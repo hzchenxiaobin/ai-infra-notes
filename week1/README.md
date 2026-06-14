@@ -397,99 +397,360 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 ## Day 2：Occupancy 与资源约束
 
 ### 🎯 目标
-理解 Occupancy 的概念，掌握寄存器、共享内存、block 大小对并行度的影响。
+
+通过今天的学习，你将：
+
+1. 深入理解 Occupancy 的定义和物理意义
+2. 掌握影响 Occupancy 的三大资源约束：寄存器、共享内存、block 大小
+3. 学会使用 `cudaFuncGetAttributes` 获取 kernel 资源使用情况
+4. 理解 register spilling 的危害和检测方法
+5. 学会使用 `__launch_bounds__` 控制寄存器使用
+6. 能用 CUDA Occupancy Calculator 计算理论 occupancy
+
+> 💡 **为什么重要**：Day 1 知道了 GPU 如何执行代码，Day 2 要知道 GPU **能同时执行多少**代码。Occupancy 决定了 GPU 隐藏延迟的能力，是 kernel 调优的核心指标之一。
+
+---
+
+### 学前导读：为什么需要 Occupancy
+
+GPU 执行指令时存在大量**延迟**：
+- Global memory 访问：~400-800 cycles
+- Shared memory 访问：~20-30 cycles
+- 指令依赖、同步等也会带来延迟
+
+如果 SM 上只驻留很少的 warp，当一个 warp 因为等待内存而停顿时，SM 可能没有别的 warp 可以切换执行，计算单元就会空转。
+
+**Occupancy 衡量的是 SM 上同时活跃的 warp 数量占最大能力的比例**。更高的 occupancy 意味着有更多的 warp 可以轮换执行，从而更好地隐藏延迟。
+
+但注意：**100% occupancy 不等于 100% 性能**。当 occupancy 足够高时（如 50% 以上），再提升 occupancy 的收益会递减，因为此时瓶颈可能在别的地方（如内存带宽、计算吞吐量）。
+
+---
 
 ### 理论学习
 
 #### 2.1 Occupancy 定义
 
+![Occupancy 概念](images/occupancy_concept.svg)
+
 ```
 Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
 ```
 
-- 100% occupancy 不意味着 100% 性能，但 **低 occupancy 容易隐藏延迟能力不足**。
-- 每个 SM 同时能驻留的 warp 数受限于：
-  - 寄存器文件大小（如 A100 每个 SM 256 KB）
-  - Shared memory 大小（如 A100 每个 SM 164 KB，可配置）
-  - Block 大小与数量上限
+**举例**：
+- 假设一个 SM 最多支持 32 个 active warp
+- 当前 kernel 让每个 SM 上驻留了 16 个 active warp
+- 则 Occupancy = 16 / 32 = 50%
 
-#### 2.2 寄存器分配
+**关键认知**：
+- Occupancy 是 **per-SM** 的概念
+- 它描述的是资源利用率，不是直接的速度
+- 低 occupancy 意味着 GPU 可能没有足够的 warp 来隐藏延迟
 
-- 每个线程的寄存器使用量由编译器自动决定。
-- 若单个线程使用寄存器过多，SM 上同时驻留的 warp 数减少，occupancy 下降。
-- 若寄存器不够用，会发生 **register spilling**，数据被放到 local memory（实际是 global memory），性能急剧下降。
+#### 2.2 影响 Occupancy 的三大资源约束
 
-#### 2.3 `__launch_bounds__`
+![资源约束](images/resource_constraints.svg)
 
-用于给编译器提示最大 block 大小和最小 warp 数，帮助编译器在寄存器分配上做出权衡：
+每个 SM 的资源是有限的，任一资源耗尽都会限制 occupancy：
+
+| 资源 | 典型限制 | 影响 |
+|------|---------|------|
+| 寄存器文件 | ~256 KB / SM | 每个线程用的寄存器越多，同时驻留的线程越少 |
+| 共享内存 | ~100-164 KB / SM | 每个 block 用的共享内存越多，同时驻留的 block 越少 |
+| Block / Warp 数量 | 最大 block/SM、最大 warp/SM | block 太大或数量太多会触顶 |
+
+**A100 具体参数示例**：
+- 每个 SM 最大 warp 数：32
+- 每个 SM 最大线程数：2048
+- 每个 SM 最大 block 数：32
+- 每个 SM 寄存器文件：256 KB
+- 每个 SM 共享内存：最多 164 KB（可配置）
+
+#### 2.3 寄存器分配与 Register Spilling
+
+![Register Spilling](images/register_spilling.svg)
+
+**寄存器分配规则**：
+- 编译器根据 kernel 代码自动决定每个线程使用多少寄存器
+- 寄存器文件总量 / 每个线程寄存器用量 = 最大同时线程数
+
+**Register Spilling（寄存器溢出）**：
+- 当编译器发现寄存器不够用时，会把一些变量放到 **local memory**
+- Local memory 实际上在 **global memory** 中
+- 访问延迟从 ~1 cycle 变成 ~400-800 cycles
+- 性能会急剧下降
+
+**如何检测 spilling**：
+
+```bash
+nvcc -Xptxas -v kernels/your_kernel.cu
+```
+
+输出中的 `lmem` 就是 local memory 使用量。如果 `lmem > 0`，说明发生了 spilling。
+
+#### 2.4 Occupancy 与性能的关系
+
+![Occupancy 与性能关系](images/occupancy_curve.svg)
+
+- **低 occupancy 区**：性能随 occupancy 提升明显，因为能更好地隐藏延迟
+- **高 occupancy 区**：性能趋于平缓，此时瓶颈可能是内存带宽或计算吞吐量
+- **经验法则**：不必盲目追求 100%，通常 50%-70% 以上就已经足够好
+
+#### 2.5 `__launch_bounds__`
+
+`__launch_bounds__` 是给编译器的提示，帮助它在寄存器使用和 occupancy 之间做权衡：
 
 ```cuda
 __launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
 __global__ void my_kernel(...) { ... }
 ```
 
-### Coding 任务
+**作用**：
+- 告诉编译器最大 block 大小
+- 告诉编译器每个 SM 上至少要有多少个 block
+- 编译器会根据这些约束分配寄存器，尽量满足 occupancy 要求
 
-创建 `kernels/occupancy_test.cu`：
+**代价**：
+- 限制寄存器可能导致 spilling
+- 或者编译器被迫使用更少的优化
+
+---
+
+### Coding 任务：测量 Occupancy
+
+#### 任务 1：基础版 occupancy_test.cu
+
+创建文件 `kernels/occupancy_test.cu`：
 
 ```cuda
 #include <cuda_runtime.h>
 #include <stdio.h>
 
-__global__ void compute_intensive(float* out, const float* in, int n) {
+__global__ void compute_intensive(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0f;
-    #pragma unroll
+    float acc = 0.0f;
+
+    // 展开循环，增加寄存器压力
+    #pragma unroll 16
     for (int i = 0; i < n; ++i) {
-        sum += in[(idx + i) % n];
+        float v = in[(idx + i) % n];
+        acc += v * v + 1.0f;
     }
-    out[idx] = sum;
+
+    out[idx] = acc;
 }
 
 int main() {
     cudaFuncAttributes attr;
-    cudaFuncGetAttributes(&attr, compute_intensive);
+    cudaError_t err = cudaFuncGetAttributes(&attr, compute_intensive);
+    if (err != cudaSuccess) {
+        printf("Error: %s\n", cudaGetErrorString(err));
+        return 1;
+    }
+
+    printf("=== Kernel Attributes ===\n");
     printf("Registers per thread: %d\n", attr.numRegs);
-    printf("Shared memory per block: %zu\n", attr.sharedSizeBytes);
-    printf("Const memory per block: %zu\n", attr.constSizeBytes);
+    printf("Shared memory per block: %zu bytes\n", attr.sharedSizeBytes);
+    printf("Constant memory per block: %zu bytes\n", attr.constSizeBytes);
+    printf("Local memory per thread: %zu bytes\n", attr.localSizeBytes);
+    printf("Max threads per block: %d\n", attr.maxThreadsPerBlock);
+    printf("=========================\n");
+
+    // 运行一次以便 ncu 可以捕获
+    const int N = 1 << 20;
+    float *d_in, *d_out;
+    cudaMalloc(&d_in, N * sizeof(float));
+    cudaMalloc(&d_out, N * sizeof(float));
+
+    int block_size = 256;
+    int grid_size = (N + block_size - 1) / block_size;
+    compute_intensive<<<grid_size, block_size>>>(d_in, d_out, 64);
+    cudaDeviceSynchronize();
+
+    cudaFree(d_in);
+    cudaFree(d_out);
     return 0;
 }
 ```
 
-编译运行：
+#### 任务 2：编译运行
 
 ```bash
-nvcc -o occupancy_test kernels/occupancy_test.cu && ./occupancy_test
+# 编译
+nvcc -o occupancy_test kernels/occupancy_test.cu
+
+# 运行
+./occupancy_test
 ```
 
-然后使用 `ncu` 查看 occupancy：
+**预期输出示例**：
+```
+=== Kernel Attributes ===
+Registers per thread: 32
+Shared memory per block: 0 bytes
+Constant memory per block: 0 bytes
+Local memory per thread: 0 bytes
+Max threads per block: 1024
+=========================
+```
+
+#### 任务 3：使用 ncu 查看 occupancy
 
 ```bash
-ncu --metrics sm__warps_active.avg.pct_of_peak_sustained_elapsed ./occupancy_test
+ncu \
+  --metrics \
+    sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+    sm__warps_active.avg.pct_of_peak_sustained_elapsed,\
+    launch__registers_per_thread \
+  ./occupancy_test
 ```
+
+**关键指标解释**：
+- `sm__occupancy.avg.pct_of_peak_sustained_elapsed`：实际 occupancy 百分比
+- `launch__registers_per_thread`：每个线程的寄存器数
+
+---
 
 ### 扩展实验
 
-修改 kernel，增加局部变量数量，重新编译并观察 `numRegs` 变化。
+#### 实验 1：改变寄存器用量观察 occupancy 变化
 
-| 版本 | 寄存器/线程 | 理论 Occupancy | 备注 |
-|------|------------|---------------|------|
-| 基础版 | - | - | 基准 |
-| 增加局部变量 | - | - | 寄存器增加 |
-| 使用 `__launch_bounds__` | - | - | 强制限制寄存器 |
+创建三个版本的 kernel：
+
+**版本 A：基础版**
+```cuda
+__global__ void version_a(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float acc = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        acc += in[(idx + i) % n];
+    }
+    out[idx] = acc;
+}
+```
+
+**版本 B：增加局部变量**
+```cuda
+__global__ void version_b(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0.0f, b = 0.0f, c = 0.0f, d = 0.0f;
+    float e = 0.0f, f = 0.0f, g = 0.0f, h = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        float v = in[(idx + i) % n];
+        a += v; b += v * 2; c += v * 3; d += v * 4;
+        e += v * 5; f += v * 6; g += v * 7; h += v * 8;
+    }
+    out[idx] = a + b + c + d + e + f + g + h;
+}
+```
+
+**版本 C：使用 launch_bounds 强制限制**
+```cuda
+__launch_bounds__(256, 4)
+__global__ void version_c(const float* in, float* out, int n) {
+    // 与 version_b 相同代码
+}
+```
+
+记录结果：
+
+| 版本 | 寄存器/线程 | 理论 Occupancy | 实际 Occupancy | 是否 Spilling |
+|------|------------|---------------|---------------|--------------|
+| A | | | | |
+| B | | | | |
+| C | | | | |
+
+#### 实验 2：用 CUDA Occupancy Calculator 验证
+
+打开 CUDA Occupancy Calculator（Excel 文件，通常在 CUDA Samples 中），输入：
+- CUDA Capability
+- Block size
+- Registers per thread
+- Shared memory per block
+
+对比理论 occupancy 和 ncu 测得的实际 occupancy。
+
+#### 实验 3：检测 Register Spilling
+
+用以下命令编译版本 B：
+
+```bash
+nvcc -Xptxas -v -o occupancy_test_b kernels/occupancy_test_b.cu
+```
+
+观察输出中是否有 `lmem`（local memory）非零。
+
+如果看到类似：
+```
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function 'version_b' for 'sm_80'
+ptxas info    : Function properties for version_b
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+```
+
+`spill stores/loads` 为 0 表示没有 spilling。
+
+---
+
+### 常见错误与调试
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| Occupancy 很低 | 寄存器使用过多 | 减少局部变量，或使用 `__launch_bounds__` |
+| 性能反而下降 | `__launch_bounds__` 导致 spilling | 放宽 launch_bounds，或优化算法 |
+| ncu 看不到 occupancy | 指标名称写错 | 使用 `sm__occupancy.avg.pct_of_peak_sustained_elapsed` |
+| `cudaFuncGetAttributes` 返回错误 | kernel 名称写错 | 直接传函数名，不要加括号 |
+
+---
 
 ### 验证 Checklist
 
 - [ ] 能用 `cudaFuncGetAttributes` 获取寄存器使用量
 - [ ] 理解为什么寄存器过多会降低 occupancy
+- [ ] 能手动计算一个 kernel 的理论 occupancy
 - [ ] 记录不同配置下的 occupancy 变化表
 - [ ] 了解 CUDA Occupancy Calculator 的使用
+- [ ] 能检测 register spilling
+- [ ] 理解 `__launch_bounds__` 的使用场景和代价
+
+---
+
+### 今日总结
+
+Day 2 我们深入理解了 GPU 的并行度：
+
+1. **Occupancy = Active Warp / Max Warp per SM**，衡量 SM 上 warp 的活跃程度
+2. **三大资源约束**：寄存器文件、共享内存、block/warp 数量上限
+3. **寄存器过多** 会降低 occupancy，因为每个线程占用更多资源
+4. **Register spilling** 会把变量放到 global memory，性能急剧下降
+5. **`__launch_bounds__`** 可以强制编译器在寄存器和 occupancy 之间做权衡
+6. **不必追求 100% occupancy**，通常足够高即可
+
+掌握这些后，你就能分析一个 kernel 的资源使用情况，并判断它是否受 occupancy 限制。
+
+---
 
 ### 面试要点
 
-- Occupancy 越高越好吗？为什么？
-- 寄存器 spilling 是怎么发生的？如何检测？
-- `__launch_bounds__` 的使用场景？
+1. **Occupancy 越高越好吗？为什么？**
+   - 不是。低 occupancy 会限制延迟隐藏能力，但当 occupancy 足够高后（如 50% 以上），继续提升收益递减。
+   - 此时瓶颈可能在内存带宽、计算吞吐量或算法本身。
+
+2. **寄存器 spilling 是怎么发生的？如何检测？**
+   - 当编译器无法为所有变量分配寄存器时，会把部分变量放到 local memory（实际在 global memory）。
+   - 检测方法：`nvcc -Xptxas -v` 查看 `lmem` 或 `spill stores/loads`。
+
+3. **`__launch_bounds__` 的使用场景？**
+   - 当 kernel 寄存器使用过多导致 occupancy 过低时，可以用它提示编译器限制寄存器。
+   - 代价是可能导致 spilling 或更少的编译优化。
+
+4. **影响 occupancy 的因素有哪些？**
+   - 每个线程的寄存器数量
+   - 每个 block 的共享内存数量
+   - Block 大小和每个 SM 的 block 数量上限
+
+5. **如何计算理论 occupancy？**
+   - 使用 CUDA Occupancy Calculator
+   - 或手动：根据 SM 资源限制，计算最多能同时驻留多少个 warp
 
 ---
 

@@ -359,6 +359,135 @@ def simt_vs_simd() -> str:
   <text x="360" y="310" text-anchor="middle" font-size="15" fill="#c9d1d9" font-weight="bold">SIMT 可以模拟 SIMD，但 SIMD 无法模拟 SIMT 的分支行为</text>
 </svg>'''
 
+
+def occupancy_concept() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 概念</text>
+
+  <!-- SM slot -->
+  <rect x="80" y="80" width="560" height="120" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="110" text-anchor="middle" font-size="16" font-weight="bold" fill="#c9d1d9">一个 SM 的 Warp 槽位（例如最大 32 个 warp）</text>
+
+  <!-- Active warps -->
+  <rect x="100" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="140" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="180" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="220" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="260" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="300" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="340" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <rect x="380" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+
+  <!-- Empty slots -->
+  <rect x="420" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+  <rect x="460" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+  <rect x="500" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+  <rect x="540" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+
+  <text x="240" y="205" text-anchor="middle" font-size="13" fill="#3fb950" font-weight="bold">Active Warps = 8</text>
+  <text x="500" y="205" text-anchor="middle" font-size="13" fill="#8b949e">Empty Slots = 4</text>
+
+  <!-- Formula -->
+  <rect x="80" y="240" width="560" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="275" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">Occupancy = 8 / 12 = 67%</text>
+  <text x="360" y="305" text-anchor="middle" font-size="14" fill="#8b949e">实际中分母是 SM 支持的最大 warp 数</text>
+</svg>'''
+
+
+def resource_constraints() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+  <rect width="720" height="420" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">影响 Occupancy 的三大资源约束</text>
+
+  <!-- Registers -->
+  <rect x="80" y="80" width="180" height="120" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="170" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">寄存器 Registers</text>
+  <text x="170" y="145" text-anchor="middle" font-size="12" fill="#8b949e">每个 SM 有限</text>
+  <text x="170" y="165" text-anchor="middle" font-size="12" fill="#8b949e">线程用得越多</text>
+  <text x="170" y="185" text-anchor="middle" font-size="12" fill="#8b949e">同时驻留 warp 越少</text>
+
+  <!-- Shared Memory -->
+  <rect x="270" y="80" width="180" height="120" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="360" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">共享内存 Shared Mem</text>
+  <text x="360" y="145" text-anchor="middle" font-size="12" fill="#8b949e">每个 SM 有限</text>
+  <text x="360" y="165" text-anchor="middle" font-size="12" fill="#8b949e">block 用得越多</text>
+  <text x="360" y="185" text-anchor="middle" font-size="12" fill="#8b949e">同时驻留 block 越少</text>
+
+  <!-- Block Size -->
+  <rect x="460" y="80" width="180" height="120" rx="8" fill="#8957e5" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
+  <text x="550" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">Block 大小与数量</text>
+  <text x="550" y="145" text-anchor="middle" font-size="12" fill="#8b949e">最大 thread/block</text>
+  <text x="550" y="165" text-anchor="middle" font-size="12" fill="#8b949e">最大 block/SM</text>
+  <text x="550" y="185" text-anchor="middle" font-size="12" fill="#8b949e">最大 warp/SM</text>
+
+  <!-- SM box -->
+  <rect x="80" y="240" width="560" height="120" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="275" text-anchor="middle" font-size="16" font-weight="bold" fill="#c9d1d9">SM 资源池</text>
+  <text x="360" y="305" text-anchor="middle" font-size="13" fill="#8b949e">Register File + Shared Memory + Warp Slots</text>
+  <text x="360" y="335" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">任一资源耗尽都会限制 Occupancy</text>
+</svg>'''
+
+
+def register_spilling() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" viewBox="0 0 720 380">
+  <rect width="720" height="380" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Register Spilling（寄存器溢出）</text>
+
+  <!-- Thread -->
+  <rect x="80" y="80" width="200" height="240" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="110" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">一个 Thread</text>
+
+  <!-- Registers -->
+  <rect x="100" y="140" width="160" height="50" rx="4" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="180" y="170" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">寄存器（快）</text>
+
+  <text x="180" y="215" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">变量太多，寄存器不够</text>
+  <line x1="180" y1="225" x2="180" y2="250" stroke="#f85149" stroke-width="2" marker-end="url(#arrowDown)"/>
+
+  <!-- Local memory -->
+  <rect x="100" y="260" width="160" height="50" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <text x="180" y="290" text-anchor="middle" font-size="13" fill="#0d1117" font-weight="bold">Local Memory（慢）</text>
+
+  <!-- Note -->
+  <rect x="320" y="120" width="340" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="490" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">Local Memory 真相</text>
+  <text x="490" y="185" text-anchor="middle" font-size="13" fill="#8b949e">实际存储在 Global Memory 中</text>
+  <text x="490" y="210" text-anchor="middle" font-size="13" fill="#8b949e">访问延迟 ~400-800 cycles</text>
+  <text x="490" y="235" text-anchor="middle" font-size="13" fill="#8b949e">性能急剧下降</text>
+  <text x="490" y="265" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">应尽量避免 spilling</text>
+</svg>'''
+
+
+def occupancy_curve() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 与性能关系</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="340" x2="640" y2="340" stroke="#8b949e" stroke-width="2"/>
+  <line x1="80" y1="340" x2="80" y2="60" stroke="#8b949e" stroke-width="2"/>
+
+  <text x="360" y="375" text-anchor="middle" font-size="14" fill="#c9d1d9">Occupancy →</text>
+  <text x="40" y="200" text-anchor="middle" font-size="14" fill="#c9d1d9" transform="rotate(-90, 40, 200)">Performance →</text>
+
+  <!-- Curve -->
+  <path d="M 80,320 Q 160,300 240,220 T 400,140 T 640,120" fill="none" stroke="#58a6ff" stroke-width="3"/>
+
+  <!-- Regions -->
+  <text x="140" y="290" font-size="13" fill="#f85149" font-weight="bold">低 Occupancy</text>
+  <text x="140" y="310" font-size="12" fill="#8b949e">无法隐藏延迟</text>
+
+  <text x="380" y="170" font-size="13" fill="#3fb950" font-weight="bold">足够隐藏延迟</text>
+  <text x="380" y="150" font-size="12" fill="#8b949e">再提升收益有限</text>
+
+  <!-- Dashed line -->
+  <line x1="80" y1="120" x2="640" y2="120" stroke="#8b949e" stroke-width="1" stroke-dasharray="5,5"/>
+  <text x="650" y="125" font-size="12" fill="#8b949e">理论峰值</text>
+
+  <text x="360" y="250" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">目标：occupancy 足够高即可，不必追求 100%</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -370,6 +499,10 @@ def main() -> None:
         "grid_block_thread.svg": grid_block_thread(),
         "warp_divergence.svg": warp_divergence(),
         "simt_vs_simd.svg": simt_vs_simd(),
+        "occupancy_concept.svg": occupancy_concept(),
+        "resource_constraints.svg": resource_constraints(),
+        "register_spilling.svg": register_spilling(),
+        "occupancy_curve.svg": occupancy_curve(),
     }
 
     for filename, content in diagrams.items():
