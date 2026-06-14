@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+  <rect width="720" height="320" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Coalesced Global Memory Access</text>
+
+  <!-- Threads -->
+  <text x="80" y="80" text-anchor="middle" font-size="14" fill="#8b949e">Warp Threads</text>
+  <circle cx="80" cy="110" r="14" fill="#58a6ff"/>
+  <text x="80" y="115" text-anchor="middle" font-size="10" fill="#0d1117" font-weight="bold">T0</text>
+  <circle cx="80" cy="150" r="14" fill="#58a6ff"/>
+  <text x="80" y="155" text-anchor="middle" font-size="10" fill="#0d1117" font-weight="bold">T1</text>
+  <circle cx="80" cy="190" r="14" fill="#58a6ff"/>
+  <text x="80" y="195" text-anchor="middle" font-size="10" fill="#0d1117" font-weight="bold">T2</text>
+  <circle cx="80" cy="230" r="14" fill="#58a6ff"/>
+  <text x="80" y="235" text-anchor="middle" font-size="10" fill="#0d1117" font-weight="bold">T3</text>
+
+  <!-- Arrows -->
+  <line x1="94" y1="110" x2="250" y2="110" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="94" y1="150" x2="250" y2="150" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="94" y1="190" x2="250" y2="190" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="94" y1="230" x2="250" y2="230" stroke="#58a6ff" stroke-width="2"/>
+
+  <!-- Memory blocks -->
+  <rect x="250" y="90" width="60" height="40" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="280" y="115" text-anchor="middle" font-size="12" fill="#c9d1d9">addr+0</text>
+  <rect x="310" y="90" width="60" height="40" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="340" y="115" text-anchor="middle" font-size="12" fill="#c9d1d9">addr+4</text>
+  <rect x="370" y="90" width="60" height="40" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="400" y="115" text-anchor="middle" font-size="12" fill="#c9d1d9">addr+8</text>
+  <rect x="430" y="90" width="60" height="40" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="460" y="115" text-anchor="middle" font-size="12" fill="#c9d1d9">addr+12</text>
+
+  <text x="250" y="75" font-size="13" fill="#8b949e">Global Memory（连续地址）</text>
+
+  <!-- Result -->
+  <rect x="560" y="150" width="120" height="50" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="620" y="172" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">合并为</text>
+  <text x="620" y="190" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">1 次事务</text>
+</svg>

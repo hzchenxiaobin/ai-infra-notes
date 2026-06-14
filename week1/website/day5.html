@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Day 5：Bank Conflict 分析与实践</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                    <p class="sidebar-subtitle">Week 1 学习指南</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">每日任务</div>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link active" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 5：Bank Conflict 分析与实践</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `## Day 5：Bank Conflict 分析与实践
+
+### 🎯 目标
+理解 shared memory bank 结构，能识别并消除 bank conflict。
+
+### 理论学习
+
+#### 5.1 Shared Memory Bank 结构
+
+- Shared memory 被划分为 32 个 bank（每 bank 4 bytes）。
+- 一个 warp 内不同线程同时访问 **同一个 bank 的不同地址** 时，会发生 bank conflict。
+- 访问同一个地址（broadcast）不会 conflict。
+
+![Bank Conflict 示意图](images/bank_conflict.svg)
+
+#### 5.2 Padding 技术
+
+在 tile 的列维度加 1，可以让数据在 bank 上错开，避免 conflict：
+
+\`\`\`cuda
+#define TILE_DIM 32
+__shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 padding
+\`\`\`
+
+### Coding 任务
+
+创建 \`kernels/bank_conflict.cu\`：
+
+\`\`\`cuda
+#define TILE_DIM 32
+
+__global__ void conflict_kernel(float* out, const float* in) {
+    __shared__ float tile[TILE_DIM][TILE_DIM];  // 无 padding，会产生 bank conflict
+    int tid = threadIdx.x;
+    for (int i = 0; i < TILE_DIM; ++i) {
+        tile[i][tid] = in[i * TILE_DIM + tid];
+    }
+    __syncthreads();
+    for (int i = 0; i < TILE_DIM; ++i) {
+        out[i * TILE_DIM + tid] = tile[i][tid];
+    }
+}
+\`\`\`
+
+以及无 conflict 版本，将 tile 声明为 \`tile[TILE_DIM][TILE_DIM + 1]\`。
+
+### Nsight Compute 指标
+
+\`\`\`bash
+ncu --metrics \\
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\\
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\\
+  sm__cycles_elapsed.avg \\
+  ./bank_conflict
+\`\`\`
+
+### 验证 Checklist
+
+- [ ] Nsight Compute 中观察到 \`l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum\` 数值变化
+- [ ] 冲突版本比无冲突版本慢 2x 以上
+- [ ] 理解 padding 的原理和代价（ slight shared memory 浪费）
+
+### 面试要点
+
+- Shared memory 有多少个 bank？每个 bank 多大？
+- 什么样的访问模式会产生 bank conflict？
+- Padding 的代价是什么？
+
+---`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">SIMT vs SIMD</text>
+
+  <!-- SIMD -->
+  <text x="180" y="80" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">SIMD</text>
+  <text x="180" y="105" text-anchor="middle" font-size="13" fill="#8b949e">Single Instruction Multiple Data</text>
+
+  <rect x="80" y="130" width="200" height="140" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="165" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">一条指令</text>
+  <text x="180" y="190" text-anchor="middle" font-size="13" fill="#8b949e">同时处理多组数据</text>
+  <text x="180" y="215" text-anchor="middle" font-size="13" fill="#8b949e">数据向量宽度固定</text>
+  <text x="180" y="240" text-anchor="middle" font-size="13" fill="#8b949e">如：AVX-512</text>
+
+  <!-- SIMT -->
+  <text x="540" y="80" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">SIMT</text>
+  <text x="540" y="105" text-anchor="middle" font-size="13" fill="#8b949e">Single Instruction Multiple Threads</text>
+
+  <rect x="440" y="130" width="200" height="140" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="540" y="165" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">一条指令</text>
+  <text x="540" y="190" text-anchor="middle" font-size="13" fill="#8b949e">多个线程各自执行</text>
+  <text x="540" y="215" text-anchor="middle" font-size="13" fill="#8b949e">每个线程有独立 PC</text>
+  <text x="540" y="240" text-anchor="middle" font-size="13" fill="#8b949e">如：NVIDIA GPU Warp</text>
+
+  <!-- Comparison -->
+  <text x="360" y="310" text-anchor="middle" font-size="15" fill="#c9d1d9" font-weight="bold">SIMT 可以模拟 SIMD，但 SIMD 无法模拟 SIMT 的分支行为</text>
+</svg>

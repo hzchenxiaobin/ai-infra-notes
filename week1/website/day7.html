@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Day 7：总结与复盘</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                    <p class="sidebar-subtitle">Week 1 学习指南</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">每日任务</div>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link active" href="day7.html">Day 7</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 7：总结与复盘</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `## Day 7：总结与复盘
+
+### 🎯 目标
+整理 Week 1 所学，形成可复用的知识资产。
+
+### 总结任务
+
+1. **绘制 GPU 内存层次结构图**
+2. **绘制 Occupancy 与性能关系图**
+3. **整理 Week 1 学习笔记** 到 \`notes/week1_notes.md\`
+
+### 建议输出
+
+在 \`notes/week1_notes.md\` 中至少包含：
+
+- GPU 执行模型要点
+- 内存层次与延迟表
+- Occupancy 影响因素
+- Coalescing 与 Bank Conflict 对比
+- Nsight 常用命令速查表
+
+### 弹性安排
+
+- 补完未完成的 coding 任务
+- 深入某个感兴趣的方向（如尝试更复杂的 shared memory tiling）
+
+### 面试要点
+
+- 用一句话概括 GPU 性能优化的核心？
+- 从硬件执行模型到代码，你的优化思路链是什么？
+
+---
+
+## 📁 本周目录结构
+
+\`\`\`
+week1/
+├── README.md              # 本文件：Week 1 完整指南
+├── kernels/               # CUDA kernel 源码
+│   ├── hello_gpu.cu
+│   ├── occupancy_test.cu
+│   ├── transpose.cu
+│   └── bank_conflict.cu
+├── profiles/              # Profiling 报告
+│   └── week1_profile_summary.md
+└── notes/                 # 学习笔记
+    └── week1_notes.md
+\`\`\`
+
+---
+
+## 🔗 推荐资源
+
+| 资源 | 说明 |
+|------|------|
+| [CUDA C Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/) | 官方权威文档 |
+| [CUDA Samples](https://github.com/NVIDIA/cuda-samples) | 官方示例代码 |
+| [Nsight Compute Docs](https://docs.nvidia.com/nsight-compute/) | Profiling 工具文档 |
+| [Nsight Systems Docs](https://docs.nvidia.com/nsight-systems/) | 系统级 trace 文档 |
+| [GPU Gems 3 - Chapter 31](https://developer.nvidia.com/gpugems/gpugems3/part-v-physics-simulation/chapter-31-fast-n-body-simulation-cuda) | 经典 CUDA 优化案例 |
+
+---
+
+## ✅ Week 1 完成标准
+
+- [ ] 完成 4 个基础 CUDA kernel 编写与运行
+- [ ] 完成 1 个 bank conflict 对比实验
+- [ ] 生成 3+ Nsight Compute 报告
+- [ ] 完成 \`notes/week1_notes.md\` 学习笔记
+- [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
+- [ ] 能使用 Nsight 定位 kernel 瓶颈类型
+
+---
+
+> 💡 **提示**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500" viewBox="0 0 720 500">
+  <rect width="720" height="500" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Week 1 学习地图</text>
+
+  <!-- Nodes -->
+  <rect x="260" y="70" width="200" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="101" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Day 1：GPU 执行模型</text>
+
+  <rect x="260" y="150" width="200" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="181" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Day 2：Occupancy</text>
+
+  <rect x="260" y="230" width="200" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="261" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Day 3：CUDA Samples</text>
+
+  <rect x="260" y="310" width="200" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="341" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Day 4：Memory Hierarchy</text>
+
+  <rect x="260" y="390" width="200" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="421" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Day 5：Bank Conflict</text>
+
+  <!-- Arrows -->
+  <line x1="360" y1="120" x2="360" y2="150" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <line x1="360" y1="200" x2="360" y2="230" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <line x1="360" y1="280" x2="360" y2="310" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <line x1="360" y1="360" x2="360" y2="390" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+
+  <!-- Side notes -->
+  <text x="490" y="175" font-size="13" fill="#8b949e">资源约束</text>
+  <text x="490" y="335" font-size="13" fill="#8b949e">内存优化</text>
+</svg>

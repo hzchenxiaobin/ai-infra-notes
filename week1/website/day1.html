@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Day 1：GPU 执行模型基础</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                    <p class="sidebar-subtitle">Week 1 学习指南</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">每日任务</div>
+<a class="nav-link day-link active" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 1：GPU 执行模型基础</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `## Day 1：GPU 执行模型基础
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 GPU 与 CPU 在设计哲学上的根本差异
+2. 掌握 SM、Warp、Grid、Block、Thread 的核心概念
+3. 能独立写出并运行第一个 CUDA 程序
+4. 理解 SIMT 执行模型及其对性能的影响
+5. 学会计算线程总数、warp 数等基础指标
+
+> 💡 **为什么重要**：GPU 执行模型是 AI Infra 的根基。后续所有 kernel 优化、推理系统调优，最终都回到 "硬件如何执行代码" 这个问题上。
+
+---
+
+### 学前导读：GPU 与 CPU 的不同
+
+| 特性 | CPU | GPU |
+|------|-----|-----|
+| 核心数量 | 少（几到几十个） | 多（数千个） |
+| 核心复杂度 | 复杂（大缓存、分支预测、乱序执行） | 简单（小缓存、顺序执行） |
+| 设计目标 | 低延迟（Latency） | 高吞吐（Throughput） |
+| 适合任务 | 串行、复杂逻辑 | 大规模并行计算 |
+| 典型应用 | 操作系统、业务逻辑 | 深度学习、图形渲染、科学计算 |
+
+**关键洞察**：
+- CPU 像一位经验丰富的教授，能快速处理复杂但数量不多的任务
+- GPU 像一支庞大的学生队伍，每人只会做简单计算，但一起做能处理海量数据
+
+AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的，因此天然适合 GPU。
+
+---
+
+### 理论学习
+
+#### 1.1 GPU 硬件层次总览
+
+\`\`\`
+GPU
+├── 多个 SM（Streaming Multiprocessor）
+│   ├── CUDA Cores / Tensor Cores
+│   ├── 寄存器文件（Register File）
+│   ├── Shared Memory / L1 Cache
+│   ├── Warp Scheduler
+│   └── Load/Store 单元
+├── L2 Cache（跨 SM 共享）
+└── Global Memory（HBM / GDDR）
+\`\`\`
+
+**SM 是 GPU 并行的基本单位**。一个 kernel 被切分为多个 block，每个 block 被分配到一个 SM 上执行。重要约束：
+- 同一个 block **不能跨 SM**
+- 一个 SM 可以同时执行多个 block
+- 一个 SM 有硬件资源上限（寄存器、共享内存、最大 thread 数）
+
+#### 1.2 SM 架构详解
+
+![SM 架构简图](images/sm_architecture.svg)
+
+以 NVIDIA A100 为例：
+- 108 个 SM
+- 每个 SM：64 个 FP32 CUDA Cores、32 个 FP64 CUDA Cores、4 个 Tensor Core
+- 每个 SM：256 KB 寄存器文件
+- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
+
+**Tensor Core** 是专门用于矩阵乘加的硬件单元，是现代深度学习算力的核心来源。
+
+#### 1.3 Warp 与 SIMT 执行模型
+
+![SIMT vs SIMD](images/simt_vs_simd.svg)
+
+**SIMT（Single Instruction Multiple Threads）** 是 NVIDIA GPU 的执行方式：
+- 一个 Warp 包含 32 个线程
+- 同一个 Warp 内的 32 个线程执行**同一条指令**
+- 但每个线程操作**不同的数据**（通过 threadIdx 区分）
+- 每个线程有独立的寄存器状态和程序计数器
+
+**SIMT vs SIMD**：
+- SIMD：一条指令同时处理固定宽度的数据向量（如 AVX-512 一次处理 512 位数据）
+- SIMT：一条指令同时被 32 个线程执行，每个线程可以有自己的数据地址和分支行为
+
+> 你可以把 Warp 理解为 GPU 调度的"最小部队"，一个班 32 个人，必须做同一个动作，但每个人处理自己的一份数据。
+
+#### 1.4 Warp Divergence（分支发散）
+
+![Warp Divergence](images/warp_divergence.svg)
+
+当 Warp 内线程遇到条件分支时：
+
+\`\`\`cuda
+if (threadIdx.x % 2 == 0) {
+    // 路径 A
+} else {
+    // 路径 B
+}
+\`\`\`
+
+Warp 会先执行路径 A（偶数线程工作，奇数线程被 mask 掉），再执行路径 B（奇数线程工作，偶数线程被 mask 掉）。这导致：
+- 两条路径**串行执行**
+- 有效算力减半
+- 性能下降
+
+**如何避免**：
+- 尽量让相邻线程走相同分支
+- 使用 warp-level primitive（如 \`__ballot_sync\`）处理分支
+- 数据布局设计时考虑 warp 访问模式
+
+#### 1.5 Grid / Block / Thread 层次结构
+
+![Grid Block Thread 层次](images/grid_block_thread.svg)
+
+CUDA 使用三级层次组织并行：
+
+\`\`\`
+Grid  -> 多个 Block
+Block -> 多个 Thread
+Thread -> 实际执行的线程
+\`\`\`
+
+**关键内置变量**：
+
+| 变量 | 含义 | 维度 |
+|------|------|------|
+| \`gridDim\` | Grid 中 block 的数量 | (x, y, z) |
+| \`blockDim\` | Block 中 thread 的数量 | (x, y, z) |
+| \`blockIdx\` | 当前 block 在 grid 中的坐标 | (x, y, z) |
+| \`threadIdx\` | 当前 thread 在 block 中的坐标 | (x, y, z) |
+
+**线程 ID 计算**：
+
+1D grid + 1D block：
+\`\`\`cuda
+int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+\`\`\`
+
+2D grid + 2D block（常用于图像处理）：
+\`\`\`cuda
+int row = blockIdx.y * blockDim.y + threadIdx.y;
+int col = blockIdx.x * blockDim.x + threadIdx.x;
+int global_tid = row * (gridDim.x * blockDim.x) + col;
+\`\`\`
+
+**总线程数计算**：
+\`\`\`
+total = gridDim.x * gridDim.y * gridDim.z *
+        blockDim.x * blockDim.y * blockDim.z
+\`\`\`
+
+**Warp 数计算**：
+\`\`\`
+warps_per_block = ceil(blockDim.x * blockDim.y * blockDim.z / 32)
+total_warps = warps_per_block * gridDim.x * gridDim.y * gridDim.z
+\`\`\`
+
+#### 1.6 常用 CUDA Runtime API
+
+| API | 作用 |
+|-----|------|
+| \`cudaMalloc(&ptr, size)\` | 在 GPU 上分配内存 |
+| \`cudaFree(ptr)\` | 释放 GPU 内存 |
+| \`cudaMemcpy(dst, src, size, kind)\` | 在 CPU/GPU 之间拷贝数据 |
+| \`cudaDeviceSynchronize()\` | 等待所有 kernel 执行完成 |
+| \`cudaGetDeviceProperties(&prop, dev)\` | 查询 GPU 属性 |
+
+数据拷贝方向 \`kind\`：
+- \`cudaMemcpyHostToDevice\`：CPU → GPU
+- \`cudaMemcpyDeviceToHost\`：GPU → CPU
+- \`cudaMemcpyDeviceToDevice\`：GPU → GPU
+
+---
+
+### Coding 任务：第一个 CUDA 程序
+
+#### 任务 1：hello_gpu.cu
+
+创建文件 \`kernels/hello_gpu.cu\`：
+
+\`\`\`cuda
+#include <stdio.h>
+
+// __global__ 表示这是一个 CUDA kernel，可以从 CPU 调用，在 GPU 上执行
+__global__ void hello_gpu() {
+    // 计算全局线程 ID（1D 情况）
+    int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    printf("block=(%d,%d,%d), thread=(%d,%d,%d), global_tid=%d\\n",
+           blockIdx.x, blockIdx.y, blockIdx.z,
+           threadIdx.x, threadIdx.y, threadIdx.z,
+           global_tid);
+}
+
+int main() {
+    // 定义 grid 和 block 大小
+    dim3 grid(2, 2, 1);   // 2x2 = 4 个 block
+    dim3 block(4, 2, 1);  // 每个 block 8 个 thread
+
+    printf("Launching kernel: grid=(%d,%d,%d), block=(%d,%d,%d)\\n",
+           grid.x, grid.y, grid.z,
+           block.x, block.y, block.z);
+    printf("Total threads: %d\\n",
+           grid.x * grid.y * grid.z * block.x * block.y * block.z);
+
+    // 启动 kernel：<<<grid, block>>>
+    hello_gpu<<<grid, block>>>();
+
+    // 等待 GPU 完成，否则 printf 输出可能不完整
+    cudaDeviceSynchronize();
+
+    return 0;
+}
+\`\`\`
+
+#### 任务 2：编译与运行
+
+\`\`\`bash
+# 编译
+nvcc -o hello_gpu kernels/hello_gpu.cu
+
+# 运行
+./hello_gpu
+\`\`\`
+
+**预期输出**：
+\`\`\`
+Launching kernel: grid=(2,2,1), block=(4,2,1)
+Total threads: 32
+block=(0,0,0), thread=(0,0,0), global_tid=0
+block=(0,0,0), thread=(1,0,0), global_tid=1
+...
+\`\`\`
+
+> ⚠️ **注意**：如果没有 \`cudaDeviceSynchronize()\`，kernel 中的 \`printf\` 可能来不及输出程序就结束了。
+
+#### 任务 3：验证线程总数
+
+手动计算：
+\`\`\`
+grid  = (2, 2, 1)  → 4 blocks
+block = (4, 2, 1)  → 8 threads/block
+total = 4 × 8 = 32 threads
+warps = ceil(8 / 32) × 4 = 1 × 4 = 4 warps
+\`\`\`
+
+检查程序输出是否与你计算的一致。
+
+---
+
+### 扩展实验
+
+#### 实验 1：不同 grid/block 配置
+
+修改 \`dim3 grid(...)\` 和 \`dim3 block(...)\`，观察输出：
+
+| grid | block | 总线程数 | warp 数 |
+|------|-------|---------|--------|
+| (1,1,1) | (32,1,1) | 32 | 1 |
+| (2,1,1) | (16,1,1) | 32 | 1 |
+| (2,2,1) | (16,16,1) | 1024 | 32 |
+| (4,1,1) | (256,1,1) | 1024 | 32 |
+| (1,1,1) | (1024,1,1) | 1024 | 32 |
+
+**思考问题**：
+1. 为什么 block 大小通常取 32 的倍数？
+   - 因为 warp 大小是 32，非 32 倍数会造成最后一个 warp 资源浪费。
+2. 为什么 block 最大 thread 数一般为 1024？
+   - 这是 GPU 硬件限制，由 \`maxThreadsPerBlock\` 决定。
+3. 输出顺序有什么规律？
+   - block 执行顺序不保证，同一个 block 内 thread 执行顺序也不保证。
+
+#### 实验 2：2D 线程 ID 计算
+
+实现一个 2D 版本的 kernel，计算每个线程的 2D 全局坐标：
+
+\`\`\`cuda
+__global__ void hello_gpu_2d() {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int width = gridDim.x * blockDim.x;
+    int global_tid = row * width + col;
+
+    printf("row=%d, col=%d, global_tid=%d\\n", row, col, global_tid);
+}
+\`\`\`
+
+使用 \`dim3 grid(2, 2)\` 和 \`dim3 block(4, 4)\` 启动，验证 global_tid 是否连续。
+
+#### 实验 3：线程数上限探索
+
+尝试以下配置，观察是否能编译运行：
+- \`block(1024, 1, 1)\` ✓
+- \`block(1024, 2, 1)\` ✗（超过 1024 threads/block）
+- \`grid(100000, 1, 1)\` ✓（grid 维度很大时通常也可以）
+
+---
+
+### 常见错误与调试
+
+| 错误 | 原因 | 解决方法 |
+|------|------|---------|
+| 没有任何输出 | 缺少 \`cudaDeviceSynchronize()\` | 在 main 末尾添加 |
+| \`invalid configuration argument\` | block 内线程数超过 1024 | 减小 block 大小 |
+| 输出顺序混乱 | CUDA 不保证 block/thread 执行顺序 | 不要依赖执行顺序 |
+| 编译错误 \`__global__\` 未识别 | 用 \`.cu\` 后缀，用 \`nvcc\` 编译 | 检查文件后缀和编译器 |
+
+**调试技巧**：
+- 先用少量线程（如 1 个 block，8 个 thread）测试
+- 使用 \`printf\` 输出 thread 坐标和中间结果
+- 确认 \`cudaDeviceSynchronize()\` 后再检查输出
+
+---
+
+### 验证 Checklist
+
+- [ ] 能独立编译并运行 \`hello_gpu.cu\`
+- [ ] kernel 能正确打印所有 thread 的坐标
+- [ ] 理解 block 内 thread 数量与 warp 数量的关系：\`warps = ceil(threads / 32)\`
+- [ ] 能计算一个 kernel launch 的总 thread 数
+- [ ] 能解释 SIMT 与 SIMD 的区别
+- [ ] 能解释什么是 warp divergence 以及如何避免
+- [ ] 完成至少 2 组不同的 grid/block 配置实验
+
+---
+
+### 今日总结
+
+Day 1 我们建立了 GPU 执行模型的基础认知：
+
+1. **GPU 是吞吐导向的并行处理器**，与 CPU 的设计哲学不同
+2. **SM 是 GPU 并行的基本单位**，包含 CUDA Core、Tensor Core、寄存器、共享内存等
+3. **Warp 是调度基本单位**，一个 warp 32 个线程执行 SIMT
+4. **分支发散会降低性能**，因为 warp 内不同分支需要串行执行
+5. **Grid/Block/Thread 三级层次** 组织 CUDA 并行
+6. **第一个 CUDA 程序** 让我们直观感受到线程的并行执行
+
+掌握这些概念后，你才能理解为什么某些 CUDA 代码写得好、某些写得慢。
+
+---
+
+### 面试要点
+
+1. **什么是 SIMT？与 SIMD 的区别？**
+   - SIMT：Single Instruction Multiple Threads，32 个线程执行同一条指令，但各自处理不同数据
+   - SIMD：Single Instruction Multiple Data，一条指令同时处理固定宽度的数据向量
+   - SIMT 可以处理分支（虽然有 divergence 代价），SIMD 分支处理更困难
+
+2. **Warp divergence 是什么？如何避免？**
+   - 同一个 warp 内线程走不同分支，需要串行执行各分支
+   - 避免方法：让相邻线程走相同分支、使用 warp-level primitive
+
+3. **一个 block 最多多少 thread？为什么？**
+   - 通常为 1024
+   - 这是 GPU 硬件限制，由 \`maxThreadsPerBlock\` 决定
+
+4. **如何计算一个 kernel 的总 thread 数？**
+   - \`gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z\`
+
+5. **CUDA 中 \`__global__\` 和 \`__device__\` 的区别？**
+   - \`__global__\`：CPU 调用，GPU 执行（kernel 函数）
+   - \`__device__\`：GPU 调用，GPU 执行（设备端辅助函数）
+
+---`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Day 2：Occupancy 与资源约束</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                    <p class="sidebar-subtitle">Week 1 学习指南</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">每日任务</div>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link active" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 2：Occupancy 与资源约束</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `## Day 2：Occupancy 与资源约束
+
+### 🎯 目标
+理解 Occupancy 的概念，掌握寄存器、共享内存、block 大小对并行度的影响。
+
+### 理论学习
+
+#### 2.1 Occupancy 定义
+
+\`\`\`
+Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
+\`\`\`
+
+- 100% occupancy 不意味着 100% 性能，但 **低 occupancy 容易隐藏延迟能力不足**。
+- 每个 SM 同时能驻留的 warp 数受限于：
+  - 寄存器文件大小（如 A100 每个 SM 256 KB）
+  - Shared memory 大小（如 A100 每个 SM 164 KB，可配置）
+  - Block 大小与数量上限
+
+#### 2.2 寄存器分配
+
+- 每个线程的寄存器使用量由编译器自动决定。
+- 若单个线程使用寄存器过多，SM 上同时驻留的 warp 数减少，occupancy 下降。
+- 若寄存器不够用，会发生 **register spilling**，数据被放到 local memory（实际是 global memory），性能急剧下降。
+
+#### 2.3 \`__launch_bounds__\`
+
+用于给编译器提示最大 block 大小和最小 warp 数，帮助编译器在寄存器分配上做出权衡：
+
+\`\`\`cuda
+__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
+__global__ void my_kernel(...) { ... }
+\`\`\`
+
+### Coding 任务
+
+创建 \`kernels/occupancy_test.cu\`：
+
+\`\`\`cuda
+#include <cuda_runtime.h>
+#include <stdio.h>
+
+__global__ void compute_intensive(float* out, const float* in, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float sum = 0.0f;
+    #pragma unroll
+    for (int i = 0; i < n; ++i) {
+        sum += in[(idx + i) % n];
+    }
+    out[idx] = sum;
+}
+
+int main() {
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, compute_intensive);
+    printf("Registers per thread: %d\\n", attr.numRegs);
+    printf("Shared memory per block: %zu\\n", attr.sharedSizeBytes);
+    printf("Const memory per block: %zu\\n", attr.constSizeBytes);
+    return 0;
+}
+\`\`\`
+
+编译运行：
+
+\`\`\`bash
+nvcc -o occupancy_test kernels/occupancy_test.cu && ./occupancy_test
+\`\`\`
+
+然后使用 \`ncu\` 查看 occupancy：
+
+\`\`\`bash
+ncu --metrics sm__warps_active.avg.pct_of_peak_sustained_elapsed ./occupancy_test
+\`\`\`
+
+### 扩展实验
+
+修改 kernel，增加局部变量数量，重新编译并观察 \`numRegs\` 变化。
+
+| 版本 | 寄存器/线程 | 理论 Occupancy | 备注 |
+|------|------------|---------------|------|
+| 基础版 | - | - | 基准 |
+| 增加局部变量 | - | - | 寄存器增加 |
+| 使用 \`__launch_bounds__\` | - | - | 强制限制寄存器 |
+
+### 验证 Checklist
+
+- [ ] 能用 \`cudaFuncGetAttributes\` 获取寄存器使用量
+- [ ] 理解为什么寄存器过多会降低 occupancy
+- [ ] 记录不同配置下的 occupancy 变化表
+- [ ] 了解 CUDA Occupancy Calculator 的使用
+
+### 面试要点
+
+- Occupancy 越高越好吗？为什么？
+- 寄存器 spilling 是怎么发生的？如何检测？
+- \`__launch_bounds__\` 的使用场景？
+
+---`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html>

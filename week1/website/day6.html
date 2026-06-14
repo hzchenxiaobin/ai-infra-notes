@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Day 6：Nsight Profiling 实战</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                    <p class="sidebar-subtitle">Week 1 学习指南</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">每日任务</div>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link active" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 6：Nsight Profiling 实战</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `## Day 6：Nsight Profiling 实战
+
+### 🎯 目标
+熟练使用 Nsight Compute 和 Nsight Systems 分析 kernel 性能。
+
+### 工具介绍
+
+| 工具 | 粒度 | 用途 |
+|------|------|------|
+| Nsight Compute (\`ncu\`) | Kernel 级 | 单个 kernel 的详细指标 |
+| Nsight Systems (\`nsys\`) | 应用级 | 时间线、CPU/GPU 交互、kernel launch overhead |
+
+### 常用 \`ncu\` 命令
+
+\`\`\`bash
+# 基本指标
+ncu ./your_kernel
+
+# 指定指标
+ncu --metrics \\
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\\
+  dram__throughput.avg.pct_of_peak_sustained_elapsed,\\
+  sm__throughput.avg.pct_of_peak_sustained_elapsed \\
+  ./your_kernel
+
+# 生成报告
+ncu --set full -o report ./your_kernel
+ncu-ui report.ncu-rep
+\`\`\`
+
+### 常用 \`nsys\` 命令
+
+\`\`\`bash
+# 生成时间线报告
+nsys profile -o timeline ./your_app
+nsys-ui timeline.nsys-rep
+\`\`\`
+
+### 本周 Profiling 任务
+
+对以下 kernel 进行 profiling：
+
+1. \`hello_gpu.cu\`：观察 kernel launch 时间
+2. \`occupancy_test.cu\`：观察 occupancy
+3. \`transpose.cu\`：观察 memory throughput
+4. \`bank_conflict.cu\`：观察 bank conflict
+
+### Roofline 模型
+
+![Roofline 模型](images/roofline_model.svg)
+
+Roofline 图帮助判断 kernel 是 compute-bound 还是 memory-bound：
+
+\`\`\`
+Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
+\`\`\`
+
+- **Arithmetic Intensity (AI)** = FLOPs / bytes
+- AI 低 → memory-bound
+- AI 高 → compute-bound
+
+### 验证 Checklist
+
+- [ ] 生成至少 3 个 kernel 的 Nsight Compute 报告
+- [ ] 能读取 Roofline 图并定位瓶颈类型（memory-bound / compute-bound）
+- [ ] 能使用 Nsight Systems 查看 kernel launch 时间线
+- [ ] 记录各 kernel 的 throughput 和 occupancy 到 \`profiles/week1_profile_summary.md\`
+
+### 面试要点
+
+- 如何判断一个 kernel 是 memory-bound 还是 compute-bound？
+- Nsight Compute 和 Nsight Systems 的区别？
+- Roofline 模型如何指导优化？
+
+---`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html>
