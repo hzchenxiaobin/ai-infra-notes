@@ -593,6 +593,144 @@ def cuda_guide_ch5() -> str:
   <text x="360" y="355" text-anchor="middle" font-size="13" fill="#8b949e">建议通读一遍，后续 Day 4-6 会反复用到这些概念</text>
 </svg>'''
 
+
+def stride_access() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Coalesced vs Stride Access</text>
+
+  <!-- Coalesced -->
+  <text x="180" y="80" text-anchor="middle" font-size="16" font-weight="bold" fill="#3fb950">✅ Coalesced</text>
+
+  <circle cx="80" cy="120" r="14" fill="#58a6ff"/>
+  <text x="80" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T0</text>
+  <circle cx="120" cy="120" r="14" fill="#58a6ff"/>
+  <text x="120" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T1</text>
+  <circle cx="160" cy="120" r="14" fill="#58a6ff"/>
+  <text x="160" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T2</text>
+  <circle cx="200" cy="120" r="14" fill="#58a6ff"/>
+  <text x="200" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T3</text>
+
+  <line x1="80" y1="134" x2="80" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="120" y1="134" x2="120" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="160" y1="134" x2="160" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="200" y1="134" x2="200" y2="170" stroke="#58a6ff" stroke-width="2"/>
+
+  <rect x="70" y="170" width="150" height="40" rx="4" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="145" y="195" text-anchor="middle" font-size="12" fill="#0d1117" font-weight="bold">1 次内存事务</text>
+
+  <!-- Stride -->
+  <text x="540" y="80" text-anchor="middle" font-size="16" font-weight="bold" fill="#f85149">❌ Stride</text>
+
+  <circle cx="440" cy="120" r="14" fill="#58a6ff"/>
+  <text x="440" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T0</text>
+  <circle cx="480" cy="120" r="14" fill="#58a6ff"/>
+  <text x="480" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T1</text>
+  <circle cx="520" cy="120" r="14" fill="#58a6ff"/>
+  <text x="520" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T2</text>
+  <circle cx="560" cy="120" r="14" fill="#58a6ff"/>
+  <text x="560" y="125" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T3</text>
+
+  <line x1="440" y1="134" x2="440" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="480" y1="134" x2="520" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="520" y1="134" x2="600" y2="170" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="560" y1="134" x2="680" y2="170" stroke="#58a6ff" stroke-width="2"/>
+
+  <rect x="430" y="170" width="60" height="40" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <rect x="500" y="170" width="60" height="40" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <rect x="570" y="170" width="60" height="40" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <rect x="640" y="170" width="60" height="40" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <text x="565" y="235" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">4 次内存事务</text>
+
+  <!-- Code examples -->
+  <rect x="60" y="270" width="280" height="70" rx="8" fill="#1f2937" stroke="#30363d"/>
+  <text x="70" y="295" font-family="monospace" font-size="12" fill="#c9d1d9">// Coalesced</text>
+  <text x="70" y="315" font-family="monospace" font-size="12" fill="#c9d1d9">x[idx]</text>
+
+  <rect x="380" y="270" width="320" height="70" rx="8" fill="#1f2937" stroke="#30363d"/>
+  <text x="390" y="295" font-family="monospace" font-size="12" fill="#c9d1d9">// Stride</text>
+  <text x="390" y="315" font-family="monospace" font-size="12" fill="#c9d1d9">x[idx * 32]</text>
+</svg>'''
+
+
+def shared_memory_tiling() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+  <rect width="720" height="420" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory Tiling 原理</text>
+
+  <!-- Global memory matrix -->
+  <rect x="60" y="80" width="240" height="240" fill="none" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="70" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Global Memory（大矩阵）</text>
+
+  <!-- Tiles in global -->
+  <rect x="60" y="80" width="80" height="80" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="100" y="125" text-anchor="middle" font-size="11" fill="#c9d1d9">Tile 0</text>
+  <rect x="140" y="80" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="220" y="80" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="60" y="160" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="140" y="160" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="220" y="160" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="60" y="240" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="140" y="240" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+  <rect x="220" y="240" width="80" height="80" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="1"/>
+
+  <!-- Shared memory tile -->
+  <rect x="420" y="120" width="120" height="120" rx="4" fill="#238636" opacity="0.3" stroke="#3fb950" stroke-width="2"/>
+  <text x="480" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Shared Memory（Tile）</text>
+
+  <line x1="320" y1="160" x2="420" y2="180" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <text x="370" y="160" text-anchor="middle" font-size="12" fill="#8b949e">加载</text>
+
+  <line x1="480" y1="240" x2="480" y2="300" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="520" y="280" text-anchor="start" font-size="12" fill="#8b949e">在 SM 内快速复用</text>
+
+  <!-- Steps -->
+  <rect x="60" y="350" width="600" height="50" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="380" text-anchor="middle" font-size="13" fill="#c9d1d9">1. 将大矩阵分块  →  2. 加载一个 tile 到 Shared Memory  →  3. 在线程间复用数据</text>
+</svg>'''
+
+
+def matrix_transpose() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">矩阵转置的内存访问模式</text>
+
+  <!-- Input matrix -->
+  <rect x="80" y="80" width="200" height="200" fill="none" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="70" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Input A（行优先）</text>
+
+  <!-- Rows highlighted -->
+  <rect x="80" y="110" width="200" height="30" fill="#1f6feb" opacity="0.3"/>
+  <rect x="80" y="150" width="200" height="30" fill="#1f6feb" opacity="0.2"/>
+  <rect x="80" y="190" width="200" height="30" fill="#1f6feb" opacity="0.1"/>
+
+  <text x="100" y="130" font-size="11" fill="#c9d1d9">Row 0</text>
+  <text x="100" y="170" font-size="11" fill="#c9d1d9">Row 1</text>
+  <text x="100" y="210" font-size="11" fill="#c9d1d9">Row 2</text>
+
+  <!-- Arrow -->
+  <text x="360" y="180" text-anchor="middle" font-size="20" fill="#c9d1d9">→</text>
+  <text x="360" y="210" text-anchor="middle" font-size="13" fill="#8b949e">转置</text>
+
+  <!-- Output matrix -->
+  <rect x="440" y="80" width="200" height="200" fill="none" stroke="#3fb950" stroke-width="2"/>
+  <text x="540" y="70" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Output A^T</text>
+
+  <!-- Columns highlighted (were rows) -->
+  <rect x="470" y="80" width="30" height="200" fill="#238636" opacity="0.3"/>
+  <rect x="510" y="80" width="30" height="200" fill="#238636" opacity="0.2"/>
+  <rect x="550" y="80" width="30" height="200" fill="#238636" opacity="0.1"/>
+
+  <text x="475" y="100" font-size="11" fill="#c9d1d9" transform="rotate(90, 475, 100)">Col 0</text>
+  <text x="515" y="100" font-size="11" fill="#c9d1d9" transform="rotate(90, 515, 100)">Col 1</text>
+  <text x="555" y="100" font-size="11" fill="#c9d1d9" transform="rotate(90, 555, 100)">Col 2</text>
+
+  <!-- Problem note -->
+  <rect x="80" y="310" width="560" height="70" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="340" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">问题：读是 coalesced（连续行），写变成 stride access（连续列）</text>
+  <text x="360" y="365" text-anchor="middle" font-size="13" fill="#8b949e">解决：用 Shared Memory 做中间缓冲，调整读写模式</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -611,6 +749,9 @@ def main() -> None:
         "device_query_output.svg": device_query_output(),
         "occupancy_calculator_workflow.svg": occupancy_calculator_workflow(),
         "cuda_guide_ch5.svg": cuda_guide_ch5(),
+        "stride_access.svg": stride_access(),
+        "shared_memory_tiling.svg": shared_memory_tiling(),
+        "matrix_transpose.svg": matrix_transpose(),
     }
 
     for filename, content in diagrams.items():
