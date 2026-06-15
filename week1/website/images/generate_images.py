@@ -488,6 +488,111 @@ def occupancy_curve() -> str:
   <text x="360" y="250" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">目标：occupancy 足够高即可，不必追求 100%</text>
 </svg>'''
 
+
+def device_query_output() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+  <rect width="720" height="440" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">deviceQuery 输出示例结构</text>
+
+  <!-- Terminal window -->
+  <rect x="60" y="60" width="600" height="340" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <rect x="60" y="60" width="600" height="30" rx="10" fill="#30363d"/>
+  <circle cx="80" cy="75" r="6" fill="#f85149"/>
+  <circle cx="100" cy="75" r="6" fill="#d29922"/>
+  <circle cx="120" cy="75" r="6" fill="#3fb950"/>
+
+  <!-- Output lines -->
+  <text x="80" y="120" font-family="monospace" font-size="13" fill="#58a6ff">Detected 1 CUDA Capable device(s)</text>
+  <text x="80" y="150" font-family="monospace" font-size="13" fill="#c9d1d9">Device 0: "NVIDIA A100-PCIE-40GB"</text>
+  <text x="80" y="180" font-family="monospace" font-size="13" fill="#8b949e">  CUDA Capability Major/Minor version number:    8.0</text>
+  <text x="80" y="205" font-family="monospace" font-size="13" fill="#8b949e">  Total amount of global memory:                 40536 MBytes</text>
+  <text x="80" y="230" font-family="monospace" font-size="13" fill="#8b949e">  (108) Multiprocessors, (64) CUDA Cores/MP:     6912 CUDA Cores</text>
+  <text x="80" y="255" font-family="monospace" font-size="13" fill="#8b949e">  GPU Max Clock rate:                            1410 MHz</text>
+  <text x="80" y="280" font-family="monospace" font-size="13" fill="#8b949e">  Memory Clock rate:                             1215 Mhz</text>
+  <text x="80" y="305" font-family="monospace" font-size="13" fill="#8b949e">  Memory Bus Width:                              5120-bit</text>
+  <text x="80" y="330" font-family="monospace" font-size="13" fill="#8b949e">  Maximum number of threads per multiprocessor:  2048</text>
+  <text x="80" y="355" font-family="monospace" font-size="13" fill="#8b949e">  Maximum number of threads per block:           1024</text>
+  <text x="80" y="380" font-family="monospace" font-size="13" fill="#3fb950">Result = PASS</text>
+</svg>'''
+
+
+def occupancy_calculator_workflow() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">CUDA Occupancy Calculator 使用流程</text>
+
+  <!-- Steps -->
+  <rect x="60" y="80" width="140" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="130" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. 输入 GPU</text>
+  <text x="130" y="140" text-anchor="middle" font-size="12" fill="#8b949e">Compute Capability</text>
+
+  <line x1="200" y1="120" x2="240" y2="120" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="250" y="80" width="140" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="320" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. 输入 Kernel</text>
+  <text x="320" y="140" text-anchor="middle" font-size="12" fill="#8b949e">Block / Regs / Shared</text>
+
+  <line x1="390" y1="120" x2="430" y2="120" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="440" y="80" width="140" height="80" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="510" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. 获取结果</text>
+  <text x="510" y="140" text-anchor="middle" font-size="12" fill="#8b949e">理论 Occupancy</text>
+
+  <!-- Input details -->
+  <rect x="60" y="200" width="280" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="200" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">输入参数</text>
+  <text x="80" y="260" font-size="12" fill="#8b949e">• Threads per block</text>
+  <text x="80" y="285" font-size="12" fill="#8b949e">• Registers per thread</text>
+  <text x="80" y="310" font-size="12" fill="#8b949e">• Shared memory per block</text>
+  <text x="80" y="335" font-size="12" fill="#8b949e">• GPU Compute Capability</text>
+
+  <!-- Output details -->
+  <rect x="380" y="200" width="280" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="520" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">输出结果</text>
+  <text x="400" y="260" font-size="12" fill="#8b949e">• Active Warps per SM</text>
+  <text x="400" y="285" font-size="12" fill="#8b949e">• Occupancy (%)</text>
+  <text x="400" y="310" font-size="12" fill="#8b949e">• Active Blocks per SM</text>
+  <text x="400" y="335" font-size="12" fill="#8b949e">• 哪个资源是瓶颈</text>
+</svg>'''
+
+
+def cuda_guide_ch5() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">CUDA C Programming Guide 第 5 章核心要点</text>
+
+  <!-- Central node -->
+  <rect x="280" y="90" width="160" height="60" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="125" text-anchor="middle" font-size="15" fill="#c9d1d9" font-weight="bold">Performance Guidelines</text>
+
+  <!-- Branches -->
+  <rect x="60" y="200" width="150" height="80" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="135" y="235" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Memory Coalescing</text>
+  <text x="135" y="260" text-anchor="middle" font-size="11" fill="#8b949e">合并全局内存访问</text>
+
+  <rect x="220" y="200" width="150" height="80" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="295" y="235" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Shared Memory</text>
+  <text x="295" y="260" text-anchor="middle" font-size="11" fill="#8b949e">Bank conflict / Tiling</text>
+
+  <rect x="380" y="200" width="150" height="80" rx="8" fill="#8957e5" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
+  <text x="455" y="235" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Occupancy</text>
+  <text x="455" y="260" text-anchor="middle" font-size="11" fill="#8b949e">隐藏延迟能力</text>
+
+  <rect x="540" y="200" width="150" height="80" rx="8" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
+  <text x="615" y="235" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Instruction Throughput</text>
+  <text x="615" y="260" text-anchor="middle" font-size="11" fill="#8b949e">指令吞吐优化</text>
+
+  <!-- Lines -->
+  <line x1="320" y1="150" x2="135" y2="200" stroke="#8b949e" stroke-width="2"/>
+  <line x1="360" y1="150" x2="295" y2="200" stroke="#8b949e" stroke-width="2"/>
+  <line x1="400" y1="150" x2="455" y2="200" stroke="#8b949e" stroke-width="2"/>
+  <line x1="440" y1="150" x2="615" y2="200" stroke="#8b949e" stroke-width="2"/>
+
+  <!-- Bottom note -->
+  <text x="360" y="330" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">这一章是 CUDA 性能优化的官方圣经</text>
+  <text x="360" y="355" text-anchor="middle" font-size="13" fill="#8b949e">建议通读一遍，后续 Day 4-6 会反复用到这些概念</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -503,6 +608,9 @@ def main() -> None:
         "resource_constraints.svg": resource_constraints(),
         "register_spilling.svg": register_spilling(),
         "occupancy_curve.svg": occupancy_curve(),
+        "device_query_output.svg": device_query_output(),
+        "occupancy_calculator_workflow.svg": occupancy_calculator_workflow(),
+        "cuda_guide_ch5.svg": cuda_guide_ch5(),
     }
 
     for filename, content in diagrams.items():

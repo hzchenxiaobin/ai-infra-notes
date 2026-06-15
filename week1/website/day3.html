@@ -54,69 +54,410 @@
         const markdown = `## Day 3：源码分析 —— CUDA 官方 Samples
 
 ### 🎯 目标
-学会从官方示例中读取 GPU 硬件属性，理解 occupancy 的官方计算方式。
 
-### 阅读内容
+通过今天的学习，你将：
 
-1. **CUDA Samples 中的 \`deviceQuery\`**
-   - 路径：\`/usr/local/cuda/samples/1_Utilities/deviceQuery\`
-   - 或 CUDA 12  toolkit 路径：\`/usr/local/cuda/extras/demo_suite/deviceQuery\`
+1. 学会查找和运行 CUDA 官方 Samples
+2. 掌握 \`deviceQuery\` 输出中每个字段的含义
+3. 学会使用 \`cudaGetDeviceProperties\` 查询 GPU 属性
+4. 掌握 CUDA Occupancy Calculator 的使用方法
+5. 了解 CUDA C Programming Guide 第 5 章的核心内容
+6. 能根据 GPU 参数计算峰值算力和显存带宽
 
-2. **CUDA Samples 中的 \`occupancyCalculator\`**
-   - 路径：\`/usr/local/cuda/samples/1_Utilities/occupancyCalculator\`
+> 💡 **为什么重要**：官方 Samples 是理解 GPU 硬件的"标准答案"。Day 1 和 Day 2 学的是概念，今天要用官方工具验证这些概念，并把你的 GPU 参数变成具体的数字。
 
-3. **CUDA C Programming Guide 第 5 章（Performance Guidelines）**
-   - 重点关注：
-     - Memory coalescing
-     - Shared memory
-     - Occupancy
-     - Instruction throughput
+---
 
-### 关键源码分析
+### 学前导读：为什么要读官方代码
 
-\`deviceQuery\` 主要调用：
+CUDA 官方提供了大量示例代码，它们不仅是学习材料，更是**最佳实践**。通过阅读官方代码，你可以：
+- 了解 NVIDIA 推荐的编程模式
+- 学习如何正确查询硬件属性
+- 理解官方如何计算 occupancy
+- 避免自己"重复造轮子"
+
+今天的重点是**阅读和理解**，不是写大量代码。但你需要动手运行这些示例，把输出和你的 GPU 对应起来。
+
+---
+
+### 理论学习
+
+#### 3.1 CUDA Samples 目录结构
+
+CUDA Toolkit 安装后，Samples 通常位于以下位置之一：
+
+\`\`\`bash
+# CUDA 11.x 及以前
+/usr/local/cuda/samples/
+
+# CUDA 12.x 可能的位置
+/usr/local/cuda/extras/demo_suite/
+\`\`\`
+
+如果找不到，可以用以下命令搜索：
+
+\`\`\`bash
+find /usr/local/cuda -name "deviceQuery" 2>/dev/null
+find / -name "deviceQuery" 2>/dev/null | head -5
+\`\`\`
+
+常见 Samples 分类：
+
+\`\`\`
+cuda/samples/
+├── 0_Introduction/          # 入门示例
+├── 1_Utilities/             # 工具类（deviceQuery, bandwidthTest 等）
+├── 2_Concepts_and_Techniques/  # 技术概念
+├── 3_CUDA_Features/         # CUDA 特性
+├── 4_CUDA_Libraries/        # CUDA 库
+└── 5_Simulations/           # 物理模拟
+\`\`\`
+
+#### 3.2 deviceQuery 源码分析
+
+![deviceQuery 输出示例](images/device_query_output.svg)
+
+\`deviceQuery\` 的核心代码非常简单，只有两行：
 
 \`\`\`cuda
 cudaGetDeviceCount(&deviceCount);
 cudaGetDeviceProperties(&prop, dev);
 \`\`\`
 
-重点字段：
+但它输出的信息非常丰富。下面是重点字段的详细解释：
 
-| 字段 | 含义 |
-|------|------|
-| \`multiProcessorCount\` | SM 数量 |
-| \`maxThreadsPerMultiProcessor\` | 每个 SM 最大线程数 |
-| \`maxThreadsPerBlock\` | 每个 block 最大线程数 |
-| \`sharedMemPerBlock\` | 每个 block 最大共享内存 |
-| \`regsPerBlock\` | 每个 block 最大寄存器数 |
-| \`warpSize\` | Warp 大小（通常为 32） |
-| \`clockRate\` | GPU 时钟频率 |
-| \`memoryClockRate\` | 显存时钟频率 |
-| \`memoryBusWidth\` | 显存位宽 |
+##### 基础信息
 
-### 任务
+| 字段 | 含义 | 用途 |
+|------|------|------|
+| \`name\` | GPU 型号名称 | 如 "NVIDIA A100-PCIE-40GB" |
+| \`totalGlobalMem\` | 全局显存总字节数 | 判断能加载多大的模型/数据 |
+| \`multiProcessorCount\` | SM 数量 | 计算峰值算力 |
+| \`warpSize\` | Warp 大小 | 通常为 32 |
 
-运行 deviceQuery：
+##### 并行能力限制
 
-\`\`\`bash
-/usr/local/cuda/extras/demo_suite/deviceQuery
+| 字段 | 含义 | 用途 |
+|------|------|------|
+| \`maxThreadsPerBlock\` | 每个 block 最大线程数 | 通常为 1024 |
+| \`maxThreadsPerMultiProcessor\` | 每个 SM 最大线程数 | A100 为 2048 |
+| \`maxBlocksPerMultiProcessor\` | 每个 SM 最大 block 数 | A100 为 32 |
+| \`maxGridSize\` | Grid 最大维度 | 决定能启动多少 block |
+
+##### 内存相关
+
+| 字段 | 含义 | 用途 |
+|------|------|------|
+| \`sharedMemPerBlock\` | 每个 block 最大共享内存 | Tiling 大小设计 |
+| \`sharedMemPerMultiprocessor\` | 每个 SM 最大共享内存 | Occupancy 计算 |
+| \`regsPerBlock\` | 每个 block 最大寄存器数 | 资源约束 |
+| \`memoryClockRate\` | 显存时钟频率 | 计算显存带宽 |
+| \`memoryBusWidth\` | 显存位宽 | 计算显存带宽 |
+
+##### 计算能力
+
+| 字段 | 含义 | 用途 |
+|------|------|------|
+| \`major\` / \`minor\` | 计算能力版本 | 决定可用的 CUDA 特性 |
+| \`clockRate\` | GPU 核心频率 | 计算峰值算力 |
+| \`pciBusID\` / \`pciDeviceID\` | PCI 总线信息 | 多 GPU 时区分设备 |
+
+#### 3.3 自己写一个 mini deviceQuery
+
+除了运行官方示例，你也可以自己写一个简化版：
+
+\`\`\`cuda
+#include <cuda_runtime.h>
+#include <stdio.h>
+
+int main() {
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    printf("Detected %d CUDA device(s)\\n\\n", deviceCount);
+
+    for (int dev = 0; dev < deviceCount; ++dev) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, dev);
+
+        printf("Device %d: %s\\n", dev, prop.name);
+        printf("  Compute Capability: %d.%d\\n", prop.major, prop.minor);
+        printf("  Total Global Memory: %.2f GB\\n", prop.totalGlobalMem / (1024.0 * 1024 * 1024));
+        printf("  Number of SMs: %d\\n", prop.multiProcessorCount);
+        printf("  Warp Size: %d\\n", prop.warpSize);
+        printf("  Max Threads per Block: %d\\n", prop.maxThreadsPerBlock);
+        printf("  Max Threads per SM: %d\\n", prop.maxThreadsPerMultiProcessor);
+        printf("  Max Blocks per SM: %d\\n", prop.maxBlocksPerMultiProcessor);
+        printf("  Shared Memory per Block: %zu KB\\n", prop.sharedMemPerBlock / 1024);
+        printf("  Registers per Block: %d\\n", prop.regsPerBlock);
+        printf("  Memory Clock Rate: %.0f MHz\\n", prop.memoryClockRate / 1000.0);
+        printf("  Memory Bus Width: %d bits\\n", prop.memoryBusWidth);
+        printf("  GPU Clock Rate: %.0f MHz\\n\\n", prop.clockRate / 1000.0);
+    }
+
+    return 0;
+}
 \`\`\`
 
-记录你的 GPU 参数，并手绘 SM 架构简图。
+编译运行：
+
+\`\`\`bash
+nvcc -o mini_device_query mini_device_query.cu
+./mini_device_query
+\`\`\`
+
+#### 3.4 CUDA Occupancy Calculator
+
+![Occupancy Calculator 流程](images/occupancy_calculator_workflow.svg)
+
+CUDA Occupancy Calculator 是一个 Excel 工具，可以计算理论 occupancy。它通常位于：
+
+\`\`\`bash
+/usr/local/cuda/tools/CUDA_Occupancy_Calculator.xls
+\`\`\`
+
+或者在 NVIDIA 官网下载最新版。
+
+**使用步骤**：
+1. 输入 GPU 的 Compute Capability
+2. 输入 Kernel 的参数：
+   - Threads per block
+   - Registers per thread
+   - Shared memory per block
+3. 读取结果：
+   - Active Warps per SM
+   - Occupancy (%)
+   - Active Blocks per SM
+   - 哪个资源是瓶颈
+
+**示例**：
+- GPU：A100 (Compute Capability 8.0)
+- Block size：256 threads
+- Registers per thread：64
+- Shared memory per block：0
+
+计算结果会显示：
+- 理论 Occupancy：50%
+- 瓶颈资源：Registers per thread
+
+#### 3.5 CUDA C Programming Guide 第 5 章
+
+![CUDA Guide Chapter 5](images/cuda_guide_ch5.svg)
+
+CUDA C Programming Guide 第 5 章（Performance Guidelines）是 CUDA 性能优化的核心章节。重点包括：
+
+##### 5.1 Memory Coalescing（内存合并访问）
+- 一个 warp 内线程访问连续地址时，合并为少量事务
+- 非连续访问会导致多个事务，带宽利用率下降
+- 这是 Day 4 的核心内容
+
+##### 5.2 Shared Memory
+- 共享内存比 global memory 快得多
+- 注意 bank conflict
+- 使用 tiling 技术重用数据
+- 这是 Day 4-5 的核心内容
+
+##### 5.3 Occupancy
+- 与 Day 2 内容呼应
+- 官方对 occupancy 的建议
+- 如何平衡 occupancy 和 register usage
+
+##### 5.4 Instruction Throughput
+- 算术指令的吞吐量
+- 特殊函数（sin, cos, exp 等）的代价
+- 控制流指令的影响
+
+**阅读建议**：
+- 先通读一遍，建立整体框架
+- 遇到 Day 4-6 的具体问题时，再回来查对应小节
+- 重点关注官方提供的代码示例和图表
+
+---
+
+### Coding 任务
+
+#### 任务 1：运行 deviceQuery
+
+找到并运行官方 deviceQuery：
+
+\`\`\`bash
+# 尝试路径 1
+/usr/local/cuda/extras/demo_suite/deviceQuery
+
+# 尝试路径 2
+/usr/local/cuda/samples/1_Utilities/deviceQuery/deviceQuery
+
+# 如果找不到，搜索
+find /usr/local/cuda -name deviceQuery
+\`\`\`
+
+**记录输出**：把输出保存到 \`notes/my_gpu_info.md\`，后续会经常用到。
+
+#### 任务 2：创建自己的 mini_device_query
+
+参考上面的代码，创建一个简化的 deviceQuery，只输出你最关心的字段：
+
+\`\`\`bash
+nvcc -o kernels/mini_device_query kernels/mini_device_query.cu
+./kernels/mini_device_query
+\`\`\`
+
+#### 任务 3：使用 CUDA Occupancy Calculator
+
+1. 找到 CUDA Occupancy Calculator Excel 文件
+2. 输入你的 GPU 计算能力
+3. 输入 Day 2 kernel 的参数
+4. 记录理论 occupancy
+
+#### 任务 4：编译 occupancyCalculator sample
+
+\`\`\`bash
+cd /usr/local/cuda/samples/1_Utilities/occupancyCalculator
+make
+./occupancyCalculator
+\`\`\`
+
+阅读源码，理解它是如何调用 \`cudaOccupancyMaxPotentialBlockSize\` 的。
+
+---
+
+### 扩展实验
+
+#### 实验 1：计算你的 GPU 峰值算力
+
+**理论 FP32 峰值算力**：
+
+\`\`\`
+Peak FLOP/s = SM数量 × 每个SM的FP32 CUDA Cores × GPU频率 × 2
+\`\`\`
+
+乘以 2 是因为 CUDA Core 通常每个 cycle 可以执行 2 条 FMA 指令。
+
+以 A100 为例：
+- SM 数量：108
+- 每个 SM FP32 CUDA Cores：64
+- GPU 频率：1.41 GHz
+
+\`\`\`
+Peak FP32 = 108 × 64 × 1.41 × 2 = 19.49 TFLOP/s
+\`\`\`
+
+**理论显存带宽**：
+
+\`\`\`
+Bandwidth = memoryClockRate × memoryBusWidth / 8
+\`\`\`
+
+以 A100 为例：
+- memoryClockRate：1215 MHz = 1.215 × 10^9 Hz
+- memoryBusWidth：5120 bits
+
+\`\`\`
+Bandwidth = 1.215 × 10^9 × 5120 / 8 = 777.6 GB/s
+\`\`\`
+
+> 注意：deviceQuery 输出的 memoryClockRate 单位是 kHz，需要转换。
+
+#### 实验 2：对比不同 GPU 的参数
+
+如果你有多块 GPU（或查看同学/同事的 GPU），对比以下参数：
+
+| GPU | SM 数 | FP32 Cores/SM | 显存 | 带宽 | 计算能力 |
+|-----|-------|--------------|------|------|---------|
+| | | | | | |
+
+思考：为什么不同 GPU 的架构差异这么大？
+
+#### 实验 3：用 \`cudaChooseDevice\` 选择 GPU
+
+在多 GPU 机器上，可以用 \`cudaChooseDevice\` 选择最合适的 GPU：
+
+\`\`\`cuda
+#include <cuda_runtime.h>
+
+int main() {
+    cudaDeviceProp prop;
+    memset(&prop, 0, sizeof(prop));
+    prop.major = 7;  // 至少 Turing
+    prop.minor = 0;
+
+    int dev;
+    cudaChooseDevice(&dev, &prop);
+    printf("Best device: %d\\n", dev);
+
+    cudaSetDevice(dev);
+    return 0;
+}
+\`\`\`
+
+---
+
+### 常见错误与调试
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| deviceQuery 找不到 | CUDA Samples 未安装 | 重新安装 CUDA Toolkit 时勾选 Samples |
+| 输出 \`CUDA driver version is insufficient\` | 驱动版本太低 | 升级 NVIDIA 驱动 |
+| \`cudaGetDeviceProperties\` 返回错误 | device ID 无效 | 确保 dev 在 0 到 deviceCount-1 之间 |
+| Occupancy Calculator 打不开 | 缺少 Excel | 使用在线版本或安装 LibreOffice |
+
+---
 
 ### 验证 Checklist
 
 - [ ] 能独立运行 \`deviceQuery\` 并解读所有输出字段
+- [ ] 能自己写一个简化版 deviceQuery
 - [ ] 理解自己 GPU 的硬件限制参数
-- [ ] 画出自己 GPU 的 SM 架构简图
+- [ ] 能计算 GPU 的理论峰值算力
+- [ ] 能计算 GPU 的理论显存带宽
 - [ ] 用 CUDA Occupancy Calculator 验证 Day 2 的 occupancy
+- [ ] 阅读 CUDA C Programming Guide 第 5 章至少一遍
+- [ ] 画出自己 GPU 的 SM 架构简图
+
+---
+
+### 今日总结
+
+Day 3 我们学会了用官方工具了解自己的 GPU：
+
+1. **CUDA Samples** 是学习 CUDA 的最佳实践来源
+2. **\`deviceQuery\`** 可以告诉我们 GPU 的所有硬件参数
+3. **\`cudaGetDeviceProperties\`** 是在代码中查询 GPU 属性的核心 API
+4. **CUDA Occupancy Calculator** 可以计算理论 occupancy
+5. **Programming Guide 第 5 章** 是性能优化的官方指南
+6. 我们学会了计算 GPU 的**峰值算力**和**显存带宽**
+
+掌握这些后，你才能真正"了解你的武器"，知道它的极限在哪里。
+
+---
 
 ### 面试要点
 
-- 如何计算显存带宽？\`bandwidth = memoryClockRate * memoryBusWidth / 8\`
-- SM 数量、warp 大小、最大 block 数的关系？
-- 你当前 GPU 的峰值算力是多少？
+1. **如何计算显存带宽？**
+   \`\`\`
+   bandwidth = memoryClockRate * memoryBusWidth / 8
+   \`\`\`
+   注意单位转换：deviceQuery 输出的 memoryClockRate 是 kHz。
+
+2. **如何计算 GPU 峰值算力？**
+   \`\`\`
+   Peak FLOP/s = SM数量 × 每个SM的FP32 CUDA Cores × GPU频率 × 2
+   \`\`\`
+   乘以 2 是因为每个 CUDA Core 每 cycle 可以执行 2 条 FMA。
+
+3. **SM 数量、warp 大小、最大 block 数的关系？**
+   - SM 数量 × 每个 SM 最大 warp 数 = GPU 总 warp 容量
+   - Warp 大小通常为 32
+   - 最大 block 数 × 每个 block 最大 thread 数 ≤ 每个 SM 最大 thread 数
+
+4. **你当前 GPU 的峰值算力是多少？**
+   - 需要运行 deviceQuery 获取具体参数后计算
+   - 以 A100 为例：约 19.5 TFLOP/s (FP32)
+
+5. **CUDA Occupancy Calculator 需要什么输入？**
+   - GPU Compute Capability
+   - Threads per block
+   - Registers per thread
+   - Shared memory per block
 
 ---`;
 
