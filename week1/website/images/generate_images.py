@@ -731,6 +731,139 @@ def matrix_transpose() -> str:
   <text x="360" y="365" text-anchor="middle" font-size="13" fill="#8b949e">解决：用 Shared Memory 做中间缓冲，调整读写模式</text>
 </svg>'''
 
+
+def shared_memory_bank_structure() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory Bank 结构</text>
+
+  <text x="360" y="65" text-anchor="middle" font-size="14" fill="#8b949e">32 个 bank，每个 bank 4 bytes（对于 float 类型，每行对应一个 warp 的访问）</text>
+
+  <!-- Bank headers -->
+  <g transform="translate(60, 90)">
+    <rect x="0" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="25" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 0</text>
+    <rect x="50" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="75" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 1</text>
+    <rect x="100" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="125" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 2</text>
+    <rect x="150" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="175" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">...</text>
+    <rect x="200" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="225" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 31</text>
+  </g>
+
+  <!-- Address mapping -->
+  <text x="60" y="155" font-size="13" fill="#c9d1d9">地址到 bank 的映射：</text>
+  <text x="60" y="180" font-family="monospace" font-size="13" fill="#58a6ff">bank = (address / 4) % 32</text>
+
+  <!-- Examples -->
+  <rect x="60" y="210" width="600" height="70" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="70" y="235" font-size="12" fill="#c9d1d9">地址 0, 128, 256 ... → Bank 0</text>
+  <text x="70" y="255" font-size="12" fill="#c9d1d9">地址 4, 132, 260 ... → Bank 1</text>
+  <text x="70" y="275" font-size="12" fill="#c9d1d9">地址 i * 4 且 i % 32 == k → Bank k</text>
+
+  <!-- Note -->
+  <text x="360" y="320" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">一个 warp 内多个线程访问同一 bank 的不同地址 → Bank Conflict</text>
+  <text x="360" y="345" text-anchor="middle" font-size="13" fill="#3fb950">一个 warp 内多个线程访问同一地址 → Broadcast，无 Conflict</text>
+  <text x="360" y="370" text-anchor="middle" font-size="13" fill="#8b949e">一个 warp 内线程访问不同 bank → 无 Conflict</text>
+</svg>'''
+
+
+def padding_solution() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+  <rect width="720" height="420" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Padding 解决 Bank Conflict</text>
+
+  <!-- Without padding -->
+  <text x="180" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#f85149">❌ 无 Padding</text>
+  <text x="180" y="95" text-anchor="middle" font-size="12" fill="#8b949e">float tile[32][32]</text>
+
+  <g transform="translate(60, 110)">
+    <rect x="0" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="15" y="20" text-anchor="middle" font-size="9" fill="#fff">B0</text>
+    <rect x="30" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="45" y="20" text-anchor="middle" font-size="9" fill="#fff">B1</text>
+    <rect x="60" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="75" y="20" text-anchor="middle" font-size="9" fill="#fff">B2</text>
+    <rect x="90" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="105" y="20" text-anchor="middle" font-size="9" fill="#fff">...</text>
+    <rect x="120" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="135" y="20" text-anchor="middle" font-size="9" fill="#fff">B31</text>
+
+    <rect x="0" y="30" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="15" y="50" text-anchor="middle" font-size="9" fill="#fff">B0</text>
+    <rect x="30" y="30" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
+    <text x="45" y="50" text-anchor="middle" font-size="9" fill="#fff">B1</text>
+
+    <text x="75" y="90" text-anchor="middle" font-size="11" fill="#f85149">同一列的数据都在同一个 bank</text>
+    <text x="75" y="110" text-anchor="middle" font-size="11" fill="#f85149">按列读 → 32-way conflict</text>
+  </g>
+
+  <!-- With padding -->
+  <text x="540" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#3fb950">✅ 有 Padding</text>
+  <text x="540" y="95" text-anchor="middle" font-size="12" fill="#8b949e">float tile[32][33]</text>
+
+  <g transform="translate(420, 110)">
+    <rect x="0" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
+    <text x="15" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B0</text>
+    <rect x="30" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
+    <text x="45" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B1</text>
+    <rect x="60" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
+    <text x="75" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B2</text>
+    <rect x="90" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
+    <text x="105" y="20" text-anchor="middle" font-size="9" fill="#0d1117">...</text>
+    <rect x="120" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
+    <text x="135" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B31</text>
+    <rect x="150" y="0" width="20" height="30" fill="#30363d" stroke="#484f58"/>
+    <text x="160" y="20" text-anchor="middle" font-size="8" fill="#8b949e">pad</text>
+
+    <rect x="0" y="30" width="30" height="30" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+    <text x="15" y="50" text-anchor="middle" font-size="9" fill="#fff">B1</text>
+    <rect x="30" y="30" width="30" height="30" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+    <text x="45" y="50" text-anchor="middle" font-size="9" fill="#fff">B2</text>
+
+    <text x="85" y="90" text-anchor="middle" font-size="11" fill="#3fb950">每行多一个 padding 单元</text>
+    <text x="85" y="110" text-anchor="middle" font-size="11" fill="#3fb950">同一列的数据错开 bank</text>
+  </g>
+
+  <!-- Code -->
+  <rect x="60" y="260" width="600" height="120" rx="8" fill="#1f2937" stroke="#30363d" stroke-width="2"/>
+  <text x="70" y="290" font-family="monospace" font-size="13" fill="#c9d1d9">// 有 conflict</text>
+  <text x="70" y="310" font-family="monospace" font-size="13" fill="#c9d1d9">__shared__ float tile[TILE_DIM][TILE_DIM];</text>
+  <text x="70" y="340" font-family="monospace" font-size="13" fill="#c9d1d9">// 无 conflict</text>
+  <text x="70" y="360" font-family="monospace" font-size="13" fill="#c9d1d9">__shared__ float tile[TILE_DIM][TILE_DIM + 1];</text>
+</svg>'''
+
+
+def bank_access_patterns() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <rect width="720" height="480" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory 访问模式总结</text>
+
+  <!-- Pattern 1: No conflict -->
+  <rect x="60" y="70" width="600" height="100" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="80" y="100" font-size="15" font-weight="bold" fill="#3fb950">✅ 模式 1：每个线程访问不同 bank</text>
+  <text x="80" y="125" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x]  // 线程 i 访问 bank i</text>
+  <text x="80" y="150" font-size="12" fill="#8b949e">结果：1 个 cycle 完成，最快</text>
+
+  <!-- Pattern 2: Broadcast -->
+  <rect x="60" y="190" width="600" height="100" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="80" y="220" font-size="15" font-weight="bold" fill="#58a6ff">✅ 模式 2：所有线程访问同一地址（Broadcast）</text>
+  <text x="80" y="245" font-family="monospace" font-size="12" fill="#c9d1d9">tile[0]  // 所有线程读同一个地址</text>
+  <text x="80" y="270" font-size="12" fill="#8b949e">结果：1 个 cycle 完成，有专门广播机制</text>
+
+  <!-- Pattern 3: 2-way conflict -->
+  <rect x="60" y="310" width="600" height="70" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="80" y="340" font-size="15" font-weight="bold" fill="#e3b341">⚠️ 模式 3：2-way bank conflict</text>
+  <text x="80" y="365" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x % 2]  // 线程分成两组访问两个 bank</text>
+
+  <!-- Pattern 4: 32-way conflict -->
+  <rect x="60" y="400" width="600" height="60" rx="8" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
+  <text x="80" y="425" font-size="15" font-weight="bold" fill="#f85149">❌ 模式 4：32-way bank conflict（最坏情况）</text>
+  <text x="80" y="450" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x * 32]  // 所有线程访问同一个 bank</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -752,6 +885,9 @@ def main() -> None:
         "stride_access.svg": stride_access(),
         "shared_memory_tiling.svg": shared_memory_tiling(),
         "matrix_transpose.svg": matrix_transpose(),
+        "shared_memory_bank_structure.svg": shared_memory_bank_structure(),
+        "padding_solution.svg": padding_solution(),
+        "bank_access_patterns.svg": bank_access_patterns(),
     }
 
     for filename, content in diagrams.items():
