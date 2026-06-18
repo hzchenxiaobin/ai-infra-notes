@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Week 1 面试准备框架</text>
+
+  <!-- Three pillars -->
+  <rect x="60" y="90" width="190" height="220" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="155" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#58a6ff">概念</text>
+  <text x="80" y="160" font-size="12" fill="#c9d1d9">• SM / Warp / SIMT</text>
+  <text x="80" y="185" font-size="12" fill="#c9d1d9">• Occupancy</text>
+  <text x="80" y="210" font-size="12" fill="#c9d1d9">• Coalescing</text>
+  <text x="80" y="235" font-size="12" fill="#c9d1d9">• Bank Conflict</text>
+  <text x="80" y="260" font-size="12" fill="#c9d1d9">• Roofline</text>
+
+  <rect x="265" y="90" width="190" height="220" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="360" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#3fb950">代码</text>
+  <text x="285" y="160" font-size="12" fill="#c9d1d9">• 写第一个 CUDA</text>
+  <text x="285" y="185" font-size="12" fill="#c9d1d9">• 查寄存器用量</text>
+  <text x="285" y="210" font-size="12" fill="#c9d1d9">• 矩阵转置优化</text>
+  <text x="285" y="235" font-size="12" fill="#c9d1d9">• Bank conflict 实验</text>
+  <text x="285" y="260" font-size="12" fill="#c9d1d9">• ncu / nsys 使用</text>
+
+  <rect x="470" y="90" width="190" height="220" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="565" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#e3b341">表达</text>
+  <text x="490" y="160" font-size="12" fill="#c9d1d9">• 用自己的话解释</text>
+  <text x="490" y="185" font-size="12" fill="#c9d1d9">• 画图说明</text>
+  <text x="490" y="210" font-size="12" fill="#c9d1d9">• 举实际例子</text>
+  <text x="490" y="235" font-size="12" fill="#c9d1d9">• 说出优化思路</text>
+  <text x="490" y="260" font-size="12" fill="#c9d1d9">• 承认不懂的地方</text>
+
+  <!-- Bottom -->
+  <rect x="60" y="340" width="600" height="40" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="365" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">面试不是背诵，而是展示你理解概念、能动手、会思考</text>
+</svg>

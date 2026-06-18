@@ -1010,6 +1010,142 @@ def memory_compute_bound() -> str:
   <text x="400" y="330" font-size="12" fill="#8b949e">• 提高 occupancy</text>
 </svg>'''
 
+
+def week1_knowledge_map() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520">
+  <rect width="720" height="520" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Week 1 知识地图</text>
+
+  <!-- Center -->
+  <circle cx="360" cy="160" r="50" fill="#1f6feb" stroke="#58a6ff" stroke-width="3"/>
+  <text x="360" y="155" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">GPU 性能</text>
+  <text x="360" y="175" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">= Memory + 并行度</text>
+
+  <!-- Branches -->
+  <line x1="320" y1="200" x2="180" y2="280" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="400" y1="200" x2="540" y2="280" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="360" y1="210" x2="360" y2="300" stroke="#58a6ff" stroke-width="2"/>
+
+  <!-- Day 1-2 -->
+  <rect x="60" y="280" width="180" height="180" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="150" y="310" text-anchor="middle" font-size="14" font-weight="bold" fill="#58a6ff">执行模型</text>
+  <text x="75" y="340" font-size="12" fill="#c9d1d9">• SM / Warp / SIMT</text>
+  <text x="75" y="365" font-size="12" fill="#c9d1d9">• Grid / Block / Thread</text>
+  <text x="75" y="390" font-size="12" fill="#c9d1d9">• Occupancy</text>
+  <text x="75" y="415" font-size="12" fill="#8b949e">Day 1-2</text>
+
+  <!-- Day 3 -->
+  <rect x="270" y="300" width="180" height="160" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="360" y="330" text-anchor="middle" font-size="14" font-weight="bold" fill="#3fb950">硬件认知</text>
+  <text x="285" y="360" font-size="12" fill="#c9d1d9">• deviceQuery</text>
+  <text x="285" y="385" font-size="12" fill="#c9d1d9">• GPU 峰值算力</text>
+  <text x="285" y="410" font-size="12" fill="#c9d1d9">• 显存带宽</text>
+  <text x="285" y="435" font-size="12" fill="#8b949e">Day 3</text>
+
+  <!-- Day 4-6 -->
+  <rect x="480" y="280" width="180" height="180" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="570" y="310" text-anchor="middle" font-size="14" font-weight="bold" fill="#e3b341">内存优化</text>
+  <text x="495" y="340" font-size="12" fill="#c9d1d9">• Coalescing</text>
+  <text x="495" y="365" font-size="12" fill="#c9d1d9">• Shared Memory Tiling</text>
+  <text x="495" y="390" font-size="12" fill="#c9d1d9">• Bank Conflict</text>
+  <text x="495" y="415" font-size="12" fill="#c9d1d9">• Nsight Profiling</text>
+  <text x="495" y="440" font-size="12" fill="#8b949e">Day 4-6</text>
+
+  <!-- Bottom note -->
+  <text x="360" y="500" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Week 1 核心：建立 GPU 性能直觉</text>
+</svg>'''
+
+
+def optimization_decision_tree() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <rect width="720" height="480" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 性能优化决策树</text>
+
+  <!-- Start -->
+  <rect x="280" y="70" width="160" height="50" rx="8" fill="#1f6feb" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="100" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Profiling 找到瓶颈</text>
+
+  <!-- Question 1 -->
+  <rect x="280" y="150" width="160" height="50" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="175" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Occupancy 低？</text>
+
+  <line x1="360" y1="120" x2="360" y2="150" stroke="#8b949e" stroke-width="2"/>
+
+  <!-- Yes branch -->
+  <line x1="280" y1="175" x2="160" y2="230" stroke="#8b949e" stroke-width="2"/>
+  <text x="200" y="195" font-size="11" fill="#3fb950">是</text>
+
+  <rect x="60" y="230" width="180" height="80" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="150" y="255" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">优化 Occupancy</text>
+  <text x="70" y="280" font-size="11" fill="#8b949e">• 减少寄存器使用</text>
+  <text x="70" y="300" font-size="11" fill="#8b949e">• 调整 block 大小</text>
+
+  <!-- No branch -->
+  <line x1="440" y1="175" x2="560" y2="230" stroke="#8b949e" stroke-width="2"/>
+  <text x="500" y="195" font-size="11" fill="#f85149">否</text>
+
+  <rect x="480" y="230" width="180" height="80" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="570" y="255" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">判断瓶颈类型</text>
+  <text x="490" y="280" font-size="11" fill="#8b949e">• Memory-bound?</text>
+  <text x="490" y="300" font-size="11" fill="#8b949e">• Compute-bound?</text>
+
+  <!-- Memory bound -->
+  <line x1="520" y1="310" x2="440" y2="360" stroke="#8b949e" stroke-width="2"/>
+  <text x="470" y="335" font-size="11" fill="#e3b341">Memory</text>
+
+  <rect x="320" y="360" width="180" height="90" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="410" y="385" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">内存优化</text>
+  <text x="330" y="410" font-size="11" fill="#8b949e">• Coalesced access</text>
+  <text x="330" y="430" font-size="11" fill="#8b949e">• Shared memory tiling</text>
+  <text x="330" y="450" font-size="11" fill="#8b949e">• 减少数据读写</text>
+
+  <!-- Compute bound -->
+  <line x1="620" y1="310" x2="620" y2="360" stroke="#8b949e" stroke-width="2"/>
+  <text x="625" y="340" font-size="11" fill="#3fb950">Compute</text>
+
+  <rect x="530" y="360" width="180" height="90" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="620" y="385" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">计算优化</text>
+  <text x="540" y="410" font-size="11" fill="#8b949e">• Tensor Core</text>
+  <text x="540" y="430" font-size="11" fill="#8b949e">• 指令级优化</text>
+  <text x="540" y="450" font-size="11" fill="#8b949e">• 提高指令吞吐</text>
+</svg>'''
+
+
+def week1_interview_prep() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Week 1 面试准备框架</text>
+
+  <!-- Three pillars -->
+  <rect x="60" y="90" width="190" height="220" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="155" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#58a6ff">概念</text>
+  <text x="80" y="160" font-size="12" fill="#c9d1d9">• SM / Warp / SIMT</text>
+  <text x="80" y="185" font-size="12" fill="#c9d1d9">• Occupancy</text>
+  <text x="80" y="210" font-size="12" fill="#c9d1d9">• Coalescing</text>
+  <text x="80" y="235" font-size="12" fill="#c9d1d9">• Bank Conflict</text>
+  <text x="80" y="260" font-size="12" fill="#c9d1d9">• Roofline</text>
+
+  <rect x="265" y="90" width="190" height="220" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="360" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#3fb950">代码</text>
+  <text x="285" y="160" font-size="12" fill="#c9d1d9">• 写第一个 CUDA</text>
+  <text x="285" y="185" font-size="12" fill="#c9d1d9">• 查寄存器用量</text>
+  <text x="285" y="210" font-size="12" fill="#c9d1d9">• 矩阵转置优化</text>
+  <text x="285" y="235" font-size="12" fill="#c9d1d9">• Bank conflict 实验</text>
+  <text x="285" y="260" font-size="12" fill="#c9d1d9">• ncu / nsys 使用</text>
+
+  <rect x="470" y="90" width="190" height="220" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="565" y="125" text-anchor="middle" font-size="15" font-weight="bold" fill="#e3b341">表达</text>
+  <text x="490" y="160" font-size="12" fill="#c9d1d9">• 用自己的话解释</text>
+  <text x="490" y="185" font-size="12" fill="#c9d1d9">• 画图说明</text>
+  <text x="490" y="210" font-size="12" fill="#c9d1d9">• 举实际例子</text>
+  <text x="490" y="235" font-size="12" fill="#c9d1d9">• 说出优化思路</text>
+  <text x="490" y="260" font-size="12" fill="#c9d1d9">• 承认不懂的地方</text>
+
+  <!-- Bottom -->
+  <rect x="60" y="340" width="600" height="40" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="365" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">面试不是背诵，而是展示你理解概念、能动手、会思考</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -1038,6 +1174,9 @@ def main() -> None:
         "profiling_workflow.svg": profiling_workflow(),
         "ncu_metrics_overview.svg": ncu_metrics_overview(),
         "memory_compute_bound.svg": memory_compute_bound(),
+        "week1_knowledge_map.svg": week1_knowledge_map(),
+        "optimization_decision_tree.svg": optimization_decision_tree(),
+        "week1_interview_prep.svg": week1_interview_prep(),
     }
 
     for filename, content in diagrams.items():
