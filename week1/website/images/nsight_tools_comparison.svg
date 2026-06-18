@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Nsight Compute vs Nsight Systems</text>
+
+  <!-- Nsight Compute -->
+  <rect x="60" y="80" width="280" height="260" rx="12" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="200" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#58a6ff">Nsight Compute</text>
+  <text x="200" y="140" text-anchor="middle" font-size="13" fill="#c9d1d9">(ncu)</text>
+
+  <text x="80" y="175" font-size="13" fill="#c9d1d9">• Kernel 级分析</text>
+  <text x="80" y="200" font-size="13" fill="#c9d1d9">• 详细硬件指标</text>
+  <text x="80" y="225" font-size="13" fill="#c9d1d9">• Occupancy / Throughput</text>
+  <text x="80" y="250" font-size="13" fill="#c9d1d9">• Memory / Compute bound</text>
+  <text x="80" y="275" font-size="13" fill="#c9d1d9">• Roofline 分析</text>
+  <text x="80" y="300" font-size="13" fill="#8b949e">适合：优化单个 kernel</text>
+
+  <!-- Nsight Systems -->
+  <rect x="380" y="80" width="280" height="260" rx="12" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="520" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#3fb950">Nsight Systems</text>
+  <text x="520" y="140" text-anchor="middle" font-size="13" fill="#c9d1d9">(nsys)</text>
+
+  <text x="400" y="175" font-size="13" fill="#c9d1d9">• 应用级时间线</text>
+  <text x="400" y="200" font-size="13" fill="#c9d1d9">• CPU / GPU 交互</text>
+  <text x="400" y="225" font-size="13" fill="#c9d1d9">• Kernel launch overhead</text>
+  <text x="400" y="250" font-size="13" fill="#c9d1d9">• 多流并行分析</text>
+  <text x="400" y="275" font-size="13" fill="#c9d1d9">• 端到端 latency</text>
+  <text x="400" y="300" font-size="13" fill="#8b949e">适合：系统级性能分析</text>
+
+  <!-- Bottom note -->
+  <text x="360" y="370" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">先用 nsys 找瓶颈 kernel，再用 ncu 深入分析该 kernel</text>
+</svg>

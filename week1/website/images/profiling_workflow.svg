@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+  <rect width="720" height="320" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU Profiling 工作流程</text>
+
+  <!-- Steps -->
+  <rect x="60" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="120" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. 运行程序</text>
+  <text x="120" y="150" text-anchor="middle" font-size="12" fill="#8b949e">确认功能正确</text>
+
+  <line x1="180" y1="130" x2="220" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="220" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="280" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. nsys</text>
+  <text x="280" y="150" text-anchor="middle" font-size="12" fill="#8b949e">找耗时 kernel</text>
+
+  <line x1="340" y1="130" x2="380" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="380" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="440" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. ncu</text>
+  <text x="440" y="150" text-anchor="middle" font-size="12" fill="#8b949e">分析瓶颈 kernel</text>
+
+  <line x1="500" y1="130" x2="540" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="540" y="90" width="120" height="80" rx="8" fill="#238636" opacity="0.3" stroke="#3fb950" stroke-width="2"/>
+  <text x="600" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">4. 优化</text>
+  <text x="600" y="150" text-anchor="middle" font-size="12" fill="#8b949e">针对性改进</text>
+
+  <!-- Questions -->
+  <rect x="60" y="210" width="600" height="80" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="240" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">每次 profiling 要回答的问题</text>
+  <text x="360" y="270" text-anchor="middle" font-size="13" fill="#8b949e">哪个 kernel 最耗时？→ 它是 memory-bound 还是 compute-bound？→ 具体瓶颈是什么？→ 如何优化？</text>
+</svg>

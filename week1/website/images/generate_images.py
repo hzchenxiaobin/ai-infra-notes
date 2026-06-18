@@ -864,6 +864,152 @@ def bank_access_patterns() -> str:
   <text x="80" y="450" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x * 32]  // 所有线程访问同一个 bank</text>
 </svg>'''
 
+
+def nsight_tools_comparison() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+  <rect width="720" height="400" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Nsight Compute vs Nsight Systems</text>
+
+  <!-- Nsight Compute -->
+  <rect x="60" y="80" width="280" height="260" rx="12" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="200" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#58a6ff">Nsight Compute</text>
+  <text x="200" y="140" text-anchor="middle" font-size="13" fill="#c9d1d9">(ncu)</text>
+
+  <text x="80" y="175" font-size="13" fill="#c9d1d9">• Kernel 级分析</text>
+  <text x="80" y="200" font-size="13" fill="#c9d1d9">• 详细硬件指标</text>
+  <text x="80" y="225" font-size="13" fill="#c9d1d9">• Occupancy / Throughput</text>
+  <text x="80" y="250" font-size="13" fill="#c9d1d9">• Memory / Compute bound</text>
+  <text x="80" y="275" font-size="13" fill="#c9d1d9">• Roofline 分析</text>
+  <text x="80" y="300" font-size="13" fill="#8b949e">适合：优化单个 kernel</text>
+
+  <!-- Nsight Systems -->
+  <rect x="380" y="80" width="280" height="260" rx="12" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="520" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#3fb950">Nsight Systems</text>
+  <text x="520" y="140" text-anchor="middle" font-size="13" fill="#c9d1d9">(nsys)</text>
+
+  <text x="400" y="175" font-size="13" fill="#c9d1d9">• 应用级时间线</text>
+  <text x="400" y="200" font-size="13" fill="#c9d1d9">• CPU / GPU 交互</text>
+  <text x="400" y="225" font-size="13" fill="#c9d1d9">• Kernel launch overhead</text>
+  <text x="400" y="250" font-size="13" fill="#c9d1d9">• 多流并行分析</text>
+  <text x="400" y="275" font-size="13" fill="#c9d1d9">• 端到端 latency</text>
+  <text x="400" y="300" font-size="13" fill="#8b949e">适合：系统级性能分析</text>
+
+  <!-- Bottom note -->
+  <text x="360" y="370" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">先用 nsys 找瓶颈 kernel，再用 ncu 深入分析该 kernel</text>
+</svg>'''
+
+
+def profiling_workflow() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+  <rect width="720" height="320" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU Profiling 工作流程</text>
+
+  <!-- Steps -->
+  <rect x="60" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="120" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. 运行程序</text>
+  <text x="120" y="150" text-anchor="middle" font-size="12" fill="#8b949e">确认功能正确</text>
+
+  <line x1="180" y1="130" x2="220" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="220" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="280" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. nsys</text>
+  <text x="280" y="150" text-anchor="middle" font-size="12" fill="#8b949e">找耗时 kernel</text>
+
+  <line x1="340" y1="130" x2="380" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="380" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="440" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. ncu</text>
+  <text x="440" y="150" text-anchor="middle" font-size="12" fill="#8b949e">分析瓶颈 kernel</text>
+
+  <line x1="500" y1="130" x2="540" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <rect x="540" y="90" width="120" height="80" rx="8" fill="#238636" opacity="0.3" stroke="#3fb950" stroke-width="2"/>
+  <text x="600" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">4. 优化</text>
+  <text x="600" y="150" text-anchor="middle" font-size="12" fill="#8b949e">针对性改进</text>
+
+  <!-- Questions -->
+  <rect x="60" y="210" width="600" height="80" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="240" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">每次 profiling 要回答的问题</text>
+  <text x="360" y="270" text-anchor="middle" font-size="13" fill="#8b949e">哪个 kernel 最耗时？→ 它是 memory-bound 还是 compute-bound？→ 具体瓶颈是什么？→ 如何优化？</text>
+</svg>'''
+
+
+def ncu_metrics_overview() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+  <rect width="720" height="440" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">ncu 常用指标分类</text>
+
+  <!-- Occupancy -->
+  <rect x="60" y="80" width="190" height="120" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="155" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">并行度</text>
+  <text x="75" y="140" font-size="12" fill="#8b949e">sm__occupancy.avg</text>
+  <text x="75" y="160" font-size="12" fill="#8b949e">sm__warps_active.avg</text>
+  <text x="75" y="180" font-size="12" fill="#8b949e">launch__registers_per_thread</text>
+
+  <!-- Memory -->
+  <rect x="265" y="80" width="190" height="120" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="360" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">内存</text>
+  <text x="280" y="140" font-size="12" fill="#8b949e">dram__throughput.avg</text>
+  <text x="280" y="160" font-size="12" fill="#8b949e">l1tex__t_bytes_pipe_lsu...</text>
+  <text x="280" y="180" font-size="12" fill="#8b949e">l1tex__data_bank_conflicts</text>
+
+  <!-- Compute -->
+  <rect x="470" y="80" width="190" height="120" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="565" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">计算</text>
+  <text x="485" y="140" font-size="12" fill="#8b949e">sm__throughput.avg</text>
+  <text x="485" y="160" font-size="12" fill="#8b949e">sm__cycles_elapsed.avg</text>
+  <text x="485" y="180" font-size="12" fill="#8b949e">smsp__sass_thread_inst_executed</text>
+
+  <!-- Latency -->
+  <rect x="60" y="230" width="190" height="120" rx="8" fill="#8957e5" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
+  <text x="155" y="260" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">延迟</text>
+  <text x="75" y="290" font-size="12" fill="#8b949e">sm__cycles_elapsed.avg</text>
+  <text x="75" y="310" font-size="12" fill="#8b949e">launch__duration</text>
+  <text x="75" y="330" font-size="12" fill="#8b949e">gpu__time_duration.avg</text>
+
+  <!-- Bottleneck -->
+  <rect x="265" y="230" width="395" height="120" rx="8" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
+  <text x="462" y="260" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">瓶颈判断</text>
+  <text x="285" y="290" font-size="12" fill="#8b949e">Memory Throughput 高 + Compute Throughput 低 → Memory-bound</text>
+  <text x="285" y="315" font-size="12" fill="#8b949e">Compute Throughput 高 + Memory Throughput 低 → Compute-bound</text>
+  <text x="285" y="340" font-size="12" fill="#8b949e">两者都低 → Latency / Occupancy 问题</text>
+</svg>'''
+
+
+def memory_compute_bound() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <rect width="720" height="360" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">如何判断 Kernel 瓶颈类型</text>
+
+  <!-- Memory bound -->
+  <rect x="60" y="80" width="280" height="220" rx="12" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
+  <text x="200" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#e3b341">Memory-Bound</text>
+
+  <text x="80" y="155" font-size="13" fill="#c9d1d9">特征：</text>
+  <text x="80" y="180" font-size="12" fill="#8b949e">• dram__throughput 接近峰值</text>
+  <text x="80" y="205" font-size="12" fill="#8b949e">• sm__throughput 较低</text>
+  <text x="80" y="230" font-size="12" fill="#8b949e">• Arithmetic Intensity 低</text>
+
+  <text x="80" y="270" font-size="13" fill="#c9d1d9">优化方向：</text>
+  <text x="80" y="290" font-size="12" fill="#8b949e">• 合并内存访问</text>
+  <text x="80" y="310" font-size="12" fill="#8b949e">• 用 shared memory / cache</text>
+  <text x="80" y="330" font-size="12" fill="#8b949e">• 减少数据读写</text>
+
+  <!-- Compute bound -->
+  <rect x="380" y="80" width="280" height="220" rx="12" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="520" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#3fb950">Compute-Bound</text>
+
+  <text x="400" y="155" font-size="13" fill="#c9d1d9">特征：</text>
+  <text x="400" y="180" font-size="12" fill="#8b949e">• sm__throughput 接近峰值</text>
+  <text x="400" y="205" font-size="12" fill="#8b949e">• dram__throughput 较低</text>
+  <text x="400" y="230" font-size="12" fill="#8b949e">• Arithmetic Intensity 高</text>
+
+  <text x="400" y="270" font-size="13" fill="#c9d1d9">优化方向：</text>
+  <text x="400" y="290" font-size="12" fill="#8b949e">• 使用 Tensor Core</text>
+  <text x="400" y="310" font-size="12" fill="#8b949e">• 指令级优化</text>
+  <text x="400" y="330" font-size="12" fill="#8b949e">• 提高 occupancy</text>
+</svg>'''
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
@@ -888,6 +1034,10 @@ def main() -> None:
         "shared_memory_bank_structure.svg": shared_memory_bank_structure(),
         "padding_solution.svg": padding_solution(),
         "bank_access_patterns.svg": bank_access_patterns(),
+        "nsight_tools_comparison.svg": nsight_tools_comparison(),
+        "profiling_workflow.svg": profiling_workflow(),
+        "ncu_metrics_overview.svg": ncu_metrics_overview(),
+        "memory_compute_bound.svg": memory_compute_bound(),
     }
 
     for filename, content in diagrams.items():
