@@ -180,10 +180,22 @@ GPU
 | 显存 | 80 GB HBM2e | 80 GB HBM3 | 141 GB HBM3e |
 | 内存带宽 | ~2 TB/s | ~3.35 TB/s | ~4.8 TB/s |
 | FP16 Tensor Core 算力 | 312 TFLOPS | 989 TFLOPS | 989 TFLOPS |
-| SM 数量 | 108 | 132 / 144 | 132 / 144 |
+| SM 数量 | 108 | 132 | 132 |
 | 典型场景 | 通用训练/推理 | 大规模训练 | 大模型推理、长上下文 |
 
 **H200 的核心价值不是算力翻倍，而是显存容量和带宽的大幅提升**。对于 LLM 推理，模型权重和 KV Cache 都占用大量显存，H200 的 141 GB 显存可以运行更大模型或支持更长上下文；同时更高的内存带宽能显著加速 memory-bound 的推理负载（如 Attention、采样阶段）。
+
+**H200 的 SM 内部数据（Hopper 架构）**：
+
+H200 与 H100 采用相同的 Hopper SM 设计，以 H200 为例：
+
+- 132 个 SM
+- 每个 SM：128 个 FP32 CUDA Cores、64 个 FP64 CUDA Cores、4 个 Fourth-Generation Tensor Core
+- 每个 SM：256 KB 寄存器文件
+- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
+- 每个 SM：最大 228 KB Shared Memory / L1 Cache（可配置）
+
+与 A100 相比，Hopper 每个 SM 的 FP32 CUDA Core 数量从 64 提升到 128，Tensor Core 升级到第四代，支持 FP8 精度，矩阵乘加吞吐显著提高。
 
 **Tensor Core** 是专门用于矩阵乘加的硬件单元，是现代深度学习算力的核心来源。
 
