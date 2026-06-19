@@ -133,6 +133,35 @@ GPU
 - 一个 SM 可以同时执行多个 block
 - 一个 SM 有硬件资源上限（寄存器、共享内存、最大 thread 数）
 
+##### 为什么同一个 block 不能跨 SM？
+
+因为 **block 是 GPU 资源共享和线程同步的基本单位，而这些资源都是 SM 私有的**。同一个 block 内的线程需要：
+
+1. **共享同一块 Shared Memory**
+2. **通过 `__syncthreads()` 直接同步**
+3. **被同一个 Warp Scheduler 调度**
+
+这三件事都只能在 **同一个 SM 内部** 完成，所以 block 不能被拆到不同 SM 上执行。
+
+| 资源/机制 | 为什么必须在同一个 SM 内 |
+|-----------|------------------------|
+| **Shared Memory** | Shared Memory 是 SM 的私有片上内存，不同 SM 之间无法直接访问彼此的 Shared Memory。 |
+| **`__syncthreads()`** | 这是 block 内所有线程的同步原语，依赖 SM 内部的硬件 barrier。跨 SM 同步没有这么轻量级的原语。 |
+| **Warp Scheduler** | 一个 SM 内部有一个或多个 Warp Scheduler，负责调度该 SM 上的 warp。block 的 warp 必须归同一个 scheduler 管。 |
+| **寄存器分配** | 每个 block 需要的寄存器总量需要在启动时从一个 SM 的寄存器文件里分配。 |
+| **硬件调度粒度** | GPU 调度器以整个 block 为单位分配给 SM，这样设计最简单高效。 |
+
+**形象类比**：把 **SM** 想象成一间教室，一个 **block** 就像一个班级。班级里的学生（threads）需要在**同一间教室**里上课，共用**同一块黑板**（Shared Memory），听**同一个老师**（Warp Scheduler）指挥。你不能让班级一半学生去 A 教室、另一半去 B 教室，否则他们没法共用黑板，也没法一起听讲。
+
+**注意区分两个概念**：
+
+| 说法 | 是否正确 |
+|------|---------|
+| 一个 block 不能跨 SM | ✅ 正确 |
+| 一个 SM 只能运行一个 block | ❌ 错误。一个 SM 可以同时运行多个 block，只要资源（shared memory、寄存器、thread 数）够用。 |
+
+> **一句话总结**：Block 是 SM 内部资源共享与同步的边界，因此同一个 block 的所有线程必须落在同一个 SM 上执行；但一个 SM 可以同时承载多个 block。
+
 #### 1.2 SM 架构详解
 
 ![SM 架构简图](images/sm_architecture.svg)
