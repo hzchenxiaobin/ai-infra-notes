@@ -1146,9 +1146,76 @@ def week1_interview_prep() -> str:
   <text x="360" y="365" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">面试不是背诵，而是展示你理解概念、能动手、会思考</text>
 </svg>'''
 
+def thread_id_calculation() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540">
+  <rect width="720" height="540" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">CUDA 线程 ID 计算</text>
+
+  <!-- 1D grid + 1D block -->
+  <text x="60" y="72" font-size="16" font-weight="bold" fill="#58a6ff">1D grid + 1D block</text>
+
+  <!-- Grid label -->
+  <text x="60" y="100" font-size="13" fill="#8b949e">Grid (gridDim.x = 3)</text>
+
+  <!-- Blocks -->
+  <rect x="60" y="115" width="180" height="70" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="150" y="138" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Block 0</text>
+  <text x="150" y="158" text-anchor="middle" font-size="11" fill="#8b949e">blockIdx.x = 0</text>
+
+  <rect x="250" y="115" width="180" height="70" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="340" y="138" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Block 1</text>
+  <text x="340" y="158" text-anchor="middle" font-size="11" fill="#8b949e">blockIdx.x = 1</text>
+
+  <rect x="440" y="115" width="180" height="70" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="530" y="138" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Block 2</text>
+  <text x="530" y="158" text-anchor="middle" font-size="11" fill="#8b949e">blockIdx.x = 2</text>
+
+  <!-- Threads in Block 1 (zoom) -->
+  <text x="250" y="215" font-size="13" fill="#8b949e">Block 1 内部：blockDim.x = 4</text>
+  <circle cx="265" cy="245" r="14" fill="#3fb950"/>
+  <text x="265" y="250" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T0</text>
+  <circle cx="305" cy="245" r="14" fill="#3fb950"/>
+  <text x="305" y="250" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T1</text>
+  <circle cx="345" cy="245" r="14" fill="#3fb950"/>
+  <text x="345" y="250" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T2</text>
+  <circle cx="385" cy="245" r="14" fill="#3fb950"/>
+  <text x="385" y="250" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T3</text>
+
+  <!-- Thread labels -->
+  <text x="265" y="275" text-anchor="middle" font-size="10" fill="#8b949e">threadIdx.x=0</text>
+  <text x="385" y="275" text-anchor="middle" font-size="10" fill="#8b949e">threadIdx.x=3</text>
+
+  <!-- Formula -->
+  <rect x="60" y="305" width="600" height="55" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="328" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">global_tid = blockIdx.x × blockDim.x + threadIdx.x</text>
+  <text x="360" y="350" text-anchor="middle" font-size="13" fill="#e3b341">例：Block 1 的 T3 → 1 × 4 + 3 = 7</text>
+
+  <!-- 2D grid + 2D block -->
+  <text x="60" y="395" font-size="16" font-weight="bold" fill="#58a6ff">2D grid + 2D block（图像处理常用）</text>
+
+  <!-- 2D grid -->
+  <rect x="60" y="415" width="120" height="80" rx="6" fill="#1f6feb" opacity="0.15" stroke="#58a6ff" stroke-width="1.5"/>
+  <rect x="180" y="415" width="120" height="80" rx="6" fill="#1f6feb" opacity="0.15" stroke="#58a6ff" stroke-width="1.5"/>
+  <rect x="60" y="495" width="120" height="20" fill="none"/>
+  <text x="130" y="440" text-anchor="middle" font-size="12" fill="#c9d1d9">Block (0,0)</text>
+  <text x="250" y="440" text-anchor="middle" font-size="12" fill="#c9d1d9">Block (1,0)</text>
+
+  <!-- Highlight a block -->
+  <rect x="180" y="415" width="120" height="80" rx="6" fill="none" stroke="#e3b341" stroke-width="2"/>
+  <text x="240" y="520" text-anchor="middle" font-size="11" fill="#e3b341">blockIdx = (1, 0)</text>
+
+  <!-- Formula -->
+  <rect x="330" y="415" width="330" height="90" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="440" font-size="13" fill="#c9d1d9" font-weight="bold">row = blockIdx.y × blockDim.y + threadIdx.y</text>
+  <text x="360" y="465" font-size="13" fill="#c9d1d9" font-weight="bold">col = blockIdx.x × blockDim.x + threadIdx.x</text>
+  <text x="360" y="490" font-size="12" fill="#8b949e">global_tid = row × (gridDim.x × blockDim.x) + col</text>
+</svg>'''
+
+
 def main() -> None:
     diagrams = {
         "gpu_memory_hierarchy.svg": gpu_memory_hierarchy(),
+        "thread_id_calculation.svg": thread_id_calculation(),
         "sm_architecture.svg": sm_architecture(),
         "coalesced_access.svg": coalesced_access(),
         "bank_conflict.svg": bank_conflict(),

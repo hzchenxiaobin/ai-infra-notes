@@ -507,6 +507,8 @@ Thread -> 实际执行的线程
 
 **线程 ID 计算**：
 
+![线程 ID 计算](website/images/thread_id_calculation.svg)
+
 1D grid + 1D block：
 ```cuda
 int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
