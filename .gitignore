@@ -7,3 +7,10 @@
 # Editor
 .vscode/
 .idea/
+
+# Build output
+public/
+
+# Generated LeetCode website files
+leetcode/website/index.html
+leetcode/website/problems/
