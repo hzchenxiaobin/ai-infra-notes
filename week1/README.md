@@ -624,6 +624,68 @@ warps = ceil(8 / 32) × 4 = 1 × 4 = 4 warps
 
 检查程序输出是否与你计算的一致。
 
+#### 为什么 32 个线程不是 1 个 warp？
+
+很多同学会有一个直觉：**整个 grid 不是总共有 32 个线程吗？那刚好凑成 1 个 warp 啊？**
+
+答案是：**warp 是按 block 分配的，不是按整个 grid 全局合并的。**
+
+以本例配置为例：
+
+```cuda
+dim3 grid(2, 2, 1);   // 4 blocks
+dim3 block(4, 2, 1);  // 8 threads/block
+```
+
+CUDA 不会把**不同 block 的线程**合并到同一个 warp 里。每个 block 自己独立被拆成 warp：
+
+```text
+block 0: 8 threads  → ceil(8/32) = 1 warp
+block 1: 8 threads  → ceil(8/32) = 1 warp
+block 2: 8 threads  → ceil(8/32) = 1 warp
+block 3: 8 threads  → ceil(8/32) = 1 warp
+-----------------------------------------
+总计:                 4 warps
+```
+
+**为什么不能跨 block 合并 warp？**
+
+因为 **block 是 GPU 资源共享和线程同步的基本单位**，同一个 block 内的线程需要：
+
+1. **共享同一块 Shared Memory**
+2. **共享同一个 Warp Scheduler 调度上下文**（SIMT）
+3. **跑在同一个 SM 上**
+4. **可以通过 `__syncthreads()` 同步**
+
+不同 block 之间无法做这些事，因此硬件天然会把每个 block 单独切分成 warp，而不会跨 block 凑数。
+
+**对比一个反例**：
+
+```cuda
+dim3 grid(1, 1, 1);   // 1 block
+dim3 block(32, 1, 1); // 32 threads/block
+```
+
+这时总 warp 数才是：
+
+```text
+1 block × ceil(32/32) = 1 warp
+```
+
+| 配置 | 总线程 | warp 数 | 原因 |
+|------|--------|---------|------|
+| `grid=(2,2,1), block=(4,2,1)` | 32 | **4** | 4 个 block 各 8 线程，各成 1 warp |
+| `grid=(1,1,1), block=(32,1,1)` | 32 | **1** | 1 个 block 32 线程，刚好 1 warp |
+
+**总结公式**：
+
+```text
+warps_per_block = ceil(threads_per_block / 32)
+total_warps     = warps_per_block × num_blocks
+```
+
+> 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
+
 ---
 
 ### 扩展实验
