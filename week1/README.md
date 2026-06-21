@@ -967,21 +967,151 @@ nvcc -Xptxas -v kernels/your_kernel.cu
 
 #### 2.5 `__launch_bounds__`
 
-`__launch_bounds__` 是给编译器的提示，帮助它在寄存器使用和 occupancy 之间做权衡：
+`__launch_bounds__` 是给编译器的**显式提示**，告诉它这个 kernel 启动时的资源约束，让编译器在**寄存器使用**和 **occupancy** 之间做权衡。
+
+##### 语法
 
 ```cuda
 __launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
 __global__ void my_kernel(...) { ... }
 ```
 
-**作用**：
-- 告诉编译器最大 block 大小
-- 告诉编译器每个 SM 上至少要有多少个 block
-- 编译器会根据这些约束分配寄存器，尽量满足 occupancy 要求
+| 参数 | 含义 | 例子 |
+|------|------|------|
+| `maxThreadsPerBlock` | 这个 kernel 运行时每个 block 的最大线程数 | `256` |
+| `minBlocksPerMultiprocessor` | 每个 SM 上至少要同时运行多少个 block | `4` |
 
-**代价**：
-- 限制寄存器可能导致 spilling
-- 或者编译器被迫使用更少的优化
+第二个参数可以省略，只写 `__launch_bounds__(maxThreadsPerBlock)`。
+
+##### 它到底在做什么？
+
+GPU 每个 SM 的寄存器文件总量是固定的。编译器在编译 kernel 时会决定每个线程用多少寄存器。寄存器越多，单个线程越快；但同时能驻留的线程就越少，occupancy 就越低。
+
+`__launch_bounds__` 让编译器"提前知道"启动配置：
+
+```text
+最大寄存器/线程 ≈ 每个 SM 的寄存器文件总量 / (maxThreadsPerBlock × minBlocksPerMultiprocessor)
+```
+
+如果 kernel 代码需要的寄存器超过这个上限，编译器就会：
+1. **减少寄存器使用**：把部分变量放到 local memory（即 register spilling）
+2. **或使用更保守的优化**：避免生成需要太多寄存器的代码
+
+##### 为什么需要它？
+
+默认情况下，编译器只按"每个线程最多 255 个寄存器"来优化。它不会主动考虑 occupancy。一个 kernel 可能用了 128 个寄存器，跑得很顺，但因为寄存器多，每个 SM 同时驻留的线程少，导致 latency hiding 不足。
+
+`__launch_bounds__` 就是告诉编译器："我这个 kernel 需要高 occupancy，请把寄存器压下来。"
+
+##### 示例 1：限制寄存器，提升 occupancy
+
+假设一个 kernel 逻辑复杂，编译器默认给它分配了 96 个寄存器：
+
+```cuda
+// 不限制寄存器：编译器可能用很多寄存器
+__global__ void compute_default(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0, b = 0, c = 0, d = 0;
+    float e = 0, f = 0, g = 0, h = 0;
+    // ... 复杂计算
+    out[idx] = a + b + c + d + e + f + g + h;
+}
+```
+
+如果希望每个 SM 上至少同时跑 4 个 block，每个 block 256 线程，可以加：
+
+```cuda
+__launch_bounds__(256, 4)
+__global__ void compute_limited(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0, b = 0, c = 0, d = 0;
+    float e = 0, f = 0, g = 0, h = 0;
+    // ... 复杂计算
+    out[idx] = a + b + c + d + e + f + g + h;
+}
+```
+
+以 A100 为例：
+
+```text
+每个 SM 寄存器文件 = 256 KB = 65536 个 32-bit 寄存器
+限制后最大寄存器/线程 = 65536 / (256 × 4) = 64
+```
+
+编译器会努力把每个线程的寄存器控制在 64 个以内。如果代码本身需要更多，就会发生 spilling。
+
+##### 示例 2：故意制造 register spilling
+
+参考 `week1/exercise/day2/register_spill.cu`：
+
+```cuda
+__launch_bounds__(128, 8)
+__global__ void spill_kernel(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    float acc[80];  // 80 个 float，编译器想全部放寄存器
+    #pragma unroll
+    for (int i = 0; i < 80; i++) {
+        acc[i] = in[(idx + i) % n];
+    }
+
+    float sum = 0.0f;
+    #pragma unroll
+    for (int i = 0; i < 80; i++) {
+        sum += acc[i] * acc[i] + 1.0f;
+    }
+
+    out[idx] = sum;
+}
+```
+
+编译验证：
+
+```bash
+nvcc -Xptxas -v week1/exercise/day2/register_spill.cu
+```
+
+输出：
+
+```text
+ptxas info    : Function properties for _Z12spill_kernelPKfPfi
+    296 bytes stack frame, 488 bytes spill stores, 488 bytes spill loads
+ptxas info    : Used 64 registers, 340 bytes cmem[0], 4 bytes cmem[2]
+```
+
+`spill stores` 和 `spill loads` 非零，说明发生了 register spilling。
+
+如果把 `__launch_bounds__(128, 8)` 去掉：
+
+```text
+ptxas info    : Function properties for _Z15no_spill_kernelPKfPfi
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 340 bytes cmem[0], 4 bytes cmem[2]
+```
+
+没有 spilling，但用了 96 个寄存器。
+
+##### 使用场景总结
+
+| 场景 | 是否使用 `__launch_bounds__` | 原因 |
+|------|---------------------------|------|
+| kernel 是 memory-bound | 可以考虑 | 高 occupancy 有助于隐藏内存延迟 |
+| kernel 是 compute-bound | 谨慎使用 | 限制寄存器可能导致 spilling，反而更慢 |
+| occupancy 明显不足 | 推荐 | 明确告诉编译器需要更多驻留 warp |
+| 寄存器用量已经很低 | 不需要 | 用了也无效 |
+
+##### 注意事项
+
+1. **只是提示，不是强制**：编译器会尽量满足，但不保证一定满足。
+2. **可能触发 spilling**：过度限制寄存器会让变量溢出到 local memory，性能暴跌。
+3. **需要实际测试**：加或不加 `__launch_bounds__`，最终要看 ncu 的实际 occupancy 和性能指标。
+4. **通常写在 kernel 定义前**：
+   ```cuda
+   __launch_bounds__(256, 4)
+   __global__ void my_kernel(...) { ... }
+   ```
+
+> 💡 **一句话总结**：`__launch_bounds__` 是 occupancy 调优的工具，它用"限制寄存器"换取"更多驻留 warp"，但使用过度会触发 register spilling，需要实测权衡。
 
 ---
 
