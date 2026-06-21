@@ -103,6 +103,67 @@ Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
 - 它描述的是资源利用率，不是直接的速度
 - 低 occupancy 意味着 GPU 可能没有足够的 warp 来隐藏延迟
 
+##### 如何理解"低 occupancy 意味着没有足够的 warp 隐藏延迟"？
+
+理解这句话要抓住两个概念：**延迟（Latency）** 和 **延迟隐藏（Latency Hiding）**。
+
+**第一步：GPU 操作有很大的延迟**
+
+| 操作 | 大致延迟 |
+|------|---------|
+| 寄存器访问 | ~1 cycle |
+| Shared Memory 访问 | ~20–30 cycles |
+| L2 Cache 访问 | ~100–200 cycles |
+| Global Memory 访问 | ~400–800 cycles |
+
+当一个 warp 从 Global Memory 读数据时，从发出请求到数据返回可能需要几百个 cycle。这段时间里，这个 warp 只能干等。
+
+**第二步：Warp Scheduler 通过切换 warp 来隐藏延迟**
+
+一个 SM 同时驻留很多 warp，但同一时刻只有少部分在执行。当一个 warp 因为等内存而卡住时，Warp Scheduler 会把它换下去，换一个准备好的 warp 上来：
+
+\`\`\`text
+cycle 0:   warp 0 执行 load（发起 Global Memory 请求）
+cycle 1:   warp 0 进入等待状态
+cycle 2:   warp scheduler 切换到 warp 1 执行
+...
+cycle 400: 数据还没回来，继续换 warp 2、warp 3 ... 执行
+cycle 800: warp 0 的数据回来了，再切换回 warp 0 继续
+\`\`\`
+
+只要总有其他 warp 可以切换，SM 的计算单元就不会空闲，仿佛"延迟被藏起来了"。
+
+**第三步：低 occupancy 的问题**
+
+如果 occupancy 太低，比如一个 SM 上只驻留了 4 个 warp：
+
+\`\`\`text
+warp 0: 等内存中...
+warp 1: 等内存中...
+warp 2: 等内存中...
+warp 3: 也等内存中...
+\`\`\`
+
+所有 warp 都在等内存，没有可切换的 warp，计算单元只能空转。
+
+**形象类比**：
+
+> 把 SM 想象成工厂车间，warp 是工人小组。
+> - 高 occupancy：车间里有 60 个小组，A 组等货时，B/C/D 组马上接上，机器不空闲。
+> - 低 occupancy：车间里只有 2 个小组，A、B 组都在等货，全车间停工。
+
+**为什么不是 occupancy 越高越好？**
+
+当 occupancy 足够高时（如 50%–70%），通常已经有足够的 warp 隐藏延迟。再往上提升，可能遇到其他瓶颈：
+
+- **内存带宽瓶颈**：数据来不及从显存搬过来
+- **计算吞吐量瓶颈**：计算单元已经满负荷
+- **资源代价**：增加 occupancy 需要减少每个线程的寄存器/共享内存，可能触发 register spilling
+
+所以 Occupancy 是**必要但不充分**的条件：太低会 stall，太高不一定更快。
+
+> 💡 **一句话总结**：低 occupancy 意味着 SM 上可轮换的 warp 太少，所有 warp 同时等待内存时，计算单元无事可做，性能下降。
+
 #### 2.2 影响 Occupancy 的三大资源约束
 
 ![资源约束](images/resource_constraints.svg)
@@ -116,7 +177,7 @@ Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
 | Block / Warp 数量 | 最大 block/SM、最大 warp/SM | block 太大或数量太多会触顶 |
 
 **A100 具体参数示例**：
-- 每个 SM 最大 warp 数：32
+- 每个 SM 最大 warp 数：64
 - 每个 SM 最大线程数：2048
 - 每个 SM 最大 block 数：32
 - 每个 SM 寄存器文件：256 KB
