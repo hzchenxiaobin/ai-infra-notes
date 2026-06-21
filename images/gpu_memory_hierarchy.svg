@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+  <defs>
+    <linearGradient id="gradFast" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradSlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d29922;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9e6a03;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="720" height="420" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 内存层次结构</text>
+
+  <!-- Pyramid levels -->
+  <polygon points="360,70 520,130 200,130" fill="url(#gradFast)"/>
+  <polygon points="200,130 520,130 540,190 180,190" fill="#4c8dff"/>
+  <polygon points="180,190 540,190 560,250 160,250" fill="#6c9fff"/>
+  <polygon points="160,250 560,250 580,310 140,310" fill="#8bb3ff"/>
+  <polygon points="140,310 580,310 600,370 120,370" fill="url(#gradSlow)"/>
+
+  <!-- Labels -->
+  <text x="360" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Register (~1 cycle)</text>
+  <text x="360" y="167" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Shared Memory / L1 (~20-30 cycles)</text>
+  <text x="360" y="227" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">L2 Cache (~200 cycles)</text>
+  <text x="360" y="287" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Global Memory (HBM/GDDR)</text>
+  <text x="360" y="348" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">~400-800 cycles</text>
+
+  <!-- Arrow -->
+  <text x="620" y="220" text-anchor="start" font-size="14" fill="#8b949e">慢</text>
+  <line x1="610" y1="200" x2="610" y2="360" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+</svg>

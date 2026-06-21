@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最大总价值</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="/js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="/css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="/js/prism.min.js"></script>
+    <script src="/js/prism-c.min.js"></script>
+    <script src="/js/prism-bash.min.js"></script>
+    <script src="/js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="/leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<a class="nav-link active" href="/leetcode/problems/最大总价值题解.html">最大总价值</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">最大总价值</h1>
+                <a class="back-link" href="/leetcode/index.html">← 返回题解列表</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="/leetcode/index.html">← 返回题解列表</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 最大总价值
+
+## 1. 题目概述
+
+- **题目名称**：最大总价值
+- **链接**：LeetCode（周赛题）
+- **难度**：中等 / 困难
+- **标签**：贪心、二分、数学、等差数列、前缀和
+
+**题意简述**：
+
+给定两个整数数组 \`value\` 和 \`decay\`，以及一个整数 \`m\`。
+
+- \`value[i]\`：下标 \`i\` 的初始价值。
+- \`decay[i]\`：每次选择下标 \`i\` 后，该下标价值减少的数值。
+- 你可以多次选择任意下标，但总选择次数不得超过 \`m\`。
+- 第 \`t\` 次（从 1 开始）选择下标 \`i\` 获得的价值为：\`value[i] - decay[i] * (t - 1)\`。
+
+返回能够获得的最大总价值，结果对 \`10^9 + 7\` 取模。
+
+**约束条件**：
+
+- \`1 <= value.length == decay.length <= 10^5\`
+- \`1 <= value[i], decay[i] <= 10^9\`
+- \`1 <= m <= 10^9\`
+
+---
+
+## 2. 示例
+
+**示例 1**
+
+\`\`\`text
+输入：value = [6,5,4], decay = [2,1,1], m = 4
+输出：19
+
+解释：
+下标 0 的取值为：6, 4, 2, 0, -2, ...
+下标 1 的取值为：5, 4, 3, 2, 1, 0, -1, ...
+下标 2 的取值为：4, 3, 2, 1, 0, -1, ...
+
+前 4 大收益为：6, 5, 4, 4，总和为 19。
+\`\`\`
+
+**示例 2**
+
+\`\`\`text
+输入：value = [7,2,2], decay = [3,2,1], m = 2
+输出：11
+
+解释：
+下标 0 的取值为：7, 4, 1, -2, ...
+前 2 大收益为：7, 4，总和为 11。
+\`\`\`
+
+**示例 3**
+
+\`\`\`text
+输入：value = [4,3], decay = [5,4], m = 5
+输出：7
+
+解释：
+下标 0 只有 1 个非负收益：4
+下标 1 只有 1 个非负收益：3
+非负收益总共只有 2 个，不足 5 次，因此答案为 4 + 3 = 7。
+\`\`\`
+
+---
+
+## 3. 解题思路
+
+### 3.1 暴力思路
+
+把每个下标看成一个**递减的等差数列**：
+
+\`\`\`text
+下标 i：value[i], value[i] - decay[i], value[i] - 2*decay[i], ...
+\`\`\`
+
+问题等价于：从 \`n\` 个递减数列中，总共挑 \`m\` 个数，使总和最大。
+
+![单个下标的收益序列](/leetcode/images/decay_sequence.svg)
+
+每次挑当前最大的数，可以用**最大堆**模拟：
+
+1. 初始把每个下标的第一个值放入堆。
+2. 每次弹出最大值加入答案。
+3. 将该下标的下一个值（如果仍非负）入堆。
+4. 重复 \`m\` 次。
+
+时间复杂度：\`O((n + m) log n)\`。由于 \`m\` 可达 \`10^9\`，不可接受。
+
+### 3.2 优化思路：二分第 m 大的收益
+
+收益数列是单调递减的，前 \`m\` 大收益可以用**二分阈值**批量统计。
+
+**关键观察**：
+
+![二分第 m 大收益](/leetcode/images/binary_search_threshold.svg)
+
+设 \`T\` 为一个收益阈值，定义：
+
+- \`g(T)\`：所有下标中收益 **>= T** 的项的总个数。
+- \`sum(T)\`：所有下标中收益 **>= T** 的项的总和。
+
+\`g(T)\` 随 \`T\` 增大而单调递减。我们可以二分找到最大的 \`T\`，使得 \`g(T) >= m\`。
+
+找到 \`T\` 后：
+
+- 所有收益 \`> T\` 的项一定在前 \`m\` 大中。
+- 收益 \`= T\` 的项可能只需要取一部分（因为 \`g(T)\` 可能超过 \`m\`）。
+
+因此答案为：
+
+\`\`\`text
+ans = sum(T) - (g(T) - m) * T
+\`\`\`
+
+其中 \`sum(T) - (g(T) - m) * T\` 表示从所有 \`>= T\` 的收益中，去掉多出的 \`g(T) - m\` 个 \`T\`。
+
+### 3.3 如何快速计算 g(T) 和 sum(T)
+
+![单下标中收益 ≥ T 的项求和](/leetcode/images/arithmetic_sum.svg)
+
+对于下标 \`i\`，收益 >= \`T\` 的项为：
+
+\`\`\`text
+value[i], value[i] - decay[i], ..., value[i] - (k-1)*decay[i]
+\`\`\`
+
+其中 \`k\` 满足 \`value[i] - (k-1)*decay[i] >= T\`，即：
+
+\`\`\`text
+k = floor((value[i] - T) / decay[i]) + 1
+\`\`\`
+
+同时，收益不能为负（选负收益只会使答案变小），所以实际最多取：
+
+\`\`\`text
+k_max = floor(value[i] / decay[i]) + 1
+\`\`\`
+
+个非负项。因此：
+
+\`\`\`text
+count_i(T) = max(0, min(k_max, floor((value[i] - T) / decay[i]) + 1))
+\`\`\`
+
+这 \`k\` 项是一个等差数列，和为：
+
+\`\`\`text
+sum_i(T) = k * value[i] - decay[i] * k * (k - 1) / 2
+\`\`\`
+
+于是：
+
+\`\`\`text
+g(T)   = Σ count_i(T)
+sum(T) = Σ sum_i(T)
+\`\`\`
+
+---
+
+## 4. 算法细节
+
+1. **预处理**：
+   - 对每个下标 \`i\`，计算 \`k_max = value[i] / decay[i] + 1\`。
+   - 计算所有非负项的总数 \`total_count\` 和总和 \`total_sum\`。
+   - 如果 \`m >= total_count\`，直接返回 \`total_sum % MOD\`（负收益不会选）。
+
+2. **二分阈值 \`T\`**：
+   - 范围：\`[1, max(value)]\`。
+   - 对于每个 \`mid\`，计算 \`g(mid)\`。
+   - 如果 \`g(mid) >= m\`，说明第 \`m\` 大收益至少为 \`mid\`，尝试增大 \`mid\`。
+   - 否则减小 \`mid\`。
+   - 最终得到最大的 \`T\` 满足 \`g(T) >= m\`。
+
+3. **计算答案**：
+   - 再次遍历所有下标，计算 \`g(T)\` 和 \`sum(T)\`。
+   - \`ans = (sum(T) - (g(T) - m) * T) % MOD\`。
+
+---
+
+## 5. 正确性证明
+
+**引理 1**：每个下标 \`i\` 最多只会选择非负收益项。
+
+**证明**：选择负收益项会使总价值减少，而总选择次数上限是 \`m\`，不选该次不会更差。∎
+
+**引理 2**：\`g(T) = Σ count_i(T)\` 是关于 \`T\` 的单调不增函数。
+
+**证明**：对于固定的下标 \`i\`，当 \`T\` 增大时，满足 \`value[i] - (t-1)*decay[i] >= T\` 的 \`t\` 只会减少或不变，因此 \`count_i(T)\` 单调不增，求和后仍单调不增。∎
+
+**引理 3**：设 \`T*\` 是满足 \`g(T*) >= m\` 的最大整数，则第 \`m\` 大收益等于 \`T*\`。
+
+**证明**：
+
+- \`g(T*) >= m\` 说明至少有 \`m\` 个收益 \`>= T*\`，所以第 \`m\` 大收益 \`>= T*\`。
+- \`g(T* + 1) < m\` 说明收益 \`>= T* + 1\` 的项不足 \`m\` 个，所以第 \`m\` 大收益 \`< T* + 1\`。
+- 综上，第 \`m\` 大收益就是 \`T*\`。∎
+
+**引理 4**：\`ans = sum(T*) - (g(T*) - m) * T*\` 等于前 \`m\` 大收益之和。
+
+**证明**：
+
+- \`sum(T*)\` 是所有 \`>= T*\` 的收益之和，共 \`g(T*)\` 项。
+- 这些项中，前 \`m\` 大就是去掉最小的 \`g(T*) - m\` 个项。
+- 由于 \`T*\` 是第 \`m\` 大收益，被去掉的项都等于 \`T*\`。
+- 因此前 \`m\` 大之和为 \`sum(T*) - (g(T*) - m) * T*\`。∎
+
+**定理**：该算法返回能够获得的最大总价值。
+
+**证明**：
+
+- 由引理 1，最优策略只会在非负收益项中选择。
+- 由引理 2 和 3，二分找到的第 \`m\` 大收益 \`T*\` 是正确的。
+- 由引理 4，计算出的 \`ans\` 恰好是前 \`m\` 大非负收益之和。
+- 因此算法返回的就是最大总价值。∎
+
+---
+
+## 6. 复杂度分析
+
+- **时间复杂度**：\`O(n log(max(value)))\`
+  - 预处理 \`O(n)\`。
+  - 二分 \`O(log(max(value)))\` 轮，每轮 \`O(n)\`。
+  - 最后统计 \`O(n)\`。
+
+- **空间复杂度**：\`O(1)\` 额外空间（不计输入数组）。
+
+---
+
+## 7. 参考代码
+
+### C++
+
+\`\`\`cpp
+class Solution {
+public:
+    int maxTotalValue(vector<int>& value, vector<int>& decay, int m) {
+        const int MOD = 1e9 + 7;
+        int n = value.size();
+        
+        // 预处理：计算每个下标的非负项数 k_max 和所有非负项之和
+        long long total_count = 0;
+        long long total_sum = 0;
+        for (int i = 0; i < n; ++i) {
+            long long k_max = (long long)value[i] / decay[i] + 1;
+            total_count += k_max;
+            long long sum_i = k_max * (long long)value[i]
+                            - (long long)decay[i] * k_max * (k_max - 1) / 2;
+            total_sum = (total_sum + sum_i) % MOD;
+        }
+        
+        // 如果 m 超过非负项总数，直接返回所有非负项之和
+        if ((long long)m >= total_count) {
+            return (int)(total_sum % MOD);
+        }
+        
+        // 二分第 m 大的收益 T
+        long long lo = 1, hi = *max_element(value.begin(), value.end()) + 1;
+        long long T = 0;
+        while (lo <= hi) {
+            long long mid = lo + (hi - lo) / 2;
+            long long cnt = 0;
+            for (int i = 0; i < n; ++i) {
+                if ((long long)value[i] < mid) continue;
+                long long k_max = (long long)value[i] / decay[i] + 1;
+                long long k = ((long long)value[i] - mid) / decay[i] + 1;
+                k = min(k, k_max);
+                cnt += k;
+                if (cnt > m) break; // 提前退出
+            }
+            if (cnt >= m) {
+                T = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        
+        // 计算 g(T) 和 sum(T)
+        long long gT = 0;
+        long long sumT = 0;
+        for (int i = 0; i < n; ++i) {
+            if ((long long)value[i] < T) continue;
+            long long k_max = (long long)value[i] / decay[i] + 1;
+            long long k = ((long long)value[i] - T) / decay[i] + 1;
+            k = min(k, k_max);
+            gT += k;
+            long long sum_i = k * (long long)value[i]
+                            - (long long)decay[i] * k * (k - 1) / 2;
+            sumT = (sumT + sum_i) % MOD;
+        }
+        
+        long long ans = (sumT - (gT - m) % MOD * (T % MOD) % MOD + MOD) % MOD;
+        return (int)ans;
+    }
+};
+\`\`\`
+
+### Python
+
+\`\`\`python
+class Solution:
+    def maxTotalValue(self, value: List[int], decay: List[int], m: int) -> int:
+        MOD = 10**9 + 7
+        n = len(value)
+        
+        total_count = 0
+        total_sum = 0
+        for i in range(n):
+            k_max = value[i] // decay[i] + 1
+            total_count += k_max
+            total_sum += k_max * value[i] - decay[i] * k_max * (k_max - 1) // 2
+        
+        if m >= total_count:
+            return total_sum % MOD
+        
+        lo, hi = 1, max(value) + 1
+        T = 0
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            cnt = 0
+            for i in range(n):
+                if value[i] < mid:
+                    continue
+                k_max = value[i] // decay[i] + 1
+                k = (value[i] - mid) // decay[i] + 1
+                k = min(k, k_max)
+                cnt += k
+                if cnt > m:
+                    break
+            if cnt >= m:
+                T = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        
+        gT = 0
+        sumT = 0
+        for i in range(n):
+            if value[i] < T:
+                continue
+            k_max = value[i] // decay[i] + 1
+            k = (value[i] - T) // decay[i] + 1
+            k = min(k, k_max)
+            gT += k
+            sum_i = k * value[i] - decay[i] * k * (k - 1) // 2
+            sumT += sum_i
+        
+        ans = (sumT - (gT - m) * T) % MOD
+        return ans
+\`\`\`
+
+---
+
+## 8. 边界情况与易错点
+
+1. **m 超过非负项总数**
+   - 示例 3 就是这种情况。负收益不会选，所以答案等于所有非负项之和。
+   - 需要先预处理 \`total_count\` 并特判。
+
+2. **整数溢出**
+   - \`value[i]\`、\`decay[i]\`、\`k_max\` 都可以达到 \`10^9\` 级别。
+   - \`k_max * value[i]\` 可能达到 \`10^18\`，C++ 中需用 \`long long\`。
+   - Python 整数无上限，但仍需注意取模时机。
+
+3. **\`k_max\` 的计算**
+   - \`k_max = value[i] / decay[i] + 1\` 表示非负项数（包含最后一项可能为 0 的情况）。
+   - 例如 \`value=6, decay=2\`：取值为 \`6, 4, 2, 0\`，共 \`6/2 + 1 = 4\` 项。
+
+4. **二分边界**
+   - 如果 \`m < total_count\`，则 \`T=0\` 一定满足 \`g(0) >= m\`，所以二分的有效范围包含 0。
+   - 这里二分从 1 开始，如果找不到 \`T >= 1\` 满足条件，则 \`T=0\`，此时所有非负项都 \`>= 0\`，答案就是前 \`m\` 大非负项之和。
+
+5. **取模时负数处理**
+   - C++ 中 \`(sumT - (gT - m) * T)\` 可能为负，需要加 \`MOD\` 后再取模。
+
+---
+
+## 9. 相关题目与扩展
+
+- **LeetCode 2218. 从栈中取出 K 个硬币的最大面值和**：分组背包 / 前缀和优化。
+- **LeetCode 198. 打家劫舍**：序列上的最优化选择。
+- **LeetCode 322. 零钱兑换**：完全背包，最优化硬币数量。
+- **LeetCode 2407. 最长递增子序列 II**：同样可以用二分 / 线段树优化。
+
+**延伸思考**：
+
+- 如果 \`decay[i]\` 可以为 0，问题会变成什么样？
+  - 下标 \`i\` 的收益恒为 \`value[i]\`，可以无限次选择。此时只要 \`m\` 足够，全部选 \`value\` 最大的那个下标即可。
+- 如果要求**恰好** \`m\` 次选择，且允许选负收益，如何处理？
+  - 当非负项不足 \`m\` 时，必须选一些负收益项，此时需要找到绝对值最小的负收益来填充。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="/js/main.js"></script>
+</body>
+</html>

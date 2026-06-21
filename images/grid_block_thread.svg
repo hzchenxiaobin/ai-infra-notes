@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <rect width="720" height="480" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Grid / Block / Thread 层次结构</text>
+
+  <!-- Grid box -->
+  <rect x="80" y="70" width="560" height="380" rx="12" fill="none" stroke="#58a6ff" stroke-width="3" stroke-dasharray="8,4"/>
+  <text x="360" y="100" text-anchor="middle" font-size="18" font-weight="bold" fill="#58a6ff">Grid (gridDim = 2 × 2)</text>
+
+  <!-- Blocks -->
+  <rect x="110" y="130" width="240" height="140" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="230" y="155" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Block (0, 0)</text>
+
+  <rect x="370" y="130" width="240" height="140" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="490" y="155" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Block (1, 0)</text>
+
+  <rect x="110" y="290" width="240" height="140" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="230" y="315" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Block (0, 1)</text>
+
+  <rect x="370" y="290" width="240" height="140" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="490" y="315" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Block (1, 1)</text>
+
+  <!-- Threads in first block -->
+  <circle cx="150" cy="195" r="14" fill="#3fb950"/>
+  <text x="150" y="200" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T0</text>
+  <circle cx="190" cy="195" r="14" fill="#3fb950"/>
+  <text x="190" y="200" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T1</text>
+  <circle cx="230" cy="195" r="14" fill="#3fb950"/>
+  <text x="230" y="200" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T2</text>
+  <circle cx="270" cy="195" r="14" fill="#3fb950"/>
+  <text x="270" y="200" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T3</text>
+
+  <circle cx="150" cy="240" r="14" fill="#3fb950"/>
+  <text x="150" y="245" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T4</text>
+  <circle cx="190" cy="240" r="14" fill="#3fb950"/>
+  <text x="190" y="245" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T5</text>
+  <circle cx="230" cy="240" r="14" fill="#3fb950"/>
+  <text x="230" y="245" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T6</text>
+  <circle cx="270" cy="240" r="14" fill="#3fb950"/>
+  <text x="270" y="245" text-anchor="middle" font-size="9" fill="#0d1117" font-weight="bold">T7</text>
+
+  <text x="230" y="270" text-anchor="middle" font-size="12" fill="#8b949e">blockDim = 4 × 2 = 8 threads</text>
+
+  <!-- Legend -->
+  <text x="360" y="450" text-anchor="middle" font-size="13" fill="#8b949e">总线程数 = gridDim.x × gridDim.y × blockDim.x × blockDim.y = 2 × 2 × 8 = 32</text>
+</svg>

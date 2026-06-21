@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+  <rect width="720" height="440" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">SM (Streaming Multiprocessor) 架构简图</text>
+
+  <!-- SM box -->
+  <rect x="60" y="60" width="600" height="360" rx="12" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="88" text-anchor="middle" font-size="16" font-weight="bold" fill="#58a6ff">一个 Streaming Multiprocessor</text>
+
+  <!-- Components -->
+  <rect x="90" y="110" width="160" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="170" y="145" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">CUDA Cores</text>
+  <text x="170" y="168" text-anchor="middle" font-size="12" fill="#8b949e">整数 / FP32 / FP64</text>
+
+  <rect x="280" y="110" width="160" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="145" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Tensor Cores</text>
+  <text x="360" y="168" text-anchor="middle" font-size="12" fill="#8b949e">矩阵计算加速</text>
+
+  <rect x="470" y="110" width="160" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
+  <text x="550" y="145" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Warp Scheduler</text>
+  <text x="550" y="168" text-anchor="middle" font-size="12" fill="#8b949e">调度 32-thread warp</text>
+
+  <rect x="90" y="220" width="220" height="80" rx="8" fill="#238636" opacity="0.3" stroke="#3fb950" stroke-width="2"/>
+  <text x="200" y="255" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Register File</text>
+  <text x="200" y="278" text-anchor="middle" font-size="12" fill="#8b949e">~256 KB / SM</text>
+
+  <rect x="350" y="220" width="280" height="80" rx="8" fill="#d29922" opacity="0.3" stroke="#e3b341" stroke-width="2"/>
+  <text x="490" y="255" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Shared Memory / L1 Cache</text>
+  <text x="490" y="278" text-anchor="middle" font-size="12" fill="#8b949e">~100-164 KB / SM</text>
+
+  <rect x="90" y="330" width="540" height="60" rx="8" fill="#8957e5" opacity="0.3" stroke="#a371f7" stroke-width="2"/>
+  <text x="360" y="365" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">Load / Store 单元</text>
+</svg>

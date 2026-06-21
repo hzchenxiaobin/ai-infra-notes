@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" viewBox="0 0 720 380">
+  <rect width="720" height="380" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Register Spilling（寄存器溢出）</text>
+
+  <!-- Thread -->
+  <rect x="80" y="80" width="200" height="240" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="110" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">一个 Thread</text>
+
+  <!-- Registers -->
+  <rect x="100" y="140" width="160" height="50" rx="4" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="180" y="170" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">寄存器（快）</text>
+
+  <text x="180" y="215" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">变量太多，寄存器不够</text>
+  <line x1="180" y1="225" x2="180" y2="250" stroke="#f85149" stroke-width="2" marker-end="url(#arrowDown)"/>
+
+  <!-- Local memory -->
+  <rect x="100" y="260" width="160" height="50" rx="4" fill="#d29922" stroke="#e3b341" stroke-width="2"/>
+  <text x="180" y="290" text-anchor="middle" font-size="13" fill="#0d1117" font-weight="bold">Local Memory（慢）</text>
+
+  <!-- Note -->
+  <rect x="320" y="120" width="340" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="490" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">Local Memory 真相</text>
+  <text x="490" y="185" text-anchor="middle" font-size="13" fill="#8b949e">实际存储在 Global Memory 中</text>
+  <text x="490" y="210" text-anchor="middle" font-size="13" fill="#8b949e">访问延迟 ~400-800 cycles</text>
+  <text x="490" y="235" text-anchor="middle" font-size="13" fill="#8b949e">性能急剧下降</text>
+  <text x="490" y="265" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">应尽量避免 spilling</text>
+</svg>
