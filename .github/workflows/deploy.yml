@@ -24,11 +24,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Build combined website
-        run: python3 build.py
+        run: |
+          python3 build.py
+          echo "--- public directory structure ---"
+          ls -la public/
+          echo "--- leetcode directory structure ---"
+          ls -la public/leetcode/
+          echo "--- file count ---"
+          find public -type f | wc -l
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
