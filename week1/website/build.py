@@ -53,6 +53,16 @@ def escape_for_template_string(text: str) -> str:
     return text
 
 
+def compute_root_prefix(output_path: Path, output_dir: Path) -> str:
+    """Return the relative prefix (e.g. '../') from output_path's directory to output_dir."""
+    try:
+        rel_parent = output_path.parent.relative_to(output_dir)
+    except ValueError:
+        return ""
+    depth = len(rel_parent.parts)
+    return "../" * depth if depth > 0 else ""
+
+
 def rewrite_md_links_to_html(markdown_text: str) -> str:
     """Rewrite local .md links to .html for GitHub Pages deployment.
 
@@ -105,26 +115,26 @@ def split_by_days(markdown_text: str):
     return overview, days
 
 
-def build_nav(current_day: Optional[int]) -> str:
+def build_nav(current_day: Optional[int], root_prefix: str = "") -> str:
     """Build sidebar navigation. current_day=None means overview page."""
     lines = []
 
     overview_class = "nav-link active" if current_day is None else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="index.html">📌 课程概览</a>')
+    lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">📌 课程概览</a>')
 
     lines.append('<div class="nav-section-title">每日任务</div>')
     for day in range(1, 8):
         cls = "nav-link day-link active" if current_day == day else "nav-link day-link"
-        lines.append(f'<a class="{cls}" href="day{day}.html">Day {day}</a>')
+        lines.append(f'<a class="{cls}" href="{root_prefix}day{day}.html">Day {day}</a>')
 
     return "\n".join(lines)
 
 
-def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = False, extra_scripts: str = "") -> str:
+def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = False, extra_scripts: str = "", root_prefix: str = "") -> str:
     escaped_markdown = escape_for_template_string(markdown)
     page_title = f"Week 1 - {title}"
-    back_link = '<a class="back-link" href="index.html">← 返回概览</a>' if not is_overview else ''
-    bottom_nav = '<div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>' if not is_overview else ''
+    back_link = f'<a class="back-link" href="{root_prefix}index.html">← 返回概览</a>' if not is_overview else ''
+    bottom_nav = f'<div class="day-nav-bottom"><a class="back-link" href="{root_prefix}index.html">← 返回概览</a></div>' if not is_overview else ''
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -132,15 +142,15 @@ def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="{root_prefix}css/style.css">
     <!-- Marked.js for Markdown rendering (local v4.3.0) -->
-    <script src="js/marked.min.js"></script>
+    <script src="{root_prefix}js/marked.min.js"></script>
     <!-- Prism.js for syntax highlighting (local) -->
-    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
-    <script src="js/prism.min.js"></script>
-    <script src="js/prism-c.min.js"></script>
-    <script src="js/prism-bash.min.js"></script>
-    <script src="js/prism-python.min.js"></script>
+    <link href="{root_prefix}css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="{root_prefix}js/prism.min.js"></script>
+    <script src="{root_prefix}js/prism-c.min.js"></script>
+    <script src="{root_prefix}js/prism-bash.min.js"></script>
+    <script src="{root_prefix}js/prism-python.min.js"></script>
 </head>
 <body>
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -148,7 +158,7 @@ def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = 
     <div class="site-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <a href="index.html" style="text-decoration: none;">
+                <a href="{root_prefix}index.html" style="text-decoration: none;">
                     <h1 class="sidebar-title">AI Infra 8 周计划</h1>
                     <p class="sidebar-subtitle">Week 1 学习指南</p>
                 </a>
@@ -219,7 +229,7 @@ def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = 
         }}
     </script>
     {extra_scripts}
-    <script src="js/main.js"></script>
+    <script src="{root_prefix}js/main.js"></script>
 </body>
 </html>
 """
@@ -240,7 +250,7 @@ def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
         print(f"Copied: {src} -> {dst}")
 
 
-def build_extra_pages(base_dir: Path, output_dir: Path, nav_html: str) -> None:
+def build_extra_pages(base_dir: Path, output_dir: Path) -> None:
     """Build standalone HTML pages from extra markdown documents."""
     for page in EXTRA_MARKDOWN_PAGES:
         source_path = (base_dir / page["source"]).resolve()
@@ -250,6 +260,8 @@ def build_extra_pages(base_dir: Path, output_dir: Path, nav_html: str) -> None:
             continue
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        root_prefix = compute_root_prefix(output_path, output_dir)
+        page_nav_html = build_nav(current_day=None, root_prefix=root_prefix)
         markdown_text = source_path.read_text(encoding="utf-8")
         # README references images as "website/images/xxx.svg"; adjust for website root.
         markdown_text = markdown_text.replace("](website/images/", "](images/")
@@ -258,9 +270,10 @@ def build_extra_pages(base_dir: Path, output_dir: Path, nav_html: str) -> None:
 
         html = page_template(
             title=page["title"],
-            nav_html=nav_html,
+            nav_html=page_nav_html,
             markdown=markdown_text,
             is_overview=False,
+            root_prefix=root_prefix,
         )
         output_path.write_text(html, encoding="utf-8")
         print(f"Generated: {output_path}")
@@ -321,7 +334,7 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
 
     # Build extra markdown pages and copy source directories for GitHub Pages links.
     copy_extra_directories(output_dir.parent, output_dir)
-    build_extra_pages(output_dir.parent, output_dir, build_nav(current_day=None))
+    build_extra_pages(output_dir.parent, output_dir)
 
 
 if __name__ == "__main__":

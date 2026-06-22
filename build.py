@@ -83,8 +83,11 @@ def main() -> None:
     if leetcode_images_src.exists():
         copy_directory_contents(leetcode_images_src, leetcode_images_dst)
 
-    # Insert LeetCode navigation link into Week 1 pages
-    week1_pages = [public_dir / "index.html"] + list(public_dir.glob("day*.html"))
+    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories)
+    week1_pages = [
+        p for p in public_dir.rglob("*.html")
+        if "leetcode" not in p.relative_to(public_dir).parts
+    ]
     for html_file in week1_pages:
         if html_file.is_file():
             html_text = html_file.read_text(encoding="utf-8")
