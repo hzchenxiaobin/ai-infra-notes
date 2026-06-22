@@ -4,14 +4,45 @@ Build the Week 1 website from README.md.
 Generates:
   - index.html: overview page
   - day1.html ~ day7.html: one page per day
+  - Extra markdown pages as HTML (e.g., exercise/day3/occupancy_problems.html)
+  - Copies referenced source directories (kernels/, exercise/, notes/) for download links
 """
 
 import re
+import shutil
 from pathlib import Path
 from typing import Optional
 
 
 OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
+
+# Markdown documents that should also be deployed as standalone HTML pages.
+# Paths are relative to week1/ (the parent directory of week1/website/).
+EXTRA_MARKDOWN_PAGES = [
+    {
+        "source": "exercise/day3/occupancy_problems.md",
+        "output": "exercise/day3/occupancy_problems.html",
+        "title": "Occupancy 手算练习题",
+    },
+    {
+        "source": "notes/cuda_programming_guide_performance.md",
+        "output": "notes/cuda_programming_guide_performance.html",
+        "title": "CUDA Programming Guide 性能优化笔记",
+    },
+    {
+        "source": "notes/week1_notes.md",
+        "output": "notes/week1_notes.html",
+        "title": "Week 1 学习笔记模板",
+    },
+]
+
+# Source directories to copy into the website output so that links to .cu,
+# .md (download), and other files keep working on GitHub Pages.
+EXTRA_SOURCE_DIRECTORIES = [
+    "kernels",
+    "exercise",
+    "notes",
+]
 
 
 def escape_for_template_string(text: str) -> str:
@@ -20,6 +51,27 @@ def escape_for_template_string(text: str) -> str:
     text = text.replace("`", "\\`")
     text = text.replace("${", "\\${")
     return text
+
+
+def rewrite_md_links_to_html(markdown_text: str) -> str:
+    """Rewrite local .md links to .html for GitHub Pages deployment.
+
+    README.md source uses .md links so they work on GitHub's markdown viewer.
+    When deployed to GitHub Pages, the markdown pages are rendered as .html,
+    so the links need to point to .html files.
+    """
+    def replace_link(match):
+        url = match.group(1)
+        # Only rewrite local links ending with .md (keep external URLs and anchors as-is)
+        if url.endswith(".md"):
+            new_url = url[:-3] + ".html"
+            # README.md is rendered as the overview page index.html
+            if new_url.endswith("README.html"):
+                new_url = new_url[: -len("README.html")] + "index.html"
+            return f"]({new_url})"
+        return match.group(0)
+
+    return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
 def split_by_days(markdown_text: str):
@@ -173,12 +225,58 @@ def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = 
 """
 
 
+def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
+    """Copy source directories into website output for download/source-code links."""
+    for rel_dir in EXTRA_SOURCE_DIRECTORIES:
+        src = (base_dir / rel_dir).resolve()
+        dst_name = Path(rel_dir).name
+        dst = output_dir / dst_name
+        if not src.exists():
+            print(f"Warning: source directory not found: {src}")
+            continue
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        print(f"Copied: {src} -> {dst}")
+
+
+def build_extra_pages(base_dir: Path, output_dir: Path, nav_html: str) -> None:
+    """Build standalone HTML pages from extra markdown documents."""
+    for page in EXTRA_MARKDOWN_PAGES:
+        source_path = (base_dir / page["source"]).resolve()
+        output_path = output_dir / page["output"]
+        if not source_path.exists():
+            print(f"Warning: extra page source not found: {source_path}")
+            continue
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_text = source_path.read_text(encoding="utf-8")
+        # README references images as "website/images/xxx.svg"; adjust for website root.
+        markdown_text = markdown_text.replace("](website/images/", "](images/")
+        # Rewrite .md links to .html so they work on GitHub Pages.
+        markdown_text = rewrite_md_links_to_html(markdown_text)
+
+        html = page_template(
+            title=page["title"],
+            nav_html=nav_html,
+            markdown=markdown_text,
+            is_overview=False,
+        )
+        output_path.write_text(html, encoding="utf-8")
+        print(f"Generated: {output_path}")
+
+
 def build_website(readme_path: Path, output_dir: Path) -> None:
     markdown_text = readme_path.read_text(encoding="utf-8")
     # README references images as "website/images/xxx.svg" (for GitHub viewing),
     # but website HTML is in website/, so we need to reference them as "images/xxx.svg"
     markdown_text = markdown_text.replace("](website/images/", "](images/")
     overview, days = split_by_days(markdown_text)
+
+    # Rewrite .md links to .html for GitHub Pages deployment.
+    overview = rewrite_md_links_to_html(overview)
+    for day in days:
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"])
 
     # Build day cards HTML for overview page
     day_cards_html = '<div class="day-cards">\n'
@@ -220,6 +318,10 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
         filename = f"day{day['num']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {output_dir / filename}")
+
+    # Build extra markdown pages and copy source directories for GitHub Pages links.
+    copy_extra_directories(output_dir.parent, output_dir)
+    build_extra_pages(output_dir.parent, output_dir, build_nav(current_day=None))
 
 
 if __name__ == "__main__":
