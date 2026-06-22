@@ -2012,6 +2012,24 @@ make
 
 阅读源码，理解它是如何调用 `cudaOccupancyMaxPotentialBlockSize` 的。
 
+#### 任务 5：手算 Occupancy 并用程序验证
+
+完成 `week1/exercise/day3/occupancy_problems.md` 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
+
+然后编译运行验证程序：
+
+```bash
+cd week1/exercise/day3
+nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
+./occupancy_verify
+```
+
+对比手算结果与 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 的输出，理解：
+
+- 不同资源约束如何成为 occupancy 瓶颈
+- 为什么有时调整 block size 对 occupancy 没有帮助
+- `__launch_bounds__` 如何影响编译器的寄存器分配决策
+
 ---
 
 ### 扩展实验
@@ -2103,7 +2121,10 @@ int main() {
 - [ ] 理解自己 GPU 的硬件限制参数
 - [ ] 能计算 GPU 的理论峰值算力
 - [ ] 能计算 GPU 的理论显存带宽
+- [ ] 能根据 kernel 参数手动计算理论 occupancy
+- [ ] 能解释寄存器、共享内存、block size 三种资源约束如何影响 occupancy
 - [ ] 用 CUDA Occupancy Calculator 验证 Day 2 的 occupancy
+- [ ] 运行 `occupancy_verify.cu` 并对比手算与运行时结果
 - [ ] 阅读 CUDA C Programming Guide 第 5 章至少一遍
 - [ ] 画出自己 GPU 的 SM 架构简图
 
