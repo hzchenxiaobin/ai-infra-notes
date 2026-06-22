@@ -554,7 +554,7 @@ total_warps = warps_per_block * gridDim.x * gridDim.y * gridDim.z
 
 #### 任务 1：hello_gpu.cu
 
-创建文件 `kernels/hello_gpu.cu`：
+创建文件 [kernels/hello_gpu.cu](kernels/hello_gpu.cu)：
 
 ```cuda
 #include <stdio.h>
@@ -1042,7 +1042,7 @@ __global__ void compute_limited(const float* in, float* out, int n) {
 
 ##### 示例 2：故意制造 register spilling
 
-参考 `week1/exercise/day2/register_spill.cu`：
+参考 [week1/exercise/day2/register_spill.cu](exercise/day2/register_spill.cu)：
 
 ```cuda
 __launch_bounds__(128, 8)
@@ -1119,7 +1119,7 @@ ptxas info    : Used 96 registers, 340 bytes cmem[0], 4 bytes cmem[2]
 
 #### 任务 1：基础版 occupancy_test.cu
 
-创建文件 `kernels/occupancy_test.cu`：
+创建文件 [kernels/occupancy_test.cu](kernels/occupancy_test.cu)：
 
 ```cuda
 #include <cuda_runtime.h>
@@ -1773,7 +1773,7 @@ Occupancy 衡量的是一个 SM 上同时活跃的 warp 数量占最大能力的
 find /usr/local/cuda -name deviceQuery
 ```
 
-**记录输出**：把输出保存到 `notes/my_gpu_info.md`，后续会经常用到。
+**记录输出**：把输出保存到 [notes/my_gpu_info.md](notes/my_gpu_info.md)，后续会经常用到。
 
 #### 任务 2：创建自己的 mini_device_query
 
@@ -1791,7 +1791,7 @@ nvcc -o mini_device_query mini_device_query.cu
 1. 理论 FP32 峰值算力
 2. 理论显存带宽
 
-把结果记录到 `notes/my_gpu_info.md`。
+把结果记录到 [notes/my_gpu_info.md](notes/my_gpu_info.md)。
 
 #### 任务 4：使用 CUDA Occupancy Calculator
 
@@ -1812,7 +1812,7 @@ make
 
 #### 任务 6：手算 Occupancy 并用程序验证
 
-完成 `week1/exercise/day3/occupancy_problems.md` 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
+完成 [week1/exercise/day3/occupancy_problems.md](exercise/day3/occupancy_problems.md) 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
 
 然后编译运行验证程序：
 
@@ -2125,7 +2125,7 @@ __global__ void stride_read(const float* x, float* y) {
 
 #### 任务 1：Naive 版本
 
-创建 `kernels/transpose.cu`，实现 naive 转置：
+创建 [kernels/transpose.cu](kernels/transpose.cu)，实现 naive 转置：
 
 ```cuda
 #include <cuda_runtime.h>
@@ -2475,7 +2475,7 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 padding
 
 #### 任务 1：创建 bank_conflict.cu
 
-创建文件 `kernels/bank_conflict.cu`：
+创建文件 [kernels/bank_conflict.cu](kernels/bank_conflict.cu)：
 
 ```cuda
 #include <cuda_runtime.h>
@@ -2987,7 +2987,7 @@ ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
 - [ ] 能读取 Roofline 图并定位瓶颈类型
 - [ ] 能判断 kernel 是 memory-bound / compute-bound / latency-bound
 - [ ] 记录各 kernel 的 throughput 和 occupancy
-- [ ] 整理 profiling 结果到 `profiles/week1_profile_summary.md`
+- [ ] 整理 profiling 结果到 [profiles/week1_profile_summary.md](profiles/week1_profile_summary.md)
 
 ---
 
@@ -3162,7 +3162,7 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 #### 任务 1：完成 Week 1 学习笔记
 
-更新 `notes/week1_notes.md`，建议包含以下内容：
+更新 [notes/week1_notes.md](notes/week1_notes.md)，建议包含以下内容：
 
 ```markdown
 # Week 1 学习笔记
@@ -3231,7 +3231,7 @@ nsys profile -o ...
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 `notes/week1_notes.md` 学习笔记
+- [ ] 完成 [notes/week1_notes.md](notes/week1_notes.md) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 
@@ -3319,7 +3319,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
 1. **知识地图**：把 SM、Warp、Occupancy、Coalescing、Bank Conflict、Profiling 连成网络
 2. **优化决策树**：建立了从 profiling 到优化的完整思路
-3. **学习笔记模板**：提供了 `week1_notes.md` 的结构
+3. **学习笔记模板**：提供了 [week1_notes.md](notes/week1_notes.md) 的结构
 4. **面试准备框架**：概念 + 代码 + 表达三位一体
 5. **Week 2 衔接**：明确了还需要巩固的基础
 
@@ -3387,7 +3387,7 @@ week1/
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 `notes/week1_notes.md` 学习笔记
+- [ ] 完成 [notes/week1_notes.md](notes/week1_notes.md) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 

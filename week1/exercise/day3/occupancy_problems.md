@@ -226,7 +226,7 @@ occupancy     = active_warps / max_warps_per_sm * 100%
 
 ## 题目 7：用 CUDA API 验证你的计算
 
-请编译并运行同目录下的 `occupancy_verify.cu`：
+请编译并运行同目录下的 [occupancy_verify.cu](occupancy_verify.cu)：
 
 ```bash
 nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
@@ -241,7 +241,7 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 
 **任务**：
 1. 对比手算结果与程序输出是否一致。
-2. 如果程序运行在 A100 上，尝试修改 `occupancy_verify.cu` 中的 block size 和 shared memory 大小，观察 occupancy 如何变化。
+2. 如果程序运行在 A100 上，尝试修改 [occupancy_verify.cu](occupancy_verify.cu) 中的 block size 和 shared memory 大小，观察 occupancy 如何变化。
 3. 思考：为什么在某些情况下，手算结果和 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 可能有细微差别？（提示：寄存器/共享内存粒度、计算能力版本差异、编译器优化）
 
 ---

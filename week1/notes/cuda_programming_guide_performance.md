@@ -1,6 +1,6 @@
 # CUDA Programming Guide 性能优化部分学习笔记
 
-> 本笔记是 `week1/README.md` Day 3 的延伸阅读，汇总了新版《CUDA Programming Guide》中与性能优化相关的内容。Day 3 只需了解整体框架，具体技术细节会在 Day 4–Day 6 中专项练习。
+> 本笔记是 [week1/README.md](../README.md) Day 3 的延伸阅读，汇总了新版《CUDA Programming Guide》中与性能优化相关的内容。Day 3 只需了解整体框架，具体技术细节会在 Day 4–Day 6 中专项练习。
 
 ---
 
