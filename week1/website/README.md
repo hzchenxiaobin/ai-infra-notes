@@ -66,3 +66,4 @@ python3 build.py
 - ⬆️ 返回顶部按钮
 - 🏠 概览页显示每日任务卡片
 - 🖼️ 配套 SVG 图表：SM 架构、内存层次、Bank Conflict、Roofline 等
+- 🧮 Day 3 集成交互式 CUDA Occupancy Calculator

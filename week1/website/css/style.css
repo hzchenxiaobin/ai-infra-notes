@@ -445,3 +445,124 @@ body {
     color: var(--text-muted);
     margin-top: 8px;
 }
+
+/* CUDA Occupancy Calculator */
+.occupancy-calculator {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.calc-title {
+    margin: 0 0 8px;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+
+.calc-desc {
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.calc-form {
+    display: grid;
+    gap: 12px;
+}
+
+.calc-row {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+.calc-row label {
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.calc-row input,
+.calc-row select {
+    padding: 8px 10px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.calc-row input:focus,
+.calc-row select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.calc-button {
+    justify-self: start;
+    padding: 10px 20px;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    margin-top: 8px;
+    transition: background 0.2s;
+}
+
+.calc-button:hover {
+    background: var(--accent-hover);
+}
+
+.calc-result {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.calc-metric {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calc-metric span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.calc-metric strong {
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.calc-detail {
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.calc-detail p {
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .calc-row {
+        grid-template-columns: 1fr;
+    }
+
+    .calc-button {
+        width: 100%;
+        justify-self: stretch;
+    }
+}
