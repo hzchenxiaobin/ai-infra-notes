@@ -243,6 +243,162 @@ Part 5 是技术参考，调优时用来查具体数字：
 
 ---
 
+## 练习题
+
+> 以下题目用于检验你对 CUDA 性能优化核心概念的理解。建议先独立作答，再展开答案对照。
+
+### 选择题
+
+**1. 关于 Occupancy，下面哪个说法最准确？**
+
+A. Occupancy 越高越好，必须尽量达到 100%  
+B. Occupancy = 活跃 Warp 数 / SM 最大 Warp 数  
+C. Occupancy 只和每个 block 的线程数有关  
+D. 高 Occupancy 一定能隐藏所有延迟
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+Occupancy 定义为每个 SM 上活跃 Warp 数与最大 Warp 数的比值。A 错误：100% Occupancy 不是必须的，很多 kernel 在 75% 左右就能达到接近峰值性能。C 错误：Occupancy 受线程数、寄存器用量、shared memory、block 数量等多因素限制。D 错误：如果 Warp 全部都在等同一类资源（例如全局内存），单纯提高 Occupancy 也无法隐藏延迟。
+
+</details>
+
+---
+
+**2. 下面哪种 global memory 访问模式最有利于合并访问（coalesced access）？**
+
+A. `globalMem[threadIdx.x * N + idx]`  
+B. `globalMem[idx * blockDim.x + threadIdx.x]`  
+C. 每个线程随机访问不同地址  
+D. 所有线程都访问同一个地址
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+`globalMem[idx * blockDim.x + threadIdx.x]` 让 Warp 内相邻线程访问连续的内存地址，落在同一或相邻 cache line 中，事务数最少。A 是大跨步访问，C 导致大量分散事务，D 虽然事务少但属于 broadcast 场景，不能代表一般的高效并行访问模式。
+
+</details>
+
+---
+
+**3. 一个 Warp 内 32 个线程访问 shared memory 的同一 bank 的不同地址，会发生什么？**
+
+A. Broadcast，无 conflict  
+B. Bank conflict，访问被串行化  
+C. 自动 padding，无需处理  
+D. 没有影响，shared memory 任意访问都全速
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+同一 Warp 访问同一 bank 的不同地址会产生 bank conflict，硬件需要把这些访问串行化。只有当访问的是**同一地址**时才是 broadcast（A）。消除方法通常是在数组第二维加 padding，例如 `__shared__ float tile[32][32 + 1]`。
+
+</details>
+
+---
+
+### 计算与分析题
+
+**4. 某 GPU 每个 SM 最多驻留 1536 个线程、48 KB shared memory。一个 kernel 使用 256 线程/block、每个 block 用 8 KB shared memory、每个线程 32 个寄存器。假设寄存器不成为瓶颈，请计算：**
+
+- 每个 SM 最多驻留多少个 block？
+- 此时每个 SM 的活跃 Warp 数是多少？
+- Occupancy 是多少？（假设该 SM 最大 Warp 数为 48）
+
+<details>
+<summary>答案</summary>
+
+- 按线程数限制：`1536 / 256 = 6` 个 block。
+- 按 shared memory 限制：`48 KB / 8 KB = 6` 个 block。
+- 两者同时约束，取最小值，因此最多 **6 个 block**。
+- 活跃线程数：`6 × 256 = 1536`，即 `1536 / 32 = 48` 个 Warp。
+- Occupancy = `48 / 48 = 100%`。
+
+> 如果再把 shared memory 增加到 16 KB/block，shared memory 限制会变为 `48 / 16 = 3` 个 block，活跃 Warp 数降为 `3 × 256 / 32 = 24`，Occupancy 降到 50%。这说明了 shared memory 用量对 Occupancy 的直接影响。
+
+</details>
+
+---
+
+**5. 阅读下面用于矩阵转置的 shared memory 代码片段，判断是否存在 bank conflict。如果有，如何修改？**
+
+```cuda
+#define TILE_DIM 32
+
+__shared__ float tile[TILE_DIM][TILE_DIM];
+
+// 写入 shared memory（行主序）
+int x = threadIdx.x;
+int y = threadIdx.y;
+tile[y][x] = input[...];
+__syncthreads();
+
+// 读出到 global memory（列主序转置）
+output[...] = tile[x][y];
+```
+
+<details>
+<summary>答案</summary>
+
+**存在 bank conflict**。
+
+在读取阶段 `tile[x][y]`，同一 Warp 内相邻线程的 `x` 相同、`y` 递增，意味着它们访问 shared memory 的**同一列**——即**同一 bank 的不同地址**，产生 32-way bank conflict。
+
+**修改方法**：给第二维加 1 的 padding：
+
+```cuda
+__shared__ float tile[TILE_DIM][TILE_DIM + 1];
+```
+
+这样同一行相邻元素会落在不同 bank，读取 `tile[x][y]` 时同一 Warp 访问不同 bank，消除 conflict。
+
+</details>
+
+---
+
+**6. 为什么 `cudaMemcpyAsync` 需要 pinned（page-locked）host memory 才能真正异步执行？**
+
+<details>
+<summary>答案</summary>
+
+普通 pageable host memory 位于操作系统的虚拟内存管理中，GPU 无法直接访问。CUDA 驱动在执行 `cudaMemcpyAsync` 时，需要先把 pageable 内存复制到临时的 pinned buffer，再把数据传给 GPU，这个中转过程会阻塞当前 CPU 线程，导致拷贝实际上变成同步的。
+
+Pinned memory 由 `cudaMallocHost`/`cudaHostAlloc` 分配，页已经被锁定在物理内存中，GPU DMA 可以直接发起读写，因此 CPU 线程在提交拷贝命令后就能立即返回，实现真正的异步。
+
+</details>
+
+---
+
+**7. 一个 kernel 在 Nsight Compute 中显示：算力达到 GPU 峰值算力的 80%，而内存带宽只达到峰值带宽的 20%。用 Roofline 模型判断它更可能是 compute-bound 还是 memory-bound？应该优先优化哪方面？**
+
+<details>
+<summary>答案</summary>
+
+**更可能是 compute-bound**。
+
+Roofline 模型的判断依据是算术强度（Arithmetic Intensity = FLOPs / Bytes）：
+
+- 如果 kernel 已经用到了 80% 的峰值算力，而内存带宽只用了 20%，说明计算单元很忙，内存不是瓶颈。
+- 这通常对应 Roofline 图中** compute-bound 区域**（高算术强度）。
+
+**优先优化方向**：
+
+- 检查是否有冗余计算、低效的指令选择、分支发散。
+- 考虑使用 FP16/BF16/TF32 + Tensor Core 提升有效算力。
+- 尝试提高 ILP（指令级并行），让 ALU 更饱和。
+
+不建议优先优化内存合并访问，因为内存带宽远未饱和。
+
+</details>
+
+---
+
 ## 与 Week 1 各天的关联
 
 | 新版指南部分 | 对应实践日 | 对应内容 |
