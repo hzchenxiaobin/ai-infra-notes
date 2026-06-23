@@ -16,6 +16,9 @@ from typing import Optional
 
 OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
 
+# Source markdown for the full 8-week plan overview page.
+PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+
 # Markdown documents that should also be deployed as standalone HTML pages.
 # Paths are relative to week1/ (the parent directory of week1/website/).
 EXTRA_MARKDOWN_PAGES = [
@@ -43,6 +46,23 @@ EXTRA_SOURCE_DIRECTORIES = [
     "exercise",
     "notes",
 ]
+
+
+def extract_plan_weeks(plan_path: Path) -> list:
+    """Extract week numbers and titles from the 8-week plan markdown."""
+    if not plan_path.exists():
+        return []
+
+    text = plan_path.read_text(encoding="utf-8")
+    # Match headings like "## 🚀 Week 1：Title" or "## Week 1: Title"
+    pattern = re.compile(r"^##\s*[^\s]*\s*Week\s*(\d+)[:：]\s*(.+)$", re.MULTILINE)
+    weeks = []
+    for match in pattern.finditer(text):
+        weeks.append({
+            "num": int(match.group(1)),
+            "title": match.group(2).strip(),
+        })
+    return weeks
 
 
 def escape_for_template_string(text: str) -> str:
@@ -115,24 +135,68 @@ def split_by_days(markdown_text: str):
     return overview, days
 
 
-def build_nav(current_day: Optional[int], root_prefix: str = "") -> str:
-    """Build sidebar navigation. current_day=None means overview page."""
+def build_nav(
+    current_day: Optional[int] = None,
+    current_page: str = "week1",
+    root_prefix: str = "",
+    weeks: Optional[list] = None,
+) -> str:
+    """Build sidebar navigation.
+
+    current_page: "week1" for week1 pages, "plan" for the 8-week plan page.
+    current_day: active day number for week1 day pages.
+    weeks: list of {"num": int, "title": str} for Week 2~8 from the detailed plan.
+    """
+    if weeks is None:
+        weeks = []
+
     lines = []
 
-    overview_class = "nav-link active" if current_day is None else "nav-link"
+    overview_active = current_page == "week1" and current_day is None
+    overview_class = "nav-link active" if overview_active else "nav-link"
     lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">📌 课程概览</a>')
 
-    lines.append('<div class="nav-section-title">每日任务</div>')
-    for day in range(1, 8):
-        cls = "nav-link day-link active" if current_day == day else "nav-link day-link"
-        lines.append(f'<a class="{cls}" href="{root_prefix}day{day}.html">Day {day}</a>')
+    lines.append('<div class="nav-section-title">8 周学习路线</div>')
+
+    # Week 1 is always present and links to the week1 overview.
+    week1_active = current_page == "week1"
+    week1_cls = f"nav-link week-link{' active' if week1_active else ''}"
+    lines.append(
+        f'<a class="{week1_cls}" href="{root_prefix}index.html">Week 1：GPU 执行本质 + Profiling</a>'
+    )
+
+    # Day links are shown as nested items when viewing Week 1 content.
+    if current_page == "week1":
+        lines.append('<div class="nav-section">')
+        for day in range(1, 8):
+            cls = "nav-link day-link active" if current_day == day else "nav-link day-link"
+            lines.append(f'<a class="{cls}" href="{root_prefix}day{day}.html">Day {day}</a>')
+        lines.append('</div>')
+
+    # Weeks 2~8 link to anchors on the plan page.
+    for week in weeks:
+        if week["num"] <= 1:
+            continue
+        lines.append(
+            f'<a class="nav-link week-link" href="{root_prefix}plan.html#week-{week["num"]}">'
+            f'Week {week["num"]}：{week["title"]}'
+            f'</a>'
+        )
 
     return "\n".join(lines)
 
 
-def page_template(title: str, nav_html: str, markdown: str, is_overview: bool = False, extra_scripts: str = "", root_prefix: str = "") -> str:
+def page_template(
+    title: str,
+    nav_html: str,
+    markdown: str,
+    is_overview: bool = False,
+    extra_scripts: str = "",
+    root_prefix: str = "",
+    page_title: Optional[str] = None,
+) -> str:
     escaped_markdown = escape_for_template_string(markdown)
-    page_title = f"Week 1 - {title}"
+    page_title = page_title if page_title is not None else f"Week 1 - {title}"
     back_link = f'<a class="back-link" href="{root_prefix}index.html">← 返回概览</a>' if not is_overview else ''
     bottom_nav = f'<div class="day-nav-bottom"><a class="back-link" href="{root_prefix}index.html">← 返回概览</a></div>' if not is_overview else ''
 
@@ -250,7 +314,41 @@ def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
         print(f"Copied: {src} -> {dst}")
 
 
-def build_extra_pages(base_dir: Path, output_dir: Path) -> None:
+def build_plan_page(output_dir: Path, weeks: list) -> None:
+    """Build the full 8-week plan overview page from docs/AI_Infra_8_week_plan_detailed.md."""
+    if not PLAN_SOURCE.exists():
+        print(f"Warning: 8-week plan source not found: {PLAN_SOURCE}")
+        return
+
+    markdown_text = PLAN_SOURCE.read_text(encoding="utf-8")
+
+    # Inject explicit anchors before each Week heading so sidebar links reliably
+    # jump to the right section, regardless of the Markdown renderer's id logic.
+    def add_week_anchor(match: re.Match) -> str:
+        return f'<a id="week-{match.group(2)}"></a>\n{match.group(0)}'
+
+    week_heading_pattern = re.compile(r"^(##\s*[^\s]*\s*Week\s*(\d+)[:：].*)$", re.MULTILINE)
+    markdown_text = week_heading_pattern.sub(add_week_anchor, markdown_text)
+
+    nav_html = build_nav(
+        current_day=None,
+        current_page="plan",
+        root_prefix="",
+        weeks=weeks,
+    )
+
+    html = page_template(
+        title="8 周学习计划",
+        nav_html=nav_html,
+        markdown=markdown_text,
+        is_overview=True,
+        page_title="AI Infra 8 周计划",
+    )
+    (output_dir / "plan.html").write_text(html, encoding="utf-8")
+    print(f"Generated: {output_dir / 'plan.html'}")
+
+
+def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = None) -> None:
     """Build standalone HTML pages from extra markdown documents."""
     for page in EXTRA_MARKDOWN_PAGES:
         source_path = (base_dir / page["source"]).resolve()
@@ -261,7 +359,12 @@ def build_extra_pages(base_dir: Path, output_dir: Path) -> None:
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         root_prefix = compute_root_prefix(output_path, output_dir)
-        page_nav_html = build_nav(current_day=None, root_prefix=root_prefix)
+        page_nav_html = build_nav(
+            current_day=None,
+            current_page="week1",
+            root_prefix=root_prefix,
+            weeks=weeks,
+        )
         markdown_text = source_path.read_text(encoding="utf-8")
         # README references images as "website/images/xxx.svg"; adjust for website root.
         markdown_text = markdown_text.replace("](website/images/", "](images/")
@@ -304,10 +407,13 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
 
     overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
 
+    # Load week titles from the detailed 8-week plan for the sidebar.
+    plan_weeks = extract_plan_weeks(PLAN_SOURCE)
+
     # Generate overview page
     overview_html = page_template(
         title="课程概览",
-        nav_html=build_nav(current_day=None),
+        nav_html=build_nav(current_day=None, current_page="week1", weeks=plan_weeks),
         markdown=overview_with_cards,
         is_overview=True,
     )
@@ -323,7 +429,7 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
         )
         html = page_template(
             title=f"Day {day['num']}：{day['title']}",
-            nav_html=build_nav(current_day=day["num"]),
+            nav_html=build_nav(current_day=day["num"], current_page="week1", weeks=plan_weeks),
             markdown=day["markdown"],
             is_overview=False,
             extra_scripts=extra_scripts,
@@ -332,9 +438,12 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
         (output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {output_dir / filename}")
 
+    # Build the full 8-week plan overview page.
+    build_plan_page(output_dir, plan_weeks)
+
     # Build extra markdown pages and copy source directories for GitHub Pages links.
     copy_extra_directories(output_dir.parent, output_dir)
-    build_extra_pages(output_dir.parent, output_dir)
+    build_extra_pages(output_dir.parent, output_dir, plan_weeks)
 
 
 if __name__ == "__main__":

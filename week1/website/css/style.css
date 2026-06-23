@@ -99,6 +99,27 @@ body {
     font-size: 0.85rem;
 }
 
+.nav-link.week-link {
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 10px 24px;
+}
+
+.nav-section {
+    padding-left: 12px;
+    border-left: 2px solid var(--border-color);
+    margin: 0 0 4px 24px;
+}
+
+.nav-section .nav-link {
+    border-left: none;
+}
+
+.nav-section .nav-link.active {
+    color: var(--accent-color);
+    background-color: rgba(88, 166, 255, 0.05);
+}
+
 /* Main Content */
 .main-content {
     margin-left: 280px;
