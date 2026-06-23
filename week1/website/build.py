@@ -161,27 +161,46 @@ def build_nav(
     # Week 1 is always present and links to the week1 overview.
     week1_active = current_page == "week1"
     week1_cls = f"nav-link week-link{' active' if week1_active else ''}"
-    lines.append(
-        f'<a class="{week1_cls}" href="{root_prefix}index.html">Week 1：GPU 执行本质 + Profiling</a>'
+    week1_expanded = " is-expanded" if current_page == "week1" else ""
+    week1_toggle = (
+        '<button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="true">▼</button>'
+        if current_page == "week1"
+        else ""
     )
+    lines.append(f'<div class="nav-accordion-item{week1_expanded}">')
+    lines.append('  <div class="nav-accordion-header">')
+    lines.append(
+        f'    <a class="{week1_cls}" href="{root_prefix}index.html">'
+        f'Week 1：GPU 执行本质 + Profiling'
+        f'</a>{week1_toggle}'
+    )
+    lines.append('  </div>')
 
     # Day links are shown as nested items when viewing Week 1 content.
     if current_page == "week1":
-        lines.append('<div class="nav-section">')
+        lines.append('  <div class="nav-accordion-content">')
+        lines.append('    <div class="nav-section">')
         for day in range(1, 8):
             cls = "nav-link day-link active" if current_day == day else "nav-link day-link"
             lines.append(f'<a class="{cls}" href="{root_prefix}day{day}.html">Day {day}</a>')
-        lines.append('</div>')
+        lines.append('    </div>')
+        lines.append('  </div>')
+
+    lines.append('</div>')
 
     # Weeks 2~8 link to anchors on the plan page.
     for week in weeks:
         if week["num"] <= 1:
             continue
+        lines.append('<div class="nav-accordion-item">')
+        lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'<a class="nav-link week-link" href="{root_prefix}plan.html#week-{week["num"]}">'
+            f'    <a class="nav-link week-link" href="{root_prefix}plan.html#week-{week["num"]}">'
             f'Week {week["num"]}：{week["title"]}'
             f'</a>'
         )
+        lines.append('  </div>')
+        lines.append('</div>')
 
     return "\n".join(lines)
 
@@ -224,7 +243,6 @@ def page_template(
             <div class="sidebar-header">
                 <a href="{root_prefix}index.html" style="text-decoration: none;">
                     <h1 class="sidebar-title">AI Infra 8 周计划</h1>
-                    <p class="sidebar-subtitle">Week 1 学习指南</p>
                 </a>
             </div>
             <nav class="sidebar-nav">

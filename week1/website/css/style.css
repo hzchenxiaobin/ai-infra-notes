@@ -108,7 +108,7 @@ body {
 .nav-section {
     padding-left: 12px;
     border-left: 2px solid var(--border-color);
-    margin: 0 0 4px 24px;
+    margin: 0 0 4px 12px;
 }
 
 .nav-section .nav-link {
@@ -118,6 +118,50 @@ body {
 .nav-section .nav-link.active {
     color: var(--accent-color);
     background-color: rgba(88, 166, 255, 0.05);
+}
+
+/* Accordion navigation for weeks */
+.nav-accordion-item {
+    margin-bottom: 2px;
+}
+
+.nav-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-accordion-header .nav-link {
+    flex: 1;
+}
+
+.nav-accordion-toggle {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 8px 24px 8px 8px;
+    transition: transform 0.2s;
+    line-height: 1;
+}
+
+.nav-accordion-toggle:hover {
+    color: var(--text-color);
+}
+
+.nav-accordion-item.is-expanded .nav-accordion-toggle {
+    transform: rotate(180deg);
+}
+
+.nav-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+}
+
+.nav-accordion-item.is-expanded .nav-accordion-content {
+    max-height: 600px;
 }
 
 /* Main Content */

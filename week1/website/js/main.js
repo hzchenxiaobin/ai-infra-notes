@@ -18,6 +18,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Accordion navigation in sidebar
+    document.querySelectorAll('.nav-accordion-toggle').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const item = button.closest('.nav-accordion-item');
+            if (item) {
+                item.classList.toggle('is-expanded');
+                const isExpanded = item.classList.contains('is-expanded');
+                button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            }
+        });
+    });
+
     // Add copy buttons to code blocks
     document.querySelectorAll('.content pre').forEach(pre => {
         const wrapper = document.createElement('div');
