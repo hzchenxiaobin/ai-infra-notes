@@ -19,3 +19,14 @@ week1/website/notes/
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/
+.claude/
+.opencode/
+.arts/
+
+# Generated Week 2 website files
+week2/website/index.html
+week2/website/day*.html
+week2/website/plan.html
+week2/website/kernels/
+week2/website/exercise/
+week2/website/notes/
