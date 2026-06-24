@@ -4,6 +4,7 @@ Build the combined website for GitHub Pages.
 Generates:
   - public/ (deployment root)
     - week1 website files (copied from week1/website)
+    - week2 website files (copied from week2/website)
     - leetcode website files (copied from leetcode/website)
 """
 
@@ -13,7 +14,7 @@ from pathlib import Path
 
 
 def insert_leetcode_nav(html_text: str) -> str:
-    """Insert a LeetCode link into the week1 sidebar navigation."""
+    """Insert a LeetCode link into the week1/week2 sidebar navigation."""
     leetcode_section = '''<div class="nav-section-title">更多</div>
 <a class="nav-link" href="/leetcode/index.html">🧩 LeetCode 题解</a>
 '''
@@ -61,6 +62,21 @@ def main() -> None:
         skip={"build.py", "README.md"},
     )
 
+    # Build Week 2 website
+    print("Building Week 2 website...")
+    subprocess.run(
+        ["python3", str(repo_root / "week2" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy Week 2 website to public/week2/
+    print("Copying Week 2 website to public/week2/...")
+    copy_directory_contents(
+        repo_root / "week2" / "website",
+        public_dir / "week2",
+        skip={"build.py", "README.md"},
+    )
+
     # Build LeetCode website
     print("Building LeetCode website...")
     subprocess.run(
@@ -83,10 +99,11 @@ def main() -> None:
     if leetcode_images_src.exists():
         copy_directory_contents(leetcode_images_src, leetcode_images_dst)
 
-    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories)
+    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories, excluding week2/leetcode)
     week1_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
+        and "week2" not in p.relative_to(public_dir).parts
     ]
     for html_file in week1_pages:
         if html_file.is_file():
