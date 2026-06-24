@@ -215,6 +215,9 @@ def page_template(title: str, nav_html: str, markdown: str,
 
 def build_website(readme_path: Path, output_dir: Path) -> None:
     markdown_text = readme_path.read_text(encoding="utf-8")
+    # README references images as "website/images/xxx.svg" (for GitHub viewing),
+    # but website HTML is in website/, so we need to reference them as "images/xxx.svg"
+    markdown_text = markdown_text.replace("](website/images/", "](images/")
     overview, days = split_by_days(markdown_text)
 
     plan_weeks = extract_plan_weeks(PLAN_SOURCE)

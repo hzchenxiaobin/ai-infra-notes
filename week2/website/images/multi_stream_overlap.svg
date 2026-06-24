@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500">
+  <rect width="760" height="500" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Multi-Stream H2D/Compute/D2H 重叠流水线</text>
+
+  <!-- Sequential (top) -->
+  <text x="380" y="72" text-anchor="middle" font-size="15" fill="#f85149" font-weight="bold">顺序执行（无 Stream）：总计 = H2D + Compute + D2H</text>
+  <g transform="translate(60, 85)">
+    <text x="0" y="22" font-size="12" fill="#8b949e">Default</text>
+    <rect x="60" y="5" width="100" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="110" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">H2D</text>
+    <rect x="160" y="5" width="100" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="210" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">Compute</text>
+    <rect x="260" y="5" width="100" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="310" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">D2H</text>
+    <rect x="360" y="5" width="100" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="410" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">H2D</text>
+    <rect x="460" y="5" width="100" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="510" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">Compute</text>
+    <rect x="560" y="5" width="100" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="610" y="25" text-anchor="middle" font-size="10" fill="#c9d1d9">D2H</text>
+  </g>
+
+  <line x1="40" y1="140" x2="720" y2="140" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Multi-Stream (bottom) -->
+  <text x="380" y="175" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">Multi-Stream 重叠：总计 ≈ max(H2D, Compute) + 流水线填充</text>
+
+  <g transform="translate(60, 190)">
+    <!-- Stream 1 -->
+    <text x="0" y="22" font-size="12" fill="#8b949e">Stream 1</text>
+    <rect x="60" y="5" width="80" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="100" y="25" text-anchor="middle" font-size="9" fill="#c9d1d9">H2D</text>
+    <rect x="140" y="5" width="80" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="180" y="25" text-anchor="middle" font-size="9" fill="#c9d1d9">Comp</text>
+    <rect x="220" y="5" width="80" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="260" y="25" text-anchor="middle" font-size="9" fill="#c9d1d9">D2H</text>
+
+    <!-- Stream 2 -->
+    <text x="0" y="57" font-size="12" fill="#8b949e">Stream 2</text>
+    <rect x="100" y="40" width="80" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="140" y="60" text-anchor="middle" font-size="9" fill="#c9d1d9">H2D</text>
+    <rect x="180" y="40" width="80" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="220" y="60" text-anchor="middle" font-size="9" fill="#c9d1d9">Comp</text>
+    <rect x="260" y="40" width="80" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="300" y="60" text-anchor="middle" font-size="9" fill="#c9d1d9">D2H</text>
+
+    <!-- Stream 3 -->
+    <text x="0" y="92" font-size="12" fill="#8b949e">Stream 3</text>
+    <rect x="140" y="75" width="80" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="180" y="95" text-anchor="middle" font-size="9" fill="#c9d1d9">H2D</text>
+    <rect x="220" y="75" width="80" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="260" y="95" text-anchor="middle" font-size="9" fill="#c9d1d9">Comp</text>
+    <rect x="300" y="75" width="80" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="340" y="95" text-anchor="middle" font-size="9" fill="#c9d1d9">D2H</text>
+
+    <!-- Stream 4 -->
+    <text x="0" y="127" font-size="12" fill="#8b949e">Stream 4</text>
+    <rect x="180" y="110" width="80" height="30" rx="4" fill="#d29922" opacity="0.4" stroke="#d29922"/>
+    <text x="220" y="130" text-anchor="middle" font-size="9" fill="#c9d1d9">H2D</text>
+    <rect x="260" y="110" width="80" height="30" rx="4" fill="#58a6ff" opacity="0.4" stroke="#58a6ff"/>
+    <text x="300" y="130" text-anchor="middle" font-size="9" fill="#c9d1d9">Comp</text>
+    <rect x="340" y="110" width="80" height="30" rx="4" fill="#a371f7" opacity="0.4" stroke="#a371f7"/>
+    <text x="380" y="130" text-anchor="middle" font-size="9" fill="#c9d1d9">D2H</text>
+
+    <!-- overlap highlight -->
+    <rect x="140" y="5" width="160" height="135" fill="none" stroke="#3fb950" stroke-width="2" stroke-dasharray="4" rx="4"/>
+    <text x="220" y="160" text-anchor="middle" font-size="11" fill="#3fb950">↑ H2D 与 Compute 重叠</text>
+
+    <!-- Hardware engines -->
+    <line x1="0" y1="180" x2="560" y2="180" stroke="#30363d"/>
+    <text x="0" y="200" font-size="13" fill="#c9d1d9" font-weight="bold">硬件引擎独立并行：</text>
+    <rect x="200" y="185" width="120" height="25" rx="4" fill="#d29922" opacity="0.2" stroke="#d29922"/>
+    <text x="260" y="202" text-anchor="middle" font-size="11" fill="#d29922">Copy Engine (DMA)</text>
+    <rect x="340" y="185" width="140" height="25" rx="4" fill="#58a6ff" opacity="0.2" stroke="#58a6ff"/>
+    <text x="410" y="202" text-anchor="middle" font-size="11" fill="#58a6ff">Compute Engine (SM)</text>
+
+    <!-- Speedup -->
+    <rect x="120" y="230" width="360" height="35" rx="6" fill="#161b22" stroke="#3fb950"/>
+    <text x="300" y="252" text-anchor="middle" font-size="13" fill="#3fb950" font-weight="bold">加速比通常 1.2x ~ 1.8x（取决于 Copy Engine 数量）</text>
+  </g>
+</svg>

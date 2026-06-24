@@ -80,6 +80,8 @@ Shared Memory 虽然比 Global Memory 快得多（~20-30 cycles vs ~400-800 cycl
 
 #### 1.1 Warp Shuffle 四大家族
 
+![Warp Shuffle 四大家族数据流向](website/images/warp_shuffle_primitives.svg)
+
 CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 
 | 原语名称 | 函数签名 | 作用描述 | 使用场景 |
@@ -150,6 +152,8 @@ val = __shfl_down_sync(0xFFFFFFFF, val, 1, 16);  // lane 0 读 lane 1，lane 16 
 
 #### 1.3 Warp Reduce Butterfly 模式
 
+![Warp Reduce Butterfly 模式](website/images/butterfly_reduction.svg)
+
 Warp Reduce（求和）使用 `__shfl_down_sync` 实现折半累加，整个过程像蝴蝶展翅，因此称为 **Butterfly 模式**：
 
 ```
@@ -201,6 +205,8 @@ __inline__ __device__ float warpReduceSumAll(float val) {
 ```
 
 #### 1.4 两级归约：Warp Reduce + Block Reduce
+
+![两级归约流程](website/images/two_level_reduction.svg)
 
 ##### 为什么需要两级归约？
 
@@ -644,6 +650,8 @@ Warp-level        Register+Shuffle   Warp内协作          ~60-80% peak
 
 #### 2.1 Register Blocking 数据流图
 
+![Register Blocking 三级数据复用](website/images/register_blocking_dataflow.svg)
+
 ```
 Global Memory (A[M][K], B[K][N])
     │
@@ -689,6 +697,8 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 
 #### 2.4 线程到输出 tile 的二维映射
 
+![Thread Tile 二维映射](website/images/thread_tile_mapping.svg)
+
 ```
 输出 tile (BM×BN = 128×128) 被划分为 (BM/TM)×(BN/TN) = 16×16 = 256 个 thread tile
 每个 thread tile = TM×TN = 8×8
@@ -704,6 +714,8 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
 ```
 
 #### 2.5 Double Buffering（软件流水线）
+
+![Double Buffering 软件流水线](website/images/double_buffering.svg)
 
 ```
 单缓冲： [Load Tile 0] ──► [Compute Tile 0] ──► [Load Tile 1] ──► [Compute Tile 1]
@@ -1079,6 +1091,8 @@ Stream 2: [H2D拷贝2] → [Kernel2] → [D2H拷贝2]
 
 #### 3.2 Default Stream 的"坑"
 
+![Default Stream 隐式同步陷阱](website/images/default_stream_sync.svg)
+
 | 特性 | Default Stream (Stream 0) | Explicit Stream |
 |------|-------------------------|-----------------|
 | 创建方式 | 隐式存在，无需创建 | `cudaStreamCreate(&stream)` |
@@ -1112,6 +1126,8 @@ cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 
 #### 3.4 多 Stream 重叠流水线
 
+![Multi-Stream 重叠流水线](website/images/multi_stream_overlap.svg)
+
 ```
 无 Stream（顺序）： [H2D拷贝] ──► [Kernel计算] ──► [D2H拷贝]
                    总计 = H2D + Compute + D2H
@@ -1126,6 +1142,8 @@ Multi-Stream（重叠）：
 ```
 
 #### 3.5 cudaEvent 跨 Stream 依赖
+
+![cudaEvent 跨 Stream 依赖管理](website/images/stream_event_dependency.svg)
 
 当 Stream 间存在数据依赖时，用 Event 实现精确同步：
 

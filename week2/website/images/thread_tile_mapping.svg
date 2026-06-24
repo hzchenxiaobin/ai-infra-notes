@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480">
+  <rect width="760" height="480" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Thread Tile 二维映射（BM=128, BN=128, TM=8, TN=8）</text>
+
+  <!-- Block tile -->
+  <g transform="translate(80, 70)">
+    <text x="0" y="-5" font-size="14" fill="#58a6ff" font-weight="bold">Block Tile (BM×BN = 128×128)</text>
+    <rect x="0" y="0" width="320" height="320" fill="none" stroke="#58a6ff" stroke-width="2" rx="4"/>
+
+    <!-- Thread tiles grid (16x16 = 256 threads) -->
+    <g opacity="0.6">
+      <!-- Row 0 -->
+      <rect x="0" y="0" width="20" height="20" fill="#1f6feb" opacity="0.3" stroke="#30363d" stroke-width="0.5"/>
+      <rect x="20" y="0" width="20" height="20" fill="#1f6feb" opacity="0.2" stroke="#30363d" stroke-width="0.5"/>
+      <rect x="40" y="0" width="20" height="20" fill="#1f6feb" opacity="0.3" stroke="#30363d" stroke-width="0.5"/>
+      <text x="280" y="-2" font-size="9" fill="#8b949e">... 16 cols</text>
+    </g>
+
+    <!-- Highlight one thread tile -->
+    <rect x="40" y="40" width="20" height="20" fill="#238636" opacity="0.5" stroke="#3fb950" stroke-width="2"/>
+    <text x="50" y="54" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">T</text>
+
+    <!-- Thread tile annotation -->
+    <line x1="60" y1="50" x2="200" y2="50" stroke="#3fb950" stroke-width="1" stroke-dasharray="4"/>
+    <rect x="200" y="35" width="120" height="30" rx="4" fill="#161b22" stroke="#3fb950"/>
+    <text x="260" y="54" text-anchor="middle" font-size="11" fill="#3fb950">TM×TN = 8×8</text>
+
+    <!-- Grid lines -->
+    <line x1="0" y1="20" x2="320" y2="20" stroke="#30363d" stroke-width="0.5"/>
+    <line x1="0" y1="40" x2="320" y2="40" stroke="#30363d" stroke-width="0.5"/>
+    <line x1="0" y1="60" x2="320" y2="60" stroke="#30363d" stroke-width="0.5"/>
+    <line x1="20" y1="0" x2="20" y2="320" stroke="#30363d" stroke-width="0.5"/>
+    <line x1="40" y1="0" x2="40" y2="320" stroke="#30363d" stroke-width="0.5"/>
+    <line x1="60" y1="0" x2="60" y2="320" stroke="#30363d" stroke-width="0.5"/>
+
+    <text x="160" y="340" text-anchor="middle" font-size="11" fill="#8b949e">16×16 = 256 个 Thread Tile，每个线程负责 8×8 输出</text>
+  </g>
+
+  <!-- Right side: formulas -->
+  <g transform="translate(460, 80)">
+    <rect x="0" y="0" width="280" height="280" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <text x="140" y="28" text-anchor="middle" font-size="14" fill="#58a6ff" font-weight="bold">线程映射公式</text>
+
+    <text x="20" y="60" font-size="12" fill="#c9d1d9">threadIdx.x 范围: 0 ~ 255</text>
+    <text x="20" y="85" font-size="12" fill="#c9d1d9">BN / TN = 128 / 8 = 16</text>
+
+    <line x1="20" y1="100" x2="260" y2="100" stroke="#30363d"/>
+
+    <text x="20" y="125" font-size="13" fill="#3fb950" font-family="monospace">threadRow = threadIdx.x / 16</text>
+    <text x="20" y="145" font-size="13" fill="#3fb950" font-family="monospace">threadCol = threadIdx.x % 16</text>
+
+    <line x1="20" y1="160" x2="260" y2="160" stroke="#30363d"/>
+
+    <text x="20" y="185" font-size="12" fill="#c9d1d9">线程 (threadRow, threadCol)</text>
+    <text x="20" y="205" font-size="12" fill="#c9d1d9">负责输出行:</text>
+    <text x="30" y="225" font-size="11" fill="#d29922" font-family="monospace">[cRow + threadRow*TM,</text>
+    <text x="30" y="242" font-size="11" fill="#d29922" font-family="monospace"> cRow + (threadRow+1)*TM)</text>
+
+    <text x="20" y="265" font-size="12" fill="#c9d1d9">每 Block 线程数 = 16×16 = 256</text>
+  </g>
+
+  <!-- Bottom: key params table -->
+  <g transform="translate(80, 410)">
+    <rect x="0" y="0" width="600" height="60" rx="6" fill="#161b22" stroke="#30363d"/>
+    <text x="15" y="22" font-size="12" fill="#58a6ff">BM=128</text>
+    <text x="100" y="22" font-size="12" fill="#58a6ff">BN=128</text>
+    <text x="185" y="22" font-size="12" fill="#58a6ff">BK=8</text>
+    <text x="250" y="22" font-size="12" fill="#3fb950">TM=8</text>
+    <text x="315" y="22" font-size="12" fill="#3fb950">TN=8</text>
+    <text x="380" y="22" font-size="12" fill="#d29922">Threads=256</text>
+    <text x="490" y="22" font-size="12" fill="#d29922">Regs≈88</text>
+    <text x="300" y="45" text-anchor="middle" font-size="11" fill="#8b949e">Shared Mem: s_A[128][8] + s_B[8][128] = 2×4KB = 8KB</text>
+  </g>
+</svg>

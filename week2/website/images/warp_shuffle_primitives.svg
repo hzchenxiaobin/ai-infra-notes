@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560">
+  <rect width="760" height="560" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Warp Shuffle 四大家族数据流向</text>
+
+  <!-- __shfl_sync (broadcast) -->
+  <text x="380" y="72" text-anchor="middle" font-size="15" font-weight="bold" fill="#58a6ff">__shfl_sync(mask, val, srcLane=4)</text>
+  <g transform="translate(140, 85)">
+    <text x="0" y="14" font-size="11" fill="#8b949e">Lane</text>
+    <rect x="0" y="20" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="36" text-anchor="middle" font-size="10" fill="#c9d1d9">0</text>
+    <rect x="0" y="44" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="60" text-anchor="middle" font-size="10" fill="#c9d1d9">1</text>
+    <rect x="0" y="68" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="84" text-anchor="middle" font-size="10" fill="#c9d1d9">2</text>
+    <rect x="0" y="92" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="108" text-anchor="middle" font-size="10" fill="#c9d1d9">3</text>
+    <rect x="0" y="116" width="40" height="24" fill="#238636" stroke="#3fb950" stroke-width="2"/><text x="20" y="132" text-anchor="middle" font-size="10" fill="#c9d1d9" font-weight="bold">4</text>
+    <rect x="0" y="140" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="156" text-anchor="middle" font-size="10" fill="#c9d1d9">5</text>
+    <rect x="0" y="164" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="180" text-anchor="middle" font-size="10" fill="#c9d1d9">...</text>
+
+    <!-- arrows -->
+    <line x1="40" y1="32" x2="100" y2="32" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+    <line x1="40" y1="56" x2="100" y2="56" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+    <line x1="40" y1="80" x2="100" y2="80" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+    <line x1="40" y1="104" x2="100" y2="104" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+    <line x1="40" y1="128" x2="100" y2="128" stroke="#3fb950" stroke-width="2" marker-end="url(#arr56)"/>
+    <line x1="40" y1="152" x2="100" y2="152" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+    <line x1="40" y1="176" x2="100" y2="176" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
+
+    <!-- result -->
+    <rect x="100" y="20" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="36" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="44" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="60" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="68" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="84" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="92" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="108" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="116" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="140" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="156" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+    <rect x="100" y="164" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="180" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
+
+    <text x="160" y="104" font-size="11" fill="#3fb950">广播：所有 lane 得到 lane 4 的值</text>
+  </g>
+
+  <line x1="40" y1="295" x2="720" y2="295" stroke="#30363d" stroke-width="1"/>
+
+  <!-- __shfl_down_sync -->
+  <text x="190" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#d29922">__shfl_down_sync(delta=2)</text>
+  <g transform="translate(60, 340)">
+    <text x="0" y="14" font-size="10" fill="#8b949e">Lane</text>
+    <rect x="0" y="18" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="32" text-anchor="middle" font-size="9" fill="#c9d1d9">0</text>
+    <rect x="0" y="38" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="52" text-anchor="middle" font-size="9" fill="#c9d1d9">1</text>
+    <rect x="0" y="58" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="72" text-anchor="middle" font-size="9" fill="#c9d1d9">2</text>
+    <rect x="0" y="78" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="92" text-anchor="middle" font-size="9" fill="#c9d1d9">3</text>
+    <rect x="0" y="98" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="112" text-anchor="middle" font-size="9" fill="#c9d1d9">4</text>
+    <rect x="0" y="118" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">5</text>
+
+    <text x="42" y="32" font-size="10" fill="#c9d1d9">V0</text>
+    <text x="42" y="52" font-size="10" fill="#c9d1d9">V1</text>
+    <text x="42" y="72" font-size="10" fill="#c9d1d9">V2</text>
+    <text x="42" y="92" font-size="10" fill="#c9d1d9">V3</text>
+    <text x="42" y="112" font-size="10" fill="#c9d1d9">V4</text>
+    <text x="42" y="132" font-size="10" fill="#c9d1d9">V5</text>
+
+    <line x1="55" y1="28" x2="85" y2="68" stroke="#d29922" stroke-width="1.5"/>
+    <line x1="55" y1="48" x2="85" y2="88" stroke="#d29922" stroke-width="1.5"/>
+    <line x1="55" y1="68" x2="85" y2="108" stroke="#d29922" stroke-width="1.5"/>
+    <line x1="55" y1="88" x2="85" y2="128" stroke="#d29922" stroke-width="1.5"/>
+
+    <text x="95" y="32" font-size="10" fill="#e3b341" font-weight="bold">V2</text>
+    <text x="95" y="52" font-size="10" fill="#e3b341" font-weight="bold">V3</text>
+    <text x="95" y="72" font-size="10" fill="#e3b341" font-weight="bold">V4</text>
+    <text x="95" y="92" font-size="10" fill="#e3b341" font-weight="bold">V5</text>
+    <text x="95" y="112" font-size="10" fill="#8b949e">?</text>
+    <text x="95" y="132" font-size="10" fill="#8b949e">?</text>
+
+    <text x="0" y="165" font-size="10" fill="#8b949e">向下偏移：lane i 读 lane (i+2)</text>
+  </g>
+
+  <!-- __shfl_xor_sync -->
+  <text x="520" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#a371f7">__shfl_xor_sync(laneMask=2)</text>
+  <g transform="translate(400, 340)">
+    <text x="0" y="14" font-size="10" fill="#8b949e">Lane</text>
+    <rect x="0" y="18" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="32" text-anchor="middle" font-size="9" fill="#c9d1d9">0</text>
+    <rect x="0" y="38" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="52" text-anchor="middle" font-size="9" fill="#c9d1d9">1</text>
+    <rect x="0" y="58" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="72" text-anchor="middle" font-size="9" fill="#c9d1d9">2</text>
+    <rect x="0" y="78" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="92" text-anchor="middle" font-size="9" fill="#c9d1d9">3</text>
+    <rect x="0" y="98" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="112" text-anchor="middle" font-size="9" fill="#c9d1d9">4</text>
+    <rect x="0" y="118" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">5</text>
+
+    <text x="42" y="32" font-size="10" fill="#c9d1d9">V0</text>
+    <text x="42" y="52" font-size="10" fill="#c9d1d9">V1</text>
+    <text x="42" y="72" font-size="10" fill="#c9d1d9">V2</text>
+    <text x="42" y="92" font-size="10" fill="#c9d1d9">V3</text>
+    <text x="42" y="112" font-size="10" fill="#c9d1d9">V4</text>
+    <text x="42" y="132" font-size="10" fill="#c9d1d9">V5</text>
+
+    <line x1="55" y1="28" x2="85" y2="68" stroke="#a371f7" stroke-width="1.5"/>
+    <line x1="55" y1="48" x2="85" y2="88" stroke="#a371f7" stroke-width="1.5"/>
+    <line x1="55" y1="68" x2="85" y2="28" stroke="#a371f7" stroke-width="1.5"/>
+    <line x1="55" y1="88" x2="85" y2="48" stroke="#a371f7" stroke-width="1.5"/>
+    <line x1="55" y1="108" x2="85" y2="128" stroke="#a371f7" stroke-width="1.5"/>
+    <line x1="55" y1="128" x2="85" y2="108" stroke="#a371f7" stroke-width="1.5"/>
+
+    <text x="95" y="32" font-size="10" fill="#a371f7" font-weight="bold">V2</text>
+    <text x="95" y="52" font-size="10" fill="#a371f7" font-weight="bold">V3</text>
+    <text x="95" y="72" font-size="10" fill="#a371f7" font-weight="bold">V0</text>
+    <text x="95" y="92" font-size="10" fill="#a371f7" font-weight="bold">V1</text>
+    <text x="95" y="112" font-size="10" fill="#a371f7" font-weight="bold">V6</text>
+    <text x="95" y="132" font-size="10" fill="#a371f7" font-weight="bold">V4</text>
+
+    <text x="0" y="165" font-size="10" fill="#8b949e">XOR 交换：lane i 与 lane (i^2) 交换</text>
+  </g>
+
+  <!-- latency comparison -->
+  <rect x="200" y="520" width="360" height="30" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="380" y="540" text-anchor="middle" font-size="13" fill="#c9d1d9">Shuffle ~1-2 cycles ≪ Shared Memory ~20-30 cycles</text>
+</svg>
