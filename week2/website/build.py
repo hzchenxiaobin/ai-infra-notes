@@ -4,7 +4,8 @@ Build the Week 2 website from README.md.
 Generates:
   - index.html: overview page
   - day1.html ~ dayN.html: one page per day
-Uses absolute paths (/css/..., /js/...) for shared resources served from root.
+Uses relative paths (../css/..., ../js/...) for shared resources,
+since week2/ is one level below the deployment root on GitHub Pages.
 """
 
 import re
@@ -62,14 +63,14 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     overview_active = current_day is None
     overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="/week2/index.html">📌 Week 2 概览</a>')
+    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 2 概览</a>')
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
     # Week 1 link (not expanded on week2 pages)
     lines.append('<div class="nav-accordion-item">')
     lines.append('  <div class="nav-accordion-header">')
-    lines.append('    <a class="nav-link week-link" href="/index.html">Week 1：GPU 执行本质 + Profiling</a>')
+    lines.append('    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a>')
     lines.append('  </div>')
     lines.append('</div>')
 
@@ -77,14 +78,14 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
     lines.append('<div class="nav-accordion-item is-expanded">')
     lines.append('  <div class="nav-accordion-header">')
     week2_cls = "nav-link week-link active" if current_day is not None else "nav-link week-link"
-    lines.append(f'    <a class="{week2_cls}" href="/week2/index.html">Week 2：CUDA 进阶优化与性能分析</a>')
+    lines.append(f'    <a class="{week2_cls}" href="index.html">Week 2：CUDA 进阶优化与性能分析</a>')
     lines.append('    <button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="true">▼</button>')
     lines.append('  </div>')
     lines.append('  <div class="nav-accordion-content">')
     lines.append('    <div class="nav-section">')
     for day_num in existing_days:
         cls = "nav-link day-link active" if current_day == day_num else "nav-link day-link"
-        lines.append(f'<a class="{cls}" href="/week2/day{day_num}.html">Day {day_num}</a>')
+        lines.append(f'<a class="{cls}" href="day{day_num}.html">Day {day_num}</a>')
     lines.append('    </div>')
     lines.append('  </div>')
     lines.append('</div>')
@@ -96,7 +97,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         lines.append('<div class="nav-accordion-item">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <a class="nav-link week-link" href="/plan.html#week-{week["num"]}">'
+            f'    <a class="nav-link week-link" href="../plan.html#week-{week["num"]}">'
             f'Week {week["num"]}：{week["title"]}'
             f'</a>'
         )
@@ -105,7 +106,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     # More section
     lines.append('<div class="nav-section-title">更多</div>')
-    lines.append('<a class="nav-link" href="/leetcode/index.html">🧩 LeetCode 题解</a>')
+    lines.append('<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>')
 
     return "\n".join(lines)
 
@@ -114,8 +115,8 @@ def page_template(title: str, nav_html: str, markdown: str,
                   is_overview: bool = False, page_title: Optional[str] = None) -> str:
     escaped_markdown = escape_for_template_string(markdown)
     page_title = page_title if page_title is not None else f"Week 2 - {title}"
-    back_link = '' if is_overview else '<a class="back-link" href="/week2/index.html">← 返回概览</a>'
-    bottom_nav = '' if is_overview else '<div class="day-nav-bottom"><a class="back-link" href="/week2/index.html">← 返回概览</a></div>'
+    back_link = '' if is_overview else '<a class="back-link" href="index.html">← 返回概览</a>'
+    bottom_nav = '' if is_overview else '<div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>'
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -123,13 +124,13 @@ def page_template(title: str, nav_html: str, markdown: str,
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <script src="/js/marked.min.js"></script>
-    <link href="/css/prism-tomorrow.min.css" rel="stylesheet">
-    <script src="/js/prism.min.js"></script>
-    <script src="/js/prism-c.min.js"></script>
-    <script src="/js/prism-bash.min.js"></script>
-    <script src="/js/prism-python.min.js"></script>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
 </head>
 <body>
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -137,7 +138,7 @@ def page_template(title: str, nav_html: str, markdown: str,
     <div class="site-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <a href="/index.html" style="text-decoration: none;">
+                <a href="../index.html" style="text-decoration: none;">
                     <h1 class="sidebar-title">AI Infra 8 周计划</h1>
                 </a>
             </div>
@@ -190,7 +191,7 @@ def page_template(title: str, nav_html: str, markdown: str,
 
         try {{
             if (typeof marked === 'undefined') {{
-                throw new Error('marked.js failed to load.');
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
             }}
             document.getElementById('content').innerHTML = marked.parse(markdown);
 
@@ -201,11 +202,12 @@ def page_template(title: str, nav_html: str, markdown: str,
             document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
                 '<h2>⚠️ 页面渲染失败</h2>' +
                 '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
                 '</div>';
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="/js/main.js"></script>
+    <script src="../js/main.js"></script>
 </body>
 </html>
 """
@@ -221,7 +223,7 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
     day_cards_html = '<div class="day-cards">\n'
     for day in days:
         day_cards_html += (
-            f'<a class="day-card" href="/week2/day{day["num"]}.html">\n'
+            f'<a class="day-card" href="day{day["num"]}.html">\n'
             f'  <div class="day-card-number">Day {day["num"]}</div>\n'
             f'  <div class="day-card-title">{day["title"]}</div>\n'
             f'</a>\n'
