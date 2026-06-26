@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500">
+  <rect width="760" height="500" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Online Softmax 三个更新公式</text>
+
+  <!-- State variables -->
+  <g transform="translate(40, 60)">
+    <rect x="0" y="0" width="680" height="60" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <text x="20" y="25" font-size="13" fill="#58a6ff" font-weight="bold">Running 状态</text>
+    <text x="20" y="45" font-size="12" fill="#c9d1d9">m = running max | l = running sum | o = running output（初始：m=-∞, l=0, o=0）</text>
+  </g>
+
+  <!-- Formula 1 -->
+  <g transform="translate(40, 140)">
+    <rect x="0" y="0" width="680" height="85" rx="8" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="2"/>
+    <text x="20" y="25" font-size="14" fill="#58a6ff" font-weight="bold">公式 1 — Max 更新</text>
+    <rect x="20" y="35" width="640" height="40" rx="4" fill="#0d1117" stroke="#30363d"/>
+    <text x="340" y="60" text-anchor="middle" font-size="16" fill="#c9d1d9" font-family="monospace">m_new = max(m, max(x_j))</text>
+  </g>
+
+  <!-- Formula 2 -->
+  <g transform="translate(40, 240)">
+    <rect x="0" y="0" width="680" height="105" rx="8" fill="#d29922" opacity="0.1" stroke="#d29922" stroke-width="2"/>
+    <text x="20" y="25" font-size="14" fill="#d29922" font-weight="bold">公式 2 — Sum 更新</text>
+    <rect x="20" y="35" width="640" height="40" rx="4" fill="#0d1117" stroke="#30363d"/>
+    <text x="340" y="60" text-anchor="middle" font-size="14" fill="#c9d1d9" font-family="monospace">l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)</text>
+    <text x="20" y="92" font-size="11" fill="#8b949e">l × exp(m - m_new)：旧 sum 从旧参考点 m 缩放到新参考点 m_new</text>
+  </g>
+
+  <!-- Formula 3 -->
+  <g transform="translate(40, 360)">
+    <rect x="0" y="0" width="680" height="120" rx="8" fill="#3fb950" opacity="0.1" stroke="#3fb950" stroke-width="2"/>
+    <text x="20" y="25" font-size="14" fill="#3fb950" font-weight="bold">公式 3 — Output 更新</text>
+    <rect x="20" y="35" width="640" height="50" rx="4" fill="#0d1117" stroke="#30363d"/>
+    <text x="340" y="58" text-anchor="middle" font-size="12" fill="#c9d1d9" font-family="monospace">o_new = o × (l × exp(m - m_new) / l_new)</text>
+    <text x="340" y="76" text-anchor="middle" font-size="12" fill="#c9d1d9" font-family="monospace">     + (exp(x_j - m_new) / l_new) × v_j</text>
+    <text x="20" y="105" font-size="11" fill="#8b949e">前半：旧输出按新概率重新归一化 | 后半：新块贡献以新权重加权 V</text>
+  </g>
+
+  <!-- Key insight -->
+  <text x="380" y="490" text-anchor="middle" font-size="13" fill="#a371f7" font-weight="bold">关键缩放因子：exp(m - m_new) 保证全局参考点一致</text>
+</svg>
