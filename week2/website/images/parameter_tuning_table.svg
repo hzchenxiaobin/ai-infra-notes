@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+  <rect width="760" height="440" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">参数精调扫描表</text>
+
+  <!-- Table header -->
+  <g transform="translate(40, 60)">
+    <rect x="0" y="0" width="680" height="35" fill="#30363d" stroke="#484f58"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">TM×TN</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">1024 矩阵</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">2048 矩阵</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">4096 矩阵</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Register</text>
+  </g>
+
+  <!-- Row 1: 8x8 baseline -->
+  <g transform="translate(40, 95)">
+    <rect x="0" y="0" width="680" height="35" fill="#a371f7" opacity="0.1" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#a371f7" font-weight="bold">8×8</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#3fb950">~88</text>
+  </g>
+
+  <!-- Row 2: 8x16 -->
+  <g transform="translate(40, 130)">
+    <rect x="0" y="0" width="680" height="35" fill="#161b22" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9">8×16</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+5%</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+8%</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+10%</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#d29922">~152</text>
+  </g>
+
+  <!-- Row 3: 16x8 -->
+  <g transform="translate(40, 165)">
+    <rect x="0" y="0" width="680" height="35" fill="#161b22" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9">16×8</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+3%</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+5%</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+8%</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#d29922">~152</text>
+  </g>
+
+  <!-- Row 4: 16x16 DANGER -->
+  <g transform="translate(40, 200)">
+    <rect x="0" y="0" width="680" height="35" fill="#f85149" opacity="0.1" stroke="#f85149"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">16×16</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#f85149">SPILL!</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#f85149">SPILL!</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#f85149">SPILL!</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">~256</text>
+  </g>
+
+  <!-- BK scan -->
+  <g transform="translate(40, 255)">
+    <rect x="0" y="0" width="680" height="35" fill="#30363d" stroke="#484f58"/>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">BK 扫描（固定 TM=TN=8）</text>
+  </g>
+
+  <g transform="translate(40, 290)">
+    <rect x="0" y="0" width="680" height="35" fill="#161b22" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9">BK=4</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#f85149">-2%</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#8b949e">+3%</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+5%</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#8b949e">smem↓</text>
+  </g>
+
+  <g transform="translate(40, 325)">
+    <rect x="0" y="0" width="680" height="35" fill="#a371f7" opacity="0.1" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#a371f7" font-weight="bold">BK=8</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#8b949e">基准</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#3fb950">~88</text>
+  </g>
+
+  <g transform="translate(40, 360)">
+    <rect x="0" y="0" width="680" height="35" fill="#161b22" stroke="#30363d"/>
+    <text x="80" y="23" text-anchor="middle" font-size="12" fill="#c9d1d9">BK=16</text>
+    <text x="200" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+1%</text>
+    <text x="340" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+2%</text>
+    <text x="480" y="23" text-anchor="middle" font-size="12" fill="#3fb950">+3%</text>
+    <text x="620" y="23" text-anchor="middle" font-size="12" fill="#d29922">smem↑</text>
+  </g>
+
+  <text x="380" y="425" text-anchor="middle" font-size="12" fill="#8b949e">精调步骤：先扫 TM×TN → 再扫 BK → 最后扫 BM/BN</text>
+</svg>
