@@ -30,3 +30,4 @@ week2/website/plan.html
 week2/website/kernels/
 week2/website/exercise/
 week2/website/notes/
+*.pyc

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500" viewBox="0 0 720 500">
+  <rect width="720" height="500" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 峰值算力与显存带宽计算（以 A100 为例）</text>
+
+  <!-- Peak FLOP/s -->
+  <rect x="40" y="65" width="640" height="185" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="92" text-anchor="middle" font-size="16" font-weight="bold" fill="#58a6ff">理论 FP32 峰值算力</text>
+
+  <text x="60" y="120" font-size="13" fill="#c9d1d9" font-family="monospace">Peak FLOP/s = SM数 × FP32 Cores/SM × GPU频率 × 2</text>
+  <text x="60" y="148" font-size="12" fill="#8b949e">乘以 2 因为一条 FMA 指令 = 乘法 + 加法</text>
+
+  <g transform="translate(60, 165)">
+    <rect x="0" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="60" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">SM: 108</text>
+    <text x="130" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="145" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="205" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Cores/SM: 64</text>
+    <text x="275" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="290" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="350" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">频率: 1.41GHz</text>
+    <text x="420" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="435" y="0" width="60" height="35" rx="4" fill="#d29922" opacity="0.2" stroke="#d29922"/>
+    <text x="465" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">2</text>
+  </g>
+
+  <rect x="180" y="210" width="280" height="30" rx="6" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="320" y="230" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">= 19.49 TFLOP/s</text>
+
+  <!-- Bandwidth -->
+  <rect x="40" y="270" width="640" height="185" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="297" text-anchor="middle" font-size="16" font-weight="bold" fill="#a371f7">理论显存带宽</text>
+
+  <text x="60" y="325" font-size="13" fill="#c9d1d9" font-family="monospace">Bandwidth = memoryClockRate × memoryBusWidth / 8</text>
+  <text x="60" y="353" font-size="12" fill="#8b949e">除以 8 将 bits 转为 bytes；memoryClockRate 单位 kHz 需转 Hz</text>
+
+  <g transform="translate(60, 370)">
+    <rect x="0" y="0" width="160" height="35" rx="4" fill="#8957e5" opacity="0.2" stroke="#a371f7"/>
+    <text x="80" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Clock: 1.215GHz</text>
+    <text x="170" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="185" y="0" width="140" height="35" rx="4" fill="#8957e5" opacity="0.2" stroke="#a371f7"/>
+    <text x="255" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Bus: 5120 bits</text>
+    <text x="335" y="22" font-size="16" fill="#8b949e">/</text>
+    <rect x="350" y="0" width="60" height="35" rx="4" fill="#d29922" opacity="0.2" stroke="#d29922"/>
+    <text x="380" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">8</text>
+  </g>
+
+  <rect x="180" y="415" width="280" height="30" rx="6" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="320" y="435" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">= 777.6 GB/s</text>
+
+  <text x="360" y="478" text-anchor="middle" font-size="12" fill="#8b949e">算力/带宽比 = 19.49T / 777.6G ≈ 25 FLOP/byte → 大多数 kernel 是 memory-bound</text>
+</svg>

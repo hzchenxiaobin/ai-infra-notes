@@ -556,6 +556,102 @@ def occupancy_calculator_workflow() -> str:
 </svg>'''
 
 
+def peak_flops_bandwidth() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500" viewBox="0 0 720 500">
+  <rect width="720" height="500" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 峰值算力与显存带宽计算（以 A100 为例）</text>
+
+  <!-- Peak FLOP/s -->
+  <rect x="40" y="65" width="640" height="185" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="92" text-anchor="middle" font-size="16" font-weight="bold" fill="#58a6ff">理论 FP32 峰值算力</text>
+
+  <text x="60" y="120" font-size="13" fill="#c9d1d9" font-family="monospace">Peak FLOP/s = SM数 × FP32 Cores/SM × GPU频率 × 2</text>
+  <text x="60" y="148" font-size="12" fill="#8b949e">乘以 2 因为一条 FMA 指令 = 乘法 + 加法</text>
+
+  <g transform="translate(60, 165)">
+    <rect x="0" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="60" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">SM: 108</text>
+    <text x="130" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="145" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="205" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Cores/SM: 64</text>
+    <text x="275" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="290" y="0" width="120" height="35" rx="4" fill="#1f6feb" opacity="0.2" stroke="#58a6ff"/>
+    <text x="350" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">频率: 1.41GHz</text>
+    <text x="420" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="435" y="0" width="60" height="35" rx="4" fill="#d29922" opacity="0.2" stroke="#d29922"/>
+    <text x="465" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">2</text>
+  </g>
+
+  <rect x="180" y="210" width="280" height="30" rx="6" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="320" y="230" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">= 19.49 TFLOP/s</text>
+
+  <!-- Bandwidth -->
+  <rect x="40" y="270" width="640" height="185" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="297" text-anchor="middle" font-size="16" font-weight="bold" fill="#a371f7">理论显存带宽</text>
+
+  <text x="60" y="325" font-size="13" fill="#c9d1d9" font-family="monospace">Bandwidth = memoryClockRate × memoryBusWidth / 8</text>
+  <text x="60" y="353" font-size="12" fill="#8b949e">除以 8 将 bits 转为 bytes；memoryClockRate 单位 kHz 需转 Hz</text>
+
+  <g transform="translate(60, 370)">
+    <rect x="0" y="0" width="160" height="35" rx="4" fill="#8957e5" opacity="0.2" stroke="#a371f7"/>
+    <text x="80" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Clock: 1.215GHz</text>
+    <text x="170" y="22" font-size="16" fill="#8b949e">×</text>
+    <rect x="185" y="0" width="140" height="35" rx="4" fill="#8957e5" opacity="0.2" stroke="#a371f7"/>
+    <text x="255" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">Bus: 5120 bits</text>
+    <text x="335" y="22" font-size="16" fill="#8b949e">/</text>
+    <rect x="350" y="0" width="60" height="35" rx="4" fill="#d29922" opacity="0.2" stroke="#d29922"/>
+    <text x="380" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9">8</text>
+  </g>
+
+  <rect x="180" y="415" width="280" height="30" rx="6" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+  <text x="320" y="435" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">= 777.6 GB/s</text>
+
+  <text x="360" y="478" text-anchor="middle" font-size="12" fill="#8b949e">算力/带宽比 = 19.49T / 777.6G ≈ 25 FLOP/byte → 大多数 kernel 是 memory-bound</text>
+</svg>'''
+
+
+def occupancy_calc_steps() -> str:
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540">
+  <rect width="720" height="540" fill="#0d1117"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 手算四步法（A100 示例）</text>
+
+  <!-- Step 1 -->
+  <rect x="40" y="60" width="640" height="60" rx="8" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="2"/>
+  <text x="60" y="85" font-size="14" fill="#58a6ff" font-weight="bold">Step 1: warps_per_block = ceil(threads / 32)</text>
+  <text x="60" y="108" font-size="13" fill="#c9d1d9" font-family="monospace">threads=256 → warps_per_block = ceil(256/32) = 8</text>
+
+  <!-- Step 2 -->
+  <rect x="40" y="135" width="640" height="145" rx="8" fill="#d29922" opacity="0.1" stroke="#d29922" stroke-width="2"/>
+  <text x="60" y="160" font-size="14" fill="#d29922" font-weight="bold">Step 2: 分别从四种资源算 block 上限</text>
+
+  <text x="60" y="185" font-size="12" fill="#c9d1d9">Threads:  floor(2048 / 256) = 8</text>
+  <text x="320" y="185" font-size="11" fill="#8b949e">← max_threads_per_sm / threads_per_block</text>
+
+  <text x="60" y="210" font-size="12" fill="#c9d1d9">Registers: ceil(256×64/256)×256 = 16384</text>
+  <text x="60" y="230" font-size="12" fill="#c9d1d9">           floor(65536 / 16384) = 4</text>
+  <text x="320" y="220" font-size="11" fill="#f85149">← 瓶颈！寄存器限制</text>
+
+  <text x="60" y="255" font-size="12" fill="#c9d1d9">Shared Mem: 未使用 → ∞</text>
+  <text x="60" y="273" font-size="12" fill="#c9d1d9">硬上限: 32 blocks/SM</text>
+
+  <!-- Step 3 -->
+  <rect x="40" y="295" width="640" height="60" rx="8" fill="#a371f7" opacity="0.1" stroke="#a371f7" stroke-width="2"/>
+  <text x="60" y="320" font-size="14" fill="#a371f7" font-weight="bold">Step 3: active_blocks = min(8, 4, ∞, 32) = 4</text>
+  <text x="60" y="343" font-size="12" fill="#f85149">瓶颈资源：Registers per thread</text>
+
+  <!-- Step 4 -->
+  <rect x="40" y="370" width="640" height="80" rx="8" fill="#238636" opacity="0.1" stroke="#3fb950" stroke-width="2"/>
+  <text x="60" y="395" font-size="14" fill="#3fb950" font-weight="bold">Step 4: 换算 Occupancy</text>
+  <text x="60" y="420" font-size="13" fill="#c9d1d9" font-family="monospace">active_warps = 4 × 8 = 32</text>
+  <text x="60" y="442" font-size="13" fill="#c9d1d9" font-family="monospace">occupancy = 32 / 64 = 50%</text>
+
+  <!-- Summary -->
+  <rect x="120" y="470" width="480" height="50" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="492" text-anchor="middle" font-size="14" fill="#c9d1d9">A100: 256 threads, 64 regs/thread, 0 smem</text>
+  <text x="360" y="512" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">→ 理论 Occupancy = 50%（瓶颈：寄存器）</text>
+</svg>'''
+
+
 def cuda_guide_ch5() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
   <rect width="720" height="400" fill="#0d1117"/>
@@ -1230,6 +1326,8 @@ def main() -> None:
         "occupancy_curve.svg": occupancy_curve(),
         "device_query_output.svg": device_query_output(),
         "occupancy_calculator_workflow.svg": occupancy_calculator_workflow(),
+        "peak_flops_bandwidth.svg": peak_flops_bandwidth(),
+        "occupancy_calc_steps.svg": occupancy_calc_steps(),
         "cuda_guide_ch5.svg": cuda_guide_ch5(),
         "stride_access.svg": stride_access(),
         "shared_memory_tiling.svg": shared_memory_tiling(),
