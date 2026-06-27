@@ -37,7 +37,7 @@ Warp-level        Register+Shuffle   Warp内协作          ~60-80% peak
 
 #### 2.1 Register Blocking 数据流图
 
-![Register Blocking 三级数据复用](website/images/register_blocking_dataflow.svg)
+![Register Blocking 三级数据复用](../website/images/register_blocking_dataflow.svg)
 
 ```
 Global Memory (A[M][K], B[K][N])
@@ -84,7 +84,7 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 
 #### 2.4 线程到输出 tile 的二维映射
 
-![Thread Tile 二维映射](website/images/thread_tile_mapping.svg)
+![Thread Tile 二维映射](../website/images/thread_tile_mapping.svg)
 
 ```
 输出 tile (BM×BN = 128×128) 被划分为 (BM/TM)×(BN/TN) = 16×16 = 256 个 thread tile
@@ -102,7 +102,7 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
 
 #### 2.5 Double Buffering（软件流水线）
 
-![Double Buffering 软件流水线](website/images/double_buffering.svg)
+![Double Buffering 软件流水线](../website/images/double_buffering.svg)
 
 ```
 单缓冲： [Load Tile 0] ──► [Compute Tile 0] ──► [Load Tile 1] ──► [Compute Tile 1]

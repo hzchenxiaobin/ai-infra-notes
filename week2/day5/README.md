@@ -17,7 +17,7 @@
 
 ### 学前导读：标准 Attention 的问题
 
-![FlashAttention HBM 访问对比](website/images/hbm_comparison.svg)
+![FlashAttention HBM 访问对比](../website/images/hbm_comparison.svg)
 
 #### 标准 Attention 计算
 
@@ -55,7 +55,7 @@ O = P × V        (输出，O(N×d) 显存)
 
 #### 5.1 分块策略（Tiling）
 
-![FlashAttention 分块策略](website/images/flash_attention_tiling.svg)
+![FlashAttention 分块策略](../website/images/flash_attention_tiling.svg)
 
 FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：
 
@@ -86,7 +86,7 @@ FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：
 
 #### 5.2 Online Softmax 三公式推导
 
-![Online Softmax 三个更新公式](website/images/online_softmax_formula.svg)
+![Online Softmax 三个更新公式](../website/images/online_softmax_formula.svg)
 
 这是 FlashAttention 的核心创新，也是面试必考的白板推导题。
 

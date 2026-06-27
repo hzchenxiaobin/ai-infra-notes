@@ -1,100 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Week 1 - Day 7：总结与复盘</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
-    <script src="js/marked.min.js"></script>
-    <!-- Prism.js for syntax highlighting (local) -->
-    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
-    <script src="js/prism.min.js"></script>
-    <script src="js/prism-c.min.js"></script>
-    <script src="js/prism-bash.min.js"></script>
-    <script src="js/prism-python.min.js"></script>
-</head>
-<body>
-    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-
-    <div class="site-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="index.html" style="text-decoration: none;">
-                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
-                </a>
-            </div>
-            <nav class="sidebar-nav">
-<a class="nav-link" href="index.html">📌 课程概览</a>
-<div class="nav-section-title">8 周学习路线</div>
-<div class="nav-accordion-item is-expanded">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link active" href="index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="true">▼</button>
-  </div>
-  <div class="nav-accordion-content">
-    <div class="nav-section">
-<a class="nav-link day-link" href="day1.html">Day 1</a>
-<a class="nav-link day-link" href="day2.html">Day 2</a>
-<a class="nav-link day-link" href="day3.html">Day 3</a>
-<a class="nav-link day-link" href="day4.html">Day 4</a>
-<a class="nav-link day-link" href="day5.html">Day 5</a>
-<a class="nav-link day-link" href="day6.html">Day 6</a>
-<a class="nav-link day-link active" href="day7.html">Day 7</a>
-    </div>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="week2/index.html">Week 2：GEMM & Kernel 优化</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-3">Week 3：Transformer 执行本质</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-4">Week 4：FlashAttention 深挖</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-5">Week 5：推理系统</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-6">Week 6：Batching & 调度</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-7">Week 7：系统整合</a>
-  </div>
-</div>
-<div class="nav-accordion-item">
-  <div class="nav-accordion-header">
-    <a class="nav-link week-link" href="plan.html#week-8">Week 8：项目打磨 + 面试准备</a>
-  </div>
-</div>
-            </nav>
-        </aside>
-
-        <main class="main-content">
-            <div class="page-header">
-                <h1 class="page-title">Day 7：总结与复盘</h1>
-                <a class="back-link" href="index.html">← 返回概览</a>
-            </div>
-            <article class="content" id="content"></article>
-            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
-        </main>
-    </div>
-
-    <button class="back-to-top" aria-label="Back to top">↑</button>
-
-    <script>
-        const markdown = `## Day 7：总结与复盘
+## Day 7：总结与复盘
 
 ### 🎯 目标
 
@@ -112,13 +16,13 @@
 
 ### Week 1 知识地图
 
-![Week 1 知识地图](images/week1_knowledge_map.svg)
+![Week 1 知识地图](../website/images/week1_knowledge_map.svg)
 
 Week 1 的核心主线：
 
-\`\`\`
+```
 GPU 性能 = Memory + 并行度
-\`\`\`
+```
 
 围绕这个公式，我们学习了三大模块：
 
@@ -137,10 +41,10 @@ GPU 性能 = Memory + 并行度
 **一句话**：GPU 以 warp 为单位执行 SIMT，一个 warp 32 个线程必须执行相同指令。
 
 **关键概念链**：
-\`\`\`
+```
 GPU → SM → Warp（32 threads）→ Thread
 Grid → Block → Thread
-\`\`\`
+```
 
 **性能启示**：
 - 避免 warp divergence
@@ -164,10 +68,10 @@ Grid → Block → Thread
 #### 3. 内存层次
 
 **从快到慢**：
-\`\`\`
+```
 Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 ~1 cycle < ~30 cycles < ~30 cycles < ~200 cycles < ~400-800 cycles
-\`\`\`
+```
 
 **性能启示**：
 - 多用 register 和 shared memory
@@ -193,15 +97,15 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 **一句话**：先用 nsys 找耗时 kernel，再用 ncu 分析该 kernel。
 
 **瓶颈判断**：
-- Memory-bound：\`dram__throughput\` 高
-- Compute-bound：\`sm__throughput\` 高
+- Memory-bound：`dram__throughput` 高
+- Compute-bound：`sm__throughput` 高
 - Latency-bound：两者都低
 
 ---
 
 ### GPU 性能优化决策树
 
-![Optimization Decision Tree](images/optimization_decision_tree.svg)
+![Optimization Decision Tree](../website/images/optimization_decision_tree.svg)
 
 面对一个性能问题，按以下流程思考：
 
@@ -219,9 +123,9 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 #### 任务 1：完成 Week 1 学习笔记
 
-更新 [notes/week1_notes.md](notes/week1_notes.html)，建议包含以下内容：
+更新 [notes/week1_notes.md](../notes/week1_notes.md)，建议包含以下内容：
 
-\`\`\`markdown
+```markdown
 # Week 1 学习笔记
 
 ## 1. GPU 执行模型
@@ -253,10 +157,10 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 - 解决方法：
 
 ## 6. Nsight 常用命令
-\`\`\`bash
+```bash
 ncu --metrics ...
 nsys profile -o ...
-\`\`\`
+```
 
 ## 7. 本周实验记录
 | Kernel | Occupancy | Memory Throughput | Compute Throughput | 瓶颈 |
@@ -266,7 +170,7 @@ nsys profile -o ...
 ## 8. 面试问题自测
 - Q: 什么是 SIMT？
 - A:
-\`\`\`
+```
 
 #### 任务 2：整理面试题库
 
@@ -288,7 +192,7 @@ nsys profile -o ...
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 [notes/week1_notes.md](notes/week1_notes.html) 学习笔记
+- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 
@@ -308,7 +212,7 @@ nsys profile -o ...
 
 ### 面试准备框架
 
-![Week 1 面试准备框架](images/week1_interview_prep.svg)
+![Week 1 面试准备框架](../website/images/week1_interview_prep.svg)
 
 面试中回答技术问题，建议用这个结构：
 
@@ -324,9 +228,9 @@ nsys profile -o ...
 >
 > **A**：bank conflict 发生在 shared memory 访问时，一个 warp 内多个线程同时访问同一个 bank 的不同地址，导致访问需要串行化。
 >
-> 比如 \`__shared__ float tile[32][32]\`，如果按列读取 \`tile[threadIdx.x][i]\`，同一列的 32 个元素都在 bank 0，32 个线程都访问 bank 0，就会形成 32-way conflict。
+> 比如 `__shared__ float tile[32][32]`，如果按列读取 `tile[threadIdx.x][i]`，同一列的 32 个元素都在 bank 0，32 个线程都访问 bank 0，就会形成 32-way conflict。
 >
-> 解决方法是在列维度加 padding：\`tile[32][33]\`，这样同一列相邻行的元素会错开 bank，避免 conflict。
+> 解决方法是在列维度加 padding：`tile[32][33]`，这样同一列相邻行的元素会错开 bank，避免 conflict。
 >
 > 这和我们 Day 4 学的矩阵转置优化是同一个问题。
 
@@ -376,7 +280,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
 1. **知识地图**：把 SM、Warp、Occupancy、Coalescing、Bank Conflict、Profiling 连成网络
 2. **优化决策树**：建立了从 profiling 到优化的完整思路
-3. **学习笔记模板**：提供了 [week1_notes.md](notes/week1_notes.html) 的结构
+3. **学习笔记模板**：提供了 [week1_notes.md](../notes/week1_notes.md) 的结构
 4. **面试准备框架**：概念 + 代码 + 表达三位一体
 5. **Week 2 衔接**：明确了还需要巩固的基础
 
@@ -411,7 +315,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
 ## 📁 本周目录结构
 
-\`\`\`
+```
 week1/
 ├── README.md              # 本文件：Week 1 完整指南
 ├── kernels/               # CUDA kernel 源码
@@ -423,7 +327,7 @@ week1/
 │   └── week1_profile_summary.md
 └── notes/                 # 学习笔记
     └── week1_notes.md
-\`\`\`
+```
 
 ---
 
@@ -444,60 +348,10 @@ week1/
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 [notes/week1_notes.md](notes/week1_notes.html) 学习笔记
+- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 
 ---
 
-> 💡 **提示**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。`;
-
-        const renderer = new marked.Renderer();
-        renderer.heading = function(text, level, raw) {
-            let anchor = raw.toLowerCase()
-                .replace(/[^\w\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-
-            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
-            if (dayMatch) {
-                anchor = 'day-' + dayMatch[1];
-            }
-
-            if (level === 2 && anchor) {
-                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
-            }
-            return '<h' + level + '>' + text + '</h' + level + '>';
-        };
-
-        marked.setOptions({
-            renderer: renderer,
-            headerIds: false,
-            gfm: true,
-            breaks: false,
-            sanitize: false
-        });
-
-        try {
-            if (typeof marked === 'undefined') {
-                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
-            }
-            document.getElementById('content').innerHTML = marked.parse(markdown);
-
-            if (window.Prism) {
-                Prism.highlightAll();
-            }
-        } catch (err) {
-            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
-                '<h2>⚠️ 页面渲染失败</h2>' +
-                '<p>' + err.message + '</p>' +
-                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
-                '</div>';
-            console.error('Markdown render error:', err);
-        }
-    </script>
-    
-    <script src="js/main.js"></script>
-</body>
-</html>
+> 💡 **提示**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。

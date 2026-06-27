@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Build the Week 2 website from README.md (overview) and days/dayN.md (per-day).
+Build the Week 2 website from README.md (overview) and dayN/README.md (per-day).
 Generates:
   - index.html: overview page (from week2/README.md)
-  - day1.html ~ dayN.html: one page per day (from week2/days/dayN.md)
+  - day1.html ~ dayN.html: one page per day (from week2/dayN/README.md)
 Uses relative paths (../css/..., ../js/...) for shared resources,
 since week2/ is one level below the deployment root on GitHub Pages.
 """
@@ -35,11 +35,11 @@ def escape_for_template_string(text: str) -> str:
 
 
 def load_overview_and_days():
-    """Load overview from week2/README.md and per-day markdown from week2/days/dayN.md.
+    """Load overview from week2/README.md and per-day markdown from week2/dayN/README.md.
 
     Returns (overview_text, days) where days is a list of
     {"num": int, "title": str, "markdown": str} sorted by day number.
-    Image paths are rewritten from "website/images/" to "images/" so they
+    Image paths are rewritten from "../website/images/" to "images/" so they
     resolve correctly in the website output directory.
     """
     readme_path = WEEK2_DIR / "README.md"
@@ -47,18 +47,18 @@ def load_overview_and_days():
         raise FileNotFoundError(f"Week 2 README not found: {readme_path}")
     overview = readme_path.read_text(encoding="utf-8").replace("](website/images/", "](images/")
 
-    days_dir = WEEK2_DIR / "days"
-    if not days_dir.exists():
-        raise FileNotFoundError(f"days/ directory not found: {days_dir}")
-
     day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
     days = []
-    for md_file in sorted(days_dir.glob("day*.md")):
-        text = md_file.read_text(encoding="utf-8").replace("](website/images/", "](images/")
+    for day_dir in sorted(WEEK2_DIR.glob("day*")):
+        readme = day_dir / "README.md"
+        if not readme.exists():
+            continue
+        text = readme.read_text(encoding="utf-8")
+        text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", text)
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
         match = day_title_pattern.match(first_line)
         if not match:
-            raise ValueError(f"Cannot parse Day title from first line of {md_file}: {first_line!r}")
+            raise ValueError(f"Cannot parse Day title from first line of {readme}: {first_line!r}")
         days.append({
             "num": int(match.group(1)),
             "title": match.group(2).strip(),
@@ -66,7 +66,7 @@ def load_overview_and_days():
         })
 
     if not days:
-        raise ValueError(f"No day*.md files found in {days_dir}")
+        raise ValueError(f"No day*/README.md files found in {WEEK2_DIR}")
     days.sort(key=lambda d: d["num"])
     return overview, days
 

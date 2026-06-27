@@ -11,10 +11,14 @@
 # Build output
 public/
 
-# Generated Week 1 source directories copied by build.py for GitHub Pages links
+# Generated Week 1 website files (copied source dirs + HTML)
 week1/website/kernels/
 week1/website/exercise/
 week1/website/notes/
+week1/website/tools/
+week1/website/index.html
+week1/website/day*.html
+week1/website/plan.html
 
 # Generated LeetCode website files
 leetcode/website/index.html
@@ -26,7 +30,6 @@ leetcode/website/problems/
 # Generated Week 2 website files
 week2/website/index.html
 week2/website/day*.html
-week2/website/plan.html
 week2/website/kernels/
 week2/website/exercise/
 week2/website/notes/

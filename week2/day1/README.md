@@ -47,7 +47,7 @@ Shared Memory 虽然比 Global Memory 快得多（~20-30 cycles vs ~400-800 cycl
 
 #### 1.1 Warp Shuffle 四大家族
 
-![Warp Shuffle 四大家族数据流向](website/images/warp_shuffle_primitives.svg)
+![Warp Shuffle 四大家族数据流向](../website/images/warp_shuffle_primitives.svg)
 
 CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 
@@ -119,7 +119,7 @@ val = __shfl_down_sync(0xFFFFFFFF, val, 1, 16);  // lane 0 读 lane 1，lane 16 
 
 #### 1.3 Warp Reduce Butterfly 模式
 
-![Warp Reduce Butterfly 模式](website/images/butterfly_reduction.svg)
+![Warp Reduce Butterfly 模式](../website/images/butterfly_reduction.svg)
 
 Warp Reduce（求和）使用 `__shfl_down_sync` 实现折半累加，整个过程像蝴蝶展翅，因此称为 **Butterfly 模式**：
 
@@ -173,7 +173,7 @@ __inline__ __device__ float warpReduceSumAll(float val) {
 
 #### 1.4 两级归约：Warp Reduce + Block Reduce
 
-![两级归约流程](website/images/two_level_reduction.svg)
+![两级归约流程](../website/images/two_level_reduction.svg)
 
 ##### 为什么需要两级归约？
 

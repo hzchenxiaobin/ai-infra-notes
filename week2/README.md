@@ -33,14 +33,14 @@ Day 7: 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
 
 ## 📚 每日学习材料
 
-每天的学习内容已拆分为独立文件，位于 [`days/`](days/) 目录：
+每天的学习内容已拆分为独立目录 `dayN/`（含该天的 kernels、exercise、notes）：
 
-| Day | 主题 | 文件 |
+| Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | Warp Shuffle 原语与 Warp/Block Reduce | [days/day1.md](days/day1.md) |
-| Day 2 | Register Blocking 与 2D Tiling | [days/day2.md](days/day2.md) |
-| Day 3 | CUDA Streams 与异步执行 | [days/day3.md](days/day3.md) |
-| Day 4 | Nsight Compute 性能分析 | [days/day4.md](days/day4.md) |
-| Day 5 | FlashAttention CUDA 实现（简化版） | [days/day5.md](days/day5.md) |
-| Day 6 | 整合优化到 cuBLAS 70%+ | [days/day6.md](days/day6.md) |
-| Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [days/day7.md](days/day7.md) |
+| Day 1 | Warp Shuffle 原语与 Warp/Block Reduce | [day1/](day1/README.md) |
+| Day 2 | Register Blocking 与 2D Tiling | [day2/](day2/README.md) |
+| Day 3 | CUDA Streams 与异步执行 | [day3/](day3/README.md) |
+| Day 4 | Nsight Compute 性能分析 | [day4/](day4/README.md) |
+| Day 5 | FlashAttention CUDA 实现（简化版） | [day5/](day5/README.md) |
+| Day 6 | 整合优化到 cuBLAS 70%+ | [day6/](day6/README.md) |
+| Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [day7/](day7/README.md) |

@@ -37,7 +37,7 @@ Stream 2: [H2D拷贝2] → [Kernel2] → [D2H拷贝2]
 
 #### 3.2 Default Stream 的"坑"
 
-![Default Stream 隐式同步陷阱](website/images/default_stream_sync.svg)
+![Default Stream 隐式同步陷阱](../website/images/default_stream_sync.svg)
 
 | 特性 | Default Stream (Stream 0) | Explicit Stream |
 |------|-------------------------|-----------------|
@@ -72,7 +72,7 @@ cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 
 #### 3.4 多 Stream 重叠流水线
 
-![Multi-Stream 重叠流水线](website/images/multi_stream_overlap.svg)
+![Multi-Stream 重叠流水线](../website/images/multi_stream_overlap.svg)
 
 ```
 无 Stream（顺序）： [H2D拷贝] ──► [Kernel计算] ──► [D2H拷贝]
@@ -89,7 +89,7 @@ Multi-Stream（重叠）：
 
 #### 3.5 cudaEvent 跨 Stream 依赖
 
-![cudaEvent 跨 Stream 依赖管理](website/images/stream_event_dependency.svg)
+![cudaEvent 跨 Stream 依赖管理](../website/images/stream_event_dependency.svg)
 
 当 Stream 间存在数据依赖时，用 Event 实现精确同步：
 

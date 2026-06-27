@@ -1,18 +1,18 @@
 # Week 1 Profiling 报告汇总
 
-> 本周 profiling 按天拆解，具体任务见 [`daily/`](daily/) 目录。
+> 本周 profiling 按天拆解，具体任务见 [`daily/`](../day1/notes/) 目录。
 
 ## 每日 Profiling 任务索引
 
 | 天数 | 主题 | 对应文件 | 核心代码 |
 |------|------|---------|---------|
-| Day 1 | GPU 执行模型与 kernel launch | [`daily/day1_hello_gpu.md`](daily/day1_hello_gpu.md) | `kernels/hello_gpu.cu` |
-| Day 2 | Occupancy 与寄存器约束 | [`daily/day2_occupancy.md`](daily/day2_occupancy.md) | `kernels/occupancy_test.cu` |
-| Day 3 | 设备属性与 Occupancy Calculator | [`daily/day3_device_query.md`](daily/day3_device_query.md) | `deviceQuery` / `occupancyCalculator` |
-| Day 4 | Memory Hierarchy 与矩阵转置 | [`daily/day4_transpose.md`](daily/day4_transpose.md) | `kernels/transpose.cu` |
-| Day 5 | Bank Conflict 分析 | [`daily/day5_bank_conflict.md`](daily/day5_bank_conflict.md) | `kernels/bank_conflict.cu` |
-| Day 6 | Nsight 综合 Profiling 实战 | [`daily/day6_nsight_profiling.md`](daily/day6_nsight_profiling.md) | 全部 kernel |
-| Day 7 | 总结与复盘 | [`daily/day7_summary.md`](daily/day7_summary.md) | - |
+| Day 1 | GPU 执行模型与 kernel launch | [`daily/day1_hello_gpu.md`](../day1/notes/day1_hello_gpu.md) | `kernels/hello_gpu.cu` |
+| Day 2 | Occupancy 与寄存器约束 | [`daily/day2_occupancy.md`](../day1/notes/day2_occupancy.md) | `kernels/occupancy_test.cu` |
+| Day 3 | 设备属性与 Occupancy Calculator | [`daily/day3_device_query.md`](../day1/notes/day3_device_query.md) | `deviceQuery` / `occupancyCalculator` |
+| Day 4 | Memory Hierarchy 与矩阵转置 | [`daily/day4_transpose.md`](../day1/notes/day4_transpose.md) | `kernels/transpose.cu` |
+| Day 5 | Bank Conflict 分析 | [`daily/day5_bank_conflict.md`](../day1/notes/day5_bank_conflict.md) | `kernels/bank_conflict.cu` |
+| Day 6 | Nsight 综合 Profiling 实战 | [`daily/day6_nsight_profiling.md`](../day1/notes/day6_nsight_profiling.md) | 全部 kernel |
+| Day 7 | 总结与复盘 | [`daily/day7_summary.md`](../day1/notes/day7_summary.md) | - |
 
 ---
 
@@ -50,19 +50,19 @@
 
 ### 1. hello_gpu
 
-- **对应命令**：见 [`daily/day1_hello_gpu.md`](daily/day1_hello_gpu.md)
+- **对应命令**：见 [`daily/day1_hello_gpu.md`](../day1/notes/day1_hello_gpu.md)
 - **关键指标**：
 - **分析**：
 
 ### 2. occupancy_test
 
-- **对应命令**：见 [`daily/day2_occupancy.md`](daily/day2_occupancy.md)
+- **对应命令**：见 [`daily/day2_occupancy.md`](../day1/notes/day2_occupancy.md)
 - **关键指标**：
 - **分析**：
 
 ### 3. transpose_naive vs transpose_optimized
 
-- **对应命令**：见 [`daily/day4_transpose.md`](daily/day4_transpose.md)
+- **对应命令**：见 [`daily/day4_transpose.md`](../day1/notes/day4_transpose.md)
 - **关键指标对比**：
 
 | 版本 | Memory Throughput | 执行时间 | 备注 |
@@ -74,7 +74,7 @@
 
 ### 4. conflict_read vs no_conflict_read
 
-- **对应命令**：见 [`daily/day5_bank_conflict.md`](daily/day5_bank_conflict.md)
+- **对应命令**：见 [`daily/day5_bank_conflict.md`](../day1/notes/day5_bank_conflict.md)
 - **关键指标**：
 - **分析**：
 

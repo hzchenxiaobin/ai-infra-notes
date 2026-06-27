@@ -17,7 +17,7 @@
 
 ### 学前导读：从 45% 到 70% 的优化路线
 
-![GEMM 优化层次](website/images/gemm_optimization_layers.svg)
+![GEMM 优化层次](../website/images/gemm_optimization_layers.svg)
 
 Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，需要叠加以下优化：
 
@@ -36,7 +36,7 @@ Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，
 
 #### 6.1 float4 向量化加载
 
-![float4 向量化加载对比](website/images/float4_vectorized_load.svg)
+![float4 向量化加载对比](../website/images/float4_vectorized_load.svg)
 
 ##### 原理
 
@@ -83,7 +83,7 @@ Register Blocking 中每个线程计算 TM×TN 子块，写回时如果线程分
 
 #### 6.3 参数精调（Auto-tuning）
 
-![参数精调扫描表](website/images/parameter_tuning_table.svg)
+![参数精调扫描表](../website/images/parameter_tuning_table.svg)
 
 不同矩阵尺寸的最优参数组合不同。参数精调就是扫描参数空间，找到每个尺寸的最优配置：
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Build the Week 1 website from README.md.
+Build the Week 1 website from README.md (overview) and dayN/README.md (per-day).
 Generates:
   - index.html: overview page
-  - day1.html ~ day7.html: one page per day
-  - Extra markdown pages as HTML (e.g., exercise/day3/occupancy_problems.html)
+  - day1.html ~ day7.html: one page per day (from week1/dayN/README.md)
+  - Extra markdown pages as HTML (e.g., exercise/occupancy_problems.html)
   - Copies referenced source directories (kernels/, exercise/, notes/) for download links
 """
 
@@ -18,17 +18,18 @@ OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
 
 # Source markdown for the full 8-week plan overview page.
 PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+WEEK1_DIR = Path(__file__).parent.parent
 
 # Markdown documents that should also be deployed as standalone HTML pages.
 # Paths are relative to week1/ (the parent directory of week1/website/).
 EXTRA_MARKDOWN_PAGES = [
     {
-        "source": "exercise/day3/occupancy_problems.md",
-        "output": "exercise/day3/occupancy_problems.html",
+        "source": "day3/exercise/occupancy_problems.md",
+        "output": "exercise/occupancy_problems.html",
         "title": "Occupancy 手算练习题",
     },
     {
-        "source": "notes/cuda_programming_guide_performance.md",
+        "source": "day3/notes/cuda_programming_guide_performance.md",
         "output": "notes/cuda_programming_guide_performance.html",
         "title": "CUDA Programming Guide 性能优化笔记",
     },
@@ -39,13 +40,8 @@ EXTRA_MARKDOWN_PAGES = [
     },
 ]
 
-# Source directories to copy into the website output so that links to .cu,
-# .md (download), and other files keep working on GitHub Pages.
-EXTRA_SOURCE_DIRECTORIES = [
-    "kernels",
-    "exercise",
-    "notes",
-]
+# Subdirectories under each dayN/ to copy (merged flat) into the website output.
+DAY_SOURCE_SUBDIRS = ["kernels", "exercise", "notes"]
 
 
 def extract_plan_weeks(plan_path: Path) -> list:
@@ -104,34 +100,41 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
-def split_by_days(markdown_text: str):
-    """Split README into overview + 7 daily sections."""
-    # Pattern: ## Day N：...
-    day_pattern = re.compile(r"^(## Day (\d+)[：:].*)$", re.MULTILINE)
+def load_overview_and_days():
+    """Load overview from week1/README.md and per-day markdown from week1/dayN/README.md.
 
-    matches = list(day_pattern.finditer(markdown_text))
-    if not matches:
-        raise ValueError("No Day sections found in README.md")
+    Returns (overview_text, days) where days is a list of
+    {"num": int, "title": str, "markdown": str} sorted by day number.
+    Image paths are rewritten from "../website/images/" to "images/" so they
+    resolve correctly in the website output directory.
+    """
+    readme_path = WEEK1_DIR / "README.md"
+    if not readme_path.exists():
+        raise FileNotFoundError(f"Week 1 README not found: {readme_path}")
+    overview = readme_path.read_text(encoding="utf-8")
+    overview = re.sub(r"\]\((?:website/)?images/", "](images/", overview)
 
-    # Content before first Day heading -> overview
-    overview = markdown_text[:matches[0].start()].strip()
-
+    day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
     days = []
-    for i, match in enumerate(matches):
-        start = match.start()
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown_text)
-        section = markdown_text[start:end].strip()
-
-        day_num = int(match.group(2))
-        title_match = re.match(r"^## Day \d+[：:]\s*(.+)$", match.group(1))
-        title = title_match.group(1) if title_match else f"Day {day_num}"
-
+    for day_dir in sorted(WEEK1_DIR.glob("day*")):
+        readme = day_dir / "README.md"
+        if not readme.exists():
+            continue
+        text = readme.read_text(encoding="utf-8")
+        text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", text)
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        match = day_title_pattern.match(first_line)
+        if not match:
+            raise ValueError(f"Cannot parse Day title from first line of {readme}: {first_line!r}")
         days.append({
-            "num": day_num,
-            "title": title,
-            "markdown": section,
+            "num": int(match.group(1)),
+            "title": match.group(2).strip(),
+            "markdown": text.strip(),
         })
 
+    if not days:
+        raise ValueError(f"No day*/README.md files found in {WEEK1_DIR}")
+    days.sort(key=lambda d: d["num"])
     return overview, days
 
 
@@ -323,18 +326,46 @@ def page_template(
 
 
 def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
-    """Copy source directories into website output for download/source-code links."""
-    for rel_dir in EXTRA_SOURCE_DIRECTORIES:
-        src = (base_dir / rel_dir).resolve()
-        dst_name = Path(rel_dir).name
-        dst = output_dir / dst_name
-        if not src.exists():
-            print(f"Warning: source directory not found: {src}")
-            continue
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst)
-        print(f"Copied: {src} -> {dst}")
+    """Copy source directories from dayN/{kernels,exercise,notes} into website output.
+
+    All day subdirectories are merged flat (e.g. day1/kernels/*.cu and
+    day2/kernels/*.cu both go to website/kernels/).  Week-level notes/ and
+    tools/ are also copied so their links keep working.
+    """
+    for subdir in DAY_SOURCE_SUBDIRS:
+        dst = output_dir / subdir
+        dst.mkdir(parents=True, exist_ok=True)
+        # Merge from each dayN/
+        for day_dir in sorted(base_dir.glob("day*")):
+            src = day_dir / subdir
+            if not src.exists():
+                continue
+            for item in src.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, dst / item.name)
+                else:
+                    shutil.copytree(item, dst / item.name, dirs_exist_ok=True)
+            print(f"Copied: {src} -> {dst}")
+        # Also copy week-level notes/ (e.g. week1_notes.md)
+        if subdir == "notes":
+            week_notes = base_dir / "notes"
+            if week_notes.exists():
+                for item in week_notes.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, dst / item.name)
+                    else:
+                        shutil.copytree(item, dst / item.name, dirs_exist_ok=True)
+                print(f"Copied: {week_notes} -> {dst}")
+        # Also copy week-level tools/
+        if subdir == "exercise":
+            week_tools = base_dir / "tools"
+            if week_tools.exists():
+                tools_dst = output_dir / "tools"
+                tools_dst.mkdir(parents=True, exist_ok=True)
+                for item in week_tools.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, tools_dst / item.name)
+                print(f"Copied: {week_tools} -> {tools_dst}")
 
 
 def build_plan_page(output_dir: Path, weeks: list) -> None:
@@ -389,8 +420,8 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
             weeks=weeks,
         )
         markdown_text = source_path.read_text(encoding="utf-8")
-        # README references images as "website/images/xxx.svg"; adjust for website root.
-        markdown_text = markdown_text.replace("](website/images/", "](images/")
+        # Rewrite image paths (both "website/images/" and "../website/images/")
+        markdown_text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", markdown_text)
         # Rewrite .md links to .html so they work on GitHub Pages.
         markdown_text = rewrite_md_links_to_html(markdown_text)
 
@@ -405,12 +436,8 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
         print(f"Generated: {output_path}")
 
 
-def build_website(readme_path: Path, output_dir: Path) -> None:
-    markdown_text = readme_path.read_text(encoding="utf-8")
-    # README references images as "website/images/xxx.svg" (for GitHub viewing),
-    # but website HTML is in website/, so we need to reference them as "images/xxx.svg"
-    markdown_text = markdown_text.replace("](website/images/", "](images/")
-    overview, days = split_by_days(markdown_text)
+def build_website(output_dir: Path) -> None:
+    overview, days = load_overview_and_days()
 
     # Rewrite .md links to .html for GitHub Pages deployment.
     overview = rewrite_md_links_to_html(overview)
@@ -471,6 +498,5 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
 
 if __name__ == "__main__":
     base_dir = Path(__file__).parent
-    readme_path = base_dir.parent / "README.md"
     output_dir = base_dir
-    build_website(readme_path, output_dir)
+    build_website(output_dir)
