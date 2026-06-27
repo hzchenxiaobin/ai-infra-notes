@@ -90,17 +90,22 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
     README.md source uses .md links so they work on GitHub's markdown viewer.
     When deployed to GitHub Pages, the markdown pages are rendered as .html,
     so the links need to point to .html files.
+
+    Links that escape the week directory (starting with ../../) are rewritten
+    to site-root-absolute paths (e.g. /LeetGPU/...) because day pages are
+    deployed at the site root, not under weekN/dayM/.
     """
     def replace_link(match):
         url = match.group(1)
-        # Only rewrite local links ending with .md (keep external URLs and anchors as-is)
-        if url.endswith(".md"):
-            new_url = url[:-3] + ".html"
-            # README.md is rendered as the overview page index.html
-            if new_url.endswith("README.html"):
-                new_url = new_url[: -len("README.html")] + "index.html"
-            return f"]({new_url})"
-        return match.group(0)
+        if not url.endswith(".md"):
+            return match.group(0)
+        new_url = url[:-3] + ".html"
+        if new_url.endswith("README.html"):
+            new_url = new_url[: -len("README.html")] + "index.html"
+        # ../../LeetGPU/x.md -> /LeetGPU/x.html  (escape week dir)
+        if new_url.startswith("../../"):
+            new_url = "/" + new_url[len("../../"):]
+        return f"]({new_url})"
 
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 

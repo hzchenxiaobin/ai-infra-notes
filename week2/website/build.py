@@ -20,12 +20,15 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
     """Rewrite local .md links to .html for GitHub Pages deployment."""
     def replace_link(match):
         url = match.group(1)
-        if url.endswith(".md"):
-            new_url = url[:-3] + ".html"
-            if new_url.endswith("README.html"):
-                new_url = new_url[: -len("README.html")] + "index.html"
-            return f"]({new_url})"
-        return match.group(0)
+        if not url.endswith(".md"):
+            return match.group(0)
+        new_url = url[:-3] + ".html"
+        if new_url.endswith("README.html"):
+            new_url = new_url[: -len("README.html")] + "index.html"
+        # ../../LeetGPU/x.md -> /LeetGPU/x.html  (escape week dir)
+        if new_url.startswith("../../"):
+            new_url = "/" + new_url[len("../../"):]
+        return f"]({new_url})"
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
