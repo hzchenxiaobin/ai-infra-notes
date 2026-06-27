@@ -240,6 +240,77 @@ ncu \
 - conflict 和 no-conflict 版本的 bank conflict 计数
 - 执行 cycle 差异
 
+#### 任务 5：LeetGPU 在线题目 —— Matrix Multiplication
+
+**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
+
+**题目概述**：
+
+给定 M×K 矩阵 A 和 K×N 矩阵 B（行优先存储），计算 C = A × B，其中 C 为 M×N 矩阵，C[i][j] = Σ(A[i][k] * B[k][j])。
+
+**约束条件**：`1 ≤ M, N, K ≤ 1024`，矩阵元素范围 `[-1.0, 1.0]`
+
+**难度**：中等　**标签**：CUDA、GEMM、Shared Memory Tiling、Roofline、Profiling
+
+**与今日知识的关联**：
+
+本题是 GEMM 的基础版，适合用 ncu 做完整 profiling。用 Day 6 学的 Nsight Compute 分析 SM throughput、memory throughput、occupancy，画出 Roofline 图，判断 kernel 是 memory-bound 还是 compute-bound。
+
+**解题思路**：
+
+先用 naive GEMM（每线程算一个元素）作为 baseline，然后加 Shared Memory Tiling 优化。用 ncu --set full 生成完整报告，对比两个版本的关键指标。
+
+**参考实现**：
+
+```cuda
+#define TILE_SIZE 16
+
+// Naive baseline
+__global__ void matmul_naive(const float* A, const float* B, float* C, int M, int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < M && col < N) {
+        float sum = 0.0f;
+        for (int k = 0; k < K; k++)
+            sum += A[row * K + k] * B[k * N + col];
+        C[row * N + col] = sum;
+    }
+}
+
+// Shared Memory Tiling 优化版
+__global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
+    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
+    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
+
+    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    float sum = 0.0f;
+
+    for (int bk = 0; bk < K; bk += TILE_SIZE) {
+        // 协作加载 tile
+        if (row < M && bk + threadIdx.x < K)
+            s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
+        else
+            s_A[threadIdx.y][threadIdx.x] = 0.0f;
+
+        if (bk + threadIdx.y < K && col < N)
+            s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
+        else
+            s_B[threadIdx.y][threadIdx.x] = 0.0f;
+        __syncthreads();
+
+        #pragma unroll
+        for (int k = 0; k < TILE_SIZE; k++)
+            sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+        __syncthreads();
+    }
+
+    if (row < M && col < N) C[row * N + col] = sum;
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-matrix-multiplication-solution.md](../../LeetGPU/leetgpu-matrix-multiplication-solution.md)。
+
 ---
 
 ### 扩展实验

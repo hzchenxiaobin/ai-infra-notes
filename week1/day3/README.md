@@ -429,6 +429,87 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 - 为什么有时调整 block size 对 occupancy 没有帮助
 - `__launch_bounds__` 如何影响编译器的寄存器分配决策
 
+#### 任务 6：LeetGPU 在线题目 —— Argmax
+
+**题目链接**：<https://leetgpu.com/challenges/argmax>
+
+**题目概述**：
+
+给定长度为 N 的浮点数组 input，找到最大值所在的下标。如果有多个相同最大值，返回最小的下标。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
+
+**难度**：中等　**标签**：CUDA、Reduction、Argmax、Warp Shuffle
+
+**与今日知识的关联**：
+
+本题是一个带状态追踪的归约问题——不仅要找最大值，还要记录其下标。要求理解 grid-stride loop 和边界处理，同时为 Day 5 的 Warp Shuffle 归约做铺垫。
+
+**解题思路**：
+
+每个线程用 grid-stride loop 找到自己所负责区间的局部最大值及下标，然后做 block 级归约。本题只需正确性，暂不要求 Warp Shuffle 优化（Day 5 会用 Shuffle 重做）。
+
+**参考实现**：
+
+```cuda
+__global__ void argmax_kernel(const float* input, int* out_idx, int N) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    float local_max = -INFINITY;
+    int local_idx = 0;
+
+    // grid-stride loop: 每个线程找自己负责区间的局部 argmax
+    for (int i = tid; i < N; i += gridDim.x * blockDim.x) {
+        if (input[i] > local_max) {
+            local_max = input[i];
+            local_idx = i;
+        }
+    }
+
+    // 简化版:用 atomicMax 做跨 block 归约(正确但非最优)
+    // Day 5 会用 Warp Shuffle + Shared Memory 重写这部分
+    __shared__ float s_val[32];
+    __shared__ int   s_idx[32];
+
+    int lane = threadIdx.x & 31;
+    int wid  = threadIdx.x >> 5;
+
+    // 用 warp shuffle 找 warp 内 argmax
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
+        int   other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+        if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
+            local_max = other_val;
+            local_idx = other_idx;
+        }
+    }
+
+    if (lane == 0) {
+        s_val[wid] = local_max;
+        s_idx[wid] = local_idx;
+    }
+    __syncthreads();
+
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) / 32;
+        local_max = (lane < numWarps) ? s_val[lane] : -INFINITY;
+        local_idx = (lane < numWarps) ? s_idx[lane] : 0;
+
+        for (int offset = 16; offset > 0; offset >>= 1) {
+            float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
+            int   other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+            if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
+                local_max = other_val;
+                local_idx = other_idx;
+            }
+        }
+
+        if (lane == 0) atomicMax(out_idx, local_idx);
+    }
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-argmax-solution.md](../../LeetGPU/leetgpu-argmax-solution.md)。
+
 ---
 
 ### 扩展实验

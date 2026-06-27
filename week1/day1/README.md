@@ -652,6 +652,41 @@ total_warps     = warps_per_block × num_blocks
 
 > 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
 
+#### 任务 4：LeetGPU 在线题目 —— Vector Add
+
+**题目链接**：<https://leetgpu.com/challenges/vector-add>
+
+**题目概述**：
+
+给定两个长度为 N 的浮点数组 A 和 B，计算逐元素和 C[i] = A[i] + B[i]。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
+
+**难度**：简单　**标签**：CUDA、Kernel Launch、Grid/Block、Coalesced Access
+
+**与今日知识的关联**：
+
+本题是最基础的 CUDA kernel，要求正确配置 grid/block 维度、计算全局线程 ID、处理越界边界。直接练习 Day 1 学的线程层次与 ID 映射。
+
+**解题思路**：
+
+1D grid + 1D block，每个线程处理一个元素。用 grid-stride loop 处理 N > total_threads 的情况，保证 coalesced access。
+
+**参考实现**：
+
+```cuda
+#include <cuda_runtime.h>
+
+__global__ void vector_add(const float* A, const float* B, float* C, int N) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        C[idx] = A[idx] + B[idx];
+    }
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-vector-add-solution.md](../../LeetGPU/leetgpu-vector-add-solution.md)。
+
 ---
 
 ### 扩展实验

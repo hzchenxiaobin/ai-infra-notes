@@ -284,6 +284,53 @@ nvcc -o transpose kernels/transpose.cu
 ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed ./transpose
 ```
 
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+
+**题目概述**：
+
+给定 M×N 的行优先矩阵 input，计算其转置矩阵 output（N×M），即 output[j][i] = input[i][j]。
+
+**约束条件**：`1 ≤ M, N ≤ 4096`，矩阵以行优先 float 数组存储
+
+**难度**：中等　**标签**：CUDA、Shared Memory、Coalesced Access、矩阵转置
+
+**与今日知识的关联**：
+
+本题直接对应 Day 4 的主题——矩阵转置。naive 版本有 stride write 导致带宽低，用 Shared Memory + padding 优化后可获得接近峰值带宽。用 ncu 对比两个版本的 memory throughput。
+
+**解题思路**：
+
+用 Shared Memory tile 做中转：先 coalesced 读入 tile，__syncthreads 后，交换坐标 coalesced 写出。用 TILE_DIM+1 的 padding 消除 bank conflict。
+
+**参考实现**：
+
+```cuda
+#define TILE_DIM 32
+
+__global__ void matrix_transpose(const float* input, float* output, int M, int N) {
+    __shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 padding 消除 bank conflict
+
+    int x = blockIdx.x * TILE_DIM + threadIdx.x;
+    int y = blockIdx.y * TILE_DIM + threadIdx.y;
+
+    // Coalesced read from global -> shared
+    if (x < N && y < M)
+        tile[threadIdx.y][threadIdx.x] = input[y * N + x];
+    __syncthreads();
+
+    // 交换 block 坐标，coalesced write
+    x = blockIdx.y * TILE_DIM + threadIdx.x;
+    y = blockIdx.x * TILE_DIM + threadIdx.y;
+
+    if (x < M && y < N)
+        output[y * M + x] = tile[threadIdx.x][threadIdx.y];
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-matrix-transpose-solution.md](../../LeetGPU/leetgpu-matrix-transpose-solution.md)。
+
 ---
 
 ### 扩展实验

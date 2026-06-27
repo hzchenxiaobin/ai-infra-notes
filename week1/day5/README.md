@@ -216,6 +216,62 @@ ncu \
 - `conflict_read` 的 bank conflict 数值远高于 `no_conflict_read`
 - `conflict_read` 的执行 cycles 明显更多
 
+#### 任务 4：LeetGPU 在线题目 —— Reduction
+
+**题目链接**：<https://leetgpu.com/challenges/reduction>
+
+**题目概述**：
+
+给定长度为 N 的浮点数组 input，计算所有元素的总和：sum = input[0] + input[1] + ... + input[N-1]。
+
+**约束条件**：`1 ≤ N ≤ 100,000,000`，数组元素范围 `[-1000.0, 1000.0]`，结果不会溢出 float
+
+**难度**：中等　**标签**：CUDA、Parallel Reduction、Shared Memory、Warp Shuffle、Bank Conflict
+
+**与今日知识的关联**：
+
+本题是并行归约的经典题，核心难点在于跨 warp 的归约需要 Shared Memory 中转，而这正是 bank conflict 的高发区。用 Day 5 学的 padding 技巧消除 conflict，用 ncu 对比优化前后 bank conflict 计数。
+
+**解题思路**：
+
+两阶段归约：grid-stride loop 做线程级累加 → Warp Shuffle 做 warp 内归约 → Shared Memory 中转 → Warp 0 做最终归约。关注 Shared Memory 访问模式是否产生 bank conflict。
+
+**参考实现**：
+
+```cuda
+__global__ void reduction_kernel(const float* input, float* output, int N) {
+    __shared__ float warpSums[32];
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadIdx.x & 31;
+    int wid  = threadIdx.x >> 5;
+
+    // grid-stride 累加
+    float sum = 0.0f;
+    for (int i = tid; i < N; i += gridDim.x * blockDim.x)
+        sum += input[i];
+
+    // Warp 级归约 (Shuffle，无 bank conflict)
+    for (int offset = 16; offset > 0; offset >>= 1)
+        sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
+
+    // warp 部分和写入 shared memory (这里注意 bank conflict)
+    if (lane == 0) warpSums[wid] = sum;
+    __syncthreads();
+
+    // Warp 0 做最终归约
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) / 32;
+        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
+        for (int offset = 16; offset > 0; offset >>= 1)
+            sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
+        if (lane == 0) output[blockIdx.x] = sum;
+    }
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-reduction-solution.md](../../LeetGPU/leetgpu-reduction-solution.md)。
+
 ---
 
 ### 扩展实验

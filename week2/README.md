@@ -2,12 +2,12 @@
 
 > 核心目标：掌握 Warp Shuffle、Register Blocking、CUDA Stream 异步执行、Nsight 性能分析和 FlashAttention CUDA 实现
 
-| 项目 | 说明 |
-|------|------|
-| 前置要求 | 已完成 Week 1 学习，掌握向量加法、Naive GEMM、Shared Memory Tiling GEMM、Softmax Kernel |
-| 建议时长 | 工作日每天 2.5h，周末每天 6h，周计 24.5h |
-| 本周产出 | Warp Reduce Kernel、Register Blocking GEMM（cuBLAS 40%+）、Multi-Stream 重叠执行、Nsight 分析报告、FlashAttention 简化版 Forward Kernel、整合优化 GEMM（cuBLAS 70%+） |
-| 周日里程碑 | 手写优化 GEMM 达到 cuBLAS 70%+ 性能，完成简化版 FlashAttention Forward Kernel |
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| -----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 1 学习，掌握向量加法、Naive GEMM、Shared Memory Tiling GEMM、Softmax Kernel　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | Warp Reduce Kernel、Register Blocking GEMM（cuBLAS 40%+）、Multi-Stream 重叠执行、Nsight 分析报告、FlashAttention 简化版 Forward Kernel、整合优化 GEMM（cuBLAS 70%+） |
+| 周日里程碑 | 手写优化 GEMM 达到 cuBLAS 70%+ 性能，完成简化版 FlashAttention Forward Kernel　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
 
 ---
 
