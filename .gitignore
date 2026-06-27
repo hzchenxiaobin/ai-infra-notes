@@ -33,4 +33,7 @@ week2/website/day*.html
 week2/website/kernels/
 week2/website/exercise/
 week2/website/notes/
+# Generated LeetGPU website files
+LeetGPU/website/index.html
+LeetGPU/website/leetgpu-*.html
 *.pyc

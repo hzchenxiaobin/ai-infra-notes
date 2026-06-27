@@ -38,6 +38,11 @@ EXTRA_MARKDOWN_PAGES = [
         "output": "notes/week1_notes.html",
         "title": "Week 1 学习笔记模板",
     },
+    {
+        "source": "profiles/week1_profile_summary.md",
+        "output": "profiles/week1_profile_summary.html",
+        "title": "Week 1 Profiling 报告汇总",
+    },
 ]
 
 # Subdirectories under each dayN/ to copy (merged flat) into the website output.
@@ -366,6 +371,16 @@ def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
                     if item.is_file():
                         shutil.copy2(item, tools_dst / item.name)
                 print(f"Copied: {week_tools} -> {tools_dst}")
+
+    # Copy week-level profiles/ directory
+    week_profiles = base_dir / "profiles"
+    if week_profiles.exists():
+        profiles_dst = output_dir / "profiles"
+        profiles_dst.mkdir(parents=True, exist_ok=True)
+        for item in week_profiles.iterdir():
+            if item.is_file():
+                shutil.copy2(item, profiles_dst / item.name)
+        print(f"Copied: {week_profiles} -> {profiles_dst}")
 
 
 def build_plan_page(output_dir: Path, weeks: list) -> None:

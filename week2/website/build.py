@@ -16,6 +16,19 @@ PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_pl
 WEEK2_DIR = Path(__file__).parent.parent
 
 
+def rewrite_md_links_to_html(markdown_text: str) -> str:
+    """Rewrite local .md links to .html for GitHub Pages deployment."""
+    def replace_link(match):
+        url = match.group(1)
+        if url.endswith(".md"):
+            new_url = url[:-3] + ".html"
+            if new_url.endswith("README.html"):
+                new_url = new_url[: -len("README.html")] + "index.html"
+            return f"]({new_url})"
+        return match.group(0)
+    return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
+
+
 def extract_plan_weeks(plan_path: Path) -> list:
     if not plan_path.exists():
         return []
@@ -235,6 +248,10 @@ def page_template(title: str, nav_html: str, markdown: str,
 
 def build_website(output_dir: Path) -> None:
     overview, days = load_overview_and_days()
+
+    overview = rewrite_md_links_to_html(overview)
+    for day in days:
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"])
 
     plan_weeks = extract_plan_weeks(PLAN_SOURCE)
 

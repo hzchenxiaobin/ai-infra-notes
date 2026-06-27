@@ -99,11 +99,34 @@ def main() -> None:
     if leetcode_images_src.exists():
         copy_directory_contents(leetcode_images_src, leetcode_images_dst)
 
-    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories, excluding week2/leetcode)
+    # Build LeetGPU website
+    print("Building LeetGPU website...")
+    subprocess.run(
+        ["python3", str(repo_root / "LeetGPU" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy LeetGPU website to public/LeetGPU/
+    print("Copying LeetGPU website to public/LeetGPU/...")
+    leetgpu_dst = public_dir / "LeetGPU"
+    copy_directory_contents(
+        repo_root / "LeetGPU" / "website",
+        leetgpu_dst,
+        skip={"build.py"},
+    )
+
+    # Copy LeetGPU images to public/LeetGPU/images/
+    leetgpu_images_src = repo_root / "LeetGPU" / "images"
+    leetgpu_images_dst = leetgpu_dst / "images"
+    if leetgpu_images_src.exists():
+        copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
+
+    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories, excluding week2/leetcode/LeetGPU)
     week1_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
         and "week2" not in p.relative_to(public_dir).parts
+        and "LeetGPU" not in p.relative_to(public_dir).parts
     ]
     for html_file in week1_pages:
         if html_file.is_file():
