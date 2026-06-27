@@ -377,6 +377,74 @@ nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_
 
 观察输出中的 `Used N registers`，确认没有 `spill stores/loads`。
 
+#### 任务 4：LeetGPU 在线题目 —— GEMM
+
+**题目链接**：<https://leetgpu.com/challenges/gemm>
+
+**题目概述**：
+
+给定 M×K 矩阵 A 和 K×N 矩阵 B（行优先），计算 C = A × B。要求手写 kernel 达到较高性能。
+
+**约束条件**：`1 ≤ M, N, K ≤ 1024`，矩阵元素范围 `[-1.0, 1.0]`
+
+**难度**：中等　**标签**：CUDA、GEMM、Register Blocking、Shared Memory Tiling、Thread Tile
+
+**与今日知识的关联**：
+
+本题直接对应 Day 2 的主题——Register Blocking。要求每个线程计算 TM×TN 子块，累加器 acc 驻留寄存器，配合 Shared Memory Tiling 实现 K 维复用。目标达到 cuBLAS 40%+。
+
+**解题思路**：
+
+Shared Memory Tiling (BM×BN×BK) + Register Blocking (TM×TN)。协作加载 A/B tile 到 Shared Memory，每个线程从 Shared Memory 加载 r_A[TM]/r_B[TN] 到寄存器，做 TM×TN 次 FMA 累加到 acc[TM][TN]。
+
+**参考实现**：
+
+```cuda
+#define BM 128
+#define BN 128
+#define BK 8
+#define TM 8
+#define TN 8
+#define NUM_THREADS ((BM / TM) * (BN / TN))
+
+__global__ void gemm_register_blocking(const float* A, const float* B, float* C,
+                                       int M, int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
+
+    float r_A[TM], r_B[TN];
+    float acc[TM][TN] = {{0}};
+
+    int threadRow = threadIdx.x / (BN / TN);
+    int threadCol = threadIdx.x % (BN / TN);
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
+
+    for (int bk = 0; bk < K; bk += BK) {
+        // 协作加载 A/B tile (省略边界处理)
+        // ... s_A[...][...] = A[...]; s_B[...][...] = B[...];
+        __syncthreads();
+
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
+            #pragma unroll
+            for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow*TM + m][k];
+            #pragma unroll
+            for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol*TN + n];
+            #pragma unroll
+            for (int m = 0; m < TM; m++)
+                #pragma unroll
+                for (int n = 0; n < TN; n++)
+                    acc[m][n] += r_A[m] * r_B[n];
+        }
+        __syncthreads();
+    }
+    // 写回 C (省略边界处理)
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-gemm-solution.md](../../LeetGPU/leetgpu-gemm-solution.md)。
+
 ---
 
 ### 扩展实验

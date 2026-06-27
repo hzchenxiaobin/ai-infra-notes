@@ -472,6 +472,68 @@ s_S[Br][Bc] = 64×64×4 = 16 KB
 总计 = 64 KB（在 A100 的 164 KB shared memory 限制内）
 ```
 
+#### 任务 4：LeetGPU 在线题目 —— Attention
+
+**题目链接**：<https://leetgpu.com/challenges/attention>
+
+**题目概述**：
+
+给定 Query (M×d)、Key (N×d)、Value (N×d)，计算 Scaled Dot-Product Attention：Attention(Q,K,V) = softmax(Q·K^T / √d) · V。
+
+**约束条件**：`1 ≤ M, N ≤ 4096`，`1 ≤ d ≤ 128`，元素范围 `[-1.0, 1.0]`
+
+**难度**：困难　**标签**：CUDA、Attention、Online Softmax、FlashAttention、分块计算
+
+**与今日知识的关联**：
+
+本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。
+
+**解题思路**：
+
+分块计算：Q tile 驻留 SRAM，K/V tile 逐块滑入。用 Online Softmax 三公式增量更新 m/l/o：m_new=max(m,mj); l_new=l*exp(m-m_new)+Σexp(xj-m_new); o_new=...。
+
+**参考实现**：
+
+```cuda
+#define BLOCK_M 64
+#define BLOCK_N 64
+
+__global__ void flash_attention(const float* Q, const float* K, const float* V,
+                                float* O, int M, int N, int d) {
+    // Q tile 驻留寄存器/SRAM
+    float q_tile[BLOCK_M][d];  // 简化,实际用 shared memory
+
+    float m_i[BLOCK_M];  // running max
+    float l_i[BLOCK_M];  // running sum
+    float o_i[BLOCK_M][d];  // running output
+
+    // 初始化
+    for (int i = 0; i < BLOCK_M; i++) {
+        m_i[i] = -INFINITY;
+        l_i[i] = 0.0f;
+        for (int j = 0; j < d; j++) o_i[i][j] = 0.0f;
+    }
+
+    // 遍历 K/V tiles
+    for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
+        // 加载 K/V tile, 计算 S = Q * K^T
+        // s_ji = Q[i] · K[j] / sqrt(d)
+
+        // Online Softmax 更新
+        // m_new = max(m_i, max(s_j))
+        // l_new = l_i * exp(m_i - m_new) + sum(exp(s_j - m_new))
+        // o_new = o_i * (l_i * exp(m_i - m_new) / l_new)
+        //       + (exp(s_j - m_new) / l_new) * V[j]
+
+        // (省略具体实现, 见 Day 5 教程的完整 kernel)
+    }
+
+    // 写回 O
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-attention-solution.md](../../LeetGPU/leetgpu-attention-solution.md)。
+
 ---
 
 ### 扩展实验

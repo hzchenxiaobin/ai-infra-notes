@@ -261,6 +261,56 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed \
 # 对比两次结果，确认优化是否有效
 ```
 
+#### 任务 5：LeetGPU 在线题目 —— Softmax
+
+**题目链接**：<https://leetgpu.com/challenges/softmax>
+
+**题目概述**：
+
+给定长度为 N 的浮点数组 input（或 batch 的多行），计算 softmax：output[i] = exp(input[i]) / Σ exp(input[j])。
+
+**约束条件**：`1 ≤ N ≤ 1,000,000`，支持 batch 维度，元素范围 `[-10.0, 10.0]`
+
+**难度**：中等　**标签**：CUDA、Softmax、Profiling、Memory-bound、Three-pass
+
+**与今日知识的关联**：
+
+本题是典型的 memory-bound kernel，适合用 Day 4 学的 Nsight Compute 做完整 profiling。用 ncu 分析 memory throughput、occupancy、warp stall reasons，判断瓶颈在内存带宽还是计算，并据此优化。
+
+**解题思路**：
+
+三遍扫描法：(1) 求 max（数值稳定性）；(2) 求 exp(x-max) 的 sum；(3) 归一化。每遍都是一次全局内存读取。用 ncu 观察 dram throughput，判断是否 memory-bound，再用 fusion（online softmax）减少访存次数。
+
+**参考实现**：
+
+```cuda
+__global__ void softmax_kernel(const float* input, float* output, int N) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N) return;
+
+    // Pass 1: 求 max
+    float max_val = -INFINITY;
+    for (int i = 0; i < N; i++)
+        max_val = fmaxf(max_val, input[i]);
+
+    // Pass 2: 求 sum(exp(x - max))
+    float sum = 0.0f;
+    for (int i = 0; i < N; i++) {
+        sum += expf(input[i] - max_val);
+    }
+
+    // Pass 3: 归一化
+    output[idx] = expf(input[idx] - max_val) / sum;
+}
+
+// profiling 命令:
+// ncu --set full --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+//   sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+//   sm__occupancy.avg.pct_of_peak_sustained_elapsed ./softmax
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-softmax-solution.md](../../LeetGPU/leetgpu-softmax-solution.md)。
+
 ---
 
 ### 扩展实验

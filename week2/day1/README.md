@@ -444,6 +444,49 @@ grid-stride loop 的好处：
 2. **coalesced access**：相邻线程访问相邻地址（步长 = 1）
 3. **自动负载均衡**：每个线程处理的元素数相近
 
+#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
+
+**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
+
+**题目概述**：
+
+给定长度为 N 的 32-bit 浮点数组 input，计算其 inclusive prefix sum：output[i] = input[0] + input[1] + ... + input[i]。
+
+**约束条件**：`1 ≤ N ≤ 100,000,000`，数值范围 `[-1000.0, 1000.0]`，结果不会溢出 float
+
+**难度**：中等　**标签**：CUDA、Scan、Prefix Sum、Warp Shuffle、__shfl_up_sync
+
+**与今日知识的关联**：
+
+本题是 scan（扫描）问题，核心是 `__shfl_up_sync` 原语的应用。Day 1 学了 `__shfl_down_sync` 做归约，本题用 `__shfl_up_sync` 做前缀和，两者是对称的 butterfly 操作。需要 block 内 scan + 跨 block 偏移累加。
+
+**解题思路**：
+
+三阶段：(1) block 内 exclusive scan 用 `__shfl_up_sync`（5 步 butterfly）+ Shared Memory 中转；(2) 对所有 block 的总和做一次 scan 得到全局偏移；(3) 把全局偏移加回 block 内每个元素。
+
+**参考实现**：
+
+```cuda
+#define BLOCK_SIZE 256
+
+// Warp 内 exclusive scan (Hillis-Steele), 使用 __shfl_up_sync
+__inline__ __device__ float warp_exclusive_scan(float val) {
+    float prefix = 0.0f;
+    #pragma unroll
+    for (int offset = 1; offset < 32; offset <<= 1) {
+        float n = __shfl_up_sync(0xFFFFFFFF, val, offset);
+        if (threadIdx.x % 32 >= offset)
+            val += n;
+    }
+    // exclusive: 当前线程的 inclusive 和减去自身
+    float inclusive = val;
+    float prev = __shfl_up_sync(0xFFFFFFFF, inclusive, 1);
+    return (threadIdx.x % 32 == 0) ? 0.0f : prev;
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-prefix-sum-solution.md](../../LeetGPU/leetgpu-prefix-sum-solution.md)。
+
 ---
 
 ### 扩展实验

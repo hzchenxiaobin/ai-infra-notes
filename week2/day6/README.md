@@ -457,6 +457,59 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 | Achieved Occupancy | ~56% | > 70% |
 | Long Scoreboard Stall | ~35% | < 20% |
 
+#### 任务 4：LeetGPU 在线题目 —— Histogram
+
+**题目链接**：<https://leetgpu.com/challenges/histogram>
+
+**题目概述**：
+
+给定长度为 N 的整数数组 input（值域 [0, B)），统计每个值的出现次数，输出长度为 B 的直方图。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`，`1 ≤ B ≤ 256`
+
+**难度**：中等　**标签**：CUDA、Histogram、Atomic、Shared Memory、Profiling、冲突分析
+
+**与今日知识的关联**：
+
+本题用 atomicAdd 做 histogram，是 GEMM 之外的另一类典型 kernel。Day 6 学了整合优化和 ncu profiling，本题适合用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic 两种实现的性能差异。
+
+**解题思路**：
+
+两种实现对比：(1) Global Memory atomicAdd（简单但冲突多）；(2) Shared Memory privatization（每 block 一份局部 histogram，最后合并）。用 ncu 分析 atomic 吞吐和 bank conflict，验证 Day 6 的优化方法论在非 GEMM kernel 上同样适用。
+
+**参考实现**：
+
+```cuda
+// Version 1: Global atomic (baseline)
+__global__ void histogram_global(const int* input, int* hist, int N, int B) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) atomicAdd(&hist[input[idx]], 1);
+}
+
+// Version 2: Shared memory privatization (optimized)
+__global__ void histogram_shared(const int* input, int* hist, int N, int B) {
+    __shared__ int s_hist[256];  // B <= 256
+    int tid = threadIdx.x;
+
+    // 初始化 shared histogram
+    for (int i = tid; i < B; i += blockDim.x) s_hist[i] = 0;
+    __syncthreads();
+
+    // 每个 block 累加到 shared memory
+    for (int i = blockIdx.x * blockDim.x + tid; i < N;
+         i += gridDim.x * blockDim.x) {
+        atomicAdd(&s_hist[input[i]], 1);
+    }
+    __syncthreads();
+
+    // 合并到 global histogram
+    for (int i = tid; i < B; i += blockDim.x)
+        atomicAdd(&hist[i], s_hist[i]);
+}
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-histogram-solution.md](../../LeetGPU/leetgpu-histogram-solution.md)。
+
 ---
 
 ### 扩展实验

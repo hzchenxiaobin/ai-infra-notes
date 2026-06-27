@@ -323,6 +323,64 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 用 Nsight Systems GUI 打开 `.nsys-rep` 文件，在 Timeline 视图中观察不同 Stream 的操作条是否有重叠区域。
 
+#### 任务 4：LeetGPU 在线题目 —— Convolution
+
+**题目链接**：<https://leetgpu.com/challenges/convolution>
+
+**题目概述**：
+
+给定输入矩阵 input 和一个 K×K 的卷积核 kernel，计算 2D 卷积输出。要求用多 Stream 分块并行处理大矩阵。
+
+**约束条件**：`1 ≤ M, N ≤ 8192`，`1 ≤ K ≤ 15`（K 为奇数），元素范围 `[-1.0, 1.0]`
+
+**难度**：中等　**标签**：CUDA、Convolution、CUDA Streams、Halo Exchange、Shared Memory
+
+**与今日知识的关联**：
+
+本题是 CUDA Streams 的典型应用场景——大矩阵分块，每块 H2D/Compute/D2H 在独立 Stream 上重叠执行。每个 chunk 的卷积计算用 Shared Memory 做 halo exchange。
+
+**解题思路**：
+
+把矩阵按行分块，每块用独立 Stream 处理：`cudaMemcpyAsync` H2D + kernel launch + `cudaMemcpyAsync` D2H。用 pinned memory 保证异步传输生效，Copy Engine 和 Compute Engine 重叠。
+
+**参考实现**：
+
+```cuda
+#define K_RADIUS 3
+#define K_SIZE (2 * K_RADIUS + 1)
+
+__global__ void conv2d(const float* input, const float* kernel, float* output,
+                       int width, int height) {
+    __shared__ float tile[BLOCK_SIZE + K_SIZE - 1][BLOCK_SIZE + K_SIZE - 1];
+
+    int tx = threadIdx.x, ty = threadIdx.y;
+    int gx = blockIdx.x * BLOCK_SIZE + tx;
+    int gy = blockIdx.y * BLOCK_SIZE + ty;
+
+    // 加载含 halo 的 tile (省略边界处理)
+    // tile[ty][tx] = input[(gy - K_RADIUS) * width + (gx - K_RADIUS)];
+    __syncthreads();
+
+    float sum = 0.0f;
+    #pragma unroll
+    for (int ky = 0; ky < K_SIZE; ky++) {
+        #pragma unroll
+        for (int kx = 0; kx < K_SIZE; kx++) {
+            sum += tile[ty + ky][tx + kx] * kernel[ky * K_SIZE + kx];
+        }
+    }
+    if (gx < width && gy < height) output[gy * width + gx] = sum;
+}
+
+// Host: 多 Stream 分块
+// for each chunk:
+//   cudaMemcpyAsync(d_chunk, h_chunk, ..., stream[i % N]);
+//   conv2d<<<grid, block, 0, stream[i % N]>>>(...);
+//   cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
+```
+
+> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-convolution-solution.md](../../LeetGPU/leetgpu-convolution-solution.md)。
+
 ---
 
 ### 扩展实验
