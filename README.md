@@ -23,32 +23,60 @@
 
 ```
 ai-infra-notes/
-├── docs/                          # 8 周学习计划文档
-│   ├── AI_Infra_8_week_plan.md           # 计划总览
-│   ├── AI_Infra_8_week_plan_detailed.md  # 详细每日任务
-│   └── learning_plan_week2_expanded.md   # Week 2 深度展开
-├── week1/                         # Week 1 完整学习材料
-│   ├── README.md                  # 本周教程（按天拆分）
-│   ├── kernels/                   # CUDA kernel 示例
-│   ├── exercise/                  # 每日练习（含手算题与验证程序）
-│   ├── notes/                     # 学习笔记与延伸阅读
-│   ├── profiles/                  # Nsight Profiling 报告
-│   ├── tools/                     # 辅助工具（Occupancy Calculator）
-│   └── website/                   # 本周静态网站源码
-├── leetcode/                      # LeetCode 算法题解
-│   ├── 最大总价值题解.md
-│   ├── images/
-│   └── website/
-├── LeetGPU/                       # LeetGPU CUDA 挑战题解
-│   └── leetgpu-prefix-sum-solution.md
-├── build.py                       # 组合构建 GitHub Pages 网站
-├── setup_github_ssh.sh            # 一键配置 GitHub SSH Key
-└── .github/workflows/deploy.yml   # GitHub Pages 自动部署
+├── docs/                               # 8 周学习计划与教程写作 Skill
+│   ├── AI_Infra_8_week_plan.md               # 计划总览
+│   ├── AI_Infra_8_week_plan_detailed.md      # 详细每日任务
+│   ├── learning_plan_week2_expanded.md       # Week 2 深度展开
+│   └── skills/daily-tutorial/SKILL.md        # 写每日教程的通用 Skill
+├── week1/                              # Week 1：GPU 执行本质 + Profiling
+│   ├── README.md                            # 本周概览 + Day 索引
+│   ├── day1/~day7/                          # 按天拆分，每天含：
+│   │   ├── README.md                        #   当日教程（11 段固定骨架）
+│   │   ├── kernels/                         #   可直接编译的 .cu 示例
+│   │   ├── exercise/                        #   练习题与验证程序
+│   │   └── notes/                           #   理论笔记与延伸阅读
+│   ├── tools/                               # 辅助工具（Occupancy Calculator）
+│   ├── profiles/                            # Nsight Profiling 报告汇总
+│   └── website/                             # 本周静态网站源码
+├── week2/                              # Week 2：CUDA 进阶优化与性能分析
+│   ├── README.md                            # 本周概览 + Day 索引
+│   ├── day1/~day7/                          # 按天拆分（同 Week 1 结构）
+│   └── website/                             # 本周静态网站源码
+├── LeetGPU/                            # LeetGPU CUDA 挑战题解（12 道）
+│   ├── leetgpu-vector-add-solution.md
+│   ├── leetgpu-prefix-sum-solution.md
+│   ├── leetgpu-gemm-solution.md
+│   └── ...
+├── leetcode/                           # LeetCode 算法题解
+│   └── 最大总价值题解.md
+├── build.py                            # 组合构建 GitHub Pages 网站
+├── setup_github_ssh.sh                 # 一键配置 GitHub SSH Key
+└── .github/workflows/deploy.yml        # GitHub Pages 自动部署
 ```
+
+## 每日教程结构
+
+每天的学习内容独立存放在 `weekN/dayM/` 目录下，遵循固定的 11 段骨架：
+
+```
+## Day N：<主题>
+### 🎯 目标              ← 6 条编号目标 + "为什么重要"
+### 学前导读              ← 动机铺垫，衔接前一日
+### 理论学习              ← 分小节讲解，配 SVG 图表
+### 昇腾对照              ← CUDA ↔ 昇腾 CANN 跨平台映射表
+### Coding 任务           ← 含完整可编译 kernel + LeetGPU 在线题目
+### 扩展实验              ← 3 个递进/对比实验
+### 常见错误与调试         ← 三列表格
+### 验证 Checklist        ← 7-8 条复选框
+### 今日总结              ← 5-7 条加粗编号
+### 面试要点              ← 5 题问答
+```
+
+详细的写作规范见 [docs/skills/daily-tutorial/SKILL.md](docs/skills/daily-tutorial/SKILL.md)。
 
 ## 在线网站
 
-每次推送到 `main` 分支会自动构建并部署到 GitHub Pages，内容包括 Week 1 每日教程、8 周计划总览、LeetCode 题解等。
+每次推送到 `main` 分支会自动构建并部署到 GitHub Pages，内容包括 Week 1 / Week 2 每日教程、8 周计划总览、LeetCode 题解等。
 
 ## 本地预览
 
@@ -61,7 +89,7 @@ cd public && python3 -m http.server 8080
 
 浏览器访问 `http://localhost:8080`。
 
-### 方式 2：单独构建 Week 1 网站
+### 方式 2：单独构建某一周网站
 
 ```bash
 python3 week1/website/build.py
@@ -70,21 +98,36 @@ cd week1/website && python3 -m http.server 8080
 
 ## 编译运行 Kernel
 
-Week 1 的 CUDA 示例可用 `nvcc` 直接编译：
+Kernel 示例按天组织在 `dayN/kernels/` 下，可用 `nvcc` 直接编译：
 
 ```bash
 cd week1
-nvcc -o kernels/hello_gpu kernels/hello_gpu.cu && ./kernels/hello_gpu
-nvcc -o kernels/transpose kernels/transpose.cu && ./kernels/transpose
-nvcc -o kernels/bank_conflict kernels/bank_conflict.cu && ./kernels/bank_conflict
+nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu && ./day1/kernels/hello_gpu
+nvcc -o day4/kernels/transpose day4/kernels/transpose.cu && ./day4/kernels/transpose
+nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu && ./day5/kernels/bank_conflict
 ```
 
 Profiling 示例：
 
 ```bash
 ncu --metrics sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-dram__throughput.avg.pct_of_peak_sustained_elapsed ./kernels/transpose
+dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
 ```
+
+## LeetGPU 每日一题
+
+每天 Coding 任务的最后一道是 [LeetGPU](https://leetgpu.com/) 在线题目，与当日主题强相关：
+
+| Day | Week 1 | Week 2 |
+|-----|--------|--------|
+| 1 | [vector-add](LeetGPU/leetgpu-vector-add-solution.md) | [prefix-sum](LeetGPU/leetgpu-prefix-sum-solution.md) |
+| 2 | [relu](LeetGPU/leetgpu-relu-solution.md) | [gemm](LeetGPU/leetgpu-gemm-solution.md) |
+| 3 | [argmax](LeetGPU/leetgpu-argmax-solution.md) | [convolution](LeetGPU/leetgpu-convolution-solution.md) |
+| 4 | [matrix-transpose](LeetGPU/leetgpu-matrix-transpose-solution.md) | [softmax](LeetGPU/leetgpu-softmax-solution.md) |
+| 5 | [reduction](LeetGPU/leetgpu-reduction-solution.md) | [attention](LeetGPU/leetgpu-attention-solution.md) |
+| 6 | [matrix-multiplication](LeetGPU/leetgpu-matrix-multiplication-solution.md) | [histogram](LeetGPU/leetgpu-histogram-solution.md) |
+
+每道题的完整题解（含 CPU 基线、GPU 设计、Kernel 实现、性能分析、复杂度）存放在 `LeetGPU/` 目录下。
 
 ## 工具链
 
@@ -97,14 +140,16 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed ./kernels/transpose
 
 1. 从 [docs/AI_Infra_8_week_plan.md](docs/AI_Infra_8_week_plan.md) 了解整体节奏
 2. 进入 [week1/README.md](week1/README.md) 按 Day 1 → Day 7 推进
-3. 每个 kernel 都配套 Nsight Profiling 任务，参考 [week1/profiles/](week1/profiles/)
+3. 每个 kernel 都配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
 4. Day 3 起配合 [week1/tools/cuda_occupancy_calculator.py](week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
+5. 每天完成 LeetGPU 在线题目，题解归档到 `LeetGPU/`
 
 ## 目录约定
 
+- `dayN/`：按天组织，每天一个目录，含 `README.md`（教程）、`kernels/`、`exercise/`、`notes/`
 - `kernels/`：可直接编译运行的 `.cu` 示例
 - `exercise/`：按天组织的练习题与验证程序
 - `notes/`：理论笔记与官方文档摘要
-- `profiles/`：Profiling 命令模板与报告
+- `website/`：静态网站源码（`build.py` 从 `dayN/README.md` 生成 `dayN.html`）
 
 > 💡 本计划为理想节奏，实际执行中可根据个人进度调整。建议每周保留 Day 7 作为缓冲，避免进度积压。
