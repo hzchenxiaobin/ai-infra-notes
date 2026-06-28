@@ -237,7 +237,7 @@ __global__ void compute_limited(const float* in, float* out, int n) {
 
 ##### 示例 2：故意制造 register spilling
 
-参考 [week1/exercise/day2/register_spill.cu](exercise/register_spill.cu)：
+参考 [week1/day2/exercise/register_spill.cu](exercise/register_spill.cu)：
 
 ```cuda
 __launch_bounds__(128, 8)
@@ -263,7 +263,7 @@ __global__ void spill_kernel(const float* in, float* out, int n) {
 编译验证：
 
 ```bash
-nvcc -Xptxas -v week1/exercise/day2/register_spill.cu
+nvcc -Xptxas -v week1/day2/exercise/register_spill.cu
 ```
 
 输出：

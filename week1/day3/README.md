@@ -169,7 +169,7 @@ nvcc -o mini_device_query mini_device_query.cu
 ./mini_device_query
 ```
 
-> 💡 这个 mini 版就是 [exercise/day3/mini_device_query.cu](exercise/mini_device_query.cu)，你可以直接编译运行。
+> 💡 这个 mini 版就是 [day3/exercise/mini_device_query.cu](exercise/mini_device_query.cu)，你可以直接编译运行。
 
 ---
 
@@ -338,7 +338,7 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessor(
 
 这个函数会考虑所有资源约束（寄存器、共享内存、线程数、block 数），返回精确的 `active_blocks`。它比手算更准确，因为编译器可能对寄存器做了额外优化。
 
-[exercise/day3/occupancy_verify.cu](exercise/occupancy_verify.cu) 就是用来对比手算与 API 结果的验证程序。
+[day3/exercise/occupancy_verify.cu](exercise/occupancy_verify.cu) 就是用来对比手算与 API 结果的验证程序。
 
 ---
 
@@ -382,10 +382,10 @@ find /usr/local/cuda -name deviceQuery
 
 #### 任务 2：创建自己的 mini_device_query
 
-参考上面的代码，编译运行 [exercise/day3/mini_device_query.cu](exercise/mini_device_query.cu)：
+参考上面的代码，编译运行 [day3/exercise/mini_device_query.cu](exercise/mini_device_query.cu)：
 
 ```bash
-cd week1/exercise/day3
+cd week1/day3/exercise
 nvcc -o mini_device_query mini_device_query.cu
 ./mini_device_query
 ```
@@ -413,12 +413,12 @@ python3 tools/cuda_occupancy_calculator.py \
 
 #### 任务 5：手算 Occupancy 并用程序验证
 
-完成 [exercise/day3/occupancy_problems.md](exercise/occupancy_problems.md) 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
+完成 [day3/exercise/occupancy_problems.md](exercise/occupancy_problems.md) 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
 
 然后编译运行验证程序：
 
 ```bash
-cd week1/exercise/day3
+cd week1/day3/exercise
 nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 ./occupancy_verify
 ```

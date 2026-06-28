@@ -74,7 +74,7 @@ int main() {
     cudaFree(d_out);
 
     printf("Done. Use the command below to check spilling:\n");
-    printf("  nvcc -Xptxas -v week1/exercise/day2/register_spill.cu\n");
+    printf("  nvcc -Xptxas -v week1/day2/exercise/register_spill.cu\n");
     printf("Look for 'spill stores' and 'spill loads' in the output.\n");
 
     return 0;

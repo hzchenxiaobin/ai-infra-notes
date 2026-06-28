@@ -429,7 +429,7 @@ week2/
 
 #### 任务 5：性能对比报告
 
-在 `week2/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
+在 `week2/day7/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
 
 ##### 报告模板
 
@@ -533,7 +533,7 @@ __inline__ __device__ float warpReduceMax(float val) {
 - [ ] 60 分钟内完成 GEMM Kernel 手撕，含 Shared Memory Tiling + Register Blocking
 - [ ] 能不看资料口述 FlashAttention 完整流程（5 分钟版本）
 - [ ] 能默写 Online Softmax 三公式（`m_new`、`l_new`、`o_new`）
-- [ ] GitHub 仓库整理完成，`week2/kernels/` 下所有 `.cu` 可独立编译
+- [ ] GitHub 仓库整理完成，`week2/day*/kernels/` 下所有 `.cu` 可独立编译
 - [ ] 性能对比报告完成，包含从 Naive 到 cuBLAS 的完整性能曲线
 - [ ] 能回答「和 cuBLAS 的差距在哪」并给出达到 90% 的优化路径
 - [ ] 能口述 CUDA 与昇腾的优化心法映射（Shared Mem↔L1 Buffer 等 7 项以上）
