@@ -122,7 +122,7 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
 |-----|--------|--------|
 | 1 | [vector-add](LeetGPU/leetgpu-vector-add-solution.md) | [prefix-sum](LeetGPU/leetgpu-prefix-sum-solution.md) |
 | 2 | [relu](LeetGPU/leetgpu-relu-solution.md) | [gemm](LeetGPU/leetgpu-gemm-solution.md) |
-| 3 | [argmax](LeetGPU/leetgpu-argmax-solution.md) | [convolution](LeetGPU/leetgpu-convolution-solution.md) |
+| 3 | [matrix-addition](LeetGPU/leetgpu-matrix-addition-solution.md) | [convolution](LeetGPU/leetgpu-convolution-solution.md) |
 | 4 | [matrix-transpose](LeetGPU/leetgpu-matrix-transpose-solution.md) | [softmax](LeetGPU/leetgpu-softmax-solution.md) |
 | 5 | [reduction](LeetGPU/leetgpu-reduction-solution.md) | [attention](LeetGPU/leetgpu-attention-solution.md) |
 | 6 | [matrix-multiplication](LeetGPU/leetgpu-matrix-multiplication-solution.md) | [histogram](LeetGPU/leetgpu-histogram-solution.md) |

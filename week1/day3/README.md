@@ -429,7 +429,7 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 - 为什么有时调整 block size 对 occupancy 没有帮助
 - `__launch_bounds__` 如何影响编译器的寄存器分配决策
 
-#### 任务 6：LeetGPU 在线题目 —— Argmax
+#### 任务 6：LeetGPU 在线题目 —— Matrix Addition
 
 **题目链接**：<https://leetgpu.com/challenges/argmax>
 
@@ -508,7 +508,7 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Argmax 题目](https://leetgpu.com/challenges/argmax)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Argmax 题解](../../LeetGPU/leetgpu-argmax-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../LeetGPU/leetgpu-matrix-addition-solution.md)。
 
 ---
 
