@@ -11,39 +11,106 @@ def save_svg(filename: str, content: str) -> None:
 
 
 def gpu_memory_hierarchy() -> str:
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="780" height="560" viewBox="0 0 780 560">
   <defs>
-    <linearGradient id="gradFast" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:1" />
+    <linearGradient id="gradReg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#238636;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#1a7f37;stop-opacity:0.8" />
     </linearGradient>
-    <linearGradient id="gradSlow" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#d29922;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#9e6a03;stop-opacity:1" />
+    <linearGradient id="gradSMem" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:0.8" />
     </linearGradient>
+    <linearGradient id="gradL2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a371f7;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#8957e5;stop-opacity:0.8" />
+    </linearGradient>
+    <linearGradient id="gradHBM" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d29922;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#9e6a03;stop-opacity:0.8" />
+    </linearGradient>
+    <marker id="arrowDown2" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+      <path d="M0,0 L10,0 L5,8 z" fill="#f85149"/>
+    </marker>
   </defs>
-  <rect width="720" height="420" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 内存层次结构</text>
 
-  <!-- Pyramid levels -->
-  <polygon points="360,70 520,130 200,130" fill="url(#gradFast)"/>
-  <polygon points="200,130 520,130 540,190 180,190" fill="#4c8dff"/>
-  <polygon points="180,190 540,190 560,250 160,250" fill="#6c9fff"/>
-  <polygon points="160,250 560,250 580,310 140,310" fill="#8bb3ff"/>
-  <polygon points="140,310 580,310 600,370 120,370" fill="url(#gradSlow)"/>
+  <rect width="780" height="560" fill="#0d1117"/>
+  <text x="390" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 内存层次结构</text>
 
-  <!-- Labels -->
-  <text x="360" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Register (~1 cycle)</text>
-  <text x="360" y="167" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Shared Memory / L1 (~20-30 cycles)</text>
-  <text x="360" y="227" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">L2 Cache (~200 cycles)</text>
-  <text x="360" y="287" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">Global Memory (HBM/GDDR)</text>
-  <text x="360" y="348" text-anchor="middle" font-size="15" font-weight="bold" fill="#0d1117">~400-800 cycles</text>
+  <!-- Left side: Pyramid -->
+  <!-- Register (top) -->
+  <polygon points="390,60 490,110 290,110" fill="url(#gradReg)" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="390" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Register</text>
+  <text x="390" y="103" text-anchor="middle" font-size="10" fill="#0d1117">~1 cycle</text>
 
-  <!-- Arrow -->
-  <text x="620" y="220" text-anchor="start" font-size="14" fill="#8b949e">慢</text>
-  <line x1="610" y1="200" x2="610" y2="360" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <!-- Shared Memory -->
+  <polygon points="290,110 490,110 510,170 270,170" fill="url(#gradSMem)" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="390" y="138" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Shared Memory</text>
+  <text x="390" y="155" text-anchor="middle" font-size="11" fill="#0d1117">~20-30 cycles</text>
+
+  <!-- L1 Cache (same level as SMem) -->
+  <polygon points="270,170 510,170 530,230 250,230" fill="#6c9fff" opacity="0.7" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="390" y="198" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">L1 Cache</text>
+  <text x="390" y="215" text-anchor="middle" font-size="11" fill="#0d1117">~20-30 cycles (自动)</text>
+
+  <!-- L2 Cache -->
+  <polygon points="250,230 530,230 550,290 230,290" fill="url(#gradL2)" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="390" y="258" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">L2 Cache</text>
+  <text x="390" y="275" text-anchor="middle" font-size="11" fill="#0d1117">~200 cycles</text>
+
+  <!-- Global Memory (HBM) -->
+  <polygon points="230,290 550,290 570,350 210,350" fill="url(#gradHBM)" stroke="#d29922" stroke-width="1.5"/>
+  <text x="390" y="318" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Global Memory (HBM)</text>
+  <text x="390" y="335" text-anchor="middle" font-size="11" fill="#0d1117">~400-800 cycles</text>
+
+  <!-- Right side: Details table -->
+  <!-- Register details -->
+  <rect x="600" y="62" width="160" height="48" rx="4" fill="#238636" opacity="0.15" stroke="#3fb950" stroke-width="1"/>
+  <text x="610" y="78" font-size="11" font-weight="bold" fill="#3fb950">容量: ~256KB/SM</text>
+  <text x="610" y="94" font-size="10" fill="#8b949e">可编程: 否(编译器)</text>
+  <text x="610" y="106" font-size="10" fill="#8b949e">作用域: Thread</text>
+
+  <!-- SMem details -->
+  <rect x="600" y="115" width="160" height="53" rx="4" fill="#1f6feb" opacity="0.15" stroke="#58a6ff" stroke-width="1"/>
+  <text x="610" y="131" font-size="11" font-weight="bold" fill="#58a6ff">容量: 100-164KB/SM</text>
+  <text x="610" y="147" font-size="10" fill="#8b949e">可编程: 是</text>
+  <text x="610" y="159" font-size="10" fill="#8b949e">作用域: Block</text>
+
+  <!-- L1 details -->
+  <rect x="600" y="175" width="160" height="53" rx="4" fill="#1f6feb" opacity="0.08" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="610" y="191" font-size="11" font-weight="bold" fill="#58a6ff">与 SMem 共享物理</text>
+  <text x="610" y="207" font-size="10" fill="#8b949e">可编程: 否(自动)</text>
+  <text x="610" y="219" font-size="10" fill="#8b949e">可配置比例</text>
+
+  <!-- L2 details -->
+  <rect x="600" y="235" width="160" height="53" rx="4" fill="#8957e5" opacity="0.15" stroke="#a371f7" stroke-width="1"/>
+  <text x="610" y="251" font-size="11" font-weight="bold" fill="#a371f7">容量: 数MB~数十MB</text>
+  <text x="610" y="267" font-size="10" fill="#8b949e">可编程: 否(自动)</text>
+  <text x="610" y="279" font-size="10" fill="#8b949e">作用域: 全局共享</text>
+
+  <!-- HBM details -->
+  <rect x="600" y="295" width="160" height="53" rx="4" fill="#d29922" opacity="0.15" stroke="#d29922" stroke-width="1"/>
+  <text x="610" y="311" font-size="11" font-weight="bold" fill="#d29922">容量: 数GB~数十GB</text>
+  <text x="610" y="327" font-size="10" fill="#8b949e">可编程: 显式分配</text>
+  <text x="610" y="339" font-size="10" fill="#8b949e">作用域: 全局</text>
+
+  <!-- Left side: Latency arrow -->
+  <line x1="140" y1="75" x2="140" y2="345" stroke="#f85149" stroke-width="2.5" marker-end="url(#arrowDown2)"/>
+  <text x="105" y="200" text-anchor="middle" font-size="13" font-weight="bold" fill="#f85149" transform="rotate(-90, 105, 200)">延迟递增 →</text>
+  <text x="85" y="85" text-anchor="middle" font-size="11" fill="#3fb950">快</text>
+  <text x="85" y="345" text-anchor="middle" font-size="11" fill="#f85149">慢</text>
+
+  <!-- Bottom: Key insights -->
+  <rect x="50" y="380" width="680" height="160" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+
+  <text x="70" y="405" font-size="13" font-weight="bold" fill="#58a6ff">💡 核心洞察</text>
+
+  <text x="70" y="430" font-size="12" fill="#c9d1d9">• <tspan fill="#3fb950" font-weight="bold">Register</tspan> 最快但不可控——编译器自动分配，程序员通过代码影响使用量</text>
+  <text x="70" y="452" font-size="12" fill="#c9d1d9">• <tspan fill="#58a6ff" font-weight="bold">Shared Memory</tspan> 是可编程的高速缓存——需要显式管理，用得好可大幅减少 Global 访问</text>
+  <text x="70" y="474" font-size="12" fill="#c9d1d9">• <tspan fill="#58a6ff">L1/L2</tspan> 是自动缓存——透明工作但不可控；理解它们有助于预测性能</text>
+  <text x="70" y="496" font-size="12" fill="#c9d1d9">• <tspan fill="#d29922" font-weight="bold">Global Memory</tspan> 是瓶颈——大多数优化都是减少对它的访问</text>
+  <text x="70" y="522" font-size="12" fill="#f85149" font-weight="bold">优化核心思想：数据离计算单元越近越好，能不访问 HBM 就不访问</text>
 </svg>'''
-
 
 def sm_architecture() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
@@ -828,6 +895,166 @@ def matrix_transpose() -> str:
 </svg>'''
 
 
+def transpose_tiled_process() -> str:
+    """Detailed diagram of tiled transpose: data partitioning, thread mapping,
+    shared-memory layout, and why read uses tile[y][x] while write uses tile[x][y]."""
+    W, H = 1000, 740
+    # Input / Output matrices: 8x8 cells, TILE_DIM=4
+    n = 8
+    tile_dim = 4
+    cell = 28
+    input_origin = (60, 110)
+    output_origin = (720, 110)
+    smem_origin = (390, 160)
+
+    def cell_x(origin, r, c):
+        return origin[0] + c * cell
+
+    def cell_y(origin, r, c):
+        return origin[1] + r * cell
+
+    # Build input matrix grid (8x8), highlight block(1,0): rows 0-3, cols 4-7
+    input_cells = ""
+    for r in range(n):
+        for c in range(n):
+            x = cell_x(input_origin, r, c)
+            y = cell_y(input_origin, r, c)
+            in_tile = (r < tile_dim) and (c >= tile_dim)
+            fill = "#1f6feb" if in_tile else "#161b22"
+            stroke = "#58a6ff" if in_tile else "#30363d"
+            opacity = "0.45" if in_tile else "1"
+            text_fill = "#c9d1d9"
+            val = f"A[{r}][{c}]"
+            input_cells += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="{fill}" opacity="{opacity}" stroke="{stroke}" stroke-width="1"/>\n'
+            input_cells += f'    <text x="{x + cell/2}" y="{y + cell/2 + 4}" text-anchor="middle" font-size="7" fill="{text_fill}">{val}</text>\n'
+
+    # Build output matrix grid (8x8), highlight block(0,1): rows 4-7, cols 0-3
+    output_cells = ""
+    for r in range(n):
+        for c in range(n):
+            x = cell_x(output_origin, r, c)
+            y = cell_y(output_origin, r, c)
+            in_tile = (r >= tile_dim) and (c < tile_dim)
+            fill = "#238636" if in_tile else "#161b22"
+            stroke = "#3fb950" if in_tile else "#30363d"
+            opacity = "0.45" if in_tile else "1"
+            text_fill = "#c9d1d9"
+            val = f"O[{r}][{c}]"
+            output_cells += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="{fill}" opacity="{opacity}" stroke="{stroke}" stroke-width="1"/>\n'
+            output_cells += f'    <text x="{x + cell/2}" y="{y + cell/2 + 4}" text-anchor="middle" font-size="7" fill="{text_fill}">{val}</text>\n'
+
+    # Shared memory tile 4x4 (read layout tile[y][x])
+    smem_read = ""
+    for r in range(tile_dim):
+        for c in range(tile_dim):
+            x = smem_origin[0] + c * cell
+            y = smem_origin[1] + r * cell
+            smem_read += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="#238636" opacity="0.25" stroke="#3fb950" stroke-width="1"/>\n'
+            smem_read += f'    <text x="{x + cell/2}" y="{y + cell/2 + 4}" text-anchor="middle" font-size="7" fill="#c9d1d9">tile[{r}][{c}]</text>\n'
+
+    # Shared memory tile 4x4 (write layout tile[x][y]) - drawn offset below read view
+    smem_write_origin = (smem_origin[0], smem_origin[1] + 190)
+    smem_write = ""
+    for r in range(tile_dim):
+        for c in range(tile_dim):
+            x = smem_write_origin[0] + c * cell
+            y = smem_write_origin[1] + r * cell
+            smem_write += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="#d29922" opacity="0.25" stroke="#e3b341" stroke-width="1"/>\n'
+            smem_write += f'    <text x="{x + cell/2}" y="{y + cell/2 + 4}" text-anchor="middle" font-size="7" fill="#c9d1d9">tile[{c}][{r}]</text>\n'
+
+    # Arrows: input tile rows -> shared memory read layout
+    read_arrows = ""
+    for r in range(tile_dim):
+        src_x = input_origin[0] + n * cell
+        src_y = input_origin[1] + r * cell + cell / 2
+        dst_x = smem_origin[0] - 10
+        dst_y = smem_origin[1] + r * cell + cell / 2
+        read_arrows += f'    <line x1="{src_x}" y1="{src_y}" x2="{dst_x}" y2="{dst_y}" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrowRight)"/>\n'
+
+    # Arrows: shared memory write layout -> output tile columns (which are rows in output)
+    write_arrows = ""
+    for c in range(tile_dim):
+        src_x = smem_write_origin[0] + tile_dim * cell + 10
+        src_y = smem_write_origin[1] + c * cell + cell / 2
+        dst_x = output_origin[0] - 10
+        dst_y = output_origin[1] + (tile_dim + c) * cell + cell / 2
+        write_arrows += f'    <line x1="{src_x}" y1="{src_y}" x2="{dst_x}" y2="{dst_y}" stroke="#e3b341" stroke-width="1.5" marker-end="url(#arrowRight)"/>\n'
+
+    # Highlight first warp: threads (0,0)~(3,0) reading row 0 of input tile
+    warp_highlight = ""
+    for c in range(tile_dim):
+        x = input_origin[0] + (tile_dim + c) * cell
+        y = input_origin[1] + 0 * cell
+        warp_highlight += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="none" stroke="#f85149" stroke-width="2"/>\n'
+        warp_highlight += f'    <text x="{x + cell/2}" y="{y - 4}" text-anchor="middle" font-size="8" fill="#f85149">T{c},0</text>\n'
+
+    # Highlight same warp writing row 4 of output (first row of output tile)
+    for c in range(tile_dim):
+        x = output_origin[0] + c * cell
+        y = output_origin[1] + tile_dim * cell
+        warp_highlight += f'    <rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="none" stroke="#f85149" stroke-width="2"/>\n'
+        warp_highlight += f'    <text x="{x + cell/2}" y="{y - 4}" text-anchor="middle" font-size="8" fill="#f85149">T{c},0</text>\n'
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
+  <defs>
+    <marker id="arrowRight" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#8b949e"/>
+    </marker>
+  </defs>
+  <rect width="{W}" height="{H}" fill="#0d1117"/>
+  <text x="{W/2}" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转</text>
+
+  <!-- Input matrix -->
+  <text x="{input_origin[0] + n*cell/2}" y="{input_origin[1] - 20}" text-anchor="middle" font-size="15" font-weight="bold" fill="#58a6ff">Input A（行优先）</text>
+  <text x="{input_origin[0] + n*cell/2}" y="{input_origin[1] - 5}" text-anchor="middle" font-size="11" fill="#8b949e">8×8，TILE_DIM=4</text>
+{input_cells}
+  <!-- Highlight block(1,0) tile in input -->
+  <rect x="{input_origin[0] + tile_dim*cell}" y="{input_origin[1]}" width="{tile_dim*cell}" height="{tile_dim*cell}" fill="none" stroke="#58a6ff" stroke-width="3" stroke-dasharray="4,2"/>
+  <text x="{input_origin[0] + tile_dim*cell + tile_dim*cell/2}" y="{input_origin[1] + tile_dim*cell + 20}" text-anchor="middle" font-size="12" fill="#58a6ff" font-weight="bold">Block(1,0) 读取此 tile</text>
+
+  <!-- Output matrix -->
+  <text x="{output_origin[0] + n*cell/2}" y="{output_origin[1] - 20}" text-anchor="middle" font-size="15" font-weight="bold" fill="#3fb950">Output A^T（行优先）</text>
+  <text x="{output_origin[0] + n*cell/2}" y="{output_origin[1] - 5}" text-anchor="middle" font-size="11" fill="#8b949e">8×8，TILE_DIM=4</text>
+{output_cells}
+  <!-- Highlight block(0,1) tile in output -->
+  <rect x="{output_origin[0]}" y="{output_origin[1] + tile_dim*cell}" width="{tile_dim*cell}" height="{tile_dim*cell}" fill="none" stroke="#3fb950" stroke-width="3" stroke-dasharray="4,2"/>
+  <text x="{output_origin[0] + tile_dim*cell/2}" y="{output_origin[1] + tile_dim*cell + 20}" text-anchor="middle" font-size="12" fill="#3fb950" font-weight="bold">Block(1,0) 写入此 tile</text>
+
+  <!-- Shared Memory read layout -->
+  <text x="{smem_origin[0] + tile_dim*cell/2}" y="{smem_origin[1] - 25}" text-anchor="middle" font-size="14" font-weight="bold" fill="#3fb950">Shared Memory Tile</text>
+  <text x="{smem_origin[0] + tile_dim*cell/2}" y="{smem_origin[1] - 10}" text-anchor="middle" font-size="11" fill="#8b949e">按 tile[y][x] 写入</text>
+{smem_read}
+{read_arrows}
+  <text x="{(input_origin[0] + n*cell + smem_origin[0]) / 2}" y="{input_origin[1] - 40}" text-anchor="middle" font-size="12" fill="#58a6ff" font-weight="bold">① Coalesced Read</text>
+  <text x="{(input_origin[0] + n*cell + smem_origin[0]) / 2}" y="{input_origin[1] - 25}" text-anchor="middle" font-size="11" fill="#8b949e">连续线程读连续地址</text>
+
+  <!-- Shared Memory write layout -->
+  <text x="{smem_write_origin[0] + tile_dim*cell/2}" y="{smem_write_origin[1] - 10}" text-anchor="middle" font-size="11" fill="#8b949e">按 tile[x][y] 读出</text>
+{smem_write}
+{write_arrows}
+  <text x="{(smem_write_origin[0] + tile_dim*cell + output_origin[0]) / 2}" y="{output_origin[1] + n*cell + 45}" text-anchor="middle" font-size="12" fill="#e3b341" font-weight="bold">② Coalesced Write</text>
+  <text x="{(smem_write_origin[0] + tile_dim*cell + output_origin[0]) / 2}" y="{output_origin[1] + n*cell + 60}" text-anchor="middle" font-size="11" fill="#8b949e">连续线程写连续地址</text>
+
+  <!-- Warp highlight -->
+{warp_highlight}
+
+  <!-- Coordinate formulas -->
+  <rect x="60" y="520" width="880" height="180" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="70" y="545" font-size="14" font-weight="bold" fill="#c9d1d9">为什么读是 tile[y][x]，写是 tile[x][y]？</text>
+
+  <text x="70" y="570" font-size="12" fill="#58a6ff" font-weight="bold">读阶段（保证 global memory 连续）：</text>
+  <text x="90" y="590" font-family="monospace" font-size="12" fill="#c9d1d9">x = blockIdx.x * TILE_DIM + threadIdx.x;  y = blockIdx.y * TILE_DIM + threadIdx.y;</text>
+  <text x="90" y="610" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.y][threadIdx.x] = in[y * width + x];</text>
+  <text x="90" y="630" font-size="11" fill="#8b949e">→ 一个 warp 内 threadIdx.x 连续变化，x 连续递增，in[y*width+x] 地址连续（coalesced read）</text>
+
+  <text x="70" y="655" font-size="12" fill="#e3b341" font-weight="bold">写阶段（保证 global memory 连续）：</text>
+  <text x="90" y="675" font-family="monospace" font-size="12" fill="#c9d1d9">x = blockIdx.y * TILE_DIM + threadIdx.x;  y = blockIdx.x * TILE_DIM + threadIdx.y;</text>
+  <text x="90" y="695" font-family="monospace" font-size="12" fill="#c9d1d9">out[y * height + x] = tile[threadIdx.x][threadIdx.y];</text>
+  <text x="90" y="715" font-size="11" fill="#8b949e">→ 交换 blockIdx.x/blockIdx.y 后，threadIdx.x 仍对应输出地址的连续维度；tile 索引交换完成真正的转置</text>
+</svg>'''
+    return svg
+
+
 def shared_memory_bank_structure() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
   <rect width="720" height="400" fill="#0d1117"/>
@@ -1404,6 +1631,7 @@ def main() -> None:
         "stride_access.svg": stride_access(),
         "shared_memory_tiling.svg": shared_memory_tiling(),
         "matrix_transpose.svg": matrix_transpose(),
+        "transpose_tiled_process.svg": transpose_tiled_process(),
         "shared_memory_bank_structure.svg": shared_memory_bank_structure(),
         "padding_solution.svg": padding_solution(),
         "bank_access_patterns.svg": bank_access_patterns(),

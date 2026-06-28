@@ -366,6 +366,107 @@ __global__ void transpose_tiled(const float* in, float* out, int width, int heig
 
 > 关于 `+1 padding` 的详细原理，请参考 Day 5 的 bank conflict 分析。
 
+#### 深入理解：为什么读和写都是 coalesced？
+
+![Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转](../website/images/transpose_tiled_process.svg)
+
+上图以 `TILE_DIM=4`、矩阵 `8×8` 为例，展示了 Block(1,0) 的完整工作流程：
+
+- **左侧 Input**：Block(1,0) 负责读取原矩阵中列范围 `[4,7]`、行范围 `[0,3]` 的蓝色 tile；
+- **中间 Shared Memory**：先把数据按 `tile[threadIdx.y][threadIdx.x]` 写入 tile（保持原矩阵的行方向），再按 `tile[threadIdx.x][threadIdx.y]` 读出（在 tile 内部完成转置）；
+- **右侧 Output**：同一个 block 把数据写到输出矩阵中行范围 `[4,7]`、列范围 `[0,3]` 的绿色 tile，这正是原 tile 的转置位置。
+
+##### 数据划分与线程映射
+
+CUDA 把矩阵划分成 `TILE_DIM × TILE_DIM` 的 tile，每个 block 负责处理一个 tile。
+
+- 原矩阵中，block `(blockIdx.x, blockIdx.y)` 对应的 tile 左上角为：
+  - `x_base = blockIdx.x * TILE_DIM`
+  - `y_base = blockIdx.y * TILE_DIM`
+- block 内线程 `(threadIdx.x, threadIdx.y)` 负责该 tile 内的元素：
+  - `x = x_base + threadIdx.x`
+  - `y = y_base + threadIdx.y`
+
+以 Block(1,0) 为例：它读取 Input 中 `A[0..3][4..7]`，经过 shared memory 中转后，写入 Output 的 `O[4..7][0..3]`。
+
+##### 第一阶段：读入 shared memory
+
+```cuda
+int x = blockIdx.x * TILE_DIM + threadIdx.x;
+int y = blockIdx.y * TILE_DIM + threadIdx.y;
+
+if (x < width && y < height) {
+    tile[threadIdx.y][threadIdx.x] = in[y * width + x];
+}
+```
+
+![Coalesced Global Memory Access](../website/images/coalesced_access.svg)
+
+在一个 warp 内，`threadIdx.y` 相同，`threadIdx.x` 从 0 变到 31：
+
+- `y` 固定，因此 `y * width` 是常量；
+- `x = blockIdx.x * TILE_DIM + threadIdx.x` 随 `threadIdx.x` 连续递增；
+- 所以读取地址 `in[y * width + x]` 是 **连续地址** → **coalesced read** ✅。
+
+形象地理解：一个 warp 的线程一起把原矩阵某一行里的连续 32 个 float 读进来。
+
+**为什么用 `tile[threadIdx.y][threadIdx.x]` 存储？** 因为这样每个线程把读到的元素放到 shared memory 中与输入矩阵相同行/列位置的单元里，保持 tile 内部的行主序布局。此时 shared memory 中的 tile 就是原矩阵这个子块的"镜像"。
+
+##### 第二阶段：从 shared memory 写出
+
+```cuda
+x = blockIdx.y * TILE_DIM + threadIdx.x;
+y = blockIdx.x * TILE_DIM + threadIdx.y;
+
+if (x < height && y < width) {
+    out[y * height + x] = tile[threadIdx.x][threadIdx.y];
+}
+```
+
+![Coalesced vs Stride Access](../website/images/stride_access.svg)
+
+关键在于：**交换了 `blockIdx.x` 和 `blockIdx.y`，但 `threadIdx.x` 仍然对应输出地址的连续维度**。
+
+输出矩阵 `out` 同样是行优先存储，形状为 `height × width`。在一个 warp 内：
+
+- `y = blockIdx.x * TILE_DIM + threadIdx.y` 固定；
+- `x = blockIdx.y * TILE_DIM + threadIdx.x` 随 `threadIdx.x` 连续递增；
+- 所以写出地址 `out[y * height + x]` 是 **连续地址** → **coalesced write** ✅。
+
+直观理解：原来 naive 版本是"按列写"（stride），现在通过 block 坐标的交换，变成了"按行写"，但写的数据块在全局空间中对应原矩阵的列——这正符合转置的语义。
+
+**为什么用 `tile[threadIdx.x][threadIdx.y]` 读出？** 因为输出阶段一个 warp 内 `threadIdx.y` 固定、`threadIdx.x` 连续变化。如果仍然按 `tile[threadIdx.y][threadIdx.x]` 读出，所有线程会读到 tile 的同一行，写出的地址反而不连续。交换索引后，相邻线程从 tile 的不同行取数据，但写回 `out[y * height + x]` 时地址连续，从而实现 coalesced write。
+
+##### 转置操作在哪里发生？
+
+![Shared Memory Tiling 原理](../website/images/shared_memory_tiling.svg)
+
+在 shared memory 内部。第一阶段按 `tile[y][x]` 写入，第二阶段按 `tile[x][y]` 读出：
+
+```cuda
+tile[threadIdx.y][threadIdx.x] = ...  // 第一阶段：按行写入 tile
+... = tile[threadIdx.x][threadIdx.y]; // 第二阶段：按列读出 tile（在 shared memory 中完成转置）
+```
+
+shared memory 的随机访问延迟很低，因此这里的非连续访问不是瓶颈。而 global memory 两侧都被改造成了连续访问，从而同时实现读和写的 coalesced。
+
+##### 地址正确性验证
+
+跟踪线程 `(threadIdx.x = a, threadIdx.y = b)`：
+
+1. 第一阶段它把原矩阵元素 `in[(by*TILE_DIM + b) * width + (bx*TILE_DIM + a)]` 写进 `tile[b][a]`。
+2. 第二阶段它从 `tile[a][b]` 读取，这个元素来自线程 `(b, a)`，对应原矩阵 `in[(by*TILE_DIM + a) * width + (bx*TILE_DIM + b)]`。
+3. 第二阶段它写出的位置是 `out[(bx*TILE_DIM + b) * height + (by*TILE_DIM + a)]`。
+
+于是得到：
+
+```
+out[(bx*TILE_DIM + b) * height + (by*TILE_DIM + a)]
+    = in[(by*TILE_DIM + a) * width + (bx*TILE_DIM + b)]
+```
+
+这正是转置的定义 `output[j][i] = input[i][j]`。
+
 #### 任务 3：编译和性能测试
 
 ```bash
