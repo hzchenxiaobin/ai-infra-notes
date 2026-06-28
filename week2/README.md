@@ -2986,3 +2986,640 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
    - TM=TN=16 时累加器 `acc[16][16]` = 256 个 register，加上 r_A、r_B 和索引变量，总 register 超过 255 上限
    - 编译器会把多余的变量 spill 到 local memory（实际在 global memory），访问延迟从 ~1 cycle 变成 ~400-800 cycles
    - Register spilling 会导致性能暴跌，远不如 TM=TN=8 的 88 register 安全配置
+
+---
+
+## Day 7：限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 通过限时手写 Kernel 检验本周学习成果，发现薄弱环节
+2. 系统梳理 Week 2 的所有核心知识点，建立完整的优化思路链
+3. 整理 GitHub 仓库结构，使其成为可展示的技术作品
+4. 编写性能对比报告，量化从 Naive 到 70%+ 的优化历程
+5. 为 Week 3 的推理优化学习做好准备
+
+> 💡 **为什么重要**：Day 7 是本周的「考试日」和「收尾日」。限时手撕 Kernel 是面试的实战模拟——面试官不会给你参考资料，也不会给你一小时。同时，一个整洁的 GitHub 仓库和性能报告，是展示你 AI Infra 能力的最佳名片。
+
+---
+
+### 学前导读：为什么需要限时手撕
+
+前面 6 天我们学习了很多优化技术：Warp Shuffle、Register Blocking、Multi-Stream、FlashAttention……但「看懂」和「写出来」之间有巨大的鸿沟。
+
+**限时手撕的价值**：
+
+| 维度 | 看懂代码 | 限时手写 |
+|------|---------|---------|
+| 记忆深度 | 短期记忆，几天后遗忘 | 肌肉记忆，长期保持 |
+| 理解程度 | 知道每行代码的作用 | 知道为什么这样写、不那样写 |
+| 面试表现 | 面试时翻资料 → 直接挂 | 白板手写 → 展示实力 |
+| 发现盲区 | 以为自己会了 | 暴露出遗忘的细节 |
+
+> **核心原则**：能不看资料写出来的，才是真正掌握的。
+
+---
+
+### Week 2 知识地图
+
+```
+Week 2 核心主线：从 Naive GEMM (1%) 到 cuBLAS 70%+ 的优化路径
+
+Day 1: Warp Shuffle ──► GPU 内最快通信（1-2 cycle）
+       │                 ↓
+Day 2: Register Blocking ──► 三级数据复用（Global→Shared→Register）
+       │                      ↓
+Day 3: CUDA Streams ──► 异步执行 + 多 Stream 重叠流水线
+       │                 ↓
+Day 4: Nsight Compute ──► Profile → 识别瓶颈 → 优化 → 验证
+       │                    ↓
+Day 5: FlashAttention ──► Tiling + Online Softmax → HBM O(N²)→O(Nd)
+       │                    ↓
+Day 6: 整合优化 ──► float4 + Warp Shuffle + Auto-tuning → 70%+
+       │              ↓
+Day 7: 限时手撕 + 项目收尾
+```
+
+#### 优化层次全景图
+
+| 优化层次 | 性能（cuBLAS %）| 关键技术 | 数据驻留位置 | 复用对象 |
+|---------|----------------|---------|------------|---------|
+| Naive GEMM | ~1-3% | 无 | Global Memory | 无 |
+| Shared Memory Tiling | ~15% | `s_A[BM][BK]`, `s_B[BK][BN]` | Shared Memory | A/B tile |
+| Register Blocking | ~45% | `acc[TM][TN]` 驻留寄存器 | Register | A子行/B子列+累加器 |
+| +float4 向量化 | ~55% | 128-bit load 指令 | Register+宽位加载 | 同上，带宽提升 |
+| +Warp Shuffle | ~60% | 累加器写回优化 | Register+Shuffle | 同上，合并写回 |
+| +Double Buffering | ~70% | 软件流水线 | 全部+双缓冲 | 同上，掩盖传输 |
+| cuBLAS | 100% | Tensor Core + PTX + Auto-tune | 全部+硬件加速 | 全部 |
+
+---
+
+### 核心概念串讲
+
+#### 1. Warp Shuffle
+
+**一句话**：同一 Warp 内 32 个线程通过专用交换网络直接传递寄存器数据，延迟仅 1-2 cycle。
+
+**关键概念链**：
+```
+__shfl_sync（广播）→ __shfl_up_sync（前缀和）→ __shfl_down_sync（归约）→ __shfl_xor_sync（Butterfly）
+```
+
+**核心记忆点**：
+- `__shfl_down_sync`：归约后只有 lane 0 有结果
+- `__shfl_xor_sync`：归约后所有 lane 都有结果
+- mask 参数 `0xFFFFFFFF`：32 位掩码，控制哪些 lane 参与
+- Butterfly 归约：5 步（offset=16→8→4→2→1）完成 32 线程归约
+
+**两级归约流程**：
+```
+每个线程 grid-stride 累加 → Warp 级 Shuffle 归约 → Shared Memory 中转 → Warp 0 二次 Shuffle → 最终结果
+```
+
+#### 2. Register Blocking
+
+**一句话**：每个线程计算 TM×TN 子块，累加器驻留寄存器，减少 Shared Memory 访问。
+
+**关键参数链**：
+```
+Block Tile (BM×BN) → Thread Tile (TM×TN) → 线程数 = (BM/TM)×(BN/TN)
+                                     ↓
+                    Register 用量 = TM×TN（累加器）+ TM + TN（加载）+ 索引
+                                     ↓
+                    TM=TN=8 → ~88 register（安全）
+                    TM=TN=16 → ~256 register（会 spill！）
+```
+
+**三级数据复用**：
+```
+Global Memory → Shared Memory（Block Tile 复用）→ Register（Thread Tile 复用）→ FMA 累加
+```
+
+#### 3. CUDA Streams 异步执行
+
+**一句话**：Stream 是 GPU 操作队列，多 Stream 可实现 H2D/Compute/D2H 重叠流水线。
+
+**三大陷阱**：
+1. **Default Stream 隐式同步**：`cudaMemcpy`（同步）会打断所有 Explicit Stream 的并发
+2. **Pinned Memory 必要性**：`cudaMemcpyAsync` 必须用 `cudaMallocHost` 分配的内存
+3. **Event 跨 Stream 依赖**：用 `cudaEventRecord` + `cudaStreamWaitEvent` 管理依赖
+
+**重叠流水线**：
+```
+Stream1: [H2D chunk1] → [Kernel1] → [D2H1]
+Stream2:        [H2D chunk2] → [Kernel2] → [D2H2]
+         ↑ Copy Engine 和 Compute Engine 独立，可并发
+```
+
+#### 4. Nsight Compute 性能分析
+
+**一句话**：用数据说话，不靠猜测。Profile → 识别瓶颈 → 优化 → 验证。
+
+**关键指标速查**：
+| 指标 | 含义 | 优化方向 |
+|------|------|---------|
+| SM Throughput | 计算利用率 | 低 → 增加 occupancy 或 ILP |
+| Memory Throughput | 显存带宽利用率 | 低 → 检查 coalesced access |
+| Achieved Occupancy | 实际 warp 占用率 | 低 → 减少 register/smem |
+| Long Scoreboard Stall | 全局内存延迟等待 | 高 → 增加 tiling、double buffer |
+| Math Pipe Throttle | FMA 过载 | 高 → 增加独立指令 |
+
+**Roofline 模型**：
+```
+计算强度 = FLOPs / Bytes
+AI < 平衡点（A100 ~25）→ memory-bound → 优化内存访问
+AI > 平衡点 → compute-bound → 优化计算吞吐量
+```
+
+#### 5. FlashAttention
+
+**一句话**：通过分块 Tiling + Online Softmax，在 SRAM 中完成所有中间计算，HBM 访问从 O(N²) 降到 O(Nd)。
+
+**三个更新公式**：
+```
+m_new = max(m, max(x_j))                          ← Max 更新
+l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)   ← Sum 更新
+o_new = o × (l × exp(m - m_new) / l_new)           ← Output 更新
+      + (exp(x_j - m_new) / l_new) × v_j
+```
+
+**关键洞察**：
+- `exp(m - m_new)` 是统一参考点的缩放因子
+- 加速来源不是减少 FLOPS（计算量相同），而是减少数据移动
+- Q tile 驻留 SRAM，K/V tile 逐块滑入
+
+---
+
+### 限时手撕模拟
+
+#### 任务 1：30 分钟手写 Warp Reduce Kernel（2h 含复盘）
+
+##### 模拟规则
+
+- **条件**：关闭所有参考资料，打开空文件
+- **时间**：30 分钟
+- **要求**：
+  - [ ] 包含 `warpReduceSum` 函数（使用 `__shfl_down_sync`）
+  - [ ] 包含 `blockReduceSum` Kernel（Warp 级 + Shared Memory + Warp 0 二级归约）
+  - [ ] 包含 Host 端的 grid-stride loop 调用
+  - [ ] 代码能编译运行（允许边界条件的小 bug）
+
+##### 评分标准
+
+| 项目 | 分值 | 评分要点 |
+|------|------|---------|
+| `__shfl_down_sync` 正确使用 | 30 分 | 参数正确、mask=0xFFFFFFFF、butterfly 循环 |
+| 两级归约结构 | 30 分 | Warp 级→Shared Memory→Warp 0 最终归约 |
+| `__syncthreads()` 位置正确 | 20 分 | Shared Memory 写后 sync、Warp 0 reduce 前 sync |
+| grid-stride 循环 | 10 分 | 每个线程处理多个元素的循环结构 |
+| 代码整洁度 | 10 分 | 命名规范、注释清晰 |
+
+##### 参考答案（复盘时对比）
+
+```cuda
+// 30 分钟手写参考：Warp Reduce Kernel
+
+__inline__ __device__ float warpReduceSum(float val) {
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+
+__global__ void blockReduceSum(const float* input, float* output, int n) {
+    __shared__ float warpSums[32];
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadIdx.x % 32;
+    int wid  = threadIdx.x / 32;
+
+    // grid-stride loop
+    float sum = 0.0f;
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x)
+        sum += input[i];
+
+    // Warp 级归约
+    sum = warpReduceSum(sum);
+
+    // Warp 的 lane 0 写入 shared memory
+    if (lane == 0) warpSums[wid] = sum;
+    __syncthreads();
+
+    // Warp 0 做最终归约
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) / 32;
+        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
+        sum = warpReduceSum(sum);
+        if (lane == 0) output[blockIdx.x] = sum;
+    }
+}
+```
+
+##### 复盘清单
+
+手写完后，对照参考答案检查以下易错点：
+
+- [ ] `__shfl_down_sync` 的 mask 参数是否写了 `0xFFFFFFFF`？
+- [ ] butterfly 循环是否从 16 开始，每次右移 1？
+- [ ] `__syncthreads()` 是否在 Shared Memory 写入之后、Warp 0 读取之前？
+- [ ] grid-stride loop 的步长是否是 `blockDim.x * gridDim.x`？
+- [ ] 第二级归约的 `numWarps` 是否正确计算？
+
+---
+
+#### 任务 2：60 分钟手写 Register Blocking GEMM（2h 含复盘）
+
+##### 模拟规则
+
+- **条件**：关闭所有参考资料，打开空文件
+- **时间**：60 分钟
+- **要求**：
+  - [ ] 包含 Shared Memory Tiling（`s_A[BM][BK]`, `s_B[BK][BN]`）
+  - [ ] 包含 Register Blocking（`acc[TM][TN]`）
+  - [ ] 包含协作加载 Global→Shared
+  - [ ] 包含正确的线程到输出 tile 的映射
+  - [ ] 代码结构正确（允许边界条件 bug 和性能未达最优）
+
+##### 评分标准
+
+| 项目 | 分值 | 评分要点 |
+|------|------|---------|
+| Shared Memory 声明和加载 | 25 分 | `s_A`/`s_B` 声明正确、协作加载逻辑 |
+| Register Blocking 结构 | 25 分 | `acc[TM][TN]` 累加器、`r_A`/`r_B` 加载 |
+| 线程映射 | 20 分 | `threadRow`/`threadCol` 计算正确 |
+| 三重循环结构 | 15 分 | 外循环 (bk)、中循环 (k)、内循环 (m,n) |
+| 写回 Global Memory | 10 分 | 正确的全局索引计算 |
+| 代码整洁度 | 5 分 | 命名规范、注释清晰 |
+
+##### 参考答案核心结构（复盘时对比）
+
+```cuda
+// 60 分钟手写参考：Register Blocking GEMM 核心结构
+
+#define BM 128
+#define BN 128
+#define BK 8
+#define TM 8
+#define TN 8
+#define NUM_THREADS ((BM/TM)*(BN/TN))  // 256
+
+__global__ void gemmRegisterBlocking(const float* A, const float* B,
+                                      float* C, int M, int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
+
+    float acc[TM][TN] = {0};
+    float r_A[TM];
+    float r_B[TN];
+
+    // 线程映射
+    int threadRow = threadIdx.x / (BN / TN);  // 0~15
+    int threadCol = threadIdx.x % (BN / TN);  // 0~15
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
+
+    for (int bk = 0; bk < K; bk += BK) {
+        // 1. 协作加载 A tile 和 B tile 到 Shared Memory
+        // ... (所有 256 线程协作加载)
+
+        __syncthreads();
+
+        // 2. Register Blocking 计算
+        for (int k = 0; k < BK; k++) {
+            for (int m = 0; m < TM; m++)
+                r_A[m] = s_A[threadRow * TM + m][k];
+            for (int n = 0; n < TN; n++)
+                r_B[n] = s_B[k][threadCol * TN + n];
+            for (int m = 0; m < TM; m++)
+                for (int n = 0; n < TN; n++)
+                    acc[m][n] += r_A[m] * r_B[n];
+        }
+        __syncthreads();
+    }
+
+    // 3. 写回 Global Memory
+    for (int m = 0; m < TM; m++)
+        for (int n = 0; n < TN; n++) {
+            int gRow = cRow + threadRow * TM + m;
+            int gCol = cCol + threadCol * TN + n;
+            if (gRow < M && gCol < N)
+                C[gRow * N + gCol] = acc[m][n];
+        }
+}
+```
+
+##### 复盘清单
+
+- [ ] `threadRow` 和 `threadCol` 的计算是否正确？
+- [ ] `s_A` 加载时是否正确处理了边界（`cRow + loadRow < M`）？
+- [ ] 内层 FMA 循环是否用了 `#pragma unroll`？
+- [ ] `__syncthreads()` 是否在 Shared Memory 加载后和计算后各放了一个？
+- [ ] 写回时全局索引 `gRow` 和 `gCol` 是否正确？
+- [ ] `acc[TM][TN]` 是否初始化为 0？
+
+---
+
+#### 任务 3：FlashAttention 口述模拟（1h）
+
+##### 模拟规则
+
+- **条件**：不看任何资料
+- **时间**：5 分钟口述 + 10 分钟问答
+- **口述内容要求**：
+  1. FlashAttention 解决的问题（O(N²) HBM 访问）
+  2. 分块策略（Q tile 驻留 SRAM，K/V tile 逐块滑入）
+  3. Online Softmax 三公式推导（m_new, l_new, o_new）
+  4. 复杂度分析（HBM 从 O(N²) 降到 O(Nd)）
+  5. 昇腾对照（L0 Buffer 预加载 Q，Cube Unit 分块计算）
+
+##### 自问自答清单
+
+口述完后，回答以下问题（不看资料）：
+
+- [ ] **"为什么不用全局 softmax，非要 online 递推？"**
+  → 因为每个 KV tile 看不到全局 max，必须用 running max 增量更新
+
+- [ ] **"`exp(m - m_new)` 的作用是什么？"**
+  → 统一参考点的缩放因子，把旧值从旧参考点 m 缩放到新参考点 m_new
+
+- [ ] **"FlashAttention 的加速上限是多少？"**
+  → 受限于 HBM 带宽和 SRAM 容量，长序列加速 2-4x
+
+- [ ] **"FlashAttention 的计算量减少了吗？"**
+  → 没有，FLOPS 相同。加速来源是减少 HBM 数据移动
+
+- [ ] **"分块大小 Br×Bc 如何确定？"**
+  → `Br×D + Bc×D×2 + Br×Bc ≤ SRAM 容量`，A100 上典型 Br=Bc=64
+
+---
+
+### GitHub 仓库整理
+
+#### 推荐仓库结构
+
+```
+cuda-learning/
+├── week1-basics/
+│   ├── vec_add.cu
+│   ├── matmul_naive.cu
+│   ├── matmul_sharedmem.cu
+│   ├── softmax.cu
+│   └── README.md
+├── week2-advanced/
+│   ├── day1-warp-reduce/
+│   │   ├── warp_reduce.cu
+│   │   └── README.md
+│   ├── day2-register-blocking/
+│   │   ├── register_blocking_gemm.cu
+│   │   └── README.md
+│   ├── day3-multi-stream/
+│   │   ├── multi_stream_pipeline.cu
+│   │   └── README.md
+│   ├── day4-nsight-profile/
+│   │   ├── ncu_commands.sh
+│   │   ├── ncu_output.txt
+│   │   └── README.md
+│   ├── day5-flashattention/
+│   │   ├── flash_attention.cu
+│   │   └── README.md
+│   ├── day6-integrated-gemm/
+│   │   ├── integrated_gemm.cu
+│   │   └── README.md
+│   └── day7-benchmark/
+│       ├── benchmark.sh
+│       └── performance_report.md
+├── README.md               # 项目总览
+└── performance-report.md   # 性能对比报告
+```
+
+#### 项目总览 README 模板
+
+```markdown
+# CUDA Learning Journey — 从 Naive 到 cuBLAS 70%+
+
+## 项目简介
+8 周 CUDA + 昇腾 CANN 跨平台算子优化学习项目，每周包含理论学习和手写 Kernel 实践。
+
+## Week 1：GPU 执行本质 + Profiling
+- 向量加法、Naive GEMM、Shared Memory Tiling GEMM、Softmax Kernel
+- Nsight Systems 基础 Profiling
+
+## Week 2：CUDA 进阶优化与性能分析
+- Warp Shuffle、Register Blocking、Multi-Stream、FlashAttention
+- GEMM 从 Naive (1%) 优化到 cuBLAS 70%+
+
+## 性能数据
+| 版本 | 4096³ 时间 | cuBLAS 百分比 |
+|------|-----------|-------------|
+| Naive | ~500ms | ~1.4% |
+| Shared Memory Tiling | ~50ms | ~14% |
+| Register Blocking | ~15ms | ~47% |
+| +float4+Warp Shuffle | ~10ms | ~70% |
+| cuBLAS | ~7ms | 100% |
+```
+
+---
+
+### 性能对比报告
+
+#### 测试环境模板
+
+```markdown
+# CUDA GEMM 性能优化报告
+
+## 测试环境
+- GPU: NVIDIA A100-SXM4-40GB（或你的 GPU 型号）
+- CUDA Version: 12.x
+- Driver: 5xx.xx
+- OS: Ubuntu 22.04 / macOS
+
+## 性能对比表（M=N=K=4096）
+
+| 版本 | 时间(ms) | GFLOPS | cuBLAS百分比 | 关键优化点 |
+|------|---------|--------|------------|-----------|
+| Naive | ~500 | ~273 | ~1.4% | 无优化 |
+| Shared Memory Tiling | ~50 | ~2730 | ~14% | Shared Memory 复用 |
+| Register Blocking | ~15 | ~9100 | ~47% | +Register 累加器 |
+| +float4 向量化 | ~12 | ~11375 | ~58% | +128-bit 加载 |
+| +Warp Shuffle | ~10 | ~13650 | ~70% | +Warp 级协作 |
+| cuBLAS | ~7 | ~19500 | 100% | NVIDIA 官方优化 |
+
+## 各版本复杂度对比
+
+| 版本 | 代码行数 | 优化层次数 | 掌握难度 |
+|------|---------|-----------|---------|
+| Naive | ~20 | 0 | ★ |
+| Shared Memory | ~80 | 1 | ★★ |
+| Register Blocking | ~150 | 2 | ★★★ |
+| +float4+Shuffle | ~200 | 4 | ★★★★ |
+| cuBLAS | N/A | 10+ | ★★★★★ |
+
+## 从昇腾到 CUDA 的迁移总结
+
+| 昇腾概念 | CUDA 对应 | 迁移难度 | 对照说明 |
+|---------|---------|---------|---------|
+| L0 Buffer | Shared Memory | ★★ | 片上缓存，存储 tile 数据 |
+| L1 Buffer | L2 Cache | ★ | 缓存层级映射 |
+| Cube Core | SM (FMA 单元) | ★★ | 计算单元映射 |
+| Vector Unit | Warp Shuffle | ★★★ | Warp 级通信抽象不同 |
+| Fixpipe | Double Buffering | ★★★ | 昇腾硬件自动 vs CUDA 手动 |
+| FRACTAL_NZ | Register Blocking | ★★★ | 分块哲学一致，布局不同 |
+```
+
+#### benchmark 脚本模板
+
+```bash
+#!/bin/bash
+# benchmark.sh — GEMM 性能对比基准测试
+
+SIZES=(512 1024 2048 4096)
+VERSIONS=("naive" "shared_mem" "register_blocking" "integrated")
+
+echo "=== GEMM Benchmark ==="
+echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader)"
+echo "CUDA: $(nvcc --version | tail -1)"
+echo ""
+echo "Size,Version,Time(ms),GFLOPS,cuBLAS_Percent" > benchmark_results.csv
+
+for size in "${SIZES[@]}"; do
+    for ver in "${VERSIONS[@]}"; do
+        echo "Running ${ver} with M=N=K=${size}..."
+        # 运行对应的可执行文件并解析输出
+        # ./gemm_${ver} ${size} >> benchmark_results.csv
+    done
+done
+
+echo "Results saved to benchmark_results.csv"
+```
+
+---
+
+### 技术博客大纲
+
+建议写一篇技术博客：**"从 Naive 到 cuBLAS 70%：CUDA GEMM 优化实战笔记"**
+
+#### 推荐大纲
+
+1. **引言**：为什么要手写 GEMM？面试价值与工程价值
+2. **Baseline**：Naive GEMM 的问题（每元素重复读取整行整列）
+3. **第一层优化**：Shared Memory Tiling（K 维度数据复用）
+4. **第二层优化**：Register Blocking（Thread Tile + 累加器驻留寄存器）
+5. **第三层优化**：float4 向量化加载（128-bit load 提升带宽利用率）
+6. **第四层优化**：Warp Shuffle 写回（合并访问优化）
+7. **第五层优化**：Double Buffering（软件流水线掩盖传输）
+8. **Profiling 驱动**：用 Nsight Compute 验证每层优化的效果
+9. **与 cuBLAS 的差距**：Tensor Core、PTX、Auto-tuning
+10. **昇腾对照**：FRACTAL_NZ、Fixpipe、L0 Buffer 的映射关系
+
+---
+
+### 常见错误与调试
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| 手写 Reduce 忘记 `__syncthreads()` | 两级归约的同步点遗漏 | 记住口诀：「写完 smem 要 sync，Warp 0 读前要 sync」|
+| 手写 GEMM 线程映射算错 | `threadRow`/`threadCol` 混淆 | 画图确认：`threadRow = tid / (BN/TN)` |
+| GEMM 写回时索引越界 | 没有检查 `gRow < M && gCol < N` | 写回前加边界检查 |
+| 性能报告数据不合理 | 没有做 warmup | 先跑一次 warmup，再计时 |
+| FlashAttention 口述卡壳 | 三公式记不牢 | 用「缩放因子」一句话记忆 |
+
+---
+
+### 验证 Checklist
+
+- [ ] 30 分钟内能不看资料手写 Warp Reduce Kernel（含两级归约）
+- [ ] 60 分钟内能不看资料手写 Register Blocking GEMM 核心结构
+- [ ] 能口述 FlashAttention 的核心思想和三公式
+- [ ] GitHub 仓库结构整洁，代码可编译运行
+- [ ] 性能对比报告包含至少 4 个版本的对比数据
+- [ ] 能画出从 Naive (1%) 到 70%+ 的完整优化路径图
+- [ ] 能说出每层优化的收益来源和量化增益
+- [ ] 能对照昇腾 CANN 解释 5 个以上的概念映射
+
+---
+
+### 今日总结
+
+Day 7 是本周的收官之日，我们完成了三件事：
+
+1. **限时手撕检验**：通过 30 分钟 Reduce + 60 分钟 GEMM 的限时手写，检验了本周学习成果，暴露了薄弱环节
+2. **知识体系梳理**：将 Week 2 的五大模块（Warp Shuffle、Register Blocking、Multi-Stream、Nsight、FlashAttention）连成完整的优化思路链
+3. **项目收尾**：整理 GitHub 仓库结构，编写性能对比报告，为后续学习和面试准备好可展示的技术作品
+
+**Week 2 核心成就**：
+```
+Naive GEMM (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
+→ +float4 (55%) → +Warp Shuffle (60%) → +Double Buffer (70%) → cuBLAS (100%)
+```
+
+这条优化路径是 AI Infra 工程师的核心能力体现——每一层优化都有明确的收益来源，每一步都能用 Profiling 数据验证。
+
+---
+
+### 面试要点
+
+1. **「请用 5 分钟画出手写 GEMM 到 cuBLAS 80% 的优化路径，并说出每层的收益来源。」**
+
+   ```
+   Naive (1%)
+     ↓ 减少 Global Memory 重复读取
+   Shared Memory Tiling (15%)
+     ↓ 累加器驻留 Register，减少 Shared Memory 访问
+   Register Blocking (45%)
+     ↓ 128-bit load 提升带宽利用率
+   +float4 向量化 (55%)
+     ↓ Warp 内协作优化写回，减少非合并访问
+   +Warp Shuffle (60%)
+     ↓ 软件流水线掩盖 Global→Shared 传输
+   +Double Buffering (70%)
+     ↓ PTX 内联、Tensor Core、参数搜索
+   cuBLAS (100%)
+   ```
+
+   每层的收益来源：
+   - Shared Memory Tiling：K 维度数据复用，减少 Global Memory 读取次数
+   - Register Blocking：累加器从 Shared Memory 提升到 Register，延迟从 ~30 cycle 降到 ~1 cycle
+   - float4：4 条 32-bit load 合并为 1 条 128-bit load，指令数减少 4x
+   - Warp Shuffle：写回从非合并变为 coalesced，减少 cache line 传输
+   - Double Buffering：计算和传输重叠，掩盖 Global Memory 延迟
+
+2. **「手写 Block Reduce Kernel 时，最容易犯的 3 个错误是什么？」**
+
+   1. **忘记 `__syncthreads()`**：Shared Memory 写入后、Warp 0 读取前，必须同步。口诀：「写完 smem 要 sync，Warp 0 读前要 sync」
+   2. **`__shfl_down_sync` 忘记 mask 参数**：Volta+ 架构必须用 `_sync` 版本，mask=0xFFFFFFFF 表示全部 32 线程参与
+   3. **第二级归约的 numWarps 计算错误**：应该是 `(blockDim.x + 31) / 32`，不是 `blockDim.x / 32`（后者在 blockDim.x 不是 32 倍数时会少算）
+
+3. **「FlashAttention 的核心创新是什么？为什么不是靠减少 FLOPS 加速？」**
+
+   - **核心创新**：分块 Tiling + Online Softmax，在 SRAM 中完成所有中间计算，不需要将 N×N 的 S 和 P 矩阵写入 HBM
+   - **不减少 FLOPS**：计算量与标准 Attention 完全相同，都是 O(N²d)
+   - **加速来源**：HBM 访问从 O(N²+Nd) 降到 O(Nd)，减少了数据移动量
+   - **核心原则**：在 GPU 上，减少数据移动比减少计算更重要，因为 HBM 带宽是最大瓶颈
+
+4. **「从昇腾迁移到 CUDA，最大的概念差异是什么？」**
+
+   | 维度 | 昇腾 CANN | CUDA | 迁移难度 |
+   |------|----------|------|---------|
+   | 编程模型 | Ascend C（C++ 封装） | CUDA C++（扩展语法） | ★★ |
+   | Warp 级通信 | Vector Unit 内置归约 | Warp Shuffle 手动 butterfly | ★★★ |
+   | 内存层次 | L0→L1→HBM | Register→Shared→Global | ★★ |
+   | 双缓冲 | Fixpipe 硬件自动 | 手动 Double Buffering | ★★★ |
+   | 矩阵布局 | FRACTAL_NZ 分块 | Register Blocking 分块 | ★★★ |
+   | Profiling | msprof | ncu / nsys | ★★ |
+
+   最大差异：**CUDA 需要更多手动控制**（Shuffle、Double Buffering、线程映射），而昇腾的硬件抽象层级更高（Fixpipe 自动流水线、Vector Unit 内置归约）。但底层优化哲学一致：多级数据复用 + 减少数据移动 + 最大化计算强度。
+
+---
+
+### 周末练习题
+
+**练习 1（综合）**：将整合版 GEMM 扩展到支持 `C = alpha × A × B + beta × C`（BLAS 标准接口）。
+
+**练习 2（综合）**：实现一个 benchmark 脚本，自动扫描矩阵尺寸（512, 1024, 2048, 4096, 8192），记录每个版本的性能并生成 CSV 报告。
+
+**练习 3（挑战）**：阅读 CUTLASS 的 GEMM 实现（https://github.com/NVIDIA/cutlass），对比手写版本和 CUTLASS 的代码结构差异。
+
+**练习 4（挑战）**：在 FlashAttention 简化版基础上，增加 Warp Shuffle 并行化 Online Softmax 更新（当前简化版只有一个线程做 softmax）。
+
+**练习 5（思考）**：如果要在昇腾 910B 上实现 FlashAttention，你会如何利用 L0 Buffer 和 Cube Unit 的特性？写出大致的伪代码结构。
