@@ -260,3 +260,123 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 1. 如果你的 kernel 是 **memory-bound**（大量等 global memory），提高 occupancy 是否有帮助？为什么？
 2. 如果你的 kernel 是 **compute-bound**（计算密集、寄存器多），盲目降低寄存器用量是否一定更好？
 3. `__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)` 的第二个参数如何影响编译器对寄存器用量的选择？
+
+
+---
+
+## 附录：occupancy_verify 在 RTX 5090 上的实际输出
+
+```text
+=== Device: NVIDIA GeForce RTX 5090 (Compute Capability 12.0) ===
+  Number of SMs: 170
+  Max threads / SM: 1536
+  Max blocks / SM: 24
+  Max warps / SM: 48
+  Registers / SM: 65536
+  Shared memory / SM: 102400 bytes
+  Warp size: 32
+
+=== Occupancy Analysis for Sample Kernels ===
+
+--- kernel_light (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 10
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_medium (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 12
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_smem (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 8
+  Shared memory per block: 1024 bytes (static) + 0 bytes (dynamic) = 1024 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_launch_bounds (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 29
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 256
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+=== Varying Block Size for kernel_medium ===
+
+--- kernel_medium (blockSize=128, dynamicSmem=0) ---
+  Registers per thread: 12
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 4
+  CUDA API   -> active blocks / SM: 12, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 12, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_medium (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 12
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_medium (blockSize=512, dynamicSmem=0) ---
+  Registers per thread: 12
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 16
+  CUDA API   -> active blocks / SM: 3, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 3, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_medium (blockSize=1024, dynamicSmem=0) ---
+  Registers per thread: 12
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 32
+  CUDA API   -> active blocks / SM: 1, active warps / SM: 32, occupancy: 66.7%
+  Hand calc  -> active blocks / SM: 1, active warps / SM: 32, occupancy: 66.7%
+
+=== Varying Dynamic Shared Memory for kernel_light ===
+
+--- kernel_light (blockSize=256, dynamicSmem=0) ---
+  Registers per thread: 10
+  Shared memory per block: 0 bytes (static) + 0 bytes (dynamic) = 0 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_light (blockSize=256, dynamicSmem=4096) ---
+  Registers per thread: 10
+  Shared memory per block: 0 bytes (static) + 4096 bytes (dynamic) = 4096 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_light (blockSize=256, dynamicSmem=8192) ---
+  Registers per thread: 10
+  Shared memory per block: 0 bytes (static) + 8192 bytes (dynamic) = 8192 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+
+--- kernel_light (blockSize=256, dynamicSmem=16384) ---
+  Registers per thread: 10
+  Shared memory per block: 0 bytes (static) + 16384 bytes (dynamic) = 16384 bytes
+  Max threads per block: 1024
+  Warps per block: 8
+  CUDA API   -> active blocks / SM: 5, active warps / SM: 40, occupancy: 83.3%
+  Hand calc  -> active blocks / SM: 6, active warps / SM: 48, occupancy: 100.0%
+```
+
+> 💡 **观察**：当 `dynamicSmem=16384` 时，CUDA API 给出的 active blocks（5）与本练习公式手算结果（6）出现差异。这说明实际 GPU 的共享内存分配粒度或对齐策略可能比本练习简化的 `1024 bytes` 更严格。理解原理后，建议以 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 的运行时结果为准。
