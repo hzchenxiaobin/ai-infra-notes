@@ -40,3 +40,6 @@ LeetGPU/website/leetgpu-*.html
 
 # Compiled binaries
 mini_device_query
+
+# Compiled binaries
+week1/day3/exercise/occupancy_verify

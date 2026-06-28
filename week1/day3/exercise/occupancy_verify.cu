@@ -32,9 +32,9 @@ static inline int min4(int a, int b, int c, int d) {
     return m;
 }
 
-// 按 A100 (CC 8.0) 及同代架构常用的粒度建模：
+// 按 RTX 5090 (CC 12.0) 的粒度建模：
 // 寄存器按 256 个/block 对齐，共享内存按 1024 bytes/block 对齐。
-// 若在其他架构上运行，granularity 可能有差异，结果仅供理解原理。
+// 不同架构的粒度可能不同，结果仅供理解原理。
 void calculate_occupancy(const OccProps& p, int blockSize, int regsPerThread,
                          int smemPerBlock, int& activeBlocks, int& activeWarps,
                          float& occupancy) {
