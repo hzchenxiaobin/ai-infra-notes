@@ -37,3 +37,6 @@ week2/website/notes/
 LeetGPU/website/index.html
 LeetGPU/website/leetgpu-*.html
 *.pyc
+
+# Compiled binaries
+mini_device_query

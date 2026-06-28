@@ -61,6 +61,44 @@ make
 | Day 2 kernel 理论 occupancy | |
 | Day 2 kernel 实际 occupancy | |
 
+## 显存带宽计算说明
+
+GDDR（Graphics Double Data Rate）显存采用**双倍数据速率**技术：数据在时钟信号的**上升沿**和**下降沿**都会被传输，因此实际数据传输速率是 deviceQuery 报告的 `Memory Clock Rate` 的 2 倍。
+
+### 计算公式
+
+```text
+理论显存带宽 = MemoryClockRate × 2 × MemoryBusWidth / 8
+```
+
+其中：
+
+- `MemoryClockRate`：deviceQuery 报告的显存时钟频率（单位：MHz）
+- `×2`：GDDR 双倍数据速率，每个时钟周期传输 2 次数据
+- `MemoryBusWidth`：显存位宽（单位：bit）
+- `/8`：将 bit 转换为 byte
+
+### 示例（RTX 5090）
+
+```text
+Memory Clock Rate = 14001 MHz
+Memory Bus Width  = 512-bit
+
+带宽 = 14001 × 2 × 512 / 8 / 1000
+     = 1792.13 GB/s
+```
+
+> 注意：deviceQuery 中的 `Memory Clock Rate` 是**基准时钟频率**，不是实际数据传输速率。计算带宽时必须先乘以 2，否则结果只有真实带宽的一半。
+
+### 简单类比
+
+把显存时钟想象成公交调度：
+
+- **SDR（单倍数据速率）**：每"滴"一声发一趟车
+- **GDDR（双倍数据速率）**：每"滴"一声发两趟车（上升沿一趟、下降沿一趟）
+
+同样的"心跳频率"下，GDDR 能搬运的数据量是 SDR 的 2 倍。
+
 ## 思考题
 
 1. 如何根据 `memoryClockRate` 和 `memoryBusWidth` 计算理论显存带宽？
