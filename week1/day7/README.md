@@ -1,0 +1,357 @@
+## Day 7：总结与复盘
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 系统梳理 Week 1 的所有核心知识点
+2. 建立从"硬件执行模型"到"代码优化"的完整思路链
+3. 整理出一份可复用的学习笔记和面试速查表
+4. 发现本周学习中的薄弱环节，制定补漏计划
+5. 为 Week 2 的 GEMM 优化做好准备
+
+> 💡 **为什么重要**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。Day 7 不是休息，而是把碎片知识连成网络。
+
+---
+
+### Week 1 知识地图
+
+![Week 1 知识地图](../website/images/week1_knowledge_map.svg)
+
+Week 1 的核心主线：
+
+```
+GPU 性能 = Memory + 并行度
+```
+
+围绕这个公式，我们学习了三大模块：
+
+| 模块 | 天数 | 核心内容 |
+|------|------|---------|
+| 执行模型 | Day 1-2 | SM、Warp、SIMT、Grid/Block/Thread、Occupancy |
+| 硬件认知 | Day 3 | deviceQuery、GPU 峰值算力、显存带宽 |
+| 内存优化 | Day 4-6 | Coalescing、Shared Memory Tiling、Bank Conflict、Nsight Profiling |
+
+---
+
+### 核心概念串讲
+
+#### 1. GPU 执行模型
+
+**一句话**：GPU 以 warp 为单位执行 SIMT，一个 warp 32 个线程必须执行相同指令。
+
+**关键概念链**：
+```
+GPU → SM → Warp（32 threads）→ Thread
+Grid → Block → Thread
+```
+
+**性能启示**：
+- 避免 warp divergence
+- block 大小取 32 的倍数
+- 理解 block 不能跨 SM
+
+#### 2. Occupancy
+
+**一句话**：Occupancy 衡量 SM 上同时活跃的 warp 比例，影响延迟隐藏能力。
+
+**三大资源约束**：
+- 寄存器数量
+- 共享内存数量
+- Block / warp 数量上限
+
+**性能启示**：
+- 不必追求 100% occupancy
+- 寄存器过多会降低 occupancy
+- Register spilling 会急剧降低性能
+
+#### 3. 内存层次
+
+**从快到慢**：
+```
+Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
+~1 cycle < ~30 cycles < ~30 cycles < ~200 cycles < ~400-800 cycles
+```
+
+**性能启示**：
+- 多用 register 和 shared memory
+- 减少 global memory 访问
+- 让 global memory 访问 coalesced
+
+#### 4. Coalescing 与 Bank Conflict
+
+| 特性 | Coalescing | Bank Conflict |
+|------|-----------|---------------|
+| 发生位置 | Global Memory | Shared Memory |
+| 优化目标 | 连续地址访问 | 不同 bank 访问 |
+| 检测工具 | ncu memory throughput | ncu bank conflict 指标 |
+| 解决方法 | 调整索引顺序 | Padding |
+
+**性能启示**：
+- Coalescing 提高 global memory 带宽利用率
+- 避免 bank conflict 提高 shared memory 访问速度
+- 矩阵转置是同时练习两者的经典例子
+
+#### 5. Profiling
+
+**一句话**：先用 nsys 找耗时 kernel，再用 ncu 分析该 kernel。
+
+**瓶颈判断**：
+- Memory-bound：`dram__throughput` 高
+- Compute-bound：`sm__throughput` 高
+- Latency-bound：两者都低
+
+---
+
+### GPU 性能优化决策树
+
+![Optimization Decision Tree](../website/images/optimization_decision_tree.svg)
+
+面对一个性能问题，按以下流程思考：
+
+1. **先 profiling**：不要猜测，用数据说话
+2. **看 occupancy**：如果低，先优化 occupancy
+3. **判断瓶颈**：memory-bound 还是 compute-bound
+4. **针对性优化**：
+   - Memory-bound → coalescing、shared memory、减少读写
+   - Compute-bound → Tensor Core、指令优化
+5. **再 profiling**：验证优化效果
+
+---
+
+### 总结任务
+
+#### 任务 1：完成 Week 1 学习笔记
+
+更新 [notes/week1_notes.md](../notes/week1_notes.md)，建议包含以下内容：
+
+```markdown
+# Week 1 学习笔记
+
+## 1. GPU 执行模型
+- SM：
+- Warp：
+- SIMT：
+- Grid/Block/Thread：
+
+## 2. 内存层次
+| 类型 | 延迟 | 容量 | 可编程 |
+|------|------|------|--------|
+| Register | | | |
+| Shared Memory | | | |
+| L1 Cache | | | |
+| L2 Cache | | | |
+| Global Memory | | | |
+
+## 3. Occupancy
+- 定义：
+- 影响因素：
+- 优化方法：
+
+## 4. Coalescing
+- 定义：
+- 写出 coalesced 代码的关键：
+
+## 5. Bank Conflict
+- 定义：
+- 解决方法：
+
+## 6. Nsight 常用命令
+```bash
+ncu --metrics ...
+nsys profile -o ...
+```
+
+## 7. 本周实验记录
+| Kernel | Occupancy | Memory Throughput | Compute Throughput | 瓶颈 |
+|--------|-----------|-------------------|-------------------|------|
+| | | | | |
+
+## 8. 面试问题自测
+- Q: 什么是 SIMT？
+- A:
+```
+
+#### 任务 2：整理面试题库
+
+针对每个核心概念，准备一个"30 秒回答版本"：
+
+1. 什么是 SIMT？
+2. 什么是 warp divergence？如何避免？
+3. 什么是 occupancy？越高越好吗？
+4. 什么是 coalesced access？
+5. 什么是 bank conflict？如何解决？
+6. 如何判断 kernel 是 memory-bound 还是 compute-bound？
+7. ncu 和 nsys 的区别？
+8. 什么是 Roofline 模型？
+
+#### 任务 3：补完未完成的实验
+
+对照 Week 1 完成标准，检查哪些还没做：
+
+- [ ] 完成 4 个基础 CUDA kernel 编写与运行
+- [ ] 完成 1 个 bank conflict 对比实验
+- [ ] 生成 3+ Nsight Compute 报告
+- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
+- [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
+- [ ] 能使用 Nsight 定位 kernel 瓶颈类型
+
+#### 任务 4：绘制关键图表
+
+即使不提交，也建议手绘或在纸上画出：
+1. GPU 内存层次结构图
+2. SM 架构简图
+3. Grid/Block/Thread 关系图
+4. Coalesced vs Stride 访问示意图
+5. Occupancy 与性能关系图
+6. Roofline 简图
+
+画图是检验理解深度的最好方法。
+
+---
+
+### 面试准备框架
+
+![Week 1 面试准备框架](../website/images/week1_interview_prep.svg)
+
+面试中回答技术问题，建议用这个结构：
+
+1. **先给定义**：用一句话说清楚是什么
+2. **解释原因**：为什么会出现这个现象
+3. **举例说明**：结合实际代码或场景
+4. **优化思路**：如果遇到这个问题怎么解决
+5. **拓展联系**：和之前学过的概念联系起来
+
+**示例**：
+
+> **Q：什么是 bank conflict？**
+>
+> **A**：bank conflict 发生在 shared memory 访问时，一个 warp 内多个线程同时访问同一个 bank 的不同地址，导致访问需要串行化。
+>
+> 比如 `__shared__ float tile[32][32]`，如果按列读取 `tile[threadIdx.x][i]`，同一列的 32 个元素都在 bank 0，32 个线程都访问 bank 0，就会形成 32-way conflict。
+>
+> 解决方法是在列维度加 padding：`tile[32][33]`，这样同一列相邻行的元素会错开 bank，避免 conflict。
+>
+> 这和我们 Day 4 学的矩阵转置优化是同一个问题。
+
+---
+
+### 常见误区澄清
+
+| 误区 | 正确理解 |
+|------|---------|
+| Occupancy 越高越好 | 足够高即可，100% 不意味着 100% 性能 |
+| Shared memory 一定比 global memory 快 | 用得好才快，bank conflict 会抵消优势 |
+| Coalescing 只对读有效 | 读写都重要 |
+| 一个 block 越大越好 | 受限于 shared memory 和寄存器，通常 128/256 最优 |
+| Profiling 是最后一步 | 应该是优化循环的起点和终点 |
+
+---
+
+### Week 1 → Week 2 衔接
+
+Week 2 我们将学习 **GEMM 优化**。为了做好准备，请确保你掌握了：
+
+1. **Grid/Block/Thread 层次**：GEMM 需要复杂的线程映射
+2. **Shared Memory Tiling**：GEMM 的核心优化手段
+3. **Coalesced Access**：GEMM 需要高效的全局内存访问
+4. **Bank Conflict**：GEMM 的 shared memory 布局必须避免
+5. **Nsight Profiling**：GEMM 优化需要数据驱动
+
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。
+
+---
+
+### 弹性安排
+
+根据本周完成情况，选择以下一项或多项：
+
+- **补进度**：完成未做的 coding 任务和实验
+- **深入方向 1**：实现更复杂的 shared memory tiling（如 2D stencil）
+- **深入方向 2**：用 ncu 详细分析一个实际 kernel 的所有指标
+- **深入方向 3**：阅读 CUDA C Programming Guide 第 5 章全文
+- **面试准备**：和同学互相模拟面试
+
+---
+
+### 今日总结
+
+Day 7 我们完成了 Week 1 的系统复盘：
+
+1. **知识地图**：把 SM、Warp、Occupancy、Coalescing、Bank Conflict、Profiling 连成网络
+2. **优化决策树**：建立了从 profiling 到优化的完整思路
+3. **学习笔记模板**：提供了 [week1_notes.md](../notes/week1_notes.md) 的结构
+4. **面试准备框架**：概念 + 代码 + 表达三位一体
+5. **Week 2 衔接**：明确了还需要巩固的基础
+
+如果你能清晰回答以下两个问题，说明 Week 1 过关了：
+
+1. **用一句话概括 GPU 性能优化的核心？**
+   > 答案：减少慢速内存访问，提高并行度，让计算单元不空转。
+
+2. **从硬件执行模型到代码，你的优化思路链是什么？**
+   > 答案：先理解 SM/Warp 执行方式 → 写出避免 divergence 和 coalescing 的代码 → 用 shared memory tiling 减少 global memory 访问 → 避免 bank conflict → 用 ncu/nsys 验证瓶颈 → 针对性优化。
+
+---
+
+### 面试要点
+
+1. **用一句话概括 GPU 性能优化的核心？**
+   - 减少慢速内存访问，提高并行度，让计算单元不空转。
+
+2. **从硬件执行模型到代码，你的优化思路链是什么？**
+   - SM/Warp 执行方式 → 避免 divergence → coalesced access → shared memory tiling → 避免 bank conflict → profiling → 针对性优化。
+
+3. **Week 1 你最大的收获是什么？**
+   - 建立 GPU 性能直觉，能判断代码是 memory-bound 还是 compute-bound。
+
+4. **如果让你优化一个未知 kernel，你会怎么做？**
+   - 先用 nsys 找耗时 kernel，再用 ncu 分析 occupancy、memory throughput、compute throughput，判断瓶颈类型，然后针对性优化。
+
+5. **Week 1 哪个实验让你印象最深刻？为什么？**
+   - 建议选矩阵转置或 bank conflict，因为这两个实验同时涉及多个概念。
+
+---
+
+## 📁 本周目录结构
+
+```
+week1/
+├── README.md              # 本文件：Week 1 完整指南
+├── kernels/               # CUDA kernel 源码
+│   ├── hello_gpu.cu
+│   ├── occupancy_test.cu
+│   ├── transpose.cu
+│   └── bank_conflict.cu
+├── profiles/              # Profiling 报告
+│   └── week1_profile_summary.md
+└── notes/                 # 学习笔记
+    └── week1_notes.md
+```
+
+---
+
+## 🔗 推荐资源
+
+| 资源 | 说明 |
+|------|------|
+| [CUDA C Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/) | 官方权威文档 |
+| [CUDA Samples](https://github.com/NVIDIA/cuda-samples) | 官方示例代码 |
+| [Nsight Compute Docs](https://docs.nvidia.com/nsight-compute/) | Profiling 工具文档 |
+| [Nsight Systems Docs](https://docs.nvidia.com/nsight-systems/) | 系统级 trace 文档 |
+| [GPU Gems 3 - Chapter 31](https://developer.nvidia.com/gpugems/gpugems3/part-v-physics-simulation/chapter-31-fast-n-body-simulation-cuda) | 经典 CUDA 优化案例 |
+
+---
+
+## ✅ Week 1 完成标准
+
+- [ ] 完成 4 个基础 CUDA kernel 编写与运行
+- [ ] 完成 1 个 bank conflict 对比实验
+- [ ] 生成 3+ Nsight Compute 报告
+- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
+- [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
+- [ ] 能使用 Nsight 定位 kernel 瓶颈类型
+
+---
+
+> 💡 **提示**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。

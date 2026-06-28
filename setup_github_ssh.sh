@@ -58,10 +58,16 @@ if [[ "$HTTP_STATUS" != "200" ]]; then
 fi
 
 # 获取 GitHub 用户名
-GITHUB_USER=$(curl -s \
+USER_JSON=$(curl -s \
     -H "Authorization: token $GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
-    "$API_BASE/user" | grep -o '"login":"[^"]*"' | cut -d'"' -f4)
+    "$API_BASE/user")
+GITHUB_USER=$(echo "$USER_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('login',''))")
+if [[ -z "$GITHUB_USER" ]]; then
+    echo "❌ 错误：无法从 GitHub API 获取用户名"
+    echo "$USER_JSON"
+    exit 1
+fi
 echo "👤 GitHub 用户: $GITHUB_USER"
 
 # 检查是否已存在相同公钥

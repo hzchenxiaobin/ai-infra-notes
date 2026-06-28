@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Build the Week 2 website from README.md.
+Build the Week 2 website from README.md (overview) and dayN/README.md (per-day).
 Generates:
-  - index.html: overview page
-  - day1.html ~ dayN.html: one page per day
+  - index.html: overview page (from week2/README.md)
+  - day1.html ~ dayN.html: one page per day (from week2/dayN/README.md)
 Uses relative paths (../css/..., ../js/...) for shared resources,
 since week2/ is one level below the deployment root on GitHub Pages.
 """
@@ -13,6 +13,23 @@ from pathlib import Path
 from typing import Optional
 
 PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+WEEK2_DIR = Path(__file__).parent.parent
+
+
+def rewrite_md_links_to_html(markdown_text: str) -> str:
+    """Rewrite local .md links to .html for GitHub Pages deployment."""
+    def replace_link(match):
+        url = match.group(1)
+        if not url.endswith(".md"):
+            return match.group(0)
+        new_url = url[:-3] + ".html"
+        if new_url.endswith("README.html"):
+            new_url = new_url[: -len("README.html")] + "index.html"
+        # ../../LeetGPU/x.md -> /LeetGPU/x.html  (escape week dir)
+        if new_url.startswith("../../"):
+            new_url = "/" + new_url[len("../../"):]
+        return f"]({new_url})"
+    return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
 def extract_plan_weeks(plan_path: Path) -> list:
@@ -33,21 +50,40 @@ def escape_for_template_string(text: str) -> str:
     return text
 
 
-def split_by_days(markdown_text: str):
-    day_pattern = re.compile(r"^(## Day (\d+)[：:].*)$", re.MULTILINE)
-    matches = list(day_pattern.finditer(markdown_text))
-    if not matches:
-        raise ValueError("No Day sections found in README.md")
-    overview = markdown_text[:matches[0].start()].strip()
+def load_overview_and_days():
+    """Load overview from week2/README.md and per-day markdown from week2/dayN/README.md.
+
+    Returns (overview_text, days) where days is a list of
+    {"num": int, "title": str, "markdown": str} sorted by day number.
+    Image paths are rewritten from "../website/images/" to "images/" so they
+    resolve correctly in the website output directory.
+    """
+    readme_path = WEEK2_DIR / "README.md"
+    if not readme_path.exists():
+        raise FileNotFoundError(f"Week 2 README not found: {readme_path}")
+    overview = readme_path.read_text(encoding="utf-8").replace("](website/images/", "](images/")
+
+    day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
     days = []
-    for i, match in enumerate(matches):
-        start = match.start()
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown_text)
-        section = markdown_text[start:end].strip()
-        day_num = int(match.group(2))
-        title_match = re.match(r"^## Day \d+[：:]\s*(.+)$", match.group(1))
-        title = title_match.group(1) if title_match else f"Day {day_num}"
-        days.append({"num": day_num, "title": title, "markdown": section})
+    for day_dir in sorted(WEEK2_DIR.glob("day*")):
+        readme = day_dir / "README.md"
+        if not readme.exists():
+            continue
+        text = readme.read_text(encoding="utf-8")
+        text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", text)
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        match = day_title_pattern.match(first_line)
+        if not match:
+            raise ValueError(f"Cannot parse Day title from first line of {readme}: {first_line!r}")
+        days.append({
+            "num": int(match.group(1)),
+            "title": match.group(2).strip(),
+            "markdown": text.strip(),
+        })
+
+    if not days:
+        raise ValueError(f"No day*/README.md files found in {WEEK2_DIR}")
+    days.sort(key=lambda d: d["num"])
     return overview, days
 
 
@@ -213,12 +249,12 @@ def page_template(title: str, nav_html: str, markdown: str,
 """
 
 
-def build_website(readme_path: Path, output_dir: Path) -> None:
-    markdown_text = readme_path.read_text(encoding="utf-8")
-    # README references images as "website/images/xxx.svg" (for GitHub viewing),
-    # but website HTML is in website/, so we need to reference them as "images/xxx.svg"
-    markdown_text = markdown_text.replace("](website/images/", "](images/")
-    overview, days = split_by_days(markdown_text)
+def build_website(output_dir: Path) -> None:
+    overview, days = load_overview_and_days()
+
+    overview = rewrite_md_links_to_html(overview)
+    for day in days:
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"])
 
     plan_weeks = extract_plan_weeks(PLAN_SOURCE)
 
@@ -261,6 +297,5 @@ def build_website(readme_path: Path, output_dir: Path) -> None:
 
 if __name__ == "__main__":
     base_dir = Path(__file__).parent
-    readme_path = base_dir.parent / "README.md"
     output_dir = base_dir
-    build_website(readme_path, output_dir)
+    build_website(output_dir)
