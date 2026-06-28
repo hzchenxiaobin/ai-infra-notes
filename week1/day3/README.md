@@ -508,7 +508,7 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 }
 ```
 
-> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-argmax-solution.md](../../LeetGPU/leetgpu-argmax-solution.md)。
+> 💡 提交后在 [LeetGPU Argmax 题目](https://leetgpu.com/challenges/argmax)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Argmax 题解](../../LeetGPU/leetgpu-argmax-solution.md)。
 
 ---
 

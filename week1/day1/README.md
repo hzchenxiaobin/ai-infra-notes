@@ -685,7 +685,7 @@ __global__ void vector_add(const float* A, const float* B, float* C, int N) {
 }
 ```
 
-> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [LeetGPU/leetgpu-vector-add-solution.md](../../LeetGPU/leetgpu-vector-add-solution.md)。
+> 💡 提交后在 [LeetGPU Vector Add 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Add 题解](../../LeetGPU/leetgpu-vector-add-solution.md)。
 
 ---
 

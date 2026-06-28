@@ -532,7 +532,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 }
 ```
 
-> 💡 提交后在 LeetGPU 上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [LeetGPU/leetgpu-attention-solution.md](../../LeetGPU/leetgpu-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Attention 题解](../../LeetGPU/leetgpu-attention-solution.md)。
 
 ---
 
