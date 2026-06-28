@@ -44,7 +44,21 @@ Argmax 是一个**带状态追踪的归约**问题：不仅要找最大值，还
 3. **Block 级**：warp 部分和写入 Shared Memory，Warp 0 做最终归约
 4. **跨 Block**：用 `atomicMax` 或第二次 kernel 汇总
 
-### 3.2 关键技巧：值相同时取较小下标
+![Argmax 两级归约流程](images/argmax_overview.png)
+
+### 3.2 Grid-Stride Loop
+
+当 `N` 很大时，每个线程通过 `grid-stride loop` 处理多个元素，保证内存访问连续且负载均衡。
+
+![Grid-Stride Loop](images/argmax_grid_stride.png)
+
+### 3.3 Warp Shuffle 归约
+
+一个 warp 内的 32 个线程通过 butterfly 模式两两比较，最终 Lane 0 持有该 warp 的 `(max_val, max_idx)`。
+
+![Warp Shuffle 归约](images/argmax_warp_shuffle.png)
+
+### 3.4 关键技巧：值相同时取较小下标
 
 归约比较逻辑：
 
@@ -55,6 +69,8 @@ if (other_val > local_max ||
     local_idx = other_idx;
 }
 ```
+
+![平局处理](images/argmax_tie_breaking.png)
 
 ## 4. Kernel 实现
 
