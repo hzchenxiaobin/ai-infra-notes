@@ -16,8 +16,13 @@ PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_pl
 WEEK2_DIR = Path(__file__).parent.parent
 
 
-def rewrite_md_links_to_html(markdown_text: str) -> str:
-    """Rewrite local .md links to .html for GitHub Pages deployment."""
+def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
+    """Rewrite local .md links to .html for GitHub Pages deployment.
+
+    Links that escape the week directory (starting with ../../) are rewritten
+    to relative paths from the generated page's location. For week2 pages
+    deployed under week2/, the LeetGPU directory is at ../LeetGPU/.
+    """
     def replace_link(match):
         url = match.group(1)
         if not url.endswith(".md"):
@@ -25,9 +30,9 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        # ../../LeetGPU/x.md -> /LeetGPU/x.html  (escape week dir)
+        # ../../LeetGPU/x.md -> <root_prefix>LeetGPU/x.html
         if new_url.startswith("../../"):
-            new_url = "/" + new_url[len("../../"):]
+            new_url = root_prefix + new_url[len("../../"):]
         return f"]({new_url})"
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
@@ -252,9 +257,10 @@ def page_template(title: str, nav_html: str, markdown: str,
 def build_website(output_dir: Path) -> None:
     overview, days = load_overview_and_days()
 
-    overview = rewrite_md_links_to_html(overview)
+    # Week 2 pages are deployed under week2/, so LeetGPU is at ../LeetGPU/
+    overview = rewrite_md_links_to_html(overview, root_prefix="../")
     for day in days:
-        day["markdown"] = rewrite_md_links_to_html(day["markdown"])
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="../")
 
     plan_weeks = extract_plan_weeks(PLAN_SOURCE)
 

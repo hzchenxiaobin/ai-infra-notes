@@ -84,7 +84,7 @@ def compute_root_prefix(output_path: Path, output_dir: Path) -> str:
     return "../" * depth if depth > 0 else ""
 
 
-def rewrite_md_links_to_html(markdown_text: str) -> str:
+def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
     """Rewrite local .md links to .html for GitHub Pages deployment.
 
     README.md source uses .md links so they work on GitHub's markdown viewer.
@@ -92,8 +92,8 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
     so the links need to point to .html files.
 
     Links that escape the week directory (starting with ../../) are rewritten
-    to site-root-absolute paths (e.g. /LeetGPU/...) because day pages are
-    deployed at the site root, not under weekN/dayM/.
+    to relative paths from the generated page's location (e.g. LeetGPU/x.html
+    for root-level day pages, ../LeetGPU/x.html for subdir pages).
     """
     def replace_link(match):
         url = match.group(1)
@@ -102,9 +102,9 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        # ../../LeetGPU/x.md -> /LeetGPU/x.html  (escape week dir)
+        # ../../LeetGPU/x.md -> <root_prefix>LeetGPU/x.html
         if new_url.startswith("../../"):
-            new_url = "/" + new_url[len("../../"):]
+            new_url = root_prefix + new_url[len("../../"):]
         return f"]({new_url})"
 
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
@@ -443,7 +443,7 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
         # Rewrite image paths (both "website/images/" and "../website/images/")
         markdown_text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", markdown_text)
         # Rewrite .md links to .html so they work on GitHub Pages.
-        markdown_text = rewrite_md_links_to_html(markdown_text)
+        markdown_text = rewrite_md_links_to_html(markdown_text, root_prefix=root_prefix)
 
         html = page_template(
             title=page["title"],
@@ -460,9 +460,10 @@ def build_website(output_dir: Path) -> None:
     overview, days = load_overview_and_days()
 
     # Rewrite .md links to .html for GitHub Pages deployment.
-    overview = rewrite_md_links_to_html(overview)
+    # Overview and day pages are generated at the site root.
+    overview = rewrite_md_links_to_html(overview, root_prefix="")
     for day in days:
-        day["markdown"] = rewrite_md_links_to_html(day["markdown"])
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="")
 
     # Build day cards HTML for overview page
     day_cards_html = '<div class="day-cards">\n'

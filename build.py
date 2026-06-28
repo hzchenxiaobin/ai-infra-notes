@@ -13,10 +13,20 @@ import subprocess
 from pathlib import Path
 
 
-def insert_leetcode_nav(html_text: str) -> str:
+def compute_relative_path(from_file: Path, to_path: str) -> str:
+    """Compute a relative path from from_file to to_path (relative to site root)."""
+    from_dir = from_file.parent
+    depth = len(from_dir.parts)
+    if depth == 0:
+        return to_path
+    return "../" * depth + to_path
+
+
+def insert_leetcode_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
     """Insert a LeetCode link into the week1/week2 sidebar navigation."""
-    leetcode_section = '''<div class="nav-section-title">更多</div>
-<a class="nav-link" href="/leetcode/index.html">🧩 LeetCode 题解</a>
+    rel_path = compute_relative_path(html_file.relative_to(public_dir), "leetcode/index.html")
+    leetcode_section = f'''<div class="nav-section-title">更多</div>
+<a class="nav-link" href="{rel_path}">🧩 LeetCode 题解</a>
 '''
     return html_text.replace(
         "            </nav>\n        </aside>",
@@ -131,7 +141,7 @@ def main() -> None:
     for html_file in week1_pages:
         if html_file.is_file():
             html_text = html_file.read_text(encoding="utf-8")
-            html_text = insert_leetcode_nav(html_text)
+            html_text = insert_leetcode_nav(html_text, html_file, public_dir)
             html_file.write_text(html_text, encoding="utf-8")
             print(f"Updated nav: {html_file}")
 
