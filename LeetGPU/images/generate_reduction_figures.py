@@ -88,6 +88,67 @@ def generate_reduction_overview():
     plt.close(fig)
 
 
+def generate_grid_stride():
+    """Illustrate grid-stride loop: each thread handles multiple elements."""
+    fig, ax = plt.subplots(figsize=(13, 5))
+    ax.set_xlim(0, 13)
+    ax.set_ylim(0, 5)
+    ax.axis("off")
+
+    ax.text(6.5, 4.7, "Grid-Stride Loop 工作原理", ha="center", va="center",
+            fontsize=15, weight="bold")
+
+    # Input array elements
+    n_elems = 16
+    elem_w = 0.65
+    start_x = 1.0
+    y_input = 3.2
+    colors = ["#4C78A8", "#F58518", "#E45756", "#72B7B2"]
+    for i in range(n_elems):
+        color = colors[i % 4]
+        draw_block(color, start_x + i * elem_w, y_input, elem_w - 0.05, 0.5, ax,
+                   label=str(i), fontsize=9)
+    ax.text(6.5, y_input + 0.8, "Input Array (N elements)", ha="center", fontsize=11)
+
+    # Thread assignments
+    thread_labels = [
+        ("T0", "0,4,8,12", 1.0, 1.8, colors[0]),
+        ("T1", "1,5,9,13", 2.0, 1.8, colors[1]),
+        ("T2", "2,6,10,14", 3.0, 1.8, colors[2]),
+        ("T3", "3,7,11,15", 4.0, 1.8, colors[3]),
+    ]
+    for tid, elems, x, y, color in thread_labels:
+        draw_block(color, x, y, 0.9, 0.6, ax, label=f"{tid}\n{elems}", fontsize=8)
+        # arrows from thread to its first element
+        first_idx = int(elems.split(",")[0])
+        elem_x = start_x + first_idx * elem_w + elem_w / 2
+        ax.annotate("", xy=(elem_x, y_input), xytext=(x + 0.45, y + 0.6),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2))
+
+    ax.text(6.5, 1.5, "每个线程从自己的 tid 开始，以 stride = gridDim.x * blockDim.x 为步长遍历数组",
+            ha="center", fontsize=10)
+
+    # Code snippet
+    code_text = (
+        "int tid = blockIdx.x * blockDim.x + threadIdx.x;\n"
+        "int stride = gridDim.x * blockDim.x;\n"
+        "for (int i = tid; i < N; i += stride) {\n"
+        "    sum += input[i];\n"
+        "}"
+    )
+    ax.text(9.5, 2.6, code_text, fontsize=9, family="monospace",
+            bbox=dict(boxstyle="round", facecolor="#F3F4F6", edgecolor="#9CA3AF"))
+
+    ax.text(6.5, 0.3,
+            "线程数可以远小于 N；每个线程负责多个元素，保证所有线程负载均衡且内存访问合并",
+            ha="center", fontsize=10,
+            bbox=dict(boxstyle="round", facecolor="#FFF3CD", edgecolor="#FFC107"))
+
+    plt.tight_layout()
+    fig.savefig(OUT_DIR / "reduction_grid_stride.svg", format="svg", bbox_inches="tight")
+    plt.close(fig)
+
+
 def generate_reduction_block_internal():
     """Detailed execution inside a single block (256 threads = 8 warps)."""
     fig, ax = plt.subplots(figsize=(13, 7))
@@ -154,7 +215,9 @@ def generate_reduction_block_internal():
 
 if __name__ == "__main__":
     generate_reduction_overview()
+    generate_grid_stride()
     generate_reduction_block_internal()
     print(f"Generated SVG figures in {OUT_DIR}:")
     print(f"  - reduction_overview.svg")
+    print(f"  - reduction_grid_stride.svg")
     print(f"  - reduction_block_internal.svg")

@@ -42,7 +42,41 @@ for (int i = 0; i < n; ++i) sum += input[i];
 - **第一次 kernel**：启动足够多的 block 覆盖输入数组。每个 block 内部先让每个线程通过 grid-stride loop 累加自己负责的一段 input，得到线程局部和；接着在 warp 内用 `__shfl_down_sync` 把 32 个线程的局部和归约成 1 个 warp 和；每个 warp 的 lane 0 把 warp 和写入 `warpSums[wid]`；最后由 warp 0 读取所有 `warpSums` 再做一次 shuffle 归约，得到该 block 的部分和，写入 `d_temp[blockIdx.x]`。
 - **第二次 kernel**：只启动 1 个 block，把 `d_temp` 里的 block 部分和再用同样的逻辑归约成全局总和，写入 `d_out`。
 
-### 3.2 单个 Block 内部执行过程
+### 3.2 Grid-Stride Loop 详解
+
+**Grid-stride loop** 是 CUDA 中一种常见的线程遍历模式，让一个线程处理数组中的多个元素，而不是只处理一个。
+
+典型写法：
+
+```cuda
+int tid = blockIdx.x * blockDim.x + threadIdx.x;
+int stride = gridDim.x * blockDim.x;
+
+for (int i = tid; i < N; i += stride) {
+    sum += input[i];
+}
+```
+
+![Grid-Stride Loop 工作原理](images/reduction_grid_stride.svg)
+
+**关键概念**：
+
+- `tid`：线程在 grid 中的全局索引（从 0 开始）
+- `stride = gridDim.x * blockDim.x`：grid 中线程总数，也就是每次前进的步长
+- 线程 `tid` 负责的元素下标为：`tid, tid + stride, tid + 2*stride, ...`
+
+**为什么用 grid-stride loop？**
+
+1. **处理 N 远大于线程数的情况**：即使只启动几百个线程，也能处理上亿个元素
+2. **负载均衡**：每个线程负责的元素数量大致相同
+3. **合并访问（coalesced access）**：相邻线程访问相邻地址，内存访问效率高
+4. **可扩展性**：增加 block 数量就能覆盖更大的 N，无需修改 kernel 逻辑
+
+**在 Reduction 中的作用**：
+
+每个线程先通过 grid-stride loop 把自己负责的那一段 input 元素累加起来，得到一个"线程局部和"。这样后续 warp/block 级归约只需要处理 `blockDim.x` 个局部和，而不是直接处理 N 个元素。
+
+### 3.3 单个 Block 内部执行过程
 
 ![单个 Block 内部归约过程](images/reduction_block_internal.svg)
 
@@ -53,7 +87,7 @@ for (int i = 0; i < n; ++i) sum += input[i];
 3. **写入 Shared Memory**：每个 warp 的 lane 0 把自己 warp 的和写入 `warpSums[wid]`。由于不同 warp 的 lane 0 写入不同索引 `wid`，对应不同的 bank，因此**无 bank conflict**。
 4. **Block-level 最终归约**：warp 0 的 32 个线程读取 `warpSums[0..7]`（不足 32 的 lane 补 0），再做一次 warp shuffle 归约，lane 0 得到 block 部分和并写入 `output[blockIdx.x]`。
 
-### 3.3 Bank Conflict 分析
+### 3.4 Bank Conflict 分析
 
 关键观察：Warp Shuffle 归约**不经过 Shared Memory**，因此 warp 级归约**无 bank conflict**。
 
