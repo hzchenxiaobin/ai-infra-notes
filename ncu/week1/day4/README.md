@@ -23,10 +23,18 @@
 （coalesced write）。转置发生在 shared memory 内部（按行写、按列读），
 而 global memory 两侧都是连续访问。
 
-## 步骤 1：编译
+## 文件说明
+
+| 文件 | 内容 |
+|------|------|
+| `transpose.cu` | Day 4 核心任务：naive 与 shared memory 优化版矩阵转置 |
+| `bandwidth.cu` | 扩展实验 1：coalesced vs stride 内存访问带宽对比 |
+| `transpose_tiles.cu` | 扩展实验 2：不同 `TILE_DIM`（8/16/32）转置性能对比 |
+
+## 步骤 1：编译核心任务
 
 ```bash
-cd ncu
+cd ncu/week1/day4
 nvcc -o transpose transpose.cu
 ./transpose
 # 预期输出：Transpose correctness: PASS
@@ -77,6 +85,120 @@ nsys profile -o profiles/day4_transpose_timeline ./transpose
 |------|------------------|-------------------|---------------|----------------|-----------------|------------------|
 | naive | | | | | | |
 | optimized | | | | | | |
+
+---
+
+## 扩展实验 1：Coalesced vs Stride Bandwidth
+
+文件：`bandwidth.cu`
+
+该实验包含两个 kernel：
+
+- `coalesced_copy`：线程 `idx` 访问 `in[idx]`，warp 内地址连续，可合并访问
+- `stride_copy`：线程 `idx` 访问 `in[(idx * stride) % n]`，产生 stride access
+
+### 编译运行
+
+```bash
+cd ncu/week1/day4
+nvcc -o bandwidth bandwidth.cu
+./bandwidth
+```
+
+### 预期输出示例
+
+```text
+=== Coalesced vs Stride Bandwidth Benchmark ===
+Array size: 67108864 elements (256.00 MB)
+
+Kernel                    | Elapsed (ms) | Effective Bandwidth (GB/s)
+-------------------------|--------------|----------------------------
+coalesced_copy           |       0.xxxx |                     xxx.xx
+stride_copy(stride= 1)   |       0.xxxx |                     xxx.xx
+stride_copy(stride= 2)   |       0.xxxx |                     xxx.xx
+...
+stride_copy(stride=32)   |       0.xxxx |                      xx.xx
+
+Coalesced copy correctness: PASS
+```
+
+### ncu 分析命令
+
+```bash
+ncu \
+  --metrics \
+    dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+    l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
+    l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
+    sm__cycles_elapsed.avg \
+  ./bandwidth
+```
+
+### 观察重点
+
+- `stride=1` 的 `stride_copy` 与 `coalesced_copy` 在访问模式上的差异
+- 随着 `stride` 增大，DRAM throughput 如何下降
+- 为什么 stride 越大，有效带宽越低？
+
+---
+
+## 扩展实验 2：不同 Tile 大小对比
+
+文件：`transpose_tiles.cu`
+
+使用模板实现 `transpose_tiled<TILE_DIM>`，分别测试：
+
+| Tile 大小 | Block 线程数 | Shared Memory（含 padding） | 特点 |
+|-----------|-------------|----------------------------|------|
+| 8 × 8     | 64          | ~256 B                     | 占用资源最小，线程数少 |
+| 16 × 16   | 256         | ~1 KB                      | 平衡配置 |
+| 32 × 32   | 1024        | ~4 KB                      | 常用配置，达到单 block 最大线程数 |
+
+> **为什么不测 64 × 64？**
+> CUDA 单个 block 最多 1024 个线程，而 64 × 64 = 4096，直接超出限制。
+> 若需更大 tile，可让每个线程处理多个元素（如 32 × 32 线程负责 64 × 64 tile），
+> 或调整 block 形状。
+
+### 编译运行
+
+```bash
+cd ncu/week1/day4
+nvcc -o transpose_tiles transpose_tiles.cu
+./transpose_tiles
+```
+
+### 预期输出示例
+
+```text
+=== Transpose with Different Tile Sizes ===
+Matrix: 1024 x 1024
+
+Tile Size | Correctness | Avg Time (ms) | Effective Bandwidth (GB/s)
+----------|-------------|---------------|----------------------------
+8 x 8     | PASS        |        x.xxxx |                       xx.xx
+16 x 16   | PASS        |        x.xxxx |                       xx.xx
+32 x 32   | PASS        |        x.xxxx |                      xxx.xx
+```
+
+### ncu 分析命令
+
+```bash
+ncu \
+  --metrics \
+    dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+    sm__cycles_elapsed.avg,\
+    l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
+    l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum \
+  ./transpose_tiles
+```
+
+### 思考问题
+
+1. 哪个 tile 大小在本矩阵尺寸下最快？为什么？
+2. 32 × 32 已经占满单个 block 的 1024 线程上限，进一步增大 tile 有哪些可行方案？
+3. 增大 tile 一定会带来收益吗？block 内线程数、shared memory 占用与 SM occupancy 如何权衡？
+
+---
 
 ## 思考题
 

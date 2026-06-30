@@ -57,13 +57,26 @@ float v = tile[threadIdx.x];
 - 1 个 cycle 完成
 
 **模式 2：Broadcast（所有线程访问同一地址）**
+
 ```cuda
 // 所有线程读同一个地址
 float v = tile[0];
 ```
-- 虽然都在 Bank 0，但是同一地址
-- GPU 有专门的广播机制
-- 1 个 cycle 完成
+
+- 虽然这个地址属于 Bank 0，但 warp 内 32 个线程读的是**同一个地址**
+- GPU 有专门的**广播（broadcast）机制**：把这个值一次性发送给所有线程
+- **1 个 cycle 完成，不产生 bank conflict**
+
+> **为什么同地址不算 conflict？**
+> Bank conflict 的定义是：同一个 warp 内多个线程访问**同一个 bank 的不同地址**。
+> 如果访问的是**同一个地址**，硬件会直接广播，不需要串行读取。
+
+典型场景：
+- 读取 shared memory 中的共享常量/标量（如 bias、scale）
+- reduction 中读取某个 warp 的部分和
+- 所有线程都需要同一个 tile 元素时
+
+**一句话记忆**：同地址 → 广播（快，无 conflict）；同 bank 不同地址 → bank conflict（慢，串行）。
 
 **模式 3：2-way Conflict**
 ```cuda
