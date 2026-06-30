@@ -3,6 +3,15 @@ name: Deploy Website to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'build.py'
+      - 'docs/**'
+      - 'week1/**'
+      - 'week2/**'
+      - 'leetcode/**'
+      - 'LeetGPU/**'
+      - 'public/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -12,7 +21,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -28,6 +37,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

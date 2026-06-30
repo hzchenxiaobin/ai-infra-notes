@@ -1,0 +1,2 @@
+# Python dependencies for building the website and generating figures
+matplotlib>=3.7.0
