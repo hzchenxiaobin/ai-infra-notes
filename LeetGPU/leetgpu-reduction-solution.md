@@ -35,7 +35,25 @@ for (int i = 0; i < n; ++i) sum += input[i];
 3. **Block 级**：warp 部分和写入 Shared Memory，Warp 0 做最终归约
 4. **跨 Block**：第二次 kernel launch 汇总
 
-### 3.2 Bank Conflict 分析
+![Reduction 两级归约流程](images/reduction_overview.svg)
+
+**流程说明**：
+
+- **第一次 kernel**：启动足够多的 block 覆盖输入数组。每个 block 内部先让每个线程通过 grid-stride loop 累加自己负责的一段 input，得到线程局部和；接着在 warp 内用 `__shfl_down_sync` 把 32 个线程的局部和归约成 1 个 warp 和；每个 warp 的 lane 0 把 warp 和写入 `warpSums[wid]`；最后由 warp 0 读取所有 `warpSums` 再做一次 shuffle 归约，得到该 block 的部分和，写入 `d_temp[blockIdx.x]`。
+- **第二次 kernel**：只启动 1 个 block，把 `d_temp` 里的 block 部分和再用同样的逻辑归约成全局总和，写入 `d_out`。
+
+### 3.2 单个 Block 内部执行过程
+
+![单个 Block 内部归约过程](images/reduction_block_internal.svg)
+
+上图以 256 线程（8 warps）为例展示了单个 block 的 4 个执行步骤：
+
+1. **Thread-level 累加**：256 个线程各自负责 input 中不相交的一段元素，使用 grid-stride loop 求出线程局部和。
+2. **Warp-level 归约**：每个 warp 内部 32 个线程通过 `__shfl_down_sync` 进行 butterfly 归约，最终每个 warp 得到 1 个和（`sum0 ~ sum7`）。
+3. **写入 Shared Memory**：每个 warp 的 lane 0 把自己 warp 的和写入 `warpSums[wid]`。由于不同 warp 的 lane 0 写入不同索引 `wid`，对应不同的 bank，因此**无 bank conflict**。
+4. **Block-level 最终归约**：warp 0 的 32 个线程读取 `warpSums[0..7]`（不足 32 的 lane 补 0），再做一次 warp shuffle 归约，lane 0 得到 block 部分和并写入 `output[blockIdx.x]`。
+
+### 3.3 Bank Conflict 分析
 
 关键观察：Warp Shuffle 归约**不经过 Shared Memory**，因此 warp 级归约**无 bank conflict**。
 
