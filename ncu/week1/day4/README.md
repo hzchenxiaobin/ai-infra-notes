@@ -13,10 +13,10 @@
 
 `transpose.cu` 包含两个 kernel：
 
-| kernel | 读 | 写 | 说明 |
-|--------|----|----|------|
-| `transpose_naive` | coalesced（按行读） | **stride access**（按列写） | 写操作成为瓶颈 |
-| `transpose_optimized` | coalesced read → shared memory tile | coalesced write | 用 `TILE_DIM+1` padding 消除 bank conflict |
+| kernel                | 读　　　　　　　　　　　　　　　　　| 写　　　　　　　　　　　　　| 说明　　　　　　　　　　　　　　　　　　　 |
+| -----------------------| -------------------------------------| -----------------------------| --------------------------------------------|
+| `transpose_naive`     | coalesced（按行读）　　　　　　　　 | **stride access**（按列写） | 写操作成为瓶颈　　　　　　　　　　　　　　 |
+| `transpose_optimized` | coalesced read → shared memory tile | coalesced write　　　　　　 | 用 `TILE_DIM+1` padding 消除 bank conflict |
 
 优化原理：先按行从 global memory 读入 shared memory（coalesced read），
 `__syncthreads` 后交换 block 坐标，再按行从 shared memory 写回 global memory

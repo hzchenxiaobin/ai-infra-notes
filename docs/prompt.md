@@ -12,3 +12,7 @@
 在SKILL.md中补充一条：在https://leetgpu.com/上找一些经典的题目，在每日教程中的coding任务中都给一道在线题目
 
 阅读：/mnt/workspace/code/github/ai-infra-notes/docs/AI_Infra_8_week_plan_detailed.md，参考：/mnt/workspace/code/github/ai-infra-notes/docs/learning_plan_week2_expanded.md，写一个详细的week3计划
+
+阅读：/mnt/workspace/code/github/ai-infra-notes/docs/AI_Infra_8_week_plan_detailed.md，参考：/mnt/workspace/code/github/ai-infra-notes/docs/learning_plan_week2_expanded.md，写一个详细的week4计划
+
+阅读：/mnt/workspace/code/github/ai-infra-notes/docs/AI_Infra_8_week_plan_detailed.md，参考：/mnt/workspace/code/github/ai-infra-notes/docs/learning_plan_week2_expanded.md，写一个详细的week5计划
