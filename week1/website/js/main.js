@@ -81,6 +81,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Image lightbox zoom
     initImageLightbox();
+
+    // Open all links in new tab
+    document.querySelectorAll('a').forEach(link => {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+    });
 });
 
 function initImageLightbox() {
