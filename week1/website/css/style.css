@@ -498,6 +498,12 @@ body {
     background-color: var(--surface-color);
     display: block;
     margin: 24px auto;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.content img:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .content figure {
@@ -509,6 +515,88 @@ body {
     font-size: 0.85rem;
     color: var(--text-muted);
     margin-top: 8px;
+}
+
+/* Image lightbox */
+.image-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    padding: 40px;
+}
+
+.image-lightbox.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.image-lightbox img {
+    max-width: 90vw;
+    max-height: 85vh;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    transform: scale(0.95);
+    transition: transform 0.25s ease;
+}
+
+.image-lightbox.active img {
+    transform: scale(1);
+}
+
+.image-lightbox .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.image-lightbox .lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.image-lightbox .lightbox-caption {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 80vw;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.image-lightbox.active .lightbox-caption {
+    opacity: 1;
 }
 
 /* CUDA Occupancy Calculator */

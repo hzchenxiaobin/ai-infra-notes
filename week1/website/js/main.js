@@ -78,4 +78,71 @@ document.addEventListener('DOMContentLoaded', function() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
+
+    // Image lightbox zoom
+    initImageLightbox();
 });
+
+function initImageLightbox() {
+    const content = document.querySelector('.content');
+    if (!content) return;
+
+    const images = content.querySelectorAll('img');
+    if (images.length === 0) return;
+
+    const lightbox = document.createElement('div');
+    lightbox.className = 'image-lightbox';
+    lightbox.setAttribute('role', 'dialog');
+    lightbox.setAttribute('aria-modal', 'true');
+    lightbox.setAttribute('aria-label', 'Image preview');
+    lightbox.innerHTML = `
+        <button class="lightbox-close" aria-label="Close image preview">&times;</button>
+        <img src="" alt="">
+        <div class="lightbox-caption"></div>
+    `;
+    document.body.appendChild(lightbox);
+
+    const lightboxImg = lightbox.querySelector('img');
+    const lightboxCaption = lightbox.querySelector('.lightbox-caption');
+    const closeButton = lightbox.querySelector('.lightbox-close');
+
+    function openLightbox(img) {
+        lightboxImg.src = img.src;
+        lightboxImg.alt = img.alt || '';
+        if (img.alt) {
+            lightboxCaption.textContent = img.alt;
+            lightboxCaption.style.display = 'block';
+        } else {
+            lightboxCaption.style.display = 'none';
+        }
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    images.forEach(img => {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
+            openLightbox(img);
+        });
+    });
+
+    lightbox.addEventListener('click', function(e) {
+        if (e.target === lightbox || e.target === lightboxImg) {
+            closeLightbox();
+        }
+    });
+
+    closeButton.addEventListener('click', closeLightbox);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+            closeLightbox();
+        }
+    });
+}

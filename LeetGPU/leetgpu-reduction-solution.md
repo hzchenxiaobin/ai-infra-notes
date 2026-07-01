@@ -87,7 +87,64 @@ for (int i = tid; i < N; i += stride) {
 3. **写入 Shared Memory**：每个 warp 的 lane 0 把自己 warp 的和写入 `warpSums[wid]`。由于不同 warp 的 lane 0 写入不同索引 `wid`，对应不同的 bank，因此**无 bank conflict**。
 4. **Block-level 最终归约**：warp 0 的 32 个线程读取 `warpSums[0..7]`（不足 32 的 lane 补 0），再做一次 warp shuffle 归约，lane 0 得到 block 部分和并写入 `output[blockIdx.x]`。
 
-### 3.4 Bank Conflict 分析
+### 3.4 `__shfl_down_sync` 详解
+
+`__shfl_down_sync` 是 CUDA 提供的 **warp shuffle** 原语，它让同一个 warp 内的线程直接互相读取寄存器数据，**不经过 Shared Memory**，因此非常适合 warp 级归约。
+
+#### 函数原型
+
+```cuda
+T __shfl_down_sync(unsigned mask, T var, unsigned int delta, int width=warpSize);
+```
+
+参数说明：
+
+- `mask`：参与 shuffle 的线程掩码。通常写 `0xFFFFFFFF`，表示 warp 内 32 个线程全部参与。
+- `var`：当前 lane 要传递下去的变量。
+- `delta`：目标 lane 相对于当前 lane 的偏移量。`lane i` 会从 `lane i + delta` 读取 `var`；若 `i + delta` 越界，则返回 `lane i` 自己的值。
+- `width`：参与 shuffle 的线程数，默认 32。
+
+#### Butterfly 归约过程
+
+在 `warpReduceSum` 中，我们通过不断折半偏移量来完成归约：
+
+```cuda
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+```
+
+以 8 线程简化示例，初始值为 `[a0, a1, a2, a3, a4, a5, a6, a7]`：
+
+1. `offset = 4`：`lane 0` 读取 `lane 4`，`lane 1` 读取 `lane 5`……得到 `[a0+a4, a1+a5, a2+a6, a3+a7, ..., ...]`
+2. `offset = 2`：`lane 0` 读取 `lane 2`……得到 `[a0+a4+a2+a6, a1+a5+a3+a7, ..., ...]`
+3. `offset = 1`：`lane 0` 读取 `lane 1`，最终 `lane 0` 持有 `a0+a1+...+a7`
+
+实际 warp 有 32 线程，循环从 `offset=16` 开始，经过 16→8→4→2→1 共 5 步，`lane 0` 得到 32 个线程局部和的总和。
+
+#### 为什么用 Shuffle 而不是 Shared Memory？
+
+| 方式 | 是否需要 Shared Memory | 是否需要 `__syncthreads()` | Bank Conflict | 延迟 |
+|---|---|---|---|---|
+| Shared Memory 归约 | 是 | 是 | 可能有（取决于访问模式） | 较高 |
+| `__shfl_down_sync` | 否 | 否 | 无 | 低 |
+
+使用 `__shfl_down_sync` 的优势：
+
+1. **避免 bank conflict**：warp shuffle 在寄存器级别交换数据，不访问 Shared Memory。
+2. **无需同步**：同一个 warp 内的线程天然同步执行（SIMT），不需要 `__syncthreads()`。
+3. **更少的内存占用**：不需要为 warp 级归约分配 Shared Memory，节省 `32 * sizeof(float)` 甚至更多。
+
+#### 注意事项
+
+- `__shfl_down_sync` 要求目标线程必须处于**活跃（active）**状态。在现代 GPU 上，只要 warp 内所有线程都执行到同一条 shuffle 指令（即 `0xFFFFFFFF` 掩码且没有分支发散），就是安全的。
+- 该原语只能用于**同一个 warp 内部**的线程通信。跨 warp 通信仍然需要 Shared Memory 或全局内存。
+- 从 Maxwell 架构（sm_50）开始支持 warp shuffle；本题的优化实现通常面向 sm_70 及以上。
+
+### 3.5 Bank Conflict 分析
 
 关键观察：Warp Shuffle 归约**不经过 Shared Memory**，因此 warp 级归约**无 bank conflict**。
 
