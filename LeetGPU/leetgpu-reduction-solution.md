@@ -117,6 +117,25 @@ __inline__ __device__ float warpReduceSum(float val) {
 }
 ```
 
+#### `#pragma unroll` 的作用
+
+```cuda
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+```
+
+`#pragma unroll` 是 NVCC 编译器指令，指示编译器对紧随其后的 `for` 循环进行**循环展开（Loop Unrolling）**。本例中循环只有固定的 5 次迭代（`offset = 16, 8, 4, 2, 1`），展开后编译器可以直接生成 5 条连续的 `__shfl_down_sync` 指令，带来以下好处：
+
+1. **消除循环控制开销**：不再需要每次迭代中的条件判断（`offset > 0`）和循环变量更新（`offset >>= 1`），减少分支指令。
+2. **提升指令级并行（ILP）**：展开后编译器能更自由地调度指令，让多条 `__shfl_down_sync` 之间的空闲周期被其他指令填充，提高流水线利用率。
+3. **编译期已知迭代次数**：由于 `offset` 从编译期常量 `16` 开始，`#pragma unroll` 让编译器在编译阶段就确定展开次数，生成最优的机器码。
+
+> **注意**：当循环次数不确定或非常大时，完全展开可能导致指令缓存压力增大（instruction cache miss），反而降低性能。本例 5 次迭代是最理想的场景。
+
 以 8 线程简化示例，初始值为 `[a0, a1, a2, a3, a4, a5, a6, a7]`：
 
 1. `offset = 4`：`lane 0` 读取 `lane 4`，`lane 1` 读取 `lane 5`……得到 `[a0+a4, a1+a5, a2+a6, a3+a7, ..., ...]`
