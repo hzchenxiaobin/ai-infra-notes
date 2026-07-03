@@ -8,6 +8,7 @@ on:
       - 'docs/**'
       - 'week1/**'
       - 'week2/**'
+      - 'week3/**'
       - 'leetcode/**'
       - 'LeetGPU/**'
       - 'public/**'
