@@ -135,10 +135,14 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
     for week in weeks:
         if week["num"] <= 2:
             continue
+        if week["num"] == 3:
+            week_href = "../week3/index.html"
+        else:
+            week_href = f"../plan.html#week-{week['num']}"
         lines.append('<div class="nav-accordion-item">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <a class="nav-link week-link" href="../plan.html#week-{week["num"]}">'
+            f'    <a class="nav-link week-link" href="{week_href}">'
             f'Week {week["num"]}：{week["title"]}'
             f'</a>'
         )

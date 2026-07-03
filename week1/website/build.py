@@ -201,13 +201,14 @@ def build_nav(
 
     lines.append('</div>')
 
-    # Weeks 2~8 link to anchors on the plan page.
-    # Week 2 has its own dedicated website now, link there instead of plan page.
+    # Weeks 2~8: weeks with dedicated websites link there; others link to plan page.
     for week in weeks:
         if week["num"] <= 1:
             continue
         if week["num"] == 2:
             week_href = f"{root_prefix}week2/index.html"
+        elif week["num"] == 3:
+            week_href = f"{root_prefix}week3/index.html"
         else:
             week_href = f"{root_prefix}plan.html#week-{week['num']}"
         lines.append('<div class="nav-accordion-item">')
