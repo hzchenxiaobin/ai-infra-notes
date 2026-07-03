@@ -1,39 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
-  <rect width="720" height="440" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">ncu 常用指标分类</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="440" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">ncu 常用指标分类</text>
 
   <!-- Occupancy -->
-  <rect x="60" y="80" width="190" height="120" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="155" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">并行度</text>
-  <text x="75" y="140" font-size="12" fill="#8b949e">sm__occupancy.avg</text>
-  <text x="75" y="160" font-size="12" fill="#8b949e">sm__warps_active.avg</text>
-  <text x="75" y="180" font-size="12" fill="#8b949e">launch__registers_per_thread</text>
+  <rect x="60" y="80" width="190" height="120" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="155" y="110" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">并行度</text>
+  <text x="75" y="140" font-size="12" fill="#666666">sm__occupancy.avg</text>
+  <text x="75" y="160" font-size="12" fill="#666666">sm__warps_active.avg</text>
+  <text x="75" y="180" font-size="12" fill="#666666">launch__registers_per_thread</text>
 
   <!-- Memory -->
-  <rect x="265" y="80" width="190" height="120" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
-  <text x="360" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">内存</text>
-  <text x="280" y="140" font-size="12" fill="#8b949e">dram__throughput.avg</text>
-  <text x="280" y="160" font-size="12" fill="#8b949e">l1tex__t_bytes_pipe_lsu...</text>
-  <text x="280" y="180" font-size="12" fill="#8b949e">l1tex__data_bank_conflicts</text>
+  <rect x="265" y="80" width="190" height="120" rx="8" fill="#e8a838" opacity="0.2" stroke="#f0c050" stroke-width="2"/>
+  <text x="360" y="110" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">内存</text>
+  <text x="280" y="140" font-size="12" fill="#666666">dram__throughput.avg</text>
+  <text x="280" y="160" font-size="12" fill="#666666">l1tex__t_bytes_pipe_lsu...</text>
+  <text x="280" y="180" font-size="12" fill="#666666">l1tex__data_bank_conflicts</text>
 
   <!-- Compute -->
-  <rect x="470" y="80" width="190" height="120" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
-  <text x="565" y="110" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">计算</text>
-  <text x="485" y="140" font-size="12" fill="#8b949e">sm__throughput.avg</text>
-  <text x="485" y="160" font-size="12" fill="#8b949e">sm__cycles_elapsed.avg</text>
-  <text x="485" y="180" font-size="12" fill="#8b949e">smsp__sass_thread_inst_executed</text>
+  <rect x="470" y="80" width="190" height="120" rx="8" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
+  <text x="565" y="110" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">计算</text>
+  <text x="485" y="140" font-size="12" fill="#666666">sm__throughput.avg</text>
+  <text x="485" y="160" font-size="12" fill="#666666">sm__cycles_elapsed.avg</text>
+  <text x="485" y="180" font-size="12" fill="#666666">smsp__sass_thread_inst_executed</text>
 
   <!-- Latency -->
-  <rect x="60" y="230" width="190" height="120" rx="8" fill="#8957e5" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
-  <text x="155" y="260" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">延迟</text>
-  <text x="75" y="290" font-size="12" fill="#8b949e">sm__cycles_elapsed.avg</text>
-  <text x="75" y="310" font-size="12" fill="#8b949e">launch__duration</text>
-  <text x="75" y="330" font-size="12" fill="#8b949e">gpu__time_duration.avg</text>
+  <rect x="60" y="230" width="190" height="120" rx="8" fill="#9b6dd9" opacity="0.2" stroke="#b689e8" stroke-width="2"/>
+  <text x="155" y="260" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">延迟</text>
+  <text x="75" y="290" font-size="12" fill="#666666">sm__cycles_elapsed.avg</text>
+  <text x="75" y="310" font-size="12" fill="#666666">launch__duration</text>
+  <text x="75" y="330" font-size="12" fill="#666666">gpu__time_duration.avg</text>
 
   <!-- Bottleneck -->
-  <rect x="265" y="230" width="395" height="120" rx="8" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
-  <text x="462" y="260" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">瓶颈判断</text>
-  <text x="285" y="290" font-size="12" fill="#8b949e">Memory Throughput 高 + Compute Throughput 低 → Memory-bound</text>
-  <text x="285" y="315" font-size="12" fill="#8b949e">Compute Throughput 高 + Memory Throughput 低 → Compute-bound</text>
-  <text x="285" y="340" font-size="12" fill="#8b949e">两者都低 → Latency / Occupancy 问题</text>
+  <rect x="265" y="230" width="395" height="120" rx="8" fill="#e57373" opacity="0.2" stroke="#e57373" stroke-width="2"/>
+  <text x="462" y="260" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">瓶颈判断</text>
+  <text x="285" y="290" font-size="12" fill="#666666">Memory Throughput 高 + Compute Throughput 低 → Memory-bound</text>
+  <text x="285" y="315" font-size="12" fill="#666666">Compute Throughput 高 + Memory Throughput 低 → Compute-bound</text>
+  <text x="285" y="340" font-size="12" fill="#666666">两者都低 → Latency / Occupancy 问题</text>
+  </g>
 </svg>

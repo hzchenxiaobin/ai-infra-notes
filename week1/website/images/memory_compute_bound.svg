@@ -1,32 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
-  <rect width="720" height="360" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">如何判断 Kernel 瓶颈类型</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="360" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">如何判断 Kernel 瓶颈类型</text>
 
   <!-- Memory bound -->
-  <rect x="60" y="80" width="280" height="220" rx="12" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
-  <text x="200" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#e3b341">Memory-Bound</text>
+  <rect x="60" y="80" width="280" height="220" rx="12" fill="#e8a838" opacity="0.2" stroke="#f0c050" stroke-width="2"/>
+  <text x="200" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#f0c050">Memory-Bound</text>
 
-  <text x="80" y="155" font-size="13" fill="#c9d1d9">特征：</text>
-  <text x="80" y="180" font-size="12" fill="#8b949e">• dram__throughput 接近峰值</text>
-  <text x="80" y="205" font-size="12" fill="#8b949e">• sm__throughput 较低</text>
-  <text x="80" y="230" font-size="12" fill="#8b949e">• Arithmetic Intensity 低</text>
+  <text x="80" y="155" font-size="13" fill="#2b2b2b">特征：</text>
+  <text x="80" y="180" font-size="12" fill="#666666">• dram__throughput 接近峰值</text>
+  <text x="80" y="205" font-size="12" fill="#666666">• sm__throughput 较低</text>
+  <text x="80" y="230" font-size="12" fill="#666666">• Arithmetic Intensity 低</text>
 
-  <text x="80" y="270" font-size="13" fill="#c9d1d9">优化方向：</text>
-  <text x="80" y="290" font-size="12" fill="#8b949e">• 合并内存访问</text>
-  <text x="80" y="310" font-size="12" fill="#8b949e">• 用 shared memory / cache</text>
-  <text x="80" y="330" font-size="12" fill="#8b949e">• 减少数据读写</text>
+  <text x="80" y="270" font-size="13" fill="#2b2b2b">优化方向：</text>
+  <text x="80" y="290" font-size="12" fill="#666666">• 合并内存访问</text>
+  <text x="80" y="310" font-size="12" fill="#666666">• 用 shared memory / cache</text>
+  <text x="80" y="330" font-size="12" fill="#666666">• 减少数据读写</text>
 
   <!-- Compute bound -->
-  <rect x="380" y="80" width="280" height="220" rx="12" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
-  <text x="520" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#3fb950">Compute-Bound</text>
+  <rect x="380" y="80" width="280" height="220" rx="12" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
+  <text x="520" y="115" text-anchor="middle" font-size="17" font-weight="bold" fill="#5cb86c">Compute-Bound</text>
 
-  <text x="400" y="155" font-size="13" fill="#c9d1d9">特征：</text>
-  <text x="400" y="180" font-size="12" fill="#8b949e">• sm__throughput 接近峰值</text>
-  <text x="400" y="205" font-size="12" fill="#8b949e">• dram__throughput 较低</text>
-  <text x="400" y="230" font-size="12" fill="#8b949e">• Arithmetic Intensity 高</text>
+  <text x="400" y="155" font-size="13" fill="#2b2b2b">特征：</text>
+  <text x="400" y="180" font-size="12" fill="#666666">• sm__throughput 接近峰值</text>
+  <text x="400" y="205" font-size="12" fill="#666666">• dram__throughput 较低</text>
+  <text x="400" y="230" font-size="12" fill="#666666">• Arithmetic Intensity 高</text>
 
-  <text x="400" y="270" font-size="13" fill="#c9d1d9">优化方向：</text>
-  <text x="400" y="290" font-size="12" fill="#8b949e">• 使用 Tensor Core</text>
-  <text x="400" y="310" font-size="12" fill="#8b949e">• 指令级优化</text>
-  <text x="400" y="330" font-size="12" fill="#8b949e">• 提高 occupancy</text>
+  <text x="400" y="270" font-size="13" fill="#2b2b2b">优化方向：</text>
+  <text x="400" y="290" font-size="12" fill="#666666">• 使用 Tensor Core</text>
+  <text x="400" y="310" font-size="12" fill="#666666">• 指令级优化</text>
+  <text x="400" y="330" font-size="12" fill="#666666">• 提高 occupancy</text>
+  </g>
 </svg>

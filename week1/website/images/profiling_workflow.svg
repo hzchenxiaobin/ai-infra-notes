@@ -1,32 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
-  <rect width="720" height="320" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU Profiling 工作流程</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="320" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">GPU Profiling 工作流程</text>
 
   <!-- Steps -->
-  <rect x="60" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
-  <text x="120" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. 运行程序</text>
-  <text x="120" y="150" text-anchor="middle" font-size="12" fill="#8b949e">确认功能正确</text>
+  <rect x="60" y="90" width="120" height="80" rx="8" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="120" y="125" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">1. 运行程序</text>
+  <text x="120" y="150" text-anchor="middle" font-size="12" fill="#666666">确认功能正确</text>
 
-  <line x1="180" y1="130" x2="220" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="180" y1="130" x2="220" y2="130" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
 
-  <rect x="220" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
-  <text x="280" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. nsys</text>
-  <text x="280" y="150" text-anchor="middle" font-size="12" fill="#8b949e">找耗时 kernel</text>
+  <rect x="220" y="90" width="120" height="80" rx="8" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="280" y="125" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">2. nsys</text>
+  <text x="280" y="150" text-anchor="middle" font-size="12" fill="#666666">找耗时 kernel</text>
 
-  <line x1="340" y1="130" x2="380" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="340" y1="130" x2="380" y2="130" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
 
-  <rect x="380" y="90" width="120" height="80" rx="8" fill="#1f6feb" opacity="0.3" stroke="#58a6ff" stroke-width="2"/>
-  <text x="440" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. ncu</text>
-  <text x="440" y="150" text-anchor="middle" font-size="12" fill="#8b949e">分析瓶颈 kernel</text>
+  <rect x="380" y="90" width="120" height="80" rx="8" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="440" y="125" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">3. ncu</text>
+  <text x="440" y="150" text-anchor="middle" font-size="12" fill="#666666">分析瓶颈 kernel</text>
 
-  <line x1="500" y1="130" x2="540" y2="130" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="500" y1="130" x2="540" y2="130" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
 
-  <rect x="540" y="90" width="120" height="80" rx="8" fill="#238636" opacity="0.3" stroke="#3fb950" stroke-width="2"/>
-  <text x="600" y="125" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">4. 优化</text>
-  <text x="600" y="150" text-anchor="middle" font-size="12" fill="#8b949e">针对性改进</text>
+  <rect x="540" y="90" width="120" height="80" rx="8" fill="#4a9d5f" opacity="0.3" stroke="#5cb86c" stroke-width="2"/>
+  <text x="600" y="125" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">4. 优化</text>
+  <text x="600" y="150" text-anchor="middle" font-size="12" fill="#666666">针对性改进</text>
 
   <!-- Questions -->
-  <rect x="60" y="210" width="600" height="80" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="360" y="240" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">每次 profiling 要回答的问题</text>
-  <text x="360" y="270" text-anchor="middle" font-size="13" fill="#8b949e">哪个 kernel 最耗时？→ 它是 memory-bound 还是 compute-bound？→ 具体瓶颈是什么？→ 如何优化？</text>
+  <rect x="60" y="210" width="600" height="80" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="360" y="240" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">每次 profiling 要回答的问题</text>
+  <text x="360" y="270" text-anchor="middle" font-size="13" fill="#666666">哪个 kernel 最耗时？→ 它是 memory-bound 还是 compute-bound？→ 具体瓶颈是什么？→ 如何优化？</text>
+  </g>
 </svg>

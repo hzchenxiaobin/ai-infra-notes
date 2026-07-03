@@ -1,35 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
-  <rect width="720" height="400" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory Bank 结构</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
 
-  <text x="360" y="65" text-anchor="middle" font-size="14" fill="#8b949e">32 个 bank，每个 bank 4 bytes（对于 float 类型，每行对应一个 warp 的访问）</text>
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="400" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory Bank 结构</text>
+
+  <text x="360" y="65" text-anchor="middle" font-size="14" fill="#666666">32 个 bank，每个 bank 4 bytes（对于 float 类型，每行对应一个 warp 的访问）</text>
 
   <!-- Bank headers -->
   <g transform="translate(60, 90)">
-    <rect x="0" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="25" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 0</text>
-    <rect x="50" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="75" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 1</text>
-    <rect x="100" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="125" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 2</text>
-    <rect x="150" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="175" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">...</text>
-    <rect x="200" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="225" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 31</text>
+    <rect x="0" y="0" width="50" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="25" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">Bank 0</text>
+    <rect x="50" y="0" width="50" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="75" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">Bank 1</text>
+    <rect x="100" y="0" width="50" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="125" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">Bank 2</text>
+    <rect x="150" y="0" width="50" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="175" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">...</text>
+    <rect x="200" y="0" width="50" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="225" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">Bank 31</text>
   </g>
 
   <!-- Address mapping -->
-  <text x="60" y="155" font-size="13" fill="#c9d1d9">地址到 bank 的映射：</text>
-  <text x="60" y="180" font-family="monospace" font-size="13" fill="#58a6ff">bank = (address / 4) % 32</text>
+  <text x="60" y="155" font-size="13" fill="#2b2b2b">地址到 bank 的映射：</text>
+  <text x="60" y="180" font-family="monospace" font-size="13" fill="#6ab0ff">bank = (address / 4) % 32</text>
 
   <!-- Examples -->
-  <rect x="60" y="210" width="600" height="70" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="70" y="235" font-size="12" fill="#c9d1d9">地址 0, 128, 256 ... → Bank 0</text>
-  <text x="70" y="255" font-size="12" fill="#c9d1d9">地址 4, 132, 260 ... → Bank 1</text>
-  <text x="70" y="275" font-size="12" fill="#c9d1d9">地址 i * 4 且 i % 32 == k → Bank k</text>
+  <rect x="60" y="210" width="600" height="70" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="70" y="235" font-size="12" fill="#2b2b2b">地址 0, 128, 256 ... → Bank 0</text>
+  <text x="70" y="255" font-size="12" fill="#2b2b2b">地址 4, 132, 260 ... → Bank 1</text>
+  <text x="70" y="275" font-size="12" fill="#2b2b2b">地址 i * 4 且 i % 32 == k → Bank k</text>
 
   <!-- Note -->
-  <text x="360" y="320" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">一个 warp 内多个线程访问同一 bank 的不同地址 → Bank Conflict</text>
-  <text x="360" y="345" text-anchor="middle" font-size="13" fill="#3fb950">一个 warp 内多个线程访问同一地址 → Broadcast，无 Conflict</text>
-  <text x="360" y="370" text-anchor="middle" font-size="13" fill="#8b949e">一个 warp 内线程访问不同 bank → 无 Conflict</text>
+  <text x="360" y="320" text-anchor="middle" font-size="13" fill="#e57373" font-weight="bold">一个 warp 内多个线程访问同一 bank 的不同地址 → Bank Conflict</text>
+  <text x="360" y="345" text-anchor="middle" font-size="13" fill="#5cb86c">一个 warp 内多个线程访问同一地址 → Broadcast，无 Conflict</text>
+  <text x="360" y="370" text-anchor="middle" font-size="13" fill="#666666">一个 warp 内线程访问不同 bank → 无 Conflict</text>
+  </g>
 </svg>

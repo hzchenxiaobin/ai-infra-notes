@@ -1,30 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
-  <rect width="720" height="440" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Roofline 模型</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="440" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Roofline 模型</text>
 
   <!-- Axes -->
-  <line x1="80" y1="380" x2="660" y2="380" stroke="#8b949e" stroke-width="2"/>
-  <line x1="80" y1="380" x2="80" y2="60" stroke="#8b949e" stroke-width="2"/>
+  <line x1="80" y1="380" x2="660" y2="380" stroke="#666666" stroke-width="2"/>
+  <line x1="80" y1="380" x2="80" y2="60" stroke="#666666" stroke-width="2"/>
 
-  <text x="360" y="410" text-anchor="middle" font-size="14" fill="#c9d1d9">Arithmetic Intensity (FLOPs / byte) →</text>
-  <text x="30" y="220" text-anchor="middle" font-size="14" fill="#c9d1d9" transform="rotate(-90, 30, 220)">Attainable FLOP/s →</text>
+  <text x="360" y="410" text-anchor="middle" font-size="14" fill="#2b2b2b">Arithmetic Intensity (FLOPs / byte) →</text>
+  <text x="30" y="220" text-anchor="middle" font-size="14" fill="#2b2b2b" transform="rotate(-90, 30, 220)">Attainable FLOP/s →</text>
 
   <!-- Roofline -->
-  <polyline points="80,340 280,180 660,180" fill="none" stroke="#58a6ff" stroke-width="3"/>
-  <text x="600" y="165" font-size="13" fill="#58a6ff" font-weight="bold">Peak Compute</text>
-  <text x="160" y="320" font-size="13" fill="#d29922" font-weight="bold">Memory-bound slope</text>
+  <polyline points="80,340 280,180 660,180" fill="none" stroke="#6ab0ff" stroke-width="3"/>
+  <text x="600" y="165" font-size="13" fill="#6ab0ff" font-weight="bold">Peak Compute</text>
+  <text x="160" y="320" font-size="13" fill="#e8a838" font-weight="bold">Memory-bound slope</text>
 
   <!-- Regions -->
-  <text x="140" y="260" font-size="15" fill="#f85149" font-weight="bold">Memory-Bound</text>
-  <text x="480" y="240" font-size="15" fill="#3fb950" font-weight="bold">Compute-Bound</text>
+  <text x="140" y="260" font-size="15" fill="#e57373" font-weight="bold">Memory-Bound</text>
+  <text x="480" y="240" font-size="15" fill="#5cb86c" font-weight="bold">Compute-Bound</text>
 
   <!-- Sample points -->
-  <circle cx="120" cy="310" r="8" fill="#f85149"/>
-  <text x="120" y="300" text-anchor="middle" font-size="12" fill="#c9d1d9">transpose_naive</text>
+  <circle cx="120" cy="310" r="8" fill="#e57373"/>
+  <text x="120" y="300" text-anchor="middle" font-size="12" fill="#2b2b2b">transpose_naive</text>
 
-  <circle cx="200" cy="260" r="8" fill="#f85149"/>
-  <text x="200" y="250" text-anchor="middle" font-size="12" fill="#c9d1d9">transpose_optimized</text>
+  <circle cx="200" cy="260" r="8" fill="#e57373"/>
+  <text x="200" y="250" text-anchor="middle" font-size="12" fill="#2b2b2b">transpose_optimized</text>
 
-  <circle cx="500" cy="200" r="8" fill="#3fb950"/>
-  <text x="500" y="230" text-anchor="middle" font-size="12" fill="#c9d1d9">compute_intensive</text>
+  <circle cx="500" cy="200" r="8" fill="#5cb86c"/>
+  <text x="500" y="230" text-anchor="middle" font-size="12" fill="#2b2b2b">compute_intensive</text>
+  </g>
 </svg>

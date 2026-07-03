@@ -1,31 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
-  <rect width="720" height="420" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">影响 Occupancy 的三大资源约束</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="420" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">影响 Occupancy 的三大资源约束</text>
 
   <!-- Registers -->
-  <rect x="80" y="80" width="180" height="120" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="170" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">寄存器 Registers</text>
-  <text x="170" y="145" text-anchor="middle" font-size="12" fill="#8b949e">每个 SM 有限</text>
-  <text x="170" y="165" text-anchor="middle" font-size="12" fill="#8b949e">线程用得越多</text>
-  <text x="170" y="185" text-anchor="middle" font-size="12" fill="#8b949e">同时驻留 warp 越少</text>
+  <rect x="80" y="80" width="180" height="120" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="170" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">寄存器 Registers</text>
+  <text x="170" y="145" text-anchor="middle" font-size="12" fill="#666666">每个 SM 有限</text>
+  <text x="170" y="165" text-anchor="middle" font-size="12" fill="#666666">线程用得越多</text>
+  <text x="170" y="185" text-anchor="middle" font-size="12" fill="#666666">同时驻留 warp 越少</text>
 
   <!-- Shared Memory -->
-  <rect x="270" y="80" width="180" height="120" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
-  <text x="360" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">共享内存 Shared Mem</text>
-  <text x="360" y="145" text-anchor="middle" font-size="12" fill="#8b949e">每个 SM 有限</text>
-  <text x="360" y="165" text-anchor="middle" font-size="12" fill="#8b949e">block 用得越多</text>
-  <text x="360" y="185" text-anchor="middle" font-size="12" fill="#8b949e">同时驻留 block 越少</text>
+  <rect x="270" y="80" width="180" height="120" rx="8" fill="#e8a838" opacity="0.2" stroke="#f0c050" stroke-width="2"/>
+  <text x="360" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">共享内存 Shared Mem</text>
+  <text x="360" y="145" text-anchor="middle" font-size="12" fill="#666666">每个 SM 有限</text>
+  <text x="360" y="165" text-anchor="middle" font-size="12" fill="#666666">block 用得越多</text>
+  <text x="360" y="185" text-anchor="middle" font-size="12" fill="#666666">同时驻留 block 越少</text>
 
   <!-- Block Size -->
-  <rect x="460" y="80" width="180" height="120" rx="8" fill="#8957e5" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
-  <text x="550" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">Block 大小与数量</text>
-  <text x="550" y="145" text-anchor="middle" font-size="12" fill="#8b949e">最大 thread/block</text>
-  <text x="550" y="165" text-anchor="middle" font-size="12" fill="#8b949e">最大 block/SM</text>
-  <text x="550" y="185" text-anchor="middle" font-size="12" fill="#8b949e">最大 warp/SM</text>
+  <rect x="460" y="80" width="180" height="120" rx="8" fill="#9b6dd9" opacity="0.2" stroke="#b689e8" stroke-width="2"/>
+  <text x="550" y="115" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">Block 大小与数量</text>
+  <text x="550" y="145" text-anchor="middle" font-size="12" fill="#666666">最大 thread/block</text>
+  <text x="550" y="165" text-anchor="middle" font-size="12" fill="#666666">最大 block/SM</text>
+  <text x="550" y="185" text-anchor="middle" font-size="12" fill="#666666">最大 warp/SM</text>
 
   <!-- SM box -->
-  <rect x="80" y="240" width="560" height="120" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="360" y="275" text-anchor="middle" font-size="16" font-weight="bold" fill="#c9d1d9">SM 资源池</text>
-  <text x="360" y="305" text-anchor="middle" font-size="13" fill="#8b949e">Register File + Shared Memory + Warp Slots</text>
-  <text x="360" y="335" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">任一资源耗尽都会限制 Occupancy</text>
+  <rect x="80" y="240" width="560" height="120" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="360" y="275" text-anchor="middle" font-size="16" font-weight="bold" fill="#2b2b2b">SM 资源池</text>
+  <text x="360" y="305" text-anchor="middle" font-size="13" fill="#666666">Register File + Shared Memory + Warp Slots</text>
+  <text x="360" y="335" text-anchor="middle" font-size="13" fill="#e57373" font-weight="bold">任一资源耗尽都会限制 Occupancy</text>
+  </g>
 </svg>

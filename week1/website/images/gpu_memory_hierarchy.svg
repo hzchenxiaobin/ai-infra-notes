@@ -1,100 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="780" height="560" viewBox="0 0 780 560">
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="560" viewBox="0 0 780 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
   <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  
+
     <linearGradient id="gradReg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#238636;stop-opacity:0.9" />
+      <stop offset="0%" style="stop-color:#4a9d5f;stop-opacity:0.9" />
       <stop offset="100%" style="stop-color:#1a7f37;stop-opacity:0.8" />
     </linearGradient>
     <linearGradient id="gradSMem" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:0.9" />
-      <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:0.8" />
+      <stop offset="0%" style="stop-color:#6ab0ff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#4a8edb;stop-opacity:0.8" />
     </linearGradient>
     <linearGradient id="gradL2" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#a371f7;stop-opacity:0.9" />
-      <stop offset="100%" style="stop-color:#8957e5;stop-opacity:0.8" />
+      <stop offset="0%" style="stop-color:#b689e8;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#9b6dd9;stop-opacity:0.8" />
     </linearGradient>
     <linearGradient id="gradHBM" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#d29922;stop-opacity:0.9" />
+      <stop offset="0%" style="stop-color:#e8a838;stop-opacity:0.9" />
       <stop offset="100%" style="stop-color:#9e6a03;stop-opacity:0.8" />
     </linearGradient>
     <marker id="arrowDown2" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
-      <path d="M0,0 L10,0 L5,8 z" fill="#f85149"/>
+      <path d="M0,0 L10,0 L5,8 z" fill="#e57373"/>
     </marker>
   </defs>
+  <g filter="url(#sketch)">
 
-  <rect width="780" height="560" fill="#0d1117"/>
-  <text x="390" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 内存层次结构</text>
+  <rect width="780" height="560" fill="#fdfcf7"/>
+  <text x="390" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">GPU 内存层次结构</text>
 
   <!-- Left side: Pyramid -->
   <!-- Register (top) -->
-  <polygon points="390,60 490,110 290,110" fill="url(#gradReg)" stroke="#3fb950" stroke-width="1.5"/>
-  <text x="390" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Register</text>
-  <text x="390" y="103" text-anchor="middle" font-size="10" fill="#0d1117">~1 cycle</text>
+  <polygon points="390,60 490,110 290,110" fill="url(#gradReg)" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="390" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#fdfcf7">Register</text>
+  <text x="390" y="103" text-anchor="middle" font-size="10" fill="#fdfcf7">~1 cycle</text>
 
   <!-- Shared Memory -->
-  <polygon points="290,110 490,110 510,170 270,170" fill="url(#gradSMem)" stroke="#58a6ff" stroke-width="1.5"/>
-  <text x="390" y="138" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Shared Memory</text>
-  <text x="390" y="155" text-anchor="middle" font-size="11" fill="#0d1117">~20-30 cycles</text>
+  <polygon points="290,110 490,110 510,170 270,170" fill="url(#gradSMem)" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="390" y="138" text-anchor="middle" font-size="13" font-weight="bold" fill="#fdfcf7">Shared Memory</text>
+  <text x="390" y="155" text-anchor="middle" font-size="11" fill="#fdfcf7">~20-30 cycles</text>
 
   <!-- L1 Cache (same level as SMem) -->
-  <polygon points="270,170 510,170 530,230 250,230" fill="#6c9fff" opacity="0.7" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="4,2"/>
-  <text x="390" y="198" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">L1 Cache</text>
-  <text x="390" y="215" text-anchor="middle" font-size="11" fill="#0d1117">~20-30 cycles (自动)</text>
+  <polygon points="270,170 510,170 530,230 250,230" fill="#7cafff" opacity="0.7" stroke="#6ab0ff" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="390" y="198" text-anchor="middle" font-size="13" font-weight="bold" fill="#fdfcf7">L1 Cache</text>
+  <text x="390" y="215" text-anchor="middle" font-size="11" fill="#fdfcf7">~20-30 cycles (自动)</text>
 
   <!-- L2 Cache -->
-  <polygon points="250,230 530,230 550,290 230,290" fill="url(#gradL2)" stroke="#a371f7" stroke-width="1.5"/>
-  <text x="390" y="258" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">L2 Cache</text>
-  <text x="390" y="275" text-anchor="middle" font-size="11" fill="#0d1117">~200 cycles</text>
+  <polygon points="250,230 530,230 550,290 230,290" fill="url(#gradL2)" stroke="#b689e8" stroke-width="1.5"/>
+  <text x="390" y="258" text-anchor="middle" font-size="13" font-weight="bold" fill="#fdfcf7">L2 Cache</text>
+  <text x="390" y="275" text-anchor="middle" font-size="11" fill="#fdfcf7">~200 cycles</text>
 
   <!-- Global Memory (HBM) -->
-  <polygon points="230,290 550,290 570,350 210,350" fill="url(#gradHBM)" stroke="#d29922" stroke-width="1.5"/>
-  <text x="390" y="318" text-anchor="middle" font-size="13" font-weight="bold" fill="#0d1117">Global Memory (HBM)</text>
-  <text x="390" y="335" text-anchor="middle" font-size="11" fill="#0d1117">~400-800 cycles</text>
+  <polygon points="230,290 550,290 570,350 210,350" fill="url(#gradHBM)" stroke="#e8a838" stroke-width="1.5"/>
+  <text x="390" y="318" text-anchor="middle" font-size="13" font-weight="bold" fill="#fdfcf7">Global Memory (HBM)</text>
+  <text x="390" y="335" text-anchor="middle" font-size="11" fill="#fdfcf7">~400-800 cycles</text>
 
   <!-- Right side: Details table -->
   <!-- Register details -->
-  <rect x="600" y="62" width="160" height="48" rx="4" fill="#238636" opacity="0.15" stroke="#3fb950" stroke-width="1"/>
-  <text x="610" y="78" font-size="11" font-weight="bold" fill="#3fb950">容量: ~256KB/SM</text>
-  <text x="610" y="94" font-size="10" fill="#8b949e">可编程: 否(编译器)</text>
-  <text x="610" y="106" font-size="10" fill="#8b949e">作用域: Thread</text>
+  <rect x="600" y="62" width="160" height="48" rx="4" fill="#4a9d5f" opacity="0.15" stroke="#5cb86c" stroke-width="1"/>
+  <text x="610" y="78" font-size="11" font-weight="bold" fill="#5cb86c">容量: ~256KB/SM</text>
+  <text x="610" y="94" font-size="10" fill="#666666">可编程: 否(编译器)</text>
+  <text x="610" y="106" font-size="10" fill="#666666">作用域: Thread</text>
 
   <!-- SMem details -->
-  <rect x="600" y="115" width="160" height="53" rx="4" fill="#1f6feb" opacity="0.15" stroke="#58a6ff" stroke-width="1"/>
-  <text x="610" y="131" font-size="11" font-weight="bold" fill="#58a6ff">容量: 100-164KB/SM</text>
-  <text x="610" y="147" font-size="10" fill="#8b949e">可编程: 是</text>
-  <text x="610" y="159" font-size="10" fill="#8b949e">作用域: Block</text>
+  <rect x="600" y="115" width="160" height="53" rx="4" fill="#4a8edb" opacity="0.15" stroke="#6ab0ff" stroke-width="1"/>
+  <text x="610" y="131" font-size="11" font-weight="bold" fill="#6ab0ff">容量: 100-164KB/SM</text>
+  <text x="610" y="147" font-size="10" fill="#666666">可编程: 是</text>
+  <text x="610" y="159" font-size="10" fill="#666666">作用域: Block</text>
 
   <!-- L1 details -->
-  <rect x="600" y="175" width="160" height="53" rx="4" fill="#1f6feb" opacity="0.08" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2"/>
-  <text x="610" y="191" font-size="11" font-weight="bold" fill="#58a6ff">与 SMem 共享物理</text>
-  <text x="610" y="207" font-size="10" fill="#8b949e">可编程: 否(自动)</text>
-  <text x="610" y="219" font-size="10" fill="#8b949e">可配置比例</text>
+  <rect x="600" y="175" width="160" height="53" rx="4" fill="#4a8edb" opacity="0.08" stroke="#6ab0ff" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="610" y="191" font-size="11" font-weight="bold" fill="#6ab0ff">与 SMem 共享物理</text>
+  <text x="610" y="207" font-size="10" fill="#666666">可编程: 否(自动)</text>
+  <text x="610" y="219" font-size="10" fill="#666666">可配置比例</text>
 
   <!-- L2 details -->
-  <rect x="600" y="235" width="160" height="53" rx="4" fill="#8957e5" opacity="0.15" stroke="#a371f7" stroke-width="1"/>
-  <text x="610" y="251" font-size="11" font-weight="bold" fill="#a371f7">容量: 数MB~数十MB</text>
-  <text x="610" y="267" font-size="10" fill="#8b949e">可编程: 否(自动)</text>
-  <text x="610" y="279" font-size="10" fill="#8b949e">作用域: 全局共享</text>
+  <rect x="600" y="235" width="160" height="53" rx="4" fill="#9b6dd9" opacity="0.15" stroke="#b689e8" stroke-width="1"/>
+  <text x="610" y="251" font-size="11" font-weight="bold" fill="#b689e8">容量: 数MB~数十MB</text>
+  <text x="610" y="267" font-size="10" fill="#666666">可编程: 否(自动)</text>
+  <text x="610" y="279" font-size="10" fill="#666666">作用域: 全局共享</text>
 
   <!-- HBM details -->
-  <rect x="600" y="295" width="160" height="53" rx="4" fill="#d29922" opacity="0.15" stroke="#d29922" stroke-width="1"/>
-  <text x="610" y="311" font-size="11" font-weight="bold" fill="#d29922">容量: 数GB~数十GB</text>
-  <text x="610" y="327" font-size="10" fill="#8b949e">可编程: 显式分配</text>
-  <text x="610" y="339" font-size="10" fill="#8b949e">作用域: 全局</text>
+  <rect x="600" y="295" width="160" height="53" rx="4" fill="#e8a838" opacity="0.15" stroke="#e8a838" stroke-width="1"/>
+  <text x="610" y="311" font-size="11" font-weight="bold" fill="#e8a838">容量: 数GB~数十GB</text>
+  <text x="610" y="327" font-size="10" fill="#666666">可编程: 显式分配</text>
+  <text x="610" y="339" font-size="10" fill="#666666">作用域: 全局</text>
 
   <!-- Left side: Latency arrow -->
-  <line x1="140" y1="75" x2="140" y2="345" stroke="#f85149" stroke-width="2.5" marker-end="url(#arrowDown2)"/>
-  <text x="105" y="200" text-anchor="middle" font-size="13" font-weight="bold" fill="#f85149" transform="rotate(-90, 105, 200)">延迟递增 →</text>
-  <text x="85" y="85" text-anchor="middle" font-size="11" fill="#3fb950">快</text>
-  <text x="85" y="345" text-anchor="middle" font-size="11" fill="#f85149">慢</text>
+  <line x1="140" y1="75" x2="140" y2="345" stroke="#e57373" stroke-width="2.5" marker-end="url(#arrowDown2)"/>
+  <text x="105" y="200" text-anchor="middle" font-size="13" font-weight="bold" fill="#e57373" transform="rotate(-90, 105, 200)">延迟递增 →</text>
+  <text x="85" y="85" text-anchor="middle" font-size="11" fill="#5cb86c">快</text>
+  <text x="85" y="345" text-anchor="middle" font-size="11" fill="#e57373">慢</text>
 
   <!-- Bottom: Key insights -->
-  <rect x="50" y="380" width="680" height="160" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <rect x="50" y="380" width="680" height="160" rx="10" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
 
-  <text x="70" y="405" font-size="13" font-weight="bold" fill="#58a6ff">💡 核心洞察</text>
+  <text x="70" y="405" font-size="13" font-weight="bold" fill="#6ab0ff">💡 核心洞察</text>
 
-  <text x="70" y="430" font-size="12" fill="#c9d1d9">• <tspan fill="#3fb950" font-weight="bold">Register</tspan> 最快但不可控——编译器自动分配，程序员通过代码影响使用量</text>
-  <text x="70" y="452" font-size="12" fill="#c9d1d9">• <tspan fill="#58a6ff" font-weight="bold">Shared Memory</tspan> 是可编程的高速缓存——需要显式管理，用得好可大幅减少 Global 访问</text>
-  <text x="70" y="474" font-size="12" fill="#c9d1d9">• <tspan fill="#58a6ff">L1/L2</tspan> 是自动缓存——透明工作但不可控；理解它们有助于预测性能</text>
-  <text x="70" y="496" font-size="12" fill="#c9d1d9">• <tspan fill="#d29922" font-weight="bold">Global Memory</tspan> 是瓶颈——大多数优化都是减少对它的访问</text>
-  <text x="70" y="522" font-size="12" fill="#f85149" font-weight="bold">优化核心思想：数据离计算单元越近越好，能不访问 HBM 就不访问</text>
+  <text x="70" y="430" font-size="12" fill="#2b2b2b">• <tspan fill="#5cb86c" font-weight="bold">Register</tspan> 最快但不可控——编译器自动分配，程序员通过代码影响使用量</text>
+  <text x="70" y="452" font-size="12" fill="#2b2b2b">• <tspan fill="#6ab0ff" font-weight="bold">Shared Memory</tspan> 是可编程的高速缓存——需要显式管理，用得好可大幅减少 Global 访问</text>
+  <text x="70" y="474" font-size="12" fill="#2b2b2b">• <tspan fill="#6ab0ff">L1/L2</tspan> 是自动缓存——透明工作但不可控；理解它们有助于预测性能</text>
+  <text x="70" y="496" font-size="12" fill="#2b2b2b">• <tspan fill="#e8a838" font-weight="bold">Global Memory</tspan> 是瓶颈——大多数优化都是减少对它的访问</text>
+  <text x="70" y="522" font-size="12" fill="#e57373" font-weight="bold">优化核心思想：数据离计算单元越近越好，能不访问 HBM 就不访问</text>
+  </g>
 </svg>

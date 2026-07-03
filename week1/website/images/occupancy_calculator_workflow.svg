@@ -1,37 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
-  <rect width="720" height="400" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">CUDA Occupancy Calculator 使用流程</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="400" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">CUDA Occupancy Calculator 使用流程</text>
 
   <!-- Steps -->
-  <rect x="60" y="80" width="140" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="130" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. 输入 GPU</text>
-  <text x="130" y="140" text-anchor="middle" font-size="12" fill="#8b949e">Compute Capability</text>
+  <rect x="60" y="80" width="140" height="80" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="130" y="115" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">1. 输入 GPU</text>
+  <text x="130" y="140" text-anchor="middle" font-size="12" fill="#666666">Compute Capability</text>
 
-  <line x1="200" y1="120" x2="240" y2="120" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="200" y1="120" x2="240" y2="120" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
 
-  <rect x="250" y="80" width="140" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="320" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. 输入 Kernel</text>
-  <text x="320" y="140" text-anchor="middle" font-size="12" fill="#8b949e">Block / Regs / Shared</text>
+  <rect x="250" y="80" width="140" height="80" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="320" y="115" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">2. 输入 Kernel</text>
+  <text x="320" y="140" text-anchor="middle" font-size="12" fill="#666666">Block / Regs / Shared</text>
 
-  <line x1="390" y1="120" x2="430" y2="120" stroke="#8b949e" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="390" y1="120" x2="430" y2="120" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
 
-  <rect x="440" y="80" width="140" height="80" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
-  <text x="510" y="115" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. 获取结果</text>
-  <text x="510" y="140" text-anchor="middle" font-size="12" fill="#8b949e">理论 Occupancy</text>
+  <rect x="440" y="80" width="140" height="80" rx="8" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
+  <text x="510" y="115" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">3. 获取结果</text>
+  <text x="510" y="140" text-anchor="middle" font-size="12" fill="#666666">理论 Occupancy</text>
 
   <!-- Input details -->
-  <rect x="60" y="200" width="280" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="200" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">输入参数</text>
-  <text x="80" y="260" font-size="12" fill="#8b949e">• Threads per block</text>
-  <text x="80" y="285" font-size="12" fill="#8b949e">• Registers per thread</text>
-  <text x="80" y="310" font-size="12" fill="#8b949e">• Shared memory per block</text>
-  <text x="80" y="335" font-size="12" fill="#8b949e">• GPU Compute Capability</text>
+  <rect x="60" y="200" width="280" height="160" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="200" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">输入参数</text>
+  <text x="80" y="260" font-size="12" fill="#666666">• Threads per block</text>
+  <text x="80" y="285" font-size="12" fill="#666666">• Registers per thread</text>
+  <text x="80" y="310" font-size="12" fill="#666666">• Shared memory per block</text>
+  <text x="80" y="335" font-size="12" fill="#666666">• GPU Compute Capability</text>
 
   <!-- Output details -->
-  <rect x="380" y="200" width="280" height="160" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="520" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#c9d1d9">输出结果</text>
-  <text x="400" y="260" font-size="12" fill="#8b949e">• Active Warps per SM</text>
-  <text x="400" y="285" font-size="12" fill="#8b949e">• Occupancy (%)</text>
-  <text x="400" y="310" font-size="12" fill="#8b949e">• Active Blocks per SM</text>
-  <text x="400" y="335" font-size="12" fill="#8b949e">• 哪个资源是瓶颈</text>
+  <rect x="380" y="200" width="280" height="160" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="520" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">输出结果</text>
+  <text x="400" y="260" font-size="12" fill="#666666">• Active Warps per SM</text>
+  <text x="400" y="285" font-size="12" fill="#666666">• Occupancy (%)</text>
+  <text x="400" y="310" font-size="12" fill="#666666">• Active Blocks per SM</text>
+  <text x="400" y="335" font-size="12" fill="#666666">• 哪个资源是瓶颈</text>
+  </g>
 </svg>
