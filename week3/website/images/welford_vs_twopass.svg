@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="660" viewBox="0 0 940 660" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="660" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">LayerNorm：两次 Reduce vs Welford 一次遍历</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- LEFT: two-pass (Day 16 / PyTorch) -->
+  <text x="235" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">两次 Reduce（Day 16 / PyTorch ATen）</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="90" width="390" height="380" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+
+  <!-- pass 1 -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="110" width="350" height="50" rx="6" fill="#4a8edb" stroke="#3a3a3a" stroke-width="1.2" opacity="0.55"/>
+    <text x="235" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Pass 1：读 x[N] → reduce sum → μ = sum/N</text>
+    <text x="235" y="146" text-anchor="middle" font-size="9" fill="#444">第一次扫描 HBM，读 N×4B</text>
+  </g>
+  <path d="M 235 162 L 235 174" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- pass 2 -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="178" width="350" height="50" rx="6" fill="#e8a838" stroke="#3a3a3a" stroke-width="1.2" opacity="0.55"/>
+    <text x="235" y="198" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Pass 2：再读 x[N] → reduce (x-μ)² → σ² = sq/N</text>
+    <text x="235" y="214" text-anchor="middle" font-size="9" fill="#444">第二次扫描 HBM，读 N×4B（依赖 μ）</text>
+  </g>
+  <path d="M 235 230 L 235 242" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- pass 3 -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="246" width="350" height="50" rx="6" fill="#e57373" stroke="#3a3a3a" stroke-width="1.2" opacity="0.5"/>
+    <text x="235" y="266" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Pass 3：读 x[N] + γ + β → 写 y[N]</text>
+    <text x="235" y="282" text-anchor="middle" font-size="9" fill="#444">第三次扫描，归一化 + affine</text>
+  </g>
+  <path d="M 235 298 L 235 312" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- stats -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="316" width="350" height="140" rx="6" fill="#fff3cf" stroke="#e8a838" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="80" y="338" font-size="11" font-weight="bold" fill="#2b2b2b">HBM 读次数：3N（三次扫描）</text>
+    <text x="80" y="358" font-size="11" fill="#444">reduce 次数：2（mean + variance）</text>
+    <text x="80" y="378" font-size="11" fill="#b03a3a">不能合并：σ² 强依赖 μ</text>
+    <text x="80" y="398" font-size="11" fill="#444">优势：清晰易读，数值精度好</text>
+    <text x="80" y="418" font-size="11" fill="#444">性能：1x（基准）</text>
+    <text x="80" y="440" font-size="10" fill="#888" font-style="italic">PyTorch ATen / 我们 Day 16 的做法</text>
+  </g>
+
+  <!-- RIGHT: Welford one-pass (FT) -->
+  <text x="705" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e7d4f">Welford 一次遍历（FasterTransformer）</text>
+  <g filter="url(#sk2)">
+    <rect x="510" y="90" width="390" height="380" rx="10" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+
+  <!-- single pass -->
+  <g filter="url(#sk2)">
+    <rect x="530" y="110" width="350" height="118" rx="6" fill="#2e7d4f" stroke="#3a3a3a" stroke-width="1.2" opacity="0.5"/>
+    <text x="705" y="132" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">单次遍历：读 x[N]，同时维护 (count, mean, M2)</text>
+  </g>
+  <text x="546" y="156" font-size="10" fill="#444" font-family="monospace">for each xi:</text>
+  <text x="546" y="172" font-size="10" fill="#1b5e3a" font-family="monospace">  count++</text>
+  <text x="546" y="188" font-size="10" fill="#1b5e3a" font-family="monospace">  delta = xi - mean</text>
+  <text x="546" y="204" font-size="10" fill="#1b5e3a" font-family="monospace">  mean += delta / count</text>
+  <text x="546" y="220" font-size="10" fill="#1b5e3a" font-family="monospace">  M2 += delta * (xi - mean)</text>
+  <path d="M 705 230 L 705 242" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- normalize -->
+  <g filter="url(#sk2)">
+    <rect x="530" y="246" width="350" height="50" rx="6" fill="#e57373" stroke="#3a3a3a" stroke-width="1.2" opacity="0.5"/>
+    <text x="705" y="266" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Pass 2：读 x[N] + γ + β → 写 y[N]</text>
+    <text x="705" y="282" text-anchor="middle" font-size="9" fill="#444">第二次扫描，归一化（var = M2/N）</text>
+  </g>
+  <path d="M 705 298 L 705 312" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- stats -->
+  <g filter="url(#sk2)">
+    <rect x="530" y="316" width="350" height="140" rx="6" fill="#fff3cf" stroke="#e8a838" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="550" y="338" font-size="11" font-weight="bold" fill="#2b2b2b">HBM 读次数：2N（省一次！）</text>
+    <text x="550" y="358" font-size="11" fill="#444">reduce 次数：1（mean + M2 同时）</text>
+    <text x="550" y="378" font-size="11" fill="#2e7d4f">已合并：在线更新 mean/M2</text>
+    <text x="550" y="398" font-size="11" fill="#444">优势：少一次 HBM 全局读</text>
+    <text x="550" y="418" font-size="11" fill="#2e7d4f">性能：~1.3-1.5x</text>
+    <text x="550" y="440" font-size="10" fill="#888" font-style="italic">FasterTransformer generalLayerNorm 做法</text>
+  </g>
+
+  <!-- center arrow: conversion -->
+  <path d="M 430 200 L 510 200" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar4)" stroke-dasharray="5 3"/>
+  <text x="470" y="192" text-anchor="middle" font-size="10" fill="#666" font-style="italic">Welford</text>
+  <text x="470" y="214" text-anchor="middle" font-size="9" fill="#888">合并</text>
+
+  <!-- bottom: key insight -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="490" width="860" height="150" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="60" y="512" font-size="12" font-weight="bold" fill="#2b2b2b">Welford 算法精髓：在线均值/方差</text>
+    <text x="60" y="534" font-size="11" fill="#444">传统两遍：先求 mean（Pass 1），再求 var（Pass 2，依赖 mean）→ 必须读两遍 HBM</text>
+    <text x="60" y="554" font-size="11" fill="#444">Welford 一次：遍历时实时更新 mean 和 M2，不需要"先知道 mean 才能算 var"</text>
+    <text x="60" y="576" font-size="11" fill="#2e7d4f">关键公式：delta = xi - mean_old; mean_new = mean_old + delta/count; M2 += delta * (xi - mean_new)</text>
+    <text x="60" y="596" font-size="11" fill="#b03a3a">并行化难点：多线程需合并各自的 (count, mean, M2)，合并公式按 count 加权，比简单 sum 复杂</text>
+    <text x="60" y="618" font-size="10" fill="#888" font-style="italic">参考论文：Welford's Algorithm for Parallel Variance；FT 已实现合并逻辑</text>
+  </g>
+</svg>

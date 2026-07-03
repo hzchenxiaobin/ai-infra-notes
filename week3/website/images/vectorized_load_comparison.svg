@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">向量化加载：逐元素 vs float4 vs half2</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- 3 columns header -->
+  <text x="160" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">逐元素 float（Day 16）</text>
+  <text x="470" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">float4 向量化（PyTorch/FT）</text>
+  <text x="780" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">half2 向量化（FT FP16）</text>
+
+  <!-- col 1: scalar -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="92" width="240" height="280" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="114" font-size="10" fill="#444">每次加载 1 个 float (32-bit)</text>
+  <!-- memory cells -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk2)"><rect x="60" y="126" width="20" height="18" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="70" y="139" text-anchor="middle">f0</text></g>
+    <g filter="url(#sk2)"><rect x="82" y="126" width="20" height="18" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="92" y="139" text-anchor="middle">f1</text></g>
+    <g filter="url(#sk2)"><rect x="104" y="126" width="20" height="18" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="114" y="139" text-anchor="middle">f2</text></g>
+    <g filter="url(#sk2)"><rect x="126" y="126" width="20" height="18" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="136" y="139" text-anchor="middle">f3</text></g>
+  </g>
+  <text x="60" y="170" font-size="10" fill="#444">4 次加载指令 ↓</text>
+  <text x="60" y="190" font-size="11" fill="#b03a3a" font-family="monospace">for (i=tid; i&lt;D; i+=bd)</text>
+  <text x="60" y="206" font-size="11" fill="#b03a3a" font-family="monospace">  v = in_row[i];  // 1 float</text>
+  <text x="60" y="232" font-size="10" fill="#444">指令数：D 条</text>
+  <text x="60" y="250" font-size="10" fill="#444">带宽利用：~25%</text>
+  <text x="60" y="274" font-size="11" font-weight="bold" fill="#b03a3a">性能基准：1x</text>
+  <g filter="url(#sk2)">
+    <rect x="60" y="290" width="200" height="20" fill="#b03a3a" opacity="0.4" stroke="#7a2828" stroke-width="0.8"/>
+    <text x="160" y="304" text-anchor="middle" font-size="10" fill="#fff">带宽 25%</text>
+  </g>
+  <text x="60" y="338" font-size="10" fill="#888">每个 element 一条 ld 指令</text>
+  <text x="60" y="354" font-size="10" fill="#888">地址非对齐风险高</text>
+
+  <!-- col 2: float4 -->
+  <g filter="url(#sk2)">
+    <rect x="350" y="92" width="240" height="280" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="370" y="114" font-size="10" fill="#444">每次加载 4 个 float (128-bit)</text>
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk2)"><rect x="370" y="126" width="80" height="18" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="410" y="139" text-anchor="middle">f0 f1 f2 f3</text></g>
+  </g>
+  <text x="370" y="170" font-size="10" fill="#444">1 次加载指令 ↓（4x fewer）</text>
+  <text x="370" y="190" font-size="11" fill="#1b5e8c" font-family="monospace">const float4* in4 =</text>
+  <text x="370" y="206" font-size="11" fill="#1b5e8c" font-family="monospace">  (const float4*)in_row;</text>
+  <text x="370" y="222" font-size="11" fill="#1b5e8c" font-family="monospace">float4 v = in4[i];  // 4 float</text>
+  <text x="370" y="250" font-size="10" fill="#444">指令数：D/4 条</text>
+  <text x="370" y="274" font-size="11" font-weight="bold" fill="#1b5e8c">性能：~1.5-2x</text>
+  <g filter="url(#sk2)">
+    <rect x="370" y="290" width="200" height="20" fill="#4a8edb" opacity="0.5" stroke="#1b5e8c" stroke-width="0.8"/>
+    <text x="470" y="304" text-anchor="middle" font-size="10" fill="#fff">带宽 ~60%</text>
+  </g>
+  <text x="370" y="338" font-size="10" fill="#888">128-bit 对齐，coalesced</text>
+  <text x="370" y="354" font-size="10" fill="#888">要求 D 是 4 的倍数</text>
+
+  <!-- col 3: half2 -->
+  <g filter="url(#sk2)">
+    <rect x="660" y="92" width="240" height="280" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <text x="680" y="114" font-size="10" fill="#444">每次加载 2 个 half (32-bit)</text>
+  <text x="680" y="126" font-size="9" fill="#888">但 128-bit 可装 8 个 half</text>
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk2)"><rect x="680" y="138" width="80" height="18" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="720" y="151" text-anchor="middle">h0 h1 h2 h3 h4 h5 h6 h7</text></g>
+  </g>
+  <text x="680" y="180" font-size="10" fill="#444">8 个 half / 128-bit ↓</text>
+  <text x="680" y="200" font-size="11" fill="#1b5e3a" font-family="monospace">__half2 val =</text>
+  <text x="680" y="216" font-size="11" fill="#1b5e3a" font-family="monospace">  *(__half2*)&amp;in[i];</text>
+  <text x="680" y="232" font-size="11" fill="#1b5e3a" font-family="monospace">// __hadd2 成对加法</text>
+  <text x="680" y="258" font-size="10" fill="#444">指令数：D/8 条（等效）</text>
+  <text x="680" y="282" font-size="11" font-weight="bold" fill="#1b5e3a">性能：~2-3x</text>
+  <g filter="url(#sk2)">
+    <rect x="680" y="290" width="200" height="20" fill="#2e7d4f" opacity="0.5" stroke="#1b5e3a" stroke-width="0.8"/>
+    <text x="780" y="304" text-anchor="middle" font-size="10" fill="#fff">带宽 ~80%</text>
+  </g>
+  <text x="680" y="338" font-size="10" fill="#888">FP16 存储省一半带宽</text>
+  <text x="680" y="354" font-size="10" fill="#888">reduce 仍用 FP32 保精度</text>
+
+  <!-- bottom summary -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="392" width="860" height="226" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="60" y="414" font-size="12" font-weight="bold" fill="#2b2b2b">为什么向量化能提速 2-4x？</text>
+    <text x="60" y="436" font-size="11" fill="#444">① 减少加载指令数：D 条 → D/4 条（float4）→ D/8 条（half2），指令发射开销线性下降</text>
+    <text x="60" y="456" font-size="11" fill="#444">② 内存事务对齐：128-bit 是 GPU memory transaction 的自然粒度，float4/half2 天然对齐</text>
+    <text x="60" y="476" font-size="11" fill="#444">③ coalesced access：相邻线程访问相邻 128-bit 块，一个 warp 的 32 次访问合并为最少事务</text>
+    <text x="60" y="496" font-size="11" fill="#444">④ ILP（指令级并行）：一次 load 后有 4 个独立元素可并行处理，掩盖 load 延迟</text>
+    <text x="60" y="520" font-size="12" font-weight="bold" fill="#2b2b2b">昇腾对照</text>
+    <text x="60" y="540" font-size="11" fill="#444">CUDA float4 → 昇腾 Vector Unit 天然向量化：Vector 指令一次处理多元素，无需手动 float4</text>
+    <text x="60" y="558" font-size="11" fill="#444">CUDA __half2 → 昇腾 Vector half 指令：支持 FP16 向量，repeat 参数等效 ILP</text>
+    <text x="60" y="576" font-size="11" fill="#2e7d4f">本质：都是"一次处理多元素"提升吞吐，硬件抽象不同（CUDA 手动 cast vs 昇腾指令原生支持）</text>
+    <text x="60" y="600" font-size="10" fill="#888" font-style="italic">注意：float4 要求 D 是 4 的倍数且指针 16-byte 对齐；不满足时需 fall back 到标量</text>
+  </g>
+</svg>
