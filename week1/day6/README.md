@@ -202,6 +202,55 @@ Ridge Point ≈ 19.5 / 1.55 ≈ 12.6 FLOP/Byte
 - 如果点在平顶区域：优化计算（Tensor Core、指令优化）
 - 如果点离平顶很远：还有很大优化空间
 
+#### 6.6 ncu 结果分析实例：以 `bank_conflict` 为例
+
+下面演示拿到 ncu 指标后，如何一步步定位到 bank conflict 瓶颈。
+
+**Step 1：运行 ncu**
+
+```bash
+cd /Users/chenbinbin/GitHub/aiinfra/week1/day5
+nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
+
+ncu --metrics \
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
+  sm__cycles_elapsed.avg,\
+  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed \
+  ./kernels/bank_conflict
+```
+
+**Step 2：假设看到的数据**
+
+| Kernel | cycles | bank conflicts (load) | sm__throughput | dram__throughput | occupancy |
+|--------|--------|----------------------|----------------|------------------|-----------|
+| `conflict_read` | 12,800 | 1,048,576 | 18% | 45% | 75% |
+| `no_conflict_read` | 3,200 | 0 | 55% | 48% | 75% |
+
+**Step 3：分析过程**
+
+1. **cycle 数**：`conflict_read` 慢 4 倍，说明有明显性能问题。
+2. **occupancy**：两者都是 75%，排除并行度不足。
+3. **throughput**：`conflict_read` 的 `sm__throughput` 只有 18%，远低于 `no_conflict_read` 的 55%，说明 SM 计算单元大量空闲。
+4. **bank conflict**：`conflict_read` 有 1,048,576 次 load bank conflict，而 `no_conflict_read` 为 0。
+5. **DRAM throughput**：两者接近（~45-48%），说明 global memory 不是瓶颈。
+
+**结论**：`conflict_read` 的瓶颈是 shared memory bank conflict，导致 shared memory 访问被串行化，SM 大量时间花在等待数据上。
+
+**验证**：把 `tile[TILE_DIM][TILE_DIM]` 改成 `tile[TILE_DIM][TILE_DIM + 1]`（padding），重新编译并跑同样 ncu 命令，预期 bank conflict 接近 0，cycle 数大幅下降。
+
+**通用分析流程**
+
+拿到 ncu 结果后，建议按这个顺序看：
+
+1. `sm__cycles_elapsed.avg` —— 谁慢、慢多少
+2. `sm__occupancy` —— 排除 occupancy 问题
+3. `sm__throughput` vs `dram__throughput` —— 判断 compute-bound / memory-bound
+4. 具体 stall / conflict 指标 —— 定位根因
+5. 修改代码 → 重新编译 → 重新 ncu → 对比验证
+
 ---
 
 ### Coding 任务：本周 kernel  profiling
