@@ -208,7 +208,7 @@ def page_template(title: str, nav_html: str, markdown: str,
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/style.css?v=2">
     <script src="../js/marked.min.js"></script>
     <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
     <script src="../js/prism.min.js"></script>
@@ -291,7 +291,7 @@ def page_template(title: str, nav_html: str, markdown: str,
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="../js/main.js?v=2"></script>
+    <script src="../js/main.js?v=3"></script>
 </body>
 </html>
 """

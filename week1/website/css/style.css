@@ -599,6 +599,26 @@ body {
     opacity: 1;
 }
 
+.image-lightbox .lightbox-zoom-hint {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    user-select: none;
+}
+
+.image-lightbox.active .lightbox-zoom-hint {
+    opacity: 1;
+}
+
 /* CUDA Occupancy Calculator */
 .occupancy-calculator {
     background: var(--surface-color);

@@ -129,14 +129,32 @@ function initImageLightbox() {
         <button class="lightbox-close" aria-label="Close image preview">&times;</button>
         <img src="" alt="">
         <div class="lightbox-caption"></div>
+        <div class="lightbox-zoom-hint">滚轮缩放 / 点击关闭</div>
     `;
     document.body.appendChild(lightbox);
 
     const lightboxImg = lightbox.querySelector('img');
     const lightboxCaption = lightbox.querySelector('.lightbox-caption');
     const closeButton = lightbox.querySelector('.lightbox-close');
+    const zoomHint = lightbox.querySelector('.lightbox-zoom-hint');
+
+    let currentScale = 1;
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 5;
+    const ZOOM_STEP = 0.15;
+
+    function updateScale(scale) {
+        currentScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+        lightboxImg.style.transform = `scale(${currentScale})`;
+    }
+
+    function resetScale() {
+        currentScale = 1;
+        lightboxImg.style.transform = '';
+    }
 
     function openLightbox(img) {
+        resetScale();
         lightboxImg.src = img.src;
         lightboxImg.alt = img.alt || '';
         if (img.alt) {
@@ -152,6 +170,7 @@ function initImageLightbox() {
     function closeLightbox() {
         lightbox.classList.remove('active');
         document.body.style.overflow = '';
+        resetScale();
     }
 
     images.forEach(img => {
@@ -169,6 +188,14 @@ function initImageLightbox() {
     });
 
     closeButton.addEventListener('click', closeLightbox);
+
+    // Mouse wheel zoom
+    lightbox.addEventListener('wheel', function(e) {
+        if (!lightbox.classList.contains('active')) return;
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        updateScale(currentScale + delta);
+    }, { passive: false });
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && lightbox.classList.contains('active')) {
