@@ -1,6 +1,35 @@
 # Week 1 & Week 2 性能分析任务汇总
 
-本目录汇总了 `week1` 和 `week2` 中所有需要使用 **ncu（Nsight Compute）** 和 **nsys（Nsight Systems）** 进行性能分析的任务，方便统一查阅和批量执行。
+本目录汇总了 `week1` 和 `week2` 中所有需要使用 **ncu（Nsight Compute）** 和 **nsys（Nsight Systems）** 进行性能分析的任务，并放置了可直接编译执行的 `.cu` 源码。
+
+**目录结构**：
+
+```text
+ncu/
+├── README.md                    # 本文件：总览
+└── week1/
+    ├── day1/hello_gpu.cu        # Day 1 kernel
+    ├── day2/occupancy_test.cu   # Day 2 kernel
+    ├── day4/                    # Day 4 kernels + README（原有）
+    ├── day5/bank_conflict.cu    # Day 5 kernel
+    └── day6/README.md           # Day 6 综合任务指引
+```
+
+> **Week 2 代码现状**：`week2/day*/kernels/` 目录目前为空，README 中引用的 `warp_reduce.cu`、`register_blocking_gemm.cu`、`flash_attention.cu` 等源文件尚未创建。因此 Week 2 部分当前只能查看命令模板，无法直接执行；等后续源码补齐后可按相同模式放入 `ncu/week2/`。
+
+---
+
+## 快速开始
+
+每个 `week1/day*/` 目录下都有 `Makefile`，进入目录后执行：
+
+```bash
+cd ncu/week1/day1
+make
+./hello_gpu
+```
+
+即可运行对应程序，再按下方命令进行 `ncu` / `nsys` 分析。
 
 ---
 
@@ -23,14 +52,18 @@
 
 ### Day 1 — GPU 执行模型与 `hello_gpu`
 
-**目标**：理解 kernel launch 开销和线程/block 调度。
+**目录**：`ncu/week1/day1/`
 
 ```bash
-# 时间线分析
-nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
+cd ncu/week1/day1
+make
+./hello_gpu
 
-# 基础硬件指标
-ncu --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_elapsed ./kernels/hello_gpu
+# nsys timeline
+nsys profile -o hello_gpu_timeline ./hello_gpu
+
+# ncu 基础指标
+ncu --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_elapsed ./hello_gpu
 ```
 
 **观察重点**：`cudaLaunchKernel` CPU 时间、GPU 执行时间、block 并行度、active warp 比例。
@@ -39,21 +72,25 @@ ncu --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_
 
 ### Day 2 — Occupancy 与寄存器约束
 
-**目标**：理解寄存器用量如何限制 occupancy，以及如何减少寄存器压力。
+**目录**：`ncu/week1/day2/`
 
 ```bash
+cd ncu/week1/day2
+make
+./occupancy_test
+
 ncu --metrics \
   sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
   sm__warps_active.avg.pct_of_peak_sustained_elapsed,\
   launch__registers_per_thread,\
   launch__shared_mem_per_block_dynamic,\
   launch__shared_mem_per_block_static \
-  ./kernels/occupancy_test
+  ./occupancy_test
 ```
 
 **观察重点**：occupancy、active warps、registers/thread、dynamic/static shared memory。
 
-**进阶**：手动修改 `#pragma unroll`、局部变量、`__launch_bounds__` 后重新编译并对比。
+**进阶**：手动修改 `#pragma unroll`、局部变量、`__launch_bounds__` 后重新 `make` 并对比。
 
 ---
 
@@ -67,19 +104,23 @@ ncu --metrics \
 
 ### Day 4 — Memory Hierarchy / 矩阵转置
 
-**目标**：对比 naive 与 shared-memory tiled transpose 的内存吞吐量和实际 DRAM 流量。
+**目录**：`ncu/week1/day4/`（原有目录，包含 `transpose.cu`、`bandwidth.cu`、`transpose_tiles.cu`）
 
 ```bash
+cd ncu/week1/day4
+make
+./transpose
+
 # 吞吐量与 cycle 对比
 ncu --metrics \
   dram__throughput.avg.pct_of_peak_sustained_elapsed,\
   l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
   l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
   sm__cycles_elapsed.avg \
-  ./kernels/transpose
+  ./transpose
 
 # 应用级时间线
-nsys profile -o profiles/day4_transpose_timeline ./kernels/transpose
+nsys profile -o transpose_timeline ./transpose
 
 # L1/L2 与 DRAM 实际流量
 ncu --metrics \
@@ -96,25 +137,29 @@ ncu --metrics \
 
 ### Day 5 — Bank Conflict
 
-**目标**：观察 bank conflict 对性能和吞吐量的影响。
+**目录**：`ncu/week1/day5/`
 
 ```bash
+cd ncu/week1/day5
+make
+./bank_conflict
+
 # 整体对比
 ncu --metrics \
   l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
   l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
   sm__cycles_elapsed.avg,\
   sm__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./kernels/bank_conflict
+  ./bank_conflict
 
 # 单独 kernel 精确对比
 ncu --kernel-name regex:conflict_read \
   --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,sm__cycles_elapsed.avg \
-  ./kernels/bank_conflict
+  ./bank_conflict
 
 ncu --kernel-name regex:no_conflict_read \
   --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,sm__cycles_elapsed.avg \
-  ./kernels/bank_conflict
+  ./bank_conflict
 ```
 
 **观察重点**：load/store bank conflicts、cycles、throughput。
@@ -123,20 +168,28 @@ ncu --kernel-name regex:no_conflict_read \
 
 ### Day 6 — Nsight 综合 Profiling 实战
 
-**目标**：掌握完整 Nsight Compute 报告生成、GUI 查看、Nsight Systems 系统级 trace。
+**目录**：`ncu/week1/day6/`
+
+本目录不复制 kernel，而是复用前面几天的可执行文件，直接采集完整报告。
 
 ```bash
+cd ncu/week1/day6
+make -C ../day1
+make -C ../day2
+make -C ../day4
+make -C ../day5
+
 # 生成完整 ncu 报告
-ncu --set full -o profiles/day6_hello_gpu ./kernels/hello_gpu
-ncu --set full -o profiles/day6_occupancy_test ./kernels/occupancy_test
-ncu --set full -o profiles/day6_transpose ./kernels/transpose
-ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
+ncu --set full -o day6_hello_gpu ../day1/hello_gpu
+ncu --set full -o day6_occupancy_test ../day2/occupancy_test
+ncu --set full -o day6_transpose ../day4/transpose
+ncu --set full -o day6_bank_conflict ../day5/bank_conflict
 
 # GUI 打开
-ncu-ui profiles/day6_transpose.ncu-rep
+ncu-ui day6_transpose.ncu-rep
 
 # 系统级 timeline
-nsys profile -o profiles/day6_full_timeline --trace cuda,nvtx,osrt ./kernels/transpose
+nsys profile -o day6_full_timeline --trace cuda,nvtx,osrt ../day4/transpose
 ```
 
 ** Roofline / 瓶颈分类**：记录 `sm__throughput`、`dram__throughput`、`launch__occupancy`，判断 compute-bound 或 memory-bound。
@@ -152,6 +205,8 @@ nsys profile -o profiles/day6_full_timeline --trace cuda,nvtx,osrt ./kernels/tra
 ---
 
 ## Week 2
+
+> 以下命令中的源文件目前尚未在仓库中创建，仅作模板参考。后续补齐 `week2/day*/kernels/*.cu` 后可按相同结构放入 `ncu/week2/` 并直接执行。
 
 ### Day 1 — Warp Shuffle / Block Reduce
 
