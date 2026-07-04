@@ -47,6 +47,39 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
     if (row < M && col < N) C[row * N + col] = sum;
 }
 
+// Bank-conflict-free version: pad the shared memory arrays by one column.
+// Without padding, s_A[threadIdx.y][k] causes a 2-way bank conflict because
+// consecutive rows are 16 floats (64 bytes) apart, which is a multiple of the
+// 32-bank shared-memory stride (4 bytes/bank). Padding breaks the alignment.
+__global__ void matmul_tiled_nobc(const float* A, const float* B, float* C, int M, int N, int K) {
+    __shared__ float s_A[TILE_SIZE][TILE_SIZE + 1];
+    __shared__ float s_B[TILE_SIZE][TILE_SIZE + 1];
+
+    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    float sum = 0.0f;
+
+    for (int bk = 0; bk < K; bk += TILE_SIZE) {
+        if (row < M && bk + threadIdx.x < K)
+            s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
+        else
+            s_A[threadIdx.y][threadIdx.x] = 0.0f;
+
+        if (bk + threadIdx.y < K && col < N)
+            s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
+        else
+            s_B[threadIdx.y][threadIdx.x] = 0.0f;
+        __syncthreads();
+
+        #pragma unroll
+        for (int k = 0; k < TILE_SIZE; k++)
+            sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+        __syncthreads();
+    }
+
+    if (row < M && col < N) C[row * N + col] = sum;
+}
+
 int main() {
     int M = 512, N = 512, K = 512;
     size_t bytesA = M * K * sizeof(float);
@@ -85,6 +118,15 @@ int main() {
     printf("Naive:  %.3f ms (%.1f GFLOPS)\n", ms_naive, gflops_naive);
     printf("Tiled:  %.3f ms (%.1f GFLOPS)\n", ms_tiled, gflops_tiled);
     printf("Speedup: %.2fx\n", ms_naive / ms_tiled);
+
+    cudaEventRecord(s1);
+    matmul_tiled_nobc<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaEventRecord(s2); cudaEventSynchronize(s2);
+    float ms_tiled_nobc; cudaEventElapsedTime(&ms_tiled_nobc, s1, s2);
+    float gflops_tiled_nobc = 2.0f * M * N * K / (ms_tiled_nobc * 1e6);
+
+    printf("Tiled (no bank conflict): %.3f ms (%.1f GFLOPS)\n", ms_tiled_nobc, gflops_tiled_nobc);
+    printf("Speedup vs Tiled: %.2fx\n", ms_tiled / ms_tiled_nobc);
 
     free(h_A); free(h_B); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
     return 0;

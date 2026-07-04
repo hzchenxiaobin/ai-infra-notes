@@ -18,6 +18,8 @@ make
 Naive:  45.123 ms (  5.9 GFLOPS)
 Tiled:   8.456 ms ( 31.7 GFLOPS)
 Speedup: 5.34x
+Tiled (no bank conflict): 7.234 ms ( 37.1 GFLOPS)
+Speedup vs Tiled: 1.17x
 ```
 
 ---
@@ -48,7 +50,8 @@ ncu-ui matmul_report.ncu-rep
 | Kernel | cycles | SM throughput | DRAM throughput | occupancy | bank conflicts |
 |--------|--------|---------------|-----------------|-----------|----------------|
 | `matmul_naive` | 高 | 低（可能 < 30%） | 低（可能 < 40%） | 正常 | 0 |
-| `matmul_tiled` | 低 | 较高（可能 40-60%） | 较高（可能 50-70%） | 正常 | 可能有少量 |
+| `matmul_tiled` | 低 | 较高（可能 40-60%） | 较高（可能 50-70%） | 正常 | 可能有 2-way |
+| `matmul_tiled_nobc` | 更低 | 较高（可能 50-70%） | 较高 | 正常 | 接近 0 |
 
 ---
 
@@ -70,10 +73,24 @@ ncu-ui matmul_report.ncu-rep
 
 ### 4.3 看 bank conflict
 
-`tiled` 版本如果 `s_B[k][threadIdx.x]` 这种访问模式，可能导致 shared memory bank conflict。如果看到 `l1tex__data_bank_conflicts_*` 数值较大，可以尝试：
+`tiled` 版本在读取 `s_A[threadIdx.y][k]` 时容易出现 bank conflict。原因：`TILE_SIZE = 16` 时，相邻两行在 Shared Memory 中相距 `16 × 4 = 64` 字节，恰好是 32-bank 共享内存（每 bank 4 字节）的整数倍。因此同一列的偶数行落在 bank `k`，奇数行落在 bank `k + 16`，形成 **2-way bank conflict**。
 
-- 对 B 的 shared memory 做 padding：`__shared__ float s_B[TILE_SIZE][TILE_SIZE + 1];`
-- 或者调整线程到共享内存的映射方式
+如果 `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum` 数值较大，可以改为 padding 版本：
+
+```cuda
+__shared__ float s_A[TILE_SIZE][TILE_SIZE + 1];
+__shared__ float s_B[TILE_SIZE][TILE_SIZE + 1];
+```
+
+行 stride 变为 `17 × 4 = 68` 字节，`68 / 4 = 17` 与 32 互质，相邻行会落到不同 bank，conflict 基本消失。
+
+也可以直接对比三个 kernel 的 bank conflict 数量：
+
+```bash
+ncu --metrics \
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum \
+  ./matmul
+```
 
 ### 4.4 Roofline 定位
 
