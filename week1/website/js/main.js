@@ -19,16 +19,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Accordion navigation in sidebar
+    function toggleAccordionItem(item) {
+        if (!item) return;
+        item.classList.toggle('is-expanded');
+        const isExpanded = item.classList.contains('is-expanded');
+        const button = item.querySelector('.nav-accordion-toggle');
+        if (button) {
+            button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        }
+    }
+
     document.querySelectorAll('.nav-accordion-toggle').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            const item = button.closest('.nav-accordion-item');
-            if (item) {
-                item.classList.toggle('is-expanded');
-                const isExpanded = item.classList.contains('is-expanded');
-                button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            toggleAccordionItem(button.closest('.nav-accordion-item'));
+        });
+    });
+
+    // Clicking a week header toggles the accordion; week links don't navigate.
+    document.querySelectorAll('.nav-accordion-header').forEach(header => {
+        header.addEventListener('click', function(e) {
+            const link = e.target.closest('.week-link');
+            if (link) {
+                e.preventDefault();
+                e.stopPropagation();
             }
+            // Don't toggle if the click was on a day-link inside the header (future-proofing)
+            if (e.target.closest('.day-link')) {
+                return;
+            }
+            toggleAccordionItem(header.closest('.nav-accordion-item'));
         });
     });
 
@@ -82,8 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Image lightbox zoom
     initImageLightbox();
 
-    // Open all links in new tab
+    // Open all links in new tab, except sidebar links
     document.querySelectorAll('a').forEach(link => {
+        if (link.closest('.sidebar')) {
+            return;
+        }
         link.setAttribute('target', '_blank');
         link.setAttribute('rel', 'noopener noreferrer');
     });

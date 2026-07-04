@@ -92,6 +92,22 @@ def load_overview_and_days():
     return overview, days
 
 
+def get_day_numbers(week_dir: Path) -> list:
+    """Return sorted day numbers for a week directory by parsing README titles."""
+    day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
+    nums = []
+    for day_dir in sorted(week_dir.glob("day*")):
+        readme = day_dir / "README.md"
+        if not readme.exists():
+            continue
+        text = readme.read_text(encoding="utf-8")
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        match = day_title_pattern.match(first_line)
+        if match:
+            nums.append(int(match.group(1)))
+    return sorted(nums)
+
+
 def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
               days: Optional[list] = None) -> str:
     if weeks is None:
@@ -108,44 +124,67 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
-    # Week 1 link (not expanded on week2 pages)
-    lines.append('<div class="nav-accordion-item">')
-    lines.append('  <div class="nav-accordion-header">')
-    lines.append('    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a>')
-    lines.append('  </div>')
-    lines.append('</div>')
-
-    # Week 2 (expanded with days)
-    lines.append('<div class="nav-accordion-item is-expanded">')
-    lines.append('  <div class="nav-accordion-header">')
-    week2_cls = "nav-link week-link active" if current_day is not None else "nav-link week-link"
-    lines.append(f'    <a class="{week2_cls}" href="index.html">Week 2：CUDA 进阶优化与性能分析</a>')
-    lines.append('    <button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="true">▼</button>')
-    lines.append('  </div>')
-    lines.append('  <div class="nav-accordion-content">')
-    lines.append('    <div class="nav-section">')
-    for day_num in existing_days:
-        cls = "nav-link day-link active" if current_day == day_num else "nav-link day-link"
-        lines.append(f'<a class="{cls}" href="day{day_num}.html">Day {day_num}</a>')
-    lines.append('    </div>')
-    lines.append('  </div>')
-    lines.append('</div>')
-
-    # Weeks 3-8
+    # Titles for all weeks; week 2 title is hardcoded, others come from the plan.
+    week_titles = {2: "GEMM & Kernel 优化"}
     for week in weeks:
-        if week["num"] <= 2:
+        week_titles[week["num"]] = week["title"]
+
+    repo_root = WEEK2_DIR.parent
+    week_data = [
+        {
+            "num": 1,
+            "href": "../index.html",
+            "day_prefix": "../",
+            "days": get_day_numbers(repo_root / "week1"),
+        },
+        {
+            "num": 2,
+            "href": "index.html",
+            "day_prefix": "",
+            "days": existing_days,
+        },
+        {
+            "num": 3,
+            "href": "../week3/index.html",
+            "day_prefix": "../week3/",
+            "days": get_day_numbers(repo_root / "week3"),
+        },
+    ]
+    for week in weeks:
+        if week["num"] <= 3:
             continue
-        if week["num"] == 3:
-            week_href = "../week3/index.html"
-        else:
-            week_href = f"../plan.html#week-{week['num']}"
-        lines.append('<div class="nav-accordion-item">')
+        week_data.append({
+            "num": week["num"],
+            "href": f"../plan.html#week-{week['num']}",
+            "day_prefix": "",
+            "days": [],
+        })
+
+    for info in week_data:
+        is_current = info["num"] == 2
+        expanded_cls = " is-expanded" if is_current else ""
+        active_cls = " active" if is_current else ""
+        aria_expanded = "true" if is_current else "false"
+        toggle_icon = "▼" if is_current else "▶"
+
+        lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <a class="nav-link week-link" href="{week_href}">'
-            f'Week {week["num"]}：{week["title"]}'
+            f'    <a class="nav-link week-link{active_cls}" href="{info["href"]}">'
+            f'Week {info["num"]}：{week_titles.get(info["num"], "")}'
             f'</a>'
+            f'<button class="nav-accordion-toggle" aria-label="收起/展开 Week {info["num"]}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
         )
+        lines.append('  </div>')
+        lines.append('  <div class="nav-accordion-content">')
+        lines.append('    <div class="nav-section">')
+        lines.append(f'<a class="nav-link overview-link" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
+        for day_num in info["days"]:
+            day_active = " active" if (is_current and current_day == day_num) else ""
+            lines.append(
+                f'<a class="nav-link day-link{day_active}" href="{info["day_prefix"]}day{day_num}.html">Day {day_num}</a>'
+            )
+        lines.append('    </div>')
         lines.append('  </div>')
         lines.append('</div>')
 
