@@ -165,11 +165,39 @@ Roofline 图帮助判断 kernel 是 compute-bound 还是 memory-bound：
 Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
 ```
 
-- **Arithmetic Intensity (AI)** = FLOPs / bytes
-- AI 低 → memory-bound（位于斜线区域）
-- AI 高 → compute-bound（位于平顶区域）
+##### 坐标轴含义
 
-**如何用 Roofline 指导优化**：
+| 坐标轴 | 含义 | 单位 |
+|--------|------|------|
+| **横轴（X 轴）** | **Arithmetic Intensity（算术强度）** | FLOPs / byte |
+| **纵轴（Y 轴）** | **Attainable FLOP/s（可达到的算力）** | FLOP/s 或 GFLOP/s |
+
+- **Arithmetic Intensity (AI)** = FLOPs / bytes，表示每读取 1 字节数据能进行多少次浮点运算。
+- **Attainable FLOP/s** 是该 kernel 在当前硬件上能达到的算力上限，由两个天花板决定：
+  - **Memory Bandwidth ceiling**：`Achievable FLOP/s = AI × Peak Bandwidth`（斜线部分）
+  - **Peak Compute ceiling**：`Achievable FLOP/s = Peak FLOP/s`（水平部分）
+
+##### Ridge Point（山脊点）
+
+两条线的交点叫 **Ridge Point**：
+
+```text
+Ridge Point = Peak FLOP/s / Peak Bandwidth
+```
+
+以 A100 为例：
+
+```text
+Peak FP32 算力 ≈ 19.5 TFLOP/s
+Peak HBM 带宽 ≈ 1.55 TB/s
+Ridge Point ≈ 19.5 / 1.55 ≈ 12.6 FLOP/Byte
+```
+
+- **AI < Ridge Point** → **memory-bound**（位于斜线区域，算力喂不饱，瓶颈在带宽）
+- **AI > Ridge Point** → **compute-bound**（位于平顶区域，数据充足，瓶颈在算力）
+
+##### 如何用 Roofline 指导优化
+
 - 如果点在斜线区域：优化内存访问（coalescing、shared memory、减少读写）
 - 如果点在平顶区域：优化计算（Tensor Core、指令优化）
 - 如果点离平顶很远：还有很大优化空间
