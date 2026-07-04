@@ -24,6 +24,49 @@ ncu/
 
 ---
 
+## 环境准备与常见故障
+
+### WSL2 下 `ncu` 报 `ERR_NVGPUCTRPERM`
+
+在 WSL2 中，CUDA 驱动由 Windows 宿主提供，因此 `/etc/modprobe.d/nvidia.conf` 中的 `NVreg_RestrictProfilingToAdminUsers=0` 对 `ncu` **无效**。若执行 `ncu` 时出现：
+
+```text
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0.
+```
+
+需要在 **Windows 宿主** 上开放 GPU 性能计数器权限。
+
+**方法 1：NVIDIA Control Panel（推荐）**
+
+1. 在 Windows 中打开 **NVIDIA Control Panel**。
+2. 菜单栏选择 `Desktop -> Enable Developer Settings`。
+3. 左侧导航选择 `Developer -> Manage GPU Performance Counters`。
+4. 勾选 `Allow access to the GPU performance counter to all users`，点击 `Apply`。
+
+**方法 2：Windows 注册表**
+
+若无法打开 NVIDIA Control Panel，可在管理员 PowerShell 中执行：
+
+```powershell
+$path = 'HKLM:\SOFTWARE\NVIDIA Corporation\Global\NVTweak'
+if (!(Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+New-ItemProperty -Path $path -Name 'RmProfilingAdminOnly' -Value 0 -PropertyType DWord -Force
+```
+
+**生效**
+
+完成上述任一设置后，在 WSL2 中执行：
+
+```bash
+wsl --shutdown
+```
+
+或重启 WSL2 实例，然后重新运行 `ncu`。
+
+> **验证**：`nsys profile` 通常可以正常工作；只有需要 GPU Performance Counters 的 `ncu` 会触发此权限错误。
+
+---
+
 ## 快速开始
 
 每个 `week1/day*/` 目录下都有 `Makefile`，进入目录后执行：
