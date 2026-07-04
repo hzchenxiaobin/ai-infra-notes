@@ -235,7 +235,7 @@ ncu --metrics \
 
 ```bash
 # 编译时查看寄存器用量（非 ncu，但相关）
-nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
+nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 ```
 
 **相关 LeetGPU**：GEMM 建议用 ncu 对比不同参数性能差异。
@@ -260,7 +260,7 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 ```bash
 # 编译带 lineinfo
-nvcc -o gemm_profile kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
+nvcc -o gemm_profile kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 
 # 详细 profile
 ncu --kernel-name regex:gemmRegisterBlocking -o gemm_profile_report \
@@ -304,7 +304,7 @@ ncu --set full --metrics \
 **目标**：判断 FlashAttention 是 compute-bound 还是 memory-bound，并与标准 attention 对比。
 
 ```bash
-nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
 
 ncu --kernel-name regex:flashAttentionFwd \
   --metrics \
@@ -323,7 +323,7 @@ ncu --kernel-name regex:flashAttentionFwd \
 **目标**：验证 `float4` + Warp Shuffle + coalesced write 后 SM throughput > 60%、Long Scoreboard < 20%。
 
 ```bash
-nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
+nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 
 ncu --kernel-name regex:gemmIntegrated -o integrated_profile \
   --metrics \

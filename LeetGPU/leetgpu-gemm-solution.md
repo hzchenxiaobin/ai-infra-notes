@@ -65,7 +65,7 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 
 ```cuda
 // gemm.cu —— Register Blocking GEMM
-// 编译命令: nvcc -o gemm gemm.cu -O3 -arch=sm_80 -lcublas
+// 编译命令: nvcc -o gemm gemm.cu -O3 -arch=sm_120 -lcublas
 
 #include <cuda_runtime.h>
 #include <cstdio>

@@ -70,7 +70,7 @@ o_new = o * (l * exp(m - m_new) / l_new)    // 缩放历史输出
 
 ```cuda
 // attention.cu —— FlashAttention 简化版 Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

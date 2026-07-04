@@ -62,7 +62,7 @@ Stream 3:               [H2D chunk3] → [Conv chunk3] → [D2H chunk3]
 
 ```cuda
 // convolution.cu —— 多 Stream 分块 2D 卷积
-// 编译命令: nvcc -o convolution convolution.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o convolution convolution.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

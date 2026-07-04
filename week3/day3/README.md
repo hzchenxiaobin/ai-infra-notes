@@ -201,7 +201,7 @@ Day 16 的版本在归一化阶段每次都从 HBM 读 gamma/beta。register 缓
 
 ```cuda
 // kernels/softmax_layernorm_opt.cu（节选：warp 级 softmax）
-// 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
 __global__ void softmax_warp_kernel(const float* __restrict__ input,
                                      float* __restrict__ output,
@@ -327,9 +327,9 @@ local_max = __shfl_sync(0xFFFFFFFF, local_max, 0);  // ← 无需 smem，无需 
 
 ```bash
 # 编译（带 -lineinfo 供 ncu Source View 使用）
-# Ampere (A100, RTX 30xx): sm_80
+# Ampere (A100, RTX 30xx): sm_120
 # Turing (RTX 20xx, T4): sm_75
-nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
+nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
 # 运行
 ./softmax_layernorm_opt
@@ -412,7 +412,7 @@ Argmax 是一个**带状态追踪的归约**——不仅要找最大值，还要
 
 ```cuda
 // argmax.cu —— Argmax 归约（两级归约 + Warp Shuffle）
-// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

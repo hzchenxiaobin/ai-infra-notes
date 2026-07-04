@@ -230,7 +230,7 @@ Block (1024 threads = 32 warps)
 
 ```cuda
 // warp_reduce.cu —— Warp 级 + Block 级两级归约完整实现
-// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
 // 运行命令: ./warp_reduce
 
 #include <cuda_runtime.h>
@@ -383,10 +383,10 @@ int main() {
 
 ```bash
 # 编译（根据 GPU 架构选择 arch 参数）
-# Ampere (A100, RTX 30xx): sm_80
+# Ampere (A100, RTX 30xx): sm_120
 # Turing (RTX 20xx, T4): sm_75
 # Volta (V100): sm_70
-nvcc -o warp_reduce kernels/warp_reduce.cu -O3 -arch=sm_80
+nvcc -o warp_reduce kernels/warp_reduce.cu -O3 -arch=sm_120
 
 # 运行
 ./warp_reduce

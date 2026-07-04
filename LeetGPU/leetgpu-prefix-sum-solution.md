@@ -65,7 +65,7 @@ offset=16: ...
 
 ```cuda
 // prefix_sum.cu —— 分块两阶段 Prefix Sum
-// 编译命令: nvcc -o prefix_sum prefix_sum.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o prefix_sum prefix_sum.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

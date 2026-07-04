@@ -54,7 +54,7 @@ nsys --version
 # 预期输出：NVIDIA Nsight Systems version 202x.x.x
 
 # 验证第2周代码可编译（复用 warp reduce 基础）
-nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_80 2>&1 | head
+nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_120 2>&1 | head
 # 预期：无报错（若路径不同请按实际调整）
 ```
 
@@ -506,7 +506,7 @@ Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 
 ```cpp
 // softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
-// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 // 运行命令: ./softmax_layernorm
 
 #include <cuda_runtime.h>
@@ -771,7 +771,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
+nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行
 ./softmax_layernorm
@@ -1011,7 +1011,7 @@ float b = beta[i];   // 加载到 register
 
 ```bash
 # 编译优化版
-nvcc -o softmax_layernorm_opt softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
+nvcc -o softmax_layernorm_opt softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
 # profile
 ncu --metrics \
@@ -1184,7 +1184,7 @@ N = 65536:  S/P 矩阵 = 65536² × 4 bytes = 16 GB   （直接 OOM）
 
 ```cpp
 // attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
-// 编译命令: nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_120
 // 运行命令: ./attention_naive
 
 #include <cuda_runtime.h>
@@ -1401,7 +1401,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
 
 # 运行
 ./attention_naive
@@ -1615,7 +1615,7 @@ my_ops = load_inline(
     cuda_sources=cuda_src,
     functions=["softmax_forward", "layernorm_forward"],
     verbose=True,
-    extra_cuda_cflags=["-O3", "-arch=sm_80"],
+    extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 

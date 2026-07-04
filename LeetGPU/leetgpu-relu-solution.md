@@ -49,7 +49,7 @@ __global__ void relu_kernel(const float* input, float* output, int N) {
 
 ```cuda
 // relu.cu —— ReLU 激活函数
-// 编译命令: nvcc -o relu relu.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o relu relu.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

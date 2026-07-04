@@ -1,5 +1,5 @@
 // matrix_multiplication.cu —— Shared Memory Tiling GEMM
-// 编译命令: nvcc -o matmul matrix_multiplication.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o matmul matrix_multiplication.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
