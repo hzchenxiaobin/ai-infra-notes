@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="620" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Cache 层次对比：Shared Memory / L1 / L2</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Layered pyramid: from fast/small to slow/large ===== -->
+  <text x="200" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">存储层次（快→慢，小→大）</text>
+
+  <!-- Register -->
+  <g filter="url(#sk)">
+    <rect x="100" y="92" width="200" height="40" rx="6" fill="#4a8e4a" opacity="0.5" stroke="#2e6e2e" stroke-width="1.4"/>
+  </g>
+  <text x="200" y="112" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Register</text>
+  <text x="200" y="127" text-anchor="middle" font-size="9" fill="#555">~1 cycle | 256KB/SM | 每线程私有</text>
+
+  <!-- Shared Memory + L1 (shared SRAM) -->
+  <g filter="url(#sk)">
+    <rect x="80" y="142" width="240" height="56" rx="6" fill="#e8a838" opacity="0.4" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="200" y="164" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Shared Memory + L1 Cache</text>
+  <text x="200" y="180" text-anchor="middle" font-size="9" fill="#555">~30 cycles | 192KB SRAM（可配比）</text>
+  <text x="200" y="193" text-anchor="middle" font-size="9" fill="#7a5415">⚠ 同一块 SRAM，物理共享</text>
+
+  <!-- L2 Cache -->
+  <g filter="url(#sk)">
+    <rect x="60" y="208" width="280" height="48" rx="6" fill="#8e5db8" opacity="0.35" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="200" y="228" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">L2 Cache</text>
+  <text x="200" y="245" text-anchor="middle" font-size="9" fill="#555">~200 cycles | 40MB（全局共享）</text>
+
+  <!-- Global Memory (HBM) -->
+  <g filter="url(#sk)">
+    <rect x="40" y="266" width="320" height="48" rx="6" fill="#b03a3a" opacity="0.3" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <text x="200" y="286" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Global Memory（HBM）</text>
+  <text x="200" y="303" text-anchor="middle" font-size="9" fill="#555">~400-800 cycles | 40-80GB | 所有 SM 共享</text>
+
+  <!-- arrow: faster up -->
+  <path d="M 380 290 L 380 100" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="390" y="200" font-size="10" fill="#666" font-style="italic">快</text>
+  <text x="390" y="216" font-size="10" fill="#666" font-style="italic">↑</text>
+  <text x="390" y="280" font-size="10" fill="#666" font-style="italic">慢</text>
+
+  <!-- ===== Right side: 3-column comparison ===== -->
+  <text x="640" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">三者核心差异</text>
+
+  <!-- column headers -->
+  <g font-size="11" font-weight="bold">
+    <text x="500" y="100" text-anchor="middle" fill="#c98a2b">Shared Memory</text>
+    <text x="640" y="100" text-anchor="middle" fill="#8e5db8">L1 Cache</text>
+    <text x="780" y="100" text-anchor="middle" fill="#4a8edb">L2 Cache</text>
+  </g>
+
+  <!-- Row 1: 可编程性 -->
+  <g filter="url(#sk)">
+    <rect x="430" y="112" width="340" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="0.8"/>
+  </g>
+  <text x="450" y="128" font-size="10" fill="#666" font-weight="bold">可编程性</text>
+  <text x="500" y="128" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">✅ 显式</text>
+  <text x="640" y="128" text-anchor="middle" font-size="10" fill="#888">❌ 自动</text>
+  <text x="780" y="128" text-anchor="middle" font-size="10" fill="#888">❌ 自动</text>
+  <text x="450" y="142" font-size="8" fill="#888">(__shared__)</text>
+  <text x="640" y="142" font-size="8" fill="#888">(硬件管理)</text>
+  <text x="780" y="142" font-size="8" fill="#888">(硬件管理)</text>
+
+  <!-- Row 2: 作用范围 -->
+  <g filter="url(#sk)">
+    <rect x="430" y="160" width="340" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="0.8"/>
+  </g>
+  <text x="450" y="176" font-size="10" fill="#666" font-weight="bold">作用范围</text>
+  <text x="500" y="176" text-anchor="middle" font-size="10" fill="#2b2b2b">block 内</text>
+  <text x="640" y="176" text-anchor="middle" font-size="10" fill="#2b2b2b">SM 内</text>
+  <text x="780" y="176" text-anchor="middle" font-size="10" fill="#2b2b2b">全局</text>
+  <text x="500" y="190" text-anchor="middle" font-size="8" fill="#888">(__syncthreads)</text>
+  <text x="640" y="190" text-anchor="middle" font-size="8" fill="#888">(warp 间不保证)</text>
+  <text x="780" y="190" text-anchor="middle" font-size="8" fill="#888">(所有 SM)</text>
+
+  <!-- Row 3: 容量 -->
+  <g filter="url(#sk)">
+    <rect x="430" y="208" width="340" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="0.8"/>
+  </g>
+  <text x="450" y="224" font-size="10" fill="#666" font-weight="bold">容量</text>
+  <text x="500" y="224" text-anchor="middle" font-size="10" fill="#2b2b2b">≤100KB/SM</text>
+  <text x="640" y="224" text-anchor="middle" font-size="10" fill="#2b2b2b">≤64KB/SM</text>
+  <text x="780" y="224" text-anchor="middle" font-size="10" fill="#2b2b2b">40MB</text>
+  <text x="500" y="238" text-anchor="middle" font-size="8" fill="#7a5415">⚠ 共享 SRAM</text>
+  <text x="640" y="238" text-anchor="middle" font-size="8" fill="#7a5415">⚠ 共享 SRAM</text>
+  <text x="780" y="238" text-anchor="middle" font-size="8" fill="#888">(全局共享)</text>
+
+  <!-- Row 4: 延迟 -->
+  <g filter="url(#sk)">
+    <rect x="430" y="256" width="340" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="0.8"/>
+  </g>
+  <text x="450" y="272" font-size="10" fill="#666" font-weight="bold">延迟</text>
+  <text x="500" y="272" text-anchor="middle" font-size="10" fill="#2b2b2b">~30 cyc</text>
+  <text x="640" y="272" text-anchor="middle" font-size="10" fill="#2b2b2b">~30 cyc</text>
+  <text x="780" y="272" text-anchor="middle" font-size="10" fill="#2b2b2b">~200 cyc</text>
+  <text x="500" y="286" text-anchor="middle" font-size="8" fill="#888">(最快片上)</text>
+  <text x="640" y="286" text-anchor="middle" font-size="8" fill="#888">(同 smem)</text>
+  <text x="780" y="286" text-anchor="middle" font-size="8" fill="#888">(全局互联)</text>
+
+  <!-- ===== Bottom: smem vs L1 carveout ===== -->
+  <text x="450" y="338" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Shared Memory 与 L1 Cache 共享同一块 SRAM（192KB/SM）</text>
+
+  <!-- Config 1: high smem -->
+  <g filter="url(#sk)">
+    <rect x="80" y="354" width="220" height="80" rx="8" fill="#fff3cf" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="190" y="374" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">高 smem 配置</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="384" width="140" height="20" fill="#e8a838" opacity="0.6" stroke="#c98a2b" stroke-width="0.8"/>
+    <text x="170" y="398" text-anchor="middle" font-size="9" fill="#fff">smem 100KB</text>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="240" y="384" width="50" height="20" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="0.8"/>
+    <text x="265" y="398" text-anchor="middle" font-size="8" fill="#fff">L1 64K</text>
+  </g>
+  <text x="190" y="420" text-anchor="middle" font-size="9" fill="#666">适用：GEMM、Attention（tiling 密集）</text>
+
+  <!-- Config 2: balanced -->
+  <g filter="url(#sk)">
+    <rect x="340" y="354" width="220" height="80" rx="8" fill="#fff3cf" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="450" y="374" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">平衡配置</text>
+  <g filter="url(#sk)">
+    <rect x="360" y="384" width="90" height="20" fill="#e8a838" opacity="0.6" stroke="#c98a2b" stroke-width="0.8"/>
+    <text x="405" y="398" text-anchor="middle" font-size="9" fill="#fff">smem 64KB</text>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="450" y="384" width="100" height="20" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="0.8"/>
+    <text x="500" y="398" text-anchor="middle" font-size="9" fill="#fff">L1 96KB</text>
+  </g>
+  <text x="450" y="420" text-anchor="middle" font-size="9" fill="#666">适用：通用场景</text>
+
+  <!-- Config 3: high L1 -->
+  <g filter="url(#sk)">
+    <rect x="600" y="354" width="220" height="80" rx="8" fill="#fff3cf" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="710" y="374" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">高 L1 配置</text>
+  <g filter="url(#sk)">
+    <rect x="620" y="384" width="40" height="20" fill="#e8a838" opacity="0.6" stroke="#c98a2b" stroke-width="0.8"/>
+    <text x="640" y="398" text-anchor="middle" font-size="8" fill="#fff">smem 28K</text>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="660" y="384" width="140" height="20" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="0.8"/>
+    <text x="730" y="398" text-anchor="middle" font-size="9" fill="#fff">L1 152KB</text>
+  </g>
+  <text x="710" y="420" text-anchor="middle" font-size="9" fill="#666">适用：cache 友好（不规则访问）</text>
+
+  <!-- ===== Bottom: when to use what ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="452" width="780" height="146" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="474" font-size="12" font-weight="bold" fill="#2b2b2b">什么时候用 Shared Memory，什么时候依赖 L1 Cache？</text>
+  <text x="80" y="494" font-size="11" fill="#444">▸ 复用模式<u>确定</u>（如 GEMM tile）→ <b>Shared Memory</b>：显式控制加载/同步，性能可预测</text>
+  <text x="80" y="512" font-size="11" fill="#444">▸ 复用模式<u>不确定</u>（如稀疏访问）→ <b>L1 Cache</b>：硬件自动缓存，无需编程</text>
+  <text x="80" y="530" font-size="11" fill="#444">▸ 需要<u>跨 warp 共享</u>中间结果 → <b>Shared Memory</b>：L1 不保证 warp 间可见性</text>
+  <text x="80" y="548" font-size="11" fill="#444">▸ <u>只读</u>数据广播复用 → <b>L1 Cache + __ldg</b>：走只读 cache 路径，省 smem</text>
+  <text x="80" y="566" font-size="11" fill="#444">▸ 需要<u>避免 bank conflict</u> → <b>Shared Memory + padding</b>：L1 无 bank 概念但不可控</text>
+  <text x="80" y="586" font-size="11" fill="#2e6e2e" font-weight="bold">💡 本质：smem 是"手动挡"（可控/可预测/需编程），L1/L2 是"自动挡"（省心/不保证/硬件管理）</text>
+</svg>

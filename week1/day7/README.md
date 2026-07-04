@@ -78,6 +78,54 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 - 减少 global memory 访问
 - 让 global memory 访问 coalesced
 
+##### Shared Memory / L1 / L2 Cache 深度对比
+
+![Cache 层次对比](../website/images/cache_hierarchy_comparison.svg)
+
+这三者是 GPU 存储层次中最容易混淆的部分。下表从 7 个维度做深度对比：
+
+| 维度 | Shared Memory | L1 Cache | L2 Cache |
+|------|--------------|----------|----------|
+| **物理位置** | 每 SM 内（SRAM） | 每 SM 内（与 smem 共享同一块 SRAM） | 全局共享（所有 SM 可见） |
+| **可编程性** | ✅ 显式管理（`__shared__`） | ❌ 硬件自动管理 | ❌ 硬件自动管理 |
+| **容量（A100）** | 0-100KB / SM（可配） | 0-64KB / SM（与 smem 共享 192KB） | 40MB（全局共享） |
+| **访问延迟** | ~30 cycles | ~30 cycles | ~200 cycles |
+| **带宽** | ~128 bytes/cycle/SM | ~128 bytes/cycle/SM | 远低于 smem/L1（全局互联） |
+| **一致性范围** | block 内（`__syncthreads` 保证可见） | SM 内（warp 间不保证） | 全局（所有 SM 可见） |
+| **典型用途** | 确定要复用的数据（tiling、reduce 中转） | 偶发复用、自动缓存 global 访问 | 跨 block / 跨 SM 数据共享 |
+
+**关键关系：Shared Memory 与 L1 Cache 共享同一块 SRAM**
+
+A100 每 SM 有 192KB SRAM，可通过 `cudaFuncSetAttribute` 配置 smem/L1 比例：
+```cuda
+// 配置 100KB shared memory + 64KB L1 cache
+cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100);
+```
+
+| 配置 | Shared Memory | L1 Cache | 适用场景 |
+|------|--------------|----------|---------|
+| 高 smem | 100KB | 64KB | tiling 密集（GEMM、Attention） |
+| 平衡 | 64KB | 96KB | 通用 |
+| 高 L1 | 28KB | 152KB | cache 友好（不规则访问） |
+
+**什么时候用 Shared Memory，什么时候依赖 L1 Cache？**
+
+| 场景 | 选择 | 原因 |
+|------|------|------|
+| 数据复用模式**确定**（如 GEMM 的 tile） | Shared Memory | 显式控制加载/同步，可预测性能 |
+| 数据复用模式**不确定**（如稀疏访问） | L1 Cache | 硬件自动缓存，无需编程 |
+| 需要**跨 warp 共享**中间结果 | Shared Memory | L1 不保证 warp 间可见性 |
+| **只读**数据的广播复用 | L1 Cache + `__ldg` | `__ldg` 走只读 cache 路径，省 smem |
+| 需要**避免 bank conflict** | Shared Memory + padding | L1 无 bank 概念，但也不可控 |
+
+**性能启示**：
+- Shared Memory 可控但需手动管理（加载、同步、bank conflict）
+- L1 Cache 省心但不保证命中，性能不可预测
+- 两者物理共享，配比要权衡：smem 多了 L1 小，反之亦然
+- **经验法则**：确定要复用的数据用 smem，不确定的依赖 L1
+
+> 💡 **一句话总结**：Shared Memory 是"手动挡"（可控、可预测、需编程），L1/L2 Cache 是"自动挡"（省心、不保证、硬件管理）。GEMM/Attention 等高性能 kernel 必须用 Shared Memory 做显式 tiling，因为自动 cache 无法保证 tile 数据驻留。
+
 #### 4. Coalescing 与 Bank Conflict
 
 | 特性 | Coalescing | Bank Conflict |
