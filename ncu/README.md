@@ -7,12 +7,15 @@
 ```text
 ncu/
 ├── README.md                    # 本文件：总览
+├── example_analysis.md          # ncu 结果分析实例
 └── week1/
     ├── day1/hello_gpu.cu        # Day 1 kernel
     ├── day2/occupancy_test.cu   # Day 2 kernel
     ├── day4/                    # Day 4 kernels + README（原有）
     ├── day5/bank_conflict.cu    # Day 5 kernel
-    └── day6/README.md           # Day 6 综合任务指引
+    └── day6/
+        ├── README.md            # Day 6 综合任务指引
+        └── matrix_multiplication/  # Day 6 LeetGPU 题目
 ```
 
 > **Week 2 代码现状**：`week2/day*/kernels/` 目录目前为空，README 中引用的 `warp_reduce.cu`、`register_blocking_gemm.cu`、`flash_attention.cu` 等源文件尚未创建。因此 Week 2 部分当前只能查看命令模板，无法直接执行；等后续源码补齐后可按相同模式放入 `ncu/week2/`。
