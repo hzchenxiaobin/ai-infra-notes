@@ -103,6 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Image lightbox zoom
     initImageLightbox();
 
+    // Enhance interview Q&A section into styled cards
+    enhanceInterviewQA();
+
     // Open all links in new tab, except sidebar links
     document.querySelectorAll('a').forEach(link => {
         if (link.closest('.sidebar')) {
@@ -112,6 +115,34 @@ document.addEventListener('DOMContentLoaded', function() {
         link.setAttribute('rel', 'noopener noreferrer');
     });
 });
+
+function enhanceInterviewQA() {
+    const content = document.querySelector('.content');
+    if (!content) return;
+
+    content.querySelectorAll('h4').forEach(heading => {
+        const details = heading.nextElementSibling;
+        if (!details || details.tagName !== 'DETAILS') return;
+
+        // Avoid re-processing
+        if (heading.closest('.qa-card')) return;
+
+        const card = document.createElement('div');
+        card.className = 'qa-card';
+
+        heading.classList.add('qa-question');
+        details.classList.add('qa-answer');
+
+        const summary = details.querySelector('summary');
+        if (summary) {
+            summary.classList.add('qa-answer-toggle');
+        }
+
+        heading.parentNode.insertBefore(card, heading);
+        card.appendChild(heading);
+        card.appendChild(details);
+    });
+}
 
 function initImageLightbox() {
     const content = document.querySelector('.content');

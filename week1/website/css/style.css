@@ -330,6 +330,101 @@ body {
     margin: 0;
 }
 
+/* Interview Q&A cards */
+.qa-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin: 16px 0;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.qa-card:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 12px rgba(88, 166, 255, 0.08);
+}
+
+.qa-question {
+    margin: 0;
+    padding: 14px 18px;
+    font-size: 1.05rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+}
+
+.qa-question::before {
+    content: 'Q';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: var(--accent-color);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.qa-answer {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    border-radius: 0;
+    margin: 0;
+    background: transparent;
+}
+
+.qa-answer-toggle {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 18px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.2s, color 0.2s;
+    user-select: none;
+}
+
+.qa-answer-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.qa-answer-toggle::after {
+    content: '▶';
+    font-size: 0.75rem;
+    color: var(--accent-color);
+    transition: transform 0.2s;
+}
+
+.qa-answer[open] .qa-answer-toggle {
+    color: var(--text-color);
+    background: rgba(88, 166, 255, 0.05);
+}
+
+.qa-answer[open] .qa-answer-toggle::after {
+    transform: rotate(90deg);
+}
+
+.qa-answer > *:not(summary) {
+    padding: 0 18px;
+    margin: 12px 0;
+}
+
+.qa-answer > *:not(summary):last-child {
+    margin-bottom: 18px;
+}
+
+.qa-answer > *:not(summary) pre {
+    margin: 12px 0;
+}
+
 /* Checkboxes in lists */
 .content input[type="checkbox"] {
     margin-right: 8px;

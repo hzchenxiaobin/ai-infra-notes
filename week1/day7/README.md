@@ -125,7 +125,7 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 更新 [notes/week1_notes.md](../notes/week1_notes.md)，建议包含以下内容：
 
-```markdown
+~~~~markdown
 # Week 1 学习笔记
 
 ## 1. GPU 执行模型
@@ -170,7 +170,7 @@ nsys profile -o ...
 ## 8. 面试问题自测
 - Q: 什么是 SIMT？
 - A:
-```
+~~~~
 
 #### 任务 2：整理面试题库
 
