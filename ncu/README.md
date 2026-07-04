@@ -16,6 +16,8 @@ ncu/
 ```
 
 > **Week 2 代码现状**：`week2/day*/kernels/` 目录目前为空，README 中引用的 `warp_reduce.cu`、`register_blocking_gemm.cu`、`flash_attention.cu` 等源文件尚未创建。因此 Week 2 部分当前只能查看命令模板，无法直接执行；等后续源码补齐后可按相同模式放入 `ncu/week2/`。
+>
+> **分析实例**：参见 [`example_analysis.md`](example_analysis.md)，以 `bank_conflict` 为例演示如何逐步分析 ncu 输出。
 
 ---
 
