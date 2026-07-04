@@ -118,7 +118,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="{root_prefix}js/main.js"></script>
+    <script src="{root_prefix}js/main.js?v=2"></script>
 </body>
 </html>"""
 

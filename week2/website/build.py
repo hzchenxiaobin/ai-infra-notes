@@ -291,7 +291,7 @@ def page_template(title: str, nav_html: str, markdown: str,
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="../js/main.js"></script>
+    <script src="../js/main.js?v=2"></script>
 </body>
 </html>
 """

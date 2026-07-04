@@ -361,7 +361,7 @@ def page_template(
         }}
     </script>
     {extra_scripts}
-    <script src="{root_prefix}js/main.js"></script>
+    <script src="{root_prefix}js/main.js?v=2"></script>
 </body>
 </html>
 """
