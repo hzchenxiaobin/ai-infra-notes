@@ -1,59 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520">
-  <rect width="760" height="520" fill="#0d1117"/>
-  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">两级归约：Warp Reduce + Block Reduce</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="560" viewBox="0 0 820 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="560" fill="#fdfcf7"/>
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">两级归约：Warp Reduce + Block Reduce</text>
+  <path d="M 250 42 Q 410 50 570 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <!-- Step 1: per-thread accumulation -->
-  <text x="380" y="72" text-anchor="middle" font-size="14" font-weight="bold" fill="#58a6ff">Step 1: 每个线程读取 Global Memory 并做 per-thread 累加（grid-stride loop）</text>
-  <g transform="translate(80, 85)">
-    <rect x="0" y="0" width="600" height="40" rx="6" fill="#161b22" stroke="#30363d"/>
-    <text x="20" y="25" font-size="12" fill="#c9d1d9">for (i = tid; i &lt; n; i += blockDim.x * gridDim.x)  sum += input[i];</text>
+  <!-- ===== Step 1: per-thread accumulation ===== -->
+  <text x="410" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Step 1：每线程读 Global Memory 做 per-thread 累加（grid-stride loop）</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="80" width="660" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="410" y="103" text-anchor="middle" font-size="11" fill="#2b2b2b" font-family="monospace">for (i = tid; i &lt; n; i += blockDim.x * gridDim.x)  sum += input[i];</text>
+  <path d="M 410 118 L 410 130" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 2: warp reduce ===== -->
+  <text x="410" y="148" text-anchor="middle" font-size="13" font-weight="bold" fill="#c98a2b">Step 2：Warp 级归约（__shfl_down_sync butterfly，每 warp 32 线程 → lane 0）</text>
+
+  <!-- Warp 0 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="162" width="110" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" opacity="0.6"/>
+  </g>
+  <text x="115" y="184" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Warp 0</text>
+  <text x="115" y="200" text-anchor="middle" font-size="9" fill="#666">32 threads → lane 0</text>
+  <g filter="url(#sk)">
+    <circle cx="150" cy="208" r="9" fill="#c98a2b" opacity="0.8" stroke="#a66f1f" stroke-width="1"/>
+    <text x="150" y="211" text-anchor="middle" font-size="7" fill="#fff" font-weight="bold">S0</text>
   </g>
 
-  <!-- Step 2: warp reduce -->
-  <text x="380" y="155" text-anchor="middle" font-size="14" font-weight="bold" fill="#d29922">Step 2: Warp 级归约（__shfl_down_sync butterfly，每个 warp 的 32 线程累加到 lane 0）</text>
-  <g transform="translate(120, 170)">
-    <!-- Warp 0 -->
-    <rect x="0" y="0" width="100" height="60" rx="6" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-    <text x="50" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Warp 0</text>
-    <text x="50" y="42" text-anchor="middle" font-size="10" fill="#8b949e">32 threads → lane 0</text>
-    <circle cx="85" cy="30" r="8" fill="#d29922"/><text x="85" y="34" text-anchor="middle" font-size="8" fill="#0d1117" font-weight="bold">S0</text>
-
-    <rect x="130" y="0" width="100" height="60" rx="6" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-    <text x="180" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Warp 1</text>
-    <text x="180" y="42" text-anchor="middle" font-size="10" fill="#8b949e">32 threads → lane 0</text>
-    <circle cx="215" cy="30" r="8" fill="#d29922"/><text x="215" y="34" text-anchor="middle" font-size="8" fill="#0d1117" font-weight="bold">S1</text>
-
-    <rect x="260" y="0" width="100" height="60" rx="6" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-    <text x="310" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Warp 2</text>
-    <text x="310" y="42" text-anchor="middle" font-size="10" fill="#8b949e">32 threads → lane 0</text>
-    <circle cx="345" cy="30" r="8" fill="#d29922"/><text x="345" y="34" text-anchor="middle" font-size="8" fill="#0d1117" font-weight="bold">S2</text>
-
-    <text x="400" y="34" font-size="16" fill="#8b949e">...</text>
-
-    <rect x="430" y="0" width="100" height="60" rx="6" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-    <text x="480" y="22" text-anchor="middle" font-size="12" fill="#c9d1d9" font-weight="bold">Warp 31</text>
-    <text x="480" y="42" text-anchor="middle" font-size="10" fill="#8b949e">32 threads → lane 0</text>
-    <circle cx="515" cy="30" r="8" fill="#d29922"/><text x="515" y="34" text-anchor="middle" font-size="8" fill="#0d1117" font-weight="bold">S31</text>
+  <!-- Warp 1 -->
+  <g filter="url(#sk)">
+    <rect x="185" y="162" width="110" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" opacity="0.6"/>
+  </g>
+  <text x="240" y="184" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Warp 1</text>
+  <text x="240" y="200" text-anchor="middle" font-size="9" fill="#666">32 threads → lane 0</text>
+  <g filter="url(#sk)">
+    <circle cx="275" cy="208" r="9" fill="#c98a2b" opacity="0.8" stroke="#a66f1f" stroke-width="1"/>
+    <text x="275" y="211" text-anchor="middle" font-size="7" fill="#fff" font-weight="bold">S1</text>
   </g>
 
-  <!-- Step 3: shared memory -->
-  <text x="380" y="270" text-anchor="middle" font-size="14" font-weight="bold" fill="#a371f7">Step 3: lane 0 写入 Shared Memory → __syncthreads()</text>
-  <g transform="translate(200, 285)">
-    <rect x="0" y="0" width="360" height="50" rx="6" fill="#8957e5" opacity="0.15" stroke="#a371f7" stroke-width="2"/>
-    <text x="180" y="20" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">__shared__ float warpSums[32]</text>
-    <text x="180" y="38" text-anchor="middle" font-size="11" fill="#8b949e">warpSums[0]=S0, warpSums[1]=S1, ..., warpSums[31]=S31</text>
+  <!-- Warp 2 -->
+  <g filter="url(#sk)">
+    <rect x="310" y="162" width="110" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" opacity="0.6"/>
+  </g>
+  <text x="365" y="184" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Warp 2</text>
+  <text x="365" y="200" text-anchor="middle" font-size="9" fill="#666">32 threads → lane 0</text>
+  <g filter="url(#sk)">
+    <circle cx="400" cy="208" r="9" fill="#c98a2b" opacity="0.8" stroke="#a66f1f" stroke-width="1"/>
+    <text x="400" y="211" text-anchor="middle" font-size="7" fill="#fff" font-weight="bold">S2</text>
   </g>
 
-  <!-- Step 4: warp 0 final reduce -->
-  <text x="380" y="370" text-anchor="middle" font-size="14" font-weight="bold" fill="#3fb950">Step 4: Warp 0 读取 warpSums[0..31]，再执行一次 warpReduceSum</text>
-  <g transform="translate(250, 385)">
-    <rect x="0" y="0" width="260" height="60" rx="6" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
-    <text x="130" y="22" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Warp 0 (32 lanes)</text>
-    <text x="130" y="42" text-anchor="middle" font-size="11" fill="#8b949e">lane i 读 warpSums[i] → warpReduceSum → lane 0</text>
+  <text x="445" y="194" font-size="18" fill="#888">...</text>
+
+  <!-- Warp 31 -->
+  <g filter="url(#sk)">
+    <rect x="475" y="162" width="115" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" opacity="0.6"/>
+  </g>
+  <text x="532" y="184" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Warp 31</text>
+  <text x="532" y="200" text-anchor="middle" font-size="9" fill="#666">32 threads → lane 0</text>
+  <g filter="url(#sk)">
+    <circle cx="568" cy="208" r="9" fill="#c98a2b" opacity="0.8" stroke="#a66f1f" stroke-width="1"/>
+    <text x="568" y="211" text-anchor="middle" font-size="7" fill="#fff" font-weight="bold">S31</text>
   </g>
 
-  <!-- Final result -->
-  <line x1="380" y1="450" x2="380" y2="475" stroke="#3fb950" stroke-width="2"/>
-  <rect x="280" y="475" width="200" height="35" rx="8" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <text x="380" y="498" text-anchor="middle" font-size="14" fill="#fff" font-weight="bold">output[blockIdx.x] = sum</text>
+  <!-- arrows from warps down to shared memory -->
+  <g stroke="#8e5db8" stroke-width="1.3" fill="none" stroke-dasharray="4 3">
+    <path d="M 150 220 Q 150 250 250 268" marker-end="url(#ar)" filter="url(#sk)"/>
+    <path d="M 275 220 Q 275 250 280 268" marker-end="url(#ar)" filter="url(#sk)"/>
+    <path d="M 400 220 Q 400 250 350 268" marker-end="url(#ar)" filter="url(#sk)"/>
+    <path d="M 568 220 Q 568 250 480 268" marker-end="url(#ar)" filter="url(#sk)"/>
+  </g>
+
+  <!-- ===== Step 3: shared memory ===== -->
+  <text x="410" y="256" text-anchor="middle" font-size="13" font-weight="bold" fill="#8e5db8">Step 3：lane 0 写入 Shared Memory → __syncthreads()</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="270" width="520" height="54" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="410" y="292" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold" font-family="monospace">__shared__ float warpSums[32]</text>
+  <text x="410" y="312" text-anchor="middle" font-size="10" fill="#666">warpSums[0]=S0,  warpSums[1]=S1,  ...,  warpSums[31]=S31</text>
+  <path d="M 410 326 L 410 340" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 4: warp 0 final reduce ===== -->
+  <text x="410" y="358" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8e4a">Step 4：Warp 0 读 warpSums[0..31]，再执行一次 warpReduceSum</text>
+  <g filter="url(#sk)">
+    <rect x="220" y="372" width="380" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="410" y="394" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Warp 0（32 lanes）</text>
+  <text x="410" y="414" text-anchor="middle" font-size="10" fill="#555">lane i 读 warpSums[i] → warpReduceSum → lane 0</text>
+  <path d="M 410 434 L 410 448" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Final result ===== -->
+  <g filter="url(#sk)">
+    <rect x="260" y="452" width="300" height="38" rx="10" fill="#4a8e4a" opacity="0.8" stroke="#2e6e2e" stroke-width="2"/>
+  </g>
+  <text x="410" y="476" text-anchor="middle" font-size="14" fill="#fff" font-weight="bold" font-family="monospace">output[blockIdx.x] = sum</text>
+
+  <!-- key insight box -->
+  <g filter="url(#sk)">
+    <rect x="60" y="510" width="700" height="40" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="410" y="528" text-anchor="middle" font-size="11" fill="#444">💡 smem[32] 正好放下 32 个 warp 的部分和 → 这就是 block 最多 32 个 warp（1024 线程）设计的来源</text>
+  <text x="410" y="544" text-anchor="middle" font-size="10" fill="#888">跨 block 汇总：atomicAdd 或第二次 kernel launch</text>
 </svg>

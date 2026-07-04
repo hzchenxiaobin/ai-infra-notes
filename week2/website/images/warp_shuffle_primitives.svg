@@ -1,111 +1,164 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560">
-  <rect width="760" height="560" fill="#0d1117"/>
-  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Warp Shuffle 四大家族数据流向</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="620" viewBox="0 0 820 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="arO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c98a2b"/>
+    </marker>
+    <marker id="arP" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#8e5db8"/>
+    </marker>
+  </defs>
+  <rect width="820" height="620" fill="#fdfcf7"/>
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Warp Shuffle 四大家族数据流向</text>
+  <path d="M 240 42 Q 410 50 580 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <!-- __shfl_sync (broadcast) -->
-  <text x="380" y="72" text-anchor="middle" font-size="15" font-weight="bold" fill="#58a6ff">__shfl_sync(mask, val, srcLane=4)</text>
-  <g transform="translate(140, 85)">
-    <text x="0" y="14" font-size="11" fill="#8b949e">Lane</text>
-    <rect x="0" y="20" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="36" text-anchor="middle" font-size="10" fill="#c9d1d9">0</text>
-    <rect x="0" y="44" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="60" text-anchor="middle" font-size="10" fill="#c9d1d9">1</text>
-    <rect x="0" y="68" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="84" text-anchor="middle" font-size="10" fill="#c9d1d9">2</text>
-    <rect x="0" y="92" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="108" text-anchor="middle" font-size="10" fill="#c9d1d9">3</text>
-    <rect x="0" y="116" width="40" height="24" fill="#238636" stroke="#3fb950" stroke-width="2"/><text x="20" y="132" text-anchor="middle" font-size="10" fill="#c9d1d9" font-weight="bold">4</text>
-    <rect x="0" y="140" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="156" text-anchor="middle" font-size="10" fill="#c9d1d9">5</text>
-    <rect x="0" y="164" width="40" height="24" fill="#30363d" stroke="#484f58"/><text x="20" y="180" text-anchor="middle" font-size="10" fill="#c9d1d9">...</text>
+  <!-- ===== Top: __shfl_sync (broadcast) ===== -->
+  <text x="410" y="70" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">__shfl_sync(mask, val, srcLane=4) — 广播</text>
+  <g filter="url(#sk)">
+    <rect x="130" y="82" width="560" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <!-- Lane labels (left column) -->
+  <g font-size="10" fill="#555">
+    <text x="145" y="108">Lane 0</text>
+    <text x="145" y="128">Lane 1</text>
+    <text x="145" y="148">Lane 2</text>
+    <text x="145" y="168">Lane 3</text>
+    <text x="145" y="188">Lane 4</text>
+    <text x="145" y="208">Lane 5</text>
+  </g>
+  <!-- source column -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="220" y="96" width="36" height="18" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="238" y="109" text-anchor="middle">V0</text></g>
+    <g filter="url(#sk)"><rect x="220" y="116" width="36" height="18" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="238" y="129" text-anchor="middle">V1</text></g>
+    <g filter="url(#sk)"><rect x="220" y="136" width="36" height="18" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="238" y="149" text-anchor="middle">V2</text></g>
+    <g filter="url(#sk)"><rect x="220" y="156" width="36" height="18" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="238" y="169" text-anchor="middle">V3</text></g>
+    <!-- src lane 4 highlighted -->
+    <g filter="url(#sk)"><rect x="220" y="176" width="36" height="18" fill="#4a8edb" opacity="0.5" stroke="#2b6e9e" stroke-width="1.2"/><text x="238" y="189" text-anchor="middle" fill="#fff" font-weight="bold">V4</text></g>
+    <g filter="url(#sk)"><rect x="220" y="196" width="36" height="18" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="238" y="209" text-anchor="middle">V5</text></g>
+  </g>
+  <!-- arrows from lane4 to all results -->
+  <g stroke="#4a8edb" stroke-width="1.4" fill="none">
+    <path d="M 258 185 Q 320 105 370 105" marker-end="url(#arB)" filter="url(#sk)"/>
+    <path d="M 258 185 Q 320 125 370 125" marker-end="url(#arB)" filter="url(#sk)"/>
+    <path d="M 258 185 Q 320 145 370 145" marker-end="url(#arB)" filter="url(#sk)"/>
+    <path d="M 258 185 Q 320 165 370 165" marker-end="url(#arB)" filter="url(#sk)"/>
+    <path d="M 258 185 L 370 185" marker-end="url(#arB)" filter="url(#sk)"/>
+    <path d="M 258 185 Q 320 205 370 205" marker-end="url(#arB)" filter="url(#sk)"/>
+  </g>
+  <!-- result column (all V4) -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="370" y="96" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="109" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="370" y="116" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="129" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="370" y="136" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="149" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="370" y="156" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="169" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="370" y="176" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="189" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="370" y="196" width="36" height="18" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="0.8"/><text x="388" y="209" text-anchor="middle">V4</text></g>
+  </g>
+  <text x="440" y="145" font-size="11" fill="#2b6e9e" font-weight="bold">所有 lane 得到</text>
+  <text x="440" y="161" font-size="11" fill="#2b6e9e" font-weight="bold">lane 4 的值</text>
 
-    <!-- arrows -->
-    <line x1="40" y1="32" x2="100" y2="32" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-    <line x1="40" y1="56" x2="100" y2="56" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-    <line x1="40" y1="80" x2="100" y2="80" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-    <line x1="40" y1="104" x2="100" y2="104" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-    <line x1="40" y1="128" x2="100" y2="128" stroke="#3fb950" stroke-width="2" marker-end="url(#arr56)"/>
-    <line x1="40" y1="152" x2="100" y2="152" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-    <line x1="40" y1="176" x2="100" y2="176" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr56)"/>
-
-    <!-- result -->
-    <rect x="100" y="20" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="36" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="44" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="60" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="68" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="84" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="92" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="108" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="116" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="140" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="156" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-    <rect x="100" y="164" width="40" height="24" fill="#1f6feb" opacity="0.4" stroke="#58a6ff"/><text x="120" y="180" text-anchor="middle" font-size="9" fill="#c9d1d9">V4</text>
-
-    <text x="160" y="104" font-size="11" fill="#3fb950">广播：所有 lane 得到 lane 4 的值</text>
+  <!-- ===== Bottom-left: __shfl_down_sync ===== -->
+  <text x="210" y="220" text-anchor="middle" font-size="13" font-weight="bold" fill="#c98a2b">__shfl_down_sync(delta=2) — 向下偏移</text>
+  <g filter="url(#sk)">
+    <rect x="50" y="232" width="320" height="180" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <g font-size="9" fill="#555">
+    <text x="65" y="258">Lane 0</text>
+    <text x="65" y="280">Lane 1</text>
+    <text x="65" y="302">Lane 2</text>
+    <text x="65" y="324">Lane 3</text>
+    <text x="65" y="346">Lane 4</text>
+    <text x="65" y="368">Lane 5</text>
+  </g>
+  <!-- source values -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="130" y="248" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="260" text-anchor="middle">V0</text></g>
+    <g filter="url(#sk)"><rect x="130" y="270" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="282" text-anchor="middle">V1</text></g>
+    <g filter="url(#sk)"><rect x="130" y="292" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="304" text-anchor="middle">V2</text></g>
+    <g filter="url(#sk)"><rect x="130" y="314" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="326" text-anchor="middle">V3</text></g>
+    <g filter="url(#sk)"><rect x="130" y="336" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="348" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="130" y="358" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="146" y="370" text-anchor="middle">V5</text></g>
+  </g>
+  <!-- arrows (down by 2) -->
+  <g stroke="#c98a2b" stroke-width="1.3" fill="none">
+    <path d="M 164 256 L 250 296" marker-end="url(#arO)" filter="url(#sk)"/>
+    <path d="M 164 278 L 250 318" marker-end="url(#arO)" filter="url(#sk)"/>
+    <path d="M 164 300 L 250 340" marker-end="url(#arO)" filter="url(#sk)"/>
+    <path d="M 164 322 L 250 362" marker-end="url(#arO)" filter="url(#sk)"/>
+  </g>
+  <!-- result values -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="250" y="290" width="32" height="16" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="0.8"/><text x="266" y="302" text-anchor="middle" font-weight="bold">V2</text></g>
+    <g filter="url(#sk)"><rect x="250" y="312" width="32" height="16" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="0.8"/><text x="266" y="324" text-anchor="middle" font-weight="bold">V3</text></g>
+    <g filter="url(#sk)"><rect x="250" y="334" width="32" height="16" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="0.8"/><text x="266" y="346" text-anchor="middle" font-weight="bold">V4</text></g>
+    <g filter="url(#sk)"><rect x="250" y="356" width="32" height="16" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="0.8"/><text x="266" y="368" text-anchor="middle" font-weight="bold">V5</text></g>
+    <text x="266" y="388" text-anchor="middle" font-size="9" fill="#888">? ?</text>
+    <text x="266" y="402" text-anchor="middle" font-size="9" fill="#888">(未定义)</text>
   </g>
 
-  <line x1="40" y1="295" x2="720" y2="295" stroke="#30363d" stroke-width="1"/>
-
-  <!-- __shfl_down_sync -->
-  <text x="190" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#d29922">__shfl_down_sync(delta=2)</text>
-  <g transform="translate(60, 340)">
-    <text x="0" y="14" font-size="10" fill="#8b949e">Lane</text>
-    <rect x="0" y="18" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="32" text-anchor="middle" font-size="9" fill="#c9d1d9">0</text>
-    <rect x="0" y="38" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="52" text-anchor="middle" font-size="9" fill="#c9d1d9">1</text>
-    <rect x="0" y="58" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="72" text-anchor="middle" font-size="9" fill="#c9d1d9">2</text>
-    <rect x="0" y="78" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="92" text-anchor="middle" font-size="9" fill="#c9d1d9">3</text>
-    <rect x="0" y="98" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="112" text-anchor="middle" font-size="9" fill="#c9d1d9">4</text>
-    <rect x="0" y="118" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">5</text>
-
-    <text x="42" y="32" font-size="10" fill="#c9d1d9">V0</text>
-    <text x="42" y="52" font-size="10" fill="#c9d1d9">V1</text>
-    <text x="42" y="72" font-size="10" fill="#c9d1d9">V2</text>
-    <text x="42" y="92" font-size="10" fill="#c9d1d9">V3</text>
-    <text x="42" y="112" font-size="10" fill="#c9d1d9">V4</text>
-    <text x="42" y="132" font-size="10" fill="#c9d1d9">V5</text>
-
-    <line x1="55" y1="28" x2="85" y2="68" stroke="#d29922" stroke-width="1.5"/>
-    <line x1="55" y1="48" x2="85" y2="88" stroke="#d29922" stroke-width="1.5"/>
-    <line x1="55" y1="68" x2="85" y2="108" stroke="#d29922" stroke-width="1.5"/>
-    <line x1="55" y1="88" x2="85" y2="128" stroke="#d29922" stroke-width="1.5"/>
-
-    <text x="95" y="32" font-size="10" fill="#e3b341" font-weight="bold">V2</text>
-    <text x="95" y="52" font-size="10" fill="#e3b341" font-weight="bold">V3</text>
-    <text x="95" y="72" font-size="10" fill="#e3b341" font-weight="bold">V4</text>
-    <text x="95" y="92" font-size="10" fill="#e3b341" font-weight="bold">V5</text>
-    <text x="95" y="112" font-size="10" fill="#8b949e">?</text>
-    <text x="95" y="132" font-size="10" fill="#8b949e">?</text>
-
-    <text x="0" y="165" font-size="10" fill="#8b949e">向下偏移：lane i 读 lane (i+2)</text>
+  <!-- ===== Bottom-right: __shfl_xor_sync ===== -->
+  <text x="600" y="220" text-anchor="middle" font-size="13" font-weight="bold" fill="#8e5db8">__shfl_xor_sync(laneMask=2) — XOR 交换</text>
+  <g filter="url(#sk)">
+    <rect x="440" y="232" width="320" height="180" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <g font-size="9" fill="#555">
+    <text x="455" y="258">Lane 0</text>
+    <text x="455" y="280">Lane 1</text>
+    <text x="455" y="302">Lane 2</text>
+    <text x="455" y="324">Lane 3</text>
+    <text x="455" y="346">Lane 4</text>
+    <text x="455" y="368">Lane 5</text>
+  </g>
+  <!-- source values -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="520" y="248" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="260" text-anchor="middle">V0</text></g>
+    <g filter="url(#sk)"><rect x="520" y="270" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="282" text-anchor="middle">V1</text></g>
+    <g filter="url(#sk)"><rect x="520" y="292" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="304" text-anchor="middle">V2</text></g>
+    <g filter="url(#sk)"><rect x="520" y="314" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="326" text-anchor="middle">V3</text></g>
+    <g filter="url(#sk)"><rect x="520" y="336" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="348" text-anchor="middle">V4</text></g>
+    <g filter="url(#sk)"><rect x="520" y="358" width="32" height="16" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/><text x="536" y="370" text-anchor="middle">V5</text></g>
+  </g>
+  <!-- arrows (XOR swap: 0↔2, 1↔3, 4↔6...) -->
+  <g stroke="#8e5db8" stroke-width="1.3" fill="none">
+    <path d="M 554 256 Q 600 280 640 296" marker-end="url(#arP)" filter="url(#sk)"/>
+    <path d="M 554 278 Q 600 300 640 318" marker-end="url(#arP)" filter="url(#sk)"/>
+    <path d="M 554 300 Q 600 280 640 256" marker-end="url(#arP)" filter="url(#sk)"/>
+    <path d="M 554 322 Q 600 300 640 278" marker-end="url(#arP)" filter="url(#sk)"/>
+    <path d="M 554 344 Q 600 360 640 362" marker-end="url(#arP)" filter="url(#sk)"/>
+    <path d="M 554 366 Q 600 360 640 344" marker-end="url(#arP)" filter="url(#sk)"/>
+  </g>
+  <!-- result values -->
+  <g font-size="9" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="640" y="248" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="260" text-anchor="middle" font-weight="bold">V2</text></g>
+    <g filter="url(#sk)"><rect x="640" y="270" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="282" text-anchor="middle" font-weight="bold">V3</text></g>
+    <g filter="url(#sk)"><rect x="640" y="292" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="304" text-anchor="middle" font-weight="bold">V0</text></g>
+    <g filter="url(#sk)"><rect x="640" y="314" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="326" text-anchor="middle" font-weight="bold">V1</text></g>
+    <g filter="url(#sk)"><rect x="640" y="336" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="348" text-anchor="middle" font-weight="bold">V6</text></g>
+    <g filter="url(#sk)"><rect x="640" y="358" width="32" height="16" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="0.8"/><text x="656" y="370" text-anchor="middle" font-weight="bold">V4</text></g>
   </g>
 
-  <!-- __shfl_xor_sync -->
-  <text x="520" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#a371f7">__shfl_xor_sync(laneMask=2)</text>
-  <g transform="translate(400, 340)">
-    <text x="0" y="14" font-size="10" fill="#8b949e">Lane</text>
-    <rect x="0" y="18" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="32" text-anchor="middle" font-size="9" fill="#c9d1d9">0</text>
-    <rect x="0" y="38" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="52" text-anchor="middle" font-size="9" fill="#c9d1d9">1</text>
-    <rect x="0" y="58" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="72" text-anchor="middle" font-size="9" fill="#c9d1d9">2</text>
-    <rect x="0" y="78" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="92" text-anchor="middle" font-size="9" fill="#c9d1d9">3</text>
-    <rect x="0" y="98" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="112" text-anchor="middle" font-size="9" fill="#c9d1d9">4</text>
-    <rect x="0" y="118" width="32" height="20" fill="#30363d" stroke="#484f58"/><text x="16" y="132" text-anchor="middle" font-size="9" fill="#c9d1d9">5</text>
-
-    <text x="42" y="32" font-size="10" fill="#c9d1d9">V0</text>
-    <text x="42" y="52" font-size="10" fill="#c9d1d9">V1</text>
-    <text x="42" y="72" font-size="10" fill="#c9d1d9">V2</text>
-    <text x="42" y="92" font-size="10" fill="#c9d1d9">V3</text>
-    <text x="42" y="112" font-size="10" fill="#c9d1d9">V4</text>
-    <text x="42" y="132" font-size="10" fill="#c9d1d9">V5</text>
-
-    <line x1="55" y1="28" x2="85" y2="68" stroke="#a371f7" stroke-width="1.5"/>
-    <line x1="55" y1="48" x2="85" y2="88" stroke="#a371f7" stroke-width="1.5"/>
-    <line x1="55" y1="68" x2="85" y2="28" stroke="#a371f7" stroke-width="1.5"/>
-    <line x1="55" y1="88" x2="85" y2="48" stroke="#a371f7" stroke-width="1.5"/>
-    <line x1="55" y1="108" x2="85" y2="128" stroke="#a371f7" stroke-width="1.5"/>
-    <line x1="55" y1="128" x2="85" y2="108" stroke="#a371f7" stroke-width="1.5"/>
-
-    <text x="95" y="32" font-size="10" fill="#a371f7" font-weight="bold">V2</text>
-    <text x="95" y="52" font-size="10" fill="#a371f7" font-weight="bold">V3</text>
-    <text x="95" y="72" font-size="10" fill="#a371f7" font-weight="bold">V0</text>
-    <text x="95" y="92" font-size="10" fill="#a371f7" font-weight="bold">V1</text>
-    <text x="95" y="112" font-size="10" fill="#a371f7" font-weight="bold">V6</text>
-    <text x="95" y="132" font-size="10" fill="#a371f7" font-weight="bold">V4</text>
-
-    <text x="0" y="165" font-size="10" fill="#8b949e">XOR 交换：lane i 与 lane (i^2) 交换</text>
+  <!-- ===== Bottom: latency comparison ===== -->
+  <g filter="url(#sk)">
+    <rect x="170" y="450" width="480" height="70" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
   </g>
+  <text x="410" y="478" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">延迟对比</text>
+  <text x="410" y="502" text-anchor="middle" font-size="12" fill="#4a8e4a">Warp Shuffle ~1-2 cycles</text>
+  <text x="410" y="518" text-anchor="middle" font-size="12" fill="#b03a3a">Shared Memory ~20-30 cycles（差 10-20x）</text>
 
-  <!-- latency comparison -->
-  <rect x="200" y="520" width="360" height="30" rx="6" fill="#161b22" stroke="#30363d"/>
-  <text x="380" y="540" text-anchor="middle" font-size="13" fill="#c9d1d9">Shuffle ~1-2 cycles ≪ Shared Memory ~20-30 cycles</text>
+  <!-- ===== Bottom: __shfl_up_sync note ===== -->
+  <g filter="url(#sk)">
+    <rect x="170" y="540" width="480" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="410" y="562" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">第四个：__shfl_up_sync(delta) — 向上偏移</text>
+  <text x="410" y="582" text-anchor="middle" font-size="11" fill="#444">lane i 读 lane (i - delta)，用于 prefix sum（前缀和）</text>
+  <text x="410" y="598" text-anchor="middle" font-size="10" fill="#888">与 __shfl_down_sync 对称，是 scan 问题的核心原语</text>
 </svg>
