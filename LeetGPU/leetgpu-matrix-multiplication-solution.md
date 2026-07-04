@@ -42,17 +42,38 @@ __global__ void matmul_naive(const float* A, const float* B, float* C, int M, in
 
 - 每个线程读 A 的一行 + B 的一列，大量重复全局内存访问。
 
+![Naive GEMM 流程](images/matmul_naive.png)
+
+*图 1：Naive GEMM — 每个线程读取 A 的一行与 B 的一列，计算 C 的一个元素。*
+
 ## 3. GPU 设计
 
 ### 3.1 并行化策略
 
 **Shared Memory Tiling**：把 A/B 的子矩阵预取到 Shared Memory，实现 K 维度的数据复用。
 
+![Shared Memory Tiling 流程](images/matmul_tiled.png)
+
+*图 2：Shared Memory Tiling — 沿 K 维分块加载 A/B tile 到 Shared Memory，每个 block 累加得到 C 的一个 tile。*
+
 - Block tile：`TILE_SIZE × TILE_SIZE`（如 16×16）
 - 每个 block 协作加载 A 的 `TILE_SIZE × TILE_SIZE` tile 和 B 的 `TILE_SIZE × TILE_SIZE` tile
 - 在 Shared Memory 中做乘加，减少全局内存访问
 
-### 3.2 存储层次使用
+### 3.2 Thread / Block 映射
+
+每个 block 负责计算 C 中一个 `TILE_SIZE × TILE_SIZE` 的子块；block 内的每个线程对应一个输出元素。
+
+![Thread / Block 映射](images/matmul_thread_block_mapping.png)
+
+*图 3：C 矩阵按 TILE 划分给 block；block 内部每个线程负责一个 `C[row][col]`。*
+
+```
+row = blockIdx.y * TILE_SIZE + threadIdx.y
+col = blockIdx.x * TILE_SIZE + threadIdx.x
+```
+
+### 3.3 存储层次使用
 
 | 层次 | 用途 | 效果 |
 |------|------|------|
