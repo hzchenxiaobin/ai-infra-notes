@@ -1,0 +1,5 @@
+   1704349 ./day2/day2_sl_dscan_full.ncu-rep
+   1696866 ./day2/day2_softmax_layernorm_full.ncu-rep
+   1922459 ./day3/day3_softmax_layernorm_opt_full.ncu-rep
+   1842646 ./day3/day3_warp_vs_block_full.ncu-rep
+=== Total: 4 files ===

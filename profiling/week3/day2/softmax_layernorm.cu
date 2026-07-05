@@ -1,5 +1,5 @@
 // softmax_layernorm.cu —— Softmax + LayerNorm 完整实现（三遍扫描 + 两级 reduce）
-// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 // 运行命令: ./softmax_layernorm
 
 #include <cuda_runtime.h>
