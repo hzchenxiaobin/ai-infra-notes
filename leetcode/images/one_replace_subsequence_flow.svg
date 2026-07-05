@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="73" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">前后缀预处理 + 枚举断点算法流程</text>
+  <path d="M 280 42 Q 470 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Step 1: Prefix pre ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="62" width="820" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="86" font-size="13" font-weight="bold" fill="#2b6e9e">Step 1：前缀预处理 pre[i]</text>
+  <text x="80" y="108" font-size="11" fill="#444" font-family="monospace">pre[i] = s[0..i-1] 在 t 中从左到右贪心匹配后，t 的下一个待匹配位置</text>
+  <text x="80" y="128" font-size="11" fill="#444" font-family="monospace">双指针：j 在 t 上推进，对 s 每个字符找 t 中第一个匹配 → O(n+m)</text>
+  <text x="80" y="148" font-size="10" fill="#888">pre[0]=0，若无法匹配标记 pre[i]=m+1（越界哨兵）</text>
+
+  <path d="M 470 164 L 470 176" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 2: Suffix suf ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="180" width="820" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="204" font-size="13" font-weight="bold" fill="#2e6e2e">Step 2：后缀预处理 suf[i]</text>
+  <text x="80" y="226" font-size="11" fill="#444" font-family="monospace">suf[i] = s[i..n-1] 在 t 中从右到左贪心匹配后，t 的已匹配最小位置</text>
+  <text x="80" y="246" font-size="11" fill="#444" font-family="monospace">双指针：j 在 t 上从右退，对 s 每个字符从右往左找 t 中最后一个匹配</text>
+  <text x="80" y="266" font-size="10" fill="#888">suf[n]=m，若无法匹配标记 suf[i]=-1</text>
+
+  <path d="M 470 282 L 470 294" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 3: Enumerate break point ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="298" width="820" height="130" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="322" font-size="13" font-weight="bold" fill="#7a5415">Step 3：枚举替换点 i，判断 pre[i] &lt; suf[i+1]</text>
+  <text x="80" y="346" font-size="11" fill="#444">s 分成三段：前缀 s[0..i-1] | 替换点 s[i] | 后缀 s[i+1..n-1]</text>
+  <text x="80" y="368" font-size="11" fill="#444" font-family="monospace">前缀匹配到 t[0..pre[i]-1]，后缀匹配到 t[suf[i+1]..m-1]</text>
+  <text x="80" y="390" font-size="12" fill="#c98a2b" font-weight="bold">若 pre[i] &lt; suf[i+1] → t[pre[i]..suf[i+1]-1] 有空隙放 s[i] → true</text>
+  <text x="80" y="410" font-size="10" fill="#888">替换 s[i] 为 t[pre[i]]，三段不重叠且顺序正确 → s 是 t 的子序列</text>
+
+  <path d="M 470 430 L 470 442" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 4: No-replace check ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="446" width="820" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="470" font-size="13" font-weight="bold" fill="#5a3a7a">Step 0（优先检查）：不替换，s 本身是否为 t 的子序列？</text>
+  <text x="80" y="490" font-size="11" fill="#444" font-family="monospace">pre[n] &lt;= m → true（前缀全部匹配完，无需替换）</text>
+
+  <!-- ===== Example walkthrough ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="524" width="820" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="548" font-size="12" font-weight="bold" fill="#2b2b2b">示例：s="cat", t="chat"</text>
+  <text x="80" y="568" font-size="11" fill="#444">pre=[0,1,3,4]，pre[3]=4&lt;=m=4 → s="cat" 本身已是 t 子序列（c,a,t 匹配 t[0,2,3]）</text>
+  <text x="80" y="588" font-size="11" fill="#2e6e2e" font-weight="bold">Step 0 直接返回 true（0 次替换即可）✓</text>
+  <text x="80" y="610" font-size="10" fill="#888">复杂度：时间 O(n+m) | 空间 O(n)</text>
+</svg>
