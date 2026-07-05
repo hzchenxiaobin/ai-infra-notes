@@ -201,9 +201,10 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         overview_markdown += f"### {section_heading}\n\n"
         overview_markdown += '<div class="day-cards">\n'
         for p in groups[folder]:
+            folder_label = folder if folder != "leetcode" else "其他"
             overview_markdown += (
                 f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
-                f'  <div class="day-card-number">{folder}</div>\n'
+                f'  <div class="day-card-number">{folder_label}</div>\n'
                 f'  <div class="day-card-title">{p["title"]}</div>\n'
                 f'</a>\n'
             )
