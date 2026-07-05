@@ -73,6 +73,16 @@
   <path d="M 350 130 Q 470 150 590 130" stroke="#8e5db8" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="3 2"/>
   <text x="470" y="164" text-anchor="middle" font-size="10" fill="#5a3a7a">i = 2·mr - mir = 2×6 - 4 = 8（mr 的镜像）</text>
 
+  <!-- mir explanation box -->
+  <g filter="url(#sk)">
+    <rect x="745" y="76" width="180" height="92" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="755" y="96" font-size="10" fill="#5a3a7a" font-weight="bold">mir = mirror（镜像）</text>
+  <text x="755" y="114" font-size="9" fill="#444">i 关于 mr 的对称点</text>
+  <text x="755" y="130" font-size="9" fill="#444" font-family="monospace">mir = 2·mr - i</text>
+  <text x="755" y="146" font-size="9" fill="#444">= l + r - i</text>
+  <text x="755" y="162" font-size="8" fill="#888">已算过 d1[mir]，可复用</text>
+
   <!-- ===== Case A: i + d1[mir] < r (fully inside) ===== -->
   <text x="470" y="196" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8e4a">情况 A：镜像回文完全在 [l, r] 内（i + d1[mir] &lt; r）</text>
   <g filter="url(#sk)">
