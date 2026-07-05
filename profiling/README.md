@@ -546,6 +546,38 @@ make nsys              # nsys 时间线
 
 ---
 
+### Day 3 — 源码分析优化对比 Profiling
+
+**目录**：`profiling/week3/day3/`
+
+> 对应 [Week 3 Day 3 任务 3（ncu 对比优化前后）+ 实验 2（warp vs block D-scan）+ 实验 3（stall 分析）](../week3/day3/README.md)
+
+**目标**：用 ncu 量化 warp 级 Softmax + float4 LayerNorm 的优化收益。
+
+```bash
+cd profiling/week3/day3
+make softmax_layernorm_opt && ./softmax_layernorm_opt   # 4 个 kernel 计时+验证
+
+make profile-opt       # 优化版 kernel ncu 指标
+make profile-base      # 基准版 kernel ncu 指标
+make profile-all       # 全部 4 个 kernel 一次性 profile
+
+make warp_vs_block && ./warp_vs_block   # 实验 2：warp vs block D-scan
+make profile-dscan     # 对 D-scan 做 ncu 分析
+
+make profile-stall     # 实验 3：stall 原因分析（scalar vs float4）
+make nsys              # nsys 时间线
+```
+
+**观察重点**：
+- float4 优化后 `dram__throughput` 上升、`sm__throughput` 基本不变 → memory-bound 优化特征
+- D≤1024 时 warp 级更快（无 `__syncthreads`），D=4096 时可能被 block 级反超
+- float4 的 Long Scoreboard stall 可能略升（单次 load 更大），但总时间下降
+
+详见 [`profiling/week3/day3/README.md`](week3/day3/README.md)。
+
+---
+
 ## 通用方法论
 
 1. **先 nsys，后 ncu**：
