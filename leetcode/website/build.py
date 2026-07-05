@@ -31,7 +31,7 @@ def parse_title(markdown_text: str) -> str:
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
-    """Build sidebar navigation grouped by contest folder.
+    """Build sidebar navigation as accordion grouped by contest folder.
 
     current_slug=None means overview page.
     """
@@ -45,14 +45,40 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
     for p in problems:
         groups.setdefault(p["folder"], []).append(p)
 
+    # Determine which folder contains the current problem (if any)
+    current_folder = None
+    if current_slug is not None:
+        for p in problems:
+            if p["slug"] == current_slug:
+                current_folder = p["folder"]
+                break
+
+    lines.append('<div class="nav-section-title">题目</div>')
+
     for folder in sorted(groups.keys(), key=lambda f: (f == "leetcode", f)):
         section_title = f"周赛 {folder}" if folder != "leetcode" else "其他"
-        lines.append(f'<div class="nav-section-title">{section_title}</div>')
+        is_current_folder = folder == current_folder
+        expanded_cls = " is-expanded" if is_current_folder else ""
+        aria_expanded = "true" if is_current_folder else "false"
+        toggle_icon = "▼" if is_current_folder else "▶"
+
+        lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
+        lines.append('  <div class="nav-accordion-header">')
+        lines.append(
+            f'    <span class="nav-link week-link">{section_title}</span>'
+            f'<button class="nav-accordion-toggle" aria-label="收起/展开 {section_title}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
+        )
+        lines.append('  </div>')
+        lines.append('  <div class="nav-accordion-content">')
+        lines.append('    <div class="nav-section">')
         for p in groups[folder]:
             cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
             lines.append(
                 f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
             )
+        lines.append('    </div>')
+        lines.append('  </div>')
+        lines.append('</div>')
 
     return "\n".join(lines)
 
