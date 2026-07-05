@@ -516,6 +516,36 @@ make ncu-softmax    # 只分析 softmax kernel
 
 ---
 
+### Day 2 — Softmax + LayerNorm Profiling
+
+**目录**：`profiling/week3/day2/`
+
+> 对应 [Week 3 Day 2 任务 3（ncu 验证 memory-bound）+ 实验 1（D-scan 尺度律）](../week3/day2/README.md)
+
+**目标**：用 ncu 验证 Softmax/LayerNorm 是 memory-bound，并观察 D 翻倍时时间的线性尺度律。
+
+```bash
+cd profiling/week3/day2
+make softmax_layernorm && ./softmax_layernorm    # 正确性 + 计时
+make profile           # ncu 核心指标（SM/DRAM throughput）
+make profile-stall     # 含 stall reasons
+make profile-full      # ncu 完整报告
+
+make sl_dscan && ./sl_dscan   # 实验 1：D-scan 尺度律
+make profile-dscan     # 对所有 D 值做 ncu 分析
+make nsys              # nsys 时间线
+```
+
+**观察重点**：
+- `dram__throughput` 高、`sm__throughput` 低 → **memory-bound**（AI ≈ 0.375）
+- D 翻倍 → 时间翻倍 → 线性尺度律（Bytes / Bandwidth）
+- Long Scoreboard stall 高（三遍扫描等 HBM）
+- 小 D 时带宽偏低（L2 cache 命中 + launch overhead）
+
+详见 [`profiling/week3/day2/README.md`](week3/day2/README.md)。
+
+---
+
 ## 通用方法论
 
 1. **先 nsys，后 ncu**：
