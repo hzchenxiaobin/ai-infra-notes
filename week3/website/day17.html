@@ -471,7 +471,7 @@ local_max = __shfl_sync(0xFFFFFFFF, local_max, 0);  // ← 无需 smem，无需 
 
 \`\`\`bash
 # 编译（带 -lineinfo 供 ncu Source View 使用）
-# Ampere (A100, RTX 30xx): sm_80
+# Ampere (A100, RTX 30xx): sm_120
 # Turing (RTX 20xx, T4): sm_75
 nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
