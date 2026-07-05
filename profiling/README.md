@@ -374,20 +374,31 @@ ncu --set full --metrics \
 
 ### Day 5 — FlashAttention 简化版
 
-**目标**：判断 FlashAttention 是 compute-bound 还是 memory-bound，并与标准 attention 对比。
+**目录**：`profiling/week2/day5/`
+
+> 对应 [Week 2 Day 5 实验 3：用 ncu 分析 FlashAttention Kernel](../week2/day5/README.md)
+
+**目标**：判断 FlashAttention 是 compute-bound 还是 memory-bound，并与标准 Attention 对比 HBM 读写量。
 
 ```bash
-nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
+cd profiling/week2/day5
+make
+./flash_attention          # 运行 FlashAttention + Standard Attention 对比
 
-ncu --kernel-name regex:flashAttentionFwd \
-  --metrics \
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed \
-  ./flash_attn_profile
+make profile-flash         # ncu 分析 FlashAttention
+make profile-standard      # ncu 分析 Standard Attention（对比）
+make profile-hbm           # HBM 读写量对比（dram__bytes_read/write）
+make profile-full          # ncu 完整报告
+make nsys                  # nsys 时间线
 ```
 
-**相关 LeetGPU**：Attention 建议用 ncu 对比不同参数性能差异。
+**观察重点**：
+- FlashAttention：SM Throughput > DRAM Throughput → **compute-bound**（IO 从 O(N²) 降到 O(Nd)）
+- Standard Attention：DRAM Throughput >> SM Throughput → **memory-bound**（O(N²) 物化 S/P）
+- `dram__bytes_read/write`：FlashAttention 远少于 Standard（核心加速来源）
+- `sm__occupancy`：FlashAttention 较低（32KB smem/block），但整体更快
+
+详见 [`profiling/week2/day5/README.md`](week2/day5/README.md)。
 
 ---
 
