@@ -486,6 +486,36 @@ make nsys-gemm           # nsys 时间线
 
 ---
 
+## Week 3
+
+### Day 1 — Transformer 推理流程 Profiling
+
+**目录**：`profiling/week3/day1/`
+
+> 对应 [Week 3 Day 1 晚间编程任务 + 练习题 2/3](../week3/day1/README.md)
+
+**目标**：三层 profiling（torch.profiler → nsys → ncu）分析 Transformer Prefill/Decode 两阶段。
+
+```bash
+cd profiling/week3/day1
+make profile        # torch.profiler 算子级分析
+make nsys           # nsys 系统级时间线（练习 2）
+make nsys-stats     # nsys kernel 统计
+make ncu            # ncu kernel 级分析
+make ncu-gemm       # 只分析 GEMM kernel
+make ncu-softmax    # 只分析 softmax kernel
+```
+
+**观察重点**：
+- Prefill：GEMM `sm__throughput` 高 → compute-bound
+- Decode：GEMM `dram__throughput` 高、`sm__throughput` 低 → memory-bound（M=1）
+- nsys 时间线：Decode 的 kernel 间隙更大（launch overhead）
+- torch.compile：kernel 数减少 30-50%
+
+详见 [`profiling/week3/day1/README.md`](week3/day1/README.md)。
+
+---
+
 ## 通用方法论
 
 1. **先 nsys，后 ncu**：
