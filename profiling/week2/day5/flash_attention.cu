@@ -1,5 +1,5 @@
 // flash_attention.cu —— FlashAttention 简化版 Forward（ncu profiling 版）
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80 -g -lineinfo
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>
@@ -8,8 +8,8 @@
 #include <cmath>
 #include <algorithm>
 
-#define Br 64   // Q tile 的行数（SRAM 可容纳）
-#define Bc 64   // K/V tile 的行数（SRAM 可容纳）
+#define Br 32   // Q tile 的行数（SRAM 可容纳）
+#define Bc 32   // K/V tile 的行数（SRAM 可容纳）
 #define D 64    // Head dimension
 
 #define NUM_THREADS_X Bc   // 64
@@ -182,13 +182,13 @@ __global__ void standardAttentionFwd(const float* __restrict__ Q,
 
 // CPU 参考实现（标准 Attention，用于验证正确性）
 void cpuAttention(const float* Q, const float* K, const float* V,
-                  float* O, int N, int D) {
+                  float* O, int N, int headDim) {
     float* S = (float*)malloc(N * N * sizeof(float));
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             float sum = 0;
-            for (int d = 0; d < D; d++)
-                sum += Q[i * D + d] * K[j * D + d];
+            for (int d = 0; d < headDim; d++)
+                sum += Q[i * headDim + d] * K[j * headDim + d];
             S[i * N + j] = sum;
         }
     }
@@ -205,11 +205,11 @@ void cpuAttention(const float* Q, const float* K, const float* V,
             S[i * N + j] /= sum;
     }
     for (int i = 0; i < N; i++) {
-        for (int d = 0; d < D; d++) {
+        for (int d = 0; d < headDim; d++) {
             float sum = 0;
             for (int j = 0; j < N; j++)
-                sum += S[i * N + j] * V[j * D + d];
-            O[i * D + d] = sum;
+                sum += S[i * N + j] * V[j * headDim + d];
+            O[i * headDim + d] = sum;
         }
     }
     free(S);
@@ -233,16 +233,16 @@ bool checkResult(const float* gpu, const float* cpu, int n, float eps) {
 
 int main() {
     const int N = 256;
-    const int D = 64;
+    const int headDim = 64;
     const int batchSize = 1;
     const int numHeads = 1;
 
     printf("=== FlashAttention Simplified Forward ===\n");
-    printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
+    printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, headDim, batchSize, numHeads);
     printf("SRAM usage per block: %.2f KB\n",
-           (Br * D + Bc * D * 2 + Br * Bc) * sizeof(float) / 1024.0);
+           (Br * headDim + Bc * headDim * 2 + Br * Bc) * sizeof(float) / 1024.0);
 
-    size_t totalElements = batchSize * numHeads * N * D;
+    size_t totalElements = batchSize * numHeads * N * headDim;
     size_t bytes = totalElements * sizeof(float);
 
     float *h_Q = (float*)malloc(bytes);
@@ -251,9 +251,9 @@ int main() {
     float *h_O = (float*)malloc(bytes);
     float *h_O_CPU = (float*)malloc(bytes);
 
-    initMatrix(h_Q, batchSize * numHeads * N, D);
-    initMatrix(h_K, batchSize * numHeads * N, D);
-    initMatrix(h_V, batchSize * numHeads * N, D);
+    initMatrix(h_Q, batchSize * numHeads * N, headDim);
+    initMatrix(h_K, batchSize * numHeads * N, headDim);
+    initMatrix(h_V, batchSize * numHeads * N, headDim);
 
     float *d_Q, *d_K, *d_V, *d_O;
     cudaMalloc(&d_Q, bytes);
@@ -284,7 +284,7 @@ int main() {
     cudaEventElapsedTime(&ms_flash, start, stop);
     cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
 
-    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, D);
+    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, headDim);
     bool correct = checkResult(h_O, h_O_CPU, totalElements, 1e-3);
 
     printf("FlashAttention GPU Time: %.3f ms\n", ms_flash);

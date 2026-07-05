@@ -1,5 +1,5 @@
 // warp_reduce.cu —— Warp 级 + Block 级两级归约完整实现（ncu profiling 版）
-// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./warp_reduce
 
 #include <cuda_runtime.h>

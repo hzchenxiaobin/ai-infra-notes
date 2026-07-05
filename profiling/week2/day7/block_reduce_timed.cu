@@ -1,5 +1,5 @@
 // block_reduce_timed.cu —— 30 分钟手撕 Block Reduce（ncu profiling 版）
-// 编译: nvcc -o block_reduce block_reduce_timed.cu -O3 -arch=sm_80 -g -lineinfo
+// 编译: nvcc -o block_reduce block_reduce_timed.cu -O3 -arch=sm_120 -g -lineinfo
 // 运行: ./block_reduce
 
 #include <cuda_runtime.h>

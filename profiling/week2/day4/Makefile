@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAGS = -O3 -arch=sm_80 -g -lineinfo
+NVCC_FLAGS = -O3 -arch=sm_120 -g -lineinfo
 
 TARGETS = register_gemm softmax_profile
 

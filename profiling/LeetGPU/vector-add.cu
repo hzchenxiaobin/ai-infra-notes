@@ -1,5 +1,5 @@
 // vector_add.cu —— 逐元素向量加法
-// 编译命令: nvcc -o vector_add vector_add.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o vector_add vector_add.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

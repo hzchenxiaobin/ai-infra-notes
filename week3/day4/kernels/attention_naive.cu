@@ -1,5 +1,5 @@
 // attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
-// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./attention_naive
 
 #include <cuda_runtime.h>

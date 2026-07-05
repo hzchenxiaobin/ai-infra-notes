@@ -1,5 +1,5 @@
 // vector_add_blocksize.cu —— Vector Add 不同 block size 性能对比（Day 1 LeetGPU 题目）
-// 编译命令: nvcc -o vector_add_blocksize vector_add_blocksize.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o vector_add_blocksize vector_add_blocksize.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./vector_add_blocksize
 // profiling: make profile
 
