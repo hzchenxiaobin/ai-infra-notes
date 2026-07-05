@@ -7,7 +7,7 @@
 ## 1. 编译运行
 
 ```bash
-cd ncu/week1/day6/matrix_multiplication
+cd profiling/week1/day6/matrix_multiplication
 make
 ./matmul
 ```

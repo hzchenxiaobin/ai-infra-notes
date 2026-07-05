@@ -7,7 +7,7 @@
 >
 > 本目录把 Day 4 中需要用 Nsight Compute / Nsight Systems 分析矩阵转置性能
 > 的部分抽出来，方便在有 GPU 的机器上统一执行。
-> 目录结构为 `ncu/<week>/<day>/`，便于后续其他日期的 ncu 任务归档。
+> 目录结构为 `profiling/<week>/<day>/`，便于后续其他日期的 ncu 任务归档。
 
 ## 背景分析对象
 
@@ -34,7 +34,7 @@
 ## 步骤 1：编译核心任务
 
 ```bash
-cd ncu/week1/day4
+cd profiling/week1/day4
 nvcc -o transpose transpose.cu
 ./transpose
 # 预期输出：Transpose correctness: PASS
@@ -100,7 +100,7 @@ nsys profile -o profiles/day4_transpose_timeline ./transpose
 ### 编译运行
 
 ```bash
-cd ncu/week1/day4
+cd profiling/week1/day4
 nvcc -o bandwidth bandwidth.cu
 ./bandwidth
 ```
@@ -162,7 +162,7 @@ ncu \
 ### 编译运行
 
 ```bash
-cd ncu/week1/day4
+cd profiling/week1/day4
 nvcc -o transpose_tiles transpose_tiles.cu
 ./transpose_tiles
 ```

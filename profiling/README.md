@@ -5,7 +5,7 @@
 **目录结构**：
 
 ```text
-ncu/
+profiling/
 ├── README.md                    # 本文件：总览
 ├── example_analysis.md          # ncu 结果分析实例
 └── week1/
@@ -18,7 +18,7 @@ ncu/
         └── matrix_multiplication/  # Day 6 LeetGPU 题目
 ```
 
-> **Week 2 代码现状**：`week2/day*/kernels/` 目录目前为空，README 中引用的 `warp_reduce.cu`、`register_blocking_gemm.cu`、`flash_attention.cu` 等源文件尚未创建。因此 Week 2 部分当前只能查看命令模板，无法直接执行；等后续源码补齐后可按相同模式放入 `ncu/week2/`。
+> **Week 2 代码现状**：`week2/day*/kernels/` 目录目前为空，README 中引用的 `warp_reduce.cu`、`register_blocking_gemm.cu`、`flash_attention.cu` 等源文件尚未创建。因此 Week 2 部分当前只能查看命令模板，无法直接执行；等后续源码补齐后可按相同模式放入 `profiling/week2/`。
 >
 > **分析实例**：参见 [`example_analysis.md`](example_analysis.md)，以 `bank_conflict` 为例演示如何逐步分析 ncu 输出。
 
@@ -72,7 +72,7 @@ wsl --shutdown
 每个 `week1/day*/` 目录下都有 `Makefile`，进入目录后执行：
 
 ```bash
-cd ncu/week1/day1
+cd profiling/week1/day1
 make
 ./hello_gpu
 ```
@@ -100,10 +100,10 @@ make
 
 ### Day 1 — GPU 执行模型与 `hello_gpu`
 
-**目录**：`ncu/week1/day1/`
+**目录**：`profiling/week1/day1/`
 
 ```bash
-cd ncu/week1/day1
+cd profiling/week1/day1
 make
 ./hello_gpu
 
@@ -120,10 +120,10 @@ ncu --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_
 
 ### Day 2 — Occupancy 与寄存器约束
 
-**目录**：`ncu/week1/day2/`
+**目录**：`profiling/week1/day2/`
 
 ```bash
-cd ncu/week1/day2
+cd profiling/week1/day2
 make
 ./occupancy_test
 
@@ -152,10 +152,10 @@ ncu --metrics \
 
 ### Day 4 — Memory Hierarchy / 矩阵转置
 
-**目录**：`ncu/week1/day4/`（原有目录，包含 `transpose.cu`、`bandwidth.cu`、`transpose_tiles.cu`）
+**目录**：`profiling/week1/day4/`（原有目录，包含 `transpose.cu`、`bandwidth.cu`、`transpose_tiles.cu`）
 
 ```bash
-cd ncu/week1/day4
+cd profiling/week1/day4
 make
 ./transpose
 
@@ -185,10 +185,10 @@ ncu --metrics \
 
 ### Day 5 — Bank Conflict
 
-**目录**：`ncu/week1/day5/`
+**目录**：`profiling/week1/day5/`
 
 ```bash
-cd ncu/week1/day5
+cd profiling/week1/day5
 make
 ./bank_conflict
 
@@ -216,12 +216,12 @@ ncu --kernel-name regex:no_conflict_read \
 
 ### Day 6 — Nsight 综合 Profiling 实战
 
-**目录**：`ncu/week1/day6/`
+**目录**：`profiling/week1/day6/`
 
 本目录不复制 kernel，而是复用前面几天的可执行文件，直接采集完整报告。
 
 ```bash
-cd ncu/week1/day6
+cd profiling/week1/day6
 make -C ../day1
 make -C ../day2
 make -C ../day4
@@ -254,7 +254,7 @@ nsys profile -o day6_full_timeline --trace cuda,nvtx,osrt ../day4/transpose
 
 ## Week 2
 
-> 以下命令中的源文件目前尚未在仓库中创建，仅作模板参考。后续补齐 `week2/day*/kernels/*.cu` 后可按相同结构放入 `ncu/week2/` 并直接执行。
+> 以下命令中的源文件目前尚未在仓库中创建，仅作模板参考。后续补齐 `week2/day*/kernels/*.cu` 后可按相同结构放入 `profiling/week2/` 并直接执行。
 
 ### Day 1 — Warp Shuffle / Block Reduce
 
