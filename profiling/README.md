@@ -329,46 +329,47 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 ### Day 4 — Nsight Compute 性能分析
 
+**目录**：`profiling/week2/day4/`
+
+> 对应 [Week 2 Day 4 Coding 任务 1-5 + 扩展实验](../week2/day4/README.md)
+
 **目标**：掌握 ncu CLI、关键指标解读、定位瓶颈、CSV 导出、profile-optimize-verify 循环。
 
-```bash
-# 编译带 lineinfo
-nvcc -o gemm_profile kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
-
-# 详细 profile
-ncu --kernel-name regex:gemmRegisterBlocking -o gemm_profile_report \
-  --metrics \
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,\
-  l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum,\
-  smsp__warps_eligible.sum.per_cycle,\
-  smsp__average_warps_issue_stalled_long_scoreboard.pct \
-  ./gemm_profile 2>&1 | tee ncu_output.txt
-
-# 导出 CSV
-ncu --csv --page details -i gemm_profile_report.ncu-rep > gemm_profile.csv
-
-# 优化后重新 profile
-ncu --kernel-name regex:gemmRegisterBlocking -o gemm_profile_v2 \
-  --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./gemm_profile_v2
-
-# nsys 时间线（扩展）
-nsys profile -o timeline_report ./gemm_profile
-```
-
-**关键 stall reason**：Long Scoreboard、Math Pipe Throttle、MIO Throttle、Wait、Barrier、LG Throttle。
-
-**Softmax 参考命令**：
+#### Register Blocking GEMM Profiling（任务 1-4）
 
 ```bash
-ncu --set full --metrics \
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed \
-  ./softmax
+cd profiling/week2/day4
+make register_gemm
+./register_gemm
+
+make profile-gemm          # 核心指标 → ncu_output.txt
+make profile-gemm-csv      # 导出 CSV
+make profile-gemm-full     # ncu --set full 完整报告
+make nsys-gemm             # nsys 时间线
 ```
+
+**关键指标**：SM Throughput、Memory Throughput、Achieved Occupancy、Long Scoreboard Stall、L1/TEX sectors。
+
+**分析清单**：
+1. SM vs Memory Throughput → 判断 compute-bound / memory-bound
+2. Achieved Occupancy → SM 利用率（目标 > 70%）
+3. Warp Stall Reasons → 主要阻塞原因
+4. ncu-ui Source View → 定位最耗时代码行
+
+#### Softmax Profiling（任务 5）
+
+```bash
+make softmax_profile
+./softmax_profile
+
+make profile-softmax       # 核心指标
+make profile-softmax-full  # 完整报告
+make nsys-softmax          # nsys 时间线
+```
+
+**预期**：DRAM Throughput 高、SM Throughput 低 → **memory-bound**（AI ≈ 0.375 FLOP/Byte）。
+
+详见 [`profiling/week2/day4/README.md`](week2/day4/README.md)。
 
 ---
 
