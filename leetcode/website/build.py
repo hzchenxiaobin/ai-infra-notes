@@ -6,6 +6,9 @@ Generates:
   - problems/<slug>.html: individual solution pages
 Uses relative paths so the site works when deployed under a repository
 path prefix (e.g. https://user.github.io/repo-name/leetcode/).
+
+Problems are organized by their parent directory (weekly contest number),
+and both the sidebar and overview page display them grouped by contest.
 """
 
 import re
@@ -28,16 +31,28 @@ def parse_title(markdown_text: str) -> str:
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
-    """Build sidebar navigation. current_slug=None means overview page."""
+    """Build sidebar navigation grouped by contest folder.
+
+    current_slug=None means overview page.
+    """
     lines = []
 
     overview_class = "nav-link active" if current_slug is None else "nav-link"
     lines.append(f'<a class="{overview_class}" href="{root_prefix}leetcode/index.html">📌 题解列表</a>')
 
-    lines.append('<div class="nav-section-title">题目</div>')
+    # Group problems by parent folder (contest number)
+    groups: Dict[str, List[Dict]] = {}
     for p in problems:
-        cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
-        lines.append(f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>')
+        groups.setdefault(p["folder"], []).append(p)
+
+    for folder in sorted(groups.keys(), key=lambda f: (f == "leetcode", f)):
+        section_title = f"周赛 {folder}" if folder != "leetcode" else "其他"
+        lines.append(f'<div class="nav-section-title">{section_title}</div>')
+        for p in groups[folder]:
+            cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
+            lines.append(
+                f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
+            )
 
     return "\n".join(lines)
 
@@ -140,24 +155,34 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
 
         title = parse_title(markdown_text)
         slug = md_file.stem
+        folder = md_file.parent.name
         problems.append({
             "slug": slug,
             "title": title,
+            "folder": folder,
             "markdown": markdown_text,
         })
 
-    # Build overview page (at leetcode/index.html -> root_prefix="../")
-    cards_html = '<div class="day-cards">\n'
+    # Group problems by contest folder for the overview page
+    groups: Dict[str, List[Dict]] = {}
     for p in problems:
-        cards_html += (
-            f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
-            f'  <div class="day-card-number">LeetCode</div>\n'
-            f'  <div class="day-card-title">{p["title"]}</div>\n'
-            f'</a>\n'
-        )
-    cards_html += '</div>\n'
+        groups.setdefault(p["folder"], []).append(p)
 
-    overview_markdown = "# LeetCode 题解\n\n> 算法题解题笔记与思路整理。\n\n## 题目列表\n\n" + cards_html
+    # Build overview page (at leetcode/index.html -> root_prefix="../")
+    overview_markdown = "# LeetCode 题解\n\n> 算法题解题笔记与思路整理。\n\n## 题目列表\n\n"
+    for folder in sorted(groups.keys(), key=lambda f: (f == "leetcode", f)):
+        section_heading = f"周赛 {folder}" if folder != "leetcode" else "其他"
+        overview_markdown += f"### {section_heading}\n\n"
+        overview_markdown += '<div class="day-cards">\n'
+        for p in groups[folder]:
+            overview_markdown += (
+                f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
+                f'  <div class="day-card-number">{folder}</div>\n'
+                f'  <div class="day-card-title">{p["title"]}</div>\n'
+                f'</a>\n'
+            )
+        overview_markdown += '</div>\n\n'
+
     # Markdown references images as "images/xxx.svg"; overview is at leetcode/index.html
     overview_markdown = overview_markdown.replace("](images/", "](./images/")
 
