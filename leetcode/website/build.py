@@ -24,10 +24,22 @@ def escape_for_template_string(text: str) -> str:
     return text
 
 
-def parse_title(markdown_text: str) -> str:
-    """Extract title from the first level-1 heading."""
+def parse_title(markdown_text: str, filename: str = "") -> str:
+    """Extract title from the first level-1 heading.
+
+    If the filename starts with a 'Qx.' prefix and the heading does not,
+    prepend the prefix to the heading for sidebar/list display.
+    """
     match = re.search(r"^#\s+(.+)$", markdown_text, re.MULTILINE)
-    return match.group(1).strip() if match else "题解"
+    title = match.group(1).strip() if match else "题解"
+
+    q_match = re.match(r"^(Q\d+)\.", filename)
+    if q_match:
+        prefix = q_match.group(1)
+        if not re.match(rf"^{prefix}\b", title):
+            title = f"{prefix}. {title}"
+
+    return title
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
@@ -179,7 +191,7 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
     for md_file in md_files:
         markdown_text = md_file.read_text(encoding="utf-8")
 
-        title = parse_title(markdown_text)
+        title = parse_title(markdown_text, filename=md_file.name)
         slug = md_file.stem
         folder = md_file.parent.name
         problems.append({
