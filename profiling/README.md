@@ -449,9 +449,40 @@ make profile-hist-hbm      # HBM 读写量对比
 
 ### Day 7 — 限时手撕 + 性能报告
 
-**无新命令。**
+**目录**：`profiling/week2/day7/`
 
-任务：撰写 `week2/day7/notes/performance_report.md`，用 ncu 指标解释每一层优化前后瓶颈的变化。
+> 对应 [Week 2 Day 7 任务 1（手撕 Reduce）+ 任务 2（手撕 GEMM）+ 任务 5（性能报告）](../week2/day7/README.md)
+
+#### Block Reduce（任务 1 手撕验收）
+
+```bash
+cd profiling/week2/day7
+make block_reduce
+./block_reduce            # 正确性 + 计时
+
+make profile-reduce       # ncu 核心指标
+make profile-reduce-full  # ncu 完整报告
+make nsys-reduce          # nsys 时间线
+```
+
+**验收指标**：occupancy 高（>80%）、DRAM throughput 高（memory-bound）、registers 少（~20）。
+
+#### Register Blocking GEMM（任务 2 手撕验收）
+
+```bash
+make gemm_timed
+./gemm_timed             # 对比 cuBLAS，目标 ~45%
+
+make profile-gemm        # ncu 核心指标
+make profile-gemm-full   # ncu 完整报告
+make nsys-gemm           # nsys 时间线
+```
+
+**验收指标**：SM throughput ~45%（vs Day 6 >60%）、Long Scoreboard ~35%（vs Day 6 <20%）——手撕版与 Day 6 的差距即优化空间。
+
+#### 性能对比报告（任务 5）
+
+用 ncu 指标解释每一层优化前后瓶颈的变化，填充报告模板。详见 [`profiling/week2/day7/README.md`](week2/day7/README.md)。
 
 ---
 
