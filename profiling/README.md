@@ -98,13 +98,15 @@ make
 
 ## Week 1
 
-### Day 1 — GPU 执行模型与 `hello_gpu`
+### Day 1 — GPU 执行模型与 `hello_gpu` + Vector Add block size 对比
 
 **目录**：`profiling/week1/day1/`
 
+#### hello_gpu（线程层次验证）
+
 ```bash
 cd profiling/week1/day1
-make
+make hello_gpu
 ./hello_gpu
 
 # nsys timeline
@@ -115,6 +117,24 @@ ncu --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_
 ```
 
 **观察重点**：`cudaLaunchKernel` CPU 时间、GPU 执行时间、block 并行度、active warp 比例。
+
+#### Vector Add：不同 block size 性能对比
+
+> 对应 [Week 1 Day 1 LeetGPU Vector Add](../week1/day1/README.md)，用 ncu 对比 block_size = 32/64/128/256/512/1024 的性能差异。
+
+```bash
+make vector_add_blocksize
+./vector_add_blocksize          # 打印各 block_size 的 time + bandwidth
+
+make profile                    # ncu 分析各 block_size 的 DRAM/SM/occupancy
+```
+
+**观察重点**：
+- `dram__throughput`：memory-bound kernel 的核心指标，应 > 60%（block_size ≥ 128 时）
+- `sm__occupancy`：block_size=32 时低（1 warp/block），256 时高
+- **关键结论**：block_size=256 通常最优；memory-bound kernel 不需 100% occupancy
+
+详见 [`profiling/week1/day1/README.md`](week1/day1/README.md)。
 
 ---
 
@@ -254,21 +274,31 @@ nsys profile -o day6_full_timeline --trace cuda,nvtx,osrt ../day4/transpose
 
 ## Week 2
 
-> 以下命令中的源文件目前尚未在仓库中创建，仅作模板参考。后续补齐 `week2/day*/kernels/*.cu` 后可按相同结构放入 `profiling/week2/` 并直接执行。
-
 ### Day 1 — Warp Shuffle / Block Reduce
+
+**目录**：`profiling/week2/day1/`
+
+> 对应 [Week 2 Day 1 任务 3：使用 ncu 查看 Warp Shuffle 效率](../week2/day1/README.md)
 
 **目标**：验证 Warp Shuffle 具有高 occupancy 和极低执行时间。
 
 ```bash
-ncu --metrics \
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  launch__registers_per_thread \
-  ./warp_reduce
+cd profiling/week2/day1
+make
+./warp_reduce          # 正确性验证 + 计时
+
+make profile           # ncu 基础指标
+make profile-full      # ncu 完整报告
+make nsys              # nsys 时间线
 ```
 
-**相关 LeetGPU**：Prefix Sum 建议用 ncu 对比不同参数性能差异。
+**观察重点**：
+- `sm__occupancy`：高（~80-100%），寄存器/smem 用量极少
+- `sm__throughput`：中低（~20-40%），归约是 memory-bound
+- `launch__registers_per_thread`：极少（~20），shuffle 不消耗额外寄存器
+- `smsp__average_warps_issue_stalled_long_scoreboard.pct`：高（>30%），grid-stride loop 等 HBM
+
+详见 [`profiling/week2/day1/README.md`](week2/day1/README.md)。
 
 ---
 
