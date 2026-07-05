@@ -402,32 +402,47 @@ make nsys                  # nsys 时间线
 
 ---
 
-### Day 6 — 整合优化 GEMM
+### Day 6 — 整合优化 GEMM + Histogram
 
-**目标**：验证 `float4` + Warp Shuffle + coalesced write 后 SM throughput > 60%、Long Scoreboard < 20%。
+**目录**：`profiling/week2/day6/`
+
+> 对应 [Week 2 Day 6 任务 3（ncu 验证 GEMM）+ 任务 4（Histogram）](../week2/day6/README.md)
+
+#### 整合版 GEMM
 
 ```bash
-nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+cd profiling/week2/day6
+make integrated_gemm
+./integrated_gemm          # 对比 cuBLAS，目标 70%+
 
-ncu --kernel-name regex:gemmIntegrated -o integrated_profile \
-  --metrics \
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  launch__registers_per_thread,\
-  smsp__average_warps_issue_stalled_long_scoreboard.pct \
-  ./gemm_profile
+make profile-gemm          # ncu 核心指标（SM/DRAM throughput, registers, stall）
+make profile-gemm-full     # ncu 完整报告
+make nsys-gemm             # nsys 时间线
 ```
 
 **与 Day 2 Register Blocking 对比目标**：
 
-| Metric | Day 2 Register Blocking | Day 6 Integrated target |
-|--------|------------------------|------------------------|
-| SM Throughput | ~45% | > 60% |
-| Memory Throughput | ~78% | ~70–80% |
-| Achieved Occupancy | ~56% | > 70% |
-| Long Scoreboard Stall | ~35% | < 20% |
+| 指标 | Day 2 Register Blocking | Day 6 整合版 目标 |
+|------|------------------------|-----------------|
+| `sm__throughput` | ~45% | **> 60%** |
+| `dram__throughput` | ~78% | ~70-80% |
+| `sm__occupancy` | ~56% | **> 70%** |
+| `smsp__...stalled_long_scoreboard.pct` | ~35% | **< 20%** |
 
-**相关 LeetGPU**：Histogram 建议用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic。
+#### Histogram（Global atomic vs Shared memory）
+
+```bash
+make histogram
+./histogram                # 对比两个版本的 latency
+
+make profile-hist-global   # Global atomic ncu 指标
+make profile-hist-shared   # Shared memory ncu 指标
+make profile-hist-hbm      # HBM 读写量对比
+```
+
+**观察重点**：shared 版 `dram__bytes_write` 远少于 global 版（smem privatization 减少 global atomic 写放大）。
+
+详见 [`profiling/week2/day6/README.md`](week2/day6/README.md)。
 
 ---
 
