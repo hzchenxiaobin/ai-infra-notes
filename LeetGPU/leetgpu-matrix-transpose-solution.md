@@ -51,7 +51,7 @@ __global__ void transpose_naive(const float* in, float* out, int M, int N) {
 
 ```cuda
 // matrix_transpose.cu —— Shared Memory 优化的矩阵转置
-// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

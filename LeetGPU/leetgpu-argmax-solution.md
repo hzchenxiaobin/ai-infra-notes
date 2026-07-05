@@ -76,7 +76,7 @@ if (other_val > local_max ||
 
 ```cuda
 // argmax.cu —— Argmax 归约（两级归约 + Warp Shuffle）
-// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

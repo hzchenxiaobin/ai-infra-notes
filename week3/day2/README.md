@@ -217,7 +217,7 @@ Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
 
 ```cuda
 // kernels/softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
-// 编译命令: nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 // 运行命令: ./softmax_layernorm
 
 #include <cuda_runtime.h>
@@ -379,10 +379,10 @@ for (int i = tid; i < D; i += blockDim.x) out_row[i] = expf(in_row[i] - row_max)
 
 ```bash
 # 编译（根据 GPU 架构选择 arch 参数）
-# Ampere (A100, RTX 30xx): sm_80
+# Ampere (A100, RTX 30xx): sm_120
 # Turing (RTX 20xx, T4): sm_75
 # Volta (V100): sm_70
-nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_80
+nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行
 ./softmax_layernorm
@@ -408,7 +408,7 @@ Config: M=128, D=1024, threads=256
 
 ```bash
 # 编译带 lineinfo 的版本（ncu Source View 需要）
-nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_80 -lineinfo
+nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_120 -lineinfo
 
 # profile 两个 kernel 的 SM / DRAM Throughput
 ncu --metrics \
@@ -454,7 +454,7 @@ ncu --metrics \
 
 ```cuda
 // softmax.cu —— LeetGPU Softmax 提交版（三遍扫描 safe softmax）
-// 编译命令: nvcc -o softmax softmax.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax softmax.cu -O3 -arch=sm_120
 
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll

@@ -60,7 +60,7 @@ Block 1:  [shared hist] → atomicAdd → 合并到 global
 
 ```cuda
 // histogram.cu —— Global vs Shared Memory Histogram 对比
-// 编译命令: nvcc -o histogram histogram.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o histogram histogram.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

@@ -53,7 +53,7 @@ for (int i = 0; i < N; ++i) output[i] /= sum;
 
 ```cuda
 // softmax.cu —— 三遍扫描 Softmax + Profiling
-// 编译命令: nvcc -o softmax softmax.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax softmax.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

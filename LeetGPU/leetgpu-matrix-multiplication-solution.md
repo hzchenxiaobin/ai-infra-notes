@@ -85,7 +85,7 @@ col = blockIdx.x * TILE_SIZE + threadIdx.x
 
 ```cuda
 // matrix_multiplication.cu —— Shared Memory Tiling GEMM
-// 编译命令: nvcc -o matmul matmul.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o matmul matmul.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
@@ -399,7 +399,7 @@ s_B[BK][BN] = 8×64 = 2KB  ← shared memory
 
 ```cuda
 // matrix_multiplication_register_tiled.cu —— Register Tiling GEMM
-// 编译命令: nvcc -o matmul_reg matmul_register_tiled.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o matmul_reg matmul_register_tiled.cu -O3 -arch=sm_120
 // 运行命令: ./matmul_reg
 
 #include <cuda_runtime.h>
