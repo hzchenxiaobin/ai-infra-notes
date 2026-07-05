@@ -127,10 +127,11 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
     problems_dir = output_dir / "problems"
     problems_dir.mkdir(parents=True, exist_ok=True)
 
-    # Find all markdown files in leetcode/ (excluding website/ and images/)
+    # Find all markdown files in leetcode/ and its subdirectories
+    # (excluding website/ and images/)
     md_files = sorted([
-        f for f in leetcode_dir.iterdir()
-        if f.is_file() and f.suffix == ".md" and f.parent.name == "leetcode"
+        f for f in leetcode_dir.rglob("*.md")
+        if f.is_file() and "website" not in f.parts and "images" not in f.parts
     ])
 
     problems = []

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="580" viewBox="0 0 900 580" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="48" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="580" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Manacher + 前缀和 算法流程</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Step 1: Prefix sum ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="64" width="780" height="76" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="88" font-size="13" font-weight="bold" fill="#2b6e9e">Step 1：前缀和 pref[0..n]</text>
+  <text x="80" y="108" font-size="11" fill="#444" font-family="monospace">pref[0] = 0,  pref[i+1] = pref[i] + nums[i]</text>
+  <text x="80" y="126" font-size="10" fill="#888">子数组 [l, r] 的和 = pref[r+1] - pref[l]  → O(1) 查询</text>
+
+  <!-- arrow -->
+  <path d="M 450 144 L 450 156" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 2: Manacher d1 ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="160" width="780" height="90" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="184" font-size="13" font-weight="bold" fill="#2e6e2e">Step 2：Manacher 奇数长度 d1[i]</text>
+  <text x="80" y="204" font-size="11" fill="#444" font-family="monospace">维护最远右端 [l, r]，对称加速：d1[i] = min(d1[mirror], r - i)</text>
+  <text x="80" y="222" font-size="11" fill="#444" font-family="monospace">扩展：while a[i-k]==a[i+k]: k++  → d1[i] = k</text>
+  <text x="80" y="240" font-size="10" fill="#888">最长回文 [i-d1[i]+1, i+d1[i]-1]，长度 2·d1[i]-1</text>
+
+  <!-- arrow -->
+  <path d="M 450 254 L 450 266" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 3: Manacher d2 ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="270" width="780" height="90" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="294" font-size="13" font-weight="bold" fill="#7a5415">Step 3：Manacher 偶数长度 d2[i]</text>
+  <text x="80" y="314" font-size="11" fill="#444" font-family="monospace">中心在 i-1 与 i 之间，对称加速同 d1</text>
+  <text x="80" y="332" font-size="11" fill="#444" font-family="monospace">扩展：while a[i-k-1]==a[i+k]: k++  → d2[i] = k</text>
+  <text x="80" y="350" font-size="10" fill="#888">最长回文 [i-d2[i], i+d2[i]-1]，长度 2·d2[i]</text>
+
+  <!-- arrow -->
+  <path d="M 450 364 L 450 376" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Step 4: Compute max sum ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="380" width="780" height="100" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="404" font-size="13" font-weight="bold" fill="#5a3a7a">Step 4：对每个中心算最长回文的和，取 max</text>
+  <text x="80" y="426" font-size="11" fill="#444" font-family="monospace">奇数：sum = pref[i + d1[i]] - pref[i - d1[i]]</text>
+  <text x="80" y="446" font-size="11" fill="#444" font-family="monospace">偶数：sum = pref[i + d2[i]] - pref[i - d2[i]]  （d2[i] > 0 时）</text>
+  <text x="80" y="466" font-size="10" fill="#888">ans = max(ans, sum) 遍历所有中心</text>
+
+  <!-- ===== Complexity ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="500" width="780" height="60" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="450" y="524" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">复杂度：时间 O(n) | 空间 O(n)</text>
+  <text x="450" y="544" text-anchor="middle" font-size="11" fill="#666">Manacher 每元素最多访问常数次（r 单调递增）+ 前缀和 O(n) + 取 max O(n)</text>
+</svg>

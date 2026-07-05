@@ -1,42 +1,68 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
-  <rect width="760" height="420" fill="#0d1117"/>
-  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">FlashAttention HBM 访问对比（N=4096, d=64）</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="480" viewBox="0 0 860 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="480" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention HBM 访问对比（N=4096, d=64）</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <!-- Standard Attention -->
-  <g transform="translate(40, 65)">
-    <text x="0" y="0" font-size="16" fill="#f85149" font-weight="bold">标准 Attention</text>
-    <rect x="0" y="10" width="680" height="140" rx="8" fill="#f85149" opacity="0.08" stroke="#f85149" stroke-width="2"/>
-
-    <text x="20" y="35" font-size="12" fill="#c9d1d9" font-family="monospace">读 Q:  N×d = 262K</text>
-    <text x="20" y="55" font-size="12" fill="#c9d1d9" font-family="monospace">读 K:  N×d = 262K</text>
-    <text x="20" y="75" font-size="12" fill="#f85149" font-family="monospace">写 S:  N×N = 16M  ← O(N²) 瓶颈</text>
-    <text x="20" y="95" font-size="12" fill="#f85149" font-family="monospace">读 S:  N×N = 16M</text>
-    <text x="20" y="115" font-size="12" fill="#f85149" font-family="monospace">写 P:  N×N = 16M  ← O(N²) 瓶颈</text>
-    <text x="350" y="35" font-size="12" fill="#c9d1d9" font-family="monospace">读 P:  N×N = 16M</text>
-    <text x="350" y="55" font-size="12" fill="#c9d1d9" font-family="monospace">读 V:  N×d = 262K</text>
-    <text x="350" y="75" font-size="12" fill="#c9d1d9" font-family="monospace">写 O:  N×d = 262K</text>
-
-    <rect x="350" y="90" width="300" height="40" rx="4" fill="#f85149" opacity="0.2" stroke="#f85149"/>
-    <text x="500" y="115" text-anchor="middle" font-size="14" fill="#f85149" font-weight="bold">总计 ≈ 48M elements ≈ 192MB</text>
+  <!-- ===== Top: Standard Attention ===== -->
+  <text x="430" y="70" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">标准 Attention（物化 S/P 到 HBM）</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="82" width="780" height="150" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
   </g>
-
-  <!-- FlashAttention -->
-  <g transform="translate(40, 225)">
-    <text x="0" y="0" font-size="16" fill="#3fb950" font-weight="bold">FlashAttention</text>
-    <rect x="0" y="10" width="680" height="120" rx="8" fill="#3fb950" opacity="0.08" stroke="#3fb950" stroke-width="2"/>
-
-    <text x="20" y="35" font-size="12" fill="#3fb950" font-family="monospace">读 Q:  N×d = 262K  （Q tile 驻留 SRAM）</text>
-    <text x="20" y="55" font-size="12" fill="#c9d1d9" font-family="monospace">读 K:  N×d = 262K  （K tile 逐块滑入）</text>
-    <text x="20" y="75" font-size="12" fill="#c9d1d9" font-family="monospace">读 V:  N×d = 262K  （V tile 逐块滑入）</text>
-    <text x="20" y="95" font-size="12" fill="#c9d1d9" font-family="monospace">写 O:  N×d = 262K</text>
-    <text x="350" y="55" font-size="12" fill="#3fb950" font-family="monospace">S, P 在 SRAM 中计算</text>
-    <text x="350" y="75" font-size="12" fill="#3fb950" font-family="monospace">不写入 HBM</text>
-
-    <rect x="350" y="90" width="300" height="35" rx="4" fill="#3fb950" opacity="0.2" stroke="#3fb950"/>
-    <text x="500" y="113" text-anchor="middle" font-size="14" fill="#3fb950" font-weight="bold">总计 ≈ 1M elements ≈ 4MB</text>
+  <!-- left column -->
+  <g font-size="11" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="106">读 Q:  N×d = 262K</text>
+    <text x="60" y="126">读 K:  N×d = 262K</text>
+    <text x="60" y="146" fill="#b03a3a" font-weight="bold">写 S:  N×N = 16M  ← O(N²) 瓶颈</text>
+    <text x="60" y="166" fill="#b03a3a" font-weight="bold">读 S:  N×N = 16M</text>
+    <text x="60" y="186" fill="#b03a3a" font-weight="bold">写 P:  N×N = 16M  ← O(N²) 瓶颈</text>
   </g>
+  <!-- right column -->
+  <g font-size="11" fill="#2b2b2b" font-family="monospace">
+    <text x="420" y="106">读 P:  N×N = 16M</text>
+    <text x="420" y="126">读 V:  N×d = 262K</text>
+    <text x="420" y="146">写 O:  N×d = 262K</text>
+  </g>
+  <!-- total -->
+  <g filter="url(#sk)">
+    <rect x="420" y="170" width="360" height="42" rx="6" fill="#b03a3a" opacity="0.2" stroke="#b03a3a" stroke-width="1.3"/>
+  </g>
+  <text x="600" y="197" text-anchor="middle" font-size="14" fill="#7a2828" font-weight="bold">总计 ≈ 48M elements ≈ 192MB</text>
 
-  <!-- Speedup -->
-  <rect x="160" y="370" width="440" height="35" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="380" y="392" text-anchor="middle" font-size="15" fill="#58a6ff" font-weight="bold">HBM 访问减少 ~48x → 长序列加速 2-4x</text>
+  <!-- divider -->
+  <path d="M 60 250 L 800 250" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Bottom: FlashAttention ===== -->
+  <text x="430" y="278" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8e4a">FlashAttention（S/P 在 SRAM，不落 HBM）</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="290" width="780" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <g font-size="11" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="314" fill="#4a8e4a" font-weight="bold">读 Q:  N×d = 262K  （Q tile 驻留 SRAM）</text>
+    <text x="60" y="334">读 K:  N×d = 262K  （K tile 逐块滑入）</text>
+    <text x="60" y="354">读 V:  N×d = 262K  （V tile 逐块滑入）</text>
+    <text x="60" y="374">写 O:  N×d = 262K</text>
+  </g>
+  <g font-size="11" fill="#2e6e2e" font-family="monospace">
+    <text x="440" y="334" font-weight="bold">S, P 在 SRAM 中计算</text>
+    <text x="440" y="354" font-weight="bold">不写入 HBM</text>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="440" y="370" width="340" height="38" rx="6" fill="#4a8e4a" opacity="0.2" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="610" y="394" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">总计 ≈ 1M elements ≈ 4MB</text>
+
+  <!-- speedup -->
+  <g filter="url(#sk)">
+    <rect x="160" y="438" width="520" height="34" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="420" y="460" text-anchor="middle" font-size="14" fill="#2b6e9e" font-weight="bold">HBM 访问减少 ~48x → 长序列加速 2-4x</text>
 </svg>

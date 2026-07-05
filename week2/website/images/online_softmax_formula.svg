@@ -1,41 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500">
-  <rect width="760" height="500" fill="#0d1117"/>
-  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Online Softmax 三个更新公式</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="560" viewBox="0 0 860 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="36" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="560" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Online Softmax 三个更新公式</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <!-- State variables -->
-  <g transform="translate(40, 60)">
-    <rect x="0" y="0" width="680" height="60" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-    <text x="20" y="25" font-size="13" fill="#58a6ff" font-weight="bold">Running 状态</text>
-    <text x="20" y="45" font-size="12" fill="#c9d1d9">m = running max | l = running sum | o = running output（初始：m=-∞, l=0, o=0）</text>
+  <!-- ===== State variables ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="62" width="740" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
   </g>
+  <text x="80" y="86" font-size="13" fill="#4a8edb" font-weight="bold">Running 状态</text>
+  <text x="80" y="106" font-size="11" fill="#2b2b2b">m = running max | l = running sum | o = running output（初始：m=-∞, l=0, o=0）</text>
 
-  <!-- Formula 1 -->
-  <g transform="translate(40, 140)">
-    <rect x="0" y="0" width="680" height="85" rx="8" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="2"/>
-    <text x="20" y="25" font-size="14" fill="#58a6ff" font-weight="bold">公式 1 — Max 更新</text>
-    <rect x="20" y="35" width="640" height="40" rx="4" fill="#0d1117" stroke="#30363d"/>
-    <text x="340" y="60" text-anchor="middle" font-size="16" fill="#c9d1d9" font-family="monospace">m_new = max(m, max(x_j))</text>
+  <!-- ===== Formula 1: Max update ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="138" width="740" height="86" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
   </g>
-
-  <!-- Formula 2 -->
-  <g transform="translate(40, 240)">
-    <rect x="0" y="0" width="680" height="105" rx="8" fill="#d29922" opacity="0.1" stroke="#d29922" stroke-width="2"/>
-    <text x="20" y="25" font-size="14" fill="#d29922" font-weight="bold">公式 2 — Sum 更新</text>
-    <rect x="20" y="35" width="640" height="40" rx="4" fill="#0d1117" stroke="#30363d"/>
-    <text x="340" y="60" text-anchor="middle" font-size="14" fill="#c9d1d9" font-family="monospace">l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)</text>
-    <text x="20" y="92" font-size="11" fill="#8b949e">l × exp(m - m_new)：旧 sum 从旧参考点 m 缩放到新参考点 m_new</text>
+  <text x="80" y="162" font-size="14" fill="#2b6e9e" font-weight="bold">公式 1 — Max 更新</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="172" width="700" height="40" rx="4" fill="#fdfcf7" stroke="#bdbdbd" stroke-width="1"/>
   </g>
+  <text x="430" y="197" text-anchor="middle" font-size="16" fill="#2b2b2b" font-family="monospace">m_new = max(m, max(x_j))</text>
 
-  <!-- Formula 3 -->
-  <g transform="translate(40, 360)">
-    <rect x="0" y="0" width="680" height="120" rx="8" fill="#3fb950" opacity="0.1" stroke="#3fb950" stroke-width="2"/>
-    <text x="20" y="25" font-size="14" fill="#3fb950" font-weight="bold">公式 3 — Output 更新</text>
-    <rect x="20" y="35" width="640" height="50" rx="4" fill="#0d1117" stroke="#30363d"/>
-    <text x="340" y="58" text-anchor="middle" font-size="12" fill="#c9d1d9" font-family="monospace">o_new = o × (l × exp(m - m_new) / l_new)</text>
-    <text x="340" y="76" text-anchor="middle" font-size="12" fill="#c9d1d9" font-family="monospace">     + (exp(x_j - m_new) / l_new) × v_j</text>
-    <text x="20" y="105" font-size="11" fill="#8b949e">前半：旧输出按新概率重新归一化 | 后半：新块贡献以新权重加权 V</text>
+  <!-- ===== Formula 2: Sum update ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="242" width="740" height="106" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
   </g>
+  <text x="80" y="266" font-size="14" fill="#7a5415" font-weight="bold">公式 2 — Sum 更新</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="276" width="700" height="40" rx="4" fill="#fdfcf7" stroke="#bdbdbd" stroke-width="1"/>
+  </g>
+  <text x="430" y="301" text-anchor="middle" font-size="14" fill="#2b2b2b" font-family="monospace">l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)</text>
+  <text x="80" y="334" font-size="11" fill="#888">l × exp(m - m_new)：旧 sum 从旧参考点 m 缩放到新参考点 m_new</text>
 
-  <!-- Key insight -->
-  <text x="380" y="490" text-anchor="middle" font-size="13" fill="#a371f7" font-weight="bold">关键缩放因子：exp(m - m_new) 保证全局参考点一致</text>
+  <!-- ===== Formula 3: Output update ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="366" width="740" height="120" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="80" y="390" font-size="14" fill="#2e6e2e" font-weight="bold">公式 3 — Output 更新</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="400" width="700" height="52" rx="4" fill="#fdfcf7" stroke="#bdbdbd" stroke-width="1"/>
+  </g>
+  <text x="430" y="422" text-anchor="middle" font-size="12" fill="#2b2b2b" font-family="monospace">o_new = o × (l × exp(m - m_new) / l_new)</text>
+  <text x="430" y="442" text-anchor="middle" font-size="12" fill="#2b2b2b" font-family="monospace">     + (exp(x_j - m_new) / l_new) × v_j</text>
+  <text x="80" y="472" font-size="11" fill="#888">前半：旧输出按新概率重新归一化 | 后半：新块贡献以新权重加权 V</text>
+
+  <!-- ===== Key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="160" y="506" width="540" height="36" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="430" y="529" text-anchor="middle" font-size="13" fill="#5a3a7a" font-weight="bold">关键缩放因子：exp(m - m_new) 保证全局参考点一致</text>
 </svg>

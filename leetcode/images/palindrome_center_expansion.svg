@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">回文中心扩展：奇数 vs 偶数长度</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: Odd length ===== -->
+  <text x="450" y="70" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8edb">奇数长度：中心在元素 i 上</text>
+  <!-- array cells -->
+  <g font-size="11" fill="#2b2b2b">
+    <!-- row of 7 cells, center at index 3 -->
+    <g filter="url(#sk)"><rect x="120" y="84" width="60" height="40" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/></g>
+    <text x="150" y="108" text-anchor="middle">a[i-3]</text>
+    <g filter="url(#sk)"><rect x="185" y="84" width="60" height="40" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="215" y="108" text-anchor="middle">a[i-2]</text>
+    <g filter="url(#sk)"><rect x="250" y="84" width="60" height="40" fill="#bdd5ed" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="280" y="108" text-anchor="middle">a[i-1]</text>
+    <!-- center highlighted -->
+    <g filter="url(#sk)"><rect x="315" y="84" width="60" height="40" fill="#4a8edb" opacity="0.6" stroke="#2b6e9e" stroke-width="1.6"/></g>
+    <text x="345" y="108" text-anchor="middle" fill="#fff" font-weight="bold">a[i]</text>
+    <g filter="url(#sk)"><rect x="380" y="84" width="60" height="40" fill="#bdd5ed" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="410" y="108" text-anchor="middle">a[i+1]</text>
+    <g filter="url(#sk)"><rect x="445" y="84" width="60" height="40" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="475" y="108" text-anchor="middle">a[i+2]</text>
+    <g filter="url(#sk)"><rect x="510" y="84" width="60" height="40" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/></g>
+    <text x="540" y="108" text-anchor="middle">a[i+3]</text>
+  </g>
+  <!-- center marker -->
+  <path d="M 345 130 L 345 142" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="345" y="156" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">中心 i</text>
+  <!-- expansion arrows -->
+  <path d="M 280 150 Q 250 165 220 150" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="3 2"/>
+  <path d="M 410 150 Q 440 165 470 150" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="3 2"/>
+  <text x="580" y="108" font-size="10" fill="#666">d1[i] = 3 → 长度 2×3-1 = 5</text>
+  <text x="580" y="124" font-size="10" fill="#666">范围 [i-2, i+2]</text>
+
+  <!-- divider -->
+  <path d="M 60 178 L 840 178" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Bottom: Even length ===== -->
+  <text x="450" y="204" text-anchor="middle" font-size="14" font-weight="bold" fill="#c98a2b">偶数长度：中心在 i-1 和 i 之间</text>
+  <!-- array cells, center between index 2 and 3 -->
+  <g font-size="11" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="120" y="218" width="60" height="40" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/></g>
+    <text x="150" y="242" text-anchor="middle">a[i-3]</text>
+    <g filter="url(#sk)"><rect x="185" y="218" width="60" height="40" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="215" y="242" text-anchor="middle">a[i-2]</text>
+    <g filter="url(#sk)"><rect x="250" y="218" width="60" height="40" fill="#fce4b8" stroke="#c98a2b" stroke-width="1.4"/></g>
+    <text x="280" y="242" text-anchor="middle" font-weight="bold">a[i-1]</text>
+    <g filter="url(#sk)"><rect x="315" y="218" width="60" height="40" fill="#fce4b8" stroke="#c98a2b" stroke-width="1.4"/></g>
+    <text x="345" y="242" text-anchor="middle" font-weight="bold">a[i]</text>
+    <g filter="url(#sk)"><rect x="380" y="218" width="60" height="40" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="410" y="242" text-anchor="middle">a[i+1]</text>
+    <g filter="url(#sk)"><rect x="445" y="218" width="60" height="40" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/></g>
+    <text x="475" y="242" text-anchor="middle">a[i+2]</text>
+    <g filter="url(#sk)"><rect x="510" y="218" width="60" height="40" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/></g>
+    <text x="540" y="242" text-anchor="middle">a[i+3]</text>
+  </g>
+  <!-- center marker (between cells) -->
+  <path d="M 307 264 L 307 276" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="307" y="290" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">中心(间隙)</text>
+  <!-- expansion arrows -->
+  <path d="M 250 282 Q 220 296 195 282" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="3 2"/>
+  <path d="M 380 282 Q 410 296 435 282" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="3 2"/>
+  <text x="580" y="242" font-size="10" fill="#666">d2[i] = 2 → 长度 2×2 = 4</text>
+  <text x="580" y="258" font-size="10" fill="#666">范围 [i-2, i+1]</text>
+
+  <!-- ===== Bottom: key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="320" width="780" height="180" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="344" font-size="13" font-weight="bold" fill="#2b2b2b">关键洞察：元素全为正 → 最长回文 = 最大和</text>
+  <text x="80" y="370" font-size="12" fill="#444">对固定中心 c，最长回文半径 R，其和 S(R) = Σ a[c-R+1 .. c+R-1]（奇数）</text>
+  <text x="80" y="390" font-size="12" fill="#444">任意更短半径 r &lt; R 的回文是它的子数组，少了外层 (R-r) 对元素</text>
+  <text x="80" y="410" font-size="12" fill="#4a8e4a" font-weight="bold">∵ 每对元素 a[c-r-1]+a[c+r+1] &gt; 0（元素为正）→ 去掉后和减小</text>
+  <text x="80" y="430" font-size="12" fill="#444">∴ S(R) &gt; S(r)，最长回文和最大</text>
+  <text x="80" y="458" font-size="12" fill="#b03a3a" font-weight="bold">结论：只需对每个中心找最长回文（Manacher O(n)），再用前缀和算和取 max</text>
+  <text x="80" y="482" font-size="10" fill="#888" font-style="italic">若元素可能为负，最长回文不一定和最大（外层可能是负对），需要更复杂处理</text>
+</svg>
