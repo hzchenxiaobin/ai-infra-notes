@@ -486,6 +486,98 @@ make nsys-gemm           # nsys 时间线
 
 ---
 
+## Week 3
+
+### Day 1 — Transformer 推理流程 Profiling
+
+**目录**：`profiling/week3/day1/`
+
+> 对应 [Week 3 Day 1 晚间编程任务 + 练习题 2/3](../week3/day1/README.md)
+
+**目标**：三层 profiling（torch.profiler → nsys → ncu）分析 Transformer Prefill/Decode 两阶段。
+
+```bash
+cd profiling/week3/day1
+make profile        # torch.profiler 算子级分析
+make nsys           # nsys 系统级时间线（练习 2）
+make nsys-stats     # nsys kernel 统计
+make ncu            # ncu kernel 级分析
+make ncu-gemm       # 只分析 GEMM kernel
+make ncu-softmax    # 只分析 softmax kernel
+```
+
+**观察重点**：
+- Prefill：GEMM `sm__throughput` 高 → compute-bound
+- Decode：GEMM `dram__throughput` 高、`sm__throughput` 低 → memory-bound（M=1）
+- nsys 时间线：Decode 的 kernel 间隙更大（launch overhead）
+- torch.compile：kernel 数减少 30-50%
+
+详见 [`profiling/week3/day1/README.md`](week3/day1/README.md)。
+
+---
+
+### Day 2 — Softmax + LayerNorm Profiling
+
+**目录**：`profiling/week3/day2/`
+
+> 对应 [Week 3 Day 2 任务 3（ncu 验证 memory-bound）+ 实验 1（D-scan 尺度律）](../week3/day2/README.md)
+
+**目标**：用 ncu 验证 Softmax/LayerNorm 是 memory-bound，并观察 D 翻倍时时间的线性尺度律。
+
+```bash
+cd profiling/week3/day2
+make softmax_layernorm && ./softmax_layernorm    # 正确性 + 计时
+make profile           # ncu 核心指标（SM/DRAM throughput）
+make profile-stall     # 含 stall reasons
+make profile-full      # ncu 完整报告
+
+make sl_dscan && ./sl_dscan   # 实验 1：D-scan 尺度律
+make profile-dscan     # 对所有 D 值做 ncu 分析
+make nsys              # nsys 时间线
+```
+
+**观察重点**：
+- `dram__throughput` 高、`sm__throughput` 低 → **memory-bound**（AI ≈ 0.375）
+- D 翻倍 → 时间翻倍 → 线性尺度律（Bytes / Bandwidth）
+- Long Scoreboard stall 高（三遍扫描等 HBM）
+- 小 D 时带宽偏低（L2 cache 命中 + launch overhead）
+
+详见 [`profiling/week3/day2/README.md`](week3/day2/README.md)。
+
+---
+
+### Day 3 — 源码分析优化对比 Profiling
+
+**目录**：`profiling/week3/day3/`
+
+> 对应 [Week 3 Day 3 任务 3（ncu 对比优化前后）+ 实验 2（warp vs block D-scan）+ 实验 3（stall 分析）](../week3/day3/README.md)
+
+**目标**：用 ncu 量化 warp 级 Softmax + float4 LayerNorm 的优化收益。
+
+```bash
+cd profiling/week3/day3
+make softmax_layernorm_opt && ./softmax_layernorm_opt   # 4 个 kernel 计时+验证
+
+make profile-opt       # 优化版 kernel ncu 指标
+make profile-base      # 基准版 kernel ncu 指标
+make profile-all       # 全部 4 个 kernel 一次性 profile
+
+make warp_vs_block && ./warp_vs_block   # 实验 2：warp vs block D-scan
+make profile-dscan     # 对 D-scan 做 ncu 分析
+
+make profile-stall     # 实验 3：stall 原因分析（scalar vs float4）
+make nsys              # nsys 时间线
+```
+
+**观察重点**：
+- float4 优化后 `dram__throughput` 上升、`sm__throughput` 基本不变 → memory-bound 优化特征
+- D≤1024 时 warp 级更快（无 `__syncthreads`），D=4096 时可能被 block 级反超
+- float4 的 Long Scoreboard stall 可能略升（单次 load 更大），但总时间下降
+
+详见 [`profiling/week3/day3/README.md`](week3/day3/README.md)。
+
+---
+
 ## 通用方法论
 
 1. **先 nsys，后 ncu**：
