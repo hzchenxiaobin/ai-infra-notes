@@ -46,7 +46,11 @@ def parse_title(markdown_text: str, filename: str = "") -> str:
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
-    """Build sidebar navigation as accordion grouped by category and folder.
+    """Build sidebar navigation as a three-level accordion.
+
+    Top level: 周赛 / 每日一题
+      周赛 -> contest numbers (descending) -> problems
+      每日一题 -> weeks (descending) -> days (ascending) -> problems
 
     current_slug=None means overview page.
     """
@@ -54,55 +58,101 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
 
     overview_class = "nav-link active" if current_slug is None else "nav-link"
     lines.append(f'<a class="{overview_class}" href="{root_prefix}leetcode/index.html">📌 题解列表</a>')
+    lines.append('<div class="nav-section-title">题目</div>')
 
-    # Group problems by (category, folder)
-    groups: Dict[Tuple[str, str], List[Dict]] = {}
-    for p in problems:
-        groups.setdefault((p["category"], p["folder"]), []).append(p)
-
-    # Determine which group contains the current problem (if any)
-    current_group: Optional[Tuple[str, str]] = None
+    # Determine the path to the container of the current problem
+    current_path: List[str] = []
     if current_slug is not None:
         for p in problems:
             if p["slug"] == current_slug:
-                current_group = (p["category"], p["folder"])
+                if p["category"] == "contest":
+                    current_path = ["contest", p["contest"]]
+                elif p["category"] == "daily":
+                    current_path = ["daily", p["week"], p["day"]]
                 break
 
-    lines.append('<div class="nav-section-title">题目</div>')
+    # Build navigation tree
+    tree: Dict[str, Dict] = {
+        "contest": {"title": "周赛", "children": {}, "problems": []},
+        "daily": {"title": "每日一题", "children": {}, "problems": []},
+    }
 
-    def section_title(category: str, folder: str) -> str:
-        if category == "contest":
-            return f"周赛 {folder}"
-        if category == "daily":
-            return f"每日一题 {folder}"
-        return folder
+    for p in problems:
+        if p["category"] == "contest":
+            contest = p["contest"]
+            if contest not in tree["contest"]["children"]:
+                tree["contest"]["children"][contest] = {
+                    "title": contest, "children": {}, "problems": []
+                }
+            tree["contest"]["children"][contest]["problems"].append(p)
+        elif p["category"] == "daily":
+            week = p["week"]
+            day = p["day"]
+            if week not in tree["daily"]["children"]:
+                tree["daily"]["children"][week] = {
+                    "title": week, "children": {}, "problems": []
+                }
+            if day not in tree["daily"]["children"][week]["children"]:
+                tree["daily"]["children"][week]["children"][day] = {
+                    "title": day, "children": {}, "problems": []
+                }
+            tree["daily"]["children"][week]["children"][day]["problems"].append(p)
 
-    # Sort: contest first, then daily, then others; within each, sort by folder
-    for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
-        category, folder = group
-        title = section_title(category, folder)
-        is_current_group = group == current_group
-        expanded_cls = " is-expanded" if is_current_group else ""
-        aria_expanded = "true" if is_current_group else "false"
-        toggle_icon = "▼" if is_current_group else "▶"
+    def sort_key_numeric(name: str) -> int:
+        match = re.search(r'(\d+)$', name)
+        return int(match.group(1)) if match else 0
 
-        lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
-        lines.append('  <div class="nav-accordion-header">')
-        lines.append(
+    def render_accordion(node: Dict, path: List[str], level: int) -> List[str]:
+        result: List[str] = []
+        title = node["title"]
+        is_expanded = bool(current_path and current_path[:len(path)] == path)
+        expanded_cls = " is-expanded" if is_expanded else ""
+        aria_expanded = "true" if is_expanded else "false"
+        toggle_icon = "▼" if is_expanded else "▶"
+        level_cls = f" level-{level}"
+
+        result.append(f'<div class="nav-accordion-item{level_cls}{expanded_cls}">')
+        result.append('  <div class="nav-accordion-header">')
+        result.append(
             f'    <span class="nav-link week-link">{title}</span>'
             f'<button class="nav-accordion-toggle" aria-label="收起/展开 {title}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
         )
-        lines.append('  </div>')
-        lines.append('  <div class="nav-accordion-content">')
-        lines.append('    <div class="nav-section">')
-        for p in groups[group]:
+        result.append('  </div>')
+        result.append('  <div class="nav-accordion-content">')
+        result.append('    <div class="nav-section">')
+
+        children = node.get("children", {})
+        if children:
+            child_items = list(children.items())
+            if path == ["contest"]:
+                # Contest numbers descending
+                child_items.sort(key=lambda x: sort_key_numeric(x[0]), reverse=True)
+            elif path == ["daily"]:
+                # Weeks descending
+                child_items.sort(key=lambda x: sort_key_numeric(x[0]), reverse=True)
+            elif len(path) == 2 and path[0] == "daily":
+                # Days ascending
+                child_items.sort(key=lambda x: sort_key_numeric(x[0]))
+            else:
+                child_items.sort(key=lambda x: x[0])
+
+            for key, child in child_items:
+                result.extend(render_accordion(child, path + [key], level + 1))
+
+        for p in node.get("problems", []):
             cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
-            lines.append(
+            result.append(
                 f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
             )
-        lines.append('    </div>')
-        lines.append('  </div>')
-        lines.append('</div>')
+
+        result.append('    </div>')
+        result.append('  </div>')
+        result.append('</div>')
+        return result
+
+    for key in ["contest", "daily"]:
+        if tree[key]["children"] or tree[key]["problems"]:
+            lines.extend(render_accordion(tree[key], [key], 1))
 
     return "\n".join(lines)
 
@@ -227,17 +277,29 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         rel_parts = md_file.relative_to(leetcode_dir).parts
         if rel_parts[0] == "contest" and len(rel_parts) > 1:
             category = "contest"
-            folder = rel_parts[1]
-        elif rel_parts[0] == "daily" and len(rel_parts) > 2:
+            contest = rel_parts[1]
+            week = None
+            day = None
+            folder = contest
+        elif rel_parts[0] == "daily" and len(rel_parts) > 3:
             category = "daily"
-            folder = rel_parts[-2]
+            contest = None
+            week = rel_parts[1]
+            day = rel_parts[2]
+            folder = day
         else:
             category = "other"
+            contest = None
+            week = None
+            day = None
             folder = md_file.parent.name
         problems.append({
             "slug": slug,
             "title": title,
             "category": category,
+            "contest": contest,
+            "week": week,
+            "day": day,
             "folder": folder,
             "markdown": markdown_text,
         })

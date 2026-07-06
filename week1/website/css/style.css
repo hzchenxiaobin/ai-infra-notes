@@ -161,7 +161,26 @@ body {
 }
 
 .nav-accordion-item.is-expanded .nav-accordion-content {
-    max-height: 600px;
+    max-height: 1200px;
+}
+
+/* Nested accordion indentation for multi-level sidebar */
+.nav-accordion-item.level-2 > .nav-accordion-header .nav-link {
+    padding-left: 36px;
+    font-size: 0.86rem;
+}
+
+.nav-accordion-item.level-3 > .nav-accordion-header .nav-link {
+    padding-left: 48px;
+    font-size: 0.84rem;
+}
+
+.nav-accordion-item.level-2 > .nav-accordion-content > .nav-section {
+    margin-left: 24px;
+}
+
+.nav-accordion-item.level-3 > .nav-accordion-content > .nav-section {
+    margin-left: 36px;
 }
 
 /* Main Content */

@@ -50,6 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             toggleAccordionItem(header.closest('.nav-accordion-item'));
+            // Prevent nested accordion clicks from toggling parent accordions
+            e.stopPropagation();
         });
     });
 
