@@ -17,7 +17,7 @@ from typing import Optional
 OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
 
 # Source markdown for the full 8-week plan overview page.
-PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+PLAN_SOURCE = Path(__file__).parent.parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
 WEEK1_DIR = Path(__file__).parent.parent
 
 # Markdown documents that should also be deployed as standalone HTML pages.

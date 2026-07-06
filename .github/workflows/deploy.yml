@@ -6,9 +6,9 @@ on:
     paths:
       - 'build.py'
       - 'docs/**'
-      - 'week1/**'
-      - 'week2/**'
-      - 'week3/**'
+      - 'aiinfra/week1/**'
+      - 'aiinfra/week2/**'
+      - 'aiinfra/week3/**'
       - 'leetcode/**'
       - 'LeetGPU/**'
       - 'public/**'

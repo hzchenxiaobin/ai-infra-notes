@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 """
-Build the Week 2 website from README.md (overview) and dayN/README.md (per-day).
+Build the Week 3 website from README.md (overview) and dayN/README.md (per-day).
 Generates:
-  - index.html: overview page (from week2/README.md)
-  - day1.html ~ dayN.html: one page per day (from week2/dayN/README.md)
+  - index.html: overview page (from week3/README.md)
+  - dayN.html: one page per day (from week3/dayN/README.md)
 Uses relative paths (../css/..., ../js/...) for shared resources,
-since week2/ is one level below the deployment root on GitHub Pages.
+since week3/ is one level below the deployment root on GitHub Pages.
 """
 
 import re
 from pathlib import Path
 from typing import Optional
 
-PLAN_SOURCE = Path(__file__).parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
-WEEK2_DIR = Path(__file__).parent.parent
+PLAN_SOURCE = Path(__file__).parent.parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+WEEK3_DIR = Path(__file__).parent.parent
 
 
 def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
-    """Rewrite local .md links to .html for GitHub Pages deployment.
+    """Rewrite local .md links to .html for GitHub Pages deployment."""
 
-    Links that escape the week directory (starting with ../../) are rewritten
-    to relative paths from the generated page's location. For week2 pages
-    deployed under week2/, the LeetGPU directory is at ../LeetGPU/.
-    """
     def replace_link(match):
         url = match.group(1)
         if not url.endswith(".md"):
@@ -30,10 +26,10 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        # ../../LeetGPU/x.md -> <root_prefix>LeetGPU/x.html
         if new_url.startswith("../../"):
             new_url = root_prefix + new_url[len("../../"):]
         return f"]({new_url})"
+
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
@@ -56,21 +52,16 @@ def escape_for_template_string(text: str) -> str:
 
 
 def load_overview_and_days():
-    """Load overview from week2/README.md and per-day markdown from week2/dayN/README.md.
+    """Load overview from week3/README.md and per-day markdown from week3/dayN/README.md."""
 
-    Returns (overview_text, days) where days is a list of
-    {"num": int, "title": str, "markdown": str} sorted by day number.
-    Image paths are rewritten from "../website/images/" to "images/" so they
-    resolve correctly in the website output directory.
-    """
-    readme_path = WEEK2_DIR / "README.md"
+    readme_path = WEEK3_DIR / "README.md"
     if not readme_path.exists():
-        raise FileNotFoundError(f"Week 2 README not found: {readme_path}")
+        raise FileNotFoundError(f"Week 3 README not found: {readme_path}")
     overview = readme_path.read_text(encoding="utf-8").replace("](website/images/", "](images/")
 
     day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
     days = []
-    for day_dir in sorted(WEEK2_DIR.glob("day*")):
+    for day_dir in sorted(WEEK3_DIR.glob("day*")):
         readme = day_dir / "README.md"
         if not readme.exists():
             continue
@@ -87,7 +78,7 @@ def load_overview_and_days():
         })
 
     if not days:
-        raise ValueError(f"No day*/README.md files found in {WEEK2_DIR}")
+        raise ValueError(f"No day*/README.md files found in {WEEK3_DIR}")
     days.sort(key=lambda d: d["num"])
     return overview, days
 
@@ -120,16 +111,16 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     overview_active = current_day is None
     overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 2 概览</a>')
+    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 3 概览</a>')
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
-    # Titles for all weeks; week 2 title is hardcoded, others come from the plan.
-    week_titles = {2: "GEMM & Kernel 优化"}
+    # Titles for all weeks; week 3 title is hardcoded, others come from the plan.
+    week_titles = {3: "Transformer 执行本质"}
     for week in weeks:
         week_titles[week["num"]] = week["title"]
 
-    repo_root = WEEK2_DIR.parent
+    repo_root = WEEK3_DIR.parent
     week_data = [
         {
             "num": 1,
@@ -139,15 +130,15 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         },
         {
             "num": 2,
-            "href": "index.html",
-            "day_prefix": "",
-            "days": existing_days,
+            "href": "../week2/index.html",
+            "day_prefix": "../week2/",
+            "days": get_day_numbers(repo_root / "week2"),
         },
         {
             "num": 3,
-            "href": "../week3/index.html",
-            "day_prefix": "../week3/",
-            "days": get_day_numbers(repo_root / "week3"),
+            "href": "index.html",
+            "day_prefix": "",
+            "days": existing_days,
         },
     ]
     for week in weeks:
@@ -161,7 +152,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         })
 
     for info in week_data:
-        is_current = info["num"] == 2
+        is_current = info["num"] == 3
         expanded_cls = " is-expanded" if is_current else ""
         active_cls = " active" if is_current else ""
         aria_expanded = "true" if is_current else "false"
@@ -194,7 +185,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 def page_template(title: str, nav_html: str, markdown: str,
                   is_overview: bool = False, page_title: Optional[str] = None) -> str:
     escaped_markdown = escape_for_template_string(markdown)
-    page_title = page_title if page_title is not None else f"Week 2 - {title}"
+    page_title = page_title if page_title is not None else f"Week 3 - {title}"
     back_link = '' if is_overview else '<a class="back-link" href="index.html">← 返回概览</a>'
     bottom_nav = '' if is_overview else '<div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>'
 
@@ -296,7 +287,6 @@ def page_template(title: str, nav_html: str, markdown: str,
 def build_website(output_dir: Path) -> None:
     overview, days = load_overview_and_days()
 
-    # Week 2 pages are deployed under week2/, so LeetGPU is at ../LeetGPU/
     overview = rewrite_md_links_to_html(overview, root_prefix="../")
     for day in days:
         day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="../")
@@ -314,15 +304,15 @@ def build_website(output_dir: Path) -> None:
         )
     day_cards_html += '</div>\n'
 
-    overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
+    overview_with_cards = overview + '\n\n' + day_cards_html
 
     # Generate overview page
     overview_html = page_template(
-        title="Week 2 概览",
+        title="Week 3 概览",
         nav_html=build_nav(current_day=None, weeks=plan_weeks, days=days),
         markdown=overview_with_cards,
         is_overview=True,
-        page_title="Week 2 - CUDA 进阶优化",
+        page_title="Week 3 - Transformer 执行本质与算子手写",
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")

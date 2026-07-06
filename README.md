@@ -28,20 +28,25 @@ ai-infra-notes/
 │   ├── AI_Infra_8_week_plan_detailed.md      # 详细每日任务
 │   ├── learning_plan_week2_expanded.md       # Week 2 深度展开
 │   └── skills/daily-tutorial/SKILL.md        # 写每日教程的通用 Skill
-├── week1/                              # Week 1：GPU 执行本质 + Profiling
-│   ├── README.md                            # 本周概览 + Day 索引
-│   ├── day1/~day7/                          # 按天拆分，每天含：
-│   │   ├── README.md                        #   当日教程（11 段固定骨架）
-│   │   ├── kernels/                         #   可直接编译的 .cu 示例
-│   │   ├── exercise/                        #   练习题与验证程序
-│   │   └── notes/                           #   理论笔记与延伸阅读
-│   ├── tools/                               # 辅助工具（Occupancy Calculator）
-│   ├── profiles/                            # Nsight Profiling 报告汇总
-│   └── website/                             # 本周静态网站源码
-├── week2/                              # Week 2：CUDA 进阶优化与性能分析
-│   ├── README.md                            # 本周概览 + Day 索引
-│   ├── day1/~day7/                          # 按天拆分（同 Week 1 结构）
-│   └── website/                             # 本周静态网站源码
+├── aiinfra/                            # 课程教程目录
+│   ├── week1/                             # Week 1：GPU 执行本质 + Profiling
+│   │   ├── README.md                           # 本周概览 + Day 索引
+│   │   ├── day1/~day7/                         # 按天拆分，每天含：
+│   │   │   ├── README.md                       #   当日教程（11 段固定骨架）
+│   │   │   ├── kernels/                        #   可直接编译的 .cu 示例
+│   │   │   ├── exercise/                       #   练习题与验证程序
+│   │   │   └── notes/                          #   理论笔记与延伸阅读
+│   │   ├── tools/                              # 辅助工具（Occupancy Calculator）
+│   │   ├── profiles/                           # Nsight Profiling 报告汇总
+│   │   └── website/                            # 本周静态网站源码
+│   ├── week2/                             # Week 2：CUDA 进阶优化与性能分析
+│   │   ├── README.md                           # 本周概览 + Day 索引
+│   │   ├── day1/~day7/                         # 按天拆分（同 Week 1 结构）
+│   │   └── website/                            # 本周静态网站源码
+│   └── week3/                             # Week 3：Transformer 执行本质
+│       ├── README.md                           # 本周概览 + Day 索引
+│       ├── day15~day19/                        # 按天拆分
+│       └── website/                            # 本周静态网站源码
 ├── LeetGPU/                            # LeetGPU CUDA 挑战题解（12 道）
 │   ├── leetgpu-vector-add-solution.md
 │   ├── leetgpu-prefix-sum-solution.md
@@ -56,7 +61,7 @@ ai-infra-notes/
 
 ## 每日教程结构
 
-每天的学习内容独立存放在 `weekN/dayM/` 目录下，遵循固定的 11 段骨架：
+每天的学习内容独立存放在 `aiinfra/weekN/dayM/` 目录下，遵循固定的 11 段骨架：
 
 ```
 ## Day N：<主题>
@@ -92,16 +97,16 @@ cd public && python3 -m http.server 8080
 ### 方式 2：单独构建某一周网站
 
 ```bash
-python3 week1/website/build.py
-cd week1/website && python3 -m http.server 8080
+python3 aiinfra/week1/website/build.py
+cd aiinfra/week1/website && python3 -m http.server 8080
 ```
 
 ## 编译运行 Kernel
 
-Kernel 示例按天组织在 `dayN/kernels/` 下，可用 `nvcc` 直接编译：
+Kernel 示例按天组织在 `aiinfra/weekN/dayM/kernels/` 下，可用 `nvcc` 直接编译：
 
 ```bash
-cd week1
+cd aiinfra/week1
 nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu && ./day1/kernels/hello_gpu
 nvcc -o day4/kernels/transpose day4/kernels/transpose.cu && ./day4/kernels/transpose
 nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu && ./day5/kernels/bank_conflict
@@ -139,9 +144,9 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
 ## 学习路线建议
 
 1. 从 [docs/AI_Infra_8_week_plan.md](docs/AI_Infra_8_week_plan.md) 了解整体节奏
-2. 进入 [week1/README.md](week1/README.md) 按 Day 1 → Day 7 推进
+2. 进入 [aiinfra/week1/README.md](aiinfra/week1/README.md) 按 Day 1 → Day 7 推进
 3. 每个 kernel 都配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
-4. Day 3 起配合 [week1/tools/cuda_occupancy_calculator.py](week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
+4. Day 3 起配合 [aiinfra/week1/tools/cuda_occupancy_calculator.py](aiinfra/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
 5. 每天完成 LeetGPU 在线题目，题解归档到 `LeetGPU/`
 
 ## 目录约定

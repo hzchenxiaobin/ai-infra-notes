@@ -3,8 +3,9 @@
 Build the combined website for GitHub Pages.
 Generates:
   - public/ (deployment root)
-    - week1 website files (copied from week1/website)
-    - week2 website files (copied from week2/website)
+    - week1 website files (copied from aiinfra/week1/website)
+    - week2 website files (copied from aiinfra/week2/website)
+    - week3 website files (copied from aiinfra/week3/website)
     - leetcode website files (copied from leetcode/website)
 """
 
@@ -66,14 +67,14 @@ def main() -> None:
     # Build Week 1 website
     print("Building Week 1 website...")
     subprocess.run(
-        ["python3", str(repo_root / "week1" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "week1" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 1 website to public/
     print("Copying Week 1 website to public/...")
     copy_directory_contents(
-        repo_root / "week1" / "website",
+        repo_root / "aiinfra" / "week1" / "website",
         public_dir,
         skip={"build.py", "README.md"},
     )
@@ -81,14 +82,14 @@ def main() -> None:
     # Build Week 2 website
     print("Building Week 2 website...")
     subprocess.run(
-        ["python3", str(repo_root / "week2" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "week2" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 2 website to public/week2/
     print("Copying Week 2 website to public/week2/...")
     copy_directory_contents(
-        repo_root / "week2" / "website",
+        repo_root / "aiinfra" / "week2" / "website",
         public_dir / "week2",
         skip={"build.py", "README.md"},
     )
@@ -96,14 +97,14 @@ def main() -> None:
     # Build Week 3 website
     print("Building Week 3 website...")
     subprocess.run(
-        ["python3", str(repo_root / "week3" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "week3" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 3 website to public/week3/
     print("Copying Week 3 website to public/week3/...")
     copy_directory_contents(
-        repo_root / "week3" / "website",
+        repo_root / "aiinfra" / "week3" / "website",
         public_dir / "week3",
         skip={"build.py", "README.md"},
     )
@@ -153,7 +154,7 @@ def main() -> None:
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
 
     # Insert LeetCode and LeetGPU navigation links into all course pages
-    # (week1/week2/week3 and extra pages), but not into the leetcode or
+    # (aiinfra/week1/week2/week3 and extra pages), but not into the leetcode or
     # LeetGPU subsites themselves.
     course_pages = [
         p for p in public_dir.rglob("*.html")

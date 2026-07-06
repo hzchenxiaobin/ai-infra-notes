@@ -12,13 +12,13 @@
 public/
 
 # Generated Week 1 website files (copied source dirs + HTML)
-week1/website/kernels/
-week1/website/exercise/
-week1/website/notes/
-week1/website/tools/
-week1/website/index.html
-week1/website/day*.html
-week1/website/plan.html
+aiinfra/week1/website/kernels/
+aiinfra/week1/website/exercise/
+aiinfra/week1/website/notes/
+aiinfra/week1/website/tools/
+aiinfra/week1/website/index.html
+aiinfra/week1/website/day*.html
+aiinfra/week1/website/plan.html
 
 # Generated LeetCode website files
 leetcode/website/index.html
@@ -29,11 +29,11 @@ leetcode/website/images/
 .arts/
 
 # Generated Week 2 website files
-week2/website/index.html
-week2/website/day*.html
-week2/website/kernels/
-week2/website/exercise/
-week2/website/notes/
+aiinfra/week2/website/index.html
+aiinfra/week2/website/day*.html
+aiinfra/week2/website/kernels/
+aiinfra/week2/website/exercise/
+aiinfra/week2/website/notes/
 # Generated LeetGPU website files
 LeetGPU/website/index.html
 LeetGPU/website/leetgpu-*.html
@@ -43,7 +43,7 @@ LeetGPU/website/leetgpu-*.html
 mini_device_query
 
 # Compiled binaries
-week1/day3/exercise/occupancy_verify
+aiinfra/week1/day3/exercise/occupancy_verify
 
 # ncu profiling workspace (binaries + nsys output)
 ncu/**/transpose
