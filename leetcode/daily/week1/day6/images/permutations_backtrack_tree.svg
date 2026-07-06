@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="600" height="420" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="300" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">回溯法本质：在决策树上 DFS，「选 → 递归 → 撤销」</text>
+
+  <!-- Left: decision tree for [1,2,3] -->
+  <text x="30" y="56" font-size="12" fill="#888">决策树（nums=[1,2,3]）:</text>
+
+  <!-- root -->
+  <ellipse cx="140" cy="80" rx="34" ry="16" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="140" y="84" text-anchor="middle" font-size="11" fill="#333">path=[]</text>
+
+  <!-- level 1: pick 1 / 2 / 3 -->
+  <line x1="140" y1="96" x2="70" y2="130" stroke="#666" stroke-width="1.3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <line x1="140" y1="96" x2="140" y2="130" stroke="#666" stroke-width="1.3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <line x1="140" y1="96" x2="210" y2="130" stroke="#666" stroke-width="1.3" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="44" y="132" width="52" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+  <text x="70" y="149" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">[1]</text>
+  <rect x="114" y="132" width="52" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+  <text x="140" y="149" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">[2]</text>
+  <rect x="184" y="132" width="52" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+  <text x="210" y="149" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">[3]</text>
+
+  <!-- level 2 from [1]: pick 2, 3 -->
+  <line x1="70" y1="158" x2="50" y2="190" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <line x1="70" y1="158" x2="100" y2="190" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="26" y="192" width="48" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="50" y="208" text-anchor="middle" font-size="10" fill="#333">[1,2]</text>
+  <rect x="78" y="192" width="48" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="102" y="208" text-anchor="middle" font-size="10" fill="#333">[1,3]</text>
+
+  <!-- level 2 from [2]: pick 1, 3 -->
+  <line x1="140" y1="158" x2="125" y2="190" stroke="#888" stroke-width="1" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <line x1="140" y1="158" x2="160" y2="190" stroke="#888" stroke-width="1" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <text x="135" y="186" font-size="9" fill="#888">…</text>
+
+  <!-- level 2 from [3] -->
+  <line x1="210" y1="158" x2="195" y2="190" stroke="#888" stroke-width="1" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <line x1="210" y1="158" x2="225" y2="190" stroke="#888" stroke-width="1" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <text x="216" y="186" font-size="9" fill="#888">…</text>
+
+  <!-- level 3: leaves = full permutations -->
+  <line x1="50" y1="216" x2="50" y2="240" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <line x1="102" y1="216" x2="102" y2="240" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="22" y="242" width="56" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="4" filter="url(#rough2)"/>
+  <text x="50" y="258" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">[1,2,3]</text>
+  <rect x="74" y="242" width="56" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="4" filter="url(#rough2)"/>
+  <text x="102" y="258" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">[1,3,2]</text>
+
+  <text x="140" y="276" text-anchor="middle" font-size="10" fill="#888">⋮ 共 6 个叶子 = 3! 种全排列</text>
+
+  <!-- Right: the three-step template -->
+  <text x="340" y="56" font-size="12" fill="#444" font-weight="bold">回溯三步模板：</text>
+
+  <rect x="340" y="72" width="240" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="460" y="92" text-anchor="middle" font-size="12" fill="#333">① 选：path.add(num)</text>
+  <text x="460" y="108" text-anchor="middle" font-size="10" fill="#888">从可选集合中挑一个放进路径</text>
+
+  <path d="M 460 116 L 460 128" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="340" y="132" width="240" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="460" y="152" text-anchor="middle" font-size="12" fill="#333">② 递归：backtrack(下一层)</text>
+  <text x="460" y="168" text-anchor="middle" font-size="10" fill="#888">带着当前选择继续往下探索</text>
+
+  <path d="M 460 176 L 460 188" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="340" y="192" width="240" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="460" y="212" text-anchor="middle" font-size="12" fill="#333">③ 撤销：path.pop_back()</text>
+  <text x="460" y="228" text-anchor="middle" font-size="10" fill="#888">回退选择，换下一个候选试试</text>
+
+  <!-- return arrow (undo back to select) -->
+  <path d="M 340 214 L 300 214 L 300 94 L 340 94" stroke="#b85450" stroke-width="1.3" fill="none" stroke-dasharray="5,3" marker-end="url(#arrR)" filter="url(#rough2)"/>
+  <text x="288" y="154" text-anchor="middle" font-size="10" fill="#b85450" transform="rotate(-90 288 154)">撤销后换选</text>
+
+  <!-- summary -->
+  <rect x="340" y="260" width="240" height="90" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="460" y="282" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">关键直觉</text>
+  <text x="460" y="302" text-anchor="middle" font-size="11" fill="#555">回溯 = 系统地枚举所有决策</text>
+  <text x="460" y="320" text-anchor="middle" font-size="11" fill="#555">用「撤销」实现回退到分叉点</text>
+  <text x="460" y="338" text-anchor="middle" font-size="11" fill="#888">叶子节点 = 一个完整排列</text>
+
+  <!-- bottom note -->
+  <text x="300" y="392" text-anchor="middle" font-size="11" fill="#888">决策树第 i 层决定排列的第 i 个位置；树高 = n，叶子数 = n!</text>
+  <text x="300" y="408" text-anchor="middle" font-size="11" fill="#888">「选-递归-撤销」是所有回溯题的通用骨架</text>
+</svg>
