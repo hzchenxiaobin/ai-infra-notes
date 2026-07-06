@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 460" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arrowD" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
+      <path d="M0,0 L4,7 L8,0 Z" fill="#888"/>
+    </marker>
+    <marker id="arrowR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="440" height="460" fill="#fafafa"/>
+
+  <text x="220" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">Kadane 算法流程</text>
+
+  <!-- Init -->
+  <rect x="110" y="40" width="220" height="50" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="220" y="62" text-anchor="middle" font-size="12.5" fill="#333" font-weight="bold">初始化</text>
+  <text x="220" y="80" text-anchor="middle" font-size="11" fill="#555">cur = max = nums[0]</text>
+
+  <!-- Arrow -->
+  <path d="M 220 94 L 220 112" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+
+  <!-- Loop -->
+ <rect x="90" y="116" width="260" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="220" y="136" text-anchor="middle" font-size="12.5" fill="#333" font-weight="bold">for i = 1 to n−1</text>
+  <text x="220" y="152" text-anchor="middle" font-size="11" fill="#555">遍历每个元素</text>
+
+  <!-- Arrow -->
+  <path d="M 220 164 L 220 182" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+
+  <!-- Diamond: cur > 0? -->
+  <polygon points="220,187 330,232 220,277 110,232" fill="#f0f0f0" stroke="#888" stroke-width="2" filter="url(#rough2)"/>
+  <text x="220" y="228" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">cur_sum > 0 ?</text>
+  <text x="220" y="246" text-anchor="middle" font-size="10.5" fill="#777">前面的和为正？</text>
+
+  <!-- Yes branch -->
+  <path d="M 110 232 L 50 232 L 50 300" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+  <text x="68" y="225" font-size="11" fill="#82b366" font-weight="bold">Yes</text>
+
+  <!-- Yes box -->
+  <rect x="10" y="304" width="100" height="60" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="10" filter="url(#rough2)"/>
+  <text x="60" y="324" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">接上</text>
+  <text x="60" y="342" text-anchor="middle" font-size="10" fill="#555">cur += nums[i]</text>
+  <text x="60" y="356" text-anchor="middle" font-size="10" fill="#82b366">（贪心扩展）</text>
+
+  <!-- No branch -->
+  <path d="M 330 232 L 390 232 L 390 300" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+  <text x="358" y="225" font-size="11" fill="#b85450" font-weight="bold">No</text>
+
+  <!-- No box -->
+  <rect x="340" y="304" width="90" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="10" filter="url(#rough2)"/>
+  <text x="385" y="324" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">重启</text>
+  <text x="385" y="342" text-anchor="middle" font-size="10" fill="#555">cur = nums[i]</text>
+  <text x="385" y="356" text-anchor="middle" font-size="10" fill="#b85450">（丢弃前缀）</text>
+
+  <!-- Merge arrows to max update -->
+  <path d="M 60 364 L 60 390 L 180 390" stroke="#888" stroke-width="1.8" fill="none" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+  <path d="M 385 364 L 385 390 L 260 390" stroke="#888" stroke-width="1.8" fill="none" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+
+  <!-- max update box -->
+  <rect x="110" y="374" width="220" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="220" y="398" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">max_sum = max(max_sum, cur)</text>
+
+  <!-- Loop back arrow -->
+  <path d="M 220 414 L 220 432 L 400 432 L 400 138 L 350 138" stroke="#888" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+
+  <!-- Final result -->
+  <text x="220" y="450" text-anchor="middle" font-size="11" fill="#d6a040" font-style="italic">循环结束 → return max_sum (O(n), O(1))</text>
+</svg>

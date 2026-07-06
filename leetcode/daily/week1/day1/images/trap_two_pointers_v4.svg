@@ -1,0 +1,54 @@
+"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arrowR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#e8853a"/>
+    </marker>
+  </defs>
+
+  <rect width="500" height="380" fill="#fafafa"/>
+
+  <text x="250" y="22" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">双指针：每次移动较小侧</text>
+
+  <path d="M 30 300 Q 250 298 470 300" stroke="#999" stroke-width="2.5" fill="none" filter="url(#rough)"/>
+
+  <rect x="60" y="210" width="44" height="90" fill="#6c8ebf" fill-opacity="0.6" stroke="#446688" stroke-width="2" rx="2" filter="url(#rough)"/>
+
+  <rect x="130" y="270" width="44" height="30" fill="#aaa" fill-opacity="0.5" stroke="#777" stroke-width="2" rx="2" filter="url(#rough)"/>
+
+  <rect x="200" y="296" width="44" height="4" fill="#b85450" fill-opacity="0.7" stroke="#8a3a36" stroke-width="2" rx="1" filter="url(#rough)"/>
+
+  <rect x="270" y="240" width="44" height="60" fill="#aaa" fill-opacity="0.5" stroke="#777" stroke-width="2" rx="2" filter="url(#rough)"/>
+
+  <rect x="340" y="180" width="44" height="120" fill="#82b366" fill-opacity="0.6" stroke="#4a7a3a" stroke-width="2" rx="2" filter="url(#rough)"/>
+
+  <rect x="130" y="240" width="44" height="30" fill="#a8c6e8" fill-opacity="0.4" stroke="#6a9acc" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#rough2)"/>
+
+  <rect x="200" y="210" width="44" height="86" fill="#a8c6e8" fill-opacity="0.4" stroke="#6a9acc" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#rough2)"/>
+
+  <rect x="270" y="234" width="44" height="6" fill="#a8c6e8" fill-opacity="0.4" stroke="#6a9acc" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#rough2)"/>
+
+  <path d="M 55 210 Q 250 208 400 210" stroke="#6a9acc" stroke-width="1.5" fill="none" stroke-dasharray="6,3" filter="url(#rough2)"/>
+  <text x="420" y="208" font-size="11" fill="#6a9acc">level=3</text>
+
+  <text x="82" y="200" text-anchor="middle" font-size="13" fill="#446688" font-weight="bold">← left</text>
+  <rect x="55" y="148" width="54" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="82" y="164" text-anchor="middle" font-size="11" fill="#446688">L_max=3</text>
+
+  <text x="362" y="170" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">right →</text>
+  <rect x="335" y="148" width="56" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="363" y="164" text-anchor="middle" font-size="11" fill="#4a7a3a">R_max=4</text>
+
+  <rect x="120" y="335" width="260" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="250" y="357" text-anchor="middle" font-size="12" fill="#444">L_max(3) &lt; R_max(4) → 处理 left 侧</text>
+
+  <path d="M 104 200 L 124 200" stroke="#e8853a" stroke-width="2.5" fill="none" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+  <text x="114" y="190" text-anchor="middle" font-size="10" fill="#e8853a">移动</text>
+</svg>"
