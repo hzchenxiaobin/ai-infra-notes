@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="440" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="280" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">LCA 递归流程：后序遍历，自底向上汇聚结果</text>
+
+  <!-- Start -->
+  <ellipse cx="280" cy="56" rx="64" ry="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="60" text-anchor="middle" font-size="11" fill="#333">调用 dfs(root, p, q)</text>
+
+  <path d="M 280 74 L 280 88" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Base case -->
+  <polygon points="280,92 400,130 280,168 160,130" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="126" text-anchor="middle" font-size="11" fill="#333">root == null 或</text>
+  <text x="280" y="142" text-anchor="middle" font-size="11" fill="#333">root == p 或 root == q ?</text>
+
+  <!-- Yes base case -->
+  <path d="M 400 130 L 470 130" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="435" y="122" text-anchor="middle" font-size="10" fill="#b85450">是</text>
+  <ellipse cx="510" cy="130" rx="44" ry="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="510" y="134" text-anchor="middle" font-size="11" fill="#333">返回 root</text>
+
+  <!-- No: recurse -->
+  <path d="M 280 168 L 280 182" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="292" y="178" font-size="10" fill="#82b366">否</text>
+
+  <!-- left/right recurse -->
+  <rect x="120" y="186" width="320" height="60" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="206" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">后序递归</text>
+  <text x="280" y="224" text-anchor="middle" font-size="11" fill="#333">left = dfs(root.left, p, q)</text>
+  <text x="280" y="240" text-anchor="middle" font-size="11" fill="#333">right = dfs(root.right, p, q)</text>
+
+  <path d="M 280 246 L 280 260" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Decision: both non-null -->
+  <polygon points="280,264 400,302 280,340 160,302" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="296" text-anchor="middle" font-size="11" fill="#333">left ≠ null 且</text>
+  <text x="280" y="312" text-anchor="middle" font-size="11" fill="#333">right ≠ null ?</text>
+  <text x="280" y="328" text-anchor="middle" font-size="10" fill="#888">(p q 分两侧)</text>
+
+  <!-- Yes LCA found -->
+  <path d="M 400 302 L 470 302" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="435" y="294" text-anchor="middle" font-size="10" fill="#82b366">是</text>
+  <rect x="470" y="284" width="80" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="8" filter="url(#rough2)"/>
+  <text x="510" y="302" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">返回 root</text>
+  <text x="510" y="314" text-anchor="middle" font-size="9" fill="#4a7a3a">LCA ⭐</text>
+
+  <!-- No: return non-null -->
+  <path d="M 280 340 L 280 354" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="292" y="350" font-size="10" fill="#b85450">否</text>
+
+  <rect x="150" y="358" width="260" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="378" text-anchor="middle" font-size="11" fill="#333">返回 left ≠ null ? left : right</text>
+  <text x="280" y="394" text-anchor="middle" font-size="10" fill="#888">(把非空那一侧向上传递)</text>
+
+  <!-- recursion note -->
+  <path d="M 120 216 L 60 216 L 60 56 L 216 56" stroke="#888" stroke-width="1.2" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="52" y="140" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-90 52 140)">先递归左右子树</text>
+
+  <!-- summary -->
+  <text x="280" y="426" text-anchor="middle" font-size="11" fill="#888">自底向上：左右子树结果汇聚到当前节点做决策，首次"两侧都命中"即为 LCA</text>
+</svg>
