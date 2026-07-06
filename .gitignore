@@ -37,6 +37,7 @@ aiinfra/week2/website/notes/
 # Generated LeetGPU website files
 leetgpu/website/index.html
 leetgpu/website/leetgpu-*.html
+leetgpu/website/images/
 *.pyc
 
 # Compiled binaries
