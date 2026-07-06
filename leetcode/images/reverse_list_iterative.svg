@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#446688"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="380" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">反转链表：用 prev / curr / next 三指针逐个掉头</text>
+
+  <!-- Original list -->
+  <text x="40" y="62" font-size="12" fill="#888">反转前:</text>
+  <rect x="90" y="46" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="118" y="68" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">1</text>
+  <line x1="146" y1="63" x2="174" y2="63" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="180" y="46" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="208" y="68" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">2</text>
+  <line x1="236" y1="63" x2="264" y2="63" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="270" y="46" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="298" y="68" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">3</text>
+  <line x1="326" y1="63" x2="354" y2="63" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="360" y="46" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="388" y="68" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">4</text>
+  <line x1="416" y1="63" x2="444" y2="63" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="450" y="46" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="478" y="68" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">5</text>
+  <line x1="506" y1="63" x2="534" y2="63" stroke="#446688" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="546" y="68" font-size="11" fill="#888">∅</text>
+
+  <!-- Reversed list -->
+  <text x="40" y="116" font-size="12" fill="#888">反转后:</text>
+  <text x="546" y="116" font-size="11" fill="#888">∅ ←</text>
+  <rect x="450" y="100" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="478" y="122" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">5</text>
+  <line x1="450" y1="117" x2="422" y2="117" stroke="#4a7a3a" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="360" y="100" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="388" y="122" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">4</text>
+  <line x1="360" y1="117" x2="332" y2="117" stroke="#4a7a3a" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="270" y="100" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="298" y="122" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">3</text>
+  <line x1="270" y1="117" x2="242" y2="117" stroke="#4a7a3a" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="180" y="100" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="208" y="122" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">2</text>
+  <line x1="180" y1="117" x2="152" y2="117" stroke="#4a7a3a" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="90" y="100" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="118" y="122" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">1</text>
+
+  <!-- Three pointers single step -->
+  <text x="40" y="168" font-size="12" fill="#888">单步演示:</text>
+  <rect x="40" y="182" width="64" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="72" y="197" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">prev</text>
+  <text x="72" y="209" text-anchor="middle" font-size="9" fill="#888">= ∅</text>
+  <rect x="110" y="182" width="64" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="142" y="197" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">curr</text>
+  <text x="142" y="209" text-anchor="middle" font-size="9" fill="#888">= 节点1</text>
+  <rect x="180" y="182" width="64" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="212" y="197" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">next</text>
+  <text x="212" y="209" text-anchor="middle" font-size="9" fill="#888">= 节点2</text>
+
+  <path d="M 72 182 L 72 84" stroke="#d6a040" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <path d="M 142 182 L 130 84" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <path d="M 212 182 L 220 84" stroke="#446688" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+
+  <!-- The 3-step core -->
+  <text x="40" y="244" font-size="12" fill="#444" font-weight="bold">每轮循环做三件事：</text>
+  <rect x="40" y="256" width="500" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="277" font-size="12" fill="#333">① <tspan font-weight="bold">next = curr-&gt;next</tspan>  先存住下一个（防止掉链子）</text>
+
+  <rect x="40" y="294" width="500" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="315" font-size="12" fill="#333">② <tspan font-weight="bold">curr-&gt;next = prev</tspan>  掉头：让当前节点指向前一个</text>
+
+  <rect x="40" y="332" width="500" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="353" font-size="12" fill="#333">③ <tspan font-weight="bold">prev = curr; curr = next</tspan>  整体右移一格，进入下一轮</text>
+</svg>
