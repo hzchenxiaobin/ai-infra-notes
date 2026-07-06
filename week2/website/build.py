@@ -188,10 +188,6 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         lines.append('  </div>')
         lines.append('</div>')
 
-    # More section
-    lines.append('<div class="nav-section-title">更多</div>')
-    lines.append('<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>')
-
     return "\n".join(lines)
 
 

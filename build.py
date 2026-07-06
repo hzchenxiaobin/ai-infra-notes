@@ -22,15 +22,21 @@ def compute_relative_path(from_file: Path, to_path: str) -> str:
     return "../" * depth + to_path
 
 
-def insert_leetcode_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
-    """Insert a LeetCode link into the week1/week2 sidebar navigation."""
-    rel_path = compute_relative_path(html_file.relative_to(public_dir), "leetcode/index.html")
-    leetcode_section = f'''<div class="nav-section-title">更多</div>
-<a class="nav-link" href="{rel_path}">🧩 LeetCode 题解</a>
+def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
+    """Insert LeetCode and LeetGPU links into the sidebar navigation."""
+    rel_leetcode = compute_relative_path(
+        html_file.relative_to(public_dir), "leetcode/index.html"
+    )
+    rel_leetgpu = compute_relative_path(
+        html_file.relative_to(public_dir), "LeetGPU/index.html"
+    )
+    extra_section = f'''<div class="nav-section-title">更多</div>
+<a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
+<a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>
 '''
     return html_text.replace(
         "            </nav>\n        </aside>",
-        "            </nav>\n" + leetcode_section + "        </aside>",
+        "            </nav>\n" + extra_section + "        </aside>",
     )
 
 
@@ -146,17 +152,18 @@ def main() -> None:
     if leetgpu_images_src.exists():
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
 
-    # Insert LeetCode navigation link into Week 1 pages (root + subdirectories, excluding week2/leetcode/LeetGPU)
-    week1_pages = [
+    # Insert LeetCode and LeetGPU navigation links into all course pages
+    # (week1/week2/week3 and extra pages), but not into the leetcode or
+    # LeetGPU subsites themselves.
+    course_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
-        and "week2" not in p.relative_to(public_dir).parts
         and "LeetGPU" not in p.relative_to(public_dir).parts
     ]
-    for html_file in week1_pages:
+    for html_file in course_pages:
         if html_file.is_file():
             html_text = html_file.read_text(encoding="utf-8")
-            html_text = insert_leetcode_nav(html_text, html_file, public_dir)
+            html_text = insert_extra_nav(html_text, html_file, public_dir)
             html_file.write_text(html_text, encoding="utf-8")
             print(f"Updated nav: {html_file}")
 
