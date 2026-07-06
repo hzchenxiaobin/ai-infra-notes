@@ -137,7 +137,24 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
                 child_items.sort(key=lambda x: x[0])
 
             for key, child in child_items:
-                result.extend(render_accordion(child, path + [key], level + 1))
+                child_path = path + [key]
+                child_problems = child.get("problems", [])
+                child_children = child.get("children", {})
+                # Daily day nodes with a single problem become direct links
+                # instead of nested accordions.
+                if (
+                    len(child_path) == 3
+                    and child_path[0] == "daily"
+                    and len(child_problems) == 1
+                    and not child_children
+                ):
+                    p = child_problems[0]
+                    cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
+                    result.append(
+                        f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{child["title"]}</a>'
+                    )
+                else:
+                    result.extend(render_accordion(child, child_path, level + 1))
 
         for p in node.get("problems", []):
             cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
