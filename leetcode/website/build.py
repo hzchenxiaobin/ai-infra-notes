@@ -7,14 +7,16 @@ Generates:
 Uses relative paths so the site works when deployed under a repository
 path prefix (e.g. https://user.github.io/repo-name/leetcode/).
 
-Problems are organized by their parent directory (weekly contest number),
-and both the sidebar and overview page display them grouped by contest.
+Problems are organized under two top-level directories:
+  - leetcode/contest/<contest-number>/
+  - leetcode/daily/week<week>/day<day>/
+The sidebar and overview page display them grouped by category and folder.
 """
 
 import re
 import shutil
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 
 def escape_for_template_string(text: str) -> str:
@@ -44,7 +46,7 @@ def parse_title(markdown_text: str, filename: str = "") -> str:
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
-    """Build sidebar navigation as accordion grouped by contest folder.
+    """Build sidebar navigation as accordion grouped by category and folder.
 
     current_slug=None means overview page.
     """
@@ -53,38 +55,47 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
     overview_class = "nav-link active" if current_slug is None else "nav-link"
     lines.append(f'<a class="{overview_class}" href="{root_prefix}leetcode/index.html">📌 题解列表</a>')
 
-    # Group problems by parent folder (contest number)
-    groups: Dict[str, List[Dict]] = {}
+    # Group problems by (category, folder)
+    groups: Dict[Tuple[str, str], List[Dict]] = {}
     for p in problems:
-        groups.setdefault(p["folder"], []).append(p)
+        groups.setdefault((p["category"], p["folder"]), []).append(p)
 
-    # Determine which folder contains the current problem (if any)
-    current_folder = None
+    # Determine which group contains the current problem (if any)
+    current_group: Optional[Tuple[str, str]] = None
     if current_slug is not None:
         for p in problems:
             if p["slug"] == current_slug:
-                current_folder = p["folder"]
+                current_group = (p["category"], p["folder"])
                 break
 
     lines.append('<div class="nav-section-title">题目</div>')
 
-    for folder in sorted(groups.keys(), key=lambda f: (f == "leetcode", f)):
-        section_title = f"周赛 {folder}" if folder != "leetcode" else "其他"
-        is_current_folder = folder == current_folder
-        expanded_cls = " is-expanded" if is_current_folder else ""
-        aria_expanded = "true" if is_current_folder else "false"
-        toggle_icon = "▼" if is_current_folder else "▶"
+    def section_title(category: str, folder: str) -> str:
+        if category == "contest":
+            return f"周赛 {folder}"
+        if category == "daily":
+            return f"每日一题 {folder}"
+        return folder
+
+    # Sort: contest first, then daily, then others; within each, sort by folder
+    for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
+        category, folder = group
+        title = section_title(category, folder)
+        is_current_group = group == current_group
+        expanded_cls = " is-expanded" if is_current_group else ""
+        aria_expanded = "true" if is_current_group else "false"
+        toggle_icon = "▼" if is_current_group else "▶"
 
         lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <span class="nav-link week-link">{section_title}</span>'
-            f'<button class="nav-accordion-toggle" aria-label="收起/展开 {section_title}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
+            f'    <span class="nav-link week-link">{title}</span>'
+            f'<button class="nav-accordion-toggle" aria-label="收起/展开 {title}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
         )
         lines.append('  </div>')
         lines.append('  <div class="nav-accordion-content">')
         lines.append('    <div class="nav-section">')
-        for p in groups[folder]:
+        for p in groups[group]:
             cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
             lines.append(
                 f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
@@ -191,10 +202,13 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         shutil.copytree(top_level_images, images_dir, dirs_exist_ok=True)
 
     # Find all markdown files in leetcode/ and its subdirectories
-    # (excluding website/ and images/)
+    # (excluding website/, images/ and SKILL.md metadata files)
     md_files = sorted([
         f for f in leetcode_dir.rglob("*.md")
-        if f.is_file() and "website" not in f.parts and "images" not in f.parts
+        if f.is_file()
+        and "website" not in f.parts
+        and "images" not in f.parts
+        and f.name != "SKILL.md"
     ])
 
     # Copy per-problem local images (e.g. leetcode/daily/week1/day1/images/)
@@ -210,30 +224,45 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
 
         title = parse_title(markdown_text, filename=md_file.name)
         slug = md_file.stem
-        folder = md_file.parent.name
+        rel_parts = md_file.relative_to(leetcode_dir).parts
+        if rel_parts[0] == "contest" and len(rel_parts) > 1:
+            category = "contest"
+            folder = rel_parts[1]
+        elif rel_parts[0] == "daily" and len(rel_parts) > 2:
+            category = "daily"
+            folder = rel_parts[-2]
+        else:
+            category = "other"
+            folder = md_file.parent.name
         problems.append({
             "slug": slug,
             "title": title,
+            "category": category,
             "folder": folder,
             "markdown": markdown_text,
         })
 
-    # Group problems by contest folder for the overview page
-    groups: Dict[str, List[Dict]] = {}
+    # Group problems by category and folder for the overview page
+    groups: Dict[Tuple[str, str], List[Dict]] = {}
     for p in problems:
-        groups.setdefault(p["folder"], []).append(p)
+        groups.setdefault((p["category"], p["folder"]), []).append(p)
 
     # Build overview page (at leetcode/index.html -> root_prefix="../")
     overview_markdown = "# LeetCode 题解\n\n> 算法题解题笔记与思路整理。\n\n## 题目列表\n\n"
-    for folder in sorted(groups.keys(), key=lambda f: (f == "leetcode", f)):
-        section_heading = f"周赛 {folder}" if folder != "leetcode" else "其他"
+    for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
+        category, folder = group
+        if category == "contest":
+            section_heading = f"周赛 {folder}"
+        elif category == "daily":
+            section_heading = f"每日一题 {folder}"
+        else:
+            section_heading = folder
         overview_markdown += f"### {section_heading}\n\n"
         overview_markdown += '<div class="day-cards">\n'
-        for p in groups[folder]:
-            folder_label = folder if folder != "leetcode" else "其他"
+        for p in groups[group]:
             overview_markdown += (
                 f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
-                f'  <div class="day-card-number">{folder_label}</div>\n'
+                f'  <div class="day-card-number">{folder}</div>\n'
                 f'  <div class="day-card-title">{p["title"]}</div>\n'
                 f'</a>\n'
             )

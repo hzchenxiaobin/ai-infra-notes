@@ -23,6 +23,7 @@ week1/website/plan.html
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/
+leetcode/website/images/
 .claude/
 .opencode/
 .arts/
