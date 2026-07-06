@@ -12,6 +12,7 @@ and both the sidebar and overview page display them grouped by contest.
 """
 
 import re
+import shutil
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -180,12 +181,28 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
     problems_dir = output_dir / "problems"
     problems_dir.mkdir(parents=True, exist_ok=True)
 
+    images_dir = output_dir / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    # Aggregate image assets from leetcode/images/ (shared) and from each
+    # markdown-adjacent images/ directory (per-problem) into the output.
+    top_level_images = leetcode_dir / "images"
+    if top_level_images.exists():
+        shutil.copytree(top_level_images, images_dir, dirs_exist_ok=True)
+
     # Find all markdown files in leetcode/ and its subdirectories
     # (excluding website/ and images/)
     md_files = sorted([
         f for f in leetcode_dir.rglob("*.md")
         if f.is_file() and "website" not in f.parts and "images" not in f.parts
     ])
+
+    # Copy per-problem local images (e.g. leetcode/daily/week1/day1/images/)
+    # into the output images/ directory so relative "../images/" references work.
+    for md_file in md_files:
+        local_images = md_file.parent / "images"
+        if local_images.exists() and local_images.is_dir():
+            shutil.copytree(local_images, images_dir, dirs_exist_ok=True)
 
     problems = []
     for md_file in md_files:
