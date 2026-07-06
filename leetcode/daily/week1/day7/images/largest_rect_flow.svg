@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 460" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="460" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="290" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">单调栈流程：维护"高度递增"的栈，出栈时计算面积</text>
+
+  <!-- Start -->
+  <ellipse cx="290" cy="56" rx="76" ry="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="60" text-anchor="middle" font-size="11" fill="#333">栈空，i = 0..n（含哨兵）</text>
+
+  <path d="M 290 74 L 290 88" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Loop check -->
+  <polygon points="290,92 410,134 290,176 170,134" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="128" text-anchor="middle" font-size="11" fill="#333">栈非空 且</text>
+  <text x="290" y="144" text-anchor="middle" font-size="11" fill="#333">heights[栈顶] &gt; heights[i] ?</text>
+  <text x="290" y="160" text-anchor="middle" font-size="10" fill="#888">(遇到更矮的，触发结算)</text>
+
+  <!-- No: push -->
+  <path d="M 170 134 L 90 134" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="130" y="126" text-anchor="middle" font-size="10" fill="#82b366">否(更高或空)</text>
+  <rect x="20" y="116" width="70" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="55" y="134" text-anchor="middle" font-size="11" fill="#333">push(i)</text>
+  <text x="55" y="146" text-anchor="middle" font-size="10" fill="#888">入栈</text>
+  <path d="M 55 152 L 55 168 L 290 168 L 290 176" stroke="#888" stroke-width="1.2" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Yes: pop and compute -->
+  <path d="M 290 176 L 290 190" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="186" font-size="10" fill="#b85450">是</text>
+
+  <rect x="160" y="194" width="260" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="214" text-anchor="middle" font-size="11" fill="#333">① top = stack.pop()  （出栈，以 heights[top] 为高）</text>
+
+  <path d="M 290 224 L 290 238" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- compute width -->
+  <polygon points="290,242 400,280 290,318 180,280" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="272" text-anchor="middle" font-size="11" fill="#333">栈空 ?</text>
+  <text x="290" y="288" text-anchor="middle" font-size="10" fill="#888">(说明 top 左边没有更矮的)</text>
+
+  <!-- yes empty: w = i -->
+  <path d="M 400 280 L 460 280" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="430" y="272" text-anchor="middle" font-size="10" fill="#82b366">是</text>
+  <rect x="460" y="262" width="100" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="510" y="280" text-anchor="middle" font-size="11" fill="#333">w = i</text>
+  <text x="510" y="292" text-anchor="middle" font-size="10" fill="#888">(左边界=0)</text>
+
+  <!-- no: w = i - 栈顶 - 1 -->
+  <path d="M 290 318 L 290 332" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="328" font-size="10" fill="#b85450">否</text>
+  <rect x="180" y="336" width="220" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="356" text-anchor="middle" font-size="11" fill="#333">w = i − stack.top() − 1</text>
+
+  <path d="M 290 366 L 290 380" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- update max -->
+  <rect x="150" y="384" width="280" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="406" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">area = heights[top] × w；更新 maxArea</text>
+
+  <!-- loop back to diamond -->
+  <path d="M 150 401 L 60 401 L 60 134 L 170 134" stroke="#888" stroke-width="1.3" fill="none" stroke-dasharray="5,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="52" y="270" text-anchor="middle" font-size="10" fill="#888" transform="rotate(-90 52 270)">继续出栈直到栈顶更矮</text>
+
+  <!-- summary -->
+  <text x="290" y="442" text-anchor="middle" font-size="11" fill="#888">栈中高度始终递增；遇更矮元素时结算栈顶，宽度由"当前 i"与"新栈顶"夹出</text>
+  <text x="290" y="456" text-anchor="middle" font-size="11" fill="#888">末尾加 height=0 哨兵，强制清空栈，避免遗漏</text>
+</svg>

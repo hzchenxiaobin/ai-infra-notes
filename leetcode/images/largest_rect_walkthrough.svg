@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="640" height="540" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="320" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">示例演算：heights=[2,1,5,6,2,3,0]，逐步追踪栈与面积</text>
+  <text x="320" y="42" text-anchor="middle" font-size="11" fill="#888">末尾加 0 哨兵强制清栈</text>
+
+  <!-- Header -->
+  <text x="20" y="66" font-size="11" fill="#444" font-weight="bold">i</text>
+  <text x="60" y="66" font-size="11" fill="#444" font-weight="bold">h[i]</text>
+  <text x="120" y="66" font-size="11" fill="#444" font-weight="bold">动作</text>
+  <text x="300" y="66" font-size="11" fill="#444" font-weight="bold">栈（存下标，高度递增）</text>
+  <text x="540" y="66" font-size="11" fill="#444" font-weight="bold">面积/max</text>
+  <line x1="10" y1="72" x2="630" y2="72" stroke="#ddd" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- Step i=0, h=2 -->
+  <text x="20" y="92" font-size="11" fill="#333">0</text>
+  <text x="60" y="92" font-size="11" fill="#333">2</text>
+  <text x="120" y="92" font-size="11" fill="#82b366">栈空，入栈</text>
+  <rect x="300" y="82" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="95" text-anchor="middle" font-size="10" fill="#333">0</text>
+  <text x="540" y="92" font-size="11" fill="#888">max=0</text>
+
+  <!-- Step i=1, h=1, 2>1 pop -->
+  <text x="20" y="116" font-size="11" fill="#333">1</text>
+  <text x="60" y="116" font-size="11" fill="#333">1</text>
+  <text x="120" y="116" font-size="11" fill="#b85450">2&gt;1，pop(0)</text>
+  <rect x="300" y="106" width="30" height="18" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="119" text-anchor="middle" font-size="10" fill="#888">0</text>
+  <text x="350" y="116" font-size="10" fill="#b85450">→ 栈空，w=1, 面积=2×1=2</text>
+  <text x="540" y="116" font-size="11" fill="#333" font-weight="bold">max=2</text>
+
+  <text x="20" y="136" font-size="11" fill="#888">↑</text>
+  <text x="120" y="136" font-size="11" fill="#82b366">栈空，入栈</text>
+  <rect x="300" y="126" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="139" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <text x="540" y="136" font-size="11" fill="#888">—</text>
+
+  <!-- Step i=2, h=5 -->
+  <text x="20" y="160" font-size="11" fill="#333">2</text>
+  <text x="60" y="160" font-size="11" fill="#333">5</text>
+  <text x="120" y="160" font-size="11" fill="#82b366">1&lt;5，入栈</text>
+  <rect x="300" y="150" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="163" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <rect x="332" y="150" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="347" y="163" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <text x="540" y="160" font-size="11" fill="#888">—</text>
+
+  <!-- Step i=3, h=6 -->
+  <text x="20" y="184" font-size="11" fill="#333">3</text>
+  <text x="60" y="184" font-size="11" fill="#333">6</text>
+  <text x="120" y="184" font-size="11" fill="#82b366">5&lt;6，入栈</text>
+  <rect x="300" y="174" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="187" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <rect x="332" y="174" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="347" y="187" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <rect x="364" y="174" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="379" y="187" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <text x="540" y="184" font-size="11" fill="#888">—</text>
+
+  <!-- Step i=4, h=2, 6>2 pop -->
+  <text x="20" y="208" font-size="11" fill="#333">4</text>
+  <text x="60" y="208" font-size="11" fill="#333">2</text>
+  <text x="120" y="208" font-size="11" fill="#b85450">6&gt;2，pop(3)</text>
+  <rect x="300" y="198" width="30" height="18" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+  <text x="338" y="208" font-size="10" fill="#b85450">→ 栈顶=2, w=4−2−1=1, 面积=6×1=6</text>
+  <text x="540" y="208" font-size="11" fill="#333" font-weight="bold">max=6</text>
+
+  <text x="20" y="228" font-size="11" fill="#888">↑</text>
+  <text x="120" y="228" font-size="11" fill="#b85450">5&gt;2，pop(2)</text>
+  <rect x="300" y="218" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="231" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <rect x="332" y="218" width="30" height="18" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+  <text x="350" y="228" font-size="10" fill="#b85450">→ 栈顶=1, w=4−1−1=2, 面积=5×2=10 ⭐</text>
+  <text x="540" y="228" font-size="11" fill="#b85450" font-weight="bold">max=10</text>
+
+  <text x="20" y="248" font-size="11" fill="#888">↑</text>
+  <text x="120" y="248" font-size="11" fill="#82b366">1&lt;2，入栈</text>
+  <rect x="300" y="238" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="251" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <rect x="332" y="238" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="347" y="251" text-anchor="middle" font-size="10" fill="#333">4</text>
+  <text x="540" y="248" font-size="11" fill="#888">—</text>
+
+  <!-- Step i=5, h=3 -->
+  <text x="20" y="272" font-size="11" fill="#333">5</text>
+  <text x="60" y="272" font-size="11" fill="#333">3</text>
+  <text x="120" y="272" font-size="11" fill="#82b366">2&lt;3，入栈</text>
+  <rect x="300" y="262" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="275" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <rect x="332" y="262" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="347" y="275" text-anchor="middle" font-size="10" fill="#333">4</text>
+  <rect x="364" y="262" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="379" y="275" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <text x="540" y="272" font-size="11" fill="#888">—</text>
+
+  <line x1="10" y1="286" x2="630" y2="286" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- Step i=6, h=0 sentinel, clear all -->
+  <text x="20" y="306" font-size="11" fill="#333">6</text>
+  <text x="60" y="306" font-size="11" fill="#333">0</text>
+  <text x="120" y="306" font-size="11" fill="#d6a040" font-weight="bold">哨兵！清空栈</text>
+
+  <text x="20" y="326" font-size="11" fill="#888">↑</text>
+  <text x="120" y="326" font-size="11" fill="#b85450">3&gt;0，pop(5)</text>
+  <text x="300" y="326" font-size="10" fill="#b85450">栈顶=4, w=6−4−1=1, 面积=3×1=3</text>
+  <text x="540" y="326" font-size="11" fill="#888">max=10</text>
+
+  <text x="20" y="346" font-size="11" fill="#888">↑</text>
+  <text x="120" y="346" font-size="11" fill="#b85450">2&gt;0，pop(4)</text>
+  <rect x="300" y="336" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="349" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <text x="338" y="346" font-size="10" fill="#b85450">栈顶=1, w=6−1−1=4, 面积=2×4=8</text>
+  <text x="540" y="346" font-size="11" fill="#888">max=10</text>
+
+  <text x="20" y="366" font-size="11" fill="#888">↑</text>
+  <text x="120" y="366" font-size="11" fill="#b85450">1&gt;0，pop(1)</text>
+  <text x="300" y="366" font-size="10" fill="#b85450">→ 栈空，w=6, 面积=1×6=6</text>
+  <text x="540" y="366" font-size="11" fill="#888">max=10</text>
+
+  <text x="20" y="386" font-size="11" fill="#888">↑</text>
+  <text x="120" y="386" font-size="11" fill="#82b366">栈空，入栈</text>
+  <rect x="300" y="376" width="30" height="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="315" y="389" text-anchor="middle" font-size="10" fill="#333">6</text>
+  <text x="540" y="386" font-size="11" fill="#888">—</text>
+
+  <!-- Result box -->
+  <rect x="60" y="420" width="520" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="320" y="442" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">答案 = 10（高=5，跨柱子 i=2,3，宽=2）⭐</text>
+  <text x="320" y="462" text-anchor="middle" font-size="11" fill="#888">每根柱子进出栈各一次 → 总时间 O(n)</text>
+
+  <!-- legend -->
+  <rect x="60" y="494" width="14" height="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+  <text x="80" y="505" font-size="11" fill="#555">在栈中</text>
+  <rect x="150" y="494" width="14" height="14" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="2" filter="url(#rough2)"/>
+  <text x="170" y="505" font-size="11" fill="#555">刚出栈结算</text>
+  <text x="270" y="505" font-size="11" fill="#82b366">入栈：当前更高</text>
+  <text x="390" y="505" font-size="11" fill="#b85450">出栈：遇到更矮，结算</text>
+  <text x="540" y="505" font-size="11" fill="#d6a040">哨兵=0</text>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="600" height="420" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="300" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">核心直觉：固定每根柱子，找它左右"第一个更矮"的位置</text>
+
+  <!-- Histogram bars: [2,1,5,6,2,3] -->
+  <text x="30" y="58" font-size="12" fill="#888">柱状图 heights=[2,1,5,6,2,3]：</text>
+
+  <!-- ground line -->
+  <line x1="80" y1="280" x2="440" y2="280" stroke="#7f8c8d" stroke-width="2.5" filter="url(#rough2)"/>
+
+  <!-- bar 0: height 2 -->
+  <rect x="90" y="230" width="40" height="50" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="270" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <text x="110" y="296" text-anchor="middle" font-size="10" fill="#888">i=0</text>
+  <!-- bar 1: height 1 -->
+  <rect x="135" y="255" width="40" height="25" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="155" y="270" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <text x="155" y="296" text-anchor="middle" font-size="10" fill="#888">i=1</text>
+  <!-- bar 2: height 5 -->
+  <rect x="180" y="155" width="40" height="125" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="200" y="270" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <text x="200" y="296" text-anchor="middle" font-size="10" fill="#888">i=2</text>
+  <!-- bar 3: height 6 -->
+  <rect x="225" y="130" width="40" height="150" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" filter="url(#rough2)"/>
+  <text x="245" y="270" text-anchor="middle" font-size="10" fill="#333">6</text>
+  <text x="245" y="296" text-anchor="middle" font-size="10" fill="#888">i=3</text>
+  <!-- bar 4: height 2 -->
+  <rect x="270" y="230" width="40" height="50" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="270" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <text x="290" y="296" text-anchor="middle" font-size="10" fill="#888">i=4</text>
+  <!-- bar 5: height 3 -->
+  <rect x="315" y="205" width="40" height="75" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="335" y="270" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <text x="335" y="296" text-anchor="middle" font-size="10" fill="#888">i=5</text>
+
+  <!-- Highlight bar i=3 (height 6) and its span -->
+  <rect x="225" y="130" width="40" height="150" fill="none" stroke="#4a7a3a" stroke-width="3" filter="url(#rough2)"/>
+  <!-- span bracket: just itself (left=bar2 height5 > 6? no, bar2=5<6 so left boundary = bar2+1 = i=3; right boundary: bar4=2<6 so right = bar4-1 = i=3) -->
+  <!-- Actually for height 6: left first smaller = bar2 (h=5<6)? No 5<6 true, so left smaller = i=2. right first smaller = i=4 (h=2<6). So width = 4-2-1 = 1, just bar 3. -->
+  <path d="M 225 320 L 225 326 L 265 326 L 265 320" stroke="#4a7a3a" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="245" y="340" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">宽=1, 面积=6</text>
+
+  <!-- Highlight bar i=2 (height 5): left smaller = i=1 (h=1), right smaller = i=4 (h=2). width = 4-1-1 = 2 (bars 2,3). -->
+  <rect x="180" y="155" width="85" height="125" fill="none" stroke="#d6a040" stroke-width="2.5" stroke-dasharray="6,3" filter="url(#rough2)"/>
+  <text x="222" y="148" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">高=5, 跨 2 根 → 面积=10</text>
+
+  <!-- arrows for left/right smaller of bar i=2 -->
+  <text x="155" y="190" text-anchor="middle" font-size="9" fill="#b85450">←左矮(i=1)</text>
+  <path d="M 175 188 L 158 250" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <text x="300" y="190" text-anchor="middle" font-size="9" fill="#b85450">右矮(i=4)→</text>
+  <path d="M 285 188 L 290 228" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+
+  <!-- Right side: the formula -->
+  <text x="470" y="58" font-size="12" fill="#444" font-weight="bold">面积公式：</text>
+  <rect x="450" y="72" width="140" height="64" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="520" y="94" text-anchor="middle" font-size="11" fill="#333">面积 = h × w</text>
+  <text x="520" y="112" text-anchor="middle" font-size="11" fill="#333">w = R − L − 1</text>
+  <text x="520" y="128" text-anchor="middle" font-size="10" fill="#888">L=左第一个更矮</text>
+  <text x="520" y="140" text-anchor="middle" font-size="10" fill="#888">R=右第一个更矮</text>
+
+  <text x="470" y="168" font-size="11" fill="#444" font-weight="bold">关键转化：</text>
+  <rect x="450" y="180" width="140" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="520" y="202" text-anchor="middle" font-size="11" fill="#333">枚举每根柱子</text>
+  <text x="520" y="220" text-anchor="middle" font-size="11" fill="#333">作为"矩形的高"</text>
+  <text x="520" y="240" text-anchor="middle" font-size="11" fill="#333">→ 求它往左往右</text>
+  <text x="520" y="254" text-anchor="middle" font-size="11" fill="#333">最远能延伸多宽</text>
+
+  <!-- bottom -->
+  <rect x="50" y="360" width="500" height="48" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="300" y="382" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">答案 = max(每根柱子作为高时的最大面积) = 10</text>
+  <text x="300" y="400" text-anchor="middle" font-size="11" fill="#888">"左右第一个更矮"用单调栈一次遍历即可求出 → O(n)</text>
+</svg>
