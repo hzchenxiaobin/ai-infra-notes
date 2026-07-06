@@ -345,7 +345,7 @@ __shared__ float tile[32][33];   // 列维度 +1 padding
 // 行 stride 从 32×4=128B 变成 33×4=132B，132/4=33，33%32=1，相邻行错开 bank
 ```
 
-**注意**：padding 会浪费一点 shared memory，需评估是否影响 occupancy。对 16×16 方形 tile + block(16,16) 配置，warp 跨相邻两行且 broadcast，实际不触发 conflict（详见 [Week3 Day3 matmul 题解](../../LeetGPU/leetgpu-matrix-multiplication-solution.md) 的 bank conflict 分析）。
+**注意**：padding 会浪费一点 shared memory，需评估是否影响 occupancy。对 16×16 方形 tile + block(16,16) 配置，warp 跨相邻两行且 broadcast，实际不触发 conflict（详见 [Week3 Day3 matmul 题解](../../leetgpu/leetgpu-matrix-multiplication-solution.md) 的 bank conflict 分析）。
 
 参见 [Day 4](../day4/README.md)、[Day 5](../day5/README.md)。
 
@@ -600,7 +600,7 @@ int main() {
 - 把 `float4` 改回逐元素加载，带宽利用率下降多少？
 - block size 从 128 调到 512，时间变化大吗？（memory-bound kernel 对 occupancy 不敏感）
 
-> 💡 完整题解见 [Matrix Addition 题解](../../LeetGPU/leetgpu-matrix-addition-solution.md)。
+> 💡 完整题解见 [Matrix Addition 题解](../../leetgpu/leetgpu-matrix-addition-solution.md)。
 
 #### 综合练习 2：Matrix Multiplication —— 检验 shared memory tiling + bank conflict
 
@@ -690,7 +690,7 @@ int main() {
 - 给 `s_A` / `s_B` 加 padding `[16][17]`，性能有变化吗？（提示：16×16 方形配置下 conflict 实际不触发，详见题解的 bank conflict 分析）
 - 进阶：改成 Register Tiling（每线程算 4×4），能再提速 2-3x 吗？
 
-> 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](../../LeetGPU/leetgpu-matrix-multiplication-solution.md)。
+> 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](../../leetgpu/leetgpu-matrix-multiplication-solution.md)。
 
 #### 练习提交记录
 

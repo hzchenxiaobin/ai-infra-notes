@@ -379,7 +379,7 @@ __global__ void conv2d(const float* input, const float* kernel, float* output,
 //   cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
 ```
 
-> 💡 提交后在 [LeetGPU Convolution 题目](https://leetgpu.com/challenges/convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Convolution 题解](../../LeetGPU/leetgpu-convolution-solution.md)。
+> 💡 提交后在 [LeetGPU Convolution 题目](https://leetgpu.com/challenges/convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Convolution 题解](../../leetgpu/leetgpu-convolution-solution.md)。
 
 ---
 

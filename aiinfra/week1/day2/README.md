@@ -536,7 +536,7 @@ __global__ void relu_kernel(const float* input, float* output, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [ReLU 题解](../../LeetGPU/leetgpu-relu-solution.md)。
+> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [ReLU 题解](../../leetgpu/leetgpu-relu-solution.md)。
 
 ---
 

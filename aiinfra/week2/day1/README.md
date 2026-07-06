@@ -485,7 +485,7 @@ __inline__ __device__ float warp_exclusive_scan(float val) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Prefix Sum 题目](https://leetgpu.com/challenges/prefix-sum)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Prefix Sum 题解](../../LeetGPU/leetgpu-prefix-sum-solution.md)。
+> 💡 提交后在 [LeetGPU Prefix Sum 题目](https://leetgpu.com/challenges/prefix-sum)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Prefix Sum 题解](../../leetgpu/leetgpu-prefix-sum-solution.md)。
 
 ---
 

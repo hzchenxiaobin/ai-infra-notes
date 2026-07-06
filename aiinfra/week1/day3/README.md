@@ -508,7 +508,7 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../LeetGPU/leetgpu-matrix-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../leetgpu/leetgpu-matrix-addition-solution.md)。
 
 ---
 

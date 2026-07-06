@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Infra 8 周计划</title>
+    <link rel="stylesheet" href="css/style.css?v=3">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="js/prism.min.js"></script>
+    <script src="js/prism-c.min.js"></script>
+    <script src="js/prism-bash.min.js"></script>
+    <script src="js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 课程概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="week3/day15.html">Day 15</a>
+<a class="nav-link day-link" href="week3/day16.html">Day 16</a>
+<a class="nav-link day-link" href="week3/day17.html">Day 17</a>
+<a class="nav-link day-link" href="week3/day18.html">Day 18</a>
+<a class="nav-link day-link" href="week3/day19.html">Day 19</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="plan.html#week-4">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="plan.html#week-4">📌 Week 4 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="plan.html#week-5">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="plan.html#week-5">📌 Week 5 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="plan.html#week-6">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="plan.html#week-6">📌 Week 6 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">8 周学习计划</h1>
+                
+            </div>
+            <article class="content" id="content"></article>
+            
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# AI Infra 8 周冲刺学习计划（工程实战版）
+
+> 适合人群：具备 CUDA / 算子优化基础，希望转向 AI Infra（推理系统 / 分布式 / 内核优化）  
+> 学习强度：每日 3～5 小时  
+> 核心目标：从"会写 kernel"进阶到"能做系统优化"
+
+---
+
+## 🧭 总体节奏（每周循环）
+
+| 天数 | 类型 | 核心动作 |
+|------|------|----------|
+| Day 1-2 | 🔬 核心学习 + Coding | 理论学习 + 动手写 kernel / 基础实现 |
+| Day 3-4 | 📖 源码分析 | 阅读开源代码（cuBLAS / vLLM / FlashAttention 等） |
+| Day 5 | 🛠 项目推进 | 将本周所学整合到 Mini 推理引擎或 benchmark 中 |
+| Day 6 | 📊 总结 + Profiler + Debug | 性能分析、瓶颈定位、文档整理 |
+| Day 7 | 🧘 弹性/缓冲 | 补进度、复盘或深入某个未完成的点 |
+
+---
+
+<a id="week-1"></a>
+## 🚀 Week 1：GPU 执行本质 + Profiling
+
+### 🎯 目标
+
+建立 GPU 性能直觉 —— **性能 = Memory + 并行度**
+
+### 📅 每日任务
+
+#### Day 1：GPU 执行模型基础
+
+- **理论学习**：
+  - SM（Streaming Multiprocessor）架构
+  - Warp（32 线程）执行模型
+  - Grid / Block / Thread 层次结构
+  - SIMT（Single Instruction Multiple Threads）执行方式
+- **Coding 任务**：
+  - 写一个 \`hello_gpu.cu\`，打印 threadIdx / blockIdx
+  - 尝试不同的 grid/block 配置（1x1、2x2、4x8 等）
+  - 观察 launch 参数与硬件执行的关系
+- **验证 Checklist**：
+  - [ ] kernel 能正确打印所有 thread 的坐标
+  - [ ] 理解 block 内 thread 数量与 warp 数量的关系
+  - [ ] 能计算一个 kernel launch 的总 thread 数
+
+#### Day 2：Occupancy 与资源约束
+
+- **理论学习**：
+  - Occupancy 定义：active warp / 最大 warp 数
+  - 影响 occupancy 的因素：寄存器数量、共享内存大小、block 大小
+  - 寄存器分配与 spilling
+- **Coding 任务**：
+  - 写一个计算密集型 kernel（如向量加法循环展开）
+  - 使用不同寄存器数量（\`__launch_bounds__\`）
+  - 使用 CUDA Occupancy Calculator 计算理论 occupancy
+- **验证 Checklist**：
+  - [ ] 能用 \`cudaFuncGetAttributes\` 获取寄存器使用量
+  - [ ] 理解为什么寄存器过多会降低 occupancy
+  - [ ] 记录不同配置下的 occupancy 变化表
+
+#### Day 3：源码分析 —— CUDA 官方 Samples
+
+- **阅读内容**：
+  - CUDA Samples 中 \`deviceQuery\` 源码
+  - CUDA Samples 中 \`occupancyCalculator\` 源码
+  - CUDA C Programming Guide 第 5 章（Performance Guidelines）
+- **分析重点**：
+  - 如何查询设备属性（SM 数量、最大 block 数、寄存器文件大小）
+  - 官方如何计算和报告 occupancy
+- **验证 Checklist**：
+  - [ ] 能独立运行 \`deviceQuery\` 并解读所有输出字段
+  - [ ] 理解自己 GPU 的硬件限制参数
+  - [ ] 画出自己 GPU 的 SM 架构简图
+
+#### Day 4：Memory Hierarchy 深入
+
+- **理论学习**：
+  - Global Memory：合并访问（coalesced access）
+  - Shared Memory：bank 结构、访问模式
+  - L1 / L2 Cache 行为
+  - 内存访问延迟对比（register < shared < L1 < L2 < global）
+- **Coding 任务**：
+  - 实现矩阵转置（naive vs shared memory 优化版）
+  - 对比两种实现的带宽利用率
+- **验证 Checklist**：
+  - [ ] naive 版本存在 stride access，带宽低
+  - [ ] 优化版利用 shared memory + 合并写入
+  - [ ] 用 Nsight Compute 对比两种版本的 memory throughput
+
+#### Day 5：Bank Conflict 分析与实践
+
+- **理论学习**：
+  - Shared memory bank 结构（32 banks，每 bank 4 bytes）
+  - Bank conflict 的几种模式
+  - Padding 技术消除 conflict
+- **Coding 任务**：
+  - 写一个故意制造 bank conflict 的 kernel（如 stride=32 的访问）
+  - 用 padding 消除 conflict，对比性能
+- **验证 Checklist**：
+  - [ ] Nsight Compute 中观察到 \`l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum\` 数值变化
+  - [ ] 冲突版本比无冲突版本慢 2x 以上
+  - [ ] 理解 padding 的原理和代价
+
+#### Day 6：Nsight Profiling 实战
+
+- **工具学习**：
+  - Nsight Compute：kernel 级详细分析
+  - Nsight Systems：应用级时间线分析
+  - \`ncu\` CLI 常用命令
+- **Profiling 任务**：
+  - 对本周所有 kernel 进行 profiling
+  - 重点分析：memory throughput、compute throughput、occupancy
+- **验证 Checklist**：
+  - [ ] 生成至少 3 个 kernel 的 Nsight Compute 报告
+  - [ ] 能读取 Roofline 图并定位瓶颈类型（memory-bound / compute-bound）
+  - [ ] 能使用 Nsight Systems 查看 kernel launch 时间线
+
+#### Day 7：总结与复盘
+
+- **总结任务**：
+  - 绘制 GPU 内存层次结构图
+  - 绘制 Occupancy 与性能关系图
+  - 整理 Week 1 学习笔记
+- **弹性安排**：
+  - 补完未完成的 coding 任务
+  - 深入某个感兴趣的方向
+
+---
+
+<a id="week-2"></a>
+## 🔥 Week 2：GEMM & Kernel 优化
+
+### 🎯 目标
+
+理解深度学习的计算核心 —— **所有深度学习本质都是 Matmul**
+
+### 📅 每日任务
+
+#### Day 1：Naive GEMM
+
+- **理论学习**：
+  - GEMM 定义：C = αAB + βC
+  - 矩阵乘法的数据访问模式
+  - FLOPs 计算：2 * M * N * K
+- **Coding 任务**：
+  - 实现 \`naive_gemm.cu\`：每个 thread 计算 C 的一个元素
+  - 使用 global memory 直接访问
+  - 测试正确性（对比 CPU 结果）
+- **验证 Checklist**：
+  - [ ] 结果与 CPU reference 误差 < 1e-4
+  - [ ] 能计算并报告该 kernel 的 FLOPs
+  - [ ] 记录不同矩阵大小下的运行时间
+
+#### Day 2：Tiling + Shared Memory 优化
+
+- **理论学习**：
+  - Tiling 策略：将大矩阵分块到 shared memory
+  - 分块大小的选择（受 shared memory 容量限制）
+  - 双缓冲（double buffering）概念
+- **Coding 任务**：
+  - 实现 \`tiled_gemm.cu\`：BLOCK_SIZE=16 或 32
+  - 每个 block 加载 A/B 的子矩阵到 shared memory
+  - 在 shared memory 上完成子矩阵乘法
+- **验证 Checklist**：
+  - [ ] 结果正确
+  - [ ] 相比 naive 版本有显著加速（通常 5x~20x）
+  - [ ] 分析 shared memory 使用量是否在限制内
+
+#### Day 3：源码分析 —— cuBLAS / CUTLASS
+
+- **阅读内容**：
+  - cuBLAS 的 \`cublasSgemm\` 调用方式与参数含义
+  - CUTLASS 的 \`gemm.h\` 核心接口
+  - 理解 leading dimension（lda/ldb/ldc）
+- **分析重点**：
+  - cuBLAS 如何处理不同 layout（row-major vs col-major）
+  - CUTLASS 的分层抽象：device、kernel、warp、thread
+- **验证 Checklist**：
+  - [ ] 能正确调用 \`cublasSgemm\` 完成矩阵乘法
+  - [ ] 理解 CUTLASS 的 template 参数（MmaShape、ThreadBlockShape）
+  - [ ] 画出 CUTLASS 的分层 tiling 结构图
+
+#### Day 4：源码分析 —— CUTLASS 优化策略
+
+- **阅读内容**：
+  - CUTLASS 的 warp-level tiling 与寄存器使用
+  - WMMA / Tensor Core 调用方式（如果硬件支持）
+  - 向量化加载（vectorized load）
+- **分析重点**：
+  - 一个 warp 如何协作计算一个子矩阵
+  - 寄存器 tiling 与 shared memory tiling 的层级关系
+- **验证 Checklist**：
+  - [ ] 理解 warp 内 thread 的数据分布
+  - [ ] 能解释 CUTLASS 中 \`warp_tile\` 的含义
+  - [ ] 理解从 shared memory 到寄存器的加载模式
+
+#### Day 5：项目推进 —— GEMM Benchmark 框架
+
+- **Coding 任务**：
+  - 构建 mini benchmark 框架
+  - 支持对比：naive vs tiled vs cuBLAS
+  - 支持不同精度（FP32、FP16、BF16）
+- **验证 Checklist**：
+  - [ ] 框架能自动运行所有实现并输出对比表
+  - [ ] 支持从 128x128 到 4096x4096 的多种矩阵大小
+  - [ ] 结果以 GFLOP/s 展示
+
+#### Day 6：性能分析与优化 Checklist
+
+- **Profiling 任务**：
+  - 用 Nsight Compute 分析三个版本的瓶颈
+  - 记录 memory throughput 和 compute throughput
+  - 绘制 Roofline 图
+- **Checklist 总结**：
+  - [ ] naive：memory-bound，global memory 访问未合并
+  - [ ] tiled：shared memory 缓解带宽压力，但可能存在 bank conflict
+  - [ ] cuBLAS：接近峰值性能，理解其优化手段
+- **优化 Checklist**：
+  - [ ] 合并内存访问
+  - [ ] 减少 global memory 访问次数
+  - [ ] 提高 occupancy
+  - [ ] 利用 Tensor Core（如果适用）
+
+#### Day 7：阅读 FlashAttention 论文（预热）
+
+- **阅读任务**：
+  - 阅读 FlashAttention 论文 Section 1-3
+  - 理解标准 Attention 的 IO 复杂度
+  - 理解 FlashAttention 的核心思想：tiling + online softmax + recomputation
+- **产出**：
+  - 论文核心思想笔记
+  - 标准 Attention vs FlashAttention 的 IO 对比表
+
+---
+
+<a id="week-3"></a>
+## ⚡ Week 3：Transformer 执行本质
+
+### 🎯 目标
+
+**理解执行而不是模型** —— 从 GPU 视角看 Transformer
+
+### 📅 每日任务
+
+#### Day 1：Trace Transformer 推理流程
+
+- **理论学习**：
+  - Transformer 推理的两个阶段：Prefill vs Decode
+  - 从输入 token 到输出 logits 的完整数据流
+  - 各算子的执行顺序和依赖关系
+- **Coding 任务**：
+  - 用 PyTorch 搭建一个最小 Transformer（或加载 GPT-2）
+  - 使用 \`torch.profiler\` 或 Nsight Systems trace 一次 forward
+- **验证 Checklist**：
+  - [ ] 能输出每个算子的执行时间和内存占用
+  - [ ] 识别耗时最长的 3 个算子
+  - [ ] 画出 Transformer forward 的时间线简图
+
+#### Day 2：手写 Softmax 与 LayerNorm Kernel
+
+- **理论学习**：
+  - Softmax 的数值稳定性：max subtraction
+  - LayerNorm 的公式与并行化策略
+  - Warp-level reduction 技术
+- **Coding 任务**：
+  - 实现 \`softmax_kernel.cu\`：支持 row-wise softmax
+  - 实现 \`layernorm_kernel.cu\`：支持 element-wise affine
+  - 使用 warp shuffle 进行 reduction
+- **验证 Checklist**：
+  - [ ] 结果与 PyTorch \`F.softmax\`、\`F.layer_norm\` 误差 < 1e-5
+  - [ ] 支持较大的 feature dim（如 768、1024、4096）
+  - [ ] 对比 PyTorch 版本的性能
+
+#### Day 3：源码分析 —— PyTorch / FasterTransformer
+
+- **阅读内容**：
+  - PyTorch ATen 中 Softmax、LayerNorm 的 CUDA 实现
+  - FasterTransformer 中对应 kernel 的实现
+- **分析重点**：
+  - 官方实现如何处理数值稳定性
+  - 向量化加载（float4 / half2）的使用
+  - warp-level vs block-level reduction 的选择
+- **验证 Checklist**：
+  - [ ] 能找到并阅读 PyTorch 的 \`SoftMax.cu\` 源码
+  - [ ] 理解 FasterTransformer 的 \`layernorm_kernels.cu\`
+  - [ ] 对比手写版本与官方实现的性能差异
+
+#### Day 4：Attention IO 分析
+
+- **理论学习**：
+  - 标准 Attention 的 HBM read/write 量计算
+  - Memory-bound vs Compute-bound 的判定
+  - IO 复杂度与序列长度的关系
+- **Coding 任务**：
+  - 实现标准 Attention forward（PyTorch 或 CUDA）
+  - 计算并记录不同 seq_len（512、1024、2048、4096）下的 HBM 访问量
+- **验证 Checklist**：
+  - [ ] 手动计算 Attention 各阶段的 IO 量
+  - [ ] 用 Nsight Compute 验证实际内存访问量
+  - [ ] 绘制 IO 随 seq_len 增长的曲线
+
+#### Day 5：项目推进 —— 算子接入 Mini 引擎
+
+- **Coding 任务**：
+  - 将手写 Softmax、LayerNorm kernel 接入 mini 推理引擎
+  - 替换 PyTorch 对应算子
+  - 验证端到端正确性
+- **验证 Checklist**：
+  - [ ] 单算子替换后输出正确
+  - [ ] 多算子组合后输出正确
+  - [ ] 记录替换前后的 latency 变化
+
+#### Day 6：端到端 Profiling
+
+- **Profiling 任务**：
+  - 对 mini 引擎中的 Transformer 进行端到端 profiling
+  - 使用 Nsight Systems 查看时间线
+  - 使用 Nsight Compute 分析关键 kernel
+- **分析重点**：
+  - 定位 memory-bound 算子
+  - 分析 kernel launch overhead
+  - 寻找 fusion 机会
+- **验证 Checklist**：
+  - [ ] 生成端到端 trace 报告
+  - [ ] 标记 top3 瓶颈算子
+  - [ ] 列出潜在的 kernel fusion 机会
+
+#### Day 7：总结 Transformer 算子分类
+
+- **总结任务**：
+  - 将 Transformer 各组件按 compute/memory intensity 分类
+  - 分类标准：arithmetic intensity（FLOPs / bytes）
+- **产出**：
+  - 算子分类表：
+    | 算子 | 类型 | 原因 |
+    |------|------|------|
+    | GEMM | Compute-bound | 高 FLOPs |
+    | Softmax | Memory-bound | element-wise |
+    | Attention | Memory-bound | O(N²) IO |
+
+---
+
+<a id="week-4"></a>
+## 🚀 Week 4：FlashAttention 深挖
+
+### 🎯 目标
+
+理解 **IO 优化** 的核心思想
+
+### 📅 每日任务
+
+#### Day 1：精读 FlashAttention 论文
+
+- **阅读内容**：
+  - FlashAttention 论文全文
+  - 重点：Section 3.2（Tiling）、Section 3.3（Online Softmax）
+- **推导任务**：
+  - 手推 online softmax 公式
+  - 理解 safe softmax 的增量计算
+- **验证 Checklist**：
+  - [ ] 能独立推导 online softmax 的更新规则
+  - [ ] 理解为什么不需要全局 max
+  - [ ] 理解 rescaling 因子的更新方式
+
+#### Day 2：实现 Block-wise Attention
+
+- **Coding 任务**：
+  - 实现 \`flash_attn_forward.cu\`
+  - 支持基本的前向计算：分块加载 Q、K、V
+  - 实现 block-wise softmax 计算
+- **关键细节**：
+  - 块大小选择（受 shared memory 限制）
+  - 中间结果 O 和累加器 L 的管理
+- **验证 Checklist**：
+  - [ ] 结果与标准 Attention 误差 < 1e-3
+  - [ ] 支持 batch、multi-head
+  - [ ] 不同 seq_len 下结果稳定
+
+#### Day 3：源码分析 —— FlashAttention 官方 CUDA 源码
+
+- **阅读内容**：
+  - FlashAttention \`flash_fwd_kernel.h\`
+  - 分块策略、warp 分配、共享内存使用
+- **分析重点**：
+  - 官方代码的分块大小如何确定
+  - 一个 warp 处理多少个 attention head
+  - shared memory 的分配和复用
+- **验证 Checklist**：
+  - [ ] 理解官方代码的 block 配置逻辑
+  - [ ] 能追踪一个 thread 的完整数据流
+  - [ ] 对比手写实现与官方代码的差异
+
+#### Day 4：源码分析 —— FlashAttention-2
+
+- **阅读内容**：
+  - FlashAttention-2 论文（主要改进点）
+  - FlashAttention-2 源码中与 FA1 的差异
+- **关键差异**：
+  - 减少非 matmul FLOPs 的 warp 并行
+  - 更好的 work partitioning
+  - 减少同步点
+- **验证 Checklist**：
+  - [ ] 列出 FA1 vs FA2 的至少 3 个关键差异
+  - [ ] 理解 FA2 中 warp group 的概念
+  - [ ] 理解 seq_len 并行 vs head 并行的 trade-off
+
+#### Day 5：项目推进 —— 集成 FlashAttention
+
+- **Coding 任务**：
+  - 将手写 FlashAttention kernel 接入 mini 推理引擎
+  - 替换标准 attention 实现
+  - 支持不同 seq_len 的输入
+- **验证 Checklist**：
+  - [ ] 端到端输出正确
+  - [ ] 支持 prefill 阶段的完整 attention 计算
+  - [ ] 与 PyTorch \`F.scaled_dot_product_attention\` 对比
+
+#### Day 6：性能对比分析
+
+- **Benchmark 任务**：
+  - 对比：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
+  - 测试不同 seq_len：512、1024、2048、4096、8192
+  - 测试不同 batch size 和 head 数
+- **分析重点**：
+  - 加速比随 seq_len 的变化趋势
+  - 内存占用对比
+  - HBM 访问量验证
+- **验证 Checklist**：
+  - [ ] 生成 Benchmark 报告（表格 + 图表）
+  - [ ] 长序列下 FlashAttention 优势明显（2x~8x）
+  - [ ] 分析短序列下是否仍有优势
+
+#### Day 7：总结 IO 优化方法论
+
+- **总结任务**：
+  - 从 FlashAttention 中提炼通用 IO 优化策略
+- **方法论 Checklist**：
+  - [ ] **Tiling**：将大数据集分块到 fast memory
+  - [ ] **Recomputation**：用计算换内存访问
+  - [ ] **Kernel Fusion**：减少中间结果的 HBM 读写
+  - [ ] **Online Algorithm**：避免全局同步
+- **产出**：
+  - IO 优化策略通用 checklist
+  - 适用场景分析表
+
+---
+
+<a id="week-5"></a>
+## 🧠 Week 5：推理系统
+
+### 🎯 目标
+
+进入 AI Infra 核心 —— **推理流程与 KV Cache**
+
+### 📅 每日任务
+
+#### Day 1：推理流程 —— Prefill vs Decode
+
+- **理论学习**：
+  - Prefill 阶段：并行处理输入 prompt
+  - Decode 阶段：自回归逐个生成 token
+  - 两个阶段的计算特征差异
+- **Coding 任务**：
+  - 实现一个基础的 Prefill + Decode 循环
+  - 用 PyTorch 模拟完整推理流程
+- **验证 Checklist**：
+  - [ ] 能区分 prefill 和 decode 的输入形状差异
+  - [ ] prefill 阶段 attention 是"full matrix"
+  - [ ] decode 阶段 attention 是"single query"
+
+#### Day 2：实现 KV Cache
+
+- **理论学习**：
+  - KV Cache 的核心思想：避免重复计算 K、V
+  - Cache 的分配策略：静态 vs 动态
+  - Cache 的更新逻辑：append 新 token 的 K、V
+- **Coding 任务**：
+  - 实现 \`kv_cache.h\` / \`kv_cache.cu\`
+  - 支持分配、更新、查询操作
+  - 支持多轮对话（历史缓存复用）
+- **验证 Checklist**：
+  - [ ] 启用 KV Cache 后输出与无 cache 版本一致
+  - [ ] decode 阶段 latency 显著降低（通常 10x+）
+  - [ ] 内存使用量与序列长度成正比
+
+#### Day 3：源码分析 —— vLLM 整体架构
+
+- **阅读内容**：
+  - vLLM \`LLMEngine\` 类
+  - vLLM 的推理流程入口
+  - \`Scheduler\` 与 \`Worker\` 的交互
+- **分析重点**：
+  - 一个请求从进入到输出的完整生命周期
+  - vLLM 的分层架构：engine -> scheduler -> worker -> model runner
+- **验证 Checklist**：
+  - [ ] 能画出 vLLM 架构图
+  - [ ] 理解 \`LLMEngine.step()\` 的执行流程
+  - [ ] 理解 \`SequenceGroup\` 的概念
+
+#### Day 4：源码分析 —— vLLM Worker 与 Attention
+
+- **阅读内容**：
+  - vLLM \`Worker\` 类
+  - \`ModelRunner\` 的执行逻辑
+  - \`AttentionBackend\` 的抽象与实现
+- **分析重点**：
+  - vLLM 如何调度 attention kernel
+  - PagedAttention 的 block table 如何传入 kernel
+  - CUDA graph 的使用（如果适用）
+- **验证 Checklist**：
+  - [ ] 理解 \`execute_model\` 的调用链
+  - [ ] 能找到 attention kernel 的调用位置
+  - [ ] 理解 input metadata 的构建过程
+
+#### Day 5：项目推进 —— Mini 推理引擎 v0
+
+- **Coding 任务**：
+  - 构建 Mini 推理引擎 v0
+  - 功能：单请求 + KV Cache + 基础推理
+  - 支持 prefill 和 decode 阶段
+- **架构设计**：
+  \`\`\`
+  Request -> Prefill -> KVCache[update] -> Decode[loop] -> Response
+  \`\`\`
+- **验证 Checklist**：
+  - [ ] 能完成单条请求的完整推理
+  - [ ] 输出结果合理（与 PyTorch 版对比）
+  - [ ] 性能优于纯 PyTorch eager 模式
+
+#### Day 6：端到端 Profiling
+
+- **Profiling 任务**：
+  - 对 mini 引擎进行 prefill/decode 的 latency 分析
+  - 分析各阶段的时间占比
+  - 定位首个 token 时间（TTFT）和逐 token 时间（TBT）
+- **验证 Checklist**：
+  - [ ] 记录 prefill latency vs seq_len 的关系
+  - [ ] 记录 decode latency per token
+  - [ ] 识别主要瓶颈（GEMM？Attention？调度？）
+
+#### Day 7：总结推理系统核心问题
+
+- **总结任务**：
+  - 整理推理系统的关键挑战
+- **核心问题清单**：
+  - [ ] 内存管理：KV Cache 的动态增长
+  - [ ] Batch 策略：如何组合请求
+  - [ ] Latency 隐藏：compute 与 communication overlap
+  - [ ] 调度开销：如何最小化调度延迟
+
+---
+
+<a id="week-6"></a>
+## ⚙️ Week 6：Batching & 调度
+
+### 🎯 目标
+
+建立 **系统感** —— 从单请求到多请求
+
+### 📅 每日任务
+
+#### Day 1：Dynamic Batching
+
+- **理论学习**：
+  - Dynamic Batching 原理：请求聚合、padding
+  - Padding 的代价与优化（padding-free 策略）
+  - Batch size 对 throughput 和 latency 的影响
+- **Coding 任务**：
+  - 在 mini 引擎中实现 Dynamic Batching
+  - 请求队列 + 超时等待 + 最大 batch size 限制
+- **验证 Checklist**：
+  - [ ] 多个请求能被正确聚合到一个 batch
+  - [ ] 输出结果与单请求一致
+  - [ ] throughput 随并发数提升
+
+#### Day 2：Continuous Batching
+
+- **理论学习**：
+  - Continuous Batching（Inflight Batching）原理
+  - 请求在 decode 阶段的动态加入和退出
+  - Iteration-level scheduling vs Request-level
+- **Coding 任务**：
+  - 实现 Continuous Batching 核心逻辑
+  - 每轮 iteration 重新构建 batch
+  - 处理请求完成和新请求加入
+- **验证 Checklist**：
+  - [ ] 新请求能在任意 iteration 加入
+  - [ ] 完成的请求能及时释放资源
+  - [ ] 不存在"一个长请求阻塞整个 batch"的情况
+
+#### Day 3：源码分析 —— vLLM / TensorRT-LLM Scheduler
+
+- **阅读内容**：
+  - vLLM \`Scheduler\` 类的 \`schedule\` 方法
+  - TensorRT-LLM 的 batch scheduler（如果开源）
+- **分析重点**：
+  - 调度决策的依据：优先级、内存预算、最大 batch size
+  - 抢占（preemption）和换出（swapping）策略
+  - vLLM 的 continuous batching 实现细节
+- **验证 Checklist**：
+  - [ ] 理解 vLLM 的 \`SchedulingBudget\`
+  - [ ] 理解抢占的条件和代价
+  - [ ] 对比两种调度策略的 trade-off
+
+#### Day 4：源码分析 —— vLLM PagedAttention
+
+- **阅读内容**：
+  - vLLM \`BlockSpaceManager\`
+  - Block table 的物理/逻辑映射
+  - Copy-on-write 机制
+- **分析重点**：
+  - 如何分配和回收 block
+  - 如何构建 attention 的 input metadata
+  - Block 大小对性能的影响
+- **验证 Checklist**：
+  - [ ] 理解逻辑 block 号到物理显存的映射
+  - [ ] 理解 decode 阶段如何 append 新 block
+  - [ ] 理解 shared prompt 的 copy-on-write
+
+#### Day 5：项目推进 —— Mini 引擎 v1
+
+- **Coding 任务**：
+  - Mini 引擎 v1：支持 Continuous Batching + 基础 Scheduler
+  - 支持多请求并发
+  - 支持请求的优先级配置
+- **验证 Checklist**：
+  - [ ] 能同时处理多个请求
+  - [ ] 请求完成顺序符合预期
+  - [ ] 内存使用稳定，无泄漏
+
+#### Day 6：Latency / Throughput 测试
+
+- **Benchmark 任务**：
+  - 测试不同 batch size 下的 throughput
+  - 测试不同请求分布（短/长/混合）下的 latency
+  - 绘制 throughput-latency 曲线
+- **测试场景**：
+  - 固定并发数，观察吞吐量
+  - 固定吞吐量，观察 P99 latency
+- **验证 Checklist**：
+  - [ ] 生成 throughput vs batch_size 曲线
+  - [ ] 生成 latency_distribution 直方图
+  - [ ] 识别系统的饱和点
+
+#### Day 7：总结调度优化策略
+
+- **总结任务**：
+  - 整理调度相关的优化策略
+- **策略清单**：
+  | 策略 | 适用场景 | 代价 |
+  |------|----------|------|
+  | Dynamic Batching | 吞吐优先 | Latency 波动 |
+  | Continuous Batching | 低延迟 + 高吞吐 | 实现复杂 |
+  | Priority Scheduling | 付费用户优先 | 公平性 |
+  | Preemption | 内存不足时 | 额外 overhead |
+
+---
+
+<a id="week-7"></a>
+## 🔥 Week 7：系统整合
+
+### 🎯 目标
+
+完成 **Mini AI Infra 系统**
+
+### 📅 每日任务
+
+#### Day 1：多请求并发支持
+
+- **Coding 任务**：
+  - 请求队列：线程安全的请求缓冲
+  - 异步处理：支持回调或 future 方式返回结果
+  - 结果回调：请求完成后的通知机制
+- **验证 Checklist**：
+  - [ ] 支持并发提交多个请求
+  - [ ] 结果能正确返回给对应请求
+  - [ ] 系统在高并发下稳定运行
+
+#### Day 2：完整调度器
+
+- **Coding 任务**：
+  - 优先级调度：支持高优先级请求插队
+  - 超时控制：请求最大等待时间和执行时间
+  - 资源预算：显存预算、batch size 上限
+- **验证 Checklist**：
+  - [ ] 高优先级请求获得更快响应
+  - [ ] 超时请求被正确取消
+  - [ ] 资源预算不被突破
+
+#### Day 3：源码分析 —— SGLang / LightLLM 高级特性
+
+- **阅读内容**：
+  - SGLang 的 speculative decoding 实现
+  - LightLLM 的 chunked prefill
+  - 其他先进特性（如 prefix caching）
+- **分析重点**：
+  - 这些特性如何进一步提升吞吐或降低延迟
+  - 实现的复杂度和收益权衡
+- **验证 Checklist**：
+  - [ ] 理解 speculative decoding 的基本流程
+  - [ ] 理解 chunked prefill 解决的问题
+  - [ ] 评估哪些特性值得集成到 mini 引擎
+
+#### Day 4：整合全部自定义 Kernel
+
+- **Coding 任务**：
+  - 替换所有 PyTorch 依赖算子
+  - 整合：GEMM、FlashAttention、Softmax、LayerNorm
+  - 实现最小化的 runtime（或保留 PyTorch 作为 fallback）
+- **验证 Checklist**：
+  - [ ] 端到端运行不依赖 PyTorch CUDA 算子
+  - [ ] 结果正确性通过
+  - [ ] 性能优于或等于 PyTorch eager
+
+#### Day 5：系统联调
+
+- **Coding 任务**：
+  - 端到端多请求推理测试
+  - KV Cache + Batching + Scheduler + 全部 Kernel 联调
+  - 长时间稳定性测试（1000+ requests）
+- **验证 Checklist**：
+  - [ ] 系统能连续处理大量请求不崩溃
+  - [ ] 内存使用稳定，无持续增长
+  - [ ] 异常情况处理（OOM、非法输入）
+
+#### Day 6：全链路 Profiling
+
+- **Profiling 任务**：
+  - 系统级瓶颈定位
+  - 分析：调度开销、内存分配开销、kernel launch overhead
+  - 与 vLLM 进行同条件对比
+- **分析重点**：
+  - CPU 瓶颈 vs GPU 瓶颈
+  - 调度是否成为瓶颈
+  - 内存分配是否频繁
+- **验证 Checklist**：
+  - [ ] 生成系统级性能报告
+  - [ ] 定位 top3 系统级瓶颈
+  - [ ] 提出优化建议
+
+#### Day 7：代码重构与文档
+
+- **重构任务**：
+  - 代码结构整理：目录、命名、接口统一
+  - 添加关键注释和文档字符串
+- **文档任务**：
+  - README 初稿：项目介绍、运行方式
+  - 架构文档：模块划分、接口定义
+- **验证 Checklist**：
+  - [ ] 代码通过编译且无 warning
+  - [ ] 新用户能根据 README 跑通示例
+  - [ ] 架构图清晰展示模块关系
+
+---
+
+<a id="week-8"></a>
+## 🏁 Week 8：项目打磨 + 面试准备
+
+### 🎯 目标
+
+将学习成果 **转化为面试能力**
+
+### 📅 每日任务
+
+#### Day 1：项目文档完善
+
+- **文档任务**：
+  - README 完善：项目目标、架构、运行方式、benchmark 结果
+  - Quick Start 指南
+  - 依赖安装说明
+- **验证 Checklist**：
+  - [ ] README 包含项目亮点和难点
+  - [ ] 包含 benchmark 对比表格
+  - [ ] 包含系统架构图
+
+#### Day 2：架构图与数据流图
+
+- **绘图任务**：
+  - 系统架构图：模块层次关系
+  - 数据流图：请求从进入到输出的完整路径
+  - 关键模块交互图：Scheduler-Worker-KV Cache 交互
+- **验证 Checklist**：
+  - [ ] 架构图清晰展示 5+ 核心模块
+  - [ ] 数据流图标明关键数据结构
+  - [ ] 交互图展示时序关系
+
+#### Day 3：高频面试题准备（基础篇）
+
+- **复习范围**：
+  - GPU 基础：SM、Warp、Occupancy、Memory Hierarchy
+  - Kernel 优化：Tiling、Bank Conflict、Coalesced Access
+  - CUDA 编程：Grid/Block、Shared Memory、Sync
+- **产出**：
+  - 面试题库（自问自答形式，20+ 题）
+  - 关键概念速查表
+
+#### Day 4：高频面试题准备（进阶篇）
+
+- **复习范围**：
+  - Attention 优化：FlashAttention 原理、IO 分析
+  - 推理系统：KV Cache、Batching、Scheduler
+  - vLLM：PagedAttention、Continuous Batching
+- **产出**：
+  - 场景题解答（如"如何优化长文本推理？"）
+  - 系统设计题思路（如"设计一个 LLM 推理服务"）
+
+#### Day 5：Mock 面试
+
+- **Mock 任务**：
+  - 自我模拟：用录音或文字记录回答
+  - 重点练习：项目介绍、技术难点、优化思路
+  - 时间控制：每题回答 3-5 分钟
+- **验证 Checklist**：
+  - [ ] 能清晰介绍项目背景和目标
+  - [ ] 能深入讲解至少 2 个技术难点
+  - [ ] 能应对 follow-up 问题
+
+#### Day 6：查漏补缺
+
+- **复习任务**：
+  - 针对 mock 中的薄弱点深入复习
+  - 补充未覆盖的知识点
+  - 整理易混淆概念对比表
+- **验证 Checklist**：
+  - [ ] 所有薄弱点已标记并学习
+  - [ ] 关键公式和参数能熟练背诵
+  - [ ] 能画出所有关键算法的流程图
+
+#### Day 7：最终复盘
+
+- **复盘任务**：
+  - 8 周能力地图 checklist
+  - 标注强项和待提升项
+  - 规划后续深入方向
+- **产出**：
+  - 8 周总结报告
+  - 后续学习路线图（3 个月 / 6 个月）
+  - 面试准备进度表
+
+---
+
+## 📦 最终产出清单
+
+### 项目代码
+
+| 产出物 | 说明 |
+|--------|------|
+| Mini 推理引擎 | 含 KV Cache、Continuous Batching、Scheduler |
+| GEMM 优化 | Naive + Tiled 实现，含 benchmark |
+| FlashAttention Kernel | Block-wise 实现，含性能对比 |
+| Softmax / LayerNorm Kernel | 手写 CUDA 实现 |
+| Benchmark 框架 | 支持多维度性能对比 |
+
+### 分析文档
+
+| 产出物 | 说明 |
+|--------|------|
+| GPU 性能 Profiling 报告 | Nsight Compute / Systems 分析报告 |
+| 推理系统架构图 | 模块划分与交互关系 |
+| 调度策略对比表 | Dynamic vs Continuous vs Priority |
+| IO 优化方法论 | 从 FlashAttention 提炼的通用策略 |
+
+### 面试准备
+
+| 产出物 | 说明 |
+|--------|------|
+| 高频问题库 | 50+ 题，含自问自答 |
+| 场景题解答 | 长文本优化、系统设计等 |
+| 项目 README | 完整项目文档 |
+| 8 周总结报告 | 能力地图 + 后续规划 |
+
+---
+
+## 🎯 能力闭环
+
+通过 8 周学习，构建完整的 AI Infra 能力：
+
+\`\`\`
+Kernel 优化 ←→ System 设计
+      ↑              ↓
+Profiling ←→ Optimization
+\`\`\`
+
+- **Kernel**：能手写并优化核心算子（GEMM、Attention、Softmax）
+- **System**：能理解并设计推理系统（Batching、Scheduling、KV Cache）
+- **Profiling**：能使用专业工具定位性能瓶颈
+- **Optimization**：能从 IO、计算、调度多角度进行系统优化
+
+---
+
+> 💡 **提示**：本计划为理想节奏，实际执行中可根据个人进度调整。建议每周保留 Day 7 作为缓冲，避免进度积压。遇到难点时，优先保证 Coding 和 Profiling 的实操时间。
+`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    
+    <script src="js/main.js?v=4"></script>
+</body>
+</html>

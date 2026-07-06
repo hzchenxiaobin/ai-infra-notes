@@ -29,7 +29,7 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
         html_file.relative_to(public_dir), "leetcode/index.html"
     )
     rel_leetgpu = compute_relative_path(
-        html_file.relative_to(public_dir), "LeetGPU/index.html"
+        html_file.relative_to(public_dir), "leetgpu/index.html"
     )
     extra_section = f'''<div class="nav-section-title">更多</div>
 <a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
@@ -134,21 +134,21 @@ def main() -> None:
     # Build LeetGPU website
     print("Building LeetGPU website...")
     subprocess.run(
-        ["python3", str(repo_root / "LeetGPU" / "website" / "build.py")],
+        ["python3", str(repo_root / "leetgpu" / "website" / "build.py")],
         check=True,
     )
 
-    # Copy LeetGPU website to public/LeetGPU/
-    print("Copying LeetGPU website to public/LeetGPU/...")
-    leetgpu_dst = public_dir / "LeetGPU"
+    # Copy LeetGPU website to public/leetgpu/
+    print("Copying LeetGPU website to public/leetgpu/...")
+    leetgpu_dst = public_dir / "leetgpu"
     copy_directory_contents(
-        repo_root / "LeetGPU" / "website",
+        repo_root / "leetgpu" / "website",
         leetgpu_dst,
         skip={"build.py"},
     )
 
-    # Copy LeetGPU images to public/LeetGPU/images/
-    leetgpu_images_src = repo_root / "LeetGPU" / "images"
+    # Copy LeetGPU images to public/leetgpu/images/
+    leetgpu_images_src = repo_root / "leetgpu" / "images"
     leetgpu_images_dst = leetgpu_dst / "images"
     if leetgpu_images_src.exists():
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
@@ -159,7 +159,7 @@ def main() -> None:
     course_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
-        and "LeetGPU" not in p.relative_to(public_dir).parts
+        and "leetgpu" not in p.relative_to(public_dir).parts
     ]
     for html_file in course_pages:
         if html_file.is_file():

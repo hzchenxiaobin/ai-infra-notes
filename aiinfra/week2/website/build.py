@@ -21,7 +21,7 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
 
     Links that escape the week directory (starting with ../../) are rewritten
     to relative paths from the generated page's location. For week2 pages
-    deployed under week2/, the LeetGPU directory is at ../LeetGPU/.
+    deployed under week2/, the LeetGPU directory is at ../leetgpu/.
     """
     def replace_link(match):
         url = match.group(1)
@@ -30,7 +30,7 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        # ../../LeetGPU/x.md -> <root_prefix>LeetGPU/x.html
+        # ../../leetgpu/x.md -> <root_prefix>leetgpu/x.html
         if new_url.startswith("../../"):
             new_url = root_prefix + new_url[len("../../"):]
         return f"]({new_url})"
@@ -296,7 +296,7 @@ def page_template(title: str, nav_html: str, markdown: str,
 def build_website(output_dir: Path) -> None:
     overview, days = load_overview_and_days()
 
-    # Week 2 pages are deployed under week2/, so LeetGPU is at ../LeetGPU/
+    # Week 2 pages are deployed under week2/, so LeetGPU is at ../leetgpu/
     overview = rewrite_md_links_to_html(overview, root_prefix="../")
     for day in days:
         day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="../")

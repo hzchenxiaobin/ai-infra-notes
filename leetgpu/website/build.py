@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Build the LeetGPU solution website from markdown files in LeetGPU/.
+Build the LeetGPU solution website from markdown files in leetgpu/.
 Generates:
   - index.html: solution list page
   - <slug>.html: individual solution pages
 Uses relative paths so the site works when deployed under a repository
-path prefix (e.g. https://user.github.io/repo-name/LeetGPU/).
+path prefix (e.g. https://user.github.io/repo-name/leetgpu/).
 """
 
 import re

@@ -47,7 +47,7 @@ ai-infra-notes/
 │       ├── README.md                           # 本周概览 + Day 索引
 │       ├── day15~day19/                        # 按天拆分
 │       └── website/                            # 本周静态网站源码
-├── LeetGPU/                            # LeetGPU CUDA 挑战题解（12 道）
+├── leetgpu/                            # LeetGPU CUDA 挑战题解（12 道）
 │   ├── leetgpu-vector-add-solution.md
 │   ├── leetgpu-prefix-sum-solution.md
 │   ├── leetgpu-gemm-solution.md
@@ -125,14 +125,14 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
 
 | Day | Week 1 | Week 2 |
 |-----|--------|--------|
-| 1 | [vector-add](LeetGPU/leetgpu-vector-add-solution.md) | [prefix-sum](LeetGPU/leetgpu-prefix-sum-solution.md) |
-| 2 | [relu](LeetGPU/leetgpu-relu-solution.md) | [gemm](LeetGPU/leetgpu-gemm-solution.md) |
-| 3 | [matrix-addition](LeetGPU/leetgpu-matrix-addition-solution.md) | [convolution](LeetGPU/leetgpu-convolution-solution.md) |
-| 4 | [matrix-transpose](LeetGPU/leetgpu-matrix-transpose-solution.md) | [softmax](LeetGPU/leetgpu-softmax-solution.md) |
-| 5 | [reduction](LeetGPU/leetgpu-reduction-solution.md) | [attention](LeetGPU/leetgpu-attention-solution.md) |
-| 6 | [matrix-multiplication](LeetGPU/leetgpu-matrix-multiplication-solution.md) | [histogram](LeetGPU/leetgpu-histogram-solution.md) |
+| 1 | [vector-add](leetgpu/leetgpu-vector-add-solution.md) | [prefix-sum](leetgpu/leetgpu-prefix-sum-solution.md) |
+| 2 | [relu](leetgpu/leetgpu-relu-solution.md) | [gemm](leetgpu/leetgpu-gemm-solution.md) |
+| 3 | [matrix-addition](leetgpu/leetgpu-matrix-addition-solution.md) | [convolution](leetgpu/leetgpu-convolution-solution.md) |
+| 4 | [matrix-transpose](leetgpu/leetgpu-matrix-transpose-solution.md) | [softmax](leetgpu/leetgpu-softmax-solution.md) |
+| 5 | [reduction](leetgpu/leetgpu-reduction-solution.md) | [attention](leetgpu/leetgpu-attention-solution.md) |
+| 6 | [matrix-multiplication](leetgpu/leetgpu-matrix-multiplication-solution.md) | [histogram](leetgpu/leetgpu-histogram-solution.md) |
 
-每道题的完整题解（含 CPU 基线、GPU 设计、Kernel 实现、性能分析、复杂度）存放在 `LeetGPU/` 目录下。
+每道题的完整题解（含 CPU 基线、GPU 设计、Kernel 实现、性能分析、复杂度）存放在 `leetgpu/` 目录下。
 
 ## 工具链
 
@@ -147,7 +147,7 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
 2. 进入 [aiinfra/week1/README.md](aiinfra/week1/README.md) 按 Day 1 → Day 7 推进
 3. 每个 kernel 都配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
 4. Day 3 起配合 [aiinfra/week1/tools/cuda_occupancy_calculator.py](aiinfra/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
-5. 每天完成 LeetGPU 在线题目，题解归档到 `LeetGPU/`
+5. 每天完成 LeetGPU 在线题目，题解归档到 `leetgpu/`
 
 ## 目录约定
 

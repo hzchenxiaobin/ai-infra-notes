@@ -583,7 +583,7 @@ __global__ void matrix_transpose(const float* input, float* output, int M, int N
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../LeetGPU/leetgpu-matrix-transpose-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../leetgpu/leetgpu-matrix-transpose-solution.md)。
 
 ---
 

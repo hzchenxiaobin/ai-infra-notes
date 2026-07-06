@@ -443,7 +443,7 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 }
 ```
 
-> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../LeetGPU/leetgpu-gemm-solution.md)。
+> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../leetgpu/leetgpu-gemm-solution.md)。
 
 ---
 

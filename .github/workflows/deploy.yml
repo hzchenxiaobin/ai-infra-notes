@@ -10,7 +10,7 @@ on:
       - 'aiinfra/week2/**'
       - 'aiinfra/week3/**'
       - 'leetcode/**'
-      - 'LeetGPU/**'
+      - 'leetgpu/**'
       - 'public/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:

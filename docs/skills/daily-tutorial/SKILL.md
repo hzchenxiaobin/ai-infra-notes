@@ -141,7 +141,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - 优先选中等难度;若当日主题偏基础可选简单,偏进阶可选困难
 - 避免重复(记录已用题目,后续 Day 不重选)
 
-**呈现格式**(参考 `LeetGPU/leetgpu-prefix-sum-solution.md`):
+**呈现格式**(参考 `leetgpu/leetgpu-prefix-sum-solution.md`):
 ```markdown
 #### 任务 4：LeetGPU 在线题目 —— <题目名>
 
@@ -164,7 +164,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 > 💡 提交后把通过截图/耗时记录到 `exercise/leetgpu_<题目slug>.md`，与官方排行榜对比性能。
 ```
 
-**题目归档**:每道题的完整题解单独存为 `LeetGPU/leetgpu-<题目slug>-solution.md`,并在教程中引用链接。题解文件结构参照已有 `LeetGPU/leetgpu-prefix-sum-solution.md`:
+**题目归档**:每道题的完整题解单独存为 `leetgpu/leetgpu-<题目slug>-solution.md`,并在教程中引用链接。题解文件结构参照已有 `leetgpu/leetgpu-prefix-sum-solution.md`:
 1. 题目概述(标题/链接/难度/标签)
 2. CPU 基线 / 朴素 GPU 方法
 3. GPU 设计(并行化策略、存储层次)
@@ -288,7 +288,7 @@ python3 build.py                   # 组合构建(含 week1/week2/leetcode)
 - [ ] `### 理论学习` 用 `#### N.x` 分节,配 SVG
 - [ ] Week2 起有 `### 昇腾对照` 表格
 - [ ] `### Coding 任务` 含 4 个任务(含 1 道 LeetGPU 在线题目),代码完整可编译,带 nvcc 命令 + 预期输出
-- [ ] LeetGPU 题目与当日主题强相关,题解归档到 `LeetGPU/leetgpu-<slug>-solution.md`
+- [ ] LeetGPU 题目与当日主题强相关,题解归档到 `leetgpu/leetgpu-<slug>-solution.md`
 - [ ] `### 扩展实验` 3 个
 - [ ] `### 验证 Checklist` 7-8 条复选框
 - [ ] `### 今日总结` 5-7 条加粗编号

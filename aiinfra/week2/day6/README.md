@@ -508,7 +508,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Histogram 题目](https://leetgpu.com/challenges/histogram)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogram 题解](../../LeetGPU/leetgpu-histogram-solution.md)。
+> 💡 提交后在 [LeetGPU Histogram 题目](https://leetgpu.com/challenges/histogram)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogram 题解](../../leetgpu/leetgpu-histogram-solution.md)。
 
 ---
 

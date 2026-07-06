@@ -92,8 +92,8 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
     so the links need to point to .html files.
 
     Links that escape the week directory (starting with ../../) are rewritten
-    to relative paths from the generated page's location (e.g. LeetGPU/x.html
-    for root-level day pages, ../LeetGPU/x.html for subdir pages).
+    to relative paths from the generated page's location (e.g. leetgpu/x.html
+    for root-level day pages, ../leetgpu/x.html for subdir pages).
     """
     def replace_link(match):
         url = match.group(1)
@@ -102,7 +102,7 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        # ../../LeetGPU/x.md -> <root_prefix>LeetGPU/x.html
+        # ../../leetgpu/x.md -> <root_prefix>leetgpu/x.html
         if new_url.startswith("../../"):
             new_url = root_prefix + new_url[len("../../"):]
         return f"]({new_url})"
