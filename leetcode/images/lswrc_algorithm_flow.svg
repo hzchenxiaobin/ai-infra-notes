@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+  </defs>
+
+  <rect width="540" height="420" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="270" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">滑动窗口算法流程（哈希表记录字符最新下标）</text>
+
+  <!-- Start node -->
+  <ellipse cx="270" cy="62" rx="70" ry="20" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="270" y="66" text-anchor="middle" font-size="12" fill="#333">开始: left=0, max=0</text>
+
+  <!-- arrow down -->
+  <path d="M 270 82 L 270 100" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Decision: right < n? -->
+  <polygon points="270,104 360,150 270,196 180,150" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="270" y="146" text-anchor="middle" font-size="12" fill="#333">right &lt; n ?</text>
+  <text x="270" y="162" text-anchor="middle" font-size="11" fill="#666">(遍历每个字符)</text>
+
+  <!-- No branch -> end -->
+  <path d="M 360 150 L 460 150" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="400" y="142" text-anchor="middle" font-size="11" fill="#b85450">否</text>
+  <ellipse cx="490" cy="150" rx="46" ry="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="490" y="154" text-anchor="middle" font-size="12" fill="#333">返回 max</text>
+
+  <!-- Yes branch down -->
+  <path d="M 270 196 L 270 214" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="282" y="210" font-size="11" fill="#82b366">是</text>
+
+  <!-- Decision: s[right] in window? -->
+  <polygon points="270,218 380,264 270,310 160,264" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="270" y="260" text-anchor="middle" font-size="12" fill="#333">s[right] 在窗口里?</text>
+  <text x="270" y="276" text-anchor="middle" font-size="11" fill="#666">(查哈希表 pos)</text>
+
+  <!-- Yes (in window) -> move left -->
+  <path d="M 160 264 L 100 264" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="130" y="256" text-anchor="middle" font-size="11" fill="#b85450">是(重复)</text>
+  <rect x="20" y="244" width="76" height="42" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="58" y="262" text-anchor="middle" font-size="11" fill="#333">left = max(</text>
+  <text x="58" y="278" text-anchor="middle" font-size="10" fill="#555">left, pos[s[right]]+1)</text>
+
+  <!-- No (not in window) annotation -->
+  <path d="M 270 310 L 270 328" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="282" y="324" font-size="11" fill="#82b366">否</text>
+
+  <!-- Update pos and max -->
+  <rect x="150" y="332" width="240" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="270" y="350" text-anchor="middle" font-size="11" fill="#333">pos[s[right]] = right  (更新最新下标)</text>
+  <text x="270" y="367" text-anchor="middle" font-size="11" fill="#333">max = max(max, right − left + 1)</text>
+
+  <!-- loop back arrow -->
+  <path d="M 150 354 L 50 354 L 50 150 L 180 150" stroke="#888" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="50" y="250" text-anchor="middle" font-size="10" fill="#888" transform="rotate(-90 50 250)">right++ 继续循环</text>
+
+  <!-- marker defs -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <!-- summary note -->
+  <text x="270" y="404" text-anchor="middle" font-size="11" fill="#888">关键：left 只增不减，保证 O(n)；哈希表让"查重复"变成 O(1)</text>
+</svg>
