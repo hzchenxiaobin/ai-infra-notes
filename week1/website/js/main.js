@@ -21,11 +21,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Accordion navigation in sidebar
     function toggleAccordionItem(item) {
         if (!item) return;
+        const willExpand = !item.classList.contains('is-expanded');
         item.classList.toggle('is-expanded');
         const isExpanded = item.classList.contains('is-expanded');
         const button = item.querySelector('.nav-accordion-toggle');
         if (button) {
             button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        }
+        // When manually expanding a level, collapse its descendants so that
+        // each level requires its own click to expand.
+        if (willExpand) {
+            item.querySelectorAll('.nav-accordion-item.is-expanded').forEach(child => {
+                child.classList.remove('is-expanded');
+                const childButton = child.querySelector('.nav-accordion-toggle');
+                if (childButton) {
+                    childButton.setAttribute('aria-expanded', 'false');
+                }
+            });
         }
     }
 
