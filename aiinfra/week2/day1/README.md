@@ -85,14 +85,12 @@ __shfl_xor_sync(mask, val, laneMask=2):
 
 以 `__shfl_down_sync` 为例，它有四个参数：
 
+![__shfl_down_sync 参数详解](../website/images/shfl_down_params.svg)
+
 ```cpp
 float val = __shfl_down_sync(0xFFFFFFFF, myVal, 16, 32);
-//              │              │           │      │    │
-//              │              │           │      │    └── width: 参与 shuffle 的宽度（默认 32）
-//              │              │           └─────────────── delta: 向下偏移量
-//              │              └─────────────────────────── var: 要传递的变量
-//              └────────────────────────────────────────── mask: 线程掩码，0xFFFFFFFF=全部 32 线程
-//              └────────────────────────────────────────── 返回值: 从目标线程读取的值
+//             ↑               ↑       ↑    ↑   ↑
+//           返回值            mask    var delta width
 ```
 
 ##### mask 参数详解

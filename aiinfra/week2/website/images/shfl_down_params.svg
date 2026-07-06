@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 500" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="500" fill="#fafafa"/>
+
+  <text x="410" y="28" text-anchor="middle" font-size="16" fill="#444" font-weight="bold">__shfl_down_sync 参数详解</text>
+  <text x="410" y="46" text-anchor="middle" font-size="11" fill="#888">4 个参数 + 1 个返回值，颜色一一对应</text>
+
+  <!-- ===== 代码行（tspan 上色） ===== -->
+  <rect x="40" y="60" width="740" height="36" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="60" y="84" font-family="monospace" font-size="14" fill="#333">
+    <tspan>float </tspan>
+    <tspan fill="#888" font-weight="bold">val</tspan>
+    <tspan> = __shfl_down_sync(</tspan>
+    <tspan fill="#446688" font-weight="bold">0xFFFFFFFF</tspan>
+    <tspan>, </tspan>
+    <tspan fill="#4a7a3a" font-weight="bold">myVal</tspan>
+    <tspan>, </tspan>
+    <tspan fill="#d6a040" font-weight="bold">16</tspan>
+    <tspan>, </tspan>
+    <tspan fill="#b85450" font-weight="bold">32</tspan>
+    <tspan>);</tspan>
+  </text>
+
+  <!-- ===== 5 个参数卡片 ===== -->
+  <!-- 卡片1: 返回值 val (灰) -->
+  <line x1="75" y1="96" x2="75" y2="116" stroke="#888" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <rect x="20" y="116" width="140" height="110" fill="#f6f6f6" stroke="#888" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <rect x="20" y="116" width="140" height="24" fill="#888" opacity="0.15" rx="8" filter="url(#rough2)"/>
+  <text x="90" y="133" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">返回值</text>
+  <text x="90" y="156" text-anchor="middle" font-family="monospace" font-size="12" fill="#888" font-weight="bold">val</text>
+  <text x="90" y="176" text-anchor="middle" font-size="10" fill="#555">float 类型</text>
+  <text x="90" y="192" text-anchor="middle" font-size="10" fill="#555">从目标 lane</text>
+  <text x="90" y="208" text-anchor="middle" font-size="10" fill="#555">读取的值</text>
+  <text x="90" y="222" text-anchor="middle" font-size="9" fill="#888">（赋值左侧）</text>
+
+  <!-- 卡片2: mask (蓝) -->
+  <line x1="235" y1="96" x2="235" y2="116" stroke="#446688" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <rect x="170" y="116" width="140" height="110" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <rect x="170" y="116" width="140" height="24" fill="#446688" opacity="0.15" rx="8" filter="url(#rough2)"/>
+  <text x="240" y="133" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">参数 1：mask</text>
+  <text x="240" y="156" text-anchor="middle" font-family="monospace" font-size="11" fill="#446688" font-weight="bold">0xFFFFFFFF</text>
+  <text x="240" y="176" text-anchor="middle" font-size="10" fill="#555">32 位线程掩码</text>
+  <text x="240" y="192" text-anchor="middle" font-size="10" fill="#555">每位对应一个 lane</text>
+  <text x="240" y="208" text-anchor="middle" font-size="10" fill="#555">全 1 = 32 线程</text>
+  <text x="240" y="222" text-anchor="middle" font-size="9" fill="#888">全参与</text>
+
+  <!-- 卡片3: var (绿) -->
+  <line x1="385" y1="96" x2="385" y2="116" stroke="#4a7a3a" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <rect x="320" y="116" width="130" height="110" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <rect x="320" y="116" width="130" height="24" fill="#4a7a3a" opacity="0.15" rx="8" filter="url(#rough2)"/>
+  <text x="385" y="133" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">参数 2：var</text>
+  <text x="385" y="156" text-anchor="middle" font-family="monospace" font-size="12" fill="#4a7a3a" font-weight="bold">myVal</text>
+  <text x="385" y="176" text-anchor="middle" font-size="10" fill="#555">要传递的</text>
+  <text x="385" y="192" text-anchor="middle" font-size="10" fill="#555">本线程变量值</text>
+  <text x="385" y="208" text-anchor="middle" font-size="10" fill="#555">类型 T 可为</text>
+  <text x="385" y="222" text-anchor="middle" font-size="9" fill="#888">float/int/double</text>
+
+  <!-- 卡片4: delta (橙) -->
+  <line x1="515" y1="96" x2="515" y2="116" stroke="#d6a040" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <rect x="460" y="116" width="110" height="110" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <rect x="460" y="116" width="110" height="24" fill="#d6a040" opacity="0.15" rx="8" filter="url(#rough2)"/>
+  <text x="515" y="133" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">参数 3：delta</text>
+  <text x="515" y="156" text-anchor="middle" font-family="monospace" font-size="12" fill="#d6a040" font-weight="bold">16</text>
+  <text x="515" y="176" text-anchor="middle" font-size="10" fill="#555">向下偏移量</text>
+  <text x="515" y="192" text-anchor="middle" font-size="10" fill="#555">lane i 读取</text>
+  <text x="515" y="208" text-anchor="middle" font-size="10" fill="#555">lane (i+16)</text>
+  <text x="515" y="222" text-anchor="middle" font-size="9" fill="#888">的 var 值</text>
+
+  <!-- 卡片5: width (红) -->
+  <line x1="635" y1="96" x2="635" y2="116" stroke="#b85450" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+  <rect x="580" y="116" width="110" height="110" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <rect x="580" y="116" width="110" height="24" fill="#b85450" opacity="0.15" rx="8" filter="url(#rough2)"/>
+  <text x="635" y="133" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">参数 4：width</text>
+  <text x="635" y="156" text-anchor="middle" font-family="monospace" font-size="12" fill="#b85450" font-weight="bold">32</text>
+  <text x="635" y="176" text-anchor="middle" font-size="10" fill="#555">分组宽度</text>
+  <text x="635" y="192" text-anchor="middle" font-size="10" fill="#555">默认 32（整 warp）</text>
+  <text x="635" y="208" text-anchor="middle" font-size="10" fill="#555">必须 2 的幂</text>
+  <text x="635" y="222" text-anchor="middle" font-size="9" fill="#888">(2/4/8/16/32)</text>
+
+  <!-- 末端箭头标注（补充说明） -->
+  <rect x="700" y="116" width="100" height="110" fill="#fff8e1" stroke="#d6a040" stroke-width="1" stroke-dasharray="3,2" rx="8" filter="url(#rough2)" opacity="0.6"/>
+  <text x="750" y="138" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">⚠️ Volta+</text>
+  <text x="750" y="156" text-anchor="middle" font-size="9" fill="#666">必须用</text>
+  <text x="750" y="170" text-anchor="middle" font-size="9" fill="#666">_sync 后缀</text>
+  <text x="750" y="186" text-anchor="middle" font-size="9" fill="#666">（显式 mask）</text>
+  <text x="750" y="206" text-anchor="middle" font-size="9" fill="#888">旧版 __shfl_down</text>
+  <text x="750" y="218" text-anchor="middle" font-size="9" fill="#888">已弃用</text>
+
+  <!-- ===== mask 二进制展开 ===== -->
+  <line x1="20" y1="248" x2="800" y2="248" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="272" font-size="12" fill="#446688" font-weight="bold">mask 二进制展开：0xFFFFFFFF = 32 个 1</text>
+
+  <g font-size="9" fill="#446688">
+    <!-- 32 个小方格，每 8 个一组 -->
+    <!-- bit 31..0, 4 组 × 8 bit -->
+    <!-- group 0: bit 31-24 -->
+    <g>
+      <rect x="40"  y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="49"  y="298" text-anchor="middle">1</text>
+      <rect x="58"  y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="67"  y="298" text-anchor="middle">1</text>
+      <rect x="76"  y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="85"  y="298" text-anchor="middle">1</text>
+      <rect x="94"  y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="103" y="298" text-anchor="middle">1</text>
+      <rect x="112" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="121" y="298" text-anchor="middle">1</text>
+      <rect x="130" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="139" y="298" text-anchor="middle">1</text>
+      <rect x="148" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="157" y="298" text-anchor="middle">1</text>
+      <rect x="166" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="175" y="298" text-anchor="middle">1</text>
+    </g>
+    <text x="112" y="320" text-anchor="middle" font-size="9" fill="#888">lane 31-24</text>
+
+    <!-- group 1: bit 23-16 -->
+    <g>
+      <rect x="194" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="203" y="298" text-anchor="middle">1</text>
+      <rect x="212" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="221" y="298" text-anchor="middle">1</text>
+      <rect x="230" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="239" y="298" text-anchor="middle">1</text>
+      <rect x="248" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="257" y="298" text-anchor="middle">1</text>
+      <rect x="266" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="275" y="298" text-anchor="middle">1</text>
+      <rect x="284" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="293" y="298" text-anchor="middle">1</text>
+      <rect x="302" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="311" y="298" text-anchor="middle">1</text>
+      <rect x="320" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="329" y="298" text-anchor="middle">1</text>
+    </g>
+    <text x="266" y="320" text-anchor="middle" font-size="9" fill="#888">lane 23-16</text>
+
+    <!-- group 2: bit 15-8 -->
+    <g>
+      <rect x="348" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="357" y="298" text-anchor="middle">1</text>
+      <rect x="366" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="375" y="298" text-anchor="middle">1</text>
+      <rect x="384" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="393" y="298" text-anchor="middle">1</text>
+      <rect x="402" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="411" y="298" text-anchor="middle">1</text>
+      <rect x="420" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="429" y="298" text-anchor="middle">1</text>
+      <rect x="438" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="447" y="298" text-anchor="middle">1</text>
+      <rect x="456" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="465" y="298" text-anchor="middle">1</text>
+      <rect x="474" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="483" y="298" text-anchor="middle">1</text>
+    </g>
+    <text x="420" y="320" text-anchor="middle" font-size="9" fill="#888">lane 15-8</text>
+
+    <!-- group 3: bit 7-0 -->
+    <g>
+      <rect x="502" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="511" y="298" text-anchor="middle">1</text>
+      <rect x="520" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="529" y="298" text-anchor="middle">1</text>
+      <rect x="538" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="547" y="298" text-anchor="middle">1</text>
+      <rect x="556" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="565" y="298" text-anchor="middle">1</text>
+      <rect x="574" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="583" y="298" text-anchor="middle">1</text>
+      <rect x="592" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="601" y="298" text-anchor="middle">1</text>
+      <rect x="610" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="619" y="298" text-anchor="middle">1</text>
+      <rect x="628" y="284" width="18" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+      <text x="637" y="298" text-anchor="middle">1</text>
+    </g>
+    <text x="574" y="320" text-anchor="middle" font-size="9" fill="#888">lane 7-0</text>
+
+    <!-- 其他 mask 示例 -->
+    <text x="690" y="296" font-size="10" fill="#666">其他值：</text>
+    <text x="690" y="312" font-family="monospace" font-size="9" fill="#446688">0x0000FFFF</text>
+    <text x="690" y="324" font-size="9" fill="#888">= lane 0-15</text>
+  </g>
+
+  <!-- ===== width 分组示意 ===== -->
+  <line x1="20" y1="344" x2="800" y2="344" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="368" font-size="12" fill="#b85450" font-weight="bold">width 参数：控制 shuffle 的分组宽度</text>
+
+  <!-- width=32 -->
+  <text x="30" y="392" font-size="11" fill="#333" font-weight="bold">width=32（默认）：</text>
+  <text x="150" y="392" font-size="10" fill="#888">整个 warp 32 lane 一起 shuffle</text>
+  <rect x="30" y="400" width="560" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="310" y="416" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">lane 0 ─────────── 31（一组，整体 shuffle）</text>
+
+  <!-- width=16 -->
+  <text x="30" y="448" font-size="11" fill="#333" font-weight="bold">width=16：</text>
+  <text x="120" y="448" font-size="10" fill="#888">warp 分成两组，各自独立 shuffle</text>
+  <rect x="30"  y="456" width="270" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="165" y="472" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">lane 0-15（组 A）</text>
+  <rect x="320" y="456" width="270" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="455" y="472" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">lane 16-31（组 B）</text>
+  <text x="610" y="472" font-size="10" fill="#888">两组互不干扰</text>
+</svg>
