@@ -1,6 +1,6 @@
 ---
 name: daily-tutorial
-description: Use when writing or revising a per-day learning tutorial (dayN/README.md) in this AI Infra learning repo. Triggers on requests like "write week3 day1", "complete day N", "add a new day tutorial", "补全 dayN 教程", "写每日教程". Produces tutorials following the repo's fixed 11-section skeleton, Chinese-first style, with compilable CUDA code, Nsight profiling commands, Ascend CANN cross-platform comparison tables, and interview Q&A. Do NOT use for editing opencode's own config, agents, or non-tutorial markdown.
+description: Use when writing or revising a per-day learning tutorial (dayN/README.md) in this AI Infra learning repo. Triggers on requests like "write week3 day1", "complete day N", "add a new day tutorial", "补全 dayN 教程", "写每日教程". Produces tutorials following the repo's fixed 9-section skeleton, Chinese-first style, with compilable CUDA code, Nsight profiling commands, and interview Q&A. Do NOT use for editing opencode's own config, agents, or non-tutorial markdown.
 ---
 
 # 写每日教程 Skill
@@ -29,7 +29,7 @@ description: Use when writing or revising a per-day learning tutorial (dayN/READ
 
 **写作流程**:
 1. 先确认 `docs/learning_plan_weekN_expanded.md` 是否存在对应 Day 的计划;若无,先写计划
-2. 将计划中的"理论学习/Coding 任务/验证 Checklist"三段,展开为完整的 11 段教程
+2. 将计划中的"理论学习/Coding 任务/验证 Checklist"三段,展开为完整的 9 段教程
 3. 计划文件的 Checklist 条目应几乎逐字出现在教程的 `### 验证 Checklist` 中
 
 ## 2. 文件落位
@@ -46,7 +46,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - 教程中用相对路径引用本地文件:`[kernels/hello_gpu.cu](kernels/hello_gpu.cu)`
 - SVG 引用:`![中文alt描述](../website/images/xxx.svg)`(从 dayM/ 出发,`../website/images/` 解析到 weekN/website/images/)
 
-## 3. 教学日 11 段骨架(固定顺序)
+## 3. 教学日 9 段骨架(固定顺序)
 
 所有"教学型 Day"(非总结日)严格遵循以下顺序:
 
@@ -55,10 +55,8 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 ### 🎯 目标
 ### 学前导读：<为什么需要 X>
 ### 理论学习
-### 昇腾对照                    ← Week2 起必有
 ### Coding 任务：<具体任务名>
 ### 扩展实验
-### 常见错误与调试
 ### 验证 Checklist
 ### 今日总结
 ### 面试要点
@@ -104,29 +102,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - 善用 `##### 五级标题` 做深入解释(如"为什么 X?")
 - 形象类比(把 SM 比作教室、warp 比作班组等)
 
-### 3.5 `### 昇腾对照`(Week2 起必有,位于理论学习后、Coding 前)
-两种表格范式:
-- **范式 A(常用)**:CUDA → 昇腾概念映射表(3 列)
-  ```markdown
-  | CUDA 概念 | 昇腾 CANN 对应 | 对照说明 |
-  |---------|------------|---------|
-  | `__shfl_down_sync` | `__reduce_add`(Ascend C 内置) | CUDA 需手动写循环;昇腾调用高级 API |
-  ```
-- **范式 B(多维横评)**:维度 / CUDA 实现 / 昇腾实现
-
-高频对照维度:
-| CUDA 概念 | 昇腾对应 |
-|----------|---------|
-| Shared Memory | L1 Buffer (UB) |
-| Register / 累加器 | L0 Buffer |
-| `__shfl_*_sync` | `__reduce_add`(Ascend C 内置) |
-| Tensor Core (WMMA) | Cube Core |
-| Double Buffering(手动) | Fixpipe 自动流水线 |
-| Nsight Compute (ncu) | Ascend Profiler (msprof) |
-
-可用 `> 💡 **一句话总结**:跨平台迁移的本质是「算法思想不变,硬件抽象重映射」。` 收束。
-
-### 3.6 `### Coding 任务:<任务名>`(教学日必有)
+### 3.5 `### Coding 任务:<任务名>`(教学日必有)
 - **4 个** `#### 任务 N:<动作描述>` 子任务,呈递进结构:
   - 任务 1:创建 `.cu` 文件(给完整参考代码)
   - 任务 2:编译与运行(给 nvcc 命令 + 预期输出)
@@ -181,20 +157,15 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 5. 性能分析与优化
 6. 复杂度分析
 
-### 3.7 `### 扩展实验`(教学日必有)
+### 3.6 `### 扩展实验`(教学日必有)
 - **3 个** `#### 实验 N:<描述>`,递进或对比
 - 每个实验给出修改建议 + 思考问题
 
-### 3.8 `### 常见错误与调试`(可选,推荐有)
-- 三列表格:`| 错误 | 原因 | 解决方法 |`
-- 附加"调试技巧"列表
-
-### 3.9 `### 验证 Checklist`(教学日必有)
+### 3.7 `### 验证 Checklist`(教学日必有)
 - **7-8 条** `- [ ] 能...` 复选框
 - 每条以"能/理解/实现/完成"动词开头
-- Week2 起最后一条常含跨平台验证,如"能对照昇腾的 ... 解释 ..."
 
-### 3.10 `### 今日总结`(必有)
+### 3.8 `### 今日总结`(必有)
 ```markdown
 ### 今日总结
 
@@ -208,7 +179,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 - **5-7 条**加粗编号列表
 - 教学日常有一句展望(如"掌握这些后,你就...")
 
-### 3.11 `### 面试要点`(必有)
+### 3.9 `### 面试要点`(必有)
 - **5 题**问答(个别 3-4 题)
 - 格式:问题加粗,答案缩进展开
   ```markdown
@@ -222,7 +193,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 
 ## 4. 总结日(Day7)变体
 
-总结日不套用 11 段骨架,改用:
+总结日不套用 9 段骨架,改用:
 
 ```
 ## Day 7：<总结/验收主题>
@@ -295,7 +266,6 @@ python3 build.py                   # 组合构建(含 week1/week2/leetcode)
 - [ ] `### 🎯 目标` 紧跟标题,含 6 条编号 + `> 💡 为什么重要`
 - [ ] 有 `### 学前导读`(总结日除外)
 - [ ] `### 理论学习` 用 `#### N.x` 分节,配 SVG
-- [ ] Week2 起有 `### 昇腾对照` 表格
 - [ ] `### Coding 任务` 含 4 个任务(含 1 道 LeetGPU 在线题目),代码完整可编译,带 nvcc 命令 + 预期输出
 - [ ] LeetGPU 题目与当日主题强相关,题解归档到 `leetgpu/leetgpu-<slug>-solution.md`
 - [ ] `### 扩展实验` 3 个
