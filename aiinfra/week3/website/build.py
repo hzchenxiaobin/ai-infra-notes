@@ -74,7 +74,7 @@ def load_overview_and_days():
         days.append({
             "num": int(match.group(1)),
             "title": match.group(2).strip(),
-            "markdown": text.strip(),
+            "markdown": "\n".join(text.strip().splitlines()[1:]),
         })
 
     if not days:
