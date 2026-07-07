@@ -1,5 +1,5 @@
 // histogram.cu —— Histogram: Global atomic vs Shared memory privatization（ncu profiling 版）
-// 编译命令: nvcc -o histogram histogram.cu -O3 -arch=sm_120 -g -lineinfo
+// 编译命令: nvcc -o histogram histogram.cu -O3 -arch=sm_80 -g -lineinfo
 // 运行命令: ./histogram
 
 #include <cuda_runtime.h>

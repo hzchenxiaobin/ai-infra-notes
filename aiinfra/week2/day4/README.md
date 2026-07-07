@@ -96,7 +96,7 @@ ncu --page details -i report.ncu-rep  # 命令行方式
 > 💡 **编译建议**：profiling 时建议加 `-g -lineinfo` 编译选项，保留调试信息，这样 ncu 的 Source View 能关联到源代码行。
 
 ```bash
-nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
 ```
 
 #### 4.3 关键性能指标
@@ -184,7 +184,7 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 ```bash
 # 编译（保留调试信息以便 Source View 关联）
 nvcc -o gemm_profile kernels/register_blocking_gemm.cu \
-    -O3 -arch=sm_120 -lcublas -g -lineinfo
+    -O3 -arch=sm_80 -lcublas -g -lineinfo
 
 # 运行 Nsight Compute profile
 ncu \

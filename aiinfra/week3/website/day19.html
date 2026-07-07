@@ -306,7 +306,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 
 \`\`\`cuda
 // kernels/softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）
-// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
+// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_80
 // 集成编译（PyTorch load_inline）: 见 mini_engine.py
 // 运行命令: ./softmax_layernorm_ext
 
@@ -479,7 +479,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
 \`\`\`bash
 # 独立编译（不依赖 PyTorch）
-nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
+nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_80
 
 # 运行
 ./softmax_layernorm_ext
@@ -558,7 +558,7 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
 
 \`\`\`cuda
 // matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_80
 
 #include <cuda_runtime.h>
 #include <cstdio>

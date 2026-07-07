@@ -192,7 +192,7 @@ O_final = o / l   （最后做一次归一化）
 
 ```cuda
 // flash_attention.cu —— FlashAttention 简化版 Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>
@@ -445,7 +445,7 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
+nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_80
 ./flash_attention
 ```
 
@@ -563,7 +563,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 #### 实验 3：用 ncu 分析 FlashAttention Kernel
 
 ```bash
-nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
+nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_80 -g -lineinfo
 ncu --kernel-name regex:flashAttentionFwd \
     --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\

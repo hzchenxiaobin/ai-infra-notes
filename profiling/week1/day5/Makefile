@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAGS = -O3 -arch=sm_120
+NVCC_FLAGS = -O3 -arch=sm_80
 
 TARGETS = bank_conflict
 

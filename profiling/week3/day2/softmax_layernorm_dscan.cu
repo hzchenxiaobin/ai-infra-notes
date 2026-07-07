@@ -1,5 +1,5 @@
 // softmax_layernorm_dscan.cu —— Softmax + LayerNorm 不同 D 值性能扫描（实验 1）
-// 编译命令: nvcc -o sl_dscan softmax_layernorm_dscan.cu -O3 -arch=sm_120 -lineinfo
+// 编译命令: nvcc -o sl_dscan softmax_layernorm_dscan.cu -O3 -arch=sm_80 -lineinfo
 // 运行命令: ./sl_dscan
 
 #include <cuda_runtime.h>

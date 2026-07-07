@@ -1,5 +1,5 @@
 // softmax_profile.cu —— Softmax 三遍扫描（ncu profiling 版，Day 4 任务 5）
-// 编译命令: nvcc -o softmax_profile softmax_profile.cu -O3 -arch=sm_120 -g -lineinfo
+// 编译命令: nvcc -o softmax_profile softmax_profile.cu -O3 -arch=sm_80 -g -lineinfo
 // 运行命令: ./softmax_profile
 
 #include <cuda_runtime.h>

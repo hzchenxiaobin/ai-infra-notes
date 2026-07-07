@@ -1,6 +1,6 @@
 // integrated_gemm.cu —— 整合优化 GEMM（ncu profiling 版）
 // Warp Shuffle + Register Blocking + float4 向量化加载 + Coalesced 写回
-// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
 // 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>

@@ -612,7 +612,7 @@ nvcc -Xptxas -v -o occupancy_test_b kernels/occupancy_test_b.cu
 如果看到类似：
 ```
 ptxas info    : 0 bytes gmem
-ptxas info    : Compiling entry function 'version_b' for 'sm_120'
+ptxas info    : Compiling entry function 'version_b' for 'sm_80'
 ptxas info    : Function properties for version_b
     0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
 ```

@@ -1,5 +1,5 @@
 // gemm_timed.cu —— 60 分钟手撕 Register Blocking GEMM（ncu profiling 版）
-// 编译: nvcc -o gemm_timed gemm_timed.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+// 编译: nvcc -o gemm_timed gemm_timed.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
 // 运行: ./gemm_timed
 
 #include <cuda_runtime.h>

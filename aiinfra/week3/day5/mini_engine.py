@@ -24,7 +24,7 @@ my_ops = load_inline(
     cuda_sources=cuda_src,
     functions=["softmax_forward", "layernorm_forward"],
     verbose=True,
-    extra_cuda_cflags=["-O3", "-arch=sm_120", "-DWITH_TORCH"],
+    extra_cuda_cflags=["-O3", "-arch=sm_80", "-DWITH_TORCH"],
 )
 
 

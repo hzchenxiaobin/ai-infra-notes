@@ -172,7 +172,7 @@ AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
 
 ```cuda
 // kernels/attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
-// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -lineinfo
+// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_80 -lineinfo
 // 运行命令: ./attention_naive
 
 #include <cuda_runtime.h>
@@ -304,7 +304,7 @@ P[qrow * N + j] = p_val;           // ← 把 N×N 的 P 写回 HBM
 # 编译（带 -lineinfo 供 ncu Source View 使用）
 # Ampere (A100, RTX 30xx): sm_80
 # Turing (RTX 20xx, T4): sm_75
-nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
+nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_80 -g -lineinfo
 
 # 运行
 ./attention_naive
@@ -385,7 +385,7 @@ ncu --metrics \
 
 ```cuda
 // attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
-// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_80
 
 #include <cuda_runtime.h>
 #include <cstdio>

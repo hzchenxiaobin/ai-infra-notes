@@ -308,7 +308,7 @@ make nsys              # nsys 时间线
 
 ```bash
 # 编译时查看寄存器用量（非 ncu，但相关）
-nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 ```
 
 **相关 LeetGPU**：GEMM 建议用 ncu 对比不同参数性能差异。

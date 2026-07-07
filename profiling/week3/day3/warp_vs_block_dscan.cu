@@ -1,5 +1,5 @@
 // warp_vs_block_dscan.cu —— Softmax warp 级 vs block 级不同 D 值性能对比（实验 2）
-// 编译命令: nvcc -o warp_vs_block warp_vs_block_dscan.cu -O3 -arch=sm_120 -lineinfo
+// 编译命令: nvcc -o warp_vs_block warp_vs_block_dscan.cu -O3 -arch=sm_80 -lineinfo
 // 运行命令: ./warp_vs_block
 
 #include <cuda_runtime.h>

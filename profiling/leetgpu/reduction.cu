@@ -1,5 +1,5 @@
 // reduction.cu —— 并行归约（Warp Shuffle + 两级归约）
-// 编译命令: nvcc -o reduction reduction.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o reduction reduction.cu -O3 -arch=sm_80
 
 #include <cuda_runtime.h>
 #include <cstdio>

@@ -137,7 +137,7 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
 
 ```cuda
 // register_blocking_gemm.cu —— Register Blocking 矩阵乘法完整实现
-// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 // 运行命令: ./register_gemm
 
 #include <cuda_runtime.h>
@@ -353,7 +353,7 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+nvcc -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 ./register_gemm
 ```
 
@@ -372,7 +372,7 @@ M          N          K          Our(ms)      cuBLAS(ms)   Percent
 #### 任务 3：检查 Register 使用量
 
 ```bash
-nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 ```
 
 观察输出中的 `Used N registers`，确认没有 `spill stores/loads`。

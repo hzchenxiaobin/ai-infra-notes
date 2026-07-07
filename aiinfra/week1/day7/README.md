@@ -544,7 +544,7 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用两道**综合题**把全
 
 ```cuda
 // matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_80
 
 #include <cuda_runtime.h>
 #include <cstdio>
@@ -626,7 +626,7 @@ int main() {
 
 ```cuda
 // matrix_multiplication.cu —— Shared Memory Tiling GEMM
-// 编译命令: nvcc -o matmul matmul.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o matmul matmul.cu -O3 -arch=sm_80
 
 #include <cuda_runtime.h>
 #include <cstdio>

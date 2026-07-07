@@ -127,7 +127,7 @@ cudaStreamWaitEvent(streamB, event, 0);
 
 ```cuda
 // multi_stream_pipeline.cu —— 多 Stream 重叠流水线完整实现
-// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_80
 // 运行命令: ./multi_stream
 
 #include <cuda_runtime.h>
@@ -299,7 +299,7 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o multi_stream kernels/multi_stream_pipeline.cu -O3 -arch=sm_120
+nvcc -o multi_stream kernels/multi_stream_pipeline.cu -O3 -arch=sm_80
 ./multi_stream
 ```
 

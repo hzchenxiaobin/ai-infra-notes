@@ -166,7 +166,7 @@ Result: lane0持有warp内32个线程的累加和
 
 ```cpp
 // warp_reduce.cu —— Warp级 + Block级两级归约完整实现
-// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
 // 运行命令: ./warp_reduce
 
 #include <cuda_runtime.h>
@@ -332,10 +332,10 @@ int main() {
 
 ```bash
 # 编译（根据GPU架构选择arch参数）
-# Ampere (A100, RTX 30xx): sm_120
+# Ampere (A100, RTX 30xx): sm_80
 # Turing (RTX 20xx, T4): sm_75
 # Volta (V100): sm_70
-nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
+nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
 
 # 运行
 ./warp_reduce
@@ -533,7 +533,7 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 
 ```cpp
 // register_blocking_gemm.cu —— Register Blocking矩阵乘法完整实现
-// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 // 运行命令: ./register_gemm
 
 #include <cuda_runtime.h>
@@ -827,7 +827,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
+nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 
 # 运行
 ./register_gemm
@@ -846,7 +846,7 @@ nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 
 **练习1（基础）**：修改TM和TN的值（如TM=4, TN=4或TM=16, TN=4），观察性能变化和register使用量的关系。
 > 提示：使用`nvcc -Xptxas -v`查看编译器报告的register使用量。超过限制会导致spill到local memory。
-> 编译命令：`nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -Xptxas -v,-warn-spills`
+> 编译命令：`nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -Xptxas -v,-warn-spills`
 
 **练习2（进阶）**：实现Double Buffering版本——声明两份shared memory buffer（`s_A[2][BM][BK]`），奇偶tile交替使用。
 > 提示：使用`buf_idx = (bk / BK) % 2`选择当前buffer，用`__syncthreads()`保证切换时无冲突。
@@ -878,7 +878,7 @@ nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 **参考答案要点**：
 - **放在register的原因**：寄存器访问延迟~0 cycle（已分配），shared memory延迟~20-30 cycles。TM×TN累加器被访问TM×TN×BK次（内层循环），放在register能极大减少延迟
 - **Register使用量计算**：acc[TM][TN]个float + r_A[TM] + r_B[TN] + 索引变量。TM=TN=8时约88个register
-- **限制**：每个线程最多255个register（sm_120+），超过会spill到local memory（性能暴跌）
+- **限制**：每个线程最多 255 个 register，超过会 spill 到 local memory（性能暴跌）
 - **Shared memory容量限制**：acc放在shared memory会占用BM×BN个float = 128×128×4 = 64KB，超过了一般shared memory上限（48-96KB），所以必须放register
 
 ---
@@ -1057,7 +1057,7 @@ cudaStreamWaitEvent(streamB, event, 0);
 
 ```cpp
 // multi_stream_pipeline.cu —— 多Stream重叠流水线完整实现
-// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_80
 // 运行命令: ./multi_stream
 
 #include <cuda_runtime.h>
@@ -1257,7 +1257,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
+nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_80
 
 # 运行
 ./multi_stream
@@ -1504,7 +1504,7 @@ Register Pressure:                72%
 ```bash
 # 编译（保留调试信息以便Source View关联）
 nvcc -o gemm_profile register_blocking_gemm.cu \
-    -O3 -arch=sm_120 -lcublas -g -lineinfo
+    -O3 -arch=sm_80 -lcublas -g -lineinfo
 
 # 运行Nsight Compute profile
 ncu \
@@ -1783,7 +1783,7 @@ O_final = o / l   （最后做一次归一化）
 
 ```cpp
 // flash_attention.cu —— FlashAttention简化版Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>
@@ -2099,7 +2099,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
+nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
 
 # 运行
 ./flash_attention
@@ -2212,7 +2212,7 @@ nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 ```cpp
 // integrated_gemm.cu —— 整合优化GEMM（Warp Shuffle + Register Blocking + float4）
 // 目标性能：cuBLAS 70%+（A100上4096x4096矩阵）
-// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
 // 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>
@@ -2528,7 +2528,7 @@ int main() {
 #### 编译运行
 
 ```bash
-nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
 ./integrated_gemm
 
 # 预期输出（A100示例）

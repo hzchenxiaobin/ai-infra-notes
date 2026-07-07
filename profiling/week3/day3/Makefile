@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAGS = -O3 -arch=sm_120 -lineinfo
+NVCC_FLAGS = -O3 -arch=sm_80 -lineinfo
 
 TARGETS = softmax_layernorm_opt warp_vs_block
 

@@ -49,3 +49,6 @@ aiinfra/week1/day3/exercise/occupancy_verify
 # ncu profiling workspace (binaries + nsys output)
 ncu/**/transpose
 ncu/**/profiles/
+
+# Large generic NCU report files generated during profiling
+profiling/**/report.ncu-rep
