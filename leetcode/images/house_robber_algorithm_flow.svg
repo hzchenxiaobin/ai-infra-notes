@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="520" height="400" fill="#fafafa"/>
+
+  <text x="260" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">DP 四步法：状态 → 转移 → 初始化 → 计算</text>
+  <text x="260" y="44" text-anchor="middle" font-size="11" fill="#888">与爬楼梯同骨架，转移方程从加法改为取 max</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1 -->
+    <rect x="40" y="64" width="440" height="64" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="140" y="84" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">① 状态定义</text>
+    <text x="140" y="102" text-anchor="middle" font-size="10" fill="#555">f(i) = 前 i+1 间房最高金额</text>
+    <text x="140" y="118" text-anchor="middle" font-size="9" fill="#888">「前 i 间能偷多少？」</text>
+    <rect x="300" y="74" width="170" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="385" y="92" text-anchor="middle" font-size="9" fill="#4a7a3a">对比爬楼梯：</text>
+    <text x="385" y="108" text-anchor="middle" font-size="9" fill="#4a7a3a">f(i)=到第i阶方法数</text>
+
+    <path d="M 260 130 L 260 144" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2 -->
+    <rect x="40" y="148" width="440" height="64" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="140" y="168" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">② 转移方程</text>
+    <text x="140" y="186" text-anchor="middle" font-family="monospace" font-size="11" fill="#555">f(i) = max(f(i-1), f(i-2)+nums[i])</text>
+    <text x="140" y="202" text-anchor="middle" font-size="9" fill="#888">「偷 or 不偷？取较优」</text>
+    <rect x="300" y="158" width="170" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="385" y="176" text-anchor="middle" font-size="9" fill="#d6a040">对比爬楼梯：</text>
+    <text x="385" y="192" text-anchor="middle" font-family="monospace" font-size="9" fill="#d6a040">f(i)=f(i-1)+f(i-2)</text>
+
+    <path d="M 260 214 L 260 228" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3 -->
+    <rect x="40" y="232" width="440" height="64" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="140" y="252" text-anchor="middle" font-size="12" fill="#d6a040" font-weight="bold">③ 初始条件</text>
+    <text x="140" y="270" text-anchor="middle" font-family="monospace" font-size="11" fill="#555">f(0)=nums[0], f(1)=max(nums[0],nums[1])</text>
+    <text x="140" y="286" text-anchor="middle" font-size="9" fill="#888">「1 间必偷；2 间偷较多者」</text>
+    <rect x="300" y="242" width="170" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="385" y="260" text-anchor="middle" font-size="9" fill="#b85450">对比爬楼梯：</text>
+    <text x="385" y="276" text-anchor="middle" font-family="monospace" font-size="9" fill="#b85450">f(1)=1, f(2)=2</text>
+
+    <path d="M 260 298 L 260 312" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 4 -->
+    <rect x="40" y="316" width="440" height="64" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="140" y="336" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">④ 计算顺序</text>
+    <text x="140" y="354" text-anchor="middle" font-family="monospace" font-size="11" fill="#555">i = 2 → 3 → ... → n-1</text>
+    <text x="140" y="370" text-anchor="middle" font-size="9" fill="#888">「自底向上 + 滚动数组 O(1)」</text>
+    <rect x="300" y="326" width="170" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="385" y="344" text-anchor="middle" font-size="9" fill="#446688">滚动写法相同：</text>
+    <text x="385" y="360" text-anchor="middle" font-family="monospace" font-size="8" fill="#446688">a,b = b, max(b, a+n)</text>
+  </g>
+</svg>
