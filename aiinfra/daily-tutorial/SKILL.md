@@ -18,6 +18,15 @@ description: Use when writing or revising a per-day learning tutorial (dayN/READ
 | 单周深度展开 | `docs/learning_plan_weekN_expanded.md` | 逐日详写(含时间分配、考察度 ⭐、附录) |
 | **执行教程** | `weekN/dayM/README.md` | 本 skill 产出的主体 |
 
+**前置阅读要求**:
+在动笔写每日教程之前,必须先完整阅读 `docs/` 目录下的全部文档:
+- `docs/AI_Infra_8_week_plan.md`
+- `docs/AI_Infra_8_week_plan_detailed.md`
+- `docs/learning_plan_week2_expanded.md`
+- `docs/learning_plan_week3_expanded.md`
+
+这些文档提供了 8 周整体路线、每周目标与逐日种子内容,是教程写作的上下文基础。
+
 **写作流程**:
 1. 先确认 `docs/learning_plan_weekN_expanded.md` 是否存在对应 Day 的计划;若无,先写计划
 2. 将计划中的"理论学习/Coding 任务/验证 Checklist"三段,展开为完整的 11 段教程
