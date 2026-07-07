@@ -183,7 +183,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=2">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=3">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <!-- Prism.js for syntax highlighting -->
@@ -250,7 +250,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="{root_prefix}js/main.js?v=3"></script>
+    <script src="{root_prefix}js/main.js?v=4"></script>
 </body>
 </html>"""
 
