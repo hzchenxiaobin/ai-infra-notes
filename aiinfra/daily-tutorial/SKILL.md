@@ -1,6 +1,6 @@
 ---
 name: daily-tutorial
-description: Use when writing or revising a per-day learning tutorial (dayN/README.md) in this AI Infra learning repo. Triggers on requests like "write week3 day1", "complete day N", "add a new day tutorial", "补全 dayN 教程", "写每日教程". Produces tutorials following the repo's fixed 9-section skeleton, Chinese-first style, with compilable CUDA code, Nsight profiling commands, and interview Q&A. Do NOT use for editing opencode's own config, agents, or non-tutorial markdown.
+description: Use when writing or revising a per-day learning tutorial (dayN/README.md) in this AI Infra learning repo. Triggers on requests like "write week3 day1", "complete day N", "add a new day tutorial", "补全 dayN 教程", "写每日教程". Produces tutorials following the repo's fixed 8-section skeleton, Chinese-first style, with compilable CUDA code, Nsight profiling commands, and interview Q&A. Do NOT use for editing opencode's own config, agents, or non-tutorial markdown.
 ---
 
 # 写每日教程 Skill
@@ -29,8 +29,8 @@ description: Use when writing or revising a per-day learning tutorial (dayN/READ
 
 **写作流程**:
 1. 先确认 `docs/learning_plan_weekN_expanded.md` 是否存在对应 Day 的计划;若无,先写计划
-2. 将计划中的"理论学习/Coding 任务/验证 Checklist"三段,展开为完整的 9 段教程
-3. 计划文件的 Checklist 条目应几乎逐字出现在教程的 `### 验证 Checklist` 中
+2. 将计划中的"理论学习/Coding 任务/Checklist"三段,展开为完整的 8 段教程
+3. 计划文件的 Checklist 条目转化为教程中的验证问题或练习要求
 
 ## 2. 文件落位
 
@@ -46,7 +46,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - 教程中用相对路径引用本地文件:`[kernels/hello_gpu.cu](kernels/hello_gpu.cu)`
 - SVG 引用:`![中文alt描述](../website/images/xxx.svg)`(从 dayM/ 出发,`../website/images/` 解析到 weekN/website/images/)
 
-## 3. 教学日 9 段骨架(固定顺序)
+## 3. 教学日 8 段骨架(固定顺序)
 
 所有"教学型 Day"(非总结日)严格遵循以下顺序:
 
@@ -57,7 +57,6 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 ### 理论学习
 ### Coding 任务：<具体任务名>
 ### 扩展实验
-### 验证 Checklist
 ### 今日总结
 ### 面试要点
 ```
@@ -161,11 +160,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - **3 个** `#### 实验 N:<描述>`,递进或对比
 - 每个实验给出修改建议 + 思考问题
 
-### 3.7 `### 验证 Checklist`(教学日必有)
-- **7-8 条** `- [ ] 能...` 复选框
-- 每条以"能/理解/实现/完成"动词开头
-
-### 3.8 `### 今日总结`(必有)
+### 3.7 `### 今日总结`(必有)
 ```markdown
 ### 今日总结
 
@@ -179,7 +174,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 - **5-7 条**加粗编号列表
 - 教学日常有一句展望(如"掌握这些后,你就...")
 
-### 3.9 `### 面试要点`(必有)
+### 3.8 `### 面试要点`(必有)
 - **5 题**问答(个别 3-4 题)
 - 格式:问题加粗,答案缩进展开
   ```markdown
@@ -193,7 +188,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 
 ## 4. 总结日(Day7)变体
 
-总结日不套用 9 段骨架,改用:
+总结日不套用 8 段骨架,改用:
 
 ```
 ## Day 7：<总结/验收主题>
@@ -269,7 +264,6 @@ python3 build.py                   # 组合构建(含 week1/week2/leetcode)
 - [ ] `### Coding 任务` 含 4 个任务(含 1 道 LeetGPU 在线题目),代码完整可编译,带 nvcc 命令 + 预期输出
 - [ ] LeetGPU 题目与当日主题强相关,题解归档到 `leetgpu/leetgpu-<slug>-solution.md`
 - [ ] `### 扩展实验` 3 个
-- [ ] `### 验证 Checklist` 7-8 条复选框
 - [ ] `### 今日总结` 5-7 条加粗编号
 - [ ] `### 面试要点` 5 题问答
 - [ ] 所有文件链接用相对路径且指向真实文件
