@@ -1,5 +1,5 @@
 # Ignore all profiling outputs and compiled binaries in this tree.
-# Only keep source files and build configs.
+# Keep source files, build configs, and ncu-rep performance reports.
 *
 !*/
 !.gitignore
@@ -8,3 +8,4 @@
 !*.md
 !*.py
 !*.txt
+!*.ncu-rep
