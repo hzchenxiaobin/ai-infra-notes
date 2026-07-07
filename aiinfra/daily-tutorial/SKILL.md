@@ -255,6 +255,14 @@ python3 weekN/website/build.py    # 单周构建
 python3 build.py                   # 组合构建(含 week1/week2/leetcode)
 ```
 
+**提交与推送**:
+构建验证通过后,将新增/修改的文件提交并推送到远程:
+```bash
+git add -A
+git commit -m "docs(weekN/dayM): <主题>"
+git push origin
+```
+
 ## 7. 检查清单(写完一个 Day 后自检)
 
 - [ ] 首行是 `## Day N：<主题>`(中文全角冒号)
@@ -269,3 +277,4 @@ python3 build.py                   # 组合构建(含 week1/week2/leetcode)
 - [ ] 所有文件链接用相对路径且指向真实文件
 - [ ] SVG 引用格式 `![中文alt](../website/images/xxx.svg)`
 - [ ] 运行 `python3 weekN/website/build.py` 成功生成 `dayN.html`
+- [ ] 提交并推送更改：`git add -A && git commit -m "docs(weekN/dayM): <主题>" && git push origin`
