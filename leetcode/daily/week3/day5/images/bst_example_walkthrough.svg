@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="380" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：中序 1,5,3,4,6 在 5→3 处递减，判定非法</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">root=[5,1,4,null,null,3,6]，跨层违规 3 &lt; 根 5</text>
+
+  <!-- ===== Left: the tree ===== -->
+  <text x="120" y="74" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">输入树</text>
+  <g font-size="12" filter="url(#rough2)">
+    <!-- 5 root -->
+    <circle cx="120" cy="100" r="18" fill="#fff" stroke="#446688" stroke-width="1.8"/>
+    <text x="120" y="105" text-anchor="middle" fill="#446688" font-weight="bold">5</text>
+    <!-- 1 -->
+    <circle cx="60" cy="160" r="16" fill="#fff" stroke="#446688" stroke-width="1.5"/>
+    <text x="60" y="165" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <!-- 4 -->
+    <circle cx="190" cy="160" r="16" fill="#fff" stroke="#446688" stroke-width="1.5"/>
+    <text x="190" y="165" text-anchor="middle" fill="#446688" font-weight="bold">4</text>
+    <!-- 3 -->
+    <circle cx="150" cy="216" r="14" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+    <text x="150" y="221" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <!-- 6 -->
+    <circle cx="230" cy="216" r="14" fill="#fff" stroke="#446688" stroke-width="1.5"/>
+    <text x="230" y="221" text-anchor="middle" fill="#446688" font-weight="bold">6</text>
+    <!-- edges -->
+    <path d="M 108 114 L 74 146" stroke="#446688" stroke-width="1.3" fill="none"/>
+    <path d="M 132 114 L 176 146" stroke="#446688" stroke-width="1.3" fill="none"/>
+    <path d="M 180 174 L 158 204" stroke="#446688" stroke-width="1.3" fill="none"/>
+    <path d="M 200 174 L 222 204" stroke="#446688" stroke-width="1.3" fill="none"/>
+  </g>
+  <text x="120" y="252" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">3 在 5 的右子树却 &lt; 5 ⚠️</text>
+
+  <!-- ===== Right: inorder sequence as a strip ===== -->
+  <text x="400" y="74" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">中序访问序列</text>
+  <g font-size="12" filter="url(#rough2)">
+    <!-- cells: 1, 5, 3, 4, 6 -->
+    <rect x="280" y="90" width="40" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="4"/>
+    <text x="300" y="111" text-anchor="middle" fill="#4a7a3a" font-weight="bold">1</text>
+    <text x="300" y="138" text-anchor="middle" font-size="9" fill="#4a7a3a">① prev=null</text>
+
+    <path d="M 322 106 L 338 106" stroke="#4a7a3a" stroke-width="1.3" fill="none" marker-end="url(#arrG)"/>
+
+    <rect x="340" y="90" width="40" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="4"/>
+    <text x="360" y="111" text-anchor="middle" fill="#4a7a3a" font-weight="bold">5</text>
+    <text x="360" y="138" text-anchor="middle" font-size="9" fill="#4a7a3a">② 5&gt;1 ✅</text>
+
+    <!-- violation arrow 5 → 3 -->
+    <path d="M 382 106 L 398 106" stroke="#b85450" stroke-width="2.2" fill="none" marker-end="url(#arrR)"/>
+
+    <rect x="400" y="90" width="40" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="2.2" rx="4"/>
+    <text x="420" y="111" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <text x="420" y="138" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">③ 3≤5 ❌</text>
+
+    <path d="M 442 106 L 458 106" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+
+    <rect x="460" y="90" width="40" height="32" fill="#f5f5f5" stroke="#888" stroke-width="1.2" rx="4"/>
+    <text x="480" y="111" text-anchor="middle" fill="#888" font-weight="bold">4</text>
+
+    <path d="M 502 106 L 518 106" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3,3" marker-end="url(#arr)"/>
+
+    <rect x="520" y="90" width="34" height="32" fill="#f5f5f5" stroke="#888" stroke-width="1.2" rx="4"/>
+    <text x="537" y="111" text-anchor="middle" fill="#888" font-weight="bold">6</text>
+
+    <text x="537" y="138" text-anchor="middle" font-size="9" fill="#888">(未访问)</text>
+  </g>
+
+  <!-- ===== Steps table ===== -->
+  <text x="280" y="170" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">逐步状态</text>
+  <g font-size="10" filter="url(#rough2)">
+    <!-- header -->
+    <rect x="40" y="180" width="480" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3"/>
+    <text x="70" y="196" text-anchor="middle" fill="#446688" font-weight="bold">步骤</text>
+    <text x="160" y="196" text-anchor="middle" fill="#446688" font-weight="bold">弹栈节点</text>
+    <text x="260" y="196" text-anchor="middle" fill="#446688" font-weight="bold">prev</text>
+    <text x="360" y="196" text-anchor="middle" fill="#446688" font-weight="bold">cur.val</text>
+    <text x="470" y="196" text-anchor="middle" fill="#446688" font-weight="bold">判断</text>
+
+    <!-- row 1 -->
+    <rect x="40" y="204" width="480" height="24" fill="#fff" stroke="#ccc" stroke-width="1"/>
+    <text x="70" y="220" text-anchor="middle" fill="#555">1</text>
+    <text x="160" y="220" text-anchor="middle" fill="#4a7a3a" font-weight="bold">1</text>
+    <text x="260" y="220" text-anchor="middle" fill="#888">null</text>
+    <text x="360" y="220" text-anchor="middle" fill="#555">1</text>
+    <text x="470" y="220" text-anchor="middle" fill="#4a7a3a">无前驱 ✅</text>
+
+    <!-- row 2 -->
+    <rect x="40" y="228" width="480" height="24" fill="#fff" stroke="#ccc" stroke-width="1"/>
+    <text x="70" y="244" text-anchor="middle" fill="#555">2</text>
+    <text x="160" y="244" text-anchor="middle" fill="#4a7a3a" font-weight="bold">5</text>
+    <text x="260" y="244" text-anchor="middle" fill="#555">1</text>
+    <text x="360" y="244" text-anchor="middle" fill="#555">5</text>
+    <text x="470" y="244" text-anchor="middle" fill="#4a7a3a">5 &gt; 1 ✅</text>
+
+    <!-- row 3 (violation) -->
+    <rect x="40" y="252" width="480" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+    <text x="70" y="268" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <text x="160" y="268" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <text x="260" y="268" text-anchor="middle" fill="#b85450" font-weight="bold">5</text>
+    <text x="360" y="268" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <text x="470" y="268" text-anchor="middle" fill="#b85450" font-weight="bold">3 ≤ 5 ❌</text>
+  </g>
+
+  <!-- ===== Result box ===== -->
+  <rect x="40" y="296" width="480" height="64" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="318" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">第 3 步：cur.val(3) ≤ prev.val(5) → 非严格递增</text>
+  <text x="280" y="336" text-anchor="middle" font-size="11" fill="#b85450">立即 return false，无需访问剩余节点</text>
+  <text x="280" y="352" text-anchor="middle" font-size="9" fill="#555">中序等价性一次遍历即抓住"右子树 3 &lt; 根 5"的跨层违规</text>
+</svg>

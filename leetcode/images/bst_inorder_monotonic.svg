@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="380" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">BST 的中序遍历 = 严格递增序列</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">合法 BST ⟺ 中序序列严格递增（无相等、无递减）</text>
+
+  <!-- ===== Left: valid BST ===== -->
+  <rect x="20" y="58" width="245" height="296" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="142" y="78" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">合法 BST ✅</text>
+
+  <!-- tree: 2 with left 1, right 3 -->
+  <g font-size="12" filter="url(#rough2)">
+    <!-- node 2 (root) -->
+    <circle cx="142" cy="110" r="18" fill="#fff" stroke="#4a7a3a" stroke-width="1.8"/>
+    <text x="142" y="115" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <!-- node 1 -->
+    <circle cx="92" cy="170" r="18" fill="#fff" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="92" y="175" text-anchor="middle" fill="#4a7a3a" font-weight="bold">1</text>
+    <!-- node 3 -->
+    <circle cx="192" cy="170" r="18" fill="#fff" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="192" y="175" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <!-- edges -->
+    <path d="M 130 124 L 104 156" stroke="#4a7a3a" stroke-width="1.3" fill="none"/>
+    <path d="M 154 124 L 180 156" stroke="#4a7a3a" stroke-width="1.3" fill="none"/>
+  </g>
+
+  <!-- inorder traversal arrows: 1 → 2 → 3 -->
+  <text x="142" y="218" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">中序：1 → 2 → 3</text>
+  <g font-size="12" filter="url(#rough2)">
+    <rect x="62" y="232" width="40" height="28" fill="#fff" stroke="#4a7a3a" stroke-width="1.3" rx="4"/>
+    <text x="82" y="251" text-anchor="middle" fill="#4a7a3a" font-weight="bold">1</text>
+    <path d="M 104 246 L 122 246" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arrG)"/>
+    <rect x="124" y="232" width="40" height="28" fill="#fff" stroke="#4a7a3a" stroke-width="1.3" rx="4"/>
+    <text x="144" y="251" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <path d="M 166 246 L 184 246" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arrG)"/>
+    <rect x="186" y="232" width="40" height="28" fill="#fff" stroke="#4a7a3a" stroke-width="1.3" rx="4"/>
+    <text x="206" y="251" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+  </g>
+  <rect x="42" y="290" width="200" height="50" fill="#fff" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="142" y="310" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">严格递增：1 &lt; 2 &lt; 3</text>
+  <text x="142" y="328" text-anchor="middle" font-size="9" fill="#555">相邻差均为正 → 合法</text>
+
+  <!-- ===== Right: invalid BST ===== -->
+  <rect x="285" y="58" width="235" height="296" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="402" y="78" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">非法 BST ❌</text>
+
+  <!-- tree: 5 (root), left 1, right 4, 4's left 3, right 6 -->
+  <g font-size="12" filter="url(#rough2)">
+    <!-- node 5 -->
+    <circle cx="402" cy="110" r="18" fill="#fff" stroke="#b85450" stroke-width="1.8"/>
+    <text x="402" y="115" text-anchor="middle" fill="#b85450" font-weight="bold">5</text>
+    <!-- node 1 -->
+    <circle cx="332" cy="170" r="18" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+    <text x="332" y="175" text-anchor="middle" fill="#b85450" font-weight="bold">1</text>
+    <!-- node 4 -->
+    <circle cx="452" cy="170" r="18" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+    <text x="452" y="175" text-anchor="middle" fill="#b85450" font-weight="bold">4</text>
+    <!-- node 3 -->
+    <circle cx="412" cy="218" r="15" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+    <text x="412" y="223" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <!-- node 6 -->
+    <circle cx="492" cy="218" r="15" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+    <text x="492" y="223" text-anchor="middle" fill="#b85450" font-weight="bold">6</text>
+    <!-- edges -->
+    <path d="M 390 124 L 344 156" stroke="#b85450" stroke-width="1.3" fill="none"/>
+    <path d="M 414 124 L 440 156" stroke="#b85450" stroke-width="1.3" fill="none"/>
+    <path d="M 442 186 L 420 206" stroke="#b85450" stroke-width="1.3" fill="none"/>
+    <path d="M 462 186 L 484 206" stroke="#b85450" stroke-width="1.3" fill="none"/>
+  </g>
+
+  <!-- inorder sequence: 1,5,3,4,6 with 5→3 highlighted -->
+  <text x="402" y="252" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">中序：1 → 5 → 3 → 4 → 6</text>
+  <g font-size="11" filter="url(#rough2)">
+    <rect x="306" y="262" width="32" height="24" fill="#fff" stroke="#b85450" stroke-width="1.2" rx="3"/>
+    <text x="322" y="279" text-anchor="middle" fill="#b85450" font-weight="bold">1</text>
+    <path d="M 340 274 L 354 274" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arrR)"/>
+    <rect x="356" y="262" width="32" height="24" fill="#fff" stroke="#b85450" stroke-width="1.2" rx="3"/>
+    <text x="372" y="279" text-anchor="middle" fill="#b85450" font-weight="bold">5</text>
+    <!-- violation arrow 5→3 -->
+    <path d="M 390 274 L 404 274" stroke="#b85450" stroke-width="2" fill="none" marker-end="url(#arrR)"/>
+    <rect x="406" y="262" width="32" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="3"/>
+    <text x="422" y="279" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <path d="M 440 274 L 454 274" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arrR)"/>
+    <rect x="456" y="262" width="32" height="24" fill="#fff" stroke="#b85450" stroke-width="1.2" rx="3"/>
+    <text x="472" y="279" text-anchor="middle" fill="#b85450" font-weight="bold">4</text>
+    <path d="M 490 274 L 504 274" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arrR)"/>
+    <rect x="506" y="262" width="28" height="24" fill="#fff" stroke="#b85450" stroke-width="1.2" rx="3"/>
+    <text x="520" y="279" text-anchor="middle" fill="#b85450" font-weight="bold">6</text>
+  </g>
+
+  <rect x="305" y="298" width="200" height="42" fill="#fff" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="405" y="316" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">5 → 3 递减 ⚠️</text>
+  <text x="405" y="332" text-anchor="middle" font-size="9" fill="#555">右子树出现 3 &lt; 根 5，跨层违规</text>
+</svg>
