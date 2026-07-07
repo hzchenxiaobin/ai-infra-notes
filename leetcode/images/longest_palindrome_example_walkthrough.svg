@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="440" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：s="babad" 5 个中心扩展</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">中心 i=1 扩展出 "bab"(len=3)，i=2 扩展出 "aba"(len=3)，并列最长</text>
+
+  <!-- ===== String visualization ===== -->
+  <text x="30" y="74" font-size="11" fill="#446688" font-weight="bold">s = "babad"</text>
+  <g font-size="13">
+    <rect x="60" y="82" width="44" height="40" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="82" y="107" text-anchor="middle" fill="#333">b</text>
+    <text x="82" y="76" text-anchor="middle" font-size="8" fill="#888">[0]</text>
+
+    <rect x="108" y="82" width="44" height="40" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="130" y="107" text-anchor="middle" fill="#333">a</text>
+    <text x="130" y="76" text-anchor="middle" font-size="8" fill="#888">[1]</text>
+
+    <rect x="156" y="82" width="44" height="40" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="178" y="107" text-anchor="middle" fill="#333">b</text>
+    <text x="178" y="76" text-anchor="middle" font-size="8" fill="#888">[2]</text>
+
+    <rect x="204" y="82" width="44" height="40" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="226" y="107" text-anchor="middle" fill="#333">a</text>
+    <text x="226" y="76" text-anchor="middle" font-size="8" fill="#888">[3]</text>
+
+    <rect x="252" y="82" width="44" height="40" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="274" y="107" text-anchor="middle" fill="#333">d</text>
+    <text x="274" y="76" text-anchor="middle" font-size="8" fill="#888">[4]</text>
+  </g>
+
+  <!-- ===== Table ===== -->
+  <line x1="20" y1="140" x2="520" y2="140" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <g font-size="9" fill="#444" font-weight="bold">
+    <rect x="20" y="148" width="36" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="38" y="161" text-anchor="middle">中心</text>
+    <rect x="56" y="148" width="120" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="116" y="161" text-anchor="middle">奇数扩展 expand(i,i)</text>
+    <rect x="176" y="148" width="120" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="236" y="161" text-anchor="middle">偶数扩展 expand(i,i+1)</text>
+    <rect x="296" y="148" width="100" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="346" y="161" text-anchor="middle">最长回文</text>
+    <rect x="396" y="148" width="100" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="446" y="161" text-anchor="middle">maxLen</text>
+  </g>
+
+  <!-- rows -->
+  <g font-size="9" fill="#333">
+    <!-- i=0 -->
+    <rect x="20" y="168" width="36" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="38" y="183" text-anchor="middle">0 (b)</text>
+    <rect x="56" y="168" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="116" y="183" text-anchor="middle" fill="#446688">"b" len=1</text>
+    <rect x="176" y="168" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="236" y="183" text-anchor="middle" fill="#888">b≠a → 0</text>
+    <rect x="296" y="168" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="346" y="183" text-anchor="middle">"b"</text>
+    <rect x="396" y="168" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="446" y="183" text-anchor="middle" fill="#888">1</text>
+
+    <!-- i=1 (key!) -->
+    <rect x="20" y="192" width="36" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="38" y="207" text-anchor="middle" fill="#d6a040" font-weight="bold">1 (a)</text>
+    <rect x="56" y="192" width="120" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="116" y="207" text-anchor="middle" fill="#d6a040" font-weight="bold">b==b → "bab" len=3</text>
+    <rect x="176" y="192" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="236" y="207" text-anchor="middle" fill="#888">a≠b → 0</text>
+    <rect x="296" y="192" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="346" y="207" text-anchor="middle" fill="#d6a040" font-weight="bold">"bab" ★</text>
+    <rect x="396" y="192" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="446" y="207" text-anchor="middle" fill="#d6a040" font-weight="bold">3</text>
+
+    <!-- i=2 -->
+    <rect x="20" y="216" width="36" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="38" y="231" text-anchor="middle" fill="#d6a040" font-weight="bold">2 (b)</text>
+    <rect x="56" y="216" width="120" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="116" y="231" text-anchor="middle" fill="#d6a040" font-weight="bold">a==a → "aba" len=3</text>
+    <rect x="176" y="216" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="236" y="231" text-anchor="middle" fill="#888">b≠a → 0</text>
+    <rect x="296" y="216" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="346" y="231" text-anchor="middle" fill="#d6a040" font-weight="bold">"aba"</text>
+    <rect x="396" y="216" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="446" y="231" text-anchor="middle" fill="#d6a040" font-weight="bold">3</text>
+
+    <!-- i=3 -->
+    <rect x="20" y="240" width="36" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="38" y="255" text-anchor="middle">3 (a)</text>
+    <rect x="56" y="240" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="116" y="255" text-anchor="middle" fill="#446688">"a" len=1</text>
+    <rect x="176" y="240" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="236" y="255" text-anchor="middle" fill="#888">a≠d → 0</text>
+    <rect x="296" y="240" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="346" y="255" text-anchor="middle">—</text>
+    <rect x="396" y="240" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="446" y="255" text-anchor="middle" fill="#888">3</text>
+
+    <!-- i=4 -->
+    <rect x="20" y="264" width="36" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="38" y="279" text-anchor="middle">4 (d)</text>
+    <rect x="56" y="264" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="116" y="279" text-anchor="middle" fill="#446688">"d" len=1</text>
+    <rect x="176" y="264" width="120" height="22" fill="#eee" stroke="#ccc" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="236" y="279" text-anchor="middle" fill="#888">i+1 越界</text>
+    <rect x="296" y="264" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="346" y="279" text-anchor="middle">—</text>
+    <rect x="396" y="264" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="446" y="279" text-anchor="middle" fill="#888">3</text>
+  </g>
+
+  <!-- ===== Result ===== -->
+  <line x1="20" y1="300" x2="520" y2="300" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="316" width="480" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="270" y="338" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">最终结果："bab"（或 "aba"，并列最长 len=3）</text>
+  <text x="270" y="358" text-anchor="middle" font-size="10" fill="#555">中心 i=1：b-a-b 对称扩展 1 步 → "bab"</text>
+  <text x="270" y="374" text-anchor="middle" font-size="10" fill="#555">中心 i=2：a-b-a 对称扩展 1 步 → "aba"</text>
+  <text x="270" y="390" text-anchor="middle" font-size="9" fill="#888">5 个中心 × 每个最多扩展 n/2 步 → O(n²)</text>
+</svg>
