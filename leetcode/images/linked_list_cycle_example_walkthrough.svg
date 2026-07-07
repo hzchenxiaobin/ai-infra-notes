@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="420" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：[3,2,0,-4] pos=1，3 步相遇</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">slow 和 fast 从 3 出发，第 3 步在节点 2 相遇</text>
+
+  <!-- ===== Cyclic list visualization ===== -->
+  <g font-size="11">
+    <!-- nodes arranged in a ring-like layout -->
+    <!-- 3 (top) -->
+    <circle cx="270" cy="90" r="20" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="270" y="95" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <text x="270" y="76" text-anchor="middle" font-size="8" fill="#888">[0]</text>
+
+    <!-- 2 (right) -->
+    <circle cx="380" cy="180" r="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="380" y="185" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="400" y="172" font-size="8" fill="#888">[1]</text>
+
+    <!-- -4 (bottom) -->
+    <circle cx="270" cy="270" r="20" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="270" y="275" text-anchor="middle" fill="#446688" font-weight="bold">-4</text>
+    <text x="270" y="296" text-anchor="middle" font-size="8" fill="#888">[3]</text>
+
+    <!-- 0 (left) -->
+    <circle cx="160" cy="180" r="20" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="160" y="185" text-anchor="middle" fill="#446688" font-weight="bold">0</text>
+    <text x="140" y="172" font-size="8" fill="#888">[2]</text>
+
+    <!-- arrows: 3→2, 2→0, 0→-4, -4→2 (cycle) -->
+    <path d="M 288 102 L 362 168" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 362 192 L 178 192" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 162 198 L 252 258" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 288 262 L 372 198" stroke="#b85450" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="350" y="250" font-size="9" fill="#b85450" font-weight="bold">环回</text>
+  </g>
+
+  <!-- ===== Step table ===== -->
+  <line x1="20" y1="320" x2="520" y2="320" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <g font-size="9" fill="#444" font-weight="bold">
+    <rect x="20" y="328" width="40" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="341" text-anchor="middle">步骤</text>
+    <rect x="60" y="328" width="100" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="110" y="341" text-anchor="middle">slow 位置</text>
+    <rect x="160" y="328" width="100" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="210" y="341" text-anchor="middle">fast 位置</text>
+    <rect x="260" y="328" width="240" height="18" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="380" y="341" text-anchor="middle">说明</text>
+  </g>
+
+  <g font-size="9" fill="#333">
+    <!-- initial -->
+    <rect x="20" y="348" width="40" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="40" y="362" text-anchor="middle">初始</text>
+    <rect x="60" y="348" width="100" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="110" y="362" text-anchor="middle" fill="#446688">3</text>
+    <rect x="160" y="348" width="100" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="210" y="362" text-anchor="middle" fill="#b85450">3</text>
+    <rect x="260" y="348" width="240" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="380" y="362" text-anchor="middle" fill="#888">同起点</text>
+
+    <!-- step 1 -->
+    <rect x="20" y="370" width="40" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="40" y="384" text-anchor="middle">1</text>
+    <rect x="60" y="370" width="100" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="110" y="384" text-anchor="middle" fill="#446688">2</text>
+    <rect x="160" y="370" width="100" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="210" y="384" text-anchor="middle" fill="#b85450">0</text>
+    <rect x="260" y="370" width="240" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="380" y="384" text-anchor="middle" fill="#888">slow +1, fast +2</text>
+
+    <!-- step 2 -->
+    <rect x="20" y="392" width="40" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="40" y="406" text-anchor="middle">2</text>
+    <rect x="60" y="392" width="100" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="110" y="406" text-anchor="middle" fill="#446688">0</text>
+    <rect x="160" y="392" width="100" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="210" y="406" text-anchor="middle" fill="#b85450">2 (环回)</text>
+    <rect x="260" y="392" width="240" height="20" fill="#fff" stroke="#eee" stroke-width="0.4" rx="1" filter="url(#rough2)"/>
+    <text x="380" y="406" text-anchor="middle" fill="#888">slow +1, fast +2（-4→2 环回）</text>
+  </g>
+</svg>
