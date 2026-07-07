@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="520" height="380" fill="#fafafa"/>
+
+  <text x="260" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：双指针从两端夹逼</text>
+  <text x="260" y="44" text-anchor="middle" font-size="11" fill="#888">时间 O(n)，空间 O(1)；每步算面积、更新最大、移短板</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: init -->
+    <rect x="40" y="64" width="440" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 初始化</text>
+    <text x="130" y="84" font-family="monospace" font-size="10" fill="#555">left = 0, right = n-1, maxArea = 0</text>
+    <text x="130" y="100" font-size="9" fill="#888">两指针指向数组两端</text>
+
+    <path d="M 260 110 L 260 124" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: while loop -->
+    <rect x="40" y="128" width="440" height="120" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="148" font-size="12" fill="#4a7a3a" font-weight="bold">② while left &lt; right</text>
+    <text x="54" y="168" font-family="monospace" font-size="10" fill="#555">while (left &lt; right) {</text>
+    <text x="70" y="186" font-family="monospace" font-size="10" fill="#d6a040">// 算面积 = 短板 × 距离</text>
+    <text x="70" y="202" font-family="monospace" font-size="10" fill="#b85450">area = min(h[left], h[right]) * (right - left);</text>
+    <text x="70" y="218" font-family="monospace" font-size="10" fill="#b85450">maxArea = max(maxArea, area);</text>
+    <text x="70" y="234" font-family="monospace" font-size="10" fill="#4a7a3a">if (h[left] &lt; h[right]) left++;  else right--;</text>
+    <text x="54" y="248" font-family="monospace" font-size="10" fill="#555">}</text>
+
+    <path d="M 260 252 L 260 266" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: return -->
+    <rect x="40" y="270" width="440" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="290" font-size="12" fill="#b85450" font-weight="bold">③ 返回</text>
+    <text x="110" y="290" font-family="monospace" font-size="10" fill="#555">return maxArea;   // 全局最大面积</text>
+    <text x="110" y="306" font-size="9" fill="#888">left 和 right 合计最多移动 n-1 次 → O(n)</text>
+
+    <!-- key insight -->
+    <rect x="40" y="324" width="440" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+    <text x="260" y="344" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">贪心核心：移动高侧 → 距离变小、短板不变 → 面积必然变小</text>
+    <text x="260" y="360" text-anchor="middle" font-size="10" fill="#555">移动矮侧 → 距离变小，但可能遇到更高的线使短板变高 → 面积可能增大</text>
+  </g>
+</svg>

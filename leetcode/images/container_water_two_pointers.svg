@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="380" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">双指针夹逼：每次移动较矮一侧</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">面积 = min(h[l], h[r]) × (r-l)，移动高侧必然劣，移动矮侧才可能更大</text>
+
+  <!-- ===== Container visualization ===== -->
+  <text x="30" y="74" font-size="11" fill="#446688" font-weight="bold">height[]（竖线表示高度）</text>
+
+  <g font-size="10">
+    <!-- x axis -->
+    <line x1="40" y1="280" x2="500" y2="280" stroke="#888" stroke-width="1.2" filter="url(#rough2)"/>
+
+    <!-- bars: [1,8,6,2,5,4,8,3,7] -->
+    <line x1="60" y1="280" x2="60" y2="270" stroke="#888" stroke-width="6" filter="url(#rough2)"/>
+    <text x="60" y="296" text-anchor="middle" font-size="8" fill="#888">0</text>
+    <text x="60" y="266" text-anchor="middle" font-size="8" fill="#888">1</text>
+
+    <line x1="110" y1="280" x2="110" y2="200" stroke="#b85450" stroke-width="6" filter="url(#rough2)"/>
+    <text x="110" y="296" text-anchor="middle" font-size="8" fill="#888">1</text>
+    <text x="110" y="194" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">8</text>
+    <text x="90" y="190" font-size="9" fill="#b85450" font-weight="bold">left ↑</text>
+
+    <line x1="160" y1="280" x2="160" y2="220" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="160" y="296" text-anchor="middle" font-size="8" fill="#888">2</text>
+    <line x1="210" y1="280" x2="210" y2="260" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="210" y="296" text-anchor="middle" font-size="8" fill="#888">3</text>
+    <line x1="260" y1="280" x2="260" y2="230" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="260" y="296" text-anchor="middle" font-size="8" fill="#888">4</text>
+    <line x1="310" y1="280" x2="310" y2="240" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="310" y="296" text-anchor="middle" font-size="8" fill="#888">5</text>
+    <line x1="360" y1="280" x2="360" y2="200" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="360" y="296" text-anchor="middle" font-size="8" fill="#888">6</text>
+    <line x1="410" y1="280" x2="410" y2="250" stroke="#ccc" stroke-width="4" filter="url(#rough2)"/>
+    <text x="410" y="296" text-anchor="middle" font-size="8" fill="#888">7</text>
+
+    <line x1="460" y1="280" x2="460" y2="210" stroke="#4a7a3a" stroke-width="6" filter="url(#rough2)"/>
+    <text x="460" y="296" text-anchor="middle" font-size="8" fill="#888">8</text>
+    <text x="460" y="204" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">7</text>
+    <text x="475" y="214" font-size="9" fill="#4a7a3a" font-weight="bold">↑ right</text>
+
+    <!-- water container (between left=1 and right=8) -->
+    <rect x="110" y="210" width="350" height="70" fill="#e8f0fe" opacity="0.4" stroke="#446688" stroke-width="1" stroke-dasharray="3,2" filter="url(#rough2)"/>
+    <text x="285" y="250" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">水（高 7 × 宽 7 = 49）</text>
+
+    <!-- height labels for water level -->
+    <line x1="100" y1="210" x2="470" y2="210" stroke="#4a7a3a" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" filter="url(#rough2)"/>
+    <text x="95" y="214" text-anchor="end" font-size="8" fill="#4a7a3a">水位=7</text>
+  </g>
+
+  <!-- ===== Movement rule ===== -->
+  <line x1="20" y1="316" x2="520" y2="316" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <rect x="30" y="326" width="230" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="346" font-size="10" fill="#b85450" font-weight="bold">h[left] &lt; h[right]</text>
+  <text x="44" y="362" font-family="monospace" font-size="10" fill="#b85450">→ left++  （移矮侧）</text>
+
+  <rect x="280" y="326" width="230" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="294" y="346" font-size="10" fill="#4a7a3a" font-weight="bold">h[left] ≥ h[right]</text>
+  <text x="294" y="362" font-family="monospace" font-size="10" fill="#4a7a3a">→ right-- （移矮侧）</text>
+</svg>
