@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="380" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">单调递减队列：队头是窗口最大，两端操作</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">左端过期出队，右端弹尾保单调；与单调栈对比：队列两端都能操作</text>
+
+  <!-- ===== Window on array ===== -->
+  <text x="30" y="74" font-size="11" fill="#446688" font-weight="bold">nums[]（窗口 k=3）</text>
+  <g font-size="10" fill="#333">
+    <rect x="30" y="82" width="44" height="32" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="52" y="102" text-anchor="middle">1</text>
+    <text x="52" y="76" text-anchor="middle" font-size="8" fill="#888">[0]</text>
+
+    <rect x="78" y="82" width="44" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="100" y="102" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <text x="100" y="76" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">[1]</text>
+
+    <rect x="126" y="82" width="44" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="148" y="102" text-anchor="middle" fill="#4a7a3a">-1</text>
+    <text x="148" y="76" text-anchor="middle" font-size="8" fill="#4a7a3a">[2]</text>
+
+    <rect x="174" y="82" width="44" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="196" y="102" text-anchor="middle" fill="#4a7a3a">-3</text>
+    <text x="196" y="76" text-anchor="middle" font-size="8" fill="#4a7a3a">[3]</text>
+
+    <rect x="222" y="82" width="44" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="244" y="102" text-anchor="middle" fill="#446688" font-weight="bold">5</text>
+    <text x="244" y="76" text-anchor="middle" font-size="8" fill="#446688" font-weight="bold">[4] 新来</text>
+
+    <rect x="270" y="82" width="44" height="32" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="292" y="102" text-anchor="middle">3</text>
+    <text x="270" y="76" text-anchor="middle" font-size="8" fill="#888">[5]</text>
+
+    <rect x="318" y="82" width="44" height="32" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="340" y="102" text-anchor="middle">6</text>
+    <text x="318" y="76" text-anchor="middle" font-size="8" fill="#888">[6]</text>
+
+    <rect x="366" y="82" width="44" height="32" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="388" y="102" text-anchor="middle">7</text>
+    <text x="366" y="76" text-anchor="middle" font-size="8" fill="#888">[7]</text>
+
+    <!-- window bracket -->
+    <path d="M 76 122 L 76 128 L 218 128 L 218 122" stroke="#4a7a3a" stroke-width="1.2" fill="none" filter="url(#rough2)"/>
+    <text x="147" y="142" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">当前窗口 [1,2,3]</text>
+  </g>
+
+  <!-- ===== Deque ===== -->
+  <text x="30" y="168" font-size="11" fill="#d6a040" font-weight="bold">单调队列 deque（存下标）</text>
+  <g font-size="10">
+    <!-- deque cells: [1,2,3] values [3,-1,-3] -->
+    <rect x="120" y="176" width="60" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="196" text-anchor="middle" fill="#b85450" font-weight="bold">[1]=3</text>
+    <text x="120" y="172" font-size="8" fill="#b85450" font-weight="bold">队头 ← max</text>
+
+    <rect x="184" y="176" width="60" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="214" y="196" text-anchor="middle" fill="#446688">[2]=-1</text>
+
+    <rect x="248" y="176" width="60" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="278" y="196" text-anchor="middle" fill="#446688">[3]=-3</text>
+    <text x="278" y="172" font-size="8" fill="#446688">队尾 ← 入队</text>
+
+    <!-- operations -->
+    <text x="330" y="186" font-size="9" fill="#b85450" font-weight="bold">← 左端过期出队</text>
+    <text x="330" y="200" font-size="9" fill="#4a7a3a" font-weight="bold">→ 右端弹尾保单调</text>
+  </g>
+
+  <!-- ===== When 5 arrives ===== -->
+  <text x="30" y="232" font-size="11" fill="#446688" font-weight="bold">当 nums[4]=5 入队时：</text>
+  <g font-size="10">
+    <rect x="30" y="242" width="200" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="130" y="260" text-anchor="middle" fill="#b85450" font-weight="bold">5 &gt; -3 → 弹尾 [3]</text>
+
+    <rect x="30" y="274" width="200" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="130" y="292" text-anchor="middle" fill="#b85450" font-weight="bold">5 &gt; -1 → 弹尾 [2]</text>
+
+    <rect x="30" y="306" width="200" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="130" y="324" text-anchor="middle" fill="#b85450" font-weight="bold">5 &gt; 3 → 弹尾 [1]</text>
+
+    <text x="250" y="260" font-size="10" fill="#888">连续弹 3 个</text>
+    <text x="250" y="276" font-size="10" fill="#888">队列变空</text>
+
+    <rect x="250" y="290" width="80" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="3" filter="url(#rough2)"/>
+    <text x="290" y="310" text-anchor="middle" fill="#446688" font-weight="bold">[4]=5</text>
+    <text x="290" y="334" text-anchor="middle" font-size="8" fill="#446688">入队，队头=队尾</text>
+
+    <text x="350" y="300" font-size="10" fill="#4a7a3a" font-weight="bold">队头即窗口最大 = 5</text>
+    <text x="350" y="316" font-size="9" fill="#555">一次入队弹掉所有</text>
+    <text x="350" y="330" font-size="9" fill="#555">比它小的旧元素</text>
+  </g>
+
+  <!-- ===== Stack vs Queue ===== -->
+  <rect x="350" y="242" width="170" height="80" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="435" y="260" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">单调栈 vs 单调队列</text>
+  <text x="362" y="276" font-size="9" fill="#555">栈：一端操作</text>
+  <text x="362" y="290" font-size="9" fill="#555">  → 找下一个更 X</text>
+  <text x="362" y="304" font-size="9" fill="#555">队列：两端操作</text>
+  <text x="362" y="318" font-size="9" fill="#555">  → 滑动窗口最值</text>
+</svg>
