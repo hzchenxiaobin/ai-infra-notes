@@ -23,12 +23,12 @@
 
 ```
 ai-infra-notes/
-├── docs/                               # 8 周学习计划与教程写作 Skill
+├── docs/                               # 8 周学习计划
 │   ├── AI_Infra_8_week_plan.md               # 计划总览
 │   ├── AI_Infra_8_week_plan_detailed.md      # 详细每日任务
-│   ├── learning_plan_week2_expanded.md       # Week 2 深度展开
-│   └── skills/daily-tutorial/SKILL.md        # 写每日教程的通用 Skill
+│   └── learning_plan_week2_expanded.md       # Week 2 深度展开
 ├── aiinfra/                            # 课程教程目录
+│   ├── daily-tutorial/SKILL.md               # 写每日教程的通用 Skill
 │   ├── week1/                             # Week 1：GPU 执行本质 + Profiling
 │   │   ├── README.md                           # 本周概览 + Day 索引
 │   │   ├── day1/~day7/                         # 按天拆分，每天含：
@@ -77,7 +77,7 @@ ai-infra-notes/
 ### 面试要点              ← 5 题问答
 ```
 
-详细的写作规范见 [docs/skills/daily-tutorial/SKILL.md](docs/skills/daily-tutorial/SKILL.md)。
+详细的写作规范见 [aiinfra/daily-tutorial/SKILL.md](aiinfra/daily-tutorial/SKILL.md)。
 
 ## 在线网站
 
