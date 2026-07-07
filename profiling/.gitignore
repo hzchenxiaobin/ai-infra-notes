@@ -1,0 +1,10 @@
+# Ignore all profiling outputs and compiled binaries in this tree.
+# Only keep source files and build configs.
+*
+!*/
+!.gitignore
+!Makefile
+!*.cu
+!*.md
+!*.py
+!*.txt
