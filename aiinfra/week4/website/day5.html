@@ -88,6 +88,7 @@
 <a class="nav-link day-link" href="day3.html">Day 3</a>
 <a class="nav-link day-link" href="day4.html">Day 4</a>
 <a class="nav-link day-link active" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
     </div>
   </div>
 </div>
@@ -492,7 +493,7 @@ Speedup: 1.5x ~ 3.0x
 
 grid-stride loop 每线程拷贝多元素，保证 coalesced（相邻线程访问相邻地址），可选 float4 向量化（一次 128-bit 拷贝）。用 ncu 的 \`dram__throughput\` 验证带宽利用率是否 >80%。
 
-> 💡 提交后在 [LeetGPU Matrix Copy 题目](https://leetgpu.com/challenges/matrix-copy)上记录通过耗时和带宽利用率。完整题解（含 coalesced access、float4 向量化、带宽测量）见 [Matrix Copy 题解](../leetgpu/week4/day5/leetgpu-matrix-copy-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Copy 题目](https://leetgpu.com/challenges/matrix-copy)上记录通过耗时和带宽利用率。完整题解（含 coalesced access、float4 向量化、带宽测量）见 [Matrix Copy 题解](../leetgpu/leetgpu-matrix-copy-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 删除链表的倒数第 N 个节点
 

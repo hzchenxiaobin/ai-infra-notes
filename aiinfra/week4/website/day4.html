@@ -88,6 +88,7 @@
 <a class="nav-link day-link" href="day3.html">Day 3</a>
 <a class="nav-link day-link active" href="day4.html">Day 4</a>
 <a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
     </div>
   </div>
 </div>
@@ -369,7 +370,7 @@ ncu --metrics \\
 
 一个 block 处理一段输出 tile，协作加载含 halo 的输入到 shared memory（halo = K/2 个边界元素），kernel 权重放 \`__constant__\` memory 广播，每线程算若干输出元素。
 
-> 💡 提交后在 [LeetGPU 1D Convolution 题目](https://leetgpu.com/challenges/1d-convolution)上记录通过耗时。完整题解（含 shared memory halo、\`__constant__\` 广播、边界处理）见 [1D Convolution 题解](../leetgpu/week4/day4/leetgpu-1d-convolution-solution.html)。
+> 💡 提交后在 [LeetGPU 1D Convolution 题目](https://leetgpu.com/challenges/1d-convolution)上记录通过耗时。完整题解（含 shared memory halo、\`__constant__\` 广播、边界处理）见 [1D Convolution 题解](../leetgpu/leetgpu-1d-convolution-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 最小覆盖子串
 

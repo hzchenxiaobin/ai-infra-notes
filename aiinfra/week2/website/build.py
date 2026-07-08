@@ -32,7 +32,15 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
             new_url = new_url[: -len("README.html")] + "index.html"
         # ../../leetgpu/x.md -> <root_prefix>leetgpu/x.html
         if new_url.startswith("../../"):
-            new_url = root_prefix + new_url[len("../../"):]
+            inner = new_url[len("../../"):]
+            # LeetGPU solution pages are emitted flat by leetgpu/website/build.py:
+            # leetgpu/weekN/dayM/leetgpu-xxx-solution.md -> leetgpu/leetgpu-xxx-solution.html
+            inner = re.sub(
+                r"^leetgpu/week\d+/day\d+/(leetgpu-.*-solution\.html)$",
+                r"leetgpu/\1",
+                inner,
+            )
+            new_url = root_prefix + inner
         return f"]({new_url})"
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 

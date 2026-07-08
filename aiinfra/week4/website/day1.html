@@ -88,6 +88,7 @@
 <a class="nav-link day-link" href="day3.html">Day 3</a>
 <a class="nav-link day-link" href="day4.html">Day 4</a>
 <a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
     </div>
   </div>
 </div>
@@ -533,7 +534,7 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 本题直接对应 Day 1 的主题——标准 Attention 物化 S/P 到 HBM 导致 O(N²) IO。今天推导的 online softmax 三公式就是 FlashAttention 消除物化的核心数学工具。完整题解含 naive 物化版与简化 fused 版的对比。
 
-> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Softmax Attention 题解](../leetgpu/week4/day1/leetgpu-softmax-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Softmax Attention 题解](../leetgpu/leetgpu-softmax-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
 
