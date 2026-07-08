@@ -309,7 +309,28 @@ __global__ void softmax_kernel(const float* input, float* output, int N) {
 //   sm__occupancy.avg.pct_of_peak_sustained_elapsed ./softmax
 ```
 
-> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](../../leetgpu/leetgpu-softmax-solution.md)。
+> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](../../leetgpu/week2/day4/leetgpu-softmax-solution.md)。
+
+#### 任务 6：LeetCode 面试题 —— 合并两个有序链表
+
+**题目链接**：[21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)
+
+**题目概述**：
+
+将两个升序链表 `list1` 和 `list2` 合并为一个新的升序链表。
+
+**与今日知识的关联**：
+
+本题核心是**哑节点 + 双指针归并**——用一个 dummy 头简化边界处理，两个指针分别遍历两条链表取较小者接上。这与今天 Profiling 的"先建立 baseline 再逐层定位瓶颈"思路呼应：归并是"逐步比较取最优"，profiling 是"逐步对比找最慢"，都是**有序推进 + 增量决策**的工作模式。
+
+**核心套路**：
+
+```
+dummy 哑节点 + tail 尾指针；遍历两链表，每次取较小者接到 tail 后；
+处理剩余；返回 dummy.next
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并两个有序链表题解](../../leetcode/daily/week2/day4/合并两个有序链表.md)。
 
 ---
 
@@ -417,5 +438,12 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
    - Source View 能将硬件指标关联到源代码行，精确定位最耗时的代码
    - 需要编译时加 `-g -lineinfo` 保留调试信息
    - 例如：能看到第 45 行的 `acc[m][n] += r_A[m] * r_B[n]` 占了 60% 的执行时间
+
+5. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
+
+   - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
+   - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
+   - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6-25）比较，AI < Ridge → memory-bound
+   - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
 
 ---

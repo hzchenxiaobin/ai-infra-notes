@@ -443,7 +443,28 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 }
 ```
 
-> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../leetgpu/leetgpu-gemm-solution.md)。
+> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../leetgpu/week2/day2/leetgpu-gemm-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 爬楼梯
+
+**题目链接**：[70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/)
+
+**题目概述**：
+
+假设你正在爬楼梯，需要 `n` 阶才能到达楼顶。每次可以爬 1 或 2 个台阶，问有多少种不同的方法可以爬到楼顶。
+
+**与今日知识的关联**：
+
+本题是经典的一维 DP 入门题，状态转移 `f(n) = f(n-1) + f(n-2)` 恰好是斐波那契数列。虽然不涉及 GPU/CUDA，但 DP 的"用额外空间记录子问题解避免重复计算"思路与今天 Register Blocking 的"用累加器 acc 驻留寄存器避免重复访存"异曲同工——两者都是**空间换时间**，把高频中间结果留在离计算最近的存储层。
+
+**核心套路**：
+
+```
+f(1)=1, f(2)=2
+f(n) = f(n-1) + f(n-2)   // 滚动两个变量即可，O(1) 空间
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [爬楼梯题解](../../leetcode/daily/week2/day2/爬楼梯.md)。
 
 ---
 
@@ -504,5 +525,17 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 
    - `acc[TM][TN]` + `r_A[TM]` + `r_B[TN]` + 索引变量
    - TM=TN=8 时约 88 个 register；TM=TN=16 时累加器就有 256 个，会 spill 到 local memory
+
+4. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
+
+   - **原理**：声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟
+   - **收益**：单缓冲时 Load 期间 SM 空闲，双缓冲后 Compute 与 Load 重叠，性能从 ~45% 提升到 ~70%，是跨越 cuBLAS 80% 的关键
+   - **注意**：① 需 `__syncthreads()` 保证 buffer 切换的数据可见性 ② 多消耗一倍 shared memory，可能降低 occupancy ③ 首块需预取（prologue），末块不再加载（epilogue）
+
+5. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
+
+   - **映射**：`threadRow = threadIdx.x / (BN/TN)`，`threadCol = threadIdx.x % (BN/TN)`，每个线程负责输出 tile 的 TM×TN 子块
+   - **线程数** = (BM/TM) × (BN/TN)，如 BM=BN=128, TM=TN=8 → 16×16=256
+   - **取 256 的原因**：= 8 个 warp，兼顾 occupancy（不会因寄存器/共享内存过多而压低 active warp 数）与并行度；过小则并行度不足，过大则资源紧张降低 occupancy
 
 ---

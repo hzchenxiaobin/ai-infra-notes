@@ -532,7 +532,28 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 }
 ```
 
-> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Attention 题解](../../leetgpu/leetgpu-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Attention 题解](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 二叉树的层序遍历
+
+**题目链接**：[102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/)
+
+**题目概述**：
+
+给定二叉树根节点 `root`，返回其节点值的层序遍历结果（逐层从左到右，每层一个子数组）。
+
+**与今日知识的关联**：
+
+本题核心是 **BFS 队列**——用队列逐层处理节点，每层批量进出。这与今天 FlashAttention 的 **tiling 分块**思路一致：FlashAttention 把 N 个 key/value 分成一块块 KV tile 逐块滑入 SRAM 处理，BFS 把树分成一层层逐层处理。两者都是**把全局问题切成块/层，用缓冲区（队列/SRAM）承载当前块，逐块推进**的流水线化思维。
+
+**核心套路**：
+
+```
+队列存当前层节点；每轮取队列全部节点（=当前层），
+记录值，把子节点入队（=下一层）；重复直到队空
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的层序遍历题解](../../leetcode/daily/week2/day5/二叉树的层序遍历.md)。
 
 ---
 
@@ -659,5 +680,11 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
    - 当 max 从 m 变为 m_new 时，之前所有 exp 值的参考点都变了
    - `exp(m - m_new)` 就是把旧值从参考点 m 缩放到新参考点 m_new 的因子
    - 没有它，不同块计算的概率无法统一到同一个归一化基
+
+5. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
+
+   - **Prefill**：序列长 N 大，标准 Attention 的 O(N²) S/P 物化是主要瓶颈，FlashAttention 把 IO 从 O(N²) 降到 O(Nd)，加速 2-4x 最明显
+   - **Decode**：M=1，没有 N×N 矩阵，标准 Attention 退化为 1×N，S/P 本就不大。但 FlashAttention 仍受益——它把 softmax+PV 融合在 SRAM 里，减少 kernel launch 数量和中间 HBM 读写，配合 KV Cache 优化 decode 的 memory-bound
+   - **关键洞察**：Prefill 的收益主要来自"消除 O(N²) 物化"，Decode 的收益主要来自"kernel fusion 减少 HBM 往返"，两者瓶颈不同但 FlashAttention 都能覆盖
 
 ---

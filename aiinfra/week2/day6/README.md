@@ -508,7 +508,30 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Histogram 题目](https://leetgpu.com/challenges/histogram)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogram 题解](../../leetgpu/leetgpu-histogram-solution.md)。
+> 💡 提交后在 [LeetGPU Histogram 题目](https://leetgpu.com/challenges/histogram)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogram 题解](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 每日温度
+
+**题目链接**：[739. 每日温度](https://leetcode.cn/problems/daily-temperatures/)
+
+**题目概述**：
+
+给定每日温度数组 `temperatures`，对每一天求"下一次出现更高温度还需等几天"，结果存入数组。若无更高天则填 0。
+
+**与今日知识的关联**：
+
+本题核心是**单调栈**——维护一个递减栈，遇到更高温度就弹出栈顶并记录答案。这与今天 GEMM 整合优化的"逐层叠加 + 每层用 ncu 验证收益"思路呼应：单调栈是"用栈缓存未解决的元素，等条件满足再弹出结算"，GEMM 优化是"用 ncu 缓存每层指标，等优化叠加后验证收益"——都是**延迟结算 + 批量回溯**的工作模式。
+
+**核心套路**：
+
+```
+单调递减栈存下标；遍历温度：
+  while 栈非空且当前温度 > 栈顶温度：
+    弹出 idx，ans[idx] = 当前下标 - idx
+  当前下标入栈
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](../../leetcode/daily/week2/day6/每日温度.md)。
 
 ---
 
@@ -627,5 +650,12 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
     - TM=TN=16 时累加器 `acc[16][16]` = 256 个 register，加上 r_A、r_B 和索引变量，总 register 超过 255 上限
     - 编译器会把多余的变量 spill 到 local memory（实际在 global memory），访问延迟从 ~1 cycle 变成 ~400-800 cycles
     - Register spilling 会导致性能暴跌，远不如 TM=TN=8 的 88 register 安全配置
+
+5. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
+
+    - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟，典型提升 10-20%（从 ~55% 到 ~70%）
+    - **代价**：① shared memory 用量翻倍（两份 buffer），可能降低 occupancy ② 代码复杂度增加（奇偶切换、prologue/epilogue 处理）③ 首块需预取，末块不再加载
+    - **值得用的场景**：global→shared 传输是瓶颈（ncu 显示 Long Scoreboard stall 高）、shared memory 余量充足（不会因翻倍而降 occupancy）
+    - **不值得用的场景**：计算本身就 memory-bound 且 shared memory 已紧张，或数据量太小启动开销主导
 
 ---

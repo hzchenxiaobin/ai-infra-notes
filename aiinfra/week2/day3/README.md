@@ -379,7 +379,29 @@ __global__ void conv2d(const float* input, const float* kernel, float* output,
 //   cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
 ```
 
-> 💡 提交后在 [LeetGPU Convolution 题目](https://leetgpu.com/challenges/convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Convolution 题解](../../leetgpu/leetgpu-convolution-solution.md)。
+> 💡 提交后在 [LeetGPU Convolution 题目](https://leetgpu.com/challenges/convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Convolution 题解](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 三数之和
+
+**题目链接**：[15. 三数之和](https://leetcode.cn/problems/3sum/)
+
+**题目概述**：
+
+给定整数数组 `nums`，找出所有和为 0 的不重复三元组 `[nums[i], nums[j], nums[k]]`。
+
+**与今日知识的关联**：
+
+本题核心套路是**排序 + 双指针**——先排序固定一个数，再用左右双指针在剩余区间扫描。这与今天 Multi-Stream 的"分块 + 流水线重叠"思路异曲同工：都是通过**预处理（排序/分块）把无序工作变成可流水线化的有序流**，从而避免重复劳动（双指针 O(n²) vs 暴力 O(n³)；多 Stream 重叠 vs 串行等待）。
+
+**核心套路**：
+
+```
+排序后固定 nums[i]，left=i+1, right=n-1：
+  sum = nums[i]+nums[left]+nums[right]
+  sum<0 → left++；sum>0 → right--；sum==0 → 记录并去重
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](../../leetcode/daily/week2/day3/三数之和.md)。
 
 ---
 
@@ -437,5 +459,24 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
    - 必须使用 Pinned Memory（page-locked），因为异步传输使用 DMA 引擎直接访问内存
    - 如果内存被 OS 换出到磁盘，DMA 无法访问，驱动会先复制到临时 pinned buffer，导致异步退化为同步
    - 分配方式：用 `cudaMallocHost` 或 `cudaHostAlloc` 代替 `malloc`
+
+3. **多 Stream 重叠加速的硬件前提是什么？什么时候多 Stream 不会带来加速？**
+
+   - **硬件前提**：GPU 有独立的 Copy Engine 和 Compute Engine，能真正并发执行不同类型的操作（H2D/D2H 走 Copy Engine，kernel 走 Compute Engine）
+   - **不加速的场景**：① 只有一个 Stream（无并发）② 用了 Default Stream（隐式同步打断并发）③ 没用 Pinned Memory（异步退化为同步）④ Compute 本身已打满 GPU（无空闲 SM 给其他 Stream）⑤ 数据量太小，启动开销 > 重叠收益
+
+4. **`cudaEvent` 在多 Stream 编程中起什么作用？如何实现跨 Stream 依赖？**
+
+   - **作用**：Event 是 Stream 内的时间标记，用于精确计时和跨 Stream 同步
+   - **跨 Stream 依赖**：`cudaEventRecord(event, streamA)` 在 streamA 标记完成点，`cudaStreamWaitEvent(streamB, event)` 让 streamB 等待该 event
+   - **典型用法**：Stream B 的 kernel 必须等 Stream A 的 D2H 完成后才能开始 → 在 A 的 D2H 后 record event，B 的 kernel 前 wait event
+   - **优势**：比 `cudaDeviceSynchronize` 精确得多，只阻塞相关 Stream，不影响其他 Stream 的并发
+
+5. **如何用 `nsys` 验证多 Stream 是否真的重叠了？**
+
+   - `nsys profile -o timeline ./multi_stream` 采集时间线，在 Nsight Systems GUI 的 CUDA Stream 行查看
+   - **重叠表现**：不同 Stream 的 H2D/Kernel/D2H 条带在时间轴上错开重叠（Copy Engine 与 Compute Engine 并行）
+   - **未重叠表现**：所有操作串行排列，有大量空白间隙
+   - **常见原因**：误用 Default Stream、未用 Pinned Memory、Stream 间有隐式依赖
 
 ---

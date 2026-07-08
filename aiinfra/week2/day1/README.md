@@ -485,6 +485,28 @@ __inline__ __device__ float warp_exclusive_scan(float val) {
 
 > 💡 提交后在 [LeetGPU Prefix Sum 题目](https://leetgpu.com/challenges/prefix-sum)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Prefix Sum 题解](../../leetgpu/week2/day1/leetgpu-prefix-sum-solution.md)。
 
+#### 任务 5：LeetCode 面试题 —— 两数之和
+
+**题目链接**：[1. 两数之和](https://leetcode.cn/problems/two-sum/)
+
+**题目概述**：
+
+给定一个整数数组 `nums` 和一个整数 `target`，在数组中找出和为 `target` 的两个整数，返回它们的下标。每种输入只有一个答案，且不能使用同一元素两次。
+
+**与今日知识的关联**：
+
+本题核心套路是 **哈希表一次遍历**——边遍历边查补数 `target - nums[i]`，把 O(n²) 暴力双循环降到 O(n)。虽然不涉及 GPU/CUDA，但哈希表是算法面试最高频的数据结构之一，与今天"Warp Shuffle 做高效查表/广播"的思路形成对照：GPU 用硬件原语做 Warp 内通信，CPU 用哈希表做 O(1) 查找，本质都是"用额外空间换时间"。
+
+**核心套路**：
+
+```
+遍历 nums[i] 时，检查 target - nums[i] 是否已在哈希表中：
+  - 在 → 返回 {hash[target-nums[i]], i}
+  - 不在 → 把 nums[i] → i 存入哈希表
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数之和题解](../../leetcode/daily/week2/day1/两数之和.md)。
+
 ---
 
 ### 扩展实验
