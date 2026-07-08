@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk5" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar5" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">端到端 Profiling 五步法</text>
+  <path d="M 250 42 Q 450 50 650 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk5)"/>
+
+  <!-- Step 1: nsys -->
+  <g filter="url(#sk5)">
+    <rect x="30" y="70" width="250" height="150" rx="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.8"/>
+    <text x="155" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">① nsys 系统级采集</text>
+    <line x1="40" y1="102" x2="270" y2="102" stroke="#446688" stroke-width="0.6" stroke-dasharray="3 3"/>
+  </g>
+  <text x="40" y="120" font-size="9" fill="#444" font-family="monospace">nsys profile -o tl --trace=cuda</text>
+  <text x="40" y="136" font-size="9" fill="#444" font-family="monospace">  python mini_engine.py</text>
+  <text x="40" y="158" font-size="10" fill="#666" font-style="italic">→ 完整 kernel 时间线</text>
+  <text x="40" y="174" font-size="10" fill="#666" font-style="italic">→ 按 CUDA 时间排序找 top3</text>
+  <text x="40" y="196" font-size="10" fill="#4a7a3a" font-weight="bold">问题：哪几个 kernel 最慢？</text>
+
+  <!-- Arrow -->
+  <path d="M 284 145 L 318 145" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)"/>
+
+  <!-- Step 2: ncu -->
+  <g filter="url(#sk5)">
+    <rect x="320" y="70" width="250" height="150" rx="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8"/>
+    <text x="445" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">② ncu kernel 级分析</text>
+    <line x1="330" y1="102" x2="560" y2="102" stroke="#d6a040" stroke-width="0.6" stroke-dasharray="3 3"/>
+  </g>
+  <text x="330" y="120" font-size="9" fill="#444" font-family="monospace">ncu --metrics sm__throughput,\\</text>
+  <text x="330" y="134" font-size="9" fill="#444" font-family="monospace">  dram__throughput ./target</text>
+  <text x="330" y="158" font-size="10" fill="#666" font-style="italic">→ SM% vs DRAM% 对比</text>
+  <text x="330" y="174" font-size="10" fill="#666" font-style="italic">→ Warp Stall Reasons</text>
+  <text x="330" y="196" font-size="10" fill="#b85450" font-weight="bold">问题：compute 还是 memory？</text>
+
+  <!-- Arrow -->
+  <path d="M 574 145 L 608 145" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)"/>
+
+  <!-- Step 3: 判定 -->
+  <g filter="url(#sk5)">
+    <rect x="610" y="70" width="260" height="150" rx="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/>
+    <text x="740" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">③ 瓶颈判定（Roofline）</text>
+    <line x1="620" y1="102" x2="860" y2="102" stroke="#4a7a3a" stroke-width="0.6" stroke-dasharray="3 3"/>
+  </g>
+  <text x="620" y="120" font-size="10" fill="#b85450" font-weight="bold">DRAM% &gt;&gt; SM% → memory-bound</text>
+  <text x="620" y="136" font-size="10" fill="#446688" font-weight="bold">SM% &gt;&gt; DRAM% → compute-bound</text>
+  <text x="620" y="158" font-size="10" fill="#666" font-style="italic">→ 在 Roofline 上标位置</text>
+  <text x="620" y="174" font-size="10" fill="#666" font-style="italic">→ AI = FLOPs / Bytes</text>
+  <text x="620" y="196" font-size="10" fill="#4a7a3a" font-weight="bold">问题：优化方向是什么？</text>
+
+  <!-- Down arrow from step 3 to step 4 -->
+  <path d="M 740 224 L 740 258" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)"/>
+
+  <!-- Step 4: Stall 分析 -->
+  <g filter="url(#sk5)">
+    <rect x="460" y="260" width="410" height="120" rx="12" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/>
+    <text x="665" y="284" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">④ Warp Stall 原因定位</text>
+    <line x1="470" y1="292" x2="860" y2="292" stroke="#b85450" stroke-width="0.6" stroke-dasharray="3 3"/>
+  </g>
+  <text x="470" y="312" font-size="10" fill="#b85450" font-weight="bold">Long Scoreboard</text>
+  <text x="560" y="312" font-size="10" fill="#666">→ 等 HBM 加载（memory-bound 特征）</text>
+  <text x="470" y="330" font-size="10" fill="#446688" font-weight="bold">Math Pipe Throttle</text>
+  <text x="600" y="330" font-size="10" fill="#666">→ 计算单元饱和（compute-bound）</text>
+  <text x="470" y="348" font-size="10" fill="#d6a040" font-weight="bold">Barrier</text>
+  <text x="540" y="348" font-size="10" fill="#666">→ __syncthreads 过多</text>
+  <text x="470" y="368" font-size="10" fill="#4a7a3a" font-style="italic">→ 精确定位"为什么慢"</text>
+
+  <!-- Arrow from step 4 to step 5 -->
+  <path d="M 460 320 L 426 320" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)"/>
+
+  <!-- Step 5: Fusion -->
+  <g filter="url(#sk5)">
+    <rect x="30" y="260" width="390" height="120" rx="12" fill="#f3e8ff" stroke="#7a4a8a" stroke-width="1.8"/>
+    <text x="225" y="284" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">⑤ Kernel Fusion 机会</text>
+    <line x1="40" y1="292" x2="410" y2="292" stroke="#7a4a8a" stroke-width="0.6" stroke-dasharray="3 3"/>
+  </g>
+  <text x="40" y="312" font-size="10" fill="#666">从时间线找相邻 memory-bound 算子：</text>
+  <text x="50" y="330" font-size="10" fill="#7a4a8a" font-weight="bold">LayerNorm + QKV GEMM</text>
+  <text x="240" y="330" font-size="10" fill="#666">省 1 次 (B,N,d) 读写</text>
+  <text x="50" y="348" font-size="10" fill="#7a4a8a" font-weight="bold">Softmax + Dropout</text>
+  <text x="220" y="348" font-size="10" fill="#666">省 1 次 N² 读写</text>
+  <text x="40" y="370" font-size="10" fill="#4a7a3a" font-style="italic">→ torch.compile 自动融合 / 手写 CUTLASS</text>
+
+  <!-- Bottom: 昇腾对照 -->
+  <g filter="url(#sk5)">
+    <rect x="30" y="410" width="840" height="86" rx="10" fill="#fdfcf7" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <text x="450" y="434" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">昇腾 msprof 对照：五步法一致，工具映射</text>
+  </g>
+  <text x="50" y="456" font-size="10" fill="#446688" font-weight="bold">nsys</text>
+  <text x="90" y="456" font-size="10" fill="#666">→ msprof timeline（系统级时间线 + AI Core 利用率合并）</text>
+  <text x="50" y="474" font-size="10" fill="#d6a040" font-weight="bold">ncu</text>
+  <text x="90" y="474" font-size="10" fill="#666">→ msprof Operator 详情（Memory Bandwidth + Compute Pipe 一起看）</text>
+  <text x="50" y="490" font-size="10" fill="#666" font-style="italic">CUDA 把指标分散到 nsys/ncu 两个工具；昇腾 msprof 合并到一个 timeline</text>
+</svg>
