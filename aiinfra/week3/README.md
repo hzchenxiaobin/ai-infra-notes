@@ -12,19 +12,19 @@
 ## 本周知识图谱
 
 ```
-Day 15: Transformer 推理流程 → Prefill vs Decode + torch.profiler 时间线
+Day 1: Transformer 推理流程 → Prefill vs Decode + torch.profiler 时间线
   ↓
-Day 16: Softmax + LayerNorm Kernel → safe softmax + 两级 reduce + warp shuffle
+Day 2: Softmax + LayerNorm Kernel → safe softmax + 两级 reduce + warp shuffle
   ↓
-Day 17: 源码分析 → PyTorch ATen / FasterTransformer 的优化手法
+Day 3: 源码分析 → PyTorch ATen / FasterTransformer 的优化手法
   ↓
-Day 18: Attention IO 分析 → 标准 Attention HBM 读写量 + O(N²) 量化
+Day 4: Attention IO 分析 → 标准 Attention HBM 读写量 + O(N²) 量化
   ↓
-Day 19: 项目推进 → 算子接入 Mini 引擎 + 端到端正确性
+Day 5: 项目推进 → 算子接入 Mini 引擎 + 端到端正确性
   ↓
-Day 20: 端到端 Profiling → 定位 memory-bound 算子 + fusion 机会
+Day 6: 端到端 Profiling → 定位 memory-bound 算子 + fusion 机会
   ↓
-Day 21: 算子分类 → arithmetic intensity 分类表 + 优化方向总结
+Day 7: 算子分类 → arithmetic intensity 分类表 + 优化方向总结
 ```
 
 ## 进入每日学习

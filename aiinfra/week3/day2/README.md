@@ -1,4 +1,4 @@
-## Day 16：手写 Softmax 与 LayerNorm Kernel
+## Day 2：手写 Softmax 与 LayerNorm Kernel
 
 ### 🎯 目标
 
@@ -11,13 +11,13 @@
 5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
 6. 能对照昇腾 CANN 解释 `__reduce_add_sync` 与 `__shfl_down_sync` 的对应关系
 
-> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 18 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
+> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
 
 ---
 
 ### 学前导读：为什么 Softmax/LayerNorm 是 Transformer 里最该手写的算子
 
-Day 15 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
+Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
 
 - 它们的核心是 **reduce（归约）**——正是 Week 2 Day 1 学的 Warp Shuffle 的直接应用场景
 - 它们是 **memory-bound**，AI ≈ 0.4 ~ 0.6 FLOP/Byte，优化空间不在算力而在访存
@@ -165,7 +165,7 @@ Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
 Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 ```
 
-> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 17 源码分析会讲 FasterTransformer 怎么压成一次）。
+> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
 
 ##### LayerNorm vs BatchNorm
 
@@ -426,7 +426,7 @@ ncu --metrics \
 | `softmax_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 | `layernorm_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 
-如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 17 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
+如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 3 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
 
 #### 任务 4：LeetGPU 在线题目 —— Softmax
 
@@ -562,7 +562,7 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 对比两次 reduce 版本与 Welford 一次 reduce 版本的 HBM 读次数（2N → N）和数值精度差异。
 
 **思考问题**：Welford 并行化（多线程合并各自的 mean/M2/count）比串行复杂在哪？
-> 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 17 要读的 FasterTransformer `generalLayerNorm` 的核心优化点。
+> 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 3 要读的 FasterTransformer `generalLayerNorm` 的核心优化点。
 
 ---
 
@@ -602,7 +602,7 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 
 ### 今日总结
 
-Day 16 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transformer 算子：
+Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transformer 算子：
 
 1. **Safe Softmax**：减 max 保证数值稳定，三遍扫描（max → sum → normalize），数学上与朴素 softmax 完全等价
 2. **两级 Block Reduce**：warp shuffle → shared memory → warp0 收尾，是 256/512/1024 线程协作 reduce 的标准模板
@@ -611,7 +611,7 @@ Day 16 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Trans
 5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
 6. **昇腾对照**：`__shfl_down_sync` ↔ `__reduce_add_sync`，算法同构、抽象重映射
 
-掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 17 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
+掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
 
 ---
 
@@ -629,7 +629,7 @@ Day 16 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Trans
    - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
    - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
    - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
-   - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 17 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
+   - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
 3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
@@ -637,7 +637,7 @@ Day 16 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Trans
    - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
    - **优化方向**：
      1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
-     2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 17）
+     2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
      3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
      4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
@@ -656,6 +656,6 @@ Day 16 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Trans
    - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
    - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
    - **昇腾对照**：昇腾混合精度算子同样用 FP32 做 reduce，跨平台策略一致
-   - **本日代码**：全程 FP32（教学清晰），Day 17 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
+   - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
 
 ---

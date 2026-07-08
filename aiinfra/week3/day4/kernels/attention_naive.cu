@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <cmath>
 
-// 复用 Week 2 Day 1 / Day 16 的 warp reduce 原语
+// 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1)

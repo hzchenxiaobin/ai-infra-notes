@@ -1,5 +1,5 @@
 // softmax_layernorm_opt.cu —— 优化版 Softmax + LayerNorm（warp 级 + float4 向量化）
-// 对比 Day 16 的 block 级 + 逐元素加载版本，验证工业级优化手法
+// 对比 Day 2 的 block 级 + 逐元素加载版本，验证工业级优化手法
 // 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
 // 运行命令: ./softmax_layernorm_opt
 
@@ -25,7 +25,7 @@ __inline__ __device__ float warpReduceMax(float val) {
     return val;
 }
 
-// Block 级 reduce（Day 16 版本，用于对比基准）
+// Block 级 reduce（Day 2 版本，用于对比基准）
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
     int lane = threadIdx.x % 32;
     int wid = threadIdx.x / 32;
@@ -91,7 +91,7 @@ __global__ void softmax_warp_kernel(const float* __restrict__ input,
 }
 
 // ============================================================
-// 基准：Day 16 的 block 级 Softmax（用于对比）
+// 基准：Day 2 的 block 级 Softmax（用于对比）
 // ============================================================
 __global__ void softmax_block_kernel(const float* __restrict__ input,
                                       float* __restrict__ output,
@@ -187,7 +187,7 @@ __global__ void layernorm_float4_kernel(const float* __restrict__ input,
 }
 
 // ============================================================
-// 基准：Day 16 的逐元素 LayerNorm（用于对比）
+// 基准：Day 2 的逐元素 LayerNorm（用于对比）
 // ============================================================
 __global__ void layernorm_scalar_kernel(const float* __restrict__ input,
                                          const float* __restrict__ gamma,

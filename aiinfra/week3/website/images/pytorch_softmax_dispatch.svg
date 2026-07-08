@@ -65,7 +65,7 @@
   <text x="636" y="406" font-size="10" fill="#888">延迟：smem ~20-30 cycles</text>
   <text x="636" y="424" font-size="10" fill="#888">更多线程协作，处理大 D</text>
   <text x="636" y="448" font-size="10" fill="#888">D=4096/8192 时走此路径</text>
-  <text x="636" y="470" font-size="11" font-weight="bold" fill="#b03a3a">→ 我们 Day 16 的实现</text>
+  <text x="636" y="470" font-size="11" font-weight="bold" fill="#b03a3a">→ 我们 Day 2 的实现</text>
 
   <!-- bottom: comparison bars -->
   <g filter="url(#sk2)">

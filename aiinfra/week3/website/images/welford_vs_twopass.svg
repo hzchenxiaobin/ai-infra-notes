@@ -12,8 +12,8 @@
   <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">LayerNorm：两次 Reduce vs Welford 一次遍历</text>
   <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
 
-  <!-- LEFT: two-pass (Day 16 / PyTorch) -->
-  <text x="235" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">两次 Reduce（Day 16 / PyTorch ATen）</text>
+  <!-- LEFT: two-pass (Day 2 / PyTorch) -->
+  <text x="235" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">两次 Reduce（Day 2 / PyTorch ATen）</text>
   <g filter="url(#sk2)">
     <rect x="40" y="90" width="390" height="380" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
   </g>
@@ -50,7 +50,7 @@
     <text x="80" y="378" font-size="11" fill="#b03a3a">不能合并：σ² 强依赖 μ</text>
     <text x="80" y="398" font-size="11" fill="#444">优势：清晰易读，数值精度好</text>
     <text x="80" y="418" font-size="11" fill="#444">性能：1x（基准）</text>
-    <text x="80" y="440" font-size="10" fill="#888" font-style="italic">PyTorch ATen / 我们 Day 16 的做法</text>
+    <text x="80" y="440" font-size="10" fill="#888" font-style="italic">PyTorch ATen / 我们 Day 2 的做法</text>
   </g>
 
   <!-- RIGHT: Welford one-pass (FT) -->

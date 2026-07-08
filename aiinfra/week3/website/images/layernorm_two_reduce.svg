@@ -84,6 +84,6 @@
     <text x="60" y="550" font-size="11" fill="#b03a3a">• AI ≈ 5 / 8 ≈ 0.6 FLOP/Byte &lt;&lt; 12.6 → memory-bound</text>
     <text x="60" y="570" font-size="11" fill="#444">• 两次 reduce 不可合并：σ² 依赖 μ（强依赖）</text>
     <text x="60" y="590" font-size="11" fill="#2e7d4f">• FasterTransformer 用 Welford 合并成一次 reduce</text>
-    <text x="60" y="608" font-size="10" fill="#888" font-style="italic">→ Day 17 源码分析会展开</text>
+    <text x="60" y="608" font-size="10" fill="#888" font-style="italic">→ Day 3 源码分析会展开</text>
   </g>
 </svg>

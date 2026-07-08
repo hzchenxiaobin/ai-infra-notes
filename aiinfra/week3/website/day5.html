@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Week 3 - Day 19：算子接入 Mini 引擎</title>
+    <title>Week 3 - Day 5：算子接入 Mini 引擎</title>
     <link rel="stylesheet" href="../css/style.css?v=3">
     <script src="../js/marked.min.js"></script>
     <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
@@ -66,12 +66,13 @@
   <div class="nav-accordion-content">
     <div class="nav-section">
 <a class="nav-link overview-link" href="index.html">📌 Week 3 概览</a>
-<a class="nav-link day-link" href="day15.html">Day 15</a>
-<a class="nav-link day-link" href="day16.html">Day 16</a>
-<a class="nav-link day-link" href="day17.html">Day 17</a>
-<a class="nav-link day-link" href="day18.html">Day 18</a>
-<a class="nav-link day-link active" href="day19.html">Day 19</a>
-<a class="nav-link day-link" href="day20.html">Day 20</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link active" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
     </div>
   </div>
 </div>
@@ -130,7 +131,7 @@
 
         <main class="main-content">
             <div class="page-header">
-                <h1 class="page-title">Day 19：算子接入 Mini 引擎</h1>
+                <h1 class="page-title">Day 5：算子接入 Mini 引擎</h1>
                 <a class="back-link" href="index.html">← 返回概览</a>
             </div>
             <article class="content" id="content"></article>
@@ -148,18 +149,18 @@
 
 1. 理解 **PyTorch C++ Extension** 的集成机制，掌握从 \`.cu\` kernel 到 Python 可调用函数的完整流水线
 2. 学会用 \`torch.utils.cpp_extension.load_inline\` 动态编译自定义 CUDA 算子，掌握 \`at::Tensor\` / \`data_ptr\` / \`getCurrentCUDAStream\` 三个关键 API
-3. 实现一个最小化 Transformer 推理引擎（Mini Engine），用 Day 16 的 Softmax/LayerNorm kernel 替换 PyTorch 官方算子
+3. 实现一个最小化 Transformer 推理引擎（Mini Engine），用 Day 2 的 Softmax/LayerNorm kernel 替换 PyTorch 官方算子
 4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-4），并对比 latency
 5. 能解释为什么自定义算子通常比 PyTorch 慢（0.8x ~ 0.95x），以及什么场景下自定义才有优势
 6. 能对照昇腾 CANN 解释自定义算子集成的方式（C++ Extension vs \`aclOpCompile\`）
 
-> 💡 **为什么重要**：Day 16-18 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 20 会对这个引擎做端到端 profiling。
+> 💡 **为什么重要**：Day 2-18 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做端到端 profiling。
 
 ---
 
 ### 学前导读：为什么 kernel 要接入框架
 
-Day 16 我们写的 \`softmax_layernorm.cu\` 是一个独立程序：\`main()\` 里手动 \`cudaMalloc\`、\`cudaMemcpy\`、调 kernel、\`checkResult\`。这在教学阶段没问题，但真实场景有三个问题：
+Day 2 我们写的 \`softmax_layernorm.cu\` 是一个独立程序：\`main()\` 里手动 \`cudaMalloc\`、\`cudaMemcpy\`、调 kernel、\`checkResult\`。这在教学阶段没问题，但真实场景有三个问题：
 
 | 问题 | 独立程序 | 接入框架后 |
 |------|---------|-----------|
@@ -167,9 +168,9 @@ Day 16 我们写的 \`softmax_layernorm.cu\` 是一个独立程序：\`main()\` 
 | GEMM | 要么手写（慢），要么调 cuBLAS（繁琐） | \`torch.mm\` 一行搞定（cuBLAS 封装） |
 | 端到端验证 | 只能验证单算子 | 能跑整个 Transformer Block 对比 |
 
-**今天的任务**：把 Day 16 的 Softmax/LayerNorm kernel 封装成 PyTorch 可调用的 C++ Extension，接入一个最小 Transformer Block，用自定义算子替换 \`F.softmax\` / \`F.layer_norm\`，GEMM 仍用 \`torch.mm\`（cuBLAS）。然后对比"全 PyTorch" vs "自定义算子"的正确性和 latency。
+**今天的任务**：把 Day 2 的 Softmax/LayerNorm kernel 封装成 PyTorch 可调用的 C++ Extension，接入一个最小 Transformer Block，用自定义算子替换 \`F.softmax\` / \`F.layer_norm\`，GEMM 仍用 \`torch.mm\`（cuBLAS）。然后对比"全 PyTorch" vs "自定义算子"的正确性和 latency。
 
-> 💡 **一句话总结**：今天不优化 kernel 本身（那是 Day 17 做的），而是学"怎么把 kernel 塞进框架"——这是工程集成的标准流程。
+> 💡 **一句话总结**：今天不优化 kernel 本身（那是 Day 3 做的），而是学"怎么把 kernel 塞进框架"——这是工程集成的标准流程。
 
 ---
 
@@ -182,7 +183,7 @@ Day 16 我们写的 \`softmax_layernorm.cu\` 是一个独立程序：\`main()\` 
 Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标：
 
 1. 用 PyTorch 做张量管理（malloc/autograd 不需要）
-2. 用自定义 CUDA kernel 替换 Softmax/LayerNorm（Day 16 实现）
+2. 用自定义 CUDA kernel 替换 Softmax/LayerNorm（Day 2 实现）
 3. GEMM 仍用 \`torch.mm\`（cuBLAS），本周不优化 GEMM
 4. 对比"全 PyTorch" vs "自定义算子"的 latency 和正确性
 
@@ -260,14 +261,14 @@ at::Tensor softmax_forward(at::Tensor input) {
 | 版本 | 相对延迟 | 原因 |
 |------|---------|------|
 | PyTorch 官方 | 1.0x（baseline） | 向量化 + warp 级 + Welford + 混合精度 + kernel fusion |
-| 自定义（Day 16） | ~0.8x（更慢） | 逐元素加载 + 两次 reduce + 全程 FP32 |
-| 自定义 + float4（Day 17） | ~0.95x（接近） | 向量化弥补部分差距 |
+| 自定义（Day 2） | ~0.8x（更慢） | 逐元素加载 + 两次 reduce + 全程 FP32 |
+| 自定义 + float4（Day 3） | ~0.95x（接近） | 向量化弥补部分差距 |
 
-> ⚠️ **预期结果**：自定义算子可能比 PyTorch **慢**（0.8x），这正常——PyTorch 的 softmax/layernorm 已经过高度优化（Day 17 读过源码）。本周的目标是**理解算子集成流程**，不是超越官方实现。只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有性能优势。
+> ⚠️ **预期结果**：自定义算子可能比 PyTorch **慢**（0.8x），这正常——PyTorch 的 softmax/layernorm 已经过高度优化（Day 3 读过源码）。本周的目标是**理解算子集成流程**，不是超越官方实现。只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有性能优势。
 
 ##### 为什么自定义通常比 PyTorch 慢？
 
-回顾 Day 17 的源码分析，PyTorch 官方实现有 4 个我们没做的优化：
+回顾 Day 3 的源码分析，PyTorch 官方实现有 4 个我们没做的优化：
 
 1. **向量化加载**（float4/half2）：我们逐元素加载，带宽利用仅 ~25%
 2. **Welford 一次 reduce**：LayerNorm 我们用两次 reduce，多读一次 HBM
@@ -302,7 +303,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 
 #### 任务 1：创建 \`kernels/softmax_layernorm_ext.cu\`
 
-下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 16 的基础上增加了：① \`launch_softmax\`/\`launch_layernorm\` 封装层 ② \`#ifdef WITH_TORCH\` 的 PyTorch 绑定 ③ 独立 \`main()\` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](kernels/softmax_layernorm_ext.cu)。
+下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 2 的基础上增加了：① \`launch_softmax\`/\`launch_layernorm\` 封装层 ② \`#ifdef WITH_TORCH\` 的 PyTorch 绑定 ③ 独立 \`main()\` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](kernels/softmax_layernorm_ext.cu)。
 
 \`\`\`cuda
 // kernels/softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）
@@ -316,7 +317,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 #include <cmath>
 
 // ============================================================
-// 复用 Week 2 Day 1 / Day 16 的 Warp Shuffle 原语
+// 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
@@ -352,7 +353,7 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 }
 
 // ============================================================
-// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 16 实现）
+// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
 // ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input,
                                 float* __restrict__ output,
@@ -382,7 +383,7 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 }
 
 // ============================================================
-// LayerNorm Kernel：一行一个 block，两次 reduce（Day 16 实现）
+// LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
 // ============================================================
 __global__ void layernorm_kernel(const float* __restrict__ input,
                                   const float* __restrict__ gamma,
@@ -627,7 +628,7 @@ int main() {
 
 #### 实验 1：在自定义 LayerNorm 中加入 float4 向量化
 
-参考 Day 17 的 float4 优化，修改 \`launch_layernorm\` 内部的 kernel，把逐元素加载改为 \`float4\` 批量加载，对比 latency 变化。
+参考 Day 3 的 float4 优化，修改 \`launch_layernorm\` 内部的 kernel，把逐元素加载改为 \`float4\` 批量加载，对比 latency 变化。
 
 **思考问题**：float4 优化后，自定义版能接近 PyTorch 性能吗？还差什么？
 > 提示：float4 能弥补"逐元素加载"的差距（~1.5-2x），但还缺 Welford 一次 reduce、warp 级特化、kernel fusion。要完全追平需要全部补齐。
@@ -676,7 +677,7 @@ benchmark(compiled_model, x, "Custom + torch.compile")
 
 ### 验证 Checklist
 
-- [ ] 能用 \`load_inline\` 把 Day 16 kernel 集成到 PyTorch（\`my_ops.softmax_forward\` / \`layernorm_forward\`）
+- [ ] 能用 \`load_inline\` 把 Day 2 kernel 集成到 PyTorch（\`my_ops.softmax_forward\` / \`layernorm_forward\`）
 - [ ] 自定义算子版 Mini Engine 编译运行成功（\`python mini_engine.py\`）
 - [ ] 自定义版与 PyTorch 版输出误差 < 1e-4
 - [ ] 记录了 Prefill 阶段自定义版 vs PyTorch 版的 latency（预期 0.8x ~ 0.95x）
@@ -689,7 +690,7 @@ benchmark(compiled_model, x, "Custom + torch.compile")
 
 ### 今日总结
 
-Day 19 我们把 Day 16 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
+Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
 
 1. **集成流水线**：\`.cu\` kernel → launch wrapper → C++ binding（\`at::Tensor\`）→ \`load_inline\` JIT 编译 → Python 调用，6 步把裸 kernel 变成框架可调用算子
 2. **三个关键 API**：\`at::empty_like\`（让 PyTorch 管显存）、\`data_ptr<float>()\`（提取裸指针）、\`getCurrentCUDAStream\`（保证 stream 正确）
@@ -698,7 +699,7 @@ Day 19 我们把 Day 16 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Exten
 5. **\`#ifdef WITH_TORCH\`**：同一 \`.cu\` 支持独立编译（快速验证）和 PyTorch 集成（端到端）两种模式
 6. **昇腾对照**：C++ Extension ↔ \`aclOpCompile\`，"封装 kernel 为框架接口"的工程模式跨平台一致
 
-掌握这套集成流程后，任何自定义 CUDA kernel 都能接入 PyTorch。Day 20 会对 Mini Engine 做端到端 profiling，定位瓶颈算子和 fusion 机会。
+掌握这套集成流程后，任何自定义 CUDA kernel 都能接入 PyTorch。Day 6 会对 Mini Engine 做端到端 profiling，定位瓶颈算子和 fusion 机会。
 
 ---
 

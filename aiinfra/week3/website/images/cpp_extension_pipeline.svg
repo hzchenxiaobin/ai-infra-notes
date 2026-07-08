@@ -19,7 +19,7 @@
   <text x="170" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① .cu Kernel</text>
   <text x="170" y="120" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">softmax_kernel&lt;&lt;&lt;&gt;&gt;&gt;</text>
   <text x="170" y="136" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">layernorm_kernel&lt;&lt;&lt;&gt;&gt;&gt;</text>
-  <text x="170" y="156" text-anchor="middle" font-size="9" fill="#888">Day 16 手写的 kernel</text>
+  <text x="170" y="156" text-anchor="middle" font-size="9" fill="#888">Day 2 手写的 kernel</text>
   <path d="M 280 124 L 300 124" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
 
   <!-- Step 2: launch wrapper -->

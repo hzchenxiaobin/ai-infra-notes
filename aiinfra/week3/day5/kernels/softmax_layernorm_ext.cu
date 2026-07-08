@@ -9,7 +9,7 @@
 #include <cmath>
 
 // ============================================================
-// 复用 Week 2 Day 1 / Day 16 的 Warp Shuffle 原语
+// 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
@@ -45,7 +45,7 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 }
 
 // ============================================================
-// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 16 实现）
+// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
 // ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input,
                                 float* __restrict__ output,
@@ -79,7 +79,7 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 }
 
 // ============================================================
-// LayerNorm Kernel：一行一个 block，两次 reduce（Day 16 实现）
+// LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
 // ============================================================
 __global__ void layernorm_kernel(const float* __restrict__ input,
                                   const float* __restrict__ gamma,

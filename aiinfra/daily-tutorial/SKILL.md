@@ -102,11 +102,12 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 - 形象类比(把 SM 比作教室、warp 比作班组等)
 
 ### 3.5 `### Coding 任务:<任务名>`(教学日必有)
-- **4 个** `#### 任务 N:<动作描述>` 子任务,呈递进结构:
+- **5 个** `#### 任务 N:<动作描述>` 子任务,呈递进结构:
   - 任务 1:创建 `.cu` 文件(给完整参考代码)
   - 任务 2:编译与运行(给 nvcc 命令 + 预期输出)
   - 任务 3:验证 / Profiling / 检查指标
   - 任务 4:**LeetGPU 在线题目**(见下方说明)
+  - 任务 5:**LeetCode 面试题**(见下方说明)
 - **参考代码要求**:
   - 包含**完整可编译代码**:`#include`、`__global__` kernel、`main()`、host 端 `cudaMalloc/Memcpy`、验证逻辑、`cudaFree`
   - 代码块标注 ` ```cuda `
@@ -118,43 +119,58 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 
 #### LeetGPU 在线题目(任务 4,必有)
 
-每天 Coding 任务必须包含一道来自 **https://leetgpu.com/** 的经典 CUDA 在线题目,作为当日所学知识的实战检验。
+每天 Coding 任务必须包含一道来自 **https://leetgpu.com/** 的经典 CUDA 在线题目,与当日主题强相关、避免重复。完整题解的写作规范(6 段结构、Kernel 代码、SVG 插图、ncu profiling)见 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md);教程"任务 4"只需给出题目链接 + 1-2 句与当日知识的关联,并用相对链接指向下表对应题解。
 
-**选题原则**:
-- 题目应与当日主题强相关(如 Day 1 学 Warp Shuffle → 选 reduce/scan 类题;Day 2 学 GEMM → 选矩阵乘法题;Day 5 学 FlashAttention → 选 attention/softmax 题)
-- 优先选中等难度;若当日主题偏基础可选简单,偏进阶可选困难
-- 避免重复(记录已用题目,后续 Day 不重选)
+**已归档题解**(位于 `leetgpu/weekN/dayM/`):
 
-**呈现格式**(参考 `leetgpu/leetgpu-prefix-sum-solution.md`):
-```markdown
-#### 任务 4：LeetGPU 在线题目 —— <题目名>
+| 教程 | 主题 | LeetGPU 题目 | 题解链接 |
+|------|------|--------------|----------|
+| Week1 Day1 | Hello GPU / grid-stride | Vector Addition | [leetgpu-vector-addition-solution.md](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md) |
+| Week1 Day2 | Memory model | ReLU | [leetgpu-relu-solution.md](../../leetgpu/week1/day2/leetgpu-relu-solution.md) |
+| Week1 Day3 | Shared memory | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week1/day3/leetgpu-matrix-transpose-solution.md) |
+| Week1 Day4 | Warp shuffle | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day4/leetgpu-reduction-solution.md) |
+| Week1 Day6 | GEMM / tiling | Matrix Multiplication | [leetgpu-matrix-multiplication-solution.md](../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md) |
+| Week1 Day7 | 综合验收 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md) |
+| Week2 Day1 | Scan / prefix | Prefix Sum | [leetgpu-prefix-sum-solution.md](../../leetgpu/week2/day1/leetgpu-prefix-sum-solution.md) |
+| Week2 Day2 | GEMM 进阶 | GEMM | [leetgpu-gemm-solution.md](../../leetgpu/week2/day2/leetgpu-gemm-solution.md) |
+| Week2 Day3 | Convolution | 2D Convolution | [leetgpu-2d-convolution-solution.md](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md) |
+| Week2 Day4 | Softmax | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week2/day4/leetgpu-softmax-solution.md) |
+| Week2 Day5 | Attention | Softmax Attention | [leetgpu-softmax-attention-solution.md](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md) |
+| Week2 Day6 | Histogram | Histogramming | [leetgpu-histogramming-solution.md](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md) |
+| Week3 Day6 | Normalization | RMS Normalization | [leetgpu-rms-normalization-solution.md](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) |
 
-**题目链接**：<https://leetgpu.com/challenges/<slug>>
+> 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
-**题目概述**：
-<1-2 句话描述题意，说明输入输出与约束>
+#### LeetCode 面试题(任务 5,必有)
 
-**与今日知识的关联**：
-<说明本题考察的当日知识点，如"本题核心是 block 内两级归约，直接用 Day 1 的 warpReduceSum + blockReduceSum 结构">
+每天 Coding 任务额外包含一道来自 **https://leetcode.cn/** 的面试高频题,作为算法基本功的日常练习。完整题解的写作规范(6 段结构、C++/Python 参考代码、手绘 SVG、复杂度分析)见 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md);教程"任务 5"只需给出题目链接 + 1-2 句核心套路点题,并用相对链接指向下表对应题解。
 
-**解题思路**：
-<3-5 句话点明并行化策略、存储层次使用、关键技巧>
+**已归档题解**(位于 `leetcode/daily/weekN/dayM/`):
 
-**参考实现**：
-\`\`\`cuda
-<完整可提交的 kernel 实现，含编译提交说明>
-\`\`\`
+| 教程 | 主题 | LeetCode 题目 | 题解链接 |
+|------|------|---------------|----------|
+| Week1 Day1 | 数组 / 双指针 | 42. 接雨水 | [接雨水.md](../../leetcode/daily/week1/day1/接雨水.md) |
+| Week1 Day2 | 动态规划 | 53. 最大子数组和 | [最大子数组和.md](../../leetcode/daily/week1/day2/最大子数组和.md) |
+| Week1 Day3 | 字符串 / 滑窗 | 3. 无重复字符的最长子串 | [无重复字符的最长子串.md](../../leetcode/daily/week1/day3/无重复字符的最长子串.md) |
+| Week1 Day4 | 链表 | 206. 反转链表 | [反转链表.md](../../leetcode/daily/week1/day4/反转链表.md) |
+| Week1 Day5 | 树 / DFS | 236. 二叉树的最近公共祖先 | [二叉树的最近公共祖先.md](../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md) |
+| Week1 Day6 | 回溯 | 46. 全排列 | [全排列.md](../../leetcode/daily/week1/day6/全排列.md) |
+| Week1 Day7 | 栈 / 困难 | 84. 柱状图中最大的矩形 | [柱状图中最大的矩形.md](../../leetcode/daily/week1/day7/柱状图中最大的矩形.md) |
+| Week2 Day1 | 哈希表 | 1. 两数之和 | [两数之和.md](../../leetcode/daily/week2/day1/两数之和.md) |
+| Week2 Day2 | 动态规划 | 70. 爬楼梯 | [爬楼梯.md](../../leetcode/daily/week2/day2/爬楼梯.md) |
+| Week2 Day3 | 双指针 | 15. 三数之和 | [三数之和.md](../../leetcode/daily/week2/day3/三数之和.md) |
+| Week2 Day4 | 链表 | 21. 合并两个有序链表 | [合并两个有序链表.md](../../leetcode/daily/week2/day4/合并两个有序链表.md) |
+| Week2 Day5 | 树 / BFS | 102. 二叉树的层序遍历 | [二叉树的层序遍历.md](../../leetcode/daily/week2/day5/二叉树的层序遍历.md) |
+| Week2 Day6 | 单调栈 | 739. 每日温度 | [每日温度.md](../../leetcode/daily/week2/day6/每日温度.md) |
+| Week2 Day7 | 单调队列 | 239. 滑动窗口最大值 | [滑动窗口最大值.md](../../leetcode/daily/week2/day7/滑动窗口最大值.md) |
+| Week3 Day1 | 双指针 | 11. 盛最多水的容器 | [盛最多水的容器.md](../../leetcode/daily/week3/day1/盛最多水的容器.md) |
+| Week3 Day2 | 动态规划 | 198. 打家劫舍 | [打家劫舍.md](../../leetcode/daily/week3/day2/打家劫舍.md) |
+| Week3 Day3 | 字符串 | 5. 最长回文子串 | [最长回文子串.md](../../leetcode/daily/week3/day3/最长回文子串.md) |
+| Week3 Day4 | 链表 | 141. 环形链表 | [环形链表.md](../../leetcode/daily/week3/day4/环形链表.md) |
+| Week3 Day5 | 树 | 98. 验证二叉搜索树 | [验证二叉搜索树.md](../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
+| Week3 Day6 | 回溯 | 78. 子集 | [子集.md](../../leetcode/daily/week3/day6/子集.md) |
 
-> 💡 提交后把通过截图/耗时记录到 `exercise/leetgpu_<题目slug>.md`，与官方排行榜对比性能。
-```
-
-**题目归档**:每道题的完整题解单独存为 `leetgpu/leetgpu-<题目slug>-solution.md`,并在教程中引用链接。题解文件结构参照已有 `leetgpu/leetgpu-prefix-sum-solution.md`:
-1. 题目概述(标题/链接/难度/标签)
-2. CPU 基线 / 朴素 GPU 方法
-3. GPU 设计(并行化策略、存储层次)
-4. Kernel 实现
-5. 性能分析与优化
-6. 复杂度分析
+> 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 
 ### 3.6 `### 扩展实验`(教学日必有)
 - **3 个** `#### 实验 N:<描述>`,递进或对比
@@ -269,8 +285,9 @@ git push origin
 - [ ] `### 🎯 目标` 紧跟标题,含 6 条编号 + `> 💡 为什么重要`
 - [ ] 有 `### 学前导读`(总结日除外)
 - [ ] `### 理论学习` 用 `#### N.x` 分节,配 SVG
-- [ ] `### Coding 任务` 含 4 个任务(含 1 道 LeetGPU 在线题目),代码完整可编译,带 nvcc 命令 + 预期输出
+- [ ] `### Coding 任务` 含 5 个任务(含 1 道 LeetGPU 在线题目 + 1 道 LeetCode 面试题),代码完整可编译,带 nvcc 命令 + 预期输出
 - [ ] LeetGPU 题目与当日主题强相关,题解归档到 `leetgpu/leetgpu-<slug>-solution.md`
+- [ ] LeetCode 题目为面试高频题,题解归档到 `leetcode/daily/weekN/dayM/<题目名>.md`
 - [ ] `### 扩展实验` 3 个
 - [ ] `### 今日总结` 5-7 条加粗编号
 - [ ] `### 面试要点` 5 题问答

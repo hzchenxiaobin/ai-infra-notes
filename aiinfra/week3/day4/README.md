@@ -1,4 +1,4 @@
-## Day 18：Attention IO 分析
+## Day 4：Attention IO 分析
 
 ### 🎯 目标
 
@@ -17,7 +17,7 @@
 
 ### 学前导读：标准 Attention 为什么"慢"
 
-Day 16 我们手写了 Softmax/LayerNorm，发现它们是 memory-bound（AI≈0.4）。Day 17 读了官方源码，学会用向量化 + reduce 合并来优化。今天把视线放到 Attention——Transformer 里最复杂的算子。
+Day 2 我们手写了 Softmax/LayerNorm，发现它们是 memory-bound（AI≈0.4）。Day 3 读了官方源码，学会用向量化 + reduce 合并来优化。今天把视线放到 Attention——Transformer 里最复杂的算子。
 
 标准 Attention 的计算公式是：
 
@@ -180,7 +180,7 @@ AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
 #include <cstdlib>
 #include <cmath>
 
-// 复用 Week 2 Day 1 / Day 16 的 warp reduce 原语
+// 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1)
@@ -541,7 +541,7 @@ done
 
 ### 今日总结
 
-Day 18 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
+Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
 
 1. **三阶段流程**：S=QK^T（写 S）→ softmax（读 S 写 P）→ PV（读 P 写 O），中间矩阵 S/P 各 N×N
 2. **O(N²) 来源**：物化两个 N×N 矩阵（S 和 P），各读写一次共 4N²，当 N >> d 时主导 IO

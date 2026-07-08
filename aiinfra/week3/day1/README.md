@@ -1,4 +1,4 @@
-## Day 15：Trace Transformer 推理流程
+## Day 1：Trace Transformer 推理流程
 
 ### 🎯 目标
 
@@ -77,7 +77,7 @@ LayerNorm1 → QKV GEMM → Attention(QK^T → Softmax → PV) → Out GEMM → 
 LayerNorm2 → FFN GEMM1 → GELU → FFN GEMM2 → Residual → 下一层
 ```
 
-> 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。Day 20 会详细分析 fusion 机会。
+> 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。Day 6 会详细分析 fusion 机会。
 
 #### 1.3 为什么 Decode 是 Memory-bound：M=1 的 GEMM
 
