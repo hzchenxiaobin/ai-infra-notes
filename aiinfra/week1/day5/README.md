@@ -283,7 +283,32 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Reduction 题解](../../leetgpu/leetgpu-reduction-solution.md)。
+> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Reduction 题解](../../leetgpu/week1/day4/leetgpu-reduction-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 二叉树的最近公共祖先
+
+**题目链接**：[236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/)
+
+**题目概述**：
+
+给定二叉树及两个节点 `p` 和 `q`，找到它们的最近公共祖先（LCA）。
+
+**与今日知识的关联**：
+
+本题核心是**后序 DFS 递归**——左右子树分别查找，汇总结果做决策。这与今天 Bank Conflict 的思路呼应：bank conflict 是多个线程访问同一 bank 导致串行化，需要 padding 错开访问；LCA 递归是左右子树各自搜索再汇总，如果某侧找到就向上传递——都是**多路并行探索 + 汇总决策**的模式（GPU warp 内多 lane 并行 + reduce 汇总）。
+
+**核心套路**：
+
+```
+dfs(root, p, q):
+  if root==null or root==p or root==q: return root
+  left = dfs(root.left, p, q)
+  right = dfs(root.right, p, q)
+  if left and right: return root  // p,q 分布在两侧
+  return left ?: right
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md)。
 
 ---
 

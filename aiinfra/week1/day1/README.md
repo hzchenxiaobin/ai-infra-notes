@@ -685,7 +685,30 @@ __global__ void vector_add(const float* A, const float* B, float* C, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Vector Add 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Add 题解](../../leetgpu/leetgpu-vector-add-solution.md)。
+> 💡 提交后在 [LeetGPU Vector Add 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Add 题解](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 接雨水
+
+**题目链接**：[42. 接雨水](https://leetcode.cn/problems/trapping-rain-water/)
+
+**题目概述**：
+
+给定 `n` 个非负整数表示柱子高度，计算下雨后能接多少雨水。
+
+**与今日知识的关联**：
+
+本题核心是**双指针**——左右指针从两端向中间逼近，每次移动较矮一侧，维护左右最大值。这与今天学 Grid/Block/Thread 层次映射的思路呼应：CUDA 把全局问题拆成 block 级子任务并行处理，双指针把全局接水量拆成"每个位置由左右最大值中的较小者决定"逐位置求解——都是**把大问题分解为可独立处理的子单元**。
+
+**核心套路**：
+
+```
+left=0, right=n-1, leftMax=0, rightMax=0
+while left<right:
+  if height[left]<height[right]: 处理左侧, left++
+  else: 处理右侧, right--
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](../../leetcode/daily/week1/day1/接雨水.md)。
 
 ---
 

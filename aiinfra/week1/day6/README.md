@@ -386,7 +386,30 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Multiplication 题解](../../leetgpu/leetgpu-matrix-multiplication-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Multiplication 题解](../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md)。
+
+#### 任务 6：LeetCode 面试题 —— 全排列
+
+**题目链接**：[46. 全排列](https://leetcode.cn/problems/permutations/)
+
+**题目概述**：
+
+给定不含重复数字的整数数组 `nums`，返回其所有可能的全排列。
+
+**与今日知识的关联**：
+
+本题核心是**回溯法**——递归选择/撤销选择，用 `used` 数组标记已选元素。这与今天 Profiling 的"Profile → 优化 → 重新 Profile 验证"闭环思路呼应：回溯是"选一条路走到底，不行就退回换一条"，profiling 优化是"试一种优化，ncu 验证不行就退回换另一种"——都是**试探 + 回退 + 换路径**的搜索模式。
+
+**核心套路**：
+
+```
+backtrack(path, used):
+  if path.size()==n: 记录结果; return
+  for i in 0..n-1:
+    if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](../../leetcode/daily/week1/day6/全排列.md)。
 
 ---
 

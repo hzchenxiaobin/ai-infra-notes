@@ -583,7 +583,29 @@ __global__ void matrix_transpose(const float* input, float* output, int M, int N
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../leetgpu/leetgpu-matrix-transpose-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../leetgpu/week1/day3/leetgpu-matrix-transpose-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 反转链表
+
+**题目链接**：[206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/)
+
+**题目概述**：
+
+给定单链表头节点 `head`，反转链表并返回新的头节点。
+
+**与今日知识的关联**：
+
+本题核心是**三指针迭代**——`prev, curr, next` 逐节点翻转指向。这与今天 Shared Memory Tiling 的思路呼应：tiling 把全局矩阵分块搬运到 shared memory 逐块处理，反转链表把链表逐节点"搬运"到新方向——都是**用局部缓冲（shared memory / prev 指针）暂存中间状态，逐块/逐节点推进**的流水线思维。
+
+**核心套路**：
+
+```
+prev=null, curr=head
+while curr: next=curr.next; curr.next=prev; prev=curr; curr=next
+return prev
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [反转链表题解](../../leetcode/daily/week1/day4/反转链表.md)。
 
 ---
 

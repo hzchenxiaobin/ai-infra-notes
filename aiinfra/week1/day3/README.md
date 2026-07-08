@@ -508,7 +508,30 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../leetgpu/leetgpu-matrix-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md)。
+
+#### 任务 7：LeetCode 面试题 —— 无重复字符的最长子串
+
+**题目链接**：[3. 无重复字符的最长子串](https://leetcode.cn/problems/longest-substring-without-repeating-characters/)
+
+**题目概述**：
+
+给定字符串 `s`，找出不含重复字符的最长子串的长度。
+
+**与今日知识的关联**：
+
+本题核心是**滑动窗口 + 哈希表**——双指针维护窗口，哈希表记录字符上次出现位置，遇到重复就收缩左边界。这与今天学 Occupancy Calculator 的思路呼应：Occupancy 受寄存器/共享内存/block 数量多重约束，需要找到"刚好不溢出"的配置；滑动窗口也是在"刚好不含重复"的约束下找最长窗口——都是**在约束边界上做动态调整**。
+
+**核心套路**：
+
+```
+left=0, maxLen=0, map=字符→上次索引
+for right in 0..n-1:
+  if s[right] in map and map[s[right]]>=left: left=map[s[right]]+1
+  map[s[right]]=right; maxLen=max(maxLen, right-left+1)
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [无重复字符的最长子串题解](../../leetcode/daily/week1/day3/无重复字符的最长子串.md)。
 
 ---
 

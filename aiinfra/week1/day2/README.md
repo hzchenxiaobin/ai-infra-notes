@@ -536,7 +536,30 @@ __global__ void relu_kernel(const float* input, float* output, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [ReLU 题解](../../leetgpu/leetgpu-relu-solution.md)。
+> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [ReLU 题解](../../leetgpu/week1/day2/leetgpu-relu-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 最大子数组和
+
+**题目链接**：[53. 最大子数组和](https://leetcode.cn/problems/maximum-subarray/)
+
+**题目概述**：
+
+给定整数数组 `nums`，找出和最大的连续子数组，返回其最大和。
+
+**与今日知识的关联**：
+
+本题核心是 **Kadane 动态规划**——`dp[i] = max(dp[i-1]+nums[i], nums[i])`，滚动一个变量即可。这与今天学 Occupancy 的思路呼应：Occupancy 受寄存器/共享内存/block 数量多重约束，取最严格的瓶颈；Kadane 在每个位置做"延续前缀 vs 重新开始"的局部最优决策——都是**在多重约束下做局部最优选择**的工程思维。
+
+**核心套路**：
+
+```
+maxSum = curSum = nums[0]
+for i in 1..n-1:
+  curSum = max(curSum + nums[i], nums[i])
+  maxSum = max(maxSum, curSum)
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最大子数组和题解](../../leetcode/daily/week1/day2/最大子数组和.md)。
 
 ---
 
