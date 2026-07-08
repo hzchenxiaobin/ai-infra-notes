@@ -1,0 +1,508 @@
+## Day 1：FlashAttention 论文精读与 Online Softmax 完整推导
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解标准 Attention 的 **O(N²) HBM 访问瓶颈**——物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵<br>
+2. 掌握 FlashAttention 的两大核心创新：**Tiling 分块** + **Online Softmax 递推**<br>
+3. 能独立白板推导 **Online Softmax 三公式**（max/sum/output 更新），并解释 `exp(m - m_new)` 缩放因子的作用<br>
+4. 理解 FlashAttention 的 HBM 访问从 O(N²) 降到 O(Nd) 的理论推导，以及实际 wall-clock 加速只有 2-8x 的原因<br>
+5. 能计算给定 Br/Bc/d 下的 **SRAM 使用量**，判断分块参数是否超限<br>
+6. 能对照昇腾 CANN 的 L0 Buffer 解释 FlashAttention 的 tile 驻留策略
+
+> 💡 **为什么重要**：FlashAttention 是推理系统面试的第一考点。Week 3 Day 18 我们分析了标准 Attention 的 O(N²) IO 问题，今天从论文出发完整推导 online softmax——这是 Week 4 全周的理论基石。明天手写完整 Forward Kernel、后天读官方源码、大后天学 FA2 改进，全部建立在今天的三公式之上。能白板推导这三行公式，是 AI Infra 岗位的硬门槛。
+
+---
+
+### 学前导读：标准 Attention 的 O(N²) 瓶颈，FlashAttention 怎么破
+
+Week 3 Day 18 我们用 ncu 实测了标准 Attention 的 HBM 读写量：当 N=4096 时，S 和 P 两个 N×N 中间矩阵各占 64MB，总 HBM IO 高达 ~206MB。这就是 O(N²) 瓶颈的来源——**softmax 和第二个 GEMM 之间必须物化 P 矩阵到 HBM**，因为 cuBLAS 要求输入是连续内存矩阵，softmax 与 GEMM 之间没有原生融合接口。
+
+FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Shared Memory）中完成 softmax + 累加**。但这里有个数学障碍——标准 softmax 需要全局 max 做数值稳定（safe softmax），分块后每个 tile 只能看到局部数据，无法直接得到全局 max。
+
+| 策略 | 标准 Attention | FlashAttention |
+|------|---------------|----------------|
+| S/P 物化 | 写回 HBM（O(N²)） | 不物化，留在 SRAM |
+| softmax | 全局 max 一次算完 | 分块 online 递推更新 |
+| HBM IO | O(N² + Nd) ≈ O(N²) | O(Nd) |
+| 长序列 N=8192 | ~805 MB | ~4 MB |
+
+> 💡 **一句话总结**：FlashAttention 的核心不是减少 FLOPs（计算量相同），而是用 online softmax 解决"分块后无法算全局 max"的数学障碍，从而把 softmax + GEMM 融合在 SRAM 里完成，消除 O(N²) 的 HBM 读写。
+
+---
+
+### 理论学习
+
+#### 1.1 标准 Attention 的 IO 痛点回顾
+
+![标准 Attention 三阶段 HBM 读写量拆解](../website/images/attention_io_breakdown.svg)
+
+```
+标准 Attention：
+  Step 1: S = Q × K^T / √d    (N×N)  → 写入 HBM
+  Step 2: P = softmax(S)       (N×N)  → 读 S，写 P
+  Step 3: O = P × V            (N×d)  → 读 P，写 O
+```
+
+各阶段 HBM 读写量（N=4096, d=64, FP32）：
+
+| 阶段 | 读 HBM | 写 HBM | 小计 |
+|------|--------|--------|------|
+| Step 1: S=QK^T | 2Nd | N² | 2Nd + N² |
+| Step 2: P=softmax(S) | N² | N² | 2N² |
+| Step 3: O=PV | N² + Nd | Nd | N² + 2Nd |
+| **总计** | **2Nd + 3N²** | **N² + N² + Nd** | **3N² + 4Nd ≈ O(N²)** |
+
+> ⚠️ **注意**：O(N²) 项来自物化两个 N×N 矩阵 S 和 P。当 N ≫ d 时，3N² 主导。
+
+#### 1.2 FlashAttention 的两大核心创新
+
+![FlashAttention Tiling 分块策略](../website/images/flash_attention_tiling.svg)
+
+| 创新点 | 解决的问题 | 关键思想 |
+|--------|-----------|---------|
+| **Tiling** | SRAM 容量有限，放不下完整 Q/K/V | 将 Q/K/V 分成小 tile，逐块加载到 SRAM |
+| **Online Softmax** | 分块后无法得到全局 max | 维护 running max/sum/output，递推更新 |
+
+##### Tiling 分块策略
+
+FlashAttention 将 Q 按行分块（Br 行一块），K/V 按行分块（Bc 行一块）。外层循环遍历 Q tile，内层循环遍历 KV tile。Q tile 常驻 SRAM，KV tile 逐块"滑入"。
+
+```
+Q tile (Br×d) 常驻 SRAM
+  for each KV tile (Bc×d):
+    加载 Kj, Vj 到 SRAM
+    Sij = Qi × Kj^T        (Br×Bc，留在 register/SRAM)
+    online softmax 更新 m, l, o
+    丢弃 Sij（不写回 HBM）
+  写回 Oi = o / l 到 HBM
+```
+
+##### SRAM 容量约束决定分块大小
+
+```
+每 Block 需要的 SRAM：
+  Q tile: Br × d
+  K tile: Bc × d
+  V tile: Bc × d
+  S tile: Br × Bc (register, 不占 smem)
+  总计 smem: Br×d + 2×Bc×d ≤ SRAM_per_SM
+
+以 A100 为例，shared memory 上限 164 KB/SM：
+  d=64, Br=128, Bc=128:
+  128×64 + 2×128×64 = 8192 + 16384 = 24576 floats = 96 KB ✓
+```
+
+#### 1.3 Online Softmax 三公式完整推导
+
+![Online Softmax 递推更新流程](../website/images/flash_attention_online_update.svg)
+
+##### 状态定义
+
+- `m`：已处理所有块的 running maximum
+- `l`：已处理所有块的 running sum（以 m 为参考点）
+- `o`：已处理所有块的 running output（部分加权和）
+
+初始状态：`m = -∞, l = 0, o = 0`
+
+##### 推导过程
+
+**处理新块前**：已有全局状态 `(m, l, o)`，旧参考点是 `m`。新块的 score 为 `xj`，value 为 `vj`。
+
+**公式 1（Max 更新）**：
+
+```
+m_new = max(m, max(xj))
+```
+
+含义：全局 max 可能是之前的 m，也可能是新块中的某个值。
+
+**公式 2（Sum 更新）**：
+
+旧 sum 以 `m` 为参考：`l = Σ exp(x_old - m)`。要转换到以 `m_new` 为参考：
+
+```
+exp(x_old - m_new) = exp(x_old - m) × exp(m - m_new)
+→ 新的旧部分和 = l × exp(m - m_new)
+```
+
+新块的和：`Σ exp(xj - m_new)`。合并：
+
+```
+l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+```
+
+**公式 3（Output 更新）**：
+
+旧 output 按旧概率分布加权：`o = Σ [exp(x_old - m) / l] × v_old`。新概率分布下，旧部分权重需缩放：
+
+```
+exp(x_old - m_new) / l_new = [exp(x_old - m) / l] × [l × exp(m - m_new) / l_new]
+```
+
+所以旧 output 乘以缩放因子 `o_scale = l × exp(m - m_new) / l_new`，新块贡献为 `Σ [exp(xj - m_new) / l_new] × vj`：
+
+```
+o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+```
+
+##### 三公式汇总
+
+```
+公式1:  m_new = max(m, max(xj))
+公式2:  l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+公式3:  o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+```
+
+##### 数值稳定性要点
+
+- `exp(m - m_new)` 中 `m_new ≥ m`，所以指数 ≤ 0，不会溢出
+- `m_new` 是全局 max，新块的 `exp(xj - m_new) ≤ 1`
+- 即使 `m_new = m`（新块没有更大的值），`exp(0) = 1`，公式退化为简单累加
+
+> 💡 **一句话总结**：`exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"。没有它，不同块计算的概率无法统一到同一个归一化基。
+
+#### 1.4 IO 复杂度对比
+
+![O(N²) vs O(Nd) IO 增长对比](../website/images/on2_vs_ond_scaling.svg)
+
+| 实现 | HBM 访问量 | N=4096, d=64, FP32 | N=8192, d=64 |
+|------|-----------|-------------------|--------------|
+| 标准 Attention | O(N² + Nd) | ~206 MB | ~805 MB |
+| FlashAttention | O(Nd) | ~2 MB | ~4 MB |
+| **IO 加速比** | | **~100x** | **~200x** |
+
+##### 为什么实际 wall-clock 加速只有 2-8x？
+
+```
+标准 Attention 时间 = max(T_gemm, T_memory)
+  - T_gemm: 由 Tensor Core 决定，与 FLOPs 成正比
+  - T_memory: 由 HBM 带宽决定
+
+FlashAttention 时间 ≈ T_gemm（IO 不再是瓶颈）
+
+如果原始 T_gemm ≈ T_memory，加速比 ≈ 2x
+如果原始 T_memory ≫ T_gemm，加速比 ≈ 8x+
+```
+
+FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少。所以长序列、小 head dim（d 较小，GEMM 计算强度低）时收益最大。
+
+---
+
+### Coding 任务：标准 Attention vs FlashAttention IO 对比
+
+#### 任务 1：创建 compare_attention_io.py
+
+创建文件 [kernels/compare_attention_io.py](kernels/compare_attention_io.py)：
+
+```python
+# compare_attention_io.py —— 标准 Attention vs FlashAttention IO 与速度对比
+# 运行命令: python compare_attention_io.py
+# 依赖: pip install torch
+
+import torch
+import torch.nn.functional as F
+import math
+import time
+
+
+def standard_attention(Q, K, V):
+    """标准 Attention，物化 S 和 P"""
+    d = Q.size(-1)
+    S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
+    P = F.softmax(S, dim=-1)
+    O = torch.matmul(P, V)
+    return O
+
+
+def flash_attention_pytorch(Q, K, V, Br=64, Bc=64):
+    """
+    纯 PyTorch 实现的 FlashAttention 算法（教学版，不追求速度）
+    用于验证 online softmax 正确性
+    """
+    N, d = Q.size(-2), Q.size(-1)
+    scale = 1.0 / math.sqrt(d)
+    O = torch.zeros_like(Q)
+    L = torch.zeros(Q.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
+
+    for q_start in range(0, N, Br):
+        q_end = min(q_start + Br, N)
+        Qi = Q[..., q_start:q_end, :] * scale
+
+        m = torch.full((Qi.size()[:-1] + (1,)), -1e30, device=Q.device, dtype=Q.dtype)
+        l = torch.zeros(Qi.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
+        o = torch.zeros_like(Qi)
+
+        for kv_start in range(0, N, Bc):
+            kv_end = min(kv_start + Bc, N)
+            Kj = K[..., kv_start:kv_end, :]
+            Vj = V[..., kv_start:kv_end, :]
+
+            Sij = torch.matmul(Qi, Kj.transpose(-2, -1))
+
+            # Online softmax update
+            mij = torch.max(Sij, dim=-1, keepdim=True).values
+            m_new = torch.max(m, mij)
+
+            # Scale old l and o
+            l_scale = torch.exp(m - m_new)
+            l_new = l * l_scale + torch.sum(torch.exp(Sij - m_new), dim=-1, keepdim=True)
+
+            # Compute P weights for new block
+            Pij = torch.exp(Sij - m_new) / l_new
+
+            # Scale old o and add new contribution
+            o = o * (l * l_scale / l_new) + torch.matmul(Pij, Vj)
+
+            m = m_new
+            l = l_new
+
+        O[..., q_start:q_end, :] = o
+
+    return O
+
+
+def benchmark(func, Q, K, V, name, n_iter=10):
+    # warmup
+    for _ in range(3):
+        _ = func(Q, K, V)
+    torch.cuda.synchronize()
+
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
+    start.record()
+    for _ in range(n_iter):
+        out = func(Q, K, V)
+    end.record()
+    torch.cuda.synchronize()
+    ms = start.elapsed_time(end) / n_iter
+    print(f"{name}: {ms:.3f} ms")
+    return out
+
+
+def main():
+    torch.manual_seed(42)
+    device = "cuda"
+    dtype = torch.float32
+    d = 64
+    seq_lens = [512, 1024, 2048, 4096]
+
+    print("=== Attention IO & Speed Comparison ===")
+    print(f"head dim d={d}, FP32\n")
+
+    for N in seq_lens:
+        print(f"--- N={N} ---")
+        Q = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+        K = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+        V = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+
+        # 正确性验证
+        O_std = standard_attention(Q, K, V)
+        O_fa = flash_attention_pytorch(Q, K, V)
+        max_diff = (O_std - O_fa).abs().max().item()
+        print(f"Max diff (standard vs flash): {max_diff:.2e}")
+
+        # 速度对比
+        benchmark(standard_attention, Q, K, V, "Standard Attention")
+        benchmark(flash_attention_pytorch, Q, K, V, "FlashAttention (PyTorch)")
+
+        # 理论 IO 对比
+        bytes_per_elem = 4
+        std_io = (3 * N * N + 4 * N * d) * bytes_per_elem / (1024 * 1024)
+        fa_io = (4 * N * d) * bytes_per_elem / (1024 * 1024)
+        print(f"Theoretical HBM IO: Standard={std_io:.2f} MB, FlashAttention={fa_io:.2f} MB, ratio={std_io/fa_io:.1f}x\n")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 任务 2：编译与运行
+
+```bash
+# 运行（需 CUDA GPU + PyTorch）
+python kernels/compare_attention_io.py
+```
+
+**预期输出**：
+
+```text
+=== Attention IO & Speed Comparison ===
+head dim d=64, FP32
+
+--- N=512 ---
+Max diff (standard vs flash): x.xx e-06
+Standard Attention: x.xxx ms
+FlashAttention (PyTorch): x.xxx ms
+Theoretical HBM IO: Standard=3.06 MB, FlashAttention=0.50 MB, ratio=6.1x
+
+--- N=4096 ---
+Max diff (standard vs flash): x.xx e-06
+Standard Attention: x.xxx ms
+FlashAttention (PyTorch): x.xxx ms
+Theoretical HBM IO: Standard=206.25 MB, FlashAttention=4.00 MB, ratio=51.6x
+```
+
+#### 任务 3：手动推导验证 + ncu 观察中间矩阵
+
+**手动推导练习**：已处理块的 `m=1.0, l=2.0`，新块 score=`[2.0, 0.5, 3.0]`，value=`[[1,2],[3,4],[5,6]]`，计算新的 `m_new, l_new, o_new`（假设 o 初始为 0）。
+
+> 提示：m_new=3.0, l_scale=exp(1-3)=0.135, l_new=2×0.135 + exp(2-3)+exp(0.5-3)+exp(3-3) = 0.27+0.368+0.082+1.0=1.72
+
+**用 torch.profiler 观察中间矩阵分配**：
+
+```bash
+# 用 torch.profiler 对比两种实现的 cuda_memory_usage
+python -c "
+import torch, torch.nn.functional as F, math
+from compare_attention_io import standard_attention, flash_attention_pytorch
+
+Q = torch.randn(1,1,4096,64,device='cuda')
+K = torch.randn(1,1,4096,64,device='cuda')
+V = torch.randn(1,1,4096,64,device='cuda')
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+    standard_attention(Q, K, V)
+print('=== Standard Attention ===')
+print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
+"
+```
+
+**观察重点**：标准 Attention 会分配 N×N 的 S/P 矩阵（4096²×4B = 64MB），FlashAttention 无 N×N 分配。
+
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
+
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
+
+**题目概述**：
+
+给定 Query (M×d)、Key (N×d)、Value (N×d)，计算 Scaled Dot-Product Attention：Attention(Q,K,V) = softmax(Q·K^T / √d) · V。
+
+**约束条件**：`1 ≤ M, N ≤ 4096`，`1 ≤ d ≤ 128`，元素范围 `[-1.0, 1.0]`
+
+**与今日知识的关联**：
+
+本题直接对应 Day 1 的主题——标准 Attention 物化 S/P 到 HBM 导致 O(N²) IO。今天推导的 online softmax 三公式就是 FlashAttention 消除物化的核心数学工具。完整题解含 naive 物化版与简化 fused 版的对比。
+
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Softmax Attention 题解](../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
+
+**题目链接**：[121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+
+**题目概述**：
+
+给定数组 `prices`，`prices[i]` 是第 i 天的股票价格，找出一次买入和一次卖出（买入在卖出前）能获得的最大利润。无利润则返回 0。
+
+**与今日知识的关联**：
+
+本题核心是**一次遍历维护最小值**——边遍历边维护"到当前为止的最低买入价"，用当前价减去最低价即为今天卖出的利润。这与今天 online softmax 的"边遍历边维护 running max/sum"思路完全一致：都是**无法回头的单遍扫描中增量维护全局统计量**。online softmax 维护 (m, l, o)，股票问题维护 (minPrice, maxProfit)——核心都是"用 O(1) 状态压缩一次扫描"。
+
+**核心套路**：
+
+```
+minPrice = prices[0], maxProfit = 0
+for price in prices[1:]:
+    maxProfit = max(maxProfit, price - minPrice)
+    minPrice = min(minPrice, price)
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [买卖股票的最佳时机题解](../../leetcode/daily/week4/day1/买卖股票的最佳时机.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：手动推导 online softmax
+
+假设已处理块的 `m=2.0, l=3.0`，新块的值为 `[3.0, 1.0, 4.0]`，计算新的 `m_new, l_new`。
+
+> 提示：m_new=4.0, l_scale=exp(2-4)=0.135, l_new=3×0.135 + exp(3-4)+exp(1-4)+exp(4-4) = 0.406+0.368+0.050+1.0=1.824
+
+#### 实验 2：未归一化 vs 每次归一化
+
+修改 `flash_attention_pytorch` 使用未归一化的 `o`（最后做 `O=o/l`），验证与归一化版本结果一致。
+
+> 提示：两种写法数学等价。工程上常见的是每次归一化，最后直接输出；未归一化版本每次不除 l_new，最后统一除 l。
+
+#### 实验 3：增大序列长度对比 HBM 访问量
+
+修改测试尺寸到 N=8192，对比标准 Attention 和 FlashAttention 的理论 HBM 访问量：
+
+| N | 标准 Attention HBM | FlashAttention HBM | 加速比 |
+|---|---|---|---|
+| 256 | O(N²+Nd) | O(Nd) | ~N/d |
+| 1024 | | | |
+| 4096 | | | |
+| 8192 | | | |
+
+> 提示：标准 = O(N²+Nd)，FlashAttention = O(Nd)。N 翻倍时标准 IO 变 4x，FlashAttention IO 变 2x。
+
+---
+
+### 今日总结
+
+Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
+
+1. **标准 Attention 的 O(N²) 瓶颈**：物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，当 N=4096 时 IO 高达 ~206MB
+2. **FlashAttention 两大创新**：Tiling 分块（Q tile 常驻 SRAM，KV tile 逐块滑入）+ Online Softmax（递推更新 m/l/o）
+3. **Online Softmax 三公式**：`m_new=max(m,max(xj))`、`l_new=l×exp(m-m_new)+Σexp(xj-m_new)`、`o_new=o×(l×exp(m-m_new)/l_new)+Σ(exp(xj-m_new)/l_new)×vj`
+4. **缩放因子 `exp(m - m_new)`**：统一参考点，保证分块递推的概率分布一致
+5. **IO 复杂度**：从 O(N²) 降到 O(Nd)，实际 wall-clock 加速 2-8x（GEMM FLOPs 未减）
+6. **SRAM 约束**：Br×d + 2×Bc×d ≤ SRAM 容量，决定分块大小上限
+
+掌握这些后，你就拥有了明天手写完整 Forward Kernel 的全部理论基础。
+
+---
+
+### 面试要点
+
+1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
+
+   - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
+   - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
+   - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
+   - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
+   - 长序列（N>2048）、小 head dim 时收益最大，因为此时 HBM 带宽是瓶颈
+
+2. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
+
+   ```
+   公式1:  m_new = max(m, max(xj))
+   公式2:  l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+   公式3:  o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+   ```
+   - `exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"
+   - 这个缩放因子保证递推过程中的概率分布始终一致
+   - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
+
+3. **FlashAttention 的实际 wall-clock 加速为什么通常只有 2-8x，而不是 IO 复杂度的 100x？**
+
+   - 标准 Attention 的时间 = max(T_gemm, T_memory)。当 N 不够大时，GEMM 计算本身也占相当时间
+   - FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少
+   - 如果原始 T_gemm ≈ T_memory，加速比 ≈ 2x；如果 T_memory ≫ T_gemm，加速比 ≈ 8x+
+   - 所以长序列、小 d（GEMM 计算强度低）时收益最大
+
+4. **FlashAttention 的分块大小 Br×Bc 如何确定？SRAM 容量如何约束？**
+
+   - 受限于 SRAM（Shared Memory）容量：`Br×d + 2×Bc×d ≤ SRAM 容量`（K/V 不复用）
+   - A100 shared memory 最多 164 KB/SM
+   - 典型值：d=64, Br=Bc=128 时 SRAM 使用约 96 KB
+   - 分块太小 → 循环次数多，递推开销大；分块太大 → SRAM 超限或 occupancy 下降
+   - K/V 分时复用可省一份 smem：`Br×d + Bc×d ≤ SRAM`
+
+5. **Online Softmax 的数值稳定性是如何保证的？**
+
+   - `exp(m - m_new)` 中 `m_new ≥ m`（因为 m_new = max(m, ...)），所以指数 ≤ 0，结果 ≤ 1，不会溢出
+   - `m_new` 是全局 max，新块的 `exp(xj - m_new) ≤ exp(0) = 1`
+   - 即使 `m_new = m`（新块没有更大的值），`exp(0) = 1`，公式退化为简单累加，不会出错
+   - FP16 场景下更关键：FP16 max ≈ 65504，exp(11)≈60000 已接近溢出，减 max 后指数 ≤ 0 保证安全
+
+6. **能对照昇腾解释 FlashAttention 的 tile 驻留策略吗？**
+
+   - CUDA 的 Shared Memory（SRAM）对应昇腾的 L0 Buffer / UB（Unified Buffer）
+   - FlashAttention 的 Q tile 常驻 SRAM ≈ 昇腾 L0 Buffer 预加载 Q
+   - KV tile 逐块滑入 ≈ 昇腾 L1 Buffer → L0 Buffer，由 Fixpipe 硬件自动预取
+   - 核心算法（tiling + online softmax）跨平台一致，差异只在硬件抽象：CUDA 需手动管理 smem + `__syncthreads`，昇腾 Fixpipe 自动完成
+   - 昇腾 CANN 已内置完整 FlashAttention 算子，生产环境直接调用，无需手写
