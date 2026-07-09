@@ -1,21 +1,23 @@
 # AI Infra 学习笔记
 
-> 从「会写 kernel」进阶到「能做系统优化」—— 8 周 AI Infra 工程实战学习仓库，涵盖 GPU 执行模型、算子优化、推理系统与 Profiling 实践。
+> 从「会写 kernel」进阶到「能做系统优化」—— 8 周 AI Infra 工程实战学习仓库，涵盖 GPU 执行模型、算子优化、推理系统与 Profiling 实践，全程 CUDA ↔ 昇腾 CANN 双栈对照。
+
+![8 周冲刺路线总览](images/roadmap_overview.svg)
 
 ## 项目简介
 
-本仓库记录 AI Infra（推理系统 / 分布式 / 内核优化）方向的系统化学习过程，核心是一条 8 周冲刺路线：
+本仓库记录 AI Infra（推理系统 / 分布式 / 内核优化）方向的系统化学习过程，核心是一条 8 周冲刺路线：**会写 kernel → 能做系统优化 → 能测能调能讲**。已完成 Week 1-5（35 个教学日），Week 6-8 按计划推进中。
 
-| 阶段 | 主题 | 关键产出 |
-|------|------|---------|
-| Week 1 | GPU 执行本质 + Profiling | SM/Warp/Memory 直觉、Nsight 实战 |
-| Week 2 | GEMM & Kernel 优化 | Naive → Tiled → Register Blocking GEMM |
-| Week 3 | Transformer 执行本质 | Softmax / LayerNorm kernel、Attention IO 分析 |
-| Week 4 | FlashAttention 深挖 | Block-wise attention、IO 优化方法论 |
-| Week 5 | 推理系统 | Prefill/Decode、KV Cache、Mini 推理引擎 v0 |
-| Week 6 | Batching & 调度 | Dynamic / Continuous Batching、Scheduler |
-| Week 7 | 系统整合 | 多请求并发、全链路 Profiling |
-| Week 8 | 项目打磨 + 面试准备 | README、架构图、高频面试题 |
+| 周 | 主题 | 关键产出 | 状态 |
+|----|------|---------|------|
+| Week 1 | GPU 执行本质 + Profiling | SM/Warp/Memory 直觉、7 个 kernel、Nsight 实战 | ✅ 完成 |
+| Week 2 | GEMM & 算子优化 | Naive→Tiled→Register Blocking GEMM、cuBLAS 70%+ | ✅ 完成 |
+| Week 3 | Transformer 执行本质 | Softmax/LayerNorm kernel、Attention IO 分析、Mini 引擎 | ✅ 完成 |
+| Week 4 | FlashAttention 深挖 | Online Softmax 推导、手写 Forward Kernel、IO 优化方法论 | ✅ 完成 |
+| Week 5 | 推理系统与 KV Cache | Prefill/Decode、KV Cache、vLLM 架构、PagedAttention、Mini 引擎 v0 | ✅ 完成 |
+| Week 6 | Batching & 调度 | Continuous Batching 深入、CUDA Graph、Chunked Prefill | 📋 计划中 |
+| Week 7 | 系统整合 | 多请求并发、全链路 Profiling、自定义 kernel 替换 | 📋 计划中 |
+| Week 8 | 项目打磨 + 面试准备 | README、架构图、高频面试题、总结博客 | 📋 计划中 |
 
 详细计划见 [docs/AI_Infra_8_week_plan_detailed.md](docs/AI_Infra_8_week_plan_detailed.md)。
 
@@ -23,138 +25,188 @@
 
 ```
 ai-infra-notes/
-├── docs/                               # 8 周学习计划
+├── docs/                               # 8 周学习计划（总览 + 详细 + 各周展开）
 │   ├── AI_Infra_8_week_plan.md               # 计划总览
-│   ├── AI_Infra_8_week_plan_detailed.md      # 详细每日任务
-│   └── learning_plan_week2_expanded.md       # Week 2 深度展开
-├── aiinfra/                            # 课程教程目录
-│   ├── daily-tutorial/SKILL.md               # 写每日教程的通用 Skill
-│   ├── week1/                             # Week 1：GPU 执行本质 + Profiling
-│   │   ├── README.md                           # 本周概览 + Day 索引
-│   │   ├── day1/~day7/                         # 按天拆分，每天含：
-│   │   │   ├── README.md                       #   当日教程（11 段固定骨架）
-│   │   │   ├── kernels/                        #   可直接编译的 .cu 示例
-│   │   │   ├── exercise/                       #   练习题与验证程序
-│   │   │   └── notes/                          #   理论笔记与延伸阅读
-│   │   ├── tools/                              # 辅助工具（Occupancy Calculator）
-│   │   ├── profiles/                           # Nsight Profiling 报告汇总
-│   │   └── website/                            # 本周静态网站源码
-│   ├── week2/                             # Week 2：CUDA 进阶优化与性能分析
-│   │   ├── README.md                           # 本周概览 + Day 索引
-│   │   ├── day1/~day7/                         # 按天拆分（同 Week 1 结构）
-│   │   └── website/                            # 本周静态网站源码
-│   └── week3/                             # Week 3：Transformer 执行本质
-│       ├── README.md                           # 本周概览 + Day 索引
-│       ├── day15~day19/                        # 按天拆分
-│       └── website/                            # 本周静态网站源码
-├── leetgpu/                            # LeetGPU CUDA 挑战题解（12 道）
-│   ├── leetgpu-vector-add-solution.md
-│   ├── leetgpu-prefix-sum-solution.md
-│   ├── leetgpu-gemm-solution.md
-│   └── ...
-├── leetcode/                           # LeetCode 算法题解
-│   └── 最大总价值题解.md
-├── build.py                            # 组合构建 GitHub Pages 网站
+│   ├── AI_Infra_8_week_plan_detailed.md      # 详细每周目标 + 每日种子
+│   └── learning_plan_week{2..8}_expanded.md  # 各周逐日深度展开
+├── aiinfra/                            # 课程教程（主体）
+│   ├── daily-tutorial/SKILL.md               # 写每日教程的 Skill 规范
+│   ├── week1/  ✅                            # GPU 执行本质 + Profiling（7 天）
+│   ├── week2/  ✅                            # GEMM & 算子优化（7 天）
+│   ├── week3/  ✅                            # Transformer 执行本质（7 天）
+│   ├── week4/  ✅                            # FlashAttention 深挖（7 天）
+│   └── week5/  ✅                            # 推理系统与 KV Cache（7 天）
+│       └── day1~day7/                        # 每天含 README + kernels + SVG
+├── leetgpu/                            # LeetGPU CUDA 挑战题解（27 道）
+│   ├── week1~week5/dayM/                     # 按周/日归档，与教程对齐
+│   └── images/                               # 题解手绘 SVG 插图
+├── leetcode/                           # LeetCode 算法题解（34 道）
+│   ├── daily/week1~week5/dayM/               # 按周/日归档
+│   └── images/                               # 题解手绘 SVG 插图
+├── images/                             # 仓库根插图（路线图等）
+├── build.py                            # 组合构建 GitHub Pages 全站
+├── setup_cuda.sh                       # WSL 安装 CUDA Toolkit 脚本
 ├── setup_github_ssh.sh                 # 一键配置 GitHub SSH Key
+├── requirements.txt                    # 网站构建依赖
 └── .github/workflows/deploy.yml        # GitHub Pages 自动部署
 ```
 
+## 已完成内容一览
+
+### 5 周 35 个教学日
+
+| 周 | Day 1 | Day 2 | Day 3 | Day 4 | Day 5 | Day 6 | Day 7 |
+|----|-------|-------|-------|-------|-------|-------|-------|
+| W1 | GPU 执行模型 | Occupancy | deviceQuery | Memory Hierarchy | Bank Conflict | Nsight 实战 | 总结复盘 |
+| W2 | Warp Shuffle | Register Blocking | CUDA Streams | ncu 分析 | FA 简化版 | cuBLAS 70%+ | 手撕验收 |
+| W3 | Trace 推理 | Softmax/LN kernel | 源码分析 | Attention IO | 接入引擎 | Profiling | 算子总结 |
+| W4 | FA 论文精读 | 手写 FA Kernel | 官方源码 | FA2 论文 | 引擎集成 | 性能对比 | IO 方法论 |
+| W5 | Prefill/Decode | KV Cache | vLLM 架构 | PagedAttention | Mini 引擎 | Profiling | 核心问题总结 |
+
+### 题解归档
+
+- **LeetGPU**：27 道 CUDA 挑战题解（含完整可编译 kernel + ncu profiling + 手绘 SVG），覆盖 Vector Addition、GEMM、Softmax、Attention、Prefix Sum、PagedAttention、GQA、Speculative Decoding、GPT-2 Block 等
+- **LeetCode**：34 道面试高频题解（含 C++/Python 参考代码 + 手绘 SVG + 复杂度分析），覆盖数组/链表/树/DP/回溯/栈/滑动窗口等套路，每道与当日教程主题强相关
+
+### 工程资产
+
+- **27 个 CUDA kernel**（`.cu`）+ **8 个 Python 脚本**（`.py`，含 Mini 引擎、调度器、profiling 脚本）
+- **467 张手绘 sketch 风 SVG**（统一 Excalidraw-like 风格，含 `feTurbulence` 抖动滤镜）
+- **在线网站**：GitHub Pages 自动部署，含 5 周教程 + LeetGPU/LeetCode 题解
+
 ## 每日教程结构
 
-每天的学习内容独立存放在 `aiinfra/weekN/dayM/` 目录下，遵循固定的 11 段骨架：
+教学型 Day 严格遵循 8 段骨架（总结日 Day7 用变体）：
 
 ```
 ## Day N：<主题>
 ### 🎯 目标              ← 6 条编号目标 + "为什么重要"
 ### 学前导读              ← 动机铺垫，衔接前一日
-### 理论学习              ← 分小节讲解，配 SVG 图表
-### 昇腾对照              ← CUDA ↔ 昇腾 CANN 跨平台映射表
-### Coding 任务           ← 含完整可编译 kernel + LeetGPU 在线题目
+### 理论学习              ← 分小节讲解，配 SVG 图表，含昇腾对照
+### Coding 任务           ← 5 个子任务（含完整可编译 kernel + LeetGPU + LeetCode）
 ### 扩展实验              ← 3 个递进/对比实验
-### 常见错误与调试         ← 三列表格
-### 验证 Checklist        ← 7-8 条复选框
 ### 今日总结              ← 5-7 条加粗编号
 ### 面试要点              ← 5 题问答
 ```
 
-详细的写作规范见 [aiinfra/daily-tutorial/SKILL.md](aiinfra/daily-tutorial/SKILL.md)。
+每天 Coding 任务包含：1 个完整可编译 kernel（带 `nvcc` 命令 + 预期输出）+ 1 道 [LeetGPU](https://leetgpu.com/) 在线题 + 1 道 [LeetCode](https://leetcode.cn/) 面试题，题解归档到 `leetgpu/` 和 `leetcode/daily/`。详细写作规范见 [aiinfra/daily-tutorial/SKILL.md](aiinfra/daily-tutorial/SKILL.md)。
 
 ## 在线网站
 
-每次推送到 `main` 分支会自动构建并部署到 GitHub Pages，内容包括 Week 1 / Week 2 每日教程、8 周计划总览、LeetCode 题解等。
+每次推送到 `main` 分支自动构建并部署到 GitHub Pages，内容包括 5 周每日教程、8 周计划总览、LeetGPU 题解、LeetCode 题解。
 
 ## 本地预览
 
-### 方式 1：构建组合网站
+### 构建组合网站（推荐）
 
 ```bash
-python3 build.py
+python3 build.py                    # 构建全站到 public/
 cd public && python3 -m http.server 8080
 ```
 
 浏览器访问 `http://localhost:8080`。
 
-### 方式 2：单独构建某一周网站
+### 单独构建某一周
 
 ```bash
-python3 aiinfra/week1/website/build.py
-cd aiinfra/week1/website && python3 -m http.server 8080
+python3 aiinfra/week5/website/build.py
+cd aiinfra/week5/website && python3 -m http.server 8080
 ```
 
 ## 编译运行 Kernel
 
-Kernel 示例按天组织在 `aiinfra/weekN/dayM/kernels/` 下，可用 `nvcc` 直接编译：
+Kernel 按天组织在 `aiinfra/weekN/dayM/kernels/` 下，可用 `nvcc` 直接编译：
 
 ```bash
-cd aiinfra/week1
-nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu && ./day1/kernels/hello_gpu
-nvcc -o day4/kernels/transpose day4/kernels/transpose.cu && ./day4/kernels/transpose
-nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu && ./day5/kernels/bank_conflict
+# Week 1: GPU 执行模型
+nvcc -o aiinfra/week1/day1/kernels/hello_gpu aiinfra/week1/day1/kernels/hello_gpu.cu && ./aiinfra/week1/day1/kernels/hello_gpu
+
+# Week 2: GEMM 优化
+nvcc -O3 -arch=sm_80 aiinfra/week2/day2/kernels/gemm.cu -o gemm && ./gemm
+
+# Week 4: FlashAttention
+nvcc -O3 -arch=sm_80 aiinfra/week4/day2/kernels/flash_attention_v2.cu -o fa && ./fa
+
+# Week 5: PagedAttention / Mini 引擎
+nvcc -O3 -arch=sm_80 aiinfra/week5/day4/kernels/paged_attention.cu -o paged && ./paged
+python3 aiinfra/week5/day5/kernels/mini_engine_v0.py
 ```
 
 Profiling 示例：
 
 ```bash
-ncu --metrics sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-dram__throughput.avg.pct_of_peak_sustained_elapsed ./day4/kernels/transpose
+# ncu 分析单 kernel 瓶颈
+ncu --metrics gpu__time_duration.sum, \
+          dram__throughput.avg.pct_of_peak_sustained_elapsed, \
+          sm__throughput.avg.pct_of_peak_sustained_elapsed \
+    ./gemm
+
+# nsys 采集端到端时间线
+nsys profile -o timeline --trace=cuda,nvtx python3 aiinfra/week5/day5/kernels/mini_engine_v0.py
+nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 ```
 
-## LeetGPU 每日一题
+## 题解索引
 
-每天 Coding 任务的最后一道是 [LeetGPU](https://leetgpu.com/) 在线题目，与当日主题强相关：
+### LeetGPU（27 道，按周归档）
 
-| Day | Week 1 | Week 2 |
-|-----|--------|--------|
-| 1 | [vector-add](leetgpu/leetgpu-vector-add-solution.md) | [prefix-sum](leetgpu/leetgpu-prefix-sum-solution.md) |
-| 2 | [relu](leetgpu/leetgpu-relu-solution.md) | [gemm](leetgpu/leetgpu-gemm-solution.md) |
-| 3 | [matrix-addition](leetgpu/leetgpu-matrix-addition-solution.md) | [convolution](leetgpu/leetgpu-convolution-solution.md) |
-| 4 | [matrix-transpose](leetgpu/leetgpu-matrix-transpose-solution.md) | [softmax](leetgpu/leetgpu-softmax-solution.md) |
-| 5 | [reduction](leetgpu/leetgpu-reduction-solution.md) | [attention](leetgpu/leetgpu-attention-solution.md) |
-| 6 | [matrix-multiplication](leetgpu/leetgpu-matrix-multiplication-solution.md) | [histogram](leetgpu/leetgpu-histogram-solution.md) |
+| 周 | 题目 |
+|----|------|
+| W1 | Vector Addition · ReLU · Matrix Transpose · Reduction · Matrix Multiplication · Matrix Addition |
+| W2 | Prefix Sum · GEMM · 2D Convolution · Softmax · Softmax Attention · Histogramming |
+| W3 | RMS Normalization |
+| W4 | Softmax Attention · Dot Product · Batched MatMul · 1D Convolution · Top-K · Matrix Copy · Multi-Head Attention |
+| W5 | INT8 KV-Cache Attention · Grouped Query Attention · Speculative Decoding · Causal Self-Attention · Token Embedding · Weight Dequantization · GPT-2 Transformer Block |
 
-每道题的完整题解（含 CPU 基线、GPU 设计、Kernel 实现、性能分析、复杂度）存放在 `leetgpu/` 目录下。
+### LeetCode（34 道，按周归档）
+
+| 周 | 题目 |
+|----|------|
+| W1 | 42 接雨水 · 53 最大子数组和 · 3 无重复字符最长子串 · 206 反转链表 · 236 最近公共祖先 · 46 全排列 · 84 柱状图最大矩形 |
+| W2 | 1 两数之和 · 70 爬楼梯 · 15 三数之和 · 21 合并有序链表 · 102 层序遍历 · 739 每日温度 · 239 滑动窗口最大值 |
+| W3 | 11 盛最多水 · 198 打家劫舍 · 5 最长回文子串 · 141 环形链表 · 98 验证BST · 78 子集 |
+| W4 | 121 买卖股票 · 146 LRU缓存 · 56 合并区间 · 76 最小覆盖子串 · 128 最长连续序列 · 19 删除倒数N节点 · 2 两数相加 |
+| W5 | 238 除自身以外数组乘积 · 155 最小栈 · 621 任务调度器 · 138 复制随机指针链表 · 322 零钱兑换 · 148 排序链表 · 25 K个一组翻转 |
+
+每道题解含 6 段结构（题目概述 / 思路 / 参考代码 / 复杂度 / 扩展 / 面试要点）+ 手绘 SVG，题解与当日教程主题强相关。
 
 ## 工具链
 
-- CUDA Toolkit 11.8+ / 12.x
-- Nsight Compute (`ncu`) / Nsight Systems (`nsys`)
-- Python 3.10+（仅用于网站构建）
-- cuBLAS（Week 2 起对比基准）
+- **CUDA Toolkit** 11.8+ / 12.x（`setup_cuda.sh` 一键安装）
+- **Nsight Compute** (`ncu`) / **Nsight Systems** (`nsys`)
+- **PyTorch** 2.x（Week 3 起对比基准 + Mini 引擎后端）
+- **cuBLAS**（Week 2 起 GEMM 对比基准）
+- **Python** 3.10+（网站构建 + Mini 引擎 + profiling 脚本）
+- **昇腾 CANN**（对照参考，`msprof` 对应 nsys/ncu）
+
+## 昇腾 CANN 对照
+
+全程贯穿 **CUDA ↔ 昇腾 CANN 双栈映射**，每个教学日的理论学习含「昇腾对照」表：
+
+| CUDA 概念 | 昇腾 CANN 对应 | 说明 |
+|-----------|--------------|------|
+| SM / Warp | AI Core / Vector Core | 并行执行单元 |
+| Shared Memory | L0 Buffer / UB | 片上高速存储 |
+| `torch.profiler` / nsys | msprof | 算子级时间线 |
+| PagedAttention | 昇腾 PagedAttention | CANN 已内置 |
+| KV Cache | KV Cache | 概念完全一致 |
 
 ## 学习路线建议
 
 1. 从 [docs/AI_Infra_8_week_plan.md](docs/AI_Infra_8_week_plan.md) 了解整体节奏
 2. 进入 [aiinfra/week1/README.md](aiinfra/week1/README.md) 按 Day 1 → Day 7 推进
-3. 每个 kernel 都配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
+3. 每个 kernel 配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
 4. Day 3 起配合 [aiinfra/week1/tools/cuda_occupancy_calculator.py](aiinfra/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
-5. 每天完成 LeetGPU 在线题目，题解归档到 `leetgpu/`
+5. 每天完成 LeetGPU 在线题目，题解归档到 `leetgpu/weekN/dayM/`
+6. 每天完成 LeetCode 面试题，题解归档到 `leetcode/daily/weekN/dayM/`
 
 ## 目录约定
 
-- `dayN/`：按天组织，每天一个目录，含 `README.md`（教程）、`kernels/`、`exercise/`、`notes/`
-- `kernels/`：可直接编译运行的 `.cu` 示例
-- `exercise/`：按天组织的练习题与验证程序
-- `notes/`：理论笔记与官方文档摘要
+- `dayN/`：按天组织，含 `README.md`（教程）、`kernels/`、`exercise/`、`notes/`
+- `kernels/`：可直接编译运行的 `.cu` / `.py` 示例
 - `website/`：静态网站源码（`build.py` 从 `dayN/README.md` 生成 `dayN.html`）
+- `leetgpu/weekN/dayM/`：LeetGPU 题解，按周/日与教程对齐
+- `leetcode/daily/weekN/dayM/`：LeetCode 题解，按周/日与教程对齐
+- `images/`：所有手绘 sketch 风 SVG，统一 `feTurbulence` 抖动滤镜 + Comic Sans/Kaiti SC 字体
 
 > 💡 本计划为理想节奏，实际执行中可根据个人进度调整。建议每周保留 Day 7 作为缓冲，避免进度积压。

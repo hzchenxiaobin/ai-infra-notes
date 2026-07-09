@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.016" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="640" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="500" y="40" text-anchor="middle" font-size="24" font-weight="bold" fill="#2b2b2b">AI Infra 8 周冲刺路线：从 kernel 到推理系统</text>
+  <path d="M 320 50 Q 500 58 680 50" stroke="#2b2b2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <text x="500" y="74" text-anchor="middle" font-size="12" fill="#888">5 周已完成 · 35 个教程日 · 27 道 LeetGPU · 34 道 LeetCode · 27 个 CUDA kernel · 467 张手绘 SVG</text>
+
+  <!-- ============ Row 1: Week 1-4 (GPU 基础 + 算子) ============ -->
+  <!-- Week 1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="96" width="210" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="145" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Week 1：GPU 执行本质</text>
+  <text x="145" y="140" text-anchor="middle" font-size="10" fill="#444">SM / Warp / SIMT</text>
+  <text x="145" y="156" text-anchor="middle" font-size="10" fill="#444">Memory Hierarchy</text>
+  <text x="145" y="172" text-anchor="middle" font-size="10" fill="#444">Occupancy · Bank Conflict</text>
+  <text x="145" y="190" text-anchor="middle" font-size="10" fill="#444">Nsight Profiling 实战</text>
+  <text x="145" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 7 天完成</text>
+
+  <!-- arrow -->
+  <path d="M 252 156 L 280 156" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 2 -->
+  <g filter="url(#sk)">
+    <rect x="282" y="96" width="210" height="120" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="387" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Week 2：GEMM &amp; 算子优化</text>
+  <text x="387" y="140" text-anchor="middle" font-size="10" fill="#444">Warp Shuffle · Register Blocking</text>
+  <text x="387" y="156" text-anchor="middle" font-size="10" fill="#444">2D Tiling · CUDA Streams</text>
+  <text x="387" y="172" text-anchor="middle" font-size="10" fill="#444">ncu 性能分析</text>
+  <text x="387" y="190" text-anchor="middle" font-size="10" fill="#444">GEMM → cuBLAS 70%+</text>
+  <text x="387" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 7 天完成</text>
+
+  <path d="M 494 156 L 522 156" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 3 -->
+  <g filter="url(#sk)">
+    <rect x="524" y="96" width="210" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="629" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Week 3：Transformer 执行</text>
+  <text x="629" y="140" text-anchor="middle" font-size="10" fill="#444">Softmax / LayerNorm kernel</text>
+  <text x="629" y="156" text-anchor="middle" font-size="10" fill="#444">PyTorch / FT 源码分析</text>
+  <text x="629" y="172" text-anchor="middle" font-size="10" fill="#444">Attention IO 分析</text>
+  <text x="629" y="190" text-anchor="middle" font-size="10" fill="#444">算子接入 Mini 引擎</text>
+  <text x="629" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 7 天完成</text>
+
+  <path d="M 736 156 L 764 156" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 4 -->
+  <g filter="url(#sk)">
+    <rect x="766" y="96" width="210" height="120" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="871" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a2828">Week 4：FlashAttention</text>
+  <text x="871" y="140" text-anchor="middle" font-size="10" fill="#444">Online Softmax 三公式</text>
+  <text x="871" y="156" text-anchor="middle" font-size="10" fill="#444">手写 Forward Kernel</text>
+  <text x="871" y="172" text-anchor="middle" font-size="10" fill="#444">官方源码 / FA2 改进</text>
+  <text x="871" y="190" text-anchor="middle" font-size="10" fill="#444">IO 优化方法论</text>
+  <text x="871" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 7 天完成</text>
+
+  <!-- down arrow W4 → W5 -->
+  <path d="M 871 218 Q 871 250 500 250 Q 145 250 145 280" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" stroke-dasharray="6 4" filter="url(#sk)"/>
+  <text x="540" y="244" font-size="10" fill="#888">进入推理系统</text>
+
+  <!-- ============ Row 2: Week 5-8 (推理系统 + 整合) ============ -->
+  <!-- Week 5 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="286" width="210" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/>
+  </g>
+  <text x="145" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Week 5：推理系统</text>
+  <text x="145" y="330" text-anchor="middle" font-size="10" fill="#444">Prefill vs Decode</text>
+  <text x="145" y="346" text-anchor="middle" font-size="10" fill="#444">KV Cache 实现</text>
+  <text x="145" y="362" text-anchor="middle" font-size="10" fill="#444">vLLM 架构 / PagedAttention</text>
+  <text x="145" y="378" text-anchor="middle" font-size="10" fill="#444">Mini 引擎 v0 · Profiling</text>
+  <text x="145" y="396" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 7 天完成</text>
+
+  <path d="M 252 346 L 280 346" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 6 -->
+  <g filter="url(#sk)">
+    <rect x="282" y="286" width="210" height="120" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6" stroke-dasharray="6 4"/>
+  </g>
+  <text x="387" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Week 6：Batching &amp; 调度</text>
+  <text x="387" y="330" text-anchor="middle" font-size="10" fill="#444">Continuous Batching 深入</text>
+  <text x="387" y="346" text-anchor="middle" font-size="10" fill="#444">CUDA Graph · torch.compile</text>
+  <text x="387" y="362" text-anchor="middle" font-size="10" fill="#444">Chunked Prefill</text>
+  <text x="387" y="378" text-anchor="middle" font-size="10" fill="#444">多请求引擎 v1</text>
+  <text x="387" y="396" text-anchor="middle" font-size="9" fill="#888" font-weight="bold">📋 计划中</text>
+
+  <path d="M 494 346 L 522 346" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 7 -->
+  <g filter="url(#sk)">
+    <rect x="524" y="286" width="210" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" stroke-dasharray="6 4"/>
+  </g>
+  <text x="629" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Week 7：系统整合</text>
+  <text x="629" y="330" text-anchor="middle" font-size="10" fill="#444">多请求并发服务</text>
+  <text x="629" y="346" text-anchor="middle" font-size="10" fill="#444">全链路 Profiling</text>
+  <text x="629" y="362" text-anchor="middle" font-size="10" fill="#444">自定义 kernel 替换</text>
+  <text x="629" y="378" text-anchor="middle" font-size="10" fill="#444">性能调优闭环</text>
+  <text x="629" y="396" text-anchor="middle" font-size="9" fill="#888" font-weight="bold">📋 计划中</text>
+
+  <path d="M 736 346 L 764 346" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week 8 -->
+  <g filter="url(#sk)">
+    <rect x="766" y="286" width="210" height="120" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6" stroke-dasharray="6 4"/>
+  </g>
+  <text x="871" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a2828">Week 8：打磨 + 面试</text>
+  <text x="871" y="330" text-anchor="middle" font-size="10" fill="#444">项目 README / 架构图</text>
+  <text x="871" y="346" text-anchor="middle" font-size="10" fill="#444">高频面试题复盘</text>
+  <text x="871" y="362" text-anchor="middle" font-size="10" fill="#444">GitHub 仓库整理</text>
+  <text x="871" y="378" text-anchor="middle" font-size="10" fill="#444">总结博客</text>
+  <text x="871" y="396" text-anchor="middle" font-size="9" fill="#888" font-weight="bold">📋 计划中</text>
+
+  <!-- ============ 底部：四大能力支柱 ============ -->
+  <text x="500" y="442" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">四大能力支柱</text>
+  <path d="M 420 450 Q 500 458 580 450" stroke="#2b2b2b" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="466" width="200" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="280" y="466" width="200" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="500" y="466" width="200" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <rect x="720" y="466" width="200" height="70" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="160" y="492" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">GPU 编程</text>
+  <text x="160" y="512" text-anchor="middle" font-size="10" fill="#444">SM/Warp/Memory</text>
+  <text x="160" y="528" text-anchor="middle" font-size="10" fill="#444">kernel 手写 + ncu</text>
+
+  <text x="380" y="492" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">算子优化</text>
+  <text x="380" y="512" text-anchor="middle" font-size="10" fill="#444">GEMM/Attention/Softmax</text>
+  <text x="380" y="528" text-anchor="middle" font-size="10" fill="#444">Tiling + Fusion 方法论</text>
+
+  <text x="600" y="492" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">推理系统</text>
+  <text x="600" y="512" text-anchor="middle" font-size="10" fill="#444">KV Cache / PagedAttention</text>
+  <text x="600" y="528" text-anchor="middle" font-size="10" fill="#444">vLLM / Continuous Batching</text>
+
+  <text x="820" y="492" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">Profiling</text>
+  <text x="820" y="512" text-anchor="middle" font-size="10" fill="#444">nsys / ncu / msprof</text>
+  <text x="820" y="528" text-anchor="middle" font-size="10" fill="#444">三层瓶颈定位法</text>
+
+  <!-- footer -->
+  <text x="500" y="572" text-anchor="middle" font-size="11" fill="#888">主线：会写 kernel → 能做系统优化 → 能测能调能讲</text>
+  <text x="500" y="592" text-anchor="middle" font-size="10" fill="#aaa">每个教学日 8 段骨架 · 每天配 1 道 LeetGPU + 1 道 LeetCode · 手绘 sketch 风 SVG</text>
+  <text x="500" y="618" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">昇腾 CANN 对照贯穿全程 · CUDA ↔ 昇腾跨平台映射</text>
+</svg>
