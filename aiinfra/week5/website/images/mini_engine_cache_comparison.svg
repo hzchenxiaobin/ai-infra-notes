@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="460" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">With vs Without KV Cache：latency 与 FLOPs 对比</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Without Cache ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="420" height="340" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="250" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">Without KV Cache</text>
+  <text x="250" y="108" text-anchor="middle" font-size="11" fill="#666">每步重算整个前缀，FLOPs 随步数线性增长</text>
+
+  <!-- 步骤展示 -->
+  <text x="60" y="134" font-size="11" fill="#444">step 1: prefill [prompt]</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="140" width="80" height="22" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <text x="155" y="155" font-size="10" fill="#7a2828">FLOPs = O(N·d²)</text>
+
+  <text x="60" y="176" font-size="11" fill="#444">step 2: 重算 [prompt + tok1]</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="182" width="96" height="22" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <text x="171" y="197" font-size="10" fill="#7a2828">FLOPs = O((N+1)·d²)</text>
+
+  <text x="60" y="218" font-size="11" fill="#444">step 3: 重算 [prompt + tok1 + tok2]</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="224" width="112" height="22" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <text x="187" y="239" font-size="10" fill="#7a2828">FLOPs = O((N+2)·d²)</text>
+
+  <text x="60" y="260" font-size="11" fill="#444">step k: 重算 [prompt + tok1..k-1]</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="266" width="160" height="22" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <text x="235" y="281" font-size="10" fill="#7a2828">FLOPs = O((N+k)·d²)</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="300" width="360" height="80" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="80" y="322" font-size="12" font-weight="bold" fill="#7a2828">总 FLOPs（生成 K 个 token）</text>
+  <text x="80" y="342" font-size="11" fill="#444">= Σ_{k=0}^{K-1} O((N+k)·d²) = O(K·N·d² + K²·d²/2)</text>
+  <text x="80" y="362" font-size="11" fill="#b03a3a" font-weight="bold">→ TBT 随步数线性增长（越生成越慢）</text>
+
+  <!-- ============ With Cache ============ -->
+  <g filter="url(#sk)">
+    <rect x="480" y="64" width="420" height="340" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="690" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">With KV Cache</text>
+  <text x="690" y="108" text-anchor="middle" font-size="11" fill="#666">每步只算 1 个新 token，读历史 K/V，FLOPs 与步数无关</text>
+
+  <text x="500" y="134" font-size="11" fill="#444">step 1: prefill [prompt] → 填 cache</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="140" width="80" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="595" y="155" font-size="10" fill="#2e6e2e">FLOPs = O(N·d²)，cache ← N</text>
+
+  <text x="500" y="176" font-size="11" fill="#444">step 2: 算 tok1，读 cache</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="182" width="24" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="539" y="197" font-size="10" fill="#2e6e2e">FLOPs = O(d²)，cache ← N+1</text>
+
+  <text x="500" y="218" font-size="11" fill="#444">step 3: 算 tok2，读 cache</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="224" width="24" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="539" y="239" font-size="10" fill="#2e6e2e">FLOPs = O(d²)，cache ← N+2</text>
+
+  <text x="500" y="260" font-size="11" fill="#444">step k: 算 tok_k，读 cache</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="266" width="24" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="539" y="281" font-size="10" fill="#2e6e2e">FLOPs = O(d²)，cache ← N+k</text>
+
+  <g filter="url(#sk)">
+    <rect x="500" y="300" width="360" height="80" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="520" y="322" font-size="12" font-weight="bold" fill="#2e6e2e">总 FLOPs（生成 K 个 token）</text>
+  <text x="520" y="342" font-size="11" fill="#444">= O(N·d²) + (K-1)×O(d²) = O(N·d² + K·d²)</text>
+  <text x="520" y="362" font-size="11" fill="#2e6e2e" font-weight="bold">→ TBT 基本稳定（与步数无关）</text>
+
+  <!-- 底部对比 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="420" width="860" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb"/>
+  </g>
+  <text x="470" y="440" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">收益：KV Cache 把每步 FLOPs 从 O((N+k)·d²) 降到 O(d²)，decode latency 降低 10x+，且不随生成长度增长</text>
+</svg>

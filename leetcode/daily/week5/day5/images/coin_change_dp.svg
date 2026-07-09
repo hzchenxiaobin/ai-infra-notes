@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="460" viewBox="0 0 920 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">零钱兑换：完全背包 DP，复用子问题解</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="72" text-anchor="middle" font-size="12" fill="#666">coins = [1, 2, 5], amount = 11 → 最少 3 枚（5+5+1）</text>
+
+  <!-- DP 状态转移 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="92" width="500" height="140" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="116" font-size="13" font-weight="bold" fill="#2b6e9e">状态定义与转移</text>
+  <text x="60" y="140" font-size="12" fill="#444" font-family="monospace">dp[i] = 凑金额 i 的最少硬币数</text>
+  <text x="60" y="162" font-size="12" fill="#444" font-family="monospace">dp[0] = 0  （金额 0 不需硬币）</text>
+  <text x="60" y="184" font-size="12" fill="#b03a3a" font-family="monospace" font-weight="bold">dp[i] = min(dp[i - coin] + 1)  for coin in coins if i ≥ coin</text>
+  <text x="60" y="208" font-size="11" fill="#666">★ 复用前面已算的 dp[i-coin]，不重算——与 KV Cache 复用历史 K/V 同构</text>
+  <text x="60" y="226" font-size="11" fill="#666">  DP 表 = 缓存的子问题解，后续金额查表而非重算</text>
+
+  <!-- DP 表示例 -->
+  <g filter="url(#sk)">
+    <rect x="580" y="92" width="300" height="140" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="730" y="116" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">dp 表（amount=11）</text>
+  <text x="600" y="140" font-size="10" fill="#444" font-family="monospace">i:   0  1  2  3  4  5  6  7  8  9  10 11</text>
+  <text x="600" y="160" font-size="10" fill="#2e6e2e" font-family="monospace" font-weight="bold">dp:  0  1  1  2  2  1  2  2  3  3  2  3</text>
+  <text x="600" y="184" font-size="10" fill="#666">dp[11]=3: 5+5+1</text>
+  <text x="600" y="204" font-size="10" fill="#b03a3a">dp[11] = min(dp[10]+1, dp[9]+1, dp[6]+1)</text>
+  <text x="600" y="222" font-size="10" fill="#b03a3a">       = min(3, 4, 3) = 3</text>
+
+  <!-- DP 填表顺序 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="250" width="500" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="60" y="274" font-size="12" font-weight="bold" fill="#2e6e2e">填表顺序：从小到大（i = 1..amount）</text>
+  <text x="60" y="294" font-size="11" fill="#444">每算 dp[i] 时，dp[i-coin] 已算好（coin>0）→ 直接查表复用</text>
+  <text x="60" y="312" font-size="11" fill="#2e6e2e">完全背包：每种硬币无限，内层正向遍历（i-coin &lt; i，已算）</text>
+
+  <!-- 与 KV Cache 类比 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="345" width="840" height="100" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 3"/>
+  </g>
+  <text x="470" y="369" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">与 Mini 引擎 KV Cache 的模式类比</text>
+  <text x="60" y="392" font-size="11" fill="#444">零钱兑换：dp 表缓存"凑金额 i 的最少硬币数"，后续复用前面的解 → 不重算子问题</text>
+  <text x="60" y="410" font-size="11" fill="#444">KV Cache：缓存"历史 K/V"，Decode 每步复用而非重算前缀 → 不重算历史 projection</text>
+  <text x="60" y="430" font-size="11" fill="#7a2828" font-weight="bold">共同模式：增量推进 + 复用缓存的状态机——dp[i] 依赖 dp[i-coin]，decode step k 复用 cache[1..k-1]</text>
+</svg>

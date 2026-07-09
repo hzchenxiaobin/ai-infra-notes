@@ -1,0 +1,528 @@
+## Day 5：项目推进 —— Mini 推理引擎 v0
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解一个 LLM 推理引擎的 **5 大核心组件**——Tokenizer、模型后端、KV Cache、采样器、Prefill/Decode 循环——各自的职责与协作<br>
+2. 能用 PyTorch 从零搭建一个 **MiniLLM**（embedding + n_layers 层 transformer + lm_head），支持 `use_cache` 参数区分 Prefill/Decode<br>
+3. 掌握 `generate()` 的 **Prefill + Decode Loop** 两阶段实现——Prefill 一次性填入 prompt 的 K/V，Decode 每步追加 1 个 token 复用 cache<br>
+4. 能验证 **with cache 与 without cache 输出一致**，证明 KV Cache 不改变生成结果只加速<br>
+5. 理解多轮对话中 **KV Cache 复用** 的设计，以及引擎从"单请求"扩展到"多请求 + Continuous Batching"的演进方向<br>
+6. 能对照昇腾 CANN 解释推理引擎核心组件的对应关系，说清 vLLM 各层在 Mini 引擎里的映射
+
+> 💡 **为什么重要**：Day 1-4 我们把推理系统的"零件"逐个造好了——Prefill/Decode（Day1）、KV Cache（Day2）、Scheduler（Day3）、PagedAttention（Day4）。但零件不等于引擎。今天我们把它们组装成第一辆能跑的车：Mini 推理引擎 v0。`generate("hello world", max_new_tokens=10)` 一行调用就能从 prompt 生成 10 个 token——这是从"理解原理"到"动手造系统"的关键一跃。"如何构建一个最简单的 LLM 推理引擎"是工程能力的直接体现，也是面试高频题。
+
+---
+
+### 学前导读：从"零件"到"引擎"，还差什么？
+
+Day 4 结束时，我们有了 KV Cache 类、PagedAttention kernel、Scheduler 逻辑——但它们是散的。一个真实推理引擎要让用户只需 `generate(prompt)` 就拿到生成文本，背后需要一个**编排层**把它们串起来：
+
+| Day | 造的"零件" | 今天怎么用 |
+|-----|-----------|-----------|
+| Day1 | Prefill/Decode 两阶段分析 | 引擎的 `generate` 主体就是这两阶段 |
+| Day2 | KVCache 类（append/get_cache/reset） | 引擎在 Prefill 填充、Decode 追加 |
+| Day3 | LLMEngine + Scheduler + Worker | Mini 引擎的架构蓝本（简化为单请求） |
+| Day4 | PagedAttention kernel | Week7 替换 PyTorch 后端时用（v0 用 PyTorch） |
+
+Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching）、**PyTorch 后端**（Week7 换自定义 kernel）、**argmax 采样**（暂不做 temperature/top-k）。这是最小可运行版本——目标是跑通"encode → prefill → decode loop → decode"的完整闭环，验证 KV Cache 的正确性与收益。后续 Day6 做端到端 profiling，Week7+ 逐步替换后端、加多请求调度。
+
+> 💡 **一句话总结**：Mini 引擎 v0 = Tokenizer + 模型后端（PyTorch）+ KV Cache + 采样器 + Prefill/Decode 循环。它把 Day1-4 的零件组装成一辆能跑的车，用"单请求 + PyTorch"的最简组合验证推理引擎的核心闭环。
+
+---
+
+### 理论学习
+
+#### 5.1 推理引擎的 5 大核心组件
+
+![Mini 推理引擎 v0 架构：5 大组件 + 数据流](../website/images/mini_engine_architecture.svg)
+
+| 组件 | 职责 | Mini v0 实现 | 对应 vLLM |
+|------|------|-------------|----------|
+| **Tokenizer** | 文本 ↔ token id 转换 | `MiniTokenizer`（空格分词） | `transformers.AutoTokenizer` |
+| **模型后端** | 执行 transformer forward | `MiniLLM`（PyTorch） | Worker + ModelRunner |
+| **KV Cache** | 存历史 K/V，避免重算 | `model.forward(use_cache=True)` 返回的 list | BlockSpaceManager |
+| **采样器** | logits → next token id | `argmax`（greedy） | Sampler（支持 top-k/top-p） |
+| **Prefill/Decode 循环** | 编排两阶段生成 | `generate()` | LLMEngine.step() 循环 |
+
+##### 为什么是这 5 个？
+
+- **Tokenizer**：用户输入是文本，模型只认 token id——必须有个转换层
+- **模型后端**：执行实际的矩阵乘 + attention，是算力的消耗者
+- **KV Cache**：没有它，Decode 每步重算前缀，latency 爆炸（Day1-2 已证）
+- **采样器**：模型输出的是 logits（vocab 维概率分布），要采样成具体 token id
+- **循环编排**：自回归生成要"生成一个、喂回一个、再生成"的循环，且区分 Prefill（一次性）和 Decode（逐个）
+
+#### 5.2 MiniLLM 模型结构
+
+```
+input_ids (B, N)
+    │
+    ▼
+embedding (B, N, d_model)
+    │
+    ▼
+┌─────────────────────────┐
+│  Layer 0                │
+│   ├─ norm1 → qkv → Q,K,V│
+│   ├─ attention (用 cache)│
+│   ├─ norm2 → ffn         │
+│   └─ 返回 x, (k, v)      │  ← 存入 KV Cache
+├─────────────────────────┤
+│  Layer 1 ... 同上        │
+├─────────────────────────┤
+│  Layer n-1 ... 同上      │
+└─────────────────────────┘
+    │
+    ▼
+lm_head (B, N, vocab)
+    │
+    ▼
+logits → 采样 → next token
+```
+
+##### `use_cache` 参数区分 Prefill/Decode
+
+```python
+def forward(self, x, kv_cache=None, use_cache=False):
+    ...
+    if use_cache and kv_cache is not None:
+        # Decode: 把新 K/V 拼到历史 cache 后面
+        k = torch.cat([k_cache, k], dim=2)
+        v = torch.cat([v_cache, v], dim=2)
+    # Prefill 时 kv_cache=None，直接用本次的 k/v
+    ...
+    return x, (k, v)   # 返回更新后的 cache
+```
+
+- **Prefill**：`use_cache=True, kv_cache=None` → 算完整 attention，返回 prompt 的 K/V 作为初始 cache
+- **Decode**：`use_cache=True, kv_cache=上一步的` → 新 K/V 拼到 cache，attention 是 1×(L+1)
+
+#### 5.3 Prefill + Decode 循环
+
+![Prefill → Decode 执行流程与 KV Cache 状态](../website/images/mini_engine_prefill_decode_flow.svg)
+
+```python
+def generate(self, prompt, max_new_tokens=20):
+    input_ids = encode(prompt)   # (B, N)
+
+    # ===== Prefill：一次性处理整段 prompt =====
+    logits, kv_cache = model(input_ids, use_cache=True)
+    next_token = argmax(logits[:, -1, :])   # first token
+    generated = [next_token]
+
+    # ===== Decode Loop：每步 1 个 token，复用 cache =====
+    for _ in range(max_new_tokens - 1):
+        logits, kv_cache = model(next_token, kv_cache=kv_cache, use_cache=True)
+        next_token = argmax(logits[:, -1, :])
+        generated.append(next_token)
+
+    return decode(generated)
+```
+
+##### KV Cache 状态变化
+
+| 阶段 | 输入 | KV Cache 长度 | FLOPs |
+|------|------|--------------|-------|
+| Prefill | prompt (N tokens) | 0 → N | O(N·d²)（大 GEMM） |
+| Decode step 1 | token N+1 (1 token) | N → N+1 | O(d²)（向量×矩阵） |
+| Decode step k | token N+k | N+k-1 → N+k | O(d²)（与 k 无关） |
+
+#### 5.4 With vs Without Cache：收益量化
+
+![With vs Without KV Cache：latency 与 FLOPs 对比](../website/images/mini_engine_cache_comparison.svg)
+
+| 维度 | Without Cache | With Cache |
+|------|--------------|------------|
+| 每步 FLOPs | O((N+k)·d²)，随步数增长 | **O(d²)**，与步数无关 |
+| 总 FLOPs（K 步） | O(K·N·d² + K²·d²/2) | O(N·d² + K·d²) |
+| TBT（逐 token 延迟） | 随生成长度线性增长 | **基本稳定** |
+| 生成结果 | 与 with cache **一致** | 基准 |
+| 内存 | 低 | 高（存 K/V cache） |
+
+> 💡 关键验证：**with cache 与 without cache 生成的 token 序列必须完全一致**——KV Cache 只影响速度不影响结果。今天的 Coding 任务会专门验证这一点。
+
+#### 5.5 多轮对话的 KV Cache 复用
+
+```
+Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
+  → KV Cache 保存了 [系统提示 + Round1 user + Round1 assistant] 的 K/V
+
+Round 2: User: "请介绍一下 FlashAttention"
+  → prompt = [Round1 全部 + Round2 user]
+  → 前 Round1 部分的 K/V 已在 cache，只需 prefill Round2 新增部分
+  → 大幅降低 Round2 的 TTFT
+```
+
+实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week6 再加。
+
+#### 5.6 昇腾对照
+
+| CUDA/PyTorch 实现 | 昇腾 CANN 对应 | 对照说明 |
+|---------|------------|---------|
+| PyTorch model backend | 昇腾 NPU backend | 两者都是框架后端 |
+| KV Cache（torch.cat 拼接） | CANN KV Cache | 概念一致，实现细节不同 |
+| Prefill/Decode 循环 | 昇腾推理引擎执行流程 | 一致 |
+| Tokenizer | Tokenizer | 与硬件无关 |
+| argmax 采样 | 采样器 | 一致 |
+| 单请求 → 多请求 | 单请求 → 多请求 | 后续扩展方向一致 |
+
+> 💡 Mini 引擎的组件划分是**系统设计层面**的，与硬件无关——Tokenizer/模型后端/KV Cache/采样器/循环编排的职责对昇腾同样适用。差异只在模型后端：PyTorch 调 CUDA kernel，昇腾调 AscendC 算子；KV Cache 的存储/拼接实现不同，但"存历史 K/V 避免重算"的概念一致。
+
+---
+
+### Coding 任务：构建 Mini 推理引擎 v0
+
+#### 任务 1：创建 mini_engine_v0.py
+
+创建文件 [kernels/mini_engine_v0.py](kernels/mini_engine_v0.py)，整合 5 大组件，实现端到端生成：
+
+```python
+# mini_engine_v0.py —— Mini 推理引擎 v0（单请求 + KV Cache + Prefill/Decode 循环）
+# 运行命令: python mini_engine_v0.py
+# 依赖: pip install torch
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+from typing import List, Optional, Tuple
+
+
+# ============================================================
+# 模型定义（对应 vLLM 的 ModelRunner 执行的 transformer）
+# ============================================================
+
+class MiniTransformerLayer(nn.Module):
+    """单层 Transformer Block：Pre-LN + Self-Attention + FFN，支持 KV Cache"""
+
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.GELU(),
+            nn.Linear(d_ff, d_model),
+        )
+
+    def forward(self, x, kv_cache=None, use_cache=False):
+        B, N, _ = x.shape
+        x_norm = self.norm1(x)
+        qkv = self.qkv(x_norm)
+        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        if use_cache and kv_cache is not None:
+            k_cache, v_cache = kv_cache
+            k = torch.cat([k_cache, k], dim=2)   # 拼历史 cache
+            v = torch.cat([v_cache, v], dim=2)
+
+        scale = self.d_head ** -0.5
+        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+        attn = F.softmax(attn, dim=-1)
+        out = torch.matmul(attn, v)
+
+        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+        x = x + self.out(out)
+        x = x + self.ffn(self.norm2(x))
+        return x, (k, v)
+
+
+class MiniLLM(nn.Module):
+    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.layers = nn.ModuleList([
+            MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
+        ])
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+
+    def forward(self, input_ids, kv_cache=None, use_cache=False):
+        x = self.embedding(input_ids)
+        new_kv_cache = []
+        for i, layer in enumerate(self.layers):
+            layer_cache = kv_cache[i] if kv_cache is not None else None
+            x, layer_new_cache = layer(x, layer_cache, use_cache)
+            new_kv_cache.append(layer_new_cache)
+        logits = self.lm_head(x)
+        return logits, new_kv_cache
+
+
+class MiniTokenizer:
+    def __init__(self, vocab_size=1000):
+        self.vocab_size = vocab_size
+        self.word_to_id = {}
+        self.id_to_word = {}
+        self.next_id = 1
+
+    def encode(self, text: str) -> List[int]:
+        tokens = []
+        for word in text.lower().split():
+            if word not in self.word_to_id:
+                if self.next_id >= self.vocab_size:
+                    break
+                self.word_to_id[word] = self.next_id
+                self.id_to_word[self.next_id] = word
+                self.next_id += 1
+            tokens.append(self.word_to_id[word])
+        return tokens
+
+    def decode(self, ids: List[int]) -> str:
+        return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+
+
+class MiniEngineV0:
+    """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+
+    def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
+        self.model = model.to(device).eval()
+        self.tokenizer = tokenizer
+        self.device = device
+
+    @torch.no_grad()
+    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
+        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+
+        # ========== Prefill ==========
+        logits, kv_cache = self.model(input_ids, use_cache=True)
+        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+        generated_ids = [next_token.item()]
+
+        # ========== Decode Loop ==========
+        for _ in range(max_new_tokens - 1):
+            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
+            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+            generated_ids.append(next_token.item())
+
+        return self.tokenizer.decode(generated_ids)
+
+    @torch.no_grad()
+    def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
+        """对照版：不用 KV Cache，每步重算完整历史"""
+        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+        current_ids = input_ids.clone()
+        generated = []
+        for _ in range(max_new_tokens):
+            logits, _ = self.model(current_ids, use_cache=False)
+            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+            generated.append(next_token.item())
+            current_ids = torch.cat([current_ids, next_token], dim=1)
+        return generated
+```
+
+代码要点：
+- **`MiniTransformerLayer.forward`** 通过 `use_cache + kv_cache` 区分 Prefill（`kv_cache=None`）与 Decode（拼历史 cache）
+- **`MiniLLM.forward`** 逐层执行 transformer，每层返回更新后的 `(k, v)`，组成 `new_kv_cache` 列表
+- **`MiniEngineV0.generate`** = Prefill（一次性）+ Decode Loop（逐 token 复用 cache）+ argmax 采样
+- **`generate_no_cache`** 对照版：每步重算完整历史，用于验证 with cache 输出一致
+
+#### 任务 2：运行并观察输出
+
+```bash
+python kernels/mini_engine_v0.py
+```
+
+**预期输出**（CPU/GPU 均可，token id 因随机种子而异）：
+
+```text
+Using device: cuda
+Prompt: hello world this is a test
+Generated (with cache): is <unk_497> <unk_592> ...
+
+=== KV Cache Correctness Check ===
+  with cache first token:    [4]
+  without cache tokens:       [4, 497, 592, 534, 130]
+
+=== Multi-turn Cache Reuse Demo ===
+  Round 1: '<unk_177> <unk_493> ...'
+  Round 2: '<unk_443> <unk_491> ...'  (新 prompt，独立 cache)
+
+=== KV Cache Memory ===
+  config: layers=4, heads=8, d_head=64, fp32
+  bytes per token: 16384 (16.0 KB)
+  seq_len=256: 4.0 MB
+  seq_len=1024: 16.0 MB
+  seq_len=4096: 64.0 MB
+```
+
+##### 验证逻辑解读
+
+1. **with cache 与 without cache 输出一致**：`without cache tokens: [4, 497, 592, 534, 130]` 与 with cache 的首 token `[4]` 及后续 token 完全一致——证明 KV Cache 只加速不改变结果
+2. **生成的 token 是"乱码"**：因为模型是随机初始化的（没训练），生成无语义——我们只验证**引擎流程正确**，不关心生成质量
+3. **KV Cache 内存占用**：4 层 × 8 头 × 64 d_head × fp32 → 每 token 16 KB，4096 token 64 MB
+
+> ⚠️ **注意**：本引擎用随机初始化模型，生成无语义。要生成有意义文本需接入预训练权重（如 HuggingFace 的 GPT-2）——Week7 替换后端时再做。v0 的目标是跑通流程 + 验证 KV Cache 正确性。
+
+#### 任务 3：用 torch.profiler 对比 Prefill/Decode 算子
+
+```bash
+python -c "
+import torch
+from kernels.mini_engine_v0 import MiniLLM, MiniTokenizer
+
+torch.manual_seed(42)
+model = MiniLLM(1000, 512, 8, n_layers=4).to('cuda').eval()
+prompt = torch.tensor([[1,2,3,4,5,6,7,8]], device='cuda')
+decode_in = torch.tensor([[9]], device='cuda')
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+    model(prompt, use_cache=False)
+print('=== Prefill (N=8) ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+    model(decode_in, use_cache=False)
+print('=== Decode (N=1) ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
+"
+```
+
+**观察重点**：Prefill 的 `addmm`/`bmm` 尺寸大、耗时长；Decode 的同算子尺寸极小（M=1），算子 launch 开销占比上升——印证 Day1 的"Decode memory-bound，SM 空闲等数据"。
+
+#### 任务 4：LeetGPU 在线题目 —— Token Embedding Layer
+
+**题目链接**：<https://leetgpu.com/challenges/token-embedding-layer>
+
+**题目概述**：
+
+实现 Transformer 输入端的 **embedding 层**：对 batch 中每个 token，从 `token_embeddings[V,D]` 表里 gather 一行、从 `position_embeddings[P,D]` gather 一行，相加后做 LayerNorm（带可学习 `gamma`/`beta`）。输出 `[B,T,D]`。
+
+**约束条件**：性能测试取 `B=32, T=512, V=30000, P=2048, D=768`（BERT-base 配置）；容差 `atol=rtol=1e-4`。
+
+**与今日知识的关联**：
+
+Token Embedding Layer 是 Mini 推理引擎 v0 的**第一个算子**——`self.embedding(input_ids)` 在 v0 里是 PyTorch 的 `nn.Embedding`，这道题就是它的手写 CUDA 版。引擎的 `model.forward` 第一步就是把 token id 转成向量，这道题把它拆成 `gather token emb + gather pos emb + 相加 + LayerNorm` 四步。Week7 替换 PyTorch 后端时，引擎的 embedding 层就要换成这个手写 kernel。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
+
+> 💡 提交后在 [LeetGPU Token Embedding Layer](https://leetgpu.com/challenges/token-embedding-layer) 上记录通过耗时。完整题解（含 gather + 加法 + LayerNorm 融合 kernel、ncu profiling）见 [Token Embedding Layer 题解](../../leetgpu/week5/day5/leetgpu-token-embedding-layer-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 零钱兑换
+
+**题目链接**：[322. 零钱兑换](https://leetcode.cn/problems/coin-change/)
+
+**题目概述**：
+
+给定不同面额的硬币 `coins` 和一个总金额 `amount`，计算凑成总金额所需的**最少硬币数**。无法凑出返回 `-1`。每种硬币数量不限（完全背包）。
+
+**与今日知识的关联**：
+
+零钱兑换的 DP 解法是 **KV Cache "复用已算结果"思想的算法直觉**——DP 表缓存"凑金额 i 的最少硬币数"，后续金额复用前面的解，避免重复计算。这与 KV Cache 缓存历史 K/V、Decode 复用而非重算同构：DP 是"用空间换时间、复用子问题解"，KV Cache 是"用显存换时间、复用历史 K/V"。Mini 引擎的 `generate` 循环每步复用 cache 就像 DP 每步复用 `dp[i-coin]`——都是**增量推进 + 复用缓存的状态机**。
+
+**核心套路**：
+
+```
+dp[0] = 0
+dp[i] = min(dp[i - coin] + 1)  for coin in coins if i >= coin
+```
+
+> 💡 完整题解（含完全背包 DP、C++/Python 参考代码、与 KV Cache 复用模式的类比）见 [零钱兑换题解](../../leetcode/daily/week5/day5/零钱兑换.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：加温度采样和 top-k 采样
+
+修改 `generate` 的采样部分，把 `argmax` 换成 `temperature + top-k` 采样：
+
+```python
+logits = logits[:, -1, :] / temperature
+top_k_logits, top_k_indices = torch.topk(logits, k)
+probs = F.softmax(top_k_logits, dim=-1)
+next_token = top_k_indices[torch.multinomial(probs, 1)]
+```
+
+> 思考：temperature→0 时采样退化为 argmax（greedy）；temperature→∞ 时趋向均匀分布。top-k 控制候选范围，避免长尾噪声。vLLM 的采样器还支持 top-p（nucleus sampling）。
+
+#### 实验 2：验证 with/without cache 在长序列下的 latency 差异
+
+修改 `main()`，用 `cuda.Event` 分别计时 `generate`（with cache）和 `generate_no_cache`（without cache），扫描 `max_new_tokens = 10, 50, 100`。绘制 TBT 随步数变化曲线。
+
+> 思考：without cache 的 TBT 应随步数线性增长（每步重算更长前缀），with cache 基本稳定——这就是 KV Cache 让 decode latency 降低 10x+ 的量化体现。Day6 会做完整 profiling。
+
+#### 实验 3：实现多轮对话 chat() API
+
+给 `MiniEngineV0` 加 `chat(messages: List[dict])` 方法，维护跨轮的 KV Cache：Round 2 只 prefill 新增 token，复用 Round 1 的 cache。
+
+```python
+def chat(self, messages):
+    # 把 messages 拼成 prompt，检查已有 cache 长度
+    # 只对新增部分 prefill，追加到 cache
+    # decode 生成回复
+    ...
+```
+
+> 思考：多轮复用的前提是 prompt 格式严格一致（Round2 prompt = Round1 全部 + 新输入）。如果用户改写历史，cache 失效要重新 prefill。vLLM 用 prefix caching 显式管理这一点。
+
+---
+
+### 今日总结
+
+Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推理引擎 v0：
+
+1. **5 大核心组件**：Tokenizer（文本↔id）、模型后端（MiniLLM PyTorch）、KV Cache（use_cache 控制）、采样器（argmax）、Prefill/Decode 循环（generate 主体）
+2. **MiniLLM 结构**：embedding + n_layers 层 transformer（Pre-LN + self-attention + FFN）+ lm_head，每层返回 `(k,v)` 供 cache 复用
+3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（O(N·d²) 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（O(d²) 向量×矩阵）
+4. **with/without cache 验证**：两者生成 token 序列完全一致，证明 KV Cache 只加速不改结果；without cache 的 TBT 随步数增长，with cache 基本稳定
+5. **KV Cache 内存**：每 token = 2 × n_layers × n_heads × d_head × bytes，4 层 × 8 头 × 64 d_head fp32 = 16 KB/token，4096 token 64 MB
+6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week6 加 session 管理
+7. **工程演进路径**：v0（单请求+PyTorch）→ v1（多请求+Continuous Batching）→ v2（自定义 kernel 替换 PyTorch）——每个组件都能独立替换优化
+
+掌握这些后，你就有了第一个可运行的推理引擎——明天 Day6 对它做端到端 profiling，测量 TTFT/TBT、定位瓶颈，为后续优化提供数据依据。
+
+---
+
+### 面试要点
+
+1. **如何构建一个最简单的 LLM 推理引擎？需要哪些核心组件？**
+
+   - 5 大核心组件：
+     1. **Tokenizer**：文本 ↔ token id 转换
+     2. **模型后端**：执行 transformer forward（PyTorch/TensorRT/vLLM）
+     3. **KV Cache**：存储历史 K/V，避免重复计算
+     4. **采样器**：argmax/greedy/temperature/top-k/top-p
+     5. **Prefill/Decode 循环**：prefill 处理 prompt，decode 自回归生成
+   - 最小流程：encode prompt → prefill forward（填 cache）→ first token → decode loop（复用 cache）→ next tokens → decode token ids → text
+   - 可选第 6 组件：调度器（多请求时决定 batch 组合，如 vLLM 的 Scheduler）
+
+2. **在推理引擎中，Prefill 和 Decode 阶段分别需要保存什么到 KV Cache？**
+
+   - **Prefill 阶段**：保存 prompt 中每个 token 的 K 和 V。对第 i 层 transformer，保存 shape `(B, H, N_prompt, d_head)` 的 K 和 V
+   - **Decode 阶段**：每步保存 1 个新生成 token 的 K 和 V，shape `(B, H, 1, d_head)`，追加到 cache
+   - 最终 KV Cache 长度 = prompt_len + generated_len
+   - 只有 K 和 V 需要保存，Q 是每步实时计算的（Q 只依赖当前 token）
+
+3. **with cache 和 without cache 生成的 token 为什么一致？**
+
+   - 数学上等价：Decode 第 t 步的 attention = `softmax(Q_t · K_{1..t}^T / √d) · V_{1..t}`
+   - with cache：`K_{1..t}` 从 cache 读取（之前算过的）+ 当前新算的 `K_t`
+   - without cache：`K_{1..t}` 全部本次重新算
+   - 两者算的是同一个 `K_{1..t}`（权重没变，输入 token 相同），所以 attention 结果逐元素一致，采样出的 token 一致
+   - KV Cache 只是把"重算历史 K/V"换成"读缓存"，是纯加速，不改变数学结果
+
+4. **Mini 引擎 v0 的 generate 循环里，Prefill 和 Decode 的 forward 调用有什么区别？**
+
+   - **Prefill**：`model(input_ids, use_cache=True)`，input_ids 是整段 prompt `(B, N)`，`kv_cache=None`。attention 是 N×N 完整矩阵，返回 prompt 的 K/V 作为初始 cache
+   - **Decode**：`model(next_token, kv_cache=上一步, use_cache=True)`，next_token 是 `(B, 1)`。层内把新 K/V `torch.cat` 到 cache，attention 是 1×(L+1)
+   - 关键：同一个 `model.forward` 通过 `use_cache + kv_cache` 参数区分两种模式——Prefill 时 cache 为空，Decode 时 cache 非空
+
+5. **KV Cache 在多轮对话中如何复用？有什么前提条件？**
+
+   - 为每个对话 session 维护独立 KV Cache，Round1 算完的 K/V 保留
+   - Round2 的 prompt = [Round1 全部 + 新输入]，其中 Round1 部分的 K/V 已在 cache，只需 prefill 新增 token 并追加
+   - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
+   - **前提**：Round2 prompt 必须严格是"Round1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 的前缀对不上无法复用。生产系统用 prefix caching 显式管理
+   - v0 暂每轮独立 cache（不复用），Week6 加 session 级 cache 管理
+
+6. **能对照昇腾解释推理引擎的核心组件吗？**
+
+   - 5 大组件的职责划分与硬件无关——Tokenizer/采样器是纯软件逻辑，模型后端/KV Cache/循环编排的概念对昇腾同样适用
+   - 差异在模型后端：PyTorch 调 CUDA kernel（cuBLAS/cuDNN），昇腾调 AscendC 算子
+   - KV Cache 概念一致（存历史 K/V 避免重算），实现细节不同：v0 用 `torch.cat` 拼接张量，生产级用 PagedAttention 的 block 分页
+   - 升腾推理框架（MindIE 等）同样有 Engine/Scheduler/Worker 的分层，与 vLLM 架构对应

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="540" viewBox="0 0 940 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="540" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Mini 推理引擎 v0 架构：5 大组件 + 数据流</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">Tokenizer → 模型后端（embedding + n_layers + lm_head）→ KV Cache → 采样器 → 生成循环</text>
+
+  <!-- 用户输入 -->
+  <g filter="url(#sk)">
+    <rect x="380" y="92" width="180" height="40" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="116" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">User: prompt 文本</text>
+  <path d="M 470 132 L 470 152" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ① Tokenizer -->
+  <g filter="url(#sk)">
+    <rect x="320" y="156" width="300" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="180" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① Tokenizer</text>
+  <text x="470" y="198" text-anchor="middle" font-size="11" fill="#444">encode: 文本 → token ids</text>
+  <path d="M 470 206 L 470 226" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ② Prefill -->
+  <g filter="url(#sk)">
+    <rect x="180" y="230" width="580" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="252" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">② Prefill（模型后端 + KV Cache 填充）</text>
+  <text x="470" y="272" text-anchor="middle" font-size="11" fill="#444">model(input_ids, use_cache=True) → 一次性处理 N 个 token</text>
+  <text x="470" y="290" text-anchor="middle" font-size="11" fill="#b03a3a">→ 把每层 prompt 的 K/V 存入 KV Cache → 输出 first token logits</text>
+  <path d="M 470 310 L 470 330" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ③ 采样 -->
+  <g filter="url(#sk)">
+    <rect x="320" y="334" width="300" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="356" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">③ 采样器（argmax / temperature / top-k）</text>
+  <text x="470" y="372" text-anchor="middle" font-size="11" fill="#444">logits → next token id</text>
+  <path d="M 470 378 L 470 398" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ④ Decode Loop -->
+  <g filter="url(#sk)">
+    <rect x="180" y="402" width="580" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="424" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">④ Decode Loop（复用 KV Cache）</text>
+  <text x="470" y="444" text-anchor="middle" font-size="11" fill="#444">model(next_token, kv_cache, use_cache=True) → 只算 1 token，读历史 K/V</text>
+  <text x="470" y="462" text-anchor="middle" font-size="11" fill="#2e6e2e">→ 新 K/V 追加到 cache → 采样 → 重复直到 EOS/max_tokens</text>
+  <!-- decode 循环箭头 -->
+  <path d="M 760 442 Q 820 442 820 372 Q 820 356 620 356" stroke="#7a5415" stroke-width="1.4" fill="none" marker-end="url(#ar)" stroke-dasharray="5 3" filter="url(#sk)"/>
+  <text x="835" y="400" font-size="10" fill="#7a5415">循环</text>
+
+  <!-- 输出 -->
+  <g filter="url(#sk)">
+    <rect x="320" y="496" width="300" height="36" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="518" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">decode: token ids → 文本</text>
+</svg>
