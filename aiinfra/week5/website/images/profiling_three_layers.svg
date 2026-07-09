@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="500" viewBox="0 0 940 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="500" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 系统级 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="260" height="380" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="170" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">① 系统级</text>
+  <text x="170" y="116" text-anchor="middle" font-size="11" fill="#666">Nsight Systems (nsys)</text>
+
+  <text x="56" y="142" font-size="11" font-weight="bold" fill="#444">工具</text>
+  <text x="56" y="160" font-size="11" fill="#444">nsys profile + nsys stats</text>
+
+  <text x="56" y="188" font-size="11" font-weight="bold" fill="#444">看什么</text>
+  <text x="56" y="206" font-size="11" fill="#444">• kernel 时间线排列</text>
+  <text x="56" y="224" font-size="11" fill="#444">• kernel 间 gap（间隙）</text>
+  <text x="56" y="242" font-size="11" fill="#444">• CPU/GPU 并行关系</text>
+  <text x="56" y="260" font-size="11" fill="#444">• CUDA stream 利用</text>
+  <text x="56" y="278" font-size="11" fill="#444">• 内存分配/释放时机</text>
+
+  <g filter="url(#sk)">
+    <rect x="56" y="296" width="228" height="66" rx="6" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <text x="170" y="318" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">回答的问题</text>
+  <text x="170" y="336" text-anchor="middle" font-size="10" fill="#444">"时间花在哪？gap 大不大？"</text>
+  <text x="170" y="352" text-anchor="middle" font-size="10" fill="#444">"CPU 和 GPU 谁等谁？"</text>
+
+  <text x="170" y="392" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">→ 定位整体瓶颈类型</text>
+  <text x="170" y="410" text-anchor="middle" font-size="10" fill="#666">compute / memory / launch</text>
+  <text x="170" y="436" text-anchor="middle" font-size="10" fill="#888">粒度：ms 级</text>
+
+  <!-- 箭头 -->
+  <path d="M 300 260 L 340 260" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ============ 阶段级 ============ -->
+  <g filter="url(#sk)">
+    <rect x="340" y="70" width="260" height="380" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="470" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">② 阶段级</text>
+  <text x="470" y="116" text-anchor="middle" font-size="11" fill="#666">cuda.Event + perf_counter</text>
+
+  <text x="356" y="142" font-size="11" font-weight="bold" fill="#444">指标</text>
+  <text x="356" y="160" font-size="11" fill="#444">TTFT（Prefill 延迟）</text>
+  <text x="356" y="178" font-size="11" fill="#444">TBT / TPOT（Decode）</text>
+  <text x="356" y="196" font-size="11" fill="#444">throughput（tokens/s）</text>
+
+  <text x="356" y="224" font-size="11" font-weight="bold" fill="#444">看什么</text>
+  <text x="356" y="242" font-size="11" fill="#444">• TTFT 随 prompt 长度增长</text>
+  <text x="356" y="260" font-size="11" fill="#444">• TBT 随序列长度增长？</text>
+  <text x="356" y="278" font-size="11" fill="#444">• Decode 的 breakdown：</text>
+  <text x="356" y="296" font-size="11" fill="#444">  forward / sampling / sync</text>
+
+  <g filter="url(#sk)">
+    <rect x="356" y="314" width="228" height="48" rx="6" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <text x="470" y="336" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">回答的问题</text>
+  <text x="470" y="352" text-anchor="middle" font-size="10" fill="#444">"Prefill 还是 Decode 慢？"</text>
+
+  <text x="470" y="392" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">→ 定位阶段瓶颈</text>
+  <text x="470" y="410" text-anchor="middle" font-size="10" fill="#666">Prefill / Decode 谁是短板</text>
+  <text x="470" y="436" text-anchor="middle" font-size="10" fill="#888">粒度：ms 级，分阶段</text>
+
+  <path d="M 600 260 L 640 260" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ============ Kernel 级 ============ -->
+  <g filter="url(#sk)">
+    <rect x="640" y="70" width="260" height="380" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="770" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">③ Kernel 级</text>
+  <text x="770" y="116" text-anchor="middle" font-size="11" fill="#666">Nsight Compute (ncu)</text>
+
+  <text x="656" y="142" font-size="11" font-weight="bold" fill="#444">指标</text>
+  <text x="656" y="160" font-size="11" fill="#444">dram__bytes（HBM 流量）</text>
+  <text x="656" y="178" font-size="11" fill="#444">sm__throughput（算力利用）</text>
+  <text x="656" y="196" font-size="11" fill="#444">dram__throughput（带宽利用）</text>
+  <text x="656" y="214" font-size="11" fill="#444">achieved occupancy</text>
+
+  <text x="656" y="242" font-size="11" font-weight="bold" fill="#444">看什么</text>
+  <text x="656" y="260" font-size="11" fill="#444">• 单 kernel 是否 compute-bound</text>
+  <text x="656" y="278" font-size="11" fill="#444">• 还是 memory-bound</text>
+  <text x="656" y="296" font-size="11" fill="#444">• Roofline 上的位置</text>
+
+  <g filter="url(#sk)">
+    <rect x="656" y="314" width="228" height="48" rx="6" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <text x="770" y="336" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">回答的问题</text>
+  <text x="770" y="352" text-anchor="middle" font-size="10" fill="#444">"哪个算子卡？为什么卡？"</text>
+
+  <text x="770" y="392" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">→ 定位具体算子瓶颈</text>
+  <text x="770" y="410" text-anchor="middle" font-size="10" fill="#666">给出优化该 kernel 的方向</text>
+  <text x="770" y="436" text-anchor="middle" font-size="10" fill="#888">粒度：ns 级，单 kernel</text>
+
+  <!-- 底部 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="466" width="860" height="26" rx="6" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="470" y="484" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">自顶向下：nsys 定位整体 → cuda.Event 量化阶段 → ncu 钻进单 kernel</text>
+</svg>

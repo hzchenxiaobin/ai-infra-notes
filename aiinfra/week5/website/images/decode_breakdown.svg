@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="440" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Decode 单步 Breakdown：forward / sampling / sync 占比</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">理想占比（GPU）：forward 占大头，sampling/sync 极小；launch overhead 大时 sync 上升</text>
+
+  <!-- 时间轴 -->
+  <text x="40" y="104" font-size="12" font-weight="bold" fill="#2b2b2b">单步 Decode 时间线</text>
+  <g filter="url(#sk)">
+    <line x1="40" y1="116" x2="880" y2="116" stroke="#bbb" stroke-width="1"/>
+  </g>
+
+  <!-- forward -->
+  <g filter="url(#sk)">
+    <rect x="40" y="126" width="600" height="50" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="148" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">forward（模型前向）</text>
+  <text x="340" y="166" text-anchor="middle" font-size="11" fill="#444">embedding + n_layers×(attention+FFN) + lm_head</text>
+
+  <!-- sampling -->
+  <g filter="url(#sk)">
+    <rect x="640" y="126" width="80" height="50" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="680" y="148" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">sampling</text>
+  <text x="680" y="166" text-anchor="middle" font-size="10" fill="#444">argmax</text>
+
+  <!-- sync -->
+  <g filter="url(#sk)">
+    <rect x="720" y="126" width="160" height="50" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="800" y="148" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a2828">sync / launch gap</text>
+  <text x="800" y="166" text-anchor="middle" font-size="10" fill="#444">cudaSynchronize 等</text>
+
+  <!-- 占比标注 -->
+  <text x="40" y="200" font-size="12" font-weight="bold" fill="#2b2b2b">占比（典型 GPU 场景）</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="212" width="600" height="32" rx="3" fill="#bcd6f0" stroke="#4a8edb"/>
+    <rect x="640" y="212" width="80" height="32" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+    <rect x="720" y="212" width="160" height="32" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <text x="340" y="232" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">~85-95%</text>
+  <text x="680" y="232" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">~2-5%</text>
+  <text x="800" y="232" text-anchor="middle" font-size="10" fill="#7a2828" font-weight="bold">~3-10%</text>
+
+  <!-- 优化方向 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="266" width="840" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="290" font-size="13" font-weight="bold" fill="#2b2b2b">各部分偏大时如何优化</text>
+
+  <text x="60" y="314" font-size="12" fill="#2b6e9e" font-weight="bold">forward 偏大（85-95% 是正常，但绝对值高）：</text>
+  <text x="80" y="332" font-size="11" fill="#444">→ Decode 是 memory-bound，优化方向：KV Cache 量化、GQA/MQA、PagedAttention、自定义 fused kernel</text>
+
+  <text x="60" y="358" font-size="12" fill="#2e6e2e" font-weight="bold">sampling 偏大（&gt;10% 说明 CPU 瓶颈）：</text>
+  <text x="80" y="376" font-size="11" fill="#444">→ argmax/temperature 在 CPU 上做，搬到 GPU；批处理多请求的采样</text>
+
+  <text x="60" y="400" font-size="12" fill="#7a2828" font-weight="bold">sync/launch gap 偏大（&gt;15% 说明 launch overhead 主导）：</text>
+  <text x="80" y="418" font-size="11" fill="#444">→ CUDA Graph（把 decode 循环录制成图，消除 per-step launch）、torch.compile、kernel fusion 减少 launch 数</text>
+</svg>
