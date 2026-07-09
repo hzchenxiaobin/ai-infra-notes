@@ -7,6 +7,7 @@ Generates:
     - week2 website files (copied from aiinfra/week2/website)
     - week3 website files (copied from aiinfra/week3/website)
     - week4 website files (copied from aiinfra/week4/website)
+    - week5 website files (copied from aiinfra/week5/website)
     - leetcode website files (copied from leetcode/website)
 """
 
@@ -122,6 +123,21 @@ def main() -> None:
     copy_directory_contents(
         repo_root / "aiinfra" / "week4" / "website",
         public_dir / "week4",
+        skip={"build.py", "README.md"},
+    )
+
+    # Build Week 5 website
+    print("Building Week 5 website...")
+    subprocess.run(
+        ["python3", str(repo_root / "aiinfra" / "week5" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy Week 5 website to public/week5/
+    print("Copying Week 5 website to public/week5/...")
+    copy_directory_contents(
+        repo_root / "aiinfra" / "week5" / "website",
+        public_dir / "week5",
         skip={"build.py", "README.md"},
     )
 

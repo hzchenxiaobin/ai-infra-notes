@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="430" viewBox="0 0 920 430" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+  </defs>
+  <rect width="920" height="430" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">示例演算：nums = [1, 2, 3, 4]</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 表头 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="60" height="40" rx="4" fill="#fffdf3" stroke="#9e9e9e"/>
+    <rect x="100" y="70" width="120" height="40" rx="4" fill="#fffdf3" stroke="#9e9e9e"/>
+    <rect x="220" y="70" width="160" height="40" rx="4" fill="#e8f0fe" stroke="#446688"/>
+    <rect x="380" y="70" width="160" height="40" rx="4" fill="#f0d9a8" stroke="#c98a2b"/>
+    <rect x="540" y="70" width="160" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="70" y="94" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">i</text>
+  <text x="160" y="94" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">nums[i]</text>
+  <text x="300" y="94" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">left[i]</text>
+  <text x="460" y="94" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">right[i]</text>
+  <text x="620" y="94" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">answer[i]</text>
+
+  <!-- 行 -->
+  <g filter="url(#sk)">
+    <g stroke="#bbb" fill="#fff">
+      <rect x="40" y="110" width="60" height="40"/>
+      <rect x="100" y="110" width="120" height="40"/>
+      <rect x="220" y="110" width="160" height="40" fill="#f4f8fe"/>
+      <rect x="380" y="110" width="160" height="40" fill="#fbf3e0"/>
+      <rect x="540" y="110" width="160" height="40" fill="#f3f9f3"/>
+    </g>
+  </g>
+  <text x="70" y="135" text-anchor="middle" font-size="12" fill="#333">0</text>
+  <text x="160" y="135" text-anchor="middle" font-size="12" fill="#333">1</text>
+  <text x="300" y="135" text-anchor="middle" font-size="12" fill="#2b6e9e">1</text>
+  <text x="460" y="135" text-anchor="middle" font-size="12" fill="#7a5415">2·3·4 = 24</text>
+  <text x="620" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">1 × 24 = 24</text>
+
+  <g filter="url(#sk)">
+    <g stroke="#bbb" fill="#fff">
+      <rect x="40" y="150" width="60" height="40"/>
+      <rect x="100" y="150" width="120" height="40"/>
+      <rect x="220" y="150" width="160" height="40" fill="#f4f8fe"/>
+      <rect x="380" y="150" width="160" height="40" fill="#fbf3e0"/>
+      <rect x="540" y="150" width="160" height="40" fill="#f3f9f3"/>
+    </g>
+  </g>
+  <text x="70" y="175" text-anchor="middle" font-size="12" fill="#333">1</text>
+  <text x="160" y="175" text-anchor="middle" font-size="12" fill="#333">2</text>
+  <text x="300" y="175" text-anchor="middle" font-size="12" fill="#2b6e9e">1</text>
+  <text x="460" y="175" text-anchor="middle" font-size="12" fill="#7a5415">3·4 = 12</text>
+  <text x="620" y="175" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">1 × 12 = 12</text>
+
+  <g filter="url(#sk)">
+    <g stroke="#bbb" fill="#fff">
+      <rect x="40" y="190" width="60" height="40"/>
+      <rect x="100" y="190" width="120" height="40"/>
+      <rect x="220" y="190" width="160" height="40" fill="#f4f8fe"/>
+      <rect x="380" y="190" width="160" height="40" fill="#fbf3e0"/>
+      <rect x="540" y="190" width="160" height="40" fill="#f3f9f3"/>
+    </g>
+  </g>
+  <text x="70" y="215" text-anchor="middle" font-size="12" fill="#333">2</text>
+  <text x="160" y="215" text-anchor="middle" font-size="12" fill="#333">3</text>
+  <text x="300" y="215" text-anchor="middle" font-size="12" fill="#2b6e9e">1·2 = 2</text>
+  <text x="460" y="215" text-anchor="middle" font-size="12" fill="#7a5415">4</text>
+  <text x="620" y="215" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">2 × 4 = 8</text>
+
+  <g filter="url(#sk)">
+    <g stroke="#bbb" fill="#fff">
+      <rect x="40" y="230" width="60" height="40"/>
+      <rect x="100" y="230" width="120" height="40"/>
+      <rect x="220" y="230" width="160" height="40" fill="#f4f8fe"/>
+      <rect x="380" y="230" width="160" height="40" fill="#fbf3e0"/>
+      <rect x="540" y="230" width="160" height="40" fill="#f3f9f3"/>
+    </g>
+  </g>
+  <text x="70" y="255" text-anchor="middle" font-size="12" fill="#333">3</text>
+  <text x="160" y="255" text-anchor="middle" font-size="12" fill="#333">4</text>
+  <text x="300" y="255" text-anchor="middle" font-size="12" fill="#2b6e9e">1·2·3 = 6</text>
+  <text x="460" y="255" text-anchor="middle" font-size="12" fill="#7a5415">1</text>
+  <text x="620" y="255" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">6 × 1 = 6</text>
+
+  <!-- 结果 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="300" width="840" height="50" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="330" font-size="13" font-weight="bold" fill="#2b2b2b">最终 answer = [24, 12, 8, 6]</text>
+
+  <!-- 复杂度 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="370" width="840" height="46" rx="8" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="60" y="398" font-size="12" font-weight="bold" fill="#2e6e2e">两遍扫描 O(n)，空间 O(1)（输出数组不计）；滚动写法把 right 压成一个变量，边逆序扫边乘进 answer。</text>
+</svg>
