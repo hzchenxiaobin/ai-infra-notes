@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="500" viewBox="0 0 940 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="500" fill="#fafafa"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">K 个一组翻转链表：分段处理 + 局部翻转 + 拼接</text>
+  <path d="M 290 42 Q 470 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">每 k 个一组翻转，不足 k 保持原序。dummy 节点 + 逐组翻转 + 串接</text>
+
+  <!-- 原链表 -->
+  <text x="40" y="100" font-size="12" font-weight="bold" fill="#2b2b2b">原链表（k=3）：1→2→3→4→5</text>
+  <g filter="url(#sk)">
+    <g fill="#e8f0fe" stroke="#446688">
+      <rect x="40" y="110" width="50" height="32" rx="4"/>
+      <rect x="110" y="110" width="50" height="32" rx="4"/>
+      <rect x="180" y="110" width="50" height="32" rx="4"/>
+      <rect x="250" y="110" width="50" height="32" rx="4"/>
+      <rect x="320" y="110" width="50" height="32" rx="4"/>
+    </g>
+  </g>
+  <text x="65" y="131" text-anchor="middle" font-size="12" fill="#234">1</text>
+  <text x="135" y="131" text-anchor="middle" font-size="12" fill="#234">2</text>
+  <text x="205" y="131" text-anchor="middle" font-size="12" fill="#234">3</text>
+  <text x="275" y="131" text-anchor="middle" font-size="12" fill="#234">4</text>
+  <text x="345" y="131" text-anchor="middle" font-size="12" fill="#234">5</text>
+  <text x="95" y="156" text-anchor="middle" font-size="9" fill="#666">→</text>
+  <text x="165" y="156" text-anchor="middle" font-size="9" fill="#666">→</text>
+  <text x="235" y="156" text-anchor="middle" font-size="9" fill="#666">→</text>
+  <text x="305" y="156" text-anchor="middle" font-size="9" fill="#666">→</text>
+
+  <!-- 第1组翻转 -->
+  <text x="40" y="186" font-size="12" font-weight="bold" fill="#7a5415">第 1 组（1,2,3）翻转 → 3,2,1</text>
+  <g filter="url(#sk)">
+    <g fill="#fef6e6" stroke="#c98a2b">
+      <rect x="40" y="196" width="50" height="32" rx="4"/>
+      <rect x="110" y="196" width="50" height="32" rx="4"/>
+      <rect x="180" y="196" width="50" height="32" rx="4"/>
+    </g>
+  </g>
+  <text x="65" y="217" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">3</text>
+  <text x="135" y="217" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">2</text>
+  <text x="205" y="217" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">1</text>
+  <text x="95" y="242" text-anchor="middle" font-size="9" fill="#7a5415">←</text>
+  <text x="165" y="242" text-anchor="middle" font-size="9" fill="#7a5415">←</text>
+
+  <!-- 第2组不足k -->
+  <text x="280" y="186" font-size="12" font-weight="bold" fill="#2e6e2e">第 2 组（4,5）不足 k=3 → 保持原序</text>
+  <g filter="url(#sk)">
+    <g fill="#eaf6ee" stroke="#4a8e4a">
+      <rect x="280" y="196" width="50" height="32" rx="4"/>
+      <rect x="350" y="196" width="50" height="32" rx="4"/>
+    </g>
+  </g>
+  <text x="305" y="217" text-anchor="middle" font-size="12" fill="#2e6e2e">4</text>
+  <text x="375" y="217" text-anchor="middle" font-size="12" fill="#2e6e2e">5</text>
+
+  <!-- 结果 -->
+  <text x="40" y="272" font-size="12" font-weight="bold" fill="#2b6e9e">结果：3→2→1→4→5</text>
+  <g filter="url(#sk)">
+    <g fill="#bcd6f0" stroke="#4a8edb">
+      <rect x="40" y="282" width="50" height="32" rx="4"/>
+      <rect x="110" y="282" width="50" height="32" rx="4"/>
+      <rect x="180" y="282" width="50" height="32" rx="4"/>
+      <rect x="250" y="282" width="50" height="32" rx="4"/>
+      <rect x="320" y="282" width="50" height="32" rx="4"/>
+    </g>
+  </g>
+  <text x="65" y="303" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">3</text>
+  <text x="135" y="303" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">2</text>
+  <text x="205" y="303" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">1</text>
+  <text x="275" y="303" text-anchor="middle" font-size="12" fill="#2e6e2e">4</text>
+  <text x="345" y="303" text-anchor="middle" font-size="12" fill="#2e6e2e">5</text>
+
+  <!-- 算法流程 -->
+  <g filter="url(#sk)">
+    <rect x="440" y="100" width="460" height="220" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="670" y="124" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">算法流程</text>
+  <text x="460" y="148" font-size="11" fill="#444">1. dummy 节点指向 head，pre = dummy</text>
+  <text x="460" y="168" font-size="11" fill="#444">2. 循环：</text>
+  <text x="476" y="186" font-size="11" fill="#444">a. 从 pre 走 k 步，检查是否够 k 个</text>
+  <text x="476" y="204" font-size="11" fill="#444">   不够 → break（保持原序）</text>
+  <text x="476" y="222" font-size="11" fill="#444">b. 记录 groupHead = pre.next</text>
+  <text x="476" y="240" font-size="11" fill="#444">c. 翻转 [groupHead, groupTail]</text>
+  <text x="476" y="258" font-size="11" fill="#444">d. pre.next → 翻转后的头</text>
+  <text x="476" y="276" font-size="11" fill="#444">e. groupHead.next → 下一组头（接续）</text>
+  <text x="476" y="294" font-size="11" fill="#444">f. pre = groupHead（原头变尾，作下组 pre）</text>
+  <text x="460" y="312" font-size="11" fill="#2e6e2e" font-weight="bold">3. 返回 dummy.next</text>
+
+  <!-- 底部：与 chunked prefill 类比 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="340" width="860" height="140" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 3"/>
+  </g>
+  <text x="470" y="364" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">与推理系统 Chunked Prefill 的模式类比</text>
+  <text x="60" y="388" font-size="11" fill="#444">K 个一组翻转：长链表按 k 分段，逐段翻转，不足 k 保持原序</text>
+  <text x="60" y="408" font-size="11" fill="#444">Chunked Prefill：长 prompt 按 chunk 分段，逐段 prefill，与 decode 交错</text>
+  <text x="60" y="436" font-size="11" fill="#7a2828" font-weight="bold">共同模式：把"大块连续处理"拆成"固定大小分段处理"，尾段特殊处理</text>
+  <text x="60" y="456" font-size="11" fill="#444">翻转链表的"不足 k 保持原序"= Chunked Prefill 的"最后一块可能不满"</text>
+  <text x="60" y="472" font-size="11" fill="#2e6e2e">都是"分段 + 逐段处理 + 尾段边界"的分治思路</text>
+</svg>

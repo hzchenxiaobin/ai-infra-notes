@@ -1,0 +1,368 @@
+## Day 7：推理系统核心问题总结与 Week 5 收官
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 系统梳理 Week 5 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
+2. 掌握推理系统的**四大核心问题**——内存管理、Batch 策略、Latency 隐藏、调度开销——及其解决方案<br>
+3. 建立**优化速查表**，拿到任意推理性能现象能查表找到检查方法与解决方案<br>
+4. 复盘本周 **17 道面试题**，建立推理系统专题的答题框架<br>
+5. 整理本周所有产出（Mini 引擎、KV Cache、profiling 脚本），形成可复用的工程资产<br>
+6. 为 Week 6（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
+
+> 💡 **为什么重要**：Day 1-6 我们分别学了推理系统的各个机制——两阶段、KV Cache、vLLM 调度、PagedAttention、Mini 引擎、profiling。但"各个机制都懂"不等于"系统全局掌握"——今天把碎片连成网络，用四大核心问题的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何性能现象，你能立刻判断它属于哪个核心问题、该查什么、怎么解决。Week 6 的 Continuous Batching 深入、CUDA Graph、Chunked Prefill 都建立在这张地图上。
+
+---
+
+### Week 5 知识地图
+
+![Week 5 知识地图：从两阶段到推理引擎](../website/images/week5_knowledge_map.svg)
+
+Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
+
+```
+Day1 Prefill/Decode 分析 → Day2 KV Cache 实现 → Day3 vLLM 整体架构
+  → Day4 PagedAttention → Day5 Mini 引擎 v0 → Day6 端到端 Profiling
+  → Day7 核心问题总结
+```
+
+| Day | 主题 | 核心产出 | 关键概念 |
+|-----|------|---------|---------|
+| Day 1 | Prefill vs Decode | PyTorch 模拟脚本 | 两阶段、compute vs memory-bound、TTFT/TBT |
+| Day 2 | 实现 KV Cache | kv_cache.cu（KVCache 类） | 5D 布局、append/reset、静态/动态/Paged 分配 |
+| Day 3 | vLLM 整体架构 | mini_vllm_scheduler.py | LLMEngine→Scheduler→Worker、Continuous Batching |
+| Day 4 | PagedAttention | paged_attention.cu | block table、CoW、解决碎片 |
+| Day 5 | Mini 引擎 v0 | mini_engine_v0.py | 5 大组件、generate 循环、with/without cache |
+| Day 6 | 端到端 Profiling | profile_engine_v0.py | 三层方法论、TTFT/TBT breakdown、决策树 |
+| **Day 7** | **核心问题总结** | **四大问题 + 速查表** | **内存管理/Batch/Latency 隐藏/调度开销** |
+
+> 💡 **一句话总结**：Week 5 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
+
+---
+
+### 核心概念串讲
+
+#### 1. Prefill/Decode 两阶段：一切优化的起点
+
+```
+Prefill：一次性处理 N 个 prompt token，大 GEMM + N×N attention → compute-bound
+Decode：逐 token 生成，M=1 的退化 GEMM + 1×N attention → memory-bound
+```
+
+| 阶段 | 瓶颈 | 关注指标 | 优化方向 |
+|------|------|---------|---------|
+| Prefill | compute-bound | TTFT | FlashAttention、Tensor Core、并行 prefill |
+| Decode | memory-bound | TBT/TPOT | KV Cache、量化、GQA、Continuous Batching |
+
+> 这两阶段的差异是推理系统所有优化的出发点——KV Cache 解决 Decode 的重算，PagedAttention 解决 KV Cache 的碎片，Continuous Batching 抬高 Decode 的 M。
+
+#### 2. KV Cache：用空间换时间
+
+```
+无 Cache：每步重算历史 K/V，FLOPs O(L·d²)，TBT 随 L 增长
+有 Cache：存历史 K/V，每步只算 1 个新 token，FLOPs O(d²)，TBT 稳定
+代价：显存 = 2 × n_layers × n_heads × L × d_head × bytes
+```
+
+#### 3. vLLM 架构：调度 + 内存管理双支柱
+
+```
+LLMEngine（接口）→ Scheduler（调度）→ Worker（执行）
+  Scheduler: Continuous Batching + SchedulingBudget + 抢占
+  Worker:    PagedAttention（block table + CoW）
+```
+
+> Continuous Batching（Day3）解决"吞吐"，PagedAttention（Day4）解决"碎片让吞吐可持续"——两者缺一不可。
+
+#### 4. Mini 引擎：5 大组件组装
+
+```
+Tokenizer → 模型后端（MiniLLM）→ KV Cache → 采样器 → Prefill/Decode 循环
+generate() = Prefill(填cache) + Decode Loop(复用cache) + argmax 采样
+```
+
+#### 5. Profiling 三层方法论
+
+```
+nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT）→ ncu（kernel 级，看带宽/算力）
+判据：dram__throughput 高 + sm__throughput 低 = memory-bound
+```
+
+---
+
+### 推理系统四大核心问题
+
+![推理系统四大核心问题](../website/images/four_core_problems.svg)
+
+#### ① 内存管理（Day2/Day4）
+
+| 问题 | 解决方案 |
+|------|---------|
+| KV Cache 显存占用大 | 量化（INT8/FP8）、GQA/MQA、PagedAttention |
+| 动态长度碎片 | PagedAttention（分页+block table） |
+| 长文本 OOM | 滑动窗口、稀疏 attention、offloading |
+| 多轮对话累积 | Cache 复用、prefix caching |
+
+#### ② Batch 策略（Day3）
+
+| 策略 | 原理 | 优缺点 |
+|------|------|--------|
+| Static Batching | 凑齐才开始 | 简单但长请求阻塞 |
+| Dynamic Batching | 请求级聚合+超时 | 提吞吐但引入等待 |
+| **Continuous Batching** | 每轮 iteration 重建 batch | 吞吐+延迟兼顾，实现复杂 |
+
+#### ③ Latency 隐藏（Day6）
+
+| 手段 | 作用 |
+|------|------|
+| CUDA Graph | 消除 per-step launch overhead |
+| torch.compile / kernel fusion | 减少 kernel 数 |
+| Async Copy | overlap 传输与计算 |
+| Speculative Decoding | 小模型预测+大模型验证 |
+| Chunked Prefill | 大 prefill 拆块与 decode 交错 |
+
+#### ④ 调度开销（Day3/Day6）
+
+| 来源 | 优化 |
+|------|------|
+| Python GIL | 核心逻辑 C++ |
+| 重建 input tensors | 预分配 buffer |
+| 内存 alloc/free | 预分配 + 复用 |
+| CPU-GPU 同步 | 异步采样、减少 cudaSynchronize |
+
+> 💡 四大问题交织：内存管理决定能服务多少请求，Batch 策略决定吞吐，Latency 隐藏决定单请求延迟，调度开销决定系统效率。
+
+---
+
+### 优化速查表（现象 → 检查 → 解决）
+
+![推理系统优化速查表](../website/images/optimization_cheatsheet.svg)
+
+| 现象 | 检查方法 | 解决方案 |
+|------|---------|---------|
+| TTFT 过高 | profile prefill，看 TTFT vs N 增长 | FlashAttention、Tensor Core、并行 prefill |
+| TBT 过高 | profile decode，看 breakdown | KV Cache、PagedAttention、量化、GQA |
+| TBT 随 L 增长 | 扫描不同 L | GQA/MQA、滑动窗口、稀疏 attention |
+| 显存 OOM | 监控显存，算 cache 占用 | PagedAttention、INT8 KV、减 batch |
+| Kernel 间隙大 | nsys timeline，看 gap 占比 | CUDA Graph、torch.compile、kernel fusion |
+| 长请求阻塞 batch | 观察完成时间 | Continuous Batching |
+| 多轮对话 TTFT 高 | 检查 cache 复用 | session KV Cache / prefix caching |
+| 显存碎片 | block allocator 看 free block | PagedAttention |
+| Throughput 低 | nsys SM util | 增大 batch、continuous batching |
+
+> 使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day6 决策树验证。
+
+---
+
+### 面试准备框架
+
+#### 本周 17 道核心面试题（按主题分组）
+
+**Prefill/Decode（Day1/Day6）**
+1. Prefill vs Decode 的区别和瓶颈？
+2. TTFT 和 TBT 是什么？如何优化？
+3. 如何做端到端 profiling？
+4. TBT 为什么随序列长度增长？
+
+**KV Cache（Day2/Day5）**
+5. KV Cache 核心思想和收益？
+6. KV Cache 内存占用如何计算？
+7. 静态 vs 动态 KV Cache 分配？
+8. Prefill/Decode 各存什么到 KV Cache？
+9. 如何构建最简单的推理引擎？
+
+**vLLM 架构（Day3）**
+10. vLLM 整体架构？
+11. SequenceGroup 是什么？
+12. Scheduler 依据什么决策？
+13. Preemption 两种策略？
+
+**PagedAttention（Day4）**
+14. PagedAttention 解决什么问题？
+15. Copy-on-Write 应用场景？
+
+**核心问题（Day7）**
+16. 推理系统四大核心问题？
+17. Continuous vs Dynamic Batching？
+
+#### 答题框架
+
+```
+1. 先定性：这属于哪个核心问题（内存/Batch/Latency/调度）？
+2. 给机制：底层原理是什么（compute vs memory-bound、碎片、launch overhead）？
+3. 量化：数据/公式支撑（AI≈0.1、cache=2×L×...、gap>20%）
+4. 给方案：3 个以上优化方向，分"治标"和"治本"
+5. 跨平台：昇腾对照（msprof/PagedAttention 概念一致）
+```
+
+---
+
+### 总结任务 / Coding 任务
+
+#### 任务 1：运行总结自测脚本
+
+运行 [kernels/week5_summary.py](kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
+
+```bash
+python kernels/week5_summary.py
+```
+
+脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
+
+#### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
+
+**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+
+**题目概述**：实现一个完整的 GPT-2 transformer decoder block（Pre-LN + 12-head self-attention + FFN(GELU) + 两次残差）。GPT-2 124M 配置：`d_model=768, n_heads=12, d_head=64, ffn_dim=3072`，性能测试 `seq_len=1024`。
+
+**与本周总结的关联**：这是 Week 5 的**综合压轴题**——把本周所有概念融于一身：attention（Day1/4 的 QK^T/softmax/PV）、KV Cache 服务对象（Day2）、GEMM compute-bound（Day6 的 Prefill）、整层 = Mini 引擎 `model.forward` 的单层（Day5）。同一个 block 里既有 compute-bound（GEMM）又有 memory-bound（LN/GELU/residual）算子，正是 Day6 profiling 方法论的完整实践对象。做好这题说明你理解了 transformer 推理的完整数据流——Week 5 毕业。
+
+> 💡 完整题解（含 LayerNorm/MHA/GELU/residual kernel + cuBLAS GEMM 拼装 + ncu 分析各子算子瓶颈 + 优化策略对比）见 [GPT-2 Transformer Block 题解](../../leetgpu/week5/day7/leetgpu-gpt-2-transformer-block-solution.md)。
+
+#### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
+
+**题目链接**：[25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/)
+
+**题目概述**：每 k 个节点一组翻转链表，不足 k 保持原序。dummy 节点 + 分组翻转 + 串接，O(n) 时间 O(1) 空间。
+
+**与本周总结的关联**：本题是 **Chunked Prefill 的算法直觉**——把"大块连续处理"拆成"固定大小分段处理，尾段特殊处理"。翻转链表的"不足 k 保持原序" = Chunked Prefill 的"最后一块可能不满"。两者都是推理系统处理变长输入的通用分治范式，正是本周四大核心问题中"Latency 隐藏"（chunked prefill 与 decode 交错）的算法基础。
+
+**核心套路**：`dummy` + 外层按组 + 内层翻转（`prev` 初始化为 `nextGroup` 让翻转后尾自动接下一组）。
+
+> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](../../leetcode/daily/week5/day7/K个一组翻转链表.md)。
+
+---
+
+### 常见误区澄清
+
+1. **"Decode 慢是因为算力不够"** —— 错。Decode 慢是 memory-bound（M=1，AI≈0.1），SM 空闲等数据。加算力没用，要减数据搬运（KV 量化/GQA）或抬 M（Continuous Batching）。
+2. **"KV Cache 越大越好"** —— 错。Cache 大显存压力，长文本/大 batch OOM。要在"避免重算"和"显存占用"间权衡，用量化/GQA 压缩。
+3. **"Continuous Batching 就是 Dynamic Batching"** —— 错。Dynamic 是请求级聚合（凑一批一起开始结束），Continuous 是 iteration 级（每轮重建 batch，完成即走）。后者才是 LLM 推理标配。
+4. **"PagedAttention 是为了加速"** —— 错。PagedAttention 是内存管理（解决碎片），不直接加速单次 attention。它让 Continuous Batching 的 slot 回收无碎片化，间接提吞吐。
+5. **"profiling 就是测时间"** —— 不全。profiling 三层：nsys 看时间线/gap、cuda.Event 测阶段指标、ncu 看 kernel 带宽/算力利用率。要定位"为什么慢"而非只测"多慢"。
+
+---
+
+### Week 5 → Week 6 衔接
+
+Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 6 深入**Batching & 调度优化**：
+
+| Week 5（理解 + 造引擎） | Week 6（深入优化） |
+|------------------------|-------------------|
+| Continuous Batching 概念 | 深入实现 + chunked prefill + mixed batching |
+| CUDA Graph 提及 | 手写 CUDA Graph 录制 decode 循环 |
+| Mini 引擎 v0（单请求） | 引擎 v1（多请求 + Continuous Batching） |
+| profiling 方法论 | 用 profiling 数据驱动 v0→v1 优化 |
+| 调度开销概念 | torch.compile / 自定义 C++ scheduler |
+
+> 💡 Week 6 的核心问题：怎么把 Week 5 的单请求引擎变成高吞吐的多请求服务？Continuous Batching 怎么真正实现？CUDA Graph 怎么录制动态长度的 decode？这些都在 Week 6 展开。
+
+---
+
+### 弹性安排
+
+- **时间紧（≤4h）**：跑 `week5_summary.py` 自测 17 题 + 过一遍四大核心问题 + 速查表
+- **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成性能报告模板
+- **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week5 学习总结博客
+
+---
+
+### 今日总结
+
+Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
+
+1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 profiling 仪表盘 → Day7 核心问题地图
+2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
+3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
+4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
+5. **常见误区澄清**：Decode 慢≠算力不够、Continuous≠Dynamic、PagedAttention 非直接加速、profiling 非只测时间
+6. **Week6 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
+
+掌握这些后，你就有了推理系统的全局视角——Week 6 我们深入 Batching 与调度优化，把 Week 5 的单请求引擎升级为高吞吐服务。
+
+---
+
+### 面试要点
+
+1. **设计一个 LLM 推理服务时，需要考虑哪些核心问题？**
+
+   - 四大核心问题：
+     1. **内存管理**：KV Cache 动态增长与显存限制 → PagedAttention、量化、GQA/MQA
+     2. **Batch 策略**：如何组合请求平衡吞吐和延迟 → Continuous Batching（每轮重建 batch）
+     3. **Latency 隐藏**：compute 与 communication overlap → CUDA Graph、async copy、speculative decoding、chunked prefill
+     4. **调度开销**：最小化调度延迟 → 核心逻辑 C++、预分配 buffer、异步采样
+   - 另需考虑：扩展性（多 GPU TP/PP）、正确性（数值精度、cache 一致性）
+   - 四者交织：内存决定能服务多少请求，Batch 决定吞吐，Latency 隐藏决定单请求延迟，调度决定效率
+
+2. **Continuous Batching 和 Dynamic Batching 有什么区别？**
+
+   - **Dynamic Batching**：请求级别聚合，等待凑够 batch size 或超时。一个 batch 内所有请求一起开始、一起结束——长请求阻塞整个 batch
+   - **Continuous Batching（Inflight Batching）**：iteration 级别 batching，每轮重新构建 batch。新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
+   - 对比：Continuous 更适合 LLM 自回归生成（生成长度差异大），吞吐提升 2-8x。前提是 PagedAttention 的细粒度 block 管理（否则完成请求的 cache 释放碎片化）
+
+3. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
+
+   - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + N×N attention）。优化：FlashAttention（IO 从 O(N²) 降到 O(Nd)）、Tensor Core、并行 prefill、reduce prompt 长度
+   - **TBT 高（Decode 慢）**：Decode 是 memory-bound（M=1，读 KV Cache）。优化：KV Cache 量化（INT8/FP8）、GQA/MQA（减 KV 头）、PagedAttention、Continuous Batching（抬 M）
+   - 若 TBT 随 L 增长 → 读 KV 随 L 增大 → 滑动窗口/稀疏 attention
+   - 若 TBT 稳定但绝对值高 → launch overhead → CUDA Graph、torch.compile
+
+4. **PagedAttention 和 Continuous Batching 是什么关系？**
+
+   - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
+   - Continuous Batching：每轮重建 batch，完成即走——但"释放 slot"要无碎片，否则回收的显存拼不出大块
+   - PagedAttention：block 粒度分配/回收，空闲 block 随时复用——让 Continuous Batching 的高频 slot 回收无碎片化
+   - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；没有 Continuous Batching，PagedAttention 的动态分配无用武之地
+
+5. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+
+   - **原因**：序列变长，KV Cache 变大，每步 Decode 读更多历史 K/V（attention 的 1×L 部分）。KV 超出 L2/L1 cache 后掉 HBM，访存随 L 增长 → TBT 增长
+   - **优化方向**：
+     1. KV Cache 量化（INT8/FP8）：减半/减 1/4 数据量
+     2. GQA/MQA：减少 KV 头数，cache 缩 4x+
+     3. 滑动窗口/稀疏 attention：只保留最近 K 个 token
+     4. PagedAttention：高效管理 cache（间接支持更大 batch）
+     5. Continuous Batching：合并多个 decode 请求，抬高 M 提升带宽利用
+
+---
+
+## 📁 本周目录结构
+
+```
+aiinfra/week5/
+├── README.md                      # 周概览
+├── day1/kernels/prefill_decode_simulation.py   # Prefill/Decode 模拟
+├── day2/kernels/kv_cache.cu                    # KVCache 类
+├── day3/kernels/mini_vllm_scheduler.py         # mini vLLM 调度器
+├── day4/kernels/paged_attention.cu             # PagedAttention kernel
+├── day5/kernels/mini_engine_v0.py              # Mini 推理引擎 v0
+├── day6/kernels/profile_engine_v0.py           # 端到端 profiling
+├── day7/kernels/week5_summary.py               # 总结日自测脚本
+└── website/images/                             # 22 张 SVG
+leetgpu/week5/day1-7/                           # 7 道 LeetGPU 题解
+leetcode/daily/week5/day1-7/                    # 7 道 LeetCode 题解
+```
+
+## 🔗 推荐资源
+
+- **vLLM 论文**：Efficient Memory Management for Large Language Model Serving with PagedAttention (SOSP 2023)
+- **vLLM 源码**：<https://github.com/vllm-project/vllm>
+- **FlashAttention 论文**：Dao et al., NeurIPS 2022（Week4 已读，推理 prefill 直接适用）
+- **Continuous Batching 博客**：AnyScale "Continuous Batching" / vLLM blog
+- **CUDA Graph 文档**：NVIDIA CUDA C++ Programming Guide → Graphs
+- **nsys/ncu 文档**：NVIDIA Nsight Systems / Nsight Compute
+
+## ✅ Week 5 完成标准
+
+- [ ] 能清晰区分 Prefill 和 Decode 的计算/内存特征，说清各自瓶颈
+- [ ] KV Cache 输出与无 cache 版本一致，理解 5D 布局与显存占用
+- [ ] 能画出 vLLM 架构图（LLMEngine→Scheduler→Worker）并解释请求生命周期
+- [ ] 理解 PagedAttention 的 block table 与 CoW，说清它解决什么碎片问题
+- [ ] Mini 引擎 v0 能完成单条请求完整推理（Prefill+Decode）
+- [ ] 能用 profiling 脚本测量 TTFT 和 per-token decode latency
+- [ ] 能列出推理系统四大核心问题，每个给出 2-3 个解决方案
+- [ ] 能对比 Continuous Batching 和 Dynamic Batching
+- [ ] 完成本周 17 道面试题的自问自答
+- [ ] 整理 GitHub 仓库，生成 Week 5 性能报告
+- [ ] 规划 Week 6（Batching & 调度）的学习重点
