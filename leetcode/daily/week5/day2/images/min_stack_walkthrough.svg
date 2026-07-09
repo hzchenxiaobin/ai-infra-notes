@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="400" viewBox="0 0 920 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+  </defs>
+  <rect width="920" height="400" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">示例演算：push(5,3,7,1), getMin, pop, getMin</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 表头 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="80" height="36" rx="4" fill="#fffdf3" stroke="#9e9e9e"/>
+    <rect x="120" y="70" width="160" height="36" rx="4" fill="#e8f0fe" stroke="#446688"/>
+    <rect x="280" y="70" width="160" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b"/>
+    <rect x="440" y="70" width="200" height="36" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="80" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">操作</text>
+  <text x="200" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">data 栈</text>
+  <text x="360" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">min_stack</text>
+  <text x="540" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">getMin()</text>
+
+  <!-- 行 -->
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="106" width="80" height="34"/><rect x="120" y="106" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="106" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="106" width="200" height="34" fill="#f3f9f3"/></g></g>
+  <text x="80" y="128" text-anchor="middle" font-size="11" fill="#333">push(5)</text>
+  <text x="200" y="128" text-anchor="middle" font-size="11" fill="#2b6e9e">[5]</text>
+  <text x="360" y="128" text-anchor="middle" font-size="11" fill="#7a5415">[5]</text>
+  <text x="540" y="128" text-anchor="middle" font-size="11" fill="#999">—</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="140" width="80" height="34"/><rect x="120" y="140" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="140" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="140" width="200" height="34" fill="#f3f9f3"/></g></g>
+  <text x="80" y="162" text-anchor="middle" font-size="11" fill="#333">push(3)</text>
+  <text x="200" y="162" text-anchor="middle" font-size="11" fill="#2b6e9e">[5, 3]</text>
+  <text x="360" y="162" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">[5, 3]</text>
+  <text x="540" y="162" text-anchor="middle" font-size="11" fill="#999">—</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="174" width="80" height="34"/><rect x="120" y="174" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="174" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="174" width="200" height="34" fill="#f3f9f3"/></g></g>
+  <text x="80" y="196" text-anchor="middle" font-size="11" fill="#333">push(7)</text>
+  <text x="200" y="196" text-anchor="middle" font-size="11" fill="#2b6e9e">[5, 3, 7]</text>
+  <text x="360" y="196" text-anchor="middle" font-size="11" fill="#7a5415">[5, 3, 3]</text>
+  <text x="540" y="196" text-anchor="middle" font-size="11" fill="#999">—</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="208" width="80" height="34"/><rect x="120" y="208" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="208" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="208" width="200" height="34" fill="#f3f9f3"/></g></g>
+  <text x="80" y="230" text-anchor="middle" font-size="11" fill="#333">push(1)</text>
+  <text x="200" y="230" text-anchor="middle" font-size="11" fill="#2b6e9e">[5, 3, 7, 1]</text>
+  <text x="360" y="230" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">[5, 3, 3, 1]</text>
+  <text x="540" y="230" text-anchor="middle" font-size="11" fill="#999">—</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="242" width="80" height="34"/><rect x="120" y="242" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="242" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="242" width="200" height="34" fill="#d9f0d9"/></g></g>
+  <text x="80" y="264" text-anchor="middle" font-size="11" fill="#333">getMin()</text>
+  <text x="200" y="264" text-anchor="middle" font-size="11" fill="#999">不变</text>
+  <text x="360" y="264" text-anchor="middle" font-size="11" fill="#999">不变</text>
+  <text x="540" y="264" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">→ 1 (O(1))</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="276" width="80" height="34"/><rect x="120" y="276" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="276" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="276" width="200" height="34" fill="#f3f9f3"/></g></g>
+  <text x="80" y="298" text-anchor="middle" font-size="11" fill="#333">pop()</text>
+  <text x="200" y="298" text-anchor="middle" font-size="11" fill="#2b6e9e">[5, 3, 7]</text>
+  <text x="360" y="298" text-anchor="middle" font-size="11" fill="#7a5415">[5, 3, 3]</text>
+  <text x="540" y="298" text-anchor="middle" font-size="11" fill="#999">—</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff"><rect x="40" y="310" width="80" height="34"/><rect x="120" y="310" width="160" height="34" fill="#f4f8fe"/><rect x="280" y="310" width="160" height="34" fill="#fbf3e0"/><rect x="440" y="310" width="200" height="34" fill="#d9f0d9"/></g></g>
+  <text x="80" y="332" text-anchor="middle" font-size="11" fill="#333">getMin()</text>
+  <text x="200" y="332" text-anchor="middle" font-size="11" fill="#999">不变</text>
+  <text x="360" y="332" text-anchor="middle" font-size="11" fill="#999">不变</text>
+  <text x="540" y="332" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">→ 3 (O(1))</text>
+
+  <!-- 说明 -->
+  <g filter="url(#sk)">
+    <rect x="660" y="106" width="240" height="238" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="780" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">关键不变量</text>
+  <text x="676" y="154" font-size="11" fill="#444">min_stack 的第 i 个元素</text>
+  <text x="676" y="172" font-size="11" fill="#444">= data 栈底到第 i 个元素</text>
+  <text x="676" y="190" font-size="11" fill="#444">  的最小值</text>
+  <text x="676" y="220" font-size="11" fill="#b03a3a" font-weight="bold">因此 getMin()</text>
+  <text x="676" y="238" font-size="11" fill="#b03a3a" font-weight="bold">= min_stack.top()</text>
+  <text x="676" y="256" font-size="11" fill="#444">无需遍历 data 栈</text>
+  <text x="676" y="286" font-size="11" font-weight="bold" fill="#2e6e2e">pop 时两栈同步</text>
+  <text x="676" y="304" font-size="11" fill="#444">弹出，min 自动</text>
+  <text x="676" y="322" font-size="11" fill="#444">回退到上一层的值</text>
+
+  <text x="460" y="376" text-anchor="middle" font-size="11" fill="#666">注意：push(7) 时 7 &gt; 当前 min 3，min_stack 仍压入 3（复制当前最小），保证两栈等高、pop 同步</text>
+</svg>

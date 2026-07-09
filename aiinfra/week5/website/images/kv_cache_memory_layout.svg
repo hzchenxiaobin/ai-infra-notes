@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="520" viewBox="0 0 940 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="520" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">KV Cache 内存布局：(num_layers, B, H, max_seq_len, d_head)</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 左侧：5D 张量嵌套框 -->
+  <text x="40" y="74" font-size="13" font-weight="bold" fill="#2b6e9e">K Cache 张量（V Cache 结构相同）</text>
+
+  <!-- num_layers 外框 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="84" width="400" height="360" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="56" y="104" font-size="12" fill="#2b6e9e">num_layers（如 32）</text>
+
+  <!-- batch 内框 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="114" width="360" height="310" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="76" y="132" font-size="11" fill="#7a5415">batch_size (B)</text>
+
+  <!-- heads 内框 -->
+  <g filter="url(#sk)">
+    <rect x="80" y="142" width="320" height="260" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="96" y="160" font-size="11" fill="#2e6e2e">num_heads (H)</text>
+
+  <!-- max_seq_len × d_head 网格 -->
+  <g filter="url(#sk)">
+    <rect x="100" y="170" width="280" height="200" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/>
+  </g>
+  <text x="116" y="188" font-size="11" fill="#7a5415">max_seq_len × d_head</text>
+
+  <!-- 网格小格 -->
+  <g filter="url(#sk)">
+    <g stroke="#d6a040" fill="#fff2cc" stroke-width="0.6">
+      <rect x="100" y="196" width="24" height="22"/>
+      <rect x="124" y="196" width="24" height="22"/>
+      <rect x="148" y="196" width="24" height="22"/>
+      <rect x="172" y="196" width="24" height="22"/>
+      <rect x="100" y="218" width="24" height="22"/>
+      <rect x="124" y="218" width="24" height="22"/>
+      <rect x="148" y="218" width="24" height="22"/>
+      <rect x="172" y="218" width="24" height="22"/>
+    </g>
+    <text x="210" y="212" font-size="10" fill="#888">d_head →</text>
+    <text x="210" y="230" font-size="10" fill="#888">(如 128)</text>
+  </g>
+  <!-- 标注 max_seq_len 方向 -->
+  <path d="M 90 200 L 90 360" stroke="#7a5415" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" transform="rotate(180 90 280)"/>
+  <text x="78" y="284" font-size="10" fill="#7a5415" transform="rotate(-90 78 284)">max_seq_len ↓</text>
+
+  <!-- 已填充 vs 未填充 区分 -->
+  <g filter="url(#sk)">
+    <rect x="100" y="196" width="80" height="44" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.5" opacity="0.7"/>
+  </g>
+  <text x="140" y="260" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">已填充 (0..seq_len)</text>
+  <text x="260" y="260" text-anchor="middle" font-size="10" fill="#999">未填充 (seq_len..max)</text>
+
+  <!-- 右侧：每 token 大小公式 -->
+  <g filter="url(#sk)">
+    <rect x="480" y="84" width="420" height="160" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="500" y="108" font-size="13" font-weight="bold" fill="#7a2828">每 token KV Cache 大小</text>
+  <text x="500" y="134" font-size="13" fill="#234">= 2 × num_layers × num_heads × d_head × bytes</text>
+  <text x="500" y="156" font-size="11" fill="#666">  （2 = K 和 V 各一份）</text>
+  <text x="500" y="184" font-size="12" fill="#234" font-weight="bold">LLaMA-7B 示例（fp16）:</text>
+  <text x="500" y="204" font-size="11" fill="#444">2 × 32 × 32 × 128 × 2 B = 524,288 B ≈ 524 KB / token</text>
+  <text x="500" y="222" font-size="11" fill="#b03a3a" font-weight="bold">4096 tokens → 2 GB；batch=16 → 32 GB</text>
+
+  <!-- 右下：总大小公式 -->
+  <g filter="url(#sk)">
+    <rect x="480" y="260" width="420" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="500" y="284" font-size="13" font-weight="bold" fill="#2b2b2b">总 KV Cache 大小</text>
+  <text x="500" y="308" font-size="13" fill="#234">= batch_size × seq_len × per_token_size</text>
+  <text x="500" y="332" font-size="12" fill="#444">= B × L × 2 × n_layers × n_heads × d_head × bytes</text>
+  <text x="500" y="358" font-size="11" fill="#2e6e2e" font-weight="bold">→ 这就是 KV Cache 是长文本/大 batch 瓶颈的原因</text>
+
+  <!-- 底部：layout 选择说明 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="460" width="860" height="46" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="56" y="482" font-size="12" font-weight="bold" fill="#2b6e9e">为什么这样排布？</text>
+  <text x="56" y="498" font-size="11" fill="#444">d_head 连续 → 同一 token 同一 head 的 d 维内存连续，coalesced 读取；seq_len 维可增量 append 不搬移已有数据。</text>
+</svg>

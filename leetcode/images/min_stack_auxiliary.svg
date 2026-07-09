@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="440" viewBox="0 0 920 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="440" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">最小栈：辅助栈同步维护 running min</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="72" text-anchor="middle" font-size="12" fill="#666">data 栈存原始数据，min_stack 栈同步存"到当前为止的最小值"，getMin() 直接读 min_stack.top()</text>
+
+  <!-- 两栈并排 -->
+  <text x="200" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">data 栈</text>
+  <text x="560" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">min_stack（辅助）</text>
+
+  <!-- 步骤标注 -->
+  <text x="40" y="130" font-size="11" fill="#666" font-weight="bold">push(5):</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="116" width="100" height="28" rx="3" fill="#e8f0fe" stroke="#446688"/>
+  </g>
+  <text x="200" y="135" text-anchor="middle" font-size="12" fill="#333">5</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="116" width="100" height="28" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="560" y="135" text-anchor="middle" font-size="12" fill="#7a5415">min=5</text>
+
+  <text x="40" y="168" font-size="11" fill="#666" font-weight="bold">push(3):</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="154" width="100" height="28" rx="3" fill="#e8f0fe" stroke="#446688"/>
+  </g>
+  <text x="200" y="173" text-anchor="middle" font-size="12" fill="#333">3</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="154" width="100" height="28" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="560" y="173" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">min=3</text>
+  <text x="630" y="173" font-size="10" fill="#b03a3a">← 3 &lt; 5，更新最小</text>
+
+  <text x="40" y="206" font-size="11" fill="#666" font-weight="bold">push(7):</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="192" width="100" height="28" rx="3" fill="#e8f0fe" stroke="#446688"/>
+  </g>
+  <text x="200" y="211" text-anchor="middle" font-size="12" fill="#333">7</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="192" width="100" height="28" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="560" y="211" text-anchor="middle" font-size="12" fill="#7a5415">min=3</text>
+  <text x="630" y="211" font-size="10" fill="#2e6e2e">← 7 &gt; 3，复制当前最小</text>
+
+  <text x="40" y="244" font-size="11" fill="#666" font-weight="bold">push(1):</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="230" width="100" height="28" rx="3" fill="#e8f0fe" stroke="#446688"/>
+  </g>
+  <text x="200" y="249" text-anchor="middle" font-size="12" fill="#333">1</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="230" width="100" height="28" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="560" y="249" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">min=1</text>
+  <text x="630" y="249" font-size="10" fill="#b03a3a">← 1 &lt; 3，更新最小</text>
+
+  <!-- getMin -->
+  <g filter="url(#sk)">
+    <rect x="40" y="280" width="300" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="190" y="300" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">getMin() → 读 min_stack.top() = 1</text>
+  <text x="190" y="316" text-anchor="middle" font-size="11" fill="#444">O(1)，不遍历 data 栈</text>
+
+  <!-- pop -->
+  <g filter="url(#sk)">
+    <rect x="40" y="332" width="300" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="190" y="352" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">pop() → data.pop() + min_stack.pop()</text>
+  <text x="190" y="368" text-anchor="middle" font-size="11" fill="#444">两栈同步弹出，min 自动回退到 3</text>
+
+  <!-- 右侧类比 -->
+  <g filter="url(#sk)">
+    <rect x="660" y="116" width="240" height="260" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="780" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">与 KV Cache 的模式类比</text>
+  <text x="676" y="166" font-size="11" fill="#444">最小栈：缓存"栈内最小值"</text>
+  <text x="676" y="184" font-size="11" fill="#444">  → getMin 不必遍历栈 O(n)→O(1)</text>
+  <text x="676" y="212" font-size="11" fill="#444">KV Cache：缓存"历史 K/V"</text>
+  <text x="676" y="230" font-size="11" fill="#444">  → decode 不必重算前缀</text>
+  <text x="676" y="248" font-size="11" fill="#444">    O(L·d²)→O(d²)</text>
+  <text x="676" y="278" font-size="11" font-weight="bold" fill="#2e6e2e">共同模式：</text>
+  <text x="676" y="296" font-size="11" fill="#2e6e2e">  空间换时间</text>
+  <text x="676" y="314" font-size="11" fill="#2e6e2e">  + 辅助状态随主数据</text>
+  <text x="676" y="332" font-size="11" fill="#2e6e2e">    增量维护（同步 push）</text>
+  <text x="676" y="356" font-size="10" fill="#666" font-style="italic">min_stack ≈ k_cache</text>
+
+  <!-- 底部 -->
+  <text x="460" y="406" text-anchor="middle" font-size="11" fill="#666">核心：每次 push 同步维护辅助栈（min_stack 存 min(x, min_stack.top())），保证任意时刻 getMin = min_stack.top()</text>
+  <text x="460" y="426" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">用 O(n) 额外空间，把 O(n) 查询压成 O(1)</text>
+</svg>
