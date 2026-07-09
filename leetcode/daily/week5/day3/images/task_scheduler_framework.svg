@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="480" viewBox="0 0 920 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+  </defs>
+  <rect width="920" height="480" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">任务调度器：贪心排最高频 + 填充冷却间隙</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="72" text-anchor="middle" font-size="12" fill="#666">tasks = [A,A,A,B,B,B], n = 2 → 最少 8 单位时间</text>
+
+  <!-- 框架：(max_freq-1) × (n+1) + max_count -->
+  <g filter="url(#sk)">
+    <rect x="40" y="90" width="500" height="200" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="114" font-size="13" font-weight="bold" fill="#7a5415">构造框架：最高频任务 A 出现 3 次，n=2</text>
+  <text x="60" y="134" font-size="11" fill="#444">A → _ → _ → A → _ → _ → A   （每组 n+1=3 格，共 max_freq-1=2 个完整组 + 末尾 1 个 A）</text>
+
+  <!-- 框架格子 -->
+  <g filter="url(#sk)">
+    <g stroke="#d6a040" stroke-width="1">
+      <rect x="60" y="146" width="50" height="40" rx="3" fill="#f0d9a8"/>
+      <rect x="112" y="146" width="50" height="40" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <rect x="164" y="146" width="50" height="40" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <rect x="216" y="146" width="50" height="40" rx="3" fill="#f0d9a8"/>
+      <rect x="268" y="146" width="50" height="40" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <rect x="320" y="146" width="50" height="40" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <rect x="372" y="146" width="50" height="40" rx="3" fill="#f0d9a8"/>
+    </g>
+  </g>
+  <text x="85" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="137" y="170" text-anchor="middle" font-size="11" fill="#bbb">_</text>
+  <text x="189" y="170" text-anchor="middle" font-size="11" fill="#bbb">_</text>
+  <text x="241" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="293" y="170" text-anchor="middle" font-size="11" fill="#bbb">_</text>
+  <text x="345" y="170" text-anchor="middle" font-size="11" fill="#bbb">_</text>
+  <text x="397" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a0a">A</text>
+
+  <text x="60" y="210" font-size="11" fill="#444">填充：B 也出现 3 次，正好填入 3 个空位（每组 1 个 B）</text>
+  <g filter="url(#sk)">
+    <g stroke="#4a8e4a" stroke-width="1.2">
+      <rect x="112" y="146" width="50" height="40" rx="3" fill="#bfe0bf"/>
+      <rect x="268" y="146" width="50" height="40" rx="3" fill="#bfe0bf"/>
+      <rect x="372" y="146" width="50" height="40" rx="3" fill="#bfe0bf"/>
+    </g>
+  </g>
+  <text x="137" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">B</text>
+  <text x="293" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">B</text>
+  <text x="397" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">B</text>
+
+  <text x="60" y="250" font-size="12" fill="#7a5415" font-weight="bold">框架大小 = (max_freq-1) × (n+1) + max_count = 2 × 3 + 1 = 7</text>
+  <text x="60" y="272" font-size="11" fill="#444">但还有第 3 个 B 放不下框架 → 追加到末尾，总时间 = max(7, 8) = 8</text>
+
+  <!-- 公式 -->
+  <g filter="url(#sk)">
+    <rect x="560" y="90" width="320" height="120" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="720" y="116" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">通用公式</text>
+  <text x="720" y="142" text-anchor="middle" font-size="13" fill="#234" font-family="monospace">max_freq = 最高频任务次数</text>
+  <text x="720" y="162" text-anchor="middle" font-size="13" fill="#234" font-family="monospace">max_count = 并列最高的任务种数</text>
+  <text x="720" y="186" text-anchor="middle" font-size="14" fill="#b03a3a" font-weight="bold" font-family="monospace">ans = max(</text>
+  <text x="720" y="202" text-anchor="middle" font-size="12" fill="#b03a3a" font-family="monospace">(max_freq-1)×(n+1)+max_count, len(tasks))</text>
+
+  <!-- 与 Continuous Batching 类比 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="310" width="840" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="334" font-size="13" font-weight="bold" fill="#2b2b2b">与 vLLM Continuous Batching 的模式类比</text>
+  <text x="60" y="358" font-size="12" fill="#b03a3a">任务调度器：高频任务 A 之间有冷却间隙 → 用低频任务 B 填充，消除 idle</text>
+  <text x="60" y="380" font-size="12" fill="#2e6e2e">Continuous Batching：完成请求释放 slot → 用 waiting 新请求填充，消除空等</text>
+  <text x="60" y="406" font-size="12" fill="#444">共同模式：资源约束下的填充——用"次要工作"填满"主要工作"留下的间隙，最大化吞吐</text>
+  <text x="60" y="430" font-size="12" fill="#444">差异：任务调度器的间隙来自冷却（同类任务间隔 n），CB 的间隙来自请求长度不齐</text>
+  <text x="60" y="452" font-size="11" fill="#7a5415" font-weight="bold">本质都是"在约束下排满时间线，不浪费任何一个 slot"</text>
+</svg>
