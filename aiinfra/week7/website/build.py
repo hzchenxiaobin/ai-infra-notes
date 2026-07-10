@@ -123,7 +123,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
-    # Titles for all weeks; week 6 title is hardcoded, others come from the plan.
+    # Titles for all weeks; week 7 title is hardcoded, others come from the plan.
     week_titles = {7: "系统整合"}
     for week in weeks:
         week_titles[week["num"]] = week["title"]
@@ -163,13 +163,19 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         },
         {
             "num": 6,
+            "href": "../week6/index.html",
+            "day_prefix": "../week6/",
+            "days": get_day_numbers(repo_root / "week6"),
+        },
+        {
+            "num": 7,
             "href": "index.html",
             "day_prefix": "",
             "days": existing_days,
         },
     ]
     for week in weeks:
-        if week["num"] <= 6:
+        if week["num"] <= 7:
             continue
         week_data.append({
             "num": week["num"],
@@ -179,7 +185,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         })
 
     for info in week_data:
-        is_current = info["num"] == 6
+        is_current = info["num"] == 7
         expanded_cls = " is-expanded" if is_current else ""
         active_cls = " active" if is_current else ""
         aria_expanded = "true" if is_current else "false"
