@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="61" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">最小覆盖子串：滑动窗口（扩张-收缩）</text>
+  <path d="M 290 40 Q 450 48 610 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- string s -->
+  <text x="60" y="74" font-size="12" font-weight="bold" fill="#2b6e9e">s = A D O B E C O D E B A N C   t = A B C</text>
+
+  <!-- window states -->
+  <!-- state 1: expand -->
+  <g filter="url(#sk)">
+    <rect x="60" y="90" width="780" height="50" rx="6" fill="#fffdf3" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)"><rect x="60" y="90" width="30" height="50" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="90" y="90" width="30" height="50" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="120" y="90" width="30" height="50" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="150" y="90" width="30" height="50" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="180" y="90" width="30" height="50" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="75" y="120" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">A</text>
+  <text x="105" y="120" text-anchor="middle" font-size="12" fill="#888">D</text>
+  <text x="135" y="120" text-anchor="middle" font-size="12" fill="#888">O</text>
+  <text x="165" y="120" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">B</text>
+  <text x="195" y="120" text-anchor="middle" font-size="12" fill="#888">E</text>
+  <text x="220" y="80" font-size="10" fill="#2b6e9e" font-weight="bold">① 扩张右指针找覆盖</text>
+  <text x="380" y="120" font-size="10" fill="#888">... 已含 A,B，还差 C → 继续扩</text>
+
+  <!-- state 2: covered, shrink -->
+  <g filter="url(#sk)">
+    <rect x="60" y="156" width="780" height="50" rx="6" fill="#fffdf3" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)"><rect x="60" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="90" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="120" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="150" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="180" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <g filter="url(#sk)"><rect x="210" y="156" width="30" height="50" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="75" y="186" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">A</text>
+  <text x="105" y="186" text-anchor="middle" font-size="12" fill="#888">D</text>
+  <text x="135" y="186" text-anchor="middle" font-size="12" fill="#888">O</text>
+  <text x="165" y="186" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">B</text>
+  <text x="195" y="186" text-anchor="middle" font-size="12" fill="#888">E</text>
+  <text x="225" y="186" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">C</text>
+  <text x="260" y="146" font-size="10" fill="#2e6e2e" font-weight="bold">② 已覆盖(A,B,C)！收缩左指针找最小</text>
+  <text x="490" y="186" font-size="10" fill="#888">ADOBEC 长度6 → 记录</text>
+
+  <!-- state 3: shrink done -->
+  <g filter="url(#sk)">
+    <rect x="60" y="222" width="780" height="50" rx="6" fill="#fffdf3" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)"><rect x="150" y="222" width="30" height="50" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+  <g filter="url(#sk)"><rect x="180" y="222" width="30" height="50" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+  <g filter="url(#sk)"><rect x="210" y="222" width="30" height="50" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+  <text x="165" y="252" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">B</text>
+  <text x="195" y="252" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">E</text>
+  <text x="225" y="252" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">C</text>
+  <text x="260" y="212" font-size="10" fill="#b85450" font-weight="bold">③ 最终最小：BANC（长度4）</text>
+  <text x="430" y="252" font-size="10" fill="#888">→ 多轮扩张收缩后找到最小覆盖</text>
+
+  <!-- algorithm -->
+  <g filter="url(#sk)">
+    <rect x="60" y="294" width="780" height="90" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="318" font-size="12" font-weight="bold" fill="#444">算法（双指针滑动窗口）：</text>
+  <text x="80" y="340" font-size="11" fill="#2e6e2e">① right 扩张，直到窗口涵盖 t 全部字符（用 need/dict 计数）</text>
+  <text x="80" y="360" font-size="11" fill="#b85450">② 涵盖后 left 收缩，直到窗口不再涵盖 → 更新最小长度</text>
+  <text x="80" y="378" font-size="11" fill="#7a5415">③ 类比 Scheduler：right=补入 waiting，left=退出 finished，窗口=batch（动态+约束满足）</text>
+</svg>
