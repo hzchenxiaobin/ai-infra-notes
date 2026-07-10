@@ -141,6 +141,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day3 | vLLM Scheduler | Stream Compaction | [leetgpu-stream-compaction-solution.md](../../leetgpu/week6/day3/leetgpu-stream-compaction-solution.md) |
 | Week6 Day4 | TRT-LLM / Chunked Prefill | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](../../leetgpu/week6/day4/leetgpu-segmented-prefix-sum-solution.md) |
 | Week6 Day5 | Mini 推理引擎 v1 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md) |
+| Week6 Day6 | Latency/Throughput 测试 | Top K Selection | [leetgpu-top-k-selection-solution.md](../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -175,6 +176,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day3 | 设计 / 哈希+双向链表 | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week6/day3/LRU缓存.md) |
 | Week6 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
 | Week6 Day5 | 图 / DFS 连通分量 | 200. 岛屿数量 | [岛屿数量.md](../../leetcode/daily/week6/day5/岛屿数量.md) |
+| Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [买卖股票的最佳时机.md](../../leetcode/daily/week6/day6/买卖股票的最佳时机.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 
