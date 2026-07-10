@@ -139,6 +139,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week2 Day6 | Histogram | Histogramming | [leetgpu-histogramming-solution.md](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md) |
 | Week3 Day6 | Normalization | RMS Normalization | [leetgpu-rms-normalization-solution.md](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) |
 | Week6 Day3 | vLLM Scheduler | Stream Compaction | [leetgpu-stream-compaction-solution.md](../../leetgpu/week6/day3/leetgpu-stream-compaction-solution.md) |
+| Week6 Day4 | TRT-LLM / Chunked Prefill | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](../../leetgpu/week6/day4/leetgpu-segmented-prefix-sum-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -171,6 +172,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week3 Day5 | 树 | 98. 验证二叉搜索树 | [验证二叉搜索树.md](../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
 | Week3 Day6 | 回溯 | 78. 子集 | [子集.md](../../leetcode/daily/week3/day6/子集.md) |
 | Week6 Day3 | 设计 / 哈希+双向链表 | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week6/day3/LRU缓存.md) |
+| Week6 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 

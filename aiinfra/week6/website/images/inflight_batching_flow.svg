@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="420" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Inflight Batching 数据流（TensorRT-LLM 风格）</text>
+  <path d="M 290 40 Q 460 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Request queue -->
+  <text x="60" y="78" font-size="12" font-weight="bold" fill="#2b6e9e">请求队列</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="86" width="90" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="85" y="107" text-anchor="middle" font-size="11" fill="#2b6e9e">R1(prompt=8)</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="124" width="90" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="85" y="145" text-anchor="middle" font-size="11" fill="#2b6e9e">R2(prompt=4)</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="162" width="90" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="85" y="183" text-anchor="middle" font-size="11" fill="#2b6e9e">R3(prompt=24)</text>
+  <text x="40" y="214" font-size="10" fill="#888">新请求随时到达</text>
+
+  <!-- C++ Scheduler -->
+  <path d="M 130 120 L 180 120" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="182" y="78" width="160" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="262" y="100" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">C++ Scheduler</text>
+  <text x="200" y="122" font-size="10" fill="#444">• max_tokens_in_batch</text>
+  <text x="200" y="138" font-size="10" fill="#444">• max_requests_in_batch</text>
+  <text x="200" y="154" font-size="10" fill="#444">• chunked prefill</text>
+  <text x="200" y="170" font-size="10" fill="#444">• 动态加入/退出</text>
+  <text x="200" y="190" font-size="10" fill="#b85450">每轮重建 batch</text>
+
+  <!-- iteration loop arrow -->
+  <path d="M 262 198 Q 262 230 262 230" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="4 2"/>
+
+  <!-- iterations -->
+  <text x="400" y="78" font-size="12" font-weight="bold" fill="#7a5415">每轮 Iteration（动态 batch）</text>
+
+  <!-- iter 1 -->
+  <g filter="url(#sk)">
+    <rect x="380" y="86" width="180" height="44" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="392" y="104" font-size="10" fill="#7a5415" font-weight="bold">iter 1</text>
+  <g filter="url(#sk)"><rect x="392" y="110" width="48" height="16" rx="3" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="416" y="122" text-anchor="middle" font-size="8" fill="#fff">R1 pf8</text>
+  <g filter="url(#sk)"><rect x="444" y="110" width="48" height="16" rx="3" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="468" y="122" text-anchor="middle" font-size="8" fill="#fff">R2 pf4</text>
+  <g filter="url(#sk)"><rect x="496" y="110" width="56" height="16" rx="3" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="524" y="122" text-anchor="middle" font-size="8" fill="#fff">R3 chunk8</text>
+
+  <path d="M 470 130 L 470 142" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- iter 2 -->
+  <g filter="url(#sk)">
+    <rect x="380" y="144" width="180" height="44" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="392" y="162" font-size="10" fill="#7a5415" font-weight="bold">iter 2</text>
+  <g filter="url(#sk)"><rect x="392" y="168" width="40" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="412" y="180" text-anchor="middle" font-size="8" fill="#2e6e2e">R1 dc</text>
+  <g filter="url(#sk)"><rect x="436" y="168" width="40" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="456" y="180" text-anchor="middle" font-size="8" fill="#2e6e2e">R2 dc</text>
+  <g filter="url(#sk)"><rect x="480" y="168" width="64" height="16" rx="3" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="512" y="180" text-anchor="middle" font-size="8" fill="#fff">R3 chunk8</text>
+  <text x="568" y="180" font-size="9" fill="#888">R3 续块</text>
+
+  <path d="M 470 188 L 470 200" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- iter 3 -->
+  <g filter="url(#sk)">
+    <rect x="380" y="202" width="180" height="44" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="392" y="220" font-size="10" fill="#7a5415" font-weight="bold">iter 3</text>
+  <g filter="url(#sk)"><rect x="392" y="226" width="40" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="412" y="238" text-anchor="middle" font-size="8" fill="#2e6e2e">R1 dc</text>
+  <g filter="url(#sk)"><rect x="436" y="226" width="48" height="16" rx="3" fill="#fce4ec" stroke="#b85450"/></g>
+  <text x="460" y="238" text-anchor="middle" font-size="8" fill="#7a2828">R2 done</text>
+  <g filter="url(#sk)"><rect x="488" y="226" width="64" height="16" rx="3" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="520" y="238" text-anchor="middle" font-size="8" fill="#fff">R3 chunk8</text>
+  <text x="568" y="238" font-size="9" fill="#b85450">R2 退出</text>
+
+  <path d="M 470 246 L 470 258" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- iter 4 -->
+  <g filter="url(#sk)">
+    <rect x="380" y="260" width="180" height="44" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="392" y="278" font-size="10" fill="#7a5415" font-weight="bold">iter 4</text>
+  <g filter="url(#sk)"><rect x="392" y="284" width="40" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="412" y="296" text-anchor="middle" font-size="8" fill="#2e6e2e">R1 dc</text>
+  <g filter="url(#sk)"><rect x="436" y="284" width="48" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="460" y="296" text-anchor="middle" font-size="8" fill="#2e6e2e">R3 dc</text>
+  <text x="492" y="296" font-size="9" fill="#888">R3 prefill 完成</text>
+
+  <!-- TRT engine -->
+  <path d="M 560 180 L 640 180" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="642" y="120" width="170" height="120" rx="10" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.6"/>
+  </g>
+  <text x="727" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a2e7e">TensorRT Engine</text>
+  <text x="660" y="164" font-size="10" fill="#444">• 预编译 plan</text>
+  <text x="660" y="180" font-size="10" fill="#444">• fused kernels</text>
+  <text x="660" y="196" font-size="10" fill="#444">• KV Cache 管理</text>
+  <text x="660" y="212" font-size="10" fill="#444">• in-place context</text>
+  <text x="660" y="232" font-size="10" fill="#b85450">C++ 深度集成</text>
+
+  <!-- legend + key points -->
+  <g filter="url(#sk)">
+    <rect x="40" y="300" width="840" height="100" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="324" font-size="11" font-weight="bold" fill="#444">关键点：</text>
+  <g filter="url(#sk)"><rect x="60" y="334" width="16" height="12" rx="2" fill="#c98a2b" stroke="#7a5415"/></g>
+  <text x="82" y="344" font-size="10" fill="#444">prefill / chunk</text>
+  <g filter="url(#sk)"><rect x="180" y="334" width="16" height="12" rx="2" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="202" y="344" font-size="10" fill="#444">decode</text>
+  <g filter="url(#sk)"><rect x="270" y="334" width="16" height="12" rx="2" fill="#fce4ec" stroke="#b85450"/></g>
+  <text x="292" y="344" font-size="10" fill="#444">完成退出</text>
+
+  <text x="60" y="368" font-size="11" fill="#2e6e2e">• Inflight = Continuous：请求任意 iter 加入/退出，batch size 动态变化（3→3→3→2）</text>
+  <text x="60" y="386" font-size="11" fill="#7a5415">• Chunked Prefill：R3(prompt=24) 分 3 个 chunk(8/8/8) 与 decode 交错，iter4 才开始 decode</text>
+</svg>

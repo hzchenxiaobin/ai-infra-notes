@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">三大推理框架调度策略对比</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- column headers -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="200" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="140" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">vLLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="260" y="60" width="200" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="360" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">TensorRT-LLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="480" y="60" width="200" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="580" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">LightLLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="700" y="60" width="200" height="34" rx="6" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5"/>
+  </g>
+  <text x="800" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a2e7e">昇腾 MindIE</text>
+
+  <!-- row: Batching 术语 -->
+  <text x="20" y="116" font-size="11" fill="#444" font-weight="bold">Batching</text>
+  <g filter="url(#sk)"><rect x="40" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="119" text-anchor="middle" font-size="10" fill="#2b6e9e">Continuous Batching</text>
+  <g filter="url(#sk)"><rect x="260" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="119" text-anchor="middle" font-size="10" fill="#2e6e2e">Inflight Batching</text>
+  <g filter="url(#sk)"><rect x="480" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="119" text-anchor="middle" font-size="10" fill="#7a5415">Dynamic Split Fuse</text>
+  <g filter="url(#sk)"><rect x="700" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="119" text-anchor="middle" font-size="10" fill="#5a2e7e">动态批处理</text>
+
+  <!-- row: 调度器语言 -->
+  <text x="20" y="150" font-size="11" fill="#444" font-weight="bold">调度器</text>
+  <g filter="url(#sk)"><rect x="40" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="153" text-anchor="middle" font-size="10" fill="#2b6e9e">Python</text>
+  <g filter="url(#sk)"><rect x="260" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="153" text-anchor="middle" font-size="10" fill="#2e6e2e">C++</text>
+  <g filter="url(#sk)"><rect x="480" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="153" text-anchor="middle" font-size="10" fill="#7a5415">Python/C++</text>
+  <g filter="url(#sk)"><rect x="700" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="153" text-anchor="middle" font-size="10" fill="#5a2e7e">C++(AscendC)</text>
+
+  <!-- row: KV Cache 管理 -->
+  <text x="20" y="184" font-size="11" fill="#444" font-weight="bold">KV Cache</text>
+  <g filter="url(#sk)"><rect x="40" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="187" text-anchor="middle" font-size="10" fill="#2b6e9e">PagedAttention</text>
+  <g filter="url(#sk)"><rect x="260" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="187" text-anchor="middle" font-size="10" fill="#2e6e2e">PagedAttention</text>
+  <g filter="url(#sk)"><rect x="480" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="187" text-anchor="middle" font-size="10" fill="#7a5415">Token Attention</text>
+  <g filter="url(#sk)"><rect x="700" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="187" text-anchor="middle" font-size="10" fill="#5a2e7e">分页 KV Cache</text>
+
+  <!-- row: Chunked Prefill -->
+  <text x="20" y="218" font-size="11" fill="#444" font-weight="bold">Chunked<br>Prefill</text>
+  <g filter="url(#sk)"><rect x="40" y="202" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="221" text-anchor="middle" font-size="10" fill="#2b6e9e">0.5+ 支持</text>
+  <g filter="url(#sk)"><rect x="260" y="202" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="221" text-anchor="middle" font-size="10" fill="#2e6e2e">原生支持</text>
+  <g filter="url(#sk)"><rect x="480" y="202" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="221" text-anchor="middle" font-size="10" fill="#7a5415">Split Fuse</text>
+  <g filter="url(#sk)"><rect x="700" y="202" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="221" text-anchor="middle" font-size="10" fill="#5a2e7e">分块 prefill</text>
+
+  <!-- row: 性能 -->
+  <text x="20" y="252" font-size="11" fill="#444" font-weight="bold">性能</text>
+  <g filter="url(#sk)"><rect x="40" y="236" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="255" text-anchor="middle" font-size="10" fill="#2b6e9e">高</text>
+  <g filter="url(#sk)"><rect x="260" y="236" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="255" text-anchor="middle" font-size="10" fill="#2e6e2e">很高</text>
+  <g filter="url(#sk)"><rect x="480" y="236" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="255" text-anchor="middle" font-size="10" fill="#7a5415">很高</text>
+  <g filter="url(#sk)"><rect x="700" y="236" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="255" text-anchor="middle" font-size="10" fill="#5a2e7e">高(昇腾优化)</text>
+
+  <!-- row: 灵活性 -->
+  <text x="20" y="286" font-size="11" fill="#444" font-weight="bold">灵活性</text>
+  <g filter="url(#sk)"><rect x="40" y="270" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="289" text-anchor="middle" font-size="10" fill="#2b6e9e">高</text>
+  <g filter="url(#sk)"><rect x="260" y="270" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="289" text-anchor="middle" font-size="10" fill="#2e6e2e">中</text>
+  <g filter="url(#sk)"><rect x="480" y="270" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="289" text-anchor="middle" font-size="10" fill="#7a5415">中</text>
+  <g filter="url(#sk)"><rect x="700" y="270" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="289" text-anchor="middle" font-size="10" fill="#5a2e7e">中</text>
+
+  <!-- row: 主要优势 -->
+  <text x="20" y="320" font-size="11" fill="#444" font-weight="bold">主要优势</text>
+  <g filter="url(#sk)"><rect x="40" y="304" width="200" height="40" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="322" text-anchor="middle" font-size="9" fill="#2b6e9e">生态好、易扩展</text>
+  <text x="140" y="336" text-anchor="middle" font-size="9" fill="#2b6e9e">PagedAttention 首创</text>
+  <g filter="url(#sk)"><rect x="260" y="304" width="200" height="40" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="322" text-anchor="middle" font-size="9" fill="#2e6e2e">NVIDIA 官方优化</text>
+  <text x="360" y="336" text-anchor="middle" font-size="9" fill="#2e6e2e">C++ 调度低开销</text>
+  <g filter="url(#sk)"><rect x="480" y="304" width="200" height="40" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="322" text-anchor="middle" font-size="9" fill="#7a5415">高吞吐</text>
+  <text x="580" y="336" text-anchor="middle" font-size="9" fill="#7a5415">Token Attention 内存池</text>
+  <g filter="url(#sk)"><rect x="700" y="304" width="200" height="40" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="322" text-anchor="middle" font-size="9" fill="#5a2e7e">昇腾原生</text>
+  <text x="800" y="336" text-anchor="middle" font-size="9" fill="#5a2e7e">软硬协同</text>
+
+  <!-- bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="368" width="860" height="76" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="392" font-size="12" font-weight="bold" fill="#444">本质统一：</text>
+  <text x="60" y="412" font-size="11" fill="#444">Continuous / Inflight / Split Fuse 都是 iteration-level 调度，请求动态加入退出、每轮重建 batch</text>
+  <text x="60" y="430" font-size="11" fill="#7a5415">差异在实现语言（Python vs C++）与 KV Cache 管理（PagedAttention vs Token Attention）→ 性能/灵活性权衡</text>
+</svg>
