@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="73" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="420" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Future / Callback / Streaming 三种结果返回</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Future -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="280" height="200" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="180" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Future</text>
+  <text x="60" y="110" font-size="11" fill="#444" font-weight="bold">机制：</text>
+  <text x="60" y="128" font-size="10" fill="#444">submit() → 返回 Future</text>
+  <text x="60" y="144" font-size="10" fill="#444">future.result() 阻塞等待</text>
+  <text x="60" y="168" font-size="11" fill="#2e6e2e" font-weight="bold">优点：</text>
+  <text x="60" y="186" font-size="10" fill="#444">• 接口最简单</text>
+  <text x="60" y="202" font-size="10" fill="#444">• 调用方控制何时等待</text>
+  <text x="60" y="222" font-size="11" fill="#b85450" font-weight="bold">缺点：</text>
+  <text x="60" y="240" font-size="10" fill="#444">• 不适合流式输出</text>
+  <text x="60" y="256" font-size="10" fill="#444">• 大结果占内存</text>
+
+  <!-- Callback -->
+  <g filter="url(#sk)">
+    <rect x="340" y="62" width="280" height="200" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="480" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Callback</text>
+  <text x="360" y="110" font-size="11" fill="#444" font-weight="bold">机制：</text>
+  <text x="360" y="128" font-size="10" fill="#444">submit(callback=fn)</text>
+  <text x="360" y="144" font-size="10" fill="#444">完成时自动调 fn(req_id, result)</text>
+  <text x="360" y="168" font-size="11" fill="#2e6e2e" font-weight="bold">优点：</text>
+  <text x="360" y="186" font-size="10" fill="#444">• 不阻塞调用方</text>
+  <text x="360" y="202" font-size="10" fill="#444">• 结果到达即触发</text>
+  <text x="360" y="222" font-size="11" fill="#b85450" font-weight="bold">缺点：</text>
+  <text x="360" y="240" font-size="10" fill="#444">• 嵌套回调复杂</text>
+  <text x="360" y="256" font-size="10" fill="#444">• 错误处理麻烦</text>
+
+  <!-- Streaming -->
+  <g filter="url(#sk)">
+    <rect x="640" y="62" width="280" height="200" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="780" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Streaming</text>
+  <text x="660" y="110" font-size="11" fill="#444" font-weight="bold">机制：</text>
+  <text x="660" y="128" font-size="10" fill="#444">submit(stream_callback=fn)</text>
+  <text x="660" y="144" font-size="10" fill="#444">每生成 1 token 调 fn(req_id, tok)</text>
+  <text x="660" y="168" font-size="11" fill="#2e6e2e" font-weight="bold">优点：</text>
+  <text x="660" y="186" font-size="10" fill="#444">• 用户体验最好</text>
+  <text x="660" y="202" font-size="10" fill="#444">• token 实时返回（打字机效果）</text>
+  <text x="660" y="222" font-size="11" fill="#b85450" font-weight="bold">缺点：</text>
+  <text x="660" y="240" font-size="10" fill="#444">• 需维护流状态</text>
+  <text x="660" y="256" font-size="10" fill="#444">• 连接管理复杂</text>
+
+  <!-- timeline comparison -->
+  <text x="40" y="290" font-size="13" font-weight="bold" fill="#444">时间线对比：</text>
+
+  <g filter="url(#sk)"><rect x="40" y="300" width="280" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="50" y="320" font-size="10" fill="#2b6e9e">Future: submit...[等待全部]...result 一次性</text>
+
+  <g filter="url(#sk)"><rect x="340" y="300" width="280" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="350" y="320" font-size="10" fill="#2e6e2e">Callback: submit...[后台]...完成触发 fn</text>
+
+  <g filter="url(#sk)"><rect x="640" y="300" width="280" height="30" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="650" y="320" font-size="10" fill="#7a5415">Streaming: submit→tok0→tok1→tok2→...→done</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="345" width="880" height="60" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="369" font-size="11" font-weight="bold" fill="#444">实际系统通常同时支持三种：</text>
+  <text x="60" y="389" font-size="10" fill="#444">Future 用于简单调用，Callback 用于事件驱动，Streaming 用于流式输出（如 ChatGPT 打字机效果）</text>
+</svg>

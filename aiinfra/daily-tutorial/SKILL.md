@@ -143,6 +143,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day5 | Mini 推理引擎 v1 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md) |
 | Week6 Day6 | Latency/Throughput 测试 | Top K Selection | [leetgpu-top-k-selection-solution.md](../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md) |
 | Week6 Day7 | 调度策略总结 | Dot Product | [leetgpu-dot-product-solution.md](../../leetgpu/week6/day7/leetgpu-dot-product-solution.md) |
+| Week7 Day1 | 多请求并发支持 | Matrix Copy | [leetgpu-matrix-copy-solution.md](../../leetgpu/week7/day1/leetgpu-matrix-copy-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -179,6 +180,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day5 | 图 / DFS 连通分量 | 200. 岛屿数量 | [岛屿数量.md](../../leetcode/daily/week6/day5/岛屿数量.md) |
 | Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [买卖股票的最佳时机.md](../../leetcode/daily/week6/day6/买卖股票的最佳时机.md) |
 | Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [最小覆盖子串.md](../../leetcode/daily/week6/day7/最小覆盖子串.md) |
+| Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](../../leetcode/daily/week7/day1/最长连续序列.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 
