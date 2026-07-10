@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="420" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">LRU 缓存：哈希表 + 双向链表</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Hash table -->
+  <text x="110" y="74" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">哈希表 (O(1) 定位)</text>
+  <g filter="url(#sk)">
+    <rect x="40" y="84" width="140" height="180" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="106" font-size="11" fill="#444">key</text>
+  <text x="150" y="106" font-size="11" fill="#444">→ node*</text>
+  <line x1="50" y1="112" x2="170" y2="112" stroke="#9e9e9e" stroke-width="1" filter="url(#sk)"/>
+  <text x="60" y="132" font-size="11" fill="#444">1</text>
+  <text x="150" y="132" font-size="11" fill="#2e6e2e">→ A</text>
+  <text x="60" y="156" font-size="11" fill="#444">2</text>
+  <text x="150" y="156" font-size="11" fill="#2e6e2e">→ B</text>
+  <text x="60" y="180" font-size="11" fill="#444">3</text>
+  <text x="150" y="180" font-size="11" fill="#2e6e2e">→ C</text>
+  <text x="60" y="204" font-size="11" fill="#444">4</text>
+  <text x="150" y="204" font-size="11" fill="#7a2828">→ (淘汰)</text>
+  <text x="60" y="240" font-size="10" fill="#888">value = 指向链表节点</text>
+
+  <!-- Doubly linked list -->
+  <text x="560" y="74" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">双向链表 (维护访问顺序)</text>
+  <text x="430" y="92" font-size="10" fill="#2e6e2e">最近访问 ← head</text>
+  <text x="700" y="92" font-size="10" fill="#b85450">tail → 最久未访问(淘汰)</text>
+
+  <!-- dummy head -->
+  <g filter="url(#sk)">
+    <rect x="200" y="130" width="40" height="40" rx="4" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="220" y="155" text-anchor="middle" font-size="11" fill="#888">H</text>
+
+  <!-- node A -->
+  <g filter="url(#sk)">
+    <rect x="280" y="128" width="90" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="325" y="148" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">A (k=1)</text>
+  <text x="325" y="164" text-anchor="middle" font-size="10" fill="#555">val</text>
+
+  <!-- node B -->
+  <g filter="url(#sk)">
+    <rect x="410" y="128" width="90" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="455" y="148" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">B (k=2)</text>
+  <text x="455" y="164" text-anchor="middle" font-size="10" fill="#555">val</text>
+
+  <!-- node C -->
+  <g filter="url(#sk)">
+    <rect x="540" y="128" width="90" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="585" y="148" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">C (k=3)</text>
+  <text x="585" y="164" text-anchor="middle" font-size="10" fill="#555">val</text>
+
+  <!-- dummy tail -->
+  <g filter="url(#sk)">
+    <rect x="670" y="130" width="40" height="40" rx="4" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="690" y="155" text-anchor="middle" font-size="11" fill="#888">T</text>
+
+  <!-- arrows between nodes (bidirectional) -->
+  <path d="M 240 150 L 278 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 370 150 L 408 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 500 150 L 538 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 630 150 L 668 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 278 160 L 240 160" stroke="#bbb" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 408 160 L 370 160" stroke="#bbb" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 538 160 L 500 160" stroke="#bbb" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- hash -> node pointers -->
+  <path d="M 170 130 Q 240 110 295 126" stroke="#4a8edb" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 170 154 Q 280 130 425 126" stroke="#4a8edb" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 170 178 Q 320 150 555 126" stroke="#4a8edb" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- operations -->
+  <g filter="url(#sk)">
+    <rect x="40" y="220" width="780" height="170" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="244" font-size="13" font-weight="bold" fill="#444">操作流程：</text>
+
+  <text x="60" y="270" font-size="12" fill="#2e6e2e" font-weight="bold">get(key) / put 命中：</text>
+  <text x="80" y="290" font-size="11" fill="#444">① 哈希表 O(1) 定位节点 → ② 从链表摘除 → ③ 移到 head（最近访问）</text>
+
+  <text x="60" y="318" font-size="12" fill="#b85450" font-weight="bold">put 容量满：</text>
+  <text x="80" y="338" font-size="11" fill="#444">① 删除 tail 前一个节点（最久未访问）→ ② 哈希表删对应 key → ③ 新节点插 head</text>
+
+  <text x="60" y="366" font-size="11" fill="#7a5415">★ 哨兵节点 head/tail 省去边界判空，所有插入/删除都是统一的中间操作</text>
+</svg>
