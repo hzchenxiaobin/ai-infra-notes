@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="940" height="480" fill="#fdfcf7"/>
+
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Continuous Batching Iteration 时间线</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">每轮 iteration 重建 batch：完成的退出、新请求插入、GPU 始终满载</text>
+
+  <!-- iter headers -->
+  <g font-size="10" fill="#888" font-weight="bold">
+    <text x="100" y="100" text-anchor="middle">iter 1</text>
+    <text x="220" y="100" text-anchor="middle">iter 2</text>
+    <text x="340" y="100" text-anchor="middle">iter 3</text>
+    <text x="460" y="100" text-anchor="middle">iter 4</text>
+    <text x="580" y="100" text-anchor="middle">iter 5</text>
+    <text x="700" y="100" text-anchor="middle">iter 6</text>
+    <text x="820" y="100" text-anchor="middle">iter 7+</text>
+  </g>
+
+  <!-- S1 row -->
+  <text x="30" y="128" font-size="11" fill="#446688" font-weight="bold">S1 (gen=4)</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="112" width="120" height="28" rx="3" fill="#bcd6f0" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="180" y="112" width="120" height="28" rx="3" fill="#bcd6f0" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="300" y="112" width="120" height="28" rx="3" fill="#bcd6f0" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="420" y="112" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <g font-size="9" fill="#234" text-anchor="middle">
+    <text x="120" y="130">decode 1</text><text x="240" y="130">decode 2</text>
+    <text x="360" y="130">decode 3</text><text x="480" y="130" fill="#b85450" font-weight="bold">✓ done</text>
+  </g>
+
+  <!-- S2 row -->
+  <text x="30" y="168" font-size="11" fill="#4a8e4a" font-weight="bold">S2 (gen=8)</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="180" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="300" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="420" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="540" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="660" y="152" width="120" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="780" y="152" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <g font-size="9" fill="#2e6e2e" text-anchor="middle">
+    <text x="120" y="170">decode 1</text><text x="240" y="170">decode 2</text>
+    <text x="360" y="170">decode 3</text><text x="480" y="170">decode 4</text>
+    <text x="600" y="170">decode 5</text><text x="720" y="170">decode 6</text>
+    <text x="840" y="170" fill="#b85450" font-weight="bold">✓ done</text>
+  </g>
+
+  <!-- S3 row (joins at iter 3) -->
+  <text x="30" y="208" font-size="11" fill="#c98a2b" font-weight="bold">S3 (gen=3)</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="192" width="240" height="28" rx="3" fill="#eee" stroke="#ccc" stroke-dasharray="3 2"/>
+    <rect x="300" y="192" width="120" height="28" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="420" y="192" width="120" height="28" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="540" y="192" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <g font-size="9" fill="#7a5415" text-anchor="middle">
+    <text x="180" y="210" fill="#999">未到达</text>
+    <text x="360" y="210">prefill+decode 1</text>
+    <text x="480" y="210">decode 2</text>
+    <text x="600" y="210" fill="#b85450" font-weight="bold">✓ done</text>
+  </g>
+
+  <!-- S4 row (joins at iter 5, fills S1's slot) -->
+  <text x="30" y="248" font-size="11" fill="#b85450" font-weight="bold">S4 (gen=5)</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="232" width="480" height="28" rx="3" fill="#eee" stroke="#ccc" stroke-dasharray="3 2"/>
+    <rect x="540" y="232" width="120" height="28" rx="3" fill="#f4b8b0" stroke="#b85450" stroke-width="1.2"/>
+    <rect x="660" y="232" width="120" height="28" rx="3" fill="#f4b8b0" stroke="#b85450" stroke-width="1.2"/>
+    <rect x="780" y="232" width="120" height="28" rx="3" fill="#f4b8b0" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <g font-size="9" fill="#7a2828" text-anchor="middle">
+    <text x="300" y="250" fill="#999">未到达</text>
+    <text x="600" y="250">prefill+decode 1</text>
+    <text x="720" y="250">decode 2</text>
+    <text x="840" y="250">decode 3</text>
+  </g>
+
+  <!-- Batch size row -->
+  <text x="30" y="288" font-size="11" fill="#2b2b2b" font-weight="bold">Batch size</text>
+  <g font-size="12" fill="#2b2b2b" font-weight="bold" text-anchor="middle">
+    <text x="120" y="288">2</text><text x="240" y="288">2</text>
+    <text x="360" y="288" fill="#2e6e2e">3</text><text x="480" y="288">3</text>
+    <text x="600" y="288" fill="#2e6e2e">3</text><text x="720" y="288">2</text>
+    <text x="840" y="288">2</text>
+  </g>
+
+  <!-- annotations -->
+  <g filter="url(#sk)">
+    <line x1="360" y1="92" x2="360" y2="292" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2" opacity="0.5"/>
+    <line x1="540" y1="92" x2="540" y2="292" stroke="#b85450" stroke-width="1" stroke-dasharray="4 2" opacity="0.5"/>
+  </g>
+  <text x="360" y="84" text-anchor="middle" font-size="9" fill="#c98a2b" font-weight="bold">S3 加入</text>
+  <text x="540" y="84" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">S1 完成, S4 加入</text>
+
+  <!-- key observations -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="860" height="140" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="344" font-size="12" font-weight="bold" fill="#2b2b2b">关键观察</text>
+  <text x="60" y="366" font-size="11" fill="#2e6e2e">✓ S1 在 iter 4 完成，立即退出 → S4 在 iter 5 填入 S1 的 slot（GPU 不空等）</text>
+  <text x="60" y="386" font-size="11" fill="#c98a2b">✓ S3 在 iter 3 到达，立刻加入 batch（不需等"下一批"）</text>
+  <text x="60" y="406" font-size="11" fill="#2b6e9e">✓ batch size 随时间动态变化：2→2→3→3→3→2→2（完成的退出、新请求加入）</text>
+  <text x="60" y="426" font-size="11" fill="#7a2828">✓ S3 (短请求 gen=3) 在 iter 6 完成，不等 S2 (长请求 gen=8) → 比 Dynamic 省等待</text>
+  <text x="60" y="446" font-size="11" fill="#444">→ 对比 Dynamic Batching：S3 要等 S2 完成才能退出（多等 2+ iterations）</text>
+</svg>

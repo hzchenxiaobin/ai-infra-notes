@@ -11,6 +11,7 @@ on:
       - 'aiinfra/week3/**'
       - 'aiinfra/week4/**'
       - 'aiinfra/week5/**'
+      - 'aiinfra/week6/**'
       - 'leetcode/**'
       - 'leetgpu/**'
       - 'public/**'

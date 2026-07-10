@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Dynamic vs Continuous Batching：request-level vs iteration-level</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Dynamic Batching (left) ===== -->
+  <text x="240" y="72" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Dynamic Batching（request-level）</text>
+  <text x="240" y="90" text-anchor="middle" font-size="11" fill="#888">整批一起开始，等最慢的结束</text>
+
+  <!-- timeline -->
+  <text x="30" y="118" font-size="10" fill="#666">时间→</text>
+  <g filter="url(#sk)">
+    <line x1="60" y1="114" x2="440" y2="114" stroke="#bbb" stroke-width="1"/>
+  </g>
+
+  <!-- R1: short (5 tokens) -->
+  <g filter="url(#sk)">
+    <rect x="60" y="100" width="120" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="120" y="116" text-anchor="middle" font-size="10" fill="#7a5415">R1 (5 tok)</text>
+
+  <!-- R2: long (15 tokens) -->
+  <g filter="url(#sk)">
+    <rect x="60" y="128" width="380" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="250" y="144" text-anchor="middle" font-size="10" fill="#7a5415">R2 (15 tok)</text>
+
+  <!-- R1 idle waiting for R2 -->
+  <g filter="url(#sk)">
+    <rect x="180" y="100" width="260" height="24" rx="3" fill="#eee" stroke="#ccc" stroke-dasharray="3 2"/>
+  </g>
+  <text x="310" y="116" text-anchor="middle" font-size="9" fill="#b85450">R1 空等 R2（10 iter 浪费）</text>
+
+  <text x="240" y="172" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">⚠ R1 完成后必须等 R2 → GPU slot 浪费</text>
+
+  <!-- ===== Continuous Batching (right) ===== -->
+  <text x="700" y="72" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Continuous Batching（iteration-level）</text>
+  <text x="700" y="90" text-anchor="middle" font-size="11" fill="#888">每轮重建 batch，完成即走，新请求随时插入</text>
+
+  <text x="490" y="118" font-size="10" fill="#666">时间→</text>
+  <g filter="url(#sk)">
+    <line x1="520" y1="114" x2="900" y2="114" stroke="#bbb" stroke-width="1"/>
+  </g>
+
+  <!-- R1: starts iter 1, ends iter 5 -->
+  <g filter="url(#sk)">
+    <rect x="520" y="100" width="100" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="570" y="116" text-anchor="middle" font-size="10" fill="#2e6e2e">R1 (5 tok)</text>
+
+  <!-- R2: starts iter 1, continues -->
+  <g filter="url(#sk)">
+    <rect x="520" y="128" width="300" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="670" y="144" text-anchor="middle" font-size="10" fill="#2e6e2e">R2 (15 tok)</text>
+
+  <!-- R3: joins iter 3, ends iter 6 (short, fills R1's slot) -->
+  <g filter="url(#sk)">
+    <rect x="560" y="100" width="60" height="24" rx="3" fill="#bcd6f0" stroke="#4a8edb"/>
+  </g>
+  <text x="590" y="116" text-anchor="middle" font-size="9" fill="#2b6e9e">R3</text>
+
+  <!-- R4: joins after R3 leaves -->
+  <g filter="url(#sk)">
+    <rect x="620" y="100" width="80" height="24" rx="3" fill="#bcd6f0" stroke="#4a8edb"/>
+  </g>
+  <text x="660" y="116" text-anchor="middle" font-size="9" fill="#2b6e9e">R4</text>
+
+  <text x="700" y="172" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">✓ R1 完成立刻让位给 R3/R4 → GPU 始终满载</text>
+
+  <!-- ===== Comparison table ===== -->
+  <line x1="20" y1="200" x2="920" y2="200" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <text x="470" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">核心对比</text>
+
+  <g font-size="11" fill="#555" font-weight="bold">
+    <rect x="40" y="238" width="200" height="26" fill="#f6f6f6" stroke="#ccc" rx="3" filter="url(#sk)"/>
+    <text x="140" y="255" text-anchor="middle">维度</text>
+    <rect x="240" y="238" width="310" height="26" fill="#fef6e6" stroke="#c98a2b" rx="3" filter="url(#sk)"/>
+    <text x="395" y="255" text-anchor="middle">Dynamic Batching</text>
+    <rect x="550" y="238" width="310" height="26" fill="#eaf6ee" stroke="#4a8e4a" rx="3" filter="url(#sk)"/>
+    <text x="705" y="255" text-anchor="middle">Continuous Batching</text>
+  </g>
+
+  <g font-size="11" fill="#555">
+    <rect x="40" y="264" width="200" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="140" y="281" text-anchor="middle">调度粒度</text>
+    <rect x="240" y="264" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="395" y="281" text-anchor="middle">request-level（整批）</text>
+    <rect x="550" y="264" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="705" y="281" text-anchor="middle" fill="#2e6e2e" font-weight="bold">iteration-level（每轮）</text>
+
+    <rect x="40" y="290" width="200" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="140" y="307" text-anchor="middle">请求加入时机</text>
+    <rect x="240" y="290" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="395" y="307" text-anchor="middle">凑满/超时后整批加入</text>
+    <rect x="550" y="290" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="705" y="307" text-anchor="middle" fill="#2e6e2e" font-weight="bold">任意 iteration 加入</text>
+
+    <rect x="40" y="316" width="200" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="140" y="333" text-anchor="middle">请求退出时机</text>
+    <rect x="240" y="316" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="395" y="333" text-anchor="middle">整批完成后一起退出</text>
+    <rect x="550" y="316" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="705" y="333" text-anchor="middle" fill="#2e6e2e" font-weight="bold">完成即退出（不等他人）</text>
+
+    <rect x="40" y="342" width="200" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="140" y="359" text-anchor="middle">短请求等待长请求</text>
+    <rect x="240" y="342" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="395" y="359" text-anchor="middle" fill="#b85450">是（阻塞）</text>
+    <rect x="550" y="342" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="705" y="359" text-anchor="middle" fill="#2e6e2e" font-weight="bold">否（独立退出）</text>
+
+    <rect x="40" y="368" width="200" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="140" y="385" text-anchor="middle">GPU 利用率</text>
+    <rect x="240" y="368" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="395" y="385" text-anchor="middle">中（有空等）</text>
+    <rect x="550" y="368" width="310" height="26" fill="#fff" stroke="#ddd" rx="2" filter="url(#sk)"/>
+    <text x="705" y="385" text-anchor="middle" fill="#2e6e2e" font-weight="bold">高（始终满载）</text>
+  </g>
+
+  <text x="470" y="424" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Continuous Batching 是现代 LLM 推理服务的核心 —— 解决了 Dynamic Batching 的"长请求阻塞短请求"问题</text>
+  <text x="470" y="444" text-anchor="middle" font-size="10" fill="#888">前提：需要 PagedAttention 的细粒度 KV Cache 管理（Week5 Day4），否则完成请求的 cache 释放碎片化</text>
+</svg>
