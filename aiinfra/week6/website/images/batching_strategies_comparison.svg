@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="520" fill="#fdfcf7"/>
+
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">No Batching vs Static vs Dynamic Batching</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== No Batching ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="64" width="270" height="400" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="165" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">No Batching（逐个处理）</text>
+  <text x="165" y="108" text-anchor="middle" font-size="11" fill="#888">每个请求单独 forward，M=1，GPU 空闲</text>
+
+  <!-- 5 requests sequential -->
+  <g filter="url(#sk)">
+    <rect x="50" y="120" width="60" height="28" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+    <rect x="50" y="152" width="60" height="28" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+    <rect x="50" y="184" width="60" height="28" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+    <rect x="50" y="216" width="60" height="28" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+    <rect x="50" y="248" width="60" height="28" rx="3" fill="#f4b8b0" stroke="#b85450"/>
+  </g>
+  <g font-size="10" fill="#7a2828" text-anchor="middle">
+    <text x="80" y="138">R1</text><text x="80" y="170">R2</text><text x="80" y="202">R3</text>
+    <text x="80" y="234">R4</text><text x="80" y="266">R5</text>
+  </g>
+  <text x="130" y="170" font-size="10" fill="#888">→</text>
+  <text x="130" y="202" font-size="10" fill="#888">→</text>
+  <text x="130" y="234" font-size="10" fill="#888">→</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="300" width="230" height="44" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="60" y="320" font-size="11" fill="#b85450" font-weight="bold">5 次 forward, 每次 M=1</text>
+  <text x="60" y="336" font-size="10" fill="#888">GPU 利用率极低, memory-bound</text>
+
+  <text x="60" y="370" font-size="11" fill="#444" font-weight="bold">吞吐</text>
+  <text x="120" y="370" font-size="11" fill="#b85450" font-weight="bold">最低</text>
+  <text x="60" y="390" font-size="11" fill="#444" font-weight="bold">延迟</text>
+  <text x="120" y="390" font-size="11" fill="#4a8e4a" font-weight="bold">最低（无等待）</text>
+  <text x="60" y="414" font-size="11" fill="#444" font-weight="bold">Padding</text>
+  <text x="120" y="414" font-size="11" fill="#4a8e4a" font-weight="bold">无</text>
+
+  <!-- ===== Static Batching ===== -->
+  <g filter="url(#sk)">
+    <rect x="335" y="64" width="270" height="400" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Static Batching（固定批次）</text>
+  <text x="470" y="108" text-anchor="middle" font-size="11" fill="#888">凑齐 N 个才开始，等最慢的结束</text>
+
+  <!-- batch of 4 -->
+  <g filter="url(#sk)">
+    <rect x="360" y="120" width="220" height="100" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="138" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Batch 1 (4 请求一起 forward)</text>
+  <g filter="url(#sk)">
+    <rect x="370" y="146" width="40" height="24" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <rect x="415" y="146" width="40" height="24" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <rect x="460" y="146" width="40" height="24" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <rect x="505" y="146" width="40" height="24" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+  </g>
+  <g font-size="9" fill="#7a5415" text-anchor="middle">
+    <text x="390" y="162">R1</text><text x="435" y="162">R2</text><text x="480" y="162">R3</text><text x="525" y="162">R4</text>
+  </g>
+  <text x="370" y="190" font-size="9" fill="#b85450">pad → max_len</text>
+  <text x="370" y="206" font-size="9" fill="#b85450">R1 完成但等 R4</text>
+
+  <!-- R5 waiting -->
+  <g filter="url(#sk)">
+    <rect x="360" y="240" width="60" height="28" rx="3" fill="#eee" stroke="#ccc" stroke-dasharray="3 2"/>
+  </g>
+  <text x="390" y="258" text-anchor="middle" font-size="10" fill="#999">R5 (等)</text>
+
+  <g filter="url(#sk)">
+    <rect x="355" y="300" width="230" height="44" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="365" y="320" font-size="11" fill="#c98a2b" font-weight="bold">2 次 forward, M=4+1</text>
+  <text x="365" y="336" font-size="10" fill="#888">R1-R4 一起跑, R5 等 Batch1 完成</text>
+
+  <text x="365" y="370" font-size="11" fill="#444" font-weight="bold">吞吐</text>
+  <text x="425" y="370" font-size="11" fill="#c98a2b" font-weight="bold">中</text>
+  <text x="365" y="390" font-size="11" fill="#444" font-weight="bold">延迟</text>
+  <text x="425" y="390" font-size="11" fill="#c98a2b" font-weight="bold">中（需等凑齐）</text>
+  <text x="365" y="414" font-size="11" fill="#444" font-weight="bold">Padding</text>
+  <text x="425" y="414" font-size="11" fill="#b85450" font-weight="bold">有浪费</text>
+
+  <!-- ===== Dynamic Batching ===== -->
+  <g filter="url(#sk)">
+    <rect x="640" y="64" width="270" height="400" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="775" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Dynamic Batching（动态聚合）</text>
+  <text x="775" y="108" text-anchor="middle" font-size="11" fill="#888">请求入队 → 等待/凑满 → 聚合 batch</text>
+
+  <!-- queue -->
+  <g filter="url(#sk)">
+    <rect x="660" y="120" width="230" height="32" rx="4" fill="#fff" stroke="#bbb"/>
+  </g>
+  <text x="670" y="140" font-size="10" fill="#666">请求队列: [R1, R2, R3, ...]</text>
+
+  <!-- timer -->
+  <g filter="url(#sk)">
+    <rect x="660" y="160" width="230" height="28" rx="4" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <text x="670" y="178" font-size="10" fill="#7a5415">⏱ timer: 等满 max_batch 或 timeout</text>
+
+  <!-- batch -->
+  <g filter="url(#sk)">
+    <rect x="660" y="196" width="230" height="60" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="670" y="214" font-size="11" fill="#2e6e2e" font-weight="bold">Batch (动态大小)</text>
+  <g filter="url(#sk)">
+    <rect x="670" y="222" width="36" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+    <rect x="710" y="222" width="36" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+    <rect x="750" y="222" width="36" height="22" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <g font-size="8" fill="#2e6e2e" text-anchor="middle">
+    <text x="688" y="236">R1</text><text x="728" y="236">R2</text><text x="768" y="236">R3</text>
+  </g>
+  <text x="800" y="236" font-size="9" fill="#888">...</text>
+
+  <g filter="url(#sk)">
+    <rect x="660" y="300" width="230" height="44" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="670" y="320" font-size="11" fill="#2e6e2e" font-weight="bold">~3 次 forward, M 动态</text>
+  <text x="670" y="336" font-size="10" fill="#888">不等凑齐, 超时即发</text>
+
+  <text x="670" y="370" font-size="11" fill="#444" font-weight="bold">吞吐</text>
+  <text x="730" y="370" font-size="11" fill="#2e6e2e" font-weight="bold">高</text>
+  <text x="670" y="390" font-size="11" fill="#444" font-weight="bold">延迟</text>
+  <text x="730" y="390" font-size="11" fill="#c98a2b" font-weight="bold">中（timeout 控制）</text>
+  <text x="670" y="414" font-size="11" fill="#444" font-weight="bold">Padding</text>
+  <text x="730" y="414" font-size="11" fill="#c98a2b" font-weight="bold">有（可优化）</text>
+
+  <!-- bottom note -->
+  <text x="470" y="492" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Dynamic Batching 是推理服务的基础能力 —— 在吞吐和延迟之间用 timeout/batch_size 调参平衡</text>
+  <text x="470" y="510" text-anchor="middle" font-size="10" fill="#888">但 request-level 聚合有缺陷：长请求阻塞整个 batch → Day 2 Continuous Batching 解决</text>
+</svg>

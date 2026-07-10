@@ -141,6 +141,21 @@ def main() -> None:
         skip={"build.py", "README.md"},
     )
 
+    # Build Week 6 website
+    print("Building Week 6 website...")
+    subprocess.run(
+        ["python3", str(repo_root / "aiinfra" / "week6" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy Week 6 website to public/week6/
+    print("Copying Week 6 website to public/week6/...")
+    copy_directory_contents(
+        repo_root / "aiinfra" / "week6" / "website",
+        public_dir / "week6",
+        skip={"build.py", "README.md"},
+    )
+
     # Build LeetCode website
     print("Building LeetCode website...")
     subprocess.run(

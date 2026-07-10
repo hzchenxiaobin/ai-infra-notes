@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Throughput vs Latency 曲线与饱和点</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">batch size 增大 → 吞吐线性增长 → 到达饱和点后延迟急剧上升</text>
+
+  <!-- axes -->
+  <g filter="url(#sk)">
+    <line x1="100" y1="360" x2="860" y2="360" stroke="#3a3a3a" stroke-width="1.4"/>
+    <line x1="100" y1="80" x2="100" y2="360" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <text x="480" y="392" text-anchor="middle" font-size="12" fill="#666">Batch Size（并发请求数）→</text>
+  <text x="70" y="220" text-anchor="middle" font-size="12" fill="#666" transform="rotate(-90 70 220)">Latency / Throughput</text>
+
+  <!-- Throughput curve (green, rising then plateau) -->
+  <g filter="url(#sk)">
+    <path d="M 100 340 Q 250 280 400 200 Q 550 170 700 165 L 860 163" stroke="#4a8e4a" stroke-width="2.5" fill="none"/>
+  </g>
+  <text x="500" y="195" font-size="12" fill="#2e6e2e" font-weight="bold">Throughput</text>
+  <text x="780" y="158" font-size="10" fill="#2e6e2e">饱和 →</text>
+
+  <!-- Latency curve (orange, flat then spikes) -->
+  <g filter="url(#sk)">
+    <path d="M 100 330 L 300 320 L 450 310 L 550 290 Q 650 220 750 130 L 860 100" stroke="#c98a2b" stroke-width="2.5" fill="none"/>
+  </g>
+  <text x="350" y="305" font-size="12" fill="#7a5415" font-weight="bold">Latency</text>
+  <text x="780" y="110" font-size="10" fill="#b85450">↑ 急剧上升</text>
+
+  <!-- Saturation point -->
+  <g filter="url(#sk)">
+    <line x1="550" y1="80" x2="550" y2="360" stroke="#b85450" stroke-width="1.2" stroke-dasharray="5 3"/>
+    <circle cx="550" cy="285" r="6" fill="#b85450" stroke="#fff" stroke-width="2"/>
+  </g>
+  <text x="560" y="100" font-size="11" fill="#b85450" font-weight="bold">饱和点</text>
+  <text x="560" y="116" font-size="10" fill="#b85450">GPU 算力/显存打满</text>
+  <text x="560" y="130" font-size="10" fill="#b85450">继续加 batch 无益</text>
+
+  <!-- Regions -->
+  <g filter="url(#sk)">
+    <rect x="100" y="80" width="450" height="280" fill="#eaf6ee" opacity="0.15"/>
+    <rect x="550" y="80" width="310" height="280" fill="#fce4ec" opacity="0.15"/>
+  </g>
+  <text x="280" y="350" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">安全区（吞吐涨、延迟可控）</text>
+  <text x="700" y="350" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">危险区（延迟爆炸）</text>
+
+  <!-- annotation -->
+  <g filter="url(#sk)">
+    <rect x="100" y="400" width="760" height="30" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="480" y="420" text-anchor="middle" font-size="11" fill="#444">目标：在饱和点左侧运行 —— 吞吐接近峰值、延迟可控。Dynamic Batching 用 timeout/max_batch 调节工作点</text>
+</svg>
