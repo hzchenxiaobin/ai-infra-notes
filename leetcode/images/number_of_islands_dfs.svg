@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">岛屿数量：DFS 沉岛法</text>
+  <path d="M 290 40 Q 440 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- grid 5x5 -->
+  <text x="60" y="72" font-size="12" font-weight="bold" fill="#2b6e9e">① 遍历网格，遇到 '1' → 岛屿+1，DFS 沉岛</text>
+
+  <!-- row 1 -->
+  <g filter="url(#sk)"><rect x="60" y="82" width="44" height="44" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+  <text x="82" y="110" text-anchor="middle" font-size="14" fill="#2b6e9e" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="104" y="82" width="44" height="44" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+  <text x="126" y="110" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="148" y="82" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="170" y="110" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="192" y="82" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="214" y="110" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="236" y="82" width="44" height="44" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+  <text x="258" y="110" text-anchor="middle" font-size="14" fill="#2b6e9e" font-weight="bold">1</text>
+
+  <!-- row 2 -->
+  <g filter="url(#sk)"><rect x="60" y="126" width="44" height="44" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+  <text x="82" y="154" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="104" y="126" width="44" height="44" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+  <text x="126" y="154" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="148" y="126" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="170" y="154" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="192" y="126" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="214" y="154" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="236" y="126" width="44" height="44" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+  <text x="258" y="154" text-anchor="middle" font-size="14" fill="#2b6e9e" font-weight="bold">1</text>
+
+  <!-- row 3 -->
+  <g filter="url(#sk)"><rect x="60" y="170" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="82" y="198" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="104" y="170" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="126" y="198" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="148" y="170" width="44" height="44" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="170" y="198" text-anchor="middle" font-size="14" fill="#7a5415" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="192" y="170" width="44" height="44" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="214" y="198" text-anchor="middle" font-size="14" fill="#7a5415" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="236" y="170" width="44" height="44" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="258" y="198" text-anchor="middle" font-size="14" fill="#7a5415" font-weight="bold">1</text>
+
+  <!-- row 4 -->
+  <g filter="url(#sk)"><rect x="60" y="214" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="82" y="242" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="104" y="214" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="126" y="242" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="148" y="214" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="170" y="242" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="192" y="214" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="214" y="242" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+  <g filter="url(#sk)"><rect x="236" y="214" width="44" height="44" rx="3" fill="#f5f5f5" stroke="#bbb" stroke-width="1"/></g>
+  <text x="258" y="242" text-anchor="middle" font-size="14" fill="#bbb">0</text>
+
+  <!-- legend -->
+  <g filter="url(#sk)"><rect x="350" y="86" width="20" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb"/></g>
+  <text x="378" y="98" font-size="10" fill="#444">岛屿A起点（新发现）</text>
+  <g filter="url(#sk)"><rect x="350" y="110" width="20" height="16" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/></g>
+  <text x="378" y="122" font-size="10" fill="#444">DFS 标记的连通格</text>
+  <g filter="url(#sk)"><rect x="350" y="134" width="20" height="16" rx="3" fill="#fef6e6" stroke="#c98a2b"/></g>
+  <text x="378" y="146" font-size="10" fill="#444">岛屿B/C（另一连通块）</text>
+  <g filter="url(#sk)"><rect x="350" y="158" width="20" height="16" rx="3" fill="#f5f5f5" stroke="#bbb"/></g>
+  <text x="378" y="170" font-size="10" fill="#444">水 '0'</text>
+
+  <!-- DFS steps -->
+  <g filter="url(#sk)">
+    <rect x="350" y="200" width="490" height="150" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="370" y="224" font-size="12" font-weight="bold" fill="#444">DFS 沉岛过程：</text>
+  <text x="370" y="246" font-size="11" fill="#2b6e9e">① (0,0)='1' → 岛屿=1，DFS 标记 (0,0)(0,1)(1,0)(1,1) 沉为 '0'</text>
+  <text x="370" y="268" font-size="11" fill="#2b6e9e">② (0,4)='1' → 岛屿=2，DFS 标记 (0,4)(1,4) 沉为 '0'</text>
+  <text x="370" y="290" font-size="11" fill="#7a5415">③ (2,2)='1' → 岛屿=3，DFS 标记 (2,2)(2,3)(2,4) 沉为 '0'</text>
+  <text x="370" y="314" font-size="11" fill="#2e6e2e">④ 遍历结束 → 岛屿数 = 3</text>
+  <text x="370" y="338" font-size="10" fill="#888">"沉岛"：访问后 grid[i][j]='0'，避免重复计数 + 省 visited 数组</text>
+</svg>

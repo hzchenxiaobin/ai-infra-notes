@@ -1,0 +1,463 @@
+## Day 5：Mini 推理引擎 v1
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 **Mini 引擎从 v0 到 v1 的升级路径**——v0 单请求同步 `generate()`，v1 多请求异步 `submit()` 返回 Future，后台 worker 线程做 Continuous Batching<br>
+2. 掌握 **MiniEngineV1 的架构**——Request Queue + Scheduler + Worker + Result Future 四组件，线程安全队列与后台 daemon 线程的协作<br>
+3. 能实现 **MiniScheduler**——token budget + max_num_seqs 双约束 + 优先级排序，每轮保留 running decode、从 waiting 补入 prefill<br>
+4. 理解 **请求生命周期**——WAITING → RUNNING（prefill → decode 循环）→ FINISHED，Future 异步返回、KV Cache 独立维护<br>
+5. 能用 Python 手写一个 **完整可运行的 Mini 推理引擎 v1**，实测多请求并发、Continuous Batching 时间线、优先级调度效果<br>
+6. 能对照昇腾解释多请求推理引擎的组件对应——Request Queue / Scheduler / Worker / KV Cache 管理在 MindIE 中的实现
+
+> 💡 **为什么重要**：Week 5 Day 5 的 Mini 引擎 v0 只能 `generate(prompt)` 单请求同步跑——一个请求生成完才能跑下一个，GPU 空闲、用户排队。Week 6 Day 1-4 我们学了 Dynamic Batching、Continuous Batching、vLLM Scheduler、Chunked Prefill。今天把这些概念**整合**成一个真正能并发处理多请求的 Mini 引擎 v1：`submit()` 异步返回 Future，后台线程每轮重建 batch。这是"从理论到工程"的关键一步，也是面试必考的"如何支持多请求并发"。
+
+---
+
+### 学前导读：Mini 引擎 v0 的"单请求同步"瓶颈
+
+Week 5 Day 5 的 Mini 引擎 v0 接口是同步的：
+
+```python
+# v0：单请求同步
+output = engine.generate(prompt, max_new_tokens=10)   # 阻塞，跑完才返回
+# 用户 B 必须等用户 A 的 generate() 返回才能开始
+```
+
+真实推理服务同时有几十上百个并发请求。v0 的"跑完一个再跑下一个"导致：
+- **GPU 空闲**：单请求 decode 是 M=1 的 memory-bound，算力利用率 1-3%（Week 6 Day 1 算过）
+- **用户排队**：用户 B 等 A 跑完才开始，延迟 = A 的延迟 + B 的延迟
+- **无法 batching**：没有"把多个请求拼成 batch 一起 forward"的机制
+
+| 维度 | v0 单请求同步 | v1 多请求并发 |
+|------|-------------|-------------|
+| 接口 | `generate()` 阻塞 | **`submit()` → Future** 异步 |
+| 并发 | 1 | **max_num_seqs（如 4-256）** |
+| Batching | 无 | **Continuous Batching**（每轮重建 batch） |
+| 调度 | 无 | **Scheduler**（token budget + 优先级） |
+| 结果返回 | 同步返回 | **Future.set_result()** 完成即返回 |
+
+> 💡 **一句话总结**：v1 = v0 的模型前向 + Day 2 的 Continuous Batching + Day 3 的 Scheduler + 异步 Future。把"单请求同步跑"升级为"多请求异步并发 + 每轮重建 batch"。
+
+---
+
+### 理论学习
+
+#### 5.1 MiniEngineV1 架构
+
+![Mini 推理引擎 v1 架构](../website/images/mini_engine_v1_architecture.svg)
+
+v1 由四个核心组件构成，对应 vLLM 的 Engine + Scheduler + Worker：
+
+```python
+class MiniEngineV1:
+    def __init__(self, model, tokenizer, max_token_budget, max_num_seqs, device):
+        self.model = model                    # ① 模型（MiniLLM，带 KV Cache）
+        self.scheduler = MiniScheduler(...)   # ② 调度器（token budget + 优先级）
+        self.waiting_queue = deque()          # ③ 请求队列（线程安全）
+        self.running_requests = {}            #    运行中请求（按 id 索引）
+        self.worker_thread = Thread(...)      # ④ 后台 worker（daemon，持续 _worker_loop）
+```
+
+##### 四组件职责
+
+| 组件 | 对应 vLLM | 职责 |
+|------|----------|------|
+| Request Queue | Engine 的 waiting | 线程安全 deque，`submit()` 入队 |
+| Scheduler | `Scheduler.schedule()` | 每轮选 batch：保留 running decode + waiting prefill |
+| Worker | `ModelRunner.execute_model()` | 执行 model forward（prefill/decode 一步） |
+| Future | `LLMEngine.generate()` 返回 | 异步返回结果，完成即 `set_result()` |
+
+##### 形象类比
+
+- **v0** = 单窗口银行（一个客户办完才叫下一个，窗口闲着等）
+- **v1** = 多窗口银行（叫号机 submit 入队 → 调度员 Scheduler 决定哪几个客户上窗 → 窗口 Worker 并行办 → 办完 Future 通知）
+
+#### 5.2 请求生命周期
+
+![请求生命周期：WAITING → RUNNING → FINISHED](../website/images/request_lifecycle_v1.svg)
+
+每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
+
+```
+submit() → WAITING（入队，等 token budget）
+         → RUNNING（schedule 选中）
+            ├── Prefill：一次性处理 prompt，建立 KV Cache
+            └── Decode：每轮 1 token，复用 KV Cache（循环 max_new_tokens 次）
+         → FINISHED（gen 满 max_new_tokens）
+            → future.set_result() 异步返回
+            → 从 running 移除，释放资源
+```
+
+##### Request 关键字段（v1 新增 vs v0）
+
+| 字段 | v0 | v1 | 说明 |
+|------|----|----|------|
+| `future` | 无 | **Future** | submit() 立即返回，完成时 set_result() |
+| `status` | 无 | **waiting/running/finished** | 生命周期状态机 |
+| `priority` | 无 | **int** | 优先级，Scheduler 按此排序 |
+| `kv_cache` | 有 | **有（每请求独立）** | v0 单请求一份；v1 多请求各自一份 |
+| `generated_ids` | 有 | 有 | 生成的 token 列表 |
+
+#### 5.3 MiniScheduler：token budget + 优先级
+
+```python
+class MiniScheduler:
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
+
+        # 1. 保留 running 的 decode（按优先级降序，高优先级先保）
+        running_sorted = sorted(running.values(), key=lambda r: -r.priority)
+        for req in running_sorted:
+            if req.is_prefill_done and token_budget >= 1:
+                batch.append(req)
+                token_budget -= 1
+
+        # 2. 从 waiting 加入新请求做 prefill（按优先级降序）
+        waiting_sorted = sorted(waiting, key=lambda r: -r.priority)
+        for req in waiting_sorted:
+            if token_budget >= len(req.input_ids):
+                batch.append(req)
+                token_budget -= len(req.input_ids)
+        return batch, still_waiting
+```
+
+##### 调度决策与 Day 2-3 的对应
+
+| 决策 | Day 2-3 概念 | v1 实现 |
+|------|-------------|---------|
+| 保留 running decode | Continuous Batching 的"完成即走、保留运行" | 按优先级排序，token_budget -= 1 |
+| 从 waiting prefill | SchedulingBudget 的 `can_schedule` | `token_budget >= prompt_len` 才加入 |
+| 优先级排序 | Day 3 扩展实验的优先级抢占 | `sorted(key=-priority)` |
+| 完成移除 | `_free_finished_seq_groups` | worker_loop 中移除 finished + set_result |
+
+> ⚠️ **注意**：v1 的 Scheduler 是 Day 2 ContinuousBatcher 的简化版——没有显存预算（BlockSpaceManager）和抢占（preemption）。真实 vLLM 的 Scheduler（Day 3）在显存压力下会 preempt，v1 假设显存够用，只做 token budget 约束。
+
+#### 5.4 Worker Loop：每轮重建 batch
+
+```python
+def _worker_loop(self):
+    while not self.stop_event.is_set():
+        with self.lock:
+            # 1. 移除已完成的 running 请求，异步返回结果
+            for rid in finished_ids:
+                req = self.running_requests.pop(rid)
+                req.future.set_result(decode(req.generated_ids))
+
+            # 2. 调度：保留 running + 从 waiting 补入
+            batch, self.waiting_queue = self.scheduler.schedule(...)
+
+        # 3. 执行 forward（锁外，避免阻塞 submit）
+        if batch:
+            self._run_iteration(batch)   # prefill 或 decode 一步
+        else:
+            time.sleep(0.001)
+```
+
+##### 关键设计：锁的粒度
+
+```python
+with self.lock:          # 锁内：操作共享队列（快速）
+    # 调度 + 状态更新
+if batch:
+    self._run_iteration(batch)   # 锁外：model forward（慢，不阻塞 submit）
+```
+
+- **锁内**只做队列操作（调度、移除完成、登记新 running）——快速，毫秒级
+- **锁外**做 model forward——慢（GPU 计算），不阻塞 `submit()` 入队
+- 这是生产者-消费者模式的标准做法，避免 forward 期间无法接收新请求
+
+#### 5.5 Continuous Batching 实测时间线
+
+![Continuous Batching in Mini Engine v1 实测](../website/images/continuous_batching_in_engine_v1.svg)
+
+实测 4 个请求（R0 高优先级 gen=8，R1-R3 普通 gen=4-6）的时间线：
+
+```
+iter 1: batch=4  R0(prefill) R1(prefill) R2(prefill) R3(prefill)   ← 全部 prefill
+iter 2: batch=4  R0(decode)  R1(decode)  R2(decode)  R3(decode)
+iter 3: batch=4  R0(decode)  R1(decode)  R2(decode)  R3(decode)
+iter 4: batch=4  R0(decode)  R1(decode)  R2(done)    R3(decode)    ← R2 完成退出
+iter 5: batch=3  R0(decode)  R1(decode)  R3(done)                   ← R3 完成退出
+iter 6: batch=2  R0(decode)  R1(done)                               ← R1 完成退出
+iter 7: batch=1  R0(decode)
+iter 8: batch=1  R0(done)                                           ← R0 最后完成
+```
+
+##### 关键观察
+
+1. **R2(gen=4) iter 4 完成立即退出**，不等 R1(gen=6)——Continuous Batching 的核心收益
+2. **batch size 动态变化**：4→4→4→4→3→2→1→1（完成退出，不空等）
+3. **R0 高优先级**先被 schedule prefill，但 gen 长(8)，最后完成——优先级影响调度顺序不等于完成顺序
+4. **无空等**：每轮 GPU 都在 forward 真实请求，不像 v0 串行排队
+
+#### 5.6 昇腾对照
+
+| CUDA/PyTorch 实现 | 昇腾 CANN 对应 | 对照说明 |
+|---------|------------|---------|
+| Request Queue | 请求队列 | 一致，线程安全缓冲 |
+| Scheduler | 昇腾调度器（MindIE） | 功能类似，token budget + 优先级 |
+| Continuous Batching | 动态批处理 | 概念一致 |
+| Worker（model forward） | Worker（AscendC 算子） | 一致，底层算子不同 |
+| Future 异步返回 | 结果队列 / callback | 一致 |
+| KV Cache per-request | 昇腾 KV Cache 管理 | 一致，每请求独立 |
+| 优先级调度 | 优先级调度 | 一致 |
+
+> 💡 v1 的架构是推理引擎的通用骨架——Request Queue + Scheduler + Worker + Result 无论 CUDA 还是昇腾都一致。差异只在 model forward 的底层（PyTorch/cuBLAS vs AscendC 算子）和 KV Cache 存储介质。
+
+---
+
+### Coding 任务：实现 Mini 推理引擎 v1
+
+#### 任务 1：创建 mini_engine_v1.py
+
+创建文件 [kernels/mini_engine_v1.py](kernels/mini_engine_v1.py)，实现多请求并发 + Continuous Batching + 优先级调度的完整引擎：
+
+```python
+# mini_engine_v1.py —— Mini 推理引擎 v1（多请求 + Continuous Batching + Scheduler + 优先级）
+# 运行命令: python mini_engine_v1.py
+# 依赖: pip install torch（无 GPU 时自动用 CPU）
+
+import threading
+import time
+from collections import deque
+from concurrent.futures import Future
+from typing import Dict, List, Tuple
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class MiniLLM(nn.Module):
+    """最小 LLM：embedding + n_layers 层 transformer + lm_head，支持 KV Cache"""
+    # ...（自包含，内嵌 MiniTransformerLayer，见完整文件）
+
+
+class RequestStatus:
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
+
+
+class Request:
+    """一个推理请求，带优先级、Future 异步返回、独立 KV Cache。"""
+    def __init__(self, request_id, input_ids, max_new_tokens=8, priority=0):
+        self.request_id = request_id
+        self.input_ids = input_ids
+        self.max_new_tokens = max_new_tokens
+        self.priority = priority
+        self.generated_ids = []
+        self.kv_cache = None
+        self.status = RequestStatus.WAITING
+        self.future = Future()
+
+
+class MiniScheduler:
+    """基础 Scheduler：token budget + max num_seqs + 优先级。"""
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
+        # 1. 保留 running decode（按优先级降序）
+        # 2. 从 waiting prefill（按优先级降序，token budget 约束）
+        return batch, still_waiting
+
+
+class MiniEngineV1:
+    """Mini 推理引擎 v1：多请求并发 + Continuous Batching + 优先级调度。"""
+    def submit(self, prompt, max_new_tokens=8, priority=0) -> Future:
+        # 入队，返回 Future
+    def _run_iteration(self, batch):
+        # 每个请求 prefill 1 步或 decode 1 步
+    def _worker_loop(self):
+        # 后台循环：移除完成 → 调度 → forward
+```
+
+完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](kernels/mini_engine_v1.py)。
+
+代码要点：
+- **`submit()` 异步返回 Future**：入队后立即返回，不阻塞；worker 完成后 `future.set_result()`
+- **`MiniScheduler.schedule()`**：①保留 running decode（按优先级）②从 waiting prefill（token budget 约束），对应 Day 2-3
+- **`_run_iteration()`**：区分 prefill（处理整段 prompt，建 KV Cache）和 decode（输入 1 token，复用 KV Cache）
+- **锁的粒度**：锁内只做队列操作，锁外做 model forward——避免 forward 期间阻塞 submit
+- **与 v0 的区别**：v0 的 `generate()` 同步阻塞；v1 的 `submit()` 异步，后台 worker 持续 batching
+
+#### 任务 2：运行并观察 Continuous Batching 时间线
+
+```bash
+python kernels/mini_engine_v1.py
+```
+
+**预期输出**（节选）：
+
+```text
+=== Mini 推理引擎 v1：多请求 + Continuous Batching + 优先级 ===
+
+  Submitted R0: 'hello world' (gen=8, priority=1)
+  Submitted R1: 'this is a longer prompt for testing' (gen=6, priority=0)
+  Submitted R2: 'short' (gen=4, priority=0)
+  Submitted R3: 'another test prompt here now' (gen=5, priority=0)
+
+Waiting for all results...
+  R0 (pri=1) done: '<unk_333> <unk_541> ...'
+  R1 (pri=0) done: '<unk_244> <unk_60> ...'
+  R2 (pri=0) done: '<unk_310> <unk_179> ...'
+  R3 (pri=0) done: '<unk_476> <unk_587> ...'
+
+=== Iteration 时间线（Continuous Batching）===
+Iter | Batch |   W/R | Batch 内容
+----------------------------------------------------------------------
+   1 |     4 |   0/4 | R0(p1,prefill), R1(p0,prefill), R2(p0,prefill), R3(p0,prefill)
+   2 |     4 |   0/4 | R0(p1,decode), R1(p0,decode), R2(p0,decode), R3(p0,decode)
+   ...
+   4 |     4 |   0/4 | R0(p1,decode), R1(p0,decode), R2(p0,done), R3(p0,decode)
+   5 |     3 |   0/3 | R0(p1,decode), R1(p0,decode), R3(p0,done)
+   6 |     2 |   0/2 | R0(p1,decode), R1(p0,done)
+   7 |     1 |   0/1 | R0(p1,decode)
+   8 |     1 |   0/0 | R0(p1,done)
+
+总 iterations: 8
+完成请求数: 4
+```
+
+##### 观察重点
+
+1. **iter 1 全部 prefill**：4 个请求一次性 prefill，token budget=40 够 4 个 prompt
+2. **iter 4 R2(done)**：R2(gen=4) 完成立即退出，iter 5 batch 从 4 降到 3
+3. **batch size 动态变化**：4→4→4→4→3→2→1→1（完成退出不空等）
+4. **R0 高优先级**先 prefill，但 gen=8 最长，最后完成
+5. **异步返回**：`future.result()` 在完成时立即拿到结果，不等其他请求
+
+#### 任务 3：对比 v0 单请求同步
+
+思考：同样 4 个请求，v0 串行 `generate()` 要多少轮？（R0:8 + R1:6 + R2:4 + R3:5 = 23 次 forward，无并发）。v1 用 8 轮完成 4 个请求，**并发收益约 2.9x**。
+
+> 思考：v1 的并发收益在什么场景下最大？（提示：请求长度方差越大、batch 不超预算时，并发收益越大。与 Day 1 Dynamic Batching 的"凑批"不同，v1 每轮都跑。）
+
+#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
+
+**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
+
+**题目概述**：
+
+给定一个 batch 的矩阵对 `(A[i], B[i])`，对每个 batch 元素独立做矩阵乘法 `C[i] = A[i] × B[i]`，其中 `A[i]` 是 `M×K`、`B[i]` 是 `K×N`、`C[i]` 是 `M×N`。
+
+**约束条件**：`1 ≤ batch ≤ 256`，`1 ≤ M, N, K ≤ 1024`；性能测试取大 batch。
+
+**与今日知识的关联**：
+
+这道题的**batched GEMM** 与 Mini Engine v1 的多请求并发 forward 同构——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 batched GEMM（batch=请求数，每个请求各自的 Q×K^T、attn×V、FFN 的两层 Linear）。batched matmul 的"每个 batch 元素独立计算、共享 kernel launch"正是 v1 Scheduler 的"每轮选多个请求组 batch、一次 forward"的底层映射。这道题的 GPU 实现用 grid 的 batch 维并行各请求，对应 v1 的 batch 维并行各请求的 GEMM。
+
+> 💡 提交后在 [LeetGPU Batched Matrix Multiplication](https://leetgpu.com/challenges/batched-matrix-multiplication) 上记录通过耗时。完整题解（含 batched kernel、batch 维并行、与多请求 forward 的类比）见 [Batched Matrix Multiplication 题解](../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 岛屿数量
+
+**题目链接**：[200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/)
+
+**题目概述**：
+
+给你一个由 `'1'`（陆地）和 `'0'`（水）组成的二维网格 `grid`，计算网格中**岛屿的数量**。岛屿是被水包围的一块连通的陆地（水平/垂直相邻连通）。
+
+**与今日知识的关联**：
+
+岛屿数量的**连通分量计数**与 Mini Engine v1 的请求分组/批处理同构——v1 每轮把多个请求组成一个 batch 一起 forward，类似把网格中相邻的 '1' 归为同一个岛屿（连通分量）。DFS/BFS 遍历标记同一岛屿的所有格子，对应 Scheduler 把同一轮能调度的请求归入同一 batch。岛屿计数的"遍历一个连通分量、标记已访问、计数+1"与 v1 的"调度一个 batch、标记 running、forward"同构。两者都是**连通分量的发现与分组**问题：岛屿找空间连通的格子，v1 找预算约束下可并发的请求。
+
+**核心套路**：
+
+```
+遍历每个格子 → 遇到 '1' 且未访问 → 岛屿数 +1
+  → DFS/BFS 标记整个连通块为已访问（沉岛，grid[i][j]='0'）
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、DFS 沉岛图解、与多请求 batch 分组的类比）见 [岛屿数量题解](../../leetcode/daily/week6/day5/岛屿数量.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：实现真正的 batch 合并 forward
+
+当前 `_run_iteration()` 对每个请求单独 forward（循环内逐个 `model(input)`）。实现真正的 batch 合并：把同一轮的多个请求 input padding 到等长，拼成 `(batch, max_len)` 一个 tensor，一次 forward。测试：forward 次数从 batch_size 降到 1。
+
+> 思考：padding 带来什么浪费？（提示：短请求被 pad 到最长请求的长度，多余计算。Day 1 讲过 padding 代价和 attention mask 优化。）
+
+#### 实验 2：添加超时与取消机制
+
+给 `Request` 加 `timeout` 和 `cancel()`：超过最大等待时间返回错误；`cancel(request_id)` 从 waiting/running 移除并 `future.set_exception(CancelledError)`。测试：提交后立即取消，验证 Future 抛异常。
+
+> 思考：取消一个 running 请求需要做什么？（提示：从 running 移除、释放 KV Cache、set_exception。注意 worker 线程可能正在 forward 它，需锁保护。）
+
+#### 实验 3：加入 Chunked Prefill（Day 4）
+
+修改 `_run_iteration()`，长 prompt 不一次性 prefill，而是每轮只 prefill `chunk_size` 个 token（Day 4 的 chunked prefill）。测试：长 prompt 的 prefill 不阻塞短 decode，TPOT 更平滑。
+
+> 思考：chunked prefill 在 v1 中如何与 Continuous Batching 配合？（提示：每轮 budget 分给一个 prefill chunk + 多个 decode，chunk_size 封顶 prefill 占用。Day 4 详讲。）
+
+---
+
+### 今日总结
+
+Day 5 我们把 Week 6 Day 1-4 的调度概念整合成了真正能并发处理多请求的 Mini 推理引擎 v1：
+
+1. **v0 → v1 升级**：单请求同步 `generate()` → 多请求异步 `submit()` 返回 Future，后台 worker 做 Continuous Batching
+2. **四组件架构**：Request Queue（线程安全 deque）+ Scheduler（token budget + 优先级）+ Worker（model forward）+ Future（异步返回）
+3. **MiniScheduler**：每轮保留 running decode（按优先级）+ 从 waiting prefill（token budget 约束），对应 Day 2-3 的 Continuous Batching
+4. **请求生命周期**：WAITING → RUNNING（prefill → decode 循环）→ FINISHED（future.set_result），每请求独立 KV Cache
+5. **锁的粒度**：锁内只做队列操作（快速），锁外做 forward（慢但不阻塞 submit）——生产者-消费者模式
+6. **实测 Continuous Batching**：4 请求 8 轮完成，R2(短) iter4 退出不等 R1(长)，batch size 动态 4→3→2→1
+7. **并发收益**：v0 串行 23 次 forward，v1 并发 8 轮，收益约 2.9x
+
+掌握这些后，你就有了推理引擎的完整骨架——明天 Day 6 对 v1 做 Latency/Throughput benchmark，绘制 throughput-latency 曲线，识别饱和点。
+
+---
+
+### 面试要点
+
+1. **如何将单请求推理引擎扩展为多请求并发？需要解决哪些问题？**（⭐⭐⭐⭐⭐ 必考）
+
+   - **请求队列**：线程安全的缓冲（deque + lock），支持异步 submit
+   - **调度器**：每轮决定运行哪些请求（Continuous Batching：保留 running + 补入 waiting）
+   - **KV Cache 管理**：每个请求独立维护一份 KV Cache，prefill 建立、decode 复用
+   - **异步返回**：Future/callback，完成即 set_result，不等其他请求
+   - **资源隔离**：token budget + max_num_seqs 双约束，防止一个请求耗尽资源
+   - **生命周期管理**：waiting → running → finished，超时/取消处理
+
+2. **Mini Engine v1 的 Scheduler 每轮做哪些决策？**
+
+   - ① 移除已完成的 running 请求，`future.set_result()` 异步返回
+   - ② 保留 running 的 decode（按优先级降序，token_budget -= 1）
+   - ③ 从 waiting 加入新请求 prefill（按优先级降序，`token_budget >= prompt_len` 才加入）
+   - 约束：token_budget（每轮 token 上限）、max_num_seqs（并发上限）
+   - 与 vLLM Scheduler 的区别：v1 无显存预算和抢占（preemption），只做 token budget
+
+3. **推理引擎中，优先级调度有什么优缺点？**
+
+   - **优点**：高优先级请求（付费用户、交互式）获得更快响应；可配置不同 SLA
+   - **缺点**：
+     - 低优先级请求可能饥饿（starvation）
+     - 需要复杂的调度逻辑和预算管理
+     - 优先级反转（高优先级等待低优先级占用的资源）
+   - **缓解**：设置最大等待时间（timeout）、动态调整优先级（aging 老化）、资源预留
+
+4. **为什么 _worker_loop 中锁内只做队列操作，锁外做 forward？**
+
+   - forward 是慢操作（GPU 计算，毫秒到秒级），若在锁内会阻塞 `submit()` 入队
+   - 锁内只做队列操作（调度、移除完成、登记 running）——快速，微秒级
+   - 锁外做 forward——慢但不阻塞其他线程提交请求
+   - 这是生产者-消费者模式的标准做法，保证 submit 不被 forward 阻塞
+
+5. **v1 的 Continuous Batching 和 v0 的串行 generate 有什么本质区别？**
+
+   - **v0**：`generate()` 同步阻塞，一个请求跑完才能跑下一个 → GPU 空闲、用户排队
+   - **v1**：`submit()` 异步返回 Future，后台 worker 每轮重建 batch → 多请求并发 forward、完成即退出
+   - **收益**：实测 4 请求 v0 需 23 次 forward（串行），v1 只需 8 轮（并发），收益约 2.9x
+   - **关键**：v1 每轮把多个请求拼 batch 一起 forward，GPU 满载；v0 每次只 forward 一个请求
+
+6. **能对照昇腾解释多请求推理引擎的组件对应吗？**
+
+   - 架构跨平台统一：Request Queue + Scheduler + Worker + Future 无论 CUDA 还是昇腾都一致
+   - 昇腾 MindIE 同样有请求队列、调度器（token budget + 优先级）、Worker（AscendC 算子）、异步返回
+   - 差异在底层：model forward 用 PyTorch/cuBLAS vs AscendC 算子；KV Cache 存显存 vs HBM
+   - Continuous Batching / 优先级调度 / Future 异步等概念在昇腾上完全对应
