@@ -477,7 +477,7 @@ int main() {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时。完整题解（含 float4 向量化、occupancy 调优、与当日主题关联）见 [Matrix Addition 题解](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matrix_add_forward`，在 Python 里调用验证。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时。完整题解（含 float4 向量化、occupancy 调优、与当日主题关联）见 [Matrix Addition 题解](../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matrix_add_forward`，在 Python 里调用验证。
 
 #### 任务 5：LeetCode 面试题 —— 验证二叉搜索树
 

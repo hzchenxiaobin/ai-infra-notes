@@ -513,7 +513,7 @@ __global__ void softmax_kernel(const float* input, float* output, int M, int N) 
 }
 ```
 
-> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同 `D` / `threads` 的性能差异。完整题解（含 online 两遍扫描优化、Roofline 分析）见 [Softmax 题解](../../leetgpu/week2/day4/leetgpu-softmax-solution.md)。
+> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同 `D` / `threads` 的性能差异。完整题解（含 online 两遍扫描优化、Roofline 分析）见 [Softmax 题解](../../leetgpu/week3/day2/leetgpu-softmax-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 打家劫舍
 

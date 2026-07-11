@@ -230,10 +230,10 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
 | Day 1 | [1D Convolution](../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md) | [11. 盛最多水的容器](../../../leetcode/daily/week3/day1/盛最多水的容器.md) |
-| Day 2 | [Softmax](../../leetgpu/week2/day4/leetgpu-softmax-solution.md) | [198. 打家劫舍](../../../leetcode/daily/week3/day2/打家劫舍.md) |
+| Day 2 | [Softmax](../../leetgpu/week3/day2/leetgpu-softmax-solution.md) | [198. 打家劫舍](../../../leetcode/daily/week3/day2/打家劫舍.md) |
 | Day 3 | [Argmax](../../leetgpu/week3/day3/leetgpu-argmax-solution.md) | [5. 最长回文子串](../../../leetcode/daily/week3/day3/最长回文子串.md) |
 | Day 4 | [Attention](../../leetgpu/week3/day4/leetgpu-attention-solution.md) | [141. 环形链表](../../../leetcode/daily/week3/day4/环形链表.md) |
-| Day 5 | [Matrix Addition](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md) | [98. 验证二叉搜索树](../../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
+| Day 5 | [Matrix Addition](../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md) | [98. 验证二叉搜索树](../../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
 | Day 6 | [RMS Normalization](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) | [78. 子集](../../../leetcode/daily/week3/day6/子集.md) |
 
 > 💡 回顾重点：Softmax / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。
