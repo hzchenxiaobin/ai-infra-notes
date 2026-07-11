@@ -107,13 +107,15 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
         result: List[str] = []
         title = node["title"]
 
-        # Day level: render as a flat label + problem links (no accordion)
+        # Day level: render day tag + problem title on a single line
         if len(path) == 3 and path[0] == "daily":
-            result.append(f'<div class="nav-day-label">{title}</div>')
             for p in node.get("problems", []):
                 cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
                 result.append(
-                    f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
+                    f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">'
+                    f'<span class="nav-day-tag">{title}</span>'
+                    f'{p["title"]}'
+                    f'</a>'
                 )
             return result
 
