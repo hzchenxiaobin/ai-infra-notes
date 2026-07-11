@@ -150,7 +150,7 @@ body {
     color: var(--text-color);
 }
 
-.nav-accordion-item.is-expanded .nav-accordion-toggle {
+.nav-accordion-item.is-expanded > .nav-accordion-header .nav-accordion-toggle {
     transform: rotate(180deg);
 }
 
@@ -160,7 +160,7 @@ body {
     transition: max-height 0.25s ease-out;
 }
 
-.nav-accordion-item.is-expanded .nav-accordion-content {
+.nav-accordion-item.is-expanded > .nav-accordion-content {
     max-height: 1200px;
 }
 
@@ -603,31 +603,42 @@ body {
     line-height: 1.4;
 }
 
-/* LeetCode overview compact cards */
-.leetcode-cards {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
-    margin: 12px 0 24px;
+/* LeetCode overview simple list */
+.leetcode-section {
+    margin-bottom: 24px;
 }
 
-.leetcode-cards .day-card {
-    padding: 12px 14px;
-    border-radius: 8px;
-}
-
-.leetcode-cards .day-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 10px rgba(88, 166, 255, 0.1);
-}
-
-.leetcode-cards .day-card-number {
-    font-size: 0.75rem;
-    margin-bottom: 4px;
-}
-
-.leetcode-cards .day-card-title {
+.leetcode-section-title {
     font-size: 0.9rem;
-    line-height: 1.35;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.leetcode-problem-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.leetcode-problem-link {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.leetcode-problem-link:hover {
+    background-color: rgba(88, 166, 255, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
 }
 
 /* Images */

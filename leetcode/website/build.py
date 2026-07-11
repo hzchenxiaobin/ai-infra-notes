@@ -311,7 +311,7 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         groups.setdefault((p["category"], p["folder"]), []).append(p)
 
     # Build overview page (at leetcode/index.html -> root_prefix="../")
-    overview_markdown = "## 题目列表\n\n"
+    overview_markdown = ""
     for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
         category, folder = group
         if category == "contest":
@@ -320,15 +320,16 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
             section_heading = f"每日一题 {folder}"
         else:
             section_heading = folder
-        overview_markdown += f"### {section_heading}\n\n"
-        overview_markdown += '<div class="day-cards leetcode-cards">\n'
+        overview_markdown += f'<div class="leetcode-section">\n'
+        overview_markdown += f'  <div class="leetcode-section-title">{section_heading}</div>\n'
+        overview_markdown += f'  <div class="leetcode-problem-list">\n'
         for p in groups[group]:
             overview_markdown += (
-                f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
-                f'  <div class="day-card-number">{folder}</div>\n'
-                f'  <div class="day-card-title">{p["title"]}</div>\n'
+                f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
+                f'{p["title"]}'
                 f'</a>\n'
             )
+        overview_markdown += '  </div>\n'
         overview_markdown += '</div>\n\n'
 
     # Markdown references images as "images/xxx.svg"; overview is at leetcode/index.html
