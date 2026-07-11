@@ -403,7 +403,7 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 </details>
 
 
-1. **什么样的访问模式会产生 bank conflict？**
+2. **什么样的访问模式会产生 bank conflict？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -414,7 +414,7 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 </details>
 
 
-1. **Padding 的代价是什么？**
+3. **Padding 的代价是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -425,7 +425,7 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 </details>
 
 
-1. **Broadcast 会产生 bank conflict 吗？**
+4. **Broadcast 会产生 bank conflict 吗？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -435,7 +435,7 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 </details>
 
 
-1. **如何检测 bank conflict？**
+5. **如何检测 bank conflict？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -446,7 +446,7 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 </details>
 
 
-1. **矩阵转置为什么要加 padding？**
+6. **矩阵转置为什么要加 padding？**
 
 <details>
 <summary>点击查看答案</summary>

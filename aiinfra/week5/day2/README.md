@@ -417,7 +417,7 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 </details>
 
 
-1. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
+2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -431,7 +431,7 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 </details>
 
 
-1. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
+3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -444,7 +444,7 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 </details>
 
 
-1. **多轮对话中如何复用 KV Cache？有什么前提条件？**
+4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -458,7 +458,7 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 </details>
 
 
-1. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
+5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -471,7 +471,7 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 </details>
 
 
-1. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
+6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>

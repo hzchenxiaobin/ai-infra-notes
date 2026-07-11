@@ -611,7 +611,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 </details>
 
 
-1. **请完整推导 Online Softmax 的三个更新公式，并解释每个公式的含义。**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释每个公式的含义。**
 
 <details>
 <summary>点击查看答案</summary>
@@ -639,7 +639,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 </details>
 
 
-1. **FlashAttention 的分块大小 Br×Bc 如何确定？**
+3. **FlashAttention 的分块大小 Br×Bc 如何确定？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -652,7 +652,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 </details>
 
 
-1. **`exp(m - m_new)` 这个缩放因子为什么重要？**
+4. **`exp(m - m_new)` 这个缩放因子为什么重要？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -666,7 +666,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 </details>
 
 
-1. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
+5. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
 
 <details>
 <summary>点击查看答案</summary>

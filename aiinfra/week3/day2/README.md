@@ -594,7 +594,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 </details>
 
 
-1. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
+2. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -607,7 +607,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 </details>
 
 
-1. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -623,7 +623,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 </details>
 
 
-1. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
+4. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -638,7 +638,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 </details>
 
 
-1. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
+5. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
 
 <details>
 <summary>点击查看答案</summary>

@@ -343,7 +343,7 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 </details>
 
 
-1. **Continuous Batching 和 Dynamic Batching 有什么区别？**
+2. **Continuous Batching 和 Dynamic Batching 有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -355,7 +355,7 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 </details>
 
 
-1. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
+3. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -368,7 +368,7 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 </details>
 
 
-1. **PagedAttention 和 Continuous Batching 是什么关系？**
+4. **PagedAttention 和 Continuous Batching 是什么关系？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -381,7 +381,7 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 </details>
 
 
-1. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+5. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>

@@ -330,7 +330,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-1. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
 
 <details>
 <summary>点击查看答案</summary>
@@ -346,7 +346,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-1. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
+3. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -360,7 +360,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-1. **从 FlashAttention 中提炼出通用的 IO 优化方法论，并举一个 Transformer 外的应用例子。**
+4. **从 FlashAttention 中提炼出通用的 IO 优化方法论，并举一个 Transformer 外的应用例子。**
 
 <details>
 <summary>点击查看答案</summary>
@@ -374,7 +374,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-1. **IO 优化和计算优化哪个更优先？为什么？**
+5. **IO 优化和计算优化哪个更优先？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -386,7 +386,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-1. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+6. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
 
 <details>
 <summary>点击查看答案</summary>

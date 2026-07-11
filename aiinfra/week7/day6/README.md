@@ -389,7 +389,7 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
 </details>
 
 
-1. **你的 Mini 系统和 vLLM 的差距主要在哪里？如何缩小？**（⭐⭐⭐⭐⭐ 必考）
+2. **你的 Mini 系统和 vLLM 的差距主要在哪里？如何缩小？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
@@ -405,7 +405,7 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
 </details>
 
 
-1. **ncu 中 SM throughput 和 DRAM throughput 分别代表什么？怎么判断 bound 类型？**（⭐⭐⭐⭐ 高频）
+3. **ncu 中 SM throughput 和 DRAM throughput 分别代表什么？怎么判断 bound 类型？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -420,7 +420,7 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
 </details>
 
 
-1. **什么是 CUDA Graph？为什么能减少 launch overhead？**（⭐⭐⭐⭐ 高频）
+4. **什么是 CUDA Graph？为什么能减少 launch overhead？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -433,7 +433,7 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
 </details>
 
 
-1. **forward 阶段内哪些 kernel 最耗时？怎么优化？**（⭐⭐⭐⭐ 高频）
+5. **forward 阶段内哪些 kernel 最耗时？怎么优化？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>

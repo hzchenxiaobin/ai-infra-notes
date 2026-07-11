@@ -542,7 +542,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-1. **为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？**
+2. **为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -555,7 +555,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-1. **`load_inline` 和 `setup.py` 有什么区别？分别什么场景用？**
+3. **`load_inline` 和 `setup.py` 有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -568,7 +568,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-1. **集成自定义算子时，为什么要传 `getCurrentCUDAStream()`？不传会怎样？**
+4. **集成自定义算子时，为什么要传 `getCurrentCUDAStream()`？不传会怎样？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -583,7 +583,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-1. **`torch.compile` 能融合自定义 C++ Extension 算子吗？为什么？**
+5. **`torch.compile` 能融合自定义 C++ Extension 算子吗？为什么？**
 
 <details>
 <summary>点击查看答案</summary>

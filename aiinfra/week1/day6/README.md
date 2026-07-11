@@ -485,7 +485,7 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 </details>
 
 
-1. **Nsight Compute 和 Nsight Systems 的区别？**
+2. **Nsight Compute 和 Nsight Systems 的区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -496,7 +496,7 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 </details>
 
 
-1. **Roofline 模型如何指导优化？**
+3. **Roofline 模型如何指导优化？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -508,7 +508,7 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 </details>
 
 
-1. **常用的 ncu 指标有哪些？**
+4. **常用的 ncu 指标有哪些？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -521,7 +521,7 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 </details>
 
 
-1. **nsys 时间线能看到什么？**
+5. **nsys 时间线能看到什么？**
 
 <details>
 <summary>点击查看答案</summary>

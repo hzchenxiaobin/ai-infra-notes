@@ -508,7 +508,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 </details>
 
 
-1. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
+2. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -520,7 +520,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 </details>
 
 
-1. **Register 使用量如何计算？什么时候会 spill？**
+3. **Register 使用量如何计算？什么时候会 spill？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -531,7 +531,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 </details>
 
 
-1. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
+4. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -543,7 +543,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 </details>
 
 
-1. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
+5. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
 
 <details>
 <summary>点击查看答案</summary>

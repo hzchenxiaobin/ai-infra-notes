@@ -466,7 +466,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 </details>
 
 
-1. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
 
 <details>
 <summary>点击查看答案</summary>
@@ -483,7 +483,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 </details>
 
 
-1. **FlashAttention 的实际 wall-clock 加速为什么通常只有 2-8x，而不是 IO 复杂度的 100x？**
+3. **FlashAttention 的实际 wall-clock 加速为什么通常只有 2-8x，而不是 IO 复杂度的 100x？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -496,7 +496,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 </details>
 
 
-1. **FlashAttention 的分块大小 Br×Bc 如何确定？SRAM 容量如何约束？**
+4. **FlashAttention 的分块大小 Br×Bc 如何确定？SRAM 容量如何约束？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -510,7 +510,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 </details>
 
 
-1. **Online Softmax 的数值稳定性是如何保证的？**
+5. **Online Softmax 的数值稳定性是如何保证的？**
 
 <details>
 <summary>点击查看答案</summary>

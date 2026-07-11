@@ -420,7 +420,7 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
 </details>
 
 
-1. **block table 是什么？attention kernel 怎么用它？**
+2. **block table 是什么？attention kernel 怎么用它？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -433,7 +433,7 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
 </details>
 
 
-1. **PagedAttention 中的 Copy-on-Write 是什么？在什么场景下使用？**
+3. **PagedAttention 中的 Copy-on-Write 是什么？在什么场景下使用？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -447,7 +447,7 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
 </details>
 
 
-1. **block_size 怎么选？太大太小各有什么问题？**
+4. **block_size 怎么选？太大太小各有什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -460,7 +460,7 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
 </details>
 
 
-1. **PagedAttention 与 Continuous Batching 是什么关系？**
+5. **PagedAttention 与 Continuous Batching 是什么关系？**
 
 <details>
 <summary>点击查看答案</summary>

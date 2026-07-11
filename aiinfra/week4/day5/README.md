@@ -422,7 +422,7 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 </details>
 
 
-1. **FlashAttention 在什么情况下可能比标准 Attention 慢？为什么？**
+2. **FlashAttention 在什么情况下可能比标准 Attention 慢？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -436,7 +436,7 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 </details>
 
 
-1. **集成自定义算子时，为什么要传递 `at::cuda::getCurrentCUDAStream()`？**
+3. **集成自定义算子时，为什么要传递 `at::cuda::getCurrentCUDAStream()`？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -449,7 +449,7 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 </details>
 
 
-1. **Mini 引擎中用自定义 FlashAttention 替换标准 Attention 后，kernel 数量有什么变化？**
+4. **Mini 引擎中用自定义 FlashAttention 替换标准 Attention 后，kernel 数量有什么变化？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -462,7 +462,7 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 </details>
 
 
-1. **你的 Mini 引擎 FlashAttention 版与生产级推理引擎（如 vLLM）有什么差距？**
+5. **你的 Mini 引擎 FlashAttention 版与生产级推理引擎（如 vLLM）有什么差距？**
 
 <details>
 <summary>点击查看答案</summary>

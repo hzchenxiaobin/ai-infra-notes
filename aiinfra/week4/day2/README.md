@@ -694,7 +694,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 </details>
 
 
-1. **FlashAttention Kernel 中为什么不需要 `__syncthreads()` 在 online softmax 内部？**
+2. **FlashAttention Kernel 中为什么不需要 `__syncthreads()` 在 online softmax 内部？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -707,7 +707,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 </details>
 
 
-1. **FlashAttention Kernel 的 register 使用量为什么很大？会导致什么问题？**
+3. **FlashAttention Kernel 的 register 使用量为什么很大？会导致什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -720,7 +720,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 </details>
 
 
-1. **SRAM 使用量如何计算？Br/Bc 选太大或太小有什么问题？**
+4. **SRAM 使用量如何计算？Br/Bc 选太大或太小有什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -733,7 +733,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 </details>
 
 
-1. **如何处理 N 不是 Br 倍数的边界情况？**
+5. **如何处理 N 不是 Br 倍数的边界情况？**
 
 <details>
 <summary>点击查看答案</summary>

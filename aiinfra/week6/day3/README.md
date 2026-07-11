@@ -550,7 +550,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 </details>
 
 
-1. **vLLM 中的 preemption 有哪两种模式？默认用哪种？为什么？**（⭐⭐⭐⭐ 高频）
+2. **vLLM 中的 preemption 有哪两种模式？默认用哪种？为什么？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -566,7 +566,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 </details>
 
 
-1. **SchedulingBudget 的两个核心参数是什么？分别限制什么？**
+3. **SchedulingBudget 的两个核心参数是什么？分别限制什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -579,7 +579,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 </details>
 
 
-1. **为什么 `_schedule_waiting` 中要先检查 `if self.swapped: return`？**
+4. **为什么 `_schedule_waiting` 中要先检查 `if self.swapped: return`？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -591,7 +591,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 </details>
 
 
-1. **RECOMPUTE 和 SWAP 各自的恢复过程有什么区别？被抢占序列的进度是否保留？**
+5. **RECOMPUTE 和 SWAP 各自的恢复过程有什么区别？被抢占序列的进度是否保留？**
 
 <details>
 <summary>点击查看答案</summary>

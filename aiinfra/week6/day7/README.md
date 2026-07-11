@@ -310,7 +310,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 </details>
 
 
-1. **在 LLM 推理服务中，如何平衡 throughput 和 latency？**（⭐⭐⭐⭐⭐ 必考）
+2. **在 LLM 推理服务中，如何平衡 throughput 和 latency？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
@@ -325,7 +325,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 </details>
 
 
-1. **vLLM 的 Continuous Batching 为什么需要 PagedAttention？**
+3. **vLLM 的 Continuous Batching 为什么需要 PagedAttention？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -338,7 +338,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 </details>
 
 
-1. **调度策略如何选择？给出你的决策流程**
+4. **调度策略如何选择？给出你的决策流程**
 
 <details>
 <summary>点击查看答案</summary>
@@ -350,7 +350,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 </details>
 
 
-1. **如何识别推理系统的饱和点？饱和后怎么优化？**
+5. **如何识别推理系统的饱和点？饱和后怎么优化？**
 
 <details>
 <summary>点击查看答案</summary>

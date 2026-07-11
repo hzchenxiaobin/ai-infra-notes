@@ -382,7 +382,7 @@ Day 3 我们分析评估了三大高级推理特性：
 </details>
 
 
-1. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
+2. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -399,7 +399,7 @@ Day 3 我们分析评估了三大高级推理特性：
 </details>
 
 
-1. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
+3. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -413,7 +413,7 @@ Day 3 我们分析评估了三大高级推理特性：
 </details>
 
 
-1. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
+4. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -427,7 +427,7 @@ Day 3 我们分析评估了三大高级推理特性：
 </details>
 
 
-1. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
+5. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>

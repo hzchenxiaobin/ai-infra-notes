@@ -379,7 +379,7 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 </details>
 
 
-1. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+2. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -393,7 +393,7 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 </details>
 
 
-1. **FlashAttention 在什么配置下收益最大？什么配置下可能更慢？**
+3. **FlashAttention 在什么配置下收益最大？什么配置下可能更慢？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -406,7 +406,7 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 </details>
 
 
-1. **手写 FlashAttention 与官方实现的性能差距主要来自哪里？**
+4. **手写 FlashAttention 与官方实现的性能差距主要来自哪里？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -421,7 +421,7 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 </details>
 
 
-1. **标准 Attention 的 latency 随 N 增长的趋势是怎样的？FlashAttention 呢？**
+5. **标准 Attention 的 latency 随 N 增长的趋势是怎样的？FlashAttention 呢？**
 
 <details>
 <summary>点击查看答案</summary>

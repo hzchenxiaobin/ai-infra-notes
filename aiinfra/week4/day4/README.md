@@ -355,7 +355,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 </details>
 
 
-1. **FlashAttention-2 中，seq 并行和 head 并行有什么区别？什么时候用 seq 并行？**
+2. **FlashAttention-2 中，seq 并行和 head 并行有什么区别？什么时候用 seq 并行？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -368,7 +368,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 </details>
 
 
-1. **为什么减少 non-matmul FLOPs 对性能影响这么大？**
+3. **为什么减少 non-matmul FLOPs 对性能影响这么大？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -381,7 +381,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 </details>
 
 
-1. **FA2 的 warp group 子块划分与 FA1 的 warp 共享有什么具体区别？**
+4. **FA2 的 warp group 子块划分与 FA1 的 warp 共享有什么具体区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -396,7 +396,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 </details>
 
 
-1. **如果让你继续优化 FlashAttention（FA3 方向），你会怎么做？**
+5. **如果让你继续优化 FlashAttention（FA3 方向），你会怎么做？**
 
 <details>
 <summary>点击查看答案</summary>

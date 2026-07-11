@@ -801,7 +801,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 </details>
 
 
-1. **从硬件执行模型到代码，你的优化思路链是什么？**
+2. **从硬件执行模型到代码，你的优化思路链是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -811,7 +811,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 </details>
 
 
-1. **Week 1 你最大的收获是什么？**
+3. **Week 1 你最大的收获是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -821,7 +821,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 </details>
 
 
-1. **如果让你优化一个未知 kernel，你会怎么做？**
+4. **如果让你优化一个未知 kernel，你会怎么做？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -831,7 +831,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 </details>
 
 
-1. **Week 1 哪个实验让你印象最深刻？为什么？**
+5. **Week 1 哪个实验让你印象最深刻？为什么？**
 
 <details>
 <summary>点击查看答案</summary>

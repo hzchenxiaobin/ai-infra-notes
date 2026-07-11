@@ -696,7 +696,7 @@ Day 4 我们深入理解了 GPU 内存层次：
 </details>
 
 
-1. **矩阵转置为什么难做 coalesced？如何解决？**
+2. **矩阵转置为什么难做 coalesced？如何解决？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -707,7 +707,7 @@ Day 4 我们深入理解了 GPU 内存层次：
 </details>
 
 
-1. **Shared memory 和 L1 cache 的区别？**
+3. **Shared memory 和 L1 cache 的区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -718,7 +718,7 @@ Day 4 我们深入理解了 GPU 内存层次：
 </details>
 
 
-1. **为什么要用 tiling？**
+4. **为什么要用 tiling？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -730,7 +730,7 @@ Day 4 我们深入理解了 GPU 内存层次：
 </details>
 
 
-1. **GPU 内存层次从快到慢是什么？**
+5. **GPU 内存层次从快到慢是什么？**
 
 <details>
 <summary>点击查看答案</summary>

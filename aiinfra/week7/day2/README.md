@@ -388,7 +388,7 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
 </details>
 
 
-1. **调度器中的抢占策略如何选择被抢占的请求？recompute 和 swap 有什么区别？**（⭐⭐⭐⭐ 高频）
+2. **调度器中的抢占策略如何选择被抢占的请求？recompute 和 swap 有什么区别？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -405,7 +405,7 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
 </details>
 
 
-1. **token_budget 和 memory_budget 分别限制什么？为什么需要两道预算？**（⭐⭐⭐⭐ 高频）
+3. **token_budget 和 memory_budget 分别限制什么？为什么需要两道预算？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -421,7 +421,7 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
 </details>
 
 
-1. **什么是 aging 机制？为什么需要它？**（⭐⭐⭐ 中频）
+4. **什么是 aging 机制？为什么需要它？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
@@ -434,7 +434,7 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
 </details>
 
 
-1. **Continuous Batching 的调度循环中，为什么先处理 running 再加入新请求？**（⭐⭐⭐⭐ 高频）
+5. **Continuous Batching 的调度循环中，为什么先处理 running 再加入新请求？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>

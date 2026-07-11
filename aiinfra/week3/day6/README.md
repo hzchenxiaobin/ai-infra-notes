@@ -545,7 +545,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 </details>
 
 
-1. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
+2. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
 
 <details>
 <summary>点击查看答案</summary>
@@ -558,7 +558,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 </details>
 
 
-1. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+3. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -577,7 +577,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 </details>
 
 
-1. **ncu 和 nsys 有什么区别？分别什么场景用？**
+4. **ncu 和 nsys 有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -590,7 +590,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 </details>
 
 
-1. **为什么 `torch.compile` 能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
+5. **为什么 `torch.compile` 能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
 
 <details>
 <summary>点击查看答案</summary>

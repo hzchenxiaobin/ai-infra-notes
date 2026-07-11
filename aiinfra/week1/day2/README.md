@@ -682,7 +682,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 </details>
 
 
-1. **寄存器 spilling 是怎么发生的？如何检测？**
+2. **寄存器 spilling 是怎么发生的？如何检测？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -693,7 +693,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 </details>
 
 
-1. **`__launch_bounds__` 的使用场景？**
+3. **`__launch_bounds__` 的使用场景？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -704,7 +704,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 </details>
 
 
-1. **影响 occupancy 的因素有哪些？**
+4. **影响 occupancy 的因素有哪些？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -716,7 +716,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 </details>
 
 
-1. **如何计算理论 occupancy？**
+5. **如何计算理论 occupancy？**
 
 <details>
 <summary>点击查看答案</summary>

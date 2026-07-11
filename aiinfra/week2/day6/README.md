@@ -603,7 +603,7 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 </details>
 
 
-1. **`float4` 向量化加载为什么能提升性能？需要什么条件？**
+2. **`float4` 向量化加载为什么能提升性能？需要什么条件？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -617,7 +617,7 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 </details>
 
 
-1. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
+3. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -636,7 +636,7 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 </details>
 
 
-1. **为什么 TM=TN=16 会导致性能下降？**
+4. **为什么 TM=TN=16 会导致性能下降？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -648,7 +648,7 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 </details>
 
 
-1. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
+5. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
 
 <details>
 <summary>点击查看答案</summary>

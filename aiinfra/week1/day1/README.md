@@ -757,7 +757,7 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 </details>
 
 
-1. **Warp divergence 是什么？如何避免？**
+2. **Warp divergence 是什么？如何避免？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -768,7 +768,7 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 </details>
 
 
-1. **一个 block 最多多少 thread？为什么？**
+3. **一个 block 最多多少 thread？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -779,7 +779,7 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 </details>
 
 
-1. **如何计算一个 kernel 的总 thread 数？**
+4. **如何计算一个 kernel 的总 thread 数？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -789,7 +789,7 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 </details>
 
 
-1. **CUDA 中 `__global__` 和 `__device__` 的区别？**
+5. **CUDA 中 `__global__` 和 `__device__` 的区别？**
 
 <details>
 <summary>点击查看答案</summary>

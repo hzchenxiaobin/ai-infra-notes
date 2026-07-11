@@ -394,7 +394,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 </details>
 
 
-1. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
+2. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -408,7 +408,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 </details>
 
 
-1. **Roofline 模型怎么解读？平衡点是什么？**
+3. **Roofline 模型怎么解读？平衡点是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -420,7 +420,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 </details>
 
 
-1. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
+4. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -432,7 +432,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 </details>
 
 
-1. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
+5. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
 
 <details>
 <summary>点击查看答案</summary>

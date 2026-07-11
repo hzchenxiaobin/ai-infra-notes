@@ -446,7 +446,7 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
 </details>
 
 
-1. **`cudaMemcpyAsync` 相比 `cudaMemcpy` 需要什么额外条件？为什么必须使用 Pinned Memory？**
+2. **`cudaMemcpyAsync` 相比 `cudaMemcpy` 需要什么额外条件？为什么必须使用 Pinned Memory？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -458,7 +458,7 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
 </details>
 
 
-1. **多 Stream 重叠加速的硬件前提是什么？什么时候多 Stream 不会带来加速？**
+3. **多 Stream 重叠加速的硬件前提是什么？什么时候多 Stream 不会带来加速？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -469,7 +469,7 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
 </details>
 
 
-1. **`cudaEvent` 在多 Stream 编程中起什么作用？如何实现跨 Stream 依赖？**
+4. **`cudaEvent` 在多 Stream 编程中起什么作用？如何实现跨 Stream 依赖？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -482,7 +482,7 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
 </details>
 
 
-1. **如何用 `nsys` 验证多 Stream 是否真的重叠了？**
+5. **如何用 `nsys` 验证多 Stream 是否真的重叠了？**
 
 <details>
 <summary>点击查看答案</summary>
