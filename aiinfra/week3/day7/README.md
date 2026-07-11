@@ -432,6 +432,18 @@ week3/
 
 ---
 
+#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+
+**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+
+**题目概述**：实现因果自注意力（Causal Self-Attention），即带 causal mask 的标准 Attention，每个位置只能看到自己及之前的位置。
+
+**与今日知识的关联**：Causal Self-Attention 是 Week 3 算子主线的综合验收——融合了 Attention（Day 4）+ Softmax（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"。
+
+> 💡 完整题解见 [Causal Self-Attention 题解](../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md)。
+
+---
+
 ## ✅ Week 3 完成标准
 
 - [ ] 能列出 Prefill 阶段算子分类表（GEMM=compute，softmax/LN=memory）

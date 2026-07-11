@@ -610,7 +610,7 @@ total_warps = warps_per_block × num_blocks
 
 > 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
 
-#### 任务 4：LeetGPU 在线题目 —— Vector Add
+#### 任务 4：LeetGPU 在线题目 —— Vector Addition
 
 **题目链接**：<https://leetgpu.com/challenges/vector-add>
 
@@ -643,7 +643,7 @@ __global__ void vector_add(const float* A, const float* B, float* C, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Vector Add 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Add 题解](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Vector Addition 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Addition 题解](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 接雨水
 

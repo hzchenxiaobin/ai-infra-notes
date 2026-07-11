@@ -412,23 +412,100 @@ ncu --metrics \\
 | Long Scoreboard Stall | 高 | 低 | 官方 async copy 隐藏了内存延迟 |
 | Occupancy | ~50-75% | ~60-80% | 官方 smem 更省，occupancy 更高 |
 
-#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
+#### 任务 4：LeetGPU 在线题目 —— Dot Product
 
-**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
+**题目链接**：<https://leetgpu.com/challenges/dot-product>
 
 **题目概述**：
 
-给定 B 组矩阵，每组 A[M×K] 和 B[K×N]，计算 C = A×B for each batch。约束 \`1 ≤ B ≤ 128\`，\`1 ≤ M,N,K ≤ 512\`，元素范围 \`[-1.0, 1.0]\`。
+给定两个长度 N 的 float32 数组 \`a\` 和 \`b\`，计算点积 \`sum(a[i] * b[i])\`。约束 \`1 ≤ N ≤ 10,000,000\`，元素范围 \`[-1000, 1000]\`，结果不溢出 float。
+
+**难度**：中等　**标签**：CUDA、Reduction、Kernel Fusion、Warp Shuffle
 
 **与今日知识的关联**：
 
-本题考察 **batched kernel launch**——用 \`gridDim.z=B\` 在一个 kernel 内并行处理所有 batch，而非串行启动 B 个 kernel。这正是今天读官方 FlashAttention 源码时看到的并行策略：官方用 \`blockIdx.z\` 区分 batch，\`blockIdx.y\` 区分 head。理解 batched GEMM 的寻址（\`base = batch * M * K\`）是理解 FlashAttention 多 batch 并行的前置知识。
+本题核心是 **element-wise 乘法 + 两级归约** 的 kernel 融合。FlashAttention 官方源码中，Q·K^T 的每一行本质上就是一批 dot product，随后紧跟 online softmax 和 PV 累加。通过本题掌握"乘法-归约 fusion"的最小原型，再读官方 \`flash_fwd_kernel.h\` 中 \`gemm_kernel\` 或 \`compute_attn\` 相关代码时，就能快速识别出相同的归约模式。
 
 **解题思路**：
 
-\`gridDim.z = B\`（batch 维度），每组内用 Shared Memory Tiling + Register Blocking（复用单矩阵 GEMM 的 tile 结构），batch offset 寻址 \`A[batch * M * K]\`。
+1. **grid-stride loop**：每个线程负责一段连续区间，先算局部点积
+2. **warp shuffle 归约**：用 \`__shfl_down_sync\` 把 warp 内 32 个线程的局部和归约到 lane 0
+3. **shared memory 跨 warp**：每个 warp 的 lane 0 把部分和写到 smem，再由 warp 0 做最终归约
+4. **原子加或第二遍 kernel**：把每个 block 的部分和累加成全局结果
 
-> 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](../leetgpu/leetgpu-batched-matrix-multiplication-solution.html)。
+**参考实现**：
+
+\`\`\`cuda
+// dot_product.cu —— 点积（grid-stride + warp shuffle + shared memory 二级归约）
+// 编译命令: nvcc -o dot_product dot_product.cu -O3 -arch=sm_80
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cmath>
+
+__global__ void dot_kernel(const float* a, const float* b, float* block_sums, int N) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+    float local_sum = 0.0f;
+
+    for (int i = tid; i < N; i += stride) {
+        local_sum += a[i] * b[i];
+    }
+
+    // Warp 内归约
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
+    }
+
+    __shared__ float s_sum[32];
+    int lane = threadIdx.x & 31;
+    int wid = threadIdx.x >> 5;
+    if (lane == 0) s_sum[wid] = local_sum;
+    __syncthreads();
+
+    // Warp 0 做跨 warp 归约
+    if (wid == 0) {
+        local_sum = (lane < blockDim.x / 32) ? s_sum[lane] : 0.0f;
+        for (int offset = 16; offset > 0; offset >>= 1) {
+            local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
+        }
+        if (lane == 0) block_sums[blockIdx.x] = local_sum;
+    }
+}
+
+__global__ void dot_final(const float* block_sums, float* out, int num_blocks) {
+    float sum = 0.0f;
+    for (int i = threadIdx.x; i < num_blocks; i += blockDim.x) {
+        sum += block_sums[i];
+    }
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
+    }
+    if (threadIdx.x == 0) *out = sum;
+}
+
+int main() {
+    const int N = 1 << 20;
+    size_t bytes = N * sizeof(float);
+    float *h_a = (float*)malloc(bytes), *h_b = (float*)malloc(bytes);
+    for (int i = 0; i < N; ++i) { h_a[i] = 0.001f; h_b[i] = 0.001f; }
+    float *d_a, *d_b, *d_block, *d_out;
+    cudaMalloc(&d_a, bytes); cudaMalloc(&d_b, bytes);
+    int threads = 256, blocks = min((N + threads - 1) / threads, 1024);
+    cudaMalloc(&d_block, blocks * sizeof(float)); cudaMalloc(&d_out, sizeof(float));
+    cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+    dot_kernel<<<blocks, threads>>>(d_a, d_b, d_block, N);
+    dot_final<<<1, 256>>>(d_block, d_out, blocks);
+    float h_out;
+    cudaMemcpy(&h_out, d_out, sizeof(float), cudaMemcpyDeviceToHost);
+    printf("Dot Product = %.6f (expected %.6f)\\n", h_out, N * 0.001f * 0.001f);
+    free(h_a); free(h_b); cudaFree(d_a); cudaFree(d_b); cudaFree(d_block); cudaFree(d_out);
+    return 0;
+}
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时，用 ncu 对比 naive 两阶段（先乘后归约）与 fused 一阶段的 \`dram__bytes_read\` 差异。完整题解（含 kernel 融合、warp shuffle 归约）见 [Dot Product 题解](../leetgpu/leetgpu-dot-product-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 合并区间
 

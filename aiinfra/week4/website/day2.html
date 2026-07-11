@@ -672,23 +672,114 @@ ncu --metrics \\
 - \`sm__occupancy\`：可能只有 50-75%（register 压力大），这是教学版的局限
 - \`dram__throughput\`：应远低于标准 Attention（因为消除了 O(N²) 读写）
 
-#### 任务 4：LeetGPU 在线题目 —— Dot Product
+#### 任务 4：LeetGPU 在线题目 —— Attention
 
-**题目链接**：<https://leetgpu.com/challenges/dot-product>
+**题目链接**：<https://leetgpu.com/challenges/attention>
 
 **题目概述**：
 
-给定两个长度 N 的 float32 数组 \`a\` 和 \`b\`，计算点积 \`sum(a[i] * b[i])\`。约束 \`1 ≤ N ≤ 10,000,000\`，元素范围 \`[-1000, 1000]\`，结果不溢出 float。
+给定 Query (\`M×d\`)、Key (\`N×d\`)、Value (\`N×d\`)，计算 Scaled Dot-Product Attention：\`Attention(Q,K,V) = softmax(Q·K^T / √d) · V\`。约束：\`1 ≤ M, N ≤ 4096\`，\`1 ≤ d ≤ 128\`，元素范围 \`[-1.0, 1.0]\`。
+
+**难度**：困难　**标签**：CUDA、Attention、Online Softmax、FlashAttention、分块计算
 
 **与今日知识的关联**：
 
-本题核心是 **block 归约 + kernel 融合**——把 element-wise 乘法与归约合并到单 kernel，避免中间数组。FlashAttention Kernel 中的 \`warpReduceSum\` / \`warpReduceMax\` 原语正是从这类归约问题抽象出来的。今天手写 FA 时复用了 Week 2 Day 1 的归约原语，本题反向巩固这些原语的最基本应用。
+本题就是今天手写完整 FlashAttention Forward Kernel 的"对标题"——今天我们在本地实现了支持 batch/multi-head 的完整 FA kernel，LeetGPU 的 Attention 题则要求一个同样基于 **分块 + Online Softmax** 的正确实现。核心目标一致：让 S/P 永远不落 HBM，只写 O 回全局内存。把今天推导的 online softmax 三公式直接套用到本题，再对照官方实现查漏补缺。
 
 **解题思路**：
 
-两阶段归约：① grid-stride 算 \`a[i]*b[i]\` 的局部和（融合乘法与累加，无中间数组）② 两级 block 归约（warp shuffle + shared memory 中转 + warp 0 最终归约）③ 第二遍 kernel 归约各 block 部分和。
+1. **分块**：把 Q 按行分 tile 驻留 SRAM，K/V 按列分 tile 逐块滑入
+2. **Online Softmax 三公式**：
+   - \`m_new = max(m, max(s_j))\`（更新 running max）
+   - \`l_new = l * exp(m - m_new) + Σ exp(s_j - m_new)\`（更新 running sum）
+   - \`o_new = o * (l * exp(m - m_new) / l_new) + (Σ exp(s_j - m_new) / l_new) * v_j\`（缩放历史输出 + 加新贡献）
+3. S/P 只在 SRAM/register 中存在，最终只写 O 到 HBM
+4. 与今天本地 kernel 对照：检查 tile 大小、边界处理、精度误差来源是否一致
 
-> 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时。完整题解（含 kernel 融合、float4 向量化、cooperative_groups 优化）见 [Dot Product 题解](../leetgpu/leetgpu-dot-product-solution.html)。
+**参考实现**（FlashAttention 简化版，今日完整实现的精简验证）：
+
+\`\`\`cuda
+// attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
+// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_80
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cmath>
+
+#define BLOCK_M 64
+#define BLOCK_N 64
+#define MAX_D 128
+
+__global__ void flash_attention(const float* Q, const float* K, const float* V,
+                                float* O, int M, int N, int d) {
+    int q_start = blockIdx.x * BLOCK_M;
+
+    __shared__ float s_Q[BLOCK_M][MAX_D];
+    __shared__ float s_K[BLOCK_N][MAX_D];
+    __shared__ float s_V[BLOCK_N][MAX_D];
+
+    // 每行的 running state（寄存器）：m=max, l=sum, o=output
+    int rows_per_warp = BLOCK_M / 32;
+    int warp_id = threadIdx.x / 32;
+    float m_i[4], l_i[4], o_i[4][MAX_D];
+
+    for (int r = 0; r < rows_per_warp; r++) {
+        m_i[r] = -INFINITY;
+        l_i[r] = 0.0f;
+        for (int j = 0; j < d; j++) o_i[r][j] = 0.0f;
+    }
+
+    // 加载 Q tile 到 SRAM（驻留，不重复读 HBM）
+    float scale = 1.0f / sqrtf((float)d);
+
+    // 遍历 K/V tiles（逐块滑入，S/P 不落 HBM）
+    for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
+        // 加载 K/V tile 到 s_K, s_V（省略协作加载代码）
+        __syncthreads();
+
+        for (int r = 0; r < rows_per_warp; r++) {
+            int q_row = q_start + warp_id * rows_per_warp + r;
+            if (q_row >= M) continue;
+
+            // 局部 S = Q[Q_row] · K[kv_tile]^T * scale
+            float local_max = -INFINITY;
+            float s_vals[BLOCK_N];
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float dot = 0.0f;
+                for (int kk = 0; kk < d; kk++)
+                    dot += s_Q[warp_id * rows_per_warp + r][kk] * s_K[j][kk];
+                s_vals[j] = dot * scale;
+                local_max = fmaxf(local_max, s_vals[j]);
+            }
+
+            // Online Softmax 更新
+            float m_new = fmaxf(m_i[r], local_max);
+            float l_new = l_i[r] * expf(m_i[r] - m_new);
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float p = expf(s_vals[j] - m_new);
+                l_new += p;
+                for (int kk = 0; kk < d; kk++)
+                    o_i[r][kk] += p * s_V[j][kk];
+            }
+            // 归一化历史输出（精确缩放见今日完整实现）
+            m_i[r] = m_new;
+            l_i[r] = l_new;
+        }
+        __syncthreads();
+    }
+
+    // 最终归一化并写回 O（只写一次 HBM）
+    for (int r = 0; r < rows_per_warp; r++) {
+        int q_row = q_start + warp_id * rows_per_warp + r;
+        if (q_row < M) {
+            for (int kk = 0; kk < d; kk++)
+                O[q_row * d + kk] = o_i[r][kk] / l_i[r];
+        }
+    }
+}
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 \`dram__bytes_read\` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../leetgpu/leetgpu-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— LRU 缓存
 

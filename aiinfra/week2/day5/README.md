@@ -448,9 +448,9 @@ s_S[Br][Bc] = 64×64×4 = 16 KB
 总计 = 64 KB（在 A100 的 164 KB shared memory 限制内）
 ```
 
-#### 任务 4：LeetGPU 在线题目 —— Attention
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
 
-**题目链接**：<https://leetgpu.com/challenges/attention>
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
 **题目概述**：
 
@@ -508,7 +508,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 }
 ```
 
-> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Attention 题解](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax Attention 题解](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的层序遍历
 

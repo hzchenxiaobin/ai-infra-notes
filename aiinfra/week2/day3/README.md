@@ -310,9 +310,9 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 用 Nsight Systems GUI 打开 `.nsys-rep` 文件，在 Timeline 视图中观察不同 Stream 的操作条是否有重叠区域。
 
-#### 任务 4：LeetGPU 在线题目 —— Convolution
+#### 任务 4：LeetGPU 在线题目 —— 2D Convolution
 
-**题目链接**：<https://leetgpu.com/challenges/convolution>
+**题目链接**：<https://leetgpu.com/challenges/2d-convolution>
 
 **题目概述**：
 
@@ -366,7 +366,7 @@ __global__ void conv2d(const float* input, const float* kernel, float* output,
 // cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
 ```
 
-> 💡 提交后在 [LeetGPU Convolution 题目](https://leetgpu.com/challenges/convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Convolution 题解](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md)。
+> 💡 提交后在 [LeetGPU 2D Convolution 题目](https://leetgpu.com/challenges/2d-convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [2D Convolution 题解](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 三数之和
 

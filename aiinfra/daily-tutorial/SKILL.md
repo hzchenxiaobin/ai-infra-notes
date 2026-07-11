@@ -125,36 +125,51 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 
 | 教程 | 主题 | LeetGPU 题目 | 题解链接 |
 |------|------|--------------|----------|
-| Week1 Day1 | Hello GPU / grid-stride | Vector Addition | [leetgpu-vector-addition-solution.md](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md) |
-| Week1 Day2 | Memory model | ReLU | [leetgpu-relu-solution.md](../../leetgpu/week1/day2/leetgpu-relu-solution.md) |
-| Week1 Day3 | Shared memory | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week1/day3/leetgpu-matrix-transpose-solution.md) |
-| Week1 Day4 | Warp shuffle | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day4/leetgpu-reduction-solution.md) |
-| Week1 Day5 | Bank Conflict 分析 | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day5/leetgpu-reduction-solution.md) |
-| Week1 Day6 | GEMM / tiling | Matrix Multiplication | [leetgpu-matrix-multiplication-solution.md](../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md) |
-| Week1 Day7 | 综合验收 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md) |
-| Week2 Day1 | Scan / prefix | Prefix Sum | [leetgpu-prefix-sum-solution.md](../../leetgpu/week2/day1/leetgpu-prefix-sum-solution.md) |
-| Week2 Day2 | GEMM 进阶 | GEMM | [leetgpu-gemm-solution.md](../../leetgpu/week2/day2/leetgpu-gemm-solution.md) |
-| Week2 Day3 | Convolution | 2D Convolution | [leetgpu-2d-convolution-solution.md](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md) |
-| Week2 Day4 | Softmax | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week2/day4/leetgpu-softmax-solution.md) |
-| Week2 Day5 | Attention | Softmax Attention | [leetgpu-softmax-attention-solution.md](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md) |
-| Week2 Day6 | Histogram | Histogramming | [leetgpu-histogramming-solution.md](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md) |
-| Week2 Day7 | 综合验收 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](../../leetgpu/week2/day7/leetgpu-max-subarray-sum-solution.md) |
+| Week1 Day1 | GPU 执行模型基础 | Vector Addition | [leetgpu-vector-addition-solution.md](../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md) |
+| Week1 Day2 | Occupancy 与资源约束 | ReLU | [leetgpu-relu-solution.md](../../leetgpu/week1/day2/leetgpu-relu-solution.md) |
+| Week1 Day3 | 认识你的 GPU —— deviceQuery 与 Occupancy 计算 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week1/day3/leetgpu-matrix-addition-solution.md) |
+| Week1 Day4 | Memory Hierarchy 深入 | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week1/day4/leetgpu-matrix-transpose-solution.md) |
+| Week1 Day5 | Bank Conflict 分析与实践 | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day5/leetgpu-reduction-solution.md) |
+| Week1 Day6 | Nsight Profiling 实战 | Matrix Multiplication | [leetgpu-matrix-multiplication-solution.md](../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md) |
+| Week1 Day7 | 总结与复盘 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md) |
+| Week2 Day1 | Warp Shuffle 原语与 Warp/Block Reduce | Prefix Sum | [leetgpu-prefix-sum-solution.md](../../leetgpu/week2/day1/leetgpu-prefix-sum-solution.md) |
+| Week2 Day2 | Register Blocking 与 2D Tiling | GEMM | [leetgpu-gemm-solution.md](../../leetgpu/week2/day2/leetgpu-gemm-solution.md) |
+| Week2 Day3 | CUDA Streams 与异步执行 | 2D Convolution | [leetgpu-2d-convolution-solution.md](../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md) |
+| Week2 Day4 | Nsight Compute 性能分析 | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week2/day4/leetgpu-softmax-solution.md) |
+| Week2 Day5 | FlashAttention CUDA 实现（简化版） | Softmax Attention | [leetgpu-softmax-attention-solution.md](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md) |
+| Week2 Day6 | 整合优化到 cuBLAS 70%+ | Histogramming | [leetgpu-histogramming-solution.md](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md) |
+| Week2 Day7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](../../leetgpu/week2/day7/leetgpu-max-subarray-sum-solution.md) |
 | Week3 Day1 | Trace Transformer 推理流程 | 1D Convolution | [leetgpu-1d-convolution-solution.md](../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md) |
-| Week3 Day2 | 手写 Softmax + LayerNorm | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week3/day2/leetgpu-softmax-solution.md) |
-| Week3 Day3 | 优化对比实验 | Argmax | [leetgpu-argmax-solution.md](../../leetgpu/week3/day3/leetgpu-argmax-solution.md) |
-| Week3 Day4 | 标准 Attention Forward | Attention | [leetgpu-attention-solution.md](../../leetgpu/week3/day4/leetgpu-attention-solution.md) |
+| Week3 Day2 | 手写 Softmax 与 LayerNorm Kernel | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week3/day2/leetgpu-softmax-solution.md) |
+| Week3 Day3 | 源码分析 —— PyTorch / FasterTransformer | Argmax | [leetgpu-argmax-solution.md](../../leetgpu/week3/day3/leetgpu-argmax-solution.md) |
+| Week3 Day4 | Attention IO 分析 | Attention | [leetgpu-attention-solution.md](../../leetgpu/week3/day4/leetgpu-attention-solution.md) |
 | Week3 Day5 | 算子接入 Mini 引擎 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md) |
-| Week3 Day6 | 端到端 Profiling | RMS Normalization | [leetgpu-rms-normalization-solution.md](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) |
-| Week3 Day7 | Transformer 算子总结 | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md) |
-| Week4 Day7 | IO 优化方法论总结 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) |
-| Week6 Day3 | vLLM Scheduler | Stream Compaction | [leetgpu-stream-compaction-solution.md](../../leetgpu/week6/day3/leetgpu-stream-compaction-solution.md) |
-| Week6 Day4 | TRT-LLM / Chunked Prefill | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](../../leetgpu/week6/day4/leetgpu-segmented-prefix-sum-solution.md) |
+| Week3 Day6 | 端到端 Profiling 与 Kernel Fusion | RMS Normalization | [leetgpu-rms-normalization-solution.md](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) |
+| Week3 Day7 | Transformer 算子分类与 Week 3 总结 | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md) |
+| Week4 Day1 | FlashAttention 论文精读与 Online Softmax 完整推导 | Softmax Attention | [leetgpu-softmax-attention-solution.md](../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md) |
+| Week4 Day2 | 手写完整 FlashAttention Forward Kernel | Attention | [leetgpu-attention-solution.md](../../leetgpu/week4/day2/leetgpu-attention-solution.md) |
+| Week4 Day3 | FlashAttention 官方 CUDA 源码分析 | Dot Product | [leetgpu-dot-product-solution.md](../../leetgpu/week4/day3/leetgpu-dot-product-solution.md) |
+| Week4 Day4 | FlashAttention-2 论文与源码差异 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](../../leetgpu/week4/day4/leetgpu-batched-matrix-multiplication-solution.md) |
+| Week4 Day5 | 算子接入 Mini 引擎 —— FlashAttention 集成 | Matrix Copy | [leetgpu-matrix-copy-solution.md](../../leetgpu/week4/day5/leetgpu-matrix-copy-solution.md) |
+| Week4 Day6 | 性能对比分析 —— 标准 vs 手写 vs 官方 | Multi-Head Attention | [leetgpu-multi-head-attention-solution.md](../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md) |
+| Week4 Day7 | IO 优化方法论总结与 Week 4 收官 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) |
+| Week5 Day1 | 推理流程 —— Prefill vs Decode | INT8 KV-Cache Attention | [leetgpu-int8-kv-cache-attention-solution.md](../../leetgpu/week5/day1/leetgpu-int8-kv-cache-attention-solution.md) |
+| Week5 Day2 | 实现 KV Cache | Grouped Query Attention (GQA) | [leetgpu-grouped-query-attention-solution.md](../../leetgpu/week5/day2/leetgpu-grouped-query-attention-solution.md) |
+| Week5 Day3 | vLLM 整体架构分析 | Speculative Decoding Verification | [leetgpu-speculative-decoding-verification-solution.md](../../leetgpu/week5/day3/leetgpu-speculative-decoding-verification-solution.md) |
+| Week5 Day4 | vLLM Worker 与 PagedAttention | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](../../leetgpu/week5/day4/leetgpu-causal-self-attention-solution.md) |
+| Week5 Day5 | 项目推进 —— Mini 推理引擎 v0 | Token Embedding Layer | [leetgpu-token-embedding-layer-solution.md](../../leetgpu/week5/day5/leetgpu-token-embedding-layer-solution.md) |
+| Week5 Day6 | 端到端 Profiling | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](../../leetgpu/week5/day6/leetgpu-weight-dequantization-solution.md) |
+| Week5 Day7 | 推理系统核心问题总结与 Week 5 收官 | Simple Inference | [leetgpu-simple-inference-solution.md](../../leetgpu/week5/day7/leetgpu-simple-inference-solution.md) |
+| Week6 Day1 | Dynamic Batching | Simple Inference | [leetgpu-simple-inference-solution.md](../../leetgpu/week6/day1/leetgpu-simple-inference-solution.md) |
+| Week6 Day2 | Continuous Batching | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](../../leetgpu/week6/day2/leetgpu-max-subarray-sum-solution.md) |
+| Week6 Day3 | vLLM Scheduler 源码分析 | Stream Compaction | [leetgpu-stream-compaction-solution.md](../../leetgpu/week6/day3/leetgpu-stream-compaction-solution.md) |
+| Week6 Day4 | TensorRT-LLM / LightLLM 调度对比 | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](../../leetgpu/week6/day4/leetgpu-segmented-prefix-sum-solution.md) |
 | Week6 Day5 | Mini 推理引擎 v1 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md) |
-| Week6 Day6 | Latency/Throughput 测试 | Top K Selection | [leetgpu-top-k-selection-solution.md](../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md) |
-| Week6 Day7 | 调度策略总结 | Dot Product | [leetgpu-dot-product-solution.md](../../leetgpu/week6/day7/leetgpu-dot-product-solution.md) |
+| Week6 Day6 | Latency / Throughput 测试 | Top K Selection | [leetgpu-top-k-selection-solution.md](../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md) |
+| Week6 Day7 | 调度优化策略总结与 Week 6 收官 | Dot Product | [leetgpu-dot-product-solution.md](../../leetgpu/week6/day7/leetgpu-dot-product-solution.md) |
 | Week7 Day1 | 多请求并发支持 | Matrix Copy | [leetgpu-matrix-copy-solution.md](../../leetgpu/week7/day1/leetgpu-matrix-copy-solution.md) |
 | Week7 Day2 | 完整调度器 | Vector Reversal | [leetgpu-vector-reversal-solution.md](../../leetgpu/week7/day2/leetgpu-vector-reversal-solution.md) |
-| Week7 Day3 | SGLang/LightLLM 高级特性 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](../../leetgpu/week7/day3/leetgpu-scalar-multiply-solution.md) |
+| Week7 Day3 | SGLang / LightLLM 高级特性 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](../../leetgpu/week7/day3/leetgpu-scalar-multiply-solution.md) |
 | Week7 Day4 | 整合全部自定义 Kernel | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week7/day4/leetgpu-matrix-transpose-solution.md) |
 | Week7 Day5 | 系统联调 | Element Reversal | [leetgpu-element-reversal-solution.md](../../leetgpu/week7/day5/leetgpu-element-reversal-solution.md) |
 | Week7 Day6 | 全链路 Profiling | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week7/day6/leetgpu-reduction-solution.md) |

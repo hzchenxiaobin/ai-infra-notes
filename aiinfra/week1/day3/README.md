@@ -431,84 +431,75 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 
 #### 任务 6：LeetGPU 在线题目 —— Matrix Addition
 
-**题目链接**：<https://leetgpu.com/challenges/argmax>
+**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
 
-**题目概述**：
+**题目概述**：给定两个相同形状的大矩阵 `A` 和 `B`，计算 `C = A + B`。约束：元素为 32-bit float，规模达数百万量级。
 
-给定长度为 N 的浮点数组 input，找到最大值所在的下标。如果有多个相同最大值，返回最小的下标。
+**难度**：简单　**标签**：CUDA、Element-wise、Memory Coalescing、Occupancy
 
-**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
-
-**难度**：中等　**标签**：CUDA、Reduction、Argmax、Warp Shuffle
-
-**与今日知识的关联**：
-
-本题是一个带状态追踪的归约问题——不仅要找最大值，还要记录其下标。要求理解 grid-stride loop 和边界处理，同时为 Day 5 的 Warp Shuffle 归约做铺垫。
+**与今日知识的关联**：Matrix Addition 是典型 memory-bound 算子（算术强度 ≈ 1 FLOP / 12 Byte），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block size（128/256/512/1024）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block size 越大越快，256 或 512 往往已经能占满带宽。
 
 **解题思路**：
-
-每个线程用 grid-stride loop 找到自己所负责区间的局部最大值及下标，然后做 block 级归约。本题只需正确性，暂不要求 Warp Shuffle 优化（Day 5 会用 Shuffle 重做）。
+1. 一维 grid-stride loop 映射，比二维更灵活
+2. 用 `float4` 向量化加载（一次 128-bit），把 4 条 load 合并为 1 条
+3. 处理剩余不足 4 个的尾部元素
+4. 尝试不同 block size，记录 occupancy 与 latency 的关系
 
 **参考实现**：
 
 ```cuda
-__global__ void argmax_kernel(const float* input, int* out_idx, int N) {
- int tid = blockIdx.x * blockDim.x + threadIdx.x;
- float local_max = -INFINITY;
- int local_idx = 0;
+// matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
+// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_80
 
- // grid-stride loop: 每个线程找自己负责区间的局部 argmax
- for (int i = tid; i < N; i += gridDim.x * blockDim.x) {
- if (input[i] > local_max) {
- local_max = input[i];
- local_idx = i;
- }
- }
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cmath>
 
- // 简化版:用 atomicMax 做跨 block 归约(正确但非最优)
- // Day 5 会用 Warp Shuffle + Shared Memory 重写这部分
- __shared__ float s_val[32];
- __shared__ int s_idx[32];
+__global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+    int vec_count = num_elements / 4;
 
- int lane = threadIdx.x & 31;
- int wid = threadIdx.x >> 5;
+    for (int i = tid; i < vec_count; i += stride) {
+        float4 a = reinterpret_cast<const float4*>(A)[i];
+        float4 b = reinterpret_cast<const float4*>(B)[i];
+        float4 c;
+        c.x = a.x + b.x;
+        c.y = a.y + b.y;
+        c.z = a.z + b.z;
+        c.w = a.w + b.w;
+        reinterpret_cast<float4*>(C)[i] = c;
+    }
 
- // 用 warp shuffle 找 warp 内 argmax
- for (int offset = 16; offset > 0; offset >>= 1) {
- float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
- int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
- if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
- local_max = other_val;
- local_idx = other_idx;
- }
- }
+    // 处理尾部不足 4 个的元素
+    int tail_start = vec_count * 4;
+    for (int i = tail_start + tid; i < num_elements; i += stride) {
+        C[i] = A[i] + B[i];
+    }
+}
 
- if (lane == 0) {
- s_val[wid] = local_max;
- s_idx[wid] = local_idx;
- }
- __syncthreads();
-
- if (wid == 0) {
- int numWarps = (blockDim.x + 31) / 32;
- local_max = (lane < numWarps) ? s_val[lane] : -INFINITY;
- local_idx = (lane < numWarps) ? s_idx[lane] : 0;
-
- for (int offset = 16; offset > 0; offset >>= 1) {
- float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
- int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
- if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
- local_max = other_val;
- local_idx = other_idx;
- }
- }
-
- if (lane == 0) atomicMax(out_idx, local_idx);
- }
+int main() {
+    const int M = 4096, N = 4096, num_elements = M * N;
+    const size_t bytes = num_elements * sizeof(float);
+    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
+    for (int i = 0; i < num_elements; ++i) { h_A[i] = (float)(rand() % 100) * 0.01f; h_B[i] = (float)(rand() % 100) * 0.01f; }
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
+    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
+    int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
+    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
+    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
+    bool pass = true;
+    for (int i = 0; i < num_elements; ++i)
+        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) { pass = false; break; }
+    printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
+    free(h_A); free(h_B); free(h_C); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    return 0;
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Addition 题解](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比 block size = 128/256/512/1024 的 `gpu__time_duration.sum`。完整题解（含 float4 向量化、occupancy 调优）见 [Matrix Addition 题解](../../leetgpu/week1/day3/leetgpu-matrix-addition-solution.md)。
 
 #### 任务 7：LeetCode 面试题 —— 无重复字符的最长子串
 

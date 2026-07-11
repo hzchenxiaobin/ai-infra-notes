@@ -445,9 +445,9 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 | Achieved Occupancy | ~56% | > 70% |
 | Long Scoreboard Stall | ~35% | < 20% |
 
-#### 任务 4：LeetGPU 在线题目 —— Histogram
+#### 任务 4：LeetGPU 在线题目 —— Histogramming
 
-**题目链接**：<https://leetgpu.com/challenges/histogram>
+**题目链接**：<https://leetgpu.com/challenges/histogramming>
 
 **题目概述**：
 
@@ -496,7 +496,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Histogram 题目](https://leetgpu.com/challenges/histogram)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogram 题解](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md)。
+> 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 每日温度
 

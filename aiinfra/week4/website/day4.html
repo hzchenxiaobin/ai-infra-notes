@@ -368,23 +368,80 @@ ncu --metrics \\
 | Occupancy | ~50-75% | ~60-85% | ↑（register 减少后更多 block 驻留） |
 | SM Throughput | ~30-40% | ~35-45% | ↑（并行度更高） |
 
-#### 任务 4：LeetGPU 在线题目 —— 1D Convolution
+#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
 
-**题目链接**：<https://leetgpu.com/challenges/1d-convolution>
+**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
 
 **题目概述**：
 
-给定长度 N 的输入信号 \`input\` 和长度 K 的卷积核 \`kernel\`，计算 1D 卷积输出 \`output[i] = Σ input[i+k-K/2..i+k+K/2] * kernel[k]\`。约束 \`1 ≤ N ≤ 1,000,000\`，\`1 ≤ K ≤ 15\`（K 为奇数），元素范围 \`[-1.0, 1.0]\`。
+给定 B 组矩阵，每组 A[M×K] 和 B[K×N]，计算 C = A×B for each batch。约束 \`1 ≤ B ≤ 128\`，\`1 ≤ M,N,K ≤ 512\`，元素范围 \`[-1.0, 1.0]\`。
+
+**难度**：中等　**标签**：CUDA、Batched Kernel、GEMM、Register Blocking
 
 **与今日知识的关联**：
 
-本题考察 **shared memory halo**——每个 block 加载一段输入含 halo（边界），在 shared memory 中完成卷积。这与 FA2 的 **tile 管理思路**直接呼应：FA2 把 Q tile 划分子块给 warp groups，每个 group 管自己的子块边界；1D 卷积的 halo 管理也是"每个 block 管自己的一段+边界"。两者都是**分块时正确处理边界数据**的工程模式。
+FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**：把 batch 维和 head 维提升到 grid 的最高维度，让每个 thread block 处理更小的子任务，从而减少同步、提高 occupancy。本题 Batched Matrix Multiplication 正是练习这种"多维 grid + batch offset 寻址"的最简场景——用 \`blockIdx.z\` 区分 batch，\`blockIdx.x/y\` 处理 M/N tile，与 FA2 官方 kernel 的 launch 策略同构。
 
 **解题思路**：
 
-一个 block 处理一段输出 tile，协作加载含 halo 的输入到 shared memory（halo = K/2 个边界元素），kernel 权重放 \`__constant__\` memory 广播，每线程算若干输出元素。
+1. \`gridDim.z = B\`（batch 维度），一个 kernel 并行处理所有 batch
+2. batch offset 寻址：\`A[batch * M * K]\`、\`B[batch * K * N]\`、\`C[batch * M * N]\`
+3. 每个 batch 内部复用单矩阵 GEMM 的 Shared Memory Tiling + Register Blocking
+4. 对比串行启动 B 个 kernel vs 单个 batched kernel 的 launch overhead
 
-> 💡 提交后在 [LeetGPU 1D Convolution 题目](https://leetgpu.com/challenges/1d-convolution)上记录通过耗时。完整题解（含 shared memory halo、\`__constant__\` 广播、边界处理）见 [1D Convolution 题解](../leetgpu/leetgpu-1d-convolution-solution.html)。
+**参考实现**（框架）：
+
+\`\`\`cuda
+// batched_gemm.cu —— Batched GEMM（batch 维用 gridDim.z）
+// 编译命令: nvcc -o batched_gemm batched_gemm.cu -O3 -arch=sm_80
+
+#include <cuda_runtime.h>
+#include <cstdio>
+
+#define BM 64
+#define BN 64
+#define BK 16
+#define TM 4
+#define TN 4
+
+__global__ void batched_gemm_kernel(const float* A, const float* B, float* C,
+                                    int M, int N, int K, int batch_stride_A,
+                                    int batch_stride_B, int batch_stride_C) {
+    int batch = blockIdx.z;
+    const float* A_b = A + batch * batch_stride_A;
+    const float* B_b = B + batch * batch_stride_B;
+    float* C_b = C + batch * batch_stride_C;
+
+    // 每个 thread block 负责 C[BM][BN] 的子块
+    int bx = blockIdx.x * BN;
+    int by = blockIdx.y * BM;
+
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
+
+    float acc[TM][TN] = {0.0f};
+
+    for (int k = 0; k < K; k += BK) {
+        // 协作加载 A[by:by+BM, k:k+BK] 到 s_A
+        // 协作加载 B[k:k+BK, bx:bx+BN] 到 s_B
+        __syncthreads();
+
+        // 寄存器累加
+        for (int kk = 0; kk < BK; ++kk) {
+            for (int m = 0; m < TM; ++m) {
+                for (int n = 0; n < TN; ++n) {
+                    // acc[m][n] += s_A[...][kk] * s_B[kk][...];
+                }
+            }
+        }
+        __syncthreads();
+    }
+
+    // 写回 C_b
+}
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时，重点观察 batch size 增大时 latency 的增长曲线。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](../leetgpu/leetgpu-batched-matrix-multiplication-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 最小覆盖子串
 

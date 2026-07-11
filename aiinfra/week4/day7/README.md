@@ -196,9 +196,9 @@ CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
 | Day 1 | [Softmax Attention](../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md) | [121. 买卖股票的最佳时机](../../../leetcode/daily/week4/day1/买卖股票的最佳时机.md) |
-| Day 2 | [Dot Product](../../leetgpu/week4/day2/leetgpu-dot-product-solution.md) | [146. LRU 缓存](../../../leetcode/daily/week4/day2/LRU缓存.md) |
-| Day 3 | [Batched Matrix Multiplication](../../leetgpu/week4/day3/leetgpu-batched-matrix-multiplication-solution.md) | [56. 合并区间](../../../leetcode/daily/week4/day3/合并区间.md) |
-| Day 4 | [1D Convolution](../../leetgpu/week4/day4/leetgpu-1d-convolution-solution.md) | [76. 最小覆盖子串](../../../leetcode/daily/week4/day4/最小覆盖子串.md) |
+| Day 2 | [Attention](../../leetgpu/week4/day2/leetgpu-attention-solution.md) | [146. LRU 缓存](../../../leetcode/daily/week4/day2/LRU缓存.md) |
+| Day 3 | [Dot Product](../../leetgpu/week4/day3/leetgpu-dot-product-solution.md) | [56. 合并区间](../../../leetcode/daily/week4/day3/合并区间.md) |
+| Day 4 | [Batched Matrix Multiplication](../../leetgpu/week4/day4/leetgpu-batched-matrix-multiplication-solution.md) | [76. 最小覆盖子串](../../../leetcode/daily/week4/day4/最小覆盖子串.md) |
 | Day 5 | [Matrix Copy](../../leetgpu/week4/day5/leetgpu-matrix-copy-solution.md) | [19. 删除链表的倒数第N个节点](../../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md) |
 | Day 6 | [Multi-Head Attention](../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md) | [2. 两数相加](../../../leetcode/daily/week4/day6/两数相加.md) |
 | Day 7 | [GPT-2 Transformer Block](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) | — |
@@ -410,6 +410,18 @@ week4/
 | [vLLM 论文](https://arxiv.org/abs/2309.06180) | Week 5 预习：PagedAttention |
 | [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
 | [Princeton NLP FlashAttention 博客](https://princeton-nlp.github.io/flash-attention-blog/) | 图解 FlashAttention |
+
+---
+
+#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
+
+**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+
+**题目概述**：实现一个完整的 GPT-2 Transformer Block，包含 LayerNorm → Causal Self-Attention → Residual → LayerNorm → FFN → Residual。
+
+**与今日知识的关联**：GPT-2 Transformer Block 是 Week 4 IO 优化主线的终极验收——融合了 FlashAttention（Week 4 核心）+ LayerNorm（Week 3）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
+
+> 💡 完整题解见 [GPT-2 Transformer Block 题解](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md)。
 
 ---
 

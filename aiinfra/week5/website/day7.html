@@ -373,15 +373,58 @@ python kernels/week5_summary.py
 
 脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
 
-#### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
+#### 任务 2：LeetGPU 综合压轴题 —— Simple Inference
 
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+**题目链接**：<https://leetgpu.com/challenges/simple-inference>
 
-**题目概述**：实现一个完整的 GPT-2 transformer decoder block（Pre-LN + 12-head self-attention + FFN(GELU) + 两次残差）。GPT-2 124M 配置：\`d_model=768, n_heads=12, d_head=64, ffn_dim=3072\`，性能测试 \`seq_len=1024\`。
+**题目概述**：
 
-**与本周总结的关联**：这是 Week 5 的**综合压轴题**——把本周所有概念融于一身：attention（Day1/4 的 QK^T/softmax/PV）、KV Cache 服务对象（Day2）、GEMM compute-bound（Day6 的 Prefill）、整层 = Mini 引擎 \`model.forward\` 的单层（Day5）。同一个 block 里既有 compute-bound（GEMM）又有 memory-bound（LN/GELU/residual）算子，正是 Day6 profiling 方法论的完整实践对象。做好这题说明你理解了 transformer 推理的完整数据流——Week 5 毕业。
+给定一个 PyTorch \`nn.Linear\` 模型和输入张量 \`input[batch_size, input_size]\`，计算 \`output = input @ weight.T + bias\`。性能测试取 \`batch_size=1000, input_size=512, output_size=256\`。
 
-> 💡 完整题解（含 LayerNorm/MHA/GELU/residual kernel + cuBLAS GEMM 拼装 + ncu 分析各子算子瓶颈 + 优化策略对比）见 [GPT-2 Transformer Block 题解](../leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+**难度**：简单　**标签**：PyTorch、GEMM、Batching、Inference
+
+**与 Week 5 知识的关联**：
+
+Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化的最终目标都是让 GPU 在 Decode 阶段（M=1）尽可能逼近 Prefill 阶段（M=N）的 GEMM 利用率。本题 Simple Inference 是这一目标的微缩实验：固定一个 \`nn.Linear\`，只改变 \`batch_size\`，观察 latency 与 throughput 如何随 batch 增大而变化。它帮你建立直觉——为什么 Continuous Batching 要把多个 decode 请求拼成大 batch，以及为什么 Prefill 天然比 Decode 快。
+
+**解题思路**：
+
+1. 用 PyTorch 构造 \`nn.Linear(input_size, output_size)\`
+2. 分别测试 \`batch_size = 1, 16, 64, 256, 1000\` 的前向 latency
+3. 记录 \`output = input @ weight.T + bias\` 的耗时
+4. 绘制 latency-vs-batch_size 和 throughput-vs-batch_size 曲线
+
+**参考实现**（PyTorch）：
+
+\`\`\`python
+# simple_inference.py —— 观察 batch_size 对 nn.Linear 性能的影响
+# 依赖: pip install torch
+
+import torch
+import torch.nn as nn
+import time
+
+input_size, output_size = 512, 256
+model = nn.Linear(input_size, output_size).cuda()
+
+for batch_size in [1, 16, 64, 256, 1000]:
+    x = torch.randn(batch_size, input_size, device='cuda')
+    # warmup
+    for _ in range(10):
+        _ = model(x)
+    torch.cuda.synchronize()
+    # measure
+    start = time.perf_counter()
+    for _ in range(100):
+        _ = model(x)
+    torch.cuda.synchronize()
+    elapsed = time.perf_counter() - start
+    latency_ms = elapsed / 100 * 1000
+    throughput = batch_size / (latency_ms / 1000)
+    print(f"batch={batch_size:4d} | latency={latency_ms:.4f} ms | throughput={throughput:.1f} samples/s")
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时，重点对比 batch_size=1 与 batch_size=1000 的 latency 差异。完整题解（含 batch_size 对 GEMM 性能的影响分析、与 Prefill/Decode 算术强度的关联）见 [Simple Inference 题解](../leetgpu/leetgpu-simple-inference-solution.html)。
 
 #### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
 
