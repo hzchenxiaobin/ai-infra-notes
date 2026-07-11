@@ -319,6 +319,7 @@ def page_template(
     <link href="{root_prefix}css/prism-tomorrow.min.css" rel="stylesheet">
     <script src="{root_prefix}js/prism.min.js"></script>
     <script src="{root_prefix}js/prism-c.min.js"></script>
+    <script src="{root_prefix}js/prism-cuda.min.js"></script>
     <script src="{root_prefix}js/prism-bash.min.js"></script>
     <script src="{root_prefix}js/prism-python.min.js"></script>
 </head>
