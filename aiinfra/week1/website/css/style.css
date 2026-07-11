@@ -170,17 +170,16 @@ body {
     font-size: 0.86rem;
 }
 
-.nav-accordion-item.level-3 > .nav-accordion-header .nav-link {
-    padding-left: 48px;
-    font-size: 0.84rem;
-}
-
 .nav-accordion-item.level-2 > .nav-accordion-content > .nav-section {
     margin-left: 24px;
 }
 
-.nav-accordion-item.level-3 > .nav-accordion-content > .nav-section {
-    margin-left: 36px;
+/* Day label (flat, no accordion) inside daily week sections */
+.nav-day-label {
+    padding: 6px 0 4px 48px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 /* Main Content */

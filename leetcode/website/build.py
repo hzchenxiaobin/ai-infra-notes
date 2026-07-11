@@ -106,6 +106,17 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
     def render_accordion(node: Dict, path: List[str], level: int) -> List[str]:
         result: List[str] = []
         title = node["title"]
+
+        # Day level: render as a flat label + problem links (no accordion)
+        if len(path) == 3 and path[0] == "daily":
+            result.append(f'<div class="nav-day-label">{title}</div>')
+            for p in node.get("problems", []):
+                cls = "nav-link active" if current_slug == p["slug"] else "nav-link"
+                result.append(
+                    f'<a class="{cls}" href="{root_prefix}leetcode/problems/{p["slug"]}.html">{p["title"]}</a>'
+                )
+            return result
+
         is_expanded = bool(current_path and current_path[:len(path)] == path)
         expanded_cls = " is-expanded" if is_expanded else ""
         aria_expanded = "true" if is_expanded else "false"
@@ -129,8 +140,8 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
                 # Contest numbers descending
                 child_items.sort(key=lambda x: sort_key_numeric(x[0]), reverse=True)
             elif path == ["daily"]:
-                # Weeks descending
-                child_items.sort(key=lambda x: sort_key_numeric(x[0]), reverse=True)
+                # Weeks ascending (week1 first)
+                child_items.sort(key=lambda x: sort_key_numeric(x[0]))
             elif len(path) == 2 and path[0] == "daily":
                 # Days ascending
                 child_items.sort(key=lambda x: sort_key_numeric(x[0]))
@@ -338,8 +349,8 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         overview_markdown += '  </div>\n'
         overview_markdown += '</div>\n\n'
 
-    # 2. Daily problems grouped by week (descending), with day tags
-    for week in sorted(weekly_groups.keys(), key=sort_key_numeric, reverse=True):
+    # 2. Daily problems grouped by week (ascending: week1 -> week7), with day tags
+    for week in sorted(weekly_groups.keys(), key=sort_key_numeric, reverse=False):
         overview_markdown += f'<div class="leetcode-section">\n'
         overview_markdown += f'  <div class="leetcode-section-title">第 {sort_key_numeric(week)} 周</div>\n'
         overview_markdown += f'  <div class="leetcode-problem-list">\n'

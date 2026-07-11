@@ -26,13 +26,24 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        if new_url.startswith("../../"):
+        if new_url.startswith("../../") and not new_url.startswith("../../../"):
             inner = new_url[len("../../"):]
             # LeetGPU solution pages are emitted flat by leetgpu/website/build.py:
             # leetgpu/weekN/dayM/leetgpu-xxx-solution.md -> leetgpu/leetgpu-xxx-solution.html
             inner = re.sub(
                 r"^leetgpu/week\d+/day\d+/(leetgpu-.*-solution\.html)$",
                 r"leetgpu/\1",
+                inner,
+            )
+            new_url = root_prefix + inner
+        # ../../../leetcode/daily/weekN/dayM/x.md -> <root_prefix>leetcode/problems/x.html
+        if new_url.startswith("../../../"):
+            inner = new_url[len("../../../"):]
+            # LeetCode solution pages are emitted flat by leetcode/website/build.py:
+            # leetcode/daily/weekN/dayM/xxx.md -> leetcode/problems/xxx.html
+            inner = re.sub(
+                r"^leetcode/daily/week\d+/day\d+/([^/]+\.html)$",
+                r"leetcode/problems/\1",
                 inner,
             )
             new_url = root_prefix + inner
