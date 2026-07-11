@@ -201,6 +201,7 @@ CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再
 | Day 4 | [1D Convolution](../../leetgpu/week4/day4/leetgpu-1d-convolution-solution.md) | [76. 最小覆盖子串](../../../leetcode/daily/week4/day4/最小覆盖子串.md) |
 | Day 5 | [Matrix Copy](../../leetgpu/week4/day5/leetgpu-matrix-copy-solution.md) | [19. 删除链表的倒数第N个节点](../../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md) |
 | Day 6 | [Multi-Head Attention](../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md) | [2. 两数相加](../../../leetcode/daily/week4/day6/两数相加.md) |
+| Day 7 | [GPT-2 Transformer Block](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) | — |
 
 > 💡 回顾重点：Softmax Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/哈希表/排序/滑动窗口/双指针/链表六大标签。把没做完的题目今天补上。
 

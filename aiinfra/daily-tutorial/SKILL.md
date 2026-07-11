@@ -129,6 +129,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week1 Day2 | Memory model | ReLU | [leetgpu-relu-solution.md](../../leetgpu/week1/day2/leetgpu-relu-solution.md) |
 | Week1 Day3 | Shared memory | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week1/day3/leetgpu-matrix-transpose-solution.md) |
 | Week1 Day4 | Warp shuffle | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day4/leetgpu-reduction-solution.md) |
+| Week1 Day5 | Bank Conflict 分析 | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week1/day5/leetgpu-reduction-solution.md) |
 | Week1 Day6 | GEMM / tiling | Matrix Multiplication | [leetgpu-matrix-multiplication-solution.md](../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md) |
 | Week1 Day7 | 综合验收 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md) |
 | Week2 Day1 | Scan / prefix | Prefix Sum | [leetgpu-prefix-sum-solution.md](../../leetgpu/week2/day1/leetgpu-prefix-sum-solution.md) |
@@ -137,12 +138,15 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week2 Day4 | Softmax | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week2/day4/leetgpu-softmax-solution.md) |
 | Week2 Day5 | Attention | Softmax Attention | [leetgpu-softmax-attention-solution.md](../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md) |
 | Week2 Day6 | Histogram | Histogramming | [leetgpu-histogramming-solution.md](../../leetgpu/week2/day6/leetgpu-histogramming-solution.md) |
+| Week2 Day7 | 综合验收 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](../../leetgpu/week2/day7/leetgpu-max-subarray-sum-solution.md) |
 | Week3 Day1 | Trace Transformer 推理流程 | 1D Convolution | [leetgpu-1d-convolution-solution.md](../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md) |
 | Week3 Day2 | 手写 Softmax + LayerNorm | Softmax | [leetgpu-softmax-solution.md](../../leetgpu/week3/day2/leetgpu-softmax-solution.md) |
 | Week3 Day3 | 优化对比实验 | Argmax | [leetgpu-argmax-solution.md](../../leetgpu/week3/day3/leetgpu-argmax-solution.md) |
 | Week3 Day4 | 标准 Attention Forward | Attention | [leetgpu-attention-solution.md](../../leetgpu/week3/day4/leetgpu-attention-solution.md) |
 | Week3 Day5 | 算子接入 Mini 引擎 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md) |
 | Week3 Day6 | 端到端 Profiling | RMS Normalization | [leetgpu-rms-normalization-solution.md](../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) |
+| Week3 Day7 | Transformer 算子总结 | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md) |
+| Week4 Day7 | IO 优化方法论总结 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) |
 | Week6 Day3 | vLLM Scheduler | Stream Compaction | [leetgpu-stream-compaction-solution.md](../../leetgpu/week6/day3/leetgpu-stream-compaction-solution.md) |
 | Week6 Day4 | TRT-LLM / Chunked Prefill | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](../../leetgpu/week6/day4/leetgpu-segmented-prefix-sum-solution.md) |
 | Week6 Day5 | Mini 推理引擎 v1 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md) |

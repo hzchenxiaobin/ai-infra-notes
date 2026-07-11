@@ -394,9 +394,17 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 > 💡 **复盘标准**：能不看资料、5 分钟内完整讲清上述 5 点 + 三公式，即为通过。
 
----
+#### 任务 4：LeetGPU 综合验收题 —— Max Subarray Sum
 
-#### 任务 4：GitHub 仓库整理
+**题目链接**：<https://leetgpu.com/challenges/max-subarray-sum>
+
+**题目概述**：给定长度为 `N` 的 `int32` 数组和窗口大小 `window_size`，求所有长度恰好为 `window_size` 的连续子数组的最大和。
+
+**与本周知识的关联**：本题综合了 Week2 两大主线——Prefix Sum（Day1）+ Reduction（Week1 Day4/Day5）。用 prefix sum 计算窗口和，再用 warp shuffle reduction 求最大值，是一道"两阶段 kernel"的综合手撕题。适合在验收日限时完成，检验 prefix sum + reduce 的综合掌握程度。
+
+> 💡 完整题解（含两阶段 kernel 设计、warp shuffle max 归约、atomicMax 跨 block 汇总）见 [Max Subarray Sum 题解](../../leetgpu/week2/day7/leetgpu-max-subarray-sum-solution.md)。
+
+#### 任务 5：GitHub 仓库整理
 
 把本周 Day 1–Day 6 的产出整理成可展示的仓库结构。建议在 `week2/` 下补充：
 
@@ -427,7 +435,7 @@ week2/
 
 ---
 
-#### 任务 5：性能对比报告
+#### 任务 6：性能对比报告
 
 在 `week2/day7/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
 

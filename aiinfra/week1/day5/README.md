@@ -283,7 +283,7 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Reduction 题解](../../leetgpu/week1/day4/leetgpu-reduction-solution.md)。
+> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Reduction 题解](../../leetgpu/week1/day5/leetgpu-reduction-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最近公共祖先
 
