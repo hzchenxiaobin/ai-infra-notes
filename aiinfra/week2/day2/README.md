@@ -21,15 +21,13 @@
 
 **Register Blocking 的核心思想**：让每个线程计算 C 的一个 **TM×TN 子块**，把累加器驻留在寄存器中，从而减少对 Shared Memory 的访问次数。
 
-```
-优化层次 数据驻留位置 复用对象 性能目标
-─────────────────────────────────────────────────────────────
-Naive GEMM Global Memory 无 ~1-3% peak
-Shared Mem Tiling Shared Memory A/B tile ~15-25% peak
-Register Blocking Register A子行/B子列+累加器 ~40-60% peak
-Warp-level Register+Shuffle Warp内协作 ~60-80% peak
-软件流水线 全部 + 双缓冲 计算掩盖传输 ~80-95% peak
-```
+| 优化层次 | 数据驻留位置 | 复用对象 | 性能目标 |
+|---|---|---|---|
+| Naive GEMM | Global Memory | 无 | ~1-3% peak |
+| Shared Mem Tiling | Shared Memory | A/B tile | ~15-25% peak |
+| Register Blocking | Register | A子行/B子列+累加器 | ~40-60% peak |
+| Warp-level | Register+Shuffle | Warp内协作 | ~60-80% peak |
+| 软件流水线 | 全部 + 双缓冲 | 计算掩盖传输 | ~80-95% peak |
 
 ---
 
