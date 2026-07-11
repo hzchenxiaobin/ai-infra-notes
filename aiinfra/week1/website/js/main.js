@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Scroll sidebar independently on wheel when it has overflow
+    if (sidebar) {
+        sidebar.addEventListener('wheel', function(e) {
+            if (e.deltaY === 0) return;
+            const canScrollUp = sidebar.scrollTop > 0;
+            const canScrollDown = sidebar.scrollTop + sidebar.clientHeight < sidebar.scrollHeight;
+            if ((e.deltaY < 0 && canScrollUp) || (e.deltaY > 0 && canScrollDown)) {
+                e.preventDefault();
+                sidebar.scrollTop += e.deltaY;
+            }
+        }, { passive: false });
+    }
+
     // Accordion navigation in sidebar
     function toggleAccordionItem(item) {
         if (!item) return;
