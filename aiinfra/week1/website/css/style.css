@@ -616,22 +616,33 @@ body {
     line-height: 1.4;
 }
 
-/* LeetCode overview two-column layout */
+/* LeetCode/LeetGPU overview responsive column layout.
+   Items share each explicit row equally (2 cols -> 50%, 3 cols -> 33%). */
 .leetcode-overview-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 40px;
     align-items: flex-start;
 }
 
 .leetcode-col {
-    flex: 0 0 calc(50% - 20px);
+    flex: 1 1 0;
     min-width: 0;
+}
+
+@media (max-width: 1100px) {
+    .leetcode-col {
+        flex: 1 1 calc(50% - 20px);
+    }
 }
 
 @media (max-width: 900px) {
     .leetcode-overview-row {
         flex-direction: column;
         gap: 24px;
+    }
+    .leetcode-col {
+        flex: 1 1 100%;
     }
 }
 
