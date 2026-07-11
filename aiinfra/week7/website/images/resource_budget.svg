@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+    <marker id="arO" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+  <rect width="940" height="520" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">资源预算：Token Budget + Memory Budget</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="56" text-anchor="middle" font-size="11" fill="#888">每轮 iteration 的两道预算闸门——计算预算限制 batch 大小，显存预算限制 KV Cache 分配</text>
+
+  <!-- ===== Schedule() entry ===== -->
+  <g filter="url(#sk)">
+    <rect x="370" y="70" width="200" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="470" y="91" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">schedule() 开始</text>
+
+  <!-- Split arrow -->
+  <path d="M 470 102 L 470 112 L 200 112 L 200 124" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 470 112 L 740 112 L 740 124" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Left: Token Budget ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="128" width="320" height="340" rx="10" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="152" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Token Budget（计算预算）</text>
+  <text x="200" y="168" text-anchor="middle" font-size="9" fill="#888">限制每轮 iteration 处理的总 token 数</text>
+
+  <text x="56" y="192" font-size="11" fill="#444" font-weight="bold">消耗规则：</text>
+  <text x="56" y="210" font-size="10" fill="#444">• running decode：每请求消耗 1</text>
+  <text x="56" y="226" font-size="10" fill="#444">• 新请求 prefill：消耗 prompt_len</text>
+
+  <text x="56" y="252" font-size="11" fill="#444" font-weight="bold">流程：</text>
+
+  <g filter="url(#sk)">
+    <rect x="56" y="260" width="200" height="24" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="156" y="276" text-anchor="middle" font-size="9" fill="#2e6e2e">remaining = token_budget (如 50)</text>
+  <path d="M 156 284 L 156 294" stroke="#2e8b57" stroke-width="1" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="56" y="296" width="200" height="24" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="156" y="312" text-anchor="middle" font-size="9" fill="#2e6e2e">② running decode: remaining -= 1/req</text>
+  <path d="M 156 320 L 156 330" stroke="#2e8b57" stroke-width="1" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="56" y="332" width="200" height="24" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="156" y="348" text-anchor="middle" font-size="9" fill="#2e6e2e">③ 新请求 prefill: remaining -= prompt_len</text>
+  <path d="M 156 356 L 156 366" stroke="#2e8b57" stroke-width="1" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="56" y="368" width="200" height="24" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="156" y="384" text-anchor="middle" font-size="9" fill="#2e8b57" font-weight="bold">remaining <= 0 → 停止加入新请求</text>
+
+  <text x="56" y="412" font-size="10" fill="#444" font-weight="bold">效果：</text>
+  <text x="56" y="430" font-size="10" fill="#444">• 长请求不会独占全部算力</text>
+  <text x="56" y="446" font-size="10" fill="#444">• prefill 和 decode 共享预算</text>
+  <text x="56" y="462" font-size="10" fill="#444">• 类似 vLLM 的 max_num_batched_tokens</text>
+
+  <!-- ===== Right: Memory Budget ===== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="128" width="320" height="340" rx="10" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="740" y="152" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Memory Budget（显存预算）</text>
+  <text x="740" y="168" text-anchor="middle" font-size="9" fill="#888">限制 KV Cache 的 block 分配（类比 PagedAttention）</text>
+
+  <text x="596" y="192" font-size="11" fill="#444" font-weight="bold">数据结构：</text>
+  <text x="596" y="210" font-size="10" fill="#444">• total_blocks（如 64 个 block）</text>
+  <text x="596" y="226" font-size="10" fill="#444">• used_blocks（已分配）</text>
+  <text x="596" y="242" font-size="10" fill="#444">• 每 block 存 N 个 token 的 KV</text>
+
+  <text x="596" y="268" font-size="11" fill="#444" font-weight="bold">检查逻辑：</text>
+
+  <g filter="url(#sk)">
+    <rect x="596" y="276" width="240" height="24" rx="4" fill="#fff" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="716" y="292" text-anchor="middle" font-size="9" fill="#7a5415">can_allocate(kv_blocks)?</text>
+  <path d="M 716 300 L 716 310" stroke="#c98a2b" stroke-width="1" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+
+  <!-- Branch: Yes -->
+  <path d="M 716 312 L 716 322 L 640 322 L 640 336" stroke="#2e8b57" stroke-width="1" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="596" y="338" width="88" height="22" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="640" y="353" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">✓ Yes: allocate</text>
+
+  <!-- Branch: No -->
+  <path d="M 716 312 L 716 322 L 792 322 L 792 336" stroke="#c04050" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="748" y="338" width="88" height="22" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="792" y="353" text-anchor="middle" font-size="9" fill="#a03040" font-weight="bold">✗ No: preempt?</text>
+
+  <text x="596" y="382" font-size="10" fill="#444" font-weight="bold">高优先级特权：</text>
+  <text x="596" y="400" font-size="10" fill="#444">• 可使用 reserved_blocks（预留块）</text>
+  <text x="596" y="416" font-size="10" fill="#444">• 普通请求受限于此预算</text>
+
+  <text x="596" y="442" font-size="10" fill="#444" font-weight="bold">效果：</text>
+  <text x="596" y="460" font-size="10" fill="#444">• 防止 OOM 崩溃</text>
+
+  <!-- ===== Bottom: combined flow ===== -->
+  <g filter="url(#sk)">
+    <rect x="150" y="482" width="640" height="28" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="470" y="500" text-anchor="middle" font-size="10" fill="#2b6e9e">💡 双预算协同：token_budget 限制"算多少"，memory_budget 限制"存多少"。新请求必须同时满足两道闸门才能加入 batch</text>
+</svg>

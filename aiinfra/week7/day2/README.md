@@ -1,0 +1,441 @@
+## Day 2：完整调度器
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 **完整调度器的六大功能**——优先级调度、超时控制、资源预算、抢占、公平性、Continuous Batching<br>
+2. 掌握 **双预算机制**——token budget（计算预算，限制每轮处理的 token 总数）与 memory budget（显存预算，限制 KV Cache 分配），两道闸门协同工作<br>
+3. 能实现 **抢占机制**——显存不足时选择最低优先级 victim，支持 recompute（丢弃 KV Cache 重算）和 swap（换出到 CPU）两种策略<br>
+4. 理解 **公平性 aging 机制**——等待时间过长自动提升优先级，防止低优先级请求无限饥饿<br>
+5. 掌握 **Continuous Batching 的调度循环**——running 请求继续 decode（每轮消耗 1 token budget），新请求按优先级和预算加入<br>
+6. 用 Python 手写一个 **FullScheduler**，实测优先级排序、资源预算检查、抢占触发、aging 提升、超时取消
+
+> 💡 **为什么重要**：Day 1 的 ConcurrentEngine 有了"并发骨架"（线程安全队列 + 三种返回 + 超时），但调度逻辑很简单——FIFO 或简单优先级。生产级推理系统（vLLM、SGLang）的调度器需要处理"显存不够时怎么办"、"高优先级请求来了能否抢占"、"低优先级会不会永远排不上"等复杂问题。Day 2 把调度器从"能调度"升级为"会调度"——这是推理系统从"demo"到"可用"的核心能力，也是面试必考题"设计一个完整 LLM 推理调度器"。
+
+---
+
+### 学前导读：Day 1 调度的"不够聪明"
+
+Day 1 的 ConcurrentEngine 已支持优先级插入和超时，但调度逻辑存在几个短板：
+
+```
+Day 1 调度器的短板：
+  1. 无资源预算 → 请求过多时 batch 无限膨胀，GPU OOM 崩溃
+  2. 无抢占 → 高优先级请求到来时只能等低优先级跑完，延迟不可控
+  3. 无公平性 → 低优先级请求可能永远排不上（starvation）
+  4. 无显存管理 → KV Cache 随意分配，不检查是否够用
+  5. 无 Continuous Batching → 调度粒度粗，每轮只取 waiting 不维护 running
+```
+
+| 维度 | Day 1 ConcurrentEngine | Day 2 FullScheduler |
+|------|----------------------|---------------------|
+| 优先级 | 队列插入时排序 | **heapq + aging 动态提升** |
+| 资源预算 | 无 | **token_budget + memory_budget 双闸门** |
+| 抢占 | 无 | **recompute / swap 两种策略** |
+| 公平性 | 无 | **aging：等待久自动升优先级** |
+| Continuous Batching | 简单 batch | **running decode + 新请求 prefill 共享预算** |
+| 超时 | waiting 超时 | **waiting + execution 双超时** |
+
+> 💡 **一句话总结**：Day 2 把调度器从"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"——从"能调度"到"会调度"。
+
+---
+
+### 理论学习
+
+#### 2.1 调度器六大功能概览
+
+![完整调度器六大功能架构](../website/images/scheduler_architecture.svg)
+
+一个生产级 LLM 推理调度器需要六大功能，缺一不可：
+
+| 功能 | 职责 | 实现方式 |
+|------|------|---------|
+| ① 优先级调度 | 高优先级请求先获得资源 | `heapq(-priority, submit_time)` |
+| ② 超时控制 | 丢弃超时请求，防积压 | waiting 超时 + execution 超时 |
+| ③ 资源预算 | 防止 OOM 和 batch 膨胀 | token_budget + memory_budget |
+| ④ 抢占 | 显存不足时释放低优先级 | select_victim + recompute/swap |
+| ⑤ 公平性 | 防止低优先级饥饿 | aging：等待久自动提升优先级 |
+| ⑥ Continuous Batching | running 继续 decode + 新请求加入 | 每轮 schedule() 返回 batch |
+
+##### 形象类比
+
+- **优先级调度** = 医院急诊分诊（危重病人先看）
+- **超时控制** = 挂号后等待超时自动退号
+- **资源预算** = 医院床位上限（不能无限收病人）
+- **抢占** = 危重病人来了，把轻症病人临时转出病房
+- **公平性** = 等待太久的普通病人自动升级别
+- **Continuous Batching** = 手术台持续运转，做完一个手术立刻接下一个
+
+#### 2.2 优先级调度：heapq + 动态排序
+
+```python
+# waiting 是一个最小堆，元组 (-priority, submit_time, req)
+# -priority 取负 → 高优先级在堆顶
+# submit_time → 同优先级 FIFO
+heapq.heappush(self.waiting, (-req.priority, req.submit_time, req))
+
+# 每轮从堆顶弹出最高优先级请求
+neg_priority, submit_time, req = heapq.heappop(self.waiting)
+```
+
+##### 高优先级特权
+
+高优先级请求可以突破 `reserved_blocks`（预留资源），保障 SLA：
+
+```python
+available_blocks = self.memory.free_blocks
+if req.priority > 0:
+    available_blocks += self.reserved_blocks    # 高优先级可用预留块
+```
+
+> ⚠️ **预留资源的权衡**：预留太多 → 普通请求可用资源少；预留太少 → 高优先级无法保障。通常预留总量的 10-15%。
+
+#### 2.3 资源预算：双闸门机制
+
+![资源预算：Token Budget + Memory Budget](../website/images/resource_budget.svg)
+
+每轮 `schedule()` 有两道预算闸门，新请求必须**同时满足**才能加入 batch：
+
+**闸门一：Token Budget（计算预算）**
+
+```
+每轮 iteration 的 token 预算 = token_budget（如 50）
+  • running decode：每请求消耗 1 token
+  • 新请求 prefill：消耗 prompt_len 个 token
+  • remaining <= 0 → 停止加入新请求
+```
+
+类比 vLLM 的 `max_num_batched_tokens`：限制每轮处理的 token 总数，防止长 prompt 的 prefill 独占全部算力。
+
+**闸门二：Memory Budget（显存预算）**
+
+```python
+class MemoryBudget:
+    def can_allocate(self, blocks: int) -> bool:
+        return self.used_blocks + blocks <= self.total_blocks
+```
+
+类比 vLLM PagedAttention 的 block allocator：显存被划分为固定大小的 block（如每 block 存 16 个 token 的 KV Cache），调度器在加入新请求时检查是否有足够空闲 block。
+
+> 💡 **双预算协同**：token_budget 限制"算多少"（计算量），memory_budget 限制"存多少"（KV Cache）。长 prompt 消耗多 token budget，长序列生成消耗多 memory budget——两者正交。
+
+#### 2.4 抢占：显存不足时的资源回收
+
+![抢占策略：Recompute vs Swap](../website/images/preemption_strategy.svg)
+
+当高优先级请求到来但显存不足时，调度器会**抢占**低优先级 running 请求的资源：
+
+##### Victim 选择策略
+
+```python
+def _select_victim(self, new_req):
+    # 选比新请求优先级低的 running 请求
+    candidates = [r for r in self.running.values() if r.priority < new_req.priority]
+    # 多因素打分：最低优先级 → 最少剩余 token → 最晚提交
+    return min(candidates, key=lambda r: (r.priority, r.max_new_tokens - r.generated_tokens, -r.start_time))
+```
+
+| 因素 | 原因 |
+|------|------|
+| 最低优先级 | 优先保障高优先级 |
+| 最少剩余 token | 换出成本低（浪费的计算少） |
+| 最晚提交 | LRU，避免频繁抢占同一请求 |
+
+##### 两种抢占后处理
+
+| 策略 | 操作 | 优点 | 缺点 | 适合 |
+|------|------|------|------|------|
+| **Recompute** | 丢弃 KV Cache，放回 waiting 队列 | 简单，无 I/O | 浪费 prefill 计算 | 短 prompt |
+| **Swap** | KV Cache 拷贝到 CPU，放 swapped 列表 | 不浪费计算 | GPU↔CPU 拷贝延迟 | 长 prompt |
+
+> 💡 vLLM 默认用 recompute（简单可靠），生产环境可根据 prompt 长度和 CPU 内存动态切换 swap。
+
+#### 2.5 公平性：Aging 机制
+
+低优先级请求可能被不断到来的高优先级请求"饿死"——永远排不上。Aging 机制自动提升等待时间过长的请求的优先级：
+
+```python
+def _apply_aging(self):
+    for neg_priority, submit_time, req in self.waiting:
+        wait_time = self.time - submit_time
+        if wait_time > self.aging_threshold:
+            # 每超过一个 threshold 周期，优先级 +1
+            req.priority = req.original_priority + int(wait_time // self.aging_threshold)
+```
+
+| 参数 | 典型值 | 效果 |
+|------|--------|------|
+| `aging_threshold` | 5.0s | 等待超过 5s 开始升优先级 |
+| 提升幅度 | +1/threshold | 5s→+1, 10s→+2, 15s→+3... |
+| 上限 | `original + 5` | 防止无限提升 |
+
+> ⚠️ **Aging 的权衡**：提升太快 → 优先级失去意义；提升太慢 → 低优先级仍可能饥饿。通常 threshold 设为平均请求延迟的 2-3 倍。
+
+#### 2.6 Continuous Batching 的调度循环
+
+```
+每轮 schedule() 的执行顺序：
+  ① 恢复 swapped 请求（如有空间）
+  ② 继续 running 请求的 decode（每请求消耗 1 token budget）
+  ③ 从 waiting 按优先级加入新请求（prefill，消耗 prompt_len token budget）
+  ④ 应用 aging（公平性）
+  ⑤ 检查超时（waiting + execution）
+```
+
+##### 为什么是这个顺序？
+
+```
+先 ① 恢复 swapped → 被抢占的请求优先恢复（公平）
+再 ② 继续 running  → 正在生成的请求不中断（延迟保障）
+后 ③ 加入新请求   → 剩余预算给新请求（利用率最大化）
+最后 ④⑤ 维护     → aging 和超时是后台维护
+```
+
+> 💡 **与 vLLM 的对应**：vLLM 的调度器每轮 iteration 也遵循类似顺序——先处理 running（decode），再从 waiting 加入新请求（prefill），token_budget 共享。
+
+#### 2.7 昇腾对照
+
+| CUDA/vLLM 概念 | 昇腾 CANN 对应 | 对照说明 |
+|---------|------------|---------|
+| 优先级调度 | 优先级调度 | 一致 |
+| token_budget | token 预算 | 一致 |
+| memory_budget (PagedAttention) | 显存块管理 | 类似 |
+| 抢占 (recompute/swap) | 抢占 | 策略一致 |
+| aging 公平性 | 公平性策略 | 一致 |
+| Continuous Batching | 连续批处理 | 一致 |
+| reserved_blocks | 资源预留 | 一致 |
+
+> 💡 调度器逻辑跨平台统一——优先级/预算/抢占/公平性的概念无论 vLLM 还是昇腾 MindIE 都一致。差异只在底层 KV Cache 管理（PagedAttention vs 昇腾 block allocator）和算子实现。
+
+---
+
+### Coding 任务：实现 FullScheduler
+
+#### 任务 1：创建 full_scheduler.py
+
+创建文件 [kernels/full_scheduler.py](kernels/full_scheduler.py)，实现支持六大功能的完整调度器：
+
+```python
+# full_scheduler.py —— 完整调度器（优先级 + 超时 + 资源预算 + 抢占）
+# 运行命令: python full_scheduler.py
+# 依赖: 仅标准库
+
+class FullScheduler:
+    """生产级调度器，支持六大功能。"""
+    def __init__(self, token_budget=100, max_num_seqs=8,
+                 max_waiting_time=10.0, max_execution_time=60.0,
+                 enable_preemption=True, preempt_strategy="recompute",
+                 reserved_blocks=8, aging_threshold=5.0,
+                 total_memory_blocks=64):
+        # ...
+
+    def schedule(self) -> List[ScheduledRequest]:
+        """每轮 iteration 调用一次，返回本轮要执行的 batch。"""
+        # ① 恢复 swapped
+        # ② 继续 running decode
+        # ③ 从 waiting 加入新请求
+        # ④ aging
+        # ⑤ 超时检查
+
+    def _select_victim(self, new_req):
+        """选择被抢占的请求：最低优先级 → 最少剩余 token → 最晚提交"""
+
+    def _preempt(self, victim):
+        """抢占：recompute（放回 waiting）或 swap（放 swapped 列表）"""
+
+    def _apply_aging(self):
+        """等待超阈值的请求自动提升优先级"""
+```
+
+完整代码见 [kernels/full_scheduler.py](kernels/full_scheduler.py)。
+
+代码要点：
+- **`MemoryBudget`**：模拟 GPU 显存的 block 分配，`can_allocate` / `allocate` / `free` 三板斧，类比 PagedAttention 的 block allocator
+- **`schedule()`**：五步流水——restore swapped → continue running → admit new → aging → timeout，顺序不可交换
+- **`_select_victim`**：多因素打分（优先级 → 剩余 token → 提交时间），选"换出代价最低"的 victim
+- **`_preempt`**：recompute 策略放回 waiting（丢弃 KV Cache），swap 策略放 swapped 列表（保留 KV Cache 到 CPU）
+- **`_apply_aging`**：每超过 `aging_threshold` 秒，优先级 +1，有上限防止无限提升
+
+#### 任务 2：运行并观察调度行为
+
+```bash
+python kernels/full_scheduler.py
+```
+
+**预期输出**（节选）：
+
+```text
+Submitted R0 (p=0, prompt=8, kv_blocks=3)
+Submitted R1 (p=1, prompt=10, kv_blocks=4)
+...
+Submitted R7 (p=1, prompt=22, kv_blocks=6)
+
+--- Tick 0 | {'waiting': 4, 'running': 4, 'swapped': 0, 'memory': 'MemoryBudget(16/32)', 'tick': 1} ---
+  Batch: [R2(p=2,gen=0/6), R5(p=2,gen=0/6), R1(p=1,gen=0/5), R0(p=0,gen=0/4)]
+
+--- Tick 3 | {'waiting': 3, 'running': 4, ...} ---
+  Batch: [R2(p=2,gen=3/6), R5(p=2,gen=3/6), R1(p=1,gen=3/5), R4(p=1,gen=0/5)]
+  [Aging] Request 7 priority boosted to 2
+  [Aging] Request 3 priority boosted to 1
+  [Aging] Request 6 priority boosted to 1
+
+--- Tick 5 | ... ---
+  Batch: [R5(p=2,gen=5/6), R4(p=1,gen=2/5), R7(p=2,gen=0/5), R3(p=1,gen=0/4)]
+```
+
+##### 观察重点
+
+1. **Tick 0 优先级**：R2(p=2) 和 R5(p=2) 优先级最高，先入 batch；R0(p=0) 最低但仍有空位所以加入
+2. **Tick 3 aging**：R7、R3、R6 等待超过 4s，优先级自动提升（R7: 1→2，R3: 0→1，R6: 0→1）
+3. **Tick 5 优先级生效**：R7 aging 后优先级=2，排到 batch 最前面
+4. **memory 预算**：MemoryBudget(16/32) 表示 16/32 块已用，新请求加入时检查 `can_allocate`
+5. **Continuous Batching**：running 请求每轮 `gen` +1，完成后释放显存，新请求加入
+
+#### 任务 3：修改参数观察调度变化
+
+尝试修改以下参数，观察调度行为变化：
+
+```python
+# 实验 A：减小 token_budget → batch 更小，请求排队更久
+scheduler = FullScheduler(token_budget=20, ...)
+
+# 实验 B：减小 total_memory_blocks → 更早触发抢占
+scheduler = FullScheduler(total_memory_blocks=16, ...)
+
+# 实验 C：切换 swap 策略 → 被抢占的请求进入 swapped 列表而非 waiting
+scheduler = FullScheduler(preempt_strategy="swap", ...)
+
+# 实验 D：关闭 aging → 低优先级请求可能长时间无法加入
+scheduler = FullScheduler(aging_threshold=999.0, ...)
+```
+
+> 思考：token_budget=20 时，长 prompt（如 prompt_len=22）会发生什么？（提示：prompt_len > remaining_tokens，请求被放回 waiting，可能等待超时。）
+
+#### 任务 4：LeetGPU 在线题目 —— Vector Reversal
+
+**题目链接**：<https://leetgpu.com/challenges/vector-reversal>
+
+**题目概述**：给定长度为 `N` 的 `float32` 数组，将其原地反转（`output[i] = input[N-1-i]`）。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`；性能测试取大数组。
+
+**与今日知识的关联**：Vector Reversal 的核心是**索引映射**——`output[i] = input[N-1-i]`，每个线程处理一个元素的"调度"。这与调度器的**请求到资源的映射**同构：调度器把请求按优先级分配到 batch 槽位（`batch[i] = waiting[best_priority]`），Vector Reversal 把数据按逆序映射到输出位置。两者都是**用索引规则做资源映射**：调度器用优先级+预算做"哪个请求进 batch"的映射，Reversal 用 `N-1-i` 做"哪个输入对应哪个输出"的映射。
+
+> 💡 提交后在 [LeetGPU Vector Reversal](https://leetgpu.com/challenges/vector-reversal) 上记录通过耗时。完整题解见 [Vector Reversal 题解](../../leetgpu/week7/day2/leetgpu-vector-reversal-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 任务调度器
+
+**题目链接**：[621. 任务调度器](https://leetcode.cn/problems/task-scheduler/)
+
+**题目概述**：给定一个用字符数组表示的 CPU 任务集 `tasks`，以及冷却时间 `n`。同一类任务两次执行之间至少间隔 `n` 个时间单位。计算完成所有任务的最少时间。
+
+**与今日知识的关联**：LeetCode 621 的"任务调度+冷却"与今日的调度器**资源预算**同构——冷却时间 `n` 类比 `token_budget` 的约束（不能在一轮内把同类任务全做完），需要"穿插"其他任务填充等待时间，就像调度器在 token_budget 不足时让请求等待下一轮。贪心策略（先排最高频任务，空闲槽位填充低频任务）对应调度器的"优先级高的先分配资源，剩余预算给低优先级"。
+
+**核心套路**：
+
+```
+1. 统计每种任务的出现次数，找最大频率 max_freq
+2. 最大频率的任务数 count = 出现 max_freq 次的任务种类数
+3. 最少时间 = max((max_freq - 1) * (n + 1) + count, len(tasks))
+   • 前者：考虑冷却的框架（max_freq-1 个完整周期 + 最后一轮）
+   • 后者：任务足够多时冷却被自然填满，不需要等待
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、贪心图解、与调度器资源预算的类比）见 [任务调度器题解](../../leetcode/daily/week7/day2/任务调度器.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：实现 swap 策略的完整流程
+
+当前 swap 策略只把请求放入 `swapped` 列表。完善 `_restore_swapped`：当显存有空间时，从 `swapped` 列表恢复请求（模拟从 CPU 拷回 KV Cache），观察 swap 请求的恢复顺序。
+
+> 思考：swap 恢复应该按什么顺序？（提示：优先级高的先恢复，或先被 swap 的先恢复 FIFO。）
+
+#### 实验 2：模拟 OOM 场景
+
+设置 `total_memory_blocks=8`（极小显存），提交 10 个 `required_kv_blocks=3` 的请求。观察：哪些请求能加入 batch？哪些被抢占？是否有请求超时？
+
+> 思考：极端 OOM 时调度器应该怎么降级？（提示：拒绝新请求 / 排队等待 / 降级到更小 batch。）
+
+#### 实验 3：对比 recompute vs swap 的延迟
+
+用相同输入运行 recompute 和 swap 两种策略，测量被抢占请求的端到端延迟（从 submit 到 finish）。swap 应该更快（只需拷回 KV Cache，不用重新 prefill）。
+
+> 思考：什么条件下 swap 的拷贝延迟反而比 recompute 更慢？（提示：prompt 很短时，重算成本低于 GPU↔CPU 拷贝。）
+
+---
+
+### 今日总结
+
+Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"：
+
+1. **六大功能**：优先级调度（heapq）、超时控制（waiting+execution）、资源预算（token+memory）、抢占（recompute/swap）、公平性（aging）、Continuous Batching
+2. **双预算闸门**：token_budget 限制"算多少"（每轮 token 总数），memory_budget 限制"存多少"（KV Cache 块），新请求必须同时满足两道闸门
+3. **抢占机制**：显存不足时选最低优先级 victim，recompute 丢弃 KV Cache（简单但浪费），swap 换出到 CPU（不浪费但拷贝慢）
+4. **公平性 aging**：等待超过阈值自动提升优先级，防止低优先级饥饿，有上限防止无限提升
+5. **调度循环顺序**：恢复 swapped → 继续 running decode → 加入新请求 prefill → aging → 超时检查
+6. **高优先级特权**：可使用 reserved_blocks 预留资源，保障 SLA
+7. **实测验证**：优先级排序、memory 预算检查、aging 提升、Continuous Batching 持续运行
+
+掌握这些后，你就有了推理引擎的"调度大脑"——明天 Day 3 分析 SGLang/LightLLM 的高级特性（Speculative Decoding、Chunked Prefill、Prefix Caching），评估哪些值得集成到 Mini 引擎。
+
+---
+
+### 面试要点
+
+1. **设计一个完整的 LLM 推理调度器，需要考虑哪些因素？**（⭐⭐⭐⭐⭐ 必考）
+
+   - **六大功能**：
+     1. **Batching 策略**：Continuous Batching（running+新请求动态组批）
+     2. **优先级调度**：heapq 按优先级排序，高优先级可使用预留资源
+     3. **资源预算**：token_budget（计算预算）+ memory_budget（显存预算）双闸门
+     4. **超时控制**：waiting 超时（丢弃）+ execution 超时（强制取消）
+     5. **抢占**：显存不足时抢占低优先级，recompute 或 swap
+     6. **公平性**：aging 机制防止低优先级饥饿
+   - **调度循环**：恢复 swapped → 继续 running → 加入新请求 → aging → 超时检查
+   - **性能目标**：吞吐优先（大 batch）还是延迟优先（小 batch + 高优先级保障）
+
+2. **调度器中的抢占策略如何选择被抢占的请求？recompute 和 swap 有什么区别？**（⭐⭐⭐⭐ 高频）
+
+   - **Victim 选择**：最低优先级 → 最少剩余 token（换出成本低）→ 最晚提交（LRU）
+   - **Recompute**：丢弃 KV Cache，放回 waiting 队列重新 prefill
+     - 优点：简单，无 I/O
+     - 缺点：浪费已算的 prefill，长 prompt 代价大
+   - **Swap**：KV Cache 拷到 CPU，放 swapped 列表，显存够时拷回恢复
+     - 优点：不浪费计算
+     - 缺点：GPU↔CPU 拷贝延迟，需 CPU 内存
+   - **选择依据**：短 prompt 用 recompute，长 prompt 用 swap；vLLM 默认 recompute
+
+3. **token_budget 和 memory_budget 分别限制什么？为什么需要两道预算？**（⭐⭐⭐⭐ 高频）
+
+   - **token_budget**：每轮 iteration 处理的 token 总数上限（类比 vLLM `max_num_batched_tokens`）
+     - running decode 消耗 1/req，新请求 prefill 消耗 prompt_len
+     - 防止长 prompt 独占算力
+   - **memory_budget**：KV Cache 的 block 分配上限（类比 PagedAttention block allocator）
+     - `can_allocate(kv_blocks)` 检查是否有足够空闲块
+     - 防止 GPU OOM
+   - **为什么两道**：token_budget 管"计算量"，memory_budget 管"存储量"，两者正交——短 prompt+长生成消耗少 token 但多 memory，长 prompt+短生成消耗多 token 但少 memory
+
+4. **什么是 aging 机制？为什么需要它？**（⭐⭐⭐ 中频）
+
+   - **问题**：纯优先级调度下，低优先级请求可能被不断到来的高优先级请求"饿死"
+   - **Aging**：等待时间超过阈值（如 5s）后，自动提升优先级（每周期 +1）
+   - **上限**：提升有上限（如 original+5），防止无限提升导致优先级失去意义
+   - **效果**：低优先级请求最终会被调度，保障公平性
+
+5. **Continuous Batching 的调度循环中，为什么先处理 running 再加入新请求？**（⭐⭐⭐⭐ 高频）
+
+   - **先 running**：正在生成的请求优先续 decode（延迟保障），避免"断流"
+   - **后新请求**：剩余的 token_budget 给新请求做 prefill（利用率最大化）
+   - **共享预算**：running decode 和新请求 prefill 共用 token_budget，防止单一类型独占
+   - **与 vLLM 对应**：vLLM 每轮 iteration 也先处理 running（decode），再从 waiting 加入新请求（prefill）
+
+6. **能对照昇腾解释完整调度器的跨平台一致性吗？**
+
+   - 调度器逻辑跨平台统一：优先级/预算/抢占/公平性/Continuous Batching 在 vLLM 和昇腾 MindIE 中概念一致
+   - 昇腾 MindIE-Service 同样支持优先级调度、资源预算、抢占、aging
+   - 差异在底层：KV Cache 管理用 PagedAttention vs 昇腾 block allocator；算子用 cuBLAS/FlashAttention vs AscendC
+   - 超时控制/生命周期管理/抢占策略等概念在昇腾上完全对应
