@@ -48,27 +48,26 @@ vLLM 把推理系统分成三层，各司其职：
 
 ```
 User Request
-    │  add_request()
-    ▼
+ │ add_request()
+ ▼
 ┌─────────────────┐
-│   LLMEngine     │  对外接口，编排 step() 循环
+│ LLMEngine │ 对外接口，编排 step() 循环
 └────────┬────────┘
-         │  schedule()
-         ▼
+ │ schedule()
+ ▼
 ┌─────────────────┐
-│    Scheduler    │  三个队列 + 预算决策
+│ Scheduler │ 三个队列 + 预算决策
 └────────┬────────┘
-         │  execute_model(seq_group_metadata)
-         ▼
+ │ execute_model(seq_group_metadata)
+ ▼
 ┌─────────────────┐
-│     Worker      │  ModelRunner.run() → 采样 → 返回 token
+│ Worker │ ModelRunner.run() → 采样 → 返回 token
 └─────────────────┘
 ```
 
 ##### 为什么分三层？
 
 - **接口层**让用户无需关心调度细节，只管 `add_request` + 读 `step` 的输出
-- **调度层**与执行层解耦——Scheduler 只决定"跑谁"，不关心"怎么跑"，方便换后端（CUDA / 多卡 / 昇腾）
 - **执行层**封装硬件细节，Worker 可以是多卡（TP/PP）的协调者
 
 #### 3.2 核心数据结构：Sequence / SequenceGroup / SequenceStatus
@@ -91,35 +90,35 @@ User Request
 
 ```
 请求到达 (add_request)
-    │
-    ▼
+ │
+ ▼
 WAITING（等待调度）
-    │  Scheduler.schedule() 选中
-    ▼
+ │ Scheduler.schedule() 选中
+ ▼
 RUNNING（执行中，每轮生成 1 token）
-    │
-    ├── 达到 max_tokens / 遇到 EOS → FINISHED（释放 KV cache）
-    │
-    └── 显存不足 → SWAPPED（KV 换出到 CPU）
-            │  显存恢复 → swap in
-            └── 回到 RUNNING
+ │
+ ├── 达到 max_tokens / 遇到 EOS → FINISHED（释放 KV cache）
+ │
+ └── 显存不足 → SWAPPED（KV 换出到 CPU）
+ │ 显存恢复 → swap in
+ └── 回到 RUNNING
 ```
 
 ##### `LLMEngine.step()` 的 4 步流程
 
 ```python
 def step(self):
-    # 1. Scheduler 决定本轮运行哪些 sequence
-    seq_group_metadata_list, scheduler_outputs = self.scheduler.schedule()
+ # 1. Scheduler 决定本轮运行哪些 sequence
+ seq_group_metadata_list, scheduler_outputs = self.scheduler.schedule()
 
-    # 2. Worker 执行模型前向
-    outputs = self.model_executor.execute_model(seq_group_metadata_list)
+ # 2. Worker 执行模型前向
+ outputs = self.model_executor.execute_model(seq_group_metadata_list)
 
-    # 3. 处理输出（采样、更新 sequence 状态、回收完成请求的 cache）
-    request_outputs = self._process_model_outputs(outputs, scheduler_outputs)
+ # 3. 处理输出（采样、更新 sequence 状态、回收完成请求的 cache）
+ request_outputs = self._process_model_outputs(outputs, scheduler_outputs)
 
-    # 4. 返回本轮结果
-    return request_outputs
+ # 4. 返回本轮结果
+ return request_outputs
 ```
 
 每调用一次 `step()`，系统就推进一个 iteration：所有 running 的 sequence 各生成 1 个 token。用户在循环里反复调 `step()` 直到所有请求 `FINISHED`。
@@ -132,10 +131,10 @@ Continuous Batching 的核心：**每个 iteration 都重新构建 batch**。
 
 ```python
 def schedule(self):
-    # 1. 保留所有 running 的 sequence（continuous batching 的基础）
-    # 2. 如果还有预算（num_seqs / 显存），从 waiting 队列补入新请求
-    # 3. 如果显存不足，抢占（preempt）低优先级的 running 请求
-    # 4. 返回本轮的 SchedulerOutputs
+ # 1. 保留所有 running 的 sequence（continuous batching 的基础）
+ # 2. 如果还有预算（num_seqs / 显存），从 waiting 队列补入新请求
+ # 3. 如果显存不足，抢占（preempt）低优先级的 running 请求
+ # 4. 返回本轮的 SchedulerOutputs
 ```
 
 **关键**：新请求可以在**任意 iteration** 加入 batch——不需要等当前 batch 跑完。请求 A 在 iter 5 完成后，它的 slot 立刻被 waiting 里的请求 D 填上，GPU 不空等。
@@ -144,12 +143,12 @@ def schedule(self):
 
 ```
 Static Batching（batch=3, A=5tok, B=12tok, C=8tok）:
-  GPU 同时跑 A B C，A 在 iter 5 完成 → A 的 slot 空等到 iter 12（B 完成）
-  → 浪费 7 个 iteration 的 A slot
+ GPU 同时跑 A B C，A 在 iter 5 完成 → A 的 slot 空等到 iter 12（B 完成）
+ → 浪费 7 个 iteration 的 A slot
 
 Continuous Batching:
-  A 在 iter 5 完成 → 立刻从 waiting 补入 D → A 的 slot 不浪费
-  → GPU 始终满载，吞吐提升 2-8×（请求长度方差越大，收益越大）
+ A 在 iter 5 完成 → 立刻从 waiting 补入 D → A 的 slot 不浪费
+ → GPU 始终满载，吞吐提升 2-8×（请求长度方差越大，收益越大）
 ```
 
 > 💡 请求长度方差越大，Continuous Batching 收益越大——因为 Static 下"短板请求"造成的空等越多。这也是为什么推理服务的请求长度往往差异巨大（有人问一句话，有人输入长文档），Continuous Batching 几乎是标配。
@@ -175,22 +174,6 @@ Scheduler 每轮决策受三重预算约束：
 
 > ⚠️ **注意**：Recomputation 看似浪费（白算了），但对短 prompt 通常比 Swapping 快——因为 CPU↔GPU 的 KV 搬运带宽远低于重算的小 GEMM。vLLM 默认用 Recomputation，长上下文场景才切 Swapping。
 
-#### 3.6 昇腾对照
-
-| CUDA/vLLM 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| LLMEngine | 昇腾推理框架 Engine | 概念类似，都是对外接口 |
-| Scheduler | Scheduler | 两者都有调度器 |
-| Worker | Worker / Executor | 执行实际模型前向 |
-| SequenceGroup | Request / Session | 请求分组概念一致 |
-| Continuous Batching | 动态批处理 | 昇腾推理框架同样支持 |
-| Preemption / Swapping | 抢占 / 换出 | 策略类似 |
-| BlockSpaceManager | 内存管理器 | 昇腾有类似的 cache 管理 |
-
-> 💡 vLLM 的分层架构是**系统设计层面**的，与硬件无关——Engine/Scheduler/Worker 的职责划分对昇腾同样适用。差异只在 Worker 内部：CUDA 调 `cuLaunchKernel`，昇腾调 `aclrtExecute`；KV cache 管理的具体实现不同，但 Scheduler 的调度逻辑跨平台通用。
-
----
-
 ### Coding 任务：手写 mini vLLM 调度器
 
 #### 任务 1：创建 mini_vllm_scheduler.py
@@ -203,51 +186,47 @@ Scheduler 每轮决策受三重预算约束：
 # 依赖: 仅标准库（无需 torch / vllm）
 #
 # 演示三大核心机制：
-#   1. 请求生命周期：WAITING → RUNNING → FINISHED（含 SWAPPED 抢占）
-#   2. Continuous Batching：每轮 iteration 重新构建 batch，新请求随时加入
-#   3. SchedulingBudget：token / num_seqs / 显存 三重预算约束
+# 1. 请求生命周期：WAITING → RUNNING → FINISHED（含 SWAPPED 抢占）
+# 2. Continuous Batching：每轮 iteration 重新构建 batch，新请求随时加入
+# 3. SchedulingBudget：token / num_seqs / 显存 三重预算约束
 
 import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
-
 # ============================================================
 # 数据模型（对应 vllm/sequence.py）
 # ============================================================
 
 class SequenceStatus(Enum):
-    WAITING = "WAITING"
-    RUNNING = "RUNNING"
-    SWAPPED = "SWAPPED"      # 被抢占，KV cache 换出到 CPU
-    FINISHED = "FINISHED"
-
+ WAITING = "WAITING"
+ RUNNING = "RUNNING"
+ SWAPPED = "SWAPPED" # 被抢占，KV cache 换出到 CPU
+ FINISHED = "FINISHED"
 
 @dataclass
 class Sequence:
-    """单个序列（对应 vllm.Sequence）"""
-    seq_id: int
-    prompt_len: int          # prefill 的 token 数
-    max_output_len: int      # 最多生成多少 token
-    output_len: int = 0      # 已生成的 token 数
-    status: SequenceStatus = SequenceStatus.WAITING
-    kv_blocks: int = 0       # 当前占用的 KV cache block 数
+ """单个序列（对应 vllm.Sequence）"""
+ seq_id: int
+ prompt_len: int # prefill 的 token 数
+ max_output_len: int # 最多生成多少 token
+ output_len: int = 0 # 已生成的 token 数
+ status: SequenceStatus = SequenceStatus.WAITING
+ kv_blocks: int = 0 # 当前占用的 KV cache block 数
 
-    def total_len(self) -> int:
-        return self.prompt_len + self.output_len
+ def total_len(self) -> int:
+ return self.prompt_len + self.output_len
 
-    def is_finished(self) -> bool:
-        return self.status == SequenceStatus.FINISHED
-
+ def is_finished(self) -> bool:
+ return self.status == SequenceStatus.FINISHED
 
 @dataclass
 class SequenceGroup:
-    """一个请求对应一个 group（对应 vllm.SequenceGroup）"""
-    request_id: int
-    seq: Sequence
-    arrival_iter: int        # 在第几个 iteration 到达
-
+ """一个请求对应一个 group（对应 vllm.SequenceGroup）"""
+ request_id: int
+ seq: Sequence
+ arrival_iter: int # 在第几个 iteration 到达
 
 # ============================================================
 # Scheduler（对应 vllm/engine/scheduler.py）
@@ -255,189 +234,183 @@ class SequenceGroup:
 
 @dataclass
 class SchedulingBudget:
-    """调度预算（对应 vllm.core.scheduling_budget.SchedulingBudget）"""
-    max_num_seqs: int        # 本轮最多并行多少 sequence
-    max_tokens: int          # 本轮最多处理多少 token（prefill+decode）
-    max_blocks: int          # KV cache 剩余 block 数
-    num_seqs: int = 0
-    tokens: int = 0
-    blocks: int = 0
+ """调度预算（对应 vllm.core.scheduling_budget.SchedulingBudget）"""
+ max_num_seqs: int # 本轮最多并行多少 sequence
+ max_tokens: int # 本轮最多处理多少 token（prefill+decode）
+ max_blocks: int # KV cache 剩余 block 数
+ num_seqs: int = 0
+ tokens: int = 0
+ blocks: int = 0
 
-    def can_add(self, seq: Sequence, block_size: int) -> bool:
-        need_blocks = (seq.total_len() + block_size - 1) // block_size
-        return (self.num_seqs < self.max_num_seqs
-                and self.tokens + seq.total_len() <= self.max_tokens
-                and self.blocks + need_blocks <= self.max_blocks)
+ def can_add(self, seq: Sequence, block_size: int) -> bool:
+ need_blocks = (seq.total_len() + block_size - 1) // block_size
+ return (self.num_seqs < self.max_num_seqs
+ and self.tokens + seq.total_len() <= self.max_tokens
+ and self.blocks + need_blocks <= self.max_blocks)
 
-    def add(self, seq: Sequence, block_size: int):
-        need_blocks = (seq.total_len() + block_size - 1) // block_size
-        self.num_seqs += 1
-        self.tokens += seq.total_len()
-        self.blocks += need_blocks
-
+ def add(self, seq: Sequence, block_size: int):
+ need_blocks = (seq.total_len() + block_size - 1) // block_size
+ self.num_seqs += 1
+ self.tokens += seq.total_len()
+ self.blocks += need_blocks
 
 @dataclass
 class SchedulerOutputs:
-    """scheduler 一轮的输出：本轮要运行哪些 sequence"""
-    running_seqs: List[Sequence] = field(default_factory=list)
-    preempted_seqs: List[Sequence] = field(default_factory=list)
-    num_batched_tokens: int = 0
-
+ """scheduler 一轮的输出：本轮要运行哪些 sequence"""
+ running_seqs: List[Sequence] = field(default_factory=list)
+ preempted_seqs: List[Sequence] = field(default_factory=list)
+ num_batched_tokens: int = 0
 
 class Scheduler:
-    """vLLM Scheduler 的核心逻辑（简化版）"""
+ """vLLM Scheduler 的核心逻辑（简化版）"""
 
-    def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
-                 max_blocks: int = 64):
-        self.block_size = block_size
-        self.max_num_seqs = max_num_seqs
-        self.max_blocks = max_blocks
-        self.used_blocks = 0
+ def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
+ max_blocks: int = 64):
+ self.block_size = block_size
+ self.max_num_seqs = max_num_seqs
+ self.max_blocks = max_blocks
+ self.used_blocks = 0
 
-        self.waiting: List[SequenceGroup] = []
-        self.running: List[SequenceGroup] = []
-        self.swapped: List[SequenceGroup] = []
+ self.waiting: List[SequenceGroup] = []
+ self.running: List[SequenceGroup] = []
+ self.swapped: List[SequenceGroup] = []
 
-    def add_request(self, sg: SequenceGroup):
-        sg.seq.status = SequenceStatus.WAITING
-        self.waiting.append(sg)
+ def add_request(self, sg: SequenceGroup):
+ sg.seq.status = SequenceStatus.WAITING
+ self.waiting.append(sg)
 
-    def _alloc_blocks(self, seq: Sequence) -> int:
-        return (seq.total_len() + self.block_size - 1) // self.block_size
+ def _alloc_blocks(self, seq: Sequence) -> int:
+ return (seq.total_len() + self.block_size - 1) // self.block_size
 
-    def _try_preempt(self) -> bool:
-        """显存不足时抢占最后加入的 running sequence（Recomputation 策略）"""
-        if not self.running:
-            return False
-        victim = self.running.pop()
-        victim.seq.status = SequenceStatus.WAITING
-        victim.seq.output_len = 0          # recomputation：丢弃 KV cache
-        self.used_blocks -= victim.seq.kv_blocks
-        victim.seq.kv_blocks = 0
-        self.waiting.insert(0, victim)
-        print(f"    ⚡ PREEMPT request {victim.request_id} (recomputation)")
-        return True
+ def _try_preempt(self) -> bool:
+ """显存不足时抢占最后加入的 running sequence（Recomputation 策略）"""
+ if not self.running:
+ return False
+ victim = self.running.pop()
+ victim.seq.status = SequenceStatus.WAITING
+ victim.seq.output_len = 0 # recomputation：丢弃 KV cache
+ self.used_blocks -= victim.seq.kv_blocks
+ victim.seq.kv_blocks = 0
+ self.waiting.insert(0, victim)
+ print(f" ⚡ PREEMPT request {victim.request_id} (recomputation)")
+ return True
 
-    def schedule(self) -> SchedulerOutputs:
-        out = SchedulerOutputs()
-        # Step 1: 保留所有 running（continuous batching 基础）
-        out.running_seqs = [sg.seq for sg in self.running]
-        # Step 2: 从 waiting 补入新请求
-        budget = SchedulingBudget(
-            max_num_seqs=self.max_num_seqs, max_tokens=999999,
-            max_blocks=self.max_blocks - self.used_blocks)
-        for sg in out.running_seqs:
-            budget.add(sg, self.block_size)
-        still_waiting = []
-        for sg in self.waiting:
-            if budget.can_add(sg.seq, self.block_size):
-                sg.seq.status = SequenceStatus.RUNNING
-                need = self._alloc_blocks(sg.seq)
-                self.used_blocks += need
-                sg.seq.kv_blocks = need
-                self.running.append(sg)
-                out.running_seqs.append(sg.seq)
-                budget.add(sg.seq, self.block_size)
-                print(f"    + ADMIT  request {sg.request_id} (prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
-            else:
-                if self._try_preempt():
-                    if budget.can_add(sg.seq, self.block_size):
-                        sg.seq.status = SequenceStatus.RUNNING
-                        need = self._alloc_blocks(sg.seq)
-                        self.used_blocks += need
-                        sg.seq.kv_blocks = need
-                        self.running.append(sg)
-                        out.running_seqs.append(sg.seq)
-                        budget.add(sg.seq, self.block_size)
-                        print(f"    + ADMIT  request {sg.request_id} (after preempt, alloc {need} blocks)")
-                    else:
-                        still_waiting.append(sg)
-                else:
-                    still_waiting.append(sg)
-        self.waiting = still_waiting
-        out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
-        return out
-
+ def schedule(self) -> SchedulerOutputs:
+ out = SchedulerOutputs()
+ # Step 1: 保留所有 running（continuous batching 基础）
+ out.running_seqs = [sg.seq for sg in self.running]
+ # Step 2: 从 waiting 补入新请求
+ budget = SchedulingBudget(
+ max_num_seqs=self.max_num_seqs, max_tokens=999999,
+ max_blocks=self.max_blocks - self.used_blocks)
+ for sg in out.running_seqs:
+ budget.add(sg, self.block_size)
+ still_waiting = []
+ for sg in self.waiting:
+ if budget.can_add(sg.seq, self.block_size):
+ sg.seq.status = SequenceStatus.RUNNING
+ need = self._alloc_blocks(sg.seq)
+ self.used_blocks += need
+ sg.seq.kv_blocks = need
+ self.running.append(sg)
+ out.running_seqs.append(sg.seq)
+ budget.add(sg.seq, self.block_size)
+ print(f" + ADMIT request {sg.request_id} (prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
+ else:
+ if self._try_preempt():
+ if budget.can_add(sg.seq, self.block_size):
+ sg.seq.status = SequenceStatus.RUNNING
+ need = self._alloc_blocks(sg.seq)
+ self.used_blocks += need
+ sg.seq.kv_blocks = need
+ self.running.append(sg)
+ out.running_seqs.append(sg.seq)
+ budget.add(sg.seq, self.block_size)
+ print(f" + ADMIT request {sg.request_id} (after preempt, alloc {need} blocks)")
+ else:
+ still_waiting.append(sg)
+ else:
+ still_waiting.append(sg)
+ self.waiting = still_waiting
+ out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
+ return out
 
 # ============================================================
 # Worker（对应 vllm/worker/worker.py）
 # ============================================================
 
 class Worker:
-    """执行模型前向（这里只模拟，不跑真模型）"""
-    def execute_model(self, running_seqs: List[Sequence]) -> List[int]:
-        new_tokens = []
-        for seq in running_seqs:
-            seq.output_len += 1
-            new_tokens.append(random.randint(0, 999))
-        return new_tokens
-
+ """执行模型前向（这里只模拟，不跑真模型）"""
+ def execute_model(self, running_seqs: List[Sequence]) -> List[int]:
+ new_tokens = []
+ for seq in running_seqs:
+ seq.output_len += 1
+ new_tokens.append(random.randint(0, 999))
+ return new_tokens
 
 # ============================================================
 # LLMEngine（对应 vllm/engine/llm_engine.py）
 # ============================================================
 
 class LLMEngine:
-    def __init__(self, block_size=16, max_num_seqs=4, max_blocks=64):
-        self.scheduler = Scheduler(block_size, max_num_seqs, max_blocks)
-        self.worker = Worker()
-        self.iteration = 0
-        self.finished: List[SequenceGroup] = []
+ def __init__(self, block_size=16, max_num_seqs=4, max_blocks=64):
+ self.scheduler = Scheduler(block_size, max_num_seqs, max_blocks)
+ self.worker = Worker()
+ self.iteration = 0
+ self.finished: List[SequenceGroup] = []
 
-    def add_request(self, request_id, prompt_len, max_output_len):
-        sg = SequenceGroup(request_id, Sequence(request_id, prompt_len, max_output_len), self.iteration)
-        self.scheduler.add_request(sg)
-        print(f"[iter {self.iteration}] ➕ add_request {request_id} (prompt={prompt_len}, max_out={max_output_len})")
+ def add_request(self, request_id, prompt_len, max_output_len):
+ sg = SequenceGroup(request_id, Sequence(request_id, prompt_len, max_output_len), self.iteration)
+ self.scheduler.add_request(sg)
+ print(f"[iter {self.iteration}] ➕ add_request {request_id} (prompt={prompt_len}, max_out={max_output_len})")
 
-    def step(self) -> List[int]:
-        self.iteration += 1
-        print(f"\n[iter {self.iteration}] === step ===")
-        sched_out = self.scheduler.schedule()
-        if not sched_out.running_seqs:
-            print("    (no running seqs)")
-            return []
-        print(f"    batch: {len(sched_out.running_seqs)} seqs, {sched_out.num_batched_tokens} tokens, used_blocks={self.scheduler.used_blocks}/{self.scheduler.max_blocks}")
-        new_tokens = self.worker.execute_model(sched_out.running_seqs)
-        finished_this_step = []
-        for sg in self.scheduler.running[:]:
-            seq = sg.seq
-            if seq.output_len >= seq.max_output_len:
-                seq.status = SequenceStatus.FINISHED
-                self.scheduler.used_blocks -= seq.kv_blocks
-                seq.kv_blocks = 0
-                self.scheduler.running.remove(sg)
-                self.finished.append(sg)
-                finished_this_step.append(sg.request_id)
-                print(f"    ✔ FINISH request {sg.request_id} (generated {seq.output_len} tokens)")
-        return finished_this_step
+ def step(self) -> List[int]:
+ self.iteration += 1
+ print(f"\n[iter {self.iteration}] === step ===")
+ sched_out = self.scheduler.schedule()
+ if not sched_out.running_seqs:
+ print(" (no running seqs)")
+ return []
+ print(f" batch: {len(sched_out.running_seqs)} seqs, {sched_out.num_batched_tokens} tokens, used_blocks={self.scheduler.used_blocks}/{self.scheduler.max_blocks}")
+ new_tokens = self.worker.execute_model(sched_out.running_seqs)
+ finished_this_step = []
+ for sg in self.scheduler.running[:]:
+ seq = sg.seq
+ if seq.output_len >= seq.max_output_len:
+ seq.status = SequenceStatus.FINISHED
+ self.scheduler.used_blocks -= seq.kv_blocks
+ seq.kv_blocks = 0
+ self.scheduler.running.remove(sg)
+ self.finished.append(sg)
+ finished_this_step.append(sg.request_id)
+ print(f" ✔ FINISH request {sg.request_id} (generated {seq.output_len} tokens)")
+ return finished_this_step
 
-    def has_unfinished(self) -> bool:
-        return bool(self.scheduler.waiting or self.scheduler.running)
-
+ def has_unfinished(self) -> bool:
+ return bool(self.scheduler.waiting or self.scheduler.running)
 
 def main():
-    random.seed(42)
-    engine = LLMEngine(block_size=16, max_num_seqs=4, max_blocks=64)
-    print("=" * 60)
-    print("Mini vLLM Scheduler Simulation")
-    print("=" * 60)
+ random.seed(42)
+ engine = LLMEngine(block_size=16, max_num_seqs=4, max_blocks=64)
+ print("=" * 60)
+ print("Mini vLLM Scheduler Simulation")
+ print("=" * 60)
 
-    engine.add_request(0, prompt_len=32, max_output_len=8)
-    for _ in range(2):
-        engine.step()
-    engine.add_request(1, prompt_len=16, max_output_len=5)
-    engine.add_request(2, prompt_len=48, max_output_len=6)
-    while engine.has_unfinished():
-        engine.step()
+ engine.add_request(0, prompt_len=32, max_output_len=8)
+ for _ in range(2):
+ engine.step()
+ engine.add_request(1, prompt_len=16, max_output_len=5)
+ engine.add_request(2, prompt_len=48, max_output_len=6)
+ while engine.has_unfinished():
+ engine.step()
 
-    print("\n" + "=" * 60)
-    print(f"All requests finished. Total iterations: {engine.iteration}")
-    print(f"Finished order: {[sg.request_id for sg in engine.finished]}")
-    print("=" * 60)
-
+ print("\n" + "=" * 60)
+ print(f"All requests finished. Total iterations: {engine.iteration}")
+ print(f"Finished order: {[sg.request_id for sg in engine.finished]}")
+ print("=" * 60)
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 代码要点：
@@ -456,22 +429,22 @@ python kernels/mini_vllm_scheduler.py
 
 ```text
 [iter 1] === step ===
-    + ADMIT  request 0 (prefill 32 tok, alloc 2 blocks)
-    batch: 1 seqs, 32 tokens, used_blocks=2/64
+ + ADMIT request 0 (prefill 32 tok, alloc 2 blocks)
+ batch: 1 seqs, 32 tokens, used_blocks=2/64
 
 [iter 3] === step ===
-    + ADMIT  request 1 (prefill 16 tok, alloc 1 blocks)
-    + ADMIT  request 2 (prefill 48 tok, alloc 3 blocks)
-    batch: 3 seqs, 98 tokens, used_blocks=6/64
+ + ADMIT request 1 (prefill 16 tok, alloc 1 blocks)
+ + ADMIT request 2 (prefill 48 tok, alloc 3 blocks)
+ batch: 3 seqs, 98 tokens, used_blocks=6/64
 
 [iter 7] === step ===
-    batch: 3 seqs, 110 tokens, used_blocks=6/64
-    ✔ FINISH request 1 (generated 5 tokens)
+ batch: 3 seqs, 110 tokens, used_blocks=6/64
+ ✔ FINISH request 1 (generated 5 tokens)
 
 [iter 8] === step ===
-    batch: 2 seqs, 92 tokens, used_blocks=5/64
-    ✔ FINISH request 0 (generated 8 tokens)
-    ✔ FINISH request 2 (generated 6 tokens)
+ batch: 2 seqs, 92 tokens, used_blocks=5/64
+ ✔ FINISH request 0 (generated 8 tokens)
+ ✔ FINISH request 2 (generated 6 tokens)
 
 All requests finished. Total iterations: 8
 Finished order: [1, 0, 2]
@@ -537,7 +510,7 @@ Speculative Decoding 是 vLLM 这类推理系统的**调度层优化**——Sche
 ```
 最多任务数 max_freq，有 max_count 个任务并列最多
 最少时间 = (max_freq - 1) × (n + 1) + max_count
-取 max(上式, len(tasks))  # 任务总数可能超过框架
+取 max(上式, len(tasks)) # 任务总数可能超过框架
 ```
 
 > 💡 完整题解（含贪心公式推导、C++/Python 参考代码、模拟画图、与 Continuous Batching 的模式类比）见 [任务调度器题解](../../../leetcode/daily/week5/day3/任务调度器.md)。
@@ -586,49 +559,44 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
 1. **vLLM 的整体架构是怎样的？一个请求从进入到输出经历哪些阶段？**
 
-   - 三层分层架构：LLMEngine（对外接口，编排 step 循环）→ Scheduler（调度决策，管理三个队列+预算）→ Worker（执行模型前向）
-   - 请求生命周期：
-     1. 用户调 `LLMEngine.add_request()`，请求进入 WAITING 队列
-     2. `Scheduler.schedule()` 依预算决定哪些请求进本轮 batch（从 waiting 补入 running）
-     3. `Worker.execute_model()` 执行模型前向，每 seq 生成 1 个 token
-     4. `_process_model_outputs` 采样、更新状态——达到 max_tokens 则 FINISHED（释放 cache），显存不足则 SWAPPED
-     5. 反复 `step()` 直到所有请求 FINISHED
-   - Continuous Batching：每轮重建 batch，新请求可在任意 iteration 加入
+ - 三层分层架构：LLMEngine（对外接口，编排 step 循环）→ Scheduler（调度决策，管理三个队列+预算）→ Worker（执行模型前向）
+ - 请求生命周期：
+ 1. 用户调 `LLMEngine.add_request()`，请求进入 WAITING 队列
+ 2. `Scheduler.schedule()` 依预算决定哪些请求进本轮 batch（从 waiting 补入 running）
+ 3. `Worker.execute_model()` 执行模型前向，每 seq 生成 1 个 token
+ 4. `_process_model_outputs` 采样、更新状态——达到 max_tokens 则 FINISHED（释放 cache），显存不足则 SWAPPED
+ 5. 反复 `step()` 直到所有请求 FINISHED
+ - Continuous Batching：每轮重建 batch，新请求可在任意 iteration 加入
 
-2. **什么是 Continuous Batching？它比 Static Batching 好在哪里？**
+1. **什么是 Continuous Batching？它比 Static Batching 好在哪里？**
 
-   - Continuous Batching：每个 iteration 都重新构建 batch，完成的请求立即释放 slot，waiting 里的新请求立刻补位
-   - Static Batching：凑齐 N 个才开始，等最慢的请求跑完才接下一批——完成的请求 slot 空等
-   - 收益：GPU 始终满载，吞吐提升 2-8×；请求长度方差越大收益越大（短板请求造成的空等越多）
-   - 前提：需要细粒度 KV cache 管理（PagedAttention 的 block 级分配/释放），否则完成请求的 cache 释放会碎片爆炸
+ - Continuous Batching：每个 iteration 都重新构建 batch，完成的请求立即释放 slot，waiting 里的新请求立刻补位
+ - Static Batching：凑齐 N 个才开始，等最慢的请求跑完才接下一批——完成的请求 slot 空等
+ - 收益：GPU 始终满载，吞吐提升 2-8×；请求长度方差越大收益越大（短板请求造成的空等越多）
+ - 前提：需要细粒度 KV cache 管理（PagedAttention 的 block 级分配/释放），否则完成请求的 cache 释放会碎片爆炸
 
-3. **vLLM 的 Scheduler 依据什么做调度决策？什么是 SchedulingBudget？**
+1. **vLLM 的 Scheduler 依据什么做调度决策？什么是 SchedulingBudget？**
 
-   - Scheduler 依据三重预算：
-     - token budget：本轮最多处理的 token 数（限制 prefill 总量）
-     - num_seqs budget：本轮最多并行的 sequence 数（限制 batch 大小）
-     - 显存预算：block allocator 报告的剩余 block 数（Day 4 PagedAttention）
-   - `SchedulingBudget` 封装这些预算，scheduler 在 add 请求时检查是否超出
-   - 调度目标：最大化 throughput，同时控制 latency（通过 budget 限制 batch 大小）
-   - 决策顺序：先保留 running（continuous batching 基础）→ 从 waiting 补入 → 显存不足则抢占
+ - Scheduler 依据三重预算：
+ - token budget：本轮最多处理的 token 数（限制 prefill 总量）
+ - num_seqs budget：本轮最多并行的 sequence 数（限制 batch 大小）
+ - 显存预算：block allocator 报告的剩余 block 数（Day 4 PagedAttention）
+ - `SchedulingBudget` 封装这些预算，scheduler 在 add 请求时检查是否超出
+ - 调度目标：最大化 throughput，同时控制 latency（通过 budget 限制 batch 大小）
+ - 决策顺序：先保留 running（continuous batching 基础）→ 从 waiting 补入 → 显存不足则抢占
 
-4. **vLLM 中抢占（preemption）的两种策略是什么？各自适用什么场景？**
+1. **vLLM 中抢占（preemption）的两种策略是什么？各自适用什么场景？**
 
-   - **Recomputation**（默认）：丢弃被抢占请求的 KV cache，之后重新 prefill。适用于短 prompt——重算成本低于 CPU↔GPU 搬运
-   - **Swapping**：把被抢占请求的 KV cache 换出到 CPU 内存，显存恢复后换回。适用于长 prompt——重算太贵
-   - vLLM 默认 Recomputation，因为大多数请求 prompt 不长，重算比搬运快
-   - 抢占对象：通常抢占 running 队列里最后加入的请求（LIFO）
+ - **Recomputation**（默认）：丢弃被抢占请求的 KV cache，之后重新 prefill。适用于短 prompt——重算成本低于 CPU↔GPU 搬运
+ - **Swapping**：把被抢占请求的 KV cache 换出到 CPU 内存，显存恢复后换回。适用于长 prompt——重算太贵
+ - vLLM 默认 Recomputation，因为大多数请求 prompt 不长，重算比搬运快
+ - 抢占对象：通常抢占 running 队列里最后加入的请求（LIFO）
 
-5. **SequenceGroup 是什么？为什么不直接用 Sequence？**
+1. **SequenceGroup 是什么？为什么不直接用 Sequence？**
 
-   - `SequenceGroup` 包含一个请求的 prompt + 1~N 个采样序列（`Sequence`）
-   - 一个用户请求可能需要多个候选序列：beam search（保留 top-K 路径）、`n>1` 采样（一次生成多个回答）
-   - 这些候选共享同一个 prompt，用 group 包起来统一管理；prompt 的 KV cache 在 group 内共享（Day 4 的 Copy-on-Write 机制）
-   - 单序列场景（n=1, no beam）group 内只有一个 Sequence，退化为直接用 Sequence
+ - `SequenceGroup` 包含一个请求的 prompt + 1~N 个采样序列（`Sequence`）
+ - 一个用户请求可能需要多个候选序列：beam search（保留 top-K 路径）、`n>1` 采样（一次生成多个回答）
+ - 这些候选共享同一个 prompt，用 group 包起来统一管理；prompt 的 KV cache 在 group 内共享（Day 4 的 Copy-on-Write 机制）
+ - 单序列场景（n=1, no beam）group 内只有一个 Sequence，退化为直接用 Sequence
 
-6. **能对照昇腾解释 vLLM 各组件的对应关系吗？**
-
-   - vLLM 的分层架构（Engine/Scheduler/Worker）是系统设计层面的，与硬件无关——昇腾推理框架同样有 Engine/Scheduler/Worker 的职责划分
-   - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用
-   - 差异只在 Worker 内部：CUDA 调 `cuLaunchKernel` + cuBLAS/cuDNN，昇腾调 `aclrtExecute` + AscendC 算子；KV cache 管理的具体实现不同（PagedAttention 的 block table 概念一致，但底层 allocator 不同）
-   - 昇腾 CANN 内置了类似的推理框架（含动态批处理、cache 管理），概念上与 vLLM 对应
+ - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用

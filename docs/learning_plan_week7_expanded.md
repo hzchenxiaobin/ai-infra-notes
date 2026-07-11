@@ -20,17 +20,17 @@
 
 ```
 Day 43: 多请求并发支持 → 线程安全队列、异步 Future、结果回调
-  ↓
+ ↓
 Day 44: 完整调度器 → 优先级、超时、资源预算、抢占
-  ↓
+ ↓
 Day 45: SGLang / LightLLM 高级特性 → Speculative Decoding、Chunked Prefill、Prefix Caching
-  ↓
+ ↓
 Day 46: 整合全部自定义 Kernel → GEMM、FlashAttention、Softmax、LayerNorm 接入
-  ↓
+ ↓
 Day 47: 系统联调 → KV Cache + Batching + Scheduler + Kernel 端到端测试
-  ↓
+ ↓
 Day 48: 全链路 Profiling → 系统级瓶颈定位、与 vLLM 对比
-  ↓
+ ↓
 Day 49: 代码重构与文档 → README、架构图、接口统一、稳定性测试
 ```
 
@@ -61,7 +61,6 @@ ncu --version
 ## Day 43（周一）：多请求并发支持
 
 > **今日目标**：为 Mini 引擎添加线程安全的请求队列、异步处理机制和结果回调，支持并发提交多个请求。
-> **时间分配**：早间1.5h（理论学习1h + 昇腾对照30min）+ 晚间1h（编程实践）
 > **面试考察度**：⭐⭐⭐⭐ 高频，"多请求并发"是推理系统从 demo 到产品的关键
 
 ---
@@ -72,28 +71,28 @@ ncu --version
 
 ```
 多请求并发推理系统需要：
-  1. 线程安全的请求队列
-  2. 异步处理线程池或事件循环
-  3. 结果返回机制（Future / Callback / Streaming）
-  4. 请求生命周期管理
-  5. 错误处理与超时控制
+ 1. 线程安全的请求队列
+ 2. 异步处理线程池或事件循环
+ 3. 结果返回机制（Future / Callback / Streaming）
+ 4. 请求生命周期管理
+ 5. 错误处理与超时控制
 ```
 
 #### 并发模型选择
 
 ```
 模型1：单 Worker 线程 + 共享队列
-  - 简单，适合教学
-  - 调度器和模型执行串行
+ - 简单，适合教学
+ - 调度器和模型执行串行
 
 模型2：调度线程 + 执行线程分离
-  - 调度器专门构建 batch
-  - Worker 专门执行 forward
-  - 适合更复杂的系统
+ - 调度器专门构建 batch
+ - Worker 专门执行 forward
+ - 适合更复杂的系统
 
 模型3：线程池 + 任务队列
-  - 多个 Worker 并行处理
-  - 适合多 GPU 场景
+ - 多个 Worker 并行处理
+ - 适合多 GPU 场景
 
 Mini 系统选择模型2：调度线程 + 执行线程
 ```
@@ -108,34 +107,22 @@ Mini 系统选择模型2：调度线程 + 执行线程
 5. 注意 Python GIL 对多线程的限制
 ```
 
-#### 昇腾对照
-
-| CUDA/PyTorch 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| 线程安全队列 | 请求队列 | 一致 |
-| Future / Callback | 异步结果返回 | 一致 |
-| 调度线程 + 执行线程 | 昇腾推理服务架构 | 类似 |
-| 请求生命周期管理 | 会话管理 | 一致 |
-| 超时控制 | 超时控制 | 一致 |
-
----
-
 ### 学习任务2：异步返回机制（30分钟）
 
 #### Future vs Callback vs Streaming
 
 ```
 Future：
-  - 优点：接口简单，调用方可以阻塞等待
-  - 缺点：大结果占用内存，不适合流式输出
+ - 优点：接口简单，调用方可以阻塞等待
+ - 缺点：大结果占用内存，不适合流式输出
 
 Callback：
-  - 优点：灵活，结果到达时触发
-  - 缺点：代码复杂，嵌套回调
+ - 优点：灵活，结果到达时触发
+ - 缺点：代码复杂，嵌套回调
 
 Streaming：
-  - 优点：用户体验好，token 逐个返回
-  - 缺点：需要维护流状态
+ - 优点：用户体验好，token 逐个返回
+ - 缺点：需要维护流状态
 
 实际系统通常同时支持三种。
 ```
@@ -156,119 +143,115 @@ from collections import deque
 from concurrent.futures import Future
 from typing import Callable, Optional
 
-
 class InferenceRequest:
-    def __init__(self, request_id, prompt, max_new_tokens=20,
-                 priority=0, timeout=None,
-                 callback: Optional[Callable] = None):
-        self.request_id = request_id
-        self.prompt = prompt
-        self.max_new_tokens = max_new_tokens
-        self.priority = priority
-        self.timeout = timeout
-        self.callback = callback
-        self.future = Future()
-        self.submit_time = time.time()
-        self.start_time = None
-        self.end_time = None
+ def __init__(self, request_id, prompt, max_new_tokens=20,
+ priority=0, timeout=None,
+ callback: Optional[Callable] = None):
+ self.request_id = request_id
+ self.prompt = prompt
+ self.max_new_tokens = max_new_tokens
+ self.priority = priority
+ self.timeout = timeout
+ self.callback = callback
+ self.future = Future()
+ self.submit_time = time.time()
+ self.start_time = None
+ self.end_time = None
 
-    def set_result(self, result):
-        self.end_time = time.time()
-        self.future.set_result(result)
-        if self.callback:
-            self.callback(self.request_id, result)
+ def set_result(self, result):
+ self.end_time = time.time()
+ self.future.set_result(result)
+ if self.callback:
+ self.callback(self.request_id, result)
 
-    def set_exception(self, exception):
-        self.end_time = time.time()
-        self.future.set_exception(exception)
-
+ def set_exception(self, exception):
+ self.end_time = time.time()
+ self.future.set_exception(exception)
 
 class ThreadSafeRequestQueue:
-    """线程安全请求队列，支持优先级"""
-    def __init__(self):
-        self._queue = deque()
-        self._lock = threading.Lock()
-        self._cond = threading.Condition(self._lock)
+ """线程安全请求队列，支持优先级"""
+ def __init__(self):
+ self._queue = deque()
+ self._lock = threading.Lock()
+ self._cond = threading.Condition(self._lock)
 
-    def put(self, request: InferenceRequest):
-        with self._cond:
-            # 按优先级插入
-            inserted = False
-            for i, req in enumerate(self._queue):
-                if request.priority > req.priority:
-                    self._queue.insert(i, request)
-                    inserted = True
-                    break
-            if not inserted:
-                self._queue.append(request)
-            self._cond.notify()
+ def put(self, request: InferenceRequest):
+ with self._cond:
+ # 按优先级插入
+ inserted = False
+ for i, req in enumerate(self._queue):
+ if request.priority > req.priority:
+ self._queue.insert(i, request)
+ inserted = True
+ break
+ if not inserted:
+ self._queue.append(request)
+ self._cond.notify()
 
-    def get(self, timeout=None) -> Optional[InferenceRequest]:
-        with self._cond:
-            if not self._queue and timeout is not None:
-                self._cond.wait(timeout)
-            if self._queue:
-                return self._queue.popleft()
-            return None
+ def get(self, timeout=None) -> Optional[InferenceRequest]:
+ with self._cond:
+ if not self._queue and timeout is not None:
+ self._cond.wait(timeout)
+ if self._queue:
+ return self._queue.popleft()
+ return None
 
-    def get_batch(self, max_size=8, max_wait_time=0.05) -> list:
-        """批量获取，带超时"""
-        batch = []
-        deadline = time.time() + max_wait_time
+ def get_batch(self, max_size=8, max_wait_time=0.05) -> list:
+ """批量获取，带超时"""
+ batch = []
+ deadline = time.time() + max_wait_time
 
-        with self._cond:
-            while len(batch) < max_size:
-                remaining = deadline - time.time()
-                if remaining <= 0:
-                    break
-                if not self._queue:
-                    self._cond.wait(remaining)
-                if self._queue:
-                    batch.append(self._queue.popleft())
+ with self._cond:
+ while len(batch) < max_size:
+ remaining = deadline - time.time()
+ if remaining <= 0:
+ break
+ if not self._queue:
+ self._cond.wait(remaining)
+ if self._queue:
+ batch.append(self._queue.popleft())
 
-        return batch
+ return batch
 
-    def __len__(self):
-        with self._lock:
-            return len(self._queue)
-
+ def __len__(self):
+ with self._lock:
+ return len(self._queue)
 
 def main():
-    queue = ThreadSafeRequestQueue()
+ queue = ThreadSafeRequestQueue()
 
-    def callback(req_id, result):
-        print(f"Callback: Request {req_id} finished with length {len(result)}")
+ def callback(req_id, result):
+ print(f"Callback: Request {req_id} finished with length {len(result)}")
 
-    # 提交请求
-    requests = []
-    for i in range(5):
-        req = InferenceRequest(
-            request_id=i,
-            prompt=f"prompt_{i}",
-            max_new_tokens=10,
-            priority=i % 2,  # 偶数高优先级
-            callback=callback
-        )
-        queue.put(req)
-        requests.append(req)
+ # 提交请求
+ requests = []
+ for i in range(5):
+ req = InferenceRequest(
+ request_id=i,
+ prompt=f"prompt_{i}",
+ max_new_tokens=10,
+ priority=i % 2, # 偶数高优先级
+ callback=callback
+ )
+ queue.put(req)
+ requests.append(req)
 
-    # 模拟 worker 处理
-    print("Processing requests...")
-    for _ in range(5):
-        req = queue.get(timeout=0.1)
-        if req:
-            print(f"Processing request {req.request_id} (priority={req.priority})")
-            req.set_result(f"result_for_{req.request_id}")
+ # 模拟 worker 处理
+ print("Processing requests...")
+ for _ in range(5):
+ req = queue.get(timeout=0.1)
+ if req:
+ print(f"Processing request {req.request_id} (priority={req.priority})")
+ req.set_result(f"result_for_{req.request_id}")
 
-    # 等待所有 Future
-    for req in requests:
-        if not req.future.done():
-            continue
-        print(f"Request {req.request_id}: {req.future.result()}")
-
+ # 等待所有 Future
+ for req in requests:
+ if not req.future.done():
+ continue
+ print(f"Request {req.request_id}: {req.future.result()}")
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 运行步骤
@@ -321,14 +304,12 @@ python request_queue.py
 - [ ] 能说出 5 个线程安全要点
 - [ ] `request_queue.py` 运行成功，支持优先级
 - [ ] 理解 Future/Callback/Streaming 的区别
-- [ ] 能对照昇腾解释并发请求处理的对应机制
 
 ---
 
 ## Day 44（周二）：完整调度器
 
 > **今日目标**：实现完整的调度器，支持优先级调度、超时控制、资源预算（显存、batch size 上限），并支持抢占。
-> **时间分配**：早间1.5h（理论学习1h + 昇腾对照30min）+ 晚间1.5h（编程+调试）
 > **面试考察度**：⭐⭐⭐⭐⭐ 必考，完整调度器是推理系统的核心能力
 
 ---
@@ -339,116 +320,103 @@ python request_queue.py
 
 ```
 一个生产级调度器需要支持：
-  1. 优先级调度：高优先级请求优先
-  2. 超时控制：请求最大等待时间和执行时间
-  3. 资源预算：显存预算、batch size 上限、token budget
-  4. 抢占：显存不足时抢占低优先级请求
-  5. 公平性：避免低优先级请求饥饿
-  6. 调度策略可配置
+ 1. 优先级调度：高优先级请求优先
+ 2. 超时控制：请求最大等待时间和执行时间
+ 3. 资源预算：显存预算、batch size 上限、token budget
+ 4. 抢占：显存不足时抢占低优先级请求
+ 5. 公平性：避免低优先级请求饥饿
+ 6. 调度策略可配置
 ```
 
 #### 优先级调度实现
 
 ```
 数据结构：优先队列（堆）
-  - 按优先级排序
-  - 同优先级按 FIFO
+ - 按优先级排序
+ - 同优先级按 FIFO
 
 预算检查：
-  - 高优先级请求可以突破某些限制（预留资源）
-  - 普通请求受限于常规预算
+ - 高优先级请求可以突破某些限制（预留资源）
+ - 普通请求受限于常规预算
 ```
 
 #### 超时控制
 
 ```
 等待超时：
-  - 请求在 waiting queue 中超过 max_waiting_time
-  - 返回超时错误
+ - 请求在 waiting queue 中超过 max_waiting_time
+ - 返回超时错误
 
 执行超时：
-  - 请求运行超过 max_execution_time
-  - 强制取消，释放资源
+ - 请求运行超过 max_execution_time
+ - 强制取消，释放资源
 ```
 
 #### 抢占策略
 
 ```
 触发条件：
-  - 高优先级请求到来但显存/预算不足
-  - 显存碎片严重
+ - 高优先级请求到来但显存/预算不足
+ - 显存碎片严重
 
 被抢占对象选择：
-  - 最低优先级
-  - 最近最少使用
-  - 剩余 token 最少（换出成本低）
+ - 最低优先级
+ - 最近最少使用
+ - 剩余 token 最少（换出成本低）
 
 抢占后处理：
-  - Recompute：丢弃 KV Cache
-  - Swap：换出到 CPU
+ - Recompute：丢弃 KV Cache
+ - Swap：换出到 CPU
 ```
-
-#### 昇腾对照
-
-| CUDA/vLLM 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| 优先级调度 | 优先级调度 | 一致 |
-| 超时控制 | 超时控制 | 一致 |
-| 资源预算 | 资源预算 | 一致 |
-| 抢占 | 抢占 | 一致 |
-| 公平性 | 公平性策略 | 一致 |
-| 预留资源 | 资源预留 | 一致 |
-
----
 
 ### 学习任务2：调度器伪代码（30分钟）
 
 ```python
 class FullScheduler:
-    def __init__(self, token_budget, max_num_seqs, max_waiting_time,
-                 enable_preemption=True):
-        self.token_budget = token_budget
-        self.max_num_seqs = max_num_seqs
-        self.max_waiting_time = max_waiting_time
-        self.enable_preemption = enable_preemption
-    
-    def schedule(self, waiting, running, swapped, memory_budget):
-        batch = []
-        budget = self.token_budget
-        
-        # 1. 处理 running（continuous batching）
-        for req in sorted(running.values(), key=lambda r: -r.priority):
-            if budget >= 1 and len(batch) < self.max_num_seqs:
-                batch.append(req)
-                budget -= 1
-        
-        # 2. 处理 swapped
-        for req in sorted(swapped, key=lambda r: -r.priority):
-            if memory_budget.can_allocate(req):
-                swapped.remove(req)
-                batch.append(req)
-                budget -= req.required_tokens
-        
-        # 3. 从 waiting 加入新请求
-        for req in sorted(waiting, key=lambda r: -r.priority):
-            # 检查超时
-            if req.waiting_time > self.max_waiting_time:
-                req.timeout()
-                continue
-            
-            # 检查预算
-            if budget >= req.required_tokens and len(batch) < self.max_num_seqs:
-                if memory_budget.can_allocate(req):
-                    batch.append(req)
-                    budget -= req.required_tokens
-                elif self.enable_preemption:
-                    # 抢占低优先级 running 请求
-                    victim = self.select_victim(running, req)
-                    if victim:
-                        self.preempt(victim)
-                        batch.append(req)
-        
-        return batch
+ def __init__(self, token_budget, max_num_seqs, max_waiting_time,
+ enable_preemption=True):
+ self.token_budget = token_budget
+ self.max_num_seqs = max_num_seqs
+ self.max_waiting_time = max_waiting_time
+ self.enable_preemption = enable_preemption
+ 
+ def schedule(self, waiting, running, swapped, memory_budget):
+ batch = []
+ budget = self.token_budget
+ 
+ # 1. 处理 running（continuous batching）
+ for req in sorted(running.values(), key=lambda r: -r.priority):
+ if budget >= 1 and len(batch) < self.max_num_seqs:
+ batch.append(req)
+ budget -= 1
+ 
+ # 2. 处理 swapped
+ for req in sorted(swapped, key=lambda r: -r.priority):
+ if memory_budget.can_allocate(req):
+ swapped.remove(req)
+ batch.append(req)
+ budget -= req.required_tokens
+ 
+ # 3. 从 waiting 加入新请求
+ for req in sorted(waiting, key=lambda r: -r.priority):
+ # 检查超时
+ if req.waiting_time > self.max_waiting_time:
+ req.timeout()
+ continue
+ 
+ # 检查预算
+ if budget >= req.required_tokens and len(batch) < self.max_num_seqs:
+ if memory_budget.can_allocate(req):
+ batch.append(req)
+ budget -= req.required_tokens
+ elif self.enable_preemption:
+ # 抢占低优先级 running 请求
+ victim = self.select_victim(running, req)
+ if victim:
+ self.preempt(victim)
+ batch.append(req)
+ 
+ return batch
 ```
 
 ---
@@ -467,183 +435,177 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from enum import Enum
 
-
 class RequestStatus(Enum):
-    WAITING = "waiting"
-    RUNNING = "running"
-    SWAPPED = "swapped"
-    FINISHED = "finished"
-    TIMEOUT = "timeout"
-
+ WAITING = "waiting"
+ RUNNING = "running"
+ SWAPPED = "swapped"
+ FINISHED = "finished"
+ TIMEOUT = "timeout"
 
 @dataclass
 class ScheduledRequest:
-    req_id: int
-    prompt_len: int
-    priority: int
-    max_new_tokens: int
-    status: RequestStatus = RequestStatus.WAITING
-    submit_time: float = 0.0
-    start_time: Optional[float] = None
-    required_kv_blocks: int = 0
-
+ req_id: int
+ prompt_len: int
+ priority: int
+ max_new_tokens: int
+ status: RequestStatus = RequestStatus.WAITING
+ submit_time: float = 0.0
+ start_time: Optional[float] = None
+ required_kv_blocks: int = 0
 
 class MemoryBudget:
-    """显存预算模拟"""
-    def __init__(self, total_blocks=64):
-        self.total_blocks = total_blocks
-        self.used_blocks = 0
-    
-    def can_allocate(self, blocks: int) -> bool:
-        return self.used_blocks + blocks <= self.total_blocks
-    
-    def allocate(self, blocks: int):
-        if not self.can_allocate(blocks):
-            raise RuntimeError("Out of memory")
-        self.used_blocks += blocks
-    
-    def free(self, blocks: int):
-        self.used_blocks = max(0, self.used_blocks - blocks)
-    
-    def __repr__(self):
-        return f"MemoryBudget({self.used_blocks}/{self.total_blocks})"
-
+ """显存预算模拟"""
+ def __init__(self, total_blocks=64):
+ self.total_blocks = total_blocks
+ self.used_blocks = 0
+ 
+ def can_allocate(self, blocks: int) -> bool:
+ return self.used_blocks + blocks <= self.total_blocks
+ 
+ def allocate(self, blocks: int):
+ if not self.can_allocate(blocks):
+ raise RuntimeError("Out of memory")
+ self.used_blocks += blocks
+ 
+ def free(self, blocks: int):
+ self.used_blocks = max(0, self.used_blocks - blocks)
+ 
+ def __repr__(self):
+ return f"MemoryBudget({self.used_blocks}/{self.total_blocks})"
 
 class FullScheduler:
-    """完整调度器"""
-    def __init__(self, token_budget=100, max_num_seqs=8,
-                 max_waiting_time=5.0, enable_preemption=True,
-                 reserved_blocks=8):
-        self.token_budget = token_budget
-        self.max_num_seqs = max_num_seqs
-        self.max_waiting_time = max_waiting_time
-        self.enable_preemption = enable_preemption
-        self.reserved_blocks = reserved_blocks
-        
-        self.waiting: List[ScheduledRequest] = []
-        self.running: Dict[int, ScheduledRequest] = {}
-        self.swapped: List[ScheduledRequest] = []
-        self.memory = MemoryBudget(total_blocks=64)
-        self.time = 0.0
-    
-    def submit(self, req: ScheduledRequest):
-        req.submit_time = self.time
-        heapq.heappush(self.waiting, (-req.priority, req.submit_time, req))
-    
-    def schedule(self) -> List[ScheduledRequest]:
-        self.time += 1.0
-        batch = []
-        remaining_tokens = self.token_budget
-        
-        # 1. 继续运行 running 请求（decode，每个消耗 1 token）
-        for req_id in list(self.running.keys()):
-            req = self.running[req_id]
-            if req.status == RequestStatus.FINISHED:
-                self.memory.free(req.required_kv_blocks)
-                del self.running[req_id]
-            elif remaining_tokens >= 1 and len(batch) < self.max_num_seqs:
-                batch.append(req)
-                remaining_tokens -= 1
-        
-        # 2. 从 waiting 中加入新请求
-        still_waiting = []
-        while self.waiting and remaining_tokens > 0 and len(batch) < self.max_num_seqs:
-            neg_priority, submit_time, req = heapq.heappop(self.waiting)
-            
-            # 检查等待超时
-            if self.time - submit_time > self.max_waiting_time:
-                req.status = RequestStatus.TIMEOUT
-                print(f"Request {req.req_id} timed out")
-                continue
-            
-            # 检查 token budget
-            if req.prompt_len > remaining_tokens:
-                still_waiting.append((neg_priority, submit_time, req))
-                continue
-            
-            # 检查显存预算（高优先级可突破预留）
-            available_blocks = self.memory.total_blocks - self.memory.used_blocks
-            if req.priority > 0:
-                available_blocks += self.reserved_blocks
-            
-            if req.required_kv_blocks <= available_blocks:
-                self.memory.allocate(req.required_kv_blocks)
-                req.status = RequestStatus.RUNNING
-                req.start_time = self.time
-                self.running[req.req_id] = req
-                batch.append(req)
-                remaining_tokens -= req.prompt_len
-            elif self.enable_preemption:
-                # 尝试抢占低优先级 running 请求
-                victim = self._select_victim(req)
-                if victim:
-                    self._preempt(victim)
-                    self.memory.allocate(req.required_kv_blocks)
-                    req.status = RequestStatus.RUNNING
-                    self.running[req.req_id] = req
-                    batch.append(req)
-                    remaining_tokens -= req.prompt_len
-                else:
-                    still_waiting.append((neg_priority, submit_time, req))
-            else:
-                still_waiting.append((neg_priority, submit_time, req))
-        
-        # 恢复仍在等待的请求
-        for item in still_waiting:
-            heapq.heappush(self.waiting, item)
-        
-        return batch
-    
-    def _select_victim(self, new_req: ScheduledRequest) -> Optional[ScheduledRequest]:
-        """选择被抢占的最低优先级 running 请求"""
-        victims = [req for req in self.running.values()
-                   if req.priority < new_req.priority]
-        if not victims:
-            return None
-        return min(victims, key=lambda r: (r.priority, r.start_time or 0))
-    
-    def _preempt(self, victim: ScheduledRequest):
-        """抢占请求（简化：直接释放资源）"""
-        print(f"Preempting request {victim.req_id} (priority={victim.priority})")
-        self.memory.free(victim.required_kv_blocks)
-        victim.status = RequestStatus.SWAPPED
-        self.swapped.append(victim)
-        del self.running[victim.req_id]
-    
-    def finish_request(self, req_id: int):
-        if req_id in self.running:
-            self.running[req_id].status = RequestStatus.FINISHED
-
+ """完整调度器"""
+ def __init__(self, token_budget=100, max_num_seqs=8,
+ max_waiting_time=5.0, enable_preemption=True,
+ reserved_blocks=8):
+ self.token_budget = token_budget
+ self.max_num_seqs = max_num_seqs
+ self.max_waiting_time = max_waiting_time
+ self.enable_preemption = enable_preemption
+ self.reserved_blocks = reserved_blocks
+ 
+ self.waiting: List[ScheduledRequest] = []
+ self.running: Dict[int, ScheduledRequest] = {}
+ self.swapped: List[ScheduledRequest] = []
+ self.memory = MemoryBudget(total_blocks=64)
+ self.time = 0.0
+ 
+ def submit(self, req: ScheduledRequest):
+ req.submit_time = self.time
+ heapq.heappush(self.waiting, (-req.priority, req.submit_time, req))
+ 
+ def schedule(self) -> List[ScheduledRequest]:
+ self.time += 1.0
+ batch = []
+ remaining_tokens = self.token_budget
+ 
+ # 1. 继续运行 running 请求（decode，每个消耗 1 token）
+ for req_id in list(self.running.keys()):
+ req = self.running[req_id]
+ if req.status == RequestStatus.FINISHED:
+ self.memory.free(req.required_kv_blocks)
+ del self.running[req_id]
+ elif remaining_tokens >= 1 and len(batch) < self.max_num_seqs:
+ batch.append(req)
+ remaining_tokens -= 1
+ 
+ # 2. 从 waiting 中加入新请求
+ still_waiting = []
+ while self.waiting and remaining_tokens > 0 and len(batch) < self.max_num_seqs:
+ neg_priority, submit_time, req = heapq.heappop(self.waiting)
+ 
+ # 检查等待超时
+ if self.time - submit_time > self.max_waiting_time:
+ req.status = RequestStatus.TIMEOUT
+ print(f"Request {req.req_id} timed out")
+ continue
+ 
+ # 检查 token budget
+ if req.prompt_len > remaining_tokens:
+ still_waiting.append((neg_priority, submit_time, req))
+ continue
+ 
+ # 检查显存预算（高优先级可突破预留）
+ available_blocks = self.memory.total_blocks - self.memory.used_blocks
+ if req.priority > 0:
+ available_blocks += self.reserved_blocks
+ 
+ if req.required_kv_blocks <= available_blocks:
+ self.memory.allocate(req.required_kv_blocks)
+ req.status = RequestStatus.RUNNING
+ req.start_time = self.time
+ self.running[req.req_id] = req
+ batch.append(req)
+ remaining_tokens -= req.prompt_len
+ elif self.enable_preemption:
+ # 尝试抢占低优先级 running 请求
+ victim = self._select_victim(req)
+ if victim:
+ self._preempt(victim)
+ self.memory.allocate(req.required_kv_blocks)
+ req.status = RequestStatus.RUNNING
+ self.running[req.req_id] = req
+ batch.append(req)
+ remaining_tokens -= req.prompt_len
+ else:
+ still_waiting.append((neg_priority, submit_time, req))
+ else:
+ still_waiting.append((neg_priority, submit_time, req))
+ 
+ # 恢复仍在等待的请求
+ for item in still_waiting:
+ heapq.heappush(self.waiting, item)
+ 
+ return batch
+ 
+ def _select_victim(self, new_req: ScheduledRequest) -> Optional[ScheduledRequest]:
+ """选择被抢占的最低优先级 running 请求"""
+ victims = [req for req in self.running.values()
+ if req.priority < new_req.priority]
+ if not victims:
+ return None
+ return min(victims, key=lambda r: (r.priority, r.start_time or 0))
+ 
+ def _preempt(self, victim: ScheduledRequest):
+ """抢占请求（简化：直接释放资源）"""
+ print(f"Preempting request {victim.req_id} (priority={victim.priority})")
+ self.memory.free(victim.required_kv_blocks)
+ victim.status = RequestStatus.SWAPPED
+ self.swapped.append(victim)
+ del self.running[victim.req_id]
+ 
+ def finish_request(self, req_id: int):
+ if req_id in self.running:
+ self.running[req_id].status = RequestStatus.FINISHED
 
 def main():
-    scheduler = FullScheduler(token_budget=50, max_num_seqs=4,
-                              max_waiting_time=10.0, enable_preemption=True)
-    
-    # 提交 6 个请求，优先级不同
-    for i in range(6):
-        req = ScheduledRequest(
-            req_id=i,
-            prompt_len=10 + i * 2,
-            priority=i % 3,  # 0, 1, 2, 0, 1, 2
-            max_new_tokens=5,
-            required_kv_blocks=4 + i
-        )
-        scheduler.submit(req)
-    
-    # 模拟 5 轮调度
-    for round in range(5):
-        batch = scheduler.schedule()
-        print(f"\nRound {round}: {scheduler.memory}")
-        print(f"  Batch: [{', '.join(f'R{req.req_id}(p={req.priority})' for req in batch)}]")
-        
-        # 模拟完成一些请求
-        if round == 2:
-            scheduler.finish_request(0)
-            scheduler.finish_request(1)
-
+ scheduler = FullScheduler(token_budget=50, max_num_seqs=4,
+ max_waiting_time=10.0, enable_preemption=True)
+ 
+ # 提交 6 个请求，优先级不同
+ for i in range(6):
+ req = ScheduledRequest(
+ req_id=i,
+ prompt_len=10 + i * 2,
+ priority=i % 3, # 0, 1, 2, 0, 1, 2
+ max_new_tokens=5,
+ required_kv_blocks=4 + i
+ )
+ scheduler.submit(req)
+ 
+ # 模拟 5 轮调度
+ for round in range(5):
+ batch = scheduler.schedule()
+ print(f"\nRound {round}: {scheduler.memory}")
+ print(f" Batch: [{', '.join(f'R{req.req_id}(p={req.priority})' for req in batch)}]")
+ 
+ # 模拟完成一些请求
+ if round == 2:
+ scheduler.finish_request(0)
+ scheduler.finish_request(1)
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 运行步骤
@@ -653,7 +615,7 @@ python full_scheduler.py
 
 # 预期输出
 # Round 0: MemoryBudget(...)
-#   Batch: [R5(p=2), R2(p=2), R4(p=1), R1(p=1)]
+# Batch: [R5(p=2), R2(p=2), R4(p=1), R1(p=1)]
 # ...
 ```
 
@@ -685,10 +647,10 @@ python full_scheduler.py
 
 **参考答案要点**：
 - 选择原则：
-  1. **优先级最低**：优先保障高优先级请求
-  2. **剩余工作最少**：换出成本低
-  3. **最近最少使用**：避免频繁抢占同一个请求
-  4. **资源占用最多**：释放更多资源
+ 1. **优先级最低**：优先保障高优先级请求
+ 2. **剩余工作最少**：换出成本低
+ 3. **最近最少使用**：避免频繁抢占同一个请求
+ 4. **资源占用最多**：释放更多资源
 - 实际系统中通常是多因素综合打分
 - 抢占后处理：recompute（丢弃 KV Cache）或 swap（换出到 CPU）
 
@@ -700,14 +662,12 @@ python full_scheduler.py
 - [ ] `full_scheduler.py` 运行成功，支持优先级和抢占
 - [ ] 理解超时控制和资源预算的实现
 - [ ] 能解释抢占策略的选择原则
-- [ ] 能对照昇腾解释完整调度器的对应实现
 
 ---
 
 ## Day 45（周三）：SGLang / LightLLM 高级特性
 
 > **今日目标**：了解 SGLang 的 speculative decoding、LightLLM 的 chunked prefill 和其他先进特性（prefix caching），评估哪些特性值得集成到 Mini 引擎。
-> **时间分配**：早间1.5h（论文/文档阅读1h + 昇腾对照30min）+ 晚间1h（可行性分析）
 > **面试考察度**：⭐⭐⭐⭐ 高频，高级特性是面试中的加分项
 
 ---
@@ -719,9 +679,9 @@ python full_scheduler.py
 - **地址**：https://arxiv.org/abs/2211.17192
 - **博客**：SGLang 文档中关于 speculative decoding 的部分
 - **重点**：
-  - 基本原理：小模型（draft）预测，大模型（target）验证
-  - 为什么能加速
-  - 适用场景和限制
+ - 基本原理：小模型（draft）预测，大模型（target）验证
+ - 为什么能加速
+ - 适用场景和限制
 
 #### 核心概念笔记
 
@@ -729,27 +689,27 @@ python full_scheduler.py
 
 ```
 传统 Decode：
-  每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
-  缺点：大模型每次只处理 1 个 token，无法充分利用 GPU
+ 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
+ 缺点：大模型每次只处理 1 个 token，无法充分利用 GPU
 
 Speculative Decoding：
-  1. 小模型（draft model）连续生成 k 个候选 tokens
-  2. 大模型（target model）一次验证这 k 个 tokens
-  3. 接受匹配的 tokens，从第一个不匹配处重新采样
+ 1. 小模型（draft model）连续生成 k 个候选 tokens
+ 2. 大模型（target model）一次验证这 k 个 tokens
+ 3. 接受匹配的 tokens，从第一个不匹配处重新采样
 
 效果：
-  - 如果 draft 质量高，每步可接受多个 tokens
-  - 大模型 batch 变大，利用率提高
-  - 保持输出分布不变（与原始大模型一致）
+ - 如果 draft 质量高，每步可接受多个 tokens
+ - 大模型 batch 变大，利用率提高
+ - 保持输出分布不变（与原始大模型一致）
 ```
 
 **2. 加速原理**
 
 ```
 假设：
-  - draft model 生成 1 个 token 的时间 = t_d
-  - target model 验证 k 个 token 的时间 ≈ T_target（基本固定）
-  - 平均接受率 = α
+ - draft model 生成 1 个 token 的时间 = t_d
+ - target model 验证 k 个 token 的时间 ≈ T_target（基本固定）
+ - 平均接受率 = α
 
 传统每 token 时间 ≈ T_target
 Speculative 每 token 时间 ≈ (k × t_d + T_target) / (k × α)
@@ -761,14 +721,14 @@ Speculative 每 token 时间 ≈ (k × t_d + T_target) / (k × α)
 
 ```
 适用：
-  - 大模型 decode 是瓶颈
-  - 有合适的 draft model（如小版自身、n-gram 模型）
-  - 对延迟敏感
+ - 大模型 decode 是瓶颈
+ - 有合适的 draft model（如小版自身、n-gram 模型）
+ - 对延迟敏感
 
 限制：
-  - 需要额外内存放 draft model
-  - draft 质量低时可能无加速甚至变慢
-  - 实现复杂，需要仔细对齐分布
+ - 需要额外内存放 draft model
+ - draft 质量低时可能无加速甚至变慢
+ - 实现复杂，需要仔细对齐分布
 ```
 
 ---
@@ -779,35 +739,35 @@ Speculative 每 token 时间 ≈ (k × t_d + T_target) / (k × α)
 
 ```
 问题：
-  - 长 prompt 的 prefill 一次性处理大量 tokens
-  - 占用大量 token budget 和显存
-  - 阻塞同 batch 的 decode 请求
+ - 长 prompt 的 prefill 一次性处理大量 tokens
+ - 占用大量 token budget 和显存
+ - 阻塞同 batch 的 decode 请求
 
 Chunked Prefill：
-  - 将长 prompt 分成多个 chunk
-  - 每个 chunk 与 decode 请求一起执行
-  - 逐步完成 prefill，同时不中断 decode
+ - 将长 prompt 分成多个 chunk
+ - 每个 chunk 与 decode 请求一起执行
+ - 逐步完成 prefill，同时不中断 decode
 
 收益：
-  - 平滑 decode latency
-  - 提高 batch 利用率
+ - 平滑 decode latency
+ - 提高 batch 利用率
 ```
 
 #### Prefix Caching
 
 ```
 问题：
-  - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
-  - 每次都要重新计算 prefix 的 KV Cache
+ - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
+ - 每次都要重新计算 prefix 的 KV Cache
 
 Prefix Caching：
-  - 缓存常见 prefix 的 KV Cache
-  - 新请求匹配到缓存 prefix 时，直接复用
+ - 缓存常见 prefix 的 KV Cache
+ - 新请求匹配到缓存 prefix 时，直接复用
 
 收益：
-  - 降低 TTFT
-  - 减少重复计算
-  - 特别适合多轮对话和模板化请求
+ - 降低 TTFT
+ - 减少重复计算
+ - 特别适合多轮对话和模板化请求
 ```
 
 ---
@@ -821,18 +781,6 @@ Prefix Caching：
 | Prefix Caching | 降低 TTFT | 中 | 推荐集成 |
 | 量化 KV Cache | 降低显存 | 中 | 推荐集成 |
 | CUDA Graph | 降低 launch overhead | 中 | 推荐集成 |
-
-#### 昇腾对照
-
-| 高级特性 | 昇腾 CANN 对应 | 说明 |
-|---------|------------|------|
-| Speculative Decoding | 昇腾投机采样 | CANN 已支持 |
-| Chunked Prefill | 昇腾分块 prefill | 已支持 |
-| Prefix Caching | 昇腾前缀缓存 | 已支持 |
-| KV Cache 量化 | 昇腾 KV 量化 | 已支持 |
-| CUDA Graph | 昇腾 Graph | 已支持 |
-
----
 
 ### 晚间任务：可行性分析报告（1小时）
 
@@ -880,9 +828,9 @@ Prefix Caching：
 **参考答案要点**：
 - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k 个 tokens
 - **加速原因**：
-  - 小模型生成速度快
-  - 大模型一次验证多个 tokens，提高 batch 利用率
-  - 如果 draft 质量高，每步可接受多个 tokens
+ - 小模型生成速度快
+ - 大模型一次验证多个 tokens，提高 batch 利用率
+ - 如果 draft 质量高，每步可接受多个 tokens
 - **保持分布不变**：通过特殊的接受/拒绝采样策略，确保最终输出分布与大模型自回归采样一致
 - **适用场景**：decode 延迟敏感、有合适 draft model
 
@@ -890,13 +838,13 @@ Prefix Caching：
 
 **参考答案要点**：
 - **Chunked Prefill**：
-  - 解决长 prompt prefill 阻塞 decode 的问题
-  - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
-  - 效果：平滑 decode latency，避免单点延迟尖峰
+ - 解决长 prompt prefill 阻塞 decode 的问题
+ - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
+ - 效果：平滑 decode latency，避免单点延迟尖峰
 - **Prefix Caching**：
-  - 解决重复 prefix 的 KV Cache 重复计算问题
-  - 缓存常见 prefix 的 KV Cache，新请求匹配时复用
-  - 效果：降低 TTFT，特别适合系统提示、多轮对话
+ - 解决重复 prefix 的 KV Cache 重复计算问题
+ - 缓存常见 prefix 的 KV Cache，新请求匹配时复用
+ - 效果：降低 TTFT，特别适合系统提示、多轮对话
 
 ---
 
@@ -906,14 +854,12 @@ Prefix Caching：
 - [ ] 理解 Chunked Prefill 的收益
 - [ ] 理解 Prefix Caching 的应用场景
 - [ ] 能评估各高级特性的收益和复杂度
-- [ ] 能对照昇腾解释 CANN 已支持的高级特性
 
 ---
 
 ## Day 46（周四）：整合全部自定义 Kernel
 
 > **今日目标**：将 Week 2-4 手写的 GEMM、FlashAttention、Softmax、LayerNorm 接入 Mini 引擎，替换 PyTorch 对应算子。
-> **时间分配**：早间1.5h（集成设计1h + 昇腾对照30min）+ 晚间1.5h（编码+调试）
 > **面试考察度**：⭐⭐⭐⭐⭐ 必考，Kernel 集成是 Infra 工程师的核心能力
 
 ---
@@ -933,14 +879,14 @@ Prefix Caching：
 
 ```
 方式1：PyTorch C++ Extension
-  - 最常用
-  - 写 .cpp wrapper + .cu kernel
-  - 用 load_inline 或 setup.py 编译
+ - 最常用
+ - 写 .cpp wrapper + .cu kernel
+ - 用 load_inline 或 setup.py 编译
 
 方式2：Triton
-  - Python 写 kernel
-  - torch.compile 自动集成
-  - 适合快速迭代
+ - Python 写 kernel
+ - torch.compile 自动集成
+ - 适合快速迭代
 
 Mini 系统选择方式1，与 Week 4 Day 26 一致。
 ```
@@ -949,26 +895,15 @@ Mini 系统选择方式1，与 Week 4 Day 26 一致。
 
 ```
 集成顺序：
-  1. 先替换单个算子，验证正确性
-  2. 再替换多个算子，验证端到端
-  3. 最后做性能对比
+ 1. 先替换单个算子，验证正确性
+ 2. 再替换多个算子，验证端到端
+ 3. 最后做性能对比
 
 注意点：
-  - 精度：FP32 reduce 保持稳定
-  - 性能：教学版 kernel 可能比 PyTorch 慢，需要逐步优化
-  - 内存：自定义 kernel 的 tensor 分配要与 PyTorch 一致
+ - 精度：FP32 reduce 保持稳定
+ - 性能：教学版 kernel 可能比 PyTorch 慢，需要逐步优化
+ - 内存：自定义 kernel 的 tensor 分配要与 PyTorch 一致
 ```
-
-#### 昇腾对照
-
-| CUDA 集成方式 | 昇腾 CANN 对应 | 说明 |
-|---------|------------|------|
-| PyTorch C++ Extension | Ascend C 自定义算子 | 类似 |
-| cuBLAS | ACL MatMul | 官方库 |
-| FlashAttention | CANN FlashAttention | 内置 |
-| Softmax/LayerNorm | CANN 内置算子 | 内置 |
-
----
 
 ### 学习任务2：Kernel 封装接口设计（30分钟）
 
@@ -1006,10 +941,10 @@ from torch.utils.cpp_extension import load_inline
 # 读取 kernel 源文件
 # 注意：实际项目中应将路径调整为对应周的位置
 with open("softmax_layernorm.cu", "r") as f:
-    softmax_layernorm_src = f.read()
+ softmax_layernorm_src = f.read()
 
 with open("flash_attention_v2.cu", "r") as f:
-    flash_attention_src = f.read()
+ flash_attention_src = f.read()
 
 cpp_src = """
 #include <torch/extension.h>
@@ -1020,92 +955,89 @@ at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
 
 # 动态编译
 custom_ops = load_inline(
-    name="custom_ops",
-    cpp_sources=cpp_src,
-    cuda_sources=softmax_layernorm_src + flash_attention_src,
-    functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
-    verbose=True,
-    extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ name="custom_ops",
+ cpp_sources=cpp_src,
+ cuda_sources=softmax_layernorm_src + flash_attention_src,
+ functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
+ verbose=True,
+ extra_cuda_cflags=["-O3", "-arch=sm_80"],
 )
 
-
 class CustomKernelTransformerLayer(torch.nn.Module):
-    """使用自定义 Kernel 的 Transformer Layer（简化版）"""
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = torch.nn.Linear(d_model, 3 * d_model)
-        self.out = torch.nn.Linear(d_model, d_model)
-        self.norm1_weight = torch.nn.Parameter(torch.ones(d_model))
-        self.norm1_bias = torch.nn.Parameter(torch.zeros(d_model))
-        self.norm2_weight = torch.nn.Parameter(torch.ones(d_model))
-        self.norm2_bias = torch.nn.Parameter(torch.zeros(d_model))
-        self.ffn = torch.nn.Sequential(
-            torch.nn.Linear(d_model, d_ff),
-            torch.nn.GELU(),
-            torch.nn.Linear(d_ff, d_model),
-        )
+ """使用自定义 Kernel 的 Transformer Layer（简化版）"""
+ def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+ super().__init__()
+ self.d_model = d_model
+ self.n_heads = n_heads
+ self.d_head = d_model // n_heads
+ self.qkv = torch.nn.Linear(d_model, 3 * d_model)
+ self.out = torch.nn.Linear(d_model, d_model)
+ self.norm1_weight = torch.nn.Parameter(torch.ones(d_model))
+ self.norm1_bias = torch.nn.Parameter(torch.zeros(d_model))
+ self.norm2_weight = torch.nn.Parameter(torch.ones(d_model))
+ self.norm2_bias = torch.nn.Parameter(torch.zeros(d_model))
+ self.ffn = torch.nn.Sequential(
+ torch.nn.Linear(d_model, d_ff),
+ torch.nn.GELU(),
+ torch.nn.Linear(d_ff, d_model),
+ )
 
-    def forward(self, x, use_custom_ops=True):
-        B, N, D = x.shape
+ def forward(self, x, use_custom_ops=True):
+ B, N, D = x.shape
 
-        # LayerNorm1 + QKV
-        if use_custom_ops:
-            x_flat = x.reshape(B * N, D)
-            x_norm = custom_ops.layernorm_forward(x_flat, self.norm1_weight, self.norm1_bias, 1e-5)
-            x_norm = x_norm.reshape(B, N, D)
-        else:
-            x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm1_weight, self.norm1_bias, 1e-5)
+ # LayerNorm1 + QKV
+ if use_custom_ops:
+ x_flat = x.reshape(B * N, D)
+ x_norm = custom_ops.layernorm_forward(x_flat, self.norm1_weight, self.norm1_bias, 1e-5)
+ x_norm = x_norm.reshape(B, N, D)
+ else:
+ x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm1_weight, self.norm1_bias, 1e-5)
 
-        qkv = self.qkv(x_norm)
-        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]
+ qkv = self.qkv(x_norm)
+ qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+ q, k, v = qkv[0], qkv[1], qkv[2]
 
-        # FlashAttention
-        if use_custom_ops:
-            # 假设 q,k,v 是 FP32
-            attn_out = custom_ops.flash_attention_forward(q, k, v)
-        else:
-            scale = self.d_head ** -0.5
-            attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-            attn = torch.nn.functional.softmax(attn, dim=-1)
-            attn_out = torch.matmul(attn, v)
+ # FlashAttention
+ if use_custom_ops:
+ # 假设 q,k,v 是 FP32
+ attn_out = custom_ops.flash_attention_forward(q, k, v)
+ else:
+ scale = self.d_head ** -0.5
+ attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+ attn = torch.nn.functional.softmax(attn, dim=-1)
+ attn_out = torch.matmul(attn, v)
 
-        attn_out = attn_out.transpose(1, 2).reshape(B, N, D)
-        x = x + self.out(attn_out)
+ attn_out = attn_out.transpose(1, 2).reshape(B, N, D)
+ x = x + self.out(attn_out)
 
-        # LayerNorm2 + FFN
-        if use_custom_ops:
-            x_flat = x.reshape(B * N, D)
-            x_norm = custom_ops.layernorm_forward(x_flat, self.norm2_weight, self.norm2_bias, 1e-5)
-            x_norm = x_norm.reshape(B, N, D)
-        else:
-            x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm2_weight, self.norm2_bias, 1e-5)
+ # LayerNorm2 + FFN
+ if use_custom_ops:
+ x_flat = x.reshape(B * N, D)
+ x_norm = custom_ops.layernorm_forward(x_flat, self.norm2_weight, self.norm2_bias, 1e-5)
+ x_norm = x_norm.reshape(B, N, D)
+ else:
+ x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm2_weight, self.norm2_bias, 1e-5)
 
-        x = x + self.ffn(x_norm)
-        return x
-
+ x = x + self.ffn(x_norm)
+ return x
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
+ device = "cuda" if torch.cuda.is_available() else "cpu"
+ print(f"Using device: {device}")
 
-    layer = CustomKernelTransformerLayer(d_model=512, n_heads=8).to(device).eval()
-    x = torch.randn(2, 128, 512, device=device)
+ layer = CustomKernelTransformerLayer(d_model=512, n_heads=8).to(device).eval()
+ x = torch.randn(2, 128, 512, device=device)
 
-    with torch.no_grad():
-        out_custom = layer(x, use_custom_ops=True)
-        out_pytorch = layer(x, use_custom_ops=False)
+ with torch.no_grad():
+ out_custom = layer(x, use_custom_ops=True)
+ out_pytorch = layer(x, use_custom_ops=False)
 
-    max_diff = (out_custom - out_pytorch).abs().max().item()
-    print(f"Max diff (custom vs pytorch): {max_diff:.2e}")
-    print("PASS" if max_diff < 1e-3 else "FAIL")
-
+ max_diff = (out_custom - out_pytorch).abs().max().item()
+ print(f"Max diff (custom vs pytorch): {max_diff:.2e}")
+ print("PASS" if max_diff < 1e-3 else "FAIL")
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 练习题
@@ -1126,28 +1058,28 @@ if __name__ == "__main__":
 1. 写 CUDA kernel（`.cu`）和 C++ wrapper（`.cpp`）
 2. 使用 `torch.utils.cpp_extension.load_inline` 或 `setup.py` 编译
 3. 在 wrapper 中：
-   - 用 `at::Tensor` 接收张量
-   - 用 `data_ptr<float>()` 获取裸指针
-   - 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream
-   - 用 `at::empty_like(input)` 分配输出
-4. 注意点：
-   - stream 一致性：确保 kernel 在正确 stream 上执行
-   - 精度：FP32 reduce 保持稳定
-   - 内存布局：与 PyTorch 对齐
-   - 边界处理：非对齐尺寸
+ - 用 `at::Tensor` 接收张量
+ - 用 `data_ptr<float>()` 获取裸指针
+ - 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream
+ - 用 `at::empty_like(input)` 分配输出
+1. 注意点：
+ - stream 一致性：确保 kernel 在正确 stream 上执行
+ - 精度：FP32 reduce 保持稳定
+ - 内存布局：与 PyTorch 对齐
+ - 边界处理：非对齐尺寸
 
 **面试题2**：自定义 Kernel 集成后，如何验证正确性和性能？（⭐⭐⭐⭐ 高频）
 
 **参考答案要点**：
 - **正确性**：
-  1. 单算子对比 PyTorch 实现，误差 < 阈值
-  2. 多算子组合后对比端到端输出
-  3. 不同尺寸和边界条件测试
+ 1. 单算子对比 PyTorch 实现，误差 < 阈值
+ 2. 多算子组合后对比端到端输出
+ 3. 不同尺寸和边界条件测试
 - **性能**：
-  1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
-  2. 用 `nsys` 看时间线
-  3. 用 `ncu` 分析 kernel 瓶颈
-  4. 对比 throughput-latency 曲线
+ 1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
+ 2. 用 `nsys` 看时间线
+ 3. 用 `ncu` 分析 kernel 瓶颈
+ 4. 对比 throughput-latency 曲线
 
 ---
 
@@ -1158,14 +1090,12 @@ if __name__ == "__main__":
 - [ ] 能设计 kernel 封装接口
 - [ ] 理解集成时的 stream、精度、内存布局注意事项
 - [ ] 能解释如何验证正确性和性能
-- [ ] 能对照昇腾解释 Ascend C 自定义算子的对应流程
 
 ---
 
 ## Day 47（周五）：系统联调
 
 > **今日目标**：将 KV Cache、Batching、Scheduler、自定义 Kernel 全部联调，进行端到端多请求推理测试和长时间稳定性测试。
-> **时间分配**：早间1.5h（联调计划1h + 昇腾对照30min）+ 晚间1.5h（编码+测试）
 > **面试考察度**：⭐⭐⭐⭐⭐ 必考，系统联调能力是 Infra 工程师的分水岭
 
 ---
@@ -1176,30 +1106,30 @@ if __name__ == "__main__":
 
 ```
 Step 1: 单请求正确性
-  - 使用 Mini 引擎 v0 验证基础 forward 正确
+ - 使用 Mini 引擎 v0 验证基础 forward 正确
 
 Step 2: 多请求并发正确性
-  - 使用 Mini 引擎 v1 验证多请求结果正确
-  - 检查请求生命周期管理
+ - 使用 Mini 引擎 v1 验证多请求结果正确
+ - 检查请求生命周期管理
 
 Step 3: KV Cache 一致性
-  - with cache vs without cache 输出一致
-  - 多轮对话 cache 复用正确
+ - with cache vs without cache 输出一致
+ - 多轮对话 cache 复用正确
 
 Step 4: Scheduler 正确性
-  - 优先级调度正确
-  - 超时取消正确
-  - 资源预算不突破
+ - 优先级调度正确
+ - 超时取消正确
+ - 资源预算不突破
 
 Step 5: 自定义 Kernel 集成
-  - 单算子替换正确
-  - 多算子组合正确
-  - 端到端性能对比
+ - 单算子替换正确
+ - 多算子组合正确
+ - 端到端性能对比
 
 Step 6: 稳定性测试
-  - 连续处理 1000+ 请求
-  - 内存使用稳定
-  - 异常情况处理（OOM、非法输入）
+ - 连续处理 1000+ 请求
+ - 内存使用稳定
+ - 异常情况处理（OOM、非法输入）
 ```
 
 #### 常见问题与排查
@@ -1212,19 +1142,6 @@ Step 6: 稳定性测试
 | 显存 OOM | batch 过大 | 检查 budget |
 | 性能下降 | kernel 未优化 | ncu profiling |
 
-#### 昇腾对照
-
-| CUDA/PyTorch 联调 | 昇腾 CANN 对应 | 说明 |
-|---------|------------|------|
-| 单请求正确性 | 单请求正确性 | 一致 |
-| 多请求并发 | 多请求并发 | 一致 |
-| KV Cache 一致性 | KV Cache 一致性 | 一致 |
-| Scheduler 联调 | 调度器联调 | 一致 |
-| 自定义算子集成 | Ascend C 集成 | 类似 |
-| 稳定性测试 | 稳定性测试 | 一致 |
-
----
-
 ### 学习任务2：稳定性测试脚本（30分钟）
 
 ```python
@@ -1236,65 +1153,62 @@ import torch
 from mini_engine_v1 import MiniEngineV1
 from mini_engine_v0 import MiniLLM, MiniTokenizer
 
-
 def stability_test(engine, num_requests=1000, max_new_tokens=10):
-    """连续处理大量请求，监控正确性和内存"""
-    prompts = [
-        "hello world",
-        "this is a test prompt",
-        "short",
-        "another example prompt for testing",
-        "a medium length prompt here for batching test",
-    ]
+ """连续处理大量请求，监控正确性和内存"""
+ prompts = [
+ "hello world",
+ "this is a test prompt",
+ "short",
+ "another example prompt for testing",
+ "a medium length prompt here for batching test",
+ ]
 
-    success_count = 0
-    fail_count = 0
-    start_time = time.time()
+ success_count = 0
+ fail_count = 0
+ start_time = time.time()
 
-    for i in range(num_requests):
-        prompt = prompts[i % len(prompts)]
-        try:
-            future = engine.submit(prompt, max_new_tokens)
-            result = future.result(timeout=30)
-            success_count += 1
-            if i % 100 == 0:
-                print(f"Processed {i} requests, success={success_count}")
-        except Exception as e:
-            fail_count += 1
-            print(f"Request {i} failed: {e}")
+ for i in range(num_requests):
+ prompt = prompts[i % len(prompts)]
+ try:
+ future = engine.submit(prompt, max_new_tokens)
+ result = future.result(timeout=30)
+ success_count += 1
+ if i % 100 == 0:
+ print(f"Processed {i} requests, success={success_count}")
+ except Exception as e:
+ fail_count += 1
+ print(f"Request {i} failed: {e}")
 
-    total_time = time.time() - start_time
-    print(f"\n=== Stability Test Result ===")
-    print(f"Total requests: {num_requests}")
-    print(f"Success: {success_count}")
-    print(f"Fail: {fail_count}")
-    print(f"Total time: {total_time:.3f}s")
-    print(f"Throughput: {num_requests / total_time:.2f} req/s")
+ total_time = time.time() - start_time
+ print(f"\n=== Stability Test Result ===")
+ print(f"Total requests: {num_requests}")
+ print(f"Success: {success_count}")
+ print(f"Fail: {fail_count}")
+ print(f"Total time: {total_time:.3f}s")
+ print(f"Throughput: {num_requests / total_time:.2f} req/s")
 
-    # 显存监控
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
-        allocated = torch.cuda.memory_allocated() / 1024 / 1024
-        reserved = torch.cuda.memory_reserved() / 1024 / 1024
-        print(f"GPU memory allocated: {allocated:.2f} MB")
-        print(f"GPU memory reserved: {reserved:.2f} MB")
-
+ # 显存监控
+ if torch.cuda.is_available():
+ torch.cuda.synchronize()
+ allocated = torch.cuda.memory_allocated() / 1024 / 1024
+ reserved = torch.cuda.memory_reserved() / 1024 / 1024
+ print(f"GPU memory allocated: {allocated:.2f} MB")
+ print(f"GPU memory reserved: {reserved:.2f} MB")
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}\n")
+ device = "cuda" if torch.cuda.is_available() else "cpu"
+ print(f"Using device: {device}\n")
 
-    model = MiniLLM(vocab_size=1000, d_model=512, n_heads=8, n_layers=2)
-    tokenizer = MiniTokenizer(vocab_size=1000)
-    engine = MiniEngineV1(model, tokenizer, max_token_budget=200, max_num_seqs=8, device=device)
+ model = MiniLLM(vocab_size=1000, d_model=512, n_heads=8, n_layers=2)
+ tokenizer = MiniTokenizer(vocab_size=1000)
+ engine = MiniEngineV1(model, tokenizer, max_token_budget=200, max_num_seqs=8, device=device)
 
-    stability_test(engine, num_requests=500, max_new_tokens=5)
+ stability_test(engine, num_requests=500, max_new_tokens=5)
 
-    engine.shutdown()
-
+ engine.shutdown()
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 练习题
@@ -1313,36 +1227,36 @@ if __name__ == "__main__":
 
 **参考答案要点**：
 1. **分层验证**：
-   - 单请求正确性
-   - 多请求并发正确性
-   - 带 KV Cache 的正确性
-   - 带 Scheduler 的正确性
-2. **关键点**：
-   - 每个请求的 KV Cache 隔离
-   - 请求生命周期状态正确转换
-   - Scheduler 不丢失请求
-   - 异步结果正确返回给对应请求
-3. **测试方法**：
-   - 与 PyTorch eager 版对比输出
-   - 长时间稳定性测试
-   - 边界条件和异常输入测试
+ - 单请求正确性
+ - 多请求并发正确性
+ - 带 KV Cache 的正确性
+ - 带 Scheduler 的正确性
+1. **关键点**：
+ - 每个请求的 KV Cache 隔离
+ - 请求生命周期状态正确转换
+ - Scheduler 不丢失请求
+ - 异步结果正确返回给对应请求
+1. **测试方法**：
+ - 与 PyTorch eager 版对比输出
+ - 长时间稳定性测试
+ - 边界条件和异常输入测试
 
 **面试题2**：如何做推理系统的稳定性测试？需要关注哪些指标？（⭐⭐⭐⭐ 高频）
 
 **参考答案要点**：
 1. **测试规模**：连续处理 1000+、10000+ 请求
 2. **关键指标**：
-   - 成功率
-   - 平均延迟 / P99 延迟
-   - 吞吐
-   - 显存使用是否持续增长（内存泄漏）
-   - CPU 使用率
-3. **异常情况**：
-   - OOM 处理
-   - 非法输入
-   - 超时取消
-   - 请求突然大量涌入
-4. **工具**：nsys、ncu、torch profiler、自定义监控
+ - 成功率
+ - 平均延迟 / P99 延迟
+ - 吞吐
+ - 显存使用是否持续增长（内存泄漏）
+ - CPU 使用率
+1. **异常情况**：
+ - OOM 处理
+ - 非法输入
+ - 超时取消
+ - 请求突然大量涌入
+1. **工具**：nsys、ncu、torch profiler、自定义监控
 
 ---
 
@@ -1354,7 +1268,6 @@ if __name__ == "__main__":
 - [ ] 系统能连续处理 500+ 请求
 - [ ] 显存使用稳定，无明显增长
 - [ ] 能处理异常输入和超时
-- [ ] 能对照昇腾解释系统联调的对应流程
 
 ---
 
@@ -1372,33 +1285,33 @@ if __name__ == "__main__":
 
 ```
 系统级瓶颈来源：
-  1. 调度开销（Scheduler CPU 时间）
-  2. 内存分配开销（KV Cache 分配、tensor 分配）
-  3. Kernel launch overhead
-  4. 计算瓶颈（GEMM、Attention、FFN）
-  5. 内存瓶颈（KV Cache 读取、attention）
-  6. Python GIL / 多线程竞争
+ 1. 调度开销（Scheduler CPU 时间）
+ 2. 内存分配开销（KV Cache 分配、tensor 分配）
+ 3. Kernel launch overhead
+ 4. 计算瓶颈（GEMM、Attention、FFN）
+ 5. 内存瓶颈（KV Cache 读取、attention）
+ 6. Python GIL / 多线程竞争
 ```
 
 #### Profiling 工具组合
 
 ```
 Nsight Systems (nsys):
-  - 看系统级时间线
-  - 识别 kernel 间隙、CPU-GPU 同步、stream 利用率
+ - 看系统级时间线
+ - 识别 kernel 间隙、CPU-GPU 同步、stream 利用率
 
 Nsight Compute (ncu):
-  - 看关键 kernel 的 SM/DRAM throughput
-  - 识别 compute-bound 还是 memory-bound
+ - 看关键 kernel 的 SM/DRAM throughput
+ - 识别 compute-bound 还是 memory-bound
 
 PyTorch Profiler:
-  - 看算子级时间分解
-  - 方便定位 PyTorch 层的 overhead
+ - 看算子级时间分解
+ - 方便定位 PyTorch 层的 overhead
 
 自定义计时：
-  - scheduler 时间
-  - memory allocation 时间
-  - result callback 时间
+ - scheduler 时间
+ - memory allocation 时间
+ - result callback 时间
 ```
 
 ---
@@ -1416,90 +1329,87 @@ import torch
 from mini_engine_v1 import MiniEngineV1
 from mini_engine_v0 import MiniLLM, MiniTokenizer
 
-
 class ProfileMiniSystem:
-    def __init__(self, engine):
-        self.engine = engine
-        self.metrics = {
-            'submit_times': [],
-            'schedule_times': [],
-            'forward_times': [],
-            'result_times': [],
-        }
+ def __init__(self, engine):
+ self.engine = engine
+ self.metrics = {
+ 'submit_times': [],
+ 'schedule_times': [],
+ 'forward_times': [],
+ 'result_times': [],
+ }
 
-    def profile_single_request(self, prompt, max_new_tokens=10):
-        t0 = time.perf_counter()
-        future = self.engine.submit(prompt, max_new_tokens)
-        t1 = time.perf_counter()
-        result = future.result()
-        t2 = time.perf_counter()
+ def profile_single_request(self, prompt, max_new_tokens=10):
+ t0 = time.perf_counter()
+ future = self.engine.submit(prompt, max_new_tokens)
+ t1 = time.perf_counter()
+ result = future.result()
+ t2 = time.perf_counter()
 
-        self.metrics['submit_times'].append(t1 - t0)
-        self.metrics['result_times'].append(t2 - t1)
-        return result
+ self.metrics['submit_times'].append(t1 - t0)
+ self.metrics['result_times'].append(t2 - t1)
+ return result
 
-    def run(self, num_requests=50, max_new_tokens=10):
-        prompts = [
-            "hello world",
-            "this is a test prompt",
-            "short",
-            "another example prompt for testing batching and scheduling",
-        ]
+ def run(self, num_requests=50, max_new_tokens=10):
+ prompts = [
+ "hello world",
+ "this is a test prompt",
+ "short",
+ "another example prompt for testing batching and scheduling",
+ ]
 
-        # 预热
-        for _ in range(3):
-            self.profile_single_request(prompts[0], 3)
+ # 预热
+ for _ in range(3):
+ self.profile_single_request(prompts[0], 3)
 
-        torch.cuda.synchronize()
-        start = time.perf_counter()
+ torch.cuda.synchronize()
+ start = time.perf_counter()
 
-        futures = []
-        for i in range(num_requests):
-            prompt = prompts[i % len(prompts)]
-            future = self.engine.submit(prompt, max_new_tokens)
-            futures.append(future)
+ futures = []
+ for i in range(num_requests):
+ prompt = prompts[i % len(prompts)]
+ future = self.engine.submit(prompt, max_new_tokens)
+ futures.append(future)
 
-        # 等待所有完成
-        results = []
-        for future in futures:
-            results.append(future.result())
+ # 等待所有完成
+ results = []
+ for future in futures:
+ results.append(future.result())
 
-        torch.cuda.synchronize()
-        total_time = time.perf_counter() - start
+ torch.cuda.synchronize()
+ total_time = time.perf_counter() - start
 
-        total_tokens = num_requests * max_new_tokens
-        throughput = total_tokens / total_time
+ total_tokens = num_requests * max_new_tokens
+ throughput = total_tokens / total_time
 
-        print(f"=== Full Chain Profile ===")
-        print(f"Total requests: {num_requests}")
-        print(f"Total time: {total_time:.3f}s")
-        print(f"Throughput: {throughput:.2f} tokens/s")
-        print(f"Avg submit time: {sum(self.metrics['submit_times'])/len(self.metrics['submit_times'])*1000:.3f} ms")
-        print(f"Avg result time: {sum(self.metrics['result_times'])/len(self.metrics['result_times'])*1000:.3f} ms")
+ print(f"=== Full Chain Profile ===")
+ print(f"Total requests: {num_requests}")
+ print(f"Total time: {total_time:.3f}s")
+ print(f"Throughput: {throughput:.2f} tokens/s")
+ print(f"Avg submit time: {sum(self.metrics['submit_times'])/len(self.metrics['submit_times'])*1000:.3f} ms")
+ print(f"Avg result time: {sum(self.metrics['result_times'])/len(self.metrics['result_times'])*1000:.3f} ms")
 
-        if torch.cuda.is_available():
-            print(f"GPU memory allocated: {torch.cuda.memory_allocated()/1024/1024:.2f} MB")
-            print(f"GPU memory reserved: {torch.cuda.memory_reserved()/1024/1024:.2f} MB")
+ if torch.cuda.is_available():
+ print(f"GPU memory allocated: {torch.cuda.memory_allocated()/1024/1024:.2f} MB")
+ print(f"GPU memory reserved: {torch.cuda.memory_reserved()/1024/1024:.2f} MB")
 
-        return throughput, total_time
-
+ return throughput, total_time
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}\n")
+ device = "cuda" if torch.cuda.is_available() else "cpu"
+ print(f"Using device: {device}\n")
 
-    model = MiniLLM(vocab_size=1000, d_model=512, n_heads=8, n_layers=4)
-    tokenizer = MiniTokenizer(vocab_size=1000)
-    engine = MiniEngineV1(model, tokenizer, max_token_budget=200, max_num_seqs=8, device=device)
+ model = MiniLLM(vocab_size=1000, d_model=512, n_heads=8, n_layers=4)
+ tokenizer = MiniTokenizer(vocab_size=1000)
+ engine = MiniEngineV1(model, tokenizer, max_token_budget=200, max_num_seqs=8, device=device)
 
-    profiler = ProfileMiniSystem(engine)
-    profiler.run(num_requests=50, max_new_tokens=10)
+ profiler = ProfileMiniSystem(engine)
+ profiler.run(num_requests=50, max_new_tokens=10)
 
-    engine.shutdown()
-
+ engine.shutdown()
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 采集命令
@@ -1513,8 +1423,8 @@ nsys stats -t cuda_gpu_kern_sum mini_system_profile.nsys-rep
 
 # Nsight Compute（分析特定 kernel）
 ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed \
-    --kernel-name regex:"gemm|flash_attention|softmax|layernorm" \
-    python full_chain_profile.py
+ --kernel-name regex:"gemm|flash_attention|softmax|layernorm" \
+ python full_chain_profile.py
 ```
 
 ---
@@ -1525,19 +1435,19 @@ ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.
 
 ```
 Step 1: 用 nsys 看时间线
-  - 找出 kernel 间隙最大的区域
-  - 判断是调度 overhead 还是 launch overhead
+ - 找出 kernel 间隙最大的区域
+ - 判断是调度 overhead 还是 launch overhead
 
 Step 2: 用 ncu 分析 top kernel
-  - 判断 compute-bound 还是 memory-bound
-  - 与 PyTorch/cuBLAS 版本对比
+ - 判断 compute-bound 还是 memory-bound
+ - 与 PyTorch/cuBLAS 版本对比
 
 Step 3: 用自定义计时拆分阶段
-  - submit / schedule / forward / result 各占多少时间
+ - submit / schedule / forward / result 各占多少时间
 
 Step 4: 与 vLLM 对比
-  - 同模型、同 batch、同序列长度下
-  - 对比 throughput 和 latency
+ - 同模型、同 batch、同序列长度下
+ - 对比 throughput 和 latency
 ```
 
 #### 常见系统级瓶颈
@@ -1549,17 +1459,6 @@ Step 4: 与 vLLM 对比
 | Kernel launch overhead | kernel 间隙大 | CUDA Graph、kernel fusion |
 | GIL contention | 多线程下 Python 层慢 | 减少 Python 层、使用多进程 |
 | Copy between CPU-GPU | input/output 传输慢 | pinned memory、zero-copy |
-
-#### 昇腾对照
-
-| 分析维度 | 昇腾对应 | 说明 |
-|---------|---------|------|
-| nsys timeline | msprof timeline | 时间线分析 |
-| ncu kernel metrics | msprof operator detail | Kernel 级指标 |
-| Python overhead | Python overhead | 一致 |
-| Memory allocation | 内存分配 | 一致 |
-
----
 
 ### 今日面试题
 
@@ -1576,17 +1475,17 @@ Step 4: 与 vLLM 对比
 
 **参考答案要点**：
 - **常见差距**：
-  1. **Kernel 优化**：vLLM 使用高度优化的 attention kernel（FlashAttention、PagedAttention），教学版 kernel 性能较低
-  2. **Scheduler 性能**：vLLM 经过多年优化，调度逻辑更高效
-  3. **Memory management**：vLLM 的 PagedAttention 内存利用率更高
-  4. **CUDA Graph**：vLLM 支持 CUDA Graph 减少 launch overhead
-  5. **Multi-GPU / TP / PP**：vLLM 支持分布式，Mini 系统是单 GPU
+ 1. **Kernel 优化**：vLLM 使用高度优化的 attention kernel（FlashAttention、PagedAttention），教学版 kernel 性能较低
+ 2. **Scheduler 性能**：vLLM 经过多年优化，调度逻辑更高效
+ 3. **Memory management**：vLLM 的 PagedAttention 内存利用率更高
+ 4. **CUDA Graph**：vLLM 支持 CUDA Graph 减少 launch overhead
+ 5. **Multi-GPU / TP / PP**：vLLM 支持分布式，Mini 系统是单 GPU
 - **缩小差距的方法**：
-  1. 使用官方 FlashAttention/PagedAttention kernel
-  2. 将 scheduler 用 C++ 重写
-  3. 实现 PagedAttention
-  4. 引入 CUDA Graph
-  5. 使用 torch.compile 自动优化
+ 1. 使用官方 FlashAttention/PagedAttention kernel
+ 2. 将 scheduler 用 C++ 重写
+ 3. 实现 PagedAttention
+ 4. 引入 CUDA Graph
+ 5. 使用 torch.compile 自动优化
 
 ---
 
@@ -1598,7 +1497,6 @@ Step 4: 与 vLLM 对比
 - [ ] 拆分 submit/schedule/forward/result 各阶段时间
 - [ ] 识别系统 top3 瓶颈
 - [ ] 能提出至少 3 个优化建议
-- [ ] 能对照昇腾解释 profiling 工具的对应关系
 
 ---
 
@@ -1631,31 +1529,31 @@ mini_ai_infra/
 ├── setup.py
 ├── requirements.txt
 ├── mini_infra/
-│   ├── __init__.py
-│   ├── engine.py           # MiniEngineV1
-│   ├── scheduler.py        # FullScheduler
-│   ├── request.py          # InferenceRequest
-│   ├── kv_cache.py         # KVCacheManager
-│   ├── model.py            # MiniLLM
-│   ├── tokenizer.py        # MiniTokenizer
-│   └── kernels/
-│       ├── __init__.py
-│       ├── gemm_kernel.py
-│       ├── flash_attention_kernel.py
-│       ├── softmax_kernel.py
-│       └── layernorm_kernel.py
+│ ├── __init__.py
+│ ├── engine.py # MiniEngineV1
+│ ├── scheduler.py # FullScheduler
+│ ├── request.py # InferenceRequest
+│ ├── kv_cache.py # KVCacheManager
+│ ├── model.py # MiniLLM
+│ ├── tokenizer.py # MiniTokenizer
+│ └── kernels/
+│ ├── __init__.py
+│ ├── gemm_kernel.py
+│ ├── flash_attention_kernel.py
+│ ├── softmax_kernel.py
+│ └── layernorm_kernel.py
 ├── tests/
-│   ├── test_engine.py
-│   ├── test_scheduler.py
-│   ├── test_kv_cache.py
-│   └── test_kernels.py
+│ ├── test_engine.py
+│ ├── test_scheduler.py
+│ ├── test_kv_cache.py
+│ └── test_kernels.py
 ├── benchmarks/
-│   ├── benchmark_engine.py
-│   └── benchmark_results/
+│ ├── benchmark_engine.py
+│ └── benchmark_results/
 └── docs/
-    ├── architecture.md
-    ├── performance_report.md
-    └── api.md
+ ├── architecture.md
+ ├── performance_report.md
+ └── api.md
 ```
 
 #### 重构要点
@@ -1663,19 +1561,19 @@ mini_ai_infra/
 ```python
 # 统一接口示例
 class InferenceEngine:
-    """Mini AI Infra 推理引擎"""
-    
-    def __init__(self, model_config, scheduler_config, device="cuda"):
-        ...
-    
-    def submit(self, prompt: str, max_new_tokens: int = 20,
-               priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
-        """提交请求，返回 Future"""
-        ...
-    
-    def shutdown(self):
-        """关闭引擎"""
-        ...
+ """Mini AI Infra 推理引擎"""
+ 
+ def __init__(self, model_config, scheduler_config, device="cuda"):
+ ...
+ 
+ def submit(self, prompt: str, max_new_tokens: int = 20,
+ priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
+ """提交请求，返回 Future"""
+ ...
+ 
+ def shutdown(self):
+ """关闭引擎"""
+ ...
 ```
 
 ---
@@ -1781,17 +1679,17 @@ Request → Queue → Scheduler → Worker → Sampler → Result
 
 **参考答案要点**：
 - **难点1：Continuous Batching 的正确性**
-  - 每轮重新构建 batch，需要精确管理每个请求的状态和 KV Cache
-  - 解决：清晰的状态机、单元测试、长时间稳定性测试
+ - 每轮重新构建 batch，需要精确管理每个请求的状态和 KV Cache
+ - 解决：清晰的状态机、单元测试、长时间稳定性测试
 - **难点2：自定义 Kernel 与 PyTorch 的集成**
-  - stream、内存布局、精度问题
-  - 解决：逐步替换、充分对比验证
+ - stream、内存布局、精度问题
+ - 解决：逐步替换、充分对比验证
 - **难点3：调度器性能**
-  - Python scheduler 可能成为瓶颈
-  - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
+ - Python scheduler 可能成为瓶颈
+ - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
 - **难点4：系统联调**
-  - 组件多，边界问题复杂
-  - 解决：分层验证、逐步集成、充分测试
+ - 组件多，边界问题复杂
+ - 解决：分层验证、逐步集成、充分测试
 
 ---
 
@@ -1825,26 +1723,6 @@ Request → Queue → Scheduler → Worker → Sampler → Result
 | 11 | Mini 系统与 vLLM 的差距在哪？ | ⭐⭐⭐⭐⭐ | Day 48 | 高 |
 | 12 | 如何设计可维护的推理系统代码？ | ⭐⭐⭐⭐ | Day 49 | 中 |
 | 13 | 项目最大技术难点是什么？ | ⭐⭐⭐⭐⭐ | Day 49 | 高 |
-
----
-
-## 附录B：昇腾→CUDA 第7周概念映射总表
-
-| 维度 | CUDA/PyTorch 概念 | 昇腾 CANN 概念 | 差异说明 | 迁移难度 |
-|------|----------------|------------|---------|---------|
-| **多请求并发** | 线程安全队列 + Future | 昇腾异步请求 | 概念一致 | ★★ |
-| **完整调度器** | Python/C++ Scheduler | 昇腾调度器 | 功能类似 | ★★ |
-| **抢占** | Preemption | 抢占 | 策略类似 | ★★ |
-| **Speculative Decoding** | 投机采样 | 昇腾投机采样 | CANN 已支持 | ★ |
-| **Chunked Prefill** | 分块 prefill | 昇腾分块 prefill | 已支持 | ★ |
-| **Prefix Caching** | 前缀缓存 | 昇腾前缀缓存 | 已支持 | ★ |
-| **Kernel 集成** | PyTorch C++ Extension | Ascend C | 机制类似 | ★★★ |
-| **系统联调** | 分层验证 | 分层验证 | 一致 | ★ |
-| **稳定性测试** | 压力测试 | 压力测试 | 一致 | ★ |
-| **全链路 Profiling** | nsys + ncu | msprof | 工具对应 | ★★ |
-| **CUDA Graph** | CUDA Graph | 昇腾 Graph | 概念类似 | ★★ |
-| **Memory Pool** | 预分配 buffer | 预分配 buffer | 一致 | ★ |
-| **项目结构** | 模块化设计 | 模块化设计 | 一致 | ★ |
 
 ---
 

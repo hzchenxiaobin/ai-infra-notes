@@ -46,22 +46,22 @@ NVIDIA 提供了两个主要的 profiling 工具：
 - **粒度**：单个 kernel
 - **用途**：分析 kernel 内部的详细硬件指标
 - **适用场景**：
-  - 判断 kernel 是 memory-bound 还是 compute-bound
-  - 查看 occupancy、register usage、shared memory
-  - 分析 memory throughput、compute throughput
-  - 查看 bank conflict、cache hit rate
-  - 生成 Roofline 图
+ - 判断 kernel 是 memory-bound 还是 compute-bound
+ - 查看 occupancy、register usage、shared memory
+ - 分析 memory throughput、compute throughput
+ - 查看 bank conflict、cache hit rate
+ - 生成 Roofline 图
 
 ##### Nsight Systems (`nsys`)
 
 - **粒度**：整个应用
 - **用途**：分析时间线、CPU/GPU 交互、kernel launch overhead
 - **适用场景**：
-  - 找到最耗时的 kernel
-  - 分析 CPU 和 GPU 的并行情况
-  - 查看 kernel launch overhead
-  - 分析多个 stream 的并行执行
-  - 端到端 latency 分析
+ - 找到最耗时的 kernel
+ - 分析 CPU 和 GPU 的并行情况
+ - 查看 kernel launch overhead
+ - 分析多个 stream 的并行执行
+ - 端到端 latency 分析
 
 **使用流程**：
 
@@ -85,10 +85,10 @@ ncu --metrics sm__occupancy.avg.pct_of_peak_sustained_elapsed ./your_kernel
 
 # 指定多个指标
 ncu --metrics \
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./your_kernel
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed \
+ ./your_kernel
 
 # 生成完整报告
 ncu --set full -o report ./your_kernel
@@ -174,8 +174,8 @@ Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
 
 - **Arithmetic Intensity (AI)** = FLOPs / bytes，表示每读取 1 字节数据能进行多少次浮点运算。
 - **Attainable FLOP/s** 是该 kernel 在当前硬件上能达到的算力上限，由两个天花板决定：
-  - **Memory Bandwidth ceiling**：`Achievable FLOP/s = AI × Peak Bandwidth`（斜线部分）
-  - **Peak Compute ceiling**：`Achievable FLOP/s = Peak FLOP/s`（水平部分）
+ - **Memory Bandwidth ceiling**：`Achievable FLOP/s = AI × Peak Bandwidth`（斜线部分）
+ - **Peak Compute ceiling**：`Achievable FLOP/s = Peak FLOP/s`（水平部分）
 
 ##### Ridge Point（山脊点）
 
@@ -213,13 +213,13 @@ cd /Users/chenbinbin/GitHub/aiinfra/week1/day5
 nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
 
 ncu --metrics \
-  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
-  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
-  sm__cycles_elapsed.avg,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed \
-  ./kernels/bank_conflict
+ l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
+ l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
+ sm__cycles_elapsed.avg,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed \
+ ./kernels/bank_conflict
 ```
 
 **Step 2：假设看到的数据**
@@ -253,7 +253,7 @@ ncu --metrics \
 
 ---
 
-### Coding 任务：本周 kernel  profiling
+### Coding 任务：本周 kernel profiling
 
 #### 任务 1：profiling hello_gpu
 
@@ -272,12 +272,12 @@ nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
 
 ```bash
 ncu \
-  --metrics \
-    sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-    launch__registers_per_thread,\
-    launch__shared_mem_per_block_static,\
-    sm__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./kernels/occupancy_test
+ --metrics \
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread,\
+ launch__shared_mem_per_block_static,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed \
+ ./kernels/occupancy_test
 ```
 
 **观察重点**：
@@ -289,12 +289,12 @@ ncu \
 
 ```bash
 ncu \
-  --metrics \
-    dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-    l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
-    l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
-    sm__cycles_elapsed.avg \
-  ./kernels/transpose
+ --metrics \
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
+ l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
+ sm__cycles_elapsed.avg \
+ ./kernels/transpose
 ```
 
 **观察重点**：
@@ -306,11 +306,11 @@ ncu \
 
 ```bash
 ncu \
-  --metrics \
-    l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
-    l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
-    sm__cycles_elapsed.avg \
-  ./kernels/bank_conflict
+ --metrics \
+ l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
+ l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
+ sm__cycles_elapsed.avg \
+ ./kernels/bank_conflict
 ```
 
 **观察重点**：
@@ -344,45 +344,45 @@ ncu \
 
 // Naive baseline
 __global__ void matmul_naive(const float* A, const float* B, float* C, int M, int N, int K) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row < M && col < N) {
-        float sum = 0.0f;
-        for (int k = 0; k < K; k++)
-            sum += A[row * K + k] * B[k * N + col];
-        C[row * N + col] = sum;
-    }
+ int row = blockIdx.y * blockDim.y + threadIdx.y;
+ int col = blockIdx.x * blockDim.x + threadIdx.x;
+ if (row < M && col < N) {
+ float sum = 0.0f;
+ for (int k = 0; k < K; k++)
+ sum += A[row * K + k] * B[k * N + col];
+ C[row * N + col] = sum;
+ }
 }
 
 // Shared Memory Tiling 优化版
 __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
-    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
+ __shared__ float s_A[TILE_SIZE][TILE_SIZE];
+ __shared__ float s_B[TILE_SIZE][TILE_SIZE];
 
-    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
-    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
-    float sum = 0.0f;
+ int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+ int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+ float sum = 0.0f;
 
-    for (int bk = 0; bk < K; bk += TILE_SIZE) {
-        // 协作加载 tile
-        if (row < M && bk + threadIdx.x < K)
-            s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
-        else
-            s_A[threadIdx.y][threadIdx.x] = 0.0f;
+ for (int bk = 0; bk < K; bk += TILE_SIZE) {
+ // 协作加载 tile
+ if (row < M && bk + threadIdx.x < K)
+ s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
+ else
+ s_A[threadIdx.y][threadIdx.x] = 0.0f;
 
-        if (bk + threadIdx.y < K && col < N)
-            s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
-        else
-            s_B[threadIdx.y][threadIdx.x] = 0.0f;
-        __syncthreads();
+ if (bk + threadIdx.y < K && col < N)
+ s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
+ else
+ s_B[threadIdx.y][threadIdx.x] = 0.0f;
+ __syncthreads();
 
-        #pragma unroll
-        for (int k = 0; k < TILE_SIZE; k++)
-            sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
-        __syncthreads();
-    }
+ #pragma unroll
+ for (int k = 0; k < TILE_SIZE; k++)
+ sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+ __syncthreads();
+ }
 
-    if (row < M && col < N) C[row * N + col] = sum;
+ if (row < M && col < N) C[row * N + col] = sum;
 }
 ```
 
@@ -404,9 +404,9 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 
 ```
 backtrack(path, used):
-  if path.size()==n: 记录结果; return
-  for i in 0..n-1:
-    if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
+ if path.size()==n: 记录结果; return
+ for i in 0..n-1:
+ if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
 ```
 
 > 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](../../../leetcode/daily/week1/day6/全排列.md)。
@@ -487,30 +487,30 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 ### 面试要点
 
 1. **如何判断一个 kernel 是 memory-bound 还是 compute-bound？**
-   - 看 `dram__throughput` 和 `sm__throughput`
-   - Memory-bound：memory throughput 高，compute throughput 低
-   - Compute-bound：compute throughput 高，memory throughput 低
-   - 也可以用 Roofline 模型：AI 低则 memory-bound，AI 高则 compute-bound
+ - 看 `dram__throughput` 和 `sm__throughput`
+ - Memory-bound：memory throughput 高，compute throughput 低
+ - Compute-bound：compute throughput 高，memory throughput 低
+ - 也可以用 Roofline 模型：AI 低则 memory-bound，AI 高则 compute-bound
 
-2. **Nsight Compute 和 Nsight Systems 的区别？**
-   - Nsight Compute：kernel 级详细指标
-   - Nsight Systems：应用级时间线，看 CPU/GPU 交互和整体流程
+1. **Nsight Compute 和 Nsight Systems 的区别？**
+ - Nsight Compute：kernel 级详细指标
+ - Nsight Systems：应用级时间线，看 CPU/GPU 交互和整体流程
 
-3. **Roofline 模型如何指导优化？**
-   - 如果点在斜线区域（memory-bound）：优化内存访问
-   - 如果点在平顶区域（compute-bound）：优化计算
-   - 目标是让点尽量接近屋顶
+1. **Roofline 模型如何指导优化？**
+ - 如果点在斜线区域（memory-bound）：优化内存访问
+ - 如果点在平顶区域（compute-bound）：优化计算
+ - 目标是让点尽量接近屋顶
 
-4. **常用的 ncu 指标有哪些？**
-   - `sm__occupancy.avg.pct_of_peak_sustained_elapsed`
-   - `dram__throughput.avg.pct_of_peak_sustained_elapsed`
-   - `sm__throughput.avg.pct_of_peak_sustained_elapsed`
-   - `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum`
+1. **常用的 ncu 指标有哪些？**
+ - `sm__occupancy.avg.pct_of_peak_sustained_elapsed`
+ - `dram__throughput.avg.pct_of_peak_sustained_elapsed`
+ - `sm__throughput.avg.pct_of_peak_sustained_elapsed`
+ - `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum`
 
-5. **nsys 时间线能看到什么？**
-   - Kernel launch overhead
-   - CPU 和 GPU 的执行时间线
-   - CUDA API 调用顺序
-   - 多个 stream 的并行情况
+1. **nsys 时间线能看到什么？**
+ - Kernel launch overhead
+ - CPU 和 GPU 的执行时间线
+ - CUDA API 调用顺序
+ - 多个 stream 的并行情况
 
 ---

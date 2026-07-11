@@ -20,7 +20,7 @@
 GPU 的峰值算力增长非常快，但显存带宽增长相对缓慢。这导致了一个普遍现象：
 
 ```
-峰值算力  >>  显存带宽能支撑的有效算力
+峰值算力 >> 显存带宽能支撑的有效算力
 ```
 
 也就是说，如果数据供应不上，GPU 的计算单元会大量空闲。这种现象称为 **memory-bound**。
@@ -120,10 +120,10 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 既然 element-wise 是 memory-bound，优化方向就明确了：
 
 1. **融合（Fusion）**：把多个 element-wise 操作合并成一个 kernel，避免中间结果写回 HBM
-   - 例如：`C = relu(A + B)` 融合后只需读 A、B，写 C（12 bytes），做 2 FLOP，AI 从 0.083 提升到 0.167
-2. **Coalesced Access**：确保 warp 内连续线程访问连续地址，最大化带宽利用率
-3. **减少读写**：如 in-place 操作 `A[i] = relu(A[i])` 省去写回新数组
-4. **向量化的内存访问**：使用 `float4` 等，一条指令加载 4 个 float，减少指令开销
+ - 例如：`C = relu(A + B)` 融合后只需读 A、B，写 C（12 bytes），做 2 FLOP，AI 从 0.083 提升到 0.167
+1. **Coalesced Access**：确保 warp 内连续线程访问连续地址，最大化带宽利用率
+2. **减少读写**：如 in-place 操作 `A[i] = relu(A[i])` 省去写回新数组
+3. **向量化的内存访问**：使用 `float4` 等，一条指令加载 4 个 float，减少指令开销
 
 > ⚠️ **常见误区**：不要试图用 Shared Memory 优化 element-wise 操作。因为每个元素只被访问一次，没有数据复用，Shared Memory 不会带来收益。
 
@@ -137,13 +137,13 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 ```
 Register（最快，容量最小）
-  ↓
+ ↓
 Shared Memory（快，可编程，~100 KB/SM）
-  ↓
+ ↓
 L1 Cache（自动）
-  ↓
+ ↓
 L2 Cache（跨 SM 共享）
-  ↓
+ ↓
 Global Memory（最慢，容量最大，即 HBM / GDDR）
 ```
 
@@ -189,7 +189,7 @@ Transaction 的大小由两层因素共同决定：**硬件固定的 sector size
 
 ```
 L2 Cache 的最小访问粒度 = 32 字节（1 个 sector）
-L1 Cache line          = 128 字节（= 4 个 sector）
+L1 Cache line = 128 字节（= 4 个 sector）
 ```
 
 > 💡 可以把 sector 想象成"运货卡车的固定载重"：不管你寄多少货，卡车一次至少拉 32 字节。
@@ -239,8 +239,8 @@ y[idx] = x[idx * 32];
 ```cuda
 // ✅ Coalesced：线程 i 访问 x[i]
 __global__ void coalesced_read(const float* x, float* y) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    y[idx] = x[idx];
+ int idx = blockIdx.x * blockDim.x + threadIdx.x;
+ y[idx] = x[idx];
 }
 ```
 
@@ -258,8 +258,8 @@ __global__ void coalesced_read(const float* x, float* y) {
 ```cuda
 // ❌ Stride：线程 i 访问 x[i * 32]，地址间隔 128 字节
 __global__ void stride_read(const float* x, float* y) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    y[idx] = x[idx * 32];
+ int idx = blockIdx.x * blockDim.x + threadIdx.x;
+ y[idx] = x[idx * 32];
 }
 ```
 
@@ -333,52 +333,52 @@ __global__ void stride_read(const float* x, float* y) {
 #include <stdlib.h>
 
 __global__ void transpose_naive(const float* in, float* out, int width, int height) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x < width && y < height) {
-        // 读：in[y * width + x] 是 coalesced（按行读）
-        // 写：out[x * height + y] 是 stride access（按列写）
-        out[x * height + y] = in[y * width + x];
-    }
+ int x = blockIdx.x * blockDim.x + threadIdx.x;
+ int y = blockIdx.y * blockDim.y + threadIdx.y;
+ if (x < width && y < height) {
+ // 读：in[y * width + x] 是 coalesced（按行读）
+ // 写：out[x * height + y] 是 stride access（按列写）
+ out[x * height + y] = in[y * width + x];
+ }
 }
 
 int main() {
-    int width = 1024;
-    int height = 1024;
-    int size = width * height;
+ int width = 1024;
+ int height = 1024;
+ int size = width * height;
 
-    float *h_in = (float*)malloc(size * sizeof(float));
-    float *h_out = (float*)malloc(size * sizeof(float));
-    for (int i = 0; i < size; ++i) h_in[i] = (float)i;
+ float *h_in = (float*)malloc(size * sizeof(float));
+ float *h_out = (float*)malloc(size * sizeof(float));
+ for (int i = 0; i < size; ++i) h_in[i] = (float)i;
 
-    float *d_in, *d_out;
-    cudaMalloc(&d_in, size * sizeof(float));
-    cudaMalloc(&d_out, size * sizeof(float));
-    cudaMemcpy(d_in, h_in, size * sizeof(float), cudaMemcpyHostToDevice);
+ float *d_in, *d_out;
+ cudaMalloc(&d_in, size * sizeof(float));
+ cudaMalloc(&d_out, size * sizeof(float));
+ cudaMemcpy(d_in, h_in, size * sizeof(float), cudaMemcpyHostToDevice);
 
-    dim3 block(32, 32);
-    dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
+ dim3 block(32, 32);
+ dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-    transpose_naive<<<grid, block>>>(d_in, d_out, width, height);
-    cudaMemcpy(h_out, d_out, size * sizeof(float), cudaMemcpyDeviceToHost);
+ transpose_naive<<<grid, block>>>(d_in, d_out, width, height);
+ cudaMemcpy(h_out, d_out, size * sizeof(float), cudaMemcpyDeviceToHost);
 
-    // 简单验证
-    bool ok = true;
-    for (int y = 0; y < height && ok; ++y) {
-        for (int x = 0; x < width; ++x) {
-            if (h_out[x * height + y] != h_in[y * width + x]) {
-                ok = false;
-                break;
-            }
-        }
-    }
-    printf("Naive transpose: %s\n", ok ? "PASS" : "FAIL");
+ // 简单验证
+ bool ok = true;
+ for (int y = 0; y < height && ok; ++y) {
+ for (int x = 0; x < width; ++x) {
+ if (h_out[x * height + y] != h_in[y * width + x]) {
+ ok = false;
+ break;
+ }
+ }
+ }
+ printf("Naive transpose: %s\n", ok ? "PASS" : "FAIL");
 
-    free(h_in);
-    free(h_out);
-    cudaFree(d_in);
-    cudaFree(d_out);
-    return 0;
+ free(h_in);
+ free(h_out);
+ cudaFree(d_in);
+ cudaFree(d_out);
+ return 0;
 }
 ```
 
@@ -395,25 +395,25 @@ int main() {
 #define TILE_DIM 32
 
 __global__ void transpose_tiled(const float* in, float* out, int width, int height) {
-    __shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 避免 bank conflict
+ __shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 避免 bank conflict
 
-    int x = blockIdx.x * TILE_DIM + threadIdx.x;
-    int y = blockIdx.y * TILE_DIM + threadIdx.y;
+ int x = blockIdx.x * TILE_DIM + threadIdx.x;
+ int y = blockIdx.y * TILE_DIM + threadIdx.y;
 
-    // Coalesced read from global memory
-    if (x < width && y < height) {
-        tile[threadIdx.y][threadIdx.x] = in[y * width + x];
-    }
-    __syncthreads();
+ // Coalesced read from global memory
+ if (x < width && y < height) {
+ tile[threadIdx.y][threadIdx.x] = in[y * width + x];
+ }
+ __syncthreads();
 
-    // Transpose block coordinates
-    x = blockIdx.y * TILE_DIM + threadIdx.x;
-    y = blockIdx.x * TILE_DIM + threadIdx.y;
+ // Transpose block coordinates
+ x = blockIdx.y * TILE_DIM + threadIdx.x;
+ y = blockIdx.x * TILE_DIM + threadIdx.y;
 
-    // Coalesced write from shared memory
-    if (x < height && y < width) {
-        out[y * height + x] = tile[threadIdx.x][threadIdx.y];
-    }
+ // Coalesced write from shared memory
+ if (x < height && y < width) {
+ out[y * height + x] = tile[threadIdx.x][threadIdx.y];
+ }
 }
 ```
 
@@ -439,11 +439,11 @@ __global__ void transpose_tiled(const float* in, float* out, int width, int heig
 CUDA 把矩阵划分成 `TILE_DIM × TILE_DIM` 的 tile，每个 block 负责处理一个 tile。
 
 - 原矩阵中，block `(blockIdx.x, blockIdx.y)` 对应的 tile 左上角为：
-  - `x_base = blockIdx.x * TILE_DIM`
-  - `y_base = blockIdx.y * TILE_DIM`
+ - `x_base = blockIdx.x * TILE_DIM`
+ - `y_base = blockIdx.y * TILE_DIM`
 - block 内线程 `(threadIdx.x, threadIdx.y)` 负责该 tile 内的元素：
-  - `x = x_base + threadIdx.x`
-  - `y = y_base + threadIdx.y`
+ - `x = x_base + threadIdx.x`
+ - `y = y_base + threadIdx.y`
 
 以 Block(1,0) 为例：它读取 Input 中 `A[0..3][4..7]`，经过 shared memory 中转后，写入 Output 的 `O[4..7][0..3]`。
 
@@ -454,7 +454,7 @@ int x = blockIdx.x * TILE_DIM + threadIdx.x;
 int y = blockIdx.y * TILE_DIM + threadIdx.y;
 
 if (x < width && y < height) {
-    tile[threadIdx.y][threadIdx.x] = in[y * width + x];
+ tile[threadIdx.y][threadIdx.x] = in[y * width + x];
 }
 ```
 
@@ -477,7 +477,7 @@ x = blockIdx.y * TILE_DIM + threadIdx.x;
 y = blockIdx.x * TILE_DIM + threadIdx.y;
 
 if (x < height && y < width) {
-    out[y * height + x] = tile[threadIdx.x][threadIdx.y];
+ out[y * height + x] = tile[threadIdx.x][threadIdx.y];
 }
 ```
 
@@ -502,7 +502,7 @@ if (x < height && y < width) {
 在 shared memory 内部。第一阶段按 `tile[y][x]` 写入，第二阶段按 `tile[x][y]` 读出：
 
 ```cuda
-tile[threadIdx.y][threadIdx.x] = ...  // 第一阶段：按行写入 tile
+tile[threadIdx.y][threadIdx.x] = ... // 第一阶段：按行写入 tile
 ... = tile[threadIdx.x][threadIdx.y]; // 第二阶段：按列读出 tile（在 shared memory 中完成转置）
 ```
 
@@ -520,7 +520,7 @@ shared memory 的随机访问延迟很低，因此这里的非连续访问不是
 
 ```
 out[(bx*TILE_DIM + b) * height + (by*TILE_DIM + a)]
-    = in[(by*TILE_DIM + a) * width + (bx*TILE_DIM + b)]
+ = in[(by*TILE_DIM + a) * width + (bx*TILE_DIM + b)]
 ```
 
 这正是转置的定义 `output[j][i] = input[i][j]`。
@@ -564,22 +564,22 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed ./transpose
 #define TILE_DIM 32
 
 __global__ void matrix_transpose(const float* input, float* output, int M, int N) {
-    __shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 padding 消除 bank conflict
+ __shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 padding 消除 bank conflict
 
-    int x = blockIdx.x * TILE_DIM + threadIdx.x;
-    int y = blockIdx.y * TILE_DIM + threadIdx.y;
+ int x = blockIdx.x * TILE_DIM + threadIdx.x;
+ int y = blockIdx.y * TILE_DIM + threadIdx.y;
 
-    // Coalesced read from global -> shared
-    if (x < N && y < M)
-        tile[threadIdx.y][threadIdx.x] = input[y * N + x];
-    __syncthreads();
+ // Coalesced read from global -> shared
+ if (x < N && y < M)
+ tile[threadIdx.y][threadIdx.x] = input[y * N + x];
+ __syncthreads();
 
-    // 交换 block 坐标，coalesced write
-    x = blockIdx.y * TILE_DIM + threadIdx.x;
-    y = blockIdx.x * TILE_DIM + threadIdx.y;
+ // 交换 block 坐标，coalesced write
+ x = blockIdx.y * TILE_DIM + threadIdx.x;
+ y = blockIdx.x * TILE_DIM + threadIdx.y;
 
-    if (x < M && y < N)
-        output[y * M + x] = tile[threadIdx.x][threadIdx.y];
+ if (x < M && y < N)
+ output[y * M + x] = tile[threadIdx.x][threadIdx.y];
 }
 ```
 
@@ -617,13 +617,13 @@ return prev
 
 ```cuda
 __global__ void coalesced_copy(const float* in, float* out, int n) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n) out[idx] = in[idx];
+ int idx = blockIdx.x * blockDim.x + threadIdx.x;
+ if (idx < n) out[idx] = in[idx];
 }
 
 __global__ void stride_copy(const float* in, float* out, int n, int stride) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n) out[idx] = in[(idx * stride) % n];
+ int idx = blockIdx.x * blockDim.x + threadIdx.x;
+ if (idx < n) out[idx] = in[(idx * stride) % n];
 }
 ```
 
@@ -646,11 +646,11 @@ __global__ void stride_copy(const float* in, float* out, int n, int stride) {
 
 ```bash
 ncu --metrics \
-  l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
-  l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
-  dram__bytes_read.sum,\
-  dram__bytes_write.sum \
-  ./transpose
+ l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
+ l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
+ dram__bytes_read.sum,\
+ dram__bytes_write.sum \
+ ./transpose
 ```
 
 对比 naive 和 tiled 版本的实际显存读写量。
@@ -700,23 +700,23 @@ Day 4 我们深入理解了 GPU 内存层次：
 ### 面试要点
 
 1. **什么是 coalesced memory access？如何写出 coalesced 的代码？**
-   - 一个 warp 内线程访问连续地址，合并为少量事务
-   - 让 threadIdx.x 对应最内层维度，访问地址为 `base + threadIdx.x`
+ - 一个 warp 内线程访问连续地址，合并为少量事务
+ - 让 threadIdx.x 对应最内层维度，访问地址为 `base + threadIdx.x`
 
-2. **矩阵转置为什么难做 coalesced？如何解决？**
-   - 读按行是 coalesced，写按列是 stride
-   - 用 shared memory tile 做中间缓冲，调整读写模式
+1. **矩阵转置为什么难做 coalesced？如何解决？**
+ - 读按行是 coalesced，写按列是 stride
+ - 用 shared memory tile 做中间缓冲，调整读写模式
 
-3. **Shared memory 和 L1 cache 的区别？**
-   - Shared memory 显式管理，可预测，适合规则数据复用
-   - L1 cache 自动管理，透明，适合不规则访问
+1. **Shared memory 和 L1 cache 的区别？**
+ - Shared memory 显式管理，可预测，适合规则数据复用
+ - L1 cache 自动管理，透明，适合不规则访问
 
-4. **为什么要用 tiling？**
-   - 减少 global memory 访问次数
-   - 把不规则访问转换为规则访问
-   - 在线程间复用数据
+1. **为什么要用 tiling？**
+ - 减少 global memory 访问次数
+ - 把不规则访问转换为规则访问
+ - 在线程间复用数据
 
-5. **GPU 内存层次从快到慢是什么？**
-   - Register → Shared Memory → L1 Cache → L2 Cache → Global Memory
+1. **GPU 内存层次从快到慢是什么？**
+ - Register → Shared Memory → L1 Cache → L2 Cache → Global Memory
 
 ---

@@ -20,17 +20,17 @@
 
 ```
 Day 50: 项目文档完善 → README、Quick Start、依赖安装、Benchmark 结果
-  ↓
+ ↓
 Day 51: 架构图与数据流图 → 系统架构、数据流、模块交互图
-  ↓
+ ↓
 Day 52: 高频面试题基础篇 → GPU、Kernel、CUDA、Profiling
-  ↓
+ ↓
 Day 53: 高频面试题进阶篇 → Attention、推理系统、vLLM、调度
-  ↓
+ ↓
 Day 54: Mock 面试 → 自我介绍、项目介绍、技术难点、优化思路
-  ↓
+ ↓
 Day 55: 查漏补缺 → 薄弱点复习、易混淆概念、关键公式
-  ↓
+ ↓
 Day 56: 最终复盘 → 8 周能力地图、强项/待提升、后续规划
 ```
 
@@ -52,7 +52,6 @@ Day 56: 最终复盘 → 8 周能力地图、强项/待提升、后续规划
 ## Day 50（周一）：项目文档完善
 
 > **今日目标**：完善项目 README，编写 Quick Start 指南、依赖安装说明、benchmark 对比表格，让新用户能根据 README 跑通示例。
-> **时间分配**：早间1.5h（README 完善1h + 昇腾对照30min）+ 晚间1h（示例和验证）
 > **面试考察度**：⭐⭐⭐⭐ 高频，README 是项目的第一印象
 
 ---
@@ -102,11 +101,11 @@ python benchmarks/benchmark_engine.py
 ## 项目结构
 ```
 mini_ai_infra/
-├── mini_infra/        # 核心代码
-├── examples/          # 示例脚本
-├── benchmarks/        # 性能测试
-├── tests/             # 单元测试
-├── docs/              # 文档
+├── mini_infra/ # 核心代码
+├── examples/ # 示例脚本
+├── benchmarks/ # 性能测试
+├── tests/ # 单元测试
+├── docs/ # 文档
 └── README.md
 ```
 
@@ -132,26 +131,13 @@ mini_ai_infra/
 
 ```
 面试官可能问：
-  - "介绍一下你的项目"
-  - "项目的难点是什么？"
-  - "为什么选择这个技术方案？"
-  - "如果让你继续优化，你会做什么？"
+ - "介绍一下你的项目"
+ - "项目的难点是什么？"
+ - "为什么选择这个技术方案？"
+ - "如果让你继续优化，你会做什么？"
 
 README 应该直接回答这些问题。
 ```
-
-#### 昇腾对照
-
-| CUDA 项目要素 | 昇腾项目要素 | 说明 |
-|---------|---------|------|
-| README | README | 一致 |
-| Quick Start | 快速开始 | 一致 |
-| 依赖安装 | 环境配置 | 一致 |
-| Benchmark | 性能测试 | 一致 |
-| 架构图 | 架构图 | 一致 |
-| 后续规划 | 路线图 | 一致 |
-
----
 
 ### 晚间任务：编写示例脚本和验证（1小时）
 
@@ -183,33 +169,33 @@ examples/
 **参考答案要点**（3-5 分钟版本）：
 1. **项目背景**：学习 AI Infra，从 kernel 到系统构建完整能力
 2. **核心功能**：
-   - 手写 CUDA kernel（GEMM、FlashAttention、Softmax、LayerNorm）
-   - Mini 推理系统（Prefill/Decode、KV Cache、Continuous Batching、Scheduler）
-   - 支持单请求/多请求并发
-3. **技术难点**：
-   - FlashAttention 的 online softmax 推导和实现
-   - Continuous Batching 的状态管理和 KV Cache 隔离
-   - 自定义 kernel 与 PyTorch 的集成
-4. **成果**：
-   - 长序列下 FlashAttention 2x+ 加速
-   - 系统能连续处理 1000+ 请求
-   - 完整的 profiling 和 benchmark 报告
+ - 手写 CUDA kernel（GEMM、FlashAttention、Softmax、LayerNorm）
+ - Mini 推理系统（Prefill/Decode、KV Cache、Continuous Batching、Scheduler）
+ - 支持单请求/多请求并发
+1. **技术难点**：
+ - FlashAttention 的 online softmax 推导和实现
+ - Continuous Batching 的状态管理和 KV Cache 隔离
+ - 自定义 kernel 与 PyTorch 的集成
+1. **成果**：
+ - 长序列下 FlashAttention 2x+ 加速
+ - 系统能连续处理 1000+ 请求
+ - 完整的 profiling 和 benchmark 报告
 
 **面试题2**：如果让你继续优化这个项目，你会做什么？（⭐⭐⭐⭐⭐ 必考）
 
 **参考答案要点**：
 1. **Kernel 层面**：
-   - 使用官方 FlashAttention/PagedAttention 替换教学版 kernel
-   - 引入 Tensor Core / WMMA
-   - 实现 CUDA Graph 减少 launch overhead
-2. **系统层面**：
-   - 完整实现 PagedAttention 和 Prefix Caching
-   - C++ 重写 scheduler 降低 CPU overhead
-   - 支持 chunked prefill 和 speculative decoding
-3. **工程层面**：
-   - 多 GPU / TP / PP 支持
-   - 更完善的测试和 CI
-   - 模型量化（INT8/FP8 KV Cache）
+ - 使用官方 FlashAttention/PagedAttention 替换教学版 kernel
+ - 引入 Tensor Core / WMMA
+ - 实现 CUDA Graph 减少 launch overhead
+1. **系统层面**：
+ - 完整实现 PagedAttention 和 Prefix Caching
+ - C++ 重写 scheduler 降低 CPU overhead
+ - 支持 chunked prefill 和 speculative decoding
+1. **工程层面**：
+ - 多 GPU / TP / PP 支持
+ - 更完善的测试和 CI
+ - 模型量化（INT8/FP8 KV Cache）
 
 ---
 
@@ -220,7 +206,6 @@ examples/
 - [ ] 新用户能在 10 分钟内跑通第一个示例
 - [ ] 能用 3-5 分钟清晰介绍项目
 - [ ] 能回答"如果继续优化会做什么"
-- [ ] 能对照昇腾解释 README 中的技术栈对应关系
 
 ---
 
@@ -238,29 +223,29 @@ examples/
 
 ```
 1. 系统架构图（模块层次）
-   - 展示 Engine、Scheduler、Worker、KV Cache、Model、Kernel 的关系
+ - 展示 Engine、Scheduler、Worker、KV Cache、Model、Kernel 的关系
 
-2. 数据流图（请求生命周期）
-   - 展示请求从进入到输出的完整路径
+1. 数据流图（请求生命周期）
+ - 展示请求从进入到输出的完整路径
 
-3. 模块交互时序图
-   - 展示 Scheduler-Worker-KV Cache 的交互
+1. 模块交互时序图
+ - 展示 Scheduler-Worker-KV Cache 的交互
 
-4. Kernel 优化层次图
-   - 从 Naive GEMM 到 cuBLAS 80% 的优化路径
+1. Kernel 优化层次图
+ - 从 Naive GEMM 到 cuBLAS 80% 的优化路径
 
-5. Continuous Batching 时间线图
-   - 展示请求动态加入和退出
+1. Continuous Batching 时间线图
+ - 展示请求动态加入和退出
 ```
 
 #### 绘图工具
 
 ```
 推荐工具：
-  - Excalidraw：手绘风格，适合面试展示
-  - Draw.io：功能全面
-  - PlantUML：代码生成，适合版本控制
-  - Mermaid：Markdown 内嵌
+ - Excalidraw：手绘风格，适合面试展示
+ - Draw.io：功能全面
+ - PlantUML：代码生成，适合版本控制
+ - Mermaid：Markdown 内嵌
 
 建议：用文本+Mermaid 编写，方便版本控制。
 ```
@@ -274,29 +259,29 @@ examples/
 ```markdown
 ```mermaid
 graph TD
-    User[User Request] --> Queue[Thread-Safe Request Queue]
-    Queue --> Scheduler[Scheduler
-    <br/>Continuous Batching
-    <br/>Priority + Budget]
-    Scheduler --> Worker[Worker
-    <br/>Model Forward]
-    Worker --> KV[KV Cache Manager]
-    Worker --> Sampler[Sampler]
-    Sampler --> Result[Result Queue
-    <br/>Future/Callback]
-    Result --> User
-    
-    subgraph CUDA Kernels
-        GEMM[GEMM]
-        FA[FlashAttention]
-        SM[Softmax]
-        LN[LayerNorm]
-    end
-    
-    Worker --> GEMM
-    Worker --> FA
-    Worker --> SM
-    Worker --> LN
+ User[User Request] --> Queue[Thread-Safe Request Queue]
+ Queue --> Scheduler[Scheduler
+ <br/>Continuous Batching
+ <br/>Priority + Budget]
+ Scheduler --> Worker[Worker
+ <br/>Model Forward]
+ Worker --> KV[KV Cache Manager]
+ Worker --> Sampler[Sampler]
+ Sampler --> Result[Result Queue
+ <br/>Future/Callback]
+ Result --> User
+ 
+ subgraph CUDA Kernels
+ GEMM[GEMM]
+ FA[FlashAttention]
+ SM[Softmax]
+ LN[LayerNorm]
+ end
+ 
+ Worker --> GEMM
+ Worker --> FA
+ Worker --> SM
+ Worker --> LN
 ```
 ```
 
@@ -305,23 +290,23 @@ graph TD
 ```markdown
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant E as Engine
-    participant Q as Queue
-    participant S as Scheduler
-    participant W as Worker
-    participant K as KV Cache
-    participant R as Result
+ participant U as User
+ participant E as Engine
+ participant Q as Queue
+ participant S as Scheduler
+ participant W as Worker
+ participant K as KV Cache
+ participant R as Result
 
-    U->>E: submit(prompt)
-    E->>Q: enqueue request
-    S->>Q: fetch batch
-    S->>W: schedule(batch)
-    W->>K: read/write KV
-    W->>W: forward + sample
-    W->>S: outputs
-    S->>R: return result
-    R->>U: future.result()
+ U->>E: submit(prompt)
+ E->>Q: enqueue request
+ S->>Q: fetch batch
+ S->>W: schedule(batch)
+ W->>K: read/write KV
+ W->>W: forward + sample
+ W->>S: outputs
+ S->>R: return result
+ R->>U: future.result()
 ```
 ```
 
@@ -333,10 +318,10 @@ sequenceDiagram
 
 ```
 docs/
-├── architecture.md          # 架构图和说明
-├── data_flow.md             # 数据流图
-├── kernel_optimization.md   # Kernel 优化层次图
-└── continuous_batching.md   # Continuous Batching 时间线
+├── architecture.md # 架构图和说明
+├── data_flow.md # 数据流图
+├── kernel_optimization.md # Kernel 优化层次图
+└── continuous_batching.md # Continuous Batching 时间线
 ```
 
 #### 练习题
@@ -365,10 +350,10 @@ docs/
 - 横轴：iteration
 - 纵轴：batch 中的请求
 - 展示：
-  - Iter 0：R1_prefill, R2_prefill
-  - Iter 1：R1_decode, R2_decode
-  - Iter 2：R1_decode, R2_decode, R3_prefill
-  - Iter 3：R2_decode, R3_decode（R1 完成退出）
+ - Iter 0：R1_prefill, R2_prefill
+ - Iter 1：R1_decode, R2_decode
+ - Iter 2：R1_decode, R2_decode, R3_prefill
+ - Iter 3：R2_decode, R3_decode（R1 完成退出）
 
 ---
 
@@ -413,20 +398,20 @@ docs/
 - **Warp**：32 个 thread 组成的一组，是 GPU 调度的基本单位
 - **Thread**：最细粒度的执行单元
 - **关系**：
-  - 一个 GPU 有多个 SM
-  - 一个 SM 可以同时运行多个 warp
-  - 一个 warp 内 32 个 thread 执行相同指令（SIMT）
-  - Grid > Block > Thread
+ - 一个 GPU 有多个 SM
+ - 一个 SM 可以同时运行多个 warp
+ - 一个 warp 内 32 个 thread 执行相同指令（SIMT）
+ - Grid > Block > Thread
 
 **Q2：什么是 Occupancy？什么情况下会降低？**
 
 **参考答案要点**：
 - **Occupancy**：active warp 数 / SM 支持的最大 warp 数
 - **降低原因**：
-  - 每个 thread 使用寄存器过多
-  - 每个 block 使用 shared memory 过多
-  - block size 不是 warp size 的倍数
-  - grid size 不足
+ - 每个 thread 使用寄存器过多
+ - 每个 block 使用 shared memory 过多
+ - block size 不是 warp size 的倍数
+ - grid size 不足
 - **影响**：occupancy 低意味着 SM 无法隐藏延迟，性能下降
 
 **Q3：解释 GPU 的 memory hierarchy。**
@@ -434,18 +419,18 @@ docs/
 **参考答案要点**：
 ```
 速度从快到慢、容量从小到大：
-  Register < Shared Memory < L1/L2 Cache < Global Memory (HBM)
+ Register < Shared Memory < L1/L2 Cache < Global Memory (HBM)
 
 延迟：
-  - Register: ~0 cycle
-  - Shared Memory: ~20-30 cycles
-  - L1: ~10-20 cycles
-  - L2: ~100-200 cycles
-  - Global Memory: ~400-800 cycles
+ - Register: ~0 cycle
+ - Shared Memory: ~20-30 cycles
+ - L1: ~10-20 cycles
+ - L2: ~100-200 cycles
+ - Global Memory: ~400-800 cycles
 
 优化目标：
-  - 让热点数据尽量驻留在 register/shared memory
-  - 合并访问 global memory
+ - 让热点数据尽量驻留在 register/shared memory
+ - 合并访问 global memory
 ```
 
 **Q4：什么是 bank conflict？如何避免？**
@@ -453,9 +438,9 @@ docs/
 **参考答案要点**：
 - **Bank conflict**：多个 thread 同时访问 shared memory 的同一个 bank，导致串行化
 - **避免方法**：
-  - 让连续 thread 访问不同 bank
-  - 使用 padding（如 `s_A[BM][BK+1]`）
-  - 使用 float4 等向量化访问
+ - 让连续 thread 访问不同 bank
+ - 使用 padding（如 `s_A[BM][BK+1]`）
+ - 使用 float4 等向量化访问
 
 ---
 
@@ -501,9 +486,9 @@ docs/
 **参考答案要点**：
 - **延迟**：Shuffle ~1-2 cycles，Shared Memory ~20-30 cycles
 - **原因**：
-  - Shuffle 通过 warp 内部专用交换网络直接读取源寄存器
-  - 不需要经过 shared memory 读写路径
-  - 不需要 `__syncthreads()`
+ - Shuffle 通过 warp 内部专用交换网络直接读取源寄存器
+ - 不需要经过 shared memory 读写路径
+ - 不需要 `__syncthreads()`
 - **局限**：只适用于 warp 内（最多 32 线程）
 
 ---
@@ -544,22 +529,22 @@ docs/
 **参考答案要点**：
 1. 用 ncu 获取 SM Throughput、Memory Throughput、Achieved Occupancy
 2. 看 Roofline 位置：
-   - Memory Throughput >> SM Throughput → memory-bound
-   - SM Throughput >> Memory Throughput → compute-bound
-3. 看 Warp Stall Reasons：
-   - Long Scoreboard → global memory 延迟
-   - Math Pipe Throttle → FMA 饱和
-4. 针对性优化后重新 profile
+ - Memory Throughput >> SM Throughput → memory-bound
+ - SM Throughput >> Memory Throughput → compute-bound
+1. 看 Warp Stall Reasons：
+ - Long Scoreboard → global memory 延迟
+ - Math Pipe Throttle → FMA 饱和
+1. 针对性优化后重新 profile
 
 **Q12：什么是 Roofline Model？**
 
 **参考答案要点**：
 ```
 Roofline 图：
-  - 横轴：Arithmetic Intensity (FLOP/Byte)
-  - 纵轴：Performance (GFLOP/s)
-  - 斜线：memory-bound 区域（性能 = AI × bandwidth）
-  - 水平线：compute-bound 区域（峰值算力）
+ - 横轴：Arithmetic Intensity (FLOP/Byte)
+ - 纵轴：Performance (GFLOP/s)
+ - 斜线：memory-bound 区域（性能 = AI × bandwidth）
+ - 水平线：compute-bound 区域（峰值算力）
 
 作用：判断 kernel 是 compute-bound 还是 memory-bound，指导优化方向
 ```
@@ -580,18 +565,18 @@ Roofline 图：
 4. Bank Conflict
 
 ## Kernel 优化
-5. GEMM 优化到 cuBLAS 80%
-6. float4 向量化
-7. Warp Shuffle
+1. GEMM 优化到 cuBLAS 80%
+2. float4 向量化
+3. Warp Shuffle
 
 ## CUDA 编程
-8. __syncthreads vs warp shuffle
-9. Default Stream 坑
-10. cudaMemcpyAsync
+1. __syncthreads vs warp shuffle
+2. Default Stream 坑
+3. cudaMemcpyAsync
 
 ## Profiling
-11. Kernel 瓶颈分析
-12. Roofline Model
+1. Kernel 瓶颈分析
+2. Roofline Model
 ```
 
 #### 练习题
@@ -607,7 +592,6 @@ Roofline 图：
 - [ ] 能清晰回答 12 道基础篇面试题
 - [ ] 每道题能在 3 分钟内口述
 - [ ] 整理了基础篇面试题笔记
-- [ ] 能对照昇腾解释 GPU 基础概念
 
 ---
 
@@ -765,43 +749,43 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 
 ```
 模板：
-  1. 姓名、背景
-  2. 目前在做的方向
-  3. 项目的核心亮点
-  4. 希望应聘的岗位
+ 1. 姓名、背景
+ 2. 目前在做的方向
+ 3. 项目的核心亮点
+ 4. 希望应聘的岗位
 
 示例：
-  "我叫陈斌斌，最近 8 周集中学习了 AI Infra。我手写了一套 CUDA kernel，
-   包括 GEMM、FlashAttention、Softmax、LayerNorm，并构建了一个 Mini 推理引擎，
-   支持 KV Cache、Continuous Batching 和优先级调度。
-   希望应聘 AI Infra / 推理优化相关岗位。"
+ "我叫陈斌斌，最近 8 周集中学习了 AI Infra。我手写了一套 CUDA kernel，
+ 包括 GEMM、FlashAttention、Softmax、LayerNorm，并构建了一个 Mini 推理引擎，
+ 支持 KV Cache、Continuous Batching 和优先级调度。
+ 希望应聘 AI Infra / 推理优化相关岗位。"
 ```
 
 #### 项目介绍（3-5 分钟）
 
 ```
 要点：
-  1. 项目背景和目标
-  2. 系统架构
-  3. 技术难点
-  4. 量化成果
-  5. 后续规划
+ 1. 项目背景和目标
+ 2. 系统架构
+ 3. 技术难点
+ 4. 量化成果
+ 5. 后续规划
 ```
 
 #### 技术难点深挖（5-10 分钟）
 
 ```
 准备 2-3 个深入的技术点：
-  1. FlashAttention 的 online softmax 推导和 CUDA 实现
-  2. Continuous Batching 的状态机和 KV Cache 管理
-  3. Register Blocking GEMM 到 cuBLAS 70%+ 的优化路径
+ 1. FlashAttention 的 online softmax 推导和 CUDA 实现
+ 2. Continuous Batching 的状态机和 KV Cache 管理
+ 3. Register Blocking GEMM 到 cuBLAS 70%+ 的优化路径
 
 每个点准备：
-  - 问题是什么
-  - 你的解决方案
-  - 遇到的挑战
-  - 如何验证
-  - 还可以怎么优化
+ - 问题是什么
+ - 你的解决方案
+ - 遇到的挑战
+ - 如何验证
+ - 还可以怎么优化
 ```
 
 #### 常见 Follow-up
@@ -890,10 +874,10 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 
 ```
 从 mock 面试中找出：
-  1. 回答不流畅的知识点
-  2. 概念模糊的地方
-  3. 数字记不住的参数
-  4. 容易混淆的对比
+ 1. 回答不流畅的知识点
+ 2. 概念模糊的地方
+ 3. 数字记不住的参数
+ 4. 容易混淆的对比
 ```
 
 #### 常见薄弱点
@@ -934,38 +918,38 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 
 ```
 1. Online Softmax
-   m_new = max(m, max(xj))
-   l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
-   o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+ m_new = max(m, max(xj))
+ l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 
-2. KV Cache 内存
-   bytes_per_token = 2 × layers × heads × d_head × bytes_per_elem
+1. KV Cache 内存
+ bytes_per_token = 2 × layers × heads × d_head × bytes_per_elem
 
-3. GEMM FLOPs
-   FLOPs = 2 × M × N × K
+1. GEMM FLOPs
+ FLOPs = 2 × M × N × K
 
-4. Arithmetic Intensity
-   AI = FLOPs / Bytes
+1. Arithmetic Intensity
+ AI = FLOPs / Bytes
 
-5. Roofline Ridge Point
-   Ridge Point = Peak FLOP/s / Peak Bandwidth
+1. Roofline Ridge Point
+ Ridge Point = Peak FLOP/s / Peak Bandwidth
 
-6. FlashAttention HBM IO
-   Standard: O(N² + Nd)
-   FlashAttention: O(Nd)
+1. FlashAttention HBM IO
+ Standard: O(N² + Nd)
+ FlashAttention: O(Nd)
 ```
 
 #### 关键参数
 
 ```
 A100:
-  - FP32 Peak: 19.5 TFLOPS
-  - Tensor Core FP16: 312 TFLOPS
-  - Memory Bandwidth: 1.55-2.0 TB/s
-  - Ridge Point: ~12.6 FLOP/Byte
-  - Shared Memory per SM: 164 KB
-  - Max threads per SM: 2048
-  - Warp size: 32
+ - FP32 Peak: 19.5 TFLOPS
+ - Tensor Core FP16: 312 TFLOPS
+ - Memory Bandwidth: 1.55-2.0 TB/s
+ - Ridge Point: ~12.6 FLOP/Byte
+ - Shared Memory per SM: 164 KB
+ - Max threads per SM: 2048
+ - Warp size: 32
 ```
 
 ---
@@ -1039,52 +1023,52 @@ A100:
 
 ```
 Kernel 优化：
-  [ ] 理解 GPU 执行模型（SM/Warp/Occupancy）
-  [ ] 能手写向量加法、矩阵乘法
-  [ ] 掌握 Shared Memory Tiling
-  [ ] 掌握 Register Blocking
-  [ ] 掌握 Warp Shuffle
-  [ ] 掌握 float4 向量化
-  [ ] 理解 Double Buffering
-  [ ] 能分析 kernel 瓶颈（ncu）
-  [ ] 手写 FlashAttention Forward Kernel
+ [ ] 理解 GPU 执行模型（SM/Warp/Occupancy）
+ [ ] 能手写向量加法、矩阵乘法
+ [ ] 掌握 Shared Memory Tiling
+ [ ] 掌握 Register Blocking
+ [ ] 掌握 Warp Shuffle
+ [ ] 掌握 float4 向量化
+ [ ] 理解 Double Buffering
+ [ ] 能分析 kernel 瓶颈（ncu）
+ [ ] 手写 FlashAttention Forward Kernel
 
 推理系统：
-  [ ] 理解 Prefill/Decode
-  [ ] 理解 KV Cache 设计和实现
-  [ ] 理解 PagedAttention
-  [ ] 理解 Continuous Batching
-  [ ] 理解 Scheduler 设计
-  [ ] 能构建 Mini 推理引擎
-  [ ] 理解多请求并发
+ [ ] 理解 Prefill/Decode
+ [ ] 理解 KV Cache 设计和实现
+ [ ] 理解 PagedAttention
+ [ ] 理解 Continuous Batching
+ [ ] 理解 Scheduler 设计
+ [ ] 能构建 Mini 推理引擎
+ [ ] 理解多请求并发
 
 Profiling：
-  [ ] 会使用 nsys
-  [ ] 会使用 ncu
-  [ ] 会解读 Roofline
-  [ ] 会做端到端 profiling
-  [ ] 能定位系统级瓶颈
+ [ ] 会使用 nsys
+ [ ] 会使用 ncu
+ [ ] 会解读 Roofline
+ [ ] 会做端到端 profiling
+ [ ] 能定位系统级瓶颈
 
 系统设计：
-  [ ] 能设计 LLM 推理服务
-  [ ] 能解释 vLLM 架构
-  [ ] 能做技术选型
-  [ ] 能平衡吞吐和延迟
+ [ ] 能设计 LLM 推理服务
+ [ ] 能解释 vLLM 架构
+ [ ] 能做技术选型
+ [ ] 能平衡吞吐和延迟
 ```
 
 #### 强项与待提升
 
 ```
 强项：
-  - [手写 FlashAttention]
-  - [Continuous Batching 实现]
-  - [...]
+ - [手写 FlashAttention]
+ - [Continuous Batching 实现]
+ - [...]
 
 待提升：
-  - [PagedAttention 完整实现]
-  - [C++ Scheduler]
-  - [多 GPU / 分布式]
-  - [...]
+ - [PagedAttention 完整实现]
+ - [C++ Scheduler]
+ - [多 GPU / 分布式]
+ - [...]
 ```
 
 ---
@@ -1095,33 +1079,33 @@ Profiling：
 
 ```
 Month 1: 深化 Kernel
-  - 完整 PagedAttention CUDA 实现
-  - Tensor Core / WMMA
-  - CUTLASS 源码阅读
+ - 完整 PagedAttention CUDA 实现
+ - Tensor Core / WMMA
+ - CUTLASS 源码阅读
 
 Month 2: 系统强化
-  - C++ Scheduler 实现
-  - CUDA Graph
-  - Chunked Prefill + Prefix Caching
+ - C++ Scheduler 实现
+ - CUDA Graph
+ - Chunked Prefill + Prefix Caching
 
 Month 3: 分布式与生产
-  - Tensor Parallelism / Pipeline Parallelism
-  - 模型量化（INT8/FP8/AWQ/GPTQ）
-  - 生产环境部署和监控
+ - Tensor Parallelism / Pipeline Parallelism
+ - 模型量化（INT8/FP8/AWQ/GPTQ）
+ - 生产环境部署和监控
 ```
 
 #### 6 个月路线
 
 ```
 Month 4-5: 多模态与长文本
-  - Multimodal LLM 推理
-  - 超长上下文优化
-  - MoE 推理优化
+ - Multimodal LLM 推理
+ - 超长上下文优化
+ - MoE 推理优化
 
 Month 6: 面试与项目
-  - 投递实习/工作
-  - 根据面试反馈查漏补缺
-  - 发表技术博客
+ - 投递实习/工作
+ - 根据面试反馈查漏补缺
+ - 发表技术博客
 ```
 
 ---
@@ -1178,33 +1162,33 @@ Month 6: 面试与项目
 
 **参考答案要点**：
 - **最大收获**：
-  - 建立了从 kernel 到系统的完整 AI Infra 知识体系
-  - 能手写并优化核心 CUDA kernel
-  - 能理解并设计推理系统的关键组件
+ - 建立了从 kernel 到系统的完整 AI Infra 知识体系
+ - 能手写并优化核心 CUDA kernel
+ - 能理解并设计推理系统的关键组件
 - **最大挑战**：
-  - FlashAttention 的 online softmax 推导和 CUDA 实现
-  - Continuous Batching 的状态机和内存管理
-  - 系统联调时多个组件的边界问题
+ - FlashAttention 的 online softmax 推导和 CUDA 实现
+ - Continuous Batching 的状态机和内存管理
+ - 系统联调时多个组件的边界问题
 - **如何克服**：
-  - 反复推导、手写代码、做实验验证
-  - 阅读 vLLM 等开源代码
-  - 长时间稳定性测试
+ - 反复推导、手写代码、做实验验证
+ - 阅读 vLLM 等开源代码
+ - 长时间稳定性测试
 
 **面试题2：你未来 3-6 个月的学习/工作计划是什么？（⭐⭐⭐⭐ 高频）
 
 **参考答案要点**：
 - **3 个月**：
-  - 完整实现 PagedAttention
-  - 学习 Tensor Core / CUTLASS
-  - C++ 重写 scheduler
+ - 完整实现 PagedAttention
+ - 学习 Tensor Core / CUTLASS
+ - C++ 重写 scheduler
 - **6 个月**：
-  - 分布式推理（TP/PP）
-  - 模型量化
-  - 生产级部署经验
+ - 分布式推理（TP/PP）
+ - 模型量化
+ - 生产级部署经验
 - **长期**：
-  - 成为 AI Infra 领域的专家
-  - 参与开源项目
-  - 发表技术博客和论文
+ - 成为 AI Infra 领域的专家
+ - 参与开源项目
+ - 发表技术博客和论文
 
 ---
 
@@ -1264,74 +1248,55 @@ Month 6: 面试与项目
 
 ```
 Week 1: GPU 执行本质 + Profiling
-         │
-         ▼
+ │
+ ▼
 Week 2: GEMM + Kernel 优化
-         │
-         ▼
+ │
+ ▼
 Week 3: Transformer 执行本质
-         │
-         ▼
+ │
+ ▼
 Week 4: FlashAttention
-         │
-         ▼
+ │
+ ▼
 Week 5: 推理系统 + KV Cache
-         │
-         ▼
+ │
+ ▼
 Week 6: Batching + 调度
-         │
-         ▼
+ │
+ ▼
 Week 7: 系统整合
-         │
-         ▼
+ │
+ ▼
 Week 8: 项目打磨 + 面试准备
 ```
-
-## 附录C：昇腾→CUDA 整体迁移总结
-
-| CUDA 概念 | 昇腾 CANN 概念 | 迁移难度 |
-|---------|------------|---------|
-| SM/Warp/Thread | AI Core / Vector Unit | ★★ |
-| Shared Memory | L0 Buffer / UB | ★ |
-| Global Memory | DDR/HBM | ★ |
-| Warp Shuffle | `__reduce_add` 等 | ★★★ |
-| Register Blocking | Split-K / FRACTAL_NZ | ★★★ |
-| Double Buffering | Fixpipe | ★★★ |
-| CUDA Stream | aclrtStream | ★ |
-| FlashAttention | CANN FlashAttention | ★★ |
-| PagedAttention | 昇腾 PagedAttention | ★★ |
-| Continuous Batching | 昇腾动态批处理 | ★ |
-| PyTorch C++ Extension | Ascend C | ★★★ |
-| nsys/ncu | msprof | ★★ |
-
----
 
 ## 附录D：面试准备检查清单
 
 ```
 项目材料：
-  [ ] GitHub 仓库结构清晰
-  [ ] README 完整
-  [ ] 架构图、数据流图
-  [ ] Benchmark 报告
-  [ ] 代码可运行
+ [ ] GitHub 仓库结构清晰
+ [ ] README 完整
+ [ ] 架构图、数据流图
+ [ ] Benchmark 报告
+ [ ] 代码可运行
 
 知识准备：
-  [ ] 50+ 面试题能自问自答
-  [ ] 关键公式熟练
-  [ ] 核心流程图能默画
-  [ ] 易混淆概念清楚
+ [ ] 50+ 面试题能自问自答
+ [ ] 关键公式熟练
+ [ ] 核心流程图能默画
+ [ ] 易混淆概念清楚
 
 表达能力：
-  [ ] 自我介绍 1-2 分钟
-  [ ] 项目介绍 3-5 分钟
-  [ ] 技术难点 5-10 分钟
-  [ ] 完成至少 2 轮 mock 面试
+ [ ] 自我介绍 1-2 分钟
+ [ ] 项目介绍 3-5 分钟
+ [ ] 技术难点 5-10 分钟
+ [ ] 完成至少 2 轮 mock 面试
 
 心态：
-  [ ] 准备好被追问
-  [ ] 准备好承认不足
-  [ ] 准备好展示学习能力
+ [ ] 准备好被追问
+ [ ] 准备好承认不足
+ [ ] 准备好展示学习能力
 ```
 
 ---

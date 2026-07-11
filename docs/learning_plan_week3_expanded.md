@@ -20,17 +20,17 @@
 
 ```
 Day 15: Transformer 推理流程 → Prefill vs Decode + torch.profiler 时间线
-  ↓
+ ↓
 Day 16: Softmax + LayerNorm Kernel → safe softmax + 两级 reduce + warp shuffle
-  ↓
+ ↓
 Day 17: 源码分析 → PyTorch ATen / FasterTransformer 的优化手法
-  ↓
+ ↓
 Day 18: Attention IO 分析 → 标准 Attention HBM 读写量 + O(N²) 量化
-  ↓
+ ↓
 Day 19: 项目推进 → 算子接入 Mini 引擎 + 端到端正确性
-  ↓
+ ↓
 Day 20: 端到端 Profiling → 定位 memory-bound 算子 + fusion 机会
-  ↓
+ ↓
 Day 21: 算子分类 → arithmetic intensity 分类表 + 优化方向总结
 ```
 
@@ -63,7 +63,6 @@ nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_80 2>&1 
 ## Day 15（周一）：Trace Transformer 推理流程
 
 > **今日目标**：理解 Transformer 推理的 Prefill/Decode 两阶段执行特征，用 torch.profiler 画出一次 forward 的算子时间线，识别耗时最长的算子。
-> **时间分配**：早间1.5h（理论学习1h + 昇腾对照30min）+ 晚间1h（编程实践）
 > **面试考察度**：⭐⭐⭐ 高频，"Transformer 推理的两个阶段有什么区别"是推理系统入门必考题
 
 ---
@@ -74,9 +73,9 @@ nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_80 2>&1 
 - **论文/博客**：vLLM 博客 "How vLLM serves LLM" 中 Prefill vs Decode 章节
 - **补充阅读**：CUDA C Programming Guide 不需要，重点是模型执行流程而非 CUDA 细节
 - **具体阅读重点**：
-  - Prefill 阶段：并行处理整条 prompt，计算密集（大量 GEMM）
-  - Decode 阶段：自回归逐 token 生成，访存密集（小 GEMM + KV Cache 读取）
-  - 两阶段的算子形状差异如何导致性能特征完全不同
+ - Prefill 阶段：并行处理整条 prompt，计算密集（大量 GEMM）
+ - Decode 阶段：自回归逐 token 生成，访存密集（小 GEMM + KV Cache 读取）
+ - 两阶段的算子形状差异如何导致性能特征完全不同
 
 #### 核心概念笔记
 
@@ -95,16 +94,16 @@ nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_80 2>&1 
 
 ```
 Input x (B, N, d)
-   │
-   ├─► LayerNorm1 ──► QKV Linear (GEMM) ──► Q, K, V (B, N, d)
-   │                                      │
-   │                                      ├─► Attention: S=QK^T → softmax → PV
-   │                                      │    （Prefill: N×N 矩阵；Decode: 1×N）
-   │                                      └─► KV Cache append（Decode 阶段）
-   │
-   ├─► Output Linear (GEMM) ──► residual add ──► LayerNorm2
-   │
-   └─► FFN: Linear(GELU(Linear(x))) （两个大 GEMM）──► residual add
+ │
+ ├─► LayerNorm1 ──► QKV Linear (GEMM) ──► Q, K, V (B, N, d)
+ │ │
+ │ ├─► Attention: S=QK^T → softmax → PV
+ │ │ （Prefill: N×N 矩阵；Decode: 1×N）
+ │ └─► KV Cache append（Decode 阶段）
+ │
+ ├─► Output Linear (GEMM) ──► residual add ──► LayerNorm2
+ │
+ └─► FFN: Linear(GELU(Linear(x))) （两个大 GEMM）──► residual add
 ```
 
 **关键观察**：Transformer 单层包含 6 个主要算子类型：
@@ -121,18 +120,6 @@ LayerNorm2 → FFN GEMM1 → GELU → FFN GEMM2 → Residual → 下一层
 
 > 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。
 
-#### 昇腾对照
-
-| CUDA/PyTorch 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| Prefill 阶段（大 GEMM） | Prefill 阶段（Cube Core 大矩阵乘） | 两阶段划分是模型层面的，与硬件无关，昇腾推理框架同样区分 |
-| Decode 阶段（小 GEMM + KV Cache） | Decode 阶段（Vector + Cache 读取） | 昇腾 Decode 阶段 Vector Unit 利用率低，与 CUDA SM 空闲同理 |
-| torch.profiler 时间线 | msprof timeline | 两者都提供算子级时间线，昇腾用 msprof 采集 |
-| `F.softmax` / `F.layer_norm` | Ascend C 内置 Softmax/LayerNorm 算子 | PyTorch 调 CUDA kernel；CANN 调 NPU 算子，语义一致 |
-| Attention（QK^T + softmax + PV） | FlashAttention 算子（CANN 内置） | 昇腾 CANN 已内置 FlashAttention，开发者无需手写 |
-
----
-
 ### 学习任务2：torch.profiler 使用方法（30分钟）
 
 #### 核心 API
@@ -141,13 +128,13 @@ LayerNorm2 → FFN GEMM1 → GELU → FFN GEMM2 → Residual → 下一层
 import torch.profiler
 
 with torch.profiler.profile(
-    activities=[
-        torch.profiler.ProfilerActivity.CPU,   # 采集 CPU 端调度
-        torch.profiler.ProfilerActivity.CUDA,  # 采集 GPU 端 kernel
-    ],
+ activities=[
+ torch.profiler.ProfilerActivity.CPU, # 采集 CPU 端调度
+ torch.profiler.ProfilerActivity.CUDA, # 采集 GPU 端 kernel
+ ],
 ) as prof:
-    for _ in range(5):
-        out = model(x)
+ for _ in range(5):
+ out = model(x)
 
 # 按 CUDA 时间排序，输出 top 算子
 print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
@@ -167,20 +154,6 @@ prof.export_chrome_trace("transformer_trace.json")
 
 ---
 
-### 学习任务3：昇腾 Profiler 对照（15分钟）
-
-| 维度 | PyTorch profiler | 昇腾 msprof |
-|------|-----------------|------------|
-| 采集命令 | `torch.profiler.profile` | `msprof --application="python train.py" --output=./prof_data` |
-| 输出格式 | Chrome trace JSON | .npu 离线文件 + timeline |
-| 算子级视图 | `key_averages().table()` | Operator 详情面板 |
-| GPU 利用率 | 需配合 nsys 看 SM 占用 | msprof 直接给出 AI Core 利用率 |
-| 适用场景 | PyTorch 模型快速 profile | NPU 模型部署后 profile |
-
-**关键发现**：PyTorch profiler 关注算子级时间分解；若要看 SM/Memory 利用率，仍需配合 nsys/ncu。昇腾 msprof 把两层信息合并到一个工具中。
-
----
-
 ### 晚间编程任务：Trace Transformer Forward（1小时）
 
 #### 完整代码
@@ -194,92 +167,87 @@ import torch
 import torch.nn as nn
 import math
 
-
 class MiniAttention(nn.Module):
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
+ def __init__(self, d_model=512, n_heads=8):
+ super().__init__()
+ self.d_model = d_model
+ self.n_heads = n_heads
+ self.d_head = d_model // n_heads
+ self.qkv = nn.Linear(d_model, 3 * d_model)
+ self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, x):
-        B, N, _ = x.shape
-        qkv = self.qkv(x)                                    # GEMM: B*N*d x d*3d
-        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
-        qkv = qkv.permute(2, 0, 3, 1, 4)                     # 3, B, n_heads, N, d_head
-        q, k, v = qkv[0], qkv[1], qkv[2]
-        scale = self.d_head ** -0.5
-        attn = torch.matmul(q, k.transpose(-2, -1)) * scale  # GEMM: Q x K^T -> N x N
-        attn = torch.softmax(attn, dim=-1)                   # softmax（memory-bound）
-        out = torch.matmul(attn, v)                          # GEMM: attn x V -> N x d_head
-        out = out.transpose(1, 2).reshape(B, N, self.d_model)
-        return self.out(out)                                 # GEMM: Output Linear
-
+ def forward(self, x):
+ B, N, _ = x.shape
+ qkv = self.qkv(x) # GEMM: B*N*d x d*3d
+ qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
+ qkv = qkv.permute(2, 0, 3, 1, 4) # 3, B, n_heads, N, d_head
+ q, k, v = qkv[0], qkv[1], qkv[2]
+ scale = self.d_head ** -0.5
+ attn = torch.matmul(q, k.transpose(-2, -1)) * scale # GEMM: Q x K^T -> N x N
+ attn = torch.softmax(attn, dim=-1) # softmax（memory-bound）
+ out = torch.matmul(attn, v) # GEMM: attn x V -> N x d_head
+ out = out.transpose(1, 2).reshape(B, N, self.d_model)
+ return self.out(out) # GEMM: Output Linear
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.attn = MiniAttention(d_model, n_heads)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, d_ff),
-            nn.GELU(),
-            nn.Linear(d_ff, d_model),
-        )
+ def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+ super().__init__()
+ self.attn = MiniAttention(d_model, n_heads)
+ self.norm1 = nn.LayerNorm(d_model)
+ self.norm2 = nn.LayerNorm(d_model)
+ self.ffn = nn.Sequential(
+ nn.Linear(d_model, d_ff),
+ nn.GELU(),
+ nn.Linear(d_ff, d_model),
+ )
 
-    def forward(self, x):
-        x = x + self.attn(self.norm1(x))    # Attention + residual
-        x = x + self.ffn(self.norm2(x))     # FFN + residual
-        return x
-
+ def forward(self, x):
+ x = x + self.attn(self.norm1(x)) # Attention + residual
+ x = x + self.ffn(self.norm2(x)) # FFN + residual
+ return x
 
 def profile_phase(model, x, name, n_iter=5):
-    """对一个阶段做 profiling 并输出 top 算子"""
-    # warmup
-    for _ in range(2):
-        _ = model(x)
-    torch.cuda.synchronize()
+ """对一个阶段做 profiling 并输出 top 算子"""
+ # warmup
+ for _ in range(2):
+ _ = model(x)
+ torch.cuda.synchronize()
 
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA,
-        ],
-    ) as prof:
-        for _ in range(n_iter):
-            _ = model(x)
-        torch.cuda.synchronize()
+ with torch.profiler.profile(
+ activities=[
+ torch.profiler.ProfilerActivity.CPU,
+ torch.profiler.ProfilerActivity.CUDA,
+ ],
+ ) as prof:
+ for _ in range(n_iter):
+ _ = model(x)
+ torch.cuda.synchronize()
 
-    print(f"\n===== {name} Phase (shape={tuple(x.shape)}) =====")
-    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
-    prof.export_chrome_trace(f"trace_{name}.json")
-
+ print(f"\n===== {name} Phase (shape={tuple(x.shape)}) =====")
+ print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
+ prof.export_chrome_trace(f"trace_{name}.json")
 
 def main():
-    torch.manual_seed(42)
-    d_model, n_heads = 512, 8
-    model = TransformerBlock(d_model, n_heads).cuda().half()
+ torch.manual_seed(42)
+ d_model, n_heads = 512, 8
+ model = TransformerBlock(d_model, n_heads).cuda().half()
 
-    # Prefill: 处理长 prompt（N=1024）
-    x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_prefill, "prefill", n_iter=5)
+ # Prefill: 处理长 prompt（N=1024）
+ x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
+ profile_phase(model, x_prefill, "prefill", n_iter=5)
 
-    # Decode: 逐 token 生成（N=1）
-    x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_decode, "decode", n_iter=10)
+ # Decode: 逐 token 生成（N=1）
+ x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
+ profile_phase(model, x_decode, "decode", n_iter=10)
 
-    print("\n===== 观察要点 =====")
-    print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
-    print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
-    print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
-    print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
-
+ print("\n===== 观察要点 =====")
+ print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
+ print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
+ print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
+ print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 运行步骤
@@ -299,19 +267,19 @@ python trace_transformer.py
 ```
 ===== Prefill Phase (shape=(1, 1024, 512)) =====
 --------------------------------- ... ---------------------------------
-Name            Self CUDA     Calls    ...
-aten::_scaled_dot_product...    xxx us    5
-aten::mm                        xxx us    20   ← QKV/Out/FFN GEMM
-aten::layer_norm                xxx us    10
-aten::softmax                   xxx us    5
+Name Self CUDA Calls ...
+aten::_scaled_dot_product... xxx us 5
+aten::mm xxx us 20 ← QKV/Out/FFN GEMM
+aten::layer_norm xxx us 10
+aten::softmax xxx us 5
 ...
 
 ===== Decode Phase (shape=(1, 1, 512)) =====
 --------------------------------- ... ---------------------------------
-Name            Self CUDA     Calls    ...
-aten::mm                        xxx us    20   ← GEMM 但矩阵极小
-aten::layer_norm                xxx us    10
-aten::softmax                   xxx us    5
+Name Self CUDA Calls ...
+aten::mm xxx us 20 ← GEMM 但矩阵极小
+aten::layer_norm xxx us 10
+aten::softmax xxx us 5
 ...
 ```
 
@@ -366,14 +334,12 @@ aten::softmax                   xxx us    5
 - [ ] 找出 Prefill 阶段 CUDA 时间 top3 算子
 - [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致计算强度低）
 - [ ] 能用 chrome://tracing 打开 trace 文件并观察 kernel 间隙
-- [ ] 能对照昇腾 msprof 解释 PyTorch profiler 的对应关系
 
 ---
 
 ## Day 16（周二）：手写 Softmax 与 LayerNorm Kernel
 
 > **今日目标**：复用 Week 2 的 Warp Shuffle 归约技术，手写 row-wise Softmax 和 LayerNorm Kernel，理解 safe softmax 的数值稳定性，掌握两级 block reduce 的工程写法。
-> **时间分配**：早间1.5h（理论学习1h + 昇腾对照30min）+ 晚间1.5h（编程+调试）
 > **面试考察度**：⭐⭐⭐⭐⭐ 必考，Softmax/LayerNorm 是 Transformer 里最典型的 memory-bound 算子，手写 reduce 是标配
 
 ---
@@ -384,9 +350,9 @@ aten::softmax                   xxx us    5
 - **资源**：PyTorch 官方文档 `torch.softmax` 的 numerical stability 说明
 - **补充阅读**：Week 2 Day 8 的 Warp Shuffle 笔记（复用 `warpReduceSum` / `warpReduceMax`）
 - **具体阅读重点**：
-  - 朴素 softmax 的数值溢出问题（exp 大数爆炸）
-  - safe softmax：先减 max 再 exp
-  - row-wise 并行：一行一个 block，block 内做 reduce
+ - 朴素 softmax 的数值溢出问题（exp 大数爆炸）
+ - safe softmax：先减 max 再 exp
+ - row-wise 并行：一行一个 block，block 内做 reduce
 
 #### 核心概念笔记
 
@@ -394,13 +360,13 @@ aten::softmax                   xxx us    5
 
 ```
 朴素 Softmax（会溢出）：
-  yi = exp(xi) / Σ exp(xj)
-  问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
+ yi = exp(xi) / Σ exp(xj)
+ 问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
 
 Safe Softmax（减去 max）：
-  m = max(xj)
-  yi = exp(xi - m) / Σ exp(xj - m)
-  原理：exp(xi - m) ≤ exp(0) = 1，不会溢出
+ m = max(xj)
+ yi = exp(xi - m) / Σ exp(xj - m)
+ 原理：exp(xi - m) ≤ exp(0) = 1，不会溢出
 ```
 
 **2. Safe Softmax 的三遍扫描 vs 两遍扫描**
@@ -418,13 +384,13 @@ Safe Softmax（减去 max）：
 ```
 矩阵 shape: (M, D)，M 行，每行 D 个元素
 并行映射: 一个 block 处理一行
-  blockIdx.x = row index（0 ~ M-1）
-  blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
+ blockIdx.x = row index（0 ~ M-1）
+ blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
 
 每个 block 内：
-  Step 1: 所有线程协作求本行 max（block reduce max）
-  Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
-  Step 3: 所有线程协作做归一化写出
+ Step 1: 所有线程协作求本行 max（block reduce max）
+ Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
+ Step 3: 所有线程协作做归一化写出
 ```
 
 **4. Block Reduce 的两级结构（复用 Week 2 Day 8）**
@@ -435,20 +401,6 @@ Warp 级 reduce（32 线程）→ Shared Memory（32 个 warp 部分和）→ Wa
 
 - 第一级：每个 warp 用 `__shfl_down_sync` 折半累加/取 max，结果存在 lane 0
 - 第二级：lane 0 写入 shared memory，warp 0 读取再做一次 warp reduce
-
-#### 昇腾对照
-
-| CUDA 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| `__shfl_down_sync` warp reduce | `__reduce_add` / `__reduce_max`（Ascend C 内置） | CUDA 需手写 butterfly 循环；昇腾提供高级 reduce API |
-| `__shared__ float smem[32]` | L0 Buffer / UB 临时存储 | 都用于存储 warp 间中间结果 |
-| row-wise softmax（一行一 block） | Ascend C Softmax 算子 | 昇腾 Softmax 算子内部同样按行 reduce，开发者无需手写 |
-| safe softmax（减 max） | safe softmax（减 max） | 数值稳定性策略完全一致，跨平台通用 |
-| 三遍扫描 | 两遍/向量化扫描 | 昇腾算子库已优化为向量化 reduce，CUDA 教学版用三遍 |
-
-**关键差异**：CUDA 教学版需要开发者手写 reduce 细节；昇腾 Ascend C 提供 `__reduce_add_sync` 等内置函数，调用更简洁，但底层逻辑一致。
-
----
 
 ### 学习任务2：LayerNorm 公式与并行化（30分钟）
 
@@ -461,9 +413,9 @@ Warp 级 reduce（32 线程）→ Shared Memory（32 个 warp 部分和）→ Wa
 参数: γ (gamma), β (beta) ∈ R^D
 
 计算:
-  μ = (1/D) Σ xi                      （均值）
-  σ² = (1/D) Σ (xi - μ)²              （方差）
-  yi = γi · (xi - μ) / sqrt(σ² + ε) + βi   （归一化 + affine）
+ μ = (1/D) Σ xi （均值）
+ σ² = (1/D) Σ (xi - μ)² （方差）
+ yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
 ```
 
 **2. LayerNorm vs BatchNorm**
@@ -489,17 +441,6 @@ Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 
 > 💡 **为什么 LayerNorm 是 memory-bound？** 每个元素读 1 次（x）、写 1 次（y），但只做 ~5 次浮点运算。Arithmetic intensity ≈ 5 / 8 ≈ 0.625 FLOP/Byte，远低于 Ridge Point（~12.6），纯 memory-bound。
 
-#### 昇腾对照
-
-| CUDA 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| 两次 block reduce（mean, variance） | LayerNorm 算子内部两次 reduce | 算法逻辑完全一致 |
-| `rsqrtf(var + eps)` | `1/sqrt(var + eps)` | 数学等价，昇腾用 Vector Unit 指令 |
-| `gamma[i], beta[i]` affine | affine 参数 | 参数语义一致，都存在 HBM |
-| element-wise 归一化 | Vector Unit element-wise | 昇腾 Vector Unit 天然适合 element-wise |
-
----
-
 ### 晚间编程任务：Softmax + LayerNorm Kernel（1.5小时）
 
 #### 完整代码
@@ -518,17 +459,17 @@ Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 // 复用 Week 2 Day 8 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+ return val;
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+ return val;
 }
 
 // ============================================================
@@ -537,27 +478,27 @@ __inline__ __device__ float warpReduceMax(float val) {
 // 注意：返回后只有 warp 0 的线程持有正确结果，调用方需用 shared 变量广播
 // ============================================================
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
-    return val;
+ int lane = threadIdx.x % 32;
+ int wid = threadIdx.x / 32;
+ val = warpReduceSum(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : 0.0f;
+ if (wid == 0) val = warpReduceSum(val);
+ return val;
 }
 
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
-    return val;
+ int lane = threadIdx.x % 32;
+ int wid = threadIdx.x / 32;
+ val = warpReduceMax(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : -INFINITY;
+ if (wid == 0) val = warpReduceMax(val);
+ return val;
 }
 
 // ============================================================
@@ -565,42 +506,42 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // 输入: input[M][D]，输出: output[M][D]
 // ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input,
-                                float* __restrict__ output,
-                                int M, int D) {
-    int row = blockIdx.x;
-    if (row >= M) return;
-    const float* in_row = input + row * D;
-    float* out_row = output + row * D;
+ float* __restrict__ output,
+ int M, int D) {
+ int row = blockIdx.x;
+ if (row >= M) return;
+ const float* in_row = input + row * D;
+ float* out_row = output + row * D;
 
-    __shared__ float smem[32];   // warp 间 reduce 缓冲区
-    __shared__ float row_max;
-    __shared__ float row_sum;
+ __shared__ float smem[32]; // warp 间 reduce 缓冲区
+ __shared__ float row_max;
+ __shared__ float row_sum;
 
-    int tid = threadIdx.x;
+ int tid = threadIdx.x;
 
-    // Step 1: 求 max（数值稳定性）
-    float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_max = fmaxf(local_max, in_row[i]);
-    }
-    local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
-    __syncthreads();
+ // Step 1: 求 max（数值稳定性）
+ float local_max = -INFINITY;
+ for (int i = tid; i < D; i += blockDim.x) {
+ local_max = fmaxf(local_max, in_row[i]);
+ }
+ local_max = blockReduceMax(local_max, smem);
+ if (tid == 0) row_max = local_max;
+ __syncthreads();
 
-    // Step 2: 求 sum(exp(x - max))
-    float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_sum += expf(in_row[i] - row_max);
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
-    __syncthreads();
+ // Step 2: 求 sum(exp(x - max))
+ float local_sum = 0.0f;
+ for (int i = tid; i < D; i += blockDim.x) {
+ local_sum += expf(in_row[i] - row_max);
+ }
+ local_sum = blockReduceSum(local_sum, smem);
+ if (tid == 0) row_sum = local_sum;
+ __syncthreads();
 
-    // Step 3: 归一化写出
-    float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x) {
-        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
-    }
+ // Step 3: 归一化写出
+ float inv_sum = 1.0f / row_sum;
+ for (int i = tid; i < D; i += blockDim.x) {
+ out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+ }
 }
 
 // ============================================================
@@ -608,162 +549,162 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 // 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
 // ============================================================
 __global__ void layernorm_kernel(const float* __restrict__ input,
-                                  const float* __restrict__ gamma,
-                                  const float* __restrict__ beta,
-                                  float* __restrict__ output,
-                                  int M, int N, float eps) {
-    int row = blockIdx.x;
-    if (row >= M) return;
-    const float* in_row = input + row * N;
-    float* out_row = output + row * N;
+ const float* __restrict__ gamma,
+ const float* __restrict__ beta,
+ float* __restrict__ output,
+ int M, int N, float eps) {
+ int row = blockIdx.x;
+ if (row >= M) return;
+ const float* in_row = input + row * N;
+ float* out_row = output + row * N;
 
-    __shared__ float smem[32];
-    __shared__ float row_mean;
-    __shared__ float row_rstd;
+ __shared__ float smem[32];
+ __shared__ float row_mean;
+ __shared__ float row_rstd;
 
-    int tid = threadIdx.x;
+ int tid = threadIdx.x;
 
-    // Step 1: 求 mean = sum(x) / N
-    float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        local_sum += in_row[i];
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_mean = local_sum / N;
-    __syncthreads();
+ // Step 1: 求 mean = sum(x) / N
+ float local_sum = 0.0f;
+ for (int i = tid; i < N; i += blockDim.x) {
+ local_sum += in_row[i];
+ }
+ local_sum = blockReduceSum(local_sum, smem);
+ if (tid == 0) row_mean = local_sum / N;
+ __syncthreads();
 
-    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
-    float local_sq = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        float diff = in_row[i] - row_mean;
-        local_sq += diff * diff;
-    }
-    local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
-    __syncthreads();
+ // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
+ float local_sq = 0.0f;
+ for (int i = tid; i < N; i += blockDim.x) {
+ float diff = in_row[i] - row_mean;
+ local_sq += diff * diff;
+ }
+ local_sq = blockReduceSum(local_sq, smem);
+ if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
+ __syncthreads();
 
-    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
-    for (int i = tid; i < N; i += blockDim.x) {
-        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
-    }
+ // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
+ for (int i = tid; i < N; i += blockDim.x) {
+ out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+ }
 }
 
 // ============================================================
 // Host 辅助函数与验证
 // ============================================================
 void initData(float* data, int n) {
-    srand(42);
-    for (int i = 0; i < n; i++) {
-        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
-    }
+ srand(42);
+ for (int i = 0; i < n; i++) {
+ data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+ }
 }
 
 void cpuSoftmax(const float* in, float* out, int M, int D) {
-    for (int r = 0; r < M; r++) {
-        const float* ir = in + r * D;
-        float* orow = out + r * D;
-        float mx = ir[0];
-        for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
-        float s = 0.0f;
-        for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
-        for (int i = 0; i < D; i++) orow[i] /= s;
-    }
+ for (int r = 0; r < M; r++) {
+ const float* ir = in + r * D;
+ float* orow = out + r * D;
+ float mx = ir[0];
+ for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
+ float s = 0.0f;
+ for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
+ for (int i = 0; i < D; i++) orow[i] /= s;
+ }
 }
 
 void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
-                  float* out, int M, int N, float eps) {
-    for (int r = 0; r < M; r++) {
-        const float* ir = in + r * N;
-        float* orow = out + r * N;
-        float mean = 0.0f;
-        for (int i = 0; i < N; i++) mean += ir[i];
-        mean /= N;
-        float var = 0.0f;
-        for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
-        var /= N;
-        float rstd = 1.0f / sqrtf(var + eps);
-        for (int i = 0; i < N; i++)
-            orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
-    }
+ float* out, int M, int N, float eps) {
+ for (int r = 0; r < M; r++) {
+ const float* ir = in + r * N;
+ float* orow = out + r * N;
+ float mean = 0.0f;
+ for (int i = 0; i < N; i++) mean += ir[i];
+ mean /= N;
+ float var = 0.0f;
+ for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
+ var /= N;
+ float rstd = 1.0f / sqrtf(var + eps);
+ for (int i = 0; i < N; i++)
+ orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
+ }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps, const char* name) {
-    float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++) {
-        float diff = fabsf(a[i] - b[i]);
-        if (diff > maxDiff) maxDiff = diff;
-    }
-    bool ok = maxDiff < eps;
-    printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
-    return ok;
+ float maxDiff = 0.0f;
+ for (int i = 0; i < n; i++) {
+ float diff = fabsf(a[i] - b[i]);
+ if (diff > maxDiff) maxDiff = diff;
+ }
+ bool ok = maxDiff < eps;
+ printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
+ return ok;
 }
 
 int main() {
-    // 测试配置
-    const int M = 128;       // 行数（batch * seq_len）
-    const int D = 1024;      // 特征维（feature dim）
-    const float eps = 1e-5f;
-    const int threads = 256;
+ // 测试配置
+ const int M = 128; // 行数（batch * seq_len）
+ const int D = 1024; // 特征维（feature dim）
+ const float eps = 1e-5f;
+ const int threads = 256;
 
-    printf("=== Softmax + LayerNorm Kernel Test ===\n");
-    printf("Config: M=%d, D=%d, threads=%d\n\n", M, D, threads);
+ printf("=== Softmax + LayerNorm Kernel Test ===\n");
+ printf("Config: M=%d, D=%d, threads=%d\n\n", M, D, threads);
 
-    size_t bytes = (size_t)M * D * sizeof(float);
+ size_t bytes = (size_t)M * D * sizeof(float);
 
-    // Host 内存
-    float *h_in = (float*)malloc(bytes);
-    float *h_out = (float*)malloc(bytes);
-    float *h_ref = (float*)malloc(bytes);
-    float *h_gamma = (float*)malloc(D * sizeof(float));
-    float *h_beta = (float*)malloc(D * sizeof(float));
-    initData(h_in, M * D);
-    for (int i = 0; i < D; i++) { h_gamma[i] = 1.0f; h_beta[i] = 0.0f; }
+ // Host 内存
+ float *h_in = (float*)malloc(bytes);
+ float *h_out = (float*)malloc(bytes);
+ float *h_ref = (float*)malloc(bytes);
+ float *h_gamma = (float*)malloc(D * sizeof(float));
+ float *h_beta = (float*)malloc(D * sizeof(float));
+ initData(h_in, M * D);
+ for (int i = 0; i < D; i++) { h_gamma[i] = 1.0f; h_beta[i] = 0.0f; }
 
-    // Device 内存
-    float *d_in, *d_out, *d_gamma, *d_beta;
-    cudaMalloc(&d_in, bytes);
-    cudaMalloc(&d_out, bytes);
-    cudaMalloc(&d_gamma, D * sizeof(float));
-    cudaMalloc(&d_beta, D * sizeof(float));
-    cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_gamma, h_gamma, D * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_beta, h_beta, D * sizeof(float), cudaMemcpyHostToDevice);
+ // Device 内存
+ float *d_in, *d_out, *d_gamma, *d_beta;
+ cudaMalloc(&d_in, bytes);
+ cudaMalloc(&d_out, bytes);
+ cudaMalloc(&d_gamma, D * sizeof(float));
+ cudaMalloc(&d_beta, D * sizeof(float));
+ cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
+ cudaMemcpy(d_gamma, h_gamma, D * sizeof(float), cudaMemcpyHostToDevice);
+ cudaMemcpy(d_beta, h_beta, D * sizeof(float), cudaMemcpyHostToDevice);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+ cudaEvent_t start, stop;
+ cudaEventCreate(&start);
+ cudaEventCreate(&stop);
 
-    // ---- Softmax 测试 ----
-    printf("[Softmax]\n");
-    cudaEventRecord(start);
-    softmax_kernel<<<M, threads>>>(d_in, d_out, M, D);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float smMs;
-    cudaEventElapsedTime(&smMs, start, stop);
-    cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
-    cpuSoftmax(h_in, h_ref, M, D);
-    checkResult(h_out, h_ref, M * D, 1e-5f, "  Softmax vs CPU");
-    printf("  Time: %.3f ms\n", smMs);
+ // ---- Softmax 测试 ----
+ printf("[Softmax]\n");
+ cudaEventRecord(start);
+ softmax_kernel<<<M, threads>>>(d_in, d_out, M, D);
+ cudaEventRecord(stop);
+ cudaEventSynchronize(stop);
+ float smMs;
+ cudaEventElapsedTime(&smMs, start, stop);
+ cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
+ cpuSoftmax(h_in, h_ref, M, D);
+ checkResult(h_out, h_ref, M * D, 1e-5f, " Softmax vs CPU");
+ printf(" Time: %.3f ms\n", smMs);
 
-    // ---- LayerNorm 测试 ----
-    printf("[LayerNorm]\n");
-    cudaEventRecord(start);
-    layernorm_kernel<<<M, threads>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float lnMs;
-    cudaEventElapsedTime(&lnMs, start, stop);
-    cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
-    cpuLayerNorm(h_in, h_gamma, h_beta, h_ref, M, D, eps);
-    checkResult(h_out, h_ref, M * D, 1e-5f, "  LayerNorm vs CPU");
-    printf("  Time: %.3f ms\n", lnMs);
+ // ---- LayerNorm 测试 ----
+ printf("[LayerNorm]\n");
+ cudaEventRecord(start);
+ layernorm_kernel<<<M, threads>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+ cudaEventRecord(stop);
+ cudaEventSynchronize(stop);
+ float lnMs;
+ cudaEventElapsedTime(&lnMs, start, stop);
+ cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
+ cpuLayerNorm(h_in, h_gamma, h_beta, h_ref, M, D, eps);
+ checkResult(h_out, h_ref, M * D, 1e-5f, " LayerNorm vs CPU");
+ printf(" Time: %.3f ms\n", lnMs);
 
-    // 释放
-    free(h_in); free(h_out); free(h_ref); free(h_gamma); free(h_beta);
-    cudaFree(d_in); cudaFree(d_out); cudaFree(d_gamma); cudaFree(d_beta);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
-    return 0;
+ // 释放
+ free(h_in); free(h_out); free(h_ref); free(h_gamma); free(h_beta);
+ cudaFree(d_in); cudaFree(d_out); cudaFree(d_gamma); cudaFree(d_beta);
+ cudaEventDestroy(start); cudaEventDestroy(stop);
+ return 0;
 }
 ```
 
@@ -781,11 +722,11 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 # Config: M=128, D=1024, threads=256
 #
 # [Softmax]
-#   Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
-#   Time: x.xxx ms
+# Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
+# Time: x.xxx ms
 # [LayerNorm]
-#   LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
-#   Time: x.xxx ms
+# LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
+# Time: x.xxx ms
 ```
 
 #### 练习题
@@ -815,8 +756,8 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 
 **参考答案要点**：
 - **两次 reduce**：
-  1. 第一次：`μ = mean(x)` → reduce sum，然后除以 D
-  2. 第二次：`σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
+ 1. 第一次：`μ = mean(x)` → reduce sum，然后除以 D
+ 2. 第二次：`σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
 - **为什么不能合并**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差
 - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
 - **与 BatchNorm 区别**：LayerNorm 沿 feature 维归一化（每样本独立），不需要 batch 统计，推理时行为一致
@@ -826,10 +767,10 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 **参考答案要点**：
 - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算（exp、加、除），AI ≈ 0.375 FLOP/Byte，远低于 Ridge Point（~12.6）
 - **优化方向**：
-  1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
-  2. **向量化加载**：用 `float4` 做 128-bit 加载，提升带宽利用率
-  3. **减少 reduce 次数**：online softmax 把三遍减为两遍
-  4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
+ 1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
+ 2. **向量化加载**：用 `float4` 做 128-bit 加载，提升带宽利用率
+ 3. **减少 reduce 次数**：online softmax 把三遍减为两遍
+ 4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
 ---
 
@@ -842,7 +783,6 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 - [ ] LayerNorm Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
 - [ ] 能解释 LayerNorm 为什么需要两次 reduce（方差依赖均值）
 - [ ] 能用 ncu 验证 Softmax 是 memory-bound（DRAM Throughput >> SM Throughput）
-- [ ] 能对照昇腾解释 `__reduce_add_sync` 与 `__shfl_down_sync` 的对应关系
 
 ---
 
@@ -860,9 +800,9 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 - **源码地址**：https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/SoftMax.cu
 - **辅助阅读**：PyTorch 的 ` Reduction.cuh` 中的 reduce 框架
 - **具体阅读重点**：
-  - `softmax_warp_forward` 函数：warp 级实现（D ≤ 1024 时一个 warp 处理一行）
-  - `softmax_block_forward` 函数：block 级实现（D > 1024 时一个 block 处理一行）
-  - 向量化加载：使用 `load` 模板按 4/8 元素批量加载
+ - `softmax_warp_forward` 函数：warp 级实现（D ≤ 1024 时一个 warp 处理一行）
+ - `softmax_block_forward` 函数：block 级实现（D > 1024 时一个 block 处理一行）
+ - 向量化加载：使用 `load` 模板按 4/8 元素批量加载
 
 #### 核心概念笔记
 
@@ -882,7 +822,7 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
 // ILP=4 时，一次加载 4 个 float（128-bit），减少指令数
 template <int ILP>
 __device__ void load(float* dst, const float* src, int d) {
-    // 按 ILP 个元素一组加载
+ // 按 ILP 个元素一组加载
 }
 ```
 
@@ -895,32 +835,21 @@ __device__ void load(float* dst, const float* src, int d) {
 PyTorch 的 softmax 在 FP16 输入时，**reduce 用 FP32** 累加：
 ```cpp
 // 伪代码
-acc = static_cast<float>(input[i]);  // FP16 → FP32
-sum += acc;                          // FP32 累加
-output[i] = static_cast<half>(acc / sum);  // FP32 → FP16 写回
+acc = static_cast<float>(input[i]); // FP16 → FP32
+sum += acc; // FP32 累加
+output[i] = static_cast<half>(acc / sum); // FP32 → FP16 写回
 ```
 
 > 💡 **为什么 reduce 要用 FP32？** FP16 的最大值约 65504，累加多个 exp 值容易溢出。用 FP32 做 reduce 保证数值稳定，这是混合精度训练的标准做法。
-
-#### 昇腾对照
-
-| PyTorch 优化 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| warp 级 softmax（D≤1024） | Ascend C Softmax 算子向量化 | 昇腾 Vector Unit 天然处理向量，无需区分 warp/block 路径 |
-| float4 向量化加载 | Vector Unit 一次处理多元素 | 昇腾 Vector 指令天然是向量化的，无需手动 float4 |
-| FP32 reduce 保精度 | FP32 reduce 保精度 | 混合精度策略跨平台一致 |
-| ILP 模板参数 | Vector 指令的 repeat 参数 | 两者都通过"一次处理多元素"提升吞吐 |
-
----
 
 ### 学习任务2：FasterTransformer LayerNorm 源码（45分钟）
 
 #### 阅读内容
 - **源码地址**：https://github.com/NVIDIA/FasterTransformer/blob/main/src/fastertransformer/kernels/layernorm_kernels.cu
 - **具体阅读重点**：
-  - `generalLayerNorm` 函数：支持 FP32/FP16/BF16 的模板实现
-  - 一次 reduce 优化版（同时求 mean 和 variance）
-  - `__half2` 双精度加载（FP16 场景下一次处理 2 个 half）
+ - `generalLayerNorm` 函数：支持 FP32/FP16/BF16 的模板实现
+ - 一次 reduce 优化版（同时求 mean 和 variance）
+ - `__half2` 双精度加载（FP16 场景下一次处理 2 个 half）
 
 #### 核心概念笔记
 
@@ -930,12 +859,12 @@ output[i] = static_cast<half>(acc / sum);  // FP32 → FP16 写回
 
 ```
 Welford 算法（在线均值/方差）：
-  遍历每个元素 xi：
-    count++
-    delta = xi - mean
-    mean += delta / count
-    M2 += delta * (xi - mean)      // M2 累积平方差
-  最终：variance = M2 / count
+ 遍历每个元素 xi：
+ count++
+ delta = xi - mean
+ mean += delta / count
+ M2 += delta * (xi - mean) // M2 累积平方差
+ 最终：variance = M2 / count
 ```
 
 | 方法 | 遍历次数 | reduce 次数 | 优势 |
@@ -958,23 +887,10 @@ __half2 val = *reinterpret_cast<const __half2*>(&input[i]);
 
 当 D 较小（如 768）时，FasterTransformer 把 gamma/beta 加载到 register 一次性使用：
 ```cpp
-float g = gamma[i];  // 加载到 register
-float b = beta[i];   // 加载到 register
+float g = gamma[i]; // 加载到 register
+float b = beta[i]; // 加载到 register
 // 后续归一化直接用 register 中的 g, b，不重复读 HBM
 ```
-
-#### 昇腾对照
-
-| FasterTransformer 优化 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| Welford 一次 reduce | LayerNorm 算子一次遍历 | 昇腾算子库同样用 Welford 或类似在线算法 |
-| `__half2` 向量化 | Vector Unit half 向量 | 昇腾 Vector 指令支持 FP16 向量，天然高效 |
-| gamma/beta register 缓存 | L0 Buffer 缓存参数 | 昇腾把热点参数预加载到 L0 Buffer |
-| 模板支持 FP32/FP16/BF16 | 算子库多精度支持 | 两者都通过模板/重载支持多精度 |
-
-**关键发现**：FasterTransformer 是 NVIDIA 官方的推理优化库，其 LayerNorm 实现比 PyTorch ATen 更激进（一次 reduce + half2 + register 缓存），是手写 kernel 的最佳参考。
-
----
 
 ### 学习任务3：对比手写版与官方实现（30分钟）
 
@@ -1002,10 +918,10 @@ float b = beta[i];   // 加载到 register
 #### 任务清单
 
 1. **将 Day 16 的 Softmax 改为 warp 级实现**（D=1024 时一个 warp 一行）
-   - 提示：`blockDim.x = 32`（一个 warp），`gridDim.x = M`，用 `__shfl` 直接 reduce，不用 shared memory
-2. **在 Day 16 的 LayerNorm 中加入 float4 向量化加载**
-   - 提示：将 `for (int i = tid; i < N; i += blockDim.x)` 改为 `for (int i = tid*4; i < N; i += blockDim.x*4)`，用 `reinterpret_cast<const float4*>` 加载
-3. **用 ncu 对比优化前后**的 DRAM Throughput 和 SM Throughput
+ - 提示：`blockDim.x = 32`（一个 warp），`gridDim.x = M`，用 `__shfl` 直接 reduce，不用 shared memory
+1. **在 Day 16 的 LayerNorm 中加入 float4 向量化加载**
+ - 提示：将 `for (int i = tid; i < N; i += blockDim.x)` 改为 `for (int i = tid*4; i < N; i += blockDim.x*4)`，用 `reinterpret_cast<const float4*>` 加载
+1. **用 ncu 对比优化前后**的 DRAM Throughput 和 SM Throughput
 
 #### ncu 对比命令
 
@@ -1015,11 +931,11 @@ nvcc -o softmax_layernorm_opt softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
 
 # profile
 ncu --metrics \
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  gpu__time_duration.sum \
-  --kernel-name regex:softmax_kernel \
-  ./softmax_layernorm_opt
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ gpu__time_duration.sum \
+ --kernel-name regex:softmax_kernel \
+ ./softmax_layernorm_opt
 ```
 
 #### 练习题
@@ -1051,7 +967,6 @@ ncu --metrics \
 - **FP16 溢出风险**：FP16 max ≈ 65504，exp(x) 在 x > 11 时就接近溢出（exp(11) ≈ 60000）
 - **累加精度**：FP16 的尾数只有 10 位（约 3 位有效十进制），多次累加会丢失精度
 - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
-- **昇腾对照**：昇腾混合精度算子同样用 FP32 做 reduce，跨平台一致
 
 ---
 
@@ -1070,7 +985,6 @@ ncu --metrics \
 ## Day 18（周四）：Attention IO 分析
 
 > **今日目标**：实现标准 Attention forward，手动计算各阶段 HBM 读写量，用 ncu 验证实测值，理解标准 Attention 为什么是 O(N²) IO —— 为 Week 4 FlashAttention 做铺垫。
-> **时间分配**：早间1.5h（IO 量化推导1h + 昇腾对照30min）+ 晚间1.5h（编程+ncu 验证）
 > **面试考察度**：⭐⭐⭐⭐⭐ 必考，"标准 Attention 的 IO 复杂度"是 FlashAttention 的核心前置知识
 
 ---
@@ -1081,20 +995,20 @@ ncu --metrics \
 - **论文**：FlashAttention 论文 Section 2.3（标准 Attention 的 IO 复杂度分析）
 - **补充阅读**：Week 2 Day 12 的 FlashAttention 笔记（对比 O(N²) vs O(Nd)）
 - **具体阅读重点**：
-  - 标准 Attention 把 S=QK^T 和 P=softmax(S) 物化到 HBM
-  - 每个中间矩阵的读写量计算
-  - O(N²) 项的来源
+ - 标准 Attention 把 S=QK^T 和 P=softmax(S) 物化到 HBM
+ - 每个中间矩阵的读写量计算
+ - O(N²) 项的来源
 
 #### 核心概念笔记
 
 **1. 标准 Attention 的计算流程**
 
 ```
-输入: Q ∈ R^{N×d},  K ∈ R^{N×d},  V ∈ R^{N×d}
+输入: Q ∈ R^{N×d}, K ∈ R^{N×d}, V ∈ R^{N×d}
 
-Step 1: S = Q × K^T / sqrt(d)     →  S ∈ R^{N×N}  （写 HBM）
-Step 2: P = softmax(S, dim=-1)    →  P ∈ R^{N×N}  （读 S，写 P）
-Step 3: O = P × V                 →  O ∈ R^{N×d}  （读 P，写 O）
+Step 1: S = Q × K^T / sqrt(d) → S ∈ R^{N×N} （写 HBM）
+Step 2: P = softmax(S, dim=-1) → P ∈ R^{N×N} （读 S，写 P）
+Step 3: O = P × V → O ∈ R^{N×d} （读 P，写 O）
 ```
 
 **2. 各阶段 HBM 读写量（以 N=4096, d=64, FP32 为例）**
@@ -1145,26 +1059,15 @@ AI_softmax = 3N / 2N² = 1.5/N ≈ 0.0004 FLOP/Byte（N=4096）
 
 **结论**：标准 Attention 是 GEMM(compute) + softmax(memory) + GEMM(compute) 的混合，其中 softmax 的 O(N²) 读写是瓶颈，FlashAttention 正是消除这一项。
 
-#### 昇腾对照
-
-| CUDA/FlashAttention 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| HBM（Global Memory） | DDR/HBM | 两者都面临 HBM 带宽瓶颈 |
-| Shared Memory（片上） | L0 Buffer / UB | FlashAttention 的 tile 驻留 ≈ 昇腾 L0 Buffer 预加载 |
-| O(N²) 物化 S/P | CANN 已内置 FlashAttention | 昇腾算子库直接提供 FlashAttention，无需手写标准版 |
-| softmax 的 O(N²) 读写 | softmax 算子分块 | 昇腾 softmax 算子同样用分块避免 O(N²) 中间结果 |
-
----
-
 ### 学习任务2：理解 O(N²) 的危害（30分钟）
 
 #### 为什么 O(N²) 是问题？
 
 ```
-N = 1024:   S/P 矩阵 = 1024² × 4 bytes = 4 MB     （L2 cache 可容纳）
-N = 4096:   S/P 矩阵 = 4096² × 4 bytes = 64 MB    （超出 L2，频繁 HBM 读写）
-N = 16384:  S/P 矩阵 = 16384² × 4 bytes = 1 GB    （HBM 都吃紧，OOM 风险）
-N = 65536:  S/P 矩阵 = 65536² × 4 bytes = 16 GB   （直接 OOM）
+N = 1024: S/P 矩阵 = 1024² × 4 bytes = 4 MB （L2 cache 可容纳）
+N = 4096: S/P 矩阵 = 4096² × 4 bytes = 64 MB （超出 L2，频繁 HBM 读写）
+N = 16384: S/P 矩阵 = 16384² × 4 bytes = 1 GB （HBM 都吃紧，OOM 风险）
+N = 65536: S/P 矩阵 = 65536² × 4 bytes = 16 GB （直接 OOM）
 ```
 
 | N | S/P 显存 | 能否放入 L2(~40MB) | 能否放入 HBM(40GB) |
@@ -1194,36 +1097,36 @@ N = 65536:  S/P 矩阵 = 65536² × 4 bytes = 16 GB   （直接 OOM）
 
 // 复用 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+ return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+ return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
-    return val;
+ int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+ val = warpReduceSum(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : 0.0f;
+ if (wid == 0) val = warpReduceSum(val);
+ return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
-    val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
-    return val;
+ int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+ val = warpReduceMax(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : -INFINITY;
+ if (wid == 0) val = warpReduceMax(val);
+ return val;
 }
 
 // ============================================================
@@ -1231,169 +1134,169 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // 一个 block 处理一行 query
 // ============================================================
 __global__ void attention_naive_kernel(const float* __restrict__ Q,
-                                        const float* __restrict__ K,
-                                        const float* __restrict__ V,
-                                        float* __restrict__ S,
-                                        float* __restrict__ P,
-                                        float* __restrict__ O,
-                                        int N, int d) {
-    int qrow = blockIdx.x;
-    if (qrow >= N) return;
+ const float* __restrict__ K,
+ const float* __restrict__ V,
+ float* __restrict__ S,
+ float* __restrict__ P,
+ float* __restrict__ O,
+ int N, int d) {
+ int qrow = blockIdx.x;
+ if (qrow >= N) return;
 
-    __shared__ float smem[32];
-    __shared__ float row_max;
-    __shared__ float row_sum;
+ __shared__ float smem[32];
+ __shared__ float row_max;
+ __shared__ float row_sum;
 
-    int tid = threadIdx.x;
-    float scale = 1.0f / sqrtf((float)d);
+ int tid = threadIdx.x;
+ float scale = 1.0f / sqrtf((float)d);
 
-    // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
-    //         物化 S 到 HBM（这就是 O(N²) 写入的来源）
-    for (int j = tid; j < N; j += blockDim.x) {
-        float s_val = 0.0f;
-        for (int dd = 0; dd < d; dd++) {
-            s_val += Q[qrow * d + dd] * K[j * d + dd];
-        }
-        S[qrow * N + j] = s_val * scale;
-    }
-    __syncthreads();
+ // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
+ // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
+ for (int j = tid; j < N; j += blockDim.x) {
+ float s_val = 0.0f;
+ for (int dd = 0; dd < d; dd++) {
+ s_val += Q[qrow * d + dd] * K[j * d + dd];
+ }
+ S[qrow * N + j] = s_val * scale;
+ }
+ __syncthreads();
 
-    // Step 2: P[qrow][j] = softmax(S[qrow][:])
-    //         读 S（O(N²) 读），写 P（O(N²) 写）
-    float local_max = -INFINITY;
-    for (int j = tid; j < N; j += blockDim.x) {
-        local_max = fmaxf(local_max, S[qrow * N + j]);
-    }
-    local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
-    __syncthreads();
+ // Step 2: P[qrow][j] = softmax(S[qrow][:])
+ // 读 S（O(N²) 读），写 P（O(N²) 写）
+ float local_max = -INFINITY;
+ for (int j = tid; j < N; j += blockDim.x) {
+ local_max = fmaxf(local_max, S[qrow * N + j]);
+ }
+ local_max = blockReduceMax(local_max, smem);
+ if (tid == 0) row_max = local_max;
+ __syncthreads();
 
-    float local_sum = 0.0f;
-    for (int j = tid; j < N; j += blockDim.x) {
-        float p_val = expf(S[qrow * N + j] - row_max);
-        P[qrow * N + j] = p_val;
-        local_sum += p_val;
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
-    __syncthreads();
+ float local_sum = 0.0f;
+ for (int j = tid; j < N; j += blockDim.x) {
+ float p_val = expf(S[qrow * N + j] - row_max);
+ P[qrow * N + j] = p_val;
+ local_sum += p_val;
+ }
+ local_sum = blockReduceSum(local_sum, smem);
+ if (tid == 0) row_sum = local_sum;
+ __syncthreads();
 
-    // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
-    //         读 P（O(N²) 读），读 V，写 O
-    float inv_sum = 1.0f / row_sum;
-    for (int dd = tid; dd < d; dd += blockDim.x) {
-        float o_val = 0.0f;
-        for (int j = 0; j < N; j++) {
-            o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
-        }
-        O[qrow * d + dd] = o_val;
-    }
+ // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
+ // 读 P（O(N²) 读），读 V，写 O
+ float inv_sum = 1.0f / row_sum;
+ for (int dd = tid; dd < d; dd += blockDim.x) {
+ float o_val = 0.0f;
+ for (int j = 0; j < N; j++) {
+ o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
+ }
+ O[qrow * d + dd] = o_val;
+ }
 }
 
 // ============================================================
 // CPU 参考（用于验证）
 // ============================================================
 void cpuAttention(const float* Q, const float* K, const float* V,
-                  float* O, int N, int d) {
-    float* S = (float*)malloc(N * N * sizeof(float));
-    float* P = (float*)malloc(N * N * sizeof(float));
-    float scale = 1.0f / sqrtf((float)d);
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            float s = 0.0f;
-            for (int dd = 0; dd < d; dd++) s += Q[i*d+dd] * K[j*d+dd];
-            S[i*N+j] = s * scale;
-        }
-        float mx = S[i*N];
-        for (int j = 1; j < N; j++) mx = fmaxf(mx, S[i*N+j]);
-        float sm = 0.0f;
-        for (int j = 0; j < N; j++) { P[i*N+j] = expf(S[i*N+j]-mx); sm += P[i*N+j]; }
-        for (int j = 0; j < N; j++) P[i*N+j] /= sm;
-        for (int dd = 0; dd < d; dd++) {
-            float o = 0.0f;
-            for (int j = 0; j < N; j++) o += P[i*N+j] * V[j*d+dd];
-            O[i*d+dd] = o;
-        }
-    }
-    free(S); free(P);
+ float* O, int N, int d) {
+ float* S = (float*)malloc(N * N * sizeof(float));
+ float* P = (float*)malloc(N * N * sizeof(float));
+ float scale = 1.0f / sqrtf((float)d);
+ for (int i = 0; i < N; i++) {
+ for (int j = 0; j < N; j++) {
+ float s = 0.0f;
+ for (int dd = 0; dd < d; dd++) s += Q[i*d+dd] * K[j*d+dd];
+ S[i*N+j] = s * scale;
+ }
+ float mx = S[i*N];
+ for (int j = 1; j < N; j++) mx = fmaxf(mx, S[i*N+j]);
+ float sm = 0.0f;
+ for (int j = 0; j < N; j++) { P[i*N+j] = expf(S[i*N+j]-mx); sm += P[i*N+j]; }
+ for (int j = 0; j < N; j++) P[i*N+j] /= sm;
+ for (int dd = 0; dd < d; dd++) {
+ float o = 0.0f;
+ for (int j = 0; j < N; j++) o += P[i*N+j] * V[j*d+dd];
+ O[i*d+dd] = o;
+ }
+ }
+ free(S); free(P);
 }
 
 void initData(float* data, int n) {
-    srand(42);
-    for (int i = 0; i < n; i++)
-        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+ srand(42);
+ for (int i = 0; i < n; i++)
+ data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
-    float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++) maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
-    bool ok = maxDiff < eps;
-    printf("  maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
-    return ok;
+ float maxDiff = 0.0f;
+ for (int i = 0; i < n; i++) maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+ bool ok = maxDiff < eps;
+ printf(" maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
+ return ok;
 }
 
 int main() {
-    // 测试多个 seq_len，观察 IO 随 N² 增长
-    int seqLens[] = {256, 512, 1024, 2048};
-    int d = 64;
-    int threads = 256;
+ // 测试多个 seq_len，观察 IO 随 N² 增长
+ int seqLens[] = {256, 512, 1024, 2048};
+ int d = 64;
+ int threads = 256;
 
-    printf("=== Standard Attention Forward (naive, materialize S/P) ===\n");
-    printf("%-8s %-12s %-14s %-12s %-10s\n",
-           "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
-    printf("--------------------------------------------------------\n");
+ printf("=== Standard Attention Forward (naive, materialize S/P) ===\n");
+ printf("%-8s %-12s %-14s %-12s %-10s\n",
+ "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
+ printf("--------------------------------------------------------\n");
 
-    for (int si = 0; si < 4; si++) {
-        int N = seqLens[si];
-        size_t bytesQKV = N * d * sizeof(float);
-        size_t bytesSP = (size_t)N * N * sizeof(float);
+ for (int si = 0; si < 4; si++) {
+ int N = seqLens[si];
+ size_t bytesQKV = N * d * sizeof(float);
+ size_t bytesSP = (size_t)N * N * sizeof(float);
 
-        float *h_Q = (float*)malloc(bytesQKV), *h_K = (float*)malloc(bytesQKV);
-        float *h_V = (float*)malloc(bytesQKV), *h_O = (float*)malloc(bytesQKV);
-        float *h_O_cpu = (float*)malloc(bytesQKV);
-        initData(h_Q, N*d); initData(h_K, N*d); initData(h_V, N*d);
+ float *h_Q = (float*)malloc(bytesQKV), *h_K = (float*)malloc(bytesQKV);
+ float *h_V = (float*)malloc(bytesQKV), *h_O = (float*)malloc(bytesQKV);
+ float *h_O_cpu = (float*)malloc(bytesQKV);
+ initData(h_Q, N*d); initData(h_K, N*d); initData(h_V, N*d);
 
-        float *d_Q, *d_K, *d_V, *d_S, *d_P, *d_O;
-        cudaMalloc(&d_Q, bytesQKV); cudaMalloc(&d_K, bytesQKV);
-        cudaMalloc(&d_V, bytesQKV); cudaMalloc(&d_O, bytesQKV);
-        cudaMalloc(&d_S, bytesSP);  cudaMalloc(&d_P, bytesSP);
-        cudaMemcpy(d_Q, h_Q, bytesQKV, cudaMemcpyHostToDevice);
-        cudaMemcpy(d_K, h_K, bytesQKV, cudaMemcpyHostToDevice);
-        cudaMemcpy(d_V, h_V, bytesQKV, cudaMemcpyHostToDevice);
+ float *d_Q, *d_K, *d_V, *d_S, *d_P, *d_O;
+ cudaMalloc(&d_Q, bytesQKV); cudaMalloc(&d_K, bytesQKV);
+ cudaMalloc(&d_V, bytesQKV); cudaMalloc(&d_O, bytesQKV);
+ cudaMalloc(&d_S, bytesSP); cudaMalloc(&d_P, bytesSP);
+ cudaMemcpy(d_Q, h_Q, bytesQKV, cudaMemcpyHostToDevice);
+ cudaMemcpy(d_K, h_K, bytesQKV, cudaMemcpyHostToDevice);
+ cudaMemcpy(d_V, h_V, bytesQKV, cudaMemcpyHostToDevice);
 
-        // 理论 HBM IO：读 Q,K,V（3Nd）+ 读/写 S,P（各 2N²）+ 写 O（Nd）
-        // = 4Nd + 4N²（简化，每元素 4 bytes）
-        double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0*1024.0);
-        double spSize = (double)bytesSP / (1024.0*1024.0);
+ // 理论 HBM IO：读 Q,K,V（3Nd）+ 读/写 S,P（各 2N²）+ 写 O（Nd）
+ // = 4Nd + 4N²（简化，每元素 4 bytes）
+ double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0*1024.0);
+ double spSize = (double)bytesSP / (1024.0*1024.0);
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start); cudaEventCreate(&stop);
-        cudaEventRecord(start);
-        attention_naive_kernel<<<N, threads>>>(d_Q, d_K, d_V, d_S, d_P, d_O, N, d);
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float ms;
-        cudaEventElapsedTime(&ms, start, stop);
+ cudaEvent_t start, stop;
+ cudaEventCreate(&start); cudaEventCreate(&stop);
+ cudaEventRecord(start);
+ attention_naive_kernel<<<N, threads>>>(d_Q, d_K, d_V, d_S, d_P, d_O, N, d);
+ cudaEventRecord(stop);
+ cudaEventSynchronize(stop);
+ float ms;
+ cudaEventElapsedTime(&ms, start, stop);
 
-        cudaMemcpy(h_O, d_O, bytesQKV, cudaMemcpyDeviceToHost);
-        cpuAttention(h_Q, h_K, h_V, h_O_cpu, N, d);
-        bool ok = checkResult(h_O, h_O_cpu, N*d, 1e-3f);
+ cudaMemcpy(h_O, d_O, bytesQKV, cudaMemcpyDeviceToHost);
+ cpuAttention(h_Q, h_K, h_V, h_O_cpu, N, d);
+ bool ok = checkResult(h_O, h_O_cpu, N*d, 1e-3f);
 
-        printf("%-8d %-12.2f %-14.2f %-12.3f %-10s\n",
-               N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
+ printf("%-8d %-12.2f %-14.2f %-12.3f %-10s\n",
+ N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
 
-        free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_cpu);
-        cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_S);
-        cudaFree(d_P); cudaFree(d_O);
-        cudaEventDestroy(start); cudaEventDestroy(stop);
-    }
+ free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_cpu);
+ cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_S);
+ cudaFree(d_P); cudaFree(d_O);
+ cudaEventDestroy(start); cudaEventDestroy(stop);
+ }
 
-    printf("\n观察要点：\n");
-    printf("1. S/P size 随 N² 增长（N 翻倍 → size 4x）\n");
-    printf("2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）\n");
-    printf("3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）\n");
-    printf("4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO\n");
-    return 0;
+ printf("\n观察要点：\n");
+ printf("1. S/P size 随 N² 增长（N 翻倍 → size 4x）\n");
+ printf("2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）\n");
+ printf("3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）\n");
+ printf("4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO\n");
+ return 0;
 }
 ```
 
@@ -1408,12 +1311,12 @@ nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80 -g -lineinfo
 
 # 预期输出
 # === Standard Attention Forward (naive, materialize S/P) ===
-# N        S/P size(MB) HBM IO(MB)    Time(ms)     Check
+# N S/P size(MB) HBM IO(MB) Time(ms) Check
 # --------------------------------------------------------
-# 256      0.25         1.00          0.xxx        PASS
-# 512      1.00         4.00          x.xxx        PASS
-# 1024     4.00         16.00         x.xxx        PASS
-# 2048     16.00        64.00         xx.xxx       PASS
+# 256 0.25 1.00 0.xxx PASS
+# 512 1.00 4.00 x.xxx PASS
+# 1024 4.00 16.00 x.xxx PASS
+# 2048 16.00 64.00 xx.xxx PASS
 ```
 
 #### 用 ncu 验证 HBM 读写量
@@ -1421,11 +1324,11 @@ nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80 -g -lineinfo
 ```bash
 # profile N=1024 的 HBM 读写量
 ncu --metrics \
-  dram__bytes_read.sum,\
-  dram__bytes_write.sum,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed \
-  --kernel-name regex:attention_naive \
-  ./attention_naive
+ dram__bytes_read.sum,\
+ dram__bytes_write.sum,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed \
+ --kernel-name regex:attention_naive \
+ ./attention_naive
 
 # 预期：dram__bytes_read + dram__bytes_write ≈ 16 MB（理论值）
 # 注意：实测值会略大于理论值（cache miss、额外访问等），误差 < 30% 属正常
@@ -1451,9 +1354,9 @@ ncu --metrics \
 **参考答案要点**：
 - **复杂度**：O(N² + Nd)，当 N >> d 时简化为 O(N²)
 - **O(N²) 来源**：标准 Attention 物化两个 N×N 中间矩阵：
-  - S = QK^T（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
-  - P = softmax(S)（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
-  - 合计 4N² 的 N² 项读写
+ - S = QK^T（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
+ - P = softmax(S)（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
+ - 合计 4N² 的 N² 项读写
 - **O(Nd) 来源**：Q/K/V 的读写（3Nd）和 O 的读写（2Nd），线性于 N
 - **危害**：N=4096 时 S/P 各 64MB，N=16384 时各 1GB，长序列下显存和带宽都吃紧
 - **FlashAttention 解决**：不物化 S/P，在 SRAM 中完成 softmax，IO 降到 O(Nd)
@@ -1477,14 +1380,12 @@ ncu --metrics \
 - [ ] 能用 ncu 验证实测 HBM 读写量与理论值一致（误差 < 30%）
 - [ ] 能计算 softmax 部分的 arithmetic intensity 并判定为 memory-bound
 - [ ] 能解释 N 翻倍时 HBM IO 变 4x 的原因
-- [ ] 能对照昇腾解释为什么 CANN 内置 FlashAttention（避免手写标准版）
 
 ---
 
 ## Day 19（周五）：项目推进 —— 算子接入 Mini 引擎
 
 > **今日目标**：将 Day 16 手写的 Softmax/LayerNorm kernel 封装为 C++ 接口，接入一个最小化的 Transformer 推理引擎，替换 PyTorch 对应算子，验证端到端正确性并记录 latency 变化。
-> **时间分配**：早间1.5h（架构设计1h + 昇腾对照30min）+ 晚间1.5h（编码+调试）
 > **面试考察度**：⭐⭐⭐ 中频，"如何把自定义算子集成到推理框架"是工程能力体现
 
 ---
@@ -1503,22 +1404,22 @@ ncu --metrics \
 
 ```
 ┌──────────────────────────────────────────────────┐
-│              Mini Transformer Engine             │
-│                                                  │
-│  Input x (B, N, d)                               │
-│    │                                             │
-│    ├─► [LayerNorm1] ──► [QKV GEMM (cuBLAS)]      │
-│    │                       │                     │
-│    │                       ├─► [QK^T GEMM]       │
-│    │                       ├─► [Softmax★] ← 自定义│
-│    │                       ├─► [PV GEMM]         │
-│    │                       └─► [Out GEMM]        │
-│    │                                             │
-│    ├─► [LayerNorm2] ★ ← 自定义                   │
-│    │                                             │
-│    └─► [FFN GEMM1] → [GELU] → [FFN GEMM2]        │
-│                                                  │
-│  ★ = 自定义 CUDA kernel，其余用 PyTorch          │
+│ Mini Transformer Engine │
+│ │
+│ Input x (B, N, d) │
+│ │ │
+│ ├─► [LayerNorm1] ──► [QKV GEMM (cuBLAS)] │
+│ │ │ │
+│ │ ├─► [QK^T GEMM] │
+│ │ ├─► [Softmax★] ← 自定义│
+│ │ ├─► [PV GEMM] │
+│ │ └─► [Out GEMM] │
+│ │ │
+│ ├─► [LayerNorm2] ★ ← 自定义 │
+│ │ │
+│ └─► [FFN GEMM1] → [GELU] → [FFN GEMM2] │
+│ │
+│ ★ = 自定义 CUDA kernel，其余用 PyTorch │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -1532,26 +1433,13 @@ from torch.utils.cpp_extension import load_inline
 # 把 Day 16 的 CUDA 代码作为 inline 编译
 cuda_source = open("softmax_layernorm.cu").read()
 my_ops = load_inline(
-    name="my_ops",
-    cpp_sources="...",  # C++ 接口声明
-    cuda_sources=cuda_source,
-    functions=["softmax_forward", "layernorm_forward"],
-    verbose=True,
+ name="my_ops",
+ cpp_sources="...", # C++ 接口声明
+ cuda_sources=cuda_source,
+ functions=["softmax_forward", "layernorm_forward"],
+ verbose=True,
 )
 ```
-
-#### 昇腾对照
-
-| CUDA 集成方式 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| PyTorch C++ Extension | Ascend C 自定义算子 + PyTorch NPU | 两者都需要把自定义 kernel 封装为框架可调用的接口 |
-| `load_inline` 动态编译 | `aclOpCompile` + 动态加载 | 概念类似，都是运行时编译/加载算子 |
-| `torch.mm`（cuBLAS） | `aclnnMatmul`（ACL MatMul） | GEMM 都调用官方库，不自写 |
-| 自定义 Softmax/LayerNorm | CANN 内置算子 | 昇腾已内置，无需自定义；CUDA 手写是学习目的 |
-
-**关键差异**：CUDA 手写算子集成是学习性质（理解算子内部）；昇腾 CANN 已内置优化算子，生产环境直接调用。
-
----
 
 ### 学习任务2：封装自定义算子（45分钟）
 
@@ -1566,29 +1454,29 @@ my_ops = load_inline(
 // 声明 Day 16 的 kernel（实现在 .cu 文件中）
 void launch_softmax(const float* input, float* output, int M, int D, cudaStream_t stream);
 void launch_layernorm(const float* input, const float* gamma, const float* beta,
-                      float* output, int M, int N, float eps, cudaStream_t stream);
+ float* output, int M, int N, float eps, cudaStream_t stream);
 
 at::Tensor softmax_forward(at::Tensor input) {
-    // input: (M, D)
-    int M = input.size(0), D = input.size(1);
-    auto output = at::empty_like(input);
-    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(),
-                   M, D, at::cuda::getCurrentCUDAStream());
-    return output;
+ // input: (M, D)
+ int M = input.size(0), D = input.size(1);
+ auto output = at::empty_like(input);
+ launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(),
+ M, D, at::cuda::getCurrentCUDAStream());
+ return output;
 }
 
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
-    int M = input.size(0), N = input.size(1);
-    auto output = at::empty_like(input);
-    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(),
-                     beta.data_ptr<float>(), output.data_ptr<float>(),
-                     M, N, (float)eps, at::cuda::getCurrentCUDAStream());
-    return output;
+ int M = input.size(0), N = input.size(1);
+ auto output = at::empty_like(input);
+ launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(),
+ beta.data_ptr<float>(), output.data_ptr<float>(),
+ M, N, (float)eps, at::cuda::getCurrentCUDAStream());
+ return output;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
-    m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
+ m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
+ m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
 }
 ```
 
@@ -1610,123 +1498,118 @@ at::Tensor softmax_forward(at::Tensor input);
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps);
 """
 my_ops = load_inline(
-    name="my_ops",
-    cpp_sources=cpp_src,
-    cuda_sources=cuda_src,
-    functions=["softmax_forward", "layernorm_forward"],
-    verbose=True,
-    extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ name="my_ops",
+ cpp_sources=cpp_src,
+ cuda_sources=cuda_src,
+ functions=["softmax_forward", "layernorm_forward"],
+ verbose=True,
+ extra_cuda_cflags=["-O3", "-arch=sm_80"],
 )
 
-
 class MiniAttention(nn.Module):
-    """用自定义 Softmax 的 Attention"""
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
+ """用自定义 Softmax 的 Attention"""
+ def __init__(self, d_model=512, n_heads=8):
+ super().__init__()
+ self.d_model = d_model
+ self.n_heads = n_heads
+ self.d_head = d_model // n_heads
+ self.qkv = nn.Linear(d_model, 3 * d_model)
+ self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, x):
-        B, N, _ = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]
-        scale = self.d_head ** -0.5
-        attn = torch.matmul(q, k.transpose(-2, -1)) * scale  # QK^T (cuBLAS)
-        # ★ 自定义 Softmax 替换 torch.softmax
-        # attn shape: (B, n_heads, N, N) → 展平为 (B*n_heads*N, N) 调用
-        B_, H, N_, _ = attn.shape
-        attn_flat = attn.reshape(B_*H*N_, N_)
-        attn_flat = my_ops.softmax_forward(attn_flat)
-        attn = attn_flat.reshape(B_, H, N_, N_)
-        out = torch.matmul(attn, v)  # PV (cuBLAS)
-        out = out.transpose(1, 2).reshape(B, N, self.d_model)
-        return self.out(out)
-
+ def forward(self, x):
+ B, N, _ = x.shape
+ qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+ q, k, v = qkv[0], qkv[1], qkv[2]
+ scale = self.d_head ** -0.5
+ attn = torch.matmul(q, k.transpose(-2, -1)) * scale # QK^T (cuBLAS)
+ # ★ 自定义 Softmax 替换 torch.softmax
+ # attn shape: (B, n_heads, N, N) → 展平为 (B*n_heads*N, N) 调用
+ B_, H, N_, _ = attn.shape
+ attn_flat = attn.reshape(B_*H*N_, N_)
+ attn_flat = my_ops.softmax_forward(attn_flat)
+ attn = attn_flat.reshape(B_, H, N_, N_)
+ out = torch.matmul(attn, v) # PV (cuBLAS)
+ out = out.transpose(1, 2).reshape(B, N, self.d_model)
+ return self.out(out)
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_custom_ln=True):
-        super().__init__()
-        self.attn = MiniAttention(d_model, n_heads)
-        # LayerNorm 参数
-        self.norm1_weight = nn.Parameter(torch.ones(d_model))
-        self.norm1_bias = nn.Parameter(torch.zeros(d_model))
-        self.norm2_weight = nn.Parameter(torch.ones(d_model))
-        self.norm2_bias = nn.Parameter(torch.zeros(d_model))
-        self.ffn = nn.Sequential(nn.Linear(d_model, d_ff), nn.GELU(), nn.Linear(d_ff, d_model))
-        self.use_custom_ln = use_custom_ln
-        self.eps = 1e-5
+ def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_custom_ln=True):
+ super().__init__()
+ self.attn = MiniAttention(d_model, n_heads)
+ # LayerNorm 参数
+ self.norm1_weight = nn.Parameter(torch.ones(d_model))
+ self.norm1_bias = nn.Parameter(torch.zeros(d_model))
+ self.norm2_weight = nn.Parameter(torch.ones(d_model))
+ self.norm2_bias = nn.Parameter(torch.zeros(d_model))
+ self.ffn = nn.Sequential(nn.Linear(d_model, d_ff), nn.GELU(), nn.Linear(d_ff, d_model))
+ self.use_custom_ln = use_custom_ln
+ self.eps = 1e-5
 
-    def forward(self, x):
-        B, N, D = x.shape
-        # ★ 自定义 LayerNorm 替换 F.layer_norm
-        if self.use_custom_ln:
-            x_flat = x.reshape(B*N, D)
-            x_norm = my_ops.layernorm_forward(x_flat, self.norm1_weight, self.norm1_bias, self.eps)
-            x_norm = x_norm.reshape(B, N, D)
-        else:
-            x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm1_weight, self.norm1_bias, self.eps)
-        x = x + self.attn(x_norm)
+ def forward(self, x):
+ B, N, D = x.shape
+ # ★ 自定义 LayerNorm 替换 F.layer_norm
+ if self.use_custom_ln:
+ x_flat = x.reshape(B*N, D)
+ x_norm = my_ops.layernorm_forward(x_flat, self.norm1_weight, self.norm1_bias, self.eps)
+ x_norm = x_norm.reshape(B, N, D)
+ else:
+ x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm1_weight, self.norm1_bias, self.eps)
+ x = x + self.attn(x_norm)
 
-        if self.use_custom_ln:
-            x_flat = x.reshape(B*N, D)
-            x_norm = my_ops.layernorm_forward(x_flat, self.norm2_weight, self.norm2_bias, self.eps)
-            x_norm = x_norm.reshape(B, N, D)
-        else:
-            x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm2_weight, self.norm2_bias, self.eps)
-        x = x + self.ffn(x_norm)
-        return x
-
+ if self.use_custom_ln:
+ x_flat = x.reshape(B*N, D)
+ x_norm = my_ops.layernorm_forward(x_flat, self.norm2_weight, self.norm2_bias, self.eps)
+ x_norm = x_norm.reshape(B, N, D)
+ else:
+ x_norm = torch.nn.functional.layer_norm(x, (D,), self.norm2_weight, self.norm2_bias, self.eps)
+ x = x + self.ffn(x_norm)
+ return x
 
 def benchmark(model, x, name, n_iter=20):
-    """对比 latency"""
-    for _ in range(3):  # warmup
-        _ = model(x)
-    torch.cuda.synchronize()
+ """对比 latency"""
+ for _ in range(3): # warmup
+ _ = model(x)
+ torch.cuda.synchronize()
 
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
-    start.record()
-    for _ in range(n_iter):
-        _ = model(x)
-    end.record()
-    torch.cuda.synchronize()
-    ms = start.elapsed_time(end) / n_iter
-    print(f"{name}: {ms:.3f} ms / forward")
-    return ms
-
+ start = torch.cuda.Event(enable_timing=True)
+ end = torch.cuda.Event(enable_timing=True)
+ start.record()
+ for _ in range(n_iter):
+ _ = model(x)
+ end.record()
+ torch.cuda.synchronize()
+ ms = start.elapsed_time(end) / n_iter
+ print(f"{name}: {ms:.3f} ms / forward")
+ return ms
 
 def main():
-    torch.manual_seed(42)
-    d_model, n_heads = 512, 8
-    x = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float32)
+ torch.manual_seed(42)
+ d_model, n_heads = 512, 8
+ x = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float32)
 
-    # 全 PyTorch 版
-    model_pytorch = TransformerBlock(d_model, n_heads, use_custom_ln=False).cuda()
-    # 自定义算子版
-    model_custom = TransformerBlock(d_model, n_heads, use_custom_ln=True).cuda()
-    model_custom.load_state_dict(model_pytorch.state_dict())
+ # 全 PyTorch 版
+ model_pytorch = TransformerBlock(d_model, n_heads, use_custom_ln=False).cuda()
+ # 自定义算子版
+ model_custom = TransformerBlock(d_model, n_heads, use_custom_ln=True).cuda()
+ model_custom.load_state_dict(model_pytorch.state_dict())
 
-    # 正确性验证
-    with torch.no_grad():
-        out_pytorch = model_pytorch(x)
-        out_custom = model_custom(x)
-    max_diff = (out_pytorch - out_custom).abs().max().item()
-    print(f"Max diff (PyTorch vs Custom): {max_diff:.2e}")
-    assert max_diff < 1e-4, "Correctness check failed"
+ # 正确性验证
+ with torch.no_grad():
+ out_pytorch = model_pytorch(x)
+ out_custom = model_custom(x)
+ max_diff = (out_pytorch - out_custom).abs().max().item()
+ print(f"Max diff (PyTorch vs Custom): {max_diff:.2e}")
+ assert max_diff < 1e-4, "Correctness check failed"
 
-    # latency 对比
-    print("\n=== Latency Comparison (Prefill, N=1024) ===")
-    with torch.no_grad():
-        ms_pt = benchmark(model_pytorch, x, "PyTorch (F.softmax + F.layer_norm)")
-        ms_my = benchmark(model_custom, x, "Custom (my_ops.softmax + my_ops.layernorm)")
-    print(f"Speedup: {ms_pt/ms_my:.2f}x")
-
+ # latency 对比
+ print("\n=== Latency Comparison (Prefill, N=1024) ===")
+ with torch.no_grad():
+ ms_pt = benchmark(model_pytorch, x, "PyTorch (F.softmax + F.layer_norm)")
+ ms_my = benchmark(model_custom, x, "Custom (my_ops.softmax + my_ops.layernorm)")
+ print(f"Speedup: {ms_pt/ms_my:.2f}x")
 
 if __name__ == "__main__":
-    main()
+ main()
 ```
 
 #### 运行步骤
@@ -1769,7 +1652,6 @@ python mini_engine.py
 - **方式2：TorchScript/Custom Operator**：用 `torch.ops.register` 注册自定义 op
 - **方式3：Triton**：用 Python 写 kernel，`torch.compile` 自动集成（无需 C++）
 - **集成要点**：① 用 `at::Tensor` 接收张量 ② 用 `data_ptr<float>()` 获取裸指针 ③ 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream ④ 用 `auto out = at::empty_like(input)` 分配输出
-- **昇腾对照**：昇腾用 `aclOpCompile` + 自定义算子注册，机制类似
 
 **面试题2**：为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？（⭐⭐⭐ 中频）
 
@@ -1788,7 +1670,6 @@ python mini_engine.py
 - [ ] 自定义版与 PyTorch 版输出误差 < 1e-4
 - [ ] 记录了 prefill 阶段自定义版 vs PyTorch 版的 latency
 - [ ] 能解释为什么自定义版通常比 PyTorch 慢（缺失向量化/warp 级优化）
-- [ ] 能对照昇腾解释自定义算子集成的方式（C++ Extension vs aclOpCompile）
 
 ---
 
@@ -1807,8 +1688,8 @@ python mini_engine.py
 ```bash
 # 用 nsys 采集 Mini 引擎的时间线
 nsys profile -o mini_engine_timeline \
-  --trace=cuda,nvtx \
-  python mini_engine.py
+ --trace=cuda,nvtx \
+ python mini_engine.py
 
 # 生成 .nsys-rep 文件，用 Nsight Systems GUI 打开
 # 或命令行导出关键信息
@@ -1838,12 +1719,12 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 
 # 预期输出（按时间降序）
-# Time(%)  Total Time   Instances  Avg         Module      Kernel
-# -------- -----------  ---------  --------    ----------  ------
-#   45.2   1.234 ms     20         61.7 us     libcublas   ...gemm...
-#   12.1   0.331 ms     10         33.1 us     my_ops      layernorm_kernel
-#    8.5   0.232 ms     5          46.4 us     my_ops      softmax_kernel
-#    ...
+# Time(%) Total Time Instances Avg Module Kernel
+# -------- ----------- --------- -------- ---------- ------
+# 45.2 1.234 ms 20 61.7 us libcublas ...gemm...
+# 12.1 0.331 ms 10 33.1 us my_ops layernorm_kernel
+# 8.5 0.232 ms 5 46.4 us my_ops softmax_kernel
+# ...
 ```
 
 ---
@@ -1865,19 +1746,19 @@ nvcc -o ... -lineinfo
 
 # profile 自定义 kernel
 ncu --metrics \
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  smsp__average_warps_issue_stalled_long_scoreboard.pct,\
-  gpu__time_duration.sum \
-  --kernel-name regex:"softmax_kernel|layernorm_kernel" \
-  python mini_engine.py
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|layernorm_kernel" \
+ python mini_engine.py
 
 # profile cuBLAS GEMM（需允许 profile 第三方库）
 ncu --metrics \
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  dram__throughput.avg.pct_of_peak_sustained_elapsed \
-  --kernel-name regex:"gemm" \
-  python mini_engine.py
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed \
+ --kernel-name regex:"gemm" \
+ python mini_engine.py
 ```
 
 #### 预期结果与分析
@@ -1892,19 +1773,6 @@ ncu --metrics \
 - Softmax/LayerNorm 的 DRAM Throughput >> SM Throughput → memory-bound，符合预期
 - cuBLAS GEMM 的 SM Throughput >> DRAM Throughput → compute-bound，符合预期
 - 自定义 kernel 的 DRAM Throughput 未达 80%+ → 带宽未充分利用，向量化加载可提升
-
-#### 昇腾对照
-
-| ncu 指标 | msprof 对应指标 | 含义 |
-|---------|------------|------|
-| SM Throughput | AI Core Utilization | 计算单元利用率 |
-| DRAM Throughput | Memory Bandwidth Utilization | 显存带宽利用率 |
-| Long Scoreboard Stall | Memory Access Stall | 内存访问等待 |
-| Math Pipe Throttle | Compute Pipe Stall | 计算单元饱和 |
-
-**关键差异**：ncu 把指标分散到多个视图；msprof 在一个 timeline 中集成 AI Core 利用率和 Memory 带宽。两者分析思路一致。
-
----
 
 ### 任务3：Kernel Fusion 机会分析（2小时）
 
@@ -1930,13 +1798,13 @@ ncu --metrics \
 以 LayerNorm + QKV GEMM 为例（B=1, N=1024, d=512, FP32）：
 ```
 未融合：
-  LayerNorm: 读 x(2MB) + 写 y(2MB) = 4MB HBM IO
-  QKV GEMM: 读 y(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB HBM IO
-  合计: 15MB
+ LayerNorm: 读 x(2MB) + 写 y(2MB) = 4MB HBM IO
+ QKV GEMM: 读 y(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB HBM IO
+ 合计: 15MB
 
 融合后：
-  Fused LN+GEMM: 读 x(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB
-  节省: 4MB（LayerNorm 中间结果 y 的读写）
+ Fused LN+GEMM: 读 x(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB
+ 节省: 4MB（LayerNorm 中间结果 y 的读写）
 ```
 
 > 💡 **PyTorch 2.0 的 `torch.compile` 会自动做这些 fusion**。用 `torch.compile(model)` 后，nsys 时间线会显示 kernel 数量减少。
@@ -1975,10 +1843,10 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_compiled.nsys-rep
 1. **第一步（nsys 系统级）**：用 Nsight Systems 采集完整时间线，按 CUDA 时间排序找 top3 算子
 2. **第二步（ncu kernel 级）**：对 top3 算子用 Nsight Compute 分析 SM Throughput 和 DRAM Throughput
 3. **第三步（瓶颈判定）**：
-   - DRAM Throughput >> SM Throughput → memory-bound → 优化方向：kernel fusion、向量化加载、减少 HBM 读写
-   - SM Throughput >> DRAM Throughput → compute-bound → 优化方向：Tensor Core、增加 ILP、auto-tuning
-4. **第四步（Stall 分析）**：看 Warp Stall Reasons 定位具体阻塞原因（Long Scoreboard = 等内存，Math Pipe = 计算饱和）
-5. **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
+ - DRAM Throughput >> SM Throughput → memory-bound → 优化方向：kernel fusion、向量化加载、减少 HBM 读写
+ - SM Throughput >> DRAM Throughput → compute-bound → 优化方向：Tensor Core、增加 ILP、auto-tuning
+1. **第四步（Stall 分析）**：看 Warp Stall Reasons 定位具体阻塞原因（Long Scoreboard = 等内存，Math Pipe = 计算饱和）
+2. **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
 - **关键术语**：系统级 vs kernel 级、Roofline、Warp Stall、kernel fusion
 
 **面试题2**：什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。（⭐⭐⭐⭐ 高频）
@@ -1988,7 +1856,6 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_compiled.nsys-rep
 - **收益来源**：减少 HBM 读写次数。例如 A→B→C 三个算子，未融合要写 B 到 HBM 再读；融合后在 register/SRAM 中直接传递
 - **Transformer 例子**：LayerNorm + QKV GEMM。未融合时 LayerNorm 输出写 HBM，GEMM 再读；融合后在 GEMM kernel 内部直接做归一化
 - **限制**：① 只有相邻且数据依赖的算子能融合 ② 融合 kernel 可能增加 register/shared memory 压力，降低 occupancy ③ 复杂融合需要 CUTLASS/Triton 等工具
-- **昇腾对照**：CANN 算子库已内置大量融合算子（如 LayerNorm+Matmul 融合算子）
 
 ---
 
@@ -2000,7 +1867,6 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_compiled.nsys-rep
 - [ ] 能判定 cuBLAS GEMM 是 compute-bound（SM >> DRAM）
 - [ ] 能列出至少 3 个 kernel fusion 候选及其收益估算
 - [ ] 能用 `torch.compile` 减少 kernel 数量并验证
-- [ ] 能对照昇腾 msprof 解释 ncu 指标的映射关系
 - [ ] 生成端到端 profiling 报告（含 top3 瓶颈算子 + 优化方向）
 
 ---
@@ -2081,25 +1947,25 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_compiled.nsys-rep
 ```
 week3-transformer/
 ├── day15-trace/
-│   ├── trace_transformer.py
-│   ├── trace_prefill.json
-│   └── trace_decode.json
+│ ├── trace_transformer.py
+│ ├── trace_prefill.json
+│ └── trace_decode.json
 ├── day16-kernels/
-│   ├── softmax_layernorm.cu
-│   └── README.md
+│ ├── softmax_layernorm.cu
+│ └── README.md
 ├── day17-source-analysis/
-│   └── notes.md          # PyTorch/FT 源码分析笔记
+│ └── notes.md # PyTorch/FT 源码分析笔记
 ├── day18-attention-io/
-│   ├── attention_naive.cu
-│   └── io_analysis.md     # HBM IO 量化表
+│ ├── attention_naive.cu
+│ └── io_analysis.md # HBM IO 量化表
 ├── day19-mini-engine/
-│   ├── mini_engine.py
-│   └── my_ops.cpp
+│ ├── mini_engine.py
+│ └── my_ops.cpp
 ├── day20-profiling/
-│   ├── mini_engine_timeline.nsys-rep
-│   └── profiling_report.md
+│ ├── mini_engine_timeline.nsys-rep
+│ └── profiling_report.md
 └── day21-summary/
-    └── operator_classification.md
+ └── operator_classification.md
 ```
 
 #### 性能对比报告模板（profiling_report.md）
@@ -2184,14 +2050,14 @@ week3-transformer/
 **参考答案要点**：
 1. **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较
 2. **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
-   - DRAM Throughput >> SM Throughput → memory-bound
-   - SM Throughput >> DRAM Throughput → compute-bound
-3. **Roofline 定位**：在 Roofline 图上标出算子位置
-4. **经验法则**：
-   - element-wise（relu、layernorm、softmax）→ 几乎总是 memory-bound
-   - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
-   - 小 GEMM（M=1 或某维很小）→ 通常 memory-bound
-   - reduction（sum、max）→ memory-bound
+ - DRAM Throughput >> SM Throughput → memory-bound
+ - SM Throughput >> DRAM Throughput → compute-bound
+1. **Roofline 定位**：在 Roofline 图上标出算子位置
+2. **经验法则**：
+ - element-wise（relu、layernorm、softmax）→ 几乎总是 memory-bound
+ - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
+ - 小 GEMM（M=1 或某维很小）→ 通常 memory-bound
+ - reduction（sum、max）→ memory-bound
 
 ---
 
@@ -2277,7 +2143,7 @@ yi = γi · (xi - μ) / sqrt(σ² + ε) + βi
 Step 1 (S=QK^T): 2Nd + N²
 Step 2 (P=softmax(S)): 2N²
 Step 3 (O=PV): N² + 2Nd
-总计: 3N² + 4Nd  →  O(N²) when N >> d
+总计: 3N² + 4Nd → O(N²) when N >> d
 ```
 
 **4. Arithmetic Intensity**
@@ -2297,31 +2163,9 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 **6. Ridge Point（A100 示例）**
 ```
 Ridge Point = Peak FLOP/s / Peak Bandwidth
-            = 19.5 TFLOP/s / 1.55 TB/s
-            ≈ 12.6 FLOP/Byte
+ = 19.5 TFLOP/s / 1.55 TB/s
+ ≈ 12.6 FLOP/Byte
 ```
-
----
-
-## 附录D：昇腾→CUDA 第3周概念映射总表
-
-| 维度 | CUDA 概念 | 昇腾 CANN 概念 | 差异说明 | 迁移难度 |
-|------|---------|------------|---------|---------|
-| **Prefill/Decode** | 两阶段划分（模型层） | 两阶段划分（模型层） | 与硬件无关，跨平台一致 | ★ |
-| **torch.profiler** | torch.profiler + nsys | msprof | 两者都提供算子级时间线 | ★★ |
-| **Warp Shuffle reduce** | `__shfl_down_sync` | `__reduce_add` (Ascend C) | CUDA 手写循环；昇腾高级 API | ★★★ |
-| **Block reduce** | warp + smem + warp0 | Vector Unit + L0 Buffer | 两级结构一致 | ★★ |
-| **Softmax 算子** | 手写 / PyTorch ATen | Ascend C 内置 Softmax | 昇腾已内置，无需手写 | ★★ |
-| **LayerNorm 算子** | 手写 / FasterTransformer | Ascend C 内置 LayerNorm | 昇腾已内置 | ★★ |
-| **向量化加载** | float4 / half2 | Vector Unit 向量指令 | 昇腾天然向量化 | ★★ |
-| **FP32 reduce 保精度** | FP16→FP32→FP16 | 同策略 | 跨平台一致 | ★ |
-| **HBM（Global Memory）** | HBM | DDR/HBM | 两者都面临带宽瓶颈 | ★ |
-| **片上 SRAM** | Shared Memory | L0 Buffer / UB | FlashAttention tile 驻留 | ★ |
-| **标准 Attention O(N²)** | 物化 S/P | CANN 已用 FlashAttention | 昇腾无需手写标准版 | ★★ |
-| **Kernel Fusion** | 手写 / torch.compile | CANN 内置融合算子 | 昇腾算子库已融合 | ★★ |
-| **SM Throughput** | ncu 指标 | AI Core Utilization | 含义一致 | ★ |
-| **DRAM Throughput** | ncu 指标 | Memory Bandwidth Utilization | 含义一致 | ★ |
-| **自定义算子集成** | C++ Extension | aclOpCompile + 注册 | 机制类似 | ★★★ |
 
 ---
 

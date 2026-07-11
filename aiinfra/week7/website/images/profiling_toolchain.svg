@@ -108,23 +108,17 @@
 
   <!-- ===== Tool comparison table ===== -->
   <line x1="30" y1="346" x2="910" y2="346" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
-  <text x="40" y="370" font-size="13" font-weight="bold" fill="#2b2b2b">昇腾对照</text>
-
   <g filter="url(#sk)">
     <rect x="40" y="378" width="860" height="52" rx="6" fill="#f6f6f6" stroke="#ccc" stroke-width="1"/>
   </g>
   <g font-size="10" fill="#444">
     <text x="56" y="398" font-weight="bold" fill="#4a8edb">nsys</text>
     <text x="120" y="398" fill="#555">→</text>
-    <text x="140" y="398" fill="#7a5415">msprof timeline</text>
     <text x="280" y="398" fill="#888">|</text>
     <text x="300" y="398" font-weight="bold" fill="#2e8b57">ncu</text>
     <text x="340" y="398" fill="#555">→</text>
-    <text x="360" y="398" fill="#7a5415">msprof operator detail</text>
     <text x="540" y="398" fill="#888">|</text>
     <text x="560" y="398" font-weight="bold" fill="#c98a2b">torch profiler</text>
     <text x="680" y="398" fill="#555">→</text>
-    <text x="700" y="398" fill="#7a5415">Ascend profiler</text>
-    <text x="56" y="418" fill="#888">三层工具链在昇腾 CANN 中完全对应，分析方法论一致</text>
-  </g>
+    </g>
 </svg>

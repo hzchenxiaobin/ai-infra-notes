@@ -9,7 +9,6 @@
 3. 理解 **LayerNorm 的两次 reduce**（先 mean 后 variance），能解释为什么方差依赖均值而无法合并
 4. 实现并运行 Softmax + LayerNorm Kernel，与 CPU 参考结果误差 < 1e-5
 5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
-6. 能对照昇腾 CANN 解释 `__reduce_add_sync` 与 `__shfl_down_sync` 的对应关系
 
 > 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
 
@@ -43,8 +42,8 @@ Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4
 
 ```
 朴素 Softmax（会溢出）：
-  yi = exp(xi) / Σ exp(xj)
-  问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
+ yi = exp(xi) / Σ exp(xj)
+ 问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
 ```
 
 FP16 的最大值只有 ~65504，而 `exp(11) ≈ 60000` 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
@@ -61,8 +60,8 @@ yi = exp(xi - m) / Σ exp(xj - m)
 
 ```
 exp(xi - m) / Σ exp(xj - m)
-  = exp(xi)·exp(-m) / (Σ exp(xj))·exp(-m)
-  = exp(xi) / Σ exp(xj)      ← 分子分母同时乘 exp(-m)，结果不变
+ = exp(xi)·exp(-m) / (Σ exp(xj))·exp(-m)
+ = exp(xi) / Σ exp(xj) ← 分子分母同时乘 exp(-m)，结果不变
 ```
 
 减 max 不改变结果，但把所有 exp 的输入压到 `(-∞, 0]`，数值上彻底安全。
@@ -86,13 +85,13 @@ exp(xi - m) / Σ exp(xj - m)
 ```
 矩阵 shape: (M, D)，M 行，每行 D 个元素
 并行映射: 一个 block 处理一行
-  blockIdx.x = row index（0 ~ M-1）
-  blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
+ blockIdx.x = row index（0 ~ M-1）
+ blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
 
 每个 block 内：
-  Step 1: 所有线程协作求本行 max（block reduce max）
-  Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
-  Step 3: 所有线程协作做归一化写出
+ Step 1: 所有线程协作求本行 max（block reduce max）
+ Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
+ Step 3: 所有线程协作做归一化写出
 ```
 
 **为什么一个 block 处理一行？** 因为 softmax 的归一化分母 `Σ exp(xj - m)` 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
@@ -117,22 +116,22 @@ exp(xi - m) / Σ exp(xj - m)
 ```cuda
 // 复用 Week 2 Day 1 的 warp 原语
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+ return val;
 }
 
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid  = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;      // 第一级结果写 smem
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);  // 第二级 warp0 收尾
-    return val;
+ int lane = threadIdx.x % 32;
+ int wid = threadIdx.x / 32;
+ val = warpReduceSum(val);
+ if (lane == 0) smem[wid] = val; // 第一级结果写 smem
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : 0.0f;
+ if (wid == 0) val = warpReduceSum(val); // 第二级 warp0 收尾
+ return val;
 }
 ```
 
@@ -147,9 +146,9 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 参数: γ (gamma), β (beta) ∈ R^D
 
 计算:
-  μ  = (1/D) Σ xi                      （均值）
-  σ² = (1/D) Σ (xi - μ)²               （方差）
-  yi = γi · (xi - μ) / sqrt(σ² + ε) + βi   （归一化 + affine）
+ μ = (1/D) Σ xi （均值）
+ σ² = (1/D) Σ (xi - μ)² （方差）
+ yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
 ```
 
 ##### LayerNorm 的 reduce 需求
@@ -189,26 +188,6 @@ Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
 
 ---
 
-### 昇腾对照
-
-| CUDA 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| `__shfl_down_sync` warp reduce | `__reduce_add` / `__reduce_max`（Ascend C 内置） | CUDA 需手写 butterfly 循环；昇腾提供高级 reduce API |
-| `__shared__ float smem[32]` | L0 Buffer / UB 临时存储 | 都用于存储 warp 间中间结果 |
-| row-wise softmax（一行一 block） | Ascend C Softmax 算子 | 昇腾 Softmax 算子内部同样按行 reduce，开发者无需手写 |
-| safe softmax（减 max） | safe softmax（减 max） | 数值稳定性策略完全一致，跨平台通用 |
-| 三遍扫描 | 两遍/向量化扫描 | 昇腾算子库已优化为向量化 reduce，CUDA 教学版用三遍 |
-| 两次 block reduce（mean, variance） | LayerNorm 算子内部两次 reduce | 算法逻辑完全一致 |
-| `rsqrtf(var + eps)` | `1/sqrt(var + eps)` | 数学等价，昇腾用 Vector Unit 指令 |
-| `gamma[i], beta[i]` affine | affine 参数 | 参数语义一致，都存在 HBM |
-| element-wise 归一化 | Vector Unit element-wise | 昇腾 Vector Unit 天然适合 element-wise |
-
-**关键差异**：CUDA 教学版需要开发者手写 reduce 细节（warp shuffle + smem + warp0 收尾）；昇腾 Ascend C 提供 `__reduce_add_sync` 等内置函数，调用更简洁，但底层"分块 → 局部 reduce → 合并"的逻辑完全一致。换句话说，**算法思想不变，硬件抽象重映射**——这也是跨平台迁移的本质。
-
-> 💡 **一句话总结**：昇腾把 Softmax/LayerNorm 做成内置算子（开发者直接调），CUDA 需要手写（但这是理解算子内部的必经之路）。两者在数值稳定性（减 max）、reduce 结构（两级）、混合精度（FP32 reduce）上完全同构。
-
----
-
 ### Coding 任务：手写 Softmax + LayerNorm Kernel
 
 #### 任务 1：创建 `kernels/softmax_layernorm.cu`
@@ -229,44 +208,44 @@ Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
 // 复用 Week 2 Day 1 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+ return val;
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    return val;
+ #pragma unroll
+ for (int offset = 16; offset > 0; offset >>= 1)
+ val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+ return val;
 }
 
 // ============================================================
 // Block 级 reduce：warp 级 → shared memory → warp 0 最终 reduce
 // ============================================================
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
-    return val;
+ int lane = threadIdx.x % 32;
+ int wid = threadIdx.x / 32;
+ val = warpReduceSum(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : 0.0f;
+ if (wid == 0) val = warpReduceSum(val);
+ return val;
 }
 
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
-    return val;
+ int lane = threadIdx.x % 32;
+ int wid = threadIdx.x / 32;
+ val = warpReduceMax(val);
+ if (lane == 0) smem[wid] = val;
+ __syncthreads();
+ int numWarps = (blockDim.x + 31) / 32;
+ val = (lane < numWarps) ? smem[lane] : -INFINITY;
+ if (wid == 0) val = warpReduceMax(val);
+ return val;
 }
 
 // ============================================================
@@ -274,42 +253,42 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // 输入: input[M][D]，输出: output[M][D]
 // ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input,
-                                float* __restrict__ output,
-                                int M, int D) {
-    int row = blockIdx.x;
-    if (row >= M) return;
-    const float* in_row = input + row * D;
-    float* out_row = output + row * D;
+ float* __restrict__ output,
+ int M, int D) {
+ int row = blockIdx.x;
+ if (row >= M) return;
+ const float* in_row = input + row * D;
+ float* out_row = output + row * D;
 
-    __shared__ float smem[32];   // warp 间 reduce 缓冲区
-    __shared__ float row_max;
-    __shared__ float row_sum;
+ __shared__ float smem[32]; // warp 间 reduce 缓冲区
+ __shared__ float row_max;
+ __shared__ float row_sum;
 
-    int tid = threadIdx.x;
+ int tid = threadIdx.x;
 
-    // Step 1: 求 max（数值稳定性）
-    float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_max = fmaxf(local_max, in_row[i]);
-    }
-    local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
-    __syncthreads();
+ // Step 1: 求 max（数值稳定性）
+ float local_max = -INFINITY;
+ for (int i = tid; i < D; i += blockDim.x) {
+ local_max = fmaxf(local_max, in_row[i]);
+ }
+ local_max = blockReduceMax(local_max, smem);
+ if (tid == 0) row_max = local_max;
+ __syncthreads();
 
-    // Step 2: 求 sum(exp(x - max))
-    float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_sum += expf(in_row[i] - row_max);
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
-    __syncthreads();
+ // Step 2: 求 sum(exp(x - max))
+ float local_sum = 0.0f;
+ for (int i = tid; i < D; i += blockDim.x) {
+ local_sum += expf(in_row[i] - row_max);
+ }
+ local_sum = blockReduceSum(local_sum, smem);
+ if (tid == 0) row_sum = local_sum;
+ __syncthreads();
 
-    // Step 3: 归一化写出
-    float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x) {
-        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
-    }
+ // Step 3: 归一化写出
+ float inv_sum = 1.0f / row_sum;
+ for (int i = tid; i < D; i += blockDim.x) {
+ out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+ }
 }
 
 // ============================================================
@@ -317,44 +296,44 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 // 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
 // ============================================================
 __global__ void layernorm_kernel(const float* __restrict__ input,
-                                  const float* __restrict__ gamma,
-                                  const float* __restrict__ beta,
-                                  float* __restrict__ output,
-                                  int M, int N, float eps) {
-    int row = blockIdx.x;
-    if (row >= M) return;
-    const float* in_row = input + row * N;
-    float* out_row = output + row * N;
+ const float* __restrict__ gamma,
+ const float* __restrict__ beta,
+ float* __restrict__ output,
+ int M, int N, float eps) {
+ int row = blockIdx.x;
+ if (row >= M) return;
+ const float* in_row = input + row * N;
+ float* out_row = output + row * N;
 
-    __shared__ float smem[32];
-    __shared__ float row_mean;
-    __shared__ float row_rstd;
+ __shared__ float smem[32];
+ __shared__ float row_mean;
+ __shared__ float row_rstd;
 
-    int tid = threadIdx.x;
+ int tid = threadIdx.x;
 
-    // Step 1: 求 mean = sum(x) / N
-    float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        local_sum += in_row[i];
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_mean = local_sum / N;
-    __syncthreads();
+ // Step 1: 求 mean = sum(x) / N
+ float local_sum = 0.0f;
+ for (int i = tid; i < N; i += blockDim.x) {
+ local_sum += in_row[i];
+ }
+ local_sum = blockReduceSum(local_sum, smem);
+ if (tid == 0) row_mean = local_sum / N;
+ __syncthreads();
 
-    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
-    float local_sq = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        float diff = in_row[i] - row_mean;
-        local_sq += diff * diff;
-    }
-    local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
-    __syncthreads();
+ // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
+ float local_sq = 0.0f;
+ for (int i = tid; i < N; i += blockDim.x) {
+ float diff = in_row[i] - row_mean;
+ local_sq += diff * diff;
+ }
+ local_sq = blockReduceSum(local_sq, smem);
+ if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
+ __syncthreads();
 
-    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
-    for (int i = tid; i < N; i += blockDim.x) {
-        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
-    }
+ // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
+ for (int i = tid; i < N; i += blockDim.x) {
+ out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+ }
 }
 ```
 
@@ -395,11 +374,11 @@ nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_80
 Config: M=128, D=1024, threads=256
 
 [Softmax]
-  Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
-  Time: x.xxx ms
+ Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
+ Time: x.xxx ms
 [LayerNorm]
-  LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
-  Time: x.xxx ms
+ LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
+ Time: x.xxx ms
 ```
 
 两个 `PASS` 且 `maxDiff < 1e-5` 即正确。Softmax 误差通常更小（~1e-7，因为只有 exp/add/div），LayerNorm 略大（~1e-6，因为多了平方和 rsqrt）。
@@ -412,11 +391,11 @@ nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_80 -linei
 
 # profile 两个 kernel 的 SM / DRAM Throughput
 ncu --metrics \
-  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-  gpu__time_duration.sum \
-  --kernel-name regex:"softmax_kernel|layernorm_kernel" \
-  ./softmax_layernorm_nl
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|layernorm_kernel" \
+ ./softmax_layernorm_nl
 ```
 
 **观察重点**：
@@ -457,59 +436,59 @@ ncu --metrics \
 // 编译命令: nvcc -o softmax softmax.cu -O3 -arch=sm_80
 
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int o = 16; o > 0; o >>= 1) val += __shfl_down_sync(0xFFFFFFFF, val, o);
-    return val;
+ #pragma unroll
+ for (int o = 16; o > 0; o >>= 1) val += __shfl_down_sync(0xFFFFFFFF, val, o);
+ return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int o = 16; o > 0; o >>= 1) val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, o));
-    return val;
+ #pragma unroll
+ for (int o = 16; o > 0; o >>= 1) val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, o));
+ return val;
 }
 __inline__ __device__ float blockReduceSum(float v, float* sm) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
-    v = warpReduceSum(v);
-    if (lane == 0) sm[wid] = v;
-    __syncthreads();
-    int nw = (blockDim.x + 31) / 32;
-    v = (lane < nw) ? sm[lane] : 0.0f;
-    if (wid == 0) v = warpReduceSum(v);
-    return v;
+ int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+ v = warpReduceSum(v);
+ if (lane == 0) sm[wid] = v;
+ __syncthreads();
+ int nw = (blockDim.x + 31) / 32;
+ v = (lane < nw) ? sm[lane] : 0.0f;
+ if (wid == 0) v = warpReduceSum(v);
+ return v;
 }
 __inline__ __device__ float blockReduceMax(float v, float* sm) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
-    v = warpReduceMax(v);
-    if (lane == 0) sm[wid] = v;
-    __syncthreads();
-    int nw = (blockDim.x + 31) / 32;
-    v = (lane < nw) ? sm[lane] : -INFINITY;
-    if (wid == 0) v = warpReduceMax(v);
-    return v;
+ int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+ v = warpReduceMax(v);
+ if (lane == 0) sm[wid] = v;
+ __syncthreads();
+ int nw = (blockDim.x + 31) / 32;
+ v = (lane < nw) ? sm[lane] : -INFINITY;
+ if (wid == 0) v = warpReduceMax(v);
+ return v;
 }
 
 __global__ void softmax_kernel(const float* input, float* output, int M, int N) {
-    int row = blockIdx.x;
-    if (row >= M) return;
-    const float* in = input + row * N;
-    float* out = output + row * N;
-    __shared__ float smem[32];
-    __shared__ float row_max, row_sum;
-    int tid = threadIdx.x;
+ int row = blockIdx.x;
+ if (row >= M) return;
+ const float* in = input + row * N;
+ float* out = output + row * N;
+ __shared__ float smem[32];
+ __shared__ float row_max, row_sum;
+ int tid = threadIdx.x;
 
-    float lm = -INFINITY;
-    for (int i = tid; i < N; i += blockDim.x) lm = fmaxf(lm, in[i]);
-    lm = blockReduceMax(lm, smem);
-    if (tid == 0) row_max = lm;
-    __syncthreads();
+ float lm = -INFINITY;
+ for (int i = tid; i < N; i += blockDim.x) lm = fmaxf(lm, in[i]);
+ lm = blockReduceMax(lm, smem);
+ if (tid == 0) row_max = lm;
+ __syncthreads();
 
-    float ls = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) ls += expf(in[i] - row_max);
-    ls = blockReduceSum(ls, smem);
-    if (tid == 0) row_sum = ls;
-    __syncthreads();
+ float ls = 0.0f;
+ for (int i = tid; i < N; i += blockDim.x) ls += expf(in[i] - row_max);
+ ls = blockReduceSum(ls, smem);
+ if (tid == 0) row_sum = ls;
+ __syncthreads();
 
-    float inv = 1.0f / row_sum;
-    for (int i = tid; i < N; i += blockDim.x) out[i] = expf(in[i] - row_max) * inv;
+ float inv = 1.0f / row_sum;
+ for (int i = tid; i < N; i += blockDim.x) out[i] = expf(in[i] - row_max) * inv;
 }
 ```
 
@@ -534,7 +513,7 @@ __global__ void softmax_kernel(const float* input, float* output, int M, int N) 
 把 `D` 分别改为 768、1024、4096，重新运行，记录时间并解释：
 
 ```cuda
-const int D = 4096;   // 从 1024 改成 4096
+const int D = 4096; // 从 1024 改成 4096
 ```
 
 **思考问题**：D 翻倍时，kernel 时间应该接近翻倍还是 4 倍？为什么？
@@ -562,10 +541,10 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 
 ```
 遍历每个元素 xi：
-  count++
-  delta = xi - mean
-  mean += delta / count
-  M2 += delta * (xi - mean)      // M2 累积平方差
+ count++
+ delta = xi - mean
+ mean += delta / count
+ M2 += delta * (xi - mean) // M2 累积平方差
 最终：variance = M2 / count
 ```
 
@@ -606,7 +585,6 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 - [ ] LayerNorm Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
 - [ ] 能解释 LayerNorm 为什么需要两次 reduce（方差依赖均值，不能合并）
 - [ ] 能用 ncu 验证 Softmax 是 memory-bound（DRAM Throughput >> SM Throughput）
-- [ ] 能对照昇腾解释 `__reduce_add_sync` 与 `__shfl_down_sync` 的对应关系（高级 API vs 手写 butterfly）
 
 ---
 
@@ -619,7 +597,6 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 3. **LayerNorm 两次 reduce**：先 mean 后 variance，第二次依赖第一次结果——这是无法合并的根本原因
 4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 12.6，优化重点在减少 HBM 读写
 5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
-6. **昇腾对照**：`__shfl_down_sync` ↔ `__reduce_add_sync`，算法同构、抽象重映射
 
 掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
 
@@ -629,43 +606,42 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 
 1. **Softmax 为什么要减去 max？不减会怎样？**
 
-   - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
-   - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
-   - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
-   - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
+ - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
+ - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
+ - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
+ - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 
-2. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
+1. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
 
-   - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
-   - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
-   - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
-   - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
+ - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
+ - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
+ - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
+ - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
-3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+1. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
-   - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~12.6）
-   - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
-   - **优化方向**：
-     1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
-     2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
-     3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
-     4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
+ - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~12.6）
+ - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
+ - **优化方向**：
+ 1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
+ 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
+ 3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
+ 4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
-4. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
+1. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
 
-   - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
-   - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
-   - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
-   - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
-   - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
-   - **`smem[32]` 的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
+ - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
+ - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
+ - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
+ - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
+ - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
+ - **`smem[32]` 的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
 
-5. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
+1. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
 
-   - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
-   - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
-   - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
-   - **昇腾对照**：昇腾混合精度算子同样用 FP32 做 reduce，跨平台策略一致
-   - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
+ - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
+ - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
+ - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
+ - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
 
 ---

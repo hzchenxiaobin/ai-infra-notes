@@ -9,7 +9,6 @@
 3. 掌握 **代码重构目标**——统一接口、模块化、类型注解、文档完善<br>
 4. 能产出 **项目文档**——README、架构图、性能报告、API 文档<br>
 5. 掌握 **13 道核心面试题**——按主题分组，覆盖并发、调度、特性、集成、联调、Profiling<br>
-6. 规划 **Week 8**——项目打磨、面试准备、昇腾迁移、开源贡献
 
 > 💡 **为什么重要**：Week 7 把前六周所学整合为完整的 Mini AI Infra 系统。Day 7 是收官日——整理代码、完善文档、复盘面试题、规划下一步。这是从"学习者"到"工程师"的转折点：代码质量和文档能力是面试考察点，也是项目可维护性的基础。
 
@@ -90,12 +89,12 @@
 #### 六层架构
 
 ```
-用户 API        → submit(prompt, ...) → Future
+用户 API → submit(prompt, ...) → Future
 ConcurrentEngine → 三线程协作 + 线程安全队列 + 生命周期管理
-FullScheduler   → 双预算 + 抢占 + aging + Continuous Batching
-Custom Kernel   → Softmax/LayerNorm/FlashAttention（C++ Extension）
-KV Cache        → Block 级分配/释放 + PagedAttention 模拟
-Profiling       → nsys/ncu/阶段计时 + vLLM 对比
+FullScheduler → 双预算 + 抢占 + aging + Continuous Batching
+Custom Kernel → Softmax/LayerNorm/FlashAttention（C++ Extension）
+KV Cache → Block 级分配/释放 + PagedAttention 模拟
+Profiling → nsys/ncu/阶段计时 + vLLM 对比
 ```
 
 #### 建议目录结构
@@ -105,44 +104,44 @@ mini_ai_infra/
 ├── README.md
 ├── requirements.txt
 ├── mini_infra/
-│   ├── engine.py           # ConcurrentEngine
-│   ├── scheduler.py        # FullScheduler
-│   ├── request.py          # InferenceRequest + RequestStatus
-│   ├── kv_cache.py         # KVCacheManager + MemoryBudget
-│   ├── model.py            # MiniLLM + TransformerLayer
-│   └── kernels/
-│       ├── softmax_kernel.cu
-│       ├── layernorm_kernel.cu
-│       └── flash_attention_kernel.cu
+│ ├── engine.py # ConcurrentEngine
+│ ├── scheduler.py # FullScheduler
+│ ├── request.py # InferenceRequest + RequestStatus
+│ ├── kv_cache.py # KVCacheManager + MemoryBudget
+│ ├── model.py # MiniLLM + TransformerLayer
+│ └── kernels/
+│ ├── softmax_kernel.cu
+│ ├── layernorm_kernel.cu
+│ └── flash_attention_kernel.cu
 ├── tests/
-│   ├── test_engine.py      # 六步分层验证
-│   ├── test_scheduler.py   # 调度器测试
-│   └── test_stability.py   # 稳定性测试
+│ ├── test_engine.py # 六步分层验证
+│ ├── test_scheduler.py # 调度器测试
+│ └── test_stability.py # 稳定性测试
 ├── benchmarks/
-│   ├── full_chain_profile.py
-│   └── benchmark_results/
+│ ├── full_chain_profile.py
+│ └── benchmark_results/
 └── docs/
-    ├── architecture.md
-    └── performance_report.md
+ ├── architecture.md
+ └── performance_report.md
 ```
 
 #### 统一接口
 
 ```python
 class InferenceEngine:
-    """Mini AI Infra 推理引擎"""
+ """Mini AI Infra 推理引擎"""
 
-    def __init__(self, model_config, scheduler_config, device="cuda"):
-        ...
+ def __init__(self, model_config, scheduler_config, device="cuda"):
+ ...
 
-    def submit(self, prompt: str, max_new_tokens: int = 20,
-               priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
-        """提交请求，返回 Future"""
-        ...
+ def submit(self, prompt: str, max_new_tokens: int = 20,
+ priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
+ """提交请求，返回 Future"""
+ ...
 
-    def shutdown(self):
-        """关闭引擎"""
-        ...
+ def shutdown(self):
+ """关闭引擎"""
+ ...
 ```
 
 ---
@@ -161,23 +160,23 @@ python kernels/week7_summary.py
 
 ```text
 📊 1. 知识地图
-  Day 1: 多请求并发支持 → 线程安全队列、Future/CB/Stream...
-  Day 2: 完整调度器 → 双预算 + 抢占 + aging...
-  ...
+ Day 1: 多请求并发支持 → 线程安全队列、Future/CB/Stream...
+ Day 2: 完整调度器 → 双预算 + 抢占 + aging...
+ ...
 
 📊 3. 面试题速查（13 道）
-  #   Day     频率         题目
-  1   Day 1   ⭐⭐⭐⭐     多请求并发如何实现？线程安全问题？
-  2   Day 1   ⭐⭐⭐       Future/Callback/Streaming 区别？
-  ...
+ # Day 频率 题目
+ 1 Day 1 ⭐⭐⭐⭐ 多请求并发如何实现？线程安全问题？
+ 2 Day 1 ⭐⭐⭐ Future/Callback/Streaming 区别？
+ ...
 
 📊 4. Mini AI Infra 架构
-  用户 API → ConcurrentEngine → FullScheduler → Custom Kernel → KV Cache → Profiling
+ 用户 API → ConcurrentEngine → FullScheduler → Custom Kernel → KV Cache → Profiling
 
 📊 5. Week 7 完成标准 Checklist
-  [✓] Day 1: ConcurrentEngine 运行成功...
-  [✓] Day 5: 稳定性测试 500+ 请求 100% 成功...
-  ...
+ [✓] Day 1: ConcurrentEngine 运行成功...
+ [✓] Day 5: 稳定性测试 500+ 请求 100% 成功...
+ ...
 ```
 
 #### 任务 2：LeetGPU 综合题 —— Matrix Addition
@@ -225,7 +224,6 @@ python kernels/week7_summary.py
 2. 再说"怎么做"（核心机制 + 数据结构）
 3. 然后说"为什么"（设计权衡 + 替代方案）
 4. 最后说"效果"（量化指标 + 实测数据）
-5. 补充"昇腾对照"（跨平台一致性）
 ```
 
 ---
@@ -234,15 +232,15 @@ python kernels/week7_summary.py
 
 1. **"并发就是多线程"** → 不完全。并发还需要条件变量（不空转）、锁粒度（锁内不做 forward）、生命周期管理（状态机）
 
-2. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
+3. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
 
-3. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
+5. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
 
-4. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
+7. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
 
-5. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
+9. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
 
-6. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
+11. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
 
 ---
 
@@ -250,17 +248,16 @@ python kernels/week7_summary.py
 
 ```
 Week 7 完成：
-  ✓ Mini AI Infra 系统可运行（500+ 请求稳定）
-  ✓ 自定义 Kernel 集成（Softmax/LN/FlashAttention）
-  ✓ 全链路 Profiling 报告完成
-  ✓ 13 道面试题已整理
+ ✓ Mini AI Infra 系统可运行（500+ 请求稳定）
+ ✓ 自定义 Kernel 集成（Softmax/LN/FlashAttention）
+ ✓ 全链路 Profiling 报告完成
+ ✓ 13 道面试题已整理
 
 Week 8 规划：
-  1. 项目打磨：README 完善、性能优化（CUDA Graph、官方 FlashAttention）
-  2. 面试准备：系统设计题模拟、项目深度问答、白板编码
-  3. 昇腾迁移：CANN 概念映射、Ascend C 算子编写、MindIE 部署
-  4. 开源贡献：整理代码结构、写博客、发布 GitHub
-  5. 持续学习：跟踪 vLLM/SGLang/TensorRT-LLM 最新进展
+ 1. 项目打磨：README 完善、性能优化（CUDA Graph、官方 FlashAttention）
+ 2. 面试准备：系统设计题模拟、项目深度问答、白板编码
+ 3. 开源贡献：整理代码结构、写博客、发布 GitHub
+ 4. 持续学习：跟踪 vLLM/SGLang/TensorRT-LLM 最新进展
 ```
 
 ---
@@ -283,8 +280,6 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
 2. **系统架构**：六层架构（API → Engine → Scheduler → Kernel → KV Cache → Profiling），数据流从 submit 到 result
 3. **代码重构**：统一接口（submit/shutdown）、模块化（engine/scheduler/kv_cache/kernels）、类型注解
 4. **项目文档**：README + 架构图 + 性能报告 + API 文档
-5. **面试准备**：13 道核心题按主题分组，答题框架（是什么→怎么做→为什么→效果→昇腾）
-6. **Week 8 规划**：项目打磨 + 面试准备 + 昇腾迁移 + 开源贡献
 
 > 💡 掌握 Week 7 后，你就有了从零构建 LLM 推理系统的完整能力——从并发引擎到调度器，从自定义 kernel 到系统联调，从 profiling 到文档。Week 8 将把这些能力转化为面试竞争力。
 
@@ -294,47 +289,42 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
 
 1. **你的 Mini AI Infra 项目最大的技术难点是什么？如何解决？**（⭐⭐⭐⭐⭐ 必考）
 
-   - **难点 1：Continuous Batching 的正确性**
-     - 每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache
-     - 解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
-   - **难点 2：自定义 Kernel 与 PyTorch 的集成**
-     - stream 一致性、内存布局、精度问题
-     - 解决：逐步替换（单算子→多算子→端到端）、充分对比验证、六大注意事项
-   - **难点 3：调度器性能**
-     - Python scheduler 可能成为瓶颈（GIL 限制）
-     - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
-   - **难点 4：系统联调**
-     - 组件多，边界问题复杂（KV Cache 串台、请求卡住、内存泄漏）
-     - 解决：分层验证（六步）、逐步集成、五大问题排查表
+ - **难点 1：Continuous Batching 的正确性**
+ - 每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache
+ - 解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
+ - **难点 2：自定义 Kernel 与 PyTorch 的集成**
+ - stream 一致性、内存布局、精度问题
+ - 解决：逐步替换（单算子→多算子→端到端）、充分对比验证、六大注意事项
+ - **难点 3：调度器性能**
+ - Python scheduler 可能成为瓶颈（GIL 限制）
+ - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
+ - **难点 4：系统联调**
+ - 组件多，边界问题复杂（KV Cache 串台、请求卡住、内存泄漏）
+ - 解决：分层验证（六步）、逐步集成、五大问题排查表
 
-2. **如何设计一个可维护的 LLM 推理系统代码结构？**（⭐⭐⭐⭐ 高频）
+1. **如何设计一个可维护的 LLM 推理系统代码结构？**（⭐⭐⭐⭐ 高频）
 
-   - **模块化**：Engine、Scheduler、Worker、KV Cache、Model、Kernel 分离
-   - **统一接口**：明确的 submit/result/shutdown API
-   - **配置驱动**：模型配置、调度配置独立
-   - **测试覆盖**：单元测试 + 集成测试 + 性能测试
-   - **文档完善**：README、架构图、API 文档、性能报告
-   - **可观测性**：metrics、profiling 接口
+ - **模块化**：Engine、Scheduler、Worker、KV Cache、Model、Kernel 分离
+ - **统一接口**：明确的 submit/result/shutdown API
+ - **配置驱动**：模型配置、调度配置独立
+ - **测试覆盖**：单元测试 + 集成测试 + 性能测试
+ - **文档完善**：README、架构图、API 文档、性能报告
+ - **可观测性**：metrics、profiling 接口
 
-3. **Week 7 你学到的最重要的三件事是什么？**
+1. **Week 7 你学到的最重要的三件事是什么？**
 
-   - **系统整合不是堆砌组件**：要在接口、状态、资源、性能四个层面做统一设计
-   - **分层验证是联调的关键**：逐步叠加组件，每步验证，出错时精确定位
-   - **Profiling 驱动优化**：先测量（三层工具链），再优化（按收益/复杂度排序），最后验证
+ - **系统整合不是堆砌组件**：要在接口、状态、资源、性能四个层面做统一设计
+ - **分层验证是联调的关键**：逐步叠加组件，每步验证，出错时精确定位
+ - **Profiling 驱动优化**：先测量（三层工具链），再优化（按收益/复杂度排序），最后验证
 
-4. **如果给你一个月优化 Mini 系统，你会怎么做？**
+1. **如果给你一个月优化 Mini 系统，你会怎么做？**
 
-   - **Week 1**：用官方 FlashAttention-2 替换教学版 → forward 降低 30-50%
-   - **Week 2**：引入 CUDA Graph → launch overhead 降低 80%
-   - **Week 3**：C++ 重写 Scheduler → 调度时间降低 10x
-   - **Week 4**：实现 PagedAttention + Prefix Caching → KV Cache 利用率提升 50%
+ - **Week 1**：用官方 FlashAttention-2 替换教学版 → forward 降低 30-50%
+ - **Week 2**：引入 CUDA Graph → launch overhead 降低 80%
+ - **Week 3**：C++ 重写 Scheduler → 调度时间降低 10x
+ - **Week 4**：实现 PagedAttention + Prefix Caching → KV Cache 利用率提升 50%
 
-5. **能对照昇腾解释整个 Week 7 的跨平台一致性吗？**
-
-   - 并发模型、调度器、KV Cache、Kernel 集成、Profiling 的概念在昇腾 CANN 中完全对应
-   - 差异在底层：CUDA kernel → Ascend C 算子、cuBLAS → ACL MatMul、nsys → msprof
-   - 系统联调的方法论（分层验证 + 稳定性测试 + 异常处理）跨平台通用
-   - 昇腾 MindIE-Service 已内置并发引擎、调度器、PagedAttention、FlashAttention
+ - 系统联调的方法论（分层验证 + 稳定性测试 + 异常处理）跨平台通用
 
 ---
 
@@ -342,57 +332,57 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
 
 ```
 aiinfra/week7/
-├── README.md                    # 周总览
+├── README.md # 周总览
 ├── day1/
-│   ├── README.md                # 多请求并发支持
-│   └── kernels/
-│       └── concurrent_engine.py # ConcurrentEngine 实现
+│ ├── README.md # 多请求并发支持
+│ └── kernels/
+│ └── concurrent_engine.py # ConcurrentEngine 实现
 ├── day2/
-│   ├── README.md                # 完整调度器
-│   └── kernels/
-│       └── full_scheduler.py    # FullScheduler 实现
+│ ├── README.md # 完整调度器
+│ └── kernels/
+│ └── full_scheduler.py # FullScheduler 实现
 ├── day3/
-│   ├── README.md                # SGLang/LightLLM 高级特性
-│   └── kernels/
-│       └── advanced_features.py # 三大特性模拟
+│ ├── README.md # SGLang/LightLLM 高级特性
+│ └── kernels/
+│ └── advanced_features.py # 三大特性模拟
 ├── day4/
-│   ├── README.md                # 整合全部自定义 Kernel
-│   └── kernels/
-│       └── custom_ops_module.py # C++ Extension 集成
+│ ├── README.md # 整合全部自定义 Kernel
+│ └── kernels/
+│ └── custom_ops_module.py # C++ Extension 集成
 ├── day5/
-│   ├── README.md                # 系统联调
-│   └── kernels/
-│       └── stability_test.py    # 六步验证 + 稳定性测试
+│ ├── README.md # 系统联调
+│ └── kernels/
+│ └── stability_test.py # 六步验证 + 稳定性测试
 ├── day6/
-│   ├── README.md                # 全链路 Profiling
-│   └── kernels/
-│       └── full_chain_profile.py # Profiling 脚本
+│ ├── README.md # 全链路 Profiling
+│ └── kernels/
+│ └── full_chain_profile.py # Profiling 脚本
 ├── day7/
-│   ├── README.md                # 代码重构与文档（本文件）
-│   └── kernels/
-│       └── week7_summary.py     # 总结自测脚本
+│ ├── README.md # 代码重构与文档（本文件）
+│ └── kernels/
+│ └── week7_summary.py # 总结自测脚本
 └── website/
-    ├── build.py
-    ├── index.html
-    ├── day1.html ~ day7.html
-    └── images/                  # 15 张 SVG
-        ├── concurrency_models.svg
-        ├── future_callback_streaming.svg
-        ├── request_lifecycle_states.svg
-        ├── scheduler_architecture.svg
-        ├── preemption_strategy.svg
-        ├── resource_budget.svg
-        ├── speculative_decoding.svg
-        ├── chunked_prefill.svg
-        ├── prefix_caching.svg
-        ├── kernel_integration_overview.svg
-        ├── cpp_extension_pipeline.svg
-        ├── integration_checklist.svg
-        ├── troubleshooting_guide.svg
-        ├── profiling_toolchain.svg
-        ├── bottleneck_analysis.svg
-        ├── week7_knowledge_map.svg
-        └── mini_ai_infra_architecture.svg
+ ├── build.py
+ ├── index.html
+ ├── day1.html ~ day7.html
+ └── images/ # 15 张 SVG
+ ├── concurrency_models.svg
+ ├── future_callback_streaming.svg
+ ├── request_lifecycle_states.svg
+ ├── scheduler_architecture.svg
+ ├── preemption_strategy.svg
+ ├── resource_budget.svg
+ ├── speculative_decoding.svg
+ ├── chunked_prefill.svg
+ ├── prefix_caching.svg
+ ├── kernel_integration_overview.svg
+ ├── cpp_extension_pipeline.svg
+ ├── integration_checklist.svg
+ ├── troubleshooting_guide.svg
+ ├── profiling_toolchain.svg
+ ├── bottleneck_analysis.svg
+ ├── week7_knowledge_map.svg
+ └── mini_ai_infra_architecture.svg
 ```
 
 ---
@@ -406,7 +396,6 @@ aiinfra/week7/
 - **Orca 论文（Continuous Batching）**：<https://www.usenix.org/conference/osdi22/presentation/yu>
 - **PyTorch C++ Extension**：<https://pytorch.org/tutorials/advanced/cpp_extension.html>
 - **Nsight Systems 文档**：<https://docs.nvidia.com/nsight-systems/>
-- **昇腾 MindIE 文档**：<https://www.hiascend.com/document/detail/zh/MindIE>
 - **LeetGPU**：<https://leetgpu.com/> — CUDA 在线编程练习
 
 ---

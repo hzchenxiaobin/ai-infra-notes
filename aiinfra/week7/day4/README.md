@@ -21,10 +21,10 @@ PyTorch 原生算子功能正确，但在推理场景下有几个不足：
 
 ```
 PyTorch 原生算子的问题：
-  1. 融合度低 → Softmax + Scale + MatMul 分 3 个 kernel launch，开销大
-  2. 显存占用高 → 中间结果（attention matrix）全量物化到 HBM
-  3. 无法定制 → 推理特化（如 KV Cache、PagedAttention）需要自定义逻辑
-  4. 缺乏控制 → 无法精细控制 tiling、shared memory、warp 调度
+ 1. 融合度低 → Softmax + Scale + MatMul 分 3 个 kernel launch，开销大
+ 2. 显存占用高 → 中间结果（attention matrix）全量物化到 HBM
+ 3. 无法定制 → 推理特化（如 KV Cache、PagedAttention）需要自定义逻辑
+ 4. 缺乏控制 → 无法精细控制 tiling、shared memory、warp 调度
 ```
 
 | 维度 | PyTorch 原生 | 自定义 Kernel |
@@ -58,15 +58,15 @@ PyTorch 原生算子的问题：
 
 ```
 教学版 register blocking GEMM：
-  - 手写 tiling + shared memory
-  - 无 Tensor Core 加速
-  - 性能约为 cuBLAS 的 10-20%
+ - 手写 tiling + shared memory
+ - 无 Tensor Core 加速
+ - 性能约为 cuBLAS 的 10-20%
 
 cuBLAS：
-  - 高度优化的 SASS 指令
-  - Tensor Core 加速（WMMA/MMA）
-  - 自动选择最优 tiling
-  → 大 GEMM 必须用 cuBLAS
+ - 高度优化的 SASS 指令
+ - Tensor Core 加速（WMMA/MMA）
+ - 自动选择最优 tiling
+ → 大 GEMM 必须用 cuBLAS
 ```
 
 > ⚠️ **生产环境**：FlashAttention 和 Softmax/LayerNorm 用官方实现（FlashAttention 库、Apex Normalization），教学版用于理解原理。
@@ -79,41 +79,41 @@ cuBLAS：
 
 ```
 ① 源码编写
-   CUDA_SOURCE (.cu)：__global__ kernel 实现
-   CPP_SOURCE (.cpp)：at::Tensor wrapper 声明
+ CUDA_SOURCE (.cu)：__global__ kernel 实现
+ CPP_SOURCE (.cpp)：at::Tensor wrapper 声明
 
 ② load_inline 编译
-   torch.utils.cpp_extension.load_inline()
-   → nvcc -O3 编译 .cu
-   → g++ 编译 .cpp
-   → 链接生成 .so 动态库
+ torch.utils.cpp_extension.load_inline()
+ → nvcc -O3 编译 .cu
+ → g++ 编译 .cpp
+ → 链接生成 .so 动态库
 
 ③ Python 模块
-   custom_ops = load_inline(...)
-   custom_ops.softmax_forward(input)
-   custom_ops.layernorm_forward(input, gamma, beta, eps)
-   custom_ops.flash_attention_forward(Q, K, V)
+ custom_ops = load_inline(...)
+ custom_ops.softmax_forward(input)
+ custom_ops.layernorm_forward(input, gamma, beta, eps)
+ custom_ops.flash_attention_forward(Q, K, V)
 
 ④ 集成到模型
-   TransformerLayer(use_custom=True)
-   → forward 中调用自定义 kernel
+ TransformerLayer(use_custom=True)
+ → forward 中调用自定义 kernel
 ```
 
 ##### C++ Wrapper 关键模式
 
 ```cpp
 at::Tensor softmax_forward(at::Tensor input) {
-    int M = input.size(0);              // 从 Tensor 获取形状
-    int N = input.size(1);
-    auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
+ int M = input.size(0); // 从 Tensor 获取形状
+ int N = input.size(1);
+ auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
 
-    int threads = std::min(N, 256);
-    softmax_kernel<<<M, threads>>>(      // launch kernel
-        input.data_ptr<float>(),         // Tensor → 裸指针
-        output.data_ptr<float>(),
-        M, N
-    );
-    return output;                       // 返回 Tensor 给 Python
+ int threads = std::min(N, 256);
+ softmax_kernel<<<M, threads>>>( // launch kernel
+ input.data_ptr<float>(), // Tensor → 裸指针
+ output.data_ptr<float>(),
+ M, N
+ );
+ return output; // 返回 Tensor 给 Python
 }
 ```
 
@@ -139,7 +139,7 @@ softmax_kernel<<<M, threads, 0, stream>>>(input.data_ptr<float>(), ...);
 ```cuda
 // reduce 用 atomicAdd 时，float 累积误差
 // 建议：用 double 做中间 reduce，或 Kahan summation
-__shared__ double s_sum;  // 用 double 而非 float
+__shared__ double s_sum; // 用 double 而非 float
 ```
 
 ##### ③ 内存布局
@@ -179,38 +179,22 @@ TORCH_CHECK(err == cudaSuccess, "Kernel launch failed: ", cudaGetErrorString(err
 
 ```
 Step 1: 单算子验证
-  softmax_forward vs F.softmax → max_diff < 1e-5
-  layernorm_forward vs F.layer_norm → max_diff < 1e-4
-  flash_attention_forward vs manual QK^T·softmax·V → max_diff < 1e-3
+ softmax_forward vs F.softmax → max_diff < 1e-5
+ layernorm_forward vs F.layer_norm → max_diff < 1e-4
+ flash_attention_forward vs manual QK^T·softmax·V → max_diff < 1e-3
 
 Step 2: 多算子组合
-  LayerNorm + QKV + Attention + Output → 逐层对比
+ LayerNorm + QKV + Attention + Output → 逐层对比
 
 Step 3: 端到端
-  完整 TransformerLayer forward → max_diff < 1e-2（FP32 累积误差容忍）
+ 完整 TransformerLayer forward → max_diff < 1e-2（FP32 累积误差容忍）
 
 Step 4: 性能对比
-  PyTorch eager vs Custom kernel → 测量 latency
-  （教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）
+ PyTorch eager vs Custom kernel → 测量 latency
+ （教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）
 ```
 
 > 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 float24 尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
-
-#### 4.5 昇腾对照
-
-| CUDA 集成方式 | 昇腾 CANN 对应 | 说明 |
-|---------|------------|------|
-| PyTorch C++ Extension | Ascend C 自定义算子 | 机制类似（.cpp + 编译 + 注册） |
-| `load_inline` 动态编译 | Ascend C 算子编译 | 编译流程对应 |
-| cuBLAS | ACL MatMul | 官方库 |
-| FlashAttention | CANN FlashAttention | 内置 |
-| Softmax/LayerNorm | CANN 内置算子 | 内置 |
-| `data_ptr<float>()` | `GetDataPtr()` | 取裸指针 |
-| `at::empty_like()` | Ascend Tensor 分配 | 类似 |
-
-> 💡 昇腾 Ascend C 的集成流程与 PyTorch C++ Extension 类似：编写算子 `.cpp` → 编译注册 → Python 调用。差异在底层用 NPU 而非 GPU，stream 概念对应昇腾的 stream。
-
----
 
 ### Coding 任务：实现 CustomKernelTransformerLayer
 
@@ -237,17 +221,17 @@ at::Tensor flash_attention_forward(at::Tensor Q, ...) { ... }
 
 # 2. 动态编译
 custom_ops = load_inline(
-    cpp_sources=CPP_SOURCE,
-    cuda_sources=CUDA_SOURCE,
-    functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
+ cpp_sources=CPP_SOURCE,
+ cuda_sources=CUDA_SOURCE,
+ functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
 )
 
 # 3. Transformer Layer（use_custom 开关）
 class TransformerLayer(nn.Module):
-    def forward(self, x, use_custom=True):
-        # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
-        # use_custom=True → 调用自定义 kernel
-        # use_custom=False → 调用 PyTorch 原生
+ def forward(self, x, use_custom=True):
+ # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
+ # use_custom=True → 调用自定义 kernel
+ # use_custom=False → 调用 PyTorch 原生
 ```
 
 完整代码见 [kernels/custom_ops_module.py](kernels/custom_ops_module.py)。
@@ -273,31 +257,31 @@ python kernels/custom_ops_module.py
 ============================================================
 1. 精度验证：自定义 kernel vs PyTorch
 ============================================================
-  Max diff:  3.2e-04
-  Mean diff: 5.1e-06
-  Status: PASS
+ Max diff: 3.2e-04
+ Mean diff: 5.1e-06
+ Status: PASS
 
 --- 单算子精度 ---
-  Softmax max diff: 1.2e-07 PASS
-  LayerNorm max diff: 8.4e-06 PASS
+ Softmax max diff: 1.2e-07 PASS
+ LayerNorm max diff: 8.4e-06 PASS
 
 ============================================================
-2. 性能对比：自定义 kernel vs PyTorch
+1. 性能对比：自定义 kernel vs PyTorch
 ============================================================
-  PyTorch eager:  2.834 ms/layer
-  Custom kernel:  3.512 ms/layer
-  Speedup: 0.81x
-  (教学版 kernel 可能比 PyTorch 慢，因为 PyTorch 用了高度优化的 cuDNN/cuBLAS)
+ PyTorch eager: 2.834 ms/layer
+ Custom kernel: 3.512 ms/layer
+ Speedup: 0.81x
+ (教学版 kernel 可能比 PyTorch 慢，因为 PyTorch 用了高度优化的 cuDNN/cuBLAS)
 
 ============================================================
-3. 集成 Checklist
+1. 集成 Checklist
 ============================================================
-  [✓] Softmax 替换
-  [✓] LayerNorm 替换
-  [✓] FlashAttention 替换
-  [✓] 端到端精度 < 1e-2
-  [✓] 无内存泄漏
-  [✓] stream 一致性
+ [✓] Softmax 替换
+ [✓] LayerNorm 替换
+ [✓] FlashAttention 替换
+ [✓] 端到端精度 < 1e-2
+ [✓] 无内存泄漏
+ [✓] stream 一致性
 ```
 
 ##### 观察重点
@@ -388,76 +372,68 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
 
 1. **如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎中？需要注意什么？**（⭐⭐⭐⭐⭐ 必考）
 
-   - **集成流程**：
-     1. 写 CUDA kernel（`.cu`）和 C++ wrapper（`.cpp`）
-     2. 用 `torch.utils.cpp_extension.load_inline` 或 `setup.py` 编译
-     3. wrapper 中用 `at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出
-     4. 用 `at::cuda::getCurrentCUDAStream()` 确保 stream 一致
-   - **六大注意事项**：
-     1. **stream 一致性**：用 PyTorch 当前 stream，避免乱序
-     2. **精度**：FP32 reduce 用 atomicAdd 注意累积误差，可用 double 中间值
-     3. **内存布局**：确保 contiguous，row-major 与 PyTorch 一致
-     4. **边界处理**：非对齐尺寸、空输入、越界保护
-     5. **形状检查**：`TORCH_CHECK(dim/is_cuda/is_contiguous)`
-     6. **错误处理**：`cudaGetLastError` + `TORCH_CHECK`
+ - **集成流程**：
+ 1. 写 CUDA kernel（`.cu`）和 C++ wrapper（`.cpp`）
+ 2. 用 `torch.utils.cpp_extension.load_inline` 或 `setup.py` 编译
+ 3. wrapper 中用 `at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出
+ 4. 用 `at::cuda::getCurrentCUDAStream()` 确保 stream 一致
+ - **六大注意事项**：
+ 1. **stream 一致性**：用 PyTorch 当前 stream，避免乱序
+ 2. **精度**：FP32 reduce 用 atomicAdd 注意累积误差，可用 double 中间值
+ 3. **内存布局**：确保 contiguous，row-major 与 PyTorch 一致
+ 4. **边界处理**：非对齐尺寸、空输入、越界保护
+ 5. **形状检查**：`TORCH_CHECK(dim/is_cuda/is_contiguous)`
+ 6. **错误处理**：`cudaGetLastError` + `TORCH_CHECK`
 
-2. **自定义 Kernel 集成后，如何验证正确性和性能？**（⭐⭐⭐⭐ 高频）
+1. **自定义 Kernel 集成后，如何验证正确性和性能？**（⭐⭐⭐⭐ 高频）
 
-   - **正确性**：
-     1. 单算子对比 PyTorch 实现，误差 < 阈值（Softmax < 1e-5，LayerNorm < 1e-4，Attention < 1e-3）
-     2. 多算子组合后对比端到端输出（< 1e-2，累积误差容忍）
-     3. 不同尺寸和边界条件测试（非对齐、空输入、大 batch）
-   - **性能**：
-     1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
-     2. 用 `nsys` 看时间线和 kernel 间隙
-     3. 用 `ncu` 分析 kernel 的 SM/DRAM throughput
-     4. 对比 throughput-latency 曲线
-   - **教学版可能比 PyTorch 慢**——因为 PyTorch 用 cuDNN/cuBLAS 高度优化
+ - **正确性**：
+ 1. 单算子对比 PyTorch 实现，误差 < 阈值（Softmax < 1e-5，LayerNorm < 1e-4，Attention < 1e-3）
+ 2. 多算子组合后对比端到端输出（< 1e-2，累积误差容忍）
+ 3. 不同尺寸和边界条件测试（非对齐、空输入、大 batch）
+ - **性能**：
+ 1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
+ 2. 用 `nsys` 看时间线和 kernel 间隙
+ 3. 用 `ncu` 分析 kernel 的 SM/DRAM throughput
+ 4. 对比 throughput-latency 曲线
+ - **教学版可能比 PyTorch 慢**——因为 PyTorch 用 cuDNN/cuBLAS 高度优化
 
-3. **为什么大 GEMM 保留 cuBLAS，而 Softmax/LayerNorm 用自定义 kernel？**（⭐⭐⭐⭐ 高频）
+1. **为什么大 GEMM 保留 cuBLAS，而 Softmax/LayerNorm 用自定义 kernel？**（⭐⭐⭐⭐ 高频）
 
-   - **大 GEMM 保留 cuBLAS**：
-     - cuBLAS 用 Tensor Core（WMMA/MMA）加速，高度优化的 SASS 指令
-     - 教学版 register blocking GEMM 无 Tensor Core，约为 cuBLAS 的 10-20%
-     - 大 GEMM 是 compute-bound，cuBLAS 接近理论峰值
-   - **Softmax/LayerNorm 用自定义**：
-     - 这些是 memory-bound，计算极轻
-     - 自定义 kernel 可以**融合**（Softmax+Attention 一趟、LayerNorm 3趟→1趟）
-     - 融合减少 kernel launch 和 HBM 往返，收益大
-     - PyTorch 原生不融合，有优化空间
+ - **大 GEMM 保留 cuBLAS**：
+ - cuBLAS 用 Tensor Core（WMMA/MMA）加速，高度优化的 SASS 指令
+ - 教学版 register blocking GEMM 无 Tensor Core，约为 cuBLAS 的 10-20%
+ - 大 GEMM 是 compute-bound，cuBLAS 接近理论峰值
+ - **Softmax/LayerNorm 用自定义**：
+ - 这些是 memory-bound，计算极轻
+ - 自定义 kernel 可以**融合**（Softmax+Attention 一趟、LayerNorm 3趟→1趟）
+ - 融合减少 kernel launch 和 HBM 往返，收益大
+ - PyTorch 原生不融合，有优化空间
 
-4. **什么是算子融合？为什么能提升性能？**（⭐⭐⭐⭐ 高频）
+1. **什么是算子融合？为什么能提升性能？**（⭐⭐⭐⭐ 高频）
 
-   - **算子融合**：把多个连续算子合并为一个 kernel
-   - **提升原因**：
-     1. **减少 kernel launch**：每次 launch 有 5-10μs 开销
-     2. **减少 HBM 往返**：中间结果留在 register/shared memory，不写回 HBM
-     3. **减少显存占用**：不物化中间结果
-   - **典型例子**：
-     - FlashAttention：QK^T + Softmax + MatMul 融合为 1 个 kernel
-     - Fused LayerNorm：mean + var + normalize 融合为 1 趟
-     - Fused Softmax + CrossEntropy：减少一次 HBM 往返
+ - **算子融合**：把多个连续算子合并为一个 kernel
+ - **提升原因**：
+ 1. **减少 kernel launch**：每次 launch 有 5-10μs 开销
+ 2. **减少 HBM 往返**：中间结果留在 register/shared memory，不写回 HBM
+ 3. **减少显存占用**：不物化中间结果
+ - **典型例子**：
+ - FlashAttention：QK^T + Softmax + MatMul 融合为 1 个 kernel
+ - Fused LayerNorm：mean + var + normalize 融合为 1 趟
+ - Fused Softmax + CrossEntropy：减少一次 HBM 往返
 
-5. **load_inline 和 setup.py 两种编译方式有什么区别？**（⭐⭐⭐ 中频）
+1. **load_inline 和 setup.py 两种编译方式有什么区别？**（⭐⭐⭐ 中频）
 
-   - **`load_inline`**：
-     - 源码以字符串传入，运行时动态编译
-     - 适合原型开发和小规模 kernel
-     - 首次编译慢，后续有缓存
-   - **`setup.py`**：
-     - 离线编译为 `.so`，安装到 site-packages
-     - 适合生产环境，编译一次反复使用
-     - 需要 `setup.py` + `__init__.py` 配置
-   - **生产推荐**：setup.py（稳定、可分发）；教学推荐：load_inline（快速迭代）
+ - **`load_inline`**：
+ - 源码以字符串传入，运行时动态编译
+ - 适合原型开发和小规模 kernel
+ - 首次编译慢，后续有缓存
+ - **`setup.py`**：
+ - 离线编译为 `.so`，安装到 site-packages
+ - 适合生产环境，编译一次反复使用
+ - 需要 `setup.py` + `__init__.py` 配置
+ - **生产推荐**：setup.py（稳定、可分发）；教学推荐：load_inline（快速迭代）
 
-6. **能对照昇腾解释自定义算子的集成流程吗？**
-
-   - 昇腾 Ascend C 的集成流程与 PyTorch C++ Extension 类似：
-     - 编写算子 `.cpp`（定义输入输出和计算逻辑）
-     - 用 Ascend C 编译器编译注册
-     - Python 侧调用注册的算子
-   - 差异在底层：
-     - CUDA 用 `data_ptr<float>()`，昇腾用 `GetDataPtr()`
-     - CUDA 用 `cudaStream`，昇腾用 `aclrtStream`
-     - CUDA 用 cuBLAS，昇腾用 ACL MatMul
-   - stream 一致性、精度、内存布局的注意事项在昇腾上完全对应
+ - 编写算子 `.cpp`（定义输入输出和计算逻辑）
+ - Python 侧调用注册的算子
+ - 差异在底层：

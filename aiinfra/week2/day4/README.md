@@ -45,22 +45,22 @@ NVIDIA 提供了两个主要的 profiling 工具，各有分工：
 - **粒度**：单个 kernel
 - **用途**：分析 kernel 内部的详细硬件指标
 - **适用场景**：
-  - 判断 kernel 是 memory-bound 还是 compute-bound
-  - 查看 occupancy、register usage、shared memory
-  - 分析 memory throughput、compute throughput
-  - 查看 bank conflict、cache hit rate
-  - 生成 Roofline 图
+ - 判断 kernel 是 memory-bound 还是 compute-bound
+ - 查看 occupancy、register usage、shared memory
+ - 分析 memory throughput、compute throughput
+ - 查看 bank conflict、cache hit rate
+ - 生成 Roofline 图
 
 ##### Nsight Systems（`nsys`）
 
 - **粒度**：整个应用
 - **用途**：分析时间线、CPU/GPU 交互、kernel launch overhead
 - **适用场景**：
-  - 找到最耗时的 kernel
-  - 分析 CPU 和 GPU 的并行情况
-  - 查看 kernel launch overhead
-  - 分析多个 stream 的并行执行
-  - 端到端 latency 分析
+ - 找到最耗时的 kernel
+ - 分析 CPU 和 GPU 的并行情况
+ - 查看 kernel launch overhead
+ - 分析多个 stream 的并行执行
+ - 端到端 latency 分析
 
 **使用流程**：
 
@@ -79,18 +79,18 @@ ncu -o report.ncu-rep ./my_kernel
 
 # 常用参数
 ncu \
-  --kernel-name regex:gemmRegisterBlocking \  # 只 profile 指定 kernel
-  -o report \                                   # 输出文件名
-  --metrics \                                   # 指定采集的指标（逗号分隔）
-    sm__throughput.avg.pct_of_peak_sustained_elapsed,  # SM 计算利用率
-    dram__throughput.avg.pct_of_peak_sustained_elapsed, # 显存带宽利用率
-    l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,     # L1/纹理缓存加载扇区数
-    l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum      # L1/纹理缓存存储扇区数
-  ./my_program
+ --kernel-name regex:gemmRegisterBlocking \ # 只 profile 指定 kernel
+ -o report \ # 输出文件名
+ --metrics \ # 指定采集的指标（逗号分隔）
+ sm__throughput.avg.pct_of_peak_sustained_elapsed, # SM 计算利用率
+ dram__throughput.avg.pct_of_peak_sustained_elapsed, # 显存带宽利用率
+ l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum, # L1/纹理缓存加载扇区数
+ l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum # L1/纹理缓存存储扇区数
+ ./my_program
 
 # 查看报告
-ncu-ui report.ncu-rep              # GUI 方式
-ncu --page details -i report.ncu-rep  # 命令行方式
+ncu-ui report.ncu-rep # GUI 方式
+ncu --page details -i report.ncu-rep # 命令行方式
 ```
 
 > 💡 **编译建议**：profiling 时建议加 `-g -lineinfo` 编译选项，保留调试信息，这样 ncu 的 Source View 能关联到源代码行。
@@ -135,16 +135,16 @@ Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。
 Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 
 ```
-   GFLOPS
-     │
-     │     ╱ 计算峰值（水平线，由 SM 数量和频率决定）
-     │    ╱
-     │   ╱
-     │  ╱
-     │ ╱
-     │╱ 带宽限制斜线（斜率 = 带宽 × 计算强度）
-     └──────────────────────────────►
-          计算强度（FLOP/Byte）
+ GFLOPS
+ │
+ │ ╱ 计算峰值（水平线，由 SM 数量和频率决定）
+ │ ╱
+ │ ╱
+ │ ╱
+ │ ╱
+ │╱ 带宽限制斜线（斜率 = 带宽 × 计算强度）
+ └──────────────────────────────►
+ 计算强度（FLOP/Byte）
 ```
 
 - **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
@@ -162,21 +162,6 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 
 ---
 
-### 昇腾对照
-
-| CUDA 工具 | 昇腾对应工具 | 功能对照 |
-|---------|------------|---------|
-| **Nsight Compute** (ncu) | **Ascend NPU Profiler** (msprof) | Kernel 级性能分析，采集计算/内存/流水线指标 |
-| **Nsight Systems** (nsys) | **Ascend NPU Profiler Timeline** | 系统级 Timeline 分析 |
-| Roofline Model | Roofline Model | 两者都支持，判断 compute-bound vs memory-bound |
-| Source View（源码级指标） | Operator Profiling Detail | 都支持源码/算子级指标关联 |
-| Warp Stall Reasons | Pipeline Stall Analysis | 昇腾 Profiler 有类似的流水线阻塞原因分析 |
-| SM Throughput | AI Core Utilization | 含义相同：计算单元的利用率 |
-
-**关键差异**：Nsight Compute 的 GUI 更成熟，指标更细粒度（到指令级）；昇腾 Profiler 与 CANN 工具链集成更紧密，但 GUI 交互性稍弱。
-
----
-
 ### Coding 任务：Profile Register Blocking GEMM
 
 #### 任务 1：编译 GEMM 并生成 Profile 报告
@@ -184,20 +169,20 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 ```bash
 # 编译（保留调试信息以便 Source View 关联）
 nvcc -o gemm_profile kernels/register_blocking_gemm.cu \
-    -O3 -arch=sm_80 -lcublas -g -lineinfo
+ -O3 -arch=sm_80 -lcublas -g -lineinfo
 
 # 运行 Nsight Compute profile
 ncu \
-  --kernel-name regex:gemmRegisterBlocking \
-  -o gemm_profile_report \
-  --metrics \
+ --kernel-name regex:gemmRegisterBlocking \
+ -o gemm_profile_report \
+ --metrics \
 sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,\
 l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum,\
 smsp__warps_eligible.sum.per_cycle,\
 smsp__average_warps_issue_stalled_long_scoreboard.pct \
-  ./gemm_profile 2>&1 | tee ncu_output.txt
+ ./gemm_profile 2>&1 | tee ncu_output.txt
 
 # 导出为 CSV（便于命令行查看）
 ncu --csv --page details -i gemm_profile_report.ncu-rep > gemm_profile.csv
@@ -208,25 +193,25 @@ ncu --csv --page details -i gemm_profile_report.ncu-rep > gemm_profile.csv
 拿到 ncu 报告后，按以下清单分析：
 
 1. **读取 SM Throughput 和 Memory Throughput**，判断是 compute-bound 还是 memory-bound
-   - Memory Throughput >> SM Throughput → memory-bound
-   - SM Throughput >> Memory Throughput → compute-bound
-2. **读取 Achieved Occupancy**，判断 SM 利用率是否充分（目标 > 70%）
-3. **查看 Warp Stall Reasons**，找出主要 stall 原因
-4. **对比 L1/TEX Hit Rate**，判断缓存效率
-5. **打开 ncu-ui → Source 视图**，定位最耗时的代码行
+ - Memory Throughput >> SM Throughput → memory-bound
+ - SM Throughput >> Memory Throughput → compute-bound
+1. **读取 Achieved Occupancy**，判断 SM 利用率是否充分（目标 > 70%）
+2. **查看 Warp Stall Reasons**，找出主要 stall 原因
+3. **对比 L1/TEX Hit Rate**，判断缓存效率
+4. **打开 ncu-ui → Source 视图**，定位最耗时的代码行
 
 #### 任务 3：案例分析
 
 假设 ncu 输出如下指标：
 
 ```
-SM Throughput:                    45.2%
-Memory Throughput:                78.5%
-Achieved Occupancy:               56.3%
-L1/TEX Hit Rate:                  82.1%
-Warp Stall Long Scoreboard:       35.2%  ← 高！
-Warp Stall Math Pipe Throttle:    12.1%
-Register Pressure:                72%
+SM Throughput: 45.2%
+Memory Throughput: 78.5%
+Achieved Occupancy: 56.3%
+L1/TEX Hit Rate: 82.1%
+Warp Stall Long Scoreboard: 35.2% ← 高！
+Warp Stall Math Pipe Throttle: 12.1%
+Register Pressure: 72%
 ```
 
 **解读过程**：
@@ -254,9 +239,9 @@ Register Pressure:                72%
 ```bash
 # 优化后重新 profile
 ncu --kernel-name regex:gemmRegisterBlocking -o gemm_profile_v2 \
-  --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./gemm_profile_v2
+ ./gemm_profile_v2
 
 # 对比两次结果，确认优化是否有效
 ```
@@ -285,28 +270,28 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed \
 
 ```cuda
 __global__ void softmax_kernel(const float* input, float* output, int N) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N) return;
+ int idx = blockIdx.x * blockDim.x + threadIdx.x;
+ if (idx >= N) return;
 
-    // Pass 1: 求 max
-    float max_val = -INFINITY;
-    for (int i = 0; i < N; i++)
-        max_val = fmaxf(max_val, input[i]);
+ // Pass 1: 求 max
+ float max_val = -INFINITY;
+ for (int i = 0; i < N; i++)
+ max_val = fmaxf(max_val, input[i]);
 
-    // Pass 2: 求 sum(exp(x - max))
-    float sum = 0.0f;
-    for (int i = 0; i < N; i++) {
-        sum += expf(input[i] - max_val);
-    }
+ // Pass 2: 求 sum(exp(x - max))
+ float sum = 0.0f;
+ for (int i = 0; i < N; i++) {
+ sum += expf(input[i] - max_val);
+ }
 
-    // Pass 3: 归一化
-    output[idx] = expf(input[idx] - max_val) / sum;
+ // Pass 3: 归一化
+ output[idx] = expf(input[idx] - max_val) / sum;
 }
 
 // profiling 命令:
 // ncu --set full --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-//   sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-//   sm__occupancy.avg.pct_of_peak_sustained_elapsed ./softmax
+// sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+// sm__occupancy.avg.pct_of_peak_sustained_elapsed ./softmax
 ```
 
 > 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](../../leetgpu/week2/day4/leetgpu-softmax-solution.md)。
@@ -384,7 +369,6 @@ nsys profile -o timeline_report ./gemm_profile
 - [ ] 能说出 3 个常见 Warp Stall Reason 及对应的优化方法
 - [ ] 能画出 Roofline 模型并解释自己的 kernel 在什么位置
 - [ ] 能在 ncu-ui 的 Source 视图中定位最耗时的代码行
-- [ ] 能对照昇腾 Profiler 解释 Nsight 指标的映射关系
 - [ ] 理解云 GPU 环境下 ncu 的替代使用方案
 - [ ] 完成一次「Profile → 识别瓶颈 → 优化 → 重新 Profile 验证」的完整循环
 
@@ -408,42 +392,42 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 
 1. **「如何分析一个 CUDA Kernel 的性能瓶颈？」请给出完整的分析流程。**
 
-   1. **工具选择**：ncu 做 kernel 级分析 + nsys 做系统级 Timeline 分析
-   2. **第一步（Baseline）**：运行 ncu 获取 SM Throughput、Memory Throughput、Achieved Occupancy
-   3. **第二步（Roofline 定位）**：根据两个 Throughput 判断 kernel 在 Roofline 上的位置
-      - Memory Throughput >> SM Throughput → Memory Bound → 优化内存访问
-      - SM Throughput >> Memory Throughput → Compute Bound → 优化计算吞吐量
-   4. **第三步（Stall 分析）**：查看 Warp Stall Reasons，定位具体阻塞原因
-      - Long Scoreboard 高 → 全局内存延迟 → 增加 tiling、vectorized load、double buffering
-      - Math Pipe Throttle 高 → FMA 依赖链 → 增加指令级并行
-      - MIO Throttle 高 → Shared Memory 瓶颈 → 减少 shared memory 访问
-   5. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
+ 1. **工具选择**：ncu 做 kernel 级分析 + nsys 做系统级 Timeline 分析
+ 2. **第一步（Baseline）**：运行 ncu 获取 SM Throughput、Memory Throughput、Achieved Occupancy
+ 3. **第二步（Roofline 定位）**：根据两个 Throughput 判断 kernel 在 Roofline 上的位置
+ - Memory Throughput >> SM Throughput → Memory Bound → 优化内存访问
+ - SM Throughput >> Memory Throughput → Compute Bound → 优化计算吞吐量
+ 1. **第三步（Stall 分析）**：查看 Warp Stall Reasons，定位具体阻塞原因
+ - Long Scoreboard 高 → 全局内存延迟 → 增加 tiling、vectorized load、double buffering
+ - Math Pipe Throttle 高 → FMA 依赖链 → 增加指令级并行
+ - MIO Throttle 高 → Shared Memory 瓶颈 → 减少 shared memory 访问
+ 1. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
 
-2. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
+1. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
 
-   - **Register 溢出**：每线程 register 过多 → ncu 查看 `launch__registers_per_thread`，与架构限制对比
-   - **Shared Memory 不足**：每 block smem 过多 → 计算 `s_A + s_B` 用量，与 SM 上限对比
-   - **Block Size 不合理**：非 32 倍数或不在甜蜜区 → 检查 `blockDim.x`
-   - **Grid Size 不足**：总 block 数 < SM 数 × 每 SM 最大 block 数 → 比较 gridDim 和 SM 数量
-   - **同步开销**：过多 `__syncthreads()` 导致 warp 空闲等待
+ - **Register 溢出**：每线程 register 过多 → ncu 查看 `launch__registers_per_thread`，与架构限制对比
+ - **Shared Memory 不足**：每 block smem 过多 → 计算 `s_A + s_B` 用量，与 SM 上限对比
+ - **Block Size 不合理**：非 32 倍数或不在甜蜜区 → 检查 `blockDim.x`
+ - **Grid Size 不足**：总 block 数 < SM 数 × 每 SM 最大 block 数 → 比较 gridDim 和 SM 数量
+ - **同步开销**：过多 `__syncthreads()` 导致 warp 空闲等待
 
-3. **Roofline 模型怎么解读？平衡点是什么？**
+1. **Roofline 模型怎么解读？平衡点是什么？**
 
-   - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
-   - A100 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
-   - 优化方向：斜线区域优化内存访问，平顶区域优化计算
+ - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
+ - A100 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
+ - 优化方向：斜线区域优化内存访问，平顶区域优化计算
 
-4. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
+1. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
 
-   - Source View 能将硬件指标关联到源代码行，精确定位最耗时的代码
-   - 需要编译时加 `-g -lineinfo` 保留调试信息
-   - 例如：能看到第 45 行的 `acc[m][n] += r_A[m] * r_B[n]` 占了 60% 的执行时间
+ - Source View 能将硬件指标关联到源代码行，精确定位最耗时的代码
+ - 需要编译时加 `-g -lineinfo` 保留调试信息
+ - 例如：能看到第 45 行的 `acc[m][n] += r_A[m] * r_B[n]` 占了 60% 的执行时间
 
-5. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
+1. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
 
-   - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
-   - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
-   - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6-25）比较，AI < Ridge → memory-bound
-   - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
+ - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
+ - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
+ - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6-25）比较，AI < Ridge → memory-bound
+ - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
 
 ---

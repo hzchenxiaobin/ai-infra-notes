@@ -172,7 +172,6 @@
 2. 掌握 \`torch.profiler\` 的使用方法，能独立采集并分析一次 forward 的算子时间线
 3. 能列出 Transformer 单层的 **6 类算子**及其执行顺序，理解哪些是 compute-bound、哪些是 memory-bound
 4. 理解 Decode 阶段 M=1 的 GEMM 为什么退化为 memory-bound
-5. 能对照昇腾 CANN 的 \`msprof\` 解释 PyTorch profiler 的对应关系
 
 > 💡 **为什么重要**：Prefill vs Decode 是推理系统入门必考题。不理解两阶段差异，就无法理解 KV Cache、PagedAttention、Continuous Batching 等推理优化的动机。今天的内容是 Week 3 全周的地基——后续手写 Softmax/LayerNorm Kernel、Attention IO 分析、端到端 Profiling 都建立在这套认知之上。
 
@@ -216,16 +215,16 @@
 
 \`\`\`
 Input x (B, N, d)
-   │
-   ├─► LayerNorm1 ──► QKV Linear (GEMM) ──► Q, K, V (B, N, d)
-   │                                      │
-   │                                      ├─► Attention: S=QK^T → softmax → PV
-   │                                      │    （Prefill: N×N 矩阵；Decode: 1×N）
-   │                                      └─► KV Cache append（Decode 阶段）
-   │
-   ├─► Output Linear (GEMM) ──► residual add ──► LayerNorm2
-   │
-   └─► FFN: Linear(GELU(Linear(x))) （两个大 GEMM）──► residual add
+ │
+ ├─► LayerNorm1 ──► QKV Linear (GEMM) ──► Q, K, V (B, N, d)
+ │ │
+ │ ├─► Attention: S=QK^T → softmax → PV
+ │ │ （Prefill: N×N 矩阵；Decode: 1×N）
+ │ └─► KV Cache append（Decode 阶段）
+ │
+ ├─► Output Linear (GEMM) ──► residual add ──► LayerNorm2
+ │
+ └─► FFN: Linear(GELU(Linear(x))) （两个大 GEMM）──► residual add
 \`\`\`
 
 **关键观察**：Transformer 单层包含 **6 个主要算子类型**：
@@ -267,8 +266,8 @@ LayerNorm2 → FFN GEMM1 → GELU → FFN GEMM2 → Residual → 下一层
 
 \`\`\`
 KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
-  N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 512 MB
-  每生成 1 个 token 要读 512 MB → 纯访存瓶颈
+ N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 512 MB
+ 每生成 1 个 token 要读 512 MB → 纯访存瓶颈
 \`\`\`
 
 **优化方向**：
@@ -289,13 +288,13 @@ KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
 import torch.profiler
 
 with torch.profiler.profile(
-    activities=[
-        torch.profiler.ProfilerActivity.CPU,   # 采集 CPU 端调度
-        torch.profiler.ProfilerActivity.CUDA,  # 采集 GPU 端 kernel
-    ],
+ activities=[
+ torch.profiler.ProfilerActivity.CPU, # 采集 CPU 端调度
+ torch.profiler.ProfilerActivity.CUDA, # 采集 GPU 端 kernel
+ ],
 ) as prof:
-    for _ in range(5):
-        out = model(x)
+ for _ in range(5):
+ out = model(x)
 
 # 按 CUDA 时间排序，输出 top 算子
 print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
@@ -321,32 +320,6 @@ prof.export_chrome_trace("transformer_trace.json")
 
 ---
 
-### 昇腾 Profiler 对照
-
-![PyTorch profiler vs 昇腾 msprof](images/profiler_comparison.svg)
-
-| 维度 | PyTorch profiler | 昇腾 msprof |
-|------|-----------------|------------|
-| 采集命令 | \`torch.profiler.profile\` | \`msprof --application="python train.py" --output=./prof_data\` |
-| 输出格式 | Chrome trace JSON | .npu 离线文件 + timeline |
-| 算子级视图 | \`key_averages().table()\` | Operator 详情面板 |
-| GPU 利用率 | 需配合 nsys 看 SM 占用 | msprof 直接给出 AI Core 利用率 |
-| 适用场景 | PyTorch 模型快速 profile | NPU 模型部署后 profile |
-
-**关键发现**：PyTorch profiler 关注算子级时间分解；若要看 SM/Memory 利用率，仍需配合 nsys/ncu。昇腾 msprof 把两层信息合并到一个工具中。
-
-#### CUDA/PyTorch → 昇腾 CANN 概念映射
-
-| CUDA/PyTorch 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| Prefill 阶段（大 GEMM） | Prefill 阶段（Cube Core 大矩阵乘） | 两阶段划分是模型层面的，与硬件无关 |
-| Decode 阶段（小 GEMM + KV Cache） | Decode 阶段（Vector + Cache 读取） | 昇腾 Vector Unit 利用率低，与 SM 空闲同理 |
-| torch.profiler 时间线 | msprof timeline | 两者都提供算子级时间线 |
-| \`F.softmax\` / \`F.layer_norm\` | Ascend C 内置 Softmax/LayerNorm 算子 | 语义一致，PyTorch 调 CUDA kernel，CANN 调 NPU 算子 |
-| Attention（QK^T + softmax + PV） | FlashAttention 算子（CANN 内置） | 昇腾 CANN 已内置 FlashAttention |
-
----
-
 ### 晚间编程任务：Trace Transformer Forward
 
 #### 完整代码
@@ -360,92 +333,87 @@ import torch
 import torch.nn as nn
 import math
 
-
 class MiniAttention(nn.Module):
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
+ def __init__(self, d_model=512, n_heads=8):
+ super().__init__()
+ self.d_model = d_model
+ self.n_heads = n_heads
+ self.d_head = d_model // n_heads
+ self.qkv = nn.Linear(d_model, 3 * d_model)
+ self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, x):
-        B, N, _ = x.shape
-        qkv = self.qkv(x)                                    # GEMM: B*N*d x d*3d
-        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
-        qkv = qkv.permute(2, 0, 3, 1, 4)                     # 3, B, n_heads, N, d_head
-        q, k, v = qkv[0], qkv[1], qkv[2]
-        scale = self.d_head ** -0.5
-        attn = torch.matmul(q, k.transpose(-2, -1)) * scale  # GEMM: Q x K^T -> N x N
-        attn = torch.softmax(attn, dim=-1)                   # softmax（memory-bound）
-        out = torch.matmul(attn, v)                          # GEMM: attn x V -> N x d_head
-        out = out.transpose(1, 2).reshape(B, N, self.d_model)
-        return self.out(out)                                 # GEMM: Output Linear
-
+ def forward(self, x):
+ B, N, _ = x.shape
+ qkv = self.qkv(x) # GEMM: B*N*d x d*3d
+ qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
+ qkv = qkv.permute(2, 0, 3, 1, 4) # 3, B, n_heads, N, d_head
+ q, k, v = qkv[0], qkv[1], qkv[2]
+ scale = self.d_head ** -0.5
+ attn = torch.matmul(q, k.transpose(-2, -1)) * scale # GEMM: Q x K^T -> N x N
+ attn = torch.softmax(attn, dim=-1) # softmax（memory-bound）
+ out = torch.matmul(attn, v) # GEMM: attn x V -> N x d_head
+ out = out.transpose(1, 2).reshape(B, N, self.d_model)
+ return self.out(out) # GEMM: Output Linear
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.attn = MiniAttention(d_model, n_heads)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, d_ff),
-            nn.GELU(),
-            nn.Linear(d_ff, d_model),
-        )
+ def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+ super().__init__()
+ self.attn = MiniAttention(d_model, n_heads)
+ self.norm1 = nn.LayerNorm(d_model)
+ self.norm2 = nn.LayerNorm(d_model)
+ self.ffn = nn.Sequential(
+ nn.Linear(d_model, d_ff),
+ nn.GELU(),
+ nn.Linear(d_ff, d_model),
+ )
 
-    def forward(self, x):
-        x = x + self.attn(self.norm1(x))    # Attention + residual
-        x = x + self.ffn(self.norm2(x))     # FFN + residual
-        return x
-
+ def forward(self, x):
+ x = x + self.attn(self.norm1(x)) # Attention + residual
+ x = x + self.ffn(self.norm2(x)) # FFN + residual
+ return x
 
 def profile_phase(model, x, name, n_iter=5):
-    """对一个阶段做 profiling 并输出 top 算子"""
-    # warmup
-    for _ in range(2):
-        _ = model(x)
-    torch.cuda.synchronize()
+ """对一个阶段做 profiling 并输出 top 算子"""
+ # warmup
+ for _ in range(2):
+ _ = model(x)
+ torch.cuda.synchronize()
 
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA,
-        ],
-    ) as prof:
-        for _ in range(n_iter):
-            _ = model(x)
-        torch.cuda.synchronize()
+ with torch.profiler.profile(
+ activities=[
+ torch.profiler.ProfilerActivity.CPU,
+ torch.profiler.ProfilerActivity.CUDA,
+ ],
+ ) as prof:
+ for _ in range(n_iter):
+ _ = model(x)
+ torch.cuda.synchronize()
 
-    print(f"\\n===== {name} Phase (shape={tuple(x.shape)}) =====")
-    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
-    prof.export_chrome_trace(f"trace_{name}.json")
-
+ print(f"\\n===== {name} Phase (shape={tuple(x.shape)}) =====")
+ print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
+ prof.export_chrome_trace(f"trace_{name}.json")
 
 def main():
-    torch.manual_seed(42)
-    d_model, n_heads = 512, 8
-    model = TransformerBlock(d_model, n_heads).cuda().half()
+ torch.manual_seed(42)
+ d_model, n_heads = 512, 8
+ model = TransformerBlock(d_model, n_heads).cuda().half()
 
-    # Prefill: 处理长 prompt（N=1024）
-    x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_prefill, "prefill", n_iter=5)
+ # Prefill: 处理长 prompt（N=1024）
+ x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
+ profile_phase(model, x_prefill, "prefill", n_iter=5)
 
-    # Decode: 逐 token 生成（N=1）
-    x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_decode, "decode", n_iter=10)
+ # Decode: 逐 token 生成（N=1）
+ x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
+ profile_phase(model, x_decode, "decode", n_iter=10)
 
-    print("\\n===== 观察要点 =====")
-    print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
-    print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
-    print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
-    print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
-
+ print("\\n===== 观察要点 =====")
+ print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
+ print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
+ print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
+ print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
 
 if __name__ == "__main__":
-    main()
+ main()
 \`\`\`
 
 #### 运行步骤
@@ -465,19 +433,19 @@ python trace_transformer.py
 \`\`\`
 ===== Prefill Phase (shape=(1, 1024, 512)) =====
 --------------------------------- ... ---------------------------------
-Name            Self CUDA     Calls    ...
-aten::_scaled_dot_product...    xxx us    5
-aten::mm                        xxx us    20   ← QKV/Out/FFN GEMM
-aten::layer_norm                xxx us    10
-aten::softmax                   xxx us    5
+Name Self CUDA Calls ...
+aten::_scaled_dot_product... xxx us 5
+aten::mm xxx us 20 ← QKV/Out/FFN GEMM
+aten::layer_norm xxx us 10
+aten::softmax xxx us 5
 ...
 
 ===== Decode Phase (shape=(1, 1, 512)) =====
 --------------------------------- ... ---------------------------------
-Name            Self CUDA     Calls    ...
-aten::mm                        xxx us    20   ← GEMM 但矩阵极小
-aten::layer_norm                xxx us    10
-aten::softmax                   xxx us    5
+Name Self CUDA Calls ...
+aten::mm xxx us 20 ← GEMM 但矩阵极小
+aten::layer_norm xxx us 10
+aten::softmax xxx us 5
 ...
 \`\`\`
 
@@ -561,8 +529,7 @@ aten::softmax                   xxx us    5
 - [ ] torch.profiler 代码运行成功，输出 Prefill/Decode 的算子时间表
 - [ ] 找出 Prefill 阶段 CUDA 时间 top3 算子
 - [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致计算强度低）
-- [ ] 能用 chrome://tracing 打开 trace 文件并观察 kernel 间隙
-- [ ] 能对照昇腾 msprof 解释 PyTorch profiler 的对应关系`;
+- [ ] 能用 chrome://tracing 打开 trace 文件并观察 kernel 间隙`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

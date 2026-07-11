@@ -96,6 +96,5 @@
   <text x="480" y="454" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">LLM 推理服务标配组合</text>
   <text x="480" y="474" text-anchor="middle" font-size="11" fill="#444">Continuous Batching + PagedAttention + Chunked Prefill</text>
 
-  <text x="480" y="510" text-anchor="middle" font-size="10" fill="#888">vLLM / TensorRT-LLM / LightLLM / 昇腾 MindIE 均支持此组合</text>
   <text x="480" y="528" text-anchor="middle" font-size="10" fill="#888">差异在实现语言（Python vs C++）与 KV Cache 管理（Paged vs Token Attention）</text>
 </svg>

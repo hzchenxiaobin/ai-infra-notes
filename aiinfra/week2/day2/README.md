@@ -22,13 +22,13 @@
 **Register Blocking 的核心思想**：让每个线程计算 C 的一个 **TM×TN 子块**，把累加器驻留在寄存器中，从而减少对 Shared Memory 的访问次数。
 
 ```
-优化层次          数据驻留位置        复用对象           性能目标
+优化层次 数据驻留位置 复用对象 性能目标
 ─────────────────────────────────────────────────────────────
-Naive GEMM        Global Memory      无                 ~1-3% peak
-Shared Mem Tiling Shared Memory      A/B tile           ~15-25% peak
-Register Blocking Register           A子行/B子列+累加器  ~40-60% peak
-Warp-level        Register+Shuffle   Warp内协作          ~60-80% peak
-软件流水线         全部 + 双缓冲       计算掩盖传输        ~80-95% peak
+Naive GEMM Global Memory 无 ~1-3% peak
+Shared Mem Tiling Shared Memory A/B tile ~15-25% peak
+Register Blocking Register A子行/B子列+累加器 ~40-60% peak
+Warp-level Register+Shuffle Warp内协作 ~60-80% peak
+软件流水线 全部 + 双缓冲 计算掩盖传输 ~80-95% peak
 ```
 
 ---
@@ -41,16 +41,16 @@ Warp-level        Register+Shuffle   Warp内协作          ~60-80% peak
 
 ```
 Global Memory (A[M][K], B[K][N])
-    │
-    ▼ 协作加载（所有线程参与）
+ │
+ ▼ 协作加载（所有线程参与）
 Shared Memory (s_A[BM][BK], s_B[BK][BN])
-    │
-    ├──► Register (r_A[TM]) ──┐
-    │                           ▼
-    └──► Register (r_B[TN]) ──► FMA累加 (acc[TM][TN])
-    │                              │
-    ◄──────────────────────────────┘
-         重复 BK 次（内层 k 循环）
+ │
+ ├──► Register (r_A[TM]) ──┐
+ │ ▼
+ └──► Register (r_B[TN]) ──► FMA累加 (acc[TM][TN])
+ │ │
+ ◄──────────────────────────────┘
+ 重复 BK 次（内层 k 循环）
 ```
 
 每个线程的执行流程：
@@ -91,13 +91,13 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 每个 thread tile = TM×TN = 8×8
 
 threadIdx.x 的范围: 0 ~ 255
-threadRow = threadIdx.x / (BN / TN) = threadIdx.x / 16  → 范围 0~15
-threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
+threadRow = threadIdx.x / (BN / TN) = threadIdx.x / 16 → 范围 0~15
+threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 
 线程(threadRow, threadCol) 负责输出的行范围:
-  [blockIdx.y * BM + threadRow * TM,  blockIdx.y * BM + (threadRow+1) * TM)
+ [blockIdx.y * BM + threadRow * TM, blockIdx.y * BM + (threadRow+1) * TM)
 负责输出的列范围:
-  [blockIdx.x * BN + threadCol * TN,  blockIdx.x * BN + (threadCol+1) * TN)
+ [blockIdx.x * BN + threadCol * TN, blockIdx.x * BN + (threadCol+1) * TN)
 ```
 
 #### 2.5 Double Buffering（软件流水线）
@@ -106,26 +106,14 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
 
 ```
 单缓冲： [Load Tile 0] ──► [Compute Tile 0] ──► [Load Tile 1] ──► [Compute Tile 1]
-                          ▲ 空闲等待（Load 不能被 Compute 掩盖）
+ ▲ 空闲等待（Load 不能被 Compute 掩盖）
 
 双缓冲： [Load Tile 0→Buf0] ──► [Compute Tile 0 同时 Load Tile 1→Buf1]
-                              ──► [Compute Tile 1 同时 Load Tile 2→Buf0]
-         ▲ Compute 和 Load 并行执行，掩盖传输延迟
+ ──► [Compute Tile 1 同时 Load Tile 2→Buf0]
+ ▲ Compute 和 Load 并行执行，掩盖传输延迟
 ```
 
 实现方式：声明两份 shared memory buffer，奇偶 tile 交替使用。
-
----
-
-### 昇腾对照
-
-| CUDA 概念 | 昇腾 CANN 对应 | 对照说明 |
-|---------|------------|---------|
-| Register Blocking（Thread Tile） | Split-K / FRACTAL_NZ 分块 | 昇腾的 FRACTAL_NZ 布局本质上也是一种多级分块 |
-| `acc[TM][TN]` 驻留寄存器 | L0 Buffer accumulator 驻留 | CUDA 用寄存器文件做累加器；昇腾用 L0 Buffer |
-| Shared Memory | L1 Buffer (UB/Tiling Buffer) | 都用于存储从 HBM 预取的 tile 数据 |
-| Double Buffering | Fixpipe 自动流水线 | 昇腾硬件自动完成，CUDA 需手动实现 |
-| FMA 指令 | Cube Core 的 MAC 指令 | 昇腾 Cube Core 用矩阵乘累加（MAC）指令 |
 
 ---
 
@@ -155,198 +143,198 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16   → 范围 0~15
 #define NUM_THREADS ((BM / TM) * (BN / TN))
 
 __global__ void gemmRegisterBlocking(const float* __restrict__ A,
-                                      const float* __restrict__ B,
-                                      float* __restrict__ C,
-                                      int M, int N, int K) {
-    __shared__ float s_A[BM][BK];
-    __shared__ float s_B[BK][BN];
+ const float* __restrict__ B,
+ float* __restrict__ C,
+ int M, int N, int K) {
+ __shared__ float s_A[BM][BK];
+ __shared__ float s_B[BK][BN];
 
-    float r_A[TM];
-    float r_B[TN];
-    float acc[TM][TN] = {0};
+ float r_A[TM];
+ float r_B[TN];
+ float acc[TM][TN] = {0};
 
-    int threadRow = threadIdx.x / (BN / TN);
-    int threadCol = threadIdx.x % (BN / TN);
-    int cRow = blockIdx.y * BM;
-    int cCol = blockIdx.x * BN;
+ int threadRow = threadIdx.x / (BN / TN);
+ int threadCol = threadIdx.x % (BN / TN);
+ int cRow = blockIdx.y * BM;
+ int cCol = blockIdx.x * BN;
 
-    for (int bk = 0; bk < K; bk += BK) {
-        // 协作加载 A tile
-        int aRow = threadIdx.x / BK;
-        int aCol = threadIdx.x % BK;
-        #pragma unroll
-        for (int i = 0; i < BM; i += NUM_THREADS / BK) {
-            int loadRow = aRow + i;
-            if (loadRow < BM && (cRow + loadRow) < M && (bk + aCol) < K) {
-                s_A[loadRow][aCol] = A[(cRow + loadRow) * K + (bk + aCol)];
-            } else if (loadRow < BM) {
-                s_A[loadRow][aCol] = 0.0f;
-            }
-        }
+ for (int bk = 0; bk < K; bk += BK) {
+ // 协作加载 A tile
+ int aRow = threadIdx.x / BK;
+ int aCol = threadIdx.x % BK;
+ #pragma unroll
+ for (int i = 0; i < BM; i += NUM_THREADS / BK) {
+ int loadRow = aRow + i;
+ if (loadRow < BM && (cRow + loadRow) < M && (bk + aCol) < K) {
+ s_A[loadRow][aCol] = A[(cRow + loadRow) * K + (bk + aCol)];
+ } else if (loadRow < BM) {
+ s_A[loadRow][aCol] = 0.0f;
+ }
+ }
 
-        // 协作加载 B tile
-        int bRow = threadIdx.x / BN;
-        int bCol = threadIdx.x % BN;
-        #pragma unroll
-        for (int i = 0; i < BK; i += NUM_THREADS / BN) {
-            int loadRow = bRow + i;
-            if (loadRow < BK && (bk + loadRow) < K && (cCol + bCol) < N) {
-                s_B[loadRow][bCol] = B[(bk + loadRow) * N + (cCol + bCol)];
-            } else if (loadRow < BK) {
-                s_B[loadRow][bCol] = 0.0f;
-            }
-        }
+ // 协作加载 B tile
+ int bRow = threadIdx.x / BN;
+ int bCol = threadIdx.x % BN;
+ #pragma unroll
+ for (int i = 0; i < BK; i += NUM_THREADS / BN) {
+ int loadRow = bRow + i;
+ if (loadRow < BK && (bk + loadRow) < K && (cCol + bCol) < N) {
+ s_B[loadRow][bCol] = B[(bk + loadRow) * N + (cCol + bCol)];
+ } else if (loadRow < BK) {
+ s_B[loadRow][bCol] = 0.0f;
+ }
+ }
 
-        __syncthreads();
+ __syncthreads();
 
-        // Register Blocking 计算
-        #pragma unroll
-        for (int k = 0; k < BK; k++) {
-            #pragma unroll
-            for (int m = 0; m < TM; m++) {
-                r_A[m] = s_A[threadRow * TM + m][k];
-            }
-            #pragma unroll
-            for (int n = 0; n < TN; n++) {
-                r_B[n] = s_B[k][threadCol * TN + n];
-            }
-            #pragma unroll
-            for (int m = 0; m < TM; m++) {
-                #pragma unroll
-                for (int n = 0; n < TN; n++) {
-                    acc[m][n] += r_A[m] * r_B[n];
-                }
-            }
-        }
-        __syncthreads();
-    }
+ // Register Blocking 计算
+ #pragma unroll
+ for (int k = 0; k < BK; k++) {
+ #pragma unroll
+ for (int m = 0; m < TM; m++) {
+ r_A[m] = s_A[threadRow * TM + m][k];
+ }
+ #pragma unroll
+ for (int n = 0; n < TN; n++) {
+ r_B[n] = s_B[k][threadCol * TN + n];
+ }
+ #pragma unroll
+ for (int m = 0; m < TM; m++) {
+ #pragma unroll
+ for (int n = 0; n < TN; n++) {
+ acc[m][n] += r_A[m] * r_B[n];
+ }
+ }
+ }
+ __syncthreads();
+ }
 
-    // 写回 Global Memory
-    #pragma unroll
-    for (int m = 0; m < TM; m++) {
-        #pragma unroll
-        for (int n = 0; n < TN; n++) {
-            int gRow = cRow + threadRow * TM + m;
-            int gCol = cCol + threadCol * TN + n;
-            if (gRow < M && gCol < N) {
-                C[gRow * N + gCol] = acc[m][n];
-            }
-        }
-    }
+ // 写回 Global Memory
+ #pragma unroll
+ for (int m = 0; m < TM; m++) {
+ #pragma unroll
+ for (int n = 0; n < TN; n++) {
+ int gRow = cRow + threadRow * TM + m;
+ int gCol = cCol + threadCol * TN + n;
+ if (gRow < M && gCol < N) {
+ C[gRow * N + gCol] = acc[m][n];
+ }
+ }
+ }
 }
 
 float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
-    cublasHandle_t handle;
-    cublasCreate(&handle);
-    const float alpha = 1.0f;
-    const float beta = 0.0f;
+ cublasHandle_t handle;
+ cublasCreate(&handle);
+ const float alpha = 1.0f;
+ const float beta = 0.0f;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+ cudaEvent_t start, stop;
+ cudaEventCreate(&start);
+ cudaEventCreate(&stop);
 
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
-                &alpha, d_B, N, d_A, K, &beta, d_C, N);
-    cudaDeviceSynchronize();
+ cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
+ &alpha, d_B, N, d_A, K, &beta, d_C, N);
+ cudaDeviceSynchronize();
 
-    cudaEventRecord(start);
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
-                &alpha, d_B, N, d_A, K, &beta, d_C, N);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
+ cudaEventRecord(start);
+ cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
+ &alpha, d_B, N, d_A, K, &beta, d_C, N);
+ cudaEventRecord(stop);
+ cudaEventSynchronize(stop);
 
-    float ms;
-    cudaEventElapsedTime(&ms, start, stop);
-    cublasDestroy(handle);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    return ms;
+ float ms;
+ cudaEventElapsedTime(&ms, start, stop);
+ cublasDestroy(handle);
+ cudaEventDestroy(start);
+ cudaEventDestroy(stop);
+ return ms;
 }
 
 void initMatrix(float* mat, int rows, int cols) {
-    srand(42);
-    for (int i = 0; i < rows * cols; i++) {
-        mat[i] = static_cast<float>(rand()) / RAND_MAX * 0.1f - 0.05f;
-    }
+ srand(42);
+ for (int i = 0; i < rows * cols; i++) {
+ mat[i] = static_cast<float>(rand()) / RAND_MAX * 0.1f - 0.05f;
+ }
 }
 
 bool checkResult(const float* gpu, const float* cpu, int M, int N, float eps) {
-    for (int i = 0; i < M * N; i++) {
-        if (fabs(gpu[i] - cpu[i]) > eps) {
-            printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n",
-                   i / N, i % N, gpu[i], cpu[i]);
-            return false;
-        }
-    }
-    return true;
+ for (int i = 0; i < M * N; i++) {
+ if (fabs(gpu[i] - cpu[i]) > eps) {
+ printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n",
+ i / N, i % N, gpu[i], cpu[i]);
+ return false;
+ }
+ }
+ return true;
 }
 
 float getGFLOPS(int M, int N, int K, float ms) {
-    return 2.0f * M * N * K / (ms * 1e6);
+ return 2.0f * M * N * K / (ms * 1e6);
 }
 
 int main() {
-    int sizes[][3] = {{1024,1024,1024}, {2048,2048,2048}, {4096,4096,4096}};
+ int sizes[][3] = {{1024,1024,1024}, {2048,2048,2048}, {4096,4096,4096}};
 
-    printf("=== Register Blocking GEMM ===\n");
-    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n",
-           BM, BN, BK, TM, TN, NUM_THREADS);
-    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n",
-           "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
-    printf("------------------------------------------------------------\n");
+ printf("=== Register Blocking GEMM ===\n");
+ printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n",
+ BM, BN, BK, TM, TN, NUM_THREADS);
+ printf("%-10s %-10s %-10s %-12s %-12s %-10s\n",
+ "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
+ printf("------------------------------------------------------------\n");
 
-    for (int s = 0; s < 3; s++) {
-        int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
-        size_t sizeA = M * K * sizeof(float);
-        size_t sizeB = K * N * sizeof(float);
-        size_t sizeC = M * N * sizeof(float);
+ for (int s = 0; s < 3; s++) {
+ int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
+ size_t sizeA = M * K * sizeof(float);
+ size_t sizeB = K * N * sizeof(float);
+ size_t sizeC = M * N * sizeof(float);
 
-        float *h_A = (float*)malloc(sizeA);
-        float *h_B = (float*)malloc(sizeB);
-        float *h_C = (float*)malloc(sizeC);
-        float *h_C_ref = (float*)malloc(sizeC);
-        initMatrix(h_A, M, K);
-        initMatrix(h_B, K, N);
+ float *h_A = (float*)malloc(sizeA);
+ float *h_B = (float*)malloc(sizeB);
+ float *h_C = (float*)malloc(sizeC);
+ float *h_C_ref = (float*)malloc(sizeC);
+ initMatrix(h_A, M, K);
+ initMatrix(h_B, K, N);
 
-        float *d_A, *d_B, *d_C;
-        cudaMalloc(&d_A, sizeA);
-        cudaMalloc(&d_B, sizeB);
-        cudaMalloc(&d_C, sizeC);
-        cudaMemcpy(d_A, h_A, sizeA, cudaMemcpyHostToDevice);
-        cudaMemcpy(d_B, h_B, sizeB, cudaMemcpyHostToDevice);
+ float *d_A, *d_B, *d_C;
+ cudaMalloc(&d_A, sizeA);
+ cudaMalloc(&d_B, sizeB);
+ cudaMalloc(&d_C, sizeC);
+ cudaMemcpy(d_A, h_A, sizeA, cudaMemcpyHostToDevice);
+ cudaMemcpy(d_B, h_B, sizeB, cudaMemcpyHostToDevice);
 
-        dim3 gridDim((N + BN - 1) / BN, (M + BM - 1) / BM);
-        dim3 blockDim(NUM_THREADS);
+ dim3 gridDim((N + BN - 1) / BN, (M + BM - 1) / BM);
+ dim3 blockDim(NUM_THREADS);
 
-        gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
-        cudaDeviceSynchronize();
+ gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
+ cudaDeviceSynchronize();
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
-        gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
+ cudaEvent_t start, stop;
+ cudaEventCreate(&start);
+ cudaEventCreate(&stop);
+ cudaEventRecord(start);
+ gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
+ cudaEventRecord(stop);
+ cudaEventSynchronize(stop);
 
-        float ourMs;
-        cudaEventElapsedTime(&ourMs, start, stop);
-        cudaMemcpy(h_C, d_C, sizeC, cudaMemcpyDeviceToHost);
+ float ourMs;
+ cudaEventElapsedTime(&ourMs, start, stop);
+ cudaMemcpy(h_C, d_C, sizeC, cudaMemcpyDeviceToHost);
 
-        float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
-        cudaMemcpy(h_C_ref, d_C, sizeC, cudaMemcpyDeviceToHost);
+ float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
+ cudaMemcpy(h_C_ref, d_C, sizeC, cudaMemcpyDeviceToHost);
 
-        bool correct = checkResult(h_C, h_C_ref, M, N, 1e-2);
-        float percent = (cublasMs / ourMs) * 100;
+ bool correct = checkResult(h_C, h_C_ref, M, N, 1e-2);
+ float percent = (cublasMs / ourMs) * 100;
 
-        printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n",
-               M, N, K, ourMs, cublasMs, percent, correct ? "PASS" : "FAIL");
+ printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n",
+ M, N, K, ourMs, cublasMs, percent, correct ? "PASS" : "FAIL");
 
-        free(h_A); free(h_B); free(h_C); free(h_C_ref);
-        cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
-        cudaEventDestroy(start); cudaEventDestroy(stop);
-    }
-    return 0;
+ free(h_A); free(h_B); free(h_C); free(h_C_ref);
+ cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+ cudaEventDestroy(start); cudaEventDestroy(stop);
+ }
+ return 0;
 }
 ```
 
@@ -362,11 +350,11 @@ nvcc -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 ```
 === Register Blocking GEMM ===
 Parameters: BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
-M          N          K          Our(ms)      cuBLAS(ms)   Percent
+M N K Our(ms) cuBLAS(ms) Percent
 ------------------------------------------------------------
-1024       1024       1024       0.xxx        0.xxx        35.2%  PASS
-2048       2048       2048       x.xxx        x.xxx        42.1%  PASS
-4096       4096       4096       xx.xxx       xx.xxx       45.8%  PASS
+1024 1024 1024 0.xxx 0.xxx 35.2% PASS
+2048 2048 2048 x.xxx x.xxx 42.1% PASS
+4096 4096 4096 xx.xxx xx.xxx 45.8% PASS
 ```
 
 #### 任务 3：检查 Register 使用量
@@ -408,38 +396,38 @@ Shared Memory Tiling (BM×BN×BK) + Register Blocking (TM×TN)。协作加载 A/
 #define NUM_THREADS ((BM / TM) * (BN / TN))
 
 __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
-                                       int M, int N, int K) {
-    __shared__ float s_A[BM][BK];
-    __shared__ float s_B[BK][BN];
+ int M, int N, int K) {
+ __shared__ float s_A[BM][BK];
+ __shared__ float s_B[BK][BN];
 
-    float r_A[TM], r_B[TN];
-    float acc[TM][TN] = {{0}};
+ float r_A[TM], r_B[TN];
+ float acc[TM][TN] = {{0}};
 
-    int threadRow = threadIdx.x / (BN / TN);
-    int threadCol = threadIdx.x % (BN / TN);
-    int cRow = blockIdx.y * BM;
-    int cCol = blockIdx.x * BN;
+ int threadRow = threadIdx.x / (BN / TN);
+ int threadCol = threadIdx.x % (BN / TN);
+ int cRow = blockIdx.y * BM;
+ int cCol = blockIdx.x * BN;
 
-    for (int bk = 0; bk < K; bk += BK) {
-        // 协作加载 A/B tile (省略边界处理)
-        // ... s_A[...][...] = A[...]; s_B[...][...] = B[...];
-        __syncthreads();
+ for (int bk = 0; bk < K; bk += BK) {
+ // 协作加载 A/B tile (省略边界处理)
+ // ... s_A[...][...] = A[...]; s_B[...][...] = B[...];
+ __syncthreads();
 
-        #pragma unroll
-        for (int k = 0; k < BK; k++) {
-            #pragma unroll
-            for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow*TM + m][k];
-            #pragma unroll
-            for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol*TN + n];
-            #pragma unroll
-            for (int m = 0; m < TM; m++)
-                #pragma unroll
-                for (int n = 0; n < TN; n++)
-                    acc[m][n] += r_A[m] * r_B[n];
-        }
-        __syncthreads();
-    }
-    // 写回 C (省略边界处理)
+ #pragma unroll
+ for (int k = 0; k < BK; k++) {
+ #pragma unroll
+ for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow*TM + m][k];
+ #pragma unroll
+ for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol*TN + n];
+ #pragma unroll
+ for (int m = 0; m < TM; m++)
+ #pragma unroll
+ for (int n = 0; n < TN; n++)
+ acc[m][n] += r_A[m] * r_B[n];
+ }
+ __syncthreads();
+ }
+ // 写回 C (省略边界处理)
 }
 ```
 
@@ -461,7 +449,7 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 
 ```
 f(1)=1, f(2)=2
-f(n) = f(n-1) + f(n-2)   // 滚动两个变量即可，O(1) 空间
+f(n) = f(n-1) + f(n-2) // 滚动两个变量即可，O(1) 空间
 ```
 
 > 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [爬楼梯题解](../../../leetcode/daily/week2/day2/爬楼梯.md)。
@@ -492,7 +480,6 @@ f(n) = f(n-1) + f(n-2)   // 滚动两个变量即可，O(1) 空间
 - [ ] 能画出数据流图：Global Memory → Shared Memory → Register → FMA 累加
 - [ ] 能计算每 Block 线程数 = (BM/TM) × (BN/TN)
 - [ ] 能解释 Double Buffering 的原理（用计算掩盖数据传输延迟）
-- [ ] 能对照昇腾的 FRACTAL_NZ + Split-K 解释 register blocking 的数据分片哲学
 
 ---
 
@@ -512,30 +499,30 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 
 1. **"如何把手写 GEMM 优化到 cuBLAS 80% 的性能？"请逐层展开优化策略。**
 
-   按层次展开：
-   - Naive（~1%）→ Shared Memory Tiling（~15%）→ Register Blocking（~40%）→ Warp-level（~60%）→ Vectorized Load（~70%）→ Double Buffering（~80%）→ Auto-tuning（~90%+）
+ 按层次展开：
+ - Naive（~1%）→ Shared Memory Tiling（~15%）→ Register Blocking（~40%）→ Warp-level（~60%）→ Vectorized Load（~70%）→ Double Buffering（~80%）→ Auto-tuning（~90%+）
 
-2. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
+1. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
 
-   - 寄存器访问延迟 ~0 cycle，Shared Memory 延迟 ~20-30 cycles
-   - `acc[TM][TN]` 被访问 TM×TN×BK 次（内层循环），放在 register 极大减少延迟
-   - 放 shared memory 会占用 BM×BN×4 = 64KB，超过 shared memory 上限
+ - 寄存器访问延迟 ~0 cycle，Shared Memory 延迟 ~20-30 cycles
+ - `acc[TM][TN]` 被访问 TM×TN×BK 次（内层循环），放在 register 极大减少延迟
+ - 放 shared memory 会占用 BM×BN×4 = 64KB，超过 shared memory 上限
 
-3. **Register 使用量如何计算？什么时候会 spill？**
+1. **Register 使用量如何计算？什么时候会 spill？**
 
-   - `acc[TM][TN]` + `r_A[TM]` + `r_B[TN]` + 索引变量
-   - TM=TN=8 时约 88 个 register；TM=TN=16 时累加器就有 256 个，会 spill 到 local memory
+ - `acc[TM][TN]` + `r_A[TM]` + `r_B[TN]` + 索引变量
+ - TM=TN=8 时约 88 个 register；TM=TN=16 时累加器就有 256 个，会 spill 到 local memory
 
-4. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
+1. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
 
-   - **原理**：声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟
-   - **收益**：单缓冲时 Load 期间 SM 空闲，双缓冲后 Compute 与 Load 重叠，性能从 ~45% 提升到 ~70%，是跨越 cuBLAS 80% 的关键
-   - **注意**：① 需 `__syncthreads()` 保证 buffer 切换的数据可见性 ② 多消耗一倍 shared memory，可能降低 occupancy ③ 首块需预取（prologue），末块不再加载（epilogue）
+ - **原理**：声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟
+ - **收益**：单缓冲时 Load 期间 SM 空闲，双缓冲后 Compute 与 Load 重叠，性能从 ~45% 提升到 ~70%，是跨越 cuBLAS 80% 的关键
+ - **注意**：① 需 `__syncthreads()` 保证 buffer 切换的数据可见性 ② 多消耗一倍 shared memory，可能降低 occupancy ③ 首块需预取（prologue），末块不再加载（epilogue）
 
-5. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
+1. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
 
-   - **映射**：`threadRow = threadIdx.x / (BN/TN)`，`threadCol = threadIdx.x % (BN/TN)`，每个线程负责输出 tile 的 TM×TN 子块
-   - **线程数** = (BM/TM) × (BN/TN)，如 BM=BN=128, TM=TN=8 → 16×16=256
-   - **取 256 的原因**：= 8 个 warp，兼顾 occupancy（不会因寄存器/共享内存过多而压低 active warp 数）与并行度；过小则并行度不足，过大则资源紧张降低 occupancy
+ - **映射**：`threadRow = threadIdx.x / (BN/TN)`，`threadCol = threadIdx.x % (BN/TN)`，每个线程负责输出 tile 的 TM×TN 子块
+ - **线程数** = (BM/TM) × (BN/TN)，如 BM=BN=128, TM=TN=8 → 16×16=256
+ - **取 256 的原因**：= 8 个 warp，兼顾 occupancy（不会因寄存器/共享内存过多而压低 active warp 数）与并行度；过小则并行度不足，过大则资源紧张降低 occupancy
 
 ---

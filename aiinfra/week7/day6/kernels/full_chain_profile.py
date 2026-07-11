@@ -367,8 +367,6 @@ ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\\
 #     engine.run(...)
 # print(prof.key_averages().table(sort_by="cuda_time_total"))
 
-# 4. 昇腾 msprof（CANN 环境）
-# msprof --output=./prof_data python full_chain_profile.py
 """)
 
 
