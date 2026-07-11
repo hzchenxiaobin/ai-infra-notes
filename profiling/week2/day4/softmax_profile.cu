@@ -14,8 +14,9 @@ __global__ void softmax_kernel(const float* input, float* output, int N) {
 
     // Pass 1: 求 max
     float max_val = -INFINITY;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++) {
         max_val = fmaxf(max_val, input[i]);
+    }
 
     // Pass 2: 求 sum(exp(x - max))
     float sum = 0.0f;
@@ -37,24 +38,27 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
 
     // Pass 1: 求 max
     float local_max = -INFINITY;
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         local_max = fmaxf(local_max, input[row * N + i]);
+    }
 
     // block reduce max（简化版：用 shared memory）
     __shared__ float smem[32];
     int lane = tid % 32;
     int wid = tid / 32;
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         local_max = fmaxf(local_max, __shfl_down_sync(0xFFFFFFFF, local_max, offset));
+    }
     if (lane == 0) smem[wid] = local_max;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     if (wid == 0) {
         local_max = (lane < numWarps) ? smem[lane] : -INFINITY;
         #pragma unroll
-        for (int offset = 16; offset > 0; offset >>= 1)
+        for (int offset = 16; offset > 0; offset >>= 1) {
             local_max = fmaxf(local_max, __shfl_down_sync(0xFFFFFFFF, local_max, offset));
+        }
         if (lane == 0) s_max = local_max;
     }
     __syncthreads();
@@ -62,19 +66,22 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
 
     // Pass 2: 求 sum
     float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         local_sum += expf(input[row * N + i] - row_max);
+    }
 
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
+    }
     if (lane == 0) smem[wid] = local_sum;
     __syncthreads();
     if (wid == 0) {
         local_sum = (lane < numWarps) ? smem[lane] : 0.0f;
         #pragma unroll
-        for (int offset = 16; offset > 0; offset >>= 1)
+        for (int offset = 16; offset > 0; offset >>= 1) {
             local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
+        }
         if (lane == 0) s_sum = local_sum;
     }
     __syncthreads();
@@ -82,27 +89,35 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
 
     // Pass 3: 归一化
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         output[row * N + i] = expf(input[row * N + i] - row_max) * inv_sum;
+    }
 }
 
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+    }
 }
 
 void cpuSoftmax(const float* in, float* out, int N) {
     float mx = in[0];
-    for (int i = 1; i < N; i++) mx = fmaxf(mx, in[i]);
+    for (int i = 1; i < N; i++) {
+        mx = fmaxf(mx, in[i]);
+    }
     float s = 0.0f;
     for (int i = 0; i < N; i++) { out[i] = expf(in[i] - mx); s += out[i]; }
-    for (int i = 0; i < N; i++) out[i] /= s;
+    for (int i = 0; i < N; i++) {
+        out[i] /= s;
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
     float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++) maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    for (int i = 0; i < n; i++) {
+        maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    }
     bool ok = maxDiff < eps;
     printf("  maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
     return ok;

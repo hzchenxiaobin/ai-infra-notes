@@ -12,15 +12,17 @@
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 
@@ -156,10 +158,14 @@ void cpuSoftmax(const float* in, float* out, int M, int D) {
         const float* ir = in + r * D;
         float* orow = out + r * D;
         float mx = ir[0];
-        for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
+        for (int i = 1; i < D; i++) {
+            mx = fmaxf(mx, ir[i]);
+        }
         float s = 0.0f;
         for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
-        for (int i = 0; i < D; i++) orow[i] /= s;
+        for (int i = 0; i < D; i++) {
+            orow[i] /= s;
+        }
     }
 }
 
@@ -169,14 +175,17 @@ void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
         const float* ir = in + r * N;
         float* orow = out + r * N;
         float mean = 0.0f;
-        for (int i = 0; i < N; i++) mean += ir[i];
+        for (int i = 0; i < N; i++) {
+            mean += ir[i];
+        }
         mean /= N;
         float var = 0.0f;
         for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
         var /= N;
         float rstd = 1.0f / sqrtf(var + eps);
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < N; i++) {
             orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
+        }
     }
 }
 

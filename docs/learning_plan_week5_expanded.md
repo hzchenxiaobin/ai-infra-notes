@@ -530,7 +530,7 @@ Cache 复用：
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <math>
+#include <cmath>
 #include <vector>
 
 // --------------------------------------------------

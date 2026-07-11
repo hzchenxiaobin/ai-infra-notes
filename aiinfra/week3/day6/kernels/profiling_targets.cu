@@ -13,14 +13,16 @@
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
@@ -60,22 +62,25 @@ __global__ void softmax_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0) row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_sum += expf(in_row[i] - row_max);
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 // ============================================================
@@ -90,8 +95,9 @@ __global__ void gemm_kernel(const float* __restrict__ A,
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= M || col >= N) return;
     float acc = 0.0f;
-    for (int k = 0; k < K; k++)
+    for (int k = 0; k < K; k++) {
         acc += A[row * K + k] * B[k * N + col];
+    }
     C[row * N + col] = acc;
 }
 
@@ -100,8 +106,9 @@ __global__ void gemm_kernel(const float* __restrict__ A,
 // ============================================================
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f;
+    }
 }
 
 void cpuSoftmax(const float* in, float* out, int M, int D) {
@@ -109,10 +116,14 @@ void cpuSoftmax(const float* in, float* out, int M, int D) {
         const float* ir = in + r * D;
         float* orow = out + r * D;
         float mx = ir[0];
-        for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
+        for (int i = 1; i < D; i++) {
+            mx = fmaxf(mx, ir[i]);
+        }
         float s = 0.0f;
         for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
-        for (int i = 0; i < D; i++) orow[i] /= s;
+        for (int i = 0; i < D; i++) {
+            orow[i] /= s;
+        }
     }
 }
 
@@ -158,7 +169,9 @@ int main() {
     cudaMemcpy(h_sm_out, d_sm_out, sm_bytes, cudaMemcpyDeviceToHost);
     cpuSoftmax(h_sm_in, h_sm_ref, SM_M, SM_D);
     float sm_diff = 0.0f;
-    for (int i = 0; i < SM_M * SM_D; i++) sm_diff = fmaxf(sm_diff, fabsf(h_sm_out[i] - h_sm_ref[i]));
+    for (int i = 0; i < SM_M * SM_D; i++) {
+        sm_diff = fmaxf(sm_diff, fabsf(h_sm_out[i] - h_sm_ref[i]));
+    }
     printf("[Softmax] time=%.3f ms  maxDiff=%.2e  (%s)\n", sm_ms, sm_diff,
            sm_diff < 1e-5f ? "PASS" : "FAIL");
 

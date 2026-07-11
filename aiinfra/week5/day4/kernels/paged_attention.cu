@@ -23,7 +23,9 @@
 // ---------- 块归约 ----------
 __inline__ __device__ float warp_reduce_sum(float v) {
     #pragma unroll
-    for (int o = WARP_SIZE/2; o > 0; o >>= 1) v += __shfl_down_sync(0xffffffff, v, o);
+    for (int o = WARP_SIZE/2; o > 0; o >>= 1) {
+        v += __shfl_down_sync(0xffffffff, v, o);
+    }
     return v;
 }
 __inline__ __device__ float block_reduce_sum(float v, float* sh) {
@@ -59,7 +61,9 @@ __global__ void paged_attention_kernel(
     const float scale = 1.0f / sqrtf((float)d);
 
     // ① 载入 query 到 shared
-    for (int t = tid; t < d; t += BLOCK_SIZE) q_shm[t] = q[t];
+    for (int t = tid; t < d; t += BLOCK_SIZE) {
+        q_shm[t] = q[t];
+    }
     __syncthreads();
 
     float m = -INFINITY, l = 0.f;
@@ -80,7 +84,9 @@ __global__ void paged_attention_kernel(
 
             // 点积 score = q · k / √d（block 归约）
             float part = 0.f;
-            for (int t = tid; t < d; t += BLOCK_SIZE) part += q_shm[t] * k_vec[t];
+            for (int t = tid; t < d; t += BLOCK_SIZE) {
+                part += q_shm[t] * k_vec[t];
+            }
             float s_k = block_reduce_sum(part, red) * scale;
             if (tid == 0) s_k_shm = s_k;
             __syncthreads(); s_k = s_k_shm;
@@ -98,13 +104,16 @@ __global__ void paged_attention_kernel(
             __syncthreads();
 
             // 累加输出
-            for (int t = tid; t < d; t += BLOCK_SIZE)
+            for (int t = tid; t < d; t += BLOCK_SIZE) {
                 o_local = o_local * alpha_shm + beta_shm * v_vec[t];
+            }
             __syncthreads();
         }
     }
     // ③ 写回
-    for (int t = tid; t < d; t += BLOCK_SIZE) output[t] = o_local;
+    for (int t = tid; t < d; t += BLOCK_SIZE) {
+        output[t] = o_local;
+    }
 }
 
 // ---------- CPU 参考（连续 KV cache，用于验证 paged 版正确性）----------
@@ -115,14 +124,18 @@ void attention_cpu(const float* K, const float* V, const float* q,
     float mx = -INFINITY;
     for (int s = 0; s < seq_len; ++s) {
         float dot = 0.f;
-        for (int t = 0; t < d; ++t) dot += q[t] * K[s * d + t];
+        for (int t = 0; t < d; ++t) {
+            dot += q[t] * K[s * d + t];
+        }
         sc[s] = dot * scale; mx = fmaxf(mx, sc[s]);
     }
     float sum = 0.f;
     for (int s = 0; s < seq_len; ++s) { sc[s] = expf(sc[s] - mx); sum += sc[s]; }
     for (int t = 0; t < d; ++t) {
         float acc = 0.f;
-        for (int s = 0; s < seq_len; ++s) acc += sc[s] * V[s * d + t];
+        for (int s = 0; s < seq_len; ++s) {
+            acc += sc[s] * V[s * d + t];
+        }
         out[t] = acc / sum;
     }
 }
@@ -141,7 +154,9 @@ int main() {
     // 逻辑 block 0..3 → 物理 block 7, 1, 12, 3（不连续！）
     std::vector<int> block_table = {7, 1, 12, 3};
     printf("block_table (logical→physical): ");
-    for (int i = 0; i < num_logical_blocks; ++i) printf("%d→%d  ", i, block_table[i]);
+    for (int i = 0; i < num_logical_blocks; ++i) {
+        printf("%d→%d  ", i, block_table[i]);
+    }
     printf("\n");
 
     // ---- 构造物理 block 池 ----
@@ -158,16 +173,19 @@ int main() {
     for (int lb = 0; lb < num_logical_blocks; ++lb) {
         int pb = block_table[lb];
         int tokens = min(KV_BLOCK_SIZE, seq_len - lb * KV_BLOCK_SIZE);
-        for (int s = 0; s < tokens; ++s)
+        for (int s = 0; s < tokens; ++s) {
             for (int t = 0; t < d; ++t) {
                 h_k_pool[(size_t)pb * KV_BLOCK_SIZE * d + s * d + t] = k_contig[(lb * KV_BLOCK_SIZE + s) * d + t];
                 h_v_pool[(size_t)pb * KV_BLOCK_SIZE * d + s * d + t] = v_contig[(lb * KV_BLOCK_SIZE + s) * d + t];
             }
+        }
     }
 
     // query
     std::vector<float> h_q(d);
-    for (int t = 0; t < d; ++t) h_q[t] = ((rand() % 2000) - 1000) / 100.f;
+    for (int t = 0; t < d; ++t) {
+        h_q[t] = ((rand() % 2000) - 1000) / 100.f;
+    }
 
     // ---- device 分配 ----
     float *d_k_pool, *d_v_pool, *d_q, *d_out;
@@ -197,7 +215,9 @@ int main() {
 
     // ---- 验证 ----
     float max_diff = 0.f;
-    for (int t = 0; t < d; ++t) max_diff = fmaxf(max_diff, fabsf(h_out[t] - h_ref[t]));
+    for (int t = 0; t < d; ++t) {
+        max_diff = fmaxf(max_diff, fabsf(h_out[t] - h_ref[t]));
+    }
     printf("max diff (paged vs contiguous): %.2e (%s)\n",
            max_diff, max_diff < 1e-4f ? "PASS" : "FAIL");
 

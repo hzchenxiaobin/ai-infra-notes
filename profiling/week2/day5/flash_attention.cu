@@ -162,8 +162,9 @@ __global__ void standardAttentionFwd(const float* __restrict__ Q,
 
     // P = softmax(S)
     float maxVal = -1e30f;
-    for (int j = 0; j < N; j++)
+    for (int j = 0; j < N; j++) {
         maxVal = fmaxf(maxVal, S[bhOffset * N + qRow * N + j]);
+    }
     float sum = 0.0f;
     for (int j = 0; j < N; j++) {
         P[bhOffset * N + qRow * N + j] = expf(S[bhOffset * N + qRow * N + j] - maxVal);
@@ -187,28 +188,32 @@ void cpuAttention(const float* Q, const float* K, const float* V,
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             float sum = 0;
-            for (int d = 0; d < headDim; d++)
+            for (int d = 0; d < headDim; d++) {
                 sum += Q[i * headDim + d] * K[j * headDim + d];
+            }
             S[i * N + j] = sum;
         }
     }
     for (int i = 0; i < N; i++) {
         float maxVal = S[i * N];
-        for (int j = 1; j < N; j++)
+        for (int j = 1; j < N; j++) {
             maxVal = fmaxf(maxVal, S[i * N + j]);
+        }
         float sum = 0;
         for (int j = 0; j < N; j++) {
             S[i * N + j] = expf(S[i * N + j] - maxVal);
             sum += S[i * N + j];
         }
-        for (int j = 0; j < N; j++)
+        for (int j = 0; j < N; j++) {
             S[i * N + j] /= sum;
+        }
     }
     for (int i = 0; i < N; i++) {
         for (int d = 0; d < headDim; d++) {
             float sum = 0;
-            for (int j = 0; j < N; j++)
+            for (int j = 0; j < N; j++) {
                 sum += S[i * N + j] * V[j * headDim + d];
+            }
             O[i * headDim + d] = sum;
         }
     }
@@ -217,8 +222,9 @@ void cpuAttention(const float* Q, const float* K, const float* V,
 
 void initMatrix(float* mat, int rows, int cols) {
     srand(42);
-    for (int i = 0; i < rows * cols; i++)
+    for (int i = 0; i < rows * cols; i++) {
         mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+    }
 }
 
 bool checkResult(const float* gpu, const float* cpu, int n, float eps) {

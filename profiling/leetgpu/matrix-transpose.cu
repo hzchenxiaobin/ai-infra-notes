@@ -34,7 +34,9 @@ int main() {
     int M = 2048, N = 2048;
     size_t bytes = M * N * sizeof(float);
     float *h_in = (float*)malloc(bytes);
-    for (int i = 0; i < M * N; i++) h_in[i] = (float)rand() / RAND_MAX;
+    for (int i = 0; i < M * N; i++) {
+        h_in[i] = (float)rand() / RAND_MAX;
+    }
 
     float *d_in, *d_out;
     cudaMalloc(&d_in, bytes);

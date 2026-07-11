@@ -56,14 +56,20 @@ __global__ void gemmRegisterBlocking(const float* A, const float* B, float* C,
         #pragma unroll
         for (int k = 0; k < BK; k++) {
             #pragma unroll
-            for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow*TM + m][k];
+            for (int m = 0; m < TM; m++) {
+                r_A[m] = s_A[threadRow*TM + m][k];
+            }
             #pragma unroll
-            for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol*TN + n];
+            for (int n = 0; n < TN; n++) {
+                r_B[n] = s_B[k][threadCol*TN + n];
+            }
             #pragma unroll
-            for (int m = 0; m < TM; m++)
+            for (int m = 0; m < TM; m++) {
                 #pragma unroll
-                for (int n = 0; n < TN; n++)
+                for (int n = 0; n < TN; n++) {
                     acc[m][n] += r_A[m] * r_B[n];
+                }
+            }
         }
         __syncthreads();
     }
@@ -99,13 +105,15 @@ float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, in
 
 void initMatrix(float* mat, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         if (fabs(a[i] - b[i]) > eps) return false;
+    }
     return true;
 }
 

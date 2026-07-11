@@ -13,15 +13,17 @@
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 
@@ -106,22 +108,25 @@ __global__ void softmax_block_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0) row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_sum += expf(in_row[i] - row_max);
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 // ============================================================
@@ -204,7 +209,9 @@ __global__ void layernorm_scalar_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) local_sum += in_row[i];
+    for (int i = tid; i < N; i += blockDim.x) {
+        local_sum += in_row[i];
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_mean = local_sum / N;
     __syncthreads();
@@ -218,8 +225,9 @@ __global__ void layernorm_scalar_kernel(const float* __restrict__ input,
     if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
     __syncthreads();
 
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+    }
 }
 
 // ============================================================
@@ -227,8 +235,9 @@ __global__ void layernorm_scalar_kernel(const float* __restrict__ input,
 // ============================================================
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+    }
 }
 
 void cpuSoftmax(const float* in, float* out, int M, int D) {
@@ -236,10 +245,14 @@ void cpuSoftmax(const float* in, float* out, int M, int D) {
         const float* ir = in + r * D;
         float* orow = out + r * D;
         float mx = ir[0];
-        for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
+        for (int i = 1; i < D; i++) {
+            mx = fmaxf(mx, ir[i]);
+        }
         float s = 0.0f;
         for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
-        for (int i = 0; i < D; i++) orow[i] /= s;
+        for (int i = 0; i < D; i++) {
+            orow[i] /= s;
+        }
     }
 }
 
@@ -249,21 +262,25 @@ void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
         const float* ir = in + r * N;
         float* orow = out + r * N;
         float mean = 0.0f;
-        for (int i = 0; i < N; i++) mean += ir[i];
+        for (int i = 0; i < N; i++) {
+            mean += ir[i];
+        }
         mean /= N;
         float var = 0.0f;
         for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
         var /= N;
         float rstd = 1.0f / sqrtf(var + eps);
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < N; i++) {
             orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
+        }
     }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps, const char* name) {
     float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    }
     bool ok = maxDiff < eps;
     printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
     return ok;
@@ -311,18 +328,26 @@ int main() {
     printf("[Softmax: block-level (Day16) vs warp-level (optimized)]\n");
 
     // warmup + bench block
-    for (int i = 0; i < 3; i++) softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+    for (int i = 0; i < 3; i++) {
+        softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+    }
     cudaEventRecord(start);
-    for (int i = 0; i < iters; i++) softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+    for (int i = 0; i < iters; i++) {
+        softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+    }
     cudaEventRecord(stop);
     float ms_block = timeKernel(start, stop) / iters;
 
     // warmup + bench warp
     int warps_per_block = threads_warp / 32;
     int grid_warp = (M + warps_per_block - 1) / warps_per_block;
-    for (int i = 0; i < 3; i++) softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+    for (int i = 0; i < 3; i++) {
+        softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+    }
     cudaEventRecord(start);
-    for (int i = 0; i < iters; i++) softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+    for (int i = 0; i < iters; i++) {
+        softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+    }
     cudaEventRecord(stop);
     float ms_warp = timeKernel(start, stop) / iters;
 
@@ -336,15 +361,23 @@ int main() {
     // ---- LayerNorm 对比 ----
     printf("[LayerNorm: scalar load (Day16) vs float4 vectorized]\n");
 
-    for (int i = 0; i < 3; i++) layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    for (int i = 0; i < 3; i++) {
+        layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
     cudaEventRecord(start);
-    for (int i = 0; i < iters; i++) layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    for (int i = 0; i < iters; i++) {
+        layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
     cudaEventRecord(stop);
     float ms_scalar = timeKernel(start, stop) / iters;
 
-    for (int i = 0; i < 3; i++) layernorm_float4_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    for (int i = 0; i < 3; i++) {
+        layernorm_float4_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
     cudaEventRecord(start);
-    for (int i = 0; i < iters; i++) layernorm_float4_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    for (int i = 0; i < iters; i++) {
+        layernorm_float4_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
     cudaEventRecord(stop);
     float ms_f4 = timeKernel(start, stop) / iters;
 

@@ -13,13 +13,15 @@ __global__ void softmax_three_pass(const float* input, float* output, int N) {
 
     // Pass 1: 求 max (数值稳定性)
     float max_val = -FLT_MAX;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++) {
         max_val = fmaxf(max_val, input[i]);
+    }
 
     // Pass 2: 求 sum(exp(x - max))
     float sum = 0.0f;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++) {
         sum += expf(input[i] - max_val);
+    }
 
     // Pass 3: 归一化
     output[idx] = expf(input[idx] - max_val) / sum;
@@ -47,7 +49,9 @@ __global__ void softmax_online(const float* input, float* output, int N) {
 int main() {
     const int N = 1 << 16;
     float *h_in = (float*)malloc(N * sizeof(float));
-    for (int i = 0; i < N; i++) h_in[i] = (float)(rand() % 2000 - 1000) * 0.01f;
+    for (int i = 0; i < N; i++) {
+        h_in[i] = (float)(rand() % 2000 - 1000) * 0.01f;
+    }
 
     float *d_in, *d_out;
     cudaMalloc(&d_in, N * sizeof(float));

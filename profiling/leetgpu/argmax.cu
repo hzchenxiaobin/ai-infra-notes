@@ -70,7 +70,9 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 int main() {
     const int N = 1 << 20;
     float *h_in = (float*)malloc(N * sizeof(float));
-    for (int i = 0; i < N; i++) h_in[i] = (float)(rand() % 1000) * 0.001f;
+    for (int i = 0; i < N; i++) {
+        h_in[i] = (float)(rand() % 1000) * 0.001f;
+    }
     h_in[N / 2] = 999.0f;  // 确保最大值在 N/2
 
     float *d_in; cudaMalloc(&d_in, N * sizeof(float));

@@ -49,7 +49,9 @@ int main() {
 
     float *h_in = (float*)malloc(N * sizeof(float));
     srand(42);
-    for (int i = 0; i < N; i++) h_in[i] = (float)(rand() % 1000) * 0.001f;
+    for (int i = 0; i < N; i++) {
+        h_in[i] = (float)(rand() % 1000) * 0.001f;
+    }
 
     float *d_in, *d_tmp, *d_out;
     cudaMalloc(&d_in, N * sizeof(float));
@@ -84,7 +86,9 @@ int main() {
     cudaMemcpy(&gpuSum, d_out, sizeof(float), cudaMemcpyDeviceToHost);
 
     double cpuSum = 0.0;
-    for (int i = 0; i < N; i++) cpuSum += h_in[i];
+    for (int i = 0; i < N; i++) {
+        cpuSum += h_in[i];
+    }
 
     printf("GPU Sum: %.4f\n", gpuSum);
     printf("CPU Sum: %.4f\n", (float)cpuSum);

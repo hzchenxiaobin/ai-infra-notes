@@ -10,14 +10,16 @@
 // 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
@@ -117,17 +119,25 @@ void cpuAttention(const float* Q, const float* K, const float* V,
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             float s = 0.0f;
-            for (int dd = 0; dd < d; dd++) s += Q[i*d+dd] * K[j*d+dd];
+            for (int dd = 0; dd < d; dd++) {
+                s += Q[i*d+dd] * K[j*d+dd];
+            }
             S[i*N+j] = s * scale;
         }
         float mx = S[i*N];
-        for (int j = 1; j < N; j++) mx = fmaxf(mx, S[i*N+j]);
+        for (int j = 1; j < N; j++) {
+            mx = fmaxf(mx, S[i*N+j]);
+        }
         float sm = 0.0f;
         for (int j = 0; j < N; j++) { P[i*N+j] = expf(S[i*N+j]-mx); sm += P[i*N+j]; }
-        for (int j = 0; j < N; j++) P[i*N+j] /= sm;
+        for (int j = 0; j < N; j++) {
+            P[i*N+j] /= sm;
+        }
         for (int dd = 0; dd < d; dd++) {
             float o = 0.0f;
-            for (int j = 0; j < N; j++) o += P[i*N+j] * V[j*d+dd];
+            for (int j = 0; j < N; j++) {
+                o += P[i*N+j] * V[j*d+dd];
+            }
             O[i*d+dd] = o;
         }
     }
@@ -136,13 +146,16 @@ void cpuAttention(const float* Q, const float* K, const float* V,
 
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
     float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++) maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    for (int i = 0; i < n; i++) {
+        maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    }
     bool ok = maxDiff < eps;
     printf("  maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
     return ok;

@@ -19,7 +19,9 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
     int tid = threadIdx.x;
 
     // 初始化 shared histogram
-    for (int i = tid; i < B; i += blockDim.x) s_hist[i] = 0;
+    for (int i = tid; i < B; i += blockDim.x) {
+        s_hist[i] = 0;
+    }
     __syncthreads();
 
     // 每个 block 累加到 shared memory
@@ -30,14 +32,16 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
     __syncthreads();
 
     // 合并到 global histogram
-    for (int i = tid; i < B; i += blockDim.x)
+    for (int i = tid; i < B; i += blockDim.x) {
         atomicAdd(&hist[i], s_hist[i]);
+    }
 }
 
 void initData(int* data, int n, int B) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = rand() % B;
+    }
 }
 
 bool checkResult(const int* a, const int* b, int n) {

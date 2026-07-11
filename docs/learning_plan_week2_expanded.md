@@ -1672,7 +1672,7 @@ O_final = o / l （最后做一次归一化）
 // 可调整参数
 // --------------------------------------------------
 #define Br 64 // Q tile的行数（SRAM可容纳）
-#define Bc 64 // K/V tile的行数（SRAM可容纳）
+#define Bc 32 // K/V tile的行数；在 RTX 5090 48KB shared memory 限制下调小
 #define D 64 // Head dimension
 
 // 每个Block处理一个Q tile
@@ -1827,6 +1827,9 @@ __global__ void flashAttentionFwd(const float* __restrict__ Q,
  }
  }
 }
+
+// 避免宏 D 与函数参数名冲突
+#undef D
 
 // --------------------------------------------------
 // CPU参考实现（标准Attention，用于验证正确性）

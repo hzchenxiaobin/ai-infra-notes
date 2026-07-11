@@ -178,7 +178,7 @@ O_final = o / l （最后做一次归一化）
 #include <algorithm>
 
 #define Br 64 // Q tile 的行数（SRAM 可容纳）
-#define Bc 64 // K/V tile 的行数（SRAM 可容纳）
+#define Bc 32 // K/V tile 的行数；在 RTX 5090 48KB shared memory 限制下调小
 #define D 64 // Head dimension
 
 #define NUM_THREADS_X Bc // 64
@@ -300,6 +300,9 @@ __global__ void flashAttentionFwd(const float* __restrict__ Q,
  }
  }
 }
+
+// 避免宏 D 与函数参数名冲突
+#undef D
 
 // CPU 参考实现（标准 Attention，用于验证正确性）
 void cpuAttention(const float* Q, const float* K, const float* V,

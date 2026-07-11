@@ -7,8 +7,9 @@
 
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 
@@ -20,8 +21,9 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
     int wid  = threadIdx.x >> 5;
 
     float sum = 0.0f;
-    for (int i = tid; i < N; i += gridDim.x * blockDim.x)
+    for (int i = tid; i < N; i += gridDim.x * blockDim.x) {
         sum += input[i];
+    }
 
     sum = warpReduceSum(sum);
 
@@ -39,7 +41,9 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 int main() {
     const int N = 1 << 22;
     float *h_in = (float*)malloc(N * sizeof(float));
-    for (int i = 0; i < N; i++) h_in[i] = (float)(rand() % 1000) * 0.001f;
+    for (int i = 0; i < N; i++) {
+        h_in[i] = (float)(rand() % 1000) * 0.001f;
+    }
 
     float *d_in, *d_temp, *d_out;
     cudaMalloc(&d_in, N * sizeof(float));
@@ -64,7 +68,9 @@ int main() {
     cudaMemcpy(&gpu_sum, d_out, sizeof(float), cudaMemcpyDeviceToHost);
 
     double cpu_sum = 0.0;
-    for (int i = 0; i < N; i++) cpu_sum += h_in[i];
+    for (int i = 0; i < N; i++) {
+        cpu_sum += h_in[i];
+    }
 
     printf("GPU=%.4f CPU=%.4f diff=%.6f %s\n",
            gpu_sum, (float)cpu_sum, fabs(gpu_sum - (float)cpu_sum),

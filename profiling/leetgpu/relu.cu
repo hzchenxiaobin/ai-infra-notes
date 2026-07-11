@@ -18,8 +18,9 @@ int main() {
 
     float *h_in = (float*)malloc(bytes);
     float *h_out = (float*)malloc(bytes);
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++) {
         h_in[i] = (float)(rand() % 2000 - 1000) * 0.001f;
+    }
 
     float *d_in, *d_out;
     cudaMalloc(&d_in, bytes);
@@ -47,8 +48,9 @@ int main() {
 
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     bool ok = true;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++) {
         if (h_out[i] != fmaxf(h_in[i], 0.0f)) { ok = false; break; }
+    }
     printf("Result: %s\n", ok ? "PASS" : "FAIL");
 
     free(h_in); free(h_out);

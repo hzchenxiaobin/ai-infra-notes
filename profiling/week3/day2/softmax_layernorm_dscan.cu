@@ -9,14 +9,16 @@
 
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
@@ -51,22 +53,25 @@ __global__ void softmax_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0) row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_sum += expf(in_row[i] - row_max);
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 __global__ void layernorm_kernel(const float* __restrict__ input,
@@ -83,7 +88,9 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) local_sum += in_row[i];
+    for (int i = tid; i < N; i += blockDim.x) {
+        local_sum += in_row[i];
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_mean = local_sum / N;
     __syncthreads();
@@ -97,14 +104,16 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
     if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
     __syncthreads();
 
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+    }
 }
 
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+    }
 }
 
 int main() {
@@ -142,15 +151,17 @@ int main() {
 
         // Softmax
         cudaEventRecord(start);
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 50; i++) {
             softmax_kernel<<<M, threads>>>(d_in, d_out, M, D);
+        }
         cudaEventRecord(stop); cudaEventSynchronize(stop);
         float ms_sm; cudaEventElapsedTime(&ms_sm, start, stop); ms_sm /= 50;
 
         // LayerNorm
         cudaEventRecord(start);
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 50; i++) {
             layernorm_kernel<<<M, threads>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+        }
         cudaEventRecord(stop); cudaEventSynchronize(stop);
         float ms_ln; cudaEventElapsedTime(&ms_ln, start, stop); ms_ln /= 50;
 

@@ -15,7 +15,9 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
     __shared__ int s_hist[256];  // B <= 256
 
     // 初始化 shared histogram
-    for (int i = threadIdx.x; i < B; i += blockDim.x) s_hist[i] = 0;
+    for (int i = threadIdx.x; i < B; i += blockDim.x) {
+        s_hist[i] = 0;
+    }
     __syncthreads();
 
     // 每个 block 累加到 shared memory (atomic 在 shared mem 上, 快得多)
@@ -26,15 +28,18 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
     __syncthreads();
 
     // 合并到 global histogram
-    for (int i = threadIdx.x; i < B; i += blockDim.x)
+    for (int i = threadIdx.x; i < B; i += blockDim.x) {
         atomicAdd(&hist[i], s_hist[i]);
+    }
 }
 
 int main() {
     const int N = 1 << 20;
     const int B = 256;
     int *h_in = (int*)malloc(N * sizeof(int));
-    for (int i = 0; i < N; i++) h_in[i] = rand() % B;
+    for (int i = 0; i < N; i++) {
+        h_in[i] = rand() % B;
+    }
 
     int *d_in, *d_hist;
     cudaMalloc(&d_in, N * sizeof(int));

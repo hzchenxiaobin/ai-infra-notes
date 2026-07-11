@@ -9,14 +9,16 @@
 
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
     return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
@@ -52,22 +54,25 @@ __global__ void softmax_block_kernel(const float* __restrict__ input,
     int tid = threadIdx.x;
 
     float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0) row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_sum += expf(in_row[i] - row_max);
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0) row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 // Warp 级 Softmax（优化版）：一个 warp 处理一行，无 shared memory
@@ -80,26 +85,30 @@ __global__ void softmax_warp_kernel(const float* __restrict__ input,
     float* out_row = output + global_warp_id * D;
 
     float local_max = -INFINITY;
-    for (int i = lane; i < D; i += 32)
+    for (int i = lane; i < D; i += 32) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = warpReduceMax(local_max);
     local_max = __shfl_sync(0xFFFFFFFF, local_max, 0);
 
     float local_sum = 0.0f;
-    for (int i = lane; i < D; i += 32)
+    for (int i = lane; i < D; i += 32) {
         local_sum += expf(in_row[i] - local_max);
+    }
     local_sum = warpReduceSum(local_sum);
     local_sum = __shfl_sync(0xFFFFFFFF, local_sum, 0);
 
     float inv_sum = 1.0f / local_sum;
-    for (int i = lane; i < D; i += 32)
+    for (int i = lane; i < D; i += 32) {
         out_row[i] = expf(in_row[i] - local_max) * inv_sum;
+    }
 }
 
 void initData(float* data, int n) {
     srand(42);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+    }
 }
 
 int main() {
@@ -129,18 +138,26 @@ int main() {
         cudaEventCreate(&start); cudaEventCreate(&stop);
 
         // Block 级
-        for (int i = 0; i < 3; i++) softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+        for (int i = 0; i < 3; i++) {
+            softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+        }
         cudaEventRecord(start);
-        for (int i = 0; i < 50; i++) softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+        for (int i = 0; i < 50; i++) {
+            softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
+        }
         cudaEventRecord(stop); cudaEventSynchronize(stop);
         float ms_block; cudaEventElapsedTime(&ms_block, start, stop); ms_block /= 50;
 
         // Warp 级
         int warps_per_block = threads_warp / 32;
         int grid_warp = (M + warps_per_block - 1) / warps_per_block;
-        for (int i = 0; i < 3; i++) softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+        for (int i = 0; i < 3; i++) {
+            softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+        }
         cudaEventRecord(start);
-        for (int i = 0; i < 50; i++) softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+        for (int i = 0; i < 50; i++) {
+            softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
+        }
         cudaEventRecord(stop); cudaEventSynchronize(stop);
         float ms_warp; cudaEventElapsedTime(&ms_warp, start, stop); ms_warp /= 50;
 

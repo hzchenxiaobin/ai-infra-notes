@@ -544,6 +544,8 @@ for right in 0..n-1:
 
 ```cuda
 #include <cuda_runtime.h>
+#include <cstdio>
+#include <cstring>
 
 int main() {
  cudaDeviceProp prop;

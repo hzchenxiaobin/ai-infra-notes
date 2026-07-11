@@ -12,8 +12,9 @@ __global__ void matmul_naive(const float* A, const float* B, float* C, int M, in
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     if (row < M && col < N) {
         float sum = 0.0f;
-        for (int k = 0; k < K; k++)
+        for (int k = 0; k < K; k++) {
             sum += A[row * K + k] * B[k * N + col];
+        }
         C[row * N + col] = sum;
     }
 }
@@ -39,8 +40,9 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
         __syncthreads();
 
         #pragma unroll
-        for (int k = 0; k < TILE_SIZE; k++)
+        for (int k = 0; k < TILE_SIZE; k++) {
             sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+        }
         __syncthreads();
     }
 
@@ -72,8 +74,9 @@ __global__ void matmul_tiled_nobc(const float* A, const float* B, float* C, int 
         __syncthreads();
 
         #pragma unroll
-        for (int k = 0; k < TILE_SIZE; k++)
+        for (int k = 0; k < TILE_SIZE; k++) {
             sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+        }
         __syncthreads();
     }
 
@@ -88,8 +91,12 @@ int main() {
 
     float *h_A = (float*)malloc(bytesA);
     float *h_B = (float*)malloc(bytesB);
-    for (int i = 0; i < M * K; i++) h_A[i] = (float)rand() / RAND_MAX * 2 - 1;
-    for (int i = 0; i < K * N; i++) h_B[i] = (float)rand() / RAND_MAX * 2 - 1;
+    for (int i = 0; i < M * K; i++) {
+        h_A[i] = (float)rand() / RAND_MAX * 2 - 1;
+    }
+    for (int i = 0; i < K * N; i++) {
+        h_B[i] = (float)rand() / RAND_MAX * 2 - 1;
+    }
 
     float *d_A, *d_B, *d_C;
     cudaMalloc(&d_A, bytesA); cudaMalloc(&d_B, bytesB); cudaMalloc(&d_C, bytesC);

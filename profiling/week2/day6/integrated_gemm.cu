@@ -203,8 +203,9 @@ float runOurKernel(const float* d_A, const float* d_B, float* d_C,
 
 void initMatrix(float* mat, int rows, int cols) {
     srand(42);
-    for (int i = 0; i < rows * cols; i++)
+    for (int i = 0; i < rows * cols; i++) {
         mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
