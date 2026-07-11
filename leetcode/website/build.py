@@ -311,7 +311,7 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         groups.setdefault((p["category"], p["folder"]), []).append(p)
 
     # Build overview page (at leetcode/index.html -> root_prefix="../")
-    overview_markdown = "# LeetCode 题解\n\n> 算法题解题笔记与思路整理。\n\n## 题目列表\n\n"
+    overview_markdown = "## 题目列表\n\n"
     for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
         category, folder = group
         if category == "contest":
@@ -321,7 +321,7 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         else:
             section_heading = folder
         overview_markdown += f"### {section_heading}\n\n"
-        overview_markdown += '<div class="day-cards">\n'
+        overview_markdown += '<div class="day-cards leetcode-cards">\n'
         for p in groups[group]:
             overview_markdown += (
                 f'<a class="day-card" href="./problems/{p["slug"]}.html">\n'
