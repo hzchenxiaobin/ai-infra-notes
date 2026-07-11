@@ -302,6 +302,7 @@ def page_template(title: str, nav_html: str, markdown: str,
             renderer: renderer,
             headerIds: false,
             gfm: true,
+            tables: true,
             breaks: false,
             sanitize: false
         }});
