@@ -716,24 +716,6 @@ __global__ void hello_gpu_2d() {
 - `block(1024, 2, 1)` ✗（超过 1024 threads/block）
 - `grid(100000, 1, 1)` ✓（grid 维度很大时通常也可以）
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| 没有任何输出 | 缺少 `cudaDeviceSynchronize()` | 在 main 末尾添加 |
-| `invalid configuration argument` | block 内线程数超过 1024 | 减小 block 大小 |
-| 输出顺序混乱 | CUDA 不保证 block/thread 执行顺序 | 不要依赖执行顺序 |
-| 编译错误 `__global__` 未识别 | 用 `.cu` 后缀，用 `nvcc` 编译 | 检查文件后缀和编译器 |
-
-**调试技巧**：
-- 先用少量线程（如 1 个 block，8 个 thread）测试
-- 使用 `printf` 输出 thread 坐标和中间结果
-- 确认 `cudaDeviceSynchronize()` 后再检查输出
-
----
-
 ### 验证 Checklist
 
 - [ ] 能独立编译并运行 `hello_gpu.cu`

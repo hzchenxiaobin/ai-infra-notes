@@ -655,20 +655,6 @@ ncu --metrics \
 
 对比 naive 和 tiled 版本的实际显存读写量。
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| 转置结果错误 | 索引计算错误 | 用 small matrix 验证 |
-| shared memory 不够用 | tile 太大 | 减小 TILE_DIM |
-| 性能提升不明显 | bank conflict | 参考 Day 5 加 padding |
-| ncu 显示 bandwidth 很低 | 访问未合并 | 检查 thread 访问地址是否连续 |
-| `__syncthreads()` 遗漏 | shared memory 数据未同步 | 在读写 shared memory 之间添加 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 理解 GPU 内存层次结构和各级延迟

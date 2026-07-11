@@ -444,20 +444,6 @@ ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
 - 这个时间占整个应用时间的比例
 - 思考如何减少 launch overhead（如 CUDA Graph）
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| ncu 报错 `Failed to profile` | 权限问题或驱动不兼容 | 用 sudo 或检查驱动版本 |
-| nsys 生成的报告很大 | 采集了太多 trace | 只采集需要的 trace，如 `--trace cuda` |
-| 指标返回 N/A | 该指标在当前 GPU 上不可用 | 查看 ncu 文档确认支持的指标 |
-| Roofline 图无法生成 | 缺少 FLOP 指标 | 使用 `--set full` 重新采集 |
-| 报告打开后看不懂 | 指标太多 | 先看 occupancy、throughput、bank conflict 这几个核心指标 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 生成至少 3 个 kernel 的 Nsight Compute 报告

@@ -570,20 +570,6 @@ sm__occupancy.avg.pct_of_peak_sustained_elapsed \
 
 观察 FlashAttention 是 memory-bound 还是 compute-bound，对比标准 Attention 的指标。
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| 结果误差大 | exp 溢出 | 确保减 max 后再 exp；初始化数据用小值 |
-| SRAM 超限 | Br/Bc 太大 | 减小 Br 或 Bc，确保 `Br×D + Bc×D×2 + Br×Bc ≤ shared mem` |
-| Online softmax 结果不对 | 缩放因子计算错误 | 检查 `exp(m - m_new)` 的方向，确保旧值缩放到新参考点 |
-| Kernel 只有一个线程做 softmax | `tid_x == 0` 限制了并行度 | 这是简化版的局限，完整版用 warp shuffle 并行化 |
-| 大序列时性能不如预期 | 简化版未优化 | 完整版需要 warp shuffle + double buffering + 向量化加载 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 能推导出 Online Softmax 的三个更新公式（m_new, l_new, o_new）

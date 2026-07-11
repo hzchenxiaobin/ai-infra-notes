@@ -665,29 +665,6 @@ benchmark(compiled_model, x, "Custom + torch.compile")
 **思考问题**：Decode 阶段自定义版的相对劣势更大还是更小？为什么？
 > 提示：Decode 下矩阵极小（M=1），launch overhead 占比上升。PyTorch 对小张量有特化路径（避免过度并行），自定义版没有这种特化，劣势可能更大。
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| \`load_inline\` 编译报错找不到 \`torch/extension.h\` | PyTorch 未装或 CUDA 版本不匹配 | \`pip install torch\` 且确保 \`torch.version.cuda\` 与 nvcc 一致 |
-| \`data_ptr<float>()\` 类型不匹配 | Tensor 不是 float32 | 用 \`.float()\` 转换：\`x = x.float()\` |
-| 自定义 kernel 在错误 stream 执行 | 没传 \`getCurrentCUDAStream()\` | launch wrapper 必须接收并传递 stream |
-| \`Max diff > 1e-4\` | kernel 有 bug 或形状不对 | 先用独立模式 \`./softmax_layernorm_ext\` 验证 kernel 正确性 |
-| \`reshape\` 后 tensor 不连续 | \`permute\` 后未 \`contiguous\` | 加 \`.contiguous()\`：\`attn_flat = attn.reshape(...).contiguous()\` |
-| \`load_inline\` 首次很慢 | JIT 编译耗时 | 正常（~30s），后续从 \`~/.cache/torch_extensions\` 加载（~0.1s） |
-| nsys 看不到自定义 kernel | kernel 名字被 mangle | 用 \`--kernel-name regex:softmax_kernel\` 过滤 |
-
-**调试技巧**：
-
-- 先用独立模式（\`nvcc\` 编译）验证 kernel 正确性，再接入 PyTorch
-- \`print(attn.sum())\` 检查 softmax 输出是否合理（每行和应为 1）
-- \`torch.cuda.synchronize()\` 后再 \`max_diff\`，避免异步执行导致假错误
-- \`load_inline(verbose=True)\` 打印编译命令，定位编译错误
-
----
-
 ### 验证 Checklist
 
 - [ ] 能用 \`load_inline\` 把 Day 2 kernel 集成到 PyTorch（\`my_ops.softmax_forward\` / \`layernorm_forward\`）

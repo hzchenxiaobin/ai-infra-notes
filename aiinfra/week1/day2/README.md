@@ -642,19 +642,6 @@ ptxas info : Function properties for version_b
 
 `spill stores/loads` 为 0 表示没有 spilling。
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| Occupancy 很低 | 寄存器使用过多 | 减少局部变量，或使用 `__launch_bounds__` |
-| 性能反而下降 | `__launch_bounds__` 导致 spilling | 放宽 launch_bounds，或优化算法 |
-| ncu 看不到 occupancy | 指标名称写错 | 使用 `sm__occupancy.avg.pct_of_peak_sustained_elapsed` |
-| `cudaFuncGetAttributes` 返回错误 | kernel 名称写错 | 直接传函数名，不要加括号 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 能用 `cudaFuncGetAttributes` 获取寄存器使用量

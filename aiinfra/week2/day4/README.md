@@ -347,21 +347,6 @@ nsys profile -o timeline_report ./gemm_profile
 - 哪个 stall reason 占比最高？
 - 为什么 Reduce kernel 的 occupancy 通常很高？
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| ncu 报告为空 | kernel 名过滤不匹配 | 用 `--kernel-name regex:` 正则匹配，或去掉过滤 |
-| Source View 无法关联源码 | 未加 `-g -lineinfo` | 重新编译时加上调试选项 |
-| Achieved Occupancy 远低于理论值 | register spill 或 block size 不合理 | 用 `-Xptxas -v` 检查 spill，调整 block size |
-| ncu 运行非常慢 | 采集了过多指标 | 用 `--metrics` 只采集需要的指标 |
-| Roofline 点在图外 | 计算强度算错 | 检查 FLOPs 和 bytes 的计算，注意单位 |
-| nsys timeline 看不到 kernel | kernel 执行太快 | 增大数据规模或循环执行多次 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 能独立运行 ncu 并导出报告（命令行 + GUI）

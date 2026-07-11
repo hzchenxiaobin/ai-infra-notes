@@ -564,21 +564,6 @@ int main() {
 
 Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming Guide》中与性能相关的内容已整理到 [notes/cuda_programming_guide_performance.md](notes/cuda_programming_guide_performance.md)，供延伸阅读。后续 Day 4–Day 6 会针对内存访问、共享内存、Occupancy、指令瓶颈做专项练习。
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| deviceQuery 找不到 | CUDA Samples 未安装 | 重新安装 CUDA Toolkit 时勾选 Samples |
-| 输出 `CUDA driver version is insufficient` | 驱动版本太低 | 升级 NVIDIA 驱动 |
-| `cudaGetDeviceProperties` 返回错误 | device ID 无效 | 确保 dev 在 0 到 deviceCount-1 之间 |
-| Occupancy Calculator 打不开 | 缺少 Excel | 使用 Python 版 `tools/cuda_occupancy_calculator.py` |
-| 手算 occupancy 与 API 结果不一致 | 粒度、计算能力版本或编译器优化差异 | 以 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 为准，手算用于理解原理 |
-| `occupancy_verify.cu` 默认编译失败 | CUDA/GCC 默认 C++ 标准冲突 | 使用 `nvcc -std=c++11 ...` |
-
----
-
 ### 验证 Checklist
 
 - [ ] 能独立运行 `deviceQuery` 并解读所有输出字段

@@ -486,28 +486,6 @@ __inline__ __device__ float warpReduceMax(float val) {
 
 写一个 shell 或 Python 脚本，自动扫描矩阵尺寸 `512, 1024, 2048, 4096, 8192`，记录每个版本的性能并生成 CSV 报告。
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| 手撕 Reduce 结果偏小 | grid-stride 步长错或漏 warp | 检查步长 = `gridDim.x*blockDim.x`，`numWarps` 用 `(blockDim.x+31)/32` |
-| 手撕 GEMM 结果全 0 | `acc` 未初始化 | `float acc[TM][TN] = {{0}}` |
-| 手撕 GEMM 结果错位 | `threadRow`/`threadCol` 算反 | `threadRow = tid/(BN/TN)`，`threadCol = tid%(BN/TN)` |
-| FlashAttention 口述卡壳 | 三公式没背熟 | 默写 5 遍 `m_new/l_new/o_new`，直到能闭卷写出 |
-| 30 分钟写不完 Reduce | 卡在编译调试 | 先写核心结构（warpReduceSum + 两级归约），边界条件最后处理 |
-| 60 分钟写不完 GEMM | 协作加载逻辑复杂 | 先用简化加载（每线程 1 元素）跑通，再优化为 4 元素协作加载 |
-
-**手撕时间分配建议**：
-
-| 任务 | 写核心结构 | 编译调试 | 边界处理 | 复盘 |
-|------|-----------|---------|---------|------|
-| Reduce（30min） | 10min | 10min | 5min | 5min |
-| GEMM（60min） | 25min | 20min | 10min | 5min |
-
----
-
 ### 验证 Checklist
 
 - [ ] 30 分钟内完成 Reduce Kernel 手撕，结果与 CPU 误差 < 1e-3

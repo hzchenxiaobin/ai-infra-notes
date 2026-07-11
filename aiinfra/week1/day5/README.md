@@ -363,20 +363,6 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 4];
 - 是否都能消除 bank conflict？
 - 哪种 padding 的 shared memory 利用率最高？
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| Bank conflict 计数高 | 访问模式导致多个线程同一 bank | 分析访问公式，加 padding 或调整索引 |
-| Padding 后仍有 conflict | padding 大小不合适 | 确保 stride 与 32 互质 |
-| Shared memory 不够用 | padding 浪费过多 | 减小 tile 大小或优化 padding |
-| 性能没有提升 | 瓶颈不在 shared memory | 检查 global memory 或 compute 是否瓶颈 |
-| `__syncthreads()` 位置不对 | 读写 shared memory 未同步 | 确保所有线程写完再读 |
-
----
-
 ### 验证 Checklist
 
 - [ ] 理解 shared memory 的 bank 结构

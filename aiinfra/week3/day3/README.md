@@ -514,29 +514,6 @@ ncu --metrics \
 **思考问题**：float4 版本的 Long Scoreboard stall 占比应该比标量版高还是低？为什么？
 > 提示：float4 版本每次 load 更大数据块，单次 load 延迟更长，但总 load 次数减少。Long Scoreboard（等内存）的占比可能略升（单次等待更久），但总执行时间下降（等待次数少）。这就是"用少量长延迟换大量短延迟"的权衡。
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| `float4` 版本结果错乱 | 指针未 16-byte 对齐，或 D 不是 4 的倍数 | 确保 `cudaMalloc` 返回的指针对齐；加 `assert(N % 4 == 0)` |
-| warp 级 softmax 结果只有部分行对 | `global_warp_id` 计算错误 | `(blockIdx.x * blockDim.x + threadIdx.x) / 32`，不是 `blockIdx.x` |
-| warp 级 softmax 所有 lane 都用了错误的 max | `__shfl_down_sync` 后没广播 | 加 `val = __shfl_sync(0xFFFFFFFF, val, 0)` 广播 lane 0 的结果 |
-| 优化后比 Day 2 还慢 | M 太小，warp 级并行度不足 | 增大 M（如 1024+），让 warp 数足够多填满 SM |
-| ncu 显示 DRAM Throughput 没提升 | L2 cache 命中率高（小矩阵） | 增大 M×D 到几十 MB，超出 L2（~40MB） |
-| `atomicMax` 用在 argmax 结果错 | `atomicMax` 对 int 是无符号比较 | argmax 下标非负可用；若有负 idx 需用自定义 atomicCAS |
-| Welford 并行合并结果精度差 | 合并公式 count 加权有精度损失 | 用 double 做 count/mean/M2 累加，最后转 float |
-
-**调试技巧**：
-
-- warp 级 kernel 先用 `M=1, D=32`（一个 warp 一个 lane 一个元素）验证正确性
-- `float4` 版本先用 `D=4`（一个 float4）验证，再放大
-- 在 ncu 的 Source View 中看哪一行 stall 最严重（带 `-lineinfo` 编译）
-- 对比优化前后时，确保两个 kernel 跑相同的 M/D 配置
-
----
-
 ### 验证 Checklist
 
 - [ ] 能找到并阅读 PyTorch `SoftMax.cu` 的 `softmax_warp_forward` 函数，说出 dispatch 条件（D ≤ 1024）

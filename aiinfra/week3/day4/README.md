@@ -496,28 +496,6 @@ done
 **思考问题**：N 翻倍时实测 IO 应该接近几倍？为什么不是精确的 4x？
 > 提示：应接近 4x（O(N²) 的特征）。不精确是因为有固定的 overhead（kernel launch、index 计算的少量访问），N 越大 overhead 占比越小，越接近 4x。
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| N=2048 时 OOM | S/P 各 16MB，加上 Q/K/V/O 显存吃紧 | 减小 N 或用 FP16（显存减半）；FlashAttention 不物化 S/P 无此问题 |
-| softmax 结果全 NaN | 没减 max，`exp(大数)` 溢出 | 检查 Step 2 是否先求 `row_max` 再 `exp(s - row_max)` |
-| Step 3 的 O 与 CPU 误差大 | `inv_sum` 未广播或 `__syncthreads` 缺失 | 确保 `if(tid==0) row_sum=...; __syncthreads();` 在 Step 3 前 |
-| ncu 实测 IO 远大于理论值 | L2 cache miss 导致重复 HBM 读 | N 大时正常（S/P 超出 L2）；若 N=256 也远大，检查是否有冗余访问 |
-| N 翻倍时 IO 不是 4x | 测量了多个 kernel（warmup 混入） | ncu 加 `--launch-count 1` 只测一次；或按 N 单独跑 |
-| Step 1 的 QK^T 性能差 | 内层 `for(dd)` 循环未展开 | 加 `#pragma unroll` 或用 register 缓存 Q 行 |
-
-**调试技巧**：
-
-- 先用 N=64（S/P 仅 16KB）验证正确性，再放大
-- 在 Step 1 后打印 `S[qrow * N + 0]` 与 CPU 对比，确认 QK^T 正确
-- softmax 验证额外检查：`Σ P[qrow][j] ≈ 1.0`
-- ncu 的 Source View（带 `-lineinfo`）可看哪一行 HBM 访问最多
-
----
-
 ### 验证 Checklist
 
 - [ ] 能手推标准 Attention 三阶段的 HBM 读写量（4N² + 4Nd）

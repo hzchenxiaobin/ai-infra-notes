@@ -553,20 +553,6 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 
 在整合版基础上，声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，用计算掩盖 global→shared 的传输延迟。
 
----
-
-### 常见错误与调试
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| float4 加载后结果错误 | 地址不对齐 | 确保 `globalCol` 是 4 的倍数；边界用逐元素 fallback |
-| 性能没有提升 | 瓶颈不在内存加载 | 用 ncu 确认 Long Scoreboard 是否下降 |
-| TM=TN=16 编译失败 | register 超限 | 减小 TM 或 TN，TM=TN=8 是安全的 |
-| 整合版比 Register Blocking 慢 | float4 边界处理开销 | 确保矩阵尺寸是 BM/BN 的整数倍 |
-| ncu 显示 occupancy 下降 | register 使用增加 | 检查 `-Xptxas -v`，必要时用 `__launch_bounds__` |
-
----
-
 ### 验证 Checklist
 
 - [ ] 整合版 GEMM 编译运行正确，4096 矩阵达到 cuBLAS 65%+

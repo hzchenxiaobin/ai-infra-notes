@@ -717,29 +717,6 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 **思考问题**：Welford 并行化（多线程合并各自的 mean/M2/count）比串行复杂在哪？
 > 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 3 要读的 FasterTransformer \`generalLayerNorm\` 的核心优化点。
 
----
-
-### 常见错误与调试
-
-| 错误 | 原因 | 解决方法 |
-|------|------|---------|
-| Softmax 结果全 NaN | 没减 max，\`exp(大数)\` 溢出 | 检查 Step 1 是否求了 \`row_max\`，Step 2/3 是否用 \`exp(x - row_max)\` |
-| Softmax 每行之和 ≠ 1 | \`row_sum\` 没广播或广播前没 \`__syncthreads\` | 确认 \`if (tid==0) row_sum=...; __syncthreads();\` 在归一化前 |
-| LayerNorm 误差大（~1e-2） | reduce 用了 FP16 累加 | 全程用 FP32 做 reduce（\`float local_sum\`），混合精度时输入 cast 到 FP32 |
-| \`blockReduceSum\` 结果只有部分对 | \`numWarps\` 算错或 warp0 读 smem 越界 | \`numWarps = (blockDim.x + 31) / 32\`；warp0 只读前 \`numWarps\` 个 |
-| LayerNorm 方差算成负数 | 先除 N 再平方导致精度损失 | 必须先 \`sum((x-mean)^2)\` 再除 N，不要 \`sum(x)/N\` 后平方 |
-| ncu 显示 DRAM 利用率很低 | L2 cache 命中率高（小矩阵）或访问不合并 | 增大 D 到 4096；确保 grid-stride 步长 = blockDim.x（coalesced） |
-| 编译警告 \`__shfl_down\` deprecated | 用了旧版无 \`_sync\` API | 改用 \`__shfl_down_sync(0xFFFFFFFF, val, offset)\` |
-
-**调试技巧**：
-
-- 先用小矩阵（\`M=1, D=32\`，一个 warp）验证 warp 级 reduce 正确，再放大到 block 级
-- 在 \`blockReduceSum\` 后让 lane 0 \`printf\` 出 \`row_max\` / \`row_sum\`，与 CPU 对比
-- Softmax 验证额外检查：\`Σ y[i] ≈ 1.0\`（每行和应为 1）
-- LayerNorm 验证额外检查：归一化后 \`(y - β)/γ\` 的均值≈0、方差≈1
-
----
-
 ### 验证 Checklist
 
 - [ ] 能解释 safe softmax 为什么要减 max（数值稳定性 + 数学等价性证明）
