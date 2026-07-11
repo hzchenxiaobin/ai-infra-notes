@@ -335,37 +335,47 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         return int(match.group(1)) if match else 0
 
     # Build overview page (at leetcode/index.html -> root_prefix="../")
-    overview_markdown = ""
-
-    # 1. Contests (descending by contest number)
-    for contest in sorted(contest_groups.keys(), key=sort_key_numeric, reverse=True):
-        overview_markdown += f'<div class="leetcode-section">\n'
-        overview_markdown += f'  <div class="leetcode-section-title">周赛 {contest}</div>\n'
-        overview_markdown += f'  <div class="leetcode-problem-list">\n'
-        for p in contest_groups[contest]:
-            overview_markdown += (
-                f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
-                f'{p["title"]}'
-                f'</a>\n'
-            )
-        overview_markdown += '  </div>\n'
-        overview_markdown += '</div>\n\n'
-
-    # 2. Daily problems grouped by week (ascending: week1 -> week7), with day tags
+    # Layout: two columns — daily problems on the left, contests on the right.
+    daily_markdown = ""
     for week in sorted(weekly_groups.keys(), key=sort_key_numeric, reverse=False):
-        overview_markdown += f'<div class="leetcode-section">\n'
-        overview_markdown += f'  <div class="leetcode-section-title">第 {sort_key_numeric(week)} 周</div>\n'
-        overview_markdown += f'  <div class="leetcode-problem-list">\n'
+        daily_markdown += f'<div class="leetcode-section">\n'
+        daily_markdown += f'  <div class="leetcode-section-title">第 {sort_key_numeric(week)} 周</div>\n'
+        daily_markdown += f'  <div class="leetcode-problem-list">\n'
         for day in sorted(weekly_groups[week].keys(), key=sort_key_numeric):
             for p in weekly_groups[week][day]:
-                overview_markdown += (
+                daily_markdown += (
                     f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
                     f'<span class="leetcode-problem-day">{day}</span>'
                     f'<span class="leetcode-problem-title">{p["title"]}</span>'
                     f'</a>\n'
                 )
-        overview_markdown += '  </div>\n'
-        overview_markdown += '</div>\n\n'
+        daily_markdown += '  </div>\n'
+        daily_markdown += '</div>\n\n'
+
+    contest_markdown = ""
+    for contest in sorted(contest_groups.keys(), key=sort_key_numeric, reverse=True):
+        contest_markdown += f'<div class="leetcode-section">\n'
+        contest_markdown += f'  <div class="leetcode-section-title">周赛 {contest}</div>\n'
+        contest_markdown += f'  <div class="leetcode-problem-list">\n'
+        for p in contest_groups[contest]:
+            contest_markdown += (
+                f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
+                f'{p["title"]}'
+                f'</a>\n'
+            )
+        contest_markdown += '  </div>\n'
+        contest_markdown += '</div>\n\n'
+
+    overview_markdown = (
+        '<div class="leetcode-overview-row">\n'
+        '  <div class="leetcode-col leetcode-col-daily">\n'
+        f'{daily_markdown}'
+        '  </div>\n'
+        '  <div class="leetcode-col leetcode-col-contest">\n'
+        f'{contest_markdown}'
+        '  </div>\n'
+        '</div>\n'
+    )
 
     # Markdown references images as "images/xxx.svg"; overview is at leetcode/index.html
     overview_markdown = overview_markdown.replace("](images/", "](./images/")

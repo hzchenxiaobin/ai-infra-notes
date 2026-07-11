@@ -35,7 +35,7 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 280px;
+    width: 300px;
     background-color: var(--surface-color);
     border-right: 1px solid var(--border-color);
     position: fixed;
@@ -75,12 +75,15 @@ body {
 
 .nav-link {
     display: block;
-    padding: 8px 24px;
+    padding: 5px 16px;
     color: var(--text-muted);
     text-decoration: none;
     font-size: 0.9rem;
     border-left: 3px solid transparent;
     transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-link:hover {
@@ -106,9 +109,9 @@ body {
 }
 
 .nav-section {
-    padding-left: 12px;
+    padding-left: 8px;
     border-left: 2px solid var(--border-color);
-    margin: 0 0 4px 12px;
+    margin: 0 0 4px 8px;
 }
 
 .nav-section .nav-link {
@@ -171,7 +174,7 @@ body {
 }
 
 .nav-accordion-item.level-2 > .nav-accordion-content > .nav-section {
-    margin-left: 24px;
+    margin-left: 16px;
 }
 
 /* Day label (flat, no accordion) inside daily week sections */
@@ -188,14 +191,14 @@ body {
     color: var(--accent-color);
     font-size: 0.75rem;
     font-weight: 700;
-    margin-right: 8px;
-    min-width: 38px;
+    margin-right: 6px;
+    min-width: 32px;
     opacity: 0.9;
 }
 
 /* Main Content */
 .main-content {
-    margin-left: 280px;
+    margin-left: 300px;
     flex: 1;
     max-width: 900px;
     padding: 40px 48px;
@@ -613,7 +616,25 @@ body {
     line-height: 1.4;
 }
 
-/* LeetCode overview simple list */
+/* LeetCode overview two-column layout */
+.leetcode-overview-row {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.leetcode-col {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .leetcode-overview-row {
+        flex-direction: column;
+        gap: 24px;
+    }
+}
+
 .leetcode-section {
     margin-bottom: 24px;
 }
