@@ -1,5 +1,5 @@
 // profiling_targets.cu —— 端到端 Profiling 靶点：memory-bound Softmax + compute-bound GEMM
-// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./profiling_targets
 // ncu 分析: ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,sm__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name regex:"softmax_kernel|gemm_kernel" ./profiling_targets
 

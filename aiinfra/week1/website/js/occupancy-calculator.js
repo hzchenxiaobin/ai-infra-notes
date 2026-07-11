@@ -14,16 +14,16 @@
     <div class="calc-row">
       <label for="occ-cc">GPU Compute Capability</label>
       <select id="occ-cc">
-        <option value="5.0">5.0 (Maxwell)</option>
-        <option value="5.2">5.2 (Maxwell)</option>
-        <option value="6.0">6.0 (Pascal)</option>
-        <option value="6.1">6.1 (Pascal)</option>
-        <option value="7.0">7.0 (Volta)</option>
-        <option value="7.5">7.5 (Turing)</option>
-        <option value="8.0" selected>8.0 (Ampere A100)</option>
-        <option value="8.6">8.6 (Ampere)</option>
-        <option value="8.9">8.9 (Ada)</option>
-        <option value="9.0">9.0 (Hopper)</option>
+        <option value="5.0">5.0 (Blackwell)</option>
+        <option value="5.2">5.2 (Blackwell)</option>
+        <option value="6.0">6.0 (Blackwell)</option>
+        <option value="6.1">6.1 (Blackwell)</option>
+        <option value="7.0">7.0 (Blackwell)</option>
+        <option value="7.5">7.5 (Blackwell)</option>
+        <option value="8.0" selected>8.0 (Blackwell RTX 5090)</option>
+        <option value="8.6">8.6 (Blackwell)</option>
+        <option value="8.9">8.9 (Blackwell)</option>
+        <option value="9.0">9.0 (Blackwell)</option>
       </select>
     </div>
     <div class="calc-row">
@@ -45,16 +45,16 @@
 `;
 
     const data = {
-        '5.0': { arch: 'Maxwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 65536, regGran: 256, smemGran: 256 },
-        '5.2': { arch: 'Maxwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 256 },
-        '6.0': { arch: 'Pascal', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 65536, regGran: 256, smemGran: 256 },
-        '6.1': { arch: 'Pascal', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 256 },
-        '7.0': { arch: 'Volta', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 1024 },
-        '7.5': { arch: 'Turing', threads: 1024, blocks: 16, warps: 32, regs: 65536, smem: 65536, regGran: 256, smemGran: 1024 },
-        '8.0': { arch: 'Ampere A100', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 167936, regGran: 256, smemGran: 1024 },
-        '8.6': { arch: 'Ampere', threads: 1536, blocks: 16, warps: 48, regs: 65536, smem: 100352, regGran: 256, smemGran: 1024 },
-        '8.9': { arch: 'Ada', threads: 1536, blocks: 16, warps: 48, regs: 65536, smem: 100352, regGran: 256, smemGran: 1024 },
-        '9.0': { arch: 'Hopper', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 228864, regGran: 256, smemGran: 1024 },
+        '5.0': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 65536, regGran: 256, smemGran: 256 },
+        '5.2': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 256 },
+        '6.0': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 65536, regGran: 256, smemGran: 256 },
+        '6.1': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 256 },
+        '7.0': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 98304, regGran: 256, smemGran: 1024 },
+        '7.5': { arch: 'Blackwell', threads: 1024, blocks: 16, warps: 32, regs: 65536, smem: 65536, regGran: 256, smemGran: 1024 },
+        '8.0': { arch: 'Blackwell RTX 5090', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 167936, regGran: 256, smemGran: 1024 },
+        '8.6': { arch: 'Blackwell', threads: 1536, blocks: 16, warps: 48, regs: 65536, smem: 100352, regGran: 256, smemGran: 1024 },
+        '8.9': { arch: 'Blackwell', threads: 1536, blocks: 16, warps: 48, regs: 65536, smem: 100352, regGran: 256, smemGran: 1024 },
+        '9.0': { arch: 'Blackwell', threads: 2048, blocks: 32, warps: 64, regs: 65536, smem: 228864, regGran: 256, smemGran: 1024 },
     };
 
     function ceilDiv(a, b) {

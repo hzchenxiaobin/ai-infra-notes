@@ -1,5 +1,5 @@
 // kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
-// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
 // 运行命令: ./kv_cache
 
 #include <cuda_runtime.h>

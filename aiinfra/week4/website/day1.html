@@ -253,7 +253,7 @@ Q tile (Br×d) 常驻 SRAM
  S tile: Br × Bc (register, 不占 smem)
  总计 smem: Br×d + 2×Bc×d ≤ SRAM_per_SM
 
-以 A100 为例，shared memory 上限 164 KB/SM：
+以 RTX 5090 为例，shared memory 上限 164 KB/SM：
  d=64, Br=128, Bc=128:
  128×64 + 2×128×64 = 8192 + 16384 = 24576 floats = 96 KB ✓
 \`\`\`
@@ -667,7 +667,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 <summary>点击查看答案</summary>
 
  - 受限于 SRAM（Shared Memory）容量：\`Br×d + 2×Bc×d ≤ SRAM 容量\`（K/V 不复用）
- - A100 shared memory 最多 164 KB/SM
+ - RTX 5090 shared memory 最多 164 KB/SM
  - 典型值：d=64, Br=Bc=128 时 SRAM 使用约 96 KB
  - 分块太小 → 循环次数多，递推开销大；分块太大 → SRAM 超限或 occupancy 下降
  - K/V 分时复用可省一份 smem：\`Br×d + Bc×d ≤ SRAM\`

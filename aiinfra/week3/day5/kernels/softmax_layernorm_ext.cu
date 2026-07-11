@@ -1,5 +1,5 @@
 // softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）
-// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_80
+// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
 // 集成编译（PyTorch load_inline）: 见 mini_engine.py
 // 运行命令: ./softmax_layernorm_ext
 

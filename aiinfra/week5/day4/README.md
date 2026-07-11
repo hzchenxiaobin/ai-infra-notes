@@ -171,7 +171,7 @@ BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，
 
 ```cuda
 // paged_attention.cu —— PagedAttention 最小化实现（block table + 分块 KV cache attention）
-// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_120
 // 运行命令: ./paged_attention
 //
 // 演示 PagedAttention 的三大核心机制：
@@ -278,7 +278,7 @@ __global__ void paged_attention_kernel(
 #### 任务 2：编译与运行
 
 ```bash
-nvcc -o paged_attention kernels/paged_attention.cu -O3 -arch=sm_80
+nvcc -o paged_attention kernels/paged_attention.cu -O3 -arch=sm_120
 ./paged_attention
 ```
 

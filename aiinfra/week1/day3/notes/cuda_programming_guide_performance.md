@@ -168,7 +168,7 @@ cudaStreamSynchronize(stream);
 
 ### 3.3 Warp-Level Primitives
 
-从 Compute Capability 3.0 起，CUDA 提供 warp shuffle，允许同一 warp 内线程直接交换寄存器数据，无需经过 shared memory：
+从 Compute Capability 12.0 起，CUDA 提供 warp shuffle，允许同一 warp 内线程直接交换寄存器数据，无需经过 shared memory：
 
 ```cuda
 // 从 lane 0 广播到整个 warp
@@ -183,9 +183,9 @@ for (int offset = 16; offset > 0; offset /= 2)
 
 ### 3.4 现代架构高级特性
 
-- **Asynchronous Data Copy（Ampere+）**：`cp.async` 把 global→shared 的 load 异步化，配合 pipeline 隐藏延迟。
-- **Tensor Memory Accelerator（Hopper+）**：硬件级多维张量搬运，配合 `mbarrier` 实现细粒度流水线。
-- **DPX Instructions（Hopper+）**：加速动态规划类 `max-plus` / `min-plus` 操作。
+- **Asynchronous Data Copy（Blackwell+）**：`cp.async` 把 global→shared 的 load 异步化，配合 pipeline 隐藏延迟。
+- **Tensor Memory Accelerator（Blackwell+）**：硬件级多维张量搬运，配合 `mbarrier` 实现细粒度流水线。
+- **DPX Instructions（Blackwell+）**：加速动态规划类 `max-plus` / `min-plus` 操作。
 
 ---
 
@@ -234,7 +234,7 @@ Part 5 是技术参考，调优时用来查具体数字：
 | Tiling + Shared Memory | 把数据分块加载到 shared memory 复用 | 矩阵乘、卷积、stencil |
 | 消除 Bank Conflict | shared memory 加 padding | 转置、矩阵乘 |
 | 提高 Occupancy | 调整 block size、减少寄存器/共享内存用量 | SM 利用率低、延迟高 |
-| 异步拷贝 / Pipeline | 使用 `cp.async`、TMA、warp-level async | Ampere/Hopper 数据流水线 |
+| 异步拷贝 / Pipeline | 使用 `cp.async`、TMA、warp-level async | Blackwell 数据流水线 |
 | 减少 Host↔Device 传输 | 使用 pinned memory、异步拷贝、Unified Memory | 数据搬运占比高 |
 | 避免分支发散 | 让分支基于 warp/block 级别 | 条件计算多的 kernel |
 | 使用 Warp Shuffle | 替代 shared memory 做 warp 内通信 | 归约、扫描、广播 |
@@ -407,7 +407,7 @@ Roofline 模型的判断依据是算术强度（Arithmetic Intensity = FLOPs / B
 | Part 2 Shared Memory / Bank Conflict | Day 5 | 共享内存 tiling、bank conflict 检测与消除 |
 | Part 2 Occupancy / Part 3 Advanced CUDA | Day 2 / Day 6 | Occupancy Calculator、Nsight Compute 分析 |
 | Part 2 Instruction Throughput / Part 5 附录 | Day 6 | Nsight Compute 指标、指令瓶颈分析 |
-| Part 3 异步特性 / Part 4 CUDA Graphs / TMA | 进阶 | CUTLASS、FlashAttention、Hopper 新特性 |
+| Part 3 异步特性 / Part 4 CUDA Graphs / TMA | 进阶 | CUTLASS、FlashAttention、Blackwell 新特性 |
 
 ---
 

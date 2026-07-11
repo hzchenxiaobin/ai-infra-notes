@@ -1,5 +1,5 @@
 // register_blocking_gemm.cu —— Register Blocking 矩阵乘法完整实现
-// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
+// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 // 运行命令: ./register_gemm
 
 #include <cuda_runtime.h>

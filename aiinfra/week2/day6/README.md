@@ -110,8 +110,8 @@ Register Blocking 中每个线程计算 TM×TN 子块，写回时如果线程分
 ```cuda
 // integrated_gemm.cu —— 整合优化 GEMM
 // Warp Shuffle + Register Blocking + float4 向量化加载 + Coalesced 写回
-// 目标性能：cuBLAS 70%+（A100 上 4096x4096 矩阵）
-// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
+// 目标性能：cuBLAS 70%+（RTX 5090 上 4096x4096 矩阵）
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
 // 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>
@@ -402,11 +402,11 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o integrated_gemm kernels/integrated_gemm.cu -O3 -arch=sm_80 -lcublas
+nvcc -o integrated_gemm kernels/integrated_gemm.cu -O3 -arch=sm_120 -lcublas
 ./integrated_gemm
 ```
 
-**预期输出（A100 示例）**：
+**预期输出（RTX 5090 示例）**：
 
 ```
 === Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===
@@ -424,7 +424,7 @@ M N K Our(ms) cuBLAS(ms) GFLOPS Percent
 
 ```bash
 # Profile 整合版 GEMM
-nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
+nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 ncu \
  --kernel-name regex:gemmIntegrated \
  -o integrated_profile \

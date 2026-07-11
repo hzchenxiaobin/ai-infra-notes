@@ -39,7 +39,7 @@ ncu --metrics \
 
 ## 3. 假设得到的 ncu 输出
 
-由于实际数值依赖 GPU 型号和 CUDA 版本，下面给出一组**典型趋势**（基于 A100）：
+由于实际数值依赖 GPU 型号和 CUDA 版本，下面给出一组**典型趋势**（基于 RTX 5090）：
 
 | Kernel | `sm__cycles_elapsed.avg` | `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum` | `sm__throughput` | `dram__throughput` | `sm__occupancy` |
 |--------|--------------------------|-----------------------------------------------------------|------------------|--------------------|-----------------|

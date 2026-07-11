@@ -96,7 +96,7 @@ ncu --page details -i report.ncu-rep # 命令行方式
 > 💡 **编译建议**：profiling 时建议加 `-g -lineinfo` 编译选项，保留调试信息，这样 ncu 的 Source View 能关联到源代码行。
 
 ```bash
-nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas -g -lineinfo
+nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 ```
 
 #### 4.3 关键性能指标
@@ -150,7 +150,7 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 - **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
 - AI 低 → **memory-bound**（位于斜线区域，优化内存访问）
 - AI 高 → **compute-bound**（位于平顶区域，优化计算吞吐量）
-- 两线交点 = **平衡点**（A100 约 25 FLOP/byte）
+- 两线交点 = **平衡点**（RTX 5090 约 25 FLOP/byte）
 
 **如何用 Roofline 指导优化**：
 
@@ -169,7 +169,7 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 ```bash
 # 编译（保留调试信息以便 Source View 关联）
 nvcc -o gemm_profile kernels/register_blocking_gemm.cu \
- -O3 -arch=sm_80 -lcublas -g -lineinfo
+ -O3 -arch=sm_120 -lcublas -g -lineinfo
 
 # 运行 Nsight Compute profile
 ncu \
@@ -414,7 +414,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 <summary>点击查看答案</summary>
 
  - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
- - A100 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
+ - RTX 5090 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
  - 优化方向：斜线区域优化内存访问，平顶区域优化计算
 
 </details>
@@ -439,7 +439,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 
  - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
  - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
- - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6-25）比较，AI < Ridge → memory-bound
+ - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 12.6-25）比较，AI < Ridge → memory-bound
  - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
 
 ---

@@ -29,13 +29,13 @@
 | `aiinfra/week1/website/images/memory_compute_bound.svg` | 2506 | 720×360 0 0 720 360 | 如何判断 Kernel 瓶颈类型 |
 | `aiinfra/week1/website/images/ncu_metrics_overview.svg` | 3248 | 720×440 0 0 720 440 | ncu 常用指标分类 |
 | `aiinfra/week1/website/images/nsight_tools_comparison.svg` | 2559 | 720×400 0 0 720 400 | Nsight Compute vs Nsight Systems |
-| `aiinfra/week1/website/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（A100 示例） |
+| `aiinfra/week1/website/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（RTX 5090 示例） |
 | `aiinfra/week1/website/images/occupancy_calculator_workflow.svg` | 3074 | 720×400 0 0 720 400 | CUDA Occupancy Calculator 使用流程 |
 | `aiinfra/week1/website/images/occupancy_concept.svg` | 2745 | 720×360 0 0 720 360 | Occupancy 概念 |
 | `aiinfra/week1/website/images/occupancy_curve.svg` | 1895 | 720×400 0 0 720 400 | Occupancy 与性能关系 |
 | `aiinfra/week1/website/images/optimization_decision_tree.svg` | 3666 | 720×480 0 0 720 480 | GPU 性能优化决策树 |
 | `aiinfra/week1/website/images/padding_solution.svg` | 4944 | 720×420 0 0 720 420 | Padding 解决 Bank Conflict |
-| `aiinfra/week1/website/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 A100 为例） |
+| `aiinfra/week1/website/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 RTX 5090 为例） |
 | `aiinfra/week1/website/images/profiling_workflow.svg` | 2778 | 720×320 0 0 720 320 | GPU Profiling 工作流程 |
 | `aiinfra/week1/website/images/register_spilling.svg` | 2345 | 720×380 0 0 720 380 | Register Spilling（寄存器溢出） |
 | `aiinfra/week1/website/images/resource_constraints.svg` | 2866 | 720×420 0 0 720 420 | 影响 Occupancy 的三大资源约束 |
@@ -591,13 +591,13 @@
 | `public/images/memory_compute_bound.svg` | 2506 | 720×360 0 0 720 360 | 如何判断 Kernel 瓶颈类型 |
 | `public/images/ncu_metrics_overview.svg` | 3248 | 720×440 0 0 720 440 | ncu 常用指标分类 |
 | `public/images/nsight_tools_comparison.svg` | 2559 | 720×400 0 0 720 400 | Nsight Compute vs Nsight Systems |
-| `public/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（A100 示例） |
+| `public/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（RTX 5090 示例） |
 | `public/images/occupancy_calculator_workflow.svg` | 3074 | 720×400 0 0 720 400 | CUDA Occupancy Calculator 使用流程 |
 | `public/images/occupancy_concept.svg` | 2745 | 720×360 0 0 720 360 | Occupancy 概念 |
 | `public/images/occupancy_curve.svg` | 1895 | 720×400 0 0 720 400 | Occupancy 与性能关系 |
 | `public/images/optimization_decision_tree.svg` | 3666 | 720×480 0 0 720 480 | GPU 性能优化决策树 |
 | `public/images/padding_solution.svg` | 4944 | 720×420 0 0 720 420 | Padding 解决 Bank Conflict |
-| `public/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 A100 为例） |
+| `public/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 RTX 5090 为例） |
 | `public/images/profiling_workflow.svg` | 2778 | 720×320 0 0 720 320 | GPU Profiling 工作流程 |
 | `public/images/register_spilling.svg` | 2345 | 720×380 0 0 720 380 | Register Spilling（寄存器溢出） |
 | `public/images/resource_constraints.svg` | 2866 | 720×420 0 0 720 420 | 影响 Occupancy 的三大资源约束 |

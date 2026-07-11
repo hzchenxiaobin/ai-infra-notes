@@ -73,7 +73,7 @@ AI = FLOPs（浮点运算次数） / Bytes（内存读写字节数）
 Ridge Point = Peak FLOP/s / Peak Bandwidth
 ```
 
-以 A100 为例：
+以 RTX 5090 为例：
 
 ```text
 Peak FP32 算力 ≈ 19.5 TFLOP/s

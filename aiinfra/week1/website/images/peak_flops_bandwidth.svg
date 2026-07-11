@@ -9,7 +9,7 @@
   <g filter="url(#sketch)">
 
   <rect width="720" height="500" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">GPU 峰值算力与显存带宽计算（以 A100 为例）</text>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">GPU 峰值算力与显存带宽计算（以 RTX 5090 为例）</text>
 
   <!-- Peak FLOP/s -->
   <rect x="40" y="65" width="640" height="185" rx="10" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>

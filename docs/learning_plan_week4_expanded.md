@@ -120,7 +120,7 @@ HBM 访问量（当 N >> d 时）：
  S tile: Br × Bc
  总计: Br×d + 2×Bc×d + Br×Bc ≤ SRAM_per_SM
 
-以 A100 为例，shared memory 上限 164 KB/SM：
+以 RTX 5090 为例，shared memory 上限 164 KB/SM：
  d=64, Br=128, Bc=128:
  128×64 + 2×128×64 + 128×128 = 8192 + 16384 + 16384 = 40960 floats = 160 KB ✓
 ```
@@ -527,7 +527,7 @@ Block 维度: (Bc, Br/4) 或更优：每个 warp 负责一行 Q
 ```cpp
 // flash_attention_v2.cu —— 完整 FlashAttention Forward Kernel
 // 支持 batch, multi-head，正确处理边界
-// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120
 // 运行命令: ./flash_attention_v2
 
 #include <cuda_runtime.h>
@@ -857,7 +857,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_80
+nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120
 
 # 运行
 ./flash_attention_v2
@@ -1007,7 +1007,7 @@ __shared__ float sV[Bc][d]; // V tile（通常与 K 复用或分时复用）
 #### 分析任务清单
 
 1. **找到 `flash_fwd_kernel` 的入口**，追踪一个 thread 的完整数据流
-2. **理解 `make_tiled copy` / `cp_async`**：官方使用 async copy（Ampere+）从 global memory 到 shared memory，与我们的 `__syncthreads` 加载不同
+2. **理解 `make_tiled copy` / `cp_async`**：官方使用 async copy（Blackwell+）从 global memory 到 shared memory，与我们的 `__syncthreads` 加载不同
 3. **理解 `online_softmax` 函数模板**：如何将 online softmax 泛化为支持不同精度
 4. **理解 `compute_attn_1rowblock` 或类似函数**：一个 Q tile 行 block 的计算逻辑
 
@@ -1170,7 +1170,7 @@ Seq 并行（Sequence 长度维度）：
 
 **练习2（进阶）**：修改 Day 23 的 Kernel，让一个 warp group（2 warps）负责一个 Q 行子块，观察性能变化。
 
-**练习3（综合）**：在 A100 上测试官方 FA1 和 FA2 的性能差异（如果环境允许安装 flash-attention 包），记录不同 seq_len 下的加速比。
+**练习3（综合）**：在 RTX 5090 上测试官方 FA1 和 FA2 的性能差异（如果环境允许安装 flash-attention 包），记录不同 seq_len 下的加速比。
 
 ---
 
@@ -1342,7 +1342,7 @@ fa_ops = load_inline(
  cuda_sources=cuda_src,
  functions=["flash_attention_forward"],
  verbose=True,
- extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 class MiniAttentionFA(nn.Module):
@@ -1690,7 +1690,7 @@ python benchmark_flash_attention.py
 
 ```bash
 # 编译带 lineinfo 的可执行文件
-nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
 
 # Profile HBM 读写量
 ncu \
@@ -1881,7 +1881,7 @@ week4-flashattention/
 # Week 4 FlashAttention 性能报告
 
 ## 测试环境
-- GPU: NVIDIA A100-SXM4-40GB
+- GPU: NVIDIA GeForce RTX 5090
 - CUDA Version: 12.4
 - Driver: 550.54.15
 
@@ -2033,7 +2033,7 @@ Memory-bound: AI < Ridge Point
 Compute-bound: AI > Ridge Point
 ```
 
-**6. Roofline Ridge Point（A100）**
+**6. Roofline Ridge Point（RTX 5090）**
 ```
 Ridge Point = Peak FLOP/s / Peak Bandwidth
  = 19.5 TFLOP/s / 1.55 TB/s

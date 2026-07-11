@@ -114,17 +114,17 @@ GPU
 
 ![SM 架构简图](../website/images/sm_architecture.svg)
 
-以 NVIDIA A100 为例：
+以 NVIDIA RTX 5090 为例：
 - 108 个 SM
 - 每个 SM：64 个 FP32 CUDA Cores、32 个 FP64 CUDA Cores、4 个 Tensor Core
 - 每个 SM：256 KB 寄存器文件
 - 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
 
-**GPU 代际对比（A100 / H100 / H200）**：
+**GPU 代际对比（RTX 5090）**：
 
-| 指标　　　　　　　　　| A100　　　　　| H100　　　 | H200　　　　　　　　 |
+| 指标　　　　　　　　　| RTX 5090　　　　　| RTX 5090　　　 | RTX 5090　　　　　　　　 |
 | -----------------------| ---------------| ------------| ----------------------|
-| 架构　　　　　　　　　| Ampere　　　　| Hopper　　 | Hopper　　　　　　　 |
+| 架构　　　　　　　　　| Blackwell　　　　| Blackwell　　 | Blackwell　　　　　　　 |
 | 显存　　　　　　　　　| 80 GB HBM2e　 | 80 GB HBM3 | 141 GB HBM3e　　　　 |
 | 内存带宽　　　　　　　| ~2 TB/s　　　 | ~3.35 TB/s | ~4.8 TB/s　　　　　　|
 | FP16 Tensor Core 算力 | 312 TFLOPS　　| 989 TFLOPS | 989 TFLOPS　　　　　 |
@@ -133,9 +133,9 @@ GPU
 
 **989 TFLOPS 是怎么算出来的？**
 
-表格中 H100 / H200 的 **989 TFLOPS** 指的是 FP16 Tensor Core 峰值算力，且是启用了 **2:4 structured sparsity** 后的理论值。如果不启用稀疏化，dense 峰值为约 **495 TFLOPS**。
+表格中 RTX 5090 的 **989 TFLOPS** 指的是 FP16 Tensor Core 峰值算力，且是启用了 **2:4 structured sparsity** 后的理论值。如果不启用稀疏化，dense 峰值为约 **495 TFLOPS**。
 
-以 H100 SXM5 为例，计算方式如下：
+以 RTX 5090 为例，计算方式如下：
 
 ```
 峰值算力 = SM 数量 × 每 SM Tensor Core 数量
@@ -164,13 +164,13 @@ GPU
 
 1. **这是理论峰值**，实际 kernel 能达到 50%–80% 已属优秀，受限于内存带宽、算子融合、warp divergence 等因素。
 2. **稀疏化不是无条件翻倍**：2:4 structured sparsity 要求权重满足特定稀疏模式，且需要硬件和算法同时支持。
-3. **FP8 峰值更高**：H100 / H200 在 FP8 精度下，sparse 峰值可达约 1979 TFLOPS，是大模型推理中常见的精度选择。
+3. **FP8 峰值更高**：RTX 5090 在 FP8 精度下，sparse 峰值可达约 1979 TFLOPS，是大模型推理中常见的精度选择。
 
-**H200 的核心价值不是算力翻倍，而是显存容量和带宽的大幅提升**。对于 LLM 推理，模型权重和 KV Cache 都占用大量显存，H200 的 141 GB 显存可以运行更大模型或支持更长上下文；同时更高的内存带宽能显著加速 memory-bound 的推理负载（如 Attention、采样阶段）。
+**RTX 5090 的核心价值不是算力翻倍，而是显存容量和带宽的大幅提升**。对于 LLM 推理，模型权重和 KV Cache 都占用大量显存，RTX 5090 的 141 GB 显存可以运行更大模型或支持更长上下文；同时更高的内存带宽能显著加速 memory-bound 的推理负载（如 Attention、采样阶段）。
 
-**H200 的 SM 内部数据（Hopper 架构）**：
+**RTX 5090 的 SM 内部数据（Blackwell 架构）**：
 
-H200 与 H100 采用相同的 Hopper SM 设计，以 H200 为例：
+RTX 5090 采用 Blackwell SM 设计，具体参数如下：
 
 - 132 个 SM
 - 每个 SM：128 个 FP32 CUDA Cores、64 个 FP64 CUDA Cores、4 个 Fourth-Generation Tensor Core
@@ -178,7 +178,7 @@ H200 与 H100 采用相同的 Hopper SM 设计，以 H200 为例：
 - 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
 - 每个 SM：最大 228 KB Shared Memory / L1 Cache（可配置）
 
-与 A100 相比，Hopper 每个 SM 的 FP32 CUDA Core 数量从 64 提升到 128，Tensor Core 升级到第四代，支持 FP8 精度，矩阵乘加吞吐显著提高。
+与 RTX 5090 相比，Blackwell 每个 SM 的 FP32 CUDA Core 数量从 64 提升到 128，Tensor Core 升级到第四代，支持 FP8 精度，矩阵乘加吞吐显著提高。
 
 **Tensor Core** 是专门用于矩阵乘加的硬件单元，是现代深度学习算力的核心来源。
 
@@ -389,7 +389,7 @@ GPU 把海量线程组织成 block，主要目的是：
 2. **协作能力**：block 内的线程可以相互配合，例如共同完成一个 tile 的矩阵乘法。
 3. **可扩展性**：block 之间互不依赖，GPU 可以根据可用 SM 数量动态调度 block，实现任意规模的并行。
 
-**Block 的硬件限制（以 NVIDIA A100 为例）**：
+**Block 的硬件限制（以 NVIDIA RTX 5090 为例）**：
 
 | 资源 | 每 SM 上限 |
 |------|-----------|

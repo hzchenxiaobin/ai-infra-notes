@@ -960,7 +960,7 @@ custom_ops = load_inline(
  cuda_sources=softmax_layernorm_src + flash_attention_src,
  functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
  verbose=True,
- extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 class CustomKernelTransformerLayer(torch.nn.Module):

@@ -570,7 +570,7 @@ def device_query_output() -> str:
 
   <!-- Output lines -->
   <text x="80" y="120" font-family="monospace" font-size="13" fill="#58a6ff">Detected 1 CUDA Capable device(s)</text>
-  <text x="80" y="150" font-family="monospace" font-size="13" fill="#c9d1d9">Device 0: "NVIDIA A100-PCIE-40GB"</text>
+  <text x="80" y="150" font-family="monospace" font-size="13" fill="#c9d1d9">Device 0: "NVIDIA GeForce RTX 5090"</text>
   <text x="80" y="180" font-family="monospace" font-size="13" fill="#8b949e">  CUDA Capability Major/Minor version number:    8.0</text>
   <text x="80" y="205" font-family="monospace" font-size="13" fill="#8b949e">  Total amount of global memory:                 40536 MBytes</text>
   <text x="80" y="230" font-family="monospace" font-size="13" fill="#8b949e">  (108) Multiprocessors, (64) CUDA Cores/MP:     6912 CUDA Cores</text>
@@ -626,7 +626,7 @@ def occupancy_calculator_workflow() -> str:
 def peak_flops_bandwidth() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500" viewBox="0 0 720 500">
   <rect width="720" height="500" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 峰值算力与显存带宽计算（以 A100 为例）</text>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GPU 峰值算力与显存带宽计算（以 RTX 5090 为例）</text>
 
   <!-- Peak FLOP/s -->
   <rect x="40" y="65" width="640" height="185" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
@@ -680,7 +680,7 @@ def peak_flops_bandwidth() -> str:
 def occupancy_calc_steps() -> str:
     return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540">
   <rect width="720" height="540" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 手算四步法（A100 示例）</text>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 手算四步法（RTX 5090 示例）</text>
 
   <!-- Step 1 -->
   <rect x="40" y="60" width="640" height="60" rx="8" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-width="2"/>
@@ -714,7 +714,7 @@ def occupancy_calc_steps() -> str:
 
   <!-- Summary -->
   <rect x="120" y="470" width="480" height="50" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="360" y="492" text-anchor="middle" font-size="14" fill="#c9d1d9">A100: 256 threads, 64 regs/thread, 0 smem</text>
+  <text x="360" y="492" text-anchor="middle" font-size="14" fill="#c9d1d9">RTX 5090: 256 threads, 64 regs/thread, 0 smem</text>
   <text x="360" y="512" text-anchor="middle" font-size="15" fill="#3fb950" font-weight="bold">→ 理论 Occupancy = 50%（瓶颈：寄存器）</text>
 </svg>'''
 
@@ -1558,7 +1558,7 @@ def element_wise_memory_bound() -> str:
   <!-- Ridge point line -->
   <line x1="300" y1="400" x2="300" y2="150" stroke="#d29922" stroke-width="2" stroke-dasharray="5,5"/>
   <text x="305" y="145" font-size="11" fill="#d29922">Ridge Point ≈ 12.6</text>
-  <text x="305" y="160" font-size="10" fill="#8b949e">(A100: 19.5T / 1.55T)</text>
+  <text x="305" y="160" font-size="10" fill="#8b949e">(RTX 5090: 19.5T / 1.55T)</text>
 
   <!-- Memory slope -->
   <line x1="80" y1="400" x2="300" y2="150" stroke="#58a6ff" stroke-width="2"/>

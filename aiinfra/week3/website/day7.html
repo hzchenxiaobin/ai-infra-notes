@@ -293,7 +293,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 \`\`\`
 1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
-2. 与 Ridge Point 比较（A100 ≈ 12.6 FLOP/Byte）
+2. 与 Ridge Point 比较（RTX 5090 ≈ 12.6 FLOP/Byte）
  - AI < 12.6 → memory-bound
  - AI > 12.6 → compute-bound
 1. 用 ncu 验证：sm__throughput vs dram__throughput
@@ -531,7 +531,7 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6）比较
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 12.6）比较
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
  - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
 

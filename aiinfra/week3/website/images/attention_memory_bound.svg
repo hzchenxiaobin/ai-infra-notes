@@ -13,7 +13,7 @@
   <path d="M 280 42 Q 460 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
   <!-- ===== Left: Roofline plot ===== -->
-  <text x="280" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Roofline 图（A100 FP32）</text>
+  <text x="280" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Roofline 图（RTX 5090 FP32）</text>
 
   <!-- axes -->
   <path d="M 100 420 L 100 100" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>

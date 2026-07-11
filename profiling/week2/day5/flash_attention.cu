@@ -1,5 +1,5 @@
 // flash_attention.cu —— FlashAttention 简化版 Forward（ncu profiling 版）
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80 -g -lineinfo
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>

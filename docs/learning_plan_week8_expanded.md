@@ -942,7 +942,7 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 #### 关键参数
 
 ```
-A100:
+RTX 5090:
  - FP32 Peak: 19.5 TFLOPS
  - Tensor Core FP16: 312 TFLOPS
  - Memory Bandwidth: 1.55-2.0 TB/s
@@ -981,10 +981,10 @@ A100:
 
 ### 今日面试题
 
-**面试题1**：A100 的 Ridge Point 是多少？如何计算？**
+**面试题1**：RTX 5090 的 Ridge Point 是多少？如何计算？**
 
 **参考答案要点**：
-- A100 FP32 Peak ≈ 19.5 TFLOPS
+- RTX 5090 FP32 Peak ≈ 19.5 TFLOPS
 - Memory Bandwidth ≈ 1.55 TB/s
 - Ridge Point = 19.5 / 1.55 ≈ 12.6 FLOP/Byte
 - 含义：当 AI < 12.6 时是 memory-bound，AI > 12.6 时是 compute-bound
@@ -1004,7 +1004,7 @@ A100:
 - [ ] 针对每个薄弱点重新学习
 - [ ] 整理了易混淆概念对比表
 - [ ] 能熟练背诵关键公式
-- [ ] 能默写关键参数（A100 等）
+- [ ] 能默写关键参数（RTX 5090 等）
 - [ ] 能默画 8 个核心流程图
 
 ---
@@ -1237,7 +1237,7 @@ Month 6: 面试与项目
 | 27 | 自我介绍 | ⭐⭐⭐⭐⭐ | Day 54 | 中 |
 | 28 | 项目介绍 | ⭐⭐⭐⭐⭐ | Day 54 | 中 |
 | 29 | 技术难点深挖 | ⭐⭐⭐⭐⭐ | Day 54 | 高 |
-| 30 | A100 Ridge Point | ⭐⭐⭐⭐ | Day 55 | 中 |
+| 30 | RTX 5090 Ridge Point | ⭐⭐⭐⭐ | Day 55 | 中 |
 | 31 | LLaMA-7B KV Cache | ⭐⭐⭐⭐ | Day 55 | 中 |
 | 32 | 最大收获/挑战 | ⭐⭐⭐⭐ | Day 56 | 中 |
 | 33 | 未来规划 | ⭐⭐⭐⭐ | Day 56 | 中 |

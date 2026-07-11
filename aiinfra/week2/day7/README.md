@@ -126,7 +126,7 @@ Level 6: Tensor Core / CUTLASS (~90%+) ← 超出本周范围
 
 ```cuda
 // block_reduce_timed.cu —— 30 分钟手撕参考实现
-// 编译: nvcc -o block_reduce block_reduce_timed.cu -O3 -arch=sm_80
+// 编译: nvcc -o block_reduce block_reduce_timed.cu -O3 -arch=sm_120
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
@@ -418,7 +418,7 @@ week2/
 # Week 2 GEMM 性能优化报告
 
 ## 测试环境
-- GPU: <你的型号，如 NVIDIA RTX 3090 / A100>
+- GPU: <你的型号，如 NVIDIA GeForce RTX 5090>
 - Compute Capability: <如 8.6>
 - CUDA Version: <如 12.4>
 - cuBLAS 版本: <如 12.4>

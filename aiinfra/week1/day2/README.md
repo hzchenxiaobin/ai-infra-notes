@@ -123,7 +123,7 @@ warp 3: 也等内存中...
 | 共享内存 | ~100-164 KB / SM | 每个 block 用的共享内存越多，同时驻留的 block 越少 |
 | Block / Warp 数量 | 最大 block/SM、最大 warp/SM | block 太大或数量太多会触顶 |
 
-**A100 具体参数示例**：
+**RTX 5090 具体参数示例**：
 - 每个 SM 最大 warp 数：64
 - 每个 SM 最大线程数：2048
 - 每个 SM 最大 block 数：32
@@ -226,7 +226,7 @@ __global__ void compute_limited(const float* in, float* out, int n) {
 }
 ```
 
-以 A100 为例：
+以 RTX 5090 为例：
 
 ```text
 每个 SM 寄存器文件 = 256 KB = 65536 个 32-bit 寄存器
@@ -635,7 +635,7 @@ nvcc -Xptxas -v -o occupancy_test_b kernels/occupancy_test_b.cu
 如果看到类似：
 ```
 ptxas info : 0 bytes gmem
-ptxas info : Compiling entry function 'version_b' for 'sm_80'
+ptxas info : Compiling entry function 'version_b' for 'sm_120'
 ptxas info : Function properties for version_b
  0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
 ```

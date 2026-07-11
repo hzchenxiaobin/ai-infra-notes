@@ -106,7 +106,7 @@ AI = 2 * M * N * K / (M*K + K*N + M*N) / sizeof(float)
 AI ≈ 2 * 512³ / (3 * 512² * 4) ≈ 85 FLOP/Byte
 ```
 
-A100 的 Ridge Point ≈ 12.6 FLOP/Byte，因此 `matmul_tiled` 更接近 **compute-bound**。但受限于简单实现（没有 register blocking、warp shuffle、float4 等），通常还远没打到峰值算力。
+RTX 5090 的 Ridge Point ≈ 12.6 FLOP/Byte，因此 `matmul_tiled` 更接近 **compute-bound**。但受限于简单实现（没有 register blocking、warp shuffle、float4 等），通常还远没打到峰值算力。
 
 ---
 

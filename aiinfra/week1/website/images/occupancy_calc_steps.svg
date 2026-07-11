@@ -9,7 +9,7 @@
   <g filter="url(#sketch)">
 
   <rect width="720" height="540" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Occupancy 手算四步法（A100 示例）</text>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Occupancy 手算四步法（RTX 5090 示例）</text>
 
   <!-- Step 1 -->
   <rect x="40" y="60" width="640" height="60" rx="8" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="2"/>
@@ -43,7 +43,7 @@
 
   <!-- Summary -->
   <rect x="120" y="470" width="480" height="50" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
-  <text x="360" y="492" text-anchor="middle" font-size="14" fill="#2b2b2b">A100: 256 threads, 64 regs/thread, 0 smem</text>
+  <text x="360" y="492" text-anchor="middle" font-size="14" fill="#2b2b2b">RTX 5090: 256 threads, 64 regs/thread, 0 smem</text>
   <text x="360" y="512" text-anchor="middle" font-size="15" fill="#5cb86c" font-weight="bold">→ 理论 Occupancy = 50%（瓶颈：寄存器）</text>
   </g>
 </svg>

@@ -1,5 +1,5 @@
 // matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>

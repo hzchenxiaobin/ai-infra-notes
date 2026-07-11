@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAGS = -O3 -arch=sm_80 -lineinfo
+NVCC_FLAGS = -O3 -arch=sm_120 -lineinfo
 
 TARGETS = hello_gpu vector_add_blocksize
 

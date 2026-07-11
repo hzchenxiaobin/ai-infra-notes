@@ -1,5 +1,5 @@
 // paged_attention.cu —— PagedAttention 最小化实现（block table + 分块 KV cache attention）
-// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_120
 // 运行命令: ./paged_attention
 //
 // 演示 PagedAttention 的三大核心机制：

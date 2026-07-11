@@ -308,7 +308,7 @@ make nsys              # nsys 时间线
 
 ```bash
 # 编译时查看寄存器用量（非 ncu，但相关）
-nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
+nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 ```
 
 **相关 LeetGPU**：GEMM 建议用 ncu 对比不同参数性能差异。
@@ -590,7 +590,7 @@ make nsys              # nsys 时间线
 3. **判断瓶颈**：
    - `sm__throughput` 高、`dram__throughput` 低 → compute-bound。
    - `dram__throughput` 高、`sm__throughput` 低 → memory-bound。
-   - Roofline balance point（A100 约 25 FLOP/byte）可作参考。
+   - Roofline balance point（RTX 5090 约 25 FLOP/byte）可作参考。
 
 ---
 

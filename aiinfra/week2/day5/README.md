@@ -168,7 +168,7 @@ O_final = o / l （最后做一次归一化）
 
 ```cuda
 // flash_attention.cu —— FlashAttention 简化版 Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>
@@ -421,7 +421,7 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_80
+nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
 ./flash_attention
 ```
 
@@ -445,7 +445,7 @@ s_Q[Br][D] = 64×64×4 = 16 KB
 s_K[Bc][D] = 64×64×4 = 16 KB
 s_V[Bc][D] = 64×64×4 = 16 KB
 s_S[Br][Bc] = 64×64×4 = 16 KB
-总计 = 64 KB（在 A100 的 164 KB shared memory 限制内）
+总计 = 64 KB（在 RTX 5090 的 164 KB shared memory 限制内）
 ```
 
 #### 任务 4：LeetGPU 在线题目 —— Softmax Attention
@@ -560,7 +560,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 #### 实验 3：用 ncu 分析 FlashAttention Kernel
 
 ```bash
-nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
 ncu --kernel-name regex:flashAttentionFwd \
  --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\
@@ -645,7 +645,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 <summary>点击查看答案</summary>
 
  - 受限于 SRAM（Shared Memory）容量：`Br×D + Bc×D×2 + Br×Bc ≤ SRAM 容量`
- - A100 shared memory 最多 164 KB/SM
+ - RTX 5090 shared memory 最多 164 KB/SM
  - 典型值：Br=Bc=64, D=64 时 SRAM 使用约 40 KB
  - 分块太小 → 循环次数多；分块太大 → SRAM 超限或 occupancy 下降
 

@@ -355,7 +355,7 @@ fa_ops = load_inline(
  cuda_sources=cuda_src,
  functions=["flash_attention_forward"],
  verbose=True,
- extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 class MiniAttentionFA(nn.Module):

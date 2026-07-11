@@ -37,7 +37,7 @@ Day 14: 限时Kernel手撕 + GitHub整理 + 性能对比报告
 ### 前置准备清单
 
 #### 硬件/软件验证
-- [ ] 确认GPU支持Warp Shuffle（Compute Capability >= 3.0，Kepler及以后架构全部支持）
+- [ ] 确认GPU支持Warp Shuffle（Compute Capability >= 12.0，Blackwell及以后架构全部支持）
 - [ ] `nvcc --version`正常，CUDA Toolkit >= 11.0
 - [ ] `ncu --version`正常，Nsight Compute可用
 - [ ] `nsys --version`正常，Nsight Systems可用
@@ -141,7 +141,7 @@ Result: lane0持有warp内32个线程的累加和
 
 ```cpp
 // warp_reduce.cu —— Warp级 + Block级两级归约完整实现
-// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
 // 运行命令: ./warp_reduce
 
 #include <cuda_runtime.h>
@@ -307,10 +307,10 @@ int main() {
 
 ```bash
 # 编译（根据GPU架构选择arch参数）
-# Ampere (A100, RTX 30xx): sm_80
-# Turing (RTX 20xx, T4): sm_75
-# Volta (V100): sm_70
-nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
+# Blackwell (RTX 5090): sm_120
+# Blackwell (RTX 5090): sm_120
+# Blackwell (RTX 5090): sm_120
+nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
 
 # 运行
 ./warp_reduce
@@ -349,7 +349,7 @@ nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
 - 参数2 `val`：要传递的本线程变量值
 - 参数3 `delta=16`：目标lane的偏移量，即读取`(laneId + delta) % width`线程的值
 - 参数4（省略，默认32）`width`：参与shuffle的宽度，默认32（整个warp），可以设为16/8等实现子warp操作
-- 注意事项：从Volta架构开始必须使用`_sync`后缀版本（显式mask），旧版`__shfl_down`已被弃用。部分warp操作时，inactive lane的返回值未定义
+- 注意事项：从Blackwell架构开始必须使用`_sync`后缀版本（显式mask），旧版`__shfl_down`已被弃用。部分warp操作时，inactive lane的返回值未定义
 
 **面试题2**：为什么Warp Shuffle比Shared Memory更适合做Warp内归约？实际延迟差距有多大？（⭐⭐⭐⭐ 必考）
 
@@ -370,7 +370,7 @@ nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_80
 - [ ] 能解释`0xFFFFFFFF`的含义：32位掩码，激活Warp内所有32个lane
 - [ ] 能解释为什么两级归约需要`__syncthreads()`（warp间同步点）
 - [ ] 能说出`__shfl_down_sync`和`__shfl_xor_sync`的区别（down=单向偏移，xor=蝴蝶交换）
-- [ ] 理解Volta+架构必须使用`_sync`版本的原因（独立线程调度需要显式mask）
+- [ ] 理解Blackwell+架构必须使用`_sync`版本的原因（独立线程调度需要显式mask）
 
 ---
 
@@ -447,7 +447,7 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 - 索引/临时变量：~8 个float
 - **总计**：~88个float ≈ 88个register（每个float一个寄存器）
 
-> 注意：现代GPU每个线程最多255个寄存器（如A100），88个register在限制内。但如果TM=TN=16，累加器就有256个register，会溢出到local memory导致性能暴跌。
+> 注意：现代GPU每个线程最多255个寄存器（如RTX 5090），88个register在限制内。但如果TM=TN=16，累加器就有256个register，会溢出到local memory导致性能暴跌。
 
 **5. Double Buffering（软件流水线）原理**
 
@@ -494,7 +494,7 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 
 ```cpp
 // register_blocking_gemm.cu —— Register Blocking矩阵乘法完整实现
-// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
+// 编译命令: nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 // 运行命令: ./register_gemm
 
 #include <cuda_runtime.h>
@@ -788,12 +788,12 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
+nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas
 
 # 运行
 ./register_gemm
 
-# 预期输出（A100 GPU示例）
+# 预期输出（RTX 5090 GPU示例）
 # === Register Blocking GEMM ===
 # Parameters: BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
 # M N K Our(ms) cuBLAS(ms) Percent
@@ -807,7 +807,7 @@ nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -lcublas
 
 **练习1（基础）**：修改TM和TN的值（如TM=4, TN=4或TM=16, TN=4），观察性能变化和register使用量的关系。
 > 提示：使用`nvcc -Xptxas -v`查看编译器报告的register使用量。超过限制会导致spill到local memory。
-> 编译命令：`nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_80 -Xptxas -v,-warn-spills`
+> 编译命令：`nvcc -o register_gemm register_blocking_gemm.cu -O3 -arch=sm_120 -Xptxas -v,-warn-spills`
 
 **练习2（进阶）**：实现Double Buffering版本——声明两份shared memory buffer（`s_A[2][BM][BK]`），奇偶tile交替使用。
 > 提示：使用`buf_idx = (bk / BK) % 2`选择当前buffer，用`__syncthreads()`保证切换时无冲突。
@@ -981,7 +981,7 @@ cudaStreamWaitEvent(streamB, event, 0);
 
 ```cpp
 // multi_stream_pipeline.cu —— 多Stream重叠流水线完整实现
-// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
 // 运行命令: ./multi_stream
 
 #include <cuda_runtime.h>
@@ -1181,7 +1181,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_80
+nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
 
 # 运行
 ./multi_stream
@@ -1411,7 +1411,7 @@ Register Pressure: 72%
 ```bash
 # 编译（保留调试信息以便Source View关联）
 nvcc -o gemm_profile register_blocking_gemm.cu \
- -O3 -arch=sm_80 -lcublas -g -lineinfo
+ -O3 -arch=sm_120 -lcublas -g -lineinfo
 
 # 运行Nsight Compute profile
 ncu \
@@ -1659,7 +1659,7 @@ O_final = o / l （最后做一次归一化）
 
 ```cpp
 // flash_attention.cu —— FlashAttention简化版Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 // 运行命令: ./flash_attention
 
 #include <cuda_runtime.h>
@@ -1975,7 +1975,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
+nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 
 # 运行
 ./flash_attention
@@ -2084,8 +2084,8 @@ nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_80
 
 ```cpp
 // integrated_gemm.cu —— 整合优化GEMM（Warp Shuffle + Register Blocking + float4）
-// 目标性能：cuBLAS 70%+（A100上4096x4096矩阵）
-// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
+// 目标性能：cuBLAS 70%+（RTX 5090上4096x4096矩阵）
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
 // 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>
@@ -2401,10 +2401,10 @@ int main() {
 #### 编译运行
 
 ```bash
-nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
+nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
 ./integrated_gemm
 
-# 预期输出（A100示例）
+# 预期输出（RTX 5090示例）
 # === Integrated GEMM ===
 # BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
 #
@@ -2441,10 +2441,10 @@ nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_80 -lcublas
 
 | GPU型号 | 理论峰值(FP32) | 4096矩阵目标GFLOPS | cuBLAS百分比 |
 |---------|--------------|-------------------|------------|
-| A100 SXM | 19.5 TFLOPS | ~13,000 GFLOPS | ~65-75% |
-| RTX 3090 | 35.6 TFLOPS | ~24,000 GFLOPS | ~65-75% |
-| A10 | 31.2 TFLOPS | ~21,000 GFLOPS | ~65-75% |
-| V100 | 15.7 TFLOPS | ~10,000 GFLOPS | ~60-70% |
+| RTX 5090 | 19.5 TFLOPS | ~13,000 GFLOPS | ~65-75% |
+| RTX 5090 | 35.6 TFLOPS | ~24,000 GFLOPS | ~65-75% |
+| RTX 5090 | 31.2 TFLOPS | ~21,000 GFLOPS | ~65-75% |
+| RTX 5090 | 15.7 TFLOPS | ~10,000 GFLOPS | ~60-70% |
 
 ---
 
@@ -2634,7 +2634,7 @@ cuda-learning/
 # CUDA GEMM性能优化报告
 
 ## 测试环境
-- GPU: NVIDIA A100-SXM4-40GB
+- GPU: NVIDIA GeForce RTX 5090
 - CUDA Version: 12.4
 - Driver: 550.54.15
 

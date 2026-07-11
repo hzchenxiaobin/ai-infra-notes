@@ -249,7 +249,7 @@ SRAM 使用量 = \`Br×d + 2×Bc×d\` 个 float。以 Br=Bc=64, d=64 为例：
 s_Q: 64×64 = 4096 floats = 16 KB
 s_K: 64×64 = 4096 floats = 16 KB
 s_V: 64×64 = 4096 floats = 16 KB
-总计: 48 KB ≤ 164 KB (A100 上限) ✓
+总计: 48 KB ≤ 164 KB (RTX 5090 上限) ✓
 \`\`\`
 
 > ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 S=QK^T 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
@@ -324,7 +324,7 @@ KV tile 同理：\`kvStart + c < N\` 判断，无效位置 score 设为 \`-1e30f
 
 \`\`\`cuda
 // flash_attention_v2.cu —— 完整 FlashAttention Forward Kernel（batch + multi-head）
-// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120
 // 运行命令: ./flash_attention_v2
 
 #include <cuda_runtime.h>
@@ -625,7 +625,7 @@ int main() {
 
 \`\`\`bash
 # 编译
-nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_80
+nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
 
 # 运行
 ./flash_attention_v2
@@ -649,7 +649,7 @@ GPU Time: x.xxx ms
 
 \`\`\`bash
 # 编译时查看 shared memory 使用
-nvcc -Xptxas -v -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_80
+nvcc -Xptxas -v -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
 # 观察 ptxas info: 'Used N registers, Z bytes spill stores, W bytes cmem'
 # shared memory 应为 48 KB (Br*d + 2*Bc*d = 3×4096×4 = 49152 bytes)
 \`\`\`
@@ -657,7 +657,7 @@ nvcc -Xptxas -v -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm
 **用 ncu 分析 kernel**：
 
 \`\`\`bash
-nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
 
 ncu --metrics \\
  sm__throughput.avg.pct_of_peak_sustained_elapsed,\\
@@ -701,7 +701,7 @@ ncu --metrics \\
 
 \`\`\`cuda
 // attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
-// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
@@ -812,7 +812,7 @@ get: 命中则移到 head; put: 新增插 head, 满则删 tail
 
 修改 Br=128, Bc=128，重新编译运行，观察 SRAM 使用量和性能变化。
 
-> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB，仍在 A100 上限内但 occupancy 可能下降。
+> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB，仍在 RTX 5090 上限内但 occupancy 可能下降。
 
 #### 实验 2：实现向量化加载
 
@@ -879,7 +879,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 
  - 每个 warp 维护 ROWS_PER_WARP 组 (m, l, acc[d]) 状态，其中 acc[d] 是大头：ROWS_PER_WARP × d 个 float
  - 以 ROWS_PER_WARP=8, d=64 为例：acc 占 512 个 float，加上 m/l/索引，每线程约 88-120 个 register
- - 问题：register 压力大 → occupancy 下降（A100 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
+ - 问题：register 压力大 → occupancy 下降（RTX 5090 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
  - 缓解：减小 ROWS_PER_WARP（增加 WARPS_PER_BLOCK）或减小 d；官方实现用 warp group 子块划分优化
 
 </details>
@@ -891,7 +891,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 <summary>点击查看答案</summary>
 
  - SRAM = (Br × d + 2 × Bc × d) × 4 bytes（K/V 不复用）
- - 太大：超过 shared memory 上限（A100 164 KB/SM）→ 编译失败；或 occupancy 暴跌
+ - 太大：超过 shared memory 上限（RTX 5090 164 KB/SM）→ 编译失败；或 occupancy 暴跌
  - 太小：KV tile 循环次数多（N/Bc 轮），每轮的 tile 加载和 \`__syncthreads\` 开销占比增大
  - 典型值：d=64, Br=Bc=64 时 SRAM = 48 KB，occupancy 与计算效率的平衡点
 

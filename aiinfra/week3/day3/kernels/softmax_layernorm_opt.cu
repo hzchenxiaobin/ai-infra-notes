@@ -1,6 +1,6 @@
 // softmax_layernorm_opt.cu —— 优化版 Softmax + LayerNorm（warp 级 + float4 向量化）
 // 对比 Day 2 的 block 级 + 逐元素加载版本，验证工业级优化手法
-// 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./softmax_layernorm_opt
 
 #include <cuda_runtime.h>

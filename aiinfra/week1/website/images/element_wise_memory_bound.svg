@@ -27,7 +27,7 @@
   <!-- Ridge point line -->
   <line x1="300" y1="400" x2="300" y2="150" stroke="#e8a838" stroke-width="2" stroke-dasharray="5,5"/>
   <text x="305" y="145" font-size="11" fill="#e8a838">Ridge Point ≈ 12.6</text>
-  <text x="305" y="160" font-size="10" fill="#666666">(A100: 19.5T / 1.55T)</text>
+  <text x="305" y="160" font-size="10" fill="#666666">(RTX 5090: 19.5T / 1.55T)</text>
 
   <!-- Memory slope -->
   <line x1="80" y1="400" x2="300" y2="150" stroke="#6ab0ff" stroke-width="2"/>

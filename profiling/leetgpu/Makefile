@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAGS = -O3 -arch=sm_80 -lineinfo
+NVCC_FLAGS = -O3 -arch=sm_120 -lineinfo
 
 # 所有可编译的 LeetGPU profiling 程序
 TARGETS = vector_add relu matrix_transpose reduction histogram \

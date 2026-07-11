@@ -26,7 +26,7 @@
   <g filter="url(#sk)">
     <rect x="60" y="250" width="370" height="56" rx="6" fill="#fce4ec" stroke="#b85450"/>
   </g>
-  <text x="72" y="272" font-size="12" font-weight="bold" fill="#7a2828">结论：AI ≪ Ridge Point (~12.6 on A100)</text>
+  <text x="72" y="272" font-size="12" font-weight="bold" fill="#7a2828">结论：AI ≪ Ridge Point (~12.6 on RTX 5090)</text>
   <text x="72" y="292" font-size="11" fill="#7a2828">→ 完全卡在 HBM 带宽，SM 空闲等数据</text>
 
   <!-- ============ 右：Ridge Point 屋顶线 ============ -->

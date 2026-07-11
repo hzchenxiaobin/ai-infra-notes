@@ -54,7 +54,7 @@ nsys --version
 # 预期输出：NVIDIA Nsight Systems version 202x.x.x
 
 # 验证第2周代码可编译（复用 warp reduce 基础）
-nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_80 2>&1 | head
+nvcc -o /tmp/warp_reduce week2/day1/kernels/warp_reduce.cu -O3 -arch=sm_120 2>&1 | head
 # 预期：无报错（若路径不同请按实际调整）
 ```
 
@@ -447,7 +447,7 @@ Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 
 ```cpp
 // softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
-// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 // 运行命令: ./softmax_layernorm
 
 #include <cuda_runtime.h>
@@ -712,7 +712,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_80
+nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行
 ./softmax_layernorm
@@ -927,7 +927,7 @@ float b = beta[i]; // 加载到 register
 
 ```bash
 # 编译优化版
-nvcc -o softmax_layernorm_opt softmax_layernorm_opt.cu -O3 -arch=sm_80 -lineinfo
+nvcc -o softmax_layernorm_opt softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
 # profile
 ncu --metrics \
@@ -1048,7 +1048,7 @@ Bytes = 3N² + 4Nd ≈ 3N²（当 N >> d）
 AI = 4·N²·d / 3N² = (4/3)·d ≈ 85 FLOP/Byte（d=64）
 ```
 
-对比 A100 Ridge Point（~12.6 FLOP/Byte）：AI=85 > 12.6 → **标准 Attention 的 GEMM 部分是 compute-bound**。
+对比 RTX 5090 Ridge Point（~12.6 FLOP/Byte）：AI=85 > 12.6 → **标准 Attention 的 GEMM 部分是 compute-bound**。
 
 但 **softmax 部分**（读 S N²，写 P N²）是纯 memory-bound：
 ```
@@ -1087,7 +1087,7 @@ N = 65536: S/P 矩阵 = 65536² × 4 bytes = 16 GB （直接 OOM）
 
 ```cpp
 // attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
-// 编译命令: nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_120
 // 运行命令: ./attention_naive
 
 #include <cuda_runtime.h>
@@ -1304,7 +1304,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o attention_naive attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
 
 # 运行
 ./attention_naive
@@ -1503,7 +1503,7 @@ my_ops = load_inline(
  cuda_sources=cuda_src,
  functions=["softmax_forward", "layernorm_forward"],
  verbose=True,
- extra_cuda_cflags=["-O3", "-arch=sm_80"],
+ extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 class MiniAttention(nn.Module):
@@ -1885,7 +1885,7 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_compiled.nsys-rep
 
 **Arithmetic Intensity (AI) = FLOPs / Bytes**
 
-以 A100 为例（Ridge Point = Peak FLOP/s / Peak Bandwidth = 19.5T / 1.55T ≈ 12.6 FLOP/Byte）：
+以 RTX 5090 为例（Ridge Point = Peak FLOP/s / Peak Bandwidth = 19.5T / 1.55T ≈ 12.6 FLOP/Byte）：
 - AI < 12.6 → **Memory-bound**（数据喂不饱计算单元）
 - AI > 12.6 → **Compute-bound**（算力是瓶颈）
 
@@ -2149,7 +2149,7 @@ Step 3 (O=PV): N² + 2Nd
 **4. Arithmetic Intensity**
 ```
 AI = FLOPs / Bytes
-Memory-bound: AI < Ridge Point (≈12.6 on A100)
+Memory-bound: AI < Ridge Point (≈12.6 on RTX 5090)
 Compute-bound: AI > Ridge Point
 ```
 
@@ -2160,7 +2160,7 @@ l_new = l * exp(m - m_new) + Σ exp(xj - m_new)
 o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 ```
 
-**6. Ridge Point（A100 示例）**
+**6. Ridge Point（RTX 5090 示例）**
 ```
 Ridge Point = Peak FLOP/s / Peak Bandwidth
  = 19.5 TFLOP/s / 1.55 TB/s

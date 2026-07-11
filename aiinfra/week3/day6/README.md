@@ -99,7 +99,7 @@ ncu --metrics \
 Arithmetic Intensity (AI) = FLOPs / Bytes（每读 1 字节做多少次运算）
 Ridge Point = Peak FLOP/s / Peak Bandwidth
 
-A100 FP32: 19.5 TFLOP/s / 1.55 TB/s ≈ 12.6 FLOP/Byte
+RTX 5090 FP32: 19.5 TFLOP/s / 1.55 TB/s ≈ 12.6 FLOP/Byte
 ```
 
 - AI < 12.6 → **memory-bound**（数据喂不饱计算单元）
@@ -195,7 +195,7 @@ ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的
 
 ```cuda
 // kernels/profiling_targets.cu —— 端到端 Profiling 靶点：memory-bound Softmax + compute-bound GEMM
-// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./profiling_targets
 
 // [Memory-bound] Softmax：一行一个 block，三遍扫描 safe softmax（复用 Day 2）
@@ -298,7 +298,7 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 
 ```bash
 # 编译（带 -lineinfo 供 ncu Source View）
-nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_80 -lineinfo
+nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
 
 # 运行验证正确性
 ./profiling_targets
@@ -370,7 +370,7 @@ ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运
 
 ```cuda
 // rmsnorm.cu —— RMS Normalization（单次 reduce，Llama 风格）
-// 编译命令: nvcc -o rmsnorm rmsnorm.cu -O3 -arch=sm_80 -lineinfo
+// 编译命令: nvcc -o rmsnorm rmsnorm.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./rmsnorm
 // ncu 分析: ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name regex:rmsnorm_kernel ./rmsnorm
 
@@ -563,7 +563,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（A100 FP32 ≈ 12.6 FLOP/Byte）
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 12.6 FLOP/Byte）
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
  - DRAM% >> SM% → memory-bound
  - SM% >> DRAM% → compute-bound

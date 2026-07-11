@@ -153,7 +153,7 @@ Decode 阶段每次处理 1 个新 token：
 Arithmetic Intensity:
  AI = FLOPs / Bytes ≈ d / (2 × d × bytes_per_float) ≈ 0.125 FLOP/Byte
 
-远低于 Ridge Point (~12.6 on A100)，所以是 memory-bound。
+远低于 Ridge Point (~12.6 on RTX 5090)，所以是 memory-bound。
 ```
 
 **直观理解**：
@@ -523,7 +523,7 @@ Cache 复用：
 
 ```cpp
 // kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
-// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_80
+// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
 // 运行命令: ./kv_cache
 
 #include <cuda_runtime.h>
@@ -709,7 +709,7 @@ int main() {
 
 ```bash
 # 编译
-nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_80
+nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
 
 # 运行
 ./kv_cache

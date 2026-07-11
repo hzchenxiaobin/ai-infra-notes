@@ -7,7 +7,7 @@
 //
 // __launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
 // 含义：每个 block 最多 128 线程，每个 SM 至少同时运行 8 个 block。
-// 以 sm_52 为例，每个 SM 有 64K 个 32-bit 寄存器：
+// 以 sm_120 为例，每个 SM 有 64K 个 32-bit 寄存器：
 //   每个线程最多可用寄存器 ≈ 65536 / (128 * 8) = 64 个
 // 但下面代码中同时活跃的 float 变量超过 64 个，编译器只能把部分变量 spill 到 local memory。
 __launch_bounds__(128, 8)

@@ -421,7 +421,7 @@ python kernels/benchmark_flash_attention.py
 
 \`\`\`bash
 # 编译带 lineinfo
-nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_80 -g -lineinfo
+nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
 
 # Profile 不同 N 的 HBM 读写量
 for N in 512 1024 2048 4096; do
@@ -501,7 +501,7 @@ return dummy.next
 
 在 benchmark 脚本中加入每个配置的 memory bandwidth utilization 和 FLOPS 估算。
 
-> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 A100 峰值（1.55 TB/s 带宽，19.5 TFLOPS FP32）。
+> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.55 TB/s 带宽，19.5 TFLOPS FP32）。
 
 #### 实验 3：绘制 latency vs N 曲线
 
