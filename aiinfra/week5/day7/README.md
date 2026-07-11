@@ -329,6 +329,9 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 
 1. **设计一个 LLM 推理服务时，需要考虑哪些核心问题？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 四大核心问题：
  1. **内存管理**：KV Cache 动态增长与显存限制 → PagedAttention、量化、GQA/MQA
  2. **Batch 策略**：如何组合请求平衡吞吐和延迟 → Continuous Batching（每轮重建 batch）
@@ -337,27 +340,51 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
  - 另需考虑：扩展性（多 GPU TP/PP）、正确性（数值精度、cache 一致性）
  - 四者交织：内存决定能服务多少请求，Batch 决定吞吐，Latency 隐藏决定单请求延迟，调度决定效率
 
+</details>
+
+
 1. **Continuous Batching 和 Dynamic Batching 有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Dynamic Batching**：请求级别聚合，等待凑够 batch size 或超时。一个 batch 内所有请求一起开始、一起结束——长请求阻塞整个 batch
  - **Continuous Batching（Inflight Batching）**：iteration 级别 batching，每轮重新构建 batch。新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
  - 对比：Continuous 更适合 LLM 自回归生成（生成长度差异大），吞吐提升 2-8x。前提是 PagedAttention 的细粒度 block 管理（否则完成请求的 cache 释放碎片化）
 
+</details>
+
+
 1. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + N×N attention）。优化：FlashAttention（IO 从 O(N²) 降到 O(Nd)）、Tensor Core、并行 prefill、reduce prompt 长度
  - **TBT 高（Decode 慢）**：Decode 是 memory-bound（M=1，读 KV Cache）。优化：KV Cache 量化（INT8/FP8）、GQA/MQA（减 KV 头）、PagedAttention、Continuous Batching（抬 M）
  - 若 TBT 随 L 增长 → 读 KV 随 L 增大 → 滑动窗口/稀疏 attention
  - 若 TBT 稳定但绝对值高 → launch overhead → CUDA Graph、torch.compile
 
+</details>
+
+
 1. **PagedAttention 和 Continuous Batching 是什么关系？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
  - Continuous Batching：每轮重建 batch，完成即走——但"释放 slot"要无碎片，否则回收的显存拼不出大块
  - PagedAttention：block 粒度分配/回收，空闲 block 随时复用——让 Continuous Batching 的高频 slot 回收无碎片化
  - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；没有 Continuous Batching，PagedAttention 的动态分配无用武之地
 
+</details>
+
+
 1. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原因**：序列变长，KV Cache 变大，每步 Decode 读更多历史 K/V（attention 的 1×L 部分）。KV 超出 L2/L1 cache 后掉 HBM，访存随 L 增长 → TBT 增长
  - **优化方向**：
@@ -368,6 +395,8 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
  5. Continuous Batching：合并多个 decode 请求，抬高 M 提升带宽利用
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

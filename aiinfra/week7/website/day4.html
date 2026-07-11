@@ -543,6 +543,9 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
 
 1. **如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎中？需要注意什么？**（⭐⭐⭐⭐⭐ 必考）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **集成流程**：
  1. 写 CUDA kernel（\`.cu\`）和 C++ wrapper（\`.cpp\`）
  2. 用 \`torch.utils.cpp_extension.load_inline\` 或 \`setup.py\` 编译
@@ -556,7 +559,13 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  5. **形状检查**：\`TORCH_CHECK(dim/is_cuda/is_contiguous)\`
  6. **错误处理**：\`cudaGetLastError\` + \`TORCH_CHECK\`
 
+</details>
+
+
 1. **自定义 Kernel 集成后，如何验证正确性和性能？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **正确性**：
  1. 单算子对比 PyTorch 实现，误差 < 阈值（Softmax < 1e-5，LayerNorm < 1e-4，Attention < 1e-3）
@@ -569,7 +578,13 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  4. 对比 throughput-latency 曲线
  - **教学版可能比 PyTorch 慢**——因为 PyTorch 用 cuDNN/cuBLAS 高度优化
 
+</details>
+
+
 1. **为什么大 GEMM 保留 cuBLAS，而 Softmax/LayerNorm 用自定义 kernel？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **大 GEMM 保留 cuBLAS**：
  - cuBLAS 用 Tensor Core（WMMA/MMA）加速，高度优化的 SASS 指令
@@ -581,7 +596,13 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  - 融合减少 kernel launch 和 HBM 往返，收益大
  - PyTorch 原生不融合，有优化空间
 
+</details>
+
+
 1. **什么是算子融合？为什么能提升性能？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **算子融合**：把多个连续算子合并为一个 kernel
  - **提升原因**：
@@ -593,7 +614,13 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  - Fused LayerNorm：mean + var + normalize 融合为 1 趟
  - Fused Softmax + CrossEntropy：减少一次 HBM 往返
 
+</details>
+
+
 1. **load_inline 和 setup.py 两种编译方式有什么区别？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **\`load_inline\`**：
  - 源码以字符串传入，运行时动态编译
@@ -607,7 +634,9 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
 
  - 编写算子 \`.cpp\`（定义输入输出和计算逻辑）
  - Python 侧调用注册的算子
- - 差异在底层：`;
+ - 差异在底层：
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

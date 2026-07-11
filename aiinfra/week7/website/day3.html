@@ -538,6 +538,9 @@ Day 3 我们分析评估了三大高级推理特性：
 
 1. **什么是 Speculative Decoding？它为什么能加速 LLM 推理？**（⭐⭐⭐⭐ 高频）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k+1 个 tokens
  - **加速原因**：
  - 小模型生成速度快（t_d ≪ T_fwd）
@@ -547,7 +550,13 @@ Day 3 我们分析评估了三大高级推理特性：
  - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
  - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
 
+</details>
+
+
 1. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Chunked Prefill**：
  - 解决长 prompt prefill 阻塞 decode 的问题
@@ -558,7 +567,13 @@ Day 3 我们分析评估了三大高级推理特性：
  - 缓存公共前缀的 KV Cache，新请求匹配时复用
  - 效果：TTFT 降低 3-5x，特别适合多轮对话和模板化请求
 
+</details>
+
+
 1. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - 对每个 draft token，target 计算其概率分布 p_target
  - 若 draft 采样值 x 满足 p_target(x) ≥ p_draft(x) → 接受
@@ -566,7 +581,13 @@ Day 3 我们分析评估了三大高级推理特性：
  - 数学上可证明：最终输出分布 = p_target（与纯 target 自回归一致）
  - 这保证了 speculative decoding 不会牺牲输出质量
 
+</details>
+
+
 1. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Key**：prefix token 序列的 hash（如 MD5），O(1) 查找
  - **Value**：KV Cache 数据（K 矩阵和 V 矩阵的 block）
@@ -574,7 +595,13 @@ Day 3 我们分析评估了三大高级推理特性：
  - **Block 级别匹配**（vLLM PagedAttention）：把 prefix 分成 block 逐 block 匹配，部分命中也能复用
  - **命中率因素**：前缀重复度越高、缓存越大 → 命中率越高
 
+</details>
+
+
 1. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Phase 1（优先）**：Prefix Caching + Chunked Prefill
  - 收益高（3-5x TTFT / 50-97% 延迟降低）、复杂度中等
@@ -584,7 +611,9 @@ Day 3 我们分析评估了三大高级推理特性：
  - Speculative Decoding 收益高但需要 draft model + 分布对齐，复杂度高
  - **排序逻辑**：按"收益/复杂度"性价比排序，优先做性价比高的
 
- - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）`;
+ - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

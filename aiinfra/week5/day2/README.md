@@ -406,12 +406,21 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 
 1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
  - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
  - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
  - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
 
+</details>
+
+
 1. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
  - 总 KV Cache = `batch_size × seq_len × per_token_size`
@@ -419,14 +428,26 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
  - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
  - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
 
+</details>
+
+
 1. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
  - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
  - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
  - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
 
+</details>
+
+
 1. **多轮对话中如何复用 KV Cache？有什么前提条件？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
  - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
@@ -434,16 +455,31 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
  - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
  - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
 
+</details>
+
+
 1. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
  - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
  - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
  - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
 
+</details>
+
+
 1. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
  - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
  - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
  - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
+
+</details>
+

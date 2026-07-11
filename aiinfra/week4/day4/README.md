@@ -343,27 +343,48 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 
 1. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
 
+<details>
+<summary>点击查看答案</summary>
+
  1. **减少 non-matmul FLOPs**：通过 warp group 子块划分，让 softmax/rescale 计算在 warp group 内独立完成，减少冗余。non-matmul:matmul 从 1:10 降到 1:20
  2. **更好的 work partitioning**：除了 batch/head 并行，还引入 sequence 长度方向并行，提高长序列下的并行度
  3. **更高的 occupancy**：优化 register 和 shared memory 使用，每个 SM 可驻留更多 block（1→2-3）
  4. **更少的 warp 同步**：减少 block 级同步点，warp group 内自治
  5. **反向传播更高效**
 
+</details>
+
+
 1. **FlashAttention-2 中，seq 并行和 head 并行有什么区别？什么时候用 seq 并行？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Head 并行**：不同 attention head 在不同 block 上并行，天然无依赖，是首选
  - **Seq 并行**：同一个 head 的序列分成多个 block 并行，增加并行度
  - **使用时机**：当 batch×head 数量不足以填满 GPU 时使用 seq 并行，尤其长序列场景
  - **注意**：seq 并行需要处理 Q tile 的边界，但 FlashAttention 的 tiling 天然适合这种划分
 
+</details>
+
+
 1. **为什么减少 non-matmul FLOPs 对性能影响这么大？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（A100 FP16 matmul 312 TFLOPS vs FP32 FMA 19.5 TFLOPS，16x 差距）
  - 即使 non-matmul FLOPs 只占总 FLOPs 的 10%，它的执行时间可能占 50%+——因为标量指令慢 16x
  - FA2 把 non-matmul 减半，直接缩小了这个瓶颈
  - FA2 论文目标：让 non-matmul 占比降到 ~1:20，使 matmul 主导
 
+</details>
+
+
 1. **FA2 的 warp group 子块划分与 FA1 的 warp 共享有什么具体区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - FA1：一个 Block 的所有 warp 共同处理 Q tile，跨 warp 需要同步 max/sum（`__syncthreads` + shared memory 中转）
  - FA2：把 Q tile 在行方向划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax
@@ -372,10 +393,19 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 
  - 核心一致：都是"减少跨组同步，让计算单元自治"
 
+</details>
+
+
 1. **如果让你继续优化 FlashAttention（FA3 方向），你会怎么做？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **异步量化**：在 KV tile 加载时就做量化（FP16→INT8），减少 HBM 带宽
  - **更细粒度的 seq 并行**：结合 KV block 级并行，类似 PagedAttention 的分块
  - **Tensor Core 利用率**：确保 QK^T 和 PV 的 GEMM 形状适合 WMMA（M/N/K 对齐 16）
  - **减少 register spilling**：用 `__launch_bounds__` 控制编译器寄存器分配
  - **硬件感知调度**：根据 SM 数量、L2 cache 大小动态选择 Br/Bc
+
+</details>
+

@@ -547,6 +547,9 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
 
 1. **如何做 LLM 推理系统的全链路性能分析？**（⭐⭐⭐⭐ 高频）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **三层工具链**：
  1. **nsys**（系统级）：看时间线，找 kernel 间隙、CPU-GPU 同步、stream 利用率
  2. **ncu**（kernel 级）：分析 top kernel 的 SM/DRAM throughput，判断 compute/memory bound
@@ -554,7 +557,13 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
  - **分析流程**：nsys 找间隙 → ncu 分析慢 kernel → 阶段计时算占比 → 提出优化
  - **PyTorch Profiler**：算子级时间分解，方便定位 PyTorch 层 overhead
 
+</details>
+
+
 1. **你的 Mini 系统和 vLLM 的差距主要在哪里？如何缩小？**（⭐⭐⭐⭐⭐ 必考）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **常见差距**：
  1. **Kernel 优化**：vLLM 用 FlashAttention-2，教学版 naive tiling → 差 2-3x
@@ -564,7 +573,13 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
  5. **torch.compile**：自动算子融合 → 差 1.2-1.5x
  - **缩小方法**：用官方 FlashAttention → 引入 CUDA Graph → C++ 重写 Scheduler → 实现 PagedAttention
 
+</details>
+
+
 1. **ncu 中 SM throughput 和 DRAM throughput 分别代表什么？怎么判断 bound 类型？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **SM throughput**：SM 算力占峰值百分比，> 60% → compute-bound
  - **DRAM throughput**：内存带宽占峰值百分比，> 60% → memory-bound
@@ -573,14 +588,26 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
  - SM 低 + DRAM 高 → memory-bound（优化访存：coalesced、shared memory、fusion）
  - 两者都低 → launch-bound 或 underutilized（增加并行度、CUDA Graph）
 
+</details>
+
+
 1. **什么是 CUDA Graph？为什么能减少 launch overhead？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原理**：录制一系列 kernel launch 为一个 graph，回放时一次性提交
  - **减少 overhead**：每次 launch 有 5-10μs CPU 开销，100 个 kernel = 0.5-1ms 纯 launch 开销；CUDA Graph 回放只需 1 次 launch
  - **适合**：固定 shape + 重复执行的 kernel 序列（如 decode 阶段每轮 forward 相同）
  - **不适合**：动态 shape、条件分支、依赖运行时数据的调度
 
+</details>
+
+
 1. **forward 阶段内哪些 kernel 最耗时？怎么优化？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **kernel 占比**：QKV GEMM ~25%、FlashAttention ~20%、FFN GEMM ~30%、LayerNorm ~10%
  - **GEMM 优化**：用 cuBLAS（Tensor Core）、增大 tile size、向量化
@@ -588,7 +615,9 @@ Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
  - **LayerNorm 优化**：3 趟→1 趟融合（mean+var+normalize 合并）
  - **通用**：算子融合减少 HBM 往返、CUDA Graph 减少 launch
 
- - 分析方法论一致：系统级找间隙 → kernel 级判 bound → 阶段级算占比`;
+ - 分析方法论一致：系统级找间隙 → kernel 级判 bound → 阶段级算占比
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

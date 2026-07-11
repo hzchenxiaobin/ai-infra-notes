@@ -473,30 +473,65 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
 ### 面试要点
 
 1. **如何判断一个 kernel 是 memory-bound 还是 compute-bound？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 看 `dram__throughput` 和 `sm__throughput`
  - Memory-bound：memory throughput 高，compute throughput 低
  - Compute-bound：compute throughput 高，memory throughput 低
  - 也可以用 Roofline 模型：AI 低则 memory-bound，AI 高则 compute-bound
 
+</details>
+
+
 1. **Nsight Compute 和 Nsight Systems 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - Nsight Compute：kernel 级详细指标
  - Nsight Systems：应用级时间线，看 CPU/GPU 交互和整体流程
 
+</details>
+
+
 1. **Roofline 模型如何指导优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 如果点在斜线区域（memory-bound）：优化内存访问
  - 如果点在平顶区域（compute-bound）：优化计算
  - 目标是让点尽量接近屋顶
 
+</details>
+
+
 1. **常用的 ncu 指标有哪些？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - `sm__occupancy.avg.pct_of_peak_sustained_elapsed`
  - `dram__throughput.avg.pct_of_peak_sustained_elapsed`
  - `sm__throughput.avg.pct_of_peak_sustained_elapsed`
  - `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum`
 
+</details>
+
+
 1. **nsys 时间线能看到什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - Kernel launch overhead
  - CPU 和 GPU 的执行时间线
  - CUDA API 调用顺序
  - 多个 stream 的并行情况
 
 ---
+
+</details>
+

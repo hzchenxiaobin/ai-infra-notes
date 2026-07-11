@@ -529,6 +529,9 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 
 1. **如何设计一个 FlashAttention 的 benchmark？需要对比哪些指标？**
 
+<details>
+<summary>点击查看答案</summary>
+
  1. **Latency**：单次 forward 时间（ms）
  2. **Throughput**：tokens/s 或 queries/s
  3. **HBM IO**：理论值 + ncu 实测值，验证 O(Nd) vs O(N²)
@@ -537,7 +540,13 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
  6. **扫描维度**：seq_len N、batch B、num_heads H、head_dim d
  7. **对比对象**：标准 Attention、手写 FA、官方 FA、PyTorch SDPA
 
+</details>
+
+
 1. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 使用 \`ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum\`
  - 测试 N=512, 1024, 2048, 4096，固定 d
@@ -545,14 +554,26 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
  - 如果 HBM 访问量 ≈ N² 的倍数（N 翻倍，IO 4x），则是 O(N²)
  - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
 
+</details>
+
+
 1. **FlashAttention 在什么配置下收益最大？什么配置下可能更慢？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **收益最大**：长序列（N>2048）、小 head dim（d=64）、单 batch（B=1）——此时 HBM 带宽是瓶颈，FA 消除 O(N²) IO 收益最大
  - **可能更慢**：短序列（N<512）——FA 的 shared memory 设置 + online softmax 递推有固定开销，可能超过 IO 节省
  - **收益减弱**：大 batch（B=16+）——标准 Attention 的 GEMM 已接近峰值，IO 不再是唯一瓶颈
  - **实际部署**：需要 benchmark 决定是否启用，通常 N>1024 时 FA 有正收益
 
+</details>
+
+
 1. **手写 FlashAttention 与官方实现的性能差距主要来自哪里？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **async copy + 双缓冲**：官方用 \`cp_async\` 隐藏加载延迟，手写版同步加载（SM 空闲等待）
  - **混合精度**：官方 FP16/BF16 输入 + FP32 累加，带宽翻倍；手写版 FP32 全程
@@ -561,7 +582,13 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
  - **warp group 优化**：官方 FA2 的子块划分减少 non-matmul FLOPs
  - **整体差距**：官方通常比手写快 1.5-2x
 
+</details>
+
+
 1. **标准 Attention 的 latency 随 N 增长的趋势是怎样的？FlashAttention 呢？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **标准 Attention**：latency 近似随 N² 增长——因为 HBM IO 是 O(N²)，N 翻倍时 IO 变 4x，latency 也近似 4x
  - **FlashAttention**：latency 近似随 N 线性增长——HBM IO 是 O(Nd)，N 翻倍时 IO 变 2x
@@ -570,7 +597,9 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 
  - 两者都测量 kernel 的实际 HBM 读写量，用于验证 IO 复杂度
  - 验证逻辑一致：N 翻倍时 IO 翻倍 → O(N)；N 翻倍时 IO 4x → O(N²)
- - 两者分析思路一致：先理论计算预期 IO，再用工具实测验证`;
+ - 两者分析思路一致：先理论计算预期 IO，再用工具实测验证
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

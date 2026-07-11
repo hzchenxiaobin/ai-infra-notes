@@ -559,11 +559,20 @@ Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
 
 1. **Continuous Batching 和 Dynamic Batching 有什么区别？为什么 Continuous Batching 更适合 LLM 推理？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **Dynamic Batching**：request-level，请求一起开始一起结束，一个长请求会阻塞整个 batch
  - **Continuous Batching**：iteration-level，每轮重新构建 batch，请求可动态加入和退出
  - **为什么更适合 LLM**：LLM 生成长度差异大（有人问一句话，有人输入长文档），Dynamic 下短请求要等长请求；Continuous 让 GPU 始终满载，吞吐和延迟都更好，还能混合 prefill 和 decode
 
+</details>
+
+
 1. **Continuous Batching 中，如何混合 Prefill 和 Decode？有什么挑战？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **混合方式**：每轮 scheduler 同时选择新请求做 prefill + 正在生成的做 decode
  - **挑战 1：Token budget 分配**——prefill 消耗大量 token budget，影响 decode 的 smooth latency
@@ -571,7 +580,13 @@ Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
  - **挑战 3：Latency 抖动**——prefill 请求加入时 decode 的 latency 突增
  - **解决**：chunked prefill（拆小块）、限制每轮 prefill token 数、优先保证 decode 节奏
 
+</details>
+
+
 1. **Continuous Batching 的 Scheduler 每轮需要做哪些决策？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - ① 继续运行哪些 RUNNING 请求（保留 running 队列的 decode）
  - ② 从 WAITING 加入哪些新请求（在 token budget 允许时做 prefill）
@@ -579,14 +594,26 @@ Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
  - ④ 处理 FINISHED 请求（释放 KV Cache、返回结果）
  - 约束：token budget（总 token ≤ 上限）、显存预算（KV Cache block ≤ 上限）、max_num_seqs
 
+</details>
+
+
 1. **Continuous Batching 为什么需要 PagedAttention？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Continuous Batching 每轮有请求完成退出、新请求加入——KV Cache 需要频繁分配/释放
  - 如果用连续分配，频繁 alloc/free 产生外部碎片——完成的请求释放的小空洞拼不回来，新请求放不下就 OOM
  - PagedAttention 的 block 粒度分配/回收让 slot 回收无碎片化——空闲 block 随时被任意序列复用
  - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；两者是 vLLM 的双支柱
 
+</details>
+
+
 1. **Continuous Batching 中，短请求的完成时间比 Dynamic Batching 快多少？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 取决于请求长度方差。极端例子：batch=[R1(gen=5), R2(gen=100)]
  - Dynamic：R1 在 iter 5 生成完，但要等 R2 到 iter 100 才能退出 → R1 空等 95 iterations
@@ -594,7 +621,9 @@ Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
  - 实际场景（请求长度方差大）下，Continuous 的吞吐通常比 Dynamic 高 2-8x
  - 请求长度方差越小（所有请求等长），Continuous 的优势越小（退化为 Dynamic）
 
- - token budget / max_num_seqs / preemption 等调度参数跨平台通用`;
+ - token budget / max_num_seqs / preemption 等调度参数跨平台通用
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

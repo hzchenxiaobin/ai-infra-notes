@@ -377,6 +377,9 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 
 1. **「如何分析一个 CUDA Kernel 的性能瓶颈？」请给出完整的分析流程。**
 
+<details>
+<summary>点击查看答案</summary>
+
  1. **工具选择**：ncu 做 kernel 级分析 + nsys 做系统级 Timeline 分析
  2. **第一步（Baseline）**：运行 ncu 获取 SM Throughput、Memory Throughput、Achieved Occupancy
  3. **第二步（Roofline 定位）**：根据两个 Throughput 判断 kernel 在 Roofline 上的位置
@@ -388,7 +391,13 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
  - MIO Throttle 高 → Shared Memory 瓶颈 → 减少 shared memory 访问
  1. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
 
+</details>
+
+
 1. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Register 溢出**：每线程 register 过多 → ncu 查看 `launch__registers_per_thread`，与架构限制对比
  - **Shared Memory 不足**：每 block smem 过多 → 计算 `s_A + s_B` 用量，与 SM 上限对比
@@ -396,19 +405,37 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
  - **Grid Size 不足**：总 block 数 < SM 数 × 每 SM 最大 block 数 → 比较 gridDim 和 SM 数量
  - **同步开销**：过多 `__syncthreads()` 导致 warp 空闲等待
 
+</details>
+
+
 1. **Roofline 模型怎么解读？平衡点是什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
  - A100 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
  - 优化方向：斜线区域优化内存访问，平顶区域优化计算
 
+</details>
+
+
 1. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Source View 能将硬件指标关联到源代码行，精确定位最耗时的代码
  - 需要编译时加 `-g -lineinfo` 保留调试信息
  - 例如：能看到第 45 行的 `acc[m][n] += r_A[m] * r_B[n]` 占了 60% 的执行时间
 
+</details>
+
+
 1. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
  - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
@@ -416,3 +443,6 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
  - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
 
 ---
+
+</details>
+

@@ -482,13 +482,22 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 
 1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
  - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
  - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
  - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
  - 长序列（N>2048）、小 head dim 时收益最大
 
+</details>
+
+
 1. **请完整推导 Online Softmax 的三个更新公式，并解释 \`exp(m - m_new)\` 的作用。**
+
+<details>
+<summary>点击查看答案</summary>
 
  \`\`\`
  公式1: m_new = max(m, max(xj))
@@ -498,7 +507,13 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
  - \`exp(m - m_new)\` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"
  - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
 
+</details>
+
+
 1. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
+
+<details>
+<summary>点击查看答案</summary>
 
  1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
  2. **更好的 work partitioning**：新增 sequence 长度方向并行，长序列下并行度更高
@@ -506,7 +521,13 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
  4. **更少的 warp 同步**：减少 block 级同步点
  5. **反向传播更高效**
 
+</details>
+
+
 1. **从 FlashAttention 中提炼出通用的 IO 优化方法论，并举一个 Transformer 外的应用例子。**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Tiling**：把大矩阵/张量分块到 SRAM，例如卷积中的 im2col + 分块
  - **Online Algorithm**：避免全局同步，例如流式计算中的 online mean/variance
@@ -514,13 +535,25 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
  - **Recomputation**：用计算换内存，例如 activation checkpointing 反向传播
  - **例子**：CNN 中的 conv + bn + relu 融合。未融合时要写卷积结果到 HBM，BN 再读；融合后在 register 中直接传递，省去一次 HBM 读写
 
+</details>
+
+
 1. **IO 优化和计算优化哪个更优先？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **通常 IO 优化更优先**，原因：① 数据移动能耗和延迟远高于计算 ② 现代 GPU 算力增长快于内存带宽增长，memory wall 越来越严重 ③ 很多推理场景本来就是 memory-bound
  - **不是绝对**：如果系统已经是 compute-bound，再优化 IO 收益很小，应该优化计算（Tensor Core、更好的 work partitioning）
  - **正确做法**：先用 profiling 判断瓶颈类型，再针对性优化
 
+</details>
+
+
 1. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 使用 \`ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum\`
  - 测试 N=512, 1024, 2048, 4096，固定 d
@@ -529,6 +562,8 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
  - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

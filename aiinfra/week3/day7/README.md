@@ -350,29 +350,56 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 
 1. **Transformer 的 Prefill 和 Decode 阶段分别是什么 bound？为什么？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 12.6，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
  - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，AI 从 384 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
  - **根本原因**：M=1 导致 GEMM 的计算量（与 M 成正比）远小于数据读取量（与 N·d 成正比），AI = FLOPs/Bytes 极低
  - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
 
+</details>
+
+
 1. **给一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6）比较
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
  - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
 
+</details>
+
+
 1. **标准 Attention 的 IO 复杂度是多少？O(N²) 来自哪里？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **复杂度**：O(N² + Nd)，当 N ≫ d 时简化为 O(N²)
  - **O(N²) 来源**：物化两个 N×N 中间矩阵——S=QK^T 写入 + softmax 读出 = 2N²，P=softmax(S) 写入 + PV 读出 = 2N²，合计 4N²
  - **FlashAttention 解决**：不物化 S/P，在 SRAM 中分块完成 online softmax，IO 降到 O(Nd)
 
+</details>
+
+
 1. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **AI 低**：Softmax 每元素读 1 写 1（8 bytes）只做 ~3 次运算，AI ≈ 0.375；LayerNorm AI ≈ 0.6，都远低于 Ridge Point
  - **优化方向**：① Kernel Fusion（与相邻算子融合省 HBM 中间读写）② 向量化加载（float4/half2）③ 减少 reduce 次数（online softmax / Welford）④ FP16 存储减带宽（reduce 用 FP32 保精度）
 
+</details>
+
+
 1. **如何做端到端 profiling 定位 Transformer 推理瓶颈？完整流程是什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **第一步（nsys 系统级）**：采集完整时间线，按 CUDA 时间排序找 top3 算子
  - **第二步（ncu kernel 级）**：对 top3 分析 SM Throughput 和 DRAM Throughput
@@ -380,11 +407,19 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
  - **第四步（Stall 分析）**：Long Scoreboard = 等内存，Math Pipe = 计算饱和
  - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子评估融合收益
 
+</details>
+
+
 1. **Week 3 你最大的收获是什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 建立"算子形状 → bound 类型 → 优化方向"的完整直觉：拿到任意 Transformer 算子，能从 M/N/K/d 形状秒判 compute-bound 还是 memory-bound，并给出对应优化路径。
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

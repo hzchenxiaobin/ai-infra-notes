@@ -436,29 +436,56 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
 
 1. **CUDA 的 Default Stream 有什么"坑"？在什么情况下会意外导致性能下降？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 隐式同步规则：Default Stream 上的操作会等待所有其他 Stream 的先前操作完成，反之亦然
  - 陷阱场景：创建了多 Stream 做并发优化，但某处调用了 `cudaMemcpy`（默认走 Default Stream），导致所有 Stream 的并发被打断
  - 解决方案：全部使用 Explicit Stream + `cudaMemcpyAsync`，或 `cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking)`
 
+</details>
+
+
 1. **`cudaMemcpyAsync` 相比 `cudaMemcpy` 需要什么额外条件？为什么必须使用 Pinned Memory？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 必须使用 Pinned Memory（page-locked），因为异步传输使用 DMA 引擎直接访问内存
  - 如果内存被 OS 换出到磁盘，DMA 无法访问，驱动会先复制到临时 pinned buffer，导致异步退化为同步
  - 分配方式：用 `cudaMallocHost` 或 `cudaHostAlloc` 代替 `malloc`
 
+</details>
+
+
 1. **多 Stream 重叠加速的硬件前提是什么？什么时候多 Stream 不会带来加速？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **硬件前提**：GPU 有独立的 Copy Engine 和 Compute Engine，能真正并发执行不同类型的操作（H2D/D2H 走 Copy Engine，kernel 走 Compute Engine）
  - **不加速的场景**：① 只有一个 Stream（无并发）② 用了 Default Stream（隐式同步打断并发）③ 没用 Pinned Memory（异步退化为同步）④ Compute 本身已打满 GPU（无空闲 SM 给其他 Stream）⑤ 数据量太小，启动开销 > 重叠收益
 
+</details>
+
+
 1. **`cudaEvent` 在多 Stream 编程中起什么作用？如何实现跨 Stream 依赖？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **作用**：Event 是 Stream 内的时间标记，用于精确计时和跨 Stream 同步
  - **跨 Stream 依赖**：`cudaEventRecord(event, streamA)` 在 streamA 标记完成点，`cudaStreamWaitEvent(streamB, event)` 让 streamB 等待该 event
  - **典型用法**：Stream B 的 kernel 必须等 Stream A 的 D2H 完成后才能开始 → 在 A 的 D2H 后 record event，B 的 kernel 前 wait event
  - **优势**：比 `cudaDeviceSynchronize` 精确得多，只阻塞相关 Stream，不影响其他 Stream 的并发
 
+</details>
+
+
 1. **如何用 `nsys` 验证多 Stream 是否真的重叠了？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - `nsys profile -o timeline ./multi_stream` 采集时间线，在 Nsight Systems GUI 的 CUDA Stream 行查看
  - **重叠表现**：不同 Stream 的 H2D/Kernel/D2H 条带在时间轴上错开重叠（Copy Engine 与 Compute Engine 并行）
@@ -466,3 +493,6 @@ Day 3 我们掌握了 CUDA Stream 异步执行模型：
  - **常见原因**：误用 Default Stream、未用 Pinned Memory、Stream 间有隐式依赖
 
 ---
+
+</details>
+

@@ -543,6 +543,9 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
 
 1. **设计一个完整的 LLM 推理调度器，需要考虑哪些因素？**（⭐⭐⭐⭐⭐ 必考）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **六大功能**：
  1. **Batching 策略**：Continuous Batching（running+新请求动态组批）
  2. **优先级调度**：heapq 按优先级排序，高优先级可使用预留资源
@@ -553,7 +556,13 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
  - **调度循环**：恢复 swapped → 继续 running → 加入新请求 → aging → 超时检查
  - **性能目标**：吞吐优先（大 batch）还是延迟优先（小 batch + 高优先级保障）
 
+</details>
+
+
 1. **调度器中的抢占策略如何选择被抢占的请求？recompute 和 swap 有什么区别？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Victim 选择**：最低优先级 → 最少剩余 token（换出成本低）→ 最晚提交（LRU）
  - **Recompute**：丢弃 KV Cache，放回 waiting 队列重新 prefill
@@ -564,7 +573,13 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
  - 缺点：GPU↔CPU 拷贝延迟，需 CPU 内存
  - **选择依据**：短 prompt 用 recompute，长 prompt 用 swap；vLLM 默认 recompute
 
+</details>
+
+
 1. **token_budget 和 memory_budget 分别限制什么？为什么需要两道预算？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **token_budget**：每轮 iteration 处理的 token 总数上限（类比 vLLM \`max_num_batched_tokens\`）
  - running decode 消耗 1/req，新请求 prefill 消耗 prompt_len
@@ -574,19 +589,33 @@ Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占
  - 防止 GPU OOM
  - **为什么两道**：token_budget 管"计算量"，memory_budget 管"存储量"，两者正交——短 prompt+长生成消耗少 token 但多 memory，长 prompt+短生成消耗多 token 但少 memory
 
+</details>
+
+
 1. **什么是 aging 机制？为什么需要它？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **问题**：纯优先级调度下，低优先级请求可能被不断到来的高优先级请求"饿死"
  - **Aging**：等待时间超过阈值（如 5s）后，自动提升优先级（每周期 +1）
  - **上限**：提升有上限（如 original+5），防止无限提升导致优先级失去意义
  - **效果**：低优先级请求最终会被调度，保障公平性
 
+</details>
+
+
 1. **Continuous Batching 的调度循环中，为什么先处理 running 再加入新请求？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **先 running**：正在生成的请求优先续 decode（延迟保障），避免"断流"
  - **后新请求**：剩余的 token_budget 给新请求做 prefill（利用率最大化）
  - **共享预算**：running decode 和新请求 prefill 共用 token_budget，防止单一类型独占
- - **与 vLLM 对应**：vLLM 每轮 iteration 也先处理 running（decode），再从 waiting 加入新请求（prefill）`;
+ - **与 vLLM 对应**：vLLM 每轮 iteration 也先处理 running（decode），再从 waiting 加入新请求（prefill）
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

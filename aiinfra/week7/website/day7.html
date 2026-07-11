@@ -460,6 +460,9 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
 
 1. **你的 Mini AI Infra 项目最大的技术难点是什么？如何解决？**（⭐⭐⭐⭐⭐ 必考）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **难点 1：Continuous Batching 的正确性**
  - 每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache
  - 解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
@@ -473,7 +476,13 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
  - 组件多，边界问题复杂（KV Cache 串台、请求卡住、内存泄漏）
  - 解决：分层验证（六步）、逐步集成、五大问题排查表
 
+</details>
+
+
 1. **如何设计一个可维护的 LLM 推理系统代码结构？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **模块化**：Engine、Scheduler、Worker、KV Cache、Model、Kernel 分离
  - **统一接口**：明确的 submit/result/shutdown API
@@ -482,13 +491,25 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
  - **文档完善**：README、架构图、API 文档、性能报告
  - **可观测性**：metrics、profiling 接口
 
+</details>
+
+
 1. **Week 7 你学到的最重要的三件事是什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **系统整合不是堆砌组件**：要在接口、状态、资源、性能四个层面做统一设计
  - **分层验证是联调的关键**：逐步叠加组件，每步验证，出错时精确定位
  - **Profiling 驱动优化**：先测量（三层工具链），再优化（按收益/复杂度排序），最后验证
 
+</details>
+
+
 1. **如果给你一个月优化 Mini 系统，你会怎么做？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Week 1**：用官方 FlashAttention-2 替换教学版 → forward 降低 30-50%
  - **Week 2**：引入 CUDA Graph → launch overhead 降低 80%
@@ -498,6 +519,8 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
  - 系统联调的方法论（分层验证 + 稳定性测试 + 异常处理）跨平台通用
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

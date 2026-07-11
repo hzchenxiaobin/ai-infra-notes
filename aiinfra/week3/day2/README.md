@@ -583,19 +583,34 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 
 1. **Softmax 为什么要减去 max？不减会怎样？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
  - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
  - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
  - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 
+</details>
+
+
 1. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
  - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
  - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
  - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
+</details>
+
+
 1. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~12.6）
  - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
@@ -605,7 +620,13 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
  3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
  4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
+</details>
+
+
 1. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
  - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
@@ -614,7 +635,13 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
  - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
  - **`smem[32]` 的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
 
+</details>
+
+
 1. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
  - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
@@ -622,3 +649,6 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
  - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
 
 ---
+
+</details>
+

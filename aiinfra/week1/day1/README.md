@@ -746,23 +746,58 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 ### 面试要点
 
 1. **什么是 SIMT？与 SIMD 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - SIMT：Single Instruction Multiple Threads，32 个线程执行同一条指令，但各自处理不同数据
  - SIMD：Single Instruction Multiple Data，一条指令同时处理固定宽度的数据向量
  - SIMT 可以处理分支（虽然有 divergence 代价），SIMD 分支处理更困难
 
+</details>
+
+
 1. **Warp divergence 是什么？如何避免？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 同一个 warp 内线程走不同分支，需要串行执行各分支
  - 避免方法：让相邻线程走相同分支、使用 warp-level primitive
 
+</details>
+
+
 1. **一个 block 最多多少 thread？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 通常为 1024
  - 这是 GPU 硬件限制，由 `maxThreadsPerBlock` 决定
 
+</details>
+
+
 1. **如何计算一个 kernel 的总 thread 数？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - `gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z`
 
+</details>
+
+
 1. **CUDA 中 `__global__` 和 `__device__` 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - `__global__`：CPU 调用，GPU 执行（kernel 函数）
  - `__device__`：GPU 调用，GPU 执行（设备端辅助函数）
 
 ---
+
+</details>
+

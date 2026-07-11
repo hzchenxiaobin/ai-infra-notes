@@ -547,38 +547,67 @@ Day 1 我们进入了 Week 6 的第一个主题——Dynamic Batching：
 
 1. **什么是 Dynamic Batching？它的优缺点是什么？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **Dynamic Batching**：将到达的请求暂时放入队列，等待一定时间（timeout）或凑够一定数量（max_batch_size）后，聚合成一个 batch 一起执行
  - **优点**：提高 GPU 利用率（decode 阶段 M 增大，从 memory-bound 逼近 compute-bound）；提高 throughput
  - **缺点**：引入等待延迟（request-level latency 增加）；需要 padding 造成计算浪费；一个长请求会阻塞整个 batch（request-level 聚合的固有问题）
  - **适用场景**：吞吐优先、请求到达率高的服务
 
+</details>
+
+
 1. **Dynamic Batching 中的 padding 有什么问题？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Padding 问题**：不同长度请求需 pad 到同一长度，pad token 也要参与 forward，浪费计算。序列长度差异越大浪费越严重（极端：len=2 和 len=100 同 batch → 98% 浪费）
  - **优化方法**：① 长度分组（相近长度的分到同 batch）② Attention mask（pad 不参与 attention，但 GEMM 仍浪费）③ Padding-free / Pack sequence（直接拼接，用 position ids 区分）④ Continuous Batching（iteration 级调度，减少固定 batch 的 padding）
 
+</details>
+
+
 1. **max_batch_size 和 timeout 怎么调？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **吞吐优先（离线批处理）**：大 batch + 长 timeout → batch 更满，GPU 利用率高，但延迟高
  - **延迟优先（交互式服务）**：小 batch + 短 timeout → 请求几乎不等，但 batch 不满，GPU 利用率低
  - **实际调参**：按 SLA 调——latency SLO → 短 timeout；throughput SLO → 大 batch。通常先确定 latency 上限，再找满足延迟约束的最大 batch size
  - **饱和点参考**：扫描 batch size 找 throughput-latency 曲线的拐点，工作点设在饱和点的 70-80%
 
+</details>
+
+
 1. **Dynamic Batching 和 Continuous Batching 有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Dynamic Batching**：request-level 聚合——一个 batch 里所有请求一起开始一起结束。长请求会阻塞短请求（R1 生成 5 token，R2 生成 100 token，R1 完成后要等 R2）
  - **Continuous Batching**：iteration-level 调度——每轮 iteration 重新构建 batch，新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
  - **为什么 Continuous 更好**：LLM 生成长度差异大，Dynamic 下短请求等长请求浪费资源；Continuous 让 GPU 始终满载，吞吐和延迟都更好
  - **Dynamic 的适用场景**：请求长度方差小、吞吐优先的离线场景
 
+</details>
+
+
 1. **什么是推理系统的饱和点？如何确定？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **饱和点**：batch size 增大到某点后，GPU 算力或显存打满，throughput 不再增长但 latency 急剧上升
  - **确定方法**：固定并发数扫描（batch=1,2,4,8,16,32,64），测量每点的 throughput 和 P99 latency，找 throughput 增长率显著下降、latency 开始飙升的拐点
  - **工作点选择**：设在饱和点的 70-80%，留余量应对突发流量
  - **影响饱和点的因素**：模型大小（越大越早饱和）、GPU 算力（越弱越早）、KV Cache 显存（长序列更早 OOM）
 
- - timeout / max_batch_size / padding 策略 / 长度分组等调参方法跨平台通用`;
+ - timeout / max_batch_size / padding 策略 / 长度分组等调参方法跨平台通用
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

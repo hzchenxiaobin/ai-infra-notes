@@ -394,26 +394,68 @@ Day 5 我们深入理解了 Shared Memory 的 bank conflict：
 ### 面试要点
 
 1. **Shared memory 有多少个 bank？每个 bank 多大？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 32 个 bank，每个 bank 4 bytes（现代 GPU）
 
+</details>
+
+
 1. **什么样的访问模式会产生 bank conflict？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 一个 warp 内多个线程同时访问同一个 bank 的不同地址
  - 典型例子：`tile[threadIdx.x * 32]` 让所有线程访问 bank 0
 
+</details>
+
+
 1. **Padding 的代价是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 少量 shared memory 浪费
  - 但换来无 conflict 的高速访问
 
+</details>
+
+
 1. **Broadcast 会产生 bank conflict 吗？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 不会。GPU 有专门的广播机制，一个 warp 内多个线程读同一地址是 1 个 cycle
 
+</details>
+
+
 1. **如何检测 bank conflict？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - Nsight Compute：`l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum`
  - 观察执行 cycles 和 shared memory throughput
 
+</details>
+
+
 1. **矩阵转置为什么要加 padding？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 无 padding 时，tile 同一列的数据都在同一个 bank
  - 转置时需要按列读取，导致 32-way bank conflict
  - 加 padding 后同一列数据错开 bank，避免 conflict
 
 ---
+
+</details>
+

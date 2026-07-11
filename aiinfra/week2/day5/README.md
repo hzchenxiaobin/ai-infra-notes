@@ -599,13 +599,22 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 
 1. **FlashAttention 为什么快？请从 HBM 访问量的角度分析。**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **核心问题**：标准 Attention 需要存储和读取 S=Q×K^T 和 P=softmax(S) 两个 N×N 中间矩阵，HBM 访问量为 O(N²)
  - **FlashAttention 方案**：通过分块 tiling + online softmax，在 SRAM 中完成所有中间计算，不需要将 S 和 P 写入 HBM
  - **HBM 访问对比**：标准 = O(N² + Nd)；FlashAttention = O(Nd)（只读 Q/K/V，只写 O）
  - **速度来源**：不是 FLOPS 减少了（计算量相同），而是**数据移动减少了**——减少数据移动比减少计算更重要
  - **实际加速**：长序列（N>2048）时加速明显（2-4x），因为 HBM 带宽是瓶颈
 
+</details>
+
+
 1. **请完整推导 Online Softmax 的三个更新公式，并解释每个公式的含义。**
+
+<details>
+<summary>点击查看答案</summary>
 
  ```
  状态：(m, l, o) —— running max、running sum、running output
@@ -627,14 +636,26 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
  关键点：exp(m - m_new) 是统一参考点的缩放因子
  ```
 
+</details>
+
+
 1. **FlashAttention 的分块大小 Br×Bc 如何确定？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 受限于 SRAM（Shared Memory）容量：`Br×D + Bc×D×2 + Br×Bc ≤ SRAM 容量`
  - A100 shared memory 最多 164 KB/SM
  - 典型值：Br=Bc=64, D=64 时 SRAM 使用约 40 KB
  - 分块太小 → 循环次数多；分块太大 → SRAM 超限或 occupancy 下降
 
+</details>
+
+
 1. **`exp(m - m_new)` 这个缩放因子为什么重要？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Softmax 需要减去全局 max 保证数值稳定性
  - 分块计算时每个块只看到局部数据，全局 max 是递推更新的
@@ -642,10 +663,19 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
  - `exp(m - m_new)` 就是把旧值从参考点 m 缩放到新参考点 m_new 的因子
  - 没有它，不同块计算的概率无法统一到同一个归一化基
 
+</details>
+
+
 1. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Prefill**：序列长 N 大，标准 Attention 的 O(N²) S/P 物化是主要瓶颈，FlashAttention 把 IO 从 O(N²) 降到 O(Nd)，加速 2-4x 最明显
  - **Decode**：M=1，没有 N×N 矩阵，标准 Attention 退化为 1×N，S/P 本就不大。但 FlashAttention 仍受益——它把 softmax+PV 融合在 SRAM 里，减少 kernel launch 数量和中间 HBM 读写，配合 KV Cache 优化 decode 的 memory-bound
  - **关键洞察**：Prefill 的收益主要来自"消除 O(N²) 物化"，Decode 的收益主要来自"kernel fusion 减少 HBM 往返"，两者瓶颈不同但 FlashAttention 都能覆盖
 
 ---
+
+</details>
+

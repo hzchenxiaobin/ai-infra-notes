@@ -299,12 +299,21 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 
 1. **对比 Static Batching、Dynamic Batching、Continuous Batching，分别适用于什么场景？**（⭐⭐⭐⭐⭐ 必考）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **Static Batching**：固定 batch size，一起开始一起结束。适用于简单 demo 或请求长度完全相同
  - **Dynamic Batching**：请求级聚合，超时等待。适用于吞吐优先、非 LLM 自回归场景
  - **Continuous Batching**：iteration-level 调度，请求动态加入/退出。适用于 LLM 自回归生成（生成长度差异大）
  - **选择**：LLM 推理服务用 Continuous Batching；传统 CV/NLP 用 Dynamic Batching
 
+</details>
+
+
 1. **在 LLM 推理服务中，如何平衡 throughput 和 latency？**（⭐⭐⭐⭐⭐ 必考）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Continuous Batching**：基础，本身就在平衡吞吐和延迟
  - **Token budget 控制**：限制每轮 token 数，避免 prefill 阻塞 decode
@@ -313,20 +322,38 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
  - **饱和点控制**：不超过 benchmark 找到的饱和并发数
  - **关键**：根据 SLA 做 trade-off，没有绝对最优
 
+</details>
+
+
 1. **vLLM 的 Continuous Batching 为什么需要 PagedAttention？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Continuous Batching 每轮有请求完成退出、新请求加入——KV Cache 频繁分配/释放
  - 连续分配会产生外部碎片——完成的请求释放的空洞拼不回来，新请求放不下 OOM
  - PagedAttention 的 block 粒度分配/回收让 slot 回收无碎片化——空闲 block 随时被任意序列复用
  - 两者是 vLLM 双支柱：Continuous 提吞吐，PagedAttention 让吞吐可持续
 
+</details>
+
+
 1. **调度策略如何选择？给出你的决策流程**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 决策树：①最低延迟→小batch+Priority ②LLM自回归→Continuous ③非LLM→Dynamic
  - 在 Continuous 基础上按需叠加：多租户→+Priority；长prompt→+Chunked Prefill；显存紧→+Preemption；有draft model→+Speculative
  - LLM 推理标配：Continuous + PagedAttention + Chunked Prefill
 
+</details>
+
+
 1. **如何识别推理系统的饱和点？饱和后怎么优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **识别**：throughput 增长率<5% + latency 开始飙升 + GPU util≈100% + 队列堆积
  - 超过后 throughput 封顶、latency 因排队线性涨（conc 翻倍→latency 翻倍）
@@ -337,6 +364,8 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
  - Scheduling overhead：C++ scheduler（TensorRT-LLM）、预分配 buffer
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

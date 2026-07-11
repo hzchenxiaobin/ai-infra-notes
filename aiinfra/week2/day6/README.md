@@ -587,6 +587,9 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 
 1. **从 Shared Memory Tiling 到 cuBLAS 80%，每一层优化的收益来源是什么？请按层次回答。**
 
+<details>
+<summary>点击查看答案</summary>
+
  | 优化层次 | 收益来源 | 量化增益 |
  |---------|---------|---------|
  | Shared Memory Tiling | 减少 Global Memory 重复读取，K 维度数据复用 | 1% → 15% |
@@ -597,7 +600,13 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
  | 参数 Auto-tuning | 针对不同矩阵尺寸选择最优分块参数 | 70% → 80%+ |
  | 指令级优化 / Tensor Core | 循环展开、PTX 内联、WMMA 指令 | 80% → 90%+ |
 
+</details>
+
+
 1. **`float4` 向量化加载为什么能提升性能？需要什么条件？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原理**：4 个连续 float（16 bytes）通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效
  - **条件 1**：内存地址 16 字节对齐（`cudaMalloc` 天然对齐）
@@ -605,7 +614,13 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
  - **条件 3**：数据布局支持（行优先矩阵连续行元素天然连续）
  - **风险**：地址不对齐或访问不连续时，可能触发更多 cache line 加载
 
+</details>
+
+
 1. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **当前差距**：
  1. 缺少指令级调度优化（cuBLAS 用 PTX 内联汇编精确控制指令发射）
@@ -618,13 +633,25 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
  3. 使用 CUTLASS 库（NVIDIA 开源高性能 GEMM 模板库）
  4. 针对目标尺寸做 exhaustive search 找最优参数
 
+</details>
+
+
 1. **为什么 TM=TN=16 会导致性能下降？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - TM=TN=16 时累加器 `acc[16][16]` = 256 个 register，加上 r_A、r_B 和索引变量，总 register 超过 255 上限
  - 编译器会把多余的变量 spill 到 local memory（实际在 global memory），访问延迟从 ~1 cycle 变成 ~400-800 cycles
  - Register spilling 会导致性能暴跌，远不如 TM=TN=8 的 88 register 安全配置
 
+</details>
+
+
 1. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟，典型提升 10-20%（从 ~55% 到 ~70%）
  - **代价**：① shared memory 用量翻倍（两份 buffer），可能降低 occupancy ② 代码复杂度增加（奇偶切换、prologue/epilogue 处理）③ 首块需预取，末块不再加载
@@ -632,3 +659,6 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
  - **不值得用的场景**：计算本身就 memory-bound 且 shared memory 已紧张，或数据量太小启动开销主导
 
 ---
+
+</details>
+

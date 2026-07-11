@@ -574,6 +574,9 @@ Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
 
 1. **TensorRT-LLM 的 Inflight Batching 和 vLLM 的 Continuous Batching 有什么区别？**（⭐⭐⭐⭐ 高频）
 
+<details>
+<summary>点击查看答案</summary>
+
  - **本质相同**：都是 iteration-level scheduling，支持请求动态加入和退出，每轮重建 batch
  - **实现差异**：
  - vLLM 调度器在 **Python** 层，灵活、易扩展调试，但有解释开销
@@ -581,7 +584,13 @@ Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
  - **其他**：TensorRT-LLM 原生支持 chunked prefill；vLLM 0.5+ 也已支持
  - **选型**：极致性能且模型固定 → TensorRT-LLM；灵活性和生态 → vLLM
 
+</details>
+
+
 1. **什么是 Chunked Prefill？它解决了什么问题？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Chunked Prefill**：将长 prompt 的 prefill 拆分成多个小 chunk（如每块 512-2048 token），每轮只 prefill 一个 chunk，剩余 token budget 给 decode
  - **解决的问题**：
@@ -592,7 +601,13 @@ Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
  - 更好地 mix prefill 和 decode，提高系统稳定性
  - **代价**：总 iterations 略增（prefill 拆多轮），TTFT（首 token 延迟）可能增加
 
+</details>
+
+
 1. **Chunked Prefill 的 chunk_size 怎么选？TTFT 和 TPOT 如何权衡？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - chunk_size 太小（如 64）：TTFT 增加（prefill 要很多轮），但 TPOT 最平滑
  - chunk_size 太大（如 8192）：退化为 naive prefill，TPOT 又抖动
@@ -600,13 +615,25 @@ Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
  - **依据 SLA**：TTFT SLA 严 → 大 chunk；TPOT SLA 严 → 小 chunk
  - LightLLM 的 Dynamic Split Fuse 更激进：按 decode 负载自适应调整 chunk_size
 
+</details>
+
+
 1. **LightLLM 的 Token Attention 和 vLLM 的 PagedAttention 有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **PagedAttention**（vLLM/TRT-LLM）：KV Cache 切成固定大小 block（如 16 token/block），block 是分配/回收最小单位。管理简单，但 block 内可能有空洞
  - **Token Attention**（LightLLM）：以 token 为粒度动态管理 KV Cache，类似内存池按需分配。无 block 空洞、利用率更高，但管理开销略大
  - **适用**：PagedAttention 通用性好；Token Attention 在长上下文、高并发场景内存利用率更高
 
+</details>
+
+
 1. **为什么 TensorRT-LLM 比 vLLM 性能更高？有什么代价？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **性能更高的原因**：
  - C++ 调度器无 Python 解释开销和 GIL
@@ -615,7 +642,9 @@ Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
  - **代价**：
  - 灵活性低：换模型结构要重新构建 engine（trtexec 编译，几分钟到几十分钟）
  - vLLM 改模型只需改 Python 代码，迭代快
- - **选择**：生产部署固定模型选 TensorRT-LLM；研发迭代选 vLLM`;
+ - **选择**：生产部署固定模型选 TensorRT-LLM；研发迭代选 vLLM
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

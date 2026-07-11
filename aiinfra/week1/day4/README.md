@@ -686,23 +686,58 @@ Day 4 我们深入理解了 GPU 内存层次：
 ### 面试要点
 
 1. **什么是 coalesced memory access？如何写出 coalesced 的代码？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 一个 warp 内线程访问连续地址，合并为少量事务
  - 让 threadIdx.x 对应最内层维度，访问地址为 `base + threadIdx.x`
 
+</details>
+
+
 1. **矩阵转置为什么难做 coalesced？如何解决？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 读按行是 coalesced，写按列是 stride
  - 用 shared memory tile 做中间缓冲，调整读写模式
 
+</details>
+
+
 1. **Shared memory 和 L1 cache 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - Shared memory 显式管理，可预测，适合规则数据复用
  - L1 cache 自动管理，透明，适合不规则访问
 
+</details>
+
+
 1. **为什么要用 tiling？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 减少 global memory 访问次数
  - 把不规则访问转换为规则访问
  - 在线程间复用数据
 
+</details>
+
+
 1. **GPU 内存层次从快到慢是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - Register → Shared Memory → L1 Cache → L2 Cache → Global Memory
 
 ---
+
+</details>
+

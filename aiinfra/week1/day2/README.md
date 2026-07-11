@@ -672,24 +672,59 @@ Day 2 我们深入理解了 GPU 的并行度：
 ### 面试要点
 
 1. **Occupancy 越高越好吗？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 不是。低 occupancy 会限制延迟隐藏能力，但当 occupancy 足够高后（如 50% 以上），继续提升收益递减。
  - 此时瓶颈可能在内存带宽、计算吞吐量或算法本身。
 
+</details>
+
+
 1. **寄存器 spilling 是怎么发生的？如何检测？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 当编译器无法为所有变量分配寄存器时，会把部分变量放到 local memory（实际在 global memory）。
  - 检测方法：`nvcc -Xptxas -v` 查看 `lmem` 或 `spill stores/loads`。
 
+</details>
+
+
 1. **`__launch_bounds__` 的使用场景？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 当 kernel 寄存器使用过多导致 occupancy 过低时，可以用它提示编译器限制寄存器。
  - 代价是可能导致 spilling 或更少的编译优化。
 
+</details>
+
+
 1. **影响 occupancy 的因素有哪些？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 每个线程的寄存器数量
  - 每个 block 的共享内存数量
  - Block 大小和每个 SM 的 block 数量上限
 
+</details>
+
+
 1. **如何计算理论 occupancy？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 使用 CUDA Occupancy Calculator
  - 或手动：根据 SM 资源限制，计算最多能同时驻留多少个 warp
 
 ---
+
+</details>
+

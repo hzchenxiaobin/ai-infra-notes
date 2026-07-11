@@ -537,6 +537,9 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 
 1. **vLLM 的 Scheduler 每轮 `schedule()` 做哪些事情？**（⭐⭐⭐⭐⭐ 必考）
 
+<details>
+<summary>点击查看答案</summary>
+
  - ① `_free_finished_seq_groups`：处理已完成的 running 序列，释放 KV Cache block
  - ② `_schedule_running`：继续 running 的 decode；显存不足时 preempt（recompute/swap）
  - ③ `_schedule_swapped`：把 swapped 队列的请求 swap in 换回 GPU（显存允许时）
@@ -544,7 +547,13 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
  - ⑤ 构建 `SchedulerOutputs`：本轮要跑的 sequence groups + swap 记录
  - 约束：token_budget、max_num_seqs、显存 block 数
 
+</details>
+
+
 1. **vLLM 中的 preemption 有哪两种模式？默认用哪种？为什么？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
 
  - **RECOMPUTE**：丢弃被抢占请求的 KV Cache，序列回 waiting 重新从 prompt 完整 prefill
  - **SWAP**：KV Cache 换出到 CPU 内存，序列进 swapped 队列，显存恢复时 swap in
@@ -554,20 +563,38 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
  - 实现更简单
  - **SWAP 适用**：prompt 极长、被抢占时间久，重算代价超过 PCIe 换入延迟
 
+</details>
+
+
 1. **SchedulingBudget 的两个核心参数是什么？分别限制什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - `token_budget`：每轮最多处理的 token 数（prefill tokens + decode tokens）。防止长 prompt 的 prefill 一次吃满整轮算力，饿死 decode 请求
  - `max_num_seqs`：每轮最多并发的 sequence 数。控制 batch 大小，避免显存/算力过载、attention 计算爆炸
  - `can_schedule(num_new_tokens, num_new_seqs)`：两个约束都满足才允许调度
  - prefill 消耗 `prompt_len` token + 1 seq 槽；decode 消耗 1 token + 0 seq 槽
 
+</details>
+
+
 1. **为什么 `_schedule_waiting` 中要先检查 `if self.swapped: return`？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 防饿死：如果有 swapped 请求未恢复却接纳新 waiting 请求，新请求会持续占用显存，被抢占的 swapped 请求永远等不到恢复
  - 强制优先级：running > swapped > waiting，先把 swapped 清空才接纳新请求
  - 公平性：被抢占的请求已经"吃亏"过一次，不能让新请求再插队
 
+</details>
+
+
 1. **RECOMPUTE 和 SWAP 各自的恢复过程有什么区别？被抢占序列的进度是否保留？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **RECOMPUTE**：`generated_count` 归零，序列回到 waiting 队首，重新从 prompt 完整 prefill——**进度丢失**，但无需 CPU 内存
  - **SWAP**：`generated_count` 保留，KV Cache 换出到 CPU，序列进 swapped 队列，显存恢复时 swap in 从断点继续 decode——**进度保留**，但需 PCIe 传输
@@ -575,3 +602,6 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
  - 选择依据：`重算时间 ≈ prompt_len / GPU吞吐` vs `换入时间 ≈ KV_size / PCIe带宽`，谁小用谁
 
  - Scheduler 是纯软件调度逻辑，与硬件无关——三队列 + 预算 + 抢占的决策框架跨平台通用
+
+</details>
+

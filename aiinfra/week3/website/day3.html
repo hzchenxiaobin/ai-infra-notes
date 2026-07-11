@@ -708,25 +708,46 @@ Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 
 
 1. **PyTorch 的 Softmax 在 D 较小时为什么用 warp 级实现而不是 block 级？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **避免 \`__syncthreads\`**：warp 级 reduce 用 \`__shfl\` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 \`__syncthreads\`，有同步开销
  - **延迟更低**：warp 内 shuffle 延迟 ~1-2 cycles，shared memory ~20-30 cycles，差 10-20 倍
  - **足够并行度**：D=1024 时 32 个线程每个处理 32 个元素，且 M 行 × M 个 warp 提供足够并行度
  - **适用条件**：D ≤ 1024（一个 warp 能处理），且 M 足够大；D > 1024 时回退到 block 级
  - **广播技巧**：\`__shfl_down_sync\` 后只有 lane 0 有结果，用 \`__shfl_sync(0xFFFFFFFF, val, 0)\` 广播给全 warp，替代 shared memory 广播
 
+</details>
+
+
 1. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **FP16 溢出风险**：FP16 max ≈ 65504，\`exp(x)\` 在 x > 11 时就接近溢出（\`exp(11) ≈ 60000\`）
  - **累加精度**：FP16 的尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
  - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
 
+</details>
+
+
 1. **什么是向量化加载？为什么 float4 能让 memory-bound kernel 提速 2-4x？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **定义**：用 \`float4\`（128-bit）一次加载 4 个 float，替代逐元素 \`float\`（32-bit）加载
  - **提速原因**：① 指令数减 4x（D 条 → D/4 条）② 128-bit 是 GPU memory transaction 自然粒度，天然对齐 ③ coalesced access 合并度更高 ④ 一次 load 后 4 个独立元素提供 ILP，掩盖延迟
  - **限制**：要求 D 是 4 的倍数且指针 16-byte 对齐；FP16 场景用 \`__half2\`（128-bit = 8 个 half），等效带宽再翻倍
 
+</details>
+
+
 1. **Welford 算法是什么？为什么能减少 LayerNorm 的 HBM 读次数？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **传统两遍**：先求 mean（Pass 1，读 N），再求 var（Pass 2，依赖 mean，再读 N）→ 读 2N
  - **Welford 一次**：遍历时实时更新 \`(count, mean, M2)\`，不需要预先知道 mean → 读 N，省一次
@@ -734,7 +755,13 @@ Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 
  - **并行化难点**：多线程需合并各自的 \`(count, mean, M2)\`，合并按 count 加权：\`mean = mean_a + delta * n_b / n; M2 = M2_a + M2_b + delta² * n_a * n_b / n\`
  - **收益**：FasterTransformer 用 Welford 把 LayerNorm 提速 ~1.3-1.5x
 
+</details>
+
+
 1. **你看过哪些开源 kernel 实现？FasterTransformer LayerNorm 比 PyTorch ATen 多了哪些优化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **FasterTransformer 比 PyTorch ATen 多的优化**：
  1. **Welford 一次 reduce**（ATen 用两次）→ 省一次 HBM 读
@@ -744,7 +771,9 @@ Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 
  - **性能对比**：手写 ~1x，PyTorch ATen ~1.5-2x，FasterTransformer ~2-3x
  - **关键洞察**：FT 是 NVIDIA 官方推理优化库，把"向量化 + reduce 合并 + register 缓存 + 多精度模板"抠到极致，是手写 kernel 的最佳参考
 
----`;
+---
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

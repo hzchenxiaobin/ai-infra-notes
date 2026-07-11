@@ -573,19 +573,34 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
 
 1. **什么是 PagedAttention？它解决了什么问题？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - PagedAttention 借鉴 OS 虚拟内存分页，把 KV cache 分成固定大小 block（默认 16 token/block）
  - 逻辑 block 对序列连续编号，物理 block 在显存中可以不连续，用 block table 维护映射
  - 解决的问题：① 静态分配的内部碎片（预分配 max_seq_len 浪费严重）② 动态分配的外部碎片（频繁 alloc/free 留空洞）③ 长文本显存管理困难
  - 收益：显存利用率从 ~20%（静态）提升到 ~90%+，支持更大 batch、更长序列，是 vLLM 吞吐优势的地基
 
+</details>
+
+
 1. **block table 是什么？attention kernel 怎么用它？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - block table 是"逻辑 block → 物理 block"的映射数组，\`block_table[l] = 第 l 个逻辑 block 的物理 block 号\`
  - kernel 读 KV 时间接寻址：\`logical_block = s / block_size; physical_block = block_table[logical_block]; addr = pool + physical_block * block_size * d + offset * d\`
  - 开销极小：每 block_size（16）个 token 才查一次表，amortized 到每 token 是 1 次 int 读 / (16×d 次 float 读)
  - block table 由 Scheduler 在每轮 schedule() 时更新（分配/回收 block），Worker 打包进 attention metadata 传给 kernel
 
+</details>
+
+
 1. **PagedAttention 中的 Copy-on-Write 是什么？在什么场景下使用？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - CoW（写时复制）：多个 sequence 共享同一物理 block 时，读共享、写复制
  - 触发：当 sequence 要往一个 \`refcount>1\` 的 block 追加新 token 时，复制该 block 到新物理 block，更新自己的 block table，原 block refcount-1
@@ -593,14 +608,26 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
  - 收益：prompt 部分的 KV cache 只存一份，各 sequence 只为新 token 分配独立 block——prompt 越长候选越多省得越多
  - 实现：PhysicalTokenBlock 带 refcount，fork 操作对所有 block refcount+1，free 时 refcount-1 归零才回收
 
+</details>
+
+
 1. **block_size 怎么选？太大太小各有什么问题？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - vLLM 默认 16，是经验最优
  - 太大：① 内部碎片严重（最后一块空 slot 多）② 单 block 大，cache 局部性差
  - 太小：① block table 变长（每序列占更多 int 显存）② kernel 间接寻址次数多（查表频率升高）③ block allocator 管理开销大
  - 16 在大多数场景是 sweet spot：内部碎片可控（平均每序列浪费 < 8 token）、block table 短（4096 token 只需 256 个 int）、查表开销可忽略
 
+</details>
+
+
 1. **PagedAttention 与 Continuous Batching 是什么关系？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
  - Continuous Batching（Day 3）：每轮 iteration 重建 batch，完成的请求立即释放 slot——但"释放 slot"要能真正不产生碎片，否则回收的显存拼不出大块
@@ -608,7 +635,9 @@ Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 ke
  - 没有 PagedAttention，Continuous Batching 的吞吐收益会被内存碎片吃掉一大半；没有 Continuous Batching，PagedAttention 的动态分配优势也无用武之地
 
  - PagedAttention 是内存管理层面的创新，与硬件无关——OS 分页思想跨平台通用
- - block_size、CoW 策略、refcount 机制都是可配置/跨平台一致的`;
+ - block_size、CoW 策略、refcount 机制都是可配置/跨平台一致的
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

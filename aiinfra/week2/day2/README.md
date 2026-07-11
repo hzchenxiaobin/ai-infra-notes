@@ -499,30 +499,60 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 
 1. **"如何把手写 GEMM 优化到 cuBLAS 80% 的性能？"请逐层展开优化策略。**
 
+<details>
+<summary>点击查看答案</summary>
+
  按层次展开：
  - Naive（~1%）→ Shared Memory Tiling（~15%）→ Register Blocking（~40%）→ Warp-level（~60%）→ Vectorized Load（~70%）→ Double Buffering（~80%）→ Auto-tuning（~90%+）
 
+</details>
+
+
 1. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 寄存器访问延迟 ~0 cycle，Shared Memory 延迟 ~20-30 cycles
  - `acc[TM][TN]` 被访问 TM×TN×BK 次（内层循环），放在 register 极大减少延迟
  - 放 shared memory 会占用 BM×BN×4 = 64KB，超过 shared memory 上限
 
+</details>
+
+
 1. **Register 使用量如何计算？什么时候会 spill？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - `acc[TM][TN]` + `r_A[TM]` + `r_B[TN]` + 索引变量
  - TM=TN=8 时约 88 个 register；TM=TN=16 时累加器就有 256 个，会 spill 到 local memory
 
+</details>
+
+
 1. **Double Buffering（双缓冲）如何提升 GEMM 性能？实现时要注意什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原理**：声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟
  - **收益**：单缓冲时 Load 期间 SM 空闲，双缓冲后 Compute 与 Load 重叠，性能从 ~45% 提升到 ~70%，是跨越 cuBLAS 80% 的关键
  - **注意**：① 需 `__syncthreads()` 保证 buffer 切换的数据可见性 ② 多消耗一倍 shared memory，可能降低 occupancy ③ 首块需预取（prologue），末块不再加载（epilogue）
 
+</details>
+
+
 1. **Thread Tile 的二维映射如何设计？为什么线程数通常取 256？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **映射**：`threadRow = threadIdx.x / (BN/TN)`，`threadCol = threadIdx.x % (BN/TN)`，每个线程负责输出 tile 的 TM×TN 子块
  - **线程数** = (BM/TM) × (BN/TN)，如 BM=BN=128, TM=TN=8 → 16×16=256
  - **取 256 的原因**：= 8 个 warp，兼顾 occupancy（不会因寄存器/共享内存过多而压低 active warp 数）与并行度；过小则并行度不足，过大则资源紧张降低 occupancy
 
 ---
+
+</details>
+

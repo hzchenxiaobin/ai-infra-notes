@@ -531,26 +531,47 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 
 1. **如何把自定义 CUDA 算子集成到 PyTorch 中？有几种方式？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **方式 1：C++ Extension（推荐）**：写 `.cpp`（接口）+ `.cu`（kernel），用 `torch.utils.cpp_extension.load_inline` 动态编译或 `setup.py` 静态编译
  - **方式 2：TorchScript/Custom Operator**：用 `torch.ops.register` 注册自定义 op
  - **方式 3：Triton**：用 Python 写 kernel，`torch.compile` 自动集成（无需 C++）
  - **集成要点**：① 用 `at::Tensor` 接收张量 ② 用 `data_ptr<float>()` 获取裸指针 ③ 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream ④ 用 `auto out = at::empty_like(input)` 分配输出
 
+</details>
+
+
 1. **为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **PyTorch 已高度优化**：warp 级特化路径、float4/half2 向量化、Welford 一次 reduce、FP32 混合精度
  - **教学版缺失优化**：逐元素加载、两次 reduce、全程 FP32、无 kernel fusion
  - **JIT/编译优化**：PyTorch 2.0 的 `torch.compile` 会做 kernel fusion，进一步拉开差距
  - **超越场景**：只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有优势
 
+</details>
+
+
 1. **`load_inline` 和 `setup.py` 有什么区别？分别什么场景用？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **`load_inline`（动态）**：运行时 JIT 编译，改代码即生效，适合原型开发和教学。首次编译 ~30s，后续从缓存加载
  - **`setup.py`（静态）**：预先编译为 `.so`，`import` 即用，适合生产部署。改代码需重新 `pip install`
  - **选择原则**：开发期用 `load_inline`（迭代快），上线用 `setup.py`（无 JIT 开销）
  - **共同点**：两者都走 PyTorch 的 C++ Extension 机制，最终都是把 `.cu` 编译为 `.so` 并注册到 Python
 
+</details>
+
+
 1. **集成自定义算子时，为什么要传 `getCurrentCUDAStream()`？不传会怎样？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原因**：PyTorch 用多 stream 管理异步执行（如 `torch.cuda.stream()`）。自定义 kernel 必须在 PyTorch 当前 stream 上执行，否则会破坏异步依赖
  - **不传的后果**：kernel 默认走 stream 0（default stream），与 PyTorch 的 stream 隔离，可能导致：
@@ -559,7 +580,13 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
  - 多 stream 并行失效（所有操作串行到 default stream）
  - **正确做法**：launch wrapper 接收 `cudaStream_t` 参数，从 `at::cuda::getCurrentCUDAStream()` 获取
 
+</details>
+
+
 1. **`torch.compile` 能融合自定义 C++ Extension 算子吗？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **不能直接融合**：`torch.compile`（Inductor）的 fusion 作用于 PyTorch 原生 ATen 算子。自定义 C++ Extension 对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法做 fusion
  - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（`torch.compile` 原生支持融合）
@@ -567,3 +594,6 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
  - **实践建议**：如果追求 fusion，优先用 Triton；如果追求极致单算子性能或复用 CUDA 代码，用 C++ Extension（接受无法 fusion 的代价）
 
 ---
+
+</details>
+

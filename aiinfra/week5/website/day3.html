@@ -723,6 +723,9 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
 1. **vLLM 的整体架构是怎样的？一个请求从进入到输出经历哪些阶段？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 三层分层架构：LLMEngine（对外接口，编排 step 循环）→ Scheduler（调度决策，管理三个队列+预算）→ Worker（执行模型前向）
  - 请求生命周期：
  1. 用户调 \`LLMEngine.add_request()\`，请求进入 WAITING 队列
@@ -732,14 +735,26 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
  5. 反复 \`step()\` 直到所有请求 FINISHED
  - Continuous Batching：每轮重建 batch，新请求可在任意 iteration 加入
 
+</details>
+
+
 1. **什么是 Continuous Batching？它比 Static Batching 好在哪里？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Continuous Batching：每个 iteration 都重新构建 batch，完成的请求立即释放 slot，waiting 里的新请求立刻补位
  - Static Batching：凑齐 N 个才开始，等最慢的请求跑完才接下一批——完成的请求 slot 空等
  - 收益：GPU 始终满载，吞吐提升 2-8×；请求长度方差越大收益越大（短板请求造成的空等越多）
  - 前提：需要细粒度 KV cache 管理（PagedAttention 的 block 级分配/释放），否则完成请求的 cache 释放会碎片爆炸
 
+</details>
+
+
 1. **vLLM 的 Scheduler 依据什么做调度决策？什么是 SchedulingBudget？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Scheduler 依据三重预算：
  - token budget：本轮最多处理的 token 数（限制 prefill 总量）
@@ -749,21 +764,35 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
  - 调度目标：最大化 throughput，同时控制 latency（通过 budget 限制 batch 大小）
  - 决策顺序：先保留 running（continuous batching 基础）→ 从 waiting 补入 → 显存不足则抢占
 
+</details>
+
+
 1. **vLLM 中抢占（preemption）的两种策略是什么？各自适用什么场景？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Recomputation**（默认）：丢弃被抢占请求的 KV cache，之后重新 prefill。适用于短 prompt——重算成本低于 CPU↔GPU 搬运
  - **Swapping**：把被抢占请求的 KV cache 换出到 CPU 内存，显存恢复后换回。适用于长 prompt——重算太贵
  - vLLM 默认 Recomputation，因为大多数请求 prompt 不长，重算比搬运快
  - 抢占对象：通常抢占 running 队列里最后加入的请求（LIFO）
 
+</details>
+
+
 1. **SequenceGroup 是什么？为什么不直接用 Sequence？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - \`SequenceGroup\` 包含一个请求的 prompt + 1~N 个采样序列（\`Sequence\`）
  - 一个用户请求可能需要多个候选序列：beam search（保留 top-K 路径）、\`n>1\` 采样（一次生成多个回答）
  - 这些候选共享同一个 prompt，用 group 包起来统一管理；prompt 的 KV cache 在 group 内共享（Day 4 的 Copy-on-Write 机制）
  - 单序列场景（n=1, no beam）group 内只有一个 Sequence，退化为直接用 Sequence
 
- - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用`;
+ - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

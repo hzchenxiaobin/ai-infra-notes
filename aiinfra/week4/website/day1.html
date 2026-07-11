@@ -618,13 +618,22 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 
 1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
  - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
  - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
  - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
  - 长序列（N>2048）、小 head dim 时收益最大，因为此时 HBM 带宽是瓶颈
 
+</details>
+
+
 1. **请完整推导 Online Softmax 的三个更新公式，并解释 \`exp(m - m_new)\` 的作用。**
+
+<details>
+<summary>点击查看答案</summary>
 
  \`\`\`
  公式1: m_new = max(m, max(xj))
@@ -635,14 +644,26 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
  - 这个缩放因子保证递推过程中的概率分布始终一致
  - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
 
+</details>
+
+
 1. **FlashAttention 的实际 wall-clock 加速为什么通常只有 2-8x，而不是 IO 复杂度的 100x？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 标准 Attention 的时间 = max(T_gemm, T_memory)。当 N 不够大时，GEMM 计算本身也占相当时间
  - FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少
  - 如果原始 T_gemm ≈ T_memory，加速比 ≈ 2x；如果 T_memory ≫ T_gemm，加速比 ≈ 8x+
  - 所以长序列、小 d（GEMM 计算强度低）时收益最大
 
+</details>
+
+
 1. **FlashAttention 的分块大小 Br×Bc 如何确定？SRAM 容量如何约束？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 受限于 SRAM（Shared Memory）容量：\`Br×d + 2×Bc×d ≤ SRAM 容量\`（K/V 不复用）
  - A100 shared memory 最多 164 KB/SM
@@ -650,12 +671,20 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
  - 分块太小 → 循环次数多，递推开销大；分块太大 → SRAM 超限或 occupancy 下降
  - K/V 分时复用可省一份 smem：\`Br×d + Bc×d ≤ SRAM\`
 
+</details>
+
+
 1. **Online Softmax 的数值稳定性是如何保证的？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - \`exp(m - m_new)\` 中 \`m_new ≥ m\`（因为 m_new = max(m, ...)），所以指数 ≤ 0，结果 ≤ 1，不会溢出
  - \`m_new\` 是全局 max，新块的 \`exp(xj - m_new) ≤ exp(0) = 1\`
  - 即使 \`m_new = m\`（新块没有更大的值），\`exp(0) = 1\`，公式退化为简单累加，不会出错
- - FP16 场景下更关键：FP16 max ≈ 65504，exp(11)≈60000 已接近溢出，减 max 后指数 ≤ 0 保证安全`;
+ - FP16 场景下更关键：FP16 max ≈ 65504，exp(11)≈60000 已接近溢出，减 max 后指数 ≤ 0 保证安全
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

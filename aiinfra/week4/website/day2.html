@@ -846,39 +846,68 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 
 1. **手写 FlashAttention Forward Kernel 时，线程如何分配？每个 warp 负责什么？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - 每个 Block 负责一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
  - 每个 warp 负责 ROWS_PER_WARP = Br/WARPS 行 Q 的完整 online softmax 计算
  - warp 内 32 线程协作：分别计算 Sij 向量的不同部分，用 \`warpReduceMax\` 求局部 max，用 \`warpReduceSum\` 求 p 的局部和与 p×V 的局部和
  - 跨 warp 不需要通信，因为每个 Q 行的计算是独立的
  - KV tile 通过 shared memory 共享给所有 warp
 
+</details>
+
+
 1. **FlashAttention Kernel 中为什么不需要 \`__syncthreads()\` 在 online softmax 内部？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 在 warp 内部，\`__shfl\` 是硬件同步的，不需要 \`__syncthreads()\`
  - 每个 Q 行的 online softmax 完全在一个 warp 内完成，不涉及跨 warp 数据共享
  - \`__syncthreads()\` 只在两个地方需要：① Q/K/V tile 加载到 shared memory 后，确保所有线程可见 ② 切换到下一个 KV tile 前，确保当前 tile 计算完成
  - 这种设计避免了频繁的 block 级同步，是 FA2 减少同步点的关键思路之一
 
+</details>
+
+
 1. **FlashAttention Kernel 的 register 使用量为什么很大？会导致什么问题？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 每个 warp 维护 ROWS_PER_WARP 组 (m, l, acc[d]) 状态，其中 acc[d] 是大头：ROWS_PER_WARP × d 个 float
  - 以 ROWS_PER_WARP=8, d=64 为例：acc 占 512 个 float，加上 m/l/索引，每线程约 88-120 个 register
  - 问题：register 压力大 → occupancy 下降（A100 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
  - 缓解：减小 ROWS_PER_WARP（增加 WARPS_PER_BLOCK）或减小 d；官方实现用 warp group 子块划分优化
 
+</details>
+
+
 1. **SRAM 使用量如何计算？Br/Bc 选太大或太小有什么问题？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - SRAM = (Br × d + 2 × Bc × d) × 4 bytes（K/V 不复用）
  - 太大：超过 shared memory 上限（A100 164 KB/SM）→ 编译失败；或 occupancy 暴跌
  - 太小：KV tile 循环次数多（N/Bc 轮），每轮的 tile 加载和 \`__syncthreads\` 开销占比增大
  - 典型值：d=64, Br=Bc=64 时 SRAM = 48 KB，occupancy 与计算效率的平衡点
 
+</details>
+
+
 1. **如何处理 N 不是 Br 倍数的边界情况？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - Q tile 边界：\`globalRow = qTileRow + r\`，若 \`globalRow >= N\` 则填 0（不参与累加）
  - KV tile 边界：\`kvStart + c < N\` 判断，无效位置的 score 设为 \`-1e30f\`（exp 后为 0，不贡献到 l 和 acc）
  - 写回边界：\`if (qi >= Br || globalRow >= N) continue\` 跳过无效行
- - 关键：无效位置的 0 不会影响 online softmax 的正确性，因为 exp(-inf)=0 且 0+v=v`;
+ - 关键：无效位置的 0 不会影响 online softmax 的正确性，因为 exp(-inf)=0 且 0+v=v
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

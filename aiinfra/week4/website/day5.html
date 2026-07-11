@@ -573,6 +573,9 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 
 1. **如何把自定义 FlashAttention kernel 集成到 PyTorch 推理引擎中？**
 
+<details>
+<summary>点击查看答案</summary>
+
  1. 写 CUDA kernel（Day 2 的 \`flashAttentionForward\`）
  2. 写 \`launch_\` 包装函数，接收裸指针 + stream
  3. 写 C++ wrapper，接收 \`at::Tensor\`，提取 \`data_ptr\` 和 \`getCurrentCUDAStream\`
@@ -580,7 +583,13 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
  5. 在 \`nn.Module\` 中替换标准 Attention 路径
  6. 注意：传递正确的 stream，保证与 PyTorch 的 async 行为一致
 
+</details>
+
+
 1. **FlashAttention 在什么情况下可能比标准 Attention 慢？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **短序列（N 较小）**：FA 的 shared memory 设置、online softmax 递推有固定开销，可能比直接调用 cuBLAS + softmax 慢
  - **head dim 较大（d=256+）**：tile 变小，计算强度降低，优势减弱
@@ -588,21 +597,39 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
  - **实现不够优化**：教学版缺少 async copy、双缓冲、向量化等优化
  - 实际部署中需要 benchmark 决定是否启用
 
+</details>
+
+
 1. **集成自定义算子时，为什么要传递 \`at::cuda::getCurrentCUDAStream()\`？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - PyTorch 的 CUDA 操作是异步的，所有操作提交到当前 stream 的队列
  - 如果自定义 kernel 不传 stream，可能在不同 stream 执行，导致数据竞争或同步问题
  - 传递 \`getCurrentCUDAStream()\` 保证自定义 kernel 与 PyTorch 的其他操作在同一 stream 串行执行
  - 不传 stream 的后果：kernel 可能在输入数据还未准备好时执行，得到错误结果
 
+</details>
+
+
 1. **Mini 引擎中用自定义 FlashAttention 替换标准 Attention 后，kernel 数量有什么变化？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - 标准版：3 个 kernel（\`mm\` QK^T + \`softmax\` + \`mm\` PV），每次 forward 调用 3 次
  - FA 版：1 个 kernel（\`flashAttentionForward\`），融合了 QK^T + softmax + PV
  - 收益：减少 2 次 kernel launch overhead（每次 ~5-10 μs），在 Decode 阶段（kernel 小而多）提升明显
  - 用 nsys 时间线可以直观看到 kernel 数量减少
 
+</details>
+
+
 1. **你的 Mini 引擎 FlashAttention 版与生产级推理引擎（如 vLLM）有什么差距？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **Kernel 优化**：教学版缺 async copy、双缓冲、Tensor Core、FP16 混合精度（Day 3 学的官方优化都没加）
  - **框架集成**：vLLM 用 CUDA Graph 减少 launch overhead、PagedAttention 管理 KV Cache、Continuous Batching 提高 GPU 利用率
@@ -610,7 +637,9 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
  - **多卡支持**：vLLM 支持张量并行，教学版单卡
  - **现实建议**：生产环境直接用 vLLM / TensorRT-LLM，手写是为了理解原理
 
- - 集成机制类似：都是把自定义 Kernel 封装为框架可调用接口，差异在底层 runtime`;
+ - 集成机制类似：都是把自定义 Kernel 封装为框架可调用接口，差异在底层 runtime
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {

@@ -792,21 +792,55 @@ Day 7 我们完成了 Week 1 的系统复盘：
 ### 面试要点
 
 1. **用一句话概括 GPU 性能优化的核心？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 减少慢速内存访问，提高并行度，让计算单元不空转。
 
+</details>
+
+
 1. **从硬件执行模型到代码，你的优化思路链是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - SM/Warp 执行方式 → 避免 divergence → coalesced access → shared memory tiling → 避免 bank conflict → profiling → 针对性优化。
 
+</details>
+
+
 1. **Week 1 你最大的收获是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 建立 GPU 性能直觉，能判断代码是 memory-bound 还是 compute-bound。
 
+</details>
+
+
 1. **如果让你优化一个未知 kernel，你会怎么做？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 先用 nsys 找耗时 kernel，再用 ncu 分析 occupancy、memory throughput、compute throughput，判断瓶颈类型，然后针对性优化。
 
+</details>
+
+
 1. **Week 1 哪个实验让你印象最深刻？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
  - 建议选矩阵转置或 bank conflict，因为这两个实验同时涉及多个概念。
 
 ---
+
+</details>
 
 ## 📁 本周目录结构
 

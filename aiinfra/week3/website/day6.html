@@ -694,6 +694,9 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 
 1. **如何做端到端 profiling 定位 Transformer 推理的瓶颈？完整流程是什么？**
 
+<details>
+<summary>点击查看答案</summary>
+
  - **第一步（nsys 系统级）**：用 Nsight Systems 采集完整时间线，\`nsys stats -t cuda_gpu_kern_sum\` 按 CUDA 时间排序找 top3 算子
  - **第二步（ncu kernel 级）**：对 top3 算子用 Nsight Compute 分析 \`sm__throughput\` 和 \`dram__throughput\`
  - **第三步（瓶颈判定）**：
@@ -703,14 +706,26 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
  - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
  - **关键分工**：latency 用 nsys/cudaEvent 测，bound 类型/Stall 用 ncu 看（ncu 下 latency 不可信，会膨胀 10-100x）
 
+</details>
+
+
 1. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **定义**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM
  - **收益来源**：减少 HBM 读写次数。A→B→C 未融合要写 B 到 HBM 再读；融合后在 register/SRAM 中直接传递
  - **Transformer 例子**：LayerNorm + QKV GEMM。未融合时 LayerNorm 输出 \`y(B,N,d)\` 写 HBM，GEMM 再读；融合后在 GEMM kernel 内部直接做归一化，省去 \`y\` 的一次读写（约 4MB，B=1,N=1024,d=512）
  - **限制**：① 只有相邻且数据依赖的算子能融合 ② 融合 kernel 可能增加 register/shared 压力降低 occupancy ③ 复杂融合需 CUTLASS/Triton
 
+</details>
+
+
 1. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（A100 FP32 ≈ 12.6 FLOP/Byte）
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
@@ -723,14 +738,26 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
  - 小 GEMM（M=1 或某维很小，如 Decode）→ 通常 memory-bound
  - reduction（sum、max）→ memory-bound
 
+</details>
+
+
 1. **ncu 和 nsys 有什么区别？分别什么场景用？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **nsys（系统级）**：采集完整程序时间线，看 kernel 排列、CPU/GPU 交互、多 stream、kernel 间隙。**测 latency、找 top3 算子、看 launch overhead**
  - **ncu（kernel 级）**：对单个 kernel 做深度分析，看 SM/DRAM 占用、Stall 原因、寄存器/shared 用量。**判 bound 类型、看 Stall 原因、做优化对比**
  - **关键区别**：ncu 会让 kernel 慢 10-100x（反复 replay），所以**latency 永远用 nsys 测，ncu 只看占比**
  - **协作流程**：nsys 找到慢的 kernel → ncu 分析它为什么慢 → 优化后用 nsys 验证整体 latency 改善
 
+</details>
+
+
 1. **为什么 \`torch.compile\` 能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
+
+<details>
+<summary>点击查看答案</summary>
 
  - **原理**：\`torch.compile\`（Inductor 后端）把 PyTorch 原生 ATen 算子图做 fusion——相邻的 element-wise 算子（LayerNorm、Softmax、GELU、Residual Add）合并成单个 fused kernel，省中间结果 HBM 读写
  - **效果**：通常 kernel 数减少 30-50%，Decode 阶段（kernel 小而多）收益更明显
@@ -738,7 +765,9 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
  - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（\`torch.compile\` 原生支持融合）
  - **实践建议**：优先用原生算子 + \`torch.compile\`；只有官方没覆盖的场景（如 FlashAttention）才自定义
 
----`;
+---
+
+</details>`;
 
         const renderer = new marked.Renderer();
         renderer.heading = function(text, level, raw) {
