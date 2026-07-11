@@ -301,7 +301,7 @@ def page_template(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=3">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=4">
     <!-- Marked.js for Markdown rendering (local v4.3.0) -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <!-- Prism.js for syntax highlighting (local) -->
@@ -387,7 +387,7 @@ def page_template(
         }}
     </script>
     {extra_scripts}
-    <script src="{root_prefix}js/main.js?v=4"></script>
+    <script src="{root_prefix}js/main.js?v=5"></script>
 </body>
 </html>
 """

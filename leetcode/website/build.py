@@ -15,6 +15,7 @@ The sidebar and overview page display them grouped by category and folder.
 
 import re
 import shutil
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
@@ -167,7 +168,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=3">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=4">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <!-- Prism.js for syntax highlighting -->
@@ -234,7 +235,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
             console.error('Markdown render error:', err);
         }}
     </script>
-    <script src="{root_prefix}js/main.js?v=4"></script>
+    <script src="{root_prefix}js/main.js?v=5"></script>
 </body>
 </html>"""
 
@@ -305,30 +306,51 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
             "markdown": markdown_text,
         })
 
-    # Group problems by category and folder for the overview page
-    groups: Dict[Tuple[str, str], List[Dict]] = {}
+    # Group problems for the overview page:
+    #   - contests by contest number
+    #   - daily problems by week, then by day
+    contest_groups: Dict[str, List[Dict]] = {}
+    weekly_groups: Dict[str, Dict[str, List[Dict]]] = defaultdict(lambda: defaultdict(list))
     for p in problems:
-        groups.setdefault((p["category"], p["folder"]), []).append(p)
+        if p["category"] == "contest":
+            contest_groups.setdefault(p["contest"], []).append(p)
+        elif p["category"] == "daily":
+            weekly_groups[p["week"]][p["day"]].append(p)
+
+    def sort_key_numeric(name: str) -> int:
+        match = re.search(r'(\d+)$', name)
+        return int(match.group(1)) if match else 0
 
     # Build overview page (at leetcode/index.html -> root_prefix="../")
     overview_markdown = ""
-    for group in sorted(groups.keys(), key=lambda g: (g[0] != "contest", g[0], g[1])):
-        category, folder = group
-        if category == "contest":
-            section_heading = f"周赛 {folder}"
-        elif category == "daily":
-            section_heading = f"每日一题 {folder}"
-        else:
-            section_heading = folder
+
+    # 1. Contests (descending by contest number)
+    for contest in sorted(contest_groups.keys(), key=sort_key_numeric, reverse=True):
         overview_markdown += f'<div class="leetcode-section">\n'
-        overview_markdown += f'  <div class="leetcode-section-title">{section_heading}</div>\n'
+        overview_markdown += f'  <div class="leetcode-section-title">周赛 {contest}</div>\n'
         overview_markdown += f'  <div class="leetcode-problem-list">\n'
-        for p in groups[group]:
+        for p in contest_groups[contest]:
             overview_markdown += (
                 f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
                 f'{p["title"]}'
                 f'</a>\n'
             )
+        overview_markdown += '  </div>\n'
+        overview_markdown += '</div>\n\n'
+
+    # 2. Daily problems grouped by week (descending), with day tags
+    for week in sorted(weekly_groups.keys(), key=sort_key_numeric, reverse=True):
+        overview_markdown += f'<div class="leetcode-section">\n'
+        overview_markdown += f'  <div class="leetcode-section-title">第 {sort_key_numeric(week)} 周</div>\n'
+        overview_markdown += f'  <div class="leetcode-problem-list">\n'
+        for day in sorted(weekly_groups[week].keys(), key=sort_key_numeric):
+            for p in weekly_groups[week][day]:
+                overview_markdown += (
+                    f'    <a class="leetcode-problem-link" href="./problems/{p["slug"]}.html">'
+                    f'<span class="leetcode-problem-day">{day}</span>'
+                    f'<span class="leetcode-problem-title">{p["title"]}</span>'
+                    f'</a>\n'
+                )
         overview_markdown += '  </div>\n'
         overview_markdown += '</div>\n\n'
 

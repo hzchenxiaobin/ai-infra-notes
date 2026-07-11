@@ -641,6 +641,19 @@ body {
     color: var(--accent-color);
 }
 
+.leetcode-problem-day {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-right: 6px;
+    opacity: 0.8;
+}
+
+.leetcode-problem-title {
+    color: inherit;
+}
+
 /* Images */
 .content img {
     max-width: 100%;
