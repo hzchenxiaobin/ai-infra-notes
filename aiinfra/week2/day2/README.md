@@ -37,8 +37,6 @@
 
 ![Register Blocking 三级数据复用](../website/images/register_blocking_dataflow.svg)
 
-![Register Blocking 单线程数据流](../website/images/register_blocking_per_thread_dataflow.svg)
-
 每个线程的执行流程：
 1. 从 Shared Memory 加载 TM 个 A 元素到 `r_A[TM]`
 2. 从 Shared Memory 加载 TN 个 B 元素到 `r_B[TN]`
