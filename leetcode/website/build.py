@@ -210,10 +210,8 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
         <main class="main-content">
             <div class="page-header">
                 <h1 class="page-title">{title}</h1>
-                <a class="back-link" href="{root_prefix}leetcode/index.html">← 返回题解列表</a>
             </div>
             <article class="content" id="content"></article>
-            <div class="day-nav-bottom"><a class="back-link" href="{root_prefix}leetcode/index.html">← 返回题解列表</a></div>
         </main>
     </div>
 
