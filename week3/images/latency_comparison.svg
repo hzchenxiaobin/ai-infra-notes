@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="540" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Latency 对比：PyTorch 官方 vs 自定义算子</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Bar chart ===== -->
+  <text x="450" y="74" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Prefill 阶段（N=1024, d=512, FP32）单次 forward 延迟</text>
+
+  <!-- axes -->
+  <path d="M 120 420 L 120 100" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="70" y="260" font-size="12" fill="#444" transform="rotate(-90 70 260)">延迟 (ms)</text>
+  <path d="M 120 420 L 720 420" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Bar 1: PyTorch (baseline) -->
+  <g filter="url(#sk)">
+    <rect x="180" y="180" width="120" height="240" fill="#4a8edb" opacity="0.6" stroke="#2b6e9e" stroke-width="1.5"/>
+  </g>
+  <text x="240" y="172" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">~1.0x</text>
+  <text x="240" y="440" text-anchor="middle" font-size="11" fill="#2b2b2b">PyTorch 官方</text>
+  <text x="240" y="456" text-anchor="middle" font-size="9" fill="#888">F.softmax + F.layer_norm</text>
+  <text x="240" y="200" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">baseline</text>
+
+  <!-- Bar 2: Custom (Day 2) -->
+  <g filter="url(#sk)">
+    <rect x="360" y="140" width="120" height="280" fill="#e8a838" opacity="0.6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="420" y="132" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">~0.8x (更慢)</text>
+  <text x="420" y="440" text-anchor="middle" font-size="11" fill="#2b2b2b">自定义（Day 2）</text>
+  <text x="420" y="456" text-anchor="middle" font-size="9" fill="#888">my_ops.softmax + layernorm</text>
+  <text x="420" y="160" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">逐元素+两次reduce</text>
+
+  <!-- Bar 3: Custom + float4 -->
+  <g filter="url(#sk)">
+    <rect x="540" y="200" width="120" height="220" fill="#4a8e4a" opacity="0.6" stroke="#2e6e2e" stroke-width="1.5"/>
+  </g>
+  <text x="600" y="192" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">~0.95x (接近)</text>
+  <text x="600" y="440" text-anchor="middle" font-size="11" fill="#2b2b2b">自定义 + float4</text>
+  <text x="600" y="456" text-anchor="middle" font-size="9" fill="#888">Day 3 向量化优化</text>
+  <text x="600" y="220" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">向量化加载</text>
+
+  <!-- ===== Right: why slower ===== -->
+  <g filter="url(#sk)">
+    <rect x="120" y="478" width="640" height="50" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.3"/>
+  </g>
+  <text x="440" y="500" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">⚠ 自定义版通常比 PyTorch 慢（0.8x ~ 0.95x）—— 这正常</text>
+  <text x="440" y="518" text-anchor="middle" font-size="10" fill="#7a2828">PyTorch 已高度优化（向量化+warp级+Welford+混合精度）；本周目标是理解算子，不是超越官方</text>
+
+  <!-- ===== Top right: optimization gap analysis ===== -->
+  <g filter="url(#sk)">
+    <rect x="720" y="100" width="160" height="200" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3"/>
+  </g>
+  <text x="800" y="122" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">性能差距来源</text>
+  <text x="730" y="144" font-size="9" fill="#b03a3a">✗ 逐元素加载</text>
+  <text x="730" y="160" font-size="9" fill="#b03a3a">✗ 两次 reduce</text>
+  <text x="730" y="176" font-size="9" fill="#b03a3a">✗ 全程 FP32</text>
+  <text x="730" y="192" font-size="9" fill="#b03a3a">✗ 无 kernel fusion</text>
+  <text x="730" y="208" font-size="9" fill="#b03a3a">✗ 无 warp 级特化</text>
+  <path d="M 730 220 L 870 220" stroke="#d4d4d4" stroke-width="0.8" filter="url(#sk)"/>
+  <text x="730" y="240" font-size="9" fill="#2e6e2e">✓ float4 向量化</text>
+  <text x="730" y="256" font-size="9" fill="#2e6e2e">✓ Welford 一次 reduce</text>
+  <text x="730" y="272" font-size="9" fill="#2e6e2e">✓ torch.compile fusion</text>
+  <text x="730" y="288" font-size="9" fill="#2e6e2e">✓ FlashAttention 分块</text>
+
+  <!-- ===== Top right: when to custom ===== -->
+  <g filter="url(#sk)">
+    <rect x="720" y="320" width="160" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="800" y="342" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">何时自定义才划算？</text>
+  <text x="730" y="362" font-size="9" fill="#444">① 官方没覆盖的场景</text>
+  <text x="730" y="378" font-size="9" fill="#444">② 需要融合特殊算子</text>
+  <text x="730" y="394" font-size="9" fill="#444">③ FlashAttention 分块</text>
+  <text x="730" y="410" font-size="9" fill="#888" font-style="italic">→ Week 4 主题</text>
+</svg>

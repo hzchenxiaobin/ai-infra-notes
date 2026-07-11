@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳跃游戏 II</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link active" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">跳跃游戏 II</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 跳跃游戏 II
+
+- **题目名称**：跳跃游戏 II
+- **链接**：[45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)
+- **难度**：中等
+- **标签**：贪心、数组、动态规划
+
+## 1. 题目概述
+
+给定一个长度为 \`n\` 的 **0 索引**整数数组 \`nums\`。一开始位于数组的第一个位置 \`nums[0]\`。
+
+数组中的每个元素 \`nums[i]\` 表示从位置 \`i\` 可以向前跳跃的最大长度。也就是说，如果你位于 \`nums[i]\`，你可以跳到任意 \`nums[i + j]\` 处，其中：
+
+- \`0 <= j <= nums[i]\`
+- \`i + j < n\`
+
+返回到达 \`nums[n - 1]\` 的最小跳跃次数。生成的测试用例保证可以到达 \`nums[n - 1]\`。
+
+**示例 1**：
+
+\`\`\`text
+输入：nums = [2,3,1,1,4]
+输出：2
+解释：跳到最后一个位置的最小跳跃次数是 2。
+     从下标 0 跳到下标 1，然后再跳到下标 4。
+\`\`\`
+
+**示例 2**：
+
+\`\`\`text
+输入：nums = [2,3,0,1,4]
+输出：2
+\`\`\`
+
+**约束条件**：
+
+- \`1 <= nums.length <= 10^4\`
+- \`0 <= nums[i] <= 1000\`
+- 题目保证可以到达 \`nums[n-1]\`
+
+> 💡 这是 **贪心算法** 的经典例题。与 [Week5/Day3 任务调度器](../week5/day3/任务调度器.md) 这种需要排序/堆的贪心不同，跳跃游戏的贪心体现在"每一步都尽可能扩展能到达的最远边界"。
+
+---
+
+## 2. 解题思路
+
+### 2.1 贪心：维护当前边界与下一跳最远边界
+
+想象我们在一条路上跳跃，每一步都要做出最优选择：
+
+- 在当前这一步的覆盖范围内，选择一个位置作为下一跳的起跳点，使得下一跳能到达最远。
+- 当遍历完当前这一步能覆盖的所有位置后，必然要再跳一次，把边界扩展到下一跳的最远位置。
+
+具体做法：
+
+- \`end\`：当前这一步能到达的最远边界
+- \`maxPos\`：从当前这一步范围内起跳，能到达的最远位置
+- \`steps\`：已经使用的跳跃次数
+
+遍历数组时不断更新 \`maxPos\`，当遍历到 \`end\` 时，说明必须再跳一次，于是 \`steps++\` 并把 \`end\` 更新为 \`maxPos\`。
+
+### 2.2 动态规划（较慢，供对比）
+
+设 \`dp[i]\` 表示到达位置 \`i\` 的最小跳跃次数。对于每个位置 \`i\`，枚举所有能跳到 \`i\` 的前驱位置 \`j\`，取最小值：
+
+\`\`\`
+dp[i] = min(dp[j] + 1)  for all j < i and j + nums[j] >= i
+\`\`\`
+
+时间复杂度 \`O(n^2)\`，对于 \`n = 10^4\` 会超时，仅用于理解。
+
+---
+
+## 3. 参考代码
+
+### 3.1 贪心解法
+
+\`\`\`cpp
+class Solution {
+public:
+    int jump(vector<int>& nums) {
+        int n = nums.size();
+        if (n == 1) return 0;
+
+        int steps = 0;          // 已用跳跃次数
+        int end = 0;            // 当前这一步能覆盖的最远边界
+        int maxPos = 0;         // 下一步能到达的最远位置
+
+        for (int i = 0; i < n - 1; ++i) {
+            maxPos = max(maxPos, i + nums[i]);
+            // 到达当前边界，必须再跳一次
+            if (i == end) {
+                steps++;
+                end = maxPos;
+                // 贪心保证：一旦 end 已经覆盖终点，可以提前结束
+                if (end >= n - 1) break;
+            }
+        }
+        return steps;
+    }
+};
+\`\`\`
+
+### 3.2 Python 版本
+
+\`\`\`python
+class Solution:
+    def jump(self, nums: list[int]) -> int:
+        n = len(nums)
+        if n == 1:
+            return 0
+
+        steps = 0
+        end = 0
+        max_pos = 0
+
+        for i in range(n - 1):
+            max_pos = max(max_pos, i + nums[i])
+            if i == end:
+                steps += 1
+                end = max_pos
+                if end >= n - 1:
+                    break
+        return steps
+\`\`\`
+
+---
+
+## 4. 复杂度分析
+
+- **时间复杂度**：\`O(n)\`，只需遍历一次数组。
+- **空间复杂度**：\`O(1)\`，只使用常数额外空间。
+
+---
+
+## 5. 面试要点
+
+1. **为什么遍历到 \`n-2\` 而不是 \`n-1\`**：因为终点不需要再跳，一旦 \`end\` 覆盖到 \`n-1\` 就可以结束。
+2. **为什么 \`i == end\` 时步数加 1**：说明当前这一步能覆盖的范围已经全部考察完毕，必须发动下一次跳跃。
+3. **贪心正确性证明**：在当前覆盖范围内，我们总是记录能到达的最远位置；当必须跳时，选择这个最远位置一定不劣于任何其他选择，因此得到最少步数。
+4. **与跳跃游戏 I 的区别**：[55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) 只需判断是否能到达终点，本题要求最小步数。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" viewBox="0 0 920 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <ns0:defs>
+    <ns0:filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <ns0:feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="48" result="n" />
+      <ns0:feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" />
+    </ns0:filter>
+    <ns0:marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <ns0:path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a" />
+    </ns0:marker>
+  </ns0:defs>
+  <ns0:rect width="920" height="440" fill="#fdfcf7" />
+
+  <ns0:text x="460" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">四种瓶颈类型与优化方向</ns0:text>
+  <ns0:path d="M 290 40 Q 460 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)" />
+
+  
+  <ns0:g filter="url(#sk)">
+    <ns0:rect x="40" y="64" width="400" height="90" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" />
+  </ns0:g>
+  <ns0:text x="60" y="88" font-size="13" font-weight="bold" fill="#2b6e9e">① Compute-bound（算力瓶颈）</ns0:text>
+  <ns0:text x="60" y="110" font-size="10" fill="#444">表现：throughput 不再增长，SM util ≈ 100%</ns0:text>
+  <ns0:text x="60" y="128" font-size="10" fill="#444">原因：batch 已打满算力，GEMM 成瓶颈</ns0:text>
+  <ns0:text x="60" y="146" font-size="10" fill="#2e6e2e" font-weight="bold">优化：量化(INT8/FP8)、模型蒸馏、更大 batch、kernel 融合</ns0:text>
+
+  
+  <ns0:g filter="url(#sk)">
+    <ns0:rect x="480" y="64" width="400" height="90" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5" />
+  </ns0:g>
+  <ns0:text x="500" y="88" font-size="13" font-weight="bold" fill="#2e6e2e">② Memory-bound（显存带宽瓶颈）</ns0:text>
+  <ns0:text x="500" y="110" font-size="10" fill="#444">表现：latency 随并发线性增长，SM util 不高</ns0:text>
+  <ns0:text x="500" y="128" font-size="10" fill="#444">原因：KV Cache 读写占主导，decode 是 M=1 GEMM</ns0:text>
+  <ns0:text x="500" y="146" font-size="10" fill="#2e6e2e" font-weight="bold">优化：KV Cache 量化、PagedAttention、FlashAttention</ns0:text>
+
+  
+  <ns0:g filter="url(#sk)">
+    <ns0:rect x="40" y="170" width="400" height="90" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5" />
+  </ns0:g>
+  <ns0:text x="60" y="194" font-size="13" font-weight="bold" fill="#7a5415">③ Launch overhead（调度开销）</ns0:text>
+  <ns0:text x="60" y="216" font-size="10" fill="#444">表现：kernel 间隙大，GPU 空闲</ns0:text>
+  <ns0:text x="60" y="234" font-size="10" fill="#444">原因：每轮 forward 多次 kernel launch，CPU-GPU 往返</ns0:text>
+  <ns0:text x="60" y="252" font-size="10" fill="#2e6e2e" font-weight="bold">优化：CUDA Graph、kernel fusion、减少 launch 次数</ns0:text>
+
+  
+  <ns0:g filter="url(#sk)">
+    <ns0:rect x="480" y="170" width="400" height="90" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" />
+  </ns0:g>
+  <ns0:text x="500" y="194" font-size="13" font-weight="bold" fill="#7a2828">④ Scheduling overhead（调度器瓶颈）</ns0:text>
+  <ns0:text x="500" y="216" font-size="10" fill="#444">表现：Python scheduler 成为瓶颈，每轮调度耗时</ns0:text>
+  <ns0:text x="500" y="234" font-size="10" fill="#444">原因：vLLM Python schedule() + GIL，大 batch 时显著</ns0:text>
+  <ns0:text x="500" y="252" font-size="10" fill="#2e6e2e" font-weight="bold">优化：C++ scheduler（TensorRT-LLM）、预分配 buffer</ns0:text>
+
+  
+  <ns0:g filter="url(#sk)">
+    <ns0:rect x="40" y="280" width="840" height="140" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3" />
+  </ns0:g>
+  <ns0:text x="60" y="304" font-size="12" font-weight="bold" fill="#444">用 nsys / ncu 识别瓶颈类型：</ns0:text>
+
+  <ns0:text x="60" y="328" font-size="11" fill="#2b6e9e" font-weight="bold">nsys profile（时间线视角）：</ns0:text>
+  <ns0:text x="280" y="328" font-size="10" fill="#444">看 kernel 间隙大 → Launch overhead；SM util 高 → Compute-bound</ns0:text>
+
+  <ns0:text x="60" y="350" font-size="11" fill="#7a5415" font-weight="bold">ncu --set full（单 kernel 视角）：</ns0:text>
+  <ns0:text x="280" y="350" font-size="10" fill="#444">看 Memory Throughput 接近峰值 → Memory-bound；Achieved Occupancy 低 → 资源约束</ns0:text>
+
+  <ns0:text x="60" y="372" font-size="11" fill="#b85450" font-weight="bold">Python profiler：</ns0:text>
+  <ns0:text x="280" y="372" font-size="10" fill="#444">schedule() 耗时占比高 → Scheduling overhead（换 C++ scheduler）</ns0:text>
+
+  </ns0:svg>

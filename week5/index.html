@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 5 - 推理系统与 KV Cache</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link active" href="index.html">📌 Week 5 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="../week3/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week3/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week3/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week3/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week3/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week3/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week3/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Week 5 概览</h1>
+                
+            </div>
+            <article class="content" id="content"></article>
+            
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# Week 5：推理系统与 KV Cache
+
+> 核心目标：进入 AI Infra 核心，理解 LLM 推理的 Prefill/Decode 两阶段，实现 KV Cache，阅读 vLLM 源码，构建第一个可运行的 Mini 推理引擎
+
+| 项目 | 说明 |
+|------|------|
+| **整体目标** | 理解 LLM 推理的 Prefill/Decode 两阶段本质差异，掌握 KV Cache 的设计与实现，阅读 vLLM 架构源码与 PagedAttention，构建支持单请求的 Mini 推理引擎 v0，完成端到端 Profiling |
+| **核心产出** | ① Prefill/Decode 模拟脚本 ② KV Cache CUDA 实现（C++ 类）③ vLLM 架构分析报告 ④ PagedAttention 笔记 ⑤ Mini 推理引擎 v0 ⑥ Profiling 报告 ⑦ 推理系统核心问题清单 |
+| **验收标准** | ① 能清晰区分 Prefill 和 Decode 的计算/内存特征 ② KV Cache 输出与无 cache 版本一致，decode latency 降低 10x+ ③ 能画出 vLLM 架构图并解释请求生命周期 ④ Mini 引擎 v0 能完成单条请求完整推理 ⑤ 能测量 TTFT 和 per-token decode latency |
+| **时间投入** | 工作日每天2.5h（早间1.5h + 晚间1h），周末每天6h，周计24.5h |
+
+## 本周知识图谱
+
+\`\`\`
+Day 1: Prefill vs Decode → 两阶段特征对比 + PyTorch 模拟 + 算术强度分析
+  ↓
+Day 2: KV Cache 实现 → C++/CUDA 缓存分配、更新、查询、多轮对话
+  ↓
+Day 3: vLLM 整体架构 → LLMEngine / Scheduler / Worker / SequenceGroup
+  ↓
+Day 4: vLLM Worker + PagedAttention → BlockSpaceManager / Block Table / Copy-on-Write
+  ↓
+Day 5: Mini 推理引擎 v0 → 单请求 + KV Cache + Prefill/Decode 循环
+  ↓
+Day 6: 端到端 Profiling → TTFT / TBT / 阶段 latency / 瓶颈定位
+  ↓
+Day 7: 推理系统核心问题总结 → 内存管理、Batch 策略、Latency 隐藏、调度开销
+\`\`\`
+
+## 进入每日学习
+
+
+<div class="day-cards">
+<a class="day-card" href="day1.html">
+  <div class="day-card-number">Day 1</div>
+  <div class="day-card-title">推理流程 —— Prefill vs Decode</div>
+</a>
+<a class="day-card" href="day2.html">
+  <div class="day-card-number">Day 2</div>
+  <div class="day-card-title">实现 KV Cache</div>
+</a>
+<a class="day-card" href="day3.html">
+  <div class="day-card-number">Day 3</div>
+  <div class="day-card-title">vLLM 整体架构分析</div>
+</a>
+<a class="day-card" href="day4.html">
+  <div class="day-card-number">Day 4</div>
+  <div class="day-card-title">vLLM Worker 与 PagedAttention</div>
+</a>
+<a class="day-card" href="day5.html">
+  <div class="day-card-number">Day 5</div>
+  <div class="day-card-title">项目推进 —— Mini 推理引擎 v0</div>
+</a>
+<a class="day-card" href="day6.html">
+  <div class="day-card-number">Day 6</div>
+  <div class="day-card-title">端到端 Profiling</div>
+</a>
+<a class="day-card" href="day7.html">
+  <div class="day-card-number">Day 7</div>
+  <div class="day-card-title">推理系统核心问题总结与 Week 5 收官</div>
+</a>
+</div>
+`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

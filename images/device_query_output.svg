@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="440" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">deviceQuery 输出示例结构</text>
+
+  <!-- Terminal window -->
+  <rect x="60" y="60" width="600" height="340" rx="10" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <rect x="60" y="60" width="600" height="30" rx="10" fill="#3a3a3a"/>
+  <circle cx="80" cy="75" r="6" fill="#e57373"/>
+  <circle cx="100" cy="75" r="6" fill="#e8a838"/>
+  <circle cx="120" cy="75" r="6" fill="#5cb86c"/>
+
+  <!-- Output lines -->
+  <text x="80" y="120" font-family="monospace" font-size="13" fill="#6ab0ff">Detected 1 CUDA Capable device(s)</text>
+  <text x="80" y="150" font-family="monospace" font-size="13" fill="#2b2b2b">Device 0: "NVIDIA A100-PCIE-40GB"</text>
+  <text x="80" y="180" font-family="monospace" font-size="13" fill="#666666">  CUDA Capability Major/Minor version number:    8.0</text>
+  <text x="80" y="205" font-family="monospace" font-size="13" fill="#666666">  Total amount of global memory:                 40536 MBytes</text>
+  <text x="80" y="230" font-family="monospace" font-size="13" fill="#666666">  (108) Multiprocessors, (64) CUDA Cores/MP:     6912 CUDA Cores</text>
+  <text x="80" y="255" font-family="monospace" font-size="13" fill="#666666">  GPU Max Clock rate:                            1410 MHz</text>
+  <text x="80" y="280" font-family="monospace" font-size="13" fill="#666666">  Memory Clock rate:                             1215 Mhz</text>
+  <text x="80" y="305" font-family="monospace" font-size="13" fill="#666666">  Memory Bus Width:                              5120-bit</text>
+  <text x="80" y="330" font-family="monospace" font-size="13" fill="#666666">  Maximum number of threads per multiprocessor:  2048</text>
+  <text x="80" y="355" font-family="monospace" font-size="13" fill="#666666">  Maximum number of threads per block:           1024</text>
+  <text x="80" y="380" font-family="monospace" font-size="13" fill="#5cb86c">Result = PASS</text>
+  </g>
+</svg>

@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 460" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="460" fill="#fafafa"/>
+
+  <text x="430" y="26" text-anchor="middle" font-size="16" fill="#444" font-weight="bold">Warp Reduce Butterfly 模式（5 步折半累加）</text>
+  <text x="430" y="44" text-anchor="middle" font-size="11" fill="#888">以 8 lane 为例（实际 32 lane，5 步 = log₂32），__shfl_down_sync 每步 offset 减半</text>
+
+  <!-- Column headers -->
+  <g font-size="11" font-weight="bold">
+    <text x="90"  y="76" text-anchor="middle" fill="#446688">初始</text>
+    <text x="220" y="76" text-anchor="middle" fill="#d6a040">Step 1</text>
+    <text x="220" y="90" text-anchor="middle" fill="#d6a040" font-size="9">offset=4</text>
+    <text x="350" y="76" text-anchor="middle" fill="#d6a040">Step 2</text>
+    <text x="350" y="90" text-anchor="middle" fill="#d6a040" font-size="9">offset=2</text>
+    <text x="480" y="76" text-anchor="middle" fill="#d6a040">Step 3</text>
+    <text x="480" y="90" text-anchor="middle" fill="#d6a040" font-size="9">offset=1</text>
+    <text x="660" y="76" text-anchor="middle" fill="#4a7a3a">结果</text>
+    <text x="660" y="90" text-anchor="middle" fill="#4a7a3a" font-size="9">lane 0</text>
+  </g>
+
+  <!-- Lane labels (left side, 8 lanes) -->
+  <g font-size="10" fill="#555">
+    <text x="30" y="118">lane 0</text>
+    <text x="30" y="148">lane 1</text>
+    <text x="30" y="178">lane 2</text>
+    <text x="30" y="208">lane 3</text>
+    <text x="30" y="238">lane 4</text>
+    <text x="30" y="268">lane 5</text>
+    <text x="30" y="298">lane 6</text>
+    <text x="30" y="328">lane 7</text>
+  </g>
+
+  <!-- ===== Step 0: initial values (1..8) ===== -->
+  <g font-size="10" fill="#333">
+    <rect x="70"  y="106" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="121" text-anchor="middle">1</text>
+    <rect x="70"  y="136" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="151" text-anchor="middle">2</text>
+    <rect x="70"  y="166" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="181" text-anchor="middle">3</text>
+    <rect x="70"  y="196" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="211" text-anchor="middle">4</text>
+    <rect x="70"  y="226" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="241" text-anchor="middle">5</text>
+    <rect x="70"  y="256" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="271" text-anchor="middle">6</text>
+    <rect x="70"  y="286" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="301" text-anchor="middle">7</text>
+    <rect x="70"  y="316" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="90"  y="331" text-anchor="middle">8</text>
+  </g>
+
+  <!-- ===== Step 1: offset=4 (lane i += lane i+4) ===== -->
+  <!-- arrows: lane0<->lane4, lane1<->lane5, lane2<->lane6, lane3<->lane7 -->
+  <g stroke="#888" stroke-width="1" fill="none" filter="url(#rough2)">
+    <path d="M 112 117 Q 165 117 198 117" marker-end="url(#arr)"/>
+    <path d="M 112 147 Q 165 147 198 147" marker-end="url(#arr)"/>
+    <path d="M 112 177 Q 165 177 198 177" marker-end="url(#arr)"/>
+    <path d="M 112 207 Q 165 207 198 207" marker-end="url(#arr)"/>
+    <path d="M 112 237 Q 165 180 198 117" marker-end="url(#arr)"/>
+    <path d="M 112 267 Q 165 210 198 147" marker-end="url(#arr)"/>
+    <path d="M 112 297 Q 165 240 198 177" marker-end="url(#arr)"/>
+    <path d="M 112 327 Q 165 270 198 207" marker-end="url(#arr)"/>
+  </g>
+  <g font-size="10" fill="#333">
+    <rect x="200" y="106" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="121" text-anchor="middle">6</text>
+    <text x="246" y="121" font-size="9" fill="#888">1+5</text>
+    <rect x="200" y="136" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="151" text-anchor="middle">8</text>
+    <text x="246" y="151" font-size="9" fill="#888">2+6</text>
+    <rect x="200" y="166" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="181" text-anchor="middle">10</text>
+    <text x="246" y="181" font-size="9" fill="#888">3+7</text>
+    <rect x="200" y="196" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="211" text-anchor="middle">12</text>
+    <text x="246" y="211" font-size="9" fill="#888">4+8</text>
+    <!-- high lanes become inactive (down: only low half keeps accumulating) -->
+    <rect x="200" y="226" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="241" text-anchor="middle" fill="#bbb">-</text>
+    <rect x="200" y="256" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="271" text-anchor="middle" fill="#bbb">-</text>
+    <rect x="200" y="286" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="301" text-anchor="middle" fill="#bbb">-</text>
+    <rect x="200" y="316" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="220" y="331" text-anchor="middle" fill="#bbb">-</text>
+  </g>
+
+  <!-- ===== Step 2: offset=2 (lane i += lane i+2) ===== -->
+  <g stroke="#888" stroke-width="1" fill="none" filter="url(#rough2)">
+    <path d="M 242 117 Q 290 117 328 117" marker-end="url(#arr)"/>
+    <path d="M 242 147 Q 290 147 328 147" marker-end="url(#arr)"/>
+    <path d="M 242 177 Q 290 150 328 117" marker-end="url(#arr)"/>
+    <path d="M 242 207 Q 290 180 328 147" marker-end="url(#arr)"/>
+  </g>
+  <g font-size="10" fill="#333">
+    <rect x="330" y="106" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="350" y="121" text-anchor="middle">16</text>
+    <text x="376" y="121" font-size="9" fill="#888">6+10</text>
+    <rect x="330" y="136" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="350" y="151" text-anchor="middle">20</text>
+    <text x="376" y="151" font-size="9" fill="#888">8+12</text>
+    <rect x="330" y="166" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="350" y="181" text-anchor="middle" fill="#bbb">-</text>
+    <rect x="330" y="196" width="40" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+    <text x="350" y="211" text-anchor="middle" fill="#bbb">-</text>
+  </g>
+
+  <!-- ===== Step 3: offset=1 (lane 0 += lane 1) ===== -->
+  <g stroke="#888" stroke-width="1" fill="none" filter="url(#rough2)">
+    <path d="M 372 117 Q 415 117 458 117" marker-end="url(#arr)"/>
+    <path d="M 372 147 Q 415 132 458 117" marker-end="url(#arr)"/>
+  </g>
+  <g font-size="10" fill="#333">
+    <rect x="460" y="106" width="40" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="480" y="121" text-anchor="middle">36</text>
+    <text x="506" y="121" font-size="9" fill="#888">16+20</text>
+  </g>
+
+  <!-- arrow to result -->
+  <path d="M 504 117 Q 580 117 638 117" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- ===== Final result ===== -->
+  <rect x="640" y="104" width="60" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="670" y="122" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">36</text>
+  <text x="710" y="122" font-size="11" fill="#4a7a3a" font-weight="bold">= 1+2+...+8 ✓</text>
+
+  <!-- ===== code ===== -->
+  <line x1="20" y1="358" x2="840" y2="358" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="40" y="372" width="780" height="56" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="54" y="392" font-family="monospace" font-size="11" fill="#333">__inline__ __device__ float warpReduceSum(float val) {</text>
+  <text x="54" y="408" font-family="monospace" font-size="11" fill="#333">    for (int offset = warpSize/2; offset &gt; 0; offset &gt;&gt;= 1)   // 16→8→4→2→1</text>
+  <text x="54" y="424" font-family="monospace" font-size="11" fill="#333">        val += __shfl_down_sync(0xFFFFFFFF, val, offset);</text>
+
+  <!-- key insight -->
+  <rect x="40" y="436" width="780" height="20" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="430" y="450" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">每步活跃 lane 减半，log₂32 = 5 步完成，结果只在 lane 0</text>
+</svg>

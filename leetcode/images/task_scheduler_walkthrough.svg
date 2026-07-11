@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="380" viewBox="0 0 920 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+  </defs>
+  <rect width="920" height="380" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">示例演算：tasks=[A,A,A,A,B,B,B,B,C,C], n=3</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 统计 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="840" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb"/>
+  </g>
+  <text x="60" y="88" font-size="12" font-weight="bold" fill="#2b6e9e">频次统计：A=4, B=4, C=2 → max_freq=4, max_count=2（A 和 B 并列最高）, n=3</text>
+  <text x="60" y="106" font-size="12" fill="#444">公式：ans = max((4-1)×(3+1)+2, 10) = max(14, 10) = 14</text>
+
+  <!-- 框架构造 -->
+  <text x="40" y="138" font-size="13" font-weight="bold" fill="#7a5415">构造：(max_freq-1)=3 个完整组（每组 n+1=4 格）+ 末尾 max_count=2 个最高频任务</text>
+
+  <!-- 时间线格子 -->
+  <g filter="url(#sk)">
+    <g stroke="#bbb" stroke-width="0.8">
+      <!-- group 1 -->
+      <rect x="40" y="150" width="44" height="36" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.2"/>
+      <rect x="86" y="150" width="44" height="36" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+      <rect x="132" y="150" width="44" height="36" rx="3" fill="#bcd6f0" stroke="#4a8edb" stroke-width="1"/>
+      <rect x="178" y="150" width="44" height="36" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <!-- group 2 -->
+      <rect x="224" y="150" width="44" height="36" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.2"/>
+      <rect x="270" y="150" width="44" height="36" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+      <rect x="316" y="150" width="44" height="36" rx="3" fill="#bcd6f0" stroke="#4a8edb" stroke-width="1"/>
+      <rect x="362" y="150" width="44" height="36" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <!-- group 3 -->
+      <rect x="408" y="150" width="44" height="36" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.2"/>
+      <rect x="454" y="150" width="44" height="36" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.2"/>
+      <rect x="500" y="150" width="44" height="36" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <rect x="546" y="150" width="44" height="36" rx="3" fill="#fff" stroke-dasharray="3 2"/>
+      <!-- 末尾 -->
+      <rect x="592" y="150" width="44" height="36" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.5"/>
+      <rect x="638" y="150" width="44" height="36" rx="3" fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1.5"/>
+    </g>
+  </g>
+  <text x="62" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="108" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">B</text>
+  <text x="154" y="172" text-anchor="middle" font-size="11" fill="#2b6e9e">C</text>
+  <text x="200" y="172" text-anchor="middle" font-size="10" fill="#bbb">idle</text>
+  <text x="246" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="292" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">B</text>
+  <text x="338" y="172" text-anchor="middle" font-size="11" fill="#2b6e9e">C</text>
+  <text x="384" y="172" text-anchor="middle" font-size="10" fill="#bbb">idle</text>
+  <text x="430" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="476" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">B</text>
+  <text x="522" y="172" text-anchor="middle" font-size="10" fill="#bbb">idle</text>
+  <text x="568" y="172" text-anchor="middle" font-size="10" fill="#bbb">idle</text>
+  <text x="614" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a0a">A</text>
+  <text x="660" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">B</text>
+
+  <!-- 时间标注 -->
+  <text x="62" y="202" text-anchor="middle" font-size="9" fill="#888">0</text>
+  <text x="154" y="202" text-anchor="middle" font-size="9" fill="#888">2</text>
+  <text x="246" y="202" text-anchor="middle" font-size="9" fill="#888">4</text>
+  <text x="430" y="202" text-anchor="middle" font-size="9" fill="#888">8</text>
+  <text x="614" y="202" text-anchor="middle" font-size="9" fill="#888">12</text>
+  <text x="660" y="202" text-anchor="middle" font-size="9" fill="#888">13</text>
+
+  <!-- 组标注 -->
+  <g filter="url(#sk)">
+    <line x1="40" y1="214" x2="222" y2="214" stroke="#c98a2b" stroke-width="1"/>
+    <line x1="224" y1="214" x2="406" y2="214" stroke="#c98a2b" stroke-width="1"/>
+    <line x1="408" y1="214" x2="590" y2="214" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="131" y="228" text-anchor="middle" font-size="10" fill="#7a5415">组1 (4格)</text>
+  <text x="315" y="228" text-anchor="middle" font-size="10" fill="#7a5415">组2 (4格)</text>
+  <text x="499" y="228" text-anchor="middle" font-size="10" fill="#7a5415">组3 (4格)</text>
+  <text x="660" y="228" text-anchor="middle" font-size="10" fill="#7a5415">末尾 A,B</text>
+
+  <!-- 结果 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="250" width="840" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="276" font-size="13" font-weight="bold" fill="#2e6e2e">结果：14 单位时间（12 格框架 + 2 格末尾）</text>
+  <text x="60" y="296" font-size="11" fill="#444">公式验证：(4-1)×(3+1)+2 = 14 ≥ len(tasks)=10 → ans = 14 ✓</text>
+
+  <!-- idle 说明 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="840" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 3"/>
+  </g>
+  <text x="460" y="346" text-anchor="middle" font-size="12" fill="#7a2828">idle 格：框架内有 3 个 idle（C 只有 2 个不够填满 3 组的第 3 格）——这是冷却间隙的必然代价</text>
+  <text x="460" y="362" text-anchor="middle" font-size="11" fill="#666">若 len(tasks) > 框架大小（低频任务太多），则无 idle，ans = len(tasks)</text>
+</svg>

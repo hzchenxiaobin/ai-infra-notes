@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">三种并发模型对比</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Model 1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="66" width="280" height="280" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="180" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">模型1：单 Worker + 共享队列</text>
+  <g filter="url(#sk)"><rect x="60" y="106" width="240" height="36" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="180" y="129" text-anchor="middle" font-size="11" fill="#2b6e9e">Request Queue</text>
+  <path d="M 180 144 L 180 160" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="80" y="162" width="200" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="180" y="187" text-anchor="middle" font-size="11" fill="#7a5415">Worker（调度+执行串行）</text>
+  <text x="60" y="226" font-size="10" fill="#444" font-weight="bold">特点：</text>
+  <text x="60" y="244" font-size="10" fill="#444">• 最简单，适合教学</text>
+  <text x="60" y="260" font-size="10" fill="#444">• 调度和 forward 串行</text>
+  <text x="60" y="276" font-size="10" fill="#444">• forward 时无法接收请求</text>
+  <text x="60" y="304" font-size="10" fill="#2e6e2e" font-weight="bold">Week6 Day5 的 v1 用此</text>
+  <text x="60" y="322" font-size="10" fill="#888">（单 worker 线程）</text>
+
+  <!-- Model 2 -->
+  <g filter="url(#sk)">
+    <rect x="340" y="66" width="280" height="280" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+  </g>
+  <text x="480" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">模型2：调度线程 + 执行线程 ✓</text>
+  <g filter="url(#sk)"><rect x="360" y="106" width="240" height="36" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="480" y="129" text-anchor="middle" font-size="11" fill="#2e6e2e">Request Queue</text>
+  <path d="M 480 144 L 480 160" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="360" y="162" width="100" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="410" y="187" text-anchor="middle" font-size="10" fill="#7a5415">调度线程</text>
+  <g filter="url(#sk)"><rect x="470" y="162" width="130" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+  <text x="535" y="187" text-anchor="middle" font-size="10" fill="#7a2828">执行线程</text>
+  <path d="M 460 182 L 470 182" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="360" y="226" font-size="10" fill="#444" font-weight="bold">特点：</text>
+  <text x="360" y="244" font-size="10" fill="#444">• 调度与执行并行</text>
+  <text x="360" y="260" font-size="10" fill="#444">• forward 时仍可接收请求</text>
+  <text x="360" y="276" font-size="10" fill="#444">• 适合复杂系统</text>
+  <text x="360" y="304" font-size="10" fill="#2e6e2e" font-weight="bold">Week7 Day1 选此 ✓</text>
+  <text x="360" y="322" font-size="10" fill="#888">（+ 超时清理线程）</text>
+
+  <!-- Model 3 -->
+  <g filter="url(#sk)">
+    <rect x="640" y="66" width="280" height="280" rx="10" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5"/>
+  </g>
+  <text x="780" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a2e7e">模型3：线程池 + 任务队列</text>
+  <g filter="url(#sk)"><rect x="660" y="106" width="240" height="36" rx="6" fill="#fff" stroke="#7a4a9e" stroke-width="1.2"/></g>
+  <text x="780" y="129" text-anchor="middle" font-size="11" fill="#5a2e7e">Task Queue</text>
+  <path d="M 780 144 L 780 160" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="660" y="162" width="60" height="36" rx="6" fill="#fff" stroke="#7a4a9e" stroke-width="1.2"/></g>
+  <text x="690" y="185" text-anchor="middle" font-size="9" fill="#5a2e7e">W0</text>
+  <g filter="url(#sk)"><rect x="730" y="162" width="60" height="36" rx="6" fill="#fff" stroke="#7a4a9e" stroke-width="1.2"/></g>
+  <text x="760" y="185" text-anchor="middle" font-size="9" fill="#5a2e7e">W1</text>
+  <g filter="url(#sk)"><rect x="800" y="162" width="60" height="36" rx="6" fill="#fff" stroke="#7a4a9e" stroke-width="1.2"/></g>
+  <text x="830" y="185" text-anchor="middle" font-size="9" fill="#5a2e7e">W2</text>
+  <text x="660" y="226" font-size="10" fill="#444" font-weight="bold">特点：</text>
+  <text x="660" y="244" font-size="10" fill="#444">• 多 Worker 并行</text>
+  <text x="660" y="260" font-size="10" fill="#444">• 适合多 GPU 场景</text>
+  <text x="660" y="276" font-size="10" fill="#444">• 调度复杂</text>
+  <text x="660" y="304" font-size="10" fill="#7a4a9e" font-weight="bold">进阶（多卡扩展）</text>
+
+  <!-- bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="362" width="880" height="60" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="386" font-size="11" font-weight="bold" fill="#444">线程安全要点：</text>
+  <text x="60" y="404" font-size="10" fill="#444">① 锁保护共享状态（queue/running） ② 条件变量通知新请求 ③ 避免锁内执行 CUDA forward ④ 原子操作更新计数器 ⑤ 注意 Python GIL</text>
+</svg>

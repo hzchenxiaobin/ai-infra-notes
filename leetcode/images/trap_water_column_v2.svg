@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 340" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arrowDn" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
+      <path d="M0,0 L4,7 L8,0 Z" fill="#6a9acc"/>
+    </marker>
+  </defs>
+
+  <rect width="480" height="340" fill="#fafafa"/>
+
+  <text x="240" y="22" text-anchor="middle" font-size="13" fill="#555" font-weight="bold">位置 i 的接水量由左右最高柱子的短板决定</text>
+
+  <rect x="70" y="38" width="340" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="240" y="59" text-anchor="middle" font-size="12.5" fill="#444">water[i] = min(left_max, right_max) − height[i]</text>
+
+  <path d="M 20 280 Q 240 278 460 280" stroke="#999" stroke-width="2.5" fill="none" filter="url(#rough)"/>
+
+  <rect x="65" y="190" width="48" height="90" fill="#6c8ebf" fill-opacity="0.65" stroke="#446688" stroke-width="2" rx="2" filter="url(#rough)"/>
+  <text x="89" y="306" text-anchor="middle" font-size="12" fill="#555">left</text>
+  <text x="89" y="322" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">max=3</text>
+
+  <rect x="183" y="276" width="48" height="4" fill="#b85450" fill-opacity="0.7" stroke="#8a3a36" stroke-width="2" rx="1" filter="url(#rough)"/>
+  <text x="207" y="306" text-anchor="middle" font-size="12" fill="#555">i</text>
+  <text x="207" y="322" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">h=0</text>
+
+  <rect x="301" y="160" width="48" height="120" fill="#82b366" fill-opacity="0.65" stroke="#4a7a3a" stroke-width="2" rx="2" filter="url(#rough)"/>
+  <text x="325" y="306" text-anchor="middle" font-size="12" fill="#555">right</text>
+  <text x="325" y="322" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">max=4</text>
+
+  <rect x="183" y="192" width="48" height="84" fill="#a8c6e8" fill-opacity="0.45" stroke="#6a9acc" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#rough2)"/>
+
+  <path d="M 118 190 Q 240 188 358 190" stroke="#6a9acc" stroke-width="1.5" fill="none" stroke-dasharray="6,3" filter="url(#rough2)"/>
+  <text x="390" y="188" font-size="10.5" fill="#6a9acc">water level</text>
+  <text x="390" y="202" font-size="10.5" fill="#6a9acc">= min(3,4) = 3</text>
+
+  <path d="M 207 170 L 207 188" stroke="#6a9acc" stroke-width="1.5" fill="none" marker-end="url(#arrowDn)" filter="url(#rough2)"/>
+  <text x="207" y="165" text-anchor="middle" font-size="10" fill="#6a9acc">water = 3</text>
+</svg>

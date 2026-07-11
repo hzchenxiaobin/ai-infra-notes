@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实现 Trie (前缀树)</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link active" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">实现 Trie (前缀树)</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 实现 Trie (前缀树)
+
+- **题目名称**：实现 Trie (前缀树)
+- **链接**：[208. 实现 Trie (前缀树)](https://leetcode.cn/problems/implement-trie-prefix-tree/)
+- **难度**：中等
+- **标签**：字典树、设计、哈希表
+
+## 1. 题目概述
+
+实现一个 Trie（前缀树），支持以下操作：
+- \`insert(word)\`：插入单词
+- \`search(word)\`：查找单词是否存在
+- \`startsWith(prefix)\`：查找是否有单词以给定前缀开头
+
+**示例**：
+
+\`\`\`text
+Trie trie = new Trie();
+trie.insert("apple");
+trie.search("apple");     // true
+trie.search("app");       // false
+trie.startsWith("app");   // true
+trie.insert("app");
+trie.search("app");       // true
+\`\`\`
+
+**约束条件**：
+
+- \`1 <= word.length, prefix.length <= 1000\`
+- \`word\` 和 \`prefix\` 仅由小写英文字母组成
+
+---
+
+## 2. 解题思路
+
+### 2.1 核心数据结构
+
+![Trie 前缀树结构](../images/trie_structure.svg)
+
+Trie 是一棵多叉树，每个节点有 26 个子节点指针（对应 a-z）和一个 \`is_end\` 标记。共享前缀的单词共用同一条路径。
+
+> 💡 与 [Week7 Day4 自定义 Kernel 集成](../../aiinfra/week7/day4/README.md) 中的 **PyTorch Module 树**同构——Trie 用子节点指针构建共享前缀树，PyTorch 用 \`nn.Module\` 的 \`children()\` 构建模型算子树。两者都是**树形结构的递归遍历 + 节点查找**：Trie 按字符逐层查找子节点，PyTorch 遍历 Module 子模块加载 kernel。
+
+### 2.2 算法流程
+
+\`\`\`
+insert(word):
+  逐字符遍历 word：
+    当前节点无此字符的子节点 → 创建
+    走到子节点
+  末尾标记 is_end = True
+
+search(word):
+  逐字符走子节点
+  能走完且 is_end = True → True
+  否则 → False
+
+startsWith(prefix):
+  逐字符走子节点
+  能走完 → True（不检查 is_end）
+\`\`\`
+
+### 2.3 示例演算
+
+插入 "apple" 和 "app" 后的 Trie：
+
+\`\`\`
+root → a → p → p → l → e (is_end)
+              ↘ (is_end)  ← "app" 在此结束
+\`\`\`
+
+| 操作 | 路径 | 结果 |
+|------|------|------|
+| search("apple") | a→p→p→l→e, is_end=T | True |
+| search("app") | a→p→p, is_end=T | True |
+| search("ap") | a→p, is_end=F | False |
+| startsWith("ap") | a→p, 存在 | True |
+
+---
+
+## 3. 参考代码
+
+### C++
+
+\`\`\`cpp
+class Trie {
+    struct TrieNode {
+        TrieNode* children[26] = {};
+        bool is_end = false;
+    };
+
+    TrieNode* root;
+
+public:
+    Trie() : root(new TrieNode()) {}
+
+    void insert(string word) {
+        TrieNode* node = root;
+        for (char c : word) {
+            int idx = c - 'a';
+            if (!node->children[idx])
+                node->children[idx] = new TrieNode();
+            node = node->children[idx];
+        }
+        node->is_end = true;
+    }
+
+    bool search(string word) {
+        TrieNode* node = root;
+        for (char c : word) {
+            int idx = c - 'a';
+            if (!node->children[idx]) return false;
+            node = node->children[idx];
+        }
+        return node->is_end;
+    }
+
+    bool startsWith(string prefix) {
+        TrieNode* node = root;
+        for (char c : prefix) {
+            int idx = c - 'a';
+            if (!node->children[idx]) return false;
+            node = node->children[idx];
+        }
+        return true;
+    }
+};
+\`\`\`
+
+### Python
+
+\`\`\`python
+class Trie:
+    def __init__(self):
+        self.root = {}
+
+    def insert(self, word: str) -> None:
+        node = self.root
+        for c in word:
+            if c not in node:
+                node[c] = {}
+            node = node[c]
+        node['#'] = True  # is_end 标记
+
+    def search(self, word: str) -> bool:
+        node = self._find(word)
+        return node is not None and '#' in node
+
+    def startsWith(self, prefix: str) -> bool:
+        return self._find(prefix) is not None
+
+    def _find(self, s: str):
+        node = self.root
+        for c in s:
+            if c not in node:
+                return None
+            node = node[c]
+        return node
+\`\`\`
+
+---
+
+## 4. 复杂度分析
+
+| 维度 | 复杂度 | 说明 |
+|------|--------|------|
+| insert 时间 | \`O(L)\` | L=单词长度，逐字符走 |
+| search 时间 | \`O(L)\` | 同上 |
+| startsWith 时间 | \`O(L)\` | 同上 |
+| 空间 | \`O(N×L)\` | N=单词数，L=平均长度 |
+
+---
+
+## 5. 扩展：用数组 vs dict
+
+- **数组 \`children[26]\`**：查找 O(1)，但固定 26 个指针，空间浪费大（稀疏时）
+- **dict \`children{}\`**：查找 O(1) 均摊，按需分配，空间省
+- **生产环境**：Unicode 场景用 dict；纯小写字母用数组更快
+
+---
+
+## 6. 面试要点
+
+1. **Trie 和哈希表有什么区别？各自适合什么场景？**
+
+   - **Trie**：支持前缀查找（startsWith），共享前缀省空间；但实现复杂
+   - **哈希表**：查找 O(1)，但不支持前缀查找
+   - **适合 Trie**：自动补全、拼写检查、IP 路由（最长前缀匹配）
+   - **适合哈希表**：精确查找、去重
+
+2. **这题和 PyTorch Module 树有什么共同模式？**
+
+   - Trie 用子节点指针构建共享前缀树
+   - PyTorch 用 \`nn.Module.children()\` 构建模型算子树
+   - 两者都是树形结构的递归遍历 + 节点查找
+   - Trie 的 \`startsWith\` 前缀匹配对应集成时的"按名称前缀查找算子"
+
+3. **\`search\` 和 \`startsWith\` 的区别是什么？**
+
+   - \`search\` 要求单词完整存在（\`is_end = True\`）
+   - \`startsWith\` 只要求前缀路径存在（不检查 \`is_end\`）
+   - 例如 "app" 是 "apple" 的前缀，\`startsWith("app")\` = True，但如果没单独插入 "app"，\`search("app")\` = False
+
+4. **空间能优化吗？**
+
+   - 稀疏场景用 dict 替代数组（按需分配）
+   - 压缩 Trie（Radix Tree）：单子节点路径合并为一个边
+   - 后缀树 / 后缀自动机：更高级的字符串结构
+
+5. **Python 用 dict 实现有什么好处？**
+
+   - 不需要预定义 TrieNode 类，直接用嵌套 dict
+   - \`{'#': True}\` 标记 is_end，简洁
+   - 按需分配键，空间省
+   - 缺点：不如数组快（哈希开销），但 Python 本身慢，差异不大
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="22" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+  <rect width="860" height="540" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention 分块策略（Tiling）</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: O matrix with Q tiles ===== -->
+  <text x="430" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Attention Output O（N×d）</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="80" width="700" height="80" fill="none" stroke="#4a8edb" stroke-width="1.8" rx="4"/>
+  </g>
+  <!-- Q Tile 0 (highlighted) -->
+  <g filter="url(#sk)">
+    <rect x="90" y="90" width="200" height="60" rx="6" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.8"/>
+  </g>
+  <text x="190" y="116" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Q Tile (Br×d)</text>
+  <text x="190" y="134" text-anchor="middle" font-size="10" fill="#eaf6ee">驻留 SRAM</text>
+  <!-- Q Tile 1 (dashed) -->
+  <g filter="url(#sk)">
+    <rect x="300" y="90" width="200" height="60" rx="6" fill="#4a8edb" opacity="0.12" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 3"/>
+  </g>
+  <text x="400" y="124" text-anchor="middle" font-size="11" fill="#888">Q Tile</text>
+  <!-- Q Tile 2 (dashed) -->
+  <g filter="url(#sk)">
+    <rect x="510" y="90" width="200" height="60" rx="6" fill="#4a8edb" opacity="0.12" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 3"/>
+  </g>
+  <text x="610" y="124" text-anchor="middle" font-size="11" fill="#888">Q Tile ...</text>
+
+  <!-- ===== Middle: inner loop KV tiles ===== -->
+  <text x="80" y="188" font-size="13" font-weight="bold" fill="#c98a2b">内循环：遍历 K/V tile</text>
+
+  <g filter="url(#sk)">
+    <rect x="90" y="200" width="120" height="42" rx="6" fill="#c98a2b" opacity="0.4" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="150" y="226" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">KV Tile 0</text>
+  <path d="M 212 221 L 240 221" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="246" y="200" width="120" height="42" rx="6" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="306" y="226" text-anchor="middle" font-size="12" fill="#2b2b2b">KV Tile 1</text>
+  <path d="M 368 221 L 396 221" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="402" y="200" width="120" height="42" rx="6" fill="#c98a2b" opacity="0.2" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="462" y="226" text-anchor="middle" font-size="12" fill="#2b2b2b">KV Tile 2</text>
+  <text x="540" y="226" font-size="16" fill="#888">...</text>
+
+  <!-- ===== Compute flow box ===== -->
+  <g filter="url(#sk)">
+    <rect x="80" y="270" width="700" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="430" y="294" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">每步计算：</text>
+  <text x="430" y="318" text-anchor="middle" font-size="12" fill="#8e5db8" font-family="monospace">S_tile = Q_tile × KV_tile^T  (Br×Bc)</text>
+  <text x="430" y="340" text-anchor="middle" font-size="12" fill="#4a8e4a" font-family="monospace">→ Online Softmax 更新 (m, l, o)</text>
+  <text x="430" y="362" text-anchor="middle" font-size="12" fill="#4a8edb" font-family="monospace">→ 累加输出 acc[d] += p_norm × V_tile[d]</text>
+  <text x="430" y="382" text-anchor="middle" font-size="10" fill="#888">S_tile / P_tile 只在 SRAM/register 中存在，不写回 HBM</text>
+
+  <!-- ===== Bottom: HBM comparison ===== -->
+  <g filter="url(#sk)">
+    <rect x="80" y="410" width="330" height="100" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="245" y="436" text-anchor="middle" font-size="14" fill="#b03a3a" font-weight="bold">标准 Attention</text>
+  <text x="245" y="460" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">HBM 访问: O(N²)</text>
+  <text x="245" y="482" text-anchor="middle" font-size="10" fill="#888">需存储 S, P 两个 N×N 矩阵</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="410" width="330" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="615" y="436" text-anchor="middle" font-size="14" fill="#4a8e4a" font-weight="bold">FlashAttention</text>
+  <text x="615" y="460" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">HBM 访问: O(Nd)</text>
+  <text x="615" y="482" text-anchor="middle" font-size="10" fill="#888">中间计算在 SRAM 完成</text>
+
+  <!-- arrow between -->
+  <path d="M 410 460 L 450 460" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="430" y="452" text-anchor="middle" font-size="9" fill="#888">优化</text>
+</svg>

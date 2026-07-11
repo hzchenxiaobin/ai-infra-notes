@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="620" viewBox="0 0 940 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="620" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">PyTorch Softmax 的两条 Dispatch 路径</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- input -->
+  <g filter="url(#sk2)">
+    <rect x="350" y="64" width="240" height="34" rx="8" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+    <text x="470" y="86" text-anchor="middle" font-size="12" fill="#2b2b2b">input (M, D)  →  at::native::softmax_cuda</text>
+  </g>
+  <path d="M 470 100 L 470 114" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar4)"/>
+
+  <!-- dispatch diamond -->
+  <g filter="url(#sk2)">
+    <path d="M 470 118 L 600 168 L 470 218 L 340 168 Z" fill="#fff3cf" stroke="#e8a838" stroke-width="1.6"/>
+    <text x="470" y="160" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">D &lt;= 1024 ?</text>
+    <text x="470" y="180" text-anchor="middle" font-size="10" fill="#666">(一个 warp 能放下)</text>
+    <text x="470" y="196" text-anchor="middle" font-size="9" fill="#888">softmax_kernel_impl</text>
+  </g>
+
+  <!-- left arrow: yes -->
+  <path d="M 340 168 L 180 168 L 180 240" stroke="#2e7d4f" stroke-width="1.5" fill="none" marker-end="url(#ar4)"/>
+  <text x="250" y="160" font-size="11" font-weight="bold" fill="#2e7d4f">是 (D≤1024)</text>
+
+  <!-- right arrow: no -->
+  <path d="M 600 168 L 760 168 L 760 240" stroke="#b03a3a" stroke-width="1.5" fill="none" marker-end="url(#ar4)"/>
+  <text x="640" y="160" font-size="11" font-weight="bold" fill="#b03a3a">否 (D&gt;1024)</text>
+
+  <!-- LEFT: warp path -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="244" width="280" height="240" rx="10" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.6"/>
+    <text x="180" y="266" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">softmax_warp_forward</text>
+  </g>
+  <text x="56" y="290" font-size="11" fill="#444">▸ 一个 warp 处理一行</text>
+  <text x="56" y="308" font-size="11" fill="#444">▸ blockDim = 32（一个 warp）</text>
+  <text x="56" y="326" font-size="11" fill="#444">▸ gridDim = M（每行一个 warp）</text>
+  <text x="56" y="348" font-size="11" font-weight="bold" fill="#2e7d4f">▸ 无 shared memory ✓</text>
+  <text x="56" y="366" font-size="11" font-weight="bold" fill="#2e7d4f">▸ 无 __syncthreads ✓</text>
+  <text x="56" y="384" font-size="11" fill="#444">▸ __shfl 直接寄存器间传递</text>
+  <text x="56" y="406" font-size="10" fill="#888">延迟：shuffle ~1-2 cycles</text>
+  <text x="56" y="424" font-size="10" fill="#888">每 lane 处理 D/32 个元素</text>
+  <text x="56" y="448" font-size="10" fill="#888">D=1024 → 每 lane 32 元素</text>
+  <text x="56" y="470" font-size="11" font-weight="bold" fill="#2e7d4f">→ 常见 D（768/1024）最优</text>
+
+  <!-- RIGHT: block path -->
+  <g filter="url(#sk2)">
+    <rect x="620" y="244" width="280" height="240" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.6"/>
+    <text x="760" y="266" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">softmax_block_forward</text>
+  </g>
+  <text x="636" y="290" font-size="11" fill="#444">▸ 一个 block 处理一行</text>
+  <text x="636" y="308" font-size="11" fill="#444">▸ blockDim = 256/512</text>
+  <text x="636" y="326" font-size="11" fill="#444">▸ gridDim = M（每行一个 block）</text>
+  <text x="636" y="348" font-size="11" font-weight="bold" fill="#b03a3a">▸ 需要 shared memory</text>
+  <text x="636" y="366" font-size="11" font-weight="bold" fill="#b03a3a">▸ 需要 __syncthreads</text>
+  <text x="636" y="384" font-size="11" fill="#444">▸ 两级 reduce（warp→smem→warp0）</text>
+  <text x="636" y="406" font-size="10" fill="#888">延迟：smem ~20-30 cycles</text>
+  <text x="636" y="424" font-size="10" fill="#888">更多线程协作，处理大 D</text>
+  <text x="636" y="448" font-size="10" fill="#888">D=4096/8192 时走此路径</text>
+  <text x="636" y="470" font-size="11" font-weight="bold" fill="#b03a3a">→ 我们 Day 2 的实现</text>
+
+  <!-- bottom: comparison bars -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="506" width="860" height="96" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="60" y="528" font-size="12" font-weight="bold" fill="#2b2b2b">关键洞察：为什么 D 小时选 warp 级？</text>
+    <text x="60" y="548" font-size="11" fill="#444">① 避免 __syncthreads：warp 内 shuffle 是 SIMT 隐式同步，零同步开销</text>
+    <text x="60" y="566" font-size="11" fill="#444">② 延迟更低：shuffle ~1-2 cyc vs shared memory ~20-30 cyc，差 10-20x</text>
+    <text x="60" y="584" font-size="11" fill="#444">③ 并行度足够：D=1024 时 32 线程每 lane 32 元素，且 M 行 × M 个 warp 提供足够并行</text>
+    <text x="60" y="598" font-size="11" fill="#b03a3a">④ 限制：D&gt;1024 时一个 warp 放不下，必须回退到 block 级</text>
+  </g>
+</svg>

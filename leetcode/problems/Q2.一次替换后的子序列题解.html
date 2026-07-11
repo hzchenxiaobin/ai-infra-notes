@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q2. 一次替换后的子序列</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link active" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Q2. 一次替换后的子序列</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# Q2. 一次替换后的子序列
+
+## 1. 题目概述
+
+- **题目名称**：Q2. 一次替换后的子序列
+- **链接**：[3983. 一次替换后的子序列](https://leetcode.cn/problems/subsequence-after-one-replacement/)
+- **难度**：中等
+- **标签**：贪心、双指针、子序列、预处理
+
+**题意简述**：
+
+给你两个由小写英文字母组成的字符串 \`s\` 和 \`t\`。你最多可以选择 \`s\` 中的一个下标，将该下标处的字符替换为任意小写英文字母。如果可以使 \`s\` 成为 \`t\` 的一个子序列，则返回 \`true\`；否则返回 \`false\`。
+
+**约束条件**：
+
+- \`1 <= s.length, t.length <= 10^5\`
+- \`s\` 和 \`t\` 仅由小写英文字母组成
+
+---
+
+## 2. 示例
+
+**示例 1**
+
+\`\`\`text
+输入：s = "cat", t = "chat"
+输出：true
+解释：将 s[1] 从 'a' 替换为 'h'，得到 "cht"。"cht" 是 "chat" 的子序列。
+\`\`\`
+
+**示例 2**
+
+\`\`\`text
+输入：s = "plane", t = "apple"
+输出：false
+解释：即使替换 s 中任意一个字符，也无法使 s 成为 t 的子序列。
+\`\`\`
+
+---
+
+## 3. 解题思路
+
+### 3.1 朴素思路：枚举替换位置 + 子序列匹配
+
+对 \`s\` 的每个位置 \`i\`，把 \`s[i]\` 替换成任意字符后检查 \`s\` 是否为 \`t\` 的子序列。但替换成"任意字符"无法枚举，朴素做法 O(n²) 会超时。
+
+### 3.2 优化：前后缀预处理 + 枚举断点
+
+**关键观察**：子序列匹配是"从左到右贪心匹配"。把 \`s\` 分成三段：
+
+\`\`\`
+s = [s[0..i-1]] [s[i]] [s[i+1..n-1]
+      前缀        替换点    后缀
+\`\`\`
+
+- **前缀** \`s[0..i-1]\` 在 \`t\` 中从左到右贪心匹配，匹配到 \`t\` 的位置 \`pre[i]\`
+- **后缀** \`s[i+1..n-1]\` 在 \`t\` 中从右到左贪心匹配，匹配到 \`t\` 的位置 \`suf[i]\`
+- **替换点** \`s[i]\` 替换为任意字符，只需在 \`t[pre[i]..suf[i]-1]\` 中存在一个位置放下即可
+
+**判定条件**：对替换点 \`i\`，若 \`pre[i] < suf[i]\`（即前缀和后缀的匹配区间在 \`t\` 中留有至少一个字符的空隙），则替换 \`s[i]\` 后 \`s\` 是 \`t\` 的子序列 → \`true\`。
+
+**特殊情况**：
+- 不替换（替换 0 次）：直接检查 \`s\` 是否为 \`t\` 的子序列
+- \`s\` 长度为 1：只要 \`t\` 非空，替换 \`s[0]\` 为 \`t\` 的任意字符即可 → \`true\`
+
+### 3.3 算法流程
+
+![前后缀预处理 + 枚举断点算法流程](../images/one_replace_subsequence_flow.svg)
+
+\`\`\`
+1. 前缀预处理 pre[i]：s[0..i-1] 在 t 中贪心匹配后，t 的下一个待匹配位置
+2. 后缀预处理 suf[i]：s[i+1..n-1] 在 t 中逆向匹配后，t 的已匹配最小位置
+3. 枚举替换点 i：
+   若 pre[i] < suf[i] → 替换 s[i] 可填入空隙 → true
+4. 若所有 i 都不满足，返回 false
+\`\`\`
+
+---
+
+## 4. 算法细节
+
+### 4.1 前缀预处理 \`pre[i]\`
+
+\`pre[i]\` 表示 \`s[0..i-1]\` 这 \`i\` 个字符在 \`t\` 中从左到右贪心匹配后，\`t\` 中下一个待匹配位置（即已匹配了 \`i\` 个字符）。
+
+\`\`\`
+pre[0] = 0  （s 的前 0 个字符，匹配了 t 的 0 个字符）
+pre[i] = pre[i-1] 之后 t 中第一个等于 s[i-1] 的位置 + 1
+\`\`\`
+
+用双指针：\`j\` 在 \`t\` 上推进，对 \`s\` 的每个字符找 \`t\` 中第一个匹配。
+
+### 4.2 后缀预处理 \`suf[i]\`
+
+\`suf[i]\` 表示 \`s[i+1..n-1]\` 在 \`t\` 中从右到左贪心匹配后，\`t\` 中已匹配的最小位置。
+
+\`\`\`
+suf[n] = t.length  （s 的后 0 个字符，t 全部可用）
+suf[i] = suf[i+1] 之前 t 中最后一个等于 s[i] 的位置
+\`\`\`
+
+从右到左：\`j\` 在 \`t\` 上从右往左退，对 \`s\` 的每个字符从右往左找 \`t\` 中最后一个匹配。
+
+### 4.3 枚举替换点
+
+对每个 \`i\`（\`0 <= i < n\`），替换 \`s[i]\` 后：
+- 前 \`i\` 个字符匹配到 \`t[0..pre[i]-1]\`
+- 后 \`n-1-i\` 个字符匹配到 \`t[suf[i]..t.length-1]\`
+- \`s[i]\`（替换后）需要在 \`t[pre[i]..suf[i]-1]\` 中占一个位置
+
+**条件**：\`pre[i] < suf[i]\`（空隙中至少有一个字符可放）
+
+> ⚠️ **注意**：这里 \`pre[i]\` 是"前 i 个字符匹配后 t 的下一个位置"，\`suf[i]\` 是"后 n-1-i 个字符匹配时 t 的起始位置"。两者之间是 \`s[i]\` 可放置的范围。
+
+### 4.4 不替换的情况
+
+还需考虑"不替换任何字符"的情况——即 \`s\` 本身就是 \`t\` 的子序列。这等价于 \`pre[n] <= t.length\`（前缀预处理中 \`s\` 全部匹配完）。
+
+---
+
+## 5. 正确性证明
+
+**引理**：若存在替换点 \`i\` 使得 \`pre[i] < suf[i]\`，则替换 \`s[i]\` 为 \`t[pre[i]]\` 后 \`s\` 是 \`t\` 的子序列。
+
+**证明**：
+- 前 \`i\` 个字符 \`s[0..i-1]\` 贪心匹配到 \`t[0..pre[i]-1]\`，由 \`pre\` 定义保证
+- 替换后的 \`s[i]\` 放在 \`t[pre[i]]\`，因为 \`pre[i] < suf[i]\`，所以 \`pre[i]\` 在后缀匹配区间之前
+- 后 \`n-1-i\` 个字符 \`s[i+1..n-1]\` 从 \`t[suf[i]\` 开始逆向匹配到 \`t[t.length-1]\`，由 \`suf\` 定义保证
+- 三段不重叠（\`pre[i] <= pre[i] < suf[i]\`），且顺序正确 → \`s\` 是 \`t\` 的子序列 □
+
+**完备性**：若所有 \`i\` 都不满足 \`pre[i] < suf[i]\`，且 \`s\` 本身不是 \`t\` 的子序列，则替换任意一个字符都无法弥补前后缀之间的空隙 → \`false\` □
+
+---
+
+## 6. 复杂度分析
+
+- **时间复杂度**：\`O(n + m)\`，其中 \`n = s.length\`，\`m = t.length\`。前缀预处理 O(n + m)，后缀预处理 O(n + m)，枚举断点 O(n)。
+- **空间复杂度**：\`O(n)\`。\`pre\` 和 \`suf\` 各 O(n)。
+
+---
+
+## 7. 参考代码
+
+### C++
+
+\`\`\`cpp
+class Solution {
+public:
+    bool canMakeSubsequence(string s, string t) {
+        int n = s.size(), m = t.size();
+        // 不替换的情况：s 本身是 t 的子序列
+        // 前后缀预处理会覆盖这种情况（pre[n] <= m 时 i=n 的"虚拟替换点"成立）
+        // 但为清晰起见，统一走前后缀流程
+
+        // 前缀预处理：pre[i] = s[0..i-1] 匹配后 t 的下一个位置
+        vector<int> pre(n + 1);
+        pre[0] = 0;
+        for (int i = 0, j = 0; i < n; i++) {
+            while (j < m && t[j] != s[i]) j++;
+            if (j < m) { j++; pre[i + 1] = j; }
+            else { pre[i + 1] = m + 1; }  // 无法匹配，标记为越界
+        }
+
+        // 不替换直接是子序列
+        if (pre[n] <= m) return true;
+
+        // 后缀预处理：suf[i] = s[i..n-1] 逆向匹配时 t 的起始位置
+        vector<int> suf(n + 1);
+        suf[n] = m;
+        for (int i = n - 1, j = m - 1; i >= 0; i--) {
+            while (j >= 0 && t[j] != s[i]) j--;
+            if (j >= 0) { suf[i] = j; j--; }
+            else { suf[i] = -1; }  // 无法匹配
+        }
+
+        // 枚举替换点 i：替换 s[i]，前 i 个用 pre，后 n-1-i 个用 suf
+        for (int i = 0; i < n; i++) {
+            // pre[i] = s[0..i-1] 匹配后 t 的位置
+            // suf[i+1] = s[i+1..n-1] 匹配时 t 的起始位置
+            if (pre[i] < suf[i + 1]) return true;
+        }
+        return false;
+    }
+};
+\`\`\`
+
+### Python
+
+\`\`\`python
+class Solution:
+    def canMakeSubsequence(self, s: str, t: str) -> bool:
+        n, m = len(s), len(t)
+
+        # 前缀预处理：pre[i] = s[0..i-1] 匹配后 t 的下一个位置
+        pre = [0] * (n + 1)
+        j = 0
+        for i in range(n):
+            while j < m and t[j] != s[i]:
+                j += 1
+            if j < m:
+                j += 1
+                pre[i + 1] = j
+            else:
+                pre[i + 1] = m + 1  # 无法匹配
+
+        # 不替换直接是子序列
+        if pre[n] <= m:
+            return True
+
+        # 后缀预处理：suf[i] = s[i..n-1] 逆向匹配时 t 的起始位置
+        suf = [0] * (n + 1)
+        suf[n] = m
+        j = m - 1
+        for i in range(n - 1, -1, -1):
+            while j >= 0 and t[j] != s[i]:
+                j -= 1
+            if j >= 0:
+                suf[i] = j
+                j -= 1
+            else:
+                suf[i] = -1  # 无法匹配
+
+        # 枚举替换点 i
+        for i in range(n):
+            if pre[i] < suf[i + 1]:
+                return True
+        return False
+\`\`\`
+
+---
+
+## 8. 边界情况与易错点
+
+1. **\`s\` 本身就是 \`t\` 的子序列**：\`pre[n] <= m\` 时直接返回 \`true\`，无需替换。必须先检查此情况。
+
+2. **\`s\` 长度为 1**：只要 \`t\` 非空，替换 \`s[0]\` 为 \`t\` 的任意字符即可。代码中 \`pre[0]=0 < suf[1]=m\`（当 \`t\` 非空时 \`suf[1] >= 0\`），自动处理。
+
+3. **\`pre\` 越界标记**：当前缀无法匹配时，\`pre[i+1] = m+1\`（大于 \`m\`），保证后续 \`pre[i] < suf[i+1]\` 不会误判为 \`true\`。
+
+4. **\`suf\` 越界标记**：当后缀无法匹配时，\`suf[i] = -1\`，保证 \`pre[i] < suf[i+1]\` 中 \`suf\` 为 -1 时条件不成立。
+
+5. **\`pre[i]\` 与 \`suf[i+1]\` 的下标关系**：枚举替换点 \`i\` 时，前缀用 \`pre[i]\`（\`s[0..i-1]\`），后缀用 \`suf[i+1]\`（\`s[i+1..n-1]\`）。不要写成 \`pre[i]\` 和 \`suf[i]\`——\`suf[i]\` 包含了 \`s[i]\` 本身。
+
+6. **\`t\` 比 \`s\` 短**：若 \`m < n\`，即使替换一个字符也无法让 \`s\` 成为 \`t\` 的子序列（子序列长度不能超过原串）。前后缀预处理会自然处理（\`pre\` 很快越界）。
+
+---
+
+## 9. 相关题目与扩展
+
+- **LeetCode 392. 判断子序列**：本题的基础版（不允许替换），双指针 O(n+m)。
+- **LeetCode 2825. 循环增长使字符串变子序列**：允许循环移位的子序列判定。
+- **LeetCode 2486. 追加字符以获得子序列**：子序列匹配 + 贪心追加。
+- **LeetCode 1055. 形成字符串的最短路径**：子序列覆盖问题。
+
+**延伸思考**：
+
+- 如果允许替换**最多 k 个**字符呢？
+  - 仍可用前后缀预处理，但需要判断"前后缀之间能否用 k 个替换填补"，可用滑动窗口或 DP。
+- 如果允许替换为**任意 ASCII 字符**（不只是小写字母）？
+  - 无影响，替换点只需在 \`t\` 中有空位即可，与字符集无关。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

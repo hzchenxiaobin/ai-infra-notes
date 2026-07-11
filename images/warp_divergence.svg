@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="400" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Warp Divergence（分支发散）</text>
+
+  <!-- Warp threads -->
+  <text x="80" y="80" text-anchor="start" font-size="15" fill="#666666">一个 Warp 中的 8 个线程（实际为 32 个）</text>
+  <circle cx="100" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="100" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T0</text>
+  <circle cx="150" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="150" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T1</text>
+  <circle cx="200" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="200" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T2</text>
+  <circle cx="250" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="250" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T3</text>
+  <circle cx="300" cy="110" r="16" fill="#e57373"/>
+  <text x="300" y="115" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">T4</text>
+  <circle cx="350" cy="110" r="16" fill="#e57373"/>
+  <text x="350" y="115" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">T5</text>
+  <circle cx="400" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="400" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T6</text>
+  <circle cx="450" cy="110" r="16" fill="#6ab0ff"/>
+  <text x="450" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T7</text>
+
+  <!-- Code -->
+  <rect x="80" y="150" width="560" height="60" rx="8" fill="#f0ede4" stroke="#3a3a3a"/>
+  <text x="100" y="180" font-family="monospace" font-size="14" fill="#2b2b2b">if (threadIdx.x % 2 == 0) { /* 蓝色线程执行 */ }</text>
+  <text x="100" y="200" font-family="monospace" font-size="14" fill="#2b2b2b">else { /* 红色线程执行 */ }</text>
+
+  <!-- Divergence visualization -->
+  <rect x="80" y="240" width="300" height="100" rx="8" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="230" y="275" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">路径 A：蓝色线程</text>
+  <text x="230" y="300" text-anchor="middle" font-size="13" fill="#666666">执行的线程：T0, T1, T2, T3, T6, T7</text>
+  <text x="230" y="322" text-anchor="middle" font-size="13" fill="#666666">红色线程被 mask 掉</text>
+
+  <rect x="400" y="240" width="300" height="100" rx="8" fill="#e57373" opacity="0.3" stroke="#e57373" stroke-width="2"/>
+  <text x="550" y="275" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">路径 B：红色线程</text>
+  <text x="550" y="300" text-anchor="middle" font-size="13" fill="#666666">执行的线程：T4, T5</text>
+  <text x="550" y="322" text-anchor="middle" font-size="13" fill="#666666">蓝色线程被 mask 掉</text>
+
+  <text x="360" y="370" text-anchor="middle" font-size="14" fill="#e57373" font-weight="bold">两条路径串行执行 → 性能下降</text>
+  </g>
+</svg>

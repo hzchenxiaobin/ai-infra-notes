@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q4. 有限电量到达目标节点的最少时间</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link active" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Q4. 有限电量到达目标节点的最少时间</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 有限电量到达目标节点的最少时间
+
+## 1. 题目概述
+
+- **标题**：有限电量到达目标节点的最少时间
+- **链接**：[3977. 有限电量到达目标节点的最少时间](https://leetcode.cn/problems/minimum-time-to-reach-target-with-limited-power/)
+- **难度**：中等
+- **标签**：图、最短路、Dijkstra
+
+**题意简述**：给定一个有向带权图，每个节点 \`u\` 有一个转发耗电 \`cost[u]\`。信号从 \`source\` 出发，初始电量为 \`power\`，要到达 \`target\`。只有当剩余电量不少于 \`cost[u]\` 时，才能从节点 \`u\` 出发沿某条出边前进，经过边会消耗时间 \`ti\`，经过节点会消耗电量 \`cost[u]\`。求到达 \`target\` 的最小时间；若存在多条最短时间路径，返回其中剩余电量最大者对应的剩余电量。
+
+**返回值**：\`[最小时间, 最大剩余电量]\`，无法到达则返回 \`[-1, -1]\`。
+
+**关键约束**：
+
+- \`1 <= n <= 1000\`
+- \`0 <= edges.length <= 1000\`
+- \`1 <= ti <= 10^9\`
+- \`1 <= power <= 1000\`
+- \`1 <= cost[i] <= 2000\`
+
+---
+
+## 2. 示例
+
+### 示例 1
+
+\`\`\`text
+n = 5
+edges = [[0,1,1],[1,4,1],[0,2,1],[2,3,1],[3,4,1]]
+power = 4
+cost = [2,3,1,1,1]
+source = 0, target = 4
+\`\`\`
+
+- 路径 \`0 -> 1 -> 4\`：离开 0 后剩余 \`4 - 2 = 2 < cost[1] = 3\`，不合法。
+- 路径 \`0 -> 2 -> 3 -> 4\`：时间 \`1 + 1 + 1 = 3\`，耗电 \`cost[0] + cost[2] + cost[3] = 2 + 1 + 1 = 4\`，剩余 \`0\`。
+
+输出：\`[3, 0]\`
+
+### 示例 2
+
+\`\`\`text
+n = 3
+edges = [[0,1,2],[1,2,2],[2,0,2]]
+power = 3
+cost = [1,1,1]
+source = 1, target = 1
+\`\`\`
+
+起点即终点，无需移动。
+
+输出：\`[0, 3]\`
+
+### 示例 3
+
+\`\`\`text
+n = 4
+edges = [[0,1,3],[2,3,4]]
+power = 3
+cost = [1,1,1,1]
+source = 0, target = 3
+\`\`\`
+
+不存在从 0 到 3 的路径。
+
+输出：\`[-1, -1]\`
+
+---
+
+## 2.1 示例图解
+
+![示例 1 图结构](../images/min_time_max_power_example_graph.png)
+
+上图展示了示例 1 的图结构：节点下方紫色标注为 \`cost[u]\`，边上橙色标注为通过该边所需时间 \`t\`。节点 0 为起点（蓝色），节点 4 为终点（绿色）。
+
+---
+
+## 3. 思路
+
+### 3.1 暴力思路
+
+枚举所有从 \`source\` 到 \`target\` 的简单路径，计算每条路径的时间和耗电，筛选合法路径后取时间最小、剩余电量最大者。
+
+- 时间复杂度：最坏 \`O(n!)\`，不可接受。
+- 空间复杂度：\`O(n)\`。
+
+### 3.2 错误尝试：每个节点只保留一个状态
+
+初看像是普通 Dijkstra：每个节点保留 \`(最短时间, 该时间下的最小耗电)\`。但这个做法**不正确**。
+
+**反例**：
+
+\`\`\`text
+节点：0, 1, 2, 3
+边：0→3(t=1), 3→1(t=1), 0→1(t=3), 1→2(t=1)
+cost = [1, 1, 1, 10], power = 11, source = 0, target = 2
+\`\`\`
+
+- 路径 \`0→3→1\`：到达 1 的时间为 2，但已耗电 1+10=11，剩余 0，无法再走 \`1→2\`。
+- 路径 \`0→1\`：到达 1 的时间为 3，已耗电 1，剩余 10，可以走 \`1→2\`。
+
+如果只保留“到达 1 的最短时间状态”\`(2, 11)\`，就会误判 1 是死路，漏掉正确答案 \`[4, 9]\`。
+
+![反例图](../images/min_time_max_power_counterexample.png)
+
+**核心原因**：时间更短的路径可能耗电更多，导致后续因电量不足无法继续；而一条稍慢但更省电的路径反而能走通。因此每个节点不能只保留一个状态。
+
+### 3.3 正确思路：按“耗电”拆点的 Dijkstra
+
+由于 \`power <= 1000\`，可以把**已耗电量**也作为状态的一维：
+
+\`\`\`text
+dp[u][p] = 从 source 到达节点 u，且总耗电恰好为 p 时的最小时间
+\`\`\`
+
+状态转移：在节点 \`u\` 且已耗电 \`p\` 时，若 \`p + cost[u] <= power\`，可以走边 \`u→v\`（耗时 \`t\`），转移到 \`dp[v][p + cost[u]]\`：
+
+\`\`\`text
+dp[v][p + cost[u]] = min(dp[v][p + cost[u]], dp[u][p] + t)
+\`\`\`
+
+最终答案：
+
+- \`minTime = min_p dp[target][p]\`
+- 在所有满足 \`dp[target][p] == minTime\` 的 \`p\` 中取最小值，剩余电量 = \`power - minPower\`
+- 若 \`minTime == INF\`，返回 \`[-1, -1]\`
+
+这等价于把原图的每个节点 \`u\` 拆成 \`power + 1\` 个状态点 \`(u, p)\`，然后在新图上跑 Dijkstra。
+
+![状态设计：按耗电拆点](../images/min_time_max_power_state_design.png)
+
+---
+
+## 4. 算法细节
+
+1. 建图：使用邻接表存储有向边。
+2. 初始化：\`dp[source][0] = 0\`，其余 \`dp[u][p] = INF\`。
+3. 优先队列：元素为 \`(time, power_consumed, node)\`，按时间优先排序。
+4. 每次取出队首状态 \`(t, p, u)\`：
+   - 若 \`t > dp[u][p]\`，说明该状态已被更新过，跳过。
+   - 遍历 \`u\` 的每条出边 \`u→v\`（耗时 \`w\`）：
+     - 若 \`p + cost[u] > power\`，电量不足，跳过。
+     - 更新 \`dp[v][p + cost[u]] = min(dp[v][p + cost[u]], t + w)\`，并入队。
+5. 最终从 \`dp[target][p]\`（\`0 <= p <= power\`）中找出最小时间，以及对应的最小耗电，计算剩余电量。
+
+下图展示了上述反例的完整 DP 执行过程：
+
+![DP 执行过程](../images/min_time_max_power_dijkstra_steps.png)
+
+---
+
+## 5. 正确性证明
+
+**引理 1**：对于任意状态 \`(u, p)\`，当算法从优先队列中第一次取出满足 \`curTime == dp[u][p]\` 的状态时，\`dp[u][p]\` 已经是从 \`source\` 到达 \`(u, p)\` 的最小时间。
+
+**证明**：新图的所有边权（即原图边的时间 \`t\`）均为正数。优先队列按时间从小到大弹出状态，因此第一次从队列中取出 \`(u, p)\` 时，其时间一定是所有到达 \`(u, p)\` 的路径中最小的。后续的松弛不会再产生更小的时间。∎
+
+**引理 2**：如果存在一条从 \`source\` 到 \`target\` 的合法路径，总耗时为 \`T\`，总耗电为 \`P\`，那么算法最终会有 \`dp[target][P] <= T\`。
+
+**证明**：对路径上的节点和边进行归纳。初始 \`dp[source][0] = 0\`。假设路径上经过节点 \`u\` 时 \`dp[u][p] <=\` 路径到 \`u\` 的实际时间。从 \`u\` 出发走合法边到 \`v\`，耗电增加 \`cost[u]\`，时间增加 \`t\`，算法在松弛时会尝试更新 \`dp[v][p + cost[u]]\`。因此最终 \`dp[target][P]\` 不会大于路径实际时间 \`T\`。∎
+
+**定理**：算法返回的 \`answer\` 满足题意。
+
+**证明**：
+
+- 若 \`target\` 不可达，由引理 2 可知所有 \`dp[target][p]\` 保持 INF，\`minTime == INF\`，返回 \`[-1, -1]\` 正确。
+- 若可达，设实际最小时间为 \`T*\`。由引理 2，存在某个 \`p\` 使得 \`dp[target][p] <= T*\`；而 \`T*\` 是下界，故 \`minTime = T*\`。
+- 在所有 \`dp[target][p] == T*\` 的状态中，我们取最小耗电 \`P*\`，则剩余电量 \`power - P*\` 是所有最短时间路径中的最大剩余电量。∎
+
+---
+
+## 6. 复杂度分析
+
+- **状态数**：\`n * (power + 1)\`，最多 \`1000 * 1001 ≈ 10^6\`。
+- **时间复杂度**：\`O((n * power + m * power) * log(n * power))\`。每个状态最多入队一次，每次优先队列操作 \`O(log(n * power))\`；每条原图边在每种耗电状态下都可能触发一次松弛，共 \`O(m * power)\` 次松弛。
+- **空间复杂度**：\`O(n * power + m)\`，用于 \`dp\` 数组和邻接表。
+
+---
+
+## 7. 参考代码（C++）
+
+\`\`\`cpp
+class Solution {
+public:
+    vector<long long> minTimeMaxPower(int n, vector<vector<int>>& edges, int power,
+                                      vector<int>& cost, int source, int target) {
+        using State = tuple<long long, int, int>; // (time, power_consumed, node)
+        // 注意：力扣在序列化 long long 时要求值落在 [-(2^53-1), 2^53-1] 范围内。
+        // 因此 INF 必须小于 2^53。1e15 足够大（大于任何合法时间 1e12），且安全。
+        const long long INF = (long long)1e15;
+
+        // 建图
+        vector<vector<pair<int, long long>>> g(n);
+        for (auto& e : edges) {
+            int u = e[0], v = e[1];
+            long long t = e[2];
+            g[u].push_back({v, t});
+        }
+
+        // dp[u][p] = 到达 u 且总耗电为 p 时的最小时间
+        vector<vector<long long>> dp(n, vector<long long>(power + 1, INF));
+        dp[source][0] = 0;
+
+        // 优先队列：按时间优先
+        priority_queue<State, vector<State>, greater<State>> pq;
+        pq.push({0, 0, source});
+
+        while (!pq.empty()) {
+            auto [curTime, curPower, u] = pq.top();
+            pq.pop();
+
+            // 跳过已被更优状态覆盖的过时状态
+            if (curTime > dp[u][curPower]) continue;
+
+            for (auto& [v, t] : g[u]) {
+                // 检查是否还有足够电量从 u 转发
+                int np = curPower + cost[u];
+                if (np > power) continue;
+
+                long long nt = curTime + t;
+                if (nt < dp[v][np]) {
+                    dp[v][np] = nt;
+                    pq.push({nt, np, v});
+                }
+            }
+        }
+
+        // 找最短时间
+        long long minTime = INF;
+        for (int p = 0; p <= power; p++) {
+            minTime = min(minTime, dp[target][p]);
+        }
+
+        if (minTime == INF) {
+            return {-1, -1};
+        }
+
+        // 在所有最短时间中找耗电最小的，从而剩余电量最大
+        long long minPower = INF;
+        for (int p = 0; p <= power; p++) {
+            if (dp[target][p] == minTime) {
+                minPower = min(minPower, (long long)p);
+            }
+        }
+
+        return {minTime, power - minPower};
+    }
+};
+\`\`\`
+
+---
+
+## 8. 边界情况与常见错误
+
+| 情况 | 说明 |
+|------|------|
+| \`source == target\` | 直接返回 \`[0, power]\`，无需遍历。 |
+| 无出边 / 不可达 | 返回 \`[-1, -1]\`。 |
+| 电量不足 | 即使时间更短，若 \`curPower + cost[u] > power\` 也不能走这条边。 |
+| 一状态 Dijkstra 错误 | 每个节点只保留 \`(最短时间, 最小耗电)\` 会漏解：更快路径可能耗电更多导致后续断电，更慢路径反而能走通。 |
+| 状态数 | \`dp\` 数组大小为 \`n * (power + 1)\`，注意 \`power <= 1000\`，不会爆内存。 |
+| 大数溢出 | \`ti\` 最大 \`10^9\`，路径最多 \`n\` 条边，时间最大约 \`10^12\`，需用 \`long long\`。 |
+| INF 取值过大 | 若用 \`LLONG_MAX / 4\` 作 INF，力扣在序列化 \`long long\` 时可能因超出 JSON 安全整数范围 \`[-(2^53-1), 2^53-1]\` 而报错。建议使用 \`1e15\` 左右的 INF，并显式构造返回数组。 |
+
+---
+
+## 9. 相关题目与扩展
+
+- **普通 Dijkstra**：LeetCode 743. 网络延迟时间
+- **带限制的最短路**：LeetCode 787. K 站中转内最便宜的航班
+- **二维状态最短路**：LeetCode 1631. 最小体力消耗路径
+- **扩展**：若要求“电量不低于 0 的前提下最短时间”，可将电量也作为一维状态，使用 \`(time, remaining_power, node)\` 的 Dijkstra。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="700" viewBox="0 0 960 700" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="700" fill="#fdfcf7"/>
+  <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Manacher 对称加速实例：s = "abacabacaba"</text>
+  <path d="M 290 42 Q 480 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Array header ===== -->
+  <text x="480" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">下标与字符</text>
+  <g font-size="9" fill="#888">
+    <text x="80" y="90" text-anchor="middle">idx</text>
+    <text x="80" y="108" text-anchor="middle">val</text>
+  </g>
+  <!-- 11 cells: 0..10, chars a b a c a b a c a b a -->
+  <g font-size="10" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="110" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="140" y="93" text-anchor="middle" font-size="8" fill="#888">0</text><text x="140" y="108" text-anchor="middle" font-weight="bold">a</text>
+    <g filter="url(#sk)"><rect x="170" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="200" y="93" text-anchor="middle" font-size="8" fill="#888">1</text><text x="200" y="108" text-anchor="middle" font-weight="bold">b</text>
+    <g filter="url(#sk)"><rect x="230" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="260" y="93" text-anchor="middle" font-size="8" fill="#888">2</text><text x="260" y="108" text-anchor="middle" font-weight="bold">a</text>
+    <g filter="url(#sk)"><rect x="290" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="320" y="93" text-anchor="middle" font-size="8" fill="#888">3</text><text x="320" y="108" text-anchor="middle" font-weight="bold">c</text>
+    <g filter="url(#sk)"><rect x="350" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="380" y="93" text-anchor="middle" font-size="8" fill="#888">4</text><text x="380" y="108" text-anchor="middle" font-weight="bold">a</text>
+    <g filter="url(#sk)"><rect x="410" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="440" y="93" text-anchor="middle" font-size="8" fill="#888">5</text><text x="440" y="108" text-anchor="middle" font-weight="bold">b</text>
+    <g filter="url(#sk)"><rect x="470" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="500" y="93" text-anchor="middle" font-size="8" fill="#888">6</text><text x="500" y="108" text-anchor="middle" font-weight="bold">a</text>
+    <g filter="url(#sk)"><rect x="530" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="560" y="93" text-anchor="middle" font-size="8" fill="#888">7</text><text x="560" y="108" text-anchor="middle" font-weight="bold">c</text>
+    <g filter="url(#sk)"><rect x="590" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="620" y="93" text-anchor="middle" font-size="8" fill="#888">8</text><text x="620" y="108" text-anchor="middle" font-weight="bold">a</text>
+    <g filter="url(#sk)"><rect x="650" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="680" y="93" text-anchor="middle" font-size="8" fill="#888">9</text><text x="680" y="108" text-anchor="middle" font-weight="bold">b</text>
+    <g filter="url(#sk)"><rect x="710" y="78" width="60" height="22" fill="#f0ede4" stroke="#9e9e9e" stroke-width="0.8"/></g><text x="740" y="93" text-anchor="middle" font-size="8" fill="#888">10</text><text x="740" y="108" text-anchor="middle" font-weight="bold">a</text>
+  </g>
+
+  <!-- ===== i=3: naive expansion builds big palindrome ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="128" width="840" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="80" y="150" font-size="12" font-weight="bold" fill="#2b6e9e">i=3：朴素扩展 → R[3]=4，回文 [0,6]="abacaba"，更新 l=0, r=6, mr=3</text>
+  <text x="80" y="170" font-size="10" fill="#444" font-family="monospace">比较 a[2]a[4]='a''a'✓ → a[1]a[5]='b''b'✓ → a[0]a[6]='a''a'✓ → 越界停</text>
+  <!-- highlight [0,6] -->
+  <path d="M 110 122 L 105 116 L 535 116 L 530 122" stroke="#4a8edb" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+  <text x="320" y="112" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">已知回文 [0,6]</text>
+  <text x="80" y="200" font-size="10" fill="#888">此时 [l=0, r=6] 是右端最远的回文，后续 i=4,5,6 都在 [0,6] 内，可对称加速</text>
+  <text x="80" y="216" font-size="10" fill="#888">mr=3（中心），mir = 2×3 - i</text>
+
+  <!-- ===== i=7: the key acceleration ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="244" width="840" height="180" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="268" font-size="13" font-weight="bold" fill="#7a5415">i=7：对称加速大幅生效 ★★★（省 3 次比较）</text>
+
+  <!-- after i=5 updated [l=0,r=10], mr=5 -->
+  <text x="80" y="290" font-size="11" fill="#444">此时已知回文 [l=0, r=10]，mr=5（i=5 时扩展出整个串 [0,10]）</text>
+
+  <!-- show mir=3, mr=5, i=7 -->
+  <text x="80" y="314" font-size="11" fill="#444" font-family="monospace">mir = 2×mr - i = 2×5 - 7 = 3    R[mir] = R[3] = 4</text>
+  <text x="80" y="334" font-size="11" fill="#444" font-family="monospace">k = min(R[3], r-i) = min(4, 10-7) = min(4, 3) = 3  ← 直接跳到 3！</text>
+
+  <!-- highlight the three positions on array -->
+  <!-- mir=3 (purple) -->
+  <g filter="url(#sk)"><rect x="290" y="352" width="60" height="22" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="320" y="367" text-anchor="middle" font-size="8" fill="#5a3a7a" font-weight="bold">mir=3</text>
+  <!-- mr=5 (blue) -->
+  <g filter="url(#sk)"><rect x="410" y="352" width="60" height="22" fill="#4a8edb" opacity="0.5" stroke="#2b6e9e" stroke-width="1.2"/></g>
+  <text x="440" y="367" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">mr=5</text>
+  <!-- i=7 (orange) -->
+  <g filter="url(#sk)"><rect x="530" y="352" width="60" height="22" fill="#e8a838" opacity="0.5" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="560" y="367" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">i=7</text>
+
+  <!-- symmetry bracket -->
+  <path d="M 320 380 Q 440 392 560 380" stroke="#8e5db8" stroke-width="1.2" stroke-dasharray="3 2" fill="none" filter="url(#sk)"/>
+  <text x="440" y="402" text-anchor="middle" font-size="9" fill="#5a3a7a">关于 mr=5 对称</text>
+
+  <text x="80" y="416" font-size="11" fill="#2e6e2e" font-weight="bold">省了：a[6]a[8], a[5]a[9], a[4]a[10] 共 3 次比较（由对称性直接得知相等）</text>
+
+  <!-- ===== Summary table ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="440" width="840" height="130" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="462" font-size="12" font-weight="bold" fill="#2b2b2b">各中心加速汇总（已知 [l=0, r=10], mr=5）</text>
+  <g font-size="11" fill="#2b2b2b">
+    <text x="80" y="484" font-weight="bold" fill="#888">i</text>
+    <text x="150" y="484" font-weight="bold" fill="#888">mir</text>
+    <text x="220" y="484" font-weight="bold" fill="#888">R[mir]</text>
+    <text x="310" y="484" font-weight="bold" fill="#888">r-i</text>
+    <text x="400" y="484" font-weight="bold" fill="#888">k=min</text>
+    <text x="520" y="484" font-weight="bold" fill="#888">省了几次比较</text>
+
+    <text x="80" y="504">4</text><text x="150" y="504">2</text><text x="220" y="504">0</text><text x="310" y="504">6</text><text x="400" y="504">0</text><text x="520" y="504" fill="#888">0 次</text>
+    <text x="80" y="522">5</text><text x="150" y="504"></text>
+  </g>
+  <!-- redo table cleanly with rows -->
+  <g font-size="11" fill="#2b2b2b">
+    <text x="80" y="504">4</text><text x="150" y="504">2</text><text x="220" y="504">0</text><text x="310" y="504">6</text><text x="400" y="504">0</text><text x="520" y="504" fill="#888">0 次</text>
+    <text x="80" y="524">6</text><text x="150" y="524">4</text><text x="220" y="524">0</text><text x="310" y="524">4</text><text x="400" y="524">0</text><text x="520" y="524" fill="#888">0 次</text>
+    <text x="80" y="544" font-weight="bold" fill="#c98a2b">7</text><text x="150" y="544" font-weight="bold" fill="#c98a2b">3</text><text x="220" y="544" font-weight="bold" fill="#c98a2b">4</text><text x="310" y="544" font-weight="bold" fill="#c98a2b">3</text><text x="400" y="544" font-weight="bold" fill="#c98a2b">3</text><text x="520" y="544" font-weight="bold" fill="#c98a2b">3 次 ★</text>
+    <text x="80" y="564">8</text><text x="150" y="564">2</text><text x="220" y="564">0</text><text x="310" y="564">2</text><text x="400" y="564">0</text><text x="520" y="564" fill="#888">0 次</text>
+  </g>
+
+  <!-- ===== Conclusion ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="590" width="840" height="90" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="80" y="614" font-size="12" font-weight="bold" fill="#2e6e2e">核心结论</text>
+  <text x="80" y="636" font-size="11" fill="#444">i=7 时，mir=3 的回文半径 R[3]=4，但受 r=10 限制只能复用 3 层 → k=3</text>
+  <text x="80" y="656" font-size="11" fill="#444">直接跳过 a[6]a[8], a[5]a[9], a[4]a[10] 三次比较，从 a[3]a[11] 开始扩展</text>
+  <text x="80" y="674" font-size="11" fill="#2e6e2e" font-weight="bold">mir 的回文越大 + 离 r 越远 → 省的比较越多 → 这就是 O(n) 的来源</text>
+</svg>

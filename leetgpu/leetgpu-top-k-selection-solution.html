@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetGPU Top K Selection 题解</title>
+    <link rel="stylesheet" href="../css/style.css?v=4">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="./index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetGPU 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="./index.html">📌 LeetGPU 题解</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 1</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-vector-addition-solution.html"><span class="nav-day-tag">day1</span>Vector Addition</a>
+<a class="nav-link" href="./leetgpu-relu-solution.html"><span class="nav-day-tag">day2</span>ReLU</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day3</span>Matrix Addition</a>
+<a class="nav-link" href="./leetgpu-matrix-transpose-solution.html"><span class="nav-day-tag">day4</span>Matrix Transpose</a>
+<a class="nav-link" href="./leetgpu-reduction-solution.html"><span class="nav-day-tag">day5</span>Reduction</a>
+<a class="nav-link" href="./leetgpu-matrix-multiplication-solution.html"><span class="nav-day-tag">day6</span>Matrix Multiplication</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day7</span>Matrix Addition</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 2</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-prefix-sum-solution.html"><span class="nav-day-tag">day1</span>Prefix Sum</a>
+<a class="nav-link" href="./leetgpu-gemm-solution.html"><span class="nav-day-tag">day2</span>GEMM</a>
+<a class="nav-link" href="./leetgpu-2d-convolution-solution.html"><span class="nav-day-tag">day3</span>2D Convolution</a>
+<a class="nav-link" href="./leetgpu-softmax-solution.html"><span class="nav-day-tag">day4</span>Softmax</a>
+<a class="nav-link" href="./leetgpu-softmax-attention-solution.html"><span class="nav-day-tag">day5</span>Softmax Attention</a>
+<a class="nav-link" href="./leetgpu-histogramming-solution.html"><span class="nav-day-tag">day6</span>Histogramming</a>
+<a class="nav-link" href="./leetgpu-max-subarray-sum-solution.html"><span class="nav-day-tag">day7</span>Max Subarray Sum</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 3</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-1d-convolution-solution.html"><span class="nav-day-tag">day1</span>1D Convolution</a>
+<a class="nav-link" href="./leetgpu-softmax-solution.html"><span class="nav-day-tag">day2</span>Softmax</a>
+<a class="nav-link" href="./leetgpu-argmax-solution.html"><span class="nav-day-tag">day3</span>Argmax</a>
+<a class="nav-link" href="./leetgpu-attention-solution.html"><span class="nav-day-tag">day4</span>Attention</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day5</span>Matrix Addition</a>
+<a class="nav-link" href="./leetgpu-rms-normalization-solution.html"><span class="nav-day-tag">day6</span>RMS Normalization</a>
+<a class="nav-link" href="./leetgpu-causal-self-attention-solution.html"><span class="nav-day-tag">day7</span>Causal Self-Attention</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 4</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-softmax-attention-solution.html"><span class="nav-day-tag">day1</span>Softmax Attention</a>
+<a class="nav-link" href="./leetgpu-attention-solution.html"><span class="nav-day-tag">day2</span>Attention</a>
+<a class="nav-link" href="./leetgpu-dot-product-solution.html"><span class="nav-day-tag">day3</span>Dot Product</a>
+<a class="nav-link" href="./leetgpu-batched-matrix-multiplication-solution.html"><span class="nav-day-tag">day4</span>Batched Matrix Multiplication</a>
+<a class="nav-link" href="./leetgpu-matrix-copy-solution.html"><span class="nav-day-tag">day5</span>Matrix Copy</a>
+<a class="nav-link" href="./leetgpu-multi-head-attention-solution.html"><span class="nav-day-tag">day6</span>Multi-Head Attention</a>
+<a class="nav-link" href="./leetgpu-gpt-2-transformer-block-solution.html"><span class="nav-day-tag">day7</span>GPT-2 Transformer Block</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 5</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-int8-kv-cache-attention-solution.html"><span class="nav-day-tag">day1</span>INT8 KV-Cache Attention</a>
+<a class="nav-link" href="./leetgpu-grouped-query-attention-solution.html"><span class="nav-day-tag">day2</span>Grouped Query Attention (GQA)</a>
+<a class="nav-link" href="./leetgpu-speculative-decoding-verification-solution.html"><span class="nav-day-tag">day3</span>Speculative Decoding Verification</a>
+<a class="nav-link" href="./leetgpu-causal-self-attention-solution.html"><span class="nav-day-tag">day4</span>Causal Self-Attention</a>
+<a class="nav-link" href="./leetgpu-token-embedding-layer-solution.html"><span class="nav-day-tag">day5</span>Token Embedding Layer</a>
+<a class="nav-link" href="./leetgpu-weight-dequantization-solution.html"><span class="nav-day-tag">day6</span>Weight Dequantization</a>
+<a class="nav-link" href="./leetgpu-simple-inference-solution.html"><span class="nav-day-tag">day7</span>Simple Inference</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 6</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-simple-inference-solution.html"><span class="nav-day-tag">day1</span>Simple Inference</a>
+<a class="nav-link" href="./leetgpu-max-subarray-sum-solution.html"><span class="nav-day-tag">day2</span>Max Subarray Sum</a>
+<a class="nav-link" href="./leetgpu-stream-compaction-solution.html"><span class="nav-day-tag">day3</span>Stream Compaction</a>
+<a class="nav-link" href="./leetgpu-segmented-prefix-sum-solution.html"><span class="nav-day-tag">day4</span>Segmented Prefix Sum</a>
+<a class="nav-link" href="./leetgpu-batched-matrix-multiplication-solution.html"><span class="nav-day-tag">day5</span>Batched Matrix Multiplication</a>
+<a class="nav-link active" href="./leetgpu-top-k-selection-solution.html"><span class="nav-day-tag">day6</span>Top K Selection</a>
+<a class="nav-link" href="./leetgpu-dot-product-solution.html"><span class="nav-day-tag">day7</span>Dot Product</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 7</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-matrix-copy-solution.html"><span class="nav-day-tag">day1</span>Matrix Copy</a>
+<a class="nav-link" href="./leetgpu-vector-reversal-solution.html"><span class="nav-day-tag">day2</span>Vector Reversal</a>
+<a class="nav-link" href="./leetgpu-scalar-multiply-solution.html"><span class="nav-day-tag">day3</span>Scalar Multiply</a>
+<a class="nav-link" href="./leetgpu-matrix-transpose-solution.html"><span class="nav-day-tag">day4</span>Matrix Transpose</a>
+<a class="nav-link" href="./leetgpu-element-reversal-solution.html"><span class="nav-day-tag">day5</span>Element Reversal</a>
+<a class="nav-link" href="./leetgpu-reduction-solution.html"><span class="nav-day-tag">day6</span>Reduction</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day7</span>Matrix Addition</a>
+    </div>
+  </div>
+</div>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../index.html">← Week 1</a>
+<a class="nav-link" href="../week2/index.html">← Week 2</a>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">LeetGPU Top K Selection 题解</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# LeetGPU Top K Selection 题解
+
+## 1. 题目概述
+
+- **标题 / 题号**：Top K Selection（#29，medium）
+- **链接**：https://leetgpu.com/challenges/top-k-selection
+- **难度**：中等
+- **标签**：CUDA、bitonic sort、堆归约、selection、reduction
+
+**题意**：给定长度为 \`N\` 的 \`int32\` 数组 \`input\` 和一个整数 \`k\`，找出其中**最大的 k 个元素**（无需排序，但需正确选出 top-k）。
+
+**示例**：
+
+\`\`\`text
+input = [5, 2, 8, 1, 9, 3, 7, 4], k = 3
+输出 = [7, 8, 9]（顺序可能不同，但必须是最大的 3 个）
+\`\`\`
+
+**约束**：\`1 ≤ k ≤ N ≤ 10^6\`；性能测试取大 \`N\`。
+
+> 💡 这道题的 **top-k 选择**与 [Week6 Day6](../../aiinfra/week6/day6/index.html) benchmark 的 P99 latency 计算同构——P99 就是"找出延迟排第 99 百分位的值"，本质是 top-k selection（k=N×0.01，选第 k 小）。benchmark 的 \`percentile()\` 是串行排序版，这道题用 GPU 并行加速。
+
+## 2. CPU 基线 / 朴素 GPU 方法
+
+### CPU 串行
+
+\`\`\`cpp
+// 方法 1：完整排序取后 k 个 → O(N log N)
+sort(input, input + N);
+// top-k = input[N-k .. N-1]
+
+// 方法 2：最小堆维护 k 个 → O(N log k)
+priority_queue<int, vector<int>, greater<int>> pq;   // 最小堆
+for (int x : input) {
+    pq.push(x);
+    if (pq.size() > k) pq.pop();   // 堆顶是最小的，弹出
+}
+// 堆中剩 top-k
+\`\`\`
+
+### 朴素 GPU（完整排序）
+
+\`\`\`cuda
+// 对整个数组做 bitonic sort，然后取后 k 个
+// 瓶颈：N=10^6 时排序开销大，但只需 top-k，全排序浪费
+\`\`\`
+
+**瓶颈**：只需 top-k 却全排序，\`O(N log N)\` 浪费——\`k\` 远小于 \`N\` 时尤其严重。
+
+## 3. GPU 设计
+
+### 3.1 并行化策略：bitonic sort + 取前 k
+
+![Top K Selection：bitonic 排序 + 取前 k](./images/top_k_selection_overview.svg)
+
+策略选择取决于 \`k\` 与 \`N\` 的关系：
+
+| 场景 | 策略 | 复杂度 |
+|------|------|--------|
+| \`k\` 接近 \`N\`（如 top 50%） | **bitonic sort** 全排序取后 k | \`O(N log²N)\` |
+| \`k\` 远小于 \`N\`（如 top 0.1%） | **block 归约 + 堆/筛选** | \`O(N)\` + \`O(k log k)\` |
+| 通用 | **radix select**（桶筛选） | \`O(N)\` |
+
+教学版用 **bitonic sort**（最直观的并行排序，适合 GPU）。
+
+### 3.2 Bitonic Sort 原理
+
+Bitonic 序列：先升后降（或先降后升）的序列。Bitonic sort 利用性质：
+1. 把无序数组逐步变成 bitonic 序列（compare-swap 网络）
+2. 对 bitonic 序列做 bitonic merge（递归对半比较交换）
+3. \`O(log²N)\` 步，每步 \`O(N)\` 并行比较 → 适合 GPU
+
+### 3.3 存储层次使用
+
+| 数据 | 存储 | 说明 |
+|------|------|------|
+| \`input[]\` | global memory | 原地排序 |
+| 比较对 | registers | compare-swap 在 register 内 |
+| block 间归约 | global memory | 大 N 时多 block 协作 |
+
+## 4. Kernel 实现
+
+\`\`\`cuda
+// top_k_selection.cu —— Top K Selection（bitonic sort + 取后 k）
+// 编译命令: nvcc -O3 -arch=sm_80 top_k_selection.cu -o top_k
+// 运行:     ./top_k
+
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+#include <cuda_runtime.h>
+
+// bitonic sort kernel：对一个 block 内的数据排序（升序）
+// 每步 compare-swap：比较距离 j 的两元素，按方向交换
+__global__ void bitonic_sort_kernel(int* data, int N) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= N) return;
+
+    // log2(N) 个阶段，每阶段做 bitonic merge
+    for (int k = 2; k <= N; k *= 2) {           // 子序列长度
+        for (int j = k / 2; j > 0; j /= 2) {    // 比较距离
+            int i = tid ^ j;                     // 配对索引
+            if (i > tid && i < N) {
+                bool ascending = ((tid & k) == 0);
+                if ((ascending && data[tid] > data[i]) ||
+                    (!ascending && data[tid] < data[i])) {
+                    // 交换（用原子或 warp shuffle；教学版用简单条件）
+                    int tmp = data[tid];
+                    data[tid] = data[i];
+                    data[i] = tmp;
+                }
+            }
+            __syncthreads();
+        }
+    }
+}
+
+// 教学版：用单 block 排序小数组（N ≤ 1024），正式版需多 block 协作
+// 注意：上述 __syncthreads() 跨 block 无效，正式版用 cooperative groups 或多 kernel
+//       此处简化演示 bitonic sort 的 compare-swap 逻辑
+
+// 更实用的版本：每 thread 处理多元素，block 内 shared memory 排序
+#define BLOCK 256
+
+__global__ void bitonic_sort_block(int* data, int N) {
+    __shared__ int sdata[2 * BLOCK];
+    int tid = threadIdx.x;
+
+    // 加载数据到 shared memory
+    if (tid < N) sdata[tid] = data[tid];
+    else sdata[tid] = INT_MIN;
+    __syncthreads();
+
+    // bitonic sort in shared memory
+    for (int k = 2; k <= 2 * BLOCK; k *= 2) {
+        for (int j = k / 2; j > 0; j /= 2) {
+            int i = tid ^ j;
+            if (i > tid) {
+                bool up = ((tid & k) == 0);
+                int a = sdata[tid], b = sdata[i];
+                if ((up && a > b) || (!up && a < b)) {
+                    sdata[tid] = b; sdata[i] = a;
+                }
+            }
+            __syncthreads();
+        }
+    }
+    if (tid < N) data[tid] = sdata[tid];
+}
+
+int main() {
+    int N = 8, k = 3;
+    std::vector<int> h_input = {5, 2, 8, 1, 9, 3, 7, 4};
+
+    int *d_data;
+    cudaMalloc(&d_data, N * sizeof(int));
+    cudaMemcpy(d_data, h_input.data(), N * sizeof(int), cudaMemcpyHostToDevice);
+
+    // bitonic sort（升序）
+    bitonic_sort_block<<<1, 2*BLOCK>>>(d_data, N);
+    cudaDeviceSynchronize();
+
+    // 取后 k 个（最大的 k 个）
+    std::vector<int> h_out(N);
+    cudaMemcpy(h_out.data(), d_data, N * sizeof(int), cudaMemcpyDeviceToHost);
+
+    printf("Sorted: ");
+    for (int x : h_out) printf("%d ", x);
+    printf("\\nTop %d: ", k);
+    for (int i = N - k; i < N; i++) printf("%d ", h_out[i]);
+    printf("\\n");
+
+    cudaFree(d_data);
+    return 0;
+}
+\`\`\`
+
+> 💡 提交给 LeetGPU 平台时，把 \`bitonic_sort_block\` 填进 \`solve\`。教学版用单 block shared memory 排序（N ≤ 512），正式版大 N 需多 block 协作（cooperative groups 或多 kernel launch）。bitonic sort 的核心是 \`compare-swap\` 网络：\`tid ^ j\` 配对、\`(tid & k)==0\` 定方向。
+
+## 5. 性能分析与优化
+
+\`\`\`bash
+nvcc -O3 -arch=sm_80 top_k_selection.cu -o top_k
+ncu --set full ./top_k | rg -i "Memory Throughput|Occupancy"
+\`\`\`
+
+**关键指标**：
+
+| 方法 | 时间复杂度 | 适合场景 |
+|------|-----------|---------|
+| 完整 bitonic sort | \`O(N log²N)\` | k 接近 N |
+| 堆归约（block 维护 k-堆） | \`O(N log k)\` | k 远小于 N |
+| radix select（桶筛选） | \`O(N)\` | 通用，k 任意 |
+
+**优化方向**：
+
+1. **k 远小于 N 时用堆归约**：每个 block 维护大小 k 的最小堆，扫描数据弹出堆顶，最后归约各 block 的堆
+2. **radix select**：按高位 radix 分桶，递归选包含第 k 大的桶，\`O(N)\` 复杂度
+3. **warp 级归约**：block 内用 \`__shfl_down_sync\` 做 warp 归约，减少 shared memory 竞争
+4. **多 block 协作**：大 N 用 cooperative groups，跨 block bitonic merge
+
+## 6. 复杂度分析
+
+| 维度 | bitonic sort | 堆归约 | radix select |
+|------|-------------|--------|-------------|
+| 时间 | \`O(N log²N)\` | \`O(N log k)\` | \`O(N)\` |
+| 空间 | \`O(N)\` shared | \`O(k)\` per block | \`O(N)\` 桶 |
+| 瓶颈 | compute（比较网络） | compute（堆操作） | memory（桶扫描） |
+| 适合 | k≈N | k≪N | 通用 |
+
+> 💡 **一句话总结**：Top K Selection 是 benchmark P99 统计的 GPU 加速版——bitonic sort 的 compare-swap 网络并行排序，对应 P99 用排序后取分位数。k≪N 时用堆归约或 radix select 避免 \`O(N log²N)\` 全排序浪费。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="520" height="360" fill="#fafafa"/>
+
+  <text x="260" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">状态转移：f(i) = f(i-1) + f(i-2)</text>
+  <text x="260" y="44" text-anchor="middle" font-size="11" fill="#888">到达第 i 阶，最后一步要么从 i-1 爬 1 阶，要么从 i-2 爬 2 阶</text>
+
+  <!-- ===== Stairs ===== -->
+  <g font-size="10" fill="#333">
+    <!-- step i-2 -->
+    <rect x="60" y="240" width="70" height="50" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="95" y="262" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">i-2 阶</text>
+    <text x="95" y="278" text-anchor="middle" font-size="9" fill="#446688">f(i-2) 种</text>
+
+    <!-- step i-1 -->
+    <rect x="180" y="180" width="70" height="50" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="202" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">i-1 阶</text>
+    <text x="215" y="218" text-anchor="middle" font-size="9" fill="#4a7a3a">f(i-1) 种</text>
+
+    <!-- step i -->
+    <rect x="310" y="110" width="70" height="50" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="345" y="132" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">i 阶</text>
+    <text x="345" y="148" text-anchor="middle" font-size="9" fill="#b85450">f(i) 种</text>
+  </g>
+
+  <!-- arrow from i-2 to i (climb 2) -->
+  <path d="M 130 250 Q 220 160 305 135" stroke="#446688" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="175" y="180" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="4" filter="url(#rough2)"/>
+  <text x="205" y="195" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">爬 2 阶</text>
+
+  <!-- arrow from i-1 to i (climb 1) -->
+  <path d="M 250 195 Q 290 165 305 145" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="265" y="158" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="4" filter="url(#rough2)"/>
+  <text x="295" y="173" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">爬 1 阶</text>
+
+  <!-- ===== Formula ===== -->
+  <rect x="60" y="300" width="400" height="44" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="260" y="322" text-anchor="middle" font-family="monospace" font-size="13" fill="#333" font-weight="bold">f(i) = f(i-1) + f(i-2)</text>
+  <text x="260" y="338" text-anchor="middle" font-size="9" fill="#888">加法原理：两类互斥方案数相加</text>
+</svg>

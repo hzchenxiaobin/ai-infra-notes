@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="480" viewBox="0 0 940 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="480" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">KV Cache 生命周期：Prefill 填充 → Decode 追加</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Prefill 阶段 ============ -->
+  <text x="240" y="72" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">① Prefill：一次性填入 N_prompt 个 token 的 K/V</text>
+
+  <!-- prompt tokens -->
+  <g filter="url(#sk)">
+    <g fill="#bcd6f0" stroke="#4a8edb">
+      <rect x="40" y="88" width="28" height="28" rx="3"/>
+      <rect x="70" y="88" width="28" height="28" rx="3"/>
+      <rect x="100" y="88" width="28" height="28" rx="3"/>
+      <rect x="130" y="88" width="28" height="28" rx="3"/>
+      <rect x="160" y="88" width="28" height="28" rx="3"/>
+    </g>
+    <text x="200" y="106" font-size="11" fill="#666">prompt: N 个 token 并行</text>
+  </g>
+
+  <!-- 计算 K/V -->
+  <g filter="url(#sk)">
+    <rect x="60" y="130" width="360" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb"/>
+  </g>
+  <text x="240" y="155" text-anchor="middle" font-size="12" fill="#2b6e9e">计算 K = prompt × W_K,  V = prompt × W_V  （大 GEMM）</text>
+
+  <!-- 箭头 -->
+  <path d="M 240 172 L 240 192" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- cache 填充前 → 后 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="200" width="400" height="80" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4"/>
+  </g>
+  <text x="56" y="220" font-size="11" fill="#7a5415">KV Cache (seq 维)</text>
+  <!-- 填充格子 -->
+  <g filter="url(#sk)">
+    <g fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1">
+      <rect x="56" y="228" width="24" height="40" rx="2"/>
+      <rect x="82" y="228" width="24" height="40" rx="2"/>
+      <rect x="108" y="228" width="24" height="40" rx="2"/>
+      <rect x="134" y="228" width="24" height="40" rx="2"/>
+      <rect x="160" y="228" width="24" height="40" rx="2"/>
+    </g>
+    <g fill="#fff" stroke="#ccc" stroke-width="0.8" stroke-dasharray="3 2">
+      <rect x="186" y="228" width="24" height="40" rx="2"/>
+      <rect x="212" y="228" width="24" height="40" rx="2"/>
+      <rect x="238" y="228" width="24" height="40" rx="2"/>
+    </g>
+  </g>
+  <text x="120" y="284" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">填入 K₁..K_N</text>
+  <text x="220" y="284" text-anchor="middle" font-size="10" fill="#999">空</text>
+  <text x="380" y="252" font-size="10" fill="#666">seq_len = N</text>
+
+  <!-- ============ Decode 阶段 ============ -->
+  <text x="700" y="72" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">② Decode：每步只追加 1 个 token 的 K/V</text>
+
+  <!-- 新 token -->
+  <g filter="url(#sk)">
+    <rect x="620" y="88" width="28" height="28" rx="3" fill="#f0d9a8" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="660" y="106" font-size="11" fill="#666">新 token t+1 (M=1)</text>
+  </g>
+
+  <!-- 计算 K/V (小) -->
+  <g filter="url(#sk)">
+    <rect x="540" y="130" width="360" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b"/>
+  </g>
+  <text x="720" y="155" text-anchor="middle" font-size="12" fill="#7a5415">计算 K_{t+1} = token × W_K （向量×矩阵，退化）</text>
+
+  <path d="M 720 172 L 720 192" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- cache 追加 -->
+  <g filter="url(#sk)">
+    <rect x="520" y="200" width="400" height="80" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4"/>
+  </g>
+  <text x="536" y="220" font-size="11" fill="#7a5415">KV Cache (seq 维)</text>
+  <g filter="url(#sk)">
+    <g fill="#bfe0bf" stroke="#4a8e4a" stroke-width="1">
+      <rect x="536" y="228" width="24" height="40" rx="2"/>
+      <rect x="562" y="228" width="24" height="40" rx="2"/>
+      <rect x="588" y="228" width="24" height="40" rx="2"/>
+      <rect x="614" y="228" width="24" height="40" rx="2"/>
+      <rect x="640" y="228" width="24" height="40" rx="2"/>
+    </g>
+    <g fill="#fce4ec" stroke="#b85450" stroke-width="1.8">
+      <rect x="666" y="228" width="24" height="40" rx="2"/>
+    </g>
+    <g fill="#fff" stroke="#ccc" stroke-width="0.8" stroke-dasharray="3 2">
+      <rect x="692" y="228" width="24" height="40" rx="2"/>
+      <rect x="718" y="228" width="24" height="40" rx="2"/>
+    </g>
+  </g>
+  <text x="600" y="284" text-anchor="middle" font-size="10" fill="#2e6e2e">已有 K₁..K_N</text>
+  <text x="678" y="284" text-anchor="middle" font-size="10" fill="#b03a3a" font-weight="bold">追加 K_{t+1}</text>
+  <text x="710" y="284" text-anchor="middle" font-size="10" fill="#999">空</text>
+  <text x="850" y="252" font-size="10" fill="#666">seq_len = N+1</text>
+
+  <!-- ============ Attention 读取 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="860" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="346" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">③ Attention：Q_{t+1} × [K₁..K_{t+1}]^T → softmax → × [V₁..V_{t+1}]</text>
+  <text x="470" y="366" text-anchor="middle" font-size="11" fill="#444">从 cache 读取所有历史 K/V（1×seq_len），无需重算 → 每步 FLOPs 从 O(L·d²) 降到 O(d²)</text>
+
+  <!-- ============ 收益对比 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="400" width="860" height="64" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="424" font-size="12" font-weight="bold" fill="#7a2828">无 Cache：每步重算 K₁..K_t → FLOPs O(L·d²)，latency 随 L 线性增长</text>
+  <text x="60" y="446" font-size="12" font-weight="bold" fill="#2e6e2e">有 Cache：每步只算 K_{t+1} + 读 cache → FLOPs O(d²)，latency 基本稳定（10x+ 提升）</text>
+  <text x="60" y="462" font-size="11" fill="#666">代价：显存 = 2 × n_layers × n_heads × L × d_head × bytes（长文本/大 batch 的主要内存瓶颈）</text>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="380" viewBox="0 0 920 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="920" height="380" fill="#fafafa"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">带随机指针的链表：next + random 双引用</text>
+  <path d="M 290 42 Q 460 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="72" text-anchor="middle" font-size="12" fill="#666">每个节点有 next（黑箭头）和 random（红虚线）两个指针，深拷贝要复制整个结构且引用关系一致</text>
+
+  <!-- 节点 A -->
+  <g filter="url(#sk)">
+    <rect x="60" y="100" width="80" height="60" rx="6" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+  </g>
+  <text x="100" y="124" text-anchor="middle" font-size="13" font-weight="bold" fill="#234">A</text>
+  <text x="100" y="142" text-anchor="middle" font-size="9" fill="#666">val=7</text>
+  <circle cx="80" cy="150" r="3" fill="#446688"/>
+  <circle cx="120" cy="150" r="3" fill="#b85450"/>
+
+  <!-- 节点 B -->
+  <g filter="url(#sk)">
+    <rect x="260" y="100" width="80" height="60" rx="6" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+  </g>
+  <text x="300" y="124" text-anchor="middle" font-size="13" font-weight="bold" fill="#234">B</text>
+  <text x="300" y="142" text-anchor="middle" font-size="9" fill="#666">val=13</text>
+  <circle cx="280" cy="150" r="3" fill="#446688"/>
+  <circle cx="320" cy="150" r="3" fill="#b85450"/>
+
+  <!-- 节点 C -->
+  <g filter="url(#sk)">
+    <rect x="460" y="100" width="80" height="60" rx="6" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+  </g>
+  <text x="500" y="124" text-anchor="middle" font-size="13" font-weight="bold" fill="#234">C</text>
+  <text x="500" y="142" text-anchor="middle" font-size="9" fill="#666">val=11</text>
+  <circle cx="480" cy="150" r="3" fill="#446688"/>
+  <circle cx="520" cy="150" r="3" fill="#b85450"/>
+
+  <!-- 节点 D -->
+  <g filter="url(#sk)">
+    <rect x="660" y="100" width="80" height="60" rx="6" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+  </g>
+  <text x="700" y="124" text-anchor="middle" font-size="13" font-weight="bold" fill="#234">D</text>
+  <text x="700" y="142" text-anchor="middle" font-size="9" fill="#666">val=10</text>
+  <circle cx="680" cy="150" r="3" fill="#446688"/>
+  <circle cx="720" cy="150" r="3" fill="#b85450"/>
+
+  <!-- next 指针（黑实线）-->
+  <path d="M 120 130 L 258 130" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 320 130 L 458 130" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 520 130 L 658 130" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- random 指针（红虚线）-->
+  <path d="M 120 150 Q 200 200 460 150" stroke="#b85450" stroke-width="1.3" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)" filter="url(#sk)"/>
+  <path d="M 320 150 Q 320 200 80 150" stroke="#b85450" stroke-width="1.3" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)" filter="url(#sk)"/>
+  <path d="M 520 150 Q 600 190 660 150" stroke="#b85450" stroke-width="1.3" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)" filter="url(#sk)"/>
+  <path d="M 720 150 Q 720 200 460 150" stroke="#b85450" stroke-width="1.3" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)" filter="url(#sk)"/>
+
+  <!-- 图例 -->
+  <g filter="url(#sk)">
+    <line x1="60" y1="250" x2="100" y2="250" stroke="#3a3a3a" stroke-width="1.6"/>
+  </g>
+  <text x="110" y="254" font-size="11" fill="#333">next 指针（顺序链）</text>
+  <g filter="url(#sk)">
+    <line x1="260" y1="250" x2="300" y2="250" stroke="#b85450" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="310" y="254" font-size="11" fill="#b85450">random 指针（可指向任意节点）</text>
+
+  <!-- 挑战 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="280" width="840" height="80" rx="8" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <text x="60" y="304" font-size="12" font-weight="bold" fill="#7a5415">深拷贝的难点</text>
+  <text x="60" y="324" font-size="11" fill="#444">不能简单复制指针值——新节点的 next/random 必须指向新链表的节点，而非原链表</text>
+  <text x="60" y="342" font-size="11" fill="#444">关键：建立"旧节点 → 新节点"的映射，复制时据此修正所有引用</text>
+  <text x="60" y="358" font-size="11" fill="#b03a3a" font-weight="bold">类比 PagedAttention CoW：复制 block table 后要更新各 sequence 对物理 block 的引用</text>
+</svg>

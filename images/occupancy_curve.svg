@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="400" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Occupancy 与性能关系</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="340" x2="640" y2="340" stroke="#666666" stroke-width="2"/>
+  <line x1="80" y1="340" x2="80" y2="60" stroke="#666666" stroke-width="2"/>
+
+  <text x="360" y="375" text-anchor="middle" font-size="14" fill="#2b2b2b">Occupancy →</text>
+  <text x="40" y="200" text-anchor="middle" font-size="14" fill="#2b2b2b" transform="rotate(-90, 40, 200)">Performance →</text>
+
+  <!-- Curve -->
+  <path d="M 80,320 Q 160,300 240,220 T 400,140 T 640,120" fill="none" stroke="#6ab0ff" stroke-width="3"/>
+
+  <!-- Regions -->
+  <text x="140" y="290" font-size="13" fill="#e57373" font-weight="bold">低 Occupancy</text>
+  <text x="140" y="310" font-size="12" fill="#666666">无法隐藏延迟</text>
+
+  <text x="380" y="170" font-size="13" fill="#5cb86c" font-weight="bold">足够隐藏延迟</text>
+  <text x="380" y="150" font-size="12" fill="#666666">再提升收益有限</text>
+
+  <!-- Dashed line -->
+  <line x1="80" y1="120" x2="640" y2="120" stroke="#666666" stroke-width="1" stroke-dasharray="5,5"/>
+  <text x="650" y="125" font-size="12" fill="#666666">理论峰值</text>
+
+  <text x="360" y="250" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">目标：occupancy 足够高即可，不必追求 100%</text>
+  </g>
+</svg>

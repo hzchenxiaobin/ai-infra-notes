@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  
+
+    <marker id="arrowR" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#666666"/>
+    </marker>
+  </defs>
+  <g filter="url(#sketch)">
+  <rect width="720" height="520" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Element-wise 操作为什么是纯 Memory-Bound</text>
+
+  <!-- Roofline Chart -->
+  <text x="80" y="70" font-size="14" font-weight="bold" fill="#6ab0ff">Roofline 模型对比</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="400" x2="680" y2="400" stroke="#666666" stroke-width="2" marker-end="url(#arrowR)"/>
+  <line x1="80" y1="400" x2="80" y2="80" stroke="#666666" stroke-width="2"/>
+
+  <text x="380" y="425" text-anchor="middle" font-size="12" fill="#2b2b2b">计算强度 (FLOP / Byte) →</text>
+  <text x="55" y="240" text-anchor="middle" font-size="12" fill="#2b2b2b" transform="rotate(-90, 55, 240)">吞吐 →</text>
+
+  <!-- Ridge point line -->
+  <line x1="300" y1="400" x2="300" y2="150" stroke="#e8a838" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="305" y="145" font-size="11" fill="#e8a838">Ridge Point ≈ 12.6</text>
+  <text x="305" y="160" font-size="10" fill="#666666">(A100: 19.5T / 1.55T)</text>
+
+  <!-- Memory slope -->
+  <line x1="80" y1="400" x2="300" y2="150" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="130" y="330" font-size="12" fill="#6ab0ff" font-weight="bold">带宽限制</text>
+
+  <!-- Compute ceiling -->
+  <line x1="300" y1="150" x2="680" y2="150" stroke="#5cb86c" stroke-width="2"/>
+  <text x="580" y="140" font-size="12" fill="#5cb86c" font-weight="bold">算力峰值</text>
+
+  <!-- Element-wise point -->
+  <circle cx="95" cy="390" r="8" fill="#e57373"/>
+  <text x="115" y="385" font-size="11" fill="#e57373" font-weight="bold">Element-wise</text>
+  <text x="115" y="400" font-size="10" fill="#666666">AI ≈ 0.08</text>
+
+  <!-- LayerNorm point -->
+  <circle cx="100" cy="380" r="6" fill="#e57373"/>
+  <text x="115" y="370" font-size="10" fill="#e57373">LayerNorm AI≈0.4</text>
+
+  <!-- GEMM point -->
+  <circle cx="600" cy="150" r="8" fill="#5cb86c"/>
+  <text x="580" y="170" text-anchor="middle" font-size="11" fill="#5cb86c" font-weight="bold">GEMM</text>
+  <text x="580" y="185" text-anchor="middle" font-size="10" fill="#666666">AI ≈ 715</text>
+
+  <!-- Gap annotation -->
+  <line x1="95" y1="250" x2="95" y2="380" stroke="#e57373" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="45" y="320" font-size="10" fill="#e57373">99.3% 时间</text>
+  <text x="45" y="335" font-size="10" fill="#e57373">在等数据</text>
+
+  <!-- Comparison table -->
+  <rect x="60" y="445" width="600" height="60" rx="6" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="70" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">操作</text>
+  <text x="200" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">FLOPs</text>
+  <text x="300" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">Bytes</text>
+  <text x="400" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">AI</text>
+  <text x="500" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">瓶颈</text>
+  <text x="70" y="488" font-size="11" fill="#e57373">C=A+B</text>
+  <text x="200" y="488" font-size="11" fill="#666666">1</text>
+  <text x="300" y="488" font-size="11" fill="#666666">12</text>
+  <text x="400" y="488" font-size="11" fill="#e57373">0.08</text>
+  <text x="500" y="488" font-size="11" fill="#e57373">Memory</text>
+  <text x="70" y="505" font-size="11" fill="#5cb86c">GEMM 4096³</text>
+  <text x="200" y="505" font-size="11" fill="#666666">137G</text>
+  <text x="300" y="505" font-size="11" fill="#666666">192M</text>
+  <text x="400" y="505" font-size="11" fill="#5cb86c">715</text>
+  <text x="500" y="505" font-size="11" fill="#5cb86c">Compute</text>
+  </g>
+</svg>

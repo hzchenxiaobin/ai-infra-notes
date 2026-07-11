@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <rect width="760" height="420" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Profile → 优化 → 验证 完整闭环</text>
+
+  <!-- Step 1: Baseline -->
+  <g transform="translate(40, 70)">
+    <rect x="0" y="0" width="160" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+    <text x="80" y="30" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">1. Baseline</text>
+    <text x="80" y="52" text-anchor="middle" font-size="11" fill="#8b949e">ncu 采集指标</text>
+    <text x="80" y="70" text-anchor="middle" font-size="11" fill="#8b949e">SM/Mem Throughput</text>
+  </g>
+
+  <line x1="205" y1="110" x2="245" y2="110" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrR4)"/>
+
+  <!-- Step 2: Bottleneck -->
+  <g transform="translate(250, 70)">
+    <rect x="0" y="0" width="160" height="80" rx="8" fill="#d29922" opacity="0.2" stroke="#d29922" stroke-width="2"/>
+    <text x="80" y="30" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">2. 定位瓶颈</text>
+    <text x="80" y="52" text-anchor="middle" font-size="11" fill="#8b949e">Roofline + Stall</text>
+    <text x="80" y="70" text-anchor="middle" font-size="11" fill="#8b949e">判断 bound 类型</text>
+  </g>
+
+  <line x1="415" y1="110" x2="455" y2="110" stroke="#d29922" stroke-width="2" marker-end="url(#arrR4)"/>
+
+  <!-- Step 3: Optimize -->
+  <g transform="translate(460, 70)">
+    <rect x="0" y="0" width="160" height="80" rx="8" fill="#a371f7" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
+    <text x="80" y="30" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">3. 针对优化</text>
+    <text x="80" y="52" text-anchor="middle" font-size="11" fill="#8b949e">只改确认有收益的</text>
+    <text x="80" y="70" text-anchor="middle" font-size="11" fill="#8b949e">优化点</text>
+  </g>
+
+  <line x1="625" y1="110" x2="665" y2="110" stroke="#a371f7" stroke-width="2" marker-end="url(#arrR4)"/>
+
+  <!-- Step 4: Validate -->
+  <g transform="translate(270, 190)">
+    <rect x="0" y="0" width="220" height="80" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+    <text x="110" y="30" text-anchor="middle" font-size="14" fill="#c9d1d9" font-weight="bold">4. 重新 Profile 验证</text>
+    <text x="110" y="52" text-anchor="middle" font-size="11" fill="#8b949e">对比前后指标变化</text>
+    <text x="110" y="70" text-anchor="middle" font-size="11" fill="#8b949e">确认性能提升</text>
+  </g>
+
+  <!-- Loop arrow back to step 1 -->
+  <path d="M 380 270 Q 380 310 200 310 Q 80 310 80 150" fill="none" stroke="#3fb950" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrU4)"/>
+  <text x="80" y="330" font-size="11" fill="#3fb950">循环迭代</text>
+
+  <!-- Decision branches -->
+  <g transform="translate(40, 190)">
+    <rect x="0" y="0" width="200" height="130" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <text x="100" y="25" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Memory Bound 分支</text>
+    <text x="15" y="50" font-size="11" fill="#a371f7">→ Coalesced access 检查</text>
+    <text x="15" y="70" font-size="11" fill="#a371f7">→ Bank conflict 检查</text>
+    <text x="15" y="90" font-size="11" fill="#a371f7">→ float4 向量化加载</text>
+    <text x="15" y="110" font-size="11" fill="#a371f7">→ Double Buffering</text>
+  </g>
+
+  <g transform="translate(520, 190)">
+    <rect x="0" y="0" width="200" height="130" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <text x="100" y="25" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">Compute Bound 分支</text>
+    <text x="15" y="50" font-size="11" fill="#3fb950">→ 增大 TM×TN 计算强度</text>
+    <text x="15" y="70" font-size="11" fill="#3fb950">→ 减少 Warp Stall</text>
+    <text x="15" y="90" font-size="11" fill="#3fb950">→ 增加 ILP</text>
+    <text x="15" y="110" font-size="11" fill="#3fb950">→ 检查 FMA 利用率</text>
+  </g>
+
+  <line x1="330" y1="110" x2="140" y2="190" stroke="#d29922" stroke-width="1.5" stroke-dasharray="3"/>
+  <line x1="540" y1="110" x2="620" y2="190" stroke="#d29922" stroke-width="1.5" stroke-dasharray="3"/>
+</svg>

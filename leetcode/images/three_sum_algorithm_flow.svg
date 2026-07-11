@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="520" height="420" fill="#fafafa"/>
+
+  <text x="260" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：排序 → 固定 i → 双指针 → 去重</text>
+  <text x="260" y="44" text-anchor="middle" font-size="11" fill="#888">O(n²) = 排序 O(n log n) + 外层 n 轮 × 内层双指针 O(n)</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: sort -->
+    <rect x="40" y="64" width="440" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 排序</text>
+    <text x="120" y="84" font-family="monospace" font-size="10" fill="#555">sort(nums.begin(), nums.end())</text>
+    <text x="120" y="100" font-size="9" fill="#888">升序排序，O(n log n)。让相同元素相邻 + 双指针可行</text>
+
+    <path d="M 260 110 L 260 124" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: for i -->
+    <rect x="40" y="128" width="440" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="148" font-size="12" fill="#4a7a3a" font-weight="bold">② 枚举第一个数 i</text>
+    <text x="180" y="148" font-family="monospace" font-size="10" fill="#555">for (i = 0; i &lt; n-2; ++i)</text>
+    <text x="54" y="166" font-size="9" fill="#b85450">剪枝：nums[i] &gt; 0 → break（后续都正，和必正）</text>
+    <text x="54" y="180" font-size="9" fill="#d6a040">去重 1：nums[i] == nums[i-1] → continue（跳过重复 i）</text>
+
+    <path d="M 260 186 L 260 200" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: two pointers -->
+    <rect x="40" y="204" width="440" height="90" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="224" font-size="12" fill="#d6a040" font-weight="bold">③ 双指针：left = i+1, right = n-1</text>
+    <text x="54" y="242" font-family="monospace" font-size="10" fill="#555">while (left &lt; right):</text>
+    <text x="70" y="258" font-family="monospace" font-size="10" fill="#446688">sum &lt; 0 → left++   // 和太小</text>
+    <text x="70" y="274" font-family="monospace" font-size="10" fill="#4a7a3a">sum &gt; 0 → right--  // 和太大</text>
+    <text x="70" y="290" font-family="monospace" font-size="10" fill="#b85450">sum == 0 → 记录解, left++, right--</text>
+
+    <path d="M 260 296 L 260 310" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 4: dedup -->
+    <rect x="40" y="314" width="440" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="334" font-size="12" fill="#b85450" font-weight="bold">④ 去重 2（找到解后）</text>
+    <text x="220" y="334" font-family="monospace" font-size="10" fill="#555">while (nums[left]==nums[left-1]) left++</text>
+    <text x="54" y="352" font-size="9" fill="#888">跳过相邻重复的 left 和 right，避免同一 i 下产生重复三元组</text>
+    <text x="54" y="366" font-size="9" fill="#888">两层去重缺一不可：外层去 i，内层去 left/right</text>
+
+    <!-- complexity -->
+    <rect x="40" y="384" width="440" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+    <text x="260" y="402" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">时间 O(n²)  ·  空间 O(log n)（排序栈）  ·  双指针已是该问题最优解</text>
+  </g>
+</svg>

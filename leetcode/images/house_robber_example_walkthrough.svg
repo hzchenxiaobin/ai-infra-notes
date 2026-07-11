@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="380" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：nums=[2,7,9,3,1] 递推到 f(4)=12</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">最优解：偷第 0、2、4 家（2+9+1=12）</text>
+
+  <!-- ===== f array ===== -->
+  <g font-size="11">
+    <!-- header -->
+    <text x="60" y="76" font-size="10" fill="#888" font-weight="bold">i:</text>
+    <text x="110" y="76" text-anchor="middle" font-size="10" fill="#888">0</text>
+    <text x="180" y="76" text-anchor="middle" font-size="10" fill="#888">1</text>
+    <text x="250" y="76" text-anchor="middle" font-size="10" fill="#888">2</text>
+    <text x="320" y="76" text-anchor="middle" font-size="10" fill="#888">3</text>
+    <text x="390" y="76" text-anchor="middle" font-size="10" fill="#888">4</text>
+
+    <!-- nums row -->
+    <text x="60" y="106" font-size="10" fill="#446688" font-weight="bold">nums:</text>
+    <rect x="90" y="86" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="110" y="104" text-anchor="middle" fill="#446688" font-weight="bold">2</text>
+    <rect x="160" y="86" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="180" y="104" text-anchor="middle" fill="#446688" font-weight="bold">7</text>
+    <rect x="230" y="86" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="250" y="104" text-anchor="middle" fill="#446688" font-weight="bold">9</text>
+    <rect x="300" y="86" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="320" y="104" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <rect x="370" y="86" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="390" y="104" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+
+    <!-- f row -->
+    <text x="60" y="146" font-size="10" fill="#b85450" font-weight="bold">f(i):</text>
+
+    <!-- f(0) init -->
+    <rect x="90" y="126" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="110" y="144" text-anchor="middle" fill="#446688" font-weight="bold">2</text>
+    <text x="110" y="168" text-anchor="middle" font-size="8" fill="#446688">初值</text>
+
+    <!-- f(1) init -->
+    <rect x="160" y="126" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="180" y="144" text-anchor="middle" fill="#446688" font-weight="bold">7</text>
+    <text x="180" y="168" text-anchor="middle" font-size="8" fill="#446688">max(2,7)</text>
+
+    <!-- f(2) = max(7, 2+9) = 11 -->
+    <rect x="230" y="126" width="40" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="250" y="144" text-anchor="middle" fill="#4a7a3a" font-weight="bold">11</text>
+    <text x="250" y="168" text-anchor="middle" font-size="7" fill="#4a7a3a">max(7, 2+9)</text>
+
+    <!-- f(3) = max(11, 7+3) = 11 -->
+    <rect x="300" y="126" width="40" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="320" y="144" text-anchor="middle" fill="#d6a040" font-weight="bold">11</text>
+    <text x="320" y="168" text-anchor="middle" font-size="7" fill="#d6a040">max(11, 7+3)</text>
+
+    <!-- f(4) = max(11, 11+1) = 12 -->
+    <rect x="370" y="126" width="40" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="3" filter="url(#rough2)"/>
+    <text x="390" y="144" text-anchor="middle" fill="#b85450" font-weight="bold">12</text>
+    <text x="390" y="168" text-anchor="middle" font-size="7" fill="#b85450">max(11, 11+1)</text>
+  </g>
+
+  <!-- arrows showing dependencies -->
+  <g opacity="0.5">
+    <!-- f(2) depends on f(1) and f(0) -->
+    <path d="M 160 140 L 228 140" stroke="#4a7a3a" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 110 156 Q 180 180 250 156" stroke="#4a7a3a" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <!-- f(3) depends on f(2) and f(1) -->
+    <path d="M 270 140 L 298 140" stroke="#d6a040" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 180 158 Q 250 182 320 156" stroke="#d6a040" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <!-- f(4) depends on f(3) and f(2) -->
+    <path d="M 340 140 L 368 140" stroke="#b85450" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 250 158 Q 320 182 390 156" stroke="#b85450" stroke-width="0.8" fill="none" stroke-dasharray="2,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  </g>
+
+  <!-- ===== Detail table ===== -->
+  <line x1="20" y1="200" x2="520" y2="200" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <g font-size="9" fill="#333">
+    <text x="30" y="222" font-size="10" fill="#444" font-weight="bold">逐步分析：</text>
+
+    <text x="30" y="242" font-size="9" fill="#4a7a3a">i=2: 不偷=7, 偷=2+9=11 → max=11（偷 0,2）</text>
+    <text x="30" y="258" font-size="9" fill="#d6a040">i=3: 不偷=11, 偷=7+3=10 → max=11（不偷 3）</text>
+    <text x="30" y="274" font-size="9" fill="#b85450">i=4: 不偷=11, 偷=11+1=12 → max=12（偷 4）</text>
+  </g>
+
+  <!-- ===== Result ===== -->
+  <rect x="30" y="296" width="480" height="64" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="270" y="318" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">最终结果：f(4) = 12</text>
+  <text x="270" y="338" text-anchor="middle" font-size="10" fill="#555">最优方案：偷第 0 家(2) + 第 2 家(9) + 第 4 家(1) = 12</text>
+  <text x="270" y="354" text-anchor="middle" font-size="9" fill="#888">f(i) 只依赖前 2 格 → 滚动数组 O(1) 空间</text>
+</svg>

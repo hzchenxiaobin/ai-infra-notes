@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" viewBox="0 0 920 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="640" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">LayerNorm 两次 Reduce 流程</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- formula -->
+  <g filter="url(#sk2)">
+    <rect x="180" y="60" width="560" height="44" rx="8" fill="#fff3cf" stroke="#e8a838" stroke-width="1.3"/>
+    <text x="460" y="80" text-anchor="middle" font-size="12" fill="#2b2b2b">yi = γi · (xi - μ) / sqrt(σ² + ε) + βi</text>
+    <text x="460" y="96" text-anchor="middle" font-size="10" fill="#666">μ = mean(x),  σ² = mean((x-μ)²)  —— 沿 feature 维归一化（一行）</text>
+  </g>
+
+  <!-- input -->
+  <g filter="url(#sk2)">
+    <rect x="320" y="120" width="280" height="32" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+    <text x="460" y="140" text-anchor="middle" font-size="11" fill="#2b2b2b">input 行 x[N] (读 HBM)</text>
+  </g>
+  <path d="M 460 154 L 460 168" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- Reduce 1: mean -->
+  <g filter="url(#sk2)">
+    <rect x="240" y="172" width="440" height="56" rx="8" fill="#4a8edb" stroke="#3a3a3a" stroke-width="1.6" opacity="0.6"/>
+    <text x="460" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Reduce 1：求 μ = sum(x) / N</text>
+    <text x="460" y="210" text-anchor="middle" font-size="10" fill="#444">blockReduceSum → row_mean = sum / N</text>
+    <text x="460" y="224" text-anchor="middle" font-size="9" fill="#888" font-style="italic">第一次扫描 x[N]，一次 reduce</text>
+  </g>
+  <text x="700" y="204" font-size="10" fill="#888" font-style="italic">读 HBM: N×4B</text>
+  <path d="M 460 230 L 460 244" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="540" y="240" font-size="10" fill="#666">依赖关系：μ 必须先算完</text>
+
+  <!-- Reduce 2: variance -->
+  <g filter="url(#sk2)">
+    <rect x="200" y="248" width="520" height="64" rx="8" fill="#e8a838" stroke="#3a3a3a" stroke-width="1.6" opacity="0.6"/>
+    <text x="460" y="268" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Reduce 2：求 σ² = sum((x - μ)²) / N</text>
+    <text x="460" y="286" text-anchor="middle" font-size="10" fill="#444">再扫一遍 x[N]，累加 (x[i] - row_mean)² → row_rstd = rsqrt(σ²/N + ε)</text>
+    <text x="460" y="302" text-anchor="middle" font-size="9" fill="#888" font-style="italic">第二次扫描，依赖 Reduce 1 的 μ——所以不能合并</text>
+  </g>
+  <text x="740" y="284" font-size="10" fill="#888" font-style="italic">读 HBM: N×4B</text>
+  <path d="M 460 314 L 460 328" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- normalize + affine -->
+  <g filter="url(#sk2)">
+    <rect x="160" y="332" width="600" height="64" rx="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1.6" opacity="0.55"/>
+    <text x="460" y="352" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Step 3：归一化 + affine</text>
+    <text x="460" y="370" text-anchor="middle" font-size="10" fill="#444">yi = (x[i] - μ) * rstd * γ[i] + β[i]</text>
+    <text x="460" y="386" text-anchor="middle" font-size="9" fill="#888" font-style="italic">第三次扫描：读 x + γ + β，写 y（element-wise）</text>
+  </g>
+  <text x="780" y="368" font-size="10" fill="#888" font-style="italic">读+写 HBM</text>
+  <path d="M 460 398 L 460 412" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- output -->
+  <g filter="url(#sk2)">
+    <rect x="320" y="416" width="280" height="32" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+    <text x="460" y="436" text-anchor="middle" font-size="11" fill="#2b2b2b">output 行 y[N] (写 HBM)</text>
+  </g>
+
+  <!-- right side: LayerNorm vs BatchNorm mini table -->
+  <g filter="url(#sk2)">
+    <rect x="560" y="470" width="340" height="150" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.3"/>
+    <text x="730" y="490" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">LayerNorm vs BatchNorm</text>
+    <text x="572" y="510" font-size="10" fill="#444">LayerNorm: 沿 feature 维（一行）</text>
+    <text x="572" y="526" font-size="10" fill="#444">BatchNorm:  沿 batch 维（一列）</text>
+    <text x="572" y="546" font-size="10" fill="#444">LayerNorm 不依赖 batch（每样本独立）</text>
+    <text x="572" y="562" font-size="10" fill="#444">BatchNorm 推理用 running mean/var</text>
+    <text x="572" y="582" font-size="10" fill="#2e7d4f" font-weight="bold">→ Transformer 用 LayerNorm</text>
+    <text x="572" y="600" font-size="9" fill="#888" font-style="italic">训练/推理行为一致</text>
+  </g>
+
+  <!-- left side: AI box -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="470" width="500" height="150" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="60" y="492" font-size="12" font-weight="bold" fill="#2b2b2b">为什么 LayerNorm 是 memory-bound？</text>
+    <text x="60" y="512" font-size="11" fill="#444">• 每元素读 x(1) + 写 y(1) = 8 bytes，γ/β 另读</text>
+    <text x="60" y="530" font-size="11" fill="#444">• 浮点运算 ~5 次（减、平方、rsqrt、乘、加）</text>
+    <text x="60" y="550" font-size="11" fill="#b03a3a">• AI ≈ 5 / 8 ≈ 0.6 FLOP/Byte &lt;&lt; 12.6 → memory-bound</text>
+    <text x="60" y="570" font-size="11" fill="#444">• 两次 reduce 不可合并：σ² 依赖 μ（强依赖）</text>
+    <text x="60" y="590" font-size="11" fill="#2e7d4f">• FasterTransformer 用 Welford 合并成一次 reduce</text>
+    <text x="60" y="608" font-size="10" fill="#888" font-style="italic">→ Day 3 源码分析会展开</text>
+  </g>
+</svg>

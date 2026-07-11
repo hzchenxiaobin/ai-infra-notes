@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="560" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 7 知识地图：系统整合</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Day 1 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="200" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Day 1：多请求并发</text>
+  <text x="130" y="98" text-anchor="middle" font-size="9" fill="#555">条件变量 + Future/CB/Stream</text>
+  <text x="130" y="110" text-anchor="middle" font-size="9" fill="#555">三线程协作 + 生命周期</text>
+  <path d="M 130 116 L 130 130" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 2 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="132" width="200" height="56" rx="8" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="154" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">Day 2：完整调度器</text>
+  <text x="130" y="170" text-anchor="middle" font-size="9" fill="#555">双预算 + 抢占 + aging</text>
+  <text x="130" y="182" text-anchor="middle" font-size="9" fill="#555">优先级 + 超时 + Continuous Batching</text>
+  <path d="M 130 188 L 130 202" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 3 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="204" width="200" height="56" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="226" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">Day 3：高级特性</text>
+  <text x="130" y="242" text-anchor="middle" font-size="9" fill="#555">Speculative Decoding</text>
+  <text x="130" y="254" text-anchor="middle" font-size="9" fill="#555">Chunked Prefill + Prefix Caching</text>
+  <path d="M 130 260 L 130 274" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 4 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="276" width="200" height="56" rx="8" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#a03040">Day 4：Kernel 集成</text>
+  <text x="130" y="314" text-anchor="middle" font-size="9" fill="#555">PyTorch C++ Extension</text>
+  <text x="130" y="326" text-anchor="middle" font-size="9" fill="#555">Softmax/LN/FlashAttn 替换</text>
+  <path d="M 130 332 L 130 346" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 5 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="348" width="200" height="56" rx="8" fill="#f3e5f5" stroke="#8e44ad" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="370" text-anchor="middle" font-size="11" font-weight="bold" fill="#6a3d8a">Day 5：系统联调</text>
+  <text x="130" y="386" text-anchor="middle" font-size="9" fill="#555">六步分层验证</text>
+  <text x="130" y="398" text-anchor="middle" font-size="9" fill="#555">稳定性 500+ 请求</text>
+  <path d="M 130 404 L 130 418" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 6 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="420" width="200" height="56" rx="8" fill="#e0f7fa" stroke="#00838f" stroke-width="1.3"/>
+  </g>
+  <text x="130" y="442" text-anchor="middle" font-size="11" font-weight="bold" fill="#005f6b">Day 6：全链路 Profiling</text>
+  <text x="130" y="458" text-anchor="middle" font-size="9" fill="#555">nsys/ncu/阶段计时</text>
+  <text x="130" y="470" text-anchor="middle" font-size="9" fill="#555">vLLM 差距分析</text>
+  <path d="M 130 476 L 130 490" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 7 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="492" width="200" height="48" rx="8" fill="#fce4ec" stroke="#c04050" stroke-width="2"/>
+  </g>
+  <text x="130" y="514" text-anchor="middle" font-size="11" font-weight="bold" fill="#a03040">Day 7：重构与文档</text>
+  <text x="130" y="530" text-anchor="middle" font-size="9" fill="#555">统一接口 + README + 面试复盘</text>
+
+  <!-- ===== Right: Integration layers ===== -->
+  <text x="280" y="82" font-size="13" font-weight="bold" fill="#2b2b2b">整合层次（从上到下）</text>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="92" width="320" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="114" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">用户 API：submit() → Future</text>
+  <path d="M 440 126 L 440 138" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="140" width="320" height="34" rx="6" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="162" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">ConcurrentEngine（Day1：队列+三线程）</text>
+  <path d="M 440 174 L 440 186" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="188" width="320" height="34" rx="6" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="210" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">FullScheduler（Day2：双预算+抢占）</text>
+  <path d="M 440 222 L 440 234" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="236" width="320" height="34" rx="6" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="258" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">Custom Kernel（Day4：C++ Extension）</text>
+  <path d="M 440 270 L 440 282" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="284" width="320" height="34" rx="6" fill="#f3e5f5" stroke="#8e44ad" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="306" text-anchor="middle" font-size="10" fill="#6a3d8a" font-weight="bold">KV Cache Manager（Week5：Block 分配）</text>
+  <path d="M 440 318 L 440 330" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="332" width="320" height="34" rx="6" fill="#e0f7fa" stroke="#00838f" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="354" text-anchor="middle" font-size="10" fill="#005f6b" font-weight="bold">Profiling（Day6：nsys/ncu/计时）</text>
+
+  <!-- ===== Right: Key metrics ===== -->
+  <text x="660" y="82" font-size="13" font-weight="bold" fill="#2b2b2b">关键指标</text>
+
+  <g filter="url(#sk)">
+    <rect x="640" y="92" width="280" height="180" rx="8" fill="#f6f6f6" stroke="#ccc" stroke-width="1"/>
+  </g>
+  <g font-size="10" fill="#444">
+    <text x="656" y="114" font-weight="bold" fill="#4a8edb">并发能力</text>
+    <text x="656" y="130">• 三线程协作（调度+执行+超时）</text>
+    <text x="656" y="146">• Future/Callback/Streaming 三返回</text>
+    <text x="656" y="162">• 优先级 + 超时 + 取消</text>
+    <text x="656" y="184" font-weight="bold" fill="#2e8b57">调度能力</text>
+    <text x="656" y="200">• 双预算（token+memory）</text>
+    <text x="656" y="216">• 抢占（recompute/swap）</text>
+    <text x="656" y="232">• aging 公平性</text>
+    <text x="656" y="254" font-weight="bold" fill="#c04050">稳定性</text>
+    <text x="656" y="266" fill="#2e8b57">• 500+ 请求 100% 成功</text>
+  </g>
+
+  <g filter="url(#sk)">
+    <rect x="640" y="284" width="280" height="100" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <g font-size="10" fill="#444">
+    <text x="656" y="306" font-weight="bold" fill="#7a5415">性能</text>
+    <text x="656" y="322">• forward 占 80-95%</text>
+    <text x="656" y="338">• 自定义 kernel 加速 1.2x</text>
+    <text x="656" y="354">• vLLM 差距 ~2.3x（forward）</text>
+    <text x="656" y="372" font-weight="bold" fill="#c04050">面试题：13 道</text>
+  </g>
+
+  <!-- ===== Bottom: Week 7 → Week 8 ===== -->
+  <line x1="30" y1="548" x2="910" y2="548" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="470" y="560" text-anchor="middle" font-size="9" fill="#888">Week 7 完成 → Week 8：项目打磨 + 面试准备</text>
+</svg>

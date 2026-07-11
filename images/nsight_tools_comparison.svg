@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="400" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Nsight Compute vs Nsight Systems</text>
+
+  <!-- Nsight Compute -->
+  <rect x="60" y="80" width="280" height="260" rx="12" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="200" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#6ab0ff">Nsight Compute</text>
+  <text x="200" y="140" text-anchor="middle" font-size="13" fill="#2b2b2b">(ncu)</text>
+
+  <text x="80" y="175" font-size="13" fill="#2b2b2b">• Kernel 级分析</text>
+  <text x="80" y="200" font-size="13" fill="#2b2b2b">• 详细硬件指标</text>
+  <text x="80" y="225" font-size="13" fill="#2b2b2b">• Occupancy / Throughput</text>
+  <text x="80" y="250" font-size="13" fill="#2b2b2b">• Memory / Compute bound</text>
+  <text x="80" y="275" font-size="13" fill="#2b2b2b">• Roofline 分析</text>
+  <text x="80" y="300" font-size="13" fill="#666666">适合：优化单个 kernel</text>
+
+  <!-- Nsight Systems -->
+  <rect x="380" y="80" width="280" height="260" rx="12" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
+  <text x="520" y="115" text-anchor="middle" font-size="18" font-weight="bold" fill="#5cb86c">Nsight Systems</text>
+  <text x="520" y="140" text-anchor="middle" font-size="13" fill="#2b2b2b">(nsys)</text>
+
+  <text x="400" y="175" font-size="13" fill="#2b2b2b">• 应用级时间线</text>
+  <text x="400" y="200" font-size="13" fill="#2b2b2b">• CPU / GPU 交互</text>
+  <text x="400" y="225" font-size="13" fill="#2b2b2b">• Kernel launch overhead</text>
+  <text x="400" y="250" font-size="13" fill="#2b2b2b">• 多流并行分析</text>
+  <text x="400" y="275" font-size="13" fill="#2b2b2b">• 端到端 latency</text>
+  <text x="400" y="300" font-size="13" fill="#666666">适合：系统级性能分析</text>
+
+  <!-- Bottom note -->
+  <text x="360" y="370" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">先用 nsys 找瓶颈 kernel，再用 ncu 深入分析该 kernel</text>
+  </g>
+</svg>

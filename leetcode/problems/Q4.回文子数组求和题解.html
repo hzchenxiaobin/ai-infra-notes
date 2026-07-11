@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q4. 回文子数组求和</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link active" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Q4. 回文子数组求和</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 回文子数组求和
+
+## 1. 题目概述
+
+- **题目名称**：Q4. 回文子数组求和
+- **链接**：[3985. 回文子数组求和](https://leetcode.cn/problems/palindromic-subarray-sum/)
+- **难度**：困难
+- **标签**：Manacher、前缀和、回文、贪心
+
+**题意简述**：
+
+给你一个整数数组 \`nums\`，找出一个**回文子数组**的**最大元素和**，返回该和。
+
+- 子数组是数组中连续的非空元素序列。
+- 回文子数组指正着读和反着读都相同的子数组。
+- 单元素子数组也是回文。
+
+**约束条件**：
+
+- \`1 <= nums.length <= 10^5\`
+- \`1 <= nums[i] <= 10^9\`
+
+---
+
+## 2. 示例
+
+**示例 1**
+
+\`\`\`text
+输入：nums = [10,10]
+输出：20
+解释：整个数组 [10,10] 是回文子数组，和 = 10 + 10 = 20。
+\`\`\`
+
+**示例 2**
+
+\`\`\`text
+输入：nums = [1,2,3,2,1,5,6]
+输出：9
+解释：子数组 [1,2,3,2,1] 是回文，和 = 1+2+3+2+1 = 9，为最大。
+\`\`\`
+
+**示例 3**
+
+\`\`\`text
+输入：nums = [7,1,2,1,7,3,4,3,4]
+输出：18
+解释：子数组 [7,1,2,1,7] 是回文，和 = 7+1+2+1+7 = 18，为最大。
+\`\`\`
+
+**示例 4**
+
+\`\`\`text
+输入：nums = [1,2,3,4,5]
+输出：5
+解释：不存在长度 > 1 的回文子数组，最大单元素为 5。
+\`\`\`
+
+**示例 5**
+
+\`\`\`text
+输入：nums = [1000]
+输出：1000
+解释：单元素回文，答案为 1000。
+\`\`\`
+
+---
+
+## 3. 解题思路
+
+### 3.1 关键观察：所有元素为正
+
+题目约束 \`1 <= nums[i] <= 10^9\`，即**所有元素都是正数**。这带来一个关键推论：
+
+> 对于固定的回文中心，**最长的回文子数组**一定拥有**最大的元素和**。
+
+因为从中心向外扩展时，每多包一对元素（左右各一个），和只会增加（元素为正）。所以不需要枚举所有回文子数组，只需对每个中心找**最长回文**，再算它的和，取全局最大即可。
+
+### 3.2 朴素方法：中心扩展 O(n²)
+
+对每个中心（共 2n-1 个：n 个奇数中心 + n-1 个偶数中心），向两边扩展直到不回文，记录最长半径。总复杂度 O(n²)，n=10⁵ 会超时。
+
+### 3.3 优化：Manacher 算法 O(n)
+
+Manacher 算法利用**已计算的回文信息**加速后续中心的扩展，把 O(n²) 降到 O(n)。它对每个中心返回**最长回文半径**，再配合**前缀和** O(1) 算出每个最长回文的元素和，最终取最大值。
+
+![回文中心扩展：奇数 vs 偶数](../images/palindrome_center_expansion.svg)
+
+![Manacher + 前缀和算法流程](../images/palindrome_manacher_flow.svg)
+
+---
+
+## 4. 算法细节
+
+### 4.1 Manacher 算法
+
+![Manacher 对称性加速原理](../images/palindrome_manacher_symmetry.svg)
+
+Manacher 维护两个数组：
+
+| 数组 | 含义 | 最长回文子数组 |
+|------|------|--------------|
+| \`d1[i]\` | 以 \`i\` 为中心的**奇数长度**回文个数 | \`[i-d1[i]+1, i+d1[i]-1]\`，长度 \`2·d1[i]-1\` |
+| \`d2[i]\` | 以 \`i-1\` 和 \`i\` 之间为中心的**偶数长度**回文个数 | \`[i-d2[i], i+d2[i]-1]\`，长度 \`2·d2[i]\` |
+
+#### 核心思想：维护最右回文区间
+
+\`\`\`
+维护 [l, r]：当前找到的回文子数组中，右端点最远的那个（闭区间）。
+mr = (l + r) / 2 是该回文中心。
+处理新中心 i 时，若 i 落在 [l, r] 内部，可利用已计算的镜像位置加速。
+\`\`\`
+
+为什么只关心“最右”？区间越靠右，覆盖的后续中心越多，能复用的对称信息也越多。
+
+#### 奇数长度 Manacher（计算 d1）
+
+\`\`\`cpp
+vector<int> d1(n);
+for (int i = 0, l = 0, r = -1; i < n; i++) {
+    int k = (i > r) ? 1 : min(d1[l + r - i], r - i + 1);
+    while (i - k >= 0 && i + k < n && nums[i - k] == nums[i + k]) k++;
+    d1[i] = k;
+    if (i + k - 1 > r) {
+        l = i - k + 1;
+        r = i + k - 1;
+    }
+}
+\`\`\`
+
+**第 1 步：利用对称性初始化 k**
+
+\`\`\`cpp
+int k = (i > r) ? 1 : min(d1[l + r - i], r - i + 1);
+\`\`\`
+
+- \`i > r\`：\`i\` 在已知最右回文之外，没有对称信息可用。至少自身是回文，所以 \`k = 1\`。
+- \`i <= r\`：\`i\` 落在 \`[l, r]\` 内部，可以利用镜像 \`mir = l + r - i\` 的已计算值。
+
+镜像为什么能加速？因为 \`[l, r]\` 是以 \`mr = (l+r)/2\` 为中心的回文，所以 \`i\` 左侧的子串与 \`mir\` 右侧的子串完全相同。\`mir\` 处半径为 \`d1[mir]-1\` 的回文会镜像到 \`i\` 处，半径相同。
+
+但这个镜像回文必须完全落在 \`[l, r]\` 内，超出 \`r\` 的部分不能保证。镜像回文在 \`i\` 处的右端点是：
+
+\`\`\`
+right = i + (d1[mir] - 1)
+\`\`\`
+
+要求 \`right <= r\`，即：
+
+\`\`\`
+i + d1[mir] - 1 <= r   ⟹   d1[mir] <= r - i + 1
+\`\`\`
+
+因此安全的初始 \`d1[i]\` 值是：
+
+\`\`\`
+k = min(d1[mir], r - i + 1)
+\`\`\`
+
+这正是上面代码的含义。\`r - i + 1\` 可以理解为“以 i 为中心、右端点不超过 r 的最大回文个数”。
+
+**第 2 步：尝试扩展**
+
+\`\`\`cpp
+while (i - k >= 0 && i + k < n && nums[i - k] == nums[i + k]) k++;
+\`\`\`
+
+从安全初始值开始，向两边一格一格扩展。只要不越界且左右元素相等就继续。这一步是唯一实际做字符比较的地方。
+
+**第 3 步：记录结果并更新最右回文**
+
+\`\`\`cpp
+d1[i] = k;
+if (i + k - 1 > r) {
+    l = i - k + 1;
+    r = i + k - 1;
+}
+\`\`\`
+
+\`d1[i] = k\` 记录以 \`i\` 为中心的奇数回文个数。若当前回文右端点 \`i+k-1\` 超过 \`r\`，就更新 \`[l, r]\`，保证它始终是最右回文。
+
+> 注意 \`d1[i]\` 的语义是“以 i 为中心的奇数回文个数”（含自身），所以半径为 \`d1[i]\` 的回文实际范围是 \`[i-d1[i]+1, i+d1[i]-1]\`，长度 \`2·d1[i]-1\`。
+
+#### 偶数长度 Manacher（计算 d2）
+
+与奇数类似，只是中心在 \`i-1\` 和 \`i\` 之间，初始半径为 0。
+
+\`\`\`cpp
+vector<int> d2(n);
+for (int i = 0, l = 0, r = -1; i < n; i++) {
+    int k = (i > r) ? 0 : min(d2[l + r - i + 1], r - i + 1);
+    while (i - k - 1 >= 0 && i + k < n && nums[i - k - 1] == nums[i + k]) k++;
+    d2[i] = k;
+    if (i + k - 1 > r) {
+        l = i - k - 1;
+        r = i + k - 1;
+    }
+}
+\`\`\`
+
+| 差异点 | d1（奇数） | d2（偶数） |
+|-------|-----------|-----------|
+| 初始 k | \`1\`（自身是回文） | \`0\`（空回文，需扩展才有） |
+| 镜像下标 | \`l + r - i\` | \`l + r - i + 1\`（中心在间隙，偏移 1） |
+| 扩展比较 | \`a[i-k] == a[i+k]\` | \`a[i-k-1] == a[i+k]\`（左侧多偏移 1） |
+| 更新 l | \`l = i - k + 1\` | \`l = i - k - 1\`（左边界多偏移 1） |
+| 回文范围 | \`[i-d1+1, i+d1-1]\` | \`[i-d2, i+d2-1]\` |
+
+> 偶数长度的“中心”定义在 \`i-1\` 和 \`i\` 之间，所以左侧下标比右侧多偏移 1。这是 d2 比 d1 容易写错的地方——前缀和求和时也要注意对应的范围。
+
+#### 为什么 \`r\` 单调递增保证 O(n)？
+
+每次 \`while\` 扩展成功时，右端点 \`i + k - 1\` 严格递增且超过当前 \`r\`；随后 \`r\` 被更新为更大的值。\`r\` 从 -1 单调递增到最多 \`n-1\`，因此 \`while\` 循环体总共执行不超过 \`n\` 次。加上外层 \`for\` 的 \`n\` 次迭代，总复杂度 **O(n)**。
+
+#### 对称加速实例：s = "abacabacaba"
+
+\`\`\`
+下标:  0   1   2   3   4   5   6   7   8   9  10
+字符:  a   b   a   c   a   b   a   c   a   b   a
+\`\`\`
+
+下面用 \`d1[i]\`（含中心的回文个数）手算，回文区间为 \`[i-d1[i]+1, i+d1[i]-1]\`。
+
+**阶段 1：i=0..3 朴素扩展，建立第一个大回文**
+
+\`\`\`
+i=0: i>r(-1), k=1; 越界停 → d1[0]=1, 回文[0,0]      → l=0, r=0, mr=0
+i=1: i>r(0),  k=1; 扩展 a[0]a[2]='a''a' ✓ → k=2, 越界停
+     d1[1]=2, 回文[0,2]="aba" → l=0, r=2, mr=1
+i=2: i<=r(2), mir=0, d1[0]=1, r-i+1=1, k=min(1,1)=1
+     扩展 a[1]a[3]='b''c' ✗ → d1[2]=1
+i=3: i>r(2),  k=1; 扩展 a[2]a[4]='a''a' ✓, a[1]a[5]='b''b' ✓, a[0]a[6]='a''a' ✓, 越界停
+     d1[3]=4, 回文[0,6]="abacaba" → l=0, r=6, mr=3
+\`\`\`
+
+此时 \`[l=0, r=6]\` 是最右回文，\`mr=3\`。后续 \`i=4,5,6\` 都在 \`[0,6]\` 内，可对称加速。
+
+**阶段 2：i=5 对称加速首次生效**
+
+\`\`\`
+i=5: i<=r(6), mir = 2×3-5 = 1, d1[1]=2, r-i+1=2
+     k = min(2, 2) = 2  ← 直接知道 [4,6]="aba" 是回文，跳过 a[4]a[6] 这次比较
+     扩展: a[3]a[7]='c''c' ✓ → k=3
+           a[2]a[8]='a''a' ✓ → k=4
+           a[1]a[9]='b''b' ✓ → k=5
+           a[0]a[10]='a''a' ✓ → k=6, 越界停
+     d1[5]=6, 回文[0,10]="abacabacaba"（整个串！）
+     → 更新 l=0, r=10, mr=5
+\`\`\`
+
+\`k=2\` 意味着：以 5 为中心、右端点不超过 \`r=6\` 的回文已经确定，从 \`k=2\` 开始只需验证 \`r\` 之外的部分。
+
+**阶段 3：i=7 对称加速大幅生效 ★★★**
+
+\`\`\`
+i=7: i<=r(10), mir = 2×5-7 = 3, d1[3]=4, r-i+1=4
+     k = min(4, 4) = 4  ← 直接跳到 4，省 3 次比较！
+     扩展: a[3]a[11] 越界 → 停
+     d1[7]=4, 回文[4,10]="abacaba"
+\`\`\`
+
+被跳过的比较：
+
+| 原本需要比较 | 为什么可以跳过 |
+|-------------|---------------|
+| \`a[6]\` vs \`a[8]\` | \`[0,10]\` 是回文 → \`a[6]=a[4]\`；\`[0,6]\` 是回文 → \`a[4]=a[2]\`；而 \`a[8]\` 是 \`a[2]\` 关于 \`[0,10]\` 的镜像，故 \`a[6]=a[8]\` |
+| \`a[5]\` vs \`a[9]\` | 同理 |
+| \`a[4]\` vs \`a[10]\` | 同理 |
+
+**阶段 4：各中心加速汇总**
+
+已知 \`[l=0, r=10]\`，\`mr=5\` 时：
+
+| 中心 i | mir | d1[mir] | r-i+1 | k=min | 省了几次比较 |
+|--------|-----|---------|-------|-------|------------|
+| 4 | 6 | 1 | 7 | 1 | 0 次 |
+| 6 | 4 | 1 | 5 | 1 | 0 次 |
+| **7** | **3** | **4** | **4** | **4** | **3 次 ★** |
+| 8 | 2 | 1 | 3 | 1 | 0 次 |
+
+\`mir\` 的回文越大，且离 \`r\` 越近，加速越多。i=7 时 \`d1[mir]=4\` 且 \`r-i+1=4\`，刚好取满，省了 3 次比较——这就是 Manacher 从 O(n²) 降到 O(n) 的关键。
+
+
+### 4.2 前缀和求回文子数组和
+
+预处理前缀和 \`pref[i] = nums[0] + ... + nums[i-1]\`（\`pref[0]=0\`），则子数组 \`[l, r]\` 的和 = \`pref[r+1] - pref[l]\`。
+
+对每个中心的最长回文：
+
+| 类型 | 回文范围 | 和 |
+|------|---------|---|
+| 奇数，中心 i | \`[i-d1[i]+1, i+d1[i]-1]\` | \`pref[i+d1[i]] - pref[i-d1[i]+1]\` |
+| 偶数，中心 i | \`[i-d2[i], i+d2[i]-1]\` | \`pref[i+d2[i]] - pref[i-d2[i]]\` |
+
+### 4.3 完整算法
+
+\`\`\`
+1. 计算前缀和 pref[0..n]
+2. Manacher 求 d1[0..n-1]（奇数长度最长回文半径）
+3. Manacher 求 d2[0..n-1]（偶数长度最长回文半径）
+4. ans = 0
+   对每个 i：ans = max(ans, pref[i+d1[i]] - pref[i-d1[i]+1])       // 奇数
+   对每个 i：若 d2[i]>0，ans = max(ans, pref[i+d2[i]] - pref[i-d2[i]])  // 偶数
+5. 返回 ans
+\`\`\`
+
+![示例演算：nums = [1,2,3,2,1,5,6]](../images/palindrome_example_walkthrough.svg)
+
+---
+
+## 5. 正确性证明
+
+**引理**：当所有 \`nums[i] > 0\` 时，对固定中心 \`c\`，最长回文子数组的元素和 ≥ 该中心任何更短回文子数组的元素和。
+
+**证明**：设中心 \`c\` 的最长回文半径为 \`R\`。对任意 \`r < R\`，半径 \`r\` 的回文子数组是半径 \`R\` 的子数组去掉外层 \`R-r\` 对元素。由于每对元素 \`nums[c-r-1] + nums[c+r+1] > 0\`（元素为正），去掉后和减小。故最长回文和最大。□
+
+**推论**：全局最大回文子数组和 = \`max over all centers c of sum(longest palindrome at c)\`。Manacher 给出每个中心的最长回文，前缀和 O(1) 算和，取 max 即可。□
+
+---
+
+## 6. 复杂度分析
+
+- **时间复杂度**：\`O(n)\`。Manacher 算法每个元素最多被访问常数次（扩展时 \`r\` 单调递增），前缀和 O(n)，取 max O(n)。
+- **空间复杂度**：\`O(n)\`。\`d1\`、\`d2\`、\`pref\` 各 O(n)。
+
+---
+
+## 7. 参考代码
+
+### C++
+
+\`\`\`cpp
+class Solution {
+public:
+    long long maxPalindromicSum(vector<int>& nums) {
+        int n = nums.size();
+        // 前缀和
+        vector<long long> pref(n + 1, 0);
+        for (int i = 0; i < n; i++) pref[i + 1] = pref[i] + nums[i];
+
+        // Manacher 奇数长度 d1[i]
+        vector<int> d1(n);
+        for (int i = 0, l = 0, r = -1; i < n; i++) {
+            int k = (i > r) ? 1 : min(d1[l + r - i], r - i + 1);
+            while (i - k >= 0 && i + k < n && nums[i - k] == nums[i + k]) k++;
+            d1[i] = k;
+            if (i + k - 1 > r) {
+                l = i - k + 1;
+                r = i + k - 1;
+            }
+        }
+
+        // Manacher 偶数长度 d2[i]
+        vector<int> d2(n);
+        for (int i = 0, l = 0, r = -1; i < n; i++) {
+            int k = (i > r) ? 0 : min(d2[l + r - i + 1], r - i + 1);
+            while (i - k - 1 >= 0 && i + k < n && nums[i - k - 1] == nums[i + k]) k++;
+            d2[i] = k;
+            if (i + k - 1 > r) {
+                l = i - k - 1;
+                r = i + k - 1;
+            }
+        }
+
+        // 取最大和
+        long long ans = 0;
+        for (int i = 0; i < n; i++) {
+            // 奇数：[i-d1[i]+1, i+d1[i]-1]，和 = pref[i+d1[i]] - pref[i-d1[i]+1]
+            ans = max(ans, pref[i + d1[i]] - pref[i - d1[i] + 1]);
+            // 偶数：[i-d2[i], i+d2[i]-1]，和 = pref[i+d2[i]] - pref[i-d2[i]]
+            if (d2[i] > 0)
+                ans = max(ans, pref[i + d2[i]] - pref[i - d2[i]]);
+        }
+        return ans;
+    }
+};
+\`\`\`
+
+### Python
+
+\`\`\`python
+class Solution:
+    def maxPalindromicSum(self, nums: List[int]) -> int:
+        n = len(nums)
+        # 前缀和
+        pref = [0] * (n + 1)
+        for i in range(n):
+            pref[i + 1] = pref[i] + nums[i]
+
+        # Manacher 奇数长度
+        d1 = [0] * n
+        l, r = 0, -1
+        for i in range(n):
+            k = 1 if i > r else min(d1[l + r - i], r - i + 1)
+            while i - k >= 0 and i + k < n and nums[i - k] == nums[i + k]:
+                k += 1
+            d1[i] = k
+            if i + k - 1 > r:
+                l, r = i - k + 1, i + k - 1
+
+        # Manacher 偶数长度
+        d2 = [0] * n
+        l, r = 0, -1
+        for i in range(n):
+            k = 0 if i > r else min(d2[l + r - i + 1], r - i + 1)
+            while i - k - 1 >= 0 and i + k < n and nums[i - k - 1] == nums[i + k]:
+                k += 1
+            d2[i] = k
+            if i + k - 1 > r:
+                l, r = i - k - 1, i + k - 1
+
+        # 取最大和
+        ans = 0
+        for i in range(n):
+            ans = max(ans, pref[i + d1[i]] - pref[i - d1[i] + 1])
+            if d2[i] > 0:
+                ans = max(ans, pref[i + d2[i]] - pref[i - d2[i]])
+        return ans
+\`\`\`
+
+
+---
+
+## 8. 边界情况与易错点
+
+1. **单元素数组**：\`n=1\`，\`d1[0]=1\`，奇数回文覆盖，返回 \`nums[0]\`。
+
+2. **无长度 > 1 的回文**（示例 4）：所有 \`d1[i]=1\`（仅自身），\`d2[i]=0\`，答案是最大单元素。代码自动处理（奇数回文长度 1 的和 = \`nums[i]\`）。
+
+3. **整数溢出**：\`nums[i]\` 可达 10⁹，n=10⁵，最大和可达 10¹⁴。C++ 必须用 \`long long\`，Python 无此问题。
+
+4. **Manacher 偶数长度的中心定义**：\`d2[i]\` 的中心在 \`i-1\` 和 \`i\` 之间，回文范围是 \`[i-d2[i], i+d2[i]-1]\`，不是 \`[i-d2[i]+1, i+d2[i]]\`。前缀和下标易错。
+
+5. **前缀和下标**：\`pref[j]\` = 前 j 个元素的和（\`pref[0]=0\`）。子数组 \`[l,r]\` 的和 = \`pref[r+1] - pref[l]\`。代入回文范围时注意 +1 偏移。
+
+6. **所有元素为正是关键前提**：若元素可能为负，最长回文不一定和最大（外层可能是一对负数），本题不适用。需改用更复杂的处理。
+
+---
+
+## 9. 相关题目与扩展
+
+- [5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)：Manacher 算法的经典应用，只求长度不求和。
+- [647. 回文子串](https://leetcode.cn/problems/palindromic-substrings/)：统计回文子串个数，同样用 Manacher 或中心扩展。
+- [1745. 分割回文串 IV](https://leetcode.cn/problems/palindrome-partitioning-iv/)：回文判定预处理。
+- [2472. 不重叠回文子字符串的最大数目](https://leetcode.cn/problems/maximum-number-of-non-overlapping-palindrome-substrings/)：回文 + 贪心/DP。
+
+**延伸思考**：
+
+- 如果 \`nums[i]\` 可以为负数，该怎么做？
+  - 最长回文不再保证和最大。需要对每个中心枚举所有回文半径（用 Manacher 的 \`d1/d2\` 知道哪些半径有效），结合前缀和求最大——但最坏仍 O(n²)。可考虑分治或线段树优化。
+- 如果要求回文子数组的**最大长度**而非和？
+  - 直接 Manacher 取 \`max(2*d1[i]-1, 2*d2[i])\`，不需要前缀和。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

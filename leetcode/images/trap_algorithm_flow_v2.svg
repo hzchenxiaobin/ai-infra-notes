@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arrowD" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
+      <path d="M0,0 L4,7 L8,0 Z" fill="#888"/>
+    </marker>
+    <marker id="arrowU" markerWidth="8" markerHeight="8" refX="4" refY="1" orient="auto">
+      <path d="M0,8 L4,1 L8,8 Z" fill="#888"/>
+    </marker>
+    <marker id="arrowR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="460" height="420" fill="#fafafa"/>
+
+  <text x="230" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">接雨水 · 双指针算法流程</text>
+
+  <!-- Step 1: Init -->
+  <rect x="120" y="44" width="220" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="230" y="64" text-anchor="middle" font-size="12.5" fill="#333" font-weight="bold">初始化</text>
+  <text x="230" y="80" text-anchor="middle" font-size="11" fill="#555">left=0, right=n−1, L_max=R_max=0</text>
+
+  <!-- Arrow down -->
+  <path d="M 230 92 L 230 110" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+
+  <!-- Step 2: Loop condition -->
+  <rect x="100" y="114" width="260" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="230" y="134" text-anchor="middle" font-size="12.5" fill="#333" font-weight="bold">while (left &lt; right)</text>
+  <text x="230" y="150" text-anchor="middle" font-size="11" fill="#555">两个指针还没相遇？继续循环</text>
+
+  <!-- Arrow down to diamond -->
+  <path d="M 230 162 L 230 180" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+
+  <!-- Diamond: compare h[left] vs h[right] -->
+  <polygon points="230,185 340,235 230,285 120,235" fill="#f0f0f0" stroke="#888" stroke-width="2" filter="url(#rough2)"/>
+  <text x="230" y="228" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">h[left] &lt; h[right] ?</text>
+  <text x="230" y="246" text-anchor="middle" font-size="10.5" fill="#777">比较两侧高度</text>
+
+  <!-- Left branch: Yes -->
+  <path d="M 120 235 L 50 235 L 50 310" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+  <text x="68" y="228" font-size="11" fill="#5b9bd5" font-weight="bold">Yes</text>
+
+  <!-- Left branch box -->
+  <rect x="10" y="314" width="120" height="80" fill="#e8f0fe" stroke="#446688" stroke-width="1.8" rx="10" filter="url(#rough2)"/>
+  <text x="70" y="334" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">处理 left 侧</text>
+  <text x="70" y="352" text-anchor="middle" font-size="10" fill="#555">if h[L]≥L_max:</text>
+  <text x="70" y="366" text-anchor="middle" font-size="10" fill="#555">  更新 L_max</text>
+  <text x="70" y="380" text-anchor="middle" font-size="10" fill="#555">else: ans+=L_max−h[L]</text>
+  <text x="70" y="394" text-anchor="middle" font-size="10" fill="#e8853a">left++ ←</text>
+
+  <!-- Right branch: No -->
+  <path d="M 340 235 L 410 235 L 410 310" stroke="#888" stroke-width="2" fill="none" marker-end="url(#arrowD)" filter="url(#rough2)"/>
+  <text x="378" y="228" font-size="11" fill="#82b366" font-weight="bold">No</text>
+
+  <!-- Right branch box -->
+  <rect x="350" y="314" width="100" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="10" filter="url(#rough2)"/>
+  <text x="400" y="334" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">处理 right 侧</text>
+  <text x="400" y="352" text-anchor="middle" font-size="10" fill="#555">if h[R]≥R_max:</text>
+  <text x="400" y="366" text-anchor="middle" font-size="10" fill="#555">  更新 R_max</text>
+  <text x="400" y="380" text-anchor="middle" font-size="10" fill="#555">else: ans+=R_max−h[R]</text>
+  <text x="400" y="394" text-anchor="middle" font-size="10" fill="#e8853a">→ right−−</text>
+
+  <!-- Loop back arrow from left box to while -->
+  <path d="M 70 314 L 70 100 L 100 100" stroke="#888" stroke-width="1.8" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+
+  <!-- Loop back arrow from right box to while -->
+  <path d="M 400 314 L 400 100 L 360 100" stroke="#888" stroke-width="1.8" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowR)" filter="url(#rough2)"/>
+
+  <!-- Final result note -->
+  <text x="230" y="406" text-anchor="middle" font-size="11" fill="#d6a040" font-style="italic">循环结束 → return ans (O(n) 时间, O(1) 空间)</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 360" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="360" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">快慢指针：fast 每轮追近 slow 1 步，有环必相遇</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">slow 走 1 步，fast 走 2 步；速度差 1 保证不跳过</text>
+
+  <!-- ===== Cyclic linked list ===== -->
+  <text x="30" y="76" font-size="11" fill="#446688" font-weight="bold">带环链表</text>
+  <g font-size="11">
+    <!-- nodes: 3 → 2 → 0 → -4 → (back to 2) -->
+    <!-- 3 -->
+    <circle cx="80" cy="120" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="80" y="125" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <!-- 2 -->
+    <circle cx="180" cy="120" r="18" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="180" y="125" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <!-- 0 -->
+    <circle cx="280" cy="120" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="280" y="125" text-anchor="middle" fill="#446688" font-weight="bold">0</text>
+    <!-- -4 -->
+    <circle cx="380" cy="120" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="380" y="125" text-anchor="middle" fill="#446688" font-weight="bold">-4</text>
+
+    <!-- arrows -->
+    <path d="M 98 120 L 160 120" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 198 120 L 260 120" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 298 120 L 360 120" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- cycle back arrow: -4 → 2 -->
+    <path d="M 380 138 Q 380 200 280 200 Q 180 200 180 138" stroke="#b85450" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="280" y="220" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">环回（-4 → 2）</text>
+  </g>
+
+  <!-- ===== Fast & Slow ===== -->
+  <text x="30" y="252" font-size="11" fill="#444" font-weight="bold">快慢指针运动：</text>
+
+  <rect x="30" y="262" width="230" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="280" font-family="monospace" font-size="10" fill="#446688">slow = slow.next      // 走 1 步</text>
+  <text x="44" y="294" font-size="9" fill="#888">乌龟：每轮前进 1</text>
+
+  <rect x="280" y="262" width="230" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="294" y="280" font-family="monospace" font-size="10" fill="#b85450">fast = fast.next.next  // 走 2 步</text>
+  <text x="294" y="294" font-size="9" fill="#888">兔子：每轮前进 2，追近 slow 1 步</text>
+
+  <!-- ===== Key insight ===== -->
+  <rect x="30" y="310" width="480" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="270" y="328" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">速度差 = 1 → 每轮追近 1 步 → 距离必减到 0（相遇）</text>
+  <text x="270" y="344" text-anchor="middle" font-size="9" fill="#555">不会跳过（差 1 不跳 0）；若速度差 2 可能跳过</text>
+</svg>

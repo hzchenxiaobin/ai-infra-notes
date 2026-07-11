@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 5 - Day 6：端到端 Profiling</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 Week 5 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="../week3/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week3/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week3/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week3/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week3/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week3/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week3/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link active" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 6：端到端 Profiling</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 掌握推理系统 profiling 的 **三层方法论**——系统级（nsys）→ 阶段级（cuda.Event）→ Kernel 级（ncu），自顶向下定位瓶颈<br>
+2. 能用 PyTorch 手写 **profiling 脚本**，测量 TTFT、mean/P50/P99 TBT、Decode 的 forward/sampling/sync 三段 breakdown<br>
+3. 理解 **TTFT 随 prompt 长度** 的增长规律（O(N²) 的 attention 主导时近似平方增长），能从扫描数据判断瓶颈<br>
+4. 理解 **TBT 是否随生成长度增长** 的判据——增长说明 Decode memory-bound 读 KV Cache 成瓶颈，稳定但绝对值高说明 launch overhead 主导<br>
+5. 能用 **瓶颈定位决策树** 从"TTFT 高 / TBT 高 / gap 大"三类现象映射到具体优化方向（FlashAttention / KV 量化 / CUDA Graph）<br>
+
+> 💡 **为什么重要**：Day 5 我们造出了 Mini 引擎 v0，但它到底快不快、慢在哪、怎么优化——没有 profiling 就是盲人摸象。今天给引擎装上"仪表盘"：测 TTFT/TBT、拆 breakdown、用 nsys 看 kernel 间隙、用 ncu 钻进单 kernel。profiling 是系统优化的标准流程——"先测量再优化"，没有数据支撑的优化都是猜。"如何做推理系统 profiling"是面试高频题，也是工程能力的硬指标。
+
+---
+
+### 学前导读：优化之前，先测量
+
+Day 1-5 我们反复说"Decode 是 memory-bound""Prefill 是 compute-bound"——这些结论怎么来的？不是背的，是测出来的。今天我们就把 Mini 引擎 v0 拆开测：
+
+- Prefill 到底比 Decode 单步慢多少倍？（TTFT vs TBT）
+- Decode 单步里，forward / sampling / sync 各占多少？
+- prompt 变长，TTFT 怎么涨？（O(N) 还是 O(N²)）
+- 生成长度增加，TBT 会涨吗？（涨说明 memory-bound 读 KV 是瓶颈）
+
+| 问题 | 测量工具 | 看什么 |
+|------|---------|--------|
+| 时间花在哪 | nsys（系统级时间线） | kernel 排列、gap 间隙 |
+| Prefill 还是 Decode 慢 | cuda.Event（阶段级计时） | TTFT、TBT |
+| 哪个算子卡 | ncu（kernel 级指标） | dram__bytes、sm__throughput |
+
+> 💡 **一句话总结**：profiling 三层方法论 = nsys 看全局 → cuda.Event 量化阶段 → ncu 钻进单 kernel。先测再优，用数据驱动决策——这是系统工程师的基本功。
+
+---
+
+### 理论学习
+
+#### 6.1 三层 profiling 方法论
+
+![推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级](images/profiling_three_layers.svg)
+
+| 层级 | 工具 | 粒度 | 回答的问题 |
+|------|------|------|-----------|
+| **① 系统级** | Nsight Systems (\`nsys\`) | ms 级 | "时间花在哪？kernel 间隙大不大？CPU/GPU 谁等谁？" |
+| **② 阶段级** | \`cuda.Event\` + \`perf_counter\` | ms 级，分阶段 | "Prefill 还是 Decode 慢？TTFT/TBT 多少？" |
+| **③ Kernel 级** | Nsight Compute (\`ncu\`) | ns 级，单 kernel | "哪个算子卡？compute 还是 memory-bound？" |
+
+##### 自顶向下的工作流
+
+\`\`\`
+1. nsys profile → 看时间线，发现 "kernel gap 占 30%"
+ → 判断：launch overhead 严重
+
+1. cuda.Event 测 TTFT/TBT → 发现 "TTFT 随 N² 增长，TBT 稳定"
+ → 判断：Prefill compute-bound，Decode launch-bound
+
+1. ncu 钻进最慢 kernel → 发现 "dram__throughput 95%，sm__throughput 5%"
+ → 判断：该 kernel memory-bound，优化方向是减 HBM 访问
+\`\`\`
+
+#### 6.2 阶段级指标：TTFT / TBT / breakdown
+
+\`\`\`
+TTFT (Time To First Token) = Prefill 延迟
+ = encode + model(prefill) + argmax(first token)
+
+TBT (Time Between Tokens) = 单步 Decode 延迟
+ = forward + sampling + sync
+
+Decode 单步 breakdown:
+ forward = model(decode_step) 的矩阵乘 + attention
+ sampling = argmax / temperature / top-k（通常在 CPU）
+ sync = cudaSynchronize 等待 GPU（含 launch overhead 间隙）
+\`\`\`
+
+![Decode 单步 Breakdown：forward / sampling / sync 占比](images/decode_breakdown.svg)
+
+| 部分 | 典型占比（GPU） | 偏大时说明 | 优化方向 |
+|------|---------------|-----------|---------|
+| **forward** | 85-95% | 绝对值高 = Decode memory-bound | KV 量化、GQA、fused kernel |
+| **sampling** | 2-5% | >10% = CPU 瓶颈 | 采样搬到 GPU、批处理 |
+| **sync/gap** | 3-10% | >15% = launch overhead 主导 | CUDA Graph、torch.compile、kernel fusion |
+
+##### TTFT 随 prompt 长度的增长规律
+
+| 增长规律 | 主导项 | 瓶颈类型 | 优化 |
+|---------|--------|---------|------|
+| TTFT ∝ O(N²) | attention 的 N×N 矩阵 | compute-bound | FlashAttention（O(Nd) IO） |
+| TTFT ∝ O(N) | QKV GEMM 的 O(N·d²) | memory/compute 混合 | Tensor Core、并行 prefill |
+
+> 💡 实测时，扫描 \`N = 32, 64, 128, 256, 512\`，看 \`TTFT/N\`（per-token）是否近似常数（O(N)）还是 \`TTFT/N²\` 近似常数（O(N²)）。N 较大时 attention 主导，趋近 O(N²)。
+
+##### TBT 是否随生成长度增长
+
+| 现象 | 说明 | 优化方向 |
+|------|------|---------|
+| TBT 随 L 增长 | Decode 读 KV Cache 随 L 增大 → memory-bound 确证 | KV 量化、GQA/MQA、滑动窗口 |
+| TBT 稳定但绝对值高 | 每步计算量与 L 无关，但 launch/sync 开销大 | CUDA Graph、kernel fusion |
+| TBT 随 L 增长但缓慢 | KV 在 L2 cache 内时影响小，超出后掉崖 | 减小 KV（量化）使其留在 cache |
+
+#### 6.3 系统级：nsys 看 kernel 时间线
+
+\`\`\`bash
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx \\
+ python aiinfra/week5/day5/kernels/mini_engine_v0.py
+
+# 统计各 kernel 耗时
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+\`\`\`
+
+**观察重点**：
+1. **Prefill 阶段**：少量大 GEMM kernel，时间长（compute-bound 特征）
+2. **Decode 阶段**：大量极小 kernel，kernel 间有明显 gap（memory-bound + launch overhead 特征）
+3. **kernel gap 占比**：gap = 相邻 kernel 间的空白时间。gap > 20% 说明 launch overhead 严重
+
+##### gap 的本质
+
+\`\`\`
+Decode 每步触发多个 kernel：embedding → qkv GEMM → attention → ffn GEMM → lm_head
+每个 kernel launch 有 ~5-10 μs 开销（CPU 提交 → GPU 执行的握手）
+kernel 本身只算几十 μs（M=1 太小），但 launch 开销占比高 → gap 大
+\`\`\`
+
+> ⚠️ 这正是 CUDA Graph 的用武之地：把整个 decode 循环录制成一张图，一次提交全部 kernel，消除 per-step launch 开销。Day 7 总结会提。
+
+#### 6.4 Kernel 级：ncu 钻进单 kernel
+
+\`\`\`bash
+ncu --kernel-name regex:your_kernel \\
+ --metrics gpu__time_duration.sum, \\
+ dram__bytes.sum, \\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed, \\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed \\
+ ./your_program
+\`\`\`
+
+| 指标 | 含义 | 判断瓶颈 |
+|------|------|---------|
+| \`dram__throughput\` 高 + \`sm__throughput\` 低 | 带宽打满、算力闲置 | **memory-bound** |
+| \`sm__throughput\` 高 + \`dram__throughput\` 低 | 算力打满、带宽没用满 | **compute-bound** |
+| 两者都低 | 可能 launch/occupancy 问题 | 查 occupancy、warp 数 |
+
+##### Roofline 视角
+
+算术强度 \`AI = FLOPs / Bytes\`，对照 Ridge Point（A100 ≈ 12.6 FLOP/Byte）：
+- \`AI < Ridge\` → memory-bound（在带宽斜线上）
+- \`AI > Ridge\` → compute-bound（在算力水平线上）
+
+#### 6.5 瓶颈定位决策树
+
+![瓶颈定位决策树：从现象到优化方向](images/bottleneck_decision_tree.svg)
+
+| 现象 | 判断 | 优化方向 |
+|------|------|---------|
+| TTFT 随 N² 增长 | Prefill compute-bound（attention 主导） | FlashAttention、Tensor Core |
+| TTFT 随 N 线性增长 | Prefill 偏 GEMM（memory/compute 混合） | Tensor Core、并行 prefill、reduce prompt |
+| TBT 随 L 增长 | Decode memory-bound（读 KV Cache） | KV 量化、GQA/MQA、PagedAttention、滑动窗口 |
+| TBT 稳定但绝对值高 | launch overhead 主导 | CUDA Graph、torch.compile、kernel fusion |
+| kernel gap > 20% | launch overhead 严重 | CUDA Graph（消除 per-step launch） |
+| sampling 占比 > 10% | CPU 瓶颈 | 采样搬到 GPU、批处理采样 |
+
+### Coding 任务：Mini 引擎端到端 Profiling
+
+#### 任务 1：创建 profile_engine_v0.py
+
+创建文件 [kernels/profile_engine_v0.py](kernels/profile_engine_v0.py)，对 Day 5 的 Mini 引擎做端到端 profiling：
+
+\`\`\`python
+# profile_engine_v0.py —— Mini 推理引擎 v0 端到端 Profiling
+# 运行命令: python profile_engine_v0.py
+# 依赖: pip install torch
+
+import sys, os, time, statistics, torch
+_DAY5 = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "day5", "kernels")
+sys.path.insert(0, _DAY5)
+from mini_engine_v0 import MiniLLM, MiniTokenizer, MiniEngineV0
+
+_HAS_CUDA = torch.cuda.is_available()
+def sync():
+ if _HAS_CUDA: torch.cuda.synchronize()
+
+def profile_engine(engine, prompt, max_new_tokens=20):
+ input_ids = torch.tensor([engine.tokenizer.encode(prompt)], device=engine.device)
+ for _ in range(3): _ = engine.model(input_ids, use_cache=False)
+ sync()
+
+ # Prefill
+ sync(); t0 = time.perf_counter()
+ with torch.no_grad():
+ logits, kv_cache = engine.model(input_ids, use_cache=True)
+ first_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+ sync(); ttft = (time.perf_counter() - t0) * 1000
+
+ print(f"=== Prefill Phase ===")
+ print(f" Prompt length: {input_ids.size(1)} tokens")
+ print(f" TTFT: {ttft:.3f} ms")
+ print(f" KV Cache shape per layer: {tuple(kv_cache[0][0].shape)}")
+
+ # Decode
+ decode_times = []; breakdown = {"forward": [], "sampling": [], "sync": []}
+ next_token = first_token
+ for _ in range(max_new_tokens):
+ t0 = time.perf_counter()
+ with torch.no_grad():
+ logits, kv_cache = engine.model(next_token, kv_cache=kv_cache, use_cache=True)
+ t1 = time.perf_counter()
+ next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+ t2 = time.perf_counter()
+ sync(); t3 = time.perf_counter()
+ decode_times.append((t3 - t0) * 1000)
+ breakdown["forward"].append((t1 - t0) * 1000)
+ breakdown["sampling"].append((t2 - t1) * 1000)
+ breakdown["sync"].append((t3 - t2) * 1000)
+
+ mean_tbt = statistics.mean(decode_times)
+ p50 = statistics.median(decode_times)
+ p99 = sorted(decode_times)[int(len(decode_times)*0.99)] if len(decode_times)>1 else decode_times[0]
+ print(f"\\n=== Decode Phase ({max_new_tokens} tokens) ===")
+ print(f" Mean TBT: {mean_tbt:.3f} ms P50: {p50:.3f} P99: {p99:.3f}")
+ print(f" Max: {max(decode_times):.3f} Min: {min(decode_times):.3f}")
+ print(f"\\n=== Decode Breakdown (mean ms, % of TBT) ===")
+ for k, ts in breakdown.items():
+ m = statistics.mean(ts); print(f" {k:12s}: {m:.3f} ms ({m/mean_tbt*100:.1f}%)")
+ print(f"\\n=== Throughput ===")
+ print(f" Output: {max_new_tokens/(sum(decode_times)/1000):.2f} tokens/s")
+ print(f" TTFT/TBT ratio: {ttft/mean_tbt:.1f}x")
+ return {"ttft": ttft, "decode_times": decode_times}
+
+def scan_prompt_lengths(engine, lengths=[32,64,128,256,512]):
+ print("\\n=== TTFT vs Prompt Length ===")
+ print(f"{'N':>8} {'TTFT(ms)':>10} {'TTFT/N':>10} {'TTFT/N²':>10}")
+ for L in lengths:
+ ids = torch.randint(1,1000,(1,L),device=engine.device)
+ for _ in range(2): _ = engine.model(ids, use_cache=False)
+ sync(); t0 = time.perf_counter()
+ with torch.no_grad(): _ = engine.model(ids, use_cache=True)
+ sync(); ttft = (time.perf_counter()-t0)*1000
+ print(f"{L:>8} {ttft:>10.3f} {ttft/L:>10.3f} {ttft/(L*L):>10.6f}")
+
+def scan_decode_length(engine, prompt_len=64, Ks=[10,30,50,100]):
+ print("\\n=== TBT vs Generated Length (prompt fixed) ===")
+ print(f"{'Gen':>8} {'Mean TBT':>12} {'Last TBT':>12}")
+ for K in Ks:
+ ids = torch.randint(1,1000,(1,prompt_len),device=engine.device)
+ with torch.no_grad():
+ logits, kv = engine.model(ids, use_cache=True)
+ nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
+ sync(); dts = []
+ for _ in range(K):
+ t0 = time.perf_counter()
+ with torch.no_grad():
+ logits, kv = engine.model(nt, kv_cache=kv, use_cache=True)
+ nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
+ sync(); dts.append((time.perf_counter()-t0)*1000)
+ print(f"{K:>8} {statistics.mean(dts):>12.3f} {dts[-1]:>12.3f}")
+
+def main():
+ device = "cuda" if _HAS_CUDA else "cpu"
+ print(f"Using device: {device}\\n")
+ torch.manual_seed(42)
+ model = MiniLLM(1000, 512, 8, n_layers=4)
+ engine = MiniEngineV0(model, MiniTokenizer(1000), device)
+ profile_engine(engine, "hello world this is a test prompt for profiling", 20)
+ scan_prompt_lengths(engine)
+ scan_decode_length(engine)
+
+if __name__ == "__main__":
+ main()
+\`\`\`
+
+代码要点：
+- **\`profile_engine\`**：测 TTFT（Prefill）+ mean/P50/P99 TBT（Decode）+ forward/sampling/sync 三段 breakdown
+- **\`scan_prompt_lengths\`**：扫描 N，看 \`TTFT/N\`（O(N) 判据）和 \`TTFT/N²\`（O(N²) 判据）哪个近似常数
+- **\`scan_decode_length\`**：固定 prompt、扫描生成长度，看 TBT 是否随 L 增长（memory-bound 判据）
+- **\`sync()\` 包装**：CPU/GPU 都能跑（CPU 上 \`sync\` 是空操作）
+
+#### 任务 2：运行并观察输出
+
+\`\`\`bash
+python kernels/profile_engine_v0.py
+\`\`\`
+
+**预期输出**（GPU；CPU 上数值不同但流程一致）：
+
+\`\`\`text
+Using device: cuda
+
+=== Prefill Phase ===
+ Prompt length: 11 tokens
+ TTFT: x.xxx ms
+ KV Cache shape per layer: (1, 8, 11, 64)
+
+=== Decode Phase (20 tokens) ===
+ Mean TBT: x.xxx ms P50: x.xxx P99: x.xxx
+ Max: x.xxx Min: x.xxx
+
+=== Decode Breakdown (mean ms, % of TBT) ===
+ forward : x.xxx ms (xx.x%)
+ sampling : x.xxx ms (x.x%)
+ sync : x.xxx ms (x.x%)
+
+=== Throughput ===
+ Output: xx.xx tokens/s
+ TTFT/TBT ratio: x.xxx
+
+=== TTFT vs Prompt Length ===
+ N TTFT(ms) TTFT/N TTFT/N²
+ 32 x.xxx x.xxx x.xxxxxx
+ ...
+ 512 x.xxx x.xxx x.xxxxxx
+
+=== TBT vs Generated Length (prompt fixed) ===
+ Gen Mean TBT Last TBT
+ 10 x.xxx x.xxx
+ ...
+\`\`\`
+
+##### 观察重点
+
+1. **TTFT vs TBT**：GPU 上 TTFT 通常远大于单步 TBT（Prefill 算 N×N，Decode 算 1×N）。CPU 上可能相反（PyTorch CPU 的 M=1 开销大）——这正说明 CPU 跑不出 GPU 的 compute/memory 特性，profiling 要在 GPU 上做。
+2. **TTFT/N vs TTFT/N²**：N 大时，\`TTFT/N²\` 趋于常数 → attention O(N²) 主导（compute-bound）。
+3. **TBT vs L**：若 TBT 随生成长度增长 → memory-bound（读 KV Cache 变慢）；若稳定 → launch overhead 主导。
+4. **breakdown**：forward 应占大头（85%+）；sync/gap 占比高说明 launch overhead。
+
+> ⚠️ **注意**：本环境若为 CPU，TTFT/TBT 的绝对值和占比不代表 GPU 真实行为（CPU 上 PyTorch 的 M=1 GEMM 开销大，TTFT/TBT ratio 会失真）。profiling 结论要在 GPU 上得出。教程的脚本在 GPU 上能正确反映 compute/memory-bound 特征。
+
+#### 任务 3：用 nsys 采集时间线
+
+\`\`\`bash
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx \\
+ python aiinfra/week5/day5/kernels/mini_engine_v0.py
+
+# 统计各 kernel 耗时
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+\`\`\`
+
+**分析任务**：
+1. 找出 Prefill 阶段 CUDA 时间 top3 算子（应是 GEMM 类）
+2. 找出 Decode 阶段 CUDA 时间 top3 算子（应是同算子但尺寸极小）
+3. 计算 kernel 间隙占总时间的比例（gap > 20% → launch overhead 严重）
+4. 判断系统主要瓶颈：compute / memory / launch overhead
+
+#### 任务 4：LeetGPU 在线题目 —— Weight Dequantization
+
+**题目链接**：<https://leetgpu.com/challenges/weight-dequantization>
+
+**题目概述**：
+
+实现 **权重反量化** kernel：给定量化权重矩阵 \`X[M,N]\` 和分块 scale 矩阵 \`S[ceil(M/T), ceil(N/T)]\`（T 是 tile size），对每个 \`X[i,j]\` 乘以对应的 \`S[i/T, j/T]\`，输出 \`Y[M,N] = X * S_expanded\`。
+
+**约束条件**：性能测试取 \`M=N=8192, T=128\`；容差 \`atol=rtol=1e-5\`。
+
+**与今日知识的关联**：
+
+Weight Dequantization 是一个**典型的 memory-bound element-wise kernel**——每元素只做一次乘法（FLOPs 极少），但要读 X 和 S、写 Y（HBM 流量大）。它正是今天 ncu profiling 的**理想分析对象**：用 \`ncu\` 测它的 \`dram__throughput\`（应接近峰值）和 \`sm__throughput\`（应很低），验证"AI 极低 → memory-bound"的判据。推理系统里，权重反量化是 INT8/INT4 量化推理的必经步骤——量化权重从 HBM 读出后要反量化成 fp16/fp32 再做 GEMM。今天我们测它的瓶颈特征，正是为后续"量化推理"优化打基础。
+
+> 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时。完整题解（含 element-wise kernel、ncu 测 memory-bound、Roofline 分析）见 [Weight Dequantization 题解](../leetgpu/leetgpu-weight-dequantization-solution.html)。
+
+#### 任务 5：LeetCode 面试题 —— 排序链表
+
+**题目链接**：[148. 排序链表](https://leetcode.cn/problems/sort-list/)
+
+**题目概述**：
+
+给定单链表的头节点，将其按**升序排序**。要求 \`O(n log n)\` 时间、\`O(1)\` 额外空间（递归栈不计则自底向上归并）。
+
+**与今日知识的关联**：
+
+排序链表的**自底向上归并**是"分而治之、逐层合并"的典范——把链表按 1→2→4→8 的步长逐趟归并，每趟合并相邻段。这与今天的 **profiling 三层方法论**同构：都是"自顶向下拆解、自底向上聚合"。profiling 也是先把系统拆成 Prefill/Decode（拆），再拆成 forward/sampling/sync（拆），最后定位单 kernel（底），再从 kernel 优化聚合回阶段提升（合）。归并排序的"每趟处理所有段、趟数 log n"与 profiling 的"逐层细化、每层覆盖全部"思路一致。
+
+**核心套路**：
+
+\`\`\`
+自底向上归并：步长 sz = 1,2,4,... 直到 ≥ n
+ 每趟：从头扫，每 2×sz 个节点做一次 merge
+ 共 log n 趟，每趟 O(n) → O(n log n)
+\`\`\`
+
+> 💡 完整题解（含递归归并 + 自底向上迭代、C++/Python 参考代码、与 profiling 三层拆解的模式类比）见 [排序链表题解](../leetcode/problems/排序链表.html)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：扫描不同 d_model 的 TTFT
+
+修改 \`scan_prompt_lengths\`，固定 N=256，扫描 \`d_model = 128, 256, 512, 1024\`，观察 TTFT 随 d_model 的增长（QKV GEMM 是 O(N·d²)，应近似 d² 增长）。
+
+> 思考：d_model 翻倍，TTFT 变几倍？（提示：QKV GEMM FLOPs ∝ d²，attention ∝ d，GEMM 主导时约 4x。）
+
+#### 实验 2：对比 with/without cache 的 TBT 随 L 增长
+
+修改 \`scan_decode_length\`，分别测 with cache 和 without cache 的 TBT 随生成长度变化。without cache 应随 L 线性增长（每步重算更长前缀），with cache 基本稳定。
+
+> 思考：这正量化了 KV Cache 的收益——without cache 的 TBT 增长斜率 = KV Cache 让 decode 稳定的程度。Day 5 的正确性验证 + 今天的 latency 对比，完整刻画了 KV Cache 的"正确且加速"。
+
+#### 实验 3：用 ncu 测 forward 里最慢的 GEMM kernel
+
+\`\`\`bash
+ncu --kernel-name regex:addmm \\
+ --metrics gpu__time_duration.sum, dram__bytes.sum, \\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed, \\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed \\
+ python aiinfra/week5/day6/kernels/profile_engine_v0.py
+\`\`\`
+
+> 思考：Prefill 的 GEMM 应 \`sm__throughput\` 高（compute-bound），Decode 的同 GEMM 应 \`dram__throughput\` 高（M=1 memory-bound）——同一个算子，M 不同瓶颈翻转，这正是 Day 1 的核心结论的 ncu 实证。
+
+---
+
+### 今日总结
+
+Day 6 我们给 Mini 引擎装上了"仪表盘"，建立了推理 profiling 的完整方法论：
+
+1. **三层方法论**：系统级（nsys 看时间线/gap）→ 阶段级（cuda.Event 测 TTFT/TBT）→ Kernel 级（ncu 测带宽/算力利用率），自顶向下定位瓶颈
+2. **阶段级指标**：TTFT（Prefill）、TBT（Decode）、Decode 的 forward/sampling/sync breakdown——forward 应占 85%+，sync 大说明 launch overhead
+3. **TTFT 增长规律**：扫描 N，\`TTFT/N²\` 趋常数 → attention O(N²) 主导（compute-bound）；\`TTFT/N\` 趋常数 → GEMM O(N·d²) 主导
+4. **TBT 是否随 L 增长**：增长 → memory-bound（读 KV Cache 变慢）；稳定但绝对值高 → launch overhead 主导 → CUDA Graph
+5. **瓶颈决策树**：TTFT 高→FlashAttention；TBT 随 L 增长→KV 量化/GQA；gap 大→CUDA Graph；sampling 大→搬 GPU
+6. **手写 profiling 脚本**：测 TTFT/mean/P50/P99 TBT + 三段 breakdown + 扫描 prompt/生成长度，从数据判断瓶颈类型
+7. **ncu 判据**：\`dram__throughput\` 高 + \`sm__throughput\` 低 = memory-bound；反之 compute-bound——同算子 M 不同瓶颈翻转
+
+掌握这些后，你就有了"先测量再优化"的工程能力——明天 Day 7 总结本周，把推理系统四大核心问题（内存管理、Batch 策略、Latency 隐藏、调度开销）系统化，为 Week 6+ 的深入优化做准备。
+
+---
+
+### 面试要点
+
+1. **如何做 LLM 推理系统的端到端 profiling？需要关注哪些指标？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 三层方法论：
+ 1. **系统级**（nsys）：看 kernel 时间线排列、gap 间隙、CPU/GPU 并行关系
+ 2. **阶段级**（cuda.Event）：测 TTFT（Prefill）、TBT/TPOT（Decode）、throughput
+ 3. **Kernel 级**（ncu）：分析 top 算子是 compute-bound 还是 memory-bound（看 dram/sm throughput）
+ - 关键指标：TTFT、TBT 的 mean/P50/P99、kernel gap 占比、SM/Memory utilization、KV Cache 内存占用
+ - 瓶颈定位：TTFT 高→Prefill；TBT 高→Decode；gap 大→launch overhead；逐层细化到单 kernel 的带宽/算力利用率
+
+</details>
+
+
+2. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **原因**：序列变长，KV Cache 变大，每步 Decode 要读取更多历史 K/V（attention 的 1×L 部分）。当 KV 超出 L2/L1 cache，掉到 HBM，访存随 L 增长 → TBT 增长
+ - 计算量：projection O(d²) 与 L 无关，但 attention 的 QK^T 和 PV 是 O(L·d)，随 L 增长
+ - **优化方向**：
+ 1. KV Cache 量化（INT8/FP8）：减半/减 1/4 数据量
+ 2. GQA/MQA：减少 KV 头数，cache 缩 4x+
+ 3. 滑动窗口/稀疏 attention：只保留最近 K 个 token
+ 4. PagedAttention：高效管理 cache 内存（不直接降 TBT，但支持更大 batch 间接提吞吐）
+ 5. Continuous Batching：合并多个 decode 请求，抬高 M，让 memory-bound 的带宽利用率提升
+
+</details>
+
+
+3. **Decode 的 breakdown 里 sync/gap 占比很大说明什么？怎么优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 说明 **launch overhead 主导**——每步 decode 触发多个小 kernel（embedding→qkv→attention→ffn→lm_head），每个 launch 有 5-10μs 开销，而 kernel 本身只算几十 μs（M=1 太小），launch 开销占比高 → gap 大
+ - 优化：
+ 1. **CUDA Graph**：把整个 decode 循环录制成图，一次提交全部 kernel，消除 per-step launch
+ 2. **torch.compile**：自动 fuse 多个 element-wise kernel，减少 launch 数
+ 3. **手写 fused kernel**：把 attention 的 softmax+matmul 融合（如 FlashAttention），减 kernel 数
+ 4. **减少 cudaSynchronize**：异步采样、减少 CPU-GPU 同步点
+
+</details>
+
+
+4. **如何判断一个 kernel 是 compute-bound 还是 memory-bound？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 用 ncu 测两个指标：
+ - \`dram__throughput\`（带宽利用率）高 + \`sm__throughput\`（算力利用率）低 → **memory-bound**
+ - \`sm__throughput\` 高 + \`dram__throughput\` 低 → **compute-bound**
+ - 或用 Roofline：算 \`AI = FLOPs / Bytes\`，对照 Ridge Point（A100 ≈ 12.6 FLOP/Byte）：AI < Ridge → memory-bound，AI > Ridge → compute-bound
+ - 实例：Decode 的 GEMM（M=1）AI≈0.1 → memory-bound；Prefill 的同 GEMM（M=N）AI≈400 → compute-bound。同算子 M 不同瓶颈翻转
+
+</details>
+
+
+5. **TTFT 随 prompt 长度怎么增长？怎么判断是 O(N) 还是 O(N²)？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 扫描 N=32,64,128,256,512，测 TTFT
+ - 看 \`TTFT/N\` 是否趋常数（O(N)）或 \`TTFT/N²\` 是否趋常数（O(N²)）
+ - N 较大时 attention 的 N×N 矩阵主导 → 趋 O(N²)；N 较小时 GEMM 的 O(N·d²) 主导 → 趋 O(N)
+ - 若 TTFT 随 N² 增长 → Prefill compute-bound → 优化用 FlashAttention（把 IO 从 O(N²) 降到 O(Nd)）
+ - 若 TTFT 随 N 线性增长 → GEMM 主导 → 优化用 Tensor Core、并行 prefill
+
+ - 语义一致：都是"测时间、拆阶段、看带宽/算力利用率"，判据（memory vs compute-bound）相同
+
+</details>`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

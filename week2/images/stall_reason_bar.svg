@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400">
+  <rect width="760" height="400" fill="#0d1117"/>
+  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Warp Stall Reasons 示例（Register Blocking GEMM）</text>
+
+  <!-- Bar chart -->
+  <g transform="translate(80, 70)">
+    <!-- Axes -->
+    <line x1="0" y1="280" x2="500" y2="280" stroke="#8b949e" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="280" stroke="#8b949e" stroke-width="2"/>
+    <text x="-10" y="145" text-anchor="middle" font-size="13" fill="#c9d1d9" transform="rotate(-90, -10, 145)">Stall 占比 (%)</text>
+
+    <!-- Grid lines -->
+    <line x1="0" y1="56" x2="500" y2="56" stroke="#30363d" stroke-width="0.5"/>
+    <text x="-5" y="60" text-anchor="end" font-size="10" fill="#8b949e">40%</text>
+    <line x1="0" y1="112" x2="500" y2="112" stroke="#30363d" stroke-width="0.5"/>
+    <text x="-5" y="116" text-anchor="end" font-size="10" fill="#8b949e">30%</text>
+    <line x1="0" y1="168" x2="500" y2="168" stroke="#30363d" stroke-width="0.5"/>
+    <text x="-5" y="172" text-anchor="end" font-size="10" fill="#8b949e">20%</text>
+    <line x1="0" y1="224" x2="500" y2="224" stroke="#30363d" stroke-width="0.5" stroke-dasharray="3"/>
+    <text x="-5" y="228" text-anchor="end" font-size="10" fill="#f85149">10%</text>
+
+    <!-- Long Scoreboard bar (35.2%) -->
+    <rect x="30" y="84" width="60" height="196" fill="#f85149" opacity="0.7" stroke="#f85149"/>
+    <text x="60" y="78" text-anchor="middle" font-size="12" fill="#f85149" font-weight="bold">35.2%</text>
+    <text x="60" y="300" text-anchor="middle" font-size="10" fill="#c9d1d9">Long</text>
+    <text x="60" y="314" text-anchor="middle" font-size="10" fill="#c9d1d9">Scoreboard</text>
+
+    <!-- Math Pipe Throttle (12.1%) -->
+    <rect x="120" y="212" width="60" height="68" fill="#d29922" opacity="0.7" stroke="#d29922"/>
+    <text x="150" y="206" text-anchor="middle" font-size="12" fill="#d29922" font-weight="bold">12.1%</text>
+    <text x="150" y="300" text-anchor="middle" font-size="10" fill="#c9d1d9">Math Pipe</text>
+    <text x="150" y="314" text-anchor="middle" font-size="10" fill="#c9d1d9">Throttle</text>
+
+    <!-- MIO Throttle (8.5%) -->
+    <rect x="210" y="232" width="60" height="48" fill="#8b949e" opacity="0.7" stroke="#8b949e"/>
+    <text x="240" y="226" text-anchor="middle" font-size="11" fill="#8b949e">8.5%</text>
+    <text x="240" y="300" text-anchor="middle" font-size="10" fill="#c9d1d9">MIO</text>
+    <text x="240" y="314" text-anchor="middle" font-size="10" fill="#c9d1d9">Throttle</text>
+
+    <!-- Wait (6.3%) -->
+    <rect x="300" y="245" width="60" height="35" fill="#8b949e" opacity="0.5" stroke="#8b949e"/>
+    <text x="330" y="239" text-anchor="middle" font-size="11" fill="#8b949e">6.3%</text>
+    <text x="330" y="300" text-anchor="middle" font-size="10" fill="#c9d1d9">Wait</text>
+
+    <!-- Others (5.2%) -->
+    <rect x="390" y="251" width="60" height="29" fill="#8b949e" opacity="0.3" stroke="#484f58"/>
+    <text x="420" y="245" text-anchor="middle" font-size="11" fill="#8b949e">5.2%</text>
+    <text x="420" y="300" text-anchor="middle" font-size="10" fill="#c9d1d9">Others</text>
+  </g>
+
+  <!-- Analysis box -->
+  <g transform="translate(540, 70)">
+    <rect x="0" y="0" width="180" height="280" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <text x="90" y="25" text-anchor="middle" font-size="13" fill="#c9d1d9" font-weight="bold">分析结论</text>
+    <text x="15" y="55" font-size="11" fill="#f85149">Long Scoreboard</text>
+    <text x="15" y="72" font-size="10" fill="#8b949e">35.2% 占比最高</text>
+    <text x="15" y="90" font-size="10" fill="#8b949e">→ 全局内存延迟</text>
+    <text x="15" y="108" font-size="10" fill="#8b949e">  是主要瓶颈</text>
+    <line x1="15" y1="120" x2="165" y2="120" stroke="#30363d"/>
+    <text x="15" y="145" font-size="11" fill="#3fb950">优化建议：</text>
+    <text x="15" y="165" font-size="10" fill="#c9d1d9">1. float4 向量化加载</text>
+    <text x="15" y="185" font-size="10" fill="#c9d1d9">2. Double Buffering</text>
+    <text x="15" y="205" font-size="10" fill="#c9d1d9">3. 增大 TM×TN</text>
+    <text x="15" y="225" font-size="10" fill="#c9d1d9">   提升计算强度</text>
+    <line x1="15" y1="240" x2="165" y2="240" stroke="#30363d"/>
+    <text x="90" y="262" text-anchor="middle" font-size="11" fill="#58a6ff">→ 优化后重新</text>
+    <text x="90" y="276" text-anchor="middle" font-size="11" fill="#58a6ff">  profile 验证</text>
+  </g>
+</svg>

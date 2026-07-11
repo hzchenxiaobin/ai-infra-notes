@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 480" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="480" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：[73,74,75,71,69,72,76,73] 逐步栈变化</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">8 步遍历，关注步骤 6、7 的连续弹栈结算</text>
+
+  <!-- table header -->
+  <g font-size="9" fill="#444" font-weight="bold">
+    <rect x="20" y="56" width="30" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="35" y="70" text-anchor="middle">步</text>
+    <rect x="50" y="56" width="30" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="65" y="70" text-anchor="middle">i</text>
+    <rect x="80" y="56" width="40" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="70" text-anchor="middle">温度</text>
+    <rect x="120" y="56" width="100" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="170" y="70" text-anchor="middle">栈（下标）</text>
+    <rect x="220" y="56" width="200" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="320" y="70" text-anchor="middle">动作</text>
+    <rect x="420" y="56" width="120" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="480" y="70" text-anchor="middle">answer 变化</text>
+  </g>
+
+  <!-- rows -->
+  <g font-size="9" fill="#333">
+    <!-- step 1 -->
+    <rect x="20" y="78" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="93" text-anchor="middle">1</text>
+    <rect x="50" y="78" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="93" text-anchor="middle">0</text>
+    <rect x="80" y="78" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="93" text-anchor="middle">73</text>
+    <rect x="120" y="78" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="93" text-anchor="middle">[]</text>
+    <rect x="220" y="78" width="200" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="93" text-anchor="middle">栈空，入栈 0</text>
+    <rect x="420" y="78" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="93" text-anchor="middle" fill="#888">[0,0,0,0,0,0,0,0]</text>
+
+    <!-- step 2 -->
+    <rect x="20" y="102" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="117" text-anchor="middle">2</text>
+    <rect x="50" y="102" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="117" text-anchor="middle">1</text>
+    <rect x="80" y="102" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="117" text-anchor="middle">74</text>
+    <rect x="120" y="102" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="117" text-anchor="middle">[0]</text>
+    <rect x="220" y="102" width="200" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="117" text-anchor="middle" fill="#b85450">74&gt;73 弹0→ans[0]=1；入栈1</text>
+    <rect x="420" y="102" width="120" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="117" text-anchor="middle" fill="#b85450">[1,0,0,0,0,0,0,0]</text>
+
+    <!-- step 3 -->
+    <rect x="20" y="126" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="141" text-anchor="middle">3</text>
+    <rect x="50" y="126" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="141" text-anchor="middle">2</text>
+    <rect x="80" y="126" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="141" text-anchor="middle">75</text>
+    <rect x="120" y="126" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="141" text-anchor="middle">[1]</text>
+    <rect x="220" y="126" width="200" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="141" text-anchor="middle" fill="#b85450">75&gt;74 弹1→ans[1]=1；入栈2</text>
+    <rect x="420" y="126" width="120" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="141" text-anchor="middle" fill="#b85450">[1,1,0,0,0,0,0,0]</text>
+
+    <!-- step 4 -->
+    <rect x="20" y="150" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="165" text-anchor="middle">4</text>
+    <rect x="50" y="150" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="165" text-anchor="middle">3</text>
+    <rect x="80" y="150" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="165" text-anchor="middle">71</text>
+    <rect x="120" y="150" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="165" text-anchor="middle">[2]</text>
+    <rect x="220" y="150" width="200" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="165" text-anchor="middle" fill="#4a7a3a">71&lt;75 不弹，入栈3</text>
+    <rect x="420" y="150" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="165" text-anchor="middle" fill="#888">不变</text>
+
+    <!-- step 5 -->
+    <rect x="20" y="174" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="189" text-anchor="middle">5</text>
+    <rect x="50" y="174" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="189" text-anchor="middle">4</text>
+    <rect x="80" y="174" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="189" text-anchor="middle">69</text>
+    <rect x="120" y="174" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="189" text-anchor="middle">[2,3]</text>
+    <rect x="220" y="174" width="200" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="189" text-anchor="middle" fill="#4a7a3a">69&lt;71 不弹，入栈4</text>
+    <rect x="420" y="174" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="189" text-anchor="middle" fill="#888">不变</text>
+
+    <!-- step 6 (key: pop 2) -->
+    <rect x="20" y="198" width="30" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="213" text-anchor="middle" fill="#d6a040" font-weight="bold">6</text>
+    <rect x="50" y="198" width="30" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="213" text-anchor="middle" fill="#d6a040" font-weight="bold">5</text>
+    <rect x="80" y="198" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="213" text-anchor="middle">72</text>
+    <rect x="120" y="198" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="213" text-anchor="middle">[2,5]</text>
+    <rect x="220" y="198" width="200" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="213" text-anchor="middle" fill="#d6a040" font-weight="bold">72&gt;69 弹4→1; 72&gt;71 弹3→2</text>
+    <rect x="420" y="198" width="120" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="213" text-anchor="middle" fill="#d6a040">[1,1,0,2,1,0,0,0]</text>
+
+    <!-- step 7 (key: pop 2 more) -->
+    <rect x="20" y="222" width="30" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="237" text-anchor="middle" fill="#d6a040" font-weight="bold">7</text>
+    <rect x="50" y="222" width="30" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="237" text-anchor="middle" fill="#d6a040" font-weight="bold">6</text>
+    <rect x="80" y="222" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="237" text-anchor="middle">76</text>
+    <rect x="120" y="222" width="100" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="237" text-anchor="middle">[6]</text>
+    <rect x="220" y="222" width="200" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="237" text-anchor="middle" fill="#d6a040" font-weight="bold">76&gt;72 弹5→1; 76&gt;75 弹2→4</text>
+    <rect x="420" y="222" width="120" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="237" text-anchor="middle" fill="#d6a040">[1,1,4,2,1,1,0,0]</text>
+
+    <!-- step 8 -->
+    <rect x="20" y="246" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="35" y="261" text-anchor="middle">8</text>
+    <rect x="50" y="246" width="30" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="65" y="261" text-anchor="middle">7</text>
+    <rect x="80" y="246" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="100" y="261" text-anchor="middle">73</text>
+    <rect x="120" y="246" width="100" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="170" y="261" text-anchor="middle">[6,7]</text>
+    <rect x="220" y="246" width="200" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="320" y="261" text-anchor="middle" fill="#4a7a3a">73&lt;76 不弹，入栈7</text>
+    <rect x="420" y="246" width="120" height="22" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="480" y="261" text-anchor="middle" fill="#888">不变</text>
+  </g>
+
+  <!-- ===== Final result ===== -->
+  <line x1="20" y1="282" x2="540" y2="282" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="298" width="500" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="320" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">最终结果：[1, 1, 4, 2, 1, 1, 0, 0]</text>
+  <text x="280" y="340" text-anchor="middle" font-size="10" fill="#555">栈剩 [6,7]（76°、73°），后面无更高温度 → answer 保持 0</text>
+  <text x="280" y="358" text-anchor="middle" font-size="10" fill="#555">步骤 6、7 是关键：一个新温度连续弹多个栈顶，一次结算多个答案</text>
+  <text x="280" y="374" text-anchor="middle" font-size="9" fill="#888">共 8 步遍历，8 次入栈 + 6 次出栈 = 14 次操作 = O(n)</text>
+</svg>

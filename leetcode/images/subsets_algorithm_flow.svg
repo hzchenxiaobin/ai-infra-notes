@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+    <marker id="arrN" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="400" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">回溯流程：入节点先收集，再分"不选 / 选"两支递归</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">子集题标志：每个节点都收集 path（区别于排列的叶收集）</text>
+
+  <g filter="url(#rough2)" font-size="11">
+    <!-- 1. Enter dfs(i): collect -->
+    <rect x="170" y="60" width="200" height="46" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="8"/>
+    <text x="270" y="80" text-anchor="middle" fill="#4a7a3a" font-weight="bold">① 入节点即收集</text>
+    <text x="270" y="96" text-anchor="middle" fill="#555" font-family="monospace" font-size="10">ans.push_back(path)</text>
+
+    <path d="M 270 106 L 270 122" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+
+    <!-- 2. Terminate check (diamond) -->
+    <polygon points="270,124 380,160 270,196 160,160" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+    <text x="270" y="156" text-anchor="middle" fill="#d6a040" font-weight="bold">i == n ?</text>
+    <text x="270" y="172" text-anchor="middle" fill="#555" font-size="9">(决策完所有元素)</text>
+
+    <!-- Yes → return -->
+    <path d="M 380 160 L 450 160" stroke="#888" stroke-width="1.3" fill="none" marker-end="url(#arrN)"/>
+    <text x="415" y="152" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">是</text>
+    <rect x="450" y="142" width="70" height="36" fill="#f5f5f5" stroke="#888" stroke-width="1.3" rx="6"/>
+    <text x="485" y="160" text-anchor="middle" fill="#555" font-weight="bold">return</text>
+    <text x="485" y="173" text-anchor="middle" fill="#555" font-size="9">(已收集)</text>
+
+    <!-- No → down to branch -->
+    <path d="M 270 196 L 270 212" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+    <text x="282" y="208" font-size="10" fill="#666" font-weight="bold">否</text>
+
+    <!-- 3. Branch split label -->
+    <rect x="150" y="214" width="240" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6"/>
+    <text x="270" y="230" text-anchor="middle" fill="#446688" font-weight="bold">② 对 nums[i] 二选一</text>
+
+    <!-- left branch: not pick -->
+    <path d="M 220 236 L 130 268" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#arrN)"/>
+    <text x="155" y="256" font-size="10" fill="#888" font-weight="bold">不选</text>
+    <rect x="50" y="270" width="160" height="44" fill="#f5f5f5" stroke="#888" stroke-width="1.4" rx="8"/>
+    <text x="130" y="290" text-anchor="middle" fill="#555" font-weight="bold">③ 不选：path 不变</text>
+    <text x="130" y="306" text-anchor="middle" fill="#555" font-family="monospace" font-size="10">dfs(i + 1)</text>
+
+    <!-- right branch: pick -->
+    <path d="M 320 236 L 410 268" stroke="#4a7a3a" stroke-width="1.4" fill="none" marker-end="url(#arrG)"/>
+    <text x="385" y="256" font-size="10" fill="#4a7a3a" font-weight="bold">选</text>
+    <rect x="330" y="270" width="200" height="58" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="8"/>
+    <text x="430" y="290" text-anchor="middle" fill="#4a7a3a" font-weight="bold">④ 选：选→递归→撤销</text>
+    <text x="430" y="306" text-anchor="middle" fill="#555" font-family="monospace" font-size="10">path.push(nums[i])</text>
+    <text x="430" y="320" text-anchor="middle" fill="#555" font-family="monospace" font-size="10">dfs(i+1); path.pop()</text>
+
+    <!-- loop-back arrows: both branches return to top (collect next node) -->
+    <path d="M 130 314 L 130 350 L 60 350 L 60 83 L 170 83" stroke="#4a7a3a" stroke-width="1.2" fill="none" stroke-dasharray="4,3" marker-end="url(#arrG)"/>
+    <path d="M 430 328 L 430 360 L 510 360 L 510 83 L 370 83" stroke="#4a7a3a" stroke-width="1.2" fill="none" stroke-dasharray="4,3" marker-end="url(#arrG)"/>
+    <text x="46" y="220" font-size="9" fill="#4a7a3a" font-weight="bold" transform="rotate(-90 46 220)">递归返回，回到上层继续</text>
+  </g>
+
+  <!-- ===== Key insight box ===== -->
+  <rect x="30" y="370" width="480" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="270" y="386" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">⚠️ 关键：收集在"入节点"，不在叶子；每个节点都是一个合法子集</text>
+</svg>

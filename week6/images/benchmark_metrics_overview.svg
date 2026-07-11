@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="920" height="420" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Benchmark 六大关键指标</text>
+  <path d="M 300 40 Q 460 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 6 metric cards (2x3) -->
+  <!-- row 1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="270" height="100" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="175" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Throughput</text>
+  <text x="175" y="108" text-anchor="middle" font-size="10" fill="#555">每秒生成 tokens 数</text>
+  <text x="175" y="128" text-anchor="middle" font-size="10" fill="#555">= total_tokens / total_time</text>
+  <text x="175" y="150" text-anchor="middle" font-size="9" fill="#888">单位 tok/s，越高越好</text>
+
+  <g filter="url(#sk)">
+    <rect x="325" y="64" width="270" height="100" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Avg / P50 / P99 Latency</text>
+  <text x="460" y="108" text-anchor="middle" font-size="10" fill="#555">端到端延迟（submit→finish）</text>
+  <text x="460" y="128" text-anchor="middle" font-size="10" fill="#555">P99 = 99 分位（尾延迟）</text>
+  <text x="460" y="150" text-anchor="middle" font-size="9" fill="#888">单位 ms，越低越好</text>
+
+  <g filter="url(#sk)">
+    <rect x="610" y="64" width="270" height="100" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="745" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">TTFT</text>
+  <text x="745" y="108" text-anchor="middle" font-size="10" fill="#555">Time To First Token</text>
+  <text x="745" y="128" text-anchor="middle" font-size="10" fill="#555">submit → 首个 token 生成</text>
+  <text x="745" y="150" text-anchor="middle" font-size="9" fill="#888">反映 prefill 延迟</text>
+
+  <!-- row 2 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="180" width="270" height="100" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="175" y="204" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a2828">TPOT</text>
+  <text x="175" y="224" text-anchor="middle" font-size="10" fill="#555">Time Per Output Token</text>
+  <text x="175" y="244" text-anchor="middle" font-size="10" fill="#555">decode 阶段每 token 时间</text>
+  <text x="175" y="266" text-anchor="middle" font-size="9" fill="#888">反映 decode 流畅度</text>
+
+  <g filter="url(#sk)">
+    <rect x="325" y="180" width="270" height="100" rx="10" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="204" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a2e7e">Batch Size Distribution</text>
+  <text x="460" y="224" text-anchor="middle" font-size="10" fill="#555">每轮 batch 大小分布</text>
+  <text x="460" y="244" text-anchor="middle" font-size="10" fill="#555">反映调度效率</text>
+  <text x="460" y="266" text-anchor="middle" font-size="9" fill="#888">batch 越满 GPU 利用率越高</text>
+
+  <g filter="url(#sk)">
+    <rect x="610" y="180" width="270" height="100" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>
+  <text x="745" y="204" text-anchor="middle" font-size="13" font-weight="bold" fill="#444">GPU Utilization</text>
+  <text x="745" y="224" text-anchor="middle" font-size="10" fill="#555">SM 利用率</text>
+  <text x="745" y="244" text-anchor="middle" font-size="10" fill="#555">nsys / ncu 测量</text>
+  <text x="745" y="266" text-anchor="middle" font-size="9" fill="#888">饱和点时 ≈ 100%</text>
+
+  <!-- test methods -->
+  <g filter="url(#sk)">
+    <rect x="40" y="300" width="840" height="100" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="324" font-size="12" font-weight="bold" fill="#444">两种测试方法：</text>
+  <text x="60" y="346" font-size="11" fill="#2e6e2e" font-weight="bold">① 固定并发数扫描：</text>
+  <text x="240" y="346" font-size="11" fill="#444">同时提交 N 个请求，等全部完成，扫 N=1,2,4,8,16,32,64 → 找饱和点</text>
+  <text x="60" y="368" font-size="11" fill="#7a5415" font-weight="bold">② 固定 QPS 测试：</text>
+  <text x="240" y="368" font-size="11" fill="#444">以恒定速率发请求（如 50 QPS），持续 N 秒 → 观察 P50/P99 随负载变化</text>
+  <text x="60" y="390" font-size="10" fill="#888">固定并发看"能力上限"，固定 QPS 看"真实负载下的尾延迟"——两者互补</text>
+</svg>

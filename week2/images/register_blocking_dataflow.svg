@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Register Blocking 三级数据复用</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: data flow (3 levels) ===== -->
+  <!-- Global Memory -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="200" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="140" y="94" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Global Memory</text>
+  <text x="140" y="112" text-anchor="middle" font-size="11" fill="#666">A[M][K], B[K][N]</text>
+  <text x="140" y="128" text-anchor="middle" font-size="10" fill="#888">~400-800 cycles</text>
+  <path d="M 140 142 L 140 165" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <text x="155" y="158" font-size="10" fill="#666">协作加载</text>
+
+  <!-- Shared Memory -->
+  <g filter="url(#sk)">
+    <rect x="40" y="172" width="200" height="70" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="140" y="196" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Shared Memory</text>
+  <text x="140" y="214" text-anchor="middle" font-size="11" fill="#666">s_A[BM][BK], s_B[BK][BN]</text>
+  <text x="140" y="230" text-anchor="middle" font-size="10" fill="#888">~20-30 cycles</text>
+  <path d="M 140 244 L 140 267" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <text x="155" y="260" font-size="10" fill="#666">加载到寄存器</text>
+
+  <!-- Registers: r_A and r_B -->
+  <g filter="url(#sk)">
+    <rect x="30" y="274" width="100" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="80" y="298" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">r_A[TM]</text>
+  <text x="80" y="316" text-anchor="middle" font-size="10" fill="#666">A 子行（TM 个）</text>
+
+  <g filter="url(#sk)">
+    <rect x="150" y="274" width="100" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="298" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">r_B[TN]</text>
+  <text x="200" y="316" text-anchor="middle" font-size="10" fill="#666">B 子列（TN 个）</text>
+
+  <!-- arrows to FMA -->
+  <path d="M 80 332 L 120 372" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 200 332 L 160 372" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- FMA accumulator -->
+  <g filter="url(#sk)">
+    <rect x="50" y="378" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="402" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">FMA 累加</text>
+  <text x="140" y="424" text-anchor="middle" font-size="13" fill="#2b6e9e" font-weight="bold" font-family="monospace">acc[TM][TN]</text>
+
+  <!-- reuse note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="460" width="220" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="4 3"/>
+  </g>
+  <text x="140" y="480" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">复用：r_A 各被 TN 次使用</text>
+  <text x="140" y="496" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">r_B 各被 TM 次使用</text>
+  <text x="140" y="512" text-anchor="middle" font-size="10" fill="#888">寄存器层算术强度 = TM×TN / (TM+TN)</text>
+
+  <!-- ===== Right: optimization levels ===== -->
+  <text x="640" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">优化层次与性能目标</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="90" width="380" height="34" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="112" font-size="12" fill="#2b2b2b">Naive GEMM</text>
+  <text x="700" y="112" font-size="12" fill="#b03a3a" font-weight="bold">~1-3% peak</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="132" width="380" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="154" font-size="12" fill="#2b2b2b">Shared Memory Tiling</text>
+  <text x="700" y="154" font-size="12" fill="#c98a2b" font-weight="bold">~15-25% peak</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="174" width="380" height="34" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="196" font-size="12" fill="#2b2b2b">Register Blocking</text>
+  <text x="700" y="196" font-size="12" fill="#8e5db8" font-weight="bold">~40-60% peak</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="216" width="380" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="238" font-size="12" fill="#2b2b2b">Warp-level + Shuffle</text>
+  <text x="700" y="238" font-size="12" fill="#4a8edb" font-weight="bold">~60-80% peak</text>
+
+  <g filter="url(#sk)">
+    <rect x="450" y="258" width="380" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="280" font-size="12" fill="#2b2b2b">软件流水线（Double Buffer）</text>
+  <text x="700" y="280" font-size="12" fill="#4a8e4a" font-weight="bold">~80-95% peak</text>
+
+  <!-- Register usage box -->
+  <text x="640" y="320" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">Register 使用量（TM=TN=8）</text>
+  <g filter="url(#sk)">
+    <rect x="470" y="334" width="340" height="170" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="490" y="360" font-size="12" fill="#4a8e4a" font-weight="bold">acc[8][8] = 64 个 float</text>
+  <text x="490" y="384" font-size="12" fill="#4a8edb">r_A[8] = 8 个 float</text>
+  <text x="490" y="408" font-size="12" fill="#4a8edb">r_B[8] = 8 个 float</text>
+  <text x="490" y="432" font-size="12" fill="#888">索引/临时变量 ≈ 8 个</text>
+  <path d="M 490 448 L 790 448" stroke="#d4d4d4" stroke-width="1" filter="url(#sk)"/>
+  <text x="490" y="476" font-size="14" fill="#c98a2b" font-weight="bold">总计 ≈ 88 registers（上限 255）</text>
+  <text x="490" y="494" font-size="10" fill="#888">寄存器未超限 → 不影响 occupancy</text>
+</svg>

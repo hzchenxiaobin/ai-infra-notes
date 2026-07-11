@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - CUDA Programming Guide 性能优化笔记</title>
+    <link rel="stylesheet" href="../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link active" href="../index.html">📌 课程概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="../week3/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week3/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week3/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week3/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week3/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week3/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week3/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">CUDA Programming Guide 性能优化笔记</h1>
+                <a class="back-link" href="../index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="../index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# CUDA Programming Guide 性能优化部分学习笔记
+
+> 本笔记是 [week1/README.md](../index.html) Day 3 的延伸阅读，汇总了新版《CUDA Programming Guide》中与性能优化相关的内容。Day 3 只需了解整体框架，具体技术细节会在 Day 4–Day 6 中专项练习。
+
+---
+
+## 文档结构说明
+
+NVIDIA 已经把传统的《CUDA C Programming Guide》升级为新版《CUDA Programming Guide》（https://docs.nvidia.com/cuda/cuda-programming-guide/）。新文档不再使用旧的“第 5 章 Performance Guidelines”结构，而是按主题重新组织成 5 个 Part。与性能优化直接相关的内容主要分布在 **Part 2（Programming GPUs in CUDA）**、**Part 3（Advanced CUDA）** 和 **Part 4（CUDA Features）**，硬件细节则集中在 **Part 5（Technical Appendices）**。
+
+> **注意**：新版在线指南使用 topic-based URL，没有单独的“Performance Guidelines”章节号。如果你需要按旧版章节号查阅，可参考仍在同步维护的《CUDA C++ Programming Guide》PDF，其中对应内容是 **第 8 章 Performance Guidelines**。
+
+---
+
+## Part 1 铺垫：执行模型与硬件抽象
+
+在谈性能之前，需要先建立几个核心概念（Part 1 中介绍）：
+
+- **Thread / Block / Grid / Warp**：Warp 是 32 个线程组成的执行单位，同一 Warp 内的线程以 SIMT 方式执行同一条指令。
+- **Streaming Multiprocessor（SM）**：GPU 的真正计算单元，每个 SM 上有 Warp Scheduler、Register File、Shared Memory、L1 Cache、各类执行单元（FP32/INT/Tensor Core/SFU 等）。
+- **Memory Hierarchy**：Register → Shared Memory / L1 → L2 → Global Memory（HBM）。越靠近 SM，带宽越高、容量越小。
+- **Compute Capability**：决定硬件能力（如是否支持 Tensor Core、TMA、异步拷贝等），查询 GPU 能力时要用到。
+
+这些概念是后续所有性能分析的底层语言。
+
+---
+
+## Part 2：Programming GPUs in CUDA（基础性能优化）
+
+Part 2 面向刚开始写 CUDA 的人，但已经包含大量常见性能考量。旧版第 5 章的“三大支柱”——Utilization、Memory Throughput、Instruction Throughput——在这里作为编程时的基本准则出现。
+
+### 2.1 性能优化的整体思路
+
+CUDA 程序的性能通常受限于以下三类因素之一：
+
+1. **并行度不足**：GPU 没有足够多的活跃 Warp 来隐藏延迟（Latency Hiding）。
+2. **内存带宽不足**：数据搬运或内存访问成为瓶颈。
+3. **指令吞吐不足**：计算指令本身太慢，或使用了代价高的特殊函数、分支发散。
+
+调优时可以用 Roofline 模型帮助定位：先算当前 kernel 的 **算术强度**（Arithmetic Intensity = FLOPs / Bytes），再对比 GPU 峰值算力和峰值带宽，判断是 memory-bound 还是 compute-bound。
+
+- AI 低 → 优化内存访问（coalescing、shared memory、减少搬运）。
+- AI 高 → 优化计算（指令选择、Occupancy、ILP）。
+
+### 2.2 利用率：Occupancy 与延迟隐藏
+
+SM 上的 Warp Scheduler 每个 cycle 会选择“可执行”的 Warp 来执行。如果所有 Warp 都在等内存返回，SM 就会空闲。**高 Occupancy 能增加可选 Warp 数量，从而隐藏延迟**。
+
+影响 Occupancy 的资源限制：
+
+| 资源 | 说明 | 限制来源 |
+|------|------|---------|
+| 每个 block 的线程数 | block 越大，单个 SM 能同时驻留的 block 越少 | \`maxThreadsPerBlock\` |
+| 每个线程的寄存器数 | 寄存器越多，SM 上能驻留的线程越少 | \`regsPerMultiprocessor\` |
+| Shared memory | 占用越多，能并存的 block 越少 | \`sharedMemPerBlock\` |
+| Block 总数 / SM 数量 | 硬件并发上限 | \`multiProcessorCount\` |
+
+- **Occupancy** = 活跃 Warp 数 / SM 最大 Warp 数。
+- **TLP（Thread-Level Parallelism）**：通过更多 Warp 隐藏延迟。
+- **ILP（Instruction-Level Parallelism）**：单个线程内部独立指令越多，即使 Occupancy 不高也能隐藏延迟。
+
+官方建议：不要一味追求 100% Occupancy。很多时候 **75% 左右的 Occupancy 已能获得接近峰值的性能**，继续增加 Warp 数量收益递减。
+
+实用工具：
+
+- \`cudaOccupancyMaxPotentialBlockSize\` 自动选择最佳 block size。
+- \`__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)\` 提示编译器减少寄存器使用。
+- Nsight Compute 的 *Occupancy* 章节查看实际瓶颈。
+
+\`\`\`cuda
+// 示例：限制编译器为每个 block 256 线程、至少 2 个 block 驻留 SM
+__launch_bounds__(256, 2)
+__global__ void myKernel(float* out, const float* in, int n) {
+    // ...
+}
+\`\`\`
+
+### 2.3 内存吞吐：Global Memory Coalescing
+
+Global memory 访问以 Warp 为单位发起。现代 GPU 通过 L1/Tex Cache 和 L2 Cache 缓存数据，合并访问能极大提升有效带宽：
+
+- Warp 内线程访问连续地址，落在同一 cache line（32/128 字节）内 → 少量事务。
+- 访问越分散 → 事务越多 → 有效带宽越低。
+
+理想模式：
+
+\`\`\`cuda
+// 理想：threadIdx.x 访问连续的 float
+globalMem[idx * blockDim.x + threadIdx.x]
+\`\`\`
+
+不佳模式：
+
+\`\`\`cuda
+// 不佳：threadIdx.x 访问列，导致跨步很大
+globalMem[threadIdx.x * N + idx]
+\`\`\`
+
+常用优化技巧：
+
+1. 先用 coalesced 读入 shared memory。
+2. 在 shared memory 中做需要跨步访问的计算（注意 bank conflict）。
+3. 2D 数组用 \`cudaMallocPitch\` 分配，保证对齐。
+
+\`\`\`cuda
+size_t pitch;
+cudaMallocPitch(&d_ptr, &pitch, width * sizeof(float), height);
+// 元素访问：d_ptr[row * pitch / sizeof(float) + col]
+\`\`\`
+
+### 2.4 内存吞吐：Shared Memory 与 Bank Conflict
+
+Shared memory 位于 SM 内部，延迟约为 global memory 的 1/100。它是 tiling、转置、归约、卷积等算法的关键。
+
+- 被划分为多个 bank（通常 32 个）。
+- 同一 Warp 访问不同 bank → 无 conflict。
+- 同一 Warp 访问同一 bank 的不同地址 → bank conflict。
+- 同一 Warp 访问同一地址 → broadcast，无 conflict。
+
+消除 bank conflict 的常见方法：
+
+\`\`\`cuda
+__shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 消除转置时的 bank conflict
+\`\`\`
+
+### 2.5 指令吞吐：算术与控制流
+
+- **整数运算**：32 位加减/位运算吞吐高；32 位乘法较慢；除法/取模开销大，尽量用位运算或预计算倒数。
+- **浮点运算**：FP32 是峰值算力计量单位；FP16/BF16/TF32 + Tensor Core 可获得更高吞吐。
+- **特殊函数**：\`sin\`、\`cos\`、\`exp\`、\`log\`、\`sqrt\` 等走 SFU，吞吐低于普通 ALU。精度允许时用 intrinsic（\`__sinf\`、\`__expf\`）。
+- **FMA**：乘加融合通常比单独 \`mul\` + \`add\` 更快且精度更高。
+- **分支发散**：Warp 内线程走不同分支会串行化执行。尽量让条件基于 block/warp 级别，或用 warp vote 函数检测。
+
+\`\`\`cuda
+// 不佳：线程级条件分支
+if (threadIdx.x % 2 == 0) { /* path A */ } else { /* path B */ }
+\`\`\`
+
+---
+
+## Part 3：Advanced CUDA（进阶性能优化）
+
+Part 3 面向想进一步压榨性能的人，内容包括更细粒度的控制、多 GPU、warp-level primitives、异步执行等。旧版第 5 章中“Application Level / Device Level”的高级话题在这里展开。
+
+### 3.1 异步执行与并发
+
+CPU 和 GPU 是独立计算资源，理想情况下通过异步 Stream 重叠执行：
+
+- **Pinned Memory + \`cudaMemcpyAsync\`**：实现异步 Host↔Device 传输。
+- **多 Stream**：把独立任务拆到不同 Stream，让拷贝与计算重叠。
+- **CUDA Events**：用于精确测量 GPU 上时间或同步特定 Stream。
+
+\`\`\`cuda
+// 使用 pinned memory + 异步拷贝示例
+cudaMallocHost(&h_ptr, bytes);  // pinned host memory
+cudaMemcpyAsync(d_ptr, h_ptr, bytes, cudaMemcpyHostToDevice, stream);
+kernel<<<grid, block, 0, stream>>>(d_ptr);
+cudaMemcpyAsync(h_ptr, d_ptr, bytes, cudaMemcpyDeviceToHost, stream);
+cudaStreamSynchronize(stream);
+\`\`\`
+
+> 如果 host 内存不是 pinned，\`cudaMemcpyAsync\` 会退化为同步拷贝。
+
+### 3.2 多 GPU 与 Multi-Process Service
+
+- **多 GPU**：单节点多卡时，用 \`cudaSetDevice()\` 选择设备，或通过 NCCL 做数据并行。
+- **MPS（Multi-Process Service）**：多个进程共享同一块 GPU 上下文，减少上下文切换开销，适合小 kernel 密集场景。
+
+### 3.3 Warp-Level Primitives
+
+从 Compute Capability 3.0 起，CUDA 提供 warp shuffle，允许同一 warp 内线程直接交换寄存器数据，无需经过 shared memory：
+
+\`\`\`cuda
+// 从 lane 0 广播到整个 warp
+float val = __shfl_sync(0xFFFFFFFF, localVal, 0);
+
+// warp 内归约
+for (int offset = 16; offset > 0; offset /= 2)
+    val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+\`\`\`
+
+这对归约、扫描、矩阵乘等非常有用，能减少 shared memory 用量和同步开销。
+
+### 3.4 现代架构高级特性
+
+- **Asynchronous Data Copy（Ampere+）**：\`cp.async\` 把 global→shared 的 load 异步化，配合 pipeline 隐藏延迟。
+- **Tensor Memory Accelerator（Hopper+）**：硬件级多维张量搬运，配合 \`mbarrier\` 实现细粒度流水线。
+- **DPX Instructions（Hopper+）**：加速动态规划类 \`max-plus\` / \`min-plus\` 操作。
+
+---
+
+## Part 4：CUDA Features（性能相关特性详解）
+
+Part 4 对具体 CUDA 特性做完整讲解，其中很多特性本身就是性能优化工具。
+
+| 特性 | 与性能的关系 |
+|------|------------|
+| **CUDA Streams / Events** | 异步并发、拷贝与计算重叠、精确计时 |
+| **CUDA Graphs** | 对重复 kernel 序列录制一次、多次发射，降低 CPU launch overhead |
+| **Unified Memory** | 自动页迁移，简化编程；需配合 \`cudaMemPrefetchAsync\` 和 \`cudaMemAdvise\` 避免 page fault |
+| **Zero-Copy / Mapped Memory** | Kernel 直接访问 pinned host memory，适合只读/低频场景 |
+| **Texture / Surface Memory** | 2D 空间局部性缓存；现代 GPU 上也可用 \`__ldg()\` 达到类似只读缓存效果 |
+
+Unified Memory 预取示例：
+
+\`\`\`cuda
+cudaMallocManaged(&data, bytes);
+cudaMemPrefetchAsync(data, bytes, deviceId, stream);        // 提前搬到 GPU
+kernel<<<grid, block, 0, stream>>>(data);
+cudaMemPrefetchAsync(data, bytes, cudaCpuDeviceId, stream);  // 搬回 CPU
+cudaStreamSynchronize(stream);
+\`\`\`
+
+---
+
+## Part 5：Technical Appendices（硬件参考）
+
+Part 5 是技术参考，调优时用来查具体数字：
+
+- **Compute Capability**：每个架构支持的特性、SM 资源上限、warp 大小等。
+- **Hardware Implementation**：SM 内部结构、Warp Scheduler、内存层次细节。
+- **Instruction Throughput**：各架构上各类指令的吞吐（注意 CUDA 13.0 后部分吞吐表已移到 CUDA C++ Best Practices Guide）。
+- **Memory Transaction Details**：不同 Compute Capability 下 global/shared memory 事务大小、对齐要求、bank 划分等。
+
+建议把自己 GPU 的关键数字整理成 Cheat Sheet：峰值算力、显存带宽、L2 大小、shared memory/bank 数、每个 SM 的 warp 上限等。
+
+---
+
+## 常用优化 Checklist
+
+| 优化方向 | 具体做法 | 适用场景 |
+|---------|---------|---------|
+| 内存合并访问 | 让 Warp 内线程按连续地址访问 global memory | 几乎所有 global memory 读写 |
+| Tiling + Shared Memory | 把数据分块加载到 shared memory 复用 | 矩阵乘、卷积、stencil |
+| 消除 Bank Conflict | shared memory 加 padding | 转置、矩阵乘 |
+| 提高 Occupancy | 调整 block size、减少寄存器/共享内存用量 | SM 利用率低、延迟高 |
+| 异步拷贝 / Pipeline | 使用 \`cp.async\`、TMA、warp-level async | Ampere/Hopper 数据流水线 |
+| 减少 Host↔Device 传输 | 使用 pinned memory、异步拷贝、Unified Memory | 数据搬运占比高 |
+| 避免分支发散 | 让分支基于 warp/block 级别 | 条件计算多的 kernel |
+| 使用 Warp Shuffle | 替代 shared memory 做 warp 内通信 | 归约、扫描、广播 |
+| 选择合适精度 | FP16/BF16/TF32 + Tensor Core | 深度学习、矩阵计算 |
+| 减少特殊函数 | 用 intrinsic 或查表替代 sin/exp 等 | 计算密集型 kernel |
+
+---
+
+## 练习题
+
+> 以下题目用于检验你对 CUDA 性能优化核心概念的理解。建议先独立作答，再展开答案对照。
+
+### 选择题
+
+**1. 关于 Occupancy，下面哪个说法最准确？**
+
+A. Occupancy 越高越好，必须尽量达到 100%  
+B. Occupancy = 活跃 Warp 数 / SM 最大 Warp 数  
+C. Occupancy 只和每个 block 的线程数有关  
+D. 高 Occupancy 一定能隐藏所有延迟
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+Occupancy 定义为每个 SM 上活跃 Warp 数与最大 Warp 数的比值。A 错误：100% Occupancy 不是必须的，很多 kernel 在 75% 左右就能达到接近峰值性能。C 错误：Occupancy 受线程数、寄存器用量、shared memory、block 数量等多因素限制。D 错误：如果 Warp 全部都在等同一类资源（例如全局内存），单纯提高 Occupancy 也无法隐藏延迟。
+
+</details>
+
+---
+
+**2. 下面哪种 global memory 访问模式最有利于合并访问（coalesced access）？**
+
+A. \`globalMem[threadIdx.x * N + idx]\`  
+B. \`globalMem[idx * blockDim.x + threadIdx.x]\`  
+C. 每个线程随机访问不同地址  
+D. 所有线程都访问同一个地址
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+\`globalMem[idx * blockDim.x + threadIdx.x]\` 让 Warp 内相邻线程访问连续的内存地址，落在同一或相邻 cache line 中，事务数最少。A 是大跨步访问，C 导致大量分散事务，D 虽然事务少但属于 broadcast 场景，不能代表一般的高效并行访问模式。
+
+</details>
+
+---
+
+**3. 一个 Warp 内 32 个线程访问 shared memory 的同一 bank 的不同地址，会发生什么？**
+
+A. Broadcast，无 conflict  
+B. Bank conflict，访问被串行化  
+C. 自动 padding，无需处理  
+D. 没有影响，shared memory 任意访问都全速
+
+<details>
+<summary>答案</summary>
+
+**B**。
+
+同一 Warp 访问同一 bank 的不同地址会产生 bank conflict，硬件需要把这些访问串行化。只有当访问的是**同一地址**时才是 broadcast（A）。消除方法通常是在数组第二维加 padding，例如 \`__shared__ float tile[32][32 + 1]\`。
+
+</details>
+
+---
+
+### 计算与分析题
+
+**4. 某 GPU 每个 SM 最多驻留 1536 个线程、48 KB shared memory。一个 kernel 使用 256 线程/block、每个 block 用 8 KB shared memory、每个线程 32 个寄存器。假设寄存器不成为瓶颈，请计算：**
+
+- 每个 SM 最多驻留多少个 block？
+- 此时每个 SM 的活跃 Warp 数是多少？
+- Occupancy 是多少？（假设该 SM 最大 Warp 数为 48）
+
+<details>
+<summary>答案</summary>
+
+- 按线程数限制：\`1536 / 256 = 6\` 个 block。
+- 按 shared memory 限制：\`48 KB / 8 KB = 6\` 个 block。
+- 两者同时约束，取最小值，因此最多 **6 个 block**。
+- 活跃线程数：\`6 × 256 = 1536\`，即 \`1536 / 32 = 48\` 个 Warp。
+- Occupancy = \`48 / 48 = 100%\`。
+
+> 如果再把 shared memory 增加到 16 KB/block，shared memory 限制会变为 \`48 / 16 = 3\` 个 block，活跃 Warp 数降为 \`3 × 256 / 32 = 24\`，Occupancy 降到 50%。这说明了 shared memory 用量对 Occupancy 的直接影响。
+
+</details>
+
+---
+
+**5. 阅读下面用于矩阵转置的 shared memory 代码片段，判断是否存在 bank conflict。如果有，如何修改？**
+
+\`\`\`cuda
+#define TILE_DIM 32
+
+__shared__ float tile[TILE_DIM][TILE_DIM];
+
+// 写入 shared memory（行主序）
+int x = threadIdx.x;
+int y = threadIdx.y;
+tile[y][x] = input[...];
+__syncthreads();
+
+// 读出到 global memory（列主序转置）
+output[...] = tile[x][y];
+\`\`\`
+
+<details>
+<summary>答案</summary>
+
+**存在 bank conflict**。
+
+在读取阶段 \`tile[x][y]\`，同一 Warp 内相邻线程的 \`x\` 相同、\`y\` 递增，意味着它们访问 shared memory 的**同一列**——即**同一 bank 的不同地址**，产生 32-way bank conflict。
+
+**修改方法**：给第二维加 1 的 padding：
+
+\`\`\`cuda
+__shared__ float tile[TILE_DIM][TILE_DIM + 1];
+\`\`\`
+
+这样同一行相邻元素会落在不同 bank，读取 \`tile[x][y]\` 时同一 Warp 访问不同 bank，消除 conflict。
+
+</details>
+
+---
+
+**6. 为什么 \`cudaMemcpyAsync\` 需要 pinned（page-locked）host memory 才能真正异步执行？**
+
+<details>
+<summary>答案</summary>
+
+普通 pageable host memory 位于操作系统的虚拟内存管理中，GPU 无法直接访问。CUDA 驱动在执行 \`cudaMemcpyAsync\` 时，需要先把 pageable 内存复制到临时的 pinned buffer，再把数据传给 GPU，这个中转过程会阻塞当前 CPU 线程，导致拷贝实际上变成同步的。
+
+Pinned memory 由 \`cudaMallocHost\`/\`cudaHostAlloc\` 分配，页已经被锁定在物理内存中，GPU DMA 可以直接发起读写，因此 CPU 线程在提交拷贝命令后就能立即返回，实现真正的异步。
+
+</details>
+
+---
+
+**7. 一个 kernel 在 Nsight Compute 中显示：算力达到 GPU 峰值算力的 80%，而内存带宽只达到峰值带宽的 20%。用 Roofline 模型判断它更可能是 compute-bound 还是 memory-bound？应该优先优化哪方面？**
+
+<details>
+<summary>答案</summary>
+
+**更可能是 compute-bound**。
+
+Roofline 模型的判断依据是算术强度（Arithmetic Intensity = FLOPs / Bytes）：
+
+- 如果 kernel 已经用到了 80% 的峰值算力，而内存带宽只用了 20%，说明计算单元很忙，内存不是瓶颈。
+- 这通常对应 Roofline 图中** compute-bound 区域**（高算术强度）。
+
+**优先优化方向**：
+
+- 检查是否有冗余计算、低效的指令选择、分支发散。
+- 考虑使用 FP16/BF16/TF32 + Tensor Core 提升有效算力。
+- 尝试提高 ILP（指令级并行），让 ALU 更饱和。
+
+不建议优先优化内存合并访问，因为内存带宽远未饱和。
+
+</details>
+
+---
+
+## 与 Week 1 各天的关联
+
+| 新版指南部分 | 对应实践日 | 对应内容 |
+|-------------|-----------|---------|
+| Part 2 Global Memory Coalescing | Day 4 | 矩阵转置、向量加法中的 global memory 访问模式 |
+| Part 2 Shared Memory / Bank Conflict | Day 5 | 共享内存 tiling、bank conflict 检测与消除 |
+| Part 2 Occupancy / Part 3 Advanced CUDA | Day 2 / Day 6 | Occupancy Calculator、Nsight Compute 分析 |
+| Part 2 Instruction Throughput / Part 5 附录 | Day 6 | Nsight Compute 指标、指令瓶颈分析 |
+| Part 3 异步特性 / Part 4 CUDA Graphs / TMA | 进阶 | CUTLASS、FlashAttention、Hopper 新特性 |
+
+---
+
+## 阅读建议
+
+1. **先读 Part 1 建立执行模型**：理解 Warp、SM、内存层次后再看性能优化，否则很多建议会显得零碎。
+2. **Part 2 是核心**：重点看编程接口、内存访问、Occupancy、指令吞吐。这部分覆盖了旧版 Performance Guidelines 的大部分内容。
+3. **Part 3 进阶选读**：遇到具体瓶颈（如需要 warp shuffle、多 GPU、异步流水线）时再深入。
+4. **Part 4 按需查阅**：Unified Memory、CUDA Graphs、Streams 等特性在写实际项目时会经常用到。
+5. **Part 5 当字典用**：查自己 GPU 的 Compute Capability、资源上限、指令吞吐表。
+6. **结合官方示例与工具**：CUDA Samples 中的 \`transpose\`、\`reduction\`、\`matrixMul\` 是理论的代码实现；每做一个优化都用 Nsight Compute / Nsight Systems 验证实际指标。
+
+> **推荐延伸阅读**：
+> - 新版 CUDA Programming Guide：https://docs.nvidia.com/cuda/cuda-programming-guide/
+> - 传统 CUDA C++ Programming Guide（含第 8 章 Performance Guidelines）：https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+> - CUDA Best Practices Guide：https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/
+> - Nsight Compute 文档：*Memory Workload Analysis*、*Occupancy*、*Instruction Statistics*
+`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    
+    <script src="../js/main.js?v=5"></script>
+</body>
+</html>

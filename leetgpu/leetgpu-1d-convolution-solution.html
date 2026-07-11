@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetGPU 1D Convolution 题解</title>
+    <link rel="stylesheet" href="../css/style.css?v=4">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="./index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetGPU 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="./index.html">📌 LeetGPU 题解</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 1</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-vector-addition-solution.html"><span class="nav-day-tag">day1</span>Vector Addition</a>
+<a class="nav-link" href="./leetgpu-relu-solution.html"><span class="nav-day-tag">day2</span>ReLU</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day3</span>Matrix Addition</a>
+<a class="nav-link" href="./leetgpu-matrix-transpose-solution.html"><span class="nav-day-tag">day4</span>Matrix Transpose</a>
+<a class="nav-link" href="./leetgpu-reduction-solution.html"><span class="nav-day-tag">day5</span>Reduction</a>
+<a class="nav-link" href="./leetgpu-matrix-multiplication-solution.html"><span class="nav-day-tag">day6</span>Matrix Multiplication</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day7</span>Matrix Addition</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 2</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-prefix-sum-solution.html"><span class="nav-day-tag">day1</span>Prefix Sum</a>
+<a class="nav-link" href="./leetgpu-gemm-solution.html"><span class="nav-day-tag">day2</span>GEMM</a>
+<a class="nav-link" href="./leetgpu-2d-convolution-solution.html"><span class="nav-day-tag">day3</span>2D Convolution</a>
+<a class="nav-link" href="./leetgpu-softmax-solution.html"><span class="nav-day-tag">day4</span>Softmax</a>
+<a class="nav-link" href="./leetgpu-softmax-attention-solution.html"><span class="nav-day-tag">day5</span>Softmax Attention</a>
+<a class="nav-link" href="./leetgpu-histogramming-solution.html"><span class="nav-day-tag">day6</span>Histogramming</a>
+<a class="nav-link" href="./leetgpu-max-subarray-sum-solution.html"><span class="nav-day-tag">day7</span>Max Subarray Sum</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 3</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link active" href="./leetgpu-1d-convolution-solution.html"><span class="nav-day-tag">day1</span>1D Convolution</a>
+<a class="nav-link" href="./leetgpu-softmax-solution.html"><span class="nav-day-tag">day2</span>Softmax</a>
+<a class="nav-link" href="./leetgpu-argmax-solution.html"><span class="nav-day-tag">day3</span>Argmax</a>
+<a class="nav-link" href="./leetgpu-attention-solution.html"><span class="nav-day-tag">day4</span>Attention</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day5</span>Matrix Addition</a>
+<a class="nav-link" href="./leetgpu-rms-normalization-solution.html"><span class="nav-day-tag">day6</span>RMS Normalization</a>
+<a class="nav-link" href="./leetgpu-causal-self-attention-solution.html"><span class="nav-day-tag">day7</span>Causal Self-Attention</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 4</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-softmax-attention-solution.html"><span class="nav-day-tag">day1</span>Softmax Attention</a>
+<a class="nav-link" href="./leetgpu-attention-solution.html"><span class="nav-day-tag">day2</span>Attention</a>
+<a class="nav-link" href="./leetgpu-dot-product-solution.html"><span class="nav-day-tag">day3</span>Dot Product</a>
+<a class="nav-link" href="./leetgpu-batched-matrix-multiplication-solution.html"><span class="nav-day-tag">day4</span>Batched Matrix Multiplication</a>
+<a class="nav-link" href="./leetgpu-matrix-copy-solution.html"><span class="nav-day-tag">day5</span>Matrix Copy</a>
+<a class="nav-link" href="./leetgpu-multi-head-attention-solution.html"><span class="nav-day-tag">day6</span>Multi-Head Attention</a>
+<a class="nav-link" href="./leetgpu-gpt-2-transformer-block-solution.html"><span class="nav-day-tag">day7</span>GPT-2 Transformer Block</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 5</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-int8-kv-cache-attention-solution.html"><span class="nav-day-tag">day1</span>INT8 KV-Cache Attention</a>
+<a class="nav-link" href="./leetgpu-grouped-query-attention-solution.html"><span class="nav-day-tag">day2</span>Grouped Query Attention (GQA)</a>
+<a class="nav-link" href="./leetgpu-speculative-decoding-verification-solution.html"><span class="nav-day-tag">day3</span>Speculative Decoding Verification</a>
+<a class="nav-link" href="./leetgpu-causal-self-attention-solution.html"><span class="nav-day-tag">day4</span>Causal Self-Attention</a>
+<a class="nav-link" href="./leetgpu-token-embedding-layer-solution.html"><span class="nav-day-tag">day5</span>Token Embedding Layer</a>
+<a class="nav-link" href="./leetgpu-weight-dequantization-solution.html"><span class="nav-day-tag">day6</span>Weight Dequantization</a>
+<a class="nav-link" href="./leetgpu-simple-inference-solution.html"><span class="nav-day-tag">day7</span>Simple Inference</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 6</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-simple-inference-solution.html"><span class="nav-day-tag">day1</span>Simple Inference</a>
+<a class="nav-link" href="./leetgpu-max-subarray-sum-solution.html"><span class="nav-day-tag">day2</span>Max Subarray Sum</a>
+<a class="nav-link" href="./leetgpu-stream-compaction-solution.html"><span class="nav-day-tag">day3</span>Stream Compaction</a>
+<a class="nav-link" href="./leetgpu-segmented-prefix-sum-solution.html"><span class="nav-day-tag">day4</span>Segmented Prefix Sum</a>
+<a class="nav-link" href="./leetgpu-batched-matrix-multiplication-solution.html"><span class="nav-day-tag">day5</span>Batched Matrix Multiplication</a>
+<a class="nav-link" href="./leetgpu-top-k-selection-solution.html"><span class="nav-day-tag">day6</span>Top K Selection</a>
+<a class="nav-link" href="./leetgpu-dot-product-solution.html"><span class="nav-day-tag">day7</span>Dot Product</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">Week 7</span><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="./leetgpu-matrix-copy-solution.html"><span class="nav-day-tag">day1</span>Matrix Copy</a>
+<a class="nav-link" href="./leetgpu-vector-reversal-solution.html"><span class="nav-day-tag">day2</span>Vector Reversal</a>
+<a class="nav-link" href="./leetgpu-scalar-multiply-solution.html"><span class="nav-day-tag">day3</span>Scalar Multiply</a>
+<a class="nav-link" href="./leetgpu-matrix-transpose-solution.html"><span class="nav-day-tag">day4</span>Matrix Transpose</a>
+<a class="nav-link" href="./leetgpu-element-reversal-solution.html"><span class="nav-day-tag">day5</span>Element Reversal</a>
+<a class="nav-link" href="./leetgpu-reduction-solution.html"><span class="nav-day-tag">day6</span>Reduction</a>
+<a class="nav-link" href="./leetgpu-matrix-addition-solution.html"><span class="nav-day-tag">day7</span>Matrix Addition</a>
+    </div>
+  </div>
+</div>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../index.html">← Week 1</a>
+<a class="nav-link" href="../week2/index.html">← Week 2</a>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">LeetGPU 1D Convolution 题解</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# LeetGPU 1D Convolution 题解
+
+## 1. 题目概述
+
+- **标题 / 题号**：1D Convolution（#28，medium）
+- **链接**：https://leetgpu.com/challenges/1d-convolution
+- **难度**：中等
+- **标签**：CUDA、卷积、shared memory、memory-bound
+
+**题意**：给定长度为 \`N\` 的输入信号 \`input\` 和长度为 \`K\` 的卷积核 \`kernel\`，计算一维卷积 \`output[i] = Σ input[i+j] * kernel[j]\`（\`j = 0..K-1\`）。
+
+**约束**：\`1 ≤ N ≤ 10,000,000\`，\`1 ≤ K ≤ 1024\`。
+
+> 💡 与 [Week3 Day1 Trace Transformer 推理流程](../../aiinfra/week3/day1/index.html) 的关联：1D Convolution 是 profiling 中 element-wise + reduction 模式的典型代表——每个输出元素依赖输入的一个局部窗口，与 attention 中每个 query 依赖所有 key 的模式同构。用 ncu 分析可验证其 memory-bound 特性。
+
+## 2. GPU 设计
+
+每个 thread 计算一个输出元素：\`output[i] = Σ input[i+j] * kernel[j]\`。
+
+- kernel 较小时直接从 global memory 读取（寄存器缓存 kernel）
+- kernel 较大时用 shared memory 缓存输入窗口
+
+## 3. Kernel 实现
+
+\`\`\`cuda
+// 1d_convolution.cu —— 1D Convolution
+#include <cuda_runtime.h>
+
+__global__ void conv1d_kernel(const float* input, const float* kernel, float* output, int N, int K) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    float sum = 0.0f;
+    for (int j = 0; j < K; j++) {
+        int idx = i + j;
+        if (idx < N) {
+            sum += input[idx] * kernel[j];
+        }
+    }
+    output[i] = sum;
+}
+
+extern "C" void solve(const float* input, const float* kernel, float* output, int N, int K) {
+    int blockSize = 256;
+    int gridSize = (N + blockSize - 1) / blockSize;
+    conv1d_kernel<<<gridSize, blockSize>>>(input, kernel, output, N, K);
+}
+\`\`\`
+
+## 4. 复杂度分析
+
+| 维度 | 分析 |
+|------|------|
+| 时间复杂度 | \`O(N×K)\` |
+| 算术强度 | \`2K FLOP / 4(K+1)B ≈ 0.5 FLOP/B\`（K 小时 memory-bound） |
+| 瓶颈类型 | K 小 → memory-bound；K 大 → compute-bound |
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=5"></script>
+</body>
+</html>

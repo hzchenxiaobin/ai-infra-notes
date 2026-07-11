@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="27" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="460" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Mini 推理引擎 v1 架构</text>
+  <path d="M 300 40 Q 460 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- outer box -->
+  <g filter="url(#sk)">
+    <rect x="40" y="56" width="840" height="380" rx="12" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.6"/>
+  </g>
+  <text x="60" y="80" font-size="12" font-weight="bold" fill="#444">MiniEngineV1</text>
+
+  <!-- submit entry -->
+  <g filter="url(#sk)">
+    <rect x="380" y="62" width="160" height="34" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="84" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">submit(prompt) → Future</text>
+  <path d="M 460 96 L 460 112" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Request Queue -->
+  <g filter="url(#sk)">
+    <rect x="340" y="114" width="240" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="134" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Request Queue</text>
+  <text x="460" y="152" text-anchor="middle" font-size="10" fill="#555">线程安全 deque + lock</text>
+  <path d="M 460 164 L 460 180" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Scheduler -->
+  <g filter="url(#sk)">
+    <rect x="280" y="182" width="360" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="460" y="204" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Scheduler（每轮 schedule）</text>
+  <text x="300" y="224" font-size="10" fill="#555">• token_budget + max_num_seqs 双约束</text>
+  <text x="300" y="240" font-size="10" fill="#555">• 优先级排序（高优先级先保 decode / 先 prefill）</text>
+  <text x="540" y="224" font-size="10" fill="#b85450">running > waiting</text>
+  <path d="M 460 252 L 460 268" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Worker / Model forward -->
+  <g filter="url(#sk)">
+    <rect x="200" y="270" width="520" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="460" y="292" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Worker（_run_iteration）</text>
+  <g filter="url(#sk)">
+    <rect x="220" y="302" width="120" height="38" rx="6" fill="#fff" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="280" y="326" text-anchor="middle" font-size="10" fill="#7a5415">Prefill（prompt）</text>
+  <g filter="url(#sk)">
+    <rect x="360" y="302" width="120" height="38" rx="6" fill="#fff" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="420" y="326" text-anchor="middle" font-size="10" fill="#7a5415">Decode（1 token）</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="302" width="120" height="38" rx="6" fill="#fff" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="560" y="326" text-anchor="middle" font-size="10" fill="#7a5415">KV Cache 复用</text>
+  <path d="M 460 350 L 460 366" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Result via Future -->
+  <g filter="url(#sk)">
+    <rect x="340" y="368" width="240" height="50" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="388" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">Future.set_result()</text>
+  <text x="460" y="406" text-anchor="middle" font-size="10" fill="#555">完成即异步返回，不等他人</text>
+
+  <!-- worker loop arrow -->
+  <path d="M 640 304 Q 720 304 720 220 Q 720 182 642 216" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="5 3"/>
+  <text x="730" y="260" font-size="10" fill="#2e6e2e">worker_loop</text>
+  <text x="730" y="274" font-size="10" fill="#2e6e2e">每轮重复</text>
+
+  <!-- side notes -->
+  <g filter="url(#sk)">
+    <rect x="60" y="270" width="130" height="100" rx="8" fill="#f5f5f5" stroke="#bbb" stroke-dasharray="4 2"/>
+  </g>
+  <text x="125" y="290" text-anchor="middle" font-size="10" font-weight="bold" fill="#444">vs v0</text>
+  <text x="70" y="310" font-size="9" fill="#666">v0: generate()</text>
+  <text x="70" y="324" font-size="9" fill="#666">  单请求同步</text>
+  <text x="70" y="344" font-size="9" fill="#b85450">v1: submit()</text>
+  <text x="70" y="358" font-size="9" fill="#b85450">  多请求异步</text>
+
+  <g filter="url(#sk)">
+    <rect x="730" y="368" width="130" height="56" rx="8" fill="#f5f5f5" stroke="#bbb" stroke-dasharray="4 2"/>
+  </g>
+  <text x="795" y="388" text-anchor="middle" font-size="10" font-weight="bold" fill="#444">后台线程</text>
+  <text x="740" y="406" font-size="9" fill="#666">daemon thread</text>
+  <text x="740" y="418" font-size="9" fill="#666">持续 _worker_loop</text>
+</svg>

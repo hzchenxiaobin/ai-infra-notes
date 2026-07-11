@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最小栈</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2 is-expanded">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link active" href="../../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">最小栈</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# 最小栈
+
+- **题目名称**：最小栈
+- **链接**：[155. 最小栈](https://leetcode.cn/problems/min-stack/)
+- **难度**：中等
+- **标签**：栈、设计
+
+## 1. 题目概述
+
+设计一个**最小栈**数据结构 \`MinStack\`，支持以下操作，且 **\`getMin\` 要在 O(1) 时间**完成：
+
+- \`push(x)\`：将元素 x 压入栈顶
+- \`pop()\`：弹出栈顶元素
+- \`top()\`：获取栈顶元素
+- \`getMin()\`：获取栈中最小元素
+
+要求所有操作的时间复杂度均为 **O(1)**。
+
+**示例**：
+
+\`\`\`text
+输入：
+  MinStack minStack = new MinStack();
+  minStack.push(-2);
+  minStack.push(0);
+  minStack.push(-3);
+  minStack.getMin();   → 返回 -3
+  minStack.pop();
+  minStack.top();      → 返回 0
+  minStack.getMin();   → 返回 -2
+\`\`\`
+
+**约束条件**：
+
+- \`-2^31 <= val <= 2^31 - 1\`
+- \`pop\`、\`top\`、\`getMin\` 操作总是在非空栈上调用
+- \`push\`、\`pop\`、\`top\`、\`getMin\` 最多被调用 \`3 × 10^4\` 次
+
+> 💡 难点在 \`getMin\` 要 O(1)。朴素做法是遍历栈求最小（O(n)），不满足要求。必须用**辅助栈**把"到当前位置为止的最小值"缓存下来。
+
+---
+
+## 2. 解题思路
+
+### 2.1 暴力思路
+
+\`getMin\` 时遍历整个栈求最小值。\`push\`/\`pop\`/\`top\` 都是 O(1)，但 \`getMin\` 是 **O(n)**——如果 \`getMin\` 被频繁调用，性能不可接受。
+
+> ⚠️ 问题的本质：最小值是栈的**全局统计量**，每次 push/pop 后都可能变化。如果不缓存，每次查询都得重算。
+
+### 2.2 核心观察：辅助栈同步维护 running min
+
+![辅助栈同步维护 running min](../images/min_stack_auxiliary.svg)
+
+关键洞察：**如果我们维护一个额外的 \`min_stack\`，每次 \`push(x)\` 时同步压入 \`min(x, min_stack.top())\`，那么 \`min_stack\` 的栈顶永远是"到当前位置为止的最小值"**，\`getMin\` 直接读 \`min_stack.top()\` 即可——O(1)。
+
+这本质上是把"栈内最小值"这个**随 push/pop 动态变化的统计量**缓存到辅助栈，随主数据流增量维护，避免查询时从头重算。
+
+> 💡 与 [Day 2 KV Cache](../../aiinfra/week5/day2/README.md) 的模式同构：KV Cache 把"历史 K/V"缓存到 \`k_cache\`，Decode 不必重算前缀（\`O(L·d²)→O(d²)\`）；最小栈把"栈内最小值"缓存到 \`min_stack\`，\`getMin\` 不必遍历栈（\`O(n)→O(1)\`）。两者都是**空间换时间 + 辅助状态随主数据增量维护**。
+
+### 2.3 算法流程
+
+![示例演算：push(5,3,7,1), getMin, pop, getMin](../images/min_stack_walkthrough.svg)
+
+\`\`\`
+push(x):
+  data.push(x)
+  min_stack.push(min(x, min_stack.top()))   // 同步压入当前最小
+
+pop():
+  data.pop()
+  min_stack.pop()                            // 两栈同步弹出
+
+top():
+  return data.top()
+
+getMin():
+  return min_stack.top()                     // O(1)，不遍历 data
+\`\`\`
+
+**关键不变量**：\`min_stack\` 的第 \`i\` 个元素 = \`data\` 栈底到第 \`i\` 个元素的最小值。因此 \`getMin = min_stack.top()\`，\`pop\` 时两栈同步弹出，min 自动回退。
+
+### 2.4 示例演算
+
+以 \`push(5, 3, 7, 1), getMin, pop, getMin\` 为例：
+
+| 操作 | data 栈 | min_stack | getMin() |
+|------|---------|-----------|----------|
+| push(5) | [5] | [5] | — |
+| push(3) | [5, 3] | [5, **3**] | — |
+| push(7) | [5, 3, 7] | [5, 3, **3**] | — |
+| push(1) | [5, 3, 7, 1] | [5, 3, 3, **1**] | — |
+| getMin() | 不变 | 不变 | → **1** (O(1)) |
+| pop() | [5, 3, 7] | [5, 3, 3] | — |
+| getMin() | 不变 | 不变 | → **3** (O(1)) |
+
+注意 \`push(7)\` 时 \`7 > 3\`（当前最小），\`min_stack\` 仍压入 \`3\`（复制当前最小），保证两栈等高、\`pop\` 同步。
+
+---
+
+## 3. 参考代码
+
+### C++
+
+\`\`\`cpp
+class MinStack {
+    stack<int> data;
+    stack<int> min_stack;
+public:
+    MinStack() {
+        min_stack.push(INT_MAX);   // 哨兵，保证第一次 push 时 min_stack 非空
+    }
+
+    void push(int val) {
+        data.push(val);
+        min_stack.push(min(val, min_stack.top()));   // 同步压入当前最小
+    }
+
+    void pop() {
+        data.pop();
+        min_stack.pop();        // 两栈同步弹出
+    }
+
+    int top() {
+        return data.top();
+    }
+
+    int getMin() {
+        return min_stack.top();  // O(1)
+    }
+};
+\`\`\`
+
+### Python
+
+\`\`\`python
+class MinStack:
+    def __init__(self):
+        self.data = []
+        self.min_stack = [float('inf')]   # 哨兵
+
+    def push(self, val: int) -> None:
+        self.data.append(val)
+        self.min_stack.append(min(val, self.min_stack[-1]))
+
+    def pop(self) -> None:
+        self.data.pop()
+        self.min_stack.pop()
+
+    def top(self) -> int:
+        return self.data[-1]
+
+    def getMin(self) -> int:
+        return self.min_stack[-1]   # O(1)
+\`\`\`
+
+> 💡 用哨兵（\`INT_MAX\` / \`float('inf')\`）初始化 \`min_stack\`，避免第一次 \`push\` 时 \`min_stack\` 为空的特判。也可不用哨兵，在 \`push\` 时判断 \`min_stack\` 是否为空。
+
+---
+
+## 4. 复杂度分析
+
+| 维度 | 复杂度 | 说明 |
+|------|--------|------|
+| 时间复杂度 | O(1) | push/pop/top/getMin 均为栈顶操作，常数时间 |
+| 空间复杂度 | O(n) | 多维护一个 \`min_stack\`，与 \`data\` 等高 |
+
+> ⚠️ 空间换时间：用 O(n) 额外空间（min_stack），把 \`getMin\` 从 O(n) 压到 O(1)。
+
+---
+
+## 5. 扩展：差值法（O(1) 额外空间）
+
+辅助栈法用 O(n) 额外空间。如果要求 **O(1) 额外空间**（不用 min_stack），可用**差值法**：\`data\` 栈不存原始值，而存 \`x - current_min\`，用符号位/大小关系编码当前最小值。
+
+\`\`\`python
+class MinStack:
+    def __init__(self):
+        self.data = []
+        self.min_val = 0
+
+    def push(self, val: int) -> None:
+        if not self.data:
+            self.data.append(0)
+            self.min_val = val
+        else:
+            diff = val - self.min_val
+            self.data.append(diff)
+            if diff < 0:            # val < min_val → 更新最小
+                self.min_val = val
+
+    def pop(self) -> None:
+        diff = self.data.pop()
+        if diff < 0:                # 弹出的是"曾经更新过最小"的元素
+            self.min_val = self.min_val - diff   # 恢复上一个最小
+
+    def top(self) -> int:
+        diff = self.data[-1]
+        if diff > 0:
+            return self.min_val + diff
+        else:
+            return self.min_val     # diff < 0 时栈顶就是 min_val
+
+    def getMin(self) -> int:
+        return self.min_val
+\`\`\`
+
+> ⚠️ 差值法用 \`long\` 防溢出（\`val - min\` 可能超出 int 范围）。面试时先讲辅助栈法（清晰易写），再提差值法作为"进阶 O(1) 空间"优化。
+
+---
+
+## 6. 面试要点
+
+1. **为什么辅助栈的 \`push\` 要压入 \`min(x, min_stack.top())\` 而不是只在 x 更小时才压？**
+
+   - 保证两栈**等高**、\`pop\` 同步。如果只在 \`x < min\` 时才压 min_stack，两栈高度不同，\`pop\` 时无法简单同步弹出，要判断"弹出的元素是否是当前最小"来决定 min_stack 是否也弹——逻辑复杂且易错。每次都压 \`min(x, top)\`，两栈永远等高，\`pop\` 时无脑同步弹即可。
+
+2. **这题和 KV Cache 的设计模式有什么共同点？**
+
+   - 都是"维护辅助状态以避免从头重算"。最小栈缓存"栈内最小值"到 \`min_stack\`，\`getMin\` 不必遍历栈（O(n)→O(1)）；KV Cache 缓存"历史 K/V"到 \`k_cache\`，Decode 不必重算前缀（O(L·d²)→O(d²)）。两者都是**空间换时间 + 辅助状态随主数据增量维护**——\`min_stack\` 随 \`push/pop\` 同步更新，\`k_cache\` 随 Decode 每步 \`append\`。这是缓存设计的通用范式。
+
+3. **不用额外栈能做到 O(1) getMin 吗？**
+
+   - 能，用**差值法**：\`data\` 栈存 \`x - current_min\` 而非原始值。\`push\` 时若差值为负（说明 x 是新最小），更新 \`min_val\`；\`pop\` 时若弹出差值为负，恢复上一个最小。额外空间 O(1)（只多存一个 \`min_val\` 变量），但要注意用 \`long\` 防溢出。面试先讲辅助栈（清晰），再提差值法作为进阶。
+
+4. **如果栈里有重复元素，辅助栈法还正确吗？**
+
+   - 正确。\`min(x, top)\` 对重复元素也成立——比如已有 min=3，再 push(3)，\`min(3,3)=3\`，min_stack 压 3。pop 时两栈同步弹，min 仍是 3（来自更早的 3）。重复元素不影响"min_stack 栈顶 = 当前最小"这一不变量。
+
+5. **pop 时如果不弹 min_stack 会怎样？**
+
+   - 不变量被破坏。比如 \`push(5,3,1)\` 后 min_stack=[5,3,1]，若 pop(1) 时不弹 min_stack，getMin 仍返回 1，但 data 栈里已经没有 1 了——结果错误。两栈必须同步弹，保证 min_stack 栈顶始终对应 data 栈当前状态的最小值。
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

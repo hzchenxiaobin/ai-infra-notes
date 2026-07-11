@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" viewBox="0 0 920 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="640" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Left: naive softmax overflow -->
+  <text x="180" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">朴素 Softmax（会溢出）</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="88" width="280" height="120" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.6"/>
+  </g>
+  <text x="55" y="110" font-size="11" fill="#2b2b2b">yi = exp(xi) / Σ exp(xj)</text>
+  <text x="55" y="132" font-size="11" fill="#2b2b2b">输入: x = [1.0, 1000.0, 2.0]</text>
+  <text x="55" y="154" font-size="11" fill="#b03a3a">exp(1000) = Inf</text>
+  <text x="55" y="174" font-size="11" fill="#b03a3a">→ Σ = Inf,  yi = Inf/Inf = NaN</text>
+  <g filter="url(#sk2)">
+    <rect x="60" y="186" width="100" height="18" rx="4" fill="#b03a3a" opacity="0.6" stroke="#7a2828" stroke-width="0.8"/>
+    <text x="110" y="199" text-anchor="middle" font-size="10" fill="#fff">全 NaN ✗</text>
+  </g>
+
+  <!-- Right: safe softmax -->
+  <text x="660" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">Safe Softmax（减 max 稳定）</text>
+  <g filter="url(#sk2)">
+    <rect x="520" y="88" width="280" height="120" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.6"/>
+  </g>
+  <text x="535" y="110" font-size="11" fill="#2b2b2b">m = max(xj) = 1000</text>
+  <text x="535" y="132" font-size="11" fill="#2b2b2b">yi = exp(xi - m) / Σ exp(xj - m)</text>
+  <text x="535" y="154" font-size="11" fill="#2e7d4f">exp(1000-1000)=1, exp(0..2)≤1</text>
+  <text x="535" y="174" font-size="11" fill="#2e7d4f">→ 不溢出，结果正确</text>
+  <g filter="url(#sk2)">
+    <rect x="540" y="186" width="120" height="18" rx="4" fill="#2e7d4f" opacity="0.6" stroke="#1b5e3a" stroke-width="0.8"/>
+    <text x="600" y="199" text-anchor="middle" font-size="10" fill="#fff">稳定 ✓</text>
+  </g>
+
+  <!-- divider -->
+  <path d="M 380 150 L 460 150" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" stroke-dasharray="4 3"/>
+  <text x="420" y="142" text-anchor="middle" font-size="10" fill="#666" font-style="italic">减 max</text>
+
+  <!-- Three pass scan -->
+  <text x="460" y="240" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">三遍扫描并行流程（一行一个 block）</text>
+
+  <!-- input row -->
+  <g filter="url(#sk2)">
+    <rect x="320" y="256" width="280" height="32" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+    <text x="460" y="276" text-anchor="middle" font-size="11" fill="#2b2b2b">input 行 x[D] (从 HBM 读 1 次)</text>
+  </g>
+  <path d="M 460 290 L 460 302" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- Pass 1: max -->
+  <g filter="url(#sk2)">
+    <rect x="260" y="306" width="400" height="44" rx="8" fill="#4a8edb" stroke="#3a3a3a" stroke-width="1.6" opacity="0.65"/>
+    <text x="460" y="324" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Pass 1：求 row_max（blockReduceMax）</text>
+    <text x="460" y="342" text-anchor="middle" font-size="10" fill="#444">每个线程 grid-stride 扫 D 元素 → warp shuffle → smem → warp0</text>
+  </g>
+  <text x="690" y="332" font-size="10" fill="#888" font-style="italic">读 HBM: D×4B</text>
+  <path d="M 460 352 L 460 364" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- Pass 2: sum -->
+  <g filter="url(#sk2)">
+    <rect x="260" y="368" width="400" height="44" rx="8" fill="#e8a838" stroke="#3a3a3a" stroke-width="1.6" opacity="0.65"/>
+    <text x="460" y="386" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Pass 2：求 row_sum = Σ exp(x - max)（blockReduceSum）</text>
+    <text x="460" y="404" text-anchor="middle" font-size="10" fill="#444">再扫一遍 D 元素，累加 exp(x - row_max)</text>
+  </g>
+  <text x="690" y="394" font-size="10" fill="#888" font-style="italic">读 HBM: D×4B</text>
+  <path d="M 460 414 L 460 426" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- Pass 3: normalize -->
+  <g filter="url(#sk2)">
+    <rect x="260" y="430" width="400" height="44" rx="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1.6" opacity="0.65"/>
+    <text x="460" y="448" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Pass 3：归一化 yi = exp(xi - max) / sum</text>
+    <text x="460" y="466" text-anchor="middle" font-size="10" fill="#444">第三遍扫描，写出 output 行</text>
+  </g>
+  <text x="690" y="456" font-size="10" fill="#888" font-style="italic">读 HBM + 写 HBM</text>
+  <path d="M 460 476 L 460 488" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- output -->
+  <g filter="url(#sk2)">
+    <rect x="320" y="492" width="280" height="32" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+    <text x="460" y="512" text-anchor="middle" font-size="11" fill="#2b2b2b">output 行 y[D] (写 HBM 1 次)</text>
+  </g>
+
+  <!-- IO summary -->
+  <g filter="url(#sk2)">
+    <rect x="80" y="540" width="760" height="78" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="100" y="562" font-size="12" font-weight="bold" fill="#2b2b2b">HBM 读写量与 Arithmetic Intensity</text>
+    <text x="100" y="582" font-size="11" fill="#444">• 每元素读 1 次 + 写 1 次 = 8 bytes；约 3 次浮点运算（exp/add/div）</text>
+    <text x="100" y="600" font-size="11" fill="#b03a3a">• AI = 3 / 8 ≈ 0.375 FLOP/Byte &lt;&lt; Ridge Point 12.6 → 纯 memory-bound</text>
+    <text x="100" y="616" font-size="11" fill="#2e7d4f">• 优化方向：kernel fusion（消除中间写回）/ 向量化 float4 / online 两遍扫描</text>
+  </g>
+</svg>

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 6 - Day 6：Latency / Throughput 测试</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 Week 6 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="../week3/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week3/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week3/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week3/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week3/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week3/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week3/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link active" href="day6.html">Day 6</a>
+<a class="nav-link day-link" href="day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 6：Latency / Throughput 测试</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 **评估推理系统性能的六大关键指标**——Throughput、Avg/P50/P99 Latency、TTFT、TPOT、Batch Size Distribution、GPU Utilization，各自反映什么问题<br>
+2. 掌握 **两种 benchmark 方法**——固定并发数扫描（看能力上限与饱和点）和固定 QPS 测试（看真实负载下的尾延迟）<br>
+3. 能绘制 **Throughput-Latency 曲线**，识别系统的**饱和点**——throughput 不再增长、latency 开始急剧上升的拐点<br>
+4. 理解 **四种瓶颈类型**——Compute-bound、Memory-bound、Launch overhead、Scheduling overhead，各自的表现与优化方向<br>
+5. 学会用 **nsys / ncu** 做 profiling，根据 SM utilization、kernel 间隙、Memory Throughput 判断瓶颈类型<br>
+6. 用 Python 手写一个 **benchmark 框架**，实测 Mini 引擎 v1 在不同并发数下的 throughput-latency 曲线，定位饱和点并给出优化建议
+
+> 💡 **为什么重要**：Day 5 我们实现了 Mini 引擎 v1，但"能跑"和"跑得好"是两回事。真实推理服务要回答："我的系统能撑多少 QPS？延迟达标吗？瓶颈在哪？"今天用 benchmark 把这些问题量化——画出 throughput-latency 曲线、找到饱和点、判断瓶颈类型。这是系统优化的起点，也是面试高频题"如何评估推理系统性能"。
+
+---
+
+### 学前导读：Day 5 的引擎"能跑"，但性能如何？
+
+Day 5 的 MiniEngineV1 能并发处理多请求，但我们没回答几个关键问题：
+
+\`\`\`
+未量化的性能问题：
+ - v1 能撑多少并发？throughput 上限是多少？
+ - 并发从 1 涨到 64，latency 怎么变？
+ - 什么时候 throughput 不再涨（饱和点）？
+ - 饱和后是算力瓶颈还是显存瓶颈？
+ - 用户的 P99 延迟（尾延迟）达标吗？
+\`\`\`
+
+| 不做 benchmark 的风险 | 后果 |
+|---------------------|------|
+| 不知道饱和点 | 超载部署 → 队列爆炸、延迟雪崩 |
+| 只看平均延迟 | P99 尾延迟可能差 10x，用户感知卡顿 |
+| 不知瓶颈类型 | 乱优化——显存瓶颈去加算力，白费功夫 |
+| 无 QPS 容量规划 | 无法回答"几块卡能扛 1000 QPS" |
+
+> 💡 **一句话总结**：Benchmark 是系统优化的"诊断仪"——用 throughput-latency 曲线找饱和点，用 nsys/ncu 判瓶颈类型，用 P99 看尾延迟。不做 benchmark 的优化都是盲猜。
+
+---
+
+### 理论学习
+
+#### 6.1 六大关键指标
+
+![Benchmark 六大关键指标](images/benchmark_metrics_overview.svg)
+
+| 指标 | 含义 | 反映 |
+|------|------|------|
+| **Throughput** | 每秒生成 tokens 数（tok/s） | 系统吞吐能力 |
+| **Avg / P50 / P99 Latency** | 端到端延迟（submit→finish） | 用户感知响应速度，P99 看尾延迟 |
+| **TTFT** | Time To First Token | 首 token 延迟（prefill 阶段） |
+| **TPOT** | Time Per Output Token | decode 每 token 时间（流畅度） |
+| **Batch Size Distribution** | 每轮 batch 大小分布 | 调度效率（batch 越满 GPU 越忙） |
+
+##### 为什么 P99 比平均延迟重要？
+
+\`\`\`
+100 个请求，99 个 50ms，1 个 500ms
+ 平均延迟 = (99×50 + 500)/100 = 54.5ms ← 看起来不错
+ P99 延迟 = 500ms ← 真实：1% 用户体验极差！
+
+在线服务的 SLA 通常看 P99/P999，因为：
+ - 用户记得的是"最慢的那次"
+ - 尾延迟常由 GC、排队、preemption 等异常引起
+\`\`\`
+
+##### TTFT vs TPOT
+
+| 指标 | 阶段 | 影响因素 |
+|------|------|---------|
+| **TTFT** | prefill | prompt 长度、prefill batch 大小、queue 等待 |
+| **TPOT** | decode | KV Cache 大小、decode batch 大小、显存带宽 |
+
+> 💡 流式输出场景，用户先等 TTFT（首字出现），然后感受 TPOT（后续字流出速度）。两者要分别优化——TTFT 靠 chunked prefill + 短队列，TPOT 靠 KV Cache 优化 + decode batch。
+
+#### 6.2 两种 Benchmark 方法
+
+![Benchmark 六大指标与两种测试方法](images/benchmark_metrics_overview.svg)
+
+##### 方法一：固定并发数扫描
+
+\`\`\`python
+# 同时提交 N 个请求，等全部完成，扫 N=1,2,4,8,16,32,64
+for concurrency in [1, 2, 4, 8, 16, 32, 64]:
+ futures = [engine.submit() for _ in range(concurrency)]
+ wait(futures)
+ throughput = total_tokens / total_time
+ latency = finish_time - submit_time
+\`\`\`
+
+- **看什么**：throughput 随并发怎么变、latency 在哪个并发开始飙升
+- **找什么**：饱和点（throughput 不再增长的拐点）
+
+##### 方法二：固定 QPS 测试
+
+\`\`\`python
+# 以恒定速率发请求（如 50 QPS），持续 N 秒
+while time < duration:
+ if time >= next_send:
+ engine.submit()
+ next_send += 1.0 / qps
+ sleep(0.001)
+\`\`\`
+
+- **看什么**：在给定 QPS 下，P50/P99 延迟是否达标
+- **找什么**：能达标 SLA 的最大 QPS（容量上限）
+
+##### 两者互补
+
+| 方法 | 适合回答 | 类比 |
+|------|---------|------|
+| 固定并发扫描 | "系统能力上限在哪？" | 压测到极限 |
+| 固定 QPS 测试 | "真实负载下延迟达标吗？" | 模拟生产流量 |
+
+#### 6.3 Throughput-Latency 曲线与饱和点
+
+![Throughput-Latency 曲线与饱和点](images/throughput_latency_saturation_curve.svg)
+
+经典的 throughput-latency 曲线分三个区域：
+
+\`\`\`
+并发数 ↑：
+ 线性增长区（conc ≤ max_num_seqs）：
+ throughput 随并发线性增长，latency 平稳
+ → GPU 未饱和，batch 在攒大
+
+ 饱和点（拐点）：
+ throughput 增长率 < 5%，开始封顶
+ latency 开始快速上升
+ → GPU 算力打满，batch 已达上限
+
+ 排队区（conc > max_num_seqs）：
+ throughput 不再增长（封顶）
+ latency 因排队线性增长（conc 翻倍 → latency 翻倍）
+ → 请求排队等下一波 batch
+\`\`\`
+
+##### 饱和点判定
+
+| 信号 | 含义 |
+|------|------|
+| throughput 增长率 < 5% | 算力打满 |
+| latency 开始快速上升 | 排队出现 |
+| GPU util ≈ 100% | 硬件饱和 |
+| 请求队列堆积 | 超过处理能力 |
+
+##### 形象类比：高速公路
+
+- **线性增长区** = 车少，提速畅通（throughput↑ latency 平稳）
+- **饱和点** = 车流刚好满（ throughput 到顶，开始堵）
+- **排队区** = 拥堵（throughput 封顶，latency 因排队飙升）
+
+#### 6.4 四种瓶颈类型
+
+![四种瓶颈类型与优化方向](images/bottleneck_types_analysis.svg)
+
+| 瓶颈类型 | 表现 | 优化方向 |
+|---------|------|---------|
+| **Compute-bound** | throughput 不涨、SM util 高 | 量化(INT8/FP8)、模型蒸馏、更大 batch |
+| **Memory-bound** | latency 随并发线性涨、SM util 不高 | KV Cache 量化、PagedAttention、FlashAttention |
+| **Launch overhead** | kernel 间隙大、GPU 空闲 | CUDA Graph、kernel fusion |
+| **Scheduling overhead** | Python scheduler 成瓶颈 | C++ scheduler（TensorRT-LLM）、预分配 buffer |
+
+##### 如何用 nsys / ncu 判断？
+
+\`\`\`bash
+# nsys：看时间线
+nsys profile ./engine
+# kernel 间隙大 → Launch overhead
+# SM util 高 + throughput 不涨 → Compute-bound
+
+# ncu：看单 kernel
+ncu --set full ./engine
+# Memory Throughput 接近峰值 → Memory-bound
+# Achieved Occupancy 低 → 资源约束
+\`\`\`
+
+### Coding 任务：手写 Benchmark 框架
+
+#### 任务 1：创建 benchmark_engine_v1.py
+
+创建文件 [kernels/benchmark_engine_v1.py](kernels/benchmark_engine_v1.py)，对 Mini 引擎 v1 做 concurrency 扫描 + QPS 测试 + 饱和点识别：
+
+\`\`\`python
+# benchmark_engine_v1.py —— Mini 引擎 v1 Latency/Throughput Benchmark
+# 运行命令: python benchmark_engine_v1.py
+# 依赖: 仅标准库（用 SimulatedEngine 复刻 v1 的 Continuous Batching 调度行为）
+
+import threading
+import time
+from collections import deque
+from concurrent.futures import Future
+
+class SimulatedEngine:
+ """模拟 MiniEngineV1：Continuous Batching + max_num_seqs + 摊销算力模型。
+
+ forward 时间 = base + per_seq × batch × amort^(batch-1)
+ - batch 越大 per-token 越省（摊销），但有 max_num_seqs 上限
+ - 超过 max_num_seqs 的并发请求排队 → throughput 封顶、latency 线性涨
+ """
+ def __init__(self, max_num_seqs=8, base_iter_ms=5.0, per_seq_ms=2.0, amort=0.85):
+ self.max_num_seqs = max_num_seqs
+ self.base_iter = base_iter_ms / 1000.0
+ self.per_seq = per_seq_ms / 1000.0
+ self.amort = amort
+ # ... waiting/running 队列 + worker 线程
+
+def run_fixed_concurrency(engine, concurrency, max_new_tokens=8):
+ """固定并发数测试：同时提交 N 个请求，等全部完成，记录各请求 latency。"""
+ reqs = [SimRequest(...) for _ in range(concurrency)]
+ for r in reqs:
+ engine.waiting.append(r)
+ for r in reqs:
+ r.future.result()
+ latencies = sorted([r.finish_time - r.submit_time for r in reqs])
+ return {
+ "throughput": total_tokens / total_time,
+ "avg_latency": mean(latencies),
+ "p99_latency": percentile(latencies, 99),
+ }
+
+def find_saturation_point(results):
+ """识别饱和点：throughput 增长率 < 5% 的拐点。"""
+ for i in range(1, len(results)):
+ growth = (results[i].tp - results[i-1].tp) / results[i-1].tp
+ if growth < 0.05:
+ return results[i] # throughput 不再显著增长 → 饱和
+\`\`\`
+
+完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](kernels/benchmark_engine_v1.py)。
+
+代码要点：
+- **\`SimulatedEngine\`**：用摊销算力模型（\`base + per_seq × batch × amort^(batch-1)\`）模拟真实 GPU 的 batch 摊销行为，\`max_num_seqs\` 限制每轮 batch 上限
+- **\`run_fixed_concurrency\`**：同时提交 N 个请求，记录每个请求的真实 \`finish_time - submit_time\` 作为 latency（不是用总时间近似）
+- **\`find_saturation_point\`**：扫描结果中 throughput 增长率 < 5% 的拐点
+- **\`run_qps_test\`**：以恒定 \`1/qps\` 间隔发请求，持续 duration 秒，看 P50/P99
+
+#### 任务 2：运行并观察 throughput-latency 曲线
+
+\`\`\`bash
+python kernels/benchmark_engine_v1.py
+\`\`\`
+
+**预期输出**（节选）：
+
+\`\`\`text
+① 固定并发数扫描（concurrency = 1,2,4,8,16,32,64）
+ concurrency= 1 | throughput= 140.2 tok/s | avg_lat= 57.0ms | p99_lat= 57.0ms
+ concurrency= 2 | throughput= 234.5 tok/s | avg_lat= 68.2ms | p99_lat= 68.2ms
+ concurrency= 4 | throughput= 398.1 tok/s | avg_lat= 80.3ms | p99_lat= 80.3ms
+ concurrency= 8 | throughput= 779.6 tok/s | avg_lat= 82.0ms | p99_lat= 82.0ms
+ concurrency= 16 | throughput= 781.9 tok/s | avg_lat= 122.8ms | p99_lat= 163.6ms
+ concurrency= 32 | throughput= 782.5 tok/s | avg_lat= 204.6ms | p99_lat= 327.0ms
+ concurrency= 64 | throughput= 783.7 tok/s | avg_lat= 367.5ms | p99_lat= 652.9ms
+
+Throughput-Latency 曲线
+ conc | throughput | avg_lat | p99_lat | 区域
+ 1 | 140.2 | 57.0ms | 57.0ms | 线性增长区
+ 8 | 779.6 | 82.0ms | 82.0ms | 线性增长区
+ 16 | 781.9 | 122.8ms | 163.6ms | ← 饱和点
+ 32 | 782.5 | 204.6ms | 327.0ms | 饱和后(排队)
+ 64 | 783.7 | 367.5ms | 652.9ms | 饱和后(排队)
+
+ 饱和点：concurrency=16, throughput≈781.9 tok/s, latency=122.8ms
+\`\`\`
+
+##### 观察重点
+
+1. **线性增长区（conc 1→8）**：throughput 从 140 涨到 780（5.5x），latency 仅 57→82ms（平稳）
+2. **饱和点（conc=8→16）**：throughput 780→782（< 0.5% 增长），latency 82→123ms（开始上升）
+3. **排队区（conc 16→64）**：throughput 封顶 782，latency 123→205→368ms（**conc 翻倍 → latency 翻倍**）
+4. **P99 尾延迟**：conc=64 时 P99=653ms，是 avg 的 1.8x——排队导致尾延迟恶化
+5. **max_num_seqs=8 是瓶颈**：超过 8 并发后请求排队等下一波 batch，throughput 封顶
+
+##### QPS 测试观察
+
+\`\`\`text
+② 固定 QPS 测试
+ qps= 50 | throughput= 392.6 tok/s | avg= 82.9ms | p99= 87.5ms ← 未饱和
+ qps= 100 | throughput= 766.9 tok/s | avg= 113.8ms | p99= 143.9ms ← 接近饱和
+ qps= 200 | throughput= 779.0 tok/s | avg=1626.0ms | p99=3167.3ms ← 超载！P99 飙升
+\`\`\`
+
+- qps=100（≈800 tok/s）接近饱和吞吐 782，P99 开始上升（144ms）
+- qps=200 超过饱和吞吐 → 请求堆积，P99 飙到 3167ms（**超载雪崩**）
+
+#### 任务 3：分析瓶颈与优化方向
+
+根据饱和点分析，\`max_num_seqs=8\` 是当前瓶颈——throughput 封顶在 \`8 tokens / iter_time\`。优化方向：
+
+| 优化 | 效果 |
+|------|------|
+| 增大 \`max_num_seqs\`（如 16/32） | 每轮 batch 更大 → throughput 上限提高 |
+| 减小 \`iter_time\`（kernel 优化） | 每轮更快 → throughput 提高 |
+| 降低 \`per_seq\`（batch 摊销更好） | 大 batch 时 per-token 更省 |
+
+> 思考：为什么不能无限增大 \`max_num_seqs\`？（提示：显存限制——每请求 KV Cache 占显存，batch 太大 OOM。Day 3 的 BlockSpaceManager 管这个。）
+
+#### 任务 4：LeetGPU 在线题目 —— Top K Selection
+
+**题目链接**：<https://leetgpu.com/challenges/top-k-selection>
+
+**题目概述**：
+
+给定长度为 \`N\` 的数组和一个整数 \`k\`，找出其中**最大的 k 个元素**（或第 k 大）。
+
+**约束条件**：\`1 ≤ k ≤ N ≤ 10^6\`；性能测试取大 \`N\`。
+
+**与今日知识的关联**：
+
+这道题的 **top-k 选择**与 benchmark 的 P99 latency 计算同构——P99 就是"找出延迟排第 99 百分位的那个值"，本质是 top-k 选择（k = N×0.01，选第 k 小的延迟）。benchmark 框架的 \`percentile()\` 函数对排序后的 latencies 取 \`int(N×p/100)\` 位置，正是 top-k selection 的串行版。这道题的 GPU 实现用 bitonic sort 或堆归约做并行 top-k，对应推理系统里用 GPU 加速 latency 分位数计算（百万级请求的 P99/P999 统计）。
+
+> 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](../leetgpu/leetgpu-top-k-selection-solution.html)。
+
+#### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
+
+**题目链接**：[121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+
+**题目概述**：
+
+给定一个数组 \`prices\`，它的第 \`i\` 个元素 \`prices[i]\` 表示一支股票第 \`i\` 天的价格。你只能选择**某一天买入**并在**未来某一天卖出**，计算能获取的**最大利润**（卖-买）。如果不能获利返回 0。
+
+**与今日知识的关联**：
+
+买卖股票的**一次遍历求最大差值**与 benchmark 扫描并发数找最优工作点同构——benchmark 扫描 concurrency=1,2,4,...,64，找"throughput 增长率开始下降"或"latency 开始飙升"的拐点（最优工作点），正如股票在价格序列中找"最低买入+最高卖出"的最大利润。两者都是**一次遍历维护极值**的问题：股票维护"历史最低价"算当前卖出利润，benchmark 维护"throughput 增长率"判断是否到饱和点。benchmark 的 \`find_saturation_point\` 用 \`growth < 5%\` 找拐点，对应股票用 \`min_price\` 算 \`max_profit\`。
+
+**核心套路**：
+
+\`\`\`
+一次遍历：维护历史最低价 min_price
+ 当前价 - min_price = 今天卖出的利润
+ 更新 max_profit = max(max_profit, 当前利润)
+ 更新 min_price = min(min_price, 当前价)
+\`\`\`
+
+> 💡 完整题解（含 C++/Python 参考代码、一次遍历图解、与 benchmark 找饱和拐点的类比）见 [买卖股票的最佳时机题解](../leetcode/problems/买卖股票的最佳时机.html)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：增大 max_num_seqs 观察饱和点变化
+
+修改 \`SimulatedEngine(max_num_seqs=16/32)\`，重新扫描并发数。观察：饱和点从 conc=8 移到 16/32，throughput 上限提高，但 latency 在更高并发才飙升。
+
+> 思考：max_num_seqs 翻倍，throughput 上限是否翻倍？（提示：受 iter_time 摊销影响——batch 越大 per-token 越省，但有算力上限。不一定线性。）
+
+#### 实验 2：混合请求分布测试
+
+修改 \`run_fixed_concurrency\`，让一半请求 \`max_new_tokens=4\`（短）、一半 \`max_new_tokens=16\`（长）。观察：短请求的 P99 是否被长请求拖累？Continuous Batching 是否让短请求先完成？
+
+> 思考：混合分布下 P99 比纯短请求高多少？（提示：长请求占据 batch slot，短请求可能排队。Day 2 的 Continuous Batching 让短请求完成即走，缓解这点。）
+
+#### 实验 3：用 nsys profiling 真实引擎
+
+如果有 GPU，给 Day 5 的 \`mini_engine_v1.py\` 加 \`torch.cuda.Event\` 计时，用 \`nsys profile python mini_engine_v1.py\` 看 kernel 时间线。观察：kernel 间隙大不大？SM utilization 多少？判断是 Compute-bound 还是 Launch overhead。
+
+> 思考：Python scheduler 的 \`schedule()\` 在 nsys 时间线上占比多少？（提示：若 schedule() 耗时 > forward 的 10%，说明 Scheduling overhead 显著，可考虑 C++ scheduler。Day 4 讲的 TensorRT-LLM 就是 C++ 调度。）
+
+---
+
+### 今日总结
+
+Day 6 我们用 benchmark 框架量化了 Mini 引擎 v1 的性能，学会了找饱和点和判瓶颈：
+
+1. **六大指标**：Throughput（吞吐）、Avg/P50/P99 Latency（延迟+尾延迟）、TTFT（首 token）、TPOT（每 token）、Batch Size Distribution、GPU Utilization
+2. **两种 benchmark**：固定并发扫描（看能力上限/饱和点）+ 固定 QPS 测试（看真实负载尾延迟），两者互补
+3. **饱和点**：throughput 增长率 < 5% 的拐点，超过后 throughput 封顶、latency 因排队线性涨（conc 翻倍 → latency 翻倍）
+4. **实测曲线**：v1 在 max_num_seqs=8 下，conc 1→8 线性增长（140→780 tok/s），conc=16 饱和（782 封顶），conc=64 时 P99 飙到 653ms
+5. **四种瓶颈**：Compute-bound（量化）、Memory-bound（KV Cache 优化）、Launch overhead（CUDA Graph）、Scheduling overhead（C++ scheduler）
+6. **P99 重要性**：conc=64 时 P99=653ms 是 avg 的 1.8x，超载雪崩时 P99 飙到 3167ms——只看平均延迟会误判
+7. **nsys/ncu 判瓶颈**：kernel 间隙大→Launch overhead；SM util 高+throughput 不涨→Compute-bound；Memory Throughput 接近峰值→Memory-bound
+
+掌握这些后，你就有了系统优化的"诊断能力"——明天 Day 7 总结本周调度策略，复盘面试题，整理 GitHub 仓库。
+
+---
+
+### 面试要点
+
+1. **如何做 LLM 推理系统的 throughput-latency benchmark？需要关注哪些指标？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **测试方法**：
+ - 固定并发数扫描：同时提交 N 个请求，扫 N=1,2,4,...,找饱和点
+ - 固定 QPS 测试：恒定速率发请求，看 P50/P99 是否达标
+ - **关键指标**：
+ - Throughput（tok/s）、Avg/P50/P99 Latency（尾延迟）
+ - TTFT（首 token，prefill）、TPOT（每 token，decode）
+ - Batch Size Distribution、GPU Utilization
+ - **分析**：画 throughput-latency 曲线，找饱和点，用 nsys/ncu 判瓶颈
+
+</details>
+
+
+2. **如何识别推理系统的饱和点？饱和后如何优化？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **识别饱和点**：
+ - throughput 不再随并发增长（增长率 < 5%）
+ - latency 开始快速上升（排队出现）
+ - GPU util ≈ 100%、请求队列堆积
+ - **饱和后优化**（按瓶颈类型）：
+ - Compute-bound：量化(INT8/FP8)、模型蒸馏、更大 batch
+ - Memory-bound：KV Cache 量化、PagedAttention、FlashAttention
+ - Launch overhead：CUDA Graph、kernel fusion
+ - Scheduling overhead：C++ scheduler（TensorRT-LLM）
+
+</details>
+
+
+3. **P99 latency 为什么比平均延迟重要？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 平均延迟掩盖尾延迟——99 个 50ms + 1 个 500ms，平均 54.5ms 看起来好，但 1% 用户体验极差
+ - 在线服务 SLA 看 P99/P999，因为用户记得"最慢的那次"
+ - 尾延迟常由排队、preemption、GC 等异常引起，是系统稳定性的信号
+ - 超载雪崩时 P99 增长远快于平均——benchmark 必须看 P99
+
+</details>
+
+
+4. **固定并发扫描和固定 QPS 测试有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **固定并发扫描**：同时提交 N 个请求等全部完成，扫 N 找能力上限和饱和点。适合"压测到极限"
+ - **固定 QPS 测试**：恒定速率发请求持续 N 秒，看给定负载下 P50/P99。适合"模拟生产流量"
+ - 两者互补：扫描看"能撑多少"，QPS 测"真实负载下延迟达标吗"
+ - 生产容量规划：先用扫描找饱和点，再用 QPS 在饱和点以下测 SLA 达标
+
+</details>
+
+
+5. **benchmark 发现 throughput 在 conc=8 后封顶，可能是什么瓶颈？怎么确认？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **可能瓶颈**：max_num_seqs=8 限制每轮 batch 上限，超过的请求排队
+ - **确认方法**：
+ - 看 batch size distribution：是否每轮 batch=8（打满 max_num_seqs）
+ - nsys 看 GPU util：若 ≈100% 是 Compute-bound；若低且有排队是 max_num_seqs 限制
+ - 增大 max_num_seqs 重测：若 throughput 提高，确认是 batch 上限瓶颈
+ - **优化**：增大 max_num_seqs（受显存限制）、减小 iter_time（kernel 优化）
+
+ - 饱和点判定方法相同：throughput 封顶 + latency 飙升 + util ≈100%
+
+</details>`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1616; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

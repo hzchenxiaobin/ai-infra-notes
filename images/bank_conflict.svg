@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="420" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory Bank Conflict</text>
+
+  <!-- Banks -->
+  <text x="360" y="70" text-anchor="middle" font-size="15" fill="#666666">Shared Memory：32 banks，每 bank 4 bytes</text>
+
+  <!-- Bank columns -->
+  <g transform="translate(120, 100)">
+    <!-- Headers -->
+    <rect x="0" y="0" width="40" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="20" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">B0</text>
+    <rect x="40" y="0" width="40" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="60" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">B1</text>
+    <rect x="80" y="0" width="40" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="100" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">B2</text>
+    <rect x="120" y="0" width="40" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="140" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">...</text>
+    <rect x="160" y="0" width="40" height="30" fill="#3a3a3a" stroke="#555555"/>
+    <text x="180" y="20" text-anchor="middle" font-size="11" fill="#2b2b2b">B31</text>
+
+    <!-- Data row -->
+    <rect x="0" y="30" width="40" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+    <rect x="40" y="30" width="40" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+    <rect x="80" y="30" width="40" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+    <rect x="120" y="30" width="40" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+    <rect x="160" y="30" width="40" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+  </g>
+
+  <!-- Conflict case -->
+  <text x="360" y="210" text-anchor="middle" font-size="16" font-weight="bold" fill="#e57373">❌ Bank Conflict：同一 warp 的多个线程同时访问同一个 bank</text>
+  <circle cx="200" cy="260" r="16" fill="#e57373"/>
+  <text x="200" y="265" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">T0</text>
+  <circle cx="240" cy="260" r="16" fill="#e57373"/>
+  <text x="240" y="265" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">T1</text>
+  <circle cx="280" cy="260" r="16" fill="#e57373"/>
+  <text x="280" y="265" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">T2</text>
+
+  <line x1="200" y1="276" x2="200" y2="330" stroke="#e57373" stroke-width="2"/>
+  <line x1="240" y1="276" x2="240" y2="330" stroke="#e57373" stroke-width="2"/>
+  <line x1="280" y1="276" x2="280" y2="330" stroke="#e57373" stroke-width="2"/>
+
+  <text x="240" y="350" text-anchor="middle" font-size="13" fill="#e57373">T0/T1/T2 都访问 Bank 0 → 串行执行</text>
+
+  <!-- Padding fix -->
+  <text x="360" y="390" text-anchor="middle" font-size="14" fill="#5cb86c">✅ 解决：tile[TILE_DIM][TILE_DIM + 1] padding 让数据错开 bank</text>
+  </g>
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="540" viewBox="0 0 940 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="940" height="540" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">推理系统优化速查表：现象 → 检查 → 解决</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 表头 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="64" width="200" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <rect x="230" y="64" width="220" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <rect x="450" y="64" width="460" height="36" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="130" y="88" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">现象</text>
+  <text x="340" y="88" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">检查方法</text>
+  <text x="680" y="88" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">解决方案</text>
+
+  <!-- 行 -->
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="100" width="200" height="44"/><rect x="230" y="100" width="220" height="44"/><rect x="450" y="100" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="120" font-size="11" fill="#b03a3a" font-weight="bold">TTFT 过高</text>
+  <text x="40" y="136" font-size="10" fill="#666">首 token 慢</text>
+  <text x="240" y="120" font-size="11" fill="#444">profile prefill</text>
+  <text x="240" y="136" font-size="10" fill="#666">看 TTFT vs N 增长</text>
+  <text x="460" y="120" font-size="11" fill="#2e6e2e">FlashAttention、Tensor Core、并行 prefill</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="144" width="200" height="44"/><rect x="230" y="144" width="220" height="44"/><rect x="450" y="144" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="164" font-size="11" fill="#b03a3a" font-weight="bold">TBT 过高</text>
+  <text x="40" y="180" font-size="10" fill="#666">生成慢</text>
+  <text x="240" y="164" font-size="11" fill="#444">profile decode</text>
+  <text x="240" y="180" font-size="10" fill="#666">看 breakdown 占比</text>
+  <text x="460" y="164" font-size="11" fill="#2e6e2e">KV Cache、PagedAttention、量化、GQA</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="188" width="200" height="44"/><rect x="230" y="188" width="220" height="44"/><rect x="450" y="188" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="208" font-size="11" fill="#b03a3a" font-weight="bold">TBT 随 L 增长</text>
+  <text x="40" y="224" font-size="10" fill="#666">序列长后更慢</text>
+  <text x="240" y="208" font-size="11" fill="#444">扫描不同 L</text>
+  <text x="240" y="224" font-size="10" fill="#666">看 TBT vs 生成长度</text>
+  <text x="460" y="208" font-size="11" fill="#2e6e2e">GQA/MQA、滑动窗口、稀疏 attention</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="232" width="200" height="44"/><rect x="230" y="232" width="220" height="44"/><rect x="450" y="232" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="252" font-size="11" fill="#b03a3a" font-weight="bold">显存 OOM</text>
+  <text x="40" y="268" font-size="10" fill="#666">KV Cache 太大</text>
+  <text x="240" y="252" font-size="11" fill="#444">监控显存</text>
+  <text x="240" y="268" font-size="10" fill="#666">算 cache 占用</text>
+  <text x="460" y="252" font-size="11" fill="#2e6e2e">PagedAttention、INT8 KV、减 batch</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="276" width="200" height="44"/><rect x="230" y="276" width="220" height="44"/><rect x="450" y="276" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="296" font-size="11" fill="#b03a3a" font-weight="bold">Kernel 间隙大</text>
+  <text x="40" y="312" font-size="10" fill="#666">调度开销</text>
+  <text x="240" y="296" font-size="11" fill="#444">nsys timeline</text>
+  <text x="240" y="312" font-size="10" fill="#666">看 gap 占比</text>
+  <text x="460" y="296" font-size="11" fill="#2e6e2e">CUDA Graph、torch.compile、kernel fusion</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="320" width="200" height="44"/><rect x="230" y="320" width="220" height="44"/><rect x="450" y="320" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="340" font-size="11" fill="#b03a3a" font-weight="bold">长请求阻塞 batch</text>
+  <text x="40" y="356" font-size="10" fill="#666">Dynamic batching</text>
+  <text x="240" y="340" font-size="11" fill="#444">观察完成时间</text>
+  <text x="240" y="356" font-size="10" fill="#666">看请求长度方差</text>
+  <text x="460" y="340" font-size="11" fill="#2e6e2e">Continuous Batching</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="364" width="200" height="44"/><rect x="230" y="364" width="220" height="44"/><rect x="450" y="364" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="384" font-size="11" fill="#b03a3a" font-weight="bold">多轮对话 TTFT 高</text>
+  <text x="40" y="400" font-size="10" fill="#666">重复算历史</text>
+  <text x="240" y="384" font-size="11" fill="#444">检查 cache 复用</text>
+  <text x="240" y="400" font-size="10" fill="#666">看 prefill 长度</text>
+  <text x="460" y="384" font-size="11" fill="#2e6e2e">session KV Cache / prefix caching</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="408" width="200" height="44"/><rect x="230" y="408" width="220" height="44"/><rect x="450" y="408" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="428" font-size="11" fill="#b03a3a" font-weight="bold">显存碎片</text>
+  <text x="40" y="444" font-size="10" fill="#666">分配失败但显存够</text>
+  <text x="240" y="428" font-size="11" fill="#444">block allocator</text>
+  <text x="240" y="444" font-size="10" fill="#666">看 free block 数</text>
+  <text x="460" y="428" font-size="11" fill="#2e6e2e">PagedAttention</text>
+
+  <g filter="url(#sk)"><g stroke="#bbb" fill="#fff">
+    <rect x="30" y="452" width="200" height="44"/><rect x="230" y="452" width="220" height="44"/><rect x="450" y="452" width="460" height="44" fill="#f9faf9"/>
+  </g></g>
+  <text x="40" y="472" font-size="11" fill="#b03a3a" font-weight="bold">Throughput 低</text>
+  <text x="40" y="488" font-size="10" fill="#666">GPU 利用率低</text>
+  <text x="240" y="472" font-size="11" fill="#444">nsys SM util</text>
+  <text x="240" y="488" font-size="10" fill="#666">看 occupancy</text>
+  <text x="460" y="472" font-size="11" fill="#2e6e2e">增大 batch、continuous batching</text>
+
+  <!-- 底部 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="508" width="880" height="26" rx="6" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="470" y="526" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day6 决策树验证</text>
+</svg>

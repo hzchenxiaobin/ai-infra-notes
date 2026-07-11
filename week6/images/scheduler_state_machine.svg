@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="420" fill="#fdfcf7"/>
+
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Scheduler 状态机与每轮决策</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== State Machine (left) ===== -->
+  <text x="200" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Sequence 状态转换</text>
+
+  <!-- WAITING -->
+  <g filter="url(#sk)">
+    <rect x="120" y="86" width="160" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">WAITING</text>
+
+  <path d="M 200 130 L 200 160" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <text x="220" y="150" font-size="9" fill="#666">scheduler 选择</text>
+
+  <!-- RUNNING -->
+  <g filter="url(#sk)">
+    <rect x="120" y="164" width="160" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="190" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">RUNNING</text>
+
+  <!-- branches -->
+  <path d="M 150 208 L 100 240" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 200 208 L 200 240" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 250 208 L 300 240" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <text x="110" y="232" font-size="9" fill="#888">完成</text>
+  <text x="170" y="232" font-size="9" fill="#888">下轮继续</text>
+  <text x="270" y="232" font-size="9" fill="#888">被抢占</text>
+
+  <!-- FINISHED -->
+  <g filter="url(#sk)">
+    <rect x="40" y="244" width="120" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="100" y="268" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">FINISHED</text>
+
+  <!-- RUNNING (next iter) -->
+  <g filter="url(#sk)">
+    <rect x="140" y="244" width="120" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2" opacity="0.6"/>
+  </g>
+  <text x="200" y="268" text-anchor="middle" font-size="11" fill="#2e6e2e">RUNNING</text>
+
+  <!-- SWAPPED -->
+  <g filter="url(#sk)">
+    <rect x="280" y="244" width="120" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="268" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">SWAPPED</text>
+
+  <!-- SWAPPED back to RUNNING -->
+  <path d="M 340 284 Q 340 320 250 320 Q 200 320 200 284" stroke="#b85450" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <text x="280" y="336" font-size="9" fill="#b85450">显存恢复 → swap in</text>
+
+  <!-- ===== Per-iteration decisions (right) ===== -->
+  <text x="660" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">每轮 Iteration 调度决策</text>
+
+  <g filter="url(#sk)">
+    <rect x="460" y="86" width="440" height="280" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+
+  <text x="480" y="110" font-size="11" fill="#446688" font-weight="bold">Scheduler 每轮需要决定：</text>
+
+  <text x="480" y="134" font-size="11" fill="#2e6e2e">1. 继续运行哪些 RUNNING 请求</text>
+  <text x="500" y="150" font-size="10" fill="#666">→ 保留 running 队列中的序列（decode 1 步/token）</text>
+
+  <text x="480" y="174" font-size="11" fill="#c98a2b">2. 从 WAITING 加入哪些新请求</text>
+  <text x="500" y="190" font-size="10" fill="#666">→ 在 token budget 允许时做 prefill</text>
+
+  <text x="480" y="214" font-size="11" fill="#b85450">3. 是否抢占某些 RUNNING 请求</text>
+  <text x="500" y="230" font-size="10" fill="#666">→ 显存不足时 preempt（recompute / swap）</text>
+
+  <text x="480" y="254" font-size="11" fill="#4a8edb">4. 处理 FINISHED 请求</text>
+  <text x="500" y="270" font-size="10" fill="#666">→ 释放 KV Cache、返回结果</text>
+
+  <text x="480" y="300" font-size="11" fill="#444" font-weight="bold">约束条件：</text>
+  <text x="500" y="316" font-size="10" fill="#666">• Token budget: prefill + decode 总 token ≤ 上限</text>
+  <text x="500" y="332" font-size="10" fill="#666">• 显存预算: KV Cache block 数 ≤ 上限</text>
+  <text x="500" y="348" font-size="10" fill="#666">• Max num_seqs: 并发 sequence 数 ≤ 上限</text>
+
+  <!-- bottom note -->
+  <text x="470" y="398" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">每轮 iteration = schedule() → run() → update status → 重复</text>
+</svg>

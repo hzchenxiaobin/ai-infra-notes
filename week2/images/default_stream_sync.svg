@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" viewBox="0 0 860 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="2" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Default Stream 隐式同步陷阱</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: correct (explicit streams, concurrent) ===== -->
+  <text x="430" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8e4a">✅ 正确：全部使用 Explicit Stream，并发正常</text>
+
+  <!-- Stream A -->
+  <text x="80" y="96" font-size="12" fill="#666" font-weight="bold">Stream A</text>
+  <g filter="url(#sk)">
+    <rect x="140" y="82" width="120" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="200" y="101" text-anchor="middle" font-size="11" fill="#2b2b2b">Kernel A</text>
+  <g filter="url(#sk)">
+    <rect x="260" y="82" width="120" height="30" rx="5" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="320" y="101" text-anchor="middle" font-size="11" fill="#2b2b2b">D2H A</text>
+
+  <!-- Stream B -->
+  <text x="80" y="140" font-size="12" fill="#666" font-weight="bold">Stream B</text>
+  <g filter="url(#sk)">
+    <rect x="180" y="126" width="120" height="30" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="240" y="145" text-anchor="middle" font-size="11" fill="#2b2b2b">Kernel B</text>
+  <g filter="url(#sk)">
+    <rect x="300" y="126" width="120" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="360" y="145" text-anchor="middle" font-size="11" fill="#2b2b2b">D2H B</text>
+
+  <!-- overlap highlight -->
+  <g filter="url(#sk)">
+    <rect x="180" y="82" width="240" height="74" fill="none" stroke="#4a8e4a" stroke-width="2" stroke-dasharray="5 3" rx="6"/>
+  </g>
+  <text x="300" y="176" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">↑ A 和 B 并发执行</text>
+
+  <!-- divider -->
+  <path d="M 60 196 L 800 196" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Bottom: wrong (default stream blocks) ===== -->
+  <text x="430" y="222" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">❌ 错误：某处调用 cudaMemcpy（Default Stream），打断所有并发</text>
+
+  <!-- Stream A (before) -->
+  <text x="80" y="252" font-size="12" fill="#666" font-weight="bold">Stream A</text>
+  <g filter="url(#sk)">
+    <rect x="140" y="238" width="100" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="190" y="257" text-anchor="middle" font-size="11" fill="#2b2b2b">Kernel A</text>
+
+  <!-- Stream B (before) -->
+  <text x="80" y="296" font-size="12" fill="#666" font-weight="bold">Stream B</text>
+  <g filter="url(#sk)">
+    <rect x="180" y="282" width="100" height="30" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="230" y="301" text-anchor="middle" font-size="11" fill="#2b2b2b">Kernel B</text>
+
+  <!-- Default stream blocks -->
+  <text x="80" y="340" font-size="12" fill="#b03a3a" font-weight="bold">Default</text>
+  <g filter="url(#sk)">
+    <rect x="140" y="326" width="240" height="30" rx="5" fill="#fdecec" stroke="#b03a3a" stroke-width="2"/>
+  </g>
+  <text x="260" y="345" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">cudaMemcpy（同步阻塞）</text>
+
+  <!-- blocked annotation lines -->
+  <path d="M 260 268 L 260 326" stroke="#b03a3a" stroke-width="1" stroke-dasharray="3 3" fill="none" filter="url(#sk)"/>
+  <path d="M 280 312 L 280 326" stroke="#b03a3a" stroke-width="1" stroke-dasharray="3 3" fill="none" filter="url(#sk)"/>
+  <text x="450" y="320" font-size="11" fill="#b03a3a">← 所有 Stream 被阻塞</text>
+  <text x="450" y="338" font-size="11" fill="#b03a3a">   等待 Default Stream 完成</text>
+
+  <!-- Stream A (after) -->
+  <text x="80" y="384" font-size="12" fill="#666" font-weight="bold">Stream A</text>
+  <g filter="url(#sk)">
+    <rect x="380" y="370" width="100" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="430" y="389" text-anchor="middle" font-size="11" fill="#2b2b2b">续 A</text>
+
+  <!-- Stream B (after) -->
+  <text x="80" y="428" font-size="12" fill="#666" font-weight="bold">Stream B</text>
+  <g filter="url(#sk)">
+    <rect x="380" y="414" width="100" height="30" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="430" y="433" text-anchor="middle" font-size="11" fill="#2b2b2b">续 B</text>
+
+  <!-- solution box -->
+  <g filter="url(#sk)">
+    <rect x="80" y="460" width="700" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="430" y="480" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">解决：cudaStreamCreateWithFlags(&amp;stream, cudaStreamNonBlocking)</text>
+  <text x="430" y="496" text-anchor="middle" font-size="11" fill="#2e6e2e">或编译时加 --default-stream per-thread</text>
+</svg>

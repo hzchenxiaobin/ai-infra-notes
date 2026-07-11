@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="620" viewBox="0 0 920 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="620" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Mini Transformer Engine 架构</text>
+  <path d="M 280 42 Q 460 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- outer box -->
+  <g filter="url(#sk)">
+    <rect x="60" y="60" width="800" height="470" rx="12" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.8"/>
+  </g>
+  <text x="460" y="82" text-anchor="middle" font-size="13" fill="#888" font-style="italic">★ = 自定义 CUDA kernel，其余用 PyTorch（cuBLAS）</text>
+
+  <!-- Input -->
+  <g filter="url(#sk)">
+    <rect x="360" y="96" width="200" height="34" rx="8" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="118" text-anchor="middle" font-size="12" fill="#2b2b2b">Input x (B, N, d)</text>
+  <path d="M 460 132 L 460 144" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- LayerNorm1 (custom) -->
+  <g filter="url(#sk)">
+    <rect x="320" y="148" width="280" height="36" rx="8" fill="#e8a838" opacity="0.55" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="460" y="170" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">★ LayerNorm1 [my_ops.layernorm_forward]</text>
+  <path d="M 460 186 L 460 198" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- QKV GEMM -->
+  <g filter="url(#sk)">
+    <rect x="300" y="202" width="320" height="36" rx="8" fill="#4a8edb" opacity="0.5" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="460" y="224" text-anchor="middle" font-size="12" fill="#2b2b2b">QKV Linear (GEMM, cuBLAS)</text>
+  <path d="M 460 240 L 460 252" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- Attention block -->
+  <g filter="url(#sk)">
+    <rect x="180" y="256" width="560" height="110" rx="10" fill="#fce4ec" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="276" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Attention</text>
+
+  <!-- QK^T -->
+  <g filter="url(#sk)">
+    <rect x="210" y="288" width="110" height="28" rx="6" fill="#4a8edb" opacity="0.5" stroke="#4a8edb"/>
+  </g>
+  <text x="265" y="306" text-anchor="middle" font-size="10" fill="#2b2b2b">QK^T (GEMM)</text>
+  <text x="328" y="306" font-size="14" fill="#3a3a3a">→</text>
+
+  <!-- Softmax (custom) -->
+  <g filter="url(#sk)">
+    <rect x="340" y="288" width="140" height="28" rx="6" fill="#e8a838" opacity="0.6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="410" y="306" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">★ Softmax [my_ops]</text>
+  <text x="488" y="306" font-size="14" fill="#3a3a3a">→</text>
+
+  <!-- PV -->
+  <g filter="url(#sk)">
+    <rect x="500" y="288" width="110" height="28" rx="6" fill="#4a8edb" opacity="0.5" stroke="#4a8edb"/>
+  </g>
+  <text x="555" y="306" text-anchor="middle" font-size="10" fill="#2b2b2b">PV (GEMM)</text>
+
+  <!-- Out GEMM -->
+  <g filter="url(#sk)">
+    <rect x="300" y="326" width="320" height="30" rx="6" fill="#4a8edb" opacity="0.4" stroke="#4a8edb"/>
+  </g>
+  <text x="460" y="345" text-anchor="middle" font-size="10" fill="#2b2b2b">Output Linear (GEMM, cuBLAS)</text>
+  <path d="M 460 368 L 460 380" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- residual add 1 -->
+  <g filter="url(#sk)">
+    <circle cx="460" cy="390" r="14" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="394" text-anchor="middle" font-size="11" fill="#2b2b2b">+</text>
+  <text x="486" y="394" font-size="9" fill="#888">residual</text>
+  <path d="M 460 406 L 460 418" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- LayerNorm2 (custom) -->
+  <g filter="url(#sk)">
+    <rect x="320" y="422" width="280" height="36" rx="8" fill="#e8a838" opacity="0.55" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="460" y="444" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">★ LayerNorm2 [my_ops.layernorm_forward]</text>
+  <path d="M 460 460 L 460 472" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- FFN -->
+  <g filter="url(#sk)">
+    <rect x="240" y="476" width="440" height="36" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="498" text-anchor="middle" font-size="11" fill="#2b2b2b">FFN: GEMM1 (cuBLAS) → GELU → GEMM2 (cuBLAS)</text>
+
+  <!-- legend -->
+  <g filter="url(#sk)">
+    <rect x="80" y="548" width="760" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <g font-size="11" fill="#2b2b2b">
+    <rect x="100" y="558" width="14" height="14" fill="#4a8edb" opacity="0.5" stroke="#4a8edb"/>
+    <text x="120" y="570">GEMM（cuBLAS，compute-bound）</text>
+    <rect x="340" y="558" width="14" height="14" fill="#e8a838" opacity="0.6" stroke="#c98a2b"/>
+    <text x="360" y="570">★ 自定义算子（Softmax/LayerNorm，memory-bound）</text>
+    <text x="100" y="594" font-size="10" fill="#888">对比维度：正确性（maxDiff &lt; 1e-4）+ latency（PyTorch 版 vs 自定义版）</text>
+  </g>
+</svg>

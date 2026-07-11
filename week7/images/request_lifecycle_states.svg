@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="380" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求生命周期：WAITING → RUNNING → 终态</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- WAITING -->
+  <g filter="url(#sk)">
+    <rect x="40" y="80" width="160" height="60" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="120" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">WAITING</text>
+  <text x="120" y="126" text-anchor="middle" font-size="10" fill="#555">submit() 入队</text>
+
+  <path d="M 200 110 L 250 110" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="225" y="102" text-anchor="middle" font-size="9" fill="#2e6e2e">调度选中</text>
+
+  <!-- RUNNING -->
+  <g filter="url(#sk)">
+    <rect x="252" y="80" width="160" height="60" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="332" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">RUNNING</text>
+  <text x="332" y="126" text-anchor="middle" font-size="10" fill="#555">prefill → decode</text>
+
+  <!-- terminal states -->
+  <path d="M 412 95 L 480 70" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 412 110 L 480 110" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 412 125 L 480 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- FINISHED -->
+  <g filter="url(#sk)">
+    <rect x="482" y="52" width="160" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="562" y="72" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">FINISHED</text>
+  <text x="562" y="88" text-anchor="middle" font-size="9" fill="#555">set_result() → Future+Callback</text>
+
+  <!-- TIMEOUT -->
+  <g filter="url(#sk)">
+    <rect x="482" y="88" width="160" height="44" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="562" y="108" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">TIMEOUT</text>
+  <text x="562" y="124" text-anchor="middle" font-size="9" fill="#555">set_exception(TimeoutError)</text>
+
+  <!-- CANCELLED -->
+  <g filter="url(#sk)">
+    <rect x="482" y="128" width="160" height="44" rx="8" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5"/>
+  </g>
+  <text x="562" y="148" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a2e7e">CANCELLED</text>
+  <text x="562" y="164" text-anchor="middle" font-size="9" fill="#555">cancel() → set_exception</text>
+
+  <!-- transitions from WAITING (timeout/cancel directly) -->
+  <path d="M 120 140 Q 120 175 480 105" stroke="#b85450" stroke-width="1" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="90" y="200" font-size="9" fill="#b85450">WAITING 也可直接超时</text>
+
+  <!-- right side: fields -->
+  <g filter="url(#sk)">
+    <rect x="680" y="52" width="240" height="200" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="800" y="74" text-anchor="middle" font-size="12" font-weight="bold" fill="#444">InferenceRequest 关键字段</text>
+  <text x="700" y="96" font-size="10" fill="#2b6e9e">• request_id: 唯一标识</text>
+  <text x="700" y="114" font-size="10" fill="#7a5415">• status: 生命周期状态</text>
+  <text x="700" y="132" font-size="10" fill="#2e6e2e">• priority: 优先级（调度用）</text>
+  <text x="700" y="150" font-size="10" fill="#b85450">• timeout: 超时阈值</text>
+  <text x="700" y="168" font-size="10" fill="#5a2e7e">• future: Future（阻塞等待）</text>
+  <text x="700" y="186" font-size="10" fill="#4a8edb">• callback: 完成回调</text>
+  <text x="700" y="204" font-size="10" fill="#c98a2b">• stream_callback: token 流</text>
+  <text x="700" y="222" font-size="10" fill="#888">• submit_time / start_time / end_time</text>
+  <text x="700" y="240" font-size="10" fill="#888">• generated_tokens: 已生成 token</text>
+
+  <!-- bottom: 3 threads -->
+  <g filter="url(#sk)">
+    <rect x="40" y="270" width="880" height="90" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="294" font-size="12" font-weight="bold" fill="#444">三个后台线程协作：</text>
+  <text x="60" y="316" font-size="10" fill="#2e6e2e" font-weight="bold">调度线程：</text>
+  <text x="150" y="316" font-size="10" fill="#444">get_batch 从队列凑批 → 加入 running</text>
+  <text x="60" y="336" font-size="10" fill="#b85450" font-weight="bold">执行线程：</text>
+  <text x="150" y="336" font-size="10" fill="#444">处理 running 请求（forward），完成 set_result（锁外执行）</text>
+  <text x="60" y="354" font-size="10" fill="#7a4a9e" font-weight="bold">超时线程：</text>
+  <text x="150" y="354" font-size="10" fill="#444">检查 waiting/running 中的过期请求，自动 set_exception</text>
+</svg>

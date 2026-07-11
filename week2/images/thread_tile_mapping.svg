@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="15" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="540" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Thread Tile 二维映射（BM=128, BN=128, TM=8, TN=8）</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: Block tile grid ===== -->
+  <text x="200" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Block Tile（BM×BN = 128×128）</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="88" width="280" height="280" fill="none" stroke="#4a8edb" stroke-width="2" rx="4"/>
+  </g>
+
+  <!-- Thread tile grid (16x16 = 256 threads, each 17.5px) -->
+  <g stroke="#d4d4d4" stroke-width="0.7" filter="url(#sk)">
+    <line x1="60" y1="123" x2="340" y2="123"/>
+    <line x1="60" y1="158" x2="340" y2="158"/>
+    <line x1="60" y1="193" x2="340" y2="193"/>
+    <line x1="60" y1="228" x2="340" y2="228"/>
+    <line x1="60" y1="263" x2="340" y2="263"/>
+    <line x1="60" y1="298" x2="340" y2="298"/>
+    <line x1="60" y1="333" x2="340" y2="333"/>
+    <line x1="95" y1="88" x2="95" y2="368"/>
+    <line x1="130" y1="88" x2="130" y2="368"/>
+    <line x1="165" y1="88" x2="165" y2="368"/>
+    <line x1="200" y1="88" x2="200" y2="368"/>
+    <line x1="235" y1="88" x2="235" y2="368"/>
+    <line x1="270" y1="88" x2="270" y2="368"/>
+    <line x1="305" y1="88" x2="305" y2="368"/>
+  </g>
+
+  <!-- Faint fill on some tiles -->
+  <g filter="url(#sk)" opacity="0.5">
+    <rect x="60" y="88" width="35" height="35" fill="#4a8edb" opacity="0.15" stroke="#9e9e9e" stroke-width="0.5"/>
+    <rect x="95" y="88" width="35" height="35" fill="#4a8edb" opacity="0.1" stroke="#9e9e9e" stroke-width="0.5"/>
+    <rect x="130" y="88" width="35" height="35" fill="#4a8edb" opacity="0.15" stroke="#9e9e9e" stroke-width="0.5"/>
+    <rect x="60" y="123" width="35" height="35" fill="#4a8edb" opacity="0.1" stroke="#9e9e9e" stroke-width="0.5"/>
+  </g>
+
+  <!-- Highlight one thread tile (row 1, col 1) -->
+  <g filter="url(#sk)">
+    <rect x="95" y="123" width="35" height="35" fill="#4a8e4a" opacity="0.5" stroke="#2e6e2e" stroke-width="2"/>
+  </g>
+  <text x="112" y="145" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">T</text>
+
+  <!-- Annotation arrow -->
+  <path d="M 130 140 L 230 140" stroke="#2e6e2e" stroke-width="1.3" stroke-dasharray="4 3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="230" y="124" width="100" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="280" y="144" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">TM×TN = 8×8</text>
+
+  <!-- Row/col count labels -->
+  <text x="50" y="230" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-90 50 230)">16 rows (BM/TM)</text>
+  <text x="200" y="384" text-anchor="middle" font-size="9" fill="#888">16 cols (BN/TN)</text>
+  <text x="200" y="398" text-anchor="middle" font-size="11" fill="#555">16×16 = 256 个 Thread Tile，每线程负责 8×8 输出</text>
+
+  <!-- ===== Right: formulas box ===== -->
+  <g filter="url(#sk)">
+    <rect x="400" y="88" width="420" height="280" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>
+  <text x="610" y="114" text-anchor="middle" font-size="14" fill="#4a8edb" font-weight="bold">线程映射公式</text>
+
+  <text x="420" y="142" font-size="12" fill="#2b2b2b">threadIdx.x 范围: 0 ~ 255</text>
+  <text x="420" y="164" font-size="12" fill="#2b2b2b">BN / TN = 128 / 8 = 16</text>
+
+  <path d="M 420 178 L 800 178" stroke="#d4d4d4" stroke-width="1" filter="url(#sk)"/>
+
+  <text x="420" y="202" font-size="13" fill="#4a8e4a" font-family="monospace" font-weight="bold">threadRow = threadIdx.x / 16</text>
+  <text x="420" y="224" font-size="13" fill="#4a8e4a" font-family="monospace" font-weight="bold">threadCol = threadIdx.x % 16</text>
+
+  <path d="M 420 240 L 800 240" stroke="#d4d4d4" stroke-width="1" filter="url(#sk)"/>
+
+  <text x="420" y="264" font-size="12" fill="#2b2b2b">线程 (threadRow, threadCol)</text>
+  <text x="420" y="284" font-size="12" fill="#2b2b2b">负责输出行:</text>
+  <text x="430" y="306" font-size="11" fill="#c98a2b" font-family="monospace">[cRow + threadRow*TM,</text>
+  <text x="430" y="324" font-size="11" fill="#c98a2b" font-family="monospace"> cRow + (threadRow+1)*TM)</text>
+
+  <text x="420" y="350" font-size="12" fill="#2b2b2b">每 Block 线程数 = 16×16 = 256</text>
+
+  <!-- ===== Bottom: key params table ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="400" width="760" height="56" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <g font-size="12" fill="#2b2b2b" font-weight="bold">
+    <text x="80" y="424">BM=128</text>
+    <text x="180" y="424">BN=128</text>
+    <text x="280" y="424">BK=8</text>
+    <text x="360" y="424" fill="#4a8e4a">TM=8</text>
+    <text x="440" y="424" fill="#4a8e4a">TN=8</text>
+    <text x="520" y="424" fill="#c98a2b">Threads=256</text>
+    <text x="640" y="424" fill="#c98a2b">Regs≈88</text>
+    <text x="400" y="446" text-anchor="middle" font-size="11" fill="#888">Shared Mem: s_A[128][8] + s_B[8][128] = 2×4KB = 8KB</text>
+  </g>
+
+  <!-- summary box -->
+  <g filter="url(#sk)">
+    <rect x="60" y="476" width="760" height="46" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="440" y="498" text-anchor="middle" font-size="11" fill="#444">💡 关键：每个线程算 8×8=64 个 C 元素，r_A 的 8 个值各被复用 8 次，r_B 同理</text>
+  <text x="440" y="514" text-anchor="middle" font-size="10" fill="#888">寄存器层算术强度 = 64 / 16 = 4（比 naive 的 1 高 4 倍）</text>
+</svg>

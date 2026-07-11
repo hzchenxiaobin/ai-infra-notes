@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 - Week 1 Profiling 报告汇总</title>
+    <link rel="stylesheet" href="../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
+    <script src="../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting (local) -->
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link active" href="../index.html">📌 课程概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week3/index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week3/index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="../week3/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week3/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week3/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week3/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week3/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week3/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week3/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Week 1 Profiling 报告汇总</h1>
+                <a class="back-link" href="../index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="../index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `# Week 1 Profiling 报告汇总
+
+> 本周 profiling 按天拆解，具体任务见各 day 的 \`notes/\` 目录。
+
+## 每日 Profiling 任务索引
+
+| 天数 | 主题 | 对应文件 | 核心代码 |
+|------|------|---------|---------|
+| Day 1 | GPU 执行模型与 kernel launch | [day1/notes/day1_hello_gpu.md](../day1/notes/day1_hello_gpu.html) | \`kernels/hello_gpu.cu\` |
+| Day 2 | Occupancy 与寄存器约束 | [day2/notes/day2_occupancy.md](../day2/notes/day2_occupancy.html) | \`kernels/occupancy_test.cu\` |
+| Day 3 | 设备属性与 Occupancy Calculator | [day3/notes/day3_device_query.md](../day3/notes/day3_device_query.html) | \`deviceQuery\` / \`occupancyCalculator\` |
+| Day 4 | Memory Hierarchy 与矩阵转置 | [day4/notes/day4_transpose.md](../day4/notes/day4_transpose.html) | \`kernels/transpose.cu\` |
+| Day 5 | Bank Conflict 分析 | [day5/notes/day5_bank_conflict.md](../day5/notes/day5_bank_conflict.html) | \`kernels/bank_conflict.cu\` |
+| Day 6 | Nsight 综合 Profiling 实战 | [day6/notes/day6_nsight_profiling.md](../day6/notes/day6_nsight_profiling.html) | 全部 kernel |
+| Day 7 | 总结与复盘 | [day7/notes/day7_summary.md](../day7/notes/day7_summary.html) | - |
+
+---
+
+## 环境信息
+
+| 项目 | 值 |
+|------|-----|
+| GPU 型号 | |
+| CUDA Capability | |
+| SM 数量 | |
+| 每个 SM 最大 Warp 数 | |
+| 理论显存带宽 | |
+| CUDA 版本 | |
+| Nsight Compute 版本 | |
+| Nsight Systems 版本 | |
+
+---
+
+## 性能汇总表
+
+请根据每日任务填写：
+
+| Day | Kernel | Occupancy | Memory Throughput | Compute Throughput | Bank Conflicts | 瓶颈类型 |
+|-----|--------|-----------|-------------------|-------------------|----------------|---------|
+| 1 | hello_gpu | | | | N/A | |
+| 2 | occupancy_test | | | | N/A | |
+| 4 | transpose_naive | | | | N/A | |
+| 4 | transpose_optimized | | | | N/A | |
+| 5 | conflict_read | | | | | |
+| 5 | no_conflict_read | | | | | |
+
+---
+
+## 各 Kernel 分析
+
+### 1. hello_gpu
+
+- **对应命令**：见 [\`day1/notes/day1_hello_gpu.md\`](../day1/notes/day1_hello_gpu.html)
+- **关键指标**：
+- **分析**：
+
+### 2. occupancy_test
+
+- **对应命令**：见 [\`day2/notes/day2_occupancy.md\`](../day2/notes/day2_occupancy.html)
+- **关键指标**：
+- **分析**：
+
+### 3. transpose_naive vs transpose_optimized
+
+- **对应命令**：见 [\`day4/notes/day4_transpose.md\`](../day4/notes/day4_transpose.html)
+- **关键指标对比**：
+
+| 版本 | Memory Throughput | 执行时间 | 备注 |
+|------|-------------------|---------|------|
+| naive | | | |
+| optimized | | | |
+
+- **分析**：
+
+### 4. conflict_read vs no_conflict_read
+
+- **对应命令**：见 [\`day5/notes/day5_bank_conflict.md\`](../day5/notes/day5_bank_conflict.html)
+- **关键指标**：
+- **分析**：
+
+---
+
+## Roofline 分析
+
+- **Peak FLOP/s**：
+- **Peak Bandwidth**：
+
+在 Roofline 图上标出各 kernel 大致位置：
+
+\`\`\`
+  FLOP/s
+    │
+Peak├───────────────┐
+    │               │
+    │     ○ optimized?    ○ occupancy_test?
+    │               │
+    │        ○ transpose_naive
+    │               │
+    │   ○ hello_gpu
+    │               │
+    └───────────────┴─────────────── Arithmetic Intensity
+                Memory-bound → Compute-bound
+\`\`\`
+
+---
+
+## 总结
+
+- **本周主要发现**：
+- **下一步优化方向**：
+`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    
+    <script src="../js/main.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 500" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="620" height="500" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="310" y="24" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">示例演算：nums=[1,2,3]，逐步追踪 path 与 used 的变化</text>
+
+  <!-- Header -->
+  <text x="30" y="56" font-size="12" fill="#444" font-weight="bold">步骤</text>
+  <text x="100" y="56" font-size="12" fill="#444" font-weight="bold">动作</text>
+  <text x="300" y="56" font-size="12" fill="#444" font-weight="bold">path</text>
+  <text x="440" y="56" font-size="12" fill="#444" font-weight="bold">used</text>
+  <text x="560" y="56" font-size="12" fill="#444" font-weight="bold">结果</text>
+  <line x1="20" y1="62" x2="600" y2="62" stroke="#ddd" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- Step 1: pick 1 -->
+  <text x="30" y="84" font-size="11" fill="#333">1</text>
+  <text x="100" y="84" font-size="11" fill="#82b366">选 1</text>
+  <rect x="295" y="72" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="86" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <text x="440" y="84" font-size="11" fill="#333">[T,F,F]</text>
+  <text x="560" y="84" font-size="11" fill="#888">—</text>
+
+  <!-- Step 2: pick 2 -->
+  <text x="30" y="110" font-size="11" fill="#333">2</text>
+  <text x="100" y="110" font-size="11" fill="#82b366">选 2</text>
+  <rect x="295" y="98" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="112" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="98" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="330" y="112" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">2</text>
+  <text x="440" y="110" font-size="11" fill="#333">[T,T,F]</text>
+  <text x="560" y="110" font-size="11" fill="#888">—</text>
+
+  <!-- Step 3: pick 3 -> full -->
+  <text x="30" y="136" font-size="11" fill="#333">3</text>
+  <text x="100" y="136" font-size="11" fill="#82b366">选 3</text>
+  <rect x="295" y="124" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="138" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="124" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="330" y="138" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">2</text>
+  <rect x="343" y="124" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="354" y="138" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">3</text>
+  <text x="440" y="136" font-size="11" fill="#333">[T,T,T]</text>
+  <text x="560" y="136" font-size="11" fill="#b85450" font-weight="bold">[1,2,3]⭐</text>
+
+  <line x1="20" y1="150" x2="600" y2="150" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- Step 4: undo 3 -->
+  <text x="30" y="170" font-size="11" fill="#333">4</text>
+  <text x="100" y="170" font-size="11" fill="#b85450">撤销 3</text>
+  <rect x="295" y="158" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="172" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="158" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="330" y="172" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">2</text>
+  <rect x="343" y="158" width="22" height="20" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+  <text x="440" y="170" font-size="11" fill="#333">[T,T,F]</text>
+  <text x="560" y="170" font-size="11" fill="#888">—</text>
+
+  <!-- Step 5: undo 2 (no more candidate) -->
+  <text x="30" y="196" font-size="11" fill="#333">5</text>
+  <text x="100" y="196" font-size="11" fill="#b85450">撤销 2</text>
+  <rect x="295" y="184" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="198" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="184" width="22" height="20" fill="#f5f5f5" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2" rx="3" filter="url(#rough2)"/>
+  <text x="440" y="196" font-size="11" fill="#333">[T,F,F]</text>
+  <text x="560" y="196" font-size="11" fill="#888">—</text>
+
+  <!-- Step 6: pick 3 (second branch) -->
+  <text x="30" y="222" font-size="11" fill="#333">6</text>
+  <text x="100" y="222" font-size="11" fill="#82b366">选 3</text>
+  <rect x="295" y="210" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="224" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="210" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="330" y="224" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">3</text>
+  <text x="440" y="222" font-size="11" fill="#333">[T,F,T]</text>
+  <text x="560" y="222" font-size="11" fill="#888">—</text>
+
+  <!-- Step 7: pick 2 -> full -->
+  <text x="30" y="248" font-size="11" fill="#333">7</text>
+  <text x="100" y="248" font-size="11" fill="#82b366">选 2</text>
+  <rect x="295" y="236" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="306" y="250" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">1</text>
+  <rect x="319" y="236" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="330" y="250" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">3</text>
+  <rect x="343" y="236" width="22" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="354" y="250" text-anchor="middle" font-size="10" fill="#333" font-weight="bold">2</text>
+  <text x="440" y="248" font-size="11" fill="#333">[T,T,T]</text>
+  <text x="560" y="248" font-size="11" fill="#b85450" font-weight="bold">[1,3,2]⭐</text>
+
+  <line x1="20" y1="262" x2="600" y2="262" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- Ellipsis -->
+  <text x="310" y="288" text-anchor="middle" font-size="13" fill="#888">⋮ 回溯到根，换选 2 / 选 3 作为首元素，同理继续 ⋮</text>
+
+  <!-- Final result box -->
+  <rect x="60" y="310" width="500" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="310" y="332" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">最终 6 个全排列（3! = 6）：</text>
+  <text x="310" y="352" text-anchor="middle" font-size="12" fill="#333">[1,2,3] [1,3,2] [2,1,3] [2,3,1] [3,1,2] [3,2,1]</text>
+
+  <!-- legend -->
+  <rect x="80" y="394" width="14" height="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+  <text x="100" y="405" font-size="11" fill="#555">已选</text>
+  <rect x="160" y="394" width="14" height="14" fill="#f5f5f5" stroke="#bbb" stroke-width="1.2" stroke-dasharray="2,2" rx="2" filter="url(#rough2)"/>
+  <text x="180" y="405" font-size="11" fill="#555">已撤销</text>
+  <text x="260" y="405" font-size="11" fill="#82b366">选 = 入 path、used=true</text>
+  <text x="440" y="405" font-size="11" fill="#b85450">撤销 = 出 path、used=false</text>
+
+  <text x="310" y="440" text-anchor="middle" font-size="11" fill="#888">每条根到叶子的路径 = 一个完整排列；used 数组保证每个数只用一次</text>
+  <text x="310" y="458" text-anchor="middle" font-size="11" fill="#888">「选-递归-撤销」对称执行，确保回退后状态干净，下一分支不受污染</text>
+</svg>

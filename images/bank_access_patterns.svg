@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="480" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory 访问模式总结</text>
+
+  <!-- Pattern 1: No conflict -->
+  <rect x="60" y="70" width="600" height="100" rx="8" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
+  <text x="80" y="100" font-size="15" font-weight="bold" fill="#5cb86c">✅ 模式 1：每个线程访问不同 bank</text>
+  <text x="80" y="125" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x]  // 线程 i 访问 bank i</text>
+  <text x="80" y="150" font-size="12" fill="#666666">结果：1 个 cycle 完成，最快</text>
+
+  <!-- Pattern 2: Broadcast -->
+  <rect x="60" y="190" width="600" height="100" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="80" y="220" font-size="15" font-weight="bold" fill="#6ab0ff">✅ 模式 2：所有线程访问同一地址（Broadcast）</text>
+  <text x="80" y="245" font-family="monospace" font-size="12" fill="#2b2b2b">tile[0]  // 所有线程读同一个地址</text>
+  <text x="80" y="270" font-size="12" fill="#666666">结果：1 个 cycle 完成，有专门广播机制</text>
+
+  <!-- Pattern 3: 2-way conflict -->
+  <rect x="60" y="310" width="600" height="70" rx="8" fill="#e8a838" opacity="0.2" stroke="#f0c050" stroke-width="2"/>
+  <text x="80" y="340" font-size="15" font-weight="bold" fill="#f0c050">⚠️ 模式 3：2-way bank conflict</text>
+  <text x="80" y="365" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x % 2]  // 线程分成两组访问两个 bank</text>
+
+  <!-- Pattern 4: 32-way conflict -->
+  <rect x="60" y="400" width="600" height="60" rx="8" fill="#e57373" opacity="0.2" stroke="#e57373" stroke-width="2"/>
+  <text x="80" y="425" font-size="15" font-weight="bold" fill="#e57373">❌ 模式 4：32-way bank conflict（最坏情况）</text>
+  <text x="80" y="450" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x * 32]  // 所有线程访问同一个 bank</text>
+  </g>
+</svg>

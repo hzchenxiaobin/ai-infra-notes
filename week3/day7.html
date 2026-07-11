@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 3 - Day 7：Transformer 算子分类与 Week 3 总结</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 Week 3 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1</a>
+<a class="nav-link day-link" href="../day2.html">Day 2</a>
+<a class="nav-link day-link" href="../day3.html">Day 3</a>
+<a class="nav-link day-link" href="../day4.html">Day 4</a>
+<a class="nav-link day-link" href="../day5.html">Day 5</a>
+<a class="nav-link day-link" href="../day6.html">Day 6</a>
+<a class="nav-link day-link" href="../day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1</a>
+<a class="nav-link day-link" href="day2.html">Day 2</a>
+<a class="nav-link day-link" href="day3.html">Day 3</a>
+<a class="nav-link day-link" href="day4.html">Day 4</a>
+<a class="nav-link day-link" href="day5.html">Day 5</a>
+<a class="nav-link day-link" href="day6.html">Day 6</a>
+<a class="nav-link day-link active" href="day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-7">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-7">📌 Week 7 概览</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../plan.html#week-8">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../plan.html#week-8">📌 Week 8 概览</a>
+    </div>
+  </div>
+</div>
+            </nav>
+<div class="nav-section-title">更多</div>
+<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>
+<a class="nav-link" href="../leetgpu/index.html">🎮 LeetGPU 题解</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 7：Transformer 算子分类与 Week 3 总结</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 把 Transformer 单层的全部算子按 **arithmetic intensity (AI)** 分类，产出一张 Prefill / Decode 两阶段的算子分类表
+2. 建立从"算子形状"到"compute-bound / memory-bound"的判断直觉，拿到任意算子能秒判 bound 类型
+3. 系统梳理 Week 3 的核心知识链：Prefill vs Decode → 手写 Softmax/LayerNorm → 源码优化 → Attention IO → 端到端 Profiling → Fusion
+4. 整理本周所有产出（kernel、引擎、profiling 报告），形成可复用的工程资产
+5. 回顾本周 10+ 道面试题，建立 Transformer 算子优化的答题框架
+6. 为 Week 4 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
+
+> 💡 **为什么重要**：Day 1-20 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
+
+---
+
+### Week 3 知识地图
+
+![Transformer 单层数据流](images/transformer_dataflow.svg)
+
+Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
+
+\`\`\`
+Transformer forward → Prefill/Decode 两阶段 → 手写 memory-bound 算子
+ → 读官方源码找优化差距 → Attention IO 量化 → 接入框架 → 端到端 Profiling → 算子分类
+\`\`\`
+
+| Day | 主题 | 核心产出 | 关键概念 |
+|-----|------|---------|---------|
+| Day 1 | Trace Transformer 推理流程 | torch.profiler 时间线 | Prefill vs Decode、6 类算子 |
+| Day 2 | 手写 Softmax / LayerNorm Kernel | softmax_layernorm.cu | safe softmax 三遍扫描、两级 block reduce |
+| Day 3 | 源码分析 PyTorch / FasterTransformer | 优化对比表 | 向量化加载、warp vs block dispatch、Welford |
+| Day 4 | Attention IO 分析 | attention_naive.cu | O(N²) 物化、HBM 读写量化 |
+| Day 5 | 算子接入 Mini 引擎 | mini_engine.py | C++ Extension、load_inline |
+| Day 6 | 端到端 Profiling + Fusion | profiling 报告 | nsys + ncu 五步法、kernel fusion 候选 |
+| **Day 7** | **算子分类 + 总结** | **算子分类表** | **arithmetic intensity 判定** |
+
+> 💡 **一句话总结**：Week 3 的本质是"理解 Transformer 推理为什么慢，并定位慢在哪些算子"。Day 7 的算子分类表就是这 7 天学习的最终答卷。
+
+---
+
+### 核心概念串讲
+
+#### 1. Prefill vs Decode：同一套层，两种性能特征
+
+![Prefill vs Decode 执行特征对比](images/prefill_vs_decode.svg)
+
+Transformer 推理分两阶段，跑的是同一套层，但算子形状截然不同，导致 bound 类型天差地别：
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 输入形状 | \`(B, N_prompt, d)\`，N 可达数千 | \`(B, 1, d)\`，每次 1 个 token |
+| GEMM 的 M | 大（N） | 极小（1） |
+| 算子整体 bound | **Compute-bound**（GEMM 主导） | **Memory-bound**（KV Cache 读取主导） |
+| SM 利用率 | 60-85% | 10-30% |
+| 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
+
+**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≫ Ridge Point（~12.6）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，AI 骤降到 ~1 → memory-bound。
+
+#### 2. Softmax / LayerNorm：memory-bound 算子的典型代表
+
+| 算子 | reduce 次数 | AI (FLOP/Byte) | bound | 关键技巧 |
+|------|------------|----------------|-------|---------|
+| Softmax | 2（max + sum） | ~0.375 | memory-bound | safe softmax 减 max、三遍扫描 |
+| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce、affine |
+
+两个算子的核心都是 **block reduce**：warp 级 \`__shfl_down_sync\` → shared memory 中转 → warp 0 最终归约。这是 Week 2 Day 8 Warp Shuffle 原语的直接工程化。
+
+> ⚠️ **注意**：LayerNorm 的两次 reduce 无法合并——第二次（variance）依赖第一次（mean）的结果。FasterTransformer 用 Welford 在线算法合并成一次遍历，是工程优化而非算法等价。
+
+#### 3. 标准 Attention：O(N²) IO 的根源
+
+![标准 Attention IO 拆解](images/attention_io_breakdown.svg)
+
+标准 Attention 三阶段把两个 N×N 中间矩阵 S 和 P 物化到 HBM，这是 O(N²) IO 的根源：
+
+\`\`\`
+Step 1: S = QK^T / √d → 写 S (N²)
+Step 2: P = softmax(S) → 读 S (N²) + 写 P (N²)
+Step 3: O = PV → 读 P (N²) + 写 O (Nd)
+总计: 3N² + 4Nd → O(N²) when N ≫ d
+\`\`\`
+
+| N | S/P 显存 | 能否入 L2(~40MB) | 能否入 HBM(40GB) |
+|---|---------|------------------|------------------|
+| 1024 | 4 MB | ✅ | ✅ |
+| 4096 | 64 MB | ❌ | ✅ |
+| 16384 | 1 GB | ❌ | ✅（紧张） |
+| 65536 | 16 GB | ❌ | ❌（OOM） |
+
+FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 softmax**，把 IO 从 O(N²) 降到 O(Nd)。
+
+#### 4. 端到端 Profiling：五步诊断法
+
+![端到端 Profiling 五步法](images/end_to_end_profiling_workflow.svg)
+
+| 步骤 | 工具 | 回答的问题 |
+|------|------|-----------|
+| 1. 系统级时间线 | nsys | 哪个算子最慢？（top3） |
+| 2. kernel 级指标 | ncu | 这个算子为什么慢？（SM/DRAM 占用） |
+| 3. 瓶颈判定 | Roofline | memory-bound 还是 compute-bound？ |
+| 4. Stall 分析 | ncu Warp Stall Reasons | 具体阻塞原因（Long Scoreboard = 等内存） |
+| 5. Fusion 机会 | 时间线 + Roofline | 哪些相邻 memory-bound 算子可融合？ |
+
+**判定法则**：\`dram__throughput ≫ sm__throughput\` → memory-bound；反之 compute-bound；两者都低 → latency-bound。
+
+#### 5. Kernel Fusion：省 HBM 中间读写
+
+![Kernel Fusion 机会](images/kernel_fusion_opportunities.svg)
+
+| Fusion 候选 | 收益来源 | 难度 |
+|------------|---------|------|
+| LayerNorm + QKV GEMM | 省去 LN 输出 (B,N,d) 一次读写 | 高 |
+| Softmax + Dropout | 省去 P 一次读写 | 低 |
+| Residual Add + LayerNorm | 省去中间结果 | 中 |
+| GEMM + Bias + GELU | epilogue fusion | 中 |
+
+\`torch.compile\` 会自动做这些 fusion，kernel 数量减少 30-50%。
+
+---
+
+### 算子分类决策树：拿到任意算子如何判 bound
+
+![O(N²) vs O(Nd) IO 增长对比](images/on2_vs_ond_scaling.svg)
+
+**判定流程**（从理论到验证）：
+
+\`\`\`
+1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
+2. 与 Ridge Point 比较（A100 ≈ 12.6 FLOP/Byte）
+ - AI < 12.6 → memory-bound
+ - AI > 12.6 → compute-bound
+1. 用 ncu 验证：sm__throughput vs dram__throughput
+2. 经验法则：
+ - element-wise（relu/layernorm/softmax）→ 几乎总是 memory-bound
+ - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
+ - 小 GEMM（M=1 或某维极小）→ 通常 memory-bound
+ - reduction（sum/max）→ memory-bound
+\`\`\`
+
+#### Prefill 阶段算子分类表（B=1, N=1024, d=512, FP32）
+
+| 算子 | FLOPs | Bytes | AI | bound | 优化方向 |
+|------|-------|-------|-----|-------|---------|
+| QKV GEMM | 2·N·d·3d ≈ 1.6G | 8·N·d ≈ 4MB | ~384 | **Compute** | Tensor Core |
+| QK^T GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
+| Attention Softmax | 3·N² ≈ 3.1M | 2·N²·4 ≈ 8MB | ~0.4 | **Memory** | FlashAttention (SRAM) |
+| PV GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
+| Output GEMM | 2·N·d² ≈ 0.5G | 2·N·d ≈ 4MB | ~128 | **Compute** | Tensor Core |
+| LayerNorm | 5·N·d ≈ 2.6M | 2·N·d·4 ≈ 4MB | ~0.6 | **Memory** | Fusion |
+| FFN GEMM1/2 | 2·N·d·4d ≈ 2.1G | ~5MB | ~400 | **Compute** | Tensor Core |
+| GELU | 4·N·4d ≈ 8.4M | 2·N·4d·4 ≈ 16MB | ~0.5 | **Memory** | Epilogue fusion |
+
+> 💡 **关键洞察**：Prefill 阶段 GEMM 是 compute-bound，softmax/layernorm/gelu 是 memory-bound。整体性能由 GEMM 主导（时间占比 60%+），所以 **Prefill 是 compute-bound**。
+
+#### Decode 阶段算子分类表（B=1, M=1, KV Cache 长度 L=1024, d=512）
+
+| 算子 | FLOPs | Bytes | AI | bound | 与 Prefill 差异 |
+|------|-------|-------|-----|-------|---------------|
+| QKV GEMM (M=1) | 2·d·3d ≈ 1.6M | 4·d ≈ 8KB | ~200* | **Memory** | GEMM 退化为向量×矩阵 |
+| QK^T (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 读 KV Cache 大 |
+| Attention Softmax | 3·L ≈ 3K | 2·L·4 ≈ 8KB | ~0.4 | **Memory** | 不变 |
+| PV GEMM (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 同上 |
+| LayerNorm | 5·d ≈ 2.6K | 2·d·4 ≈ 4KB | ~0.6 | **Memory** | 不变 |
+
+> *Decode 的 GEMM 虽然理论 AI 较高，但因矩阵极小（M=1），SM 无法充分利用，实际表现为 memory-bound。
+
+> 💡 **关键洞察**：Decode 阶段 **几乎所有算子都是 memory-bound**（M=1 导致 GEMM 的 AI 骤降）。这就是为什么 Decode 是 memory-bound，优化重点是减少 HBM 读写（KV Cache）和 launch overhead（CUDA Graph）。
+
+#### Prefill vs Decode 总览
+
+![延迟对比](images/latency_comparison.svg)
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 主导算子类型 | GEMM（compute-bound） | KV Cache 读取（memory-bound） |
+| 优化重点 | Tensor Core、FlashAttention | KV Cache、CUDA Graph、Continuous Batching |
+| SM 利用率 | 高（60-85%） | 低（10-30%） |
+| 单 token 延迟 | 低（并行处理 N 个 token） | 高（串行生成，每次 1 token） |
+| 吞吐量瓶颈 | 算力 | 显存带宽 |
+
+---
+
+### 总结任务
+
+#### 任务 1：完成 Transformer 算子分类表
+
+将上文两张分类表整理到 [notes/operator_classification.md](../notes/operator_classification.html)，并补充你自己 Mini Engine 的实测数据：
+
+\`\`\`markdown
+# Week 3 Transformer 算子分类表
+
+## 测试环境
+- GPU: [你的型号]
+- CUDA: 12.x / PyTorch: 2.x
+
+## Prefill 阶段（N=1024, d=512）
+| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
+|------|---------|---------|-----------|-------|
+| QKV GEMM | 384 | xx | xx | Compute |
+| Softmax | 0.4 | xx | xx | Memory |
+| ... | | | | |
+
+## Decode 阶段（M=1, L=1024）
+| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
+| ... | | | | |
+\`\`\`
+
+> 💡 用 Day 6 的 ncu 命令采集实测 SM%/DRAM%，对比理论与实测，误差大时排查原因（cache、launch overhead）。
+
+#### 任务 2：整理本周产出
+
+按下表清点本周所有代码和报告，补全缺失项：
+
+| 产出物 | 文件 | 验收标准 | 状态 |
+|--------|------|---------|------|
+| Transformer profiler trace | \`day1/trace_transformer.py\` + trace_*.json | Prefill/Decode 算子时间表 | ☐ |
+| Softmax + LayerNorm Kernel | \`day2/softmax_layernorm.cu\` | 与 CPU 误差 < 1e-5 | ☐ |
+| 源码分析笔记 | \`day3/notes/source_analysis.md\` | 3 个优化点对比 | ☐ |
+| 标准 Attention Kernel | \`day4/attention_naive.cu\` | 与 CPU 误差 < 1e-3 | ☐ |
+| Mini 引擎 | \`day5/mini_engine.py\` | 自定义版端到端 PASS | ☐ |
+| Profiling 报告 | \`day6/profiling_report.md\` | 含 top3 瓶颈分析 | ☐ |
+| 算子分类表 | \`day7/notes/operator_classification.md\` | Prefill/Decode 分类完整 | ☐ |
+
+#### 任务 3：本周 LeetGPU / LeetCode 题目回顾
+
+本周实战题目汇总（点击查看完整题解）：
+
+| Day | LeetGPU 题目 | LeetCode 题目 |
+|-----|--------------|---------------|
+| Day 1 | [1D Convolution](../leetgpu/leetgpu-1d-convolution-solution.html) | [11. 盛最多水的容器](../leetcode/problems/盛最多水的容器.html) |
+| Day 2 | [Softmax](../leetgpu/leetgpu-softmax-solution.html) | [198. 打家劫舍](../leetcode/problems/打家劫舍.html) |
+| Day 3 | [Argmax](../leetgpu/leetgpu-argmax-solution.html) | [5. 最长回文子串](../leetcode/problems/最长回文子串.html) |
+| Day 4 | [Attention](../leetgpu/leetgpu-attention-solution.html) | [141. 环形链表](../leetcode/problems/环形链表.html) |
+| Day 5 | [Matrix Addition](../leetgpu/leetgpu-matrix-addition-solution.html) | [98. 验证二叉搜索树](../leetcode/problems/验证二叉搜索树.html) |
+| Day 6 | [RMS Normalization](../leetgpu/leetgpu-rms-normalization-solution.html) | [78. 子集](../leetcode/problems/子集.html) |
+| Day 7 | [Causal Self-Attention](../leetgpu/leetgpu-causal-self-attention-solution.html) | — |
+
+> 💡 回顾重点：Softmax / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。
+
+#### 任务 4：Week 4 预热 + 面试复盘
+
+**Week 4 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 4 将深入 FlashAttention：
+
+1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 12 已学简化版，Week 4 学完整版）
+2. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
+3. **手写完整 FlashAttention kernel**：支持 batch、multi-head、不同 seq_len
+4. **性能对比**：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
+
+**本周铺垫的关键概念**：
+- ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 4 用 FlashAttention 解决
+- ✅ Online Softmax 三公式（Week 2 Day 12）→ Week 4 完整实现
+- ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 4 在 SRAM 中做 softmax
+- ✅ Warp Shuffle reduce（Week 2 Day 8）→ Week 4 用于 online softmax 的分块 reduce
+
+**面试复盘**：回顾本周面试题，自问自答（答案见下方"面试要点"）：
+
+1. Prefill vs Decode 的区别？为什么 Decode 是 memory-bound？
+2. Transformer 单层算子分类（compute vs memory）？
+3. Softmax 为什么要减 max？
+4. LayerNorm 需要几次 reduce？
+5. 为什么 Softmax/LayerNorm 是 memory-bound？
+6. PyTorch Softmax 为什么 D 小时用 warp 级？
+7. FP16 reduce 为什么要用 FP32？
+8. 标准 Attention 的 IO 复杂度？O(N²) 来源？
+9. 如何做端到端 profiling 定位瓶颈？
+10. 什么是 kernel fusion？举例。
+
+---
+
+### 面试准备框架
+
+面试中回答 Transformer 算子优化问题，建议用这个结构：
+
+1. **先分类**：这个算子是 GEMM 还是 element-wise/reduction？
+2. **判 bound**：compute-bound 还是 memory-bound？给出 AI 估算
+3. **分阶段**：Prefill 和 Decode 表现是否不同？（GEMM 会随 M 变化）
+4. **给方案**：memory-bound → fusion / 向量化 / 减少读写；compute-bound → Tensor Core / ILP
+5. **联系工具**：用 nsys 找 top3，用 ncu 看 SM/DRAM 占用验证
+
+**示例**：
+
+> **Q：Attention 的 softmax 部分为什么慢？怎么优化？**
+>
+> **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~12.6），纯 memory-bound。
+>
+> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。
+>
+> 用 ncu 验证：标准 Attention 的 softmax 部分 DRAM Throughput ≫ SM Throughput，符合 memory-bound 判定。
+
+---
+
+### 常见误区澄清
+
+| 误区 | 正确理解 |
+|------|---------|
+| Decode 的 GEMM 也是 compute-bound | M=1 时 GEMM 退化为向量×矩阵，AI 骤降，实际是 memory-bound |
+| 自定义 kernel 一定能超过 PyTorch | 官方已高度优化（向量化、warp 级、Welford），只有官方没覆盖的场景（如 FlashAttention）自定义才有优势 |
+| LayerNorm 两次 reduce 能随便合并 | 第二次（variance）依赖第一次（mean），必须 Welford 在线算法才能合并成一次遍历 |
+| Softmax 减 max 只是防溢出 | 还保证数值等价性，是数学恒等变换，不影响结果 |
+| O(N²) 是计算复杂度问题 | O(N²) 是 **IO 复杂度**问题——物化两个 N×N 矩阵的 HBM 读写，计算本身（GEMM）是 compute-bound |
+| Fusion 总是有收益 | 融合 kernel 可能增加 register/shared memory 压力降低 occupancy；只有相邻且数据依赖的算子才能融合 |
+| Profiling 是优化最后一步 | Profiling 应该是优化循环的起点和终点——先定位再优化再验证 |
+
+---
+
+### Week 3 → Week 4 衔接
+
+Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
+
+1. **标准 Attention 的三阶段 IO**（Day 4）：不理解 O(N²) 物化，就无法理解 FlashAttention 的动机
+2. **Online Softmax 三公式**（Week 2 Day 12）：FlashAttention 的算法核心
+3. **Warp Shuffle reduce**（Week 2 Day 8）：FlashAttention 分块 reduce 的基础
+4. **Shared Memory tiling**（Week 1 Day 5）：FlashAttention 的 Q/K/V tile 驻留机制
+5. **Arithmetic intensity 判定**（Day 7）：理解为什么把 softmax 搬到 SRAM 能消除瓶颈
+
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 4 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。
+
+---
+
+### 弹性安排
+
+根据本周完成情况，选择以下一项或多项：
+
+- **补进度**：完成未做的 LeetGPU/LeetCode 题目和实验
+- **深入方向 1**：把 Day 2 的 Softmax 改为 online 两遍扫描版，对比三遍扫描性能
+- **深入方向 2**：用 ncu 详细分析 Mini Engine 中 cuBLAS GEMM 的所有指标，理解它为什么接近峰值
+- **深入方向 3**：阅读 FlashAttention 论文 Section 2-3，预习 tiling + online softmax
+- **面试准备**：和同学互相模拟面试，重点练 Day 7 的 10 道题
+
+---
+
+### 今日总结
+
+Day 7 我们完成了 Week 3 的系统复盘与算子分类：
+
+1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
+2. **算子分类表**：用 arithmetic intensity 把 Transformer 全部算子分到 compute/memory 两类，Prefill 的 GEMM 是 compute，softmax/layernorm/gelu 是 memory
+3. **memory-bound 算子三件套**：Softmax（safe softmax 三遍扫描）、LayerNorm（两次 reduce）、Attention softmax（O(N²) 物化）
+4. **源码优化差距**：向量化加载、warp vs block dispatch、Welford 一次 reduce、FP32 混合精度
+5. **端到端 Profiling 五步法**：nsys 找 top3 → ncu 判 bound → Roofline 定方向 → Stall 分析 → Fusion 出方案
+6. **Week 4 衔接**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心动机，本周已铺好全部前置概念
+
+如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么"，说明 Week 3 过关了。
+
+---
+
+### 面试要点
+
+1. **Transformer 的 Prefill 和 Decode 阶段分别是什么 bound？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 12.6，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
+ - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，AI 从 384 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
+ - **根本原因**：M=1 导致 GEMM 的计算量（与 M 成正比）远小于数据读取量（与 N·d 成正比），AI = FLOPs/Bytes 极低
+ - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
+
+</details>
+
+
+2. **给一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（A100 ≈ 12.6）比较
+ - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
+ - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
+
+</details>
+
+
+3. **标准 Attention 的 IO 复杂度是多少？O(N²) 来自哪里？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **复杂度**：O(N² + Nd)，当 N ≫ d 时简化为 O(N²)
+ - **O(N²) 来源**：物化两个 N×N 中间矩阵——S=QK^T 写入 + softmax 读出 = 2N²，P=softmax(S) 写入 + PV 读出 = 2N²，合计 4N²
+ - **FlashAttention 解决**：不物化 S/P，在 SRAM 中分块完成 online softmax，IO 降到 O(Nd)
+
+</details>
+
+
+4. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **AI 低**：Softmax 每元素读 1 写 1（8 bytes）只做 ~3 次运算，AI ≈ 0.375；LayerNorm AI ≈ 0.6，都远低于 Ridge Point
+ - **优化方向**：① Kernel Fusion（与相邻算子融合省 HBM 中间读写）② 向量化加载（float4/half2）③ 减少 reduce 次数（online softmax / Welford）④ FP16 存储减带宽（reduce 用 FP32 保精度）
+
+</details>
+
+
+5. **如何做端到端 profiling 定位 Transformer 推理瓶颈？完整流程是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **第一步（nsys 系统级）**：采集完整时间线，按 CUDA 时间排序找 top3 算子
+ - **第二步（ncu kernel 级）**：对 top3 分析 SM Throughput 和 DRAM Throughput
+ - **第三步（瓶颈判定）**：DRAM ≫ SM → memory-bound → fusion/向量化/减读写；SM ≫ DRAM → compute-bound → Tensor Core/ILP
+ - **第四步（Stall 分析）**：Long Scoreboard = 等内存，Math Pipe = 计算饱和
+ - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子评估融合收益
+
+</details>
+
+
+6. **Week 3 你最大的收获是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 建立"算子形状 → bound 类型 → 优化方向"的完整直觉：拿到任意 Transformer 算子，能从 M/N/K/d 形状秒判 compute-bound 还是 memory-bound，并给出对应优化路径。
+
+---
+
+</details>
+
+## 📁 本周目录结构
+
+\`\`\`
+week3/
+├── README.md # Week 3 概览
+├── day1/ # Day 1: Trace Transformer 推理流程
+│ ├── README.md
+│ └── trace_transformer.py
+├── day2/ # Day 2: 手写 Softmax/LayerNorm Kernel
+│ ├── README.md
+│ └── kernels/softmax_layernorm.cu
+├── day3/ # Day 3: 源码分析 PyTorch/FasterTransformer
+│ ├── README.md
+│ └── notes/source_analysis.md
+├── day4/ # Day 4: Attention IO 分析
+│ ├── README.md
+│ └── kernels/attention_naive.cu
+├── day5/ # Day 5: 算子接入 Mini 引擎
+│ ├── README.md
+│ └── mini_engine.py
+├── day6/ # Day 6: 端到端 Profiling + Fusion
+│ ├── README.md
+│ └── profiling_report.md
+├── day7/ # Day 7: 算子分类 + 总结
+│ ├── README.md
+│ └── notes/operator_classification.md
+└── website/ # 网站构建
+ ├── build.py
+ └── images/ # SVG 插图
+\`\`\`
+
+---
+
+## 🔗 推荐资源
+
+| 资源 | 说明 |
+|------|------|
+| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Week 4 核心论文，预习 Section 2-3 |
+| [PyTorch ATen Softmax 源码](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/SoftMax.cu) | Day 3 阅读的官方 softmax 实现 |
+| [FasterTransformer LayerNorm 源码](https://github.com/NVIDIA/FasterTransformer/blob/main/src/fastertransformer/kernels/layernorm_kernels.cu) | Welford 一次 reduce 参考 |
+| [vLLM 博客: How vLLM serves LLM](https://blog.vllm.ai/) | Prefill/Decode 与 PagedAttention |
+| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
+| [Nsight Systems 文档](https://docs.nvidia.com/nsight-systems/) | nsys 时间线采集 |
+
+---
+
+#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+
+**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+
+**题目概述**：实现因果自注意力（Causal Self-Attention），即带 causal mask 的标准 Attention，每个位置只能看到自己及之前的位置。
+
+**与今日知识的关联**：Causal Self-Attention 是 Week 3 算子主线的综合验收——融合了 Attention（Day 4）+ Softmax（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"。
+
+> 💡 完整题解见 [Causal Self-Attention 题解](../leetgpu/leetgpu-causal-self-attention-solution.html)。
+
+---
+
+## ✅ Week 3 完成标准
+
+- [ ] 能列出 Prefill 阶段算子分类表（GEMM=compute，softmax/LN=memory）
+- [ ] 能列出 Decode 阶段算子分类表（几乎全是 memory-bound）
+- [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致 AI 骤降）
+- [ ] 能计算给定算子的 arithmetic intensity 并判定 bound 类型
+- [ ] Softmax/LayerNorm Kernel 与 CPU 误差 < 1e-5
+- [ ] 标准 Attention Kernel 与 CPU 误差 < 1e-3，ncu 实测 HBM IO 与理论值误差 < 30%
+- [ ] Mini Engine 自定义版端到端 PASS，与 PyTorch 误差 < 1e-4
+- [ ] 生成 profiling 报告（含 top3 瓶颈算子 + 优化方向）
+- [ ] 能口述本周 10 道面试题的答案要点
+- [ ] 理解 Week 4 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
+- [ ] 完成本周 LeetGPU（Softmax/Softmax Attention/RMS Normalization）与 LeetCode 题目
+
+---
+
+> 💡 **提示**：Week 3 是从"手写单算子"到"理解系统执行"的转折点。算子分类表是推理系统优化的"地图"——看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。Week 4 的 FlashAttention 是这张地图上最重要的优化案例，务必把本周的 O(N²) IO 和 online softmax 基础打牢。`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

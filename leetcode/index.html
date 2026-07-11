@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 题解</title>
+    <link rel="stylesheet" href="../css/style.css?v=4">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="../js/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
+                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link active" href="../leetcode/index.html">📌 题解列表</a>
+<div class="nav-section-title">题目</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">周赛</span><button class="nav-accordion-toggle" aria-label="收起/展开 周赛" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">509</span><button class="nav-accordion-toggle" aria-label="收起/展开 509" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+<a class="nav-link" href="../leetcode/problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">508</span><button class="nav-accordion-toggle" aria-label="收起/展开 508" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">507</span><button class="nav-accordion-toggle" aria-label="收起/展开 507" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-1">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">每日一题</span><button class="nav-accordion-toggle" aria-label="收起/展开 每日一题" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week1</span><button class="nav-accordion-toggle" aria-label="收起/展开 week1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/接雨水.html"><span class="nav-day-tag">day1</span>接雨水</a>
+<a class="nav-link" href="../leetcode/problems/最大子数组和.html"><span class="nav-day-tag">day2</span>最大子数组和</a>
+<a class="nav-link" href="../leetcode/problems/无重复字符的最长子串.html"><span class="nav-day-tag">day3</span>无重复字符的最长子串</a>
+<a class="nav-link" href="../leetcode/problems/反转链表.html"><span class="nav-day-tag">day4</span>反转链表</a>
+<a class="nav-link" href="../leetcode/problems/二叉树的最近公共祖先.html"><span class="nav-day-tag">day5</span>二叉树的最近公共祖先</a>
+<a class="nav-link" href="../leetcode/problems/全排列.html"><span class="nav-day-tag">day6</span>全排列</a>
+<a class="nav-link" href="../leetcode/problems/柱状图中最大的矩形.html"><span class="nav-day-tag">day7</span>柱状图中最大的矩形</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week2</span><button class="nav-accordion-toggle" aria-label="收起/展开 week2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/两数之和.html"><span class="nav-day-tag">day1</span>两数之和</a>
+<a class="nav-link" href="../leetcode/problems/爬楼梯.html"><span class="nav-day-tag">day2</span>爬楼梯</a>
+<a class="nav-link" href="../leetcode/problems/三数之和.html"><span class="nav-day-tag">day3</span>三数之和</a>
+<a class="nav-link" href="../leetcode/problems/合并两个有序链表.html"><span class="nav-day-tag">day4</span>合并两个有序链表</a>
+<a class="nav-link" href="../leetcode/problems/二叉树的层序遍历.html"><span class="nav-day-tag">day5</span>二叉树的层序遍历</a>
+<a class="nav-link" href="../leetcode/problems/每日温度.html"><span class="nav-day-tag">day6</span>每日温度</a>
+<a class="nav-link" href="../leetcode/problems/滑动窗口最大值.html"><span class="nav-day-tag">day7</span>滑动窗口最大值</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week3</span><button class="nav-accordion-toggle" aria-label="收起/展开 week3" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/盛最多水的容器.html"><span class="nav-day-tag">day1</span>盛最多水的容器</a>
+<a class="nav-link" href="../leetcode/problems/打家劫舍.html"><span class="nav-day-tag">day2</span>打家劫舍</a>
+<a class="nav-link" href="../leetcode/problems/最长回文子串.html"><span class="nav-day-tag">day3</span>最长回文子串</a>
+<a class="nav-link" href="../leetcode/problems/环形链表.html"><span class="nav-day-tag">day4</span>环形链表</a>
+<a class="nav-link" href="../leetcode/problems/验证二叉搜索树.html"><span class="nav-day-tag">day5</span>验证二叉搜索树</a>
+<a class="nav-link" href="../leetcode/problems/子集.html"><span class="nav-day-tag">day6</span>子集</a>
+<a class="nav-link" href="../leetcode/problems/不同路径.html"><span class="nav-day-tag">day7</span>不同路径</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week4</span><button class="nav-accordion-toggle" aria-label="收起/展开 week4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day1</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day2</span>LRU 缓存</a>
+<a class="nav-link" href="../leetcode/problems/合并区间.html"><span class="nav-day-tag">day3</span>合并区间</a>
+<a class="nav-link" href="../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day4</span>最小覆盖子串</a>
+<a class="nav-link" href="../leetcode/problems/删除链表的倒数第N个节点.html"><span class="nav-day-tag">day5</span>删除链表的倒数第N个节点</a>
+<a class="nav-link" href="../leetcode/problems/两数相加.html"><span class="nav-day-tag">day6</span>两数相加</a>
+<a class="nav-link" href="../leetcode/problems/跳跃游戏 II.html"><span class="nav-day-tag">day7</span>跳跃游戏 II</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week5</span><button class="nav-accordion-toggle" aria-label="收起/展开 week5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/除自身以外数组的乘积.html"><span class="nav-day-tag">day1</span>除自身以外数组的乘积</a>
+<a class="nav-link" href="../leetcode/problems/最小栈.html"><span class="nav-day-tag">day2</span>最小栈</a>
+<a class="nav-link" href="../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day3</span>任务调度器</a>
+<a class="nav-link" href="../leetcode/problems/复制带随机指针的链表.html"><span class="nav-day-tag">day4</span>复制带随机指针的链表</a>
+<a class="nav-link" href="../leetcode/problems/零钱兑换.html"><span class="nav-day-tag">day5</span>零钱兑换</a>
+<a class="nav-link" href="../leetcode/problems/排序链表.html"><span class="nav-day-tag">day6</span>排序链表</a>
+<a class="nav-link" href="../leetcode/problems/K个一组翻转链表.html"><span class="nav-day-tag">day7</span>K 个一组翻转链表</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week6</span><button class="nav-accordion-toggle" aria-label="收起/展开 week6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/合并区间.html"><span class="nav-day-tag">day1</span>合并区间</a>
+<a class="nav-link" href="../leetcode/problems/有效括号.html"><span class="nav-day-tag">day2</span>有效括号</a>
+<a class="nav-link" href="../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day3</span>LRU 缓存</a>
+<a class="nav-link" href="../leetcode/problems/课程表.html"><span class="nav-day-tag">day4</span>课程表</a>
+<a class="nav-link" href="../leetcode/problems/岛屿数量.html"><span class="nav-day-tag">day5</span>岛屿数量</a>
+<a class="nav-link" href="../leetcode/problems/买卖股票的最佳时机.html"><span class="nav-day-tag">day6</span>买卖股票的最佳时机</a>
+<a class="nav-link" href="../leetcode/problems/最小覆盖子串.html"><span class="nav-day-tag">day7</span>最小覆盖子串</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item level-2">
+  <div class="nav-accordion-header">
+    <span class="nav-link week-link">week7</span><button class="nav-accordion-toggle" aria-label="收起/展开 week7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link" href="../leetcode/problems/最长连续序列.html"><span class="nav-day-tag">day1</span>最长连续序列</a>
+<a class="nav-link" href="../leetcode/problems/任务调度器.html"><span class="nav-day-tag">day2</span>任务调度器</a>
+<a class="nav-link" href="../leetcode/problems/单词拆分.html"><span class="nav-day-tag">day3</span>单词拆分</a>
+<a class="nav-link" href="../leetcode/problems/实现Trie.html"><span class="nav-day-tag">day4</span>实现 Trie (前缀树)</a>
+<a class="nav-link" href="../leetcode/problems/合并K个升序链表.html"><span class="nav-day-tag">day5</span>合并 K 个升序链表</a>
+<a class="nav-link" href="../leetcode/problems/数据流的中位数.html"><span class="nav-day-tag">day6</span>数据流的中位数</a>
+<a class="nav-link" href="../leetcode/problems/LRU缓存.html"><span class="nav-day-tag">day7</span>LRU 缓存</a>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">LeetCode 题解</h1>
+            </div>
+            <article class="content" id="content"></article>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `<div class="leetcode-overview-row">
+  <div class="leetcode-col leetcode-col-daily">
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 1 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/接雨水.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">接雨水</span></a>
+    <a class="leetcode-problem-link" href="./problems/最大子数组和.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">最大子数组和</span></a>
+    <a class="leetcode-problem-link" href="./problems/无重复字符的最长子串.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">无重复字符的最长子串</span></a>
+    <a class="leetcode-problem-link" href="./problems/反转链表.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">反转链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/二叉树的最近公共祖先.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">二叉树的最近公共祖先</span></a>
+    <a class="leetcode-problem-link" href="./problems/全排列.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">全排列</span></a>
+    <a class="leetcode-problem-link" href="./problems/柱状图中最大的矩形.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">柱状图中最大的矩形</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 2 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/两数之和.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">两数之和</span></a>
+    <a class="leetcode-problem-link" href="./problems/爬楼梯.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">爬楼梯</span></a>
+    <a class="leetcode-problem-link" href="./problems/三数之和.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">三数之和</span></a>
+    <a class="leetcode-problem-link" href="./problems/合并两个有序链表.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">合并两个有序链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/二叉树的层序遍历.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">二叉树的层序遍历</span></a>
+    <a class="leetcode-problem-link" href="./problems/每日温度.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">每日温度</span></a>
+    <a class="leetcode-problem-link" href="./problems/滑动窗口最大值.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">滑动窗口最大值</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 3 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/盛最多水的容器.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">盛最多水的容器</span></a>
+    <a class="leetcode-problem-link" href="./problems/打家劫舍.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">打家劫舍</span></a>
+    <a class="leetcode-problem-link" href="./problems/最长回文子串.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">最长回文子串</span></a>
+    <a class="leetcode-problem-link" href="./problems/环形链表.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">环形链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/验证二叉搜索树.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">验证二叉搜索树</span></a>
+    <a class="leetcode-problem-link" href="./problems/子集.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">子集</span></a>
+    <a class="leetcode-problem-link" href="./problems/不同路径.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">不同路径</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 4 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/买卖股票的最佳时机.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">买卖股票的最佳时机</span></a>
+    <a class="leetcode-problem-link" href="./problems/LRU缓存.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">LRU 缓存</span></a>
+    <a class="leetcode-problem-link" href="./problems/合并区间.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">合并区间</span></a>
+    <a class="leetcode-problem-link" href="./problems/最小覆盖子串.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">最小覆盖子串</span></a>
+    <a class="leetcode-problem-link" href="./problems/删除链表的倒数第N个节点.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">删除链表的倒数第N个节点</span></a>
+    <a class="leetcode-problem-link" href="./problems/两数相加.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">两数相加</span></a>
+    <a class="leetcode-problem-link" href="./problems/跳跃游戏 II.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">跳跃游戏 II</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 5 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/除自身以外数组的乘积.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">除自身以外数组的乘积</span></a>
+    <a class="leetcode-problem-link" href="./problems/最小栈.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">最小栈</span></a>
+    <a class="leetcode-problem-link" href="./problems/任务调度器.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">任务调度器</span></a>
+    <a class="leetcode-problem-link" href="./problems/复制带随机指针的链表.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">复制带随机指针的链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/零钱兑换.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">零钱兑换</span></a>
+    <a class="leetcode-problem-link" href="./problems/排序链表.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">排序链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/K个一组翻转链表.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">K 个一组翻转链表</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 6 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/合并区间.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">合并区间</span></a>
+    <a class="leetcode-problem-link" href="./problems/有效括号.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">有效括号</span></a>
+    <a class="leetcode-problem-link" href="./problems/LRU缓存.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">LRU 缓存</span></a>
+    <a class="leetcode-problem-link" href="./problems/课程表.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">课程表</span></a>
+    <a class="leetcode-problem-link" href="./problems/岛屿数量.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">岛屿数量</span></a>
+    <a class="leetcode-problem-link" href="./problems/买卖股票的最佳时机.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">买卖股票的最佳时机</span></a>
+    <a class="leetcode-problem-link" href="./problems/最小覆盖子串.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">最小覆盖子串</span></a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">第 7 周</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/最长连续序列.html"><span class="leetcode-problem-day">day1</span><span class="leetcode-problem-title">最长连续序列</span></a>
+    <a class="leetcode-problem-link" href="./problems/任务调度器.html"><span class="leetcode-problem-day">day2</span><span class="leetcode-problem-title">任务调度器</span></a>
+    <a class="leetcode-problem-link" href="./problems/单词拆分.html"><span class="leetcode-problem-day">day3</span><span class="leetcode-problem-title">单词拆分</span></a>
+    <a class="leetcode-problem-link" href="./problems/实现Trie.html"><span class="leetcode-problem-day">day4</span><span class="leetcode-problem-title">实现 Trie (前缀树)</span></a>
+    <a class="leetcode-problem-link" href="./problems/合并K个升序链表.html"><span class="leetcode-problem-day">day5</span><span class="leetcode-problem-title">合并 K 个升序链表</span></a>
+    <a class="leetcode-problem-link" href="./problems/数据流的中位数.html"><span class="leetcode-problem-day">day6</span><span class="leetcode-problem-title">数据流的中位数</span></a>
+    <a class="leetcode-problem-link" href="./problems/LRU缓存.html"><span class="leetcode-problem-day">day7</span><span class="leetcode-problem-title">LRU 缓存</span></a>
+  </div>
+</div>
+
+  </div>
+  <div class="leetcode-col leetcode-col-contest">
+<div class="leetcode-section">
+  <div class="leetcode-section-title">周赛 509</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/Q2.一次替换后的子序列题解.html">Q2. 一次替换后的子序列</a>
+    <a class="leetcode-problem-link" href="./problems/Q4.回文子数组求和题解.html">Q4. 回文子数组求和</a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">周赛 508</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/Q4.有限电量到达目标节点的最少时间题解.html">Q4. 有限电量到达目标节点的最少时间</a>
+  </div>
+</div>
+
+<div class="leetcode-section">
+  <div class="leetcode-section-title">周赛 507</div>
+  <div class="leetcode-problem-list">
+    <a class="leetcode-problem-link" href="./problems/Q4.最大总价值题解.html">Q4. 最大总价值</a>
+  </div>
+</div>
+
+  </div>
+</div>
+`;
+
+        const renderer = new marked.Renderer();
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=5"></script>
+</body>
+</html>
