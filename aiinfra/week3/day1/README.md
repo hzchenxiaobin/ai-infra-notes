@@ -328,6 +328,26 @@ aten::softmax                   xxx us    5
 - **Prefill**：GEMM（`aten::mm`）占 CUDA 时间 60%+，是绝对主导 → compute-bound
 - **Decode**：GEMM 矩阵极小（M=1），时间占比下降；softmax/layernorm 相对占比上升；kernel 间 gap 更明显（launch overhead 占比增大）→ memory-bound
 
+#### 任务 4：LeetGPU 在线题目 —— 1D Convolution
+
+**题目链接**：<https://leetgpu.com/challenges/1d-convolution>
+
+**题目概述**：给定长度为 `N` 的输入信号和长度为 `K` 的卷积核，计算一维卷积输出。
+
+**与今日知识的关联**：1D Convolution 是 Transformer 前馈网络中 GEMM 之外的基础算子——每个输出元素依赖输入的一个局部窗口，与 attention 中每个 query 依赖所有 key 的模式同构。今天的 profiling 分析揭示了 Prefill（compute-bound）和 Decode（memory-bound）的差异，1D Conv 同样可以用 ncu 分析其 bound 类型，验证"element-wise + reduction = memory-bound"的规律。
+
+> 💡 完整题解见 [1D Convolution 题解](../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 盛最多水的容器
+
+**题目链接**：[11. 盛最多水的容器](https://leetcode.cn/problems/container-with-most-water/)
+
+**题目概述**：给定 `n` 个非负整数 `a1, a2, ..., an`，每个代表坐标中的一个点 `(i, ai)`。找出两条线，使得它们与 x 轴构成的容器能容纳最多的水。
+
+**与今日知识的关联**：盛最多水容器的**双指针贪心**与今日 profiling 中"缩小搜索范围"的思路同构——双指针从两端向中间逼近，每次移动较短的一边（因为移动较长的一边不可能得到更大面积），就像 profiling 中逐步缩小瓶颈范围。两者都是"通过排除不可能的候选来高效定位最优解"。
+
+> 💡 完整题解见 [盛最多水的容器题解](../../leetcode/daily/week3/day1/盛最多水的容器.md)。
+
 ---
 
 ### 练习题

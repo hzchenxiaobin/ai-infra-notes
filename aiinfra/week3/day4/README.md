@@ -464,7 +464,17 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V,
 }
 ```
 
-> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../../leetgpu/leetgpu-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../../leetgpu/week3/day4/leetgpu-attention-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 环形链表
+
+**题目链接**：[141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/)
+
+**题目概述**：给定链表头节点 `head`，判断链表中是否有环。
+
+**与今日知识的关联**：环形链表的**快慢指针**与今日 Attention 的**分块计算**同构——快慢指针以不同步长遍历链表检测环，Attention 以不同 tile 大小遍历 Q/K 矩阵计算 score。两者都是"用不同粒度的遍历策略高效处理数据依赖"。
+
+> 💡 完整题解见 [环形链表题解](../../leetcode/daily/week3/day4/环形链表.md)。
 
 ---
 

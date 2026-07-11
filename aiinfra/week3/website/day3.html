@@ -637,6 +637,16 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 
 > 💡 提交后在 [LeetGPU Argmax 题目](https://leetgpu.com/challenges/argmax)上记录通过耗时。完整题解（含平局处理图解、\`atomicMax\` vs 两次 kernel 的权衡）见 [Argmax 题解](../leetgpu/leetgpu-argmax-solution.html)。
 
+#### 任务 5：LeetCode 面试题 —— 最长回文子串
+
+**题目链接**：[5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)
+
+**题目概述**：给定字符串 \`s\`，找到 \`s\` 中最长的回文子串。
+
+**与今日知识的关联**：最长回文子串的**中心扩展法**与今日 Argmax 的**逐元素比较+状态追踪**同构——中心扩展从每个位置向两端逐步扩展并维护"最长回文"状态，Argmax 逐元素扫描并维护"最大值+索引"状态。两者都是"线性扫描 + 维护最优状态"的模式。
+
+> 💡 完整题解见 [最长回文子串题解](../leetcode/daily/week3/day3/最长回文子串.html)。
+
 ---
 
 ### 扩展实验

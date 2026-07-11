@@ -477,7 +477,17 @@ int main() {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时。完整题解（含 float4 向量化、occupancy 调优、与当日主题关联）见 [Matrix Addition 题解](../../leetgpu/leetgpu-matrix-addition-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matrix_add_forward`，在 Python 里调用验证。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时。完整题解（含 float4 向量化、occupancy 调优、与当日主题关联）见 [Matrix Addition 题解](../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matrix_add_forward`，在 Python 里调用验证。
+
+#### 任务 5：LeetCode 面试题 —— 验证二叉搜索树
+
+**题目链接**：[98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/)
+
+**题目概述**：给定二叉树根节点 `root`，判断其是否是一个有效的二叉搜索树（BST）。
+
+**与今日知识的关联**：验证 BST 的**中序遍历有序性**与今日 `load_inline` 的**编译流水线**同构——中序遍历按"左→根→右"顺序检查节点值递增，编译流水线按"源码→编译→链接"顺序检查每步正确。两者都是"按固定顺序逐步验证"的模式。
+
+> 💡 完整题解见 [验证二叉搜索树题解](../../leetcode/daily/week3/day5/验证二叉搜索树.md)。
 
 ---
 
