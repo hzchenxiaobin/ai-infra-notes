@@ -1,0 +1,441 @@
+## Day 6：全链路 Profiling
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 **三层 Profiling 工具链**——nsys（系统级时间线）→ ncu（kernel 级指标）→ 自定义计时（阶段级拆分），从粗到细定位瓶颈<br>
+2. 掌握 **阶段计时方法**——submit/schedule/forward/result 各占多少时间，forward 内 kernel 级分解<br>
+3. 能识别 **五大系统级瓶颈**——Python Scheduler CPU-bound、内存分配、kernel launch overhead、GIL 竞争、CPU-GPU 数据传输<br>
+4. 理解 **vLLM 差距来源**——FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile<br>
+5. 掌握 **优化优先级排序**——按"收益/复杂度"性价比：CUDA Graph > 官方 kernel > C++ Scheduler > Memory Pool<br>
+6. 用 Python 手写一个 **全链路 Profiling 脚本**，实测阶段分解、kernel 分解、瓶颈定位、vLLM 对比
+
+> 💡 **为什么重要**：Day 5 完成了系统联调，Mini 引擎能跑通 500+ 请求。但"能跑"不等于"跑得快"——生产系统需要知道瓶颈在哪、与 vLLM 差多远、怎么优化。全链路 Profiling 是 Infra 优化的核心能力：用 nsys 看时间线、用 ncu 分析 kernel、用自定义计时拆分阶段，最终输出"瓶颈 Top3 + 优化建议"的完整报告。这是面试高频题"如何做 LLM 推理系统的全链路性能分析"。
+
+---
+
+### 学前导读：Day 5 的系统能跑，但不知道慢在哪
+
+Day 5 的稳定性测试关注正确性（成功率、内存泄漏），但没有回答性能问题：
+
+```
+Day 5 遗留的性能问题：
+  1. 不知道瓶颈在哪 → forward 慢？schedule 慢？还是 submit 慢？
+  2. 不知道 kernel 分解 → forward 内哪个 kernel 最耗时？
+  3. 不知道与 vLLM 差多远 → 差距来自 kernel？调度？还是内存？
+  4. 不知道怎么优化 → 该用 CUDA Graph？C++ scheduler？还是 memory pool？
+```
+
+| 问题 | Day 5（稳定性） | Day 6（Profiling） |
+|------|---------------|-------------------|
+| 关注点 | 正确性 | **性能** |
+| 指标 | 成功率、内存泄漏 | **延迟分解、吞吐、kernel 占比** |
+| 工具 | assert + 打印 | **nsys + ncu + 阶段计时** |
+| 产出 | "能跑" | **"知道慢在哪 + 怎么优化"** |
+
+> 💡 **一句话总结**：Day 6 从"能跑"升级为"知道慢在哪"——三层工具链 + 瓶颈分类 + 优化建议。
+
+---
+
+### 理论学习
+
+#### 6.1 三层 Profiling 工具链
+
+![Profiling 工具链：三层分析](../website/images/profiling_toolchain.svg)
+
+##### 三层工具的分工
+
+| 层次 | 工具 | 看什么 | 粒度 |
+|------|------|--------|------|
+| ① 系统级 | **nsys**（Nsight Systems） | kernel 间隙、CPU-GPU 同步、stream 利用率 | 时间线 |
+| ② Kernel 级 | **ncu**（Nsight Compute） | SM/DRAM throughput、compute/memory bound | 单 kernel |
+| ③ 阶段级 | **自定义计时** | submit/schedule/forward/result 占比 | 代码段 |
+
+##### 分析流程：从粗到细
+
+```
+Step 1: nsys 看时间线
+  → 找 kernel 间隙最大的区域
+  → 判断是调度 overhead 还是 launch overhead
+
+Step 2: ncu 分析 top kernel
+  → 判断 compute-bound 还是 memory-bound
+  → 与 PyTorch/cuBLAS 版本对比
+
+Step 3: 自定义计时拆分阶段
+  → submit / schedule / forward / result 各占多少
+  → forward 内 kernel 级分解
+
+Step 4: 提出优化方案
+  → kernel 融合 / CUDA Graph / C++ scheduler / memory pool
+```
+
+> ⚠️ **为什么要三层？** nsys 能看到"forward 段有 20ms 间隙"，但不知道是哪个 kernel 慢；ncu 能分析单个 kernel 的 SM/DRAM 利用率，但不知道它在整体中占比多少；自定义计时能拆分阶段，但看不到 GPU 底层指标。三层配合才能精确定位。
+
+##### nsys 关键命令
+
+```bash
+# 采集系统级时间线
+nsys profile -o mini_system_profile --trace=cuda,nvtx python full_chain_profile.py
+
+# 查看 kernel 统计（按总时间排序）
+nsys stats -t cuda_gpu_kern_sum mini_system_profile.nsys-rep
+
+# GUI 查看时间线
+nsys-ui mini_system_profile.nsys-rep
+```
+
+##### ncu 关键指标
+
+| 指标 | 含义 | 期望 |
+|------|------|------|
+| `sm__throughput.avg.pct_of_peak_sustained_elapsed` | SM 算力占比 | > 60% → compute-bound |
+| `dram__throughput.avg.pct_of_peak_sustained_elapsed` | DRAM 带宽占比 | > 60% → memory-bound |
+| `sm__sass_thread_inst_executed_op_fadd_pred_on.sum` | FADD 指令数 | 计算量参考 |
+| `launch__waves_per_multiprocessor` | SM wave 数 | > 2 → 充分利用 |
+
+```bash
+# 分析特定 kernel
+ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+        dram__throughput.avg.pct_of_peak_sustained_elapsed \
+    --kernel-name regex:"gemm|flash_attention|softmax|layernorm" \
+    python full_chain_profile.py
+```
+
+#### 6.2 阶段计时与 Kernel 分解
+
+##### 阶段计时
+
+```python
+class PhaseTimer:
+    def start(self, phase): self._starts[phase] = time.perf_counter()
+    def end(self, phase): self.phases[phase].append(time.perf_counter() - self._starts[phase])
+
+# 使用
+timer.start("submit")
+# ... submit 逻辑 ...
+timer.end("submit")
+
+timer.start("schedule")
+# ... schedule 逻辑 ...
+timer.end("schedule")
+
+timer.start("forward")
+# ... forward 逻辑 ...
+timer.end("forward")
+```
+
+##### Kernel 级分解
+
+```python
+# forward 内部按 kernel 拆分
+for layer in range(num_layers):
+    timer.start("kernel:layernorm")
+    layernorm_forward(...)
+    timer.end("kernel:layernorm")
+
+    timer.start("kernel:qkv_gemm")
+    qkv_projection(...)
+    timer.end("kernel:qkv_gemm")
+
+    timer.start("kernel:flash_attention")
+    flash_attention_forward(...)
+    timer.end("kernel:flash_attention")
+```
+
+##### 典型阶段占比
+
+| 阶段 | 占比 | 说明 |
+|------|------|------|
+| **forward** | 80-95% | 模型计算，绝对主瓶颈 |
+| schedule | 2-10% | 调度逻辑，Python 实现偏慢 |
+| submit | < 1% | 入队操作，极快 |
+| result | < 1% | 回调 + Future，极快 |
+
+> 💡 **forward 内 kernel 占比**：QKV GEMM ~25%、FlashAttention ~20%、FFN GEMM ~30%、LayerNorm ~10%、其他 ~15%。GEMM 总占比 ~55%，是优化重点。
+
+#### 6.3 五大系统级瓶颈
+
+![系统级瓶颈分类与优化](../website/images/bottleneck_analysis.svg)
+
+| 瓶颈 | 症状 | nsys 表现 | ncu 表现 | 优化 |
+|------|------|---------|---------|------|
+| **Python Scheduler** | schedule 时间长，CPU 高 GPU 空闲 | kernel 间隙大 | kernel 本身正常 | C++ 重写、简化逻辑 |
+| **内存分配** | cudaMalloc 频繁，OOM 风险 | cudaMalloc 调用多 | 无关 | memory pool、预分配 |
+| **Kernel Launch** | kernel 间隙大，小 kernel 多 | kernel 间空白 5-10μs | 单 kernel 正常 | CUDA Graph、算子融合 |
+| **GIL 竞争** | 多线程 CPU 高但不快 | CPU 段交替无并行 | 无关 | C++ 扩展释放 GIL |
+| **CPU-GPU 传输** | memcpy 慢，PCIe 瓶颈 | memcpy 段多 | 无关 | pinned memory、异步 |
+
+##### 优化优先级（按收益/复杂度性价比）
+
+```
+① CUDA Graph     — 降 launch overhead — 复杂度中 — 收益 10-20%
+② 官方 FlashAttention — 降 forward      — 复杂度低 — 收益 20-30%
+③ C++ Scheduler  — 降调度开销         — 复杂度高 — 收益 5-10%
+④ Memory Pool    — 降分配开销         — 复杂度中 — 收益 5-10%
+⑤ torch.compile  — 自动融合           — 复杂度低 — 收益 10-15%
+```
+
+> 💡 **优先做 ② 和 ①**：官方 FlashAttention 替换教学版（低复杂度高收益），CUDA Graph 减少 launch（中复杂度中收益）。
+
+#### 6.4 与 vLLM 的差距分析
+
+| 差距来源 | Mini 系统 | vLLM | 差距倍数 |
+|---------|----------|------|---------|
+| FlashAttention | 教学版（naive tiling） | FlashAttention-2（高度优化） | 2-3x |
+| GEMM | cuBLAS（已用官方库） | cuBLAS + Tensor Core | 1x（无差距） |
+| Kernel Launch | 逐个 launch | CUDA Graph 批量回放 | 1.5-2x |
+| Scheduler | Python（GIL 限制） | C++（无 GIL） | 5-10x（调度部分） |
+| KV Cache | 简单 block 管理 | PagedAttention（高效复用） | 1.5-2x |
+| 算子融合 | 部分融合 | torch.compile 全自动融合 | 1.2-1.5x |
+
+##### 缩小差距的方法
+
+```
+1. 使用官方 FlashAttention-2 → forward 时间降低 30-50%
+2. 引入 CUDA Graph → launch overhead 降低 80%
+3. C++ 重写 Scheduler → 调度时间降低 10x
+4. 实现 PagedAttention → KV Cache 利用率提升 50%
+5. torch.compile → 自动算子融合，减少 HBM 往返
+```
+
+#### 6.5 昇腾对照
+
+| 分析维度 | CUDA 对应 | 昇腾对应 | 说明 |
+|---------|---------|---------|------|
+| 系统级时间线 | nsys | msprof timeline | 时间线分析 |
+| Kernel 级指标 | ncu | msprof operator detail | Kernel 级指标 |
+| 算子级分解 | PyTorch Profiler | Ascend Profiler | 算子时间分解 |
+| Python overhead | Python overhead | 一致 | GIL 限制一致 |
+| 内存分配 | cudaMalloc | acl.rt.malloc | 内存分配监控 |
+
+> 💡 三层工具链在昇腾 CANN 中完全对应：nsys → msprof、ncu → msprof operator detail、PyTorch Profiler → Ascend Profiler。分析方法论一致。
+
+---
+
+### Coding 任务：全链路 Profiling 脚本
+
+#### 任务 1：创建 full_chain_profile.py
+
+创建文件 [kernels/full_chain_profile.py](kernels/full_chain_profile.py)，实现全链路 Profiling：
+
+```python
+# full_chain_profile.py —— Mini 系统全链路 Profiling
+# 运行命令: python full_chain_profile.py
+# 有 GPU 时可配合 nsys/ncu：
+#   nsys profile -o mini_system_profile python full_chain_profile.py
+#   ncu --metrics sm__throughput,dram__throughput python full_chain_profile.py
+
+class PhaseTimer:
+    """记录每个阶段的耗时，支持嵌套和聚合。"""
+
+class ProfiledMiniEngine:
+    """带全链路计时的模拟推理引擎。"""
+    def run_single(self, prompt, max_new_tokens):
+        # submit → schedule → forward×N → result
+    def run_batch(self, prompts, max_new_tokens):
+        # 批量 continuous batching
+
+def generate_report(engine, reqs):
+    """生成全链路 profiling 报告：
+       1. 阶段时间分解（submit/schedule/forward/result）
+       2. Kernel 级分解（layernorm/qkv/attention/ffn）
+       3. 系统级指标（吞吐/P50/P99）
+       4. 瓶颈分析 Top3
+       5. 优化建议
+    """
+
+def compare_with_vllm():
+    """模拟与 vLLM 的同条件对比。"""
+```
+
+完整代码见 [kernels/full_chain_profile.py](kernels/full_chain_profile.py)。
+
+代码要点：
+- **`PhaseTimer`**：通用阶段计时器，支持任意层级的 start/end，自动计算 total/avg/P50/P99/占比
+- **`ProfiledMiniEngine`**：模拟推理引擎，每层 forward 内按 kernel 拆分计时（layernorm/qkv_gemm/flash_attention/ffn_gemm/launch_overhead）
+- **`generate_report`**：五段报告——阶段分解、kernel 分解、系统指标、瓶颈 Top3、优化建议
+- **`compare_with_vllm`**：模拟 vLLM（更快 kernel + C++ 调度 + CUDA Graph），输出差距分析
+
+#### 任务 2：运行并分析 Profiling 报告
+
+```bash
+python kernels/full_chain_profile.py
+```
+
+**预期输出**（节选）：
+
+```text
+🔬 实验 1：单请求全链路 profiling
+
+📊 1. 阶段时间分解
+阶段          次数   总时间(s)  平均(ms)  P50(ms)  P99(ms)  占比
+submit           1    0.001     0.570     0.570    0.570   0.1%
+schedule         1    0.001     1.057     1.057    1.057   0.1%
+forward          5    0.440    88.000    88.001   88.007  49.9%
+result           1    0.000     0.357     0.357    0.357   0.0%
+
+📊 2. Kernel 级时间分解
+Kernel           次数  总时间(s)  平均(ms)  占比
+qkv_gemm           20   0.101     5.056   11.5%
+flash_attention    20   0.085     4.256    9.7%
+ffn_gemm_1         20   0.081     4.057    9.2%
+ffn_gemm_2         20   0.081     4.053    9.2%
+out_proj_gemm      20   0.061     3.056    6.9%
+layernorm          20   0.025     1.256    2.8%
+
+📊 4. 瓶颈分析（Top 3）
+  #1: forward — 0.440s (49.9%)
+  #2: schedule — 0.001s (0.1%)
+  #3: submit — 0.001s (0.1%)
+
+📊 5. 优化建议
+  • forward 是主瓶颈 → 优化 kernel（向量化、融合、Tensor Core）
+  • 自定义 kernel 已启用 → 对比 PyTorch 版本确认收益
+```
+
+##### 观察重点
+
+1. **阶段占比**：forward 占 50%+（绝对主瓶颈），schedule/submit/result 占比极小
+2. **Kernel 分解**：qkv_gemm 和 flash_attention 占比最高（11.5% 和 9.7%），是优化重点
+3. **vLLM 对比**：forward 差距 ~2.3x（vLLM 用 FlashAttention-2 + CUDA Graph）
+4. **优化建议**：报告自动根据瓶颈类型给出建议（forward 慢 → 优化 kernel）
+
+#### 任务 3：修改参数观察瓶颈变化
+
+```python
+# 实验 A：增大 num_layers → forward 占比更高
+engine = ProfiledMiniEngine(num_layers=12, ...)
+
+# 实验 B：增大 schedule_time → schedule 成为瓶颈
+engine = ProfiledMiniEngine(schedule_time=0.01, ...)
+
+# 实验 C：关闭自定义 kernel → forward 更慢
+engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
+```
+
+> 思考：`num_layers=12` 时 forward 占比会怎样变化？（提示：layers 越多 forward 越重，schedule 占比更小。GPT-3 有 96 层，forward 几乎是 100%。）
+
+#### 任务 4：LeetGPU 在线题目 —— Reduction
+
+**题目链接**：<https://leetgpu.com/challenges/reduction>
+
+**题目概述**：给定长度为 `N` 的 `float32` 数组，计算所有元素的和。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`。
+
+**与今日知识的关联**：Reduction 是 profiling 中最常分析的 kernel 之一——它是 memory-bound 的代表（算术强度极低），也是 warp shuffle 的经典应用。在全链路 profiling 中，LayerNorm 和 Softmax 内部都包含 reduction 操作（求 mean/var/max/sum）。理解 reduction 的性能特征（memory-bound、warp shuffle 优化）是分析 LayerNorm/Softmax kernel 瓶颈的基础。ncu 分析 reduction kernel 时，`dram__throughput` 应接近 100%（memory-bound），`sm__throughput` 很低。
+
+> 💡 提交后在 [LeetGPU Reduction](https://leetgpu.com/challenges/reduction) 上记录通过耗时。完整题解见 [Reduction 题解](../../leetgpu/week7/day6/leetgpu-reduction-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 数据流的中位数
+
+**题目链接**：[295. 数据流的中位数](https://leetcode.cn/problems/find-median-from-data-stream/)
+
+**题目概述**：设计一个数据结构，支持 `addNum(num)` 添加数字和 `findMedian()` 返回当前所有数字的中位数。
+
+**与今日知识的关联**：数据流中位数的**双堆（大顶堆+小顶堆）**与全链路 Profiling 中的**P50 延迟统计**同构——P50 就是中位数，用堆维护可以 O(log N) 插入 + O(1) 查中位数。Profiling 脚本中的 `statistics.median()` 对应 `findMedian()`，`PhaseTimer` 的 `times` 列表对应数据流。两者都是"动态维护中位数"的核心模式：双堆保证大顶堆的最大值 ≤ 小顶堆的最小值，中位数在堆顶。
+
+**核心套路**：
+
+```
+大顶堆（left）：存较小的一半，堆顶是其中的最大值
+小顶堆（right）：存较大的一半，堆顶是其中的最小值
+平衡：|left.size - right.size| <= 1
+中位数：奇数取多的那个堆顶，偶数取两堆顶平均
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、双堆图解、与 P50 统计的类比）见 [数据流的中位数题解](../../../leetcode/daily/week7/day6/数据流的中位数.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：实现 nsys 时间线标注（NVTX）
+
+在有 GPU 的环境中，用 `torch.cuda.nvtx.range_push/pop` 或 `nvtx.RangeStart/End` 标注 submit/schedule/forward/result 区间，运行 `nsys profile` 后在时间线上看到彩色标注。
+
+> 思考：NVTX 标注对性能有影响吗？（提示：几乎为零，NVTX 是极轻量的标记，只在 nsys 采集时记录。）
+
+#### 实验 2：实现 CUDA Graph 优化模拟
+
+修改 profiling 脚本，模拟 CUDA Graph 的效果：将所有 kernel launch 录制为一个 graph，回放时 launch overhead 降为原来的 10%。对比 before/after 的 forward 时间和吞吐。
+
+> 思考：CUDA Graph 对什么样的场景最有效？（提示：固定 shape + 重复执行的 kernel 序列。动态 shape 不适合。）
+
+#### 实验 3：实现 PyTorch Profiler 集成
+
+在有 PyTorch 的环境中，用 `torch.profiler.profile` 替换自定义计时，对比两种方式的粒度和准确性。PyTorch Profiler 能看到算子级时间分解（如 `aten::mm`、`aten::softmax`）。
+
+> 思考：PyTorch Profiler 和自定义计时各有什么优缺点？（提示：Profiler 自动但粒度粗，自定义精确但需手动插桩。生产环境两者结合。）
+
+---
+
+### 今日总结
+
+Day 6 我们对 Mini AI Infra 系统进行了全链路 Profiling：
+
+1. **三层工具链**：nsys（系统级时间线）→ ncu（kernel 级指标）→ 自定义计时（阶段级拆分），从粗到细定位瓶颈
+2. **阶段计时**：forward 占 50%+（绝对主瓶颈），schedule/submit/result 占比极小；forward 内 QKV GEMM 和 FlashAttention 占比最高
+3. **五大瓶颈**：Python Scheduler（CPU-bound）、内存分配（cudaMalloc）、kernel launch（间隙大）、GIL 竞争、CPU-GPU 传输
+4. **优化优先级**：CUDA Graph（降 launch）> 官方 FlashAttention（降 forward）> C++ Scheduler（降调度）> Memory Pool（降分配）
+5. **vLLM 差距**：forward ~2.3x（FlashAttention-2 + CUDA Graph），调度 ~10x（C++ vs Python）
+6. **昇腾对照**：nsys→msprof、ncu→msprof operator detail，三层工具链完全对应
+
+掌握这些后，你就有了系统级性能分析能力——明天 Day 7 代码重构与文档，整理项目结构，完成 Week 7 总结。
+
+---
+
+### 面试要点
+
+1. **如何做 LLM 推理系统的全链路性能分析？**（⭐⭐⭐⭐ 高频）
+
+   - **三层工具链**：
+     1. **nsys**（系统级）：看时间线，找 kernel 间隙、CPU-GPU 同步、stream 利用率
+     2. **ncu**（kernel 级）：分析 top kernel 的 SM/DRAM throughput，判断 compute/memory bound
+     3. **自定义计时**（阶段级）：拆分 submit/schedule/forward/result，算各阶段占比
+   - **分析流程**：nsys 找间隙 → ncu 分析慢 kernel → 阶段计时算占比 → 提出优化
+   - **PyTorch Profiler**：算子级时间分解，方便定位 PyTorch 层 overhead
+
+2. **你的 Mini 系统和 vLLM 的差距主要在哪里？如何缩小？**（⭐⭐⭐⭐⭐ 必考）
+
+   - **常见差距**：
+     1. **Kernel 优化**：vLLM 用 FlashAttention-2，教学版 naive tiling → 差 2-3x
+     2. **CUDA Graph**：vLLM 录制+回放减少 launch → 差 1.5-2x
+     3. **Scheduler**：vLLM 用 C++，Python 有 GIL → 调度差 5-10x
+     4. **PagedAttention**：vLLM 高效 KV Cache 管理 → 差 1.5-2x
+     5. **torch.compile**：自动算子融合 → 差 1.2-1.5x
+   - **缩小方法**：用官方 FlashAttention → 引入 CUDA Graph → C++ 重写 Scheduler → 实现 PagedAttention
+
+3. **ncu 中 SM throughput 和 DRAM throughput 分别代表什么？怎么判断 bound 类型？**（⭐⭐⭐⭐ 高频）
+
+   - **SM throughput**：SM 算力占峰值百分比，> 60% → compute-bound
+   - **DRAM throughput**：内存带宽占峰值百分比，> 60% → memory-bound
+   - **判断规则**：
+     - SM 高 + DRAM 低 → compute-bound（优化计算：Tensor Core、向量化）
+     - SM 低 + DRAM 高 → memory-bound（优化访存：coalesced、shared memory、fusion）
+     - 两者都低 → launch-bound 或 underutilized（增加并行度、CUDA Graph）
+
+4. **什么是 CUDA Graph？为什么能减少 launch overhead？**（⭐⭐⭐⭐ 高频）
+
+   - **原理**：录制一系列 kernel launch 为一个 graph，回放时一次性提交
+   - **减少 overhead**：每次 launch 有 5-10μs CPU 开销，100 个 kernel = 0.5-1ms 纯 launch 开销；CUDA Graph 回放只需 1 次 launch
+   - **适合**：固定 shape + 重复执行的 kernel 序列（如 decode 阶段每轮 forward 相同）
+   - **不适合**：动态 shape、条件分支、依赖运行时数据的调度
+
+5. **forward 阶段内哪些 kernel 最耗时？怎么优化？**（⭐⭐⭐⭐ 高频）
+
+   - **kernel 占比**：QKV GEMM ~25%、FlashAttention ~20%、FFN GEMM ~30%、LayerNorm ~10%
+   - **GEMM 优化**：用 cuBLAS（Tensor Core）、增大 tile size、向量化
+   - **Attention 优化**：用官方 FlashAttention-2（分块 tiling + online softmax）
+   - **LayerNorm 优化**：3 趟→1 趟融合（mean+var+normalize 合并）
+   - **通用**：算子融合减少 HBM 往返、CUDA Graph 减少 launch
+
+6. **能对照昇腾解释 profiling 工具的对应关系吗？**
+
+   - nsys → msprof timeline（系统级时间线）
+   - ncu → msprof operator detail（kernel 级指标）
+   - PyTorch Profiler → Ascend Profiler（算子级分解）
+   - 分析方法论一致：系统级找间隙 → kernel 级判 bound → 阶段级算占比
+   - 差异在底层：CUDA SM/DRAM metrics vs 昇腾 AI Core/HBM metrics

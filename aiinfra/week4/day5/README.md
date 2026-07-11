@@ -367,7 +367,7 @@ slow.next = slow.next.next  # 删除倒数第 n 个
 return dummy.next
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [删除链表的倒数第N个节点题解](../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [删除链表的倒数第N个节点题解](../../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md)。
 
 ---
 

@@ -421,7 +421,7 @@ dp[0] = 0
 dp[i] = min(dp[i - coin] + 1)  for coin in coins if i >= coin
 ```
 
-> 💡 完整题解（含完全背包 DP、C++/Python 参考代码、与 KV Cache 复用模式的类比）见 [零钱兑换题解](../../leetcode/daily/week5/day5/零钱兑换.md)。
+> 💡 完整题解（含完全背包 DP、C++/Python 参考代码、与 KV Cache 复用模式的类比）见 [零钱兑换题解](../../../leetcode/daily/week5/day5/零钱兑换.md)。
 
 ---
 

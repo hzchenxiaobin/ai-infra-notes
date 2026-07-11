@@ -342,7 +342,7 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
    • 后者：任务足够多时冷却被自然填满，不需要等待
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、贪心图解、与调度器资源预算的类比）见 [任务调度器题解](../../leetcode/daily/week7/day2/任务调度器.md)。
+> 💡 完整题解（含 C++/Python 参考代码、贪心图解、与调度器资源预算的类比）见 [任务调度器题解](../../../leetcode/daily/week7/day2/任务调度器.md)。
 
 ---
 

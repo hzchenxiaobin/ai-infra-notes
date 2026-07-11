@@ -409,7 +409,7 @@ backtrack(path, used):
     if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](../../leetcode/daily/week1/day6/全排列.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](../../../leetcode/daily/week1/day6/全排列.md)。
 
 ---
 

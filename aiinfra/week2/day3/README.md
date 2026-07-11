@@ -401,7 +401,7 @@ __global__ void conv2d(const float* input, const float* kernel, float* output,
   sum<0 → left++；sum>0 → right--；sum==0 → 记录并去重
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](../../leetcode/daily/week2/day3/三数之和.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](../../../leetcode/daily/week2/day3/三数之和.md)。
 
 ---
 

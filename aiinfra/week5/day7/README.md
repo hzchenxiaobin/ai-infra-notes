@@ -230,7 +230,7 @@ python kernels/week5_summary.py
 
 **核心套路**：`dummy` + 外层按组 + 内层翻转（`prev` 初始化为 `nextGroup` 让翻转后尾自动接下一组）。
 
-> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](../../leetcode/daily/week5/day7/K个一组翻转链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](../../../leetcode/daily/week5/day7/K个一组翻转链表.md)。
 
 ---
 

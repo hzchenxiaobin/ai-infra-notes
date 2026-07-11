@@ -308,7 +308,7 @@ dfs(root, p, q):
   return left ?: right
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](../../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md)。
 
 ---
 

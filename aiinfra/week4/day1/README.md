@@ -408,7 +408,7 @@ for price in prices[1:]:
     minPrice = min(minPrice, price)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [买卖股票的最佳时机题解](../../leetcode/daily/week4/day1/买卖股票的最佳时机.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [买卖股票的最佳时机题解](../../../leetcode/daily/week4/day1/买卖股票的最佳时机.md)。
 
 ---
 

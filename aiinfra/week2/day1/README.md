@@ -505,7 +505,7 @@ __inline__ __device__ float warp_exclusive_scan(float val) {
   - 不在 → 把 nums[i] → i 存入哈希表
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数之和题解](../../leetcode/daily/week2/day1/两数之和.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数之和题解](../../../leetcode/daily/week2/day1/两数之和.md)。
 
 ---
 

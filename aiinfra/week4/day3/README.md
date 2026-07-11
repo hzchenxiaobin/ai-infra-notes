@@ -289,7 +289,7 @@ ncu --metrics \
     merged.append(intervals[i])
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并区间题解](../../leetcode/daily/week4/day3/合并区间.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并区间题解](../../../leetcode/daily/week4/day3/合并区间.md)。
 
 ---
 

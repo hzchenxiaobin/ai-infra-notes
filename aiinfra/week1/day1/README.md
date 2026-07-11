@@ -708,7 +708,7 @@ while left<right:
   else: 处理右侧, right--
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](../../leetcode/daily/week1/day1/接雨水.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](../../../leetcode/daily/week1/day1/接雨水.md)。
 
 ---
 

@@ -531,7 +531,7 @@ for right in 0..n-1:
   map[s[right]]=right; maxLen=max(maxLen, right-left+1)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [无重复字符的最长子串题解](../../leetcode/daily/week1/day3/无重复字符的最长子串.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [无重复字符的最长子串题解](../../../leetcode/daily/week1/day3/无重复字符的最长子串.md)。
 
 ---
 

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="520" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Mini AI Infra 系统架构</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="56" text-anchor="middle" font-size="11" fill="#888">从用户 API 到 GPU Kernel 的完整数据流</text>
+
+  <!-- ===== Layer 1: User API ===== -->
+  <g filter="url(#sk)">
+    <rect x="270" y="70" width="400" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="88" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">用户 API</text>
+  <text x="470" y="103" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">submit(prompt, max_new_tokens, priority) → Future</text>
+  <path d="M 470 110 L 470 122" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 2: ConcurrentEngine ===== -->
+  <g filter="url(#sk)">
+    <rect x="140" y="124" width="660" height="80" rx="8" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="146" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">ConcurrentEngine（Day 1）</text>
+
+  <g filter="url(#sk)">
+    <rect x="160" y="156" width="180" height="38" rx="5" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+    <rect x="380" y="156" width="180" height="38" rx="5" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+    <rect x="600" y="156" width="180" height="38" rx="5" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <g font-size="9" text-anchor="middle" fill="#2e6e2e">
+    <text x="250" y="172" font-weight="bold">调度线程</text>
+    <text x="250" y="186">get_batch → 加入 running</text>
+    <text x="470" y="172" font-weight="bold">执行线程</text>
+    <text x="470" y="186">forward（锁外执行）</text>
+    <text x="690" y="172" font-weight="bold">超时线程</text>
+    <text x="690" y="186">检查过期 → set_exception</text>
+  </g>
+  <path d="M 470 204 L 470 216" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 3: FullScheduler ===== -->
+  <g filter="url(#sk)">
+    <rect x="140" y="218" width="660" height="56" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="240" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">FullScheduler（Day 2）</text>
+  <text x="470" y="258" text-anchor="middle" font-size="9" fill="#555">优先级(heapq) + 双预算(token+memory) + 抢占(recompute/swap) + aging + 超时</text>
+  <text x="470" y="270" text-anchor="middle" font-size="9" fill="#888">调度循环：恢复 swapped → 继续 running → 加入新请求 → aging → 超时检查</text>
+  <path d="M 470 274 L 470 286" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 4: Custom Kernel ===== -->
+  <g filter="url(#sk)">
+    <rect x="100" y="288" width="740" height="70" rx="8" fill="#fce4ec" stroke="#c04050" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="310" text-anchor="middle" font-size="12" fill="#a03040" font-weight="bold">自定义 Kernel（Day 4：PyTorch C++ Extension）</text>
+
+  <g filter="url(#sk)">
+    <rect x="120" y="320" width="130" height="30" rx="5" fill="#fff" stroke="#c04050" stroke-width="1"/>
+    <rect x="260" y="320" width="130" height="30" rx="5" fill="#fff" stroke="#c04050" stroke-width="1"/>
+    <rect x="400" y="320" width="130" height="30" rx="5" fill="#fff" stroke="#c04050" stroke-width="1"/>
+    <rect x="540" y="320" width="130" height="30" rx="5" fill="#fff" stroke="#c04050" stroke-width="1"/>
+    <rect x="680" y="320" width="140" height="30" rx="5" fill="#fff8e1" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <g font-size="9" text-anchor="middle">
+    <text x="185" y="340" fill="#a03040">Softmax</text>
+    <text x="325" y="340" fill="#a04050">LayerNorm</text>
+    <text x="465" y="340" fill="#a03040">FlashAttention</text>
+    <text x="605" y="340" fill="#a03040">QKV/FFN</text>
+    <text x="750" y="340" fill="#7a5415">cuBLAS(保留)</text>
+  </g>
+  <path d="M 470 358 L 470 370" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 5: KV Cache ===== -->
+  <g filter="url(#sk)">
+    <rect x="200" y="372" width="540" height="44" rx="8" fill="#f3e5f5" stroke="#8e44ad" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="394" text-anchor="middle" font-size="12" fill="#6a3d8a" font-weight="bold">KV Cache Manager（Week 5）</text>
+  <text x="470" y="410" text-anchor="middle" font-size="9" fill="#555">Block 级分配/释放 + PagedAttention 模拟 + Prefix Caching（Day 3）</text>
+  <path d="M 470 416 L 470 428" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 6: Profiling ===== -->
+  <g filter="url(#sk)">
+    <rect x="200" y="430" width="540" height="44" rx="8" fill="#e0f7fa" stroke="#00838f" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="452" text-anchor="middle" font-size="12" fill="#005f6b" font-weight="bold">Profiling & 监控（Day 6）</text>
+  <text x="470" y="468" text-anchor="middle" font-size="9" fill="#555">nsys(时间线) + ncu(kernel指标) + 阶段计时 + vLLM 对比</text>
+
+  <!-- ===== Side: Data flow ===== -->
+  <text x="40" y="88" font-size="10" fill="#888" font-weight="bold">数据流</text>
+  <path d="M 40 100 L 40 430 L 80 430" stroke="#888" stroke-width="1" stroke-dasharray="3,2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="40" y="260" font-size="9" fill="#888" transform="rotate(-90 40 260)">submit → schedule → forward → result</text>
+
+  <!-- ===== Side: Key numbers ===== -->
+  <g filter="url(#sk)">
+    <rect x="780" y="430" width="140" height="80" rx="6" fill="#fff8e1" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="850" y="450" text-anchor="middle" font-weight="bold" fill="#7a5415">Week 7 数据</text>
+    <text x="792" y="466">• 7 个 kernel 文件</text>
+    <text x="792" y="480">• 15 张 SVG 图</text>
+    <text x="792" y="494">• 13 道面试题</text>
+    <text x="792" y="506" fill="#2e8b57" font-weight="bold">→ Week 8</text>
+  </g>
+</svg>

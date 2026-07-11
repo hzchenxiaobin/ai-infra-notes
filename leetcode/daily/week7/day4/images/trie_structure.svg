@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="400" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Trie 前缀树结构</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="56" text-anchor="middle" font-size="11" fill="#888">共享前缀的单词共用路径：insert("apple") + insert("app")</text>
+
+  <!-- ===== Trie tree ===== -->
+  <!-- Root -->
+  <g filter="url(#sk)">
+    <circle cx="200" cy="100" r="24" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="105" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">root</text>
+
+  <!-- a -->
+  <path d="M 200 124 L 200 156" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="210" y="144" font-size="9" fill="#888">a</text>
+  <g filter="url(#sk)">
+    <circle cx="200" cy="176" r="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="181" text-anchor="middle" font-size="10" fill="#2b6e9e">a</text>
+
+  <!-- p -->
+  <path d="M 200 196 L 200 228" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="210" y="216" font-size="9" fill="#888">p</text>
+  <g filter="url(#sk)">
+    <circle cx="200" cy="248" r="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="253" text-anchor="middle" font-size="10" fill="#2b6e9e">p</text>
+
+  <!-- p (shared) -->
+  <path d="M 200 268 L 200 300" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="210" y="288" font-size="9" fill="#888">p</text>
+  <g filter="url(#sk)">
+    <circle cx="200" cy="320" r="22" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="325" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">p</text>
+  <text x="200" y="354" text-anchor="middle" font-size="9" fill="#2e8b57" font-weight="bold">is_end ✓ ("app")</text>
+
+  <!-- l -->
+  <path d="M 200 342 L 200 366" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="210" y="360" font-size="9" fill="#888">l</text>
+
+  <!-- Branch right: l → e -->
+  <path d="M 220 320 Q 300 320 340 280" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="280" y="306" font-size="9" fill="#888">l</text>
+  <g filter="url(#sk)">
+    <circle cx="360" cy="270" r="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="360" y="275" text-anchor="middle" font-size="10" fill="#2b6e9e">l</text>
+
+  <path d="M 360 290 L 360 322" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="370" y="310" font-size="9" fill="#888">e</text>
+  <g filter="url(#sk)">
+    <circle cx="360" cy="342" r="22" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="360" y="347" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">e</text>
+  <text x="360" y="372" text-anchor="middle" font-size="9" fill="#2e8b57" font-weight="bold">is_end ✓ ("apple")</text>
+
+  <!-- ===== Operations table (right) ===== -->
+  <g filter="url(#sk)">
+    <rect x="520" y="80" width="390" height="280" rx="8" fill="#f6f6f6" stroke="#ccc" stroke-width="1"/>
+  </g>
+  <text x="715" y="104" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">操作示例</text>
+
+  <g font-size="10" fill="#444">
+    <text x="536" y="128" font-weight="bold" fill="#4a8edb">insert("apple")</text>
+    <text x="536" y="144" fill="#555">→ root→a→p→p→l→e, is_end=T</text>
+
+    <text x="536" y="172" font-weight="bold" fill="#4a8edb">insert("app")</text>
+    <text x="536" y="188" fill="#555">→ root→a→p→p, is_end=T（共享前缀）</text>
+
+    <text x="536" y="216" font-weight="bold" fill="#2e8b57">search("apple")</text>
+    <text x="536" y="232" fill="#555">→ a→p→p→l→e, is_end=T → </text>
+    <text x="690" y="232" fill="#2e8b57" font-weight="bold">True</text>
+
+    <text x="536" y="256" font-weight="bold" fill="#2e8b57">search("app")</text>
+    <text x="536" y="272" fill="#555">→ a→p→p, is_end=T → </text>
+    <text x="660" y="272" fill="#2e8b57" font-weight="bold">True</text>
+
+    <text x="536" y="296" font-weight="bold" fill="#c04050">search("ap")</text>
+    <text x="536" y="312" fill="#555">→ a→p, is_end=F → </text>
+    <text x="620" y="312" fill="#c04050" font-weight="bold">False</text>
+
+    <text x="536" y="336" font-weight="bold" fill="#c98a2b">startsWith("ap")</text>
+    <text x="536" y="352" fill="#555">→ a→p 存在 → </text>
+    <text x="620" y="352" fill="#c98a2b" font-weight="bold">True</text>
+  </g>
+
+  <!-- ===== Analogy note ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="374" width="880" height="20" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/>
+  </g>
+  <text x="470" y="388" text-anchor="middle" font-size="9" fill="#2b6e9e">💡 Trie 的前缀共享 = PyTorch Module 树的算子共享：两者都是树形结构的递归遍历 + 节点查找</text>
+</svg>

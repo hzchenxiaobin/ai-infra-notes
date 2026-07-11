@@ -547,7 +547,7 @@ ncu --metrics \
 get: 命中则移到 head; put: 新增插 head, 满则删 tail
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [LRU 缓存题解](../../leetcode/daily/week4/day2/LRU缓存.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [LRU 缓存题解](../../../leetcode/daily/week4/day2/LRU缓存.md)。
 
 ---
 

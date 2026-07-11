@@ -349,7 +349,7 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 按 start 排序 → 遍历，若当前区间 start ≤ 上一区间的 end → 合并（更新 end = max(end)）
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、贪心合并图解、与 Dynamic Batching 时间窗口聚合的模式类比）见 [合并区间题解](../../leetcode/daily/week6/day1/合并区间.md)。
+> 💡 完整题解（含 C++/Python 参考代码、贪心合并图解、与 Dynamic Batching 时间窗口聚合的模式类比）见 [合并区间题解](../../../leetcode/daily/week6/day1/合并区间.md)。
 
 ---
 

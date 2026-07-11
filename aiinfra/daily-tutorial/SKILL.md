@@ -145,6 +145,11 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day7 | 调度策略总结 | Dot Product | [leetgpu-dot-product-solution.md](../../leetgpu/week6/day7/leetgpu-dot-product-solution.md) |
 | Week7 Day1 | 多请求并发支持 | Matrix Copy | [leetgpu-matrix-copy-solution.md](../../leetgpu/week7/day1/leetgpu-matrix-copy-solution.md) |
 | Week7 Day2 | 完整调度器 | Vector Reversal | [leetgpu-vector-reversal-solution.md](../../leetgpu/week7/day2/leetgpu-vector-reversal-solution.md) |
+| Week7 Day3 | SGLang/LightLLM 高级特性 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](../../leetgpu/week7/day3/leetgpu-scalar-multiply-solution.md) |
+| Week7 Day4 | 整合全部自定义 Kernel | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](../../leetgpu/week7/day4/leetgpu-matrix-transpose-solution.md) |
+| Week7 Day5 | 系统联调 | Element Reversal | [leetgpu-element-reversal-solution.md](../../leetgpu/week7/day5/leetgpu-element-reversal-solution.md) |
+| Week7 Day6 | 全链路 Profiling | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week7/day6/leetgpu-reduction-solution.md) |
+| Week7 Day7 | 代码重构与文档 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week7/day7/leetgpu-matrix-addition-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -183,6 +188,11 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [最小覆盖子串.md](../../leetcode/daily/week6/day7/最小覆盖子串.md) |
 | Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](../../leetcode/daily/week7/day1/最长连续序列.md) |
 | Week7 Day2 | 贪心 | 621. 任务调度器 | [任务调度器.md](../../leetcode/daily/week7/day2/任务调度器.md) |
+| Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](../../leetcode/daily/week7/day3/单词拆分.md) |
+| Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](../../leetcode/daily/week7/day4/实现Trie.md) |
+| Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](../../leetcode/daily/week7/day5/合并K个升序链表.md) |
+| Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](../../leetcode/daily/week7/day6/数据流的中位数.md) |
+| Week7 Day7 | 设计 / LRU | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week7/day7/LRU缓存.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 

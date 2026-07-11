@@ -242,7 +242,7 @@ ncu --metrics \
 用 need/have 两个哈希表 O(1) 判断是否满足
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最小覆盖子串题解](../../leetcode/daily/week4/day4/最小覆盖子串.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最小覆盖子串题解](../../../leetcode/daily/week4/day4/最小覆盖子串.md)。
 
 ---
 

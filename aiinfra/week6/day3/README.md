@@ -513,7 +513,7 @@ LRU 的**哈希表 + 双向链表**淘汰机制与 vLLM Scheduler 的 KV Cache b
 get/put 命中 → 移到链表头；容量满 put → 删除链表尾节点 + 哈希表项
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、哈希+双向链表图解、与 vLLM BlockSpaceManager 空闲池回收的类比）见 [LRU 缓存题解](../../leetcode/daily/week6/day3/LRU缓存.md)。
+> 💡 完整题解（含 C++/Python 参考代码、哈希+双向链表图解、与 vLLM BlockSpaceManager 空闲池回收的类比）见 [LRU 缓存题解](../../../leetcode/daily/week6/day3/LRU缓存.md)。
 
 ---
 

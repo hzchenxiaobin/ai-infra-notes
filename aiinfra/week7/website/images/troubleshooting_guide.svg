@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="420" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">系统联调常见问题排查</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="56" text-anchor="middle" font-size="11" fill="#888">五大常见问题 × 症状 × 排查方法 × 解决方案</text>
+
+  <!-- Table header -->
+  <g filter="url(#sk)">
+    <rect x="20" y="72" width="140" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="160" y="72" width="200" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="360" y="72" width="200" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="560" y="72" width="360" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+  </g>
+  <g font-size="10" fill="#555" font-weight="bold" text-anchor="middle">
+    <text x="90" y="91">问题</text>
+    <text x="260" y="91">可能原因</text>
+    <text x="460" y="91">排查方法</text>
+    <text x="740" y="91">解决方案</text>
+  </g>
+
+  <!-- Row 1: 结果不一致 -->
+  <g filter="url(#sk)">
+    <rect x="20" y="100" width="140" height="56" fill="#fce4ec" stroke="#c04050" stroke-width="1" rx="3"/>
+    <rect x="160" y="100" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="360" y="100" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="560" y="100" width="360" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="30" y="120" font-weight="bold" fill="#a03040">结果不一致</text>
+    <text x="30" y="136" fill="#888">输出与 PyTorch 不符</text>
+    <text x="170" y="120">• Kernel 边界处理错误</text>
+    <text x="170" y="136">• FP32 reduce 累积误差</text>
+    <text x="170" y="152">• 内存布局不对齐</text>
+    <text x="370" y="120">• 小尺寸逐步对比</text>
+    <text x="370" y="136">• 单算子 vs PyTorch</text>
+    <text x="370" y="152">• 打印中间值</text>
+    <text x="570" y="120">• 修正边界 if (i &lt; N) 保护</text>
+    <text x="570" y="136">• 用 double 做 reduce</text>
+    <text x="570" y="152">• 确保 tensor.contiguous()</text>
+  </g>
+
+  <!-- Row 2: 内存泄漏 -->
+  <g filter="url(#sk)">
+    <rect x="20" y="156" width="140" height="56" fill="#fff8e1" stroke="#c98a2b" stroke-width="1" rx="3"/>
+    <rect x="160" y="156" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="360" y="156" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="560" y="156" width="360" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="30" y="176" font-weight="bold" fill="#7a5415">内存泄漏</text>
+    <text x="30" y="192" fill="#888">显存持续增长</text>
+    <text x="170" y="176">• KV Cache 未释放</text>
+    <text x="170" y="192">• finished 请求残留</text>
+    <text x="170" y="208">• tensor 未释放</text>
+    <text x="370" y="176">• 监控 torch.cuda.</text>
+    <text x="370" y="186">  memory_allocated()</text>
+    <text x="370" y="202">• 每 100 请求打印</text>
+    <text x="570" y="176">• finish 后 free KV blocks</text>
+    <text x="570" y="192">• del running[req_id]</text>
+    <text x="570" y="208">• 定期 gc.collect()</text>
+  </g>
+
+  <!-- Row 3: 请求卡住 -->
+  <g filter="url(#sk)">
+    <rect x="20" y="212" width="140" height="56" fill="#f3e5f5" stroke="#8e44ad" stroke-width="1" rx="3"/>
+    <rect x="160" y="212" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="360" y="212" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="560" y="212" width="360" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="30" y="232" font-weight="bold" fill="#6a3d8a">请求卡住</text>
+    <text x="30" y="248" fill="#888">future.result() 超时</text>
+    <text x="170" y="232">• Scheduler 死锁</text>
+    <text x="170" y="248">• 请求被丢弃</text>
+    <text x="170" y="264">• still_waiting 丢失</text>
+    <text x="370" y="232">• 打印调度日志</text>
+    <text x="370" y="248">• 检查 waiting/running</text>
+    <text x="370" y="264">• 检查锁竞争</text>
+    <text x="570" y="232">• 修复 still_waiting 合并</text>
+    <text x="570" y="248">• 加超时自动取消</text>
+    <text x="570" y="264">• 避免锁内 forward</text>
+  </g>
+
+  <!-- Row 4: 显存 OOM -->
+  <g filter="url(#sk)">
+    <rect x="20" y="268" width="140" height="56" fill="#fce4ec" stroke="#c04050" stroke-width="1" rx="3"/>
+    <rect x="160" y="268" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="360" y="268" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="560" y="268" width="360" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="30" y="288" font-weight="bold" fill="#a03040">显存 OOM</text>
+    <text x="30" y="304" fill="#888">cudaMalloc 失败</text>
+    <text x="170" y="288">• batch 过大</text>
+    <text x="170" y="304">• KV Cache 无上限</text>
+    <text x="170" y="320">• 无抢占机制</text>
+    <text x="370" y="288">• 检查 token_budget</text>
+    <text x="370" y="304">• 检查 memory_budget</text>
+    <text x="370" y="320">• 检查 max_num_seqs</text>
+    <text x="570" y="288">• 设 memory_budget 上限</text>
+    <text x="570" y="304">• 实现抢占释放低优先级</text>
+    <text x="570" y="320">• 限制 max_num_seqs</text>
+  </g>
+
+  <!-- Row 5: 性能下降 -->
+  <g filter="url(#sk)">
+    <rect x="20" y="324" width="140" height="56" fill="#e0f7fa" stroke="#00838f" stroke-width="1" rx="3"/>
+    <rect x="160" y="324" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="360" y="324" width="200" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="560" y="324" width="360" height="56" fill="#fff" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="9" fill="#444">
+    <text x="30" y="344" font-weight="bold" fill="#005f6b">性能下降</text>
+    <text x="30" y="360" fill="#888">比 PyTorch eager 慢</text>
+    <text x="170" y="344">• 教学 kernel 未优化</text>
+    <text x="170" y="360">• kernel launch 开销</text>
+    <text x="170" y="376">• 锁竞争</text>
+    <text x="370" y="344">• ncu profiling</text>
+    <text x="370" y="360">• nsys 看时间线</text>
+    <text x="370" y="376">• 拆分各阶段计时</text>
+    <text x="570" y="344">• 用 cuBLAS 替代教学 GEMM</text>
+    <text x="570" y="360">• 算子融合减少 launch</text>
+    <text x="570" y="376">• 减小锁粒度</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="20" y="388" width="900" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/>
+  </g>
+  <text x="470" y="404" text-anchor="middle" font-size="9" fill="#2b6e9e">💡 排查原则：分层定位（单算子→多算子→端到端）+ 逐步缩小范围 + 监控关键指标（显存/延迟/成功率）</text>
+</svg>

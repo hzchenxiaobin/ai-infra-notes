@@ -531,7 +531,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
   当前下标入栈
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](../../leetcode/daily/week2/day6/每日温度.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](../../../leetcode/daily/week2/day6/每日温度.md)。
 
 ---
 
