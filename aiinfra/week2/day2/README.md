@@ -37,19 +37,7 @@
 
 ![Register Blocking 三级数据复用](../website/images/register_blocking_dataflow.svg)
 
-```
-Global Memory (A[M][K], B[K][N])
- │
- ▼ 协作加载（所有线程参与）
-Shared Memory (s_A[BM][BK], s_B[BK][BN])
- │
- ├──► Register (r_A[TM]) ──┐
- │ ▼
- └──► Register (r_B[TN]) ──► FMA累加 (acc[TM][TN])
- │ │
- ◄──────────────────────────────┘
- 重复 BK 次（内层 k 循环）
-```
+![Register Blocking 单线程数据流](../website/images/register_blocking_per_thread_dataflow.svg)
 
 每个线程的执行流程：
 1. 从 Shared Memory 加载 TM 个 A 元素到 `r_A[TM]`

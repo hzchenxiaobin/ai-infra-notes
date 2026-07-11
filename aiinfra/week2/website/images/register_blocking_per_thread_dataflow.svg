@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 520" width="620" height="520">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrow-loop" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect width="620" height="520" rx="12" fill="#0f172a"/>
+
+  <!-- title -->
+  <text x="310" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Register Blocking 单线程数据流</text>
+
+  <!-- Global Memory -->
+  <rect x="180" y="60" width="260" height="56" rx="8" fill="#334155" stroke="#60a5fa" stroke-width="2"/>
+  <text x="310" y="85" text-anchor="middle" font-size="15" fill="#e2e8f0" font-family="sans-serif">Global Memory</text>
+  <text x="310" y="105" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">A[M][K], B[K][N]</text>
+
+  <!-- arrow down -->
+  <line x1="310" y1="116" x2="310" y2="150" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="320" y="138" font-size="12" fill="#94a3b8" font-family="sans-serif">协作加载（所有线程参与）</text>
+
+  <!-- Shared Memory -->
+  <rect x="160" y="160" width="300" height="56" rx="8" fill="#334155" stroke="#a78bfa" stroke-width="2"/>
+  <text x="310" y="185" text-anchor="middle" font-size="15" fill="#e2e8f0" font-family="sans-serif">Shared Memory</text>
+  <text x="310" y="205" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">s_A[BM][BK], s_B[BK][BN]</text>
+
+  <!-- arrow down -->
+  <line x1="310" y1="216" x2="310" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Registers -->
+  <rect x="60" y="260" width="200" height="56" rx="8" fill="#334155" stroke="#34d399" stroke-width="2"/>
+  <text x="160" y="285" text-anchor="middle" font-size="15" fill="#e2e8f0" font-family="sans-serif">Register r_A[TM]</text>
+  <text x="160" y="305" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">A 的 TM 个元素</text>
+
+  <rect x="360" y="260" width="200" height="56" rx="8" fill="#334155" stroke="#34d399" stroke-width="2"/>
+  <text x="460" y="285" text-anchor="middle" font-size="15" fill="#e2e8f0" font-family="sans-serif">Register r_B[TN]</text>
+  <text x="460" y="305" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">B 的 TN 个元素</text>
+
+  <!-- arrows to FMA -->
+  <line x1="160" y1="316" x2="260" y2="370" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="460" y1="316" x2="360" y2="370" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- FMA accumulate -->
+  <rect x="230" y="360" width="160" height="64" rx="8" fill="#334155" stroke="#f59e0b" stroke-width="2"/>
+  <text x="310" y="385" text-anchor="middle" font-size="15" fill="#e2e8f0" font-family="sans-serif">FMA 累加</text>
+  <text x="310" y="408" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">acc[TM][TN]</text>
+
+  <!-- loop arrow -->
+  <path d="M 390 392 C 460 392, 480 290, 310 290" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow-loop)"/>
+  <text x="430" y="345" font-size="12" fill="#f59e0b" font-family="sans-serif">重复 BK 次</text>
+
+  <!-- bottom note -->
+  <text x="310" y="460" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">每个线程反复从 Shared Memory 取 TM×TN 数据到寄存器，</text>
+  <text x="310" y="480" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="sans-serif">在寄存器内完成 FMA 累加，避免频繁访问 Shared Memory。</text>
+</svg>
