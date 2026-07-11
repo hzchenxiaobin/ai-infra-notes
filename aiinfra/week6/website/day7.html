@@ -408,15 +408,15 @@ Continuous Batching iteration-level 调度... LLM 自回归推理 ...
 
 1. **"Continuous Batching 就是 Dynamic Batching"** —— 错。Dynamic 是 request-level（整批一起开始结束），Continuous 是 iteration-level（每轮重建 batch，完成即走）。后者才是 LLM 推理标配，吞吐 2-8x。
 
-3. **"PagedAttention 是为了加速"** —— 错。PagedAttention 是内存管理（解决 KV Cache 碎片），不直接加速单次 attention。它让 Continuous Batching 的 slot 回收无碎片化，间接提吞吐。两者是 vLLM 双支柱，缺一不可。
+2. **"PagedAttention 是为了加速"** —— 错。PagedAttention 是内存管理（解决 KV Cache 碎片），不直接加速单次 attention。它让 Continuous Batching 的 slot 回收无碎片化，间接提吞吐。两者是 vLLM 双支柱，缺一不可。
 
-5. **"RECOMPUTE 是因为重算快"** —— 不全对。RECOMPUTE 默认是因为**通常重算比 PCIe 换入快**（GPU 算力 >> PCIe 带宽，尤其 prompt 不长时），且不需 CPU 内存。但 prompt 极长时重算代价超过 PCIe 换入，此时 SWAP 更优。
+3. **"RECOMPUTE 是因为重算快"** —— 不全对。RECOMPUTE 默认是因为**通常重算比 PCIe 换入快**（GPU 算力 >> PCIe 带宽，尤其 prompt 不长时），且不需 CPU 内存。但 prompt 极长时重算代价超过 PCIe 换入，此时 SWAP 更优。
 
-7. **"chunk_size 越小越好（TPOT 最平滑）"** —— 错。chunk_size 太小 → prefill 要很多轮 → TTFT（首 token 延迟）增加。要在 TPOT 平滑和 TTFT 间权衡，经验值 512-2048。
+4. **"chunk_size 越小越好（TPOT 最平滑）"** —— 错。chunk_size 太小 → prefill 要很多轮 → TTFT（首 token 延迟）增加。要在 TPOT 平滑和 TTFT 间权衡，经验值 512-2048。
 
-9. **"饱和点就是 GPU 利用率 100%"** —— 不全对。饱和点的标志是 throughput 不再增长（增长率<5%）+ latency 开始飙升。GPU util≈100% 是必要条件但非充分——也可能是 max_num_seqs 限制导致排队，而非算力打满。
+5. **"饱和点就是 GPU 利用率 100%"** —— 不全对。饱和点的标志是 throughput 不再增长（增长率<5%）+ latency 开始飙升。GPU util≈100% 是必要条件但非充分——也可能是 max_num_seqs 限制导致排队，而非算力打满。
 
-11. **"benchmark 只看平均延迟"** —— 错。必须看 P99——超载时 P99 增长远快于平均（conc=64 时 P99 是 avg 的 1.8x，QPS 超载时 P99 飙到 3167ms）。只看平均会误判系统稳定性。
+6. **"benchmark 只看平均延迟"** —— 错。必须看 P99——超载时 P99 增长远快于平均（conc=64 时 P99 是 avg 的 1.8x，QPS 超载时 P99 飙到 3167ms）。只看平均会误判系统稳定性。
 
 ---
 

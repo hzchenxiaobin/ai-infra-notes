@@ -232,15 +232,15 @@ python kernels/week7_summary.py
 
 1. **"并发就是多线程"** → 不完全。并发还需要条件变量（不空转）、锁粒度（锁内不做 forward）、生命周期管理（状态机）
 
-3. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
+2. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
 
-5. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
+3. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
 
-7. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
+4. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
 
-9. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
+5. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
 
-11. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
+6. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
 
 ---
 
