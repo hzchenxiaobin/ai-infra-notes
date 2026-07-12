@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="700" viewBox="0 0 940 700" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#aaa"/>
+    </marker>
+  </defs>
+  <rect width="940" height="700" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">网格列选择 = 保序子序列 = DAG 最长路</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Panel A: Grid → select column subsequence ===== -->
+  <text x="470" y="74" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 每列视为整体，选一个保序子序列（示例 limit=3）</text>
+
+  <g font-size="11">
+    <!-- column index labels -->
+    <text x="78" y="104" font-size="10" fill="#888" font-weight="bold">列号:</text>
+    <text x="140" y="104" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">0</text>
+    <text x="216" y="104" text-anchor="middle" font-size="10" fill="#bbb">1</text>
+    <text x="292" y="104" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">2</text>
+    <text x="368" y="104" text-anchor="middle" font-size="10" fill="#bbb">3</text>
+    <text x="444" y="104" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">4</text>
+
+    <!-- row 0 -->
+    <text x="78" y="132" font-size="10" fill="#888" font-weight="bold">行0:</text>
+    <g filter="url(#sk)"><rect x="112" y="114" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="140" y="135" text-anchor="middle" fill="#2e6e2e" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="188" y="114" width="56" height="32" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.55"/></g>
+    <text x="216" y="135" text-anchor="middle" fill="#aaa">5</text>
+    <g filter="url(#sk)"><rect x="264" y="114" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="292" y="135" text-anchor="middle" fill="#2e6e2e" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="340" y="114" width="56" height="32" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.55"/></g>
+    <text x="368" y="135" text-anchor="middle" fill="#aaa">9</text>
+    <g filter="url(#sk)"><rect x="416" y="114" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="444" y="135" text-anchor="middle" fill="#2e6e2e" font-weight="bold">1</text>
+
+    <!-- row 1 -->
+    <text x="78" y="164" font-size="10" fill="#888" font-weight="bold">行1:</text>
+    <g filter="url(#sk)"><rect x="112" y="146" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="140" y="167" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="188" y="146" width="56" height="32" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.55"/></g>
+    <text x="216" y="167" text-anchor="middle" fill="#aaa">8</text>
+    <g filter="url(#sk)"><rect x="264" y="146" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="292" y="167" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="340" y="146" width="56" height="32" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.55"/></g>
+    <text x="368" y="167" text-anchor="middle" fill="#aaa">9</text>
+    <g filter="url(#sk)"><rect x="416" y="146" width="56" height="32" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="444" y="167" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text>
+  </g>
+
+  <!-- bracket for selected subsequence -->
+  <path d="M 112 188 L 108 194 L 476 194 L 472 188" stroke="#4a8e4a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="292" y="208" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">保留列 {0, 2, 4}（保序子序列，移除列 1、3）</text>
+
+  <!-- condition box on right -->
+  <g filter="url(#sk)">
+    <rect x="540" y="104" width="360" height="112" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="560" y="126" font-size="11" font-weight="bold" fill="#7a5415">一致性条件（只看相邻保留列）</text>
+  <text x="560" y="148" font-size="11" fill="#444" font-family="monospace">对 ∀ 行 i，∀ 相邻保留列 (a,b)：</text>
+  <text x="560" y="170" font-size="12" fill="#b03a3a" font-family="monospace" font-weight="bold">|grid[i][b] − grid[i][a]| ≤ limit</text>
+  <text x="560" y="192" font-size="10" fill="#888">★ 非相邻列无需兼容（列0与列4不检查）</text>
+  <text x="560" y="208" font-size="10" fill="#888">★ 列1、3 已移除，不参与任何判断</text>
+
+  <!-- ===== Panel B: DAG ===== -->
+  <text x="470" y="246" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">② 兼容列对连有向边 a→b（a&lt;b），构成 DAG，求最长路</text>
+
+  <!-- DAG nodes 0..4 at y=312, x=140,290,440,590,740 -->
+  <!-- dp labels above nodes -->
+  <g font-size="11">
+    <text x="140" y="284" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">dp=1</text>
+    <text x="290" y="284" text-anchor="middle" font-size="10" fill="#aaa">dp=1</text>
+    <text x="440" y="284" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">dp=2</text>
+    <text x="590" y="284" text-anchor="middle" font-size="10" fill="#aaa">dp=1</text>
+    <text x="740" y="284" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">dp=3</text>
+  </g>
+
+  <!-- edges (curved below) -->
+  <!-- 0->2 green (path) -->
+  <path d="M 140 336 Q 290 392 440 336" stroke="#4a8e4a" stroke-width="1.8" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <!-- 0->4 gray dashed (skip, non-adjacent in subseq) -->
+  <path d="M 140 336 Q 440 420 740 336" stroke="#aaa" stroke-width="1.2" fill="none" marker-end="url(#arB)" filter="url(#sk)" stroke-dasharray="4 3"/>
+  <!-- 2->4 green (path) -->
+  <path d="M 440 336 Q 590 392 740 336" stroke="#4a8e4a" stroke-width="1.8" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- edge labels -->
+  <text x="290" y="392" text-anchor="middle" font-size="9" fill="#2e6e2e">0→2 ✓</text>
+  <text x="440" y="420" text-anchor="middle" font-size="9" fill="#999">0→4（跳过，非相邻）</text>
+  <text x="590" y="392" text-anchor="middle" font-size="9" fill="#2e6e2e">2→4 ✓</text>
+
+  <!-- nodes -->
+  <g font-size="13">
+    <!-- node 0 selected -->
+    <g filter="url(#sk)"><circle cx="140" cy="312" r="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="140" y="317" text-anchor="middle" fill="#2e6e2e" font-weight="bold">0</text>
+    <!-- node 1 dimmed -->
+    <g filter="url(#sk)"><circle cx="290" cy="312" r="24" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.6"/></g>
+    <text x="290" y="317" text-anchor="middle" fill="#aaa">1</text>
+    <!-- node 2 selected -->
+    <g filter="url(#sk)"><circle cx="440" cy="312" r="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="440" y="317" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text>
+    <!-- node 3 dimmed -->
+    <g filter="url(#sk)"><circle cx="590" cy="312" r="24" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.6"/></g>
+    <text x="590" y="317" text-anchor="middle" fill="#aaa">3</text>
+    <!-- node 4 selected -->
+    <g filter="url(#sk)"><circle cx="740" cy="312" r="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="740" y="317" text-anchor="middle" fill="#2e6e2e" font-weight="bold">4</text>
+  </g>
+
+  <!-- longest path annotation -->
+  <text x="470" y="448" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">最长路 0→2→4，长度 3 = 保留列数</text>
+
+  <!-- ===== Panel C: dp recurrence + complexity ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="470" width="500" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="494" font-size="13" font-weight="bold" fill="#2b6e9e">③ DP 转移（拓扑序 = 列下标顺序）</text>
+  <text x="80" y="518" font-size="12" fill="#444" font-family="monospace">dp[b] = 以列 b 结尾的最长一致子序列长度</text>
+  <text x="80" y="540" font-size="12" fill="#b03a3a" font-family="monospace" font-weight="bold">dp[b] = 1 + max{ dp[a] : a&lt;b, compatible(a,b) }</text>
+  <text x="80" y="560" font-size="11" fill="#666">无兼容的 a 时 dp[b]=1（至少保留自身）；答案 = max dp[b]</text>
+
+  <!-- complexity box -->
+  <g filter="url(#sk)">
+    <rect x="580" y="470" width="320" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="600" y="494" font-size="13" font-weight="bold" fill="#2e6e2e">复杂度</text>
+  <text x="600" y="516" font-size="11" fill="#444" font-family="monospace">列对 O(n²) × 兼容检查 O(m)</text>
+  <text x="600" y="538" font-size="12" fill="#2e6e2e" font-family="monospace" font-weight="bold">时间 O(n²·m)</text>
+  <text x="600" y="560" font-size="11" fill="#666">n,m ≤ 250 → ≈ 1.56×10⁷，可接受</text>
+
+  <!-- key insight -->
+  <g filter="url(#sk)">
+    <rect x="60" y="590" width="840" height="86" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="614" font-size="12" font-weight="bold" fill="#2b2b2b">关键洞察</text>
+  <text x="80" y="636" font-size="11" fill="#444">条件只约束子序列中相邻列 → 满足最优子结构 → DP 多项式可解</text>
+  <text x="80" y="656" font-size="11" fill="#7a2828">若改为「所有列对都须兼容」则变为最大团问题（NP-hard），本题因只约束相邻才可 DP</text>
+</svg>
