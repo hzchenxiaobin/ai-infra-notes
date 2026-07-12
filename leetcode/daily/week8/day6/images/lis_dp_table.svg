@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">LIS 动态规划填表过程</text>
+  <path d="M 250 42 Q 380 50 510 42" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="56" text-anchor="middle" font-size="11" fill="#888">nums = [10, 9, 2, 5, 3, 7, 101, 18]　dp[i] = 以 nums[i] 结尾的 LIS 长度</text>
+
+  <!-- nums 行 -->
+  <text x="50" y="92" font-size="12" fill="#888" font-weight="bold">nums</text>
+  <g filter="url(#sk)">
+    <rect x="90" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="150" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="210" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="270" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="330" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="390" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="450" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="510" y="76" width="60" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="120" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">10</text>
+  <text x="180" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">9</text>
+  <text x="240" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">2</text>
+  <text x="300" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">5</text>
+  <text x="360" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">3</text>
+  <text x="420" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">7</text>
+  <text x="480" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">101</text>
+  <text x="540" y="96" text-anchor="middle" font-size="13" fill="#2b2b2b">18</text>
+
+  <!-- index 行 -->
+  <text x="50" y="124" font-size="11" fill="#888">i</text>
+  <text x="120" y="124" text-anchor="middle" font-size="11" fill="#888">0</text>
+  <text x="180" y="124" text-anchor="middle" font-size="11" fill="#888">1</text>
+  <text x="240" y="124" text-anchor="middle" font-size="11" fill="#888">2</text>
+  <text x="300" y="124" text-anchor="middle" font-size="11" fill="#888">3</text>
+  <text x="360" y="124" text-anchor="middle" font-size="11" fill="#888">4</text>
+  <text x="420" y="124" text-anchor="middle" font-size="11" fill="#888">5</text>
+  <text x="480" y="124" text-anchor="middle" font-size="11" fill="#888">6</text>
+  <text x="540" y="124" text-anchor="middle" font-size="11" fill="#888">7</text>
+
+  <!-- dp 行 -->
+  <text x="50" y="156" font-size="12" fill="#888" font-weight="bold">dp[i]</text>
+  <g filter="url(#sk)">
+    <rect x="90" y="140" width="60" height="30" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="150" y="140" width="60" height="30" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="210" y="140" width="60" height="30" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="270" y="140" width="60" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <rect x="330" y="140" width="60" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <rect x="390" y="140" width="60" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <rect x="450" y="140" width="60" height="30" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <rect x="510" y="140" width="60" height="30" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="120" y="160" text-anchor="middle" font-size="13" fill="#2b2b2b">1</text>
+  <text x="180" y="160" text-anchor="middle" font-size="13" fill="#2b2b2b">1</text>
+  <text x="240" y="160" text-anchor="middle" font-size="13" fill="#2b2b2b">1</text>
+  <text x="300" y="160" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">2</text>
+  <text x="360" y="160" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">2</text>
+  <text x="420" y="160" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">3</text>
+  <text x="480" y="160" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">4</text>
+  <text x="540" y="160" text-anchor="middle" font-size="13" fill="#2b2b2b">4</text>
+
+  <!-- 转移说明 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="200" width="680" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="60" y="224" font-size="12" fill="#2b2b2b" font-weight="bold">转移过程（dp[i] = max(dp[j]+1), j&lt;i 且 nums[j]&lt;nums[i]）：</text>
+  <text x="60" y="248" font-size="11" fill="#444">i=3 (5)：j=2 (2&lt;5) → dp[3]=dp[2]+1=2 ✓</text>
+  <text x="60" y="268" font-size="11" fill="#444">i=4 (3)：j=2 (2&lt;3) → dp[4]=dp[2]+1=2 ✓　(j=3 时 5&lt;3 不成立)</text>
+  <text x="60" y="288" font-size="11" fill="#444">i=5 (7)：j=2,3,4 都 &lt;7 → dp[5]=max(2,3,3)+1=3 ✓</text>
+  <text x="60" y="308" font-size="11" fill="#444">i=6 (101)：j=0..5 都 &lt;101 → dp[6]=max(1,1,1,2,2,3)+1=4 ✓ ← 全局最优</text>
+  <text x="60" y="328" font-size="11" fill="#444">i=7 (18)：j=0..5 都 &lt;18 → dp[7]=max(1,1,1,2,2,3)+1=4</text>
+  <text x="60" y="346" font-size="11" fill="#c98a2b" font-weight="bold">答案 = max(dp) = 4，对应子序列 [2,3,7,101] 或 [2,3,7,18]</text>
+
+  <text x="380" y="384" text-anchor="middle" font-size="11" fill="#888">时间 O(n²)，空间 O(n)；每个 i 往前扫所有 j</text>
+</svg>

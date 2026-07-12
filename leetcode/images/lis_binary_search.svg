@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="440" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">LIS 贪心 + 二分：维护 tails 数组</text>
+  <path d="M 240 42 Q 380 50 520 42" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="56" text-anchor="middle" font-size="11" fill="#888">tails[k] = 长度 k+1 的所有递增子序列中，最小的末尾元素</text>
+
+  <!-- 表头 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="72" width="50" height="28" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="80" y="72" width="70" height="28" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="150" y="72" width="200" height="28" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="350" y="72" width="200" height="28" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/>
+    <rect x="550" y="72" width="180" height="28" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="55" y="90" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">步</text>
+  <text x="115" y="90" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">x</text>
+  <text x="250" y="90" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">tails（变化前）</text>
+  <text x="450" y="90" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">tails（变化后）</text>
+  <text x="640" y="90" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">操作</text>
+
+  <!-- 行 1: x=10 -->
+  <g filter="url(#sk)"><rect x="30" y="100" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="100" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="100" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="100" width="200" height="28" fill="#eaf6ee" stroke="#cdddc4"/><rect x="550" y="100" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="118" text-anchor="middle" font-size="11" fill="#444">1</text>
+  <text x="115" y="118" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">10</text>
+  <text x="250" y="118" text-anchor="middle" font-size="11" fill="#888">[]</text>
+  <text x="450" y="118" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">[10]</text>
+  <text x="640" y="118" text-anchor="middle" font-size="11" fill="#4a8e4a">追加</text>
+
+  <!-- 行 2: x=9 -->
+  <g filter="url(#sk)"><rect x="30" y="128" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="128" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="128" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="128" width="200" height="28" fill="#fef6e6" stroke="#e6d4ad"/><rect x="550" y="128" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="146" text-anchor="middle" font-size="11" fill="#444">2</text>
+  <text x="115" y="146" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">9</text>
+  <text x="250" y="146" text-anchor="middle" font-size="11" fill="#444">[10]</text>
+  <text x="450" y="146" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">[9]</text>
+  <text x="640" y="146" text-anchor="middle" font-size="11" fill="#c98a2b">替换 10</text>
+
+  <!-- 行 3: x=2 -->
+  <g filter="url(#sk)"><rect x="30" y="156" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="156" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="156" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="156" width="200" height="28" fill="#fef6e6" stroke="#e6d4ad"/><rect x="550" y="156" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="174" text-anchor="middle" font-size="11" fill="#444">3</text>
+  <text x="115" y="174" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">2</text>
+  <text x="250" y="174" text-anchor="middle" font-size="11" fill="#444">[9]</text>
+  <text x="450" y="174" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">[2]</text>
+  <text x="640" y="174" text-anchor="middle" font-size="11" fill="#c98a2b">替换 9</text>
+
+  <!-- 行 4: x=5 -->
+  <g filter="url(#sk)"><rect x="30" y="184" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="184" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="184" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="184" width="200" height="28" fill="#eaf6ee" stroke="#cdddc4"/><rect x="550" y="184" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="202" text-anchor="middle" font-size="11" fill="#444">4</text>
+  <text x="115" y="202" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">5</text>
+  <text x="250" y="202" text-anchor="middle" font-size="11" fill="#444">[2]</text>
+  <text x="450" y="202" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">[2, 5]</text>
+  <text x="640" y="202" text-anchor="middle" font-size="11" fill="#4a8e4a">追加</text>
+
+  <!-- 行 5: x=3 -->
+  <g filter="url(#sk)"><rect x="30" y="212" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="212" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="212" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="212" width="200" height="28" fill="#fef6e6" stroke="#e6d4ad"/><rect x="550" y="212" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="230" text-anchor="middle" font-size="11" fill="#444">5</text>
+  <text x="115" y="230" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">3</text>
+  <text x="250" y="230" text-anchor="middle" font-size="11" fill="#444">[2, 5]</text>
+  <text x="450" y="230" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">[2, 3]</text>
+  <text x="640" y="230" text-anchor="middle" font-size="11" fill="#c98a2b">替换 5</text>
+
+  <!-- 行 6: x=7 -->
+  <g filter="url(#sk)"><rect x="30" y="240" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="240" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="240" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="240" width="200" height="28" fill="#eaf6ee" stroke="#cdddc4"/><rect x="550" y="240" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="258" text-anchor="middle" font-size="11" fill="#444">6</text>
+  <text x="115" y="258" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">7</text>
+  <text x="250" y="258" text-anchor="middle" font-size="11" fill="#444">[2, 3]</text>
+  <text x="450" y="258" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">[2, 3, 7]</text>
+  <text x="640" y="258" text-anchor="middle" font-size="11" fill="#4a8e4a">追加</text>
+
+  <!-- 行 7: x=101 -->
+  <g filter="url(#sk)"><rect x="30" y="268" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="268" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="268" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="268" width="200" height="28" fill="#eaf6ee" stroke="#cdddc4"/><rect x="550" y="268" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="286" text-anchor="middle" font-size="11" fill="#444">7</text>
+  <text x="115" y="286" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">101</text>
+  <text x="250" y="286" text-anchor="middle" font-size="11" fill="#444">[2, 3, 7]</text>
+  <text x="450" y="286" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">[2, 3, 7, 101]</text>
+  <text x="640" y="286" text-anchor="middle" font-size="11" fill="#4a8e4a">追加</text>
+
+  <!-- 行 8: x=18 -->
+  <g filter="url(#sk)"><rect x="30" y="296" width="50" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="80" y="296" width="70" height="28" fill="#e8f0fa" stroke="#cdd9e6"/><rect x="150" y="296" width="200" height="28" fill="#fffdf3" stroke="#e2dccd"/><rect x="350" y="296" width="200" height="28" fill="#fef6e6" stroke="#e6d4ad"/><rect x="550" y="296" width="180" height="28" fill="#fffdf3" stroke="#e2dccd"/></g>
+  <text x="55" y="314" text-anchor="middle" font-size="11" fill="#444">8</text>
+  <text x="115" y="314" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">18</text>
+  <text x="250" y="314" text-anchor="middle" font-size="11" fill="#444">[2, 3, 7, 101]</text>
+  <text x="450" y="314" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">[2, 3, 7, 18]</text>
+  <text x="640" y="314" text-anchor="middle" font-size="11" fill="#c98a2b">替换 101</text>
+
+  <!-- 二分说明 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="340" width="700" height="80" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="50" y="362" font-size="12" fill="#2b2b2b" font-weight="bold">二分规则（lower_bound，第一个 ≥ x）：</text>
+  <text x="50" y="382" font-size="11" fill="#4a8e4a">✓ x &gt; tails 所有元素 → 追加到末尾（LIS 长度 +1）</text>
+  <text x="50" y="400" font-size="11" fill="#c98a2b">✓ 否则 → 用 x 替换 tails[pos]（保持最小末尾，长度不变）</text>
+  <text x="50" y="416" font-size="11" fill="#888">tails 严格递增 → 二分可用；最终长度 = len(tails) = 4 ✓</text>
+</svg>

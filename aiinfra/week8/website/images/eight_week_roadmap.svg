@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 540" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="540" fill="#fdfcf7"/>
+
+  <text x="420" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">8 周学习路线总图：从 GPU 执行到推理系统</text>
+  <path d="M 270 44 Q 420 52 570 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="58" text-anchor="middle" font-size="11" fill="#888">每周一个台阶，从 kernel 到系统，从单算子到完整推理引擎</text>
+
+  <!-- Week1 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="120" y="102" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">Week 1</text>
+  <text x="120" y="120" text-anchor="middle" font-size="11" fill="#2b2b2b">GPU 执行本质</text>
+  <text x="120" y="136" text-anchor="middle" font-size="10" fill="#666">SM/Warp/Occupancy · ncu</text>
+
+  <!-- Week2 -->
+  <g filter="url(#sk)">
+    <rect x="225" y="80" width="180" height="64" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="315" y="102" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">Week 2</text>
+  <text x="315" y="120" text-anchor="middle" font-size="11" fill="#2b2b2b">GEMM + Kernel 优化</text>
+  <text x="315" y="136" text-anchor="middle" font-size="10" fill="#666">Tiling→RegBlock→cuBLAS 70%</text>
+
+  <!-- Week3 -->
+  <g filter="url(#sk)">
+    <rect x="420" y="80" width="180" height="64" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="510" y="102" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">Week 3</text>
+  <text x="510" y="120" text-anchor="middle" font-size="11" fill="#2b2b2b">Transformer 执行本质</text>
+  <text x="510" y="136" text-anchor="middle" font-size="10" fill="#666">Softmax/LayerNorm/Attention</text>
+
+  <!-- Week4 -->
+  <g filter="url(#sk)">
+    <rect x="615" y="80" width="180" height="64" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="705" y="102" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">Week 4</text>
+  <text x="705" y="120" text-anchor="middle" font-size="11" fill="#2b2b2b">FlashAttention</text>
+  <text x="705" y="136" text-anchor="middle" font-size="10" fill="#666">online softmax · tiling</text>
+
+  <!-- arrows row1 -->
+  <path d="M 210 112 L 223 112" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 405 112 L 418 112" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 600 112 L 613 112" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Week5 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="170" width="180" height="64" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="120" y="192" text-anchor="middle" font-size="13" fill="#8e5db8" font-weight="bold">Week 5</text>
+  <text x="120" y="210" text-anchor="middle" font-size="11" fill="#2b2b2b">推理系统 + KV Cache</text>
+  <text x="120" y="226" text-anchor="middle" font-size="10" fill="#666">Prefill/Decode · PagedAttention</text>
+
+  <!-- Week6 -->
+  <g filter="url(#sk)">
+    <rect x="225" y="170" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="315" y="192" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">Week 6</text>
+  <text x="315" y="210" text-anchor="middle" font-size="11" fill="#2b2b2b">Batching + 调度</text>
+  <text x="315" y="226" text-anchor="middle" font-size="10" fill="#666">Continuous · Scheduler</text>
+
+  <!-- Week7 -->
+  <g filter="url(#sk)">
+    <rect x="420" y="170" width="180" height="64" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="510" y="192" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">Week 7</text>
+  <text x="510" y="210" text-anchor="middle" font-size="11" fill="#2b2b2b">系统整合</text>
+  <text x="510" y="226" text-anchor="middle" font-size="10" fill="#666">Mini 引擎 · 全链路 Profiling</text>
+
+  <!-- Week8 (highlight) -->
+  <g filter="url(#sk)">
+    <rect x="615" y="170" width="180" height="64" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2.2"/>
+  </g>
+  <text x="705" y="192" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">Week 8 ★</text>
+  <text x="705" y="210" text-anchor="middle" font-size="11" fill="#2b2b2b">项目打磨 + 面试</text>
+  <text x="705" y="226" text-anchor="middle" font-size="10" fill="#666">README · 面试题 · Mock</text>
+
+  <!-- arrow week4 -> week5 (down) -->
+  <path d="M 705 146 Q 705 158 420 158 Q 120 158 120 168" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 210 202 L 223 202" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 405 202 L 418 202" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 600 202 L 613 202" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 三个能力层 -->
+  <text x="420" y="276" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">三大能力层</text>
+
+  <g filter="url(#sk)">
+    <rect x="30" y="290" width="250" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="155" y="312" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">Kernel 优化层（W1-4）</text>
+  <text x="155" y="332" text-anchor="middle" font-size="10" fill="#444">手写 GEMM / FlashAttention</text>
+  <text x="155" y="348" text-anchor="middle" font-size="10" fill="#444">达到 cuBLAS 70% / FA 加速 2x</text>
+  <text x="155" y="364" text-anchor="middle" font-size="10" fill="#666">ncu profiling · 数值稳定</text>
+
+  <g filter="url(#sk)">
+    <rect x="295" y="290" width="250" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="420" y="312" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">推理系统层（W5-7）</text>
+  <text x="420" y="332" text-anchor="middle" font-size="10" fill="#444">KV Cache · Continuous Batching</text>
+  <text x="420" y="348" text-anchor="middle" font-size="10" fill="#444">Scheduler · Mini 引擎</text>
+  <text x="420" y="364" text-anchor="middle" font-size="10" fill="#666">500+ 请求稳定 · 端到端 profiling</text>
+
+  <g filter="url(#sk)">
+    <rect x="560" y="290" width="250" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="685" y="312" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">工程表达层（W8）</text>
+  <text x="685" y="332" text-anchor="middle" font-size="10" fill="#444">README · 架构图 · Benchmark</text>
+  <text x="685" y="348" text-anchor="middle" font-size="10" fill="#444">50+ 面试题 · Mock 面试</text>
+  <text x="685" y="364" text-anchor="middle" font-size="10" fill="#666">查漏补缺 · 能力地图</text>
+
+  <!-- 底部：核心产出 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="396" width="780" height="120" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5,3"/>
+  </g>
+  <text x="420" y="422" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">8 周核心产出</text>
+  <text x="60" y="448" font-size="11" fill="#4a8edb" font-weight="bold">① CUDA Kernel</text>
+  <text x="60" y="466" font-size="10" fill="#444">GEMM / FlashAttention / Softmax / LayerNorm</text>
+  <text x="290" y="448" font-size="11" fill="#4a8e4a" font-weight="bold">② Mini 推理引擎</text>
+  <text x="290" y="466" font-size="10" fill="#444">KV Cache · Continuous Batching · Scheduler</text>
+  <text x="540" y="448" font-size="11" fill="#c98a2b" font-weight="bold">③ 面试素材</text>
+  <text x="540" y="466" font-size="10" fill="#444">50+ 题 · Mock 记录 · 能力地图</text>
+  <text x="60" y="492" font-size="11" fill="#888">关键数据：GEMM cuBLAS 70%+ · FlashAttention 长序列 2x+ · Mini 引擎 1000+ 请求稳定 · RTX 5090 Ridge 12.6</text>
+</svg>
