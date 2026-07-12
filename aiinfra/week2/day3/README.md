@@ -115,6 +115,27 @@ cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 
 > 为什么 `cudaMemcpyAsync` 需要 Pinned Memory？因为异步传输使用 DMA 引擎直接访问内存，如果内存被 OS 换出到磁盘，DMA 无法访问。普通 pageable 内存会被 CUDA 驱动先复制到临时 pinned buffer，导致异步退化为同步。
 
+**DMA 引擎的工作机制**
+
+GPU 的 Copy Engine 本质上是一个 **DMA（Direct Memory Access）控制器**。DMA 可以在不占用 CPU 的情况下，直接在内存和设备之间搬运数据，工作流程大致如下：
+
+1. **CPU 配置 DMA**：驱动程序把源地址、目的地址、传输字节数写入 Copy Engine 的寄存器。
+2. **DMA 接管总线**：Copy Engine 通过 PCIe 总线直接读取 Host 内存，并把数据写入 GPU 显存（或反向）。这期间 CPU 可以去执行其他代码。
+3. **传输完成通知**：Copy Engine 通过中断或状态位告诉 GPU/CPU“这一批数据传完了”，后续 kernel 或 Host 代码才能安全使用。
+
+因为 DMA 访问的是**物理内存地址**，它要求传输期间源/目的内存必须一直驻留在物理内存中，不能被操作系统移动或换出。否则 DMA 读到的地址内容可能已经不是期望的数据。
+
+**什么是“换出到磁盘”？**
+
+操作系统使用**虚拟内存**管理内存。当物理内存（RAM）紧张时，OS 会把一部分暂时不活跃的内存页（page）写入磁盘上的 swap 空间，腾出物理页给其他进程使用，这个过程叫 **换出（swap out）**。当程序再次访问这些页时，OS 会从磁盘把它们读回物理内存，叫 **换入（swap in）**。
+
+CPU 访问被换出的页时会触发**页错误（page fault）**，由 OS 负责换入。但 DMA 控制器没有处理页错误的能力：
+
+- 如果 DMA 传输时访问的页正好被换出到磁盘，DMA 无法通知 OS 换入；
+- 它可能读到错误数据，或者导致传输挂起/失败。
+
+因此，异步 DMA 传输必须使用 **pinned memory**。`cudaMallocHost` 分配的内存会被 OS 锁住（pin），保证这些页一直留在物理内存中，DMA 可以安全地直接访问。
+
 **示例代码**：
 
 ```cuda
