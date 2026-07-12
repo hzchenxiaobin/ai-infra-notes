@@ -136,7 +136,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!problems.length) return;
                 const p = problems[Math.floor(Math.random() * problems.length)];
                 if (p.slug) {
-                    window.location.href = 'https://leetgpu.com/challenges/' + encodeURIComponent(p.slug);
+                    window.open('https://leetgpu.com/challenges/' + encodeURIComponent(p.slug), '_blank',
+                                'noopener,noreferrer');
                 }
             } catch (e) {
                 // Ignore malformed data attribute
