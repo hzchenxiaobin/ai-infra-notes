@@ -429,15 +429,24 @@ nvcc -o multi_stream kernels/multi_stream_pipeline.cu -O3 -arch=sm_120
 ./multi_stream
 ```
 
-**预期输出**：
+**实际运行结果**（在 NVIDIA GeForce RTX 5090 上执行）：
 
 ```
 === Multi-Stream Overlap Pipeline ===
-...
+Total size: 16777216 (64.00 MB)
+Chunk size: 262144 (1.00 MB)
+Num chunks: 64, Num streams: 4
+
+Running sequential version...
+Sequential: 9.349 ms
+
+Running multi-stream version (nStreams=4)...
+Multi-Stream: 5.488 ms
+
 === Performance Summary ===
-Sequential: xxx.xxx ms
-Multi-Stream: xx.xxx ms
-Speedup: 1.2x ~ 1.8x
+Sequential: 9.349 ms
+Multi-Stream: 5.488 ms
+Speedup: 1.70x
 Result check: PASS
 ```
 
@@ -448,6 +457,15 @@ nsys profile -o multi_stream_timeline ./multi_stream
 ```
 
 用 Nsight Systems GUI 打开 `.nsys-rep` 文件，在 Timeline 视图中观察不同 Stream 的操作条是否有重叠区域。
+
+**实际捕获的 Timeline 截图**（4 个 Stream 的 H2D / Kernel / D2H 重叠执行）：
+
+![Multi-Stream Timeline](../website/images/multi_stream_timeline.png)
+
+从图中可以看到：
+- 4 个 Stream 横向并行推进，每个 Stream 内部按 `H2D → Kernel → D2H` 顺序执行。
+- 不同 Stream 的 H2D、Kernel、D2H 在时间上相互重叠，Copy Engine 与 Compute Engine 同时工作。
+- 这与顺序版本（单 Stream 串行）形成对比，也是 Multi-Stream 取得约 **1.7x 加速**的原因。
 
 #### 任务 4：LeetGPU 在线题目 —— 2D Convolution
 
