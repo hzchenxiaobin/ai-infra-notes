@@ -178,9 +178,21 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
             "day_prefix": "",
             "days": existing_days,
         },
+        {
+            "num": 7,
+            "href": "../week7/index.html",
+            "day_prefix": "../week7/",
+            "days": get_day_numbers(repo_root / "week7"),
+        },
+        {
+            "num": 8,
+            "href": "../week8/index.html",
+            "day_prefix": "../week8/",
+            "days": get_day_numbers(repo_root / "week8"),
+        },
     ]
     for week in weeks:
-        if week["num"] <= 6:
+        if week["num"] <= 8:
             continue
         week_data.append({
             "num": week["num"],

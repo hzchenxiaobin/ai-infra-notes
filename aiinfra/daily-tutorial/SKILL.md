@@ -174,6 +174,8 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week7 Day5 | 系统联调 | Element Reversal | [leetgpu-element-reversal-solution.md](../../leetgpu/week7/day5/leetgpu-element-reversal-solution.md) |
 | Week7 Day6 | 全链路 Profiling | Reduction | [leetgpu-reduction-solution.md](../../leetgpu/week7/day6/leetgpu-reduction-solution.md) |
 | Week7 Day7 | 代码重构与文档 | Matrix Addition | [leetgpu-matrix-addition-solution.md](../../leetgpu/week7/day7/leetgpu-matrix-addition-solution.md) |
+| Week8 Day1 | 项目文档完善 | SiLU | [leetgpu-silu-solution.md](../../leetgpu/week8/day1/leetgpu-silu-solution.md) |
+| Week8 Day2 | 架构图与数据流图 | Rotary Positional Embedding | [leetgpu-rope-embedding-solution.md](../../leetgpu/week8/day2/leetgpu-rope-embedding-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -217,6 +219,8 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](../../leetcode/daily/week7/day5/合并K个升序链表.md) |
 | Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](../../leetcode/daily/week7/day6/数据流的中位数.md) |
 | Week7 Day7 | 设计 / LRU | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week7/day7/LRU缓存.md) |
+| Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](../../leetcode/daily/week8/day1/合并区间.md) |
+| Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](../../leetcode/daily/week8/day2/腐烂的橘子.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 

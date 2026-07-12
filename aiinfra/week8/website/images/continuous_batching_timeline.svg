@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="500" viewBox="0 0 920 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="920" height="500" fill="#fdfcf7"/>
+  <text x="460" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Continuous Batching 时间线</text>
+  <path d="M 290 40 Q 460 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="58" text-anchor="middle" font-size="11" fill="#888">请求动态加入/退出，每轮 iteration 重新凑批</text>
+
+  <!-- iteration axis -->
+  <g filter="url(#sk)">
+    <line x1="120" y1="90" x2="860" y2="90" stroke="#888" stroke-width="1.4"/>
+  </g>
+  <g font-size="10" fill="#888">
+    <text x="200" y="82" text-anchor="middle">iter 0</text>
+    <text x="320" y="82" text-anchor="middle">iter 1</text>
+    <text x="440" y="82" text-anchor="middle">iter 2</text>
+    <text x="560" y="82" text-anchor="middle">iter 3</text>
+    <text x="680" y="82" text-anchor="middle">iter 4</text>
+    <text x="800" y="82" text-anchor="middle">iter 5</text>
+  </g>
+  <!-- vertical guides -->
+  <g filter="url(#sk)" stroke="#eee" stroke-width="1">
+    <line x1="200" y1="90" x2="200" y2="420"/>
+    <line x1="320" y1="90" x2="320" y2="420"/>
+    <line x1="440" y1="90" x2="440" y2="420"/>
+    <line x1="560" y1="90" x2="560" y2="420"/>
+    <line x1="680" y1="90" x2="680" y2="420"/>
+    <line x1="800" y1="90" x2="800" y2="420"/>
+  </g>
+
+  <!-- Request 1: prefill iter0, decode iter1-3, done -->
+  <g font-size="10">
+    <text x="110" y="124" text-anchor="end" fill="#2b6e9e" font-weight="bold">R1</text>
+    <g filter="url(#sk)"><rect x="200" y="110" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="260" y="128" text-anchor="middle" fill="#2b6e9e" font-weight="bold">prefill</text>
+    <g filter="url(#sk)"><rect x="320" y="110" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="380" y="128" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="440" y="110" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="500" y="128" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="560" y="110" width="120" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="620" y="128" text-anchor="middle" fill="#7a5415" font-weight="bold">done ✓</text>
+  </g>
+
+  <!-- Request 2: prefill iter0, decode iter1-4, done -->
+  <g font-size="10">
+    <text x="110" y="164" text-anchor="end" fill="#2b6e9e" font-weight="bold">R2</text>
+    <g filter="url(#sk)"><rect x="200" y="150" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="260" y="168" text-anchor="middle" fill="#2b6e9e" font-weight="bold">prefill</text>
+    <g filter="url(#sk)"><rect x="320" y="150" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="380" y="168" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="440" y="150" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="500" y="168" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="560" y="150" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="620" y="168" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="680" y="150" width="120" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="740" y="168" text-anchor="middle" fill="#7a5415" font-weight="bold">done ✓</text>
+  </g>
+
+  <!-- Request 3: joins iter2 (prefill), decode iter3-5 -->
+  <g font-size="10">
+    <text x="110" y="204" text-anchor="end" fill="#8e5db8" font-weight="bold">R3</text>
+    <text x="180" y="204" text-anchor="end" font-size="8" fill="#8e5db8">← iter2 新加入</text>
+    <g filter="url(#sk)"><rect x="440" y="190" width="120" height="28" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/></g>
+    <text x="500" y="208" text-anchor="middle" fill="#5a3a7a" font-weight="bold">prefill</text>
+    <g filter="url(#sk)"><rect x="560" y="190" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="620" y="208" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="680" y="190" width="120" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="740" y="208" text-anchor="middle" fill="#2e6e2e">decode</text>
+    <g filter="url(#sk)"><rect x="800" y="190" width="60" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="830" y="208" text-anchor="middle" fill="#2e6e2e">dec...</text>
+  </g>
+
+  <!-- Batch size annotation -->
+  <g font-size="10">
+    <text x="110" y="258" text-anchor="end" fill="#888" font-weight="bold">batch</text>
+    <g filter="url(#sk)"><rect x="200" y="244" width="120" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="260" y="260" text-anchor="middle" fill="#444" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="320" y="244" width="120" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="380" y="260" text-anchor="middle" fill="#444" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="440" y="244" width="120" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+    <text x="500" y="260" text-anchor="middle" fill="#7a5415" font-weight="bold">3</text>
+    <g filter="url(#sk)"><rect x="560" y="244" width="120" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="620" y="260" text-anchor="middle" fill="#444" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="680" y="244" width="120" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="740" y="260" text-anchor="middle" fill="#444" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="800" y="244" width="60" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="830" y="260" text-anchor="middle" fill="#444" font-weight="bold">1</text>
+  </g>
+
+  <!-- ===== Bottom: key points ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="290" width="800" height="190" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="460" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Continuous Batching 的三个关键特征</text>
+  <g font-size="10" fill="#444">
+    <text x="80" y="340"><tspan font-weight="bold" fill="#8e5db8">① 请求动态加入</tspan>：R3 在 iter2 才 prefill，不需要等 R1/R2 完成</text>
+    <text x="80" y="358"><tspan fill="#888">  → 对比 Dynamic Batching（必须等一批一起开始），Continuous 大幅降低排队延迟</tspan></text>
+
+    <text x="80" y="384"><tspan font-weight="bold" fill="#c98a2b">② 请求动态退出</tspan>：R1 在 iter3 生成完毕后退出，batch slot 立即释放给新请求</text>
+    <text x="80" y="402"><tspan fill="#888">  → batch size 随请求完成/加入动态变化（2→2→3→2→2→1）</tspan></text>
+
+    <text x="80" y="428"><tspan font-weight="bold" fill="#4a8edb">③ 每轮 iteration 重新凑批</tspan>：Scheduler 每 step 从 WAITING 队列取新请求加入 RUNNING</text>
+    <text x="80" y="446"><tspan fill="#888">  → 这就是"Continuous"的含义：批不是静态的，而是每步都在变</tspan></text>
+
+    <text x="80" y="470" fill="#b03a3a" font-weight="bold">面试画图要点：横轴=iteration，纵轴=请求，标注 prefill/decode/done，新请求用不同色</text>
+  </g>
+</svg>

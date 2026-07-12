@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">8 周代码 → 一份可展示的项目文档</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- left: 8 weeks scattered code -->
+  <text x="170" y="74" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">前 7 周：散落的代码与笔记</text>
+
+  <g font-size="9">
+    <!-- W1 -->
+    <g filter="url(#sk)"><rect x="40" y="92" width="120" height="42" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+    <text x="100" y="110" text-anchor="middle" fill="#2b6e9e" font-weight="bold">Week1</text>
+    <text x="100" y="125" text-anchor="middle" fill="#666">hello.cu / vec_add</text>
+    <!-- W2 -->
+    <g filter="url(#sk)"><rect x="180" y="92" width="120" height="42" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.1"/></g>
+    <text x="240" y="110" text-anchor="middle" fill="#2e6e2e" font-weight="bold">Week2</text>
+    <text x="240" y="125" text-anchor="middle" fill="#666">gemm.cu / FA sketch</text>
+    <!-- W3 -->
+    <g filter="url(#sk)"><rect x="40" y="146" width="120" height="42" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+    <text x="100" y="164" text-anchor="middle" fill="#7a5415" font-weight="bold">Week3</text>
+    <text x="100" y="179" text-anchor="middle" fill="#666">softmax / layernorm</text>
+    <!-- W4 -->
+    <g filter="url(#sk)"><rect x="180" y="146" width="120" height="42" rx="5" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.1"/></g>
+    <text x="240" y="164" text-anchor="middle" fill="#5a3a7a" font-weight="bold">Week4</text>
+    <text x="240" y="179" text-anchor="middle" fill="#666">flash_attn.cu</text>
+    <!-- W5 -->
+    <g filter="url(#sk)"><rect x="40" y="200" width="120" height="42" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.1"/></g>
+    <text x="100" y="218" text-anchor="middle" fill="#b03a3a" font-weight="bold">Week5</text>
+    <text x="100" y="233" text-anchor="middle" fill="#666">kv_cache / prefill</text>
+    <!-- W6 -->
+    <g filter="url(#sk)"><rect x="180" y="200" width="120" height="42" rx="5" fill="#fff8e1" stroke="#d6a040" stroke-width="1.1"/></g>
+    <text x="240" y="218" text-anchor="middle" fill="#7a5415" font-weight="bold">Week6</text>
+    <text x="240" y="233" text-anchor="middle" fill="#666">batching / scheduler</text>
+    <!-- W7 -->
+    <g filter="url(#sk)"><rect x="110" y="254" width="140" height="42" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+    <text x="180" y="272" text-anchor="middle" fill="#2b6e9e" font-weight="bold">Week7</text>
+    <text x="180" y="287" text-anchor="middle" fill="#666">concurrent_engine / 联调</text>
+  </g>
+
+  <!-- arrow to consolidation -->
+  <path d="M 320 180 Q 380 180 410 250" stroke="#888" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="5 3"/>
+
+  <!-- middle: Week 8 polish funnel -->
+  <g filter="url(#sk)">
+    <rect x="410" y="200" width="170" height="120" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="495" y="224" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Week 8 打磨</text>
+  <text x="495" y="244" text-anchor="middle" font-size="10" fill="#444">整理 + 命名 + 文档化</text>
+  <text x="495" y="262" text-anchor="middle" font-size="9" fill="#888">统一接口 / 去冗余</text>
+  <text x="495" y="278" text-anchor="middle" font-size="9" fill="#888">补 benchmark / 画图</text>
+  <text x="495" y="298" text-anchor="middle" font-size="9" fill="#888">写 README / 示例</text>
+  <text x="495" y="314" text-anchor="middle" font-size="9" fill="#888">mock 面试 / 查漏</text>
+
+  <path d="M 586 260 L 636 260" stroke="#4a8e4a" stroke-width="1.8" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- right: deliverables -->
+  <text x="760" y="74" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Week 8 产出：可展示素材</text>
+
+  <g font-size="10">
+    <g filter="url(#sk)"><rect x="640" y="92" width="220" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <text x="750" y="113" text-anchor="middle" fill="#2b6e9e" font-weight="bold">README + Quick Start</text>
+    <text x="750" y="130" text-anchor="middle" fill="#888">新用户 10 分钟跑通</text>
+
+    <g filter="url(#sk)"><rect x="640" y="152" width="220" height="50" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <text x="750" y="173" text-anchor="middle" fill="#5a3a7a" font-weight="bold">架构图 + 数据流图</text>
+    <text x="750" y="190" text-anchor="middle" fill="#888">一眼看懂系统设计</text>
+
+    <g filter="url(#sk)"><rect x="640" y="212" width="220" height="50" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="750" y="233" text-anchor="middle" fill="#b03a3a" font-weight="bold">Benchmark 报告</text>
+    <text x="750" y="250" text-anchor="middle" fill="#888">FA 2.1x / GEMM 72%</text>
+
+    <g filter="url(#sk)"><rect x="640" y="272" width="220" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="750" y="293" text-anchor="middle" fill="#2e6e2e" font-weight="bold">50+ 面试题库</text>
+    <text x="750" y="310" text-anchor="middle" fill="#888">自问自答 / mock</text>
+  </g>
+
+  <!-- bottom: the value -->
+  <g filter="url(#sk)">
+    <rect x="60" y="360" width="800" height="140" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="388" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">为什么文档打磨是 Week 8 第一天？</text>
+  <text x="80" y="414" font-size="11" fill="#444">① 代码能跑 ≠ 项目可展示 —— 面试官先看 README，看不懂就直接 pass</text>
+  <text x="80" y="436" font-size="11" fill="#444">② 文档倒逼重构 —— 写 Quick Start 时会发现"依赖没列全、入口不清晰"，逼你补齐</text>
+  <text x="80" y="458" font-size="11" fill="#444">③ Benchmark 数字是面试弹药 —— "FlashAttention 2.1x 加速"比"我写了 FlashAttention"有力 10 倍</text>
+  <text x="80" y="480" font-size="11" fill="#444">④ 先有文档框架，后续 Day2-7（架构图/面试题/mock）才能往里填</text>
+  <text x="460" y="498" text-anchor="middle" font-size="10" fill="#888" font-style="italic">Day1 = 把 7 周的"代码堆"变成"项目" 的第一步</text>
+</svg>

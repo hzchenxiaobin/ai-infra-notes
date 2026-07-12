@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="580" viewBox="0 0 940 580" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="580" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求生命周期数据流图</text>
+  <path d="M 290 42 Q 470 50 650 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Horizontal pipeline ===== -->
+  <text x="470" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">一个请求从提交到返回的完整路径</text>
+
+  <!-- Stage 1: submit -->
+  <g filter="url(#sk)"><rect x="30" y="86" width="120" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="90" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">① submit()</text>
+  <text x="90" y="128" text-anchor="middle" font-size="9" fill="#666">用户调用</text>
+  <text x="90" y="142" text-anchor="middle" font-size="9" fill="#666">返回 Future</text>
+
+  <path d="M 152 121 L 186 121" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Stage 2: enqueue -->
+  <g filter="url(#sk)"><rect x="190" y="86" width="120" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="250" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">② enqueue</text>
+  <text x="250" y="128" text-anchor="middle" font-size="9" fill="#666">入队 WAITING</text>
+  <text x="250" y="142" text-anchor="middle" font-size="9" fill="#666">notify worker</text>
+
+  <path d="M 312 121 L 346 121" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Stage 3: schedule -->
+  <g filter="url(#sk)"><rect x="350" y="86" width="120" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="410" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">③ schedule</text>
+  <text x="410" y="128" text-anchor="middle" font-size="9" fill="#666">get_batch</text>
+  <text x="410" y="142" text-anchor="middle" font-size="9" fill="#666">→ RUNNING</text>
+
+  <path d="M 472 121 L 506 121" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Stage 4: forward -->
+  <g filter="url(#sk)"><rect x="510" y="86" width="130" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="575" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">④ forward</text>
+  <text x="575" y="128" text-anchor="middle" font-size="9" fill="#666">prefill→decode</text>
+  <text x="575" y="142" text-anchor="middle" font-size="9" fill="#666">读写 KV Cache</text>
+
+  <path d="M 642 121 L 676 121" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Stage 5: sample -->
+  <g filter="url(#sk)"><rect x="680" y="86" width="110" height="70" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/></g>
+  <text x="735" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">⑤ sample</text>
+  <text x="735" y="128" text-anchor="middle" font-size="9" fill="#666">top-k/p</text>
+  <text x="735" y="142" text-anchor="middle" font-size="9" fill="#666">emit token</text>
+
+  <path d="M 792 121 L 826 121" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Stage 6: return -->
+  <g filter="url(#sk)"><rect x="830" y="86" width="100" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="880" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">⑥ return</text>
+  <text x="880" y="128" text-anchor="middle" font-size="9" fill="#666">set_result</text>
+  <text x="880" y="142" text-anchor="middle" font-size="9" fill="#666">FINISHED</text>
+
+  <!-- ===== State transitions below ===== -->
+  <text x="470" y="186" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">状态机视角</text>
+
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="60" y="200" width="100" height="40" rx="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+    <text x="110" y="224" text-anchor="middle" fill="#7a5415" font-weight="bold">WAITING</text>
+
+    <path d="M 162 220 L 198 220" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="180" y="212" text-anchor="middle" font-size="8" fill="#888">schedule</text>
+
+    <g filter="url(#sk)"><rect x="200" y="200" width="100" height="40" rx="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="250" y="224" text-anchor="middle" fill="#2e6e2e" font-weight="bold">RUNNING</text>
+
+    <!-- three outcomes -->
+    <path d="M 302 210 Q 380 195 458 210" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <path d="M 302 220 Q 380 220 458 220" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <path d="M 302 230 Q 380 245 458 230" stroke="#b85450" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="460" y="200" width="100" height="40" rx="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="510" y="224" text-anchor="middle" fill="#2e6e2e" font-weight="bold">FINISHED</text>
+
+    <g filter="url(#sk)"><rect x="460" y="246" width="100" height="34" rx="17" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <text x="510" y="268" text-anchor="middle" font-size="10" fill="#7a5415">TIMEOUT</text>
+
+    <g filter="url(#sk)"><rect x="460" y="286" width="100" height="34" rx="17" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="510" y="308" text-anchor="middle" font-size="10" fill="#b03a3a">CANCELLED</text>
+  </g>
+
+  <text x="380" y="212" text-anchor="middle" font-size="8" fill="#2e6e2e">完成</text>
+  <text x="380" y="262" text-anchor="middle" font-size="8" fill="#7a5415">超时</text>
+  <text x="380" y="304" text-anchor="middle" font-size="8" fill="#b03a3a">取消</text>
+
+  <!-- ===== Key metrics per stage ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="340" width="860" height="220" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="490" y="364" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">每阶段的关键指标与面试考点</text>
+
+  <g font-size="10" fill="#444">
+    <text x="80" y="390"><tspan font-weight="bold" fill="#4a8edb">① submit</tspan>：延迟 &lt; 1ms（仅入队 + notify）</text>
+    <text x="80" y="408"><tspan fill="#888">  考点：为什么 submit 不阻塞？→ 条件变量 notify 异步唤醒</tspan></text>
+
+    <text x="80" y="434"><tspan font-weight="bold" fill="#c98a2b">②③ queue + schedule</tspan>：每轮 iteration 重新凑批（Continuous Batching）</text>
+    <text x="80" y="452"><tspan fill="#888">  考点：Continuous vs Dynamic Batching？→ iteration 级 vs request 级</tspan></text>
+
+    <text x="80" y="478"><tspan font-weight="bold" fill="#4a8e4a">④ forward</tspan>：prefill（compute-bound）vs decode（memory-bound）</text>
+    <text x="80" y="496"><tspan fill="#888">  考点：为什么 decode 是 memory-bound？→ M=1，GEMM 退化，算术强度极低</tspan></text>
+
+    <text x="80" y="522"><tspan font-weight="bold" fill="#5a3a7a">⑤ sample</tspan>：top-k / top-p 采样，Streaming 每 token 触发 stream_callback</text>
+    <text x="80" y="540"><tspan fill="#888">  考点：Streaming 如何实现？→ emit_token 逐个调用，SSE 打字机效果</tspan></text>
+  </g>
+
+  <text x="470" y="560" text-anchor="middle" font-size="9" fill="#888" font-style="italic">画数据流图 = 把"系统怎么工作"变成"一条线 + 状态机"，面试官一眼看懂</text>
+</svg>

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" viewBox="0 0 860 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">合并区间：排序 + 线性扫描</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Step 1: unsorted intervals ===== -->
+  <text x="430" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">原始区间（无序）</text>
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="80" y="80" width="80" height="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="120" y="94" text-anchor="middle" fill="#2b6e9e">[1,3]</text>
+    <g filter="url(#sk)"><rect x="200" y="80" width="120" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="260" y="94" text-anchor="middle" fill="#2e6e2e">[8,10]</text>
+    <g filter="url(#sk)"><rect x="360" y="80" width="80" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="400" y="94" text-anchor="middle" fill="#7a5415">[2,6]</text>
+    <g filter="url(#sk)"><rect x="480" y="80" width="120" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="540" y="94" text-anchor="middle" fill="#b03a3a">[15,18]</text>
+    <g filter="url(#sk)"><rect x="640" y="80" width="80" height="20" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+    <text x="680" y="94" text-anchor="middle" fill="#5a3a7a">[1,2]</text>
+  </g>
+
+  <!-- arrow down -->
+  <path d="M 430 110 L 430 130" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="450" y="124" font-size="10" fill="#888">① 按左端点排序</text>
+
+  <!-- ===== Step 2: sorted ===== -->
+  <text x="430" y="146" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">排序后（左端点升序）</text>
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="60" y="158" width="80" height="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="100" y="172" text-anchor="middle" fill="#2b6e9e">[1,3]</text>
+    <g filter="url(#sk)"><rect x="148" y="158" width="80" height="20" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+    <text x="188" y="172" text-anchor="middle" fill="#5a3a7a">[1,2]</text>
+    <g filter="url(#sk)"><rect x="236" y="158" width="80" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="276" y="172" text-anchor="middle" fill="#7a5415">[2,6]</text>
+    <g filter="url(#sk)"><rect x="324" y="158" width="120" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="384" y="172" text-anchor="middle" fill="#2e6e2e">[8,10]</text>
+    <g filter="url(#sk)"><rect x="452" y="158" width="120" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="512" y="172" text-anchor="middle" fill="#b03a3a">[15,18]</text>
+  </g>
+
+  <!-- arrow down -->
+  <path d="M 430 184 L 430 204" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="450" y="198" font-size="10" fill="#888">② 线性扫描合并</text>
+
+  <!-- ===== Step 3: scan ===== -->
+  <text x="430" y="220" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">扫描合并（重叠则并，否则新建）</text>
+
+  <!-- number line -->
+  <g filter="url(#sk)">
+    <line x1="60" y1="250" x2="620" y2="250" stroke="#888" stroke-width="1.2"/>
+  </g>
+  <g font-size="9" fill="#888">
+    <text x="60" y="266">0</text>
+    <text x="180" y="266">5</text>
+    <text x="300" y="266">10</text>
+    <text x="420" y="266">15</text>
+    <text x="540" y="266">20</text>
+  </g>
+
+  <!-- merged intervals on number line -->
+  <g font-size="10">
+    <!-- [1,6] merged -->
+    <g filter="url(#sk)"><rect x="72" y="280" width="156" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+    <text x="150" y="298" text-anchor="middle" fill="#2b6e9e" font-weight="bold">[1,6]</text>
+    <text x="150" y="324" text-anchor="middle" font-size="8" fill="#2b6e9e">[1,3]+[1,2]+[2,6] 合并</text>
+
+    <!-- [8,10] -->
+    <g filter="url(#sk)"><rect x="252" y="280" width="72" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+    <text x="288" y="298" text-anchor="middle" fill="#2e6e2e" font-weight="bold">[8,10]</text>
+    <text x="288" y="324" text-anchor="middle" font-size="8" fill="#2e6e2e">独立，不重叠</text>
+
+    <!-- [15,18] -->
+    <g filter="url(#sk)"><rect x="420" y="280" width="72" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="456" y="298" text-anchor="middle" fill="#b03a3a" font-weight="bold">[15,18]</text>
+    <text x="456" y="324" text-anchor="middle" font-size="8" fill="#b03a3a">独立，不重叠</text>
+  </g>
+
+  <!-- ===== Decision logic ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="350" width="740" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="430" y="374" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">合并判定逻辑</text>
+
+  <g font-size="11">
+    <text x="80" y="400" fill="#444" font-family="monospace">当前 cur = [l, r]，下一个 iv = [a, b]（已排序，a ≥ l）：</text>
+
+    <g filter="url(#sk)"><rect x="80" y="414" width="340" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="92" y="436" fill="#2e6e2e" font-weight="bold" font-family="monospace">if a &lt;= r:  r = max(r, b)   // 重叠 → 合并</text>
+
+    <g filter="url(#sk)"><rect x="440" y="414" width="340" height="36" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="452" y="436" fill="#b03a3a" font-weight="bold" font-family="monospace">else:       push cur; cur = iv // 不重叠 → 新建</text>
+
+    <text x="80" y="476" fill="#888" font-size="10">关键：排序后只需看相邻 → O(n) 扫描；总 O(n log n) 由排序主导</text>
+    <text x="80" y="492" fill="#888" font-size="10">类比：项目文档整合时，按主题归类（排序）后，相邻重复内容合并成一</text>
+  </g>
+</svg>

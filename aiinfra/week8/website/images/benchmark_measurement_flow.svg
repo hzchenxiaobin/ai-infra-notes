@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="560" viewBox="0 0 920 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="560" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Kernel Benchmark 测量流程</text>
+  <path d="M 280 42 Q 460 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: pipeline ===== -->
+  <text x="460" y="72" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">正确测量 = warmup + 多次计时 + 排除拷贝</text>
+
+  <!-- step boxes -->
+  <g font-size="10">
+    <g filter="url(#sk)"><rect x="40" y="92" width="150" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <text x="115" y="114" text-anchor="middle" font-weight="bold" fill="#2b6e9e">① Warmup</text>
+    <text x="115" y="132" text-anchor="middle" fill="#444">跑 3-5 次预热</text>
+    <text x="115" y="148" text-anchor="middle" fill="#888">填充 cache / JIT</text>
+
+    <path d="M 194 127 L 226 127" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="232" y="92" width="150" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="307" y="114" text-anchor="middle" font-weight="bold" fill="#2e6e2e">② cudaEvent 计时</text>
+    <text x="307" y="132" text-anchor="middle" fill="#444">start → N 次kernel</text>
+    <text x="307" y="148" text-anchor="middle" fill="#888">→ stop → sync</text>
+
+    <path d="M 386 127 L 418 127" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="424" y="92" width="150" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <text x="499" y="114" text-anchor="middle" font-weight="bold" fill="#7a5415">③ 算指标</text>
+    <text x="499" y="132" text-anchor="middle" fill="#444">带宽 / TFLOPS</text>
+    <text x="499" y="148" text-anchor="middle" fill="#888">= 数据量 / 时间</text>
+
+    <path d="M 578 127 L 610 127" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="616" y="92" width="150" height="70" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="691" y="114" text-anchor="middle" font-weight="bold" fill="#b03a3a">④ 对比基线</text>
+    <text x="691" y="132" text-anchor="middle" fill="#444">vs cuBLAS / 理论峰</text>
+    <text x="691" y="148" text-anchor="middle" fill="#888">得出百分比</text>
+
+    <path d="M 770 127 L 802 127" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="808" y="92" width="92" height="70" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <text x="854" y="118" text-anchor="middle" font-weight="bold" fill="#5a3a7a">⑤ 填表</text>
+    <text x="854" y="138" text-anchor="middle" fill="#444">写进 README</text>
+    <text x="854" y="154" text-anchor="middle" fill="#888">benchmark 表</text>
+  </g>
+
+  <!-- ===== Middle: code snippet ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="180" width="500" height="180" rx="8" fill="#fff" stroke="#bbb" stroke-width="1.2"/>
+  </g>
+  <text x="56" y="202" font-size="11" font-weight="bold" fill="#2b6e9e">cudaEvent 计时模板</text>
+  <g font-size="10" fill="#444" font-family="monospace">
+    <text x="56" y="222">cudaEvent_t start, stop;</text>
+    <text x="56" y="238">cudaEventCreate(&amp;start); cudaEventCreate(&amp;stop);</text>
+    <text x="56" y="258">// warmup</text>
+    <text x="56" y="274">for (int i = 0; i &lt; 5; i++) kernel&lt;..&gt;&gt;(args);</text>
+    <text x="56" y="294">cudaEventRecord(start);</text>
+    <text x="56" y="310">for (int i = 0; i &lt; 100; i++) kernel&lt;..&gt;&gt;(args);  <tspan fill="#888">// N 次</tspan></text>
+    <text x="56" y="326">cudaEventRecord(stop);</text>
+    <text x="56" y="342">cudaEventSynchronize(stop);</text>
+    <text x="56" y="358" fill="#b03a3a">cudaEventElapsedTime(&amp;ms, start, stop);  <tspan fill="#888">// ms</tspan></text>
+  </g>
+
+  <!-- formula box -->
+  <g filter="url(#sk)">
+    <rect x="560" y="180" width="340" height="180" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="730" y="204" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">指标计算公式</text>
+  <g font-size="11" fill="#444" font-family="monospace">
+    <text x="580" y="230">// 单次时间</text>
+    <text x="580" y="248" fill="#b03a3a">t = ms / N   (毫秒)</text>
+    <text x="580" y="274">// 内存带宽 (GB/s)</text>
+    <text x="580" y="292" fill="#b03a3a">BW = (R+W bytes) / t / 1e9</text>
+    <text x="580" y="318">// 算力 (TFLOPS)</text>
+    <text x="580" y="336" fill="#b03a3a">TFLOPS = (2·M·N·K) / t / 1e12</text>
+    <text x="580" y="354" fill="#888">利用 % = 实测 / 峰值 × 100</text>
+  </g>
+
+  <!-- ===== Bottom: common pitfalls ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="380" width="860" height="160" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="470" y="404" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">⚠️ Benchmark 常见坑（每个都会让数字失真）</text>
+
+  <g font-size="10" fill="#444">
+    <text x="60" y="430" font-weight="bold" fill="#b03a3a">坑1：不 warmup</text>
+    <text x="60" y="446">首次 kernel 含 JIT/cold miss → 偏慢</text>
+
+    <text x="60" y="470" font-weight="bold" fill="#b03a3a">坑2：计时内含 cudaMemcpy</text>
+    <text x="60" y="486">H2D/D2H 拷贝远慢于 kernel → 带宽假低</text>
+
+    <text x="60" y="510" font-weight="bold" fill="#b03a3a">坑3：只跑 1 次</text>
+    <text x="60" y="526">单次抖动大 → 取 N 次平均</text>
+
+    <text x="470" y="430" font-weight="bold" fill="#b03a3a">坑4：忘了 cudaDeviceSynchronize</text>
+    <text x="470" y="446">kernel 异步 → stop 立刻触发 → 时间≈0</text>
+
+    <text x="470" y="470" font-weight="bold" fill="#b03a3a">坑5：带宽算错 R+W</text>
+    <text x="470" y="486">copy 读+写=2x；GEMM 读 A+B 写 C=2MN+... </text>
+
+    <text x="470" y="510" font-weight="bold" fill="#b03a3a">坑6：不对比基线</text>
+    <text x="470" y="526">"1100 GB/s" 无意义 → 须除以峰值 ~1555</text>
+  </g>
+</svg>

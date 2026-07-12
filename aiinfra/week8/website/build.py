@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Build the Week 7 website from README.md (overview) and dayN/README.md (per-day).
+Build the Week 8 website from README.md (overview) and dayN/README.md (per-day).
 Generates:
-  - index.html: overview page (from week7/README.md)
-  - dayN.html: one page per day (from week7/dayN/README.md)
+  - index.html: overview page (from week8/README.md)
+  - dayN.html: one page per day (from week8/dayN/README.md)
 Uses relative paths (../css/..., ../js/...) for shared resources,
-since week7/ is one level below the deployment root on GitHub Pages.
+since week8/ is one level below the deployment root on GitHub Pages.
 """
 
 import re
@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 PLAN_SOURCE = Path(__file__).parent.parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
-WEEK7_DIR = Path(__file__).parent.parent
+WEEK8_DIR = Path(__file__).parent.parent
 
 
 def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
@@ -71,16 +71,16 @@ def escape_for_template_string(text: str) -> str:
 
 
 def load_overview_and_days():
-    """Load overview from week7/README.md and per-day markdown from week7/dayN/README.md."""
+    """Load overview from week8/README.md and per-day markdown from week8/dayN/README.md."""
 
-    readme_path = WEEK7_DIR / "README.md"
+    readme_path = WEEK8_DIR / "README.md"
     if not readme_path.exists():
-        raise FileNotFoundError(f"Week 7 README not found: {readme_path}")
+        raise FileNotFoundError(f"Week 8 README not found: {readme_path}")
     overview = readme_path.read_text(encoding="utf-8").replace("](website/images/", "](images/")
 
     day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
     days = []
-    for day_dir in sorted(WEEK7_DIR.glob("day*")):
+    for day_dir in sorted(WEEK8_DIR.glob("day*")):
         readme = day_dir / "README.md"
         if not readme.exists():
             continue
@@ -97,7 +97,7 @@ def load_overview_and_days():
         })
 
     if not days:
-        raise ValueError(f"No day*/README.md files found in {WEEK7_DIR}")
+        raise ValueError(f"No day*/README.md files found in {WEEK8_DIR}")
     days.sort(key=lambda d: d["num"])
     return overview, days
 
@@ -130,17 +130,17 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     overview_active = current_day is None
     overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 7 概览</a>')
+    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 8 概览</a>')
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
-    # Titles for all weeks; week 7 title is hardcoded, others come from the plan.
-    week_titles = {7: "系统整合"}
+    # Titles for all weeks; week 8 title is hardcoded, others come from the plan.
+    week_titles = {8: "项目打磨 + 面试准备"}
     for week in weeks:
         week_titles[week["num"]] = week["title"]
 
-    repo_root = WEEK7_DIR.parent
-    existing_days = get_day_numbers(WEEK7_DIR)
+    repo_root = WEEK8_DIR.parent
+    existing_days = get_day_numbers(WEEK8_DIR)
     week_data = [
         {
             "num": 1,
@@ -180,15 +180,15 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         },
         {
             "num": 7,
-            "href": "index.html",
-            "day_prefix": "",
-            "days": existing_days,
+            "href": "../week7/index.html",
+            "day_prefix": "../week7/",
+            "days": get_day_numbers(repo_root / "week7"),
         },
         {
             "num": 8,
-            "href": "../week8/index.html",
-            "day_prefix": "../week8/",
-            "days": get_day_numbers(repo_root / "week8"),
+            "href": "index.html",
+            "day_prefix": "",
+            "days": existing_days,
         },
     ]
     for week in weeks:
@@ -202,7 +202,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         })
 
     for info in week_data:
-        is_current = info["num"] == 7
+        is_current = info["num"] == 8
         expanded_cls = " is-expanded" if is_current else ""
         active_cls = " active" if is_current else ""
         aria_expanded = "true" if is_current else "false"
@@ -235,7 +235,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 def page_template(title: str, nav_html: str, markdown: str,
                   is_overview: bool = False, page_title: Optional[str] = None) -> str:
     escaped_markdown = escape_for_template_string(markdown)
-    page_title = page_title if page_title is not None else f"Week 7 - {title}"
+    page_title = page_title if page_title is not None else f"Week 8 - {title}"
     back_link = '' if is_overview else '<a class="back-link" href="index.html">← 返回概览</a>'
     bottom_nav = '' if is_overview else '<div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>'
 
@@ -359,11 +359,11 @@ def build_website(output_dir: Path) -> None:
 
     # Generate overview page
     overview_html = page_template(
-        title="Week 7 概览",
+        title="Week 8 概览",
         nav_html=build_nav(current_day=None, weeks=plan_weeks, days=days),
         markdown=overview_with_cards,
         is_overview=True,
-        page_title="Week 7 - 系统整合",
+        page_title="Week 8 - 项目打磨 + 面试准备",
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="680" viewBox="0 0 940 680" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="940" height="680" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Mini AI Infra 系统架构图（分层视图）</text>
+  <path d="M 280 42 Q 470 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Layer 1: User API ===== -->
+  <g filter="url(#sk)"><rect x="340" y="62" width="260" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="470" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">ConcurrentEngine</text>
+  <text x="470" y="100" text-anchor="middle" font-size="9" fill="#666">submit() → Future / Callback / Streaming</text>
+
+  <path d="M 470 112 L 470 128" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 2: Queue + Scheduler ===== -->
+  <g filter="url(#sk)"><rect x="120" y="130" width="260" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="250" y="154" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">ThreadSafeRequestQueue</text>
+  <text x="250" y="172" text-anchor="middle" font-size="9" fill="#666">条件变量 + 优先级插入 + 批量获取</text>
+
+  <g filter="url(#sk)"><rect x="560" y="130" width="260" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="690" y="154" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Scheduler</text>
+  <text x="690" y="172" text-anchor="middle" font-size="9" fill="#666">Continuous Batching + 优先级 + 资源预算</text>
+
+  <path d="M 380 158 L 556 158" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="468" y="152" text-anchor="middle" font-size="8" fill="#7a5415">get_batch()</text>
+
+  <path d="M 690 188 L 690 206" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 3: Worker + KV Cache ===== -->
+  <g filter="url(#sk)"><rect x="400" y="208" width="300" height="56" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="550" y="232" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Worker（Model Forward）</text>
+  <text x="550" y="250" text-anchor="middle" font-size="9" fill="#666">Prefill / Decode · 锁外执行</text>
+
+  <g filter="url(#sk)"><rect x="740" y="208" width="160" height="56" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="820" y="232" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a7a">KV Cache</text>
+  <text x="820" y="250" text-anchor="middle" font-size="9" fill="#666">Manager</text>
+
+  <path d="M 700 236 L 736 236" stroke="#8e5db8" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="718" y="228" text-anchor="middle" font-size="8" fill="#5a3a7a">read/write</text>
+
+  <path d="M 550 266 L 550 284" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 4: Model layers ===== -->
+  <g filter="url(#sk)"><rect x="160" y="286" width="660" height="56" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="490" y="308" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Transformer Block × N</text>
+  <text x="490" y="326" text-anchor="middle" font-size="9" fill="#666">RMSNorm → RoPE → Attention → RMSNorm → SwiGLU MLP</text>
+
+  <path d="M 490 344 L 490 362" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 5: CUDA Kernels ===== -->
+  <text x="470" y="378" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">手写 CUDA Kernel 层</text>
+
+  <g font-size="10">
+    <g filter="url(#sk)"><rect x="80" y="390" width="130" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="145" y="410" text-anchor="middle" fill="#b03a3a" font-weight="bold">GEMM</text>
+    <text x="145" y="424" text-anchor="middle" fill="#888" font-size="8">cuBLAS 72%</text>
+
+    <g filter="url(#sk)"><rect x="230" y="390" width="130" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="295" y="410" text-anchor="middle" fill="#b03a3a" font-weight="bold">FlashAttention</text>
+    <text x="295" y="424" text-anchor="middle" fill="#888" font-size="8">2.1x 加速</text>
+
+    <g filter="url(#sk)"><rect x="380" y="390" width="130" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="445" y="410" text-anchor="middle" fill="#b03a3a" font-weight="bold">Softmax</text>
+    <text x="445" y="424" text-anchor="middle" fill="#888" font-size="8">三遍数值稳定</text>
+
+    <g filter="url(#sk)"><rect x="530" y="390" width="130" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="595" y="410" text-anchor="middle" fill="#b03a3a" font-weight="bold">RMSNorm</text>
+    <text x="595" y="424" text-anchor="middle" fill="#888" font-size="8">融合归约</text>
+
+    <g filter="url(#sk)"><rect x="680" y="390" width="130" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="745" y="410" text-anchor="middle" fill="#b03a3a" font-weight="bold">RoPE / SiLU</text>
+    <text x="745" y="424" text-anchor="middle" fill="#888" font-size="8">elementwise</text>
+  </g>
+
+  <path d="M 550 438 L 550 454" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Layer 6: Sampler + Result ===== -->
+  <g filter="url(#sk)"><rect x="340" y="456" width="260" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="470" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Sampler + Result Queue</text>
+  <text x="470" y="494" text-anchor="middle" font-size="9" fill="#666">Top-k / Top-p → Future.set_result()</text>
+
+  <!-- ===== Thread annotations on right ===== -->
+  <g filter="url(#sk)">
+    <rect x="820" y="62" width="100" height="442" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="4 3"/>
+  </g>
+  <text x="870" y="84" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b2b2b">三线程</text>
+  <g font-size="9" fill="#444">
+    <text x="835" y="110">调度线程</text>
+    <text x="835" y="124" fill="#888">凑批→running</text>
+    <text x="835" y="160">执行线程</text>
+    <text x="835" y="174" fill="#888">forward(锁外)</text>
+    <text x="835" y="210">超时线程</text>
+    <text x="835" y="224" fill="#888">清理过期请求</text>
+  </g>
+  <text x="870" y="280" text-anchor="middle" font-size="8" fill="#888" font-style="italic">锁的粒度：</text>
+  <text x="870" y="294" text-anchor="middle" font-size="8" fill="#888" font-style="italic">running_lock</text>
+  <text x="870" y="308" text-anchor="middle" font-size="8" fill="#888" font-style="italic">保护 running</text>
+  <text x="870" y="322" text-anchor="middle" font-size="8" fill="#888" font-style="italic">map</text>
+
+  <!-- ===== Bottom: layer legend ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="530" width="860" height="130" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="554" font-size="12" font-weight="bold" fill="#2b2b2b">五层架构 = 面试时从上到下讲</text>
+  <g font-size="10" fill="#444">
+    <text x="80" y="576"><tspan font-weight="bold" fill="#4a8edb">① API 层</tspan>：ConcurrentEngine — submit() 返回 Future/Callback/Streaming</text>
+    <text x="80" y="596"><tspan font-weight="bold" fill="#c98a2b">② 调度层</tspan>：Queue（条件变量）+ Scheduler（Continuous Batching + 优先级 + 资源预算）</text>
+    <text x="80" y="616"><tspan font-weight="bold" fill="#4a8e4a">③ 执行层</tspan>：Worker（Model Forward，锁外执行）+ KV Cache Manager（读写历史 K/V）</text>
+    <text x="80" y="636"><tspan font-weight="bold" fill="#d6a040">④ 模型层</tspan>：Transformer Block × N（RMSNorm → RoPE → Attention → RMSNorm → SwiGLU MLP）</text>
+    <text x="80" y="656"><tspan font-weight="bold" fill="#b85450">⑤ Kernel 层</tspan>：手写 CUDA（GEMM / FlashAttention / Softmax / RMSNorm / RoPE / SiLU）</text>
+  </g>
+</svg>
