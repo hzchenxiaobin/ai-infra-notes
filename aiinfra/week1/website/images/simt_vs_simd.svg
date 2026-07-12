@@ -1,37 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
   <defs>
-    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
   </defs>
 
-  <g filter="url(#sketch)">
+  <rect width="720" height="380" fill="#fdfcf7"/>
 
-  <rect width="720" height="360" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">SIMT vs SIMD</text>
+  <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">SIMT vs SIMD</text>
+  <path d="M 280 44 Q 360 52 440 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
 
-  <!-- SIMD -->
-  <text x="180" y="80" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">SIMD</text>
-  <text x="180" y="105" text-anchor="middle" font-size="13" fill="#666666">Single Instruction Multiple Data</text>
+  <!-- 左：SIMD（蓝） -->
+  <text x="180" y="76" text-anchor="middle" font-size="16" font-weight="bold" fill="#4a8edb">SIMD</text>
+  <text x="180" y="96" text-anchor="middle" font-size="11" fill="#666">Single Instruction Multiple Data</text>
 
-  <rect x="80" y="130" width="200" height="140" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="180" y="165" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">一条指令</text>
-  <text x="180" y="190" text-anchor="middle" font-size="13" fill="#666666">同时处理多组数据</text>
-  <text x="180" y="215" text-anchor="middle" font-size="13" fill="#666666">数据向量宽度固定</text>
-  <text x="180" y="240" text-anchor="middle" font-size="13" fill="#666666">如：AVX-512</text>
-
-  <!-- SIMT -->
-  <text x="540" y="80" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">SIMT</text>
-  <text x="540" y="105" text-anchor="middle" font-size="13" fill="#666666">Single Instruction Multiple Threads</text>
-
-  <rect x="440" y="130" width="200" height="140" rx="8" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
-  <text x="540" y="165" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">一条指令</text>
-  <text x="540" y="190" text-anchor="middle" font-size="13" fill="#666666">多个线程各自执行</text>
-  <text x="540" y="215" text-anchor="middle" font-size="13" fill="#666666">每个线程有独立 PC</text>
-  <text x="540" y="240" text-anchor="middle" font-size="13" fill="#666666">如：NVIDIA GPU Warp</text>
-
-  <!-- Comparison -->
-  <text x="360" y="310" text-anchor="middle" font-size="15" fill="#2b2b2b" font-weight="bold">SIMT 可以模拟 SIMD，但 SIMD 无法模拟 SIMT 的分支行为</text>
+  <g filter="url(#sk)">
+    <rect x="70" y="110" width="220" height="160" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
   </g>
+  <text x="180" y="138" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">一条指令</text>
+  <text x="180" y="160" text-anchor="middle" font-size="12" fill="#444">同时处理固定宽度数据向量</text>
+  <!-- 数据向量示意 -->
+  <g filter="url(#sk)">
+    <rect x="100" y="178" width="36" height="28" rx="4" fill="#fffdf3" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="138" y="178" width="36" height="28" rx="4" fill="#fffdf3" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="176" y="178" width="36" height="28" rx="4" fill="#fffdf3" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="214" y="178" width="36" height="28" rx="4" fill="#fffdf3" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="180" y="196" text-anchor="middle" font-size="9" fill="#888">固定宽度向量</text>
+  <text x="180" y="232" text-anchor="middle" font-size="12" fill="#444">分支处理困难</text>
+  <text x="180" y="254" text-anchor="middle" font-size="11" fill="#888">如：AVX-512</text>
+
+  <!-- 右：SIMT（绿） -->
+  <text x="540" y="76" text-anchor="middle" font-size="16" font-weight="bold" fill="#4a8e4a">SIMT</text>
+  <text x="540" y="96" text-anchor="middle" font-size="11" fill="#666">Single Instruction Multiple Threads</text>
+
+  <g filter="url(#sk)">
+    <rect x="430" y="110" width="220" height="160" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="540" y="138" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">一条指令</text>
+  <text x="540" y="160" text-anchor="middle" font-size="12" fill="#444">32 个线程各自执行</text>
+  <!-- 线程示意 -->
+  <g filter="url(#sk)">
+    <circle cx="470" cy="192" r="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <circle cx="505" cy="192" r="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <circle cx="540" cy="192" r="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <circle cx="575" cy="192" r="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <circle cx="610" cy="192" r="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="540" y="196" text-anchor="middle" font-size="8" fill="#888">...</text>
+  <text x="540" y="232" text-anchor="middle" font-size="12" fill="#444">每线程独立 PC，可分支</text>
+  <text x="540" y="254" text-anchor="middle" font-size="11" fill="#888">如：NVIDIA GPU Warp</text>
+
+  <!-- 底部对比 -->
+  <g filter="url(#sk)">
+    <rect x="80" y="296" width="560" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="360" y="320" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">SIMT 可模拟 SIMD，但 SIMD 无法模拟 SIMT 的分支行为</text>
+  <text x="360" y="340" text-anchor="middle" font-size="11" fill="#888">SIMT 每线程有独立寄存器/PC → 支持 divergence（有代价）</text>
 </svg>

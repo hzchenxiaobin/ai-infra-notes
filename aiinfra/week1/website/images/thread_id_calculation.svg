@@ -1,73 +1,94 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 540" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
   <defs>
-    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
   </defs>
 
-  <g filter="url(#sketch)">
-
   <rect width="720" height="540" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">CUDA 线程 ID 计算</text>
 
-  <!-- 1D grid + 1D block -->
-  <text x="60" y="72" font-size="16" font-weight="bold" fill="#6ab0ff">1D grid + 1D block</text>
+  <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">CUDA 线程 ID 计算</text>
+  <path d="M 260 44 Q 360 52 460 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
 
-  <!-- Grid label -->
-  <text x="60" y="100" font-size="13" fill="#666666">Grid (gridDim.x = 3)</text>
+  <!-- ===== 1D grid + 1D block ===== -->
+  <text x="60" y="76" font-size="15" font-weight="bold" fill="#4a8edb">① 1D grid + 1D block</text>
+  <text x="60" y="98" font-size="12" fill="#666">Grid（gridDim.x = 3）</text>
 
-  <!-- Blocks -->
-  <rect x="60" y="115" width="180" height="70" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="150" y="138" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 0</text>
-  <text x="150" y="158" text-anchor="middle" font-size="11" fill="#666666">blockIdx.x = 0</text>
-
-  <rect x="250" y="115" width="180" height="70" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="340" y="138" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 1</text>
-  <text x="340" y="158" text-anchor="middle" font-size="11" fill="#666666">blockIdx.x = 1</text>
-
-  <rect x="440" y="115" width="180" height="70" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="530" y="138" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 2</text>
-  <text x="530" y="158" text-anchor="middle" font-size="11" fill="#666666">blockIdx.x = 2</text>
-
-  <!-- Threads in Block 1 (zoom) -->
-  <text x="250" y="215" font-size="13" fill="#666666">Block 1 内部：blockDim.x = 4</text>
-  <circle cx="265" cy="245" r="14" fill="#5cb86c"/>
-  <text x="265" y="250" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T0</text>
-  <circle cx="305" cy="245" r="14" fill="#5cb86c"/>
-  <text x="305" y="250" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T1</text>
-  <circle cx="345" cy="245" r="14" fill="#5cb86c"/>
-  <text x="345" y="250" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T2</text>
-  <circle cx="385" cy="245" r="14" fill="#5cb86c"/>
-  <text x="385" y="250" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T3</text>
-
-  <!-- Thread labels -->
-  <text x="265" y="275" text-anchor="middle" font-size="10" fill="#666666">threadIdx.x=0</text>
-  <text x="385" y="275" text-anchor="middle" font-size="10" fill="#666666">threadIdx.x=3</text>
-
-  <!-- Formula -->
-  <rect x="60" y="305" width="600" height="55" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
-  <text x="360" y="328" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">global_tid = blockIdx.x × blockDim.x + threadIdx.x</text>
-  <text x="360" y="350" text-anchor="middle" font-size="13" fill="#f0c050">例：Block 1 的 T3 → 1 × 4 + 3 = 7</text>
-
-  <!-- 2D grid + 2D block -->
-  <text x="60" y="395" font-size="16" font-weight="bold" fill="#6ab0ff">2D grid + 2D block（图像处理常用）</text>
-
-  <!-- 2D grid -->
-  <rect x="60" y="415" width="120" height="80" rx="6" fill="#4a8edb" opacity="0.15" stroke="#6ab0ff" stroke-width="1.5"/>
-  <rect x="180" y="415" width="120" height="80" rx="6" fill="#4a8edb" opacity="0.15" stroke="#6ab0ff" stroke-width="1.5"/>
-  <rect x="60" y="495" width="120" height="20" fill="none"/>
-  <text x="130" y="440" text-anchor="middle" font-size="12" fill="#2b2b2b">Block (0,0)</text>
-  <text x="250" y="440" text-anchor="middle" font-size="12" fill="#2b2b2b">Block (1,0)</text>
-
-  <!-- Highlight a block -->
-  <rect x="180" y="415" width="120" height="80" rx="6" fill="none" stroke="#f0c050" stroke-width="2"/>
-  <text x="240" y="520" text-anchor="middle" font-size="11" fill="#f0c050">blockIdx = (1, 0)</text>
-
-  <!-- Formula -->
-  <rect x="330" y="415" width="330" height="90" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
-  <text x="360" y="440" font-size="13" fill="#2b2b2b" font-weight="bold">row = blockIdx.y × blockDim.y + threadIdx.y</text>
-  <text x="360" y="465" font-size="13" fill="#2b2b2b" font-weight="bold">col = blockIdx.x × blockDim.x + threadIdx.x</text>
-  <text x="360" y="490" font-size="12" fill="#666666">global_tid = row × (gridDim.x × blockDim.x) + col</text>
+  <!-- 三个 block -->
+  <g filter="url(#sk)">
+    <rect x="60" y="110" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
   </g>
+  <text x="150" y="136" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 0</text>
+  <text x="150" y="156" text-anchor="middle" font-size="11" fill="#666">blockIdx.x = 0</text>
+
+  <g filter="url(#sk)">
+    <rect x="250" y="110" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="136" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 1</text>
+  <text x="340" y="156" text-anchor="middle" font-size="11" fill="#666">blockIdx.x = 1</text>
+
+  <g filter="url(#sk)">
+    <rect x="440" y="110" width="180" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="530" y="136" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">Block 2</text>
+  <text x="530" y="156" text-anchor="middle" font-size="11" fill="#666">blockIdx.x = 2</text>
+
+  <!-- Block 1 内部展开（绿） -->
+  <text x="250" y="200" font-size="12" fill="#666">Block 1 内部：blockDim.x = 4</text>
+  <g filter="url(#sk)">
+    <circle cx="270" cy="230" r="14" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <circle cx="315" cy="230" r="14" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <circle cx="360" cy="230" r="14" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <circle cx="405" cy="230" r="14" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="270" y="235" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">T0</text>
+  <text x="315" y="235" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">T1</text>
+  <text x="360" y="235" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">T2</text>
+  <text x="405" y="235" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">T3</text>
+  <text x="270" y="258" text-anchor="middle" font-size="10" fill="#888">threadIdx=0</text>
+  <text x="405" y="258" text-anchor="middle" font-size="10" fill="#888">threadIdx=3</text>
+
+  <!-- 1D 公式 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="276" width="600" height="54" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="360" y="300" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">global_tid = blockIdx.x × blockDim.x + threadIdx.x</text>
+  <text x="360" y="320" text-anchor="middle" font-size="12" fill="#c98a2b">例：Block 1 的 T3 → 1 × 4 + 3 = 7</text>
+
+  <!-- 分隔线 -->
+  <path d="M 60 352 L 660 352" stroke="#e2dccd" stroke-width="1" filter="url(#sk)"/>
+
+  <!-- ===== 2D grid + 2D block ===== -->
+  <text x="60" y="382" font-size="15" font-weight="bold" fill="#4a8edb">② 2D grid + 2D block（图像处理常用）</text>
+
+  <!-- 2D grid 示意 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="398" width="110" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="175" y="398" width="110" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="60" y="463" width="110" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="175" y="463" width="110" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="115" y="432" text-anchor="middle" font-size="11" fill="#2b2b2b">Block (0,0)</text>
+  <text x="230" y="432" text-anchor="middle" font-size="11" fill="#2b2b2b">Block (1,0)</text>
+  <text x="115" y="497" text-anchor="middle" font-size="11" fill="#2b2b2b">Block (0,1)</text>
+  <text x="230" y="497" text-anchor="middle" font-size="11" fill="#2b2b2b">Block (1,1)</text>
+
+  <!-- 高亮 Block (1,0) -->
+  <g filter="url(#sk)">
+    <rect x="175" y="398" width="110" height="60" rx="6" fill="none" stroke="#c98a2b" stroke-width="2.2"/>
+  </g>
+  <text x="230" y="534" text-anchor="middle" font-size="10" fill="#c98a2b">blockIdx = (1, 0)</text>
+
+  <!-- 2D 公式 -->
+  <g filter="url(#sk)">
+    <rect x="320" y="398" width="340" height="104" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="424" font-size="12" fill="#2b2b2b" font-weight="bold">row = blockIdx.y × blockDim.y + threadIdx.y</text>
+  <text x="340" y="448" font-size="12" fill="#2b2b2b" font-weight="bold">col = blockIdx.x × blockDim.x + threadIdx.x</text>
+  <text x="340" y="476" font-size="11" fill="#666">global_tid =</text>
+  <text x="340" y="494" font-size="11" fill="#666">  row × (gridDim.x × blockDim.x) + col</text>
 </svg>
