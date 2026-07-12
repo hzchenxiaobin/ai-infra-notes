@@ -106,10 +106,10 @@ def load_overview_and_days():
     return overview, days
 
 
-def get_day_numbers(week_dir: Path) -> list:
-    """Return sorted day numbers for a week directory by parsing README titles."""
+def get_day_info(week_dir: Path) -> list:
+    """Return sorted day info [{'num': int, 'title': str}, ...] by parsing README titles."""
     day_title_pattern = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
-    nums = []
+    info = []
     for day_dir in sorted(week_dir.glob("day*")):
         readme = day_dir / "README.md"
         if not readme.exists():
@@ -118,8 +118,8 @@ def get_day_numbers(week_dir: Path) -> list:
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
         match = day_title_pattern.match(first_line)
         if match:
-            nums.append(int(match.group(1)))
-    return sorted(nums)
+            info.append({"num": int(match.group(1)), "title": match.group(2).strip()})
+    return sorted(info, key=lambda d: d["num"])
 
 
 def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
@@ -128,7 +128,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         weeks = []
     if days is None:
         days = []
-    existing_days = [d["num"] for d in days]
+    existing_days = days
 
     lines = []
 
@@ -144,31 +144,31 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         week_titles[week["num"]] = week["title"]
 
     repo_root = WEEK5_DIR.parent
-    existing_days = get_day_numbers(WEEK5_DIR)
+    existing_days = get_day_info(WEEK5_DIR)
     week_data = [
         {
             "num": 1,
             "href": "../index.html",
             "day_prefix": "../",
-            "days": get_day_numbers(repo_root / "week1"),
+            "days": get_day_info(repo_root / "week1"),
         },
         {
             "num": 2,
             "href": "../week2/index.html",
             "day_prefix": "../week2/",
-            "days": get_day_numbers(repo_root / "week2"),
+            "days": get_day_info(repo_root / "week2"),
         },
         {
             "num": 3,
             "href": "../week3/index.html",
             "day_prefix": "../week3/",
-            "days": get_day_numbers(repo_root / "week3"),
+            "days": get_day_info(repo_root / "week3"),
         },
         {
             "num": 4,
             "href": "../week4/index.html",
             "day_prefix": "../week4/",
-            "days": get_day_numbers(repo_root / "week4"),
+            "days": get_day_info(repo_root / "week4"),
         },
         {
             "num": 5,
@@ -180,19 +180,19 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
             "num": 6,
             "href": "../week6/index.html",
             "day_prefix": "../week6/",
-            "days": get_day_numbers(repo_root / "week6"),
+            "days": get_day_info(repo_root / "week6"),
         },
         {
             "num": 7,
             "href": "../week7/index.html",
             "day_prefix": "../week7/",
-            "days": get_day_numbers(repo_root / "week7"),
+            "days": get_day_info(repo_root / "week7"),
         },
         {
             "num": 8,
             "href": "../week8/index.html",
             "day_prefix": "../week8/",
-            "days": get_day_numbers(repo_root / "week8"),
+            "days": get_day_info(repo_root / "week8"),
         },
     ]
     for week in weeks:
@@ -224,10 +224,12 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         lines.append('  <div class="nav-accordion-content">')
         lines.append('    <div class="nav-section">')
         lines.append(f'<a class="nav-link overview-link" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
-        for day_num in info["days"]:
+        for day in info["days"]:
+            day_num = day["num"]
             day_active = " active" if (is_current and current_day == day_num) else ""
+            day_title = day["title"]
             lines.append(
-                f'<a class="nav-link day-link{day_active}" href="{info["day_prefix"]}day{day_num}.html">Day {day_num}</a>'
+                f'<a class="nav-link day-link{day_active}" href="{info["day_prefix"]}day{day_num}.html">Day {day_num}：{day_title}</a>'
             )
         lines.append('    </div>')
         lines.append('  </div>')
