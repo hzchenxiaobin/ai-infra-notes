@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <rect width="820" height="440" fill="#fdfcf7"/>
+
+  <text x="410" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">十大易混淆概念对比</text>
+  <path d="M 280 44 Q 410 52 540 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="58" text-anchor="middle" font-size="11" fill="#888">面试官最爱用对比题区分"背了"和"懂了"</text>
+
+  <!-- 表头 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="72" width="760" height="32" fill="#f0ede4" stroke="#9e9e9e" stroke-width="1.3"/>
+  </g>
+  <text x="120" y="93" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">概念 A</text>
+  <text x="300" y="93" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">概念 B</text>
+  <text x="590" y="93" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">关键区别</text>
+
+  <!-- 行 1 Prefill / Decode -->
+  <g filter="url(#sk)">
+    <rect x="30" y="104" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="124" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">Prefill</text>
+  <text x="300" y="124" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">Decode</text>
+  <text x="590" y="124" text-anchor="middle" font-size="11" fill="#444">输入 (B,N,d) vs (B,1,d)；compute-bound vs memory-bound</text>
+
+  <!-- 行 2 Dynamic / Continuous -->
+  <g filter="url(#sk)">
+    <rect x="30" y="134" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="154" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">Dynamic Batching</text>
+  <text x="300" y="154" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">Continuous Batching</text>
+  <text x="590" y="154" text-anchor="middle" font-size="11" fill="#444">request-level 同进退 vs iteration-level 动态进出</text>
+
+  <!-- 行 3 Recompute / Swap -->
+  <g filter="url(#sk)">
+    <rect x="30" y="164" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="184" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">Recompute</text>
+  <text x="300" y="184" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">Swap</text>
+  <text x="590" y="184" text-anchor="middle" font-size="11" fill="#444">丢 KV 重算（快）vs 换出到 CPU（省显存）</text>
+
+  <!-- 行 4 SM / Memory Throughput -->
+  <g filter="url(#sk)">
+    <rect x="30" y="194" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="214" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">SM Throughput</text>
+  <text x="300" y="214" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">Memory Throughput</text>
+  <text x="590" y="214" text-anchor="middle" font-size="11" fill="#444">算力利用率 vs 带宽利用率；谁高谁 bound</text>
+
+  <!-- 行 5 shfl_down / shfl_xor -->
+  <g filter="url(#sk)">
+    <rect x="30" y="224" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="244" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">__shfl_down_sync</text>
+  <text x="300" y="244" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">__shfl_xor_sync</text>
+  <text x="590" y="244" text-anchor="middle" font-size="11" fill="#444">reduce 偏移（lane-offset）vs butterfly 蝶形交换</text>
+
+  <!-- 行 6 FA1 / FA2 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="254" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="274" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">FlashAttention-1</text>
+  <text x="300" y="274" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">FlashAttention-2</text>
+  <text x="590" y="274" text-anchor="middle" font-size="11" fill="#444">FA2 少 non-matmul FLOPs + 更好 warp 划分</text>
+
+  <!-- 行 7 LayerNorm / BatchNorm -->
+  <g filter="url(#sk)">
+    <rect x="30" y="284" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="304" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">LayerNorm</text>
+  <text x="300" y="304" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">BatchNorm</text>
+  <text x="590" y="304" text-anchor="middle" font-size="11" fill="#444">按特征维度归一化 vs 按 batch 维度归一化</text>
+
+  <!-- 行 8 TTFT / TBT -->
+  <g filter="url(#sk)">
+    <rect x="30" y="314" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="334" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">TTFT</text>
+  <text x="300" y="334" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">TBT</text>
+  <text x="590" y="334" text-anchor="middle" font-size="11" fill="#444">首 token 延迟（Prefill）vs 每 token 延迟（Decode）</text>
+
+  <!-- 行 9 Occupancy / Utilization -->
+  <g filter="url(#sk)">
+    <rect x="30" y="344" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="364" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">Occupancy</text>
+  <text x="300" y="364" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">Utilization</text>
+  <text x="590" y="364" text-anchor="middle" font-size="11" fill="#444">active warp / max warp vs 实际算力占比</text>
+
+  <!-- 行 10 float4 / half2 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="374" width="760" height="30" fill="#fffdf3" stroke="#e2dccd" stroke-width="1"/>
+  </g>
+  <text x="120" y="394" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">float4</text>
+  <text x="300" y="394" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">half2</text>
+  <text x="590" y="394" text-anchor="middle" font-size="11" fill="#444">4×32bit=128bit load vs 2×16bit=32bit 访问</text>
+
+  <text x="410" y="428" text-anchor="middle" font-size="11" fill="#888">口诀：对比题先说"粒度/维度/阶段"差异，再给一句量化或场景</text>
+</svg>

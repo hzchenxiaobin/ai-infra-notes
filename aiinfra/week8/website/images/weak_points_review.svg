@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="460" fill="#fdfcf7"/>
+
+  <text x="410" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">六大高频薄弱点与复习方法</text>
+  <path d="M 270 44 Q 410 52 550 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="58" text-anchor="middle" font-size="11" fill="#888">Mock 面试后最容易卡壳的六个点</text>
+
+  <!-- 1. Online softmax -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="240" height="92" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="104" font-size="13" fill="#b03a3a" font-weight="bold">① Online softmax 推导</text>
+  <text x="50" y="126" font-size="11" fill="#444">m_new / l_new / o_new 三公式</text>
+  <text x="50" y="144" font-size="11" fill="#444">exp 缩放因子统一参考点</text>
+  <text x="50" y="162" font-size="11" fill="#4a8e4a" font-weight="bold">→ 手写 5 遍，默写不卡</text>
+
+  <!-- 2. GEMM 优化层次 -->
+  <g filter="url(#sk)">
+    <rect x="290" y="80" width="240" height="92" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="310" y="104" font-size="13" fill="#c98a2b" font-weight="bold">② GEMM 优化层次</text>
+  <text x="310" y="126" font-size="11" fill="#444">Naive→Tiling→RegBlock→float4</text>
+  <text x="310" y="144" font-size="11" fill="#444">→Shuffle→DblBuf→TensorCore</text>
+  <text x="310" y="162" font-size="11" fill="#4a8e4a" font-weight="bold">→ 画每层增益图，背 %</text>
+
+  <!-- 3. vLLM Scheduler -->
+  <g filter="url(#sk)">
+    <rect x="550" y="80" width="240" height="92" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="570" y="104" font-size="13" fill="#4a8edb" font-weight="bold">③ vLLM Scheduler 流程</text>
+  <text x="570" y="126" font-size="11" fill="#444">WAITING→RUNNING→FINISHED</text>
+  <text x="570" y="144" font-size="11" fill="#444">每轮 re-batch + 抢占</text>
+  <text x="570" y="162" font-size="11" fill="#4a8e4a" font-weight="bold">→ 看源码 + 画流程图</text>
+
+  <!-- 4. KV Cache 内存 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="196" width="240" height="92" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="220" font-size="13" fill="#4a8e4a" font-weight="bold">④ KV Cache 内存计算</text>
+  <text x="50" y="242" font-size="11" fill="#444">2×L×H×d×bytes / token</text>
+  <text x="50" y="260" font-size="11" fill="#444">LLaMA-7B: ~524 KB/token</text>
+  <text x="50" y="278" font-size="11" fill="#4a8e4a" font-weight="bold">→ 算 10 次，秒答</text>
+
+  <!-- 5. Roofline -->
+  <g filter="url(#sk)">
+    <rect x="290" y="196" width="240" height="92" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="310" y="220" font-size="13" fill="#8e5db8" font-weight="bold">⑤ Roofline Model</text>
+  <text x="310" y="242" font-size="11" fill="#444">Ridge = PeakFLOP/BW</text>
+  <text x="310" y="260" font-size="11" fill="#444">RTX5090 ≈ 12.6 FLOP/Byte</text>
+  <text x="310" y="278" font-size="11" fill="#4a8e4a" font-weight="bold">→ 画 3 遍，判 bound</text>
+
+  <!-- 6. Prefill/Decode -->
+  <g filter="url(#sk)">
+    <rect x="550" y="196" width="240" height="92" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="570" y="220" font-size="13" fill="#c98a2b" font-weight="bold">⑥ Prefill/Decode 强度</text>
+  <text x="570" y="242" font-size="11" fill="#444">Prefill: (B,N,d) compute</text>
+  <text x="570" y="260" font-size="11" fill="#444">Decode: (B,1,d) memory</text>
+  <text x="570" y="278" font-size="11" fill="#4a8e4a" font-weight="bold">→ 推导 AI 公式</text>
+
+  <!-- 底部：复习闭环 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="320" width="760" height="110" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5,3"/>
+  </g>
+  <text x="410" y="346" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">复习闭环：定位 → 重学 → 默写 → 二次 Mock</text>
+  <path d="M 70 372 L 200 372" stroke="#b03a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="135" y="388" text-anchor="middle" font-size="11" fill="#b03a3a">① Mock 找薄弱</text>
+  <path d="M 240 372 L 370 372" stroke="#c98a2b" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="305" y="388" text-anchor="middle" font-size="11" fill="#c98a2b">② 重学+笔记</text>
+  <path d="M 410 372 L 540 372" stroke="#4a8edb" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="475" y="388" text-anchor="middle" font-size="11" fill="#4a8edb">③ 默写公式图</text>
+  <path d="M 580 372 L 720 372" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="650" y="388" text-anchor="middle" font-size="11" fill="#4a8e4a">④ 二次 Mock</text>
+  <text x="410" y="416" text-anchor="middle" font-size="11" fill="#888">薄弱点没消除就回到 ②，直到能 3 分钟内流畅口述</text>
+</svg>
