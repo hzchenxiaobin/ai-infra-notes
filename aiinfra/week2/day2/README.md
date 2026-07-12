@@ -99,6 +99,22 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 
 实现方式：声明两份 shared memory buffer，奇偶 tile 交替使用。
 
+> **与 Occupancy 隐藏延迟的异同**
+>
+> 在 Week 1 Day 2 / Week 2 Day 1 中我们学过：**更高的 Occupancy 意味着 SM 上有更多 warp 可以轮换执行**，当某个 warp 因等待内存或同步而 stall 时，Warp Scheduler 可以切换到其他就绪 warp，从而隐藏延迟。
+>
+> Double Buffering 也是为了隐藏延迟，但两者的本质不同：
+>
+> | 维度 | 高 Occupancy | Double Buffering |
+> |------|--------------|------------------|
+> | 隐藏延迟的手段 | 增加同时驻留的 warp 数量，靠 Warp Scheduler 轮换 | 使用两份 buffer，让当前 tile 的计算与下一个 tile 的加载并行 |
+> | 作用范围 | SM 上多个 warp 之间 | 单个 block / warp 内部 |
+> | 额外资源消耗 | 需要更多寄存器 / 共享内存来容纳更多 warp | 共享内存用量翻倍 |
+> | 针对的延迟类型 | 内存、barrier、指令依赖等各类 stall | 主要是 global memory → shared memory 的数据传输延迟 |
+> | 相互影响 | 提高 Occupancy 通常有利于隐藏延迟 | 共享内存翻倍可能降低 Occupancy，但流水线收益往往更大 |
+>
+> **一句话总结**：Occupancy 是“人多力量大”，用更多 warp 轮换掩盖空闲；Double Buffering 是“手脚并用”，让同一份 warp 在计算当前 tile 的同时准备下一块数据。两者可以叠加：先用 Double Buffering 掩盖加载延迟，再保持足够 Occupancy 掩盖其他 stall。
+
 ---
 
 ### Coding 任务：Register Blocking GEMM
