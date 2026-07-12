@@ -178,6 +178,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week8 Day2 | 架构图与数据流图 | Rotary Positional Embedding | [leetgpu-rope-embedding-solution.md](../../leetgpu/week8/day2/leetgpu-rope-embedding-solution.md) |
 | Week8 Day3 | 高频面试题基础篇 | SwiGLU | [leetgpu-swiglu-solution.md](../../leetgpu/week8/day3/leetgpu-swiglu-solution.md) |
 | Week8 Day4 | 高频面试题进阶篇 | Multi-Head Attention | [leetgpu-multi-head-attention-solution.md](../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md) |
+| Week8 Day5 | Mock 面试 | Top-K Selection | [leetgpu-top-k-selection-solution.md](../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](../../leetgpu/SKILL.md) 在 `leetgpu/weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -225,6 +226,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](../../leetcode/daily/week8/day2/腐烂的橘子.md) |
 | Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](../../leetcode/daily/week8/day3/零钱兑换.md) |
 | Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
+| Week8 Day5 | 贪心 / 数组 | 45. 跳跃游戏 II | [跳跃游戏 II.md](../../leetcode/daily/week2/day7/跳跃游戏 II.md) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 
