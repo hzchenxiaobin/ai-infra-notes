@@ -467,6 +467,14 @@ nsys profile -o multi_stream_timeline ./multi_stream
 - 不同 Stream 的 H2D、Kernel、D2H 在时间上相互重叠，Copy Engine 与 Compute Engine 同时工作。
 - 这与顺序版本（单 Stream 串行）形成对比，也是 Multi-Stream 取得约 **1.7x 加速**的原因。
 
+> 💡 **为什么看不到 Kernel 执行的条？**
+>
+> 这个版本里 `vecAdd` 的计算量很小（只有 100 次循环），Kernel 执行时间只有约 **2 μs**，而 H2D/D2H 拷贝大约 **40 μs**。在毫秒级总览图里 Kernel 的宽度只有 H2D/D2H 的 1/20，所以几乎被压成一条细线，看不清楚。
+>
+> 下面是把时间轴放大到微秒级、只看 **Stream 1 里一个 chunk** 的截图，可以清楚看到 `H2D → H2D → Kernel → D2H` 的完整流水线：
+
+![Multi-Stream Timeline Zoomed](../website/images/multi_stream_timeline_zoom.png)
+
 #### 任务 4：LeetGPU 在线题目 —— 2D Convolution
 
 **题目链接**：<https://leetgpu.com/challenges/2d-convolution>
