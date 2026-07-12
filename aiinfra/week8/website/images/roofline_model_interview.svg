@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="540" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Roofline Model：判断 kernel 瓶颈</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Axes ===== -->
+  <g filter="url(#sk)">
+    <line x1="80" y1="460" x2="780" y2="460" stroke="#888" stroke-width="1.4"/>
+    <line x1="80" y1="80" x2="80" y2="460" stroke="#888" stroke-width="1.4"/>
+  </g>
+  <text x="430" y="500" text-anchor="middle" font-size="11" fill="#888">算术强度 Arithmetic Intensity (FLOP / Byte) →</text>
+  <text x="40" y="270" text-anchor="middle" font-size="11" fill="#888" transform="rotate(-90 40 270)">性能 (GFLOP/s) →</text>
+
+  <!-- log scale ticks x -->
+  <g font-size="9" fill="#888">
+    <text x="160" y="476" text-anchor="middle">0.1</text>
+    <text x="280" y="476" text-anchor="middle">1</text>
+    <text x="400" y="476" text-anchor="middle">10</text>
+    <text x="520" y="476" text-anchor="middle">100</text>
+    <text x="640" y="476" text-anchor="middle">1000</text>
+  </g>
+  <!-- log scale ticks y -->
+  <g font-size="9" fill="#888">
+    <text x="72" y="424" text-anchor="end">100</text>
+    <text x="72" y="340" text-anchor="end">1K</text>
+    <text x="72" y="256" text-anchor="end">10K</text>
+    <text x="72" y="172" text-anchor="end">100K</text>
+    <text x="72" y="88" text-anchor="end">1M</text>
+  </g>
+
+  <!-- ===== Roofline curve ===== -->
+  <!-- memory-bound slope (rising) then flat compute ceiling -->
+  <path d="M 160 420 L 400 180 L 700 180" stroke="#4a8edb" stroke-width="2.5" fill="none" filter="url(#sk)"/>
+
+  <!-- slope label -->
+  <text x="240" y="300" font-size="10" fill="#4a8edb" font-weight="bold" transform="rotate(-35 240 300)">带宽限制区</text>
+  <text x="260" y="320" font-size="9" fill="#4a8edb" transform="rotate(-35 260 320)">性能 = AI × 带宽</text>
+
+  <!-- ceiling label -->
+  <text x="520" y="168" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">算力限制区</text>
+  <text x="520" y="156" text-anchor="middle" font-size="9" fill="#b85450">峰值 FLOP/s</text>
+
+  <!-- ridge point -->
+  <g filter="url(#sk)"><circle cx="400" cy="180" r="6" fill="#c98a2b" stroke="#7a5415" stroke-width="1.5"/></g>
+  <text x="412" y="176" font-size="10" fill="#7a5415" font-weight="bold">Ridge Point</text>
+  <text x="412" y="190" font-size="9" fill="#7a5415">≈ 12.6 FLOP/Byte (RTX 5090)</text>
+
+  <!-- ===== Kernel dots ===== -->
+  <!-- SiLU: low AI, low perf (memory-bound) -->
+  <g filter="url(#sk)"><circle cx="200" cy="360" r="5" fill="#4a8e4a" stroke="#2e6e2e" stroke-width="1.2"/></g>
+  <text x="210" y="364" font-size="10" fill="#2e6e2e" font-weight="bold">SiLU</text>
+  <text x="210" y="378" font-size="8" fill="#888">AI≈0.25, bandwidth-bound</text>
+
+  <!-- Reduction: low AI, moderate -->
+  <g filter="url(#sk)"><circle cx="240" cy="320" r="5" fill="#c98a2b" stroke="#7a5415" stroke-width="1.2"/></g>
+  <text x="250" y="324" font-size="10" fill="#7a5415" font-weight="bold">Reduction</text>
+  <text x="250" y="338" font-size="8" fill="#888">AI≈1, partially bw-bound</text>
+
+  <!-- GEMM: high AI, high perf (compute-bound) -->
+  <g filter="url(#sk)"><circle cx="500" cy="200" r="5" fill="#b85450" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <text x="510" y="204" font-size="10" fill="#b03a3a" font-weight="bold">GEMM 4096³</text>
+  <text x="510" y="218" font-size="8" fill="#888">AI≈275, compute-bound</text>
+
+  <!-- Attention: moderate -->
+  <g filter="url(#sk)"><circle cx="340" cy="250" r="5" fill="#8e5db8" stroke="#5a3a7a" stroke-width="1.2"/></g>
+  <text x="350" y="254" font-size="10" fill="#5a3a7a" font-weight="bold">Attention N=512</text>
+  <text x="350" y="268" font-size="8" fill="#888">AI≈5, near ridge</text>
+
+  <!-- ===== RTX 5090 params ===== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="300" width="200" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="680" y="322" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">RTX 5090 关键参数</text>
+  <g font-size="10" fill="#444">
+    <text x="596" y="344">FP32 峰值: 19.5 TFLOPS</text>
+    <text x="596" y="362">Tensor Core FP16: 312 TFLOPS</text>
+    <text x="596" y="380">HBM 带宽: 1.55 TB/s</text>
+    <text x="596" y="400" fill="#c98a2b" font-weight="bold">Ridge = 19.5/1.55</text>
+    <text x="596" y="414" fill="#c98a2b" font-weight="bold">      ≈ 12.6 FLOP/Byte</text>
+  </g>
+
+  <!-- ===== How to use ===== -->
+  <g filter="url(#sk)">
+    <rect x="80" y="430" width="480" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="100" y="452" font-size="11" font-weight="bold" fill="#2e6e2e">面试用法（3 步）</text>
+  <g font-size="10" fill="#444">
+    <text x="100" y="470">1. 算 AI = FLOP / Bytes → 在 x 轴定位</text>
+    <text x="100" y="486">2. 看落在斜线还是水平线 → memory-bound / compute-bound</text>
+    <text x="100" y="502">3. 优化方向：memory-bound → 减少访存/提升带宽；compute-bound → 用 Tensor Core</text>
+  </g>
+</svg>
