@@ -912,7 +912,7 @@ Mini 系统选择方式1，与 Week 4 Day 26 一致。
 #include <torch/extension.h>
 
 // GEMM: C = alpha * A * B + beta * C
-at::Tensor gemm_forward(at::Tensor A, at::Tensor B, float alpha=1.0f, float beta=0.0f);
+at::Tensor gemm_forward(at::Tensor A, at::Tensor B, float alpha = 1.0f, float beta = 0.0f);
 
 // FlashAttention
 at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
@@ -921,7 +921,7 @@ at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
 at::Tensor softmax_forward(at::Tensor input);
 
 // LayerNorm
-at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps=1e-5);
+at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps = 1e-5);
 ```
 
 ---

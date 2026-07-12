@@ -225,12 +225,11 @@
 官方代码使用模板参数 \`Kernel_traits\` 来组织所有分块参数：
 
 \`\`\`cpp
-template<typename Kernel_traits>
-__global__ void flash_fwd_kernel(...) {
- constexpr int kBlockM = Kernel_traits::kBlockM; // Br
- constexpr int kBlockN = Kernel_traits::kBlockN; // Bc
- constexpr int kHeadDim = Kernel_traits::kHeadDim; // d
- constexpr int kNWarps = Kernel_traits::kNWarps; // warps per block
+template <typename Kernel_traits> __global__ void flash_fwd_kernel(...) {
+    constexpr int kBlockM = Kernel_traits::kBlockM;   // Br
+    constexpr int kBlockN = Kernel_traits::kBlockN;   // Bc
+    constexpr int kHeadDim = Kernel_traits::kHeadDim; // d
+    constexpr int kNWarps = Kernel_traits::kNWarps;   // warps per block
 }
 \`\`\`
 
@@ -257,7 +256,7 @@ Day 2 我们用普通 global → shared 加载：
 \`\`\`cuda
 // Day 2 手写版：同步加载
 s_K[r][c] = K[global_idx]; // global → shared
-__syncthreads(); // 等待所有线程加载完成
+__syncthreads();           // 等待所有线程加载完成
 // 计算 S = Q × K^T ...
 \`\`\`
 
@@ -461,7 +460,8 @@ __global__ void dot_kernel(const float* a, const float* b, float* block_sums, in
     __shared__ float s_sum[32];
     int lane = threadIdx.x & 31;
     int wid = threadIdx.x >> 5;
-    if (lane == 0) s_sum[wid] = local_sum;
+    if (lane == 0)
+        s_sum[wid] = local_sum;
     __syncthreads();
 
     // Warp 0 做跨 warp 归约
@@ -470,7 +470,8 @@ __global__ void dot_kernel(const float* a, const float* b, float* block_sums, in
         for (int offset = 16; offset > 0; offset >>= 1) {
             local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
         }
-        if (lane == 0) block_sums[blockIdx.x] = local_sum;
+        if (lane == 0)
+            block_sums[blockIdx.x] = local_sum;
     }
 }
 
@@ -482,18 +483,24 @@ __global__ void dot_final(const float* block_sums, float* out, int num_blocks) {
     for (int offset = 16; offset > 0; offset >>= 1) {
         sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
     }
-    if (threadIdx.x == 0) *out = sum;
+    if (threadIdx.x == 0)
+        *out = sum;
 }
 
 int main() {
     const int N = 1 << 20;
     size_t bytes = N * sizeof(float);
     float *h_a = (float*)malloc(bytes), *h_b = (float*)malloc(bytes);
-    for (int i = 0; i < N; ++i) { h_a[i] = 0.001f; h_b[i] = 0.001f; }
+    for (int i = 0; i < N; ++i) {
+        h_a[i] = 0.001f;
+        h_b[i] = 0.001f;
+    }
     float *d_a, *d_b, *d_block, *d_out;
-    cudaMalloc(&d_a, bytes); cudaMalloc(&d_b, bytes);
+    cudaMalloc(&d_a, bytes);
+    cudaMalloc(&d_b, bytes);
     int threads = 256, blocks = min((N + threads - 1) / threads, 1024);
-    cudaMalloc(&d_block, blocks * sizeof(float)); cudaMalloc(&d_out, sizeof(float));
+    cudaMalloc(&d_block, blocks * sizeof(float));
+    cudaMalloc(&d_out, sizeof(float));
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
     dot_kernel<<<blocks, threads>>>(d_a, d_b, d_block, N);
@@ -501,7 +508,12 @@ int main() {
     float h_out;
     cudaMemcpy(&h_out, d_out, sizeof(float), cudaMemcpyDeviceToHost);
     printf("Dot Product = %.6f (expected %.6f)\\n", h_out, N * 0.001f * 0.001f);
-    free(h_a); free(h_b); cudaFree(d_a); cudaFree(d_b); cudaFree(d_block); cudaFree(d_out);
+    free(h_a);
+    free(h_b);
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_block);
+    cudaFree(d_out);
     return 0;
 }
 \`\`\`

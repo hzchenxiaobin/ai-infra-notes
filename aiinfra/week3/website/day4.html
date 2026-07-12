@@ -329,36 +329,40 @@ AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
 
 // 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceSum(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : 0.0f;
- if (wid == 0) val = warpReduceSum(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceMax(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : -INFINITY;
- if (wid == 0) val = warpReduceMax(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
 }
 
 // ============================================================
@@ -366,64 +370,63 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // 一个 block 处理一行 query（qrow）
 // 三步：S=QK^T → P=softmax(S) → O=PV，S/P 全部写回 HBM
 // ============================================================
-__global__ void attention_naive_kernel(const float* __restrict__ Q,
- const float* __restrict__ K,
- const float* __restrict__ V,
- float* __restrict__ S,
- float* __restrict__ P,
- float* __restrict__ O,
- int N, int d) {
- int qrow = blockIdx.x;
- if (qrow >= N) return;
+__global__ void attention_naive_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                       const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
+                                       float* __restrict__ O, int N, int d) {
+    int qrow = blockIdx.x;
+    if (qrow >= N)
+        return;
 
- __shared__ float smem[32];
- __shared__ float row_max;
- __shared__ float row_sum;
+    __shared__ float smem[32];
+    __shared__ float row_max;
+    __shared__ float row_sum;
 
- int tid = threadIdx.x;
- float scale = 1.0f / sqrtf((float)d);
+    int tid = threadIdx.x;
+    float scale = 1.0f / sqrtf((float)d);
 
- // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
- // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
- for (int j = tid; j < N; j += blockDim.x) {
- float s_val = 0.0f;
- for (int dd = 0; dd < d; dd++) {
- s_val += Q[qrow * d + dd] * K[j * d + dd];
- }
- S[qrow * N + j] = s_val * scale;
- }
- __syncthreads();
+    // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
+    // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
+    for (int j = tid; j < N; j += blockDim.x) {
+        float s_val = 0.0f;
+        for (int dd = 0; dd < d; dd++) {
+            s_val += Q[qrow * d + dd] * K[j * d + dd];
+        }
+        S[qrow * N + j] = s_val * scale;
+    }
+    __syncthreads();
 
- // Step 2: P[qrow][j] = softmax(S[qrow][:])
- // 读 S（O(N²) 读），写 P（O(N²) 写）
- float local_max = -INFINITY;
- for (int j = tid; j < N; j += blockDim.x) {
- local_max = fmaxf(local_max, S[qrow * N + j]);
- }
- local_max = blockReduceMax(local_max, smem);
- if (tid == 0) row_max = local_max;
- __syncthreads();
+    // Step 2: P[qrow][j] = softmax(S[qrow][:])
+    // 读 S（O(N²) 读），写 P（O(N²) 写）
+    float local_max = -INFINITY;
+    for (int j = tid; j < N; j += blockDim.x) {
+        local_max = fmaxf(local_max, S[qrow * N + j]);
+    }
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
 
- float local_sum = 0.0f;
- for (int j = tid; j < N; j += blockDim.x) {
- float p_val = expf(S[qrow * N + j] - row_max);
- P[qrow * N + j] = p_val;
- local_sum += p_val;
- }
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_sum = local_sum;
- __syncthreads();
+    float local_sum = 0.0f;
+    for (int j = tid; j < N; j += blockDim.x) {
+        float p_val = expf(S[qrow * N + j] - row_max);
+        P[qrow * N + j] = p_val;
+        local_sum += p_val;
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
 
- // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
- // 读 P（O(N²) 读），读 V，写 O
- float inv_sum = 1.0f / row_sum;
- for (int dd = tid; dd < d; dd += blockDim.x) {
- float o_val = 0.0f;
- for (int j = 0; j < N; j++) {
- o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
- }
- O[qrow * d + dd] = o_val;
- }
+    // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
+    // 读 P（O(N²) 读），读 V，写 O
+    float inv_sum = 1.0f / row_sum;
+    for (int dd = tid; dd < d; dd += blockDim.x) {
+        float o_val = 0.0f;
+        for (int j = 0; j < N; j++) {
+            o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
+        }
+        O[qrow * d + dd] = o_val;
+    }
 }
 \`\`\`
 
@@ -542,72 +545,73 @@ ncu --metrics \\
 #define BLOCK_N 64
 #define MAX_D 128
 
-__global__ void flash_attention(const float* Q, const float* K, const float* V,
- float* O, int M, int N, int d) {
- int q_start = blockIdx.x * BLOCK_M;
+__global__ void flash_attention(const float* Q, const float* K, const float* V, float* O, int M, int N, int d) {
+    int q_start = blockIdx.x * BLOCK_M;
 
- __shared__ float s_Q[BLOCK_M][MAX_D];
- __shared__ float s_K[BLOCK_N][MAX_D];
- __shared__ float s_V[BLOCK_N][MAX_D];
+    __shared__ float s_Q[BLOCK_M][MAX_D];
+    __shared__ float s_K[BLOCK_N][MAX_D];
+    __shared__ float s_V[BLOCK_N][MAX_D];
 
- // 每行的 running state（寄存器）：m=max, l=sum, o=output
- int rows_per_warp = BLOCK_M / 32;
- int warp_id = threadIdx.x / 32;
- float m_i[4], l_i[4], o_i[4][MAX_D];
+    // 每行的 running state（寄存器）：m=max, l=sum, o=output
+    int rows_per_warp = BLOCK_M / 32;
+    int warp_id = threadIdx.x / 32;
+    float m_i[4], l_i[4], o_i[4][MAX_D];
 
- for (int r = 0; r < rows_per_warp; r++) {
- m_i[r] = -INFINITY;
- l_i[r] = 0.0f;
- for (int j = 0; j < d; j++) o_i[r][j] = 0.0f;
- }
+    for (int r = 0; r < rows_per_warp; r++) {
+        m_i[r] = -INFINITY;
+        l_i[r] = 0.0f;
+        for (int j = 0; j < d; j++)
+            o_i[r][j] = 0.0f;
+    }
 
- // 加载 Q tile 到 SRAM（驻留，不重复读 HBM）
- float scale = 1.0f / sqrtf((float)d);
+    // 加载 Q tile 到 SRAM（驻留，不重复读 HBM）
+    float scale = 1.0f / sqrtf((float)d);
 
- // 遍历 K/V tiles（逐块滑入，S/P 不落 HBM）
- for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
- // 加载 K/V tile 到 s_K, s_V（省略协作加载代码）
- __syncthreads();
+    // 遍历 K/V tiles（逐块滑入，S/P 不落 HBM）
+    for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
+        // 加载 K/V tile 到 s_K, s_V（省略协作加载代码）
+        __syncthreads();
 
- for (int r = 0; r < rows_per_warp; r++) {
- int q_row = q_start + warp_id * rows_per_warp + r;
- if (q_row >= M) continue;
+        for (int r = 0; r < rows_per_warp; r++) {
+            int q_row = q_start + warp_id * rows_per_warp + r;
+            if (q_row >= M)
+                continue;
 
- // 局部 S = Q[Q_row] · K[kv_tile]^T * scale
- float local_max = -INFINITY;
- float s_vals[BLOCK_N];
- for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
- float dot = 0.0f;
- for (int kk = 0; kk < d; kk++)
- dot += s_Q[warp_id * rows_per_warp + r][kk] * s_K[j][kk];
- s_vals[j] = dot * scale;
- local_max = fmaxf(local_max, s_vals[j]);
- }
+            // 局部 S = Q[Q_row] · K[kv_tile]^T * scale
+            float local_max = -INFINITY;
+            float s_vals[BLOCK_N];
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float dot = 0.0f;
+                for (int kk = 0; kk < d; kk++)
+                    dot += s_Q[warp_id * rows_per_warp + r][kk] * s_K[j][kk];
+                s_vals[j] = dot * scale;
+                local_max = fmaxf(local_max, s_vals[j]);
+            }
 
- // Online Softmax 更新
- float m_new = fmaxf(m_i[r], local_max);
- float l_new = l_i[r] * expf(m_i[r] - m_new);
- for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
- float p = expf(s_vals[j] - m_new);
- l_new += p;
- for (int kk = 0; kk < d; kk++)
- o_i[r][kk] += p * s_V[j][kk];
- }
- // 归一化历史输出（省略精确缩放，Week 4 完整实现）
- m_i[r] = m_new;
- l_i[r] = l_new;
- }
- __syncthreads();
- }
+            // Online Softmax 更新
+            float m_new = fmaxf(m_i[r], local_max);
+            float l_new = l_i[r] * expf(m_i[r] - m_new);
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float p = expf(s_vals[j] - m_new);
+                l_new += p;
+                for (int kk = 0; kk < d; kk++)
+                    o_i[r][kk] += p * s_V[j][kk];
+            }
+            // 归一化历史输出（省略精确缩放，Week 4 完整实现）
+            m_i[r] = m_new;
+            l_i[r] = l_new;
+        }
+        __syncthreads();
+    }
 
- // 最终归一化并写回 O（只写一次 HBM）
- for (int r = 0; r < rows_per_warp; r++) {
- int q_row = q_start + warp_id * rows_per_warp + r;
- if (q_row < M) {
- for (int kk = 0; kk < d; kk++)
- O[q_row * d + kk] = o_i[r][kk] / l_i[r];
- }
- }
+    // 最终归一化并写回 O（只写一次 HBM）
+    for (int r = 0; r < rows_per_warp; r++) {
+        int q_row = q_start + warp_id * rows_per_warp + r;
+        if (q_row < M) {
+            for (int kk = 0; kk < d; kk++)
+                O[q_row * d + kk] = o_i[r][kk] / l_i[r];
+        }
+    }
 }
 \`\`\`
 

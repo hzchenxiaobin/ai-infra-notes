@@ -5,8 +5,8 @@ __global__ void compute_intensive(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     float acc = 0.0f;
 
-    #pragma unroll 16
-    for(int i = 0; i < n; ++i) {
+#pragma unroll 16
+    for (int i = 0; i < n; ++i) {
         float v = in[(idx + i) % n];
         acc += v * v + 1.0f;
     }
@@ -17,7 +17,7 @@ __global__ void compute_intensive(const float* in, float* out, int n) {
 int main() {
     cudaFuncAttributes attr;
     cudaError_t err = cudaFuncGetAttributes(&attr, compute_intensive);
-    if(err != cudaSuccess) {
+    if (err != cudaSuccess) {
         printf("Error: %s\n", cudaGetErrorString(err));
         return 1;
     }

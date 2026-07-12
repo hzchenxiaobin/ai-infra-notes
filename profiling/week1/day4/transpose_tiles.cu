@@ -15,8 +15,7 @@
 //
 // 用模板参数把 TILE_DIM 编译为常量，使 __shared__ 数组维度可在编译期确定。
 
-template <int TILE_DIM>
-__global__ void transpose_tiled(const float* in, float* out, int width, int height) {
+template <int TILE_DIM> __global__ void transpose_tiled(const float* in, float* out, int width, int height) {
     // +1 padding 消除 shared memory bank conflict
     __shared__ float tile[TILE_DIM][TILE_DIM + 1];
 
@@ -46,8 +45,7 @@ void fill_matrix(float* mat, int size) {
 
 // 检查 tiled 转置结果是否与 CPU 转置一致
 template <int TILE_DIM>
-bool run_and_check(const float* d_in, float* d_out, float* h_out,
-                   const float* h_ref, int width, int height, int size,
+bool run_and_check(const float* d_in, float* d_out, float* h_out, const float* h_ref, int width, int height, int size,
                    float* elapsed_ms) {
     dim3 block(TILE_DIM, TILE_DIM);
     dim3 grid((width + TILE_DIM - 1) / TILE_DIM, (height + TILE_DIM - 1) / TILE_DIM);
@@ -112,18 +110,15 @@ int main() {
 
     // 8x8
     bool ok8 = run_and_check<8>(d_in, d_out, h_out, h_in, width, height, size, &ms);
-    printf("8 x 8     | %s        | %13.4f | %26.2f\n",
-           ok8 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
+    printf("8 x 8     | %s        | %13.4f | %26.2f\n", ok8 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
 
     // 16x16
     bool ok16 = run_and_check<16>(d_in, d_out, h_out, h_in, width, height, size, &ms);
-    printf("16 x 16   | %s        | %13.4f | %26.2f\n",
-           ok16 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
+    printf("16 x 16   | %s        | %13.4f | %26.2f\n", ok16 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
 
     // 32x32
     bool ok32 = run_and_check<32>(d_in, d_out, h_out, h_in, width, height, size, &ms);
-    printf("32 x 32   | %s        | %13.4f | %26.2f\n",
-           ok32 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
+    printf("32 x 32   | %s        | %13.4f | %26.2f\n", ok32 ? "PASS" : "FAIL", ms, total_bytes / (ms / 1000.0) / 1e9);
 
     free(h_in);
     free(h_out);

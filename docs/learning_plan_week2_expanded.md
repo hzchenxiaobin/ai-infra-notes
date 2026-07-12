@@ -154,13 +154,13 @@ Result: lane0持有warp内32个线程的累加和
 // Warp级归约：使用__shfl_down_sync折半累加
 // --------------------------------------------------
 __inline__ __device__ float warpReduceSum(float val) {
- // Butterfly模式：offset=16,8,4,2,1
- // 每一步将距离为offset的两个线程的值相加
- #pragma unroll
- for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- }
- return val; // 返回后，lane 0持有warp内32个线程的累加和
+// Butterfly模式：offset=16,8,4,2,1
+// 每一步将距离为offset的两个线程的值相加
+    #pragma unroll
+    for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
+    return val; // 返回后，lane 0持有warp内32个线程的累加和
 }
 
 // --------------------------------------------------
@@ -168,138 +168,139 @@ __inline__ __device__ float warpReduceSum(float val) {
 // 用途：when you need reduction result in ALL lanes, not just lane 0
 // --------------------------------------------------
 __inline__ __device__ float warpReduceSumXor(float val) {
- #pragma unroll
- for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
- val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
- }
- return val; // 所有lane都持有相同的累加和（广播效果）
+    #pragma unroll
+    for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
+        val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
+    }
+    return val; // 所有lane都持有相同的累加和（广播效果）
 }
 
 // --------------------------------------------------
 // Block级归约：每个warp先归约，然后warp 0做最终归约
 // --------------------------------------------------
 __global__ void blockReduceSum(const float* input, float* output, int n) {
- // Shared memory存储每个warp的部分和（最多32个warp per block）
- __shared__ float warpSums[32]; // 32 = 1024/32，即最大warp数
+    // Shared memory存储每个warp的部分和（最多32个warp per block）
+    __shared__ float warpSums[32]; // 32 = 1024/32，即最大warp数
 
- int tid = blockIdx.x * blockDim.x + threadIdx.x; // 全局线程ID
- int lane = threadIdx.x % warpSize; // warp内lane编号(0-31)
- int wid = threadIdx.x / warpSize; // warp编号(0-31)
+    int tid = blockIdx.x * blockDim.x + threadIdx.x; // 全局线程ID
+    int lane = threadIdx.x % warpSize;               // warp内lane编号(0-31)
+    int wid = threadIdx.x / warpSize;                // warp编号(0-31)
 
- // Step 1: 每个线程从global memory读取并做per-thread累加
- // 使用grid-stride loop处理n很大的情况
- float sum = 0.0f;
- #pragma unroll 4
- for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
- sum += input[i];
- }
+    // Step 1: 每个线程从global memory读取并做per-thread累加
+    // 使用grid-stride loop处理n很大的情况
+    float sum = 0.0f;
+    #pragma unroll 4
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        sum += input[i];
+    }
 
- // Step 2: Warp级归约（每个warp的32个线程累加到lane 0）
- sum = warpReduceSum(sum);
+    // Step 2: Warp级归约（每个warp的32个线程累加到lane 0）
+    sum = warpReduceSum(sum);
 
- // Step 3: lane 0将warp的部分和写入shared memory
- if (lane == 0) {
- warpSums[wid] = sum;
- }
- __syncthreads(); // 等待所有warp完成归约
+    // Step 3: lane 0将warp的部分和写入shared memory
+    if (lane == 0) {
+        warpSums[wid] = sum;
+    }
+    __syncthreads(); // 等待所有warp完成归约
 
- // Step 4: Warp 0做最终归约（读取最多32个warp的部分和）
- if (wid == 0) {
- // lane < numWarps的线程读取对应warp的部分和，其余读0
- int numWarps = (blockDim.x + warpSize - 1) / warpSize;
- sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
- sum = warpReduceSum(sum);
- // lane 0将最终结果写入global memory
- if (lane == 0) {
- output[blockIdx.x] = sum;
- }
- }
+    // Step 4: Warp 0做最终归约（读取最多32个warp的部分和）
+    if (wid == 0) {
+        // lane < numWarps的线程读取对应warp的部分和，其余读0
+        int numWarps = (blockDim.x + warpSize - 1) / warpSize;
+        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
+        sum = warpReduceSum(sum);
+        // lane 0将最终结果写入global memory
+        if (lane == 0) {
+            output[blockIdx.x] = sum;
+        }
+    }
 }
 
 // --------------------------------------------------
 // 多block版本：如果grid有多个block，需要第二次kernel调用汇总
 // --------------------------------------------------
-float launchReduce(const float* d_input, float* d_temp, float* d_output,
- int n, int threadsPerBlock) {
- int blocks = (n + threadsPerBlock - 1) / threadsPerBlock;
- blocks = min(blocks, 1024); // 限制block数量便于第二次归约
+float launchReduce(const float* d_input, float* d_temp, float* d_output, int n, int threadsPerBlock) {
+    int blocks = (n + threadsPerBlock - 1) / threadsPerBlock;
+    blocks = min(blocks, 1024); // 限制block数量便于第二次归约
 
- // 第一次归约：每个block输出一个部分和
- blockReduceSum<<<blocks, threadsPerBlock>>>(d_input, d_temp, n);
- cudaDeviceSynchronize();
+    // 第一次归约：每个block输出一个部分和
+    blockReduceSum<<<blocks, threadsPerBlock>>>(d_input, d_temp, n);
+    cudaDeviceSynchronize();
 
- // 第二次归约：将所有block的部分和再归约
- blockReduceSum<<<1, 256>>>(d_temp, d_output, blocks);
- cudaDeviceSynchronize();
+    // 第二次归约：将所有block的部分和再归约
+    blockReduceSum<<<1, 256>>>(d_temp, d_output, blocks);
+    cudaDeviceSynchronize();
 
- float result;
- cudaMemcpy(&result, d_output, sizeof(float), cudaMemcpyDeviceToHost);
- return result;
+    float result;
+    cudaMemcpy(&result, d_output, sizeof(float), cudaMemcpyDeviceToHost);
+    return result;
 }
 
 // --------------------------------------------------
 // Host辅助函数
 // --------------------------------------------------
 void initData(float* data, int n) {
- srand(42);
- for (int i = 0; i < n; i++) {
- data[i] = static_cast<float>(rand()) / RAND_MAX * 0.01f; // 小值防止累加溢出
- }
+    srand(42);
+    for (int i = 0; i < n; i++) {
+        data[i] = static_cast<float>(rand()) / RAND_MAX * 0.01f; // 小值防止累加溢出
+    }
 }
 
 float cpuReduceSum(const float* data, int n) {
- double sum = 0.0; // 用double减少累加误差
- for (int i = 0; i < n; i++) {
- sum += data[i];
- }
- return static_cast<float>(sum);
+    double sum = 0.0; // 用double减少累加误差
+    for (int i = 0; i < n; i++) {
+        sum += data[i];
+    }
+    return static_cast<float>(sum);
 }
 
 int main() {
- const int n = 1 << 22; // 4,194,304个元素
- printf("=== Warp Shuffle Block Reduce ===\n");
- printf("Array size: %d (%.2f MB)\n", n, n * sizeof(float) / (1024.0 * 1024.0));
+    const int n = 1 << 22; // 4,194,304个元素
+    printf("=== Warp Shuffle Block Reduce ===\n");
+    printf("Array size: %d (%.2f MB)\n", n, n * sizeof(float) / (1024.0 * 1024.0));
 
- // Host数据
- float* h_input = (float*)malloc(n * sizeof(float));
- initData(h_input, n);
+    // Host数据
+    float* h_input = (float*)malloc(n * sizeof(float));
+    initData(h_input, n);
 
- // Device内存
- float *d_input, *d_temp, *d_output;
- cudaMalloc(&d_input, n * sizeof(float));
- cudaMalloc(&d_temp, 1024 * sizeof(float)); // 最多1024个block的部分和
- cudaMalloc(&d_output, sizeof(float));
- cudaMemcpy(d_input, h_input, n * sizeof(float), cudaMemcpyHostToDevice);
+    // Device内存
+    float *d_input, *d_temp, *d_output;
+    cudaMalloc(&d_input, n * sizeof(float));
+    cudaMalloc(&d_temp, 1024 * sizeof(float)); // 最多1024个block的部分和
+    cudaMalloc(&d_output, sizeof(float));
+    cudaMemcpy(d_input, h_input, n * sizeof(float), cudaMemcpyHostToDevice);
 
- // 运行GPU归约
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    // 运行GPU归约
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- cudaEventRecord(start);
- float gpuSum = launchReduce(d_input, d_temp, d_output, n, 256);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+    cudaEventRecord(start);
+    float gpuSum = launchReduce(d_input, d_temp, d_output, n, 256);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
 
- // CPU验证
- float cpuSum = cpuReduceSum(h_input, n);
- float diff = fabs(gpuSum - cpuSum);
+    // CPU验证
+    float cpuSum = cpuReduceSum(h_input, n);
+    float diff = fabs(gpuSum - cpuSum);
 
- printf("GPU Sum: %.6f\n", gpuSum);
- printf("CPU Sum: %.6f\n", cpuSum);
- printf("Diff: %.6f (%s)\n", diff, diff < 1e-3 ? "PASS" : "FAIL");
- printf("Time: %.3f ms (%.2f GB/s bandwidth)\n",
- ms, n * sizeof(float) / (ms * 1e6));
+    printf("GPU Sum: %.6f\n", gpuSum);
+    printf("CPU Sum: %.6f\n", cpuSum);
+    printf("Diff: %.6f (%s)\n", diff, diff < 1e-3 ? "PASS" : "FAIL");
+    printf("Time: %.3f ms (%.2f GB/s bandwidth)\n", ms, n * sizeof(float) / (ms * 1e6));
 
- // 释放
- free(h_input);
- cudaFree(d_input); cudaFree(d_temp); cudaFree(d_output);
- cudaEventDestroy(start); cudaEventDestroy(stop);
+    // 释放
+    free(h_input);
+    cudaFree(d_input);
+    cudaFree(d_temp);
+    cudaFree(d_output);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
- return 0;
+    return 0;
 }
 ```
 
@@ -509,9 +510,9 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 // --------------------------------------------------
 #define BM 128 // Block tile M维度
 #define BN 128 // Block tile N维度
-#define BK 8 // Block tile K维度（较小的BK减少shared mem占用）
-#define TM 8 // 每个线程负责的M方向输出数
-#define TN 8 // 每个线程负责的N方向输出数
+#define BK 8   // Block tile K维度（较小的BK减少shared mem占用）
+#define TM 8   // 每个线程负责的M方向输出数
+#define TN 8   // 每个线程负责的N方向输出数
 
 // 每Block线程数 = (BM/TM) * (BN/TN) = 16 * 16 = 256
 #define NUM_THREADS ((BM / TM) * (BN / TN))
@@ -519,268 +520,267 @@ Shared Memory (s_A[BM][BK], s_B[BK][BN])
 // --------------------------------------------------
 // Register Blocking GEMM Kernel
 // --------------------------------------------------
-__global__ void gemmRegisterBlocking(const float* __restrict__ A,
- const float* __restrict__ B,
- float* __restrict__ C,
- int M, int N, int K) {
- // Shared Memory：存储A和B的tile
- __shared__ float s_A[BM][BK]; // 128×8 = 1024 floats
- __shared__ float s_B[BK][BN]; // 8×128 = 1024 floats
+__global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C,
+                                     int M, int N, int K) {
+    // Shared Memory：存储A和B的tile
+    __shared__ float s_A[BM][BK]; // 128×8 = 1024 floats
+    __shared__ float s_B[BK][BN]; // 8×128 = 1024 floats
 
- // Register：累加器和加载缓冲区
- float r_A[TM]; // A的子行（8个元素）
- float r_B[TN]; // B的子列（8个元素）
- float acc[TM][TN] = {0}; // TM×TN累加器（初始化为0）
+    // Register：累加器和加载缓冲区
+    float r_A[TM];           // A的子行（8个元素）
+    float r_B[TN];           // B的子列（8个元素）
+    float acc[TM][TN] = {0}; // TM×TN累加器（初始化为0）
 
- // 线程到输出tile的二维映射
- int threadRow = threadIdx.x / (BN / TN); // 0 ~ 15
- int threadCol = threadIdx.x % (BN / TN); // 0 ~ 15
+    // 线程到输出tile的二维映射
+    int threadRow = threadIdx.x / (BN / TN); // 0 ~ 15
+    int threadCol = threadIdx.x % (BN / TN); // 0 ~ 15
 
- // Block在C矩阵中的位置
- int cRow = blockIdx.y * BM; // 当前Block负责的C行起始
- int cCol = blockIdx.x * BN; // 当前Block负责的C列起始
+    // Block在C矩阵中的位置
+    int cRow = blockIdx.y * BM; // 当前Block负责的C行起始
+    int cCol = blockIdx.x * BN; // 当前Block负责的C列起始
 
- // 主循环：沿K维度滑动
- for (int bk = 0; bk < K; bk += BK) {
- // =====================================================
- // Step 1: 协作加载 A[BM][BK] tile 从 Global → Shared
- // 策略：每个线程加载 (BM×BK)/NUM_THREADS = 1024/256 = 4个元素
- // =====================================================
- int aRow = threadIdx.x / BK; // 0 ~ 127 (BM范围内)
- int aCol = threadIdx.x % BK; // 0 ~ 7 (BK范围内)
+    // 主循环：沿K维度滑动
+    for (int bk = 0; bk < K; bk += BK) {
+        // =====================================================
+        // Step 1: 协作加载 A[BM][BK] tile 从 Global → Shared
+        // 策略：每个线程加载 (BM×BK)/NUM_THREADS = 1024/256 = 4个元素
+        // =====================================================
+        int aRow = threadIdx.x / BK; // 0 ~ 127 (BM范围内)
+        int aCol = threadIdx.x % BK; // 0 ~ 7 (BK范围内)
 
- #pragma unroll
- for (int i = 0; i < BM; i += NUM_THREADS / BK) {
- // NUM_THREADS/BK = 256/8 = 32，每次处理32行
- int loadRow = aRow + i;
- if (loadRow < BM && (cRow + loadRow) < M && (bk + aCol) < K) {
- s_A[loadRow][aCol] = A[(cRow + loadRow) * K + (bk + aCol)];
- } else if (loadRow < BM) {
- s_A[loadRow][aCol] = 0.0f; // 边界填充0
- }
- }
+        #pragma unroll
+        for (int i = 0; i < BM; i += NUM_THREADS / BK) {
+            // NUM_THREADS/BK = 256/8 = 32，每次处理32行
+            int loadRow = aRow + i;
+            if (loadRow < BM && (cRow + loadRow) < M && (bk + aCol) < K) {
+                s_A[loadRow][aCol] = A[(cRow + loadRow) * K + (bk + aCol)];
+            } else if (loadRow < BM) {
+                s_A[loadRow][aCol] = 0.0f; // 边界填充0
+            }
+        }
 
- // =====================================================
- // Step 2: 协作加载 B[BK][BN] tile 从 Global → Shared
- // 策略：每个线程加载 (BK×BN)/NUM_THREADS = 1024/256 = 4个元素
- // =====================================================
- int bRow = threadIdx.x / BN; // 0 ~ 7 (BK范围内)
- int bCol = threadIdx.x % BN; // 0 ~ 127 (BN范围内)
+        // =====================================================
+        // Step 2: 协作加载 B[BK][BN] tile 从 Global → Shared
+        // 策略：每个线程加载 (BK×BN)/NUM_THREADS = 1024/256 = 4个元素
+        // =====================================================
+        int bRow = threadIdx.x / BN; // 0 ~ 7 (BK范围内)
+        int bCol = threadIdx.x % BN; // 0 ~ 127 (BN范围内)
 
- #pragma unroll
- for (int i = 0; i < BK; i += NUM_THREADS / BN) {
- // NUM_THREADS/BN = 256/128 = 2，每次处理2行
- int loadRow = bRow + i;
- if (loadRow < BK && (bk + loadRow) < K && (cCol + bCol) < N) {
- s_B[loadRow][bCol] = B[(bk + loadRow) * N + (cCol + bCol)];
- } else if (loadRow < BK) {
- s_B[loadRow][bCol] = 0.0f;
- }
- }
+        #pragma unroll
+        for (int i = 0; i < BK; i += NUM_THREADS / BN) {
+            // NUM_THREADS/BN = 256/128 = 2，每次处理2行
+            int loadRow = bRow + i;
+            if (loadRow < BK && (bk + loadRow) < K && (cCol + bCol) < N) {
+                s_B[loadRow][bCol] = B[(bk + loadRow) * N + (cCol + bCol)];
+            } else if (loadRow < BK) {
+                s_B[loadRow][bCol] = 0.0f;
+            }
+        }
 
- __syncthreads(); // 等待tile加载完成
+        __syncthreads(); // 等待tile加载完成
 
- // =====================================================
- // Step 3: 从Shared Memory加载到Register并计算
- // 内层循环：沿BK维度展开
- // =====================================================
- #pragma unroll
- for (int k = 0; k < BK; k++) {
- // 加载TM个A元素到寄存器（A的一"子行"）
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- r_A[m] = s_A[threadRow * TM + m][k];
- }
- // 加载TN个B元素到寄存器（B的一"子列"）
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- r_B[n] = s_B[k][threadCol * TN + n];
- }
- // TM×TN次FMA累加
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- acc[m][n] += r_A[m] * r_B[n];
- }
- }
- }
+// =====================================================
+// Step 3: 从Shared Memory加载到Register并计算
+// 内层循环：沿BK维度展开
+// =====================================================
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
+// 加载TM个A元素到寄存器（A的一"子行"）
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                r_A[m] = s_A[threadRow * TM + m][k];
+            }
+// 加载TN个B元素到寄存器（B的一"子列"）
+            #pragma unroll
+            for (int n = 0; n < TN; n++) {
+                r_B[n] = s_B[k][threadCol * TN + n];
+            }
+// TM×TN次FMA累加
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                #pragma unroll
+                for (int n = 0; n < TN; n++) {
+                    acc[m][n] += r_A[m] * r_B[n];
+                }
+            }
+        }
 
- __syncthreads(); // 准备加载下一tile
- }
+        __syncthreads(); // 准备加载下一tile
+    }
 
- // =====================================================
- // Step 4: 将acc结果写回Global Memory（C矩阵）
- // =====================================================
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- int gRow = cRow + threadRow * TM + m;
- int gCol = cCol + threadCol * TN + n;
- if (gRow < M && gCol < N) {
- C[gRow * N + gCol] = acc[m][n];
- }
- }
- }
+// =====================================================
+// Step 4: 将acc结果写回Global Memory（C矩阵）
+// =====================================================
+    #pragma unroll
+    for (int m = 0; m < TM; m++) {
+        #pragma unroll
+        for (int n = 0; n < TN; n++) {
+            int gRow = cRow + threadRow * TM + m;
+            int gCol = cCol + threadCol * TN + n;
+            if (gRow < M && gCol < N) {
+                C[gRow * N + gCol] = acc[m][n];
+            }
+        }
+    }
 }
 
 // --------------------------------------------------
 // cuBLAS基准（用于对比性能）
 // --------------------------------------------------
 float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
- cublasHandle_t handle;
- cublasCreate(&handle);
+    cublasHandle_t handle;
+    cublasCreate(&handle);
 
- const float alpha = 1.0f;
- const float beta = 0.0f;
+    const float alpha = 1.0f;
+    const float beta = 0.0f;
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- // 预热
- cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
- &alpha, d_B, N, d_A, K, &beta, d_C, N);
- cudaDeviceSynchronize();
+    // 预热
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaDeviceSynchronize();
 
- cudaEventRecord(start);
- cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
- &alpha, d_B, N, d_A, K, &beta, d_C, N);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+    cudaEventRecord(start);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
 
- cublasDestroy(handle);
- cudaEventDestroy(start);
- cudaEventDestroy(stop);
- return ms;
+    cublasDestroy(handle);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
 // --------------------------------------------------
 // Host辅助函数
 // --------------------------------------------------
 void initMatrix(float* mat, int rows, int cols) {
- srand(42);
- for (int i = 0; i < rows * cols; i++) {
- mat[i] = static_cast<float>(rand()) / RAND_MAX * 0.1f - 0.05f;
- }
+    srand(42);
+    for (int i = 0; i < rows * cols; i++) {
+        mat[i] = static_cast<float>(rand()) / RAND_MAX * 0.1f - 0.05f;
+    }
 }
 
 void cpuGEMM(const float* A, const float* B, float* C, int M, int N, int K) {
- for (int m = 0; m < M; m++) {
- for (int n = 0; n < N; n++) {
- float sum = 0;
- for (int k = 0; k < K; k++) {
- sum += A[m * K + k] * B[k * N + n];
- }
- C[m * N + n] = sum;
- }
- }
+    for (int m = 0; m < M; m++) {
+        for (int n = 0; n < N; n++) {
+            float sum = 0;
+            for (int k = 0; k < K; k++) {
+                sum += A[m * K + k] * B[k * N + n];
+            }
+            C[m * N + n] = sum;
+        }
+    }
 }
 
 bool checkResult(const float* gpu, const float* cpu, int M, int N, float eps) {
- for (int i = 0; i < M * N; i++) {
- if (fabs(gpu[i] - cpu[i]) > eps) {
- printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n",
- i / N, i % N, gpu[i], cpu[i]);
- return false;
- }
- }
- return true;
+    for (int i = 0; i < M * N; i++) {
+        if (fabs(gpu[i] - cpu[i]) > eps) {
+            printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n", i / N, i % N, gpu[i], cpu[i]);
+            return false;
+        }
+    }
+    return true;
 }
 
 float getGFLOPS(int M, int N, int K, float ms) {
- return 2.0f * M * N * K / (ms * 1e6); // GFLOPS
+    return 2.0f * M * N * K / (ms * 1e6); // GFLOPS
 }
 
 int main() {
- // 测试矩阵尺寸
- int sizes[][3] = {
- {1024, 1024, 1024},
- {2048, 2048, 2048},
- {4096, 4096, 4096},
- };
+    // 测试矩阵尺寸
+    int sizes[][3] = {
+        {1024, 1024, 1024},
+        {2048, 2048, 2048},
+        {4096, 4096, 4096},
+    };
 
- printf("=== Register Blocking GEMM ===\n");
- printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n",
- BM, BN, BK, TM, TN, NUM_THREADS);
- printf("%-10s %-10s %-10s %-12s %-12s %-10s\n",
- "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
- printf("------------------------------------------------------------\n");
+    printf("=== Register Blocking GEMM ===\n");
+    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
+    printf("------------------------------------------------------------\n");
 
- for (int s = 0; s < 3; s++) {
- int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
+    for (int s = 0; s < 3; s++) {
+        int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
 
- size_t sizeA = M * K * sizeof(float);
- size_t sizeB = K * N * sizeof(float);
- size_t sizeC = M * N * sizeof(float);
+        size_t sizeA = M * K * sizeof(float);
+        size_t sizeB = K * N * sizeof(float);
+        size_t sizeC = M * N * sizeof(float);
 
- float *h_A = (float*)malloc(sizeA);
- float *h_B = (float*)malloc(sizeB);
- float *h_C = (float*)malloc(sizeC);
- float *h_C_CPU = (float*)malloc(sizeC);
- float *h_C_ref = (float*)malloc(sizeC);
+        float* h_A = (float*)malloc(sizeA);
+        float* h_B = (float*)malloc(sizeB);
+        float* h_C = (float*)malloc(sizeC);
+        float* h_C_CPU = (float*)malloc(sizeC);
+        float* h_C_ref = (float*)malloc(sizeC);
 
- initMatrix(h_A, M, K);
- initMatrix(h_B, K, N);
+        initMatrix(h_A, M, K);
+        initMatrix(h_B, K, N);
 
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, sizeA);
- cudaMalloc(&d_B, sizeB);
- cudaMalloc(&d_C, sizeC);
- cudaMemcpy(d_A, h_A, sizeA, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B, h_B, sizeB, cudaMemcpyHostToDevice);
+        float *d_A, *d_B, *d_C;
+        cudaMalloc(&d_A, sizeA);
+        cudaMalloc(&d_B, sizeB);
+        cudaMalloc(&d_C, sizeC);
+        cudaMemcpy(d_A, h_A, sizeA, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, h_B, sizeB, cudaMemcpyHostToDevice);
 
- // 运行Register Blocking GEMM
- dim3 gridDim((N + BN - 1) / BN, (M + BM - 1) / BM);
- dim3 blockDim(NUM_THREADS);
+        // 运行Register Blocking GEMM
+        dim3 gridDim((N + BN - 1) / BN, (M + BM - 1) / BM);
+        dim3 blockDim(NUM_THREADS);
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
 
- // 预热
- gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
- cudaDeviceSynchronize();
+        // 预热
+        gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
+        cudaDeviceSynchronize();
 
- cudaEventRecord(start);
- gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+        cudaEventRecord(start);
+        gemmRegisterBlocking<<<gridDim, blockDim>>>(d_A, d_B, d_C, M, N, K);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
 
- float ourMs;
- cudaEventElapsedTime(&ourMs, start, stop);
+        float ourMs;
+        cudaEventElapsedTime(&ourMs, start, stop);
 
- cudaMemcpy(h_C, d_C, sizeC, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_C, d_C, sizeC, cudaMemcpyDeviceToHost);
 
- // cuBLAS基准
- float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
- cudaMemcpy(h_C_ref, d_C, sizeC, cudaMemcpyDeviceToHost);
+        // cuBLAS基准
+        float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C_ref, d_C, sizeC, cudaMemcpyDeviceToHost);
 
- // 验证（与cuBLAS对比，而不是CPU，因为大矩阵CPU太慢）
- bool correct = checkResult(h_C, h_C_ref, M, N, 1e-2);
- float percent = (cublasMs / ourMs) * 100; // 我们是cuBLAS的百分之多少（越大越接近）
+        // 验证（与cuBLAS对比，而不是CPU，因为大矩阵CPU太慢）
+        bool correct = checkResult(h_C, h_C_ref, M, N, 1e-2);
+        float percent = (cublasMs / ourMs) * 100; // 我们是cuBLAS的百分之多少（越大越接近）
 
- printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n",
- M, N, K, ourMs, cublasMs, percent,
- correct ? "PASS" : "FAIL");
+        printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n", M, N, K, ourMs, cublasMs, percent,
+               correct ? "PASS" : "FAIL");
 
- // CPU验证（只对小矩阵）
- if (M <= 512) {
- cpuGEMM(h_A, h_B, h_C_CPU, M, N, K);
- bool cpuCorrect = checkResult(h_C, h_C_CPU, M, N, 1e-3);
- printf(" CPU verification: %s\n", cpuCorrect ? "PASS" : "FAIL");
- }
+        // CPU验证（只对小矩阵）
+        if (M <= 512) {
+            cpuGEMM(h_A, h_B, h_C_CPU, M, N, K);
+            bool cpuCorrect = checkResult(h_C, h_C_CPU, M, N, 1e-3);
+            printf(" CPU verification: %s\n", cpuCorrect ? "PASS" : "FAIL");
+        }
 
- free(h_A); free(h_B); free(h_C); free(h_C_CPU); free(h_C_ref);
- cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
- cudaEventDestroy(start); cudaEventDestroy(stop);
- }
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        free(h_C_CPU);
+        free(h_C_ref);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    }
 
- return 0;
+    return 0;
 }
 ```
 
@@ -993,187 +993,182 @@ cudaStreamWaitEvent(streamB, event, 0);
 // 向量加法Kernel（作为计算任务示例）
 // --------------------------------------------------
 __global__ void vecAdd(const float* A, const float* B, float* C, int n) {
- int i = blockIdx.x * blockDim.x + threadIdx.x;
- if (i < n) {
- // 增加计算量使Kernel运行时间更显著
- float sum = A[i] + B[i];
- for (int j = 0; j < 100; j++) {
- sum = sum * 0.999f + 0.001f;
- }
- C[i] = sum;
- }
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        // 增加计算量使Kernel运行时间更显著
+        float sum = A[i] + B[i];
+        for (int j = 0; j < 100; j++) {
+            sum = sum * 0.999f + 0.001f;
+        }
+        C[i] = sum;
+    }
 }
 
 // --------------------------------------------------
 // 顺序版本（baseline）
 // --------------------------------------------------
-float sequentialVersion(float* h_A, float* h_B, float* h_C,
- float* d_A, float* d_B, float* d_C,
- int totalSize, int chunkSize) {
- int numChunks = (totalSize + chunkSize - 1) / chunkSize;
+float sequentialVersion(float* h_A, float* h_B, float* h_C, float* d_A, float* d_B, float* d_C, int totalSize,
+                        int chunkSize) {
+    int numChunks = (totalSize + chunkSize - 1) / chunkSize;
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
- cudaEventRecord(start);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
 
- for (int i = 0; i < numChunks; i++) {
- int offset = i * chunkSize;
- int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
- size_t bytes = currSize * sizeof(float);
+    for (int i = 0; i < numChunks; i++) {
+        int offset = i * chunkSize;
+        int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
+        size_t bytes = currSize * sizeof(float);
 
- // 顺序：H2D → Kernel → D2H（全部在Default Stream）
- cudaMemcpy(d_A + offset, h_A + offset, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B + offset, h_B + offset, bytes, cudaMemcpyHostToDevice);
+        // 顺序：H2D → Kernel → D2H（全部在Default Stream）
+        cudaMemcpy(d_A + offset, h_A + offset, bytes, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B + offset, h_B + offset, bytes, cudaMemcpyHostToDevice);
 
- int threads = 256;
- int blocks = (currSize + threads - 1) / threads;
- vecAdd<<<blocks, threads>>>(d_A + offset, d_B + offset, d_C + offset, currSize);
+        int threads = 256;
+        int blocks = (currSize + threads - 1) / threads;
+        vecAdd<<<blocks, threads>>>(d_A + offset, d_B + offset, d_C + offset, currSize);
 
- cudaMemcpy(h_C + offset, d_C + offset, bytes, cudaMemcpyDeviceToHost);
- }
+        cudaMemcpy(h_C + offset, d_C + offset, bytes, cudaMemcpyDeviceToHost);
+    }
 
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
- cudaEventDestroy(start);
- cudaEventDestroy(stop);
- return ms;
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
 // --------------------------------------------------
 // Multi-Stream重叠版本
 // --------------------------------------------------
-float multiStreamVersion(float* h_A, float* h_B, float* h_C,
- float* d_A, float* d_B, float* d_C,
- int totalSize, int chunkSize, int nStreams) {
- int numChunks = (totalSize + chunkSize - 1) / chunkSize;
+float multiStreamVersion(float* h_A, float* h_B, float* h_C, float* d_A, float* d_B, float* d_C, int totalSize,
+                         int chunkSize, int nStreams) {
+    int numChunks = (totalSize + chunkSize - 1) / chunkSize;
 
- // 创建多个Stream（使用NonBlocking避免与Default Stream同步）
- cudaStream_t* streams = new cudaStream_t[nStreams];
- for (int i = 0; i < nStreams; i++) {
- cudaStreamCreateWithFlags(&streams[i], cudaStreamNonBlocking);
- }
+    // 创建多个Stream（使用NonBlocking避免与Default Stream同步）
+    cudaStream_t* streams = new cudaStream_t[nStreams];
+    for (int i = 0; i < nStreams; i++) {
+        cudaStreamCreateWithFlags(&streams[i], cudaStreamNonBlocking);
+    }
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
- cudaEventRecord(start);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
 
- for (int i = 0; i < numChunks; i++) {
- int streamIdx = i % nStreams;
- int offset = i * chunkSize;
- int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
- size_t bytes = currSize * sizeof(float);
+    for (int i = 0; i < numChunks; i++) {
+        int streamIdx = i % nStreams;
+        int offset = i * chunkSize;
+        int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
+        size_t bytes = currSize * sizeof(float);
 
- // 在同一个Stream中按序执行H2D→Compute→D2H
- // 不同Stream之间自动重叠
- cudaMemcpyAsync(d_A + offset, h_A + offset, bytes,
- cudaMemcpyHostToDevice, streams[streamIdx]);
- cudaMemcpyAsync(d_B + offset, h_B + offset, bytes,
- cudaMemcpyHostToDevice, streams[streamIdx]);
+        // 在同一个Stream中按序执行H2D→Compute→D2H
+        // 不同Stream之间自动重叠
+        cudaMemcpyAsync(d_A + offset, h_A + offset, bytes, cudaMemcpyHostToDevice, streams[streamIdx]);
+        cudaMemcpyAsync(d_B + offset, h_B + offset, bytes, cudaMemcpyHostToDevice, streams[streamIdx]);
 
- int threads = 256;
- int blocks = (currSize + threads - 1) / threads;
- vecAdd<<<blocks, threads, 0, streams[streamIdx]>>>(
- d_A + offset, d_B + offset, d_C + offset, currSize);
+        int threads = 256;
+        int blocks = (currSize + threads - 1) / threads;
+        vecAdd<<<blocks, threads, 0, streams[streamIdx]>>>(d_A + offset, d_B + offset, d_C + offset, currSize);
 
- cudaMemcpyAsync(h_C + offset, d_C + offset, bytes,
- cudaMemcpyDeviceToHost, streams[streamIdx]);
- }
+        cudaMemcpyAsync(h_C + offset, d_C + offset, bytes, cudaMemcpyDeviceToHost, streams[streamIdx]);
+    }
 
- // 同步所有Stream
- for (int i = 0; i < nStreams; i++) {
- cudaStreamSynchronize(streams[i]);
- }
+    // 同步所有Stream
+    for (int i = 0; i < nStreams; i++) {
+        cudaStreamSynchronize(streams[i]);
+    }
 
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
 
- for (int i = 0; i < nStreams; i++) {
- cudaStreamDestroy(streams[i]);
- }
- delete[] streams;
- cudaEventDestroy(start);
- cudaEventDestroy(stop);
- return ms;
+    for (int i = 0; i < nStreams; i++) {
+        cudaStreamDestroy(streams[i]);
+    }
+    delete[] streams;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
 // --------------------------------------------------
 // Main
 // --------------------------------------------------
 int main() {
- const int totalSize = 1 << 24; // 16,777,216个元素
- const int chunkSize = 1 << 18; // 262,144个元素 per chunk
- const int nStreams = 4;
+    const int totalSize = 1 << 24; // 16,777,216个元素
+    const int chunkSize = 1 << 18; // 262,144个元素 per chunk
+    const int nStreams = 4;
 
- printf("=== Multi-Stream Overlap Pipeline ===\n");
- printf("Total size: %d (%.2f MB)\n", totalSize, totalSize * sizeof(float) / (1024.0 * 1024.0));
- printf("Chunk size: %d (%.2f MB)\n", chunkSize, chunkSize * sizeof(float) / (1024.0 * 1024.0));
- printf("Num chunks: %d, Num streams: %d\n",
- (totalSize + chunkSize - 1) / chunkSize, nStreams);
- printf("\n");
+    printf("=== Multi-Stream Overlap Pipeline ===\n");
+    printf("Total size: %d (%.2f MB)\n", totalSize, totalSize * sizeof(float) / (1024.0 * 1024.0));
+    printf("Chunk size: %d (%.2f MB)\n", chunkSize, chunkSize * sizeof(float) / (1024.0 * 1024.0));
+    printf("Num chunks: %d, Num streams: %d\n", (totalSize + chunkSize - 1) / chunkSize, nStreams);
+    printf("\n");
 
- size_t totalBytes = totalSize * sizeof(float);
+    size_t totalBytes = totalSize * sizeof(float);
 
- // 分配Pinned Memory（必须用于cudaMemcpyAsync）
- float *h_A, *h_B, *h_C_seq, *h_C_multi;
- cudaMallocHost(&h_A, totalBytes);
- cudaMallocHost(&h_B, totalBytes);
- cudaMallocHost(&h_C_seq, totalBytes);
- cudaMallocHost(&h_C_multi, totalBytes);
+    // 分配Pinned Memory（必须用于cudaMemcpyAsync）
+    float *h_A, *h_B, *h_C_seq, *h_C_multi;
+    cudaMallocHost(&h_A, totalBytes);
+    cudaMallocHost(&h_B, totalBytes);
+    cudaMallocHost(&h_C_seq, totalBytes);
+    cudaMallocHost(&h_C_multi, totalBytes);
 
- // 初始化
- srand(42);
- for (int i = 0; i < totalSize; i++) {
- h_A[i] = static_cast<float>(rand()) / RAND_MAX;
- h_B[i] = static_cast<float>(rand()) / RAND_MAX;
- }
+    // 初始化
+    srand(42);
+    for (int i = 0; i < totalSize; i++) {
+        h_A[i] = static_cast<float>(rand()) / RAND_MAX;
+        h_B[i] = static_cast<float>(rand()) / RAND_MAX;
+    }
 
- // Device内存
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, totalBytes);
- cudaMalloc(&d_B, totalBytes);
- cudaMalloc(&d_C, totalBytes);
+    // Device内存
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, totalBytes);
+    cudaMalloc(&d_B, totalBytes);
+    cudaMalloc(&d_C, totalBytes);
 
- // 运行顺序版本
- printf("Running sequential version...\n");
- float seqMs = sequentialVersion(h_A, h_B, h_C_seq,
- d_A, d_B, d_C, totalSize, chunkSize);
- printf("Sequential: %.3f ms\n\n", seqMs);
+    // 运行顺序版本
+    printf("Running sequential version...\n");
+    float seqMs = sequentialVersion(h_A, h_B, h_C_seq, d_A, d_B, d_C, totalSize, chunkSize);
+    printf("Sequential: %.3f ms\n\n", seqMs);
 
- // 运行Multi-Stream版本
- printf("Running multi-stream version (nStreams=%d)...\n", nStreams);
- float multiMs = multiStreamVersion(h_A, h_B, h_C_multi,
- d_A, d_B, d_C, totalSize, chunkSize, nStreams);
- printf("Multi-Stream: %.3f ms\n\n", multiMs);
+    // 运行Multi-Stream版本
+    printf("Running multi-stream version (nStreams=%d)...\n", nStreams);
+    float multiMs = multiStreamVersion(h_A, h_B, h_C_multi, d_A, d_B, d_C, totalSize, chunkSize, nStreams);
+    printf("Multi-Stream: %.3f ms\n\n", multiMs);
 
- // 结果验证
- bool correct = true;
- for (int i = 0; i < totalSize; i++) {
- if (fabs(h_C_seq[i] - h_C_multi[i]) > 1e-5) {
- correct = false;
- break;
- }
- }
+    // 结果验证
+    bool correct = true;
+    for (int i = 0; i < totalSize; i++) {
+        if (fabs(h_C_seq[i] - h_C_multi[i]) > 1e-5) {
+            correct = false;
+            break;
+        }
+    }
 
- // 性能报告
- float speedup = seqMs / multiMs;
- printf("=== Performance Summary ===\n");
- printf("Sequential: %.3f ms\n", seqMs);
- printf("Multi-Stream: %.3f ms\n", multiMs);
- printf("Speedup: %.2fx\n", speedup);
- printf("Result check: %s\n", correct ? "PASS" : "FAIL");
+    // 性能报告
+    float speedup = seqMs / multiMs;
+    printf("=== Performance Summary ===\n");
+    printf("Sequential: %.3f ms\n", seqMs);
+    printf("Multi-Stream: %.3f ms\n", multiMs);
+    printf("Speedup: %.2fx\n", speedup);
+    printf("Result check: %s\n", correct ? "PASS" : "FAIL");
 
- // 释放资源
- cudaFreeHost(h_A); cudaFreeHost(h_B);
- cudaFreeHost(h_C_seq); cudaFreeHost(h_C_multi);
- cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    // 释放资源
+    cudaFreeHost(h_A);
+    cudaFreeHost(h_B);
+    cudaFreeHost(h_C_seq);
+    cudaFreeHost(h_C_multi);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
 
- return 0;
+    return 0;
 }
 ```
 
@@ -1673,159 +1668,156 @@ O_final = o / l （最后做一次归一化）
 // --------------------------------------------------
 #define Br 64 // Q tile的行数（SRAM可容纳）
 #define Bc 32 // K/V tile的行数；在 RTX 5090 48KB shared memory 限制下调小
-#define D 64 // Head dimension
+#define D 64  // Head dimension
 
 // 每个Block处理一个Q tile
 // Block配置: (Bc, Br/4) threads = (64, 16) = 1024 threads（较大，可调）
 // 简化版：使用 (Bc, 4) 线程配置
 #define NUM_THREADS_X Bc // 64
-#define NUM_THREADS_Y 4 // Br/NUM_THREADS_Y = 64/4 = 16
+#define NUM_THREADS_Y 4  // Br/NUM_THREADS_Y = 64/4 = 16
 
 // --------------------------------------------------
 // FlashAttention简化版Forward Kernel
 // --------------------------------------------------
-__global__ void flashAttentionFwd(const float* __restrict__ Q,
- const float* __restrict__ K,
- const float* __restrict__ V,
- float* __restrict__ O,
- int N, int numHeads) {
- // Shared Memory声明
- __shared__ float s_Q[Br][D]; // Q tile: Br×D
- __shared__ float s_K[Bc][D]; // K tile: Bc×D
- __shared__ float s_V[Bc][D]; // V tile: Bc×D
- __shared__ float s_S[Br][Bc]; // S = Q×K^T partial: Br×Bc
+__global__ void flashAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K, const float* __restrict__ V,
+                                  float* __restrict__ O, int N, int numHeads) {
+    // Shared Memory声明
+    __shared__ float s_Q[Br][D];  // Q tile: Br×D
+    __shared__ float s_K[Bc][D];  // K tile: Bc×D
+    __shared__ float s_V[Bc][D];  // V tile: Bc×D
+    __shared__ float s_S[Br][Bc]; // S = Q×K^T partial: Br×Bc
 
- // 当前Block的batch、head、Q行位置
- int batch = blockIdx.z;
- int head = blockIdx.y;
- int qTileRow = blockIdx.x * Br; // 当前Q tile的行起始
+    // 当前Block的batch、head、Q行位置
+    int batch = blockIdx.z;
+    int head = blockIdx.y;
+    int qTileRow = blockIdx.x * Br; // 当前Q tile的行起始
 
- int tid_x = threadIdx.x; // 0 ~ Bc-1 (0~63)
- int tid_y = threadIdx.y; // 0 ~ 3
+    int tid_x = threadIdx.x; // 0 ~ Bc-1 (0~63)
+    int tid_y = threadIdx.y; // 0 ~ 3
 
- // 每个线程处理Br/NUM_THREADS_Y = 16行中的多列
- // 简化：每个线程处理 (tid_y + NUM_THREADS_Y * k) 行
+    // 每个线程处理Br/NUM_THREADS_Y = 16行中的多列
+    // 简化：每个线程处理 (tid_y + NUM_THREADS_Y * k) 行
 
- // 偏移计算：Q/K/V/O的base offset
- int bhOffset = ((batch * numHeads + head) * N);
+    // 偏移计算：Q/K/V/O的base offset
+    int bhOffset = ((batch * numHeads + head) * N);
 
- // 每个线程维护的running状态（按Q行）
- float m = -1e30f; // running max
- float l = 0.0f; // running sum
- float acc[D] = {0}; // running output accumulator（每个线程处理一行Q时累加）
+    // 每个线程维护的running状态（按Q行）
+    float m = -1e30f;   // running max
+    float l = 0.0f;     // running sum
+    float acc[D] = {0}; // running output accumulator（每个线程处理一行Q时累加）
 
- // =====================================================
- // Step 1: 加载Q tile到Shared Memory（所有线程协作）
- // =====================================================
- for (int i = tid_y; i < Br; i += NUM_THREADS_Y) {
- int qRow = qTileRow + i;
- for (int d = tid_x; d < D; d += NUM_THREADS_X) {
- if (qRow < N) {
- s_Q[i][d] = Q[bhOffset * D + qRow * D + d];
- } else {
- s_Q[i][d] = 0.0f;
- }
- }
- }
- __syncthreads();
+    // =====================================================
+    // Step 1: 加载Q tile到Shared Memory（所有线程协作）
+    // =====================================================
+    for (int i = tid_y; i < Br; i += NUM_THREADS_Y) {
+        int qRow = qTileRow + i;
+        for (int d = tid_x; d < D; d += NUM_THREADS_X) {
+            if (qRow < N) {
+                s_Q[i][d] = Q[bhOffset * D + qRow * D + d];
+            } else {
+                s_Q[i][d] = 0.0f;
+            }
+        }
+    }
+    __syncthreads();
 
- // =====================================================
- // Step 2: 外循环已隐含在Block配置中（每个Block处理一个Q tile）
- // Step 3: 内循环遍历K/V tile
- // =====================================================
- for (int kvStart = 0; kvStart < N; kvStart += Bc) {
- // -------------------------------------------------
- // 3a: 加载K和V tile到Shared Memory
- // -------------------------------------------------
- for (int i = tid_y; i < Bc; i += NUM_THREADS_Y) {
- int kvRow = kvStart + i;
- for (int d = tid_x; d < D; d += NUM_THREADS_X) {
- if (kvRow < N) {
- s_K[i][d] = K[bhOffset * D + kvRow * D + d];
- s_V[i][d] = V[bhOffset * D + kvRow * D + d];
- } else {
- s_K[i][d] = 0.0f;
- s_V[i][d] = 0.0f;
- }
- }
- }
- __syncthreads();
+    // =====================================================
+    // Step 2: 外循环已隐含在Block配置中（每个Block处理一个Q tile）
+    // Step 3: 内循环遍历K/V tile
+    // =====================================================
+    for (int kvStart = 0; kvStart < N; kvStart += Bc) {
+        // -------------------------------------------------
+        // 3a: 加载K和V tile到Shared Memory
+        // -------------------------------------------------
+        for (int i = tid_y; i < Bc; i += NUM_THREADS_Y) {
+            int kvRow = kvStart + i;
+            for (int d = tid_x; d < D; d += NUM_THREADS_X) {
+                if (kvRow < N) {
+                    s_K[i][d] = K[bhOffset * D + kvRow * D + d];
+                    s_V[i][d] = V[bhOffset * D + kvRow * D + d];
+                } else {
+                    s_K[i][d] = 0.0f;
+                    s_V[i][d] = 0.0f;
+                }
+            }
+        }
+        __syncthreads();
 
- // -------------------------------------------------
- // 3b: 计算 S_tile = Q_tile × K_tile^T (Br×Bc)
- // 每个线程计算 s_Q[row][:] · s_K[col][:]
- // -------------------------------------------------
- // 简化版：每个warp计算一小部分
- for (int qi = tid_y; qi < Br; qi += NUM_THREADS_Y) {
- for (int ki = tid_x; ki < Bc; ki += NUM_THREADS_X) {
- float s_val = 0.0f;
- #pragma unroll
- for (int d = 0; d < D; d++) {
- s_val += s_Q[qi][d] * s_K[ki][d];
- }
- s_S[qi][ki] = s_val;
- }
- }
- __syncthreads();
+        // -------------------------------------------------
+        // 3b: 计算 S_tile = Q_tile × K_tile^T (Br×Bc)
+        // 每个线程计算 s_Q[row][:] · s_K[col][:]
+        // -------------------------------------------------
+        // 简化版：每个warp计算一小部分
+        for (int qi = tid_y; qi < Br; qi += NUM_THREADS_Y) {
+            for (int ki = tid_x; ki < Bc; ki += NUM_THREADS_X) {
+                float s_val = 0.0f;
+                #pragma unroll
+                for (int d = 0; d < D; d++) {
+                    s_val += s_Q[qi][d] * s_K[ki][d];
+                }
+                s_S[qi][ki] = s_val;
+            }
+        }
+        __syncthreads();
 
- // -------------------------------------------------
- // 3c: Online Softmax更新（每个Q行独立处理）
- // -------------------------------------------------
- for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
- // 只在tid_x == 0的线程做softmax更新（避免重复）
- if (tid_x == 0) {
- // ---- 公式1: 计算新块的局部max ----
- float m_prev = m;
- float m_new = m_prev;
- for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
- m_new = fmaxf(m_new, s_S[qi][c]);
- }
+        // -------------------------------------------------
+        // 3c: Online Softmax更新（每个Q行独立处理）
+        // -------------------------------------------------
+        for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
+            // 只在tid_x == 0的线程做softmax更新（避免重复）
+            if (tid_x == 0) {
+                // ---- 公式1: 计算新块的局部max ----
+                float m_prev = m;
+                float m_new = m_prev;
+                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
+                    m_new = fmaxf(m_new, s_S[qi][c]);
+                }
 
- // ---- 公式2: 更新running sum ----
- float l_scale = expf(m_prev - m_new); // 旧sum的缩放因子
- float l_new = l * l_scale;
+                // ---- 公式2: 更新running sum ----
+                float l_scale = expf(m_prev - m_new); // 旧sum的缩放因子
+                float l_new = l * l_scale;
 
- // 计算新块的概率权重
- float p[Bc];
- for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
- p[c] = expf(s_S[qi][c] - m_new);
- l_new += p[c];
- }
+                // 计算新块的概率权重
+                float p[Bc];
+                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
+                    p[c] = expf(s_S[qi][c] - m_new);
+                    l_new += p[c];
+                }
 
- // ---- 公式3: 更新running output ----
- // 先将之前的输出按新的概率重新归一化
- float o_scale = (l * l_scale) / l_new;
- for (int d = 0; d < D; d++) {
- acc[d] = acc[d] * o_scale;
- }
+                // ---- 公式3: 更新running output ----
+                // 先将之前的输出按新的概率重新归一化
+                float o_scale = (l * l_scale) / l_new;
+                for (int d = 0; d < D; d++) {
+                    acc[d] = acc[d] * o_scale;
+                }
 
- // 加上新块的贡献
- for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
- float p_norm = p[c] / l_new; // 新块的概率权重
- for (int d = 0; d < D; d++) {
- acc[d] += p_norm * s_V[c][d];
- }
- }
+                // 加上新块的贡献
+                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
+                    float p_norm = p[c] / l_new; // 新块的概率权重
+                    for (int d = 0; d < D; d++) {
+                        acc[d] += p_norm * s_V[c][d];
+                    }
+                }
 
- // 更新running状态
- m = m_new;
- l = l_new;
- }
- }
- __syncthreads();
- }
+                // 更新running状态
+                m = m_new;
+                l = l_new;
+            }
+        }
+        __syncthreads();
+    }
 
- // =====================================================
- // Step 4: 写回最终结果（每个线程写自己处理的行）
- // =====================================================
- for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
- if (tid_x == 0) {
- for (int d = 0; d < D; d++) {
- int outRow = qTileRow + qi;
- O[bhOffset * D + outRow * D + d] = acc[d];
- }
- }
- }
+    // =====================================================
+    // Step 4: 写回最终结果（每个线程写自己处理的行）
+    // =====================================================
+    for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
+        if (tid_x == 0) {
+            for (int d = 0; d < D; d++) {
+                int outRow = qTileRow + qi;
+                O[bhOffset * D + outRow * D + d] = acc[d];
+            }
+        }
+    }
 }
 
 // 避免宏 D 与函数参数名冲突
@@ -1834,143 +1826,147 @@ __global__ void flashAttentionFwd(const float* __restrict__ Q,
 // --------------------------------------------------
 // CPU参考实现（标准Attention，用于验证正确性）
 // --------------------------------------------------
-void cpuAttention(const float* Q, const float* K, const float* V,
- float* O, int N, int D) {
- // S = Q × K^T (N×N)
- float* S = (float*)malloc(N * N * sizeof(float));
- for (int i = 0; i < N; i++) {
- for (int j = 0; j < N; j++) {
- float sum = 0;
- for (int d = 0; d < D; d++) {
- sum += Q[i * D + d] * K[j * D + d];
- }
- S[i * N + j] = sum;
- }
- }
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int D) {
+    // S = Q × K^T (N×N)
+    float* S = (float*)malloc(N * N * sizeof(float));
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0;
+            for (int d = 0; d < D; d++) {
+                sum += Q[i * D + d] * K[j * D + d];
+            }
+            S[i * N + j] = sum;
+        }
+    }
 
- // Softmax per row
- for (int i = 0; i < N; i++) {
- float maxVal = S[i * N];
- for (int j = 1; j < N; j++) {
- maxVal = fmaxf(maxVal, S[i * N + j]);
- }
- float sum = 0;
- for (int j = 0; j < N; j++) {
- S[i * N + j] = expf(S[i * N + j] - maxVal);
- sum += S[i * N + j];
- }
- for (int j = 0; j < N; j++) {
- S[i * N + j] /= sum;
- }
- }
+    // Softmax per row
+    for (int i = 0; i < N; i++) {
+        float maxVal = S[i * N];
+        for (int j = 1; j < N; j++) {
+            maxVal = fmaxf(maxVal, S[i * N + j]);
+        }
+        float sum = 0;
+        for (int j = 0; j < N; j++) {
+            S[i * N + j] = expf(S[i * N + j] - maxVal);
+            sum += S[i * N + j];
+        }
+        for (int j = 0; j < N; j++) {
+            S[i * N + j] /= sum;
+        }
+    }
 
- // O = S × V (N×D)
- for (int i = 0; i < N; i++) {
- for (int d = 0; d < D; d++) {
- float sum = 0;
- for (int j = 0; j < N; j++) {
- sum += S[i * N + j] * V[j * D + d];
- }
- O[i * D + d] = sum;
- }
- }
+    // O = S × V (N×D)
+    for (int i = 0; i < N; i++) {
+        for (int d = 0; d < D; d++) {
+            float sum = 0;
+            for (int j = 0; j < N; j++) {
+                sum += S[i * N + j] * V[j * D + d];
+            }
+            O[i * D + d] = sum;
+        }
+    }
 
- free(S);
+    free(S);
 }
 
 // --------------------------------------------------
 // Host辅助函数
 // --------------------------------------------------
 void initMatrix(float* mat, int rows, int cols) {
- srand(42);
- for (int i = 0; i < rows * cols; i++) {
- mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f; // 小值防exp溢出
- }
+    srand(42);
+    for (int i = 0; i < rows * cols; i++) {
+        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f; // 小值防exp溢出
+    }
 }
 
 bool checkResult(const float* gpu, const float* cpu, int n, float eps) {
- for (int i = 0; i < n; i++) {
- if (fabs(gpu[i] - cpu[i]) > eps) {
- printf("Mismatch at %d: GPU=%.6f, CPU=%.6f, diff=%.6f\n",
- i, gpu[i], cpu[i], fabs(gpu[i] - cpu[i]));
- return false;
- }
- }
- return true;
+    for (int i = 0; i < n; i++) {
+        if (fabs(gpu[i] - cpu[i]) > eps) {
+            printf("Mismatch at %d: GPU=%.6f, CPU=%.6f, diff=%.6f\n", i, gpu[i], cpu[i], fabs(gpu[i] - cpu[i]));
+            return false;
+        }
+    }
+    return true;
 }
 
 // --------------------------------------------------
 // Main
 // --------------------------------------------------
 int main() {
- // 测试配置（小尺寸便于CPU验证）
- const int N = 256; // Sequence length
- const int D = 64; // Head dimension
- const int batchSize = 1; // Batch size
- const int numHeads = 1; // Number of heads
+    // 测试配置（小尺寸便于CPU验证）
+    const int N = 256;       // Sequence length
+    const int D = 64;        // Head dimension
+    const int batchSize = 1; // Batch size
+    const int numHeads = 1;  // Number of heads
 
- printf("=== FlashAttention Simplified Forward ===\n");
- printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
- printf("SRAM usage per block: %.2f KB\n",
- (Br * D + Bc * D * 2 + Br * Bc) * sizeof(float) / 1024.0);
+    printf("=== FlashAttention Simplified Forward ===\n");
+    printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
+    printf("SRAM usage per block: %.2f KB\n", (Br * D + Bc * D * 2 + Br * Bc) * sizeof(float) / 1024.0);
 
- size_t totalElements = batchSize * numHeads * N * D;
- size_t bytes = totalElements * sizeof(float);
+    size_t totalElements = batchSize * numHeads * N * D;
+    size_t bytes = totalElements * sizeof(float);
 
- // Host内存
- float *h_Q = (float*)malloc(bytes);
- float *h_K = (float*)malloc(bytes);
- float *h_V = (float*)malloc(bytes);
- float *h_O = (float*)malloc(bytes);
- float *h_O_CPU = (float*)malloc(bytes);
+    // Host内存
+    float* h_Q = (float*)malloc(bytes);
+    float* h_K = (float*)malloc(bytes);
+    float* h_V = (float*)malloc(bytes);
+    float* h_O = (float*)malloc(bytes);
+    float* h_O_CPU = (float*)malloc(bytes);
 
- initMatrix(h_Q, batchSize * numHeads * N, D);
- initMatrix(h_K, batchSize * numHeads * N, D);
- initMatrix(h_V, batchSize * numHeads * N, D);
+    initMatrix(h_Q, batchSize * numHeads * N, D);
+    initMatrix(h_K, batchSize * numHeads * N, D);
+    initMatrix(h_V, batchSize * numHeads * N, D);
 
- // Device内存
- float *d_Q, *d_K, *d_V, *d_O;
- cudaMalloc(&d_Q, bytes);
- cudaMalloc(&d_K, bytes);
- cudaMalloc(&d_V, bytes);
- cudaMalloc(&d_O, bytes);
- cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
+    // Device内存
+    float *d_Q, *d_K, *d_V, *d_O;
+    cudaMalloc(&d_Q, bytes);
+    cudaMalloc(&d_K, bytes);
+    cudaMalloc(&d_V, bytes);
+    cudaMalloc(&d_O, bytes);
+    cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
 
- // 启动Kernel
- dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
- dim3 blockDim(NUM_THREADS_X, NUM_THREADS_Y);
+    // 启动Kernel
+    dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
+    dim3 blockDim(NUM_THREADS_X, NUM_THREADS_Y);
 
- printf("Grid: (%d, %d, %d), Block: (%d, %d)\n",
- gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y);
+    printf("Grid: (%d, %d, %d), Block: (%d, %d)\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y);
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- cudaEventRecord(start);
- flashAttentionFwd<<<gridDim, blockDim>>>(d_Q, d_K, d_V, d_O, N, numHeads);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+    cudaEventRecord(start);
+    flashAttentionFwd<<<gridDim, blockDim>>>(d_Q, d_K, d_V, d_O, N, numHeads);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
- cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
 
- // CPU验证
- cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, D);
- bool correct = checkResult(h_O, h_O_CPU, totalElements, 1e-3);
+    // CPU验证
+    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, D);
+    bool correct = checkResult(h_O, h_O_CPU, totalElements, 1e-3);
 
- printf("GPU Time: %.3f ms\n", ms);
- printf("Result check: %s\n", correct ? "PASS" : "FAIL");
+    printf("GPU Time: %.3f ms\n", ms);
+    printf("Result check: %s\n", correct ? "PASS" : "FAIL");
 
- // 释放资源
- free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_CPU);
- cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_O);
- cudaEventDestroy(start); cudaEventDestroy(stop);
+    // 释放资源
+    free(h_Q);
+    free(h_K);
+    free(h_V);
+    free(h_O);
+    free(h_O_CPU);
+    cudaFree(d_Q);
+    cudaFree(d_K);
+    cudaFree(d_V);
+    cudaFree(d_O);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
- return 0;
+    return 0;
 }
 ```
 
@@ -2111,22 +2107,25 @@ nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
 // float4辅助：将float*转换为float4*做向量化加载
 // --------------------------------------------------
 __device__ __forceinline__ float4 make_float4_from_float(const float* p) {
- return make_float4(p[0], p[1], p[2], p[3]);
+    return make_float4(p[0], p[1], p[2], p[3]);
 }
 
 __device__ __forceinline__ void store_float4_to_float(float* p, float4 v) {
- p[0] = v.x; p[1] = v.y; p[2] = v.z; p[3] = v.w;
+    p[0] = v.x;
+    p[1] = v.y;
+    p[2] = v.z;
+    p[3] = v.w;
 }
 
 // --------------------------------------------------
 // Warp级归约（用于最终累加器写回优化）
 // --------------------------------------------------
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1) {
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- }
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
 }
 
 // --------------------------------------------------
@@ -2137,267 +2136,257 @@ __inline__ __device__ float warpReduceSum(float val) {
 // 3. Warp Shuffle辅助累加
 // 4. Coalesced写回
 // --------------------------------------------------
-__global__ void gemmIntegrated(const float* __restrict__ A,
- const float* __restrict__ B,
- float* __restrict__ C,
- int M, int N, int K) {
- __shared__ float s_A[BM][BK];
- __shared__ float s_B[BK][BN];
+__global__ void gemmIntegrated(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                               int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
 
- float r_A[TM];
- float r_B[TN];
- float acc[TM][TN] = {0};
+    float r_A[TM];
+    float r_B[TN];
+    float acc[TM][TN] = {0};
 
- int threadRow = threadIdx.x / (BN / TN);
- int threadCol = threadIdx.x % (BN / TN);
- int cRow = blockIdx.y * BM;
- int cCol = blockIdx.x * BN;
+    int threadRow = threadIdx.x / (BN / TN);
+    int threadCol = threadIdx.x % (BN / TN);
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
 
- // 主循环沿K维度
- for (int bk = 0; bk < K; bk += BK) {
- // ---- 协作加载A tile (BM×BK) ----
- // 向量化加载：每次加载4个float（一个float4）
- int aRow = threadIdx.x / (BK / 4);
- int aCol4 = threadIdx.x % (BK / 4); // 列号/4
+    // 主循环沿K维度
+    for (int bk = 0; bk < K; bk += BK) {
+        // ---- 协作加载A tile (BM×BK) ----
+        // 向量化加载：每次加载4个float（一个float4）
+        int aRow = threadIdx.x / (BK / 4);
+        int aCol4 = threadIdx.x % (BK / 4); // 列号/4
 
- #pragma unroll
- for (int i = 0; i < BM; i += NUM_THREADS / (BK / 4)) {
- int loadRow = aRow + i;
- int globalRow = cRow + loadRow;
- int globalCol = bk + aCol4 * 4;
+        #pragma unroll
+        for (int i = 0; i < BM; i += NUM_THREADS / (BK / 4)) {
+            int loadRow = aRow + i;
+            int globalRow = cRow + loadRow;
+            int globalCol = bk + aCol4 * 4;
 
- if (loadRow < BM && globalRow < M && globalCol + 3 < K) {
- float4 val = reinterpret_cast<const float4*>(
- &A[globalRow * K + globalCol])[0];
- s_A[loadRow][aCol4 * 4 + 0] = val.x;
- s_A[loadRow][aCol4 * 4 + 1] = val.y;
- s_A[loadRow][aCol4 * 4 + 2] = val.z;
- s_A[loadRow][aCol4 * 4 + 3] = val.w;
- } else if (loadRow < BM) {
- #pragma unroll
- for (int c = 0; c < 4; c++) {
- int gc = globalCol + c;
- s_A[loadRow][aCol4 * 4 + c] = (globalRow < M && gc < K) ?
- A[globalRow * K + gc] : 0.0f;
- }
- }
- }
+            if (loadRow < BM && globalRow < M && globalCol + 3 < K) {
+                float4 val = reinterpret_cast<const float4*>(&A[globalRow * K + globalCol])[0];
+                s_A[loadRow][aCol4 * 4 + 0] = val.x;
+                s_A[loadRow][aCol4 * 4 + 1] = val.y;
+                s_A[loadRow][aCol4 * 4 + 2] = val.z;
+                s_A[loadRow][aCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BM) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_A[loadRow][aCol4 * 4 + c] = (globalRow < M && gc < K) ? A[globalRow * K + gc] : 0.0f;
+                }
+            }
+        }
 
- // ---- 协作加载B tile (BK×BN) ----
- int bRow = threadIdx.x / (BN / 4);
- int bCol4 = threadIdx.x % (BN / 4);
+        // ---- 协作加载B tile (BK×BN) ----
+        int bRow = threadIdx.x / (BN / 4);
+        int bCol4 = threadIdx.x % (BN / 4);
 
- #pragma unroll
- for (int i = 0; i < BK; i += NUM_THREADS / (BN / 4)) {
- int loadRow = bRow + i;
- int globalRow = bk + loadRow;
- int globalCol = cCol + bCol4 * 4;
+        #pragma unroll
+        for (int i = 0; i < BK; i += NUM_THREADS / (BN / 4)) {
+            int loadRow = bRow + i;
+            int globalRow = bk + loadRow;
+            int globalCol = cCol + bCol4 * 4;
 
- if (loadRow < BK && globalRow < K && globalCol + 3 < N) {
- float4 val = reinterpret_cast<const float4*>(
- &B[globalRow * N + globalCol])[0];
- s_B[loadRow][bCol4 * 4 + 0] = val.x;
- s_B[loadRow][bCol4 * 4 + 1] = val.y;
- s_B[loadRow][bCol4 * 4 + 2] = val.z;
- s_B[loadRow][bCol4 * 4 + 3] = val.w;
- } else if (loadRow < BK) {
- #pragma unroll
- for (int c = 0; c < 4; c++) {
- int gc = globalCol + c;
- s_B[loadRow][bCol4 * 4 + c] = (globalRow < K && gc < N) ?
- B[globalRow * N + gc] : 0.0f;
- }
- }
- }
+            if (loadRow < BK && globalRow < K && globalCol + 3 < N) {
+                float4 val = reinterpret_cast<const float4*>(&B[globalRow * N + globalCol])[0];
+                s_B[loadRow][bCol4 * 4 + 0] = val.x;
+                s_B[loadRow][bCol4 * 4 + 1] = val.y;
+                s_B[loadRow][bCol4 * 4 + 2] = val.z;
+                s_B[loadRow][bCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BK) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_B[loadRow][bCol4 * 4 + c] = (globalRow < K && gc < N) ? B[globalRow * N + gc] : 0.0f;
+                }
+            }
+        }
 
- __syncthreads();
+        __syncthreads();
 
- // ---- Register Blocking计算 ----
- #pragma unroll
- for (int k = 0; k < BK; k++) {
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- r_A[m] = s_A[threadRow * TM + m][k];
- }
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- r_B[n] = s_B[k][threadCol * TN + n];
- }
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- acc[m][n] += r_A[m] * r_B[n];
- }
- }
- }
+// ---- Register Blocking计算 ----
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                r_A[m] = s_A[threadRow * TM + m][k];
+            }
+            #pragma unroll
+            for (int n = 0; n < TN; n++) {
+                r_B[n] = s_B[k][threadCol * TN + n];
+            }
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                #pragma unroll
+                for (int n = 0; n < TN; n++) {
+                    acc[m][n] += r_A[m] * r_B[n];
+                }
+            }
+        }
 
- __syncthreads();
- }
+        __syncthreads();
+    }
 
- // ---- Coalesced写回Global Memory ----
- // 使用float4向量化写回
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- int gRow = cRow + threadRow * TM + m;
- if (gRow < M) {
- #pragma unroll
- for (int n = 0; n < TN; n += 4) {
- int gCol = cCol + threadCol * TN + n;
- if (gCol + 3 < N) {
- float4 val = make_float4(
- acc[m][n + 0], acc[m][n + 1],
- acc[m][n + 2], acc[m][n + 3]
- );
- reinterpret_cast<float4*>(&C[gRow * N + gCol])[0] = val;
- } else {
- #pragma unroll
- for (int c = 0; c < 4 && gCol + c < N; c++) {
- C[gRow * N + gCol + c] = acc[m][n + c];
- }
- }
- }
- }
- }
+// ---- Coalesced写回Global Memory ----
+// 使用float4向量化写回
+    #pragma unroll
+    for (int m = 0; m < TM; m++) {
+        int gRow = cRow + threadRow * TM + m;
+        if (gRow < M) {
+            #pragma unroll
+            for (int n = 0; n < TN; n += 4) {
+                int gCol = cCol + threadCol * TN + n;
+                if (gCol + 3 < N) {
+                    float4 val = make_float4(acc[m][n + 0], acc[m][n + 1], acc[m][n + 2], acc[m][n + 3]);
+                    reinterpret_cast<float4*>(&C[gRow * N + gCol])[0] = val;
+                } else {
+                    #pragma unroll
+                    for (int c = 0; c < 4 && gCol + c < N; c++) {
+                        C[gRow * N + gCol + c] = acc[m][n + c];
+                    }
+                }
+            }
+        }
+    }
 }
 
 // --------------------------------------------------
 // cuBLAS基准
 // --------------------------------------------------
-float runCuBLAS(const float* d_A, const float* d_B, float* d_C,
- int M, int N, int K) {
- cublasHandle_t handle;
- cublasCreate(&handle);
- float alpha = 1.0f, beta = 0.0f;
+float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    float alpha = 1.0f, beta = 0.0f;
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
- &alpha, d_B, N, d_A, K, &beta, d_C, N);
- cudaDeviceSynchronize();
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaDeviceSynchronize();
 
- cudaEventRecord(start);
- cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
- &alpha, d_B, N, d_A, K, &beta, d_C, N);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+    cudaEventRecord(start);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
 
- cublasDestroy(handle);
- cudaEventDestroy(start);
- cudaEventDestroy(stop);
- return ms;
+    cublasDestroy(handle);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
-float runOurKernel(const float* d_A, const float* d_B, float* d_C,
- int M, int N, int K) {
- dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
- dim3 block(NUM_THREADS);
+float runOurKernel(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
+    dim3 block(NUM_THREADS);
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
- cudaDeviceSynchronize();
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaDeviceSynchronize();
 
- cudaEventRecord(start);
- gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
+    cudaEventRecord(start);
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
- cudaEventDestroy(start);
- cudaEventDestroy(stop);
- return ms;
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
 // --------------------------------------------------
 // Host辅助函数
 // --------------------------------------------------
 void initMatrix(float* mat, int rows, int cols) {
- srand(42);
- for (int i = 0; i < rows * cols; i++) {
- mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
- }
+    srand(42);
+    for (int i = 0; i < rows * cols; i++) {
+        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
- for (int i = 0; i < n; i++) {
- if (fabs(a[i] - b[i]) > eps) {
- printf("First mismatch at %d: %.6f vs %.6f\n", i, a[i], b[i]);
- return false;
- }
- }
- return true;
+    for (int i = 0; i < n; i++) {
+        if (fabs(a[i] - b[i]) > eps) {
+            printf("First mismatch at %d: %.6f vs %.6f\n", i, a[i], b[i]);
+            return false;
+        }
+    }
+    return true;
 }
 
 float getGFLOPS(int M, int N, int K, float ms) {
- return 2.0f * M * N * K / (ms * 1e6);
+    return 2.0f * M * N * K / (ms * 1e6);
 }
 
 // --------------------------------------------------
 // Main：性能对比测试
 // --------------------------------------------------
 int main() {
- int sizes[][3] = {
- {1024, 1024, 1024},
- {2048, 2048, 2048},
- {4096, 4096, 4096},
- {8192, 8192, 8192},
- };
+    int sizes[][3] = {
+        {1024, 1024, 1024},
+        {2048, 2048, 2048},
+        {4096, 4096, 4096},
+        {8192, 8192, 8192},
+    };
 
- printf("=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===\n");
- printf("BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n\n", BM, BN, BK, TM, TN, NUM_THREADS);
- printf("%-8s %-8s %-8s %-10s %-10s %-10s %-8s\n",
- "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "GFLOPS", "Percent");
- printf("----------------------------------------------------------------\n");
+    printf("=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===\n");
+    printf("BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-8s %-8s %-8s %-10s %-10s %-10s %-8s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "GFLOPS", "Percent");
+    printf("----------------------------------------------------------------\n");
 
- for (int s = 0; s < 4; s++) {
- int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
- size_t bytesA = M * K * sizeof(float);
- size_t bytesB = K * N * sizeof(float);
- size_t bytesC = M * N * sizeof(float);
+    for (int s = 0; s < 4; s++) {
+        int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
+        size_t bytesA = M * K * sizeof(float);
+        size_t bytesB = K * N * sizeof(float);
+        size_t bytesC = M * N * sizeof(float);
 
- float *h_A = (float*)malloc(bytesA);
- float *h_B = (float*)malloc(bytesB);
- float *h_C = (float*)malloc(bytesC);
- float *h_C_ref = (float*)malloc(bytesC);
+        float* h_A = (float*)malloc(bytesA);
+        float* h_B = (float*)malloc(bytesB);
+        float* h_C = (float*)malloc(bytesC);
+        float* h_C_ref = (float*)malloc(bytesC);
 
- initMatrix(h_A, M, K);
- initMatrix(h_B, K, N);
+        initMatrix(h_A, M, K);
+        initMatrix(h_B, K, N);
 
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, bytesA);
- cudaMalloc(&d_B, bytesB);
- cudaMalloc(&d_C, bytesC);
- cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
+        float *d_A, *d_B, *d_C;
+        cudaMalloc(&d_A, bytesA);
+        cudaMalloc(&d_B, bytesB);
+        cudaMalloc(&d_C, bytesC);
+        cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
 
- float ourMs = runOurKernel(d_A, d_B, d_C, M, N, K);
- cudaMemcpy(h_C, d_C, bytesC, cudaMemcpyDeviceToHost);
+        float ourMs = runOurKernel(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C, d_C, bytesC, cudaMemcpyDeviceToHost);
 
- float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
- cudaMemcpy(h_C_ref, d_C, bytesC, cudaMemcpyDeviceToHost);
+        float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C_ref, d_C, bytesC, cudaMemcpyDeviceToHost);
 
- bool correct = checkResult(h_C, h_C_ref, M * N, 1e-2);
- float ourGFLOPS = getGFLOPS(M, N, K, ourMs);
- float percent = (cublasMs / ourMs) * 100;
+        bool correct = checkResult(h_C, h_C_ref, M * N, 1e-2);
+        float ourGFLOPS = getGFLOPS(M, N, K, ourMs);
+        float percent = (cublasMs / ourMs) * 100;
 
- printf("%-8d %-8d %-8d %-10.3f %-10.3f %-10.1f %-7.1f%% %s\n",
- M, N, K, ourMs, cublasMs, ourGFLOPS, percent,
- correct ? "PASS" : "FAIL");
+        printf("%-8d %-8d %-8d %-10.3f %-10.3f %-10.1f %-7.1f%% %s\n", M, N, K, ourMs, cublasMs, ourGFLOPS, percent,
+               correct ? "PASS" : "FAIL");
 
- free(h_A); free(h_B); free(h_C); free(h_C_ref);
- cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
- }
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        free(h_C_ref);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+    }
 
- return 0;
+    return 0;
 }
 ```
 

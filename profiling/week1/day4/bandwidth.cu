@@ -86,9 +86,7 @@ int main() {
     const int repeats = 20;
 
     // 1. Coalesced copy
-    float ms_coalesced = benchmark_kernel(
-        coalesced_copy, threads_per_block, n, warmup, repeats,
-        d_in, d_out, n);
+    float ms_coalesced = benchmark_kernel(coalesced_copy, threads_per_block, n, warmup, repeats, d_in, d_out, n);
 
     // 2. Stride copy with different strides
     int strides[] = {1, 2, 4, 8, 16, 32};
@@ -103,9 +101,7 @@ int main() {
 
     for (int i = 0; i < num_strides; ++i) {
         int stride = strides[i];
-        float ms_stride = benchmark_kernel(
-            stride_copy, threads_per_block, n, warmup, repeats,
-            d_in, d_out, n, stride);
+        float ms_stride = benchmark_kernel(stride_copy, threads_per_block, n, warmup, repeats, d_in, d_out, n, stride);
         double bw_stride = total_bytes / (ms_stride / 1000.0) / 1e9;
         printf("stride_copy(stride=%2d)  | %12.4f | %26.2f\n", stride, ms_stride, bw_stride);
     }

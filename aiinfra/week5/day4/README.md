@@ -110,9 +110,9 @@ Block Table for Seq 0: [7, 1, 12, 3]
 float k_val = K[s * d + t]; // 直接算地址
 
 // PagedAttention（分页布局）：
-int logical_block = s / BLOCK_SIZE; // 第几个逻辑 block
-int offset = s % BLOCK_SIZE; // block 内第几个 token
-int physical_block = block_table[logical_block]; // 查表得物理 block
+int logical_block = s / BLOCK_SIZE;                                     // 第几个逻辑 block
+int offset = s % BLOCK_SIZE;                                            // block 内第几个 token
+int physical_block = block_table[logical_block];                        // 查表得物理 block
 float k_val = k_pool[physical_block * BLOCK_SIZE * d + offset * d + t]; // 物理 block 内读取
 ```
 
@@ -192,16 +192,25 @@ BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，
 
 // ---------- 块归约 ----------
 __inline__ __device__ float warp_reduce_sum(float v) {
- #pragma unroll
- for (int o = WARP_SIZE/2; o > 0; o >>= 1) v += __shfl_down_sync(0xffffffff, v, o);
- return v;
+    #pragma unroll
+    for (int o = WARP_SIZE / 2; o > 0; o >>= 1)
+        v += __shfl_down_sync(0xffffffff, v, o);
+    return v;
 }
 __inline__ __device__ float block_reduce_sum(float v, float* sh) {
- int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
- v = warp_reduce_sum(v);
- if (lane == 0) sh[wid] = v; __syncthreads();
- if (wid == 0) { v = (lane < NUM_WARPS) ? sh[lane] : 0.f; v = warp_reduce_sum(v); if (lane==0) sh[0]=v; }
- __syncthreads(); return sh[0];
+    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
+    v = warp_reduce_sum(v);
+    if (lane == 0)
+        sh[wid] = v;
+    __syncthreads();
+    if (wid == 0) {
+        v = (lane < NUM_WARPS) ? sh[lane] : 0.f;
+        v = warp_reduce_sum(v);
+        if (lane == 0)
+            sh[0] = v;
+    }
+    __syncthreads();
+    return sh[0];
 }
 
 // ---------- PagedAttention kernel（decode：1 query 对 N 历史 key）----------
@@ -210,62 +219,64 @@ __inline__ __device__ float block_reduce_sum(float v, float* sh) {
 // q: [d]，当前 query 向量
 // output: [d]，attention 输出
 // seq_len: 历史 key 数量
-__global__ void paged_attention_kernel(
- const float* __restrict__ k_cache_pool,
- const float* __restrict__ v_cache_pool,
- const int* __restrict__ block_table,
- const float* __restrict__ q,
- float* __restrict__ output,
- int seq_len, int d, int max_blocks_per_seq) {
+__global__ void paged_attention_kernel(const float* __restrict__ k_cache_pool, const float* __restrict__ v_cache_pool,
+                                       const int* __restrict__ block_table, const float* __restrict__ q,
+                                       float* __restrict__ output, int seq_len, int d, int max_blocks_per_seq) {
 
- __shared__ float q_shm[256];
- __shared__ float red[NUM_WARPS + 1];
- __shared__ float s_k_shm, alpha_shm, beta_shm;
+    __shared__ float q_shm[256];
+    __shared__ float red[NUM_WARPS + 1];
+    __shared__ float s_k_shm, alpha_shm, beta_shm;
 
- int tid = threadIdx.x;
- const float scale = 1.0f / sqrtf((float)d);
+    int tid = threadIdx.x;
+    const float scale = 1.0f / sqrtf((float)d);
 
- for (int t = tid; t < d; t += BLOCK_SIZE) q_shm[t] = q[t];
- __syncthreads();
+    for (int t = tid; t < d; t += BLOCK_SIZE)
+        q_shm[t] = q[t];
+    __syncthreads();
 
- float m = -INFINITY, l = 0.f;
- float o_local = 0.f;
+    float m = -INFINITY, l = 0.f;
+    float o_local = 0.f;
 
- // 遍历所有历史 key（按逻辑 block 顺序，通过 block_table 找物理 block）
- int num_logical_blocks = (seq_len + KV_BLOCK_SIZE - 1) / KV_BLOCK_SIZE;
- for (int lb = 0; lb < num_logical_blocks; ++lb) {
- int physical_block = block_table[lb]; // ★ 核心：逻辑→物理映射
- const float* k_block = k_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
- const float* v_block = v_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
+    // 遍历所有历史 key（按逻辑 block 顺序，通过 block_table 找物理 block）
+    int num_logical_blocks = (seq_len + KV_BLOCK_SIZE - 1) / KV_BLOCK_SIZE;
+    for (int lb = 0; lb < num_logical_blocks; ++lb) {
+        int physical_block = block_table[lb]; // ★ 核心：逻辑→物理映射
+        const float* k_block = k_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
+        const float* v_block = v_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
 
- int tokens_in_block = min(KV_BLOCK_SIZE, seq_len - lb * KV_BLOCK_SIZE);
- for (int s = 0; s < tokens_in_block; ++s) {
- const float* k_vec = k_block + s * d;
- const float* v_vec = v_block + s * d;
+        int tokens_in_block = min(KV_BLOCK_SIZE, seq_len - lb * KV_BLOCK_SIZE);
+        for (int s = 0; s < tokens_in_block; ++s) {
+            const float* k_vec = k_block + s * d;
+            const float* v_vec = v_block + s * d;
 
- float part = 0.f;
- for (int t = tid; t < d; t += BLOCK_SIZE) part += q_shm[t] * k_vec[t];
- float s_k = block_reduce_sum(part, red) * scale;
- if (tid == 0) s_k_shm = s_k;
- __syncthreads(); s_k = s_k_shm;
+            float part = 0.f;
+            for (int t = tid; t < d; t += BLOCK_SIZE)
+                part += q_shm[t] * k_vec[t];
+            float s_k = block_reduce_sum(part, red) * scale;
+            if (tid == 0)
+                s_k_shm = s_k;
+            __syncthreads();
+            s_k = s_k_shm;
 
- if (tid == 0) {
- float m_new = fmaxf(m, s_k);
- float alpha = expf(m - m_new);
- float p = expf(s_k - m_new);
- float l_new = l * alpha + p;
- alpha_shm = (l * alpha) / l_new;
- beta_shm = p / l_new;
- m = m_new; l = l_new;
- }
- __syncthreads();
+            if (tid == 0) {
+                float m_new = fmaxf(m, s_k);
+                float alpha = expf(m - m_new);
+                float p = expf(s_k - m_new);
+                float l_new = l * alpha + p;
+                alpha_shm = (l * alpha) / l_new;
+                beta_shm = p / l_new;
+                m = m_new;
+                l = l_new;
+            }
+            __syncthreads();
 
- for (int t = tid; t < d; t += BLOCK_SIZE)
- o_local = o_local * alpha_shm + beta_shm * v_vec[t];
- __syncthreads();
- }
- }
- for (int t = tid; t < d; t += BLOCK_SIZE) output[t] = o_local;
+            for (int t = tid; t < d; t += BLOCK_SIZE)
+                o_local = o_local * alpha_shm + beta_shm * v_vec[t];
+            __syncthreads();
+        }
+    }
+    for (int t = tid; t < d; t += BLOCK_SIZE)
+        output[t] = o_local;
 }
 ```
 

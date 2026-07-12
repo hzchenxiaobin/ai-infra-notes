@@ -5,8 +5,8 @@ __global__ void compute_intensive(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     float acc = 0.0f;
 
-    // 展开循环，增加寄存器压力
-    #pragma unroll 16
+// 展开循环，增加寄存器压力
+#pragma unroll 16
     for (int i = 0; i < n; ++i) {
         float v = in[(idx + i) % n];
         acc += v * v + 1.0f;

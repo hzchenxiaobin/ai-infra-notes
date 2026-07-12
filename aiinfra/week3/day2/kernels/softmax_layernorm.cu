@@ -11,7 +11,7 @@
 // 复用 Week 2 Day 1 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
@@ -19,7 +19,7 @@ __inline__ __device__ float warpReduceSum(float val) {
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     }
@@ -35,11 +35,13 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
     int lane = threadIdx.x % 32;
     int wid = threadIdx.x / 32;
     val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
+    if (wid == 0)
+        val = warpReduceSum(val);
     return val;
 }
 
@@ -47,11 +49,13 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
     int lane = threadIdx.x % 32;
     int wid = threadIdx.x / 32;
     val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
+    if (wid == 0)
+        val = warpReduceMax(val);
     return val;
 }
 
@@ -59,15 +63,14 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // Softmax Kernel：一行一个 block，三遍扫描 safe softmax
 // 输入: input[M][D]，输出: output[M][D]
 // ============================================================
-__global__ void softmax_kernel(const float* __restrict__ input,
-                                float* __restrict__ output,
-                                int M, int D) {
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     const float* in_row = input + row * D;
     float* out_row = output + row * D;
 
-    __shared__ float smem[32];   // warp 间 reduce 缓冲区
+    __shared__ float smem[32]; // warp 间 reduce 缓冲区
     __shared__ float row_max;
     __shared__ float row_sum;
 
@@ -79,7 +82,8 @@ __global__ void softmax_kernel(const float* __restrict__ input,
         local_max = fmaxf(local_max, in_row[i]);
     }
     local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
+    if (tid == 0)
+        row_max = local_max;
     __syncthreads();
 
     // Step 2: 求 sum(exp(x - max))
@@ -88,7 +92,8 @@ __global__ void softmax_kernel(const float* __restrict__ input,
         local_sum += expf(in_row[i] - row_max);
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
+    if (tid == 0)
+        row_sum = local_sum;
     __syncthreads();
 
     // Step 3: 归一化写出
@@ -102,13 +107,11 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 // LayerNorm Kernel：一行一个 block，两次 reduce
 // 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
 // ============================================================
-__global__ void layernorm_kernel(const float* __restrict__ input,
-                                  const float* __restrict__ gamma,
-                                  const float* __restrict__ beta,
-                                  float* __restrict__ output,
-                                  int M, int N, float eps) {
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     const float* in_row = input + row * N;
     float* out_row = output + row * N;
 
@@ -124,7 +127,8 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
         local_sum += in_row[i];
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_mean = local_sum / N;
+    if (tid == 0)
+        row_mean = local_sum / N;
     __syncthreads();
 
     // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
@@ -134,7 +138,8 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
         local_sq += diff * diff;
     }
     local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
     __syncthreads();
 
     // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
@@ -162,15 +167,17 @@ void cpuSoftmax(const float* in, float* out, int M, int D) {
             mx = fmaxf(mx, ir[i]);
         }
         float s = 0.0f;
-        for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
+        for (int i = 0; i < D; i++) {
+            orow[i] = expf(ir[i] - mx);
+            s += orow[i];
+        }
         for (int i = 0; i < D; i++) {
             orow[i] /= s;
         }
     }
 }
 
-void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
-                  float* out, int M, int N, float eps) {
+void cpuLayerNorm(const float* in, const float* gamma, const float* beta, float* out, int M, int N, float eps) {
     for (int r = 0; r < M; r++) {
         const float* ir = in + r * N;
         float* orow = out + r * N;
@@ -180,7 +187,10 @@ void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
         }
         mean /= N;
         float var = 0.0f;
-        for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
+        for (int i = 0; i < N; i++) {
+            float d = ir[i] - mean;
+            var += d * d;
+        }
         var /= N;
         float rstd = 1.0f / sqrtf(var + eps);
         for (int i = 0; i < N; i++) {
@@ -193,7 +203,8 @@ bool checkResult(const float* a, const float* b, int n, float eps, const char* n
     float maxDiff = 0.0f;
     for (int i = 0; i < n; i++) {
         float diff = fabsf(a[i] - b[i]);
-        if (diff > maxDiff) maxDiff = diff;
+        if (diff > maxDiff)
+            maxDiff = diff;
     }
     bool ok = maxDiff < eps;
     printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
@@ -202,8 +213,8 @@ bool checkResult(const float* a, const float* b, int n, float eps, const char* n
 
 int main() {
     // 测试配置
-    const int M = 128;       // 行数（batch * seq_len）
-    const int D = 1024;      // 特征维（feature dim）
+    const int M = 128;  // 行数（batch * seq_len）
+    const int D = 1024; // 特征维（feature dim）
     const float eps = 1e-5f;
     const int threads = 256;
 
@@ -213,13 +224,16 @@ int main() {
     size_t bytes = (size_t)M * D * sizeof(float);
 
     // Host 内存
-    float *h_in = (float*)malloc(bytes);
-    float *h_out = (float*)malloc(bytes);
-    float *h_ref = (float*)malloc(bytes);
-    float *h_gamma = (float*)malloc(D * sizeof(float));
-    float *h_beta = (float*)malloc(D * sizeof(float));
+    float* h_in = (float*)malloc(bytes);
+    float* h_out = (float*)malloc(bytes);
+    float* h_ref = (float*)malloc(bytes);
+    float* h_gamma = (float*)malloc(D * sizeof(float));
+    float* h_beta = (float*)malloc(D * sizeof(float));
     initData(h_in, M * D);
-    for (int i = 0; i < D; i++) { h_gamma[i] = 1.0f; h_beta[i] = 0.0f; }
+    for (int i = 0; i < D; i++) {
+        h_gamma[i] = 1.0f;
+        h_beta[i] = 0.0f;
+    }
 
     // Device 内存
     float *d_in, *d_out, *d_gamma, *d_beta;
@@ -262,8 +276,16 @@ int main() {
     printf("  Time: %.3f ms\n", lnMs);
 
     // 释放
-    free(h_in); free(h_out); free(h_ref); free(h_gamma); free(h_beta);
-    cudaFree(d_in); cudaFree(d_out); cudaFree(d_gamma); cudaFree(d_beta);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    free(h_in);
+    free(h_out);
+    free(h_ref);
+    free(h_gamma);
+    free(h_beta);
+    cudaFree(d_in);
+    cudaFree(d_out);
+    cudaFree(d_gamma);
+    cudaFree(d_beta);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     return 0;
 }

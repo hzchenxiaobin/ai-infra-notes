@@ -16,8 +16,8 @@ int main() {
     const int N = 1 << 20;
     size_t bytes = N * sizeof(float);
 
-    float *h_in = (float*)malloc(bytes);
-    float *h_out = (float*)malloc(bytes);
+    float* h_in = (float*)malloc(bytes);
+    float* h_out = (float*)malloc(bytes);
     for (int i = 0; i < N; i++) {
         h_in[i] = (float)(rand() % 2000 - 1000) * 0.001f;
     }
@@ -40,8 +40,7 @@ int main() {
         cudaEventSynchronize(stop);
         float ms;
         cudaEventElapsedTime(&ms, start, stop);
-        printf("block=%4d  time=%.3f ms  bw=%.1f GB/s\n",
-               bs, ms, 2.0f * N * sizeof(float) / (ms * 1e6));
+        printf("block=%4d  time=%.3f ms  bw=%.1f GB/s\n", bs, ms, 2.0f * N * sizeof(float) / (ms * 1e6));
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
@@ -49,11 +48,16 @@ int main() {
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     bool ok = true;
     for (int i = 0; i < N; i++) {
-        if (h_out[i] != fmaxf(h_in[i], 0.0f)) { ok = false; break; }
+        if (h_out[i] != fmaxf(h_in[i], 0.0f)) {
+            ok = false;
+            break;
+        }
     }
     printf("Result: %s\n", ok ? "PASS" : "FAIL");
 
-    free(h_in); free(h_out);
-    cudaFree(d_in); cudaFree(d_out);
+    free(h_in);
+    free(h_out);
+    cudaFree(d_in);
+    cudaFree(d_out);
     return 0;
 }

@@ -132,70 +132,75 @@ Level 6: Tensor Core / CUTLASS (~90%+) ← 超出本周范围
 #include <cmath>
 
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1) {
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- }
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
 }
 
 __global__ void blockReduceSum(const float* in, float* out, int n) {
- __shared__ float warpSums[32];
- int tid = blockIdx.x * blockDim.x + threadIdx.x;
- int lane = threadIdx.x & 31;
- int wid = threadIdx.x >> 5;
+    __shared__ float warpSums[32];
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadIdx.x & 31;
+    int wid = threadIdx.x >> 5;
 
- // Step 1: grid-stride 累加
- float sum = 0.0f;
- for (int i = tid; i < n; i += gridDim.x * blockDim.x) {
- sum += in[i];
- }
+    // Step 1: grid-stride 累加
+    float sum = 0.0f;
+    for (int i = tid; i < n; i += gridDim.x * blockDim.x) {
+        sum += in[i];
+    }
 
- // Step 2: Warp 级归约
- sum = warpReduceSum(sum);
+    // Step 2: Warp 级归约
+    sum = warpReduceSum(sum);
 
- // Step 3: lane 0 写入 Shared Memory
- if (lane == 0) warpSums[wid] = sum;
- __syncthreads();
+    // Step 3: lane 0 写入 Shared Memory
+    if (lane == 0)
+        warpSums[wid] = sum;
+    __syncthreads();
 
- // Step 4: Warp 0 做最终归约
- if (wid == 0) {
- int numWarps = (blockDim.x + 31) >> 5;
- sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
- sum = warpReduceSum(sum);
- if (lane == 0) out[blockIdx.x] = sum;
- }
+    // Step 4: Warp 0 做最终归约
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) >> 5;
+        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
+        sum = warpReduceSum(sum);
+        if (lane == 0)
+            out[blockIdx.x] = sum;
+    }
 }
 
 int main() {
- const int N = 1 << 22;
- float *h_in = (float*)malloc(N * sizeof(float));
- for (int i = 0; i < N; i++) h_in[i] = (float)(rand() % 1000) * 0.001f;
+    const int N = 1 << 22;
+    float* h_in = (float*)malloc(N * sizeof(float));
+    for (int i = 0; i < N; i++)
+        h_in[i] = (float)(rand() % 1000) * 0.001f;
 
- float *d_in, *d_tmp, *d_out;
- cudaMalloc(&d_in, N * sizeof(float));
- cudaMalloc(&d_tmp, 1024 * sizeof(float));
- cudaMalloc(&d_out, sizeof(float));
- cudaMemcpy(d_in, h_in, N * sizeof(float), cudaMemcpyHostToDevice);
+    float *d_in, *d_tmp, *d_out;
+    cudaMalloc(&d_in, N * sizeof(float));
+    cudaMalloc(&d_tmp, 1024 * sizeof(float));
+    cudaMalloc(&d_out, sizeof(float));
+    cudaMemcpy(d_in, h_in, N * sizeof(float), cudaMemcpyHostToDevice);
 
- int threads = 256;
- int blocks = min((N + threads - 1) / threads, 1024);
- blockReduceSum<<<blocks, threads>>>(d_in, d_tmp, N);
- blockReduceSum<<<1, 256>>>(d_tmp, d_out, blocks);
+    int threads = 256;
+    int blocks = min((N + threads - 1) / threads, 1024);
+    blockReduceSum<<<blocks, threads>>>(d_in, d_tmp, N);
+    blockReduceSum<<<1, 256>>>(d_tmp, d_out, blocks);
 
- float gpuSum;
- cudaMemcpy(&gpuSum, d_out, sizeof(float), cudaMemcpyDeviceToHost);
+    float gpuSum;
+    cudaMemcpy(&gpuSum, d_out, sizeof(float), cudaMemcpyDeviceToHost);
 
- double cpuSum = 0.0;
- for (int i = 0; i < N; i++) cpuSum += h_in[i];
+    double cpuSum = 0.0;
+    for (int i = 0; i < N; i++)
+        cpuSum += h_in[i];
 
- printf("GPU=%.4f CPU=%.4f diff=%.6f %s\n",
- gpuSum, (float)cpuSum, fabs(gpuSum - (float)cpuSum),
- fabs(gpuSum - (float)cpuSum) < 1e-3 ? "PASS" : "FAIL");
+    printf("GPU=%.4f CPU=%.4f diff=%.6f %s\n", gpuSum, (float)cpuSum, fabs(gpuSum - (float)cpuSum),
+           fabs(gpuSum - (float)cpuSum) < 1e-3 ? "PASS" : "FAIL");
 
- free(h_in);
- cudaFree(d_in); cudaFree(d_tmp); cudaFree(d_out);
- return 0;
+    free(h_in);
+    cudaFree(d_in);
+    cudaFree(d_tmp);
+    cudaFree(d_out);
+    return 0;
 }
 ```
 
@@ -250,71 +255,73 @@ int main() {
 #define BK 8
 #define TM 8
 #define TN 8
-#define NUM_THREADS ((BM/TM)*(BN/TN)) // 256
+#define NUM_THREADS ((BM / TM) * (BN / TN)) // 256
 
-__global__ void gemmRegisterBlocking(const float* A, const float* B, float* C,
- int M, int N, int K) {
- __shared__ float s_A[BM][BK];
- __shared__ float s_B[BK][BN];
+__global__ void gemmRegisterBlocking(const float* A, const float* B, float* C, int M, int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
 
- float r_A[TM];
- float r_B[TN];
- float acc[TM][TN] = {{0}};
+    float r_A[TM];
+    float r_B[TN];
+    float acc[TM][TN] = {{0}};
 
- int threadRow = threadIdx.x / (BN / TN); // 0~15
- int threadCol = threadIdx.x % (BN / TN); // 0~15
- int cRow = blockIdx.y * BM;
- int cCol = blockIdx.x * BN;
+    int threadRow = threadIdx.x / (BN / TN); // 0~15
+    int threadCol = threadIdx.x % (BN / TN); // 0~15
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
 
- for (int bk = 0; bk < K; bk += BK) {
- // 协作加载 A tile: 256 线程加载 128*8=1024 元素，每线程 4 个
- #pragma unroll
- for (int i = 0; i < BM; i += NUM_THREADS / BK) {
- int row = threadIdx.x / BK + i;
- int col = threadIdx.x % BK;
- if (cRow + row < M && bk + col < K)
- s_A[row][col] = A[(cRow + row) * K + (bk + col)];
- else
- s_A[row][col] = 0.0f;
- }
- // 协作加载 B tile: 256 线程加载 8*128=1024 元素，每线程 4 个
- #pragma unroll
- for (int i = 0; i < BK; i += NUM_THREADS / BN) {
- int row = threadIdx.x / BN + i;
- int col = threadIdx.x % BN;
- if (bk + row < K && cCol + col < N)
- s_B[row][col] = B[(bk + row) * N + (cCol + col)];
- else
- s_B[row][col] = 0.0f;
- }
- __syncthreads();
+    for (int bk = 0; bk < K; bk += BK) {
+// 协作加载 A tile: 256 线程加载 128*8=1024 元素，每线程 4 个
+        #pragma unroll
+        for (int i = 0; i < BM; i += NUM_THREADS / BK) {
+            int row = threadIdx.x / BK + i;
+            int col = threadIdx.x % BK;
+            if (cRow + row < M && bk + col < K)
+                s_A[row][col] = A[(cRow + row) * K + (bk + col)];
+            else
+                s_A[row][col] = 0.0f;
+        }
+// 协作加载 B tile: 256 线程加载 8*128=1024 元素，每线程 4 个
+        #pragma unroll
+        for (int i = 0; i < BK; i += NUM_THREADS / BN) {
+            int row = threadIdx.x / BN + i;
+            int col = threadIdx.x % BN;
+            if (bk + row < K && cCol + col < N)
+                s_B[row][col] = B[(bk + row) * N + (cCol + col)];
+            else
+                s_B[row][col] = 0.0f;
+        }
+        __syncthreads();
 
- // Register Blocking 计算
- #pragma unroll
- for (int k = 0; k < BK; k++) {
- #pragma unroll
- for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow*TM + m][k];
- #pragma unroll
- for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol*TN + n];
- #pragma unroll
- for (int m = 0; m < TM; m++)
- #pragma unroll
- for (int n = 0; n < TN; n++)
- acc[m][n] += r_A[m] * r_B[n];
- }
- __syncthreads();
- }
+// Register Blocking 计算
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
+            #pragma unroll
+            for (int m = 0; m < TM; m++)
+                r_A[m] = s_A[threadRow * TM + m][k];
+            #pragma unroll
+            for (int n = 0; n < TN; n++)
+                r_B[n] = s_B[k][threadCol * TN + n];
+            #pragma unroll
+            for (int m = 0; m < TM; m++)
+                #pragma unroll
+                for (int n = 0; n < TN; n++)
+                    acc[m][n] += r_A[m] * r_B[n];
+        }
+        __syncthreads();
+    }
 
- // 写回
- #pragma unroll
- for (int m = 0; m < TM; m++) {
- #pragma unroll
- for (int n = 0; n < TN; n++) {
- int gRow = cRow + threadRow * TM + m;
- int gCol = cCol + threadCol * TN + n;
- if (gRow < M && gCol < N) C[gRow * N + gCol] = acc[m][n];
- }
- }
+// 写回
+    #pragma unroll
+    for (int m = 0; m < TM; m++) {
+        #pragma unroll
+        for (int n = 0; n < TN; n++) {
+            int gRow = cRow + threadRow * TM + m;
+            int gCol = cCol + threadCol * TN + n;
+            if (gRow < M && gCol < N)
+                C[gRow * N + gCol] = acc[m][n];
+        }
+    }
 }
 ```
 
@@ -464,11 +471,11 @@ GFLOPS = 2.0 * M * N * K / (time_ms * 1e6)
 
 ```cuda
 __inline__ __device__ float warpReduceMax(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1) {
- val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
- }
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
+    return val;
 }
 ```
 

@@ -200,46 +200,49 @@ ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的
 
 // [Memory-bound] Softmax：一行一个 block，三遍扫描 safe softmax（复用 Day 2）
 // 预期 ncu：DRAM Throughput >> SM Throughput
-__global__ void softmax_kernel(const float* __restrict__ input,
- float* __restrict__ output, int M, int D) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* in_row = input + row * D;
- float* out_row = output + row * D;
- __shared__ float smem[32];
- __shared__ float row_max, row_sum;
- int tid = threadIdx.x;
- // Step 1: 求 max（数值稳定性）
- float local_max = -INFINITY;
- for (int i = tid; i < D; i += blockDim.x)
- local_max = fmaxf(local_max, in_row[i]);
- local_max = blockReduceMax(local_max, smem);
- if (tid == 0) row_max = local_max;
- __syncthreads();
- // Step 2: 求 sum(exp(x - max))
- float local_sum = 0.0f;
- for (int i = tid; i < D; i += blockDim.x)
- local_sum += expf(in_row[i] - row_max);
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_sum = local_sum;
- __syncthreads();
- // Step 3: 归一化写出
- float inv_sum = 1.0f / row_sum;
- for (int i = tid; i < D; i += blockDim.x)
- out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
+    __shared__ float smem[32];
+    __shared__ float row_max, row_sum;
+    int tid = threadIdx.x;
+    // Step 1: 求 max（数值稳定性）
+    float local_max = -INFINITY;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_max = fmaxf(local_max, in_row[i]);
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
+    // Step 2: 求 sum(exp(x - max))
+    float local_sum = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_sum += expf(in_row[i] - row_max);
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
+    // Step 3: 归一化写出
+    float inv_sum = 1.0f / row_sum;
+    for (int i = tid; i < D; i += blockDim.x)
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
 }
 
 // [Compute-bound] Naive GEMM：C = A·B（故意不做 tiling，但仍体现 compute 特征）
 // 预期 ncu：SM Throughput >> DRAM Throughput
-__global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B,
- float* __restrict__ C, int M, int N, int K) {
- int row = blockIdx.y * blockDim.y + threadIdx.y;
- int col = blockIdx.x * blockDim.x + threadIdx.x;
- if (row >= M || col >= N) return;
- float acc = 0.0f;
- for (int k = 0; k < K; k++)
- acc += A[row * K + k] * B[k * N + col];
- C[row * N + col] = acc;
+__global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                            int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= N)
+        return;
+    float acc = 0.0f;
+    for (int k = 0; k < K; k++)
+        acc += A[row * K + k] * B[k * N + col];
+    C[row * N + col] = acc;
 }
 ```
 
@@ -372,92 +375,106 @@ ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运
 // rmsnorm.cu —— RMS Normalization（单次 reduce，Llama 风格）
 // 编译命令: nvcc -o rmsnorm rmsnorm.cu -O3 -arch=sm_120 -lineinfo
 // 运行命令: ./rmsnorm
-// ncu 分析: ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name regex:rmsnorm_kernel ./rmsnorm
+// ncu 分析: ncu --metrics
+// sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name
+// regex:rmsnorm_kernel ./rmsnorm
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int o = 16; o > 0; o >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, o);
- return val;
+    #pragma unroll
+    for (int o = 16; o > 0; o >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, o);
+    return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceSum(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int nw = (blockDim.x + 31) / 32;
- val = (lane < nw) ? smem[lane] : 0.0f;
- if (wid == 0) val = warpReduceSum(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int nw = (blockDim.x + 31) / 32;
+    val = (lane < nw) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
 }
 
 // RMSNorm：一次 reduce（sum of squares）+ 归一化
-__global__ void rmsnorm_kernel(const float* __restrict__ x,
- const float* __restrict__ gamma,
- float* __restrict__ y,
- int M, int D, float eps) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* xr = x + row * D;
- float* yr = y + row * D;
- __shared__ float smem[32];
- __shared__ float rms;
- int tid = threadIdx.x;
+__global__ void rmsnorm_kernel(const float* __restrict__ x, const float* __restrict__ gamma, float* __restrict__ y,
+                               int M, int D, float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* xr = x + row * D;
+    float* yr = y + row * D;
+    __shared__ float smem[32];
+    __shared__ float rms;
+    int tid = threadIdx.x;
 
- // Step 1: sum of squares（只 reduce 一次，比 LayerNorm 少一次）
- float local_sq = 0.0f;
- for (int i = tid; i < D; i += blockDim.x) {
- float v = xr[i];
- local_sq += v * v;
- }
- local_sq = blockReduceSum(local_sq, smem);
- if (tid == 0) rms = rsqrtf(local_sq / D + eps);
- __syncthreads();
+    // Step 1: sum of squares（只 reduce 一次，比 LayerNorm 少一次）
+    float local_sq = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x) {
+        float v = xr[i];
+        local_sq += v * v;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        rms = rsqrtf(local_sq / D + eps);
+    __syncthreads();
 
- // Step 2: 归一化 + affine：y = x * rms * gamma
- for (int i = tid; i < D; i += blockDim.x)
- yr[i] = xr[i] * rms * gamma[i];
+    // Step 2: 归一化 + affine：y = x * rms * gamma
+    for (int i = tid; i < D; i += blockDim.x)
+        yr[i] = xr[i] * rms * gamma[i];
 }
 
 int main() {
- const int M = 256, D = 1024;
- const float eps = 1e-5f;
- size_t bytes = (size_t)M * D * sizeof(float);
- float *h_x = (float*)malloc(bytes), *h_y = (float*)malloc(bytes), *h_ref = (float*)malloc(bytes);
- float *h_g = (float*)malloc(D * sizeof(float));
- srand(42);
- for (int i = 0; i < M*D; i++) h_x[i] = (float)(rand()%1000)/1000.0f - 0.5f;
- for (int i = 0; i < D; i++) h_g[i] = 1.0f;
+    const int M = 256, D = 1024;
+    const float eps = 1e-5f;
+    size_t bytes = (size_t)M * D * sizeof(float);
+    float *h_x = (float*)malloc(bytes), *h_y = (float*)malloc(bytes), *h_ref = (float*)malloc(bytes);
+    float* h_g = (float*)malloc(D * sizeof(float));
+    srand(42);
+    for (int i = 0; i < M * D; i++)
+        h_x[i] = (float)(rand() % 1000) / 1000.0f - 0.5f;
+    for (int i = 0; i < D; i++)
+        h_g[i] = 1.0f;
 
- float *d_x, *d_g, *d_y;
- cudaMalloc(&d_x, bytes); cudaMalloc(&d_g, D*sizeof(float)); cudaMalloc(&d_y, bytes);
- cudaMemcpy(d_x, h_x, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_g, h_g, D*sizeof(float), cudaMemcpyHostToDevice);
+    float *d_x, *d_g, *d_y;
+    cudaMalloc(&d_x, bytes);
+    cudaMalloc(&d_g, D * sizeof(float));
+    cudaMalloc(&d_y, bytes);
+    cudaMemcpy(d_x, h_x, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_g, h_g, D * sizeof(float), cudaMemcpyHostToDevice);
 
- rmsnorm_kernel<<<M, 256>>>(d_x, d_g, d_y, M, D, eps);
- cudaMemcpy(h_y, d_y, bytes, cudaMemcpyDeviceToHost);
+    rmsnorm_kernel<<<M, 256>>>(d_x, d_g, d_y, M, D, eps);
+    cudaMemcpy(h_y, d_y, bytes, cudaMemcpyDeviceToHost);
 
- // CPU 验证
- float maxDiff = 0.0f;
- for (int r = 0; r < M; r++) {
- float sq = 0.0f;
- for (int i = 0; i < D; i++) sq += h_x[r*D+i] * h_x[r*D+i];
- float rms = 1.0f / sqrtf(sq / D + eps);
- for (int i = 0; i < D; i++) {
- float ref = h_x[r*D+i] * rms * h_g[i];
- maxDiff = fmaxf(maxDiff, fabsf(h_y[r*D+i] - ref));
- }
- }
- printf("RMSNorm: maxDiff = %.2e (%s)\n", maxDiff, maxDiff < 1e-5f ? "PASS" : "FAIL");
- printf("ncu: ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\\\n");
- printf(" dram__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name regex:rmsnorm_kernel ./rmsnorm\n");
- free(h_x); free(h_y); free(h_ref); free(h_g);
- cudaFree(d_x); cudaFree(d_g); cudaFree(d_y);
- return 0;
+    // CPU 验证
+    float maxDiff = 0.0f;
+    for (int r = 0; r < M; r++) {
+        float sq = 0.0f;
+        for (int i = 0; i < D; i++)
+            sq += h_x[r * D + i] * h_x[r * D + i];
+        float rms = 1.0f / sqrtf(sq / D + eps);
+        for (int i = 0; i < D; i++) {
+            float ref = h_x[r * D + i] * rms * h_g[i];
+            maxDiff = fmaxf(maxDiff, fabsf(h_y[r * D + i] - ref));
+        }
+    }
+    printf("RMSNorm: maxDiff = %.2e (%s)\n", maxDiff, maxDiff < 1e-5f ? "PASS" : "FAIL");
+    printf("ncu: ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\\\n");
+    printf(" dram__throughput.avg.pct_of_peak_sustained_elapsed --kernel-name regex:rmsnorm_kernel ./rmsnorm\n");
+    free(h_x);
+    free(h_y);
+    free(h_ref);
+    free(h_g);
+    cudaFree(d_x);
+    cudaFree(d_g);
+    cudaFree(d_y);
+    return 0;
 }
 ```
 

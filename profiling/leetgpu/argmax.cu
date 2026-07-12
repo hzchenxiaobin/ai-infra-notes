@@ -26,23 +26,25 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
     }
 
     __shared__ float s_val[32];
-    __shared__ int   s_idx[32];
+    __shared__ int s_idx[32];
 
     int lane = threadIdx.x & 31;
-    int wid  = threadIdx.x >> 5;
+    int wid = threadIdx.x >> 5;
 
     // Warp 级归约
     for (int offset = 16; offset > 0; offset >>= 1) {
         float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
-        int   other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
-        if (other_val > local_max ||
-            (other_val == local_max && other_idx < local_idx)) {
+        int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+        if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
             local_max = other_val;
             local_idx = other_idx;
         }
     }
 
-    if (lane == 0) { s_val[wid] = local_max; s_idx[wid] = local_idx; }
+    if (lane == 0) {
+        s_val[wid] = local_max;
+        s_idx[wid] = local_idx;
+    }
     __syncthreads();
 
     // Warp 0 最终归约
@@ -53,9 +55,8 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 
         for (int offset = 16; offset > 0; offset >>= 1) {
             float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
-            int   other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
-            if (other_val > local_max ||
-                (other_val == local_max && other_idx < local_idx)) {
+            int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+            if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
                 local_max = other_val;
                 local_idx = other_idx;
             }
@@ -69,14 +70,16 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 
 int main() {
     const int N = 1 << 20;
-    float *h_in = (float*)malloc(N * sizeof(float));
+    float* h_in = (float*)malloc(N * sizeof(float));
     for (int i = 0; i < N; i++) {
         h_in[i] = (float)(rand() % 1000) * 0.001f;
     }
-    h_in[N / 2] = 999.0f;  // 确保最大值在 N/2
+    h_in[N / 2] = 999.0f; // 确保最大值在 N/2
 
-    float *d_in; cudaMalloc(&d_in, N * sizeof(float));
-    unsigned long long *d_out; cudaMalloc(&d_out, sizeof(unsigned long long));
+    float* d_in;
+    cudaMalloc(&d_in, N * sizeof(float));
+    unsigned long long* d_out;
+    cudaMalloc(&d_out, sizeof(unsigned long long));
     cudaMemcpy(d_in, h_in, N * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemset(d_out, 0, sizeof(unsigned long long));
 
@@ -88,9 +91,10 @@ int main() {
     cudaMemcpy(&packed, d_out, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
     int gpu_idx = -(static_cast<int>(packed & 0xFFFFFFFFULL));
 
-    printf("GPU argmax idx = %d (expected %d) %s\n",
-           gpu_idx, N / 2, gpu_idx == N / 2 ? "PASS" : "FAIL");
+    printf("GPU argmax idx = %d (expected %d) %s\n", gpu_idx, N / 2, gpu_idx == N / 2 ? "PASS" : "FAIL");
 
-    free(h_in); cudaFree(d_in); cudaFree(d_out);
+    free(h_in);
+    cudaFree(d_in);
+    cudaFree(d_out);
     return 0;
 }

@@ -16,8 +16,7 @@ __global__ void vector_add(const float* A, const float* B, float* C, int N) {
 }
 
 // 带计时和正确性验证的 benchmark 函数
-float benchmark_blocksize(const float* d_A, const float* d_B, float* d_C, int N,
-                          int block_size, int iters = 100) {
+float benchmark_blocksize(const float* d_A, const float* d_B, float* d_C, int N, int block_size, int iters = 100) {
     int grid_size = (N + block_size - 1) / block_size;
 
     // warmup
@@ -45,14 +44,14 @@ float benchmark_blocksize(const float* d_A, const float* d_B, float* d_C, int N,
 }
 
 int main() {
-    const int N = 1 << 20;  // 1M 元素
+    const int N = 1 << 20; // 1M 元素
     size_t bytes = N * sizeof(float);
 
     printf("=== Vector Add: block size 性能对比 ===\n");
     printf("N = %d (%.1f MB per array)\n\n", N, (double)bytes / 1024 / 1024);
 
-    float *h_A = (float*)malloc(bytes);
-    float *h_B = (float*)malloc(bytes);
+    float* h_A = (float*)malloc(bytes);
+    float* h_B = (float*)malloc(bytes);
     for (int i = 0; i < N; i++) {
         h_A[i] = (float)(rand() % 1000) * 0.001f;
         h_B[i] = (float)(rand() % 1000) * 0.001f;
@@ -86,7 +85,10 @@ int main() {
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     bool pass = true;
     for (int i = 0; i < N; i++) {
-        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) { pass = false; break; }
+        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
+            pass = false;
+            break;
+        }
     }
     printf("\n正确性: %s\n", pass ? "PASS" : "FAIL");
 
@@ -98,7 +100,11 @@ int main() {
     printf("  --kernel-name regex:vector_add \\\n");
     printf("  ./vector_add_blocksize\n");
 
-    free(h_A); free(h_B); free(h_C);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
     return 0;
 }

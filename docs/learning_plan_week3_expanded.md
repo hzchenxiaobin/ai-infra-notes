@@ -459,17 +459,17 @@ Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 // 复用 Week 2 Day 8 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
 }
 
 __inline__ __device__ float warpReduceMax(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
 }
 
 // ============================================================
@@ -478,233 +478,258 @@ __inline__ __device__ float warpReduceMax(float val) {
 // 注意：返回后只有 warp 0 的线程持有正确结果，调用方需用 shared 变量广播
 // ============================================================
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
- int lane = threadIdx.x % 32;
- int wid = threadIdx.x / 32;
- val = warpReduceSum(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : 0.0f;
- if (wid == 0) val = warpReduceSum(val);
- return val;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
 }
 
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
- int lane = threadIdx.x % 32;
- int wid = threadIdx.x / 32;
- val = warpReduceMax(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : -INFINITY;
- if (wid == 0) val = warpReduceMax(val);
- return val;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
 }
 
 // ============================================================
 // Softmax Kernel：一行一个 block，三遍扫描 safe softmax
 // 输入: input[M][D]，输出: output[M][D]
 // ============================================================
-__global__ void softmax_kernel(const float* __restrict__ input,
- float* __restrict__ output,
- int M, int D) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* in_row = input + row * D;
- float* out_row = output + row * D;
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
 
- __shared__ float smem[32]; // warp 间 reduce 缓冲区
- __shared__ float row_max;
- __shared__ float row_sum;
+    __shared__ float smem[32]; // warp 间 reduce 缓冲区
+    __shared__ float row_max;
+    __shared__ float row_sum;
 
- int tid = threadIdx.x;
+    int tid = threadIdx.x;
 
- // Step 1: 求 max（数值稳定性）
- float local_max = -INFINITY;
- for (int i = tid; i < D; i += blockDim.x) {
- local_max = fmaxf(local_max, in_row[i]);
- }
- local_max = blockReduceMax(local_max, smem);
- if (tid == 0) row_max = local_max;
- __syncthreads();
+    // Step 1: 求 max（数值稳定性）
+    float local_max = -INFINITY;
+    for (int i = tid; i < D; i += blockDim.x) {
+        local_max = fmaxf(local_max, in_row[i]);
+    }
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
 
- // Step 2: 求 sum(exp(x - max))
- float local_sum = 0.0f;
- for (int i = tid; i < D; i += blockDim.x) {
- local_sum += expf(in_row[i] - row_max);
- }
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_sum = local_sum;
- __syncthreads();
+    // Step 2: 求 sum(exp(x - max))
+    float local_sum = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x) {
+        local_sum += expf(in_row[i] - row_max);
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
 
- // Step 3: 归一化写出
- float inv_sum = 1.0f / row_sum;
- for (int i = tid; i < D; i += blockDim.x) {
- out_row[i] = expf(in_row[i] - row_max) * inv_sum;
- }
+    // Step 3: 归一化写出
+    float inv_sum = 1.0f / row_sum;
+    for (int i = tid; i < D; i += blockDim.x) {
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 // ============================================================
 // LayerNorm Kernel：一行一个 block，两次 reduce
 // 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
 // ============================================================
-__global__ void layernorm_kernel(const float* __restrict__ input,
- const float* __restrict__ gamma,
- const float* __restrict__ beta,
- float* __restrict__ output,
- int M, int N, float eps) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* in_row = input + row * N;
- float* out_row = output + row * N;
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * N;
+    float* out_row = output + row * N;
 
- __shared__ float smem[32];
- __shared__ float row_mean;
- __shared__ float row_rstd;
+    __shared__ float smem[32];
+    __shared__ float row_mean;
+    __shared__ float row_rstd;
 
- int tid = threadIdx.x;
+    int tid = threadIdx.x;
 
- // Step 1: 求 mean = sum(x) / N
- float local_sum = 0.0f;
- for (int i = tid; i < N; i += blockDim.x) {
- local_sum += in_row[i];
- }
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_mean = local_sum / N;
- __syncthreads();
+    // Step 1: 求 mean = sum(x) / N
+    float local_sum = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        local_sum += in_row[i];
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_mean = local_sum / N;
+    __syncthreads();
 
- // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
- float local_sq = 0.0f;
- for (int i = tid; i < N; i += blockDim.x) {
- float diff = in_row[i] - row_mean;
- local_sq += diff * diff;
- }
- local_sq = blockReduceSum(local_sq, smem);
- if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
- __syncthreads();
+    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
+    float local_sq = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        float diff = in_row[i] - row_mean;
+        local_sq += diff * diff;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
+    __syncthreads();
 
- // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
- for (int i = tid; i < N; i += blockDim.x) {
- out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
- }
+    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
+    for (int i = tid; i < N; i += blockDim.x) {
+        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+    }
 }
 
 // ============================================================
 // Host 辅助函数与验证
 // ============================================================
 void initData(float* data, int n) {
- srand(42);
- for (int i = 0; i < n; i++) {
- data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
- }
+    srand(42);
+    for (int i = 0; i < n; i++) {
+        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4.0f;
+    }
 }
 
 void cpuSoftmax(const float* in, float* out, int M, int D) {
- for (int r = 0; r < M; r++) {
- const float* ir = in + r * D;
- float* orow = out + r * D;
- float mx = ir[0];
- for (int i = 1; i < D; i++) mx = fmaxf(mx, ir[i]);
- float s = 0.0f;
- for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
- for (int i = 0; i < D; i++) orow[i] /= s;
- }
+    for (int r = 0; r < M; r++) {
+        const float* ir = in + r * D;
+        float* orow = out + r * D;
+        float mx = ir[0];
+        for (int i = 1; i < D; i++)
+            mx = fmaxf(mx, ir[i]);
+        float s = 0.0f;
+        for (int i = 0; i < D; i++) {
+            orow[i] = expf(ir[i] - mx);
+            s += orow[i];
+        }
+        for (int i = 0; i < D; i++)
+            orow[i] /= s;
+    }
 }
 
-void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
- float* out, int M, int N, float eps) {
- for (int r = 0; r < M; r++) {
- const float* ir = in + r * N;
- float* orow = out + r * N;
- float mean = 0.0f;
- for (int i = 0; i < N; i++) mean += ir[i];
- mean /= N;
- float var = 0.0f;
- for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
- var /= N;
- float rstd = 1.0f / sqrtf(var + eps);
- for (int i = 0; i < N; i++)
- orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
- }
+void cpuLayerNorm(const float* in, const float* gamma, const float* beta, float* out, int M, int N, float eps) {
+    for (int r = 0; r < M; r++) {
+        const float* ir = in + r * N;
+        float* orow = out + r * N;
+        float mean = 0.0f;
+        for (int i = 0; i < N; i++)
+            mean += ir[i];
+        mean /= N;
+        float var = 0.0f;
+        for (int i = 0; i < N; i++) {
+            float d = ir[i] - mean;
+            var += d * d;
+        }
+        var /= N;
+        float rstd = 1.0f / sqrtf(var + eps);
+        for (int i = 0; i < N; i++)
+            orow[i] = (ir[i] - mean) * rstd * gamma[i] + beta[i];
+    }
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps, const char* name) {
- float maxDiff = 0.0f;
- for (int i = 0; i < n; i++) {
- float diff = fabsf(a[i] - b[i]);
- if (diff > maxDiff) maxDiff = diff;
- }
- bool ok = maxDiff < eps;
- printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
- return ok;
+    float maxDiff = 0.0f;
+    for (int i = 0; i < n; i++) {
+        float diff = fabsf(a[i] - b[i]);
+        if (diff > maxDiff)
+            maxDiff = diff;
+    }
+    bool ok = maxDiff < eps;
+    printf("%s: maxDiff = %.2e (%s)\n", name, maxDiff, ok ? "PASS" : "FAIL");
+    return ok;
 }
 
 int main() {
- // 测试配置
- const int M = 128; // 行数（batch * seq_len）
- const int D = 1024; // 特征维（feature dim）
- const float eps = 1e-5f;
- const int threads = 256;
+    // 测试配置
+    const int M = 128;  // 行数（batch * seq_len）
+    const int D = 1024; // 特征维（feature dim）
+    const float eps = 1e-5f;
+    const int threads = 256;
 
- printf("=== Softmax + LayerNorm Kernel Test ===\n");
- printf("Config: M=%d, D=%d, threads=%d\n\n", M, D, threads);
+    printf("=== Softmax + LayerNorm Kernel Test ===\n");
+    printf("Config: M=%d, D=%d, threads=%d\n\n", M, D, threads);
 
- size_t bytes = (size_t)M * D * sizeof(float);
+    size_t bytes = (size_t)M * D * sizeof(float);
 
- // Host 内存
- float *h_in = (float*)malloc(bytes);
- float *h_out = (float*)malloc(bytes);
- float *h_ref = (float*)malloc(bytes);
- float *h_gamma = (float*)malloc(D * sizeof(float));
- float *h_beta = (float*)malloc(D * sizeof(float));
- initData(h_in, M * D);
- for (int i = 0; i < D; i++) { h_gamma[i] = 1.0f; h_beta[i] = 0.0f; }
+    // Host 内存
+    float* h_in = (float*)malloc(bytes);
+    float* h_out = (float*)malloc(bytes);
+    float* h_ref = (float*)malloc(bytes);
+    float* h_gamma = (float*)malloc(D * sizeof(float));
+    float* h_beta = (float*)malloc(D * sizeof(float));
+    initData(h_in, M * D);
+    for (int i = 0; i < D; i++) {
+        h_gamma[i] = 1.0f;
+        h_beta[i] = 0.0f;
+    }
 
- // Device 内存
- float *d_in, *d_out, *d_gamma, *d_beta;
- cudaMalloc(&d_in, bytes);
- cudaMalloc(&d_out, bytes);
- cudaMalloc(&d_gamma, D * sizeof(float));
- cudaMalloc(&d_beta, D * sizeof(float));
- cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_gamma, h_gamma, D * sizeof(float), cudaMemcpyHostToDevice);
- cudaMemcpy(d_beta, h_beta, D * sizeof(float), cudaMemcpyHostToDevice);
+    // Device 内存
+    float *d_in, *d_out, *d_gamma, *d_beta;
+    cudaMalloc(&d_in, bytes);
+    cudaMalloc(&d_out, bytes);
+    cudaMalloc(&d_gamma, D * sizeof(float));
+    cudaMalloc(&d_beta, D * sizeof(float));
+    cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_gamma, h_gamma, D * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_beta, h_beta, D * sizeof(float), cudaMemcpyHostToDevice);
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start);
- cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
- // ---- Softmax 测试 ----
- printf("[Softmax]\n");
- cudaEventRecord(start);
- softmax_kernel<<<M, threads>>>(d_in, d_out, M, D);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
- float smMs;
- cudaEventElapsedTime(&smMs, start, stop);
- cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
- cpuSoftmax(h_in, h_ref, M, D);
- checkResult(h_out, h_ref, M * D, 1e-5f, " Softmax vs CPU");
- printf(" Time: %.3f ms\n", smMs);
+    // ---- Softmax 测试 ----
+    printf("[Softmax]\n");
+    cudaEventRecord(start);
+    softmax_kernel<<<M, threads>>>(d_in, d_out, M, D);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float smMs;
+    cudaEventElapsedTime(&smMs, start, stop);
+    cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
+    cpuSoftmax(h_in, h_ref, M, D);
+    checkResult(h_out, h_ref, M * D, 1e-5f, " Softmax vs CPU");
+    printf(" Time: %.3f ms\n", smMs);
 
- // ---- LayerNorm 测试 ----
- printf("[LayerNorm]\n");
- cudaEventRecord(start);
- layernorm_kernel<<<M, threads>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
- float lnMs;
- cudaEventElapsedTime(&lnMs, start, stop);
- cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
- cpuLayerNorm(h_in, h_gamma, h_beta, h_ref, M, D, eps);
- checkResult(h_out, h_ref, M * D, 1e-5f, " LayerNorm vs CPU");
- printf(" Time: %.3f ms\n", lnMs);
+    // ---- LayerNorm 测试 ----
+    printf("[LayerNorm]\n");
+    cudaEventRecord(start);
+    layernorm_kernel<<<M, threads>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float lnMs;
+    cudaEventElapsedTime(&lnMs, start, stop);
+    cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
+    cpuLayerNorm(h_in, h_gamma, h_beta, h_ref, M, D, eps);
+    checkResult(h_out, h_ref, M * D, 1e-5f, " LayerNorm vs CPU");
+    printf(" Time: %.3f ms\n", lnMs);
 
- // 释放
- free(h_in); free(h_out); free(h_ref); free(h_gamma); free(h_beta);
- cudaFree(d_in); cudaFree(d_out); cudaFree(d_gamma); cudaFree(d_beta);
- cudaEventDestroy(start); cudaEventDestroy(stop);
- return 0;
+    // 释放
+    free(h_in);
+    free(h_out);
+    free(h_ref);
+    free(h_gamma);
+    free(h_beta);
+    cudaFree(d_in);
+    cudaFree(d_out);
+    cudaFree(d_gamma);
+    cudaFree(d_beta);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return 0;
 }
 ```
 
@@ -820,9 +845,8 @@ nvcc -o softmax_layernorm softmax_layernorm.cu -O3 -arch=sm_120
 ```cpp
 // PyTorch 用模板参数 ILP（Instruction-Level Parallelism）控制每次加载元素数
 // ILP=4 时，一次加载 4 个 float（128-bit），减少指令数
-template <int ILP>
-__device__ void load(float* dst, const float* src, int d) {
- // 按 ILP 个元素一组加载
+template <int ILP> __device__ void load(float* dst, const float* src, int d) {
+    // 按 ILP 个元素一组加载
 }
 ```
 
@@ -835,8 +859,8 @@ __device__ void load(float* dst, const float* src, int d) {
 PyTorch 的 softmax 在 FP16 输入时，**reduce 用 FP32** 累加：
 ```cpp
 // 伪代码
-acc = static_cast<float>(input[i]); // FP16 → FP32
-sum += acc; // FP32 累加
+acc = static_cast<float>(input[i]);       // FP16 → FP32
+sum += acc;                               // FP32 累加
 output[i] = static_cast<half>(acc / sum); // FP32 → FP16 写回
 ```
 
@@ -888,7 +912,7 @@ __half2 val = *reinterpret_cast<const __half2*>(&input[i]);
 当 D 较小（如 768）时，FasterTransformer 把 gamma/beta 加载到 register 一次性使用：
 ```cpp
 float g = gamma[i]; // 加载到 register
-float b = beta[i]; // 加载到 register
+float b = beta[i];  // 加载到 register
 // 后续归一化直接用 register 中的 g, b，不重复读 HBM
 ```
 
@@ -1097,206 +1121,230 @@ N = 65536: S/P 矩阵 = 65536² × 4 bytes = 16 GB （直接 OOM）
 
 // 复用 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceSum(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : 0.0f;
- if (wid == 0) val = warpReduceSum(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceMax(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : -INFINITY;
- if (wid == 0) val = warpReduceMax(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
 }
 
 // ============================================================
 // 标准 Attention Forward Kernel（物化 S 和 P 到 HBM）
 // 一个 block 处理一行 query
 // ============================================================
-__global__ void attention_naive_kernel(const float* __restrict__ Q,
- const float* __restrict__ K,
- const float* __restrict__ V,
- float* __restrict__ S,
- float* __restrict__ P,
- float* __restrict__ O,
- int N, int d) {
- int qrow = blockIdx.x;
- if (qrow >= N) return;
+__global__ void attention_naive_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                       const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
+                                       float* __restrict__ O, int N, int d) {
+    int qrow = blockIdx.x;
+    if (qrow >= N)
+        return;
 
- __shared__ float smem[32];
- __shared__ float row_max;
- __shared__ float row_sum;
+    __shared__ float smem[32];
+    __shared__ float row_max;
+    __shared__ float row_sum;
 
- int tid = threadIdx.x;
- float scale = 1.0f / sqrtf((float)d);
+    int tid = threadIdx.x;
+    float scale = 1.0f / sqrtf((float)d);
 
- // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
- // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
- for (int j = tid; j < N; j += blockDim.x) {
- float s_val = 0.0f;
- for (int dd = 0; dd < d; dd++) {
- s_val += Q[qrow * d + dd] * K[j * d + dd];
- }
- S[qrow * N + j] = s_val * scale;
- }
- __syncthreads();
+    // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
+    // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
+    for (int j = tid; j < N; j += blockDim.x) {
+        float s_val = 0.0f;
+        for (int dd = 0; dd < d; dd++) {
+            s_val += Q[qrow * d + dd] * K[j * d + dd];
+        }
+        S[qrow * N + j] = s_val * scale;
+    }
+    __syncthreads();
 
- // Step 2: P[qrow][j] = softmax(S[qrow][:])
- // 读 S（O(N²) 读），写 P（O(N²) 写）
- float local_max = -INFINITY;
- for (int j = tid; j < N; j += blockDim.x) {
- local_max = fmaxf(local_max, S[qrow * N + j]);
- }
- local_max = blockReduceMax(local_max, smem);
- if (tid == 0) row_max = local_max;
- __syncthreads();
+    // Step 2: P[qrow][j] = softmax(S[qrow][:])
+    // 读 S（O(N²) 读），写 P（O(N²) 写）
+    float local_max = -INFINITY;
+    for (int j = tid; j < N; j += blockDim.x) {
+        local_max = fmaxf(local_max, S[qrow * N + j]);
+    }
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
 
- float local_sum = 0.0f;
- for (int j = tid; j < N; j += blockDim.x) {
- float p_val = expf(S[qrow * N + j] - row_max);
- P[qrow * N + j] = p_val;
- local_sum += p_val;
- }
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_sum = local_sum;
- __syncthreads();
+    float local_sum = 0.0f;
+    for (int j = tid; j < N; j += blockDim.x) {
+        float p_val = expf(S[qrow * N + j] - row_max);
+        P[qrow * N + j] = p_val;
+        local_sum += p_val;
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
 
- // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
- // 读 P（O(N²) 读），读 V，写 O
- float inv_sum = 1.0f / row_sum;
- for (int dd = tid; dd < d; dd += blockDim.x) {
- float o_val = 0.0f;
- for (int j = 0; j < N; j++) {
- o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
- }
- O[qrow * d + dd] = o_val;
- }
+    // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
+    // 读 P（O(N²) 读），读 V，写 O
+    float inv_sum = 1.0f / row_sum;
+    for (int dd = tid; dd < d; dd += blockDim.x) {
+        float o_val = 0.0f;
+        for (int j = 0; j < N; j++) {
+            o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
+        }
+        O[qrow * d + dd] = o_val;
+    }
 }
 
 // ============================================================
 // CPU 参考（用于验证）
 // ============================================================
-void cpuAttention(const float* Q, const float* K, const float* V,
- float* O, int N, int d) {
- float* S = (float*)malloc(N * N * sizeof(float));
- float* P = (float*)malloc(N * N * sizeof(float));
- float scale = 1.0f / sqrtf((float)d);
- for (int i = 0; i < N; i++) {
- for (int j = 0; j < N; j++) {
- float s = 0.0f;
- for (int dd = 0; dd < d; dd++) s += Q[i*d+dd] * K[j*d+dd];
- S[i*N+j] = s * scale;
- }
- float mx = S[i*N];
- for (int j = 1; j < N; j++) mx = fmaxf(mx, S[i*N+j]);
- float sm = 0.0f;
- for (int j = 0; j < N; j++) { P[i*N+j] = expf(S[i*N+j]-mx); sm += P[i*N+j]; }
- for (int j = 0; j < N; j++) P[i*N+j] /= sm;
- for (int dd = 0; dd < d; dd++) {
- float o = 0.0f;
- for (int j = 0; j < N; j++) o += P[i*N+j] * V[j*d+dd];
- O[i*d+dd] = o;
- }
- }
- free(S); free(P);
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int d) {
+    float* S = (float*)malloc(N * N * sizeof(float));
+    float* P = (float*)malloc(N * N * sizeof(float));
+    float scale = 1.0f / sqrtf((float)d);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float s = 0.0f;
+            for (int dd = 0; dd < d; dd++)
+                s += Q[i * d + dd] * K[j * d + dd];
+            S[i * N + j] = s * scale;
+        }
+        float mx = S[i * N];
+        for (int j = 1; j < N; j++)
+            mx = fmaxf(mx, S[i * N + j]);
+        float sm = 0.0f;
+        for (int j = 0; j < N; j++) {
+            P[i * N + j] = expf(S[i * N + j] - mx);
+            sm += P[i * N + j];
+        }
+        for (int j = 0; j < N; j++)
+            P[i * N + j] /= sm;
+        for (int dd = 0; dd < d; dd++) {
+            float o = 0.0f;
+            for (int j = 0; j < N; j++)
+                o += P[i * N + j] * V[j * d + dd];
+            O[i * d + dd] = o;
+        }
+    }
+    free(S);
+    free(P);
 }
 
 void initData(float* data, int n) {
- srand(42);
- for (int i = 0; i < n; i++)
- data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+    srand(42);
+    for (int i = 0; i < n; i++)
+        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
 }
 
 bool checkResult(const float* a, const float* b, int n, float eps) {
- float maxDiff = 0.0f;
- for (int i = 0; i < n; i++) maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
- bool ok = maxDiff < eps;
- printf(" maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
- return ok;
+    float maxDiff = 0.0f;
+    for (int i = 0; i < n; i++)
+        maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    bool ok = maxDiff < eps;
+    printf(" maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
+    return ok;
 }
 
 int main() {
- // 测试多个 seq_len，观察 IO 随 N² 增长
- int seqLens[] = {256, 512, 1024, 2048};
- int d = 64;
- int threads = 256;
+    // 测试多个 seq_len，观察 IO 随 N² 增长
+    int seqLens[] = {256, 512, 1024, 2048};
+    int d = 64;
+    int threads = 256;
 
- printf("=== Standard Attention Forward (naive, materialize S/P) ===\n");
- printf("%-8s %-12s %-14s %-12s %-10s\n",
- "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
- printf("--------------------------------------------------------\n");
+    printf("=== Standard Attention Forward (naive, materialize S/P) ===\n");
+    printf("%-8s %-12s %-14s %-12s %-10s\n", "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
+    printf("--------------------------------------------------------\n");
 
- for (int si = 0; si < 4; si++) {
- int N = seqLens[si];
- size_t bytesQKV = N * d * sizeof(float);
- size_t bytesSP = (size_t)N * N * sizeof(float);
+    for (int si = 0; si < 4; si++) {
+        int N = seqLens[si];
+        size_t bytesQKV = N * d * sizeof(float);
+        size_t bytesSP = (size_t)N * N * sizeof(float);
 
- float *h_Q = (float*)malloc(bytesQKV), *h_K = (float*)malloc(bytesQKV);
- float *h_V = (float*)malloc(bytesQKV), *h_O = (float*)malloc(bytesQKV);
- float *h_O_cpu = (float*)malloc(bytesQKV);
- initData(h_Q, N*d); initData(h_K, N*d); initData(h_V, N*d);
+        float *h_Q = (float*)malloc(bytesQKV), *h_K = (float*)malloc(bytesQKV);
+        float *h_V = (float*)malloc(bytesQKV), *h_O = (float*)malloc(bytesQKV);
+        float* h_O_cpu = (float*)malloc(bytesQKV);
+        initData(h_Q, N * d);
+        initData(h_K, N * d);
+        initData(h_V, N * d);
 
- float *d_Q, *d_K, *d_V, *d_S, *d_P, *d_O;
- cudaMalloc(&d_Q, bytesQKV); cudaMalloc(&d_K, bytesQKV);
- cudaMalloc(&d_V, bytesQKV); cudaMalloc(&d_O, bytesQKV);
- cudaMalloc(&d_S, bytesSP); cudaMalloc(&d_P, bytesSP);
- cudaMemcpy(d_Q, h_Q, bytesQKV, cudaMemcpyHostToDevice);
- cudaMemcpy(d_K, h_K, bytesQKV, cudaMemcpyHostToDevice);
- cudaMemcpy(d_V, h_V, bytesQKV, cudaMemcpyHostToDevice);
+        float *d_Q, *d_K, *d_V, *d_S, *d_P, *d_O;
+        cudaMalloc(&d_Q, bytesQKV);
+        cudaMalloc(&d_K, bytesQKV);
+        cudaMalloc(&d_V, bytesQKV);
+        cudaMalloc(&d_O, bytesQKV);
+        cudaMalloc(&d_S, bytesSP);
+        cudaMalloc(&d_P, bytesSP);
+        cudaMemcpy(d_Q, h_Q, bytesQKV, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_K, h_K, bytesQKV, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_V, h_V, bytesQKV, cudaMemcpyHostToDevice);
 
- // 理论 HBM IO：读 Q,K,V（3Nd）+ 读/写 S,P（各 2N²）+ 写 O（Nd）
- // = 4Nd + 4N²（简化，每元素 4 bytes）
- double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0*1024.0);
- double spSize = (double)bytesSP / (1024.0*1024.0);
+        // 理论 HBM IO：读 Q,K,V（3Nd）+ 读/写 S,P（各 2N²）+ 写 O（Nd）
+        // = 4Nd + 4N²（简化，每元素 4 bytes）
+        double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0 * 1024.0);
+        double spSize = (double)bytesSP / (1024.0 * 1024.0);
 
- cudaEvent_t start, stop;
- cudaEventCreate(&start); cudaEventCreate(&stop);
- cudaEventRecord(start);
- attention_naive_kernel<<<N, threads>>>(d_Q, d_K, d_V, d_S, d_P, d_O, N, d);
- cudaEventRecord(stop);
- cudaEventSynchronize(stop);
- float ms;
- cudaEventElapsedTime(&ms, start, stop);
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        attention_naive_kernel<<<N, threads>>>(d_Q, d_K, d_V, d_S, d_P, d_O, N, d);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float ms;
+        cudaEventElapsedTime(&ms, start, stop);
 
- cudaMemcpy(h_O, d_O, bytesQKV, cudaMemcpyDeviceToHost);
- cpuAttention(h_Q, h_K, h_V, h_O_cpu, N, d);
- bool ok = checkResult(h_O, h_O_cpu, N*d, 1e-3f);
+        cudaMemcpy(h_O, d_O, bytesQKV, cudaMemcpyDeviceToHost);
+        cpuAttention(h_Q, h_K, h_V, h_O_cpu, N, d);
+        bool ok = checkResult(h_O, h_O_cpu, N * d, 1e-3f);
 
- printf("%-8d %-12.2f %-14.2f %-12.3f %-10s\n",
- N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
+        printf("%-8d %-12.2f %-14.2f %-12.3f %-10s\n", N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
 
- free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_cpu);
- cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_S);
- cudaFree(d_P); cudaFree(d_O);
- cudaEventDestroy(start); cudaEventDestroy(stop);
- }
+        free(h_Q);
+        free(h_K);
+        free(h_V);
+        free(h_O);
+        free(h_O_cpu);
+        cudaFree(d_Q);
+        cudaFree(d_K);
+        cudaFree(d_V);
+        cudaFree(d_S);
+        cudaFree(d_P);
+        cudaFree(d_O);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    }
 
- printf("\n观察要点：\n");
- printf("1. S/P size 随 N² 增长（N 翻倍 → size 4x）\n");
- printf("2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）\n");
- printf("3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）\n");
- printf("4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO\n");
- return 0;
+    printf("\n观察要点：\n");
+    printf("1. S/P size 随 N² 增长（N 翻倍 → size 4x）\n");
+    printf("2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）\n");
+    printf("3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）\n");
+    printf("4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO\n");
+    return 0;
 }
 ```
 
@@ -1453,30 +1501,28 @@ my_ops = load_inline(
 
 // 声明 Day 16 的 kernel（实现在 .cu 文件中）
 void launch_softmax(const float* input, float* output, int M, int D, cudaStream_t stream);
-void launch_layernorm(const float* input, const float* gamma, const float* beta,
- float* output, int M, int N, float eps, cudaStream_t stream);
+void launch_layernorm(const float* input, const float* gamma, const float* beta, float* output, int M, int N, float eps,
+                      cudaStream_t stream);
 
 at::Tensor softmax_forward(at::Tensor input) {
- // input: (M, D)
- int M = input.size(0), D = input.size(1);
- auto output = at::empty_like(input);
- launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(),
- M, D, at::cuda::getCurrentCUDAStream());
- return output;
+    // input: (M, D)
+    int M = input.size(0), D = input.size(1);
+    auto output = at::empty_like(input);
+    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(), M, D, at::cuda::getCurrentCUDAStream());
+    return output;
 }
 
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
- int M = input.size(0), N = input.size(1);
- auto output = at::empty_like(input);
- launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(),
- beta.data_ptr<float>(), output.data_ptr<float>(),
- M, N, (float)eps, at::cuda::getCurrentCUDAStream());
- return output;
+    int M = input.size(0), N = input.size(1);
+    auto output = at::empty_like(input);
+    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(), beta.data_ptr<float>(), output.data_ptr<float>(),
+                     M, N, (float)eps, at::cuda::getCurrentCUDAStream());
+    return output;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
- m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
- m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
+    m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
+    m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
 }
 ```
 

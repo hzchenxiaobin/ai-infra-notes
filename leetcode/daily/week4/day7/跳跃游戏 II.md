@@ -77,14 +77,15 @@ dp[i] = min(dp[j] + 1)  for all j < i and j + nums[j] >= i
 
 ```cpp
 class Solution {
-public:
+  public:
     int jump(vector<int>& nums) {
         int n = nums.size();
-        if (n == 1) return 0;
+        if (n == 1)
+            return 0;
 
-        int steps = 0;          // 已用跳跃次数
-        int end = 0;            // 当前这一步能覆盖的最远边界
-        int maxPos = 0;         // 下一步能到达的最远位置
+        int steps = 0;  // 已用跳跃次数
+        int end = 0;    // 当前这一步能覆盖的最远边界
+        int maxPos = 0; // 下一步能到达的最远位置
 
         for (int i = 0; i < n - 1; ++i) {
             maxPos = max(maxPos, i + nums[i]);
@@ -93,7 +94,8 @@ public:
                 steps++;
                 end = maxPos;
                 // 贪心保证：一旦 end 已经覆盖终点，可以提前结束
-                if (end >= n - 1) break;
+                if (end >= n - 1)
+                    break;
             }
         }
         return steps;

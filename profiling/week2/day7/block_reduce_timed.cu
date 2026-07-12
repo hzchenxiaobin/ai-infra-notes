@@ -7,7 +7,7 @@
 #include <cmath>
 
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
@@ -18,7 +18,7 @@ __global__ void blockReduceSum(const float* in, float* out, int n) {
     __shared__ float warpSums[32];
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int lane = threadIdx.x & 31;
-    int wid  = threadIdx.x >> 5;
+    int wid = threadIdx.x >> 5;
 
     // Step 1: grid-stride 累加
     float sum = 0.0f;
@@ -30,7 +30,8 @@ __global__ void blockReduceSum(const float* in, float* out, int n) {
     sum = warpReduceSum(sum);
 
     // Step 3: lane 0 写入 Shared Memory
-    if (lane == 0) warpSums[wid] = sum;
+    if (lane == 0)
+        warpSums[wid] = sum;
     __syncthreads();
 
     // Step 4: Warp 0 做最终归约
@@ -38,16 +39,17 @@ __global__ void blockReduceSum(const float* in, float* out, int n) {
         int numWarps = (blockDim.x + 31) >> 5;
         sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
         sum = warpReduceSum(sum);
-        if (lane == 0) out[blockIdx.x] = sum;
+        if (lane == 0)
+            out[blockIdx.x] = sum;
     }
 }
 
 int main() {
-    const int N = 1 << 22;  // 4M 元素
+    const int N = 1 << 22; // 4M 元素
     printf("=== Block Reduce (Warp Shuffle + 两级归约) ===\n");
     printf("N = %d (%.2f MB)\n\n", N, N * sizeof(float) / (1024.0 * 1024.0));
 
-    float *h_in = (float*)malloc(N * sizeof(float));
+    float* h_in = (float*)malloc(N * sizeof(float));
     srand(42);
     for (int i = 0; i < N; i++) {
         h_in[i] = (float)(rand() % 1000) * 0.001f;
@@ -92,10 +94,8 @@ int main() {
 
     printf("GPU Sum: %.4f\n", gpuSum);
     printf("CPU Sum: %.4f\n", (float)cpuSum);
-    printf("Diff:    %.6f (%s)\n", fabs(gpuSum - (float)cpuSum),
-           fabs(gpuSum - (float)cpuSum) < 1e-3 ? "PASS" : "FAIL");
-    printf("Time:    %.3f ms (%.2f GB/s bandwidth)\n",
-           ms, N * sizeof(float) / (ms * 1e6));
+    printf("Diff:    %.6f (%s)\n", fabs(gpuSum - (float)cpuSum), fabs(gpuSum - (float)cpuSum) < 1e-3 ? "PASS" : "FAIL");
+    printf("Time:    %.3f ms (%.2f GB/s bandwidth)\n", ms, N * sizeof(float) / (ms * 1e6));
 
     printf("\n=== ncu 分析命令 ===\n");
     printf("ncu --kernel-name regex:blockReduceSum \\\n");
@@ -108,7 +108,10 @@ int main() {
     printf("  ./block_reduce\n");
 
     free(h_in);
-    cudaFree(d_in); cudaFree(d_tmp); cudaFree(d_out);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    cudaFree(d_in);
+    cudaFree(d_tmp);
+    cudaFree(d_out);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     return 0;
 }

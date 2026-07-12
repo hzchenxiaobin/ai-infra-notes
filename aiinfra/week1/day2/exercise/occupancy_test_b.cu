@@ -7,8 +7,14 @@ __global__ void compute_intensive(const float* in, float* out, int n) {
     float e = 0.0f, f = 0.0f, g = 0.0f, h = 0.0f;
     for (int i = 0; i < n; ++i) {
         float v = in[(idx + i) % n];
-        a += v; b += v * 2; c += v * 3; d += v * 4;
-        e += v * 5; f += v * 6; g += v * 7; h += v * 8;
+        a += v;
+        b += v * 2;
+        c += v * 3;
+        d += v * 4;
+        e += v * 5;
+        f += v * 6;
+        g += v * 7;
+        h += v * 8;
     }
     out[idx] = a + b + c + d + e + f + g + h;
 }
@@ -16,7 +22,7 @@ __global__ void compute_intensive(const float* in, float* out, int n) {
 int main() {
     cudaFuncAttributes attr;
     cudaError_t err = cudaFuncGetAttributes(&attr, compute_intensive);
-    if(err != cudaSuccess) {
+    if (err != cudaSuccess) {
         printf("Error: %s\n", cudaGetErrorString(err));
         return 1;
     }

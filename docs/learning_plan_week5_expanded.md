@@ -539,169 +539,171 @@ Cache 复用：
 // 为简化，这里只实现单层
 // --------------------------------------------------
 class KVCache {
-public:
- KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
- : num_layers_(num_layers), batch_size_(batch_size),
- num_heads_(num_heads), max_seq_len_(max_seq_len), d_head_(d_head) {
+  public:
+    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
+        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
+          d_head_(d_head) {
 
- size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
- total_size_ = (size_t)num_layers_ * size_per_layer_;
+        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        total_size_ = (size_t)num_layers_ * size_per_layer_;
 
- cudaMalloc(&k_cache_, total_size_);
- cudaMalloc(&v_cache_, total_size_);
- cudaMemset(k_cache_, 0, total_size_);
- cudaMemset(v_cache_, 0, total_size_);
+        cudaMalloc(&k_cache_, total_size_);
+        cudaMalloc(&v_cache_, total_size_);
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
 
- // 每个 batch 当前已缓存的序列长度
- seq_lens_ = std::vector<int>(batch_size_, 0);
- }
+        // 每个 batch 当前已缓存的序列长度
+        seq_lens_ = std::vector<int>(batch_size_, 0);
+    }
 
- ~KVCache() {
- cudaFree(k_cache_);
- cudaFree(v_cache_);
- }
+    ~KVCache() {
+        cudaFree(k_cache_);
+        cudaFree(v_cache_);
+    }
 
- // 追加新的 K/V 到 cache
- // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)
- // 本函数假设 k_new/v_new 在 device 上
- void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
- for (int b = 0; b < batch_size_; b++) {
- int start = seq_lens_[b];
- int end = start + new_len;
- if (end > max_seq_len_) {
- printf("Error: seq len exceeds max_seq_len_\n");
- return;
- }
+    // 追加新的 K/V 到 cache
+    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)
+    // 本函数假设 k_new/v_new 在 device 上
+    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
+        for (int b = 0; b < batch_size_; b++) {
+            int start = seq_lens_[b];
+            int end = start + new_len;
+            if (end > max_seq_len_) {
+                printf("Error: seq len exceeds max_seq_len_\n");
+                return;
+            }
 
- // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
- for (int h = 0; h < num_heads_; h++) {
- size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ +
- h * new_len * d_head_) * sizeof(float);
- size_t dst_offset = ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
- b * num_heads_ * max_seq_len_ * d_head_ +
- h * max_seq_len_ * d_head_ +
- start * d_head_) * sizeof(float);
- size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
- cudaMemcpy(k_cache_ + dst_offset / sizeof(float), k_new + src_offset / sizeof(float),
- bytes, cudaMemcpyDeviceToDevice);
- cudaMemcpy(v_cache_ + dst_offset / sizeof(float), v_new + src_offset / sizeof(float),
- bytes, cudaMemcpyDeviceToDevice);
- }
- seq_lens_[b] = end;
- }
- }
+            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
+            for (int h = 0; h < num_heads_; h++) {
+                size_t src_offset =
+                    ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_) * sizeof(float);
+                size_t dst_offset =
+                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_) *
+                    sizeof(float);
+                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
+                cudaMemcpy(k_cache_ + dst_offset / sizeof(float), k_new + src_offset / sizeof(float), bytes,
+                           cudaMemcpyDeviceToDevice);
+                cudaMemcpy(v_cache_ + dst_offset / sizeof(float), v_new + src_offset / sizeof(float), bytes,
+                           cudaMemcpyDeviceToDevice);
+            }
+            seq_lens_[b] = end;
+        }
+    }
 
- // 获取当前 cache 指针和序列长度
- void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
- *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
- *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
- *seq_lens = seq_lens_;
- }
+    // 获取当前 cache 指针和序列长度
+    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
+        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *seq_lens = seq_lens_;
+    }
 
- int get_seq_len(int batch_id) const {
- return seq_lens_[batch_id];
- }
+    int get_seq_len(int batch_id) const {
+        return seq_lens_[batch_id];
+    }
 
- void reset() {
- cudaMemset(k_cache_, 0, total_size_);
- cudaMemset(v_cache_, 0, total_size_);
- std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
- }
+    void reset() {
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
+    }
 
- void reset_batch(int batch_id) {
- for (int l = 0; l < num_layers_; l++) {
- for (int h = 0; h < num_heads_; h++) {
- size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
- batch_id * num_heads_ * max_seq_len_ * d_head_ +
- h * max_seq_len_ * d_head_) * sizeof(float);
- cudaMemset(k_cache_ + offset / sizeof(float), 0, max_seq_len_ * d_head_ * sizeof(float));
- cudaMemset(v_cache_ + offset / sizeof(float), 0, max_seq_len_ * d_head_ * sizeof(float));
- }
- }
- seq_lens_[batch_id] = 0;
- }
+    void reset_batch(int batch_id) {
+        for (int l = 0; l < num_layers_; l++) {
+            for (int h = 0; h < num_heads_; h++) {
+                size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                                 batch_id * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_) *
+                                sizeof(float);
+                cudaMemset(k_cache_ + offset / sizeof(float), 0, max_seq_len_ * d_head_ * sizeof(float));
+                cudaMemset(v_cache_ + offset / sizeof(float), 0, max_seq_len_ * d_head_ * sizeof(float));
+            }
+        }
+        seq_lens_[batch_id] = 0;
+    }
 
-private:
- int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
- size_t size_per_layer_, total_size_;
- float* k_cache_;
- float* v_cache_;
- std::vector<int> seq_lens_;
+  private:
+    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
+    size_t size_per_layer_, total_size_;
+    float* k_cache_;
+    float* v_cache_;
+    std::vector<int> seq_lens_;
 };
 
 // --------------------------------------------------
 // 测试：模拟多轮对话
 // --------------------------------------------------
 void initData(float* data, int n) {
- for (int i = 0; i < n; i++) {
- data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
- }
+    for (int i = 0; i < n; i++) {
+        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
+    }
 }
 
 int main() {
- const int num_layers = 2;
- const int batch_size = 1;
- const int num_heads = 8;
- const int max_seq_len = 1024;
- const int d_head = 64;
+    const int num_layers = 2;
+    const int batch_size = 1;
+    const int num_heads = 8;
+    const int max_seq_len = 1024;
+    const int d_head = 64;
 
- printf("=== KV Cache Test ===\n");
- printf("Config: layers=%d, batch=%d, heads=%d, max_len=%d, d_head=%d\n",
- num_layers, batch_size, num_heads, max_seq_len, d_head);
+    printf("=== KV Cache Test ===\n");
+    printf("Config: layers=%d, batch=%d, heads=%d, max_len=%d, d_head=%d\n", num_layers, batch_size, num_heads,
+           max_seq_len, d_head);
 
- KVCache cache(num_layers, batch_size, num_heads, max_seq_len, d_head);
+    KVCache cache(num_layers, batch_size, num_heads, max_seq_len, d_head);
 
- // Round 1: prompt 长度 10
- int round1_len = 10;
- size_t round1_bytes = (size_t)batch_size * num_heads * round1_len * d_head * sizeof(float);
- float *d_k1, *d_v1;
- cudaMalloc(&d_k1, round1_bytes);
- cudaMalloc(&d_v1, round1_bytes);
- // 实际应用中会调用 transformer layer 生成 k1/v1
- // 这里用随机数据填充
- float* h_tmp = (float*)malloc(round1_bytes);
- initData(h_tmp, batch_size * num_heads * round1_len * d_head);
- cudaMemcpy(d_k1, h_tmp, round1_bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_v1, h_tmp, round1_bytes, cudaMemcpyHostToDevice);
+    // Round 1: prompt 长度 10
+    int round1_len = 10;
+    size_t round1_bytes = (size_t)batch_size * num_heads * round1_len * d_head * sizeof(float);
+    float *d_k1, *d_v1;
+    cudaMalloc(&d_k1, round1_bytes);
+    cudaMalloc(&d_v1, round1_bytes);
+    // 实际应用中会调用 transformer layer 生成 k1/v1
+    // 这里用随机数据填充
+    float* h_tmp = (float*)malloc(round1_bytes);
+    initData(h_tmp, batch_size * num_heads * round1_len * d_head);
+    cudaMemcpy(d_k1, h_tmp, round1_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_v1, h_tmp, round1_bytes, cudaMemcpyHostToDevice);
 
- cache.append(0, d_k1, d_v1, round1_len);
- printf("After Round 1 (len=%d): seq_len=%d\n", round1_len, cache.get_seq_len(0));
+    cache.append(0, d_k1, d_v1, round1_len);
+    printf("After Round 1 (len=%d): seq_len=%d\n", round1_len, cache.get_seq_len(0));
 
- // Round 2: 新增 5 个 tokens
- int round2_len = 5;
- size_t round2_bytes = (size_t)batch_size * num_heads * round2_len * d_head * sizeof(float);
- float *d_k2, *d_v2;
- cudaMalloc(&d_k2, round2_bytes);
- cudaMalloc(&d_v2, round2_bytes);
- initData(h_tmp, batch_size * num_heads * round2_len * d_head);
- cudaMemcpy(d_k2, h_tmp, round2_bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_v2, h_tmp, round2_bytes, cudaMemcpyHostToDevice);
+    // Round 2: 新增 5 个 tokens
+    int round2_len = 5;
+    size_t round2_bytes = (size_t)batch_size * num_heads * round2_len * d_head * sizeof(float);
+    float *d_k2, *d_v2;
+    cudaMalloc(&d_k2, round2_bytes);
+    cudaMalloc(&d_v2, round2_bytes);
+    initData(h_tmp, batch_size * num_heads * round2_len * d_head);
+    cudaMemcpy(d_k2, h_tmp, round2_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_v2, h_tmp, round2_bytes, cudaMemcpyHostToDevice);
 
- cache.append(0, d_k2, d_v2, round2_len);
- printf("After Round 2 (len=%d): seq_len=%d\n", round2_len, cache.get_seq_len(0));
+    cache.append(0, d_k2, d_v2, round2_len);
+    printf("After Round 2 (len=%d): seq_len=%d\n", round2_len, cache.get_seq_len(0));
 
- // Round 3: 新增 8 个 tokens
- cache.append(0, d_k2, d_v2, 8);
- printf("After Round 3 (len=8): seq_len=%d\n", cache.get_seq_len(0));
+    // Round 3: 新增 8 个 tokens
+    cache.append(0, d_k2, d_v2, 8);
+    printf("After Round 3 (len=8): seq_len=%d\n", cache.get_seq_len(0));
 
- // 验证总长度
- int expected = round1_len + round2_len + 8;
- if (cache.get_seq_len(0) == expected) {
- printf("PASS: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
- } else {
- printf("FAIL: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
- }
+    // 验证总长度
+    int expected = round1_len + round2_len + 8;
+    if (cache.get_seq_len(0) == expected) {
+        printf("PASS: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
+    } else {
+        printf("FAIL: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
+    }
 
- // 内存占用统计
- size_t bytes_per_token = (size_t)num_layers * num_heads * d_head * sizeof(float) * 2;
- printf("KV Cache bytes per token: %zu\n", bytes_per_token);
- printf("Max memory usage: %zu MB\n", bytes_per_token * max_seq_len / (1024 * 1024));
+    // 内存占用统计
+    size_t bytes_per_token = (size_t)num_layers * num_heads * d_head * sizeof(float) * 2;
+    printf("KV Cache bytes per token: %zu\n", bytes_per_token);
+    printf("Max memory usage: %zu MB\n", bytes_per_token * max_seq_len / (1024 * 1024));
 
- free(h_tmp);
- cudaFree(d_k1); cudaFree(d_v1);
- cudaFree(d_k2); cudaFree(d_v2);
+    free(h_tmp);
+    cudaFree(d_k1);
+    cudaFree(d_v1);
+    cudaFree(d_k2);
+    cudaFree(d_v2);
 
- return 0;
+    return 0;
 }
 ```
 

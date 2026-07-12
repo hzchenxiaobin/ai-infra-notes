@@ -129,15 +129,18 @@ cur.next = cur.next.next  # 删除
 struct ListNode {
     int val;
     ListNode* next;
-    ListNode() : val(0), next(nullptr) {}
-    ListNode(int x) : val(x), next(nullptr) {}
-    ListNode(int x, ListNode* n) : val(x), next(n) {}
+    ListNode() : val(0), next(nullptr) {
+    }
+    ListNode(int x) : val(x), next(nullptr) {
+    }
+    ListNode(int x, ListNode* n) : val(x), next(n) {
+    }
 };
 
 class Solution {
-public:
+  public:
     ListNode* removeNthFromEnd(ListNode* head, int n) {
-        ListNode dummy(0);                  // 哑节点，统一处理删除头节点
+        ListNode dummy(0); // 哑节点，统一处理删除头节点
         dummy.next = head;
         ListNode* slow = &dummy;
         ListNode* fast = &dummy;
@@ -156,7 +159,7 @@ public:
         // 3. slow.next 是待删节点，跳过它
         ListNode* toDelete = slow->next;
         slow->next = slow->next->next;
-        delete toDelete;                    // 释放内存（可选，C++ 良好习惯）
+        delete toDelete; // 释放内存（可选，C++ 良好习惯）
 
         return dummy.next;
     }

@@ -10,7 +10,8 @@
 // 朴素三遍扫描 Softmax（每线程遍历整个数组，O(N²) 访存）
 __global__ void softmax_kernel(const float* input, float* output, int N) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N) return;
+    if (idx >= N)
+        return;
 
     // Pass 1: 求 max
     float max_val = -INFINITY;
@@ -33,7 +34,8 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
     __shared__ float s_sum;
     __shared__ float s_max;
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     int tid = threadIdx.x;
 
     // Pass 1: 求 max
@@ -46,20 +48,22 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
     __shared__ float smem[32];
     int lane = tid % 32;
     int wid = tid / 32;
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         local_max = fmaxf(local_max, __shfl_down_sync(0xFFFFFFFF, local_max, offset));
     }
-    if (lane == 0) smem[wid] = local_max;
+    if (lane == 0)
+        smem[wid] = local_max;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     if (wid == 0) {
         local_max = (lane < numWarps) ? smem[lane] : -INFINITY;
-        #pragma unroll
+#pragma unroll
         for (int offset = 16; offset > 0; offset >>= 1) {
             local_max = fmaxf(local_max, __shfl_down_sync(0xFFFFFFFF, local_max, offset));
         }
-        if (lane == 0) s_max = local_max;
+        if (lane == 0)
+            s_max = local_max;
     }
     __syncthreads();
     float row_max = s_max;
@@ -70,19 +74,21 @@ __global__ void softmax_row_kernel(const float* input, float* output, int M, int
         local_sum += expf(input[row * N + i] - row_max);
     }
 
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
     }
-    if (lane == 0) smem[wid] = local_sum;
+    if (lane == 0)
+        smem[wid] = local_sum;
     __syncthreads();
     if (wid == 0) {
         local_sum = (lane < numWarps) ? smem[lane] : 0.0f;
-        #pragma unroll
+#pragma unroll
         for (int offset = 16; offset > 0; offset >>= 1) {
             local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
         }
-        if (lane == 0) s_sum = local_sum;
+        if (lane == 0)
+            s_sum = local_sum;
     }
     __syncthreads();
     float row_sum = s_sum;
@@ -107,7 +113,10 @@ void cpuSoftmax(const float* in, float* out, int N) {
         mx = fmaxf(mx, in[i]);
     }
     float s = 0.0f;
-    for (int i = 0; i < N; i++) { out[i] = expf(in[i] - mx); s += out[i]; }
+    for (int i = 0; i < N; i++) {
+        out[i] = expf(in[i] - mx);
+        s += out[i];
+    }
     for (int i = 0; i < N; i++) {
         out[i] /= s;
     }
@@ -125,16 +134,16 @@ bool checkResult(const float* a, const float* b, int n, float eps) {
 
 int main() {
     // 测试行级 Softmax（更实用的版本）
-    const int M = 128;   // batch 行数
-    const int N = 1024;  // 每行元素数
+    const int M = 128;  // batch 行数
+    const int N = 1024; // 每行元素数
     const int threads = 256;
 
     printf("=== Softmax Profiling (row-level, M=%d, N=%d) ===\n\n", M, N);
 
     size_t bytes = (size_t)M * N * sizeof(float);
-    float *h_in = (float*)malloc(bytes);
-    float *h_out = (float*)malloc(bytes);
-    float *h_ref = (float*)malloc(bytes);
+    float* h_in = (float*)malloc(bytes);
+    float* h_out = (float*)malloc(bytes);
+    float* h_ref = (float*)malloc(bytes);
     initData(h_in, M * N);
 
     float *d_in, *d_out;
@@ -174,8 +183,12 @@ int main() {
     printf("# nsys 时间线\n");
     printf("nsys profile -o softmax_timeline ./softmax_profile\n");
 
-    free(h_in); free(h_out); free(h_ref);
-    cudaFree(d_in); cudaFree(d_out);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    free(h_in);
+    free(h_out);
+    free(h_ref);
+    cudaFree(d_in);
+    cudaFree(d_out);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     return 0;
 }

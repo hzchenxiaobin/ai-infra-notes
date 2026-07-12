@@ -47,9 +47,9 @@ int main() {
     int height = 1024;
     int size = width * height;
 
-    float *h_in = (float*)malloc(size * sizeof(float));
-    float *h_out_naive = (float*)malloc(size * sizeof(float));
-    float *h_out_opt = (float*)malloc(size * sizeof(float));
+    float* h_in = (float*)malloc(size * sizeof(float));
+    float* h_out_naive = (float*)malloc(size * sizeof(float));
+    float* h_out_opt = (float*)malloc(size * sizeof(float));
     fill_matrix(h_in, size);
 
     float *d_in, *d_out;

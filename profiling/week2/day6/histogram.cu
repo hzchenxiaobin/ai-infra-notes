@@ -10,12 +10,13 @@
 // Version 1: Global atomic (baseline)
 __global__ void histogram_global(const int* input, int* hist, int N, int B) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < N) atomicAdd(&hist[input[idx]], 1);
+    if (idx < N)
+        atomicAdd(&hist[input[idx]], 1);
 }
 
 // Version 2: Shared memory privatization (optimized)
 __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
-    __shared__ int s_hist[256];  // B <= 256
+    __shared__ int s_hist[256]; // B <= 256
     int tid = threadIdx.x;
 
     // 初始化 shared histogram
@@ -25,8 +26,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
     __syncthreads();
 
     // 每个 block 累加到 shared memory
-    for (int i = blockIdx.x * blockDim.x + tid; i < N;
-         i += gridDim.x * blockDim.x) {
+    for (int i = blockIdx.x * blockDim.x + tid; i < N; i += gridDim.x * blockDim.x) {
         atomicAdd(&s_hist[input[i]], 1);
     }
     __syncthreads();
@@ -55,8 +55,8 @@ bool checkResult(const int* a, const int* b, int n) {
 }
 
 int main() {
-    const int N = 1 << 20;  // 1M 元素
-    const int B = 256;       // 256 bins
+    const int N = 1 << 20; // 1M 元素
+    const int B = 256;     // 256 bins
     const int threads = 256;
     const int blocks = min((N + threads - 1) / threads, 1024);
 
@@ -126,8 +126,13 @@ int main() {
     printf("  --metrics dram__bytes_read.sum,dram__bytes_write.sum \\\n");
     printf("  ./histogram\n");
 
-    free(h_input); free(h_hist_global); free(h_hist_shared);
-    cudaFree(d_input); cudaFree(d_hist_global); cudaFree(d_hist_shared);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    free(h_input);
+    free(h_hist_global);
+    free(h_hist_shared);
+    cudaFree(d_input);
+    cudaFree(d_hist_global);
+    cudaFree(d_hist_shared);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     return 0;
 }

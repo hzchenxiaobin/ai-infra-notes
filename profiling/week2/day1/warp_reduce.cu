@@ -12,7 +12,7 @@
 // Warp 级归约：使用 __shfl_down_sync 折半累加
 // --------------------------------------------------
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
@@ -24,7 +24,7 @@ __inline__ __device__ float warpReduceSum(float val) {
 // 用途：when you need reduction result in ALL lanes, not just lane 0
 // --------------------------------------------------
 __inline__ __device__ float warpReduceSumXor(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
         val += __shfl_xor_sync(0xFFFFFFFF, val, offset);
     }
@@ -43,7 +43,7 @@ __global__ void blockReduceSum(const float* input, float* output, int n) {
 
     // Step 1: 每个线程从 global memory 读取并做 per-thread 累加
     float sum = 0.0f;
-    #pragma unroll 4
+#pragma unroll 4
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         sum += input[i];
     }
@@ -71,8 +71,7 @@ __global__ void blockReduceSum(const float* input, float* output, int n) {
 // --------------------------------------------------
 // 多 block 版本：需要第二次 kernel 调用汇总
 // --------------------------------------------------
-float launchReduce(const float* d_input, float* d_temp, float* d_output,
-                   int n, int threadsPerBlock) {
+float launchReduce(const float* d_input, float* d_temp, float* d_output, int n, int threadsPerBlock) {
     int blocks = (n + threadsPerBlock - 1) / threadsPerBlock;
     blocks = min(blocks, 1024);
 
@@ -106,7 +105,7 @@ float cpuReduceSum(const float* data, int n) {
 }
 
 int main() {
-    const int n = 1 << 22;  // 4,194,304 个元素
+    const int n = 1 << 22; // 4,194,304 个元素
     printf("=== Warp Shuffle Block Reduce ===\n");
     printf("Array size: %d (%.2f MB)\n", n, n * sizeof(float) / (1024.0 * 1024.0));
 
@@ -137,8 +136,7 @@ int main() {
     printf("GPU Sum: %.6f\n", gpuSum);
     printf("CPU Sum: %.6f\n", cpuSum);
     printf("Diff:    %.6f (%s)\n", diff, diff < 1e-3 ? "PASS" : "FAIL");
-    printf("Time:    %.3f ms (%.2f GB/s bandwidth)\n",
-           ms, n * sizeof(float) / (ms * 1e6));
+    printf("Time:    %.3f ms (%.2f GB/s bandwidth)\n", ms, n * sizeof(float) / (ms * 1e6));
 
     printf("\n=== ncu 分析命令 ===\n");
     printf("ncu --metrics \\\n");
@@ -150,8 +148,11 @@ int main() {
     printf("  ./warp_reduce\n");
 
     free(h_input);
-    cudaFree(d_input); cudaFree(d_temp); cudaFree(d_output);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    cudaFree(d_input);
+    cudaFree(d_temp);
+    cudaFree(d_output);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     return 0;
 }

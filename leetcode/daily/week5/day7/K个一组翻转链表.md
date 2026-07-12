@@ -81,9 +81,10 @@ dummy → 1 → 2 → 3 → 4 → 5,  k=3
 
 ```cpp
 class Solution {
-public:
+  public:
     ListNode* reverseKGroup(ListNode* head, int k) {
-        ListNode dummy(0); dummy.next = head;
+        ListNode dummy(0);
+        dummy.next = head;
         ListNode* pre = &dummy;
 
         while (true) {
@@ -91,10 +92,11 @@ public:
             ListNode* tail = pre;
             for (int i = 0; i < k; ++i) {
                 tail = tail->next;
-                if (!tail) return dummy.next;   // 不足 k，保持原序
+                if (!tail)
+                    return dummy.next; // 不足 k，保持原序
             }
-            ListNode* nextGroup = tail->next;   // 下一组头
-            ListNode* groupHead = pre->next;    // 本组头（翻转后变尾）
+            ListNode* nextGroup = tail->next; // 下一组头
+            ListNode* groupHead = pre->next;  // 本组头（翻转后变尾）
 
             // 翻转 [groupHead, tail]
             ListNode* prev = nextGroup;

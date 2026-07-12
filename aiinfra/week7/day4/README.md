@@ -103,17 +103,15 @@ cuBLAS：
 
 ```cpp
 at::Tensor softmax_forward(at::Tensor input) {
- int M = input.size(0); // 从 Tensor 获取形状
- int N = input.size(1);
- auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
+    int M = input.size(0); // 从 Tensor 获取形状
+    int N = input.size(1);
+    auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
 
- int threads = std::min(N, 256);
- softmax_kernel<<<M, threads>>>( // launch kernel
- input.data_ptr<float>(), // Tensor → 裸指针
- output.data_ptr<float>(),
- M, N
- );
- return output; // 返回 Tensor 给 Python
+    int threads = std::min(N, 256);
+    softmax_kernel<<<M, threads>>>( // launch kernel
+        input.data_ptr<float>(),    // Tensor → 裸指针
+        output.data_ptr<float>(), M, N);
+    return output; // 返回 Tensor 给 Python
 }
 ```
 

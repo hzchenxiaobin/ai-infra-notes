@@ -9,14 +9,14 @@
 
 // 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     }
@@ -25,21 +25,25 @@ __inline__ __device__ float warpReduceMax(float val) {
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
+    if (wid == 0)
+        val = warpReduceSum(val);
     return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
+    if (wid == 0)
+        val = warpReduceMax(val);
     return val;
 }
 
@@ -48,15 +52,12 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 // 一个 block 处理一行 query（qrow）
 // 三步：S=QK^T → P=softmax(S) → O=PV，S/P 全部写回 HBM
 // ============================================================
-__global__ void attention_naive_kernel(const float* __restrict__ Q,
-                                         const float* __restrict__ K,
-                                         const float* __restrict__ V,
-                                         float* __restrict__ S,
-                                         float* __restrict__ P,
-                                         float* __restrict__ O,
-                                         int N, int d) {
+__global__ void attention_naive_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                       const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
+                                       float* __restrict__ O, int N, int d) {
     int qrow = blockIdx.x;
-    if (qrow >= N) return;
+    if (qrow >= N)
+        return;
 
     __shared__ float smem[32];
     __shared__ float row_max;
@@ -83,7 +84,8 @@ __global__ void attention_naive_kernel(const float* __restrict__ Q,
         local_max = fmaxf(local_max, S[qrow * N + j]);
     }
     local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
+    if (tid == 0)
+        row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
@@ -93,7 +95,8 @@ __global__ void attention_naive_kernel(const float* __restrict__ Q,
         local_sum += p_val;
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
+    if (tid == 0)
+        row_sum = local_sum;
     __syncthreads();
 
     // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
@@ -111,8 +114,7 @@ __global__ void attention_naive_kernel(const float* __restrict__ Q,
 // ============================================================
 // CPU 参考（用于验证）
 // ============================================================
-void cpuAttention(const float* Q, const float* K, const float* V,
-                  float* O, int N, int d) {
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int d) {
     float* S = (float*)malloc(N * N * sizeof(float));
     float* P = (float*)malloc(N * N * sizeof(float));
     float scale = 1.0f / sqrtf((float)d);
@@ -120,28 +122,32 @@ void cpuAttention(const float* Q, const float* K, const float* V,
         for (int j = 0; j < N; j++) {
             float s = 0.0f;
             for (int dd = 0; dd < d; dd++) {
-                s += Q[i*d+dd] * K[j*d+dd];
+                s += Q[i * d + dd] * K[j * d + dd];
             }
-            S[i*N+j] = s * scale;
+            S[i * N + j] = s * scale;
         }
-        float mx = S[i*N];
+        float mx = S[i * N];
         for (int j = 1; j < N; j++) {
-            mx = fmaxf(mx, S[i*N+j]);
+            mx = fmaxf(mx, S[i * N + j]);
         }
         float sm = 0.0f;
-        for (int j = 0; j < N; j++) { P[i*N+j] = expf(S[i*N+j]-mx); sm += P[i*N+j]; }
         for (int j = 0; j < N; j++) {
-            P[i*N+j] /= sm;
+            P[i * N + j] = expf(S[i * N + j] - mx);
+            sm += P[i * N + j];
+        }
+        for (int j = 0; j < N; j++) {
+            P[i * N + j] /= sm;
         }
         for (int dd = 0; dd < d; dd++) {
             float o = 0.0f;
             for (int j = 0; j < N; j++) {
-                o += P[i*N+j] * V[j*d+dd];
+                o += P[i * N + j] * V[j * d + dd];
             }
-            O[i*d+dd] = o;
+            O[i * d + dd] = o;
         }
     }
-    free(S); free(P);
+    free(S);
+    free(P);
 }
 
 void initData(float* data, int n) {
@@ -168,8 +174,7 @@ int main() {
     int threads = 256;
 
     printf("=== Standard Attention Forward (naive, materialize S/P) ===\n");
-    printf("%-8s %-14s %-16s %-12s %-10s\n",
-           "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
+    printf("%-8s %-14s %-16s %-12s %-10s\n", "N", "S/P size(MB)", "HBM IO(MB)", "Time(ms)", "Check");
     printf("------------------------------------------------------------------\n");
 
     for (int si = 0; si < 4; si++) {
@@ -179,24 +184,30 @@ int main() {
 
         float *h_Q = (float*)malloc(bytesQKV), *h_K = (float*)malloc(bytesQKV);
         float *h_V = (float*)malloc(bytesQKV), *h_O = (float*)malloc(bytesQKV);
-        float *h_O_cpu = (float*)malloc(bytesQKV);
-        initData(h_Q, N*d); initData(h_K, N*d); initData(h_V, N*d);
+        float* h_O_cpu = (float*)malloc(bytesQKV);
+        initData(h_Q, N * d);
+        initData(h_K, N * d);
+        initData(h_V, N * d);
 
         float *d_Q, *d_K, *d_V, *d_S, *d_P, *d_O;
-        cudaMalloc(&d_Q, bytesQKV); cudaMalloc(&d_K, bytesQKV);
-        cudaMalloc(&d_V, bytesQKV); cudaMalloc(&d_O, bytesQKV);
-        cudaMalloc(&d_S, bytesSP);  cudaMalloc(&d_P, bytesSP);
+        cudaMalloc(&d_Q, bytesQKV);
+        cudaMalloc(&d_K, bytesQKV);
+        cudaMalloc(&d_V, bytesQKV);
+        cudaMalloc(&d_O, bytesQKV);
+        cudaMalloc(&d_S, bytesSP);
+        cudaMalloc(&d_P, bytesSP);
         cudaMemcpy(d_Q, h_Q, bytesQKV, cudaMemcpyHostToDevice);
         cudaMemcpy(d_K, h_K, bytesQKV, cudaMemcpyHostToDevice);
         cudaMemcpy(d_V, h_V, bytesQKV, cudaMemcpyHostToDevice);
 
         // 理论 HBM IO：读 Q,K,V（3Nd）+ 读/写 S,P（各 2N²）+ 写 O（Nd）
         // = 4Nd + 4N²（简化，每元素 4 bytes）
-        double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0*1024.0);
-        double spSize = (double)bytesSP / (1024.0*1024.0);
+        double hbmIO = (4.0 * N * d + 4.0 * N * N) * sizeof(float) / (1024.0 * 1024.0);
+        double spSize = (double)bytesSP / (1024.0 * 1024.0);
 
         cudaEvent_t start, stop;
-        cudaEventCreate(&start); cudaEventCreate(&stop);
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
         cudaEventRecord(start);
         attention_naive_kernel<<<N, threads>>>(d_Q, d_K, d_V, d_S, d_P, d_O, N, d);
         cudaEventRecord(stop);
@@ -206,15 +217,23 @@ int main() {
 
         cudaMemcpy(h_O, d_O, bytesQKV, cudaMemcpyDeviceToHost);
         cpuAttention(h_Q, h_K, h_V, h_O_cpu, N, d);
-        bool ok = checkResult(h_O, h_O_cpu, N*d, 1e-3f);
+        bool ok = checkResult(h_O, h_O_cpu, N * d, 1e-3f);
 
-        printf("%-8d %-14.2f %-16.2f %-12.3f %-10s\n",
-               N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
+        printf("%-8d %-14.2f %-16.2f %-12.3f %-10s\n", N, spSize, hbmIO, ms, ok ? "PASS" : "FAIL");
 
-        free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_cpu);
-        cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_S);
-        cudaFree(d_P); cudaFree(d_O);
-        cudaEventDestroy(start); cudaEventDestroy(stop);
+        free(h_Q);
+        free(h_K);
+        free(h_V);
+        free(h_O);
+        free(h_O_cpu);
+        cudaFree(d_Q);
+        cudaFree(d_K);
+        cudaFree(d_V);
+        cudaFree(d_S);
+        cudaFree(d_P);
+        cudaFree(d_O);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     }
 
     printf("\n观察要点：\n");

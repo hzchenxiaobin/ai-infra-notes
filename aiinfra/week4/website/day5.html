@@ -249,14 +249,13 @@ Input x (B, N, d)
 \`\`\`cpp
 // C++ wrapper 关键点
 at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
- int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
- auto O = at::empty_like(Q);
- launch_flash_attention_forward(
- Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(),
- O.data_ptr<float>(), B, H, N, d,
- at::cuda::getCurrentCUDAStream() // ★ 关键：传递当前 stream
- );
- return O;
+    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
+    auto O = at::empty_like(Q);
+    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
+                                   B, H, N, d,
+                                   at::cuda::getCurrentCUDAStream() // ★ 关键：传递当前 stream
+    );
+    return O;
 }
 \`\`\`
 
@@ -300,31 +299,24 @@ max_diff = (out_std - out_fa).abs().max().item()
 #include <torch/extension.h>
 #include <cuda_runtime.h>
 
-void launch_flash_attention_forward(
- const float* Q, const float* K, const float* V, float* O,
- int B, int H, int N, int d, cudaStream_t stream);
+void launch_flash_attention_forward(const float* Q, const float* K, const float* V, float* O, int B, int H, int N,
+                                    int d, cudaStream_t stream);
 
 at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
- TORCH_CHECK(Q.dim() == 4, "Q must be 4D (B,H,N,d)");
- TORCH_CHECK(K.sizes() == Q.sizes(), "K shape must match Q");
- TORCH_CHECK(V.sizes() == Q.sizes(), "V shape must match Q");
+    TORCH_CHECK(Q.dim() == 4, "Q must be 4D (B,H,N,d)");
+    TORCH_CHECK(K.sizes() == Q.sizes(), "K shape must match Q");
+    TORCH_CHECK(V.sizes() == Q.sizes(), "V shape must match Q");
 
- int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
- auto O = at::empty_like(Q);
+    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
+    auto O = at::empty_like(Q);
 
- launch_flash_attention_forward(
- Q.data_ptr<float>(),
- K.data_ptr<float>(),
- V.data_ptr<float>(),
- O.data_ptr<float>(),
- B, H, N, d,
- at::cuda::getCurrentCUDAStream()
- );
- return O;
+    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
+                                   B, H, N, d, at::cuda::getCurrentCUDAStream());
+    return O;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
- m.def("flash_attention_forward", &flash_attention_forward, "FlashAttention forward (CUDA)");
+    m.def("flash_attention_forward", &flash_attention_forward, "FlashAttention forward (CUDA)");
 }
 \`\`\`
 

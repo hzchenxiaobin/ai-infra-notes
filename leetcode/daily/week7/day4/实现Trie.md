@@ -91,8 +91,9 @@ class Trie {
 
     TrieNode* root;
 
-public:
-    Trie() : root(new TrieNode()) {}
+  public:
+    Trie() : root(new TrieNode()) {
+    }
 
     void insert(string word) {
         TrieNode* node = root;
@@ -109,7 +110,8 @@ public:
         TrieNode* node = root;
         for (char c : word) {
             int idx = c - 'a';
-            if (!node->children[idx]) return false;
+            if (!node->children[idx])
+                return false;
             node = node->children[idx];
         }
         return node->is_end;
@@ -119,7 +121,8 @@ public:
         TrieNode* node = root;
         for (char c : prefix) {
             int idx = c - 'a';
-            if (!node->children[idx]) return false;
+            if (!node->children[idx])
+                return false;
             node = node->children[idx];
         }
         return true;

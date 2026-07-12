@@ -110,11 +110,12 @@ struct Node {
     int key, val;
     Node* prev;
     Node* next;
-    Node(int k, int v) : key(k), val(v), prev(nullptr), next(nullptr) {}
+    Node(int k, int v) : key(k), val(v), prev(nullptr), next(nullptr) {
+    }
 };
 
 class LRUCache {
-private:
+  private:
     int cap;
     unordered_map<int, Node*> mp;
     Node* head; // 哑节点，dummy_head（MRU 端）
@@ -147,7 +148,7 @@ private:
         return node;
     }
 
-public:
+  public:
     LRUCache(int capacity) : cap(capacity) {
         head = new Node(0, 0);
         tail = new Node(0, 0);
@@ -157,7 +158,8 @@ public:
 
     int get(int key) {
         auto it = mp.find(key);
-        if (it == mp.end()) return -1;
+        if (it == mp.end())
+            return -1;
         Node* node = it->second;
         moveToHead(node);
         return node->val;

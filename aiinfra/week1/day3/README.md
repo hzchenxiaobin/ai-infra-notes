@@ -135,30 +135,30 @@ cudaGetDeviceProperties(&prop, dev);
 #include <stdio.h>
 
 int main() {
- int deviceCount;
- cudaGetDeviceCount(&deviceCount);
- printf("Detected %d CUDA device(s)\n\n", deviceCount);
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    printf("Detected %d CUDA device(s)\n\n", deviceCount);
 
- for (int dev = 0; dev < deviceCount; ++dev) {
- cudaDeviceProp prop;
- cudaGetDeviceProperties(&prop, dev);
+    for (int dev = 0; dev < deviceCount; ++dev) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, dev);
 
- printf("Device %d: %s\n", dev, prop.name);
- printf(" Compute Capability: %d.%d\n", prop.major, prop.minor);
- printf(" Total Global Memory: %.2f GB\n", prop.totalGlobalMem / (1024.0 * 1024 * 1024));
- printf(" Number of SMs: %d\n", prop.multiProcessorCount);
- printf(" Warp Size: %d\n", prop.warpSize);
- printf(" Max Threads per Block: %d\n", prop.maxThreadsPerBlock);
- printf(" Max Threads per SM: %d\n", prop.maxThreadsPerMultiProcessor);
- printf(" Max Blocks per SM: %d\n", prop.maxBlocksPerMultiProcessor);
- printf(" Shared Memory per Block: %zu KB\n", prop.sharedMemPerBlock / 1024);
- printf(" Registers per Block: %d\n", prop.regsPerBlock);
- printf(" Memory Clock Rate: %.0f MHz\n", prop.memoryClockRate / 1000.0);
- printf(" Memory Bus Width: %d bits\n", prop.memoryBusWidth);
- printf(" GPU Clock Rate: %.0f MHz\n\n", prop.clockRate / 1000.0);
- }
+        printf("Device %d: %s\n", dev, prop.name);
+        printf(" Compute Capability: %d.%d\n", prop.major, prop.minor);
+        printf(" Total Global Memory: %.2f GB\n", prop.totalGlobalMem / (1024.0 * 1024 * 1024));
+        printf(" Number of SMs: %d\n", prop.multiProcessorCount);
+        printf(" Warp Size: %d\n", prop.warpSize);
+        printf(" Max Threads per Block: %d\n", prop.maxThreadsPerBlock);
+        printf(" Max Threads per SM: %d\n", prop.maxThreadsPerMultiProcessor);
+        printf(" Max Blocks per SM: %d\n", prop.maxBlocksPerMultiProcessor);
+        printf(" Shared Memory per Block: %zu KB\n", prop.sharedMemPerBlock / 1024);
+        printf(" Registers per Block: %d\n", prop.regsPerBlock);
+        printf(" Memory Clock Rate: %.0f MHz\n", prop.memoryClockRate / 1000.0);
+        printf(" Memory Bus Width: %d bits\n", prop.memoryBusWidth);
+        printf(" GPU Clock Rate: %.0f MHz\n\n", prop.clockRate / 1000.0);
+    }
 
- return 0;
+    return 0;
 }
 ```
 
@@ -328,11 +328,10 @@ occupancy = 32 / 64 = 50%
 
 ```cuda
 int numBlocks;
-cudaOccupancyMaxActiveBlocksPerMultiprocessor(
- &numBlocks, // 输出：每 SM 最多能驻留多少个 block
- myKernel, // kernel 函数指针
- blockSize, // 每 block 线程数
- dynamicSmemBytes // 动态共享内存字节数
+cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks,      // 输出：每 SM 最多能驻留多少个 block
+                                              myKernel,        // kernel 函数指针
+                                              blockSize,       // 每 block 线程数
+                                              dynamicSmemBytes // 动态共享内存字节数
 );
 ```
 
@@ -482,9 +481,14 @@ int main() {
     const int M = 4096, N = 4096, num_elements = M * N;
     const size_t bytes = num_elements * sizeof(float);
     float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < num_elements; ++i) { h_A[i] = (float)(rand() % 100) * 0.01f; h_B[i] = (float)(rand() % 100) * 0.01f; }
+    for (int i = 0; i < num_elements; ++i) {
+        h_A[i] = (float)(rand() % 100) * 0.01f;
+        h_B[i] = (float)(rand() % 100) * 0.01f;
+    }
     float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
+    cudaMalloc(&d_A, bytes);
+    cudaMalloc(&d_B, bytes);
+    cudaMalloc(&d_C, bytes);
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
     int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
@@ -492,9 +496,17 @@ int main() {
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     bool pass = true;
     for (int i = 0; i < num_elements; ++i)
-        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) { pass = false; break; }
+        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
+            pass = false;
+            break;
+        }
     printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
-    free(h_A); free(h_B); free(h_C); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
     return 0;
 }
 ```
@@ -548,17 +560,17 @@ for right in 0..n-1:
 #include <cstring>
 
 int main() {
- cudaDeviceProp prop;
- memset(&prop, 0, sizeof(prop));
- prop.major = 12; // 至少 Blackwell
- prop.minor = 0;
+    cudaDeviceProp prop;
+    memset(&prop, 0, sizeof(prop));
+    prop.major = 12; // 至少 Blackwell
+    prop.minor = 0;
 
- int dev;
- cudaChooseDevice(&dev, &prop);
- printf("Best device: %d\n", dev);
+    int dev;
+    cudaChooseDevice(&dev, &prop);
+    printf("Best device: %d\n", dev);
 
- cudaSetDevice(dev);
- return 0;
+    cudaSetDevice(dev);
+    return 0;
 }
 ```
 

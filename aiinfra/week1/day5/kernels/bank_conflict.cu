@@ -38,8 +38,8 @@ __global__ void no_conflict_read(float* out, const float* in) {
 
 int main() {
     const int N = TILE_DIM * TILE_DIM;
-    float *h_in = (float*)malloc(N * sizeof(float));
-    float *h_out = (float*)malloc(N * sizeof(float));
+    float* h_in = (float*)malloc(N * sizeof(float));
+    float* h_out = (float*)malloc(N * sizeof(float));
     for (int i = 0; i < N; ++i) {
         h_in[i] = static_cast<float>(i);
     }

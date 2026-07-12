@@ -12,14 +12,14 @@
 // 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     }
@@ -28,32 +28,35 @@ __inline__ __device__ float warpReduceMax(float val) {
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
+    if (wid == 0)
+        val = warpReduceSum(val);
     return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
+    if (wid == 0)
+        val = warpReduceMax(val);
     return val;
 }
 
 // ============================================================
 // Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
 // ============================================================
-__global__ void softmax_kernel(const float* __restrict__ input,
-                                float* __restrict__ output,
-                                int M, int D) {
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     const float* in_row = input + row * D;
     float* out_row = output + row * D;
 
@@ -66,7 +69,8 @@ __global__ void softmax_kernel(const float* __restrict__ input,
         local_max = fmaxf(local_max, in_row[i]);
     }
     local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
+    if (tid == 0)
+        row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
@@ -74,7 +78,8 @@ __global__ void softmax_kernel(const float* __restrict__ input,
         local_sum += expf(in_row[i] - row_max);
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
+    if (tid == 0)
+        row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
@@ -86,13 +91,11 @@ __global__ void softmax_kernel(const float* __restrict__ input,
 // ============================================================
 // LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
 // ============================================================
-__global__ void layernorm_kernel(const float* __restrict__ input,
-                                  const float* __restrict__ gamma,
-                                  const float* __restrict__ beta,
-                                  float* __restrict__ output,
-                                  int M, int N, float eps) {
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     const float* in_row = input + row * N;
     float* out_row = output + row * N;
 
@@ -105,7 +108,8 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
         local_sum += in_row[i];
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_mean = local_sum / N;
+    if (tid == 0)
+        row_mean = local_sum / N;
     __syncthreads();
 
     float local_sq = 0.0f;
@@ -114,7 +118,8 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
         local_sq += diff * diff;
     }
     local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
     __syncthreads();
 
     for (int i = tid; i < N; i += blockDim.x) {
@@ -131,8 +136,8 @@ void launch_softmax(const float* input, float* output, int M, int D, cudaStream_
     softmax_kernel<<<M, threads, 0, stream>>>(input, output, M, D);
 }
 
-void launch_layernorm(const float* input, const float* gamma, const float* beta,
-                      float* output, int M, int N, float eps, cudaStream_t stream) {
+void launch_layernorm(const float* input, const float* gamma, const float* beta, float* output, int M, int N, float eps,
+                      cudaStream_t stream) {
     int threads = 256;
     layernorm_kernel<<<M, threads, 0, stream>>>(input, gamma, beta, output, M, N, eps);
 }
@@ -156,15 +161,17 @@ void cpuSoftmax(const float* in, float* out, int M, int D) {
             mx = fmaxf(mx, ir[i]);
         }
         float s = 0.0f;
-        for (int i = 0; i < D; i++) { orow[i] = expf(ir[i] - mx); s += orow[i]; }
+        for (int i = 0; i < D; i++) {
+            orow[i] = expf(ir[i] - mx);
+            s += orow[i];
+        }
         for (int i = 0; i < D; i++) {
             orow[i] /= s;
         }
     }
 }
 
-void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
-                  float* out, int M, int N, float eps) {
+void cpuLayerNorm(const float* in, const float* gamma, const float* beta, float* out, int M, int N, float eps) {
     for (int r = 0; r < M; r++) {
         const float* ir = in + r * N;
         float* orow = out + r * N;
@@ -174,7 +181,10 @@ void cpuLayerNorm(const float* in, const float* gamma, const float* beta,
         }
         mean /= N;
         float var = 0.0f;
-        for (int i = 0; i < N; i++) { float d = ir[i] - mean; var += d * d; }
+        for (int i = 0; i < N; i++) {
+            float d = ir[i] - mean;
+            var += d * d;
+        }
         var /= N;
         float rstd = 1.0f / sqrtf(var + eps);
         for (int i = 0; i < N; i++) {
@@ -204,11 +214,16 @@ int main() {
     float *h_in = (float*)malloc(bytes), *h_out = (float*)malloc(bytes), *h_ref = (float*)malloc(bytes);
     float *h_gamma = (float*)malloc(D * sizeof(float)), *h_beta = (float*)malloc(D * sizeof(float));
     initData(h_in, M * D);
-    for (int i = 0; i < D; i++) { h_gamma[i] = 1.0f; h_beta[i] = 0.0f; }
+    for (int i = 0; i < D; i++) {
+        h_gamma[i] = 1.0f;
+        h_beta[i] = 0.0f;
+    }
 
     float *d_in, *d_out, *d_gamma, *d_beta;
-    cudaMalloc(&d_in, bytes); cudaMalloc(&d_out, bytes);
-    cudaMalloc(&d_gamma, D * sizeof(float)); cudaMalloc(&d_beta, D * sizeof(float));
+    cudaMalloc(&d_in, bytes);
+    cudaMalloc(&d_out, bytes);
+    cudaMalloc(&d_gamma, D * sizeof(float));
+    cudaMalloc(&d_beta, D * sizeof(float));
     cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_gamma, h_gamma, D * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_beta, h_beta, D * sizeof(float), cudaMemcpyHostToDevice);
@@ -231,8 +246,15 @@ int main() {
     printf("\n这两个 launch wrapper 就是 PyTorch C++ Extension 要调用的入口。\n");
     printf("集成方式见 mini_engine.py 的 load_inline 调用。\n");
 
-    free(h_in); free(h_out); free(h_ref); free(h_gamma); free(h_beta);
-    cudaFree(d_in); cudaFree(d_out); cudaFree(d_gamma); cudaFree(d_beta);
+    free(h_in);
+    free(h_out);
+    free(h_ref);
+    free(h_gamma);
+    free(h_beta);
+    cudaFree(d_in);
+    cudaFree(d_out);
+    cudaFree(d_gamma);
+    cudaFree(d_beta);
     return 0;
 }
 
@@ -246,16 +268,14 @@ int main() {
 at::Tensor softmax_forward(at::Tensor input) {
     int M = input.size(0), D = input.size(1);
     auto output = at::empty_like(input);
-    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(),
-                   M, D, at::cuda::getCurrentCUDAStream());
+    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(), M, D, at::cuda::getCurrentCUDAStream());
     return output;
 }
 
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
     int M = input.size(0), N = input.size(1);
     auto output = at::empty_like(input);
-    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(),
-                     beta.data_ptr<float>(), output.data_ptr<float>(),
+    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(), beta.data_ptr<float>(), output.data_ptr<float>(),
                      M, N, (float)eps, at::cuda::getCurrentCUDAStream());
     return output;
 }

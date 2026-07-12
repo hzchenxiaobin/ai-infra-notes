@@ -16,9 +16,9 @@ int main() {
     const int N = 1 << 20;
     size_t bytes = N * sizeof(float);
 
-    float *h_A = (float*)malloc(bytes);
-    float *h_B = (float*)malloc(bytes);
-    float *h_C = (float*)malloc(bytes);
+    float* h_A = (float*)malloc(bytes);
+    float* h_B = (float*)malloc(bytes);
+    float* h_C = (float*)malloc(bytes);
     for (int i = 0; i < N; i++) {
         h_A[i] = (float)(rand() % 1000) * 0.001f;
         h_B[i] = (float)(rand() % 1000) * 0.001f;
@@ -48,14 +48,20 @@ int main() {
 
     bool ok = true;
     for (int i = 0; i < N; i++) {
-        if (fabs(h_C[i] - (h_A[i] + h_B[i])) > 1e-5) { ok = false; break; }
+        if (fabs(h_C[i] - (h_A[i] + h_B[i])) > 1e-5) {
+            ok = false;
+            break;
+        }
     }
 
     printf("Result: %s\n", ok ? "PASS" : "FAIL");
-    printf("Time: %.3f ms (%.2f GB/s bandwidth)\n",
-           ms, 3.0f * N * sizeof(float) / (ms * 1e6));
+    printf("Time: %.3f ms (%.2f GB/s bandwidth)\n", ms, 3.0f * N * sizeof(float) / (ms * 1e6));
 
-    free(h_A); free(h_B); free(h_C);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
     return 0;
 }

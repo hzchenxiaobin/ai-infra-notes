@@ -8,22 +8,19 @@
 #include <cmath>
 #include <algorithm>
 
-#define Br 32   // Q tile 的行数（SRAM 可容纳）
-#define Bc 32   // K/V tile 的行数（SRAM 可容纳）
-#define D 64    // Head dimension
+#define Br 32 // Q tile 的行数（SRAM 可容纳）
+#define Bc 32 // K/V tile 的行数（SRAM 可容纳）
+#define D 64  // Head dimension
 
-#define NUM_THREADS_X Bc   // 64
-#define NUM_THREADS_Y 4    // Br/NUM_THREADS_Y = 64/4 = 16
+#define NUM_THREADS_X Bc // 64
+#define NUM_THREADS_Y 4  // Br/NUM_THREADS_Y = 64/4 = 16
 
-__global__ void flashAttentionFwd(const float* __restrict__ Q,
-                                    const float* __restrict__ K,
-                                    const float* __restrict__ V,
-                                    float* __restrict__ O,
-                                    int N, int numHeads) {
-    __shared__ float s_Q[Br][D];    // Q tile: Br×D
-    __shared__ float s_K[Bc][D];    // K tile: Bc×D
-    __shared__ float s_V[Bc][D];    // V tile: Bc×D
-    __shared__ float s_S[Br][Bc];   // S = Q×K^T partial: Br×Bc
+__global__ void flashAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K, const float* __restrict__ V,
+                                  float* __restrict__ O, int N, int numHeads) {
+    __shared__ float s_Q[Br][D];  // Q tile: Br×D
+    __shared__ float s_K[Bc][D];  // K tile: Bc×D
+    __shared__ float s_V[Bc][D];  // V tile: Bc×D
+    __shared__ float s_S[Br][Bc]; // S = Q×K^T partial: Br×Bc
 
     int batch = blockIdx.z;
     int head = blockIdx.y;
@@ -73,7 +70,7 @@ __global__ void flashAttentionFwd(const float* __restrict__ Q,
         for (int qi = tid_y; qi < Br; qi += NUM_THREADS_Y) {
             for (int ki = tid_x; ki < Bc; ki += NUM_THREADS_X) {
                 float s_val = 0.0f;
-                #pragma unroll
+#pragma unroll
                 for (int d = 0; d < D; d++) {
                     s_val += s_Q[qi][d] * s_K[ki][d];
                 }
@@ -135,17 +132,14 @@ __global__ void flashAttentionFwd(const float* __restrict__ Q,
 // ============================================================
 // 标准 Attention（物化 S/P，用于 ncu 对比）
 // ============================================================
-__global__ void standardAttentionFwd(const float* __restrict__ Q,
-                                       const float* __restrict__ K,
-                                       const float* __restrict__ V,
-                                       float* __restrict__ S,
-                                       float* __restrict__ P,
-                                       float* __restrict__ O,
-                                       int N, int numHeads) {
+__global__ void standardAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K,
+                                     const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
+                                     float* __restrict__ O, int N, int numHeads) {
     int batch = blockIdx.z;
     int head = blockIdx.y;
     int qRow = blockIdx.x * blockDim.x + threadIdx.x;
-    if (qRow >= N) return;
+    if (qRow >= N)
+        return;
 
     int bhOffset = (batch * numHeads + head) * N;
     float scale = 1.0f / sqrtf((float)D);
@@ -182,8 +176,7 @@ __global__ void standardAttentionFwd(const float* __restrict__ Q,
 }
 
 // CPU 参考实现（标准 Attention，用于验证正确性）
-void cpuAttention(const float* Q, const float* K, const float* V,
-                  float* O, int N, int headDim) {
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int headDim) {
     float* S = (float*)malloc(N * N * sizeof(float));
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
@@ -245,17 +238,16 @@ int main() {
 
     printf("=== FlashAttention Simplified Forward ===\n");
     printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, headDim, batchSize, numHeads);
-    printf("SRAM usage per block: %.2f KB\n",
-           (Br * headDim + Bc * headDim * 2 + Br * Bc) * sizeof(float) / 1024.0);
+    printf("SRAM usage per block: %.2f KB\n", (Br * headDim + Bc * headDim * 2 + Br * Bc) * sizeof(float) / 1024.0);
 
     size_t totalElements = batchSize * numHeads * N * headDim;
     size_t bytes = totalElements * sizeof(float);
 
-    float *h_Q = (float*)malloc(bytes);
-    float *h_K = (float*)malloc(bytes);
-    float *h_V = (float*)malloc(bytes);
-    float *h_O = (float*)malloc(bytes);
-    float *h_O_CPU = (float*)malloc(bytes);
+    float* h_Q = (float*)malloc(bytes);
+    float* h_K = (float*)malloc(bytes);
+    float* h_V = (float*)malloc(bytes);
+    float* h_O = (float*)malloc(bytes);
+    float* h_O_CPU = (float*)malloc(bytes);
 
     initMatrix(h_Q, batchSize * numHeads * N, headDim);
     initMatrix(h_K, batchSize * numHeads * N, headDim);
@@ -273,8 +265,7 @@ int main() {
     dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
     dim3 blockDim(NUM_THREADS_X, NUM_THREADS_Y);
 
-    printf("Grid: (%d, %d, %d), Block: (%d, %d)\n",
-           gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y);
+    printf("Grid: (%d, %d, %d), Block: (%d, %d)\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -337,10 +328,19 @@ int main() {
     printf("    --metrics dram__bytes_read.sum,dram__bytes_write.sum \\\n");
     printf("    ./flash_attention\n");
 
-    free(h_Q); free(h_K); free(h_V); free(h_O); free(h_O_CPU);
-    cudaFree(d_Q); cudaFree(d_K); cudaFree(d_V); cudaFree(d_O);
-    cudaFree(d_S); cudaFree(d_P);
-    cudaEventDestroy(start); cudaEventDestroy(stop);
+    free(h_Q);
+    free(h_K);
+    free(h_V);
+    free(h_O);
+    free(h_O_CPU);
+    cudaFree(d_Q);
+    cudaFree(d_K);
+    cudaFree(d_V);
+    cudaFree(d_O);
+    cudaFree(d_S);
+    cudaFree(d_P);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     return 0;
 }

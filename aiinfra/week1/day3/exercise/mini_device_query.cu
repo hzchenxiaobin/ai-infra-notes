@@ -6,7 +6,7 @@ int main() {
     cudaGetDeviceCount(&deviceCount);
     printf("Detected %d CUDA device(s)\n\n", deviceCount);
 
-    for(int dev = 0; dev < deviceCount; ++dev) {
+    for (int dev = 0; dev < deviceCount; ++dev) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, dev);
 

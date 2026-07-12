@@ -246,15 +246,13 @@ Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标�
 
 \`\`\`cpp
 at::Tensor softmax_forward(at::Tensor input) {
- int M = input.size(0), D = input.size(1);
- auto output = at::empty_like(input); // ① 让 PyTorch 分配输出显存
- launch_softmax(
- input.data_ptr<float>(), // ② 从 Tensor 提取裸指针
- output.data_ptr<float>(),
- M, D,
- at::cuda::getCurrentCUDAStream() // ③ 获取当前 stream（多 stream 正确性）
- );
- return output;
+    int M = input.size(0), D = input.size(1);
+    auto output = at::empty_like(input);    // ① 让 PyTorch 分配输出显存
+    launch_softmax(input.data_ptr<float>(), // ② 从 Tensor 提取裸指针
+                   output.data_ptr<float>(), M, D,
+                   at::cuda::getCurrentCUDAStream() // ③ 获取当前 stream（多 stream 正确性）
+    );
+    return output;
 }
 \`\`\`
 
@@ -324,98 +322,104 @@ at::Tensor softmax_forward(at::Tensor input) {
 // 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
- #pragma unroll
- for (int offset = 16; offset > 0; offset >>= 1)
- val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
- return val;
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
 }
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceSum(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : 0.0f;
- if (wid == 0) val = warpReduceSum(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
- int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
- val = warpReduceMax(val);
- if (lane == 0) smem[wid] = val;
- __syncthreads();
- int numWarps = (blockDim.x + 31) / 32;
- val = (lane < numWarps) ? smem[lane] : -INFINITY;
- if (wid == 0) val = warpReduceMax(val);
- return val;
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
 }
 
 // ============================================================
 // Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
 // ============================================================
-__global__ void softmax_kernel(const float* __restrict__ input,
- float* __restrict__ output,
- int M, int D) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* in_row = input + row * D;
- float* out_row = output + row * D;
- __shared__ float smem[32];
- __shared__ float row_max, row_sum;
- int tid = threadIdx.x;
- float local_max = -INFINITY;
- for (int i = tid; i < D; i += blockDim.x)
- local_max = fmaxf(local_max, in_row[i]);
- local_max = blockReduceMax(local_max, smem);
- if (tid == 0) row_max = local_max;
- __syncthreads();
- float local_sum = 0.0f;
- for (int i = tid; i < D; i += blockDim.x)
- local_sum += expf(in_row[i] - row_max);
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_sum = local_sum;
- __syncthreads();
- float inv_sum = 1.0f / row_sum;
- for (int i = tid; i < D; i += blockDim.x)
- out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
+    __shared__ float smem[32];
+    __shared__ float row_max, row_sum;
+    int tid = threadIdx.x;
+    float local_max = -INFINITY;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_max = fmaxf(local_max, in_row[i]);
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
+    float local_sum = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_sum += expf(in_row[i] - row_max);
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
+    float inv_sum = 1.0f / row_sum;
+    for (int i = tid; i < D; i += blockDim.x)
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
 }
 
 // ============================================================
 // LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
 // ============================================================
-__global__ void layernorm_kernel(const float* __restrict__ input,
- const float* __restrict__ gamma,
- const float* __restrict__ beta,
- float* __restrict__ output,
- int M, int N, float eps) {
- int row = blockIdx.x;
- if (row >= M) return;
- const float* in_row = input + row * N;
- float* out_row = output + row * N;
- __shared__ float smem[32];
- __shared__ float row_mean, row_rstd;
- int tid = threadIdx.x;
- float local_sum = 0.0f;
- for (int i = tid; i < N; i += blockDim.x) local_sum += in_row[i];
- local_sum = blockReduceSum(local_sum, smem);
- if (tid == 0) row_mean = local_sum / N;
- __syncthreads();
- float local_sq = 0.0f;
- for (int i = tid; i < N; i += blockDim.x) {
- float diff = in_row[i] - row_mean;
- local_sq += diff * diff;
- }
- local_sq = blockReduceSum(local_sq, smem);
- if (tid == 0) row_rstd = rsqrtf(local_sq / N + eps);
- __syncthreads();
- for (int i = tid; i < N; i += blockDim.x)
- out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * N;
+    float* out_row = output + row * N;
+    __shared__ float smem[32];
+    __shared__ float row_mean, row_rstd;
+    int tid = threadIdx.x;
+    float local_sum = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x)
+        local_sum += in_row[i];
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_mean = local_sum / N;
+    __syncthreads();
+    float local_sq = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        float diff = in_row[i] - row_mean;
+        local_sq += diff * diff;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
+    __syncthreads();
+    for (int i = tid; i < N; i += blockDim.x)
+        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
 }
 
 // ============================================================
@@ -423,14 +427,14 @@ __global__ void layernorm_kernel(const float* __restrict__ input,
 // 封装 grid/block 配置 + stream 传递
 // ============================================================
 void launch_softmax(const float* input, float* output, int M, int D, cudaStream_t stream) {
- int threads = 256;
- softmax_kernel<<<M, threads, 0, stream>>>(input, output, M, D);
+    int threads = 256;
+    softmax_kernel<<<M, threads, 0, stream>>>(input, output, M, D);
 }
 
-void launch_layernorm(const float* input, const float* gamma, const float* beta,
- float* output, int M, int N, float eps, cudaStream_t stream) {
- int threads = 256;
- layernorm_kernel<<<M, threads, 0, stream>>>(input, gamma, beta, output, M, N, eps);
+void launch_layernorm(const float* input, const float* gamma, const float* beta, float* output, int M, int N, float eps,
+                      cudaStream_t stream) {
+    int threads = 256;
+    layernorm_kernel<<<M, threads, 0, stream>>>(input, gamma, beta, output, M, N, eps);
 }
 \`\`\`
 
@@ -444,25 +448,23 @@ void launch_layernorm(const float* input, const float* gamma, const float* beta,
 #include <torch/extension.h>
 
 at::Tensor softmax_forward(at::Tensor input) {
- int M = input.size(0), D = input.size(1);
- auto output = at::empty_like(input);
- launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(),
- M, D, at::cuda::getCurrentCUDAStream());
- return output;
+    int M = input.size(0), D = input.size(1);
+    auto output = at::empty_like(input);
+    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(), M, D, at::cuda::getCurrentCUDAStream());
+    return output;
 }
 
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
- int M = input.size(0), N = input.size(1);
- auto output = at::empty_like(input);
- launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(),
- beta.data_ptr<float>(), output.data_ptr<float>(),
- M, N, (float)eps, at::cuda::getCurrentCUDAStream());
- return output;
+    int M = input.size(0), N = input.size(1);
+    auto output = at::empty_like(input);
+    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(), beta.data_ptr<float>(), output.data_ptr<float>(),
+                     M, N, (float)eps, at::cuda::getCurrentCUDAStream());
+    return output;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
- m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
- m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
+    m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
+    m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
 }
 #endif
 \`\`\`
@@ -570,57 +572,70 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
 #include <cmath>
 
 __global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
- int tid = blockIdx.x * blockDim.x + threadIdx.x;
- int stride = gridDim.x * blockDim.x;
- int vec_count = num_elements / 4;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+    int vec_count = num_elements / 4;
 
- for (int i = tid; i < vec_count; i += stride) {
- float4 a = reinterpret_cast<const float4*>(A)[i];
- float4 b = reinterpret_cast<const float4*>(B)[i];
- float4 c;
- c.x = a.x + b.x;
- c.y = a.y + b.y;
- c.z = a.z + b.z;
- c.w = a.w + b.w;
- reinterpret_cast<float4*>(C)[i] = c;
- }
+    for (int i = tid; i < vec_count; i += stride) {
+        float4 a = reinterpret_cast<const float4*>(A)[i];
+        float4 b = reinterpret_cast<const float4*>(B)[i];
+        float4 c;
+        c.x = a.x + b.x;
+        c.y = a.y + b.y;
+        c.z = a.z + b.z;
+        c.w = a.w + b.w;
+        reinterpret_cast<float4*>(C)[i] = c;
+    }
 }
 
 // 封装为 PyTorch 可调用（今日集成模式）
 #ifdef WITH_TORCH
 #include <torch/extension.h>
 at::Tensor matrix_add_forward(at::Tensor A, at::Tensor B) {
- auto C = at::empty_like(A);
- int n = A.numel();
- int threads = 256;
- int blocks = min((n / 4 + threads - 1) / threads, 1024);
- matrix_add_float4<<<blocks, threads, 0, at::cuda::getCurrentCUDAStream()>>>(
- A.data_ptr<float>(), B.data_ptr<float>(), C.data_ptr<float>(), n);
- return C;
+    auto C = at::empty_like(A);
+    int n = A.numel();
+    int threads = 256;
+    int blocks = min((n / 4 + threads - 1) / threads, 1024);
+    matrix_add_float4<<<blocks, threads, 0, at::cuda::getCurrentCUDAStream()>>>(
+        A.data_ptr<float>(), B.data_ptr<float>(), C.data_ptr<float>(), n);
+    return C;
 }
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
- m.def("matrix_add_forward", &matrix_add_forward, "Matrix Add (CUDA)");
+    m.def("matrix_add_forward", &matrix_add_forward, "Matrix Add (CUDA)");
 }
 #endif
 
 int main() {
- const int M = 4096, N = 4096, num_elements = M * N;
- const size_t bytes = num_elements * sizeof(float);
- float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
- for (int i = 0; i < num_elements; ++i) { h_A[i] = (float)(rand() % 100) * 0.01f; h_B[i] = (float)(rand() % 100) * 0.01f; }
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
- cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
- int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
- matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
- cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
- bool pass = true;
- for (int i = 0; i < num_elements; ++i)
- if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) { pass = false; break; }
- printf("Matrix Addition %s\\n", pass ? "PASS" : "FAIL");
- free(h_A); free(h_B); free(h_C); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
- return 0;
+    const int M = 4096, N = 4096, num_elements = M * N;
+    const size_t bytes = num_elements * sizeof(float);
+    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
+    for (int i = 0; i < num_elements; ++i) {
+        h_A[i] = (float)(rand() % 100) * 0.01f;
+        h_B[i] = (float)(rand() % 100) * 0.01f;
+    }
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, bytes);
+    cudaMalloc(&d_B, bytes);
+    cudaMalloc(&d_C, bytes);
+    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
+    int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
+    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
+    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
+    bool pass = true;
+    for (int i = 0; i < num_elements; ++i)
+        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
+            pass = false;
+            break;
+        }
+    printf("Matrix Addition %s\\n", pass ? "PASS" : "FAIL");
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    return 0;
 }
 \`\`\`
 

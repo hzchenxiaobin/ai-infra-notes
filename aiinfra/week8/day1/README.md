@@ -119,16 +119,17 @@ cudaEventCreate(&start);
 cudaEventCreate(&stop);
 
 // warmup（避免首次 cold miss）
-for (int i = 0; i < 5; i++) kernel<<<grid, block>>>(args);
-
-cudaEventRecord(start);                    // 计时开始
-for (int i = 0; i < N; i++)                 // 跑 N 次取平均
+for (int i = 0; i < 5; i++)
     kernel<<<grid, block>>>(args);
-cudaEventRecord(stop);                     // 计时结束
-cudaEventSynchronize(stop);                // 必须同步！
-cudaEventElapsedTime(&ms, start, stop);    // ms = N 次总耗时
 
-float t_per_call = ms / N;                 // 单次毫秒
+cudaEventRecord(start);     // 计时开始
+for (int i = 0; i < N; i++) // 跑 N 次取平均
+    kernel<<<grid, block>>>(args);
+cudaEventRecord(stop);                  // 计时结束
+cudaEventSynchronize(stop);             // 必须同步！
+cudaEventElapsedTime(&ms, start, stop); // ms = N 次总耗时
+
+float t_per_call = ms / N; // 单次毫秒
 ```
 
 ##### 1.3.2 指标计算

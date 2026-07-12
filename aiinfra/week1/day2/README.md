@@ -167,8 +167,9 @@ nvcc -Xptxas -v kernels/your_kernel.cu
 ##### 语法
 
 ```cuda
-__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-__global__ void my_kernel(...) { ... }
+__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor) __global__ void my_kernel(...) {
+    ...
+}
 ```
 
 | 参数 | 含义 | 例子 |
@@ -205,24 +206,23 @@ GPU 每个 SM 的寄存器文件总量是固定的。编译器在编译 kernel �
 ```cuda
 // 不限制寄存器：编译器可能用很多寄存器
 __global__ void compute_default(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- float a = 0, b = 0, c = 0, d = 0;
- float e = 0, f = 0, g = 0, h = 0;
- // ... 复杂计算
- out[idx] = a + b + c + d + e + f + g + h;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0, b = 0, c = 0, d = 0;
+    float e = 0, f = 0, g = 0, h = 0;
+    // ... 复杂计算
+    out[idx] = a + b + c + d + e + f + g + h;
 }
 ```
 
 如果希望每个 SM 上至少同时跑 4 个 block，每个 block 256 线程，可以加：
 
 ```cuda
-__launch_bounds__(256, 4)
-__global__ void compute_limited(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- float a = 0, b = 0, c = 0, d = 0;
- float e = 0, f = 0, g = 0, h = 0;
- // ... 复杂计算
- out[idx] = a + b + c + d + e + f + g + h;
+__launch_bounds__(256, 4) __global__ void compute_limited(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0, b = 0, c = 0, d = 0;
+    float e = 0, f = 0, g = 0, h = 0;
+    // ... 复杂计算
+    out[idx] = a + b + c + d + e + f + g + h;
 }
 ```
 
@@ -240,23 +240,22 @@ __global__ void compute_limited(const float* in, float* out, int n) {
 参考 [week1/day2/exercise/register_spill.cu](exercise/register_spill.cu)：
 
 ```cuda
-__launch_bounds__(128, 8)
-__global__ void spill_kernel(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
+__launch_bounds__(128, 8) __global__ void spill_kernel(const float* in, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
- float acc[80]; // 80 个 float，编译器想全部放寄存器
- #pragma unroll
- for (int i = 0; i < 80; i++) {
- acc[i] = in[(idx + i) % n];
- }
+    float acc[80]; // 80 个 float，编译器想全部放寄存器
+    #pragma unroll
+    for (int i = 0; i < 80; i++) {
+        acc[i] = in[(idx + i) % n];
+    }
 
- float sum = 0.0f;
- #pragma unroll
- for (int i = 0; i < 80; i++) {
- sum += acc[i] * acc[i] + 1.0f;
- }
+    float sum = 0.0f;
+    #pragma unroll
+    for (int i = 0; i < 80; i++) {
+        sum += acc[i] * acc[i] + 1.0f;
+    }
 
- out[idx] = sum;
+    out[idx] = sum;
 }
 ```
 
@@ -321,49 +320,49 @@ ptxas info : Used 96 registers, 340 bytes cmem[0], 4 bytes cmem[2]
 #include <stdio.h>
 
 __global__ void compute_intensive(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- float acc = 0.0f;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float acc = 0.0f;
 
- // 展开循环，增加寄存器压力
- #pragma unroll 16
- for (int i = 0; i < n; ++i) {
- float v = in[(idx + i) % n];
- acc += v * v + 1.0f;
- }
+// 展开循环，增加寄存器压力
+    #pragma unroll 16
+    for (int i = 0; i < n; ++i) {
+        float v = in[(idx + i) % n];
+        acc += v * v + 1.0f;
+    }
 
- out[idx] = acc;
+    out[idx] = acc;
 }
 
 int main() {
- cudaFuncAttributes attr;
- cudaError_t err = cudaFuncGetAttributes(&attr, compute_intensive);
- if (err != cudaSuccess) {
- printf("Error: %s\n", cudaGetErrorString(err));
- return 1;
- }
+    cudaFuncAttributes attr;
+    cudaError_t err = cudaFuncGetAttributes(&attr, compute_intensive);
+    if (err != cudaSuccess) {
+        printf("Error: %s\n", cudaGetErrorString(err));
+        return 1;
+    }
 
- printf("=== Kernel Attributes ===\n");
- printf("Registers per thread: %d\n", attr.numRegs);
- printf("Shared memory per block: %zu bytes\n", attr.sharedSizeBytes);
- printf("Constant memory per block: %zu bytes\n", attr.constSizeBytes);
- printf("Local memory per thread: %zu bytes\n", attr.localSizeBytes);
- printf("Max threads per block: %d\n", attr.maxThreadsPerBlock);
- printf("=========================\n");
+    printf("=== Kernel Attributes ===\n");
+    printf("Registers per thread: %d\n", attr.numRegs);
+    printf("Shared memory per block: %zu bytes\n", attr.sharedSizeBytes);
+    printf("Constant memory per block: %zu bytes\n", attr.constSizeBytes);
+    printf("Local memory per thread: %zu bytes\n", attr.localSizeBytes);
+    printf("Max threads per block: %d\n", attr.maxThreadsPerBlock);
+    printf("=========================\n");
 
- // 运行一次以便 ncu 可以捕获
- const int N = 1 << 20;
- float *d_in, *d_out;
- cudaMalloc(&d_in, N * sizeof(float));
- cudaMalloc(&d_out, N * sizeof(float));
+    // 运行一次以便 ncu 可以捕获
+    const int N = 1 << 20;
+    float *d_in, *d_out;
+    cudaMalloc(&d_in, N * sizeof(float));
+    cudaMalloc(&d_out, N * sizeof(float));
 
- int block_size = 256;
- int grid_size = (N + block_size - 1) / block_size;
- compute_intensive<<<grid_size, block_size>>>(d_in, d_out, 64);
- cudaDeviceSynchronize();
+    int block_size = 256;
+    int grid_size = (N + block_size - 1) / block_size;
+    compute_intensive<<<grid_size, block_size>>>(d_in, d_out, 64);
+    cudaDeviceSynchronize();
 
- cudaFree(d_in);
- cudaFree(d_out);
- return 0;
+    cudaFree(d_in);
+    cudaFree(d_out);
+    return 0;
 }
 ```
 
@@ -375,8 +374,8 @@ int main() {
 // 展开循环，增加寄存器压力
 #pragma unroll 16
 for (int i = 0; i < n; ++i) {
- float v = in[(idx + i) % n];
- acc += v * v + 1.0f;
+    float v = in[(idx + i) % n];
+    acc += v * v + 1.0f;
 }
 ```
 
@@ -429,10 +428,10 @@ for (int i = 0; i < n; ++i) {
 把 `#pragma unroll` 改成不同倍数，观察寄存器数量变化：
 
 ```cuda
-#pragma unroll 1 // 不展开
-#pragma unroll 4 // 展开 4 倍
+#pragma unroll 1  // 不展开
+#pragma unroll 4  // 展开 4 倍
 #pragma unroll 16 // 展开 16 倍
-#pragma unroll // 完全展开（n 是变量时，实际行为取决于编译器）
+#pragma unroll    // 完全展开（n 是变量时，实际行为取决于编译器）
 ```
 
 用 `nvcc -Xptxas -v` 编译后，某 GPU 上的结果：
@@ -529,10 +528,10 @@ ncu \
 
 ```cuda
 __global__ void relu_kernel(const float* input, float* output, int N) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- if (idx < N) {
- output[idx] = fmaxf(input[idx], 0.0f);
- }
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        output[idx] = fmaxf(input[idx], 0.0f);
+    }
 }
 ```
 
@@ -572,35 +571,40 @@ for i in 1..n-1:
 **版本 A：基础版**
 ```cuda
 __global__ void version_a(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- float acc = 0.0f;
- for (int i = 0; i < n; ++i) {
- acc += in[(idx + i) % n];
- }
- out[idx] = acc;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float acc = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        acc += in[(idx + i) % n];
+    }
+    out[idx] = acc;
 }
 ```
 
 **版本 B：增加局部变量**
 ```cuda
 __global__ void version_b(const float* in, float* out, int n) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- float a = 0.0f, b = 0.0f, c = 0.0f, d = 0.0f;
- float e = 0.0f, f = 0.0f, g = 0.0f, h = 0.0f;
- for (int i = 0; i < n; ++i) {
- float v = in[(idx + i) % n];
- a += v; b += v * 2; c += v * 3; d += v * 4;
- e += v * 5; f += v * 6; g += v * 7; h += v * 8;
- }
- out[idx] = a + b + c + d + e + f + g + h;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float a = 0.0f, b = 0.0f, c = 0.0f, d = 0.0f;
+    float e = 0.0f, f = 0.0f, g = 0.0f, h = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        float v = in[(idx + i) % n];
+        a += v;
+        b += v * 2;
+        c += v * 3;
+        d += v * 4;
+        e += v * 5;
+        f += v * 6;
+        g += v * 7;
+        h += v * 8;
+    }
+    out[idx] = a + b + c + d + e + f + g + h;
 }
 ```
 
 **版本 C：使用 launch_bounds 强制限制**
 ```cuda
-__launch_bounds__(256, 4)
-__global__ void version_c(const float* in, float* out, int n) {
- // 与 version_b 相同代码
+__launch_bounds__(256, 4) __global__ void version_c(const float* in, float* out, int n) {
+    // 与 version_b 相同代码
 }
 ```
 

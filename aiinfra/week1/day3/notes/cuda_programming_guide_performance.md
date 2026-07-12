@@ -69,8 +69,7 @@ SM 上的 Warp Scheduler 每个 cycle 会选择“可执行”的 Warp 来执行
 
 ```cuda
 // 示例：限制编译器为每个 block 256 线程、至少 2 个 block 驻留 SM
-__launch_bounds__(256, 2)
-__global__ void myKernel(float* out, const float* in, int n) {
+__launch_bounds__(256, 2) __global__ void myKernel(float* out, const float* in, int n) {
     // ...
 }
 ```
@@ -120,7 +119,7 @@ Shared memory 位于 SM 内部，延迟约为 global memory 的 1/100。它是 t
 消除 bank conflict 的常见方法：
 
 ```cuda
-__shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 消除转置时的 bank conflict
+__shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 消除转置时的 bank conflict
 ```
 
 ### 2.5 指令吞吐：算术与控制流
@@ -133,7 +132,9 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 1];  // +1 消除转置时的 bank co
 
 ```cuda
 // 不佳：线程级条件分支
-if (threadIdx.x % 2 == 0) { /* path A */ } else { /* path B */ }
+if (threadIdx.x % 2 == 0) { /* path A */
+} else {                    /* path B */
+}
 ```
 
 ---
@@ -152,7 +153,7 @@ CPU 和 GPU 是独立计算资源，理想情况下通过异步 Stream 重叠执
 
 ```cuda
 // 使用 pinned memory + 异步拷贝示例
-cudaMallocHost(&h_ptr, bytes);  // pinned host memory
+cudaMallocHost(&h_ptr, bytes); // pinned host memory
 cudaMemcpyAsync(d_ptr, h_ptr, bytes, cudaMemcpyHostToDevice, stream);
 kernel<<<grid, block, 0, stream>>>(d_ptr);
 cudaMemcpyAsync(h_ptr, d_ptr, bytes, cudaMemcpyDeviceToHost, stream);
@@ -205,9 +206,9 @@ Unified Memory 预取示例：
 
 ```cuda
 cudaMallocManaged(&data, bytes);
-cudaMemPrefetchAsync(data, bytes, deviceId, stream);        // 提前搬到 GPU
+cudaMemPrefetchAsync(data, bytes, deviceId, stream); // 提前搬到 GPU
 kernel<<<grid, block, 0, stream>>>(data);
-cudaMemPrefetchAsync(data, bytes, cudaCpuDeviceId, stream);  // 搬回 CPU
+cudaMemPrefetchAsync(data, bytes, cudaCpuDeviceId, stream); // 搬回 CPU
 cudaStreamSynchronize(stream);
 ```
 

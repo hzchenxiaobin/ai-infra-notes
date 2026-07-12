@@ -73,8 +73,10 @@ struct DLinkedNode {
     int key, value;
     DLinkedNode* prev;
     DLinkedNode* next;
-    DLinkedNode() : key(0), value(0), prev(nullptr), next(nullptr) {}
-    DLinkedNode(int k, int v) : key(k), value(v), prev(nullptr), next(nullptr) {}
+    DLinkedNode() : key(0), value(0), prev(nullptr), next(nullptr) {
+    }
+    DLinkedNode(int k, int v) : key(k), value(v), prev(nullptr), next(nullptr) {
+    }
 };
 
 class LRUCache {
@@ -107,7 +109,7 @@ class LRUCache {
         return node;
     }
 
-public:
+  public:
     LRUCache(int capacity) : capacity(capacity), size(0) {
         head = new DLinkedNode();
         tail = new DLinkedNode();
@@ -116,7 +118,8 @@ public:
     }
 
     int get(int key) {
-        if (!cache.count(key)) return -1;
+        if (!cache.count(key))
+            return -1;
         DLinkedNode* node = cache[key];
         moveToHead(node);
         return node->value;

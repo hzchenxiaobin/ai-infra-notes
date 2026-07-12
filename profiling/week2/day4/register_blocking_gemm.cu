@@ -16,10 +16,8 @@
 #define TN 8
 #define NUM_THREADS ((BM / TM) * (BN / TN))
 
-__global__ void gemmRegisterBlocking(const float* __restrict__ A,
-                                      const float* __restrict__ B,
-                                      float* __restrict__ C,
-                                      int M, int N, int K) {
+__global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C,
+                                     int M, int N, int K) {
     __shared__ float s_A[BM][BK];
     __shared__ float s_B[BK][BN];
 
@@ -36,7 +34,7 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A,
         // 协作加载 A tile
         int aRow = threadIdx.x / BK;
         int aCol = threadIdx.x % BK;
-        #pragma unroll
+#pragma unroll
         for (int i = 0; i < BM; i += NUM_THREADS / BK) {
             int loadRow = aRow + i;
             if (loadRow < BM && (cRow + loadRow) < M && (bk + aCol) < K) {
@@ -49,7 +47,7 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A,
         // 协作加载 B tile
         int bRow = threadIdx.x / BN;
         int bCol = threadIdx.x % BN;
-        #pragma unroll
+#pragma unroll
         for (int i = 0; i < BK; i += NUM_THREADS / BN) {
             int loadRow = bRow + i;
             if (loadRow < BK && (bk + loadRow) < K && (cCol + bCol) < N) {
@@ -61,20 +59,20 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A,
 
         __syncthreads();
 
-        // Register Blocking 计算
-        #pragma unroll
+// Register Blocking 计算
+#pragma unroll
         for (int k = 0; k < BK; k++) {
-            #pragma unroll
+#pragma unroll
             for (int m = 0; m < TM; m++) {
                 r_A[m] = s_A[threadRow * TM + m][k];
             }
-            #pragma unroll
+#pragma unroll
             for (int n = 0; n < TN; n++) {
                 r_B[n] = s_B[k][threadCol * TN + n];
             }
-            #pragma unroll
+#pragma unroll
             for (int m = 0; m < TM; m++) {
-                #pragma unroll
+#pragma unroll
                 for (int n = 0; n < TN; n++) {
                     acc[m][n] += r_A[m] * r_B[n];
                 }
@@ -83,10 +81,10 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A,
         __syncthreads();
     }
 
-    // 写回 Global Memory
-    #pragma unroll
+// 写回 Global Memory
+#pragma unroll
     for (int m = 0; m < TM; m++) {
-        #pragma unroll
+#pragma unroll
         for (int n = 0; n < TN; n++) {
             int gRow = cRow + threadRow * TM + m;
             int gCol = cCol + threadCol * TN + n;
@@ -107,13 +105,11 @@ float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, in
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
-                &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
     cudaDeviceSynchronize();
 
     cudaEventRecord(start);
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
-                &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
@@ -135,8 +131,7 @@ void initMatrix(float* mat, int rows, int cols) {
 bool checkResult(const float* gpu, const float* cpu, int M, int N, float eps) {
     for (int i = 0; i < M * N; i++) {
         if (fabs(gpu[i] - cpu[i]) > eps) {
-            printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n",
-                   i / N, i % N, gpu[i], cpu[i]);
+            printf("Mismatch at [%d][%d]: GPU=%.6f, CPU=%.6f\n", i / N, i % N, gpu[i], cpu[i]);
             return false;
         }
     }
@@ -148,13 +143,11 @@ float getGFLOPS(int M, int N, int K, float ms) {
 }
 
 int main() {
-    int sizes[][3] = {{1024,1024,1024}, {2048,2048,2048}, {4096,4096,4096}};
+    int sizes[][3] = {{1024, 1024, 1024}, {2048, 2048, 2048}, {4096, 4096, 4096}};
 
     printf("=== Register Blocking GEMM ===\n");
-    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n",
-           BM, BN, BK, TM, TN, NUM_THREADS);
-    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n",
-           "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
+    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
     printf("------------------------------------------------------------\n");
 
     for (int s = 0; s < 3; s++) {
@@ -163,10 +156,10 @@ int main() {
         size_t sizeB = K * N * sizeof(float);
         size_t sizeC = M * N * sizeof(float);
 
-        float *h_A = (float*)malloc(sizeA);
-        float *h_B = (float*)malloc(sizeB);
-        float *h_C = (float*)malloc(sizeC);
-        float *h_C_ref = (float*)malloc(sizeC);
+        float* h_A = (float*)malloc(sizeA);
+        float* h_B = (float*)malloc(sizeB);
+        float* h_C = (float*)malloc(sizeC);
+        float* h_C_ref = (float*)malloc(sizeC);
         initMatrix(h_A, M, K);
         initMatrix(h_B, K, N);
 
@@ -201,12 +194,18 @@ int main() {
         bool correct = checkResult(h_C, h_C_ref, M, N, 1e-2);
         float percent = (cublasMs / ourMs) * 100;
 
-        printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n",
-               M, N, K, ourMs, cublasMs, percent, correct ? "PASS" : "FAIL");
+        printf("%-10d %-10d %-10d %-12.3f %-12.3f %-9.1f%% %s\n", M, N, K, ourMs, cublasMs, percent,
+               correct ? "PASS" : "FAIL");
 
-        free(h_A); free(h_B); free(h_C); free(h_C_ref);
-        cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
-        cudaEventDestroy(start); cudaEventDestroy(stop);
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        free(h_C_ref);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     }
     return 0;
 }

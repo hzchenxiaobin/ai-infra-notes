@@ -270,22 +270,23 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed \
 
 ```cuda
 __global__ void softmax_kernel(const float* input, float* output, int N) {
- int idx = blockIdx.x * blockDim.x + threadIdx.x;
- if (idx >= N) return;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N)
+        return;
 
- // Pass 1: 求 max
- float max_val = -INFINITY;
- for (int i = 0; i < N; i++)
- max_val = fmaxf(max_val, input[i]);
+    // Pass 1: 求 max
+    float max_val = -INFINITY;
+    for (int i = 0; i < N; i++)
+        max_val = fmaxf(max_val, input[i]);
 
- // Pass 2: 求 sum(exp(x - max))
- float sum = 0.0f;
- for (int i = 0; i < N; i++) {
- sum += expf(input[i] - max_val);
- }
+    // Pass 2: 求 sum(exp(x - max))
+    float sum = 0.0f;
+    for (int i = 0; i < N; i++) {
+        sum += expf(input[i] - max_val);
+    }
 
- // Pass 3: 归一化
- output[idx] = expf(input[idx] - max_val) / sum;
+    // Pass 3: 归一化
+    output[idx] = expf(input[idx] - max_val) / sum;
 }
 
 // profiling 命令:

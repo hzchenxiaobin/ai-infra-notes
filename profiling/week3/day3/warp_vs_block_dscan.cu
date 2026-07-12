@@ -8,14 +8,14 @@
 #include <cmath>
 
 __inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
     return val;
 }
 __inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
+#pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1) {
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     }
@@ -24,29 +24,33 @@ __inline__ __device__ float warpReduceMax(float val) {
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceSum(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0) val = warpReduceSum(val);
+    if (wid == 0)
+        val = warpReduceSum(val);
     return val;
 }
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
     int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
     val = warpReduceMax(val);
-    if (lane == 0) smem[wid] = val;
+    if (lane == 0)
+        smem[wid] = val;
     __syncthreads();
     int numWarps = (blockDim.x + 31) / 32;
     val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0) val = warpReduceMax(val);
+    if (wid == 0)
+        val = warpReduceMax(val);
     return val;
 }
 
 // Block 级 Softmax（Day 16 基准）：一个 block 处理一行
-__global__ void softmax_block_kernel(const float* __restrict__ input,
-                                      float* __restrict__ output, int M, int D) {
+__global__ void softmax_block_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int row = blockIdx.x;
-    if (row >= M) return;
+    if (row >= M)
+        return;
     const float* in_row = input + row * D;
     float* out_row = output + row * D;
     __shared__ float smem[32];
@@ -58,7 +62,8 @@ __global__ void softmax_block_kernel(const float* __restrict__ input,
         local_max = fmaxf(local_max, in_row[i]);
     }
     local_max = blockReduceMax(local_max, smem);
-    if (tid == 0) row_max = local_max;
+    if (tid == 0)
+        row_max = local_max;
     __syncthreads();
 
     float local_sum = 0.0f;
@@ -66,7 +71,8 @@ __global__ void softmax_block_kernel(const float* __restrict__ input,
         local_sum += expf(in_row[i] - row_max);
     }
     local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0) row_sum = local_sum;
+    if (tid == 0)
+        row_sum = local_sum;
     __syncthreads();
 
     float inv_sum = 1.0f / row_sum;
@@ -76,10 +82,10 @@ __global__ void softmax_block_kernel(const float* __restrict__ input,
 }
 
 // Warp 级 Softmax（优化版）：一个 warp 处理一行，无 shared memory
-__global__ void softmax_warp_kernel(const float* __restrict__ input,
-                                     float* __restrict__ output, int M, int D) {
+__global__ void softmax_warp_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int global_warp_id = (blockIdx.x * blockDim.x + threadIdx.x) / 32;
-    if (global_warp_id >= M) return;
+    if (global_warp_id >= M)
+        return;
     int lane = threadIdx.x % 32;
     const float* in_row = input + global_warp_id * D;
     float* out_row = output + global_warp_id * D;
@@ -114,7 +120,7 @@ void initData(float* data, int n) {
 int main() {
     const int M = 1024;
     const int threads_block = 256;
-    const int threads_warp = 128;  // 4 warps per block
+    const int threads_warp = 128; // 4 warps per block
     int test_D[] = {256, 512, 1024, 2048, 4096};
     int num_D = sizeof(test_D) / sizeof(test_D[0]);
 
@@ -126,16 +132,18 @@ int main() {
     for (int d = 0; d < num_D; d++) {
         int D = test_D[d];
         size_t bytes = (size_t)M * D * sizeof(float);
-        float *h_in = (float*)malloc(bytes);
-        float *h_out = (float*)malloc(bytes);
+        float* h_in = (float*)malloc(bytes);
+        float* h_out = (float*)malloc(bytes);
         initData(h_in, M * D);
 
         float *d_in, *d_out;
-        cudaMalloc(&d_in, bytes); cudaMalloc(&d_out, bytes);
+        cudaMalloc(&d_in, bytes);
+        cudaMalloc(&d_out, bytes);
         cudaMemcpy(d_in, h_in, bytes, cudaMemcpyHostToDevice);
 
         cudaEvent_t start, stop;
-        cudaEventCreate(&start); cudaEventCreate(&stop);
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
 
         // Block 级
         for (int i = 0; i < 3; i++) {
@@ -145,8 +153,11 @@ int main() {
         for (int i = 0; i < 50; i++) {
             softmax_block_kernel<<<M, threads_block>>>(d_in, d_out, M, D);
         }
-        cudaEventRecord(stop); cudaEventSynchronize(stop);
-        float ms_block; cudaEventElapsedTime(&ms_block, start, stop); ms_block /= 50;
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float ms_block;
+        cudaEventElapsedTime(&ms_block, start, stop);
+        ms_block /= 50;
 
         // Warp 级
         int warps_per_block = threads_warp / 32;
@@ -158,14 +169,20 @@ int main() {
         for (int i = 0; i < 50; i++) {
             softmax_warp_kernel<<<grid_warp, threads_warp>>>(d_in, d_out, M, D);
         }
-        cudaEventRecord(stop); cudaEventSynchronize(stop);
-        float ms_warp; cudaEventElapsedTime(&ms_warp, start, stop); ms_warp /= 50;
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float ms_warp;
+        cudaEventElapsedTime(&ms_warp, start, stop);
+        ms_warp /= 50;
 
         printf("%-8d %-16.4f %-16.4f %-12.2f\n", D, ms_block, ms_warp, ms_block / ms_warp);
 
-        free(h_in); free(h_out);
-        cudaFree(d_in); cudaFree(d_out);
-        cudaEventDestroy(start); cudaEventDestroy(stop);
+        free(h_in);
+        free(h_out);
+        cudaFree(d_in);
+        cudaFree(d_out);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     }
 
     printf("\n观察要点：\n");

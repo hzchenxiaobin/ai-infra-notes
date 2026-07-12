@@ -274,8 +274,8 @@ tile 的不同行取数据，但写回 global memory 时地址连续。
 在 shared memory 内部：
 
 ```cuda
-tile[threadIdx.y][threadIdx.x] = ...   // 按行写入 tile
-... = tile[threadIdx.x][threadIdx.y]; // 按列读出 tile
+tile[threadIdx.y][threadIdx.x] = ...      // 按行写入 tile
+    ... = tile[threadIdx.x][threadIdx.y]; // 按列读出 tile
 ```
 
 shared memory 的随机访问延迟低，所以这里的非连续访问不是瓶颈。global memory 两侧

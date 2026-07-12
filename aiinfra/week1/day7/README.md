@@ -553,47 +553,60 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 #include <cmath>
 
 __global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
- int tid = blockIdx.x * blockDim.x + threadIdx.x;
- int stride = gridDim.x * blockDim.x;
- int vec_count = num_elements / 4;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+    int vec_count = num_elements / 4;
 
- for (int i = tid; i < vec_count; i += stride) {
- float4 a = reinterpret_cast<const float4*>(A)[i];
- float4 b = reinterpret_cast<const float4*>(B)[i];
- float4 c;
- c.x = a.x + b.x;
- c.y = a.y + b.y;
- c.z = a.z + b.z;
- c.w = a.w + b.w;
- reinterpret_cast<float4*>(C)[i] = c;
- }
+    for (int i = tid; i < vec_count; i += stride) {
+        float4 a = reinterpret_cast<const float4*>(A)[i];
+        float4 b = reinterpret_cast<const float4*>(B)[i];
+        float4 c;
+        c.x = a.x + b.x;
+        c.y = a.y + b.y;
+        c.z = a.z + b.z;
+        c.w = a.w + b.w;
+        reinterpret_cast<float4*>(C)[i] = c;
+    }
 }
 
 int main() {
- const int M = 4096, N = 4096;
- const int num_elements = M * N;
- const size_t bytes = num_elements * sizeof(float);
+    const int M = 4096, N = 4096;
+    const int num_elements = M * N;
+    const size_t bytes = num_elements * sizeof(float);
 
- float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
- for (int i = 0; i < num_elements; ++i) { h_A[i] = (float)(rand() % 100) * 0.01f; h_B[i] = (float)(rand() % 100) * 0.01f; }
+    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
+    for (int i = 0; i < num_elements; ++i) {
+        h_A[i] = (float)(rand() % 100) * 0.01f;
+        h_B[i] = (float)(rand() % 100) * 0.01f;
+    }
 
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
- cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, bytes);
+    cudaMalloc(&d_B, bytes);
+    cudaMalloc(&d_C, bytes);
+    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
 
- int threads = 256;
- int blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
- matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
+    int threads = 256;
+    int blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
+    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
 
- cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
- bool pass = true;
- for (int i = 0; i < num_elements; ++i)
- if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) { pass = false; break; }
- printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
+    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
+    bool pass = true;
+    for (int i = 0; i < num_elements; ++i)
+        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
+            pass = false;
+            break;
+        }
+    printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
 
- free(h_A); free(h_B); free(h_C); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
- return 0;
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    return 0;
 }
 ```
 
@@ -636,53 +649,62 @@ int main() {
 #define TILE_SIZE 16
 
 __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
- __shared__ float s_A[TILE_SIZE][TILE_SIZE];
- __shared__ float s_B[TILE_SIZE][TILE_SIZE];
+    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
+    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
 
- int row = blockIdx.y * TILE_SIZE + threadIdx.y;
- int col = blockIdx.x * TILE_SIZE + threadIdx.x;
- float sum = 0.0f;
+    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    float sum = 0.0f;
 
- for (int bk = 0; bk < K; bk += TILE_SIZE) {
- // 协作加载 A/B tile（注意边界）
- if (row < M && bk + threadIdx.x < K)
- s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
- else
- s_A[threadIdx.y][threadIdx.x] = 0.0f;
- if (bk + threadIdx.y < K && col < N)
- s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
- else
- s_B[threadIdx.y][threadIdx.x] = 0.0f;
- __syncthreads();
+    for (int bk = 0; bk < K; bk += TILE_SIZE) {
+        // 协作加载 A/B tile（注意边界）
+        if (row < M && bk + threadIdx.x < K)
+            s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
+        else
+            s_A[threadIdx.y][threadIdx.x] = 0.0f;
+        if (bk + threadIdx.y < K && col < N)
+            s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
+        else
+            s_B[threadIdx.y][threadIdx.x] = 0.0f;
+        __syncthreads();
 
- #pragma unroll
- for (int k = 0; k < TILE_SIZE; k++)
- sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
- __syncthreads();
- }
+        #pragma unroll
+        for (int k = 0; k < TILE_SIZE; k++)
+            sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
+        __syncthreads();
+    }
 
- if (row < M && col < N) C[row * N + col] = sum;
+    if (row < M && col < N)
+        C[row * N + col] = sum;
 }
 
 int main() {
- int M = 512, N = 512, K = 512;
- size_t bytesA = M * K * sizeof(float), bytesB = K * N * sizeof(float), bytesC = M * N * sizeof(float);
- float *h_A = (float*)malloc(bytesA), *h_B = (float*)malloc(bytesB);
- for (int i = 0; i < M * K; i++) h_A[i] = (float)rand() / RAND_MAX * 2 - 1;
- for (int i = 0; i < K * N; i++) h_B[i] = (float)rand() / RAND_MAX * 2 - 1;
+    int M = 512, N = 512, K = 512;
+    size_t bytesA = M * K * sizeof(float), bytesB = K * N * sizeof(float), bytesC = M * N * sizeof(float);
+    float *h_A = (float*)malloc(bytesA), *h_B = (float*)malloc(bytesB);
+    for (int i = 0; i < M * K; i++)
+        h_A[i] = (float)rand() / RAND_MAX * 2 - 1;
+    for (int i = 0; i < K * N; i++)
+        h_B[i] = (float)rand() / RAND_MAX * 2 - 1;
 
- float *d_A, *d_B, *d_C;
- cudaMalloc(&d_A, bytesA); cudaMalloc(&d_B, bytesB); cudaMalloc(&d_C, bytesC);
- cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
- cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
+    float *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, bytesA);
+    cudaMalloc(&d_B, bytesB);
+    cudaMalloc(&d_C, bytesC);
+    cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
 
- dim3 block(TILE_SIZE, TILE_SIZE);
- dim3 grid((N + TILE_SIZE - 1) / TILE_SIZE, (M + TILE_SIZE - 1) / TILE_SIZE);
- matmul_tiled<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    dim3 block(TILE_SIZE, TILE_SIZE);
+    dim3 grid((N + TILE_SIZE - 1) / TILE_SIZE, (M + TILE_SIZE - 1) / TILE_SIZE);
+    matmul_tiled<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
 
- printf("GEMM %dx%dx%d done\n", M, N, K);
- free(h_A); free(h_B); cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
- return 0;
+    printf("GEMM %dx%dx%d done\n", M, N, K);
+    free(h_A);
+    free(h_B);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    return 0;
 }
 ```
 

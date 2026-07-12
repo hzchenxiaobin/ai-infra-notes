@@ -25,8 +25,7 @@ __global__ void matrix_add_float4(const float* A, const float* B, float* C, int 
 }
 
 // 处理剩余不足 4 个的元素
-__global__ void matrix_add_tail(const float* A, const float* B, float* C,
-                                int vec_count, int num_elements) {
+__global__ void matrix_add_tail(const float* A, const float* B, float* C, int vec_count, int num_elements) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
 
@@ -41,9 +40,9 @@ int main() {
     const int num_elements = M * N;
     const size_t bytes = num_elements * sizeof(float);
 
-    float *h_A = (float*)malloc(bytes);
-    float *h_B = (float*)malloc(bytes);
-    float *h_C = (float*)malloc(bytes);
+    float* h_A = (float*)malloc(bytes);
+    float* h_B = (float*)malloc(bytes);
+    float* h_C = (float*)malloc(bytes);
 
     for (int i = 0; i < num_elements; ++i) {
         h_A[i] = (float)(rand() % 100) * 0.01f;
@@ -76,7 +75,11 @@ int main() {
     }
     printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
 
-    free(h_A); free(h_B); free(h_C);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
     return 0;
 }

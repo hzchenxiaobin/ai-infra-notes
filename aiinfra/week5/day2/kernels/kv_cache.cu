@@ -15,10 +15,10 @@
 // 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
 // --------------------------------------------------
 class KVCache {
-public:
+  public:
     KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
-        : num_layers_(num_layers), batch_size_(batch_size),
-          num_heads_(num_heads), max_seq_len_(max_seq_len), d_head_(d_head) {
+        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
+          d_head_(d_head) {
 
         size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
         total_size_ = (size_t)num_layers_ * size_per_layer_;
@@ -50,17 +50,13 @@ public:
 
             // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
             for (int h = 0; h < num_heads_; h++) {
-                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ +
-                                     h * new_len * d_head_);
-                size_t dst_offset = ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
-                                     b * num_heads_ * max_seq_len_ * d_head_ +
-                                     h * max_seq_len_ * d_head_ +
-                                     start * d_head_);
+                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
+                size_t dst_offset =
+                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
                 size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
-                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset,
-                           bytes, cudaMemcpyDeviceToDevice);
-                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset,
-                           bytes, cudaMemcpyDeviceToDevice);
+                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
             }
             seq_lens_[b] = end;
         }
@@ -73,7 +69,9 @@ public:
         *seq_lens = seq_lens_;
     }
 
-    int get_seq_len(int batch_id) const { return seq_lens_[batch_id]; }
+    int get_seq_len(int batch_id) const {
+        return seq_lens_[batch_id];
+    }
 
     void reset() {
         cudaMemset(k_cache_, 0, total_size_);
@@ -92,7 +90,7 @@ public:
         seq_lens_[batch_id] = 0;
     }
 
-private:
+  private:
     int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
     size_t size_per_layer_, total_size_;
     float* k_cache_;
@@ -117,8 +115,8 @@ int main() {
     const int d_head = 64;
 
     printf("=== KV Cache Test ===\n");
-    printf("Config: layers=%d, batch=%d, heads=%d, max_len=%d, d_head=%d\n",
-           num_layers, batch_size, num_heads, max_seq_len, d_head);
+    printf("Config: layers=%d, batch=%d, heads=%d, max_len=%d, d_head=%d\n", num_layers, batch_size, num_heads,
+           max_seq_len, d_head);
 
     KVCache cache(num_layers, batch_size, num_heads, max_seq_len, d_head);
 
@@ -180,8 +178,8 @@ int main() {
     for (int i = 0; i < num_heads * round1_len * d_head; i++) {
         max_diff = fmaxf(max_diff, fabsf(h_check[i] - h_k1[i]));
     }
-    printf("Data verification (Round 1 K in cache): max_diff = %.2e (%s)\n",
-           max_diff, max_diff < 1e-5f ? "PASS" : "FAIL");
+    printf("Data verification (Round 1 K in cache): max_diff = %.2e (%s)\n", max_diff,
+           max_diff < 1e-5f ? "PASS" : "FAIL");
 
     // 内存占用统计
     size_t bytes_per_token = (size_t)num_layers * num_heads * d_head * sizeof(float) * 2;
@@ -189,16 +187,20 @@ int main() {
     printf("Max memory usage: %zu MB\n", bytes_per_token * max_seq_len / (1024 * 1024));
 
     // 类比真实模型：LLaMA-7B (32 层, 32 头, d_head=128, fp16)
-    size_t llama_per_token = 2 * 32 * 32 * 128 * 2;  // fp16 = 2 bytes
-    printf("\n[LLaMA-7B reference] bytes per token: %zu (%.1f KB)\n",
-           llama_per_token, llama_per_token / 1024.0);
+    size_t llama_per_token = 2 * 32 * 32 * 128 * 2; // fp16 = 2 bytes
+    printf("\n[LLaMA-7B reference] bytes per token: %zu (%.1f KB)\n", llama_per_token, llama_per_token / 1024.0);
     printf("[LLaMA-7B reference] 4096 tokens: %zu MB\n", llama_per_token * 4096 / (1024 * 1024));
-    printf("[LLaMA-7B reference] batch=16, 4096 tokens: %zu GB\n",
-           llama_per_token * 4096 * 16 / (1024 * 1024 * 1024));
+    printf("[LLaMA-7B reference] batch=16, 4096 tokens: %zu GB\n", llama_per_token * 4096 * 16 / (1024 * 1024 * 1024));
 
-    free(h_k1); free(h_v1); free(h_k2); free(h_v2); free(h_check);
-    cudaFree(d_k1); cudaFree(d_v1);
-    cudaFree(d_k2); cudaFree(d_v2);
+    free(h_k1);
+    free(h_v1);
+    free(h_k2);
+    free(h_v2);
+    free(h_check);
+    cudaFree(d_k1);
+    cudaFree(d_v1);
+    cudaFree(d_k2);
+    cudaFree(d_v2);
 
     return 0;
 }

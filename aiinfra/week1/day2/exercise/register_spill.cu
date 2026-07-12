@@ -10,20 +10,19 @@
 // 以 sm_120 为例，每个 SM 有 64K 个 32-bit 寄存器：
 //   每个线程最多可用寄存器 ≈ 65536 / (128 * 8) = 64 个
 // 但下面代码中同时活跃的 float 变量超过 64 个，编译器只能把部分变量 spill 到 local memory。
-__launch_bounds__(128, 8)
-__global__ void spill_kernel(const float* in, float* out, int n) {
+__launch_bounds__(128, 8) __global__ void spill_kernel(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     // 通过常量索引访问数组，编译器会尝试把 acc[80] 都保留在寄存器中
     float acc[80];
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < 80; i++) {
         acc[i] = in[(idx + i) % n];
     }
 
     // 对所有元素做一次规约，制造大量同时 live 的变量
     float sum = 0.0f;
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < 80; i++) {
         sum += acc[i] * acc[i] + 1.0f;
     }
@@ -36,13 +35,13 @@ __global__ void no_spill_kernel(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     float acc[80];
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < 80; i++) {
         acc[i] = in[(idx + i) % n];
     }
 
     float sum = 0.0f;
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < 80; i++) {
         sum += acc[i] * acc[i] + 1.0f;
     }
@@ -51,7 +50,7 @@ __global__ void no_spill_kernel(const float* in, float* out, int n) {
 }
 
 int main() {
-    const int N = 1 << 20;  // 约 100 万元素
+    const int N = 1 << 20; // 约 100 万元素
     size_t bytes = N * sizeof(float);
 
     float *d_in, *d_out;
@@ -62,8 +61,7 @@ int main() {
     int grid_size = (N + block_size - 1) / block_size;
 
     printf("=== Register Spill Demo ===\n");
-    printf("Launching: grid=%d, block=%d, total_threads=%d\n",
-           grid_size, block_size, grid_size * block_size);
+    printf("Launching: grid=%d, block=%d, total_threads=%d\n", grid_size, block_size, grid_size * block_size);
 
     spill_kernel<<<grid_size, block_size>>>(d_in, d_out, N);
     no_spill_kernel<<<grid_size, block_size>>>(d_in, d_out, N);

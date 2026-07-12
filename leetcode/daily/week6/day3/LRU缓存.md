@@ -98,11 +98,12 @@ class LRUCache {
     struct Node {
         int key, val;
         Node *prev, *next;
-        Node(int k, int v) : key(k), val(v), prev(nullptr), next(nullptr) {}
+        Node(int k, int v) : key(k), val(v), prev(nullptr), next(nullptr) {
+        }
     };
     int cap;
     unordered_map<int, Node*> mp;
-    Node *head, *tail;   // 哨兵：head/tail 不存数据，省边界判空
+    Node *head, *tail; // 哨兵：head/tail 不存数据，省边界判空
 
     void addToHead(Node* node) {
         node->prev = head;
@@ -123,7 +124,8 @@ class LRUCache {
         removeNode(node);
         return node;
     }
-public:
+
+  public:
     LRUCache(int capacity) : cap(capacity) {
         head = new Node(0, 0);
         tail = new Node(0, 0);
@@ -132,7 +134,8 @@ public:
     }
     int get(int key) {
         auto it = mp.find(key);
-        if (it == mp.end()) return -1;
+        if (it == mp.end())
+            return -1;
         moveToHead(it->second);
         return it->second->val;
     }

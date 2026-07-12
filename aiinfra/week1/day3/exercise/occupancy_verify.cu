@@ -26,18 +26,20 @@ static inline int ceil_div(int a, int b) {
 
 static inline int min4(int a, int b, int c, int d) {
     int m = a;
-    if (b < m) m = b;
-    if (c < m) m = c;
-    if (d < m) m = d;
+    if (b < m)
+        m = b;
+    if (c < m)
+        m = c;
+    if (d < m)
+        m = d;
     return m;
 }
 
 // 按 RTX 5090 (CC 12.0) 的粒度建模：
 // 寄存器按 256 个/block 对齐，共享内存按 1024 bytes/block 对齐。
 // 不同架构的粒度可能不同，结果仅供理解原理。
-void calculate_occupancy(const OccProps& p, int blockSize, int regsPerThread,
-                         int smemPerBlock, int& activeBlocks, int& activeWarps,
-                         float& occupancy) {
+void calculate_occupancy(const OccProps& p, int blockSize, int regsPerThread, int smemPerBlock, int& activeBlocks,
+                         int& activeWarps, float& occupancy) {
     const int regGranularity = 256;
     const int smemGranularity = 1024;
 
@@ -49,8 +51,7 @@ void calculate_occupancy(const OccProps& p, int blockSize, int regsPerThread,
     int blocksFromRegs = (regsPerBlock > 0) ? (p.regsPerSM / regsPerBlock) : p.maxBlocksPerSM;
 
     int smemPerBlockAligned = ceil_div(smemPerBlock, smemGranularity) * smemGranularity;
-    int blocksFromSmem = (smemPerBlockAligned > 0) ? (p.smemPerSM / smemPerBlockAligned)
-                                                   : p.maxBlocksPerSM;
+    int blocksFromSmem = (smemPerBlockAligned > 0) ? (p.smemPerSM / smemPerBlockAligned) : p.maxBlocksPerSM;
 
     activeBlocks = min4(blocksFromThreads, blocksFromRegs, blocksFromSmem, p.maxBlocksPerSM);
     activeWarps = activeBlocks * warpsPerBlock;
@@ -87,8 +88,14 @@ __global__ void kernel_medium(const float* in, float* out, int n) {
     float e = 0.0f, f = 0.0f, g = 0.0f, h = 0.0f;
     if (idx < n) {
         float v = in[idx];
-        a += v;       b += v * 2.0f; c += v * 3.0f; d += v * 4.0f;
-        e += v * 5.0f; f += v * 6.0f; g += v * 7.0f; h += v * 8.0f;
+        a += v;
+        b += v * 2.0f;
+        c += v * 3.0f;
+        d += v * 4.0f;
+        e += v * 5.0f;
+        f += v * 6.0f;
+        g += v * 7.0f;
+        h += v * 8.0f;
     }
     if (idx < n) {
         out[idx] = a + b + c + d + e + f + g + h;
@@ -110,11 +117,10 @@ __global__ void kernel_smem(const float* in, float* out, int n) {
 }
 
 // 使用 launch_bounds 提示编译器：每个 SM 至少驻留 2 个 block
-__launch_bounds__(256, 2)
-__global__ void kernel_launch_bounds(const float* in, float* out, int n) {
+__launch_bounds__(256, 2) __global__ void kernel_launch_bounds(const float* in, float* out, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     float acc = 0.0f;
-    #pragma unroll 8
+#pragma unroll 8
     for (int i = 0; i < 64; ++i) {
         acc += in[(idx + i) % n] * 1.5f;
     }
@@ -126,22 +132,19 @@ __global__ void kernel_launch_bounds(const float* in, float* out, int n) {
 // ------------------------------------------------------------------
 // 对单个 kernel + block size + 动态共享内存做分析
 // ------------------------------------------------------------------
-void analyze_kernel(const OccProps& p, const char* name, const void* kernelFunc,
-                    int blockSize, int dynamicSmem = 0) {
+void analyze_kernel(const OccProps& p, const char* name, const void* kernelFunc, int blockSize, int dynamicSmem = 0) {
     cudaFuncAttributes attr;
     cudaError_t err = cudaFuncGetAttributes(&attr, kernelFunc);
     if (err != cudaSuccess) {
-        printf("[ERROR] cudaFuncGetAttributes failed for %s: %s\n\n",
-               name, cudaGetErrorString(err));
+        printf("[ERROR] cudaFuncGetAttributes failed for %s: %s\n\n", name, cudaGetErrorString(err));
         return;
     }
 
     int activeBlocksCUDA = 0;
-    err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-        &activeBlocksCUDA, kernelFunc, blockSize, dynamicSmem);
+    err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&activeBlocksCUDA, kernelFunc, blockSize, dynamicSmem);
     if (err != cudaSuccess) {
-        printf("[ERROR] cudaOccupancyMaxActiveBlocksPerMultiprocessor failed for %s: %s\n\n",
-               name, cudaGetErrorString(err));
+        printf("[ERROR] cudaOccupancyMaxActiveBlocksPerMultiprocessor failed for %s: %s\n\n", name,
+               cudaGetErrorString(err));
         return;
     }
 
@@ -150,8 +153,8 @@ void analyze_kernel(const OccProps& p, const char* name, const void* kernelFunc,
 
     int activeBlocksHand = 0, activeWarpsHand = 0;
     float occupancyHand = 0.0f;
-    calculate_occupancy(p, blockSize, attr.numRegs, totalSmemPerBlock,
-                        activeBlocksHand, activeWarpsHand, occupancyHand);
+    calculate_occupancy(p, blockSize, attr.numRegs, totalSmemPerBlock, activeBlocksHand, activeWarpsHand,
+                        occupancyHand);
 
     int warpsPerBlock = ceil_div(blockSize, p.warpSize);
     int activeWarpsCUDA = activeBlocksCUDA * warpsPerBlock;
@@ -159,14 +162,14 @@ void analyze_kernel(const OccProps& p, const char* name, const void* kernelFunc,
 
     printf("--- %s (blockSize=%d, dynamicSmem=%d) ---\n", name, blockSize, dynamicSmem);
     printf("  Registers per thread: %d\n", attr.numRegs);
-    printf("  Shared memory per block: %zu bytes (static) + %d bytes (dynamic) = %d bytes\n",
-           attr.sharedSizeBytes, dynamicSmem, totalSmemPerBlock);
+    printf("  Shared memory per block: %zu bytes (static) + %d bytes (dynamic) = %d bytes\n", attr.sharedSizeBytes,
+           dynamicSmem, totalSmemPerBlock);
     printf("  Max threads per block: %d\n", attr.maxThreadsPerBlock);
     printf("  Warps per block: %d\n", warpsPerBlock);
-    printf("  CUDA API   -> active blocks / SM: %d, active warps / SM: %d, occupancy: %.1f%%\n",
-           activeBlocksCUDA, activeWarpsCUDA, occupancyCUDA);
-    printf("  Hand calc  -> active blocks / SM: %d, active warps / SM: %d, occupancy: %.1f%%\n",
-           activeBlocksHand, activeWarpsHand, occupancyHand);
+    printf("  CUDA API   -> active blocks / SM: %d, active warps / SM: %d, occupancy: %.1f%%\n", activeBlocksCUDA,
+           activeWarpsCUDA, occupancyCUDA);
+    printf("  Hand calc  -> active blocks / SM: %d, active warps / SM: %d, occupancy: %.1f%%\n", activeBlocksHand,
+           activeWarpsHand, occupancyHand);
     printf("\n");
 }
 

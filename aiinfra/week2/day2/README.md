@@ -127,8 +127,8 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 #define TN 8
 #define NUM_THREADS ((BM / TM) * (BN / TN))
 
-__global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* __restrict__ B,
-                                     float* __restrict__ C, int M, int N, int K) {
+__global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C,
+                                     int M, int N, int K) {
     __shared__ float s_A[BM][BK];
     __shared__ float s_B[BK][BN];
 
@@ -170,7 +170,7 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* _
 
         __syncthreads();
 
-        // Register Blocking 计算
+// Register Blocking 计算
         #pragma unroll
         for (int k = 0; k < BK; k++) {
             #pragma unroll
@@ -192,7 +192,7 @@ __global__ void gemmRegisterBlocking(const float* __restrict__ A, const float* _
         __syncthreads();
     }
 
-    // 写回 Global Memory
+// 写回 Global Memory
     #pragma unroll
     for (int m = 0; m < TM; m++) {
         #pragma unroll
@@ -249,16 +249,16 @@ bool checkResult(const float* gpu, const float* cpu, int M, int N, float eps) {
     return true;
 }
 
-float getGFLOPS(int M, int N, int K, float ms) { return 2.0f * M * N * K / (ms * 1e6); }
+float getGFLOPS(int M, int N, int K, float ms) {
+    return 2.0f * M * N * K / (ms * 1e6);
+}
 
 int main() {
     int sizes[][3] = {{1024, 1024, 1024}, {2048, 2048, 2048}, {4096, 4096, 4096}};
 
     printf("=== Register Blocking GEMM ===\n");
-    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n", BM, BN, BK, TM, TN,
-           NUM_THREADS);
-    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)",
-           "Percent");
+    printf("Parameters: BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-10s %-10s %-10s %-12s %-12s %-10s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "Percent");
     printf("------------------------------------------------------------\n");
 
     for (int s = 0; s < 3; s++) {
@@ -379,8 +379,7 @@ Shared Memory Tiling (BM×BN×BK) + Register Blocking (TM×TN)。协作加载 A/
 #define TN 8
 #define NUM_THREADS ((BM / TM) * (BN / TN))
 
-__global__ void gemm_register_blocking(const float* A, const float* B, float* C, int M, int N,
-                                       int K) {
+__global__ void gemm_register_blocking(const float* A, const float* B, float* C, int M, int N, int K) {
     __shared__ float s_A[BM][BK];
     __shared__ float s_B[BK][BN];
 
@@ -400,13 +399,16 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
         #pragma unroll
         for (int k = 0; k < BK; k++) {
             #pragma unroll
-            for (int m = 0; m < TM; m++) r_A[m] = s_A[threadRow * TM + m][k];
+            for (int m = 0; m < TM; m++)
+                r_A[m] = s_A[threadRow * TM + m][k];
             #pragma unroll
-            for (int n = 0; n < TN; n++) r_B[n] = s_B[k][threadCol * TN + n];
+            for (int n = 0; n < TN; n++)
+                r_B[n] = s_B[k][threadCol * TN + n];
             #pragma unroll
             for (int m = 0; m < TM; m++)
                 #pragma unroll
-                for (int n = 0; n < TN; n++) acc[m][n] += r_A[m] * r_B[n];
+                for (int n = 0; n < TN; n++)
+                    acc[m][n] += r_A[m] * r_B[n];
         }
         __syncthreads();
     }
