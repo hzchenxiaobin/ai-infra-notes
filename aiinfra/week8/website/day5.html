@@ -378,15 +378,15 @@ python kernels/mock_interview.py
 
 > 思考：哪个环节得分最低？针对该环节重写逐字稿，再练 3 遍。
 
-#### 任务 4：LeetGPU 在线题目 —— Top-K Selection
+#### 任务 4：LeetGPU 在线题目 —— LoRA Linear
 
-**题目链接**：<https://leetgpu.com/challenges/top-k-selection>
+**题目链接**：<https://leetgpu.com/challenges/lora-linear>
 
-**题目概述**：给定长度为 \`N\` 的分数数组，找出最大的 \`K\` 个值及其下标。这是 LLM 推理中 **sampling** 阶段的核心算子——生成 token 概率后需要快速取 top-k/top-p 进行筛选。
+**题目概述**：实现 LoRA（Low-Rank Adaptation）线性层前向传播：\`y = W·x + B·(A·x)/r\`，其中 \`W\` 为预训练冻结权重，\`A/B\` 为低秩适配矩阵，\`r << min(m,n)\`。
 
-**与今日知识的关联**：面试中常被问到"生成阶段除了 GEMM 和 Attention，还有哪些算子瓶颈"。Top-K 是典型答案：朴素排序是 \`O(N log N)\`，而 GPU 上可用 partial sort、bitonic sort 或 warp-select 优化到 \`O(N)\` 或 \`O(N log K)\`。同时它与调度策略相关——sampling 结果决定下一步要解码的 token。
+**与今日知识的关联**：Mock 面试中"项目深度拷问"环节常问参数高效微调。LoRA 把可训练参数量从 \`m·n\` 降到 \`r·(m+n)\`，是部署大模型时节省显存、支持多任务适配的关键技术。能讲清其 CUDA 实现（先算 \`A·x\` 共享给所有输出，再算 \`W·x + B·h\`）以及推理部署时的 merge/switch adapter 策略，能体现工程深度。
 
-> 💡 提交后在 [LeetGPU Top-K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解见 [Top-K Selection 题解](../leetgpu/leetgpu-top-k-selection-solution.html)。
+> 💡 提交后在 [LeetGPU LoRA Linear](https://leetgpu.com/challenges/lora-linear) 上记录通过耗时。完整题解见 [LoRA Linear 题解](../leetgpu/leetgpu-lora-linear-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 跳跃游戏 II
 
@@ -461,7 +461,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 4. **Follow-up 应对**：常见追问包括“为什么不用现成方案”“差距多少”“怎么再优化”“显存不够怎么办”
 5. **计时系统**：\`mock_interview.py\` 提供倒计时和复盘清单，把练习标准化
 6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
-7. **Top-K Selection**：LLM 推理 sampling 阶段的典型算子，连接面试中的“生成阶段优化”问题
+7. **LoRA Linear**：参数高效微调的核心算子，Mock 面试中“项目深度拷问”的常见考点
 8. **跳跃游戏 II**：贪心决策训练，与 Scheduler 做局部最优选择同构
 
 完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。

@@ -276,15 +276,15 @@ FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 
 
 > 思考：标准 softmax 的分母是全局 `Σ exp(x_i)`，online softmax 的分母是“统一参考点后的局部和累加”，这是 FlashAttention 能在 SRAM 完成计算的核心。
 
-#### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
+#### 任务 4：LeetGPU 在线题目 —— Sliding Window Self-Attention
 
-**题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
+**题目链接**：<https://leetgpu.com/challenges/sliding-window-self-attention>
 
-**题目概述**：给定 Q、K、V 三个矩阵，实现 Multi-Head Attention 的 forward kernel，输出 `O = softmax(QK^T/√d)V`，支持多头拆分。
+**题目概述**：给定输入序列 `X ∈ R^(N×d)`，实现 **Sliding Window Self-Attention**：每个位置 `i` 的 query 只与左侧窗口 `[max(0, i-W+1), i]` 内的 `W` 个 key 做 attention，输出 `O ∈ R^(N×d)`。
 
-**与今日知识的关联**：Multi-Head Attention 是理解 FlashAttention 和 GQA/MQA 的基石。今日理论学习中的 **online softmax** 和 **SRAM tiling** 正是为了加速这个基础算子。面试中“Attention 为什么慢”→“FlashAttention 怎么优化”→“MHA/GQA/MQA 怎么 trade-off”是一条完整的追问链。
+**与今日知识的关联**：今日进阶篇核心主题之一是**长文本推理优化**。标准 Attention 的 `O(N²)` IO 在长序列下不可接受，而 Sliding Window Attention 通过固定局部窗口把复杂度降到 `O(N·W)`，是 Longformer、StreamingLLM 等长上下文方案的基础。面试中回答"长文本怎么优化"时，能讲清局部窗口 Attention 的 kernel 实现、显存收益和精度 trade-off，是加分项。
 
-> 💡 提交后在 [LeetGPU Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention) 上记录通过耗时。完整题解（含多头拆分、softmax 稳定化、与 FlashAttention 的对比）见 [Multi-Head Attention 题解](../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Sliding Window Self-Attention](https://leetgpu.com/challenges/sliding-window-self-attention) 上记录通过耗时。完整题解见 [Sliding Window Self-Attention 题解](../../leetgpu/week8/day4/leetgpu-sliding-window-self-attention-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 课程表
 
@@ -359,7 +359,7 @@ Day 4 我们系统复习了 AI Infra 面试进阶篇的四大主题：
 3. **PagedAttention**：block table 实现逻辑连续物理离散，copy-on-write 支持 prefix 共享，解决碎片和 over-allocation
 4. **vLLM 调度**：LLMEngine → Scheduler → Worker → Model Runner；Continuous Batching 在 iteration 级别动态组 batch；抢占默认 Recompute
 5. **自测系统**：12 道进阶题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
-6. **Multi-Head Attention**：LeetGPU 经典题，夯实 Attention 基础 kernel
+6. **Sliding Window Self-Attention**：长文本优化典型 CUDA 题，理解局部窗口 Attention 的 IO 收益与实现要点
 7. **课程表**：拓扑排序与调度依赖同构，训练算法基本功
 
 掌握这些后，你就有了面试进阶篇的“深度弹药”——明天 Day 5 进入 Mock 面试，把知识转化为可表达的面试语言。
