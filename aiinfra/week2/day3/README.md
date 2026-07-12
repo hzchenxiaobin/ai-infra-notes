@@ -35,6 +35,28 @@ Stream 2: [H2D拷贝2] → [Kernel2] → [D2H拷贝2]
  ↑ H2D拷贝2可以与Kernel1并发执行（copy engine和compute unit独立）
 ```
 
+**示例代码**：
+
+```cuda
+cudaStream_t s1, s2;
+cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking);
+cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking);
+
+// Stream 1 内按 FIFO 顺序执行
+cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, s1);
+kernel<<<grid, block, 0, s1>>>(d_A);
+cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, s1);
+
+// Stream 2 的操作可以与 Stream 1 并发
+cudaMemcpyAsync(d_B, h_B, bytes, cudaMemcpyHostToDevice, s2);
+kernel<<<grid, block, 0, s2>>>(d_B);
+
+cudaStreamSynchronize(s1);
+cudaStreamSynchronize(s2);
+cudaStreamDestroy(s1);
+cudaStreamDestroy(s2);
+```
+
 #### 3.2 Default Stream 的"坑"
 
 ![Default Stream 隐式同步陷阱](../website/images/default_stream_sync.svg)
@@ -50,6 +72,29 @@ Stream 2: [H2D拷贝2] → [Kernel2] → [D2H拷贝2]
 - 规则 1：Default Stream 上的操作会等待所有其他 Stream 的先前操作完成
 - 规则 2：其他 Stream 上的操作会等待 Default Stream 的先前操作完成
 - **后果**：即使创建了多 Stream，只要在 Default Stream 上做一次 `cudaMemcpy`，所有并发都被打断
+
+**错误示例**：
+
+```cuda
+cudaStream_t s;
+cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking);
+
+kernel<<<grid, block, 0, s>>>(d_A); // 提交到显式 Stream
+
+// ❌ Default Stream 上的同步 cudaMemcpy 会隐式同步 s
+cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
+
+kernel<<<grid, block, 0, s>>>(d_B); // 实际要等到上面的 cudaMemcpy 完成后才开始
+```
+
+**正确写法**：
+
+```cuda
+// 全部使用 Async 并在指定 Stream 上执行
+cudaMemcpyAsync(d_B, h_B, bytes, cudaMemcpyHostToDevice, s);
+kernel<<<grid, block, 0, s>>>(d_B);
+cudaStreamSynchronize(s);
+```
 
 **解决方案**：始终使用 `cudaStreamNonBlocking` 标志创建 Stream，或编译时加 `--default-stream per-thread`。
 
@@ -70,6 +115,32 @@ cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 
 > 为什么 `cudaMemcpyAsync` 需要 Pinned Memory？因为异步传输使用 DMA 引擎直接访问内存，如果内存被 OS 换出到磁盘，DMA 无法访问。普通 pageable 内存会被 CUDA 驱动先复制到临时 pinned buffer，导致异步退化为同步。
 
+**示例代码**：
+
+```cuda
+float *h_A, *d_A;
+size_t bytes = n * sizeof(float);
+
+// Pinned Memory：页锁定，支持 DMA 直接传输
+cudaMallocHost(&h_A, bytes);
+cudaMalloc(&d_A, bytes);
+
+cudaStream_t s;
+cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking);
+
+// 异步传输：立即返回，不阻塞 Host
+cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, s);
+kernel<<<grid, block, 0, s>>>(d_A);
+cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, s);
+
+// 在需要结果的地方再同步
+cudaStreamSynchronize(s);
+
+cudaFreeHost(h_A);
+cudaFree(d_A);
+cudaStreamDestroy(s);
+```
+
 #### 3.4 多 Stream 重叠流水线
 
 ![Multi-Stream 重叠流水线](../website/images/multi_stream_overlap.svg)
@@ -87,6 +158,32 @@ Multi-Stream（重叠）：
  总计 ≈ max(H2D + D2H, Compute) + 流水线填充
 ```
 
+**示例代码**：
+
+```cuda
+const int nStreams = 4;
+cudaStream_t streams[nStreams];
+for (int i = 0; i < nStreams; ++i)
+    cudaStreamCreateWithFlags(&streams[i], cudaStreamNonBlocking);
+
+int chunkSize = totalSize / nStreams;
+size_t chunkBytes = chunkSize * sizeof(float);
+
+for (int i = 0; i < nStreams; ++i) {
+    int offset = i * chunkSize;
+    cudaStream_t s = streams[i];
+
+    // 同一个 chunk 的 H2D / Compute / D2H 在对应 Stream 中顺序执行
+    cudaMemcpyAsync(d_A + offset, h_A + offset, chunkBytes, cudaMemcpyHostToDevice, s);
+    cudaMemcpyAsync(d_B + offset, h_B + offset, chunkBytes, cudaMemcpyHostToDevice, s);
+    vecAdd<<<blocks, threads, 0, s>>>(d_A + offset, d_B + offset, d_C + offset, chunkSize);
+    cudaMemcpyAsync(h_C + offset, d_C + offset, chunkBytes, cudaMemcpyDeviceToHost, s);
+}
+
+for (int i = 0; i < nStreams; ++i)
+    cudaStreamSynchronize(streams[i]);
+```
+
 #### 3.5 cudaEvent 跨 Stream 依赖
 
 ![cudaEvent 跨 Stream 依赖管理](../website/images/stream_event_dependency.svg)
@@ -102,6 +199,33 @@ cudaEventRecord(event, streamA);
 
 // Stream B 等待该事件
 cudaStreamWaitEvent(streamB, event, 0);
+```
+
+**完整示例**：Producer-Consumer 跨 Stream 依赖
+
+```cuda
+cudaStream_t streamProduce, streamConsume;
+cudaStreamCreateWithFlags(&streamProduce, cudaStreamNonBlocking);
+cudaStreamCreateWithFlags(&streamConsume, cudaStreamNonBlocking);
+
+cudaEvent_t event;
+cudaEventCreate(&event);
+
+// Producer：H2D + 计算，完成后记录 event
+cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, streamProduce);
+producerKernel<<<grid, block, 0, streamProduce>>>(d_A);
+cudaEventRecord(event, streamProduce);
+
+// Consumer：必须等 producer 完成后才能开始
+cudaStreamWaitEvent(streamConsume, event, 0);
+consumerKernel<<<grid, block, 0, streamConsume>>>(d_A);
+cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, streamConsume);
+
+cudaStreamSynchronize(streamConsume);
+
+cudaEventDestroy(event);
+cudaStreamDestroy(streamProduce);
+cudaStreamDestroy(streamConsume);
 ```
 
 ---
