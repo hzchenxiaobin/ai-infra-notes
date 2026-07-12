@@ -11,7 +11,7 @@ __global__ void vecAdd(const float* A, const float* B, float* C, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
         float sum = A[i] + B[i];
-        for (int j = 0; j < 100; j++) {
+        for (int j = 0; j < 10000; j++) {
             sum = sum * 0.999f + 0.001f;
         }
         C[i] = sum;

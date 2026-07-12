@@ -271,7 +271,7 @@ __global__ void vecAdd(const float* A, const float* B, float* C, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
         float sum = A[i] + B[i];
-        for (int j = 0; j < 100; j++) {
+        for (int j = 0; j < 10000; j++) {
             sum = sum * 0.999f + 0.001f;
         }
         C[i] = sum;
@@ -429,7 +429,7 @@ nvcc -o multi_stream kernels/multi_stream_pipeline.cu -O3 -arch=sm_120
 ./multi_stream
 ```
 
-**实际运行结果**（在 NVIDIA GeForce RTX 5090 上执行）：
+**实际运行结果**（在 NVIDIA GeForce RTX 5090 上执行，Kernel 循环 10000 次以放大计算耗时）：
 
 ```
 === Multi-Stream Overlap Pipeline ===
@@ -438,15 +438,15 @@ Chunk size: 262144 (1.00 MB)
 Num chunks: 64, Num streams: 4
 
 Running sequential version...
-Sequential: 9.349 ms
+Sequential: 13.091 ms
 
 Running multi-stream version (nStreams=4)...
-Multi-Stream: 5.488 ms
+Multi-Stream: 5.396 ms
 
 === Performance Summary ===
-Sequential: 9.349 ms
-Multi-Stream: 5.488 ms
-Speedup: 1.70x
+Sequential: 13.091 ms
+Multi-Stream: 5.396 ms
+Speedup: 2.43x
 Result check: PASS
 ```
 
@@ -465,11 +465,11 @@ nsys profile -o multi_stream_timeline ./multi_stream
 从图中可以看到：
 - 4 个 Stream 横向并行推进，每个 Stream 内部按 `H2D → Kernel → D2H` 顺序执行。
 - 不同 Stream 的 H2D、Kernel、D2H 在时间上相互重叠，Copy Engine 与 Compute Engine 同时工作。
-- 这与顺序版本（单 Stream 串行）形成对比，也是 Multi-Stream 取得约 **1.7x 加速**的原因。
+- 这与顺序版本（单 Stream 串行）形成对比，也是 Multi-Stream 取得约 **2.4x 加速**的原因。
 
-> 💡 **为什么看不到 Kernel 执行的条？**
+> 💡 **Kernel 为什么现在能看到了？**
 >
-> 这个版本里 `vecAdd` 的计算量很小（只有 100 次循环），Kernel 执行时间只有约 **2 μs**，而 H2D/D2H 拷贝大约 **40 μs**。在毫秒级总览图里 Kernel 的宽度只有 H2D/D2H 的 1/20，所以几乎被压成一条细线，看不清楚。
+> 为了让 Timeline 上能看清 Kernel 执行，这里把 `vecAdd` 里的循环次数从 100 次提高到 **10000 次**。这样 Kernel 执行时间从约 2 μs 增加到约 **60 μs**，和 H2D/D2H 拷贝（约 40 μs）处于同一量级，在总览图里就能明显看到橙色的 Kernel 条了。
 >
 > 下面是把时间轴放大到微秒级、只看 **Stream 1 里一个 chunk** 的截图，可以清楚看到 `H2D → H2D → Kernel → D2H` 的完整流水线：
 
