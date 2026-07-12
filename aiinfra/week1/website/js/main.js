@@ -127,6 +127,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Random LeetGPU problem picker on overview page
+    const randomPickBtn = document.getElementById('random-pick-btn');
+    if (randomPickBtn) {
+        randomPickBtn.addEventListener('click', function() {
+            try {
+                const problems = JSON.parse(randomPickBtn.dataset.problems || '[]');
+                if (!problems.length) return;
+                const p = problems[Math.floor(Math.random() * problems.length)];
+                if (p.slug) {
+                    window.location.href = 'https://leetgpu.com/challenges/' + encodeURIComponent(p.slug);
+                }
+            } catch (e) {
+                // Ignore malformed data attribute
+            }
+        });
+    }
+
     // Image lightbox zoom
     initImageLightbox();
 
