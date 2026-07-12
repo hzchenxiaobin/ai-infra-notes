@@ -351,7 +351,7 @@ nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_
 
 #### 任务 4：LeetGPU 在线题目 —— GEMM
 
-**题目链接**：<https://leetgpu.com/challenges/gemm>
+**题目链接**：<https://leetgpu.com/challenges/general-matrix-multiplication-gemm>
 
 **题目概述**：
 
@@ -414,7 +414,7 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 }
 ```
 
-> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../leetgpu/week2/day2/leetgpu-gemm-solution.md)。
+> 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/general-matrix-multiplication-gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](../../leetgpu/week2/day2/leetgpu-gemm-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 爬楼梯
 
