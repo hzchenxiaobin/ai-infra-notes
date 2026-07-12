@@ -1,85 +1,112 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560">
-  <rect width="760" height="560" fill="#0d1117"/>
-  <text x="380" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">GEMM 优化层次：从 1% 到 70%+</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 580" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
 
-  <!-- Level 0: Naive -->
-  <g transform="translate(80, 60)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#f85149" opacity="0.15" stroke="#f85149"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">Naive GEMM</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">每线程算 1 元素，直接访问 Global Memory</text>
-    <text x="560" y="27" font-size="14" fill="#f85149" font-weight="bold">~1%</text>
+  <rect width="780" height="580" fill="#fdfcf7"/>
+
+  <text x="390" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">GEMM 优化层次：从 1% 到 70%+</text>
+  <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="58" text-anchor="middle" font-size="11" fill="#888">每叠加一层优化，cuBLAS 占比提升一档</text>
+
+  <!-- 左侧手绘上箭头：性能方向（底=Naive 1%，顶=cuBLAS 100%） -->
+  <path d="M 52 544 L 52 82" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="40" y="311" font-size="12" fill="#666" font-weight="bold" transform="rotate(-90, 40, 311)" text-anchor="middle">性能 ↑</text>
+
+  <!-- 1. cuBLAS 100%（灰） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="72" width="600" height="46" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+    <rect x="90" y="72" width="6" height="46" fill="#9e9e9e" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="101" font-size="13" fill="#2b2b2b" font-weight="bold">cuBLAS（NVIDIA 官方优化）</text>
+  <text x="300" y="101" font-size="11" fill="#666">PTX 内联 + 完整流水线 + Tensor Core + auto-tuning</text>
+  <text x="662" y="102" text-anchor="middle" font-size="16" fill="#666" font-weight="bold">100%</text>
 
-  <!-- Level 1: Shared Memory Tiling -->
-  <g transform="translate(80, 112)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#d29922" opacity="0.15" stroke="#d29922"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">+ Shared Memory Tiling</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">A/B tile 预取到 Shared Memory，K 维度复用</text>
-    <text x="560" y="27" font-size="14" fill="#d29922" font-weight="bold">~15%</text>
+  <!-- 2. Tensor Core / CUTLASS ~90%+（绿，虚线=进阶） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="126" width="600" height="46" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" stroke-dasharray="5,3"/>
+    <rect x="90" y="126" width="6" height="46" fill="#4a8e4a" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="155" font-size="13" fill="#2b2b2b" font-weight="bold">+ Tensor Core / CUTLASS（进阶）</text>
+  <text x="300" y="155" font-size="11" fill="#666">WMMA 指令，矩阵乘加硬件加速</text>
+  <text x="662" y="156" text-anchor="middle" font-size="16" fill="#4a8e4a" font-weight="bold">~90%+</text>
 
-  <!-- Level 2: Register Blocking -->
-  <g transform="translate(80, 164)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#a371f7" opacity="0.15" stroke="#a371f7"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">+ Register Blocking (Day 2)</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">TM×TN thread tile，累加器驻留寄存器</text>
-    <text x="560" y="27" font-size="14" fill="#a371f7" font-weight="bold">~45%</text>
+  <!-- 3. 参数 Auto-tuning ~80%+（绿，虚线=进阶） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="180" width="600" height="46" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" stroke-dasharray="5,3"/>
+    <rect x="90" y="180" width="6" height="46" fill="#4a8e4a" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="209" font-size="13" fill="#2b2b2b" font-weight="bold">+ 参数 Auto-tuning（进阶）</text>
+  <text x="300" y="209" font-size="11" fill="#666">针对不同尺寸选最优 BM/BN/BK/TM/TN</text>
+  <text x="662" y="210" text-anchor="middle" font-size="16" fill="#4a8e4a" font-weight="bold">~80%+</text>
 
-  <!-- Level 3: float4 -->
-  <g transform="translate(80, 216)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#58a6ff" opacity="0.15" stroke="#58a6ff"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">+ float4 向量化加载 (Day 6)</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">128-bit load，提升带宽利用率</text>
-    <text x="560" y="27" font-size="14" fill="#58a6ff" font-weight="bold">~55%</text>
+  <!-- 4. Double Buffering ~70%（蓝） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="234" width="600" height="46" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <rect x="90" y="234" width="6" height="46" fill="#4a8edb" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="263" font-size="13" fill="#2b2b2b" font-weight="bold">+ Double Buffering</text>
+  <text x="300" y="263" font-size="11" fill="#666">软件流水线，计算掩盖传输延迟</text>
+  <text x="662" y="264" text-anchor="middle" font-size="16" fill="#4a8edb" font-weight="bold">~70%</text>
 
-  <!-- Level 4: Warp Shuffle -->
-  <g transform="translate(80, 268)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#3fb950" opacity="0.15" stroke="#3fb950"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">+ Warp Shuffle 写回优化 (Day 6)</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">Warp 内协作，减少非合并访问</text>
-    <text x="560" y="27" font-size="14" fill="#3fb950" font-weight="bold">~60%</text>
+  <!-- 5. Warp Shuffle 写回优化 ~60%（蓝，Day 6） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="288" width="600" height="46" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <rect x="90" y="288" width="6" height="46" fill="#4a8edb" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="317" font-size="13" fill="#2b2b2b" font-weight="bold">+ Warp Shuffle 写回优化（Day 6）</text>
+  <text x="300" y="317" font-size="11" fill="#666">Warp 内协作，减少非合并访问</text>
+  <text x="662" y="318" text-anchor="middle" font-size="16" fill="#4a8edb" font-weight="bold">~60%</text>
 
-  <!-- Level 5: Double Buffer -->
-  <g transform="translate(80, 320)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#238636" opacity="0.15" stroke="#238636"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">+ Double Buffering</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">软件流水线，计算掩盖传输延迟</text>
-    <text x="560" y="27" font-size="14" fill="#3fb950" font-weight="bold">~70%</text>
+  <!-- 6. float4 向量化加载 ~55%（蓝，Day 6） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="342" width="600" height="46" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <rect x="90" y="342" width="6" height="46" fill="#4a8edb" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="371" font-size="13" fill="#2b2b2b" font-weight="bold">+ float4 向量化加载（Day 6）</text>
+  <text x="300" y="371" font-size="11" fill="#666">128-bit load，提升带宽利用率</text>
+  <text x="662" y="372" text-anchor="middle" font-size="16" fill="#4a8edb" font-weight="bold">~55%</text>
 
-  <!-- Level 6: Auto-tuning -->
-  <g transform="translate(80, 372)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-dasharray="4"/>
-    <text x="15" y="27" font-size="13" fill="#8b949e">+ 参数 Auto-tuning (进阶)</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">针对不同尺寸选择最优 BM/BN/BK/TM/TN</text>
-    <text x="560" y="27" font-size="14" fill="#58a6ff">~80%+</text>
+  <!-- 7. Register Blocking ~45%（橙，Day 2） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="396" width="600" height="46" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <rect x="90" y="396" width="6" height="46" fill="#c98a2b" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="425" font-size="13" fill="#2b2b2b" font-weight="bold">+ Register Blocking（Day 2）</text>
+  <text x="300" y="425" font-size="11" fill="#666">TM×TN thread tile，累加器驻留寄存器</text>
+  <text x="662" y="426" text-anchor="middle" font-size="16" fill="#c98a2b" font-weight="bold">~45%</text>
 
-  <!-- Level 7: Tensor Core -->
-  <g transform="translate(80, 424)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#1f6feb" opacity="0.1" stroke="#58a6ff" stroke-dasharray="4"/>
-    <text x="15" y="27" font-size="13" fill="#8b949e">+ Tensor Core / CUTLASS (进阶)</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">WMMA 指令，矩阵乘加硬件加速</text>
-    <text x="560" y="27" font-size="14" fill="#58a6ff">~90%+</text>
+  <!-- 8. Shared Memory Tiling ~15%（橙） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="450" width="600" height="46" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <rect x="90" y="450" width="6" height="46" fill="#c98a2b" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="479" font-size="13" fill="#2b2b2b" font-weight="bold">+ Shared Memory Tiling</text>
+  <text x="300" y="479" font-size="11" fill="#666">A/B tile 预取到 Shared Memory，K 维复用</text>
+  <text x="662" y="480" text-anchor="middle" font-size="16" fill="#c98a2b" font-weight="bold">~15%</text>
 
-  <!-- cuBLAS -->
-  <g transform="translate(80, 476)">
-    <rect x="0" y="0" width="600" height="42" rx="6" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-    <text x="15" y="27" font-size="13" fill="#c9d1d9">cuBLAS（NVIDIA 官方优化）</text>
-    <text x="200" y="27" font-size="12" fill="#8b949e">PTX 内联 + 完整流水线 + Tensor Core + auto-tuning</text>
-    <text x="560" y="27" font-size="14" fill="#c9d1d9" font-weight="bold">100%</text>
+  <!-- 9. Naive GEMM ~1%（红） -->
+  <g filter="url(#sk)">
+    <rect x="90" y="504" width="600" height="46" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+    <rect x="90" y="504" width="6" height="46" fill="#b03a3a" opacity="0.5" rx="3"/>
   </g>
+  <text x="108" y="533" font-size="13" fill="#2b2b2b" font-weight="bold">Naive GEMM</text>
+  <text x="300" y="533" font-size="11" fill="#666">每线程算 1 元素，直接访问 Global Memory</text>
+  <text x="662" y="534" text-anchor="middle" font-size="16" fill="#b03a3a" font-weight="bold">~1%</text>
 
-  <!-- Day 2 vs Day 6 marker -->
-  <line x1="690" y1="185" x2="730" y2="185" stroke="#a371f7" stroke-width="2"/>
-  <text x="735" y="180" font-size="10" fill="#a371f7" font-weight="bold" transform="rotate(90, 735, 180)">Day 2</text>
+  <!-- Day 6 右侧括号标记（覆盖 float4 + Warp Shuffle 两行） -->
+  <path d="M 746 290 L 752 290 L 752 388 L 746 388" stroke="#4a8edb" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <text x="762" y="339" font-size="10" fill="#4a8edb" font-weight="bold" transform="rotate(90, 762, 339)" text-anchor="middle">Day 6</text>
 
-  <line x1="690" y1="341" x2="730" y2="341" stroke="#3fb950" stroke-width="2"/>
-  <text x="735" y="336" font-size="10" fill="#3fb950" font-weight="bold" transform="rotate(90, 735, 336)">Day 6</text>
+  <!-- Day 2 右侧标记（Register Blocking 行） -->
+  <path d="M 746 398 L 752 398 L 752 440 L 746 440" stroke="#c98a2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <text x="762" y="419" font-size="10" fill="#c98a2b" font-weight="bold" transform="rotate(90, 762, 419)" text-anchor="middle">Day 2</text>
 
-  <text x="380" y="545" text-anchor="middle" font-size="13" fill="#c9d1d9">Day 6 目标：从 ~45% 跨越到 70%+</text>
+  <text x="390" y="568" text-anchor="middle" font-size="12" fill="#888">Day 6 目标：从 ~45%（Day 2）跨越到 70%+</text>
 </svg>
