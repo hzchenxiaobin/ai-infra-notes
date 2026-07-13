@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="400" viewBox="0 0 680 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="680" height="400" fill="#fafafa"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">排序 + 双指针求交集</text>
+
+  <!-- Sorted arrays -->
+  <text x="340" y="60" text-anchor="middle" font-size="12" fill="#888">排序后：nums1=[4,5,9]，nums2=[4,4,8,9,9]</text>
+
+  <!-- nums1 row -->
+  <text x="40" y="90" font-size="12" fill="#555" font-weight="bold">nums1:</text>
+  <g font-size="14" font-weight="bold">
+    <g filter="url(#sk)"><rect x="90" y="76" width="44" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+    <text x="112" y="96" text-anchor="middle" fill="#446688">4</text>
+    <g filter="url(#sk)"><rect x="134" y="76" width="44" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.2"/></g>
+    <text x="156" y="96" text-anchor="middle" fill="#446688">5</text>
+    <g filter="url(#sk)"><rect x="178" y="76" width="44" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.2"/></g>
+    <text x="200" y="96" text-anchor="middle" fill="#446688">9</text>
+  </g>
+
+  <!-- nums2 row -->
+  <text x="40" y="130" font-size="12" fill="#555" font-weight="bold">nums2:</text>
+  <g font-size="14" font-weight="bold">
+    <g filter="url(#sk)"><rect x="90" y="116" width="44" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+    <text x="112" y="136" text-anchor="middle" fill="#4a7a3a">4</text>
+    <g filter="url(#sk)"><rect x="134" y="116" width="44" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+    <text x="156" y="136" text-anchor="middle" fill="#4a7a3a">4</text>
+    <g filter="url(#sk)"><rect x="178" y="116" width="44" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+    <text x="200" y="136" text-anchor="middle" fill="#4a7a3a">8</text>
+    <g filter="url(#sk)"><rect x="222" y="116" width="44" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+    <text x="244" y="136" text-anchor="middle" fill="#4a7a3a">9</text>
+    <g filter="url(#sk)"><rect x="266" y="116" width="44" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+    <text x="288" y="136" text-anchor="middle" fill="#4a7a3a">9</text>
+  </g>
+
+  <!-- Pointer labels -->
+  <text x="112" y="160" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">↑i=0</text>
+  <text x="112" y="175" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">↑j=0</text>
+
+  <!-- Step table -->
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="360" y="76" width="40" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="380" y="93" text-anchor="middle" fill="#333" font-weight="bold">步</text>
+    <g filter="url(#sk)"><rect x="400" y="76" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="425" y="93" text-anchor="middle" fill="#333" font-weight="bold">i</text>
+    <g filter="url(#sk)"><rect x="450" y="76" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="475" y="93" text-anchor="middle" fill="#333" font-weight="bold">j</text>
+    <g filter="url(#sk)"><rect x="500" y="76" width="60" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="530" y="93" text-anchor="middle" fill="#333" font-weight="bold">比较</text>
+    <g filter="url(#sk)"><rect x="560" y="76" width="80" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="600" y="93" text-anchor="middle" fill="#333" font-weight="bold">操作</text>
+
+    <!-- Step 1: 4==4 -->
+    <g filter="url(#sk)"><rect x="360" y="100" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="380" y="115" text-anchor="middle" fill="#4a7a3a">1</text>
+    <g filter="url(#sk)"><rect x="400" y="100" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="425" y="115" text-anchor="middle" fill="#4a7a3a">0</text>
+    <g filter="url(#sk)"><rect x="450" y="100" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="475" y="115" text-anchor="middle" fill="#4a7a3a">0</text>
+    <g filter="url(#sk)"><rect x="500" y="100" width="60" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="530" y="115" text-anchor="middle" fill="#4a7a3a">4==4</text>
+    <g filter="url(#sk)"><rect x="560" y="100" width="80" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="600" y="115" text-anchor="middle" fill="#4a7a3a" font-weight="bold">加入4</text>
+
+    <!-- Step 2: 5>4 -->
+    <g filter="url(#sk)"><rect x="360" y="122" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="380" y="137" text-anchor="middle" fill="#446688">2</text>
+    <g filter="url(#sk)"><rect x="400" y="122" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="425" y="137" text-anchor="middle" fill="#446688">1</text>
+    <g filter="url(#sk)"><rect x="450" y="122" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="475" y="137" text-anchor="middle" fill="#446688">1</text>
+    <g filter="url(#sk)"><rect x="500" y="122" width="60" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="530" y="137" text-anchor="middle" fill="#446688">5&gt;4</text>
+    <g filter="url(#sk)"><rect x="560" y="122" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="600" y="137" text-anchor="middle" fill="#446688">j++</text>
+
+    <!-- Step 3: 5<8 -->
+    <g filter="url(#sk)"><rect x="360" y="144" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="380" y="159" text-anchor="middle" fill="#446688">3</text>
+    <g filter="url(#sk)"><rect x="400" y="144" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="425" y="159" text-anchor="middle" fill="#446688">1</text>
+    <g filter="url(#sk)"><rect x="450" y="144" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="475" y="159" text-anchor="middle" fill="#446688">2</text>
+    <g filter="url(#sk)"><rect x="500" y="144" width="60" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="530" y="159" text-anchor="middle" fill="#446688">5&lt;8</text>
+    <g filter="url(#sk)"><rect x="560" y="144" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="600" y="159" text-anchor="middle" fill="#446688">i++</text>
+
+    <!-- Step 4: 9>8 -->
+    <g filter="url(#sk)"><rect x="360" y="166" width="40" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="380" y="181" text-anchor="middle" fill="#446688">4</text>
+    <g filter="url(#sk)"><rect x="400" y="166" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="425" y="181" text-anchor="middle" fill="#446688">2</text>
+    <g filter="url(#sk)"><rect x="450" y="166" width="50" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="475" y="181" text-anchor="middle" fill="#446688">2</text>
+    <g filter="url(#sk)"><rect x="500" y="166" width="60" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="530" y="181" text-anchor="middle" fill="#446688">9&gt;8</text>
+    <g filter="url(#sk)"><rect x="560" y="166" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8"/></g>
+    <text x="600" y="181" text-anchor="middle" fill="#446688">j++</text>
+
+    <!-- Step 5: 9==9 -->
+    <g filter="url(#sk)"><rect x="360" y="188" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="380" y="203" text-anchor="middle" fill="#4a7a3a">5</text>
+    <g filter="url(#sk)"><rect x="400" y="188" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="425" y="203" text-anchor="middle" fill="#4a7a3a">2</text>
+    <g filter="url(#sk)"><rect x="450" y="188" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="475" y="203" text-anchor="middle" fill="#4a7a3a">3</text>
+    <g filter="url(#sk)"><rect x="500" y="188" width="60" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="530" y="203" text-anchor="middle" fill="#4a7a3a">9==9</text>
+    <g filter="url(#sk)"><rect x="560" y="188" width="80" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="600" y="203" text-anchor="middle" fill="#4a7a3a" font-weight="bold">加入9</text>
+  </g>
+
+  <!-- Result -->
+  <g filter="url(#sk)">
+    <rect x="120" y="230" width="440" height="45" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="252" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">结果（排序双指针天然去重）</text>
+  <text x="340" y="270" text-anchor="middle" font-size="16" fill="#b85450" font-weight="bold">[4, 9]</text>
+
+  <!-- Key insight -->
+  <g filter="url(#sk)">
+    <rect x="30" y="295" width="620" height="90" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/>
+  </g>
+  <text x="50" y="318" font-size="12" font-weight="bold" fill="#333">去重机制：检查 result.back() != 当前元素</text>
+  <text x="50" y="338" font-size="11" fill="#555">排序后相同元素相邻。加入前检查 result 最后一个元素是否相同：</text>
+  <text x="50" y="356" font-size="11" fill="#555">• 若不同 → 加入（首次遇到该值）</text>
+  <text x="50" y="374" font-size="11" fill="#555">• 若相同 → 跳过（已加入过，去重）。也可用 while 跳过连续相同元素。</text>
+</svg>

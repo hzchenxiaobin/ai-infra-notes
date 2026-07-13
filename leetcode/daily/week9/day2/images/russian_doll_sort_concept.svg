@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="680" height="420" fill="#fafafa"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">排序降维：二维嵌套 → 一维 LIS</text>
+
+  <!-- Original envelopes -->
+  <g filter="url(#sk)">
+    <rect x="30" y="55" width="620" height="80" rx="10" fill="#e8f0fe" stroke="#446688" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#446688">原始信封（二维 [w, h]）</text>
+  <g font-size="12">
+    <g filter="url(#sk)"><rect x="50" y="92" width="60" height="30" rx="4" fill="#fff" stroke="#446688" stroke-width="1"/></g>
+    <text x="80" y="112" text-anchor="middle" fill="#446688">[5,4]</text>
+    <g filter="url(#sk)"><rect x="120" y="92" width="60" height="30" rx="4" fill="#fff" stroke="#446688" stroke-width="1"/></g>
+    <text x="150" y="112" text-anchor="middle" fill="#446688">[6,4]</text>
+    <g filter="url(#sk)"><rect x="190" y="92" width="60" height="30" rx="4" fill="#fff" stroke="#446688" stroke-width="1"/></g>
+    <text x="220" y="112" text-anchor="middle" fill="#446688">[6,7]</text>
+    <g filter="url(#sk)"><rect x="260" y="92" width="60" height="30" rx="4" fill="#fff" stroke="#446688" stroke-width="1"/></g>
+    <text x="290" y="112" text-anchor="middle" fill="#446688">[2,3]</text>
+  </g>
+
+  <!-- Arrow down -->
+  <path d="M 340 140 L 340 160" stroke="#555" stroke-width="2" marker-end="url(#arr)" filter="url(#sk)"/>
+  <text x="400" y="155" font-size="12" fill="#555">排序：w 升序，w 相同 h 降序</text>
+
+  <!-- Sorted -->
+  <g filter="url(#sk)">
+    <rect x="30" y="165" width="620" height="80" rx="10" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="188" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a7a3a">排序后（w 升序，w 相同 h 降序）</text>
+  <g font-size="12">
+    <g filter="url(#sk)"><rect x="50" y="202" width="60" height="30" rx="4" fill="#fff" stroke="#4a7a3a" stroke-width="1"/></g>
+    <text x="80" y="222" text-anchor="middle" fill="#4a7a3a">[2,3]</text>
+    <g filter="url(#sk)"><rect x="120" y="202" width="60" height="30" rx="4" fill="#fff" stroke="#4a7a3a" stroke-width="1"/></g>
+    <text x="150" y="222" text-anchor="middle" fill="#4a7a3a">[5,4]</text>
+    <g filter="url(#sk)"><rect x="190" y="202" width="60" height="30" rx="4" fill="#fff" stroke="#4a7a3a" stroke-width="1.5"/></g>
+    <text x="220" y="222" text-anchor="middle" fill="#4a7a3a" font-weight="bold">[6,7]</text>
+    <g filter="url(#sk)"><rect x="260" y="202" width="60" height="30" rx="4" fill="#fff" stroke="#4a7a3a" stroke-width="1.5"/></g>
+    <text x="290" y="222" text-anchor="middle" fill="#4a7a3a" font-weight="bold">[6,4]</text>
+  </g>
+  <text x="350" y="222" font-size="11" fill="#b85450">← w=6 相同，h 降序：7 在 4 前</text>
+
+  <!-- Arrow down -->
+  <path d="M 340 250 L 340 270" stroke="#555" stroke-width="2" marker-end="url(#arr)" filter="url(#sk)"/>
+  <text x="400" y="265" font-size="12" fill="#555">提取高度序列</text>
+
+  <!-- Height sequence -->
+  <g filter="url(#sk)">
+    <rect x="30" y="275" width="620" height="60" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="298" text-anchor="middle" font-size="13" font-weight="bold" fill="#d6a040">高度序列 → 求 LIS</text>
+  <g font-size="14" font-weight="bold">
+    <text x="100" y="322" text-anchor="middle" fill="#d6a040">3</text>
+    <text x="130" y="322" text-anchor="middle" fill="#888">→</text>
+    <text x="160" y="322" text-anchor="middle" fill="#d6a040">4</text>
+    <text x="190" y="322" text-anchor="middle" fill="#888">→</text>
+    <text x="220" y="322" text-anchor="middle" fill="#d6a040">7</text>
+    <text x="250" y="322" text-anchor="middle" fill="#888">→</text>
+    <text x="280" y="322" text-anchor="middle" fill="#b85450">4</text>
+  </g>
+  <text x="350" y="322" font-size="11" fill="#888">LIS = [3, 4, 7]，长度 3</text>
+
+  <!-- Key insight -->
+  <g filter="url(#sk)">
+    <rect x="30" y="350" width="620" height="60" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <text x="50" y="372" font-size="12" font-weight="bold" fill="#b85450">关键：w 相同时 h 降序</text>
+  <text x="50" y="390" font-size="11" fill="#555">若 h 升序，[6,4]→[6,7] 会被 LIS 误判为递增（4→7），但 w 相同不能嵌套。</text>
+  <text x="50" y="404" font-size="11" fill="#555">h 降序后 [6,7]→[6,4]，7→4 不递增，正确排除。LIS 用 lower_bound 保证严格递增。</text>
+</svg>
