@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="460" viewBox="0 0 640 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="640" height="460" fill="#fdfcf7"/>
+  <text x="320" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">算法流程：枚举子数组 + 增量维护</text>
+  <path d="M 200 42 Q 320 50 440 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Step 1: Enumerate l -->
+  <g filter="url(#sk)">
+    <rect x="40" y="65" width="560" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="88" font-size="13" font-weight="bold" fill="#2b6e9e">① 枚举左端点 l（0 到 n-1）</text>
+  <text x="60" y="106" font-size="11" fill="#444">初始化 outs = sorted(nums)，ins = []。每个 l 重新开始。</text>
+
+  <!-- Step 2: Extend r -->
+  <g filter="url(#sk)">
+    <rect x="40" y="125" width="560" height="50" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="148" font-size="13" font-weight="bold" fill="#7a5415">② 扩展右端点 r（l 到 n-1）</text>
+  <text x="60" y="166" font-size="11" fill="#444">将 nums[r] 从 outs 移到 ins（用 lower_bound 保持有序）。subSum = pre[r+1] - pre[l]。</text>
+
+  <!-- Step 3: Compute gain -->
+  <g filter="url(#sk)">
+    <rect x="40" y="185" width="560" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="208" font-size="13" font-weight="bold" fill="#2e6e2e">③ 计算增益（边际递减，提前终止）</text>
+  <text x="60" y="228" font-size="11" fill="#444" font-family="monospace">for t = 1 to min(k, |ins|, |outs|):</text>
+  <text x="60" y="244" font-size="11" fill="#444" font-family="monospace">    in_t = ins[t-1]  (内部第 t 小)</text>
+  <text x="60" y="260" font-size="11" fill="#444" font-family="monospace">    out_t = outs[-t]  (外部第 t 大)</text>
+
+  <!-- Step 4: Update ans -->
+  <g filter="url(#sk)">
+    <rect x="40" y="275" width="560" height="50" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="298" font-size="13" font-weight="bold" fill="#5a3a7a">④ 更新答案</text>
+  <text x="60" y="316" font-size="11" fill="#444">if out_t - in_t <= 0: break（边际递减，停止）  else: gain += out_t - in_t</text>
+
+  <!-- Data structure visualization -->
+  <line x1="30" y1="340" x2="610" y2="340" stroke="#e0e0e0" stroke-width="1" filter="url(#sk)"/>
+  <text x="320" y="362" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">数据结构：两个有序数组</text>
+
+  <!-- ins -->
+  <g filter="url(#sk)">
+    <rect x="40" y="375" width="270" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="175" y="396" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">ins（升序）</text>
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="55" y="406" width="34" height="24" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="3"/></g>
+    <text x="72" y="422" text-anchor="middle" fill="#b03a3a">小</text>
+    <g filter="url(#sk)"><rect x="89" y="406" width="34" height="24" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8" rx="3"/></g>
+    <text x="106" y="422" text-anchor="middle" fill="#2b6e9e">→</text>
+    <g filter="url(#sk)"><rect x="123" y="406" width="34" height="24" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8" rx="3"/></g>
+    <text x="140" y="422" text-anchor="middle" fill="#2b6e9e">→</text>
+    <g filter="url(#sk)"><rect x="157" y="406" width="34" height="24" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8" rx="3"/></g>
+    <text x="174" y="422" text-anchor="middle" fill="#2b6e9e">→</text>
+    <text x="205" y="422" font-size="11" fill="#2b6e9e" font-weight="bold">大</text>
+  </g>
+  <text x="175" y="442" text-anchor="middle" font-size="10" fill="#888">ins[t-1] = 第 t 小</text>
+
+  <!-- outs -->
+  <g filter="url(#sk)">
+    <rect x="330" y="375" width="270" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="465" y="396" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">outs（升序）</text>
+  <g font-size="11">
+    <text x="350" y="422" font-size="11" fill="#888">小</text>
+    <g filter="url(#sk)"><rect x="365" y="406" width="34" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8" rx="3"/></g>
+    <text x="382" y="422" text-anchor="middle" fill="#2e6e2e">→</text>
+    <g filter="url(#sk)"><rect x="399" y="406" width="34" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8" rx="3"/></g>
+    <text x="416" y="422" text-anchor="middle" fill="#2e6e2e">→</text>
+    <g filter="url(#sk)"><rect x="433" y="406" width="34" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8" rx="3"/></g>
+    <text x="450" y="422" text-anchor="middle" fill="#2e6e2e">→</text>
+    <g filter="url(#sk)"><rect x="467" y="406" width="34" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" rx="3"/></g>
+    <text x="484" y="422" text-anchor="middle" fill="#2e6e2e">大</text>
+  </g>
+  <text x="465" y="442" text-anchor="middle" font-size="10" fill="#888">outs[-t] = 第 t 大（从末尾取）</text>
+</svg>

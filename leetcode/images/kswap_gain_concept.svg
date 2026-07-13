@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="31" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="680" height="420" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">交换增益模型：贪心配对</text>
+  <path d="M 220 42 Q 340 50 460 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Subarray and outside -->
+  <text x="340" y="66" text-anchor="middle" font-size="13" fill="#444">固定子数组 [l, r]，用外部最大换内部最小</text>
+
+  <!-- Inside (sorted ascending) -->
+  <g filter="url(#sk)">
+    <rect x="40" y="85" width="280" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="180" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">子数组内部（升序）</text>
+  <g font-size="13" font-weight="bold">
+    <g filter="url(#sk)"><rect x="55" y="120" width="40" height="30" fill="#f5e0e0" stroke="#b85450" stroke-width="1.5" rx="4"/></g>
+    <text x="75" y="140" text-anchor="middle" fill="#b03a3a">-1</text>
+    <text x="75" y="162" text-anchor="middle" font-size="9" fill="#b03a3a">最小</text>
+    <g filter="url(#sk)"><rect x="95" y="120" width="40" height="30" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="4"/></g>
+    <text x="115" y="140" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="135" y="120" width="40" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="4"/></g>
+    <text x="155" y="140" text-anchor="middle" fill="#2b6e9e">1</text>
+    <g filter="url(#sk)"><rect x="175" y="120" width="40" height="30" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="4"/></g>
+    <text x="195" y="140" text-anchor="middle" fill="#2b6e9e">2</text>
+    <text x="220" y="140" font-size="11" fill="#888">...</text>
+  </g>
+  <text x="180" y="188" text-anchor="middle" font-size="11" fill="#444">从最小开始，逐个替换</text>
+
+  <!-- Swap arrows -->
+  <path d="M 75 160 Q 340 175 605 160" stroke="#b85450" stroke-width="2" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="340" y="172" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">交换 t=1: 增益 = 2 - (-1) = 3</text>
+
+  <!-- Outside (sorted descending) -->
+  <g filter="url(#sk)">
+    <rect x="360" y="85" width="280" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="500" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">外部元素（降序）</text>
+  <g font-size="13" font-weight="bold">
+    <g filter="url(#sk)"><rect x="375" y="120" width="40" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5" rx="4"/></g>
+    <text x="395" y="140" text-anchor="middle" fill="#2e6e2e">2</text>
+    <text x="395" y="162" text-anchor="middle" font-size="9" fill="#2e6e2e">最大</text>
+    <g filter="url(#sk)"><rect x="415" y="120" width="40" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" rx="4"/></g>
+    <text x="435" y="140" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="455" y="120" width="40" height="30" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="4"/></g>
+    <text x="475" y="140" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="495" y="120" width="40" height="30" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="4"/></g>
+    <text x="515" y="140" text-anchor="middle" fill="#b03a3a">-1</text>
+    <text x="540" y="140" font-size="11" fill="#888">...</text>
+  </g>
+  <text x="500" y="188" text-anchor="middle" font-size="11" fill="#444">从最大开始，逐个给出</text>
+
+  <!-- Marginal gain curve -->
+  <line x1="30" y1="225" x2="650" y2="225" stroke="#e0e0e0" stroke-width="1" filter="url(#sk)"/>
+  <text x="340" y="248" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">边际增益递减 → 贪心累加至增益 ≤ 0</text>
+
+  <!-- Gain table -->
+  <g font-size="12">
+    <g filter="url(#sk)"><rect x="60" y="265" width="80" height="28" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="100" y="284" text-anchor="middle" fill="#2b2b2b" font-weight="bold">t（次数）</text>
+    <g filter="url(#sk)"><rect x="140" y="265" width="120" height="28" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="200" y="284" text-anchor="middle" fill="#2b2b2b" font-weight="bold">外部第 t 大</text>
+    <g filter="url(#sk)"><rect x="260" y="265" width="120" height="28" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="320" y="284" text-anchor="middle" fill="#2b2b2b" font-weight="bold">内部第 t 小</text>
+    <g filter="url(#sk)"><rect x="380" y="265" width="100" height="28" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="430" y="284" text-anchor="middle" fill="#2b2b2b" font-weight="bold">边际增益 g_t</text>
+    <g filter="url(#sk)"><rect x="480" y="265" width="100" height="28" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="530" y="284" text-anchor="middle" fill="#2b2b2b" font-weight="bold">累加增益</text>
+
+    <!-- t=1 -->
+    <g filter="url(#sk)"><rect x="60" y="293" width="80" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="100" y="311" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="140" y="293" width="120" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="200" y="311" text-anchor="middle" fill="#2e6e2e">2</text>
+    <g filter="url(#sk)"><rect x="260" y="293" width="120" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8"/></g>
+    <text x="320" y="311" text-anchor="middle" fill="#b03a3a">-1</text>
+    <g filter="url(#sk)"><rect x="380" y="293" width="100" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="430" y="311" text-anchor="middle" fill="#2e6e2e" font-weight="bold">3</text>
+    <g filter="url(#sk)"><rect x="480" y="293" width="100" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="530" y="311" text-anchor="middle" fill="#2e6e2e" font-weight="bold">3</text>
+
+    <!-- t=2 -->
+    <g filter="url(#sk)"><rect x="60" y="319" width="80" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="100" y="337" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="140" y="319" width="120" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="200" y="337" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="260" y="319" width="120" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="320" y="337" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="380" y="319" width="100" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="430" y="337" text-anchor="middle" fill="#7a5415" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="480" y="319" width="100" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="530" y="337" text-anchor="middle" fill="#7a5415" font-weight="bold">4</text>
+
+    <!-- t=3 -->
+    <g filter="url(#sk)"><rect x="60" y="345" width="80" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="100" y="363" text-anchor="middle" fill="#b03a3a">3</text>
+    <g filter="url(#sk)"><rect x="140" y="345" width="120" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="200" y="363" text-anchor="middle" fill="#b03a3a">0</text>
+    <g filter="url(#sk)"><rect x="260" y="345" width="120" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="320" y="363" text-anchor="middle" fill="#b03a3a">1</text>
+    <g filter="url(#sk)"><rect x="380" y="345" width="100" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="430" y="363" text-anchor="middle" fill="#b03a3a">-1 ≤ 0 停!</text>
+    <g filter="url(#sk)"><rect x="480" y="345" width="100" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="530" y="363" text-anchor="middle" fill="#888">—</text>
+  </g>
+
+  <!-- Summary -->
+  <g filter="url(#sk)">
+    <rect x="40" y="385" width="600" height="28" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="340" y="404" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">最优 t=2，增益=4。g_t 递减 → 遇 ≤0 即停，最多 k 次</text>
+</svg>
