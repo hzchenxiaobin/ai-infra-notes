@@ -269,3 +269,10 @@ class Solution:
    - 面试策略：先说两趟扫描的朴素思路，再优化为一趟扫描，展示从"知道长度才能定位"到"用间距锁定位置"的思维跃迁。
 
 > 💡 **一句话总结**：删除倒数第 N 个节点是"快慢双指针制造间距"的招牌题——哑节点统一删除头节点的边界，`fast` 先走 `n` 步锁定间距，同速推进后 `slow` 恰停在前驱。一趟扫描 `O(n)` 时间、`O(1)` 空间。核心模板是"用先发量把后向参照转成前向间距"，可迁移到链表中点、倒数第 k、环形链表等所有"定位类"链表问题。
+
+---
+
+## 7. 同类练习题
+- [19. 删除链表的倒数第 N 个节点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/)：快慢双指针
+- [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/)：一次遍历
+- [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/)：快慢指针

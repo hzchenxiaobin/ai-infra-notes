@@ -190,3 +190,10 @@ def mergeKLists_divide(self, lists):
    - `lists = []` → 返回 None
    - `lists = [[], [1,2]]` → 跳过空链表，只把非空头入堆
    - 代码中 `if head: pq.push(head)` 已处理
+
+---
+
+## 7. 同类练习题
+- [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)：堆/分治合并
+- [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)：双指针合并
+- [148. 排序链表](https://leetcode.cn/problems/sort-list/)：归并排序

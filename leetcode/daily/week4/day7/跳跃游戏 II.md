@@ -141,3 +141,10 @@ class Solution:
 2. **为什么 `i == end` 时步数加 1**：说明当前这一步能覆盖的范围已经全部考察完毕，必须发动下一次跳跃。
 3. **贪心正确性证明**：在当前覆盖范围内，我们总是记录能到达的最远位置；当必须跳时，选择这个最远位置一定不劣于任何其他选择，因此得到最少步数。
 4. **与跳跃游戏 I 的区别**：[55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) 只需判断是否能到达终点，本题要求最小步数。
+
+---
+
+## 7. 同类练习题
+- [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/)：贪心可达性
+- [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)：贪心最小跳跃
+- [1306. 跳跃游戏 III](https://leetcode.cn/problems/jump-game-iii/)：BFS 跳跃

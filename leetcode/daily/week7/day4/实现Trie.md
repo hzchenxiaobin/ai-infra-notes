@@ -216,3 +216,10 @@ class Trie:
    - `{'#': True}` 标记 is_end，简洁
    - 按需分配键，空间省
    - 缺点：不如数组快（哈希开销），但 Python 本身慢，差异不大
+
+---
+
+## 7. 同类练习题
+- [211. 添加与搜索单词](https://leetcode.cn/problems/design-add-and-search-words-data-structure/)：字典树 + 通配符
+- [212. 单词搜索 II](https://leetcode.cn/problems/word-search-ii/)：字典树 + DFS
+- [648. 单词替换](https://leetcode.cn/problems/replace-words/)：字典树前缀匹配

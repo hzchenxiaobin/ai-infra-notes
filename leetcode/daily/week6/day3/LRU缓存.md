@@ -251,3 +251,10 @@ LRU 只看"最近访问时间"，LFU（最不经常使用）看"访问频率"。
 5. **能否用 `OrderedDict` 一行实现？**
 
    - Python 可以：`OrderedDict.move_to_end(key)` + `popitem(last=False)`。但面试官通常要求手写双向链表以考察指针操作。`OrderedDict` 本质就是哈希 + 双向链表。
+
+---
+
+## 7. 同类练习题
+- [460. LFU 缓存](https://leetcode.cn/problems/lfu-cache/)：LFU 设计
+- [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)：LRU 设计
+- [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/)：设计题

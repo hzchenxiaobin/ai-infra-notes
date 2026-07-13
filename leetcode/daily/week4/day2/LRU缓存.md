@@ -313,3 +313,10 @@ class LRUCache:
 5. **如果要求线程安全怎么做？**
 
    - 给整个缓存加一把读写锁（`shared_mutex`）是最简单的方案，但粒度粗、并发度低；工业级实现（如 `concurrent-lru`）通常采用**分片（sharding）**：把 key 哈希到多个独立的 LRU 桶，每个桶一把锁，降低争用。
+
+---
+
+## 7. 同类练习题
+- [460. LFU 缓存](https://leetcode.cn/problems/lfu-cache/)：LFU 设计
+- [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)：LRU 设计
+- [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/)：设计题

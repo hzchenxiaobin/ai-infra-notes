@@ -224,3 +224,10 @@ class LRUCache:
    - LFU：淘汰访问次数最少的（按频率）
    - LFU 需要维护频率，更复杂（需要 `min_freq` + 频率到链表的映射）
    - 推理系统中 Prefix Cache 通常用 LRU（简单且效果好）
+
+---
+
+## 7. 同类练习题
+- [460. LFU 缓存](https://leetcode.cn/problems/lfu-cache/)：LFU 设计
+- [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)：LRU 设计
+- [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/)：设计题

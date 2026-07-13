@@ -202,3 +202,10 @@ class Solution:
    - 虽然每组有"检查 k 个"和"翻转 k 个"，看起来像 O(n/k × 2k) = O(2n)
    - 但每节点总共被访问常数次：检查时访问 1 次，翻转时访问 1 次 → O(n)
    - 不是嵌套循环（外层按组、内层按 k），而是顺序处理
+
+---
+
+## 7. 同类练习题
+- [92. 反转链表 II](https://leetcode.cn/problems/reverse-linked-list-ii/)：区间翻转
+- [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/)：基础翻转
+- [25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/)：分段翻转
