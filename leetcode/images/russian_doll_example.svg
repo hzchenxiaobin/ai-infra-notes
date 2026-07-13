@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="11"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="680" height="420" fill="#fafafa"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">示例演算</text>
+  <text x="340" y="56" text-anchor="middle" font-size="12" fill="#888">envelopes = [[5,4],[6,4],[6,7],[2,3]]</text>
+
+  <!-- Sorting step -->
+  <g filter="url(#sk)">
+    <rect x="30" y="70" width="620" height="90" rx="10" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="93" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a7a3a">排序：w 升序，w 相同 h 降序</text>
+  <g font-size="12">
+    <text x="50" y="118" fill="#555">原始：</text>
+    <text x="100" y="118" fill="#888" font-family="monospace">[5,4] [6,4] [6,7] [2,3]</text>
+    <text x="50" y="140" fill="#555">排序后：</text>
+    <text x="110" y="140" fill="#4a7a3a" font-family="monospace" font-weight="bold">[2,3] [5,4] [6,7] [6,4]</text>
+    <text x="350" y="140" font-size="10" fill="#b85450">← w=6 相同，h 降序：7 在 4 前</text>
+  </g>
+
+  <!-- Height sequence -->
+  <g filter="url(#sk)">
+    <rect x="30" y="170" width="620" height="40" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/>
+  </g>
+  <text x="50" y="195" font-size="12" font-weight="bold" fill="#d6a040">高度序列：</text>
+  <g font-size="14" font-weight="bold">
+    <text x="150" y="195" text-anchor="middle" fill="#d6a040">3</text>
+    <text x="175" y="195" text-anchor="middle" fill="#888">→</text>
+    <text x="200" y="195" text-anchor="middle" fill="#d6a040">4</text>
+    <text x="225" y="195" text-anchor="middle" fill="#888">→</text>
+    <text x="250" y="195" text-anchor="middle" fill="#d6a040">7</text>
+    <text x="275" y="195" text-anchor="middle" fill="#888">→</text>
+    <text x="300" y="195" text-anchor="middle" fill="#b85450">4</text>
+  </g>
+
+  <!-- LIS table -->
+  <text x="340" y="232" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">LIS 二分过程</text>
+  <g font-size="11">
+    <!-- Header -->
+    <g filter="url(#sk)"><rect x="80" y="240" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="105" y="257" text-anchor="middle" fill="#333" font-weight="bold">步</text>
+    <g filter="url(#sk)"><rect x="130" y="240" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="155" y="257" text-anchor="middle" fill="#333" font-weight="bold">h</text>
+    <g filter="url(#sk)"><rect x="180" y="240" width="160" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="260" y="257" text-anchor="middle" fill="#333" font-weight="bold">操作</text>
+    <g filter="url(#sk)"><rect x="340" y="240" width="140" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1"/></g>
+    <text x="410" y="257" text-anchor="middle" fill="#333" font-weight="bold">tails</text>
+
+    <!-- Step 1: h=3 -->
+    <g filter="url(#sk)"><rect x="80" y="264" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="105" y="280" text-anchor="middle" fill="#4a7a3a">1</text>
+    <g filter="url(#sk)"><rect x="130" y="264" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="155" y="280" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <g filter="url(#sk)"><rect x="180" y="264" width="160" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="260" y="280" text-anchor="middle" fill="#4a7a3a">3 最大, append</text>
+    <g filter="url(#sk)"><rect x="340" y="264" width="140" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="410" y="280" text-anchor="middle" fill="#4a7a3a" font-family="monospace">[3]</text>
+
+    <!-- Step 2: h=4 -->
+    <g filter="url(#sk)"><rect x="80" y="286" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="105" y="302" text-anchor="middle" fill="#4a7a3a">2</text>
+    <g filter="url(#sk)"><rect x="130" y="286" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="155" y="302" text-anchor="middle" fill="#4a7a3a" font-weight="bold">4</text>
+    <g filter="url(#sk)"><rect x="180" y="286" width="160" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="260" y="302" text-anchor="middle" fill="#4a7a3a">4 &gt; 3, append</text>
+    <g filter="url(#sk)"><rect x="340" y="286" width="140" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="410" y="302" text-anchor="middle" fill="#4a7a3a" font-family="monospace">[3, 4]</text>
+
+    <!-- Step 3: h=7 -->
+    <g filter="url(#sk)"><rect x="80" y="308" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="105" y="324" text-anchor="middle" fill="#4a7a3a">3</text>
+    <g filter="url(#sk)"><rect x="130" y="308" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="155" y="324" text-anchor="middle" fill="#4a7a3a" font-weight="bold">7</text>
+    <g filter="url(#sk)"><rect x="180" y="308" width="160" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="260" y="324" text-anchor="middle" fill="#4a7a3a">7 &gt; 4, append</text>
+    <g filter="url(#sk)"><rect x="340" y="308" width="140" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8"/></g>
+    <text x="410" y="324" text-anchor="middle" fill="#4a7a3a" font-family="monospace">[3, 4, 7]</text>
+
+    <!-- Step 4: h=4 -->
+    <g filter="url(#sk)"><rect x="80" y="330" width="50" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8"/></g>
+    <text x="105" y="346" text-anchor="middle" fill="#d6a040">4</text>
+    <g filter="url(#sk)"><rect x="130" y="330" width="50" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8"/></g>
+    <text x="155" y="346" text-anchor="middle" fill="#d6a040" font-weight="bold">4</text>
+    <g filter="url(#sk)"><rect x="180" y="330" width="160" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8"/></g>
+    <text x="260" y="346" text-anchor="middle" fill="#d6a040">lower_bound(4)=1</text>
+    <g filter="url(#sk)"><rect x="340" y="330" width="140" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8"/></g>
+    <text x="410" y="346" text-anchor="middle" fill="#d6a040" font-family="monospace">[3, 4, 7]</text>
+    <text x="410" y="358" text-anchor="middle" fill="#888" font-size="9">替换 tails[1]=4（无变化）</text>
+  </g>
+
+  <!-- Result -->
+  <g filter="url(#sk)">
+    <rect x="100" y="372" width="480" height="38" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="396" text-anchor="middle" font-size="14" fill="#b85450" font-weight="bold">LIS 长度 = 3 → [2,3]→[5,4]→[6,7] ✓</text>
+</svg>
