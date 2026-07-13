@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="380" viewBox="0 0 660 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="59" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="660" height="380" fill="#fdfcf7"/>
+  <text x="330" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">首尾数字提取与前缀和</text>
+  <path d="M 190 42 Q 330 50 470 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Prefix sum -->
+  <g filter="url(#sk)">
+    <rect x="40" y="65" width="580" height="90" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="330" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">前缀和：sum(l..r) = pre[r+1] − pre[l]</text>
+  <g font-size="12">
+    <text x="60" y="112" fill="#444">nums:</text>
+    <g filter="url(#sk)"><rect x="110" y="98" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" rx="3"/></g>
+    <text x="135" y="115" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="160" y="98" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" rx="3"/></g>
+    <text x="185" y="115" text-anchor="middle" fill="#2e6e2e">100</text>
+    <g filter="url(#sk)"><rect x="210" y="98" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" rx="3"/></g>
+    <text x="235" y="115" text-anchor="middle" fill="#2e6e2e">1</text>
+
+    <text x="290" y="112" fill="#444">→ pre:</text>
+    <g filter="url(#sk)"><rect x="330" y="98" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="3"/></g>
+    <text x="355" y="115" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="380" y="98" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="3"/></g>
+    <text x="405" y="115" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="430" y="98" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="3"/></g>
+    <text x="455" y="115" text-anchor="middle" fill="#7a5415">101</text>
+    <g filter="url(#sk)"><rect x="480" y="98" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" rx="3"/></g>
+    <text x="505" y="115" text-anchor="middle" fill="#7a5415">102</text>
+  </g>
+  <text x="330" y="142" text-anchor="middle" font-size="11" fill="#888">例：sum(0..1) = pre[2] − pre[0] = 101 − 0 = 101</text>
+
+  <!-- Last digit -->
+  <g filter="url(#sk)">
+    <rect x="40" y="170" width="280" height="90" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="180" y="194" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">末位数字</text>
+  <text x="180" y="220" text-anchor="middle" font-size="14" fill="#444" font-family="monospace">last = sum % 10</text>
+  <text x="180" y="244" text-anchor="middle" font-size="11" fill="#888">101 % 10 = 1 ✓</text>
+
+  <!-- First digit -->
+  <g filter="url(#sk)">
+    <rect x="340" y="170" width="280" height="90" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="480" y="194" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">首位数字</text>
+  <text x="480" y="220" text-anchor="middle" font-size="12" fill="#444" font-family="monospace">while s >= 10: s //= 10</text>
+  <text x="480" y="244" text-anchor="middle" font-size="11" fill="#888">101→10→1 ✓</text>
+
+  <!-- Valid check -->
+  <g filter="url(#sk)">
+    <rect x="40" y="280" width="580" height="50" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="330" y="302" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">有效 ⟺ first(sum) == x 且 last(sum) == x</text>
+  <text x="330" y="320" text-anchor="middle" font-size="11" fill="#888">先检查 last（O(1)），再检查 first（O(log sum)），短路优化</text>
+
+  <!-- Complexity -->
+  <g filter="url(#sk)">
+    <rect x="40" y="340" width="580" height="32" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1"/>
+  </g>
+  <text x="330" y="361" text-anchor="middle" font-size="12" fill="#444">O(n²) 枚举子数组 × O(log V) 提取首位 = O(n² log V)，n=1500 可行</text>
+</svg>

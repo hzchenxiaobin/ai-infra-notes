@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="400" viewBox="0 0 680 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="109" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="680" height="400" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">候选 k 的生成：所有元素的因数</text>
+  <path d="M 180 42 Q 340 50 500 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="340" y="62" text-anchor="middle" font-size="12" fill="#444">nums = [1, 4, 6, 8]</text>
+
+  <!-- Each number's factors -->
+  <g font-size="12">
+    <!-- 1 -->
+    <g filter="url(#sk)"><rect x="40" y="80" width="120" height="60" rx="8" fill="#f5e0e0" stroke="#b85450" stroke-width="1" opacity="0.5"/></g>
+    <text x="100" y="100" text-anchor="middle" fill="#b03a3a" font-weight="bold">1</text>
+    <text x="100" y="118" text-anchor="middle" fill="#888" font-size="10">因数 > 1: 无</text>
+    <text x="100" y="134" text-anchor="middle" fill="#888" font-size="9">(素数边界)</text>
+
+    <!-- 4 -->
+    <g filter="url(#sk)"><rect x="180" y="80" width="120" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="240" y="100" text-anchor="middle" fill="#2b6e9e" font-weight="bold">4</text>
+    <text x="240" y="118" text-anchor="middle" fill="#444" font-size="10" font-family="monospace">2, 4</text>
+    <text x="240" y="134" text-anchor="middle" fill="#888" font-size="9">4=2×2</text>
+
+    <!-- 6 -->
+    <g filter="url(#sk)"><rect x="320" y="80" width="120" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="380" y="100" text-anchor="middle" fill="#2e6e2e" font-weight="bold">6</text>
+    <text x="380" y="118" text-anchor="middle" fill="#444" font-size="10" font-family="monospace">2, 3, 6</text>
+    <text x="380" y="134" text-anchor="middle" fill="#888" font-size="9">6=2×3</text>
+
+    <!-- 8 -->
+    <g filter="url(#sk)"><rect x="460" y="80" width="120" height="60" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="520" y="100" text-anchor="middle" fill="#7a5415" font-weight="bold">8</text>
+    <text x="520" y="118" text-anchor="middle" fill="#444" font-size="10" font-family="monospace">2, 4, 8</text>
+    <text x="520" y="134" text-anchor="middle" fill="#888" font-size="9">8=2×4</text>
+  </g>
+
+  <!-- Arrows down to union -->
+  <g font-size="10" fill="#888">
+    <path d="M 240 145 Q 340 165 340 175" stroke="#4a8edb" stroke-width="1" fill="none" filter="url(#sk)"/>
+    <path d="M 380 145 Q 340 165 340 175" stroke="#4a8e4a" stroke-width="1" fill="none" filter="url(#sk)"/>
+    <path d="M 520 145 Q 340 165 340 175" stroke="#c98a2b" stroke-width="1" fill="none" filter="url(#sk)"/>
+  </g>
+
+  <!-- Union set -->
+  <g filter="url(#sk)">
+    <rect x="120" y="175" width="440" height="50" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="196" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">候选 k = 因数并集 ∪ {2}</text>
+  <text x="340" y="216" text-anchor="middle" font-size="13" fill="#5a3a7a" font-family="monospace" font-weight="bold">{2, 3, 4, 6, 8}</text>
+
+  <!-- Why k=2 always -->
+  <g filter="url(#sk)">
+    <rect x="40" y="240" width="600" height="50" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="262" font-size="12" font-weight="bold" fill="#2b2b2b">为什么总是加 k=2？</text>
+  <text x="60" y="280" font-size="11" fill="#444">当所有 nums[i]=1 时无因数 > 1，但 k=2 是最小合法值（题目要求 k>1），需保底</text>
+
+  <!-- Factorization method -->
+  <g filter="url(#sk)">
+    <rect x="40" y="300" width="600" height="90" rx="8" fill="#f6f8fa" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <text x="60" y="322" font-size="12" font-weight="bold" fill="#2b2b2b">因数枚举：O(√V) per element</text>
+  <text x="60" y="340" font-size="11" fill="#888" font-family="monospace">for d in 2..sqrt(x):</text>
+  <text x="60" y="356" font-size="11" fill="#888" font-family="monospace">    if x % d == 0: add d, add x/d</text>
+  <text x="60" y="372" font-size="11" fill="#888" font-family="monospace">add x (x itself is a factor)</text>
+  <text x="60" y="388" font-size="11" fill="#444">V = max(nums) = 10^6, √V = 1000, n=1000 → 10^6 操作</text>
+</svg>

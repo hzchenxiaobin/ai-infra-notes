@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="101" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="680" height="420" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Kadane 状态机：四阶段 DP</text>
+  <path d="M 180 42 Q 340 50 500 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- State machine diagram -->
+  <text x="340" y="66" text-anchor="middle" font-size="12" fill="#444">求和子数组 = [原值段 S0] + [操作段 S1] + [原值段 S2]</text>
+
+  <!-- S0 -->
+  <g filter="url(#sk)">
+    <ellipse cx="100" cy="120" rx="55" ry="35" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="100" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">S0</text>
+  <text x="100" y="132" text-anchor="middle" font-size="10" fill="#2b6e9e">未操作</text>
+  <text x="100" y="146" text-anchor="middle" font-size="9" fill="#888">nums[i]</text>
+
+  <!-- S1 -->
+  <g filter="url(#sk)">
+    <ellipse cx="340" cy="120" rx="55" ry="35" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="340" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">S1</text>
+  <text x="340" y="132" text-anchor="middle" font-size="10" fill="#7a5415">操作中</text>
+  <text x="340" y="146" text-anchor="middle" font-size="9" fill="#888">nums[i]×k 或 ÷k</text>
+
+  <!-- S2 -->
+  <g filter="url(#sk)">
+    <ellipse cx="580" cy="120" rx="55" ry="35" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="580" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">S2</text>
+  <text x="580" y="132" text-anchor="middle" font-size="10" fill="#2e6e2e">已操作</text>
+  <text x="580" y="146" text-anchor="middle" font-size="9" fill="#888">nums[i]</text>
+
+  <!-- Transitions -->
+  <g filter="url(#sk)">
+    <path d="M 100 85 Q 100 75 100 75" stroke="#4a8edb" stroke-width="1.5" fill="none"/>
+    <text x="100" y="72" text-anchor="middle" font-size="9" fill="#2b6e9e">自环</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 155 120 L 285 120" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)"/>
+  </g>
+  <text x="220" y="112" text-anchor="middle" font-size="10" fill="#444">开始操作</text>
+  <g filter="url(#sk)">
+    <path d="M 340 85 Q 340 75 340 75" stroke="#c98a2b" stroke-width="1.5" fill="none"/>
+    <text x="340" y="72" text-anchor="middle" font-size="9" fill="#7a5415">自环</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 395 120 L 525 120" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)"/>
+  </g>
+  <text x="460" y="112" text-anchor="middle" font-size="10" fill="#444">结束操作</text>
+  <g filter="url(#sk)">
+    <path d="M 580 85 Q 580 75 580 75" stroke="#4a8e4a" stroke-width="1.5" fill="none"/>
+    <text x="580" y="72" text-anchor="middle" font-size="9" fill="#2e6e2e">自环</text>
+  </g>
+
+  <!-- DP transitions -->
+  <line x1="30" y1="170" x2="650" y2="170" stroke="#e0e0e0" stroke-width="1" filter="url(#sk)"/>
+  <text x="340" y="192" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">DP 状态转移</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="205" width="600" height="120" rx="8" fill="#f6f8fa" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <g font-size="12" font-family="monospace">
+    <text x="60" y="228" fill="#2b6e9e">new_dp0 = max(v,         dp0 + v)                    # S0 自环</text>
+    <text x="60" y="248" fill="#7a5415">new_dp1 = max(v*op,      dp0 + v*op,   dp1 + v*op)     # S0→S1 或 S1 自环</text>
+    <text x="60" y="268" fill="#2e6e2e">new_dp2 = max(v,         dp1 + v,      dp2 + v)        # S1→S2 或 S2 自环</text>
+    <text x="60" y="290" fill="#888">  其中 v = nums[i], op = k (乘) 或 trunc_div(1,k) (除)</text>
+    <text x="60" y="310" fill="#b03a3a" font-weight="bold">  ans = max(dp1, dp2)  over all i  （必须经过操作）</text>
+  </g>
+
+  <!-- Key points -->
+  <g filter="url(#sk)">
+    <rect x="40" y="340" width="600" height="70" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="362" font-size="12" font-weight="bold" fill="#2b2b2b">关键点：</text>
+  <text x="60" y="380" font-size="11" fill="#444">• 操作子数组 ⊆ 求和子数组。S0/S2 可为空，S1 必须非空（至少操作一个元素）。</text>
+  <text x="60" y="396" font-size="11" fill="#444">• 乘法和除法各跑一次 DP，取最大值。除法需向零取整（C++ x/k，Python int(x/k)）。</text>
+</svg>

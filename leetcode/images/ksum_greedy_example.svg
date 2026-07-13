@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320" viewBox="0 0 640 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="79" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="640" height="320" fill="#fdfcf7"/>
+  <text x="320" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">示例演算：nums=[6,1,2,9], k=3, mul=2</text>
+  <path d="M 180 42 Q 320 50 460 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Processing order table -->
+  <g font-size="12">
+    <g filter="url(#sk)"><rect x="40" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="65" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">步骤</text>
+    <g filter="url(#sk)"><rect x="90" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="115" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">元素</text>
+    <g filter="url(#sk)"><rect x="140" y="65" width="60" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="170" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">mul值</text>
+    <g filter="url(#sk)"><rect x="200" y="65" width="60" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="230" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">操作</text>
+    <g filter="url(#sk)"><rect x="260" y="65" width="80" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="300" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">贡献</text>
+    <g filter="url(#sk)"><rect x="340" y="65" width="80" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="380" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">mul→</text>
+
+    <!-- Step 1: 9 × 2 -->
+    <g filter="url(#sk)"><rect x="40" y="91" width="50" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="65" y="109" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="90" y="91" width="50" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="115" y="109" text-anchor="middle" fill="#2e6e2e" font-weight="bold">9</text>
+    <g filter="url(#sk)"><rect x="140" y="91" width="60" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="170" y="109" text-anchor="middle" fill="#2e6e2e">2</text>
+    <g filter="url(#sk)"><rect x="200" y="91" width="60" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="230" y="109" text-anchor="middle" fill="#2e6e2e">×乘</text>
+    <g filter="url(#sk)"><rect x="260" y="91" width="80" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="300" y="109" text-anchor="middle" fill="#2e6e2e" font-weight="bold">9×2=18</text>
+    <g filter="url(#sk)"><rect x="340" y="91" width="80" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="380" y="109" text-anchor="middle" fill="#7a5415">1</text>
+
+    <!-- Step 2: 6 × 1 = 6, but mul=1 so +1=6 same. Actually mul-1=1, so t=1, only 1 multiply -->
+    <!-- Wait: t = min(k, mul-1) = min(3, 1) = 1. So only 9 uses multiply. 6 and 2 use add. -->
+    <g filter="url(#sk)"><rect x="40" y="117" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="65" y="135" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="90" y="117" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="115" y="135" text-anchor="middle" fill="#7a5415" font-weight="bold">6</text>
+    <g filter="url(#sk)"><rect x="140" y="117" width="60" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="170" y="135" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="200" y="117" width="60" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="230" y="135" text-anchor="middle" fill="#7a5415">加</text>
+    <g filter="url(#sk)"><rect x="260" y="117" width="80" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="300" y="135" text-anchor="middle" fill="#7a5415" font-weight="bold">6</text>
+    <g filter="url(#sk)"><rect x="340" y="117" width="80" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.5"/></g>
+    <text x="380" y="135" text-anchor="middle" fill="#b03a3a">0</text>
+
+    <!-- Step 3: 2 + add -->
+    <g filter="url(#sk)"><rect x="40" y="143" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="65" y="161" text-anchor="middle" fill="#7a5415">3</text>
+    <g filter="url(#sk)"><rect x="90" y="143" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="115" y="161" text-anchor="middle" fill="#7a5415" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="140" y="143" width="60" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="170" y="161" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="200" y="143" width="60" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="230" y="161" text-anchor="middle" fill="#7a5415">加</text>
+    <g filter="url(#sk)"><rect x="260" y="143" width="80" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="300" y="161" text-anchor="middle" fill="#7a5415" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="340" y="143" width="80" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.5"/></g>
+    <text x="380" y="161" text-anchor="middle" fill="#b03a3a">-1</text>
+  </g>
+
+  <!-- Total -->
+  <g filter="url(#sk)">
+    <rect x="440" y="91" width="180" height="78" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="530" y="115" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">总和</text>
+  <text x="530" y="138" text-anchor="middle" font-size="14" fill="#444" font-family="monospace">18 + 6 + 2</text>
+  <text x="530" y="160" text-anchor="middle" font-size="18" fill="#2e6e2e" font-weight="bold">= 26 ✓</text>
+
+  <!-- Formula -->
+  <g filter="url(#sk)">
+    <rect x="40" y="185" width="580" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="330" y="207" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">公式</text>
+  <text x="330" y="226" text-anchor="middle" font-size="12" fill="#444" font-family="monospace">t = min(k, mul−1) = min(3, 1) = 1 → 前1个乘法，后2个加法</text>
+
+  <!-- Key point -->
+  <g filter="url(#sk)">
+    <rect x="40" y="245" width="580" height="60" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="267" font-size="12" font-weight="bold" fill="#2b2b2b">为什么 t = mul−1 而非 mul？</text>
+  <text x="60" y="285" font-size="11" fill="#444">乘数从 mul 递减。第 t 个乘数为 mul−t+1。要 ≥ 2 需 t ≤ mul−1。mul=2 时只有 1 个乘法（乘数2），</text>
+  <text x="60" y="299" font-size="11" fill="#444">乘数 1 时乘法=加法（不亏不赚），乘数 ≤0 时乘法更差。</text>
+</svg>

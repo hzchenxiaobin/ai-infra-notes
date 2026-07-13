@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="440" viewBox="0 0 680 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="680" height="440" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Dijkstra 执行过程</text>
+  <path d="M 200 42 Q 340 50 480 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="340" y="62" text-anchor="middle" font-size="12" fill="#444">n=3, labels="aab", k=2. 状态 (node, count)，距离升序处理</text>
+
+  <!-- Step table -->
+  <g font-size="11">
+    <!-- Header -->
+    <g filter="url(#sk)"><rect x="40" y="80" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="65" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">步骤</text>
+    <g filter="url(#sk)"><rect x="90" y="80" width="90" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="135" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">取出状态</text>
+    <g filter="url(#sk)"><rect x="180" y="80" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="205" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">dist</text>
+    <g filter="url(#sk)"><rect x="230" y="80" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="255" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">v</text>
+    <g filter="url(#sk)"><rect x="280" y="80" width="70" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="315" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">labels</text>
+    <g filter="url(#sk)"><rect x="350" y="80" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="375" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">c'</text>
+    <g filter="url(#sk)"><rect x="400" y="80" width="60" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="430" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">有效?</text>
+    <g filter="url(#sk)"><rect x="460" y="80" width="180" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="550" y="98" text-anchor="middle" fill="#2b2b2b" font-weight="bold">新状态 / 备注</text>
+
+    <!-- Step 1: (0,1) d=0 -->
+    <g filter="url(#sk)"><rect x="40" y="106" width="50" height="40" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="65" y="131" text-anchor="middle" fill="#2b6e9e">1</text>
+    <g filter="url(#sk)"><rect x="90" y="106" width="90" height="40" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="135" y="131" text-anchor="middle" fill="#2b6e9e" font-family="monospace">(0, 1)</text>
+    <g filter="url(#sk)"><rect x="180" y="106" width="50" height="40" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="205" y="131" text-anchor="middle" fill="#2b6e9e">0</text>
+    <g filter="url(#sk)"><rect x="230" y="106" width="50" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="255" y="121" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="280" y="106" width="70" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="315" y="121" text-anchor="middle" fill="#2e6e2e">a==a</text>
+    <g filter="url(#sk)"><rect x="350" y="106" width="50" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="375" y="121" text-anchor="middle" fill="#2e6e2e">2</text>
+    <g filter="url(#sk)"><rect x="400" y="106" width="60" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="430" y="121" text-anchor="middle" fill="#2e6e2e">✓</text>
+    <g filter="url(#sk)"><rect x="460" y="106" width="180" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="550" y="121" text-anchor="middle" fill="#2e6e2e">(1,2) d=1</text>
+    <!-- second neighbor -->
+    <g filter="url(#sk)"><rect x="230" y="126" width="50" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="255" y="141" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="280" y="126" width="70" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="315" y="141" text-anchor="middle" fill="#7a5415">b≠a</text>
+    <g filter="url(#sk)"><rect x="350" y="126" width="50" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="375" y="141" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="400" y="126" width="60" height="20" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="430" y="141" text-anchor="middle" fill="#2e6e2e">✓</text>
+    <g filter="url(#sk)"><rect x="460" y="126" width="180" height="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="550" y="141" text-anchor="middle" fill="#7a5415">(2,1) d=3</text>
+
+    <!-- Step 2: (1,2) d=1 -->
+    <g filter="url(#sk)"><rect x="40" y="146" width="50" height="26" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="65" y="164" text-anchor="middle" fill="#2b6e9e">2</text>
+    <g filter="url(#sk)"><rect x="90" y="146" width="90" height="26" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="135" y="164" text-anchor="middle" fill="#2b6e9e" font-family="monospace">(1, 2)</text>
+    <g filter="url(#sk)"><rect x="180" y="146" width="50" height="26" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="205" y="164" text-anchor="middle" fill="#2b6e9e">1</text>
+    <g filter="url(#sk)"><rect x="230" y="146" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="255" y="164" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="280" y="146" width="70" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="315" y="164" text-anchor="middle" fill="#7a5415">b≠a</text>
+    <g filter="url(#sk)"><rect x="350" y="146" width="50" height="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="375" y="164" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="400" y="146" width="60" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="430" y="164" text-anchor="middle" fill="#2e6e2e">✓</text>
+    <g filter="url(#sk)"><rect x="460" y="146" width="180" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="550" y="164" text-anchor="middle" fill="#2e6e2e">(2,1) d=2 更优!</text>
+
+    <!-- Step 3: (2,1) d=2 - terminal -->
+    <g filter="url(#sk)"><rect x="40" y="172" width="50" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="65" y="190" text-anchor="middle" fill="#2e6e2e">3</text>
+    <g filter="url(#sk)"><rect x="90" y="172" width="90" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="135" y="190" text-anchor="middle" fill="#2e6e2e" font-family="monospace">(2, 1)</text>
+    <g filter="url(#sk)"><rect x="180" y="172" width="50" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="205" y="190" text-anchor="middle" fill="#2e6e9e" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="230" y="172" width="230" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="345" y="190" text-anchor="middle" fill="#2e6e2e">u == n-1，返回 d=2</text>
+    <g filter="url(#sk)"><rect x="460" y="172" width="180" height="26" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="550" y="190" text-anchor="middle" fill="#2e6e2e" font-weight="bold">答案 = 2 ✓</text>
+
+    <!-- Step 4: (2,1) d=3 skipped -->
+    <g filter="url(#sk)"><rect x="40" y="198" width="50" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="65" y="216" text-anchor="middle" fill="#b03a3a">4</text>
+    <g filter="url(#sk)"><rect x="90" y="198" width="90" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="135" y="216" text-anchor="middle" fill="#b03a3a" font-family="monospace">(2, 1)</text>
+    <g filter="url(#sk)"><rect x="180" y="198" width="50" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="205" y="216" text-anchor="middle" fill="#b03a3a">3</text>
+    <g filter="url(#sk)"><rect x="230" y="198" width="410" height="26" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="435" y="216" text-anchor="middle" fill="#b03a3a">d=3 > dist=2，过期状态跳过</text>
+  </g>
+
+  <!-- k=1 comparison -->
+  <line x1="30" y1="235" x2="650" y2="235" stroke="#e0e0e0" stroke-width="1" filter="url(#sk)"/>
+  <text x="340" y="258" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">对比：k=1 时 0→1 被禁止</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="275" width="600" height="60" rx="8" fill="#f5e0e0" stroke="#b85450" stroke-width="1.2" opacity="0.5"/>
+  </g>
+  <text x="60" y="298" font-size="12" font-weight="bold" fill="#b03a3a">k=1 时：</text>
+  <text x="60" y="316" font-size="11" fill="#444">0→1: labels[1]='a' == labels[0]='a', c'=1+1=2 > k=1 → 跳过。只能走 0→2 (w=3)。答案=3。</text>
+
+  <!-- Algorithm summary -->
+  <g filter="url(#sk)">
+    <rect x="40" y="350" width="600" height="80" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="372" font-size="12" font-weight="bold" fill="#2b2b2b">算法要点：</text>
+  <text x="60" y="390" font-size="11" fill="#444">① 状态 (u, c)，c = 末尾连续相同标签数。初始 (0,1) d=0。</text>
+  <text x="60" y="406" font-size="11" fill="#444">② 转移：labels[v]==labels[u] → c'=c+1；否则 c'=1。c'&gt;k 跳过。</text>
+  <text x="60" y="422" font-size="11" fill="#444">③ Dijkstra 保证首次取出 (n-1, *) 即为最短。复杂度 O(nk·log(nk))。</text>
+</svg>

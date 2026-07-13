@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="460" viewBox="0 0 680 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="89" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="680" height="460" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">区间减法的四种情况</text>
+  <path d="M 200 42 Q 340 50 480 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="340" y="62" text-anchor="middle" font-size="12" fill="#444">忙碌区间 [l, r]（蓝）减去 空闲区间 [fs, fe]（红）</text>
+
+  <!-- Case A: free entirely left -->
+  <g filter="url(#sk)">
+    <rect x="40" y="80" width="600" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2" opacity="0.3"/>
+  </g>
+  <text x="60" y="100" font-size="12" font-weight="bold" fill="#2b6e9e">A: 空闲完全在左侧（fe &lt; l）→ 不变</text>
+  <g filter="url(#sk)"><rect x="100" y="115" width="60" height="20" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="3"/></g>
+  <text x="130" y="129" text-anchor="middle" font-size="9" fill="#b03a3a">[fs,fe]</text>
+  <g filter="url(#sk)"><rect x="250" y="115" width="120" height="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" rx="3"/></g>
+  <text x="310" y="129" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">[l, r]</text>
+  <text x="450" y="129" font-size="11" fill="#2e6e2e" font-weight="bold">→ 保留 [l, r]</text>
+
+  <!-- Case B: free entirely right -->
+  <g filter="url(#sk)">
+    <rect x="40" y="170" width="600" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2" opacity="0.3"/>
+  </g>
+  <text x="60" y="190" font-size="12" font-weight="bold" fill="#2b6e9e">B: 空闲完全在右侧（fs &gt; r）→ 不变</text>
+  <g filter="url(#sk)"><rect x="100" y="205" width="120" height="20" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" rx="3"/></g>
+  <text x="160" y="219" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">[l, r]</text>
+  <g filter="url(#sk)"><rect x="310" y="205" width="60" height="20" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="3"/></g>
+  <text x="340" y="219" text-anchor="middle" font-size="9" fill="#b03a3a">[fs,fe]</text>
+  <text x="450" y="219" font-size="11" fill="#2e6e2e" font-weight="bold">→ 保留 [l, r]</text>
+
+  <!-- Case C: free covers interval -->
+  <g filter="url(#sk)">
+    <rect x="40" y="260" width="600" height="80" rx="8" fill="#f5e0e0" stroke="#b85450" stroke-width="1.2" opacity="0.3"/>
+  </g>
+  <text x="60" y="280" font-size="12" font-weight="bold" fill="#b03a3a">C: 空闲完全覆盖（fs ≤ l, fe ≥ r）→ 消失</text>
+  <g filter="url(#sk)"><rect x="100" y="295" width="200" height="20" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="3"/></g>
+  <text x="200" y="309" text-anchor="middle" font-size="9" fill="#b03a3a">[fs--------fe]</text>
+  <g filter="url(#sk)"><rect x="140" y="300" width="80" height="14" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="2" opacity="0.7"/></g>
+  <text x="180" y="310" text-anchor="middle" font-size="8" fill="#2b6e9e">[l,r]</text>
+  <text x="450" y="309" font-size="11" fill="#b03a3a" font-weight="bold">→ 删除（无剩余）</text>
+
+  <!-- Case D: partial overlap -->
+  <g filter="url(#sk)">
+    <rect x="40" y="350" width="600" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2" opacity="0.3"/>
+  </g>
+  <text x="60" y="370" font-size="12" font-weight="bold" fill="#7a5415">D: 部分重叠 → 截断或分裂</text>
+  <!-- D1: left truncated -->
+  <g filter="url(#sk)"><rect x="100" y="385" width="140" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="2"/></g>
+  <g filter="url(#sk)"><rect x="100" y="385" width="60" height="16" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="2" opacity="0.5"/></g>
+  <text x="130" y="396" text-anchor="middle" font-size="8" fill="#b03a3a">[fs</text>
+  <text x="210" y="396" text-anchor="middle" font-size="8" fill="#2b6e9e">r]</text>
+  <text x="100" y="412" font-size="9" fill="#7a5415">截左: [fe+1, r]</text>
+  <!-- D2: right truncated -->
+  <g filter="url(#sk)"><rect x="280" y="385" width="140" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="2"/></g>
+  <g filter="url(#sk)"><rect x="340" y="385" width="80" height="16" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="2" opacity="0.5"/></g>
+  <text x="300" y="396" text-anchor="middle" font-size="8" fill="#2b6e9e">[l</text>
+  <text x="380" y="396" text-anchor="middle" font-size="8" fill="#b03a3a">fe]</text>
+  <text x="290" y="412" font-size="9" fill="#7a5415">截右: [l, fs-1]</text>
+  <!-- D3: split -->
+  <g filter="url(#sk)"><rect x="460" y="385" width="160" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" rx="2"/></g>
+  <g filter="url(#sk)"><rect x="490" y="385" width="100" height="16" fill="#f5e0e0" stroke="#b85450" stroke-width="1" rx="2" opacity="0.5"/></g>
+  <text x="475" y="396" font-size="8" fill="#2b6e9e">[l</text>
+  <text x="540" y="396" font-size="8" fill="#b03a3a">fs...fe</text>
+  <text x="610" y="396" font-size="8" fill="#2b6e9e">r]</text>
+  <text x="470" y="412" font-size="9" fill="#7a5415">分裂: [l,fs-1]+[fe+1,r]</text>
+  <!-- Summary for D -->
+  <text x="60" y="438" font-size="10" fill="#444">通用公式：保留 [l, fs−1]（若 l ≤ fs−1）和 [fe+1, r]（若 fe+1 ≤ r）</text>
+</svg>

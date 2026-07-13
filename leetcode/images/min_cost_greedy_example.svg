@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="420" viewBox="0 0 680 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="131" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="680" height="420" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">示例演算：nums=[1,1,7,14], k=4</text>
+  <path d="M 180 42 Q 340 50 500 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Step table -->
+  <g font-size="11">
+    <!-- Header -->
+    <g filter="url(#sk)"><rect x="40" y="65" width="30" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="55" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">i</text>
+    <g filter="url(#sk)"><rect x="70" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="95" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">nums[i]</text>
+    <g filter="url(#sk)"><rect x="120" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="145" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">cur前</text>
+    <g filter="url(#sk)"><rect x="170" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="195" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">足够?</text>
+    <g filter="url(#sk)"><rect x="220" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="245" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">x(次)</text>
+    <g filter="url(#sk)"><rect x="270" y="65" width="120" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="330" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">成本明细</text>
+    <g filter="url(#sk)"><rect x="390" y="65" width="50" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="415" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">cur后</text>
+    <g filter="url(#sk)"><rect x="440" y="65" width="40" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="460" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">cnt</text>
+    <g filter="url(#sk)"><rect x="480" y="65" width="60" height="26" fill="#fffdf3" stroke="#c98a2b" stroke-width="1"/></g>
+    <text x="510" y="83" text-anchor="middle" fill="#2b2b2b" font-weight="bold">total</text>
+
+    <!-- i=0: nums=1, cur=4, ok, cur=3 -->
+    <g filter="url(#sk)"><rect x="40" y="91" width="30" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="55" y="108" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="70" y="91" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="95" y="108" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="120" y="91" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="145" y="108" text-anchor="middle" fill="#2e6e2e">4</text>
+    <g filter="url(#sk)"><rect x="170" y="91" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="195" y="108" text-anchor="middle" fill="#2e6e2e">✓</text>
+    <g filter="url(#sk)"><rect x="220" y="91" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="245" y="108" text-anchor="middle" fill="#888">0</text>
+    <g filter="url(#sk)"><rect x="270" y="91" width="120" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="330" y="108" text-anchor="middle" fill="#888">—</text>
+    <g filter="url(#sk)"><rect x="390" y="91" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="415" y="108" text-anchor="middle" fill="#2e6e2e">3</text>
+    <g filter="url(#sk)"><rect x="440" y="91" width="40" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="460" y="108" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="480" y="91" width="60" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="510" y="108" text-anchor="middle" fill="#2e6e2e">0</text>
+
+    <!-- i=1: nums=1, cur=3, ok, cur=2 -->
+    <g filter="url(#sk)"><rect x="40" y="115" width="30" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="55" y="132" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="70" y="115" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="95" y="132" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="120" y="115" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="145" y="132" text-anchor="middle" fill="#2e6e2e">3</text>
+    <g filter="url(#sk)"><rect x="170" y="115" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="195" y="132" text-anchor="middle" fill="#2e6e2e">✓</text>
+    <g filter="url(#sk)"><rect x="220" y="115" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="245" y="132" text-anchor="middle" fill="#888">0</text>
+    <g filter="url(#sk)"><rect x="270" y="115" width="120" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="330" y="132" text-anchor="middle" fill="#888">—</text>
+    <g filter="url(#sk)"><rect x="390" y="115" width="50" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="415" y="132" text-anchor="middle" fill="#2e6e2e">2</text>
+    <g filter="url(#sk)"><rect x="440" y="115" width="40" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="460" y="132" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="480" y="115" width="60" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+    <text x="510" y="132" text-anchor="middle" fill="#2e6e2e">0</text>
+
+    <!-- i=2: nums=7, cur=2, need, x=2, cost=1+2=3, cur=3 -->
+    <g filter="url(#sk)"><rect x="40" y="139" width="30" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="55" y="156" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="70" y="139" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="95" y="156" text-anchor="middle" fill="#7a5415">7</text>
+    <g filter="url(#sk)"><rect x="120" y="139" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="145" y="156" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="170" y="139" width="50" height="24" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="195" y="156" text-anchor="middle" fill="#b03a3a">✗</text>
+    <g filter="url(#sk)"><rect x="220" y="139" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="245" y="156" text-anchor="middle" fill="#7a5415" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="270" y="139" width="120" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="330" y="156" text-anchor="middle" fill="#7a5415" font-weight="bold">1+2=3</text>
+    <g filter="url(#sk)"><rect x="390" y="139" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="415" y="156" text-anchor="middle" fill="#7a5415">3</text>
+    <g filter="url(#sk)"><rect x="440" y="139" width="40" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="460" y="156" text-anchor="middle" fill="#7a5415">2</text>
+    <g filter="url(#sk)"><rect x="480" y="139" width="60" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="510" y="156" text-anchor="middle" fill="#7a5415">3</text>
+
+    <!-- i=3: nums=14, cur=3, need, x=3, cost=3+4+5=12, cur=1 -->
+    <g filter="url(#sk)"><rect x="40" y="163" width="30" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="55" y="180" text-anchor="middle" fill="#7a5415">3</text>
+    <g filter="url(#sk)"><rect x="70" y="163" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="95" y="180" text-anchor="middle" fill="#7a5415">14</text>
+    <g filter="url(#sk)"><rect x="120" y="163" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="145" y="180" text-anchor="middle" fill="#7a5415">3</text>
+    <g filter="url(#sk)"><rect x="170" y="163" width="50" height="24" fill="#f5e0e0" stroke="#b85450" stroke-width="0.8" opacity="0.6"/></g>
+    <text x="195" y="180" text-anchor="middle" fill="#b03a3a">✗</text>
+    <g filter="url(#sk)"><rect x="220" y="163" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="245" y="180" text-anchor="middle" fill="#7a5415" font-weight="bold">3</text>
+    <g filter="url(#sk)"><rect x="270" y="163" width="120" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="330" y="180" text-anchor="middle" fill="#7a5415" font-weight="bold">3+4+5=12</text>
+    <g filter="url(#sk)"><rect x="390" y="163" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="415" y="180" text-anchor="middle" fill="#7a5415">1</text>
+    <g filter="url(#sk)"><rect x="440" y="163" width="40" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="460" y="180" text-anchor="middle" fill="#7a5415">5</text>
+    <g filter="url(#sk)"><rect x="480" y="163" width="60" height="24" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="510" y="180" text-anchor="middle" fill="#2e6e2e" font-weight="bold">15</text>
+  </g>
+
+  <!-- Calculation detail for i=2 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="205" width="600" height="80" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="228" font-size="12" font-weight="bold" fill="#2b2b2b">i=2 详细计算：</text>
+  <text x="60" y="246" font-size="11" fill="#444" font-family="monospace">need = 7 - 2 = 5,  x = ceil(5/4) = 2,  cur += 2×4 = 10,  cur - 7 = 3</text>
+  <text x="60" y="264" font-size="11" fill="#444" font-family="monospace">cost = 2 × (2×0 + 2 + 1) / 2 = 2 × 3 / 2 = 3  (即 1+2)</text>
+  <text x="60" y="280" font-size="11" fill="#888">cnt: 0 → 2,  ans: 0 → 3</text>
+
+  <!-- Calculation detail for i=3 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="295" width="600" height="80" rx="8" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="60" y="318" font-size="12" font-weight="bold" fill="#2b2b2b">i=3 详细计算：</text>
+  <text x="60" y="336" font-size="11" fill="#444" font-family="monospace">need = 14 - 3 = 11,  x = ceil(11/4) = 3,  cur += 3×4 = 12,  cur - 14 = 1</text>
+  <text x="60" y="354" font-size="11" fill="#444" font-family="monospace">cost = 3 × (2×2 + 3 + 1) / 2 = 3 × 8 / 2 = 12  (即 3+4+5)</text>
+  <text x="60" y="370" font-size="11" fill="#888">cnt: 2 → 5,  ans: 3 → 15</text>
+
+  <!-- Result -->
+  <g filter="url(#sk)">
+    <rect x="200" y="385" width="280" height="30" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="340" y="405" text-anchor="middle" font-size="15" fill="#2e6e2e" font-weight="bold">总成本 = 3 + 12 = 15 ✓</text>
+</svg>
