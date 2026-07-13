@@ -465,38 +465,37 @@ FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 
 
 > 💡 提交后在 [LeetGPU Sliding Window Self-Attention](https://leetgpu.com/challenges/sliding-window-self-attention) 上记录通过耗时。完整题解见 [Sliding Window Self-Attention 题解](../leetgpu/leetgpu-sliding-window-self-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 课程表
+#### 任务 5：LeetCode 面试题 —— 编辑距离
 
-**题目链接**：[207. 课程表](https://leetcode.cn/problems/course-schedule/)
+**题目链接**：[72. 编辑距离](https://leetcode.cn/problems/edit-distance/)
 
-**题目概述**：给定课程总数 \`numCourses\` 和先修关系 \`prerequisites\`，判断能否完成所有课程（即图中是否有环）。
+**题目概述**：给定两个字符串 \`word1\` 和 \`word2\`，返回把 \`word1\` 转换成 \`word2\` 所使用的最少操作数（插入/删除/替换）。
 
-**与今日知识的关联**：课程表的 **拓扑排序** 与 vLLM Scheduler 的 **请求依赖调度** 同构——Scheduler 需要保证请求状态按正确顺序推进（WAITING → RUNNING → FINISHED），并处理抢占/恢复时的依赖一致性。两者都需要在 DAG 上维护合法执行顺序。面试中“如何检测循环依赖”和“如何调度有依赖关系的任务”是同一类问题。
+**与今日知识的关联**：编辑距离在 LLM 推理系统中有直接应用——**Speculative Decoding Verification** 中 draft token 与 target token 的对齐、**Beam Search** 中候选序列的去重比较，本质上都是序列间的编辑距离问题。此外，编辑距离的 \`O(m×n)\` 二维 DP 与 Attention Score 矩阵计算同构（两序列逐位置交互），GPU 分块并行化思路相同。面试中"二维 DP 状态转移"和"空间优化"是高频考点。
 
 **核心套路**：
 
 \`\`\`python
-# Kahn 算法：入度表 + BFS
-indeg = [0] * numCourses
-graph = defaultdict(list)
-for a, b in prerequisites:
-    graph[b].append(a)
-    indeg[a] += 1
+# 二维 DP：dp[i][j] = word1[0..i-1] → word2[0..j-1] 的最少操作数
+m, n = len(word1), len(word2)
+dp = [[0] * (n + 1) for _ in range(m + 1)]
+for i in range(m + 1): dp[i][0] = i
+for j in range(n + 1): dp[0][j] = j
 
-queue = [i for i in range(numCourses) if indeg[i] == 0]
-visited = 0
-while queue:
-    u = queue.pop(0)
-    visited += 1
-    for v in graph[u]:
-        indeg[v] -= 1
-        if indeg[v] == 0:
-            queue.append(v)
-
-return visited == numCourses
+for i in range(1, m + 1):
+    for j in range(1, n + 1):
+        if word1[i-1] == word2[j-1]:
+            dp[i][j] = dp[i-1][j-1]          # 字符相同，无操作
+        else:
+            dp[i][j] = 1 + min(
+                dp[i-1][j-1],   # 替换
+                dp[i-1][j],     # 删除
+                dp[i][j-1]      # 插入
+            )
+return dp[m][n]
 \`\`\`
 
-> 💡 完整题解（含 Kahn 算法与 DFS 三色标记法对比、复杂度分析、与调度依赖的类比）见 [课程表题解](../leetcode/problems/课程表.html)。
+> 💡 完整题解（含二维 DP 与滚动数组 O(n) 空间优化、最优路径回溯、与 speculative decoding 的关联）见 [编辑距离题解](../leetcode/problems/编辑距离.html)。
 
 ---
 

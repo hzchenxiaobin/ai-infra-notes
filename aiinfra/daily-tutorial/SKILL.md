@@ -228,7 +228,8 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](../../leetcode/daily/week8/day2/腐烂的橘子.md) |
 | Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](../../leetcode/daily/week8/day3/零钱兑换.md) |
 | Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
-| Week8 Day5 | 贪心 / 数组 | 45. 跳跃游戏 II | [跳跃游戏 II.md](../../leetcode/daily/week2/day7/跳跃游戏 II.md) |
+| Week8 Day4 | 动态规划 / 二维 DP | 72. 编辑距离 | [编辑距离.md](../../leetcode/daily/week8/day4/编辑距离.md) |
+| Week8 Day5 | 困难 / 栈 + DP | 32. 最长有效括号 | [最长有效括号.md](../../leetcode/daily/week8/day5/最长有效括号.md) |
 | Week8 Day6 | 动态规划 / 二分 | 300. 最长递增子序列 | [最长递增子序列.md](../../leetcode/daily/week8/day6/最长递增子序列.md) |
 | Week8 Day7 | 链表 / 归并排序 | 148. 排序链表 | [排序链表.md](../../leetcode/daily/week8/day7/排序链表.md) |
 

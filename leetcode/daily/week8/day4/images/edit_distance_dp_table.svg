@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 460" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="460" fill="#fdfcf7"/>
+
+  <text x="390" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">编辑距离 DP 状态转移</text>
+  <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="58" text-anchor="middle" font-size="11" fill="#888">dp[i][j] = word1[0..i-1] → word2[0..j-1] 的最少操作数</text>
+
+  <!-- 3×3 示意 dp 表 -->
+  <!-- 行/列标签 -->
+  <text x="80" y="104" font-size="11" fill="#888" font-weight="bold" text-anchor="end">word2→</text>
+  <text x="80" y="124" font-size="11" fill="#888" font-weight="bold" text-anchor="end">word1↓</text>
+
+  <!-- 列标题 -->
+  <text x="160" y="96" text-anchor="middle" font-size="11" fill="#666">""</text>
+  <text x="240" y="96" text-anchor="middle" font-size="11" fill="#666">r</text>
+  <text x="320" y="96" text-anchor="middle" font-size="11" fill="#666">o</text>
+  <text x="400" y="96" text-anchor="middle" font-size="11" fill="#666">s</text>
+
+  <!-- 行标题 -->
+  <text x="120" y="130" text-anchor="middle" font-size="11" fill="#666">""</text>
+  <text x="120" y="190" text-anchor="middle" font-size="11" fill="#666">h</text>
+  <text x="120" y="250" text-anchor="middle" font-size="11" fill="#666">o</text>
+
+  <!-- dp 单元格 -->
+  <!-- 第一行：边界 dp[0][j] = j -->
+  <g filter="url(#sk)"><rect x="130" y="106" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="160" y="136" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">0</text>
+  <g filter="url(#sk)"><rect x="210" y="106" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="240" y="136" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="290" y="106" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="320" y="136" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="370" y="106" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="400" y="136" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">3</text>
+
+  <!-- 第二行 dp[1][j] (h vs ros) -->
+  <g filter="url(#sk)"><rect x="130" y="166" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="160" y="196" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="210" y="166" width="60" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="240" y="196" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="290" y="166" width="60" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="320" y="196" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="370" y="166" width="60" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="400" y="196" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">3</text>
+
+  <!-- 第三行 dp[2][j] (ho vs ros) -->
+  <g filter="url(#sk)"><rect x="130" y="226" width="60" height="48" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="160" y="256" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="210" y="226" width="60" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="240" y="256" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">2</text>
+  <!-- 高亮当前计算格 dp[2][2] (o==o, 字符相同) -->
+  <g filter="url(#sk)"><rect x="290" y="226" width="60" height="48" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="320" y="256" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="370" y="226" width="60" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="400" y="256" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">2</text>
+
+  <!-- 转移箭头：三个来源 → dp[2][3] (o vs s, 字符不同) -->
+  <!-- 替换：左上 dp[1][2] -->
+  <path d="M 250 214 Q 280 220 370 226" stroke="#b03a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="4,2"/>
+  <text x="290" y="222" font-size="10" fill="#b03a3a">替换</text>
+  <!-- 删除：上 dp[1][3] -->
+  <path d="M 400 214 L 400 226" stroke="#c98a2b" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="4,2"/>
+  <text x="416" y="222" font-size="10" fill="#c98a2b">删除</text>
+  <!-- 插入：左 dp[2][2] -->
+  <path d="M 350 250 L 370 250" stroke="#8e5db8" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)" stroke-dasharray="4,2"/>
+  <text x="358" y="244" font-size="10" fill="#8e5db8">插入</text>
+
+  <!-- 右侧：转移公式 -->
+  <g filter="url(#sk)">
+    <rect x="470" y="106" width="280" height="168" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3"/>
+  </g>
+  <text x="610" y="130" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">状态转移方程</text>
+  <text x="490" y="156" font-size="11" fill="#4a8e4a" font-weight="bold">字符相同：</text>
+  <text x="490" y="174" font-family="monospace" font-size="11" fill="#2b2b2b">dp[i][j] = dp[i-1][j-1]</text>
+  <text x="490" y="202" font-size="11" fill="#b03a3a" font-weight="bold">字符不同：</text>
+  <text x="490" y="220" font-family="monospace" font-size="11" fill="#2b2b2b">dp[i][j] = 1 + min(</text>
+  <text x="510" y="236" font-size="10" fill="#b03a3a">替换 dp[i-1][j-1]</text>
+  <text x="510" y="250" font-size="10" fill="#c98a2b">删除 dp[i-1][j]</text>
+  <text x="510" y="264" font-size="10" fill="#8e5db8">插入 dp[i][j-1]</text>
+  <text x="590" y="264" font-size="11" fill="#2b2b2b">)</text>
+
+  <!-- 底部说明 -->
+  <g filter="url(#sk)">
+    <rect x="80" y="300" width="670" height="140" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="100" y="324" font-size="12" fill="#2b2b2b" font-weight="bold">三种操作对应的 DP 方向：</text>
+  <text x="100" y="348" font-size="11" fill="#b03a3a" font-weight="bold">替换 (↖)</text>
+  <text x="180" y="348" font-size="11" fill="#444">dp[i-1][j-1]+1 — 两字符对齐，各前进一步</text>
+  <text x="100" y="372" font-size="11" fill="#c98a2b" font-weight="bold">删除 (↑)</text>
+  <text x="180" y="372" font-size="11" fill="#444">dp[i-1][j]+1 — 删掉 word1[i-1]，word2 不动</text>
+  <text x="100" y="396" font-size="11" fill="#8e5db8" font-weight="bold">插入 (←)</text>
+  <text x="180" y="396" font-size="11" fill="#444">dp[i][j-1]+1 — 插入 word2[j-1]，word1 不动</text>
+  <text x="100" y="424" font-size="11" fill="#888">边界：dp[0][j]=j（全插入），dp[i][0]=i（全删除）　答案：dp[m][n]</text>
+</svg>

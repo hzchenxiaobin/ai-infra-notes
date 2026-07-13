@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="440" fill="#fdfcf7"/>
+
+  <text x="390" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">最长有效括号：DP 解法</text>
+  <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="58" text-anchor="middle" font-size="11" fill="#888">dp[i] = 以 s[i] 结尾的最长有效括号长度　两种转移："...()" 和 "...))"</text>
+
+  <!-- 情况 1: ...() -->
+  <text x="60" y="88" font-size="13" fill="#4a8edb" font-weight="bold">情况 1：s[i]=')' 且 s[i-1]='('　→ "...()"</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="100" width="660" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <!-- 示意：... [有效段 dp[i-2]] ( ) -->
+  <text x="80" y="124" font-size="11" fill="#888">...</text>
+  <g filter="url(#sk)">
+    <rect x="120" y="110" width="100" height="28" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="170" y="129" text-anchor="middle" font-size="10" fill="#666">dp[i-2]</text>
+  <text x="240" y="129" font-size="14" fill="#2b2b2b" font-weight="bold">(</text>
+  <text x="258" y="129" font-size="14" fill="#b03a3a" font-weight="bold">)</text>
+  <text x="288" y="129" font-size="10" fill="#888">← s[i-1], s[i]</text>
+
+  <path d="M 170 140 L 170 152" stroke="#4a8edb" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="290" y="166" font-family="monospace" font-size="11" fill="#4a8edb" font-weight="bold">dp[i] = dp[i-2] + 2</text>
+
+  <!-- 情况 2: ...)) -->
+  <text x="60" y="208" font-size="13" fill="#b03a3a" font-weight="bold">情况 2：s[i]=')' 且 s[i-1]=')'　→ "...))"</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="220" width="660" height="110" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <!-- 示意：... ( [内部有效段 dp[i-1]] ) -->
+  <text x="80" y="248" font-size="11" fill="#888">...</text>
+  <g filter="url(#sk)">
+    <rect x="120" y="238" width="60" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="150" y="257" text-anchor="middle" font-size="10" fill="#c98a2b">dp[j-1]</text>
+  <text x="195" y="257" font-size="14" fill="#2b2b2b" font-weight="bold">(</text>
+  <text x="206" y="257" font-size="9" fill="#888">j</text>
+  <g filter="url(#sk)">
+    <rect x="215" y="238" width="130" height="28" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="280" y="257" text-anchor="middle" font-size="10" fill="#666">dp[i-1]（内部有效段）</text>
+  <text x="360" y="257" font-size="14" fill="#b03a3a" font-weight="bold">)</text>
+  <text x="372" y="257" font-size="9" fill="#888">i-1</text>
+  <text x="395" y="257" font-size="14" fill="#b03a3a" font-weight="bold">)</text>
+  <text x="407" y="257" font-size="9" fill="#888">i</text>
+
+  <!-- 公式 -->
+  <text x="80" y="296" font-family="monospace" font-size="10" fill="#444">j = i - dp[i-1] - 1</text>
+  <text x="260" y="296" font-size="10" fill="#888">（跳过内部有效段，找外层 '('）</text>
+  <text x="80" y="316" font-family="monospace" font-size="11" fill="#b03a3a" font-weight="bold">if s[j]=='(': dp[i] = dp[i-1] + 2 + dp[j-1]</text>
+  <text x="430" y="316" font-size="10" fill="#888">（内部 + 外层对 + 外层之前）</text>
+
+  <!-- 底部对比 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="348" width="660" height="76" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="80" y="372" font-size="12" fill="#2b2b2b" font-weight="bold">三种解法对比：</text>
+  <text x="80" y="392" font-size="11" fill="#4a8edb" font-weight="bold">栈</text>
+  <text x="120" y="392" font-size="10" fill="#444">O(n) 时间 / O(n) 空间　存下标，栈底留基准</text>
+  <text x="80" y="410" font-size="11" fill="#b03a3a" font-weight="bold">DP</text>
+  <text x="120" y="410" font-size="10" fill="#444">O(n) 时间 / O(n) 空间　两种转移，...)) 推导复杂</text>
+  <text x="380" y="410" font-size="11" fill="#4a8e4a" font-weight="bold">双向扫描</text>
+  <text x="450" y="410" font-size="10" fill="#444">O(n) 时间 / O(1) 空间　需双向处理边界</text>
+</svg>

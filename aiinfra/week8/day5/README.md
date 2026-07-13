@@ -211,33 +211,34 @@ python kernels/mock_interview.py
 
 > 💡 提交后在 [LeetGPU LoRA Linear](https://leetgpu.com/challenges/lora-linear) 上记录通过耗时。完整题解见 [LoRA Linear 题解](../../leetgpu/week8/day5/leetgpu-lora-linear-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 跳跃游戏 II
+#### 任务 5：LeetCode 面试题 —— 最长有效括号
 
-**题目链接**：[45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)
+**题目链接**：[32. 最长有效括号](https://leetcode.cn/problems/longest-valid-parentheses/)
 
-**题目概述**：给定非负整数数组 `nums`，你最初位于数组第一个位置，每个元素代表你在该位置可以跳跃的最大长度，求到达最后一个位置的最少跳跃次数。
+**题目概述**：给定只包含 `(` 和 `)` 的字符串，找出最长的有效（正确闭合）括号子串的长度。
 
-**与今日知识的关联**：跳跃游戏 II 的 **贪心/DP 思想** 与推理系统中的 **调度决策** 同构——Scheduler 每轮需要决定“从当前状态出发，下一步选择哪个请求/哪个 batch 能最快推进系统目标（最小化 TBT、最大化吞吐）”。两者都是在约束条件下做局部最优选择。面试中“如何做决策”是高频问题，这道题训练的是“在 O(N) 内做出最优跳跃”的直觉。
+**与今日知识的关联**：括号匹配的本质是**状态追踪**——用栈维护"未闭合的状态"，遇到匹配时消解。这与推理系统中的状态管理同构：vLLM 的 `WAITING → RUNNING → FINISHED` 状态流转就像括号的 `(` 压栈 → `)` 弹栈；PagedAttention 的 block table 维护"哪些 block 还在使用"，本质是括号匹配的变体。面试中"栈 + DP 双解"是高频困难题，训练的是在 Mock 面试高压下快速给出多种解法的能力。
 
 **核心套路**：
 
 ```python
-def jump(nums):
-    n = len(nums)
-    if n <= 1:
-        return 0
-    jumps = 0
-    cur_end = 0      # 当前这一轮能跳到的最远距离
-    farthest = 0     # 下一轮能跳到的最远距离
-    for i in range(n - 1):
-        farthest = max(farthest, i + nums[i])
-        if i == cur_end:
-            jumps += 1
-            cur_end = farthest
-    return jumps
+# 栈解法：存下标，栈底保留基准
+def longestValidParentheses(s):
+    stack = [-1]
+    max_len = 0
+    for i, c in enumerate(s):
+        if c == '(':
+            stack.append(i)
+        else:
+            stack.pop()
+            if not stack:
+                stack.append(i)  # 未匹配的 ) 作新基准
+            else:
+                max_len = max(max_len, i - stack[-1])
+    return max_len
 ```
 
-> 💡 完整题解（含贪心法与 DP 法对比、复杂度分析、与调度决策的类比）见 [跳跃游戏 II 题解](../../../leetcode/daily/week2/day7/跳跃游戏 II.md)。
+> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](../../../leetcode/daily/week8/day5/最长有效括号.md)。
 
 ---
 
@@ -285,7 +286,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 5. **计时系统**：`mock_interview.py` 提供倒计时和复盘清单，把练习标准化
 6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
 7. **LoRA Linear**：参数高效微调的核心算子，Mock 面试中“项目深度拷问”的常见考点
-8. **跳跃游戏 II**：贪心决策训练，与 Scheduler 做局部最优选择同构
+8. **最长有效括号**：栈 + DP 双解困难题，与推理系统状态追踪（请求状态机/KV Cache 生命周期）同构
 
 完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。
 

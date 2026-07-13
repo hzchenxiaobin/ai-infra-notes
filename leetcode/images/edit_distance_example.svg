@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <rect width="780" height="420" fill="#fdfcf7"/>
+
+  <text x="390" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">编辑距离填表示例：horse → ros</text>
+  <path d="M 240 44 Q 390 52 540 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="58" text-anchor="middle" font-size="11" fill="#888">完整 DP 表，高亮路径为最优操作序列</text>
+
+  <!-- 列标题 word2: "", r, o, s -->
+  <text x="130" y="84" text-anchor="middle" font-size="10" fill="#888"></text>
+  <text x="190" y="84" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">""</text>
+  <text x="250" y="84" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">r</text>
+  <text x="310" y="84" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">o</text>
+  <text x="370" y="84" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">s</text>
+
+  <!-- 行标题 word1: "", h, o, r, s, e -->
+  <text x="130" y="108" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">""</text>
+  <text x="130" y="144" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">h</text>
+  <text x="130" y="180" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">o</text>
+  <text x="130" y="216" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">r</text>
+  <text x="130" y="252" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">s</text>
+  <text x="130" y="288" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">e</text>
+
+  <!-- 行 0: 0 1 2 3 (边界, 橙) -->
+  <g filter="url(#sk)"><rect x="160" y="92" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="113" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">0</text>
+  <g filter="url(#sk)"><rect x="220" y="92" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="250" y="113" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="280" y="92" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="310" y="113" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="340" y="92" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="370" y="113" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">3</text>
+
+  <!-- 行 1 (h): 1 1 2 3 -->
+  <g filter="url(#sk)"><rect x="160" y="128" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="149" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="220" y="128" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="250" y="149" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="280" y="128" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="310" y="149" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="340" y="128" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="370" y="149" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">3</text>
+
+  <!-- 行 2 (o): 2 2 1 2 -->
+  <g filter="url(#sk)"><rect x="160" y="164" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="185" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="220" y="164" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="250" y="185" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">2</text>
+  <!-- o==o 字符相同，高亮绿 -->
+  <g filter="url(#sk)"><rect x="280" y="164" width="60" height="32" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+  <text x="310" y="185" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">1</text>
+  <g filter="url(#sk)"><rect x="340" y="164" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="370" y="185" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">2</text>
+
+  <!-- 行 3 (r): 3 2 2 2 -->
+  <g filter="url(#sk)"><rect x="160" y="200" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="221" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">3</text>
+  <!-- r==r 字符相同，高亮绿（最优路径） -->
+  <g filter="url(#sk)"><rect x="220" y="200" width="60" height="32" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+  <text x="250" y="221" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="280" y="200" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="310" y="221" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">2</text>
+  <g filter="url(#sk)"><rect x="340" y="200" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="370" y="221" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">2</text>
+
+  <!-- 行 4 (s): 4 3 3 2 -->
+  <g filter="url(#sk)"><rect x="160" y="236" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="257" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">4</text>
+  <g filter="url(#sk)"><rect x="220" y="236" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="250" y="257" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">3</text>
+  <g filter="url(#sk)"><rect x="280" y="236" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="310" y="257" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">3</text>
+  <!-- s==s 字符相同，高亮绿（最优路径） -->
+  <g filter="url(#sk)"><rect x="340" y="236" width="60" height="32" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+  <text x="370" y="257" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">2</text>
+
+  <!-- 行 5 (e): 5 4 4 3 (答案格高亮红) -->
+  <g filter="url(#sk)"><rect x="160" y="272" width="60" height="32" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.1"/></g>
+  <text x="190" y="293" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">5</text>
+  <g filter="url(#sk)"><rect x="220" y="272" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="250" y="293" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">4</text>
+  <g filter="url(#sk)"><rect x="280" y="272" width="60" height="32" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.1"/></g>
+  <text x="310" y="293" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">4</text>
+  <!-- 答案格 -->
+  <g filter="url(#sk)"><rect x="340" y="272" width="60" height="32" rx="3" fill="#fdecec" stroke="#b03a3a" stroke-width="2"/></g>
+  <text x="370" y="293" text-anchor="middle" font-size="14" fill="#b03a3a" font-weight="bold">3</text>
+
+  <!-- 右侧：最优路径回溯 -->
+  <g filter="url(#sk)">
+    <rect x="470" y="92" width="280" height="212" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="610" y="116" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">最优路径回溯（3 步）</text>
+  <text x="490" y="144" font-size="11" fill="#4a8e4a" font-weight="bold">① e≠s → 删除 e</text>
+  <text x="490" y="160" font-family="monospace" font-size="10" fill="#666">  dp[5][3] ← dp[4][3]+1 = 2+1</text>
+  <text x="490" y="184" font-size="11" fill="#4a8e4a" font-weight="bold">② s==s → 跳过（无操作）</text>
+  <text x="490" y="200" font-family="monospace" font-size="10" fill="#666">  dp[4][3] ← dp[3][3] = 2</text>
+  <text x="490" y="224" font-size="11" fill="#4a8e4a" font-weight="bold">③ r==r → 跳过（无操作）</text>
+  <text x="490" y="240" font-family="monospace" font-size="10" fill="#666">  dp[3][1] ← dp[2][1] = 2</text>
+  <text x="490" y="264" font-size="11" fill="#b03a3a" font-weight="bold">④ h→r → 替换 h 为 r</text>
+  <text x="490" y="280" font-family="monospace" font-size="10" fill="#666">  dp[1][1] ← dp[0][0]+1 = 1</text>
+  <text x="490" y="298" font-size="11" fill="#c98a2b" font-weight="bold">合计：1 替换 + 1 删除 = 3</text>
+
+  <!-- 底部图例 -->
+  <text x="160" y="332" font-size="10" fill="#c98a2b">■ 橙 = 边界</text>
+  <text x="280" y="332" font-size="10" fill="#4a8edb">■ 蓝 = 计算</text>
+  <text x="400" y="332" font-size="10" fill="#4a8e4a">■ 绿 = 字符相同/最优路径</text>
+  <text x="560" y="332" font-size="10" fill="#b03a3a">■ 红 = 答案 dp[m][n]</text>
+
+  <text x="390" y="360" text-anchor="middle" font-size="11" fill="#888">时间 O(m×n)，空间 O(m×n) 或 O(n)（滚动数组）</text>
+  <text x="390" y="380" text-anchor="middle" font-size="10" fill="#888" font-style="italic">关联 AI Infra：speculative decoding verification 的 draft-target token 对齐</text>
+</svg>
