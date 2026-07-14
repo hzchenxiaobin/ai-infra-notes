@@ -847,6 +847,7 @@ def _preempt(self, seq_group, blocks_to_swap_out):
 - Recompute: 丢弃 KV Cache，之后重算
 - Swap: KV Cache 换出到 CPU
 - 默认 Recompute，因为通常更快
+```
 
 ## Day 39（周四）：TensorRT-LLM / LightLLM 调度对比
 
@@ -968,6 +969,7 @@ Chunked Prefill：
 - KV Cache: Token Attention
 - 优点: 高吞吐
 - 缺点: 生态较小
+```
 
 ## Day 40（周五）：项目推进 —— Mini 推理引擎 v1
 

@@ -164,7 +164,7 @@ O_final = o / l （最后做一次归一化）
 
 #### 任务 1：创建 flash_attention.cu
 
-创建文件 [kernels/flash_attention.cu](kernels/flash_attention.cu)：
+创建文件 `kernels/flash_attention.cu`：
 
 ```cuda
 // flash_attention.cu —— FlashAttention 简化版 Forward Kernel

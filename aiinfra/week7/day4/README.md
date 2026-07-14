@@ -459,9 +459,5 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  - 需要 `setup.py` + `__init__.py` 配置
  - **生产推荐**：setup.py（稳定、可分发）；教学推荐：load_inline（快速迭代）
 
- - 编写算子 `.cpp`（定义输入输出和计算逻辑）
- - Python 侧调用注册的算子
- - 差异在底层：
-
 </details>
 

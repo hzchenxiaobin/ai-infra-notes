@@ -113,7 +113,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 > 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 GPU 需要做 12+ 次运算才能不吃亏。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
 
-![Element-wise 操作为什么是纯 Memory-Bound](../website/images/element_wise_memory_bound.svg)"
+![Element-wise 操作为什么是纯 Memory-Bound](../website/images/element_wise_memory_bound.svg)
 
 #### Element-wise 操作的优化策略
 

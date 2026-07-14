@@ -163,7 +163,7 @@ cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100
 4. **针对性优化**：
  - Memory-bound → coalescing、shared memory、减少读写
  - Compute-bound → Tensor Core、指令优化
-1. **再 profiling**：验证优化效果
+5. **再 profiling**：验证优化效果
 
 ---
 
@@ -718,7 +718,7 @@ int main() {
 
 #### 练习提交记录
 
-提交后把通过截图和耗时记录到 [exercise/leetgpu_week1_review.md](exercise/leetgpu_week1_review.md)，按下表格式整理：
+提交后把通过截图和耗时记录到 `exercise/leetgpu_week1_review.md`（自行创建），按下表格式整理：
 
 | 题目 | 耗时 | GFLOPS / 带宽利用率 | 瓶颈类型 | 优化尝试 |
 |------|------|---------------------|---------|---------|
@@ -806,7 +806,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 1. **用一句话概括 GPU 性能优化的核心？**
  > 答案：减少慢速内存访问，提高并行度，让计算单元不空转。
 
-1. **从硬件执行模型到代码，你的优化思路链是什么？**
+2. **从硬件执行模型到代码，你的优化思路链是什么？**
  > 答案：先理解 SM/Warp 执行方式 → 写出避免 divergence 和 coalescing 的代码 → 用 shared memory tiling 减少 global memory 访问 → 避免 bank conflict → 用 ncu/nsys 验证瓶颈 → 针对性优化。
 
 ---

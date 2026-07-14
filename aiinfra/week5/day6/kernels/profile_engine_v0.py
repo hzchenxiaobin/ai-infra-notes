@@ -21,7 +21,7 @@ _HAS_CUDA = torch.cuda.is_available()
 def sync():
     """cuda.synchronize 的 CPU 安全包装"""
     if _HAS_CUDA:
-        sync()
+        torch.cuda.synchronize()
 
 
 def profile_engine(engine, prompt, max_new_tokens=20):

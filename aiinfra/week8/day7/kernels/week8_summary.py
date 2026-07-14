@@ -166,7 +166,6 @@ def section3_interview_quiz():
     if cmd == "q":
         return
     import random
-    q, freq = random.choice(INTERVIEW_QUESTIONS)[1], 0
     pick = random.choice(INTERVIEW_QUESTIONS)
     print(f"\n  抽到：【{pick[0]}】{pick[1]}  {'⭐' * pick[2]}")
     print("  → 限时 3 分钟口述，回车看下一题")

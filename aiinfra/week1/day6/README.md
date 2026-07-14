@@ -28,7 +28,7 @@
 - **发现隐藏问题**：如 bank conflict、low occupancy、launch overhead 等
 - **指导优化方向**：避免在无效方向上浪费时间
 
-** profiling 的黄金法则**：
+**profiling 的黄金法则**：
 > 不要猜测，要测量。
 
 ---

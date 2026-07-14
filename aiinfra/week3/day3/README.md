@@ -310,7 +310,6 @@ local_max = __shfl_sync(0xFFFFFFFF, local_max, 0); // ← 无需 smem，无需 s
 ```bash
 # 编译（带 -lineinfo 供 ncu Source View 使用）
 # Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
 nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
 
 # 运行

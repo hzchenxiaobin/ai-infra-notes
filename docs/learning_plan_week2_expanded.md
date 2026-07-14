@@ -309,8 +309,6 @@ int main() {
 ```bash
 # 编译（根据GPU架构选择arch参数）
 # Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
 nvcc -o warp_reduce warp_reduce.cu -O3 -arch=sm_120
 
 # 运行

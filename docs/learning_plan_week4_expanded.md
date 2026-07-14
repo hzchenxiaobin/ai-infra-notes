@@ -1051,6 +1051,7 @@ __shared__ float sV[Bc][d]; // V tile（通常与 K 复用或分时复用）
 1. 异步拷贝隐藏延迟
 2. 多精度支持
 3. warp group 更细粒度并行
+```
 
 ## Day 25（周四）：FlashAttention-2 论文与源码差异
 

@@ -209,7 +209,7 @@ Block (1024 threads = 32 warps)
 
 #### 任务 1：创建 warp_reduce.cu
 
-创建文件 [kernels/warp_reduce.cu](kernels/warp_reduce.cu)：
+创建文件 `kernels/warp_reduce.cu`：
 
 ```cuda
 // warp_reduce.cu —— Warp 级 + Block 级两级归约完整实现
@@ -367,8 +367,6 @@ int main() {
 
 ```bash
 # 编译（根据 GPU 架构选择 arch 参数）
-# Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
 # Blackwell (RTX 5090): sm_120
 nvcc -o warp_reduce kernels/warp_reduce.cu -O3 -arch=sm_120
 

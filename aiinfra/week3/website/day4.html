@@ -467,7 +467,6 @@ P[qrow * N + j] = p_val; // ← 把 N×N 的 P 写回 HBM
 \`\`\`bash
 # 编译（带 -lineinfo 供 ncu Source View 使用）
 # Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
 nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
 
 # 运行

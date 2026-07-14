@@ -685,9 +685,9 @@ while left<right:
 **思考问题**：
 1. 为什么 block 大小通常取 32 的倍数？
  - 因为 warp 大小是 32，非 32 倍数会造成最后一个 warp 资源浪费。
-1. 为什么 block 最大 thread 数一般为 1024？
+2. 为什么 block 最大 thread 数一般为 1024？
  - 这是 GPU 硬件限制，由 `maxThreadsPerBlock` 决定。
-1. 输出顺序有什么规律？
+3. 输出顺序有什么规律？
  - block 执行顺序不保证，同一个 block 内 thread 执行顺序也不保证。
 
 #### 实验 2：2D 线程 ID 计算

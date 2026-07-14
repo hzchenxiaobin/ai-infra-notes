@@ -1143,6 +1143,7 @@ class BlockAllocator:
 ## Block Allocator
 - 管理物理 block 池
 - allocate / free / fork
+```
 
 ## Day 33（周五）：项目推进 —— Mini 推理引擎 v0
 

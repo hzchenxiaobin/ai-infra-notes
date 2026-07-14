@@ -268,7 +268,8 @@
 
 选一个你真正深入做过的点，按以下结构准备：
 
-\`\`\`textn1. 问题是什么：标准 Attention IO 是 O(N²)，长序列跑不动
+\`\`\`text
+1. 问题是什么：标准 Attention IO 是 O(N²)，长序列跑不动
 2. 现有方案局限：朴素 tiling 需要物化 N×N 矩阵
 3. 你的方案：FlashAttention = tiling + online softmax，IO 降到 O(Nd)
 4. 实现细节：block 切分、shared memory 分配、warp 同步

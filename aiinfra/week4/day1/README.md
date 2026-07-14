@@ -193,7 +193,7 @@ FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少
 
 #### 任务 1：创建 compare_attention_io.py
 
-创建文件 [kernels/compare_attention_io.py](kernels/compare_attention_io.py)：
+创建文件 `kernels/compare_attention_io.py`：
 
 ```python
 # compare_attention_io.py —— 标准 Attention vs FlashAttention IO 与速度对比

@@ -117,13 +117,14 @@ class Scheduler:
             return False
         # LIFO 抢占：弹出最后加入的
         victim = self.running.pop()
+        released_blocks = victim.seq.kv_blocks
         victim.seq.status = SequenceStatus.WAITING
         victim.seq.output_len = 0          # recomputation：丢弃 KV cache
-        self.used_blocks -= self._alloc_blocks(victim.seq)
+        self.used_blocks -= released_blocks
         victim.seq.kv_blocks = 0
         self.waiting.insert(0, victim)     # 放回 waiting 队首，下次重新 prefill
         print(f"    ⚡ PREEMPT request {victim.request_id} "
-              f"(recomputation, 释放 {self._alloc_blocks(victim.seq) if False else '?'} blocks)")
+              f"(recomputation, 释放 {released_blocks} blocks)")
         return True
 
     def schedule(self) -> SchedulerOutputs:

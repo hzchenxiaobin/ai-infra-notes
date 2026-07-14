@@ -126,7 +126,7 @@ max_diff = (out_std - out_fa).abs().max().item()
 
 #### 任务 1：创建 flash_attention_ops.cpp
 
-创建文件 [kernels/flash_attention_ops.cpp](kernels/flash_attention_ops.cpp)：
+创建文件 `kernels/flash_attention_ops.cpp`：
 
 ```cpp
 // flash_attention_ops.cpp —— PyTorch C++ Extension 接口
@@ -157,7 +157,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
 #### 任务 2：创建 mini_engine_fa.py
 
-创建文件 [kernels/mini_engine_fa.py](kernels/mini_engine_fa.py)：
+创建文件 `kernels/mini_engine_fa.py`：
 
 ```python
 # mini_engine_fa.py —— Mini Transformer 引擎（FlashAttention 版）

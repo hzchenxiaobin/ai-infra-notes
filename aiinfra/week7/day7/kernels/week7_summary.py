@@ -238,7 +238,7 @@ def main():
     print("-" * 50)
     passed = 0
     for item in CHECKLIST:
-        print(f"  [{'✓' if True else '✗'}] {item}")
+        print(f"  [✓] {item}")
         passed += 1
     print(f"\n  完成: {passed}/{len(CHECKLIST)}")
 
@@ -251,7 +251,7 @@ def main():
     1. 项目打磨：README 完善、性能优化、边界测试
     2. 面试准备：系统设计题模拟、项目深度问答
     3. 开源贡献：整理代码结构、发布 GitHub
-    5. 持续学习：跟踪 vLLM/SGLang 最新进展
+    4. 持续学习：跟踪 vLLM/SGLang 最新进展
     """)
 
 

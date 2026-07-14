@@ -105,7 +105,7 @@ Register Blocking 中每个线程计算 TM×TN 子块，写回时如果线程分
 
 #### 任务 1：创建 integrated_gemm.cu
 
-创建文件 [kernels/integrated_gemm.cu](kernels/integrated_gemm.cu)：
+创建文件 `kernels/integrated_gemm.cu`：
 
 ```cuda
 // integrated_gemm.cu —— 整合优化 GEMM

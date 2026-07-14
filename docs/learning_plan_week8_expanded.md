@@ -256,7 +256,7 @@ examples/
 
 #### 系统架构图
 
-```markdown
+````markdown
 ```mermaid
 graph TD
  User[User Request] --> Queue[Thread-Safe Request Queue]
@@ -283,11 +283,11 @@ graph TD
  Worker --> SM
  Worker --> LN
 ```
-```
+````
 
 #### 数据流图
 
-```markdown
+````markdown
 ```mermaid
 sequenceDiagram
  participant U as User
@@ -308,7 +308,7 @@ sequenceDiagram
  S->>R: return result
  R->>U: future.result()
 ```
-```
+````
 
 ---
 

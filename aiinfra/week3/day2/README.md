@@ -369,8 +369,6 @@ for (int i = tid; i < D; i += blockDim.x)
 ```bash
 # 编译（根据 GPU 架构选择 arch 参数）
 # Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
-# Blackwell (RTX 5090): sm_120
 nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行

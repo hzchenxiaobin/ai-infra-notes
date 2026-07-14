@@ -345,10 +345,6 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
  - **Week 3**：C++ 重写 Scheduler → 调度时间降低 10x
  - **Week 4**：实现 PagedAttention + Prefix Caching → KV Cache 利用率提升 50%
 
- - 系统联调的方法论（分层验证 + 稳定性测试 + 异常处理）跨平台通用
-
----
-
 </details>
 
 ## 📁 本周目录结构

@@ -121,7 +121,7 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 
 #### 任务 1：创建 register_blocking_gemm.cu
 
-创建文件 [kernels/register_blocking_gemm.cu](kernels/register_blocking_gemm.cu)：
+创建文件 `kernels/register_blocking_gemm.cu`：
 
 ```cuda
 // register_blocking_gemm.cu —— Register Blocking 矩阵乘法完整实现
