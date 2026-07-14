@@ -43,7 +43,7 @@
     <rect x="40" y="275" width="560" height="50" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
   </g>
   <text x="60" y="298" font-size="13" font-weight="bold" fill="#5a3a7a">④ 更新答案</text>
-  <text x="60" y="316" font-size="11" fill="#444">if out_t - in_t <= 0: break（边际递减，停止）  else: gain += out_t - in_t</text>
+  <text x="60" y="316" font-size="11" fill="#444">if out_t - in_t &lt;= 0: break（边际递减，停止）  else: gain += out_t - in_t</text>
 
   <!-- Data structure visualization -->
   <line x1="30" y1="340" x2="610" y2="340" stroke="#e0e0e0" stroke-width="1" filter="url(#sk)"/>

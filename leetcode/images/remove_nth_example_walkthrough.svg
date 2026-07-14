@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="440" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">示例演算：head = [1,2,3,4,5], n = 2</text>
+  <path d="M 300 40 Q 460 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- table header -->
+  <g filter="url(#sk)"><rect x="40" y="62" width="840" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="80" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">阶段</text>
+  <text x="200" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">slow</text>
+  <text x="320" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">fast</text>
+  <text x="560" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">链表状态</text>
+  <text x="820" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">说明</text>
+
+  <!-- helper: draw linked list row -->
+  <!-- Row 1: init -->
+  <g filter="url(#sk)"><rect x="40" y="92" width="840" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="118" text-anchor="middle" font-size="11" fill="#444">初始</text>
+  <text x="200" y="118" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">dummy</text>
+  <text x="320" y="118" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">dummy</text>
+  <g font-size="10" fill="#444">
+    <g filter="url(#sk)"><rect x="430" y="104" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="450" y="120" text-anchor="middle">1</text></g>
+    <g filter="url(#sk)"><rect x="474" y="104" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="494" y="120" text-anchor="middle">2</text></g>
+    <g filter="url(#sk)"><rect x="518" y="104" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="538" y="120" text-anchor="middle">3</text></g>
+    <g filter="url(#sk)"><rect x="562" y="104" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="582" y="120" text-anchor="middle">4</text></g>
+    <g filter="url(#sk)"><rect x="606" y="104" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="626" y="120" text-anchor="middle">5</text></g>
+  </g>
+  <text x="820" y="118" text-anchor="middle" font-size="10" fill="#888">两指针在哑节点</text>
+
+  <!-- Row 2: fast walks 2 -->
+  <g filter="url(#sk)"><rect x="40" y="136" width="840" height="44" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="162" text-anchor="middle" font-size="11" fill="#444">fast 走 2 步</text>
+  <text x="200" y="162" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">dummy</text>
+  <text x="320" y="162" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">2</text>
+  <g font-size="10" fill="#444">
+    <g filter="url(#sk)"><rect x="430" y="148" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="450" y="164" text-anchor="middle">1</text></g>
+    <g filter="url(#sk)"><rect x="474" y="148" width="40" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/><text x="494" y="164" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text></g>
+    <g filter="url(#sk)"><rect x="518" y="148" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="538" y="164" text-anchor="middle">3</text></g>
+    <g filter="url(#sk)"><rect x="562" y="148" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="582" y="164" text-anchor="middle">4</text></g>
+    <g filter="url(#sk)"><rect x="606" y="148" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="626" y="164" text-anchor="middle">5</text></g>
+  </g>
+  <text x="820" y="162" text-anchor="middle" font-size="10" fill="#888">间距 = 2</text>
+
+  <!-- Row 3: advance 1 -->
+  <g filter="url(#sk)"><rect x="40" y="180" width="840" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="206" text-anchor="middle" font-size="11" fill="#444">同速 1</text>
+  <text x="200" y="206" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">1</text>
+  <text x="320" y="206" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">3</text>
+  <text x="820" y="206" text-anchor="middle" font-size="10" fill="#888">各前进 1 步</text>
+
+  <!-- Row 4: advance 2 -->
+  <g filter="url(#sk)"><rect x="40" y="224" width="840" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="250" text-anchor="middle" font-size="11" fill="#444">同速 2</text>
+  <text x="200" y="250" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">2</text>
+  <text x="320" y="250" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">4</text>
+  <text x="820" y="250" text-anchor="middle" font-size="10" fill="#888">各前进 1 步</text>
+
+  <!-- Row 5: advance 3, stop -->
+  <g filter="url(#sk)"><rect x="40" y="268" width="840" height="44" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="80" y="294" text-anchor="middle" font-size="11" fill="#444">同速 3</text>
+  <text x="200" y="294" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">3</text>
+  <text x="320" y="294" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">5</text>
+  <g font-size="10" fill="#444">
+    <g filter="url(#sk)"><rect x="518" y="280" width="40" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/><text x="538" y="296" text-anchor="middle" fill="#2b6e9e" font-weight="bold">3</text></g>
+    <g filter="url(#sk)"><rect x="606" y="280" width="40" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/><text x="626" y="296" text-anchor="middle" fill="#2e6e2e" font-weight="bold">5</text></g>
+  </g>
+  <text x="820" y="294" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">fast.next=null, 停</text>
+
+  <!-- Row 6: delete -->
+  <g filter="url(#sk)"><rect x="40" y="312" width="840" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="80" y="338" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">删除</text>
+  <text x="200" y="338" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">3</text>
+  <text x="320" y="338" text-anchor="middle" font-size="11" fill="#888">—</text>
+  <g font-size="10" fill="#444">
+    <g filter="url(#sk)"><rect x="430" y="324" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="450" y="340" text-anchor="middle">1</text></g>
+    <g filter="url(#sk)"><rect x="474" y="324" width="40" height="24" rx="3" fill="#fff" stroke="#ddd"/><text x="494" y="340" text-anchor="middle">2</text></g>
+    <g filter="url(#sk)"><rect x="518" y="324" width="40" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/><text x="538" y="340" text-anchor="middle" fill="#2b6e9e" font-weight="bold">3</text></g>
+    <g filter="url(#sk)"><rect x="562" y="324" width="40" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/><text x="582" y="340" text-anchor="middle" fill="#b85450" text-decoration="line-through">4</text></g>
+    <g filter="url(#sk)"><rect x="606" y="324" width="40" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/><text x="626" y="340" text-anchor="middle" fill="#2e6e2e" font-weight="bold">5</text></g>
+  </g>
+  <text x="820" y="338" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">slow.next 跳过 4</text>
+
+  <!-- Result -->
+  <g filter="url(#sk)"><rect x="40" y="370" width="840" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="460" y="396" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">结果：dummy.next = 1 → 2 → 3 → 5</text>
+  <text x="460" y="416" text-anchor="middle" font-size="11" fill="#555">一趟扫描 O(n) 时间，O(1) 空间</text>
+</svg>

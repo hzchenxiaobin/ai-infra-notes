@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="460" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">LRU 示例演算（capacity = 2）</text>
+  <path d="M 290 40 Q 440 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- table header -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="800" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="80" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">步骤</text>
+  <text x="220" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">操作</text>
+  <text x="480" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">链表（MRU→LRU）</text>
+  <text x="780" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">说明</text>
+
+  <!-- Step 1: put(1,1) -->
+  <g filter="url(#sk)"><rect x="40" y="92" width="800" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="118" text-anchor="middle" font-size="11" fill="#444">1</text>
+  <text x="220" y="118" text-anchor="middle" font-size="11" fill="#2b6e9e">put(1,1)</text>
+  <g filter="url(#sk)"><rect x="420" y="100" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="445" y="118" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">1</text>
+  <text x="780" y="118" text-anchor="middle" font-size="10" fill="#888">插入表头</text>
+
+  <!-- Step 2: put(2,2) -->
+  <g filter="url(#sk)"><rect x="40" y="136" width="800" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="162" text-anchor="middle" font-size="11" fill="#444">2</text>
+  <text x="220" y="162" text-anchor="middle" font-size="11" fill="#2b6e9e">put(2,2)</text>
+  <g filter="url(#sk)"><rect x="420" y="144" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="445" y="162" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">2</text>
+  <path d="M 470 158 L 490 158" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="490" y="144" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="515" y="162" text-anchor="middle" font-size="11" fill="#2e6e2e">1</text>
+  <text x="780" y="162" text-anchor="middle" font-size="10" fill="#888">容量未满</text>
+
+  <!-- Step 3: get(1) -->
+  <g filter="url(#sk)"><rect x="40" y="180" width="800" height="44" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="206" text-anchor="middle" font-size="11" fill="#444">3</text>
+  <text x="220" y="206" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">get(1)→1</text>
+  <g filter="url(#sk)"><rect x="420" y="188" width="50" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="445" y="206" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">1</text>
+  <path d="M 470 202 L 490 202" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="490" y="188" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="515" y="206" text-anchor="middle" font-size="11" fill="#2e6e2e">2</text>
+  <text x="780" y="206" text-anchor="middle" font-size="10" fill="#888">命中，移到表头</text>
+
+  <!-- Step 4: put(3,3) evict 2 -->
+  <g filter="url(#sk)"><rect x="40" y="224" width="800" height="44" fill="#fce4ec" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="250" text-anchor="middle" font-size="11" fill="#444">4</text>
+  <text x="220" y="250" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">put(3,3)</text>
+  <g filter="url(#sk)"><rect x="420" y="232" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="445" y="250" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">3</text>
+  <path d="M 470 246 L 490 246" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="490" y="232" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="515" y="250" text-anchor="middle" font-size="11" fill="#2e6e2e">1</text>
+  <text x="640" y="250" font-size="10" fill="#b85450" font-weight="bold">★ 淘汰 2</text>
+  <text x="780" y="250" text-anchor="middle" font-size="10" fill="#b85450">容量满，淘汰 LRU</text>
+
+  <!-- Step 5: get(2) miss -->
+  <g filter="url(#sk)"><rect x="40" y="268" width="800" height="44" fill="#fce4ec" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="294" text-anchor="middle" font-size="11" fill="#444">5</text>
+  <text x="220" y="294" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">get(2)→-1</text>
+  <g filter="url(#sk)"><rect x="420" y="276" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="445" y="294" text-anchor="middle" font-size="11" fill="#2e6e2e">3</text>
+  <path d="M 470 290 L 490 290" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="490" y="276" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="515" y="294" text-anchor="middle" font-size="11" fill="#2e6e2e">1</text>
+  <text x="780" y="294" text-anchor="middle" font-size="10" fill="#b85450">未命中，返回 -1</text>
+
+  <!-- Step 6: put(4,4) evict 1 -->
+  <g filter="url(#sk)"><rect x="40" y="312" width="800" height="44" fill="#fce4ec" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="338" text-anchor="middle" font-size="11" fill="#444">6</text>
+  <text x="220" y="338" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">put(4,4)</text>
+  <g filter="url(#sk)"><rect x="420" y="320" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="445" y="338" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">4</text>
+  <path d="M 470 334 L 490 334" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="490" y="320" width="50" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="515" y="338" text-anchor="middle" font-size="11" fill="#2e6e2e">3</text>
+  <text x="640" y="338" font-size="10" fill="#b85450" font-weight="bold">★ 淘汰 1</text>
+  <text x="780" y="338" text-anchor="middle" font-size="10" fill="#b85450">容量满，淘汰 LRU</text>
+
+  <!-- legend -->
+  <g filter="url(#sk)">
+    <rect x="40" y="380" width="800" height="64" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="404" font-size="12" font-weight="bold" fill="#444">链表方向：MRU（最近使用）→ ... → LRU（最久未使用，淘汰端）</text>
+  <text x="60" y="424" font-size="11" fill="#2e6e2e">命中/插入的节点移到表头（MRU 端）</text>
+  <text x="60" y="440" font-size="11" fill="#b85450">容量超限时，删除表尾（LRU 端）节点并从哈希表移除</text>
+</svg>

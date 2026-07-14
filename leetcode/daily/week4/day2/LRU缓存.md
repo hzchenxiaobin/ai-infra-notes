@@ -67,7 +67,7 @@ lRUCache.get(4);    // 返回 4，缓存是 {3=3, 4=4}
 - **双向链表**：节点带 `prev` / `next` 指针，负责 `O(1)` 删除与插入（无需找前驱）。
 - **哨兵节点**：用 `dummy_head`（最近使用）和 `dummy_tail`（最久未使用）两个虚拟节点夹住真实节点，**消除边界判空**。
 
-![LRU 缓存数据结构](images/lru_cache_structure.svg)
+![LRU 缓存数据结构](images/lru_cache_overview.svg)
 
 约定：**`dummy_head` 端是最近使用（MRU）**，**`dummy_tail` 端是最久未使用（LRU）**。
 

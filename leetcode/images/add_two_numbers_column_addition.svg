@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="25" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">两数相加：模拟竖式加法</text>
+  <path d="M 290 40 Q 440 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="440" y="66" text-anchor="middle" font-size="12" fill="#666">l1 = [2,4,3] (342), l2 = [5,6,4] (465) → 342 + 465 = 807 → [7,0,8]</text>
+
+  <!-- Column addition visualization -->
+  <!-- Headers -->
+  <text x="200" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">l1（逆序）</text>
+  <text x="320" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">l2（逆序）</text>
+  <text x="440" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">carry</text>
+  <text x="560" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">sum</text>
+  <text x="680" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#444">结果节点</text>
+
+  <!-- Column headers (百十个) -->
+  <text x="200" y="120" text-anchor="middle" font-size="10" fill="#888">个 十 百</text>
+  <text x="320" y="120" text-anchor="middle" font-size="10" fill="#888">个 十 百</text>
+
+  <!-- Digit boxes -->
+  <!-- l1: 2, 4, 3 -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="140" y="130" width="40" height="40" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+    <text x="160" y="156" text-anchor="middle" fill="#2b6e9e">2</text>
+    <g filter="url(#sk)"><rect x="180" y="130" width="40" height="40" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+    <text x="200" y="156" text-anchor="middle" fill="#2b6e9e">4</text>
+    <g filter="url(#sk)"><rect x="220" y="130" width="40" height="40" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+    <text x="240" y="156" text-anchor="middle" fill="#2b6e9e">3</text>
+  </g>
+
+  <!-- + sign -->
+  <text x="270" y="156" text-anchor="middle" font-size="18" fill="#888">+</text>
+
+  <!-- l2: 5, 6, 4 -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="260" y="130" width="40" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+    <text x="280" y="156" text-anchor="middle" fill="#2e6e2e">5</text>
+    <g filter="url(#sk)"><rect x="300" y="130" width="40" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+    <text x="320" y="156" text-anchor="middle" fill="#2e6e2e">6</text>
+    <g filter="url(#sk)"><rect x="340" y="130" width="40" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+    <text x="360" y="156" text-anchor="middle" fill="#2e6e2e">4</text>
+  </g>
+
+  <!-- = sign -->
+  <text x="390" y="156" text-anchor="middle" font-size="18" fill="#888">=</text>
+
+  <!-- Carry row -->
+  <text x="440" y="120" text-anchor="middle" font-size="10" fill="#b85450">入 → 出</text>
+  <g font-size="13" font-weight="bold" fill="#b85450">
+    <text x="160" y="200" text-anchor="middle">0→0</text>
+    <text x="200" y="200" text-anchor="middle">0→1</text>
+    <text x="240" y="200" text-anchor="middle">1→0</text>
+  </g>
+
+  <!-- sum row -->
+  <g filter="url(#sk)">
+    <line x1="130" y1="210" x2="380" y2="210" stroke="#888" stroke-width="1.2"/>
+  </g>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="140" y="216" width="40" height="40" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <text x="160" y="242" text-anchor="middle" fill="#7a5415">7</text>
+    <g filter="url(#sk)"><rect x="180" y="216" width="40" height="40" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <text x="200" y="242" text-anchor="middle" fill="#7a5415">0</text>
+    <g filter="url(#sk)"><rect x="220" y="216" width="40" height="40" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <text x="240" y="242" text-anchor="middle" fill="#7a5415">8</text>
+  </g>
+
+  <!-- step annotations -->
+  <g font-size="11" fill="#444">
+    <text x="160" y="280" text-anchor="middle">个位: 2+5+0=7</text>
+    <text x="160" y="294" text-anchor="middle" font-size="10" fill="#888">写 7, 进 0</text>
+    <text x="200" y="280" text-anchor="middle">十位: 4+6+0=10</text>
+    <text x="200" y="294" text-anchor="middle" font-size="10" fill="#b85450">写 0, 进 1</text>
+    <text x="240" y="280" text-anchor="middle">百位: 3+4+1=8</text>
+    <text x="240" y="294" text-anchor="middle" font-size="10" fill="#888">写 8, 进 0</text>
+  </g>
+
+  <!-- Result linked list -->
+  <text x="440" y="320" font-size="13" font-weight="bold" fill="#7a5415">结果链表（逆序）：</text>
+  <g filter="url(#sk)"><rect x="140" y="332" width="40" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="160" y="354" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">7</text>
+  <path d="M 180 350 L 216 350" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="220" y="332" width="40" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="240" y="354" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">0</text>
+  <path d="M 260 350 L 296 350" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="300" y="332" width="40" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="320" y="354" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">8</text>
+  <text x="360" y="354" font-size="11" fill="#888">→ null</text>
+
+  <!-- key insight -->
+  <g filter="url(#sk)"><rect x="440" y="330" width="400" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="460" y="352" font-size="11" font-weight="bold" fill="#444">关键：逆序存储 → 头节点是个位</text>
+  <text x="460" y="370" font-size="11" fill="#2e6e2e">链表遍历方向 = 加法方向（从低到高）</text>
+  <text x="460" y="384" font-size="11" fill="#b85450">每位：sum = l1.val + l2.val + carry</text>
+</svg>

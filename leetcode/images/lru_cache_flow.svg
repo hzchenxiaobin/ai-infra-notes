@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">LRU get / put 操作流程</text>
+  <path d="M 290 40 Q 440 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== get(key) flow ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="66" width="380" height="310" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="230" y="90" text-anchor="middle" font-size="15" font-weight="bold" fill="#2e6e2e">get(key)</text>
+
+  <g filter="url(#sk)"><rect x="70" y="104" width="320" height="36" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="230" y="126" text-anchor="middle" font-size="12" fill="#444">① 哈希表查找 key</text>
+
+  <path d="M 230 140 L 230 160" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="70" y="160" width="320" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="230" y="182" text-anchor="middle" font-size="12" fill="#b85450">未找到 → 返回 -1</text>
+
+  <path d="M 230 196 L 230 216" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="70" y="216" width="320" height="36" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="230" y="238" text-anchor="middle" font-size="12" fill="#444">② 找到节点 node</text>
+
+  <path d="M 230 252 L 230 272" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="70" y="272" width="320" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="230" y="294" text-anchor="middle" font-size="12" fill="#2b6e9e">③ moveToHead(node)</text>
+  <text x="230" y="306" text-anchor="middle" font-size="9" fill="#888">remove(node) + addToHead(node)</text>
+
+  <path d="M 230 308 L 230 328" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="70" y="328" width="320" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="230" y="350" text-anchor="middle" font-size="12" fill="#7a5415">④ 返回 node.val</text>
+
+  <!-- ===== put(key, value) flow ===== -->
+  <g filter="url(#sk)">
+    <rect x="460" y="66" width="380" height="310" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="650" y="90" text-anchor="middle" font-size="15" font-weight="bold" fill="#b85450">put(key, value)</text>
+
+  <g filter="url(#sk)"><rect x="490" y="104" width="320" height="36" rx="6" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="650" y="126" text-anchor="middle" font-size="12" fill="#444">① 哈希表查找 key</text>
+
+  <path d="M 650 140 L 650 160" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- hit branch -->
+  <g filter="url(#sk)"><rect x="490" y="160" width="150" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="565" y="180" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">命中</text>
+  <text x="565" y="196" text-anchor="middle" font-size="10" fill="#555">更新 val + moveToHead</text>
+
+  <!-- miss branch -->
+  <g filter="url(#sk)"><rect x="660" y="160" width="150" height="50" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="735" y="180" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">未命中</text>
+  <text x="735" y="196" text-anchor="middle" font-size="10" fill="#555">新建节点 → addToHead</text>
+
+  <path d="M 735 210 L 735 230" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="660" y="230" width="150" height="50" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="735" y="250" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">size > cap?</text>
+  <text x="735" y="266" text-anchor="middle" font-size="10" fill="#555">是 → evictTail</text>
+
+  <path d="M 735 280 L 735 300" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="660" y="300" width="150" height="36" rx="6" fill="#fff" stroke="#9e9e9e" stroke-width="1"/></g>
+  <text x="735" y="322" text-anchor="middle" font-size="11" fill="#888">哈希表登记 key→node</text>
+
+  <!-- summary -->
+  <g filter="url(#sk)">
+    <rect x="490" y="346" width="320" height="24" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/>
+  </g>
+  <text x="650" y="362" text-anchor="middle" font-size="10" fill="#7a5415">★ 核心三步：定位 → 摘出 → 接到表头</text>
+</svg>
