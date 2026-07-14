@@ -21,8 +21,8 @@
 - **跳过/依赖外部库**：1 个
 
 > 说明：为使代码可直接编译运行，已对部分 Markdown 中的代码做了最小修正：
-> - `aiinfra/week1/day3/README.md`：补齐缺失的 `#include <stdio.h>`。
-> - `aiinfra/week2/day5/README.md`、`docs/learning_plan_week2_expanded.md`：
+> - `aiinfra/daily/week1/day3/README.md`：补齐缺失的 `#include <stdio.h>`。
+> - `aiinfra/daily/week2/day5/README.md`、`docs/learning_plan_week2_expanded.md`：
 >   将 FlashAttention 示例的 `Bc` 从 64 调为 32，并添加 `#undef D` 避免宏与函数参数名冲突。
 > - `leetgpu/week6/day3/leetgpu-stream-compaction-solution.md`：补充 `predicate_kernel`，
 >   使用真正的 predicate（`input[i]!=0`）驱动 scan + scatter。
@@ -33,23 +33,23 @@
 
 | 文件 | 编译(s) | 运行(s) | 状态 | 关键输出 |
 |------|--------|--------|------|----------|
-| `aiinfra/week1/day1/exercise/hello_gpu.cu` | 1.20 | 0.454 | ✅ PASS | Launching kernel: grid=(2, 2, 1), block=(4, 2, 1) |
-| `aiinfra/week1/day1/kernels/hello_gpu.cu` | 1.18 | 0.374 | ✅ PASS | Launching kernel: grid=(2,2,1), block=(8,1,1), total_th |
-| `aiinfra/week1/day2/exercise/occupancy_test.cu` | 1.26 | 0.391 | ✅ PASS | === Kernel Attributes === |
-| `aiinfra/week1/day2/exercise/occupancy_test_b.cu` | 1.25 | 0.369 | ✅ PASS | === Kernel Attributes === |
-| `aiinfra/week1/day2/exercise/register_spill.cu` | 1.57 | 0.439 | ✅ PASS | === Register Spill Demo === |
-| `aiinfra/week1/day2/kernels/occupancy_test.cu` | 1.24 | 0.431 | ✅ PASS | === Kernel Attributes === |
-| `aiinfra/week1/day3/exercise/mini_device_query.cu` | 1.18 | 0.135 | ✅ PASS | Detected 1 CUDA device(s) |
-| `aiinfra/week1/day3/exercise/occupancy_verify.cu` | 1.27 | 0.439 | ✅ PASS | === Device: NVIDIA GeForce RTX 5090 (Compute Capability |
-| `aiinfra/week1/day4/kernels/transpose.cu` | 1.22 | 0.421 | ✅ PASS | Transpose correctness: PASS |
-| `aiinfra/week1/day5/kernels/bank_conflict.cu` | 1.23 | 0.372 | ✅ PASS | Bank conflict kernels finished. Use ncu to compare metr |
-| `aiinfra/week3/day2/kernels/softmax_layernorm.cu` | 1.37 | 0.442 | ✅ PASS | === Softmax + LayerNorm Kernel Test === |
-| `aiinfra/week3/day3/kernels/softmax_layernorm_opt.cu` | 1.55 | 0.488 | ✅ PASS | === Softmax + LayerNorm Optimization Comparison === |
-| `aiinfra/week3/day4/kernels/attention_naive.cu` | 1.42 | 0.784 | ✅ PASS | === Standard Attention Forward (naive, materialize S/P) |
-| `aiinfra/week3/day5/kernels/softmax_layernorm_ext.cu` | 1.36 | 0.454 | ✅ PASS | === Softmax + LayerNorm (ext version, launch wrappers)  |
-| `aiinfra/week3/day6/kernels/profiling_targets.cu` | 1.32 | 0.451 | ✅ PASS | === Profiling Targets: Softmax(memory-bound) + GEMM(com |
-| `aiinfra/week5/day2/kernels/kv_cache.cu` | 1.43 | 0.390 | ✅ PASS | === KV Cache Test === |
-| `aiinfra/week5/day4/kernels/paged_attention.cu` | 1.63 | 0.374 | ✅ PASS | === PagedAttention Test === |
+| `aiinfra/daily/week1/day1/exercise/hello_gpu.cu` | 1.20 | 0.454 | ✅ PASS | Launching kernel: grid=(2, 2, 1), block=(4, 2, 1) |
+| `aiinfra/daily/week1/day1/kernels/hello_gpu.cu` | 1.18 | 0.374 | ✅ PASS | Launching kernel: grid=(2,2,1), block=(8,1,1), total_th |
+| `aiinfra/daily/week1/day2/exercise/occupancy_test.cu` | 1.26 | 0.391 | ✅ PASS | === Kernel Attributes === |
+| `aiinfra/daily/week1/day2/exercise/occupancy_test_b.cu` | 1.25 | 0.369 | ✅ PASS | === Kernel Attributes === |
+| `aiinfra/daily/week1/day2/exercise/register_spill.cu` | 1.57 | 0.439 | ✅ PASS | === Register Spill Demo === |
+| `aiinfra/daily/week1/day2/kernels/occupancy_test.cu` | 1.24 | 0.431 | ✅ PASS | === Kernel Attributes === |
+| `aiinfra/daily/week1/day3/exercise/mini_device_query.cu` | 1.18 | 0.135 | ✅ PASS | Detected 1 CUDA device(s) |
+| `aiinfra/daily/week1/day3/exercise/occupancy_verify.cu` | 1.27 | 0.439 | ✅ PASS | === Device: NVIDIA GeForce RTX 5090 (Compute Capability |
+| `aiinfra/daily/week1/day4/kernels/transpose.cu` | 1.22 | 0.421 | ✅ PASS | Transpose correctness: PASS |
+| `aiinfra/daily/week1/day5/kernels/bank_conflict.cu` | 1.23 | 0.372 | ✅ PASS | Bank conflict kernels finished. Use ncu to compare metr |
+| `aiinfra/daily/week3/day2/kernels/softmax_layernorm.cu` | 1.37 | 0.442 | ✅ PASS | === Softmax + LayerNorm Kernel Test === |
+| `aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu` | 1.55 | 0.488 | ✅ PASS | === Softmax + LayerNorm Optimization Comparison === |
+| `aiinfra/daily/week3/day4/kernels/attention_naive.cu` | 1.42 | 0.784 | ✅ PASS | === Standard Attention Forward (naive, materialize S/P) |
+| `aiinfra/daily/week3/day5/kernels/softmax_layernorm_ext.cu` | 1.36 | 0.454 | ✅ PASS | === Softmax + LayerNorm (ext version, launch wrappers)  |
+| `aiinfra/daily/week3/day6/kernels/profiling_targets.cu` | 1.32 | 0.451 | ✅ PASS | === Profiling Targets: Softmax(memory-bound) + GEMM(com |
+| `aiinfra/daily/week5/day2/kernels/kv_cache.cu` | 1.43 | 0.390 | ✅ PASS | === KV Cache Test === |
+| `aiinfra/daily/week5/day4/kernels/paged_attention.cu` | 1.63 | 0.374 | ✅ PASS | === PagedAttention Test === |
 | `profiling/leetgpu/argmax.cu` | 1.23 | 0.400 | ✅ PASS | GPU argmax idx = 524288 (expected 524288) PASS |
 | `profiling/leetgpu/histogram.cu` | 1.22 | 0.460 | ✅ PASS | Global atomic: 0.106 ms |
 | `profiling/leetgpu/matrix-addition.cu` | 1.26 | 1.081 | ✅ PASS | Matrix Addition PASS |
@@ -82,9 +82,9 @@
 
 ### 源文件详细输出
 
-#### `aiinfra/week1/day1/exercise/hello_gpu.cu`
+#### `aiinfra/daily/week1/day1/exercise/hello_gpu.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day1/exercise/hello_gpu /root/aiinfra_run/aiinfra/week1/day1/exercise/hello_gpu.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day1/exercise/hello_gpu /root/aiinfra_run/aiinfra/daily/week1/day1/exercise/hello_gpu.cu`
 - **编译耗时**：1.20s，**运行耗时**：0.454s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -128,9 +128,9 @@ block=(1, 1, 0), thread=(3, 1, 0), global_tid=7
 ```
 </details>
 
-#### `aiinfra/week1/day1/kernels/hello_gpu.cu`
+#### `aiinfra/daily/week1/day1/kernels/hello_gpu.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day1/kernels/hello_gpu /root/aiinfra_run/aiinfra/week1/day1/kernels/hello_gpu.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day1/kernels/hello_gpu /root/aiinfra_run/aiinfra/daily/week1/day1/kernels/hello_gpu.cu`
 - **编译耗时**：1.18s，**运行耗时**：0.374s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -173,9 +173,9 @@ block=(1,1,0), thread=(7,0,0), global_tid=15
 ```
 </details>
 
-#### `aiinfra/week1/day2/exercise/occupancy_test.cu`
+#### `aiinfra/daily/week1/day2/exercise/occupancy_test.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day2/exercise/occupancy_test /root/aiinfra_run/aiinfra/week1/day2/exercise/occupancy_test.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/occupancy_test /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/occupancy_test.cu`
 - **编译耗时**：1.26s，**运行耗时**：0.391s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -192,9 +192,9 @@ Max threads per block: 1024
 ```
 </details>
 
-#### `aiinfra/week1/day2/exercise/occupancy_test_b.cu`
+#### `aiinfra/daily/week1/day2/exercise/occupancy_test_b.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day2/exercise/occupancy_test_b /root/aiinfra_run/aiinfra/week1/day2/exercise/occupancy_test_b.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/occupancy_test_b /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/occupancy_test_b.cu`
 - **编译耗时**：1.25s，**运行耗时**：0.369s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -211,9 +211,9 @@ Max threads per block: 1024
 ```
 </details>
 
-#### `aiinfra/week1/day2/exercise/register_spill.cu`
+#### `aiinfra/daily/week1/day2/exercise/register_spill.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day2/exercise/register_spill /root/aiinfra_run/aiinfra/week1/day2/exercise/register_spill.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/register_spill /root/aiinfra_run/aiinfra/daily/week1/day2/exercise/register_spill.cu`
 - **编译耗时**：1.57s，**运行耗时**：0.439s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -228,9 +228,9 @@ Look for 'spill stores' and 'spill loads' in the output.
 ```
 </details>
 
-#### `aiinfra/week1/day2/kernels/occupancy_test.cu`
+#### `aiinfra/daily/week1/day2/kernels/occupancy_test.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day2/kernels/occupancy_test /root/aiinfra_run/aiinfra/week1/day2/kernels/occupancy_test.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day2/kernels/occupancy_test /root/aiinfra_run/aiinfra/daily/week1/day2/kernels/occupancy_test.cu`
 - **编译耗时**：1.24s，**运行耗时**：0.431s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -247,9 +247,9 @@ Max threads per block: 1024
 ```
 </details>
 
-#### `aiinfra/week1/day3/exercise/mini_device_query.cu`
+#### `aiinfra/daily/week1/day3/exercise/mini_device_query.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day3/exercise/mini_device_query /root/aiinfra_run/aiinfra/week1/day3/exercise/mini_device_query.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day3/exercise/mini_device_query /root/aiinfra_run/aiinfra/daily/week1/day3/exercise/mini_device_query.cu`
 - **编译耗时**：1.18s，**运行耗时**：0.135s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -274,9 +274,9 @@ Device 0: NVIDIA GeForce RTX 5090
 ```
 </details>
 
-#### `aiinfra/week1/day3/exercise/occupancy_verify.cu`
+#### `aiinfra/daily/week1/day3/exercise/occupancy_verify.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day3/exercise/occupancy_verify /root/aiinfra_run/aiinfra/week1/day3/exercise/occupancy_verify.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day3/exercise/occupancy_verify /root/aiinfra_run/aiinfra/daily/week1/day3/exercise/occupancy_verify.cu`
 - **编译耗时**：1.27s，**运行耗时**：0.439s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -396,9 +396,9 @@ Device 0: NVIDIA GeForce RTX 5090
 ```
 </details>
 
-#### `aiinfra/week1/day4/kernels/transpose.cu`
+#### `aiinfra/daily/week1/day4/kernels/transpose.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day4/kernels/transpose /root/aiinfra_run/aiinfra/week1/day4/kernels/transpose.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day4/kernels/transpose /root/aiinfra_run/aiinfra/daily/week1/day4/kernels/transpose.cu`
 - **编译耗时**：1.22s，**运行耗时**：0.421s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -409,9 +409,9 @@ Transpose correctness: PASS
 ```
 </details>
 
-#### `aiinfra/week1/day5/kernels/bank_conflict.cu`
+#### `aiinfra/daily/week1/day5/kernels/bank_conflict.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week1/day5/kernels/bank_conflict /root/aiinfra_run/aiinfra/week1/day5/kernels/bank_conflict.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week1/day5/kernels/bank_conflict /root/aiinfra_run/aiinfra/daily/week1/day5/kernels/bank_conflict.cu`
 - **编译耗时**：1.23s，**运行耗时**：0.372s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -422,9 +422,9 @@ Bank conflict kernels finished. Use ncu to compare metrics.
 ```
 </details>
 
-#### `aiinfra/week3/day2/kernels/softmax_layernorm.cu`
+#### `aiinfra/daily/week3/day2/kernels/softmax_layernorm.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week3/day2/kernels/softmax_layernorm /root/aiinfra_run/aiinfra/week3/day2/kernels/softmax_layernorm.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week3/day2/kernels/softmax_layernorm /root/aiinfra_run/aiinfra/daily/week3/day2/kernels/softmax_layernorm.cu`
 - **编译耗时**：1.37s，**运行耗时**：0.442s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -443,9 +443,9 @@ Config: M=128, D=1024, threads=256
 ```
 </details>
 
-#### `aiinfra/week3/day3/kernels/softmax_layernorm_opt.cu`
+#### `aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week3/day3/kernels/softmax_layernorm_opt /root/aiinfra_run/aiinfra/week3/day3/kernels/softmax_layernorm_opt.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt /root/aiinfra_run/aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu`
 - **编译耗时**：1.55s，**运行耗时**：0.488s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -476,9 +476,9 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 ```
 </details>
 
-#### `aiinfra/week3/day4/kernels/attention_naive.cu`
+#### `aiinfra/daily/week3/day4/kernels/attention_naive.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week3/day4/kernels/attention_naive /root/aiinfra_run/aiinfra/week3/day4/kernels/attention_naive.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week3/day4/kernels/attention_naive /root/aiinfra_run/aiinfra/daily/week3/day4/kernels/attention_naive.cu`
 - **编译耗时**：1.42s，**运行耗时**：0.784s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -505,9 +505,9 @@ N        S/P size(MB)   HBM IO(MB)       Time(ms)     Check
 ```
 </details>
 
-#### `aiinfra/week3/day5/kernels/softmax_layernorm_ext.cu`
+#### `aiinfra/daily/week3/day5/kernels/softmax_layernorm_ext.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week3/day5/kernels/softmax_layernorm_ext /root/aiinfra_run/aiinfra/week3/day5/kernels/softmax_layernorm_ext.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week3/day5/kernels/softmax_layernorm_ext /root/aiinfra_run/aiinfra/daily/week3/day5/kernels/softmax_layernorm_ext.cu`
 - **编译耗时**：1.36s，**运行耗时**：0.454s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -527,9 +527,9 @@ Config: M=128, D=1024
 ```
 </details>
 
-#### `aiinfra/week3/day6/kernels/profiling_targets.cu`
+#### `aiinfra/daily/week3/day6/kernels/profiling_targets.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week3/day6/kernels/profiling_targets /root/aiinfra_run/aiinfra/week3/day6/kernels/profiling_targets.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week3/day6/kernels/profiling_targets /root/aiinfra_run/aiinfra/daily/week3/day6/kernels/profiling_targets.cu`
 - **编译耗时**：1.32s，**运行耗时**：0.451s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -555,9 +555,9 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 ```
 </details>
 
-#### `aiinfra/week5/day2/kernels/kv_cache.cu`
+#### `aiinfra/daily/week5/day2/kernels/kv_cache.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week5/day2/kernels/kv_cache /root/aiinfra_run/aiinfra/week5/day2/kernels/kv_cache.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week5/day2/kernels/kv_cache /root/aiinfra_run/aiinfra/daily/week5/day2/kernels/kv_cache.cu`
 - **编译耗时**：1.43s，**运行耗时**：0.390s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -580,9 +580,9 @@ Max memory usage: 8 MB
 ```
 </details>
 
-#### `aiinfra/week5/day4/kernels/paged_attention.cu`
+#### `aiinfra/daily/week5/day4/kernels/paged_attention.cu`
 
-- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/week5/day4/kernels/paged_attention /root/aiinfra_run/aiinfra/week5/day4/kernels/paged_attention.cu`
+- **编译命令**：`nvcc -O3 -arch=sm_120 -o /root/aiinfra_run/aiinfra/daily/week5/day4/kernels/paged_attention /root/aiinfra_run/aiinfra/daily/week5/day4/kernels/paged_attention.cu`
 - **编译耗时**：1.63s，**运行耗时**：0.374s
 - **状态**：✅ PASS
 - **运行输出**：
@@ -1302,25 +1302,25 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 
 | 来源文件 | 编译(s) | 运行(s) | 状态 | 关键输出 |
 |----------|--------|--------|------|----------|
-| `aiinfra/week1/day1/README.md` | 2.60 | 1.641 | ✅ PASS | Launching kernel: grid=(2,2,1), block=(4,2,1) |
-| `aiinfra/week1/day2/README.md` | 2.52 | 1.629 | ✅ PASS | === Kernel Attributes === |
-| `aiinfra/week1/day3/README.md` | 2.35 | 1.435 | ✅ PASS | Detected 1 CUDA device(s) |
-| `aiinfra/week1/day3/README.md` | 2.54 | 2.368 | ✅ PASS | Matrix Addition PASS |
-| `aiinfra/week1/day3/README.md` | 2.46 | 1.674 | ✅ PASS | Best device: 0 |
-| `aiinfra/week1/day4/README.md` | 2.44 | 1.809 | ✅ PASS | Naive transpose: PASS |
-| `aiinfra/week1/day5/README.md` | 2.55 | 1.723 | ✅ PASS | Bank conflict kernels finished. Use ncu to compare metr |
-| `aiinfra/week1/day7/README.md` | 2.60 | 2.323 | ✅ PASS | Matrix Addition PASS |
-| `aiinfra/week1/day7/README.md` | 2.48 | 1.710 | ✅ PASS | GEMM 512x512x512 done |
-| `aiinfra/week2/day1/README.md` | 2.62 | 1.684 | ✅ PASS | === Warp Shuffle Block Reduce === |
-| `aiinfra/week2/day2/README.md` | 3.57 | 2.870 | ✅ PASS | === Register Blocking GEMM === |
-| `aiinfra/week2/day3/README.md` | 2.57 | 2.457 | ✅ PASS | === Multi-Stream Overlap Pipeline === |
-| `aiinfra/week2/day5/README.md` | 3.33 | 1.846 | ✅ PASS | === FlashAttention Simplified Forward === |
-| `aiinfra/week2/day6/README.md` | 3.70 | 5.711 | ✅ PASS | === Integrated GEMM (Warp Shuffle + Register Blocking + |
-| `aiinfra/week2/day7/README.md` | 2.45 | 1.792 | ✅ PASS | GPU=2094779.6250 CPU=2094779.6250 diff=0.000000 PASS |
-| `aiinfra/week3/day5/README.md` | - | - | ⏭️ SKIPPED |  |
-| `aiinfra/week3/day6/README.md` | 2.51 | 1.855 | ✅ PASS | RMSNorm: maxDiff = 1.43e-06 (PASS) |
-| `aiinfra/week4/day2/README.md` | 5.35 | 1.885 | ✅ PASS | === FlashAttention v2 Forward Kernel === |
-| `aiinfra/week4/day3/README.md` | 2.75 | 2.075 | ✅ PASS | Dot Product = 0.131072 (expected 1.048576) |
+| `aiinfra/daily/week1/day1/README.md` | 2.60 | 1.641 | ✅ PASS | Launching kernel: grid=(2,2,1), block=(4,2,1) |
+| `aiinfra/daily/week1/day2/README.md` | 2.52 | 1.629 | ✅ PASS | === Kernel Attributes === |
+| `aiinfra/daily/week1/day3/README.md` | 2.35 | 1.435 | ✅ PASS | Detected 1 CUDA device(s) |
+| `aiinfra/daily/week1/day3/README.md` | 2.54 | 2.368 | ✅ PASS | Matrix Addition PASS |
+| `aiinfra/daily/week1/day3/README.md` | 2.46 | 1.674 | ✅ PASS | Best device: 0 |
+| `aiinfra/daily/week1/day4/README.md` | 2.44 | 1.809 | ✅ PASS | Naive transpose: PASS |
+| `aiinfra/daily/week1/day5/README.md` | 2.55 | 1.723 | ✅ PASS | Bank conflict kernels finished. Use ncu to compare metr |
+| `aiinfra/daily/week1/day7/README.md` | 2.60 | 2.323 | ✅ PASS | Matrix Addition PASS |
+| `aiinfra/daily/week1/day7/README.md` | 2.48 | 1.710 | ✅ PASS | GEMM 512x512x512 done |
+| `aiinfra/daily/week2/day1/README.md` | 2.62 | 1.684 | ✅ PASS | === Warp Shuffle Block Reduce === |
+| `aiinfra/daily/week2/day2/README.md` | 3.57 | 2.870 | ✅ PASS | === Register Blocking GEMM === |
+| `aiinfra/daily/week2/day3/README.md` | 2.57 | 2.457 | ✅ PASS | === Multi-Stream Overlap Pipeline === |
+| `aiinfra/daily/week2/day5/README.md` | 3.33 | 1.846 | ✅ PASS | === FlashAttention Simplified Forward === |
+| `aiinfra/daily/week2/day6/README.md` | 3.70 | 5.711 | ✅ PASS | === Integrated GEMM (Warp Shuffle + Register Blocking + |
+| `aiinfra/daily/week2/day7/README.md` | 2.45 | 1.792 | ✅ PASS | GPU=2094779.6250 CPU=2094779.6250 diff=0.000000 PASS |
+| `aiinfra/daily/week3/day5/README.md` | - | - | ⏭️ SKIPPED |  |
+| `aiinfra/daily/week3/day6/README.md` | 2.51 | 1.855 | ✅ PASS | RMSNorm: maxDiff = 1.43e-06 (PASS) |
+| `aiinfra/daily/week4/day2/README.md` | 5.35 | 1.885 | ✅ PASS | === FlashAttention v2 Forward Kernel === |
+| `aiinfra/daily/week4/day3/README.md` | 2.75 | 2.075 | ✅ PASS | Dot Product = 0.131072 (expected 1.048576) |
 | `docs/learning_plan_week2_expanded.md` | 2.70 | 2.219 | ✅ PASS | === Warp Shuffle Block Reduce === |
 | `docs/learning_plan_week2_expanded.md` | 3.58 | 3.015 | ✅ PASS | === Register Blocking GEMM === |
 | `docs/learning_plan_week2_expanded.md` | 2.61 | 2.479 | ✅ PASS | === Multi-Stream Overlap Pipeline === |
@@ -1364,7 +1364,7 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 
 ### Markdown 代码块详细输出
 
-#### `aiinfra/week1/day1/README.md`
+#### `aiinfra/daily/week1/day1/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day1_README_block0_e17e239380a9.cu -o aiinfra_week1_day1_README_block0_e17e239380a9 `
 - **编译耗时**：2.60s，**运行耗时**：1.641s
@@ -1410,7 +1410,7 @@ block=(1,1,0), thread=(3,1,0), global_tid=7
 ```
 </details>
 
-#### `aiinfra/week1/day2/README.md`
+#### `aiinfra/daily/week1/day2/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day2_README_block1_559b2011f76a.cu -o aiinfra_week1_day2_README_block1_559b2011f76a `
 - **编译耗时**：2.52s，**运行耗时**：1.629s
@@ -1429,7 +1429,7 @@ Max threads per block: 1024
 ```
 </details>
 
-#### `aiinfra/week1/day3/README.md`
+#### `aiinfra/daily/week1/day3/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day3_README_block2_2a66a41b9a37.cu -o aiinfra_week1_day3_README_block2_2a66a41b9a37 `
 - **编译耗时**：2.35s，**运行耗时**：1.435s
@@ -1456,7 +1456,7 @@ Device 0: NVIDIA GeForce RTX 5090
 ```
 </details>
 
-#### `aiinfra/week1/day3/README.md`
+#### `aiinfra/daily/week1/day3/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day3_README_block3_c2397c043426.cu -o aiinfra_week1_day3_README_block3_c2397c043426 `
 - **编译耗时**：2.54s，**运行耗时**：2.368s
@@ -1469,7 +1469,7 @@ Matrix Addition PASS
 ```
 </details>
 
-#### `aiinfra/week1/day3/README.md`
+#### `aiinfra/daily/week1/day3/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day3_README_block4_da80c224337d.cu -o aiinfra_week1_day3_README_block4_da80c224337d `
 - **编译耗时**：2.46s，**运行耗时**：1.674s
@@ -1482,7 +1482,7 @@ Best device: 0
 ```
 </details>
 
-#### `aiinfra/week1/day4/README.md`
+#### `aiinfra/daily/week1/day4/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day4_README_block5_586138c24c03.cu -o aiinfra_week1_day4_README_block5_586138c24c03 `
 - **编译耗时**：2.44s，**运行耗时**：1.809s
@@ -1495,7 +1495,7 @@ Naive transpose: PASS
 ```
 </details>
 
-#### `aiinfra/week1/day5/README.md`
+#### `aiinfra/daily/week1/day5/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day5_README_block6_035aefc95983.cu -o aiinfra_week1_day5_README_block6_035aefc95983 `
 - **编译耗时**：2.55s，**运行耗时**：1.723s
@@ -1508,7 +1508,7 @@ Bank conflict kernels finished. Use ncu to compare metrics.
 ```
 </details>
 
-#### `aiinfra/week1/day7/README.md`
+#### `aiinfra/daily/week1/day7/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day7_README_block7_cc0d6bddb8a8.cu -o aiinfra_week1_day7_README_block7_cc0d6bddb8a8 `
 - **编译耗时**：2.60s，**运行耗时**：2.323s
@@ -1521,7 +1521,7 @@ Matrix Addition PASS
 ```
 </details>
 
-#### `aiinfra/week1/day7/README.md`
+#### `aiinfra/daily/week1/day7/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week1_day7_README_block8_0a048eb71347.cu -o aiinfra_week1_day7_README_block8_0a048eb71347 `
 - **编译耗时**：2.48s，**运行耗时**：1.710s
@@ -1534,7 +1534,7 @@ GEMM 512x512x512 done
 ```
 </details>
 
-#### `aiinfra/week2/day1/README.md`
+#### `aiinfra/daily/week2/day1/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day1_README_block9_5f4f9750a687.cu -o aiinfra_week2_day1_README_block9_5f4f9750a687 `
 - **编译耗时**：2.62s，**运行耗时**：1.684s
@@ -1552,7 +1552,7 @@ Time: 0.179 ms (93.66 GB/s bandwidth)
 ```
 </details>
 
-#### `aiinfra/week2/day2/README.md`
+#### `aiinfra/daily/week2/day2/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day2_README_block10_d5a4eb39127d.cu -o aiinfra_week2_day2_README_block10_d5a4eb39127d -lcublas`
 - **编译耗时**：3.57s，**运行耗时**：2.870s
@@ -1571,7 +1571,7 @@ M          N          K          Our(ms)      cuBLAS(ms)   Percent
 ```
 </details>
 
-#### `aiinfra/week2/day3/README.md`
+#### `aiinfra/daily/week2/day3/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day3_README_block11_cc0a8b489c4a.cu -o aiinfra_week2_day3_README_block11_cc0a8b489c4a `
 - **编译耗时**：2.57s，**运行耗时**：2.457s
@@ -1599,7 +1599,7 @@ Result check: PASS
 ```
 </details>
 
-#### `aiinfra/week2/day5/README.md`
+#### `aiinfra/daily/week2/day5/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day5_README_block12_c0978e2bf1b3.cu -o aiinfra_week2_day5_README_block12_c0978e2bf1b3 `
 - **编译耗时**：3.33s，**运行耗时**：1.846s
@@ -1617,7 +1617,7 @@ Result check: PASS
 ```
 </details>
 
-#### `aiinfra/week2/day6/README.md`
+#### `aiinfra/daily/week2/day6/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day6_README_block13_36444672eda0.cu -o aiinfra_week2_day6_README_block13_36444672eda0 -lcublas`
 - **编译耗时**：3.70s，**运行耗时**：5.711s
@@ -1638,7 +1638,7 @@ M        N        K        Our(ms)    cuBLAS(ms) GFLOPS     Percent
 ```
 </details>
 
-#### `aiinfra/week2/day7/README.md`
+#### `aiinfra/daily/week2/day7/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week2_day7_README_block14_fa3b7756d465.cu -o aiinfra_week2_day7_README_block14_fa3b7756d465 `
 - **编译耗时**：2.45s，**运行耗时**：1.792s
@@ -1651,12 +1651,12 @@ GPU=2094779.6250 CPU=2094779.6250 diff=0.000000 PASS
 ```
 </details>
 
-#### `aiinfra/week3/day5/README.md`
+#### `aiinfra/daily/week3/day5/README.md`
 
 - **状态**：⏭️ SKIPPED
 - **原因**：depends on PyTorch/torch/extension.h
 
-#### `aiinfra/week3/day6/README.md`
+#### `aiinfra/daily/week3/day6/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week3_day6_README_block16_0632ee28da4c.cu -o aiinfra_week3_day6_README_block16_0632ee28da4c `
 - **编译耗时**：2.51s，**运行耗时**：1.855s
@@ -1671,7 +1671,7 @@ ncu: ncu --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 ```
 </details>
 
-#### `aiinfra/week4/day2/README.md`
+#### `aiinfra/daily/week4/day2/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week4_day2_README_block17_160dd5cc5910.cu -o aiinfra_week4_day2_README_block17_160dd5cc5910 `
 - **编译耗时**：5.35s，**运行耗时**：1.885s
@@ -1690,7 +1690,7 @@ GPU Time: 0.796 ms
 ```
 </details>
 
-#### `aiinfra/week4/day3/README.md`
+#### `aiinfra/daily/week4/day3/README.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 aiinfra_week4_day3_README_block18_cbb7a720bbd4.cu -o aiinfra_week4_day3_README_block18_cbb7a720bbd4 `
 - **编译耗时**：2.75s，**运行耗时**：2.075s

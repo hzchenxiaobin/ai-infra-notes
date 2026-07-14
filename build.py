@@ -3,14 +3,14 @@
 Build the combined website for GitHub Pages.
 Generates:
   - public/ (deployment root)
-    - week1 website files (copied from aiinfra/week1/website)
-    - week2 website files (copied from aiinfra/week2/website)
-    - week3 website files (copied from aiinfra/week3/website)
-    - week4 website files (copied from aiinfra/week4/website)
-    - week5 website files (copied from aiinfra/week5/website)
-    - week6 website files (copied from aiinfra/week6/website)
-    - week7 website files (copied from aiinfra/week7/website)
-    - week8 website files (copied from aiinfra/week8/website)
+    - week1 website files (copied from aiinfra/daily/week1/website)
+    - week2 website files (copied from aiinfra/daily/week2/website)
+    - week3 website files (copied from aiinfra/daily/week3/website)
+    - week4 website files (copied from aiinfra/daily/week4/website)
+    - week5 website files (copied from aiinfra/daily/week5/website)
+    - week6 website files (copied from aiinfra/daily/week6/website)
+    - week7 website files (copied from aiinfra/daily/week7/website)
+    - week8 website files (copied from aiinfra/daily/week8/website)
     - leetcode website files (copied from leetcode/website)
 """
 
@@ -72,14 +72,14 @@ def main() -> None:
     # Build Week 1 website
     print("Building Week 1 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week1" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week1" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 1 website to public/
     print("Copying Week 1 website to public/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week1" / "website",
+        repo_root / "aiinfra" / "daily" / "week1" / "website",
         public_dir,
         skip={"build.py", "README.md"},
     )
@@ -87,14 +87,14 @@ def main() -> None:
     # Build Week 2 website
     print("Building Week 2 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week2" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week2" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 2 website to public/week2/
     print("Copying Week 2 website to public/week2/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week2" / "website",
+        repo_root / "aiinfra" / "daily" / "week2" / "website",
         public_dir / "week2",
         skip={"build.py", "README.md"},
     )
@@ -102,14 +102,14 @@ def main() -> None:
     # Build Week 3 website
     print("Building Week 3 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week3" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week3" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 3 website to public/week3/
     print("Copying Week 3 website to public/week3/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week3" / "website",
+        repo_root / "aiinfra" / "daily" / "week3" / "website",
         public_dir / "week3",
         skip={"build.py", "README.md"},
     )
@@ -117,14 +117,14 @@ def main() -> None:
     # Build Week 4 website
     print("Building Week 4 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week4" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week4" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 4 website to public/week4/
     print("Copying Week 4 website to public/week4/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week4" / "website",
+        repo_root / "aiinfra" / "daily" / "week4" / "website",
         public_dir / "week4",
         skip={"build.py", "README.md"},
     )
@@ -132,14 +132,14 @@ def main() -> None:
     # Build Week 5 website
     print("Building Week 5 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week5" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week5" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 5 website to public/week5/
     print("Copying Week 5 website to public/week5/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week5" / "website",
+        repo_root / "aiinfra" / "daily" / "week5" / "website",
         public_dir / "week5",
         skip={"build.py", "README.md"},
     )
@@ -147,14 +147,14 @@ def main() -> None:
     # Build Week 6 website
     print("Building Week 6 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week6" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week6" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 6 website to public/week6/
     print("Copying Week 6 website to public/week6/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week6" / "website",
+        repo_root / "aiinfra" / "daily" / "week6" / "website",
         public_dir / "week6",
         skip={"build.py", "README.md"},
     )
@@ -162,14 +162,14 @@ def main() -> None:
     # Build Week 7 website
     print("Building Week 7 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week7" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week7" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 7 website to public/week7/
     print("Copying Week 7 website to public/week7/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week7" / "website",
+        repo_root / "aiinfra" / "daily" / "week7" / "website",
         public_dir / "week7",
         skip={"build.py", "README.md"},
     )
@@ -177,14 +177,14 @@ def main() -> None:
     # Build Week 8 website
     print("Building Week 8 website...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "week8" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "daily" / "week8" / "website" / "build.py")],
         check=True,
     )
 
     # Copy Week 8 website to public/week8/
     print("Copying Week 8 website to public/week8/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "week8" / "website",
+        repo_root / "aiinfra" / "daily" / "week8" / "website",
         public_dir / "week8",
         skip={"build.py", "README.md"},
     )
@@ -234,7 +234,7 @@ def main() -> None:
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
 
     # Insert LeetCode and LeetGPU navigation links into all course pages
-    # (aiinfra/week1/week2/week3 and extra pages), but not into the leetcode or
+    # (aiinfra/daily/week1/week2/week3 and extra pages), but not into the leetcode or
     # LeetGPU subsites themselves.
     course_pages = [
         p for p in public_dir.rglob("*.html")

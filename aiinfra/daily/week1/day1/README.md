@@ -1,0 +1,801 @@
+## Day 1：GPU 执行模型基础
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 GPU 与 CPU 在设计哲学上的根本差异
+2. 掌握 SM、Warp、Grid、Block、Thread 的核心概念
+3. 能独立写出并运行第一个 CUDA 程序
+4. 理解 SIMT 执行模型及其对性能的影响
+5. 学会计算线程总数、warp 数等基础指标
+
+> 💡 **为什么重要**：GPU 执行模型是 AI Infra 的根基。后续所有 kernel 优化、推理系统调优，最终都回到 "硬件如何执行代码" 这个问题上。
+
+---
+
+### 学前导读：GPU 与 CPU 的不同
+
+| 特性　　　 | CPU　　　　　　　　　　　　　　　　| GPU　　　　　　　　　　　　　|
+| ------------| ------------------------------------| ------------------------------|
+| 核心数量　 | 少（几到几十个）　　　　　　　　　 | 多（数千个）　　　　　　　　 |
+| 核心复杂度 | 复杂（大缓存、分支预测、乱序执行） | 简单（小缓存、顺序执行）　　 |
+| 设计目标　 | 低延迟（Latency）　　　　　　　　　| 高吞吐（Throughput）　　　　 |
+| 适合任务　 | 串行、复杂逻辑　　　　　　　　　　 | 大规模并行计算　　　　　　　 |
+| 典型应用　 | 操作系统、业务逻辑　　　　　　　　 | 深度学习、图形渲染、科学计算 |
+
+#### 补充：如何理解 CPU 的低延迟 vs GPU 的高吞吐
+
+表格里说 CPU 追求**低延迟（Latency）**，GPU 追求**高吞吐（Throughput）**。二者的核心区别可以概括为：
+
+> **低延迟关心"一个任务多快做完"，高吞吐关心"一段时间内能做多少个任务"。**
+
+更具体地说，**吞吐（Throughput）= 单位时间内完成的总工作量**。在 GPU 场景下常遇到三类吞吐指标：
+
+| 指标 | 含义 | GPU 场景举例 |
+|------|------|-------------|
+| **计算吞吐** | 每秒完成的浮点运算次数 | TFLOPS（每秒万亿次浮点运算） |
+| **内存吞吐** | 每秒读写的数据量 | GB/s（HBM/GDDR 带宽） |
+| **任务吞吐** | 单位时间处理的任务数 | 每秒处理多少张图片、多少 token |
+
+**形象类比**：
+
+- **CPU 像跑车**：速度快、载的人少，适合紧急送一两个人（低延迟）。
+- **GPU 像货运列车**：单辆车不快，但一次能拉几千节车厢，总体运量大（高吞吐）。
+
+**为什么 GPU 能做到高吞吐？**
+
+1. **核心数量多**：几千个 CUDA Core / Tensor Core 同时工作。
+2. **核心简单**：去掉复杂分支预测、大缓存、乱序执行，省下的芯片面积用来堆更多核心。
+3. **大量线程掩盖延迟**：当一个 warp 在等待内存数据时，warp scheduler 立刻换另一个 warp 执行，让计算单元尽量不空闲。
+
+**一句话总结**：GPU 通过"人海战术"牺牲单线程延迟，换取整体吞吐量，所以适合深度学习这种大规模并行任务。
+
+**关键洞察**：
+- CPU 像一位经验丰富的教授，能快速处理复杂但数量不多的任务
+- GPU 像一支庞大的学生队伍，每人只会做简单计算，但一起做能处理海量数据
+
+AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的，因此天然适合 GPU。
+
+---
+
+
+### 理论学习
+
+#### 1.1 GPU 硬件层次总览
+
+```
+GPU
+├── 多个 SM（Streaming Multiprocessor）
+│ ├── CUDA Cores / Tensor Cores
+│ ├── 寄存器文件（Register File）
+│ ├── Shared Memory / L1 Cache
+│ ├── Warp Scheduler
+│ └── Load/Store 单元
+├── L2 Cache（跨 SM 共享）
+└── Global Memory（HBM / GDDR）
+```
+
+**SM 是 GPU 并行的基本单位**。一个 kernel 被切分为多个 block，每个 block 被分配到一个 SM 上执行。重要约束：
+- 同一个 block **不能跨 SM**
+- 一个 SM 可以同时执行多个 block
+- 一个 SM 有硬件资源上限（寄存器、共享内存、最大 thread 数）
+
+##### 为什么同一个 block 不能跨 SM？
+
+因为 **block 是 GPU 资源共享和线程同步的基本单位，而这些资源都是 SM 私有的**。同一个 block 内的线程需要：
+
+1. **共享同一块 Shared Memory**
+2. **通过 `__syncthreads()` 直接同步**
+3. **被同一个 Warp Scheduler 调度**
+
+这三件事都只能在 **同一个 SM 内部** 完成，所以 block 不能被拆到不同 SM 上执行。
+
+| 资源/机制 | 为什么必须在同一个 SM 内 |
+|-----------|------------------------|
+| **Shared Memory** | Shared Memory 是 SM 的私有片上内存，不同 SM 之间无法直接访问彼此的 Shared Memory。 |
+| **`__syncthreads()`** | 这是 block 内所有线程的同步原语，依赖 SM 内部的硬件 barrier。跨 SM 同步没有这么轻量级的原语。 |
+| **Warp Scheduler** | 一个 SM 内部有一个或多个 Warp Scheduler，负责调度该 SM 上的 warp。block 的 warp 必须归同一个 scheduler 管。 |
+| **寄存器分配** | 每个 block 需要的寄存器总量需要在启动时从一个 SM 的寄存器文件里分配。 |
+| **硬件调度粒度** | GPU 调度器以整个 block 为单位分配给 SM，这样设计最简单高效。 |
+
+**形象类比**：把 **SM** 想象成一间教室，一个 **block** 就像一个班级。班级里的学生（threads）需要在**同一间教室**里上课，共用**同一块黑板**（Shared Memory），听**同一个老师**（Warp Scheduler）指挥。你不能让班级一半学生去 A 教室、另一半去 B 教室，否则他们没法共用黑板，也没法一起听讲。
+
+**注意区分两个概念**：
+
+| 说法 | 是否正确 |
+|------|---------|
+| 一个 block 不能跨 SM | ✅ 正确 |
+| 一个 SM 只能运行一个 block | ❌ 错误。一个 SM 可以同时运行多个 block，只要资源（shared memory、寄存器、thread 数）够用。 |
+
+> **一句话总结**：Block 是 SM 内部资源共享与同步的边界，因此同一个 block 的所有线程必须落在同一个 SM 上执行；但一个 SM 可以同时承载多个 block。
+
+#### 1.2 SM 架构详解
+
+![SM 架构简图](../website/images/sm_architecture.svg)
+
+以 NVIDIA RTX 5090 为例：
+- 108 个 SM
+- 每个 SM：64 个 FP32 CUDA Cores、32 个 FP64 CUDA Cores、4 个 Tensor Core
+- 每个 SM：256 KB 寄存器文件
+- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
+
+**GPU 代际对比（RTX 5090）**：
+
+| 指标　　　　　　　　　| RTX 5090　　　　　| RTX 5090　　　 | RTX 5090　　　　　　　　 |
+| -----------------------| ---------------| ------------| ----------------------|
+| 架构　　　　　　　　　| Blackwell　　　　| Blackwell　　 | Blackwell　　　　　　　 |
+| 显存　　　　　　　　　| 80 GB HBM2e　 | 80 GB HBM3 | 141 GB HBM3e　　　　 |
+| 内存带宽　　　　　　　| ~2 TB/s　　　 | ~3.35 TB/s | ~4.8 TB/s　　　　　　|
+| FP16 Tensor Core 算力 | 312 TFLOPS　　| 989 TFLOPS | 989 TFLOPS　　　　　 |
+| SM 数量　　　　　　　 | 108　　　　　 | 132　　　　| 132　　　　　　　　　|
+| 典型场景　　　　　　　| 通用训练/推理 | 大规模训练 | 大模型推理、长上下文 |
+
+**989 TFLOPS 是怎么算出来的？**
+
+表格中 RTX 5090 的 **989 TFLOPS** 指的是 FP16 Tensor Core 峰值算力，且是启用了 **2:4 structured sparsity** 后的理论值。如果不启用稀疏化，dense 峰值为约 **495 TFLOPS**。
+
+以 RTX 5090 为例，计算方式如下：
+
+```
+峰值算力 = SM 数量 × 每 SM Tensor Core 数量
+ × 每 Tensor Core 每周期 FMA 次数
+ × 2（FMA 包含一次乘法和一次加法）
+ × 时钟频率
+ × 2（仅 sparse 峰值，利用 2:4 稀疏化带来的翻倍）
+```
+
+代入数值（以 sparse 峰值为例）：
+
+| 参数 | 数值 |
+|------|------|
+| SM 数量 | 132 |
+| 每 SM Tensor Core 数量 | 4 |
+| 每 Tensor Core 每周期 FMA 次数 | 约 512 |
+| FMA 折算操作数 | × 2 |
+| 时钟频率 | 约 1.83 GHz |
+| Structured Sparsity 翻倍 | × 2 |
+
+```
+132 × 4 × 512 × 2 × 1.83 × 10^9 × 2 ≈ 989 × 10^12 FLOPS = 989 TFLOPS
+```
+
+需要注意：
+
+1. **这是理论峰值**，实际 kernel 能达到 50%–80% 已属优秀，受限于内存带宽、算子融合、warp divergence 等因素。
+2. **稀疏化不是无条件翻倍**：2:4 structured sparsity 要求权重满足特定稀疏模式，且需要硬件和算法同时支持。
+3. **FP8 峰值更高**：RTX 5090 在 FP8 精度下，sparse 峰值可达约 1979 TFLOPS，是大模型推理中常见的精度选择。
+
+**RTX 5090 的核心价值不是算力翻倍，而是显存容量和带宽的大幅提升**。对于 LLM 推理，模型权重和 KV Cache 都占用大量显存，RTX 5090 的 141 GB 显存可以运行更大模型或支持更长上下文；同时更高的内存带宽能显著加速 memory-bound 的推理负载（如 Attention、采样阶段）。
+
+**RTX 5090 的 SM 内部数据（Blackwell 架构）**：
+
+RTX 5090 采用 Blackwell SM 设计，具体参数如下：
+
+- 132 个 SM
+- 每个 SM：128 个 FP32 CUDA Cores、64 个 FP64 CUDA Cores、4 个 Fourth-Generation Tensor Core
+- 每个 SM：256 KB 寄存器文件
+- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
+- 每个 SM：最大 228 KB Shared Memory / L1 Cache（可配置）
+
+与 RTX 5090 相比，Blackwell 每个 SM 的 FP32 CUDA Core 数量从 64 提升到 128，Tensor Core 升级到第四代，支持 FP8 精度，矩阵乘加吞吐显著提高。
+
+**Tensor Core** 是专门用于矩阵乘加的硬件单元，是现代深度学习算力的核心来源。
+
+##### 核心概念对应关系：CUDA Core / Tensor Core / Thread / Warp / Block
+
+理解 GPU 执行模型，关键是把**软件层面的线程组织**和**硬件层面的计算单元**对应起来：
+
+| 概念 | 层级 | 作用 | 硬件/软件 |
+|------|------|------|-----------|
+| **CUDA Core** | 计算单元 | 执行标量 FP32/FP64/INT 运算，是 GPU 最基本的计算单元。 | 硬件 |
+| **Tensor Core** | 计算单元 | 执行矩阵乘加（GEMM），如 D = A × B + C，是深度学习算力的主要来源。 | 硬件 |
+| **Thread** | 软件执行单位 | CUDA 程序的最小执行单元，每个 thread 有独立的寄存器状态和指令地址。 | 软件 |
+| **Warp** | 调度单位 | 32 个 thread 组成一个 warp，同一个 warp 内的线程被同一个 warp scheduler 调度，执行相同的指令。 | 硬件调度粒度 |
+| **Block** | 协作单位 | 多个 warp 组成一个 block，block 内线程共享 Shared Memory，可通过 `__syncthreads()` 同步。 | 软件 |
+| **Grid** | 启动单位 | 一个 kernel 启动的所有 block 组成 grid，覆盖整个计算任务。 | 软件 |
+| **SM** | 执行引擎 | 一个 SM 包含多个 CUDA Core、Tensor Core、warp scheduler 和 Shared Memory，是 block 执行的物理载体。 | 硬件 |
+
+**层次关系**：
+
+```
+Grid
+ └── Block 0
+ │ ├── Warp 0 (thread 0 ~ 31)
+ │ ├── Warp 1 (thread 32 ~ 63)
+ │ └── ...
+ └── Block 1
+ └── ...
+```
+
+**映射到硬件**：
+
+- 一个 **thread** 最终映射到一个 **CUDA Core** 或 **Tensor Core** 上执行一次运算。
+- 一个 **warp**（32 threads）被 **一个 warp scheduler** 同时发射执行，warp 内的线程共享指令流。
+- 一个 **block** 被分配到 **一个 SM** 上执行，block 内的所有 warp 共享该 SM 的 Shared Memory 和寄存器文件。
+- 一个 **grid** 由 GPU 根据可用 SM 数量动态调度执行。
+
+**形象类比**：
+
+- **Thread** = 一个工人
+- **Warp** = 32 个工人组成的班组，必须同时做同一个动作
+- **Block** = 一个车间（SM）内协同作业的所有工人班组，共用车间工具和黑板（Shared Memory）
+- **Grid** = 整个工厂的所有车间共同完成的大订单
+- **CUDA Core** = 工人的手，做具体计算
+- **Tensor Core** = 专用机器，专门做矩阵乘法
+
+#### 1.3 Warp 与 SIMT 执行模型
+
+![SIMT vs SIMD](../website/images/simt_vs_simd.svg)
+
+**SIMT（Single Instruction Multiple Threads）** 是 NVIDIA GPU 的执行方式：
+- 一个 Warp 包含 32 个线程
+- 同一个 Warp 内的 32 个线程执行**同一条指令**
+- 但每个线程操作**不同的数据**（通过 threadIdx 区分）
+- 每个线程有独立的寄存器状态和程序计数器
+
+**SIMT vs SIMD**：
+- SIMD：一条指令同时处理固定宽度的数据向量（如 AVX-512 一次处理 512 位数据）
+- SIMT：一条指令同时被 32 个线程执行，每个线程可以有自己的数据地址和分支行为
+
+> 你可以把 Warp 理解为 GPU 调度的"最小部队"，一个班 32 个人，必须做同一个动作，但每个人处理自己的一份数据。
+
+#### 1.4 Warp Divergence（分支发散）
+
+![Warp Divergence](../website/images/warp_divergence.svg)
+
+当 Warp 内线程遇到条件分支时：
+
+```cuda
+if (threadIdx.x % 2 == 0) {
+    // 路径 A
+} else {
+    // 路径 B
+}
+```
+
+Warp 会先执行路径 A（偶数线程工作，奇数线程被 mask 掉），再执行路径 B（奇数线程工作，偶数线程被 mask 掉）。这导致：
+- 两条路径**串行执行**
+- 有效算力减半
+- 性能下降
+
+**如何避免**：
+- 尽量让相邻线程走相同分支
+- 使用 warp-level primitive（如 `__ballot_sync`）处理分支
+- 数据布局设计时考虑 warp 访问模式
+
+**三条措施的原理分别是什么？**
+
+##### 措施 1：尽量让相邻线程走相同分支
+
+**原理**：一个 warp 内的 32 个线程共享同一条指令流。如果 warp 内部分线程走分支 A、部分走分支 B，硬件会**串行执行两条路径**：先执行 A 路径（B 路径的线程被 mask 掉），再执行 B 路径（A 路径的线程被 mask 掉）。因此，最有效的避免 divergence 方式，就是让**同一个 warp 内的 32 个线程尽可能走同一条分支**。
+
+相邻线程通常落在同一个 warp 中（warp 的线程编号是连续的），所以让相邻线程走相同分支，本质上就是让 warp 内所有线程的分支条件一致。
+
+**反例**：
+```cuda
+// 坏：同一个 warp 内奇偶线程走不同分支
+if (threadIdx.x % 2 == 0) {
+    // 路径 A
+} else {
+    // 路径 B
+}
+```
+
+**正例**：
+```cuda
+// 好：按 warp 对齐处理，整个 warp 走同一条分支
+int warp_id = threadIdx.x / 32;
+if (warp_id % 2 == 0) {
+    // 路径 A：整个 warp 一起走
+} else {
+    // 路径 B：整个 warp 一起走
+}
+```
+
+> **一句话**：divergence 的代价是按 warp 支付的，不是按线程。只要一个 warp 内分支一致，就不会产生 divergence。
+
+##### 措施 2：使用 warp-level primitive（如 `__ballot_sync`）处理分支
+
+**原理**：当分支不可避免时，可以用 warp-level primitive **显式控制 warp 内线程的协作**，避免编译器生成低效的隐式分支代码。核心思想是：把"某些线程做 A、某些线程做 B"的逻辑，转换为"warp 内所有线程共同参与的数据移动或规约操作"。
+
+常用 warp primitive：
+
+| 函数 | 作用 |
+|------|------|
+| `__ballot_sync(mask, predicate)` | 返回 warp 内满足条件 predicate 的线程掩码 |
+| `__shfl_sync(mask, var, srcLane)` | 从指定 lane 获取数据 |
+| `__reduce_*_sync` | 对 warp 内数据进行规约（如 sum、max、and） |
+
+**典型场景**：需要找到 warp 内满足条件的线程数量，或需要让满足条件的线程把数据传给其他线程。
+
+```cuda
+// 例子：统计 warp 内值大于阈值的线程数
+unsigned mask = __ballot_sync(0xFFFFFFFF, val > threshold);
+int count = __popc(mask); // 统计活跃线程数
+```
+
+**为什么这能避免 divergence？**
+
+因为 `__ballot_sync` 让所有线程同时执行同一个"比较并生成掩码"的操作，不再走 if-else 分支。后续可以根据掩码做 warp-level 的数据重排或规约，而不是让 warp 串行执行两个分支路径。
+
+> **一句话**：warp primitive 把分支变成 warp 内的位运算和数据交换，绕过了串行执行不同分支的代价。
+
+##### 措施 3：数据布局设计时考虑 warp 访问模式
+
+**原理**：数据布局决定了相邻线程访问的数据特征，而数据特征又决定了分支条件是否一致。如果同一个 warp 内的线程处理的数据在逻辑上属于同一类（如同一区域、同一通道、同一 batch），它们更容易满足相同的分支条件；反之，如果数据布局导致一个 warp 内线程处理的数据差异很大，就更容易触发 divergence。
+
+**例子 1：图像处理中的边界判断**
+
+假设一个 warp 内部分线程处理图像内部像素，部分线程处理边界像素：
+```cuda
+// 坏：相邻线程可能分别对应内部和边界
+if (row > 0 && row < height - 1 && col > 0 && col < width - 1) {
+    // 内部像素：做卷积
+} else {
+    // 边界像素：跳过或特殊处理
+}
+```
+
+如果数据布局是按行优先连续存储，边界判断很可能在一个 warp 内同时出现 true 和 false，导致 divergence。
+
+**改进**：按 tile/block 组织计算，或padding图像，让整个 warp 统一处理带padding的区域，减少 warp 内部分线程走不同分支的概率。
+
+**例子 2：稀疏矩阵/条件性计算**
+
+如果数据按 AOS（Array of Structs）存储：
+```cpp
+struct Point {
+    float x, y, z;
+    int flag;
+};
+```
+相邻线程读取相邻 `Point`，flag 可能各不相同，容易 divergence。
+
+如果改成 SOA（Structure of Arrays）：
+```cpp
+float x[N], y[N], z[N];
+int flag[N];
+```
+可以先统一读取 `flag` 数组，按 warp 对 flag 相同的元素分组处理，减少 divergence。
+
+> **一句话**：数据布局影响线程的行为一致性。让同一个 warp 处理逻辑上同类的数据，是从源头减少 divergence 的方法。
+
+**三条措施的优先级总结**：
+
+| 优先级 | 措施 | 适用场景 |
+|--------|------|---------|
+| 1 | 让相邻线程走相同分支 | 通用，首选 |
+| 2 | 数据布局考虑 warp 访问模式 | 数据特征导致分支时 |
+| 3 | warp-level primitive | 分支不可避免时，显式优化 |
+
+> **核心洞察**：避免 warp divergence 的本质，是**保证同一个 warp 内 32 个线程的行为一致**。无论是从算法上、数据布局上，还是用 warp primitive 显式处理，最终目的都是减少 warp 被拆分成多个执行路径的次数。
+
+#### 1.5 Grid / Block / Thread 层次结构
+
+![Grid Block Thread 层次](../website/images/grid_block_thread.svg)
+
+##### 什么是 Block？
+
+**Block（线程块）** 是 GPU 上能够协同执行的一组线程的集合。一个 block 内的线程具有以下特征：
+
+- **共享资源**：block 内的所有线程共享同一块 **Shared Memory**，访问速度远快于全局内存。
+- **可以同步**：block 内的线程可以通过 `__syncthreads()` 进行全局同步，确保所有线程都到达某一点后再继续执行。
+- **独立执行**：不同 block 之间无法直接共享 Shared Memory，也不能直接同步，彼此独立执行。
+- **被分配到一个 SM**：启动 kernel 时，整个 block 会被调度到一个 SM 上执行，不能跨 SM。
+
+**为什么需要 Block？**
+
+GPU 把海量线程组织成 block，主要目的是：
+
+1. **数据局部性**：block 内的线程可以复用 Shared Memory 中的数据，减少全局内存访问。
+2. **协作能力**：block 内的线程可以相互配合，例如共同完成一个 tile 的矩阵乘法。
+3. **可扩展性**：block 之间互不依赖，GPU 可以根据可用 SM 数量动态调度 block，实现任意规模的并行。
+
+**Block 的硬件限制（以 NVIDIA RTX 5090 为例）**：
+
+| 资源 | 每 SM 上限 |
+|------|-----------|
+| 最大 thread 数 | 2048 |
+| 最大 warp 数 | 64 |
+| 最大 block 数 | 32 |
+| 寄存器文件 | 256 KB |
+| Shared Memory | 最多 164 KB（可配置）|
+
+这些限制决定了单个 block 的大小不能无限大。例如，一个 block 有 1024 个线程，每个线程用 64 个寄存器，则寄存器总量为 64 KB，仍在 SM 的 256 KB 寄存器文件内；但如果每个线程用 256 个寄存器，则一个 block 就需要 256 KB，一个 SM 同时就只能跑这一个 block。
+
+**如何选择 block 大小？**
+
+常见的选择原则：
+
+- **warp 的整数倍**：block 内线程数最好是 32 的倍数（一个 warp 32 线程），避免最后一个 warp 出现无效线程。
+- **常见配置**：128、256、512、1024 都是常用选择。
+- **考虑资源占用**：线程数越多，每个 SM 能同时运行的 block 数越少；线程数太少，可能无法充分利用 SM 的 warp scheduler。
+- **考虑算法需求**：如果 kernel 需要大量 Shared Memory 协作，block 太小会导致并行度不足；block 太大可能超过 SM 资源限制。
+
+> **一句话总结**：Block 是 GPU 上"能共享资源、能相互同步、一起被调度到一个 SM"的线程集合，是连接软件并行逻辑与硬件执行资源的关键层次。
+
+CUDA 使用三级层次组织并行：
+
+```
+Grid -> 多个 Block
+Block -> 多个 Thread
+Thread -> 实际执行的线程
+```
+
+**关键内置变量**：
+
+| 变量 | 含义 | 维度 |
+|------|------|------|
+| `gridDim` | Grid 中 block 的数量 | (x, y, z) |
+| `blockDim` | Block 中 thread 的数量 | (x, y, z) |
+| `blockIdx` | 当前 block 在 grid 中的坐标 | (x, y, z) |
+| `threadIdx` | 当前 thread 在 block 中的坐标 | (x, y, z) |
+
+**线程 ID 计算**：
+
+![线程 ID 计算](../website/images/thread_id_calculation.svg)
+
+1D grid + 1D block：
+```cuda
+int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+```
+
+2D grid + 2D block（常用于图像处理）：
+```cuda
+int row = blockIdx.y * blockDim.y + threadIdx.y;
+int col = blockIdx.x * blockDim.x + threadIdx.x;
+int global_tid = row * (gridDim.x * blockDim.x) + col;
+```
+
+**总线程数计算**：
+```
+total = gridDim.x * gridDim.y * gridDim.z *
+ blockDim.x * blockDim.y * blockDim.z
+```
+
+**Warp 数计算**：
+```
+warps_per_block = ceil(blockDim.x * blockDim.y * blockDim.z / 32)
+total_warps = warps_per_block * gridDim.x * gridDim.y * gridDim.z
+```
+
+#### 1.6 常用 CUDA Runtime API
+
+| API | 作用 |
+|-----|------|
+| `cudaMalloc(&ptr, size)` | 在 GPU 上分配内存 |
+| `cudaFree(ptr)` | 释放 GPU 内存 |
+| `cudaMemcpy(dst, src, size, kind)` | 在 CPU/GPU 之间拷贝数据 |
+| `cudaDeviceSynchronize()` | 等待所有 kernel 执行完成 |
+| `cudaGetDeviceProperties(&prop, dev)` | 查询 GPU 属性 |
+
+数据拷贝方向 `kind`：
+- `cudaMemcpyHostToDevice`：CPU → GPU
+- `cudaMemcpyDeviceToHost`：GPU → CPU
+- `cudaMemcpyDeviceToDevice`：GPU → GPU
+
+---
+
+### Coding 任务：第一个 CUDA 程序
+
+#### 任务 1：hello_gpu.cu
+
+创建文件 [kernels/hello_gpu.cu](kernels/hello_gpu.cu)：
+
+```cuda
+#include <stdio.h>
+
+// __global__ 表示这是一个 CUDA kernel，可以从 CPU 调用，在 GPU 上执行
+__global__ void hello_gpu() {
+    // 计算全局线程 ID（1D 情况）
+    int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    printf("block=(%d,%d,%d), thread=(%d,%d,%d), global_tid=%d\n", blockIdx.x, blockIdx.y, blockIdx.z, threadIdx.x,
+           threadIdx.y, threadIdx.z, global_tid);
+}
+
+int main() {
+    // 定义 grid 和 block 大小
+    dim3 grid(2, 2, 1);  // 2x2 = 4 个 block
+    dim3 block(4, 2, 1); // 每个 block 8 个 thread
+
+    printf("Launching kernel: grid=(%d,%d,%d), block=(%d,%d,%d)\n", grid.x, grid.y, grid.z, block.x, block.y, block.z);
+    printf("Total threads: %d\n", grid.x * grid.y * grid.z * block.x * block.y * block.z);
+
+    // 启动 kernel：<<<grid, block>>>
+    hello_gpu<<<grid, block>>>();
+
+    // 等待 GPU 完成，否则 printf 输出可能不完整
+    cudaDeviceSynchronize();
+
+    return 0;
+}
+```
+
+#### 任务 2：编译与运行
+
+```bash
+# 编译
+nvcc -o hello_gpu kernels/hello_gpu.cu
+
+# 运行
+./hello_gpu
+```
+
+**预期输出**：
+```
+Launching kernel: grid=(2,2,1), block=(4,2,1)
+Total threads: 32
+block=(0,0,0), thread=(0,0,0), global_tid=0
+block=(0,0,0), thread=(1,0,0), global_tid=1
+...
+```
+
+> ⚠️ **注意**：如果没有 `cudaDeviceSynchronize()`，kernel 中的 `printf` 可能来不及输出程序就结束了。
+
+#### 任务 3：验证线程总数
+
+手动计算：
+```
+grid = (2, 2, 1) → 4 blocks
+block = (4, 2, 1) → 8 threads/block
+total = 4 × 8 = 32 threads
+warps = ceil(8 / 32) × 4 = 1 × 4 = 4 warps
+```
+
+检查程序输出是否与你计算的一致。
+
+#### 为什么 32 个线程不是 1 个 warp？
+
+很多同学会有一个直觉：**整个 grid 不是总共有 32 个线程吗？那刚好凑成 1 个 warp 啊？**
+
+答案是：**warp 是按 block 分配的，不是按整个 grid 全局合并的。**
+
+以本例配置为例：
+
+```cuda
+dim3 grid(2, 2, 1);  // 4 blocks
+dim3 block(4, 2, 1); // 8 threads/block
+```
+
+CUDA 不会把**不同 block 的线程**合并到同一个 warp 里。每个 block 自己独立被拆成 warp：
+
+```text
+block 0: 8 threads → ceil(8/32) = 1 warp
+block 1: 8 threads → ceil(8/32) = 1 warp
+block 2: 8 threads → ceil(8/32) = 1 warp
+block 3: 8 threads → ceil(8/32) = 1 warp
+-----------------------------------------
+总计: 4 warps
+```
+
+**为什么不能跨 block 合并 warp？**
+
+因为 **block 是 GPU 资源共享和线程同步的基本单位**，同一个 block 内的线程需要：
+
+1. **共享同一块 Shared Memory**
+2. **共享同一个 Warp Scheduler 调度上下文**（SIMT）
+3. **跑在同一个 SM 上**
+4. **可以通过 `__syncthreads()` 同步**
+
+不同 block 之间无法做这些事，因此硬件天然会把每个 block 单独切分成 warp，而不会跨 block 凑数。
+
+**对比一个反例**：
+
+```cuda
+dim3 grid(1, 1, 1);   // 1 block
+dim3 block(32, 1, 1); // 32 threads/block
+```
+
+这时总 warp 数才是：
+
+```text
+1 block × ceil(32/32) = 1 warp
+```
+
+| 配置 | 总线程 | warp 数 | 原因 |
+|------|--------|---------|------|
+| `grid=(2,2,1), block=(4,2,1)` | 32 | **4** | 4 个 block 各 8 线程，各成 1 warp |
+| `grid=(1,1,1), block=(32,1,1)` | 32 | **1** | 1 个 block 32 线程，刚好 1 warp |
+
+**总结公式**：
+
+```text
+warps_per_block = ceil(threads_per_block / 32)
+total_warps = warps_per_block × num_blocks
+```
+
+> 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
+
+#### 任务 4：LeetGPU 在线题目 —— Vector Addition
+
+**题目链接**：<https://leetgpu.com/challenges/vector-add>
+
+**题目概述**：
+
+给定两个长度为 N 的浮点数组 A 和 B，计算逐元素和 C[i] = A[i] + B[i]。
+
+**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
+
+**难度**：简单　**标签**：CUDA、Kernel Launch、Grid/Block、Coalesced Access
+
+**与今日知识的关联**：
+
+本题是最基础的 CUDA kernel，要求正确配置 grid/block 维度、计算全局线程 ID、处理越界边界。直接练习 Day 1 学的线程层次与 ID 映射。
+
+**解题思路**：
+
+1D grid + 1D block，每个线程处理一个元素。用 grid-stride loop 处理 N > total_threads 的情况，保证 coalesced access。
+
+**参考实现**：
+
+```cuda
+#include <cuda_runtime.h>
+
+__global__ void vector_add(const float* A, const float* B, float* C, int N) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        C[idx] = A[idx] + B[idx];
+    }
+}
+```
+
+> 💡 提交后在 [LeetGPU Vector Addition 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Addition 题解](../../../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 接雨水
+
+**题目链接**：[42. 接雨水](https://leetcode.cn/problems/trapping-rain-water/)
+
+**题目概述**：
+
+给定 `n` 个非负整数表示柱子高度，计算下雨后能接多少雨水。
+
+**与今日知识的关联**：
+
+本题核心是**双指针**——左右指针从两端向中间逼近，每次移动较矮一侧，维护左右最大值。这与今天学 Grid/Block/Thread 层次映射的思路呼应：CUDA 把全局问题拆成 block 级子任务并行处理，双指针把全局接水量拆成"每个位置由左右最大值中的较小者决定"逐位置求解——都是**把大问题分解为可独立处理的子单元**。
+
+**核心套路**：
+
+```
+left=0, right=n-1, leftMax=0, rightMax=0
+while left<right:
+ if height[left]<height[right]: 处理左侧, left++
+ else: 处理右侧, right--
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](../../../../leetcode/daily/week1/day1/接雨水.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：不同 grid/block 配置
+
+修改 `dim3 grid(...)` 和 `dim3 block(...)`，观察输出：
+
+| grid | block | 总线程数 | warp 数 |
+|------|-------|---------|--------|
+| (1,1,1) | (32,1,1) | 32 | 1 |
+| (2,1,1) | (16,1,1) | 32 | 1 |
+| (2,2,1) | (16,16,1) | 1024 | 32 |
+| (4,1,1) | (256,1,1) | 1024 | 32 |
+| (1,1,1) | (1024,1,1) | 1024 | 32 |
+
+**思考问题**：
+1. 为什么 block 大小通常取 32 的倍数？
+ - 因为 warp 大小是 32，非 32 倍数会造成最后一个 warp 资源浪费。
+2. 为什么 block 最大 thread 数一般为 1024？
+ - 这是 GPU 硬件限制，由 `maxThreadsPerBlock` 决定。
+3. 输出顺序有什么规律？
+ - block 执行顺序不保证，同一个 block 内 thread 执行顺序也不保证。
+
+#### 实验 2：2D 线程 ID 计算
+
+实现一个 2D 版本的 kernel，计算每个线程的 2D 全局坐标：
+
+```cuda
+__global__ void hello_gpu_2d() {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int width = gridDim.x * blockDim.x;
+    int global_tid = row * width + col;
+
+    printf("row=%d, col=%d, global_tid=%d\n", row, col, global_tid);
+}
+```
+
+使用 `dim3 grid(2, 2)` 和 `dim3 block(4, 4)` 启动，验证 global_tid 是否连续。
+
+#### 实验 3：线程数上限探索
+
+尝试以下配置，观察是否能编译运行：
+- `block(1024, 1, 1)` ✓
+- `block(1024, 2, 1)` ✗（超过 1024 threads/block）
+- `grid(100000, 1, 1)` ✓（grid 维度很大时通常也可以）
+
+### 验证 Checklist
+
+- [ ] 能独立编译并运行 `hello_gpu.cu`
+- [ ] kernel 能正确打印所有 thread 的坐标
+- [ ] 理解 block 内 thread 数量与 warp 数量的关系：`warps = ceil(threads / 32)`
+- [ ] 能计算一个 kernel launch 的总 thread 数
+- [ ] 能解释 SIMT 与 SIMD 的区别
+- [ ] 能解释什么是 warp divergence 以及如何避免
+- [ ] 完成至少 2 组不同的 grid/block 配置实验
+
+---
+
+### 今日总结
+
+Day 1 我们建立了 GPU 执行模型的基础认知：
+
+1. **GPU 是吞吐导向的并行处理器**，与 CPU 的设计哲学不同
+2. **SM 是 GPU 并行的基本单位**，包含 CUDA Core、Tensor Core、寄存器、共享内存等
+3. **Warp 是调度基本单位**，一个 warp 32 个线程执行 SIMT
+4. **分支发散会降低性能**，因为 warp 内不同分支需要串行执行
+5. **Grid/Block/Thread 三级层次** 组织 CUDA 并行
+6. **第一个 CUDA 程序** 让我们直观感受到线程的并行执行
+
+掌握这些概念后，你才能理解为什么某些 CUDA 代码写得好、某些写得慢。
+
+---
+
+### 面试要点
+
+1. **什么是 SIMT？与 SIMD 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - SIMT：Single Instruction Multiple Threads，32 个线程执行同一条指令，但各自处理不同数据
+ - SIMD：Single Instruction Multiple Data，一条指令同时处理固定宽度的数据向量
+ - SIMT 可以处理分支（虽然有 divergence 代价），SIMD 分支处理更困难
+
+</details>
+
+
+2. **Warp divergence 是什么？如何避免？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 同一个 warp 内线程走不同分支，需要串行执行各分支
+ - 避免方法：让相邻线程走相同分支、使用 warp-level primitive
+
+</details>
+
+
+3. **一个 block 最多多少 thread？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 通常为 1024
+ - 这是 GPU 硬件限制，由 `maxThreadsPerBlock` 决定
+
+</details>
+
+
+4. **如何计算一个 kernel 的总 thread 数？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - `gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z`
+
+</details>
+
+
+5. **CUDA 中 `__global__` 和 `__device__` 的区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - `__global__`：CPU 调用，GPU 执行（kernel 函数）
+ - `__device__`：GPU 调用，GPU 执行（设备端辅助函数）
+
+---
+
+</details>
+

@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 3 - Day 3：源码分析 —— PyTorch / FasterTransformer</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 Week 3 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1：GPU 执行模型基础</a>
+<a class="nav-link day-link" href="../day2.html">Day 2：Occupancy 与资源约束</a>
+<a class="nav-link day-link" href="../day3.html">Day 3：认识你的 GPU —— deviceQuery 与 Occupancy 计算</a>
+<a class="nav-link day-link" href="../day4.html">Day 4：Memory Hierarchy 深入</a>
+<a class="nav-link day-link" href="../day5.html">Day 5：Bank Conflict 分析与实践</a>
+<a class="nav-link day-link" href="../day6.html">Day 6：Nsight Profiling 实战</a>
+<a class="nav-link day-link" href="../day7.html">Day 7：总结与复盘</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1：Warp Shuffle 原语与 Warp/Block Reduce</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2：Register Blocking 与 2D Tiling</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3：CUDA Streams 与异步执行</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4：Nsight Compute 性能分析</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5：FlashAttention CUDA 实现（简化版）</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6：整合优化到 cuBLAS 70%+</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7：限时 Kernel 手撕 + GitHub 整理 + 性能对比报告</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1：Trace Transformer 推理流程</a>
+<a class="nav-link day-link" href="day2.html">Day 2：手写 Softmax 与 LayerNorm Kernel</a>
+<a class="nav-link day-link active" href="day3.html">Day 3：源码分析 —— PyTorch / FasterTransformer</a>
+<a class="nav-link day-link" href="day4.html">Day 4：Attention IO 分析</a>
+<a class="nav-link day-link" href="day5.html">Day 5：算子接入 Mini 引擎</a>
+<a class="nav-link day-link" href="day6.html">Day 6：端到端 Profiling 与 Kernel Fusion</a>
+<a class="nav-link day-link" href="day7.html">Day 7：Transformer 算子分类与 Week 3 总结</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1：FlashAttention 论文精读与 Online Softmax 完整推导</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2：手写完整 FlashAttention Forward Kernel</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3：FlashAttention 官方 CUDA 源码分析</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4：FlashAttention-2 论文与源码差异</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5：算子接入 Mini 引擎 —— FlashAttention 集成</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6：性能对比分析 —— 标准 vs 手写 vs 官方</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7：IO 优化方法论总结与 Week 4 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1：推理流程 —— Prefill vs Decode</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2：实现 KV Cache</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3：vLLM 整体架构分析</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4：vLLM Worker 与 PagedAttention</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5：项目推进 —— Mini 推理引擎 v0</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6：端到端 Profiling</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7：推理系统核心问题总结与 Week 5 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1：Dynamic Batching</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2：Continuous Batching</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3：vLLM Scheduler 源码分析</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4：TensorRT-LLM / LightLLM 调度对比</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5：Mini 推理引擎 v1</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6：Latency / Throughput 测试</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7：调度优化策略总结与 Week 6 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week7/index.html">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week7/index.html">📌 Week 7 概览</a>
+<a class="nav-link day-link" href="../week7/day1.html">Day 1：多请求并发支持</a>
+<a class="nav-link day-link" href="../week7/day2.html">Day 2：完整调度器</a>
+<a class="nav-link day-link" href="../week7/day3.html">Day 3：SGLang / LightLLM 高级特性</a>
+<a class="nav-link day-link" href="../week7/day4.html">Day 4：整合全部自定义 Kernel</a>
+<a class="nav-link day-link" href="../week7/day5.html">Day 5：系统联调</a>
+<a class="nav-link day-link" href="../week7/day6.html">Day 6：全链路 Profiling</a>
+<a class="nav-link day-link" href="../week7/day7.html">Day 7：代码重构与文档</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week8/index.html">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week8/index.html">📌 Week 8 概览</a>
+<a class="nav-link day-link" href="../week8/day1.html">Day 1：项目文档完善</a>
+<a class="nav-link day-link" href="../week8/day2.html">Day 2：架构图与数据流图</a>
+<a class="nav-link day-link" href="../week8/day3.html">Day 3：高频面试题基础篇</a>
+<a class="nav-link day-link" href="../week8/day4.html">Day 4：高频面试题进阶篇</a>
+<a class="nav-link day-link" href="../week8/day5.html">Day 5：Mock 面试</a>
+<a class="nav-link day-link" href="../week8/day6.html">Day 6：查漏补缺</a>
+<a class="nav-link day-link" href="../week8/day7.html">Day 7：最终复盘</a>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 3：源码分析 —— PyTorch / FasterTransformer</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 PyTorch ATen 的 Softmax 为何在 **D ≤ 1024 时走 warp 级路径**，避免 \`__syncthreads\` 和 shared memory
+2. 掌握 **向量化加载**（float4 / half2）的原理，能解释为什么它能让 memory-bound kernel 提速 2-4x
+3. 理解 FasterTransformer LayerNorm 用 **Welford 在线算法**把两次 reduce 合并成一次遍历
+4. 能列出工业级实现比 Day 2 手写版多的 3 个优化（向量化 / Welford / register 缓存），并评估各自收益
+5. 理解 FP16 输入时 reduce 为什么要 cast 到 FP32（混合精度标准做法）
+6. 完成至少一项优化（warp 级 Softmax 或 float4 LayerNorm），用 ncu 验证 DRAM Throughput 提升
+
+> 💡 **为什么重要**：Day 2 我们手写了"能跑对"的 Softmax/LayerNorm，但和 PyTorch 官方实现比慢了 1.5-3x。今天通过读源码，找到差距在哪、为什么这么优化——这是从"能写 kernel"到"能写高性能 kernel"的关键一步。读源码不是为了背代码，而是建立"看到 memory-bound kernel 就条件反射想到向量化 + fusion + reduce 合并"的工程直觉。
+
+---
+
+### 学前导读：Day 2 的 kernel 跑对了，但慢在哪？
+
+昨天我们用三遍扫描 + 两级 block reduce 实现了 Softmax/LayerNorm，与 CPU 误差 < 1e-5。但如果拿 \`torch.softmax\` 对比 latency，大概率会慢 1.5-2x。差距来自三个工程细节：
+
+| 维度 | Day 2 手写版 | 差距来源 | 今日对应源码 |
+|------|-------------|---------|------------|
+| 加载方式 | 逐元素 \`float\`（每次 1 个） | 指令数 4x，带宽利用仅 ~25% | PyTorch \`load<ILP=4>\` |
+| Softmax 路径 | 一律 block 级（256 线程） | D=1024 时 \`__syncthreads\` 是多余开销 | PyTorch \`softmax_warp_forward\` |
+| LayerNorm reduce | 两次（mean, var 各读一遍 HBM） | 多一次 N×4B 全局读 | FT Welford 一次遍历 |
+
+今天的任务是**读官方源码 + 动手把 Day 2 的版本优化一两项**，用 ncu 量化收益。这不是为了超越 PyTorch（那需要 CUTLASS 级工程量），而是建立"看到 memory-bound 就知道优化在哪"的直觉。
+
+> 💡 **一句话总结**：工业 kernel 的优势不是算法多巧妙，而是把"向量化、reduce 合并、精度混合、register 缓存"这些工程细节一个个抠到极致——今天逐个拆解。
+
+---
+
+### 理论学习
+
+#### 3.1 PyTorch ATen Softmax：warp 级 vs block 级 Dispatch
+
+![PyTorch Softmax 的两条 Dispatch 路径](images/pytorch_softmax_dispatch.svg)
+
+**源码位置**：\`aten/src/ATen/native/cuda/SoftMax.cu\`
+
+PyTorch 的 softmax 不是一条路径，而是根据特征维 \`D\` 做 **dispatch**：
+
+| 路径 | 触发条件 | 并行粒度 | 关键优势 |
+|------|---------|---------|---------|
+| \`softmax_warp_forward\` | D ≤ 1024（一个 warp 能放下） | 一个 warp 一行 | 无 \`__syncthreads\`、无 shared memory |
+| \`softmax_block_forward\` | D > 1024 | 一个 block 一行 | 更多线程协作，处理大 D |
+
+##### 为什么 D ≤ 1024 时选 warp 级？
+
+Day 2 我们一律用 block 级（256 线程 + shared memory + \`__syncthreads\`）。但 PyTorch 在 D=1024 时改用 warp 级（32 线程，无 smem），原因有三：
+
+1. **避免 \`__syncthreads\`**：warp 内的 \`__shfl\` 是 SIMT 隐式同步（32 个 lane 同步执行），不需要显式屏障；block 级 reduce 必须 \`__syncthreads\`，有同步开销
+2. **延迟更低**：warp shuffle 延迟 ~1-2 cycles，shared memory 访问 ~20-30 cycles，差 10-20 倍
+3. **并行度足够**：D=1024 时 32 线程每 lane 处理 32 元素，且 M 行 × M 个 warp 提供足够并行度
+
+\`\`\`cuda
+// PyTorch softmax_warp_forward 的核心思路（简化）
+// blockDim.x = 32（一个 warp），gridDim.x = M
+int lane = threadIdx.x; // 0..31
+float local_max = -INFINITY;
+for (int i = lane; i < D; i += 32) // 每 lane 处理 D/32 个
+    local_max = fmaxf(local_max, in_row[i]);
+local_max = warpReduceMax(local_max);              // __shfl 直接归约，无 smem
+local_max = __shfl_sync(0xFFFFFFFF, local_max, 0); // 广播给全 warp
+// 后续 sum / normalize 同理，全程无 __syncthreads
+\`\`\`
+
+**关键差异**：warp 级用 \`__shfl_sync(0xFFFFFFFF, val, 0)\` 把 lane 0 的结果广播给全 warp（因为 \`__shfl_down_sync\` 后只有 lane 0 有正确值），而 block 级必须走 \`__shared__\` 变量 + \`__syncthreads\` 广播。
+
+> ⚠️ **注意**：warp 级的代价是"一个 warp 只能处理 D ≤ 1024 的行"（32 lane × 32 元素 = 1024）。D 更大时一个 warp 放不下，必须回退到 block 级。这就是 Day 2 用 block 级做"通用版"的原因——它什么 D 都能处理，但在常见 D（768/1024）上不是最优。
+
+#### 3.2 向量化加载：float4 与 half2
+
+![向量化加载：逐元素 vs float4 vs half2](images/vectorized_load_comparison.svg)
+
+这是 memory-bound kernel **最直接、收益最大**的优化。Day 2 我们逐元素加载：
+
+\`\`\`cuda
+// Day 2：每次加载 1 个 float（32-bit）
+for (int i = tid; i < D; i += blockDim.x) {
+    float v = in_row[i]; // 1 条 ld 指令，1 个 float
+    local_sum += v;
+}
+\`\`\`
+
+PyTorch/FasterTransformer 用 \`float4\`（128-bit）一次加载 4 个 float：
+
+\`\`\`cuda
+// 优化版：每次加载 4 个 float（128-bit）
+const float4* in4 = reinterpret_cast<const float4*>(in_row);
+int N4 = D / 4;
+for (int i = tid; i < N4; i += blockDim.x) {
+    float4 v = in4[i]; // 1 条 ld 指令，4 个 float
+    local_sum += v.x + v.y + v.z + v.w;
+}
+\`\`\`
+
+##### 为什么向量化能提速 2-4x？
+
+1. **减少加载指令数**：D 条 → D/4 条（float4），指令发射开销线性下降
+2. **内存事务对齐**：128-bit 是 GPU memory transaction 的自然粒度，\`float4\` 天然对齐
+3. **coalesced access**：相邻线程访问相邻 128-bit 块，一个 warp 的 32 次访问合并为最少事务
+4. **ILP（指令级并行）**：一次 load 后有 4 个独立元素可并行处理，掩盖 load 延迟
+
+FP16 场景下 FasterTransformer 用 \`__half2\`（一次 2 个 half = 32-bit），同样 128-bit 可装 8 个 half，等效带宽再翻倍：
+
+\`\`\`cuda
+// FasterTransformer FP16 路径
+__half2 val = *reinterpret_cast<const __half2*>(&input[i]);
+// __hadd2 成对加法，一次处理 2 个 half
+\`\`\`
+
+| 加载方式 | 每次加载元素 | 指令数（D=1024） | 带宽利用 | 相对性能 |
+|---------|------------|-----------------|---------|---------|
+| 逐元素 float | 1 | 1024 | ~25% | 1x |
+| float4 | 4 | 256 | ~60% | 1.5-2x |
+| half2（FP16） | 2（但 128-bit=8） | 128（等效） | ~80% | 2-3x |
+
+> ⚠️ **注意**：\`float4\` 要求 D 是 4 的倍数且指针 16-byte 对齐。不满足时需 fall back 到标量——这也是 PyTorch 用模板 \`ILP\` 参数做 dispatch 的原因。
+
+#### 3.3 FasterTransformer LayerNorm：Welford 一次遍历
+
+![LayerNorm：两次 Reduce vs Welford 一次遍历](images/welford_vs_twopass.svg)
+
+**源码位置**：\`src/fastertransformer/kernels/layernorm_kernels.cu\` 的 \`generalLayerNorm\`
+
+Day 2 的 LayerNorm 用两次 reduce（先 mean 后 variance），读两遍 HBM。FasterTransformer 用 **Welford 在线算法**合并成一次遍历：
+
+\`\`\`
+Welford 算法（一次遍历同时求 mean 和 M2）：
+ 遍历每个元素 xi：
+ count++
+ delta = xi - mean
+ mean += delta / count // 在线更新均值
+ M2 += delta * (xi - mean) // M2 累积平方差
+ 最终：variance = M2 / count
+\`\`\`
+
+| 方法 | HBM 读次数 | reduce 次数 | 性能 | 实现复杂度 |
+|------|-----------|------------|------|----------|
+| Day 2（两次 reduce） | 3N（三遍扫描） | 2 | 1x（基准） | 低，清晰易读 |
+| PyTorch ATen（两遍） | 3N | 2 | ~1x | 中 |
+| FasterTransformer（Welford） | 2N（省一次！） | 1 | ~1.3-1.5x | 高，并行合并复杂 |
+
+##### Welford 的精髓：在线均值/方差
+
+传统两遍法必须"先知道 mean 才能算 var"，所以读两遍。Welford 的洞察是：**遍历时实时更新 mean 和 M2，不需要预先知道 mean**。每来一个新元素，用 \`delta = xi - mean_old\` 同时更新 mean 和 M2，最终 \`var = M2 / count\`。
+
+**并行化难点**：多线程各自维护 \`(count, mean, M2)\`，合并时需按 count 加权——比简单 sum 复杂。合并两个统计块 \`(n_a, mean_a, M2_a)\` 和 \`(n_b, mean_b, M2_b)\` 的公式：
+
+\`\`\`
+delta = mean_b - mean_a
+n = n_a + n_b
+mean = mean_a + delta * n_b / n
+M2 = M2_a + M2_b + delta² * n_a * n_b / n
+\`\`\`
+
+这就是 FasterTransformer 比手写版难写的地方——但收益是少一次 N×4B 的全局读，对 memory-bound kernel 很值。
+
+##### Register 缓存 gamma/beta
+
+当 D 较小（如 768）时，FasterTransformer 把 gamma/beta 加载到 register 一次性使用：
+
+\`\`\`cuda
+float g = gamma[i]; // 加载到 register
+float b = beta[i];  // 加载到 register
+// 后续归一化直接用 register 中的 g, b，不重复读 HBM
+\`\`\`
+
+Day 2 的版本在归一化阶段每次都从 HBM 读 gamma/beta。register 缓存避免了重复读，但要求 D 小到能放进 register（每线程 ~255 个 register，D=768 时每线程 ~3 元素，可行）。
+
+---
+
+### Coding 任务：优化对比实验
+
+#### 任务 1：创建 \`kernels/softmax_layernorm_opt.cu\`
+
+下面是优化版 kernel，包含两项改进：① warp 级 Softmax（参考 PyTorch \`softmax_warp_forward\`）② float4 向量化 LayerNorm（参考 FasterTransformer 向量化加载）。同时保留 Day 2 的 block 级 / 标量版本做对比基准。完整文件见 [kernels/softmax_layernorm_opt.cu](kernels/softmax_layernorm_opt.cu)。
+
+**优化 1：warp 级 Softmax**（一个 warp 处理一行，无 shared memory）：
+
+\`\`\`cuda
+// kernels/softmax_layernorm_opt.cu（节选：warp 级 softmax）
+// 编译命令: nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
+
+__global__ void softmax_warp_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    // 每个 warp 处理一行，warp 数 = M * (blockDim.x / 32)
+    int global_warp_id = (blockIdx.x * blockDim.x + threadIdx.x) / 32;
+    if (global_warp_id >= M)
+        return;
+    int lane = threadIdx.x % 32;
+
+    const float* in_row = input + global_warp_id * D;
+    float* out_row = output + global_warp_id * D;
+
+    // 每个 lane 处理 D/32 个元素（D=1024 时每 lane 32 个）
+    float local_max = -INFINITY;
+    #pragma unroll
+    for (int i = lane; i < D; i += 32) {
+        local_max = fmaxf(local_max, in_row[i]);
+    }
+    local_max = warpReduceMax(local_max);
+    // 关键：__shfl_down 后只有 lane 0 有结果，用 __shfl_sync 广播给全 warp
+    local_max = __shfl_sync(0xFFFFFFFF, local_max, 0);
+
+    float local_sum = 0.0f;
+    #pragma unroll
+    for (int i = lane; i < D; i += 32) {
+        local_sum += expf(in_row[i] - local_max);
+    }
+    local_sum = warpReduceSum(local_sum);
+    local_sum = __shfl_sync(0xFFFFFFFF, local_sum, 0);
+
+    float inv_sum = 1.0f / local_sum;
+    #pragma unroll
+    for (int i = lane; i < D; i += 32) {
+        out_row[i] = expf(in_row[i] - local_max) * inv_sum;
+    }
+}
+\`\`\`
+
+**优化 2：float4 向量化 LayerNorm**（一次加载 4 个 float）：
+
+\`\`\`cuda
+// kernels/softmax_layernorm_opt.cu（节选：float4 向量化 layernorm）
+
+__global__ void layernorm_float4_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                        const float* __restrict__ beta, float* __restrict__ output, int M, int N,
+                                        float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+
+    // float4 指针：把 float* 按 4 个一组 reinterpret
+    const float4* in4 = reinterpret_cast<const float4*>(input + row * N);
+    const float4* g4 = reinterpret_cast<const float4*>(gamma);
+    const float4* b4 = reinterpret_cast<const float4*>(beta);
+    float4* out4 = reinterpret_cast<float4*>(output + row * N);
+
+    int N4 = N / 4; // float4 元素数
+    int tid = threadIdx.x;
+
+    __shared__ float smem[32];
+    __shared__ float row_mean, row_rstd;
+
+    // Step 1: 求 mean（用 float4 批量加载累加）
+    float local_sum = 0.0f;
+    for (int i = tid; i < N4; i += blockDim.x) {
+        float4 v = in4[i];
+        local_sum += v.x + v.y + v.z + v.w; // 一次加载，4 个累加
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_mean = local_sum / N;
+    __syncthreads();
+
+    // Step 2: 求 variance（同样 float4 批量加载）
+    float local_sq = 0.0f;
+    for (int i = tid; i < N4; i += blockDim.x) {
+        float4 v = in4[i];
+        float dx = v.x - row_mean;
+        float dy = v.y - row_mean;
+        float dz = v.z - row_mean;
+        float dw = v.w - row_mean;
+        local_sq += dx * dx + dy * dy + dz * dz + dw * dw;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
+    __syncthreads();
+
+    // Step 3: 归一化 + affine（float4 批量写出）
+    for (int i = tid; i < N4; i += blockDim.x) {
+        float4 v = in4[i];
+        float4 g = g4[i];
+        float4 b = b4[i];
+        float4 r;
+        r.x = (v.x - row_mean) * row_rstd * g.x + b.x;
+        r.y = (v.y - row_mean) * row_rstd * g.y + b.y;
+        r.z = (v.z - row_mean) * row_rstd * g.z + b.z;
+        r.w = (v.w - row_mean) * row_rstd * g.w + b.w;
+        out4[i] = r;
+    }
+}
+\`\`\`
+
+Host 端的对比基准（\`softmax_block_kernel\` / \`layernorm_scalar_kernel\`）和计时逻辑（50 次迭代取平均）见 [kernels/softmax_layernorm_opt.cu](kernels/softmax_layernorm_opt.cu) 完整文件。
+
+#### 为什么 warp 级 softmax 不需要 \`__syncthreads\`？
+
+对比 Day 2 的 block 级和今天的 warp 级，关键差异在"结果广播"：
+
+\`\`\`cuda
+// Day 2 block 级：结果只有 lane 0 有，必须经 shared memory 广播
+local_max = blockReduceMax(local_max, smem);
+if (tid == 0)
+    row_max = local_max;
+__syncthreads(); // ← 等全 block 写完 smem 才能读
+
+// 今日 warp 级：结果只有 lane 0 有，用 __shfl_sync 直接广播
+local_max = warpReduceMax(local_max);
+local_max = __shfl_sync(0xFFFFFFFF, local_max, 0); // ← 无需 smem，无需 syncthreads
+\`\`\`
+
+\`__shfl_sync(mask, val, src_lane)\` 把指定 lane 的值广播给 mask 内所有 lane，走寄存器交换网络，延迟 ~1-2 cycles。这就是 warp 级省掉 \`__syncthreads\` 的关键——warp 内通信不走 shared memory。
+
+#### 任务 2：编译与运行
+
+\`\`\`bash
+# 编译（带 -lineinfo 供 ncu Source View 使用）
+# Blackwell (RTX 5090): sm_120
+nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 -lineinfo
+
+# 运行
+./softmax_layernorm_opt
+\`\`\`
+
+**预期输出**：
+
+\`\`\`text
+=== Softmax + LayerNorm Optimization Comparison ===
+Config: M=1024, D=1024 (D must be multiple of 4 for float4)
+
+[Softmax: block-level (Day16) vs warp-level (optimized)]
+ warp-level correctness: maxDiff = x.xx e-07 (PASS)
+ block-level (Day16): 0.xxxx ms
+ warp-level (optim) : 0.xxxx ms
+ speedup : 1.xx x
+
+[LayerNorm: scalar load (Day16) vs float4 vectorized]
+ float4 correctness: maxDiff = x.xx e-06 (PASS)
+ scalar (Day16) : 0.xxxx ms
+ float4 (optim) : 0.xxxx ms
+ speedup : 1.xx x
+\`\`\`
+
+两个 \`PASS\` 确认优化版与 CPU 参考一致。warp 级 softmax 预期提速 1.1-1.5x（省了 \`__syncthreads\`），float4 layernorm 预期提速 1.3-2x（指令数减少 4x）。实际提速取决于 GPU 型号和 D 是否对齐。
+
+#### 任务 3：用 ncu 对比优化前后的 DRAM / SM Throughput
+
+\`\`\`bash
+# profile 优化版 kernel
+ncu --metrics \\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\\
+ gpu__time_duration.sum \\
+ --kernel-name regex:"softmax_warp_kernel|layernorm_float4_kernel" \\
+ ./softmax_layernorm_opt
+
+# 对比：也 profile Day 2 的 block/scalar 版本
+ncu --metrics \\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\\
+ gpu__time_duration.sum \\
+ --kernel-name regex:"softmax_block_kernel|layernorm_scalar_kernel" \\
+ ./softmax_layernorm_opt
+\`\`\`
+
+**预期对比**：
+
+| Kernel | DRAM Throughput | SM Throughput | Time | 观察 |
+|--------|-----------------|---------------|------|------|
+| \`softmax_block_kernel\`（Day16） | ~50-60% | ~15-20% | 基准 | memory-bound，带宽未喂饱 |
+| \`softmax_warp_kernel\`（优化） | ~60-75% | ~15-22% | 更快 | DRAM 利用率提升（省了同步开销） |
+| \`layernorm_scalar_kernel\`（Day16） | ~45-55% | ~12-18% | 基准 | 逐元素加载，指令多 |
+| \`layernorm_float4_kernel\`（优化） | ~65-80% | ~18-25% | 更快 | DRAM 利用率明显提升（向量化） |
+
+**关键观察**：float4 优化后 DRAM Throughput 应明显上升（因为同样时间内核读了更多数据），但 SM Throughput 变化不大（计算量没变）——这正是 memory-bound kernel 优化的特征：**提升的是带宽利用率，不是算力利用率**。
+
+#### 任务 4：LeetGPU 在线题目 —— Argmax
+
+**题目链接**：<https://leetgpu.com/challenges/argmax>
+
+**题目概述**：
+
+给定长度为 \`N\` 的浮点数组 \`input\`，找到最大值所在的下标。如果有多个相同最大值，返回最小的下标。约束 \`1 ≤ N ≤ 10,000,000\`，元素范围 \`[-1000.0, 1000.0]\`。
+
+**难度**：中等　**标签**：CUDA、Reduction、Argmax、Warp Shuffle
+
+**与今日知识的关联**：
+
+Argmax 是一个**带状态追踪的归约**——不仅要找最大值，还要记录其下标。这正是今天"warp 级 vs block 级 reduce"的直接实战：用 \`__shfl_down_sync\` 在 warp 内归约 \`(max_val, max_idx)\`，比较逻辑比纯 sum/max 更复杂（值相同时取较小下标）。今天读了 PyTorch softmax 的 warp 级 dispatch，本题就是把这个模式应用到 argmax。
+
+**解题思路**：
+
+1. **线程级**：每个线程用 grid-stride loop 扫描自己负责的区间，维护局部 \`(max_val, max_idx)\`
+2. **Warp 级**：用 \`__shfl_down_sync\` 在 warp 内归约，同时 shuffle 值和下标，比较时处理平局（值相同取较小 idx）
+3. **Block 级**：warp 部分结果写 shared memory，Warp 0 做最终归约
+4. **跨 Block**：用 \`atomicMax\` 或第二次 kernel 汇总所有 block 的结果
+
+**参考实现**：
+
+\`\`\`cuda
+// argmax.cu —— Argmax 归约（两级归约 + Warp Shuffle）
+// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_120
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cfloat>
+
+__global__ void argmax_kernel(const float* input, int* out_idx, int N) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    float local_max = -FLT_MAX;
+    int local_idx = 0;
+
+    // 线程级：grid-stride loop 扫描区间
+    for (int i = tid; i < N; i += gridDim.x * blockDim.x) {
+        if (input[i] > local_max) {
+            local_max = input[i];
+            local_idx = i;
+        }
+    }
+
+    __shared__ float s_val[32];
+    __shared__ int s_idx[32];
+
+    int lane = threadIdx.x & 31;
+    int wid = threadIdx.x >> 5;
+
+    // Warp 级：shuffle 同时归约值和下标（平局取较小 idx）
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
+        int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+        if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
+            local_max = other_val;
+            local_idx = other_idx;
+        }
+    }
+
+    if (lane == 0) {
+        s_val[wid] = local_max;
+        s_idx[wid] = local_idx;
+    }
+    __syncthreads();
+
+    // Block 级：Warp 0 收尾
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) / 32;
+        local_max = (lane < numWarps) ? s_val[lane] : -FLT_MAX;
+        local_idx = (lane < numWarps) ? s_idx[lane] : 0;
+
+        for (int offset = 16; offset > 0; offset >>= 1) {
+            float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
+            int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
+            if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
+                local_max = other_val;
+                local_idx = other_idx;
+            }
+        }
+        if (lane == 0)
+            atomicMax(out_idx, local_idx);
+    }
+}
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Argmax 题目](https://leetgpu.com/challenges/argmax)上记录通过耗时。完整题解（含平局处理图解、\`atomicMax\` vs 两次 kernel 的权衡）见 [Argmax 题解](../leetgpu/leetgpu-argmax-solution.html)。
+
+#### 任务 5：LeetCode 面试题 —— 最长回文子串
+
+**题目链接**：[5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)
+
+**题目概述**：给定字符串 \`s\`，找到 \`s\` 中最长的回文子串。
+
+**与今日知识的关联**：最长回文子串的**中心扩展法**与今日 Argmax 的**逐元素比较+状态追踪**同构——中心扩展从每个位置向两端逐步扩展并维护"最长回文"状态，Argmax 逐元素扫描并维护"最大值+索引"状态。两者都是"线性扫描 + 维护最优状态"的模式。
+
+> 💡 完整题解见 [最长回文子串题解](../leetcode/problems/最长回文子串.html)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：将 LayerNorm 改为 Welford 一次 reduce 版本
+
+参考今天理论学习的 Welford 公式，把 \`layernorm_float4_kernel\` 的两次 reduce 合并成一次遍历。核心改动：
+
+\`\`\`cuda
+// Welford：一次遍历同时维护 mean 和 M2
+float local_mean = 0.0f, local_M2 = 0.0f;
+int local_count = 0;
+for (int i = tid; i < N4; i += blockDim.x) {
+    float4 v = in4[i];
+    // 对 v.x, v.y, v.z, v.w 依次做 Welford 更新
+    // ... mean += delta / count; M2 += delta * (x - mean);
+}
+// 然后合并多线程的 (count, mean, M2) —— 需要按 count 加权
+\`\`\`
+
+**思考问题**：并行 Welford 合并多线程的 \`(count, mean, M2)\` 比简单 sum 复杂在哪？合并公式是什么？
+> 提示：合并 \`(n_a, mean_a, M2_a)\` 和 \`(n_b, mean_b, M2_b)\`：\`delta = mean_b - mean_a; n = n_a + n_b; mean = mean_a + delta * n_b / n; M2 = M2_a + M2_b + delta² * n_a * n_b / n\`。参考论文 "Welford's Algorithm for Parallel Variance"。
+
+#### 实验 2：对比不同 D 下的 warp vs block 路径选择
+
+把 D 分别设为 256、1024、4096，运行 \`softmax_warp_kernel\` 和 \`softmax_block_kernel\`，记录时间：
+
+\`\`\`cuda
+int test_D[] = {256, 1024, 4096};
+// 对每个 D 跑两个 kernel，对比时间
+\`\`\`
+
+**思考问题**：D=4096 时 warp 级还能正确工作吗？性能会怎样？
+> 提示：warp 级每 lane 处理 D/32 个元素。D=4096 时每 lane 128 元素，仍能正确，但每 lane 工作量增加，并行度相对下降。D 太大时 block 级（更多线程协作）可能反超——这就是 PyTorch 用 D=1024 做 dispatch 分界的原因。
+
+#### 实验 3：用 ncu 分析 stall 原因
+
+对 \`layernorm_scalar_kernel\` 和 \`layernorm_float4_kernel\` 分别采集 warp stall reasons：
+
+\`\`\`bash
+ncu --metrics \\
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\\
+ smsp__average_warps_issue_stalled_membar.pct \\
+ --kernel-name regex:"layernorm" \\
+ ./softmax_layernorm_opt
+\`\`\`
+
+**思考问题**：float4 版本的 Long Scoreboard stall 占比应该比标量版高还是低？为什么？
+> 提示：float4 版本每次 load 更大数据块，单次 load 延迟更长，但总 load 次数减少。Long Scoreboard（等内存）的占比可能略升（单次等待更久），但总执行时间下降（等待次数少）。这就是"用少量长延迟换大量短延迟"的权衡。
+
+### 验证 Checklist
+
+- [ ] 能找到并阅读 PyTorch \`SoftMax.cu\` 的 \`softmax_warp_forward\` 函数，说出 dispatch 条件（D ≤ 1024）
+- [ ] 能解释 warp 级 softmax 为什么不需要 \`__syncthreads\`（\`__shfl_sync\` 广播替代 shared memory）
+- [ ] 能阅读 FasterTransformer \`layernorm_kernels.cu\` 的 \`generalLayerNorm\`，列出 Welford 一次 reduce 的核心公式
+- [ ] 能列出 FasterTransformer LayerNorm 比手写版多的 3 个优化（Welford / half2 / register 缓存）
+- [ ] 理解 float4 向量化加载为什么能提升 2-4x（指令数 1/4 + 对齐 + coalesced + ILP）
+- [ ] 能解释 FP16 reduce 为什么要 cast 到 FP32（FP16 溢出 + 累加精度）
+- [ ] 完成 Day 2 版本的至少一项优化（warp 级或 float4），并用 ncu 验证 DRAM Throughput 提升
+
+---
+
+### 今日总结
+
+Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 手写版的三个差距并动手优化：
+
+1. **warp 级 Dispatch**：PyTorch 在 D ≤ 1024 时用 warp 级（一个 warp 一行），省掉 \`__syncthreads\` 和 shared memory，延迟降低 10-20x
+2. **向量化加载**：\`float4\`（128-bit）一次加载 4 个 float，指令数减 4x，带宽利用从 ~25% 提到 ~60%；FP16 用 \`__half2\` 等效带宽再翻倍
+3. **Welford 一次遍历**：FasterTransformer 把 LayerNorm 的两次 reduce 合并成一次，省一次 N×4B 全局读，提速 ~1.3-1.5x
+4. **register 缓存**：小 D 时把 gamma/beta 预加载到 register，避免归一化阶段重复读 HBM
+5. **FP32 混合精度**：FP16 输入时 reduce 用 FP32 累加（防溢出 + 保精度），这是跨平台一致的标准做法
+
+掌握这些后，你就建立了"看到 memory-bound kernel 就条件反射想到向量化 + reduce 合并 + fusion"的工程直觉。Day 4 会把这套分析框架用到标准 Attention 的 IO 复杂度上。
+
+---
+
+### 面试要点
+
+1. **PyTorch 的 Softmax 在 D 较小时为什么用 warp 级实现而不是 block 级？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **避免 \`__syncthreads\`**：warp 级 reduce 用 \`__shfl\` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 \`__syncthreads\`，有同步开销
+ - **延迟更低**：warp 内 shuffle 延迟 ~1-2 cycles，shared memory ~20-30 cycles，差 10-20 倍
+ - **足够并行度**：D=1024 时 32 个线程每个处理 32 个元素，且 M 行 × M 个 warp 提供足够并行度
+ - **适用条件**：D ≤ 1024（一个 warp 能处理），且 M 足够大；D > 1024 时回退到 block 级
+ - **广播技巧**：\`__shfl_down_sync\` 后只有 lane 0 有结果，用 \`__shfl_sync(0xFFFFFFFF, val, 0)\` 广播给全 warp，替代 shared memory 广播
+
+</details>
+
+
+2. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **FP16 溢出风险**：FP16 max ≈ 65504，\`exp(x)\` 在 x > 11 时就接近溢出（\`exp(11) ≈ 60000\`）
+ - **累加精度**：FP16 的尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
+ - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
+
+</details>
+
+
+3. **什么是向量化加载？为什么 float4 能让 memory-bound kernel 提速 2-4x？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **定义**：用 \`float4\`（128-bit）一次加载 4 个 float，替代逐元素 \`float\`（32-bit）加载
+ - **提速原因**：① 指令数减 4x（D 条 → D/4 条）② 128-bit 是 GPU memory transaction 自然粒度，天然对齐 ③ coalesced access 合并度更高 ④ 一次 load 后 4 个独立元素提供 ILP，掩盖延迟
+ - **限制**：要求 D 是 4 的倍数且指针 16-byte 对齐；FP16 场景用 \`__half2\`（128-bit = 8 个 half），等效带宽再翻倍
+
+</details>
+
+
+4. **Welford 算法是什么？为什么能减少 LayerNorm 的 HBM 读次数？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **传统两遍**：先求 mean（Pass 1，读 N），再求 var（Pass 2，依赖 mean，再读 N）→ 读 2N
+ - **Welford 一次**：遍历时实时更新 \`(count, mean, M2)\`，不需要预先知道 mean → 读 N，省一次
+ - **核心公式**：\`delta = xi - mean_old; mean += delta / count; M2 += delta * (xi - mean_new)\`，最终 \`var = M2 / count\`
+ - **并行化难点**：多线程需合并各自的 \`(count, mean, M2)\`，合并按 count 加权：\`mean = mean_a + delta * n_b / n; M2 = M2_a + M2_b + delta² * n_a * n_b / n\`
+ - **收益**：FasterTransformer 用 Welford 把 LayerNorm 提速 ~1.3-1.5x
+
+</details>
+
+
+5. **你看过哪些开源 kernel 实现？FasterTransformer LayerNorm 比 PyTorch ATen 多了哪些优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **FasterTransformer 比 PyTorch ATen 多的优化**：
+ 1. **Welford 一次 reduce**（ATen 用两次）→ 省一次 HBM 读
+ 2. **\`__half2\` 向量化**（ATen 用 float4）→ FP16 带宽翻倍
+ 3. **register 缓存 gamma/beta**（ATen 每次从 HBM 读）→ 小 D 时省重复读
+ 4. **模板多精度**（ATen 分 FP32/FP16 两套）→ 代码复用 + BF16 支持
+ - **性能对比**：手写 ~1x，PyTorch ATen ~1.5-2x，FasterTransformer ~2-3x
+ - **关键洞察**：FT 是 NVIDIA 官方推理优化库，把"向量化 + reduce 合并 + register 缓存 + 多精度模板"抠到极致，是手写 kernel 的最佳参考
+
+---
+
+</details>`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

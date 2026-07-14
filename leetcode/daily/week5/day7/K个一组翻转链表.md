@@ -60,7 +60,7 @@ dummy → 1 → 2 → 3 → 4 → 5,  k=3
 结果: dummy → 3 → 2 → 1 → 4 → 5
 ```
 
-> 💡 与 [Day7 推理系统 Chunked Prefill](../../aiinfra/week5/day7/README.md) 的模式同构：都是"把大块连续处理拆成固定大小分段处理，尾段特殊处理"。翻转链表的"不足 k 保持原序" = Chunked Prefill 的"最后一块可能不满"。
+> 💡 与 [Day7 推理系统 Chunked Prefill](../../aiinfra/daily/week5/day7/README.md) 的模式同构：都是"把大块连续处理拆成固定大小分段处理，尾段特殊处理"。翻转链表的"不足 k 保持原序" = Chunked Prefill 的"最后一块可能不满"。
 
 ### 2.3 算法流程
 

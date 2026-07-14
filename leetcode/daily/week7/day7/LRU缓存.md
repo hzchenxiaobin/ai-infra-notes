@@ -41,7 +41,7 @@ cache.get(4);       // 返回 4
 
 关键洞察：**哈希表提供 O(1) 查找，双向链表维护访问顺序**。访问（get/put）时把节点移到链表头部，淘汰时从尾部删除。
 
-> 💡 与 [Week7 Day7 代码重构与文档](../../aiinfra/week7/day7/README.md) 中的 **Prefix Caching（Day 3）** 同构——Prefix Cache 用 LRU 策略淘汰最久未用的 KV Cache，正如 LRU Cache 淘汰最久未访问的 key。两者都是"容量有限时按 LRU 淘汰"的核心模式。
+> 💡 与 [Week7 Day7 代码重构与文档](../../aiinfra/daily/week7/day7/README.md) 中的 **Prefix Caching（Day 3）** 同构——Prefix Cache 用 LRU 策略淘汰最久未用的 KV Cache，正如 LRU Cache 淘汰最久未访问的 key。两者都是"容量有限时按 LRU 淘汰"的核心模式。
 
 ### 2.2 算法流程
 

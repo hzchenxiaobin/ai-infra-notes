@@ -30,13 +30,18 @@ ai-infra-notes/
 │ ├── AI_Infra_8_week_plan_detailed.md # 详细每周目标 + 每日种子
 │ └── learning_plan_week{2..8}_expanded.md # 各周逐日深度展开
 ├── aiinfra/ # 课程教程（主体）
-│ ├── daily-tutorial/SKILL.md # 写每日教程的 Skill 规范
-│ ├── week1/ ✅ # GPU 执行本质 + Profiling（7 天）
-│ ├── week2/ ✅ # GEMM & 算子优化（7 天）
-│ ├── week3/ ✅ # Transformer 执行本质（7 天）
-│ ├── week4/ ✅ # FlashAttention 深挖（7 天）
-│ └── week5/ ✅ # 推理系统与 KV Cache（7 天）
-│ └── day1~day7/ # 每天含 README + kernels + SVG
+│ ├── daily/ # 每日教程（8 周）
+│ │ ├── SKILL.md # 写每日教程的 Skill 规范
+│ │ ├── week1/ ✅ # GPU 执行本质 + Profiling（7 天）
+│ │ ├── week2/ ✅ # GEMM & 算子优化（7 天）
+│ │ ├── week3/ ✅ # Transformer 执行本质（7 天）
+│ │ ├── week4/ ✅ # FlashAttention 深挖（7 天）
+│ │ ├── week5/ ✅ # 推理系统与 KV Cache（7 天）
+│ │ ├── week6/ ✅ # Continuous Batching 推理引擎（7 天）
+│ │ ├── week7/ ✅ # 推理引擎集成与项目打磨（7 天）
+│ │ └── week8/ ✅ # 项目打磨 + 面试准备（7 天）
+│ ├── topics/ # 专题学习（CUTLASS/Triton 等横向深挖）
+│ │ └── SKILL.md # 写专题教程的 Skill 规范
 ├── leetgpu/ # LeetGPU CUDA 挑战题解（27 道）
 │ ├── week1~week5/dayM/ # 按周/日归档，与教程对齐
 │ └── images/ # 题解手绘 SVG 插图
@@ -109,27 +114,27 @@ cd public && python3 -m http.server 8080
 ### 单独构建某一周
 
 ```bash
-python3 aiinfra/week5/website/build.py
-cd aiinfra/week5/website && python3 -m http.server 8080
+python3 aiinfra/daily/week5/website/build.py
+cd aiinfra/daily/week5/website && python3 -m http.server 8080
 ```
 
 ## 编译运行 Kernel
 
-Kernel 按天组织在 `aiinfra/weekN/dayM/kernels/` 下，可用 `nvcc` 直接编译：
+Kernel 按天组织在 `aiinfra/daily/weekN/dayM/kernels/` 下，可用 `nvcc` 直接编译：
 
 ```bash
 # Week 1: GPU 执行模型
-nvcc -o aiinfra/week1/day1/kernels/hello_gpu aiinfra/week1/day1/kernels/hello_gpu.cu && ./aiinfra/week1/day1/kernels/hello_gpu
+nvcc -o aiinfra/daily/week1/day1/kernels/hello_gpu aiinfra/daily/week1/day1/kernels/hello_gpu.cu && ./aiinfra/daily/week1/day1/kernels/hello_gpu
 
 # Week 2: GEMM 优化
-nvcc -O3 -arch=sm_120 aiinfra/week2/day2/kernels/gemm.cu -o gemm && ./gemm
+nvcc -O3 -arch=sm_120 aiinfra/daily/week2/day2/kernels/gemm.cu -o gemm && ./gemm
 
 # Week 4: FlashAttention
-nvcc -O3 -arch=sm_120 aiinfra/week4/day2/kernels/flash_attention_v2.cu -o fa && ./fa
+nvcc -O3 -arch=sm_120 aiinfra/daily/week4/day2/kernels/flash_attention_v2.cu -o fa && ./fa
 
 # Week 5: PagedAttention / Mini 引擎
-nvcc -O3 -arch=sm_120 aiinfra/week5/day4/kernels/paged_attention.cu -o paged && ./paged
-python3 aiinfra/week5/day5/kernels/mini_engine_v0.py
+nvcc -O3 -arch=sm_120 aiinfra/daily/week5/day4/kernels/paged_attention.cu -o paged && ./paged
+python3 aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
 ```
 
 Profiling 示例：
@@ -142,7 +147,7 @@ ncu --metrics gpu__time_duration.sum, \
  ./gemm
 
 # nsys 采集端到端时间线
-nsys profile -o timeline --trace=cuda,nvtx python3 aiinfra/week5/day5/kernels/mini_engine_v0.py
+nsys profile -o timeline --trace=cuda,nvtx python3 aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
 nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 ```
 
@@ -181,9 +186,9 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 ## 学习路线建议
 
 1. 从 [docs/AI_Infra_8_week_plan.md](docs/AI_Infra_8_week_plan.md) 了解整体节奏
-2. 进入 [aiinfra/week1/README.md](aiinfra/week1/README.md) 按 Day 1 → Day 7 推进
+2. 进入 [aiinfra/daily/week1/README.md](aiinfra/daily/week1/README.md) 按 Day 1 → Day 7 推进
 3. 每个 kernel 配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
-4. Day 3 起配合 [aiinfra/week1/tools/cuda_occupancy_calculator.py](aiinfra/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
+4. Day 3 起配合 [aiinfra/daily/week1/tools/cuda_occupancy_calculator.py](aiinfra/daily/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
 5. 每天完成 LeetGPU 在线题目，题解归档到 `leetgpu/weekN/dayM/`
 6. 每天完成 LeetCode 面试题，题解归档到 `leetcode/daily/weekN/dayM/`
 

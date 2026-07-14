@@ -1,0 +1,505 @@
+## Day 7：最终复盘
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 完成 **8 周能力地图 Checklist**——逐项勾选 Kernel 优化 / 推理系统 / Profiling / 系统设计 / 工程表达五大领域，标注强项与待提升<br>
+2. 串讲 **8 周知识体系**——从 Week 1 GPU 执行模型到 Week 8 面试准备，理清每周主题与递进关系<br>
+3. 制定 **后续 6 个月学习路线**——3 个月深化（PagedAttention / Tensor Core / C++ Scheduler）+ 3 个月拓展（分布式 / 量化 / 多模态）<br>
+4. 整理 **最终项目报告**——项目概述、核心产出、关键数据、技术难点、强项待提升<br>
+5. 掌握 **8 周收官面试题**——最大收获/挑战、未来规划、项目深挖、系统设计综合题<br>
+6. 能用 `week8_summary.py` 自测系统完成 8 周知识的最终检验
+
+> 💡 **为什么重要**：今天是 8 周学习的终点，也是职业生涯的新起点。复盘不是"庆祝结束"，而是"看清自己"——强项给你面试底气，待提升给你后续方向。一份诚实的能力地图，比刷 100 道题更有价值。
+
+---
+
+### Week 8 知识地图
+
+![Week 8 知识地图：项目打磨 + 面试准备](../website/images/week8_knowledge_map.svg)
+
+| Day | 主题 | 核心产出 |
+|-----|------|---------|
+| Day 1 | 项目文档完善 | README、Quick Start、依赖安装、Benchmark 结果 |
+| Day 2 | 架构图与数据流图 | 系统架构、数据流、模块交互、Continuous Batching 时间线 |
+| Day 3 | 高频面试题基础篇 | GPU 基础、Kernel 优化、CUDA 编程、Profiling（12 题） |
+| Day 4 | 高频面试题进阶篇 | Attention、推理系统、vLLM、调度、场景题（11 题） |
+| Day 5 | Mock 面试 | STAR 法、技术难点深挖、Follow-up、录音复盘 |
+| Day 6 | 查漏补缺 | 六大薄弱点、易混淆概念、关键公式默写、默画 8 图 |
+| Day 7 | 最终复盘 | 8 周能力地图、后续路线、最终报告（本日） |
+
+---
+
+### 核心概念串讲：8 周知识体系
+
+![8 周学习路线总图：从 GPU 执行到推理系统](../website/images/eight_week_roadmap.svg)
+
+8 周学习是一条从"底层硬件"到"上层系统"再到"工程表达"的完整进阶路径：
+
+#### 1. Week 1-2：Kernel 优化基础
+
+从 GPU 执行模型出发，掌握"如何写一个快的 kernel"：
+
+- **Week 1**：SM/Warp/Occupancy 三层结构、Memory Hierarchy、Coalesced/Bank Conflict、nsys/ncu Profiling、Roofline Model
+- **Week 2**：GEMM 优化九层阶梯（Naive 1% → cuBLAS 70%+）——Shared Memory Tiling、Register Blocking、float4、Warp Shuffle、Double Buffering、参数精调
+
+> 核心能力：**能手写 GEMM 并用 ncu 分析瓶颈**，理解 memory-bound vs compute-bound。
+
+#### 2. Week 3-4：Transformer 算子与 FlashAttention
+
+从单算子优化转向"理解模型在 GPU 上怎么跑"：
+
+- **Week 3**：Softmax / LayerNorm / Attention 的 CUDA 实现，PyTorch / FasterTransformer 源码分析，算子接入 Mini 引擎
+- **Week 4**：FlashAttention 论文精读——online softmax 完整推导、手写 Forward Kernel、官方 CUDA 源码分析、FA1 vs FA2 差异、性能对比
+
+> 核心能力：**能手写 FlashAttention 并讲清 online softmax 三公式**，理解 IO 优化方法论。
+
+#### 3. Week 5-7：推理系统与调度
+
+从单算子转向"完整推理系统"：
+
+- **Week 5**：Prefill vs Decode、KV Cache 实现、vLLM 架构、PagedAttention、Mini 推理引擎 v0、端到端 Profiling
+- **Week 6**：Dynamic / Continuous Batching、vLLM Scheduler 源码、TensorRT-LLM / LightLLM 调度对比、Latency / Throughput 测试
+- **Week 7**：多请求并发、完整调度器（双预算 + 抢占 + aging）、高级特性（Speculative Decoding / Chunked Prefill / Prefix Caching）、自定义 Kernel 集成、系统联调、全链路 Profiling
+
+> 核心能力：**能构建 Mini 推理引擎（500+ 请求稳定）**，理解 Continuous Batching + PagedAttention + Scheduler。
+
+#### 4. Week 8：项目打磨与面试准备
+
+把前 7 周的代码和知识转化为面试竞争力：
+
+- **Day 1-2 项目打磨**：README 让新用户 10 分钟跑通、架构图 + 数据流图、Benchmark 对比表
+- **Day 3-4 面试题库**：50+ 高频题（基础 GPU/Kernel/CUDA/Profiling + 进阶 Attention/推理/vLLM/调度/场景设计）
+- **Day 5-6 面试冲刺**：Mock 面试 + 录音复盘 + 查漏补缺（六大薄弱点 + 易混淆概念 + 公式默写）
+- **Day 7 最终复盘**：能力地图 + 后续路线 + 报告（本日）
+
+> 核心能力：**能清晰口述项目、秒答关键数字、应对 follow-up**，把"懂"转化为"讲得清"。
+
+---
+
+### 8 周能力地图
+
+![8 周能力地图：强项与待提升](../website/images/eight_week_capability_map.svg)
+
+#### 能力地图 Checklist
+
+```text
+Kernel 优化：
+  [✓] 理解 GPU 执行模型（SM/Warp/Occupancy）
+  [✓] 掌握 Shared Memory Tiling + Bank Conflict
+  [✓] 掌握 Register Blocking + float4 + Warp Shuffle
+  [✓] 能分析 kernel 瓶颈（ncu + Roofline）
+  [✓] 手写 FlashAttention Forward Kernel
+  [ ] Double Buffering 完整实现
+  [ ] Tensor Core / WMMA / mma.sync
+  [ ] CUTLASS 源码阅读
+
+推理系统：
+  [✓] 理解 Prefill/Decode 区别与瓶颈
+  [✓] 理解 KV Cache 设计和内存计算
+  [✓] 理解 PagedAttention 概念
+  [✓] 理解 Continuous Batching
+  [✓] 理解 Scheduler 设计（双预算 + 抢占 + aging）
+  [✓] 能构建 Mini 推理引擎（500+ 请求稳定）
+  [ ] PagedAttention 完整 CUDA 实现
+  [ ] C++ Scheduler（降 CPU overhead）
+
+Profiling：
+  [✓] 会使用 nsys 系统级时间线
+  [✓] 会使用 ncu + Roofline 判 bound
+  [✓] 会做端到端 profiling + vLLM 对比
+
+系统设计：
+  [✓] 能设计 LLM 推理服务（6 要素）
+  [✓] 能解释 vLLM 架构 + trade-off
+  [ ] 多 GPU / TP / PP 分布式
+
+工程表达：
+  [✓] README + 架构图 + Benchmark 报告
+  [✓] 50+ 面试题自问自答
+  [✓] Mock 面试 + 录音复盘
+  [✓] STAR 法项目介绍 + 技术难点深挖
+  [✓] 关键公式 / 参数秒答
+  [✓] 8 张核心流程图默画
+```
+
+#### 强项与待提升
+
+```text
+强项（面试底气）：
+  - 手写 FlashAttention + online softmax 推导
+  - GEMM 优化到 cuBLAS 70%+ 的完整路径
+  - Continuous Batching + Scheduler 实现
+  - ncu profiling + Roofline 瓶颈分析
+  - 完整 Mini 推理引擎（500+ 请求稳定）
+
+待提升（后续 3 个月重点）：
+  - PagedAttention 完整 CUDA 实现
+  - Tensor Core / WMMA / CUTLASS
+  - C++ Scheduler（降 CPU overhead）
+  - 多 GPU / TP / PP 分布式
+  - 模型量化（INT8/FP8/AWQ/GPTQ）
+```
+
+> 💡 **复盘原则**：强项是面试时主动展示的，待提升是被追问时诚实承认并给出改进计划的。永远不要把待提升说成强项——面试官一追问就露馅。
+
+---
+
+### 总结任务 / Coding 任务
+
+#### 任务 1：运行 8 周总复盘自测系统
+
+创建并运行 [kernels/week8_summary.py](kernels/week8_summary.py)，汇总 8 周全部知识点：
+
+```bash
+python kernels/week8_summary.py
+```
+
+**预期输出**（节选）：
+
+```text
+============================================================
+     Week 8 Day 7：8 周最终复盘
+============================================================
+五个模块：知识地图 / 能力地图 / 面试题 / 公式参数 / 路线规划
+
+输入命令: all
+
+============================================================
+📊 1. Week 8 知识地图（7 天回顾）
+  Day 1: 项目文档完善
+       → README、Quick Start、依赖安装、Benchmark 结果
+  ...
+   ★ Day 7: 最终复盘
+       → 8 周能力地图、后续路线、最终报告
+
+============================================================
+📊 2. 8 周能力地图 Checklist（✅ 强项 / ⚠️ 待提升）
+
+  【Kernel 优化】
+    ✅ GPU 执行模型（SM/Warp/Occupancy）
+    ...
+    ⚠️ Tensor Core / WMMA / mma.sync
+
+  汇总：✅ 强项 18/24　⚠️ 待提升 6/24
+
+📊 4. 关键公式 + RTX 5090 参数速答
+  • Online Softmax: m_new=max(m,max(xj)); ...
+  • Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX5090 ≈ 12.6）
+```
+
+代码要点：
+- **五个模块**：知识地图、能力地图（自评强项/待提升）、30 道面试题速查、关键公式+参数、6 个月路线
+- **能力地图**：24 项 checklist，标注 ✅/⚠️，汇总强项占比，待提升项即后续重点
+- **面试题速查**：30 道高频题按基础/进阶/项目/成长分组，可随机抽题口述
+
+#### 任务 2：LeetGPU 综合题 —— 1D Convolution
+
+**题目链接**：<https://leetgpu.com/challenges/1d-convolution>
+
+**与本周知识的关联**：1D Convolution 是 **shared memory + halo region** 模板的最简形态，是 8 周收官题——检验你最扎实的 shared memory 基本功。它对应能力地图中 Kernel 优化层的强项（Shared Memory Tiling + Bank Conflict）。掌握 1D halo 加载，2D/3D Conv / Stencil / Gaussian Blur 都是同构扩展。作为 8 周最后一道 LeetGPU，它把 Week 1-2 的 shared memory 教学画上句号。
+
+> 💡 完整题解见 [1D Convolution 题解](../../../../leetgpu/week8/day7/leetgpu-1d-convolution-solution.md)。
+
+#### 任务 3：LeetCode 面试题 —— 排序链表
+
+**题目链接**：[148. 排序链表](https://leetcode.cn/problems/sort-list/)
+
+**与本周知识的关联**：排序链表是**归并排序（分治）**的经典应用，要求 `O(n log n)` 时间 + `O(1)` 空间。它综合了 Week 2/Day4「合并两个有序链表」+ 快慢双指针找中点，是"分治 + 合并"思维的收官题。这与 8 周学习的整体结构同构：把复杂系统拆成可解的子问题（Week 1-4 算子 / Week 5-7 系统），各部分独立优化后再整合（Week 8 工程）。迭代归并的"自底向上倍增"也呼应系统优化中"用迭代代替递归省栈空间"的思想（如 CUDA kernel 用循环替代递归归约）。
+
+> 💡 完整题解（含递归归并与迭代归并双解、复杂度对比、链表归并 vs 快排对比）见 [排序链表题解](../../../../leetcode/daily/week8/day7/排序链表.md)。
+
+---
+
+### 面试准备框架
+
+#### 8 周核心面试题（按主题分组）
+
+| # | 主题 | 题目 | 频率 |
+|---|------|------|------|
+| 1 | 项目 | 介绍一下你的 Mini AI Infra 项目 | ⭐⭐⭐⭐⭐ |
+| 2 | Kernel | GEMM 优化到 cuBLAS 80%，每层收益？ | ⭐⭐⭐⭐⭐ |
+| 3 | Attention | FlashAttention 为什么快？online softmax 推导 | ⭐⭐⭐⭐⭐ |
+| 4 | 推理 | Prefill 和 Decode 的区别？ | ⭐⭐⭐⭐⭐ |
+| 5 | 推理 | KV Cache 核心思想 + 内存计算 | ⭐⭐⭐⭐⭐ |
+| 6 | 推理 | PagedAttention 解决什么问题？ | ⭐⭐⭐⭐⭐ |
+| 7 | 调度 | Continuous vs Dynamic Batching | ⭐⭐⭐⭐⭐ |
+| 8 | 项目 | 项目最大技术难点？如何解决？ | ⭐⭐⭐⭐⭐ |
+| 9 | 项目 | 如果继续优化会做什么？ | ⭐⭐⭐⭐⭐ |
+| 10 | Profiling | Roofline Model + Ridge Point 计算 | ⭐⭐⭐⭐ |
+| 11 | 系统 | 设计一个 LLM 推理服务 | ⭐⭐⭐⭐⭐ |
+| 12 | 成长 | 8 周最大收获和挑战？ | ⭐⭐⭐⭐ |
+
+#### 答题框架（通用四步）
+
+```
+1. 先说"是什么"（定义 + 一句话概括）
+2. 再说"怎么做"（核心机制 + 数据结构）
+3. 然后说"为什么"（设计权衡 + 替代方案）
+4. 最后说"效果"（量化指标 + 实测数据）
+```
+
+#### 项目介绍 STAR 模板（3-5 分钟）
+
+```text
+S (Situation)：LLM 推理部署对延迟和吞吐要求高，我想理解底层优化
+T (Task)：手写高性能 kernel 并搭建可运行的 Mini 推理引擎
+A (Action)：
+  - GEMM 优化到 cuBLAS 70%（Tiling + RegBlock + float4 + Shuffle）
+  - 手写 FlashAttention（online softmax + tiling）
+  - Continuous Batching + Scheduler（双预算 + 抢占）
+R (Result)：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
+```
+
+---
+
+### 常见误区澄清
+
+1. **"8 周学完就是 AI Infra 专家了"** → 不对。8 周建立的是"从 kernel 到系统"的完整知识框架和动手能力，但离生产级还有距离：Tensor Core / PagedAttention 完整实现 / C++ Scheduler / 分布式都没深入。诚实的态度是"入门 + 能独立推进"，不是"精通"。
+
+2. **"手写 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 cuDNN/cuBLAS 慢（官方高度优化）。手写 kernel 的核心价值是**算子融合**和**推理特化**，不是单纯比绝对速度。
+
+3. **"面试只考手撕 kernel"** → 不全对。AI Infra 面试考四块：① 项目深度（最大难点/优化思路）② 系统设计（LLM 推理服务）③ Kernel 基础（GEMM 优化/FlashAttention）④ Coding（LeetCode 高频）。只练手撕 kernel 会偏科。
+
+4. **"Mock 面试练一次就够了"** → 不够。Mock 要至少 2-3 轮，每轮录音复盘，针对性改进。第一轮暴露问题，第二轮验证改进，第三轮固化表达。
+
+5. **"待提升项面试时藏起来"** → 错误策略。面试官会追问到。正确做法是诚实承认 + 给出改进计划（如"PagedAttention 我只实现了概念版，完整 CUDA 实现是我下个月计划的重点"），展示学习意识。
+
+6. **"复盘只是走形式"** → 不对。复盘的核心价值是**看清自己的能力边界**——强项给你面试底气，待提升给你后续方向。一份诚实的能力地图，比刷 100 道题更有价值。
+
+---
+
+### 8 周总结 → 后续规划
+
+![后续学习路线：3 个月深化 + 6 个月拓展](../website/images/future_roadmap.svg)
+
+```
+8 周完成：
+  ✓ CUDA Kernel：GEMM / FlashAttention / Softmax / LayerNorm
+  ✓ Mini 推理引擎：KV Cache · Continuous Batching · Scheduler（500+ 请求稳定）
+  ✓ Profiling 报告：nsys / ncu / 端到端 + vLLM 对比
+  ✓ 面试素材：README + 架构图 + 50+ 面试题 + Mock 记录
+  ✓ 能力地图：18 项强项 / 6 项待提升
+
+后续 6 个月规划：
+  Month 1：深化 Kernel —— PagedAttention CUDA + Tensor Core + CUTLASS
+  Month 2：系统强化 —— C++ Scheduler + CUDA Graph + Chunked Prefill
+  Month 3：分布式与生产 —— TP/PP + 量化 + 部署
+  Month 4-5：多模态与长文本 —— Multimodal + 100K 上下文 + MoE
+  Month 6：面试与影响力 —— 面试反馈 + 博客 + 开源贡献
+```
+
+**规划原则**：每月一个主线 + 一个量化目标 + 一个可展示产出。优先级按待提升项排序：Tensor Core / PagedAttention（补强项）> C++ Scheduler > 分布式。
+
+---
+
+### 弹性安排
+
+| 时间 | 充足版（6h） | 紧凑版（3h） |
+|------|------------|------------|
+| 能力地图 | 2h：24 项逐项自评 + 强项/待提升深挖 | 45min：勾选 checklist + 标注 Top3 待提升 |
+| 后续路线 | 2h：6 个月详细规划 + 量化目标 | 1h：3 个月主线 + 目标 |
+| 最终报告 | 2h：完整报告（概述/产出/数据/难点/路线） | 1h：报告骨架 + 关键数据 |
+
+---
+
+### 今日总结
+
+Day 7 我们完成了 8 周学习的最终复盘：
+
+1. **8 周知识体系串讲**：从 Week 1 GPU 执行模型到 Week 8 面试准备，理清 Kernel 优化 → Transformer 算子 → 推理系统 → 工程表达的递进关系
+2. **能力地图 Checklist**：24 项逐项自评，18 项强项（面试底气）/ 6 项待提升（后续重点）
+3. **后续 6 个月路线**：3 个月深化（PagedAttention / Tensor Core / C++ Scheduler）+ 3 个月拓展（分布式 / 量化 / 多模态）
+4. **最终报告框架**：项目概述、核心产出、关键数据、技术难点、强项待提升
+5. **收官面试题**：最大收获/挑战、未来规划、项目深挖、系统设计综合题
+6. **自测系统**：`week8_summary.py` 五模块（知识地图/能力地图/面试题/公式参数/路线）
+7. **1D Convolution**：shared memory halo 模板收官题，检验最扎实的 shared memory 基本功
+8. **排序链表**：归并排序分治收官题，综合合并有序链表 + 快慢双指针
+
+> 💡 8 周学习的终点，也是职业生涯的新起点。强项给你面试底气，待提升给你后续方向。**保持学习、保持诚实、保持动手**——这是 AI Infra 工程师的三件法宝。祝面试顺利！
+
+---
+
+### 面试要点
+
+1. **这 8 周学习你最大的收获是什么？最大的挑战是什么？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **最大收获**：
+   - 建立了从 kernel 到系统的完整 AI Infra 知识体系
+   - 能手写并优化核心 CUDA kernel（GEMM 达 cuBLAS 70%、FlashAttention）
+   - 能理解并设计推理系统的关键组件（Continuous Batching、Scheduler、KV Cache）
+   - 建立了 profiling 驱动优化的方法论（nsys/ncu + Roofline）
+ - **最大挑战**：
+   - FlashAttention 的 online softmax 推导和 CUDA 实现（数学 + 工程双难）
+   - Continuous Batching 的状态机和 KV Cache 内存管理（并发正确性）
+   - 系统联调时多组件边界问题（KV Cache 串台、请求卡住、内存泄漏）
+ - **如何克服**：反复推导、手写代码、做实验验证；阅读 vLLM 开源代码；长时间稳定性测试
+
+</details>
+
+
+2. **你未来 3-6 个月的学习/工作计划是什么？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **3 个月**：
+   - 完整实现 PagedAttention（CUDA kernel + block table）
+   - 学习 Tensor Core / WMMA / CUTLASS，GEMM 达 cuBLAS 90%+
+   - C++ 重写 Scheduler，降低 CPU overhead 10x
+ - **6 个月**：
+   - 分布式推理（Tensor / Pipeline Parallelism）
+   - 模型量化（INT8/FP8/AWQ/GPTQ）
+   - 多模态 / 超长上下文 / MoE 推理优化
+ - **长期**：成为 AI Infra 领域专家，参与开源（vLLM/SGLang），发表技术博客
+ - **规划原则**：每月一个主线 + 一个量化目标 + 一个可展示产出，按待提升项排序
+
+</details>
+
+
+3. **用 STAR 法介绍你的 Mini AI Infra 项目，并说出最大的技术难点。**（⭐⭐⭐⭐⭐ 必考）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **S**ituation：LLM 推理部署对延迟和吞吐要求高，我想理解 vLLM 调度与 Attention 优化的底层
+ - **T**ask：手写高性能 kernel 并搭建可运行的 Mini 推理引擎
+ - **A**ction：GEMM 优化到 cuBLAS 70%（Tiling+RegBlock+float4+Shuffle）；手写 FlashAttention（online softmax + tiling）；Continuous Batching + Scheduler（双预算 + 抢占）
+ - **R**esult：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
+ - **最大难点**：Continuous Batching 的正确性——每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache。解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
+
+</details>
+
+
+4. **你的强项和待提升分别是什么？面试时如何呈现？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **强项**（主动展示）：
+   - 手写 FlashAttention + online softmax 推导
+   - GEMM 优化完整路径 + ncu 瓶颈分析
+   - Continuous Batching + Scheduler 实现
+ - **待提升**（诚实承认 + 改进计划）：
+   - PagedAttention 完整 CUDA 实现（"概念版已实现，完整版是下月重点"）
+   - Tensor Core / CUTLASS（"GEMM 用 FMA 到 70%，WMMA 是下一步"）
+   - 分布式 / 量化（"单卡已掌握，多 GPU 在规划中"）
+ - **呈现原则**：强项主动讲深，待提升诚实承认 + 给出时间表，绝不把待提升说成强项
+
+</details>
+
+
+5. **如果让你设计一个生产级 LLM 推理服务，你会怎么做？**（⭐⭐⭐⭐⭐ 必考）
+
+<details>
+<summary>点击查看答案</summary>
+
+ 1. **模型层**：权重管理 + 量化（INT8/FP8 KV Cache）+ 官方 FlashAttention-2
+ 2. **KV Cache 管理**：PagedAttention（block 化 + block table + copy-on-write）
+ 3. **调度层**：Continuous Batching + 优先级 + 抢占 + Chunked Prefill + Prefix Caching
+ 4. **并发**：多请求异步 + CUDA Graph 降 launch overhead + C++ Scheduler
+ 5. **性能优化**：Tensor Core + 算子融合 + Speculative Decoding
+ 6. **运维**：监控（TTFT/TBT/吞吐）+ 自动扩缩容 + 灰度发布
+ 7. **权衡**：延迟 vs 吞吐（batch size）、显存 vs 速度（量化）、一致性 vs 性能（prefix cache）
+ - 基于 8 周所学，能讲清每个组件的原理和 trade-off，这是系统设计题的核心
+
+</details>
+
+## 📁 本周目录结构
+
+```
+aiinfra/week8/
+├── README.md                      # 周总览
+├── day1/
+│   ├── README.md                  # 项目文档完善
+│   └── kernels/
+├── day2/
+│   ├── README.md                  # 架构图与数据流图
+│   └── kernels/
+├── day3/
+│   ├── README.md                  # 高频面试题基础篇
+│   └── kernels/
+├── day4/
+│   ├── README.md                  # 高频面试题进阶篇
+│   └── kernels/
+├── day5/
+│   ├── README.md                  # Mock 面试
+│   └── kernels/
+│       └── mock_interview.py      # Mock 计时系统
+├── day6/
+│   ├── README.md                  # 查漏补缺
+│   └── kernels/
+│       └── knowledge_selftest.py  # 知识自测系统
+├── day7/
+│   ├── README.md                  # 最终复盘（本文件）
+│   └── kernels/
+│       └── week8_summary.py       # 8 周总复盘自测
+└── website/
+    ├── build.py
+    ├── index.html
+    ├── day1.html ~ day7.html
+    └── images/                    # Week 8 + 8 周总览 SVG
+        ├── week8_knowledge_map.svg
+        ├── eight_week_roadmap.svg
+        ├── eight_week_capability_map.svg
+        ├── future_roadmap.svg
+        ├── benchmark_measurement_flow.svg
+        ├── doc_consolidation_lifecycle.svg
+        ├── interview_basics_knowledge_map.svg
+        ├── interview_advanced_knowledge_map.svg
+        ├── mock_interview_framework.svg
+        ├── weak_points_review.svg
+        ├── confusable_concepts.svg
+        ├── key_formulas_cheatsheet.svg
+        └── ... (Day1-2 架构图等)
+```
+
+---
+
+## 🔗 推荐资源
+
+**学习进阶**：
+- **CUTLASS**：<https://github.com/NVIDIA/cutlass> — NVIDIA 高性能 GEMM 模板库，Tensor Core 进阶必读
+- **FlashAttention-2/3**：<https://arxiv.org/abs/2307.08691> — tiling + online softmax，跟踪 FA3 最新进展
+- **vLLM**：<https://github.com/vllm-project/vllm> — PagedAttention + Continuous Batching，源码必读
+- **SGLang**：<https://github.com/sgl-project/sglang> — RadixAttention + Speculative Decoding
+- **TensorRT-LLM**：<https://github.com/NVIDIA/TensorRT-LLM> — 生产级推理引擎
+
+**面试准备**：
+- **LeetGPU**：<https://leetgpu.com/> — CUDA 在线编程练习
+- **LeetCode 面试经典 150**：<https://leetcode.cn/studyplan/top-interview-150/>
+- **系统设计**：ByteByteGo / Alex Xu《System Design Interview》
+
+**Profiling 工具**：
+- **Nsight Systems**：<https://docs.nvidia.com/nsight-systems/>
+- **Nsight Compute**：<https://docs.nvidia.com/nsight-compute/>
+
+**社区**：
+- **CUDA Programming Guide**：<https://docs.nvidia.com/cuda/cuda-c-programming-guide/>
+- **GPU Mode Discord**：<https://discord.gg/gpumode> — GPU 编程社区
+
+---
+
+## ✅ Week 8 完成标准
+
+- [ ] Day 1：README 完整，新用户能 10 分钟跑通示例
+- [ ] Day 1：示例脚本在干净环境跑通
+- [ ] Day 2：系统架构图、数据流图、Continuous Batching 时间线图完成
+- [ ] Day 2：图表保存到 docs 目录，能用图表辅助讲解
+- [ ] Day 3：12 道基础篇面试题能 3 分钟内口述
+- [ ] Day 3：基础篇面试题笔记整理完成
+- [ ] Day 4：11 道进阶篇面试题能 5 分钟内口述
+- [ ] Day 4：能白板推导 online softmax 三公式、画 vLLM 架构图
+- [ ] Day 5：完成自我介绍 + 项目介绍 + 2-3 个技术难点准备
+- [ ] Day 5：完成至少 1 轮 Mock 面试并录音复盘
+- [ ] Day 6：六大薄弱点清零，自测系统全对
+- [ ] Day 6：关键公式熟练背诵，8 张核心流程图能默画
+- [ ] Day 7：完成 8 周能力地图 checklist，标注强项/待提升
+- [ ] Day 7：制定 3-6 个月后续学习路线
+- [ ] Day 7：完成最终项目报告
+- [ ] Day 7：能回答"最大收获/挑战"和"未来规划"
+- [ ] Day 7：所有文档整理到 GitHub，8 周学习闭环完成

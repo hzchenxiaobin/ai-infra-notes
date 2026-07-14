@@ -49,7 +49,7 @@
 ### 3. `leetgpu/images/reduction_warp_shuffle.svg`
 
 - 元素数：88，重复副本数：5，疑似重叠：13 处
-- 所在路径：`aiinfra/week4/website/images/reduction_warp_shuffle.svg`, `leetgpu/images/reduction_warp_shuffle.svg`, `leetgpu/website/images/reduction_warp_shuffle.svg`, `public/leetgpu/images/reduction_warp_shuffle.svg`, `public/week4/images/reduction_warp_shuffle.svg`
+- 所在路径：`aiinfra/daily/week4/website/images/reduction_warp_shuffle.svg`, `leetgpu/images/reduction_warp_shuffle.svg`, `leetgpu/website/images/reduction_warp_shuffle.svg`, `public/leetgpu/images/reduction_warp_shuffle.svg`, `public/week4/images/reduction_warp_shuffle.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -106,7 +106,7 @@
 ### 6. `public/images/transpose_tiled_process.svg`
 
 - 元素数：371，重复副本数：2，疑似重叠：12 处
-- 所在路径：`aiinfra/week1/website/images/transpose_tiled_process.svg`, `public/images/transpose_tiled_process.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/transpose_tiled_process.svg`, `public/images/transpose_tiled_process.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -180,7 +180,7 @@
 ### 10. `public/week7/images/mini_ai_infra_architecture.svg`
 
 - 元素数：54，重复副本数：2，疑似重叠：8 处
-- 所在路径：`aiinfra/week7/website/images/mini_ai_infra_architecture.svg`, `public/week7/images/mini_ai_infra_architecture.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/mini_ai_infra_architecture.svg`, `public/week7/images/mini_ai_infra_architecture.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -196,7 +196,7 @@
 ### 11. `public/week2/images/multi_stream_overlap.svg`
 
 - 元素数：61，重复副本数：2，疑似重叠：8 处
-- 所在路径：`aiinfra/week2/website/images/multi_stream_overlap.svg`, `public/week2/images/multi_stream_overlap.svg`
+- 所在路径：`aiinfra/daily/week2/website/images/multi_stream_overlap.svg`, `public/week2/images/multi_stream_overlap.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -212,7 +212,7 @@
 ### 12. `public/week6/images/continuous_batching_timeline.svg`
 
 - 元素数：72，重复副本数：2，疑似重叠：8 处
-- 所在路径：`aiinfra/week6/website/images/continuous_batching_timeline.svg`, `public/week6/images/continuous_batching_timeline.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/continuous_batching_timeline.svg`, `public/week6/images/continuous_batching_timeline.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -244,7 +244,7 @@
 ### 14. `leetgpu/images/flash_attention_tiling.svg`
 
 - 元素数：57，重复副本数：7，疑似重叠：7 处
-- 所在路径：`aiinfra/week4/website/images/flash_attention_kernel_tiling.svg`, `aiinfra/week4/website/images/flash_attention_tiling.svg`, `leetgpu/images/flash_attention_tiling.svg`, `leetgpu/website/images/flash_attention_tiling.svg`, `public/leetgpu/images/flash_attention_tiling.svg` ...
+- 所在路径：`aiinfra/daily/week4/website/images/flash_attention_kernel_tiling.svg`, `aiinfra/daily/week4/website/images/flash_attention_tiling.svg`, `leetgpu/images/flash_attention_tiling.svg`, `leetgpu/website/images/flash_attention_tiling.svg`, `public/leetgpu/images/flash_attention_tiling.svg` ...
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -274,7 +274,7 @@
 ### 16. `public/images/element_wise_memory_bound.svg`
 
 - 元素数：41，重复副本数：2，疑似重叠：7 处
-- 所在路径：`aiinfra/week1/website/images/element_wise_memory_bound.svg`, `public/images/element_wise_memory_bound.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/element_wise_memory_bound.svg`, `public/images/element_wise_memory_bound.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -289,7 +289,7 @@
 ### 17. `public/week7/images/kernel_integration_overview.svg`
 
 - 元素数：67，重复副本数：2，疑似重叠：7 处
-- 所在路径：`aiinfra/week7/website/images/kernel_integration_overview.svg`, `public/week7/images/kernel_integration_overview.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/kernel_integration_overview.svg`, `public/week7/images/kernel_integration_overview.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -398,7 +398,7 @@
 ### 25. `public/images/roofline_model.svg`
 
 - 元素数：17，重复副本数：2，疑似重叠：5 处
-- 所在路径：`aiinfra/week1/website/images/roofline_model.svg`, `public/images/roofline_model.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/roofline_model.svg`, `public/images/roofline_model.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -411,7 +411,7 @@
 ### 26. `public/week3/images/attention_memory_bound.svg`
 
 - 元素数：40，重复副本数：2，疑似重叠：5 处
-- 所在路径：`aiinfra/week3/website/images/attention_memory_bound.svg`, `public/week3/images/attention_memory_bound.svg`
+- 所在路径：`aiinfra/daily/week3/website/images/attention_memory_bound.svg`, `public/week3/images/attention_memory_bound.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -424,7 +424,7 @@
 ### 27. `public/week5/images/kv_cache_append_decode.svg`
 
 - 元素数：53，重复副本数：2，疑似重叠：5 处
-- 所在路径：`aiinfra/week5/website/images/kv_cache_append_decode.svg`, `public/week5/images/kv_cache_append_decode.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/kv_cache_append_decode.svg`, `public/week5/images/kv_cache_append_decode.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -437,7 +437,7 @@
 ### 28. `public/images/cache_hierarchy_comparison.svg`
 
 - 元素数：87，重复副本数：2，疑似重叠：5 处
-- 所在路径：`aiinfra/week1/website/images/cache_hierarchy_comparison.svg`, `public/images/cache_hierarchy_comparison.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/cache_hierarchy_comparison.svg`, `public/images/cache_hierarchy_comparison.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -474,7 +474,7 @@
 ### 31. `public/week5/images/paged_attention_block_table.svg`
 
 - 元素数：75，重复副本数：2，疑似重叠：4 处
-- 所在路径：`aiinfra/week5/website/images/paged_attention_block_table.svg`, `public/week5/images/paged_attention_block_table.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/paged_attention_block_table.svg`, `public/week5/images/paged_attention_block_table.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -522,7 +522,7 @@
 ### 35. `public/week6/images/scheduling_strategy_decision_tree.svg`
 
 - 元素数：44，重复副本数：2，疑似重叠：3 处
-- 所在路径：`aiinfra/week6/website/images/scheduling_strategy_decision_tree.svg`, `public/week6/images/scheduling_strategy_decision_tree.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/scheduling_strategy_decision_tree.svg`, `public/week6/images/scheduling_strategy_decision_tree.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -544,7 +544,7 @@
 ### 37. `public/week7/images/request_lifecycle_states.svg`
 
 - 元素数：44，重复副本数：2，疑似重叠：3 处
-- 所在路径：`aiinfra/week7/website/images/request_lifecycle_states.svg`, `public/week7/images/request_lifecycle_states.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/request_lifecycle_states.svg`, `public/week7/images/request_lifecycle_states.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -555,7 +555,7 @@
 ### 38. `public/week7/images/profiling_toolchain.svg`
 
 - 元素数：66，重复副本数：2，疑似重叠：3 处
-- 所在路径：`aiinfra/week7/website/images/profiling_toolchain.svg`, `public/week7/images/profiling_toolchain.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/profiling_toolchain.svg`, `public/week7/images/profiling_toolchain.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -610,7 +610,7 @@
 ### 43. `public/week6/images/framework_comparison.svg`
 
 - 元素数：36，重复副本数：2，疑似重叠：3 处
-- 所在路径：`aiinfra/week6/website/images/framework_comparison.svg`, `public/week6/images/framework_comparison.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/framework_comparison.svg`, `public/week6/images/framework_comparison.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -643,7 +643,7 @@
 ### 46. `public/week5/images/kv_cache_allocation_strategies.svg`
 
 - 元素数：78，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week5/website/images/kv_cache_allocation_strategies.svg`, `public/week5/images/kv_cache_allocation_strategies.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/kv_cache_allocation_strategies.svg`, `public/week5/images/kv_cache_allocation_strategies.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -653,7 +653,7 @@
 ### 47. `public/images/grid_block_thread.svg`
 
 - 元素数：30，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week1/website/images/grid_block_thread.svg`, `public/images/grid_block_thread.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/grid_block_thread.svg`, `public/images/grid_block_thread.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -663,7 +663,7 @@
 ### 48. `public/week3/images/decode_memory_bound.svg`
 
 - 元素数：52，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week3/website/images/decode_memory_bound.svg`, `public/week3/images/decode_memory_bound.svg`
+- 所在路径：`aiinfra/daily/week3/website/images/decode_memory_bound.svg`, `public/week3/images/decode_memory_bound.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -673,7 +673,7 @@
 ### 49. `public/images/optimization_decision_tree.svg`
 
 - 元素数：33，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week1/website/images/optimization_decision_tree.svg`, `public/images/optimization_decision_tree.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/optimization_decision_tree.svg`, `public/images/optimization_decision_tree.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -693,7 +693,7 @@
 ### 51. `public/images/occupancy_concept.svg`
 
 - 元素数：21，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week1/website/images/occupancy_concept.svg`, `public/images/occupancy_concept.svg`
+- 所在路径：`aiinfra/daily/week1/website/images/occupancy_concept.svg`, `public/images/occupancy_concept.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -733,7 +733,7 @@
 ### 55. `public/week5/images/kv_cache_memory_layout.svg`
 
 - 元素数：42，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week5/website/images/kv_cache_memory_layout.svg`, `public/week5/images/kv_cache_memory_layout.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/kv_cache_memory_layout.svg`, `public/week5/images/kv_cache_memory_layout.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -743,7 +743,7 @@
 ### 56. `public/week3/images/prefill_vs_decode.svg`
 
 - 元素数：59，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week3/website/images/prefill_vs_decode.svg`, `public/week3/images/prefill_vs_decode.svg`
+- 所在路径：`aiinfra/daily/week3/website/images/prefill_vs_decode.svg`, `public/week3/images/prefill_vs_decode.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -763,7 +763,7 @@
 ### 58. `public/week6/images/dynamic_batcher_flow.svg`
 
 - 元素数：42，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week6/website/images/dynamic_batcher_flow.svg`, `public/week6/images/dynamic_batcher_flow.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/dynamic_batcher_flow.svg`, `public/week6/images/dynamic_batcher_flow.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -773,7 +773,7 @@
 ### 59. `public/week6/images/request_lifecycle_v1.svg`
 
 - 元素数：32，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week6/website/images/request_lifecycle_v1.svg`, `public/week6/images/request_lifecycle_v1.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/request_lifecycle_v1.svg`, `public/week6/images/request_lifecycle_v1.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -783,7 +783,7 @@
 ### 60. `public/week6/images/throughput_latency_curve.svg`
 
 - 元素数：25，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week6/website/images/throughput_latency_curve.svg`, `public/week6/images/throughput_latency_curve.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/throughput_latency_curve.svg`, `public/week6/images/throughput_latency_curve.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -793,7 +793,7 @@
 ### 61. `public/week5/images/continuous_vs_static_batching.svg`
 
 - 元素数：67，重复副本数：2，疑似重叠：2 处
-- 所在路径：`aiinfra/week5/website/images/continuous_vs_static_batching.svg`, `public/week5/images/continuous_vs_static_batching.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/continuous_vs_static_batching.svg`, `public/week5/images/continuous_vs_static_batching.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -823,7 +823,7 @@
 ### 64. `public/week5/images/decode_breakdown.svg`
 
 - 元素数：30，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week5/website/images/decode_breakdown.svg`, `public/week5/images/decode_breakdown.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/decode_breakdown.svg`, `public/week5/images/decode_breakdown.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -832,7 +832,7 @@
 ### 65. `public/week2/images/default_stream_sync.svg`
 
 - 元素数：40，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week2/website/images/default_stream_sync.svg`, `public/week2/images/default_stream_sync.svg`
+- 所在路径：`aiinfra/daily/week2/website/images/default_stream_sync.svg`, `public/week2/images/default_stream_sync.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -859,7 +859,7 @@
 ### 68. `public/week6/images/scheduler_state_machine.svg`
 
 - 元素数：40，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week6/website/images/scheduler_state_machine.svg`, `public/week6/images/scheduler_state_machine.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/scheduler_state_machine.svg`, `public/week6/images/scheduler_state_machine.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -868,7 +868,7 @@
 ### 69. `public/week6/images/inflight_batching_flow.svg`
 
 - 元素数：75，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week6/website/images/inflight_batching_flow.svg`, `public/week6/images/inflight_batching_flow.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/inflight_batching_flow.svg`, `public/week6/images/inflight_batching_flow.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -904,7 +904,7 @@
 ### 73. `public/week3/images/block_reduce_two_level.svg`
 
 - 元素数：54，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week3/website/images/block_reduce_two_level.svg`, `public/week3/images/block_reduce_two_level.svg`
+- 所在路径：`aiinfra/daily/week3/website/images/block_reduce_two_level.svg`, `public/week3/images/block_reduce_two_level.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -913,7 +913,7 @@
 ### 74. `public/week7/images/troubleshooting_guide.svg`
 
 - 元素数：89，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week7/website/images/troubleshooting_guide.svg`, `public/week7/images/troubleshooting_guide.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/troubleshooting_guide.svg`, `public/week7/images/troubleshooting_guide.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -922,7 +922,7 @@
 ### 75. `public/week6/images/dynamic_vs_continuous_batching.svg`
 
 - 元素数：67，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week6/website/images/dynamic_vs_continuous_batching.svg`, `public/week6/images/dynamic_vs_continuous_batching.svg`
+- 所在路径：`aiinfra/daily/week6/website/images/dynamic_vs_continuous_batching.svg`, `public/week6/images/dynamic_vs_continuous_batching.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -958,7 +958,7 @@
 ### 79. `public/week5/images/request_lifecycle.svg`
 
 - 元素数：45，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week5/website/images/request_lifecycle.svg`, `public/week5/images/request_lifecycle.svg`
+- 所在路径：`aiinfra/daily/week5/website/images/request_lifecycle.svg`, `public/week5/images/request_lifecycle.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -1057,7 +1057,7 @@
 ### 90. `public/week7/images/week7_knowledge_map.svg`
 
 - 元素数：74，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week7/website/images/week7_knowledge_map.svg`, `public/week7/images/week7_knowledge_map.svg`
+- 所在路径：`aiinfra/daily/week7/website/images/week7_knowledge_map.svg`, `public/week7/images/week7_knowledge_map.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -1066,7 +1066,7 @@
 ### 91. `public/week3/images/kernel_fusion_opportunities.svg`
 
 - 元素数：51，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week3/website/images/kernel_fusion_opportunities.svg`, `public/week3/images/kernel_fusion_opportunities.svg`
+- 所在路径：`aiinfra/daily/week3/website/images/kernel_fusion_opportunities.svg`, `public/week3/images/kernel_fusion_opportunities.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|
@@ -1075,7 +1075,7 @@
 ### 92. `public/week2/images/thread_tile_mapping.svg`
 
 - 元素数：56，重复副本数：2，疑似重叠：1 处
-- 所在路径：`aiinfra/week2/website/images/thread_tile_mapping.svg`, `public/week2/images/thread_tile_mapping.svg`
+- 所在路径：`aiinfra/daily/week2/website/images/thread_tile_mapping.svg`, `public/week2/images/thread_tile_mapping.svg`
 
 | 类型 | 元素 A | 元素 B | 重叠面积 |
 |------|--------|--------|----------|

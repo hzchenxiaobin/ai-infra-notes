@@ -62,7 +62,7 @@ lRUCache.get(4);                 // 返回 4
 | 哈希表 | `key → node*` 定位 | `O(1)` 查找 |
 | 双向链表 | 维护访问时序（head=最近，tail=最久） | `O(1)` 摘除/插头 |
 
-> 💡 与 [Day3 vLLM Scheduler](../../aiinfra/week6/day3/README.md) 的 `BlockSpaceManager` 同构：vLLM 用 `free_blocks` 空闲链表回收/分配 KV Cache block，preemption 时被抢占序列的 block 被淘汰回空闲池供他人复用——正是 LRU 式的"有限资源池分配/回收/淘汰"。
+> 💡 与 [Day3 vLLM Scheduler](../../aiinfra/daily/week6/day3/README.md) 的 `BlockSpaceManager` 同构：vLLM 用 `free_blocks` 空闲链表回收/分配 KV Cache block，preemption 时被抢占序列的 block 被淘汰回空闲池供他人复用——正是 LRU 式的"有限资源池分配/回收/淘汰"。
 
 ### 2.3 算法流程
 

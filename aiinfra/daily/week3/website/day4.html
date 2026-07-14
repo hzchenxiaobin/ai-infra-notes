@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 3 - Day 4：Attention IO 分析</title>
+    <link rel="stylesheet" href="../css/style.css?v=3">
+    <script src="../js/marked.min.js"></script>
+    <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../js/prism.min.js"></script>
+    <script src="../js/prism-c.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../js/prism-bash.min.js"></script>
+    <script src="../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">AI Infra 8 周计划</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="index.html">📌 Week 3 概览</a>
+<div class="nav-section-title">8 周学习路线</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../index.html">Week 1：GPU 执行本质 + Profiling</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 1" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../index.html">📌 Week 1 概览</a>
+<a class="nav-link day-link" href="../day1.html">Day 1：GPU 执行模型基础</a>
+<a class="nav-link day-link" href="../day2.html">Day 2：Occupancy 与资源约束</a>
+<a class="nav-link day-link" href="../day3.html">Day 3：认识你的 GPU —— deviceQuery 与 Occupancy 计算</a>
+<a class="nav-link day-link" href="../day4.html">Day 4：Memory Hierarchy 深入</a>
+<a class="nav-link day-link" href="../day5.html">Day 5：Bank Conflict 分析与实践</a>
+<a class="nav-link day-link" href="../day6.html">Day 6：Nsight Profiling 实战</a>
+<a class="nav-link day-link" href="../day7.html">Day 7：总结与复盘</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week2/index.html">Week 2：GEMM & Kernel 优化</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 2" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week2/index.html">📌 Week 2 概览</a>
+<a class="nav-link day-link" href="../week2/day1.html">Day 1：Warp Shuffle 原语与 Warp/Block Reduce</a>
+<a class="nav-link day-link" href="../week2/day2.html">Day 2：Register Blocking 与 2D Tiling</a>
+<a class="nav-link day-link" href="../week2/day3.html">Day 3：CUDA Streams 与异步执行</a>
+<a class="nav-link day-link" href="../week2/day4.html">Day 4：Nsight Compute 性能分析</a>
+<a class="nav-link day-link" href="../week2/day5.html">Day 5：FlashAttention CUDA 实现（简化版）</a>
+<a class="nav-link day-link" href="../week2/day6.html">Day 6：整合优化到 cuBLAS 70%+</a>
+<a class="nav-link day-link" href="../week2/day7.html">Day 7：限时 Kernel 手撕 + GitHub 整理 + 性能对比报告</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item is-expanded">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link active" href="index.html">Week 3：Transformer 执行本质</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 3" aria-expanded="true">▼</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="index.html">📌 Week 3 概览</a>
+<a class="nav-link day-link" href="day1.html">Day 1：Trace Transformer 推理流程</a>
+<a class="nav-link day-link" href="day2.html">Day 2：手写 Softmax 与 LayerNorm Kernel</a>
+<a class="nav-link day-link" href="day3.html">Day 3：源码分析 —— PyTorch / FasterTransformer</a>
+<a class="nav-link day-link active" href="day4.html">Day 4：Attention IO 分析</a>
+<a class="nav-link day-link" href="day5.html">Day 5：算子接入 Mini 引擎</a>
+<a class="nav-link day-link" href="day6.html">Day 6：端到端 Profiling 与 Kernel Fusion</a>
+<a class="nav-link day-link" href="day7.html">Day 7：Transformer 算子分类与 Week 3 总结</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week4/index.html">Week 4：FlashAttention 深挖</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 4" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week4/index.html">📌 Week 4 概览</a>
+<a class="nav-link day-link" href="../week4/day1.html">Day 1：FlashAttention 论文精读与 Online Softmax 完整推导</a>
+<a class="nav-link day-link" href="../week4/day2.html">Day 2：手写完整 FlashAttention Forward Kernel</a>
+<a class="nav-link day-link" href="../week4/day3.html">Day 3：FlashAttention 官方 CUDA 源码分析</a>
+<a class="nav-link day-link" href="../week4/day4.html">Day 4：FlashAttention-2 论文与源码差异</a>
+<a class="nav-link day-link" href="../week4/day5.html">Day 5：算子接入 Mini 引擎 —— FlashAttention 集成</a>
+<a class="nav-link day-link" href="../week4/day6.html">Day 6：性能对比分析 —— 标准 vs 手写 vs 官方</a>
+<a class="nav-link day-link" href="../week4/day7.html">Day 7：IO 优化方法论总结与 Week 4 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week5/index.html">Week 5：推理系统</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 5" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week5/index.html">📌 Week 5 概览</a>
+<a class="nav-link day-link" href="../week5/day1.html">Day 1：推理流程 —— Prefill vs Decode</a>
+<a class="nav-link day-link" href="../week5/day2.html">Day 2：实现 KV Cache</a>
+<a class="nav-link day-link" href="../week5/day3.html">Day 3：vLLM 整体架构分析</a>
+<a class="nav-link day-link" href="../week5/day4.html">Day 4：vLLM Worker 与 PagedAttention</a>
+<a class="nav-link day-link" href="../week5/day5.html">Day 5：项目推进 —— Mini 推理引擎 v0</a>
+<a class="nav-link day-link" href="../week5/day6.html">Day 6：端到端 Profiling</a>
+<a class="nav-link day-link" href="../week5/day7.html">Day 7：推理系统核心问题总结与 Week 5 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week6/index.html">Week 6：Batching & 调度</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 6" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week6/index.html">📌 Week 6 概览</a>
+<a class="nav-link day-link" href="../week6/day1.html">Day 1：Dynamic Batching</a>
+<a class="nav-link day-link" href="../week6/day2.html">Day 2：Continuous Batching</a>
+<a class="nav-link day-link" href="../week6/day3.html">Day 3：vLLM Scheduler 源码分析</a>
+<a class="nav-link day-link" href="../week6/day4.html">Day 4：TensorRT-LLM / LightLLM 调度对比</a>
+<a class="nav-link day-link" href="../week6/day5.html">Day 5：Mini 推理引擎 v1</a>
+<a class="nav-link day-link" href="../week6/day6.html">Day 6：Latency / Throughput 测试</a>
+<a class="nav-link day-link" href="../week6/day7.html">Day 7：调度优化策略总结与 Week 6 收官</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week7/index.html">Week 7：系统整合</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 7" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week7/index.html">📌 Week 7 概览</a>
+<a class="nav-link day-link" href="../week7/day1.html">Day 1：多请求并发支持</a>
+<a class="nav-link day-link" href="../week7/day2.html">Day 2：完整调度器</a>
+<a class="nav-link day-link" href="../week7/day3.html">Day 3：SGLang / LightLLM 高级特性</a>
+<a class="nav-link day-link" href="../week7/day4.html">Day 4：整合全部自定义 Kernel</a>
+<a class="nav-link day-link" href="../week7/day5.html">Day 5：系统联调</a>
+<a class="nav-link day-link" href="../week7/day6.html">Day 6：全链路 Profiling</a>
+<a class="nav-link day-link" href="../week7/day7.html">Day 7：代码重构与文档</a>
+    </div>
+  </div>
+</div>
+<div class="nav-accordion-item">
+  <div class="nav-accordion-header">
+    <a class="nav-link week-link" href="../week8/index.html">Week 8：项目打磨 + 面试准备</a><button class="nav-accordion-toggle" aria-label="收起/展开 Week 8" aria-expanded="false">▶</button>
+  </div>
+  <div class="nav-accordion-content">
+    <div class="nav-section">
+<a class="nav-link overview-link" href="../week8/index.html">📌 Week 8 概览</a>
+<a class="nav-link day-link" href="../week8/day1.html">Day 1：项目文档完善</a>
+<a class="nav-link day-link" href="../week8/day2.html">Day 2：架构图与数据流图</a>
+<a class="nav-link day-link" href="../week8/day3.html">Day 3：高频面试题基础篇</a>
+<a class="nav-link day-link" href="../week8/day4.html">Day 4：高频面试题进阶篇</a>
+<a class="nav-link day-link" href="../week8/day5.html">Day 5：Mock 面试</a>
+<a class="nav-link day-link" href="../week8/day6.html">Day 6：查漏补缺</a>
+<a class="nav-link day-link" href="../week8/day7.html">Day 7：最终复盘</a>
+    </div>
+  </div>
+</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Day 4：Attention IO 分析</h1>
+                <a class="back-link" href="index.html">← 返回概览</a>
+            </div>
+            <article class="content" id="content"></article>
+            <div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>
+        </main>
+    </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解标准 Attention 的**三阶段计算流程**（S=QK^T → softmax → PV）及各阶段的 HBM 读写量
+2. 手推标准 Attention 的 IO 复杂度，解释为什么是 **O(N²)**——O(N²) 项来自物化两个 N×N 中间矩阵 S 和 P
+3. 实现标准 Attention Forward Kernel（物化 S/P 到 HBM），与 CPU 对比误差 < 1e-3
+4. 能用 ncu 的 \`dram__bytes_read/write\` 验证实测 HBM 读写量与理论值一致（误差 < 30%）
+5. 能计算 softmax 部分的 arithmetic intensity（AI≈0.375）并判定为 memory-bound，解释 FlashAttention 的优化动机
+
+> 💡 **为什么重要**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心前置知识。不理解"物化 S/P 导致 O(N²)"，就无法理解 FlashAttention 的 online softmax + tiling 为什么能把 IO 降到 O(Nd)。今天是 Week 4 FlashAttention 深挖的最后一块基石。
+
+---
+
+### 学前导读：标准 Attention 为什么"慢"
+
+Day 2 我们手写了 Softmax/LayerNorm，发现它们是 memory-bound（AI≈0.4）。Day 3 读了官方源码，学会用向量化 + reduce 合并来优化。今天把视线放到 Attention——Transformer 里最复杂的算子。
+
+标准 Attention 的计算公式是：
+
+\`\`\`
+Attention(Q, K, V) = softmax(Q·K^T / √d) · V
+\`\`\`
+
+看起来只是两个 GEMM + 一个 softmax，但**关键问题在中间矩阵 S 和 P 的物化**：
+
+| 阶段 | 操作 | 中间矩阵 | 大小 | 是否物化到 HBM |
+|------|------|---------|------|---------------|
+| Step 1 | S = Q·K^T / √d | S | N×N | ✅ 写入 HBM |
+| Step 2 | P = softmax(S) | P | N×N | ✅ 读 S，写 P |
+| Step 3 | O = P·V | O | N×d | 读 P，写 O |
+
+当 N=4096（长序列），S 和 P 各占 64MB——两个 N×N 矩阵的读写让 HBM IO 爆炸到 ~206MB。这就是 FlashAttention 要解决的核心问题。
+
+> 💡 **一句话总结**：标准 Attention 的"慢"不在计算（GEMM 是 compute-bound），而在中间矩阵 S/P 的 O(N²) 物化读写。今天用 ncu 实测验证这一点，为 Week 4 的 FlashAttention 做铺垫。
+
+---
+
+### 理论学习
+
+#### 4.1 标准 Attention 的三阶段 HBM 读写量推导
+
+![标准 Attention 三阶段 HBM 读写量拆解](images/attention_io_breakdown.svg)
+
+**计算流程**：
+
+\`\`\`
+输入: Q ∈ R^{N×d}, K ∈ R^{N×d}, V ∈ R^{N×d}
+
+Step 1: S = Q × K^T / sqrt(d) → S ∈ R^{N×N} （写 HBM）
+Step 2: P = softmax(S, dim=-1) → P ∈ R^{N×N} （读 S，写 P）
+Step 3: O = P × V → O ∈ R^{N×d} （读 P，写 O）
+\`\`\`
+
+**各阶段 HBM 读写量**（以 N=4096, d=64, FP32 为例）：
+
+| 阶段 | 操作 | 读 HBM | 写 HBM | 小计 |
+|------|------|--------|--------|------|
+| Step 1: S=QK^T | 读 Q,K；写 S | N·d + N·d = 2Nd | N² | 2Nd + N² |
+| Step 2: P=softmax(S) | 读 S；写 P | N² | N² | 2N² |
+| Step 3: O=PV | 读 P,V；写 O | N² + N·d | N·d | N² + 2Nd |
+| **总计** | | **2N² + 3Nd** | **2N² + Nd** | **4N² + 4Nd** |
+
+代入 N=4096, d=64：
+- \`4N² = 4 × 4096² = 67,108,864\` 元素 × 4 bytes = 256 MB
+- \`4Nd = 4 × 4096 × 64 = 1,048,576\` 元素 × 4 bytes = 4 MB
+- **总计 ≈ 260 MB**（N² 项主导）
+
+> ⚠️ **注意**：计划文档中"3N² + 4Nd"是按"读+写合并统计且 S/P 各算一次读一次写"的口径；本教程按"读/写分开统计，S 写 1 次读 1 次、P 写 1 次读 1 次"得到 4N² + 4Nd。两种口径都说明同一结论：**当 N >> d 时，N² 项主导，IO 是 O(N²)**。面试时说清口径即可。
+
+##### 关键洞察：O(N²) 项的来源
+
+O(N²) 来自**物化两个 N×N 中间矩阵**：
+
+- **S = QK^T**（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
+- **P = softmax(S)**（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
+- 合计 **4N²** 的 N² 项读写
+
+而 Q/K/V/O 的读写是 O(Nd)（线性于 N），当 N >> d 时被 N² 项淹没。这就是 FlashAttention 要消除的——通过分块 + online softmax，让 S/P 永远不落 HBM，IO 降到 O(Nd)。
+
+#### 4.2 O(N²) 的危害：长序列下 IO 爆炸与 OOM
+
+![O(N²) vs O(Nd) HBM IO 随序列长度增长](images/on2_vs_ond_scaling.svg)
+
+**S/P 矩阵显存占用**：
+
+\`\`\`
+N = 1024: S/P = 1024² × 4 bytes = 4 MB （L2 cache 可容纳）
+N = 4096: S/P = 4096² × 4 bytes = 64 MB （超出 L2，频繁 HBM 读写）
+N = 16384: S/P = 16384² × 4 bytes = 1 GB （HBM 都吃紧，OOM 风险）
+N = 65536: S/P = 65536² × 4 bytes = 16 GB （直接 OOM）
+\`\`\`
+
+| N | S/P 显存 | 能否放入 L2(~40MB) | 能否放入 HBM(40GB) |
+|---|---------|------------------|------------------|
+| 1024 | 4 MB | ✅ | ✅ |
+| 4096 | 64 MB | ❌ | ✅ |
+| 16384 | 1 GB | ❌ | ✅（紧张） |
+| 65536 | 16 GB | ❌ | ❌（OOM） |
+
+**结论**：长序列下，物化 S/P 不仅导致 HBM 读写量大，还可能直接 OOM。FlashAttention 不物化 S/P，显存始终是 O(Nd)。
+
+##### IO 复杂度对比
+
+| 实现 | HBM 读写量 | 当 N=4096, d=64 | 当 N=8192, d=64 |
+|------|-----------|----------------|----------------|
+| 标准 Attention | O(N² + Nd) | ~206 MB | ~805 MB（4x） |
+| FlashAttention | O(Nd) | ~2 MB | ~4 MB（2x） |
+| **加速比** | | **~100x** | **~200x** |
+
+> 💡 **为什么长序列加速更明显？** 标准 Attention 的 IO 随 N² 增长，FlashAttention 随 N 线性增长。N 翻倍时，标准 Attention IO 变 4x，FlashAttention 只变 2x。差距随 N 指数级拉大。
+
+#### 4.3 Memory-bound 判定：softmax 是瓶颈
+
+![标准 Attention 的 Roofline 与瓶颈判定](images/attention_memory_bound.svg)
+
+标准 Attention 是**混合瓶颈**——GEMM 部分是 compute-bound，softmax 部分是 memory-bound：
+
+**GEMM 部分（QK^T 和 PV）**：
+
+\`\`\`
+FLOPs ≈ 2·N²·d + 2·N²·d = 4·N²·d
+Bytes ≈ 3N²（S/P 读写）
+AI = 4·N²·d / 3N² = (4/3)·d ≈ 85 FLOP/Byte（d=64）
+\`\`\`
+
+AI=85 > Ridge Point(12.6) → **GEMM 部分是 compute-bound**（大矩阵乘，算力主导）。
+
+**softmax 部分**：
+
+\`\`\`
+FLOPs ≈ 3N²（每元素 exp + add + div）
+Bytes = 2N² × 4 bytes（读 S + 写 P）
+AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte
+\`\`\`
+
+AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
+
+**结论**：标准 Attention 是 \`GEMM(compute) + softmax(memory) + GEMM(compute)\` 的混合，其中 **softmax 的 O(N²) 读写是瓶颈**。FlashAttention 正是消除这一项——把 softmax 从 HBM 搬到 SRAM，在片上完成归约。
+
+##### 为什么 GEMM 是 compute-bound 却救不了整体？
+
+虽然 QK^T 和 PV 各自是 compute-bound，但它们中间夹着一个 memory-bound 的 softmax，必须把 S 写回 HBM 再读出来做 softmax，再把 P 写回 HBM 读出来做 PV。这个"写回-读出"的 O(N²) 读写无法被 GEMM 的算力掩盖——**中间结果的物化是结构性瓶颈，与 GEMM 本身快不快无关**。
+
+---
+
+### Coding 任务：标准 Attention Forward + IO 验证
+
+#### 任务 1：创建 \`kernels/attention_naive.cu\`
+
+下面是完整可编译的标准 Attention Forward Kernel。它**故意物化 S 和 P 到 HBM**，用于 IO 分析——这正是我们要"暴露问题"的版本。完整文件见 [kernels/attention_naive.cu](kernels/attention_naive.cu)。
+
+\`\`\`cuda
+// kernels/attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
+// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -lineinfo
+// 运行命令: ./attention_naive
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+// 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+__inline__ __device__ float warpReduceMax(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
+}
+__inline__ __device__ float blockReduceSum(float val, float* smem) {
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
+}
+__inline__ __device__ float blockReduceMax(float val, float* smem) {
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
+}
+
+// ============================================================
+// 标准 Attention Forward Kernel（物化 S 和 P 到 HBM）
+// 一个 block 处理一行 query（qrow）
+// 三步：S=QK^T → P=softmax(S) → O=PV，S/P 全部写回 HBM
+// ============================================================
+__global__ void attention_naive_kernel(const float* __restrict__ Q, const float* __restrict__ K,
+                                       const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
+                                       float* __restrict__ O, int N, int d) {
+    int qrow = blockIdx.x;
+    if (qrow >= N)
+        return;
+
+    __shared__ float smem[32];
+    __shared__ float row_max;
+    __shared__ float row_sum;
+
+    int tid = threadIdx.x;
+    float scale = 1.0f / sqrtf((float)d);
+
+    // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
+    // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
+    for (int j = tid; j < N; j += blockDim.x) {
+        float s_val = 0.0f;
+        for (int dd = 0; dd < d; dd++) {
+            s_val += Q[qrow * d + dd] * K[j * d + dd];
+        }
+        S[qrow * N + j] = s_val * scale;
+    }
+    __syncthreads();
+
+    // Step 2: P[qrow][j] = softmax(S[qrow][:])
+    // 读 S（O(N²) 读），写 P（O(N²) 写）
+    float local_max = -INFINITY;
+    for (int j = tid; j < N; j += blockDim.x) {
+        local_max = fmaxf(local_max, S[qrow * N + j]);
+    }
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
+
+    float local_sum = 0.0f;
+    for (int j = tid; j < N; j += blockDim.x) {
+        float p_val = expf(S[qrow * N + j] - row_max);
+        P[qrow * N + j] = p_val;
+        local_sum += p_val;
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
+
+    // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
+    // 读 P（O(N²) 读），读 V，写 O
+    float inv_sum = 1.0f / row_sum;
+    for (int dd = tid; dd < d; dd += blockDim.x) {
+        float o_val = 0.0f;
+        for (int j = 0; j < N; j++) {
+            o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
+        }
+        O[qrow * d + dd] = o_val;
+    }
+}
+\`\`\`
+
+Host 端的验证逻辑（\`cpuAttention\` / \`checkResult\` / \`main\`）见 [kernels/attention_naive.cu](kernels/attention_naive.cu) 完整文件。核心是：对 N=256/512/1024/2048 四个序列长度分别跑 GPU kernel 和 CPU 参考，用 \`maxDiff < 1e-3\` 判定 PASS，同时打印理论 HBM IO 量供对比。
+
+#### 为什么这个 kernel 故意"慢"？
+
+看 Step 1 的这行：
+
+\`\`\`cuda
+S[qrow * N + j] = s_val * scale; // ← 把 N×N 的 S 写回 HBM
+\`\`\`
+
+以及 Step 2 的：
+
+\`\`\`cuda
+P[qrow * N + j] = p_val; // ← 把 N×N 的 P 写回 HBM
+\`\`\`
+
+这两处物化就是 O(N²) IO 的根源。今天我们**故意保留它们**，是为了用 ncu 实测验证 O(N²) 的存在。Week 4 的 FlashAttention 会通过 tiling + online softmax 把 S/P 永远留在 SRAM，消除这两次写回。
+
+#### 任务 2：编译与运行
+
+\`\`\`bash
+# 编译（带 -lineinfo 供 ncu Source View 使用）
+# Blackwell (RTX 5090): sm_120
+nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
+
+# 运行
+./attention_naive
+\`\`\`
+
+**预期输出**：
+
+\`\`\`text
+=== Standard Attention Forward (naive, materialize S/P) ===
+N S/P size(MB) HBM IO(MB) Time(ms) Check
+------------------------------------------------------------------
+256 0.25 1.00 0.xxx PASS
+512 1.00 4.00 x.xxx PASS
+1024 4.00 16.00 x.xxx PASS
+2048 16.00 64.00 xx.xxx PASS
+
+观察要点：
+1. S/P size 随 N² 增长（N 翻倍 → size 4x）
+2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）
+3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）
+4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO
+\`\`\`
+
+**分析任务**：
+1. 观察 N 从 256→2048 时，HBM IO 从 1MB→64MB（64x，而 N 只变 8x → 验证 O(N²)）
+2. 观察 Time 的增长趋势是否接近 4x（N 翻倍时）
+3. 确认所有 \`PASS\`（与 CPU 误差 < 1e-3）
+
+#### 任务 3：用 ncu 验证 HBM 读写量
+
+\`\`\`bash
+# profile N=1024 的 HBM 读写量
+ncu --metrics \\
+ dram__bytes_read.sum,\\
+ dram__bytes_write.sum,\\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed \\
+ --kernel-name regex:attention_naive \\
+ ./attention_naive
+\`\`\`
+
+**预期实测结果**：
+
+| N | 理论 HBM IO | 预期 ncu 实测 | 误差 |
+|---|-----------|--------------|------|
+| 256 | 1.00 MB | ~1.1-1.4 MB | < 30% |
+| 512 | 4.00 MB | ~4.5-5.5 MB | < 30% |
+| 1024 | 16.00 MB | ~18-22 MB | < 30% |
+| 2048 | 64.00 MB | ~72-85 MB | < 30% |
+
+> ⚠️ **注意**：实测值会略大于理论值（cache miss、额外访问、index 计算等），误差 < 30% 属正常。如果误差 > 50%，检查是否有意外的全局内存访问（如 \`__shared__\` 误用为全局）。
+
+**关键验证**：N 翻倍时，实测 \`dram__bytes_read + dram__bytes_write\` 应接近 **4x**（如 1024→2048 时 16MB→64MB），这是 O(N²) 的直接证据。
+
+#### 任务 4：LeetGPU 在线题目 —— Attention
+
+**题目链接**：<https://leetgpu.com/challenges/attention>
+
+**题目概述**：
+
+给定 Query (\`M×d\`)、Key (\`N×d\`)、Value (\`N×d\`)，计算 Scaled Dot-Product Attention：\`Attention(Q,K,V) = softmax(Q·K^T / √d) · V\`。约束：\`1 ≤ M, N ≤ 4096\`，\`1 ≤ d ≤ 128\`，元素范围 \`[-1.0, 1.0]\`。
+
+**难度**：困难　**标签**：CUDA、Attention、Online Softmax、FlashAttention、分块计算
+
+**与今日知识的关联**：
+
+本题就是今天标准 Attention 的"进阶版"——今天我们写了物化 S/P 的 naive 版（O(N²) IO），本题要求实现 FlashAttention（O(Nd) IO）。核心区别：FlashAttention 用 **分块 + Online Softmax** 让 S/P 永远不落 HBM。今天学的"O(N²) 来源"正是理解 FlashAttention 为什么要这么做的关键。
+
+**解题思路**：
+
+1. **分块**：把 Q 按行分 tile 驻留 SRAM，K/V 按列分 tile 逐块滑入
+2. **Online Softmax 三公式**（Week 2 Day 12 已学）：
+ - \`m_new = max(m, max(s_j))\`（更新 running max）
+ - \`l_new = l * exp(m - m_new) + Σ exp(s_j - m_new)\`（更新 running sum）
+ - \`o_new = o * (l * exp(m - m_new) / l_new) + (Σ exp(s_j - m_new) / l_new) * v_j\`（缩放历史输出 + 加新贡献）
+1. S/P 只在 SRAM/register 中存在，最终只写 O 到 HBM
+
+**参考实现**（FlashAttention 简化版，完整版 Week 4 深入）：
+
+\`\`\`cuda
+// attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
+// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_120
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cmath>
+
+#define BLOCK_M 64
+#define BLOCK_N 64
+#define MAX_D 128
+
+__global__ void flash_attention(const float* Q, const float* K, const float* V, float* O, int M, int N, int d) {
+    int q_start = blockIdx.x * BLOCK_M;
+
+    __shared__ float s_Q[BLOCK_M][MAX_D];
+    __shared__ float s_K[BLOCK_N][MAX_D];
+    __shared__ float s_V[BLOCK_N][MAX_D];
+
+    // 每行的 running state（寄存器）：m=max, l=sum, o=output
+    int rows_per_warp = BLOCK_M / 32;
+    int warp_id = threadIdx.x / 32;
+    float m_i[4], l_i[4], o_i[4][MAX_D];
+
+    for (int r = 0; r < rows_per_warp; r++) {
+        m_i[r] = -INFINITY;
+        l_i[r] = 0.0f;
+        for (int j = 0; j < d; j++)
+            o_i[r][j] = 0.0f;
+    }
+
+    // 加载 Q tile 到 SRAM（驻留，不重复读 HBM）
+    float scale = 1.0f / sqrtf((float)d);
+
+    // 遍历 K/V tiles（逐块滑入，S/P 不落 HBM）
+    for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
+        // 加载 K/V tile 到 s_K, s_V（省略协作加载代码）
+        __syncthreads();
+
+        for (int r = 0; r < rows_per_warp; r++) {
+            int q_row = q_start + warp_id * rows_per_warp + r;
+            if (q_row >= M)
+                continue;
+
+            // 局部 S = Q[Q_row] · K[kv_tile]^T * scale
+            float local_max = -INFINITY;
+            float s_vals[BLOCK_N];
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float dot = 0.0f;
+                for (int kk = 0; kk < d; kk++)
+                    dot += s_Q[warp_id * rows_per_warp + r][kk] * s_K[j][kk];
+                s_vals[j] = dot * scale;
+                local_max = fmaxf(local_max, s_vals[j]);
+            }
+
+            // Online Softmax 更新
+            float m_new = fmaxf(m_i[r], local_max);
+            float l_new = l_i[r] * expf(m_i[r] - m_new);
+            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
+                float p = expf(s_vals[j] - m_new);
+                l_new += p;
+                for (int kk = 0; kk < d; kk++)
+                    o_i[r][kk] += p * s_V[j][kk];
+            }
+            // 归一化历史输出（省略精确缩放，Week 4 完整实现）
+            m_i[r] = m_new;
+            l_i[r] = l_new;
+        }
+        __syncthreads();
+    }
+
+    // 最终归一化并写回 O（只写一次 HBM）
+    for (int r = 0; r < rows_per_warp; r++) {
+        int q_row = q_start + warp_id * rows_per_warp + r;
+        if (q_row < M) {
+            for (int kk = 0; kk < d; kk++)
+                O[q_row * d + kk] = o_i[r][kk] / l_i[r];
+        }
+    }
+}
+\`\`\`
+
+> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 \`dram__bytes_read\` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../leetgpu/leetgpu-attention-solution.html)。
+
+#### 任务 5：LeetCode 面试题 —— 环形链表
+
+**题目链接**：[141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/)
+
+**题目概述**：给定链表头节点 \`head\`，判断链表中是否有环。
+
+**与今日知识的关联**：环形链表的**快慢指针**与今日 Attention 的**分块计算**同构——快慢指针以不同步长遍历链表检测环，Attention 以不同 tile 大小遍历 Q/K 矩阵计算 score。两者都是"用不同粒度的遍历策略高效处理数据依赖"。
+
+> 💡 完整题解见 [环形链表题解](../leetcode/problems/环形链表.html)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：手动计算 N=512 的理论 HBM IO
+
+不用运行程序，手算 N=512, d=64 时的理论 HBM IO 量，再与程序输出对比。
+
+**思考问题**：\`4N² + 4Nd\` 代入 N=512, d=64 得多少？为什么 N² 项远大于 Nd 项？
+> 提示：\`4×512² = 1,048,576\`，\`4×512×64 = 131,072\`，合计 1,179,648 元素 × 4B = 4.5 MB。N² 项是 Nd 项的 8 倍（N/d = 8）。
+
+#### 实验 2：减少一个中间矩阵的物化
+
+修改 kernel，只保留 S=QK^T 一步物化，softmax 在 register 里做完不写 P，直接做 PV。对比 HBM 读写量。
+
+\`\`\`cuda
+// 修改 Step 2/3：不写 P 到 HBM，在 register 里做 softmax 后直接累加 PV
+// 省去 P[qrow * N + j] = p_val; 这一行
+\`\`\`
+
+**思考问题**：少物化 P 能减少多少 HBM IO？为什么 FlashAttention 连 S 也不物化？
+> 提示：少物化 P 省了 2N²（P 的写+读）。但 S 仍物化（2N²），所以 IO 从 4N² 降到 2N²，仍是 O(N²)。FlashAttention 连 S 也不物化，才把 IO 降到 O(Nd)。
+
+#### 实验 3：绘制 IO 随 N 增长的曲线
+
+用 ncu 测量 N=256/512/1024/2048 的实际 \`dram__bytes_read + dram__bytes_write\`，在纸上或用工具绘制 IO-N 曲线，验证 O(N²)。
+
+\`\`\`bash
+for N in 256 512 1024 2048; do
+ ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum \\
+ --kernel-name regex:attention_naive \\
+ ./attention_naive 2>&1 | grep -E "dram__bytes"
+done
+\`\`\`
+
+**思考问题**：N 翻倍时实测 IO 应该接近几倍？为什么不是精确的 4x？
+> 提示：应接近 4x（O(N²) 的特征）。不精确是因为有固定的 overhead（kernel launch、index 计算的少量访问），N 越大 overhead 占比越小，越接近 4x。
+
+### 验证 Checklist
+
+- [ ] 能手推标准 Attention 三阶段的 HBM 读写量（4N² + 4Nd）
+- [ ] 能解释 O(N²) 项的来源（物化 S 和 P 两个 N×N 矩阵，各读写一次）
+- [ ] 标准 Attention kernel 编译运行正确，与 CPU 对比误差 < 1e-3
+- [ ] 能用 ncu 验证实测 HBM 读写量与理论值一致（误差 < 30%）
+- [ ] 能计算 softmax 部分的 arithmetic intensity（AI≈0.375）并判定为 memory-bound
+- [ ] 能解释 N 翻倍时 HBM IO 变 4x 的原因（O(N²) 的数学性质）
+- [ ] 能解释标准 Attention 是混合瓶颈（GEMM compute-bound + softmax memory-bound）
+
+---
+
+### 今日总结
+
+Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
+
+1. **三阶段流程**：S=QK^T（写 S）→ softmax（读 S 写 P）→ PV（读 P 写 O），中间矩阵 S/P 各 N×N
+2. **O(N²) 来源**：物化两个 N×N 矩阵（S 和 P），各读写一次共 4N²，当 N >> d 时主导 IO
+3. **混合瓶颈**：GEMM 部分是 compute-bound（AI≈85），softmax 部分是纯 memory-bound（AI≈0.375）——softmax 的 O(N²) 读写是结构性瓶颈
+4. **长序列危害**：N=4096 时 S/P 各 64MB，N=16384 时各 1GB，N=65536 直接 OOM
+5. **ncu 验证**：实测 \`dram__bytes_read + write\` 与理论 4N²+4Nd 一致，N 翻倍时 IO 变 4x
+6. **FlashAttention 预告**：通过 tiling + online softmax 不物化 S/P，IO 从 O(N²) 降到 O(Nd)，Week 4 深入
+
+掌握这些后，你就理解了 FlashAttention 的全部动机——Week 4 我们会手写完整的 FlashAttention kernel，把今天的 O(N²) 降到 O(Nd)。
+
+---
+
+### 面试要点
+
+1. **标准 Attention 的 HBM 读写复杂度是多少？为什么是 O(N²)？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **复杂度**：O(N² + Nd)，当 N >> d 时简化为 O(N²)
+ - **O(N²) 来源**：标准 Attention 物化两个 N×N 中间矩阵：
+ - S = QK^T（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
+ - P = softmax(S)（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
+ - 合计 4N² 的 N² 项读写
+ - **O(Nd) 来源**：Q/K/V 的读写（3Nd）和 O 的读写（Nd），线性于 N
+ - **危害**：N=4096 时 S/P 各 64MB，N=16384 时各 1GB，长序列下显存和带宽都吃紧
+ - **FlashAttention 解决**：不物化 S/P，在 SRAM 中完成 softmax，IO 降到 O(Nd)
+
+</details>
+
+
+2. **标准 Attention 中 softmax 部分的 arithmetic intensity 是多少？是 compute-bound 还是 memory-bound？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **softmax 的 FLOPs**：每元素约 3 次运算（exp + add + div），共 3N² FLOPs
+ - **softmax 的 Bytes**：读 S（N²）+ 写 P（N²）= 2N² × 4 bytes
+ - **AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte**
+ - **判定**：AI=0.375 远低于 Ridge Point（~12.6）→ **纯 memory-bound**
+ - **优化方向**：FlashAttention 把 softmax 从 HBM 搬到 SRAM，消除 O(N²) 读写
+
+</details>
+
+
+3. **标准 Attention 的 GEMM 部分是 compute-bound，为什么整体还是慢？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - GEMM（QK^T 和 PV）的 AI ≈ (4/3)·d ≈ 85（d=64）>> Ridge Point 12.6 → 确实 compute-bound
+ - 但 GEMM 中间夹着 memory-bound 的 softmax，必须把 S 写回 HBM 再读出做 softmax，再把 P 写回读出做 PV
+ - 这个"写回-读出"的 O(N²) 读写**无法被 GEMM 的算力掩盖**——中间结果的物化是结构性瓶颈
+ - 类比：流水线中间有个慢工序，前后快工序都得等它
+ - **结论**：整体性能受限于 softmax 的 O(N²) IO，而非 GEMM 的算力
+
+</details>
+
+
+4. **N 翻倍时，标准 Attention 的 HBM IO 变几倍？为什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **变 4 倍**（O(N²) 的数学性质）
+ - IO = 4N² + 4Nd，N 翻倍（N→2N）：4(2N)² = 16N² = 4 × 4N²（N² 项变 4x）
+ - 而 FlashAttention 的 O(Nd)：N→2N 时 4(2N)d = 8Nd = 2 × 4Nd（只变 2x）
+ - **这就是长序列下 FlashAttention 优势爆炸的原因**：N 越大，O(N²) 与 O(Nd) 的差距越大
+ - 实例：N=4096 时 64x，N=16384 时 256x，N=65536 时 1024x
+
+</details>
+
+
+5. **为什么 FlashAttention 能把 IO 从 O(N²) 降到 O(Nd)？核心思想是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **核心思想**：分块（tiling）+ Online Softmax，让 S/P 永远不落 HBM
+ - **tiling**：把 Q 按行分 tile 驻留 SRAM，K/V 按列分 tile 逐块滑入。每个 Q tile 与所有 K/V tile 在 SRAM 中完成计算
+ - **Online Softmax**：分块时每个 K/V tile 只能看到局部数据，用在线算法增量更新 (m, l, o) 三个 running state，不需要先看完所有 S 再做 softmax
+ - **结果**：S/P 只在 SRAM/register 中存在，HBM 只读写 Q/K/V/O 各一次 → O(Nd)
+ - **代价**：SRAM 容量有限，tile 大小受限；online softmax 的缩放有额外 exp 计算
+ - **前提条件**：需要足够大的 SRAM（RTX 5090 每 SM 100KB）容纳 Q tile + K/V tile
+
+---
+
+</details>`;
+
+        const renderer = new marked.Renderer();
+        renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const dayMatch = raw.match(/^Day (\d+)[:：]\s*(.+)$/);
+            if (dayMatch) {
+                anchor = 'day-' + dayMatch[1];
+            }
+
+            if (level === 2 && anchor) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        });
+
+        try {
+            if (typeof marked === 'undefined') {
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        } catch (err) {
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }
+    </script>
+    <script src="../js/main.js?v=4"></script>
+</body>
+</html>

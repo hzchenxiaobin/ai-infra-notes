@@ -1,0 +1,483 @@
+## Day 2：实现 KV Cache
+
+### 🎯 目标
+
+通过今天的学习，你将：
+
+1. 理解 KV Cache 的核心思想——**把每步新生成的 K/V 存下来**，避免 Decode 阶段重复计算历史 K/V<br>
+2. 掌握 KV Cache 的 **5D 内存布局** `(num_layers, B, H, max_seq_len, d_head)`，能计算给定模型配置下的显存占用<br>
+3. 能区分 **静态分配 / 动态分配 / PagedAttention** 三种 cache 分配策略的优缺点，理解为什么 vLLM 要借鉴 OS 虚拟内存分页<br>
+4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
+5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
+
+> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
+
+---
+
+### 学前导读：Decode 每步都在重算历史，能不能存下来？
+
+Day 1 的 PyTorch 模拟里，`MiniTransformer.forward` 有这么一段：
+
+```python
+if use_cache and k_cache is not None:
+ k = torch.cat([k_cache, k], dim=2) # 把新 K 拼到历史 cache 后面
+ v = torch.cat([v_cache, v], dim=2)
+```
+
+这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
+
+关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
+
+| 维度 | 无 KV Cache | 有 KV Cache |
+|------|------------|------------|
+| 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
+| 每步 FLOPs | O(L × d²) | **O(d²)** |
+| 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
+| 内存使用 | 低 | 高（2 × L × d × bytes） |
+| Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
+
+收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
+
+> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
+
+---
+
+### 理论学习
+
+#### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
+
+![KV Cache 生命周期：Prefill 填充 → Decode 追加](../website/images/kv_cache_append_decode.svg)
+
+Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
+
+```
+KV Cache 工作流程：
+ Prefill 阶段：
+ 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
+ cache 从空 → 填入 N_prompt 个 token 的 K/V
+
+ Decode 阶段（每步）：
+ 1. 只计算新 token 的 K_t, V_t
+ 2. 把 K_t/V_t 追加（append）到 cache
+ 3. 从 cache 读取所有历史 K/V 做 attention
+ 4. 输出下一个 token
+ 5. 重复直到 EOS
+```
+
+**收益量化**：
+
+```
+无 Cache 时每步：
+ FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
+ 每步都要重算前 L 个 token 的 QKV projection
+
+有 Cache 时每步：
+ FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
+ 只算 1 个新 token 的 QKV projection + 1×L 的 attention
+
+ attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
+ 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
+```
+
+> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
+
+#### 2.2 KV Cache 的内存布局与显存占用
+
+![KV Cache 5D 内存布局](../website/images/kv_cache_memory_layout.svg)
+
+KV Cache 是一个 5 维张量，K 和 V 各一份：
+
+```
+布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+ v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+
+每 token KV Cache 大小：
+ = 2 × num_layers × num_heads × d_head × bytes_per_elem
+ （2 = K 和 V 各一份）
+
+总 KV Cache 大小：
+ = batch_size × seq_len × per_token_size
+ = B × L × 2 × n_layers × n_heads × d_head × bytes
+```
+
+##### 为什么 d_head 维放最内层？
+
+`d_head` 维连续排列，保证同一 token 同一 head 的 `d` 个元素内存连续——attention 做点积时一次 coalesced 读 `d` 个 float，带宽利用率最高。`seq_len` 维在外层，使得 append 新 token 时只需在尾部写入，不搬移已有数据。
+
+##### 真实模型的显存占用
+
+| 模型 | n_layers | n_heads | d_head | dtype | 每 token KV Cache | 4096 tokens | batch=16 |
+|------|----------|---------|--------|-------|-------------------|-------------|----------|
+| LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
+| LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
+| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
+
+> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
+
+#### 2.3 分配策略：静态 vs 动态 vs PagedAttention
+
+![三种 KV Cache 分配策略对比](../website/images/kv_cache_allocation_strategies.svg)
+
+| 策略 | 做法 | 优点 | 缺点 |
+|------|------|------|------|
+| **静态分配** | 为每个请求预分配 `max_seq_len` 空间 | 简单，无碎片 | 内存浪费严重（实际长度常远小于 max） |
+| **动态分配** | 按实际长度分配/扩展 | 内存利用率高 | 频繁 alloc/free 产生外部碎片，大请求可能 OOM |
+| **PagedAttention** | 分成固定大小 block + block table 映射 | 无碎片、利用率高、支持共享/CoW | 实现复杂，block table 有额外开销 |
+
+##### PagedAttention 核心思想（Day 4 详读）
+
+借鉴 OS 虚拟内存分页：
+- 把 KV cache 分成固定大小的 **block**（如 16 tokens/block）
+- **逻辑 block** 号对序列连续，**物理 block** 号在显存中可以不连续
+- 用 **block table** 维护逻辑→物理映射（类似页表）
+- 多个 sequence 共享同一 prompt 的物理 block，写入时 **Copy-on-Write**
+
+> 💡 PagedAttention 解决的是"动态分配的碎片"问题——不是消除碎片（分页本身也有内部碎片），而是让碎片**可回收**。这是 Day 4 的核心，今天先建直觉。
+
+#### 2.4 多轮对话中的 Cache 复用
+
+```
+多轮对话：
+ Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
+ Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
+
+Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
+
+Cache 复用：
+ - Round 1 已经计算过的 K/V 直接保留在 cache 里
+ - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
+ - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
+```
+
+实现要点：
+1. 为每个对话 session 维护一个 KV Cache
+2. 每次用户输入时，先复用已有 cache（检查已缓存长度）
+3. 对新输入 tokens 做 prefill，将新 K/V 追加到 cache
+4. 生成 assistant 回复时，每步 decode 用 append 模式更新 cache
+5. 释放已完成/超时的 session cache（LRU 或显式释放）
+
+> ⚠️ **注意**：多轮复用的前提是 **prompt 格式严格一致**——如果 Round 2 的 prompt 不是"Round1 全部 + 新输入"的拼接，而是重新构造，cache 就无法复用。生产系统（如 vLLM）通过 prefix caching 显式管理这一点。
+
+### Coding 任务：手写 KV Cache
+
+#### 任务 1：创建 kv_cache.cu
+
+创建文件 [kernels/kv_cache.cu](kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
+
+```cuda
+// kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
+// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
+// 运行命令: ./kv_cache
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+
+// --------------------------------------------------
+// KVCache 类
+// 存储 layout: (num_layers, batch_size, num_heads, max_seq_len, d_head)
+// 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
+// --------------------------------------------------
+class KVCache {
+  public:
+    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
+        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
+          d_head_(d_head) {
+
+        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        total_size_ = (size_t)num_layers_ * size_per_layer_;
+
+        cudaMalloc(&k_cache_, total_size_);
+        cudaMalloc(&v_cache_, total_size_);
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+
+        // 每个 batch 当前已缓存的序列长度
+        seq_lens_ = std::vector<int>(batch_size_, 0);
+    }
+
+    ~KVCache() {
+        cudaFree(k_cache_);
+        cudaFree(v_cache_);
+    }
+
+    // 追加新的 K/V 到 cache
+    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)，在 device 上
+    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
+        for (int b = 0; b < batch_size_; b++) {
+            int start = seq_lens_[b];
+            int end = start + new_len;
+            if (end > max_seq_len_) {
+                printf("Error: seq len %d exceeds max_seq_len %d\n", end, max_seq_len_);
+                return;
+            }
+
+            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
+            for (int h = 0; h < num_heads_; h++) {
+                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
+                size_t dst_offset =
+                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
+                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
+                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+            }
+            seq_lens_[b] = end;
+        }
+    }
+
+    // 获取某层 cache 指针和各 batch 序列长度
+    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
+        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *seq_lens = seq_lens_;
+    }
+
+    int get_seq_len(int batch_id) const {
+        return seq_lens_[batch_id];
+    }
+
+    void reset() {
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
+    }
+
+    void reset_batch(int batch_id) {
+        size_t batch_bytes = (size_t)num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        for (int l = 0; l < num_layers_; l++) {
+            size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                             batch_id * num_heads_ * max_seq_len_ * d_head_);
+            cudaMemset(k_cache_ + offset, 0, batch_bytes);
+            cudaMemset(v_cache_ + offset, 0, batch_bytes);
+        }
+        seq_lens_[batch_id] = 0;
+    }
+
+  private:
+    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
+    size_t size_per_layer_, total_size_;
+    float* k_cache_;
+    float* v_cache_;
+    std::vector<int> seq_lens_;
+};
+```
+
+代码要点：
+- **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
+- **`append`**：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
+- **`get_cache`**：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
+- **`reset` / `reset_batch`**：清空整个 cache 或某个 batch（多轮对话切换时用）。
+
+#### 任务 2：编译与运行
+
+```bash
+# 编译
+nvcc -o kv_cache kernels/kv_cache.cu -O3 -arch=sm_120
+
+# 运行
+./kv_cache
+```
+
+**预期输出**：
+
+```text
+=== KV Cache Test ===
+Config: layers=2, batch=1, heads=8, max_len=1024, d_head=64
+After Round 1 (len=10): seq_len=10
+After Round 2 (len=5): seq_len=15
+After Round 3 (len=8): seq_len=23
+PASS: seq_len = 23 (expected 23)
+Data verification (Round 1 K in cache): max_diff = 0.00e+00 (PASS)
+KV Cache bytes per token: 8192
+Max memory usage: 8 MB
+
+[LLaMA-7B reference] bytes per token: 524288 (512.0 KB)
+[LLaMA-7B reference] 4096 tokens: 2048 MB
+[LLaMA-7B reference] batch=16, 4096 tokens: 32 GB
+```
+
+##### 验证逻辑解读
+
+- **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
+- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
+- **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
+
+#### 任务 3：用 ncu 观察 append 的内存拷贝模式
+
+```bash
+# profile append 阶段的 memcpy
+ncu --kernel-name regex:memcpy \
+ --metrics gpu__time_duration.sum, \
+ dram__bytes.sum \
+ ./kv_cache
+```
+
+**观察重点**：
+- 每次 `append` 会触发 `num_heads` 次 device-to-device `cudaMemcpy`（逐 head 拷贝）——这是教学版的低效点。
+- 生产级实现会用一个 CUDA kernel 一次性把整个 `(B, H, new_len, d_head)` 的块写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。
+
+> 💡 思考：这个教学版 `append` 用 host 端循环 + `cudaMemcpy`，每次拷贝有 launch 开销。如果 `num_heads=32`、每步 decode 追加 1 个 token，就是 32 次小拷贝。优化方向：写一个 `append_kernel`，让 GPU 端一次性完成所有 head 的拷贝。
+
+#### 任务 4：LeetGPU 在线题目 —— Grouped Query Attention (GQA)
+
+**题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
+
+**题目概述**：
+
+实现 **Grouped Query Attention (GQA)**：给定 `num_q_heads` 个 query 头和 `num_kv_heads` 个 KV 头（`num_q_heads` 是 `num_kv_heads` 的整数倍），每 `num_q_heads / num_kv_heads` 个连续 query 头共享同一组 K/V 头，做 scaled dot-product attention。
+
+**约束条件**：`1 ≤ num_kv_heads ≤ num_q_heads ≤ 64`，`1 ≤ seq_len ≤ 4096`，`8 ≤ head_dim ≤ 256`；性能测试取 LLaMA-3 8B 配置 `num_q_heads=32, num_kv_heads=8, seq_len=1024, head_dim=128`。
+
+**与今日知识的关联**：
+
+GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。
+
+> 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](../../../../leetgpu/week5/day2/leetgpu-grouped-query-attention-solution.md)。
+
+#### 任务 5：LeetCode 面试题 —— 最小栈
+
+**题目链接**：[155. 最小栈](https://leetcode.cn/problems/min-stack/)
+
+**题目概述**：
+
+设计一个栈，支持 `push`、`pop`、`top` 和 `getMin` 操作，且 **`getMin` 要在 O(1) 时间**完成。**辅助栈**解法：维护一个额外的 `min_stack`，每次 `push` 时同步压入"当前最小值"，`getMin` 直接读 `min_stack.top()`。
+
+**与今日知识的关联**：
+
+最小栈和 KV Cache 是**同一设计模式的两种应用**——"维护辅助状态以避免从头重算"。最小栈把"栈内最小值"缓存到 `min_stack`，`getMin` 不必遍历整个栈（O(n) → O(1)）；KV Cache 把"历史 K/V"缓存到 `k_cache`，Decode 不必重算整个前缀（O(L·d²) → O(d²)）。两者都是**空间换时间**：多存一份辅助数据，换取查询时跳过重算。最小栈的 `min_stack` 随 `push/pop` 增删同步更新，正是 KV Cache 的 `append` 操作的算法直觉——**缓存不是静态的，要随主数据流增量维护**。
+
+**核心套路**：
+
+```
+push(x): data.push(x); min_stack.push(min(x, min_stack.top()))
+pop(): data.pop(); min_stack.pop()
+getMin(): return min_stack.top() // O(1)，不遍历 data
+```
+
+> 💡 完整题解（含 C++/Python 参考代码、辅助栈图解、复杂度分析、与 KV Cache 的模式类比）见 [最小栈题解](../../../../leetcode/daily/week5/day2/最小栈.md)。
+
+---
+
+### 扩展实验
+
+#### 实验 1：扩展支持多 batch 不同序列长度
+
+修改 `KVCache`，让每个 batch 有独立的 `seq_lens_[b]`，`append` 时各 batch 独立追加不同长度。测试：`batch_size=2`，batch 0 追加 10+5，batch 1 追加 8+3，验证两者 `seq_len` 独立正确。
+
+> 思考：多 batch 独立长度时，attention kernel 如何知道每个 batch 该读多少 cache？（提示：把 `seq_lens[]` 传进 kernel，每 batch 用各自的长度。这正是 vLLM 的 `seq_group_metadata` 做的事。）
+
+#### 实验 2：实现 FP16 版本
+
+把 `KVCache` 的 `float*` 改成 `__half*`（`#include <cuda_fp16.h>`），`cudaMalloc`/`cudaMemcpy` 的字节数除以 2。对比 fp32 与 fp16 的显存占用，验证内存减半。
+
+> 思考：fp16 cache 的数值精度是否足够？什么场景下必须用 fp32？（提示：长序列累积误差、量化感知训练时 fp16 可能不够；Day 1 的 int8 量化是更激进的压缩。）
+
+#### 实验 3：把 append 换成单个 CUDA kernel
+
+当前 `append` 在 host 端用 for 循环 + `cudaMemcpy` 逐 head 拷贝。写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、`block=(num_heads * new_len * d_head)` 一次性把新 K/V 写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。用 `nvprof` 或 `ncu` 对比两种实现的 append 耗时。
+
+> 思考：kernel 版本的 append 应该比 memcpy 版快多少？瓶颈从"launch 开销"变成什么？（提示：变成实际的显存写入带宽，更接近理论极限。）
+
+---
+
+### 今日总结
+
+Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
+
+1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
+2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
+3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
+4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
+5. **多轮对话复用**：Round 1 的 cache 保留，Round 2 只算新增 token 的 K/V，TTFT 大幅降低；前提是 prompt 格式严格一致
+6. **手写 KVCache 类**：`append`/`get_cache`/`reset` 三件套，多轮追加 + 数据落位验证通过，并打印 LLaMA-7B 真实显存参考值
+7. **GQA 优化**：从模型结构层面减少 KV 头数，把 cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`（LLaMA-3 缩小 4×）
+
+掌握这些后，你就有了 Day 3-4 读 vLLM 源码的全部数据结构基础——明天的 PagedAttention 就建在今天的 KVCache 之上，只是把"连续分配"换成了"分页 + block table"。
+
+---
+
+### 面试要点
+
+1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
+ - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
+ - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
+ - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
+
+</details>
+
+
+2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
+ - 总 KV Cache = `batch_size × seq_len × per_token_size`
+ - LLaMA-7B（32 层、32 头、d_head=128、fp16）：每 token ≈ 524 KB，4096 tokens ≈ 2 GB，batch=16 ≈ 32 GB
+ - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
+ - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
+
+</details>
+
+
+3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
+ - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
+ - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
+ - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
+
+</details>
+
+
+4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
+ - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
+ - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
+ - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
+ - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
+
+</details>
+
+
+5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
+ - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
+ - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
+ - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
+
+</details>
+
+
+6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
+ - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
+ - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
+ - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
+
+</details>
+

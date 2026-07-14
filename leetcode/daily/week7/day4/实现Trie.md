@@ -39,7 +39,7 @@ trie.search("app");       // true
 
 Trie 是一棵多叉树，每个节点有 26 个子节点指针（对应 a-z）和一个 `is_end` 标记。共享前缀的单词共用同一条路径。
 
-> 💡 与 [Week7 Day4 自定义 Kernel 集成](../../aiinfra/week7/day4/README.md) 中的 **PyTorch Module 树**同构——Trie 用子节点指针构建共享前缀树，PyTorch 用 `nn.Module` 的 `children()` 构建模型算子树。两者都是**树形结构的递归遍历 + 节点查找**：Trie 按字符逐层查找子节点，PyTorch 遍历 Module 子模块加载 kernel。
+> 💡 与 [Week7 Day4 自定义 Kernel 集成](../../aiinfra/daily/week7/day4/README.md) 中的 **PyTorch Module 树**同构——Trie 用子节点指针构建共享前缀树，PyTorch 用 `nn.Module` 的 `children()` 构建模型算子树。两者都是**树形结构的递归遍历 + 节点查找**：Trie 按字符逐层查找子节点，PyTorch 遍历 Module 子模块加载 kernel。
 
 ### 2.2 算法流程
 

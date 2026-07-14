@@ -38,7 +38,7 @@
 
 关键洞察：**每次从 K 个链表头中选最小的节点**。用最小堆维护 K 个候选，每次弹出堆顶（最小），将该节点的下一个节点入堆。
 
-> 💡 与 [Week7 Day5 系统联调](../../aiinfra/week7/day5/README.md) 中的 **Scheduler 优先级调度**同构——Scheduler 用 `heapq` 从 waiting 队列按优先级弹出请求，合并链表用最小堆从 K 个链表弹最小节点。两者都是"多路归并用堆维护全局最优"的核心模式。
+> 💡 与 [Week7 Day5 系统联调](../../aiinfra/daily/week7/day5/README.md) 中的 **Scheduler 优先级调度**同构——Scheduler 用 `heapq` 从 waiting 队列按优先级弹出请求，合并链表用最小堆从 K 个链表弹最小节点。两者都是"多路归并用堆维护全局最优"的核心模式。
 
 ### 2.3 算法流程
 

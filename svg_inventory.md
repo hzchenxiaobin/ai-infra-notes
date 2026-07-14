@@ -16,143 +16,143 @@
 
 | 路径 | 大小 (B) | 宽高 / viewBox | 首个文本 |
 |---|---:|---|---|
-| `aiinfra/week1/website/images/bank_access_patterns.svg` | 2534 | 720×480 0 0 720 480 | Shared Memory 访问模式总结 |
-| `aiinfra/week1/website/images/bank_conflict.svg` | 3421 | 720×420 0 0 720 420 | Shared Memory Bank Conflict |
-| `aiinfra/week1/website/images/cache_hierarchy_comparison.svg` | 11171 | 900×620 0 0 900 620 | Cache 层次对比：Shared Memory / L1 / L2 |
-| `aiinfra/week1/website/images/coalesced_access.svg` | 2932 | 720×320 0 0 720 320 | Coalesced Global Memory Access |
-| `aiinfra/week1/website/images/cuda_guide_ch5.svg` | 2952 | 720×400 0 0 720 400 | CUDA C Programming Guide 第 5 章核心要点 |
-| `aiinfra/week1/website/images/device_query_output.svg` | 2488 | 720×440 0 0 720 440 | deviceQuery 输出示例结构 |
-| `aiinfra/week1/website/images/element_wise_memory_bound.svg` | 4260 | 720×520 0 0 720 520 | Element-wise 操作为什么是纯 Memory-Bound |
-| `aiinfra/week1/website/images/gpu_memory_hierarchy.svg` | 7314 | 780×560 0 0 780 560 | GPU 内存层次结构 |
-| `aiinfra/week1/website/images/grid_block_thread.svg` | 3454 | 720×480 0 0 720 480 | Grid / Block / Thread 层次结构 |
-| `aiinfra/week1/website/images/matrix_transpose.svg` | 2816 | 720×400 0 0 720 400 | 矩阵转置的内存访问模式 |
-| `aiinfra/week1/website/images/memory_compute_bound.svg` | 2506 | 720×360 0 0 720 360 | 如何判断 Kernel 瓶颈类型 |
-| `aiinfra/week1/website/images/ncu_metrics_overview.svg` | 3248 | 720×440 0 0 720 440 | ncu 常用指标分类 |
-| `aiinfra/week1/website/images/nsight_tools_comparison.svg` | 2559 | 720×400 0 0 720 400 | Nsight Compute vs Nsight Systems |
-| `aiinfra/week1/website/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（RTX 5090 示例） |
-| `aiinfra/week1/website/images/occupancy_calculator_workflow.svg` | 3074 | 720×400 0 0 720 400 | CUDA Occupancy Calculator 使用流程 |
-| `aiinfra/week1/website/images/occupancy_concept.svg` | 2745 | 720×360 0 0 720 360 | Occupancy 概念 |
-| `aiinfra/week1/website/images/occupancy_curve.svg` | 1895 | 720×400 0 0 720 400 | Occupancy 与性能关系 |
-| `aiinfra/week1/website/images/optimization_decision_tree.svg` | 3666 | 720×480 0 0 720 480 | GPU 性能优化决策树 |
-| `aiinfra/week1/website/images/padding_solution.svg` | 4944 | 720×420 0 0 720 420 | Padding 解决 Bank Conflict |
-| `aiinfra/week1/website/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 RTX 5090 为例） |
-| `aiinfra/week1/website/images/profiling_workflow.svg` | 2778 | 720×320 0 0 720 320 | GPU Profiling 工作流程 |
-| `aiinfra/week1/website/images/register_spilling.svg` | 2345 | 720×380 0 0 720 380 | Register Spilling（寄存器溢出） |
-| `aiinfra/week1/website/images/resource_constraints.svg` | 2866 | 720×420 0 0 720 420 | 影响 Occupancy 的三大资源约束 |
-| `aiinfra/week1/website/images/roofline_model.svg` | 2051 | 720×440 0 0 720 440 | Roofline 模型 |
-| `aiinfra/week1/website/images/shared_memory_bank_structure.svg` | 1640175 | 992.16pt×704.16pt 0 0 992.16 704.16 |  |
-| `aiinfra/week1/website/images/shared_memory_tiling.svg` | 3011 | 720×420 0 0 720 420 | Shared Memory Tiling 原理 |
-| `aiinfra/week1/website/images/simt_vs_simd.svg` | 2391 | 720×360 0 0 720 360 | SIMT vs SIMD |
-| `aiinfra/week1/website/images/sm_architecture.svg` | 2861 | 720×440 0 0 720 440 | SM (Streaming Multiprocessor) 架构简图 |
-| `aiinfra/week1/website/images/stride_access.svg` | 4132 | 720×360 0 0 720 360 | Coalesced vs Stride Access |
-| `aiinfra/week1/website/images/thread_id_calculation.svg` | 4620 | 720×540 0 0 720 540 | CUDA 线程 ID 计算 |
-| `aiinfra/week1/website/images/transpose_tiled_process.svg` | 40199 | 1000×740 0 0 1000 740 | Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转 |
-| `aiinfra/week1/website/images/warp_divergence.svg` | 3524 | 720×400 0 0 720 400 | Warp Divergence（分支发散） |
-| `aiinfra/week1/website/images/week1_interview_prep.svg` | 2863 | 720×400 0 0 720 400 | Week 1 面试准备框架 |
-| `aiinfra/week1/website/images/week1_knowledge_map.svg` | 3162 | 720×520 0 0 720 520 | Week 1 知识地图 |
-| `aiinfra/week1/website/images/week1_roadmap.svg` | 2423 | 720×500 0 0 720 500 | Week 1 学习地图 |
-| `aiinfra/week2/website/images/butterfly_reduction.svg` | 9916 | 0 0 860 460 | Warp Reduce Butterfly 模式（5 步折半累加） |
-| `aiinfra/week2/website/images/default_stream_sync.svg` | 5592 | 860×520 0 0 860 520 | Default Stream 隐式同步陷阱 |
-| `aiinfra/week2/website/images/double_buffering.svg` | 6266 | 860×480 0 0 860 480 | Double Buffering（软件流水线） |
-| `aiinfra/week2/website/images/flash_attention_tiling.svg` | 5688 | 860×540 0 0 860 540 | FlashAttention 分块策略（Tiling） |
-| `aiinfra/week2/website/images/float4_vectorized_load.svg` | 3500 | 760×440 0 0 760 440 | float4 向量化加载 vs 逐元素加载 |
-| `aiinfra/week2/website/images/gemm_optimization_layers.svg` | 4977 | 760×560 0 0 760 560 | GEMM 优化层次：从 1% 到 70%+ |
-| `aiinfra/week2/website/images/hbm_comparison.svg` | 3905 | 860×480 0 0 860 480 | FlashAttention HBM 访问对比（N=4096, d=64） |
-| `aiinfra/week2/website/images/multi_stream_overlap.svg` | 7889 | 860×560 0 0 860 560 | Multi-Stream H2D / Compute / D2H 重叠流水线 |
-| `aiinfra/week2/website/images/ncu_metrics_overview.svg` | 4173 | 760×500 0 0 760 500 | ncu 关键性能指标分类 |
-| `aiinfra/week2/website/images/online_softmax_formula.svg` | 3622 | 860×560 0 0 860 560 | Online Softmax 三个更新公式 |
-| `aiinfra/week2/website/images/parameter_tuning_table.svg` | 5586 | 760×440 0 0 760 440 | 参数精调扫描表 |
-| `aiinfra/week2/website/images/profile_optimize_loop.svg` | 4381 | 760×420 0 0 760 420 | Profile → 优化 → 验证 完整闭环 |
-| `aiinfra/week2/website/images/register_blocking_dataflow.svg` | 6929 | 900×560 0 0 900 560 | Register Blocking 三级数据复用 |
-| `aiinfra/week2/website/images/shfl_down_params.svg` | 16280 | 0 0 820 500 | __shfl_down_sync 参数详解 |
-| `aiinfra/week2/website/images/stall_reason_bar.svg` | 4598 | 760×400 0 0 760 400 | Warp Stall Reasons 示例（Register Blocking GEMM） |
-| `aiinfra/week2/website/images/stream_event_dependency.svg` | 4820 | 860×460 0 0 860 460 | cudaEvent 跨 Stream 依赖管理 |
-| `aiinfra/week2/website/images/thread_tile_mapping.svg` | 6290 | 860×540 0 0 860 540 | Thread Tile 二维映射（BM=128, BN=128, TM=8, TN=8） |
-| `aiinfra/week2/website/images/two_level_reduction.svg` | 7165 | 0 0 820 580 | 两级归约：Warp Reduce + Block Reduce |
-| `aiinfra/week2/website/images/warp_shuffle_primitives.svg` | 18138 | 0 0 820 680 | Warp Shuffle 四大家族数据流向 |
-| `aiinfra/week3/website/images/attention_io_breakdown.svg` | 5285 | 940×620 0 0 940 620 | 标准 Attention 三阶段 HBM 读写量拆解 |
-| `aiinfra/week3/website/images/attention_memory_bound.svg` | 5475 | 920×580 0 0 920 580 | 标准 Attention 的 Roofline 与瓶颈判定 |
-| `aiinfra/week3/website/images/block_reduce_two_level.svg` | 6928 | 920×620 0 0 920 620 | Block 级 Reduce 两级结构（复用 Week2 Warp Shuffle） |
-| `aiinfra/week3/website/images/cpp_extension_pipeline.svg` | 7014 |  |  |
-| `aiinfra/week3/website/images/decode_memory_bound.svg` | 6257 | 860×500 0 0 860 500 | Decode 为什么是 Memory-bound：M=1 的 GEMM |
-| `aiinfra/week3/website/images/end_to_end_profiling_workflow.svg` | 6953 |  |  |
-| `aiinfra/week3/website/images/kernel_fusion_opportunities.svg` | 6929 | 920×540 0 0 920 540 | Kernel Fusion：省的是 HBM 中间读写 |
-| `aiinfra/week3/website/images/latency_comparison.svg` | 5654 | 900×540 0 0 900 540 | Latency 对比：PyTorch 官方 vs 自定义算子 |
-| `aiinfra/week3/website/images/layernorm_two_reduce.svg` | 6450 | 920×640 0 0 920 640 | LayerNorm 两次 Reduce 流程 |
-| `aiinfra/week3/website/images/mini_engine_architecture.svg` | 5792 | 920×620 0 0 920 620 | Mini Transformer Engine 架构 |
-| `aiinfra/week3/website/images/on2_vs_ond_scaling.svg` | 6378 | 900×560 0 0 900 560 | O(N²) vs O(Nd)：HBM IO 随序列长度增长 |
-| `aiinfra/week3/website/images/prefill_vs_decode.svg` | 6683 | 880×480 0 0 880 480 | Prefill vs Decode 执行特征对比 |
-| `aiinfra/week3/website/images/pytorch_softmax_dispatch.svg` | 5636 | 940×620 0 0 940 620 | PyTorch Softmax 的两条 Dispatch 路径 |
-| `aiinfra/week3/website/images/safe_softmax_three_pass.svg` | 6555 | 920×640 0 0 920 640 | Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出 |
-| `aiinfra/week3/website/images/torch_profiler_workflow.svg` | 8162 | 860×440 0 0 860 440 | torch.profiler 工作流 |
-| `aiinfra/week3/website/images/transformer_dataflow.svg` | 6902 | 900×620 0 0 900 620 | Transformer 单层数据流 |
-| `aiinfra/week3/website/images/vectorized_load_comparison.svg` | 8029 |  |  |
-| `aiinfra/week3/website/images/welford_vs_twopass.svg` | 7781 | 940×660 0 0 940 660 | LayerNorm：两次 Reduce vs Welford 一次遍历 |
-| `aiinfra/week4/website/images/attention_io_breakdown.svg` | 5285 | 940×620 0 0 940 620 | 标准 Attention 三阶段 HBM 读写量拆解 |
-| `aiinfra/week4/website/images/flash_attention_kernel_tiling.svg` | 7653 | 0 0 640 500 | FlashAttention 分块：Q tile 驻留，K/V tile 滑动 |
-| `aiinfra/week4/website/images/flash_attention_naive_vs_fused.svg` | 7001 | 0 0 640 480 | 朴素三步 vs FlashAttention 融合：HBM 访存量对比 |
-| `aiinfra/week4/website/images/flash_attention_online_update.svg` | 10469 | 0 0 640 520 | Online Softmax 扩展：(m, l, O) 三元组增量更新 |
-| `aiinfra/week4/website/images/flash_attention_tiling.svg` | 7653 | 0 0 640 500 | FlashAttention 分块：Q tile 驻留，K/V tile 滑动 |
-| `aiinfra/week4/website/images/on2_vs_ond_scaling.svg` | 6378 | 900×560 0 0 900 560 | O(N²) vs O(Nd)：HBM IO 随序列长度增长 |
-| `aiinfra/week4/website/images/reduction_warp_shuffle.svg` | 9682 | 0 0 640 480 | Warp Shuffle：__shfl_down_sync 原理 |
-| `aiinfra/week5/website/images/bottleneck_decision_tree.svg` | 7121 | 940×540 0 0 940 540 | 瓶颈定位决策树：从现象到优化方向 |
-| `aiinfra/week5/website/images/continuous_vs_static_batching.svg` | 8158 | 940×500 0 0 940 500 | Continuous Batching vs Static Batching |
-| `aiinfra/week5/website/images/decode_breakdown.svg` | 4262 | 940×440 0 0 940 440 | Decode 单步 Breakdown：forward / sampling / sync 占比 |
-| `aiinfra/week5/website/images/decode_memory_bound.svg` | 6784 | 940×560 0 0 940 560 | Decode 为什么 memory-bound：算术强度 vs Ridge Point |
-| `aiinfra/week5/website/images/four_core_problems.svg` | 5616 | 940×560 0 0 940 560 | 推理系统四大核心问题 |
-| `aiinfra/week5/website/images/inference_metrics_timeline.svg` | 4605 | 940×420 0 0 940 420 | 推理时延指标：TTFT 与 TBT 时间线 |
-| `aiinfra/week5/website/images/kv_cache_allocation_strategies.svg` | 9226 | 940×520 0 0 940 520 | KV Cache 分配策略：静态 vs 动态 vs PagedAttention |
-| `aiinfra/week5/website/images/kv_cache_append_decode.svg` | 6711 | 940×480 0 0 940 480 | KV Cache 生命周期：Prefill 填充 → Decode 追加 |
-| `aiinfra/week5/website/images/kv_cache_memory_layout.svg` | 5436 | 940×520 0 0 940 520 | KV Cache 内存布局：(num_layers, B, H, max_seq_len, d_head) |
-| `aiinfra/week5/website/images/mini_engine_architecture.svg` | 4456 | 940×540 0 0 940 540 | Mini 推理引擎 v0 架构：5 大组件 + 数据流 |
-| `aiinfra/week5/website/images/mini_engine_cache_comparison.svg` | 5570 | 940×460 0 0 940 460 | With vs Without KV Cache：latency 与 FLOPs 对比 |
-| `aiinfra/week5/website/images/mini_engine_prefill_decode_flow.svg` | 6699 | 940×480 0 0 940 480 | Prefill → Decode 执行流程与 KV Cache 状态 |
-| `aiinfra/week5/website/images/optimization_cheatsheet.svg` | 7578 | 940×540 0 0 940 540 | 推理系统优化速查表：现象 → 检查 → 解决 |
-| `aiinfra/week5/website/images/paged_attention_block_table.svg` | 9177 | 940×540 0 0 940 540 | Block Table：逻辑连续 ↔ 物理不连续 |
-| `aiinfra/week5/website/images/paged_attention_copy_on_write.svg` | 7830 | 940×500 0 0 940 500 | Copy-on-Write：共享 prompt block，写入时才复制 |
-| `aiinfra/week5/website/images/paged_attention_fragmentation.svg` | 8235 | 940×500 0 0 940 500 | 内存碎片对比：Static / Dynamic / PagedAttention |
-| `aiinfra/week5/website/images/prefill_vs_decode_overview.svg` | 6483 | 960×600 0 0 960 600 | Prefill vs Decode：两阶段输入与 Attention 形状 |
-| `aiinfra/week5/website/images/profiling_three_layers.svg` | 7145 | 940×500 0 0 940 500 | 推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级 |
-| `aiinfra/week5/website/images/request_lifecycle.svg` | 5985 | 940×460 0 0 940 460 | 请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED |
-| `aiinfra/week5/website/images/vllm_layered_architecture.svg` | 4929 | 940×560 0 0 940 560 | vLLM 分层架构：LLMEngine → Scheduler → Worker |
-| `aiinfra/week5/website/images/week5_knowledge_map.svg` | 6881 | 940×560 0 0 940 560 | Week 5 知识地图：从两阶段到推理引擎 |
-| `aiinfra/week6/website/images/batching_strategies_comparison.svg` | 8665 | 0 0 940 520 | No Batching vs Static vs Dynamic Batching |
-| `aiinfra/week6/website/images/benchmark_metrics_overview.svg` | 5102 | 0 0 920 420 | Benchmark 六大关键指标 |
-| `aiinfra/week6/website/images/bottleneck_types_analysis.svg` | 4710 |  |  |
-| `aiinfra/week6/website/images/chunked_prefill_vs_naive.svg` | 8619 | 0 0 920 440 | Naive Prefill vs Chunked Prefill：延迟曲线对比 |
-| `aiinfra/week6/website/images/continuous_batching_in_engine_v1.svg` | 5727 | 0 0 920 400 | Continuous Batching in Mini Engine v1（实测时间线） |
-| `aiinfra/week6/website/images/continuous_batching_timeline.svg` | 7248 | 0 0 940 480 | Continuous Batching Iteration 时间线 |
-| `aiinfra/week6/website/images/dynamic_batcher_flow.svg` | 5668 | 0 0 940 460 | Dynamic Batcher 工作流程 |
-| `aiinfra/week6/website/images/dynamic_vs_continuous_batching.svg` | 8200 | 0 0 940 460 | Dynamic vs Continuous Batching：request-level vs iteration-level |
-| `aiinfra/week6/website/images/framework_comparison.svg` | 4362 | 0 0 940 460 | 三大推理框架调度策略对比 |
-| `aiinfra/week6/website/images/inflight_batching_flow.svg` | 8610 | 0 0 920 420 | Inflight Batching 数据流（TensorRT-LLM 风格） |
-| `aiinfra/week6/website/images/mini_engine_v1_architecture.svg` | 5606 | 0 0 920 460 | Mini 推理引擎 v1 架构 |
-| `aiinfra/week6/website/images/request_lifecycle_v1.svg` | 4418 | 0 0 920 380 | 请求生命周期：WAITING → RUNNING → FINISHED |
-| `aiinfra/week6/website/images/scheduler_state_machine.svg` | 5327 | 0 0 940 420 | Scheduler 状态机与每轮决策 |
-| `aiinfra/week6/website/images/scheduling_strategy_decision_tree.svg` | 6097 | 0 0 920 560 | 调度策略选择决策树 |
-| `aiinfra/week6/website/images/throughput_latency_curve.svg` | 3458 | 0 0 940 440 | Throughput vs Latency 曲线与饱和点 |
-| `aiinfra/week6/website/images/throughput_latency_saturation_curve.svg` | 4347 | 0 0 920 440 | Throughput-Latency 曲线与饱和点 |
-| `aiinfra/week6/website/images/vllm_scheduler_budget.svg` | 4757 | 0 0 920 400 | SchedulingBudget：双预算约束每轮调度 |
-| `aiinfra/week6/website/images/vllm_scheduler_preemption_modes.svg` | 4499 | 0 0 940 440 | Preemption 两种模式：Recompute vs Swap |
-| `aiinfra/week6/website/images/vllm_scheduler_schedule_flow.svg` | 5436 | 0 0 920 460 | vLLM Scheduler.schedule() 五步流程 |
-| `aiinfra/week6/website/images/week6_knowledge_map.svg` | 6583 | 0 0 940 460 | Week 6 知识地图：从凑批到并发服务 |
-| `aiinfra/week7/website/images/bottleneck_analysis.svg` | 8070 | 0 0 940 460 | 系统级瓶颈分类与优化 |
-| `aiinfra/week7/website/images/chunked_prefill.svg` | 8740 | 0 0 940 440 | Chunked Prefill：长 Prompt 分块 + Decode 交错 |
-| `aiinfra/week7/website/images/concurrency_models.svg` | 6235 | 0 0 940 440 | 三种并发模型对比 |
-| `aiinfra/week7/website/images/cpp_extension_pipeline.svg` | 6333 | 0 0 940 400 | PyTorch C++ Extension 编译流水线 |
-| `aiinfra/week7/website/images/future_callback_streaming.svg` | 5301 | 0 0 940 420 | Future / Callback / Streaming 三种结果返回 |
-| `aiinfra/week7/website/images/integration_checklist.svg` | 8789 | 0 0 940 520 | 系统联调：六步分层验证 |
-| `aiinfra/week7/website/images/kernel_integration_overview.svg` | 7915 | 0 0 940 500 | 自定义 Kernel 集成：替换 PyTorch 算子 |
-| `aiinfra/week7/website/images/mini_ai_infra_architecture.svg` | 6928 | 0 0 940 520 | Mini AI Infra 系统架构 |
-| `aiinfra/week7/website/images/preemption_strategy.svg` | 6086 | 0 0 940 540 | 抢占策略：Recompute vs Swap |
-| `aiinfra/week7/website/images/prefix_caching.svg` | 8062 | 0 0 940 460 | Prefix Caching：公共前缀 KV Cache 复用 |
-| `aiinfra/week7/website/images/profiling_toolchain.svg` | 7758 | 0 0 940 440 | Profiling 工具链：三层分析 |
-| `aiinfra/week7/website/images/request_lifecycle_states.svg` | 5715 | 0 0 940 380 | 请求生命周期：WAITING → RUNNING → 终态 |
-| `aiinfra/week7/website/images/resource_budget.svg` | 7578 | 0 0 940 520 | 资源预算：Token Budget + Memory Budget |
-| `aiinfra/week7/website/images/scheduler_architecture.svg` | 6693 | 0 0 940 560 | 完整调度器六大功能架构 |
-| `aiinfra/week7/website/images/speculative_decoding.svg` | 6824 | 0 0 940 480 | Speculative Decoding：小模型 Draft + 大模型 Verify |
-| `aiinfra/week7/website/images/troubleshooting_guide.svg` | 8013 | 0 0 940 420 | 系统联调常见问题排查 |
-| `aiinfra/week7/website/images/week7_knowledge_map.svg` | 9232 | 0 0 940 560 | Week 7 知识地图：系统整合 |
+| `aiinfra/daily/week1/website/images/bank_access_patterns.svg` | 2534 | 720×480 0 0 720 480 | Shared Memory 访问模式总结 |
+| `aiinfra/daily/week1/website/images/bank_conflict.svg` | 3421 | 720×420 0 0 720 420 | Shared Memory Bank Conflict |
+| `aiinfra/daily/week1/website/images/cache_hierarchy_comparison.svg` | 11171 | 900×620 0 0 900 620 | Cache 层次对比：Shared Memory / L1 / L2 |
+| `aiinfra/daily/week1/website/images/coalesced_access.svg` | 2932 | 720×320 0 0 720 320 | Coalesced Global Memory Access |
+| `aiinfra/daily/week1/website/images/cuda_guide_ch5.svg` | 2952 | 720×400 0 0 720 400 | CUDA C Programming Guide 第 5 章核心要点 |
+| `aiinfra/daily/week1/website/images/device_query_output.svg` | 2488 | 720×440 0 0 720 440 | deviceQuery 输出示例结构 |
+| `aiinfra/daily/week1/website/images/element_wise_memory_bound.svg` | 4260 | 720×520 0 0 720 520 | Element-wise 操作为什么是纯 Memory-Bound |
+| `aiinfra/daily/week1/website/images/gpu_memory_hierarchy.svg` | 7314 | 780×560 0 0 780 560 | GPU 内存层次结构 |
+| `aiinfra/daily/week1/website/images/grid_block_thread.svg` | 3454 | 720×480 0 0 720 480 | Grid / Block / Thread 层次结构 |
+| `aiinfra/daily/week1/website/images/matrix_transpose.svg` | 2816 | 720×400 0 0 720 400 | 矩阵转置的内存访问模式 |
+| `aiinfra/daily/week1/website/images/memory_compute_bound.svg` | 2506 | 720×360 0 0 720 360 | 如何判断 Kernel 瓶颈类型 |
+| `aiinfra/daily/week1/website/images/ncu_metrics_overview.svg` | 3248 | 720×440 0 0 720 440 | ncu 常用指标分类 |
+| `aiinfra/daily/week1/website/images/nsight_tools_comparison.svg` | 2559 | 720×400 0 0 720 400 | Nsight Compute vs Nsight Systems |
+| `aiinfra/daily/week1/website/images/occupancy_calc_steps.svg` | 3198 | 720×540 0 0 720 540 | Occupancy 手算四步法（RTX 5090 示例） |
+| `aiinfra/daily/week1/website/images/occupancy_calculator_workflow.svg` | 3074 | 720×400 0 0 720 400 | CUDA Occupancy Calculator 使用流程 |
+| `aiinfra/daily/week1/website/images/occupancy_concept.svg` | 2745 | 720×360 0 0 720 360 | Occupancy 概念 |
+| `aiinfra/daily/week1/website/images/occupancy_curve.svg` | 1895 | 720×400 0 0 720 400 | Occupancy 与性能关系 |
+| `aiinfra/daily/week1/website/images/optimization_decision_tree.svg` | 3666 | 720×480 0 0 720 480 | GPU 性能优化决策树 |
+| `aiinfra/daily/week1/website/images/padding_solution.svg` | 4944 | 720×420 0 0 720 420 | Padding 解决 Bank Conflict |
+| `aiinfra/daily/week1/website/images/peak_flops_bandwidth.svg` | 4115 | 720×500 0 0 720 500 | GPU 峰值算力与显存带宽计算（以 RTX 5090 为例） |
+| `aiinfra/daily/week1/website/images/profiling_workflow.svg` | 2778 | 720×320 0 0 720 320 | GPU Profiling 工作流程 |
+| `aiinfra/daily/week1/website/images/register_spilling.svg` | 2345 | 720×380 0 0 720 380 | Register Spilling（寄存器溢出） |
+| `aiinfra/daily/week1/website/images/resource_constraints.svg` | 2866 | 720×420 0 0 720 420 | 影响 Occupancy 的三大资源约束 |
+| `aiinfra/daily/week1/website/images/roofline_model.svg` | 2051 | 720×440 0 0 720 440 | Roofline 模型 |
+| `aiinfra/daily/week1/website/images/shared_memory_bank_structure.svg` | 1640175 | 992.16pt×704.16pt 0 0 992.16 704.16 |  |
+| `aiinfra/daily/week1/website/images/shared_memory_tiling.svg` | 3011 | 720×420 0 0 720 420 | Shared Memory Tiling 原理 |
+| `aiinfra/daily/week1/website/images/simt_vs_simd.svg` | 2391 | 720×360 0 0 720 360 | SIMT vs SIMD |
+| `aiinfra/daily/week1/website/images/sm_architecture.svg` | 2861 | 720×440 0 0 720 440 | SM (Streaming Multiprocessor) 架构简图 |
+| `aiinfra/daily/week1/website/images/stride_access.svg` | 4132 | 720×360 0 0 720 360 | Coalesced vs Stride Access |
+| `aiinfra/daily/week1/website/images/thread_id_calculation.svg` | 4620 | 720×540 0 0 720 540 | CUDA 线程 ID 计算 |
+| `aiinfra/daily/week1/website/images/transpose_tiled_process.svg` | 40199 | 1000×740 0 0 1000 740 | Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转 |
+| `aiinfra/daily/week1/website/images/warp_divergence.svg` | 3524 | 720×400 0 0 720 400 | Warp Divergence（分支发散） |
+| `aiinfra/daily/week1/website/images/week1_interview_prep.svg` | 2863 | 720×400 0 0 720 400 | Week 1 面试准备框架 |
+| `aiinfra/daily/week1/website/images/week1_knowledge_map.svg` | 3162 | 720×520 0 0 720 520 | Week 1 知识地图 |
+| `aiinfra/daily/week1/website/images/week1_roadmap.svg` | 2423 | 720×500 0 0 720 500 | Week 1 学习地图 |
+| `aiinfra/daily/week2/website/images/butterfly_reduction.svg` | 9916 | 0 0 860 460 | Warp Reduce Butterfly 模式（5 步折半累加） |
+| `aiinfra/daily/week2/website/images/default_stream_sync.svg` | 5592 | 860×520 0 0 860 520 | Default Stream 隐式同步陷阱 |
+| `aiinfra/daily/week2/website/images/double_buffering.svg` | 6266 | 860×480 0 0 860 480 | Double Buffering（软件流水线） |
+| `aiinfra/daily/week2/website/images/flash_attention_tiling.svg` | 5688 | 860×540 0 0 860 540 | FlashAttention 分块策略（Tiling） |
+| `aiinfra/daily/week2/website/images/float4_vectorized_load.svg` | 3500 | 760×440 0 0 760 440 | float4 向量化加载 vs 逐元素加载 |
+| `aiinfra/daily/week2/website/images/gemm_optimization_layers.svg` | 4977 | 760×560 0 0 760 560 | GEMM 优化层次：从 1% 到 70%+ |
+| `aiinfra/daily/week2/website/images/hbm_comparison.svg` | 3905 | 860×480 0 0 860 480 | FlashAttention HBM 访问对比（N=4096, d=64） |
+| `aiinfra/daily/week2/website/images/multi_stream_overlap.svg` | 7889 | 860×560 0 0 860 560 | Multi-Stream H2D / Compute / D2H 重叠流水线 |
+| `aiinfra/daily/week2/website/images/ncu_metrics_overview.svg` | 4173 | 760×500 0 0 760 500 | ncu 关键性能指标分类 |
+| `aiinfra/daily/week2/website/images/online_softmax_formula.svg` | 3622 | 860×560 0 0 860 560 | Online Softmax 三个更新公式 |
+| `aiinfra/daily/week2/website/images/parameter_tuning_table.svg` | 5586 | 760×440 0 0 760 440 | 参数精调扫描表 |
+| `aiinfra/daily/week2/website/images/profile_optimize_loop.svg` | 4381 | 760×420 0 0 760 420 | Profile → 优化 → 验证 完整闭环 |
+| `aiinfra/daily/week2/website/images/register_blocking_dataflow.svg` | 6929 | 900×560 0 0 900 560 | Register Blocking 三级数据复用 |
+| `aiinfra/daily/week2/website/images/shfl_down_params.svg` | 16280 | 0 0 820 500 | __shfl_down_sync 参数详解 |
+| `aiinfra/daily/week2/website/images/stall_reason_bar.svg` | 4598 | 760×400 0 0 760 400 | Warp Stall Reasons 示例（Register Blocking GEMM） |
+| `aiinfra/daily/week2/website/images/stream_event_dependency.svg` | 4820 | 860×460 0 0 860 460 | cudaEvent 跨 Stream 依赖管理 |
+| `aiinfra/daily/week2/website/images/thread_tile_mapping.svg` | 6290 | 860×540 0 0 860 540 | Thread Tile 二维映射（BM=128, BN=128, TM=8, TN=8） |
+| `aiinfra/daily/week2/website/images/two_level_reduction.svg` | 7165 | 0 0 820 580 | 两级归约：Warp Reduce + Block Reduce |
+| `aiinfra/daily/week2/website/images/warp_shuffle_primitives.svg` | 18138 | 0 0 820 680 | Warp Shuffle 四大家族数据流向 |
+| `aiinfra/daily/week3/website/images/attention_io_breakdown.svg` | 5285 | 940×620 0 0 940 620 | 标准 Attention 三阶段 HBM 读写量拆解 |
+| `aiinfra/daily/week3/website/images/attention_memory_bound.svg` | 5475 | 920×580 0 0 920 580 | 标准 Attention 的 Roofline 与瓶颈判定 |
+| `aiinfra/daily/week3/website/images/block_reduce_two_level.svg` | 6928 | 920×620 0 0 920 620 | Block 级 Reduce 两级结构（复用 Week2 Warp Shuffle） |
+| `aiinfra/daily/week3/website/images/cpp_extension_pipeline.svg` | 7014 |  |  |
+| `aiinfra/daily/week3/website/images/decode_memory_bound.svg` | 6257 | 860×500 0 0 860 500 | Decode 为什么是 Memory-bound：M=1 的 GEMM |
+| `aiinfra/daily/week3/website/images/end_to_end_profiling_workflow.svg` | 6953 |  |  |
+| `aiinfra/daily/week3/website/images/kernel_fusion_opportunities.svg` | 6929 | 920×540 0 0 920 540 | Kernel Fusion：省的是 HBM 中间读写 |
+| `aiinfra/daily/week3/website/images/latency_comparison.svg` | 5654 | 900×540 0 0 900 540 | Latency 对比：PyTorch 官方 vs 自定义算子 |
+| `aiinfra/daily/week3/website/images/layernorm_two_reduce.svg` | 6450 | 920×640 0 0 920 640 | LayerNorm 两次 Reduce 流程 |
+| `aiinfra/daily/week3/website/images/mini_engine_architecture.svg` | 5792 | 920×620 0 0 920 620 | Mini Transformer Engine 架构 |
+| `aiinfra/daily/week3/website/images/on2_vs_ond_scaling.svg` | 6378 | 900×560 0 0 900 560 | O(N²) vs O(Nd)：HBM IO 随序列长度增长 |
+| `aiinfra/daily/week3/website/images/prefill_vs_decode.svg` | 6683 | 880×480 0 0 880 480 | Prefill vs Decode 执行特征对比 |
+| `aiinfra/daily/week3/website/images/pytorch_softmax_dispatch.svg` | 5636 | 940×620 0 0 940 620 | PyTorch Softmax 的两条 Dispatch 路径 |
+| `aiinfra/daily/week3/website/images/safe_softmax_three_pass.svg` | 6555 | 920×640 0 0 920 640 | Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出 |
+| `aiinfra/daily/week3/website/images/torch_profiler_workflow.svg` | 8162 | 860×440 0 0 860 440 | torch.profiler 工作流 |
+| `aiinfra/daily/week3/website/images/transformer_dataflow.svg` | 6902 | 900×620 0 0 900 620 | Transformer 单层数据流 |
+| `aiinfra/daily/week3/website/images/vectorized_load_comparison.svg` | 8029 |  |  |
+| `aiinfra/daily/week3/website/images/welford_vs_twopass.svg` | 7781 | 940×660 0 0 940 660 | LayerNorm：两次 Reduce vs Welford 一次遍历 |
+| `aiinfra/daily/week4/website/images/attention_io_breakdown.svg` | 5285 | 940×620 0 0 940 620 | 标准 Attention 三阶段 HBM 读写量拆解 |
+| `aiinfra/daily/week4/website/images/flash_attention_kernel_tiling.svg` | 7653 | 0 0 640 500 | FlashAttention 分块：Q tile 驻留，K/V tile 滑动 |
+| `aiinfra/daily/week4/website/images/flash_attention_naive_vs_fused.svg` | 7001 | 0 0 640 480 | 朴素三步 vs FlashAttention 融合：HBM 访存量对比 |
+| `aiinfra/daily/week4/website/images/flash_attention_online_update.svg` | 10469 | 0 0 640 520 | Online Softmax 扩展：(m, l, O) 三元组增量更新 |
+| `aiinfra/daily/week4/website/images/flash_attention_tiling.svg` | 7653 | 0 0 640 500 | FlashAttention 分块：Q tile 驻留，K/V tile 滑动 |
+| `aiinfra/daily/week4/website/images/on2_vs_ond_scaling.svg` | 6378 | 900×560 0 0 900 560 | O(N²) vs O(Nd)：HBM IO 随序列长度增长 |
+| `aiinfra/daily/week4/website/images/reduction_warp_shuffle.svg` | 9682 | 0 0 640 480 | Warp Shuffle：__shfl_down_sync 原理 |
+| `aiinfra/daily/week5/website/images/bottleneck_decision_tree.svg` | 7121 | 940×540 0 0 940 540 | 瓶颈定位决策树：从现象到优化方向 |
+| `aiinfra/daily/week5/website/images/continuous_vs_static_batching.svg` | 8158 | 940×500 0 0 940 500 | Continuous Batching vs Static Batching |
+| `aiinfra/daily/week5/website/images/decode_breakdown.svg` | 4262 | 940×440 0 0 940 440 | Decode 单步 Breakdown：forward / sampling / sync 占比 |
+| `aiinfra/daily/week5/website/images/decode_memory_bound.svg` | 6784 | 940×560 0 0 940 560 | Decode 为什么 memory-bound：算术强度 vs Ridge Point |
+| `aiinfra/daily/week5/website/images/four_core_problems.svg` | 5616 | 940×560 0 0 940 560 | 推理系统四大核心问题 |
+| `aiinfra/daily/week5/website/images/inference_metrics_timeline.svg` | 4605 | 940×420 0 0 940 420 | 推理时延指标：TTFT 与 TBT 时间线 |
+| `aiinfra/daily/week5/website/images/kv_cache_allocation_strategies.svg` | 9226 | 940×520 0 0 940 520 | KV Cache 分配策略：静态 vs 动态 vs PagedAttention |
+| `aiinfra/daily/week5/website/images/kv_cache_append_decode.svg` | 6711 | 940×480 0 0 940 480 | KV Cache 生命周期：Prefill 填充 → Decode 追加 |
+| `aiinfra/daily/week5/website/images/kv_cache_memory_layout.svg` | 5436 | 940×520 0 0 940 520 | KV Cache 内存布局：(num_layers, B, H, max_seq_len, d_head) |
+| `aiinfra/daily/week5/website/images/mini_engine_architecture.svg` | 4456 | 940×540 0 0 940 540 | Mini 推理引擎 v0 架构：5 大组件 + 数据流 |
+| `aiinfra/daily/week5/website/images/mini_engine_cache_comparison.svg` | 5570 | 940×460 0 0 940 460 | With vs Without KV Cache：latency 与 FLOPs 对比 |
+| `aiinfra/daily/week5/website/images/mini_engine_prefill_decode_flow.svg` | 6699 | 940×480 0 0 940 480 | Prefill → Decode 执行流程与 KV Cache 状态 |
+| `aiinfra/daily/week5/website/images/optimization_cheatsheet.svg` | 7578 | 940×540 0 0 940 540 | 推理系统优化速查表：现象 → 检查 → 解决 |
+| `aiinfra/daily/week5/website/images/paged_attention_block_table.svg` | 9177 | 940×540 0 0 940 540 | Block Table：逻辑连续 ↔ 物理不连续 |
+| `aiinfra/daily/week5/website/images/paged_attention_copy_on_write.svg` | 7830 | 940×500 0 0 940 500 | Copy-on-Write：共享 prompt block，写入时才复制 |
+| `aiinfra/daily/week5/website/images/paged_attention_fragmentation.svg` | 8235 | 940×500 0 0 940 500 | 内存碎片对比：Static / Dynamic / PagedAttention |
+| `aiinfra/daily/week5/website/images/prefill_vs_decode_overview.svg` | 6483 | 960×600 0 0 960 600 | Prefill vs Decode：两阶段输入与 Attention 形状 |
+| `aiinfra/daily/week5/website/images/profiling_three_layers.svg` | 7145 | 940×500 0 0 940 500 | 推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级 |
+| `aiinfra/daily/week5/website/images/request_lifecycle.svg` | 5985 | 940×460 0 0 940 460 | 请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED |
+| `aiinfra/daily/week5/website/images/vllm_layered_architecture.svg` | 4929 | 940×560 0 0 940 560 | vLLM 分层架构：LLMEngine → Scheduler → Worker |
+| `aiinfra/daily/week5/website/images/week5_knowledge_map.svg` | 6881 | 940×560 0 0 940 560 | Week 5 知识地图：从两阶段到推理引擎 |
+| `aiinfra/daily/week6/website/images/batching_strategies_comparison.svg` | 8665 | 0 0 940 520 | No Batching vs Static vs Dynamic Batching |
+| `aiinfra/daily/week6/website/images/benchmark_metrics_overview.svg` | 5102 | 0 0 920 420 | Benchmark 六大关键指标 |
+| `aiinfra/daily/week6/website/images/bottleneck_types_analysis.svg` | 4710 |  |  |
+| `aiinfra/daily/week6/website/images/chunked_prefill_vs_naive.svg` | 8619 | 0 0 920 440 | Naive Prefill vs Chunked Prefill：延迟曲线对比 |
+| `aiinfra/daily/week6/website/images/continuous_batching_in_engine_v1.svg` | 5727 | 0 0 920 400 | Continuous Batching in Mini Engine v1（实测时间线） |
+| `aiinfra/daily/week6/website/images/continuous_batching_timeline.svg` | 7248 | 0 0 940 480 | Continuous Batching Iteration 时间线 |
+| `aiinfra/daily/week6/website/images/dynamic_batcher_flow.svg` | 5668 | 0 0 940 460 | Dynamic Batcher 工作流程 |
+| `aiinfra/daily/week6/website/images/dynamic_vs_continuous_batching.svg` | 8200 | 0 0 940 460 | Dynamic vs Continuous Batching：request-level vs iteration-level |
+| `aiinfra/daily/week6/website/images/framework_comparison.svg` | 4362 | 0 0 940 460 | 三大推理框架调度策略对比 |
+| `aiinfra/daily/week6/website/images/inflight_batching_flow.svg` | 8610 | 0 0 920 420 | Inflight Batching 数据流（TensorRT-LLM 风格） |
+| `aiinfra/daily/week6/website/images/mini_engine_v1_architecture.svg` | 5606 | 0 0 920 460 | Mini 推理引擎 v1 架构 |
+| `aiinfra/daily/week6/website/images/request_lifecycle_v1.svg` | 4418 | 0 0 920 380 | 请求生命周期：WAITING → RUNNING → FINISHED |
+| `aiinfra/daily/week6/website/images/scheduler_state_machine.svg` | 5327 | 0 0 940 420 | Scheduler 状态机与每轮决策 |
+| `aiinfra/daily/week6/website/images/scheduling_strategy_decision_tree.svg` | 6097 | 0 0 920 560 | 调度策略选择决策树 |
+| `aiinfra/daily/week6/website/images/throughput_latency_curve.svg` | 3458 | 0 0 940 440 | Throughput vs Latency 曲线与饱和点 |
+| `aiinfra/daily/week6/website/images/throughput_latency_saturation_curve.svg` | 4347 | 0 0 920 440 | Throughput-Latency 曲线与饱和点 |
+| `aiinfra/daily/week6/website/images/vllm_scheduler_budget.svg` | 4757 | 0 0 920 400 | SchedulingBudget：双预算约束每轮调度 |
+| `aiinfra/daily/week6/website/images/vllm_scheduler_preemption_modes.svg` | 4499 | 0 0 940 440 | Preemption 两种模式：Recompute vs Swap |
+| `aiinfra/daily/week6/website/images/vllm_scheduler_schedule_flow.svg` | 5436 | 0 0 920 460 | vLLM Scheduler.schedule() 五步流程 |
+| `aiinfra/daily/week6/website/images/week6_knowledge_map.svg` | 6583 | 0 0 940 460 | Week 6 知识地图：从凑批到并发服务 |
+| `aiinfra/daily/week7/website/images/bottleneck_analysis.svg` | 8070 | 0 0 940 460 | 系统级瓶颈分类与优化 |
+| `aiinfra/daily/week7/website/images/chunked_prefill.svg` | 8740 | 0 0 940 440 | Chunked Prefill：长 Prompt 分块 + Decode 交错 |
+| `aiinfra/daily/week7/website/images/concurrency_models.svg` | 6235 | 0 0 940 440 | 三种并发模型对比 |
+| `aiinfra/daily/week7/website/images/cpp_extension_pipeline.svg` | 6333 | 0 0 940 400 | PyTorch C++ Extension 编译流水线 |
+| `aiinfra/daily/week7/website/images/future_callback_streaming.svg` | 5301 | 0 0 940 420 | Future / Callback / Streaming 三种结果返回 |
+| `aiinfra/daily/week7/website/images/integration_checklist.svg` | 8789 | 0 0 940 520 | 系统联调：六步分层验证 |
+| `aiinfra/daily/week7/website/images/kernel_integration_overview.svg` | 7915 | 0 0 940 500 | 自定义 Kernel 集成：替换 PyTorch 算子 |
+| `aiinfra/daily/week7/website/images/mini_ai_infra_architecture.svg` | 6928 | 0 0 940 520 | Mini AI Infra 系统架构 |
+| `aiinfra/daily/week7/website/images/preemption_strategy.svg` | 6086 | 0 0 940 540 | 抢占策略：Recompute vs Swap |
+| `aiinfra/daily/week7/website/images/prefix_caching.svg` | 8062 | 0 0 940 460 | Prefix Caching：公共前缀 KV Cache 复用 |
+| `aiinfra/daily/week7/website/images/profiling_toolchain.svg` | 7758 | 0 0 940 440 | Profiling 工具链：三层分析 |
+| `aiinfra/daily/week7/website/images/request_lifecycle_states.svg` | 5715 | 0 0 940 380 | 请求生命周期：WAITING → RUNNING → 终态 |
+| `aiinfra/daily/week7/website/images/resource_budget.svg` | 7578 | 0 0 940 520 | 资源预算：Token Budget + Memory Budget |
+| `aiinfra/daily/week7/website/images/scheduler_architecture.svg` | 6693 | 0 0 940 560 | 完整调度器六大功能架构 |
+| `aiinfra/daily/week7/website/images/speculative_decoding.svg` | 6824 | 0 0 940 480 | Speculative Decoding：小模型 Draft + 大模型 Verify |
+| `aiinfra/daily/week7/website/images/troubleshooting_guide.svg` | 8013 | 0 0 940 420 | 系统联调常见问题排查 |
+| `aiinfra/daily/week7/website/images/week7_knowledge_map.svg` | 9232 | 0 0 940 560 | Week 7 知识地图：系统整合 |
 | `images/roadmap_overview.svg` | 11349 | 1000×640 0 0 1000 640 | AI Infra 8 周冲刺路线：从 kernel 到推理系统 |
 | `leetcode/daily/week1/day1/images/trap_algorithm_flow.svg` | 56192 | 460.8pt×369.999375pt 0 0 460.8 369.999375 |  |
 | `leetcode/daily/week1/day1/images/trap_algorithm_flow_v2.svg` | 5062 | 0 0 460 420 | 接雨水 · 双指针算法流程 |
