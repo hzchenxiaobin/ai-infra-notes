@@ -184,11 +184,15 @@
 
 > 核心目标：建立 GPU 性能直觉 —— **性能 = Memory + 并行度**
 
+Week 1 是整个 8 周计划的基石。所有后续的 Kernel 优化（GEMM、Attention）、推理系统调优（KV Cache、Batching），最终都要回到"硬件如何执行代码"这个根本问题上。本周从 SM / Warp / SIMT 执行模型出发，逐步建立 Occupancy、Memory Hierarchy、Bank Conflict 三大性能维度，并用 Nsight 完成第一次端到端 Profiling，形成"理论 → 编码 → 测量 → 定位"的闭环。
+
 | 项目 | 说明 |
 |------|------|
-| 前置要求 | 已安装 CUDA Toolkit 11.8+ / 12.x，Nsight Compute / Systems |
-| 建议时长 | 每日 3~5 小时 |
-| 本周产出 | 7 个 CUDA kernel、3+ Nsight Compute 报告、GPU 架构与性能笔记 |
+| **整体目标** | 从硬件视角理解 GPU 执行模型（SM / Warp / SIMT），掌握 Occupancy 与资源约束的定量关系，深入 Memory Hierarchy 与 Bank Conflict，用 Nsight Compute / Systems 完成 kernel 级与应用级 Profiling，建立"性能 = Memory + 并行度"的直觉 |
+| **核心产出** | ① 7 个可编译 CUDA kernel（hello_gpu / occupancy 演示 / 矩阵转置 naive+tiled / bank conflict 对比 / profiling 标的）② 3+ Nsight Compute 报告（含 Roofline 与瓶颈定位）③ GPU 架构与内存层次笔记 ④ 手算 Occupancy 与 deviceQuery 解读记录 |
+| **验收标准** | ① 能画出 SM / Warp / Grid-Block-Thread 层次图并解释 SIMT ② 能用 \`cudaFuncGetAttributes\` 读取寄存器用量并手算 Occupancy，与 Occupancy Calculator 一致 ③ naive 矩阵转置存在 stride access，tiled 版带宽提升 2x+ ④ Nsight Compute 中能读取 bank conflict 指标，padding 后冲突消失 ⑤ 能用 Roofline 判断 kernel 属于 memory-bound 还是 compute-bound |
+| **时间投入** | 工作日每天 2.5h（早间 1.5h + 晚间 1h），周末每天 6h，周计 24.5h |
+| **前置要求** | 已安装 CUDA Toolkit 11.8+ / 12.x，Nsight Compute (\`ncu\`) / Nsight Systems (\`nsys\`) |
 
 ---
 
@@ -212,7 +216,7 @@ Day 6: Nsight Profiling 实战（Compute + Systems）
 Day 7: 总结与复盘
 \`\`\`
 
----
+本周围绕 **性能 = Memory + 并行度** 这一主线展开：Day 1-3 建立"并行度"直觉（SM / Warp / Occupancy），Day 4-5 深入"Memory"维度（层次结构 / 合并访问 / Bank Conflict），Day 6 用 Profiling 把两者量化打通，Day 7 收口为可复用的方法论。
 
 ---
 

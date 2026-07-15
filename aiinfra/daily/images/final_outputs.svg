@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="470" fill="#fdfcf7"/>
+
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">8 周最终产出</text>
+  <path d="M 320 44 Q 450 52 580 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="450" y="60" text-anchor="middle" font-size="11" fill="#888">项目 · 能力 双线交付 —— 从可运行系统到可迁移方法论</text>
+
+  <text x="40" y="92" font-size="13" font-weight="bold" fill="#2b2b2b">📦 项目产出</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="104" width="270" height="118" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="175" y="128" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Mini 推理引擎</text>
+  <text x="175" y="146" text-anchor="middle" font-size="10" fill="#666">支持单请求 → 多请求 → Continuous Batching</text>
+  <g filter="url(#sk)">
+    <rect x="54" y="160" width="74" height="24" rx="6" fill="#ffffff" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="188" y="160" width="108" height="24" rx="6" fill="#ffffff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="91" y="176" text-anchor="middle" font-size="10" fill="#2b6e9e">单请求</text>
+  <text x="242" y="176" text-anchor="middle" font-size="10" fill="#2b6e9e">Continuous Batching</text>
+  <path d="M 132 172 L 184 172" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="175" y="206" text-anchor="middle" font-size="9" fill="#888">端到端可运行 · 全链路 Profiling</text>
+
+  <g filter="url(#sk)">
+    <rect x="330" y="104" width="270" height="118" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="465" y="128" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Attention Kernel</text>
+  <text x="465" y="146" text-anchor="middle" font-size="10" fill="#666">标准 Attention + FlashAttention</text>
+  <g filter="url(#sk)">
+    <rect x="346" y="160" width="118" height="24" rx="6" fill="#ffffff" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="478" y="160" width="118" height="24" rx="6" fill="#ffffff" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="405" y="176" text-anchor="middle" font-size="10" fill="#7a5415">标准 Attention</text>
+  <text x="537" y="176" text-anchor="middle" font-size="10" fill="#7a5415">FlashAttention</text>
+  <path d="M 466 172 L 476 172" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="465" y="206" text-anchor="middle" font-size="9" fill="#888">IO 优化 · Online Softmax · Tiling</text>
+
+  <g filter="url(#sk)">
+    <rect x="620" y="104" width="260" height="118" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="750" y="128" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">GEMM 优化</text>
+  <text x="750" y="146" text-anchor="middle" font-size="10" fill="#666">naive → tiled → register blocking</text>
+  <g filter="url(#sk)">
+    <rect x="634" y="160" width="60" height="24" rx="6" fill="#ffffff" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="710" y="160" width="56" height="24" rx="6" fill="#ffffff" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="780" y="160" width="86" height="24" rx="6" fill="#ffffff" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="664" y="176" text-anchor="middle" font-size="10" fill="#2e6e2e">naive</text>
+  <text x="738" y="176" text-anchor="middle" font-size="10" fill="#2e6e2e">tiled</text>
+  <text x="823" y="176" text-anchor="middle" font-size="10" fill="#2e6e2e">reg blocking</text>
+  <path d="M 696 172 L 706 172" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 768 172 L 778 172" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="750" y="206" text-anchor="middle" font-size="9" fill="#888">对标 cuBLAS · Warp Shuffle</text>
+
+  <text x="40" y="258" font-size="13" font-weight="bold" fill="#2b2b2b">🧠 能力产出</text>
+
+  <g filter="url(#sk)">
+    <rect x="40" y="270" width="270" height="118" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="175" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a2828">GPU 性能分析</text>
+  <text x="175" y="314" text-anchor="middle" font-size="11" fill="#2b2b2b">Nsight Compute / Systems</text>
+  <text x="175" y="334" text-anchor="middle" font-size="10" fill="#666">三层瓶颈定位法</text>
+  <text x="175" y="354" text-anchor="middle" font-size="10" fill="#666">系统级 → 阶段级 → Kernel 级</text>
+  <text x="175" y="376" text-anchor="middle" font-size="9" fill="#888">ncu 指标 · nsys 时间线 · Roofline</text>
+
+  <g filter="url(#sk)">
+    <rect x="330" y="270" width="270" height="118" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+  </g>
+  <text x="465" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#5d3a7e">推理系统优化</text>
+  <text x="465" y="314" text-anchor="middle" font-size="11" fill="#2b2b2b">KV Cache · Batching · 调度</text>
+  <text x="465" y="334" text-anchor="middle" font-size="10" fill="#666">PagedAttention · Continuous Batching</text>
+  <text x="465" y="354" text-anchor="middle" font-size="10" fill="#666">Prefill / Decode 两阶段</text>
+  <text x="465" y="376" text-anchor="middle" font-size="9" fill="#888">vLLM 架构 · Chunked Prefill</text>
+
+  <g filter="url(#sk)">
+    <rect x="620" y="270" width="260" height="118" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="750" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Kernel 优化方法论</text>
+  <text x="750" y="314" text-anchor="middle" font-size="11" fill="#2b2b2b">memory-bound / compute-bound</text>
+  <text x="750" y="334" text-anchor="middle" font-size="10" fill="#666">IO 优化 · Fusion</text>
+  <text x="750" y="354" text-anchor="middle" font-size="10" fill="#666">Tiling + Register Blocking</text>
+  <text x="750" y="376" text-anchor="middle" font-size="9" fill="#888">算术强度 · Ridge Point</text>
+
+  <text x="450" y="424" text-anchor="middle" font-size="11" fill="#888">主线：会写 kernel → 能做系统优化 → 能测能调能讲</text>
+  <text x="450" y="446" text-anchor="middle" font-size="10" fill="#aaa">每个项目可运行 · 每项能力可迁移 · 每个结论可量化</text>
+</svg>
