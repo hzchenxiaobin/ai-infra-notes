@@ -18,6 +18,8 @@ OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
 
 # Source markdown for the full 8-week plan overview page.
 PLAN_SOURCE = Path(__file__).parent.parent.parent / "plan" / "AI_Infra_8_week_plan_detailed.md"
+# Source markdown for the course overview landing page (deployed as site root index.html).
+COURSE_OVERVIEW_SOURCE = Path(__file__).parent.parent.parent / "README.md"
 WEEK1_DIR = Path(__file__).parent.parent
 
 # Markdown documents that should also be deployed as standalone HTML pages.
@@ -201,9 +203,9 @@ def build_nav(
 
     lines = []
 
-    overview_active = current_page == "plan"
+    overview_active = current_page == "overview"
     overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="{root_prefix}plan.html">📌 课程概览</a>')
+    lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">📌 课程概览</a>')
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
@@ -217,7 +219,7 @@ def build_nav(
     week_data = [
         {
             "num": 1,
-            "href": f"{root_prefix}index.html",
+            "href": f"{root_prefix}week1/index.html",
             "day_prefix": root_prefix,
             "days": get_day_info(WEEK1_DIR),
         },
@@ -541,42 +543,81 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
         print(f"Generated: {output_path}")
 
 
-def build_website(output_dir: Path) -> None:
-    overview, days = load_overview_and_days()
-
-    # Rewrite .md links to .html for GitHub Pages deployment.
-    # Overview and day pages are generated at the site root.
-    overview = rewrite_md_links_to_html(overview, root_prefix="")
-    for day in days:
-        day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="")
-
-    # Build day cards HTML for overview page
+def build_day_cards_html(days: list, root_prefix: str = "") -> str:
+    """Build the Day cards HTML block used on the Week 1 overview page."""
     day_cards_html = '<div class="day-cards">\n'
     for day in days:
         day_cards_html += (
-            f'<a class="day-card" href="day{day["num"]}.html">\n'
+            f'<a class="day-card" href="{root_prefix}day{day["num"]}.html">\n'
             f'  <div class="day-card-number">Day {day["num"]}</div>\n'
             f'  <div class="day-card-title">{day["title"]}</div>\n'
             f'</a>\n'
         )
     day_cards_html += '</div>\n'
+    return day_cards_html
 
-    overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
+
+def build_website(output_dir: Path) -> None:
+    week1_overview, days = load_overview_and_days()
+
+    # Rewrite .md links to .html for GitHub Pages deployment.
+    for day in days:
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix="")
 
     # Load week titles from the detailed 8-week plan for the sidebar.
     plan_weeks = extract_plan_weeks(PLAN_SOURCE)
 
-    # Generate overview page
-    overview_html = page_template(
+    # ------------------------------------------------------------------
+    # 1. Course overview landing page (deployed as site root index.html).
+    # ------------------------------------------------------------------
+    if not COURSE_OVERVIEW_SOURCE.exists():
+        raise FileNotFoundError(f"Course overview source not found: {COURSE_OVERVIEW_SOURCE}")
+    course_overview = COURSE_OVERVIEW_SOURCE.read_text(encoding="utf-8")
+    course_overview = rewrite_md_links_to_html(course_overview, root_prefix="")
+
+    course_overview_html = page_template(
         title="课程概览",
-        nav_html=build_nav(current_day=None, current_page="week1", weeks=plan_weeks),
-        markdown=overview_with_cards,
+        page_title="AI Infra 8 周学习计划",
+        nav_html=build_nav(current_day=None, current_page="overview", weeks=plan_weeks),
+        markdown=course_overview,
         is_overview=True,
     )
-    (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
+    (output_dir / "index.html").write_text(course_overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
-    # Generate day pages
+    # ------------------------------------------------------------------
+    # 2. Week 1 overview page (now deployed under week1/index.html).
+    # ------------------------------------------------------------------
+    week1_root_prefix = "../"
+    week1_overview_html_src = rewrite_md_links_to_html(week1_overview, root_prefix=week1_root_prefix)
+    # Image paths in the Week 1 overview point to images/ relative to the site root,
+    # so rewrite them for the week1/ subdirectory.
+    week1_overview_html_src = re.sub(r"\]\(images/", "](../images/", week1_overview_html_src)
+    week1_overview_with_cards = (
+        week1_overview_html_src + '\n\n## 🚀 进入每日学习\n\n' +
+        build_day_cards_html(days, root_prefix=week1_root_prefix)
+    )
+
+    week1_output_dir = output_dir / "week1"
+    week1_output_dir.mkdir(parents=True, exist_ok=True)
+    week1_overview_html = page_template(
+        title="Week 1 概览",
+        nav_html=build_nav(
+            current_day=None,
+            current_page="week1",
+            root_prefix=week1_root_prefix,
+            weeks=plan_weeks,
+        ),
+        markdown=week1_overview_with_cards,
+        is_overview=True,
+        root_prefix=week1_root_prefix,
+    )
+    (week1_output_dir / "index.html").write_text(week1_overview_html, encoding="utf-8")
+    print(f"Generated: {week1_output_dir / 'index.html'}")
+
+    # ------------------------------------------------------------------
+    # 3. Week 1 day pages (kept at the site root for URL compatibility).
+    # ------------------------------------------------------------------
     for day in days:
         has_calc = OCCUPANCY_CALCULATOR_MARKER in day["markdown"]
         extra_scripts = (
