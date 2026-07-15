@@ -4,10 +4,6 @@
       <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
       <feDisplacementMap in="SourceGraphic" scale="1.5"/>
     </filter>
-    <filter id="rough">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
-      <feDisplacementMap in="SourceGraphic" scale="2"/>
-    </filter>
   </defs>
   <rect width="520" height="320" fill="#fafafa"/>
   <text x="260" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" filter="url(#rough2)">n &amp; x == 0：n 为 1 的位，x 必须为 0</text>
