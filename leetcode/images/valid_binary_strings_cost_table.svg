@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#666"/>
+    </marker>
+  </defs>
+  <rect width="520" height="380" fill="#fafafa"/>
+  <text x="260" y="30" text-anchor="middle" font-size="16" fill="#333" filter="url(#rough2)">n=3 时所有无连续 1 的字符串及其成本</text>
+  <rect x="60" y="55" width="100" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="75" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">字符串</text>
+  <rect x="170" y="55" width="100" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="75" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">1 的位置</text>
+  <rect x="280" y="55" width="100" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="75" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">成本</text>
+  <rect x="390" y="55" width="100" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="75" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">是否有效</text>
+  <rect x="60" y="95" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="115" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">000</text>
+  <rect x="170" y="95" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="115" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">无</text>
+  <rect x="280" y="95" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="115" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="390" y="95" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="115" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">✓</text>
+  <rect x="60" y="135" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="155" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">100</text>
+  <rect x="170" y="135" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="155" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="280" y="135" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="155" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="390" y="135" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="155" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">✓</text>
+  <rect x="60" y="175" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="195" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">010</text>
+  <rect x="170" y="175" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="195" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">1</text>
+  <rect x="280" y="175" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="195" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">1</text>
+  <rect x="390" y="175" width="100" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="195" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">✓</text>
+  <rect x="60" y="215" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="235" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">001</text>
+  <rect x="170" y="215" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="235" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">2</text>
+  <rect x="280" y="215" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="235" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">2</text>
+  <rect x="390" y="215" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="235" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">✗</text>
+  <rect x="60" y="255" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="275" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">101</text>
+  <rect x="170" y="255" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="275" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">0,2</text>
+  <rect x="280" y="255" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="330" y="275" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">2</text>
+  <rect x="390" y="255" width="100" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="440" y="275" text-anchor="middle" font-size="13" fill="#333" filter="url(#rough2)">✗</text>
+  <text x="260" y="330" text-anchor="middle" font-size="14" fill="#555" filter="url(#rough2)">k=1 时，绿色行即为答案：000、100、010</text>
+
+</svg>
