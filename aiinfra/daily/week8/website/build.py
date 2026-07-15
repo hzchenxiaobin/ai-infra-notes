@@ -130,9 +130,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
 
     lines = []
 
-    overview_active = current_day is None
-    overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="index.html">📌 Week 8 概览</a>')
+    lines.append('<a class="nav-link" href="../index.html">📌 课程概览</a>')
 
     lines.append('<div class="nav-section-title">8 周学习路线</div>')
 
