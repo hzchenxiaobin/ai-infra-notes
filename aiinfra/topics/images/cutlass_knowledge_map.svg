@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="125" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="520" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUTLASS 一周知识图谱</text>
+  <path d="M 280 40 Q 460 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Root: CUTLASS -->
+  <g filter="url(#sk)"><rect x="380" y="56" width="160" height="40" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/></g>
+  <text x="460" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#5a3a7a">CUTLASS</text>
+
+  <!-- Edges to 2.x and 3.x -->
+  <path d="M 420 96 L 200 130" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 500 96 L 720 130" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 2.x branch -->
+  <g filter="url(#sk)"><rect x="100" y="130" width="200" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="200" y="152" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">2.x 三层抽象</text>
+
+  <path d="M 150 166 L 80 200" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 200 166 L 200 200" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 250 166 L 320 200" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="20" y="200" width="120" height="30" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="80" y="219" text-anchor="middle" font-size="10" fill="#2b6e9e">Threadblock</text>
+
+  <g filter="url(#sk)"><rect x="150" y="200" width="100" height="30" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="200" y="219" text-anchor="middle" font-size="10" fill="#2b6e9e">Warp</text>
+
+  <g filter="url(#sk)"><rect x="270" y="200" width="100" height="30" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="320" y="219" text-anchor="middle" font-size="10" fill="#2b6e9e">Thread</text>
+
+  <!-- MMA instruction -->
+  <path d="M 200 230 L 200 254" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="120" y="254" width="160" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="200" y="273" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">mma.sync (PTX)</text>
+
+  <!-- 3.x branch -->
+  <g filter="url(#sk)"><rect x="620" y="130" width="200" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="720" y="152" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">3.x CuTe 模型</text>
+
+  <path d="M 670 166 L 620 200" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 770 166 L 820 200" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="560" y="200" width="120" height="30" rx="4" fill="#fff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="620" y="219" text-anchor="middle" font-size="10" fill="#7a5415">Layout</text>
+
+  <g filter="url(#sk)"><rect x="770" y="200" width="120" height="30" rx="4" fill="#fff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="830" y="219" text-anchor="middle" font-size="10" fill="#7a5415">Tensor</text>
+
+  <!-- copy() -->
+  <path d="M 670 230 L 670 254" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 790 230 L 730 254" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="660" y="254" width="120" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="720" y="273" text-anchor="middle" font-size="10" fill="#2e6e2e">copy() 自动优化</text>
+
+  <!-- CollectiveBuilder -->
+  <path d="M 720 284 L 720 314" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="600" y="314" width="240" height="30" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="720" y="333" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">CollectiveBuilder (auto-tuning)</text>
+
+  <!-- Epilogue (shared) -->
+  <path d="M 460 96 L 460 360" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3 2" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="380" y="360" width="160" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="460" y="383" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">Epilogue 融合</text>
+
+  <path d="M 460 396 L 460 420" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="380" y="420" width="160" height="30" rx="4" fill="#fff" stroke="#b85450" stroke-width="1"/></g>
+  <text x="460" y="439" text-anchor="middle" font-size="10" fill="#b85450">EVT (Visitor Tree)</text>
+
+  <!-- Profiling -->
+  <path d="M 460 450 L 460 474" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="380" y="474" width="160" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="460" y="493" text-anchor="middle" font-size="10" fill="#2b6e9e">Profiling (NCU)</text>
+
+  <!-- Advanced (right) -->
+  <path d="M 720 344 L 720 474" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3 2" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="580" y="474" width="280" height="30" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1"/></g>
+  <text x="720" y="493" text-anchor="middle" font-size="10" fill="#5a3a7a">Group GEMM / TMA / Stream-K</text>
+
+  <!-- Day labels (left) -->
+  <g font-size="8" fill="#888">
+    <text x="10" y="78">Day 1</text>
+    <text x="10" y="148">Day 4</text>
+    <text x="10" y="268">Day 4</text>
+    <text x="10" y="328">Day 3</text>
+    <text x="10" y="378">Day 5</text>
+    <text x="10" y="492">Day 6-7</text>
+  </g>
+</svg>

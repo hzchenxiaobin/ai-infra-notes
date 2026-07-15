@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="121" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Group GEMM：一次 launch 计算多个不等大 GEMM</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Traditional (separate launches) -->
+  <text x="180" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">传统方案：逐个 launch</text>
+
+  <g filter="url(#sk)"><rect x="40" y="78" width="280" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="180" y="100" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">Kernel 1: GEMM 128×256×512</text>
+
+  <g filter="url(#sk)"><rect x="40" y="120" width="280" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="180" y="142" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">Kernel 2: GEMM 1024×1024×512</text>
+
+  <g filter="url(#sk)"><rect x="40" y="162" width="280" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="180" y="184" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">Kernel 3: GEMM 256×128×1024</text>
+
+  <g font-size="9" fill="#444">
+    <text x="40" y="220" fill="#b85450" font-weight="bold">3 次 kernel launch</text>
+    <text x="40" y="236" fill="#888">每次含 launch overhead</text>
+    <text x="40" y="252" fill="#888">小 GEMM 开销占比大</text>
+    <text x="40" y="268" fill="#888">SM 间负载不均衡</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 350 120 L 420 120" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="385" y="114" text-anchor="middle" font-size="9" fill="#888">Group GEMM</text>
+
+  <!-- Right: Group GEMM (single launch) -->
+  <text x="640" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Group GEMM：1 次 launch</text>
+
+  <g filter="url(#sk)"><rect x="460" y="78" width="360" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="640" y="100" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">单 Kernel 处理 3 组</text>
+
+  <g filter="url(#sk)"><rect x="480" y="110" width="100" height="28" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="530" y="128" text-anchor="middle" font-size="8" fill="#444">128×256×512</text>
+
+  <g filter="url(#sk)"><rect x="590" y="110" width="100" height="28" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="640" y="128" text-anchor="middle" font-size="8" fill="#444">1024×1024×512</text>
+
+  <g filter="url(#sk)"><rect x="700" y="110" width="100" height="28" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="750" y="128" text-anchor="middle" font-size="8" fill="#444">256×128×1024</text>
+
+  <text x="640" y="158" text-anchor="middle" font-size="9" fill="#888">SM 间动态分配计算量</text>
+  <text x="640" y="174" text-anchor="middle" font-size="9" fill="#888">大 GEMM 分到更多 SM</text>
+
+  <g font-size="9" fill="#444">
+    <text x="460" y="220" fill="#2e6e2e" font-weight="bold">1 次 kernel launch</text>
+    <text x="460" y="236" fill="#888">launch overhead 仅 1 次</text>
+    <text x="460" y="252" fill="#888">SM 间负载均衡</text>
+    <text x="460" y="268" fill="#888">支持不同尺寸</text>
+  </g>
+
+  <!-- Bottom: MoE use case -->
+  <g filter="url(#sk)">
+    <rect x="40" y="290" width="820" height="76" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="314" font-size="12" font-weight="bold" fill="#7a5415">典型应用：Mixture-of-Experts (MoE)</text>
+  <text x="60" y="334" font-size="10" fill="#444">MoE 中每个专家处理的 token 数不同 → 多个 GEMM 尺寸各异</text>
+  <text x="60" y="350" font-size="10" fill="#2e6e2e">Group GEMM 一次 launch 处理所有专家 → 消除 launch 开销 + 负载均衡</text>
+  <text x="500" y="350" font-size="10" fill="#5a3a7a">DeepSpeed / Megatron-LM 均在使用</text>
+</svg>
