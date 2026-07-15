@@ -25,8 +25,6 @@
 
 ```
 ai-infra-notes/
-├── docs/ # CUDA 运行结果记录
-│ └── cuda_run_results.md
 ├── aiinfra/ # 课程教程（主体）
 │ ├── daily/ # 每日教程（8 周）
 │ │ ├── plan/ # 8 周学习计划（总览 + 详细 + 各周展开）
