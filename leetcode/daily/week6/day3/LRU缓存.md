@@ -48,7 +48,7 @@ lRUCache.get(4);                 // 返回 4
 
 ### 2.2 核心观察：哈希表 + 双向链表
 
-![哈希表 + 双向链表结构](../../../images/lru_cache_overview.svg)
+![哈希表 + 双向链表结构](images/lru_cache_overview.svg)
 
 关键洞察：**用哈希表实现 `O(1)` 定位，用双向链表维护访问顺序**。
 
