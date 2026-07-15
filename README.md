@@ -19,18 +19,20 @@
 | Week 7 | 系统整合 | 多请求并发、全链路 Profiling、自定义 kernel 替换 | 📋 计划中 |
 | Week 8 | 项目打磨 + 面试准备 | README、架构图、高频面试题、总结博客 | 📋 计划中 |
 
-详细计划见 [docs/AI_Infra_8_week_plan_detailed.md](docs/AI_Infra_8_week_plan_detailed.md)。
+详细计划见 [aiinfra/daily/plan/AI_Infra_8_week_plan_detailed.md](aiinfra/daily/plan/AI_Infra_8_week_plan_detailed.md)。
 
 ## 仓库结构
 
 ```
 ai-infra-notes/
-├── docs/ # 8 周学习计划（总览 + 详细 + 各周展开）
-│ ├── AI_Infra_8_week_plan.md # 计划总览
-│ ├── AI_Infra_8_week_plan_detailed.md # 详细每周目标 + 每日种子
-│ └── learning_plan_week{2..8}_expanded.md # 各周逐日深度展开
+├── docs/ # CUDA 运行结果记录
+│ └── cuda_run_results.md
 ├── aiinfra/ # 课程教程（主体）
 │ ├── daily/ # 每日教程（8 周）
+│ │ ├── plan/ # 8 周学习计划（总览 + 详细 + 各周展开）
+│ │ │ ├── AI_Infra_8_week_plan.md # 计划总览
+│ │ │ ├── AI_Infra_8_week_plan_detailed.md # 详细每周目标 + 每日种子
+│ │ │ └── learning_plan_week{2..8}_expanded.md # 各周逐日深度展开
 │ │ ├── SKILL.md # 写每日教程的 Skill 规范
 │ │ ├── week1/ ✅ # GPU 执行本质 + Profiling（7 天）
 │ │ ├── week2/ ✅ # GEMM & 算子优化（7 天）
@@ -185,7 +187,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 
 ## 学习路线建议
 
-1. 从 [docs/AI_Infra_8_week_plan.md](docs/AI_Infra_8_week_plan.md) 了解整体节奏
+1. 从 [aiinfra/daily/plan/AI_Infra_8_week_plan.md](aiinfra/daily/plan/AI_Infra_8_week_plan.md) 了解整体节奏
 2. 进入 [aiinfra/daily/week1/README.md](aiinfra/daily/week1/README.md) 按 Day 1 → Day 7 推进
 3. 每个 kernel 配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
 4. Day 3 起配合 [aiinfra/daily/week1/tools/cuda_occupancy_calculator.py](aiinfra/daily/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy

@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-PLAN_SOURCE = Path(__file__).parent.parent.parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+PLAN_SOURCE = Path(__file__).parent.parent.parent.parent.parent / "aiinfra" / "daily" / "plan" / "AI_Infra_8_week_plan_detailed.md"
 WEEK2_DIR = Path(__file__).parent.parent
 
 

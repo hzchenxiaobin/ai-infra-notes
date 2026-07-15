@@ -22,12 +22,12 @@
 
 > 说明：为使代码可直接编译运行，已对部分 Markdown 中的代码做了最小修正：
 > - `aiinfra/daily/week1/day3/README.md`：补齐缺失的 `#include <stdio.h>`。
-> - `aiinfra/daily/week2/day5/README.md`、`docs/learning_plan_week2_expanded.md`：
+> - `aiinfra/daily/week2/day5/README.md`、`aiinfra/daily/plan/learning_plan_week2_expanded.md`：
 >   将 FlashAttention 示例的 `Bc` 从 64 调为 32，并添加 `#undef D` 避免宏与函数参数名冲突。
 > - `leetgpu/week6/day3/leetgpu-stream-compaction-solution.md`：补充 `predicate_kernel`，
 >   使用真正的 predicate（`input[i]!=0`）驱动 scan + scatter。
 > - 6 个 LeetGPU 题解：将 `cudaMemcpy(hX, dX, ...)` 改为 `cudaMemcpy(hX.data(), dX, ...)`。
-> - `docs/learning_plan_week5_expanded.md`：将 `#include <math>` 改为 `<cmath>`。
+> - `aiinfra/daily/plan/learning_plan_week5_expanded.md`：将 `#include <math>` 改为 `<cmath>`。
 
 ## 一、源文件执行结果
 
@@ -1321,15 +1321,15 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 | `aiinfra/daily/week3/day6/README.md` | 2.51 | 1.855 | ✅ PASS | RMSNorm: maxDiff = 1.43e-06 (PASS) |
 | `aiinfra/daily/week4/day2/README.md` | 5.35 | 1.885 | ✅ PASS | === FlashAttention v2 Forward Kernel === |
 | `aiinfra/daily/week4/day3/README.md` | 2.75 | 2.075 | ✅ PASS | Dot Product = 0.131072 (expected 1.048576) |
-| `docs/learning_plan_week2_expanded.md` | 2.70 | 2.219 | ✅ PASS | === Warp Shuffle Block Reduce === |
-| `docs/learning_plan_week2_expanded.md` | 3.58 | 3.015 | ✅ PASS | === Register Blocking GEMM === |
-| `docs/learning_plan_week2_expanded.md` | 2.61 | 2.479 | ✅ PASS | === Multi-Stream Overlap Pipeline === |
-| `docs/learning_plan_week2_expanded.md` | 3.40 | 2.005 | ✅ PASS | === FlashAttention Simplified Forward === |
-| `docs/learning_plan_week2_expanded.md` | 3.79 | 5.693 | ✅ PASS | === Integrated GEMM (Warp Shuffle + Register Blocking + |
-| `docs/learning_plan_week3_expanded.md` | 2.65 | 1.850 | ✅ PASS | === Softmax + LayerNorm Kernel Test === |
-| `docs/learning_plan_week3_expanded.md` | 2.93 | 2.183 | ✅ PASS | === Standard Attention Forward (naive, materialize S/P) |
-| `docs/learning_plan_week4_expanded.md` | 5.46 | 2.127 | ✅ PASS | === FlashAttention v2 Forward Kernel === |
-| `docs/learning_plan_week5_expanded.md` | 3.01 | 1.854 | ✅ PASS | === KV Cache Test === |
+| `aiinfra/daily/plan/learning_plan_week2_expanded.md` | 2.70 | 2.219 | ✅ PASS | === Warp Shuffle Block Reduce === |
+| `aiinfra/daily/plan/learning_plan_week2_expanded.md` | 3.58 | 3.015 | ✅ PASS | === Register Blocking GEMM === |
+| `aiinfra/daily/plan/learning_plan_week2_expanded.md` | 2.61 | 2.479 | ✅ PASS | === Multi-Stream Overlap Pipeline === |
+| `aiinfra/daily/plan/learning_plan_week2_expanded.md` | 3.40 | 2.005 | ✅ PASS | === FlashAttention Simplified Forward === |
+| `aiinfra/daily/plan/learning_plan_week2_expanded.md` | 3.79 | 5.693 | ✅ PASS | === Integrated GEMM (Warp Shuffle + Register Blocking + |
+| `aiinfra/daily/plan/learning_plan_week3_expanded.md` | 2.65 | 1.850 | ✅ PASS | === Softmax + LayerNorm Kernel Test === |
+| `aiinfra/daily/plan/learning_plan_week3_expanded.md` | 2.93 | 2.183 | ✅ PASS | === Standard Attention Forward (naive, materialize S/P) |
+| `aiinfra/daily/plan/learning_plan_week4_expanded.md` | 5.46 | 2.127 | ✅ PASS | === FlashAttention v2 Forward Kernel === |
+| `aiinfra/daily/plan/learning_plan_week5_expanded.md` | 3.01 | 1.854 | ✅ PASS | === KV Cache Test === |
 | `leetgpu/week1/day1/leetgpu-vector-addition-solution.md` | 2.80 | 2.826 | ✅ PASS | N = 25000000  (100.0 MB per vector) |
 | `leetgpu/week1/day2/leetgpu-relu-solution.md` | 2.73 | 2.446 | ✅ PASS | N = 25000000  (100.0 MB per vector) |
 | `leetgpu/week1/day3/leetgpu-matrix-addition-solution.md` | 3.03 | 2.576 | ✅ PASS | M=4096, N=4096  (67.1 MB per matrix) |
@@ -1703,7 +1703,7 @@ Dot Product = 0.131072 (expected 1.048576)
 ```
 </details>
 
-#### `docs/learning_plan_week2_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week2_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week2_expanded_block19_351c1af6f3f4.cu -o docs_learning_plan_week2_expanded_block19_351c1af6f3f4 `
 - **编译耗时**：2.70s，**运行耗时**：2.219s
@@ -1721,7 +1721,7 @@ Time: 0.157 ms (107.08 GB/s bandwidth)
 ```
 </details>
 
-#### `docs/learning_plan_week2_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week2_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week2_expanded_block20_0fab822c3ec2.cu -o docs_learning_plan_week2_expanded_block20_0fab822c3ec2 -lcublas`
 - **编译耗时**：3.58s，**运行耗时**：3.015s
@@ -1740,7 +1740,7 @@ M          N          K          Our(ms)      cuBLAS(ms)   Percent
 ```
 </details>
 
-#### `docs/learning_plan_week2_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week2_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week2_expanded_block21_64084c5c36d7.cu -o docs_learning_plan_week2_expanded_block21_64084c5c36d7 `
 - **编译耗时**：2.61s，**运行耗时**：2.479s
@@ -1768,7 +1768,7 @@ Result check: PASS
 ```
 </details>
 
-#### `docs/learning_plan_week2_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week2_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week2_expanded_block22_f7ef611530f3.cu -o docs_learning_plan_week2_expanded_block22_f7ef611530f3 `
 - **编译耗时**：3.40s，**运行耗时**：2.005s
@@ -1786,7 +1786,7 @@ Result check: PASS
 ```
 </details>
 
-#### `docs/learning_plan_week2_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week2_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week2_expanded_block23_ccc2b72fc7d3.cu -o docs_learning_plan_week2_expanded_block23_ccc2b72fc7d3 -lcublas`
 - **编译耗时**：3.79s，**运行耗时**：5.693s
@@ -1807,7 +1807,7 @@ M        N        K        Our(ms)    cuBLAS(ms) GFLOPS     Percent
 ```
 </details>
 
-#### `docs/learning_plan_week3_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week3_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week3_expanded_block24_3682f1df1722.cu -o docs_learning_plan_week3_expanded_block24_3682f1df1722 `
 - **编译耗时**：2.65s，**运行耗时**：1.850s
@@ -1828,7 +1828,7 @@ Config: M=128, D=1024, threads=256
 ```
 </details>
 
-#### `docs/learning_plan_week3_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week3_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week3_expanded_block25_81b34bf00a11.cu -o docs_learning_plan_week3_expanded_block25_81b34bf00a11 `
 - **编译耗时**：2.93s，**运行耗时**：2.183s
@@ -1857,7 +1857,7 @@ N        S/P size(MB) HBM IO(MB)     Time(ms)     Check
 ```
 </details>
 
-#### `docs/learning_plan_week4_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week4_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week4_expanded_block26_a7863d0b9f30.cu -o docs_learning_plan_week4_expanded_block26_a7863d0b9f30 `
 - **编译耗时**：5.46s，**运行耗时**：2.127s
@@ -1876,7 +1876,7 @@ GPU Time: 0.855 ms
 ```
 </details>
 
-#### `docs/learning_plan_week5_expanded.md`
+#### `aiinfra/daily/plan/learning_plan_week5_expanded.md`
 
 - **编译命令**：`export PATH=/usr/local/cuda/bin:$PATH && cd /root/md_cuda && nvcc -O3 -arch=sm_120 docs_learning_plan_week5_expanded_block27_84fab14a3d7f.cu -o docs_learning_plan_week5_expanded_block27_84fab14a3d7f `
 - **编译耗时**：3.01s，**运行耗时**：1.854s

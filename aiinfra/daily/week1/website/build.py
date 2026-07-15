@@ -17,7 +17,7 @@ from typing import Optional
 OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
 
 # Source markdown for the full 8-week plan overview page.
-PLAN_SOURCE = Path(__file__).parent.parent.parent.parent.parent / "docs" / "AI_Infra_8_week_plan_detailed.md"
+PLAN_SOURCE = Path(__file__).parent.parent.parent / "plan" / "AI_Infra_8_week_plan_detailed.md"
 WEEK1_DIR = Path(__file__).parent.parent
 
 # Markdown documents that should also be deployed as standalone HTML pages.
@@ -474,7 +474,7 @@ def copy_extra_directories(base_dir: Path, output_dir: Path) -> None:
 
 
 def build_plan_page(output_dir: Path, weeks: list) -> None:
-    """Build the full 8-week plan overview page from docs/AI_Infra_8_week_plan_detailed.md."""
+    """Build the full 8-week plan overview page from aiinfra/daily/plan/AI_Infra_8_week_plan_detailed.md."""
     if not PLAN_SOURCE.exists():
         print(f"Warning: 8-week plan source not found: {PLAN_SOURCE}")
         return
