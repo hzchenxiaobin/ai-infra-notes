@@ -614,6 +614,9 @@ def build_website(output_dir: Path) -> None:
         raise FileNotFoundError(f"Course overview source not found: {COURSE_OVERVIEW_SOURCE}")
     course_overview = COURSE_OVERVIEW_SOURCE.read_text(encoding="utf-8")
     course_overview = rewrite_md_links_to_html(course_overview, root_prefix="")
+    # Rewrite image paths (../../images/, ../website/images/, images/) so they
+    # resolve from the site root where index.html is deployed.
+    course_overview = re.sub(r"\]\((?:\.\./)*(?:website/)?images/", "](images/", course_overview)
 
     course_overview_html = page_template(
         title="课程概览",

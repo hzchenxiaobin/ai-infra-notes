@@ -95,6 +95,15 @@ def main() -> None:
         skip={"build.py", "README.md"},
     )
 
+    # Copy course overview images (referenced by index.html) to public/images/
+    print("Copying course overview images to public/images/...")
+    public_images = public_dir / "images"
+    for images_src in [repo_root / "images", repo_root / "aiinfra" / "daily" / "images"]:
+        if images_src.exists():
+            for item in images_src.iterdir():
+                if item.is_file() and item.suffix == ".svg":
+                    shutil.copy2(item, public_images / item.name)
+
     # Build Week 2 website
     print("Building Week 2 website...")
     subprocess.run(
