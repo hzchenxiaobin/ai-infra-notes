@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="213" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="340" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Block 级控制流：tl.where 替代 if-else</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: CUDA if-else (warp divergence) -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="220" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">CUDA if-else（warp divergence）</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="50" y="110" fill="#b85450">if (x &gt; 0) {</text>
+    <text x="60" y="126" fill="#444">y = x;     // 线程 0,1,3 走这里</text>
+    <text x="50" y="142" fill="#b85450">} else {</text>
+    <text x="60" y="158" fill="#444">y = 0;     // 线程 2,4,5 走这里</text>
+    <text x="50" y="174" fill="#b85450">}</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="200" fill="#b85450" font-weight="bold">问题：warp divergence</text>
+    <text x="50" y="218" fill="#888">同一 warp 内线程走不同分支</text>
+    <text x="50" y="234" fill="#888">→ 串行执行两条路径</text>
+    <text x="50" y="250" fill="#888">→ 性能下降最高 2x</text>
+    <text x="50" y="268" fill="#888">→ 逐线程判断，无法向量化</text>
+  </g>
+
+  <!-- Right: Triton tl.where (no divergence) -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="220" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Triton tl.where（无 divergence）</text>
+
+  <g font-size="10" fill="#444" font-family="monospace">
+    <text x="490" y="110" fill="#888"># 向量化条件选择</text>
+    <text x="490" y="128" fill="#2e6e2e" font-weight="bold">y = tl.where(x &gt; 0, x, 0.0)</text>
+    <text x="490" y="148" fill="#888"># 等价于</text>
+    <text x="490" y="166" fill="#2e6e2e" font-weight="bold">y = tl.maximum(x, 0.0)  # ReLU</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="490" y="200" fill="#2e6e2e" font-weight="bold">优势：无 divergence</text>
+    <text x="490" y="218" fill="#888">同时对所有元素做条件选择</text>
+    <text x="490" y="234" fill="#888">→ 底层用 selp 指令（并行）</text>
+    <text x="490" y="250" fill="#888">→ 无串行化，性能无损</text>
+    <text x="490" y="268" fill="#888">→ 类似 NumPy 的 np.where</text>
+  </g>
+
+  <!-- Bottom comparison table -->
+  <g filter="url(#sk)">
+    <rect x="30" y="296" width="840" height="36" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/>
+  </g>
+  <text x="50" y="318" font-size="10" fill="#444">
+    <tspan fill="#b85450" font-weight="bold">CUDA:</tspan>
+    <tspan fill="#888"> if (cond) a; else b;  → 逐线程分支, 可能 divergence</tspan>
+    <tspan fill="#2e6e2e" font-weight="bold">  Triton:</tspan>
+    <tspan fill="#888"> tl.where(cond, a, b)  → 向量化选择, 零 divergence</tspan>
+  </text>
+</svg>

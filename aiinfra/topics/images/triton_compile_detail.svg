@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="261" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton 编译流程详解：从 Python 到 GPU 机器码</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Stage 1 -->
+  <g filter="url(#sk)"><rect x="20" y="56" width="150" height="60" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="95" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">Python DSL</text>
+  <text x="95" y="94" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">@triton.jit</text>
+  <text x="95" y="108" text-anchor="middle" font-size="7" fill="#888">block 级 Python</text>
+
+  <path d="M 170 86 L 195 86" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="182" y="80" text-anchor="middle" font-size="6" fill="#888">AST</text>
+
+  <!-- Stage 2 -->
+  <g filter="url(#sk)"><rect x="195" y="56" width="150" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="270" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">TTIR</text>
+  <text x="270" y="94" text-anchor="middle" font-size="7" fill="#555">block 级 IR</text>
+  <text x="270" y="108" text-anchor="middle" font-size="6" fill="#888">类型推断 + 常量传播</text>
+
+  <path d="M 345 86 L 370 86" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="357" y="80" text-anchor="middle" font-size="6" fill="#888">MLIR</text>
+
+  <!-- Stage 3 -->
+  <g filter="url(#sk)"><rect x="370" y="56" width="150" height="60" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="445" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">TritonGPU IR</text>
+  <text x="445" y="94" text-anchor="middle" font-size="7" fill="#555">线程级 lowering</text>
+  <text x="445" y="108" text-anchor="middle" font-size="6" fill="#888">smem + 向量化 + 同步</text>
+
+  <path d="M 520 86 L 545 86" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="532" y="80" text-anchor="middle" font-size="6" fill="#888">LLVM</text>
+
+  <!-- Stage 4 -->
+  <g filter="url(#sk)"><rect x="545" y="56" width="130" height="60" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="610" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">PTX</text>
+  <text x="610" y="94" text-anchor="middle" font-size="7" fill="#555">NVIDIA 指令</text>
+  <text x="610" y="108" text-anchor="middle" font-size="6" fill="#888">mma.sync / ld.global</text>
+
+  <path d="M 675 86 L 700 86" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="687" y="80" text-anchor="middle" font-size="6" fill="#888">驱动</text>
+
+  <!-- Stage 5 -->
+  <g filter="url(#sk)"><rect x="700" y="56" width="110" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/></g>
+  <text x="755" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">SASS</text>
+  <text x="755" y="94" text-anchor="middle" font-size="7" fill="#555">GPU 机器码</text>
+  <text x="755" y="108" text-anchor="middle" font-size="6" fill="#888">直接执行</text>
+
+  <!-- JIT timing -->
+  <g filter="url(#sk)"><rect x="20" y="130" width="790" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="40" y="152" font-size="10" fill="#7a5415" font-weight="bold">JIT 时机：首次调用编译（步骤 ①→⑤），缓存到 ~/.triton/cache/，后续零开销</text>
+
+  <!-- TTIR example -->
+  <g filter="url(#sk)"><rect x="20" y="184" width="420" height="220" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="40" y="206" font-size="10" font-weight="bold" fill="#2b6e9e">TTIR 示例（block 级）：</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <text x="40" y="226">tt.func @kernel(%x: !tt.ptr&lt;f32&gt;, %n: i32) {</text>
+    <text x="40" y="240">  %pid = tt.get_program_id x : i32</text>
+    <text x="40" y="254">  %block = tt.make_range</text>
+    <text x="40" y="268">    {start=0, end=1024} : tensor&lt;1024xi32&gt;</text>
+    <text x="40" y="282">  %offsets = arith.addi ...</text>
+    <text x="40" y="296">  %mask = arith.cmpi slt, %offsets, %n</text>
+    <text x="40" y="310">  %x = tt.load %x_ptr, %offsets, %mask</text>
+    <text x="40" y="324">    : tensor&lt;1024xf32&gt;</text>
+    <text x="40" y="338">  %y = arith.mulf %x, %cst : tensor&lt;1024xf32&gt;</text>
+    <text x="40" y="352">  tt.store %x_ptr, %offsets, %y, %mask</text>
+    <text x="40" y="366">}</text>
+    <text x="40" y="386" fill="#2b6e9e">↑ tensor&lt;1024xf32&gt; = block 级（不涉及线程）</text>
+  </g>
+
+  <!-- MLIR lowering -->
+  <g filter="url(#sk)"><rect x="460" y="184" width="420" height="220" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="480" y="206" font-size="10" font-weight="bold" fill="#7a5415">MLIR 阶段（线程级 lowering）：</text>
+  <g font-size="9" fill="#444">
+    <text x="480" y="228" fill="#4a8edb" font-weight="bold">① tile 分配</text>
+    <text x="490" y="244">把 tensor&lt;1024xf32&gt; 分配给</text>
+    <text x="490" y="258">32 线程 × 4 warp</text>
+
+    <text x="480" y="282" fill="#2e6e2e" font-weight="bold">② Shared Memory</text>
+    <text x="490" y="298">自动分配 smem buffer</text>
+    <text x="490" y="312">插入 __syncthreads()</text>
+
+    <text x="480" y="336" fill="#b85450" font-weight="bold">③ 向量化</text>
+    <text x="490" y="352">tl.load → ld.global.v4 (float4)</text>
+
+    <text x="480" y="376" fill="#5a3a7a" font-weight="bold">④ Tensor Core</text>
+    <text x="490" y="392">tl.dot → mma.sync.aligned</text>
+  </g>
+</svg>

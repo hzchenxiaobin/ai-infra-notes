@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="254" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Autotune 调参实验：不同 config 的性能差异</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Bar chart -->
+  <line x1="60" y1="60" x2="60" y2="260" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+  <line x1="60" y1="260" x2="860" y2="260" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="30" y="160" font-size="10" fill="#888" transform="rotate(-90,30,160)">TFLOPS</text>
+
+  <!-- Y-axis labels -->
+  <text x="52" y="264" text-anchor="end" font-size="8" fill="#888">0</text>
+  <text x="52" y="214" text-anchor="end" font-size="8" fill="#888">30</text>
+  <text x="52" y="164" text-anchor="end" font-size="8" fill="#888">60</text>
+  <text x="52" y="114" text-anchor="end" font-size="8" fill="#888">90</text>
+  <text x="52" y="74" text-anchor="end" font-size="8" fill="#888">120</text>
+
+  <!-- Config A (best) 112 TFLOPS -->
+  <g filter="url(#sk)"><rect x="80" y="73" width="90" height="187" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="125" y="68" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">112</text>
+  <text x="125" y="276" text-anchor="middle" font-size="8" fill="#444">A: 128×256×64</text>
+  <text x="125" y="288" text-anchor="middle" font-size="7" fill="#2e6e2e" font-weight="bold">★ BEST</text>
+  <text x="125" y="300" text-anchor="middle" font-size="6" fill="#888">w8 s3</text>
+
+  <!-- Config B 98.5 -->
+  <g filter="url(#sk)"><rect x="190" y="96" width="90" height="164" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="235" y="91" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">99</text>
+  <text x="235" y="276" text-anchor="middle" font-size="8" fill="#444">B: 64×256×32</text>
+  <text x="235" y="290" text-anchor="middle" font-size="6" fill="#888">w4 s4</text>
+
+  <!-- Config C 105.2 -->
+  <g filter="url(#sk)"><rect x="300" y="85" width="90" height="175" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="345" y="80" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">105</text>
+  <text x="345" y="276" text-anchor="middle" font-size="8" fill="#444">C: 128×128×32</text>
+  <text x="345" y="290" text-anchor="middle" font-size="6" fill="#888">w4 s4</text>
+
+  <!-- Config D 95.3 -->
+  <g filter="url(#sk)"><rect x="410" y="101" width="90" height="159" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="455" y="96" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">95</text>
+  <text x="455" y="276" text-anchor="middle" font-size="8" fill="#444">D: 128×64×32</text>
+  <text x="455" y="290" text-anchor="middle" font-size="6" fill="#888">w4 s4</text>
+
+  <!-- Config E 82.1 (worst) -->
+  <g filter="url(#sk)"><rect x="520" y="123" width="90" height="137" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="565" y="118" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">82</text>
+  <text x="565" y="276" text-anchor="middle" font-size="8" fill="#444">E: 64×64×32</text>
+  <text x="565" y="288" text-anchor="middle" font-size="7" fill="#b85450">WORST</text>
+  <text x="565" y="300" text-anchor="middle" font-size="6" fill="#888">w4 s4</text>
+
+  <!-- Config F 88.6 -->
+  <g filter="url(#sk)"><rect x="630" y="112" width="90" height="148" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1"/></g>
+  <text x="675" y="107" text-anchor="middle" font-size="9" fill="#5a3a7a" font-weight="bold">89</text>
+  <text x="675" y="276" text-anchor="middle" font-size="8" fill="#444">F: 64×64×64</text>
+  <text x="675" y="290" text-anchor="middle" font-size="6" fill="#888">w4 s4</text>
+
+  <!-- cuBLAS reference -->
+  <line x1="60" y1="62" x2="860" y2="62" stroke="#b85450" stroke-width="1.5" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="850" y="58" text-anchor="end" font-size="8" fill="#b85450" font-weight="bold">cuBLAS: 119 TFLOPS</text>
+
+  <!-- Bottom analysis -->
+  <g filter="url(#sk)"><rect x="60" y="316" width="800" height="52" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="80" y="338" font-size="10" font-weight="bold" fill="#7a5415">分析：</text>
+  <g font-size="9" fill="#444">
+    <text x="80" y="356" fill="#2e6e2e">最优 A (128×256×64, w8, s3) = 112 TFLOPS — 大 tile + 多 warp + 3 阶段流水线</text>
+    <text x="490" y="356" fill="#b85450">最差 E (64×64×32) = 82 TFLOPS — tile 太小，SM 未充分利用</text>
+  </g>
+</svg>

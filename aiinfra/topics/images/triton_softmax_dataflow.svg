@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="224" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Fused Softmax 数据流：一行的完整计算在 Register 中</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Global Memory (input) -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="140" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="100" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Global Memory</text>
+  <text x="100" y="98" text-anchor="middle" font-size="9" fill="#555">input row (N cols)</text>
+
+  <!-- Step 1: load -->
+  <path d="M 170 85 L 210 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="190" y="78" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">① tl.load</text>
+
+  <!-- Register (x) -->
+  <g filter="url(#sk)"><rect x="210" y="60" width="100" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="260" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">Register</text>
+  <text x="260" y="98" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">x (BLOCK_SIZE)</text>
+
+  <!-- Step 2: max -->
+  <path d="M 310 85 L 340 85" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="340" y="62" width="80" height="46" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="380" y="80" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">② max</text>
+  <text x="380" y="96" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">m=tl.max(x)</text>
+
+  <!-- Step 3: sub+exp -->
+  <path d="M 420 85 L 450 85" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="450" y="62" width="90" height="46" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="495" y="80" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">③ sub+exp</text>
+  <text x="495" y="96" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">e=exp(x-m)</text>
+
+  <!-- Step 4: sum -->
+  <path d="M 540 85 L 570 85" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="570" y="62" width="80" height="46" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="610" y="80" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">④ sum</text>
+  <text x="610" y="96" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">s=tl.sum(e)</text>
+
+  <!-- Step 5: divide -->
+  <path d="M 650 85 L 680 85" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="680" y="62" width="80" height="46" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="720" y="80" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">⑤ divide</text>
+  <text x="720" y="96" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">y=e/s</text>
+
+  <!-- Step 6: store -->
+  <path d="M 760 85 L 790 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="775" y="78" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">⑥ store</text>
+
+  <!-- Global Memory (output) -->
+  <g filter="url(#sk)"><rect x="790" y="60" width="100" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="840" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Global</text>
+  <text x="840" y="98" text-anchor="middle" font-size="9" fill="#555">output</text>
+
+  <!-- Register bar -->
+  <g filter="url(#sk)"><rect x="210" y="120" width="550" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" stroke-dasharray="4 2"/></g>
+  <text x="485" y="136" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">↑ 步骤 ②-⑤ 全在 Register 中完成（零额外 Global 读写）</text>
+
+  <!-- Memory access count -->
+  <g filter="url(#sk)"><rect x="30" y="160" width="840" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="50" y="184" font-size="12" font-weight="bold" fill="#7a5415">Global Memory 访问统计：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="208" fill="#2b6e2e" font-weight="bold">Fused (Triton):</text>
+    <text x="180" y="208">读 1 次 (input) + 写 1 次 (output) = 2 次</text>
+
+    <text x="50" y="230" fill="#b85450" font-weight="bold">Unfused (PyTorch):</text>
+    <text x="200" y="230">读 4 次 + 写 3 次 = 7 次（中间 max/exp/sum 落盘）</text>
+
+    <text x="50" y="250" fill="#5a3a7a" font-weight="bold">减少: 7 → 2 = 3.5x 理论加速</text>
+  </g>
+
+  <!-- Mask handling -->
+  <g filter="url(#sk)"><rect x="30" y="280" width="840" height="100" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/></g>
+  <text x="50" y="304" font-size="12" font-weight="bold" fill="#b85450">边界处理（other=-inf）：</text>
+  <g font-size="10" fill="#444">
+    <text x="50" y="326" font-family="monospace">x = tl.load(ptr + cols, mask=mask, other=-float('inf'))</text>
+    <text x="50" y="346" fill="#b85450">边界位置: x = -inf → exp(-inf) = 0 → 不影响 sum</text>
+    <text x="50" y="366" fill="#2e6e2e">有效位置: x = 实际值 → 正常参与计算</text>
+  </g>
+</svg>

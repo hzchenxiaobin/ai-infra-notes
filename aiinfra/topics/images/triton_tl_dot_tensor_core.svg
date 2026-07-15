@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="232" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="360" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">tl.dot 自动映射到 Tensor Core mma.sync 指令</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- User code -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="380" height="80" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="220" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">用户代码（1 行）</text>
+  <text x="220" y="104" text-anchor="middle" font-size="12" fill="#444" font-family="monospace">acc += tl.dot(a, b)</text>
+  <text x="220" y="124" text-anchor="middle" font-size="9" fill="#888">a: (BM,BK) fp16  b: (BK,BN) fp16  →  acc: (BM,BN) fp32</text>
+
+  <!-- Arrow down -->
+  <path d="M 220 140 L 220 170" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="250" y="160" font-size="8" fill="#888">编译器自动 lowered</text>
+
+  <!-- Compiler generates -->
+  <g filter="url(#sk)"><rect x="30" y="170" width="380" height="170" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="220" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">编译器自动生成（用户无感）</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="50" y="214" fill="#4a8edb">1. ldmatrix 加载 fragment 到 Register</text>
+    <text x="50" y="232" fill="#2e6e2e">2. mma.sync.aligned.m16n8k16 (Tensor Core)</text>
+    <text x="50" y="250" fill="#b85450">3. FP32 累加到 acc fragment</text>
+    <text x="50" y="268" fill="#5a3a7a">4. 循环展开（BLOCK_K 已知）</text>
+    <text x="50" y="286" fill="#7a5415">5. Shared Memory 中转（自动）</text>
+    <text x="50" y="304" fill="#888">6. __syncthreads()（自动）</text>
+    <text x="50" y="324" fill="#888">7. bank conflict 处理（自动）</text>
+  </g>
+
+  <!-- Hardware mapping table -->
+  <g filter="url(#sk)"><rect x="440" y="60" width="440" height="280" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="660" y="84" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">硬件指令映射</text>
+
+  <g font-size="9" fill="#444">
+    <text x="460" y="110" fill="#888" font-weight="bold">架构</text>
+    <text x="580" y="110" fill="#888" font-weight="bold">指令</text>
+    <text x="780" y="110" fill="#888" font-weight="bold">吞吐</text>
+
+    <text x="460" y="132" fill="#5a3a7a">Sm90 (Hopper)</text>
+    <text x="580" y="132" font-family="monospace" font-size="8">WGMMA.m64n256k16</text>
+    <text x="780" y="132">989 TFLOPS</text>
+
+    <text x="460" y="154" fill="#4a8edb">Sm80 (Ampere)</text>
+    <text x="580" y="154" font-family="monospace" font-size="8">mma.m16n8k16</text>
+    <text x="780" y="154">312 TFLOPS</text>
+
+    <text x="460" y="176" fill="#2e6e2e">Sm75 (Turing)</text>
+    <text x="580" y="176" font-family="monospace" font-size="8">mma.m16n8k16</text>
+    <text x="780" y="176">65 TFLOPS</text>
+
+    <text x="460" y="198" fill="#7a5415">Sm70 (Volta)</text>
+    <text x="580" y="198" font-family="monospace" font-size="8">mma.m16n8k16</text>
+    <text x="780" y="198">125 TFLOPS</text>
+
+    <text x="460" y="220" fill="#b85450">无 Tensor Core</text>
+    <text x="580" y="220" font-family="monospace" font-size="8">FMA fallback</text>
+    <text x="780" y="220">~10x 慢</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="460" y="252" fill="#2e6e2e" font-weight="bold">关键：</text>
+    <text x="460" y="270" fill="#555">用户不需要手写 PTX / ldmatrix / fragment 布局</text>
+    <text x="460" y="288" fill="#555">编译器根据 GPU 架构自动选最优指令</text>
+    <text x="460" y="310" fill="#7a5415" font-weight="bold">★ CUDA 手写需要 100+ 行 PTX 汇编</text>
+    <text x="460" y="328" fill="#7a5415" font-weight="bold">  Triton 一行 tl.dot 搞定</text>
+  </g>
+</svg>

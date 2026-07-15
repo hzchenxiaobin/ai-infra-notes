@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="243" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">FlashAttention 分块：Q 固定，遍历 K/V 块</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Q matrix (fixed block) -->
+  <text x="130" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Q (N × d)</text>
+  <g filter="url(#sk)"><rect x="40" y="72" width="180" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+  <g filter="url(#sk)"><rect x="42" y="74" width="176" height="40" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="130" y="98" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">Q block (Br × d)</text>
+  <text x="130" y="112" text-anchor="middle" font-size="7" fill="#888">固定，整个循环不变</text>
+
+  <!-- K/V blocks (iterated) -->
+  <text x="430" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">K, V (N × d) 分块遍历</text>
+  <g filter="url(#sk)"><rect x="340" y="72" width="320" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+
+  <g filter="url(#sk)"><rect x="342" y="74" width="70" height="40" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="377" y="92" text-anchor="middle" font-size="7" fill="#2e6e2e">K[0] V[0]</text>
+  <text x="377" y="104" text-anchor="middle" font-size="6" fill="#888">Bc×d</text>
+
+  <g filter="url(#sk)"><rect x="414" y="74" width="70" height="40" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="449" y="92" text-anchor="middle" font-size="7" fill="#7a5415">K[1] V[1]</text>
+
+  <g filter="url(#sk)"><rect x="486" y="74" width="70" height="40" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="521" y="92" text-anchor="middle" font-size="7" fill="#b85450">K[2] V[2]</text>
+
+  <text x="570" y="92" font-size="7" fill="#888">...</text>
+
+  <g filter="url(#sk)"><rect x="590" y="74" width="70" height="40" rx="2" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="625" y="92" text-anchor="middle" font-size="7" fill="#5a3a7a">K[N/Bc]</text>
+
+  <!-- Iteration arrows -->
+  <g filter="url(#sk)"><rect x="342" y="130" width="316" height="20" rx="2" fill="none" stroke="#888" stroke-width="0.8" stroke-dasharray="3 2"/></g>
+  <path d="M 350 140 L 620 140" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="480" y="136" text-anchor="middle" font-size="7" fill="#888">内循环: for start_n in range(0, N, Bc)</text>
+
+  <!-- Per-block computation -->
+  <g font-size="8" fill="#444" font-family="monospace">
+    <text x="350" y="170" fill="#2b6e9e">S = Q_block × K[i]^T    (Br × Bc) Register</text>
+    <text x="350" y="188" fill="#7a5415">m_new = max(m_old, row_max(S))</text>
+    <text x="350" y="206" fill="#b85450">P = exp(S - m_new)      (Br × Bc) Register</text>
+    <text x="350" y="224" fill="#2e6e2e">acc = acc*alpha + P × V[i]  Register</text>
+    <text x="350" y="242" fill="#5a3a7a">l_i = l_i*alpha + row_sum(P)</text>
+  </g>
+
+  <!-- Output -->
+  <text x="780" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">O (N × d)</text>
+  <g filter="url(#sk)"><rect x="700" y="72" width="160" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+  <g filter="url(#sk)"><rect x="702" y="74" width="156" height="40" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="780" y="98" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">O block (Br × d)</text>
+  <text x="780" y="112" text-anchor="middle" font-size="7" fill="#888">= acc / l_i</text>
+
+  <!-- Arrow Q to compute -->
+  <path d="M 220 130 Q 280 130 340 160" stroke="#4a8edb" stroke-width="1.2" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <!-- Arrow compute to O -->
+  <path d="M 660 130 Q 680 130 700 100" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)"><rect x="40" y="296" width="820" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-dasharray="5 3"/></g>
+  <text x="60" y="320" font-size="11" font-weight="bold" fill="#2e6e2e">分块策略：</text>
+  <g font-size="10" fill="#444">
+    <text x="60" y="342">Q block 固定（Br×d），遍历所有 K/V blocks（Bc×d），每次计算局部 S（Br×Bc）和 P（Br×Bc）</text>
+    <text x="60" y="360" fill="#7a5415" font-weight="bold">★ S 和 P 只存在于 Register（Br×Bc 小矩阵），不落盘 Global Memory</text>
+  </g>
+</svg>

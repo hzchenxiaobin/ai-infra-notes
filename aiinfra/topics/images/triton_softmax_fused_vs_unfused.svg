@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="222" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Fused vs 未融合 Softmax：Global Memory 访问对比</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Unfused -->
+  <text x="220" y="62" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">未融合（PyTorch eager）</text>
+
+  <g filter="url(#sk)"><rect x="40" y="72" width="360" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="90" text-anchor="middle" font-size="9" fill="#b85450">① 求 max: 读 x → 写 max_buf</text>
+
+  <g filter="url(#sk)"><rect x="40" y="104" width="360" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="220" y="122" text-anchor="middle" font-size="9" fill="#7a5415">② 减 max+exp: 读 x+max → 写 exp_buf</text>
+
+  <g filter="url(#sk)"><rect x="40" y="136" width="360" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="220" y="154" text-anchor="middle" font-size="9" fill="#2b6e9e">③ 求 sum: 读 exp_buf → 写 sum_buf</text>
+
+  <g filter="url(#sk)"><rect x="40" y="168" width="360" height="28" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="220" y="186" text-anchor="middle" font-size="9" fill="#5a3a7a">④ 除 sum: 读 exp+sum → 写 y</text>
+
+  <g font-size="10" fill="#444">
+    <text x="40" y="218" fill="#b85450" font-weight="bold">Global 读写: 4 读 + 3 写 = 7 次</text>
+    <text x="40" y="236" fill="#b85450" font-weight="bold">Kernel launch: 3-5 次</text>
+    <text x="40" y="254" fill="#888">中间结果 max_buf / exp_buf / sum_buf 落盘</text>
+  </g>
+
+  <!-- Right: Fused -->
+  <text x="680" y="62" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">融合（Triton）</text>
+
+  <g filter="url(#sk)"><rect x="500" y="72" width="360" height="124" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="680" y="96" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">单 Kernel：全部在 Register 中</text>
+
+  <g font-size="9" fill="#555" font-family="monospace">
+    <text x="520" y="118">x = tl.load(...)          # 读 x (1次)</text>
+    <text x="520" y="134">m = tl.max(x)             # Register</text>
+    <text x="520" y="150">e = tl.exp(x - m)         # Register</text>
+    <text x="520" y="166">s = tl.sum(e)             # Register</text>
+    <text x="520" y="182">tl.store(..., e / s)      # 写 y (1次)</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="500" y="218" fill="#2e6e2e" font-weight="bold">Global 读写: 1 读 + 1 写 = 2 次</text>
+    <text x="500" y="236" fill="#2e6e2e" font-weight="bold">Kernel launch: 1 次</text>
+    <text x="500" y="254" fill="#888">中间结果全在 Register，零额外 Global 访问</text>
+  </g>
+
+  <!-- Bottom comparison -->
+  <g filter="url(#sk)"><rect x="40" y="280" width="820" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="60" y="304" font-size="12" font-weight="bold" fill="#7a5415">性能对比（4096×4096 FP32）：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="60" y="328" fill="#b85450" font-weight="bold">未融合:</text>
+    <text x="140" y="328">0.62 ms, 7 次 Global 读写, 3-5 次 launch</text>
+
+    <text x="60" y="350" fill="#2e6e2e" font-weight="bold">融合:</text>
+    <text x="140" y="350">0.45 ms, 2 次 Global 读写, 1 次 launch</text>
+
+    <text x="60" y="372" fill="#7a5415" font-weight="bold">加速:</text>
+    <text x="140" y="372">1.38x（理论 3.5x，实际受 launch 和计算开销影响）</text>
+
+    <text x="60" y="392" fill="#5a3a7a" font-weight="bold">★ Softmax 是 memory-bound → 减少读写是核心优化方向</text>
+  </g>
+</svg>

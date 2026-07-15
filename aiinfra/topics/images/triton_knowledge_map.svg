@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="264" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="480" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton 一周知识图谱</text>
+  <path d="M 280 40 Q 460 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Root -->
+  <g filter="url(#sk)"><rect x="370" y="56" width="180" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="460" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Triton</text>
+
+  <!-- Branches -->
+  <path d="M 400 96 L 250 130" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 460 96 L 460 130" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 520 96 L 670 130" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Block programming -->
+  <g filter="url(#sk)"><rect x="150" y="130" width="200" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="250" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Block 级编程</text>
+
+  <path d="M 200 166 L 130 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 250 166 L 250 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 300 166 L 370 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="196" width="120" height="28" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="120" y="214" text-anchor="middle" font-size="9" fill="#2b6e9e">tl.load / tl.store</text>
+
+  <g filter="url(#sk)"><rect x="200" y="196" width="100" height="28" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="250" y="214" text-anchor="middle" font-size="9" fill="#2b6e9e">block pointer</text>
+
+  <g filter="url(#sk)"><rect x="320" y="196" width="100" height="28" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="370" y="214" text-anchor="middle" font-size="9" fill="#2a8e9e">mask / 边界</text>
+
+  <!-- Fused kernel -->
+  <g filter="url(#sk)"><rect x="370" y="130" width="180" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="460" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">Fused Kernel</text>
+
+  <path d="M 420 166 L 420 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 500 166 L 500 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="380" y="196" width="80" height="28" rx="4" fill="#fff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="420" y="214" text-anchor="middle" font-size="9" fill="#7a5415">Softmax</text>
+
+  <g filter="url(#sk)"><rect x="470" y="196" width="80" height="28" rx="4" fill="#fff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="510" y="214" text-anchor="middle" font-size="9" fill="#7a5415">FlashAttn</text>
+
+  <!-- Performance -->
+  <g filter="url(#sk)"><rect x="570" y="130" width="200" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="670" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">性能优化</text>
+
+  <path d="M 620 166 L 580 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 720 166 L 760 196" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="520" y="196" width="120" height="28" rx="4" fill="#fff" stroke="#b85450" stroke-width="1"/></g>
+  <text x="580" y="214" text-anchor="middle" font-size="9" fill="#b85450">@autotune</text>
+
+  <g filter="url(#sk)"><rect x="700" y="196" width="120" height="28" rx="4" fill="#fff" stroke="#b85450" stroke-width="1"/></g>
+  <text x="760" y="214" text-anchor="middle" font-size="9" fill="#b85450">NCU Profiling</text>
+
+  <!-- tl.dot / Tensor Core -->
+  <path d="M 250 224 L 250 260" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="180" y="260" width="140" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="250" y="279" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">tl.dot → Tensor Core</text>
+
+  <!-- GEMM -->
+  <path d="M 250 290 L 250 316" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="180" y="316" width="140" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="250" y="335" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">GEMM (K 分块累加)</text>
+
+  <!-- Online softmax -->
+  <path d="M 420 224 L 420 260" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="350" y="260" width="140" height="30" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="420" y="279" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">online softmax</text>
+
+  <!-- FlashAttention -->
+  <path d="M 420 290 L 420 316" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="340" y="316" width="160" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="420" y="335" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">FlashAttention</text>
+
+  <!-- smem auto -->
+  <path d="M 670 224 L 670 260" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="590" y="260" width="160" height="30" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="670" y="279" text-anchor="middle" font-size="10" fill="#5a3a7a" font-weight="bold">smem 自动管理</text>
+
+  <!-- torch.compile -->
+  <path d="M 670 290 L 670 316" stroke="#888" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="590" y="316" width="160" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="335" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">torch.compile 集成</text>
+
+  <!-- Day labels -->
+  <g font-size="8" fill="#888">
+    <text x="10" y="80">Day 1</text>
+    <text x="10" y="148">Day 2</text>
+    <text x="10" y="210">Day 2-3</text>
+    <text x="10" y="275">Day 3-4</text>
+    <text x="10" y="330">Day 4-5</text>
+    <text x="10" y="370">Day 6-7</text>
+  </g>
+
+  <!-- Bottom: key takeaways -->
+  <g filter="url(#sk)"><rect x="40" y="370" width="840" height="90" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="60" y="394" font-size="11" font-weight="bold" fill="#7a5415">核心收获：</text>
+  <g font-size="10" fill="#444">
+    <text x="60" y="414" fill="#2e6e2e">30 行 Python 达 cuBLAS 85%+（GEMM）| 3.5x 加速（FlashAttention）| 1.4x 加速（Softmax）</text>
+    <text x="60" y="434" fill="#2b6e9e">编译器自动: smem + 同步 + Tensor Core + 向量化 + multi-stage buffering</text>
+    <text x="60" y="454" fill="#b85450">vs CUTLASS: 差 ~10%（TMA/WGMMA 缺失），但开发效率 5-10x</text>
+  </g>
+</svg>

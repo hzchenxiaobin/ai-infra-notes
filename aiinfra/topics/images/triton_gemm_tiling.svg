@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="231" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton GEMM 分块策略：K 维度分块累加</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Matrix A -->
+  <text x="130" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">A (M × K)</text>
+  <g filter="url(#sk)"><rect x="40" y="74" width="180" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+  <g filter="url(#sk)"><rect x="42" y="76" width="86" height="50" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="85" y="104" text-anchor="middle" font-size="8" fill="#2b6e9e" font-weight="bold">A tile</text>
+  <text x="85" y="116" text-anchor="middle" font-size="7" fill="#888">(BM × BK)</text>
+
+  <!-- Matrix B -->
+  <text x="350" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">B (K × N)</text>
+  <g filter="url(#sk)"><rect x="260" y="74" width="180" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+  <g filter="url(#sk)"><rect x="262" y="76" width="86" height="50" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="305" y="104" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">B tile</text>
+  <text x="305" y="116" text-anchor="middle" font-size="7" fill="#888">(BK × BN)</text>
+
+  <!-- tl.dot arrow -->
+  <path d="M 220 130 L 255 130" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Accumulator -->
+  <text x="570" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">C tile (acc)</text>
+  <g filter="url(#sk)"><rect x="480" y="74" width="180" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+  <g filter="url(#sk)"><rect x="482" y="76" width="100" height="60" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="532" y="104" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">acc</text>
+  <text x="532" y="116" text-anchor="middle" font-size="7" fill="#888">(BM × BN)</text>
+  <text x="532" y="128" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">FP32 累加</text>
+
+  <!-- K iteration arrows -->
+  <path d="M 85 126 Q 85 280 85 290" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="110" y="280" font-size="8" fill="#888">advance K</text>
+
+  <path d="M 305 126 Q 305 280 305 290" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="330" y="280" font-size="8" fill="#888">advance K</text>
+
+  <!-- Code -->
+  <g filter="url(#sk)"><rect x="680" y="74" width="200" height="200" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1"/></g>
+  <text x="690" y="94" font-size="8" fill="#444" font-family="monospace">acc = zeros(BM,BN)</text>
+  <text x="690" y="110" font-size="8" fill="#7a5415" font-family="monospace">for k in range(0,K,BK):</text>
+  <text x="700" y="126" font-size="8" fill="#2b6e9e" font-family="monospace">a=tl.load(A_ptr)</text>
+  <text x="700" y="142" font-size="8" fill="#2e6e2e" font-family="monospace">b=tl.load(B_ptr)</text>
+  <text x="700" y="158" font-size="8" fill="#b85450" font-family="monospace">acc+=tl.dot(a,b)</text>
+  <text x="700" y="174" font-size="8" fill="#888" font-family="monospace">advance(A,B)</text>
+  <text x="690" y="194" font-size="8" fill="#5a3a7a" font-family="monospace">tl.store(C_ptr, acc)</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)"><rect x="40" y="300" width="840" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-dasharray="5 3"/></g>
+  <text x="60" y="324" font-size="11" font-weight="bold" fill="#2e6e2e">分块策略：</text>
+  <g font-size="10" fill="#444">
+    <text x="60" y="346">每个 program 处理 C 的一个 (BLOCK_M × BLOCK_N) tile</text>
+    <text x="60" y="364">沿 K 维度分块：每次加载 A(BM×BK) 和 B(BK×BN)，用 tl.dot 乘并累加到 acc</text>
+    <text x="60" y="382">acc 保存在 Register 中（FP32），K 迭代完后写回 Global Memory</text>
+    <text x="60" y="396" fill="#7a5415" font-weight="bold">★ 编译器自动管理 Shared Memory + multi-stage buffering + Tensor Core 映射</text>
+  </g>
+</svg>

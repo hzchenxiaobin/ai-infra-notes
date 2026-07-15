@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="214" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">矩阵转置数据流：读 tile → 转置 → 写回</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Input matrix -->
+  <text x="150" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Input A (M × N) RowMajor</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="60" y="76" width="180" height="120" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <!-- tile outline -->
+    <g filter="url(#sk)"><rect x="62" y="78" width="86" height="56" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+    <text x="105" y="100" text-anchor="middle" font-size="8" fill="#2b6e9e" font-weight="bold">tile (BLOCK_M, BLOCK_N)</text>
+    <text x="105" y="116" text-anchor="middle" font-size="7" fill="#888">coalesced read ↓</text>
+  </g>
+
+  <!-- Step 1: tl.load -->
+  <path d="M 250 136 L 310 136" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="280" y="130" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">① tl.load</text>
+
+  <!-- Register (tile in register) -->
+  <g filter="url(#sk)"><rect x="310" y="76" width="120" height="120" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="370" y="100" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">Register</text>
+  <text x="370" y="118" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">x = (BM, BN)</text>
+
+  <!-- Step 2: tl.trans (via Shared Memory) -->
+  <path d="M 430 136 L 490 136" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="460" y="130" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">② tl.trans</text>
+
+  <!-- Shared Memory (transposition) -->
+  <g filter="url(#sk)"><rect x="490" y="76" width="140" height="120" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2" stroke-dasharray="4 2"/></g>
+  <text x="560" y="100" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a5415">Shared Memory</text>
+  <text x="560" y="118" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">写入 (BM, BN)</text>
+  <text x="560" y="134" text-anchor="middle" font-size="7" fill="#888">+ swizzle</text>
+  <text x="560" y="150" text-anchor="middle" font-size="7" fill="#888">__syncthreads()</text>
+  <text x="560" y="168" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">读出 (BN, BM)</text>
+  <text x="560" y="184" text-anchor="middle" font-size="7" fill="#888">+ swizzle</text>
+
+  <!-- Step 3: tl.store -->
+  <path d="M 630 136 L 690 136" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="660" y="130" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">③ tl.store</text>
+
+  <!-- Output matrix -->
+  <text x="780" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">Output B (N × M) RowMajor</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="690" y="76" width="180" height="120" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <!-- transposed tile -->
+    <g filter="url(#sk)"><rect x="692" y="78" width="56" height="86" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+    <text x="720" y="100" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">tile (BN, BM)</text>
+    <text x="720" y="116" text-anchor="middle" font-size="7" fill="#888">coalesced write ↑</text>
+  </g>
+
+  <!-- User code vs compiler -->
+  <g filter="url(#sk)">
+    <rect x="60" y="220" width="810" height="160" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="244" font-size="12" font-weight="bold" fill="#444">用户代码 vs 编译器生成：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="80" y="268" fill="#2e6e2e" font-weight="bold">用户写（3 行）：</text>
+    <text x="200" y="268" font-family="monospace" fill="#555">x = tl.load(input_block)</text>
+    <text x="460" y="268" font-family="monospace" fill="#555">x_t = tl.trans(x)</text>
+    <text x="620" y="268" font-family="monospace" fill="#555">tl.store(output_block, x_t)</text>
+
+    <text x="80" y="296" fill="#b85450" font-weight="bold">编译器自动生成：</text>
+    <text x="200" y="296" font-family="monospace" fill="#555">1. x 写入 Shared Memory（带 swizzle 消除 bank conflict）</text>
+    <text x="200" y="314" font-family="monospace" fill="#555">2. __syncthreads()</text>
+    <text x="200" y="332" font-family="monospace" fill="#555">3. 按转置布局从 Shared Memory 读出（coalesced）</text>
+    <text x="200" y="350" font-family="monospace" fill="#555">4. __syncthreads()（如有后续操作）</text>
+
+    <text x="80" y="372" fill="#7a5415" font-weight="bold">★ CUDA 中需要 30+ 行手动 Shared Memory 转置代码，Triton 一行 tl.trans 搞定</text>
+  </g>
+</svg>

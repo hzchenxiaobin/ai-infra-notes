@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="241" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">标准 Attention vs FlashAttention</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Standard -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="280" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">标准 Attention</text>
+
+  <g filter="url(#sk)"><rect x="50" y="96" width="340" height="36" rx="6" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="118" text-anchor="middle" font-size="10" fill="#b85450" font-family="monospace">S = Q × K^T  → 写 N×N 到 Global</text>
+
+  <g filter="url(#sk)"><rect x="50" y="138" width="340" height="36" rx="6" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="160" text-anchor="middle" font-size="10" fill="#b85450" font-family="monospace">P = softmax(S) → 读+写 N×N</text>
+
+  <g filter="url(#sk)"><rect x="50" y="180" width="340" height="36" rx="6" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="202" text-anchor="middle" font-size="10" fill="#b85450" font-family="monospace">O = P × V  → 读 N×N</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="236" fill="#b85450" font-weight="bold">Global 读写: ~4 × N²</text>
+    <text x="50" y="254" fill="#888">中间矩阵 S, P 各 N×N，落盘 Global</text>
+    <text x="50" y="272" fill="#888">N=8192 → 每个矩阵 256MB</text>
+    <text x="50" y="290" fill="#b85450" font-weight="bold">IO: O(N²d + N²)</text>
+    <text x="50" y="312" fill="#888">3 个独立 kernel，memory-bound</text>
+  </g>
+
+  <!-- Right: FlashAttention -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="280" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">FlashAttention</text>
+
+  <g filter="url(#sk)"><rect x="490" y="96" width="360" height="120" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="118" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">单 Kernel（fused）</text>
+  <text x="670" y="138" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">S = Q × K^T  (Register)</text>
+  <text x="670" y="156" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">P = online_softmax(S)  (Register)</text>
+  <text x="670" y="174" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">acc += P × V  (Register)</text>
+  <text x="670" y="196" text-anchor="middle" font-size="8" fill="#2e6e2e">S, P 不落盘 Global Memory</text>
+
+  <g font-size="10" fill="#444">
+    <text x="490" y="236" fill="#2e6e2e" font-weight="bold">Global 读写: ~2 × N × d</text>
+    <text x="490" y="254" fill="#888">S, P 在 Register 中完成</text>
+    <text x="490" y="272" fill="#888">只需读 Q/K/V + 写 O</text>
+    <text x="490" y="290" fill="#2e6e2e" font-weight="bold">IO: O(N²d²/M)</text>
+    <text x="490" y="312" fill="#888">1 个 kernel，compute-bound</text>
+  </g>
+
+  <!-- Bottom -->
+  <g filter="url(#sk)"><rect x="30" y="356" width="840" height="50" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-dasharray="5 3"/></g>
+  <text x="450" y="380" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">N=4096 时：标准 8.2ms → Flash 2.3ms = 3.5x 加速（N 越大加速越明显）</text>
+  <text x="450" y="398" text-anchor="middle" font-size="10" fill="#888">FlashAttention 把 memory-bound 的 Attention 变为 compute-bound，充分利用 Tensor Core</text>
+</svg>

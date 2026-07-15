@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="223" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Online Softmax：逐块增量更新 max 与 sum</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Data array split into blocks -->
+  <text x="450" y="62" text-anchor="middle" font-size="10" fill="#888">长行 x[0..N-1] 分成多个 block</text>
+
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="60" y="72" width="140" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="130" y="90" text-anchor="middle">Block 0: x[0..B-1]</text>
+
+    <g filter="url(#sk)"><rect x="220" y="72" width="140" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="290" y="90" text-anchor="middle">Block 1: x[B..2B-1]</text>
+
+    <g filter="url(#sk)"><rect x="380" y="72" width="140" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="450" y="90" text-anchor="middle">Block 2: x[2B..3B-1]</text>
+
+    <text x="540" y="90" font-size="7" fill="#888">...</text>
+
+    <g filter="url(#sk)"><rect x="580" y="72" width="140" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="650" y="90" text-anchor="middle">Block K: x[...N-1]</text>
+  </g>
+
+  <!-- State update flow -->
+  <!-- Initial state -->
+  <g filter="url(#sk)"><rect x="60" y="120" width="120" height="44" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="120" y="138" text-anchor="middle" font-size="9" fill="#5a3a7a" font-weight="bold">初始状态</text>
+  <text x="120" y="154" text-anchor="middle" font-size="8" fill="#888" font-family="monospace">m=-inf, l=0</text>
+
+  <path d="M 180 142 L 220 142" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- After block 0 -->
+  <g filter="url(#sk)"><rect x="220" y="120" width="140" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="290" y="138" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">处理 Block 0 后</text>
+  <text x="290" y="154" text-anchor="middle" font-size="8" fill="#888" font-family="monospace">m=m0, l=sum(exp(x0-m0))</text>
+
+  <path d="M 360 142 L 400 142" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="380" y="136" text-anchor="middle" font-size="7" fill="#b85450">rescale!</text>
+
+  <!-- After block 1 -->
+  <g filter="url(#sk)"><rect x="400" y="120" width="160" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="480" y="138" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">处理 Block 1 后</text>
+  <text x="480" y="154" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">m=max(m0,m1)</text>
+  <text x="480" y="164" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">l=l_old·exp(m_old-m_new)+Σexp(x1-m_new)</text>
+
+  <path d="M 560 142 L 600 142" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- After block K -->
+  <g filter="url(#sk)"><rect x="600" y="120" width="160" height="44" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="680" y="138" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">处理完所有 Block</text>
+  <text x="680" y="154" text-anchor="middle" font-size="8" fill="#888" font-family="monospace">m=全局max, l=全局sum</text>
+
+  <!-- Rescale formula -->
+  <g filter="url(#sk)"><rect x="40" y="186" width="820" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5" stroke-dasharray="5 3"/></g>
+  <text x="60" y="210" font-size="12" font-weight="bold" fill="#7a5415">核心公式（rescale）：</text>
+
+  <g font-size="10" fill="#444" font-family="monospace">
+    <text x="60" y="234" fill="#2b6e9e">m_new = maximum(m_old, m_block)          # 更新全局 max</text>
+    <text x="60" y="252" fill="#b85450">alpha = exp(m_old - m_new)                # rescale 因子</text>
+    <text x="60" y="270" fill="#2e6e2e">l_new = l_old * alpha + sum(exp(x_block - m_new))  # rescale + 累加</text>
+  </g>
+
+  <!-- Why rescale -->
+  <g filter="url(#sk)"><rect x="40" y="304" width="820" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-dasharray="5 3"/></g>
+  <text x="60" y="328" font-size="12" font-weight="bold" fill="#2e6e2e">为什么需要 rescale？</text>
+  <g font-size="10" fill="#444">
+    <text x="60" y="350">l_old 是基于 m_old 计算的：l_old = Σexp(x_prev - m_old)</text>
+    <text x="60" y="368">当 max 更新为 m_new 后，需要把 l_old 调整到新基准：l_old × exp(m_old - m_new)</text>
+    <text x="60" y="386">如果不 rescale，旧 sum 和新 exp 的基准不一致 → 结果错误</text>
+    <text x="60" y="400" fill="#5a3a7a" font-weight="bold">★ 这是 FlashAttention 能做 tiling 的数学基础</text>
+  </g>
+</svg>

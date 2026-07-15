@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="212" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Block 级 Reduce：一行完成 warp shuffle + block reduce</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Triton code (simple) -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="380" height="280" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="220" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Triton（1 行）</text>
+
+  <g font-size="10" fill="#444" font-family="monospace">
+    <text x="50" y="112" fill="#888"># 加载 2D block</text>
+    <text x="50" y="128" fill="#2b6e9e">x = tl.load(x_ptr + offsets,</text>
+    <text x="50" y="144" fill="#2b6e9e">           mask=mask)</text>
+    <text x="50" y="144" fill="#2b6e9e"></text>
+    <text x="50" y="170" fill="#888"># block 级 reduce</text>
+    <text x="50" y="188" fill="#2e6e2e" font-weight="bold">row_sum = tl.sum(x, axis=1)</text>
+    <text x="50" y="206" fill="#7a5415" font-weight="bold">col_max = tl.max(x, axis=0)</text>
+    <text x="50" y="224" fill="#b85450" font-weight="bold">mean = tl.mean(x)</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="258" fill="#2e6e2e" font-weight="bold">特点：</text>
+    <text x="50" y="276" fill="#888">- 1 行代码完成</text>
+    <text x="50" y="292" fill="#888">- 编译器自动管理 smem + 同步</text>
+    <text x="50" y="308" fill="#888">- 自动 warp shuffle + block reduce</text>
+    <text x="50" y="324" fill="#888">- 支持 axis / keep_dims 参数</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 410 200 L 450 200" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="430" y="194" text-anchor="middle" font-size="8" fill="#888">底层</text>
+
+  <!-- Right: CUDA equivalent (complex) -->
+  <g filter="url(#sk)">
+    <rect x="450" y="60" width="420" height="280" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="660" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">CUDA 等价实现（~30 行）</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="470" y="108" fill="#888">// Warp 内 shuffle reduce</text>
+    <text x="470" y="124" fill="#b85450">for (int offset = 16; offset &gt; 0; offset /= 2) {</text>
+    <text x="470" y="140" fill="#b85450">  val += __shfl_down_sync(0xFFFFFFFF, val, offset);</text>
+    <text x="470" y="156" fill="#b85450">}</text>
+
+    <text x="470" y="180" fill="#888">// 写入 Shared Memory</text>
+    <text x="470" y="196" fill="#b85450">if (lane == 0) smem[warp_id] = val;</text>
+    <text x="470" y="212" fill="#b85450">__syncthreads();</text>
+
+    <text x="470" y="236" fill="#888">// Warp 0 做第二轮 reduce</text>
+    <text x="470" y="252" fill="#b85450">if (warp_id == 0) {</text>
+    <text x="470" y="268" fill="#b85450">  val = (lane &lt; num_warps) ? smem[lane] : 0;</text>
+    <text x="470" y="284" fill="#b85450">  for (int o = 16; o &gt; 0; o /= 2)</text>
+    <text x="470" y="300" fill="#b85450">    val += __shfl_down_sync(0xFFFFFFFF, val, o);</text>
+    <text x="470" y="316" fill="#b85450">}</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="352" width="840" height="20" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/>
+  </g>
+  <text x="450" y="366" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">★ Triton 编译器自动把 tl.sum lowered 为 warp shuffle + shared memory 两级 reduce——用户无感</text>
+</svg>

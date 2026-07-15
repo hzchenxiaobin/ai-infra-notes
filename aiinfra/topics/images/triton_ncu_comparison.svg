@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="252" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="360" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton vs 手写 CUDA vs CUTLASS NCU 指标对比</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Bar groups: SM / Tensor / DRAM / TFLOPS -->
+  <!-- SM Throughput -->
+  <text x="60" y="70" font-size="10" fill="#2b6e9e" font-weight="bold">SM Throughput (%)</text>
+  <g filter="url(#sk)"><rect x="60" y="78" width="84" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="102" y="94" text-anchor="middle" font-size="9" fill="#b85450">42%</text>
+  <text x="55" y="94" text-anchor="end" font-size="7" fill="#888">CUDA</text>
+
+  <g filter="url(#sk)"><rect x="60" y="106" width="164" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="142" y="122" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">82%</text>
+  <text x="55" y="122" text-anchor="end" font-size="7" fill="#888">Triton</text>
+
+  <g filter="url(#sk)"><rect x="60" y="134" width="174" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="147" y="150" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">87%</text>
+  <text x="55" y="150" text-anchor="end" font-size="7" fill="#888">CUTLASS</text>
+
+  <!-- Tensor Core -->
+  <text x="350" y="70" font-size="10" fill="#2e6e2e" font-weight="bold">Tensor Core (%)</text>
+  <g filter="url(#sk)"><rect x="350" y="78" width="2" height="24" rx="1" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="362" y="94" font-size="9" fill="#b85450">0%</text>
+  <text x="345" y="94" text-anchor="end" font-size="7" fill="#888">CUDA</text>
+
+  <g filter="url(#sk)"><rect x="350" y="106" width="130" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="415" y="122" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">65%</text>
+  <text x="345" y="122" text-anchor="end" font-size="7" fill="#888">Triton</text>
+
+  <g filter="url(#sk)"><rect x="350" y="134" width="144" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="422" y="150" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">72%</text>
+  <text x="345" y="150" text-anchor="end" font-size="7" fill="#888">CUTLASS</text>
+
+  <!-- DRAM -->
+  <text x="600" y="70" font-size="10" fill="#7a5415" font-weight="bold">DRAM (%)</text>
+  <g filter="url(#sk)"><rect x="600" y="78" width="116" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="658" y="94" text-anchor="middle" font-size="9" fill="#b85450">58%</text>
+  <text x="595" y="94" text-anchor="end" font-size="7" fill="#888">CUDA</text>
+
+  <g filter="url(#sk)"><rect x="600" y="106" width="42" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="621" y="122" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">21%</text>
+  <text x="595" y="122" text-anchor="end" font-size="7" fill="#888">Triton</text>
+
+  <g filter="url(#sk)"><rect x="600" y="134" width="46" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="623" y="150" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">23%</text>
+  <text x="595" y="150" text-anchor="end" font-size="7" fill="#888">CUTLASS</text>
+
+  <!-- TFLOPS -->
+  <text x="60" y="186" font-size="10" fill="#5a3a7a" font-weight="bold">TFLOPS (4096² FP16)</text>
+  <g filter="url(#sk)"><rect x="60" y="194" width="46" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/></g>
+  <text x="83" y="212" text-anchor="middle" font-size="9" fill="#b85450">46</text>
+  <text x="55" y="212" text-anchor="end" font-size="7" fill="#888">CUDA</text>
+
+  <g filter="url(#sk)"><rect x="60" y="226" width="105" height="28" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="112" y="244" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">105</text>
+  <text x="55" y="244" text-anchor="end" font-size="7" fill="#888">Triton</text>
+
+  <g filter="url(#sk)"><rect x="60" y="258" width="112" height="28" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="116" y="276" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">112</text>
+  <text x="55" y="276" text-anchor="end" font-size="7" fill="#888">CUTLASS</text>
+
+  <!-- Summary -->
+  <g filter="url(#sk)"><rect x="200" y="186" width="660" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/></g>
+  <text x="220" y="210" font-size="11" font-weight="bold" fill="#7a5415">分析：</text>
+  <g font-size="10" fill="#444">
+    <text x="220" y="230" fill="#b85450">手写 CUDA: memory-bound, 无 Tensor Core → 46 TFLOPS (39% cuBLAS)</text>
+    <text x="220" y="250" fill="#2e6e2e">Triton: compute-bound, TC 65% → 105 TFLOPS (88% cuBLAS)</text>
+    <text x="220" y="270" fill="#2b6e9e">CUTLASS: compute-bound, TC 72% → 112 TFLOPS (94% cuBLAS)</text>
+  </g>
+
+  <text x="450" y="316" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">★ Triton 接近 CUTLASS（差距 ~7%），远超手写 CUDA（2.3x）</text>
+  <text x="450" y="336" text-anchor="middle" font-size="9" fill="#888">差距来源：TMA 缺失 + WGMMA 缺失 + 指令调度</text>
+</svg>

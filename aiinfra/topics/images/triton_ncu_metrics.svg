@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="251" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">NCU 分析 Triton kernel 的关键指标</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Table header -->
+  <g filter="url(#sk)"><rect x="20" y="56" width="860" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="80" y="76" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">指标</text>
+  <text x="260" y="76" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">含义</text>
+  <text x="430" y="76" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">Triton GEMM</text>
+  <text x="570" y="76" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">手写 CUDA</text>
+  <text x="730" y="76" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">目标</text>
+
+  <!-- Row 1 -->
+  <g filter="url(#sk)"><rect x="20" y="86" width="860" height="40" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="104" text-anchor="middle" font-size="7" fill="#2b6e9e" font-weight="bold" font-family="monospace">sm__throughput</text>
+  <text x="80" y="116" text-anchor="middle" font-size="6" fill="#888">.pct_of_peak</text>
+  <text x="260" y="104" text-anchor="middle" font-size="9" fill="#444">SM 吞吐占比</text>
+  <text x="260" y="118" text-anchor="middle" font-size="7" fill="#888">整体计算效率</text>
+  <text x="430" y="110" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">82%</text>
+  <text x="570" y="110" text-anchor="middle" font-size="12" fill="#b85450">42%</text>
+  <text x="730" y="110" text-anchor="middle" font-size="10" fill="#2e6e2e">&gt;80%</text>
+
+  <!-- Row 2 -->
+  <g filter="url(#sk)"><rect x="20" y="126" width="860" height="40" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="144" text-anchor="middle" font-size="6" fill="#2e6e2e" font-weight="bold" font-family="monospace">inst_pipe_tensor</text>
+  <text x="80" y="156" text-anchor="middle" font-size="6" fill="#888">.pct_of_peak</text>
+  <text x="260" y="144" text-anchor="middle" font-size="9" fill="#444">Tensor Core 利用率</text>
+  <text x="260" y="158" text-anchor="middle" font-size="7" fill="#888">MMA 指令执行占比</text>
+  <text x="430" y="150" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">65%</text>
+  <text x="570" y="150" text-anchor="middle" font-size="12" fill="#b85450">0%</text>
+  <text x="730" y="150" text-anchor="middle" font-size="10" fill="#2e6e2e">&gt;60%</text>
+
+  <!-- Row 3 -->
+  <g filter="url(#sk)"><rect x="20" y="166" width="860" height="40" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="184" text-anchor="middle" font-size="7" fill="#7a5415" font-weight="bold" font-family="monospace">dram__throughput</text>
+  <text x="80" y="196" text-anchor="middle" font-size="6" fill="#888">.pct_of_peak</text>
+  <text x="260" y="184" text-anchor="middle" font-size="9" fill="#444">DRAM 带宽占比</text>
+  <text x="260" y="198" text-anchor="middle" font-size="7" fill="#888">内存带宽利用率</text>
+  <text x="430" y="190" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">21%</text>
+  <text x="570" y="190" text-anchor="middle" font-size="12" fill="#b85450">58%</text>
+  <text x="730" y="190" text-anchor="middle" font-size="10" fill="#2e6e2e">&lt;50%</text>
+
+  <!-- Row 4 -->
+  <g filter="url(#sk)"><rect x="20" y="206" width="860" height="40" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="224" text-anchor="middle" font-size="6" fill="#b85450" font-weight="bold" font-family="monospace">occupancy_limit</text>
+  <text x="80" y="236" text-anchor="middle" font-size="6" fill="#888">_registers.pct</text>
+  <text x="260" y="224" text-anchor="middle" font-size="9" fill="#444">寄存器占用率</text>
+  <text x="260" y="238" text-anchor="middle" font-size="7" fill="#888">影响 SM 并行度</text>
+  <text x="430" y="230" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">72%</text>
+  <text x="570" y="230" text-anchor="middle" font-size="12" fill="#888">50%</text>
+  <text x="730" y="230" text-anchor="middle" font-size="10" fill="#2e6e2e">&lt;80%</text>
+
+  <!-- Bottom: key insight -->
+  <g filter="url(#sk)"><rect x="20" y="260" width="860" height="120" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/></g>
+  <text x="40" y="284" font-size="12" font-weight="bold" fill="#b85450">关键发现：</text>
+  <g font-size="10" fill="#444">
+    <text x="40" y="306" fill="#b85450">手写 CUDA: DRAM 58% + Tensor 0% → memory-bound（没用 Tensor Core）</text>
+    <text x="40" y="326" fill="#2e6e2e">Triton: DRAM 21% + Tensor 65% → compute-bound（tl.dot 自动用 Tensor Core）</text>
+    <text x="40" y="350" fill="#7a5415" font-weight="bold">★ Triton 编译器自动把 GEMM 从 memory-bound 转为 compute-bound</text>
+    <text x="40" y="368" fill="#888">这就是 Triton "30 行 Python 胜过 200 行 C" 的根本原因</text>
+  </g>
+</svg>
