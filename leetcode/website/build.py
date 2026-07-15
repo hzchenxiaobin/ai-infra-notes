@@ -173,6 +173,10 @@ def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: st
         if tree[key]["children"] or tree[key]["problems"]:
             lines.extend(render_accordion(tree[key], [key], 1))
 
+    lines.append('<div class="nav-section-title">更多</div>')
+    lines.append(f'<a class="nav-link" href="https://hzchenxiaobin.github.io/ai-infra-notes/index.html">📚 AI Infra 学习笔记</a>')
+    lines.append(f'<a class="nav-link" href="{root_prefix}leetgpu/index.html">🎮 LeetGPU 题解</a>')
+
     return "\n".join(lines)
 
 
@@ -203,8 +207,7 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <a href="{root_prefix}index.html" style="text-decoration: none;">
-                    <h1 class="sidebar-title">AI Infra 学习笔记</h1>
-                    <p class="sidebar-subtitle">LeetCode 题解</p>
+                    <h1 class="sidebar-title" style="font-size: 1.5rem; margin-bottom: 0;">LeetCode 题解</h1>
                 </a>
             </div>
             <nav class="sidebar-nav">
