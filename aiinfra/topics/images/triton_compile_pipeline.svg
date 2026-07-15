@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="203" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton 编译流程：Python → IR → PTX</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Stage 1: Python DSL -->
+  <g filter="url(#sk)"><rect x="30" y="62" width="160" height="70" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="110" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Python DSL</text>
+  <text x="110" y="102" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">@triton.jit</text>
+  <text x="110" y="116" text-anchor="middle" font-size="8" fill="#888">block 级 Python 代码</text>
+
+  <path d="M 190 97 L 220 97" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="205" y="90" text-anchor="middle" font-size="7" fill="#888">AST 解析</text>
+
+  <!-- Stage 2: Triton IR -->
+  <g filter="url(#sk)"><rect x="220" y="62" width="160" height="70" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="300" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Triton IR</text>
+  <text x="300" y="102" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">SSA + block 操作</text>
+  <text x="300" y="116" text-anchor="middle" font-size="8" fill="#888">tl.load / tl.store / tl.dot</text>
+
+  <path d="M 380 97 L 410 97" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="395" y="90" text-anchor="middle" font-size="7" fill="#888">MLIR 优化</text>
+
+  <!-- Stage 3: Optimized IR -->
+  <g filter="url(#sk)"><rect x="410" y="62" width="160" height="70" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="490" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">优化后 IR</text>
+  <text x="490" y="102" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">smem 分配 + 循环展开</text>
+  <text x="490" y="116" text-anchor="middle" font-size="8" fill="#888">向量化 + warp shuffle</text>
+
+  <path d="M 570 97 L 600 97" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="585" y="90" text-anchor="middle" font-size="7" fill="#888">LLVM 后端</text>
+
+  <!-- Stage 4: PTX -->
+  <g filter="url(#sk)"><rect x="600" y="62" width="140" height="70" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="670" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">PTX</text>
+  <text x="670" y="102" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">NVIDIA 指令</text>
+  <text x="670" y="116" text-anchor="middle" font-size="8" fill="#888">mma.sync / ld.global</text>
+
+  <path d="M 740 97 L 770 97" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="755" y="90" text-anchor="middle" font-size="7" fill="#888">驱动</text>
+
+  <!-- Stage 5: SASS -->
+  <g filter="url(#sk)"><rect x="770" y="62" width="110" height="70" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/></g>
+  <text x="825" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a7a">SASS</text>
+  <text x="825" y="102" text-anchor="middle" font-size="9" fill="#555">GPU 机器码</text>
+  <text x="825" y="116" text-anchor="middle" font-size="8" fill="#888">直接执行</text>
+
+  <!-- JIT timing -->
+  <g filter="url(#sk)">
+    <rect x="30" y="160" width="850" height="50" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="182" font-size="11" font-weight="bold" fill="#7a5415">JIT 编译时机：</text>
+  <text x="180" y="182" font-size="11" fill="#444">首次调用 kernel 时编译（步骤 ①→⑤），耗时几百毫秒到几秒</text>
+  <text x="50" y="200" font-size="11" fill="#2e6e2e">后续调用直接使用缓存的 SASS（~/.triton/cache/），零编译开销</text>
+
+  <!-- Compiler optimizations -->
+  <g filter="url(#sk)">
+    <rect x="30" y="230" width="850" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="254" font-size="12" font-weight="bold" fill="#2e6e2e">编译器自动完成的优化（用户无感）：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="276" fill="#2b6e9e" font-weight="bold">Shared Memory:</text>
+    <text x="170" y="276">自动分配 + 自动插入 __syncthreads()</text>
+
+    <text x="50" y="296" fill="#7a5415" font-weight="bold">向量化:</text>
+    <text x="120" y="296">自动用 float4 / ld.global.v4</text>
+    <text x="350" y="296" fill="#2e6e2e" font-weight="bold">Tensor Core:</text>
+    <text x="440" y="296">tl.dot → mma.sync</text>
+
+    <text x="50" y="316" fill="#b85450" font-weight="bold">Warp Reduce:</text>
+    <text x="150" y="316">tl.sum → warp shuffle + block reduce</text>
+    <text x="420" y="316" fill="#5a3a7a" font-weight="bold">循环展开:</text>
+    <text x="510" y="316">constexpr 已知时自动展开</text>
+
+    <text x="50" y="344" fill="#888">★ 性能取决于编译器优化质量，而非用户代码——这就是 Triton "易写又快"的根本原因</text>
+  </g>
+</svg>

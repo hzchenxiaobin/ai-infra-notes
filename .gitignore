@@ -76,6 +76,12 @@ aiinfra/topics/cutlass/website/day*.html
 aiinfra/topics/cutlass/website/images/
 aiinfra/topics/cutlass/website/kernels/
 
+# Generated Triton topic website files
+aiinfra/topics/triton/website/index.html
+aiinfra/topics/triton/website/day*.html
+aiinfra/topics/triton/website/images/
+aiinfra/topics/triton/website/kernels/
+
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/

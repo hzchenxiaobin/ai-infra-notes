@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="201" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Triton vs CUDA 编程模型对比</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: CUDA (thread-level) -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="340" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">CUDA（Thread 级编程）</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="50" y="110" fill="#888">// 每个线程处理 1 个元素</text>
+    <text x="50" y="126" fill="#2b6e9e">int i = blockIdx.x * blockDim.x</text>
+    <text x="50" y="140" fill="#2b6e9e">      + threadIdx.x;</text>
+    <text x="50" y="158" fill="#7a5415">if (i &lt; n) {</text>
+    <text x="60" y="174" fill="#444">float x = a[i];  // 1 个标量</text>
+    <text x="60" y="190" fill="#444">float y = b[i];</text>
+    <text x="60" y="206" fill="#444">c[i] = x + y;    // 标量运算</text>
+    <text x="50" y="222" fill="#7a5415">}</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="252" fill="#b85450" font-weight="bold">手动管理：</text>
+    <text x="50" y="270" fill="#888">- threadIdx / blockIdx 索引</text>
+    <text x="50" y="286" fill="#888">- Shared Memory 声明 + __syncthreads()</text>
+    <text x="50" y="302" fill="#888">- cudaMalloc / cudaMemcpy / cudaFree</text>
+    <text x="50" y="318" fill="#888">- 边界检查: if (i &lt; n)</text>
+
+    <text x="50" y="348" fill="#4a8edb" font-weight="bold">粒度：1 thread = 1 element</text>
+    <text x="50" y="366" fill="#888">30+ 行样板代码</text>
+    <text x="50" y="384" fill="#888">学习曲线：陡</text>
+  </g>
+
+  <!-- Right: Triton (block-level) -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="340" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Triton（Block 级编程）</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="490" y="110" fill="#888"># 每个 program 处理 1 个 block</text>
+    <text x="490" y="126" fill="#2e6e2e">pid = tl.program_id(0)</text>
+    <text x="490" y="140" fill="#2e6e2e">offsets = pid * BLOCK_SIZE</text>
+    <text x="490" y="154" fill="#2e6e2e">    + tl.arange(0, BLOCK_SIZE)</text>
+    <text x="490" y="172" fill="#7a5415">mask = offsets &lt; n</text>
+    <text x="490" y="190" fill="#444">x = tl.load(x_ptr + offsets,</text>
+    <text x="490" y="204" fill="#444">           mask=mask)  # 向量</text>
+    <text x="490" y="220" fill="#444">y = tl.load(y_ptr + offsets,</text>
+    <text x="490" y="234" fill="#444">           mask=mask)</text>
+    <text x="490" y="250" fill="#444">z = x + y  # 向量运算</text>
+    <text x="490" y="266" fill="#444">tl.store(z_ptr + offsets, z,</text>
+    <text x="490" y="280" fill="#444">         mask=mask)</text>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="490" y="310" fill="#2e6e2e" font-weight="bold">编译器自动：</text>
+    <text x="490" y="328" fill="#888">- Shared Memory 分配 + 同步</text>
+    <text x="490" y="344" fill="#888">- 向量化加载 (float4)</text>
+    <text x="490" y="360" fill="#888">- 边界检查: mask 向量</text>
+    <text x="490" y="376" fill="#888">- 设备内存: PyTorch tensor</text>
+
+    <text x="490" y="396" fill="#2e6e2e" font-weight="bold">粒度：1 program = BLOCK_SIZE elements</text>
+  </g>
+
+  <!-- Center arrow -->
+  <path d="M 430 230 L 470 230" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="450" y="224" text-anchor="middle" font-size="8" fill="#888">抽象</text>
+</svg>
