@@ -35,13 +35,13 @@
   <div class="nav-accordion-content">
     <div class="nav-section">
 <a class="nav-link overview-link" href="../week1/index.html">📌 Week 1 概览</a>
-<a class="nav-link day-link" href="../day1.html">Day 1：GPU 执行模型基础</a>
-<a class="nav-link day-link" href="../day2.html">Day 2：Occupancy 与资源约束</a>
-<a class="nav-link day-link" href="../day3.html">Day 3：认识你的 GPU —— deviceQuery 与 Occupancy 计算</a>
-<a class="nav-link day-link" href="../day4.html">Day 4：Memory Hierarchy 深入</a>
-<a class="nav-link day-link" href="../day5.html">Day 5：Bank Conflict 分析与实践</a>
-<a class="nav-link day-link" href="../day6.html">Day 6：Nsight Profiling 实战</a>
-<a class="nav-link day-link" href="../day7.html">Day 7：总结与复盘</a>
+<a class="nav-link day-link" href="../week1/day1.html">Day 1：GPU 执行模型基础</a>
+<a class="nav-link day-link" href="../week1/day2.html">Day 2：Occupancy 与资源约束</a>
+<a class="nav-link day-link" href="../week1/day3.html">Day 3：认识你的 GPU —— deviceQuery 与 Occupancy 计算</a>
+<a class="nav-link day-link" href="../week1/day4.html">Day 4：Memory Hierarchy 深入</a>
+<a class="nav-link day-link" href="../week1/day5.html">Day 5：Bank Conflict 分析与实践</a>
+<a class="nav-link day-link" href="../week1/day6.html">Day 6：Nsight Profiling 实战</a>
+<a class="nav-link day-link" href="../week1/day7.html">Day 7：总结与复盘</a>
     </div>
   </div>
 </div>
@@ -186,9 +186,11 @@
 
 | 项目 | 说明 |
 |------|------|
-| 前置要求 | 已安装 CUDA Toolkit 11.8+ / 12.x，Nsight Compute / Systems |
-| 建议时长 | 每日 3~5 小时 |
-| 本周产出 | 7 个 CUDA kernel、3+ Nsight Compute 报告、GPU 架构与性能笔记 |
+| **整体目标** | 从硬件视角理解 GPU 执行模型（SM / Warp / SIMT），掌握 Occupancy 与资源约束的定量关系，深入 Memory Hierarchy 与 Bank Conflict，用 Nsight Compute / Systems 完成 kernel 级与应用级 Profiling，建立"性能 = Memory + 并行度"的直觉 |
+| **核心产出** | ① 7 个可编译 CUDA kernel（hello_gpu / occupancy 演示 / 矩阵转置 naive+tiled / bank conflict 对比 / profiling 标的）② 3+ Nsight Compute 报告（含 Roofline 与瓶颈定位）③ GPU 架构与内存层次笔记 ④ 手算 Occupancy 与 deviceQuery 解读记录 |
+| **验收标准** | ① 能画出 SM / Warp / Grid-Block-Thread 层次图并解释 SIMT ② 能用 \`cudaFuncGetAttributes\` 读取寄存器用量并手算 Occupancy，与 Occupancy Calculator 一致 ③ naive 矩阵转置存在 stride access，tiled 版带宽提升 2x+ ④ Nsight Compute 中能读取 bank conflict 指标，padding 后冲突消失 ⑤ 能用 Roofline 判断 kernel 属于 memory-bound 还是 compute-bound |
+| **时间投入** | 工作日每天 2.5h（早间 1.5h + 晚间 1h），周末每天 6h，周计 24.5h |
+| **前置要求** | 已安装 CUDA Toolkit 11.8+ / 12.x，Nsight Compute (\`ncu\`) / Nsight Systems (\`nsys\`) |
 
 ---
 
@@ -211,8 +213,6 @@ Day 6: Nsight Profiling 实战（Compute + Systems）
         ↓
 Day 7: 总结与复盘
 \`\`\`
-
----
 
 ---
 
@@ -240,31 +240,31 @@ Day 7: 总结与复盘
 ## 🚀 进入每日学习
 
 <div class="day-cards">
-<a class="day-card" href="../day1.html">
+<a class="day-card" href="day1.html">
   <div class="day-card-number">Day 1</div>
   <div class="day-card-title">GPU 执行模型基础</div>
 </a>
-<a class="day-card" href="../day2.html">
+<a class="day-card" href="day2.html">
   <div class="day-card-number">Day 2</div>
   <div class="day-card-title">Occupancy 与资源约束</div>
 </a>
-<a class="day-card" href="../day3.html">
+<a class="day-card" href="day3.html">
   <div class="day-card-number">Day 3</div>
   <div class="day-card-title">认识你的 GPU —— deviceQuery 与 Occupancy 计算</div>
 </a>
-<a class="day-card" href="../day4.html">
+<a class="day-card" href="day4.html">
   <div class="day-card-number">Day 4</div>
   <div class="day-card-title">Memory Hierarchy 深入</div>
 </a>
-<a class="day-card" href="../day5.html">
+<a class="day-card" href="day5.html">
   <div class="day-card-number">Day 5</div>
   <div class="day-card-title">Bank Conflict 分析与实践</div>
 </a>
-<a class="day-card" href="../day6.html">
+<a class="day-card" href="day6.html">
   <div class="day-card-number">Day 6</div>
   <div class="day-card-title">Nsight Profiling 实战</div>
 </a>
-<a class="day-card" href="../day7.html">
+<a class="day-card" href="day7.html">
   <div class="day-card-number">Day 7</div>
   <div class="day-card-title">总结与复盘</div>
 </a>

@@ -132,6 +132,24 @@ def rewrite_md_links_to_html(markdown_text: str, root_prefix: str = "") -> str:
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
 
 
+def rewrite_week1_resource_links(markdown_text: str, root_prefix: str = "") -> str:
+    """Rewrite relative resource links so they resolve from pages under week1/.
+
+    Images are kept at the site root, so image paths are prefixed with root_prefix.
+    Tools/notes referenced from day pages via ../tools/ or ../notes/ are rewritten
+    to be relative to week1/.  Profile summary references to dayN/notes/ are
+    flattened to week1/notes/.
+    """
+    # Images: keep them at the site root images/ directory.
+    text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", f"]({root_prefix}images/", markdown_text)
+    # Tools and notes referenced from dayN README via ../tools/ or ../notes/.
+    text = text.replace("](../tools/", "](tools/")
+    text = text.replace("](../notes/", "](notes/")
+    # Profile summary references dayN notes; flatten to week1/notes/.
+    text = re.sub(r"\]\(\.\./day\d+/notes/", "](notes/", text)
+    return text
+
+
 def load_overview_and_days():
     """Load overview from week1/README.md and per-day markdown from week1/dayN/README.md.
 
@@ -220,7 +238,7 @@ def build_nav(
         {
             "num": 1,
             "href": f"{root_prefix}week1/index.html",
-            "day_prefix": root_prefix,
+            "day_prefix": f"{root_prefix}week1/",
             "days": get_day_info(WEEK1_DIR),
         },
         {
@@ -509,8 +527,14 @@ def build_plan_page(output_dir: Path, weeks: list) -> None:
     print(f"Generated: {output_dir / 'plan.html'}")
 
 
-def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = None) -> None:
+def build_extra_pages(
+    base_dir: Path,
+    output_dir: Path,
+    weeks: Optional[list] = None,
+    site_root_dir: Optional[Path] = None,
+) -> None:
     """Build standalone HTML pages from extra markdown documents."""
+    site_root_dir = site_root_dir or output_dir
     for page in EXTRA_MARKDOWN_PAGES:
         source_path = (base_dir / page["source"]).resolve()
         output_path = output_dir / page["output"]
@@ -519,7 +543,7 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
             continue
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        root_prefix = compute_root_prefix(output_path, output_dir)
+        root_prefix = compute_root_prefix(output_path, site_root_dir)
         page_nav_html = build_nav(
             current_day=None,
             current_page="week1",
@@ -527,10 +551,10 @@ def build_extra_pages(base_dir: Path, output_dir: Path, weeks: Optional[list] = 
             weeks=weeks,
         )
         markdown_text = source_path.read_text(encoding="utf-8")
-        # Rewrite image paths (both "website/images/" and "../website/images/")
-        markdown_text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", markdown_text)
         # Rewrite .md links to .html so they work on GitHub Pages.
         markdown_text = rewrite_md_links_to_html(markdown_text, root_prefix=root_prefix)
+        # Images are kept at the site root; resource links resolve from week1/.
+        markdown_text = rewrite_week1_resource_links(markdown_text, root_prefix=root_prefix)
 
         html = page_template(
             title=page["title"],
@@ -558,6 +582,22 @@ def build_day_cards_html(days: list, root_prefix: str = "") -> str:
 
 
 def build_website(output_dir: Path) -> None:
+    # Remove stale generated files/directories from previous builds so that
+    # Week 1 content (day pages, kernels, exercise, notes, profiles, tools)
+    # is only present under the week1/ subdirectory.
+    stale_names = (
+        [f"day{i}.html" for i in range(1, 8)]
+        + ["week1", "kernels", "exercise", "notes", "profiles", "tools"]
+    )
+    for name in stale_names:
+        path = output_dir / name
+        if not path.exists():
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
     week1_overview, days = load_overview_and_days()
 
     # Rewrite .md links to .html for GitHub Pages deployment.
@@ -590,12 +630,10 @@ def build_website(output_dir: Path) -> None:
     # ------------------------------------------------------------------
     week1_root_prefix = "../"
     week1_overview_html_src = rewrite_md_links_to_html(week1_overview, root_prefix=week1_root_prefix)
-    # Image paths in the Week 1 overview point to images/ relative to the site root,
-    # so rewrite them for the week1/ subdirectory.
-    week1_overview_html_src = re.sub(r"\]\(images/", "](../images/", week1_overview_html_src)
+    week1_overview_html_src = rewrite_week1_resource_links(week1_overview_html_src, root_prefix=week1_root_prefix)
     week1_overview_with_cards = (
         week1_overview_html_src + '\n\n## 🚀 进入每日学习\n\n' +
-        build_day_cards_html(days, root_prefix=week1_root_prefix)
+        build_day_cards_html(days, root_prefix="")
     )
 
     week1_output_dir = output_dir / "week1"
@@ -616,31 +654,40 @@ def build_website(output_dir: Path) -> None:
     print(f"Generated: {week1_output_dir / 'index.html'}")
 
     # ------------------------------------------------------------------
-    # 3. Week 1 day pages (kept at the site root for URL compatibility).
+    # 3. Week 1 day pages (deployed under week1/).
     # ------------------------------------------------------------------
     for day in days:
+        day["markdown"] = rewrite_md_links_to_html(day["markdown"], root_prefix=week1_root_prefix)
+        day["markdown"] = rewrite_week1_resource_links(day["markdown"], root_prefix=week1_root_prefix)
+
         has_calc = OCCUPANCY_CALCULATOR_MARKER in day["markdown"]
         extra_scripts = (
-            '<script src="js/occupancy-calculator.js"></script>'
+            '<script src="../js/occupancy-calculator.js"></script>'
             if has_calc else ""
         )
         html = page_template(
             title=f"Day {day['num']}：{day['title']}",
-            nav_html=build_nav(current_day=day["num"], current_page="week1", weeks=plan_weeks),
+            nav_html=build_nav(
+                current_day=day["num"],
+                current_page="week1",
+                root_prefix=week1_root_prefix,
+                weeks=plan_weeks,
+            ),
             markdown=day["markdown"],
             is_overview=False,
+            root_prefix=week1_root_prefix,
             extra_scripts=extra_scripts,
         )
         filename = f"day{day['num']}.html"
-        (output_dir / filename).write_text(html, encoding="utf-8")
-        print(f"Generated: {output_dir / filename}")
+        (week1_output_dir / filename).write_text(html, encoding="utf-8")
+        print(f"Generated: {week1_output_dir / filename}")
 
     # Build the full 8-week plan overview page.
     build_plan_page(output_dir, plan_weeks)
 
     # Build extra markdown pages and copy source directories for GitHub Pages links.
-    copy_extra_directories(output_dir.parent, output_dir)
-    build_extra_pages(output_dir.parent, output_dir, plan_weeks)
+    copy_extra_directories(output_dir.parent, week1_output_dir)
+    build_extra_pages(output_dir.parent, week1_output_dir, plan_weeks, site_root_dir=output_dir)
 
 
 if __name__ == "__main__":

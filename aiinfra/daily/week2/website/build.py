@@ -154,7 +154,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         {
             "num": 1,
             "href": "../week1/index.html",
-            "day_prefix": "../",
+            "day_prefix": "../week1/",
             "days": get_day_info(repo_root / "week1"),
         },
         {
