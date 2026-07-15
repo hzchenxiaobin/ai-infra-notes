@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="360" fill="#fdfcf7"/>
+
+  <text x="410" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CuTe 核心抽象：Layout 与 Tensor 的关系</text>
+  <path d="M 250 40 Q 410 48 570 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Layout box -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="300" height="170" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="190" y="96" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b6e9e">Layout</text>
+  <text x="190" y="114" text-anchor="middle" font-size="10" fill="#555">描述数据布局，不绑定数据</text>
+
+  <g filter="url(#sk)"><rect x="60" y="128" width="120" height="36" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="120" y="150" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Shape</text>
+  <text x="120" y="164" text-anchor="middle" font-size="9" fill="#888">(M, N) 每维元素数</text>
+
+  <g filter="url(#sk)"><rect x="200" y="128" width="120" height="36" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="260" y="150" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Stride</text>
+  <text x="260" y="164" text-anchor="middle" font-size="9" fill="#888">(sM, sN) 每维步长</text>
+
+  <g filter="url(#sk)"><rect x="80" y="178" width="220" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="190" y="196" text-anchor="middle" font-size="10" fill="#2e6e2e" font-family="monospace">offset = coord · stride</text>
+  <text x="190" y="212" text-anchor="middle" font-size="9" fill="#888">Coord (i,j) → 物理偏移</text>
+
+  <!-- Plus sign -->
+  <text x="390" y="160" text-anchor="middle" font-size="24" fill="#888" font-weight="bold">+</text>
+
+  <!-- Data pointer box -->
+  <g filter="url(#sk)">
+    <rect x="420" y="110" width="180" height="100" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="510" y="136" text-anchor="middle" font-size="15" font-weight="bold" fill="#7a5415">Data Pointer</text>
+  <text x="510" y="156" text-anchor="middle" font-size="10" fill="#555">float* / half_t* / ...</text>
+  <text x="510" y="174" text-anchor="middle" font-size="9" fill="#888">gmem / smem / reg</text>
+  <text x="510" y="192" text-anchor="middle" font-size="9" fill="#888">make_gmem_ptr / make_smem_ptr</text>
+
+  <!-- Equals sign -->
+  <text x="640" y="160" text-anchor="middle" font-size="24" fill="#888" font-weight="bold">=</text>
+
+  <!-- Tensor box -->
+  <g filter="url(#sk)">
+    <rect x="670" y="70" width="130" height="170" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="735" y="96" text-anchor="middle" font-size="15" font-weight="bold" fill="#b85450">Tensor</text>
+  <text x="735" y="114" text-anchor="middle" font-size="10" fill="#555">数据 + 布局</text>
+
+  <g filter="url(#sk)"><rect x="685" y="128" width="100" height="36" rx="6" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="735" y="150" text-anchor="middle" font-size="10" fill="#b85450" font-family="monospace">tensor(i, j)</text>
+  <text x="735" y="164" text-anchor="middle" font-size="9" fill="#888">声明式访问</text>
+
+  <g filter="url(#sk)"><rect x="685" y="178" width="100" height="44" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="735" y="196" text-anchor="middle" font-size="9" fill="#2e6e2e">切片/分块</text>
+  <text x="735" y="212" text-anchor="middle" font-size="9" fill="#2e6e2e">零拷贝</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="270" width="740" height="70" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="294" font-size="12" font-weight="bold" fill="#444">解耦的核心价值：</text>
+  <text x="60" y="314" font-size="11" fill="#2b6e9e">Layout 变了 → Tensor 访问代码不变（只换 Layout 定义）</text>
+  <text x="60" y="332" font-size="11" fill="#7a5415">数据指针变了 → Layout 不变（同一布局用于不同数据）</text>
+</svg>

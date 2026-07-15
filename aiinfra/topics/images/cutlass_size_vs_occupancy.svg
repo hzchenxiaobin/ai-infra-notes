@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="116" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="880" height="380" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">小尺寸 vs 大尺寸 GEMM 的 SM 利用率</text>
+  <path d="M 260 40 Q 440 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Bar chart -->
+  <!-- Y-axis -->
+  <line x1="80" y1="60" x2="80" y2="290" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="40" y="180" font-size="10" fill="#888" transform="rotate(-90,40,180)">TFLOPS</text>
+
+  <!-- X-axis -->
+  <line x1="80" y1="290" x2="840" y2="290" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+
+  <!-- H100 peak line -->
+  <line x1="80" y1="80" x2="840" y2="80" stroke="#b85450" stroke-width="1.5" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="830" y="76" text-anchor="end" font-size="9" fill="#b85450" font-weight="bold">H100 FP16 Peak: 989 TFLOPS</text>
+
+  <!-- cuBLAS line -->
+  <line x1="80" y1="100" x2="840" y2="100" stroke="#888" stroke-width="1" stroke-dasharray="4 2" filter="url(#sk)"/>
+  <text x="830" y="96" text-anchor="end" font-size="8" fill="#888">cuBLAS ~119 TFLOPS</text>
+
+  <!-- Bars: each = (label, tflops, sm_util, color) -->
+  <!-- 512 -->
+  <g filter="url(#sk)"><rect x="100" y="272" width="80" height="18" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="140" y="268" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">14</text>
+  <text x="140" y="306" text-anchor="middle" font-size="9" fill="#555">512×512</text>
+  <text x="140" y="320" text-anchor="middle" font-size="8" fill="#888">16 tile / 132 SM</text>
+  <text x="140" y="332" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">12% SM</text>
+
+  <!-- 1024 -->
+  <g filter="url(#sk)"><rect x="230" y="248" width="80" height="42" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="270" y="244" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">26</text>
+  <text x="270" y="306" text-anchor="middle" font-size="9" fill="#555">1024×1024</text>
+  <text x="270" y="320" text-anchor="middle" font-size="8" fill="#888">64 tile / 132 SM</text>
+  <text x="270" y="332" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">48% SM</text>
+
+  <!-- 2048 -->
+  <g filter="url(#sk)"><rect x="360" y="206" width="80" height="84" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="400" y="202" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">49</text>
+  <text x="400" y="306" text-anchor="middle" font-size="9" fill="#555">2048×2048</text>
+  <text x="400" y="320" text-anchor="middle" font-size="8" fill="#888">256 tile / 132 SM</text>
+  <text x="400" y="332" text-anchor="middle" font-size="8" fill="#2b6e9e" font-weight="bold">100% (1轮)</text>
+
+  <!-- 4096 -->
+  <g filter="url(#sk)"><rect x="490" y="124" width="80" height="166" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="530" y="120" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">112</text>
+  <text x="530" y="306" text-anchor="middle" font-size="9" fill="#555">4096×4096</text>
+  <text x="530" y="320" text-anchor="middle" font-size="8" fill="#888">1024 tile / 132 SM</text>
+  <text x="530" y="332" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">100% (8轮)</text>
+
+  <!-- 8192 -->
+  <g filter="url(#sk)"><rect x="620" y="118" width="80" height="172" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="660" y="114" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">114</text>
+  <text x="660" y="306" text-anchor="middle" font-size="9" fill="#555">8192×8192</text>
+  <text x="660" y="320" text-anchor="middle" font-size="8" fill="#888">4096 tile / 132 SM</text>
+  <text x="660" y="332" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">100% (31轮)</text>
+
+  <!-- Growth arrow -->
+  <path d="M 140 272 Q 400 200 660 118" stroke="#888" stroke-width="1.2" fill="none" stroke-dasharray="4 3" filter="url(#sk)"/>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="80" y="348" width="760" height="24" rx="4" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 2"/>
+  </g>
+  <text x="440" y="364" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">★ 512×512 只有 16 个 tile，88% SM 空闲 → 增大尺寸到 4096+ 后 SM 持续满载，性能提升 8x</text>
+</svg>

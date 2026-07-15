@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="102" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="360" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Epilogue 在 GEMM 数据流中的位置</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Mainloop -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="380" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="230" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Mainloop（MMA 计算）</text>
+  <text x="230" y="106" text-anchor="middle" font-size="10" fill="#555">Global → Shared → Register</text>
+  <text x="230" y="124" text-anchor="middle" font-size="10" fill="#555" font-family="monospace">acc += A × B</text>
+  <text x="230" y="142" text-anchor="middle" font-size="9" fill="#888">数据在 Register 中（frag_C）</text>
+  <text x="230" y="162" text-anchor="middle" font-size="9" fill="#888">K 维度迭代累加</text>
+
+  <!-- Arrow -->
+  <path d="M 420 122 L 460 122" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="440" y="116" text-anchor="middle" font-size="8" fill="#888">acc</text>
+
+  <!-- Epilogue (highlighted) -->
+  <g filter="url(#sk)">
+    <rect x="460" y="62" width="380" height="120" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2.5"/>
+  </g>
+  <text x="650" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">Epilogue（后处理融合）</text>
+  <text x="650" y="106" text-anchor="middle" font-size="10" fill="#555">Register → Register → Global</text>
+  <text x="650" y="124" text-anchor="middle" font-size="10" fill="#555" font-family="monospace">D = post_process(alpha*acc + beta*C)</text>
+  <text x="650" y="142" text-anchor="middle" font-size="9" fill="#888">在 Register 中做 Bias/ReLU/GELU</text>
+  <text x="650" y="162" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">★ 零额外 Global Memory 读写</text>
+
+  <!-- Output -->
+  <path d="M 650 182 L 650 202" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="500" y="202" width="300" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="650" y="222" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Global Memory (输出 D)</text>
+  <text x="650" y="238" text-anchor="middle" font-size="9" fill="#888">唯一一次 Global 写</text>
+
+  <!-- Detail box -->
+  <g filter="url(#sk)">
+    <rect x="40" y="202" width="380" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="60" y="222" font-size="10" fill="#7a5415" font-weight="bold">Epilogue 内部步骤：</text>
+  <text x="60" y="238" font-size="9" fill="#555" font-family="monospace">① 缩放 ② +beta*C ③ +bias ④ 激活 ⑤ 写回</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="266" width="800" height="80" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="290" font-size="11" font-weight="bold" fill="#444">核心洞察：</text>
+  <text x="60" y="310" font-size="11" fill="#b85450">MMA 结果在 Register 中 → Epilogue 直接在 Register 做后处理 → 只写回一次 Global Memory</text>
+  <text x="60" y="328" font-size="11" fill="#7a5415">这就是融合的本质：后处理"搭便车"在 GEMM kernel 内完成，不产生额外的 Global Memory 往返</text>
+  <text x="60" y="344" font-size="10" fill="#888">对比未融合：每个后处理 kernel 都要读写 Global Memory → 3 次往返 vs 1 次</text>
+</svg>

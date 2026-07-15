@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="104" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">常见 Epilogue 融合模式</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Pattern 1: Pure GEMM -->
+  <g filter="url(#sk)"><rect x="30" y="62" width="200" height="90" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="130" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">纯 GEMM</text>
+  <text x="130" y="100" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = A×B</text>
+  <text x="130" y="118" text-anchor="middle" font-size="8" fill="#888">标准矩阵乘法</text>
+  <text x="130" y="138" text-anchor="middle" font-size="8" fill="#888">alpha=1, beta=0</text>
+
+  <!-- Pattern 2: GEMM+Bias -->
+  <g filter="url(#sk)"><rect x="250" y="62" width="200" height="90" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="350" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">GEMM+Bias</text>
+  <text x="350" y="100" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = A×B + bias</text>
+  <text x="350" y="118" text-anchor="middle" font-size="8" fill="#888">Transformer FFN</text>
+  <text x="350" y="138" text-anchor="middle" font-size="8" fill="#888">Add(LinComb, bias)</text>
+
+  <!-- Pattern 3: GEMM+Bias+ReLU -->
+  <g filter="url(#sk)"><rect x="470" y="62" width="200" height="90" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="570" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">GEMM+Bias+ReLU</text>
+  <text x="570" y="100" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = ReLU(A×B+bias)</text>
+  <text x="570" y="118" text-anchor="middle" font-size="8" fill="#888">CNN 卷积层</text>
+  <text x="570" y="138" text-anchor="middle" font-size="8" fill="#888">ReLU(Add(LinComb,bias))</text>
+
+  <!-- Pattern 4: GEMM+Bias+GELU -->
+  <g filter="url(#sk)"><rect x="690" y="62" width="200" height="90" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="790" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">GEMM+Bias+GELU</text>
+  <text x="790" y="100" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = GELU(A×B+bias)</text>
+  <text x="790" y="118" text-anchor="middle" font-size="8" fill="#888">Transformer Attention</text>
+  <text x="790" y="138" text-anchor="middle" font-size="8" fill="#888">GELU(Add(LinComb,bias))</text>
+
+  <!-- Pattern 5: GEMM+残差 -->
+  <g filter="url(#sk)"><rect x="30" y="172" width="200" height="90" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="130" y="192" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">GEMM+残差</text>
+  <text x="130" y="210" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = A×B + C</text>
+  <text x="130" y="228" text-anchor="middle" font-size="8" fill="#888">ResNet 残差连接</text>
+  <text x="130" y="248" text-anchor="middle" font-size="8" fill="#888">alpha=1, beta=1</text>
+
+  <!-- Pattern 6: Scale+Quantize -->
+  <g filter="url(#sk)"><rect x="250" y="172" width="200" height="90" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="350" y="192" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">GEMM+Scale+ReLU</text>
+  <text x="350" y="210" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = ReLU(s×A×B)</text>
+  <text x="350" y="228" text-anchor="middle" font-size="8" fill="#888">量化前缩放</text>
+  <text x="350" y="248" text-anchor="middle" font-size="8" fill="#888">ReLU(Scale(LinComb))</text>
+
+  <!-- Pattern 7: Multi-output -->
+  <g filter="url(#sk)"><rect x="470" y="172" width="200" height="90" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="570" y="192" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">多输出融合</text>
+  <text x="570" y="210" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D1=A×B, D2=GELU(D1)</text>
+  <text x="570" y="228" text-anchor="middle" font-size="8" fill="#888">同时输出 acc 和激活</text>
+  <text x="570" y="248" text-anchor="middle" font-size="8" fill="#888">AuxStore + 主输出</text>
+
+  <!-- Pattern 8: FP8 quantize -->
+  <g filter="url(#sk)"><rect x="690" y="172" width="200" height="90" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="790" y="192" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">GEMM+量化</text>
+  <text x="790" y="210" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">D = quant(A×B+bias)</text>
+  <text x="790" y="228" text-anchor="middle" font-size="8" fill="#888">INT8/FP8 量化输出</text>
+  <text x="790" y="248" text-anchor="middle" font-size="8" fill="#888">Quantize(Add(LinComb,bias))</text>
+
+  <!-- Bottom summary -->
+  <g filter="url(#sk)">
+    <rect x="30" y="286" width="860" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="310" font-size="12" font-weight="bold" fill="#444">性能对比（4096×4096 FP16, H100）：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="332" fill="#4a8edb">纯 GEMM:</text>
+    <text x="130" y="332">1.23 ms / 112 TFLOPS</text>
+
+    <text x="50" y="350" fill="#7a5415">GEMM+Bias:</text>
+    <text x="130" y="350">1.25 ms / 110 TFLOPS（+2%）</text>
+
+    <text x="50" y="368" fill="#b85450">GEMM+Bias+ReLU:</text>
+    <text x="170" y="368">1.28 ms / 108 TFLOPS（+4%）</text>
+
+    <text x="400" y="332" fill="#888">未融合 GEMM+Bias+ReLU:</text>
+    <text x="560" y="332">~1.80 ms / 76 TFLOPS</text>
+
+    <text x="400" y="350" fill="#2e6e2e" font-weight="bold">★ 融合加速比:</text>
+    <text x="540" y="350" fill="#2e6e2e" font-weight="bold">~1.4x（vs 未融合）</text>
+
+    <text x="400" y="368" fill="#888">Epilogue 开销:</text>
+    <text x="510" y="368">Bias+ReLU 在 Register 中仅 ~2 cycles</text>
+  </g>
+
+  <text x="50" y="396" font-size="10" fill="#7a5415" font-weight="bold">★ 结论：融合 Epilogue 几乎免费（&lt;5% 开销），但相比未融合省掉大量 Global Memory 往返</text>
+</svg>

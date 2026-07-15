@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="112" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">NCU 关键指标解读</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Table header -->
+  <g filter="url(#sk)"><rect x="20" y="56" width="860" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="80" y="76" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">指标</text>
+  <text x="250" y="76" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">含义</text>
+  <text x="420" y="76" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">目标值</text>
+  <text x="540" y="76" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">GEMM 典型</text>
+  <text x="720" y="76" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">瓶颈信号</text>
+
+  <!-- Row 1: SM Throughput -->
+  <g filter="url(#sk)"><rect x="20" y="86" width="860" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="104" text-anchor="middle" font-size="8" fill="#2b6e9e" font-weight="bold" font-family="monospace">sm__throughput</text>
+  <text x="80" y="116" text-anchor="middle" font-size="7" fill="#888">.pct_of_peak</text>
+  <text x="250" y="106" text-anchor="middle" font-size="9" fill="#444">SM 吞吐占比</text>
+  <text x="250" y="120" text-anchor="middle" font-size="7" fill="#888">整体计算效率</text>
+  <text x="420" y="110" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">&gt; 80%</text>
+  <text x="540" y="110" text-anchor="middle" font-size="11" fill="#444">87%</text>
+  <text x="720" y="106" text-anchor="middle" font-size="8" fill="#b85450">&lt; 70% → 计算效率低</text>
+
+  <!-- Row 2: Tensor Core -->
+  <g filter="url(#sk)"><rect x="20" y="130" width="860" height="44" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="148" text-anchor="middle" font-size="7" fill="#2e6e2e" font-weight="bold" font-family="monospace">inst_pipe_tensor</text>
+  <text x="80" y="160" text-anchor="middle" font-size="7" fill="#888">.pct_of_peak</text>
+  <text x="250" y="150" text-anchor="middle" font-size="9" fill="#444">Tensor Core 利用率</text>
+  <text x="250" y="164" text-anchor="middle" font-size="7" fill="#888">MMA 指令执行占比</text>
+  <text x="420" y="154" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">&gt; 70%</text>
+  <text x="540" y="154" text-anchor="middle" font-size="11" fill="#444">72%</text>
+  <text x="720" y="150" text-anchor="middle" font-size="8" fill="#b85450">&lt; 50% → TC 未充分利用</text>
+
+  <!-- Row 3: DRAM -->
+  <g filter="url(#sk)"><rect x="20" y="174" width="860" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="192" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold" font-family="monospace">dram__throughput</text>
+  <text x="80" y="204" text-anchor="middle" font-size="7" fill="#888">.pct_of_peak</text>
+  <text x="250" y="194" text-anchor="middle" font-size="9" fill="#444">DRAM 带宽占比</text>
+  <text x="250" y="208" text-anchor="middle" font-size="7" fill="#888">内存带宽利用率</text>
+  <text x="420" y="198" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">&lt; 50%</text>
+  <text x="540" y="198" text-anchor="middle" font-size="11" fill="#444">23%</text>
+  <text x="720" y="194" text-anchor="middle" font-size="8" fill="#b85450">&gt; 70% → memory-bound</text>
+
+  <!-- Row 4: Registers -->
+  <g filter="url(#sk)"><rect x="20" y="218" width="860" height="44" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="236" text-anchor="middle" font-size="7" fill="#b85450" font-weight="bold" font-family="monospace">occupancy_limit</text>
+  <text x="80" y="248" text-anchor="middle" font-size="7" fill="#888">_registers.pct</text>
+  <text x="250" y="238" text-anchor="middle" font-size="9" fill="#444">寄存器占用率</text>
+  <text x="250" y="252" text-anchor="middle" font-size="7" fill="#888">影响 SM 并行度</text>
+  <text x="420" y="242" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">&lt; 80%</text>
+  <text x="540" y="242" text-anchor="middle" font-size="11" fill="#444">75%</text>
+  <text x="720" y="238" text-anchor="middle" font-size="8" fill="#b85450">&gt; 90% → 并行度受限</text>
+
+  <!-- Row 5: Global Load -->
+  <g filter="url(#sk)"><rect x="20" y="262" width="860" height="44" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="80" y="280" text-anchor="middle" font-size="7" fill="#5a3a7a" font-weight="bold" font-family="monospace">global_op_ld</text>
+  <text x="80" y="292" text-anchor="middle" font-size="7" fill="#888">.sum (bytes)</text>
+  <text x="250" y="282" text-anchor="middle" font-size="9" fill="#444">Global Load 字节</text>
+  <text x="250" y="296" text-anchor="middle" font-size="7" fill="#888">总加载量</text>
+  <text x="420" y="286" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">越低越好</text>
+  <text x="540" y="286" text-anchor="middle" font-size="11" fill="#444">128 MB</text>
+  <text x="720" y="282" text-anchor="middle" font-size="8" fill="#b85450">过高 → tile 太小</text>
+
+  <!-- Bottom: compute vs memory bound -->
+  <g filter="url(#sk)">
+    <rect x="20" y="320" width="860" height="66" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/>
+  </g>
+  <text x="40" y="342" font-size="11" font-weight="bold" fill="#b85450">判断 compute-bound vs memory-bound：</text>
+  <text x="40" y="360" font-size="10" fill="#2e6e2e">DRAM &lt; 50% + Tensor &gt; 70% → ✅ compute-bound（GEMM 理想状态）</text>
+  <text x="40" y="376" font-size="10" fill="#b85450">DRAM &gt; 70% → ⚠️ memory-bound（tile 太小或 K 太大，需增大 tile）</text>
+</svg>

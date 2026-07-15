@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="84" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="880" height="380" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">MMA 指令与数据类型映射</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Table header -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="820" height="32" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="90" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">数据类型</text>
+  <text x="290" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">MMA 指令</text>
+  <text x="500" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Shape</text>
+  <text x="630" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">累加类型</text>
+  <text x="770" y="80" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">吞吐(H100)</text>
+
+  <!-- FP16 row -->
+  <g filter="url(#sk)"><rect x="30" y="92" width="820" height="36" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="114" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">FP16</text>
+  <text x="290" y="114" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k16.f16.f16.f16.f16</text>
+  <text x="500" y="114" text-anchor="middle" font-size="11" fill="#444">16×8×16</text>
+  <text x="630" y="114" text-anchor="middle" font-size="11" fill="#444">FP16/FP32</text>
+  <text x="770" y="114" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">256 TFLOPS</text>
+
+  <!-- BF16 row -->
+  <g filter="url(#sk)"><rect x="30" y="128" width="820" height="36" fill="#eaf6ee" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="150" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">BF16</text>
+  <text x="290" y="150" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k16.bf16.bf16.f32.f32</text>
+  <text x="500" y="150" text-anchor="middle" font-size="11" fill="#444">16×8×16</text>
+  <text x="630" y="150" text-anchor="middle" font-size="11" fill="#444">FP32</text>
+  <text x="770" y="150" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">256 TFLOPS</text>
+
+  <!-- TF32 row -->
+  <g filter="url(#sk)"><rect x="30" y="164" width="820" height="36" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="186" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">TF32</text>
+  <text x="290" y="186" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k8.tf32.tf32.f32.f32</text>
+  <text x="500" y="186" text-anchor="middle" font-size="11" fill="#444">16×8×8</text>
+  <text x="630" y="186" text-anchor="middle" font-size="11" fill="#444">FP32</text>
+  <text x="770" y="186" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">128 TFLOPS</text>
+
+  <!-- INT8 row -->
+  <g filter="url(#sk)"><rect x="30" y="200" width="820" height="36" fill="#fef6e6" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="222" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">INT8</text>
+  <text x="290" y="222" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k32.s8.s8.s32.s32</text>
+  <text x="500" y="222" text-anchor="middle" font-size="11" fill="#444">16×8×32</text>
+  <text x="630" y="222" text-anchor="middle" font-size="11" fill="#444">INT32</text>
+  <text x="770" y="222" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">512 TOPS</text>
+
+  <!-- FP8 E4M3 row -->
+  <g filter="url(#sk)"><rect x="30" y="236" width="820" height="36" fill="#fce4ec" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="258" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">FP8 (E4M3)</text>
+  <text x="290" y="258" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k32.e4m3.e4m3.f32.f32</text>
+  <text x="500" y="258" text-anchor="middle" font-size="11" fill="#444">16×8×32</text>
+  <text x="630" y="258" text-anchor="middle" font-size="11" fill="#444">FP32</text>
+  <text x="770" y="258" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">1024 TOPS</text>
+
+  <!-- FP8 E5M2 row -->
+  <g filter="url(#sk)"><rect x="30" y="272" width="820" height="36" fill="#f3eaf7" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="90" y="294" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">FP8 (E5M2)</text>
+  <text x="290" y="294" text-anchor="middle" font-size="9" fill="#444" font-family="monospace">mma.m16n8k32.e5m2.e5m2.f32.f32</text>
+  <text x="500" y="294" text-anchor="middle" font-size="11" fill="#444">16×8×32</text>
+  <text x="630" y="294" text-anchor="middle" font-size="11" fill="#444">FP32</text>
+  <text x="770" y="294" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">1024 TOPS</text>
+
+  <!-- Key insight box -->
+  <g filter="url(#sk)">
+    <rect x="30" y="320" width="820" height="48" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="342" font-size="11" font-weight="bold" fill="#7a5415">关键洞察：</text>
+  <text x="50" y="360" font-size="10" fill="#444">K 维度越大，一条指令做的乘加越多 → INT8/FP8 的 K=32 是 FP16 的 K=16 的 2 倍 → 吞吐翻倍</text>
+  <text x="640" y="360" font-size="10" fill="#b85450" font-weight="bold">FP8 = FP16 的 4 倍吞吐!</text>
+</svg>

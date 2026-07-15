@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="440" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CollectiveBuilder 编译期 auto-tuning 决策流程</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Input parameters (left) -->
+  <g filter="url(#sk)">
+    <rect x="30" y="62" width="260" height="320" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="160" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">用户输入（7 个参数）</text>
+
+  <g font-size="10" fill="#444" font-family="monospace">
+    <text x="50" y="112" fill="#888">①</text>
+    <text x="70" y="112" fill="#5a3a7a" font-weight="bold">arch::Sm90</text>
+    <text x="70" y="126" fill="#888" font-size="9">→ 决定可用指令集</text>
+
+    <text x="50" y="148" fill="#888">②</text>
+    <text x="70" y="148" fill="#2e6e2e" font-weight="bold">OpClassTensorOp</text>
+    <text x="70" y="162" fill="#888" font-size="9">→ Tensor Core（非 SIMT）</text>
+
+    <text x="50" y="184" fill="#888">③</text>
+    <text x="70" y="184" fill="#4a8edb" font-weight="bold">RowMajor / ColMajor</text>
+    <text x="70" y="198" fill="#888" font-size="9">→ 影响 swizzle 策略</text>
+
+    <text x="50" y="220" fill="#888">④</text>
+    <text x="70" y="220" fill="#7a5415" font-weight="bold">half_t, half_t</text>
+    <text x="70" y="234" fill="#888" font-size="9">→ 选 MMA 指令变体</text>
+
+    <text x="50" y="256" fill="#888">⑤</text>
+    <text x="70" y="256" fill="#b85450" font-weight="bold">float（累加）</text>
+    <text x="70" y="270" fill="#888" font-size="9">→ FP32 累加寄存器</text>
+
+    <text x="50" y="292" fill="#888">⑥</text>
+    <text x="70" y="292" fill="#2b6e9e" font-weight="bold">RowMajor（C/D）</text>
+
+    <text x="50" y="316" fill="#888">⑦</text>
+    <text x="70" y="316" fill="#888" font-weight="bold">TileShape（可选）</text>
+    <text x="70" y="330" fill="#888" font-size="9">→ 不指定则自动搜索</text>
+
+    <text x="50" y="360" fill="#888" font-size="9">★ 全部编译期常量</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 290 222 L 340 222" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="315" y="214" text-anchor="middle" font-size="9" fill="#888">Builder</text>
+
+  <!-- Builder internal (center) -->
+  <g filter="url(#sk)">
+    <rect x="340" y="62" width="300" height="320" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2" stroke-dasharray="6 3"/>
+  </g>
+  <text x="490" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">编译期 auto-tuning</text>
+
+  <g font-size="10" fill="#444">
+    <text x="360" y="112" fill="#7a5415" font-weight="bold">遍历组合空间：</text>
+
+    <g filter="url(#sk)"><rect x="360" y="122" width="120" height="28" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <text x="420" y="140" text-anchor="middle" font-size="9" fill="#444">TileShape</text>
+    <text x="490" y="140" font-size="9" fill="#888">×</text>
+    <g filter="url(#sk)"><rect x="500" y="122" width="120" height="28" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <text x="560" y="140" text-anchor="middle" font-size="9" fill="#444">Stages</text>
+
+    <text x="490" y="166" text-anchor="middle" font-size="9" fill="#888">×</text>
+
+    <g filter="url(#sk)"><rect x="360" y="172" width="120" height="28" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <text x="420" y="190" text-anchor="middle" font-size="9" fill="#444">Swizzle</text>
+    <text x="490" y="190" font-size="9" fill="#888">×</text>
+    <g filter="url(#sk)"><rect x="500" y="172" width="120" height="28" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <text x="560" y="190" text-anchor="middle" font-size="9" fill="#444">MMA 指令</text>
+
+    <text x="360" y="222" fill="#b85450" font-weight="bold">决策规则：</text>
+    <text x="360" y="240" fill="#444" font-size="9">Sm90 → 选 TMA + WGMMA</text>
+    <text x="360" y="256" fill="#444" font-size="9">FP16 → mma.m16n8k16.f16</text>
+    <text x="360" y="272" fill="#444" font-size="9">布局 → 自动 swizzle</text>
+    <text x="360" y="288" fill="#444" font-size="9">tile → 平衡 SM/smem</text>
+
+    <text x="360" y="320" fill="#2e6e2e" font-weight="bold">输出：最优 CollectiveMainloop</text>
+    <text x="360" y="336" fill="#888" font-size="9">类型已完全确定</text>
+    <text x="360" y="352" fill="#888" font-size="9">零运行时开销</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 640 222 L 690 222" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Output (right) -->
+  <g filter="url(#sk)">
+    <rect x="690" y="62" width="180" height="320" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="780" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">输出</text>
+
+  <g font-size="10" fill="#444">
+    <text x="710" y="112" fill="#2e6e2e" font-weight="bold">最优配置：</text>
+
+    <text x="710" y="138" fill="#5a3a7a" font-size="9">TileShape:</text>
+    <text x="710" y="152" fill="#444" font-size="9" font-family="monospace">  (128,256,64)</text>
+
+    <text x="710" y="176" fill="#7a5415" font-size="9">Stages:</text>
+    <text x="710" y="190" fill="#444" font-size="9" font-family="monospace">  3（三阶段流水线）</text>
+
+    <text x="710" y="214" fill="#b85450" font-size="9">MMA:</text>
+    <text x="710" y="228" fill="#444" font-size="9" font-family="monospace">  WGMMA.m64n256k16</text>
+
+    <text x="710" y="252" fill="#4a8edb" font-size="9">数据搬运:</text>
+    <text x="710" y="266" fill="#444" font-size="9" font-family="monospace">  TMA + swizzle</text>
+
+    <text x="710" y="296" fill="#2e6e2e" font-size="9" font-weight="bold">= 最优 kernel 配置</text>
+    <text x="710" y="312" fill="#888" font-size="9">编译期完全确定</text>
+    <text x="710" y="328" fill="#888" font-size="9">编译器完全内联</text>
+    <text x="710" y="356" fill="#2e6e2e" font-size="9" font-weight="bold">→ cuBLAS 90%+ 性能</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="398" width="840" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 2"/>
+  </g>
+  <text x="450" y="418" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">★ 编译期 auto-tuning：遍历参数空间 → 选最优配置 → 编译器完全内联，运行时零开销</text>
+</svg>

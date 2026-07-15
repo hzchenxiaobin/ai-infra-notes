@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="420" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUTLASS 3.x GEMM 三步组装</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Device API (top) -->
+  <g filter="url(#sk)">
+    <rect x="60" y="60" width="760" height="60" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="440" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#5a3a7a">Device API（GemmUniversal）</text>
+  <text x="440" y="102" text-anchor="middle" font-size="10" fill="#555">参数配置 + workspace 分配 + kernel launch</text>
+  <text x="440" y="116" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">gemm::device::GemmUniversal&lt;GemmKernel&gt;</text>
+
+  <!-- Three components -->
+  <!-- Mainloop -->
+  <g filter="url(#sk)">
+    <rect x="60" y="140" width="240" height="200" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="180" y="164" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">CollectiveMainloop</text>
+  <text x="180" y="182" text-anchor="middle" font-size="10" fill="#555">MMA 计算核心</text>
+
+  <g font-size="9" fill="#444">
+    <text x="80" y="208" fill="#2b6e9e" font-weight="bold">① 加载 A/B tile</text>
+    <text x="90" y="222" fill="#888">Global → Shared</text>
+    <text x="90" y="234" fill="#888">copy(gA, sA) + TMA</text>
+
+    <text x="80" y="256" fill="#2e6e2e" font-weight="bold">② 加载 fragment</text>
+    <text x="90" y="270" fill="#888">Shared → Register</text>
+    <text x="90" y="282" fill="#888">ldmatrix 指令</text>
+
+    <text x="80" y="304" fill="#7a5415" font-weight="bold">③ MMA 计算</text>
+    <text x="90" y="318" fill="#888">Register → Register</text>
+    <text x="90" y="330" fill="#888">mma.m16n8k16 / WGMMA</text>
+  </g>
+
+  <!-- Epilogue -->
+  <g filter="url(#sk)">
+    <rect x="320" y="140" width="240" height="200" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="440" y="164" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">CollectiveEpilogue</text>
+  <text x="440" y="182" text-anchor="middle" font-size="10" fill="#555">后处理 + 写回</text>
+
+  <g font-size="9" fill="#444">
+    <text x="340" y="208" fill="#2e6e2e" font-weight="bold">④ 读累加结果</text>
+    <text x="350" y="222" fill="#888">Register → 处理</text>
+
+    <text x="340" y="248" fill="#4a8edb" font-weight="bold">⑤ 应用 alpha/beta</text>
+    <text x="350" y="262" fill="#888">D = alpha*acc + beta*C</text>
+
+    <text x="340" y="288" fill="#b85450" font-weight="bold">⑥ 写回 Global</text>
+    <text x="350" y="302" fill="#888">Register → Global</text>
+    <text x="350" y="314" fill="#888">stmatrix / TMA store</text>
+
+    <text x="340" y="334" fill="#7a5415" font-size="8">★ 可融合 Bias/ReLU（Day 5）</text>
+  </g>
+
+  <!-- GemmKernel assembly -->
+  <g filter="url(#sk)">
+    <rect x="580" y="140" width="240" height="200" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="700" y="164" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">GemmKernel</text>
+  <text x="700" y="182" text-anchor="middle" font-size="10" fill="#555">编译期组装</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="600" y="210" fill="#888">gemm::kernel::</text>
+    <text x="600" y="224" fill="#7a5415" font-weight="bold">  GemmUniversal&lt;</text>
+    <text x="600" y="238" fill="#5a3a7a">    ProblemShape,</text>
+    <text x="600" y="252" fill="#2b6e9e">    Mainloop,</text>
+    <text x="600" y="266" fill="#2e6e2e">    Epilogue</text>
+    <text x="600" y="280" fill="#7a5415" font-weight="bold">  &gt;</text>
+  </g>
+
+  <text x="700" y="310" text-anchor="middle" font-size="9" fill="#888">编译期 C++ 模板组装</text>
+  <text x="700" y="324" text-anchor="middle" font-size="9" fill="#888">零运行时开销</text>
+
+  <!-- Assembly arrows -->
+  <path d="M 300 240 L 320 240" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 560 240 L 580 240" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Top-down arrow -->
+  <path d="M 440 120 L 440 138" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Bottom analogy -->
+  <g filter="url(#sk)">
+    <rect x="60" y="360" width="760" height="48" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="382" font-size="11" font-weight="bold" fill="#b85450">类比：Device API = 工厂调度室（下发生产单）</text>
+  <text x="380" y="382" font-size="11" fill="#2b6e9e">Mainloop = 车间（取料+组装）</text>
+  <text x="580" y="382" font-size="11" fill="#2e6e2e">Epilogue = 质检包装（打标签+出库）</text>
+  <text x="80" y="400" font-size="10" fill="#888">三个组件通过 C++ 模板在编译期组装为一个完整的 GEMM kernel，运行时只需传 Arguments 参数</text>
+</svg>

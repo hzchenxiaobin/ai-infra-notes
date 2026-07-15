@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="400" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Shared Memory Swizzle 消除 Bank Conflict 原理</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Without Swizzle (conflict) -->
+  <text x="200" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">不用 Swizzle：Bank Conflict</text>
+
+  <text x="60" y="92" font-size="10" fill="#888">Warp 内 4 个线程同时读 smem：</text>
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="60" y="112" fill="#2b6e9e">T0 → smem[0]</text>
+    <text x="60" y="128" fill="#2e6e2e">T1 → smem[8]</text>
+    <text x="60" y="144" fill="#c98a2b">T2 → smem[16]</text>
+    <text x="60" y="160" fill="#b85450">T3 → smem[24]</text>
+  </g>
+
+  <text x="60" y="184" font-size="10" fill="#888">32 个 bank（每 bank 4 字节）：</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="60" y="192" width="30" height="20" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g><text x="75" y="206" text-anchor="middle">B0</text>
+    <g filter="url(#sk)"><rect x="90" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="105" y="206" text-anchor="middle">B1</text>
+    <g filter="url(#sk)"><rect x="120" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="135" y="206" text-anchor="middle">B2</text>
+    <g filter="url(#sk)"><rect x="150" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="165" y="206" text-anchor="middle">B3</text>
+    <g filter="url(#sk)"><rect x="180" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="195" y="206" text-anchor="middle">B4</text>
+    <g filter="url(#sk)"><rect x="210" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="225" y="206" text-anchor="middle">B5</text>
+    <g filter="url(#sk)"><rect x="240" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="255" y="206" text-anchor="middle">B6</text>
+    <g filter="url(#sk)"><rect x="270" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="285" y="206" text-anchor="middle">B7</text>
+  </g>
+
+  <g font-size="8" fill="#444" font-family="monospace">
+    <text x="75" y="230" text-anchor="middle" fill="#2b6e9e">T0</text>
+    <text x="75" y="244" text-anchor="middle" fill="#888">smem[0]</text>
+    <text x="105" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="135" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="165" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="195" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="225" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="255" y="230" text-anchor="middle" fill="#888">-</text>
+    <text x="285" y="230" text-anchor="middle" fill="#888">-</text>
+  </g>
+
+  <text x="200" y="270" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">4 线程都命中 Bank 0 → 4-way conflict!</text>
+  <text x="200" y="286" text-anchor="middle" font-size="9" fill="#888">（stride=8 × 4字节 = 32字节 = 正好绕回 Bank 0）</text>
+  <text x="200" y="306" text-anchor="middle" font-size="10" fill="#b85450">串行化执行，带宽降为 1/4</text>
+
+  <!-- Divider -->
+  <line x1="380" y1="60" x2="380" y2="330" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <!-- Right: With Swizzle (no conflict) -->
+  <text x="640" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">用 Swizzle：无 Conflict</text>
+
+  <text x="500" y="92" font-size="10" fill="#888">Swizzle 打乱地址映射：</text>
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="500" y="112" fill="#2b6e9e">T0 → smem[0]  → Bank 0</text>
+    <text x="500" y="128" fill="#2e6e2e">T1 → smem[9]  → Bank 1</text>
+    <text x="500" y="144" fill="#c98a2b">T2 → smem[18] → Bank 2</text>
+    <text x="500" y="160" fill="#b85450">T3 → smem[27] → Bank 3</text>
+  </g>
+
+  <text x="500" y="184" font-size="10" fill="#888">32 个 bank（每 bank 4 字节）：</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="500" y="192" width="30" height="20" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g><text x="515" y="206" text-anchor="middle">B0</text>
+    <g filter="url(#sk)"><rect x="530" y="192" width="30" height="20" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="545" y="206" text-anchor="middle">B1</text>
+    <g filter="url(#sk)"><rect x="560" y="192" width="30" height="20" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g><text x="575" y="206" text-anchor="middle">B2</text>
+    <g filter="url(#sk)"><rect x="590" y="192" width="30" height="20" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g><text x="605" y="206" text-anchor="middle">B3</text>
+    <g filter="url(#sk)"><rect x="620" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="635" y="206" text-anchor="middle">B4</text>
+    <g filter="url(#sk)"><rect x="650" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="665" y="206" text-anchor="middle">B5</text>
+    <g filter="url(#sk)"><rect x="680" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="695" y="206" text-anchor="middle">B6</text>
+    <g filter="url(#sk)"><rect x="710" y="192" width="30" height="20" rx="2" fill="#fff" stroke="#ddd" stroke-width="0.8"/></g><text x="725" y="206" text-anchor="middle">B7</text>
+  </g>
+
+  <g font-size="8" fill="#444" font-family="monospace">
+    <text x="515" y="230" text-anchor="middle" fill="#2b6e9e">T0</text>
+    <text x="515" y="244" text-anchor="middle" fill="#888">smem[0]</text>
+    <text x="545" y="230" text-anchor="middle" fill="#2e6e2e">T1</text>
+    <text x="545" y="244" text-anchor="middle" fill="#888">smem[9]</text>
+    <text x="575" y="230" text-anchor="middle" fill="#7a5415">T2</text>
+    <text x="575" y="244" text-anchor="middle" fill="#888">smem[18]</text>
+    <text x="605" y="230" text-anchor="middle" fill="#b85450">T3</text>
+    <text x="605" y="244" text-anchor="middle" fill="#888">smem[27]</text>
+  </g>
+
+  <text x="640" y="270" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">4 线程分散到 4 个 Bank → 无 conflict!</text>
+  <text x="640" y="286" text-anchor="middle" font-size="9" fill="#888">（Swizzle 通过 XOR 变换地址 bit 打散）</text>
+  <text x="640" y="306" text-anchor="middle" font-size="10" fill="#2e6e2e">并行执行，带宽 100% 利用</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="340" width="820" height="48" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="362" font-size="11" font-weight="bold" fill="#7a5415">CuTe 的做法：</text>
+  <text x="60" y="380" font-size="11" fill="#444">在 Layout 中声明 Swizzle&lt;M,N,S&gt; → copy() 写入 smem 时自动应用 → MMA 读取时自动反解，用户完全无感</text>
+</svg>

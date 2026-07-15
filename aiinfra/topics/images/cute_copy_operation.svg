@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CuTe copy 操作：自动处理 Layout 差异与向量化</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Global Memory -->
+  <g filter="url(#sk)">
+    <rect x="30" y="70" width="220" height="200" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="140" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Global Memory</text>
+  <text x="140" y="112" text-anchor="middle" font-size="10" fill="#555" font-family="monospace">make_gmem_ptr()</text>
+
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="50" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="62" y="138" text-anchor="middle">A00</text>
+    <g filter="url(#sk)"><rect x="75" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="87" y="138" text-anchor="middle">A01</text>
+    <g filter="url(#sk)"><rect x="100" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="112" y="138" text-anchor="middle">A02</text>
+    <g filter="url(#sk)"><rect x="125" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="137" y="138" text-anchor="middle">A03</text>
+    <text x="170" y="138" font-size="7" fill="#888">RowMajor</text>
+
+    <g filter="url(#sk)"><rect x="50" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="62" y="162" text-anchor="middle">A10</text>
+    <g filter="url(#sk)"><rect x="75" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="87" y="162" text-anchor="middle">A11</text>
+    <g filter="url(#sk)"><rect x="100" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="112" y="162" text-anchor="middle">A12</text>
+    <g filter="url(#sk)"><rect x="125" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8edb" stroke-width="0.8"/></g><text x="137" y="162" text-anchor="middle">A13</text>
+  </g>
+
+  <text x="140" y="200" text-anchor="middle" font-size="9" fill="#888">Layout: (4,4):(4,1)</text>
+  <text x="140" y="216" text-anchor="middle" font-size="9" fill="#888">行内连续</text>
+  <text x="140" y="248" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold" font-family="monospace">gA = make_tensor(</text>
+  <text x="140" y="262" text-anchor="middle" font-size="10" fill="#2b6e9e" font-family="monospace">  gmem_ptr, layout)</text>
+
+  <!-- copy() arrow -->
+  <path d="M 260 170 L 340 170" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="300" y="156" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">copy()</text>
+  <text x="300" y="186" text-anchor="middle" font-size="8" fill="#888">自动优化</text>
+
+  <!-- Optimization box -->
+  <g filter="url(#sk)">
+    <rect x="340" y="80" width="220" height="190" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2" stroke-dasharray="6 3"/>
+  </g>
+  <text x="450" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">copy 自动决策</text>
+
+  <g font-size="10" fill="#444">
+    <text x="360" y="128" fill="#2e6e2e" font-weight="bold">① 向量化</text>
+    <text x="360" y="142" fill="#888" font-size="9">float4 一次 128-bit</text>
+
+    <text x="360" y="166" fill="#4a8edb" font-weight="bold">② cp.async (Sm80+)</text>
+    <text x="360" y="180" fill="#888" font-size="9">异步拷贝, 与计算重叠</text>
+
+    <text x="360" y="204" fill="#8e5db8" font-weight="bold">③ TMA (Sm90+)</text>
+    <text x="360" y="218" fill="#888" font-size="9">硬件搬运, 不占线程</text>
+
+    <text x="360" y="242" fill="#b85450" font-weight="bold">④ Swizzle</text>
+    <text x="360" y="256" fill="#888" font-size="9">消除 bank conflict</text>
+  </g>
+
+  <!-- copy() arrow 2 -->
+  <path d="M 570 170 L 650 170" stroke="#5a5a5a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Shared Memory -->
+  <g filter="url(#sk)">
+    <rect x="650" y="70" width="220" height="200" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="760" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Shared Memory</text>
+  <text x="760" y="112" text-anchor="middle" font-size="10" fill="#555" font-family="monospace">make_smem_ptr()</text>
+
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="670" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="682" y="138" text-anchor="middle">A00</text>
+    <g filter="url(#sk)"><rect x="695" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="707" y="138" text-anchor="middle">A01</text>
+    <g filter="url(#sk)"><rect x="720" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="732" y="138" text-anchor="middle">A02</text>
+    <g filter="url(#sk)"><rect x="745" y="124" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="757" y="138" text-anchor="middle">A03</text>
+    <text x="800" y="138" font-size="7" fill="#888">+Swizzle</text>
+
+    <g filter="url(#sk)"><rect x="670" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="682" y="162" text-anchor="middle">A10</text>
+    <g filter="url(#sk)"><rect x="695" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="707" y="162" text-anchor="middle">A11</text>
+    <g filter="url(#sk)"><rect x="720" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="732" y="162" text-anchor="middle">A12</text>
+    <g filter="url(#sk)"><rect x="745" y="148" width="25" height="20" rx="2" fill="#fff" stroke="#4a8e4a" stroke-width="0.8"/></g><text x="757" y="162" text-anchor="middle">A13</text>
+  </g>
+
+  <text x="760" y="200" text-anchor="middle" font-size="9" fill="#888">Layout: 可含 Swizzle</text>
+  <text x="760" y="216" text-anchor="middle" font-size="9" fill="#888">bank conflict 已消除</text>
+  <text x="760" y="248" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold" font-family="monospace">sA = make_tensor(</text>
+  <text x="760" y="262" text-anchor="middle" font-size="10" fill="#2e6e2e" font-family="monospace">  smem_ptr, swizzled)</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="296" width="840" height="70" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="320" font-size="12" font-weight="bold" fill="#b85450">copy() 不仅是 memcpy：</text>
+  <text x="50" y="340" font-size="11" fill="#444">它根据源/目标 Layout 自动选择最优搬运策略（向量化 → cp.async → TMA → Swizzle），不需要用户手写任何优化</text>
+  <text x="50" y="358" font-size="11" fill="#7a5415">这是 CUTLASS 3.x 相比 2.x 的核心改进：把"数据搬运优化"从用户代码移到框架内部</text>
+</svg>

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="66" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="340" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CuTe Tensor：数据指针与 Layout 的绑定关系</text>
+  <path d="M 260 40 Q 430 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Data pointer (memory array) -->
+  <text x="180" y="72" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">float* data (16 elements)</text>
+  <g font-size="9" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="50" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="66" y="96" text-anchor="middle">0</text>
+    <g filter="url(#sk)"><rect x="82" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="98" y="96" text-anchor="middle">1</text>
+    <g filter="url(#sk)"><rect x="114" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="130" y="96" text-anchor="middle">2</text>
+    <g filter="url(#sk)"><rect x="146" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="162" y="96" text-anchor="middle">3</text>
+    <g filter="url(#sk)"><rect x="178" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="194" y="96" text-anchor="middle">4</text>
+    <g filter="url(#sk)"><rect x="210" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="226" y="96" text-anchor="middle">5</text>
+    <g filter="url(#sk)"><rect x="242" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="258" y="96" text-anchor="middle">6</text>
+    <g filter="url(#sk)"><rect x="274" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="290" y="96" text-anchor="middle">7</text>
+    <text x="310" y="96" font-size="8" fill="#888">...</text>
+    <g filter="url(#sk)"><rect x="320" y="80" width="32" height="24" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g><text x="336" y="96" text-anchor="middle">14</text>
+  </g>
+
+  <!-- Arrows down to two tensors -->
+  <path d="M 130 120 Q 130 140 220 150" stroke="#4a8edb" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 300 120 Q 300 140 560 150" stroke="#4a8e4a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Tensor A (Column-Major view) -->
+  <g filter="url(#sk)">
+    <rect x="180" y="150" width="180" height="140" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="270" y="172" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">tensor_col (ColMajor)</text>
+  <text x="270" y="186" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">Layout: (4,4):(1,4)</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="200" y="208" text-anchor="middle">0</text><text x="230" y="208" text-anchor="middle">4</text><text x="260" y="208" text-anchor="middle">8</text><text x="290" y="208" text-anchor="middle">12</text>
+    <text x="200" y="228" text-anchor="middle">1</text><text x="230" y="228" text-anchor="middle">5</text><text x="260" y="228" text-anchor="middle">9</text><text x="290" y="228" text-anchor="middle">13</text>
+    <text x="200" y="248" text-anchor="middle">2</text><text x="230" y="248" text-anchor="middle">6</text>
+    <g filter="url(#sk)"><rect x="250" y="238" width="24" height="16" rx="2" fill="none" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <text x="262" y="250" text-anchor="middle" font-weight="bold" fill="#7a5415">10</text>
+    <text x="290" y="250" text-anchor="middle">14</text>
+    <text x="200" y="270" text-anchor="middle">3</text><text x="230" y="270" text-anchor="middle">7</text><text x="260" y="270" text-anchor="middle">11</text><text x="290" y="270" text-anchor="middle">15</text>
+  </g>
+  <text x="270" y="288" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">tensor_col(2,2) = data[10]</text>
+
+  <!-- Tensor B (Row-Major view) -->
+  <g filter="url(#sk)">
+    <rect x="500" y="150" width="180" height="140" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="590" y="172" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">tensor_row (RowMajor)</text>
+  <text x="590" y="186" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">Layout: (4,4):(4,1)</text>
+
+  <g font-size="9" fill="#444" font-family="monospace">
+    <text x="520" y="208" text-anchor="middle">0</text><text x="550" y="208" text-anchor="middle">1</text><text x="580" y="208" text-anchor="middle">2</text><text x="610" y="208" text-anchor="middle">3</text>
+    <text x="520" y="228" text-anchor="middle">4</text><text x="550" y="228" text-anchor="middle">5</text><text x="580" y="228" text-anchor="middle">6</text><text x="610" y="228" text-anchor="middle">7</text>
+    <text x="520" y="248" text-anchor="middle">8</text><text x="550" y="248" text-anchor="middle">9</text>
+    <g filter="url(#sk)"><rect x="570" y="238" width="24" height="16" rx="2" fill="none" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <text x="582" y="250" text-anchor="middle" font-weight="bold" fill="#7a5415">10</text>
+    <text x="610" y="250" text-anchor="middle">11</text>
+    <text x="520" y="270" text-anchor="middle">12</text><text x="550" y="270" text-anchor="middle">13</text><text x="580" y="270" text-anchor="middle">14</text><text x="610" y="270" text-anchor="middle">15</text>
+  </g>
+  <text x="590" y="288" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">tensor_row(2,2) = data[10]</text>
+
+  <!-- Key insight -->
+  <g filter="url(#sk)">
+    <rect x="40" y="304" width="780" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 2"/>
+  </g>
+  <text x="430" y="322" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">★ 同一数据指针 + 不同 Layout = 不同逻辑视图（零拷贝，只是换个"看法"）</text>
+</svg>

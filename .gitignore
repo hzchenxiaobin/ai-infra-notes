@@ -1,6 +1,10 @@
 # Python virtual environment
 .venv/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
 
@@ -11,40 +15,85 @@
 # Build output
 public/
 
-# Generated Week 1 website files (copied source dirs + HTML)
-aiinfra/week1/website/kernels/
-aiinfra/week1/website/exercise/
-aiinfra/week1/website/notes/
-aiinfra/week1/website/tools/
-aiinfra/week1/website/index.html
-aiinfra/week1/website/day*.html
-aiinfra/week1/website/plan.html
+# Generated Week 1~8 website files (copied source dirs + HTML)
+aiinfra/daily/week1/website/kernels/
+aiinfra/daily/week1/website/exercise/
+aiinfra/daily/week1/website/notes/
+aiinfra/daily/week1/website/tools/
+aiinfra/daily/week1/website/profiles/
+aiinfra/daily/week1/website/index.html
+aiinfra/daily/week1/website/day*.html
+aiinfra/daily/week1/website/plan.html
+aiinfra/daily/week1/website/exercise/*.html
+aiinfra/daily/week1/website/notes/*.html
+aiinfra/daily/week1/website/profiles/*.html
+
+aiinfra/daily/week2/website/index.html
+aiinfra/daily/week2/website/day*.html
+aiinfra/daily/week2/website/kernels/
+aiinfra/daily/week2/website/exercise/
+aiinfra/daily/week2/website/notes/
+
+aiinfra/daily/week3/website/index.html
+aiinfra/daily/week3/website/day*.html
+aiinfra/daily/week3/website/kernels/
+aiinfra/daily/week3/website/exercise/
+aiinfra/daily/week3/website/notes/
+
+aiinfra/daily/week4/website/index.html
+aiinfra/daily/week4/website/day*.html
+aiinfra/daily/week4/website/kernels/
+aiinfra/daily/week4/website/exercise/
+aiinfra/daily/week4/website/notes/
+
+aiinfra/daily/week5/website/index.html
+aiinfra/daily/week5/website/day*.html
+aiinfra/daily/week5/website/kernels/
+aiinfra/daily/week5/website/exercise/
+aiinfra/daily/week5/website/notes/
+
+aiinfra/daily/week6/website/index.html
+aiinfra/daily/week6/website/day*.html
+aiinfra/daily/week6/website/kernels/
+aiinfra/daily/week6/website/exercise/
+aiinfra/daily/week6/website/notes/
+
+aiinfra/daily/week7/website/index.html
+aiinfra/daily/week7/website/day*.html
+aiinfra/daily/week7/website/kernels/
+aiinfra/daily/week7/website/exercise/
+aiinfra/daily/week7/website/notes/
+
+aiinfra/daily/week8/website/index.html
+aiinfra/daily/week8/website/day*.html
+aiinfra/daily/week8/website/kernels/
+aiinfra/daily/week8/website/exercise/
+aiinfra/daily/week8/website/notes/
+
+# Generated CUTLASS topic website files
+aiinfra/topics/cutlass/website/index.html
+aiinfra/topics/cutlass/website/day*.html
+aiinfra/topics/cutlass/website/images/
+aiinfra/topics/cutlass/website/kernels/
 
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/
 leetcode/website/images/
-.claude/
-.opencode/
-.arts/
 
-# Generated Week 2 website files
-aiinfra/week2/website/index.html
-aiinfra/week2/website/day*.html
-aiinfra/week2/website/kernels/
-aiinfra/week2/website/exercise/
-aiinfra/week2/website/notes/
 # Generated LeetGPU website files
 leetgpu/website/index.html
 leetgpu/website/leetgpu-*.html
 leetgpu/website/images/
-*.pyc
+
+# IDE / agent artifacts
+.claude/
+.opencode/
+.arts/
 
 # Compiled binaries
 mini_device_query
-
-# Compiled binaries
-aiinfra/week1/day3/exercise/occupancy_verify
+aiinfra/daily/week1/day3/exercise/occupancy_verify
 
 # ncu profiling workspace (binaries + nsys output)
 ncu/**/transpose

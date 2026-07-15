@@ -77,7 +77,7 @@ ai-infra-notes/
 
 - **27 个 CUDA kernel**（`.cu`）+ **8 个 Python 脚本**（`.py`，含 Mini 引擎、调度器、profiling 脚本）
 - **467 张手绘 sketch 风 SVG**（统一 Excalidraw-like 风格，含 `feTurbulence` 抖动滤镜）
-- **在线网站**：GitHub Pages 自动部署，含 8 周教程 + LeetGPU/LeetCode 题解
+- **在线网站**：GitHub Pages 自动部署，含 8 周教程 + LeetGPU/LeetCode 题解 + CUTLASS 专题
 
 ## 每日教程结构
 
@@ -98,7 +98,7 @@ ai-infra-notes/
 
 ## 在线网站
 
-每次推送到 `main` 分支自动构建并部署到 GitHub Pages，内容包括 8 周每日教程、8 周计划总览、LeetGPU 题解、LeetCode 题解。
+每次推送到 `main` 分支自动构建并部署到 GitHub Pages，内容包括 8 周每日教程、8 周计划总览、LeetGPU 题解、LeetCode 题解、CUTLASS 专题。
 
 ## 本地预览
 

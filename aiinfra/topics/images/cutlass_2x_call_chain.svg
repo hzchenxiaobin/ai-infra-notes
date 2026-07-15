@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="62" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="380" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUTLASS 2.x 源码调用链：从 Device API 到 PTX</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Layer 1: Device API -->
+  <g filter="url(#sk)">
+    <rect x="280" y="60" width="340" height="44" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="450" y="80" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a7a">Device API</text>
+  <text x="450" y="96" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">gemm/device/gemm.h → Gemm</text>
+
+  <path d="M 450 104 L 450 120" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 2: Kernel -->
+  <g filter="url(#sk)">
+    <rect x="280" y="120" width="340" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="450" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Kernel</text>
+  <text x="450" y="156" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">gemm/kernel/gemm.h → GemmKernel</text>
+
+  <path d="M 450 164 L 450 180" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 3: Threadblock -->
+  <g filter="url(#sk)">
+    <rect x="280" y="180" width="340" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="450" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Threadblock 级</text>
+  <text x="450" y="216" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">gemm/threadblock/mma_multistage.h → MmaMultistage</text>
+
+  <path d="M 450 224 L 450 240" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 4: Warp -->
+  <g filter="url(#sk)">
+    <rect x="280" y="240" width="340" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="450" y="260" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Warp 级</text>
+  <text x="450" y="276" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">gemm/warp/mma_tensor_op.h → MmaTensorOp</text>
+
+  <path d="M 450 284 L 450 300" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 5: Thread (PTX) -->
+  <g filter="url(#sk)">
+    <rect x="280" y="300" width="340" height="44" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="450" y="320" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">Thread 级 (PTX)</text>
+  <text x="450" y="336" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">gemm/thread/mma.h → mma.sync.aligned.m16n8k16</text>
+
+  <!-- Left annotations -->
+  <g font-size="9" fill="#888">
+    <text x="60" y="84" text-anchor="end" fill="#5a3a7a">host 端入口</text>
+    <text x="60" y="140" text-anchor="end" fill="#2b6e9e">grid 级调度</text>
+    <text x="60" y="200" text-anchor="end" fill="#7a5415">SM 级: Global→Shared</text>
+    <text x="60" y="260" text-anchor="end" fill="#2e6e2e">Warp 级: Shared→Reg+MMA</text>
+    <text x="60" y="320" text-anchor="end" fill="#b85450">硬件指令</text>
+  </g>
+
+  <!-- Right annotations -->
+  <g font-size="9" fill="#888">
+    <text x="840" y="84" fill="#5a3a7a">initialize() + run()</text>
+    <text x="840" y="140" fill="#2b6e9e">调用 Threadblock Mma</text>
+    <text x="840" y="200" fill="#7a5415">cp.async + 多阶段流水线</text>
+    <text x="840" y="260" fill="#2e6e2e">ldmatrix + MMA 循环</text>
+    <text x="840" y="320" fill="#b85450">PTX 内联汇编</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="60" y="356" width="780" height="16" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/>
+  </g>
+  <text x="450" y="368" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">★ 从 host 端 API 到硬件 PTX 指令的完整调用链——每层封装一层抽象，编译期完全展开</text>
+</svg>

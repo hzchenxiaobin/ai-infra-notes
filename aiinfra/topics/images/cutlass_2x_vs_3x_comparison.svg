@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="95" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="920" height="460" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUTLASS 2.x vs 3.x 架构对比</text>
+  <path d="M 290 40 Q 460 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 2.x column -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="420" height="380" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="240" y="86" text-anchor="middle" font-size="16" font-weight="bold" fill="#2b6e9e">CUTLASS 2.x</text>
+  <text x="240" y="104" text-anchor="middle" font-size="11" fill="#888">"手动挡" — 显式配置每层</text>
+
+  <!-- 3.x column -->
+  <g filter="url(#sk)">
+    <rect x="470" y="60" width="420" height="380" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="680" y="86" text-anchor="middle" font-size="16" font-weight="bold" fill="#7a5415">CUTLASS 3.x</text>
+  <text x="680" y="104" text-anchor="middle" font-size="11" fill="#888">"自动挡" — CuTe + Builder 自动调优</text>
+
+  <!-- Comparison rows -->
+  <g font-size="10" fill="#444">
+    <!-- Row 1: 核心抽象 -->
+    <text x="50" y="130" fill="#888" font-weight="bold">核心抽象</text>
+    <text x="150" y="130" fill="#2b6e9e">Threadblock/Warp/Thread</text>
+    <text x="490" y="130" fill="#888" font-weight="bold">核心抽象</text>
+    <text x="590" y="130" fill="#7a5415">CuTe Layout/Tensor + Collective</text>
+
+    <!-- Row 2: 索引计算 -->
+    <text x="50" y="152" fill="#888" font-weight="bold">索引计算</text>
+    <text x="150" y="152" fill="#b85450" font-family="monospace" font-size="9">offset = row*stride + col</text>
+    <text x="490" y="152" fill="#888" font-weight="bold">索引计算</text>
+    <text x="590" y="152" fill="#2e6e2e" font-family="monospace" font-size="9">tensor(i, j) 声明式</text>
+
+    <!-- Row 3: Tile 配置 -->
+    <text x="50" y="174" fill="#888" font-weight="bold">Tile 配置</text>
+    <text x="150" y="174" fill="#b85450">显式指定每层 Shape</text>
+    <text x="490" y="174" fill="#888" font-weight="bold">Tile 配置</text>
+    <text x="590" y="174" fill="#2e6e2e">CollectiveBuilder 自动选择</text>
+
+    <!-- Row 4: 数据搬运 -->
+    <text x="50" y="196" fill="#888" font-weight="bold">数据搬运</text>
+    <text x="150" y="196" fill="#b85450">cp.async + ldmatrix 手动</text>
+    <text x="490" y="196" fill="#888" font-weight="bold">数据搬运</text>
+    <text x="590" y="196" fill="#2e6e2e">copy() 自动优化</text>
+
+    <!-- Row 5: Swizzle -->
+    <text x="50" y="218" fill="#888" font-weight="bold">Swizzle</text>
+    <text x="150" y="218" fill="#b85450">手动配置模板参数</text>
+    <text x="490" y="218" fill="#888" font-weight="bold">Swizzle</text>
+    <text x="590" y="218" fill="#2e6e2e">copy() 自动应用</text>
+
+    <!-- Row 6: TMA -->
+    <text x="50" y="240" fill="#888" font-weight="bold">TMA 支持</text>
+    <text x="150" y="240" fill="#b85450">无</text>
+    <text x="490" y="240" fill="#888" font-weight="bold">TMA 支持</text>
+    <text x="590" y="240" fill="#2e6e2e">原生（Hopper+）</text>
+
+    <!-- Row 7: WGMMA -->
+    <text x="50" y="262" fill="#888" font-weight="bold">WGMMA</text>
+    <text x="150" y="262" fill="#b85450">无</text>
+    <text x="490" y="262" fill="#888" font-weight="bold">WGMMA</text>
+    <text x="590" y="262" fill="#2e6e2e">原生（Hopper+）</text>
+
+    <!-- Row 8: 代码量 -->
+    <text x="50" y="284" fill="#888" font-weight="bold">代码量</text>
+    <text x="150" y="284" fill="#b85450">多（模板参数爆炸）</text>
+    <text x="490" y="284" fill="#888" font-weight="bold">代码量</text>
+    <text x="590" y="284" fill="#2e6e2e">少（Builder 隐藏细节）</text>
+
+    <!-- Row 9: 编译时间 -->
+    <text x="50" y="306" fill="#888" font-weight="bold">编译时间</text>
+    <text x="150" y="306" fill="#2e6e2e">快（展开较少）</text>
+    <text x="490" y="306" fill="#888" font-weight="bold">编译时间</text>
+    <text x="590" y="306" fill="#b85450">慢（遍历组合空间）</text>
+
+    <!-- Row 10: 适用场景 -->
+    <text x="50" y="328" fill="#888" font-weight="bold">适用场景</text>
+    <text x="150" y="328" fill="#2b6e9e">维护旧代码、定制算子</text>
+    <text x="490" y="328" fill="#888" font-weight="bold">适用场景</text>
+    <text x="590" y="328" fill="#7a5415">新项目首选</text>
+  </g>
+
+  <!-- Bottom: why 2.x still used -->
+  <g filter="url(#sk)">
+    <rect x="30" y="350" width="860" height="90" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="374" font-size="12" font-weight="bold" fill="#b85450">为什么 2.x 仍在用？</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="394" fill="#2b6e9e" font-weight="bold">迁移成本:</text>
+    <text x="130" y="394">vLLM PagedAttention 依赖 2.x Epilogue，重写代价高</text>
+    <text x="490" y="394" fill="#7a5415" font-weight="bold">稳定性:</text>
+    <text x="550" y="394">2.x API 稳定多年，3.x CuTe 仍在演进</text>
+
+    <text x="50" y="414" fill="#2e6e2e" font-weight="bold">定制需求:</text>
+    <text x="130" y="414">MoE Group GEMM 等在 2.x 更易定制</text>
+    <text x="490" y="414" fill="#b85450" font-weight="bold">硬件兼容:</text>
+    <text x="560" y="414">2.x 支持 Sm70+，3.x 优化需 Sm90+</text>
+
+    <text x="50" y="434" fill="#5a3a7a" font-weight="bold">★ 趋势:</text>
+    <text x="110" y="434">新项目（FlashAttention-3 等）已转向 3.x，存量项目逐步迁移中</text>
+  </g>
+</svg>

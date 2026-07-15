@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="36" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">TileShape 对 GEMM 性能的影响</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Matrix tiling visualization -->
+  <text x="180" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">矩阵分块示意（M×N）</text>
+
+  <!-- Big matrix outline -->
+  <g filter="url(#sk)">
+    <rect x="50" y="80" width="260" height="200" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/>
+  </g>
+  <text x="180" y="100" text-anchor="middle" font-size="9" fill="#888">4096 × 4096</text>
+
+  <!-- Tile grid (128x128) -->
+  <g font-size="7" fill="#aaa" font-family="monospace">
+    <g filter="url(#sk)"><rect x="50" y="110" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="80" y="134" text-anchor="middle">128</text>
+    <g filter="url(#sk)"><rect x="110" y="110" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="170" y="110" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="230" y="110" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+
+    <g filter="url(#sk)"><rect x="50" y="150" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="110" y="150" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="170" y="150" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="230" y="150" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+
+    <g filter="url(#sk)"><rect x="50" y="190" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="110" y="190" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="170" y="190" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="230" y="190" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+
+    <g filter="url(#sk)"><rect x="50" y="230" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="110" y="230" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="170" y="230" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <g filter="url(#sk)"><rect x="230" y="230" width="60" height="40" rx="2" fill="none" stroke="#4a8edb" stroke-width="0.8"/></g>
+  </g>
+  <text x="180" y="284" text-anchor="middle" font-size="8" fill="#4a8edb">每个 tile = 一个 block 处理</text>
+
+  <!-- Tradeoff table (right) -->
+  <text x="620" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">TileShape tradeoff</text>
+
+  <g filter="url(#sk)">
+    <rect x="360" y="80" width="500" height="220" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1"/>
+  </g>
+
+  <g font-size="10" fill="#444">
+    <text x="380" y="104" fill="#2b6e9e" font-weight="bold">增大 M tile ↑</text>
+    <text x="380" y="118" fill="#2e6e2e" font-size="9">+ A 矩阵复用更多</text>
+    <text x="380" y="130" fill="#b85450" font-size="9">- Shared Memory ↑, SM 并行度 ↓</text>
+
+    <text x="380" y="156" fill="#7a5415" font-weight="bold">增大 N tile ↑</text>
+    <text x="380" y="170" fill="#2e6e2e" font-size="9">+ B 矩阵复用更多</text>
+    <text x="380" y="182" fill="#b85450" font-size="9">- 同上</text>
+
+    <text x="380" y="208" fill="#b85450" font-weight="bold">增大 K tile ↑</text>
+    <text x="380" y="222" fill="#2e6e2e" font-size="9">+ 减少 K 维度迭代次数</text>
+    <text x="380" y="234" fill="#b85450" font-size="9">- Shared Memory ↑, 可能影响双缓冲</text>
+
+    <text x="380" y="262" fill="#5a3a7a" font-weight="bold">★ 选择原则</text>
+    <text x="380" y="276" fill="#444" font-size="9">方形矩阵：128×256×64 通常最优</text>
+    <text x="380" y="288" fill="#444" font-size="9">受 Shared Memory 容量限制</text>
+  </g>
+
+  <!-- Bottom perf comparison -->
+  <g filter="url(#sk)">
+    <rect x="40" y="310" width="800" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="332" font-size="12" font-weight="bold" fill="#2e6e2e">性能对比（4096×4096 FP16, H100）：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="60" y="352" fill="#4a8edb">128×128×64:</text>
+    <g filter="url(#sk)"><rect x="160" y="343" width="80" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+    <text x="250" y="354">108 TFLOPS</text>
+
+    <text x="60" y="370" fill="#2e6e2e">128×256×64:</text>
+    <g filter="url(#sk)"><rect x="160" y="361" width="83" height="14" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+    <text x="255" y="372" font-weight="bold">112 TFLOPS ★</text>
+
+    <text x="440" y="352" fill="#7a5415">256×128×64:</text>
+    <g filter="url(#sk)"><rect x="540" y="343" width="81" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+    <text x="630" y="354">110 TFLOPS</text>
+
+    <text x="440" y="370" fill="#b85450">128×128×128:</text>
+    <g filter="url(#sk)"><rect x="540" y="361" width="82" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+    <text x="630" y="372">111 TFLOPS</text>
+  </g>
+</svg>

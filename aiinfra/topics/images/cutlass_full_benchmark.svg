@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="117" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="880" height="380" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">完整性能对比：Naive → CUTLASS → cuBLAS</text>
+  <path d="M 260 40 Q 440 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Y-axis -->
+  <line x1="80" y1="60" x2="80" y2="300" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="30" y="180" font-size="10" fill="#888" transform="rotate(-90,30,180)">TFLOPS (4096×4096 FP16)</text>
+
+  <!-- X-axis -->
+  <line x1="80" y1="300" x2="840" y2="300" stroke="#888" stroke-width="1.4" filter="url(#sk)"/>
+
+  <!-- Peak line -->
+  <line x1="80" y1="80" x2="840" y2="80" stroke="#b85450" stroke-width="1.5" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="830" y="76" text-anchor="end" font-size="9" fill="#b85450" font-weight="bold">H100 FP16 Peak: 989 TFLOPS</text>
+
+  <!-- Bars: height = tflops / 989 * 220 (300-80) -->
+  <!-- Naive 5.5 -->
+  <g filter="url(#sk)"><rect x="120" y="299" width="100" height="1" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="120" y="298" width="100" height="2" rx="1" fill="#b85450"/></g>
+  <text x="170" y="294" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">5.5</text>
+  <text x="170" y="316" text-anchor="middle" font-size="9" fill="#555">Naive</text>
+  <text x="170" y="330" text-anchor="middle" font-size="7" fill="#888">无优化</text>
+  <text x="170" y="342" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">~5%</text>
+
+  <!-- +SM Tiling 34 -->
+  <g filter="url(#sk)"><rect x="260" y="292" width="100" height="8" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="310" y="288" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">34</text>
+  <text x="310" y="316" text-anchor="middle" font-size="9" fill="#555">+SM Tiling</text>
+  <text x="310" y="330" text-anchor="middle" font-size="7" fill="#888">Shared Memory</text>
+  <text x="310" y="342" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">~30%</text>
+
+  <!-- +Reg Blocking 46 -->
+  <g filter="url(#sk)"><rect x="400" y="290" width="100" height="10" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="450" y="286" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">46</text>
+  <text x="450" y="316" text-anchor="middle" font-size="9" fill="#555">+Reg Blocking</text>
+  <text x="450" y="330" text-anchor="middle" font-size="7" fill="#888">Register Blocking</text>
+  <text x="450" y="342" text-anchor="middle" font-size="8" fill="#2b6e9e" font-weight="bold">~40%</text>
+
+  <!-- CUTLASS 112 -->
+  <g filter="url(#sk)"><rect x="540" y="275" width="100" height="25" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="590" y="271" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">112</text>
+  <text x="590" y="316" text-anchor="middle" font-size="9" fill="#555">CUTLASS 3.x</text>
+  <text x="590" y="330" text-anchor="middle" font-size="7" fill="#888">+TC+DBuf+Swizzle+TMA</text>
+  <text x="590" y="342" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">~94%</text>
+
+  <!-- cuBLAS 119 -->
+  <g filter="url(#sk)"><rect x="680" y="274" width="100" height="26" rx="2" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/></g>
+  <text x="730" y="270" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">119</text>
+  <text x="730" y="316" text-anchor="middle" font-size="9" fill="#555">cuBLAS</text>
+  <text x="730" y="330" text-anchor="middle" font-size="7" fill="#888">NVIDIA 闭源</text>
+  <text x="730" y="342" text-anchor="middle" font-size="8" fill="#5a3a7a" font-weight="bold">100%</text>
+
+  <!-- Growth arrows -->
+  <path d="M 170 299 Q 310 295 450 290" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3 2" filter="url(#sk)"/>
+  <path d="M 450 290 Q 590 282 730 274" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3 2" filter="url(#sk)"/>
+
+  <!-- NCU metrics comparison (right) -->
+  <g filter="url(#sk)">
+    <rect x="80" y="356" width="760" height="16" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/>
+  </g>
+  <text x="440" y="368" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">★ 手写(memory-bound: DRAM 58%) → CUTLASS(compute-bound: TC 72%, DRAM 23%) = 20x 算力提升</text>
+</svg>

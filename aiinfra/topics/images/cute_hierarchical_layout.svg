@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="55" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="400" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CuTe 分层 Layout：矩阵分块的嵌套结构</text>
+  <path d="M 260 40 Q 430 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Full 8x8 matrix -->
+  <text x="150" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">原始矩阵 8×8</text>
+  <g font-size="8" fill="#444" font-family="monospace">
+    <g filter="url(#sk)"><rect x="50" y="76" width="100" height="100" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/></g>
+    <text x="100" y="92" text-anchor="middle" fill="#888" font-size="8">8×8 = 64</text>
+    <!-- tile outlines -->
+    <g filter="url(#sk)"><rect x="50" y="76" width="50" height="50" rx="2" fill="none" stroke="#4a8edb" stroke-width="1.5"/></g>
+    <g filter="url(#sk)"><rect x="100" y="76" width="50" height="50" rx="2" fill="none" stroke="#4a8e4a" stroke-width="1.5"/></g>
+    <g filter="url(#sk)"><rect x="50" y="126" width="50" height="50" rx="2" fill="none" stroke="#c98a2b" stroke-width="1.5"/></g>
+    <g filter="url(#sk)"><rect x="100" y="126" width="50" height="50" rx="2" fill="none" stroke="#b85450" stroke-width="1.5"/></g>
+    <text x="75" y="104" text-anchor="middle" font-size="8" fill="#2b6e9e">Tile 00</text>
+    <text x="125" y="104" text-anchor="middle" font-size="8" fill="#2e6e2e">Tile 01</text>
+    <text x="75" y="154" text-anchor="middle" font-size="8" fill="#7a5415">Tile 10</text>
+    <text x="125" y="154" text-anchor="middle" font-size="8" fill="#b85450">Tile 11</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 170 126 L 220 126" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="195" y="120" text-anchor="middle" font-size="9" fill="#888">分块</text>
+
+  <!-- Nested shape representation -->
+  <g filter="url(#sk)">
+    <rect x="230" y="60" width="360" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="410" y="82" text-anchor="middle" font-size="12" font-weight="bold" fill="#444">嵌套 Shape 表达</text>
+
+  <text x="250" y="106" font-size="10" fill="#2b6e9e" font-family="monospace" font-weight="bold">Shape:</text>
+  <text x="250" y="124" font-size="10" fill="#555" font-family="monospace">  ((4, 2), (4, 2))</text>
+  <text x="250" y="138" font-size="9" fill="#888">  M: tile_size=4, tile_count=2</text>
+  <text x="250" y="152" font-size="9" fill="#888">  N: tile_size=4, tile_count=2</text>
+
+  <text x="250" y="176" font-size="10" fill="#7a5415" font-family="monospace" font-weight="bold">Stride:</text>
+  <text x="250" y="194" font-size="10" fill="#555" font-family="monospace">  ((1, 4), (8, 32))</text>
+
+  <!-- Tile visualization -->
+  <text x="700" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#888">4 个 4×4 Tile</text>
+
+  <!-- Tile 00 -->
+  <g filter="url(#sk)"><rect x="630" y="76" width="60" height="50" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="660" y="96" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">Tile(0,0)</text>
+  <text x="660" y="110" text-anchor="middle" font-size="8" fill="#888">4×4</text>
+
+  <!-- Tile 01 -->
+  <g filter="url(#sk)"><rect x="700" y="76" width="60" height="50" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="730" y="96" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">Tile(0,1)</text>
+  <text x="730" y="110" text-anchor="middle" font-size="8" fill="#888">4×4</text>
+
+  <!-- Tile 10 -->
+  <g filter="url(#sk)"><rect x="630" y="132" width="60" height="50" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="660" y="152" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">Tile(1,0)</text>
+  <text x="660" y="166" text-anchor="middle" font-size="8" fill="#888">4×4</text>
+
+  <!-- Tile 11 -->
+  <g filter="url(#sk)"><rect x="700" y="132" width="60" height="50" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="730" y="152" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">Tile(1,1)</text>
+  <text x="730" y="166" text-anchor="middle" font-size="8" fill="#888">4×4</text>
+
+  <!-- Access pattern -->
+  <path d="M 630 190 L 590 190 L 590 160 L 230 160" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Bottom: code comparison -->
+  <g filter="url(#sk)">
+    <rect x="40" y="240" width="780" height="140" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="264" font-size="12" font-weight="bold" fill="#444">手写索引 vs CuTe 嵌套 Layout：</text>
+
+  <text x="60" y="288" font-size="10" fill="#b85450" font-weight="bold" font-family="monospace">手写:</text>
+  <text x="110" y="288" font-size="10" fill="#555" font-family="monospace">int row = blockIdx.y * 64 + threadIdx.y;</text>
+  <text x="110" y="304" font-size="10" fill="#555" font-family="monospace">int col = blockIdx.x * 64 + threadIdx.x;</text>
+  <text x="110" y="320" font-size="10" fill="#555" font-family="monospace">int offset = row * N + col;  // 每种布局要重写</text>
+
+  <text x="500" y="288" font-size="10" fill="#2e6e2e" font-weight="bold" font-family="monospace">CuTe:</text>
+  <text x="550" y="288" font-size="10" fill="#555" font-family="monospace">auto tile = tensor(_, tile_m, _, tile_n);</text>
+  <text x="550" y="304" font-size="10" fill="#555" font-family="monospace">float v = tile(i, j);  // 自动算 offset</text>
+  <text x="550" y="320" font-size="10" fill="#555" font-family="monospace">// 布局变了，访问代码不变</text>
+
+  <text x="60" y="352" font-size="11" fill="#7a5415" font-weight="bold">★ 嵌套 Layout 把 tile 分块变成纯 Layout 操作，零拷贝、零索引手算</text>
+</svg>

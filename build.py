@@ -12,6 +12,8 @@ Generates:
     - week7 website files (copied from aiinfra/daily/week7/website)
     - week8 website files (copied from aiinfra/daily/week8/website)
     - leetcode website files (copied from leetcode/website)
+    - leetgpu website files (copied from leetgpu/website)
+    - cutlass topic website files (copied from aiinfra/topics/cutlass/website)
 """
 
 import shutil
@@ -29,16 +31,20 @@ def compute_relative_path(from_file: Path, to_path: str) -> str:
 
 
 def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
-    """Insert LeetCode and LeetGPU links into the sidebar navigation."""
+    """Insert LeetCode, LeetGPU and CUTLASS links into the sidebar navigation."""
     rel_leetcode = compute_relative_path(
         html_file.relative_to(public_dir), "leetcode/index.html"
     )
     rel_leetgpu = compute_relative_path(
         html_file.relative_to(public_dir), "leetgpu/index.html"
     )
+    rel_cutlass = compute_relative_path(
+        html_file.relative_to(public_dir), "cutlass/index.html"
+    )
     extra_section = f'''<div class="nav-section-title">更多</div>
 <a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
 <a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>
+<a class="nav-link" href="{rel_cutlass}">⚡ CUTLASS 专题</a>
 '''
     return html_text.replace(
         "            </nav>\n        </aside>",
@@ -233,13 +239,30 @@ def main() -> None:
     if leetgpu_images_src.exists():
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
 
-    # Insert LeetCode and LeetGPU navigation links into all course pages
-    # (aiinfra/daily/week1/week2/week3 and extra pages), but not into the leetcode or
-    # LeetGPU subsites themselves.
+    # Build CUTLASS topic website
+    print("Building CUTLASS topic website...")
+    subprocess.run(
+        ["python3", str(repo_root / "aiinfra" / "topics" / "cutlass" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy CUTLASS topic website to public/cutlass/
+    print("Copying CUTLASS topic website to public/cutlass/...")
+    cutlass_dst = public_dir / "cutlass"
+    copy_directory_contents(
+        repo_root / "aiinfra" / "topics" / "cutlass" / "website",
+        cutlass_dst,
+        skip={"build.py", "README.md"},
+    )
+
+    # Insert LeetCode, LeetGPU and CUTLASS navigation links into all course pages
+    # (aiinfra/daily/week1~week8 and extra pages), but not into the leetcode,
+    # leetgpu or cutlass subsites themselves.
     course_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
         and "leetgpu" not in p.relative_to(public_dir).parts
+        and "cutlass" not in p.relative_to(public_dir).parts
     ]
     for html_file in course_pages:
         if html_file.is_file():

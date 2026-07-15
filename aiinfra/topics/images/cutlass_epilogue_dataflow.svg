@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="105" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="420" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Epilogue 数据流：Register 级后处理</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- MMA result (Register) -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="160" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="110" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">MMA 完成</text>
+  <text x="110" y="98" text-anchor="middle" font-size="9" fill="#888">acc 在 frag_C (Register)</text>
+
+  <path d="M 190 85 L 230 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 1: Scale -->
+  <g filter="url(#sk)">
+    <rect x="230" y="62" width="110" height="46" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="285" y="80" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">① 缩放</text>
+  <text x="285" y="96" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">acc *= alpha</text>
+  <text x="285" y="108" text-anchor="middle" font-size="7" fill="#888">~1 cycle (FMA)</text>
+
+  <path d="M 340 85 L 370 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: Add C -->
+  <g filter="url(#sk)">
+    <rect x="370" y="62" width="110" height="46" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="425" y="80" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">② +beta*C</text>
+  <text x="425" y="96" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">acc += beta*C</text>
+  <text x="425" y="108" text-anchor="middle" font-size="7" fill="#888">~1 cycle + 1 Global load</text>
+
+  <path d="M 480 85 L 510 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: Add Bias -->
+  <g filter="url(#sk)">
+    <rect x="510" y="62" width="110" height="46" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="565" y="80" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">③ +bias</text>
+  <text x="565" y="96" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">acc += bias[j]</text>
+  <text x="565" y="108" text-anchor="middle" font-size="7" fill="#888">~1 cycle + 1 Global load</text>
+
+  <path d="M 620 85 L 650 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 4: Activation -->
+  <g filter="url(#sk)">
+    <rect x="650" y="62" width="110" height="46" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <text x="705" y="80" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">④ 激活</text>
+  <text x="705" y="96" text-anchor="middle" font-size="8" fill="#555" font-family="monospace">acc = ReLU(acc)</text>
+  <text x="705" y="108" text-anchor="middle" font-size="7" fill="#888">~1 cycle (max)</text>
+
+  <path d="M 760 85 L 790 85" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 5: Store -->
+  <g filter="url(#sk)">
+    <rect x="790" y="60" width="90" height="50" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="835" y="82" text-anchor="middle" font-size="9" font-weight="bold" fill="#5a3a7a">⑤ 写回</text>
+  <text x="835" y="98" text-anchor="middle" font-size="8" fill="#888">D = acc</text>
+  <text x="835" y="110" text-anchor="middle" font-size="7" fill="#888">Global store</text>
+
+  <!-- Register level bar -->
+  <g filter="url(#sk)">
+    <rect x="220" y="120" width="550" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="495" y="136" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">↑ 步骤 ①-④ 全在 Register 中完成（~4 cycles），零额外 Global Memory 写</text>
+
+  <!-- Global Memory annotations -->
+  <g font-size="8" fill="#888">
+    <path d="M 425 108 L 425 155" stroke="#c98a2b" stroke-width="0.8" fill="none" stroke-dasharray="2 1"/>
+    <text x="425" y="168" text-anchor="middle" fill="#7a5415">读 C (Global)</text>
+
+    <path d="M 565 108 L 565 155" stroke="#4a8e4a" stroke-width="0.8" fill="none" stroke-dasharray="2 1"/>
+    <text x="565" y="168" text-anchor="middle" fill="#2e6e2e">读 bias (Global)</text>
+
+    <path d="M 835 110 L 835 155" stroke="#8e5db8" stroke-width="0.8" fill="none" stroke-dasharray="2 1"/>
+    <text x="835" y="168" text-anchor="middle" fill="#5a3a7a">写 D (Global)</text>
+  </g>
+
+  <!-- Cost comparison -->
+  <g filter="url(#sk)">
+    <rect x="30" y="190" width="840" height="210" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="214" font-size="12" font-weight="bold" fill="#444">开销对比：</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="238" fill="#2e6e2e" font-weight="bold">融合（Register 级）：</text>
+    <text x="200" y="238">Bias ~1 cycle + ReLU ~1 cycle = ~2 cycles</text>
+    <text x="200" y="252" fill="#888" font-size="9">额外的 Global 访问：bias 1 次 load（可与 C 的 load 重叠）</text>
+
+    <text x="50" y="280" fill="#b85450" font-weight="bold">未融合（Global Memory 级）：</text>
+    <text x="200" y="280">GEMM 写 D (1 store) → Add 读 D + bias 写 D (2+1) → ReLU 读 D 写 D (1+1)</text>
+    <text x="200" y="294" fill="#888" font-size="9">额外的 Global 访问：2 次 load + 2 次 store = ~1200 cycles</text>
+
+    <text x="50" y="324" fill="#7a5415" font-weight="bold">差距：</text>
+    <text x="120" y="324">融合 ~2 cycles vs 未融合 ~1200 cycles → 600x 差距（仅后处理部分）</text>
+
+    <text x="50" y="352" fill="#5a3a7a" font-weight="bold">实际端到端加速：</text>
+    <text x="200" y="352">~1.4-2x（因为 GEMM 本身的计算时间占大头，后处理只是部分）</text>
+  </g>
+
+  <text x="50" y="386" font-size="11" fill="#b85450" font-weight="bold">★ 核心洞察：后处理在 Register 中几乎免费，瓶颈是不可避免的 Global Memory 写回（步骤 ⑤）</text>
+</svg>
