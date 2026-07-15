@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">三种 GPU 编程方案的定位光谱</text>
+  <path d="M 280 40 Q 380 46 480 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Axes -->
+  <line x1="80" y1="360" x2="700" y2="360" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <line x1="80" y1="360" x2="80" y2="60" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="390" y="395" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">开发效率 / 抽象层级 →</text>
+  <text x="28" y="215" text-anchor="middle" font-size="13" fill="#444" font-weight="bold" transform="rotate(-90 28 215)">性能天花板 →</text>
+
+  <text x="100" y="378" font-size="10" fill="#777">低</text>
+  <text x="670" y="378" font-size="10" fill="#777">高</text>
+  <text x="64" y="340" font-size="10" fill="#777">低</text>
+  <text x="64" y="70" font-size="10" fill="#777">高</text>
+
+  <!-- Spectrum region -->
+  <path d="M 80 360 Q 240 340 360 280 Q 480 220 700 180" stroke="#d0d0d0" stroke-width="2" fill="none" stroke-dasharray="6,4" filter="url(#sk)"/>
+  <text x="520" y="210" font-size="10" fill="#999">理想区域：高效率 + 高性能</text>
+
+  <!-- CUDA -->
+  <g filter="url(#sk)">
+    <circle cx="140" cy="120" r="14" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="140" y="125" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">CUDA</text>
+  <text x="140" y="96" text-anchor="middle" font-size="9" fill="#555">手写 CUDA</text>
+  <text x="140" y="158" text-anchor="middle" font-size="9" fill="#666">性能最高</text>
+  <text x="140" y="172" text-anchor="middle" font-size="9" fill="#666">开发效率最低</text>
+
+  <!-- CUTLASS -->
+  <g filter="url(#sk)">
+    <circle cx="380" cy="150" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/>
+  </g>
+  <text x="380" y="155" text-anchor="middle" font-size="11" font-weight="bold" fill="#8a6a20">CUTLASS</text>
+  <text x="380" y="126" text-anchor="middle" font-size="9" fill="#555">C++ 模板</text>
+  <text x="380" y="188" text-anchor="middle" font-size="9" fill="#666">接近峰值性能</text>
+  <text x="380" y="202" text-anchor="middle" font-size="9" fill="#666">模板陡峭</text>
+
+  <!-- Triton -->
+  <g filter="url(#sk)">
+    <circle cx="620" cy="190" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/>
+  </g>
+  <text x="620" y="195" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a7a3a">Triton</text>
+  <text x="620" y="166" text-anchor="middle" font-size="9" fill="#555">Python DSL</text>
+  <text x="620" y="228" text-anchor="middle" font-size="9" fill="#666">效率最高</text>
+  <text x="620" y="242" text-anchor="middle" font-size="9" fill="#666">性能接近手写</text>
+
+  <!-- Summary -->
+  <rect x="460" y="280" width="240" height="70" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#sk)"/>
+  <text x="580" y="304" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">选择建议</text>
+  <text x="470" y="324" font-size="9" fill="#555">• 极致性能/库开发 → CUDA / CUTLASS</text>
+  <text x="470" y="338" font-size="9" fill="#555">• 快速验证/算法迭代 → Triton</text>
+</svg>
