@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="560" height="300" fill="#fafafa"/>
+  <text x="280" y="28" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" filter="url(#rough2)">有效二进制字符串：两个过滤条件</text>
+
+  <!-- All binary strings -->
+  <rect x="30" y="48" width="160" height="50" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="70" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold" filter="url(#rough2)">所有 2^n 个字符串</text>
+  <text x="110" y="86" text-anchor="middle" font-size="9" fill="#888" filter="url(#rough2)">n=3: 000~111 共8个</text>
+
+  <!-- Arrow -->
+  <path d="M 190 73 L 220 73" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#888"/></marker></defs>
+  <text x="205" y="66" text-anchor="middle" font-size="8" fill="#888" filter="url(#rough2)">条件1</text>
+
+  <!-- No consecutive 1 -->
+  <rect x="220" y="48" width="160" height="50" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="300" y="70" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold" filter="url(#rough2)">无连续 1</text>
+  <text x="300" y="86" text-anchor="middle" font-size="9" fill="#888" filter="url(#rough2)">000,100,010,001,101</text>
+
+  <!-- Arrow -->
+  <path d="M 380 73 L 410 73" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="395" y="66" text-anchor="middle" font-size="8" fill="#888" filter="url(#rough2)">条件2</text>
+
+  <!-- Cost <= k -->
+  <rect x="410" y="48" width="130" height="50" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" filter="url(#rough2)"/>
+  <text x="475" y="70" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">成本 &lt;= k</text>
+  <text x="475" y="86" text-anchor="middle" font-size="9" fill="#888" filter="url(#rough2)">000,100,010</text>
+
+  <!-- Cost table -->
+  <rect x="30" y="120" width="500" height="160" rx="8" fill="#fff" stroke="#ddd" stroke-width="1" filter="url(#rough2)"/>
+  <text x="50" y="142" font-size="11" fill="#446688" font-weight="bold" filter="url(#rough2)">n=3 各字符串成本（k=1）：</text>
+
+  <text x="50" y="164" font-size="9" fill="#333" filter="url(#rough2)">000: 成本=0  ≤1 ✓</text>
+  <text x="250" y="164" font-size="9" fill="#333" filter="url(#rough2)">100: 成本=0  ≤1 ✓</text>
+  <text x="50" y="182" font-size="9" fill="#333" filter="url(#rough2)">010: 成本=1  ≤1 ✓</text>
+  <text x="250" y="182" font-size="9" fill="#b85450" filter="url(#rough2)">001: 成本=2  &gt;1 ✗</text>
+  <text x="50" y="200" font-size="9" fill="#b85450" filter="url(#rough2)">101: 成本=0+2=2  &gt;1 ✗</text>
+  <text x="250" y="200" font-size="9" fill="#888" filter="url(#rough2)">011: 有连续1 ✗</text>
+  <text x="50" y="218" font-size="9" fill="#888" filter="url(#rough2)">110: 有连续1 ✗</text>
+  <text x="250" y="218" font-size="9" fill="#888" filter="url(#rough2)">111: 有连续1 ✗</text>
+
+  <text x="50" y="248" font-size="10" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">结果：["000", "100", "010"]</text>
+  <text x="50" y="266" font-size="9" fill="#888" filter="url(#rough2)">★ s[0]='1' 成本贡献=0（下标从0开始）</text>
+</svg>

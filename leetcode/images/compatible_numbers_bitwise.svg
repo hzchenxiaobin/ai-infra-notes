@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+  </defs>
+  <rect width="520" height="320" fill="#fafafa"/>
+  <text x="260" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" filter="url(#rough2)">n &amp; x == 0：n 为 1 的位，x 必须为 0</text>
+  <text x="260" y="48" text-anchor="middle" font-size="10" fill="#888" filter="url(#rough2)">n=2 (010), x=5 (101) → 010 &amp; 101 = 000 ✓</text>
+
+  <!-- n bits -->
+  <text x="60" y="80" font-size="11" fill="#446688" font-weight="bold" filter="url(#rough2)">n = 2:</text>
+  <rect x="120" y="68" width="40" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="140" y="88" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="165" y="68" width="40" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="185" y="88" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold" filter="url(#rough2)">1</text>
+  <rect x="210" y="68" width="40" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="230" y="88" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <text x="265" y="88" font-size="9" fill="#888" filter="url(#rough2)">← n 为 1 的位</text>
+
+  <!-- x bits -->
+  <text x="60" y="130" font-size="11" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">x = 5:</text>
+  <rect x="120" y="118" width="40" height="28" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="140" y="138" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">1</text>
+  <rect x="165" y="118" width="40" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="185" y="138" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="210" y="118" width="40" height="28" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="230" y="138" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">1</text>
+  <text x="265" y="138" font-size="9" fill="#4a7a3a" filter="url(#rough2)">← x 对应位=0 ✓</text>
+
+  <!-- AND result -->
+  <text x="60" y="180" font-size="11" fill="#d6a040" font-weight="bold" filter="url(#rough2)">n&amp;x:</text>
+  <rect x="120" y="168" width="40" height="28" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="140" y="188" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="165" y="168" width="40" height="28" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="185" y="188" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <rect x="210" y="168" width="40" height="28" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="230" y="188" text-anchor="middle" font-size="12" fill="#333" filter="url(#rough2)">0</text>
+  <text x="265" y="188" font-size="10" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">→ 全0 = 兼容!</text>
+
+  <!-- Compatible range -->
+  <rect x="40" y="220" width="440" height="80" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="60" y="244" font-size="11" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">枚举范围 [max(1,n-k), n+k]：</text>
+  <text x="60" y="262" font-size="10" fill="#333" filter="url(#rough2)">n=2, k=3 → 枚举 x ∈ [1, 5]</text>
+  <text x="60" y="278" font-size="10" fill="#333" filter="url(#rough2)">x=1(001): 2&amp;1=0 ✓ | x=2(010): 2&amp;2=2 ✗ | x=3(011): 2&amp;3=2 ✗</text>
+  <text x="60" y="294" font-size="10" fill="#333" filter="url(#rough2)">x=4(100): 2&amp;4=0 ✓ | x=5(101): 2&amp;5=0 ✓ → 和=1+4+5=10</text>
+</svg>

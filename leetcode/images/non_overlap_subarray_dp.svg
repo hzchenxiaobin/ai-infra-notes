@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="560" height="340" fill="#fafafa"/>
+  <text x="280" y="28" text-anchor="middle" font-size="14" font-weight="bold" fill="#333" filter="url(#rough2)">DP 状态设计：位置 i 处选或不选子数组</text>
+
+  <!-- Array -->
+  <text x="30" y="58" font-size="10" fill="#888" filter="url(#rough2)">nums:</text>
+  <rect x="70" y="44" width="50" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <text x="95" y="64" text-anchor="middle" font-size="11" fill="#333" filter="url(#rough2)">4</text>
+  <rect x="125" y="44" width="50" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <text x="150" y="64" text-anchor="middle" font-size="11" fill="#333" filter="url(#rough2)">1</text>
+  <rect x="180" y="44" width="50" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <text x="205" y="64" text-anchor="middle" font-size="11" fill="#333" filter="url(#rough2)">-5</text>
+  <rect x="235" y="44" width="50" height="28" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <text x="260" y="64" text-anchor="middle" font-size="11" fill="#333" filter="url(#rough2)">2</text>
+
+  <text x="70" y="86" font-size="8" fill="#888" filter="url(#rough2)">i=0</text>
+  <text x="125" y="86" font-size="8" fill="#888" filter="url(#rough2)">i=1</text>
+  <text x="180" y="86" font-size="8" fill="#888" filter="url(#rough2)">i=2</text>
+  <text x="235" y="86" font-size="8" fill="#888" filter="url(#rough2)">i=3</text>
+
+  <!-- Option 1: skip -->
+  <rect x="30" y="110" width="230" height="70" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="145" y="132" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold" filter="url(#rough2)">不选子数组</text>
+  <text x="145" y="150" text-anchor="middle" font-size="9" fill="#555" filter="url(#rough2)">dp[i][j] = dp[i-1][j]</text>
+  <text x="145" y="166" text-anchor="middle" font-size="8" fill="#888" filter="url(#rough2)">跳过位置 i-1</text>
+
+  <!-- Option 2: select -->
+  <rect x="290" y="110" width="250" height="70" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="415" y="132" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold" filter="url(#rough2)">选长度 len∈[l,r] 的子数组</text>
+  <text x="415" y="150" text-anchor="middle" font-size="9" fill="#555" filter="url(#rough2)">dp[i][j] = dp[i-len][j-1] + sum</text>
+  <text x="415" y="166" text-anchor="middle" font-size="8" fill="#888" filter="url(#rough2)">len 从 l 到 r 枚举</text>
+
+  <!-- Example -->
+  <rect x="30" y="200" width="500" height="120" rx="8" fill="#fff" stroke="#ddd" stroke-width="1" filter="url(#rough2)"/>
+  <text x="50" y="222" font-size="10" fill="#446688" font-weight="bold" filter="url(#rough2)">示例演算 nums=[4,1,-5,2], m=2, l=1, r=3:</text>
+
+  <text x="50" y="244" font-size="9" fill="#333" filter="url(#rough2)">选 [4,1]（len=2, 和=5）+ [2]（len=1, 和=2）</text>
+  <text x="50" y="260" font-size="9" fill="#4a7a3a" filter="url(#rough2)">dp[2][1] = dp[0][0] + (4+1) = 0 + 5 = 5</text>
+  <text x="50" y="276" font-size="9" fill="#4a7a3a" filter="url(#rough2)">dp[4][2] = dp[2][1] + 2 = 5 + 2 = 7</text>
+  <text x="50" y="298" font-size="10" fill="#b85450" font-weight="bold" filter="url(#rough2)">答案 = max(dp[4][1], dp[4][2]) = 7</text>
+  <text x="50" y="314" font-size="8" fill="#888" filter="url(#rough2)">★ "至少1个" → 取 max(dp[n][1..m])</text>
+</svg>
