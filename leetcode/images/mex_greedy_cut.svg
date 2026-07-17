@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 400" font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#446688"/>
+    </marker>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="780" height="400" fill="#fafafa"/>
+
+  <text x="390" y="38" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">贪心首刀：首元素 = 全集 MEX，且切最短前缀</text>
+  <text x="390" y="66" text-anchor="middle" font-size="13" fill="#555">nums = [0, 1, 0]：值 0、1 都在，值 2 缺失 ⇒ 全集 MEX = 2</text>
+
+  <!-- array cells -->
+  <g filter="url(#rough2)"><rect x="210" y="100" width="64" height="56" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.8"/></g>
+  <g filter="url(#rough2)"><rect x="274" y="100" width="64" height="56" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.8"/></g>
+  <g filter="url(#rough2)"><rect x="338" y="100" width="64" height="56" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1.2"/></g>
+  <text x="242" y="136" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b4a6b">0</text>
+  <text x="306" y="136" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b4a6b">1</text>
+  <text x="370" y="136" text-anchor="middle" font-size="18" fill="#999">0</text>
+  <text x="176" y="136" font-size="12" fill="#888">nums:</text>
+
+  <!-- index labels -->
+  <text x="242" y="176" text-anchor="middle" font-size="11" fill="#888">下标 0</text>
+  <text x="306" y="176" text-anchor="middle" font-size="11" fill="#888">下标 1</text>
+  <text x="370" y="176" text-anchor="middle" font-size="11" fill="#888">下标 2</text>
+
+  <!-- first occurrence annotations -->
+  <text x="474" y="112" font-size="12" fill="#446688">① 值 0 首次出现：下标 0</text>
+  <path d="M 466 108 Q 350 82 250 94" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="474" y="146" font-size="12" fill="#446688">② 值 1 首次出现：下标 1</text>
+  <path d="M 466 142 Q 392 114 314 98" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="474" y="180" font-size="12" font-weight="bold" fill="#b85450">切点 k = max(0, 1) = 1 ⇒ 切前 2 个</text>
+
+  <!-- brace under shortest prefix -->
+  <path d="M 210 188 L 205 196 L 342 196 L 338 188" stroke="#446688" stroke-width="1.6" fill="none" filter="url(#rough2)"/>
+  <text x="274" y="216" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b4a6b">最短前缀 [0,1]：凑齐 0 和 1，MEX = 2</text>
+
+  <!-- remaining suffix -->
+  <path d="M 372 160 Q 384 202 434 216" stroke="#999" stroke-width="1.2" fill="none" stroke-dasharray="4 3" marker-end="url(#arrG)" filter="url(#rough2)"/>
+  <text x="444" y="224" font-size="12" fill="#777">剩余后缀 [0]，留得越多越好</text>
+
+  <!-- result box -->
+  <g filter="url(#rough2)"><rect x="140" y="240" width="290" height="44" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <text x="285" y="268" text-anchor="middle" font-size="14" font-weight="bold" fill="#33602f">result[0] = MEX([0,1]) = 2</text>
+
+  <!-- note box -->
+  <g filter="url(#rough2)"><rect x="70" y="308" width="640" height="70" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4"/></g>
+  <text x="92" y="336" font-size="13" font-weight="bold" fill="#7a5415">首元素最大 = 全集 MEX（任何前缀的 MEX 都不超过它，一刀切可达）</text>
+  <text x="92" y="360" font-size="13" fill="#7a5415">同样 MEX 下切最短前缀：剩余越多结果越大（前缀相同取更长者）</text>
+</svg>

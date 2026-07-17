@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 470" font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="780" height="470" fill="#fafafa"/>
+  <text x="390" y="36" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">引理：MEX(B) ≤ MEX(A)（B 是 A 的后缀）⇒ result 单调不增</text>
+
+  <!-- ===== panel 1: A = P + B ===== -->
+  <text x="390" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 数组 A 切成「前缀 P + 后缀 B」，每一刀之后都在更短的后缀上递归</text>
+  <path d="M 150 102 L 145 94 L 322 94 L 317 102" stroke="#446688" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="234" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#446688">前缀 P（已切掉）</text>
+  <path d="M 324 102 L 319 94 L 554 94 L 549 102" stroke="#d6a040" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="437" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#9a7010">后缀 B（待处理）</text>
+
+  <!-- P cells: 0,1,2 -->
+  <g filter="url(#rough2)"><rect x="150" y="110" width="52" height="48" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="208" y="110" width="52" height="48" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="266" y="110" width="52" height="48" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <!-- B cells: 0,1,0,5 -->
+  <g filter="url(#rough2)"><rect x="324" y="110" width="52" height="48" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="382" y="110" width="52" height="48" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="440" y="110" width="52" height="48" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="498" y="110" width="52" height="48" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="176" y="141" text-anchor="middle" font-size="16" fill="#2b4a6b">0</text>
+  <text x="234" y="141" text-anchor="middle" font-size="16" fill="#2b4a6b">1</text>
+  <text x="292" y="141" text-anchor="middle" font-size="16" fill="#2b4a6b">2</text>
+  <text x="350" y="141" text-anchor="middle" font-size="16" fill="#7a5415">0</text>
+  <text x="408" y="141" text-anchor="middle" font-size="16" fill="#7a5415">1</text>
+  <text x="466" y="141" text-anchor="middle" font-size="16" fill="#7a5415">0</text>
+  <text x="524" y="141" text-anchor="middle" font-size="16" fill="#7a5415">5</text>
+  <text x="120" y="141" font-size="12" fill="#888">A =</text>
+
+  <!-- annotation box -->
+  <g filter="url(#rough2)"><rect x="590" y="96" width="160" height="76" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+  <text x="670" y="122" text-anchor="middle" font-size="12" font-weight="bold" fill="#8a3230">MEX(A) = 3（缺 3）</text>
+  <text x="670" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#8a3230">MEX(B) = 2（缺 2）</text>
+  <text x="670" y="162" text-anchor="middle" font-size="12" fill="#8a3230">2 ≤ 3 ✓</text>
+
+  <text x="390" y="200" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">m = MEX(A) ∉ A　⇒　m ∉ B（因为 B ⊆ A）　⇒　MEX(B) ≤ m</text>
+  <text x="390" y="224" text-anchor="middle" font-size="12" fill="#777">B 的缺失值集合 ⊇ A 的缺失值集合，故「最小缺失值」不会更大</text>
+
+  <!-- ===== panel 2: monotone staircase ===== -->
+  <text x="390" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">② result 序列 = 各刀的 MEX：阶梯下降，单调不增</text>
+
+  <!-- bars for result = [4,3,3,1,0,0], unit 26, baseline y=410 -->
+  <g filter="url(#rough2)"><rect x="150" y="306" width="56" height="104" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="222" y="332" width="56" height="78" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="294" y="332" width="56" height="78" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="366" y="384" width="56" height="26" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/></g>
+  <g filter="url(#rough2)"><rect x="438" y="402" width="56" height="8" rx="4" fill="none" stroke="#999" stroke-width="1.2" stroke-dasharray="4 3"/></g>
+  <g filter="url(#rough2)"><rect x="510" y="402" width="56" height="8" rx="4" fill="none" stroke="#999" stroke-width="1.2" stroke-dasharray="4 3"/></g>
+
+  <!-- value labels -->
+  <text x="178" y="296" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b4a6b">4</text>
+  <text x="250" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b4a6b">3</text>
+  <text x="322" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b4a6b">3</text>
+  <text x="394" y="374" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b4a6b">1</text>
+  <text x="466" y="394" text-anchor="middle" font-size="13" fill="#777">0</text>
+  <text x="538" y="394" text-anchor="middle" font-size="13" fill="#777">0</text>
+
+  <!-- baseline -->
+  <path d="M 120 410 L 600 410" stroke="#888" stroke-width="1.4" fill="none" filter="url(#rough2)"/>
+  <text x="178" y="430" text-anchor="middle" font-size="11" fill="#888">刀1</text>
+  <text x="250" y="430" text-anchor="middle" font-size="11" fill="#888">刀2</text>
+  <text x="322" y="430" text-anchor="middle" font-size="11" fill="#888">刀3</text>
+  <text x="394" y="430" text-anchor="middle" font-size="11" fill="#888">刀4</text>
+  <text x="466" y="430" text-anchor="middle" font-size="11" fill="#888">刀5</text>
+  <text x="538" y="430" text-anchor="middle" font-size="11" fill="#888">刀6</text>
+
+  <!-- descending dashed arrow -->
+  <path d="M 172 288 Q 370 322 548 388" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#arrR)" filter="url(#rough2)"/>
+  <text x="620" y="330" font-size="13" font-weight="bold" fill="#b85450">result</text>
+  <text x="620" y="350" font-size="13" font-weight="bold" fill="#b85450">单调不增</text>
+
+  <text x="390" y="458" text-anchor="middle" font-size="12" fill="#777">后一刀处理的后缀 ⊆ 前一刀的后缀 ⇒ 由引理，MEX 只降不升</text>
+</svg>

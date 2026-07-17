@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="770" viewBox="0 0 960 770" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="960" height="770" fill="#fafafa"/>
+  <text x="480" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">示例 2 演算：budget = 35 → 答案 7</text>
+  <path d="M 280 42 Q 480 50 680 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Panel 1: input table with c_i ===== -->
+  <text x="480" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#446688">① 输入与 c_i：c_i =（factor 为 factor_i 倍数的物品数）− 1</text>
+
+  <text x="220" y="94" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">类型 i</text>
+  <text x="360" y="94" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">factor</text>
+  <text x="500" y="94" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">price</text>
+  <text x="640" y="94" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">c_i</text>
+  <text x="730" y="94" font-size="12" fill="#555" font-weight="bold">决策</text>
+  <path d="M 160 104 L 700 104" stroke="#bbb" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+
+  <!-- type 0: taken -->
+  <g filter="url(#sk)"><rect x="150" y="112" width="560" height="28" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3"/></g>
+  <text x="220" y="131" text-anchor="middle" font-size="11" fill="#2b2b2b">0</text>
+  <text x="360" y="131" text-anchor="middle" font-size="11" fill="#2b2b2b">2</text>
+  <text x="500" y="131" text-anchor="middle" font-size="11" fill="#2b2b2b">8</text>
+  <text x="640" y="131" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">2</text>
+  <text x="730" y="131" font-size="10" fill="#4a7a3a" font-weight="bold">✓ 拿 2 个双倍槽</text>
+
+  <!-- type 1: taken (budget-limited) -->
+  <g filter="url(#sk)"><rect x="150" y="144" width="560" height="28" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3"/></g>
+  <text x="220" y="163" text-anchor="middle" font-size="11" fill="#2b2b2b">1</text>
+  <text x="360" y="163" text-anchor="middle" font-size="11" fill="#2b2b2b">1</text>
+  <text x="500" y="163" text-anchor="middle" font-size="11" fill="#2b2b2b">10</text>
+  <text x="640" y="163" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">5</text>
+  <text x="730" y="163" font-size="10" fill="#4a7a3a" font-weight="bold">✓ 拿 1 个（预算只够 1 个）</text>
+
+  <!-- type 2: cheapest -->
+  <g filter="url(#sk)"><rect x="150" y="176" width="560" height="28" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4"/></g>
+  <text x="220" y="195" text-anchor="middle" font-size="11" fill="#2b2b2b">2</text>
+  <text x="360" y="195" text-anchor="middle" font-size="11" fill="#2b2b2b">6</text>
+  <text x="500" y="195" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">6</text>
+  <text x="640" y="195" text-anchor="middle" font-size="11" fill="#2b2b2b">0</text>
+  <text x="730" y="195" font-size="10" fill="#7a5415" font-weight="bold">★ 最便宜：p1 = 6（c=0 无槽）</text>
+
+  <!-- type 3: no slots -->
+  <g filter="url(#sk)"><rect x="150" y="208" width="560" height="28" rx="4" fill="#f0ede4" stroke="#ccc" stroke-width="1" opacity="0.7"/></g>
+  <text x="220" y="227" text-anchor="middle" font-size="11" fill="#888">3</text>
+  <text x="360" y="227" text-anchor="middle" font-size="11" fill="#888">4</text>
+  <text x="500" y="227" text-anchor="middle" font-size="11" fill="#888">12</text>
+  <text x="640" y="227" text-anchor="middle" font-size="11" fill="#888">0</text>
+  <text x="730" y="227" font-size="10" fill="#999">c=0，无双倍槽</text>
+
+  <!-- type 4: skipped -->
+  <g filter="url(#sk)"><rect x="150" y="240" width="560" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="259" text-anchor="middle" font-size="11" fill="#2b2b2b">4</text>
+  <text x="360" y="259" text-anchor="middle" font-size="11" fill="#2b2b2b">5</text>
+  <text x="500" y="259" text-anchor="middle" font-size="11" fill="#2b2b2b">20</text>
+  <text x="640" y="259" text-anchor="middle" font-size="11" fill="#2b2b2b">1</text>
+  <text x="730" y="259" font-size="10" fill="#b85450" font-weight="bold">✗ 20 &gt; 12，跳过</text>
+
+  <!-- type 5: skipped -->
+  <g filter="url(#sk)"><rect x="150" y="272" width="560" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="220" y="291" text-anchor="middle" font-size="11" fill="#2b2b2b">5</text>
+  <text x="360" y="291" text-anchor="middle" font-size="11" fill="#2b2b2b">5</text>
+  <text x="500" y="291" text-anchor="middle" font-size="11" fill="#2b2b2b">17</text>
+  <text x="640" y="291" text-anchor="middle" font-size="11" fill="#2b2b2b">1</text>
+  <text x="730" y="291" font-size="10" fill="#b85450" font-weight="bold">✗ 17 &gt; 12，跳过</text>
+
+  <!-- ===== Panel 2: scan in price order ===== -->
+  <text x="480" y="330" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a7a3a">② 双倍槽按价格升序扫描（阈值 2·p1 = 12）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="346" width="840" height="38" rx="6" fill="#f0ede4" stroke="#ccc" stroke-width="1"/></g>
+  <text x="78" y="370" font-size="11" fill="#666" font-family="monospace">类型2 (p=6,  c=0)  无双倍槽 —— 但它是最便宜类型，p1 = 6</text>
+  <text x="885" y="370" text-anchor="end" font-size="10" fill="#7a5415" font-weight="bold">单倍槽来源</text>
+
+  <g filter="url(#sk)"><rect x="60" y="392" width="840" height="38" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3"/></g>
+  <text x="78" y="416" font-size="11" fill="#444" font-family="monospace">类型0 (p=8 ≤ 12)  t = min(2, ⌊35/8⌋) = min(2, 4) = 2 槽</text>
+  <text x="885" y="416" text-anchor="end" font-size="11" fill="#4a7a3a" font-weight="bold">+4 件，rem = 19</text>
+
+  <g filter="url(#sk)"><rect x="60" y="438" width="840" height="38" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3"/></g>
+  <text x="78" y="462" font-size="11" fill="#444" font-family="monospace">类型1 (p=10 ≤ 12) t = min(5, ⌊19/10⌋) = min(5, 1) = 1 槽</text>
+  <text x="885" y="462" text-anchor="end" font-size="11" fill="#4a7a3a" font-weight="bold">+2 件，rem = 9</text>
+
+  <g filter="url(#sk)"><rect x="60" y="484" width="840" height="38" rx="6" fill="#f0ede4" stroke="#ccc" stroke-width="1"/></g>
+  <text x="78" y="508" font-size="11" fill="#666" font-family="monospace">类型3 (p=12 ≤ 12) c = 0，无双倍槽</text>
+  <text x="885" y="508" text-anchor="end" font-size="10" fill="#999">rem = 9</text>
+
+  <g filter="url(#sk)"><rect x="60" y="530" width="840" height="38" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="78" y="554" font-size="11" fill="#444" font-family="monospace">类型5 (p=17 &gt; 12) 超过阈值 → break（后面更贵）</text>
+  <text x="885" y="554" text-anchor="end" font-size="10" fill="#b85450" font-weight="bold">放弃</text>
+
+  <g filter="url(#sk)"><rect x="60" y="576" width="840" height="38" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1" opacity="0.65"/></g>
+  <text x="78" y="600" font-size="11" fill="#888" font-family="monospace">类型4 (p=20 &gt; 12) 不再考虑</text>
+  <text x="885" y="600" text-anchor="end" font-size="10" fill="#b85450">放弃</text>
+
+  <!-- ===== Panel 3: settlement ===== -->
+  <g filter="url(#sk)"><rect x="60" y="646" width="840" height="100" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <text x="480" y="674" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">③ 余钱全买单倍件：⌊rem / p1⌋ = ⌊9 / 6⌋ = 1 件</text>
+  <text x="480" y="702" text-anchor="middle" font-size="16" fill="#2b2b2b" font-weight="bold">总物品数 = 4 + 2 + 1 = 7 ✓</text>
+  <text x="480" y="728" text-anchor="middle" font-size="10" fill="#666">对应购买方案：物品0 ×2、物品1 ×1、物品2 ×1，花费 32 ≤ 35，免费 3 件</text>
+</svg>

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="800" height="480" fill="#fafafa"/>
+  <text x="400" y="36" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">完整走查：nums = [0, 1, 0] → result = [2, 1]</text>
+
+  <!-- ===== step 1 ===== -->
+  <text x="70" y="124" font-size="14" font-weight="bold" fill="#446688">第 1 刀</text>
+  <g filter="url(#rough2)"><rect x="140" y="90" width="64" height="56" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.8"/></g>
+  <g filter="url(#rough2)"><rect x="204" y="90" width="64" height="56" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.8"/></g>
+  <g filter="url(#rough2)"><rect x="268" y="90" width="64" height="56" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1.2"/></g>
+  <text x="172" y="126" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b4a6b">0</text>
+  <text x="236" y="126" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b4a6b">1</text>
+  <text x="300" y="126" text-anchor="middle" font-size="18" fill="#999">0</text>
+  <path d="M 140 156 L 135 164 L 272 164 L 268 156" stroke="#446688" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="204" y="184" text-anchor="middle" font-size="12" fill="#2b4a6b">切 [0,1]（最短覆盖 0,1）→ MEX = 2</text>
+  <path d="M 348 118 L 402 118" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="375" y="106" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">输出 2</text>
+  <g filter="url(#rough2)"><rect x="420" y="90" width="64" height="56" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1.2" stroke-dasharray="5 3"/></g>
+  <text x="452" y="126" text-anchor="middle" font-size="18" fill="#999">0</text>
+  <text x="452" y="184" text-anchor="middle" font-size="12" fill="#777">剩余 [0]</text>
+  <text x="552" y="112" font-size="12" fill="#555">当前后缀 MEX = 2</text>
+  <text x="552" y="134" font-size="12" fill="#555">（值 0、1 都在）</text>
+
+  <!-- ===== step 2 ===== -->
+  <text x="70" y="268" font-size="14" font-weight="bold" fill="#446688">第 2 刀</text>
+  <g filter="url(#rough2)"><rect x="140" y="234" width="64" height="56" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8"/></g>
+  <text x="172" y="270" text-anchor="middle" font-size="18" font-weight="bold" fill="#7a5415">0</text>
+  <path d="M 140 300 L 135 308 L 208 308 L 204 300" stroke="#d6a040" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="172" y="328" text-anchor="middle" font-size="12" fill="#7a5415">切 [0] → MEX = 1（缺 1）</text>
+  <path d="M 220 262 L 274 262" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="247" y="250" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">输出 1</text>
+  <text x="292" y="266" font-size="12" fill="#777">剩余 ∅，结束</text>
+  <g filter="url(#rough2)"><rect x="430" y="236" width="190" height="52" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.6"/></g>
+  <text x="525" y="268" text-anchor="middle" font-size="15" font-weight="bold" fill="#33602f">result = [2, 1]</text>
+  <text x="525" y="312" text-anchor="middle" font-size="12" fill="#b85450">★ [2,1] &gt; [2]：前缀相同，更长者更大</text>
+
+  <!-- ===== mini example A ===== -->
+  <g filter="url(#rough2)"><rect x="60" y="352" width="340" height="104" rx="10" fill="#e8f0fe" stroke="#446688" stroke-width="1.3"/></g>
+  <text x="82" y="378" font-size="13" font-weight="bold" fill="#2b4a6b">小例 A：nums = [1, 0, 2]</text>
+  <g filter="url(#rough2)"><rect x="82" y="390" width="36" height="30" rx="4" fill="#ffffff" stroke="#446688" stroke-width="1.2"/></g>
+  <g filter="url(#rough2)"><rect x="122" y="390" width="36" height="30" rx="4" fill="#ffffff" stroke="#446688" stroke-width="1.2"/></g>
+  <g filter="url(#rough2)"><rect x="162" y="390" width="36" height="30" rx="4" fill="#ffffff" stroke="#446688" stroke-width="1.2"/></g>
+  <text x="100" y="410" text-anchor="middle" font-size="13" fill="#2b4a6b">1</text>
+  <text x="140" y="410" text-anchor="middle" font-size="13" fill="#2b4a6b">0</text>
+  <text x="180" y="410" text-anchor="middle" font-size="13" fill="#2b4a6b">2</text>
+  <text x="212" y="410" font-size="12" fill="#2b4a6b">含 0,1,2 ⇒ MEX = 3，一刀切</text>
+  <text x="82" y="442" font-size="13" font-weight="bold" fill="#33602f">result = [3]</text>
+
+  <!-- ===== mini example B ===== -->
+  <g filter="url(#rough2)"><rect x="430" y="352" width="340" height="104" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3"/></g>
+  <text x="452" y="378" font-size="13" font-weight="bold" fill="#7a5415">小例 B：nums = [3, 1]</text>
+  <g filter="url(#rough2)"><rect x="452" y="390" width="36" height="30" rx="4" fill="#ffffff" stroke="#d6a040" stroke-width="1.2"/></g>
+  <g filter="url(#rough2)"><rect x="492" y="390" width="36" height="30" rx="4" fill="#ffffff" stroke="#d6a040" stroke-width="1.2"/></g>
+  <text x="470" y="410" text-anchor="middle" font-size="13" fill="#7a5415">3</text>
+  <text x="510" y="410" text-anchor="middle" font-size="13" fill="#7a5415">1</text>
+  <text x="542" y="410" font-size="12" fill="#7a5415">0 缺失 ⇒ 每刀 MEX 都是 0</text>
+  <text x="452" y="442" font-size="13" font-weight="bold" fill="#33602f">逐元素各一刀：result = [0, 0]</text>
+</svg>
