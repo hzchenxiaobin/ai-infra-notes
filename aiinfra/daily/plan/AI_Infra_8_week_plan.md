@@ -1,5 +1,8 @@
 # AI Infra 8 周冲刺学习计划（工程实战版）
 
+> 📌 本文件是**极简总览**（164 行），完整版见 [AI_Infra_8_week_plan_detailed.md](AI_Infra_8_week_plan_detailed.md)（883 行，含每日详细任务）。
+> 每周概览见各周 [README.md](../week1/README.md)。
+
 > 适合人群：具备 CUDA / 算子优化基础，希望转向 AI Infra（推理系统 /
 > 分布式 / 内核优化）\
 > 学习强度：每日 3～5 小时\
