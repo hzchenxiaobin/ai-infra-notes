@@ -196,6 +196,8 @@ def page_template(title: str, nav_html: str, markdown: str, root_prefix: str) ->
     <link href="{root_prefix}css/prism-tomorrow.min.css" rel="stylesheet">
     <script src="{root_prefix}js/prism.min.js"></script>
     <script src="{root_prefix}js/prism-c.min.js"></script>
+    <script src="{root_prefix}js/prism-cpp.min.js"></script>
+    <script src="{root_prefix}js/prism-cpp.min.js"></script>
     <script>Prism.languages.cuda=Prism.languages.extend("c",{{builtin:/\\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\\b/}});</script>
     <script src="{root_prefix}js/prism-bash.min.js"></script>
     <script src="{root_prefix}js/prism-python.min.js"></script>

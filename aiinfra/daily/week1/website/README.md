@@ -17,6 +17,7 @@ week1/website/
 │   ├── marked.min.js
 │   ├── prism.min.js
 │   ├── prism-c.min.js
+│   ├── prism-cpp.min.js
 │   ├── prism-bash.min.js
 │   └── prism-python.min.js
 └── images/             # 图片资源（SVG 图表）
