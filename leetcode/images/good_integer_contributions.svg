@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="23"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+  </defs>
+  <rect width="540" height="320" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">各数字 d 对差值的贡献 d·(d-1)</text>
+  <text x="270" y="48" text-anchor="middle" font-size="11" fill="#888" filter="url(#r)">squareSum - digitSum = Σ d·(d-1)，0/1 贡献 0</text>
+
+  <g filter="url(#r)" font-size="10" font-family="monospace">
+    <text x="30" y="80" fill="#446688" font-weight="bold">d=0</text><rect x="70" y="70" width="6" height="20" fill="#e8f0fe" stroke="#446688"/><text x="85" y="85" fill="#888">0</text>
+    <text x="30" y="110" fill="#446688" font-weight="bold">d=1</text><rect x="70" y="100" width="6" height="20" fill="#e8f0fe" stroke="#446688"/><text x="85" y="115" fill="#888">0</text>
+    <text x="30" y="140" fill="#446688" font-weight="bold">d=2</text><rect x="70" y="130" width="20" height="20" fill="#e8f0fe" stroke="#446688"/><text x="95" y="145" fill="#333">2</text>
+    <text x="30" y="170" fill="#446688" font-weight="bold">d=3</text><rect x="70" y="160" width="45" height="20" fill="#e8f0fe" stroke="#446688"/><text x="120" y="175" fill="#333">6</text>
+    <text x="30" y="200" fill="#446688" font-weight="bold">d=4</text><rect x="70" y="190" width="75" height="20" fill="#fff8e1" stroke="#d6a040"/><text x="150" y="205" fill="#333">12</text>
+    <text x="30" y="230" fill="#446688" font-weight="bold">d=5</text><rect x="70" y="220" width="110" height="20" fill="#fff8e1" stroke="#d6a040"/><text x="185" y="235" fill="#333">20</text>
+    <text x="200" y="80" fill="#446688" font-weight="bold">d=6</text><rect x="240" y="70" width="150" height="20" fill="#fff8e1" stroke="#d6a040"/><text x="395" y="85" fill="#333">30</text>
+    <text x="200" y="110" fill="#446688" font-weight="bold">d=7</text><rect x="240" y="100" width="200" height="20" fill="#fce4ec" stroke="#b85450"/><text x="445" y="115" fill="#b85450">42</text>
+    <text x="200" y="140" fill="#446688" font-weight="bold">d=8</text><rect x="240" y="130" width="255" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="2"/><text x="500" y="145" fill="#b85450" font-weight="bold">56 ≥50</text>
+    <text x="200" y="170" fill="#446688" font-weight="bold">d=9</text><rect x="240" y="160" width="280" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="2"/><text x="525" y="175" fill="#b85450" font-weight="bold">72 ≥50</text>
+  </g>
+
+  <rect x="30" y="210" width="480" height="90" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="234" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">关键观察：阈值 50</text>
+  <text x="45" y="254" font-size="11" fill="#333" filter="url(#r)">单个 8（56）或 9（72）即可达标</text>
+  <text x="45" y="272" font-size="11" fill="#333" filter="url(#r)">组合：6+5=50、7+4=54、5+5+5=60 等</text>
+  <text x="45" y="290" font-size="10" fill="#888" filter="url(#r)">剪枝：累加贡献一旦 ≥50 立即返回 true</text>
+</svg>

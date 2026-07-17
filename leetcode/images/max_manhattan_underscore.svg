@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="29"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/></marker>
+  </defs>
+  <rect width="540" height="320" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">_ 的方向选择：沿净位移符号方向使 |x| 或 |y| 增 1</text>
+
+  <g filter="url(#r)">
+    <rect x="30" y="60" width="230" height="110" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="145" y="82" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">net_x ≥ 0</text>
+    <path d="M 80 120 L 140 120" stroke="#446688" stroke-width="2.5" marker-end="url(#ar)" filter="url(#r)"/>
+    <text x="110" y="112" text-anchor="middle" font-size="11" fill="#446688">选 R：x+1</text>
+    <text x="145" y="150" text-anchor="middle" font-size="11" fill="#4a7a3a" filter="url(#r)">|x| 增 1（x≥0 单调增）</text>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="280" y="60" width="230" height="110" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="395" y="82" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">net_x &lt; 0</text>
+    <path d="M 420 120 L 360 120" stroke="#4a7a3a" stroke-width="2.5" marker-end="url(#ar)" filter="url(#r)"/>
+    <text x="390" y="112" text-anchor="middle" font-size="11" fill="#4a7a3a">选 L：x-1</text>
+    <text x="395" y="150" text-anchor="middle" font-size="11" fill="#4a7a3a" filter="url(#r)">|x| 增 1（x&lt;0 时 |x| 随 x 减而增）</text>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="30" y="185" width="230" height="110" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+    <text x="145" y="207" text-anchor="middle" font-size="12" fill="#d6a040" font-weight="bold">net_y ≥ 0</text>
+    <path d="M 145 230 L 145 285" stroke="#d6a040" stroke-width="2.5" marker-end="url(#ar)" filter="url(#r)"/>
+    <text x="175" y="260" font-size="11" fill="#d6a040">选 U：y+1</text>
+    <text x="145" y="300" text-anchor="middle" font-size="11" fill="#4a7a3a" filter="url(#r)">|y| 增 1</text>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="280" y="185" width="230" height="110" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+    <text x="395" y="207" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">net_y &lt; 0</text>
+    <path d="M 395 230 L 395 285" stroke="#b85450" stroke-width="2.5" marker-end="url(#ar)" filter="url(#r)"/>
+    <text x="425" y="260" font-size="11" fill="#b85450">选 D：y-1</text>
+    <text x="395" y="300" text-anchor="middle" font-size="11" fill="#4a7a3a" filter="url(#r)">|y| 增 1</text>
+  </g>
+</svg>

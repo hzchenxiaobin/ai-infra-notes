@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+  </defs>
+  <rect width="540" height="340" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">分块维护 freq 与 lazy：type-2 查询细节</text>
+
+  <text x="30" y="62" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">nums2 分块（块大小 S=√n）：</text>
+  <g filter="url(#r)">
+    <rect x="30" y="72" width="70" height="34" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="65" y="94" text-anchor="middle" font-size="11" fill="#333">块 0</text>
+    <rect x="105" y="72" width="70" height="34" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="140" y="94" text-anchor="middle" font-size="11" fill="#333">块 1</text>
+    <rect x="180" y="72" width="70" height="34" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="2"/><text x="215" y="88" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">块 b</text>
+    <rect x="255" y="72" width="70" height="34" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="290" y="94" text-anchor="middle" font-size="11" fill="#333">块 b+1</text>
+    <text x="340" y="94" font-size="11" fill="#888">...</text>
+  </g>
+  <text x="30" y="128" font-size="11" fill="#888" filter="url(#r)">每块维护：freq[原始值]=计数，lazy=块级偏移</text>
+
+  <rect x="30" y="145" width="480" height="80" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="167" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">type-2 查询 [tot]：对每个 nums1[j] 查 target=tot-nums1[j]</text>
+  <text x="45" y="187" font-size="11" fill="#333" filter="url(#r)">块 b 中实际值 = 原始值 + lazy[b]</text>
+  <text x="45" y="205" font-size="12" fill="#b85450" font-family="monospace" filter="url(#r)">ans += freq[b][ target - lazy[b] ]</text>
+  <text x="45" y="220" font-size="10" fill="#888" filter="url(#r)">↑ 反向减 lazy，定位到原始值键</text>
+
+  <rect x="30" y="240" width="230" height="80" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" filter="url(#r)"/>
+  <text x="45" y="262" font-size="12" fill="#d6a040" font-weight="bold" filter="url(#r)">type-1 区间加 [x,y,val]</text>
+  <text x="45" y="280" font-size="11" fill="#333" filter="url(#r)">完整块：lazy[b]+=val（O(1)）</text>
+  <text x="45" y="298" font-size="11" fill="#333" filter="url(#r)">边缘块：逐元素改 freq（O(√n)）</text>
+  <text x="45" y="314" font-size="10" fill="#888" filter="url(#r)">总计 O(√n)/次</text>
+
+  <rect x="280" y="240" width="230" height="80" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" filter="url(#r)"/>
+  <text x="295" y="262" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">复杂度（|nums1|≤5）</text>
+  <text x="295" y="282" font-size="11" fill="#333" font-family="monospace" filter="url(#r)">type-1: O(√n)</text>
+  <text x="295" y="300" font-size="11" fill="#333" font-family="monospace" filter="url(#r)">type-2: O(5·√n)</text>
+  <text x="295" y="316" font-size="10" fill="#4a7a3a" filter="url(#r)">总计 O(Q·√n·|nums1|)</text>
+</svg>

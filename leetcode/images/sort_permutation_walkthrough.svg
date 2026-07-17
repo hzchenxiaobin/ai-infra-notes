@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="5"/><feDisplacementMap in="SourceGraphic" scale="1.6"/></filter>
+  </defs>
+  <rect width="540" height="340" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">示例演算：nums = [0,2,1]，pos = [0,2,1]</text>
+
+  <text x="30" y="62" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">值 v</text>
+  <text x="30" y="84" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">pos[v]</text>
+  <g filter="url(#r)">
+    <rect x="110" y="50" width="60" height="26" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="140" y="68" text-anchor="middle" font-size="13" fill="#333">0</text>
+    <rect x="180" y="50" width="60" height="26" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="210" y="68" text-anchor="middle" font-size="13" fill="#333">1</text>
+    <rect x="250" y="50" width="60" height="26" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/><text x="280" y="68" text-anchor="middle" font-size="13" fill="#333">2</text>
+    <rect x="110" y="72" width="60" height="26" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="140" y="90" text-anchor="middle" font-size="13" fill="#333">0</text>
+    <rect x="180" y="72" width="60" height="26" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="210" y="90" text-anchor="middle" font-size="13" fill="#333">2</text>
+    <rect x="250" y="72" width="60" height="26" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="280" y="90" text-anchor="middle" font-size="13" fill="#333">1</text>
+  </g>
+
+  <rect x="30" y="115" width="480" height="50" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="136" font-size="11" fill="#b85450" font-weight="bold" filter="url(#r)">升序检查 pos[1]==(pos[0]+1)%3？</text>
+  <text x="45" y="154" font-size="11" fill="#333" filter="url(#r)">2 == (0+1)%3 = 1？  ✗ → 非升序形态</text>
+
+  <rect x="30" y="175" width="480" height="50" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="196" font-size="11" fill="#4a7a3a" font-weight="bold" filter="url(#r)">降序检查 pos[i-1]==(pos[i]+1)%3？</text>
+  <text x="45" y="214" font-size="11" fill="#333" filter="url(#r)">pos[1]=2==(1+1)%3 ✓；pos[0]=0==(2+1)%3 ✓ → 降序成立</text>
+
+  <text x="30" y="250" font-size="12" fill="#d6a040" font-weight="bold" filter="url(#r)">降序两种排序顺序取 min：</text>
+  <g filter="url(#r)">
+    <rect x="30" y="260" width="230" height="60" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3"/>
+    <text x="45" y="280" font-size="11" fill="#333">先反转再左旋：</text>
+    <text x="45" y="298" font-size="12" fill="#b85450" font-family="monospace">1 + (n-1-pos[0]) = 1+2 = 3</text>
+    <text x="45" y="314" font-size="10" fill="#888">反转[0,2,1]→[1,2,0]，左旋2次</text>
+    <rect x="280" y="260" width="230" height="60" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/>
+    <text x="295" y="280" font-size="11" fill="#333">先左旋再反转：</text>
+    <text x="295" y="298" font-size="12" fill="#4a7a3a" font-weight="bold" font-family="monospace">1 + pos[n-1] = 1+1 = 2 ✓</text>
+    <text x="295" y="314" font-size="10" fill="#888">左旋→[2,1,0]，反转→[0,1,2]</text>
+  </g>
+</svg>

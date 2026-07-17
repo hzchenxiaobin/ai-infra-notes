@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="17"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+  </defs>
+  <rect width="560" height="340" fill="#fafafa"/>
+  <text x="280" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">DP 演算：nums=[4,1,-5,2], m=2, l=1, r=3</text>
+
+  <text x="30" y="62" font-size="11" fill="#446688" font-weight="bold" filter="url(#r)">dp[i][j] = nums[0..i-1] 中选 j 个不重叠子数组的最大和</text>
+
+  <g filter="url(#r)" font-size="11" font-family="monospace">
+    <text x="30" y="90" fill="#446688" font-weight="bold">i\j</text>
+    <text x="110" y="90" fill="#446688" font-weight="bold">0</text>
+    <text x="180" y="90" fill="#446688" font-weight="bold">1</text>
+    <text x="250" y="90" fill="#446688" font-weight="bold">2</text>
+
+    <text x="30" y="112" fill="#333">0</text><text x="110" y="112" fill="#333">0</text><text x="180" y="112" fill="#888">-∞</text><text x="250" y="112" fill="#888">-∞</text>
+    <text x="30" y="134" fill="#333">1</text><text x="110" y="134" fill="#333">0</text><text x="180" y="134" fill="#4a7a3a" font-weight="bold">4</text><text x="250" y="134" fill="#888">-∞</text>
+    <text x="30" y="156" fill="#333">2</text><text x="110" y="156" fill="#333">0</text><text x="180" y="156" fill="#4a7a3a" font-weight="bold">5</text><text x="250" y="156" fill="#888">-∞</text>
+    <text x="30" y="178" fill="#333">3</text><text x="110" y="178" fill="#333">0</text><text x="180" y="178" fill="#333">5</text><text x="250" y="178" fill="#888">-∞</text>
+    <text x="30" y="200" fill="#333">4</text><text x="110" y="200" fill="#333">0</text><text x="180" y="200" fill="#333">5</text><text x="250" y="200" fill="#4a7a3a" font-weight="bold">7</text>
+  </g>
+
+  <text x="320" y="112" font-size="10" fill="#888" filter="url(#r)">i=1: 选[4], dp[1][1]=4</text>
+  <text x="320" y="134" font-size="10" fill="#888" filter="url(#r)">i=2: 选[4,1]=5, 优于单独[1]</text>
+  <text x="320" y="156" font-size="10" fill="#888" filter="url(#r)">i=3: -5 使和减小，保持5</text>
+  <text x="320" y="178" font-size="10" fill="#888" filter="url(#r)">i=4: dp[4][2]=dp[2][1]+[2]=5+2=7</text>
+
+  <rect x="30" y="225" width="500" height="95" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="248" font-size="12" fill="#d6a040" font-weight="bold" filter="url(#r)">转移：dp[i][j] = max(dp[i-1][j], max_len dp[i-len][j-1]+sum)</text>
+  <text x="45" y="268" font-size="11" fill="#333" filter="url(#r)">不选以 i-1 结尾的子数组 → 继承 dp[i-1][j]</text>
+  <text x="45" y="286" font-size="11" fill="#333" filter="url(#r)">选长度 len∈[l,r] 的子数组 → dp[i-len][j-1] + prefix[i]-prefix[i-len]</text>
+  <text x="45" y="306" font-size="12" fill="#b85450" font-weight="bold" filter="url(#r)">答案 = max(dp[n][1..m]) = max(5, 7) = 7 ✓</text>
+</svg>

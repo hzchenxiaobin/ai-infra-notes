@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="41"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/></marker>
+  </defs>
+  <rect width="540" height="320" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">示例演算：12:34:56 → 13:00:00 转秒分解</text>
+
+  <g filter="url(#r)">
+    <rect x="30" y="55" width="480" height="60" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="45" y="78" font-size="13" fill="#446688" font-weight="bold" filter="url(#r)">startTime = "12:34:56"</text>
+    <text x="45" y="100" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">HH=12  →  12×3600 = 43200</text>
+    <text x="220" y="100" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">MM=34 → 34×60 = 2040</text>
+    <text x="380" y="100" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">SS=56</text>
+  </g>
+  <text x="270" y="135" text-anchor="middle" font-size="11" fill="#888" font-family="monospace" filter="url(#r)">总秒数 = 43200 + 2040 + 56 = 45296</text>
+
+  <g filter="url(#r)">
+    <rect x="30" y="150" width="480" height="60" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="45" y="173" font-size="13" fill="#4a7a3a" font-weight="bold" filter="url(#r)">endTime = "13:00:00"</text>
+    <text x="45" y="195" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">HH=13  →  13×3600 = 46800</text>
+    <text x="220" y="195" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">MM=0 → 0</text>
+    <text x="380" y="195" font-size="12" font-family="monospace" fill="#333" filter="url(#r)">SS=0</text>
+  </g>
+  <text x="270" y="230" text-anchor="middle" font-size="11" fill="#888" font-family="monospace" filter="url(#r)">总秒数 = 46800</text>
+
+  <g filter="url(#r)">
+    <path d="M 270 240 L 270 265" stroke="#b85450" stroke-width="2" marker-end="url(#ar)"/>
+  </g>
+  <rect x="30" y="270" width="480" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" filter="url(#r)"/>
+  <text x="270" y="296" text-anchor="middle" font-size="14" fill="#b85450" font-weight="bold" font-family="monospace" filter="url(#r)">差 = 46800 − 45296 = 1504 ✓</text>
+</svg>

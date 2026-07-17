@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="47"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="ar" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#3a3a3a"/></marker>
+  </defs>
+  <rect width="560" height="360" fill="#fafafa"/>
+  <text x="280" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">状态机演算：nums=[1,-2,3,4,-5], k=2（乘法）</text>
+
+  <g filter="url(#r)" font-size="11" font-family="monospace">
+    <text x="20" y="58" fill="#446688" font-weight="bold">i</text>
+    <text x="60" y="58" fill="#446688" font-weight="bold">v</text>
+    <text x="110" y="58" fill="#446688" font-weight="bold">mv</text>
+    <text x="170" y="58" fill="#446688" font-weight="bold">S0</text>
+    <text x="240" y="58" fill="#446688" font-weight="bold">S1(×2)</text>
+    <text x="330" y="58" fill="#446688" font-weight="bold">S2</text>
+    <text x="400" y="58" fill="#446688" font-weight="bold">ans</text>
+
+    <text x="20" y="82" fill="#333">0</text><text x="60" y="82" fill="#333">1</text><text x="110" y="82" fill="#333">2</text><text x="170" y="82" fill="#333">1</text><text x="240" y="82" fill="#4a7a3a" font-weight="bold">2</text><text x="330" y="82" fill="#333">1</text><text x="400" y="82" fill="#333">2</text>
+    <text x="20" y="106" fill="#333">1</text><text x="60" y="106" fill="#333">-2</text><text x="110" y="106" fill="#333">-4</text><text x="170" y="106" fill="#333">-1</text><text x="240" y="106" fill="#333">-2</text><text x="330" y="106" fill="#333">0</text><text x="400" y="106" fill="#333">2</text>
+    <text x="20" y="130" fill="#333">2</text><text x="60" y="130" fill="#333">3</text><text x="110" y="130" fill="#333">6</text><text x="170" y="130" fill="#333">3</text><text x="240" y="130" fill="#4a7a3a" font-weight="bold">6</text><text x="330" y="130" fill="#333">3</text><text x="400" y="130" fill="#333">6</text>
+    <text x="20" y="154" fill="#333">3</text><text x="60" y="154" fill="#333">4</text><text x="110" y="154" fill="#333">8</text><text x="170" y="154" fill="#333">7</text><text x="240" y="154" fill="#b85450" font-weight="bold">14</text><text x="330" y="154" fill="#333">10</text><text x="400" y="154" fill="#b85450" font-weight="bold">14</text>
+    <text x="20" y="178" fill="#333">4</text><text x="60" y="178" fill="#333">-5</text><text x="110" y="178" fill="#333">-10</text><text x="170" y="178" fill="#333">2</text><text x="240" y="178" fill="#333">4</text><text x="330" y="178" fill="#333">9</text><text x="400" y="178" fill="#b85450" font-weight="bold">14</text>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="20" y="200" width="250" height="70" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.4"/>
+    <text x="35" y="222" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">状态转移</text>
+    <text x="35" y="240" font-size="10" fill="#333" font-family="monospace" filter="url(#r)">dp0=max(v, dp0+v)</text>
+    <text x="35" y="256" font-size="10" fill="#333" font-family="monospace" filter="url(#r)">dp1=max(mv, dp0+mv, dp1+mv)</text>
+    <text x="35" y="272" font-size="10" fill="#333" font-family="monospace" filter="url(#r)">dp2=max(v, dp1+v, dp2+v)</text>
+  </g>
+  <g filter="url(#r)">
+    <rect x="290" y="200" width="250" height="70" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4"/>
+    <text x="305" y="222" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">关键点</text>
+    <text x="305" y="240" font-size="10" fill="#333" filter="url(#r)">S1 新开 = mv（操作段起始）</text>
+    <text x="305" y="256" font-size="10" fill="#333" filter="url(#r)">S2 从 S1 转入（操作段结束）</text>
+    <text x="305" y="272" font-size="10" fill="#b85450" filter="url(#r)">ans=max(dp1,dp2)，不含 dp0</text>
+  </g>
+
+  <rect x="20" y="285" width="520" height="50" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" filter="url(#r)"/>
+  <text x="35" y="308" font-size="12" fill="#b85450" font-weight="bold" filter="url(#r)">i=3: S1=max(8, 3+8, 6+8)=14（操作[3,4]求和[3,4]）</text>
+  <text x="35" y="326" font-size="11" fill="#333" filter="url(#r)">最终 ans = 14 ✓（除法另跑一次取 max）</text>
+</svg>

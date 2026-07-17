@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="19"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+  </defs>
+  <rect width="560" height="340" fill="#fafafa"/>
+  <text x="280" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">单调队列维护窗口 [i-r, i-l] 内 val 最大值</text>
+
+  <text x="30" y="62" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">val[k] = dp[k][j-1] - prefix[k]，窗口随 i 右移</text>
+
+  <g filter="url(#r)">
+    <rect x="30" y="80" width="500" height="40" rx="4" fill="none" stroke="#446688" stroke-width="1.2"/>
+    <text x="40" y="105" font-size="10" fill="#888">k:</text>
+    <g font-size="11" font-family="monospace">
+      <text x="70" y="105" fill="#333">0</text><text x="110" y="105" fill="#333">1</text><text x="150" y="105" fill="#333">2</text><text x="190" y="105" fill="#333">3</text><text x="230" y="105" fill="#333">4</text><text x="270" y="105" fill="#333">5</text><text x="310" y="105" fill="#333">6</text><text x="350" y="105" fill="#333">7</text><text x="390" y="105" fill="#333">8</text>
+    </g>
+    <text x="430" y="105" font-size="10" fill="#888">...</text>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="150" y="130" width="120" height="30" rx="4" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="210" y="150" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">窗口 [i-r, i-l]</text>
+  </g>
+  <g filter="url(#r)" font-size="10" fill="#888">
+    <text x="155" y="175">↑</text>
+    <text x="250" y="175">↑</text>
+    <text x="140" y="188">i-r</text>
+    <text x="245" y="188">i-l</text>
+  </g>
+
+  <text x="30" y="210" font-size="11" fill="#333" filter="url(#r)">i 增大时窗口右移：左侧超界出队，右侧新值入队</text>
+
+  <rect x="30" y="225" width="240" height="95" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="248" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">入队（i 处）</text>
+  <text x="45" y="268" font-size="11" fill="#333" filter="url(#r)">idx = i - l</text>
+  <text x="45" y="286" font-size="11" fill="#333" filter="url(#r)">val = dp[idx][j-1] - prefix[idx]</text>
+  <text x="45" y="304" font-size="10" fill="#888" filter="url(#r)">弹尾部 ≤ val 者，保单调递减</text>
+
+  <rect x="290" y="225" width="240" height="95" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" filter="url(#r)"/>
+  <text x="305" y="248" font-size="12" fill="#b85450" font-weight="bold" filter="url(#r)">出队 &amp; 转移</text>
+  <text x="305" y="268" font-size="11" fill="#333" filter="url(#r)">弹队首 &lt; i-r 者</text>
+  <text x="305" y="286" font-size="11" fill="#333" font-family="monospace" filter="url(#r)">dp[i][j]=max(dp[i-1][j],</text>
+  <text x="335" y="304" font-size="11" fill="#b85450" font-family="monospace" filter="url(#r)">prefix[i]+front.val)</text>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="r"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="11"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/></marker>
+  </defs>
+  <rect width="540" height="320" fill="#fafafa"/>
+  <text x="270" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" filter="url(#r)">兼容筛选流程：距离条件 ∧ 按位与条件</text>
+
+  <g filter="url(#r)">
+    <rect x="30" y="55" width="180" height="50" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="120" y="78" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">条件①：abs(n-x)≤k</text>
+    <text x="120" y="96" text-anchor="middle" font-size="11" fill="#333">x ∈ [n-k, n+k]</text>
+    <rect x="330" y="55" width="180" height="50" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="420" y="78" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">条件②：(n&amp;x)==0</text>
+    <text x="420" y="96" text-anchor="middle" font-size="11" fill="#333">无公共 1 位</text>
+  </g>
+  <g filter="url(#r)">
+    <path d="M 210 80 L 265 130" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)"/>
+    <path d="M 330 80 L 275 130" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)"/>
+  </g>
+
+  <g filter="url(#r)">
+    <rect x="180" y="130" width="180" height="44" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8"/>
+    <text x="270" y="158" text-anchor="middle" font-size="13" fill="#d6a040" font-weight="bold">交集 = 兼容整数</text>
+  </g>
+
+  <text x="30" y="200" font-size="12" fill="#446688" font-weight="bold" filter="url(#r)">示例 n=2(010), k=3，区间 [−1,5]∩正整数=[1,5]：</text>
+  <g filter="url(#r)">
+    <rect x="30" y="212" width="90" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="75" y="232" text-anchor="middle" font-size="11" fill="#4a7a3a">1 ✓</text>
+    <rect x="125" y="212" width="90" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/><text x="170" y="232" text-anchor="middle" font-size="11" fill="#b85450">2 ✗</text>
+    <rect x="220" y="212" width="90" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/><text x="265" y="232" text-anchor="middle" font-size="11" fill="#b85450">3 ✗</text>
+    <rect x="315" y="212" width="90" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="360" y="232" text-anchor="middle" font-size="11" fill="#4a7a3a">4 ✓</text>
+    <rect x="410" y="212" width="90" height="30" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/><text x="455" y="232" text-anchor="middle" font-size="11" fill="#4a7a3a">5 ✓</text>
+  </g>
+
+  <rect x="30" y="258" width="480" height="44" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#r)"/>
+  <text x="45" y="280" font-size="12" fill="#4a7a3a" font-weight="bold" filter="url(#r)">累加兼容整数：1 + 4 + 5 = 10 ✓</text>
+  <text x="45" y="296" font-size="10" fill="#888" filter="url(#r)">2&amp;2=2≠0, 2&amp;3=2≠0（n=2 的位被 x 占用）</text>
+</svg>
