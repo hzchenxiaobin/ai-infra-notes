@@ -108,6 +108,9 @@ def page_template(
     <link rel="stylesheet" href="../css/style.css?v=4">
     <!-- Marked.js for Markdown rendering (local v4.3.0) -->
     <script src="../js/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="../js/markdown-math.js"></script>
     <!-- Prism.js for syntax highlighting (local) -->
     <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
     <script src="../js/prism.min.js"></script>
