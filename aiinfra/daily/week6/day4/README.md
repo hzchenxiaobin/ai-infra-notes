@@ -276,8 +276,8 @@ class PrefillScheduler:
 完整代码（含延迟模型、对比输出）见 [kernels/chunked_prefill_simulator.py](kernels/chunked_prefill_simulator.py)。
 
 代码要点：
-- **`Sequence.prefill_chunk(chunk_size)`**：核心方法——每轮只 prefill `min(chunk_size, remaining)` 个 token，`prefilled_tokens` 累加追踪进度
-- **`is_prefill_done`**：`prefilled_tokens >= prompt_len` 时 prefill 完成，序列转入 decode
+- `Sequence.prefill_chunk(chunk_size)`：核心方法——每轮只 prefill `min(chunk_size, remaining)` 个 token，`prefilled_tokens` 累加追踪进度
+- `is_prefill_done`：`prefilled_tokens >= prompt_len` 时 prefill 完成，序列转入 decode
 - **naive vs chunked 的分支**：`_schedule_waiting` 中，naive 一次 `prefill_chunk(prompt_len)`，chunked 每轮 `prefill_chunk(chunk_size)`
 - **延迟模型**：`_prefill_cost_per_token` 模拟 prefill tokens 对 decode 延迟的挤压——prefill tokens 越多，本轮 decode 越慢
 - **与 Day 3 Scheduler 的区别**：Day 3 一次性 prefill（naive），本文件多了 chunked 分支和延迟追踪

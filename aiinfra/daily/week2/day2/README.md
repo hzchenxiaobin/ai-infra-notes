@@ -509,7 +509,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 </details>
 
 
-2. **Register Blocking 中的 `acc[TM][TN]` 为什么要放在 register 而不是 shared memory？**
+2. **Register Blocking 中的** `acc[TM][TN]` **为什么要放在 register 而不是 shared memory？**
 
 <details>
 <summary>点击查看答案</summary>

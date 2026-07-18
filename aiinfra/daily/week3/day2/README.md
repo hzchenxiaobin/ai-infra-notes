@@ -643,7 +643,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 </details>
 
 
-4. **`blockReduceSum` 的两级结构是怎样的？为什么需要两级？**
+4. `blockReduceSum` **的两级结构是怎样的？为什么需要两级？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -653,7 +653,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
  - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
  - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
  - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
- - **`smem[32]` 的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
+ - `smem[32]` **的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
 
 </details>
 

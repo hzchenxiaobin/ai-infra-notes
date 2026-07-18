@@ -31,7 +31,7 @@ output = engine.generate(prompt, max_new_tokens=10) # 阻塞，跑完才返回
 
 | 维度 | v0 单请求同步 | v1 多请求并发 |
 |------|-------------|-------------|
-| 接口 | `generate()` 阻塞 | **`submit()` → Future** 异步 |
+| 接口 | `generate()` 阻塞 | `submit()` **→ Future** 异步 |
 | 并发 | 1 | **max_num_seqs（如 4-256）** |
 | Batching | 无 | **Continuous Batching**（每轮重建 batch） |
 | 调度 | 无 | **Scheduler**（token budget + 优先级） |
@@ -256,9 +256,9 @@ class MiniEngineV1:
 完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](kernels/mini_engine_v1.py)。
 
 代码要点：
-- **`submit()` 异步返回 Future**：入队后立即返回，不阻塞；worker 完成后 `future.set_result()`
-- **`MiniScheduler.schedule()`**：①保留 running decode（按优先级）②从 waiting prefill（token budget 约束），对应 Day 2-3
-- **`_run_iteration()`**：区分 prefill（处理整段 prompt，建 KV Cache）和 decode（输入 1 token，复用 KV Cache）
+- `submit()` **异步返回 Future**：入队后立即返回，不阻塞；worker 完成后 `future.set_result()`
+- `MiniScheduler.schedule()`：①保留 running decode（按优先级）②从 waiting prefill（token budget 约束），对应 Day 2-3
+- `_run_iteration()`：区分 prefill（处理整段 prompt，建 KV Cache）和 decode（输入 1 token，复用 KV Cache）
 - **锁的粒度**：锁内只做队列操作，锁外做 model forward——避免 forward 期间阻塞 submit
 - **与 v0 的区别**：v0 的 `generate()` 同步阻塞；v1 的 `submit()` 异步，后台 worker 持续 batching
 

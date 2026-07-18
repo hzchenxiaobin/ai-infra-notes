@@ -50,7 +50,7 @@ PyTorch 的 softmax 不是一条路径，而是根据特征维 `D` 做 **dispatc
 
 Day 2 我们一律用 block 级（256 线程 + shared memory + `__syncthreads`）。但 PyTorch 在 D=1024 时改用 warp 级（32 线程，无 smem），原因有三：
 
-1. **避免 `__syncthreads`**：warp 内的 `__shfl` 是 SIMT 隐式同步（32 个 lane 同步执行），不需要显式屏障；block 级 reduce 必须 `__syncthreads`，有同步开销
+1. **避免** `__syncthreads`：warp 内的 `__shfl` 是 SIMT 隐式同步（32 个 lane 同步执行），不需要显式屏障；block 级 reduce 必须 `__syncthreads`，有同步开销
 2. **延迟更低**：warp shuffle 延迟 ~1-2 cycles，shared memory 访问 ~20-30 cycles，差 10-20 倍
 3. **并行度足够**：D=1024 时 32 线程每 lane 处理 32 元素，且 M 行 × M 个 warp 提供足够并行度
 
@@ -549,7 +549,7 @@ Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 
 <details>
 <summary>点击查看答案</summary>
 
- - **避免 `__syncthreads`**：warp 级 reduce 用 `__shfl` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 `__syncthreads`，有同步开销
+ - **避免** `__syncthreads`：warp 级 reduce 用 `__shfl` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 `__syncthreads`，有同步开销
  - **延迟更低**：warp 内 shuffle 延迟 ~1-2 cycles，shared memory ~20-30 cycles，差 10-20 倍
  - **足够并行度**：D=1024 时 32 个线程每个处理 32 个元素，且 M 行 × M 个 warp 提供足够并行度
  - **适用条件**：D ≤ 1024（一个 warp 能处理），且 M 足够大；D > 1024 时回退到 block 级
@@ -603,7 +603,7 @@ Day 3 我们读了 PyTorch 和 FasterTransformer 的官方源码，找到 Day 2 
 
  - **FasterTransformer 比 PyTorch ATen 多的优化**：
  1. **Welford 一次 reduce**（ATen 用两次）→ 省一次 HBM 读
- 2. **`__half2` 向量化**（ATen 用 float4）→ FP16 带宽翻倍
+ 2. `__half2` **向量化**（ATen 用 float4）→ FP16 带宽翻倍
  3. **register 缓存 gamma/beta**（ATen 每次从 HBM 读）→ 小 D 时省重复读
  4. **模板多精度**（ATen 分 FP32/FP16 两套）→ 代码复用 + BF16 支持
  - **性能对比**：手写 ~1x，PyTorch ATen ~1.5-2x，FasterTransformer ~2-3x

@@ -108,3 +108,5 @@ ncu/**/profiles/
 
 # Large generic NCU report files generated during profiling
 profiling/**/report.ncu-rep
+leetgpu/website/week*.html
+fix_bold_code_markdown.py

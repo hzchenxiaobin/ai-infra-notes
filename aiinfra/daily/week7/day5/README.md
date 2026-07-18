@@ -173,7 +173,7 @@ def test_abnormal_inputs(): # 异常输入
 完整代码见 [kernels/stability_test.py](kernels/stability_test.py)。
 
 代码要点：
-- **`MiniEngine`**：模拟推理引擎，包含线程安全队列、优先级调度、KV Cache 管理、超时控制、自定义 kernel 模拟
+- `MiniEngine`：模拟推理引擎，包含线程安全队列、优先级调度、KV Cache 管理、超时控制、自定义 kernel 模拟
 - **六步分层验证**：每步只叠加一个组件，出错时精确定位
 - **稳定性测试**：500 请求连续处理，每 100 请求打印 KV Cache 状态，最终检查内存泄漏
 - **异常输入**：空 prompt、超长 prompt、超时取消、OOM 模拟

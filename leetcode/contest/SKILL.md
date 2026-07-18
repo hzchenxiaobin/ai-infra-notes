@@ -34,7 +34,7 @@ description: 用于在 leetcode/contest 下编写 LeetCode 周赛题解。规定
 
 ## 2. 目录组织
 
-所有周赛题解**必须写在 `leetcode/contest/` 下**，按"周赛场次号 → 题目"一级组织：
+所有周赛题解**必须写在** `leetcode/contest/` **下**，按"周赛场次号 → 题目"一级组织：
 
 ```
 leetcode/
@@ -56,11 +56,11 @@ leetcode/
 **规则**：
 
 1. **题解根目录**：`leetcode/contest/`，不要写到 `leetcode/` 根下或 `daily/` 下。
-2. **场次目录**：纯数字的周赛编号（`507`、`508`、`509` …），**不带 `weekly-contest-` 前缀**，与 `build.py` 的 contest 分组一致。
+2. **场次目录**：纯数字的周赛编号（`507`、`508`、`509` …），**不带** `weekly-contest-` **前缀**，与 `build.py` 的 contest 分组一致。
 3. **题解文件名**：`Q<题号>.<题目中文名>题解.md`，例如 `Q4.最大总价值题解.md`。题号 `Q1`~`Q4` 对应周赛四题。文件名以 `题解` 结尾。
    - `Q<题号>` 后有一个英文句点 `.`，再接中文题目名。
    - 510 场存在 `Q3. 创建一个恰好有...`（句点后带空格）的写法属历史遗留，**新写文件不要带空格**，统一 `Q4.题目名题解.md`。
-4. **图片目录**：周赛题解**不在场次目录下建 `images/`**，所有插图统一放在 `leetcode/images/`（与 daily 共享），详见 §6。
+4. **图片目录**：周赛题解**不在场次目录下建** `images/`，所有插图统一放在 `leetcode/images/`（与 daily 共享），详见 §6。
 
 ## 3. 获取周赛题目信息
 
@@ -242,7 +242,7 @@ print(d)
 - `consistent_columns_dp_model.svg`（510 Q4 一致列）
 - `min_time_max_power_state_design.png`（508 Q4，复杂图可用 PNG）
 
-**存储位置**：周赛 SVG/PNG **统一存放在 `leetcode/images/`**（与 daily 共享该目录），**不在 `contest/<场次>/` 下建 `images/` 子目录**。题解中仍写 `![alt](images/xxx.svg)`，`build.py` 会把 `leetcode/images/` 复制到网站输出目录并重写路径。
+**存储位置**：周赛 SVG/PNG **统一存放在** `leetcode/images/`（与 daily 共享该目录），**不在** `contest/<场次>/` **下建** `images/` **子目录**。题解中仍写 `![alt](images/xxx.svg)`，`build.py` 会把 `leetcode/images/` 复制到网站输出目录并重写路径。
 
 > ⚠️ 与 daily 的区别：daily 在 `dayN/images/` 和 `leetcode/images/` 各存一份；周赛只在 `leetcode/images/` 存一份即可。
 

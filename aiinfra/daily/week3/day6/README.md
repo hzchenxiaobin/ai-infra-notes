@@ -607,7 +607,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 </details>
 
 
-5. **为什么 `torch.compile` 能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
+5. **为什么** `torch.compile` **能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
 
 <details>
 <summary>点击查看答案</summary>

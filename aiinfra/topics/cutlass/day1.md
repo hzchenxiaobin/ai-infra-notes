@@ -775,7 +775,7 @@ nvcc -diag-template=tree ...
 
 </details>
 
-5. **`CollectiveBuilder` 的作用是什么？为什么说它是"编译期 auto-tuning"？**
+5. `CollectiveBuilder` **的作用是什么？为什么说它是"编译期 auto-tuning"？**
 
 <details>
 <summary>点击查看答案</summary>

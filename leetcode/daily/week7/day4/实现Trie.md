@@ -176,8 +176,8 @@ class Trie:
 
 ## 5. 扩展：用数组 vs dict
 
-- **数组 `children[26]`**：查找 O(1)，但固定 26 个指针，空间浪费大（稀疏时）
-- **dict `children{}`**：查找 O(1) 均摊，按需分配，空间省
+- **数组** `children[26]`：查找 O(1)，但固定 26 个指针，空间浪费大（稀疏时）
+- **dict** `children{}`：查找 O(1) 均摊，按需分配，空间省
 - **生产环境**：Unicode 场景用 dict；纯小写字母用数组更快
 
 ---
@@ -198,7 +198,7 @@ class Trie:
    - 两者都是树形结构的递归遍历 + 节点查找
    - Trie 的 `startsWith` 前缀匹配对应集成时的"按名称前缀查找算子"
 
-3. **`search` 和 `startsWith` 的区别是什么？**
+3. `search` **和** `startsWith` **的区别是什么？**
 
    - `search` 要求单词完整存在（`is_end = True`）
    - `startsWith` 只要求前缀路径存在（不检查 `is_end`）

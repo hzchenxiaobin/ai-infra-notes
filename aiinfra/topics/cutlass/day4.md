@@ -385,7 +385,7 @@ using Mma = MmaMultistage<Shape<256, 256, 128>, ..., 4>;
 
 </details>
 
-3. **`mma.sync` 指令的 Shape 和数据类型如何映射？**
+3. `mma.sync` **指令的 Shape 和数据类型如何映射？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -398,7 +398,7 @@ using Mma = MmaMultistage<Shape<256, 256, 128>, ..., 4>;
 
 </details>
 
-4. **`ldmatrix` 指令的作用是什么？为什么不用普通 `lds`？**
+4. `ldmatrix` **指令的作用是什么？为什么不用普通** `lds`**？**
 
 <details>
 <summary>点击查看答案</summary>

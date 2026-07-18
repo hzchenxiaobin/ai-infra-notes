@@ -442,7 +442,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 1. **标准 Attention 的 O(N²) 瓶颈**：物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，当 N=4096 时 IO 高达 ~206MB
 2. **FlashAttention 两大创新**：Tiling 分块（Q tile 常驻 SRAM，KV tile 逐块滑入）+ Online Softmax（递推更新 m/l/o）
 3. **Online Softmax 三公式**：`m_new=max(m,max(xj))`、`l_new=l×exp(m-m_new)+Σexp(xj-m_new)`、`o_new=o×(l×exp(m-m_new)/l_new)+Σ(exp(xj-m_new)/l_new)×vj`
-4. **缩放因子 `exp(m - m_new)`**：统一参考点，保证分块递推的概率分布一致
+4. **缩放因子** `exp(m - m_new)`：统一参考点，保证分块递推的概率分布一致
 5. **IO 复杂度**：从 O(N²) 降到 O(Nd)，实际 wall-clock 加速 2-8x（GEMM FLOPs 未减）
 6. **SRAM 约束**：Br×d + 2×Bc×d ≤ SRAM 容量，决定分块大小上限
 
@@ -466,7 +466,7 @@ Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 </details>
 
 
-2. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释** `exp(m - m_new)` **的作用。**
 
 <details>
 <summary>点击查看答案</summary>

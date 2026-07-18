@@ -497,7 +497,7 @@ docs/
 
 #### 高频面试题
 
-**Q8：`__syncthreads()` 和 warp shuffle 的同步区别？**
+**Q8：**`__syncthreads()` **和 warp shuffle 的同步区别？**
 
 **参考答案要点**：
 - `__syncthreads()`：block 级同步，所有 thread 必须到达，有性能开销
@@ -511,7 +511,7 @@ docs/
 - 如果在 explicit stream 中做并发，然后调用 `cudaMemcpy`（走 default stream），所有并发被打断
 - 解决：使用 `cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking)` 或 `--default-stream per-thread`
 
-**Q10：`cudaMemcpyAsync` 和 `cudaMemcpy` 的区别？**
+**Q10：**`cudaMemcpyAsync` **和** `cudaMemcpy` **的区别？**
 
 **参考答案要点**：
 - `cudaMemcpy`：同步，阻塞 host

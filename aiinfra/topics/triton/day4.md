@@ -515,7 +515,7 @@ tl.store(c_block_ptr, acc.to(c_ptr.dtype.element_ty))
 
 </details>
 
-2. **`tl.dot` 做了什么？为什么不用 `*` + `tl.sum`？**
+2. `tl.dot` **做了什么？为什么不用** `*` **+** `tl.sum`**？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -528,7 +528,7 @@ tl.store(c_block_ptr, acc.to(c_ptr.dtype.element_ty))
 
 </details>
 
-3. **`@triton.autotune` 如何工作？与 CUTLASS 的 auto-tuning 有什么区别？**
+3. `@triton.autotune` **如何工作？与 CUTLASS 的 auto-tuning 有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -553,7 +553,7 @@ tl.store(c_block_ptr, acc.to(c_ptr.dtype.element_ty))
 
 </details>
 
-5. **`num_stages` 参数的作用？**
+5. `num_stages` **参数的作用？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -585,10 +585,10 @@ tl.store(c_block_ptr, acc.to(c_ptr.dtype.element_ty))
 Day 4 我们用 Triton 实现了完整的 GEMM：
 
 1. **K 维度分块累加**：每个 program 处理 C 的一个 tile，沿 K 迭代用 `tl.dot` 累加
-2. **`tl.dot`**：一行代码自动映射到 Tensor Core `mma.sync` 指令，无需手写 PTX
-3. **`@triton.autotune`**：运行时自动搜索最优 tile/warps/stages 配置，按尺寸缓存
+2. `tl.dot`：一行代码自动映射到 Tensor Core `mma.sync` 指令，无需手写 PTX
+3. `@triton.autotune`：运行时自动搜索最优 tile/warps/stages 配置，按尺寸缓存
 4. **GROUP_M**：L2 cache 友好的 tile 排序，提升 5-10% 性能
-5. **`num_stages`**：编译器自动实现 multi-stage buffering，无需手写 double buffer
+5. `num_stages`：编译器自动实现 multi-stage buffering，无需手写 double buffer
 6. **性能**：30 行 Python 达到 cuBLAS 85-90%——开发效率与性能的最佳平衡
 
 > 💡 **明日预告**：Day 5 将用 Day 3 的 online softmax + Day 4 的 `tl.dot` 实现 FlashAttention 简化版——把 Q×K、softmax、×V 融合为单 kernel，消除 O(N²) 中间矩阵。

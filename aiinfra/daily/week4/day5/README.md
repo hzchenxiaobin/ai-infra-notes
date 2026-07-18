@@ -428,7 +428,7 @@ Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 </details>
 
 
-3. **集成自定义算子时，为什么要传递 `at::cuda::getCurrentCUDAStream()`？**
+3. **集成自定义算子时，为什么要传递** `at::cuda::getCurrentCUDAStream()`**？**
 
 <details>
 <summary>点击查看答案</summary>

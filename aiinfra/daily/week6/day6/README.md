@@ -231,10 +231,10 @@ def find_saturation_point(results):
 完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](kernels/benchmark_engine_v1.py)。
 
 代码要点：
-- **`SimulatedEngine`**：用摊销算力模型（`base + per_seq × batch × amort^(batch-1)`）模拟真实 GPU 的 batch 摊销行为，`max_num_seqs` 限制每轮 batch 上限
-- **`run_fixed_concurrency`**：同时提交 N 个请求，记录每个请求的真实 `finish_time - submit_time` 作为 latency（不是用总时间近似）
-- **`find_saturation_point`**：扫描结果中 throughput 增长率 < 5% 的拐点
-- **`run_qps_test`**：以恒定 `1/qps` 间隔发请求，持续 duration 秒，看 P50/P99
+- `SimulatedEngine`：用摊销算力模型（`base + per_seq × batch × amort^(batch-1)`）模拟真实 GPU 的 batch 摊销行为，`max_num_seqs` 限制每轮 batch 上限
+- `run_fixed_concurrency`：同时提交 N 个请求，记录每个请求的真实 `finish_time - submit_time` 作为 latency（不是用总时间近似）
+- `find_saturation_point`：扫描结果中 throughput 增长率 < 5% 的拐点
+- `run_qps_test`：以恒定 `1/qps` 间隔发请求，持续 duration 秒，看 P50/P99
 
 #### 任务 2：运行并观察 throughput-latency 曲线
 

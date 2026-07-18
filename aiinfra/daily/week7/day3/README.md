@@ -234,10 +234,10 @@ def evaluate_features():
 完整代码见 [kernels/advanced_features.py](kernels/advanced_features.py)。
 
 代码要点：
-- **`simulate_speculative_decoding`**：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
-- **`simulate_chunked_prefill`**：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
-- **`PrefixCache`**：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
-- **`evaluate_features`**：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
+- `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
+- `simulate_chunked_prefill`：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
+- `PrefixCache`：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
+- `evaluate_features`：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
 
 #### 任务 2：运行并分析收益报告
 

@@ -227,9 +227,9 @@ class ConcurrentEngine:
 完整代码（含 5 个 demo）见 [kernels/concurrent_engine.py](kernels/concurrent_engine.py)。
 
 代码要点：
-- **`ThreadSafeRequestQueue`**：`Condition` 保护队列，`put` 按优先级插入 + `notify`，`get_batch` 批量获取 + `wait` 挂起（不空转）
-- **`InferenceRequest`**：同时支持 Future（`future.result()` 阻塞）、Callback（`set_result` 时触发）、Streaming（`emit_token` 每 token 触发）
-- **`ConcurrentEngine`**：三线程协作——调度线程凑批、执行线程 forward（锁外）、超时线程清理
+- `ThreadSafeRequestQueue`：`Condition` 保护队列，`put` 按优先级插入 + `notify`，`get_batch` 批量获取 + `wait` 挂起（不空转）
+- `InferenceRequest`：同时支持 Future（`future.result()` 阻塞）、Callback（`set_result` 时触发）、Streaming（`emit_token` 每 token 触发）
+- `ConcurrentEngine`：三线程协作——调度线程凑批、执行线程 forward（锁外）、超时线程清理
 - **锁的粒度**：`running_lock` 保护 running map，forward 在锁外执行（避免阻塞 submit/scheduler）
 - **与 Week6 v1 的区别**：v1 单 worker + 轮询 + 仅 Future；本文件三线程 + 条件变量 + 三种返回 + 优先级 + 超时
 

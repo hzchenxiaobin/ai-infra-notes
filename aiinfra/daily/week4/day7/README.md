@@ -330,7 +330,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 </details>
 
 
-2. **请完整推导 Online Softmax 的三个更新公式，并解释 `exp(m - m_new)` 的作用。**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释** `exp(m - m_new)` **的作用。**
 
 <details>
 <summary>点击查看答案</summary>

@@ -145,7 +145,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 > - 需要快速验证算法 / Python 生态 → **Triton**
 > - 需要极致性能 + 复杂 Epilogue → **CUTLASS**
 > - 需要完全控制 + 非标准操作 → **手写 CUDA**
-> - 不想写 kernel，只要加速 → **`torch.compile`**（底层用 Triton）
+> - 不想写 kernel，只要加速 → `torch.compile`（底层用 Triton）
 
 ---
 
@@ -180,7 +180,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 
 </details>
 
-3. **`tl.dot` 做了什么？为什么不用 `*` + `tl.sum`？**
+3. `tl.dot` **做了什么？为什么不用** `*` **+** `tl.sum`**？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -193,7 +193,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 
 </details>
 
-4. **`@triton.autotune` 如何工作？与 CUTLASS 的 auto-tuning 有什么区别？**
+4. `@triton.autotune` **如何工作？与 CUTLASS 的 auto-tuning 有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -256,7 +256,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 
 </details>
 
-9. **`torch.compile` 和 Triton 的关系是什么？**
+9. `torch.compile` **和 Triton 的关系是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -354,7 +354,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 Day 7 我们完成了进阶专题速览和全周知识复盘：
 
 1. **Triton 编译流程**：Python AST → TTIR（block 级）→ MLIR（线程级 lowering）→ LLVM IR → PTX → SASS
-2. **`torch.compile`**：PyTorch 2.0+ 底层用 Triton，Dynamo 自动融合 eager 操作为 Triton kernel
+2. `torch.compile`：PyTorch 2.0+ 底层用 Triton，Dynamo 自动融合 eager 操作为 Triton kernel
 3. **自定义算子**：`torch.autograd.Function` + `@triton.jit` 注册为 PyTorch 算子
 4. **三方对比**：Triton（Python，85% cuBLAS，数小时）vs CUTLASS（C++，94%，数天）vs CUDA（C，取决于优化，数周）
 5. **知识图谱**：环境 → block 编程 → softmax → GEMM → FlashAttention → Profiling → 进阶

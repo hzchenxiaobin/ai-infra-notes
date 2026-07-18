@@ -897,7 +897,7 @@ Welford 算法（在线均值/方差）：
 | FasterTransformer（Welford） | 1 | 1 | 减少一次 HBM 读，但数值略有差异 |
 | 两遍扫描（先 mean 后 var） | 2 | 2 | 标准 PyTorch 做法 |
 
-**2. `__half2` 向量化（FP16 场景）**
+**2.** `__half2` **向量化（FP16 场景）**
 
 ```cpp
 // 一次加载 2 个 half（32-bit），用 __half2 类型
@@ -980,7 +980,7 @@ ncu --metrics \
 **面试题1**：PyTorch 的 Softmax 在 D 较小时为什么用 warp 级实现而不是 block 级？（⭐⭐⭐ 中频）
 
 **参考答案要点**：
-- **避免 `__syncthreads`**：warp 级 reduce 用 `__shfl` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 `__syncthreads`，有同步开销
+- **避免** `__syncthreads`：warp 级 reduce 用 `__shfl` 直接在寄存器间传递，不需要 shared memory 和同步屏障；block 级需要 `__syncthreads`，有同步开销
 - **更低延迟**：warp 内 shuffle 延迟 ~1-2 cycles，shared memory ~20-30 cycles
 - **足够并行度**：D=1024 时，32 个线程每个处理 32 个元素，并行度足够
 - **适用条件**：D ≤ 1024（一个 warp 能处理），且 M 足够大（每个 warp 一行，warp 数 = M）
@@ -1853,7 +1853,7 @@ ncu --metrics \
  节省: 4MB（LayerNorm 中间结果 y 的读写）
 ```
 
-> 💡 **PyTorch 2.0 的 `torch.compile` 会自动做这些 fusion**。用 `torch.compile(model)` 后，nsys 时间线会显示 kernel 数量减少。
+> 💡 **PyTorch 2.0 的** `torch.compile` **会自动做这些 fusion**。用 `torch.compile(model)` 后，nsys 时间线会显示 kernel 数量减少。
 
 #### 验证 Fusion 效果
 

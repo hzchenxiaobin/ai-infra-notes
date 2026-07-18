@@ -281,7 +281,7 @@ __global__ void paged_attention_kernel(const float* __restrict__ k_cache_pool, c
 ```
 
 代码要点：
-- **`block_table[lb]`**：核心间接寻址——逻辑 block `lb` 映射到物理 block `block_table[lb]`，kernel 据此算出 `k_block`/`v_block` 的实际地址
+- `block_table[lb]`：核心间接寻址——逻辑 block `lb` 映射到物理 block `block_table[lb]`，kernel 据此算出 `k_block`/`v_block` 的实际地址
 - **双层循环**：外层遍历逻辑 block（连续），内层遍历 block 内 token（最后一块可能不满）
 - **online softmax**：复用 Week 4 的三公式，把点积→softmax→加权 V 融合成一遍扫描，无需物化 score 矩阵
 - **CPU 参考用连续布局**：验证 paged 版（物理散布）与连续版结果一致，证明 block table 映射正确

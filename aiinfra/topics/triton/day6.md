@@ -415,7 +415,7 @@ Triton 的 TFLOPS 是结果，NCU 是原因。如果 Triton GEMM 只有 50 TFLOP
 
 </details>
 
-3. **`@triton.autotune` 的效果如何量化？**
+3. `@triton.autotune` **的效果如何量化？**
 
 <details>
 <summary>点击查看答案</summary>

@@ -212,7 +212,7 @@ class LRUCache:
    - 代码更简洁：`addToHead` / `removeNode` 统一处理
    - 不用虚拟节点：头插和尾删需要特判
 
-4. **Python OrderedDict 的 `move_to_end` 是 O(1) 吗？**
+4. **Python OrderedDict 的** `move_to_end` **是 O(1) 吗？**
 
    - 是的。OrderedDict 内部也是哈希表 + 双向链表
    - `move_to_end(key)` = 删除节点 + 末尾插入，都是 O(1)

@@ -268,9 +268,9 @@ class KVCache {
 
 代码要点：
 - **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
-- **`append`**：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
-- **`get_cache`**：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
-- **`reset` / `reset_batch`**：清空整个 cache 或某个 batch（多轮对话切换时用）。
+- `append`：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
+- `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
+- `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
 
 #### 任务 2：编译与运行
 
@@ -344,7 +344,7 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 
 **题目概述**：
 
-设计一个栈，支持 `push`、`pop`、`top` 和 `getMin` 操作，且 **`getMin` 要在 O(1) 时间**完成。**辅助栈**解法：维护一个额外的 `min_stack`，每次 `push` 时同步压入"当前最小值"，`getMin` 直接读 `min_stack.top()`。
+设计一个栈，支持 `push`、`pop`、`top` 和 `getMin` 操作，且 `getMin` **要在 O(1) 时间**完成。**辅助栈**解法：维护一个额外的 `min_stack`，每次 `push` 时同步压入"当前最小值"，`getMin` 直接读 `min_stack.top()`。
 
 **与今日知识的关联**：
 

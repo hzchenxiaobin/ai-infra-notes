@@ -235,11 +235,11 @@ class FullScheduler:
 完整代码见 [kernels/full_scheduler.py](kernels/full_scheduler.py)。
 
 代码要点：
-- **`MemoryBudget`**：模拟 GPU 显存的 block 分配，`can_allocate` / `allocate` / `free` 三板斧，类比 PagedAttention 的 block allocator
-- **`schedule()`**：五步流水——restore swapped → continue running → admit new → aging → timeout，顺序不可交换
-- **`_select_victim`**：多因素打分（优先级 → 剩余 token → 提交时间），选"换出代价最低"的 victim
-- **`_preempt`**：recompute 策略放回 waiting（丢弃 KV Cache），swap 策略放 swapped 列表（保留 KV Cache 到 CPU）
-- **`_apply_aging`**：每超过 `aging_threshold` 秒，优先级 +1，有上限防止无限提升
+- `MemoryBudget`：模拟 GPU 显存的 block 分配，`can_allocate` / `allocate` / `free` 三板斧，类比 PagedAttention 的 block allocator
+- `schedule()`：五步流水——restore swapped → continue running → admit new → aging → timeout，顺序不可交换
+- `_select_victim`：多因素打分（优先级 → 剩余 token → 提交时间），选"换出代价最低"的 victim
+- `_preempt`：recompute 策略放回 waiting（丢弃 KV Cache），swap 策略放 swapped 列表（保留 KV Cache 到 CPU）
+- `_apply_aging`：每超过 `aging_threshold` 秒，优先级 +1，有上限防止无限提升
 
 #### 任务 2：运行并观察调度行为
 

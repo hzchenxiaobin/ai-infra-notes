@@ -251,7 +251,7 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 1. **不要把整个 grid 的线程加在一起算 warp**。Occupancy 是 **per-SM** 的概念，永远先算每个 block 占多少 warp，再算每个 SM 能放多少个 block。
 2. **注意寄存器粒度**。不是 `threads * regs` 直接除，而要按 256 对齐。
 3. **共享内存的上限是按 SM 算，不是按 block 算**。RTX 5090 每个 block 最多用 48 KB shared memory，但 occupancy 计算里看的是 SM 总共 100 KB。
-4. **`maxBlocksPerMultiprocessor` 是硬上限**。即使 thread、register、smem 都没用完，active blocks 也不能超过这个值。
+4. `maxBlocksPerMultiprocessor` **是硬上限**。即使 thread、register、smem 都没用完，active blocks 也不能超过这个值。
 
 ---
 

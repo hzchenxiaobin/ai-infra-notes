@@ -90,7 +90,7 @@ tile[threadIdx.y][threadIdx.x] = in[y * width + x];
 - `x = blockIdx.x * TILE_DIM + threadIdx.x` 连续递增；
 - 地址 `in[y * width + x]` 连续 → **coalesced read** ✅。
 
-**为什么用 `tile[threadIdx.y][threadIdx.x]` 存储？** 因为这样每个线程把读到的元素放到 shared memory 中与输入矩阵相同行/列位置的单元里，保持 tile 内部的行主序布局。
+**为什么用** `tile[threadIdx.y][threadIdx.x]` **存储？** 因为这样每个线程把读到的元素放到 shared memory 中与输入矩阵相同行/列位置的单元里，保持 tile 内部的行主序布局。
 
 #### 第二阶段：coalesced write
 
@@ -102,7 +102,7 @@ out[y * height + x] = tile[threadIdx.x][threadIdx.y];
 
 ![Coalesced vs Stride Access](../../website/images/stride_access.svg)
 
-关键点：**交换了 `blockIdx.x` 和 `blockIdx.y`，但 `threadIdx.x` 仍然对应输出地址的连续维度**。
+关键点：**交换了** `blockIdx.x` **和** `blockIdx.y`**，但** `threadIdx.x` **仍然对应输出地址的连续维度**。
 
 输出矩阵 `out` 是行优先的 `height × width`。一个 warp 内：
 
@@ -110,7 +110,7 @@ out[y * height + x] = tile[threadIdx.x][threadIdx.y];
 - `x = blockIdx.y * TILE_DIM + threadIdx.x` 连续递增；
 - 地址 `out[y * height + x]` 连续 → **coalesced write** ✅。
 
-**为什么用 `tile[threadIdx.x][threadIdx.y]` 读出？** 因为输出阶段一个 warp 内 `threadIdx.y` 固定、`threadIdx.x` 连续变化。如果仍然按 `tile[threadIdx.y][threadIdx.x]` 读出，所有线程会读到 tile 的同一行，写出的地址反而不连续。交换索引后，相邻线程从 tile 的不同行取数据，但写回 global memory 时地址连续。
+**为什么用** `tile[threadIdx.x][threadIdx.y]` **读出？** 因为输出阶段一个 warp 内 `threadIdx.y` 固定、`threadIdx.x` 连续变化。如果仍然按 `tile[threadIdx.y][threadIdx.x]` 读出，所有线程会读到 tile 的同一行，写出的地址反而不连续。交换索引后，相邻线程从 tile 的不同行取数据，但写回 global memory 时地址连续。
 
 #### 转置发生在哪里？
 

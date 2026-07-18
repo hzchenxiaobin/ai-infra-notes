@@ -719,7 +719,7 @@ python continuous_batcher.py
 
 #### 核心概念笔记
 
-**1. `Scheduler` 类关键方法**
+**1.** `Scheduler` **类关键方法**
 
 ```python
 class Scheduler:
@@ -736,7 +736,7 @@ class Scheduler:
  ...
 ```
 
-**2. `schedule()` 的 5 个步骤**
+**2.** `schedule()` **的 5 个步骤**
 
 ```python
 def schedule(self):
@@ -747,7 +747,7 @@ def schedule(self):
  # 5. 构建 scheduler_outputs
 ```
 
-**3. `SchedulingBudget` 类**
+**3.** `SchedulingBudget` **类**
 
 ```python
 @dataclass

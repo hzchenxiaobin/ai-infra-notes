@@ -379,7 +379,7 @@ for (int i = 0; i < n; ++i) {
 }
 ```
 
-**什么是 `#pragma unroll`？**
+**什么是** `#pragma unroll`**？**
 
 `#pragma unroll` 是 CUDA C/C++ 中的编译器指令，告诉编译器**把循环体展开**。
 
@@ -405,7 +405,7 @@ for (int i = 0; i < n; ++i) {
 
 这样可以减少循环控制开销（i 的递增、边界判断、跳转），增加指令级并行（ILP）。
 
-**`#pragma unroll` 的几种写法**：
+`#pragma unroll` **的几种写法**：
 
 | 写法 | 含义 |
 |------|------|
@@ -414,7 +414,7 @@ for (int i = 0; i < n; ++i) {
 | `#pragma unroll` | 完全展开（仅当循环次数是编译期常量时有效） |
 | `#pragma unroll 1` | 不展开 |
 
-**为什么 `#pragma unroll` 会增加寄存器使用量？**
+**为什么** `#pragma unroll` **会增加寄存器使用量？**
 
 关键在 `float v = in[(idx + i) % n];` 这行。
 
@@ -463,7 +463,7 @@ for (int i = 0; i < n; ++i) {
 1. **memory-bound 的 kernel**：适度 unroll 可以提高 ILP，隐藏内存延迟。
 2. **compute-bound 的 kernel**：unroll 通常有好处，但要监控寄存器用量。
 3. **循环体本身寄存器压力大**：慎用大倍数 unroll，避免 spilling。
-4. **先用 `nvcc -Xptxas -v` 检查**：确认没有 spilling 后再决定最终 unroll 倍数。
+4. **先用** `nvcc -Xptxas -v` **检查**：确认没有 spilling 后再决定最终 unroll 倍数。
 
 > 💡 **一句话总结**：`#pragma unroll 16` 让编译器把循环体复制 16 份，减少循环开销、提升并行度，但同时会让更多变量同时"活着"，从而增加寄存器用量。
 
@@ -666,7 +666,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 2. **三大资源约束**：寄存器文件、共享内存、block/warp 数量上限
 3. **寄存器过多** 会降低 occupancy，因为每个线程占用更多资源
 4. **Register spilling** 会把变量放到 global memory，性能急剧下降
-5. **`__launch_bounds__`** 可以强制编译器在寄存器和 occupancy 之间做权衡
+5. `__launch_bounds__` 可以强制编译器在寄存器和 occupancy 之间做权衡
 6. **不必追求 100% occupancy**，通常足够高即可
 
 掌握这些后，你就能分析一个 kernel 的资源使用情况，并判断它是否受 occupancy 限制。
@@ -697,7 +697,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 </details>
 
 
-3. **`__launch_bounds__` 的使用场景？**
+3. `__launch_bounds__` **的使用场景？**
 
 <details>
 <summary>点击查看答案</summary>

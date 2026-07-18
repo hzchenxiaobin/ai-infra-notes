@@ -269,10 +269,10 @@ if __name__ == "__main__":
 ```
 
 代码要点：
-- **`profile_engine`**：测 TTFT（Prefill）+ mean/P50/P99 TBT（Decode）+ forward/sampling/sync 三段 breakdown
-- **`scan_prompt_lengths`**：扫描 N，看 `TTFT/N`（O(N) 判据）和 `TTFT/N²`（O(N²) 判据）哪个近似常数
-- **`scan_decode_length`**：固定 prompt、扫描生成长度，看 TBT 是否随 L 增长（memory-bound 判据）
-- **`sync()` 包装**：CPU/GPU 都能跑（CPU 上 `sync` 是空操作）
+- `profile_engine`：测 TTFT（Prefill）+ mean/P50/P99 TBT（Decode）+ forward/sampling/sync 三段 breakdown
+- `scan_prompt_lengths`：扫描 N，看 `TTFT/N`（O(N) 判据）和 `TTFT/N²`（O(N²) 判据）哪个近似常数
+- `scan_decode_length`：固定 prompt、扫描生成长度，看 TBT 是否随 L 增长（memory-bound 判据）
+- `sync()` **包装**：CPU/GPU 都能跑（CPU 上 `sync` 是空操作）
 
 #### 任务 2：运行并观察输出
 

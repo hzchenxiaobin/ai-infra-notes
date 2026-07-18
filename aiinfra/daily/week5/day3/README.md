@@ -414,10 +414,10 @@ if __name__ == "__main__":
 ```
 
 代码要点：
-- **`Sequence` / `SequenceGroup` / `SequenceStatus`**：对应 vLLM 的数据模型，`SequenceGroup` 包一个 `Sequence`（简化为单序列）。
-- **`Scheduler.schedule()`**：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`）。
-- **`Worker.execute_model()`**：每 seq 生成 1 个 token（随机模拟，不跑真模型）。
-- **`LLMEngine.step()`**：schedule → execute → 更新状态（完成则释放 cache），对应 vLLM 的 4 步流程。
+- `Sequence` **/** `SequenceGroup` **/** `SequenceStatus`：对应 vLLM 的数据模型，`SequenceGroup` 包一个 `Sequence`（简化为单序列）。
+- `Scheduler.schedule()`：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`）。
+- `Worker.execute_model()`：每 seq 生成 1 个 token（随机模拟，不跑真模型）。
+- `LLMEngine.step()`：schedule → execute → 更新状态（完成则释放 cache），对应 vLLM 的 4 步流程。
 
 #### 任务 2：运行并观察 Continuous Batching
 

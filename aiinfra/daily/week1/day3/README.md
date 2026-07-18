@@ -599,8 +599,8 @@ Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming
 Day 3 我们学会了用官方工具了解自己的 GPU，并把概念变成具体数字：
 
 1. **CUDA Samples** 是学习 CUDA 的最佳实践来源
-2. **`deviceQuery`** 可以告诉我们 GPU 的所有硬件参数
-3. **`cudaGetDeviceProperties`** 是在代码中查询 GPU 属性的核心 API
+2. `deviceQuery` 可以告诉我们 GPU 的所有硬件参数
+3. `cudaGetDeviceProperties` 是在代码中查询 GPU 属性的核心 API
 4. 我们学会了计算 GPU 的**峰值算力**和**显存带宽**，以及**算力带宽比**
 5. **CUDA Occupancy Calculator** 可以计算理论 occupancy（四步法）
 6. 我们掌握了 Occupancy 的**手算方法**和**代码验证方法**（`cudaOccupancyMaxActiveBlocksPerMultiprocessor`）

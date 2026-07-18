@@ -469,7 +469,7 @@ if (x < width && y < height) {
 
 形象地理解：一个 warp 的线程一起把原矩阵某一行里的连续 32 个 float 读进来。
 
-**为什么用 `tile[threadIdx.y][threadIdx.x]` 存储？** 因为这样每个线程把读到的元素放到 shared memory 中与输入矩阵相同行/列位置的单元里，保持 tile 内部的行主序布局。此时 shared memory 中的 tile 就是原矩阵这个子块的"镜像"。
+**为什么用** `tile[threadIdx.y][threadIdx.x]` **存储？** 因为这样每个线程把读到的元素放到 shared memory 中与输入矩阵相同行/列位置的单元里，保持 tile 内部的行主序布局。此时 shared memory 中的 tile 就是原矩阵这个子块的"镜像"。
 
 ##### 第二阶段：从 shared memory 写出
 
@@ -484,7 +484,7 @@ if (x < height && y < width) {
 
 ![Coalesced vs Stride Access](../website/images/stride_access.svg)
 
-关键在于：**交换了 `blockIdx.x` 和 `blockIdx.y`，但 `threadIdx.x` 仍然对应输出地址的连续维度**。
+关键在于：**交换了** `blockIdx.x` **和** `blockIdx.y`**，但** `threadIdx.x` **仍然对应输出地址的连续维度**。
 
 输出矩阵 `out` 同样是行优先存储，形状为 `height × width`。在一个 warp 内：
 
@@ -494,7 +494,7 @@ if (x < height && y < width) {
 
 直观理解：原来 naive 版本是"按列写"（stride），现在通过 block 坐标的交换，变成了"按行写"，但写的数据块在全局空间中对应原矩阵的列——这正符合转置的语义。
 
-**为什么用 `tile[threadIdx.x][threadIdx.y]` 读出？** 因为输出阶段一个 warp 内 `threadIdx.y` 固定、`threadIdx.x` 连续变化。如果仍然按 `tile[threadIdx.y][threadIdx.x]` 读出，所有线程会读到 tile 的同一行，写出的地址反而不连续。交换索引后，相邻线程从 tile 的不同行取数据，但写回 `out[y * height + x]` 时地址连续，从而实现 coalesced write。
+**为什么用** `tile[threadIdx.x][threadIdx.y]` **读出？** 因为输出阶段一个 warp 内 `threadIdx.y` 固定、`threadIdx.x` 连续变化。如果仍然按 `tile[threadIdx.y][threadIdx.x]` 读出，所有线程会读到 tile 的同一行，写出的地址反而不连续。交换索引后，相邻线程从 tile 的不同行取数据，但写回 `out[y * height + x]` 时地址连续，从而实现 coalesced write。
 
 ##### 转置操作在哪里发生？
 

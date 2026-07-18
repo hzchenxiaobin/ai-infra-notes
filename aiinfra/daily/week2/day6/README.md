@@ -593,7 +593,7 @@ Naive (1%) → Shared Memory Tiling (15%) → Register Blocking (45%)
 </details>
 
 
-2. **`float4` 向量化加载为什么能提升性能？需要什么条件？**
+2. `float4` **向量化加载为什么能提升性能？需要什么条件？**
 
 <details>
 <summary>点击查看答案</summary>

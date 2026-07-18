@@ -460,8 +460,8 @@ ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
 
 Day 6 我们学会了用专业工具分析 GPU 性能：
 
-1. **Nsight Systems (`nsys`)**：应用级时间线分析，找耗时 kernel
-2. **Nsight Compute (`ncu`)**：kernel 级详细指标分析
+1. **Nsight Systems (**`nsys`**)**：应用级时间线分析，找耗时 kernel
+2. **Nsight Compute (**`ncu`**)**：kernel 级详细指标分析
 3. **核心指标**：occupancy、memory throughput、compute throughput、bank conflict
 4. **瓶颈判断**：memory-bound、compute-bound、latency-bound
 5. **Roofline 模型**：用 arithmetic intensity 判断优化方向

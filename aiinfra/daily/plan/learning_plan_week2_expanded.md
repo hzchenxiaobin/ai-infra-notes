@@ -89,7 +89,7 @@ ls /usr/local/cuda/lib64/libcublas.so*
 | `__shfl_down_sync` | `T __shfl_down_sync(unsigned mask, T var, unsigned int delta, int width=warpSize)` | 从`threadIdx+delta`线程读取 | 归约：warp内折半累加 |
 | `__shfl_xor_sync` | `T __shfl_xor_sync(unsigned mask, T var, int laneMask, int width=warpSize)` | 从`threadIdx ^ laneMask`线程读取 | Butterfly交换：归约、位反转排序 |
 
-**2. 四个参数详解（以`__shfl_down_sync`为例）**
+**2. 四个参数详解（以**`__shfl_down_sync`**为例）**
 
 ```cpp
 float val = __shfl_down_sync(0xFFFFFFFF, myVal, 16, 32);
@@ -908,7 +908,7 @@ cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 // nvcc --default-stream per-thread ...
 ```
 
-**3. `cudaMemcpy` vs `cudaMemcpyAsync`对比**
+**3.** `cudaMemcpy` **vs** `cudaMemcpyAsync`**对比**
 
 | 函数 | 同步性 | 是否可指定Stream | 内存要求 | 使用场景 |
 |------|--------|----------------|---------|---------|

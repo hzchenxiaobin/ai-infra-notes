@@ -704,7 +704,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 </details>
 
 
-2. **FlashAttention Kernel 中为什么不需要 `__syncthreads()` 在 online softmax 内部？**
+2. **FlashAttention Kernel 中为什么不需要** `__syncthreads()` **在 online softmax 内部？**
 
 <details>
 <summary>点击查看答案</summary>

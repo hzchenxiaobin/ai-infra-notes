@@ -657,7 +657,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 </details>
 
 
-4. **`exp(m - m_new)` 这个缩放因子为什么重要？**
+4. `exp(m - m_new)` **这个缩放因子为什么重要？**
 
 <details>
 <summary>点击查看答案</summary>

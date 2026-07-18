@@ -857,7 +857,7 @@ RUNNING（执行中）
  └── 显存可用 → RUNNING
 ```
 
-**4. `LLMEngine.step()` 执行流程**
+**4.** `LLMEngine.step()` **执行流程**
 
 ```python
 def step(self):
@@ -1003,7 +1003,7 @@ Worker:
  - 返回采样结果
 ```
 
-**2. `execute_model` 调用链**
+**2.** `execute_model` **调用链**
 
 ```python
 def execute_model(self, seq_group_metadata_list):

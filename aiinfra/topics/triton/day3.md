@@ -540,7 +540,7 @@ l_old = l_old * alpha
 
 </details>
 
-4. **Triton softmax 中 `other=-inf` 为什么不能用 `other=0`？**
+4. **Triton softmax 中** `other=-inf` **为什么不能用** `other=0`**？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -563,7 +563,7 @@ l_old = l_old * alpha
 
 </details>
 
-6. **Triton softmax 的 `BLOCK_SIZE` 如何选择？**
+6. **Triton softmax 的** `BLOCK_SIZE` **如何选择？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -586,7 +586,7 @@ Day 3 我们用 Triton 实现了 fused softmax 和 online softmax：
 3. **Online softmax**：逐块增量更新 max 和 sum，rescale 旧值——FlashAttention 的数学基础
 4. **边界处理**：`other=-inf` 确保 `exp(-inf)=0` 不影响 sum
 5. **memory-bound**：Softmax 性能取决于 Global Memory 读写次数，fused 是主要优化方向
-6. **`BLOCK_SIZE` 选择**：`>= n_cols`，用 `next_power_of_2` 自动取
+6. `BLOCK_SIZE` **选择**：`>= n_cols`，用 `next_power_of_2` 自动取
 
 > 💡 **明日预告**：Day 4 将用 Triton 实现 GEMM（矩阵乘法）——block pointer + `tl.dot`（自动 Tensor Core）+ `@triton.autotune`（自动搜索最优 tile 配置），达到 `torch.matmul` 的 85%+。
 

@@ -104,9 +104,9 @@ conflict_read 慢 4 倍的原因：
 
 拿到 ncu 结果后，建议按这个顺序看：
 
-1. **`sm__cycles_elapsed.avg`** —— 先确定谁慢、慢多少
-2. **`sm__occupancy.avg.pct_of_peak_sustained_elapsed`** —— 排除 occupancy 问题
-3. **`sm__throughput` vs `dram__throughput`** —— 判断是 compute-bound 还是 memory-bound
+1. `sm__cycles_elapsed.avg` —— 先确定谁慢、慢多少
+2. `sm__occupancy.avg.pct_of_peak_sustained_elapsed` —— 排除 occupancy 问题
+3. `sm__throughput` **vs** `dram__throughput` —— 判断是 compute-bound 还是 memory-bound
    - SM 高、DRAM 低 → compute-bound
    - SM 低、DRAM 高 → memory-bound
    - 两者都低 → 可能是 latency/stall/bank conflict/occupancy 问题

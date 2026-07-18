@@ -235,11 +235,11 @@ class TransformerLayer(nn.Module):
 完整代码见 [kernels/custom_ops_module.py](kernels/custom_ops_module.py)。
 
 代码要点：
-- **`CUDA_SOURCE`**：内嵌完整的 CUDA kernel 源码（softmax/layernorm/flash_attention），通过字符串传给 `load_inline`
-- **`load_custom_ops()`**：有 CUDA 时用 `load_inline` 动态编译，无 CUDA 时返回 None（用 PyTorch fallback 演示）
-- **`TransformerLayer`**：`use_custom` 开关控制使用自定义 kernel 还是 PyTorch 原生，便于对比验证
-- **`PyTorchOps`**：PyTorch 原生实现，作为 fallback 和正确性验证基准
-- **`verify_and_benchmark()`**：单算子精度验证 + 端到端精度验证 + 性能对比 + 集成 checklist
+- `CUDA_SOURCE`：内嵌完整的 CUDA kernel 源码（softmax/layernorm/flash_attention），通过字符串传给 `load_inline`
+- `load_custom_ops()`：有 CUDA 时用 `load_inline` 动态编译，无 CUDA 时返回 None（用 PyTorch fallback 演示）
+- `TransformerLayer`：`use_custom` 开关控制使用自定义 kernel 还是 PyTorch 原生，便于对比验证
+- `PyTorchOps`：PyTorch 原生实现，作为 fallback 和正确性验证基准
+- `verify_and_benchmark()`：单算子精度验证 + 端到端精度验证 + 性能对比 + 集成 checklist
 
 #### 任务 2：运行并验证精度与性能
 
@@ -449,11 +449,11 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
 <details>
 <summary>点击查看答案</summary>
 
- - **`load_inline`**：
+ - `load_inline`：
  - 源码以字符串传入，运行时动态编译
  - 适合原型开发和小规模 kernel
  - 首次编译慢，后续有缓存
- - **`setup.py`**：
+ - `setup.py`：
  - 离线编译为 `.so`，安装到 site-packages
  - 适合生产环境，编译一次反复使用
  - 需要 `setup.py` + `__init__.py` 配置

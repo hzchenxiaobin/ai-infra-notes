@@ -263,8 +263,8 @@ class ContinuousBatcher:
 ```
 
 代码要点：
-- **`_schedule()`**：每轮调度的核心——①移除已完成序列 → ②保留 running（decode）→ ③从 waiting 补入新请求（prefill），受 token budget 约束
-- **`_run_iteration()`**：每轮 forward，每个序列生成 1 个 token；完成的序列设置 `FINISHED` 状态
+- `_schedule()`：每轮调度的核心——①移除已完成序列 → ②保留 running（decode）→ ③从 waiting 补入新请求（prefill），受 token budget 约束
+- `_run_iteration()`：每轮 forward，每个序列生成 1 个 token；完成的序列设置 `FINISHED` 状态
 - **与 Day 1 Dynamic Batcher 的区别**：Dynamic 的 `_collect_batch` 凑满一批发一次；Continuous 的 `_schedule` 每轮都调用，完成即走、新请求随时加入
 
 #### 任务 2：运行并观察 iteration 时间线

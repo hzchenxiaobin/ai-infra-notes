@@ -242,9 +242,9 @@ class DynamicBatcher:
 ```
 
 代码要点：
-- **`Request`**：封装请求元数据 + `done_event`（异步通知完成）
-- **`_collect_batch`**：先等第一个请求到达（阻塞），再启动 timer 等更多（非阻塞轮询），凑满 `max_batch_size` 或超时即返回
-- **`_process_batch`**：模拟 forward（`sleep`），计算 padding waste，设置每个请求的结果和 `done_event`
+- `Request`：封装请求元数据 + `done_event`（异步通知完成）
+- `_collect_batch`：先等第一个请求到达（阻塞），再启动 timer 等更多（非阻塞轮询），凑满 `max_batch_size` 或超时即返回
+- `_process_batch`：模拟 forward（`sleep`），计算 padding waste，设置每个请求的结果和 `done_event`
 - **线程安全**：`threading.Lock` 保护队列访问，worker 线程后台运行
 
 #### 任务 2：运行并观察聚合效果

@@ -239,10 +239,10 @@ def compare_with_vllm():
 完整代码见 [kernels/full_chain_profile.py](kernels/full_chain_profile.py)。
 
 代码要点：
-- **`PhaseTimer`**：通用阶段计时器，支持任意层级的 start/end，自动计算 total/avg/P50/P99/占比
-- **`ProfiledMiniEngine`**：模拟推理引擎，每层 forward 内按 kernel 拆分计时（layernorm/qkv_gemm/flash_attention/ffn_gemm/launch_overhead）
-- **`generate_report`**：五段报告——阶段分解、kernel 分解、系统指标、瓶颈 Top3、优化建议
-- **`compare_with_vllm`**：模拟 vLLM（更快 kernel + C++ 调度 + CUDA Graph），输出差距分析
+- `PhaseTimer`：通用阶段计时器，支持任意层级的 start/end，自动计算 total/avg/P50/P99/占比
+- `ProfiledMiniEngine`：模拟推理引擎，每层 forward 内按 kernel 拆分计时（layernorm/qkv_gemm/flash_attention/ffn_gemm/launch_overhead）
+- `generate_report`：五段报告——阶段分解、kernel 分解、系统指标、瓶颈 Top3、优化建议
+- `compare_with_vllm`：模拟 vLLM（更快 kernel + C++ 调度 + CUDA Graph），输出差距分析
 
 #### 任务 2：运行并分析 Profiling 报告
 

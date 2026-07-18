@@ -91,9 +91,9 @@ at::Tensor softmax_forward(at::Tensor input) {
 }
 ```
 
-- **`at::empty_like(input)`**：让 PyTorch 管理显存（走 caching allocator），无需手动 `cudaMalloc`/`cudaFree`
-- **`data_ptr<float>()`**：从 `at::Tensor` 提取 `float*` 裸指针，传给 CUDA kernel
-- **`at::cuda::getCurrentCUDAStream()`**：获取 PyTorch 当前 stream，保证 kernel 在正确 stream 上执行（多 stream 场景关键）
+- `at::empty_like(input)`：让 PyTorch 管理显存（走 caching allocator），无需手动 `cudaMalloc`/`cudaFree`
+- `data_ptr<float>()`：从 `at::Tensor` 提取 `float*` 裸指针，传给 CUDA kernel
+- `at::cuda::getCurrentCUDAStream()`：获取 PyTorch 当前 stream，保证 kernel 在正确 stream 上执行（多 stream 场景关键）
 
 > ⚠️ **注意**：忘记传 stream 是常见 bug——默认用 stream 0（default stream），会破坏多 stream 并行。务必用 `getCurrentCUDAStream()`。
 
@@ -536,7 +536,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 2. **三个关键 API**：`at::empty_like`（让 PyTorch 管显存）、`data_ptr<float>()`（提取裸指针）、`getCurrentCUDAStream`（保证 stream 正确）
 3. **Mini Engine**：Transformer Block 中 GEMM 用 cuBLAS、Softmax/LayerNorm 用自定义，混合调用是真实引擎的常见模式
 4. **性能预期**：自定义版比 PyTorch 慢 0.8x ~ 0.95x——因为缺失向量化、Welford、warp 级、fusion 四项优化
-5. **`#ifdef WITH_TORCH`**：同一 `.cu` 支持独立编译（快速验证）和 PyTorch 集成（端到端）两种模式
+5. `#ifdef WITH_TORCH`：同一 `.cu` 支持独立编译（快速验证）和 PyTorch 集成（端到端）两种模式
 
 掌握这套集成流程后，任何自定义 CUDA kernel 都能接入 PyTorch。Day 6 会对 Mini Engine 做端到端 profiling，定位瓶颈算子和 fusion 机会。
 
@@ -570,20 +570,20 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-3. **`load_inline` 和 `setup.py` 有什么区别？分别什么场景用？**
+3. `load_inline` **和** `setup.py` **有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **`load_inline`（动态）**：运行时 JIT 编译，改代码即生效，适合原型开发和教学。首次编译 ~30s，后续从缓存加载
- - **`setup.py`（静态）**：预先编译为 `.so`，`import` 即用，适合生产部署。改代码需重新 `pip install`
+ - `load_inline`**（动态）**：运行时 JIT 编译，改代码即生效，适合原型开发和教学。首次编译 ~30s，后续从缓存加载
+ - `setup.py`**（静态）**：预先编译为 `.so`，`import` 即用，适合生产部署。改代码需重新 `pip install`
  - **选择原则**：开发期用 `load_inline`（迭代快），上线用 `setup.py`（无 JIT 开销）
  - **共同点**：两者都走 PyTorch 的 C++ Extension 机制，最终都是把 `.cu` 编译为 `.so` 并注册到 Python
 
 </details>
 
 
-4. **集成自定义算子时，为什么要传 `getCurrentCUDAStream()`？不传会怎样？**
+4. **集成自定义算子时，为什么要传** `getCurrentCUDAStream()`**？不传会怎样？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -598,7 +598,7 @@ Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extensi
 </details>
 
 
-5. **`torch.compile` 能融合自定义 C++ Extension 算子吗？为什么？**
+5. `torch.compile` **能融合自定义 C++ Extension 算子吗？为什么？**
 
 <details>
 <summary>点击查看答案</summary>

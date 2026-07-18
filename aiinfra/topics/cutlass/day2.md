@@ -694,7 +694,7 @@ copy(gA_tile, sA);  // 64×64 → 64×64，OK
 
 </details>
 
-3. **CuTe 的 `copy()` 比手写 `cudaMemcpy` 好在哪里？**
+3. **CuTe 的** `copy()` **比手写** `cudaMemcpy` **好在哪里？**
 
 <details>
 <summary>点击查看答案</summary>

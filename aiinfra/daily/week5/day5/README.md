@@ -298,10 +298,10 @@ class MiniEngineV0:
 ```
 
 代码要点：
-- **`MiniTransformerLayer.forward`** 通过 `use_cache + kv_cache` 区分 Prefill（`kv_cache=None`）与 Decode（拼历史 cache）
-- **`MiniLLM.forward`** 逐层执行 transformer，每层返回更新后的 `(k, v)`，组成 `new_kv_cache` 列表
-- **`MiniEngineV0.generate`** = Prefill（一次性）+ Decode Loop（逐 token 复用 cache）+ argmax 采样
-- **`generate_no_cache`** 对照版：每步重算完整历史，用于验证 with cache 输出一致
+- `MiniTransformerLayer.forward` 通过 `use_cache + kv_cache` 区分 Prefill（`kv_cache=None`）与 Decode（拼历史 cache）
+- `MiniLLM.forward` 逐层执行 transformer，每层返回更新后的 `(k, v)`，组成 `new_kv_cache` 列表
+- `MiniEngineV0.generate` = Prefill（一次性）+ Decode Loop（逐 token 复用 cache）+ argmax 采样
+- `generate_no_cache` 对照版：每步重算完整历史，用于验证 with cache 输出一致
 
 #### 任务 2：运行并观察输出
 

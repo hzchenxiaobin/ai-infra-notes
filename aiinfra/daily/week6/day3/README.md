@@ -4,12 +4,12 @@
 
 通过今天的学习，你将：
 
-1. 理解 vLLM **`Scheduler` 类的整体结构**——三个 FIFO 队列（waiting/running/swapped）+ BlockSpaceManager，每轮 `schedule()` 决定哪些序列参与本轮 forward<br>
-2. 掌握 **`schedule()` 的 5 步流程**——处理完成 → 调度 running → 调度 swapped → 调度 waiting → 构建 SchedulerOutputs，每一步的输入输出与约束<br>
-3. 理解 **`SchedulingBudget` 双预算约束**——`token_budget`（每轮 token 上限）+ `max_num_seqs`（并发 sequence 上限），`can_schedule()` 如何同时卡算力与显存并发<br>
+1. 理解 vLLM `Scheduler` **类的整体结构**——三个 FIFO 队列（waiting/running/swapped）+ BlockSpaceManager，每轮 `schedule()` 决定哪些序列参与本轮 forward<br>
+2. 掌握 `schedule()` **的 5 步流程**——处理完成 → 调度 running → 调度 swapped → 调度 waiting → 构建 SchedulerOutputs，每一步的输入输出与约束<br>
+3. 理解 `SchedulingBudget` **双预算约束**——`token_budget`（每轮 token 上限）+ `max_num_seqs`（并发 sequence 上限），`can_schedule()` 如何同时卡算力与显存并发<br>
 4. 掌握 **Preemption 的两种模式**——RECOMPUTE（丢弃 KV Cache 重算，默认）与 SWAP（KV Cache 换出到 CPU），各自的适用场景与权衡<br>
-5. 能追踪 **`_schedule_running` / `_schedule_swapped` / `_schedule_waiting`** 三个内部方法的核心逻辑，理解"swapped 非空时不接纳新请求"的防饿死策略<br>
-6. 用 Python 手写一个 **教学级 `Scheduler` 复刻**，实测 RECOMPUTE 与 SWAP 两种抢占模式下请求被抢占、恢复、完成的完整时间线
+5. 能追踪 `_schedule_running` **/** `_schedule_swapped` **/** `_schedule_waiting` 三个内部方法的核心逻辑，理解"swapped 非空时不接纳新请求"的防饿死策略<br>
+6. 用 Python 手写一个 **教学级** `Scheduler` **复刻**，实测 RECOMPUTE 与 SWAP 两种抢占模式下请求被抢占、恢复、完成的完整时间线
 
 > 💡 **为什么重要**：Day 2 我们手写了 Continuous Batcher，但那个实现只有 `token_budget` 约束、没有显存预算和抢占——一旦显存不够就直接拒绝新请求。真实 vLLM 的 Scheduler 远比这复杂：它要在显存压力下**抢占**正在运行的请求（而不是简单拒绝），并通过 RECOMPUTE/SWAP 两种策略恢复。`Scheduler.schedule()` 是 vLLM 推理调度的"心脏"，也是面试必考题（⭐⭐⭐⭐⭐）。今天我们逐行拆解它的源码逻辑，并复刻一个能真正触发抢占的教学模型。
 
@@ -374,10 +374,10 @@ class Scheduler:
 完整代码（含三个内部方法、抢占逻辑、三个 demo 场景）见 [kernels/vllm_scheduler_analyzer.py](kernels/vllm_scheduler_analyzer.py)。
 
 代码要点：
-- **`SchedulingBudget`**：`can_schedule()` 同时检查 token 和 seq 两个约束，任一不满足就拒绝调度
-- **`BlockSpaceManager`**：`allocate()` 对 decode 增长是**追加**而非覆盖（否则会泄漏已分配的 block）；`swap_out/in` 配对使用
-- **`_schedule_running`**：检查 `_needs_new_block`（decode 跨过 block 边界时需要新 block），显存不足则 `_preempt`
-- **`_schedule_waiting`** 的 `if self.swapped: return`：防饿死关键，swapped 非空时不接纳新请求
+- `SchedulingBudget`：`can_schedule()` 同时检查 token 和 seq 两个约束，任一不满足就拒绝调度
+- `BlockSpaceManager`：`allocate()` 对 decode 增长是**追加**而非覆盖（否则会泄漏已分配的 block）；`swap_out/in` 配对使用
+- `_schedule_running`：检查 `_needs_new_block`（decode 跨过 block 边界时需要新 block），显存不足则 `_preempt`
+- `_schedule_waiting` 的 `if self.swapped: return`：防饿死关键，swapped 非空时不接纳新请求
 - **与 Day 2 ContinuousBatcher 的区别**：多了显存预算 + 完整抢占逻辑 + 第三个 swapped 队列
 
 #### 任务 2：运行并观察抢占时间线
@@ -535,7 +535,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 
 ### 面试要点
 
-1. **vLLM 的 Scheduler 每轮 `schedule()` 做哪些事情？**（⭐⭐⭐⭐⭐ 必考）
+1. **vLLM 的 Scheduler 每轮** `schedule()` **做哪些事情？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
@@ -579,7 +579,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 </details>
 
 
-4. **为什么 `_schedule_waiting` 中要先检查 `if self.swapped: return`？**
+4. **为什么** `_schedule_waiting` **中要先检查** `if self.swapped: return`**？**
 
 <details>
 <summary>点击查看答案</summary>

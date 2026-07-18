@@ -557,7 +557,7 @@ row_sum = tl.sum(x, axis=1, keep_dims=True)  # (BLOCK_M, 1) → 可以 broadcast
 
 </details>
 
-2. **`tl.sum(x, axis=0)` 在底层是怎么实现的？**
+2. `tl.sum(x, axis=0)` **在底层是怎么实现的？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -570,7 +570,7 @@ row_sum = tl.sum(x, axis=1, keep_dims=True)  # (BLOCK_M, 1) → 可以 broadcast
 
 </details>
 
-3. **`tl.where` 和 CUDA 的 `if-else` 有什么区别？**
+3. `tl.where` **和 CUDA 的** `if-else` **有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -596,7 +596,7 @@ row_sum = tl.sum(x, axis=1, keep_dims=True)  # (BLOCK_M, 1) → 可以 broadcast
 
 </details>
 
-5. **矩阵转置中，Triton 的 `tl.trans` 内部做了什么？**
+5. **矩阵转置中，Triton 的** `tl.trans` **内部做了什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -611,7 +611,7 @@ row_sum = tl.sum(x, axis=1, keep_dims=True)  # (BLOCK_M, 1) → 可以 broadcast
 
 </details>
 
-6. **block pointer 的 `order` 参数有什么作用？**
+6. **block pointer 的** `order` **参数有什么作用？**
 
 <details>
 <summary>点击查看答案</summary>

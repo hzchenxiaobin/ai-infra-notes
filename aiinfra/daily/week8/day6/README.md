@@ -427,7 +427,7 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
 </details>
 
 
-4. **写出 online softmax 的三个更新公式。`exp(m - m_new)` 的作用是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **写出 online softmax 的三个更新公式。**`exp(m - m_new)` **的作用是什么？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
@@ -437,7 +437,7 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
  l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
  o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
  ```
- - **`exp(m - m_new)` 的作用**：统一参考点的缩放因子。当新 block 的 max 比旧的大时，旧的累加值 `l` 和 `o` 需要按 `exp(m - m_new)` 缩小（因为 m 变大了，旧的 exp 值相对变小）。
+ - `exp(m - m_new)` **的作用**：统一参考点的缩放因子。当新 block 的 max 比旧的大时，旧的累加值 `l` 和 `o` 需要按 `exp(m - m_new)` 缩小（因为 m 变大了，旧的 exp 值相对变小）。
  - **为什么避免物化 N×N**：online softmax 在 SRAM 内增量更新 m/l/o，不需要把完整的 S=QK^T 和 P=softmax(S) 写到 HBM，IO 从 O(N²) 降到 O(Nd)。
 
 </details>

@@ -54,7 +54,7 @@ cuBLAS 的 `beta*C` 只能做线性组合，无法加 Bias 或做 ReLU。CUTLASS
 | 阶段 | 数据位置 | 操作 |
 |------|----------|------|
 | Mainloop（MMA） | Register | `acc += A × B`（累加） |
-| **Epilogue** | **Register → Global** | **`D = post_process(alpha * acc + beta * C)`** |
+| **Epilogue** | **Register → Global** | `D = post_process(alpha * acc + beta * C)` |
 | 写回 | Global Memory | 最终输出 D |
 
 > 💡 **关键洞察**：Epilogue 发生在 Register 级——MMA 结果在 Register 中，后处理直接在 Register 上做，不需要额外的 Global Memory 读写。这就是融合的本质。

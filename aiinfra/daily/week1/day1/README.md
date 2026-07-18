@@ -86,7 +86,7 @@ GPU
 因为 **block 是 GPU 资源共享和线程同步的基本单位，而这些资源都是 SM 私有的**。同一个 block 内的线程需要：
 
 1. **共享同一块 Shared Memory**
-2. **通过 `__syncthreads()` 直接同步**
+2. **通过** `__syncthreads()` **直接同步**
 3. **被同一个 Warp Scheduler 调度**
 
 这三件事都只能在 **同一个 SM 内部** 完成，所以 block 不能被拆到不同 SM 上执行。
@@ -94,7 +94,7 @@ GPU
 | 资源/机制 | 为什么必须在同一个 SM 内 |
 |-----------|------------------------|
 | **Shared Memory** | Shared Memory 是 SM 的私有片上内存，不同 SM 之间无法直接访问彼此的 Shared Memory。 |
-| **`__syncthreads()`** | 这是 block 内所有线程的同步原语，依赖 SM 内部的硬件 barrier。跨 SM 同步没有这么轻量级的原语。 |
+| `__syncthreads()` | 这是 block 内所有线程的同步原语，依赖 SM 内部的硬件 barrier。跨 SM 同步没有这么轻量级的原语。 |
 | **Warp Scheduler** | 一个 SM 内部有一个或多个 Warp Scheduler，负责调度该 SM 上的 warp。block 的 warp 必须归同一个 scheduler 管。 |
 | **寄存器分配** | 每个 block 需要的寄存器总量需要在启动时从一个 SM 的寄存器文件里分配。 |
 | **硬件调度粒度** | GPU 调度器以整个 block 为单位分配给 SM，这样设计最简单高效。 |
@@ -577,7 +577,7 @@ block 3: 8 threads → ceil(8/32) = 1 warp
 1. **共享同一块 Shared Memory**
 2. **共享同一个 Warp Scheduler 调度上下文**（SIMT）
 3. **跑在同一个 SM 上**
-4. **可以通过 `__syncthreads()` 同步**
+4. **可以通过** `__syncthreads()` **同步**
 
 不同 block 之间无法做这些事，因此硬件天然会把每个 block 单独切分成 warp，而不会跨 block 凑数。
 
@@ -787,7 +787,7 @@ Day 1 我们建立了 GPU 执行模型的基础认知：
 </details>
 
 
-5. **CUDA 中 `__global__` 和 `__device__` 的区别？**
+5. **CUDA 中** `__global__` **和** `__device__` **的区别？**
 
 <details>
 <summary>点击查看答案</summary>
