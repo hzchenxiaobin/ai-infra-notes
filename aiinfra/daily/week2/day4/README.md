@@ -134,18 +134,7 @@ Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。
 
 Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 
-```
- GFLOPS
- │
- │ ╱ 计算峰值（水平线，由 SM 数量和频率决定）
- │ ╱
- │ ╱
- │ ╱
- │ ╱
- │╱ 带宽限制斜线（斜率 = 带宽 × 计算强度）
- └──────────────────────────────►
- 计算强度（FLOP/Byte）
-```
+![Roofline 模型](../website/images/roofline_model_day4.svg)
 
 - **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
 - AI 低 → **memory-bound**（位于斜线区域，优化内存访问）
@@ -421,7 +410,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 </details>
 
 
-4. **`ncu` 的 Source View 有什么用？需要什么编译条件？**
+4. `ncu` **的 Source View 有什么用？需要什么编译条件？**
 
 <details>
 <summary>点击查看答案</summary>

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+  </defs>
+
+  <rect width="640" height="420" fill="#fafafa"/>
+
+  <text x="320" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#222">Roofline 模型</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="360" x2="600" y2="360" stroke="#666" stroke-width="2" filter="url(#rough2)"/>
+  <line x1="80" y1="360" x2="80" y2="60" stroke="#666" stroke-width="2" filter="url(#rough2)"/>
+
+  <!-- Y axis label -->
+  <text x="35" y="210" text-anchor="middle" font-size="13" fill="#444" transform="rotate(-90, 35, 210)">GFLOPS（可达算力）</text>
+  <!-- X axis label -->
+  <text x="340" y="395" text-anchor="middle" font-size="13" fill="#444">计算强度 Arithmetic Intensity（FLOP / Byte）</text>
+
+  <!-- Roofline curve: slope then flat top -->
+  <polyline points="80,340 280,140 600,140" fill="none" stroke="#6ab0ff" stroke-width="3" filter="url(#rough2)"/>
+
+  <!-- Labels for the two segments -->
+  <text x="150" y="310" font-size="12" fill="#e8a838" font-weight="bold" transform="rotate(-35, 150, 310)">带宽限制斜线</text>
+  <text x="150" y="328" font-size="10" fill="#888">斜率 = 峰值带宽</text>
+
+  <text x="440" y="125" font-size="12" fill="#6ab0ff" font-weight="bold">计算峰值（水平线）</text>
+  <text x="440" y="140" font-size="10" fill="#888">由 SM 数量 × 频率决定</text>
+
+  <!-- Ridge point (balance point) -->
+  <circle cx="280" cy="140" r="6" fill="#d6a040" filter="url(#rough2)"/>
+  <text x="290" y="135" font-size="11" fill="#d6a040" font-weight="bold">平衡点</text>
+  <text x="290" y="150" font-size="10" fill="#888">RTX 5090 ≈ 25 FLOP/Byte</text>
+
+  <!-- Memory-bound region -->
+  <rect x="90" y="200" width="170" height="40" fill="#fce4ec" opacity="0.3" rx="4" filter="url(#rough2)"/>
+  <text x="175" y="225" text-anchor="middle" font-size="14" fill="#b85450" font-weight="bold">Memory-Bound</text>
+  <text x="175" y="240" text-anchor="middle" font-size="10" fill="#b85450">AI 低 → 优化内存访问</text>
+
+  <!-- Compute-bound region -->
+  <rect x="370" y="200" width="170" height="40" fill="#e6f4ea" opacity="0.3" rx="4" filter="url(#rough2)"/>
+  <text x="455" y="225" text-anchor="middle" font-size="14" fill="#4a7a3a" font-weight="bold">Compute-Bound</text>
+  <text x="455" y="240" text-anchor="middle" font-size="10" fill="#4a7a3a">AI 高 → 优化计算吞吐</text>
+
+  <!-- Sample kernel points -->
+  <circle cx="120" cy="320" r="7" fill="#b85450" filter="url(#rough2)"/>
+  <text x="120" y="345" text-anchor="middle" font-size="10" fill="#333">Transpose</text>
+  <text x="120" y="357" text-anchor="middle" font-size="9" fill="#888">AI≈0</text>
+
+  <circle cx="180" cy="280" r="7" fill="#b85450" filter="url(#rough2)"/>
+  <text x="180" y="270" text-anchor="middle" font-size="10" fill="#333">Softmax</text>
+  <text x="180" y="300" text-anchor="middle" font-size="9" fill="#888">AI≈0.4</text>
+
+  <circle cx="450" cy="150" r="7" fill="#4a7a3a" filter="url(#rough2)"/>
+  <text x="450" y="175" text-anchor="middle" font-size="10" fill="#333">GEMM (WMMA)</text>
+  <text x="450" y="187" text-anchor="middle" font-size="9" fill="#888">AI≈8+</text>
+
+  <!-- Arrow indicating optimization direction -->
+  <path d="M 130 315 Q 200 260 280 160" stroke="#d6a040" stroke-width="1.5" stroke-dasharray="4,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#d6a040"/>
+    </marker>
+  </defs>
+  <text x="210" y="235" font-size="10" fill="#d6a040" font-weight="bold">优化方向：提升 AI →</text>
+</svg>
