@@ -16,6 +16,7 @@ on:
       - 'aiinfra/daily/week8/**'
       - 'aiinfra/topics/cutlass/**'
       - 'aiinfra/topics/triton/**'
+      - 'aiinfra/topics/cute/**'
       - 'leetcode/**'
       - 'leetgpu/**'
       - 'public/**'
@@ -63,6 +64,8 @@ jobs:
           ls -la public/cutlass/
           echo "--- triton directory structure ---"
           ls -la public/triton/
+          echo "--- cute directory structure ---"
+          ls -la public/cute/
           echo "--- leetcode directory structure ---"
           ls -la public/leetcode/
           echo "--- file count ---"

@@ -45,11 +45,15 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
     rel_triton = compute_relative_path(
         html_file.relative_to(public_dir), "triton/index.html"
     )
+    rel_cute = compute_relative_path(
+        html_file.relative_to(public_dir), "cute/index.html"
+    )
     extra_section = f'''<div class="nav-section-title">更多</div>
 <a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
 <a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>
 <a class="nav-link" href="{rel_cutlass}">⚡ CUTLASS 专题</a>
 <a class="nav-link" href="{rel_triton}">🐍 Triton 专题</a>
+<a class="nav-link" href="{rel_cute}">🔷 CuTe 专题</a>
 '''
     return html_text.replace(
         "            </nav>\n        </aside>",
@@ -285,6 +289,22 @@ def main() -> None:
         skip={"build.py", "README.md"},
     )
 
+    # Build CuTe topic website
+    print("Building CuTe topic website...")
+    subprocess.run(
+        ["python3", str(repo_root / "aiinfra" / "topics" / "cute" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy CuTe topic website to public/cute/
+    print("Copying CuTe topic website to public/cute/...")
+    cute_dst = public_dir / "cute"
+    copy_directory_contents(
+        repo_root / "aiinfra" / "topics" / "cute" / "website",
+        cute_dst,
+        skip={"build.py", "README.md"},
+    )
+
     # Insert LeetCode, LeetGPU, CUTLASS and Triton navigation links into all course pages
     # (aiinfra/daily/week1~week8 and extra pages), but not into the leetcode,
     # leetgpu, cutlass or triton subsites themselves.
@@ -294,6 +314,7 @@ def main() -> None:
         and "leetgpu" not in p.relative_to(public_dir).parts
         and "cutlass" not in p.relative_to(public_dir).parts
         and "triton" not in p.relative_to(public_dir).parts
+        and "cute" not in p.relative_to(public_dir).parts
     ]
     for html_file in course_pages:
         if html_file.is_file():

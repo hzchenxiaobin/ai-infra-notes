@@ -83,6 +83,12 @@ aiinfra/topics/triton/website/day*.html
 aiinfra/topics/triton/website/images/
 aiinfra/topics/triton/website/kernels/
 
+# Generated CuTe topic website files
+aiinfra/topics/cute/website/index.html
+aiinfra/topics/cute/website/day*.html
+aiinfra/topics/cute/website/images/
+aiinfra/topics/cute/website/kernels/
+
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/
