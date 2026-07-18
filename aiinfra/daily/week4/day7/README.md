@@ -195,15 +195,15 @@ CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再
 
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
-| Day 1 | [Softmax Attention](../../../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md) | [152. 乘积最大子数组](../../../../leetcode/daily/week4/day1/乘积最大子数组.md) |
-| Day 2 | [Attention](../../../../leetgpu/week4/day2/leetgpu-attention-solution.md) | [416. 分割等和子集](../../../../leetcode/daily/week4/day2/分割等和子集.md) |
+| Day 1 | [Decaying Causal Attention](../../../../leetgpu/week4/day1/leetgpu-decaying-causal-attention-solution.md) | [152. 乘积最大子数组](../../../../leetcode/daily/week4/day1/乘积最大子数组.md) |
+| Day 2 | [Adder Transformer](../../../../leetgpu/week4/day2/leetgpu-adder-transformer-solution.md) | [416. 分割等和子集](../../../../leetcode/daily/week4/day2/分割等和子集.md) |
 | Day 3 | [Dot Product](../../../../leetgpu/week4/day3/leetgpu-dot-product-solution.md) | [131. 分割回文串](../../../../leetcode/daily/week4/day3/分割回文串.md) |
 | Day 4 | [Batched Matrix Multiplication](../../../../leetgpu/week4/day4/leetgpu-batched-matrix-multiplication-solution.md) | [226. 翻转二叉树](../../../../leetcode/daily/week4/day4/翻转二叉树.md) |
 | Day 5 | [Matrix Copy](../../../../leetgpu/week4/day5/leetgpu-matrix-copy-solution.md) | [19. 删除链表的倒数第N个节点](../../../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md) |
 | Day 6 | [Multi-Head Attention](../../../../leetgpu/week4/day6/leetgpu-multi-head-attention-solution.md) | [2. 两数相加](../../../../leetcode/daily/week4/day6/两数相加.md) |
 | Day 7 | [GPT-2 Transformer Block](../../../../leetgpu/week4/day7/leetgpu-gpt-2-transformer-block-solution.md) | — |
 
-> 💡 回顾重点：Softmax Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/背包/回溯/树/双指针/链表六大标签。把没做完的题目今天补上。
+> 💡 回顾重点：Decaying Causal Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/背包/回溯/树/双指针/链表六大标签。把没做完的题目今天补上。
 
 #### 任务 4：Week 5 预热 + 面试复盘
 
@@ -471,7 +471,7 @@ week4/
 - [ ] 能列出 IO 优化六大策略并解释每种含义
 - [ ] 能用决策树分析一个陌生算子是否适合 tiling/fusion/recomputation
 - [ ] 生成性能对比报告（含 top3 配置的 speedup）
-- [ ] 完成本周 LeetGPU（Softmax Attention/Dot Product/Batched GEMM/1D Conv/Matrix Copy/Multi-Head Attention）与 LeetCode 题目
+- [ ] 完成本周 LeetGPU（Decaying Causal Attention/Dot Product/Batched GEMM/1D Conv/Matrix Copy/Multi-Head Attention）与 LeetCode 题目
 - [ ] 理解 Week 5 推理系统的前置概念（KV Cache、PagedAttention、Continuous Batching）
 
 ---

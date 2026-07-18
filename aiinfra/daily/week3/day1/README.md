@@ -296,15 +296,15 @@ aten::softmax xxx us 5
 - **Prefill**：GEMM（`aten::mm`）占 CUDA 时间 60%+，是绝对主导 → compute-bound
 - **Decode**：GEMM 矩阵极小（M=1），时间占比下降；softmax/layernorm 相对占比上升；kernel 间 gap 更明显（launch overhead 占比增大）→ memory-bound
 
-#### 任务 4：LeetGPU 在线题目 —— 1D Convolution
+#### 任务 4：LeetGPU 在线题目 —— Causal Depthwise Conv1d
 
-**题目链接**：<https://leetgpu.com/challenges/1d-convolution>
+**题目链接**：<https://leetgpu.com/challenges/causal-depthwise-conv1d>
 
-**题目概述**：给定长度为 `N` 的输入信号和长度为 `K` 的卷积核，计算一维卷积输出。
+**题目概述**：给定输入 `x` 形状 `(B, L, D)`、权重 `weight` 形状 `(D, K)`、偏置 `bias` 形状 `(D,)`，计算因果深度卷积：`output[b, l, d] = bias[d] + Σ_{k=0}^{K-1} weight[d, k] * x[b, l - K + 1 + k, d]`。因果性指输出位置 `l` 只依赖 `≤ l` 的输入（过去与当前），越界位置按 0 处理。每个通道 `d` 相互独立。
 
-**与今日知识的关联**：1D Convolution 是 Transformer 前馈网络中 GEMM 之外的基础算子——每个输出元素依赖输入的一个局部窗口，与 attention 中每个 query 依赖所有 key 的模式同构。今天的 profiling 分析揭示了 Prefill（compute-bound）和 Decode（memory-bound）的差异，1D Conv 同样可以用 ncu 分析其 bound 类型，验证"element-wise + reduction = memory-bound"的规律。
+**与今日知识的关联**：Causal Depthwise Conv1d 是 1D 卷积的变体——在 Transformer 里常用于卷积前馈或局部上下文建模。它综合了卷积的边界处理（halo 区 + 因果 padding）与通道独立并行（depthwise 分组），是练习"卷积边界处理 + 通道独立并行"的好题。今天的 profiling 分析揭示了 Prefill（compute-bound）和 Decode（memory-bound）的差异，Causal Depthwise Conv1d 同样可以用 ncu 分析其 bound 类型，验证"element-wise + 局部窗口 = memory-bound"的规律。
 
-> 💡 完整题解见 [1D Convolution 题解](../../../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md)。
+> 💡 完整题解见 [Causal Depthwise Conv1d 题解](../../../../leetgpu/week3/day1/leetgpu-causal-depthwise-conv1d-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 盛最多水的容器
 

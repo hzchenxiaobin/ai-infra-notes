@@ -174,15 +174,15 @@ Continuous Batching iteration-level 调度... LLM 自回归推理 ...
  6. Benchmark：throughput-latency 曲线找饱和点，P99 看尾延迟
 ```
 
-#### 任务 2：LeetGPU 综合题 —— Dot Product
+#### 任务 2：LeetGPU 综合题 —— FP16 Dot Product
 
-**题目链接**：<https://leetgpu.com/challenges/dot-product>
+**题目链接**：<https://leetgpu.com/challenges/fp16-dot-product>
 
-**题目概述**：给定两个长度为 `N` 的向量，计算点积 `sum(a[i] × b[i])`。
+**题目概述**：给定两个长度为 `N` 的 FP16 向量，计算点积 `sum(a[i] × b[i])`，要求用 FP32 累加保证精度、最终转回 FP16 输出。
 
-**与本周总结的关联**：Dot Product 是**归约**（reduction）的最简形式——block 内归约 + 跨 block 归约，正是 Week 6 benchmark 的 `percentile()` 统计、Scheduler 的 token budget 累加、Continuous Batcher 的 batch 聚合的底层模式。本周所有"累加/统计"操作的本质都是 dot product 式的归约。做好这题说明你掌握了归约模板——Week 7 系统整合中会频繁用到。
+**与本周总结的关联**：FP16 Dot Product 是**归约**（reduction）的半精度变体——block 内归约 + 跨 block 归约的结构与普通 dot product 一致，但引入了"低精度输入 + 高精度累加 + 低精度输出"的混合精度模式。这正是 Week 6 优化方向的微缩版：饱和点后用 INT8/FP16 量化提吞吐（Day 6 benchmark 的 compute-bound 优化），但 reduce 必须升精度累加以控误差。本周所有"累加/统计"操作（`percentile()`、token budget 累加、batch 聚合）的本质都是归约，这道题额外练习 `__half` 类型转换 + warp shuffle 归约——Week 7 系统整合中 FP16 混合精度会频繁用到。
 
-> 💡 完整题解（含 block 归约 kernel、kernel 融合、与本周累加操作的类比）见 [Dot Product 题解](../../../../leetgpu/week6/day7/leetgpu-dot-product-solution.md)。
+> 💡 完整题解（含 FP16 输入 + FP32 累加 kernel、warp shuffle 归约、与混合精度量化的类比）见 [FP16 Dot Product 题解](../../../../leetgpu/week6/day7/leetgpu-fp16-dot-product-solution.md)。
 
 #### 任务 3：LeetCode 面试题 —— 最小覆盖子串
 

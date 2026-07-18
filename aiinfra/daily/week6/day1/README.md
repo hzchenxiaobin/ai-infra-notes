@@ -298,19 +298,19 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 观察：短 timeout 时 batch size 偏小（来不及凑齐），长 timeout 时 batch 更满但 wait_time 更大。
 
-#### 任务 4：LeetGPU 在线题目 —— Simple Inference
+#### 任务 4：LeetGPU 在线题目 —— MoE Top-K Gating
 
-**题目链接**：<https://leetgpu.com/challenges/simple-inference>
+**题目链接**：<https://leetgpu.com/challenges/moe-topk-gating>
 
 **题目概述**：
 
-给定一个 PyTorch `nn.Linear` 模型和输入张量 `input[batch_size, input_size]`，计算 `output = input @ weight.T + bias`。性能测试取 `batch_size=1000, input_size=512, output_size=256`。
+给定 logits 张量 `[M, E]`（M 个 token、E 个专家），对每一行选出 top-k 个最大值，对这 k 个值做 softmax 得到门控权重，返回权重 `[M, k]` 和对应的专家索引 `[M, k]`。性能测试取大 M、E。
 
 **与今日知识的关联**：
 
-这道题直接展示了 **batch size 对推理性能的影响**——性能测试用 `batch_size=1000` 而非 1，正是因为大 batch 能让 GEMM 的 M 维足够大，充分利用 GPU 并行。今天的 Dynamic Batcher 就是在系统层面把多个单请求（M=1）聚合成大 batch（M=N），让模型 forward 的 GEMM 从 memory-bound 逼近 compute-bound。这道题是"为什么需要 batching"的微缩版：单次 forward 的 batch_size 越大，GPU 利用率越高。
+这道题直接展示了 **token 到专家的路由（routing）**——MoE 门控对每个 token 选 top-k 专家，正是"把输入分派到不同计算路径"的决策。今天的 Dynamic Batcher 在系统层面做类似的"路由"：把到达的请求分派到不同 batch（按到达顺序/长度分组），让 GPU 满载。两者的本质都是**基于策略的分流**：MoE 用 logits + top-k 决定 token 去哪个专家，Dynamic Batcher 用队列 + timeout 决定请求进哪个 batch。这道题练习 top-k 选择 + softmax，是 MoE 推理服务的核心 kernel——Week 7 系统整合中 MoE 模型会频繁用到。
 
-> 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时。完整题解（含 batch_size 对 GEMM 性能的影响分析）见 [Simple Inference 题解](../../../../leetgpu/week6/day1/leetgpu-simple-inference-solution.md)。
+> 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](../../../../leetgpu/week6/day1/leetgpu-moe-topk-gating-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的序列化与反序列化
 

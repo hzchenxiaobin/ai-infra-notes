@@ -229,15 +229,15 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
-| Day 1 | [1D Convolution](../../../../leetgpu/week3/day1/leetgpu-1d-convolution-solution.md) | [11. 盛最多水的容器](../../../../leetcode/daily/week3/day1/盛最多水的容器.md) |
-| Day 2 | [Softmax](../../../../leetgpu/week3/day2/leetgpu-softmax-solution.md) | [198. 打家劫舍](../../../../leetcode/daily/week3/day2/打家劫舍.md) |
+| Day 1 | [Causal Depthwise Conv1d](../../../../leetgpu/week3/day1/leetgpu-causal-depthwise-conv1d-solution.md) | [11. 盛最多水的容器](../../../../leetcode/daily/week3/day1/盛最多水的容器.md) |
+| Day 2 | [Group Normalization](../../../../leetgpu/week3/day2/leetgpu-group-normalization-solution.md) | [198. 打家劫舍](../../../../leetcode/daily/week3/day2/打家劫舍.md) |
 | Day 3 | [Argmax](../../../../leetgpu/week3/day3/leetgpu-argmax-solution.md) | [5. 最长回文子串](../../../../leetcode/daily/week3/day3/最长回文子串.md) |
 | Day 4 | [Attention](../../../../leetgpu/week3/day4/leetgpu-attention-solution.md) | [141. 环形链表](../../../../leetcode/daily/week3/day4/环形链表.md) |
-| Day 5 | [Matrix Addition](../../../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md) | [98. 验证二叉搜索树](../../../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
+| Day 5 | [2D Max Pooling](../../../../leetgpu/week3/day5/leetgpu-2d-max-pooling-solution.md) | [98. 验证二叉搜索树](../../../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
 | Day 6 | [RMS Normalization](../../../../leetgpu/week3/day6/leetgpu-rms-normalization-solution.md) | [78. 子集](../../../../leetcode/daily/week3/day6/子集.md) |
-| Day 7 | [Causal Self-Attention](../../../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md) | — |
+| Day 7 | [Attention with Linear Biases (ALiBi)](../../../../leetgpu/week3/day7/leetgpu-attn-w-linear-bias-solution.md) | — |
 
-> 💡 回顾重点：Softmax / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。
+> 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。
 
 #### 任务 4：Week 4 预热 + 面试复盘
 
@@ -467,15 +467,15 @@ week3/
 
 ---
 
-#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+#### 任务 4：LeetGPU 在线题目 —— Attention with Linear Biases (ALiBi)
 
-**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+**题目链接**：<https://leetgpu.com/challenges/attn-w-linear-bias>
 
-**题目概述**：实现因果自注意力（Causal Self-Attention），即带 causal mask 的标准 Attention，每个位置只能看到自己及之前的位置。
+**题目概述**：实现 ALiBi（Attention with Linear Biases）注意力。给定 `Q ∈ R^{M×d}`、`K ∈ R^{N×d}`、`V ∈ R^{N×d}`，计算 `attn = Q@K^T/√d + α·(m-n)`，`output = softmax(attn) @ V`。其中 `α` 是偏置斜率，`pos_bias[m,n] = α×(m-n)` 是线性位置偏置——query 与 key 距离越远偏置越负，注意力权重越小。与 causal mask 不同，ALiBi 不截断 key（所有 key 都参与），而是用加性偏置衰减远处 key 的权重。
 
-**与今日知识的关联**：Causal Self-Attention 是 Week 3 算子主线的综合验收——融合了 Attention（Day 4）+ Softmax（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"。
+**与今日知识的关联**：ALiBi 是 Week 3 算子主线的综合验收——它是 Attention（Day 4）的位置编码变体练习，融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：在标准 attention score 上加一个 O(1) 的线性偏置，即可融入 online softmax，无需物化 S/P。
 
-> 💡 完整题解见 [Causal Self-Attention 题解](../../../../leetgpu/week3/day7/leetgpu-causal-self-attention-solution.md)。
+> 💡 完整题解见 [Attention with Linear Biases (ALiBi) 题解](../../../../leetgpu/week3/day7/leetgpu-attn-w-linear-bias-solution.md)。
 
 ---
 
@@ -491,7 +491,7 @@ week3/
 - [ ] 生成 profiling 报告（含 top3 瓶颈算子 + 优化方向）
 - [ ] 能口述本周 10 道面试题的答案要点
 - [ ] 理解 Week 4 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
-- [ ] 完成本周 LeetGPU（Softmax/Softmax Attention/RMS Normalization）与 LeetCode 题目
+- [ ] 完成本周 LeetGPU（Group Normalization/Softmax Attention/RMS Normalization）与 LeetCode 题目
 
 ---
 

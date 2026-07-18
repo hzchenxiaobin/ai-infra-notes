@@ -280,17 +280,17 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 
 > 思考：v1 的 `sleep(0.001)` 轮询每秒 1000 次，CPU 浪费；Week7 的 `cond.wait()` 无请求时挂起零 CPU，有请求时 `notify` 立即唤醒。
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Copy
+#### 任务 4：LeetGPU 在线题目 —— Color Inversion
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-copy>
+**题目链接**：<https://leetgpu.com/challenges/color-inversion>
 
-**题目概述**：给定 `M×N` 矩阵，将其拷贝到输出矩阵。
+**题目概述**：给定 RGBA 图像（`height*width*4` 的 uint8 数组，每像素 4 字节），对每个像素反转 RGB 三通道（`255 - v`），保留 alpha 通道不变。
 
-**约束条件**：`1 ≤ M, N ≤ 4096`；性能测试取大矩阵。
+**约束条件**：`1 ≤ height, width ≤ 4096`；性能测试取大图。
 
-**与今日知识的关联**：Matrix Copy 是**内存带宽测试**的最简形式——纯拷贝无计算，衡量 GPU 能否以峰值带宽搬运数据。这与并发引擎的"线程安全队列搬运请求"同构：队列的 `put`/`get_batch` 是请求的"拷贝"（从 submit 线程搬运到 worker 线程），搬运效率（条件变量 notify 的及时性）决定并发引擎的响应延迟。Matrix Copy 测的是 GPU 显存带宽，请求队列测的是线程间通信带宽——两者都是"数据搬运效率"的基准。
+**与今日知识的关联**：Color Inversion 是**elementwise 内存受限 kernel** 的典型——每个像素独立处理、无计算依赖，瓶颈在显存带宽而非算力。这与并发引擎的"请求独立搬运"同构：队列的 `put`/`get_batch` 把每个请求从 submit 线程搬到 worker 线程，请求间无依赖（像像素间无依赖），搬运效率（coalesced 访存 + 条件变量 notify 的及时性）决定整体吞吐。Color Inversion 练习 coalesced 访存和 grid-stride 循环——这是并发引擎高效处理海量独立请求的底层模式：把"每个请求独立处理"映射到 GPU 就是"每个像素独立计算"。
 
-> 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解（含 coalesced 拷贝 kernel、带宽测量、与请求队列搬运效率的类比）见 [Matrix Copy 题解](../../../../leetgpu/week7/day1/leetgpu-matrix-copy-solution.md)。
+> 💡 提交后在 [LeetGPU Color Inversion](https://leetgpu.com/challenges/color-inversion) 上记录通过耗时。完整题解（含 elementwise kernel、coalesced 访存、与请求独立搬运的类比）见 [Color Inversion 题解](../../../../leetgpu/week7/day1/leetgpu-color-inversion-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 最长连续序列
 

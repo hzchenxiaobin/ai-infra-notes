@@ -230,40 +230,39 @@ ncu \
 - `conflict_read` 的 bank conflict 数值远高于 `no_conflict_read`
 - `conflict_read` 的执行 cycles 明显更多
 
-#### 任务 4：LeetGPU 在线题目 —— Reduction
+#### 任务 4：LeetGPU 在线题目 —— Subarray Sum
 
-**题目链接**：<https://leetgpu.com/challenges/reduction>
+**题目链接**：<https://leetgpu.com/challenges/subarray-sum>
 
 **题目概述**：
 
-给定长度为 N 的浮点数组 input，计算所有元素的总和：sum = input[0] + input[1] + ... + input[N-1]。
-
-**约束条件**：`1 ≤ N ≤ 100,000,000`，数组元素范围 `[-1000.0, 1000.0]`，结果不会溢出 float
+给定长度为 N 的 int 数组 `input` 和两个下标 `S`、`E`（含端点），计算 `input[S] + input[S+1] + ... + input[E]` 的区间和。约束 `1 ≤ N ≤ 100,000,000`，`0 ≤ S ≤ E < N`。
 
 **难度**：中等　**标签**：CUDA、Parallel Reduction、Shared Memory、Warp Shuffle、Bank Conflict
 
 **与今日知识的关联**：
 
-本题是并行归约的经典题，核心难点在于跨 warp 的归约需要 Shared Memory 中转，而这正是 bank conflict 的高发区。用 Day 5 学的 padding 技巧消除 conflict，用 ncu 对比优化前后 bank conflict 计数。
+本题是范围归约（range reduction）的经典题，是 reduction 概念的直接应用：把 `input[S..E]` 的连续区间映射到线程，再用 grid-stride 累加 + Warp Shuffle 归约。核心难点仍是跨 warp 的归约需要 Shared Memory 中转——bank conflict 的高发区。用 Day 5 学的 padding 技巧消除 conflict，用 ncu 对比优化前后 bank conflict 计数。
 
 **解题思路**：
 
-两阶段归约：grid-stride loop 做线程级累加 → Warp Shuffle 做 warp 内归约 → Shared Memory 中转 → Warp 0 做最终归约。关注 Shared Memory 访问模式是否产生 bank conflict。
+两阶段归约：grid-stride loop 对 `input[S..E]` 区间做线程级累加 → Warp Shuffle 做 warp 内归约 → Shared Memory 中转 → Warp 0 做最终归约。关键是把线程索引 `i` 映射回区间 `S + i`，并处理 `len = E - S + 1` 不是 block 整数倍时的尾部。关注 Shared Memory 访问模式是否产生 bank conflict。
 
 **参考实现**：
 
 ```cuda
-__global__ void reduction_kernel(const float* input, float* output, int N) {
-    __shared__ float warpSums[32];
+__global__ void subarray_sum_kernel(const int* input, int* output, int S, int E) {
+    __shared__ int warpSums[32];
 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int lane = threadIdx.x & 31;
     int wid = threadIdx.x >> 5;
+    int len = E - S + 1;  // 区间长度
 
-    // grid-stride 累加
-    float sum = 0.0f;
-    for (int i = tid; i < N; i += gridDim.x * blockDim.x)
-        sum += input[i];
+    // grid-stride 累加 input[S..E]
+    int sum = 0;
+    for (int i = tid; i < len; i += gridDim.x * blockDim.x)
+        sum += input[S + i];
 
     // Warp 级归约 (Shuffle，无 bank conflict)
     for (int offset = 16; offset > 0; offset >>= 1)
@@ -277,7 +276,7 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
     // Warp 0 做最终归约
     if (wid == 0) {
         int numWarps = (blockDim.x + 31) / 32;
-        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
+        sum = (lane < numWarps) ? warpSums[lane] : 0;
         for (int offset = 16; offset > 0; offset >>= 1)
             sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
         if (lane == 0)
@@ -286,7 +285,7 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Reduction 题解](../../../../leetgpu/week1/day5/leetgpu-reduction-solution.md)。
+> 💡 提交后在 [LeetGPU Subarray Sum 题目](https://leetgpu.com/challenges/subarray-sum)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Subarray Sum 题解](../../../../leetgpu/week1/day5/leetgpu-subarray-sum-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最近公共祖先
 

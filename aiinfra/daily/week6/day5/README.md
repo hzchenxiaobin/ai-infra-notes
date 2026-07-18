@@ -314,21 +314,21 @@ Iter | Batch | W/R | Batch 内容
 
 > 思考：v1 的并发收益在什么场景下最大？（提示：请求长度方差越大、batch 不超预算时，并发收益越大。与 Day 1 Dynamic Batching 的"凑批"不同，v1 每轮都跑。）
 
-#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
+#### 任务 4：LeetGPU 在线题目 —— INT8 Quantized MatMul
 
-**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
+**题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
 
 **题目概述**：
 
-给定一个 batch 的矩阵对 `(A[i], B[i])`，对每个 batch 元素独立做矩阵乘法 `C[i] = A[i] × B[i]`，其中 `A[i]` 是 `M×K`、`B[i]` 是 `K×N`、`C[i]` 是 `M×N`。
+给定 INT8 量化矩阵 `A[M, K]` 和 `B[K, N]`，以及 scale/zero_point 参数，计算量化矩阵乘法：先反量化到 INT32 做乘加，再重量化回 INT8 输出 `C[M, N]`。性能测试取大 M、N、K。
 
-**约束条件**：`1 ≤ batch ≤ 256`，`1 ≤ M, N, K ≤ 1024`；性能测试取大 batch。
+**约束条件**：`1 ≤ M, N, K ≤ 1024`；性能测试取大矩阵。
 
 **与今日知识的关联**：
 
-这道题的**batched GEMM** 与 Mini Engine v1 的多请求并发 forward 同构——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 batched GEMM（batch=请求数，每个请求各自的 Q×K^T、attn×V、FFN 的两层 Linear）。batched matmul 的"每个 batch 元素独立计算、共享 kernel launch"正是 v1 Scheduler 的"每轮选多个请求组 batch、一次 forward"的底层映射。这道题的 GPU 实现用 grid 的 batch 维并行各请求，对应 v1 的 batch 维并行各请求的 GEMM。
+这道题的**INT8 量化 GEMM** 是 Mini Engine v1 的 forward 优化的关键方向——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 GEMM。当 batch 增大让 GEMM 进入 compute-bound（饱和点）后，进一步降延迟的手段就是**低精度量化**（INT8/FP8）：用 INT8 替代 FP32 让 Tensor Core 吞吐提升 2-4x、显存带宽压力减半。这道题练习"反量化→INT32 乘加→重量化"的三段式量化 GEMM，正是 Week 6 Day 6 benchmark 识别出 compute-bound 瓶颈后的优化路径——量化是缩小与 vLLM 性能差距的核心手段之一。
 
-> 💡 提交后在 [LeetGPU Batched Matrix Multiplication](https://leetgpu.com/challenges/batched-matrix-multiplication) 上记录通过耗时。完整题解（含 batched kernel、batch 维并行、与多请求 forward 的类比）见 [Batched Matrix Multiplication 题解](../../../../leetgpu/week6/day5/leetgpu-batched-matrix-multiplication-solution.md)。
+> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](../../../../leetgpu/week6/day5/leetgpu-int8-quantized-matmul-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 岛屿数量
 

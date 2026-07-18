@@ -517,115 +517,87 @@ ncu --metrics \
 - `sm__occupancy`：可能只有 50-75%（register 压力大），这是教学版的局限
 - `dram__throughput`：应远低于标准 Attention（因为消除了 O(N²) 读写）
 
-#### 任务 4：LeetGPU 在线题目 —— Attention
+#### 任务 4：LeetGPU 在线题目 —— Adder Transformer
 
-**题目链接**：<https://leetgpu.com/challenges/attention>
+**题目链接**：<https://leetgpu.com/challenges/adder-transformer>
 
 **题目概述**：
 
-给定 Query (`M×d`)、Key (`N×d`)、Value (`N×d`)，计算 Scaled Dot-Product Attention：`Attention(Q,K,V) = softmax(Q·K^T / √d) · V`。约束：`1 ≤ M, N ≤ 4096`，`1 ≤ d ≤ 128`，元素范围 `[-1.0, 1.0]`。
+实现一个极简 transformer 的批量自回归推理（该 transformer 完成两个 10 位数字的加法）。给定 prompt `[batch, 31]`（int32）和 10 个 float 权重，输出 `[batch, 11, 10]`（11 个解码步、每步对 10 个数字词表的 logits）。架构为单层 pre-norm transformer（embedding → RMSNorm → self-attention → MLP → final norm → logits），从 31 token prompt 出发自回归解码 11 步。
 
-**难度**：困难　**标签**：CUDA、Attention、Online Softmax、FlashAttention、分块计算
+**难度**：中等　**标签**：CUDA、多 kernel 流水线、autoregressive 推理、kernel 融合
 
 **与今日知识的关联**：
 
-本题就是今天手写完整 FlashAttention Forward Kernel 的"对标题"——今天我们在本地实现了支持 batch/multi-head 的完整 FA kernel，LeetGPU 的 Attention 题则要求一个同样基于 **分块 + Online Softmax** 的正确实现。核心目标一致：让 S/P 永远不落 HBM，只写 O 回全局内存。把今天推导的 online softmax 三公式直接套用到本题，再对照官方实现查漏补缺。
+今天我们手写的是**单个 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题练习的是 transformer 推理的**另一面**：把多个小 kernel（embedding / attention / MLP / logits）串成自回归推理管线，循环 11 步生成。核心痛点相反——hidden_dim 极小时 launch overhead 淹没计算，需要**融合前向**把整条管线压进一个 kernel + batch 维并行。这是 multi-kernel orchestration 的典型练习，与今天的单 kernel fusion 互补。
 
 **解题思路**：
 
-1. **分块**：把 Q 按行分 tile 驻留 SRAM，K/V 按列分 tile 逐块滑入
-2. **Online Softmax 三公式**：
-   - `m_new = max(m, max(s_j))`（更新 running max）
-   - `l_new = l * exp(m - m_new) + Σ exp(s_j - m_new)`（更新 running sum）
-   - `o_new = o * (l * exp(m - m_new) / l_new) + (Σ exp(s_j - m_new) / l_new) * v_j`（缩放历史输出 + 加新贡献）
-3. S/P 只在 SRAM/register 中存在，最终只写 O 到 HBM
-4. 与今天本地 kernel 对照：检查 tile 大小、边界处理、精度误差来源是否一致
+1. **batch 维并行**：`grid = batch_size`，每 block 处理一个 batch 元素的完整推理
+2. **融合前向**：一个 block 完成整个前向（embedding → QKV → attention → MLP → logits → argmax），消除多 kernel launch 开销
+3. **last-only 优化**：输出只需最后位置 logits，K/V 只依赖前注意力的 embedding，因此只算所有位置的 K/V + last 位置的 attention/MLP，把 `O(seq²)` 降为 `O(seq)`
+4. **11 步循环在 host**：`solve` 里 for 循环 11 次，每步 launch 一次融合前向 kernel
 
-**参考实现**（FlashAttention 简化版，今日完整实现的精简验证）：
+**参考实现**（多 kernel 推理管线骨架，完整实现见题解）：
 
 ```cuda
-// attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
-// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_120
+// adder_transformer.cu —— Adder Transformer Inference（融合前向 + 11 步自回归）
+// 编译命令: nvcc -o adder_transformer adder_transformer.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-#define BLOCK_M 64
-#define BLOCK_N 64
-#define MAX_D 128
+#define VOCAB_SIZE 10
+#define PROMPT_LEN 31
+#define OUTPUT_DIGITS 11
+#define MAX_LEN (PROMPT_LEN + OUTPUT_DIGITS)   // 42
+#define FORWARD_BLOCK 64
 
-__global__ void flash_attention(const float* Q, const float* K, const float* V, float* O, int M, int N, int d) {
-    int q_start = blockIdx.x * BLOCK_M;
+// 一个 block 处理一个 batch 元素的一步融合前向：
+//   ① 各 thread 并行算所有位置的 k/v（embedding → unit rms norm → QKV → RoPE）
+//   ② thread 0 串行算 last 位置的 attention + MLP + logits + argmax
+//   last-only 优化：输出只需 last 位置，把 O(seq²) attention 降为 O(seq)
+// （完整 kernel 体见题解：softmax attention + SwiGLU MLP + final norm + logits）
+__global__ void forward_step_kernel(const int* seq, float* output, const float* weights,
+                                    int batch_size, int cur_len, int step,
+                                    float omega, float attn_scale);
 
-    __shared__ float s_Q[BLOCK_M][MAX_D];
-    __shared__ float s_K[BLOCK_N][MAX_D];
-    __shared__ float s_V[BLOCK_N][MAX_D];
+// 初始化 seq[batch, MAX_LEN]：把 prompts[batch, 31] 拷到前 31 列
+__global__ void init_seq_kernel(const int* prompts, int* seq, int batch_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total = batch_size * PROMPT_LEN;
+    if (idx < total)
+        seq[(idx / PROMPT_LEN) * MAX_LEN + (idx % PROMPT_LEN)] = prompts[idx];
+}
 
-    // 每行的 running state（寄存器）：m=max, l=sum, o=output
-    int rows_per_warp = BLOCK_M / 32;
-    int warp_id = threadIdx.x / 32;
-    float m_i[4], l_i[4], o_i[4][MAX_D];
+// prompts, output, weights are device pointers
+extern "C" void solve(const int* prompts, float* output, const float* weights, int batch_size) {
+    // host 端预计算派生常量（RoPE 角频率、attention scale），保证 batch 间一致
+    const double PI = 3.14159265358979323846;
+    double OMEGA = 2.0 * PI / 19.0;
+    double ATTN_AMPLITUDE = log(10.0) / (cos(OMEGA * 0.3) - cos(OMEGA * 0.7));
+    double QK_NORM_SCALE = sqrt(ATTN_AMPLITUDE / sqrt(2.0));
+    double ATTN_SCALE = (1.0 / sqrt(2.0)) * (QK_NORM_SCALE * QK_NORM_SCALE);
+    float omega = (float)OMEGA, attn_scale = (float)ATTN_SCALE;
 
-    for (int r = 0; r < rows_per_warp; r++) {
-        m_i[r] = -INFINITY;
-        l_i[r] = 0.0f;
-        for (int j = 0; j < d; j++)
-            o_i[r][j] = 0.0f;
+    int* seq;
+    cudaMalloc(&seq, (size_t)batch_size * MAX_LEN * sizeof(int));
+    init_seq_kernel<<<(batch_size * PROMPT_LEN + 255) / 256, 256>>>(prompts, seq, batch_size);
+    cudaDeviceSynchronize();
+
+    // 11 步自回归：每步 launch 一次融合前向 kernel，序列从 31 增长到 42
+    for (int step = 0; step < OUTPUT_DIGITS; step++) {
+        int cur_len = PROMPT_LEN + step;
+        forward_step_kernel<<<batch_size, FORWARD_BLOCK>>>(
+            seq, output, weights, batch_size, cur_len, step, omega, attn_scale);
+        cudaDeviceSynchronize();
     }
-
-    // 加载 Q tile 到 SRAM（驻留，不重复读 HBM）
-    float scale = 1.0f / sqrtf((float)d);
-
-    // 遍历 K/V tiles（逐块滑入，S/P 不落 HBM）
-    for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
-        // 加载 K/V tile 到 s_K, s_V（省略协作加载代码）
-        __syncthreads();
-
-        for (int r = 0; r < rows_per_warp; r++) {
-            int q_row = q_start + warp_id * rows_per_warp + r;
-            if (q_row >= M)
-                continue;
-
-            // 局部 S = Q[Q_row] · K[kv_tile]^T * scale
-            float local_max = -INFINITY;
-            float s_vals[BLOCK_N];
-            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
-                float dot = 0.0f;
-                for (int kk = 0; kk < d; kk++)
-                    dot += s_Q[warp_id * rows_per_warp + r][kk] * s_K[j][kk];
-                s_vals[j] = dot * scale;
-                local_max = fmaxf(local_max, s_vals[j]);
-            }
-
-            // Online Softmax 更新
-            float m_new = fmaxf(m_i[r], local_max);
-            float l_new = l_i[r] * expf(m_i[r] - m_new);
-            for (int j = 0; j < BLOCK_N && kv_start + j < N; j++) {
-                float p = expf(s_vals[j] - m_new);
-                l_new += p;
-                for (int kk = 0; kk < d; kk++)
-                    o_i[r][kk] += p * s_V[j][kk];
-            }
-            // 归一化历史输出（精确缩放见今日完整实现）
-            m_i[r] = m_new;
-            l_i[r] = l_new;
-        }
-        __syncthreads();
-    }
-
-    // 最终归一化并写回 O（只写一次 HBM）
-    for (int r = 0; r < rows_per_warp; r++) {
-        int q_row = q_start + warp_id * rows_per_warp + r;
-        if (q_row < M) {
-            for (int kk = 0; kk < d; kk++)
-                O[q_row * d + kk] = o_i[r][kk] / l_i[r];
-        }
-    }
+    cudaFree(seq);
 }
 ```
 
-> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../../../../leetgpu/week4/day2/leetgpu-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Adder Transformer 题目](https://leetgpu.com/challenges/adder-transformer)上记录通过耗时。对比"朴素多 kernel（每步 5-6 个 kernel，60+ 次 launch）" vs "融合前向（每步 1 个 kernel）"的 launch overhead 差异。完整题解（含融合前向、last-only 优化、batch 维并行）见 [Adder Transformer 题解](../../../../leetgpu/week4/day2/leetgpu-adder-transformer-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 分割等和子集
 

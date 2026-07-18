@@ -179,13 +179,13 @@ python kernels/week7_summary.py
  ...
 ```
 
-#### 任务 2：LeetGPU 综合题 —— Matrix Addition
+#### 任务 2：LeetGPU 综合题 —— Sigmoid
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+**题目链接**：<https://leetgpu.com/challenges/sigmoid>
 
-**与本周知识的关联**：Matrix Addition 是 element-wise 操作的最简形式（`C[i][j] = A[i][j] + B[i][j]`），是 Week 7 的"收官题"——从 Day 1 的 Matrix Copy（搬运）到 Day 7 的 Matrix Addition（计算），体现了 Mini 系统从"能搬数据"到"能算结果"的完整能力。它也是自定义 kernel 集成中最基础的验证算子（Day 4 单算子精度对比的起点）。
+**与本周知识的关联**：Sigmoid 是 element-wise 数学函数的最简形式（`Y[i] = 1 / (1 + exp(-X[i]))`），是 Week 7 的"收官题"——从 Day 1 的 Color Inversion（像素变换、内存受限）到 Day 7 的 Sigmoid（数学函数、用 `__expf` 快速数学），体现了 Mini 系统从"能搬数据"到"能算数学函数"的完整能力。它也是自定义 kernel 集成中 LLM 激活函数的基础算子（FFN 的 SiLU/GLU 都含 sigmoid 类运算，Day 4 算子融合的组成单元）。
 
-> 💡 完整题解见 [Matrix Addition 题解](../../../../leetgpu/week7/day7/leetgpu-matrix-addition-solution.md)。
+> 💡 完整题解见 [Sigmoid 题解](../../../../leetgpu/week7/day7/leetgpu-sigmoid-solution.md)。
 
 #### 任务 3：LeetCode 面试题 —— N 皇后
 

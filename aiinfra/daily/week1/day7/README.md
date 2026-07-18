@@ -524,87 +524,95 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 | Day 5 | [Reduction](https://leetgpu.com/challenges/reduction) | warp shuffle、两级归约、divergence | ✅ 已做 |
 | Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | shared memory tiling、compute-bound | ✅ 已做 |
 
-#### 综合练习 1：Matrix Addition —— 检验 memory-bound 优化
+#### 综合练习 1：Leaky ReLU —— 检验 memory-bound 优化
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+**题目链接**：<https://leetgpu.com/challenges/leaky-relu>
 
-**题目概述**：给定两个相同形状的大矩阵 `A` 和 `B`，计算 `C = A + B`。约束：元素为 32-bit float，规模达数百万量级。
+**题目概述**：给定长度为 `N` 的浮点数组 `input`，逐元素计算 Leaky ReLU：`output[i] = input[i] > 0 ? input[i] : 0.01 * input[i]`。约束：元素为 32-bit float，规模可达数百万量级。
 
 **与 Week 1 知识的关联**：
 
-本题是 **memory-bound** 算子的典型案例（算术强度 ≈ 1 FLOP / 12 Byte），综合检验 Week 1 三个核心概念：
+本题是 **memory-bound** elementwise 算子的典型代表（算术强度 ≈ 1 FLOP / 8 Byte），综合检验 Week 1 三个核心概念，并额外练习分支优化：
 1. **Coalesced access**（Day 4）：必须保证 warp 内线程访问连续地址
 2. **Occupancy 调优**（Day 2）：memory-bound kernel 不需 100% occupancy，block size 取 256/512 即可
-3. **Roofline 判定**（Day 6）：AI << Ridge Point → memory-bound，优化方向是最大化带宽利用率
+3. **Warp divergence**（Day 1）：`if (x > 0)` 会让 warp 内正负元素走向不同分支，可用三元运算或 `fmaxf` 改写成 branchless
+4. **Roofline 判定**（Day 6）：AI << Ridge Point → memory-bound，优化方向是最大化带宽利用率
 
 **解题思路**：
 - 一维 grid-stride loop 映射，比二维更灵活
 - 用 `float4` 向量化加载（一次 128-bit），把 4 条 load 合并为 1 条
+- 用 branchless 写法（三元 `x > 0 ? x : 0.01f * x`）避免 warp divergence
 - 处理剩余不足 4 个的尾部元素
 
 **参考实现**：
 
 ```cuda
-// matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
+// leaky_relu.cu —— Leaky ReLU（1D grid-stride + float4 向量化 + branchless）
+// 编译命令: nvcc -o leaky_relu leaky_relu.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-__global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
+__device__ __forceinline__ float leaky_relu(float x) {
+    // branchless: 避免 warp divergence
+    return x > 0.0f ? x : 0.01f * x;
+}
+
+__global__ void leaky_relu_float4(const float* input, float* output, int num_elements) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
     int vec_count = num_elements / 4;
 
     for (int i = tid; i < vec_count; i += stride) {
-        float4 a = reinterpret_cast<const float4*>(A)[i];
-        float4 b = reinterpret_cast<const float4*>(B)[i];
+        float4 a = reinterpret_cast<const float4*>(input)[i];
         float4 c;
-        c.x = a.x + b.x;
-        c.y = a.y + b.y;
-        c.z = a.z + b.z;
-        c.w = a.w + b.w;
-        reinterpret_cast<float4*>(C)[i] = c;
+        c.x = leaky_relu(a.x);
+        c.y = leaky_relu(a.y);
+        c.z = leaky_relu(a.z);
+        c.w = leaky_relu(a.w);
+        reinterpret_cast<float4*>(output)[i] = c;
+    }
+
+    // 处理尾部不足 4 个的元素
+    int tail_start = vec_count * 4;
+    for (int i = tail_start + tid; i < num_elements; i += stride) {
+        output[i] = leaky_relu(input[i]);
     }
 }
 
 int main() {
-    const int M = 4096, N = 4096;
-    const int num_elements = M * N;
-    const size_t bytes = num_elements * sizeof(float);
+    const int N = 4096 * 4096;
+    const size_t bytes = N * sizeof(float);
 
-    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < num_elements; ++i) {
-        h_A[i] = (float)(rand() % 100) * 0.01f;
-        h_B[i] = (float)(rand() % 100) * 0.01f;
+    float *h_A = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
+    for (int i = 0; i < N; ++i) {
+        h_A[i] = (float)(rand() % 2000 - 1000) * 0.01f;  // [-10, 10]
     }
 
-    float *d_A, *d_B, *d_C;
+    float *d_A, *d_C;
     cudaMalloc(&d_A, bytes);
-    cudaMalloc(&d_B, bytes);
     cudaMalloc(&d_C, bytes);
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
 
     int threads = 256;
-    int blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
-    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
+    int blocks = min((N / 4 + threads - 1) / threads, 1024);
+    leaky_relu_float4<<<blocks, threads>>>(d_A, d_C, N);
 
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     bool pass = true;
-    for (int i = 0; i < num_elements; ++i)
-        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
+    for (int i = 0; i < N; ++i) {
+        float expected = h_A[i] > 0.0f ? h_A[i] : 0.01f * h_A[i];
+        if (fabsf(h_C[i] - expected) > 1e-6f) {
             pass = false;
             break;
         }
-    printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
+    }
+    printf("Leaky ReLU %s\n", pass ? "PASS" : "FAIL");
 
     free(h_A);
-    free(h_B);
     free(h_C);
     cudaFree(d_A);
-    cudaFree(d_B);
     cudaFree(d_C);
     return 0;
 }
@@ -612,10 +620,11 @@ int main() {
 
 **自测问题**：
 - 用 `ncu` 看 `dram__throughput`，能否达到峰值带宽的 60%+？
+- 把 branchless 三元运算改回 `if (x > 0)`，观察 warp divergence 指标变化（混合正负数据时 divergence 明显）
 - 把 `float4` 改回逐元素加载，带宽利用率下降多少？
 - block size 从 128 调到 512，时间变化大吗？（memory-bound kernel 对 occupancy 不敏感）
 
-> 💡 完整题解见 [Matrix Addition 题解](../../../../leetgpu/week1/day7/leetgpu-matrix-addition-solution.md)。
+> 💡 完整题解见 [Leaky ReLU 题解](../../../../leetgpu/week1/day7/leetgpu-leaky-relu-solution.md)。
 
 #### 综合练习 2：Matrix Multiplication —— 检验 shared memory tiling + bank conflict
 
@@ -722,7 +731,7 @@ int main() {
 
 | 题目 | 耗时 | GFLOPS / 带宽利用率 | 瓶颈类型 | 优化尝试 |
 |------|------|---------------------|---------|---------|
-| Matrix Addition | | | memory-bound | float4 / block size |
+| Leaky ReLU | | | memory-bound | float4 / branchless / block size |
 | Matrix Multiplication | | | compute-bound | tiling / padding / register tiling |
 
 ---

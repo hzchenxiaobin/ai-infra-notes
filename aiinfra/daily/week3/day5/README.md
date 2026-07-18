@@ -378,103 +378,145 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
 - PyTorch 版对应的是 `aten::_softmax` 和 `aten::layer_norm`（可能融合了）
 - 自定义版的 kernel 数量可能更多（未做 fusion）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Addition
+#### 任务 4：LeetGPU 在线题目 —— 2D Max Pooling
 
-今天的主题是"把自定义算子封装为框架可调用接口"。本题用最简单的 memory-bound 算子（Matrix Addition）练习这个集成模式——先写 kernel，再封装为 PyTorch 可调用函数。
+今天的主题是"把自定义算子封装为框架可调用接口"。本题用一个 memory-bound 的滑窗 reduction 算子（2D Max Pooling）练习这个集成模式——先写 kernel，再封装为 PyTorch 可调用函数，套用今天的 `load_inline` + `at::Tensor` + `data_ptr` 模板。
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+**题目链接**：<https://leetgpu.com/challenges/2d-max-pooling>
 
-**题目概述**：给定两个相同形状的大矩阵 `A` 和 `B`，计算 `C = A + B`。约束：元素为 32-bit float，规模达数百万量级。
+**题目概述**：对形状为 `(N, C, H, W)` 的输入做 2D 最大池化，等价于 `torch.nn.functional.max_pool2d(input, kernel_size, stride, padding)`。输出形状 `(N, C, H_out, W_out)`，其中 `H_out = (H + 2·padding - kernel_size) / stride + 1`，`W_out` 同理；每个输出元素是输入中一个 `kernel_size × kernel_size` 窗口内的最大值，padding 产生的越界位置视为 `-∞`，不参与 max。
 
-**难度**：简单　**标签**：CUDA、Element-wise、Memory Coalescing、Occupancy
+**难度**：中等　**标签**：CUDA、Pooling、滑窗 reduction、2D 索引映射、padding 边界、memory-bound
 
-**与今日知识的关联**：本题是"自定义算子集成"模式的最简案例。Matrix Addition 是典型 memory-bound 算子（AI ≈ 1/12 FLOP/Byte），用今天的 C++ Extension 流程把它封装为 `my_ops.matrix_add_forward`，就掌握了"任何自定义 kernel 接入 PyTorch"的通用模板。今天学了 `load_inline` + `at::Tensor` + `data_ptr`，本题直接套用。
+**与今日知识的关联**：本题是"自定义算子集成"模式的典型 case。2D Max Pooling 是 memory-bound 的滑窗 reduction 算子（AI 远低于 Ridge Point），核心是 2D 索引映射 + padding 边界 + W 维合并访存。用今天的 C++ Extension 流程把它封装为 `my_ops.max_pool2d_forward`，就掌握了"任何自定义 kernel 接入 PyTorch"的通用模板——和今天把 Softmax/LayerNorm 封装成 `my_ops.softmax_forward` 是同一套流程。
 
 **解题思路**：
-1. 一维 grid-stride loop 映射，比二维更灵活
-2. 用 `float4` 向量化加载（一次 128-bit），把 4 条 load 合并为 1 条
-3. 处理剩余不足 4 个的尾部元素
-4. 可选：封装为 PyTorch C++ Extension（`my_ops.matrix_add_forward`）
+1. 一维 grid 映射：把 `(N, C, H_out, W_out)` 展平，每 thread 算一个输出；`W_out` 放在线性索引最内层，保证 warp 内 `ox` 连续 → 读 input 时 `iw` 也连续 → 合并访存
+2. 累加器初值设 `-INFINITY`，保证任何有效输入都能成为首个 max
+3. padding 边界用 `if (ih<0 || ih>=H || iw<0 || iw>=W) continue` 跳过，等价 `-∞`
+4. `#pragma unroll` 展开 K 循环（K 是小常量如 3）；K 小无需 shared memory tiling
+5. 可选：封装为 PyTorch C++ Extension（`my_ops.max_pool2d_forward`）
 
 **参考实现**：
 
 ```cuda
-// matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
+// max_pool2d.cu —— 2D Max Pooling（每 thread 一个输出，W_out 维内层合并访存）
+// 编译命令: nvcc -o max_pool2d max_pool2d.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-__global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = gridDim.x * blockDim.x;
-    int vec_count = num_elements / 4;
+#define BLOCK 256
 
-    for (int i = tid; i < vec_count; i += stride) {
-        float4 a = reinterpret_cast<const float4*>(A)[i];
-        float4 b = reinterpret_cast<const float4*>(B)[i];
-        float4 c;
-        c.x = a.x + b.x;
-        c.y = a.y + b.y;
-        c.z = a.z + b.z;
-        c.w = a.w + b.w;
-        reinterpret_cast<float4*>(C)[i] = c;
+// 2D max pooling kernel：每 thread 算一个 output[n,c,oy,ox]
+__global__ void max_pool2d_kernel(const float* __restrict__ input,
+                                  float* __restrict__ output,
+                                  int N, int C, int H, int W,
+                                  int kernel_size, int stride, int padding,
+                                  int H_out, int W_out) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total = N * C * H_out * W_out;
+    if (idx >= total) return;
+
+    // 线性索引 → (n, c, oy, ox)，W_out 在最内层（保证 warp 内 ox 连续 → 合并访存）
+    int ox = idx % W_out;
+    int oy = (idx / W_out) % H_out;
+    int c  = (idx / (W_out * H_out)) % C;
+    int n  = idx / (C * H_out * W_out);
+
+    // 窗口左上角对应的输入坐标
+    int base_h = oy * stride - padding;
+    int base_w = ox * stride - padding;
+
+    // 累加器初值 -∞，保证任何有效输入都能成为首个 max
+    float m = -INFINITY;
+    int nc_offset = (n * C + c) * H * W;
+    #pragma unroll
+    for (int ky = 0; ky < kernel_size; ++ky) {
+        int ih = base_h + ky;
+        if (ih < 0 || ih >= H) continue;
+        int row_offset = nc_offset + ih * W;
+        #pragma unroll
+        for (int kx = 0; kx < kernel_size; ++kx) {
+            int iw = base_w + kx;
+            if (iw < 0 || iw >= W) continue;
+            float v = input[row_offset + iw];
+            if (v > m) m = v;
+        }
     }
+    output[idx] = m;
 }
 
 // 封装为 PyTorch 可调用（今日集成模式）
 #ifdef WITH_TORCH
 #include <torch/extension.h>
-at::Tensor matrix_add_forward(at::Tensor A, at::Tensor B) {
-    auto C = at::empty_like(A);
-    int n = A.numel();
-    int threads = 256;
-    int blocks = min((n / 4 + threads - 1) / threads, 1024);
-    matrix_add_float4<<<blocks, threads, 0, at::cuda::getCurrentCUDAStream()>>>(
-        A.data_ptr<float>(), B.data_ptr<float>(), C.data_ptr<float>(), n);
-    return C;
+at::Tensor max_pool2d_forward(at::Tensor input, int kernel_size, int stride, int padding) {
+    int N = input.size(0), C = input.size(1), H = input.size(2), W = input.size(3);
+    int H_out = (H + 2 * padding - kernel_size) / stride + 1;
+    int W_out = (W + 2 * padding - kernel_size) / stride + 1;
+    auto output = at::empty({N, C, H_out, W_out}, input.options());
+    int total = N * C * H_out * W_out;
+    int blocks = (total + BLOCK - 1) / BLOCK;
+    max_pool2d_kernel<<<blocks, BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
+        input.data_ptr<float>(), output.data_ptr<float>(),
+        N, C, H, W, kernel_size, stride, padding, H_out, W_out);
+    return output;
 }
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("matrix_add_forward", &matrix_add_forward, "Matrix Add (CUDA)");
+    m.def("max_pool2d_forward", &max_pool2d_forward, "2D Max Pooling (CUDA)");
 }
 #endif
 
 int main() {
-    const int M = 4096, N = 4096, num_elements = M * N;
-    const size_t bytes = num_elements * sizeof(float);
-    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < num_elements; ++i) {
-        h_A[i] = (float)(rand() % 100) * 0.01f;
-        h_B[i] = (float)(rand() % 100) * 0.01f;
-    }
-    float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, bytes);
-    cudaMalloc(&d_B, bytes);
-    cudaMalloc(&d_C, bytes);
-    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
-    int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
-    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
-    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
+    const int N = 4, C = 64, H = 256, W = 256;
+    const int kernel_size = 3, stride = 2, padding = 1;
+    const int H_out = (H + 2 * padding - kernel_size) / stride + 1;
+    const int W_out = (W + 2 * padding - kernel_size) / stride + 1;
+    const size_t in_bytes = (size_t)N * C * H * W * sizeof(float);
+    const size_t out_bytes = (size_t)N * C * H_out * W_out * sizeof(float);
+
+    float *h_in = (float*)malloc(in_bytes), *h_out = (float*)malloc(out_bytes);
+    for (int i = 0; i < N * C * H * W; ++i)
+        h_in[i] = (float)(rand() % 1000) * 0.1f;
+
+    float *d_in, *d_out;
+    cudaMalloc(&d_in, in_bytes);
+    cudaMalloc(&d_out, out_bytes);
+    cudaMemcpy(d_in, h_in, in_bytes, cudaMemcpyHostToDevice);
+
+    int total = N * C * H_out * W_out;
+    int blocks = (total + BLOCK - 1) / BLOCK;
+    max_pool2d_kernel<<<blocks, BLOCK>>>(d_in, d_out, N, C, H, W,
+                                         kernel_size, stride, padding, H_out, W_out);
+    cudaMemcpy(h_out, d_out, out_bytes, cudaMemcpyDeviceToHost);
+
+    // CPU 验证
     bool pass = true;
-    for (int i = 0; i < num_elements; ++i)
-        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
-            pass = false;
-            break;
+    for (int idx = 0; idx < total && pass; ++idx) {
+        int ox = idx % W_out, oy = (idx / W_out) % H_out;
+        int c  = (idx / (W_out * H_out)) % C, n = idx / (C * H_out * W_out);
+        float ref = -INFINITY;
+        for (int ky = 0; ky < kernel_size; ++ky) {
+            int ih = oy * stride - padding + ky;
+            if (ih < 0 || ih >= H) continue;
+            for (int kx = 0; kx < kernel_size; ++kx) {
+                int iw = ox * stride - padding + kx;
+                if (iw < 0 || iw >= W) continue;
+                float v = h_in[((n * C + c) * H + ih) * W + iw];
+                if (v > ref) ref = v;
+            }
         }
-    printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
-    free(h_A);
-    free(h_B);
-    free(h_C);
-    cudaFree(d_A);
-    cudaFree(d_B);
-    cudaFree(d_C);
+        if (fabsf(h_out[idx] - ref) > 1e-5f) pass = false;
+    }
+    printf("2D Max Pooling %s\n", pass ? "PASS" : "FAIL");
+    free(h_in); free(h_out);
+    cudaFree(d_in); cudaFree(d_out);
     return 0;
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时。完整题解（含 float4 向量化、occupancy 调优、与当日主题关联）见 [Matrix Addition 题解](../../../../leetgpu/week3/day5/leetgpu-matrix-addition-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matrix_add_forward`，在 Python 里调用验证。
+> 💡 提交后在 [LeetGPU 2D Max Pooling 题目](https://leetgpu.com/challenges/2d-max-pooling)上记录通过耗时。完整题解（含 W_out 维内层合并访存分析、padding 边界处理、与当日主题关联）见 [2D Max Pooling 题解](../../../../leetgpu/week3/day5/leetgpu-2d-max-pooling-solution.md)。尝试用今天的 `load_inline` 把它封装为 `my_ops.max_pool2d_forward`，在 Python 里调用验证。
 
 #### 任务 5：LeetCode 面试题 —— 验证二叉搜索树
 

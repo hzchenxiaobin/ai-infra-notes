@@ -365,21 +365,21 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 **观察重点**：标准 Attention 会分配 N×N 的 S/P 矩阵（4096²×4B = 64MB），FlashAttention 无 N×N 分配。
 
-#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
+#### 任务 4：LeetGPU 在线题目 —— Decaying Causal Attention
 
-**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
+**题目链接**：<https://leetgpu.com/challenges/decaying-causal-attention>
 
 **题目概述**：
 
-给定 Query (M×d)、Key (N×d)、Value (N×d)，计算 Scaled Dot-Product Attention：Attention(Q,K,V) = softmax(Q·K^T / √d) · V。
+实现衰减因果注意力（Decaying Causal Attention）。给定 `Q/K/V ∈ R^{seq_len × d_model}`，计算带指数衰减的因果注意力：`decay_mask[n,m] = γ^(n-m)`（当 `m ≤ n`，否则 0），`attn = (Q·K^T/√d) × decay_mask`，`output = attn · V`。关键点：衰减因子是乘性的（乘到 score 上），且没有 softmax 归一化——输出是加权求和，不是概率分布。
 
-**约束条件**：`1 ≤ M, N ≤ 4096`，`1 ≤ d ≤ 128`，元素范围 `[-1.0, 1.0]`
+**约束条件**：性能测试取 `seq_len=4096, d_model=64`，`0 < gamma < 1`，元素为 float32
 
 **与今日知识的关联**：
 
-本题直接对应 Day 1 的主题——标准 Attention 物化 S/P 到 HBM 导致 O(N²) IO。今天推导的 online softmax 三公式就是 FlashAttention 消除物化的核心数学工具。完整题解含 naive 物化版与简化 fused 版的对比。
+本题是 Day 1 主题的 attention mask 变体练习——它保留了 attention 的 QK^T 结构，但用乘性指数衰减替代 softmax 归一化。与今天推导的 online softmax 三公式对比：标准 attention 用 softmax 做概率归一化（需 max/sum 追踪），而 Decaying Causal Attention 用 `γ^(n-m)` 直接乘到 score 上做加权求和（无需 softmax）。逆序遍历 `m=n→0` 让衰减因子从 1 开始增量递减（`decay *= gamma`），是 attention mask 变体的典型实现技巧。
 
-> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Softmax Attention 题解](../../../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Decaying Causal Attention 题目](https://leetgpu.com/challenges/decaying-causal-attention)上记录通过耗时。完整题解（含增量衰减计算、逆序遍历优化、与 softmax attention 对比）见 [Decaying Causal Attention 题解](../../../../leetgpu/week4/day1/leetgpu-decaying-causal-attention-solution.md)。
 
 #### 任务 5：LeetCode 面试题 —— 乘积最大子数组
 

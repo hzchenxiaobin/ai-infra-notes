@@ -374,15 +374,15 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 > 💡 **复盘标准**：能不看资料、5 分钟内完整讲清上述 5 点 + 三公式，即为通过。
 
-#### 任务 4：LeetGPU 综合验收题 —— Max Subarray Sum
+#### 任务 4：LeetGPU 综合验收题 —— Mean Squared Error
 
-**题目链接**：<https://leetgpu.com/challenges/max-subarray-sum>
+**题目链接**：<https://leetgpu.com/challenges/mean-squared-error>
 
-**题目概述**：给定长度为 `N` 的 `int32` 数组和窗口大小 `window_size`，求所有长度恰好为 `window_size` 的连续子数组的最大和。
+**题目概述**：给定长度为 `N` 的预测值数组 `predictions` 和真实值数组 `targets`，计算均方误差 `mse = (1/N) * Σ (predictions[i] - targets[i])²`。
 
-**与本周知识的关联**：本题综合了 Week2 两大主线——Prefix Sum（Day1）+ Reduction（Week1 Day4/Day5）。用 prefix sum 计算窗口和，再用 warp shuffle reduction 求最大值，是一道"两阶段 kernel"的综合手撕题。适合在验收日限时完成，检验 prefix sum + reduce 的综合掌握程度。
+**与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 在损失函数中的典型应用。fused kernel 把 element-wise 平方差与 block reduction 融合：每个线程累加局部平方差 → Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总 → 最后除以 N。适合在验收日限时完成，检验 fused reduction 的综合掌握程度。
 
-> 💡 完整题解（含两阶段 kernel 设计、warp shuffle max 归约、atomicMax 跨 block 汇总）见 [Max Subarray Sum 题解](../../../../leetgpu/week2/day7/leetgpu-max-subarray-sum-solution.md)。
+> 💡 完整题解（含 fused kernel 设计、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Mean Squared Error 题解](../../../../leetgpu/week2/day7/leetgpu-mean-squared-error-solution.md)。
 
 #### 任务 5：GitHub 仓库整理
 
