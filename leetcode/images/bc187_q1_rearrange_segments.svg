@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220"
+     font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>
+    <filter id="rough2"><feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#446688"/>
+    </marker>
+  </defs>
+  <rect width="520" height="220" fill="#fafafa"/>
+  <text x="260" y="30" text-anchor="middle" font-size="16" fill="#333" filter="url(#rough2)">把字符分成三段：y → 其他 → x</text>
+  <rect x="60" y="80" width="80" height="60" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="100" y="115" text-anchor="middle" font-size="14" fill="#333" filter="url(#rough2)">所有 y</text>
+  <rect x="150" y="80" width="120" height="60" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="210" y="115" text-anchor="middle" font-size="14" fill="#333" filter="url(#rough2)">其他字符</text>
+  <rect x="280" y="80" width="120" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="6" filter="url(#rough2)"/>
+  <text x="340" y="115" text-anchor="middle" font-size="14" fill="#333" filter="url(#rough2)">所有 x</text>
+  <path d="M90 160 L90 185 L340 185 L340 160" fill="none" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="260" y="205" text-anchor="middle" font-size="12" fill="#555" filter="url(#rough2)">这样每个 y 都自然位于每个 x 之前</text>
+</svg>

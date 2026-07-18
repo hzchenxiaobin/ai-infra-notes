@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220"
+     font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>
+    <filter id="rough2"><feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#446688"/>
+    </marker>
+  </defs>
+  <rect width="520" height="220" fill="#fafafa"/>
+  <text x="260" y="30" text-anchor="middle" font-size="16" fill="#333" filter="url(#rough2)">一条合法规则覆盖的区间</text>
+  <text x="60" y="70" font-size="13" fill="#333" filter="url(#rough2)">source</text>
+  <rect x="60" y="80" width="30" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/><text x="75" y="103" text-anchor="middle" font-size="14" filter="url(#rough2)">h</text>
+  <rect x="95" y="80" width="30" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/><text x="110" y="103" text-anchor="middle" font-size="14" filter="url(#rough2)">e</text>
+  <rect x="130" y="80" width="30" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/><text x="145" y="103" text-anchor="middle" font-size="14" filter="url(#rough2)">l</text>
+  <rect x="165" y="80" width="30" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/><text x="180" y="103" text-anchor="middle" font-size="14" filter="url(#rough2)">l</text>
+  <rect x="200" y="80" width="30" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/><text x="215" y="103" text-anchor="middle" font-size="14" filter="url(#rough2)">o</text>
+
+  <text x="60" y="145" font-size="13" fill="#333" filter="url(#rough2)">target</text>
+  <rect x="60" y="155" width="30" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="75" y="178" text-anchor="middle" font-size="14" filter="url(#rough2)">w</text>
+  <rect x="95" y="155" width="30" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="110" y="178" text-anchor="middle" font-size="14" filter="url(#rough2)">o</text>
+  <rect x="130" y="155" width="30" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="145" y="178" text-anchor="middle" font-size="14" filter="url(#rough2)">r</text>
+  <rect x="165" y="155" width="30" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="180" y="178" text-anchor="middle" font-size="14" filter="url(#rough2)">l</text>
+  <rect x="200" y="155" width="30" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="215" y="178" text-anchor="middle" font-size="14" filter="url(#rough2)">d</text>
+
+  <rect x="58" y="72" width="70" height="130" fill="none" stroke="#b85450" stroke-width="2" rx="6" stroke-dasharray="5,3" filter="url(#rough2)"/>
+  <text x="93" y="215" text-anchor="middle" font-size="12" fill="#b85450" filter="url(#rough2)">规则 "he"→"wo"</text>
+  <text x="300" y="105" font-size="12" fill="#555" filter="url(#rough2)">pattern 与 source 匹配</text>
+  <text x="300" y="178" font-size="12" fill="#555" filter="url(#rough2)">replacement 与 target 匹配</text>
+</svg>

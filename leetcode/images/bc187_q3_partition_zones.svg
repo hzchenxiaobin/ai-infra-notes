@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 260"
+     font-family="'Comic Sans MS','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>
+    <filter id="rough2"><feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.5"/></filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#446688"/>
+    </marker>
+  </defs>
+  <rect width="520" height="260" fill="#fafafa"/>
+  <text x="260" y="30" text-anchor="middle" font-size="16" fill="#333" filter="url(#rough2)">把数组按三类重排：&lt;a, [a,b], &gt;b</text>
+  <text x="60" y="70" font-size="13" fill="#333" filter="url(#rough2)">原数组</text>
+  <rect x="60" y="80" width="40" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="80" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">1</text>
+  <rect x="105" y="80" width="40" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/><text x="125" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">3</text>
+  <rect x="150" y="80" width="40" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="170" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">2</text>
+  <rect x="195" y="80" width="40" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/><text x="215" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">4</text>
+  <rect x="240" y="80" width="40" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/><text x="260" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">5</text>
+  <rect x="285" y="80" width="40" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/><text x="305" y="105" text-anchor="middle" font-size="14" filter="url(#rough2)">6</text>
+
+  <text x="60" y="165" font-size="13" fill="#333" filter="url(#rough2)">目标数组（同类保持相对顺序）</text>
+  <rect x="60" y="175" width="40" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="80" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">1</text>
+  <rect x="105" y="175" width="40" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/><text x="125" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">2</text>
+  <rect x="150" y="175" width="40" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/><text x="170" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">3</text>
+  <rect x="195" y="175" width="40" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/><text x="215" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">4</text>
+  <rect x="240" y="175" width="40" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/><text x="260" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">5</text>
+  <rect x="285" y="175" width="40" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" filter="url(#rough2)"/><text x="305" y="200" text-anchor="middle" font-size="14" filter="url(#rough2)">6</text>
+
+  <path d="M215 100 L215 145" fill="none" stroke="#b85450" stroke-width="2" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="260" y="135" font-size="12" fill="#b85450" filter="url(#rough2)">只需 1 次相邻交换</text>
+</svg>
