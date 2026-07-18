@@ -47,6 +47,24 @@ body {
     padding: 24px 0;
 }
 
+.sidebar-resizer {
+    position: fixed;
+    top: 0;
+    left: 300px;
+    width: 6px;
+    height: 100vh;
+    cursor: col-resize;
+    z-index: 101;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.resizing {
+    background: var(--accent-color);
+    opacity: 0.3;
+}
+
 .sidebar-header {
     padding: 0 24px 20px;
     border-bottom: 1px solid var(--border-color);
@@ -511,6 +529,10 @@ body {
 
     .sidebar.open {
         transform: translateX(0);
+    }
+
+    .sidebar-resizer {
+        display: none;
     }
 
     .main-content {

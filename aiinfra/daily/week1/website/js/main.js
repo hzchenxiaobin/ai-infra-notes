@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }, { passive: false });
     }
 
+    // Draggable sidebar width resizer
+    initSidebarResizer();
+
     // Accordion navigation in sidebar
     function toggleAccordionItem(item) {
         if (!item) return;
@@ -278,6 +281,82 @@ function initImageLightbox() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && lightbox.classList.contains('active')) {
             closeLightbox();
+        }
+    });
+}
+
+
+function initSidebarResizer() {
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    if (!sidebar || !mainContent) return;
+
+    // Don't show resizer on mobile where sidebar is an overlay
+    if (window.innerWidth <= 768) return;
+
+    const resizer = document.createElement('div');
+    resizer.className = 'sidebar-resizer';
+    resizer.setAttribute('aria-label', '调整侧边栏宽度');
+    document.body.appendChild(resizer);
+
+    const MIN_WIDTH = 220;
+    const MAX_WIDTH = 520;
+    const DEFAULT_WIDTH = 300;
+
+    function setSidebarWidth(width) {
+        sidebar.style.width = width + 'px';
+        mainContent.style.marginLeft = width + 'px';
+        resizer.style.left = width + 'px';
+    }
+
+    // Restore saved width on load
+    const savedWidth = localStorage.getItem('sidebar-width');
+    if (savedWidth) {
+        const width = parseInt(savedWidth, 10);
+        if (!isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
+            setSidebarWidth(width);
+        }
+    }
+
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        resizer.classList.add('resizing');
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, e.clientX));
+        setSidebarWidth(newWidth);
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (!isResizing) return;
+        isResizing = false;
+        resizer.classList.remove('resizing');
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        localStorage.setItem('sidebar-width', sidebar.offsetWidth);
+    });
+
+    // Clean up on orientation/resize changes to mobile layout
+    window.addEventListener('resize', function() {
+        if (window.innerWidth <= 768) {
+            resizer.style.display = 'none';
+            sidebar.style.width = '';
+            mainContent.style.marginLeft = '';
+        } else {
+            resizer.style.display = '';
+            const currentWidth = sidebar.offsetWidth;
+            if (currentWidth < MIN_WIDTH || currentWidth > MAX_WIDTH) {
+                setSidebarWidth(DEFAULT_WIDTH);
+            } else {
+                resizer.style.left = currentWidth + 'px';
+            }
         }
     });
 }
