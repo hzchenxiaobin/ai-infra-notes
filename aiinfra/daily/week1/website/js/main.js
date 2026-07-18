@@ -135,7 +135,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const problems = JSON.parse(randomPickBtn.dataset.problems || '[]');
                 if (!problems.length) return;
                 const p = problems[Math.floor(Math.random() * problems.length)];
-                if (p.slug) {
+                if (p.url) {
+                    window.open(p.url, '_blank', 'noopener,noreferrer');
+                } else if (p.slug) {
                     window.open('https://leetgpu.com/challenges/' + encodeURIComponent(p.slug), '_blank',
                                 'noopener,noreferrer');
                 }

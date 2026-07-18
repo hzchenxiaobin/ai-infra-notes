@@ -13,6 +13,7 @@ Problems are organized under two top-level directories:
 The sidebar and overview page display them grouped by category and folder.
 """
 
+import json
 import re
 import shutil
 from collections import defaultdict
@@ -48,6 +49,14 @@ def parse_title(markdown_text: str, filename: str = "") -> str:
             title = f"{prefix}. {title}"
 
     return title
+
+
+def extract_leetcode_url(markdown_text: str) -> Optional[str]:
+    """Extract the first leetcode.cn problem URL from markdown."""
+    match = re.search(r"https://leetcode\.cn/problems/([^/\s)]+)/?", markdown_text)
+    if match:
+        return f"https://leetcode.cn/problems/{match.group(1)}/"
+    return None
 
 
 def build_nav(current_slug: Optional[str], problems: List[Dict], root_prefix: str) -> str:
@@ -319,6 +328,7 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         problems.append({
             "slug": slug,
             "title": title,
+            "leetcode_url": extract_leetcode_url(markdown_text),
             "category": category,
             "contest": contest,
             "week": week,
@@ -374,8 +384,48 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
         contest_markdown += '  </div>\n'
         contest_markdown += '</div>\n\n'
 
+    # Random problem picker data (deduplicated by slug)
+    picker_problems = []
+    seen_slugs = set()
+    for p in problems:
+        if p.get("leetcode_url") and p["slug"] not in seen_slugs:
+            seen_slugs.add(p["slug"])
+            picker_problems.append({"title": p["title"], "url": p["leetcode_url"]})
+    problems_json = json.dumps(picker_problems, ensure_ascii=False)
+
+    random_picker_html = f"""<div class="random-pick">
+  <button id="random-pick-btn" class="random-btn" data-problems='{problems_json}'>🎲 随机选一道题练习</button>
+</div>
+<style>
+.random-pick {{
+  margin: 1rem 0 1.5rem;
+  padding: 1rem;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}}
+.random-btn {{
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}}
+.random-btn:hover {{ background: #1d4ed8; }}
+</style>
+
+"""
+
     overview_markdown = (
-        '<div class="leetcode-overview-row">\n'
+        random_picker_html
+        + '<div class="leetcode-overview-row">\n'
         '  <div class="leetcode-col leetcode-col-daily">\n'
         f'{daily_markdown}'
         '  </div>\n'
