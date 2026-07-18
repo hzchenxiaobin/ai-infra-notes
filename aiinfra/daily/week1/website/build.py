@@ -207,6 +207,7 @@ def get_day_info(week_dir: Path) -> list:
 def build_nav(
     current_day: Optional[int] = None,
     current_page: str = "week1",
+    current_is_overview: bool = False,
     root_prefix: str = "",
     weeks: Optional[list] = None,
 ) -> str:
@@ -297,14 +298,15 @@ def build_nav(
     for info in week_data:
         is_current = current_page == "week1" and info["num"] == 1
         expanded_cls = " is-expanded" if is_current else ""
-        active_cls = " active" if is_current else ""
+        week_active_cls = " active" if (is_current and not current_is_overview) else ""
+        overview_active_cls = " active" if (is_current and current_is_overview) else ""
         aria_expanded = "true" if is_current else "false"
         toggle_icon = "▼" if is_current else "▶"
 
         lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <a class="nav-link week-link{active_cls}" href="{info["href"]}">'
+            f'    <a class="nav-link week-link{week_active_cls}" href="{info["href"]}">'
             f'Week {info["num"]}：{week_titles.get(info["num"], "")}'
             f'</a>'
             f'<button class="nav-accordion-toggle" aria-label="收起/展开 Week {info["num"]}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
@@ -312,7 +314,7 @@ def build_nav(
         lines.append('  </div>')
         lines.append('  <div class="nav-accordion-content">')
         lines.append('    <div class="nav-section">')
-        lines.append(f'<a class="nav-link overview-link" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
+        lines.append(f'<a class="nav-link overview-link{overview_active_cls}" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
         for day in info["days"]:
             day_num = day["num"]
             day_active = " active" if (is_current and current_day == day_num) else ""
@@ -647,6 +649,7 @@ def build_website(output_dir: Path) -> None:
         nav_html=build_nav(
             current_day=None,
             current_page="week1",
+            current_is_overview=True,
             root_prefix=week1_root_prefix,
             weeks=plan_weeks,
         ),

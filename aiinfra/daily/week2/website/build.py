@@ -129,7 +129,7 @@ def get_day_info(week_dir: Path) -> list:
 
 
 def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
-              days: Optional[list] = None) -> str:
+              days: Optional[list] = None, current_is_overview: bool = False) -> str:
     if weeks is None:
         weeks = []
     if days is None:
@@ -211,14 +211,15 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
     for info in week_data:
         is_current = info["num"] == 2
         expanded_cls = " is-expanded" if is_current else ""
-        active_cls = " active" if is_current else ""
+        week_active_cls = " active" if (is_current and not current_is_overview) else ""
+        overview_active_cls = " active" if (is_current and current_is_overview) else ""
         aria_expanded = "true" if is_current else "false"
         toggle_icon = "▼" if is_current else "▶"
 
         lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
         lines.append('  <div class="nav-accordion-header">')
         lines.append(
-            f'    <a class="nav-link week-link{active_cls}" href="{info["href"]}">'
+            f'    <a class="nav-link week-link{week_active_cls}" href="{info["href"]}">'
             f'Week {info["num"]}：{week_titles.get(info["num"], "")}'
             f'</a>'
             f'<button class="nav-accordion-toggle" aria-label="收起/展开 Week {info["num"]}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
@@ -226,7 +227,7 @@ def build_nav(current_day: Optional[int] = None, weeks: Optional[list] = None,
         lines.append('  </div>')
         lines.append('  <div class="nav-accordion-content">')
         lines.append('    <div class="nav-section">')
-        lines.append(f'<a class="nav-link overview-link" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
+        lines.append(f'<a class="nav-link overview-link{overview_active_cls}" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
         for day in info["days"]:
             day_num = day["num"]
             day_active = " active" if (is_current and current_day == day_num) else ""
@@ -372,7 +373,7 @@ def build_website(output_dir: Path) -> None:
     # Generate overview page
     overview_html = page_template(
         title="Week 2 概览",
-        nav_html=build_nav(current_day=None, weeks=plan_weeks, days=days),
+        nav_html=build_nav(current_day=None, weeks=plan_weeks, days=days, current_is_overview=True),
         markdown=overview_with_cards,
         is_overview=True,
         page_title="Week 2 - CUDA 进阶优化",
@@ -384,7 +385,7 @@ def build_website(output_dir: Path) -> None:
     for day in days:
         html = page_template(
             title=f"Day {day['num']}：{day['title']}",
-            nav_html=build_nav(current_day=day["num"], weeks=plan_weeks, days=days),
+            nav_html=build_nav(current_day=day["num"], weeks=plan_weeks, days=days, current_is_overview=False),
             markdown=day["markdown"],
             is_overview=False,
         )
