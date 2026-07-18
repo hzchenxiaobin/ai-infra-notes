@@ -355,29 +355,30 @@ int main() {
 
 > 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时，用 ncu 对比 naive 两阶段（先乘后归约）与 fused 一阶段的 `dram__bytes_read` 差异。完整题解（含 kernel 融合、warp shuffle 归约）见 [Dot Product 题解](../../../../leetgpu/week4/day3/leetgpu-dot-product-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 合并区间
+#### 任务 5：LeetCode 面试题 —— 分割回文串
 
-**题目链接**：[56. 合并区间](https://leetcode.cn/problems/merge-intervals/)
+**题目链接**：[131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/)
 
 **题目概述**：
 
-给定区间集合 `intervals[i] = [start_i, end_i]`，合并所有重叠的区间，返回不重叠的区间数组。
+给定字符串 `s`，将其分割成若干子串使每段都是回文，返回所有分割方案（回溯枚举）。
 
 **与今日知识的关联**：
 
-本题核心是**排序后贪心合并**——先按 start 排序，再遍历时若当前区间 start ≤ 上一合并区间的 end 则合并。这与今天读官方源码的"分块参数按 d 排序 dispatch"思路呼应：都是**先排序/分类，再贪心处理**。官方按 d 选择不同 `Kernel_traits`，合并区间按 start 排序后贪心——都是"有序化后用单遍扫描解决问题"的模式。
+本题核心是**预处理回文表 + 回溯查表**——先用区间 DP 预处理 `isPal[i][j]`，回溯中判回文降到 O(1)。这与今天读官方源码的"按 d 预先 dispatch 不同 Kernel_traits"思路呼应：官方把"运行时按参数选 kernel"前移到"编译期/初始化期建分发表"，分割回文串把"回溯时每次判回文 O(n)"前移到"预处理建表 O(n²) 一次"——都是**把重复判定前移到预处理阶段，运行时 O(1) 查表**。两者都是"预处理换运行时效率"的工程套路。
 
 **核心套路**：
 
 ```
-按 start 排序；遍历：
- if intervals[i].start <= merged[-1].end:
- merged[-1].end = max(merged[-1].end, intervals[i].end)
- else:
- merged.append(intervals[i])
+预处理 isPal[i][j] = (s[i]==s[j]) && isPal[i+1][j-1]
+回溯 dfs(start):
+ if start == n: 记录方案
+ for end = start..n-1:
+ if isPal[start][end]:
+ path.push(s[start..end]); dfs(end+1); path.pop()
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并区间题解](../../../../leetcode/daily/week4/day3/合并区间.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割回文串题解](../../../../leetcode/daily/week4/day3/分割回文串.md)。
 
 ---
 

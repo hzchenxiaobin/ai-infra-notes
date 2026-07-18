@@ -278,26 +278,29 @@ __global__ void batched_gemm_kernel(const float* A, const float* B, float* C, in
 
 > 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时，重点观察 batch size 增大时 latency 的增长曲线。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](../../../../leetgpu/week4/day4/leetgpu-batched-matrix-multiplication-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 最小覆盖子串
+#### 任务 5：LeetCode 面试题 —— 翻转二叉树
 
-**题目链接**：[76. 最小覆盖子串](https://leetcode.cn/problems/minimum-window-substring/)
+**题目链接**：[226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/)
 
 **题目概述**：
 
-给定字符串 `s` 和 `t`，返回 `s` 中涵盖 `t` 所有字符的最小子串。如不存在返回空串。
+给定二叉树根节点，翻转整棵树（每个节点的左右子树互换），返回翻转后的根。递归一次遍历即可。
 
 **与今日知识的关联**：
 
-本题核心是**滑动窗口 + 双指针**——右指针扩展窗口直到满足条件，左指针收缩窗口直到不满足。这与 FA2 的 **seq 并行 vs head 并行选择**思路呼应：滑动窗口是"动态调整窗口大小找最优"，FA2 的并行维度选择是"动态调整并行度找最优"——都是**在约束边界上做动态调整**的工程思维。
+本题核心是**递归地把问题拆成"当前节点 + 两个子问题"**——翻转整棵树 = 交换当前节点左右孩子 + 递归翻转左右子树。这与 FA2 的 **seq 并行 vs head 并行选择**思路呼应：FA2 把 attention 计算递归地拆成"沿 seq 维切"或"沿 head 维切"的独立子任务，翻转二叉树把树拆成"当前节点 + 左右子树"——都是**把大问题递归分解为结构相同的子问题**。FA2 在每个分支选并行维度，翻转树在每个节点做交换——都是"递归骨架 + 当前层 O(1) 决策"。
 
 **核心套路**：
 
 ```
-右指针扩展直到窗口含 t 全部字符；左指针收缩直到刚不满足；记录最小窗口
-用 need/have 两个哈希表 O(1) 判断是否满足
+invert(root):
+ if root == null: return null
+ swap(root.left, root.right)
+ invert(root.left); invert(root.right)
+ return root
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最小覆盖子串题解](../../../../leetcode/daily/week4/day4/最小覆盖子串.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [翻转二叉树题解](../../../../leetcode/daily/week4/day4/翻转二叉树.md)。
 
 ---
 

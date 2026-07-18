@@ -218,12 +218,12 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 | Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [买卖股票的最佳时机.md](../../leetcode/daily/week6/day6/买卖股票的最佳时机.md) |
 | Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [最小覆盖子串.md](../../leetcode/daily/week6/day7/最小覆盖子串.md) |
 | Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](../../leetcode/daily/week7/day1/最长连续序列.md) |
-| Week7 Day2 | 贪心 | 621. 任务调度器 | [任务调度器.md](../../leetcode/daily/week7/day2/任务调度器.md) |
+| Week7 Day2 | 树 / 递归 | 101. 对称二叉树 | [对称二叉树.md](../../leetcode/daily/week7/day2/对称二叉树.md) |
 | Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](../../leetcode/daily/week7/day3/单词拆分.md) |
 | Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](../../leetcode/daily/week7/day4/实现Trie.md) |
 | Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](../../leetcode/daily/week7/day5/合并K个升序链表.md) |
 | Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](../../leetcode/daily/week7/day6/数据流的中位数.md) |
-| Week7 Day7 | 设计 / LRU | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week7/day7/LRU缓存.md) |
+| Week7 Day7 | 回溯 | 51. N 皇后 | [N 皇后.md](../../leetcode/daily/week7/day7/N 皇后.md) |
 | Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](../../leetcode/daily/week8/day1/合并区间.md) |
 | Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](../../leetcode/daily/week8/day2/腐烂的橘子.md) |
 | Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](../../leetcode/daily/week8/day3/零钱兑换.md) |

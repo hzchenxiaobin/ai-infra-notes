@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">0-1 背包一维 DP：倒序更新</text>
+
+  <!-- 初始化 -->
+  <rect x="190" y="50" width="200" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="73" text-anchor="middle" font-size="12" fill="#333">dp[0]=true，其余 false</text>
+
+  <path d="M 290 86 L 290 102" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 遍历 num -->
+  <polygon points="290,104 410,146 290,188 170,146" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="290" y="142" text-anchor="middle" font-size="12" fill="#333">还有未处理的 num？</text>
+  <text x="290" y="160" text-anchor="middle" font-size="11" fill="#888">每个元素用一次</text>
+
+  <path d="M 290 188 L 290 206" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="202" font-size="10" fill="#82b366">是</text>
+
+  <!-- 倒序更新 -->
+  <rect x="150" y="210" width="280" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="228" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">for j = target ↓ num</text>
+  <text x="290" y="244" text-anchor="middle" font-size="11" fill="#333">dp[j] = dp[j] | dp[j-num]</text>
+
+  <text x="470" y="232" font-size="10" fill="#b85450">↓ 倒序！</text>
+
+  <path d="M 290 250 L 290 268" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 剪枝 -->
+  <rect x="170" y="272" width="240" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="294" text-anchor="middle" font-size="11" fill="#333">若 dp[target] 为真 → 提前返回 true</text>
+
+  <!-- 回到遍历 -->
+  <path d="M 170 289 L 110 289 L 110 146 L 170 146" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 结束 -->
+  <path d="M 410 146 L 470 146 L 470 220" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="432" y="138" font-size="10" fill="#b85450">否</text>
+  <rect x="410" y="224" width="120" height="34" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="470" y="246" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">返回 dp[target]</text>
+
+  <!-- 倒序示意 -->
+  <text x="290" y="346" text-anchor="middle" font-size="11" fill="#888">倒序保证 dp[j-num] 还是上一轮的旧值 → 每个 num 只用一次</text>
+  <text x="290" y="364" text-anchor="middle" font-size="11" fill="#888">若升序则同一 num 会被反复选取，退化成完全背包</text>
+</svg>

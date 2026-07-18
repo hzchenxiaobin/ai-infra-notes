@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="360" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">核心观察：负数让最大、最小互换</text>
+
+  <!-- 上排：i-1 时刻 -->
+  <text x="60" y="66" font-size="12" fill="#888">处理 nums[i] 之前（以 i-1 结尾）：</text>
+
+  <rect x="70" y="80" width="150" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="145" y="105" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">maxP = 6</text>
+
+  <rect x="300" y="80" width="150" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="375" y="105" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">minP = -12</text>
+
+  <!-- 中间：乘上一个负数 -->
+  <text x="280" y="156" text-anchor="middle" font-size="12" fill="#444">乘上 nums[i] = -2（负数）</text>
+
+  <path d="M 145 122 L 145 178" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 375 122 L 375 178" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 下排：i 时刻（互换） -->
+  <text x="60" y="196" font-size="12" fill="#888">处理 nums[i] 之后（以 i 结尾）：</text>
+
+  <!-- 原本小的 -12 乘 -2 = 24 变大 -->
+  <rect x="70" y="210" width="150" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="8" filter="url(#rough2)"/>
+  <text x="145" y="235" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">maxP = 24 ⭐</text>
+  <text x="145" y="270" text-anchor="middle" font-size="10" fill="#4a7a3a">(-12) · (-2) 翻正</text>
+
+  <!-- 原本大的 6 乘 -2 = -12 变小 -->
+  <rect x="300" y="210" width="150" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="8" filter="url(#rough2)"/>
+  <text x="375" y="235" text-anchor="middle" font-size="13" fill="#333" font-weight="bold">minP = -12</text>
+  <text x="375" y="270" text-anchor="middle" font-size="10" fill="#b85450">6 · (-2) 变负</text>
+
+  <!-- 交叉箭头示意互换 -->
+  <path d="M 220 100 Q 280 140 300 220" stroke="#82b366" stroke-width="1.4" fill="none" stroke-dasharray="5,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 300 100 Q 240 140 220 220" stroke="#b85450" stroke-width="1.4" fill="none" stroke-dasharray="5,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <text x="280" y="318" text-anchor="middle" font-size="11" fill="#888">关键：只维护最大值会丢掉 -12，遇到下一个负数就翻不成大正数</text>
+  <text x="280" y="336" text-anchor="middle" font-size="11" fill="#888">所以 maxP、minP 必须同时维护</text>
+</svg>

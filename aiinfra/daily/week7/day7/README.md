@@ -187,13 +187,13 @@ python kernels/week7_summary.py
 
 > 💡 完整题解见 [Matrix Addition 题解](../../../../leetgpu/week7/day7/leetgpu-matrix-addition-solution.md)。
 
-#### 任务 3：LeetCode 面试题 —— LRU 缓存
+#### 任务 3：LeetCode 面试题 —— N 皇后
 
-**题目链接**：[146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)
+**题目链接**：[51. N 皇后](https://leetcode.cn/problems/n-queens/)
 
-**与本周知识的关联**：LRU 缓存的**哈希表 + 双向链表**与 Week 7 的 **Prefix Caching（Day 3）** 同构——Prefix Cache 用 LRU 策略淘汰最久未用的 KV Cache，正如 LRU Cache 淘汰最久未访问的 key。两者都是"容量有限时按 LRU 淘汰"的核心模式：Prefix Cache 的 `max_entries` 对应 LRU 的 `capacity`，`move_to_end` 对应访问后提升优先级。
+**与本周知识的关联**：N 皇后的"多重约束集合 + 回溯剪枝"与 Week 7 的 **Prefix Caching（Day 3）** 同构——Prefix Cache 在容量约束（`max_entries`）下用 LRU 策略淘汰最久未用的 KV Cache，N 皇后在同行/列/对角线约束下用三集合（`cols`/`diag1`/`diag2`）剪枝冲突放置。两者都是"约束集合驱动的决策 + 回溯"：Prefix Cache 容量满时淘汰一项再尝试，N 皇后位置冲突时回溯换列再尝试——都是"多重约束下做放置/淘汰决策，冲突即回退"。
 
-> 💡 完整题解见 [LRU 缓存题解](../../../../leetcode/daily/week7/day7/LRU缓存.md)。
+> 💡 完整题解见 [N 皇后题解](../../../../leetcode/daily/week7/day7/N 皇后.md)。
 
 ---
 

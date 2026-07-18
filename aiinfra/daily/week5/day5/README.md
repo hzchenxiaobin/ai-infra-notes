@@ -382,26 +382,31 @@ Token Embedding Layer 是 Mini 推理引擎 v0 的**第一个算子**——`self
 
 > 💡 提交后在 [LeetGPU Token Embedding Layer](https://leetgpu.com/challenges/token-embedding-layer) 上记录通过耗时。完整题解（含 gather + 加法 + LayerNorm 融合 kernel、ncu profiling）见 [Token Embedding Layer 题解](../../../../leetgpu/week5/day5/leetgpu-token-embedding-layer-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 零钱兑换
+#### 任务 5：LeetCode 面试题 —— 从前序与中序遍历序列构造二叉树
 
-**题目链接**：[322. 零钱兑换](https://leetcode.cn/problems/coin-change/)
+**题目链接**：[105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/)
 
 **题目概述**：
 
-给定不同面额的硬币 `coins` 和一个总金额 `amount`，计算凑成总金额所需的**最少硬币数**。无法凑出返回 `-1`。每种硬币数量不限（完全背包）。
+给定同一棵二叉树的前序和中序遍历，构造出这棵树。用哈希表缓存中序下标，O(1) 定位根并划分左右子树后递归。
 
 **与今日知识的关联**：
 
-零钱兑换的 DP 解法是 **KV Cache "复用已算结果"思想的算法直觉**——DP 表缓存"凑金额 i 的最少硬币数"，后续金额复用前面的解，避免重复计算。这与 KV Cache 缓存历史 K/V、Decode 复用而非重算同构：DP 是"用空间换时间、复用子问题解"，KV Cache 是"用显存换时间、复用历史 K/V"。Mini 引擎的 `generate` 循环每步复用 cache 就像 DP 每步复用 `dp[i-coin]`——都是**增量推进 + 复用缓存的状态机**。
+本题核心是**用哈希表缓存下标，把每次定位根的 O(n) 线性扫描压成 O(1) 查询**——避免重复扫描中序数组。这与今天 KV Cache 的"复用历史 K/V 避免重算"思想同构：KV Cache 缓存历史 K/V 让 Decode 每步 O(1) 取用而非 O(n) 重算 attention，哈希表缓存 inorder 下标让每次定位根 O(1) 而非 O(n) 扫描——都是**用缓存/预处理换时间，把 O(n) 的重复查找压成 O(1)**。Mini 引擎的 generate 循环每步复用 cache 就像递归每步复用 idx 哈希——都是"增量推进 + 复用缓存"。
 
 **核心套路**：
 
 ```
-dp[0] = 0
-dp[i] = min(dp[i - coin] + 1) for coin in coins if i >= coin
+idx = {v: i for i,v in enumerate(inorder)}   # 预缓存
+preIdx = 0
+build(inL, inR):
+ if inL > inR: return null
+ rootVal = preorder[preIdx++]
+ mid = idx[rootVal]                          # O(1) 定位根
+ root.left = build(inL, mid-1); root.right = build(mid+1, inR)
 ```
 
-> 💡 完整题解（含完全背包 DP、C++/Python 参考代码、与 KV Cache 复用模式的类比）见 [零钱兑换题解](../../../../leetcode/daily/week5/day5/零钱兑换.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 KV Cache 复用模式的类比）见 [从前序与中序遍历序列构造二叉树题解](../../../../leetcode/daily/week5/day5/从前序与中序遍历序列构造二叉树.md)。
 
 ---
 

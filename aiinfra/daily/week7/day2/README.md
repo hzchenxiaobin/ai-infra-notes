@@ -308,25 +308,24 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
 
 > 💡 提交后在 [LeetGPU Vector Reversal](https://leetgpu.com/challenges/vector-reversal) 上记录通过耗时。完整题解见 [Vector Reversal 题解](../../../../leetgpu/week7/day2/leetgpu-vector-reversal-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 任务调度器
+#### 任务 5：LeetCode 面试题 —— 对称二叉树
 
-**题目链接**：[621. 任务调度器](https://leetcode.cn/problems/task-scheduler/)
+**题目链接**：[101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/)
 
-**题目概述**：给定一个用字符数组表示的 CPU 任务集 `tasks`，以及冷却时间 `n`。同一类任务两次执行之间至少间隔 `n` 个时间单位。计算完成所有任务的最少时间。
+**题目概述**：给定二叉树根节点，判断其是否轴对称（左右子树互为镜像）。递归交叉比较：左子树的左孩子对右子树的右孩子、左子树的右孩子对右子树的左孩子。
 
-**与今日知识的关联**：LeetCode 621 的"任务调度+冷却"与今日的调度器**资源预算**同构——冷却时间 `n` 类比 `token_budget` 的约束（不能在一轮内把同类任务全做完），需要"穿插"其他任务填充等待时间，就像调度器在 token_budget 不足时让请求等待下一轮。贪心策略（先排最高频任务，空闲槽位填充低频任务）对应调度器的"优先级高的先分配资源，剩余预算给低优先级"。
+**与今日知识的关联**：对称二叉树的"交叉配对验证约束"与今日调度器的**请求-资源配对验证**同构——调度器每轮检查请求是否满足约束（token_budget、KV 空间）才分配资源，对称树每层检查节点对是否满足镜像约束（值相等 + 子树交叉镜像）才返回 true。两者都是**递归/迭代地验证约束配对**：调度器在配对不满足时让请求等待下一轮，对称树在配对不满足时立即返回 false——都是"约束驱动的成对匹配 + 不满足即拒绝"。
 
 **核心套路**：
 
 ```
-1. 统计每种任务的出现次数，找最大频率 max_freq
-2. 最大频率的任务数 count = 出现 max_freq 次的任务种类数
-3. 最少时间 = max((max_freq - 1) * (n + 1) + count, len(tasks))
- • 前者：考虑冷却的框架（max_freq-1 个完整周期 + 最后一轮）
- • 后者：任务足够多时冷却被自然填满，不需要等待
+check(p, q):
+ if p 和 q 都空: return true
+ if 一空一非空: return false
+ return p.val==q.val && check(p.left, q.right) && check(p.right, q.left)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、贪心图解、与调度器资源预算的类比）见 [任务调度器题解](../../../../leetcode/daily/week7/day2/任务调度器.md)。
+> 💡 完整题解（含 C++/Python 参考代码、递归/迭代双解、与调度器约束配对验证的类比）见 [对称二叉树题解](../../../../leetcode/daily/week7/day2/对称二叉树.md)。
 
 ---
 

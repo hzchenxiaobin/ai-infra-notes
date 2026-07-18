@@ -312,25 +312,28 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 > 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时。完整题解（含 batch_size 对 GEMM 性能的影响分析）见 [Simple Inference 题解](../../../../leetgpu/week6/day1/leetgpu-simple-inference-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 合并区间
+#### 任务 5：LeetCode 面试题 —— 二叉树的序列化与反序列化
 
-**题目链接**：[56. 合并区间](https://leetcode.cn/problems/merge-intervals/)
+**题目链接**：[297. 二叉树的序列化与反序列化](https://leetcode.cn/problems/serialize-and-deserialize-binary-tree/)
 
 **题目概述**：
 
-给定一组区间 `intervals[i] = [start_i, end_i]`，合并所有重叠的区间，返回不重叠的区间数组。
+设计算法把二叉树序列化为字符串，并能从字符串反序列化重建原树。前序遍历显式记录 null 标记，单序列即可无损往返。
 
 **与今日知识的关联**：
 
-合并区间的核心是**排序后贪心合并相邻重叠区间**——这与 Dynamic Batching 中"将时间上重叠的请求聚合到同一 batch"思路同构。Dynamic Batcher 的 `_collect_batch` 就是在"时间窗口内收集到达的请求"，类似合并区间中"在重叠范围内合并"。两者都是**排序/有序遍历 + 贪心聚合**的模式。
+本题核心是**把结构化数据编码成线性序列、再从序列无损重建**——序列化把树的前序 + null 标记写成字符串，反序列化按序消费重建。这与 Dynamic Batching 的"请求打包成 batch、再分发执行"同构：Dynamic Batcher 把多个请求序列化成 batch 张量送入 engine，scheduler 再从 batch 重建执行计划；序列化把树打包成 token 串以便存储/传输，反序列化从 token 串重建树——都是**结构与线性序列的双向转换**。null 标记保留结构信息，正如 batch 里 padding/request_id 保留每个请求的边界信息——都是"编码时显式标注边界以保证无损往返"。
 
 **核心套路**：
 
 ```
-按 start 排序 → 遍历，若当前区间 start ≤ 上一区间的 end → 合并（更新 end = max(end)）
+serialize（前序）：null 写 "#"，值间用分隔符
+ serialize(node): if null 写"#"; 否则 写 val; serialize(left); serialize(right)
+deserialize：全局指针按序消费
+ build(): token=next(); if token=="#" return null; 建节点; left=build(); right=build()
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、贪心合并图解、与 Dynamic Batching 时间窗口聚合的模式类比）见 [合并区间题解](../../../../leetcode/daily/week6/day1/合并区间.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 Dynamic Batching 打包/分发模式的类比）见 [二叉树的序列化与反序列化题解](../../../../leetcode/daily/week6/day1/二叉树的序列化与反序列化.md)。
 
 ---
 

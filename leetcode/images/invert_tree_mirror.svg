@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 360" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="360" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">翻转二叉树：每个节点交换左右孩子 → 整棵树镜像</text>
+
+  <!-- 原树 -->
+  <text x="120" y="60" text-anchor="middle" font-size="12" fill="#888">翻转前</text>
+  <circle cx="120" cy="80" r="15" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="120" y="84" text-anchor="middle" font-size="11" fill="#333">4</text>
+  <circle cx="80" cy="130" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="80" y="134" text-anchor="middle" font-size="11" fill="#333">2</text>
+  <line x1="110" y1="92" x2="90" y2="118" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="160" cy="130" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="160" y="134" text-anchor="middle" font-size="11" fill="#333">7</text>
+  <line x1="130" y1="92" x2="150" y2="118" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="55" cy="180" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="55" y="184" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <line x1="72" y1="142" x2="60" y2="170" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="105" cy="180" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="105" y="184" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <line x1="88" y1="142" x2="100" y2="170" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="135" cy="180" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="135" y="184" text-anchor="middle" font-size="10" fill="#333">6</text>
+  <line x1="152" y1="142" x2="140" y2="170" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="185" cy="180" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="185" y="184" text-anchor="middle" font-size="10" fill="#333">9</text>
+  <line x1="168" y1="142" x2="180" y2="170" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <!-- 箭头 -->
+  <path d="M 220 130 L 320 130" stroke="#82b366" stroke-width="2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="270" y="122" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">交换每个节点的</text>
+  <text x="270" y="138" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">left / right</text>
+
+  <!-- 翻转后 -->
+  <text x="460" y="60" text-anchor="middle" font-size="12" fill="#888">翻转后（镜像）</text>
+  <circle cx="460" cy="80" r="15" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="460" y="84" text-anchor="middle" font-size="11" fill="#333">4</text>
+  <circle cx="420" cy="130" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="420" y="134" text-anchor="middle" font-size="11" fill="#333">7</text>
+  <line x1="450" y1="92" x2="430" y2="118" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="500" cy="130" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="500" y="134" text-anchor="middle" font-size="11" fill="#333">2</text>
+  <line x1="470" y1="92" x2="490" y2="118" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="395" cy="180" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="395" y="184" text-anchor="middle" font-size="10" fill="#333">9</text>
+  <line x1="412" y1="142" x2="400" y2="170" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="445" cy="180" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="445" y="184" text-anchor="middle" font-size="10" fill="#333">6</text>
+  <line x1="428" y1="142" x2="440" y2="170" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="475" cy="180" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="475" y="184" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <line x1="492" y1="142" x2="480" y2="170" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="525" cy="180" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="525" y="184" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <line x1="508" y1="142" x2="520" y2="170" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <!-- 递归说明 -->
+  <rect x="60" y="230" width="460" height="100" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="290" y="254" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">递归描述</text>
+  <text x="80" y="276" font-size="11" fill="#555">invert(root) =</text>
+  <text x="100" y="294" font-size="11" fill="#555">① 交换 root.left 与 root.right</text>
+  <text x="100" y="312" font-size="11" fill="#555">② invert(root.left) ；invert(root.right)</text>
+  <text x="80" y="326" font-size="11" fill="#888">终止：root == null 返回 null</text>
+</svg>

@@ -329,27 +329,30 @@ Submitting 3 sequences with staggered arrival...
 
 > 💡 提交后在 [LeetGPU Max Subarray Sum](https://leetgpu.com/challenges/max-subarray-sum) 上记录通过耗时。完整题解（含滑动窗口 kernel、prefix sum 优化、与 Continuous Batching 窗口调度的类比）见 [Max Subarray Sum 题解](../../../../leetgpu/week6/day2/leetgpu-max-subarray-sum-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 有效括号
+#### 任务 5：LeetCode 面试题 —— 二叉树的最大深度
 
-**题目链接**：[20. 有效括号](https://leetcode.cn/problems/valid-parentheses/)
+**题目链接**：[104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/)
 
 **题目概述**：
 
-给定一个只包含 `(`、`)`、`{`、`}`、`[`、`]` 的字符串 `s`，判断字符串是否有效（括号正确闭合、顺序正确、类型匹配）。
+给定二叉树根节点，返回最大深度（根到最远叶子的节点数）。后序递归 `max(left,right)+1`，或 BFS 逐层计数。
 
 **与今日知识的关联**：
 
-有效括号的**栈匹配**（push 开括号、pop 闭括号匹配）与 Continuous Batching 的序列生命周期管理同构——每个请求加入 batch 是"push"，完成退出是"pop"，必须正确匹配（FIFO/栈序）。Scheduler 的 running 队列就是一个栈/队列：新请求 push 进来，完成的 pop 出去，中间的序列持续 decode。有效括号要求"后入先出"的匹配（最近的开括号先匹配），对应 Continuous Batching 中"最近加入的请求先完成退出的场景"（短请求 gen 少先完成）。两者都是**动态集合的入/出管理**。
+本题的 **BFS 层序解法**与 Continuous Batching 的序列生命周期管理同构——BFS 用队列逐层处理节点（入队 push、处理出队 pop、每层 depth++），Continuous Batching 用 running 队列管理请求（新请求 push 入队、完成的 pop 出队、每轮 step 处理一批）。两者都是**队列驱动的迭代式批处理**：BFS 每轮处理一整层节点后深度 +1，Scheduler 每轮 step 处理一批 running 请求后推进 generation——都是"外层循环管批次/层数，内层处理当前批次全部元素"的队列骨架。
 
 **核心套路**：
 
 ```
-遇到开括号 → push 入栈
-遇到闭括号 → 检查栈顶是否匹配 → 匹配则 pop，不匹配则 invalid
-最终栈空 → valid
+DFS: depth(root) = max(depth(left), depth(right)) + 1   # 空树 0
+
+BFS: q = [root]; depth = 0
+ while q 非空:
+ depth++
+ for 当前层全部节点: 出队、子节点入队
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、栈匹配图解、与 Continuous Batching 序列入/出管理的类比）见 [有效括号题解](../../../../leetcode/daily/week6/day2/有效括号.md)。
+> 💡 完整题解（含 C++/Python 参考代码、DFS/BFS 双解、与 Continuous Batching 队列驱动批处理的类比）见 [二叉树的最大深度题解](../../../../leetcode/daily/week6/day2/二叉树的最大深度.md)。
 
 ---
 

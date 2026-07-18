@@ -356,27 +356,32 @@ Weight Dequantization 是一个**典型的 memory-bound element-wise kernel**—
 
 > 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时。完整题解（含 element-wise kernel、ncu 测 memory-bound、Roofline 分析）见 [Weight Dequantization 题解](../../../../leetgpu/week5/day6/leetgpu-weight-dequantization-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 排序链表
+#### 任务 5：LeetCode 面试题 —— 组合总和
 
-**题目链接**：[148. 排序链表](https://leetcode.cn/problems/sort-list/)
+**题目链接**：[39. 组合总和](https://leetcode.cn/problems/combination-sum/)
 
 **题目概述**：
 
-给定单链表的头节点，将其按**升序排序**。要求 `O(n log n)` 时间、`O(1)` 额外空间（递归栈不计则自底向上归并）。
+给定无重复正整数数组 `candidates` 和目标 `target`，找出所有和为 `target` 的组合（数字可无限重复选取），结果不重复（回溯 + 剪枝）。
 
 **与今日知识的关联**：
 
-排序链表的**自底向上归并**是"分而治之、逐层合并"的典范——把链表按 1→2→4→8 的步长逐趟归并，每趟合并相邻段。这与今天的 **profiling 三层方法论**同构：都是"自顶向下拆解、自底向上聚合"。profiling 也是先把系统拆成 Prefill/Decode（拆），再拆成 forward/sampling/sync（拆），最后定位单 kernel（底），再从 kernel 优化聚合回阶段提升（合）。归并排序的"每趟处理所有段、趟数 log n"与 profiling 的"逐层细化、每层覆盖全部"思路一致。
+本题核心是**决策树展开 + 剪枝**——自顶向下逐层选数（`remain` 递减），排序后 `candidates[i] > remain` 直接 `break` 砍掉整棵子树。这与今天的 **profiling 三层方法论**同构：都是"自顶向下分层探索 + 剪掉不可行分支"。profiling 逐层细化（Prefill/Decode → forward/sampling/sync → 单 kernel），每层排除无关阶段定位瓶颈；组合总和逐层选数，每层用排序 + break 排除超 target 的分支——都是"树形探索 + 剪枝定位"。profiling 的"锁定最慢 kernel"对应回溯的"找到合法组合"——都是分层收敛到目标。
 
 **核心套路**：
 
 ```
-自底向上归并：步长 sz = 1,2,4,... 直到 ≥ n
- 每趟：从头扫，每 2×sz 个节点做一次 merge
- 共 log n 趟，每趟 O(n) → O(n log n)
+sort(candidates)
+dfs(remain, start):
+ if remain == 0: 记录方案
+ for i = start..n-1:
+ if candidates[i] > remain: break   # 有序 → 整枝剪掉
+ path.push(candidates[i])
+ dfs(remain - candidates[i], i)     # 传 i（非 i+1）→ 可重复选
+ path.pop()
 ```
 
-> 💡 完整题解（含递归归并 + 自底向上迭代、C++/Python 参考代码、与 profiling 三层拆解的模式类比）见 [排序链表题解](../../../../leetcode/daily/week5/day6/排序链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 profiling 三层拆解的模式类比）见 [组合总和题解](../../../../leetcode/daily/week5/day6/组合总和.md)。
 
 ---
 

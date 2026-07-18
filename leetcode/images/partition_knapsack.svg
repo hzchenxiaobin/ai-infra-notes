@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="380" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">转化：两子集和相等 ⇔ 能凑出总和一半</text>
+
+  <!-- 原问题：分两组 -->
+  <text x="40" y="64" font-size="12" fill="#888">原问题：把 nums 分成和相等的两组</text>
+  <rect x="40" y="74" width="180" height="46" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="130" y="94" text-anchor="middle" font-size="11" fill="#333">子集 A: {1,5,5}</text>
+  <text x="130" y="110" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">和 = 11</text>
+
+  <rect x="240" y="74" width="180" height="46" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="330" y="94" text-anchor="middle" font-size="11" fill="#333">子集 B: {11}</text>
+  <text x="330" y="110" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">和 = 11</text>
+
+  <text x="220" y="100" text-anchor="middle" font-size="14" fill="#888">=</text>
+
+  <!-- 箭头向下转化 -->
+  <path d="M 230 130 L 230 152" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="240" y="146" font-size="10" fill="#888">等价转化</text>
+
+  <!-- 总和折半 -->
+  <rect x="120" y="156" width="340" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="181" text-anchor="middle" font-size="12" fill="#333">S = sum = 22, target = S/2 = 11</text>
+
+  <path d="M 290 196 L 290 218" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 背包问题 -->
+  <rect x="100" y="222" width="380" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="10" filter="url(#rough2)"/>
+  <text x="290" y="241" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">0-1 背包</text>
+  <text x="290" y="258" text-anchor="middle" font-size="11" fill="#333">能否选若干元素，和恰好 = target？</text>
+
+  <path d="M 290 266 L 290 284" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 奇偶剪枝 -->
+  <rect x="120" y="288" width="340" height="34" fill="#f5f5f5" stroke="#bbb" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="310" text-anchor="middle" font-size="11" fill="#555">先剪枝：S 为奇数 → 直接 false</text>
+
+  <text x="290" y="354" text-anchor="middle" font-size="11" fill="#888">关键：把「分割」问题压缩成「能否凑出 target」的判定问题</text>
+</svg>

@@ -627,27 +627,29 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 
 > 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../../../../leetgpu/week4/day2/leetgpu-attention-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— LRU 缓存
+#### 任务 5：LeetCode 面试题 —— 分割等和子集
 
-**题目链接**：[146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)
+**题目链接**：[416. 分割等和子集](https://leetcode.cn/problems/partition-equal-subset-sum/)
 
 **题目概述**：
 
-设计支持 `get(key)` 和 `put(key, value)` 的数据结构，O(1) 平均时间复杂度，容量满时淘汰最久未使用的元素。
+给定只含正整数的数组 `nums`，判断能否分割成两个元素之和相等的子集（等价于能否选若干元素凑出总和一半，0-1 背包判定）。
 
 **与今日知识的关联**：
 
-本题核心是 **哈希表 + 双向链表**——哈希表保证 O(1) 查找，双向链表保证 O(1) 重排顺序。这与今天 FlashAttention Kernel 的"shared memory + register"分层思路呼应：FA 用 shared memory 做共享数据（KV tile），用 register 做每 warp 私有状态（m/l/acc）；LRU 用哈希表做快速查找，用双向链表做顺序维护——都是**两种数据结构各司其职、组合实现 O(1)**。
+本题核心是**状态空间降维**——把二维 `dp[i][j]` 压成一维 `dp[j]` 滚动更新（内层倒序保证每个元素只用一次）。这与今天 FlashAttention Kernel 的"shared memory + register"分层思路呼应：FA 用 shared memory 做共享数据（KV tile），用 register 做每 warp 私有状态（m/l/acc）；0-1 背包用一维 dp 做滚动状态，用倒序遍历保证"用旧值"——都是**用更小的状态空间表示等价信息**。FA 把 O(N²) attention 的 IO 压成 O(N) tiling，背包把 O(n·target) 二维压成 O(target) 一维——都是"状态空间降维 + 边界条件保证正确性"。
 
 **核心套路**：
 
 ```
-哈希表 key→node (O(1) 查找)
-双向链表 head=MRU, tail=LRU (O(1) 重排)
-get: 命中则移到 head; put: 新增插 head, 满则删 tail
+target = sum/2 （奇数直接 false）
+dp[0] = true
+for num in nums:
+ for j = target ↓ num:     # 倒序，保证每个 num 只用一次
+ dp[j] = dp[j] | dp[j-num]
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [LRU 缓存题解](../../../../leetcode/daily/week4/day2/LRU缓存.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割等和子集题解](../../../../leetcode/daily/week4/day2/分割等和子集.md)。
 
 ---
 

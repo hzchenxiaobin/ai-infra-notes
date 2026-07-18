@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">乘积最大子数组：滚动 DP 流程</text>
+
+  <!-- 初始化 -->
+  <rect x="210" y="50" width="160" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="73" text-anchor="middle" font-size="12" fill="#333">初始化 maxP=minP=ans=nums[0]</text>
+
+  <path d="M 290 86 L 290 102" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Loop -->
+  <polygon points="290,104 430,150 290,196 150,150" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="290" y="146" text-anchor="middle" font-size="12" fill="#333">i &lt; n ?</text>
+  <text x="290" y="164" text-anchor="middle" font-size="11" fill="#888">遍历每个元素</text>
+
+  <path d="M 290 196 L 290 214" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="210" font-size="10" fill="#82b366">是</text>
+
+  <!-- 取 cur -->
+  <rect x="200" y="218" width="180" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="240" text-anchor="middle" font-size="12" fill="#333">cur = nums[i]</text>
+
+  <path d="M 290 252 L 290 268" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 暂存乘积 -->
+  <rect x="170" y="272" width="240" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="294" text-anchor="middle" font-size="11" fill="#333">a=maxP·cur, b=minP·cur （用旧值）</text>
+
+  <path d="M 290 306 L 290 318" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 更新 -->
+  <rect x="140" y="322" width="300" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="344" text-anchor="middle" font-size="11" fill="#333">maxP=max(cur,a,b); minP=min(cur,a,b); ans=max(ans,maxP)</text>
+
+  <!-- 回到 loop -->
+  <path d="M 140 339 L 90 339 L 90 150 L 150 150" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 结束 -->
+  <path d="M 430 150 L 490 150 L 490 250" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="452" y="142" font-size="10" fill="#b85450">否</text>
+  <rect x="430" y="254" width="120" height="34" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="490" y="276" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">返回 ans</text>
+
+  <text x="290" y="386" text-anchor="middle" font-size="11" fill="#888">每步 O(1)，共 O(n)；只用 3 个变量 → 空间 O(1)</text>
+</svg>

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="420" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">序列化 / 反序列化流程（前序 + null 标记）</text>
+
+  <!-- 序列化侧 -->
+  <text x="140" y="56" text-anchor="middle" font-size="13" fill="#446688" font-weight="bold">serialize(root)</text>
+
+  <polygon points="140,68 240,100 140,132 40,100" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6" filter="url(#rough2)"/>
+  <text x="140" y="96" text-anchor="middle" font-size="11" fill="#333">root == null ?</text>
+  <text x="140" y="112" text-anchor="middle" font-size="10" fill="#888">空子树</text>
+
+  <path d="M 40 100 L 20 100 L 20 140" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="50" y="92" font-size="10" fill="#b85450">是</text>
+  <rect x="0" y="144" width="80" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="40" y="163" text-anchor="middle" font-size="11" fill="#333">写 "#"</text>
+
+  <path d="M 140 132 L 140 152" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="152" y="148" font-size="10" fill="#82b366">否</text>
+
+  <rect x="60" y="156" width="160" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="140" y="175" text-anchor="middle" font-size="11" fill="#333">写 root.val</text>
+
+  <path d="M 140 184 L 140 200" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="40" y="204" width="100" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="5" filter="url(#rough2)"/>
+  <text x="90" y="222" text-anchor="middle" font-size="10" fill="#333">serialize(left)</text>
+  <rect x="150" y="204" width="100" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="5" filter="url(#rough2)"/>
+  <text x="200" y="222" text-anchor="middle" font-size="10" fill="#333">serialize(right)</text>
+
+  <text x="140" y="252" text-anchor="middle" font-size="10" fill="#888">用分隔符拼接，得到字符串</text>
+
+  <!-- 中间箭头到字符串 -->
+  <path d="M 280 250 L 290 250" stroke="#82b366" stroke-width="2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 字符串 -->
+  <rect x="295" y="232" width="200" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="395" y="250" text-anchor="middle" font-size="10" fill="#333" font-family="monospace">1,2,#,#,3,4,#,#,5,#,#</text>
+  <text x="395" y="266" text-anchor="middle" font-size="9" fill="#888">序列</text>
+
+  <!-- 反序列化侧 -->
+  <text x="440" y="300" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">deserialize(data)</text>
+
+  <rect x="330" y="310" width="220" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="440" y="329" text-anchor="middle" font-size="10" fill="#333">全局指针 ptr 按序读 token</text>
+
+  <path d="M 440 338 L 440 354" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <polygon points="440,356 540,384 440,412 340,384" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6" filter="url(#rough2)"/>
+  <text x="440" y="380" text-anchor="middle" font-size="11" fill="#333">token == "#" ?</text>
+  <text x="440" y="396" text-anchor="middle" font-size="10" fill="#888">空位</text>
+
+  <path d="M 340 384 L 300 384 L 300 350" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="320" y="376" font-size="10" fill="#b85450">是</text>
+  <rect x="260" y="338" width="80" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="300" y="356" text-anchor="middle" font-size="11" fill="#333">返回 null</text>
+
+  <path d="M 440 412 L 440 412" stroke="#666" stroke-width="1.3" fill="none"/>
+  <text x="300" y="408" text-anchor="middle" font-size="10" fill="#82b366">否：建节点，递归 build(left), build(right)</text>
+</svg>

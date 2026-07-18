@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="380" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">序列化：把 null 也写进前序序列 → 唯一确定树</text>
+
+  <!-- 原树 -->
+  <text x="110" y="58" text-anchor="middle" font-size="12" fill="#888">原树</text>
+  <circle cx="110" cy="80" r="15" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="110" y="84" text-anchor="middle" font-size="11" fill="#333">1</text>
+  <circle cx="75" cy="130" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="75" y="134" text-anchor="middle" font-size="11" fill="#333">2</text>
+  <line x1="100" y1="92" x2="82" y2="118" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="145" cy="130" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="145" y="134" text-anchor="middle" font-size="11" fill="#333">3</text>
+  <line x1="120" y1="92" x2="138" y2="118" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <!-- 2 的左右空 -->
+  <text x="60" y="166" text-anchor="middle" font-size="10" fill="#b85450">#</text>
+  <text x="90" y="166" text-anchor="middle" font-size="10" fill="#b85450">#</text>
+  <circle cx="115" cy="180" r="13" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="115" y="184" text-anchor="middle" font-size="10" fill="#333">4</text>
+  <line x1="138" y1="142" x2="120" y2="168" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="170" cy="180" r="13" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="170" y="184" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <line x1="152" y1="142" x2="165" y2="168" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+  <text x="100" y="214" text-anchor="middle" font-size="9" fill="#b85450">#</text>
+  <text x="130" y="214" text-anchor="middle" font-size="9" fill="#b85450">#</text>
+  <text x="155" y="214" text-anchor="middle" font-size="9" fill="#b85450">#</text>
+  <text x="185" y="214" text-anchor="middle" font-size="9" fill="#b85450">#</text>
+
+  <!-- 箭头 -->
+  <path d="M 210 130 L 270 130" stroke="#82b366" stroke-width="2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="240" y="122" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">前序遍历</text>
+  <text x="240" y="138" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">遇 null 写 #</text>
+
+  <!-- 序列 -->
+  <text x="430" y="58" text-anchor="middle" font-size="12" fill="#888">序列化字符串</text>
+  <rect x="300" y="68" width="260" height="50" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="430" y="90" text-anchor="middle" font-size="11" fill="#333" font-family="monospace">1,2,#,#,3,4,#,#,5,#,#</text>
+  <text x="430" y="108" text-anchor="middle" font-size="10" fill="#888">值与 # 用逗号分隔</text>
+
+  <!-- 反序列化 -->
+  <path d="M 430 118 L 430 150" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="300" y="154" width="260" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="430" y="172" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">反序列化：全局指针按序消费</text>
+  <text x="430" y="188" text-anchor="middle" font-size="10" fill="#555">读到值→建节点递归左右；读到 #→返回 null</text>
+
+  <path d="M 430 194 L 430 220" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 重建树 -->
+  <text x="430" y="240" text-anchor="middle" font-size="12" fill="#888">重建出相同的树</text>
+  <circle cx="430" cy="262" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="430" y="266" text-anchor="middle" font-size="10" fill="#333">1</text>
+  <circle cx="400" cy="302" r="13" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="400" y="306" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <line x1="422" y1="274" x2="406" y2="292" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="460" cy="302" r="13" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="460" y="306" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <line x1="438" y1="274" x2="454" y2="292" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+  <circle cx="440" cy="342" r="11" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="440" y="346" text-anchor="middle" font-size="9" fill="#333">4</text>
+  <circle cx="480" cy="342" r="11" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="480" y="346" text-anchor="middle" font-size="9" fill="#333">5</text>
+  <line x1="455" y1="313" x2="444" y2="334" stroke="#4a7a3a" stroke-width="1" filter="url(#rough2)"/>
+  <line x1="465" y1="313" x2="476" y2="334" stroke="#4a7a3a" stroke-width="1" filter="url(#rough2)"/>
+
+  <text x="110" y="300" text-anchor="middle" font-size="11" fill="#888">关键：null 显式记录</text>
+  <text x="110" y="318" text-anchor="middle" font-size="11" fill="#888">→ 结构信息无损</text>
+  <text x="110" y="342" text-anchor="middle" font-size="11" fill="#888">→ 单序列即可重建</text>
+</svg>

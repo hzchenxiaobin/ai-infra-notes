@@ -381,28 +381,30 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 > 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Softmax Attention 题解](../../../../leetgpu/week4/day1/leetgpu-softmax-attention-solution.md)。
 
-#### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
+#### 任务 5：LeetCode 面试题 —— 乘积最大子数组
 
-**题目链接**：[121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+**题目链接**：[152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/)
 
 **题目概述**：
 
-给定数组 `prices`，`prices[i]` 是第 i 天的股票价格，找出一次买入和一次卖出（买入在卖出前）能获得的最大利润。无利润则返回 0。
+给定整数数组 `nums`，找出乘积最大的连续子数组，返回其乘积。负数会让"最大"与"最小"互换，需同时维护两者。
 
 **与今日知识的关联**：
 
-本题核心是**一次遍历维护最小值**——边遍历边维护"到当前为止的最低买入价"，用当前价减去最低价即为今天卖出的利润。这与今天 online softmax 的"边遍历边维护 running max/sum"思路完全一致：都是**无法回头的单遍扫描中增量维护全局统计量**。online softmax 维护 (m, l, o)，股票问题维护 (minPrice, maxProfit)——核心都是"用 O(1) 状态压缩一次扫描"。
+本题核心是**单遍扫描中用 O(1) 滚动状态维护两个极值**——同时维护以 `i` 结尾的最大乘积 `maxP` 和最小乘积 `minP`，因为遇到负数时最小值翻正可能成为新的最大值。这与今天 online softmax 的"边遍历边维护 running max/sum"思路完全一致：都是**无法回头的单遍扫描中增量维护全局统计量**。online softmax 维护 (m, l, o) 三态，乘积问题维护 (maxP, minP) 两态——核心都是"用 O(1) 状态压缩一次扫描"，且都需同时跟踪多个关联量以应对翻转。
 
 **核心套路**：
 
 ```
-minPrice = prices[0], maxProfit = 0
-for price in prices[1:]:
- maxProfit = max(maxProfit, price - minPrice)
- minPrice = min(minPrice, price)
+maxP = minP = ans = nums[0]
+for cur in nums[1:]:
+ a, b = maxP*cur, minP*cur
+ maxP = max(cur, a, b)   # 三候选：新开段 / 接正乘积 / 接负乘积翻正
+ minP = min(cur, a, b)
+ ans = max(ans, maxP)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [买卖股票的最佳时机题解](../../../../leetcode/daily/week4/day1/买卖股票的最佳时机.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [乘积最大子数组题解](../../../../leetcode/daily/week4/day1/乘积最大子数组.md)。
 
 ---
 
