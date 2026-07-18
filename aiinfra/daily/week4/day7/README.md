@@ -21,10 +21,7 @@
 
 Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
 
-```
-FlashAttention 论文精读 → Online Softmax 三公式 → 手写完整 Forward Kernel
- → 读官方源码找差距 → FA2 改进 → 集成到 Mini 引擎 → 性能对比验证 → IO 优化方法论
-```
+![Week 4 学习主线](../../images/week4_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -113,21 +110,7 @@ FlashAttention：
 
 #### 场景决策树
 
-```
-遇到一个 memory-bound 算子：
- 1. 是否能用 tiling 放进 SRAM？
- → 是：用 tiling + online algorithm
- → 否：考虑量化/压缩减少数据量
- 1. 是否有相邻的 memory-bound 算子？
- → 是：用 kernel fusion
- → 否：考虑向量化加载提升带宽利用率
- 1. 中间结果是否可被重算？
- → 是：用 recomputation 减少 HBM 读写
- → 否：考虑更换算法
- 1. 数据搬运与计算能否重叠？
- → 是：用 async copy / 双缓冲
- → 否：考虑调整循环顺序
-```
+![IO 优化方法论决策树](../../images/week4_io_optimization_decision.svg)
 
 #### IO 优化与计算优化的关系
 

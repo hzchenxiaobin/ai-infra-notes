@@ -30,21 +30,7 @@
 
 ### 本周知识图谱
 
-```
-Day 1: CuTe 总览 + 独立环境 → 脱离 CUTLASS 编译第一个 cute 程序
-  ↓
-Day 2: Layout 代数深入 → Shape/Stride 整数代数、嵌套、coalesce/zipped/composed
-  ↓
-Day 3: Tensor 引擎分层 → gmem/smem/rmem engine、切片/分区、make_tensor 变体
-  ↓
-Day 4: Copy 原语体系 → copy_if/copy、向量化、cp.async、3-stage 流水线
-  ↓
-Day 5: Swizzle 作为 Layout → XOR 映射、MMA swizzle、手写无 bank conflict 的 smem
-  ↓
-Day 6: TMA 与 Hopper 异步 → TMA descriptor、cute::TmaCopy、warp specialization
-  ↓
-Day 7: CuTe GEMM 实战 + 面试复盘 → 原语组装 GEMM、对标 cute/tutorial
-```
+![CuTe 一周学习路径：Day 1-7 渐进式 Pipeline](../images/cute_learning_pipeline.svg)
 
 ### 前置准备清单
 

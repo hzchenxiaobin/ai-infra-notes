@@ -72,11 +72,11 @@ Mini AI Infra 的系统架构分为五层，从上到下依次为：
 
 一个请求从提交到返回，经过六个阶段：
 
-![请求生命周期数据流](../images/week8_request_lifecycle_pipeline.svg)
+![请求生命周期数据流](../../images/week8_request_lifecycle_pipeline.svg)
 
 ##### 状态机
 
-![请求状态机 · 三态终局](../images/week8_request_state_tree.svg)
+![请求状态机 · 三态终局](../../images/week8_request_state_tree.svg)
 
 ##### 每阶段的关键指标
 

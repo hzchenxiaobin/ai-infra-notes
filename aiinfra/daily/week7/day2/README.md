@@ -185,7 +185,7 @@ def _apply_aging(self):
 
 ##### 为什么是这个顺序？
 
-![Scheduler 调度顺序](../images/week7_scheduler_priority.svg)
+![Scheduler 调度顺序](../../images/week7_scheduler_priority.svg)
 
 > 💡 **与 vLLM 的对应**：vLLM 的调度器每轮 iteration 也遵循类似顺序——先处理 running（decode），再从 waiting 加入新请求（prefill），token_budget 共享。
 

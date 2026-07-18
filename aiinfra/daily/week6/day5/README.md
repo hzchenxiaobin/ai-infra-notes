@@ -79,7 +79,7 @@ class MiniEngineV1:
 
 每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
 
-![请求生命周期](../images/week6_request_lifecycle.svg)
+![请求生命周期](../../images/week6_request_lifecycle.svg)
 
 ##### Request 关键字段（v1 新增 vs v0）
 
@@ -166,7 +166,7 @@ if batch:
 
 实测 4 个请求（R0 高优先级 gen=8，R1-R3 普通 gen=4-6）的时间线：
 
-![Mini 引擎 v1 实测时间线](../images/week6_batch_iteration_timeline.svg)
+![Mini 引擎 v1 实测时间线](../../images/week6_batch_iteration_timeline.svg)
 
 ##### 关键观察
 

@@ -566,7 +566,7 @@ Day 6 我们把 GEMM 从 cuBLAS ~45% 提升到了 70%+：
 
 从 Naive（1%）到整合版（70%），我们走过了完整的 GEMM 优化路径：
 
-![GEMM 优化进阶之路](../images/week2_gemm_optimization_progress.svg)
+![GEMM 优化进阶之路](../../images/week2_gemm_optimization_progress.svg)
 
 ---
 

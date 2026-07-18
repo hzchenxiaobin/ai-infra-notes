@@ -86,7 +86,7 @@ max_num_blocks_per_seq = ceil(max_seq_len / block_size)
 
 ##### 逻辑 view vs 物理 view
 
-![PagedAttention 逻辑→物理 block 映射（block table）](../images/week5_pagedattention_mapping.svg)
+![PagedAttention 逻辑→物理 block 映射（block table）](../../images/week5_pagedattention_mapping.svg)
 
 > ⚠️ **注意**：block_size 选 16 是经验值。太大 → 内部碎片（最后一块空 slot 多）+ block table 变短但单 block 大；太小 → block table 变长（占显存）+ kernel 间接寻址次数多。16 在大多数场景下是 sweet spot。
 

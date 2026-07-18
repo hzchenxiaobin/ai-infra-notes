@@ -142,7 +142,7 @@ Streaming: submit → tok0 → tok1 → tok2 → ... → done（逐个返回）
 
 ![请求生命周期状态机](../website/images/request_lifecycle_states.svg)
 
-![请求生命周期状态分支](../images/week7_request_lifecycle_states.svg)
+![请求生命周期状态分支](../../images/week7_request_lifecycle_states.svg)
 
 ##### 三线程协作
 

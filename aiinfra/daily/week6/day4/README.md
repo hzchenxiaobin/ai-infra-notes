@@ -26,7 +26,7 @@ if budget.can_schedule(num_new, 1): # ← 长 prompt 可能直接吃满整轮
 
 假设 `token_budget=32`，一个 `prompt_len=24` 的请求 prefill 时消耗 24 budget，只剩 8 给 decode。如果 `prompt_len=512`（长文档问答），它要么被拒绝（budget 不够），要么如果调大 budget 就会占满整轮——**decode 请求被"卡住"一轮，TPOT 突增**：
 
-![没有 Chunked Prefill 时](../images/week6_chunked_prefill_timeline.svg)
+![没有 Chunked Prefill 时](../../images/week6_chunked_prefill_timeline.svg)
 
 | 问题 | 原因 | 影响 |
 |------|------|------|
@@ -80,7 +80,7 @@ TensorRT-LLM 的调度器与 vLLM 有关键差异：
 
 ##### 为什么 TensorRT-LLM 性能更高？
 
-![vLLM vs TensorRT-LLM 调度链路](../images/week6_vllm_vs_trtllm.svg)
+![vLLM vs TensorRT-LLM 调度链路](../../images/week6_vllm_vs_trtllm.svg)
 
 **代价**：灵活性低——换模型结构要重新构建 engine（trtexec 编译，耗时几分钟到几十分钟）；vLLM 改模型只需改 Python 代码。
 
@@ -113,7 +113,7 @@ def prefill_chunked(seq, budget, chunk_size):
 
 ##### Chunked Prefill 的工作流程
 
-![Chunked Prefill 迭代时间线](../images/week6_chunked_prefill_iteration.svg)
+![Chunked Prefill 迭代时间线](../../images/week6_chunked_prefill_iteration.svg)
 
 ##### 收益量化
 

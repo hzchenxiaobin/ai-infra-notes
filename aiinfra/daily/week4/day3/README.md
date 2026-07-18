@@ -111,15 +111,7 @@ __syncthreads();
 
 ##### 双缓冲（Double Buffering）
 
-```
-单缓冲（Day 2）：[Load Tile 0] → [Compute Tile 0] → [Load Tile 1] → [Compute Tile 1]
- ▲ Load 期间 SM 空闲
-
-双缓冲（官方）：[Load Tile 0→Buf0]
- [Compute Buf0 ‖ Load Tile 1→Buf1]
- [Compute Buf1 ‖ Load Tile 2→Buf0]
- ▲ Compute 与 Load 重叠，掩盖传输延迟
-```
+![单缓冲 vs 双缓冲](../../images/week4_double_buffering.svg)
 
 **收益**：global → shared 的加载延迟被计算掩盖，理论提升 30-50%（取决于 compute/load 比例）。
 

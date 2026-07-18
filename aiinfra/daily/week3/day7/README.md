@@ -21,10 +21,7 @@
 
 Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
 
-```
-Transformer forward → Prefill/Decode 两阶段 → 手写 memory-bound 算子
- → 读官方源码找优化差距 → Attention IO 量化 → 接入框架 → 端到端 Profiling → 算子分类
-```
+![Week 3 学习主线](../../images/week3_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|

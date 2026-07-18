@@ -46,7 +46,7 @@
 
 #### 1. 本周优化层次全景
 
-![GEMM 优化层次全景](../images/week2_gemm_levels.svg)
+![GEMM 优化层次全景](../../images/week2_gemm_levels.svg)
 
 #### 2. 三大核心数据结构回忆
 

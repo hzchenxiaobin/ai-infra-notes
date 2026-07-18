@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="640" viewBox="0 0 840 640" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="640" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="420" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">IO 优化方法论决策树</text>
+  <path d="M 280 44 Q 420 52 560 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="60" text-anchor="middle" font-size="11" fill="#888">拿到任意 memory-bound 算子，按四问选对优化策略</text>
+
+  <!-- Root -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="320" y="78" width="200" height="42" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="420" y="105" fill="#5d3a7e" font-weight="bold">遇到 memory-bound 算子</text>
+  </g>
+
+  <!-- arrow root -> Q1 -->
+  <g filter="url(#sk)">
+    <path d="M 420 120 L 420 148" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Q1 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="300" y="152" width="240" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="176" fill="#7a5415" font-weight="bold">Q1：能用 tiling 放进 SRAM？</text>
+    <text x="420" y="194" fill="#7a5415" font-size="10">数据量 > SRAM 容量时分块</text>
+  </g>
+
+  <!-- Q1 是 (left) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 300 180 L 180 180 L 180 220" marker-end="url(#ar)"/>
+  </g>
+  <text x="240" y="172" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="224" width="240" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="180" y="246" fill="#2e6e2e" font-weight="bold">Tiling + Online Algorithm</text>
+    <text x="180" y="263" fill="#2e6e2e" font-size="10">分块加载 + 边算边更新</text>
+  </g>
+
+  <!-- Q1 否 (down) -->
+  <g filter="url(#sk)">
+    <path d="M 420 208 L 420 252" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="432" y="234" font-size="10" fill="#888" font-weight="bold">否</text>
+
+  <!-- 否 side note for Q1 -->
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="560" y="216" width="200" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <text x="660" y="240" fill="#b85450">考虑量化/压缩减少数据量</text>
+  </g>
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 540 236 L 558 236" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Q2 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="300" y="256" width="240" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="280" fill="#7a5415" font-weight="bold">Q2：有相邻 memory-bound 算子？</text>
+    <text x="420" y="298" fill="#7a5415" font-size="10">相邻算子数据依赖</text>
+  </g>
+
+  <!-- Q2 是 (left) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 300 284 L 180 284 L 180 324" marker-end="url(#ar)"/>
+  </g>
+  <text x="240" y="276" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="328" width="240" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="180" y="350" fill="#2e6e2e" font-weight="bold">Kernel Fusion</text>
+    <text x="180" y="367" fill="#2e6e2e" font-size="10">合并算子省 HBM 中间读写</text>
+  </g>
+
+  <!-- Q2 否 (down) -->
+  <g filter="url(#sk)">
+    <path d="M 420 312 L 420 356" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="432" y="338" font-size="10" fill="#888" font-weight="bold">否</text>
+
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="560" y="320" width="200" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <text x="660" y="344" fill="#b85450">考虑向量化加载提升带宽</text>
+  </g>
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 540 340 L 558 340" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Q3 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="300" y="360" width="240" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="384" fill="#7a5415" font-weight="bold">Q3：中间结果可被重算？</text>
+    <text x="420" y="402" fill="#7a5415" font-size="10">重算代价 &lt; 读写代价</text>
+  </g>
+
+  <!-- Q3 是 (left) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 300 388 L 180 388 L 180 428" marker-end="url(#ar)"/>
+  </g>
+  <text x="240" y="380" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="432" width="240" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="180" y="454" fill="#2e6e2e" font-weight="bold">Recomputation</text>
+    <text x="180" y="471" fill="#2e6e2e" font-size="10">用计算换内存访问</text>
+  </g>
+
+  <!-- Q3 否 (down) -->
+  <g filter="url(#sk)">
+    <path d="M 420 416 L 420 460" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="432" y="442" font-size="10" fill="#888" font-weight="bold">否</text>
+
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="560" y="424" width="200" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <text x="660" y="448" fill="#b85450">考虑更换算法</text>
+  </g>
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 540 444 L 558 444" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Q4 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="300" y="464" width="240" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="488" fill="#7a5415" font-weight="bold">Q4：搬运与计算能重叠？</text>
+    <text x="420" y="506" fill="#7a5415" font-size="10">数据搬运与计算可并行</text>
+  </g>
+
+  <!-- Q4 是 (left) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 300 492 L 180 492 L 180 532" marker-end="url(#ar)"/>
+  </g>
+  <text x="240" y="484" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="536" width="240" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="180" y="558" fill="#2e6e2e" font-weight="bold">Async Copy / 双缓冲</text>
+    <text x="180" y="575" fill="#2e6e2e" font-size="10">cp_async 掩盖传输延迟</text>
+  </g>
+
+  <!-- Q4 否 (right-down) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 540 492 L 660 492 L 660 532" marker-end="url(#ar)"/>
+  </g>
+  <text x="600" y="484" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="540" y="536" width="240" height="50" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="660" y="558" fill="#5d3a7e" font-weight="bold">调整循环顺序</text>
+    <text x="660" y="575" fill="#5d3a7e" font-size="10">改善访问局部性</text>
+  </g>
+
+  <!-- footer notes -->
+  <text x="420" y="612" text-anchor="middle" font-size="10" fill="#888">优先级通常：减少数据移动 (IO) &gt; 融合 kernel &gt; 提升计算吞吐</text>
+  <text x="420" y="628" text-anchor="middle" font-size="9" fill="#aaa">先用 profiling 判断瓶颈类型，再针对性选择策略 · "You can hide compute, but you can't hide memory"</text>
+</svg>

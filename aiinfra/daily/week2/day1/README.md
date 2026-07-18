@@ -59,7 +59,7 @@ CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 
 ##### 四个原语的数据流向图
 
-![Warp Shuffle 四原语数据流向](../images/week2_warp_shuffle_layout.svg)
+![Warp Shuffle 四原语数据流向](../../images/week2_warp_shuffle_layout.svg)
 
 #### 1.2 参数详解
 
@@ -159,7 +159,7 @@ __inline__ __device__ float warpReduceSumAll(float val) {
 
 ##### 两级归约的执行流程
 
-![Block 两级归约执行流程](../images/week2_block_reduction_flow.svg)
+![Block 两级归约执行流程](../../images/week2_block_reduction_flow.svg)
 
 ##### 为什么第二级归约也用 Warp Shuffle？
 

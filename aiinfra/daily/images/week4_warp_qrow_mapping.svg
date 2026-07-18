@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="500" viewBox="0 0 780 500" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="500" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention Warp → Q 行映射</text>
+  <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">Block 256 threads = 8 warps · Br=64, ROWS_PER_WARP=8 · 每个 warp 独立处理 8 行 Q</text>
+
+  <!-- Block container -->
+  <g filter="url(#sk)">
+    <rect x="50" y="86" width="260" height="380" rx="12" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8" fill-opacity="0.35"/>
+  </g>
+  <text x="180" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Block (256 threads)</text>
+  <text x="180" y="118" text-anchor="middle" font-size="10" fill="#2b6e9e">8 warps × 32 threads</text>
+
+  <!-- Q tile container -->
+  <g filter="url(#sk)">
+    <rect x="470" y="86" width="260" height="380" rx="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8" fill-opacity="0.35"/>
+  </g>
+  <text x="600" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Q tile (Br=64 行)</text>
+  <text x="600" y="118" text-anchor="middle" font-size="10" fill="#2e6e2e">每 warp 负责 8 行</text>
+
+  <!-- 8 warp rows + 8 Q row groups -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <!-- warp 0 -->
+    <rect x="70" y="130" width="220" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="180" y="151" fill="#2b6e9e" font-weight="bold">warp 0</text>
+    <!-- Q rows 0~7 -->
+    <rect x="490" y="130" width="220" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="600" y="151" fill="#2e6e2e" font-weight="bold">Q 行 0 ~ 7</text>
+
+    <!-- warp 1 -->
+    <rect x="70" y="172" width="220" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="180" y="193" fill="#7a5415" font-weight="bold">warp 1</text>
+    <rect x="490" y="172" width="220" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="600" y="193" fill="#7a5415" font-weight="bold">Q 行 8 ~ 15</text>
+
+    <!-- warp 2 -->
+    <rect x="70" y="214" width="220" height="34" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="180" y="235" fill="#b85450" font-weight="bold">warp 2</text>
+    <rect x="490" y="214" width="220" height="34" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="600" y="235" fill="#b85450" font-weight="bold">Q 行 16 ~ 23</text>
+
+    <!-- warp 3 -->
+    <rect x="70" y="256" width="220" height="34" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="180" y="277" fill="#5d3a7e" font-weight="bold">warp 3</text>
+    <rect x="490" y="256" width="220" height="34" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="600" y="277" fill="#5d3a7e" font-weight="bold">Q 行 24 ~ 31</text>
+
+    <!-- warp ... -->
+    <rect x="70" y="298" width="220" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text x="180" y="319" fill="#2b6e9e" font-weight="bold">...</text>
+    <rect x="490" y="298" width="220" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text x="600" y="319" fill="#2b6e9e" font-weight="bold">...</text>
+
+    <!-- warp 4 -->
+    <rect x="70" y="340" width="220" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="180" y="361" fill="#2e6e2e" font-weight="bold">warp 4</text>
+    <rect x="490" y="340" width="220" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="600" y="361" fill="#2e6e2e" font-weight="bold">Q 行 32 ~ 39</text>
+
+    <!-- warp 5,6 omitted, warp 7 -->
+    <rect x="70" y="382" width="220" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text x="180" y="403" fill="#7a5415" font-weight="bold">warp 5, 6</text>
+    <rect x="490" y="382" width="220" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text x="600" y="403" fill="#7a5415" font-weight="bold">Q 行 40 ~ 55</text>
+
+    <!-- warp 7 -->
+    <rect x="70" y="424" width="220" height="34" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="180" y="445" fill="#b85450" font-weight="bold">warp 7</text>
+    <rect x="490" y="424" width="220" height="34" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="600" y="445" fill="#b85450" font-weight="bold">Q 行 56 ~ 63</text>
+  </g>
+
+  <!-- arrows warp -> Q rows -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.1" fill="none">
+    <path d="M 292 147 L 488 147" marker-end="url(#ar)"/>
+    <path d="M 292 189 L 488 189" marker-end="url(#ar)"/>
+    <path d="M 292 231 L 488 231" marker-end="url(#ar)"/>
+    <path d="M 292 273 L 488 273" marker-end="url(#ar)"/>
+    <path d="M 292 315 L 488 315" stroke-dasharray="3 2"/>
+    <path d="M 292 357 L 488 357" marker-end="url(#ar)"/>
+    <path d="M 292 399 L 488 399" stroke-dasharray="3 2"/>
+    <path d="M 292 441 L 488 441" marker-end="url(#ar)"/>
+  </g>
+
+  <text x="390" y="484" text-anchor="middle" font-size="10" fill="#888">跨 warp 无需通信 · 每个 Q 行的 online softmax 完全在 warp 内完成</text>
+</svg>

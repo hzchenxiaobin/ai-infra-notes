@@ -61,7 +61,7 @@
 
 ##### SM / Warp / Thread 层次
 
-![Grid / Block / Warp / Thread 层次](../images/week8_grid_block_hierarchy.svg)
+![Grid / Block / Warp / Thread 层次](../../images/week8_grid_block_hierarchy.svg)
 
 - **SM（Streaming Multiprocessor）**：GPU 的基本计算单元，含多个 CUDA 核心、寄存器文件、shared memory
 - **Warp**：32 个 thread 组成，是 GPU 调度的最小单位，warp 内所有 thread 执行相同指令（SIMT）

@@ -59,7 +59,7 @@ Day 1-4 分别实现了并发引擎、调度器、高级特性、自定义 Kerne
 
 ##### 为什么是这个顺序？
 
-![调试方法论 · 增量集成](../images/week7_debugging_methodology.svg)
+![调试方法论 · 增量集成](../../images/week7_debugging_methodology.svg)
 
 > ⚠️ **反向例子**：如果一次性集成所有组件，发现"请求 3 的结果错了"，无法判断是 KV Cache 串台、Scheduler 调度错误、还是 Kernel 精度问题。
 

@@ -56,14 +56,7 @@ Block 内部的 warp 分工：
 | THREADS_PER_BLOCK | Block 内线程数 = WARPS × 32 | 256 |
 | ROWS_PER_WARP | 每个 warp 负责的 Q 行数 = Br / WARPS | 8 |
 
-```
-Block (256 threads = 8 warps)
-├── warp 0: 负责 Q 行 0~7 (ROWS_PER_WARP=8)
-├── warp 1: 负责 Q 行 8~15
-├── warp 2: 负责 Q 行 16~23
-├── ...
-└── warp 7: 负责 Q 行 56~63
-```
+![FlashAttention Warp → Q 行映射](../../images/week4_warp_qrow_mapping.svg)
 
 ##### 为什么每个 warp 负责多行 Q 而不是一行？
 

@@ -18,21 +18,7 @@
 
 ### 本周知识图谱
 
-```
-Day 1: CUTLASS 总览 + 构建环境 → 跑通第一个 example
- ↓
-Day 2: CuTe 编程模型 → Layout / Tensor / Coord 抽象
- ↓
-Day 3: CUTLASS 3.x GEMM → device API + kernel 调度
- ↓
-Day 4: CUTLASS 2.x GEMM → 三层抽象源码精读 + 与 3.x 对比
- ↓
-Day 5: Epilogue 融合 → 自定义 GEMM+Bias+ReLU
- ↓
-Day 6: Profiling + 调参 → Nsight 分析 + 性能对比报告
- ↓
-Day 7: 进阶专题 + 总结 → Group GEMM / TMA / 面试复盘
-```
+![CUTLASS 一周学习路径：Day 1-7 渐进式 Pipeline](../images/cutlass_learning_pipeline.svg)
 
 ### 前置准备清单
 
@@ -337,16 +323,7 @@ int main() {
 
 CUTLASS 3.x 把 GEMM 拆解为三个可组合的组件：
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Device API                      │
-│  (参数配置 + kernel 选择 + launch)                │
-├──────────────┬──────────────┬───────────────────┤
-│  Collective  │  Collective  │    Epilogue        │
-│  Mainloop    │    Store     │   (后处理融合)      │
-│ (MMA 计算)   │  (结果写回)   │  (Bias/ReLU/...)   │
-└──────────────┴──────────────┴───────────────────┘
-```
+![CUTLASS 3.x GEMM 架构：Device/Collective/Epilogue 三层](../images/cutlass_gemm_architecture.svg)
 
 #### 最小 GEMM 代码
 
@@ -483,21 +460,7 @@ using CollectiveMainloop = typename cutlass::gemm::collective::CollectiveBuilder
 
 CUTLASS 2.x 把 GEMM 的计算组织为三级嵌套，每级对应一个硬件层级：
 
-```
-┌──────────────────────────────────────────────┐
-│  Threadblock 级（Grid 的一个 block）            │
-│  处理 M_tile × N_tile × K 的分块               │
-│  ┌──────────────────────────────────────┐    │
-│  │  Warp 级（block 内的一个 warp）         │    │
-│  │  处理 M_warp × N_warp × K_tile 的分块   │    │
-│  │  ┌──────────────────────────────┐    │    │
-│  │  │  Thread 级（warp 内的一个线程）  │    │    │
-│  │  │  处理 M_thread × N_thread      │    │    │
-│  │  │  用 mma.m16n8k16 指令           │    │    │
-│  │  └──────────────────────────────┘    │    │
-│  └──────────────────────────────────────┘    │
-└──────────────────────────────────────────────┘
-```
+![CUTLASS 三级计算层级：Threadblock/Warp/Thread 嵌套](../images/cutlass_compute_hierarchy.svg)
 
 | 层级 | 对应硬件 | 职责 | 数据位置 |
 |------|----------|------|----------|

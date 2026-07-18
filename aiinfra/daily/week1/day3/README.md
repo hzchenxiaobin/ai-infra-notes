@@ -17,7 +17,7 @@
 
 ### 🗺️ 今日学习路径
 
-![Occupancy 计算方法论](../images/week1_occupancy_methodology.svg)
+![Occupancy 计算方法论](../../images/week1_occupancy_methodology.svg)
 
 ---
 

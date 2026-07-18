@@ -135,7 +135,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 ![GPU 内存层次结构](../website/images/gpu_memory_hierarchy.svg)
 
-![GPU 内存层次结构](../images/week1_memory_hierarchy.svg)
+![GPU 内存层次结构](../../images/week1_memory_hierarchy.svg)
 
 **各级内存特点**：
 

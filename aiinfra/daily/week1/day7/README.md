@@ -41,7 +41,7 @@ GPU 性能 = Memory + 并行度
 **一句话**：GPU 以 warp 为单位执行 SIMT，一个 warp 32 个线程必须执行相同指令。
 
 **关键概念链**：
-![GPU 执行模型层次](../images/week1_execution_hierarchy.svg)
+![GPU 执行模型层次](../../images/week1_execution_hierarchy.svg)
 
 **性能启示**：
 - 避免 warp divergence

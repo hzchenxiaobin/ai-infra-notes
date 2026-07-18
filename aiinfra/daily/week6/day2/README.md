@@ -70,7 +70,7 @@ Iteration-level scheduling：
 
 ![Continuous Batching Iteration 时间线](../website/images/continuous_batching_timeline.svg)
 
-![Continuous Batching 迭代时间线](../images/week6_continuous_batching_timeline.svg)
+![Continuous Batching 迭代时间线](../../images/week6_continuous_batching_timeline.svg)
 
 ##### 关键观察
 
@@ -85,7 +85,7 @@ Iteration-level scheduling：
 
 ##### Sequence 状态转换
 
-![Scheduler 请求状态机](../images/week6_request_state_machine.svg)
+![Scheduler 请求状态机](../../images/week6_request_state_machine.svg)
 
 ##### 每轮调度决策
 

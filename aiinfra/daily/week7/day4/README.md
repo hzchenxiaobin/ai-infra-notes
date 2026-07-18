@@ -77,7 +77,7 @@ cuBLAS：
 
 ##### 四步流水线
 
-![PyTorch C++ Extension 编译流水线](../images/week7_cpp_extension_pipeline.svg)
+![PyTorch C++ Extension 编译流水线](../../images/week7_cpp_extension_pipeline.svg)
 
 ##### C++ Wrapper 关键模式
 

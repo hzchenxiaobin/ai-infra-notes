@@ -49,19 +49,7 @@
 
 上图展示了一个标准 Transformer Block 的完整数据流。按执行顺序：
 
-```
-Input x (B, N, d)
- │
- ├─► LayerNorm1 ──► QKV Linear (GEMM) ──► Q, K, V (B, N, d)
- │ │
- │ ├─► Attention: S=QK^T → softmax → PV
- │ │ （Prefill: N×N 矩阵；Decode: 1×N）
- │ └─► KV Cache append（Decode 阶段）
- │
- ├─► Output Linear (GEMM) ──► residual add ──► LayerNorm2
- │
- └─► FFN: Linear(GELU(Linear(x))) （两个大 GEMM）──► residual add
-```
+![Transformer 单层前向数据流](../../images/week3_transformer_forward_flow.svg)
 
 **关键观察**：Transformer 单层包含 **6 个主要算子类型**：
 
@@ -71,10 +59,7 @@ Input x (B, N, d)
 
 **算子执行顺序与依赖**：
 
-```
-LayerNorm1 → QKV GEMM → Attention(QK^T → Softmax → PV) → Out GEMM → Residual →
-LayerNorm2 → FFN GEMM1 → GELU → FFN GEMM2 → Residual → 下一层
-```
+![Transformer 单层算子执行流水线](../../images/week3_transformer_layer_pipeline.svg)
 
 > 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。Day 6 会详细分析 fusion 机会。
 

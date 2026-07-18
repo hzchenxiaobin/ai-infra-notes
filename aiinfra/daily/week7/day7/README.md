@@ -88,7 +88,7 @@
 
 #### 六层架构
 
-![Mini AI Infra 系统架构](../images/week7_system_architecture.svg)
+![Mini AI Infra 系统架构](../../images/week7_system_architecture.svg)
 
 #### 建议目录结构
 
