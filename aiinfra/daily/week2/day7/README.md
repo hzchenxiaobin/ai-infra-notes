@@ -46,33 +46,7 @@
 
 #### 1. 本周优化层次全景
 
-```
-Level 0: Naive GEMM (~1%)
- └── 每线程算一个元素，直接访问 Global Memory
- │
-Level 1: Shared Memory Tiling (~15%) ← Day 1 基础
- └── A/B tile 预取到 Shared Memory，K 维复用
- └── 关键：协作加载 + __syncthreads
- │
-Level 2: Register Blocking (~45%) ← Day 2
- └── 每线程算 TM×TN 子块，acc 驻留寄存器
- └── 关键：threadRow/threadCol 映射 + r_A/r_B
- │
-Level 3: Vectorized Load (~55%) ← Day 6
- └── float4 做 128-bit Global Memory 加载
- └── 关键：地址 16 字节对齐
- │
-Level 4: Warp-level Optimize (~60%) ← Day 1+6
- └── Warp Shuffle 协作 + 优化写回
- └── 关键：__shfl_xor_sync 减少非合并访问
- │
-Level 5: Double Buffering (~70%) ← Day 6
- └── 两份 Shared Memory 交替，计算掩盖传输
- └── 关键：软件流水线 + __syncthreads 位置
- │
-Level 6: Tensor Core / CUTLASS (~90%+) ← 超出本周范围
- └── WMMA 指令调用 Tensor Core
-```
+![GEMM 优化层次全景](../images/week2_gemm_levels.svg)
 
 #### 2. 三大核心数据结构回忆
 

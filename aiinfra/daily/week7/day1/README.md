@@ -142,13 +142,7 @@ Streaming: submit → tok0 → tok1 → tok2 → ... → done（逐个返回）
 
 ![请求生命周期状态机](../website/images/request_lifecycle_states.svg)
 
-```
-submit() → WAITING（入队，等调度）
- → RUNNING（调度选中，prefill→decode）
- ├── 正常完成 → FINISHED（set_result → Future+Callback）
- ├── 超时 → TIMEOUT（set_exception）
- └── 取消 → CANCELLED（cancel() → set_exception）
-```
+![请求生命周期状态分支](../images/week7_request_lifecycle_states.svg)
 
 ##### 三线程协作
 

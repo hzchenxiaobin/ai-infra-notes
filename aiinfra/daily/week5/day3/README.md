@@ -46,24 +46,7 @@ vLLM 把推理系统分成三层，各司其职：
 | **调度层** | `Scheduler` | 决定每轮运行哪些 sequence，管理三个队列 + 预算 | `schedule()` |
 | **执行层** | `Worker` | 执行实际模型前向，管理 GPU / 模型权重 / KV cache | `execute_model()` |
 
-```
-User Request
- │ add_request()
- ▼
-┌─────────────────┐
-│ LLMEngine │ 对外接口，编排 step() 循环
-└────────┬────────┘
- │ schedule()
- ▼
-┌─────────────────┐
-│ Scheduler │ 三个队列 + 预算决策
-└────────┬────────┘
- │ execute_model(seq_group_metadata)
- ▼
-┌─────────────────┐
-│ Worker │ ModelRunner.run() → 采样 → 返回 token
-└─────────────────┘
-```
+![vLLM 三层分层架构：LLMEngine → Scheduler → Worker](../images/week5_vllm_architecture.svg)
 
 ##### 为什么分三层？
 
@@ -88,21 +71,7 @@ User Request
 
 ![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../website/images/request_lifecycle.svg)
 
-```
-请求到达 (add_request)
- │
- ▼
-WAITING（等待调度）
- │ Scheduler.schedule() 选中
- ▼
-RUNNING（执行中，每轮生成 1 token）
- │
- ├── 达到 max_tokens / 遇到 EOS → FINISHED（释放 KV cache）
- │
- └── 显存不足 → SWAPPED（KV 换出到 CPU）
- │ 显存恢复 → swap in
- └── 回到 RUNNING
-```
+![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../images/week5_request_state_flow.svg)
 
 ##### `LLMEngine.step()` 的 4 步流程
 
@@ -141,15 +110,7 @@ def schedule(self):
 
 ##### 为什么能提升吞吐？
 
-```
-Static Batching（batch=3, A=5tok, B=12tok, C=8tok）:
- GPU 同时跑 A B C，A 在 iter 5 完成 → A 的 slot 空等到 iter 12（B 完成）
- → 浪费 7 个 iteration 的 A slot
-
-Continuous Batching:
- A 在 iter 5 完成 → 立刻从 waiting 补入 D → A 的 slot 不浪费
- → GPU 始终满载，吞吐提升 2-8×（请求长度方差越大，收益越大）
-```
+![Static vs Continuous Batching：slot 利用率对比](../images/week5_batching_comparison.svg)
 
 > 💡 请求长度方差越大，Continuous Batching 收益越大——因为 Static 下"短板请求"造成的空等越多。这也是为什么推理服务的请求长度往往差异巨大（有人问一句话，有人输入长文档），Continuous Batching 几乎是标配。
 

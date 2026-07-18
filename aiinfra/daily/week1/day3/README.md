@@ -17,15 +17,7 @@
 
 ### 🗺️ 今日学习路径
 
-```
-运行 deviceQuery → 查 GPU 硬件参数
- ↓
-计算峰值算力 + 显存带宽（建立理论上限直觉）
- ↓
-用 Occupancy Calculator 算理论 Occupancy（四步法）
- ↓
-手算 Occupancy 练习 + occupancy_verify.cu 验证
-```
+![Occupancy 计算方法论](../images/week1_occupancy_methodology.svg)
 
 ---
 

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="300" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">GPU 执行模型层次</text>
+  <path d="M 240 44 Q 380 52 520 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">硬件层次与软件层次两条链 · 启动时由后者映射到前者</text>
+
+  <!-- Row labels -->
+  <text x="34" y="124" font-size="12" font-weight="bold" fill="#2b2b2b">硬件</text>
+  <text x="34" y="224" font-size="12" font-weight="bold" fill="#2b2b2b">软件</text>
+
+  <!-- Row 1: hardware GPU → SM → Warp(32) → Thread -->
+  <g filter="url(#sk)">
+    <rect x="80" y="96" width="130" height="48" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <rect x="260" y="96" width="130" height="48" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <rect x="440" y="96" width="130" height="48" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <rect x="620" y="96" width="110" height="48" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="145" y="126" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">GPU</text>
+  <text x="325" y="126" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">SM</text>
+  <text x="505" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Warp</text>
+  <text x="505" y="136" text-anchor="middle" font-size="9" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">（32 threads）</text>
+  <text x="675" y="126" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">Thread</text>
+
+  <path d="M 210 120 L 256 120" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 390 120 L 436 120" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 570 120 L 616 120" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Row 2: software Grid → Block → Thread -->
+  <g filter="url(#sk)">
+    <rect x="170" y="196" width="130" height="48" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <rect x="350" y="196" width="130" height="48" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <rect x="530" y="196" width="130" height="48" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="235" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Grid</text>
+  <text x="415" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Block</text>
+  <text x="595" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">Thread</text>
+
+  <path d="M 300 220 L 346 220" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 480 220 L 526 220" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- mapping note -->
+  <path d="M 235 196 L 235 170 L 145 170 L 145 148" stroke="#888" stroke-width="1.2" stroke-dasharray="3 3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="190" y="164" text-anchor="middle" font-size="9" fill="#888">映射</text>
+
+  <text x="380" y="280" text-anchor="middle" font-size="10" fill="#aaa">GPU 以 warp 为单位 SIMT 执行 · block 大小取 32 的倍数 · block 不能跨 SM</text>
+</svg>

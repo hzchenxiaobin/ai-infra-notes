@@ -21,11 +21,7 @@
 
 Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
 
-```
-Day1 Prefill/Decode 分析 → Day2 KV Cache 实现 → Day3 vLLM 整体架构
- → Day4 PagedAttention → Day5 Mini 引擎 v0 → Day6 端到端 Profiling
- → Day7 核心问题总结
-```
+![Week 5 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../images/week5_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|

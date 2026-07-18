@@ -26,13 +26,7 @@ if budget.can_schedule(num_new, 1): # ← 长 prompt 可能直接吃满整轮
 
 假设 `token_budget=32`，一个 `prompt_len=24` 的请求 prefill 时消耗 24 budget，只剩 8 给 decode。如果 `prompt_len=512`（长文档问答），它要么被拒绝（budget 不够），要么如果调大 budget 就会占满整轮——**decode 请求被"卡住"一轮，TPOT 突增**：
 
-```
-没有 Chunked Prefill 时：
- iter N: S1(decode) S2(decode) ← 正常，延迟 0.6ms
- iter N+1: S3(prefill 512) ← 整轮被 prefill 占满！S1/S2 不能 decode
- → S1/S2 的 TPOT 从 0.6ms 飙到几十 ms（用户感知"卡顿"）
- iter N+2: S1(decode) S2(decode) S3(decode) ← 恢复
-```
+![没有 Chunked Prefill 时](../images/week6_chunked_prefill_timeline.svg)
 
 | 问题 | 原因 | 影响 |
 |------|------|------|
@@ -86,15 +80,7 @@ TensorRT-LLM 的调度器与 vLLM 有关键差异：
 
 ##### 为什么 TensorRT-LLM 性能更高？
 
-```
-vLLM 调度链路：
- Python schedule() → PyTorch forward → cuBLAS kernel
- ↑ Python 解释执行，每轮有 GIL + 解释开销（~0.1-1ms）
-
-TensorRT-LLM 调度链路：
- C++ Scheduler → 预编译 TensorRT plan → fused kernel
- ↑ C++ 原生，无解释开销；plan 已做 kernel 融合、显存预分配
-```
+![vLLM vs TensorRT-LLM 调度链路](../images/week6_vllm_vs_trtllm.svg)
 
 **代价**：灵活性低——换模型结构要重新构建 engine（trtexec 编译，耗时几分钟到几十分钟）；vLLM 改模型只需改 Python 代码。
 
@@ -127,14 +113,7 @@ def prefill_chunked(seq, budget, chunk_size):
 
 ##### Chunked Prefill 的工作流程
 
-```
-prompt_len=24, chunk_size=8, token_budget=32：
-
-iter 1: S3 prefill +8(8/24) + S1 decode + S2 decode ← 预算 8+1+1=10 < 32 ✓
-iter 2: S3 prefill +8(16/24) + S1 decode + S2 decode ← 继续分块
-iter 3: S3 prefill +8(24/24) + S1 decode + S2 decode ← prefill 完成
-iter 4: S3 decode + S1 decode + S2 decode ← S3 开始 decode
-```
+![Chunked Prefill 迭代时间线](../images/week6_chunked_prefill_iteration.svg)
 
 ##### 收益量化
 

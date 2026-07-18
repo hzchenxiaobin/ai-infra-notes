@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="400" viewBox="0 0 680 400" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="400" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Block 到 Warp 的映射</text>
+  <path d="M 220 44 Q 340 52 460 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="340" y="60" text-anchor="middle" font-size="11" fill="#888">每个 block 8 threads · 不同 block 的线程不会合并到同一 warp</text>
+
+  <!-- column headers -->
+  <text x="145" y="84" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Block（8 threads）</text>
+  <text x="520" y="84" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">Warp</text>
+
+  <!-- Row 0 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="92" width="190" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="145" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">block 0</text>
+  <text x="145" y="125" text-anchor="middle" font-size="10" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">8 threads</text>
+  <path d="M 244 112 L 406 112" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="410" y="92" width="220" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="117" text-anchor="middle" font-size="12" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">ceil(8/32) = 1 warp</text>
+
+  <!-- Row 1 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="138" width="190" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="145" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">block 1</text>
+  <text x="145" y="171" text-anchor="middle" font-size="10" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">8 threads</text>
+  <path d="M 244 158 L 406 158" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="410" y="138" width="220" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="163" text-anchor="middle" font-size="12" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">ceil(8/32) = 1 warp</text>
+
+  <!-- Row 2 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="184" width="190" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="145" y="202" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">block 2</text>
+  <text x="145" y="217" text-anchor="middle" font-size="10" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">8 threads</text>
+  <path d="M 244 204 L 406 204" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="410" y="184" width="220" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="209" text-anchor="middle" font-size="12" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">ceil(8/32) = 1 warp</text>
+
+  <!-- Row 3 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="230" width="190" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="145" y="248" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">block 3</text>
+  <text x="145" y="263" text-anchor="middle" font-size="10" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">8 threads</text>
+  <path d="M 244 250 L 406 250" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="410" y="230" width="220" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="255" text-anchor="middle" font-size="12" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">ceil(8/32) = 1 warp</text>
+
+  <!-- divider -->
+  <path d="M 50 290 L 630 290" stroke="#888" stroke-width="1.2" stroke-dasharray="5 4" fill="none" filter="url(#sk)"/>
+
+  <!-- total -->
+  <g filter="url(#sk)">
+    <rect x="210" y="306" width="260" height="56" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+  </g>
+  <text x="340" y="332" text-anchor="middle" font-size="14" font-weight="bold" fill="#5d3a7e">总计：4 warps</text>
+  <text x="340" y="350" text-anchor="middle" font-size="10" fill="#666">每个 block 独立拆成 warp · 不跨 block 合并</text>
+
+  <text x="340" y="384" text-anchor="middle" font-size="10" fill="#aaa">warp 数 = Σ ceil(blockSize / 32)</text>
+</svg>

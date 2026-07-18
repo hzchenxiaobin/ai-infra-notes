@@ -77,27 +77,7 @@ cuBLAS：
 
 ##### 四步流水线
 
-```
-① 源码编写
- CUDA_SOURCE (.cu)：__global__ kernel 实现
- CPP_SOURCE (.cpp)：at::Tensor wrapper 声明
-
-② load_inline 编译
- torch.utils.cpp_extension.load_inline()
- → nvcc -O3 编译 .cu
- → g++ 编译 .cpp
- → 链接生成 .so 动态库
-
-③ Python 模块
- custom_ops = load_inline(...)
- custom_ops.softmax_forward(input)
- custom_ops.layernorm_forward(input, gamma, beta, eps)
- custom_ops.flash_attention_forward(Q, K, V)
-
-④ 集成到模型
- TransformerLayer(use_custom=True)
- → forward 中调用自定义 kernel
-```
+![PyTorch C++ Extension 编译流水线](../images/week7_cpp_extension_pipeline.svg)
 
 ##### C++ Wrapper 关键模式
 

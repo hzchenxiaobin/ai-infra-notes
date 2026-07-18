@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="340" viewBox="0 0 840 340" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="22" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="340" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="420" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Scheduler 调度顺序</text>
+  <path d="M 270 44 Q 420 52 570 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="60" text-anchor="middle" font-size="11" fill="#888">每轮 schedule() 的执行顺序：恢复 swapped → 继续 running → 加入 waiting → 后台维护</text>
+
+  <!-- 4 step boxes -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="20"  y="100" width="190" height="100" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="115" y="124" fill="#2b6e9e" font-weight="bold" font-size="14">① 恢复 swapped</text>
+    <text x="115" y="146" fill="#2b6e9e" font-size="10">被抢占的请求优先恢复</text>
+    <text x="115" y="170" fill="#2b6e9e" font-size="11" font-style="italic" fill="#5d3a7e">公平</text>
+
+    <rect x="226" y="100" width="190" height="100" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="321" y="124" fill="#2e6e2e" font-weight="bold" font-size="14">② 继续 running</text>
+    <text x="321" y="146" fill="#2e6e2e" font-size="10">正在生成的请求不中断</text>
+    <text x="321" y="170" fill="#2e6e2e" font-size="11" font-style="italic">延迟保障</text>
+
+    <rect x="432" y="100" width="190" height="100" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="527" y="124" fill="#7a5415" font-weight="bold" font-size="14">③ 加入新请求</text>
+    <text x="527" y="146" fill="#7a5415" font-size="10">剩余预算给新请求</text>
+    <text x="527" y="170" fill="#7a5415" font-size="11" font-style="italic">利用率最大化</text>
+
+    <rect x="638" y="100" width="180" height="100" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="728" y="124" fill="#5d3a7e" font-weight="bold" font-size="14">④⑤ 维护</text>
+    <text x="728" y="146" fill="#5d3a7e" font-size="10">aging + 超时检查</text>
+    <text x="728" y="170" fill="#5d3a7e" font-size="11" font-style="italic">后台维护</text>
+  </g>
+
+  <!-- arrows between steps -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 212 150 L 224 150" marker-end="url(#ar)"/>
+    <path d="M 418 150 L 430 150" marker-end="url(#ar)"/>
+    <path d="M 624 150 L 636 150" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- 先/再/后/最后 labels -->
+  <g font-size="11" fill="#888" text-anchor="middle">
+    <text x="115" y="92">先</text>
+    <text x="321" y="92">再</text>
+    <text x="527" y="92">后</text>
+    <text x="728" y="92">最后</text>
+  </g>
+
+  <!-- rationale box -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="230" width="760" height="70" rx="10" fill="#fdfcf7" stroke="#888" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <text x="420" y="254" fill="#2b2b2b" font-weight="bold">为什么是这个顺序？</text>
+    <text x="420" y="274" fill="#5a5a5a">swapped 最优先（公平）→ running 不中断（延迟保障）→ waiting 利用剩余预算（利用率）→ aging/超时为后台维护</text>
+    <text x="420" y="290" fill="#888" font-size="10" font-style="italic">对应 vLLM 调度器：先 running（decode），再 waiting（prefill），token_budget 共享</text>
+  </g>
+
+  <text x="420" y="322" text-anchor="middle" font-size="10" fill="#aaa">先恢复 → 再继续 → 后接纳 → 最后维护 · 顺序固定保障公平与延迟</text>
+</svg>

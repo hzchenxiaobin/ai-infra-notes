@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="320" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">多 Stream 并发流水线</text>
+  <path d="M 240 44 Q 380 52 520 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">同 Stream 内 FIFO 顺序 · 不同 Stream 间可并发（copy engine 与 compute unit 独立）</text>
+
+  <!-- overlap shaded region -->
+  <g filter="url(#sk)">
+    <rect x="270" y="84" width="130" height="138" rx="6" fill="#f3eaf7" opacity="0.35"/>
+  </g>
+  <text x="335" y="80" text-anchor="middle" font-size="10" font-weight="bold" fill="#8e5db8">并发区</text>
+
+  <!-- Stream 1 -->
+  <text x="80" y="108" text-anchor="end" font-size="12" font-weight="bold" fill="#2b6e9e">Stream 1</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="120" y="92" width="130" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="185" y="112" fill="#2b6e9e">H2D 拷贝 1</text>
+    <rect x="270" y="92" width="160" height="32" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="350" y="112" fill="#2e6e2e">Kernel 1</text>
+    <rect x="450" y="92" width="130" height="32" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="515" y="112" fill="#7a5415">D2H 拷贝 1</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 252 108 L 268 108" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 432 108 L 448 108" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Stream 2 (offset right so H2D2 aligns with Kernel1 start) -->
+  <text x="80" y="193" text-anchor="end" font-size="12" font-weight="bold" fill="#2b6e9e">Stream 2</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="270" y="177" width="130" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="335" y="197" fill="#2b6e9e">H2D 拷贝 2</text>
+    <rect x="420" y="177" width="160" height="32" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="500" y="197" fill="#2e6e2e">Kernel 2</text>
+    <rect x="600" y="177" width="130" height="32" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="665" y="197" fill="#7a5415">D2H 拷贝 2</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 402 193 L 418 193" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 582 193 L 598 193" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- concurrency annotation -->
+  <g filter="url(#sk)" fill="none" stroke="#8e5db8" stroke-width="1.2">
+    <path d="M 335 128 L 335 170" stroke-dasharray="3 2"/>
+  </g>
+  <text x="335" y="152" text-anchor="middle" font-size="9" fill="#8e5db8">H2D2 ∥ Kernel1</text>
+
+  <!-- legend -->
+  <g font-size="10">
+    <rect x="120" y="248" width="16" height="12" rx="3" fill="#e8f0fa" stroke="#4a8edb"/>
+    <text x="142" y="258" fill="#666">H2D（copy engine）</text>
+    <rect x="290" y="248" width="16" height="12" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/>
+    <text x="312" y="258" fill="#666">Kernel（compute unit）</text>
+    <rect x="470" y="248" width="16" height="12" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+    <text x="492" y="258" fill="#666">D2H（copy engine）</text>
+  </g>
+
+  <text x="380" y="290" text-anchor="middle" font-size="10" fill="#5d3a7e">↑ H2D 拷贝 2 与 Kernel 1 并发执行 · copy engine 与 compute unit 硬件独立</text>
+  <text x="380" y="308" text-anchor="middle" font-size="9" fill="#aaa">不同 Stream 的操作只要资源不冲突即可重叠 · 同 Stream 内仍严格 FIFO</text>
+</svg>

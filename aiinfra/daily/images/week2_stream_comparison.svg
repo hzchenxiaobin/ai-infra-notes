@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="440" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">单 Stream 顺序 vs 多 Stream 重叠</text>
+  <path d="M 280 44 Q 430 52 580 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="430" y="60" text-anchor="middle" font-size="11" fill="#888">4 路 Stream 流水线 · H2D 与 Kernel 重叠 · Kernel 与 D2H 重叠</text>
+
+  <!-- ====== Sequential (no stream) ====== -->
+  <text x="40" y="104" font-size="13" font-weight="bold" fill="#7a2828">无 Stream</text>
+  <text x="40" y="120" font-size="10" fill="#888">顺序执行</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="140" y="92" width="200" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="240" y="112" fill="#2b6e9e">H2D 拷贝</text>
+    <rect x="350" y="92" width="240" height="32" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="470" y="112" fill="#2e6e2e">Kernel 计算</text>
+    <rect x="600" y="92" width="200" height="32" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="700" y="112" fill="#7a5415">D2H 拷贝</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 342 108 L 348 108" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 592 108 L 598 108" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="430" y="142" text-anchor="middle" font-size="10" fill="#7a2828">总计 = H2D + Compute + D2H（三者串行累加）</text>
+
+  <!-- divider -->
+  <path d="M 40 162 L 820 162" stroke="#888" stroke-width="1.2" stroke-dasharray="5 4" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Multi-stream (4 streams overlapped) ====== -->
+  <text x="40" y="194" font-size="13" font-weight="bold" fill="#2e6e2e">Multi-Stream</text>
+  <text x="40" y="210" font-size="10" fill="#888">4 路重叠</text>
+
+  <!-- stream labels -->
+  <text x="130" y="226" text-anchor="end" font-size="10" font-weight="bold" fill="#2b6e9e">Stream 1</text>
+  <text x="130" y="252" text-anchor="end" font-size="10" font-weight="bold" fill="#2b6e9e">Stream 2</text>
+  <text x="130" y="278" text-anchor="end" font-size="10" font-weight="bold" fill="#2b6e9e">Stream 3</text>
+  <text x="130" y="304" text-anchor="end" font-size="10" font-weight="bold" fill="#2b6e9e">Stream 4</text>
+
+  <!-- Stream 1: H2D 140-210, Kernel 210-300, D2H 300-370 -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="140" y="212" width="70" height="24" rx="5" fill="#e8f0fa" stroke="#4a8edb"/><text x="175" y="228" fill="#2b6e9e">H2D 1</text>
+    <rect x="210" y="212" width="90" height="24" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/><text x="255" y="228" fill="#2e6e2e">Kernel 1</text>
+    <rect x="300" y="212" width="70" height="24" rx="5" fill="#fef6e6" stroke="#c98a2b"/><text x="335" y="228" fill="#7a5415">D2H 1</text>
+  </g>
+  <!-- Stream 2: H2D 210-280, Kernel 280-370, D2H 370-440 -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="210" y="238" width="70" height="24" rx="5" fill="#e8f0fa" stroke="#4a8edb"/><text x="245" y="254" fill="#2b6e9e">H2D 2</text>
+    <rect x="280" y="238" width="90" height="24" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/><text x="325" y="254" fill="#2e6e2e">Kernel 2</text>
+    <rect x="370" y="238" width="70" height="24" rx="5" fill="#fef6e6" stroke="#c98a2b"/><text x="405" y="254" fill="#7a5415">D2H 2</text>
+  </g>
+  <!-- Stream 3: H2D 280-350, Kernel 350-440, D2H 440-510 -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="280" y="264" width="70" height="24" rx="5" fill="#e8f0fa" stroke="#4a8edb"/><text x="315" y="280" fill="#2b6e9e">H2D 3</text>
+    <rect x="350" y="264" width="90" height="24" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/><text x="395" y="280" fill="#2e6e2e">Kernel 3</text>
+    <rect x="440" y="264" width="70" height="24" rx="5" fill="#fef6e6" stroke="#c98a2b"/><text x="475" y="280" fill="#7a5415">D2H 3</text>
+  </g>
+  <!-- Stream 4: H2D 350-420, Kernel 420-510, D2H 510-580 -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="350" y="290" width="70" height="24" rx="5" fill="#e8f0fa" stroke="#4a8edb"/><text x="385" y="306" fill="#2b6e9e">H2D 4</text>
+    <rect x="420" y="290" width="90" height="24" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/><text x="465" y="306" fill="#2e6e2e">Kernel 4</text>
+    <rect x="510" y="290" width="70" height="24" rx="5" fill="#fef6e6" stroke="#c98a2b"/><text x="545" y="306" fill="#7a5415">D2H 4</text>
+  </g>
+
+  <!-- stagger guide lines -->
+  <g filter="url(#sk)" stroke="#bbb" stroke-width="1" stroke-dasharray="2 3" fill="none">
+    <path d="M 210 208 L 210 320"/>
+    <path d="M 280 208 L 280 320"/>
+    <path d="M 350 208 L 350 320"/>
+  </g>
+
+  <text x="430" y="338" text-anchor="middle" font-size="10" fill="#2e6e2e">↑ H2D 与 Kernel 重叠 · Kernel 与 D2H 重叠 · 4 路流水线错峰启动</text>
+  <text x="430" y="356" text-anchor="middle" font-size="10" fill="#888">总计 ≈ max(H2D + D2H, Compute) + 流水线填充（远小于顺序总和）</text>
+
+  <!-- legend -->
+  <g font-size="10">
+    <rect x="180" y="384" width="16" height="12" rx="3" fill="#e8f0fa" stroke="#4a8edb"/>
+    <text x="202" y="394" fill="#666">H2D 拷贝</text>
+    <rect x="320" y="384" width="16" height="12" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/>
+    <text x="342" y="394" fill="#666">Kernel 计算</text>
+    <rect x="460" y="384" width="16" height="12" rx="3" fill="#fef6e6" stroke="#c98a2b"/>
+    <text x="482" y="394" fill="#666">D2H 拷贝</text>
+  </g>
+  <text x="430" y="420" text-anchor="middle" font-size="9" fill="#aaa">每个 stream 处理 1/N 数据 · 流水线稳定后吞吐由最慢阶段决定</text>
+</svg>

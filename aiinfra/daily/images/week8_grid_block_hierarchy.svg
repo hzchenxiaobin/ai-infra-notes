@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="440" viewBox="0 0 640 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="28" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="640" height="440" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="320" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Grid / Block / Warp / Thread 层次</text>
+  <path d="M 180 44 Q 320 52 460 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="320" y="60" text-anchor="middle" font-size="11" fill="#888">软件抽象层次：Grid → Block → Warp → Thread · 自顶向下逐层细分</text>
+
+  <!-- Grid root -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="220" y="80" width="200" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="320" y="106" fill="#2b6e9e" font-weight="bold" font-size="16">Grid</text>
+    <text x="320" y="124" fill="#2b6e9e" font-size="11">（全局）</text>
+  </g>
+
+  <!-- connector Grid -> Block -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 320 136 L 320 168" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Block -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="180" y="172" width="280" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="320" y="198" fill="#2e6e2e" font-weight="bold" font-size="16">Block</text>
+    <text x="320" y="216" fill="#2e6e2e" font-size="11">（可共享 shared memory）</text>
+  </g>
+
+  <!-- connector Block -> Warp -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 320 228 L 320 260" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Warp -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="140" y="264" width="360" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="320" y="290" fill="#7a5415" font-weight="bold" font-size="16">Warp</text>
+    <text x="320" y="308" fill="#7a5415" font-size="11">（32 thread · SIMT 调度基本单位）</text>
+  </g>
+
+  <!-- connector Warp -> Thread -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 320 320 L 320 352" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Thread -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="100" y="356" width="440" height="56" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="320" y="382" fill="#b85450" font-weight="bold" font-size="16">Thread</text>
+    <text x="320" y="400" fill="#b85450" font-size="11">（最细粒度）</text>
+  </g>
+
+  <!-- footer -->
+  <text x="320" y="430" text-anchor="middle" font-size="10" fill="#5d3a7e">thread → warp(32) → block → grid · 1 个 GPU 多 SM · 1 SM 多 warp · 1 warp 32 thread</text>
+</svg>

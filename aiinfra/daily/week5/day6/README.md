@@ -47,16 +47,7 @@ Day 1-5 我们反复说"Decode 是 memory-bound""Prefill 是 compute-bound"—�
 
 ##### 自顶向下的工作流
 
-```
-1. nsys profile → 看时间线，发现 "kernel gap 占 30%"
- → 判断：launch overhead 严重
-
-1. cuda.Event 测 TTFT/TBT → 发现 "TTFT 随 N² 增长，TBT 稳定"
- → 判断：Prefill compute-bound，Decode launch-bound
-
-1. ncu 钻进最慢 kernel → 发现 "dram__throughput 95%，sm__throughput 5%"
- → 判断：该 kernel memory-bound，优化方向是减 HBM 访问
-```
+![Profiling 三层方法论决策流：nsys → cuda.Event → ncu](../images/week5_profiling_methodology.svg)
 
 #### 6.2 阶段级指标：TTFT / TBT / breakdown
 

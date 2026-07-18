@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="500" viewBox="0 0 640 500" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a8edb"/>
+      <stop offset="50%" stop-color="#c98a2b"/>
+      <stop offset="100%" stop-color="#b85450"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="500" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="320" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">GPU 内存层次结构</text>
+  <path d="M 200 44 Q 320 52 440 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="320" y="60" text-anchor="middle" font-size="11" fill="#888">越往下越慢、容量越大 · 越往上越快、越稀缺</text>
+
+  <!-- side gradient bar (speed/capacity) -->
+  <g filter="url(#sk)">
+    <rect x="60" y="92" width="18" height="356" rx="6" fill="url(#sg)" stroke="#bbb" stroke-width="1"/>
+  </g>
+  <text x="40" y="104" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">快</text>
+  <text x="40" y="118" text-anchor="middle" font-size="9" fill="#666">小</text>
+  <text x="40" y="436" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a2828">慢</text>
+  <text x="40" y="450" text-anchor="middle" font-size="9" fill="#666">大</text>
+
+  <!-- Register -->
+  <g filter="url(#sk)">
+    <rect x="120" y="92" width="400" height="52" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="116" font-size="13" font-weight="bold" fill="#2b6e9e">Register</text>
+  <text x="140" y="134" font-size="10" fill="#666">（最快，容量最小）</text>
+  <text x="500" y="124" text-anchor="end" font-size="10" fill="#888" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">~1 cycle · ~256 KB/SM</text>
+
+  <path d="M 320 146 L 320 167" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Shared Memory -->
+  <g filter="url(#sk)">
+    <rect x="120" y="170" width="400" height="52" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="194" font-size="13" font-weight="bold" fill="#2e6e2e">Shared Memory</text>
+  <text x="140" y="212" font-size="10" fill="#666">（快，可编程）</text>
+  <text x="500" y="202" text-anchor="end" font-size="10" fill="#888" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">~20-30 cycles · ~100 KB/SM</text>
+
+  <path d="M 320 224 L 320 245" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- L1 Cache -->
+  <g filter="url(#sk)">
+    <rect x="120" y="248" width="400" height="52" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="272" font-size="13" font-weight="bold" fill="#7a5415">L1 Cache</text>
+  <text x="140" y="290" font-size="10" fill="#666">（自动管理）</text>
+  <text x="500" y="280" text-anchor="end" font-size="10" fill="#888" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">~30 cycles</text>
+
+  <path d="M 320 302 L 320 323" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- L2 Cache -->
+  <g filter="url(#sk)">
+    <rect x="120" y="326" width="400" height="52" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="350" font-size="13" font-weight="bold" fill="#5d3a7e">L2 Cache</text>
+  <text x="140" y="368" font-size="10" fill="#666">（跨 SM 共享）</text>
+  <text x="500" y="358" text-anchor="end" font-size="10" fill="#888" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">~200 cycles</text>
+
+  <path d="M 320 380 L 320 401" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Global Memory -->
+  <g filter="url(#sk)">
+    <rect x="120" y="404" width="400" height="52" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="140" y="428" font-size="13" font-weight="bold" fill="#7a2828">Global Memory</text>
+  <text x="140" y="446" font-size="10" fill="#666">（最慢，容量最大）</text>
+  <text x="500" y="436" text-anchor="end" font-size="10" fill="#888" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">~400-800 cycles · HBM/GDDR</text>
+
+  <text x="320" y="482" text-anchor="middle" font-size="10" fill="#aaa">可编程性：Register/Shared 可控 · L1/L2 由硬件管理</text>
+</svg>

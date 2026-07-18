@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Profiling 三层方法论决策流</text>
+  <path d="M 240 44 Q 380 52 520 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">自顶向下：nsys 看全局 → cuda.Event 量化阶段 → ncu 钻进单 kernel</text>
+
+  <!-- Lane 1: nsys -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="40" y="84" width="220" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="150" y="107" fill="#2b6e9e" font-weight="bold">① nsys profile</text>
+  </g>
+  <text x="150" y="138" text-anchor="middle" font-size="10" fill="#666">看时间线，发现</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="146" width="220" height="36" rx="6" fill="#fdfcf7" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="150" y="169" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">"kernel gap 占 30%"</text>
+  </g>
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 150 186 L 150 210" marker-end="url(#ar)"/>
+  </g>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="214" width="220" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="150" y="234" fill="#7a5415" font-weight="bold">判断：launch overhead 严重</text>
+    <text x="150" y="250" fill="#7a5415" font-size="9">→ CUDA Graph / kernel fusion</text>
+  </g>
+  <text x="150" y="280" text-anchor="middle" font-size="9" fill="#888">系统级 · ms 粒度</text>
+
+  <!-- Lane 2: cuda.Event -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="280" y="84" width="220" height="36" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="390" y="107" fill="#2e6e2e" font-weight="bold">② cuda.Event 测 TTFT/TBT</text>
+  </g>
+  <text x="390" y="138" text-anchor="middle" font-size="10" fill="#666">扫描 N，发现</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="280" y="146" width="220" height="36" rx="6" fill="#fdfcf7" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="390" y="169" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">"TTFT ∝ N²，TBT 稳定"</text>
+  </g>
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 390 186 L 390 210" marker-end="url(#ar)"/>
+  </g>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="280" y="214" width="220" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="390" y="234" fill="#7a5415" font-weight="bold">判断：Prefill compute-bound</text>
+    <text x="390" y="250" fill="#7a5415" font-size="9">Decode launch-bound → FA / Graph</text>
+  </g>
+  <text x="390" y="280" text-anchor="middle" font-size="9" fill="#888">阶段级 · ms 分阶段</text>
+
+  <!-- Lane 3: ncu -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="520" y="84" width="220" height="36" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="630" y="107" fill="#5d3a7e" font-weight="bold">③ ncu 钻进最慢 kernel</text>
+  </g>
+  <text x="630" y="138" text-anchor="middle" font-size="10" fill="#666">查指标，发现</text>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="520" y="146" width="220" height="36" rx="6" fill="#fdfcf7" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="630" y="169" fill="#666" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">"dram 95%, sm 5%"</text>
+  </g>
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 630 186 L 630 210" marker-end="url(#ar)"/>
+  </g>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="520" y="214" width="220" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="630" y="234" fill="#7a5415" font-weight="bold">判断：memory-bound</text>
+    <text x="630" y="250" fill="#7a5415" font-size="9">→ 减 HBM 访问 / KV 量化</text>
+  </g>
+  <text x="630" y="280" text-anchor="middle" font-size="9" fill="#888">Kernel 级 · ns 单 kernel</text>
+
+  <!-- connecting arrows between lanes (drill-down flow) -->
+  <g filter="url(#sk)" stroke="#8e5db8" stroke-width="1.2" fill="none" stroke-dasharray="4 3">
+    <path d="M 260 102 L 280 102"/>
+    <path d="M 500 102 L 520 102"/>
+  </g>
+  <text x="270" y="96" text-anchor="middle" font-size="9" fill="#8e5db8">细化</text>
+  <text x="510" y="96" text-anchor="middle" font-size="9" fill="#8e5db8">细化</text>
+
+  <!-- bottom note -->
+  <text x="380" y="324" text-anchor="middle" font-size="11" fill="#5d3a7e">每一层都产出"现象 → 判断 → 优化方向" · 上一层定位区间，下一层钻进细节</text>
+  <text x="380" y="346" text-anchor="middle" font-size="10" fill="#888">nsys 找区间 → cuda.Event 量化阶段 → ncu 钻进最慢 kernel 看带宽/算力利用率</text>
+  <text x="380" y="372" text-anchor="middle" font-size="9" fill="#aaa">判据：dram__throughput 高 + sm__throughput 低 = memory-bound · 反之 compute-bound</text>
+</svg>

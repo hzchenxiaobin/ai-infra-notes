@@ -79,15 +79,7 @@ class MiniEngineV1:
 
 每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
 
-```
-submit() → WAITING（入队，等 token budget）
- → RUNNING（schedule 选中）
- ├── Prefill：一次性处理 prompt，建立 KV Cache
- └── Decode：每轮 1 token，复用 KV Cache（循环 max_new_tokens 次）
- → FINISHED（gen 满 max_new_tokens）
- → future.set_result() 异步返回
- → 从 running 移除，释放资源
-```
+![请求生命周期](../images/week6_request_lifecycle.svg)
 
 ##### Request 关键字段（v1 新增 vs v0）
 
@@ -174,16 +166,7 @@ if batch:
 
 实测 4 个请求（R0 高优先级 gen=8，R1-R3 普通 gen=4-6）的时间线：
 
-```
-iter 1: batch=4 R0(prefill) R1(prefill) R2(prefill) R3(prefill) ← 全部 prefill
-iter 2: batch=4 R0(decode) R1(decode) R2(decode) R3(decode)
-iter 3: batch=4 R0(decode) R1(decode) R2(decode) R3(decode)
-iter 4: batch=4 R0(decode) R1(decode) R2(done) R3(decode) ← R2 完成退出
-iter 5: batch=3 R0(decode) R1(decode) R3(done) ← R3 完成退出
-iter 6: batch=2 R0(decode) R1(done) ← R1 完成退出
-iter 7: batch=1 R0(decode)
-iter 8: batch=1 R0(done) ← R0 最后完成
-```
+![Mini 引擎 v1 实测时间线](../images/week6_batch_iteration_timeline.svg)
 
 ##### 关键观察
 

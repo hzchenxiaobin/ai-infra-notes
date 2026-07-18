@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="540" viewBox="0 0 840 540" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="540" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="420" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Batching 策略选择决策树</text>
+  <path d="M 280 44 Q 420 52 560 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="60" text-anchor="middle" font-size="11" fill="#888">拿到任意推理服务需求，三步选对 batching 策略 + 按需叠加</text>
+
+  <!-- Q1 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="320" y="84" width="200" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="108" fill="#7a5415" font-weight="bold">Q1：要求最低延迟？</text>
+    <text x="420" y="126" fill="#7a5415" font-size="10">（交互式场景）</text>
+  </g>
+
+  <!-- Q1 branches: 是 (left) / 否 (down) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 320 112 L 180 112 L 180 168" marker-end="url(#ar)"/>
+    <path d="M 420 140 L 420 184" marker-end="url(#ar)"/>
+  </g>
+  <text x="240" y="104" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <text x="432" y="166" font-size="10" fill="#888" font-weight="bold">否</text>
+
+  <!-- Q1 是 -> Static / 小batch + Priority -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="172" width="240" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="180" y="196" fill="#2b6e9e" font-weight="bold">Static / 小 batch</text>
+    <text x="180" y="214" fill="#2b6e9e">+ Priority Scheduling</text>
+  </g>
+
+  <!-- Q2 -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="320" y="188" width="200" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="420" y="212" fill="#7a5415" font-weight="bold">Q2：LLM 自回归生成？</text>
+    <text x="420" y="230" fill="#7a5415" font-size="10">（生成长度差异大）</text>
+  </g>
+
+  <!-- Q2 branches: 是 (down) / 否 (right) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 520 216 L 660 216 L 660 268" marker-end="url(#ar)"/>
+    <path d="M 420 244 L 420 290" marker-end="url(#ar)"/>
+  </g>
+  <text x="600" y="208" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <text x="432" y="272" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+
+  <!-- Q2 否 -> Dynamic Batching -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="540" y="272" width="240" height="56" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="660" y="296" fill="#b85450" font-weight="bold">Dynamic Batching</text>
+    <text x="660" y="314" fill="#b85450" font-size="10">非 LLM / CV / NLP 分类</text>
+  </g>
+
+  <!-- Q2 是 -> Continuous Batching -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="300" y="294" width="240" height="60" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+    <text x="420" y="320" fill="#2e6e2e" font-weight="bold" font-size="14">Continuous Batching ✓</text>
+    <text x="420" y="340" fill="#2e6e2e" font-size="10">LLM 推理标配</text>
+  </g>
+
+  <!-- Continuous -> 叠加层 -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 420 354 L 420 380" marker-end="url(#ar)"/>
+  </g>
+  <text x="432" y="374" font-size="10" fill="#666">按需叠加</text>
+
+  <!-- 叠加层 4 boxes -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="384" width="180" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="130" y="408" fill="#5d3a7e" font-weight="bold">+ Priority</text>
+    <text x="130" y="426" fill="#5d3a7e" font-size="10">多租户 / 多 SLA</text>
+
+    <rect x="240" y="384" width="180" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="330" y="408" fill="#5d3a7e" font-weight="bold">+ Chunked Prefill</text>
+    <text x="330" y="426" fill="#5d3a7e" font-size="10">有长 prompt</text>
+
+    <rect x="440" y="384" width="180" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="530" y="408" fill="#5d3a7e" font-weight="bold">+ Preemption</text>
+    <text x="530" y="426" fill="#5d3a7e" font-size="10">显存紧张</text>
+
+    <rect x="640" y="384" width="180" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="730" y="408" fill="#5d3a7e" font-weight="bold">+ Speculative</text>
+    <text x="730" y="426" fill="#5d3a7e" font-size="10">有 draft model</text>
+  </g>
+
+  <!-- connector from Continuous down to a bus that fans to 4 add-on boxes -->
+  <g filter="url(#sk)" stroke="#8e5db8" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 130 380 L 130 384"/>
+    <path d="M 330 380 L 330 384"/>
+    <path d="M 530 380 L 530 384"/>
+    <path d="M 730 380 L 730 384"/>
+    <path d="M 130 380 L 730 380"/>
+  </g>
+
+  <text x="420" y="480" text-anchor="middle" font-size="11" fill="#5d3a7e" font-style="italic">LLM 推理标配：Continuous + PagedAttention + Chunked Prefill</text>
+  <text x="420" y="502" text-anchor="middle" font-size="10" fill="#888">叠加层互不冲突 · 按场景按需组合 · 没有绝对最优，只有 SLA 权衡</text>
+  <text x="420" y="524" text-anchor="middle" font-size="9" fill="#aaa">面试答题框架：定性（哪类策略）→ 机制 → 量化 → 方案（标配 + 按需叠加）</text>
+</svg>

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="540" viewBox="0 0 560 540" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="540" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="280" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">vLLM 推理引擎架构</text>
+  <path d="M 140 44 Q 280 52 420 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="280" y="60" text-anchor="middle" font-size="11" fill="#888">User Request → LLMEngine → Scheduler → Worker → ModelRunner · 自顶向下分层</text>
+
+  <!-- User Request -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="140" y="84" width="280" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="280" y="110" fill="#2b6e9e" font-weight="bold" font-size="15">User Request</text>
+    <text x="280" y="128" fill="#2b6e9e" font-size="11">用户请求</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 280 140 L 280 168" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- LLMEngine -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="120" y="172" width="320" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="280" y="198" fill="#2e6e2e" font-weight="bold" font-size="15">LLMEngine</text>
+    <text x="280" y="216" fill="#2e6e2e" font-size="11">请求生命周期管理</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 280 228 L 280 256" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Scheduler -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="100" y="260" width="360" height="56" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="280" y="286" fill="#7a5415" font-weight="bold" font-size="15">Scheduler</text>
+    <text x="280" y="304" fill="#7a5415" font-size="11">每轮选请求 · 分配 block · 处理抢占</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 280 316 L 280 344" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Worker -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="120" y="348" width="320" height="56" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="280" y="374" fill="#5d3a7e" font-weight="bold" font-size="15">Worker</text>
+    <text x="280" y="392" fill="#5d3a7e" font-size="11">进程/线程 · 管理 GPU</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 280 404 L 280 432" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Model Runner -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="100" y="436" width="360" height="56" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="280" y="462" fill="#b85450" font-weight="bold" font-size="15">Model Runner</text>
+    <text x="280" y="480" fill="#b85450" font-size="11">执行 forward</text>
+  </g>
+
+  <!-- footer -->
+  <text x="280" y="520" text-anchor="middle" font-size="10" fill="#5d3a7e">分层解耦 · Engine 管生命周期 · Scheduler 管调度 · Worker 管 GPU · ModelRunner 管执行</text>
+</svg>

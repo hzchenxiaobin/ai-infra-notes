@@ -88,14 +88,7 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 
 ![Double Buffering 软件流水线](../website/images/double_buffering.svg)
 
-```
-单缓冲： [Load Tile 0] ──► [Compute Tile 0] ──► [Load Tile 1] ──► [Compute Tile 1]
- ▲ 空闲等待（Load 不能被 Compute 掩盖）
-
-双缓冲： [Load Tile 0→Buf0] ──► [Compute Tile 0 同时 Load Tile 1→Buf1]
- ──► [Compute Tile 1 同时 Load Tile 2→Buf0]
- ▲ Compute 和 Load 并行执行，掩盖传输延迟
-```
+![单缓冲 vs 双缓冲软件流水线](../images/week2_double_buffering.svg)
 
 实现方式：声明两份 shared memory buffer，奇偶 tile 交替使用。
 

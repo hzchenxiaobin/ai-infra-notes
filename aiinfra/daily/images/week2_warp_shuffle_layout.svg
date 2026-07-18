@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="640" viewBox="0 0 680 640" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="640" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Warp Shuffle 四原语数据流向</text>
+  <path d="M 210 44 Q 340 52 470 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="340" y="60" text-anchor="middle" font-size="11" fill="#888">同一 warp 内 32 lane 通过寄存器直接交换 · 图示前 8 个 lane</text>
+
+  <!-- ============ Section 1: __shfl_sync (broadcast) ============ -->
+  <text x="40" y="96" font-size="13" font-weight="bold" fill="#2b6e9e">① __shfl_sync(mask, val, srcLane=4) — 广播</text>
+  <text x="120" y="148" text-anchor="end" font-size="10" fill="#888">数据</text>
+  <text x="120" y="182" text-anchor="end" font-size="10" fill="#888">结果</text>
+  <g font-size="9" fill="#999" text-anchor="middle">
+    <text x="173" y="126">0</text><text x="223" y="126">1</text><text x="273" y="126">2</text><text x="323" y="126">3</text>
+    <text x="373" y="126">4</text><text x="423" y="126">5</text><text x="473" y="126">6</text><text x="523" y="126">7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="173" y="148" fill="#999">?</text>
+    <rect x="200" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="223" y="148" fill="#999">?</text>
+    <rect x="250" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="273" y="148" fill="#999">?</text>
+    <rect x="300" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="323" y="148" fill="#999">?</text>
+    <rect x="350" y="132" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/><text x="373" y="148" fill="#2b6e9e" font-weight="bold">V4</text>
+    <rect x="400" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="423" y="148" fill="#999">?</text>
+    <rect x="450" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="473" y="148" fill="#999">?</text>
+    <rect x="500" y="132" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="523" y="148" fill="#999">?</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="173" y="182" fill="#2b6e9e">V4</text>
+    <rect x="200" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="223" y="182" fill="#2b6e9e">V4</text>
+    <rect x="250" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="273" y="182" fill="#2b6e9e">V4</text>
+    <rect x="300" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="323" y="182" fill="#2b6e9e">V4</text>
+    <rect x="350" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/><text x="373" y="182" fill="#2b6e9e" font-weight="bold">V4</text>
+    <rect x="400" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="423" y="182" fill="#2b6e9e">V4</text>
+    <rect x="450" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="473" y="182" fill="#2b6e9e">V4</text>
+    <rect x="500" y="166" width="46" height="24" rx="4" fill="#e8f0fa" stroke="#4a8edb"/><text x="523" y="182" fill="#2b6e9e">V4</text>
+  </g>
+  <text x="340" y="206" text-anchor="middle" font-size="10" fill="#2b6e9e">↑ srcLane=4 的值广播给 warp 内所有 lane</text>
+
+  <!-- ============ Section 2: __shfl_up_sync ============ -->
+  <text x="40" y="231" font-size="13" font-weight="bold" fill="#2e6e2e">② __shfl_up_sync(mask, val, delta=2) — 前缀和</text>
+  <text x="120" y="283" text-anchor="end" font-size="10" fill="#888">数据</text>
+  <text x="120" y="317" text-anchor="end" font-size="10" fill="#888">结果</text>
+  <g font-size="9" fill="#999" text-anchor="middle">
+    <text x="173" y="261">0</text><text x="223" y="261">1</text><text x="273" y="261">2</text><text x="323" y="261">3</text>
+    <text x="373" y="261">4</text><text x="423" y="261">5</text><text x="473" y="261">6</text><text x="523" y="261">7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="173" y="283" fill="#555">V0</text>
+    <rect x="200" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="223" y="283" fill="#555">V1</text>
+    <rect x="250" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="273" y="283" fill="#555">V2</text>
+    <rect x="300" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="323" y="283" fill="#555">V3</text>
+    <rect x="350" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="373" y="283" fill="#555">V4</text>
+    <rect x="400" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="423" y="283" fill="#555">V5</text>
+    <rect x="450" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="473" y="283" fill="#555">V6</text>
+    <rect x="500" y="267" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="523" y="283" fill="#555">V7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="301" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="173" y="317" fill="#555">V0</text>
+    <rect x="200" y="301" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="223" y="317" fill="#555">V1</text>
+    <rect x="250" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="273" y="317" fill="#2e6e2e">V0</text>
+    <rect x="300" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="323" y="317" fill="#2e6e2e">V1</text>
+    <rect x="350" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="373" y="317" fill="#2e6e2e">V2</text>
+    <rect x="400" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="423" y="317" fill="#2e6e2e">V3</text>
+    <rect x="450" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="473" y="317" fill="#2e6e2e">V4</text>
+    <rect x="500" y="301" width="46" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a"/><text x="523" y="317" fill="#2e6e2e">V5</text>
+  </g>
+  <text x="340" y="341" text-anchor="middle" font-size="10" fill="#2e6e2e">↑ 每个 lane 从左侧 delta=2 处取值（lane 2←0, 3←1, 4←2 …）</text>
+
+  <!-- ============ Section 3: __shfl_down_sync ============ -->
+  <text x="40" y="366" font-size="13" font-weight="bold" fill="#7a5415">③ __shfl_down_sync(mask, val, delta=2) — 归约</text>
+  <text x="120" y="418" text-anchor="end" font-size="10" fill="#888">数据</text>
+  <text x="120" y="452" text-anchor="end" font-size="10" fill="#888">结果</text>
+  <g font-size="9" fill="#999" text-anchor="middle">
+    <text x="173" y="396">0</text><text x="223" y="396">1</text><text x="273" y="396">2</text><text x="323" y="396">3</text>
+    <text x="373" y="396">4</text><text x="423" y="396">5</text><text x="473" y="396">6</text><text x="523" y="396">7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="173" y="418" fill="#555">V0</text>
+    <rect x="200" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="223" y="418" fill="#555">V1</text>
+    <rect x="250" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="273" y="418" fill="#555">V2</text>
+    <rect x="300" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="323" y="418" fill="#555">V3</text>
+    <rect x="350" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="373" y="418" fill="#555">V4</text>
+    <rect x="400" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="423" y="418" fill="#555">V5</text>
+    <rect x="450" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="473" y="418" fill="#555">V6</text>
+    <rect x="500" y="402" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="523" y="418" fill="#555">V7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="173" y="452" fill="#7a5415">V2</text>
+    <rect x="200" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="223" y="452" fill="#7a5415">V3</text>
+    <rect x="250" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="273" y="452" fill="#7a5415">V4</text>
+    <rect x="300" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="323" y="452" fill="#7a5415">V5</text>
+    <rect x="350" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="373" y="452" fill="#7a5415">V6</text>
+    <rect x="400" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="423" y="452" fill="#7a5415">V7</text>
+    <rect x="450" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="473" y="452" fill="#7a5415">V8</text>
+    <rect x="500" y="436" width="46" height="24" rx="4" fill="#fef6e6" stroke="#c98a2b"/><text x="523" y="452" fill="#7a5415">V9</text>
+  </g>
+  <text x="340" y="476" text-anchor="middle" font-size="10" fill="#7a5415">↑ 每个 lane 从右侧 delta=2 处取值（butterfly 折半归约，lane 0 收集总和）</text>
+
+  <!-- ============ Section 4: __shfl_xor_sync ============ -->
+  <text x="40" y="501" font-size="13" font-weight="bold" fill="#5d3a7e">④ __shfl_xor_sync(mask, val, laneMask=2) — 蝶形交换</text>
+  <text x="120" y="553" text-anchor="end" font-size="10" fill="#888">数据</text>
+  <text x="120" y="587" text-anchor="end" font-size="10" fill="#888">结果</text>
+  <g font-size="9" fill="#999" text-anchor="middle">
+    <text x="173" y="531">0</text><text x="223" y="531">1</text><text x="273" y="531">2</text><text x="323" y="531">3</text>
+    <text x="373" y="531">4</text><text x="423" y="531">5</text><text x="473" y="531">6</text><text x="523" y="531">7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="173" y="553" fill="#555">V0</text>
+    <rect x="200" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="223" y="553" fill="#555">V1</text>
+    <rect x="250" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="273" y="553" fill="#555">V2</text>
+    <rect x="300" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="323" y="553" fill="#555">V3</text>
+    <rect x="350" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="373" y="553" fill="#555">V4</text>
+    <rect x="400" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="423" y="553" fill="#555">V5</text>
+    <rect x="450" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="473" y="553" fill="#555">V6</text>
+    <rect x="500" y="537" width="46" height="24" rx="4" fill="#f4f4f0" stroke="#bbb"/><text x="523" y="553" fill="#555">V7</text>
+  </g>
+  <g filter="url(#sk)" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11" text-anchor="middle">
+    <rect x="150" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="173" y="587" fill="#5d3a7e">V2</text>
+    <rect x="200" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="223" y="587" fill="#5d3a7e">V3</text>
+    <rect x="250" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="273" y="587" fill="#5d3a7e">V0</text>
+    <rect x="300" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="323" y="587" fill="#5d3a7e">V1</text>
+    <rect x="350" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="373" y="587" fill="#5d3a7e">V6</text>
+    <rect x="400" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="423" y="587" fill="#5d3a7e">V7</text>
+    <rect x="450" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="473" y="587" fill="#5d3a7e">V4</text>
+    <rect x="500" y="571" width="46" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8"/><text x="523" y="587" fill="#5d3a7e">V5</text>
+  </g>
+  <text x="340" y="611" text-anchor="middle" font-size="10" fill="#5d3a7e">↑ lane i 与 lane (i^2) 互换：0↔2, 1↔3, 4↔6, 5↔7</text>
+
+  <text x="340" y="632" text-anchor="middle" font-size="9" fill="#aaa">warp 共 32 lane · 所有交换在寄存器间完成，不经共享内存</text>
+</svg>

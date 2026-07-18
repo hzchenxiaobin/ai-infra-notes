@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="30" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="720" height="360" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求状态转移图</text>
+  <path d="M 220 44 Q 360 52 500 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="360" y="60" text-anchor="middle" font-size="11" fill="#888">WAITING → RUNNING → FINISHED · 显存不足时 RUNNING ↔ SWAPPED</text>
+
+  <!-- WAITING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="60" y="130" width="180" height="64" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="150" y="158" fill="#2b6e9e" font-weight="bold" font-size="16">WAITING</text>
+    <text x="150" y="180" fill="#2b6e9e" font-size="11">入队等调度</text>
+  </g>
+
+  <!-- arrow WAITING -> RUNNING -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 240 162 L 268 162" marker-end="url(#ar)"/>
+  </g>
+  <text x="254" y="154" text-anchor="middle" font-size="10" fill="#666">选中</text>
+
+  <!-- RUNNING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="270" y="130" width="180" height="64" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="360" y="158" fill="#2e6e2e" font-weight="bold" font-size="16">RUNNING</text>
+    <text x="360" y="180" fill="#2e6e2e" font-size="11">prefill / decode</text>
+  </g>
+
+  <!-- arrow RUNNING -> FINISHED -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 450 162 L 478 162" marker-end="url(#ar)"/>
+  </g>
+  <text x="464" y="154" text-anchor="middle" font-size="10" fill="#666">完成</text>
+
+  <!-- FINISHED -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="480" y="130" width="180" height="64" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="570" y="158" fill="#7a5415" font-weight="bold" font-size="16">FINISHED</text>
+    <text x="570" y="180" fill="#7a5415" font-size="11">完成退出</text>
+  </g>
+
+  <!-- SWAPPED below RUNNING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="270" y="270" width="180" height="64" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="360" y="298" fill="#b85450" font-weight="bold" font-size="16">SWAPPED</text>
+    <text x="360" y="320" fill="#b85450" font-size="11">显存不足被抢占</text>
+  </g>
+
+  <!-- arrow RUNNING -> SWAPPED (down) -->
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.4" fill="none">
+    <path d="M 340 194 L 340 268" marker-end="url(#ar)"/>
+  </g>
+  <text x="328" y="234" text-anchor="end" font-size="10" fill="#b85450">抢占</text>
+
+  <!-- arrow SWAPPED -> RUNNING (up, dashed) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none" stroke-dasharray="4 3">
+    <path d="M 380 270 L 380 196" marker-end="url(#ar)"/>
+  </g>
+  <text x="392" y="234" font-size="10" fill="#666">恢复</text>
+
+  <!-- footer -->
+  <text x="360" y="350" text-anchor="middle" font-size="10" fill="#5d3a7e">主路径：WAITING → RUNNING → FINISHED · 显存压力时 RUNNING ↔ SWAPPED（下一轮恢复）</text>
+</svg>

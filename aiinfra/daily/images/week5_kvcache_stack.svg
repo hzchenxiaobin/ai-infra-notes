@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="560" viewBox="0 0 580 560" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="560" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="290" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Transformer 层栈与 KV Cache</text>
+  <path d="M 170 44 Q 290 52 410 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="290" y="60" text-anchor="middle" font-size="11" fill="#888">MiniLLM：embedding → n_layers 层 Transformer → lm_head · 每层返回 (k,v) 存入 KV Cache</text>
+
+  <!-- input_ids -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="190" y="80" width="200" height="32" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+    <text x="290" y="100" fill="#5d3a7e" font-weight="bold" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">input_ids (B, N)</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 290 114 L 290 138" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- embedding -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="170" y="142" width="240" height="32" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="290" y="162" fill="#2b6e9e" font-weight="bold" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">embedding (B, N, d_model)</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 290 176 L 290 200" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Layer stack outer box -->
+  <g filter="url(#sk)">
+    <rect x="80" y="204" width="420" height="220" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" opacity="0.4"/>
+  </g>
+  <text x="100" y="222" font-size="11" fill="#2e6e2e" font-weight="bold">Transformer 层栈（n_layers 层）</text>
+
+  <!-- Layer 0 detailed -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="100" y="228" width="380" height="86" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="290" y="246" fill="#2e6e2e" font-weight="bold" font-size="13">Layer 0</text>
+    <text x="290" y="264" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="10">norm1 → qkv → Q,K,V</text>
+    <text x="290" y="280" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="10">attention (用 cache)</text>
+    <text x="290" y="296" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="10">norm2 → ffn</text>
+    <text x="290" y="310" fill="#2e6e2e" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="10">返回 x, (k, v)</text>
+  </g>
+
+  <!-- arrow to KV Cache from Layer 0 -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 480 271 L 520 271" marker-end="url(#ar)"/>
+  </g>
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="520" y="256" width="50" height="32" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="545" y="276" fill="#7a5415" font-weight="bold">KV</text>
+  </g>
+
+  <!-- Layer 1 compact -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="100" y="322" width="380" height="32" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <text x="290" y="342" fill="#2e6e2e">Layer 1 … 同上</text>
+  </g>
+
+  <!-- Layer n-1 compact -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="100" y="380" width="380" height="32" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <text x="290" y="400" fill="#2e6e2e">Layer n-1 … 同上</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 290 426 L 290 450" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- lm_head -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="170" y="454" width="240" height="32" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="290" y="474" fill="#7a5415" font-weight="bold" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace">lm_head (B, N, vocab)</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 290 488 L 290 512" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- logits -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="150" y="516" width="280" height="32" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="290" y="536" fill="#b85450" font-weight="bold">logits → 采样 → next token</text>
+  </g>
+
+  <!-- side note: KV Cache annotation -->
+  <text x="545" y="244" text-anchor="middle" font-size="9" fill="#7a5415" font-style="italic">存入</text>
+  <text x="545" y="300" text-anchor="middle" font-size="9" fill="#7a5415" font-style="italic">Cache</text>
+
+  <text x="50" y="276" text-anchor="middle" font-size="9" fill="#888" font-style="italic" transform="rotate(-90 50 276)">每层独立 KV Cache</text>
+</svg>

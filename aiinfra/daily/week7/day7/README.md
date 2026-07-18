@@ -88,14 +88,7 @@
 
 #### 六层架构
 
-```
-用户 API → submit(prompt, ...) → Future
-ConcurrentEngine → 三线程协作 + 线程安全队列 + 生命周期管理
-FullScheduler → 双预算 + 抢占 + aging + Continuous Batching
-Custom Kernel → Softmax/LayerNorm/FlashAttention（C++ Extension）
-KV Cache → Block 级分配/释放 + PagedAttention 模拟
-Profiling → nsys/ncu/阶段计时 + vLLM 对比
-```
+![Mini AI Infra 系统架构](../images/week7_system_architecture.svg)
 
 #### 建议目录结构
 

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="290" viewBox="0 0 780 290" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="290" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 6 学习主线</text>
+  <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">从凑批 → 每轮重建 → Scheduler → 框架对比 → Mini 引擎 → benchmark → 策略总结</text>
+
+  <!-- Row 1: Day1 → Day2 → Day3 → Day4 -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40"  y="90" width="160" height="62" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="120" y="112" fill="#2b6e9e" font-weight="bold" font-size="13">Day 1</text>
+    <text x="120" y="132" fill="#2b6e9e">Dynamic Batching</text>
+    <text x="120" y="146" fill="#2b6e9e" font-size="10">请求聚合凑批</text>
+
+    <rect x="220" y="90" width="160" height="62" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="300" y="112" fill="#2e6e2e" font-weight="bold" font-size="13">Day 2</text>
+    <text x="300" y="132" fill="#2e6e2e">Continuous Batching</text>
+    <text x="300" y="146" fill="#2e6e2e" font-size="10">iteration-level</text>
+
+    <rect x="400" y="90" width="160" height="62" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="480" y="112" fill="#7a5415" font-weight="bold" font-size="13">Day 3</text>
+    <text x="480" y="132" fill="#7a5415">vLLM Scheduler</text>
+    <text x="480" y="146" fill="#7a5415" font-size="10">schedule() 5 步</text>
+
+    <rect x="580" y="90" width="160" height="62" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="660" y="112" fill="#b85450" font-weight="bold" font-size="13">Day 4</text>
+    <text x="660" y="132" fill="#b85450">框架对比</text>
+    <text x="660" y="146" fill="#b85450" font-size="10">Chunked Prefill</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 202 121 L 218 121" marker-end="url(#ar)"/>
+    <path d="M 382 121 L 398 121" marker-end="url(#ar)"/>
+    <path d="M 562 121 L 578 121" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- wrap arrow Day4 -> Day5 (down and left) -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 660 154 L 660 182 Q 660 192 650 192 L 130 192 Q 120 192 120 202 L 120 218" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Row 2: Day5 → Day6 → Day7 -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40"  y="222" width="220" height="62" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="150" y="244" fill="#5d3a7e" font-weight="bold" font-size="13">Day 5</text>
+    <text x="150" y="264" fill="#5d3a7e">Mini 引擎 v1</text>
+    <text x="150" y="278" fill="#5d3a7e" font-size="10">多请求并发 + Future</text>
+
+    <rect x="280" y="222" width="220" height="62" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="390" y="244" fill="#2b6e9e" font-weight="bold" font-size="13">Day 6</text>
+    <text x="390" y="264" fill="#2b6e9e">Benchmark</text>
+    <text x="390" y="278" fill="#2b6e9e" font-size="10">饱和点 + P99</text>
+
+    <rect x="520" y="222" width="220" height="62" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="630" y="244" fill="#2e6e2e" font-weight="bold" font-size="13">Day 7</text>
+    <text x="630" y="264" fill="#2e6e2e">策略总结</text>
+    <text x="630" y="278" fill="#2e6e2e" font-size="10">决策树 + 误区澄清</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 262 253 L 278 253" marker-end="url(#ar)"/>
+    <path d="M 502 253 L 518 253" marker-end="url(#ar)"/>
+  </g>
+</svg>

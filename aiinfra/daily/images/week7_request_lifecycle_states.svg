@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460" viewBox="0 0 760 460" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="460" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求生命周期状态分支</text>
+  <path d="M 240 44 Q 380 52 520 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">submit() → WAITING → RUNNING → 三态终局（FINISHED / TIMEOUT / CANCELLED）</text>
+
+  <!-- submit() -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="290" y="82" width="180" height="42" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+    <text x="380" y="108" fill="#5d3a7e" font-weight="bold">submit() 立即返回 Future</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 380 124 L 380 152" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- WAITING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="280" y="156" width="200" height="54" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="380" y="180" fill="#2b6e9e" font-weight="bold" font-size="15">WAITING</text>
+    <text x="380" y="198" fill="#2b6e9e" font-size="11">入队 · 等调度</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 380 210 L 380 240" marker-end="url(#ar)"/>
+  </g>
+  <text x="392" y="230" font-size="10" fill="#666">调度选中</text>
+
+  <!-- RUNNING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="280" y="244" width="200" height="54" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="380" y="268" fill="#2e6e2e" font-weight="bold" font-size="15">RUNNING</text>
+    <text x="380" y="286" fill="#2e6e2e" font-size="11">prefill → decode</text>
+  </g>
+
+  <!-- branch lines from RUNNING -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 380 298 L 380 312"/>
+    <path d="M 150 312 L 610 312"/>
+    <path d="M 150 312 L 150 340" marker-end="url(#ar)"/>
+    <path d="M 380 312 L 380 340" marker-end="url(#ar)"/>
+    <path d="M 610 312 L 610 340" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- FINISHED (left) -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="50" y="344" width="200" height="76" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="150" y="368" fill="#7a5415" font-weight="bold" font-size="15">FINISHED</text>
+    <text x="150" y="386" fill="#7a5415" font-size="11">正常完成</text>
+    <text x="150" y="404" fill="#7a5415" font-size="10" font-style="italic">set_result → Future+Callback</text>
+  </g>
+  <text x="150" y="336" text-anchor="middle" font-size="10" fill="#7a5415">正常完成</text>
+
+  <!-- TIMEOUT (center) -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="280" y="344" width="200" height="76" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="380" y="368" fill="#b85450" font-weight="bold" font-size="15">TIMEOUT</text>
+    <text x="380" y="386" fill="#b85450" font-size="11">超时</text>
+    <text x="380" y="404" fill="#b85450" font-size="10" font-style="italic">set_exception</text>
+  </g>
+  <text x="380" y="336" text-anchor="middle" font-size="10" fill="#b85450">超时</text>
+
+  <!-- CANCELLED (right) -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="510" y="344" width="200" height="76" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="610" y="368" fill="#b85450" font-weight="bold" font-size="15">CANCELLED</text>
+    <text x="610" y="386" fill="#b85450" font-size="11">取消</text>
+    <text x="610" y="404" fill="#b85450" font-size="10" font-style="italic">cancel() → set_exception</text>
+  </g>
+  <text x="610" y="336" text-anchor="middle" font-size="10" fill="#b85450">取消</text>
+
+  <text x="380" y="448" text-anchor="middle" font-size="10" fill="#5d3a7e">RUNNING 之后三种终局：完成正常返回 · 超时/取消走异常路径 set_exception</text>
+</svg>

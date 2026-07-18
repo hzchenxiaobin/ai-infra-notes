@@ -70,20 +70,7 @@ Iteration-level scheduling：
 
 ![Continuous Batching Iteration 时间线](../website/images/continuous_batching_timeline.svg)
 
-```
-Time 0: Batch = [S1_prefill, S2_prefill] ← 2 个请求同时 prefill
-Time 1: S1, S2 进入 decode
- Batch = [S1_decode, S2_decode]
-Time 2: 新请求 S3 到达
- Batch = [S1_decode, S2_decode, S3_prefill] ← S3 立刻加入
-Time 3: S1 生成结束（gen=4，短请求）
- Batch = [S2_decode, S3_decode] ← S1 退出，S3 接替
-Time 4: 新请求 S4 到达
- Batch = [S2_decode, S3_decode, S4_prefill] ← S4 填入 S1 的 slot
-Time 5: S3 生成结束（gen=3，比 S2 早完成）
- Batch = [S2_decode, S4_decode] ← S3 退出，不等 S2
-...
-```
+![Continuous Batching 迭代时间线](../images/week6_continuous_batching_timeline.svg)
 
 ##### 关键观察
 
@@ -98,21 +85,7 @@ Time 5: S3 生成结束（gen=3，比 S2 早完成）
 
 ##### Sequence 状态转换
 
-```
- ┌─────────────┐
- │ WAITING │ ← 请求到达，等待调度
- └──────┬──────┘
- │ scheduler 选择（token budget 允许）
- ▼
- ┌─────────────┐
- │ RUNNING │ ← 正在 prefill / decode
- └──────┬──────┘
- │
- ┌───────┼───────┐
- ▼ ▼ ▼
- FINISHED SWAPPED RUNNING (next iter)
- (完成退出) (被抢占) (继续 decode)
-```
+![Scheduler 请求状态机](../images/week6_request_state_machine.svg)
 
 ##### 每轮调度决策
 

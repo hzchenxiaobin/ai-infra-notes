@@ -46,7 +46,7 @@ O = P × V (输出，O(N×d) 显存)
 
 #### FlashAttention 的核心洞察
 
-> 不需要把 S 和 P 完整写入 HBM。通过分块计算，在 SRAM（Shared Memory）中完成 softmax 和输出累加，HBM 访问降为 O(N)。
+> 不需要把 S 和 P 完整写入 HBM。通过分块计算，在 SRAM（Shared Memory）+ 寄存器中完成 softmax 和输出累加，HBM 访问降为 O(Nd) 级别（d 为 head dim；把 d 看作常数时即 O(N)）。
 
 ---
 
@@ -59,29 +59,27 @@ O = P × V (输出，O(N×d) 显存)
 FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：
 
 ```
-┌──────────────────────────────────────────┐
-│ Attention Output O (N×d) │
-│ ┌────────┐ ┌────────┐ ┌────────┐ │
-│ │ Q Tile │ │ Q Tile │ │ Q Tile │ ... │ Br rows each
-│ │ Br×d │ │ Br×d │ │ Br×d │ │
-│ └───┬────┘ └────┬───┘ └───┬────┘ │
-│ └────────────┼─────────┘ │
-│ ▼ │
-│ K,V iterate: ┌────────┐ │
-│ │ KV Tile│ Bc rows each │
-│ │ Bc×d │ │
-│ └────────┘ │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  Attention Output O (N×d)                   │
+│  ┌────────┐  ┌────────┐  ┌────────┐         │
+│  │ Q Tile │  │ Q Tile │  │ Q Tile │  ...    │  ← Br rows each
+│  └───┬────┘  └───┬────┘  └───┬────┘         │
+│      └───────────┼───────────┘              │
+│                  ▼                          │
+│   K,V iterate: ┌────────┐                   │
+│                │ KV Tile│  ← Bc rows each   │
+│                └────────┘                   │
+└─────────────────────────────────────────────┘
 
 外循环：遍历 Q tile（行方向，步长 Br）
- 内循环：遍历 KV tile（行方向，步长 Bc）
- 每步计算：S_tile = Q_tile × KV_tile^T (Br×Bc)
- 在线更新 softmax 和输出累加
+  内循环：遍历 KV tile（行方向，步长 Bc）
+    每步计算：S_tile = Q_tile × KV_tile^T (Br×Bc)
+    在线更新 softmax 和输出累加
 ```
 
 **关键**：Q tile 驻留在 SRAM 中（不移动），K/V tile 逐块滑入。每计算完一个 KV tile，立即更新 running softmax 状态和输出累加器。
 
-**分块大小约束**：`Br×d + Bc×d×2 + Br×Bc ≤ SRAM 容量`，这决定了 Br 和 Bc 的选择。
+**分块大小约束**：SRAM 只需容纳 Q/K/V 三个 tile：`Br×d + 2×Bc×d ≤ SRAM 容量`。S/P 中间结果只活在寄存器里，不占 SRAM、更不落 HBM（FlashAttention 论文也是这个口径）。在静态 `__shared__` 48 KB/block 的统一硬上限下，Br、Bc 不能取得太大。
 
 #### 5.2 Online Softmax 三公式推导
 
@@ -94,7 +92,7 @@ FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：
 ```
 y_i = exp(x_i - m) / l
 where m = max(x_j) (全局最大值)
- l = Σ exp(x_j - m) (全局求和)
+      l = Σ exp(x_j - m) (全局求和)
 ```
 
 **分块计算的问题**：每个 KV tile 只能看到部分 x_j，不知道全局 max，无法直接做 softmax。
@@ -147,20 +145,21 @@ o_new = o × (l × exp(m - m_new) / l_new) + (exp(x_j - m_new) / l_new) × v_j
 - `o × (l × exp(m - m_new) / l_new)`：将之前累积的输出按新的概率分布重新归一化
 - `(exp(x_j - m_new) / l_new) × v_j`：新块的贡献，以新的全局概率权重加权 V
 
-**最终输出**（所有 KV tile 处理完后）：
-```
-O_final = o / l （最后做一次归一化）
-```
+**最终输出**：公式 3 把归一化"摊"进了每一步——`o` 始终是**已归一化**的部分结果，所以所有 KV tile 处理完后 `o` 就是最终输出，**末尾无需再除 l**。本教程的 kernel 采用这种写法。
+
+> 💡 **另一种等价写法（FA 论文的原始形式）**：`o` 只累加**未归一化**的加权和，每步只做 `o_new = o × exp(m - m_new) + Σ exp(x_j - m_new) × v_j`，全部 tile 处理完最后做一次 `O = o / l`。两种写法数学上严格等价：前者每步多一次除法、状态更直观；后者把 N/Bc 次除法省成 1 次——FlashAttention-2 正是靠这种"推迟归一化"减少了 non-matmul FLOPs。面试手写推导时用任何一种都可以，但要能讲清两者的差别。
 
 ##### 关键理解点
 
 1. 三个公式是**递推的**：每次新块到来时，用旧 `(m, l, o)` 和新块 `(x_j, v_j)` 计算新 `(m_new, l_new, o_new)`
 2. `exp(m - m_new)` 是**关键缩放因子**，保证全局参考点一致
-3. 整个过程 HBM 访问量为 **O(N)**，因为不需要存储中间 S 和 P 矩阵
+3. 整个过程 HBM 访问量为 **O(Nd) 级别**，因为不需要存储中间 S 和 P 矩阵
 
 ---
 
 ### Coding 任务：FlashAttention 简化版 Forward Kernel
+
+> ⚠️ **关于 1/√d scale**：标准 Attention 的 score 是 `Q·K^T / √d`。本简化版为了聚焦 online softmax 的结构，**省略了 scale**（GPU kernel 与 CPU 参考实现同步省略，数值对比仍然自洽）。LeetGPU 提交和面试手写时记得加回——在 `s` 算出后乘 `1.0f / sqrtf(D)` 即可，[LeetGPU 题解](../../../../leetgpu/week2/day5/leetgpu-softmax-attention-solution.md)的 kernel 有完整示范。
 
 #### 任务 1：创建 flash_attention.cu
 
@@ -177,131 +176,103 @@ O_final = o / l （最后做一次归一化）
 #include <cmath>
 #include <algorithm>
 
-#define Br 64 // Q tile 的行数（SRAM 可容纳）
-#define Bc 32 // K/V tile 的行数；在 RTX 5090 48KB shared memory 限制下调小
+#define Br 64 // Q tile 的行数；本实现一个 block 固定 Br 个线程，每个线程负责 Q tile 的一行
+#define Bc 32 // K/V tile 的行数；Bc=32 时 SRAM 占 32 KB，Bc=64 会顶到 48 KB 静态上限、每 SM 只能驻留 1 个 block
 #define D 64  // Head dimension
-
-#define NUM_THREADS_X Bc // 64
-#define NUM_THREADS_Y 4  // Br/NUM_THREADS_Y = 64/4 = 16
 
 __global__ void flashAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K, const float* __restrict__ V,
                                   float* __restrict__ O, int N, int numHeads) {
-    __shared__ float s_Q[Br][D];  // Q tile: Br×D
-    __shared__ float s_K[Bc][D];  // K tile: Bc×D
-    __shared__ float s_V[Bc][D];  // V tile: Bc×D
-    __shared__ float s_S[Br][Bc]; // S = Q×K^T partial: Br×Bc
+    __shared__ float s_Q[Br][D]; // Q tile: Br×D
+    __shared__ float s_K[Bc][D]; // K tile: Bc×D
+    __shared__ float s_V[Bc][D]; // V tile: Bc×D
+    // 注意：S/P 中间结果不放 shared memory，每个线程用寄存器/local 保存自己那一行的值
 
     int batch = blockIdx.z;
     int head = blockIdx.y;
     int qTileRow = blockIdx.x * Br;
 
-    int tid_x = threadIdx.x;
-    int tid_y = threadIdx.y;
+    int tid = threadIdx.x;        // 本线程负责的 Q 行（tile 内偏移）
+    int qRow = qTileRow + tid;    // 全局行号
+    int bhOffset = (batch * numHeads + head) * N;
 
-    int bhOffset = ((batch * numHeads + head) * N);
-
-    // 每个线程维护的 running 状态（按 Q 行）
+    // 每个线程维护自己那一行的 running 状态
     float m = -1e30f;   // running max
     float l = 0.0f;     // running sum
-    float acc[D] = {0}; // running output accumulator
+    float acc[D] = {0}; // running output accumulator（每步归一化变体，末尾无需再除 l）
 
-    // Step 1: 加载 Q tile 到 Shared Memory
-    for (int i = tid_y; i < Br; i += NUM_THREADS_Y) {
-        int qRow = qTileRow + i;
-        for (int d = tid_x; d < D; d += NUM_THREADS_X) {
-            if (qRow < N) {
-                s_Q[i][d] = Q[bhOffset * D + qRow * D + d];
-            } else {
-                s_Q[i][d] = 0.0f;
-            }
-        }
+    // Step 1: 全 block 协作加载 Q tile 到 Shared Memory（全局内存合并访问）
+    for (int idx = tid; idx < Br * D; idx += Br) {
+        int r = idx / D, c = idx % D;
+        s_Q[r][c] = (qTileRow + r < N) ? Q[bhOffset * D + (qTileRow + r) * D + c] : 0.0f;
     }
     __syncthreads();
 
     // Step 2: 内循环遍历 K/V tile
     for (int kvStart = 0; kvStart < N; kvStart += Bc) {
-        // 2a: 加载 K 和 V tile
-        for (int i = tid_y; i < Bc; i += NUM_THREADS_Y) {
-            int kvRow = kvStart + i;
-            for (int d = tid_x; d < D; d += NUM_THREADS_X) {
-                if (kvRow < N) {
-                    s_K[i][d] = K[bhOffset * D + kvRow * D + d];
-                    s_V[i][d] = V[bhOffset * D + kvRow * D + d];
-                } else {
-                    s_K[i][d] = 0.0f;
-                    s_V[i][d] = 0.0f;
-                }
-            }
+        // 2a: 协作加载 K 和 V tile
+        for (int idx = tid; idx < Bc * D; idx += Br) {
+            int r = idx / D, c = idx % D;
+            s_K[r][c] = (kvStart + r < N) ? K[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
+            s_V[r][c] = (kvStart + r < N) ? V[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
         }
         __syncthreads();
 
-        // 2b: 计算 S_tile = Q_tile × K_tile^T (Br×Bc)
-        for (int qi = tid_y; qi < Br; qi += NUM_THREADS_Y) {
-            for (int ki = tid_x; ki < Bc; ki += NUM_THREADS_X) {
-                float s_val = 0.0f;
+        // 2b+2c: 每个线程独立计算自己那一行的 score，并做 Online Softmax 更新
+        if (qRow < N) {
+            int kvLen = min(Bc, N - kvStart); // 最后一个 tile 可能不满
+
+            // 2b: s_row[c] = Q[qRow] · K[kvStart+c]，本行对当前 KV tile 的 kvLen 个 score
+            float s_row[Bc];
+            float m_tile = -1e30f;
+            for (int c = 0; c < kvLen; c++) {
+                float s = 0.0f;
                 #pragma unroll
-                for (int d = 0; d < D; d++) {
-                    s_val += s_Q[qi][d] * s_K[ki][d];
-                }
-                s_S[qi][ki] = s_val;
+                for (int d = 0; d < D; d++)
+                    s += s_Q[tid][d] * s_K[c][d];
+                s_row[c] = s; // 面试/LeetGPU 版本这里要乘 1/sqrtf(D)
+                m_tile = fmaxf(m_tile, s);
             }
-        }
-        __syncthreads();
 
-        // 2c: Online Softmax 更新（每个 Q 行独立处理）
-        for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
-            if (tid_x == 0) {
-                // 公式1: 计算新块的局部 max
-                float m_prev = m;
-                float m_new = m_prev;
-                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
-                    m_new = fmaxf(m_new, s_S[qi][c]);
-                }
+            // 公式1: max 更新
+            float m_new = fmaxf(m, m_tile);
 
-                // 公式2: 更新 running sum
-                float l_scale = expf(m_prev - m_new);
-                float l_new = l * l_scale;
-
-                float p[Bc];
-                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
-                    p[c] = expf(s_S[qi][c] - m_new);
-                    l_new += p[c];
-                }
-
-                // 公式3: 更新 running output
-                float o_scale = (l * l_scale) / l_new;
-                for (int d = 0; d < D; d++) {
-                    acc[d] = acc[d] * o_scale;
-                }
-                for (int c = 0; c < Bc && (kvStart + c) < N; c++) {
-                    float p_norm = p[c] / l_new;
-                    for (int d = 0; d < D; d++) {
-                        acc[d] += p_norm * s_V[c][d];
-                    }
-                }
-
-                m = m_new;
-                l = l_new;
+            // 公式2: sum 更新（l_scale 把旧 sum 从参考点 m 缩放到 m_new）
+            float l_scale = expf(m - m_new);
+            float l_new = l * l_scale;
+            for (int c = 0; c < kvLen; c++) {
+                s_row[c] = expf(s_row[c] - m_new); // p_c = exp(s_c - m_new)
+                l_new += s_row[c];
             }
+
+            // 公式3: output 更新（每步归一化变体）
+            float o_scale = (l * l_scale) / l_new;
+            #pragma unroll
+            for (int d = 0; d < D; d++)
+                acc[d] *= o_scale;
+            for (int c = 0; c < kvLen; c++) {
+                float p_norm = s_row[c] / l_new;
+                #pragma unroll
+                for (int d = 0; d < D; d++)
+                    acc[d] += p_norm * s_V[c][d];
+            }
+
+            m = m_new;
+            l = l_new;
         }
-        __syncthreads();
+        __syncthreads(); // 等所有线程用完 s_K/s_V，再加载下一个 tile
     }
 
     // Step 3: 写回最终结果
-    for (int qi = tid_y; qi < Br && (qTileRow + qi) < N; qi += NUM_THREADS_Y) {
-        if (tid_x == 0) {
-            for (int d = 0; d < D; d++) {
-                int outRow = qTileRow + qi;
-                O[bhOffset * D + outRow * D + d] = acc[d];
-            }
-        }
+    if (qRow < N) {
+        for (int d = 0; d < D; d++)
+            O[bhOffset * D + qRow * D + d] = acc[d];
     }
 }
 
 // 避免宏 D 与函数参数名冲突
 #undef D
 
-// CPU 参考实现（标准 Attention，用于验证正确性）
+// CPU 参考实现（标准 Attention，用于验证正确性；与 kernel 同步省略 1/√d scale）
 void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int D) {
     float* S = (float*)malloc(N * N * sizeof(float));
     for (int i = 0; i < N; i++) {
@@ -336,7 +307,6 @@ void cpuAttention(const float* Q, const float* K, const float* V, float* O, int 
 }
 
 void initMatrix(float* mat, int rows, int cols) {
-    srand(42);
     for (int i = 0; i < rows * cols; i++)
         mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
 }
@@ -359,7 +329,7 @@ int main() {
 
     printf("=== FlashAttention Simplified Forward ===\n");
     printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
-    printf("SRAM usage per block: %.2f KB\n", (Br * D + Bc * D * 2 + Br * Bc) * sizeof(float) / 1024.0);
+    printf("SRAM usage per block: %.2f KB\n", (Br * D + Bc * D * 2) * sizeof(float) / 1024.0);
 
     size_t totalElements = batchSize * numHeads * N * D;
     size_t bytes = totalElements * sizeof(float);
@@ -370,6 +340,7 @@ int main() {
     float* h_O = (float*)malloc(bytes);
     float* h_O_CPU = (float*)malloc(bytes);
 
+    srand(42); // 只播种一次：若在 initMatrix 里每次 srand(42)，Q/K/V 会被初始化成完全相同的矩阵
     initMatrix(h_Q, batchSize * numHeads * N, D);
     initMatrix(h_K, batchSize * numHeads * N, D);
     initMatrix(h_V, batchSize * numHeads * N, D);
@@ -384,9 +355,9 @@ int main() {
     cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
 
     dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
-    dim3 blockDim(NUM_THREADS_X, NUM_THREADS_Y);
+    dim3 blockDim(Br); // 一个 block Br 个线程，每个线程负责 Q tile 的一行
 
-    printf("Grid: (%d, %d, %d), Block: (%d, %d)\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y);
+    printf("Grid: (%d, %d, %d), Block: %d\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -423,6 +394,12 @@ int main() {
 }
 ```
 
+**实现要点**（与标准实现的差异，面试可以主动讲）：
+
+- **一个线程负责 Q tile 的一行**：running 状态 `(m, l, acc)` 天然按行隔离，每个线程独立跑自己的 online softmax，无需跨线程通信
+- **S/P 不落 shared memory**：`s_row[Bc]` 和 `acc[D]` 在寄存器/local 中，shared memory 只放 Q/K/V 三个 tile——这正是 5.1 节"SRAM 只需 `Br×d + 2×Bc×d`"的原因
+- **边界处理**：`qRow >= N` 的线程只参与 tile 加载和 `__syncthreads`，不做计算；最后一个 KV tile 用 `kvLen` 截断
+
 #### 任务 2：编译运行
 
 ```bash
@@ -435,23 +412,28 @@ nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
 ```
 === FlashAttention Simplified Forward ===
 Config: N=256, D=64, batch=1, heads=1
-SRAM usage per block: 40.00 KB
-Grid: (4, 1, 1), Block: (64, 4)
+SRAM usage per block: 32.00 KB
+Grid: (4, 1, 1), Block: 64
 GPU Time: x.xxx ms
 Result check: PASS
 ```
 
 #### 任务 3：验证 SRAM 使用量
 
-代码中打印了 SRAM 使用量。验证计算：
+代码中打印了 SRAM 使用量。验证计算（Br=64, Bc=32, D=64, float32）：
 
 ```
 s_Q[Br][D] = 64×64×4 = 16 KB
-s_K[Bc][D] = 64×64×4 = 16 KB
-s_V[Bc][D] = 64×64×4 = 16 KB
-s_S[Br][Bc] = 64×64×4 = 16 KB
-总计 = 64 KB（在 RTX 5090 的 164 KB shared memory 限制内）
+s_K[Bc][D] = 32×64×4 =  8 KB
+s_V[Bc][D] = 32×64×4 =  8 KB
+总计 = 32 KB（S/P 在寄存器中，不占 shared memory）
 ```
+
+几个容易记混的数字（面试常作为追问）：
+
+- **静态** `__shared__` **上限统一是 48 KB/block**（所有 CUDA 架构）；要超过它必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
+- **每 SM 的 shared memory 上限**：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = **100 KB**（128 KB unified cache，carveout 可调 0–100 KB，每 block 动态上限 99 KB）
+- 本配置 32 KB 在静态上限内，且每 SM 可同时驻留 ⌊100/32⌋ = 3 个 block；Bc 改成 64 会顶到 48 KB 静态上限，occupancy 掉到 1 block/SM
 
 #### 任务 4：LeetGPU 在线题目 —— Softmax Attention
 
@@ -467,7 +449,7 @@ s_S[Br][Bc] = 64×64×4 = 16 KB
 
 **与今日知识的关联**：
 
-本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。
+本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。注意**题目要求带 1/√d scale**，提交时别忘了。
 
 **解题思路**：
 
@@ -497,14 +479,14 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 
     // 遍历 K/V tiles
     for (int kv_start = 0; kv_start < N; kv_start += BLOCK_N) {
-        // 加载 K/V tile, 计算 S = Q * K^T
+        // 加载 K/V tile, 计算 S = Q * K^T / sqrt(d)
         // s_ji = Q[i] · K[j] / sqrt(d)
 
         // Online Softmax 更新
         // m_new = max(m_i, max(s_j))
         // l_new = l_i * exp(m_i - m_new) + sum(exp(s_j - m_new))
         // o_new = o_i * (l_i * exp(m_i - m_new) / l_new)
-        // + (exp(s_j - m_new) / l_new) * V[j]
+        //              + (exp(s_j - m_new) / l_new) * V[j]
 
         // (省略具体实现, 见 Day 5 教程的完整 kernel)
     }
@@ -542,13 +524,18 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 
 #### 实验 1：手动推导 Online Softmax
 
-假设已处理块的 `m=2.0, l=3.0`，新块的值为 `[3.0, 1.0, 4.0]`，计算新的 `m_new, l_new`。
+假设已处理块的 `m=2.0, l=3.0`，已归一化的旧输出 `o=0.5`（为简单起见假设 V 是一维标量），新块的 score 为 `[3.0, 1.0, 4.0]`，对应的 `v = [1.0, 2.0, 3.0]`，计算新的 `m_new, l_new, o_new`。
 
 > 提示：
 > - `m_new = max(2.0, max(3.0, 1.0, 4.0)) = 4.0`
-> - `l_scale = exp(2.0 - 4.0) = exp(-2.0) ≈ 0.135`
-> - `l_new = 3.0 × 0.135 + exp(3.0-4.0) + exp(1.0-4.0) + exp(4.0-4.0)`
-> - `= 0.406 + 0.368 + 0.050 + 1.0 = 1.824`
+> - `l_scale = exp(2.0 - 4.0) = exp(-2.0) ≈ 0.1353`
+> - `l_new = 3.0 × 0.1353 + exp(3-4) + exp(1-4) + exp(4-4)`
+>   `= 0.406 + 0.368 + 0.050 + 1.0 = 1.824`
+> - `o_scale = l × l_scale / l_new = 0.406 / 1.824 ≈ 0.2225`
+> - `o_new = 0.5 × 0.2225 + (0.368×1.0 + 0.050×2.0 + 1.0×3.0) / 1.824`
+>   `≈ 0.1113 + 3.4676 / 1.824 ≈ 0.1113 + 1.9012 ≈ 2.01`
+>
+> **验证**（按全局 softmax 重新算一遍）：旧块质量缩放到新参考点 = `3.0×exp(-2) = 0.406`，其分子贡献 = `0.5×0.406 = 0.203`；最终输出 = `(0.203 + 3.4676) / 1.824 ≈ 2.01` ✓ 与递推结果一致——这说明 online 更新与"全量算一遍"严格等价。
 
 #### 实验 2：增大序列长度对比 HBM 访问量
 
@@ -567,23 +554,49 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 ```bash
 nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
 ncu --kernel-name regex:flashAttentionFwd \
- --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+    --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 sm__occupancy.avg.pct_of_peak_sustained_elapsed \
- ./flash_attn_profile
+    ./flash_attn_profile
 ```
 
 观察 FlashAttention 是 memory-bound 还是 compute-bound，对比标准 Attention 的指标。
+
+#### 实验 4：给 Kernel 加 Causal Mask（思考题）
+
+Decoder 推理要求位置 i 只能 attend 到 ≤ i 的 key（下三角 mask）。在本 kernel 上的改法：
+
+1. **整块跳过**：当 `kvStart > qRow` 时直接 `break`——对角线以右的 KV tile 对本行毫无贡献
+2. **对角线 tile 内逐元素判断**：当 `kvStart + c > qRow` 时跳过该 c（或把 `s_row[c]` 置为 `-inf`，让它在 exp 后权重为 0）
+3. 完全在对角线左侧的 tile（`kvStart + Bc - 1 <= qRow`）不需要任何判断，全速跑
+
+注意加了 mask 之后计算量减半，但 tiling 的访存结构不变——这就是 causal attention 依然适合 FlashAttention 的原因。
+
+> 💡 LeetGPU 上有专门的 [Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 题目，做完今天的 kernel 可以直接去挑战。
+
+---
+
+### 延伸：FlashAttention-2 / 3 改了什么（面试高频追问）
+
+| 版本 | 核心改进 | 效果 |
+|---|---|---|
+| **FA1**（2022） | Tiling + Online Softmax，S/P 不物化 | HBM IO 从 O(N²) 降到 O(Nd) 级别，2-4x 加速 |
+| **FA2**（2023） | ① 外循环从 KV tile 换成 Q tile：每个 block 独占一个 Q tile 的输出，消除跨 block 通信 ② 推迟归一化（`o` 最后才除 `l`）+ 减少 rescale 次数，降低 non-matmul FLOPs ③ warp 之间按 Q 行切分，减少 shared memory 读写和 barrier | 再快 ~2x，A100 上从 ~30% 峰值提到 50-70% |
+| **FA3**（2024，Hopper） | ① FP8 低精度 ② warp specialization：producer/consumer 异步流水（TMA + wgmma）③ GEMM 与 softmax 块间 overlap 隐藏延迟 | H100 上达 ~75% 理论峰值利用率 |
+
+> 💡 **面试答法**：先讲 FA1 的 IO 感知（今天的内容），再补一句"FA2 主要是工程优化——减少 non-matmul FLOPs、更好的并行划分；FA3 是挖掘 Hopper 硬件特性——异步流水 + FP8"。共同主线：**让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上**，softmax 的 exp/除法吞吐远低于 GEMM 单元，能省则省、能藏则藏。
 
 ### 验证 Checklist
 
 - [ ] 能推导出 Online Softmax 的三个更新公式（m_new, l_new, o_new）
 - [ ] 能理解每个公式中 `exp(m - m_new)` 缩放因子的作用（统一参考点）
+- [ ] 能讲清 online softmax 两种变体的等价性（每步归一化 vs 末尾 `o/l`）
 - [ ] FlashAttention Kernel 编译运行正确，小尺寸测试通过（与 CPU 对比误差 < 1e-3）
 - [ ] 能解释 FlashAttention 的 HBM 访问复杂度为什么是 O(Nd) 而非 O(N²)
 - [ ] 能画出 FlashAttention 的 tiling 示意图（Q tile 驻留 SRAM，K/V tile 逐块滑入）
-- [ ] 能计算 SRAM 使用量：`Br×D + Bc×D×2 + Br×Bc`，确认不超过 shared memory 上限
+- [ ] 能计算 SRAM 使用量：`Br×D + Bc×D×2`（S/P 在寄存器），确认不超过 48 KB 静态上限
 - [ ] 能解释 FlashAttention 的加速来源（减少 HBM 访问，而非减少计算量）
+- [ ] 知道本简化版省略了 1/√d scale，并能指出该在哪一行加回
 
 ---
 
@@ -592,7 +605,7 @@ sm__occupancy.avg.pct_of_peak_sustained_elapsed \
 Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 
 1. **标准 Attention 的瓶颈**：S 和 P 两个 N×N 中间矩阵导致 O(N²) HBM 访问
-2. **FlashAttention 的核心**：分块 Tiling + Online Softmax，在 SRAM 中完成所有中间计算
+2. **FlashAttention 的核心**：分块 Tiling + Online Softmax，S/P 只在 SRAM/寄存器中存活，不落 HBM
 3. **Online Softmax 三公式**：`m_new = max(m, max(xj))`、`l_new = l×exp(m-m_new) + Σexp(xj-m_new)`、`o_new = o×(l×exp(m-m_new)/l_new) + (exp(xj-m_new)/l_new)×vj`
 4. **关键缩放因子**：`exp(m - m_new)` 保证全局参考点一致
 5. **HBM 复杂度**：从 O(N²) 降到 O(Nd)，长序列加速 2-4x
@@ -608,7 +621,7 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 <summary>点击查看答案</summary>
 
  - **核心问题**：标准 Attention 需要存储和读取 S=Q×K^T 和 P=softmax(S) 两个 N×N 中间矩阵，HBM 访问量为 O(N²)
- - **FlashAttention 方案**：通过分块 tiling + online softmax，在 SRAM 中完成所有中间计算，不需要将 S 和 P 写入 HBM
+ - **FlashAttention 方案**：通过分块 tiling + online softmax，在 SRAM/寄存器中完成所有中间计算，不需要将 S 和 P 写入 HBM
  - **HBM 访问对比**：标准 = O(N² + Nd)；FlashAttention = O(Nd)（只读 Q/K/V，只写 O）
  - **速度来源**：不是 FLOPS 减少了（计算量相同），而是**数据移动减少了**——减少数据移动比减少计算更重要
  - **实际加速**：长序列（N>2048）时加速明显（2-4x），因为 HBM 带宽是瓶颈
@@ -632,13 +645,16 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
  公式2 - Sum 更新：
  l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
  含义：l × exp(m - m_new) 将旧 sum 从旧参考点 m 缩放到新参考点 m_new；
- Σ exp(xj - m_new) 是新块的指数和
+       Σ exp(xj - m_new) 是新块的指数和
 
  公式3 - Output 更新：
  o_new = o × (l × exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) × vj
  含义：前半部分将旧输出按新概率重新归一化；后半部分是新块贡献
 
  关键点：exp(m - m_new) 是统一参考点的缩放因子
+ 注意：这是"每步归一化"变体（o 始终已归一化）；FA 论文用的是
+       "末尾归一化"变体——o 只累加未归一化加权和，最后 O = o/l，
+       两者数学等价
  ```
 
 </details>
@@ -649,10 +665,11 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
 <details>
 <summary>点击查看答案</summary>
 
- - 受限于 SRAM（Shared Memory）容量：`Br×D + Bc×D×2 + Br×Bc ≤ SRAM 容量`
- - RTX 5090 shared memory 最多 164 KB/SM
- - 典型值：Br=Bc=64, D=64 时 SRAM 使用约 40 KB
- - 分块太小 → 循环次数多；分块太大 → SRAM 超限或 occupancy 下降
+ - 硬约束是 SRAM：`Br×d + 2×Bc×d ≤ shared memory 容量`（Q/K/V 三个 tile；S/P 中间结果放寄存器，不占 SRAM）
+ - 注意**静态** `__shared__` **有 48 KB/block 的统一硬上限**，超过必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
+ - 各代 GPU 每 SM shared memory 上限：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = 100 KB（每 block 动态上限 99 KB）——别把数字记混
+ - 本教程 Br=64, Bc=32, D=64：`(64×64 + 2×32×64)×4B = 32 KB`，在静态上限内，每 SM 可驻留 3 个 block
+ - 权衡：tile 越大 → K/V 复用率越高、HBM 流量越低，但单 block 占 SRAM 多、occupancy 下降；tile 太小则循环开销占比上升
 
 </details>
 
@@ -680,7 +697,18 @@ Day 5 我们掌握了 FlashAttention 的核心思想和实现：
  - **Decode**：M=1，没有 N×N 矩阵，标准 Attention 退化为 1×N，S/P 本就不大。但 FlashAttention 仍受益——它把 softmax+PV 融合在 SRAM 里，减少 kernel launch 数量和中间 HBM 读写，配合 KV Cache 优化 decode 的 memory-bound
  - **关键洞察**：Prefill 的收益主要来自"消除 O(N²) 物化"，Decode 的收益主要来自"kernel fusion 减少 HBM 往返"，两者瓶颈不同但 FlashAttention 都能覆盖
 
----
-
 </details>
 
+
+6. **FlashAttention-2 相比初代做了哪些改进？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **循环结构**：外循环从 KV tile 换成 Q tile，每个 block 独占一个 Q tile 的输出，消除跨 block 通信（初代需要跨 block 协调 rescale）
+ - **减少 non-matmul FLOPs**：推迟归一化（`o` 最后才除 `l`）、减少每步 rescale 次数——softmax 的 exp/除法吞吐远低于 GEMM 单元，省这些比省 matmul 更值
+ - **warp 划分**：warp 之间按 Q 行切分（初代按 KV 切分需要跨 warp 通信归约），减少 shared memory 读写和 barrier
+ - **结果**：A100 上从 FA1 的 ~30% 峰值利用率提到 50-70%
+ - **主线思想**：让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上（FA3 沿这条路继续：Hopper 异步流水 + FP8）
+
+</details>

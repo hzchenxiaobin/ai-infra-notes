@@ -72,24 +72,11 @@ Mini AI Infra 的系统架构分为五层，从上到下依次为：
 
 一个请求从提交到返回，经过六个阶段：
 
-```
-① submit()     → 用户调用，返回 Future
-② enqueue      → 入队 WAITING，notify 唤醒调度线程
-③ schedule     → get_batch 凑批，状态 → RUNNING
-④ forward      → prefill → decode，读写 KV Cache（锁外执行）
-⑤ sample       → top-k/top-p 采样，emit_token（Streaming）
-⑥ return       → set_result，状态 → FINISHED
-```
+![请求生命周期数据流](../images/week8_request_lifecycle_pipeline.svg)
 
 ##### 状态机
 
-```
-submit() → WAITING（入队，等调度）
-  → RUNNING（调度选中，prefill→decode）
-  ├── 正常完成 → FINISHED（set_result → Future+Callback）
-  ├── 超时 → TIMEOUT（set_exception）
-  └── 取消 → CANCELLED（cancel() → set_exception）
-```
+![请求状态机 · 三态终局](../images/week8_request_state_tree.svg)
 
 ##### 每阶段的关键指标
 

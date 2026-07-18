@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="280" viewBox="0 0 860 280" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="26" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="280" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求生命周期数据流</text>
+  <path d="M 270 44 Q 430 52 590 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="430" y="60" text-anchor="middle" font-size="11" fill="#888">submit → enqueue → schedule → forward → sample → return · 六阶段从提交到返回</text>
+
+  <!-- 6 step boxes -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="20"  y="100" width="130" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="85"  y="124" fill="#2b6e9e" font-weight="bold" font-size="14">①</text>
+    <text x="85"  y="146" fill="#2b6e9e" font-weight="bold">submit()</text>
+    <text x="85"  y="168" fill="#2b6e9e" font-size="10">用户调用</text>
+    <text x="85"  y="184" fill="#2b6e9e" font-size="10">返回 Future</text>
+    <text x="85"  y="208" fill="#2b6e9e" font-size="10" font-style="italic" fill="#5d3a7e">延迟 &lt; 1ms</text>
+
+    <rect x="162" y="100" width="130" height="120" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="227" y="124" fill="#2e6e2e" font-weight="bold" font-size="14">②</text>
+    <text x="227" y="146" fill="#2e6e2e" font-weight="bold">enqueue</text>
+    <text x="227" y="168" fill="#2e6e2e" font-size="10">入队 WAITING</text>
+    <text x="227" y="184" fill="#2e6e2e" font-size="10">notify 唤醒</text>
+    <text x="227" y="200" fill="#2e6e2e" font-size="10">调度线程</text>
+
+    <rect x="304" y="100" width="130" height="120" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="369" y="124" fill="#7a5415" font-weight="bold" font-size="14">③</text>
+    <text x="369" y="146" fill="#7a5415" font-weight="bold">schedule</text>
+    <text x="369" y="168" fill="#7a5415" font-size="10">get_batch 凑批</text>
+    <text x="369" y="184" fill="#7a5415" font-size="10">状态 → RUNNING</text>
+
+    <rect x="446" y="100" width="130" height="120" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="511" y="124" fill="#5d3a7e" font-weight="bold" font-size="14">④</text>
+    <text x="511" y="146" fill="#5d3a7e" font-weight="bold">forward</text>
+    <text x="511" y="168" fill="#5d3a7e" font-size="10">prefill → decode</text>
+    <text x="511" y="184" fill="#5d3a7e" font-size="10">读写 KV Cache</text>
+    <text x="511" y="200" fill="#5d3a7e" font-size="10">（锁外执行）</text>
+
+    <rect x="588" y="100" width="130" height="120" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="653" y="124" fill="#b85450" font-weight="bold" font-size="14">⑤</text>
+    <text x="653" y="146" fill="#b85450" font-weight="bold">sample</text>
+    <text x="653" y="168" fill="#b85450" font-size="10">top-k / top-p</text>
+    <text x="653" y="184" fill="#b85450" font-size="10">emit_token</text>
+    <text x="653" y="200" fill="#b85450" font-size="10">（Streaming）</text>
+
+    <rect x="730" y="100" width="118" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="789" y="124" fill="#2b6e9e" font-weight="bold" font-size="14">⑥</text>
+    <text x="789" y="146" fill="#2b6e9e" font-weight="bold">return</text>
+    <text x="789" y="168" fill="#2b6e9e" font-size="10">set_result</text>
+    <text x="789" y="184" fill="#2b6e9e" font-size="10">状态 → FINISHED</text>
+  </g>
+
+  <!-- arrows between steps -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 152 160 L 160 160" marker-end="url(#ar)"/>
+    <path d="M 294 160 L 302 160" marker-end="url(#ar)"/>
+    <path d="M 436 160 L 444 160" marker-end="url(#ar)"/>
+    <path d="M 578 160 L 586 160" marker-end="url(#ar)"/>
+    <path d="M 720 160 L 728 160" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- footer -->
+  <text x="430" y="252" text-anchor="middle" font-size="10" fill="#5d3a7e">每阶段只做一件事 · submit/enqueue 不阻塞 · forward 锁外执行避免阻塞调度</text>
+  <text x="430" y="268" text-anchor="middle" font-size="9" fill="#aaa">对应面试题：从用户视角到实现细节 · 顺序画架构图</text>
+</svg>

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="16" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="720" height="540" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">请求生命周期</text>
+  <path d="M 230 44 Q 360 52 490 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="360" y="60" text-anchor="middle" font-size="11" fill="#888">submit() → WAITING → RUNNING(prefill+decode) → FINISHED → 异步返回</text>
+
+  <!-- submit() -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="270" y="84" width="180" height="38" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+    <text x="360" y="108" fill="#5d3a7e" font-weight="bold">submit() 立即返回 Future</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 360 122 L 360 150" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- WAITING -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="260" y="154" width="200" height="52" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="360" y="178" fill="#2b6e9e" font-weight="bold" font-size="15">WAITING</text>
+    <text x="360" y="196" fill="#2b6e9e" font-size="11">入队 · 等 token budget</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 360 206 L 360 234" marker-end="url(#ar)"/>
+  </g>
+  <text x="372" y="226" font-size="10" fill="#666">schedule 选中</text>
+
+  <!-- RUNNING container with two branches -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="140" y="238" width="440" height="148" rx="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" stroke-dasharray="5 3"/>
+    <text x="360" y="262" fill="#2e6e2e" font-weight="bold" font-size="15">RUNNING</text>
+  </g>
+
+  <!-- Prefill branch -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="170" y="280" width="170" height="92" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="255" y="304" fill="#7a5415" font-weight="bold" font-size="13">Prefill</text>
+    <text x="255" y="322" fill="#7a5415" font-size="10">一次性处理 prompt</text>
+    <text x="255" y="338" fill="#7a5415" font-size="10">建立 KV Cache</text>
+    <text x="255" y="358" fill="#7a5415" font-size="9" font-style="italic">（仅 1 次）</text>
+  </g>
+
+  <!-- Decode branch -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="380" y="280" width="170" height="92" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="465" y="304" fill="#7a5415" font-weight="bold" font-size="13">Decode</text>
+    <text x="465" y="322" fill="#7a5415" font-size="10">每轮 1 token</text>
+    <text x="465" y="338" fill="#7a5415" font-size="10">复用 KV Cache</text>
+    <text x="465" y="358" fill="#7a5415" font-size="9" font-style="italic">循环 max_new_tokens 次</text>
+  </g>
+
+  <!-- decode self-loop arrow -->
+  <g filter="url(#sk)" stroke="#7a5415" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 550 326 Q 600 326 600 300 Q 600 274 550 274" marker-end="url(#ar)"/>
+  </g>
+  <text x="612" y="304" font-size="9" fill="#7a5415" text-anchor="middle">循环</text>
+
+  <!-- branch fork from top of RUNNING -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 360 272 L 360 276 L 255 276 L 255 280" marker-end="url(#ar)"/>
+    <path d="M 360 276 L 465 276 L 465 280" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- arrow RUNNING -> FINISHED -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 360 386 L 360 414" marker-end="url(#ar)"/>
+  </g>
+  <text x="372" y="406" font-size="10" fill="#666">gen 满 max_new_tokens</text>
+
+  <!-- FINISHED -->
+  <g filter="url(#sk)" font-size="13" text-anchor="middle">
+    <rect x="260" y="418" width="200" height="52" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="360" y="442" fill="#b85450" font-weight="bold" font-size="15">FINISHED</text>
+    <text x="360" y="460" fill="#b85450" font-size="11">从 running 移除 · 释放资源</text>
+  </g>
+
+  <!-- async return on right -->
+  <g filter="url(#sk)" stroke="#5d3a7e" stroke-width="1.3" fill="none" stroke-dasharray="4 3">
+    <path d="M 460 444 L 560 444 L 560 102 L 450 102" marker-end="url(#ar)"/>
+  </g>
+  <text x="568" y="274" font-size="10" fill="#5d3a7e" text-anchor="middle" transform="rotate(-90 568 274)">future.set_result() 异步返回</text>
+
+  <text x="360" y="500" text-anchor="middle" font-size="10" fill="#888">Prefill 仅 1 次（建 KV）· Decode 循环 max_new_tokens 次（复用 KV）· 完成即异步通知</text>
+  <text x="360" y="518" text-anchor="middle" font-size="9" fill="#aaa">对应 Day 2-3 Scheduler 状态机 · v1 用 Future 实现异步返回</text>
+</svg>

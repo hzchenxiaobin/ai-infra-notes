@@ -185,12 +185,7 @@ def _apply_aging(self):
 
 ##### 为什么是这个顺序？
 
-```
-先 ① 恢复 swapped → 被抢占的请求优先恢复（公平）
-再 ② 继续 running → 正在生成的请求不中断（延迟保障）
-后 ③ 加入新请求 → 剩余预算给新请求（利用率最大化）
-最后 ④⑤ 维护 → aging 和超时是后台维护
-```
+![Scheduler 调度顺序](../images/week7_scheduler_priority.svg)
 
 > 💡 **与 vLLM 的对应**：vLLM 的调度器每轮 iteration 也遵循类似顺序——先处理 running（decode），再从 waiting 加入新请求（prefill），token_budget 共享。
 

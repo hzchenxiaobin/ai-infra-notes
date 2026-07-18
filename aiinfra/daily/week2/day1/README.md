@@ -59,26 +59,7 @@ CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 
 ##### 四个原语的数据流向图
 
-```
-__shfl_sync(mask, val, srcLane=4):
- Lane: 0 1 2 3 4 5 6 7 ... 31
- 数据: ? ? ? ? V4 ? ? ? ... ?
- 结果: V4 V4 V4 V4 V4 V4 V4 V4 ... V4 ← 所有 lane 都得到 lane 4 的值
-
-__shfl_up_sync(mask, val, delta=2):
- Lane: 0 1 2 3 4 5 6 7 ... 31
- 数据: V0 V1 V2 V3 V4 V5 V6 V7 ... V31
- 结果: V0 V1 V0 V1 V2 V3 V4 V5 ... V29 ← 每个 lane 从上方 delta 处取值
-
-__shfl_down_sync(mask, val, delta=2):
- Lane: 0 1 2 3 4 5 6 7 ... 31
- 数据: V0 V1 V2 V3 V4 V5 V6 V7 ... V31
- 结果: V2 V3 V4 V5 V6 V7 V8 V9 ... ? ← 每个 lane 从下方 delta 处取值
-
-__shfl_xor_sync(mask, val, laneMask=2):
- Lane: 0 1 2 3 4 5 6 7 ... 31
- 交换: 2 3 0 1 6 7 4 5 ... 29 ← lane i 与 lane (i^2) 交换
-```
+![Warp Shuffle 四原语数据流向](../images/week2_warp_shuffle_layout.svg)
 
 #### 1.2 参数详解
 
@@ -178,24 +159,7 @@ __inline__ __device__ float warpReduceSumAll(float val) {
 
 ##### 两级归约的执行流程
 
-```
-Block (1024 threads = 32 warps)
-│
-├── Step 1: 每个线程从 Global Memory 读取并做 per-thread 累加
-│ (使用 grid-stride loop 处理大数组)
-│
-├── Step 2: Warp 级归约（每个 Warp 的 32 个线程累加到 lane 0）
-│ 使用 __shfl_down_sync 的 butterfly 模式
-│
-├── Step 3: lane 0 将 Warp 的部分和写入 Shared Memory
-│ warpSums[0], warpSums[1], ..., warpSums[31]
-│ __syncthreads() ← 等待所有 Warp 完成
-│
-└── Step 4: Warp 0 做最终归约
- lane 0~31 读取 warpSums[0]~warpSums[31]
- 再执行一次 warpReduceSum
- lane 0 写入最终结果到 Global Memory
-```
+![Block 两级归约执行流程](../images/week2_block_reduction_flow.svg)
 
 ##### 为什么第二级归约也用 Warp Shuffle？
 

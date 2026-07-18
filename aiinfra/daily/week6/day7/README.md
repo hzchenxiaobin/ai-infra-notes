@@ -21,11 +21,7 @@
 
 Week 6 围绕一条主线展开：**从单请求串行到多请求高吞吐服务**。
 
-```
-Day1 Dynamic Batching → Day2 Continuous Batching → Day3 vLLM Scheduler
- → Day4 框架对比/Chunked Prefill → Day5 Mini 引擎 v1
- → Day6 Benchmark → Day7 策略总结
-```
+![Week 6 学习主线](../images/week6_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -45,15 +41,7 @@ Day1 Dynamic Batching → Day2 Continuous Batching → Day3 vLLM Scheduler
 
 #### 1. Dynamic → Continuous：request-level 到 iteration-level
 
-```
-Dynamic Batching（Day1）：
- 请求入队 → 等满/超时 → 整批 forward → 整批完成 → 下一批
- 问题：长请求阻塞短请求（batch 内所有请求一起结束）
-
-Continuous Batching（Day2）：
- 每轮 iteration → 保留 running + 补入 waiting → forward 1 步 → 完成的退出
- 优势：短请求完成即走、新请求随时插入、GPU 始终满载
-```
+![Dynamic vs Continuous Batching](../images/week6_dynamic_vs_continuous.svg)
 
 | 维度 | Dynamic（Day1） | Continuous（Day2） |
 |------|----------------|-------------------|
@@ -64,14 +52,7 @@ Continuous Batching（Day2）：
 
 #### 2. vLLM Scheduler：5 步 + 预算 + 抢占（Day3）
 
-```
-schedule() 5 步：
- ① free_finished → ② schedule_running → ③ schedule_swapped
- → ④ schedule_waiting → ⑤ 构建 outputs
-
-SchedulingBudget：token_budget（每轮 token 上限）+ max_num_seqs（并发上限）
-Preemption：RECOMPUTE（默认，丢弃 KV 重 prefill）/ SWAP（换出 CPU）
-```
+![vLLM Scheduler schedule() 五步](../images/week6_vllm_scheduler_flow.svg)
 
 > 关键防饿死：`_schedule_waiting` 中 `if self.swapped: return`——swapped 非空时不接纳新请求。
 
@@ -119,20 +100,7 @@ P99 > 平均延迟 → 尾延迟是 SLA 关键
 
 ![调度策略选择决策树](../website/images/scheduling_strategy_decision_tree.svg)
 
-```
-选择 batching 策略：
- 1. 是否要求最低延迟（交互式）？
- → 是：Static / 小 batch + Priority
- → 否：继续
- 1. 是否 LLM 自回归生成？
- → 是：Continuous Batching ✓
- → 否：Dynamic Batching
- 1. 在 Continuous 基础上叠加（按需）：
- → 多租户/多 SLA？ + Priority Scheduling
- → 有长 prompt？ + Chunked Prefill
- → 显存紧张？ + Preemption (Recompute/Swap)
- → 有 draft model？ + Speculative Decoding
-```
+![Batching 策略选择决策树](../images/week6_batching_strategy_decision.svg)
 
 ---
 
@@ -150,29 +118,7 @@ python kernels/week6_summary.py
 
 **预期输出**（节选）：
 
-```text
-Week 6 调度策略对比表（7 种策略）
-策略 原理 适用场景 ...
-Static Batching 固定 batch size，凑齐... 简单 demo / 请求等长 ...
-Continuous Batching iteration-level 调度... LLM 自回归推理 ...
-...
-
-调度策略选择决策树
- Step 1: 是否要求最低延迟（交互式）？
- ├─ 是 → Static / 小 batch + Priority
- └─ 否
- Step 3: 是否 LLM 自回归生成？
- ├─ 是 → Continuous Batching ✓
- ...
-
-✅ Week 6 核心收获：
- 1. Dynamic→Continuous：request-level → iteration-level 调度
- 2. vLLM Scheduler：5 步 schedule() + SchedulingBudget + Preemption
- 3. 框架对比：vLLM(Python,灵活) vs TRT-LLM(C++,快) vs LightLLM(Token Attn)
- 4. Chunked Prefill：长 prompt 拆块与 decode 交错，平滑 TPOT
- 5. Mini 引擎 v1：多请求 + Continuous Batching + 优先级 + Future
- 6. Benchmark：throughput-latency 曲线找饱和点，P99 看尾延迟
-```
+![Week 6 调度策略总结](../images/week6_scheduling_strategy_comparison.svg)
 
 #### 任务 2：LeetGPU 综合题 —— FP16 Dot Product
 
