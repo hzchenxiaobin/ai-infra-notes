@@ -83,7 +83,7 @@ curl -s 'https://leetcode.cn/graphql' -H 'Content-Type: application/json' \
   -d '{"query":"query{question(titleSlug:\"<slug>\"){questionFrontendId translatedTitle translatedContent difficulty topicTags{name} sampleTestCase}}"}'
 ```
 
-- `translatedTitle`：中文题名（用作文件名与一级标题）。
+- `translatedTitle`：中文题名（用作文件名与 `<!-- title: ... -->` 注释）。
 - `translatedContent`：HTML 中文题面，需去标签后阅读（见下）。
 - `difficulty`：`Easy` / `Medium` / `Hard`。
 - `sampleTestCase`：示例输入。
@@ -109,7 +109,7 @@ print(d)
 每篇周赛题解 `.md` 遵循固定章节顺序（参考 `507/Q4.最大总价值题解.md`、`510/Q4.网格中保持一致的最大列数题解.md`）。周赛题解比 daily 多**算法细节、正确性证明、边界情况**三节，强调严谨性：
 
 ```markdown
-# <题目中文名>
+<!-- title: <题目中文名> -->
 
 ## 1. 题目概述
 
@@ -188,7 +188,7 @@ print(d)
 - **证明用引理-定理结构**：先证引理（小结论），再证主定理。证明结尾用 `∎` 或 `□` 标记。
 - 图片引用相对路径：`![<中文alt>](images/<filename>.svg)`（从 contest 场次目录出发，实际文件在 `leetcode/images/`，build.py 会重写）。
 - 每篇平均引用 **2-4 张 SVG**。alt 文本用中文。
-- 题号在元数据 `题目名称` 中可带 `Qx.` 前缀（如 `Q4. 网格中保持一致的最大列数`）；一级标题 `# <题目名>` **不带** `Qx.` 前缀，build.py 会从文件名自动补前缀到侧边栏。
+- 题号在元数据 `题目名称` 中可带 `Qx.` 前缀（如 `Q4. 网格中保持一致的最大列数`）；页面标题通过文件顶部 `<!-- title: <题目名> -->` 注释提供，**不带** `Qx.` 前缀，build.py 会从文件名自动补前缀到侧边栏。
 
 ### 数学公式
 
@@ -268,7 +268,7 @@ print(d)
 
 - `build.py` 递归扫描 `leetcode/` 下所有 `.md`（排除 `website/`、`images/`、`SKILL.md`）。
 - `contest/<场次>/<文件>.md` 被识别为 `category="contest"`，按场次号**降序**分组显示在侧边栏与列表页右栏。
-- 文件名以 `Q<num>.` 开头时，`parse_title` 会把 `Q<num>` 前缀自动补到侧边栏标题前（若一级标题未带）。
+- 文件名以 `Q<num>.` 开头时，`parse_title` 会把 `Q<num>` 前缀自动补到侧边栏标题前（若 title 注释未带）。
 - 图片路径 `images/xxx.svg` 在题解页被重写为 `../images/xxx.svg`。
 - `leetcode/images/` 整体复制到网站 `images/` 输出目录，周赛与 daily 共享。
 
@@ -283,7 +283,7 @@ python3 build.py                     # 组合构建全站（含 leetcode）
 
 - [ ] 题解位于 `leetcode/contest/<场次>/Q<num>.<题目名>题解.md`
 - [ ] 文件名格式 `Q<num>.<中文题目名>题解.md`，`Q<num>.` 后无空格
-- [ ] 一级标题 `# <题目中文名>`（不带 Qx 前缀）
+- [ ] 文件顶部包含 `<!-- title: <题目中文名> -->`（不带 Qx 前缀），正文从 `## 1. 题目概述` 开始
 - [ ] 元数据含 `难度`、`标签`，以及 `链接` 或 `来源`（至少其一，建议都写）
 - [ ] 含「5. 正确性证明」节（引理 + 定理，困难题必写）
 - [ ] 含「8. 边界情况与易错点」节

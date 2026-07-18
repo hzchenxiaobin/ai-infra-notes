@@ -57,13 +57,20 @@ def rewrite_md_links_to_html(markdown_text: str) -> str:
 
 
 def parse_title(markdown_text: str, filename: str = "") -> str:
-    """Extract title from the first level-1 heading.
+    """Extract title from an explicit HTML title comment, then fallback to the
+    first level-1 heading, then fallback to the filename stem.
 
-    If the filename starts with a 'Qx.' prefix and the heading does not,
-    prepend the prefix to the heading for sidebar/list display.
+    If the filename starts with a 'Qx.' prefix and the title does not,
+    prepend the prefix to the title for sidebar/list display.
     """
-    match = re.search(r"^#\s+(.+)$", markdown_text, re.MULTILINE)
-    title = match.group(1).strip() if match else "题解"
+    # 1. explicit <!-- title: ... --> comment (invisible in rendered page)
+    match = re.search(r"<!--\s*title:\s*(.+?)\s*-->", markdown_text)
+    if match:
+        title = match.group(1).strip()
+    else:
+        # 2. fallback to first H1
+        match = re.search(r"^#\s+(.+)$", markdown_text, re.MULTILINE)
+        title = match.group(1).strip() if match else "题解"
 
     q_match = re.match(r"^(Q\d+)\.", filename)
     if q_match:
