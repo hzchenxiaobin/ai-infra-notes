@@ -1,0 +1,239 @@
+[1mdiff --git a/aiinfra/daily/week8/day2/README.md b/aiinfra/daily/week8/day2/README.md[m
+[1mindex d822351..1e6e960 100644[m
+[1m--- a/aiinfra/daily/week8/day2/README.md[m
+[1m+++ b/aiinfra/daily/week8/day2/README.md[m
+[36m@@ -187,97 +187,9 @@[m [msequenceDiagram[m
+ ### Coding 任务：绘制 Mini 引擎架构图集并验证[m
+ [m
+ #### 任务 1：创建 architecture_diagrams.py[m
+[32m+[m[32m创建文件 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)，用 Python 生成 Mini 引擎的 Mermaid 架构图集，可直接贴进 README。[m
+ [m
+[31m-创建文件 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)，用 Python 生成 Mini 引擎的 Mermaid 架构图集，可直接贴进 README：[m
+[31m-[m
+[31m-```python[m
+[31m-# architecture_diagrams.py —— 生成 Mini 引擎 Mermaid 架构图集[m
+[31m-# 运行命令: python architecture_diagrams.py[m
+[31m-# 依赖: 仅标准库[m
+[31m-# 作用: 输出 4 张 Mermaid 图（架构/时序/时间线/状态机）的 Markdown 代码[m
+[31m-[m
+[31m-def system_architecture():[m
+[31m-    """五层系统架构图。"""[m
+[31m-    return """```mermaid[m
+[31m-graph TD[m
+[31m-    User[User Request] --> Queue[ThreadSafeRequestQueue<br/>条件变量+优先级][m
+[31m-    Queue --> Scheduler[Scheduler<br/>Continuous Batching][m
+[31m-    Scheduler --> Worker[Worker<br/>Model Forward][m
+[31m-    Worker --> KV[KV Cache Manager][m
+[31m-    Worker --> Sampler[Sampler][m
+[31m-    Sampler --> Result[Result Queue][m
+[31m-    Result --> User[m
+[31m-    subgraph CUDA Kernels[m
+[31m-        GEMM[GEMM 72%][m
+[31m-        FA[FlashAttention 2.1x][m
+[31m-        SM[Softmax][m
+[31m-        LN[RMSNorm][m
+[31m-    end[m
+[31m-    Worker --> GEMM & FA & SM & LN[m
+[31m-```"""[m
+[31m-[m
+[31m-[m
+[31m-def request_sequence():[m
+[31m-    """请求生命周期时序图。"""[m
+[31m-    return """```mermaid[m
+[31m-sequenceDiagram[m
+[31m-    participant U as User[m
+[31m-    participant E as Engine[m
+[31m-    participant Q as Queue[m
+[31m-    participant S as Scheduler[m
+[31m-    participant W as Worker[m
+[31m-    participant K as KV Cache[m
+[31m-    U->>E: submit(prompt)[m
+[31m-    E->>Q: enqueue (WAITING)[m
+[31m-    S->>Q: get_batch()[m
+[31m-    S->>W: schedule (RUNNING)[m
+[31m-    W->>K: read/write KV[m
+[31m-    W->>W: forward + sample[m
+[31m-    W->>S: outputs[m
+[31m-    S->>U: set_result (FINISHED)[m
+[31m-```"""[m
+[31m-[m
+[31m-[m
+[31m-def state_machine():[m
+[31m-    """请求状态机图。"""[m
+[31m-    return """```mermaid[m
+[31m-stateDiagram-v2[m
+[31m-    [*] --> WAITING: submit()[m
+[31m-    WAITING --> RUNNING: schedule()[m
+[31m-    RUNNING --> FINISHED: 完成[m
+[31m-    RUNNING --> TIMEOUT: 超时[m
+[31m-    RUNNING --> CANCELLED: cancel()[m
+[31m-    WAITING --> CANCELLED: cancel()[m
+[31m-    FINISHED --> [*][m
+[31m-    TIMEOUT --> [*][m
+[31m-    CANCELLED --> [*][m
+[31m-```"""[m
+[31m-[m
+[31m-[m
+[31m-def batching_timeline():[m
+[31m-    """Continuous Batching 时间线（用表格模拟）。"""[m
+[31m-    return """| 请求 | iter0 | iter1 | iter2 | iter3 | iter4 |[m
+[31m-|------|-------|-------|-------|-------|-------|[m
+[31m-| R1   | prefill | decode | decode | done ✓ | |[m
+[31m-| R2   | prefill | decode | decode | decode | done ✓ |[m
+[31m-| R3   | | | prefill | decode | decode |[m
+[31m-| **batch** | **2** | **2** | **3** | **2** | **1** |"""[m
+[31m-[m
+[31m-[m
+[31m-DIAGRAMS = {[m
+[31m-    "系统架构图": system_architecture,[m
+[31m-    "请求时序图": request_sequence,[m
+[31m-    "状态机图": state_machine,[m
+[31m-    "Batching 时间线": batching_timeline,[m
+[31m-}[m
+[31m-[m
+[31m-if __name__ == "__main__":[m
+[31m-    for name, fn in DIAGRAMS.items():[m
+[31m-        print(f"\n{'='*60}")[m
+[31m-        print(f"  {name}")[m
+[31m-        print(f"{'='*60}\n")[m
+[31m-        print(fn())[m
+[31m-```[m
+[32m+[m[32m> 💡 完整代码见 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)。运行 `python kernels/architecture_diagrams.py` 输出 4 张 Mermaid 图（系统架构 / 请求时序 / 状态机 / Batching 时间线）的 Markdown 代码，可直接贴进 README。[m
+ [m
+ 完整代码见 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)。[m
+ [m
+[36m@@ -289,24 +201,7 @@[m [mpython kernels/architecture_diagrams.py[m
+ [m
+ **预期输出**（节选）：[m
+ [m
+[31m-```text[m
+[31m-============================================================[m
+[31m-  系统架构图[m
+[31m-============================================================[m
+[31m-[m
+[31m-```mermaid[m
+[31m-graph TD[m
+[31m-    User[User Request] --> Queue[ThreadSafeRequestQueue<br/>条件变量+优先级][m
+[31m-    ...[m
+[31m-```[m
+[31m-[m
+[31m-============================================================[m
+[31m-  Batching 时间线[m
+[31m-============================================================[m
+[31m-[m
+[31m-| 请求 | iter0 | iter1 | iter2 | iter3 | iter4 |[m
+[31m-...[m
+[31m-```[m
+[32m+[m[32m> 程序输出 4 段 Markdown 代码，每段是一张 Mermaid 图（系统架构 / 请求时序 / 状态机 / Batching 时间线），可直接贴进 README。GitHub 原生渲染 Mermaid。[m
+ [m
+ ##### 观察重点[m
+ [m
+[1mdiff --git a/leetcode/website/build.py b/leetcode/website/build.py[m
+[1mindex 114e0a0..df066b1 100644[m
+[1m--- a/leetcode/website/build.py[m
+[1m+++ b/leetcode/website/build.py[m
+[36m@@ -33,6 +33,29 @@[m [mdef escape_for_template_string(text: str) -> str:[m
+     return text[m
+ [m
+ [m
+[32m+[m[32mdef rewrite_md_links_to_html(markdown_text: str) -> str:[m
+[32m+[m[32m    """Rewrite local .md links to .html for GitHub Pages deployment.[m
+[32m+[m
+[32m+[m[32m    Solution pages are emitted flat in the problems/ output directory, so a[m
+[32m+[m[32m    cross-link like ../../daily/weekN/dayM/xxx.md becomes ./xxx.html.[m
+[32m+[m[32m    Contest links like ../weekN/xxx.md also flatten to ./xxx.html.[m
+[32m+[m[32m    """[m
+[32m+[m
+[32m+[m[32m    def replace_link(match):[m
+[32m+[m[32m        url = match.group(1)[m
+[32m+[m[32m        if not url.endswith(".md"):[m
+[32m+[m[32m            return match.group(0)[m
+[32m+[m[32m        new_url = url[:-3] + ".html"[m
+[32m+[m[32m        if new_url.endswith("README.html"):[m
+[32m+[m[32m            new_url = new_url[: -len("README.html")] + "index.html"[m
+[32m+[m[32m        # Flatten any path prefix to ./ — all problem HTML files are siblings[m
+[32m+[m[32m        # in the problems/ directory.[m
+[32m+[m[32m        new_url = re.sub(r"^(?:\.\./)+(?:daily|contest)/[^/]+/(?:[^/]+/)?", "./", new_url)[m
+[32m+[m[32m        return f"]({new_url})"[m
+[32m+[m
+[32m+[m[32m    return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)[m
+[32m+[m
+[32m+[m
+ def parse_title(markdown_text: str, filename: str = "") -> str:[m
+     """Extract title from the first level-1 heading.[m
+ [m
+[36m@@ -301,11 +324,13 @@[m [mdef build_website(leetcode_dir: Path, output_dir: Path) -> None:[m
+             shutil.copytree(local_images, images_dir, dirs_exist_ok=True)[m
+ [m
+     problems = [][m
+[32m+[m[32m    seen_slugs = {}  # slug -> count, for disambiguation[m
+     for md_file in md_files:[m
+         markdown_text = md_file.read_text(encoding="utf-8")[m
+[32m+[m[32m        markdown_text = rewrite_md_links_to_html(markdown_text)[m
+ [m
+         title = parse_title(markdown_text, filename=md_file.name)[m
+[31m-        slug = md_file.stem[m
+[32m+[m[32m        base_slug = md_file.stem[m
+         rel_parts = md_file.relative_to(leetcode_dir).parts[m
+         if rel_parts[0] == "contest" and len(rel_parts) > 1:[m
+             category = "contest"[m
+[36m@@ -325,6 +350,20 @@[m [mdef build_website(leetcode_dir: Path, output_dir: Path) -> None:[m
+             week = None[m
+             day = None[m
+             folder = md_file.parent.name[m
+[32m+[m
+[32m+[m[32m        # Disambiguate duplicate slugs by prefixing with location[m
+[32m+[m[32m        slug = base_slug[m
+[32m+[m[32m        if slug in seen_slugs:[m
+[32m+[m[32m            seen_slugs[slug] += 1[m
+[32m+[m[32m            if category == "contest":[m
+[32m+[m[32m                slug = f"{contest}-{base_slug}"[m
+[32m+[m[32m            elif category == "daily":[m
+[32m+[m[32m                slug = f"{week}-{day}-{base_slug}"[m
+[32m+[m[32m            else:[m
+[32m+[m[32m                slug = f"{folder}-{base_slug}"[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            seen_slugs[slug] = 1[m
+[32m+[m
+         problems.append({[m
+             "slug": slug,[m
+             "title": title,[m
+[1mdiff --git a/leetgpu/website/build.py b/leetgpu/website/build.py[m
+[1mindex 4e1f01a..556658b 100644[m
+[1m--- a/leetgpu/website/build.py[m
+[1m+++ b/leetgpu/website/build.py[m
+[36m@@ -245,6 +245,7 @@[m [mdef build_website(leetgpu_dir: Path, output_dir: Path) -> None:[m
+     ])[m
+ [m
+     solutions = [][m
+[32m+[m[32m    seen_slugs = {}  # slug -> count, for disambiguation[m
+     for md_file in md_files:[m
+         markdown_text = md_file.read_text(encoding="utf-8")[m
+         markdown_text = markdown_text.replace("](../../images/", "](./images/")[m
+[36m@@ -252,7 +253,7 @@[m [mdef build_website(leetgpu_dir: Path, output_dir: Path) -> None:[m
+         markdown_text = rewrite_md_links_to_html(markdown_text)[m
+ [m
+         title = parse_title(markdown_text)[m
+[31m-        slug = md_file.stem  # e.g. leetgpu-vector-addition-solution[m
+[32m+[m[32m        base_slug = md_file.stem  # e.g. leetgpu-vector-addition-solution[m
+ [m
+         rel_parts = md_file.relative_to(leetgpu_dir).parts[m
+         week = None[m
+[36m@@ -261,6 +262,17 @@[m [mdef build_website(leetgpu_dir: Path, output_dir: Path) -> None:[m
+             week = rel_parts[0][m
+             day = rel_parts[1][m
+ [m
+[32m+[m[32m        # Disambiguate duplicate slugs by prefixing with week-day[m
+[32m+[m[32m        slug = base_slug[m
+[32m+[m[32m        if slug in seen_slugs:[m
+[32m+[m[32m            seen_slugs[slug] += 1[m
+[32m+[m[32m            if week and day:[m
+[32m+[m[32m                slug = f"{week}-{day}-{base_slug}"[m
+[32m+[m[32m            else:[m
+[32m+[m[32m                slug = f"{len(seen_slugs)}-{base_slug}"[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            seen_slugs[slug] = 1[m
+[32m+[m
+         solutions.append({[m
+             "slug": slug,[m
+             "title": title,[m

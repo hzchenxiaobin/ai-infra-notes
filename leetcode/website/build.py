@@ -33,6 +33,29 @@ def escape_for_template_string(text: str) -> str:
     return text
 
 
+def rewrite_md_links_to_html(markdown_text: str) -> str:
+    """Rewrite local .md links to .html for GitHub Pages deployment.
+
+    Solution pages are emitted flat in the problems/ output directory, so a
+    cross-link like ../../daily/weekN/dayM/xxx.md becomes ./xxx.html.
+    Contest links like ../weekN/xxx.md also flatten to ./xxx.html.
+    """
+
+    def replace_link(match):
+        url = match.group(1)
+        if not url.endswith(".md"):
+            return match.group(0)
+        new_url = url[:-3] + ".html"
+        if new_url.endswith("README.html"):
+            new_url = new_url[: -len("README.html")] + "index.html"
+        # Flatten any path prefix to ./ — all problem HTML files are siblings
+        # in the problems/ directory.
+        new_url = re.sub(r"^(?:\.\./)+(?:daily|contest)/[^/]+/(?:[^/]+/)?", "./", new_url)
+        return f"]({new_url})"
+
+    return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
+
+
 def parse_title(markdown_text: str, filename: str = "") -> str:
     """Extract title from the first level-1 heading.
 
@@ -301,11 +324,13 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
             shutil.copytree(local_images, images_dir, dirs_exist_ok=True)
 
     problems = []
+    seen_slugs = {}  # slug -> count, for disambiguation
     for md_file in md_files:
         markdown_text = md_file.read_text(encoding="utf-8")
+        markdown_text = rewrite_md_links_to_html(markdown_text)
 
         title = parse_title(markdown_text, filename=md_file.name)
-        slug = md_file.stem
+        base_slug = md_file.stem
         rel_parts = md_file.relative_to(leetcode_dir).parts
         if rel_parts[0] == "contest" and len(rel_parts) > 1:
             category = "contest"
@@ -325,6 +350,20 @@ def build_website(leetcode_dir: Path, output_dir: Path) -> None:
             week = None
             day = None
             folder = md_file.parent.name
+
+        # Disambiguate duplicate slugs by prefixing with location
+        slug = base_slug
+        if slug in seen_slugs:
+            seen_slugs[slug] += 1
+            if category == "contest":
+                slug = f"{contest}-{base_slug}"
+            elif category == "daily":
+                slug = f"{week}-{day}-{base_slug}"
+            else:
+                slug = f"{folder}-{base_slug}"
+        else:
+            seen_slugs[slug] = 1
+
         problems.append({
             "slug": slug,
             "title": title,
