@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="760" height="520" fill="#fdfcf7"/>
+
+  <text x="380" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">为什么是 f[j−k−1]？偏移量 d = j−k 的时序关系</text>
+  <path d="M 240 36 Q 380 44 520 36" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Part 1: The two strings aligned at k and j ===== -->
+  <text x="40" y="70" font-size="13" font-weight="bold" fill="#2b6e9e">① 两条串的对齐关系（以 s2 = "baabbaab", k=1 为例）</text>
+
+  <!-- s2 character cells -->
+  <g font-size="11" font-family="monospace" fill="#333">
+    <!-- index row -->
+    <text x="50" y="100" font-size="9" fill="#888">idx:</text>
+    <!-- positions 0..7 -->
+    <g filter="url(#sk)">
+      <rect x="80" y="88" width="40" height="28" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1"/>
+      <text x="100" y="107" text-anchor="middle">b</text>
+      <rect x="120" y="88" width="40" height="28" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+      <text x="140" y="107" text-anchor="middle">a</text>
+      <rect x="160" y="88" width="40" height="28" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+      <text x="180" y="107" text-anchor="middle">a</text>
+      <rect x="200" y="88" width="40" height="28" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+      <text x="220" y="107" text-anchor="middle">b</text>
+      <rect x="240" y="88" width="40" height="28" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <text x="260" y="107" text-anchor="middle">b</text>
+      <rect x="280" y="88" width="40" height="28" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <text x="300" y="107" text-anchor="middle">a</text>
+      <rect x="320" y="88" width="40" height="28" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <text x="340" y="107" text-anchor="middle">a</text>
+      <rect x="360" y="88" width="40" height="28" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <text x="380" y="107" text-anchor="middle">b</text>
+    </g>
+    <!-- index labels -->
+    <g font-size="9" fill="#888">
+      <text x="100" y="84" text-anchor="middle">0</text>
+      <text x="140" y="84" text-anchor="middle">1</text>
+      <text x="180" y="84" text-anchor="middle">2</text>
+      <text x="220" y="84" text-anchor="middle">3</text>
+      <text x="260" y="84" text-anchor="middle">4</text>
+      <text x="300" y="84" text-anchor="middle">5</text>
+      <text x="340" y="84" text-anchor="middle">6</text>
+      <text x="380" y="84" text-anchor="middle">7</text>
+    </g>
+  </g>
+
+  <!-- k=1 pointer -->
+  <path d="M 140 78 L 140 70" stroke="#4a8e4a" stroke-width="1.8" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="140" y="64" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">k=1</text>
+
+  <!-- j=5 pointer (current) -->
+  <path d="M 300 78 L 300 70" stroke="#c98a2b" stroke-width="1.8" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="300" y="64" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">j=5</text>
+
+  <!-- j-1=4 pointer (previous) -->
+  <path d="M 260 78 L 260 70" stroke="#888" stroke-width="1.3" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="260" y="58" text-anchor="middle" font-size="9" fill="#888">j−1=4</text>
+
+  <!-- offset annotation -->
+  <g filter="url(#sk)">
+    <path d="M 140 130 L 260 130" stroke="#888" stroke-width="1" stroke-dasharray="3,2" fill="none"/>
+    <path d="M 140 127 L 140 133" stroke="#888" stroke-width="1"/>
+    <path d="M 260 127 L 260 133" stroke="#888" stroke-width="1"/>
+  </g>
+  <text x="200" y="126" text-anchor="middle" font-size="9" fill="#888">d = (j−1)−k = 4−1 = 3 = j−k−1</text>
+
+  <!-- ===== Part 2: f array semantics ===== -->
+  <text x="40" y="160" font-size="13" font-weight="bold" fill="#2b6e9e">② f[d] 的语义：d = 偏移量 = 两条串起点的距离</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="175" width="660" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <g font-size="11" fill="#444">
+    <text x="65" y="197">f[d] 记录 s2[k..] 与 s2[k+d..] 的公共前缀长度 − 1</text>
+    <text x="65" y="215">当 j = k + d 时，f[j−k] = f[d] 是「到当前位置 j 为止」的匹配结果</text>
+    <text x="65" y="233" fill="#b85450" font-weight="bold">处理 j 时，需要的是「上一步 j−1 的结果」→ 查 f[(j−1)−k] = f[j−k−1]</text>
+  </g>
+
+  <!-- ===== Part 3: Timeline showing why -1 ===== -->
+  <text x="40" y="270" font-size="13" font-weight="bold" fill="#2b6e9e">③ 时序图：为什么查的是 j−k−1 而非 j−k</text>
+
+  <!-- Timeline table -->
+  <g font-size="10" fill="#444">
+    <!-- header -->
+    <g filter="url(#sk)">
+      <rect x="50" y="285" width="50" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <rect x="100" y="285" width="80" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <rect x="180" y="285" width="100" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <rect x="280" y="285" width="100" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <rect x="380" y="285" width="120" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+      <rect x="500" y="285" width="120" height="24" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    </g>
+    <text x="75" y="301" text-anchor="middle" font-weight="bold">步</text>
+    <text x="140" y="301" text-anchor="middle" font-weight="bold">j</text>
+    <text x="230" y="301" text-anchor="middle" font-weight="bold">d=j−k</text>
+    <text x="330" y="301" text-anchor="middle" font-weight="bold">比较位置</text>
+    <text x="440" y="301" text-anchor="middle" font-weight="bold">读 f[?]</text>
+    <text x="560" y="301" text-anchor="middle" font-weight="bold">写 f[?]</text>
+
+    <!-- row j=4 -->
+    <g filter="url(#sk)">
+      <rect x="50" y="309" width="50" height="22" fill="#fdfcf7" stroke="#ddd" stroke-width="0.8"/>
+      <rect x="100" y="309" width="80" height="22" fill="#fdfcf7" stroke="#ddd" stroke-width="0.8"/>
+      <rect x="180" y="309" width="100" height="22" fill="#fdfcf7" stroke="#ddd" stroke-width="0.8"/>
+      <rect x="280" y="309" width="100" height="22" fill="#fdfcf7" stroke="#ddd" stroke-width="0.8"/>
+      <rect x="380" y="309" width="120" height="22" fill="#fdfcf7" stroke="#ddd" stroke-width="0.8"/>
+      <rect x="500" y="309" width="120" height="22" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    </g>
+    <text x="75" y="324" text-anchor="middle">上步</text>
+    <text x="140" y="324" text-anchor="middle">4</text>
+    <text x="230" y="324" text-anchor="middle">3</text>
+    <text x="330" y="324" text-anchor="middle">s2[4] vs s2[1]</text>
+    <text x="440" y="324" text-anchor="middle" fill="#888">f[2]=−1 (已有)</text>
+    <text x="560" y="324" text-anchor="middle" fill="#2e6e2e" font-weight="bold">f[3]=−1</text>
+
+    <!-- row j=5 (current, highlighted) -->
+    <g filter="url(#sk)">
+      <rect x="50" y="331" width="50" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+      <rect x="100" y="331" width="80" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+      <rect x="180" y="331" width="100" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+      <rect x="280" y="331" width="100" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+      <rect x="380" y="331" width="120" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+      <rect x="500" y="331" width="120" height="22" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    </g>
+    <text x="75" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">当前</text>
+    <text x="140" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">5</text>
+    <text x="140" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">5</text>
+    <text x="230" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">4</text>
+    <text x="330" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">s2[5] vs s2[1]</text>
+    <text x="440" y="346" text-anchor="middle" font-weight="bold" fill="#b85450">f[4−1]=f[3]</text>
+    <text x="560" y="346" text-anchor="middle" fill="#c98a2b" font-weight="bold">f[4]=0</text>
+  </g>
+
+  <!-- arrow from f[3] write to f[3] read -->
+  <path d="M 560 331 Q 560 372 440 353" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arR)" filter="url(#sk)" stroke-dasharray="4,2"/>
+  <text x="510" y="378" font-size="9" fill="#b85450" font-weight="bold">上步写入 f[3]，本步读出 f[3]</text>
+
+  <!-- ===== Part 4: Key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="395" width="660" height="105" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="380" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">核心：f 的下标是「偏移量 d」，d = j−k</text>
+  <g font-size="11" fill="#444">
+    <text x="65" y="440">处理 j 时：d = j−k（当前偏移），但 f[d] 还没算出来（正是本步要写的）</text>
+    <text x="65" y="458">上一步 j−1 的偏移是 d' = (j−1)−k = j−k−1，f[d'] 已在上步写好</text>
+    <text x="65" y="476" fill="#b85450" font-weight="bold">所以读 f[j−k−1] = 取上一步存好的匹配信息 → 再加 1 位得到本步结果</text>
+    <text x="65" y="492" fill="#888" font-size="10">类比 KMP：KMP 查 next[i−1] 是因为 next[i] 还没算；Booth 查 f[j−k−1] 是因为 f[j−k] 还没算</text>
+  </g>
+</svg>
