@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="113" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Warp 间的工作划分：FA1 split-K vs FA2 split-Q</text>
+  <path d="M 190 44 Q 450 52 710 44" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== FA1 ===== -->
+  <text x="225" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0504d">FA1：按 K/V 切分（split-K）</text>
+  <!-- 4 warps -->
+  <g filter="url(#sk)"><rect x="70" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="115" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 0</text>
+  <g filter="url(#sk)"><rect x="175" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="220" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 1</text>
+  <g filter="url(#sk)"><rect x="280" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="325" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 2/3</text>
+  <text x="225" y="165" text-anchor="middle" font-size="10" fill="#555">每个 warp 持有 K/V 的一段切片，Q 全员共享</text>
+  <!-- partial results to smem -->
+  <path d="M 115 141 L 160 200" stroke="#c0504d" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 225 141 L 225 200" stroke="#c0504d" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 325 141 L 290 200" stroke="#c0504d" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="100" y="205" width="250" height="56" rx="8" fill="#c0504d" opacity="0.22" stroke="#c0504d" stroke-width="1.6"/></g>
+  <text x="225" y="230" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0504d">部分和写 shared memory</text>
+  <text x="225" y="248" text-anchor="middle" font-size="10" fill="#c0504d">→ __syncthreads → 跨 warp 归约相加</text>
+  <g filter="url(#sk)"><rect x="70" y="290" width="310" height="70" rx="8" fill="none" stroke="#c0504d" stroke-width="1.4" stroke-dasharray="5 3"/></g>
+  <text x="225" y="316" text-anchor="middle" font-size="11" fill="#c0504d">问题：每次 PV 乘都要 smem 往返 + barrier</text>
+  <text x="225" y="336" text-anchor="middle" font-size="11" fill="#c0504d">smem 读写和同步开销吃掉了 GEMM 时间</text>
+
+  <!-- ===== FA2 ===== -->
+  <text x="675" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#2f7d5b">FA2：按 Q 切分（split-Q）</text>
+  <g filter="url(#sk)"><rect x="520" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="565" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 0</text>
+  <g filter="url(#sk)"><rect x="625" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="670" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 1</text>
+  <g filter="url(#sk)"><rect x="730" y="95" width="90" height="46" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="775" y="123" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">warp 2/3</text>
+  <text x="675" y="165" text-anchor="middle" font-size="10" fill="#555">每个 warp 持有 Q 的一段行切片，K/V 全员共享</text>
+  <!-- independent outputs -->
+  <g filter="url(#sk)"><rect x="520" y="205" width="90" height="46" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.5"/></g>
+  <text x="565" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">O 切片 0</text>
+  <g filter="url(#sk)"><rect x="625" y="205" width="90" height="46" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.5"/></g>
+  <text x="670" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">O 切片 1</text>
+  <g filter="url(#sk)"><rect x="730" y="205" width="90" height="46" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.5"/></g>
+  <text x="775" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">O 切片 2/3</text>
+  <path d="M 565 141 L 565 200" stroke="#57a773" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 670 141 L 670 200" stroke="#57a773" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 775 141 L 775 200" stroke="#57a773" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="520" y="290" width="310" height="70" rx="8" fill="none" stroke="#57a773" stroke-width="1.4" stroke-dasharray="5 3"/></g>
+  <text x="675" y="316" text-anchor="middle" font-size="11" fill="#2f5238">每个 warp 独立算自己的 QKᵀ 切片 × V</text>
+  <text x="675" y="336" text-anchor="middle" font-size="11" fill="#2f5238">warp 间零通信：无 smem 归约、无 barrier</text>
+
+  <!-- divider & bottom note -->
+  <line x1="450" y1="70" x2="450" y2="380" stroke="#8a8471" stroke-width="1" stroke-dasharray="4 4"/>
+  <g filter="url(#sk)"><rect x="200" y="410" width="500" height="80" rx="10" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="450" y="438" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">本质：归约维（KV 维）不该跨 warp 切</text>
+  <text x="450" y="460" text-anchor="middle" font-size="11" fill="#555">输出维（Q 行）切分 → 各 warp 产出互不重叠，天然无通信</text>
+  <text x="450" y="480" text-anchor="middle" font-size="11" fill="#555">backward 同理避免 split-K；每 block 通常 4 或 8 个 warp</text>
+</svg>
