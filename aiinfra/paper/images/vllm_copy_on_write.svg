@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="540" viewBox="0 0 920 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="37" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b8514d"/>
+    </marker>
+  </defs>
+  <rect width="920" height="540" fill="#fdfcf7"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Parallel Sampling：共享 Prompt + Copy-on-Write（Fig. 8）</text>
+  <path d="M 170 46 Q 460 54 750 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="62" text-anchor="middle" font-size="12" fill="#555">同一 prompt 采样多个输出：prompt 的 KV 只存一份，分叉时按块复制</text>
+
+  <!-- Sample A1 -->
+  <text x="180" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Sample A1（逻辑块）</text>
+  <g filter="url(#sk)"><rect x="60" y="115" width="110" height="48" rx="6" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="115" y="136" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">Block 0</text>
+  <text x="115" y="151" text-anchor="middle" font-size="9" fill="#28455c">Four score and seven</text>
+  <g filter="url(#sk)"><rect x="178" y="115" width="120" height="48" rx="6" fill="#c98a2b" opacity="0.35" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="238" y="136" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">Block 1（共享）</text>
+  <text x="238" y="151" text-anchor="middle" font-size="9" fill="#6b4a14">years ago our fathers</text>
+
+  <!-- Sample A2 -->
+  <text x="180" y="215" text-anchor="middle" font-size="13" font-weight="bold" fill="#57a773">Sample A2（逻辑块）</text>
+  <g filter="url(#sk)"><rect x="60" y="230" width="110" height="48" rx="6" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="115" y="251" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">Block 0</text>
+  <text x="115" y="266" text-anchor="middle" font-size="9" fill="#28455c">Four score and seven</text>
+  <g filter="url(#sk)"><rect x="178" y="230" width="120" height="48" rx="6" fill="#c98a2b" opacity="0.35" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="238" y="251" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">Block 1（共享）</text>
+  <text x="238" y="266" text-anchor="middle" font-size="9" fill="#6b4a14">years ago our mothers</text>
+
+  <!-- mapping arrows to physical -->
+  <path d="M 170 140 C 320 130 450 130 560 152" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 170 255 C 320 265 450 262 560 175" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 298 140 C 420 150 480 210 560 252" stroke="#b8514d" stroke-width="1.6" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <path d="M 298 255 C 420 245 480 200 560 178" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- physical blocks -->
+  <text x="690" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#c98a2b">物理 KV 块（GPU DRAM）</text>
+  <g filter="url(#sk)"><rect x="600" y="115" width="180" height="55" rx="6" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="690" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">物理 Block 7（ref count = 2）</text>
+  <text x="690" y="153" text-anchor="middle" font-size="9" fill="#28455c">Four score and seven</text>
+
+  <g filter="url(#sk)"><rect x="600" y="180" width="180" height="55" rx="6" fill="#c98a2b" opacity="0.35" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="690" y="202" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">物理 Block 1（ref count: 2 → 1）</text>
+  <text x="690" y="218" text-anchor="middle" font-size="9" fill="#6b4a14">years ago our + 空槽</text>
+
+  <g filter="url(#sk)"><rect x="600" y="245" width="180" height="55" rx="6" fill="#b8514d" opacity="0.25" stroke="#b8514d" stroke-width="1.8"/></g>
+  <text x="690" y="267" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">物理 Block 3（CoW 新副本）</text>
+  <text x="690" y="283" text-anchor="middle" font-size="9" fill="#7a2e2b">years ago our fathers（A1 独占）</text>
+
+  <!-- copy arrow -->
+  <path d="M 700 236 L 700 242" stroke="#b8514d" stroke-width="1.8" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="815" y="245" text-anchor="middle" font-size="10" fill="#b8514d">写时复制</text>
+
+  <!-- steps -->
+  <g filter="url(#sk)"><rect x="60" y="330" width="800" height="180" rx="12" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="460" y="358" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Copy-on-Write 流程</text>
+  <text x="90" y="388" font-size="11" fill="#2b2b2b">① Prompt 阶段：A1 / A2 的逻辑块 0、1 映射到同一份物理块（7、1），ref count = 2，prompt KV 只存一份</text>
+  <text x="90" y="414" font-size="11" fill="#2b2b2b">② A1 生成 “fathers”，要写最后一个共享块：发现 ref count &gt; 1</text>
+  <text x="90" y="440" font-size="11" fill="#2b2b2b">③ 分配物理 Block 3，把 Block 1 的内容复制过去，ref count 减为 1，A1 此后独占 Block 3</text>
+  <text x="90" y="466" font-size="11" fill="#2b2b2b">④ A2 再写 Block 1 时 ref count 已是 1，直接原地写入 “mothers”，无需再复制</text>
+  <text x="90" y="494" font-size="11" fill="#4a463c">⇒ 除最后一个块外 prompt 全部共享；复制代价最多一个块（与 OS fork 的 CoW 完全同构）</text>
+</svg>

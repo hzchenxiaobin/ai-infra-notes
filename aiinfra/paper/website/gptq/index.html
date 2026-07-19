@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers —— 论文精读 - 论文精读</title>
+    <link rel="stylesheet" href="../../css/style.css?v=4">
+    <script src="../../js/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="../../js/markdown-math.js"></script>
+    <link href="../../css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="../../js/prism.min.js"></script>
+    <script src="../../js/prism-c.min.js"></script>
+    <script src="../../js/prism-cpp.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{builtin:/\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\b/});</script>
+    <script src="../../js/prism-bash.min.js"></script>
+    <script src="../../js/prism-python.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+
+    <div class="site-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="../../paper/index.html" style="text-decoration: none;">
+                    <h1 class="sidebar-title">论文精读</h1>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+<a class="nav-link" href="../../paper/index.html">📌 论文列表</a>
+<div class="nav-section-title">论文笔记</div>
+<a class="nav-link" href="../../paper/anatomy_gemm/anatomy_gemm.pdf">anatomy gemm</a>
+<a class="nav-link" href="../../paper/attention_is_all_you_need/index.html">Attention Is All You Need</a>
+<a class="nav-link" href="../../paper/awq/awq.pdf">awq</a>
+<a class="nav-link" href="../../paper/deepseek_v2/deepseek_v2.pdf">deepseek v2</a>
+<a class="nav-link" href="../../paper/deepseek_v3/deepseek_v3.pdf">deepseek v3</a>
+<a class="nav-link" href="../../paper/flashattention/index.html">FlashAttention</a>
+<a class="nav-link" href="../../paper/flashattention2/index.html">FlashAttention-2</a>
+<a class="nav-link" href="../../paper/flashattention3/index.html">FlashAttention-3</a>
+<a class="nav-link" href="../../paper/flashinfer/flashinfer.pdf">flashinfer</a>
+<a class="nav-link active" href="../../paper/gptq/index.html">GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers</a>
+<a class="nav-link" href="../../paper/gqa/gqa.pdf">gqa</a>
+<a class="nav-link" href="../../paper/mamba/mamba.pdf">mamba</a>
+<a class="nav-link" href="../../paper/medusa/medusa.pdf">medusa</a>
+<a class="nav-link" href="../../paper/megatron_lm/megatron_lm.pdf">megatron lm</a>
+<a class="nav-link" href="../../paper/mqa/mqa.pdf">mqa</a>
+<a class="nav-link" href="../../paper/online_softmax/online_softmax.pdf">online softmax</a>
+<a class="nav-link" href="../../paper/orca/orca.pdf">orca</a>
+<a class="nav-link" href="../../paper/sarathi_serve/sarathi_serve.pdf">sarathi serve</a>
+<a class="nav-link" href="../../paper/scaling_transformer_inference/scaling_transformer_inference.pdf">scaling transformer inference</a>
+<a class="nav-link" href="../../paper/smoothquant/smoothquant.pdf">smoothquant</a>
+<a class="nav-link" href="../../paper/speculative_decoding/speculative_decoding.pdf">speculative decoding</a>
+<a class="nav-link" href="../../paper/splitwise/splitwise.pdf">splitwise</a>
+<a class="nav-link" href="../../paper/triton/triton.pdf">triton</a>
+<a class="nav-link" href="../../paper/vllm/index.html">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>
+<a class="nav-link" href="../../paper/zero/zero.pdf">zero</a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="content-header">
+                <h1>GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers —— 论文精读</h1>
+            </div>
+            <div class="content" id="content">
+
+            </div>
+            <script type="text/markdown" id="markdown-source">
+# GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers —— 论文精读
+
+> 原文 PDF：[gptq.pdf](gptq.pdf)
+> 精读规范：[\`../SKILL.md\`](../index.html)
+> 系列精读：量化省下的显存如何转化为吞吐，见 [vLLM / PagedAttention](../vllm/README.md)；Transformer 本体见 [Attention Is All You Need](../attention_is_all_you_need/README.md)
+
+---
+
+## 1. Metadata
+
+| 项目 | 内容 |
+|---|---|
+| Title | GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers |
+| Authors | Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh |
+| 机构 | IST Austria / ETH Zurich / NeuralMagic |
+| Venue | ICLR 2023 |
+| Year | 2022（arXiv v1: 2022-10；v2: 2023-03） |
+| arXiv | [2210.17323](https://arxiv.org/abs/2210.17323) |
+| Code | [IST-DASLab/gptq](https://github.com/IST-DASLab/gptq) |
+| 任务 | LLM 权重的训练后一次性量化（Post-Training Quantization, PTQ），W4/W3/W2 + FP16 激活 |
+| 关键词 | One-shot Quantization, Second-order, OBQ, Hessian, Cholesky, W4A16, Dequant Kernel |
+
+---
+
+## 2. Summary
+
+GPTQ 是一种基于**近似二阶信息**的一次性权重量化方法：不重训练、只用 128 段校准数据，就能把 175B 级 GPT 模型在约 4 个 GPU 小时内量化到 3~4 bit，且精度损失可忽略。
+
+- **Problem**：175B 模型 FP16 权重占 326GB，推理要 5 张 A100；重训练式压缩在百亿规模不可行；已有高精度 one-shot 方法（OBQ 等）复杂度 $O(d_{row} \\cdot d_{col}^3)$，到千亿规模要跑数周；能 scale 的只有 RTN（round-to-nearest），而 RTN 在 3~4 bit 精度崩盘。
+- **Method**：在 OBQ（逐权重量化 + 按 Hessian 逆补偿剩余权重）基础上做三个改造——**任意固定顺序量化**（让全行共享一次 Hessian 逆更新）、**lazy batch-update**（128 列一块，延迟全局更新以吃满 GPU）、**Cholesky 重构**（一次分解替代反复数值不稳定的逆更新）。
+- **Result**：OPT-175B 4bit PPL 8.37 vs FP16 8.34（RTN 10.54，比 FP16 的 13B 还差）；3bit RTN 全面崩盘（PPL $10^3$）而 GPTQ 仅 8.68；首次让 175B 模型跑在**单张 A100** 上，生成速度 3.25×（A100）/ 4.5×（A6000）。
+- **Contribution**：把"OBQ 级精度"以"接近 RTN 级成本"带到千亿模型，计算加速三个数量级以上；GPTQ 此后成为 LLM 权重量化的事实标准之一（AutoGPTQ、exllama、TensorRT-LLM、vLLM 均支持）。
+
+---
+
+## 3. Background
+
+### 3.1 已有方法及其问题
+
+量化方法分两路，都存在"精度-成本"的死结：
+
+1. **训练时量化（QAT）**：量化进训练/微调过程，精度高，但对百亿模型重训练本身就不现实。
+2. **高精度 one-shot PTQ**：AdaRound（学数据依赖的舍入）、AdaQuant（straight-through 直接优化）、BitSplit（按位构造）、BRECQ（引入 Fisher、按残差块联合优化）、**OBQ**（二阶逐权重量化 + 补偿）——精度好，但复杂度撑不住：OBQ 量化 ResNet-50（25M）要约 1 GPU 小时，其 $O(d_{row} \\cdot d_{col}^3)$ 的三次方依赖外推到 175B 要数周。
+3. **大模型 PTQ（RTN 系）**：ZeroQuant、LLM.int8()、nuQmm 为控制运行时，最终都退化为**按格点最近舍入（RTN）**+ 精心选择量化粒度（vector-wise）。8 bit 时工作良好，但到 3~4 bit 精度显著下降甚至崩盘（Table 3：3bit RTN PPL 到 $10^3$ 量级）。
+
+### 3.2 作者真正想解决的问题
+
+> 能不能让 **OBQ 级别的量化精度**在**接近 RTN 的运行成本**下，scale 到千亿参数的 GPT 模型？如果可以，175B 模型将第一次能在单张消费级/数据中心单卡上跑起来。
+
+关键张力在于：OBQ 的精度来自"量化一个、补偿一片"的二阶贪心过程，而这个过程的逐个权重串行更新正是它无法 scale 的原因。
+
+---
+
+## 4. Core Idea
+
+\`\`\`text
+Problem     OBQ 精度高但 O(d_row·d_col³) 无法 scale；RTN 能 scale 但 3-4bit 崩盘
+   ↓
+Observation ① OBQ 的贪心选序相对"任意固定顺序"精度收益很小（大层上尤其如此）
+            ② 每行的量化相互独立，而 Hessian H = 2XXᵀ 只依赖层输入 X、
+              不依赖权重 —— 所以所有行可以共用同一顺序、同一份 H⁻¹ 更新
+   ↓
+Insight     按固定列序量化所有行 ⇒ H⁻¹ 的更新从"每个权重一次"降为"每列一次"；
+            再把列分块做 lazy 批量更新消除访存瓶颈；用 Cholesky 分解
+            一次性算好全部所需行，绕开反复逆更新的数值病态
+   ↓
+Method      GPTQ：固定列序 + B=128 分块 lazy update + Cholesky 重构 +
+            dampening（λ = 对角线均值 1%）+ 逐 Transformer block 顺序量化
+   ↓
+Benefit     复杂度 O(d_row·d_col³) → O(max{d_row·d_col², d_col³})，提速 3+ 个数量级；
+            175B 量化 4 小时；4bit 精度几乎无损；单卡 A100 跑 175B，推理快 3.25×~4.5×
+\`\`\`
+
+一句话：**GPTQ 不是发明了新的量化数学，而是发现 OBQ 的二阶补偿可以在"固定顺序"下几乎不损失精度——这一观察把串行逐权重过程变成可分块并行的大规模矩阵运算。**
+
+---
+
+## 5. Method
+
+### 5.1 逐层量化的问题定义
+
+![OBQ 误差补偿](../images/gptq_error_compensation.svg)
+
+- **Purpose**：把全模型量化分解为逐层的重建问题，避免全局优化的天价成本。
+- **Input / Output**：对线性层 $\\ell$，输入 $X_\\ell$（$m$ 个校准样本前向得到），权重 $W_\\ell$；输出量化权重 $\\hat{W}$。
+- **目标**：
+
+$$
+\\arg\\min_{\\hat{W}} \\| W X - \\hat{W} X \\|_2^2
+$$
+
+- **设计假设**：量化网格（grid）事先固定（min-max 均匀格点），但未量化权重可以**自由移动**以补偿已量化权重的误差——这正是与 RTN 的本质区别：RTN 中未量化权重不动，误差无人买单。
+
+### 5.2 OBQ 回顾（GPTQ 的出发点）
+
+OBQ 把式 (5.1) 按行拆开独立求解。对每行：
+
+1. 贪心选出"当前量化代价最小"的权重 $w_q$（式 6.2）；
+2. 用 Hessian 逆计算对所有未量化权重 $F$ 的最优补偿 $\\delta_F$；
+3. 通过一步高斯消元直接从 $H^{-1}$ 中"删除" $w_q$ 对应的行列（式 6.4），进入下一轮。
+
+- **Complexity**：每个权重量化都要更新一次 $H^{-1}$ → $O(d_{row} \\cdot d_{col}^3)$。
+- **Advantage**：补偿机制使 3~4bit 下精度远好于 RTN。
+- **Limitation**：逐权重串行 + 低计算访存比，无法 scale 到百亿模型。
+
+### 5.3 Step 1：任意顺序也行（Arbitrary Order Insight）
+
+- **观察**：OBQ 贪心选序相对**任意固定顺序**的精度优势很小，在大而超参数化的层上几乎消失。作者的解释：贪心省下的是"单个误差大"的权重，但这些权重被排到后期量化时，可用来补偿的剩余权重已经很少——两头相抵。
+- **推论**：让所有行按**同一固定列序**量化。于是未量化集合 $F$ 与 $H_F^{-1}$ 对所有行始终相同（$H$ 只依赖 $X$），$H^{-1}$ 更新从 $d_{row} \\cdot d_{col}$ 次降为 $d_{col}$ 次。
+- **复杂度**：$O(d_{row} \\cdot d_{col}^3) \\to O(\\max\\{d_{row} \\cdot d_{col}^2,\\ d_{col}^3\\})$，加速因子 $\\min\\{d_{row}, d_{col}\\}$——大模型上即几个数量级。
+
+### 5.4 Step 2：Lazy Batch-Update（消灭访存瓶颈）
+
+- **问题**：直接实现 Step 1 仍然慢——每次更新只对整个矩阵的每个元素做几个 FLOP，**compute-to-memory 比极低**，被显存带宽卡死。
+- **关键观察**：列 $i$ 的**最终舍入决策只受发生在本列上的更新影响**，更靠后列的更新与此刻无关 ⇒ 更新可以"懒惰地"攒批。
+- **做法**：$B = 128$ 列为一块；块内逐列量化，更新只落在块内列和 $H^{-1}$ 的 $B \\times B$ 子块上；块结束后，用块级版本公式（式 6.5/6.6）**一次性全局更新**整个 $W$ 和 $H^{-1}$。
+- **效果**：不减少理论计算量，但把零散 rank-1 更新变成 GEMM 形态的大矩阵乘，实际再快约一个数量级——作者称其为"critical component"。
+
+### 5.5 Step 3：Cholesky 重构（数值稳定性）
+
+- **问题**：大模型上反复应用逆更新公式会累积数值误差，$H_F^{-1}$ 可能变成不定矩阵，算法会朝错误方向"激进更新"剩余权重，把整层量化搞砸；模型越大几乎必然发生。
+- **小模型的办法**：dampening——$H$ 对角线加 $\\lambda$（取对角线均值的 1%）。大模型不够。
+- **观察**：量化权重 $q$ 时只需要 $H_{F_q}^{-1}$ 的**第 $q$ 行（对角线起）**；而对对称矩阵做"删行"的逆更新，本质上等价于 **Cholesky 分解**（仅差一个对 $\\sqrt{[H^{-1}]_{qq}}$ 的归一）。
+- **做法**：一开始就用成熟的 Cholesky kernel 从 $H^{-1} = (2XX^\\top + \\lambda I)^{-1}$ 一次性算出全部所需行，之后只查表不再逆更新。既根除数值问题，又顺便更快。
+
+### 5.6 完整算法与实现细节
+
+![GPTQ 量化过程](../images/gptq_procedure.svg)
+
+- **量化网格**：per-row 非对称均匀量化，min-max 格点（与 LLM.int8() 相同，保证与 RTN 基线公平对比）。
+- **Grouping（可选）**：每 $g$ 个连续权重共享一组 scale/zero-point；group 参数在量化过程中按**当前已更新的权重**动态确定，与 GPTQ 的补偿机制天然契合。
+- **显存控制**：每次只把一个 Transformer block（6 层）载入 GPU 做 Hessian 累积与量化；且**用已部分量化的模型的实际输出作为下一块的输入**——校准数据流过的是"半成品"模型，以极小代价补偿逐层误差累积（论文称带来 noticeable improvements）。
+- **校准数据**：C4 数据集中随机 128 段 × 2048 token，无任务特定数据 → 结果保持 zero-shot 性质。
+
+### 5.7 推理侧：反量化 GEMV kernel
+
+![反量化 GEMV Kernel](../images/gptq_dequant_kernel.svg)
+
+- **场景**：生成式推理 batch=1 时是 GEMV，**memory-bound**——瓶颈是把权重从 HBM 搬进来，不是乘法。
+- **Kernel**：quantized-matrix × full-precision-vector——加载 3bit 打包权重，片上动态反量化为 FP16，与 FP16 激活向量相乘。**不需要激活量化**。
+- **为什么有效**：反量化多花的 ALU 在 memory-bound 下几乎免费（算力本来就在等数据），而搬运字节数减少约 5.3× → A100 3.24×、A6000 4.53× 端到端加速（带宽越低的卡收益越大）。
+- **大 batch 场景**：compute-bound 时该 kernel 不适用；可先把矩阵整体解压再 GEMM——175B 的 FC2 层解压 <1.5ms（A100），而后续计算 76ms，开销可忽略。
+
+---
+
+## 6. Formula Explanation
+
+### 6.1 逐层重建目标
+
+$$
+\\arg\\min_{\\hat{W}} \\| W X - \\hat{W} X \\|_2^2
+$$
+
+| 变量 | 含义 | 维度 |
+|---|---|---|
+| $W$ | 某线性层的全精度权重 | $d_{row} \\times d_{col}$ |
+| $X$ | 该层输入（$m$ 个校准样本） | $d_{col} \\times m$ |
+| $\\hat{W}$ | 待求：量化权重 + 自由补偿 | $d_{row} \\times d_{col}$ |
+
+- **为什么是层输出误差而非权重误差**：$\\|W - \\hat{W}\\|_2^2$ 假设所有权重同等重要；而输出误差 $\\|WX - \\hat{W}X\\|_2^2$ 通过 $X$ 自动给"输入方差大/相关性强的方向"更高权重——这正是二阶信息的来源，也是 RTN（隐含最小化权重误差）失败的数学解释。
+- **作用**：把"保精度"定义为"每层输出尽量不变"，可逐层独立求解，避免全局优化。
+
+### 6.2 Hessian 与贪心选择（OBQ）
+
+$$
+w_q = \\arg\\min_{w_q} \\frac{(\\mathrm{quant}(w_q) - w_q)^2}{[H_F^{-1}]_{qq}}, \\qquad
+\\delta_F = -\\frac{w_q - \\mathrm{quant}(w_q)}{[H_F^{-1}]_{qq}} \\cdot (H_F^{-1})_{:,q}
+$$
+
+| 变量 | 含义 |
+|---|---|
+| $H_F = 2X_F X_F^\\top$ | 平方误差目标关于未量化权重 $F$ 的 Hessian |
+| $w_q$ | 本轮被量化的权重（贪心：单位补偿代价下误差最小者） |
+| $\\delta_F$ | 对所有未量化权重的最优补偿量 |
+| $[H_F^{-1}]_{:,q}$ | 逆 Hessian 第 $q$ 列——权重间"相关性"的度量 |
+
+- **为什么成立**：目标是二次型，给定 $w_q$ 被钉在 $\\mathrm{quant}(w_q)$，对剩余权重的最优解有解析形式——这就是经典 Optimal Brain Surgeon 的引理，OBQ 把它从剪枝（钉在 0）推广到量化（钉在格点）。
+- **$\\delta_F$ 的直觉**：与 $w_q$ 输入相关性强的权重大幅补偿、弱的小幅补偿，把舍入造成的输出偏移摊平（见 §5.1 图）。
+- **关键性质**：$H$ 只含 $X$ 不含 $W$ ⇒ 所有行共用同一 Hessian——§5.3 固定顺序优化的数学前提。
+
+### 6.3 高斯消元逆更新（OBQ 的效率来源）
+
+$$
+H_{-q}^{-1} = \\left( H^{-1} - \\frac{1}{[H^{-1}]_{qq}} H^{-1}_{:,q} H^{-1}_{q,:} \\right)_{-q}
+$$
+
+- **含义**：量化 $w_q$ 后需要"删掉" $H$ 的第 $q$ 行列再求逆；该公式直接在 $H^{-1}$ 上做一次 rank-1 更新 + 删行列得到结果，避免重算逆。
+- **GPTQ 的视角**：这是 OBQ 每次只动一个权重的产物；GPTQ 的块级版本（下式）把 $Q$ 从单索引扩成索引集合。
+
+### 6.4 块级补偿与逆更新（GPTQ 的 lazy update）
+
+$$
+\\delta_F = -(w_Q - \\mathrm{quant}(w_Q))\\,([H_F^{-1}]_{QQ})^{-1}(H_F^{-1})_{:,Q}, \\qquad
+H_{-Q}^{-1} = \\left( H^{-1} - H^{-1}_{:,Q}([H^{-1}]_{QQ})^{-1} H^{-1}_{Q,:} \\right)_{-Q}
+$$
+
+- 与式 6.2/6.3 完全同构，只是 $q \\to Q$（一个块）。形式上要求对一个 $B \\times B$ 矩阵求逆——这正是 §5.5 所说数值误差的来源，也是 Cholesky 重构要消除的东西。
+- **复杂度影响**：全局更新变成大矩阵乘（GEMM），GPU 友好；块内仍是逐列的轻量更新。
+
+### 6.5 量化与反量化（推理时）
+
+$$
+q = \\mathrm{clamp}\\left(\\left\\lfloor \\frac{w}{s} \\right\\rceil + z,\\ 0,\\ 2^b - 1\\right), \\qquad \\hat{w} = s \\cdot (q - z)
+$$
+
+- $s$（scale）、$z$（zero-point）按 min-max 格点逐行（或逐 group）确定；$b$ = bit 数。
+- 推理 kernel 中 $\\hat{w}$ 在片上即时重建（W4A16）；grouping 时每 $g$ 个权重一组 $(s, z)$，额外开销约 $16/g$ bit——g128 ≈ +0.125 bit 换 0.2~0.3 PPL，是极划算的交换。
+
+---
+
+## 7. Algorithm
+
+**自然语言版**：用 128 段 C4 文本前向模型，逐 Transformer block（6 层）处理：累积各线性层的 Hessian $H = 2XX^\\top$（加 dampening $\\lambda$）→ 对 $H^{-1}$ 做 Cholesky 分解 → 按固定列序、每 128 列一块量化：块内逐列舍入并只更新块内后续列，块末一次性全局更新剩余权重 → 当前 block 全部量化后，把校准数据**重新过一遍这个已量化 block**，其输出作为下一 block 的输入。
+
+**伪代码版（Algorithm 1，单层）**：
+
+\`\`\`python
+# 输入: W (d_row × d_col), H⁻¹ = (2XXᵀ + λI)⁻¹, 块大小 B = 128
+Q = zeros_like(W)              # 量化输出
+E = zeros(d_row, B)            # 块内量化误差缓冲
+H⁻¹ = Cholesky(H⁻¹).T          # 一次性预分解（数值稳定的关键）
+for i in range(0, d_col, B):
+    for j in range(i, i + B):
+        Q[:, j]  = quant(W[:, j])                        # 量化本列
+        E[:, j-i] = (W[:, j] - Q[:, j]) / H⁻¹[j, j]      # 归一化误差
+        W[:, j:i+B] -= E[:, j-i] * H⁻¹[j, j:i+B]         # 块内 lazy 补偿
+    W[:, i+B:] -= E @ H⁻¹[i:i+B, i+B:]                   # 块末全局更新（GEMM）
+\`\`\`
+
+**复杂度与瓶颈**：
+
+- 时间：$O(\\max\\{d_{row} \\cdot d_{col}^2,\\ d_{col}^3\\})$，比 OBQ 快 $\\min\\{d_{row}, d_{col}\\}$ 倍；175B 全模型 ≈ 4.2 GPU 小时（单卡 A100）。
+- 空间：Hessian $O(d_{col}^2)$（最大层 $d_{col} \\approx 18K$ → 约 1.3GB FP32），逐 block 加载使量化所需显存**小于** FP16 推理所需显存。
+- 瓶颈：块末全局更新的 GEMM（compute）与 Hessian 累积（$X X^\\top$，需校准数据前向）；均已 GPU 友好化。
+
+---
+
+## 8. Figures
+
+### Figure 1（PPL vs 模型规模，全文门面）
+
+见本文 §9.2 的 SVG 复刻。横轴参数量（log），纵轴 WikiText2 PPL：GPTQ 曲线全程贴住 FP16，RTN 在 3bit 直接飞出图外。**关键观察**：模型越大越好量化（冗余度更高）——压缩收益最大的场景恰好是压缩最容易的场景，这是全文最"幸运"的实证。
+
+### Figure 2（量化过程示意）
+
+见 §5.6 的 SVG 复刻。数据流：左侧绿色为已量化列块，中间粗框为当前 B=128 列块（白色列正在量化），右侧蓝色为待更新权重；上方是 Cholesky 形式的逆 Hessian。**关键观察**：所有行同步走同一列序，Hessian 信息只读不写——整张图就是"固定顺序 ⇒ 可共享 ⇒ 可批量"的图形化。
+
+### Figure 3（LAMBADA zero-shot 准确率）
+
+与 Figure 1 同构：4bit 时连 RTN 都尚可，3bit 时 RTN 崩盘（LAMBADA 接近 0 分）而 GPTQ 保持。**关键观察**：zero-shot 任务与 PPL 趋势一致——说明 PPL 上的优势迁移到了下游能力，不是指标幻觉。
+
+### Figure 4（grouping 对 4bit 中型模型的修复）
+
+对 1.3B~30B 的 OPT，4bit + g1024/g128 的 grouping 把 PPL 差距基本抹平。**关键观察**：grouping 的额外 bit 开销（+0.02~0.15 bit）极小，收益却是修复中小模型的主要手段——量化粒度是与算法正交的另一个维度。
+
+---
+
+## 9. Experiments
+
+### 9.1 设置
+
+| 项目 | 配置 |
+|---|---|
+| 模型 | OPT 全家族（125M~175B）、BLOOM 全家族（560M~176B）；小模型对照 ResNet18/50、BERT-base |
+| 量化硬件 | 单张 A100-80GB（所有模型，含 175B） |
+| 校准数据 | C4 随机 128 段 × 2048 token（无任务数据，保持 zero-shot；注意 C4 评测因此不完全 zero-shot，作者自己标注了） |
+| 量化配置 | per-row 非对称均匀量化，min-max 格点；可选 g1024/g128/g64/g32 grouping |
+| Baseline | RTN（同格点，= LLM.int8() 的权重量化部分）；小模型上对照 AdaRound/AdaQuant/BRECQ/OBQ |
+| 指标 | WikiText2/PTB/C4 PPL（对量化最敏感）；LAMBADA/ARC/PIQA zero-shot；端到端生成延迟 |
+
+### 9.2 主结果
+
+![主结果：GPTQ vs RTN vs FP16](../images/gptq_results.svg)
+
+- **OPT（Table 3）**：4bit 时 GPTQ-175B PPL 8.37 vs FP16 8.34（+0.03），RTN 10.54——**比 10 倍小的 FP16 13B 模型还差**；3bit 时 RTN 全线崩盘（$10^3$ 量级），GPTQ 175B 仅 8.68。
+- **BLOOM（Table 4）**：同趋势但差距更小——BLOOM 家族更容易量化。
+- **规模趋势**：模型越大越好量化；唯一例外 OPT-66B（RTN-4bit PPL 110、GPTQ-3bit 14.16 也偏高），论文脚注归因于该模型**早期层有大量 dead units**，破坏了"大模型冗余度高"的假设——这个诚实披露反而强化了机理解释。
+- **175B 详表（Table 5）**：4bit 各任务 ≤0.25 PPL 退化；3bit 仅退化 0.3~0.6；g128 grouping 再追回 0.1~0.3，距 FP16 只差 0.1~0.3。
+
+**为什么能证明作者观点**：RTN 与 GPTQ 用**完全相同的量化格点**，唯一变量是"舍入方式（无补偿 vs 二阶补偿）"——精度差距干净地归因于算法本身；而不同规模、两个模型家族、多种任务上趋势一致，排除了巧合。
+
+### 9.3 精度-成本对照（小模型与运行时）
+
+- **小模型（Table 1/8）**：ResNet 上 4bit 与 AdaRound/BRECQ 持平、3bit 略逊；BERT/OPT-125M 上与完整 OBQ 相当甚至更好（3bit 更好——作者猜测 OBQ 的 outlier 启发式对非视觉模型需要额外调参），而耗时从 ≈1 小时降到 **<1 分钟**。
+- **运行时（Table 2）**：175B ≈ 4.2h、BLOOM-176B ≈ 3.8h；对照 ZeroQuant-LKD 在 1.3B 上就要 3h（线性外推 175B 需数周）。
+- **这组实验回答的是**：GPTQ 没有在"可 scale"上牺牲精度——它的精度对标的是跑不动的贵方法，成本对标的是精度崩的便宜方法。
+
+### 9.4 极限量化与实用加速
+
+- **2bit（Table 7）**：g128（≈2.2bit）PPL 退化 <1.5；g32（≈2.6bit）仅退化 0.6~0.7，已接近 vanilla 3bit。
+- **三值（{-1,0,+1}，g8）**：OPT-175B PPL 9.20，退化 <1——为 FPGA 等定制硬件指明可能。
+- **实用加速（Table 6）**：3bit OPT-175B = 63GB（embedding/输出层保持 FP16）+ 9GB KV → **单卡 A100**（FP16 需 5 卡，LLM.int8() 需 3 卡）；生成延迟 230ms→71ms（3.24×，A100）、589ms→130ms（4.53×，2×A6000 vs 8×FP16）。
+- **为什么这组实验重要**：证明量化收益可以**端到端兑现**——不是省显存的账面数字，而是 GPU 数量 5→1/8→2 与每 token 延迟的真实下降；且 LLM.int8() 省显存但不省时，GPTQ 两者兼得。
+
+### 9.5 作者真正证明了什么
+
+"千亿模型的 3~4bit one-shot 量化可行"这一开放问题被肯定地回答，且证据链完整：**机理（二阶补偿）→ 精度（同格点对照 RTN）→ 成本（4 小时单卡）→ 兑现（kernel 加速 + 单卡可跑）**四环闭合。同时给出了量化难度的标度律雏形：精度随规模上升、随 bit 下降、随粒度变细上升。
+
+---
+
+## 10. Contributions
+
+1. **GPTQ 算法**：首个能在数小时内把 175B 级模型量化到 3~4bit 且精度几乎无损的 one-shot PTQ 方法；三个改造（固定顺序、lazy batch-update、Cholesky 重构）相对 OBQ 提速三个数量级以上。
+2. **系统的实证研究**：完整扫描 OPT/BLOOM 两个家族 × 2/3/4bit × 多任务，确立"大模型更好量化""3bit 是 RTN 死亡线""grouping 高性价比"等此后被反复引用的结论。
+3. **端到端兑现**：开源实现 + 反量化 GEMV kernel，首次单卡 A100 运行 175B 生成式推理，3.25×~4.5× 加速，直接催生了此后整个 W4A16 推理生态。
+
+---
+
+## 11. Limitations
+
+**Paper says**：
+
+- 加速只来自**减少内存搬运**，不减少计算量——主流硬件缺乏 FP16×INT4 混合精度乘法的支持，乘法本身没有变快。
+- **不做激活量化**（目标场景下激活不是瓶颈，可用 ZeroQuant 等正交技术补）。
+- 3bit 下 GPTQ 在小模型上仍明显掉精度（OPT-125M PPL 27.65→53.85）；C4 任务因校准数据同源**不完全 zero-shot**（作者在表注中明确声明）。
+
+**Reviewer thinks**：
+
+- **逐层目标忽略了层间误差的非线性耦合**：用"已量化 block 的输出作为下一块输入"只是启发式修补，并非全局最优——后来的 AWQ（按激活幅度保护 1% salient 权重）证明纯层内二阶并非唯一正确答案，激活感知的更简单策略可以更好。
+- **均匀格点 + min-max** 对 outlier 通道敏感；论文没有像 LLM.int8() 那样处理激活/权重异常值，靠补偿硬扛（OPT-66B 的 dead units 问题暴露了这一点）。
+- **PPL 与少量 zero-shot 任务的评测面偏窄**：对推理、代码、长上下文等能力在 3bit 下的影响未评估（后来的工作发现 PPL 会低估能力损失）。
+- **校准集仅 128 段 C4**：对分布偏移（多语言、代码、领域文本）的鲁棒性未验证；grouping 的动态参数确定也与校准分布绑定。
+- **2bit/三值结果只在最大模型上成立**，中小模型 2bit 基本不可用——极限量化的实用面比摘要读起来要窄。
+
+---
+
+## 12. Related Work
+
+| 方法 | 核心思想 | 与本文差异 | 优点 | 弱点 |
+|---|---|---|---|---|
+| RTN（LLM.int8 / ZeroQuant / nuQmm） | 按格点最近舍入 + 粒度选择 | 本文同格点但加二阶补偿 | 成本极低，可 scale | 3~4bit 精度崩盘 |
+| AdaRound | 学习数据依赖的舍入（退火惩罚） | 优化型 vs 本文解析型 | 中小模型精度好 | SGD 步数多，无法 scale |
+| AdaQuant / BitSplit | 逐层 STE 优化 / 按位构造 | 同上 | 直接优化目标 | 慢，百亿不可行 |
+| BRECQ | Fisher 信息 + 残差块联合优化 | 块联合 vs 本文逐层 | 视觉模型 SOTA | 更重，无法 scale |
+| OBQ（本文前身） | 贪心逐权重量化 + OBS 补偿 | 本文固定顺序 + 批量 + Cholesky | 精度最高档 | $O(d_{row} d_{col}^3)$，最多亿级模型 |
+| QAT（量化感知训练） | 量化进训练/微调 | 本文零重训练 | 精度上限最高 | 175B 重训练不现实 |
+| LLM.int8() | 激活 outlier 维度保持高精度 | 解决激活 outlier vs 本文解决权重舍入误差 | 8bit 无损 | 不省时间；8bit 压缩率有限 |
+
+---
+
+## 13. Reproducibility
+
+| 检查项 | 情况 |
+|---|---|
+| Code | ✅ 官方开源 [IST-DASLab/gptq](https://github.com/IST-DASLab/gptq)，附 Reproducibility Statement（压缩、评测、3bit CUDA kernel、benchmark、README 命令全覆盖） |
+| Dataset | ✅ C4 校准（128×2048）+ WikiText2/PTB/C4/LAMBADA/ARC/PIQA 评测，全部公开；评测口径（2048 非重叠分段、EleutherAI harness）写清 |
+| Hyperparameter | ✅ B=128、dampening λ=对角线均值 1%、min-max per-row 格点、group size 各档全给出 |
+| Training Details | N/A（无训练）；量化流程（逐 6 层 block、半成品前向）描述完整 |
+| Hardware | ✅ 单卡 A100-80GB 量化 + A100/A6000 计时，设置（HuggingFace accelerate 式层切分、通信 <5%）明确 |
+
+**评分：⭐⭐⭐⭐⭐**（算法、数据、超参、kernel 全公开，单卡即可复现最大模型结果；附录连"为什么 66B 异常"都做了机理排查，是量化论文的复现标杆。）
+
+---
+
+## 14. Reading Notes
+
+1. 大模型量化的死结是"精度的方法跑不动、跑得动的方法没精度"——GPTQ 用"固定顺序也行"的观察解开了它。
+2. OBQ 贪心选序相对任意固定顺序的精度收益很小：大层上剩余可补偿权重的多寡会抵消选序收益。
+3. Hessian $H = 2XX^\\top$ 只依赖输入不依赖权重 ⇒ 所有行可共享同一 $H^{-1}$，更新次数从 $d_{row} \\cdot d_{col}$ 降到 $d_{col}$。
+4. 层输出平方误差目标 $\\|WX - \\hat{W}X\\|^2$ 是"权重重要性由输入统计决定"的数学化——这是二阶方法打败 RTN 的根源。
+5. Lazy batch-update（B=128）不减计算量，只把 rank-1 更新攒成 GEMM——**系统优化的经典套路救了数值算法**。
+6. 大规模下反复逆更新会让 $H^{-1}$ 变不定、算法发散；Cholesky 一次分解既稳定又更快——数值稳定性在百亿规模是功能性问题而非小问题。
+7. 模型越大越好量化（冗余度）；OPT-66B 因早期层 dead units 成为反例——冗余度假设可被训练缺陷破坏。
+8. Grouping（g128 ≈ +0.125bit）用极小 bit 成本换回 0.2~0.3 PPL——量化粒度与舍入算法是两个正交旋钮。
+9. W4A16 的推理加速全部来自少搬字节：memory-bound GEMV 下片上反量化的 ALU 开销免费；卡越低端收益越大。
+10. 量化所需显存可小于推理显存：逐 block 加载 + 半成品模型前向，让 175B 的量化也能在单卡 80GB 内完成。
+
+---
+
+## 15. Interview Version
+
+**2 分钟版**：
+
+> GPTQ 是 ICLR 2023 的训练后权重量化方法，解决的問題是：175B 级模型 FP16 要 5 张 A100 才能推理，而高精度的 one-shot 量化方法 OBQ 复杂度是立方级的，根本跑不动；能跑动的 RTN 在 3~4bit 精度直接崩盘。GPTQ 的核心观察有三个：第一，OBQ 贪心选择量化顺序其实没比固定顺序好多少，因为大层上后期可用来补偿的权重本来就少；第二，误差补偿用到的 Hessian 是 2XXᵀ，只依赖层输入不依赖权重，所以所有行可以共享同一份逆 Hessian，更新次数降一个维度；第三，单列的最终舍入不受后续列更新影响，所以可以把 128 列攒成一块做 lazy 批量更新，把访存密集的 rank-1 更新变成 GEMM。最后再用 Cholesky 分解一次性算好逆 Hessian 信息，解决大模型上的数值发散。结果 175B 模型 4 个 GPU 小时量化完，4bit 精度几乎无损，3bit 只掉 0.3 左右 PPL，而 RTN 在 3bit 已经崩到 PPL 几千。配套的反量化 kernel 让 175B 第一次跑在单张 A100 上，生成快 3.25 倍。它的本质是把"量化一个权重、其余权重按 Hessian 逆买单"的二阶补偿思想，改造成 GPU 友好的大规模矩阵运算。
+
+**5 分钟版**（在 2 分钟版基础上展开）：
+
+> 展开三个细节。一是问题形式化：逐层最小化输出平方误差 $\\|WX - \\hat{W}X\\|^2$，这个目标通过输入协方差自动编码了权重重要性，这是它优于最小化权重误差的 RTN 的数学根源；OBQ 给出逐权重量化时的最优补偿闭式解——误差除以逆 Hessian 对角元、按逆 Hessian 的列分摊。二是系统改造的艺术：固定列序把 $H^{-1}$ 更新从每个权重一次降到每列一次，复杂度从 $O(d_{row} d_{col}^3)$ 降到 $O(\\max(d_{row} d_{col}^2, d_{col}^3))$；lazy update 不省理论计算量但消除访存瓶颈，作者称之为 critical；Cholesky 重构是因为百亿规模下反复逆更新会让矩阵变不定、算法朝错误方向激进更新——dampening 加对角线均值 1% 只是小模型的补丁。三是实验证据链：同格点对照 RTN 干净归因算法收益；两个家族全尺寸扫描得出"越大越好量化"，OPT-66B 因 dead units 成反例反而强化了机理；推理侧 memory-bound GEMV 下片上反量化几乎免费，A6000 这种低带宽卡收益反而更大（4.5×）。局限也要会说：不减计算量、不做激活量化、层间误差耦合只用半成品前向启发式修补——后来 AWQ 用激活感知保护关键权重、SqueezeLLM 用非均匀量化，都是在它划出的边界上继续推进。
+
+---
+
+## 16. Engineering Insights
+
+- **算法-系统协同设计的教科书案例**：GPTQ 的三个 Step 分别对应三种系统病——固定顺序治"计算量"、lazy update 治"访存比"、Cholesky 治"数值病态"。**数值算法要 scale，先得变成 GEMM 形状**。
+- **Compute-to-Memory 比是隐形约束**：OBQ 的直接实现每元素只有几个 FLOP，理论复杂度降了也跑不快；lazy batch-update 把更新攒成块级矩阵乘才兑现加速——分析任何 kernel 前先算 arithmetic intensity。
+- **数值稳定性是规模函数**：小模型上 dampening 就够，百亿规模下反复逆更新必然发散。大规模数值代码要优先选"一次性分解 + 查表"而非"增量更新"的结构。
+- **Memory-bound 下"计算是免费的"**：反量化 GEMV kernel 多花 ALU 换少搬字节；优化方向由 Roofline 决定而非由直觉决定——W4A16 的全部收益都在字节数上。
+- **校准 pipeline 的显存工程**：逐 6 层 block 加载、半成品模型前向，使 175B 量化的峰值显存低于推理峰值——**离线任务也受在线约束启发**（不需要全模型常驻就不要常驻）。
+- **量化格式与 kernel 共设计**：3bit 打包 + per-row/group 的 FP16 scale/zp 的格式选择直接决定 kernel 能否高效解压；group size 是"bit 开销 vs 精度 vs kernel 复杂度"的三维权衡。
+- **可迁移性**：思路（固定顺序 + 二阶补偿 + 批量更新）可迁移到剪枝、稀疏化与激活量化；GPTQ 格式已成为生态标准（AutoGPTQ、exllamav2、Marlin kernel、TensorRT-LLM/vLLM 的 W4A16 支持），其 kernel 思想直接演变为后来的 Marlin/AWQ kernel。
+
+---
+
+## 17. Future Work
+
+**作者自己提出的方向**：
+
+- 让乘法本身提速（等待 FP16×INT4 混合精度硬件支持）；
+- 加入激活量化（与 ZeroQuant 等正交技术结合）；
+- 更精心设计的 GPU kernel。
+
+**我认为后来真正发生的延续**：
+
+- **更优的 PTQ 算法**：AWQ（激活感知的 salient 权重保护，放弃 Hessian）、SqueezeLLM（非均匀量化 + 敏感权重）、SpQR（稀疏化 outlier + 3-4bit）——都在 GPTQ 划出的"W4A16 + one-shot"框架内卷精度。
+- **极限低 bit**：AQLM、QuIP# 把可用精度推到 2bit（GPTQ 的 2bit 结果只在最大模型上可用）。
+- **Kernel 生态爆发**：Marlin、exllama/exllamav2 把 W4A16 GEMV/GEMM 做到极致；GPTQ 格式进入 TensorRT-LLM、vLLM、llama.cpp，成为部署事实标准。
+- **硬件跟进**：论文"等混合精度硬件"的愿望部分兑现——新 GPU 的 INT4/FP8 支持（W4A16→W4A8、FP8 权重）延续了同一条压缩路线。
+- **量化对象扩展**：从权重到 KV Cache 量化（与 vLLM 的分页 KV 结合）、激活量化（SmoothQuant 系），以及量化与投机解码、MoE 的叠加。
+
+---
+
+> **一句话总结**：GPTQ 发现 OBQ 的二阶补偿在固定顺序下几乎不掉精度，于是把逐权重的串行数值算法改写成可分块、可批量、数值稳定的矩阵运算，让 175B 模型 4 小时量化到 3~4bit 且精度无损——LLM 从此可以塞进单张 GPU。
+
+</script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const renderer = new marked.Renderer();
+                    renderer.heading = function(text, level, raw) {
+                        let anchor = raw.toLowerCase()
+                            .replace(/[^\w\s-]/g, '')
+                            .replace(/\s+/g, '-')
+                            .replace(/-+/g, '-')
+                            .replace(/^-|-$/g, '');
+                        if (anchor && level >= 2) {
+                            return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+                        }
+                        return '<h' + level + '>' + text + '</h' + level + '>';
+                    };
+                    marked.setOptions({ renderer: renderer, headerIds: false, gfm: true, breaks: false, sanitize: false });
+                    const markdownSource = document.getElementById('markdown-source');
+                    if (markdownSource) {
+                        try {
+                            document.getElementById('content').innerHTML = marked.parse(markdownSource.textContent);
+                            if (window.Prism) Prism.highlightAll();
+                        } catch (err) {
+                            document.getElementById('content').innerHTML = '<div style="padding:20px;color:#ff7b72;background:#2d1515;border-radius:8px;"><h2>⚠️ 页面渲染失败</h2><p>' + err.message + '</p></div>';
+                            console.error('Markdown render error:', err);
+                        }
+                    }
+                });
+            </script>
+        </main>
+    </div>
+    <script src="../../js/main.js?v=5"></script>
+</body>
+</html>

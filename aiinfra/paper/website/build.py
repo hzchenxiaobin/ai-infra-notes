@@ -159,7 +159,7 @@ def page_template(title: str, page_title: str, root_prefix: str, nav: str,
             <div class="content-header">
                 <h1>{page_title}</h1>
             </div>
-            <div class="markdown-body" id="content">
+            <div class="content" id="content">
 {content_html}
             </div>
             {markdown_block}

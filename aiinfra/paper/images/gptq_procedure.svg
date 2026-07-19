@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="53" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="920" height="520" fill="#fdfcf7"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">GPTQ 量化过程（Fig. 2）：按列分块 + 块末批量补偿</text>
+  <path d="M 180 46 Q 460 54 740 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="62" text-anchor="middle" font-size="12" fill="#555">所有行共用同一固定列序 → 逆 Hessian（Cholesky 形式）只需每列更新一次，而非每个权重一次</text>
+
+  <!-- Weight matrix -->
+  <text x="230" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">权重矩阵 W（d_row × d_col）</text>
+  <!-- quantized blocks -->
+  <g filter="url(#sk)"><rect x="60" y="115" width="70" height="220" rx="4" fill="#57a773" opacity="0.35" stroke="#57a773" stroke-width="1.6"/></g>
+  <g filter="url(#sk)"><rect x="135" y="115" width="70" height="220" rx="4" fill="#57a773" opacity="0.35" stroke="#57a773" stroke-width="1.6"/></g>
+  <text x="95" y="355" text-anchor="middle" font-size="10" fill="#2f5238">已量化块</text>
+  <text x="170" y="355" text-anchor="middle" font-size="10" fill="#2f5238">已量化块</text>
+
+  <!-- current block -->
+  <g filter="url(#sk)"><rect x="210" y="115" width="100" height="220" rx="4" fill="none" stroke="#c98a2b" stroke-width="2.6"/></g>
+  <text x="260" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#c98a2b">当前块（B = 128 列）</text>
+  <!-- inside current block: quantized cols -->
+  <g filter="url(#sk)"><rect x="216" y="122" width="40" height="206" rx="3" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.2"/></g>
+  <!-- current column (white) -->
+  <g filter="url(#sk)"><rect x="258" y="122" width="16" height="206" rx="3" fill="#fdfcf7" stroke="#2b2b2b" stroke-width="1.8"/></g>
+  <text x="266" y="345" text-anchor="middle" font-size="9" fill="#2b2b2b">正量化列 j</text>
+  <!-- rest of block -->
+  <g filter="url(#sk)"><rect x="276" y="122" width="28" height="206" rx="3" fill="#c98a2b" opacity="0.20" stroke="#c98a2b" stroke-width="1.2"/></g>
+
+  <!-- remaining weights -->
+  <g filter="url(#sk)"><rect x="315" y="115" width="130" height="220" rx="4" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="380" y="225" text-anchor="middle" font-size="11" font-weight="bold" fill="#28455c">未量化权重</text>
+  <text x="380" y="243" text-anchor="middle" font-size="10" fill="#28455c">（块末一次性更新）</text>
+  <text x="380" y="355" text-anchor="middle" font-size="10" fill="#28455c">块处理完后全局更新 W 与 H⁻¹</text>
+
+  <!-- compensation arrow -->
+  <path d="M 312 225 L 340 225" stroke="#4a8edb" stroke-width="2" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+
+  <!-- Cholesky Hessian -->
+  <g filter="url(#sk)"><rect x="540" y="115" width="330" height="220" rx="12" fill="#c98a2b" opacity="0.14" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="705" y="142" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">逆 Hessian（Cholesky 分解，一次算好）</text>
+  <g filter="url(#sk)"><rect x="575" y="160" width="120" height="120" rx="6" fill="#c98a2b" opacity="0.35" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <path d="M 575 160 L 695 160 L 695 280 Z" fill="#c98a2b" opacity="0.30" stroke="#c98a2b" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="640" y="228" text-anchor="middle" font-size="11" fill="#6b4a14">上三角</text>
+  <text x="705" y="300" text-anchor="middle" font-size="10" fill="#4a463c">H⁻¹ = (2XXᵀ + λI)⁻¹，只依赖层输入 X</text>
+  <text x="705" y="320" text-anchor="middle" font-size="10" fill="#4a463c">λ = 对角线均值的 1%（dampening 防病态）</text>
+
+  <!-- flow steps -->
+  <g filter="url(#sk)"><rect x="60" y="390" width="800" height="105" rx="12" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="460" y="416" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">一个块内的流程（Algorithm 1）</text>
+  <text x="85" y="444" font-size="11" fill="#2b2b2b">① 量化列 j：Q[:,j] ← quant(W[:,j])，误差 E = (W[:,j] − Q[:,j]) / [H⁻¹]_jj</text>
+  <text x="85" y="466" font-size="11" fill="#2b2b2b">② 只更新块内后续列（lazy）：W[:,j+1..块末] −= E · H⁻¹[j, j+1..块末]　——列 j 的最终舍入不受更后列影响</text>
+  <text x="85" y="488" font-size="11" fill="#2b2b2b">③ 块完成后：一次性把累积误差 E 广播到所有未量化列与 H⁻¹（全局更新，GEMM 形态，吃满 GPU）</text>
+</svg>

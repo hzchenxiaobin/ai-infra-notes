@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="500" viewBox="0 0 920 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="83" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="500" fill="#fdfcf7"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">主结果（Fig. 1 / Table 3-4）：GPTQ 贴住 FP16，RTN 崩盘</text>
+  <path d="M 150 46 Q 460 54 770 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="62" text-anchor="middle" font-size="12" fill="#555">WikiText2 Perplexity（越低越好，对数轴）× 模型规模（OPT / BLOOM 家族，125M → 176B）</text>
+
+  <!-- axes -->
+  <g filter="url(#sk)"><line x1="110" y1="90" x2="110" y2="410" stroke="#3a3a3a" stroke-width="1.8" marker-end="url(#ar)"/></g>
+  <g filter="url(#sk)"><line x1="110" y1="410" x2="840" y2="410" stroke="#3a3a3a" stroke-width="1.8" marker-end="url(#ar)"/></g>
+  <text x="70" y="250" font-size="12" fill="#2b2b2b" transform="rotate(-90 70 250)" text-anchor="middle">WikiText2 PPL（log）</text>
+  <text x="475" y="445" font-size="12" fill="#2b2b2b" text-anchor="middle">模型参数量（log）：125M ··· 1.3B ··· 13B ··· 66B ··· 175B/176B</text>
+
+  <!-- y grid labels -->
+  <text x="90" y="415" font-size="10" fill="#777" text-anchor="end">8</text>
+  <text x="90" y="330" font-size="10" fill="#777" text-anchor="end">15</text>
+  <text x="90" y="245" font-size="10" fill="#777" text-anchor="end">30</text>
+  <text x="90" y="160" font-size="10" fill="#777" text-anchor="end">100+</text>
+
+  <!-- FP16 line -->
+  <path d="M 150 330 C 300 350 500 385 810 398" stroke="#2b2b2b" stroke-width="2.5" fill="none" filter="url(#sk)"/>
+  <text x="740" y="390" font-size="11" font-weight="bold" fill="#2b2b2b">FP16</text>
+
+  <!-- GPTQ line -->
+  <path d="M 150 315 C 300 338 500 372 810 388" stroke="#57a773" stroke-width="2.5" fill="none" filter="url(#sk)"/>
+  <text x="700" y="376" font-size="11" font-weight="bold" fill="#57a773">GPTQ 3-4bit</text>
+
+  <!-- RTN 4bit line -->
+  <path d="M 150 300 C 280 320 420 345 560 300 C 620 280 640 200 660 180 C 700 260 760 340 810 360" stroke="#c98a2b" stroke-width="2" fill="none" stroke-dasharray="6 4" filter="url(#sk)"/>
+  <text x="560" y="292" font-size="11" font-weight="bold" fill="#c98a2b">RTN 4bit</text>
+  <text x="660" y="170" font-size="9" fill="#c98a2b">OPT-66B 异常</text>
+
+  <!-- RTN 3bit line -->
+  <path d="M 150 180 C 250 160 350 150 450 155 C 550 160 650 140 810 130" stroke="#b8514d" stroke-width="2.5" fill="none" stroke-dasharray="8 4" filter="url(#sk)"/>
+  <text x="640" y="122" font-size="11" font-weight="bold" fill="#b8514d">RTN 3bit：PPL 爆炸到 10³ 量级</text>
+
+  <!-- annotation -->
+  <g filter="url(#sk)"><rect x="150" y="228" width="330" height="56" rx="10" fill="none" stroke="#8a8471" stroke-width="1.4" stroke-dasharray="7 4"/></g>
+  <text x="315" y="250" text-anchor="middle" font-size="11" fill="#4a463c">OPT-175B @ 4bit：FP16 8.34</text>
+  <text x="315" y="270" text-anchor="middle" font-size="11" fill="#4a463c">GPTQ 8.37（+0.03） vs RTN 10.54</text>
+
+  <!-- key takeaways -->
+  <text x="460" y="472" text-anchor="middle" font-size="11" fill="#4a463c">三个观察：① 模型越大越好量化（冗余度更高）；② 3bit 是 RTN 的死亡线、GPTQ 的安全区；③ RTN-4bit 的 175B 比 FP16 的 13B 还差</text>
+</svg>
