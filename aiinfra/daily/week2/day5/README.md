@@ -247,6 +247,53 @@ o_new = o × (l × exp(m - m_new) / l_new) + (exp(x_j - m_new) / l_new) × v_j
 - `o × (l × exp(m - m_new) / l_new)`：将之前累积的输出按新的概率分布重新归一化
 - `(exp(x_j - m_new) / l_new) × v_j`：新块的贡献，以新的全局概率权重加权 V
 
+**公式 3 的逐步推导**：
+
+旧状态 $(m, l, o)$ 已经覆盖了一部分 score $X_{\text{old}}$，并且 $o$ 是**已归一化**的输出：
+
+$$
+o = \frac{\sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x}{l}, \qquad l = \sum_{x \in X_{\text{old}}} \exp(x - m)
+$$
+
+来了新块 $X_{\text{new}} = \{x_j\}$，新的全局 max 为 $m_{\text{new}} = \max(m, \max_{j} x_j)$，新的归一化分母为：
+
+$$
+l_{\text{new}} = \sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) + \sum_{x_j \in X_{\text{new}}} \exp(x_j - m_{\text{new}})
+$$
+
+把旧部分的分子也统一到 $m_{\text{new}}$ 参考点：
+
+$$
+\sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) \cdot v_x
+= \exp(m - m_{\text{new}}) \sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x
+= \exp(m - m_{\text{new}}) \cdot l \cdot o
+$$
+
+新部分的分子是：
+
+$$
+\sum_{x_j \in X_{\text{new}}} \exp(x_j - m_{\text{new}}) \cdot v_j
+$$
+
+所以新的全局 softmax 加权平均为：
+
+$$
+o_{\text{new}}
+= \frac{\exp(m - m_{\text{new}}) \cdot l \cdot o + \sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}
+$$
+
+拆成两项就是公式 3：
+
+$$
+o_{\text{new}}
+= o \cdot \frac{l \cdot \exp(m - m_{\text{new}})}{l_{\text{new}}}
++ \frac{\sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}
+$$
+
+直观理解：
+- 第一项把旧的"加权和" $l \cdot o$ 先按参考点汇率 $\exp(m - m_{\text{new}})$ 缩放，再除以新的全局 $l_{\text{new}}$ 重新归一化；
+- 第二项直接用新块在全局 softmax 下的概率权重 $\exp(x_j - m_{\text{new}}) / l_{\text{new}}$ 对 $v_j$ 加权。
+
 **最终输出**：公式 3 把归一化"摊"进了每一步——`o` 始终是**已归一化**的部分结果，所以所有 KV tile 处理完后 `o` 就是最终输出，**末尾无需再除 l**。本教程的 kernel 采用这种写法。
 
 > 💡 **另一种等价写法（FA 论文的原始形式）**：`o` 只累加**未归一化**的加权和，每步只做 `o_new = o × exp(m - m_new) + Σ exp(x_j - m_new) × v_j`，全部 tile 处理完最后做一次 `O = o / l`。两种写法数学上严格等价：前者每步多一次除法、状态更直观；后者把 N/Bc 次除法省成 1 次——FlashAttention-2 正是靠这种"推迟归一化"减少了 non-matmul FLOPs。面试手写推导时用任何一种都可以，但要能讲清两者的差别。
