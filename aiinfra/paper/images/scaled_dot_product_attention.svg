@@ -29,10 +29,10 @@
   <path d="M 110 135 L 153 160" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
   <path d="M 110 210 L 153 186" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
 
-  <!-- MatMul1 (Q·Kᵀ) -->
+  <!-- MatMul1 (Q·Kᵀ) — GEMM ① -->
   <g filter="url(#sk)"><rect x="155" y="145" width="95" height="56" rx="8" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
-  <text x="202" y="169" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">MatMul</text>
-  <text x="202" y="187" text-anchor="middle" font-size="11" fill="#555">Q · Kᵀ</text>
+  <text x="202" y="167" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">MatMul</text>
+  <text x="202" y="187" text-anchor="middle" font-size="11" fill="#555">GEMM ① Q · Kᵀ</text>
   <path d="M 250 173 L 278 173" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
 
   <!-- S 标注（相似度得分） -->
@@ -75,10 +75,10 @@
   <path d="M 110 380 L 508 383" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
   <text x="300" y="372" text-anchor="middle" font-size="11" fill="#666">V</text>
 
-  <!-- MatMul2 (P·V) -->
+  <!-- MatMul2 (P·V) — GEMM ② -->
   <g filter="url(#sk)"><rect x="510" y="355" width="110" height="56" rx="8" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
-  <text x="565" y="379" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">MatMul</text>
-  <text x="565" y="397" text-anchor="middle" font-size="11" fill="#555">P · V</text>
+  <text x="565" y="377" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">MatMul</text>
+  <text x="565" y="397" text-anchor="middle" font-size="11" fill="#555">GEMM ② P · V</text>
 
   <!-- MatMul2 → Output -->
   <path d="M 620 383 L 678 383" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
@@ -88,15 +88,16 @@
   <text x="740" y="379" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">输出 O</text>
   <text x="740" y="397" text-anchor="middle" font-size="11" fill="#5c4a28">n × d_v</text>
 
-  <!-- 右侧注解：两段 MatMul 的角色 -->
-  <g filter="url(#sk)"><rect x="680" y="100" width="170" height="180" rx="10" fill="none" stroke="#8a8471" stroke-width="1.4" stroke-dasharray="6 4"/></g>
-  <text x="765" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">两段 MatMul 的角色</text>
+  <!-- 右侧注解：算子角色、瓶颈与加速器友好性 -->
+  <g filter="url(#sk)"><rect x="680" y="100" width="170" height="200" rx="10" fill="none" stroke="#8a8471" stroke-width="1.4" stroke-dasharray="6 4"/></g>
+  <text x="765" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">算子角色与复杂度</text>
   <text x="765" y="148" text-anchor="middle" font-size="11" fill="#555">① Q·Kᵀ：算相似度</text>
   <text x="765" y="166" text-anchor="middle" font-size="11" fill="#555">　 输出 n × n 得分矩阵</text>
   <text x="765" y="194" text-anchor="middle" font-size="11" fill="#555">② P·V：加权聚合 Value</text>
   <text x="765" y="212" text-anchor="middle" font-size="11" fill="#555">　 输出 n × d_v 上下文</text>
-  <text x="765" y="244" text-anchor="middle" font-size="11" fill="#5c4a28">两次 GEMM 是 FLOPs 主体</text>
-  <text x="765" y="262" text-anchor="middle" font-size="11" fill="#5c4a28">softmax 物化 n² 是显存瓶颈</text>
+  <text x="765" y="240" text-anchor="middle" font-size="11" fill="#5c4a28">两次 GEMM = FLOPs 主体</text>
+  <text x="765" y="258" text-anchor="middle" font-size="11" fill="#5c4a28">softmax 物化 n² = 显存瓶颈</text>
+  <text x="765" y="282" text-anchor="middle" font-size="11" fill="#5c4a28">全矩阵运算 → 加速器友好</text>
 
   <!-- 底部注释 -->
   <text x="440" y="450" text-anchor="middle" font-size="11" fill="#666">Mask 只在 Decoder 自注意力中使用（因果掩码防止偷看未来）；Scale 中 1/√d_k 防止 softmax 饱和</text>
