@@ -83,23 +83,27 @@ Benefit     FP16 达 740 TFLOPs/s（75% 峰值），FP8 近 1.2 PFLOPs/s，
 
 ![Warp 特化异步流水](../images/flashattention3_warp_specialization.svg)
 
-- **角色分工**：CTA 内的 warpgroup 分为 **producer**（只发 TMA 搬 K/V tile）和 **consumer**（只做计算）。分工让编译器更容易生成最优指令调度。
-- **寄存器重分配**：TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器寄存器）。
-- **同步原语**：producer/consumer 之间用 mbarrier 做块级握手的多 stage 流水。
-- **Pingpong 调度**：两个 consumer warpgroup 交替——wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然。一个 SM 的 Tensor Core 与 CUDA core 同时有活干。实测 hd128 FP16 forward 从 **570 → 620–640 TFLOPs/s**。
+- **Purpose**：把 TMA 搬数与计算重叠起来——让 Hopper 的异步执行单元（TMA / WGMMA / CUDA core）同时有活干，Tensor Core 不空转。
+- **Algorithm（角色分工）**：CTA 内的 warpgroup 分为 **producer**（只发 TMA 搬 K/V tile）和 **consumer**（只做计算）。分工让编译器更容易生成最优指令调度。
+- **Algorithm（寄存器重分配）**：TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器寄存器）。
+- **Algorithm（同步原语）**：producer/consumer 之间用 mbarrier 做块级握手的多 stage 流水。
+- **Algorithm（Pingpong 调度）**：两个 consumer warpgroup 交替——wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然。一个 SM 的 Tensor Core 与 CUDA core 同时有活干。
+- **Benefit**：实测 hd128 FP16 forward 从 **570 → 620–640 TFLOPs/s**。
 
 ### 5.2 Warpgroup 内的 GEMM-Softmax 流水（2-stage）
 
 ![GEMM 与 softmax 两级重叠](../images/flashattention3_pingpong_pipeline.svg)
 
-- **依赖障碍**：FA2 的顺序是 GEMM(QKᵀ) → softmax → GEMM(PV) → 下一块 GEMM(QKᵀ)——严格的串行链，Tensor Core 在 softmax 期间空转。
-- **重排（rework FA2）**：2-stage 版本中，块 $j$ 的 softmax 在 CUDA core 上执行的同时，**块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行**——为此要重新组织 online softmax 的更新顺序，绕开"softmax 输出是下一个 GEMM 输入"的直接依赖（利用 $O$ 累加器作为缓冲：当前块的 PV 与下一块的 QKᵀ 无数据依赖）。
-- **代价与边界**：寄存器压力上升（需同时驻留两块的状态），3-stage 变体进一步加深流水但 tile 大小与流水深度更难平衡（附录讨论）。
-- **消融确认**（Table 2，batch 4、seqlen 8448、hd128）：GEMM-softmax 流水 + warp 特化从 **570 → 661 TFLOPs/s**。
+- **Purpose**：打破 FA2 "GEMM(QKᵀ) → softmax → GEMM(PV) → 下一块 GEMM(QKᵀ)" 的严格串行链——Tensor Core 在 softmax 期间空转。
+- **Algorithm（重排，rework FA2）**：2-stage 版本中，块 $j$ 的 softmax 在 CUDA core 上执行的同时，**块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行**——为此要重新组织 online softmax 的更新顺序，绕开"softmax 输出是下一个 GEMM 输入"的直接依赖（利用 $O$ 累加器作为缓冲：当前块的 PV 与下一块的 QKᵀ 无数据依赖）。
+- **Limitations**：寄存器压力上升（需同时驻留两块的状态），3-stage 变体进一步加深流水但 tile 大小与流水深度更难平衡（附录讨论）。
+- **Benefit（消融确认，Table 2，batch 4、seqlen 8448、hd128）**：GEMM-softmax 流水 + warp 特化从 **570 → 661 TFLOPs/s**。
 
 ### 5.3 FP8：布局手术与量化补偿
 
 ![FP8 的布局与精度问题](../images/flashattention3_fp8.svg)
+
+- **Purpose**：吃下 FP8 Tensor Core 的 2× 算力，同时把量化误差压住。
 
 **布局（Layout）侧**：
 

@@ -77,6 +77,8 @@ def find_papers() -> list:
         papers.append({
             "slug": subdir.name,
             "title": title,
+            # 侧边栏只显示主标题（"——" 前半段），避免长副标题被省略号截断
+            "short_title": title.split("——")[0].strip(),
             "dir": subdir,
             "readme": readme if readme.exists() else None,
             "pdfs": pdfs,
@@ -101,7 +103,7 @@ def build_nav(papers: list, current_slug: Optional[str], root_prefix: str) -> st
             href = f"{root_prefix}paper/{paper['slug']}/{paper['pdfs'][0].name}"
         else:
             continue
-        lines.append(f'<a class="nav-link{active}" href="{href}">{paper["title"]}</a>')
+        lines.append(f'<a class="nav-link{active}" href="{href}">{paper["short_title"]}</a>')
     return "\n".join(lines)
 
 
@@ -203,16 +205,18 @@ def build_index_content(papers: list, root_prefix: str) -> str:
         "",
         "## 论文列表",
         "",
+        "| 论文 | 阅读笔记 | 原文 PDF |",
+        "| --- | --- | --- |",
     ]
     for paper in papers:
-        note_link = ""
+        note_cell = "—"
         if paper["readme"]:
-            note_link = f' [阅读笔记]({root_prefix}paper/{paper["slug"]}/index.html)'
-        pdf_links = " / ".join(
+            note_cell = f'[阅读笔记]({root_prefix}paper/{paper["slug"]}/index.html)'
+        pdf_cell = "<br>".join(
             f'[{pdf.name}]({root_prefix}paper/{paper["slug"]}/{pdf.name})'
             for pdf in paper["pdfs"]
-        )
-        lines.append(f"- **{paper['title']}**：{note_link}{' | ' if note_link and pdf_links else ''}{pdf_links}")
+        ) or "—"
+        lines.append(f"| **{paper['title']}** | {note_cell} | {pdf_cell} |")
     return "\n".join(lines)
 
 

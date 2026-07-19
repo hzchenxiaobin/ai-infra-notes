@@ -2,6 +2,7 @@
 
 > 原文 PDF：[attention_is_all_you_need.pdf](attention_is_all_you_need.pdf)
 > 精读规范：[`../SKILL.md`](../SKILL.md)
+> 系列精读：本篇是 Attention 机制的源头；后续硬件化优化见 [FlashAttention (FA1)](../flashattention/README.md) / [FA2](../flashattention2/README.md) / [FA3](../flashattention3/README.md)
 
 ---
 

@@ -30,10 +30,29 @@
             <nav class="sidebar-nav">
 <a class="nav-link" href="../../paper/index.html">📌 论文列表</a>
 <div class="nav-section-title">论文笔记</div>
-<a class="nav-link" href="../../paper/attention_is_all_you_need/index.html">Attention Is All You Need —— Transformer 论文精读</a>
-<a class="nav-link" href="../../paper/flashattention/index.html">FlashAttention —— Fast and Memory-Efficient Exact Attention with IO-Awareness 论文精读</a>
-<a class="nav-link active" href="../../paper/flashattention2/index.html">FlashAttention-2 —— Faster Attention with Better Parallelism and Work Partitioning 论文精读</a>
-<a class="nav-link" href="../../paper/flashattention3/index.html">FlashAttention-3 —— Fast and Accurate Attention with Asynchrony and Low-precision 论文精读</a>
+<a class="nav-link" href="../../paper/attention_is_all_you_need/index.html">Attention Is All You Need</a>
+<a class="nav-link" href="../../paper/awq/awq.pdf">awq</a>
+<a class="nav-link" href="../../paper/deepseek_v2/deepseek_v2.pdf">deepseek v2</a>
+<a class="nav-link" href="../../paper/deepseek_v3/deepseek_v3.pdf">deepseek v3</a>
+<a class="nav-link" href="../../paper/flashattention/index.html">FlashAttention</a>
+<a class="nav-link active" href="../../paper/flashattention2/index.html">FlashAttention-2</a>
+<a class="nav-link" href="../../paper/flashattention3/index.html">FlashAttention-3</a>
+<a class="nav-link" href="../../paper/flashinfer/flashinfer.pdf">flashinfer</a>
+<a class="nav-link" href="../../paper/gptq/gptq.pdf">gptq</a>
+<a class="nav-link" href="../../paper/gqa/gqa.pdf">gqa</a>
+<a class="nav-link" href="../../paper/mamba/mamba.pdf">mamba</a>
+<a class="nav-link" href="../../paper/medusa/medusa.pdf">medusa</a>
+<a class="nav-link" href="../../paper/megatron_lm/megatron_lm.pdf">megatron lm</a>
+<a class="nav-link" href="../../paper/mqa/mqa.pdf">mqa</a>
+<a class="nav-link" href="../../paper/online_softmax/online_softmax.pdf">online softmax</a>
+<a class="nav-link" href="../../paper/orca/orca.pdf">orca</a>
+<a class="nav-link" href="../../paper/sarathi_serve/sarathi_serve.pdf">sarathi serve</a>
+<a class="nav-link" href="../../paper/scaling_transformer_inference/scaling_transformer_inference.pdf">scaling transformer inference</a>
+<a class="nav-link" href="../../paper/smoothquant/smoothquant.pdf">smoothquant</a>
+<a class="nav-link" href="../../paper/speculative_decoding/speculative_decoding.pdf">speculative decoding</a>
+<a class="nav-link" href="../../paper/splitwise/splitwise.pdf">splitwise</a>
+<a class="nav-link" href="../../paper/vllm/vllm.pdf">vllm</a>
+<a class="nav-link" href="../../paper/zero/zero.pdf">zero</a>
             </nav>
         </aside>
         <main class="main-content">
@@ -48,7 +67,7 @@
 
 > 原文 PDF：[flashattention2.pdf](flashattention2.pdf)
 > 精读规范：[\`../SKILL.md\`](../index.html)
-> 前作精读：[FlashAttention (FA1)](../flashattention/README.md)　｜　配套教程：[week2/day5](../../../aiinfra/daily/week2/day5/README.md)
+> 系列精读：[FlashAttention (FA1)](../flashattention/README.md) / [FlashAttention-3 (FA3)](../flashattention3/README.md)　｜　配套教程：[week2/day5](../../../aiinfra/daily/week2/day5/README.md)
 
 ---
 
@@ -124,34 +143,35 @@ Benefit     再快 ~2×，forward 达 73% 峰值（接近 GEMM），
 
 ![减少 non-matmul FLOPs](../images/flashattention2_nonmatmul.svg)
 
-两处对 online softmax 的"微创手术"：
-
-1. **推迟归一化**：FA1 的输出更新是 $O^{(2)} = \\mathrm{diag}(\\ell^{(1)}/\\ell^{(2)})^{-1} O^{(1)} + \\mathrm{diag}(\\ell^{(2)})^{-1} e^{S^{(2)}-m^{(2)}} V^{(2)}$，每个 tile 都要做除法。FA2 改为维护**未归一化**的累加器 $\\tilde{O}^{(2)} = \\mathrm{diag}(\\ell^{(1)})^{-1} O^{(1)} + e^{S^{(2)}-m^{(2)}} V^{(2)}$，循环内只剩 $e^{m-m_{new}}$ 一次缩放，**全部循环结束后才除一次 $\\ell$**——$T_c$ 次归一化省成 1 次。
-2. **统计量合并**：backward 不再需要分别存 max $m$ 和指数和 $\\ell$，只存 **logsumexp** $L = m + \\log \\ell$（backward 里 $P = \\exp(S - L)$ 一步复原）。
-
-**因果掩码的块级优化**（附带收益）：对角线右侧的 KV 块整块跳过；严格左侧的块不做 mask 判断——每行只有 1 个块需要逐元素掩码，因果注意力比无 mask 快 **1.7–1.8×**。
+- **Purpose**：对 online softmax 做两处"微创手术"，砍掉 non-matmul FLOPs 与显存占用（matmul 由 Tensor Core 加速后，这部分成为新的相对瓶颈）。
+- **Algorithm（推迟归一化）**：FA1 的输出更新是 $O^{(2)} = \\mathrm{diag}(\\ell^{(1)}/\\ell^{(2)})^{-1} O^{(1)} + \\mathrm{diag}(\\ell^{(2)})^{-1} e^{S^{(2)}-m^{(2)}} V^{(2)}$，每个 tile 都要做除法。FA2 改为维护**未归一化**的累加器 $\\tilde{O}^{(2)} = \\mathrm{diag}(\\ell^{(1)})^{-1} O^{(1)} + e^{S^{(2)}-m^{(2)}} V^{(2)}$，循环内只剩 $e^{m-m_{new}}$ 一次缩放，**全部循环结束后才除一次 $\\ell$**——$T_c$ 次归一化省成 1 次。
+- **Algorithm（统计量合并）**：backward 不再需要分别存 max $m$ 和指数和 $\\ell$，只存 **logsumexp** $L = m + \\log \\ell$（backward 里 $P = \\exp(S - L)$ 一步复原）。
+- **附带收益（因果掩码的块级优化）**：对角线右侧的 KV 块整块跳过；严格左侧的块不做 mask 判断——每行只有 1 个块需要逐元素掩码，因果注意力比无 mask 快 **1.7–1.8×**。
 
 ### 5.2 并行化：对调循环 + Q 块维并行
 
 ![FA1 vs FA2 循环顺序对调](../images/flashattention2_loop_swap.svg)
 
-- **FA1 的调度**：1 个 thread block 负责 1 个注意力头，总并行度 = batch × heads。A100 有 108 个 SM，这个数 ≥80 才够用；长序列场景（batch 小、头数少）大量 SM 闲置。
-- **FA2 的调度**：forward 的外层循环（Q 块维）是 embarrassingly parallel 的，thread block 按 **batch × heads × Q 块数**分配——并行度直接乘上 $T_r$，长序列 regime 显著提速。
-- **循环对调**的附带好处：Q 块驻留 SRAM，其输出 $O_i$ 全程在片上累加，**只写回一次 HBM**（FA1 里每个 KV 块都要读写一次 $O_i$）。
-- **Backward**：按 KV 列块分配 thread block，$dQ$ 的跨块累加用 **atomic add** 通信。
-- **学术诚实**：循环对调与序列维并行由 **Phil Tillet 的 Triton 实现首先提出**（论文脚注明确致谢）——FA2 把它系统化并加上 warp 级优化。
+- **Purpose**：FA1 的总并行度只有 batch × heads——A100 有 108 个 SM，这个数 ≥80 才够用；长序列场景（batch 小、头数少）大量 SM 闲置。
+- **Algorithm（forward，Q 块维并行）**：外层循环（Q 块维）是 embarrassingly parallel 的，thread block 按 **batch × heads × Q 块数**分配——并行度直接乘上 $T_r$，长序列 regime 显著提速。
+- **Algorithm（循环对调）**：Q 块驻留 SRAM，其输出 $O_i$ 全程在片上累加，**只写回一次 HBM**（FA1 里每个 KV 块都要读写一次 $O_i$）。
+- **Algorithm（backward）**：按 KV 列块分配 thread block，$dQ$ 的跨块累加用 **atomic add** 通信。
+- **备注（学术诚实）**：循环对调与序列维并行由 **Phil Tillet 的 Triton 实现首先提出**（论文脚注明确致谢）——FA2 把它系统化并加上 warp 级优化。
 
 ### 5.3 Warp 间的工作划分
 
 ![Warp 划分：FA1 split-K vs FA2 split-Q](../images/flashattention2_warp_partition.svg)
 
+- **Purpose**：消除 FA1 warp 划分方式带来的跨 warp 归约通信。
 - **FA1（split-K）**：K/V 按 warp 切片、Q 共享。每个 warp 算出 QKᵀ 的一个切片后，PV 的部分和必须写 shared memory、barrier、跨 warp 归约——**每个 KV tile 一轮 smem 往返 + 同步**。
 - **FA2（split-Q）**：Q 按 warp 切片、K/V 共享。每个 warp 独立算自己那几行的 QKᵀ、softmax、PV，输出切片互不重叠——**warp 间零通信**。
-- **本质**：归约维（KV 维）跨 warp 切必然引入归约通信；输出维（Q 行）切分天然无冲突。Backward 同理避开 split-K。典型配置：每 thread block 4 或 8 个 warp。
+- **Insight**：归约维（KV 维）跨 warp 切必然引入归约通信；输出维（Q 行）切分天然无冲突。Backward 同理避开 split-K。典型配置：每 thread block 4 或 8 个 warp。
 
 ### 5.4 MQA / GQA 支持
 
-Multi-Query / Grouped-Query Attention（多组 Q 头共享同一 KV 头）不需要真的把 KV 头复制扩维——**只改索引**即可完成同样的计算；backward 时把隐式复制过的各头的 dK/dV 梯度**求和**回去即可。省显存也省搬运。
+- **Purpose**：支持 Multi-Query / Grouped-Query Attention（多组 Q 头共享同一 KV 头），且不引入额外的显存与搬运开销。
+- **Algorithm**：不需要真的把 KV 头复制扩维——**只改索引**即可完成同样的计算；backward 时把隐式复制过的各头的 dK/dV 梯度**求和**回去即可。
+- **Advantages**：省显存也省搬运。
 
 ---
 
