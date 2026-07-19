@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="67" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention 分块（Tiling）与循环结构</text>
+  <path d="M 230 44 Q 450 52 670 44" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="450" y="60" text-anchor="middle" font-size="12" fill="#555">块大小：Bc = ⌈M/4d⌉，Br = min(⌈M/4d⌉, d)，保证 4 个块 + S̃ 能同时放进 SRAM（大小 M）</text>
+
+  <!-- Q matrix (column of blocks) -->
+  <text x="150" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Q（Tr = ⌈N/Br⌉ 个行块）</text>
+  <g filter="url(#sk)"><rect x="90" y="115" width="120" height="90" rx="6" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="150" y="165" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Q_i</text>
+  <text x="150" y="182" text-anchor="middle" font-size="10" fill="#28455c">Br×d</text>
+  <g filter="url(#sk)"><rect x="90" y="215" width="120" height="90" rx="6" fill="#4a8edb" opacity="0.12" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 3"/></g>
+  <text x="150" y="265" text-anchor="middle" font-size="11" fill="#888">Q_i+1</text>
+  <text x="150" y="330" text-anchor="middle" font-size="18" fill="#888">⋮</text>
+
+  <!-- KV blocks -->
+  <text x="400" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#c98a2b">K、V（Tc = ⌈N/Bc⌉ 个行块）</text>
+  <g filter="url(#sk)"><rect x="330" y="115" width="140" height="60" rx="6" fill="#c98a2b" opacity="0.40" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="400" y="150" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">K_j, V_j（Bc×d）</text>
+  <path d="M 400 175 L 400 200" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="330" y="205" width="140" height="60" rx="6" fill="#c98a2b" opacity="0.15" stroke="#c98a2b" stroke-width="1.2" stroke-dasharray="4 3"/></g>
+  <text x="400" y="240" text-anchor="middle" font-size="11" fill="#888">K_j+1, V_j+1</text>
+  <text x="400" y="290" text-anchor="middle" font-size="18" fill="#888">⋮</text>
+  <text x="400" y="330" text-anchor="middle" font-size="11" fill="#c98a2b">外循环 j：逐块从 HBM 载入 SRAM</text>
+
+  <!-- on-chip compute -->
+  <g filter="url(#sk)"><rect x="560" y="130" width="290" height="200" rx="12" fill="#57a773" opacity="0.22" stroke="#57a773" stroke-width="1.8"/></g>
+  <text x="705" y="156" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">片上 SRAM（一次性完成）</text>
+  <text x="705" y="182" text-anchor="middle" font-size="11" fill="#2b2b2b">① S̃_ij = Q_i · K_jᵀ（Br×Bc，不落 HBM）</text>
+  <text x="705" y="206" text-anchor="middle" font-size="11" fill="#2b2b2b">② m̃ = rowmax(S̃)，P̃ = exp(S̃ − m̃)</text>
+  <text x="705" y="230" text-anchor="middle" font-size="11" fill="#2b2b2b">③ 更新 (m_i, ℓ_i)：online softmax</text>
+  <text x="705" y="254" text-anchor="middle" font-size="11" fill="#2b2b2b">④ O_i ← 缩放累加 P̃·V_j</text>
+  <text x="705" y="282" text-anchor="middle" font-size="10" fill="#2f5238">内循环 i：对每个 Q 块重复 ①–④</text>
+  <text x="705" y="302" text-anchor="middle" font-size="10" fill="#2f5238">只有 O_i、(ℓ_i, m_i) 写回 HBM</text>
+
+  <!-- arrows Q/KV to SRAM -->
+  <path d="M 210 160 L 555 185" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 470 145 L 555 175" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- O output -->
+  <text x="150" y="400" text-anchor="middle" font-size="13" font-weight="bold" fill="#57a773">O + (ℓ, m)（Tr 个块）</text>
+  <g filter="url(#sk)"><rect x="90" y="415" width="120" height="80" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.8"/></g>
+  <text x="150" y="448" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">O_i, ℓ_i, m_i</text>
+  <text x="150" y="468" text-anchor="middle" font-size="10" fill="#2f5238">Br×d + 2×Br</text>
+  <path d="M 560 300 L 215 440" stroke="#57a773" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- note box -->
+  <g filter="url(#sk)"><rect x="330" y="395" width="520" height="130" rx="10" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="590" y="423" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">FA1 的循环顺序（面试细节）</text>
+  <text x="590" y="445" text-anchor="middle" font-size="11" fill="#555">外循环 j 遍历 KV 块，内循环 i 遍历 Q 块</text>
+  <text x="590" y="463" text-anchor="middle" font-size="11" fill="#555">→ K_j/V_j 每轮只载一次，但 O_i 要反复读写 HBM</text>
+  <text x="590" y="481" text-anchor="middle" font-size="11" fill="#555">FlashAttention-2 把顺序对调（外 Q 内 KV），</text>
+  <text x="590" y="499" text-anchor="middle" font-size="11" fill="#555">让每个 block 独占一个 Q 块的输出，消除重复读写</text>
+</svg>

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="53" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c0504d"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="900" height="540" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">标准 Attention vs FlashAttention：HBM 访问对比</text>
+  <path d="M 200 44 Q 450 52 700 44" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="450" y="62" text-anchor="middle" font-size="12" fill="#555">A100：HBM 40–80 GB @ 1.5–2.0 TB/s　｜　SRAM 192 KB/SM × 108 SM @ ~19 TB/s（快一个数量级，但小得多）</text>
+
+  <!-- ===== Left: standard attention ===== -->
+  <text x="225" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0504d">标准 Attention</text>
+  <!-- HBM box -->
+  <g filter="url(#sk)"><rect x="60" y="110" width="330" height="180" rx="10" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="225" y="132" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">HBM（慢，大）</text>
+  <g filter="url(#sk)"><rect x="85" y="145" width="90" height="56" rx="6" fill="#c0504d" opacity="0.30" stroke="#c0504d" stroke-width="1.5"/></g>
+  <text x="130" y="170" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">S = QKᵀ</text>
+  <text x="130" y="188" text-anchor="middle" font-size="10" fill="#6b2f2d">N×N 物化</text>
+  <g filter="url(#sk)"><rect x="190" y="145" width="90" height="56" rx="6" fill="#c0504d" opacity="0.30" stroke="#c0504d" stroke-width="1.5"/></g>
+  <text x="235" y="170" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">P = softmax(S)</text>
+  <text x="235" y="188" text-anchor="middle" font-size="10" fill="#6b2f2d">N×N 物化</text>
+  <g filter="url(#sk)"><rect x="295" y="145" width="80" height="56" rx="6" fill="none" stroke="#8a8471" stroke-width="1.3"/></g>
+  <text x="335" y="170" text-anchor="middle" font-size="11" fill="#2b2b2b">Q/K/V</text>
+  <text x="335" y="186" text-anchor="middle" font-size="11" fill="#2b2b2b">O</text>
+  <!-- compute unit -->
+  <g filter="url(#sk)"><rect x="110" y="360" width="230" height="60" rx="10" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="225" y="386" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">SM 计算单元</text>
+  <text x="225" y="404" text-anchor="middle" font-size="10" fill="#28455c">matmul / softmax 各自独立 kernel</text>
+  <!-- round trips -->
+  <path d="M 160 360 L 160 205" stroke="#c0504d" stroke-width="2" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <path d="M 200 205 L 200 360" stroke="#c0504d" stroke-width="2" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="225" y="300" text-anchor="middle" font-size="11" font-weight="bold" fill="#c0504d">S、P 反复读写 HBM</text>
+  <text x="225" y="318" text-anchor="middle" font-size="11" fill="#c0504d">Θ(Nd + N²) 次访问</text>
+  <text x="225" y="455" text-anchor="middle" font-size="12" fill="#c0504d">瓶颈：O(N²) 的 HBM 流量</text>
+  <text x="225" y="475" text-anchor="middle" font-size="12" fill="#c0504d">显存占用：O(N²)</text>
+
+  <!-- ===== Right: FlashAttention ===== -->
+  <text x="675" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8edb">FlashAttention</text>
+  <g filter="url(#sk)"><rect x="510" y="110" width="330" height="180" rx="10" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="675" y="132" text-anchor="middle" font-size="12" font-weight="bold" fill="#555">HBM</text>
+  <g filter="url(#sk)"><rect x="545" y="150" width="260" height="50" rx="6" fill="none" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="675" y="180" text-anchor="middle" font-size="12" fill="#2b2b2b">只存 Q、K、V、O 和统计量 (ℓ, m)</text>
+  <!-- SRAM -->
+  <g filter="url(#sk)"><rect x="560" y="360" width="230" height="76" rx="10" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.8"/></g>
+  <text x="675" y="384" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">SRAM（片上，快）</text>
+  <text x="675" y="402" text-anchor="middle" font-size="10" fill="#2f5238">Q/K/V 分块 + S̃/P̃ 中间块</text>
+  <text x="675" y="418" text-anchor="middle" font-size="10" fill="#2f5238">matmul→softmax→matmul 全融合</text>
+  <path d="M 640 360 L 640 205" stroke="#4a8edb" stroke-width="2" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 710 205 L 710 360" stroke="#4a8edb" stroke-width="2" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <text x="675" y="300" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a8edb">只搬 Q/K/V 块与 O 块</text>
+  <text x="675" y="318" text-anchor="middle" font-size="11" fill="#4a8edb">Θ(N²d²/M) 次访问</text>
+  <text x="675" y="455" text-anchor="middle" font-size="12" fill="#2f5238">最多 9× 更少 HBM 访问（Fig. 2）</text>
+  <text x="675" y="475" text-anchor="middle" font-size="12" fill="#2f5238">显存占用：O(N) 线性</text>
+
+  <!-- divider -->
+  <line x1="450" y1="100" x2="450" y2="500" stroke="#8a8471" stroke-width="1" stroke-dasharray="4 4"/>
+</svg>

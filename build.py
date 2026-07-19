@@ -32,7 +32,7 @@ def compute_relative_path(from_file: Path, to_path: str) -> str:
 
 
 def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
-    """Insert LeetCode, LeetGPU, CUTLASS and Triton links into the sidebar navigation."""
+    """Insert LeetCode, LeetGPU, CUTLASS, Triton, CuTe and Paper links into the sidebar navigation."""
     rel_leetcode = compute_relative_path(
         html_file.relative_to(public_dir), "leetcode/index.html"
     )
@@ -48,7 +48,11 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
     rel_cute = compute_relative_path(
         html_file.relative_to(public_dir), "cute/index.html"
     )
+    rel_paper = compute_relative_path(
+        html_file.relative_to(public_dir), "paper/index.html"
+    )
     extra_section = f'''<div class="nav-section-title">更多</div>
+<a class="nav-link" href="{rel_paper}">📄 论文精读</a>
 <a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
 <a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>
 <a class="nav-link" href="{rel_cutlass}">⚡ CUTLASS 专题</a>
@@ -305,9 +309,31 @@ def main() -> None:
         skip={"build.py", "README.md"},
     )
 
-    # Insert LeetCode, LeetGPU, CUTLASS and Triton navigation links into all course pages
+    # Build Paper Reading website
+    print("Building Paper Reading website...")
+    subprocess.run(
+        ["python3", str(repo_root / "aiinfra" / "paper" / "website" / "build.py")],
+        check=True,
+    )
+
+    # Copy Paper Reading website to public/paper/
+    print("Copying Paper Reading website to public/paper/...")
+    paper_dst = public_dir / "paper"
+    copy_directory_contents(
+        repo_root / "aiinfra" / "paper" / "website",
+        paper_dst,
+        skip={"build.py", "README.md"},
+    )
+
+    # Copy Paper Reading images to public/paper/images/
+    paper_images_src = repo_root / "aiinfra" / "paper" / "images"
+    paper_images_dst = paper_dst / "images"
+    if paper_images_src.exists():
+        copy_directory_contents(paper_images_src, paper_images_dst)
+
+    # Insert LeetCode, LeetGPU, CUTLASS, Triton, CuTe and Paper navigation links into all course pages
     # (aiinfra/daily/week1~week8 and extra pages), but not into the leetcode,
-    # leetgpu, cutlass or triton subsites themselves.
+    # leetgpu, cutlass, triton or cute subsites themselves.
     course_pages = [
         p for p in public_dir.rglob("*.html")
         if "leetcode" not in p.relative_to(public_dir).parts
