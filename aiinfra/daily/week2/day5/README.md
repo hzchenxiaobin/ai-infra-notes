@@ -135,26 +135,7 @@ d 固定时，**长序列的瓶颈是 N² 的显存和 HBM 访问，而不是计
 
 ![FlashAttention 分块策略](../website/images/flash_attention_tiling.svg)
 
-FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：
-
-```
-┌─────────────────────────────────────────────┐
-│  Attention Output O (N×d)                   │
-│  ┌────────┐  ┌────────┐  ┌────────┐         │
-│  │ Q Tile │  │ Q Tile │  │ Q Tile │  ...    │  ← Br rows each
-│  └───┬────┘  └───┬────┘  └───┬────┘         │
-│      └───────────┼───────────┘              │
-│                  ▼                          │
-│   K,V iterate: ┌────────┐                   │
-│                │ KV Tile│  ← Bc rows each   │
-│                └────────┘                   │
-└─────────────────────────────────────────────┘
-
-外循环：遍历 Q tile（行方向，步长 Br）
-  内循环：遍历 KV tile（行方向，步长 Bc）
-    每步计算：S_tile = Q_tile × KV_tile^T (Br×Bc)
-    在线更新 softmax 和输出累加
-```
+FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：外循环遍历 Q tile（行方向，步长 Br），内循环遍历 KV tile（行方向，步长 Bc），每步计算 `S_tile = Q_tile × KV_tile^T (Br×Bc)` 并在线更新 softmax 和输出累加。
 
 **关键**：Q tile 驻留在 SRAM 中（不移动），K/V tile 逐块滑入。每计算完一个 KV tile，立即更新 running softmax 状态和输出累加器。
 
@@ -233,6 +214,57 @@ o_new = o × (l × exp(m - m_new) / l_new) + (exp(x_j - m_new) / l_new) × v_j
 1. 三个公式是**递推的**：每次新块到来时，用旧 `(m, l, o)` 和新块 `(x_j, v_j)` 计算新 `(m_new, l_new, o_new)`
 2. `exp(m - m_new)` 是**关键缩放因子**，保证全局参考点一致
 3. 整个过程 HBM 访问量为 **O(Nd) 级别**，因为不需要存储中间 S 和 P 矩阵
+
+---
+
+#### 5.3 FlashAttention 论文原始伪代码（Algorithm 1）
+
+下面给出论文中的 Forward 伪代码，可直接与 5.2 节的三个更新公式对照。注意这是**论文原始形式**：$O_i$ 每一步都做一次归一化，状态 `(m, l, O)` 都写在 HBM 里；下面「Coding 任务」的简化 CUDA kernel 把归一化摊进了 `acc`，数学完全等价。
+
+```text
+# 块大小：保证 Q/K/V/O 四个块加中间结果能同时驻留 SRAM
+Bc = ceil(M / 4d)
+Br = min(ceil(M / 4d), d)
+
+O = 0_{N×d}          # 输出，存在 HBM
+l = 0_N              # running sum，存在 HBM
+m = -inf_N           # running max，存在 HBM
+
+for j = 1 .. Tc:                       # 外循环：遍历 K/V tile（共 Tc=ceil(N/Bc) 个）
+    load K_j, V_j  → SRAM              # 当前 KV 块从 HBM 搬到片上
+
+    for i = 1 .. Tr:                   # 内循环：遍历 Q tile（共 Tr=ceil(N/Br) 个）
+        load Q_i, O_i, l_i, m_i → SRAM # Q 块和当前 running 状态搬到片上
+
+        S̃ = Q_i · K_jᵀ                 # 片上计算 Br×Bc 的 score 块
+        m̃ = rowmax(S̃)                  # 当前块的局部行最大值
+        P̃ = exp(S̃ - m̃)                 # 未归一化的注意力权重
+        l̃ = rowsum(P̃)                  # 当前块未归一化的指数和
+
+        m_new = max(m_i, m̃)            # 公式 1：更新全局 running max
+
+        # 公式 2：把旧的 running sum 缩放到新的参考点，再加当前块
+        l_new = e^(m_i - m_new) · l_i + e^(m̃ - m_new) · l̃
+
+        # 公式 3：把旧的输出 O_i 按新的参考点重归一化，再加当前块的贡献
+        O_i ← diag(l_new)⁻¹ · (diag(l_i) · e^(m_i - m_new) · O_i
+                                + e^(m̃ - m_new) · P̃ · V_j)
+
+        write O_i, l_i ← l_new, m_i ← m_new  → HBM   # 写回当前 Q tile 的状态
+
+return O
+```
+
+**与公式的对应关系**：
+
+| 伪代码 | 5.2 节公式 |
+|---|---|
+| `m_new = max(m_i, m̃)` | 公式 1：$m_{new} = \max(m, \max(x_j))$ |
+| `l_new = ...` | 公式 2：$l_{new} = l \cdot e^{m - m_{new}} + \sum e^{x_j - m_{new}}$ |
+| `O_i ← diag(l_new)⁻¹·(...)` | 公式 3 的论文归一化变体：先把旧的累加输出缩放到新的全局参考点，再加新块并按新 sum 归一化 |
+| `e^(m_i - m_new)` / `e^(m̃ - m_new)` | 关键缩放因子：旧参考点 / 新参考点切换到当前全局 max |
+
+> 💡 **内存访问视角**：循环里唯一从 HBM 来回搬的"大件"是 Q/K/V 块与 running 状态；$S̃$、$P̃$ 两个 $B_r \times B_c$ 小矩阵只活在 SRAM/寄存器里，**从不写 HBM**——这就是 FlashAttention 从 $O(N^2)$ 降到 $O(N^2 d^2 / M)$ HBM 访问的原因。
 
 ---
 
