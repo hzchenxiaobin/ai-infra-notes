@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">规范化分组：最小循环表示作键，Booth O(n)</text>
+  <path d="M 230 42 Q 470 50 710 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Panel A: minimal rotation of "ngz" ===== -->
+  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 枚举所有循环旋转，取字典序最小者为规范代表</text>
+
+  <text x="80" y="108" font-size="12" fill="#444" font-family="monospace" font-weight="bold">E = "ngz" 的 3 种旋转：</text>
+
+  <!-- rotation rows -->
+  <g font-size="14" font-family="monospace">
+    <!-- rot 0: ngz -->
+    <text x="100" y="138" font-size="11" fill="#888">shift 0:</text>
+    <g filter="url(#sk)"><rect x="158" y="122" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="173" y="142" text-anchor="middle" fill="#555">n</text>
+    <g filter="url(#sk)"><rect x="190" y="122" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="205" y="142" text-anchor="middle" fill="#555">g</text>
+    <g filter="url(#sk)"><rect x="222" y="122" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="237" y="142" text-anchor="middle" fill="#555">z</text>
+    <text x="262" y="142" font-size="11" fill="#999">"ngz"</text>
+
+    <!-- rot 1: zng -->
+    <text x="100" y="172" font-size="11" fill="#888">shift 1:</text>
+    <g filter="url(#sk)"><rect x="158" y="156" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="173" y="176" text-anchor="middle" fill="#555">z</text>
+    <g filter="url(#sk)"><rect x="190" y="156" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="205" y="176" text-anchor="middle" fill="#555">n</text>
+    <g filter="url(#sk)"><rect x="222" y="156" width="30" height="28" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="237" y="176" text-anchor="middle" fill="#555">g</text>
+    <text x="262" y="176" font-size="11" fill="#999">"zng"</text>
+
+    <!-- rot 2: gzn  (minimal, highlighted) -->
+    <text x="100" y="206" font-size="11" fill="#2e6e2e" font-weight="bold">shift 2:</text>
+    <g filter="url(#sk)"><rect x="158" y="190" width="30" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+    <text x="173" y="210" text-anchor="middle" fill="#2e6e2e" font-weight="bold">g</text>
+    <g filter="url(#sk)"><rect x="190" y="190" width="30" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+    <text x="205" y="210" text-anchor="middle" fill="#2e6e2e" font-weight="bold">z</text>
+    <g filter="url(#sk)"><rect x="222" y="190" width="30" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+    <text x="237" y="210" text-anchor="middle" fill="#2e6e2e" font-weight="bold">n</text>
+    <text x="262" y="210" font-size="11" fill="#2e6e2e" font-weight="bold">"gzn" ← 最小</text>
+  </g>
+
+  <!-- arrow to canonical -->
+  <path d="M 300 204 L 360 204" stroke="#4a8e4a" stroke-width="1.6" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- Booth box -->
+  <g filter="url(#sk)">
+    <rect x="370" y="120" width="240" height="120" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="490" y="146" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Booth 算法</text>
+  <text x="390" y="170" font-size="11" fill="#444" font-family="monospace">在 s+s 上扫描 + 失配函数 f</text>
+  <text x="390" y="190" font-size="11" fill="#444" font-family="monospace">均摊 O(1) / 字符</text>
+  <text x="390" y="212" font-size="12" fill="#b03a3a" font-family="monospace" font-weight="bold">总复杂度 O(n)</text>
+  <text x="390" y="230" font-size="10" fill="#888">n 可达 5×10^5，朴素 O(n²) 超时</text>
+
+  <!-- key box -->
+  <g filter="url(#sk)">
+    <rect x="640" y="120" width="250" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="765" y="146" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">分组键</text>
+  <text x="660" y="172" font-size="12" fill="#444" font-family="monospace">key(w) = (</text>
+  <text x="680" y="192" font-size="12" fill="#3a6ea8" font-family="monospace" font-weight="bold">minrot(E(w)),</text>
+  <text x="680" y="212" font-size="12" fill="#c98a2b" font-family="monospace" font-weight="bold">minrot(O(w))</text>
+  <text x="660" y="232" font-size="11" fill="#666" font-family="monospace">)</text>
+
+  <!-- ===== Panel B: example 2 grouping table ===== -->
+  <text x="470" y="278" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">② 示例 2：按 key 去重，键数 = 分组数</text>
+
+  <!-- table header -->
+  <g font-size="11" font-weight="bold" fill="#2b2b2b">
+    <g filter="url(#sk)"><rect x="60" y="298" width="90" height="26" rx="3" fill="#eef2f7" stroke="#bbb" stroke-width="1"/></g>
+    <text x="105" y="316" text-anchor="middle">word</text>
+    <g filter="url(#sk)"><rect x="150" y="298" width="110" height="26" rx="3" fill="#eef2f7" stroke="#bbb" stroke-width="1"/></g>
+    <text x="205" y="316" text-anchor="middle" fill="#3a6ea8">minrot(E)</text>
+    <g filter="url(#sk)"><rect x="260" y="298" width="90" height="26" rx="3" fill="#eef2f7" stroke="#bbb" stroke-width="1"/></g>
+    <text x="305" y="316" text-anchor="middle" fill="#c98a2b">minrot(O)</text>
+    <g filter="url(#sk)"><rect x="350" y="298" width="200" height="26" rx="3" fill="#eef2f7" stroke="#bbb" stroke-width="1"/></g>
+    <text x="450" y="316" text-anchor="middle">key</text>
+    <g filter="url(#sk)"><rect x="550" y="298" width="330" height="26" rx="3" fill="#eef2f7" stroke="#bbb" stroke-width="1"/></g>
+    <text x="715" y="316" text-anchor="middle">归属组</text>
+  </g>
+
+  <!-- rows -->
+  <g font-size="11" font-family="monospace">
+    <!-- abc -->
+    <text x="105" y="340" text-anchor="middle" fill="#444">abc</text>
+    <text x="205" y="340" text-anchor="middle" fill="#3a6ea8">ac</text>
+    <text x="305" y="340" text-anchor="middle" fill="#c98a2b">b</text>
+    <text x="450" y="340" text-anchor="middle" fill="#444">(ac, b)</text>
+    <text x="715" y="340" text-anchor="middle" fill="#2e6e2e" font-weight="bold">组 A</text>
+    <!-- cba -->
+    <text x="105" y="360" text-anchor="middle" fill="#444">cba</text>
+    <text x="205" y="360" text-anchor="middle" fill="#3a6ea8">ac</text>
+    <text x="305" y="360" text-anchor="middle" fill="#c98a2b">b</text>
+    <text x="450" y="360" text-anchor="middle" fill="#444">(ac, b)</text>
+    <text x="715" y="360" text-anchor="middle" fill="#2e6e2e" font-weight="bold">组 A</text>
+    <!-- cab -->
+    <text x="105" y="384" text-anchor="middle" fill="#444">cab</text>
+    <text x="205" y="384" text-anchor="middle" fill="#3a6ea8">bc</text>
+    <text x="305" y="384" text-anchor="middle" fill="#c98a2b">a</text>
+    <text x="450" y="384" text-anchor="middle" fill="#444">(bc, a)</text>
+    <text x="715" y="384" text-anchor="middle" fill="#b85450" font-weight="bold">组 B</text>
+    <!-- bac -->
+    <text x="105" y="404" text-anchor="middle" fill="#444">bac</text>
+    <text x="205" y="404" text-anchor="middle" fill="#3a6ea8">bc</text>
+    <text x="305" y="404" text-anchor="middle" fill="#c98a2b">a</text>
+    <text x="450" y="404" text-anchor="middle" fill="#444">(bc, a)</text>
+    <text x="715" y="404" text-anchor="middle" fill="#b85450" font-weight="bold">组 B</text>
+    <!-- acb -->
+    <text x="105" y="428" text-anchor="middle" fill="#444">acb</text>
+    <text x="205" y="428" text-anchor="middle" fill="#3a6ea8">ab</text>
+    <text x="305" y="428" text-anchor="middle" fill="#c98a2b">c</text>
+    <text x="450" y="428" text-anchor="middle" fill="#444">(ab, c)</text>
+    <text x="715" y="428" text-anchor="middle" fill="#7a3a7a" font-weight="bold">组 C</text>
+    <!-- bca -->
+    <text x="105" y="448" text-anchor="middle" fill="#444">bca</text>
+    <text x="205" y="448" text-anchor="middle" fill="#3a6ea8">ab</text>
+    <text x="305" y="448" text-anchor="middle" fill="#c98a2b">c</text>
+    <text x="450" y="448" text-anchor="middle" fill="#444">(ab, c)</text>
+    <text x="715" y="448" text-anchor="middle" fill="#7a3a7a" font-weight="bold">组 C</text>
+  </g>
+
+  <!-- row separators -->
+  <g stroke="#e0e0e0" stroke-width="1">
+    <line x1="60" y1="348" x2="880" y2="348" filter="url(#sk)"/>
+    <line x1="60" y1="368" x2="880" y2="368" filter="url(#sk)"/>
+    <line x1="60" y1="392" x2="880" y2="392" filter="url(#sk)"/>
+    <line x1="60" y1="412" x2="880" y2="412" filter="url(#sk)"/>
+    <line x1="60" y1="436" x2="880" y2="436" filter="url(#sk)"/>
+  </g>
+
+  <!-- ===== Panel C: answer ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="486" width="820" height="120" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="512" font-size="13" font-weight="bold" fill="#2e6e2e">③ 结论</text>
+  <text x="80" y="536" font-size="12" fill="#444" font-family="monospace">不同 key 的个数 = 最少分组数</text>
+  <text x="80" y="558" font-size="12" fill="#b03a3a" font-family="monospace" font-weight="bold">答案 = |{ (minrot(E), minrot(O)) : w ∈ words }| = 3</text>
+  <text x="80" y="580" font-size="11" fill="#666">可行性：同 key ⟹ E、O 均互为循环旋转 ⟹ s ~ t，可同组</text>
+  <text x="80" y="598" font-size="11" fill="#666">最优性：异 key ⟹ E 或 O 不互为循环旋转 ⟹ s ≁ t，不可同组</text>
+</svg>

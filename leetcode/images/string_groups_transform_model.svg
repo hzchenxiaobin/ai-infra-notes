@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="560" viewBox="0 0 940 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a6ea8"/>
+    </marker>
+    <marker id="arO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c98a2b"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="560" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">变换 = 偶位环 E 与 奇位环 O 各自独立循环旋转</text>
+  <path d="M 250 42 Q 470 50 690 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Panel 1: original string "ntgwz" ===== -->
+  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 原串 s = "ntgwz"（蓝=偶位 E，橙=奇位 O）</text>
+
+  <!-- index labels -->
+  <g font-size="10" fill="#888">
+    <text x="200" y="100" text-anchor="middle" font-weight="bold">idx0</text>
+    <text x="252" y="100" text-anchor="middle" font-weight="bold">idx1</text>
+    <text x="304" y="100" text-anchor="middle" font-weight="bold">idx2</text>
+    <text x="356" y="100" text-anchor="middle" font-weight="bold">idx3</text>
+    <text x="408" y="100" text-anchor="middle" font-weight="bold">idx4</text>
+  </g>
+
+  <!-- char boxes: even (blue) odd (orange) -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="178" y="108" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="200" y="137" text-anchor="middle" fill="#23476e">n</text>
+    <g filter="url(#sk)"><rect x="230" y="108" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="252" y="137" text-anchor="middle" fill="#7a5415">t</text>
+    <g filter="url(#sk)"><rect x="282" y="108" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="304" y="137" text-anchor="middle" fill="#23476e">g</text>
+    <g filter="url(#sk)"><rect x="334" y="108" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="356" y="137" text-anchor="middle" fill="#7a5415">w</text>
+    <g filter="url(#sk)"><rect x="386" y="108" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="408" y="137" text-anchor="middle" fill="#23476e">z</text>
+  </g>
+
+  <!-- split arrows: even indices -> E row (left), odd indices -> O row (right) -->
+  <path d="M 200 158 Q 175 195 150 228" stroke="#3a6ea8" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 304 158 Q 260 195 215 228" stroke="#3a6ea8" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 408 158 Q 440 195 470 228" stroke="#3a6ea8" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 252 158 Q 560 195 660 228" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <path d="M 356 158 Q 580 195 720 228" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+
+  <!-- ===== Panel 2: E ring (left) ===== -->
+  <text x="215" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">偶位环 E = "ngz"</text>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="128" y="232" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="150" y="261" text-anchor="middle" fill="#23476e">n</text>
+    <g filter="url(#sk)"><rect x="194" y="232" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="216" y="261" text-anchor="middle" fill="#23476e">g</text>
+    <g filter="url(#sk)"><rect x="260" y="232" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="282" y="261" text-anchor="middle" fill="#23476e">z</text>
+  </g>
+  <!-- cyclic arrow over E -->
+  <path d="M 150 222 Q 216 200 282 222" stroke="#3a6ea8" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)" stroke-dasharray="4 3"/>
+  <text x="216" y="298" text-anchor="middle" font-size="11" fill="#3a6ea8" font-weight="bold">右移 1 位</text>
+
+  <!-- arrow E rotated -> "zng" -->
+  <path d="M 216 305 L 216 338" stroke="#3a6ea8" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="128" y="345" width="44" height="44" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="150" y="374" text-anchor="middle" fill="#2e6e2e">z</text>
+    <g filter="url(#sk)"><rect x="194" y="345" width="44" height="44" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="216" y="374" text-anchor="middle" fill="#2e6e2e">n</text>
+    <g filter="url(#sk)"><rect x="260" y="345" width="44" height="44" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="282" y="374" text-anchor="middle" fill="#2e6e2e">g</text>
+  </g>
+  <text x="216" y="408" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">旋转后 E' = "zng"</text>
+
+  <!-- ===== Panel 3: O ring (right) ===== -->
+  <text x="690" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">奇位环 O = "tw"</text>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="628" y="232" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="650" y="261" text-anchor="middle" fill="#7a5415">t</text>
+    <g filter="url(#sk)"><rect x="694" y="232" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="716" y="261" text-anchor="middle" fill="#7a5415">w</text>
+  </g>
+  <!-- cyclic arrow over O -->
+  <path d="M 650 222 Q 683 200 716 222" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#arO)" filter="url(#sk)" stroke-dasharray="4 3"/>
+  <text x="683" y="298" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold">右移 1 位</text>
+
+  <!-- arrow O rotated -> "wt" -->
+  <path d="M 683 305 L 683 338" stroke="#c98a2b" stroke-width="1.4" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="628" y="345" width="44" height="44" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="650" y="374" text-anchor="middle" fill="#2e6e2e">w</text>
+    <g filter="url(#sk)"><rect x="694" y="345" width="44" height="44" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="716" y="374" text-anchor="middle" fill="#2e6e2e">t</text>
+  </g>
+  <text x="683" y="408" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">旋转后 O' = "wt"</text>
+
+  <!-- ===== merge arrows down to result ===== -->
+  <path d="M 216 415 Q 350 450 460 470" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <path d="M 683 415 Q 560 450 480 470" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- ===== Panel 4: result string "zwntg" ===== -->
+  <text x="470" y="464" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">② 放回原下标 → 重构 t = "zwntg"</text>
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="378" y="478" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="400" y="507" text-anchor="middle" fill="#23476e">z</text>
+    <g filter="url(#sk)"><rect x="430" y="478" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="452" y="507" text-anchor="middle" fill="#7a5415">w</text>
+    <g filter="url(#sk)"><rect x="482" y="478" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="504" y="507" text-anchor="middle" fill="#23476e">n</text>
+    <g filter="url(#sk)"><rect x="534" y="478" width="44" height="44" rx="5" fill="#fff3e0" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="556" y="507" text-anchor="middle" fill="#7a5415">t</text>
+    <g filter="url(#sk)"><rect x="586" y="478" width="44" height="44" rx="5" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.6"/></g>
+    <text x="608" y="507" text-anchor="middle" fill="#23476e">g</text>
+  </g>
+
+  <!-- ===== condition box (right edge, top) ===== -->
+  <g filter="url(#sk)">
+    <rect x="730" y="90" width="190" height="130" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="750" y="114" font-size="12" font-weight="bold" fill="#2b2b2b">等价判定</text>
+  <text x="750" y="138" font-size="11" fill="#444" font-family="monospace">s ~ t  ⟺</text>
+  <text x="750" y="158" font-size="11" fill="#444" font-family="monospace">  |s|=|t|  且</text>
+  <text x="750" y="178" font-size="11" fill="#3a6ea8" font-family="monospace" font-weight="bold">  E(s)≈E(t)</text>
+  <text x="750" y="196" font-size="10" fill="#888" font-family="monospace">  （循环旋转）</text>
+  <text x="750" y="216" font-size="11" fill="#c98a2b" font-family="monospace" font-weight="bold">  O(s)≈O(t)</text>
+
+  <!-- footer insight -->
+  <text x="470" y="548" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">★ E、O 两环完全独立 → 分别求等价类 → 笛卡尔积</text>
+</svg>
