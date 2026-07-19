@@ -1,0 +1,326 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="760" viewBox="0 0 940 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a6ea8"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="760" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Booth 算法演算：s = "baab" 逐步 trace</text>
+  <path d="M 230 42 Q 470 50 710 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== s2 char bar with indices ===== -->
+  <text x="80" y="74" font-size="12" font-weight="bold" fill="#444">s2 =</text>
+  <g font-size="10" fill="#888">
+    <text x="140" y="70" text-anchor="middle">0</text>
+    <text x="184" y="70" text-anchor="middle">1</text>
+    <text x="228" y="70" text-anchor="middle">2</text>
+    <text x="272" y="70" text-anchor="middle">3</text>
+    <text x="316" y="70" text-anchor="middle">4</text>
+    <text x="360" y="70" text-anchor="middle">5</text>
+    <text x="404" y="70" text-anchor="middle">6</text>
+    <text x="448" y="70" text-anchor="middle">7</text>
+  </g>
+  <g font-size="14" font-weight="bold" font-family="monospace">
+    <g filter="url(#sk)"><rect x="120" y="76" width="40" height="30" rx="4" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="140" y="97" text-anchor="middle" fill="#23476e">b</text>
+    <g filter="url(#sk)"><rect x="164" y="76" width="40" height="30" rx="4" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="184" y="97" text-anchor="middle" fill="#23476e">a</text>
+    <g filter="url(#sk)"><rect x="208" y="76" width="40" height="30" rx="4" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="228" y="97" text-anchor="middle" fill="#23476e">a</text>
+    <g filter="url(#sk)"><rect x="252" y="76" width="40" height="30" rx="4" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="272" y="97" text-anchor="middle" fill="#23476e">b</text>
+    <g filter="url(#sk)"><rect x="296" y="76" width="40" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="316" y="97" text-anchor="middle" fill="#2e6e2e">b</text>
+    <g filter="url(#sk)"><rect x="340" y="76" width="40" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="360" y="97" text-anchor="middle" fill="#2e6e2e">a</text>
+    <g filter="url(#sk)"><rect x="384" y="76" width="40" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="404" y="97" text-anchor="middle" fill="#2e6e2e">a</text>
+    <g filter="url(#sk)"><rect x="428" y="76" width="40" height="30" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="448" y="97" text-anchor="middle" fill="#2e6e2e">b</text>
+  </g>
+  <text x="480" y="97" font-size="10" fill="#888">蓝=第一个 s，绿=第二个 s</text>
+
+  <!-- ===== trace table ===== -->
+  <text x="470" y="130" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">逐位扫描 j = 1..7（i = f[j−k−1] 为上一位继承的匹配长度）</text>
+
+  <!-- table header -->
+  <g font-size="10" font-weight="bold">
+    <g filter="url(#sk)"><rect x="60" y="142" width="30" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="75" y="157" text-anchor="middle">j</text>
+    <g filter="url(#sk)"><rect x="90" y="142" width="30" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="105" y="157" text-anchor="middle">sj</text>
+    <g filter="url(#sk)"><rect x="120" y="142" width="40" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="140" y="157" text-anchor="middle">i 入</text>
+    <g filter="url(#sk)"><rect x="160" y="142" width="140" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="230" y="157" text-anchor="middle">比较 s2[j] vs s2[k+i+1]</text>
+    <g filter="url(#sk)"><rect x="300" y="142" width="120" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="360" y="157" text-anchor="middle">决策</text>
+    <g filter="url(#sk)"><rect x="420" y="142" width="35" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="437" y="157" text-anchor="middle">k</text>
+    <g filter="url(#sk)"><rect x="455" y="142" width="50" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="480" y="157" text-anchor="middle">f[j−k]</text>
+    <g filter="url(#sk)"><rect x="505" y="142" width="375" height="22" rx="3" fill="#eef2f7" stroke="#bbb"/></g>
+    <text x="692" y="157" text-anchor="middle">说明</text>
+  </g>
+
+  <!-- row 1: j=1, sj=a, i=-1, cmp a vs b(s2[0]), k 0→1, f[0]=-1 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="178" text-anchor="middle" fill="#3a6ea8" font-weight="bold">1</text>
+    <text x="105" y="178" text-anchor="middle" fill="#444">a</text>
+    <text x="140" y="178" text-anchor="middle" fill="#888">−1</text>
+    <text x="230" y="178" text-anchor="middle" fill="#444">a vs b (s2[0])</text>
+    <text x="360" y="178" text-anchor="middle" fill="#b85450" font-weight="bold">a&lt;b → k=j</text>
+    <text x="437" y="178" text-anchor="middle" fill="#b85450" font-weight="bold">0→1</text>
+    <text x="480" y="178" text-anchor="middle" fill="#444">−1</text>
+    <text x="515" y="178" fill="#444" font-size="10">起点1的'a'&lt;起点0的'b' → 发现更优起点</text>
+  </g>
+
+  <!-- row 2: j=2, sj=a, i=-1, cmp a vs a(s2[1]), k=1, f[1]=0 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="200" text-anchor="middle" fill="#3a6ea8" font-weight="bold">2</text>
+    <text x="105" y="200" text-anchor="middle" fill="#444">a</text>
+    <text x="140" y="200" text-anchor="middle" fill="#888">−1</text>
+    <text x="230" y="200" text-anchor="middle" fill="#444">a vs a (s2[1])</text>
+    <text x="360" y="200" text-anchor="middle" fill="#2e6e2e" font-weight="bold">匹配</text>
+    <text x="437" y="200" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="200" text-anchor="middle" fill="#2e6e2e" font-weight="bold">0</text>
+    <text x="515" y="200" fill="#444" font-size="10">s2[1]=s2[2]='a' → 记录匹配长度 f[1]=0</text>
+  </g>
+
+  <!-- row 3: j=3, sj=b, i=0, cmp b vs a(s2[2]) while失配, then b vs a(s2[1]) 外层失配, k=1, f[2]=-1 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="222" text-anchor="middle" fill="#3a6ea8" font-weight="bold">3</text>
+    <text x="105" y="222" text-anchor="middle" fill="#444">b</text>
+    <text x="140" y="222" text-anchor="middle" fill="#c98a2b" font-weight="bold">0</text>
+    <text x="230" y="222" text-anchor="middle" fill="#444">b vs a (s2[2])</text>
+    <text x="360" y="222" text-anchor="middle" fill="#888" font-weight="bold">失配 b&gt;a</text>
+    <text x="437" y="222" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="222" text-anchor="middle" fill="#888">−1</text>
+    <text x="515" y="222" fill="#444" font-size="10">b&gt;a → k=1 仍最优；i 沿 f 回退到 −1</text>
+  </g>
+
+  <!-- row 4: j=4, sj=b, i=-1, cmp b vs a(s2[1]), 失配, k=1, f[3]=-1 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="244" text-anchor="middle" fill="#3a6ea8" font-weight="bold">4</text>
+    <text x="105" y="244" text-anchor="middle" fill="#444">b</text>
+    <text x="140" y="244" text-anchor="middle" fill="#888">−1</text>
+    <text x="230" y="244" text-anchor="middle" fill="#444">b vs a (s2[1])</text>
+    <text x="360" y="244" text-anchor="middle" fill="#888" font-weight="bold">失配 b&gt;a</text>
+    <text x="437" y="244" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="244" text-anchor="middle" fill="#888">−1</text>
+    <text x="515" y="244" fill="#444" font-size="10">起点4的'b'&gt;起点1的'a' → k=1 仍最优</text>
+  </g>
+
+  <!-- row 5: j=5, sj=a, i=-1, cmp a vs a(s2[1]), 匹配, k=1, f[4]=0 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="266" text-anchor="middle" fill="#3a6ea8" font-weight="bold">5</text>
+    <text x="105" y="266" text-anchor="middle" fill="#444">a</text>
+    <text x="140" y="266" text-anchor="middle" fill="#888">−1</text>
+    <text x="230" y="266" text-anchor="middle" fill="#444">a vs a (s2[1])</text>
+    <text x="360" y="266" text-anchor="middle" fill="#2e6e2e" font-weight="bold">匹配</text>
+    <text x="437" y="266" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="266" text-anchor="middle" fill="#2e6e2e" font-weight="bold">0</text>
+    <text x="515" y="266" fill="#444" font-size="10">s2[5]=s2[1]='a' → 开始新一轮匹配</text>
+  </g>
+
+  <!-- row 6: j=6, sj=a, i=0, cmp a vs a(s2[2]), 匹配, k=1, f[5]=1 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="288" text-anchor="middle" fill="#3a6ea8" font-weight="bold">6</text>
+    <text x="105" y="288" text-anchor="middle" fill="#444">a</text>
+    <text x="140" y="288" text-anchor="middle" fill="#c98a2b" font-weight="bold">0</text>
+    <text x="230" y="288" text-anchor="middle" fill="#444">a vs a (s2[2])</text>
+    <text x="360" y="288" text-anchor="middle" fill="#2e6e2e" font-weight="bold">匹配</text>
+    <text x="437" y="288" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="288" text-anchor="middle" fill="#2e6e2e" font-weight="bold">1</text>
+    <text x="515" y="288" fill="#444" font-size="10">继承上步 → 已匹配 "aa"，f[5]=1</text>
+  </g>
+
+  <!-- row 7: j=7, sj=b, i=1, cmp b vs b(s2[3]), 匹配, k=1, f[6]=2 -->
+  <g font-size="10" font-family="monospace">
+    <text x="75" y="310" text-anchor="middle" fill="#3a6ea8" font-weight="bold">7</text>
+    <text x="105" y="310" text-anchor="middle" fill="#444">b</text>
+    <text x="140" y="310" text-anchor="middle" fill="#c98a2b" font-weight="bold">1</text>
+    <text x="230" y="310" text-anchor="middle" fill="#444">b vs b (s2[3])</text>
+    <text x="360" y="310" text-anchor="middle" fill="#2e6e2e" font-weight="bold">匹配</text>
+    <text x="437" y="310" text-anchor="middle" fill="#444">1</text>
+    <text x="480" y="310" text-anchor="middle" fill="#2e6e2e" font-weight="bold">2</text>
+    <text x="515" y="310" fill="#444" font-size="10">已匹配 "aab" → f[6]=2，确认 k=1 最优</text>
+  </g>
+
+  <!-- row separators -->
+  <g stroke="#e8e8e8" stroke-width="1">
+    <line x1="60" y1="186" x2="880" y2="186" filter="url(#sk)"/>
+    <line x1="60" y1="208" x2="880" y2="208" filter="url(#sk)"/>
+    <line x1="60" y1="230" x2="880" y2="230" filter="url(#sk)"/>
+    <line x1="60" y1="252" x2="880" y2="252" filter="url(#sk)"/>
+    <line x1="60" y1="274" x2="880" y2="274" filter="url(#sk)"/>
+    <line x1="60" y1="296" x2="880" y2="296" filter="url(#sk)"/>
+  </g>
+
+  <!-- result -->
+  <g filter="url(#sk)">
+    <rect x="60" y="324" width="820" height="30" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="470" y="344" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold" font-family="monospace">最终 k=1 → minrot = s[1:]+s[:1] = "aabb" + "b" = "aabb" ✓（4 个旋转中最小）</text>
+
+  <!-- ===== Key step snapshots ===== -->
+  <text x="470" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">关键步骤快照：k 指针（红）与 j 指针（蓝）的位置</text>
+
+  <!-- Snapshot 1: j=1, k 0→1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="396" width="280" height="160" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="180" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a2828">步骤 j=1：发现更优起点</text>
+  <!-- mini s2 bar -->
+  <g font-size="11" font-family="monospace">
+    <g filter="url(#sk)"><rect x="60" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="74" y="449" text-anchor="middle" fill="#23476e">b</text>
+    <g filter="url(#sk)"><rect x="90" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1.3"/></g>
+    <text x="104" y="449" text-anchor="middle" fill="#23476e">a</text>
+    <g filter="url(#sk)"><rect x="120" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1"/></g>
+    <text x="134" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="150" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="1"/></g>
+    <text x="164" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="180" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+    <text x="194" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="210" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+    <text x="224" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="240" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+    <text x="254" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="270" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/></g>
+    <text x="284" y="449" text-anchor="middle" fill="#555">b</text>
+  </g>
+  <!-- k=0 (old, faded) pointing at s2[0] -->
+  <text x="74" y="426" text-anchor="middle" font-size="9" fill="#ccc">k=0</text>
+  <!-- j=1 pointing at s2[1] -->
+  <path d="M 104 470 L 104 460" stroke="#3a6ea8" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <text x="104" y="482" text-anchor="middle" font-size="9" fill="#3a6ea8" font-weight="bold">j=1</text>
+  <!-- k update arrow 0→1 -->
+  <path d="M 74 472 Q 89 484 104 472" stroke="#b85450" stroke-width="1.6" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="180" y="500" text-anchor="middle" font-size="10" fill="#7a2828" font-family="monospace">s2[1]='a' &lt; s2[0]='b'</text>
+  <text x="180" y="516" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">k: 0 → 1（更优起点）</text>
+  <text x="180" y="534" text-anchor="middle" font-size="9" fill="#888">起点1的旋转 "aabb" 必 &lt; 起点0的 "baab"</text>
+  <text x="180" y="548" text-anchor="middle" font-size="9" fill="#888">（首位 a&lt;b 已决出胜负）</text>
+
+  <!-- Snapshot 2: j=3, 失配 k不变 -->
+  <g filter="url(#sk)">
+    <rect x="330" y="396" width="280" height="160" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="470" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">步骤 j=3：失配但 k 不变</text>
+  <g font-size="11" font-family="monospace">
+    <g filter="url(#sk)"><rect x="350" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="364" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="380" y="432" width="28" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="394" y="449" text-anchor="middle" fill="#7a2828">a</text>
+    <g filter="url(#sk)"><rect x="410" y="432" width="28" height="24" rx="3" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.6"/></g>
+    <text x="424" y="449" text-anchor="middle" fill="#7a5415">a</text>
+    <g filter="url(#sk)"><rect x="440" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="2"/></g>
+    <text x="454" y="449" text-anchor="middle" fill="#23476e">b</text>
+    <g filter="url(#sk)"><rect x="470" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="484" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="500" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="514" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="530" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="544" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="560" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="574" y="449" text-anchor="middle" fill="#555">b</text>
+  </g>
+  <!-- k=1 pointing at s2[1] -->
+  <text x="394" y="426" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">k=1</text>
+  <!-- i=0: comparing s2[k+i+1]=s2[2]='a' (orange highlight) -->
+  <text x="424" y="426" text-anchor="middle" font-size="8" fill="#c98a2b">k+i+1</text>
+  <!-- j=3 pointing at s2[3] -->
+  <path d="M 454 470 L 454 460" stroke="#3a6ea8" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <text x="454" y="482" text-anchor="middle" font-size="9" fill="#3a6ea8" font-weight="bold">j=3</text>
+  <text x="470" y="500" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">s2[3]='b' vs s2[2]='a'</text>
+  <text x="470" y="516" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">b &gt; a → k=1 仍最优</text>
+  <text x="470" y="534" text-anchor="middle" font-size="9" fill="#888">起点3的旋转以 "b" 开头</text>
+  <text x="470" y="548" text-anchor="middle" font-size="9" fill="#888">起点1的旋转以 "a" 开头 → 起点3不可能更小</text>
+
+  <!-- Snapshot 3: j=7, 匹配确认 -->
+  <g filter="url(#sk)">
+    <rect x="620" y="396" width="280" height="160" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="760" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">步骤 j=7：匹配链完整确认</text>
+  <g font-size="11" font-family="monospace">
+    <g filter="url(#sk)"><rect x="640" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="654" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="670" y="432" width="28" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="684" y="449" text-anchor="middle" fill="#7a2828">a</text>
+    <g filter="url(#sk)"><rect x="700" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/></g>
+    <text x="714" y="449" text-anchor="middle" fill="#2e6e2e">a</text>
+    <g filter="url(#sk)"><rect x="730" y="432" width="28" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/></g>
+    <text x="744" y="449" text-anchor="middle" fill="#2e6e2e">b</text>
+    <g filter="url(#sk)"><rect x="760" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="774" y="449" text-anchor="middle" fill="#555">b</text>
+    <g filter="url(#sk)"><rect x="790" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="804" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="820" y="432" width="28" height="24" rx="3" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="834" y="449" text-anchor="middle" fill="#555">a</text>
+    <g filter="url(#sk)"><rect x="850" y="432" width="28" height="24" rx="3" fill="#e8f0fe" stroke="#3a6ea8" stroke-width="2"/></g>
+    <text x="864" y="449" text-anchor="middle" fill="#23476e">b</text>
+  </g>
+  <!-- k=1 -->
+  <text x="684" y="426" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">k=1</text>
+  <!-- matched region s2[1..3] vs s2[5..7] -->
+  <path d="M 670 460 L 758 460" stroke="#4a8e4a" stroke-width="1.4" fill="none" filter="url(#sk)" stroke-dasharray="3 2"/>
+  <text x="714" y="472" text-anchor="middle" font-size="8" fill="#2e6e2e">已匹配 "aab"</text>
+  <!-- j=7 -->
+  <path d="M 864 470 L 864 460" stroke="#3a6ea8" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <text x="864" y="482" text-anchor="middle" font-size="9" fill="#3a6ea8" font-weight="bold">j=7</text>
+  <text x="760" y="500" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">s2[5..7]="aab" = s2[1..3]</text>
+  <text x="760" y="516" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">k=1 的旋转完整确认</text>
+  <text x="760" y="534" text-anchor="middle" font-size="9" fill="#888">s2 后半段 = s 重复</text>
+  <text x="760" y="548" text-anchor="middle" font-size="9" fill="#888">匹配到末尾即验证 k 最优</text>
+
+  <!-- ===== Footer: f array visualization ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="572" width="820" height="172" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="596" font-size="13" font-weight="bold" fill="#2b6e9e">失配函数 f 的最终状态（f[j−k] 记录已匹配前缀长度 − 1）</text>
+
+  <!-- f array visualization: f[0]=-1, f[1]=0, f[2]=-1, f[3]=-1, f[4]=0, f[5]=1, f[6]=2 -->
+  <text x="80" y="624" font-size="11" fill="#444" font-weight="bold">下标 j−k:</text>
+  <g font-size="11" font-family="monospace">
+    <text x="180" y="624" text-anchor="middle">0</text>
+    <text x="240" y="624" text-anchor="middle">1</text>
+    <text x="300" y="624" text-anchor="middle">2</text>
+    <text x="360" y="624" text-anchor="middle">3</text>
+    <text x="440" y="624" text-anchor="middle">4</text>
+    <text x="510" y="624" text-anchor="middle">5</text>
+    <text x="580" y="624" text-anchor="middle">6</text>
+  </g>
+  <text x="80" y="652" font-size="11" fill="#444" font-weight="bold">f[j−k]:</text>
+  <g font-size="12" font-family="monospace" font-weight="bold">
+    <g filter="url(#sk)"><rect x="160" y="636" width="40" height="28" rx="4" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="180" y="656" text-anchor="middle" fill="#888">−1</text>
+    <g filter="url(#sk)"><rect x="220" y="636" width="40" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="240" y="656" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="280" y="636" width="40" height="28" rx="4" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="300" y="656" text-anchor="middle" fill="#888">−1</text>
+    <g filter="url(#sk)"><rect x="340" y="636" width="40" height="28" rx="4" fill="#f0ede4" stroke="#bbb"/></g>
+    <text x="360" y="656" text-anchor="middle" fill="#888">−1</text>
+    <g filter="url(#sk)"><rect x="420" y="636" width="40" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="440" y="656" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="490" y="636" width="40" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="510" y="656" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="560" y="636" width="40" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/></g>
+    <text x="580" y="656" text-anchor="middle" fill="#2e6e2e">2</text>
+  </g>
+
+  <!-- annotation for f values -->
+  <text x="80" y="684" font-size="10" fill="#888">↑ 绿色 = 匹配成功时记录（f = i+1），灰色 = 失配时置 −1</text>
+  <text x="80" y="704" font-size="11" fill="#444" font-family="monospace">f[5]=1 表示 s2[k..k+1]="aa" 已与 s2[5..6]="aa" 匹配；f[6]=2 表示 "aab" 三位全匹配。</text>
+  <text x="80" y="722" font-size="11" fill="#444" font-family="monospace">下次若需比较 s2[7] 之后的位置，直接从 i=f[6]=2 继承，跳过已知匹配的 "aab"。</text>
+  <text x="80" y="740" font-size="11" fill="#b03a3a" font-weight="bold">★ 这正是「均摊 O(1)」的来源：已匹配的信息被 f 保存，不会重复比较。</text>
+</svg>

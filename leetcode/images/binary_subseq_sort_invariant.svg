@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="600" viewBox="0 0 940 600" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="940" height="600" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">核心不变量：排序子序列 → 前缀 1 计数单调不增</text>
+  <path d="M 230 42 Q 470 50 710 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Panel A: the operation on s="1010" ===== -->
+  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 操作示例：s = "1010"，选子序列 {0,2,3} = "110"，排序得 "011"</text>
+
+  <!-- original string with indices -->
+  <g font-size="10" fill="#888">
+    <text x="170" y="100" text-anchor="middle" font-weight="bold">idx</text>
+    <text x="220" y="100" text-anchor="middle" font-weight="bold">0</text>
+    <text x="270" y="100" text-anchor="middle" font-weight="bold">1</text>
+    <text x="320" y="100" text-anchor="middle" font-weight="bold">2</text>
+    <text x="370" y="100" text-anchor="middle" font-weight="bold">3</text>
+  </g>
+  <!-- s chars: highlight 0,2,3 -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="198" y="108" width="44" height="40" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="220" y="135" text-anchor="middle" fill="#7a2828">1</text>
+    <g filter="url(#sk)"><rect x="248" y="108" width="44" height="40" rx="5" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="270" y="135" text-anchor="middle" fill="#777">0</text>
+    <g filter="url(#sk)"><rect x="298" y="108" width="44" height="40" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="320" y="135" text-anchor="middle" fill="#7a2828">1</text>
+    <g filter="url(#sk)"><rect x="348" y="108" width="44" height="40" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+    <text x="370" y="135" text-anchor="middle" fill="#7a2828">0</text>
+  </g>
+  <text x="410" y="132" font-size="11" fill="#b85450" font-weight="bold">← 选中位</text>
+
+  <!-- extract arrow -->
+  <path d="M 320 155 L 320 178" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="338" y="172" font-size="10" fill="#666">抽出</text>
+
+  <!-- extracted "110" -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="268" y="185" width="40" height="36" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+    <text x="288" y="210" text-anchor="middle" fill="#7a2828">1</text>
+    <g filter="url(#sk)"><rect x="310" y="185" width="40" height="36" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+    <text x="330" y="210" text-anchor="middle" fill="#7a2828">1</text>
+    <g filter="url(#sk)"><rect x="352" y="185" width="40" height="36" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+    <text x="372" y="210" text-anchor="middle" fill="#7a2828">0</text>
+  </g>
+  <text x="410" y="210" font-size="11" fill="#444" font-family="monospace">"110"</text>
+
+  <!-- sort arrow -->
+  <path d="M 460 203 L 510 203" stroke="#4a8e4a" stroke-width="1.6" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <text x="485" y="196" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">排序</text>
+
+  <!-- sorted "011" -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="520" y="185" width="40" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="540" y="210" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="562" y="185" width="40" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="582" y="210" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="604" y="185" width="40" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="624" y="210" text-anchor="middle" fill="#2e6e2e">1</text>
+  </g>
+  <text x="662" y="210" font-size="11" fill="#2e6e2e" font-family="monospace">"011"</text>
+
+  <!-- place back arrow -->
+  <path d="M 540 225 Q 430 250 320 248" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- result "0011" -->
+  <g font-size="16" font-weight="bold">
+    <g filter="url(#sk)"><rect x="198" y="258" width="44" height="40" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="220" y="285" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="248" y="258" width="44" height="40" rx="5" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="270" y="285" text-anchor="middle" fill="#777">0</text>
+    <g filter="url(#sk)"><rect x="298" y="258" width="44" height="40" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="320" y="285" text-anchor="middle" fill="#2e6e2e">1</text>
+    <g filter="url(#sk)"><rect x="348" y="258" width="44" height="40" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="370" y="285" text-anchor="middle" fill="#2e6e2e">1</text>
+  </g>
+  <text x="410" y="282" font-size="11" fill="#2e6e2e" font-weight="bold">→ "0011"</text>
+
+  <!-- ===== Panel B: prefix-1-count bars before vs after ===== -->
+  <text x="730" y="100" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">前缀 1 计数（逐位）</text>
+
+  <!-- bars: s = [1,1,2,2], after = [0,0,1,2] -->
+  <!-- baseline y=290, scale 30 px per unit, x positions 660,690,720,750 -->
+  <line x1="650" y1="290" x2="790" y2="290" stroke="#888" stroke-width="1" filter="url(#sk)"/>
+  <g font-size="10">
+    <!-- s bars (red outline) -->
+    <g filter="url(#sk)"><rect x="660" y="260" width="22" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+    <text x="671" y="256" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="690" y="260" width="22" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+    <text x="701" y="256" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="720" y="230" width="22" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+    <text x="731" y="226" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">2</text>
+    <g filter="url(#sk)"><rect x="750" y="230" width="22" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+    <text x="761" y="226" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">2</text>
+  </g>
+  <text x="820" y="248" font-size="10" fill="#b85450" font-weight="bold">s (操作前)</text>
+
+  <g font-size="10">
+    <!-- after bars (green) drawn lower, overlapping -->
+    <g filter="url(#sk)"><rect x="660" y="290" width="22" height="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <g filter="url(#sk)"><rect x="690" y="290" width="22" height="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <g filter="url(#sk)"><rect x="720" y="260" width="22" height="30" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="731" y="306" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">1</text>
+    <g filter="url(#sk)"><rect x="750" y="230" width="22" height="60" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  </g>
+  <text x="820" y="268" font-size="10" fill="#2e6e2e" font-weight="bold">操作后</text>
+
+  <!-- delta arrows: not increased -->
+  <text x="820" y="290" font-size="10" fill="#444" font-family="monospace">后 ≤ 前 ✓</text>
+  <text x="820" y="306" font-size="10" fill="#888">逐位不增</text>
+
+  <!-- ===== Panel C: why — 1s only move right ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="330" width="820" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="356" font-size="13" font-weight="bold" fill="#2b6e9e">② 为什么？排序子序列 = 把子序列中的 1 整体右移、0 整体左移</text>
+  <text x="80" y="380" font-size="12" fill="#444">在任意切分点 i：子序列中位于 i 左侧的 1，可能移到 i 右侧；但右侧的 1 不会移到左侧。</text>
+  <text x="80" y="402" font-size="12" fill="#444" font-family="monospace">前缀 [0..i] 中 1 的个数 = (子序列外不变的 1) + max(0, o_L − z_R) ≤ 原值</text>
+  <text x="80" y="420" font-size="11" fill="#666">o_L = 子序列在 i 左侧的 1 数，z_R = 子序列在 i 右侧的 0 数；多次操作复合后仍不增（归纳）</text>
+
+  <!-- ===== Panel D: sufficiency via 2-element swaps ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="445" width="820" height="135" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="471" font-size="13" font-weight="bold" fill="#2b2b2b">③ 反向：满足条件即可达（配对 + 二元排序）</text>
+  <text x="80" y="495" font-size="12" fill="#444">设 d(i) = ones(s[0..i]) − ones(t[0..i]) ≥ 0，d 末尾为 0 → 像「括号匹配」：每个 s=1,t=0 位 (L) 配一个右侧的 s=0,t=1 位 (R)。</text>
+  <text x="80" y="517" font-size="12" fill="#444">对每对 (l, r)，l &lt; r，s[l]=1, s[r]=0：选子序列 {l, r}，排序 "10"→"01"，即把该位修好。各对位置互不相交，可逐一执行。</text>
+
+  <!-- mini swap illustration -->
+  <g font-size="13" font-weight="bold" font-family="monospace">
+    <text x="100" y="548" fill="#444">s:</text>
+    <g filter="url(#sk)"><rect x="130" y="534" width="30" height="26" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+    <text x="145" y="552" text-anchor="middle" fill="#7a2828">1</text>
+    <g filter="url(#sk)"><rect x="162" y="534" width="30" height="26" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="177" y="552" text-anchor="middle" fill="#777">·</text>
+    <g filter="url(#sk)"><rect x="194" y="534" width="30" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+    <text x="209" y="552" text-anchor="middle" fill="#2e6e2e">0</text>
+    <text x="240" y="552" font-size="12" fill="#2e6e2e">→ 排序 {l,r} →</text>
+    <g filter="url(#sk)"><rect x="350" y="534" width="30" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+    <text x="365" y="552" text-anchor="middle" fill="#2e6e2e">0</text>
+    <g filter="url(#sk)"><rect x="382" y="534" width="30" height="26" rx="4" fill="#f0ede4" stroke="#bbb" stroke-width="1"/></g>
+    <text x="397" y="552" text-anchor="middle" fill="#777">·</text>
+    <g filter="url(#sk)"><rect x="414" y="534" width="30" height="26" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+    <text x="429" y="552" text-anchor="middle" fill="#7a2828">1</text>
+  </g>
+  <text x="470" y="552" font-size="11" fill="#666">l 位变 0、r 位变 1，与 t 对齐；其余位置不动</text>
+  <text x="80" y="572" font-size="11" fill="#7a2828" font-weight="bold">★ 一句话：可达 ⟺ ones(t[0..i]) ≤ ones(s[0..i]) 逐位成立 且 总 1 数相等</text>
+</svg>
