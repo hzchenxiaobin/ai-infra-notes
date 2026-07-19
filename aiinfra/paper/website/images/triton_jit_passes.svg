@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Kaiti SC','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Triton-JIT 编译流水线与分层 Tiling</text>
+  <path d="M 260 42 Q 470 50 680 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="60" text-anchor="middle" font-size="11" fill="#666">机器无关 pass → 机器相关 pass（Hierarchical Tiling → Coalescing → SharedMem Alloc → Sync）</text>
+
+  <!-- ===== 上半：编译流水线（横向） ===== -->
+
+  <!-- 机器无关 pass -->
+  <g filter="url(#sk)"><rect x="40" y="100" width="180" height="100" rx="8" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="130" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">机器无关 Pass</text>
+  <text x="130" y="146" text-anchor="middle" font-size="11" fill="#555">Pre-Fetching</text>
+  <text x="130" y="164" text-anchor="middle" font-size="10" fill="#666">循环内 load 提前一轮</text>
+  <text x="130" y="184" text-anchor="middle" font-size="11" fill="#555">Peephole</text>
+  <text x="130" y="200" text-anchor="middle" font-size="10" fill="#666">(Xᵀ)ᵀ = X</text>
+
+  <!-- 箭头 -->
+  <path d="M 220 150 L 248 150" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Hierarchical Tiling -->
+  <g filter="url(#sk)"><rect x="250" y="100" width="170" height="100" rx="8" fill="#c98a2b" opacity="0.28" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="335" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Hierarchical</text>
+  <text x="335" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Tiling</text>
+  <text x="335" y="164" text-anchor="middle" font-size="10" fill="#5c4a28">Tile → Micro → Nano</text>
+  <text x="335" y="180" text-anchor="middle" font-size="10" fill="#5c4a28">映射存储层级</text>
+  <text x="335" y="196" text-anchor="middle" font-size="10" fill="#888">auto-tuner 穷举</text>
+
+  <!-- 箭头 -->
+  <path d="M 420 150 L 448 150" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Coalescing -->
+  <g filter="url(#sk)"><rect x="450" y="100" width="150" height="100" rx="8" fill="#c98a2b" opacity="0.28" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="525" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Memory</text>
+  <text x="525" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Coalescing</text>
+  <text x="525" y="164" text-anchor="middle" font-size="10" fill="#5c4a28">排线程顺序</text>
+  <text x="525" y="180" text-anchor="middle" font-size="10" fill="#5c4a28">保证合并访存</text>
+  <text x="525" y="196" text-anchor="middle" font-size="10" fill="#888">减少 DRAM 事务</text>
+
+  <!-- 箭头 -->
+  <path d="M 600 150 L 628 150" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- SharedMem Alloc -->
+  <g filter="url(#sk)"><rect x="630" y="100" width="150" height="100" rx="8" fill="#c98a2b" opacity="0.28" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="705" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">SharedMem</text>
+  <text x="705" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Alloc</text>
+  <text x="705" y="164" text-anchor="middle" font-size="10" fill="#5c4a28">live interval</text>
+  <text x="705" y="180" text-anchor="middle" font-size="10" fill="#5c4a28">线性时间分配</text>
+  <text x="705" y="196" text-anchor="middle" font-size="10" fill="#888">类寄存器分配</text>
+
+  <!-- 箭头 -->
+  <path d="M 780 150 L 808 150" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- SharedMem Sync -->
+  <g filter="url(#sk)"><rect x="810" y="100" width="120" height="100" rx="8" fill="#c98a2b" opacity="0.28" stroke="#c98a2b" stroke-width="1.8"/></g>
+  <text x="870" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">SharedMem</text>
+  <text x="870" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Sync</text>
+  <text x="870" y="164" text-anchor="middle" font-size="10" fill="#5c4a28">RAW/WAR</text>
+  <text x="870" y="180" text-anchor="middle" font-size="10" fill="#5c4a28">数据流分析</text>
+  <text x="870" y="196" text-anchor="middle" font-size="10" fill="#888">自动插 barrier</text>
+
+  <!-- ===== 中部：分层 Tiling → 存储映射（左侧） ===== -->
+  <g filter="url(#sk)"><rect x="40" y="240" width="430" height="380" rx="10" fill="none" stroke="#3a3a3a" stroke-width="1.6" stroke-dasharray="7 4"/></g>
+  <text x="255" y="262" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">Hierarchical Tiling → 存储层级映射</text>
+
+  <!-- Tile 层（最外） -->
+  <g filter="url(#sk)"><rect x="70" y="280" width="370" height="90" rx="8" fill="#4a8edb" opacity="0.22" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="90" y="302" font-size="12" font-weight="bold" fill="#2b2b2b">Tile</text>
+  <text x="90" y="320" font-size="10" fill="#28455c">→ Device / DRAM</text>
+  <!-- 内含 4 个 Micro-Tile -->
+  <g filter="url(#sk)">
+    <rect x="180" y="295" width="60" height="60" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.4"/>
+    <rect x="250" y="295" width="60" height="60" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.4"/>
+    <rect x="320" y="295" width="60" height="60" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.4"/>
+    <rect x="390" y="295" width="40" height="60" rx="6" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="3 2"/>
+  </g>
+  <text x="210" y="330" text-anchor="middle" font-size="9" fill="#2f5238">Micro</text>
+  <text x="280" y="330" text-anchor="middle" font-size="9" fill="#2f5238">Micro</text>
+  <text x="350" y="330" text-anchor="middle" font-size="9" fill="#2f5238">Micro</text>
+
+  <!-- 标注：Tile 大框 -->
+  <text x="430" y="302" font-size="10" fill="#28455c">tile size 32-128</text>
+
+  <!-- Micro-Tile 层 -->
+  <g filter="url(#sk)"><rect x="70" y="390" width="370" height="90" rx="8" fill="#57a773" opacity="0.22" stroke="#57a773" stroke-width="1.6"/></g>
+  <text x="90" y="412" font-size="12" font-weight="bold" fill="#2b2b2b">Micro-Tile</text>
+  <text x="90" y="430" font-size="10" fill="#2f5238">→ Core / Shared Memory</text>
+  <!-- 内含 nano-tile -->
+  <g filter="url(#sk)">
+    <rect x="200" y="405" width="35" height="60" rx="4" fill="#c98a2b" opacity="0.40" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="245" y="405" width="35" height="60" rx="4" fill="#c98a2b" opacity="0.40" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="290" y="405" width="35" height="60" rx="4" fill="#c98a2b" opacity="0.40" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="335" y="405" width="35" height="60" rx="4" fill="#c98a2b" opacity="0.40" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="217" y="440" text-anchor="middle" font-size="8" fill="#5c4a28">Nano</text>
+  <text x="262" y="440" text-anchor="middle" font-size="8" fill="#5c4a28">Nano</text>
+  <text x="307" y="440" text-anchor="middle" font-size="8" fill="#5c4a28">Nano</text>
+  <text x="352" y="440" text-anchor="middle" font-size="8" fill="#5c4a28">Nano</text>
+  <text x="430" y="412" font-size="10" fill="#2f5238">micro 8-32</text>
+
+  <!-- Nano-Tile 层 -->
+  <g filter="url(#sk)"><rect x="70" y="500" width="370" height="90" rx="8" fill="#c98a2b" opacity="0.22" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="90" y="522" font-size="12" font-weight="bold" fill="#2b2b2b">Nano-Tile</text>
+  <text x="90" y="540" font-size="10" fill="#5c4a28">→ SIMD Unit / Register File</text>
+  <!-- ALU 小块 -->
+  <g filter="url(#sk)">
+    <rect x="200" y="515" width="30" height="60" rx="4" fill="#fdfcf7" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="240" y="515" width="30" height="60" rx="4" fill="#fdfcf7" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="280" y="515" width="30" height="60" rx="4" fill="#fdfcf7" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="320" y="515" width="30" height="60" rx="4" fill="#fdfcf7" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="360" y="515" width="30" height="60" rx="4" fill="#fdfcf7" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="215" y="552" text-anchor="middle" font-size="8" fill="#5c4a28">ALU</text>
+  <text x="255" y="552" text-anchor="middle" font-size="8" fill="#5c4a28">ALU</text>
+  <text x="295" y="552" text-anchor="middle" font-size="8" fill="#5c4a28">ALU</text>
+  <text x="430" y="522" font-size="10" fill="#5c4a28">nano 1-4</text>
+
+  <!-- ===== 右侧：SharedMem Sync 数据流示意 ===== -->
+  <g filter="url(#sk)"><rect x="490" y="240" width="440" height="380" rx="10" fill="none" stroke="#3a3a3a" stroke-width="1.6" stroke-dasharray="7 4"/></g>
+  <text x="710" y="262" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">Shared Memory 同步：RAW/WAR 数据流分析</text>
+
+  <!-- 基本块流 -->
+  <g filter="url(#sk)"><rect x="520" y="290" width="80" height="50" rx="6" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.5"/></g>
+  <text x="560" y="313" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Block A</text>
+  <text x="560" y="330" text-anchor="middle" font-size="10" fill="#2f5238">write(x)</text>
+
+  <path d="M 600 315 L 638 315" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="640" y="290" width="80" height="50" rx="6" fill="#c98a2b" opacity="0.35" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="680" y="313" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Barrier</text>
+  <text x="680" y="330" text-anchor="middle" font-size="10" fill="#5c4a28">__syncthreads</text>
+
+  <path d="M 720 315 L 758 315" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="760" y="290" width="80" height="50" rx="6" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="800" y="313" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">Block B</text>
+  <text x="800" y="330" text-anchor="middle" font-size="10" fill="#28455c">read(x)</text>
+
+  <!-- 说明 -->
+  <text x="710" y="370" text-anchor="middle" font-size="11" font-weight="bold" fill="#5c4a28">RAW 检测：outᴿᴬᵂ_A = {x}，B 读 x → 命中 → 插 barrier</text>
+
+  <!-- 数据流方程简化版 -->
+  <g filter="url(#sk)"><rect x="520" y="390" width="380" height="200" rx="8" fill="#fdfcf7" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="710" y="412" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">前向数据流方程（简化）</text>
+
+  <text x="540" y="438" font-size="11" fill="#2b2b2b">in_RAW(s) = ∪ out_RAW(pred(s))</text>
+  <text x="540" y="458" font-size="11" fill="#2b2b2b">in_WAR(s) = ∪ out_WAR(pred(s))</text>
+
+  <text x="540" y="486" font-size="11" fill="#5c4a28">out_RAW(s) = ∅  if in_RAW(s) ∩ read(s) ≠ ∅</text>
+  <text x="540" y="504" font-size="11" fill="#5c4a28">             ∪ write(s)  otherwise</text>
+
+  <text x="540" y="528" font-size="11" fill="#28455c">out_WAR(s) = ∅  if in_WAR(s) ∩ write(s) ≠ ∅</text>
+  <text x="540" y="546" font-size="11" fill="#28455c">             ∪ read(s)  otherwise</text>
+
+  <text x="540" y="574" font-size="10" fill="#666">命中即插 barrier 并清空集合——程序员不写同步</text>
+</svg>
