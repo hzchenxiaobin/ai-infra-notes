@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="540" viewBox="0 0 920 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="103" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="arO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+  <rect width="920" height="540" fill="#fdfcf7"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">DeepSeekMoE：细粒度专家 + 共享专家 + 设备受限路由</text>
+  <path d="M 150 46 Q 460 54 770 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="62" text-anchor="middle" font-size="12" fill="#555">每层：2 个共享专家（必过）+ 160 个细粒度路由专家（Top-6）——236B 总参数，每 token 只激活 21B</text>
+
+  <!-- input -->
+  <g filter="url(#sk)"><rect x="370" y="80" width="180" height="40" rx="8" fill="#8a8471" opacity="0.25" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="460" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">FFN 输入 u_t</text>
+
+  <!-- router -->
+  <path d="M 460 122 L 250 165" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="100" y="168" width="300" height="66" rx="10" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="250" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Router：s_i,t = Softmax(u_tᵀ e_i)</text>
+  <text x="250" y="212" text-anchor="middle" font-size="10" fill="#28455c">e_i = 第 i 个路由专家的“质心”</text>
+
+  <!-- shared experts -->
+  <path d="M 500 122 L 620 165" stroke="#57a773" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="560" y="168" width="150" height="66" rx="10" fill="#57a773" opacity="0.30" stroke="#57a773" stroke-width="1.8"/></g>
+  <text x="635" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#2f5238">共享专家 ×2</text>
+  <text x="635" y="212" text-anchor="middle" font-size="10" fill="#2f5238">所有 token 必过（通用知识）</text>
+
+  <!-- device limited routing -->
+  <path d="M 250 236 L 250 285" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="80" y="290" width="340" height="60" rx="10" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="250" y="314" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">设备受限路由（M = 3）</text>
+  <text x="250" y="334" text-anchor="middle" font-size="10" fill="#4a463c">先选亲和力最高的 ≤3 台设备，再在其中做 Top-6</text>
+
+  <!-- expert groups on devices -->
+  <g filter="url(#sk)"><rect x="60" y="375" width="200" height="120" rx="10" fill="#c98a2b" opacity="0.18" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="160" y="398" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">设备 0（20 专家）</text>
+  <g filter="url(#sk)"><rect x="75" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.45" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="133" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="191" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="75" y="448" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="160" y="468" text-anchor="middle" font-size="18" fill="#999">…</text>
+  <text x="75" y="405" font-size="9" fill="#6b4a14">选中</text>
+
+  <g filter="url(#sk)"><rect x="300" y="375" width="200" height="120" rx="10" fill="#c98a2b" opacity="0.18" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="400" y="398" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">设备 1（20 专家）</text>
+  <g filter="url(#sk)"><rect x="315" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.45" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="373" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.45" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="431" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="400" y="468" text-anchor="middle" font-size="18" fill="#999">…</text>
+
+  <g filter="url(#sk)"><rect x="540" y="375" width="200" height="120" rx="10" fill="#c98a2b" opacity="0.12" stroke="#c98a2b" stroke-width="1.4" stroke-dasharray="5 4"/></g>
+  <text x="640" y="398" text-anchor="middle" font-size="11" fill="#777">设备 2（被跳过）</text>
+  <g filter="url(#sk)"><rect x="555" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.15" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <g filter="url(#sk)"><rect x="613" y="410" width="52" height="30" rx="5" fill="#c98a2b" opacity="0.15" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="640" y="468" text-anchor="middle" font-size="18" fill="#bbb">…</text>
+  <text x="810" y="440" text-anchor="middle" font-size="18" fill="#999">…</text>
+  <text x="810" y="465" text-anchor="middle" font-size="10" fill="#999">共 8 台设备</text>
+
+  <!-- aux losses -->
+  <g filter="url(#sk)"><rect x="560" y="255" width="320" height="100" rx="10" fill="none" stroke="#8a8471" stroke-width="1.5" stroke-dasharray="7 4"/></g>
+  <text x="720" y="278" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">三种负载均衡辅助损失</text>
+  <text x="575" y="300" font-size="10" fill="#4a463c">① 专家级 L_ExpBal（α₁=0.003）：防路由崩塌</text>
+  <text x="575" y="320" font-size="10" fill="#4a463c">② 设备级 L_DevBal（α₂=0.05）：算力均衡</text>
+  <text x="575" y="340" font-size="10" fill="#4a463c">③ 通信级 L_CommBal（α₃=0.02）：收发各 ≈MT</text>
+
+  <!-- output -->
+  <path d="M 160 495 L 400 515" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <path d="M 400 495 L 430 513" stroke="#c98a2b" stroke-width="1.6" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <path d="M 635 234 L 500 510" stroke="#57a773" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="405" y="505" width="240" height="32" rx="8" fill="#57a773" opacity="0.25" stroke="#57a773" stroke-width="1.4"/></g>
+  <text x="525" y="526" text-anchor="middle" font-size="10" fill="#2f5238">输出 = u_t + Σ共享 + Σ g_i,t·路由</text>
+</svg>

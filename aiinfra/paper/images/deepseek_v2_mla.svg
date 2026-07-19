@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="560" viewBox="0 0 920 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="91" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57a773"/>
+    </marker>
+  </defs>
+  <rect width="920" height="560" fill="#fdfcf7"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">MLA 数据流：低秩 KV 联合压缩 + 解耦 RoPE（Fig. 2 左半）</text>
+  <path d="M 140 46 Q 460 54 780 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- input -->
+  <g filter="url(#sk)"><rect x="380" y="70" width="160" height="40" rx="8" fill="#8a8471" opacity="0.25" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="460" y="95" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">输入 h_t（d = 5120）</text>
+
+  <!-- KV path -->
+  <path d="M 430 110 L 250 150" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="150" y="152" width="200" height="42" rx="8" fill="#4a8edb" opacity="0.30" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="250" y="177" text-anchor="middle" font-size="11" fill="#2b2b2b">W_DKV 降维 → c_t^KV（d_c = 512）</text>
+
+  <!-- Q path -->
+  <path d="M 490 110 L 660 150" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="570" y="152" width="200" height="42" rx="8" fill="#c98a2b" opacity="0.30" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="670" y="177" text-anchor="middle" font-size="11" fill="#2b2b2b">W_DQ 降维 → c_t^Q（d_c' = 1536）</text>
+
+  <!-- cached latent -->
+  <path d="M 250 196 L 250 236" stroke="#57a773" stroke-width="1.8" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="130" y="240" width="240" height="58" rx="10" fill="#57a773" opacity="0.35" stroke="#57a773" stroke-width="2.2"/></g>
+  <text x="250" y="264" text-anchor="middle" font-size="12" font-weight="bold" fill="#2f5238">KV Cache：c_t^KV（512 维）</text>
+  <text x="250" y="284" text-anchor="middle" font-size="10" fill="#2f5238">推理只缓存它 + 右侧 k_t^R</text>
+
+  <!-- up projections -->
+  <path d="M 180 298 L 130 350" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="50" y="354" width="160" height="42" rx="8" fill="#4a8edb" opacity="0.22" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="130" y="379" text-anchor="middle" font-size="10" fill="#28455c">W_UK → k_t^C（128头×128）</text>
+  <path d="M 320 298 L 370 350" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="290" y="354" width="160" height="42" rx="8" fill="#4a8edb" opacity="0.22" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="370" y="379" text-anchor="middle" font-size="10" fill="#28455c">W_UV → v_t^C（128头×128）</text>
+  <text x="250" y="415" text-anchor="middle" font-size="10" fill="#6b4a14">推理时 W_UK 吸进 W_Q、W_UV 吸进 W_O ⇒ 不用真的展开 K/V</text>
+
+  <!-- decoupled rope key -->
+  <path d="M 540 95 L 830 150" stroke="#b8514d" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="740" y="152" width="150" height="42" rx="8" fill="#b8514d" opacity="0.28" stroke="#b8514d" stroke-width="1.6"/></g>
+  <text x="815" y="177" text-anchor="middle" font-size="10" fill="#7a2e2b">W_KR + RoPE → k_t^R</text>
+  <path d="M 790 196 L 620 240" stroke="#b8514d" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="430" y="240" width="180" height="58" rx="10" fill="#b8514d" opacity="0.22" stroke="#b8514d" stroke-width="2" stroke-dasharray="6 4"/></g>
+  <text x="520" y="264" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a2e2b">KV Cache：k_t^R（64 维）</text>
+  <text x="520" y="284" text-anchor="middle" font-size="10" fill="#7a2e2b">解耦 RoPE 共享键，全头共用</text>
+
+  <!-- q up -->
+  <path d="M 640 196 L 560 300" stroke="#c98a2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="480" y="304" width="170" height="40" rx="8" fill="#c98a2b" opacity="0.22" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="565" y="328" text-anchor="middle" font-size="10" fill="#6b4a14">W_UQ → q_t^C（不带位置）</text>
+  <path d="M 700 196 L 740 300" stroke="#c98a2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="670" y="304" width="170" height="40" rx="8" fill="#c98a2b" opacity="0.22" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="755" y="328" text-anchor="middle" font-size="10" fill="#6b4a14">W_QR + RoPE → q_t^R</text>
+
+  <!-- attention -->
+  <g filter="url(#sk)"><rect x="270" y="448" width="380" height="70" rx="12" fill="#57a773" opacity="0.22" stroke="#57a773" stroke-width="1.8"/></g>
+  <text x="460" y="474" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">逐头注意力：q = [q^C; q^R]，k = [k^C; k^R]</text>
+  <text x="460" y="496" text-anchor="middle" font-size="10" fill="#2f5238">Softmax(qᵀk / √(d_h + d_h^R)) · v^C → W_O → 输出 u_t</text>
+  <path d="M 130 398 L 240 460" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 370 398 L 400 444" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 520 300 L 490 444" stroke="#b8514d" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <path d="M 565 346 L 520 444" stroke="#c98a2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <path d="M 755 346 L 610 452" stroke="#c98a2b" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+
+  <text x="460" y="545" text-anchor="middle" font-size="11" fill="#4a463c">每 token 缓存 = (512 + 64) × 60 层 = 34.6K 元素，是 MHA（128 头）的 ~1/57，与 GQA-2.25 组相当</text>
+</svg>
