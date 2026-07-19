@@ -197,6 +197,48 @@ l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)
 - `l × exp(m - m_new)`：将之前的 running sum 从旧参考点 m 缩放到新参考点 m_new
 - `Σ exp(xj - m_new)`：新块的指数和，直接以 m_new 为参考
 
+**公式 2 的推导过程**：
+
+`l` 的定义是**已处理部分**在旧参考点 `m` 下的指数和：
+
+```
+l = Σ_old exp(x_old - m)
+```
+
+当新块到来后，全局 max 从 `m` 变成 `m_new`，新的指数和应该**统一以 m_new 为参考**：
+
+```
+l_new = Σ_old exp(x_old - m_new) + Σ_new exp(x_new - m_new)
+```
+
+关键一步：把旧参考点下的 `exp(x_old - m)` 换算到新参考点 `m_new`：
+
+```
+exp(x_old - m_new) = exp(x_old - m + m - m_new)
+                   = exp(x_old - m) × exp(m - m_new)
+```
+
+所以旧部分的和：
+
+```
+Σ_old exp(x_old - m_new) = exp(m - m_new) × Σ_old exp(x_old - m)
+                         = exp(m - m_new) × l
+```
+
+新块的和直接以 `m_new` 为参考计算：
+
+```
+Σ_new exp(x_new - m_new) = Σ exp(x_j - m_new)
+```
+
+合并即得：
+
+```
+l_new = l × exp(m - m_new) + Σ exp(x_j - m_new)
+```
+
+> 💡 **直觉**：`exp(m - m_new)` 是参考点平移的"汇率"。因为 softmax 对整体减常数不变，所有指数统一扣 `m_new` 后求和，与扣原来的 `m` 再乘汇率完全等价。这个换算让每块只保存局部的 `Σ exp(x_j - m_new)`，却能递推得到全局归一化需要的 `l`。
+
 **公式 3 — Output 更新**：
 ```
 o_new = o × (l × exp(m - m_new) / l_new) + (exp(x_j - m_new) / l_new) × v_j
