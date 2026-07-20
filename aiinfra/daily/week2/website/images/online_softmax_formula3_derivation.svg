@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="820" viewBox="0 0 920 820" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="36" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="820" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">公式 3 — Output 更新推导</text>
+  <path d="M 280 42 Q 460 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="62" text-anchor="middle" font-size="11" fill="#888">从「已归一化的旧 o」出发，五步推出 o_new 的两步累加形式</text>
+
+  <!-- ===== Step 1: Setup ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="80" width="820" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="104" font-size="13" fill="#4a8edb" font-weight="bold">Step 1 · 起点：旧状态 (m, l, o) 已归一化</text>
+  <text x="70" y="128" font-size="13" fill="#2b2b2b" font-family="monospace">o  =  ( Σ_old exp(x − m) · v_x ) / l        ←  o 是已归一化的部分输出</text>
+  <text x="70" y="150" font-size="13" fill="#2b2b2b" font-family="monospace">l  =   Σ_old exp(x − m)                       ←  旧块的指数和（参考点 m）</text>
+  <text x="70" y="170" font-size="11" fill="#888">推论：旧块的未归一化加权和 = l · o （后面 Step 3 要用）</text>
+
+  <!-- arrow 1 -> 2 -->
+  <path d="M 460 184 L 460 200" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 2: New block arrives ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="206" width="820" height="96" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="230" font-size="13" fill="#2b6e9e" font-weight="bold">Step 2 · 新块到来：全局 max 切换到 m_new，分母 l_new 重算</text>
+  <text x="70" y="254" font-size="13" fill="#2b2b2b" font-family="monospace">m_new  =  max( m,  max_j x_j )</text>
+  <text x="70" y="276" font-size="13" fill="#2b2b2b" font-family="monospace">l_new  =  Σ_old exp(x − m_new)  +  Σ_new exp(x_j − m_new)</text>
+  <text x="70" y="294" font-size="11" fill="#888">新分母 = 旧块换算到 m_new  +  新块直接以 m_new 计算</text>
+
+  <!-- arrow 2 -> 3 -->
+  <path d="M 460 306 L 460 322" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 3: Key identity ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="328" width="820" height="148" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="352" font-size="13" fill="#7a5415" font-weight="bold">Step 3 · 关键一步：把旧分子从参考点 m 换算到 m_new</text>
+  <text x="70" y="376" font-size="13" fill="#2b2b2b" font-family="monospace">Σ_old exp(x − m_new) · v_x</text>
+  <text x="70" y="398" font-size="13" fill="#2b2b2b" font-family="monospace">  =  Σ_old exp( (x − m) + (m − m_new) ) · v_x        ← 拆项：x − m_new = (x − m) + (m − m_new)</text>
+  <text x="70" y="420" font-size="13" fill="#2b2b2b" font-family="monospace">  =  exp(m − m_new) · Σ_old exp(x − m) · v_x         ← exp(m − m_new) 与 x 无关，提到求和号外</text>
+  <text x="70" y="442" font-size="13" fill="#b85450" font-family="monospace" font-weight="bold">  =  exp(m − m_new) · l · o                             ← 用 Step 1 的 l · o = 旧加权和</text>
+  <text x="70" y="464" font-size="11" fill="#888">这就是「exp(m − m_new) 是参考点平移的汇率」的来源</text>
+
+  <!-- arrow 3 -> 4 -->
+  <path d="M 460 480 L 460 496" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 4: Combine ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="502" width="820" height="92" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="526" font-size="13" fill="#5a3a7a" font-weight="bold">Step 4 · 拼成全局 softmax 加权平均</text>
+  <text x="70" y="552" font-size="13" fill="#2b2b2b" font-family="monospace">o_new  =  [ exp(m − m_new) · l · o   +   Σ_j exp(x_j − m_new) · v_j ] / l_new</text>
+  <text x="70" y="574" font-size="11" fill="#888">分子 = 旧块加权和（换算到 m_new）  +  新块加权和（直接以 m_new 算）</text>
+  <text x="70" y="590" font-size="11" fill="#888">分母 = l_new （Step 2 算好的全局归一化常数）</text>
+
+  <!-- arrow 4 -> 5 -->
+  <path d="M 460 598 L 460 614" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 5: Split into Formula 3 ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="620" width="820" height="124" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+  </g>
+  <text x="70" y="644" font-size="13" fill="#2e6e2e" font-weight="bold">Step 5 · 拆成两项 → 公式 3</text>
+  <text x="70" y="670" font-size="13" fill="#2b2b2b" font-family="monospace">o_new  =  o · ( l · exp(m − m_new) / l_new )   +   ( Σ_j exp(x_j − m_new) · v_j ) / l_new</text>
+  <text x="70" y="692" font-size="11" fill="#2e6e2e">┌ 第一项：旧的「加权和 l·o」先按汇率 exp(m − m_new) 缩放，再除新 l_new 重新归一化</text>
+  <text x="70" y="710" font-size="11" fill="#2e6e2e">└ 第二项：新块在全局 softmax 下的概率权重 × v_j，直接加权累加</text>
+  <text x="70" y="732" font-size="11" fill="#888">归一化被「摊」进每一步：o 始终已归一化，所有 KV tile 处理完即为最终输出，末尾无需再除 l</text>
+
+  <!-- ===== Footer intuition ===== -->
+  <g filter="url(#sk)">
+    <rect x="120" y="760" width="680" height="44" rx="8" fill="#fde9ec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="460" y="780" text-anchor="middle" font-size="12" fill="#7a2a2a" font-weight="bold">核心：exp(m − m_new) 是参考点平移的「汇率」</text>
+  <text x="460" y="797" text-anchor="middle" font-size="11" fill="#7a2a2a">让旧块只存 (l, o) 就能递推合并新块 —— HBM 访问从 O(N²) 降到 O(Nd)</text>
+</svg>
