@@ -159,13 +159,27 @@ where m = max(x_j) (全局最大值)
 
 ##### Online Softmax 解决方案
 
-维护 running 状态 `(m, l, o)`，每处理一个新块时增量更新：
+维护 running 状态 $(m, l, o)$，每处理一个新块时增量更新。设已处理的所有 score 集合为 $X_{\text{old}}$，对应的 $(x, v)$ 为已见过的（score, value）对：
 
-- `m`：已处理所有块的 running maximum
-- `l`：已处理所有块的 running sum（以 m 为参考点的指数和）
-- `o`：已处理所有块的 running output（部分加权和）
+- $m$：已处理所有块的 running maximum
 
-**初始状态**：`m = -inf, l = 0, o = 0`（零向量）
+  $$
+  m = \max_{x \in X_{\text{old}}} x
+  $$
+
+- $l$：已处理所有块的 running sum（以 $m$ 为参考点的指数和）
+
+  $$
+  l = \sum_{x \in X_{\text{old}}} \exp(x - m)
+  $$
+
+- $o$：已处理所有块的 running output（已归一化的部分加权和）
+
+  $$
+  o = \frac{\sum_{(x, v) \in \text{已处理}} \exp(x - m) \cdot v}{l}
+  $$
+
+**初始状态**：$m = -\infty,\; l = 0,\; o = 0$（零向量）
 
 ##### 推导过程
 
