@@ -164,15 +164,68 @@ topics/
 - 引用其他专题：`(../<other-topic>/README.md)`
 - 引用根目录资源：`(../../images/xxx.svg)`
 
-## 5. 构建集成
+## 5. 构建与 GitHub Pages 集成（统一自动发布）
 
-专题目前**不纳入** `build.py` 网站构建（每日教程 + leetcode + leetgpu 已覆盖）。若后续需要将专题加入 GitHub Pages，按以下步骤扩展：
+专题已纳入统一的 GitHub Pages 构建流程，**不再需要为每个专题单独写构建脚本**。
 
-1. 在 `build.py` 中新增 `copy_directory_contents(repo_root / "aiinfra" / "topics", public_dir / "topics", ...)`
-2. 为专题写一个 `topics/website/build.py`（可参考 `leetgpu/website/build.py`）
-3. 在根 `build.py` 的导航注入逻辑中把 `topics` 排除规则调整
+### 5.1 自动发现机制
 
-**本地预览**（不依赖构建）：直接用 Markdown 预览器查看 `topics/<name>/README.md`，SVG 相对路径在本地即可解析。
+- 统一构建脚本：`aiinfra/topics/build.py`
+- 构建入口：`build.py`（根目录）会自动调用 `aiinfra/topics/build.py`
+- 发现规则：扫描 `aiinfra/topics/` 下所有包含 `README.md` 的子目录（自动排除 `images/`、`website/`、`__pycache__`）
+- 新增专题无需修改 `build.py` 或 `.github/workflows/deploy.yml`，push 后自动部署
+
+### 5.2 每个专题的预期文件结构
+
+```
+aiinfra/topics/<topic-name>/
+├── README.md              # 专题主体（必需）
+├── day1.md ~ day7.md      # 可选：拆分的每日学习文件
+├── kernels/               # 可选：可编译代码示例
+├── notes/                 # 可选：源码笔记、延伸阅读
+├── benchmark/             # 可选：性能对比脚本
+└── images/                # 可选：专题私有图片（较少时使用 topics/images/）
+```
+
+- `README.md` 中可用 `## Day N（周 x）：标题` 组织大纲；若存在对应的 `dayN.md`，构建时会生成独立页面
+- 拆分 `dayN.md` 的好处：便于维护、便于按日更新、自动生成 `dayN.html`
+- 拆分方式：把 `README.md` 中每个 `## Day N...` 章节拷贝为 `# Day N...` 开头的 `dayN.md`，`README.md` 保留概览和目录结构
+
+### 5.3 图片资源
+
+- 推荐放在共享目录：`aiinfra/topics/images/<topic-name>_<description>.svg`
+- 在 Markdown 中引用：`![中文alt](../images/<topic-name>_xxx.svg)`
+- 构建时会自动把匹配 `<topic-name>_*.svg` 的图片复制到 `public/<topic-name>/images/`
+
+### 5.4 交叉引用规范
+
+Markdown 中可写源文件相对路径，构建时会自动重写为部署后的路径：
+
+| 源路径示例 | 部署后路径 |
+|---|---|
+| `](../cutlass/README.md)` | `](../cutlass/index.html)` |
+| `](../cutlass/day2.md)` | `](../cutlass/day2.html)` |
+| `](../../paper/flashattention3/README.md)` | `](../paper/flashattention3/index.html)` |
+| `](../../daily/week6/day1/README.md)` | `](../daily/week6/day1.html)` |
+
+### 5.5 本地构建与预览
+
+```bash
+python3 build.py
+# 专题站点生成在 public/<topic-name>/
+```
+
+部署地址：`https://<username>.github.io/ai-infra-notes/<topic-name>/`
+
+### 5.6 新增专题 checklist
+
+- [ ] 目录名全小写，如 `my-topic`
+- [ ] 放入 `README.md`
+- [ ] （可选）按需要拆分 `day1.md` ~ `day7.md`
+- [ ] （可选）把 SVG 图片放入 `aiinfra/topics/images/<topic-name>_*.svg`
+- [ ] push 到 `main`，GitHub Actions 自动发布
+
+> 历史变更：原先 cutlass/triton/cute/deepgemm/moe 各有独立的 `website/build.py`，现已统一删除，统一由 `aiinfra/topics/build.py` 处理。
 
 ## 6. 开题流程
 
@@ -197,3 +250,16 @@ topics/
 - [ ] 所有文件链接用相对路径且指向真实文件
 - [ ] SVG 引用格式 `![中文alt](../images/xxx.svg)`，风格为手绘 sketch 风
 - [ ] 目录名全小写 + 连字符
+
+## 8. 本对话中的相关操作记录
+
+本次会话中对 `aiinfra/topics/` 及周边仓库结构做了以下调整，作为后续维护的背景参考：
+
+| 操作 | 说明 |
+|------|------|
+| 下载 `deepseek_v3.pdf` 的 HTML 版本 | 从 arXiv 下载 `DeepSeek-V3 Technical Report` 的 HTML，保存为 `aiinfra/paper/deepseek_v3/deepseek_v3.html`，并设置 `<base href>` 使其本地可正确加载图片与样式。 |
+| 部署 DeepGEMM / MoE 专题 | 为 `aiinfra/topics/deepgemm/` 和 `aiinfra/topics/moe/` 增加构建能力，接入根 `build.py`，并推送到 GitHub Pages。 |
+| 拆分 Day 1-7 文件 | 将 `deepgemm`、`moe`、`cute` 三个专题的 `README.md` 中的 `## Day N...` 章节分别拆成独立的 `day1.md` ~ `day7.md`，`README.md` 保留概览。 |
+| 统一 topics 构建逻辑 | 删除各专题独立的 `website/build.py`，改为 `aiinfra/topics/build.py` 自动发现所有含 `README.md` 的专题目录；新增目录无需再改构建脚本即可自动发布到 GitHub Pages。 |
+
+> 现在新增一个专题只需：创建 `aiinfra/topics/<name>/README.md`（可选 `day1.md`~`day7.md` 和 `images/`），push 到 `main` 即可自动部署。
