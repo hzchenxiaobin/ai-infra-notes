@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 780" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="55" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="780" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">JIT 编译全流程：Python API → heuristics → 渲染 → 编译 → 加载 → launch</text>
+  <path d="M 280 40 Q 460 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Step 1: Python API ====== -->
+  <g filter="url(#sk)"><rect x="60" y="68" width="800" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="80" y="90" font-size="11" fill="#2b6e9e" font-weight="bold">Python</text>
+  <text x="80" y="108" font-size="10" fill="#444" font-family="monospace">deep_gemm.fp8_gemm_nt(a, b, d, c=c)</text>
+  <text x="840" y="108" font-size="9" fill="#888" text-anchor="end">用户调用入口</text>
+
+  <path d="M 460 124 L 460 138" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 2: C++ API ====== -->
+  <g filter="url(#sk)"><rect x="60" y="140" width="800" height="72" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="80" y="162" font-size="11" fill="#2e6e2e" font-weight="bold">csrc/apis/gemm.hpp:73</text>
+  <text x="80" y="180" font-size="10" fill="#444" font-family="monospace">fp8_gemm_nt()</text>
+  <text x="80" y="196" font-size="9" fill="#666">├─ 构造 GemmDesc{gemm_type, m, n, k, dtype, num_sms, tc_util, ...}</text>
+  <text x="80" y="210" font-size="9" fill="#666">└─ 调用 get_best_config&lt;SM90ArchSpec&gt;(desc) 选出 GemmConfig（Layout / Storage / Pipeline / Launch）</text>
+
+  <path d="M 460 212 L 460 226" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 3: JIT 胶水层 generate_impl ====== -->
+  <g filter="url(#sk)"><rect x="60" y="228" width="800" height="72" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="80" y="250" font-size="11" fill="#7a5415" font-weight="bold">csrc/jit_kernels/impls/sm90_fp8_gemm_1d1d.hpp:33</text>
+  <text x="80" y="268" font-size="10" fill="#444" font-family="monospace">SM90FP8Gemm1D1DRuntime::generate_impl()</text>
+  <text x="80" y="284" font-size="9" fill="#666">├─ 用 fmt::format 把 BLOCK_M/N/K、stages、num_threads 等填进模板</text>
+  <text x="80" y="296" font-size="9" fill="#666">└─ 渲染出一段 .cu 源码字符串</text>
+
+  <path d="M 460 300 L 460 314" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 4: IncludeParser hash ====== -->
+  <g filter="url(#sk)"><rect x="60" y="316" width="800" height="56" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="80" y="338" font-size="11" fill="#5a3a7a" font-weight="bold">csrc/jit/kernel_runtime.hpp:123</text>
+  <text x="80" y="356" font-size="10" fill="#444" font-family="monospace">LaunchRuntime::generate()</text>
+  <text x="80" y="368" font-size="9" fill="#666">IncludeParser 递归 hash 所有 &lt;deep_gemm/*&gt; 头文件 → 头文件改了就自动失效</text>
+
+  <path d="M 460 372 L 460 386" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 5: Compiler::build ====== -->
+  <g filter="url(#sk)"><rect x="60" y="388" width="800" height="100" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="80" y="410" font-size="11" fill="#b85450" font-weight="bold">csrc/jit/compiler.hpp:100</text>
+  <text x="80" y="428" font-size="10" fill="#444" font-family="monospace">Compiler::build()</text>
+  <text x="80" y="444" font-size="9" fill="#666">signature = name + 编译器签名 + flags + 源码 → SHA hash</text>
+  <text x="80" y="458" font-size="9" fill="#666">缓存路径 = ~/.deep_gemm/cache/kernel.{name}.{hash}/</text>
+  <text x="80" y="472" font-size="9" fill="#b85450" font-weight="bold">① 命中内存缓存 → 直接返回 KernelRuntime</text>
+  <text x="80" y="484" font-size="9" fill="#7a3a3a">② 命中磁盘缓存 → 加载 kernel.cubin　　③ 未命中 → 写 .cu → NVCC/NVRTC 编译</text>
+
+  <path d="M 460 488 L 460 502" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 6: load_kernel ====== -->
+  <g filter="url(#sk)"><rect x="60" y="504" width="800" height="72" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="80" y="526" font-size="11" fill="#2b6e9e" font-weight="bold">csrc/jit/handle.hpp:135</text>
+  <text x="80" y="544" font-size="10" fill="#444" font-family="monospace">load_kernel()</text>
+  <text x="80" y="560" font-size="9" fill="#666">├─ cuLibraryLoadFromFile 加载 .cubin</text>
+  <text x="80" y="572" font-size="9" fill="#666">└─ cuLibraryEnumerateKernels 取出唯一 kernel 符号（旧驱动走 cuobjdump -symbols）</text>
+
+  <path d="M 460 576 L 460 590" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 7: launch ====== -->
+  <g filter="url(#sk)"><rect x="60" y="592" width="800" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="80" y="614" font-size="11" fill="#2e6e2e" font-weight="bold">csrc/jit/kernel_runtime.hpp:139</text>
+  <text x="80" y="632" font-size="10" fill="#444" font-family="monospace">LaunchRuntime::launch()</text>
+  <text x="80" y="644" font-size="9" fill="#666">构造 CUlaunchConfig（grid/block/smem/cluster/PDL attr）→ cuLaunchKernelEx 发射</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="668" width="840" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="692" font-size="12" font-weight="bold" fill="#444">关键洞察：</text>
+  <text x="60" y="714" font-size="10" fill="#444">JIT 让 DeepGEMM 针对<tspan font-weight="bold" fill="#b85450">每个具体 shape</tspan> 生成最优 kernel——BLOCK_M/N/K、kNumStages、kNumSMs 甚至 SHAPE_M/N/K 都作为编译期常量嵌入</text>
+  <text x="60" y="732" font-size="10" fill="#444">编译器可充分常量传播与寄存器分配——这是"小代码量达到大库性能"的核心手段</text>
+  <text x="60" y="750" font-size="10" fill="#888" font-style="italic">代价：首次调用有编译延迟（NVCC ~5-15s，NVRTC ~0.5-2s），之后命中缓存</text>
+</svg>

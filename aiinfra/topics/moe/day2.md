@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3            Day 4           Day 5          Day 6        Day 7
- 总览      →   Gating +    →   Grouped       →   Expert      →  vLLM         → 完整       →  调优
- 算法动机      Top-K 融合      GEMM              Parallelism    fused_moe       Triton       ncu
- 数据流        Triton         Triton/CUTLASS    all-to-all     源码精读        MoE FFN      报告
- 路由算法      kernel          cuBLAS 对照      Megatron 通信                  性能对比
- 朴素实现         ↑
-              你在这里（第一个瓶颈优化：Gating/TopK 的 PyTorch 多 kernel 开销）
-```
+![Day 2 在一周知识图谱中的位置：Triton Gating + Top-K 融合 Kernel](../images/moe_day2_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -161,14 +153,12 @@ def gating_kernel(x_ptr, w_ptr, logits_ptr,
 
 #### 融合 Gating kernel 的设计
 
-```
-每个 program 处理 BLOCK_T 个 token：
-  ├─ 加载 x_tile: [BLOCK_T, d]
-  ├─ 加载 W_g: [N, d]（若 N 小可整块加载）
-  ├─ 计算 logits = x_tile @ W_g.T → [BLOCK_T, N]
-  ├─ softmax(logits, dim=-1) → [BLOCK_T, N]    ← 融合进同一 kernel
-  └─ Top-K + 重归一化 → [BLOCK_T, K]            ← 学习任务 4 融合进来
-```
+每个 program 处理 `BLOCK_T` 个 token：
+- 加载 `x_tile: [BLOCK_T, d]`
+- 加载 `W_g: [N, d]`（若 N 小可整块加载）
+- 计算 `logits = x_tile @ W_g.T` → `[BLOCK_T, N]`
+- `softmax(logits, dim=-1)` → `[BLOCK_T, N]`（融合进同一 kernel）
+- Top-K + 重归一化 → `[BLOCK_T, K]`（学习任务 4 融合进来）
 
 #### 为什么 softmax 可以融合
 

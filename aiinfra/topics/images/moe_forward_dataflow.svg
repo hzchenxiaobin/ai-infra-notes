@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 720" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="66" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="720" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">MoE 前向数据流：门控 → Top-K → 分派 → 专家 → 合并</text>
+  <path d="M 240 40 Q 390 48 540 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Input ====== -->
+  <g filter="url(#sk)"><rect x="290" y="68" width="200" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="3 2"/></g>
+  <text x="390" y="86" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">输入 x</text>
+  <text x="390" y="100" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">[num_tokens, d]</text>
+
+  <path d="M 390 108 L 390 122" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Gating ====== -->
+  <g filter="url(#sk)"><rect x="240" y="124" width="300" height="64" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="390" y="146" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">① Gating（门控网络）</text>
+  <text x="390" y="164" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">g = softmax(x @ W_g)</text>
+  <text x="390" y="180" text-anchor="middle" font-size="9" fill="#888">W_g: [d, N] → g: [num_tokens, N]</text>
+
+  <path d="M 390 188 L 390 202" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Top-K ====== -->
+  <g filter="url(#sk)"><rect x="240" y="204" width="300" height="74" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="390" y="226" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">② Top-K + 重归一化</text>
+  <text x="390" y="244" text-anchor="middle" font-size="10" fill="#444">选每 token 亲和力最高的 K 个专家</text>
+  <text x="390" y="260" text-anchor="middle" font-size="9" fill="#666" font-family="monospace">g_topk, idx_topk = topk(g, K)</text>
+  <text x="390" y="272" text-anchor="middle" font-size="9" fill="#7a5415" font-style="italic">g_topk = g_topk / g_topk.sum()  ← 重归一化</text>
+
+  <path d="M 390 278 L 390 292" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Dispatch ====== -->
+  <g filter="url(#sk)"><rect x="240" y="294" width="300" height="60" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="390" y="316" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">③ Dispatch（分派）</text>
+  <text x="390" y="334" text-anchor="middle" font-size="10" fill="#444">按 idx_topk 把 token 散到对应专家</text>
+  <text x="390" y="348" text-anchor="middle" font-size="9" fill="#888">→ 每 expert 收到一组 token（动态数量）</text>
+
+  <path d="M 390 354 L 390 368" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Expert FFN ====== -->
+  <g filter="url(#sk)"><rect x="180" y="370" width="420" height="80" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="390" y="392" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">④ Expert FFN（专家计算）</text>
+  <text x="390" y="410" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">对每 expert: y_e = FFN_e(x_e)</text>
+  <text x="390" y="426" text-anchor="middle" font-size="9" fill="#666">N 个专家并行（或 Grouped GEMM 单 kernel）</text>
+  <text x="390" y="442" text-anchor="middle" font-size="9" fill="#5a3a7a" font-style="italic">scatter-gather 模式：token 按 expert 索引散开</text>
+
+  <path d="M 390 450 L 390 464" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Combine ====== -->
+  <g filter="url(#sk)"><rect x="240" y="466" width="300" height="74" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="390" y="488" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">⑤ Combine（合并）</text>
+  <text x="390" y="506" text-anchor="middle" font-size="10" fill="#444">按 idx_topk 把专家输出散回原位置</text>
+  <text x="390" y="522" text-anchor="middle" font-size="9" fill="#666" font-family="monospace">y = Σ g_topk[:,k] * y_scattered[:,k]</text>
+  <text x="390" y="534" text-anchor="middle" font-size="9" fill="#888">→ [num_tokens, d]</text>
+
+  <path d="M 390 540 L 390 554" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Output ====== -->
+  <g filter="url(#sk)"><rect x="290" y="556" width="200" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="3 2"/></g>
+  <text x="390" y="574" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">输出 y</text>
+  <text x="390" y="588" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">[num_tokens, d]</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="616" width="700" height="84" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="640" font-size="12" font-weight="bold" fill="#444">关键洞察：</text>
+  <text x="60" y="660" font-size="10" fill="#444">MoE 的"分派 → 专家 → 合并"本质是 <tspan font-weight="bold" fill="#5a3a7a">scatter-gather 模式</tspan>——token 按 expert 索引散开、各算各的、再按索引合并</text>
+  <text x="60" y="676" font-size="10" fill="#444">这与稠密 GEMM 的"全员算同一矩阵"根本不同</text>
+  <text x="60" y="692" font-size="10" fill="#888" font-style="italic">是后面 Grouped GEMM（Day 3）与 EP all-to-all（Day 4）的算法基础</text>
+</svg>

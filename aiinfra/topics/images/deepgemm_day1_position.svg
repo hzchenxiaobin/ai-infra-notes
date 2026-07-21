@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="320" fill="#fdfcf7"/>
+
+  <text x="480" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">本日在本周知识图谱中的位置</text>
+  <path d="M 300 40 Q 480 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Day 1 (highlighted) -->
+  <g filter="url(#sk)"><rect x="20" y="62" width="150" height="106" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2.5"/></g>
+  <text x="95" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Day 1</text>
+  <text x="95" y="108" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">总览</text>
+  <text x="95" y="124" text-anchor="middle" font-size="9" fill="#666">JIT 环境</text>
+  <text x="95" y="138" text-anchor="middle" font-size="9" fill="#666">源码地图</text>
+  <text x="95" y="154" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">← 你在这里</text>
+
+  <path d="M 170 115 L 188 115" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 2 -->
+  <g filter="url(#sk)"><rect x="190" y="70" width="130" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="255" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Day 2</text>
+  <text x="255" y="112" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">FP8/FP4</text>
+  <text x="255" y="128" text-anchor="middle" font-size="9" fill="#666">Scaling</text>
+  <text x="255" y="142" text-anchor="middle" font-size="9" fill="#666">per-128-ch / UE8M0</text>
+
+  <path d="M 320 115 L 338 115" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 3-4 -->
+  <g filter="url(#sk)"><rect x="340" y="70" width="140" height="90" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="410" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Day 3-4</text>
+  <text x="410" y="112" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">SM90 Kernel</text>
+  <text x="410" y="128" text-anchor="middle" font-size="9" fill="#666">源码精读</text>
+  <text x="410" y="142" text-anchor="middle" font-size="9" fill="#666">TMA+WGMMA / 持久化</text>
+
+  <path d="M 480 115 L 498 115" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 5 -->
+  <g filter="url(#sk)"><rect x="500" y="70" width="130" height="90" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/></g>
+  <text x="565" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">Day 5</text>
+  <text x="565" y="112" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">Grouped GEMM</text>
+  <text x="565" y="128" text-anchor="middle" font-size="9" fill="#666">contiguous /</text>
+  <text x="565" y="142" text-anchor="middle" font-size="9" fill="#666">masked / k-group</text>
+
+  <path d="M 630 115 L 648 115" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 6 -->
+  <g filter="url(#sk)"><rect x="650" y="70" width="130" height="90" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+  <text x="715" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">Day 6</text>
+  <text x="715" y="112" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">SM100 / Mega MoE</text>
+  <text x="715" y="128" text-anchor="middle" font-size="9" fill="#666">TCgen05</text>
+  <text x="715" y="142" text-anchor="middle" font-size="9" fill="#666">EP 融合</text>
+
+  <path d="M 780 115 L 798 115" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 7 -->
+  <g filter="url(#sk)"><rect x="800" y="70" width="130" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="865" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Day 7</text>
+  <text x="865" y="112" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">调优</text>
+  <text x="865" y="128" text-anchor="middle" font-size="9" fill="#666">ncu</text>
+  <text x="865" y="142" text-anchor="middle" font-size="9" fill="#666">报告</text>
+
+  <!-- "你在这里" annotation -->
+  <g filter="url(#sk)">
+    <path d="M 95 200 L 95 172" stroke="#4a8edb" stroke-width="1.8" fill="none" marker-end="url(#ar)" stroke-dasharray="4 2"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="40" y="206" width="410" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2" stroke-dasharray="4 2"/>
+  </g>
+  <text x="245" y="230" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">你在这里</text>
+  <text x="245" y="250" text-anchor="middle" font-size="10" fill="#1a4e7e">地基：不理解 JIT 与源码结构，后面 6 天都读不动</text>
+
+  <!-- bottom note -->
+  <text x="480" y="296" text-anchor="middle" font-size="10" fill="#888" font-style="italic">Day 1 是地基：JIT 环境 + 源码地图 → Day 2 FP8 scaling → Day 3-4 kernel 精读</text>
+</svg>

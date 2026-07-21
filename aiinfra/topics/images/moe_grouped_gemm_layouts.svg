@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="720" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">MoE Grouped GEMM 数据布局：Padded vs Contiguous</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Left: Padded Layout ====== -->
+  <text x="220" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">Padded 布局（Day 1 朴素实现）</text>
+  <text x="220" y="94" text-anchor="middle" font-size="9" fill="#888">每专家一个独立 padded 块</text>
+
+  <!-- A: [num_experts, max_m, K] -->
+  <text x="60" y="120" font-size="10" fill="#b85450" font-weight="bold" font-family="monospace">A: [num_experts, max_m, K]</text>
+
+  <!-- expert 0 block -->
+  <g filter="url(#sk)"><rect x="60" y="128" width="180" height="36" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="80" y="142" font-size="9" fill="#b85450" font-weight="bold">expert 0</text>
+  <text x="80" y="156" font-size="8" fill="#666">有效 m_0 个 + padding</text>
+  <g filter="url(#sk)"><rect x="170" y="132" width="60" height="28" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8" stroke-dasharray="3 2"/></g>
+  <text x="200" y="150" text-anchor="middle" font-size="8" fill="#aaa">pad</text>
+
+  <!-- expert 1 block -->
+  <g filter="url(#sk)"><rect x="60" y="168" width="180" height="36" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="80" y="182" font-size="9" fill="#b85450" font-weight="bold">expert 1</text>
+  <text x="80" y="196" font-size="8" fill="#666">有效 m_1 个 + padding</text>
+  <g filter="url(#sk)"><rect x="170" y="172" width="60" height="28" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8" stroke-dasharray="3 2"/></g>
+  <text x="200" y="190" text-anchor="middle" font-size="8" fill="#aaa">pad</text>
+
+  <!-- ellipsis -->
+  <text x="150" y="224" text-anchor="middle" font-size="14" fill="#888" font-weight="bold">. . .</text>
+
+  <!-- expert E-1 -->
+  <g filter="url(#sk)"><rect x="60" y="232" width="180" height="36" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="80" y="246" font-size="9" fill="#b85450" font-weight="bold">expert E-1</text>
+  <text x="80" y="260" font-size="8" fill="#666">有效 m_{E-1} + padding</text>
+  <g filter="url(#sk)"><rect x="170" y="236" width="60" height="28" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8" stroke-dasharray="3 2"/></g>
+  <text x="200" y="254" text-anchor="middle" font-size="8" fill="#aaa">pad</text>
+
+  <text x="220" y="290" text-anchor="middle" font-size="9" fill="#b85450" font-style="italic">显存浪费：(E*max_m - sum_m) * K</text>
+  <text x="220" y="306" text-anchor="middle" font-size="9" fill="#888" font-style="italic">CUDA graph 兼容（shape 固定）</text>
+
+  <!-- Divider -->
+  <line x1="380" y1="68" x2="380" y2="320" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <!-- ====== Right: Contiguous Layout ====== -->
+  <text x="620" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Contiguous 布局（Day 3 Grouped GEMM）</text>
+  <text x="620" y="94" text-anchor="middle" font-size="9" fill="#888">所有专家的有效 token 拼接（无 padding）</text>
+
+  <text x="420" y="120" font-size="10" fill="#2e6e2e" font-weight="bold" font-family="monospace">A: [sum_m, K]</text>
+
+  <!-- expert 0 -->
+  <g filter="url(#sk)"><rect x="420" y="128" width="120" height="36" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="480" y="142" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">expert 0</text>
+  <text x="480" y="156" text-anchor="middle" font-size="8" fill="#666">counts[0] 个</text>
+  <text x="550" y="148" font-size="8" fill="#2e6e2e" font-style="italic">← offsets[0]=0</text>
+
+  <!-- expert 1 -->
+  <g filter="url(#sk)"><rect x="420" y="168" width="100" height="36" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="470" y="182" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">expert 1</text>
+  <text x="470" y="196" text-anchor="middle" font-size="8" fill="#666">counts[1] 个</text>
+  <text x="530" y="188" font-size="8" fill="#2e6e2e" font-style="italic">← offsets[1]</text>
+
+  <!-- ellipsis -->
+  <text x="470" y="224" text-anchor="middle" font-size="14" fill="#888" font-weight="bold">. . .</text>
+
+  <!-- expert E-1 -->
+  <g filter="url(#sk)"><rect x="420" y="232" width="140" height="36" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="490" y="246" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">expert E-1</text>
+  <text x="490" y="260" text-anchor="middle" font-size="8" fill="#666">counts[E-1] 个</text>
+  <text x="570" y="252" font-size="8" fill="#2e6e2e" font-style="italic">← offsets[E-1]</text>
+
+  <text x="560" y="290" text-anchor="middle" font-size="9" fill="#2e6e2e" font-style="italic">无 padding，省显存</text>
+  <text x="560" y="306" text-anchor="middle" font-size="9" fill="#888" font-style="italic">需 group_offsets 显式标记边界</text>
+
+  <!-- ====== Bottom: sorted_x detailed layout ====== -->
+  <text x="450" y="350" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">sorted_x 内存布局（contiguous 拼接 + group_offsets 标记）</text>
+
+  <!-- Container -->
+  <g filter="url(#sk)"><rect x="60" y="368" width="780" height="120" rx="6" fill="#fffdf3" stroke="#5a5a5a" stroke-width="1.5"/></g>
+  <text x="80" y="388" font-size="10" fill="#444" font-family="monospace" font-weight="bold">sorted_x: [sum_m, d]</text>
+
+  <!-- expert 0 segment -->
+  <g filter="url(#sk)"><rect x="80" y="398" width="200" height="56" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="180" y="418" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">expert 0 的 token</text>
+  <text x="180" y="434" text-anchor="middle" font-size="9" fill="#666">counts[0] 个</text>
+  <text x="180" y="450" text-anchor="middle" font-size="8" fill="#2e6e2e" font-family="monospace">offsets[0] = 0</text>
+
+  <!-- expert 1 segment -->
+  <g filter="url(#sk)"><rect x="290" y="398" width="170" height="56" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="375" y="418" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">expert 1 的 token</text>
+  <text x="375" y="434" text-anchor="middle" font-size="9" fill="#666">counts[1] 个</text>
+  <text x="375" y="450" text-anchor="middle" font-size="8" fill="#7a5415" font-family="monospace">offsets[1] = counts[0]</text>
+
+  <!-- ellipsis -->
+  <text x="480" y="430" text-anchor="middle" font-size="14" fill="#888" font-weight="bold">. . .</text>
+
+  <!-- expert E-1 segment -->
+  <g filter="url(#sk)"><rect x="510" y="398" width="200" height="56" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="610" y="418" text-anchor="middle" font-size="10" fill="#5a3a7a" font-weight="bold">expert E-1 的 token</text>
+  <text x="610" y="434" text-anchor="middle" font-size="9" fill="#666">counts[E-1] 个</text>
+  <text x="610" y="450" text-anchor="middle" font-size="8" fill="#5a3a7a" font-family="monospace">offsets[E-1]</text>
+
+  <text x="450" y="478" text-anchor="middle" font-size="9" fill="#888" font-style="italic">offsets[E] = sum_m（末尾）</text>
+
+  <!-- ====== Bottom: comparison table ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="504" width="820" height="200" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="528" font-size="12" font-weight="bold" fill="#444">两种布局对比：</text>
+
+  <g font-size="10">
+    <text x="60" y="552" fill="#b85450" font-weight="bold">Padded</text>
+    <text x="160" y="552" fill="#444">A: [E, max_m, K]</text>
+    <text x="380" y="552" fill="#888">每专家 padding 到 max_m</text>
+    <text x="600" y="552" fill="#888">显存浪费，CUDA graph ✓</text>
+
+    <text x="60" y="574" fill="#2e6e2e" font-weight="bold">Contiguous</text>
+    <text x="160" y="574" fill="#444">A: [sum_m, K]</text>
+    <text x="380" y="574" fill="#888">无 padding，需 group_offsets</text>
+    <text x="600" y="574" fill="#888">省显存，CUDA graph ✗</text>
+
+    <text x="60" y="598" fill="#7a5415" font-weight="bold">kernel 复杂度</text>
+    <text x="160" y="598" fill="#444">Padded: 简单（batched GEMM）</text>
+    <text x="380" y="598" fill="#444">Contiguous: 复杂（变长 + 跨 group tile）</text>
+
+    <text x="60" y="620" fill="#5a3a7a" font-weight="bold">典型场景</text>
+    <text x="160" y="620" fill="#444">Padded: decode + CUDA graph</text>
+    <text x="380" y="620" fill="#444">Contiguous: prefill / 训练</text>
+
+    <text x="60" y="642" fill="#4a8edb" font-weight="bold">代表实现</text>
+    <text x="160" y="642" fill="#444">Padded: vLLM 早期、Day 1 朴素</text>
+    <text x="380" y="642" fill="#444">Contiguous: DeepGEMM、Triton fused_experts、Day 3</text>
+
+    <text x="60" y="666" fill="#b85450" font-weight="bold">折中方案</text>
+    <text x="160" y="666" fill="#444">DeepGEMM psum layout：group 间对齐 gap 但不 padding 到 max_m</text>
+  </g>
+
+  <text x="450" y="694" text-anchor="middle" font-size="10" fill="#888" font-style="italic">token_src_idx 记录每个 sorted token 的原始索引，combine 阶段用 output[token_src_idx] += score * sorted_output 散回</text>
+</svg>

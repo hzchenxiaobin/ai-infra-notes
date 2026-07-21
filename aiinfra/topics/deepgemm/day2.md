@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-               UE8M0           持久化调度          masked/k-group   EP 融合
-                  ↑
-                  你在这里（精度策略：不理解 scaling，读不懂 kernel 里的 promote 循环）
-```
+![Day 2 在一周知识图谱中的位置：FP8/FP4 Scaling，精度策略](../images/deepgemm_day2_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|

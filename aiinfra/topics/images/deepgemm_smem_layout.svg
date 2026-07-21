@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="22" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="560" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">SMEM 布局（kNumStages=3, BLOCK_M=128, BLOCK_N=128）</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Outer SMEM container -->
+  <g filter="url(#sk)">
+    <rect x="80" y="68" width="720" height="400" rx="6" fill="#fffdf3" stroke="#5a5a5a" stroke-width="2"/>
+  </g>
+  <text x="100" y="88" font-size="10" fill="#888" font-family="monospace">extern __shared__ __align__(1024) uint8_t smem_buffer[]</text>
+
+  <!-- ====== Section 1: Tensor Maps (KGrouped only) ====== -->
+  <g filter="url(#sk)"><rect x="100" y="100" width="680" height="40" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="120" y="120" font-size="11" fill="#5a3a7a" font-weight="bold">Tensor Maps</text>
+  <text x="240" y="120" font-size="9" fill="#666">仅 KGrouped 模式，2 × TmaDescriptor = 256B</text>
+  <text x="700" y="120" font-size="9" fill="#888" font-style="italic" text-anchor="end">:69</text>
+  <text x="120" y="134" font-size="9" fill="#888" font-family="monospace">smem_tensor_map_a, smem_tensor_map_b</text>
+
+  <!-- ====== Section 2: D ====== -->
+  <g filter="url(#sk)"><rect x="100" y="148" width="680" height="48" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="120" y="168" font-size="11" fill="#2b6e9e" font-weight="bold">D</text>
+  <text x="240" y="168" font-size="10" fill="#444">BLOCK_M × BLOCK_N × FP32 = 128×128×4</text>
+  <text x="700" y="168" font-size="9" fill="#888" font-style="italic" text-anchor="end">:70, :103</text>
+  <text x="240" y="184" font-size="11" fill="#2b6e9e" font-weight="bold">= 65536B (64KB)</text>
+  <text x="120" y="184" font-size="9" fill="#888">输出 buffer</text>
+
+  <!-- ====== Section 3: A (3 stages) ====== -->
+  <g filter="url(#sk)"><rect x="100" y="204" width="680" height="60" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+  <text x="120" y="224" font-size="11" fill="#b85450" font-weight="bold">A</text>
+  <text x="240" y="224" font-size="10" fill="#444">[stage 0][stage 1][stage 2] × BLOCK_M×BLOCK_K×FP8</text>
+  <text x="700" y="224" font-size="9" fill="#888" font-style="italic" text-anchor="end">:104-106</text>
+  <text x="240" y="240" font-size="11" fill="#b85450" font-weight="bold">= 3 × 128×128×1 = 49152B (48KB)</text>
+
+  <!-- 3 stage sub-boxes -->
+  <g filter="url(#sk)"><rect x="120" y="246" width="200" height="14" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8"/></g>
+  <text x="220" y="257" text-anchor="middle" font-size="8" fill="#b85450">stage 0 (16KB)</text>
+  <g filter="url(#sk)"><rect x="330" y="246" width="200" height="14" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8"/></g>
+  <text x="430" y="257" text-anchor="middle" font-size="8" fill="#b85450">stage 1 (16KB)</text>
+  <g filter="url(#sk)"><rect x="540" y="246" width="200" height="14" rx="2" fill="#fff" stroke="#b85450" stroke-width="0.8"/></g>
+  <text x="640" y="257" text-anchor="middle" font-size="8" fill="#b85450">stage 2 (16KB)</text>
+
+  <!-- ====== Section 4: B (3 stages) ====== -->
+  <g filter="url(#sk)"><rect x="100" y="272" width="680" height="60" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="120" y="292" font-size="11" fill="#7a5415" font-weight="bold">B</text>
+  <text x="240" y="292" font-size="10" fill="#444">[stage 0][stage 1][stage 2] × BLOCK_N×BLOCK_K×FP8</text>
+  <text x="700" y="292" font-size="9" fill="#888" font-style="italic" text-anchor="end">:107-109</text>
+  <text x="240" y="308" font-size="11" fill="#7a5415" font-weight="bold">= 3 × 128×128×1 = 49152B (48KB)</text>
+
+  <g filter="url(#sk)"><rect x="120" y="314" width="200" height="14" rx="2" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="220" y="325" text-anchor="middle" font-size="8" fill="#7a5415">stage 0 (16KB)</text>
+  <g filter="url(#sk)"><rect x="330" y="314" width="200" height="14" rx="2" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="430" y="325" text-anchor="middle" font-size="8" fill="#7a5415">stage 1 (16KB)</text>
+  <g filter="url(#sk)"><rect x="540" y="314" width="200" height="14" rx="2" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="640" y="325" text-anchor="middle" font-size="8" fill="#7a5415">stage 2 (16KB)</text>
+
+  <!-- ====== Section 5: SFA (3 stages) ====== -->
+  <g filter="url(#sk)"><rect x="100" y="340" width="680" height="48" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="120" y="360" font-size="11" fill="#2e6e2e" font-weight="bold">SFA</text>
+  <text x="240" y="360" font-size="10" fill="#444">[stage 0][stage 1][stage 2] × BLOCK_M×FP32</text>
+  <text x="700" y="360" font-size="9" fill="#888" font-style="italic" text-anchor="end">:111-113</text>
+  <text x="240" y="376" font-size="11" fill="#2e6e2e" font-weight="bold">= 3 × 128×4 = 1536B (1.5KB)</text>
+  <text x="120" y="376" font-size="9" fill="#888">scale factor A</text>
+
+  <!-- ====== Section 6: SFB (3 stages) ====== -->
+  <g filter="url(#sk)"><rect x="100" y="396" width="680" height="48" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="120" y="416" font-size="11" fill="#2e6e2e" font-weight="bold">SFB</text>
+  <text x="240" y="416" font-size="10" fill="#444">[stage 0][stage 1][stage 2] × BLOCK_N×FP32 (aligned 128B)</text>
+  <text x="700" y="416" font-size="9" fill="#888" font-style="italic" text-anchor="end">:114-116</text>
+  <text x="240" y="432" font-size="11" fill="#2e6e2e" font-weight="bold">= 3 × 512B = 1536B (1.5KB)</text>
+  <text x="120" y="432" font-size="9" fill="#888">scale factor B</text>
+
+  <!-- ====== Section 7: Barriers ====== -->
+  <g filter="url(#sk)"><rect x="100" y="452" width="680" height="40" rx="4" fill="#fff" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="120" y="472" font-size="11" fill="#444" font-weight="bold">Barriers</text>
+  <text x="240" y="472" font-size="10" fill="#444">full_barriers[3] + empty_barriers[3]</text>
+  <text x="700" y="472" font-size="9" fill="#888" font-style="italic" text-anchor="end">:120-124</text>
+  <text x="240" y="486" font-size="9" fill="#666">6 × ClusterTransactionBarrier</text>
+
+  <!-- Total summary -->
+  <g filter="url(#sk)">
+    <rect x="100" y="500" width="680" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="440" y="520" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">总计 ≈ 64 + 48 + 48 + 1.5 + 1.5 + barrier ≈ 163KB（&lt; 232KB SMEM 容量，occupancy=1）</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="540" width="800" height="14" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="3 2"/>
+  </g>
+  <text x="440" y="552" text-anchor="middle" font-size="10" fill="#444" font-style="italic">scale factor 也进 SMEM 流水线 → scale 读取与 WGMMA 完全 overlap，无额外延迟</text>
+</svg>

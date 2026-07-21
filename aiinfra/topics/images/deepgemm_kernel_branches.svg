@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="99" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="720" fill="#fdfcf7"/>
+
+  <text x="480" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Kernel 两 warpgroup 分支结构（sm90_fp8_gemm_1d1d.cuh:170-348）</text>
+  <path d="M 280 40 Q 480 48 680 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Root: warp_idx decision ====== -->
+  <g filter="url(#sk)"><rect x="340" y="68" width="280" height="44" rx="6" fill="#fffdf3" stroke="#5a5a5a" stroke-width="1.5"/></g>
+  <text x="480" y="88" text-anchor="middle" font-size="11" fill="#444" font-family="monospace" font-weight="bold">warp_idx &gt;= kNumMathThreads / 32 ?</text>
+  <text x="480" y="104" text-anchor="middle" font-size="9" fill="#888">（即 warp_idx 是否属于 TMA warpgroup）</text>
+
+  <!-- YES branch arrow -->
+  <path d="M 400 112 L 220 140" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="280" y="128" font-size="10" fill="#2e6e2e" font-weight="bold">YES</text>
+
+  <!-- NO branch arrow -->
+  <path d="M 560 112 L 740 140" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="660" y="128" font-size="10" fill="#b85450" font-weight="bold">NO</text>
+
+  <!-- ====== Left: TMA warpgroup branch ====== -->
+  <g filter="url(#sk)"><rect x="40" y="146" width="380" height="540" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="60" y="170" font-size="13" fill="#2e6e2e" font-weight="bold">TMA warpgroup 分支</text>
+  <text x="320" y="170" font-size="9" fill="#888" font-style="italic" text-anchor="end">:170-245</text>
+
+  <!-- Step 1: reg_dealloc -->
+  <g filter="url(#sk)"><rect x="60" y="186" width="340" height="44" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="206" font-size="10" fill="#2e6e2e" font-weight="bold">warpgroup_reg_dealloc&lt;kNumTMARegisters&gt;</text>
+  <text x="80" y="222" font-size="9" fill="#666">24（Normal）或 40（KGrouped）—— 释放寄存器给 Math wg</text>
+
+  <path d="M 230 230 L 230 244" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: elect_one_sync -->
+  <g filter="url(#sk)"><rect x="60" y="246" width="340" height="44" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="266" font-size="10" fill="#2e6e2e" font-weight="bold">elect_one_sync()</text>
+  <text x="80" y="282" font-size="9" fill="#666">128 线程中只有 1 个 thread 发射 TMA，其余休眠</text>
+
+  <path d="M 230 290 L 230 304" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: while loop -->
+  <g filter="url(#sk)"><rect x="60" y="306" width="340" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="230" y="328" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold" font-family="monospace">while (scheduler.get_next_block(...))</text>
+  <text x="380" y="328" font-size="9" fill="#888" text-anchor="end">← 持久化调度</text>
+
+  <path d="M 230 342 L 230 356" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 4: KGrouped tensormap update -->
+  <g filter="url(#sk)"><rect x="60" y="358" width="340" height="36" rx="4" fill="#fff" stroke="#8e5db8" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="80" y="380" font-size="9" fill="#5a3a7a" font-weight="bold">（KGrouped）更新 tensormap.replace</text>
+  <text x="380" y="380" font-size="9" fill="#888" text-anchor="end">:191-215</text>
+
+  <path d="M 230 394 L 230 408" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 5: for k_block loop -->
+  <g filter="url(#sk)"><rect x="60" y="410" width="340" height="120" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="230" y="430" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold" font-family="monospace">for k_block_idx in 0..num_k_blocks</text>
+
+  <g filter="url(#sk)"><rect x="80" y="438" width="300" height="26" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+  <text x="100" y="455" font-size="9" fill="#2e6e2e">├─ wait(empty_barriers[stage])</text>
+
+  <g filter="url(#sk)"><rect x="80" y="466" width="300" height="26" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+  <text x="100" y="483" font-size="9" fill="#b85450">├─ tma::copy × 4（SFA, SFB, A, B）</text>
+
+  <g filter="url(#sk)"><rect x="80" y="494" width="300" height="26" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="100" y="511" font-size="9" fill="#7a5415">└─ full_barrier.arrive_and_expect_tx(bytes)</text>
+
+  <!-- bottom note for TMA branch -->
+  <text x="230" y="558" text-anchor="middle" font-size="9" fill="#2e6e2e" font-style="italic">TMA 是单 thread 指令，不需要整个 warpgroup</text>
+  <text x="230" y="572" text-anchor="middle" font-size="9" fill="#888" font-style="italic">寄存器重配后其他 127 线程休眠</text>
+
+  <!-- ====== Right: Math warpgroup branch ====== -->
+  <g filter="url(#sk)"><rect x="540" y="146" width="380" height="540" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="560" y="170" font-size="13" fill="#b85450" font-weight="bold">Math warpgroup 分支</text>
+  <text x="820" y="170" font-size="9" fill="#888" font-style="italic" text-anchor="end">:246-348</text>
+
+  <!-- Step 1: reg_alloc -->
+  <g filter="url(#sk)"><rect x="560" y="186" width="340" height="44" rx="4" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="580" y="206" font-size="10" fill="#b85450" font-weight="bold">warpgroup_reg_alloc&lt;kNumMathRegisters&gt;</text>
+  <text x="580" y="222" font-size="9" fill="#666">240（Normal）或 232（KGrouped）—— 抢占更多寄存器</text>
+
+  <path d="M 730 230 L 730 244" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: lane mapping -->
+  <g filter="url(#sk)"><rect x="560" y="246" width="340" height="44" rx="4" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="580" y="266" font-size="10" fill="#b85450" font-weight="bold">计算 lane → accum 映射</text>
+  <text x="580" y="282" font-size="9" fill="#666" font-family="monospace">math_wg_idx, r_0, r_1, row_idx, col_idx</text>
+
+  <path d="M 730 290 L 730 304" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: while loop -->
+  <g filter="url(#sk)"><rect x="560" y="306" width="340" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="730" y="328" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold" font-family="monospace">while (scheduler.get_next_block(...))</text>
+  <text x="880" y="328" font-size="9" fill="#888" text-anchor="end">← 同一调度器</text>
+
+  <path d="M 730 342 L 730 356" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 4: for k_block loop -->
+  <g filter="url(#sk)"><rect x="560" y="358" width="340" height="150" rx="4" fill="#fff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="730" y="378" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold" font-family="monospace">for k_block_idx in 0..num_k_blocks</text>
+
+  <g filter="url(#sk)"><rect x="580" y="386" width="300" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+  <text x="600" y="401" font-size="9" fill="#2e6e2e">├─ wait(full_barriers[stage])</text>
+
+  <g filter="url(#sk)"><rect x="580" y="410" width="300" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="600" y="425" font-size="9" fill="#7a5415">├─ ld_shared(scale_a, scale_b)</text>
+
+  <g filter="url(#sk)"><rect x="580" y="434" width="300" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+  <text x="600" y="449" font-size="9" fill="#b85450">├─ warpgroup_arrive + wgmma×4 + commit + wait</text>
+
+  <g filter="url(#sk)"><rect x="580" y="458" width="300" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/></g>
+  <text x="600" y="473" font-size="9" fill="#2e6e2e">├─ empty_barrier_arrive(stage)</text>
+
+  <g filter="url(#sk)"><rect x="580" y="482" width="300" height="22" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="0.8"/></g>
+  <text x="600" y="497" font-size="9" fill="#5a3a7a">└─ promote with scales（4 次 FFMA）</text>
+
+  <path d="M 730 508 L 730 522" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 5: Epilogue -->
+  <g filter="url(#sk)"><rect x="560" y="524" width="340" height="100" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="730" y="544" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">Epilogue（tile 结束后）</text>
+
+  <g filter="url(#sk)"><rect x="580" y="550" width="300" height="20" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="600" y="564" font-size="9" fill="#7a5415">├─ tma_store_wait&lt;0&gt;()（等上一 tile）</text>
+
+  <g filter="url(#sk)"><rect x="580" y="572" width="300" height="20" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="600" y="586" font-size="9" fill="#7a5415">├─ st_shared(final_accum → smem_d)</text>
+
+  <g filter="url(#sk)"><rect x="580" y="594" width="300" height="20" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="0.8"/></g>
+  <text x="600" y="608" font-size="9" fill="#7a5415">└─ TMA_REDUCE_ADD_2D（写回 gmem）</text>
+
+  <!-- bottom note for Math branch -->
+  <text x="730" y="650" text-anchor="middle" font-size="9" fill="#b85450" font-style="italic">Math wg 需要大量寄存器存放展开的 accum</text>
+  <text x="730" y="664" text-anchor="middle" font-size="9" fill="#888" font-style="italic">2 个 math wg 各负责 64 行（BLOCK_M=128 时）</text>
+
+  <!-- ====== Bottom: reg reconfig summary ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="696" width="880" height="20" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="3 2"/>
+  </g>
+  <text x="460" y="710" text-anchor="middle" font-size="10" fill="#444">寄存器重配：Normal 模式 TMA 24 / Math 240　|　KGrouped 模式 TMA 40 / Math 232（TMA 需更多寄存器处理 tensormap.replace）</text>
+</svg>

@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-               UE8M0           持久化调度          masked/k-group   EP 融合
-                                  ↑
-                                  你在这里（Day 3 = 上半场：TMA/WGMMA/barrier；Day 4 = 下半场：调度器/epilogue/cluster）
-```
+![Day 3 在一周知识图谱中的位置：SM90 Kernel 上半场，TMA/WGMMA/barrier](../images/deepgemm_day3_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -71,16 +63,7 @@ CUTLASS_DEVICE void warpgroup_fence_operand(float& reg) {
 
 **时序关系**（`sm90_fp8_gemm_1d1d.cuh:291-306`）：
 
-```
-warpgroup_arrive()          ← wgmma.fence（确保 smem 数据就绪）
-  ├─ wgmma.mma_async #0     ← k==0, ScaleOut::Zero（覆盖 accum）
-  ├─ wgmma.mma_async #1     ← k==1, ScaleOut::One（累加进 accum）
-  ├─ wgmma.mma_async #2     ← k==2, ScaleOut::One
-  └─ wgmma.mma_async #3     ← k==3, ScaleOut::One
-warpgroup_commit_batch()    ← commit_group（4 次 MMA 打包成一个 group）
-warpgroup_fence_operand ×N  ← 防止编译器重排寄存器
-warpgroup_wait<0>()         ← wait_group 0（等这个 group 完成）
-```
+![WGMMA 三件套时序：fence → 4× mma_async → commit → wait，fence_operand 两次](../images/deepgemm_wgmma_trilogy.svg)
 
 > ⚠️ **为什么 fence_operand 要在 commit 后、wait 前各做一次？** 见 `:292-294`（commit 前）和 `:303-305`（wait 前）。编译器可能把 `accum` 的读写重排到 WGMMA 两侧——`fence_operand` 用空 asm + `"+f"` 约束强制编译器认为寄存器被修改了，阻止重排。
 
@@ -165,29 +148,7 @@ DG_STATIC_ASSERT(BLOCK_M % WGMMA::M == 0, "Invalid block size");
 
 读 `:68-125`，SMEM 是一块连续的 `extern __shared__` buffer，按以下顺序分配：
 
-```
-SMEM 布局（kNumStages = 3, BLOCK_M=128, BLOCK_N=128 为例）：
-┌────────────────────────────────────────────────────────────────────┐
-│ Tensor Maps (仅 KGrouped 模式，2 × TmaDescriptor = 256B)            │  ← :69
-├────────────────────────────────────────────────────────────────────┤
-│ D: BLOCK_M × BLOCK_N × FP32 = 128×128×4 = 65536B (64KB)            │  ← :70, :103
-├────────────────────────────────────────────────────────────────────┤
-│ A: [stage 0][stage 1][stage 2] × BLOCK_M×BLOCK_K×FP8              │  ← :104-106
-│    = 3 × 128×128×1 = 49152B (48KB)                                 │
-├────────────────────────────────────────────────────────────────────┤
-│ B: [stage 0][stage 1][stage 2] × BLOCK_N×BLOCK_K×FP8              │  ← :107-109
-│    = 3 × 128×128×1 = 49152B (48KB)                                 │
-├────────────────────────────────────────────────────────────────────┤
-│ SFA: [stage 0][stage 1][stage 2] × BLOCK_M×FP32                    │  ← :111-113
-│     = 3 × 128×4 = 1536B                                             │
-├────────────────────────────────────────────────────────────────────┤
-│ SFB: [stage 0][stage 1][stage 2] × BLOCK_N×FP32 (aligned 128B)    │  ← :114-116
-│     = 3 × 512B = 1536B                                              │
-├────────────────────────────────────────────────────────────────────┤
-│ full_barriers[3] + empty_barriers[3] (6 × ClusterTransactionBarrier)│  ← :120-124
-└────────────────────────────────────────────────────────────────────┘
-总计 ≈ 64 + 48 + 48 + 1.5 + 1.5 + barrier ≈ 163KB（< 232KB smem 容量）
-```
+![SMEM 布局：Tensor Maps / D / A×3 / B×3 / SFA×3 / SFB×3 / Barriers，总计 ~163KB](../images/deepgemm_smem_layout.svg)
 
 > 💡 **关键设计**：DeepGEMM 把 **scale factor 也放进 SMEM 流水线**——每个 stage 不仅有 A/B 数据，还有对应的 SFA/SFB。这样 scale 读取与 WGMMA 计算完全 overlap，不会因为 scale 加载引入额外延迟。
 >
@@ -323,12 +284,7 @@ if (warp_idx == kNumMathThreads / 32 + 1 and cute::elect_one_sync()) {
 
 #### 双 barrier 握手时序
 
-```
-时间 →
-TMA:   load stage0 → arrive(full[0], tx=bytes) → load stage1 → arrive(full[1]) → wait(empty[0]) → load stage0' → ...
-Math:                              wait(full[0]) → WGMMA → arrive(empty[0]) → wait(full[1]) → ...
-                                                    ↑ 两者在不同 stage 上并行
-```
+![双 Barrier 流水线：TMA warpgroup × Math warpgroup 的 full/empty barrier 握手](../images/deepgemm_barrier_timeline.svg)
 
 | Barrier | 生产者 | 消费者 | 含义 |
 |---------|--------|--------|------|
@@ -463,33 +419,7 @@ auto desc_b = mma::sm90::make_smem_desc(smem_b[stage_idx] + k * WGMMA::K, 1);
 
 #### 分支结构
 
-```
-warp_idx >= kNumMathThreads / 32 ?
-│
-├─ YES → TMA warpgroup 分支（:170-245）
-│        ├─ warpgroup_reg_dealloc<kNumTMARegisters>(24 或 40)
-│        ├─ elect_one_sync()（只有 1 个 thread 发射 TMA）
-│        └─ while (scheduler.get_next_block(...))     ← 持久化调度
-│             ├─ （KGrouped）更新 tensormap
-│             └─ for k_block_idx in 0..num_k_blocks
-│                  ├─ wait(empty_barriers[stage])
-│                  ├─ tma::copy × 4（SFA, SFB, A, B）
-│                  └─ full_barrier.arrive_and_expect_tx(bytes)
-│
-└─ NO → Math warpgroup 分支（:246-348）
-         ├─ warpgroup_reg_alloc<kNumMathRegisters>(232 或 240)
-         ├─ 计算 lane 到 accum 的映射（r_0, r_1, row_idx, col_idx）
-         └─ while (scheduler.get_next_block(...))     ← 同样的持久化调度
-              ├─ for k_block_idx in 0..num_k_blocks
-              │    ├─ wait(full_barriers[stage])
-              │    ├─ ld_shared(scale_a, scale_b)
-              │    ├─ warpgroup_arrive + wgmma × 4 + commit + wait
-              │    ├─ empty_barrier_arrive(stage)
-              │    └─ promote with scales（4 次 FFMA）
-              ├─ tma_store_wait<0>()（等上一个 tile 的 store 完成）
-              ├─ st_shared(final_accum → smem_d)
-              └─ TMA_REDUCE_ADD_2D（写回 gmem）
-```
+![Kernel 两 warpgroup 分支结构：TMA wg（reg_dealloc + elect + TMA×4）vs Math wg（reg_alloc + WGMMA×4 + epilogue）](../images/deepgemm_kernel_branches.svg)
 
 #### 寄存器重配
 

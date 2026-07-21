@@ -10,16 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3            Day 4           Day 5          Day 6        Day 7
- 总览      →   Gating +    →   Grouped       →   Expert      →  vLLM         → 完整       →  调优
- 算法动机      Top-K 融合      GEMM              Parallelism    fused_moe       Triton       ncu
- 数据流        Triton         Triton/CUTLASS    all-to-all     源码精读        MoE FFN      报告
- 路由算法      kernel          cuBLAS 对照      Megatron 通信                  性能对比
- 朴素实现
-  ↑
-  你在这里（地基：不理解 MoE 数据流与瓶颈，后面 6 天都不知道在优化什么）
-```
+![Day 1 在一周知识图谱中的位置：MoE 算法总览与朴素实现](../images/moe_day1_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -84,44 +75,7 @@ $$\text{MoE}(x) = \sum_{i \in \text{TopK}(g(x), K)} g_i(x) \cdot \text{FFN}_i(x)
 
 #### 前向数据流（验收 ① 的核心）
 
-```
-输入 x: [num_tokens, d]
-    │
-    ▼
-┌──────────────┐
-│   Gating     │  g = softmax(x @ W_g)   → [num_tokens, N]
-│  (门控网络)   │  W_g: [d, N]
-└──────────────┘
-    │
-    ▼
-┌──────────────┐
-│   Top-K      │  选每 token 亲和力最高的 K 个专家
-│   + 重归一化  │  g_topk, idx_topk = topk(g, K)
-│              │  g_topk = g_topk / g_topk.sum()   ← 对 K 个分数重归一化
-└──────────────┘
-    │
-    ▼
-┌──────────────┐
-│  Dispatch    │  按 idx_topk 把 token 散到对应专家
-│  (分派)      │  → 每 expert 收到一组 token（动态数量）
-└──────────────┘
-    │
-    ▼
-┌──────────────┐
-│  Expert FFN  │  对每 expert: y_e = FFN_e(x_e)
-│  (专家计算)   │  N 个专家并行（或 Grouped GEMM 单 kernel）
-└──────────────┘
-    │
-    ▼
-┌──────────────┐
-│   Combine    │  按 idx_topk 把专家输出散回原位置
-│  (合并)      │  y = Σ_{k=0}^{K-1} g_topk[:,k] * y_scattered[:,k]
-│              │  → [num_tokens, d]
-└──────────────┘
-    │
-    ▼
-输出 y: [num_tokens, d]
-```
+![MoE 前向数据流：门控 → Top-K → 分派 → 专家 → 合并](../images/moe_forward_dataflow.svg)
 
 > 💡 **关键洞察**：MoE 的"分派 → 专家 → 合并"本质是 **scatter-gather 模式**——token 按 expert 索引散开、各算各的、再按索引合并。这与稠密 GEMM 的"全员算同一矩阵"根本不同，是后面 Grouped GEMM（Day 3）与 EP all-to-all（Day 4）的算法基础。
 
@@ -283,41 +237,7 @@ topk_scores, topk_idx = masked_scores.topk(K, dim=-1)
 
 #### DeepSeekMoE 前向数据流（完整版）
 
-```
-输入 x: [T, d]
-    │
-    ├──────────────────────┐
-    │                      │
-    ▼                      ▼
-┌──────────┐         ┌──────────────┐
-│ 共享专家  │         │   Gating     │
-│ (N_s 个)  │         │  + 设受限路由 │
-│ 无门控    │         │  + Top-K     │
-└──────────┘         └──────────────┘
-    │                      │
-    │                      ▼
-    │              ┌──────────────┐
-    │              │   Dispatch   │  all-to-all（≤M 台设备）
-    │              └──────────────┘
-    │                      │
-    │                      ▼
-    │              ┌──────────────┐
-    │              │  路由专家 FFN │  N_r 个，每 token 激活 K_r
-    │              └──────────────┘
-    │                      │
-    │                      ▼
-    │              ┌──────────────┐
-    │              │   Combine    │  all-to-all 反向
-    │              └──────────────┘
-    │                      │
-    └──────────┬───────────┘
-               │
-               ▼
-    y = shared_out + routed_out
-               │
-               ▼
-输出 y: [T, d]
-```
+![DeepSeekMoE 前向数据流：共享专家 ‖ 路由专家分支](../images/moe_deepseek_dataflow.svg)
 
 ### 学习任务 5：朴素 PyTorch MoE 实现（45 分钟）
 

@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-               UE8M0           持久化调度          masked/k-group   EP 融合
-  ↑
-  你在这里（地基：不理解 JIT 与源码结构，后面 6 天都读不动）
-```
+![Day 1 在一周知识图谱中的位置：总览 + JIT 环境 + 源码地图](../images/deepgemm_day1_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -129,39 +121,7 @@ DeepGEMM 最独特的设计是**运行时 JIT**——安装时不编译任何 CU
 
 #### JIT 全流程（含两层架构）
 
-```
-Python: deep_gemm.fp8_gemm_nt(a, b, d, c=c)
-    │
-    ▼
-csrc/apis/gemm.hpp:73  fp8_gemm_nt()
-    │  构造 GemmDesc{gemm_type, m, n, k, dtype, num_sms, tc_util, ...}
-    │  调用 get_best_config<SM90ArchSpec>(desc) 选出 GemmConfig
-    │  （Layout / StorageConfig / PipelineConfig / LaunchConfig）
-    ▼
-csrc/jit_kernels/impls/sm90_fp8_gemm_1d1d.hpp:33  SM90FP8Gemm1D1DRuntime::generate_impl()
-    │  用 fmt::format 把 BLOCK_M/N/K、stages、num_threads 等
-    │  填进模板，渲染出一段 .cu 源码字符串
-    ▼
-csrc/jit/kernel_runtime.hpp:123  LaunchRuntime::generate()
-    │  IncludeParser 递归 hash 所有 <deep_gemm/*> 头文件
-    │  把 hash 值插到源码顶部（头文件改了就自动失效）
-    ▼
-csrc/jit/compiler.hpp:100  Compiler::build()
-    │  signature = name + 编译器签名 + flags + 源码 → SHA hash
-    │  缓存路径 = ~/.deep_gemm/cache/kernel.{name}.{hash}/
-    │  ① 命中内存缓存 → 直接返回 KernelRuntime
-    │  ② 命中磁盘缓存 → 加载 kernel.cubin
-    │  ③ 未命中 → 写 kernel.cu 到 tmp 目录，调 NVCC/NVRTC 编译
-    ▼
-csrc/jit/handle.hpp:135  load_kernel()
-    │  cuLibraryLoadFromFile 加载 .cubin
-    │  cuLibraryEnumerateKernels 取出唯一 kernel 符号
-    │  （旧驱动走 cuobjdump -symbols 解析 STT_FUNC）
-    ▼
-csrc/jit/kernel_runtime.hpp:139  LaunchRuntime::launch()
-    │  构造 CUlaunchConfig（grid/block/smem/cluster/PDL attr）
-    │  cuLaunchKernelEx 发射
-```
+![JIT 编译全流程：Python API → heuristics → 渲染 .cu → 编译 → 缓存 → 加载 → launch](../images/deepgemm_jit_flow.svg)
 
 > 💡 **关键洞察**：JIT 让 DeepGEMM 能针对**每个具体 shape** 生成最优 kernel——`BLOCK_M/N/K`、`kNumStages`、`kNumTMAMulticast`、`kNumSMs` 甚至 `SHAPE_M/N/K` 都作为编译期常量嵌入，编译器可充分常量传播与寄存器分配。这是它用"小代码量"达到"大库性能"的核心手段。代价是首次调用有编译延迟（NVRTC 可缓解）。
 
@@ -258,20 +218,7 @@ deep_gemm.set_block_size_multiple_of(block_m_multiple_of=128, block_n_multiple_o
 
 调参背后是 `csrc/jit_kernels/heuristics/` 的启发式选择器。`GemmDesc`（`config.hpp:12`）描述问题，`GemmConfig`（`config.hpp:143`）描述方案：
 
-```
-GemmDesc {gemm_type, kernel_type, m,n,k, num_groups, dtype, major_a/b, num_sms, tc_util, ...}
-    │
-    ▼  get_best_config<SM90ArchSpec>(desc)   (common.hpp:14)
-    │
-    ├─ get_layout_candidates:  枚举 block_m{16,32,64,128,256} × block_n × cluster{1,2} 组合
-    ├─ get_layout_info:        估算 num_waves / last_wave_util / num_cycles，挑最优
-    ├─ get_storage_config:     定 load/store block + swizzle mode
-    ├─ get_pipeline_config:    定 num_stages（受 smem_capacity=232448 限制，sm90.hpp:14）
-    └─ get_launch_config:      定 num_tma/math/epilogue threads
-    │
-    ▼
-GemmConfig {Layout, StorageConfig, PipelineConfig, LaunchConfig}
-```
+![Heuristics 流程：GemmDesc → get_best_config → 5 步选择 → GemmConfig](../images/deepgemm_heuristics_flow.svg)
 
 > 💡 **设计要点**：heuristics 是**纯 C++ host 代码**，不进 JIT 编译，可以快速枚举上百个候选 layout 并用 roofline 模型估算 cycle 数选出最优——而真正执行的 kernel 才走 JIT。这让"选 config"（微秒级）和"编译 kernel"（秒级，有缓存）解耦。
 

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="760" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">DeepSeekMoE 前向数据流：共享专家 ‖ 路由专家</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Input ====== -->
+  <g filter="url(#sk)"><rect x="340" y="68" width="200" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="3 2"/></g>
+  <text x="440" y="86" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">输入 x</text>
+  <text x="440" y="100" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">[T, d]</text>
+
+  <!-- Branch arrows -->
+  <path d="M 380 108 L 200 138" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 500 108 L 680 138" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Left branch: Shared Expert ====== -->
+  <g filter="url(#sk)"><rect x="60" y="140" width="280" height="100" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/></g>
+  <text x="200" y="164" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">共享专家（N_s 个）</text>
+  <text x="200" y="184" text-anchor="middle" font-size="10" fill="#666">无门控，所有 token 必过</text>
+  <text x="200" y="202" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">shared_out = Σ FFN_s(x)</text>
+  <text x="200" y="218" text-anchor="middle" font-size="9" fill="#2e6e2e" font-style="italic">捕捉通用知识（语法、常见模式）</text>
+  <text x="200" y="232" text-anchor="middle" font-size="9" fill="#2e6e2e" font-style="italic">稠密计算，可与 all-to-all overlap</text>
+
+  <!-- vertical line down from shared -->
+  <path d="M 200 240 L 200 600" stroke="#4a8e4a" stroke-width="1.2" fill="none" stroke-dasharray="4 2" filter="url(#sk)"/>
+
+  <!-- ====== Right branch: Gating + Routed Experts ====== -->
+  <g filter="url(#sk)"><rect x="540" y="140" width="280" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="680" y="162" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Gating + 设受限路由 + Top-K</text>
+  <text x="680" y="180" text-anchor="middle" font-size="9" fill="#666">先选亲和力最高的 M 台设备</text>
+  <text x="680" y="194" text-anchor="middle" font-size="9" fill="#666">再在其中做 Top-K（K_r 个路由专家）</text>
+
+  <path d="M 680 200 L 680 214" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Dispatch -->
+  <g filter="url(#sk)"><rect x="540" y="216" width="280" height="48" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="680" y="236" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Dispatch</text>
+  <text x="680" y="252" text-anchor="middle" font-size="9" fill="#888">all-to-all（≤ M 台设备）</text>
+
+  <path d="M 680 264 L 680 278" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Routed Expert FFN -->
+  <g filter="url(#sk)"><rect x="540" y="280" width="280" height="64" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="680" y="302" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">路由专家 FFN</text>
+  <text x="680" y="320" text-anchor="middle" font-size="10" fill="#666">N_r 个，每 token 激活 K_r</text>
+  <text x="680" y="336" text-anchor="middle" font-size="9" fill="#888">DeepSeek-V2: N_r=160, K_r=6</text>
+
+  <path d="M 680 344 L 680 358" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Combine -->
+  <g filter="url(#sk)"><rect x="540" y="360" width="280" height="48" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="680" y="380" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">Combine</text>
+  <text x="680" y="396" text-anchor="middle" font-size="9" fill="#888">all-to-all 反向 + 加权合并</text>
+
+  <!-- vertical line down from routed -->
+  <path d="M 680 408 L 680 600" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="4 2" filter="url(#sk)"/>
+
+  <!-- ====== Merge point ====== -->
+  <path d="M 200 600 L 380 620" stroke="#4a8e4a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 680 600 L 500 620" stroke="#b85450" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Sum box -->
+  <g filter="url(#sk)"><rect x="320" y="612" width="240" height="48" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="440" y="634" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">y = shared_out + routed_out</text>
+  <text x="440" y="650" text-anchor="middle" font-size="9" fill="#888">共享专家 + 路由专家加权</text>
+
+  <path d="M 440 660 L 440 674" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Output ====== -->
+  <g filter="url(#sk)"><rect x="340" y="676" width="200" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="3 2"/></g>
+  <text x="440" y="694" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">输出 y</text>
+  <text x="440" y="708" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">[T, d]</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="724" width="800" height="28" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="3 2"/>
+  </g>
+  <text x="440" y="742" text-anchor="middle" font-size="10" fill="#444" font-style="italic">DeepSeekMoE 三创新：细粒度专家（N_r=160）+ 共享专家（N_s=2）+ 设受限路由（M=3）</text>
+</svg>

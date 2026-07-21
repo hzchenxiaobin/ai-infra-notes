@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="540" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Heuristics：从 shape 到 GemmConfig 的选择流程</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Input: GemmDesc ====== -->
+  <g filter="url(#sk)"><rect x="60" y="68" width="760" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="80" y="90" font-size="11" fill="#2b6e9e" font-weight="bold">GemmDesc</text>
+  <text x="80" y="108" font-size="10" fill="#444" font-family="monospace">{gemm_type, kernel_type, m, n, k, num_groups, dtype, major_a/b, num_sms, tc_util, ...}</text>
+  <text x="800" y="108" font-size="9" fill="#888" text-anchor="end">描述问题</text>
+
+  <path d="M 440 124 L 440 140" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== get_best_config ====== -->
+  <g filter="url(#sk)"><rect x="280" y="142" width="320" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="440" y="167" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold" font-family="monospace">get_best_config&lt;SM90ArchSpec&gt;(desc)</text>
+  <text x="620" y="167" font-size="9" fill="#888">common.hpp:14</text>
+
+  <!-- 5 branches -->
+  <path d="M 440 182 L 440 196" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- branch 1: get_layout_candidates -->
+  <g filter="url(#sk)"><rect x="60" y="200" width="760" height="44" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="220" font-size="10" fill="#2e6e2e" font-weight="bold">├─ get_layout_candidates</text>
+  <text x="300" y="220" font-size="9" fill="#666">枚举 block_m{16,32,64,128,256} × block_n × cluster{1,2} 组合</text>
+  <text x="80" y="236" font-size="9" fill="#888" font-style="italic">数百个候选 layout</text>
+
+  <path d="M 440 244 L 440 252" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- branch 2: get_layout_info -->
+  <g filter="url(#sk)"><rect x="60" y="254" width="760" height="44" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="274" font-size="10" fill="#2e6e2e" font-weight="bold">├─ get_layout_info</text>
+  <text x="300" y="274" font-size="9" fill="#666">估算 num_waves / last_wave_util / num_cycles，挑最优</text>
+  <text x="80" y="290" font-size="9" fill="#888" font-style="italic">roofline 模型估算 cycle 数，last-wave 利用率纳入代价</text>
+
+  <path d="M 440 298 L 440 306" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- branch 3: get_storage_config -->
+  <g filter="url(#sk)"><rect x="60" y="308" width="760" height="36" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="328" font-size="10" fill="#2e6e2e" font-weight="bold">├─ get_storage_config</text>
+  <text x="300" y="328" font-size="9" fill="#666">定 load/store block + swizzle mode</text>
+
+  <path d="M 440 344 L 440 352" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- branch 4: get_pipeline_config -->
+  <g filter="url(#sk)"><rect x="60" y="354" width="760" height="36" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="374" font-size="10" fill="#2e6e2e" font-weight="bold">├─ get_pipeline_config</text>
+  <text x="300" y="374" font-size="9" fill="#666">定 num_stages（受 smem_capacity=232448 限制，sm90.hpp:14）</text>
+
+  <path d="M 440 390 L 440 398" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- branch 5: get_launch_config -->
+  <g filter="url(#sk)"><rect x="60" y="400" width="760" height="36" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="80" y="420" font-size="10" fill="#2e6e2e" font-weight="bold">└─ get_launch_config</text>
+  <text x="300" y="420" font-size="9" fill="#666">定 num_tma / math / epilogue threads</text>
+
+  <path d="M 440 436 L 440 450" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Output: GemmConfig ====== -->
+  <g filter="url(#sk)"><rect x="60" y="452" width="760" height="56" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="80" y="474" font-size="11" fill="#b85450" font-weight="bold">GemmConfig</text>
+  <text x="80" y="492" font-size="10" fill="#444" font-family="monospace">{Layout, StorageConfig, PipelineConfig, LaunchConfig}</text>
+  <text x="800" y="492" font-size="9" fill="#888" text-anchor="end">描述方案</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="518" width="800" height="16" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="3 2"/>
+  </g>
+  <text x="440" y="530" text-anchor="middle" font-size="10" fill="#444" font-style="italic">heuristics 是纯 C++ host 代码（不进 JIT），微秒级选 config；真正执行的 kernel 才走 JIT（秒级，有缓存）</text>
+</svg>

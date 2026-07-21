@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">WGMMA 三件套时序：fence → commit → wait</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Time axis -->
+  <text x="40" y="78" font-size="11" fill="#888" font-weight="bold">时间 →</text>
+  <line x1="70" y1="74" x2="830" y2="74" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" filter="url(#sk)"/>
+
+  <!-- ====== Step 1: warpgroup_arrive (fence) ====== -->
+  <g filter="url(#sk)"><rect x="70" y="92" width="150" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="145" y="114" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">warpgroup_arrive()</text>
+  <text x="145" y="130" text-anchor="middle" font-size="9" fill="#666" font-family="monospace">wgmma.fence.sync</text>
+  <text x="145" y="142" text-anchor="middle" font-size="8" fill="#888">确保 smem 数据就绪</text>
+
+  <path d="M 220 117 L 240 117" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 2: 4× wgmma.mma_async ====== -->
+  <g filter="url(#sk)"><rect x="240" y="80" width="380" height="74" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="430" y="100" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">4× wgmma.mma_async（BLOCK_K=128, K=32 → 4 次）</text>
+
+  <!-- 4 sub-boxes -->
+  <g filter="url(#sk)"><rect x="252" y="110" width="88" height="36" rx="3" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="296" y="126" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">mma #0</text>
+  <text x="296" y="140" text-anchor="middle" font-size="8" fill="#888">k=0, Zero</text>
+
+  <g filter="url(#sk)"><rect x="346" y="110" width="88" height="36" rx="3" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="390" y="126" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">mma #1</text>
+  <text x="390" y="140" text-anchor="middle" font-size="8" fill="#888">k=1, One</text>
+
+  <g filter="url(#sk)"><rect x="440" y="110" width="88" height="36" rx="3" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="484" y="126" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">mma #2</text>
+  <text x="484" y="140" text-anchor="middle" font-size="8" fill="#888">k=2, One</text>
+
+  <g filter="url(#sk)"><rect x="534" y="110" width="80" height="36" rx="3" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="574" y="126" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">mma #3</text>
+  <text x="574" y="140" text-anchor="middle" font-size="8" fill="#888">k=3, One</text>
+
+  <!-- annotations for ScaleOut -->
+  <text x="296" y="170" text-anchor="middle" font-size="8" fill="#b85450" font-style="italic">覆盖 accum</text>
+  <text x="390" y="170" text-anchor="middle" font-size="8" fill="#2e6e2e" font-style="italic">累加</text>
+  <text x="484" y="170" text-anchor="middle" font-size="8" fill="#2e6e2e" font-style="italic">累加</text>
+  <text x="574" y="170" text-anchor="middle" font-size="8" fill="#2e6e2e" font-style="italic">累加</text>
+
+  <path d="M 620 117 L 640 117" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 3: commit ====== -->
+  <g filter="url(#sk)"><rect x="640" y="92" width="180" height="50" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="730" y="114" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">warpgroup_commit_batch()</text>
+  <text x="730" y="130" text-anchor="middle" font-size="9" fill="#666" font-family="monospace">wgmma.commit_group</text>
+  <text x="730" y="142" text-anchor="middle" font-size="8" fill="#888">4 次 MMA 打包成 1 group</text>
+
+  <!-- ====== Step 4: fence_operand (before commit, after commit) ====== -->
+  <g filter="url(#sk)"><rect x="240" y="194" width="380" height="36" rx="4" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="430" y="216" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">warpgroup_fence_operand ×N</text>
+  <text x="430" y="228" text-anchor="middle" font-size="8" fill="#888">空 asm + "+f" 约束，防编译器重排 accum 寄存器读写</text>
+
+  <!-- annotation arrows for fence_operand timing -->
+  <g filter="url(#sk)">
+    <path d="M 280 194 L 280 154" stroke="#c98a2b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+    <path d="M 580 194 L 580 154" stroke="#c98a2b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+  </g>
+  <text x="200" y="180" font-size="8" fill="#7a5415" font-style="italic">commit 前</text>
+  <text x="610" y="180" font-size="8" fill="#7a5415" font-style="italic">wait 前</text>
+
+  <!-- ====== Step 5: wait ====== -->
+  <path d="M 730 142 L 730 248" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="640" y="248" width="180" height="50" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="730" y="270" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">warpgroup_wait&lt;0&gt;()</text>
+  <text x="730" y="286" text-anchor="middle" font-size="9" fill="#666" font-family="monospace">wgmma.wait_group 0</text>
+  <text x="730" y="298" text-anchor="middle" font-size="8" fill="#888">等所有 group 完成</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="800" height="70" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="344" font-size="11" font-weight="bold" fill="#444">为什么 fence_operand 要调两次？</text>
+  <text x="60" y="362" font-size="10" fill="#444">① commit 前：确保 accum 是"干净"的输入（前一次 WGMMA 的输出已写入）</text>
+  <text x="60" y="378" font-size="10" fill="#444">② wait 前：确保 WGMMA 写完才读 accum（防编译器把 load 重排到 wait 之前）</text>
+</svg>
