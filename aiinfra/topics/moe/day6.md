@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3            Day 4           Day 5          Day 6        Day 7
- 总览      →   Gating +    →   Grouped       →   Expert      →  vLLM         → 完整       →  调优
- 算法动机      Top-K 融合      GEMM              Parallelism    fused_moe       Triton       ncu
- 数据流        Triton         Triton/CUTLASS    all-to-all     源码精读        MoE FFN      报告
- 路由算法      kernel          cuBLAS 对照      Megatron 通信                  性能对比
- 朴素实现                                                      ↑
-                                                           你在这里（组装：把 Day 2-5 的组件拼成端到端 MoE FFN）
-```
+![Day 6 在一周知识图谱中的位置：组装完整 Triton MoE FFN 层](../images/moe_day6_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -47,26 +39,7 @@ Day 1          Day 2           Day 3            Day 4           Day 5          D
 
 #### 整体架构（借鉴 vLLM 的三段式）
 
-```
-TritonMoEFFN.forward(x: [T, d]):
-    │
-    ├─ Step 1: Gating + Top-K (Day 2 kernel)
-    │   topk_scores, topk_idx = triton_gating_topk(x, w_gate, top_k)
-    │
-    ├─ Step 2: Sort + Dispatch (Day 3 sort + Day 5 间接寻址)
-    │   sorted_token_ids, expert_offsets = moe_align_block_size(topk_idx, ...)
-    │   # 不显式搬 token，GEMM kernel 间接寻址
-    │
-    ├─ Step 3: GEMM 1 (w1) + SiLU (Day 3 GEMM + Day 5 SiLU)
-    │   intermediate = grouped_gemm(x, w1, sorted_token_ids, ...)  # [max_m*N, 2*K_ffn]
-    │   intermediate = silu_and_mul(intermediate)                   # [max_m*N, K_ffn]
-    │
-    ├─ Step 4: GEMM 2 (w2) (Day 3 GEMM)
-    │   expert_output = grouped_gemm(intermediate, w2, sorted_token_ids, ...)  # [max_m*N, d]
-    │
-    └─ Step 5: Combine (Day 5 kernel)
-        output = fused_combine(expert_output, topk_scores, sorted_token_ids, ...)  # [T, d]
-```
+![TritonMoEFFN.forward 五步架构：Gating+TopK → Sort+Dispatch → GEMM1+SiLU → GEMM2 → Combine](../images/moe_triton_moe_architecture.svg)
 
 #### 与 vLLM 的差异
 

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="560" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">TritonMoEFFN.forward 五步架构（借鉴 vLLM 三段式）</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Input -->
+  <g filter="url(#sk)"><rect x="320" y="68" width="240" height="40" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="3 2"/></g>
+  <text x="440" y="86" text-anchor="middle" font-size="11" fill="#444" font-weight="bold" font-family="monospace">TritonMoEFFN.forward(x)</text>
+  <text x="440" y="100" text-anchor="middle" font-size="9" fill="#888" font-family="monospace">x: [T, d]</text>
+
+  <path d="M 440 108 L 440 122" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 1: Gating + Top-K ====== -->
+  <g filter="url(#sk)"><rect x="80" y="124" width="720" height="64" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="100" y="146" font-size="11" fill="#2e6e2e" font-weight="bold">Step 1: Gating + Top-K</text>
+  <text x="320" y="146" font-size="9" fill="#888" font-style="italic">（Day 2 融合 kernel）</text>
+  <text x="100" y="164" font-size="10" fill="#444" font-family="monospace">topk_scores, topk_idx = triton_gating_topk(x, w_gate, top_k)</text>
+  <text x="100" y="180" font-size="9" fill="#888">输出 topk_scores: [T, K], topk_idx: [T, K]</text>
+
+  <path d="M 440 188 L 440 202" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 2: Sort + Dispatch ====== -->
+  <g filter="url(#sk)"><rect x="80" y="204" width="720" height="72" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="100" y="226" font-size="11" fill="#7a5415" font-weight="bold">Step 2: Sort + Dispatch</text>
+  <text x="320" y="226" font-size="9" fill="#888" font-style="italic">（Day 3 sort + Day 5 间接寻址）</text>
+  <text x="100" y="244" font-size="10" fill="#444" font-family="monospace">sorted_token_ids, expert_offsets = moe_align_block_size(topk_idx, ...)</text>
+  <text x="100" y="260" font-size="9" fill="#7a5415" font-style="italic">不显式搬 token，GEMM kernel 间接寻址</text>
+  <text x="100" y="272" font-size="9" fill="#888">输出 sorted_token_ids: [max_m*N], expert_offsets: [N+1]</text>
+
+  <path d="M 440 276 L 440 290" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 3: GEMM 1 + SiLU ====== -->
+  <g filter="url(#sk)"><rect x="80" y="292" width="720" height="80" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="100" y="314" font-size="11" fill="#b85450" font-weight="bold">Step 3: GEMM 1 (w1) + SiLU</text>
+  <text x="320" y="314" font-size="9" fill="#888" font-style="italic">（Day 3 GEMM + Day 5 SiLU）</text>
+  <text x="100" y="332" font-size="10" fill="#444" font-family="monospace">intermediate = grouped_gemm(x, w1, sorted_token_ids, ...)</text>
+  <text x="100" y="348" font-size="10" fill="#444" font-family="monospace">intermediate = silu_and_mul(intermediate)</text>
+  <text x="100" y="364" font-size="9" fill="#888">输出 intermediate: [max_m*N, K_ffn]（SiLU(gate)*up 后）</text>
+
+  <path d="M 440 372 L 440 386" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 4: GEMM 2 (w2) ====== -->
+  <g filter="url(#sk)"><rect x="80" y="388" width="720" height="64" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="100" y="410" font-size="11" fill="#5a3a7a" font-weight="bold">Step 4: GEMM 2 (w2)</text>
+  <text x="320" y="410" font-size="9" fill="#888" font-style="italic">（Day 3 GEMM）</text>
+  <text x="100" y="428" font-size="10" fill="#444" font-family="monospace">expert_output = grouped_gemm(intermediate, w2, sorted_token_ids, ...)</text>
+  <text x="100" y="444" font-size="9" fill="#888">输出 expert_output: [max_m*N, d]</text>
+
+  <path d="M 440 452 L 440 466" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ====== Step 5: Combine ====== -->
+  <g filter="url(#sk)"><rect x="80" y="468" width="720" height="64" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="100" y="490" font-size="11" fill="#2b6e9e" font-weight="bold">Step 5: Combine</text>
+  <text x="320" y="490" font-size="9" fill="#888" font-style="italic">（Day 5 kernel）</text>
+  <text x="100" y="508" font-size="10" fill="#444" font-family="monospace">output = fused_combine(expert_output, topk_scores, sorted_token_ids, ...)</text>
+  <text x="100" y="524" font-size="9" fill="#888">输出 output: [T, d]（加权累加 K 个专家输出）</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="540" width="800" height="16" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="3 2"/>
+  </g>
+  <text x="440" y="552" text-anchor="middle" font-size="10" fill="#444" font-style="italic">设计取舍：host 端 sort（简化）+ 间接寻址（省 1 次显存往返）+ 独立 SiLU kernel（Triton epilogue 弱）</text>
+</svg>
