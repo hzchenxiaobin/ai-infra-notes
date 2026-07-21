@@ -3,7 +3,8 @@
 Build the MoE topic website from README.md.
 
 Generates:
-  - index.html: overview page from README.md, with anchor navigation for Day 1-7
+  - index.html: overview page from README.md
+  - day1.html ~ day7.html: one page per day (if dayN.md files exist)
   - images/: copies MoE-related SVGs from aiinfra/topics/images/ (if present)
 
 This builder is copied into public/moe/ by the root build.py, so all asset
@@ -76,10 +77,34 @@ def extract_day_headings_from_readme(readme_text: str) -> list:
     return days
 
 
-def build_nav(current_day: Optional[int] = None, nav_days: list = None) -> str:
+def extract_day_files() -> list:
+    """Extract day info from moe/dayN.md files if they exist."""
+    day_title_pattern = re.compile(r"^# Day (\d+)[（(][^)）]*[）)]*[：:]\s*(.+)$")
+    days = []
+    for md_path in sorted(TOPIC_DIR.glob("day*.md")):
+        text = md_path.read_text(encoding="utf-8")
+        text = rewrite_local_paths(text)
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        match = day_title_pattern.match(first_line)
+        if not match:
+            print(f"Warning: skipping {md_path}, cannot parse Day title")
+            continue
+        days.append({
+            "num": int(match.group(1)),
+            "title": match.group(2).strip(),
+            "markdown": "\n".join(text.strip().splitlines()[1:]),
+        })
+    days.sort(key=lambda d: d["num"])
+    return days
+
+
+def build_nav(current_day: Optional[int] = None, nav_days: list = None, day_files: list = None) -> str:
     """Build sidebar navigation for the MoE topic site."""
     if nav_days is None:
         nav_days = []
+    if day_files is None:
+        day_files = []
+    has_day_files = bool(day_files)
 
     lines = []
     lines.append('<div class="nav-section-title">返回主站</div>')
@@ -93,7 +118,10 @@ def build_nav(current_day: Optional[int] = None, nav_days: list = None) -> str:
 
     for day in nav_days:
         day_active = " active" if current_day == day["num"] else ""
-        href = f'index.html#day-{day["num"]}'
+        if has_day_files:
+            href = f'day{day["num"]}.html'
+        else:
+            href = f'index.html#day-{day["num"]}'
         lines.append(
             f'<a class="nav-link day-link{day_active}" href="{href}">'
             f'Day {day["num"]}：{day["title"]}'
@@ -237,17 +265,19 @@ def copy_images(output_dir: Path) -> None:
 def build_website(output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    day_files = extract_day_files()
     readme_path = TOPIC_DIR / "README.md"
     if not readme_path.exists():
         raise FileNotFoundError(f"{TOPIC_DISPLAY} README not found: {readme_path}")
     overview = rewrite_local_paths(readme_path.read_text(encoding="utf-8"))
     readme_days = extract_day_headings_from_readme(overview)
 
-    if readme_days:
+    # Always build overview page; if dayN.md files exist, also build per-day pages.
+    if day_files:
         day_cards_html = '<div class="day-cards">\n'
-        for day in readme_days:
+        for day in day_files:
             day_cards_html += (
-                f'<a class="day-card" href="#day-{day["num"]}">\n'
+                f'<a class="day-card" href="day{day["num"]}.html">\n'
                 f'  <div class="day-card-number">Day {day["num"]}</div>\n'
                 f'  <div class="day-card-title">{day["title"]}</div>\n'
                 f'</a>\n'
@@ -255,17 +285,44 @@ def build_website(output_dir: Path) -> None:
         day_cards_html += '</div>\n'
         overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
     else:
-        overview_with_cards = overview
+        # README already contains all Day sections; generate anchor cards from headings.
+        if readme_days:
+            day_cards_html = '<div class="day-cards">\n'
+            for day in readme_days:
+                day_cards_html += (
+                    f'<a class="day-card" href="#day-{day["num"]}">\n'
+                    f'  <div class="day-card-number">Day {day["num"]}</div>\n'
+                    f'  <div class="day-card-title">{day["title"]}</div>\n'
+                    f'</a>\n'
+                )
+            day_cards_html += '</div>\n'
+            overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
+        else:
+            overview_with_cards = overview
 
+    nav_days = day_files if day_files else readme_days
     overview_html = page_template(
         title=f"{TOPIC_DISPLAY} 专题",
-        nav_html=build_nav(current_day=None, nav_days=readme_days),
+        nav_html=build_nav(current_day=None, nav_days=nav_days, day_files=day_files),
         markdown=overview_with_cards,
         is_overview=True,
         page_title=f"{TOPIC_DISPLAY} 专题 - AI Infra 学习笔记",
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
+
+    # Per-day pages (only when dedicated dayN.md files exist)
+    for day in day_files:
+        html = page_template(
+            title=f"Day {day['num']}：{day['title']}",
+            nav_html=build_nav(current_day=day["num"], nav_days=nav_days, day_files=day_files),
+            markdown=day["markdown"],
+            is_overview=False,
+            page_title=f"MoE Day {day['num']} - {day['title']}",
+        )
+        filename = f"day{day['num']}.html"
+        (output_dir / filename).write_text(html, encoding="utf-8")
+        print(f"Generated: {output_dir / filename}")
 
     copy_images(output_dir)
 

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="460" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">MoE 门控数据流：Logits → Softmax → Top-K → Scatter</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Top: Naive 3-step -->
+  <text x="220" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">朴素三步（3 次 kernel launch + 2 次中间落盘 HBM）</text>
+
+  <!-- Step 1: GEMM -->
+  <g filter="url(#sk)"><rect x="40" y="80" width="180" height="50" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="130" y="100" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">① GEMM</text>
+  <text x="130" y="116" text-anchor="middle" font-size="9" fill="#888">logits = x @ gate.T</text>
+  <text x="130" y="128" text-anchor="middle" font-size="8" fill="#888">[T,D]×[D,N] → [T,N]</text>
+  <path d="M 130 130 L 130 146" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- HBM write -->
+  <g filter="url(#sk)"><rect x="60" y="146" width="140" height="18" rx="2" fill="#fff" stroke="#ddd" stroke-dasharray="3 2"/></g>
+  <text x="130" y="159" text-anchor="middle" font-size="8" fill="#b85450">写 HBM [T,N]</text>
+  <path d="M 130 164 L 130 178" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: Softmax -->
+  <g filter="url(#sk)"><rect x="40" y="178" width="180" height="50" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="130" y="198" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">② Softmax</text>
+  <text x="130" y="214" text-anchor="middle" font-size="9" fill="#888">scores = softmax(logits)</text>
+  <text x="130" y="226" text-anchor="middle" font-size="8" fill="#888">逐行 reduce</text>
+  <path d="M 130 228 L 130 244" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- HBM write 2 -->
+  <g filter="url(#sk)"><rect x="60" y="244" width="140" height="18" rx="2" fill="#fff" stroke="#ddd" stroke-dasharray="3 2"/></g>
+  <text x="130" y="257" text-anchor="middle" font-size="8" fill="#b85450">写 HBM [T,N]</text>
+  <path d="M 130 262 L 130 276" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: Top-K -->
+  <g filter="url(#sk)"><rect x="40" y="276" width="180" height="50" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="130" y="296" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">③ Top-K</text>
+  <text x="130" y="312" text-anchor="middle" font-size="9" fill="#888">topk_val, topk_idx</text>
+  <text x="130" y="324" text-anchor="middle" font-size="8" fill="#888">[T,k]</text>
+
+  <!-- Divider -->
+  <line x1="260" y1="64" x2="260" y2="340" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <!-- Right: Fused -->
+  <text x="640" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Triton 融合（1 次 kernel launch，寄存器内完成）</text>
+
+  <g filter="url(#sk)"><rect x="460" y="90" width="360" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="640" y="114" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">Fused Gating Kernel</text>
+  <text x="640" y="132" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">tl.dot(x, w.T) → tl.softmax</text>
+  <text x="640" y="148" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">→ K 轮 tl.argmax + 屏蔽</text>
+  <text x="640" y="164" text-anchor="middle" font-size="9" fill="#888">全部在寄存器内，零中间落盘</text>
+
+  <!-- Why fuse box -->
+  <g filter="url(#sk)"><rect x="460" y="190" width="360" height="80" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="640" y="210" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">为什么融合收益大？</text>
+  <text x="480" y="228" font-size="9" fill="#555">• GEMM 很小（[T,D]×[D,N]，N 通常 8-64）</text>
+  <text x="480" y="244" font-size="9" fill="#555">• 瓶颈不是算力，是 kernel launch + HBM 往返</text>
+  <text x="480" y="260" font-size="9" fill="#555">• 小 batch 下 launch 开销占比极高</text>
+
+  <!-- Top-K strategy box -->
+  <g filter="url(#sk)"><rect x="460" y="286" width="360" height="76" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 2"/></g>
+  <text x="640" y="306" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">Top-K 策略（按 N 大小选）</text>
+  <text x="480" y="324" font-size="9" fill="#555">N ≤ 32: 寄存器内 K 轮 argmax  O(KN)</text>
+  <text x="480" y="340" font-size="9" fill="#555">32 &lt; N ≤ 256: bitonic sort       O(N log²N)</text>
+  <text x="480" y="356" font-size="9" fill="#555">N &gt; 256: radix select             O(N)</text>
+
+  <!-- Bottom comparison -->
+  <g filter="url(#sk)">
+    <rect x="40" y="384" width="820" height="60" rx="8" fill="#fce4ec" stroke="#b85450" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="408" font-size="12" font-weight="bold" fill="#b85450">对比：</text>
+  <text x="120" y="408" font-size="11" fill="#444">朴素 3 次 launch + 2 次 HBM 落盘</text>
+  <text x="440" y="408" font-size="14" fill="#2e6e2e" font-weight="bold">→ 融合 1 次 launch + 0 次落盘</text>
+  <text x="60" y="430" font-size="11" fill="#7a5415" font-weight="bold">典型加速 3-5x（小 batch 更明显，launch 开销占比高）</text>
+</svg>
