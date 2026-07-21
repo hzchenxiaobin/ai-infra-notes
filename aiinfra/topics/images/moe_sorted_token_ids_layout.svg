@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="440" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">vLLM sorted_token_ids 内存布局（padded 到 BLOCK_M 倍数）</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Container label -->
+  <text x="60" y="80" font-size="11" fill="#444" font-family="monospace" font-weight="bold">sorted_token_ids: [max_num_tokens_per_expert * N]</text>
+
+  <!-- Expert 0 segment -->
+  <g filter="url(#sk)"><rect x="60" y="92" width="240" height="140" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="180" y="112" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">expert 0</text>
+  <line x1="80" y1="120" x2="280" y2="120" stroke="#4a8e4a" stroke-width="0.6" stroke-dasharray="2 2"/>
+
+  <!-- expert 0 token ids -->
+  <g filter="url(#sk)"><rect x="80" y="128" width="200" height="28" rx="3" fill="#fff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="180" y="146" text-anchor="middle" font-size="9" fill="#2e6e2e" font-family="monospace">token_id_0, token_id_1, ...</text>
+
+  <!-- expert 0 padding -->
+  <g filter="url(#sk)"><rect x="80" y="160" width="200" height="36" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="180" y="178" text-anchor="middle" font-size="9" fill="#aaa">padding, padding, ...</text>
+  <text x="180" y="190" text-anchor="middle" font-size="8" fill="#aaa" font-style="italic">padding 到 BLOCK_M 倍数</text>
+
+  <text x="180" y="216" text-anchor="middle" font-size="9" fill="#2e6e2e" font-style="italic">有效 token + padding</text>
+
+  <!-- Expert 1 segment -->
+  <g filter="url(#sk)"><rect x="320" y="92" width="240" height="140" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="440" y="112" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">expert 1</text>
+  <line x1="340" y1="120" x2="540" y2="120" stroke="#c98a2b" stroke-width="0.6" stroke-dasharray="2 2"/>
+
+  <g filter="url(#sk)"><rect x="340" y="128" width="200" height="28" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="440" y="146" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">token_id_5, token_id_8, ...</text>
+
+  <g filter="url(#sk)"><rect x="340" y="160" width="200" height="36" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="440" y="178" text-anchor="middle" font-size="9" fill="#aaa">padding, padding, ...</text>
+  <text x="440" y="190" text-anchor="middle" font-size="8" fill="#aaa" font-style="italic">padding 到 BLOCK_M 倍数</text>
+
+  <text x="440" y="216" text-anchor="middle" font-size="9" fill="#7a5415" font-style="italic">有效 token + padding</text>
+
+  <!-- ellipsis -->
+  <text x="610" y="160" text-anchor="middle" font-size="16" fill="#888" font-weight="bold">. . .</text>
+
+  <!-- Expert N-1 segment -->
+  <g filter="url(#sk)"><rect x="660" y="92" width="200" height="140" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="760" y="112" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">expert N-1</text>
+  <line x1="680" y1="120" x2="840" y2="120" stroke="#8e5db8" stroke-width="0.6" stroke-dasharray="2 2"/>
+
+  <g filter="url(#sk)"><rect x="680" y="128" width="160" height="28" rx="3" fill="#fff" stroke="#8e5db8" stroke-width="1"/></g>
+  <text x="760" y="146" text-anchor="middle" font-size="9" fill="#5a3a7a" font-family="monospace">token_id_...</text>
+
+  <g filter="url(#sk)"><rect x="680" y="160" width="160" height="36" rx="3" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="760" y="178" text-anchor="middle" font-size="9" fill="#aaa">padding, ...</text>
+
+  <text x="760" y="216" text-anchor="middle" font-size="9" fill="#5a3a7a" font-style="italic">有效 token + padding</text>
+
+  <!-- ====== Bottom: key insight ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="256" width="820" height="170" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="280" font-size="12" font-weight="bold" fill="#444">与 Day 3 contiguous 布局的关键区别：</text>
+
+  <text x="60" y="304" font-size="10" fill="#2e6e2e" font-weight="bold">vLLM padded 布局</text>
+  <text x="220" y="304" font-size="10" fill="#444">每 expert padding 到 BLOCK_M 倍数</text>
+  <text x="540" y="304" font-size="10" fill="#888">sorted_token_ids 是扁平数组</text>
+
+  <text x="60" y="326" font-size="10" fill="#7a5415" font-weight="bold">Day 3 contiguous</text>
+  <text x="220" y="326" font-size="10" fill="#444">无 padding，group_offsets 标记边界</text>
+  <text x="540" y="326" font-size="10" fill="#888">省显存但 tile 分配复杂</text>
+
+  <text x="60" y="350" font-size="10" fill="#5a3a7a" font-weight="bold">间接寻址</text>
+  <text x="220" y="350" font-size="10" fill="#444" font-family="monospace">x_tile = tl.load(x_ptr + sorted_token_ids[...])</text>
+
+  <text x="60" y="372" font-size="10" fill="#b85450" font-weight="bold">padding 位置</text>
+  <text x="220" y="372" font-size="10" fill="#444">token_id 设为 num_tokens（超出范围），mask 填 0</text>
+
+  <text x="60" y="396" font-size="10" fill="#4a8edb" font-weight="bold">GEMM tile</text>
+  <text x="220" y="396" font-size="10" fill="#444">可跨 expert 边界（同一 expert 的 padded 块内），但不跨 expert</text>
+
+  <text x="60" y="418" font-size="10" fill="#888" font-style="italic">vLLM 选 padded：推理 batch 小，padding 浪费可接受 + tile 分配简单 + device 端单 kernel 生成</text>
+</svg>

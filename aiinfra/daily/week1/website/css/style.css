@@ -776,12 +776,24 @@ body {
     border-radius: 8px;
     border: 1px solid var(--border-color);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-    transform: scale(0.95);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    transform-origin: center center;
     transition: transform 0.25s ease;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .image-lightbox.active img {
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.image-lightbox img.dragging {
+    cursor: grabbing;
+    transition: none;
 }
 
 .image-lightbox .lightbox-close {

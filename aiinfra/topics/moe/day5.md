@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3            Day 4           Day 5          Day 6        Day 7
- 总览      →   Gating +    →   Grouped       →   Expert      →  vLLM         → 完整       →  调优
- 算法动机      Top-K 融合      GEMM              Parallelism    fused_moe       Triton       ncu
- 数据流        Triton         Triton/CUTLASS    all-to-all     源码精读        MoE FFN      报告
- 路由算法      kernel          cuBLAS 对照      Megatron 通信
- 朴素实现                                                       ↑
-                                                            你在这里（生产级 MoE 推理：vLLM fused_moe 源码精读）
-```
+![Day 5 在一周知识图谱中的位置：vLLM fused_moe 源码精读](../images/moe_day5_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -154,15 +146,7 @@ def moe_align_block_size_kernel(
 
 输出布局：
 
-```
-sorted_token_ids: [max_num_tokens_per_expert * N]
-┌──────────────────────────────┬──────────────────────────────┬─────┐
-│ expert 0                     │ expert 1                     │ ... │
-│ [token_id_0, token_id_1,     │ [token_id_5, token_id_8,     │     │
-│  ..., padding, padding]      │  ..., padding, padding]      │     │
-│  (padding 到 BLOCK_M 倍数)    │  (padding 到 BLOCK_M 倍数)    │     │
-└──────────────────────────────┴──────────────────────────────┴─────┘
-```
+![vLLM sorted_token_ids 内存布局：按 expert 排序 + padding 到 BLOCK_M 倍数](../images/moe_sorted_token_ids_layout.svg)
 
 > ⚠️ **与 Day 3 的区别**：Day 3 用 contiguous 布局（无 padding，`group_offsets` 标记边界），vLLM 用 padded 布局（每 expert padding 到 BLOCK_M 倍数，`sorted_token_ids` 是扁平数组）。padded 让 GEMM tile 分配更简单（每 expert 的 tile 数是 `count // BLOCK_M` 的整数倍），但浪费 padding 计算。
 
