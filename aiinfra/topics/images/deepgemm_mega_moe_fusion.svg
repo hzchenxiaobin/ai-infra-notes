@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Mega MoE：单 Kernel 融合 EP + 2×GEMM + SwiGLU + EP</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Traditional 5-step -->
+  <text x="220" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">传统 MoE FFN（5 个 kernel，串行）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="80" width="320" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="80" y="103" font-size="10" fill="#b85450" font-weight="bold">① EP dispatch</text>
+  <text x="220" y="103" font-size="9" fill="#888">all-to-all（SM 空闲，纯通信）</text>
+  <path d="M 220 116 L 220 128" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="128" width="320" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="80" y="151" font-size="10" fill="#7a5415" font-weight="bold">② Linear 1</text>
+  <text x="220" y="151" font-size="9" fill="#888">x @ W1.T（FP8 GEMM）</text>
+  <path d="M 220 164 L 220 176" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="176" width="320" height="36" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="80" y="199" font-size="10" fill="#5a3a7a" font-weight="bold">③ SwiGLU</text>
+  <text x="220" y="199" font-size="9" fill="#888">silu(gate) * up</text>
+  <path d="M 220 212 L 220 224" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="224" width="320" height="36" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="80" y="247" font-size="10" fill="#7a5415" font-weight="bold">④ Linear 2</text>
+  <text x="220" y="247" font-size="9" fill="#888">h @ W2.T（FP8 GEMM）</text>
+  <path d="M 220 260 L 220 272" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="272" width="320" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="80" y="295" font-size="10" fill="#b85450" font-weight="bold">⑤ EP combine</text>
+  <text x="220" y="295" font-size="9" fill="#888">all-to-all（SM 空闲，纯通信）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="318" width="320" height="40" rx="4" fill="#fff" stroke="#ddd" stroke-dasharray="3 2"/></g>
+  <text x="220" y="336" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">5 次 kernel launch</text>
+  <text x="220" y="350" text-anchor="middle" font-size="9" fill="#b85450">② ⑤ 期间 Tensor Core 空闲</text>
+
+  <!-- Divider -->
+  <line x1="420" y1="60" x2="420" y2="370" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <!-- Right: Mega MoE single kernel -->
+  <text x="660" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Mega MoE（1 个 kernel，通信藏在计算里）</text>
+
+  <g filter="url(#sk)"><rect x="460" y="80" width="400" height="260" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="660" y="102" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">Mega MoE Kernel（单 launch）</text>
+
+  <!-- Compute pipeline inside -->
+  <g filter="url(#sk)"><rect x="480" y="116" width="100" height="32" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="530" y="136" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">TMA load</text>
+
+  <path d="M 580 132 L 600 132" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="600" y="116" width="100" height="32" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="650" y="136" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">WGMMA L1</text>
+
+  <path d="M 700 132 L 720 132" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="720" y="116" width="120" height="32" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="780" y="136" text-anchor="middle" font-size="9" fill="#5a3a7a" font-weight="bold">SwiGLU</text>
+
+  <!-- Second row -->
+  <g filter="url(#sk)"><rect x="720" y="160" width="120" height="32" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="780" y="180" text-anchor="middle" font-size="9" fill="#7a5415" font-weight="bold">WGMMA L2</text>
+
+  <path d="M 720 176 L 700 176" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="600" y="160" width="100" height="32" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="650" y="180" text-anchor="middle" font-size="9" fill="#2b6e9e" font-weight="bold">TMA store</text>
+
+  <!-- NVLink overlap arrows -->
+  <g filter="url(#sk)">
+    <path d="M 530 148 Q 490 200 530 252" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)"/>
+    <path d="M 650 192 Q 650 220 650 248" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)"/>
+  </g>
+
+  <g filter="url(#sk)"><rect x="480" y="248" width="360" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="530" y="268" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">NVLink recv</text>
+  <text x="660" y="268" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">EP dispatch</text>
+  <text x="790" y="268" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">NVLink send</text>
+
+  <text x="660" y="304" text-anchor="middle" font-size="8" fill="#888">↑ NVLink 通信藏在 WGMMA 计算影子里 ↑</text>
+  <text x="660" y="318" text-anchor="middle" font-size="8" fill="#2e6e2e" font-style="italic">SM 在等 NVLink 时持续做 WGMMA</text>
+
+  <!-- Summary box -->
+  <g filter="url(#sk)"><rect x="460" y="318" width="400" height="40" rx="4" fill="#fff" stroke="#ddd" stroke-dasharray="3 2"/></g>
+  <text x="660" y="336" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">1 次 kernel launch</text>
+  <text x="660" y="350" text-anchor="middle" font-size="9" fill="#2e6e2e">Tensor Core 全程不空转</text>
+
+  <!-- Bottom: key points -->
+  <g filter="url(#sk)">
+    <rect x="40" y="384" width="820" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="408" font-size="12" font-weight="bold" fill="#444">关键约束与洞察：</text>
+
+  <text x="60" y="430" font-size="10" fill="#b85450" font-weight="bold">① 多进程 + 对称内存</text>
+  <text x="240" y="430" font-size="10" fill="#444">所有 rank 的 GPU 地址映射到同一物理地址，NVLink 可直接读写</text>
+
+  <text x="60" y="450" font-size="10" fill="#7a5415" font-weight="bold">② PyTorch >= 2.9</text>
+  <text x="240" y="450" font-size="10" fill="#444">需对称内存 API（get_symm_buffer_for_mega_moe）</text>
+
+  <text x="60" y="470" font-size="10" fill="#2e6e2e" font-weight="bold">③ 权重预处理</text>
+  <text x="240" y="470" font-size="10" fill="#444">FP4 + UE8M0 scale 布局（transform_weights_for_mega_moe）</text>
+
+  <text x="60" y="490" font-size="10" fill="#5a3a7a" font-weight="bold">④ 哲学</text>
+  <text x="240" y="490" font-size="10" fill="#444">同 FA3 的"让 Tensor Core 不空转"——把通信藏在计算影子里</text>
+</svg>

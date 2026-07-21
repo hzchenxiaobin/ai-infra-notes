@@ -100,6 +100,8 @@ if (warp_idx == kNumMathThreads / 32 and cute::elect_one_sync()) {
 
 #### mbarrier 的双 barrier 设计
 
+![DeepGEMM 双 Barrier 流水线：TMA warpgroup × Math warpgroup](../images/deepgemm_barrier_timeline.svg)
+
 DeepGEMM 用**成对 barrier**——`full_barriers` 和 `empty_barriers` 各 `kNumStages` 个：
 
 | Barrier | 生产者 | 消费者 | 含义 |

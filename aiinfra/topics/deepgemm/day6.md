@@ -13,6 +13,8 @@
 
 #### 融合了什么
 
+![Mega MoE：单 Kernel 融合 EP + 2×GEMM + SwiGLU + EP](../images/deepgemm_mega_moe_fusion.svg)
+
 传统 MoE FFN 的 5 步：
 ```
 1. EP dispatch（all-to-all 发送 token 到专家所在卡）
