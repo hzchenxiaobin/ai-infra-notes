@@ -149,6 +149,7 @@ topics/
 - 过长则拆分为多个专题（如 `cutlass-gemm`、`cutlass-epilogue`）
 
 ### 图片
+- **禁止 ASCII 图片**：所有示意图、流程图、架构图一律用 SVG，不要在 Markdown 中嵌入 ASCII 字符画（如用 `+---+`、`|   |` 拼成的表格或流程图）
 - SVG 命名：全小写 + 下划线，语义化（如 `cutlass_three_level_abstraction.svg`）
 - 每个专题引用 3-6 张 SVG
 - alt 文本用中文
