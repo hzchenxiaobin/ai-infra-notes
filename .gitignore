@@ -71,33 +71,8 @@ aiinfra/daily/week8/website/kernels/
 aiinfra/daily/week8/website/exercise/
 aiinfra/daily/week8/website/notes/
 
-# Generated CUTLASS topic website files
-aiinfra/topics/cutlass/website/index.html
-aiinfra/topics/cutlass/website/day*.html
-aiinfra/topics/cutlass/website/images/
-aiinfra/topics/cutlass/website/kernels/
-
-# Generated Triton topic website files
-aiinfra/topics/triton/website/index.html
-aiinfra/topics/triton/website/day*.html
-aiinfra/topics/triton/website/images/
-aiinfra/topics/triton/website/kernels/
-
-# Generated CuTe topic website files
-aiinfra/topics/cute/website/index.html
-aiinfra/topics/cute/website/day*.html
-aiinfra/topics/cute/website/images/
-aiinfra/topics/cute/website/kernels/
-
-# Generated DeepGEMM topic website files
-aiinfra/topics/deepgemm/website/index.html
-aiinfra/topics/deepgemm/website/day*.html
-aiinfra/topics/deepgemm/website/images/
-
-# Generated MoE topic website files
-aiinfra/topics/moe/website/index.html
-aiinfra/topics/moe/website/day*.html
-aiinfra/topics/moe/website/images/
+# Generated topic website files (built by aiinfra/topics/build.py)
+aiinfra/topics/website/
 
 # Generated LeetCode website files
 leetcode/website/index.html

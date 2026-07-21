@@ -13,17 +13,15 @@ Generates:
     - week8 website files (copied from aiinfra/daily/week8/website)
     - leetcode website files (copied from leetcode/website)
     - leetgpu website files (copied from leetgpu/website)
-    - cutlass topic website files (copied from aiinfra/topics/cutlass/website)
-    - triton topic website files (copied from aiinfra/topics/triton/website)
-    - cute topic website files (copied from aiinfra/topics/cute/website)
-    - deepgemm topic website files (copied from aiinfra/topics/deepgemm/website)
-    - moe topic website files (copied from aiinfra/topics/moe/website)
+    - topic website files (built by aiinfra/topics/build.py and copied from aiinfra/topics/website/)
     - paper reading website files (copied from aiinfra/paper/website)
 """
 
 import shutil
 import subprocess
 from pathlib import Path
+
+from aiinfra.topics.build import discover_topics, topic_display
 
 
 def compute_relative_path(from_file: Path, to_path: str) -> str:
@@ -35,7 +33,7 @@ def compute_relative_path(from_file: Path, to_path: str) -> str:
     return "../" * depth + to_path
 
 
-def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
+def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path, topics: list) -> str:
     """Insert extra cross-site links into the sidebar navigation."""
     rel_leetcode = compute_relative_path(
         html_file.relative_to(public_dir), "leetcode/index.html"
@@ -43,34 +41,20 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path) -> str:
     rel_leetgpu = compute_relative_path(
         html_file.relative_to(public_dir), "leetgpu/index.html"
     )
-    rel_cutlass = compute_relative_path(
-        html_file.relative_to(public_dir), "cutlass/index.html"
-    )
-    rel_triton = compute_relative_path(
-        html_file.relative_to(public_dir), "triton/index.html"
-    )
-    rel_cute = compute_relative_path(
-        html_file.relative_to(public_dir), "cute/index.html"
-    )
-    rel_deepgemm = compute_relative_path(
-        html_file.relative_to(public_dir), "deepgemm/index.html"
-    )
-    rel_moe = compute_relative_path(
-        html_file.relative_to(public_dir), "moe/index.html"
-    )
     rel_paper = compute_relative_path(
         html_file.relative_to(public_dir), "paper/index.html"
     )
-    extra_section = f'''<div class="nav-section-title">更多</div>
-<a class="nav-link" href="{rel_paper}">📄 论文精读</a>
-<a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>
-<a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>
-<a class="nav-link" href="{rel_cutlass}">⚡ CUTLASS 专题</a>
-<a class="nav-link" href="{rel_triton}">🐍 Triton 专题</a>
-<a class="nav-link" href="{rel_cute}">🔷 CuTe 专题</a>
-<a class="nav-link" href="{rel_deepgemm}">🔶 DeepGEMM 专题</a>
-<a class="nav-link" href="{rel_moe}">🧩 MoE 专题</a>
-'''
+    lines = [
+        '<div class="nav-section-title">更多</div>',
+        f'<a class="nav-link" href="{rel_paper}">📄 论文精读</a>',
+        f'<a class="nav-link" href="{rel_leetcode}">🧩 LeetCode 题解</a>',
+        f'<a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>',
+    ]
+    for slug in sorted(topics):
+        rel = compute_relative_path(html_file.relative_to(public_dir), f"{slug}/index.html")
+        display = topic_display(slug)
+        lines.append(f'<a class="nav-link" href="{rel}">{display} 专题</a>')
+    extra_section = "\n".join(lines) + "\n"
     return html_text.replace(
         "            </nav>\n        </aside>",
         "            </nav>\n" + extra_section + "        </aside>",
@@ -273,84 +257,18 @@ def main() -> None:
     if leetgpu_images_src.exists():
         copy_directory_contents(leetgpu_images_src, leetgpu_images_dst)
 
-    # Build CUTLASS topic website
-    print("Building CUTLASS topic website...")
+    # Build all topic websites (auto-discovers subdirectories with README.md)
+    print("Building topic websites...")
     subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "topics" / "cutlass" / "website" / "build.py")],
+        ["python3", str(repo_root / "aiinfra" / "topics" / "build.py")],
         check=True,
     )
 
-    # Copy CUTLASS topic website to public/cutlass/
-    print("Copying CUTLASS topic website to public/cutlass/...")
-    cutlass_dst = public_dir / "cutlass"
+    # Copy topic websites to public/<topic>/
+    print("Copying topic websites to public/...")
     copy_directory_contents(
-        repo_root / "aiinfra" / "topics" / "cutlass" / "website",
-        cutlass_dst,
-        skip={"build.py", "README.md"},
-    )
-
-    # Build Triton topic website
-    print("Building Triton topic website...")
-    subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "topics" / "triton" / "website" / "build.py")],
-        check=True,
-    )
-
-    # Copy Triton topic website to public/triton/
-    print("Copying Triton topic website to public/triton/...")
-    triton_dst = public_dir / "triton"
-    copy_directory_contents(
-        repo_root / "aiinfra" / "topics" / "triton" / "website",
-        triton_dst,
-        skip={"build.py", "README.md"},
-    )
-
-    # Build CuTe topic website
-    print("Building CuTe topic website...")
-    subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "topics" / "cute" / "website" / "build.py")],
-        check=True,
-    )
-
-    # Copy CuTe topic website to public/cute/
-    print("Copying CuTe topic website to public/cute/...")
-    cute_dst = public_dir / "cute"
-    copy_directory_contents(
-        repo_root / "aiinfra" / "topics" / "cute" / "website",
-        cute_dst,
-        skip={"build.py", "README.md"},
-    )
-
-    # Build DeepGEMM topic website
-    print("Building DeepGEMM topic website...")
-    subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "topics" / "deepgemm" / "website" / "build.py")],
-        check=True,
-    )
-
-    # Copy DeepGEMM topic website to public/deepgemm/
-    print("Copying DeepGEMM topic website to public/deepgemm/...")
-    deepgemm_dst = public_dir / "deepgemm"
-    copy_directory_contents(
-        repo_root / "aiinfra" / "topics" / "deepgemm" / "website",
-        deepgemm_dst,
-        skip={"build.py", "README.md"},
-    )
-
-    # Build MoE topic website
-    print("Building MoE topic website...")
-    subprocess.run(
-        ["python3", str(repo_root / "aiinfra" / "topics" / "moe" / "website" / "build.py")],
-        check=True,
-    )
-
-    # Copy MoE topic website to public/moe/
-    print("Copying MoE topic website to public/moe/...")
-    moe_dst = public_dir / "moe"
-    copy_directory_contents(
-        repo_root / "aiinfra" / "topics" / "moe" / "website",
-        moe_dst,
-        skip={"build.py", "README.md"},
+        repo_root / "aiinfra" / "topics" / "website",
+        public_dir,
     )
 
     # Build Paper Reading website
@@ -376,22 +294,17 @@ def main() -> None:
         copy_directory_contents(paper_images_src, paper_images_dst)
 
     # Insert extra navigation links into all course pages (aiinfra/daily/week1~week8
-    # and extra pages), but not into the leetcode, leetgpu, cutlass, triton, cute,
-    # deepgemm or moe subsites themselves.
+    # and extra pages), but not into the leetcode, leetgpu or any topic subsites.
+    topics = discover_topics()
+    excluded_parts = {"leetcode", "leetgpu"} | set(topics)
     course_pages = [
         p for p in public_dir.rglob("*.html")
-        if "leetcode" not in p.relative_to(public_dir).parts
-        and "leetgpu" not in p.relative_to(public_dir).parts
-        and "cutlass" not in p.relative_to(public_dir).parts
-        and "triton" not in p.relative_to(public_dir).parts
-        and "cute" not in p.relative_to(public_dir).parts
-        and "deepgemm" not in p.relative_to(public_dir).parts
-        and "moe" not in p.relative_to(public_dir).parts
+        if not any(part in excluded_parts for part in p.relative_to(public_dir).parts)
     ]
     for html_file in course_pages:
         if html_file.is_file():
             html_text = html_file.read_text(encoding="utf-8")
-            html_text = insert_extra_nav(html_text, html_file, public_dir)
+            html_text = insert_extra_nav(html_text, html_file, public_dir, topics)
             html_file.write_text(html_text, encoding="utf-8")
             print(f"Updated nav: {html_file}")
 

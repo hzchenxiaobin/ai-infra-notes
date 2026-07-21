@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Build the DeepGEMM topic website from README.md.
+Build all topic websites under aiinfra/topics/.
 
-Generates:
-  - index.html: overview page from README.md
-  - day1.html ~ day7.html: one page per day (if dayN.md files exist)
-  - images/: copies DeepGEMM-related SVGs from aiinfra/topics/images/ (if present)
+Discovers every subdirectory that contains README.md, generates:
+  - website/<topic>/index.html      (overview from README.md)
+  - website/<topic>/day1.html ~ dayN.html (when dayN.md files exist)
+  - website/<topic>/images/         (topic-related SVGs)
+  - website/<topic>/kernels/ etc.   (copied local assets if present)
 
-This builder is copied into public/deepgemm/ by the root build.py, so all asset
-links use root_prefix="../" to reach public/css/, public/js/, etc.
+The root build.py copies website/ into public/, so assets use root_prefix="../".
 """
 
 import re
@@ -17,11 +17,23 @@ from pathlib import Path
 from typing import Optional
 
 
-TOPIC_DIR = Path(__file__).parent.parent
-TOPICS_DIR = TOPIC_DIR.parent
-WEBSITE_DIR = Path(__file__).parent
-TOPIC_NAME = "deepgemm"
-TOPIC_DISPLAY = "DeepGEMM"
+TOPICS_DIR = Path(__file__).parent
+WEBSITE_DIR = TOPICS_DIR / "website"
+IMAGES_SRC = TOPICS_DIR / "images"
+
+# Display names for known topics; new topics fall back to title-cased slug.
+TOPIC_DISPLAY_NAMES = {
+    "cutlass": "⚡ CUTLASS",
+    "triton": "🐍 Triton",
+    "cute": "🔷 CuTe",
+    "deepgemm": "🔶 DeepGEMM",
+    "moe": "🧩 MoE",
+}
+
+
+def topic_display(slug: str) -> str:
+    """Return a human-readable display name for a topic slug."""
+    return TOPIC_DISPLAY_NAMES.get(slug, slug.replace("_", " ").title())
 
 
 def escape_for_template_string(text: str) -> str:
@@ -34,8 +46,8 @@ def escape_for_template_string(text: str) -> str:
 
 
 def rewrite_local_paths(markdown_text: str) -> str:
-    """Rewrite local asset/cross-links so they work after deployment to public/deepgemm/."""
-    # Images referenced as ../images/xxx.svg from README.md
+    """Rewrite local asset/cross-links so they work after deployment to public/<topic>/."""
+    # Images referenced as ../images/xxx.svg
     markdown_text = re.sub(r"\]\(\.\./images/", "](images/", markdown_text)
     # Cross-topic README links: ../cutlass/README.md -> ../cutlass/index.html
     markdown_text = re.sub(
@@ -65,7 +77,7 @@ def rewrite_local_paths(markdown_text: str) -> str:
 
 
 def extract_day_headings_from_readme(readme_text: str) -> list:
-    """Parse ## Day N headings from README to generate sidebar navigation anchors."""
+    """Parse ## Day N headings from README to generate overview cards/anchors."""
     heading_pattern = re.compile(r"^## Day (\d+)[（(][^)）]*[）)]*[：:]\s*(.+)$", re.MULTILINE)
     days = []
     for match in heading_pattern.finditer(readme_text):
@@ -77,11 +89,11 @@ def extract_day_headings_from_readme(readme_text: str) -> list:
     return days
 
 
-def extract_day_files() -> list:
-    """Extract day info from deepgemm/dayN.md files if they exist."""
-    day_title_pattern = re.compile(r"^# Day (\d+)[（(][^)）]*[）)]*[：:]\s*(.+)$")
+def extract_day_files(topic_dir: Path) -> list:
+    """Extract day info from <topic>/dayN.md files if they exist."""
+    day_title_pattern = re.compile(r"^# Day (\d+)(?:[（(][^)）]*[）)])*[：:]\s*(.+)$")
     days = []
-    for md_path in sorted(TOPIC_DIR.glob("day*.md")):
+    for md_path in sorted(topic_dir.glob("day*.md")):
         text = md_path.read_text(encoding="utf-8")
         text = rewrite_local_paths(text)
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
@@ -98,8 +110,10 @@ def extract_day_files() -> list:
     return days
 
 
-def build_nav(current_day: Optional[int] = None, nav_days: list = None, day_files: list = None) -> str:
-    """Build sidebar navigation for the DeepGEMM topic site."""
+def build_nav(topic_slug: str, topic_display_name: str,
+              current_day: Optional[int] = None, nav_days: list = None,
+              day_files: list = None) -> str:
+    """Build sidebar navigation for a topic site."""
     if nav_days is None:
         nav_days = []
     if day_files is None:
@@ -111,7 +125,7 @@ def build_nav(current_day: Optional[int] = None, nav_days: list = None, day_file
     lines.append('<a class="nav-link" href="../index.html">← AI Infra 主页</a>')
     lines.append('<a class="nav-link" href="../plan.html">📋 8 周计划</a>')
 
-    lines.append(f'<div class="nav-section-title" style="margin-top:1rem;">{TOPIC_DISPLAY} 专题</div>')
+    lines.append(f'<div class="nav-section-title" style="margin-top:1rem;">{topic_display_name} 专题</div>')
 
     overview_active = " active" if current_day is None else ""
     lines.append(f'<a class="nav-link{overview_active}" href="index.html">📌 专题概览</a>')
@@ -139,7 +153,7 @@ def page_template(
     page_title: Optional[str] = None,
 ) -> str:
     escaped_markdown = escape_for_template_string(markdown)
-    page_title = page_title if page_title is not None else f"{TOPIC_DISPLAY} - {title}"
+    page_title = page_title if page_title is not None else title
     back_link = '<a class="back-link" href="index.html">← 返回概览</a>' if not is_overview else ""
     bottom_nav = '<div class="day-nav-bottom"><a class="back-link" href="index.html">← 返回概览</a></div>' if not is_overview else ""
 
@@ -150,12 +164,10 @@ def page_template(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
     <link rel="stylesheet" href="../css/style.css?v=4">
-    <!-- Marked.js for Markdown rendering (local v4.3.0) -->
     <script src="../js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="../js/markdown-math.js"></script>
-    <!-- Prism.js for syntax highlighting (local) -->
     <link href="../css/prism-tomorrow.min.css" rel="stylesheet">
     <script src="../js/prism.min.js"></script>
     <script src="../js/prism-c.min.js"></script>
@@ -202,7 +214,7 @@ def page_template(
                 .replace(/-+/g, '-')
                 .replace(/^-|-$/g, '');
 
-            const dayMatch = raw.match(/^Day (\\d+)[（(][^)）]*[）)]*[:：]\\s*(.+)$/);
+            const dayMatch = raw.match(/^Day (\\d+)(?:[（(][^)）]*[）)])*[:：]\\s*(.+)$/);
             if (dayMatch) {{
                 anchor = 'day-' + dayMatch[1];
             }}
@@ -245,34 +257,42 @@ def page_template(
 """
 
 
-def copy_images(output_dir: Path) -> None:
+def copy_topic_images(topic_slug: str, output_dir: Path) -> int:
     """Copy topic-related SVG images from aiinfra/topics/images/ to output/images/."""
-    src = TOPICS_DIR / "images"
     dst = output_dir / "images"
-    if not src.exists():
-        print(f"Warning: images source not found: {src}")
-        return
     dst.mkdir(parents=True, exist_ok=True)
     copied = 0
-    prefix = f"{TOPIC_NAME}_"
-    for item in src.iterdir():
-        if item.is_file() and item.suffix.lower() == ".svg" and item.name.startswith(prefix):
-            shutil.copy2(item, dst / item.name)
-            copied += 1
-    print(f"Copied {copied} {TOPIC_DISPLAY} SVG images: {src} -> {dst}")
+    prefix = f"{topic_slug}_"
+    if IMAGES_SRC.exists():
+        for item in IMAGES_SRC.iterdir():
+            if item.is_file() and item.suffix.lower() == ".svg" and item.name.startswith(prefix):
+                shutil.copy2(item, dst / item.name)
+                copied += 1
+    print(f"Copied {copied} {topic_slug} SVG images")
+    return copied
 
 
-def build_website(output_dir: Path) -> None:
+def copy_local_dirs(topic_dir: Path, output_dir: Path) -> None:
+    """Copy local asset dirs (kernels, notes, benchmark, images) if they exist."""
+    for name in ("kernels", "notes", "benchmark", "images"):
+        src = topic_dir / name
+        if src.exists() and any(src.iterdir()):
+            dst = output_dir / name
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+            print(f"Copied: {src} -> {dst}")
+
+
+def build_topic(topic_dir: Path, output_dir: Path) -> None:
+    """Generate a single topic website."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    slug = topic_dir.name
+    display = topic_display(slug)
 
-    day_files = extract_day_files()
-    readme_path = TOPIC_DIR / "README.md"
-    if not readme_path.exists():
-        raise FileNotFoundError(f"{TOPIC_DISPLAY} README not found: {readme_path}")
+    readme_path = topic_dir / "README.md"
     overview = rewrite_local_paths(readme_path.read_text(encoding="utf-8"))
     readme_days = extract_day_headings_from_readme(overview)
+    day_files = extract_day_files(topic_dir)
 
-    # Always build overview page; if dayN.md files exist, also build per-day pages.
     if day_files:
         day_cards_html = '<div class="day-cards">\n'
         for day in day_files:
@@ -285,7 +305,6 @@ def build_website(output_dir: Path) -> None:
         day_cards_html += '</div>\n'
         overview_with_cards = overview + '\n\n## 🚀 进入每日学习\n\n' + day_cards_html
     else:
-        # README already contains all Day sections; generate anchor cards from headings.
         if readme_days:
             day_cards_html = '<div class="day-cards">\n'
             for day in readme_days:
@@ -302,30 +321,51 @@ def build_website(output_dir: Path) -> None:
 
     nav_days = day_files if day_files else readme_days
     overview_html = page_template(
-        title=f"{TOPIC_DISPLAY} 专题",
-        nav_html=build_nav(current_day=None, nav_days=nav_days, day_files=day_files),
+        title=f"{display} 专题",
+        nav_html=build_nav(slug, display, current_day=None, nav_days=nav_days, day_files=day_files),
         markdown=overview_with_cards,
         is_overview=True,
-        page_title=f"{TOPIC_DISPLAY} 专题 - AI Infra 学习笔记",
+        page_title=f"{display} 专题 - AI Infra 学习笔记",
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
-    # Per-day pages (only when dedicated dayN.md files exist)
     for day in day_files:
         html = page_template(
             title=f"Day {day['num']}：{day['title']}",
-            nav_html=build_nav(current_day=day["num"], nav_days=nav_days, day_files=day_files),
+            nav_html=build_nav(slug, display, current_day=day["num"], nav_days=nav_days, day_files=day_files),
             markdown=day["markdown"],
             is_overview=False,
-            page_title=f"DeepGEMM Day {day['num']} - {day['title']}",
+            page_title=f"{display} Day {day['num']} - {day['title']}",
         )
         filename = f"day{day['num']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {output_dir / filename}")
 
-    copy_images(output_dir)
+    copy_topic_images(slug, output_dir)
+    copy_local_dirs(topic_dir, output_dir)
+
+
+def discover_topics() -> list:
+    """Return sorted list of topic slugs that have README.md."""
+    topics = []
+    skip = {"images", "website", "__pycache__"}
+    for subdir in sorted(TOPICS_DIR.iterdir()):
+        if subdir.is_dir() and subdir.name not in skip and (subdir / "README.md").exists():
+            topics.append(subdir.name)
+    return topics
+
+
+def main() -> None:
+    if WEBSITE_DIR.exists():
+        shutil.rmtree(WEBSITE_DIR)
+    WEBSITE_DIR.mkdir(parents=True, exist_ok=True)
+
+    topics = discover_topics()
+    print(f"Discovered {len(topics)} topics: {topics}")
+    for slug in topics:
+        build_topic(TOPICS_DIR / slug, WEBSITE_DIR / slug)
 
 
 if __name__ == "__main__":
-    build_website(WEBSITE_DIR)
+    main()

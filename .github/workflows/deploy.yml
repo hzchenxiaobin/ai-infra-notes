@@ -15,11 +15,7 @@ on:
       - 'aiinfra/daily/week7/**'
       - 'aiinfra/daily/week8/**'
       - 'aiinfra/paper/**'
-      - 'aiinfra/topics/cutlass/**'
-      - 'aiinfra/topics/triton/**'
-      - 'aiinfra/topics/cute/**'
-      - 'aiinfra/topics/deepgemm/**'
-      - 'aiinfra/topics/moe/**'
+      - 'aiinfra/topics/**'
       - 'leetcode/**'
       - 'leetgpu/**'
       - 'public/**'
@@ -63,16 +59,8 @@ jobs:
           python3 build.py
           echo "--- public directory structure ---"
           ls -la public/
-          echo "--- cutlass directory structure ---"
-          ls -la public/cutlass/
-          echo "--- triton directory structure ---"
-          ls -la public/triton/
-          echo "--- cute directory structure ---"
-          ls -la public/cute/
-          echo "--- deepgemm directory structure ---"
-          ls -la public/deepgemm/
-          echo "--- moe directory structure ---"
-          ls -la public/moe/
+          echo "--- topic directories ---"
+          ls -la public/
           echo "--- leetcode directory structure ---"
           ls -la public/leetcode/
           echo "--- file count ---"
