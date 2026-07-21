@@ -91,10 +91,12 @@ aiinfra/topics/cute/website/kernels/
 
 # Generated DeepGEMM topic website files
 aiinfra/topics/deepgemm/website/index.html
+aiinfra/topics/deepgemm/website/day*.html
 aiinfra/topics/deepgemm/website/images/
 
 # Generated MoE topic website files
 aiinfra/topics/moe/website/index.html
+aiinfra/topics/moe/website/day*.html
 aiinfra/topics/moe/website/images/
 
 # Generated LeetCode website files
