@@ -54,7 +54,7 @@ def rewrite_local_paths(markdown_text: str) -> str:
 
 def extract_day_files() -> list:
     """Extract day info from cute/dayN.md files if they exist."""
-    day_title_pattern = re.compile(r"^# Day (\d+)[：:]\s*(.+)$")
+    day_title_pattern = re.compile(r"^# Day (\d+)[（(][^)）]*[）)]*[：:]\s*(.+)$")
     days = []
     for md_path in sorted(CUTE_DIR.glob("day*.md")):
         text = md_path.read_text(encoding="utf-8")
