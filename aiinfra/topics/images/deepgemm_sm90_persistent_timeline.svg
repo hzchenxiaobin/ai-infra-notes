@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="66" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="760" fill="#fdfcf7"/>
+
+  <text x="480" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">跨 tile 持久化调度 + Cluster Multicast + 异步单元 overlap</text>
+  <path d="M 280 40 Q 480 48 680 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Section 1: Persistent scheduling across tiles ====== -->
+  <text x="40" y="78" font-size="13" font-weight="bold" fill="#2b2b2b">① 持久化调度：单 threadblock 跨 tile 串行</text>
+
+  <!-- Threadblock 0 lane -->
+  <text x="40" y="108" font-size="11" fill="#b85450" font-weight="bold">Threadblock 0</text>
+  <text x="40" y="122" font-size="9" fill="#888">blockIdx.x=0, SM 0</text>
+
+  <!-- while loop container -->
+  <g filter="url(#sk)"><rect x="160" y="92" width="780" height="80" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="180" y="110" font-size="9" fill="#888" font-family="monospace">while (scheduler.get_next_block(...)) {</text>
+
+  <!-- tile A -->
+  <g filter="url(#sk)"><rect x="180" y="118" width="180" height="44" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="270" y="136" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">tile A (m=0, n=0)</text>
+  <text x="270" y="150" text-anchor="middle" font-size="8" fill="#666">6×k_block (TMA+Math) → epilogue</text>
+  <text x="270" y="160" text-anchor="middle" font-size="8" fill="#b85450">→ tma_store_arrive</text>
+
+  <!-- arrow -->
+  <path d="M 360 140 L 378 140" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- tile B -->
+  <g filter="url(#sk)"><rect x="380" y="118" width="220" height="44" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="490" y="136" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">tile B (m=0, n=8)</text>
+  <text x="490" y="150" text-anchor="middle" font-size="8" fill="#666">tma_store_wait(上 tile) → 6×k_block</text>
+  <text x="490" y="160" text-anchor="middle" font-size="8" fill="#b85450">→ epilogue</text>
+
+  <!-- ellipsis -->
+  <text x="630" y="142" font-size="14" fill="#888" font-weight="bold">. . .</text>
+
+  <!-- end -->
+  <g filter="url(#sk)"><rect x="670" y="118" width="180" height="44" rx="4" fill="#fff" stroke="#bbb" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="760" y="136" text-anchor="middle" font-size="9" fill="#888" font-weight="bold">next_block_idx >= num_blocks</text>
+  <text x="760" y="150" text-anchor="middle" font-size="8" fill="#888">→ return false</text>
+  <text x="760" y="160" text-anchor="middle" font-size="8" fill="#888">退出 while</text>
+
+  <text x="930" y="142" font-size="9" fill="#888" font-family="monospace">}</text>
+
+  <!-- Threadblock 1 lane -->
+  <text x="40" y="198" font-size="11" fill="#2e6e2e" font-weight="bold">Threadblock 1</text>
+  <text x="40" y="212" font-size="9" fill="#888">blockIdx.x=1, SM 1</text>
+
+  <g filter="url(#sk)"><rect x="160" y="184" width="500" height="44" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="410" y="202" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">同一 current_iter 内并行处理 tile (m=0, n=1)</text>
+  <text x="410" y="216" text-anchor="middle" font-size="8" fill="#666">swizzle 决定 n=1（不是 n=8）—— 组内沿 N 排开</text>
+  <text x="410" y="226" text-anchor="middle" font-size="8" fill="#2e6e2e" font-style="italic">next_block_idx = current_iter * kNumSMs + blockIdx.x</text>
+
+  <!-- ====== Section 2: Cluster multicast ====== -->
+  <text x="40" y="266" font-size="13" font-weight="bold" fill="#2b2b2b">② Cluster Multicast（kNumTMAMulticast=2, kIsTMAMulticastOnA=true）</text>
+
+  <g filter="url(#sk)"><rect x="40" y="282" width="900" height="120" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+
+  <!-- CTA 0 -->
+  <g filter="url(#sk)"><rect x="70" y="298" width="380" height="90" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="260" y="318" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">CTA 0（cluster rank 0）</text>
+  <text x="90" y="340" font-size="10" fill="#444">├─ 算 n=0 列</text>
+  <text x="90" y="358" font-size="10" fill="#444">├─ TMA multicast A（一次 load 到 2 个 SMEM）</text>
+  <text x="90" y="376" font-size="10" fill="#2b6e9e">└─ empty_barrier.arrive(target_cta=1) 跨 CTA</text>
+
+  <!-- CTA 1 -->
+  <g filter="url(#sk)"><rect x="510" y="298" width="380" height="90" rx="4" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="700" y="318" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">CTA 1（cluster rank 1）</text>
+  <text x="530" y="340" font-size="10" fill="#444">├─ 算 n=1 列</text>
+  <text x="530" y="358" font-size="10" fill="#444">├─ 共享 A 块（multicast 接收方）</text>
+  <text x="530" y="376" font-size="10" fill="#2b6e9e">└─ empty_barrier.arrive(target_cta=0) 跨 CTA</text>
+
+  <!-- multicast arrow -->
+  <g filter="url(#sk)">
+    <path d="M 260 332 Q 480 326 700 332" stroke="#b85450" stroke-width="1.4" fill="none" stroke-dasharray="4 2" marker-end="url(#ar)"/>
+  </g>
+  <text x="480" y="324" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">↑ TMA multicast A（bitmask=0b11）↑</text>
+
+  <!-- ====== Section 3: Async units overlap ====== -->
+  <text x="40" y="432" font-size="13" font-weight="bold" fill="#2b2b2b">③ 三类异步单元的并发 overlap</text>
+
+  <!-- Time axis -->
+  <text x="50" y="462" font-size="11" fill="#888" font-weight="bold">时间 →</text>
+  <line x1="80" y1="458" x2="920" y2="458" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" filter="url(#sk)"/>
+
+  <!-- TMA engine lane -->
+  <text x="40" y="492" font-size="11" fill="#b85450" font-weight="bold">TMA 引擎</text>
+  <g filter="url(#sk)"><rect x="180" y="478" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="240" y="496" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">load tile 0</text>
+  <g filter="url(#sk)"><rect x="310" y="478" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="370" y="496" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">load tile 1</text>
+  <g filter="url(#sk)"><rect x="440" y="478" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="500" y="496" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">load tile 2</text>
+  <g filter="url(#sk)"><rect x="570" y="478" width="120" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="630" y="496" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">load tile 3</text>
+  <text x="710" y="496" font-size="11" fill="#888">...</text>
+
+  <!-- Tensor Core lane -->
+  <text x="40" y="540" font-size="11" fill="#2e6e2e" font-weight="bold">Tensor Core</text>
+  <g filter="url(#sk)"><rect x="250" y="526" width="120" height="28" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="310" y="544" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">WGMMA tile 0</text>
+  <g filter="url(#sk)"><rect x="380" y="526" width="120" height="28" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="440" y="544" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">WGMMA tile 1</text>
+  <g filter="url(#sk)"><rect x="510" y="526" width="120" height="28" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="570" y="544" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">WGMMA tile 2</text>
+  <text x="650" y="544" font-size="11" fill="#888">...</text>
+
+  <!-- CUDA core lane -->
+  <text x="40" y="588" font-size="11" fill="#7a5415" font-weight="bold">CUDA core</text>
+  <g filter="url(#sk)"><rect x="320" y="574" width="100" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="370" y="590" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">SF promote 0</text>
+  <g filter="url(#sk)"><rect x="430" y="574" width="100" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="480" y="590" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">SF promote 1</text>
+  <text x="540" y="590" font-size="11" fill="#888">...</text>
+  <g filter="url(#sk)"><rect x="320" y="602" width="100" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="370" y="618" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">st_shared 0</text>
+  <g filter="url(#sk)"><rect x="430" y="602" width="100" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="480" y="618" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">st_shared 1</text>
+
+  <!-- TMA store lane -->
+  <text x="40" y="656" font-size="11" fill="#5a3a7a" font-weight="bold">TMA store</text>
+  <g filter="url(#sk)"><rect x="440" y="642" width="120" height="28" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="500" y="660" text-anchor="middle" font-size="9" fill="#5a3a7a" font-weight="bold">store tile 0</text>
+  <g filter="url(#sk)"><rect x="570" y="642" width="120" height="28" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="630" y="660" text-anchor="middle" font-size="9" fill="#5a3a7a" font-weight="bold">store tile 1</text>
+  <text x="710" y="660" font-size="11" fill="#888">...</text>
+
+  <!-- overlap annotations -->
+  <g filter="url(#sk)">
+    <path d="M 310 506 L 310 526" stroke="#4a8edb" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+    <path d="M 440 506 L 440 526" stroke="#4a8edb" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+  </g>
+  <text x="475" y="520" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">↑ TMA load 与 WGMMA overlap ↑</text>
+
+  <!-- ====== Bottom: verification standard ① summary ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="690" width="900" height="60" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="712" font-size="11" font-weight="bold" fill="#444">本周验收 ① 的画图要点：</text>
+  <text x="60" y="730" font-size="10" fill="#444">① 4 类 barrier 握手点（full/empty/named/warp）　② 三类异步单元 overlap 区间　③ pipeline stage 循环复用　④ phase 翻转　⑤ 跨 tile 串行衔接　⑥ cluster multicast partner CTA 协作</text>
+  <text x="60" y="744" font-size="10" fill="#444" font-style="italic">持久化调度公式：<tspan font-family="monospace">next_block_idx = (++current_iter) * kNumSMs + blockIdx.x</tspan></text>
+</svg>

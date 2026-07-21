@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="420" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Psum Layout vs 普通 Contiguous：padding 分布对比</text>
+  <path d="M 260 40 Q 440 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: 普通 contiguous ===== -->
+  <text x="220" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">普通 contiguous</text>
+  <text x="220" y="94" text-anchor="middle" font-size="9" fill="#888">每 group 末尾 padding 到 mk_alignment</text>
+
+  <!-- group 0 -->
+  <g filter="url(#sk)"><rect x="70" y="108" width="120" height="36" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="130" y="131" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">group 0: [0, m_0)</text>
+  <text x="60" y="131" text-anchor="end" font-size="9" fill="#888">m_0</text>
+
+  <!-- group 0 padding -->
+  <g filter="url(#sk)"><rect x="190" y="108" width="60" height="36" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="220" y="131" text-anchor="middle" font-size="9" fill="#aaa">pad</text>
+
+  <!-- group 1 -->
+  <g filter="url(#sk)"><rect x="250" y="108" width="100" height="36" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="300" y="131" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">group 1</text>
+
+  <!-- group 1 padding -->
+  <g filter="url(#sk)"><rect x="350" y="108" width="60" height="36" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="380" y="131" text-anchor="middle" font-size="9" fill="#aaa">pad</text>
+
+  <!-- group 2 -->
+  <g filter="url(#sk)"><rect x="410" y="108" width="80" height="36" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="450" y="131" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">group 2</text>
+
+  <!-- group 2 padding -->
+  <g filter="url(#sk)"><rect x="490" y="108" width="60" height="36" rx="3" fill="#fff" stroke="#c98a2b" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="520" y="131" text-anchor="middle" font-size="9" fill="#aaa">pad</text>
+
+  <text x="220" y="166" text-anchor="middle" font-size="10" fill="#7a5415" font-style="italic">总 M = sum(align(m_g))，每 group 末尾有 padding</text>
+
+  <!-- ===== Right: psum layout ===== -->
+  <text x="680" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">psum layout</text>
+  <text x="680" y="94" text-anchor="middle" font-size="9" fill="#888">group 间对齐 gap，end 不对齐</text>
+
+  <!-- group 0 -->
+  <g filter="url(#sk)"><rect x="570" y="108" width="120" height="36" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="630" y="131" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">group 0: [0, m_0)</text>
+  <text x="560" y="131" text-anchor="end" font-size="9" fill="#888">m_0</text>
+
+  <!-- gap -->
+  <g filter="url(#sk)"><rect x="690" y="108" width="30" height="36" rx="3" fill="#fff" stroke="#8e5db8" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="705" y="131" text-anchor="middle" font-size="8" fill="#aaa">gap</text>
+
+  <!-- group 1 -->
+  <g filter="url(#sk)"><rect x="720" y="108" width="100" height="36" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="770" y="131" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">group 1</text>
+
+  <!-- gap -->
+  <g filter="url(#sk)"><rect x="820" y="108" width="20" height="36" rx="3" fill="#fff" stroke="#8e5db8" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="830" y="131" text-anchor="middle" font-size="8" fill="#aaa">gap</text>
+
+  <!-- group 2 -->
+  <g filter="url(#sk)"><rect x="570" y="158" width="80" height="36" rx="3" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="610" y="181" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">group 2</text>
+
+  <text x="680" y="216" text-anchor="middle" font-size="10" fill="#5a3a7a" font-style="italic">总 M = align(last_end)，padding 仅在 group 间小 gap</text>
+
+  <!-- ===== Bottom: comparison table ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="240" width="800" height="160" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="264" font-size="12" font-weight="bold" fill="#444">对比：</text>
+
+  <text x="60" y="288" font-size="10" fill="#7a5415" font-weight="bold">普通 contiguous</text>
+  <text x="220" y="288" font-size="10" fill="#444">每 group 末尾 padding 到 mk_alignment</text>
+  <text x="540" y="288" font-size="10" fill="#888">总 padding = num_groups × (align(m) - m)</text>
+
+  <text x="60" y="312" font-size="10" fill="#5a3a7a" font-weight="bold">psum layout</text>
+  <text x="220" y="312" font-size="10" fill="#444">只在 group 起点对齐，end 不对齐</text>
+  <text x="540" y="312" font-size="10" fill="#888">总 padding = num_groups × kKAlignment</text>
+
+  <text x="60" y="336" font-size="10" fill="#2e6e2e" font-weight="bold">grouped_layout[g]</text>
+  <text x="220" y="336" font-size="10" fill="#444">普通：per-row group id / per-group K</text>
+  <text x="540" y="336" font-size="10" fill="#888">psum：per-group 累积 end offset</text>
+
+  <text x="60" y="360" font-size="10" fill="#b85450" font-weight="bold">节省效果</text>
+  <text x="220" y="360" font-size="10" fill="#444">group 多 + 每 group m 小 → 节省显著</text>
+  <text x="540" y="360" font-size="10" fill="#888">如 EP16 的 16 个 expert</text>
+
+  <text x="60" y="384" font-size="10" fill="#4a8edb" font-weight="bold">契约</text>
+  <text x="220" y="384" font-size="10" fill="#444">ensure_zero_padding：A/D padding 行必须为 0（SM100）</text>
+</svg>

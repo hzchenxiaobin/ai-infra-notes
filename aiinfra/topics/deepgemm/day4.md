@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-                UE8M0           持久化调度          masked/k-group   EP 融合
-                                   ↑
-                                   你在这里（Day 4 = 下半场：调度器/multicast/epilogue，串成完整时序图）
-```
+![Day 4 在一周知识图谱中的位置：SM90 Kernel 下半场，调度器/multicast/epilogue 串成完整时序图](../images/deepgemm_day4_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -502,12 +494,7 @@ cudaGridDependencySynchronize();
 
 这是 PDL 的核心 API——kernel 在此处 signal 上游"我已经初始化好了，你可以提前退出了"，然后等下游依赖。**PDL 不是流水线 kernel，而是流水线 launch**：
 
-```
-传统 launch：  kernel A 结束 → kernel B launch → kernel B 执行
-PDL launch：   kernel A 执行 ──┐
-                                ├─ overlap ──→ kernel B 执行
-               kernel B launch ─┘
-```
+![PDL（Programmatic Dependent Launch）：传统串行 launch vs PDL 重叠 launch](../images/deepgemm_pdl_overlap.svg)
 
 `cudaGridDependencySynchronize` 在 kernel B 内部，表示"B 在此处等 A 完成"。在这条指令之前，B 可以做初始化（如 DeepGEMM 的 barrier init、SMEM 分配、scheduler 构造）。
 
@@ -549,67 +536,11 @@ DeepGEMM 的 SMEM 用法接近上限——以 `BLOCK_M=128, BLOCK_N=128, kNumSta
 
 #### 单 tile 内的时序（Day 3 回顾）
 
-```
-kNumStages = 3, 单个 tile 的 k_block 数 = num_k_blocks（设为 6）
-
-TMA warpgroup (1 thread elect)：
-┌─────────────────────────────────────────────────────────────────────┐
-│ iter 0: wait(empty[0]) → TMA(A,B,SFA,SFB → stage 0) → arrive(full[0])│
-│ iter 1: wait(empty[1]) → TMA(            → stage 1) → arrive(full[1])│
-│ iter 2: wait(empty[2]) → TMA(            → stage 2) → arrive(full[2])│
-│ iter 3: wait(empty[0]) → TMA(            → stage 0) → arrive(full[0])│  ← 复用 stage 0
-│ iter 4: wait(empty[1]) → TMA(            → stage 1) → arrive(full[1])│
-│ iter 5: wait(empty[2]) → TMA(            → stage 2) → arrive(full[2])│
-└─────────────────────────────────────────────────────────────────────┘
-
-Math warpgroup (128 or 256 threads)：
-┌─────────────────────────────────────────────────────────────────────┐
-│ iter 0: wait(full[0]) → ld_shared(SF) → WGMMA×4 → arrive(empty[0])  │
-│         → promote with scales                                         │
-│ iter 1: wait(full[1]) → ld_shared(SF) → WGMMA×4 → arrive(empty[1])  │
-│         → promote with scales                                         │
-│ ...                                                                   │
-│ iter 5: wait(full[2]) → ... → arrive(empty[2]) → promote            │
-└─────────────────────────────────────────────────────────────────────┘
-
-Epilogue（tile 结束后）：
-┌─────────────────────────────────────────────────────────────────────┐
-│ tma_store_wait<0>() → st_shared(final_accum → smem_d)                │
-│ → tma_store_fence → NamedBarrier::sync(128)                          │
-│ → SM90_TMA_REDUCE_ADD_2D(smem_d → gmem_d) → tma_store_arrive         │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![单 tile 时序图：TMA warpgroup + Math warpgroup + Epilogue + barrier 握手点](../images/deepgemm_sm90_tile_timeline.svg)
 
 #### 跨 tile 的持久化时序（Day 4 新增）
 
-```
-Threadblock 0 (blockIdx.x = 0) 在 SM 0 上：
-┌─────────────────────────────────────────────────────────────────────┐
-│ while (scheduler.get_next_block(...)) {                              │
-│   ┌──── tile A (m=0, n=0) ────┐                                      │
-│   │ 6 次 k_block（TMA+Math）   │ → epilogue → tma_store_arrive       │
-│   └────────────────────────────┘                                      │
-│   ┌──── tile B (m=0, n=8) ────┐                                      │
-│   │ tma_store_wait<0>(上一 tile)│ → 6 次 k_block → epilogue           │
-│   └────────────────────────────┘                                      │
-│   ...直到 next_block_idx >= num_blocks                                │
-│ }                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-
-Threadblock 1 (blockIdx.x = 1) 在 SM 1 上：
-┌─────────────────────────────────────────────────────────────────────┐
-│ 同一 current_iter 内并行处理 tile (m=0, n=1)                          │
-│ swizzle 决定 n=1（不是 n=8）—— 组内沿 N 排开                         │
-│ ...                                                                   │
-└─────────────────────────────────────────────────────────────────────┘
-
-Cluster 模式 (kNumTMAMulticast=2, kIsTMAMulticastOnA=true)：
-┌─────────────────────────────────────────────────────────────────────┐
-│ CTA 0 + CTA 1 组成 cluster，multicast A（A 只 TMA 一次到 2 个 SMEM） │
-│ CTA 0 算 n=0 列，CTA 1 算 n=1 列                                     │
-│ empty_barrier 用 arrive(target_cta) 跨 CTA arrive                    │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![跨 tile 持久化调度 + Cluster Multicast + 三类异步单元 overlap](../images/deepgemm_sm90_persistent_timeline.svg)
 
 #### 完整 barrier 握手点（验收标准 ① 的核心）
 
@@ -622,15 +553,6 @@ Cluster 模式 (kNumTMAMulticast=2, kIsTMAMulticastOnA=true)：
 | Cluster barrier | `cluster_arrive_relaxed` | `cluster_wait` | barrier init 后 | Kernel 启动 |
 
 #### 三类异步单元的并发（Day 3 学习任务 1 的延伸）
-
-```
-时间 →
-TMA 引擎:     [load tile 0] [load tile 1] [load tile 2] [load tile 3] ...
-Tensor Core:              [WGMMA tile 0] [WGMMA tile 1] [WGMMA tile 2] ...
-CUDA core:                            [SF promote 0] [SF promote 1] ...
-                                      [st_shared 0]  [st_shared 1] ...
-TMA store:                                          [store tile 0] [store tile 1] ...
-```
 
 > 💡 **本周验收 ① 的画图要点**：
 > 1. 标出 4 个 barrier 握手点（full/empty/named/warp）

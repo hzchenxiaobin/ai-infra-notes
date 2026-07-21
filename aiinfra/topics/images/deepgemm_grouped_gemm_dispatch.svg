@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="22" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="980" height="760" fill="#fdfcf7"/>
+
+  <text x="490" y="32" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Grouped GEMM Dispatch 决策树：Python API → C++ 实现</text>
+  <path d="M 290 40 Q 490 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Path 1: M-grouped contiguous ============ -->
+  <!-- Python API box -->
+  <g filter="url(#sk)"><rect x="40" y="68" width="290" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="185" y="90" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">Python: m_grouped_fp8_gemm_nt_contiguous</text>
+  <text x="185" y="106" text-anchor="middle" font-size="9" fill="#888">(a, b, d, grouped_layout, ...)</text>
+
+  <!-- arrow down -->
+  <path d="M 185 118 L 185 132" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- C++ dispatch box -->
+  <g filter="url(#sk)"><rect x="40" y="134" width="290" height="48" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="185" y="155" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">csrc/apis/gemm.hpp:166</text>
+  <text x="185" y="171" text-anchor="middle" font-size="9" fill="#666">检查 major_a==K, major_b==K + SF 转换</text>
+
+  <!-- branch arrow -->
+  <path d="M 185 182 L 185 196" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="195" y="192" font-size="9" fill="#888">arch_major?</text>
+
+  <!-- SM90 branch -->
+  <g filter="url(#sk)"><rect x="30" y="200" width="150" height="180" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="105" y="222" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">arch_major == 9</text>
+  <text x="105" y="238" text-anchor="middle" font-size="9" fill="#888">sfa is FP32</text>
+  <text x="105" y="258" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">sm90_m_grouped_</text>
+  <text x="105" y="272" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">fp8_gemm_contiguous_1d2d</text>
+  <text x="105" y="290" text-anchor="middle" font-size="9" fill="#888">[1D2D, BF16 输出]</text>
+  <line x1="50" y1="300" x2="160" y2="300" stroke="#eee" stroke-width="1"/>
+  <text x="105" y="316" text-anchor="middle" font-size="8" fill="#666">GemmDesc{MGroupedContiguous}</text>
+  <text x="105" y="330" text-anchor="middle" font-size="8" fill="#666">block_m = mk_alignment</text>
+  <text x="105" y="344" text-anchor="middle" font-size="8" fill="#666">B TMA: num_groups 折叠</text>
+  <text x="105" y="358" text-anchor="middle" font-size="8" fill="#666">JIT 编译 + launch</text>
+  <text x="105" y="372" text-anchor="middle" font-size="8" fill="#7a5415" font-style="italic">→ 验收 ④ 调度器</text>
+
+  <!-- SM100 branch -->
+  <g filter="url(#sk)"><rect x="190" y="200" width="150" height="180" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="265" y="222" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">arch_major == 10</text>
+  <text x="265" y="238" text-anchor="middle" font-size="9" fill="#888">sfa is INT (UE8M0)</text>
+  <text x="265" y="258" text-anchor="middle" font-size="9" fill="#b85450" font-family="monospace">sm100_m_grouped_</text>
+  <text x="265" y="272" text-anchor="middle" font-size="9" fill="#b85450" font-family="monospace">fp8_fp4_gemm_contiguous_1d1d</text>
+  <text x="265" y="290" text-anchor="middle" font-size="9" fill="#888">[1D1D, BF16 输出]</text>
+  <line x1="210" y1="300" x2="320" y2="300" stroke="#eee" stroke-width="1"/>
+  <text x="265" y="316" text-anchor="middle" font-size="8" fill="#666">类似 SM90</text>
+  <text x="265" y="330" text-anchor="middle" font-size="8" fill="#666">+ UE8M0 scale</text>
+  <text x="265" y="344" text-anchor="middle" font-size="8" fill="#666">+ SM100 kernel</text>
+  <text x="265" y="358" text-anchor="middle" font-size="8" fill="#666">+ TMEM/TCgen05</text>
+  <text x="265" y="372" text-anchor="middle" font-size="8" fill="#b85450" font-style="italic">→ Day 6 详讲</text>
+
+  <!-- ============ Path 2: M-grouped masked ============ -->
+  <g filter="url(#sk)"><rect x="350" y="68" width="290" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="495" y="90" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Python: m_grouped_fp8_gemm_nt_masked</text>
+  <text x="495" y="106" text-anchor="middle" font-size="9" fill="#888">(a, b, d, masked_m, expected_m, ...)</text>
+
+  <path d="M 495 118 L 495 132" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="350" y="134" width="290" height="48" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="495" y="155" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">csrc/apis/gemm.hpp:250</text>
+  <text x="495" y="171" text-anchor="middle" font-size="9" fill="#666">检查 major + transform_sf_pair</text>
+
+  <path d="M 495 182 L 495 196" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="505" y="192" font-size="9" fill="#888">arch_major?</text>
+
+  <!-- SM90 -->
+  <g filter="url(#sk)"><rect x="350" y="200" width="140" height="180" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="420" y="222" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">arch_major == 9</text>
+  <text x="420" y="248" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">sm90_m_grouped_</text>
+  <text x="420" y="262" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">fp8_gemm_masked_1d2d</text>
+  <text x="420" y="280" text-anchor="middle" font-size="9" fill="#888">[1D2D, BF16 输出]</text>
+  <line x1="370" y1="290" x2="470" y2="290" stroke="#eee" stroke-width="1"/>
+  <text x="420" y="308" text-anchor="middle" font-size="8" fill="#666">A: [G, max_m, K]</text>
+  <text x="420" y="322" text-anchor="middle" font-size="8" fill="#666">kWithGroupOffsetA=true</text>
+  <text x="420" y="336" text-anchor="middle" font-size="8" fill="#666">CUDA graph 兼容</text>
+  <text x="420" y="358" text-anchor="middle" font-size="8" fill="#7a5415" font-style="italic">→ DeepEP 接力</text>
+
+  <!-- SM100 -->
+  <g filter="url(#sk)"><rect x="500" y="200" width="140" height="180" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="570" y="222" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">arch_major == 10</text>
+  <text x="570" y="248" text-anchor="middle" font-size="9" fill="#b85450" font-family="monospace">sm100_m_grouped_</text>
+  <text x="570" y="262" text-anchor="middle" font-size="9" fill="#b85450" font-family="monospace">fp8_fp4_gemm_masked_1d1d</text>
+  <text x="570" y="280" text-anchor="middle" font-size="9" fill="#888">[1D1D, BF16 输出]</text>
+  <line x1="520" y1="290" x2="620" y2="290" stroke="#eee" stroke-width="1"/>
+  <text x="570" y="308" text-anchor="middle" font-size="8" fill="#666">UE8M0 + TMEM</text>
+  <text x="570" y="322" text-anchor="middle" font-size="8" fill="#666">可转 contiguous + psum</text>
+  <text x="570" y="358" text-anchor="middle" font-size="8" fill="#b85450" font-style="italic">→ Day 6 详讲</text>
+
+  <!-- ============ Path 3: K-grouped contiguous ============ -->
+  <g filter="url(#sk)"><rect x="660" y="68" width="290" height="50" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="805" y="90" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">Python: k_grouped_fp8_gemm_nt_contiguous</text>
+  <text x="805" y="106" text-anchor="middle" font-size="9" fill="#888">(a, b, d, ks_cpu, grouped_layout, c, ...)</text>
+
+  <path d="M 805 118 L 805 132" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="660" y="134" width="290" height="48" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="4 2"/></g>
+  <text x="805" y="155" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">csrc/apis/gemm.hpp:348  [SM90 only]</text>
+  <text x="805" y="171" text-anchor="middle" font-size="9" fill="#666">recipe=(1,1,128) 强制 + 不支持 psum</text>
+
+  <path d="M 805 182 L 805 196" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Single box (SM90 only) -->
+  <g filter="url(#sk)"><rect x="670" y="200" width="270" height="180" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="805" y="222" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">SM90 only（wgrad 反向）</text>
+  <text x="805" y="248" text-anchor="middle" font-size="9" fill="#7a5415" font-family="monospace">sm90_k_grouped_fp8_gemm_1d1d</text>
+  <text x="805" y="266" text-anchor="middle" font-size="9" fill="#888">[1D1D, FP32 累加]</text>
+  <line x1="690" y1="276" x2="920" y2="276" stroke="#eee" stroke-width="1"/>
+  <text x="805" y="294" text-anchor="middle" font-size="8" fill="#666">A/B: [sum_k, *] 沿 K 拼接</text>
+  <text x="805" y="308" text-anchor="middle" font-size="8" fill="#666">D: [G, M, N] 每 group 独立</text>
+  <text x="805" y="322" text-anchor="middle" font-size="8" fill="#666">分配 tensor_map_buffer</text>
+  <text x="805" y="336" text-anchor="middle" font-size="8" fill="#666">kernel 内 tensormap.replace</text>
+  <text x="805" y="350" text-anchor="middle" font-size="8" fill="#666">切换 group（Day 4 的 7 步流程）</text>
+  <text x="805" y="370" text-anchor="middle" font-size="8" fill="#7a5415" font-style="italic">→ 高精度累加 + 动态 K</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="408" width="900" height="110" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="432" font-size="12" font-weight="bold" fill="#444">三条路径的核心差异：</text>
+  <text x="60" y="454" font-size="10" fill="#4a8edb" font-weight="bold">M-contiguous</text>
+  <text x="180" y="454" font-size="10" fill="#444">A/D 连续拼接，B 折叠 num_groups 到 outer 维，block_m = mk_alignment</text>
+  <text x="60" y="476" font-size="10" fill="#2e6e2e" font-weight="bold">M-masked</text>
+  <text x="180" y="476" font-size="10" fill="#444">A/D 为 [G, max_m, *]，kWithGroupOffsetA=true，CUDA graph 兼容</text>
+  <text x="60" y="498" font-size="10" fill="#5a3a7a" font-weight="bold">K-contiguous</text>
+  <text x="180" y="498" font-size="10" fill="#444">沿 K 拼接，1D1D FP32 累加，tensormap.replace 动态切 group</text>
+
+  <!-- ============ Bottom: scheduler branches ============ -->
+  <text x="490" y="548" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">三种调度器分支（scheduler/gemm.cuh:197-324）</text>
+
+  <!-- M-contiguous scheduler -->
+  <g filter="url(#sk)"><rect x="40" y="566" width="290" height="170" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="185" y="588" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">MGroupedContiguous</text>
+  <text x="60" y="610" font-size="9" fill="#444" font-family="monospace">grouped_layout[m] >= 0?</text>
+  <text x="60" y="624" font-size="9" fill="#666">  → is_computation_valid</text>
+  <text x="60" y="644" font-size="9" fill="#444" font-family="monospace">multicast on B:</text>
+  <text x="60" y="658" font-size="9" fill="#666">  → 两 CTA 同 group?</text>
+  <text x="60" y="678" font-size="9" fill="#444" font-family="monospace">kWithGroupOffset:</text>
+  <text x="60" y="692" font-size="9" fill="#666">  → 只 B=true，A/D=false</text>
+  <text x="60" y="712" font-size="9" fill="#7a5415" font-style="italic">padding 行标 -1，跳过 WGMMA</text>
+
+  <!-- M-masked scheduler -->
+  <g filter="url(#sk)"><rect x="345" y="566" width="290" height="170" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="490" y="588" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">MGroupedMasked</text>
+  <text x="365" y="610" font-size="9" fill="#444" font-family="monospace">get_next_block 跨 group 累积:</text>
+  <text x="365" y="624" font-size="9" fill="#666">  current_m_block_cumsum</text>
+  <text x="365" y="638" font-size="9" fill="#666">  超出则 group_idx++</text>
+  <text x="365" y="658" font-size="9" fill="#444" font-family="monospace">kWithGroupOffsetA=true</text>
+  <text x="365" y="672" font-size="9" fill="#666">  → A/SFA/D 加 group offset</text>
+  <text x="365" y="692" font-size="9" fill="#444" font-family="monospace">is_valid: m_offset &lt; masked_m[g]</text>
+  <text x="365" y="712" font-size="9" fill="#2e6e2e" font-style="italic">CUDA graph + DeepEP 接力</text>
+
+  <!-- K-contiguous scheduler -->
+  <g filter="url(#sk)"><rect x="650" y="566" width="290" height="170" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+  <text x="795" y="588" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">KGroupedContiguous</text>
+  <text x="670" y="610" font-size="9" fill="#444" font-family="monospace">get_next_k_group:</text>
+  <text x="670" y="624" font-size="9" fill="#666">  跳过 shape_k == 0 的 group</text>
+  <text x="670" y="644" font-size="9" fill="#444" font-family="monospace">get_global_idx 三种 IndexType:</text>
+  <text x="670" y="658" font-size="9" fill="#666">  MN: group_idx * shape_dim (D)</text>
+  <text x="670" y="672" font-size="9" fill="#666">  K: current_k_cumsum (A/B)</text>
+  <text x="670" y="686" font-size="9" fill="#666">  SF_K: current_sf_k_cumsum</text>
+  <text x="670" y="712" font-size="9" fill="#5a3a7a" font-style="italic">tensormap.replace 切 group</text>
+</svg>

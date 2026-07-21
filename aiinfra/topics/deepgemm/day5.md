@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-                UE8M0           持久化调度          masked/k-group   EP 融合
-                                                     ↑
-                                                     你在这里（MoE 场景的三种 Grouped GEMM 布局）
-```
+![Day 5 在一周知识图谱中的位置：MoE 场景的三种 Grouped GEMM 布局](../images/deepgemm_day5_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -460,12 +452,7 @@ if (kGemmType == GemmType::KGroupedContiguous and last_group_idx != scheduler.cu
 
 以 M-grouped psum 为例，对比：
 
-```
-普通 contiguous:          psum layout:
-group 0: [0, m_0)         group 0: [0, m_0)
-group 1: [m_0, m_0+m_1)   group 1: [align(m_0), align(m_0)+m_1)   ← 对齐后起点
-group 2: [...]            group 2: [align(align(m_0)+m_1), ...)
-```
+![Psum Layout vs 普通 Contiguous：padding 分布对比](../images/deepgemm_psum_layout_comparison.svg)
 
 - 普通 contiguous：每 group 起点对齐到 `mk_alignment`，padding 行填 0
 - psum layout：`grouped_layout[g]` 存**累积的 end offset**（`m_0`, `m_0+m_1`, ...），起点是 `align(prev_end)`
@@ -620,45 +607,7 @@ deep_gemm.set_mk_alignment_for_contiguous_layout(alignment)
 
 读 `csrc/apis/gemm.hpp:166-232`（M-grouped）与 `:299-400`（K-grouped），完整的 dispatch 流程：
 
-```
-Python: m_grouped_fp8_gemm_nt_contiguous(a, b, d, grouped_layout, ...)
-    │
-    ▼
-csrc/apis/gemm.hpp:166  m_grouped_fp8_fp4_gemm_nt_contiguous()
-    │  检查 major_a == K, major_b == K
-    │  transform_sf_pair_into_required_layout() 转换 SF 布局
-    │
-    ├─ arch_major == 9 + sfa is FP32:
-    │   └─ sm90_m_grouped_fp8_gemm_contiguous_1d2d()  [1D2D, BF16 输出]
-    │       │  GemmDesc{gemm_type = MGroupedContiguous or ...WithPsumLayout}
-    │       │  get_best_config<SM90ArchSpec>(desc)
-    │       │  block_m = mk_alignment（强制）
-    │       │  make_tma_*_desc(B 的 num_groups = num_groups)
-    │       └─ JIT 编译 + launch
-    │
-    └─ arch_major == 10 + sfa is INT (UE8M0):
-        └─ sm100_m_grouped_fp8_fp4_gemm_contiguous_1d1d()  [1D1D, BF16 输出]
-            └─ 类似，但用 SM100 kernel + UE8M0 scale
-
-Python: m_grouped_fp8_gemm_nt_masked(a, b, d, masked_m, expected_m, ...)
-    │
-    ▼
-csrc/apis/gemm.hpp:250  m_grouped_fp8_fp4_gemm_nt_masked()
-    │  检查 major_a == K, major_b == K
-    │  transform_sf_pair_into_required_layout()
-    ├─ arch_major == 9: sm90_m_grouped_fp8_gemm_masked_1d2d()
-    └─ arch_major == 10: sm100_m_grouped_fp8_fp4_gemm_masked_1d1d()
-
-Python: k_grouped_fp8_gemm_nt_contiguous(a, b, d, ks_cpu, grouped_layout, c, ...)
-    │
-    ▼
-csrc/apis/gemm.hpp:348  k_grouped_fp8_gemm_nt_contiguous()  [SM90 only]
-    │  recipe = (1, 1, 128) 强制
-    │  不支持 psum layout
-    │  分配 tensor_map_buffer
-    └─ sm90_k_grouped_fp8_gemm_1d1d()  [1D1D, FP32 累加]
-        └─ kernel 内 tensormap.replace 切换 group
-```
+![Grouped GEMM Dispatch 决策树：3 条 Python API → C++ 路径 + 调度器分支](../images/deepgemm_grouped_gemm_dispatch.svg)
 
 #### 运行 Grouped GEMM Benchmark
 

@@ -10,15 +10,7 @@
 
 ## 本日在本周知识图谱中的位置
 
-```
-Day 1          Day 2           Day 3-4            Day 5           Day 6          Day 7
- 总览      →   FP8/FP4     →   SM90 Kernel   →   Grouped      →  SM100/Mega  →  调优
- JIT 环境      Scaling         源码精读           GEMM for MoE     MoE            ncu
- 源码地图      per-128-ch      TMA+WGMMA          contiguous/      TCgen05        报告
-                UE8M0           持久化调度          masked/k-group   EP 融合
-                                                                        ↑
-                                                                        你在这里（收官：量化验证 + 性能报告）
-```
+![Day 7 在一周知识图谱中的位置：收官，量化验证 + 性能报告](../images/deepgemm_day7_position.svg)
 
 | 本日产出 | 对应本周验收标准 |
 |----------|-----------------|
@@ -591,16 +583,7 @@ python scripts/quick_plot_pm.py work/mega-moe.0.ncu-rep
 
 预期输出（示意图）：
 
-```
-Mega MoE 时序图（280 us）：
-时间 →  0    50   100   150   200   250   280 us
-       │    │    │    │    │    │    │
-Tensor:██████████░░░░████████████░░░░░░░░  ← L1/L2 交替高峰
-NVLink TX:░░░░████████░░░░░░░░░░████████  ← dispatch 头 + combine 尾
-NVLink RX:░░░░████████░░░░░░░░░░░░░░████  ← 对应远端 TX
-HBM:    ██░░░░░░░░░░░░░░░░████████░░░░░░  ← weight 加载 + 写 y
-SM Active:██████████████████████████████  ← 几乎全程活跃
-```
+![Mega MoE PM Sampling 时序图：Tensor / NVLink / HBM / SM Active 的时间分布](../images/deepgemm_pm_sampling_timeline.svg)
 
 > 💡 **PM Sampling 的价值**：从时序图能看出 Mega MoE 的"通信/计算 overlap"是否真的生效——Tensor Pipe 与 NVLink TX 的活跃区间应该重叠（说明 dispatch 与 L1 GEMM 在 overlap）。如果两者是串行的（先 NVLink 后 Tensor），说明调度有问题。
 
