@@ -18,6 +18,8 @@ on:
       - 'aiinfra/topics/cutlass/**'
       - 'aiinfra/topics/triton/**'
       - 'aiinfra/topics/cute/**'
+      - 'aiinfra/topics/deepgemm/**'
+      - 'aiinfra/topics/moe/**'
       - 'leetcode/**'
       - 'leetgpu/**'
       - 'public/**'
@@ -67,6 +69,10 @@ jobs:
           ls -la public/triton/
           echo "--- cute directory structure ---"
           ls -la public/cute/
+          echo "--- deepgemm directory structure ---"
+          ls -la public/deepgemm/
+          echo "--- moe directory structure ---"
+          ls -la public/moe/
           echo "--- leetcode directory structure ---"
           ls -la public/leetcode/
           echo "--- file count ---"

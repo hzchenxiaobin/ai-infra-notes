@@ -89,6 +89,14 @@ aiinfra/topics/cute/website/day*.html
 aiinfra/topics/cute/website/images/
 aiinfra/topics/cute/website/kernels/
 
+# Generated DeepGEMM topic website files
+aiinfra/topics/deepgemm/website/index.html
+aiinfra/topics/deepgemm/website/images/
+
+# Generated MoE topic website files
+aiinfra/topics/moe/website/index.html
+aiinfra/topics/moe/website/images/
+
 # Generated LeetCode website files
 leetcode/website/index.html
 leetcode/website/problems/
