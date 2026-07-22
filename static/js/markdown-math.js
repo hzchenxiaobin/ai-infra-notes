@@ -1,6 +1,6 @@
 /**
  * markdown-math.js
- * 为 marked.js (v4.x) 增加 $...$ / $$...$$ 公式支持，并用 KaTeX 渲染。
+ * 为 marked.js (v12.x) 增加 $...$ / $$...$$ 公式支持，并用 KaTeX 渲染。
  *
  * 使用方式：在 marked.min.js 之后、调用 marked.parse() 之前加载本文件。
  * 本文件会注册 marked 扩展，将公式保留为 <span class="math-inline"> /
