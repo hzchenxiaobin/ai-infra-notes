@@ -266,7 +266,7 @@ print(d)
 
 ## 6. 网站构建集成
 
-题解写完后会被 `leetcode/website/build.py` 自动读取并生成网页：
+题解写完后会被 `build/leetcode.py` 自动读取并生成网页：
 
 - `build.py` 递归扫描 `leetcode/` 下所有 `.md`（排除 `website/`、`images/`、`SKILL.md`）。
 - `contest/<场次>/<文件>.md` 被识别为 `category="contest"`，按场次号**降序**分组显示在侧边栏与列表页右栏。
@@ -277,7 +277,7 @@ print(d)
 **验证命令**：
 
 ```bash
-python3 leetcode/website/build.py   # 单独构建 leetcode 网站
+python3 build.py                     # 组合构建全站（含 leetcode）
 python3 build.py                     # 组合构建全站（含 leetcode）
 ```
 

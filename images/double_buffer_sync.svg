@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="680" viewBox="0 0 940 680" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="680" fill="#fdfcf7"/>
+  <text x="470" y="36" text-anchor="middle" font-size="21" font-weight="bold" fill="#2b2b2b">Double Buffering 同步等待机制</text>
+  <path d="M 290 44 Q 470 52 650 44" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Part 1: Pipeline 三阶段 ===== -->
+  <text x="60" y="76" font-size="14" font-weight="bold" fill="#2b2b2b">① Pipeline 三阶段</text>
+
+  <!-- Prologue -->
+  <g filter="url(#sk)">
+    <rect x="60" y="86" width="250" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="185" y="106" text-anchor="middle" font-size="12" font-weight="bold" fill="#c98a2b">Prologue（预热）</text>
+  <text x="70" y="128" font-size="11" fill="#2b2b2b">cp.async Load 0 → Buf A</text>
+  <text x="70" y="146" font-size="11" fill="#2b2b2b">cp.async.commit_group</text>
+  <text x="70" y="164" font-size="11" fill="#888">仅发起首个 Load，无 Compute</text>
+
+  <!-- Main Loop -->
+  <g filter="url(#sk)">
+    <rect x="330" y="86" width="300" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="480" y="106" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">Main Loop（i = 0 .. N-2）</text>
+  <text x="340" y="128" font-size="11" fill="#b03a3a" font-weight="bold">wait</text>
+  <text x="372" y="128" font-size="11" fill="#2b2b2b">(Load i)  ← 同步点</text>
+  <text x="340" y="146" font-size="11" fill="#2b2b2b">Compute i  ‖  Load i+1</text>
+  <text x="340" y="164" font-size="11" fill="#2b2b2b">commit_group / arrive</text>
+
+  <!-- Epilogue -->
+  <g filter="url(#sk)">
+    <rect x="650" y="86" width="230" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="765" y="106" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8e4a">Epilogue（收尾）</text>
+  <text x="660" y="128" font-size="11" fill="#b03a3a" font-weight="bold">wait</text>
+  <text x="692" y="128" font-size="11" fill="#2b2b2b">(Load N-1)</text>
+  <text x="660" y="146" font-size="11" fill="#2b2b2b">Compute N-1</text>
+  <text x="660" y="164" font-size="11" fill="#888">无新 Load，排空流水线</text>
+
+  <!-- divider -->
+  <path d="M 50 200 L 890 200" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Part 2: 同步点时间线 ===== -->
+  <text x="60" y="224" font-size="14" font-weight="bold" fill="#2b2b2b">② 同步点时间线（红色竖线 = wait，必须等对应 Load 完成）</text>
+
+  <!-- sync vertical lines (drawn first, behind blocks) -->
+  <g stroke="#b03a3a" stroke-width="1.3" stroke-dasharray="4 3" filter="url(#sk)">
+    <line x1="235" y1="246" x2="235" y2="388"/>
+    <line x1="330" y1="246" x2="330" y2="388"/>
+    <line x1="425" y1="246" x2="425" y2="388"/>
+    <line x1="520" y1="246" x2="520" y2="388"/>
+    <line x1="615" y1="246" x2="615" y2="388"/>
+  </g>
+  <!-- sync labels -->
+  <text x="235" y="242" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">wait0</text>
+  <text x="330" y="242" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">wait1</text>
+  <text x="425" y="242" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">wait2</text>
+  <text x="520" y="242" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">wait3</text>
+  <text x="615" y="242" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">wait4</text>
+
+  <!-- Lane: Buf A (Load even) -->
+  <text x="52" y="270" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Buf A</text>
+  <g filter="url(#sk)">
+    <rect x="140" y="254" width="95" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="187" y="274" text-anchor="middle" font-size="11" fill="#2b2b2b">Load 0</text>
+  <g filter="url(#sk)">
+    <rect x="330" y="254" width="95" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="377" y="274" text-anchor="middle" font-size="11" fill="#2b2b2b">Load 2</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="254" width="95" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="567" y="274" text-anchor="middle" font-size="11" fill="#2b2b2b">Load 4</text>
+
+  <!-- Lane: Buf B (Load odd) -->
+  <text x="52" y="312" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Buf B</text>
+  <g filter="url(#sk)">
+    <rect x="235" y="296" width="95" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="282" y="316" text-anchor="middle" font-size="11" fill="#2b2b2b">Load 1</text>
+  <g filter="url(#sk)">
+    <rect x="425" y="296" width="95" height="30" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="472" y="316" text-anchor="middle" font-size="11" fill="#2b2b2b">Load 3</text>
+
+  <!-- Lane: Compute -->
+  <text x="52" y="354" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Compute</text>
+  <g filter="url(#sk)">
+    <rect x="235" y="338" width="95" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="282" y="358" text-anchor="middle" font-size="11" fill="#2b2b2b">Compute 0</text>
+  <g filter="url(#sk)">
+    <rect x="330" y="338" width="95" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="377" y="358" text-anchor="middle" font-size="11" fill="#2b2b2b">Compute 1</text>
+  <g filter="url(#sk)">
+    <rect x="425" y="338" width="95" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="472" y="358" text-anchor="middle" font-size="11" fill="#2b2b2b">Compute 2</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="338" width="95" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="567" y="358" text-anchor="middle" font-size="11" fill="#2b2b2b">Compute 3</text>
+  <g filter="url(#sk)">
+    <rect x="615" y="338" width="95" height="30" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="662" y="358" text-anchor="middle" font-size="11" fill="#2b2b2b">Compute 4</text>
+
+  <!-- dependency arrow: Load 0 -> wait0 -->
+  <path d="M 235 284 Q 230 312 235 336" stroke="#b03a3a" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#sk)"/>
+  <!-- dependency arrow: Load 1 -> wait1 -->
+  <path d="M 330 326 Q 325 332 330 336" stroke="#b03a3a" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#sk)"/>
+
+  <!-- time arrow -->
+  <path d="M 140 384 L 720 384" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="730" y="388" font-size="10" fill="#888">时间</text>
+
+  <text x="140" y="404" font-size="10.5" fill="#b03a3a">wait<i>: 若 Load 未完成 → Compute stall（long_scoreboard ↑）；Load 已完成 → 立即通过</i></text>
+
+  <!-- divider -->
+  <path d="M 50 418 L 890 418" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Part 3: 同步原语 ===== -->
+  <text x="60" y="442" font-size="14" font-weight="bold" fill="#2b2b2b">③ 同步原语（Producer = Load，Consumer = Compute）</text>
+
+  <!-- primitive 1: cp.async -->
+  <g filter="url(#sk)">
+    <rect x="60" y="456" width="270" height="196" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="195" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#c98a2b">Producer：cp.async（异步加载）</text>
+  <text x="70" y="500" font-size="10.5" fill="#2b2b2b" font-family="monospace">cp.async.cg.shared.global</text>
+  <text x="70" y="516" font-size="10.5" fill="#2b2b2b" font-family="monospace">  [smem_ptr], [gmem_ptr], 16;</text>
+  <text x="70" y="538" font-size="11" fill="#2b2b2b">• 非阻塞，发出后立即返回</text>
+  <text x="70" y="556" font-size="11" fill="#2b2b2b">• 数据走 LDGSTS 通道，不占寄存器</text>
+  <text x="70" y="574" font-size="11" fill="#2b2b2b">• commit_group(N)：把 N 条打包成组</text>
+  <text x="70" y="592" font-size="11" fill="#2b2b2b">• SM_80+（Ampere）可用</text>
+  <text x="70" y="614" font-size="11" fill="#888">SM_90+ 改用 TMA + mbarrier</text>
+  <text x="70" y="632" font-size="11" fill="#888">SM_100+ 用 setmaxnreg 等更细控</text>
+
+  <!-- primitive 2: wait / barrier -->
+  <g filter="url(#sk)">
+    <rect x="350" y="456" width="270" height="196" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="485" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">Consumer：wait（阻塞等待）</text>
+  <text x="360" y="500" font-size="10.5" fill="#2b2b2b" font-family="monospace">cp.async.wait_group(0);</text>
+  <text x="360" y="516" font-size="10.5" fill="#2b2b2b" font-family="monospace">__syncthreads();</text>
+  <text x="360" y="538" font-size="11" fill="#2b2b2b">• wait_group(K)：等至仅剩 K 组未完成</text>
+  <text x="360" y="556" font-size="11" fill="#2b2b2b">• K=0 等全部完成，K=1 留 1 组在途</text>
+  <text x="360" y="574" font-size="11" fill="#2b2b2b">• 双缓冲常 wait_group(1)：本轮等上轮</text>
+  <text x="360" y="592" font-size="11" fill="#2b2b2b">• __syncthreads 保证 block 内可见</text>
+  <text x="360" y="614" font-size="11" fill="#b03a3a" font-weight="bold">wait 过早 → 读到旧数据（错）</text>
+  <text x="360" y="632" font-size="11" fill="#b03a3a" font-weight="bold">wait 过晚 → 重叠变差（慢）</text>
+
+  <!-- primitive 3: mbarrier (SM90+) -->
+  <g filter="url(#sk)">
+    <rect x="640" y="456" width="240" height="196" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="760" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8e4a">SM_90+：mbarrier（屏障）</text>
+  <text x="650" y="500" font-size="10.5" fill="#2b2b2b" font-family="monospace">mbarrier.init(&amp;bar, count);</text>
+  <text x="650" y="516" font-size="10.5" fill="#2b2b2b" font-family="monospace">cp.async.bulk.tensor...;</text>
+  <text x="650" y="532" font-size="10.5" fill="#2b2b2b" font-family="monospace">mbarrier.arrive_expect_tx(&amp;bar, B);</text>
+  <text x="650" y="554" font-size="11" fill="#2b2b2b">• TMA + mbarrier 替代 cp.async</text>
+  <text x="650" y="572" font-size="11" fill="#2b2b2b">• arrive：producer 通知已提交</text>
+  <text x="650" y="590" font-size="11" fill="#2b2b2b">• wait：consumer 等到达计数</text>
+  <text x="650" y="608" font-size="11" fill="#2b2b2b">• 支持 expect_tx 按字节数校验</text>
+  <text x="650" y="630" font-size="11" fill="#888">CUTLASS 3.x / CuTe 默认路径</text>
+</svg>

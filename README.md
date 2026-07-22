@@ -115,8 +115,8 @@ cd public && python3 -m http.server 8080
 ### 单独构建某一周
 
 ```bash
-python3 aiinfra/daily/week5/website/build.py
-cd aiinfra/daily/week5/website && python3 -m http.server 8080
+python3 build.py
+cd public && python3 -m http.server 8080
 ```
 
 ## 编译运行 Kernel

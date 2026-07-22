@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="560" fill="#fdfcf7"/>
+  <text x="450" y="36" text-anchor="middle" font-size="21" font-weight="bold" fill="#2b2b2b">Double Buffering 双缓冲原理</text>
+  <path d="M 280 44 Q 450 52 620 44" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: single buffer (serial) ===== -->
+  <text x="450" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">单缓冲：Load 与 Compute 串行，存在空闲 bubble</text>
+
+  <!-- single buffer timeline: L0 C0 L1 C1 L2 C2 -->
+  <g filter="url(#sk)">
+    <rect x="70" y="92" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="125" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 0</text>
+
+  <g filter="url(#sk)">
+    <rect x="180" y="92" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="235" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 0</text>
+
+  <g filter="url(#sk)">
+    <rect x="290" y="92" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="345" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 1</text>
+
+  <g filter="url(#sk)">
+    <rect x="400" y="92" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="455" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 1</text>
+
+  <g filter="url(#sk)">
+    <rect x="510" y="92" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="565" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 2</text>
+
+  <g filter="url(#sk)">
+    <rect x="620" y="92" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="675" y="114" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 2</text>
+
+  <!-- total time bracket: single -->
+  <path d="M 70 138 L 70 148 M 730 138 L 730 148 M 70 144 L 730 144" stroke="#b03a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="400" y="160" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">总耗时 = 6 × T（Load/Compute 不能重叠）</text>
+
+  <!-- time arrow -->
+  <path d="M 70 172 L 760 172" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="770" y="176" font-size="10" fill="#888">时间</text>
+
+  <!-- divider -->
+  <path d="M 50 192 L 850 192" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Bottom: double buffer (parallel) ===== -->
+  <text x="450" y="216" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8e4a">双缓冲：Load 与 Compute 重叠，掩盖访存延迟</text>
+
+  <!-- Lane: Buf A (Load even tiles) -->
+  <text x="62" y="246" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Buf A</text>
+  <g filter="url(#sk)">
+    <rect x="70" y="230" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="125" y="252" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 0</text>
+  <g filter="url(#sk)">
+    <rect x="290" y="230" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="345" y="252" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 2</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="230" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="565" y="252" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 4</text>
+
+  <!-- Lane: Buf B (Load odd tiles) -->
+  <text x="62" y="296" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Buf B</text>
+  <g filter="url(#sk)">
+    <rect x="180" y="280" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="235" y="302" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 1</text>
+  <g filter="url(#sk)">
+    <rect x="400" y="280" width="110" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" opacity="0.9"/>
+  </g>
+  <text x="455" y="302" text-anchor="middle" font-size="12" fill="#2b2b2b">Load 3</text>
+
+  <!-- Lane: Compute -->
+  <text x="62" y="352" text-anchor="end" font-size="11" fill="#666" font-weight="bold">Compute</text>
+  <g filter="url(#sk)">
+    <rect x="180" y="336" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="235" y="358" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 0</text>
+  <g filter="url(#sk)">
+    <rect x="290" y="336" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="345" y="358" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 1</text>
+  <g filter="url(#sk)">
+    <rect x="400" y="336" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="455" y="358" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 2</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="336" width="110" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="565" y="358" text-anchor="middle" font-size="12" fill="#2b2b2b">Compute 3</text>
+
+  <!-- overlap region: Load 1 与 Compute 0 重叠 -->
+  <g filter="url(#sk)">
+    <rect x="180" y="280" width="110" height="90" fill="none" stroke="#4a8e4a" stroke-width="2" stroke-dasharray="5 3" rx="6"/>
+  </g>
+  <text x="235" y="386" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">↑ Load 1 与 Compute 0 重叠</text>
+
+  <!-- total time bracket: double -->
+  <path d="M 70 402 L 70 412 M 620 402 L 620 412 M 70 408 L 620 408" stroke="#4a8e4a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="345" y="424" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">总耗时 ≈ 4 × T（Load 被计算掩盖）</text>
+
+  <!-- time arrow -->
+  <path d="M 70 436 L 730 436" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="740" y="440" font-size="10" fill="#888">时间</text>
+
+  <!-- bottom note -->
+  <g filter="url(#sk)">
+    <rect x="90" y="456" width="720" height="86" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="100" y="478" font-size="12" fill="#2b2b2b" font-weight="bold">作用：</text>
+  <text x="100" y="498" font-size="11.5" fill="#2b2b2b">① 声明两份 shared memory buffer（Buf A / Buf B），奇偶 tile 交替使用</text>
+  <text x="100" y="516" font-size="11.5" fill="#2b2b2b">② 当前 tile 在 Buf A 上 Compute 时，下一 tile 已在 Buf B 上异步 Load</text>
+  <text x="100" y="534" font-size="11.5" fill="#2b2b2b">③ 让 Global→Shared 的访存延迟被 Compute 掩盖，消除空闲 bubble，提升吞吐</text>
+</svg>

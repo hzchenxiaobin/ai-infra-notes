@@ -331,15 +331,14 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 
 ## 6. 构建集成
 
-写完 dayN/README.md 后,教程会被 `weekN/website/build.py` 自动读取并生成 `dayN.html`:
+写完 dayN/README.md 后,教程会被 `build/weeks.py` 自动读取并生成 `dayN.html`:
 - `build.py` 遍历 `weekN/day*/README.md`,解析首行 `## Day N：<title>`
 - 图片路径 `../website/images/` 会被重写为 `images/`(网站输出目录)
 - `.md` 链接会被重写为 `.html`(GitHub Pages 部署)
 
 **验证命令**:
 ```bash
-python3 weekN/website/build.py    # 单周构建
-python3 build.py                   # 组合构建(含 week1/week2/leetcode)
+python3 build.py                   # 组合构建(含 week1~week8/leetcode/leetgpu/topics/paper)
 ```
 
 **提交与推送**:
@@ -364,5 +363,5 @@ git push origin
 - [ ] `### 面试要点` 5 题问答
 - [ ] 所有文件链接用相对路径且指向真实文件
 - [ ] SVG 引用格式 `![中文alt](../website/images/xxx.svg)`
-- [ ] 运行 `python3 weekN/website/build.py` 成功生成 `dayN.html`
+- [ ] 运行 `python3 build.py` 成功生成 `dayN.html`
 - [ ] 提交并推送更改：`git add -A && git commit -m "docs(weekN/dayM): <主题>" && git push origin`

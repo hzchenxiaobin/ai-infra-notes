@@ -171,8 +171,8 @@ topics/
 
 ### 5.1 自动发现机制
 
-- 统一构建脚本：`aiinfra/topics/build.py`
-- 构建入口：`build.py`（根目录）会自动调用 `aiinfra/topics/build.py`
+- 统一构建脚本：`build/topics.py`
+- 构建入口：`build.py`（根目录）会自动调用 `build/topics.py`
 - 发现规则：扫描 `aiinfra/topics/` 下所有包含 `README.md` 的子目录（自动排除 `images/`、`website/`、`__pycache__`）
 - 新增专题无需修改 `build.py` 或 `.github/workflows/deploy.yml`，push 后自动部署
 
@@ -226,7 +226,7 @@ python3 build.py
 - [ ] （可选）把 SVG 图片放入 `aiinfra/topics/images/<topic-name>_*.svg`
 - [ ] push 到 `main`，GitHub Actions 自动发布
 
-> 历史变更：原先 cutlass/triton/cute/deepgemm/moe 各有独立的 `website/build.py`，现已统一删除，统一由 `aiinfra/topics/build.py` 处理。
+> 历史变更：原先 cutlass/triton/cute/deepgemm/moe 各有独立的 `website/build.py`，后统一为 `aiinfra/topics/build.py`，现已进一步统一到 `build/topics.py`。
 
 ## 6. 开题流程
 
@@ -261,6 +261,6 @@ python3 build.py
 | 下载 `deepseek_v3.pdf` 的 HTML 版本 | 从 arXiv 下载 `DeepSeek-V3 Technical Report` 的 HTML，保存为 `aiinfra/paper/deepseek_v3/deepseek_v3.html`，并设置 `<base href>` 使其本地可正确加载图片与样式。 |
 | 部署 DeepGEMM / MoE 专题 | 为 `aiinfra/topics/deepgemm/` 和 `aiinfra/topics/moe/` 增加构建能力，接入根 `build.py`，并推送到 GitHub Pages。 |
 | 拆分 Day 1-7 文件 | 将 `deepgemm`、`moe`、`cute` 三个专题的 `README.md` 中的 `## Day N...` 章节分别拆成独立的 `day1.md` ~ `day7.md`，`README.md` 保留概览。 |
-| 统一 topics 构建逻辑 | 删除各专题独立的 `website/build.py`，改为 `aiinfra/topics/build.py` 自动发现所有含 `README.md` 的专题目录；新增目录无需再改构建脚本即可自动发布到 GitHub Pages。 |
+| 统一 topics 构建逻辑 | 删除各专题独立的 `website/build.py`，改为 `build/topics.py` 自动发现所有含 `README.md` 的专题目录；新增目录无需再改构建脚本即可自动发布到 GitHub Pages。 |
 
 > 现在新增一个专题只需：创建 `aiinfra/topics/<name>/README.md`（可选 `day1.md`~`day7.md` 和 `images/`），push 到 `main` 即可自动部署。

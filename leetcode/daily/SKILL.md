@@ -293,7 +293,7 @@ leetcode/daily/
 
 ## 5. 网站构建集成
 
-题解写完后会被 `leetcode/website/build.py` 自动读取并生成网页：
+题解写完后会被 `build/leetcode.py` 自动读取并生成网页：
 
 - `build.py` 递归扫描 `leetcode/` 下所有 `.md`（排除 `website/`、`images/`）。
 - 解析一级标题 `# <title>` 作为侧边栏与列表页标题。
@@ -303,7 +303,6 @@ leetcode/daily/
 **验证命令**：
 
 ```bash
-python3 leetcode/website/build.py   # 单独构建 leetcode 网站
 python3 build.py                     # 组合构建全站（含 leetcode）
 ```
 
