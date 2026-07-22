@@ -34,7 +34,7 @@ GPU 执行指令时存在大量**延迟**：
 
 #### 2.1 Occupancy 定义
 
-![Occupancy 概念](../website/images/occupancy_concept.svg)
+![Occupancy 概念](../images/occupancy_concept.svg)
 
 ```
 Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
@@ -113,7 +113,7 @@ warp 3: 也等内存中...
 
 #### 2.2 影响 Occupancy 的三大资源约束
 
-![资源约束](../website/images/resource_constraints.svg)
+![资源约束](../images/resource_constraints.svg)
 
 每个 SM 的资源是有限的，任一资源耗尽都会限制 occupancy：
 
@@ -132,7 +132,7 @@ warp 3: 也等内存中...
 
 #### 2.3 寄存器分配与 Register Spilling
 
-![Register Spilling](../website/images/register_spilling.svg)
+![Register Spilling](../images/register_spilling.svg)
 
 **寄存器分配规则**：
 - 编译器根据 kernel 代码自动决定每个线程使用多少寄存器
@@ -154,7 +154,7 @@ nvcc -Xptxas -v kernels/your_kernel.cu
 
 #### 2.4 Occupancy 与性能的关系
 
-![Occupancy 与性能关系](../website/images/occupancy_curve.svg)
+![Occupancy 与性能关系](../images/occupancy_curve.svg)
 
 - **低 occupancy 区**：性能随 occupancy 提升明显，因为能更好地隐藏延迟
 - **高 occupancy 区**：性能趋于平缓，此时瓶颈可能是内存带宽或计算吞吐量

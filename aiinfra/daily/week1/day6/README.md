@@ -37,7 +37,7 @@
 
 #### 6.1 Nsight 工具家族
 
-![Nsight Tools Comparison](../website/images/nsight_tools_comparison.svg)
+![Nsight Tools Comparison](../images/nsight_tools_comparison.svg)
 
 NVIDIA 提供了两个主要的 profiling 工具：
 
@@ -65,7 +65,7 @@ NVIDIA 提供了两个主要的 profiling 工具：
 
 **使用流程**：
 
-![Profiling Workflow](../website/images/profiling_workflow.svg)
+![Profiling Workflow](../images/profiling_workflow.svg)
 
 1. 先用 **nsys** 找到最耗时的 kernel
 2. 再用 **ncu** 深入分析该 kernel
@@ -99,7 +99,7 @@ ncu-ui report.ncu-rep
 
 ##### 常用指标分类
 
-![ncu Metrics Overview](../website/images/ncu_metrics_overview.svg)
+![ncu Metrics Overview](../images/ncu_metrics_overview.svg)
 
 | 类别 | 指标 | 含义 |
 |------|------|------|
@@ -137,7 +137,7 @@ nsys profile --stats=true ./your_app
 
 #### 6.4 如何判断瓶颈类型
 
-![Memory vs Compute Bound](../website/images/memory_compute_bound.svg)
+![Memory vs Compute Bound](../images/memory_compute_bound.svg)
 
 判断一个 kernel 是 memory-bound 还是 compute-bound 的方法：
 
@@ -157,7 +157,7 @@ nsys profile --stats=true ./your_app
 
 #### 6.5 Roofline 模型
 
-![Roofline 模型](../website/images/roofline_model.svg)
+![Roofline 模型](../images/roofline_model.svg)
 
 Roofline 图帮助判断 kernel 是 compute-bound 还是 memory-bound：
 

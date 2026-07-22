@@ -94,6 +94,6 @@ for x, (title, color, result, desc) in zip(x_positions, patterns):
 ax.text(7, 0.35, 'Bank Conflict 定义：同一个 warp 内多个线程同时访问同一个 bank 的不同地址', fontsize=12, ha='center', style='italic')
 
 plt.tight_layout()
-plt.savefig('/Users/chenbinbin/GitHub/aiinfra/week1/website/images/shared_memory_bank_structure.svg', format='svg', bbox_inches='tight', dpi=150)
-plt.savefig('/Users/chenbinbin/GitHub/aiinfra/week1/website/images/shared_memory_bank_structure.png', format='png', bbox_inches='tight', dpi=150)
+plt.savefig('/Users/chenbinbin/GitHub/aiinfra/week1/images/shared_memory_bank_structure.svg', format='svg', bbox_inches='tight', dpi=150)
+plt.savefig('/Users/chenbinbin/GitHub/aiinfra/week1/images/shared_memory_bank_structure.png', format='png', bbox_inches='tight', dpi=150)
 print('Saved shared_memory_bank_structure.svg and .png')

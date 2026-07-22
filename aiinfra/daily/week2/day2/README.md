@@ -35,7 +35,7 @@
 
 #### 2.1 Register Blocking 数据流图
 
-![Register Blocking 三级数据复用](../website/images/register_blocking_dataflow.svg)
+![Register Blocking 三级数据复用](../images/register_blocking_dataflow.svg)
 
 每个线程的执行流程：
 1. 从 Shared Memory 加载 TM 个 A 元素到 `r_A[TM]`
@@ -68,7 +68,7 @@
 
 #### 2.4 线程到输出 tile 的二维映射
 
-![Thread Tile 二维映射](../website/images/thread_tile_mapping.svg)
+![Thread Tile 二维映射](../images/thread_tile_mapping.svg)
 
 ```
 输出 tile (BM×BN = 128×128) 被划分为 (BM/TM)×(BN/TN) = 16×16 = 256 个 thread tile
@@ -86,7 +86,7 @@ threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
 
 #### 2.5 Double Buffering（软件流水线）
 
-![Double Buffering 软件流水线](../website/images/double_buffering.svg)
+![Double Buffering 软件流水线](../images/double_buffering.svg)
 
 ![单缓冲 vs 双缓冲软件流水线](../../images/week2_double_buffering.svg)
 

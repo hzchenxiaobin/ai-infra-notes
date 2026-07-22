@@ -85,7 +85,7 @@ def main() -> None:
 
     print("Copying course overview images to public/images/...")
     public_images = public_dir / "images"
-    copy_images(repo_root / "aiinfra" / "daily" / "week1" / "website" / "images", public_images)
+    copy_images(repo_root / "aiinfra" / "daily" / "week1" / "images", public_images)
     for images_src in [repo_root / "images", repo_root / "aiinfra" / "daily" / "images"]:
         copy_images(images_src, public_images)
 
@@ -98,7 +98,7 @@ def main() -> None:
         print(f"Building Week {week_num} website...")
         build_week(week_num, public_dir, plan_weeks)
         copy_images(
-            repo_root / "aiinfra" / "daily" / f"week{week_num}" / "website" / "images",
+            repo_root / "aiinfra" / "daily" / f"week{week_num}" / "images",
             public_dir / f"week{week_num}" / "images",
         )
 

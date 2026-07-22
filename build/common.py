@@ -64,7 +64,7 @@ def load_overview_and_days(week_dir: Path):
     if not readme_path.exists():
         raise FileNotFoundError(f"Week README not found: {readme_path}")
     overview = readme_path.read_text(encoding="utf-8")
-    overview = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", overview)
+    overview = re.sub(r"\]\((?:\.\./)?images/", "](images/", overview)
 
     days = []
     for day_dir in sorted(week_dir.glob("day*")):
@@ -72,7 +72,7 @@ def load_overview_and_days(week_dir: Path):
         if not readme.exists():
             continue
         text = readme.read_text(encoding="utf-8")
-        text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", "](images/", text)
+        text = re.sub(r"\]\((?:\.\./)?images/", "](images/", text)
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
         match = DAY_TITLE_PATTERN.match(first_line)
         if not match:

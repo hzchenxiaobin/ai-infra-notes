@@ -39,7 +39,7 @@ Day 2 调度器遗留的性能问题：
 
 #### 3.1 Speculative Decoding（投机采样）
 
-![Speculative Decoding：小模型 Draft + 大模型 Verify](../website/images/speculative_decoding.svg)
+![Speculative Decoding：小模型 Draft + 大模型 Verify](../images/speculative_decoding.svg)
 
 ##### 基本原理
 
@@ -96,7 +96,7 @@ Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
 
 #### 3.2 Chunked Prefill（分块预填充）
 
-![Chunked Prefill：长 Prompt 分块 + Decode 交错](../website/images/chunked_prefill.svg)
+![Chunked Prefill：长 Prompt 分块 + Decode 交错](../images/chunked_prefill.svg)
 
 ##### 问题与方案
 
@@ -132,7 +132,7 @@ Chunked Prefill：
 
 #### 3.3 Prefix Caching（前缀缓存）
 
-![Prefix Caching：公共前缀 KV Cache 复用](../website/images/prefix_caching.svg)
+![Prefix Caching：公共前缀 KV Cache 复用](../images/prefix_caching.svg)
 
 ##### 问题与方案
 

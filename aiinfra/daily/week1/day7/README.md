@@ -16,7 +16,7 @@
 
 ### Week 1 知识地图
 
-![Week 1 知识地图](../website/images/week1_knowledge_map.svg)
+![Week 1 知识地图](../images/week1_knowledge_map.svg)
 
 Week 1 的核心主线：
 
@@ -77,7 +77,7 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 ##### Shared Memory / L1 / L2 Cache 深度对比
 
-![Cache 层次对比](../website/images/cache_hierarchy_comparison.svg)
+![Cache 层次对比](../images/cache_hierarchy_comparison.svg)
 
 这三者是 GPU 存储层次中最容易混淆的部分。下表从 7 个维度做深度对比：
 
@@ -150,7 +150,7 @@ cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100
 
 ### GPU 性能优化决策树
 
-![Optimization Decision Tree](../website/images/optimization_decision_tree.svg)
+![Optimization Decision Tree](../images/optimization_decision_tree.svg)
 
 面对一个性能问题，按以下流程思考：
 
@@ -735,7 +735,7 @@ int main() {
 
 ### 面试准备框架
 
-![Week 1 面试准备框架](../website/images/week1_interview_prep.svg)
+![Week 1 面试准备框架](../images/week1_interview_prep.svg)
 
 面试中回答技术问题，建议用这个结构：
 

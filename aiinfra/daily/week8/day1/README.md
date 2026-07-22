@@ -36,7 +36,7 @@ Week 1-7 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.
 | 项目结构 | 各周独立 | **统一目录树** |
 | 架构图 | 无 | **一张图看懂系统**（Day 2 细化） |
 
-![8 周代码 → 一份可展示的项目文档](../website/images/doc_consolidation_lifecycle.svg)
+![8 周代码 → 一份可展示的项目文档](../images/doc_consolidation_lifecycle.svg)
 
 > 💡 **一句话总结**：Day 1 的核心是把"代码堆"变成"项目"——用 README 回答面试官的五个高频问题（介绍项目 / 能跑吗 / 架构 / 成果 / 后续），让仓库自己会"说话"。
 
@@ -46,7 +46,7 @@ Week 1-7 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.
 
 #### 1.1 README 的六段结构
 
-![项目 README 解剖：面试官想看到什么](../website/images/readme_anatomy.svg)
+![项目 README 解剖：面试官想看到什么](../images/readme_anatomy.svg)
 
 一份面向面试的 README 不是"把所有信息都写上去"，而是**每一段对应一个面试高频问题**：
 
@@ -105,7 +105,7 @@ python examples/single_request.py
 
 #### 1.3 Benchmark 测量方法论
 
-![Kernel Benchmark 测量流程](../website/images/benchmark_measurement_flow.svg)
+![Kernel Benchmark 测量流程](../images/benchmark_measurement_flow.svg)
 
 Benchmark 数字是 README 最有说服力的部分，但**测错数字比没有数字更糟**。正确测量流程：
 

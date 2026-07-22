@@ -42,7 +42,7 @@
 
 #### 1.1 Mock 面试流程
 
-![Mock 面试流程：7 个环节约 30 分钟](../website/images/mock_interview_framework.svg)
+![Mock 面试流程：7 个环节约 30 分钟](../images/mock_interview_framework.svg)
 
 完整 Mock 面试分为 7 个环节，总时长约 30 分钟：
 

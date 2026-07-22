@@ -113,7 +113,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 > 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 GPU 需要做 12+ 次运算才能不吃亏。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
 
-![Element-wise 操作为什么是纯 Memory-Bound](../website/images/element_wise_memory_bound.svg)
+![Element-wise 操作为什么是纯 Memory-Bound](../images/element_wise_memory_bound.svg)
 
 #### Element-wise 操作的优化策略
 
@@ -133,7 +133,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 #### 4.1 GPU 内存层次详解
 
-![GPU 内存层次结构](../website/images/gpu_memory_hierarchy.svg)
+![GPU 内存层次结构](../images/gpu_memory_hierarchy.svg)
 
 ![GPU 内存层次结构](../../images/week1_memory_hierarchy.svg)
 
@@ -155,7 +155,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 
 #### 4.2 Global Memory Coalesced Access
 
-![Coalesced Memory Access](../website/images/coalesced_access.svg)
+![Coalesced Memory Access](../images/coalesced_access.svg)
 
 **Coalesced Access（合并访问）**：
 - 当一个 warp 的 32 个线程同时访问 global memory 时，如果访问的地址是连续的，硬件会把这些访问合并成少量的 memory transaction。
@@ -236,7 +236,7 @@ __global__ void coalesced_read(const float* x, float* y) {
 
 #### 4.3 Stride Access（非合并访问）
 
-![Stride Access](../website/images/stride_access.svg)
+![Stride Access](../images/stride_access.svg)
 
 **Stride Access**：
 - 当 warp 内线程访问的地址间隔较大时，每个线程访问落在不同的 memory transaction 中
@@ -259,7 +259,7 @@ __global__ void stride_read(const float* x, float* y) {
 
 #### 4.4 Shared Memory 与 Tiling
 
-![Shared Memory Tiling](../website/images/shared_memory_tiling.svg)
+![Shared Memory Tiling](../images/shared_memory_tiling.svg)
 
 **Shared Memory 的作用**：
 - 位于 SM 内部，速度接近 L1 cache
@@ -311,7 +311,7 @@ __global__ void stride_read(const float* x, float* y) {
 
 矩阵转置是一个经典的内存访问优化问题。
 
-![矩阵转置](../website/images/matrix_transpose.svg)
+![矩阵转置](../images/matrix_transpose.svg)
 
 #### 任务 1：Naive 版本
 
@@ -417,7 +417,7 @@ __global__ void transpose_tiled(const float* in, float* out, int width, int heig
 
 #### 深入理解：为什么读和写都是 coalesced？
 
-![Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转](../website/images/transpose_tiled_process.svg)
+![Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转](../images/transpose_tiled_process.svg)
 
 上图以 `TILE_DIM=4`、矩阵 `8×8` 为例，展示了 Block(1,0) 的完整工作流程：
 
@@ -449,7 +449,7 @@ if (x < width && y < height) {
 }
 ```
 
-![Coalesced Global Memory Access](../website/images/coalesced_access.svg)
+![Coalesced Global Memory Access](../images/coalesced_access.svg)
 
 在一个 warp 内，`threadIdx.y` 相同，`threadIdx.x` 从 0 变到 31：
 
@@ -472,7 +472,7 @@ if (x < height && y < width) {
 }
 ```
 
-![Coalesced vs Stride Access](../website/images/stride_access.svg)
+![Coalesced vs Stride Access](../images/stride_access.svg)
 
 关键在于：**交换了** `blockIdx.x` **和** `blockIdx.y`**，但** `threadIdx.x` **仍然对应输出地址的连续维度**。
 
@@ -488,7 +488,7 @@ if (x < height && y < width) {
 
 ##### 转置操作在哪里发生？
 
-![Shared Memory Tiling 原理](../website/images/shared_memory_tiling.svg)
+![Shared Memory Tiling 原理](../images/shared_memory_tiling.svg)
 
 在 shared memory 内部。第一阶段按 `tile[y][x]` 写入，第二阶段按 `tile[x][y]` 读出：
 

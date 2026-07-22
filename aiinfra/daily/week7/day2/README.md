@@ -45,7 +45,7 @@ Day 1 调度器的短板：
 
 #### 2.1 调度器六大功能概览
 
-![完整调度器六大功能架构](../website/images/scheduler_architecture.svg)
+![完整调度器六大功能架构](../images/scheduler_architecture.svg)
 
 一个生产级 LLM 推理调度器需要六大功能，缺一不可：
 
@@ -93,7 +93,7 @@ if req.priority > 0:
 
 #### 2.3 资源预算：双闸门机制
 
-![资源预算：Token Budget + Memory Budget](../website/images/resource_budget.svg)
+![资源预算：Token Budget + Memory Budget](../images/resource_budget.svg)
 
 每轮 `schedule()` 有两道预算闸门，新请求必须**同时满足**才能加入 batch：
 
@@ -122,7 +122,7 @@ class MemoryBudget:
 
 #### 2.4 抢占：显存不足时的资源回收
 
-![抢占策略：Recompute vs Swap](../website/images/preemption_strategy.svg)
+![抢占策略：Recompute vs Swap](../images/preemption_strategy.svg)
 
 当高优先级请求到来但显存不足时，调度器会**抢占**低优先级 running 请求的资源：
 

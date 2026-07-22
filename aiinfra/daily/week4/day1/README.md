@@ -35,7 +35,7 @@ FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Share
 
 #### 1.1 标准 Attention 的 IO 痛点回顾
 
-![标准 Attention 三阶段 HBM 读写量拆解](../website/images/attention_io_breakdown.svg)
+![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
 ```
 标准 Attention：
@@ -57,7 +57,7 @@ FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Share
 
 #### 1.2 FlashAttention 的两大核心创新
 
-![FlashAttention Tiling 分块策略](../website/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 分块策略](../images/flash_attention_tiling.svg)
 
 | 创新点 | 解决的问题 | 关键思想 |
 |--------|-----------|---------|
@@ -95,7 +95,7 @@ Q tile (Br×d) 常驻 SRAM
 
 #### 1.3 Online Softmax 三公式完整推导
 
-![Online Softmax 递推更新流程](../website/images/flash_attention_online_update.svg)
+![Online Softmax 递推更新流程](../images/flash_attention_online_update.svg)
 
 ##### 状态定义
 
@@ -164,7 +164,7 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 
 #### 1.4 IO 复杂度对比
 
-![O(N²) vs O(Nd) IO 增长对比](../website/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../images/on2_vs_ond_scaling.svg)
 
 | 实现 | HBM 访问量 | N=4096, d=64, FP32 | N=8192, d=64 |
 |------|-----------|-------------------|--------------|

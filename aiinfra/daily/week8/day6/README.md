@@ -43,7 +43,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 
 #### 6.1 六大高频薄弱点定位与复习
 
-![六大高频薄弱点与复习方法](../website/images/weak_points_review.svg)
+![六大高频薄弱点与复习方法](../images/weak_points_review.svg)
 
 从历次 Mock 面试和真实面经中，反复出现的薄弱点集中在以下六个。每个点给出"卡壳表现"和"复习方法"：
 
@@ -68,7 +68,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 
 #### 6.2 十大易混淆概念对比
 
-![十大易混淆概念对比](../website/images/confusable_concepts.svg)
+![十大易混淆概念对比](../images/confusable_concepts.svg)
 
 面试官最爱用**对比题**区分候选人的理解深度。下面十个对比是高频考点，每个都要能一句话说清区别：
 
@@ -107,7 +107,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 
 #### 6.3 关键公式与参数速查
 
-![关键公式与参数速查表](../website/images/key_formulas_cheatsheet.svg)
+![关键公式与参数速查表](../images/key_formulas_cheatsheet.svg)
 
 面试前必须能**秒写、秒背、秒算**的五组公式和一组参数：
 

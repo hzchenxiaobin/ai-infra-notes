@@ -42,7 +42,7 @@ Attention(Q, K, V) = softmax(Q·K^T / √d) · V
 
 #### 4.1 标准 Attention 的三阶段 HBM 读写量推导
 
-![标准 Attention 三阶段 HBM 读写量拆解](../website/images/attention_io_breakdown.svg)
+![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
 **计算流程**：
 
@@ -82,7 +82,7 @@ O(N²) 来自**物化两个 N×N 中间矩阵**：
 
 #### 4.2 O(N²) 的危害：长序列下 IO 爆炸与 OOM
 
-![O(N²) vs O(Nd) HBM IO 随序列长度增长](../website/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) HBM IO 随序列长度增长](../images/on2_vs_ond_scaling.svg)
 
 **S/P 矩阵显存占用**：
 
@@ -114,7 +114,7 @@ N = 65536: S/P = 65536² × 4 bytes = 16 GB （直接 OOM）
 
 #### 4.3 Memory-bound 判定：softmax 是瓶颈
 
-![标准 Attention 的 Roofline 与瓶颈判定](../website/images/attention_memory_bound.svg)
+![标准 Attention 的 Roofline 与瓶颈判定](../images/attention_memory_bound.svg)
 
 标准 Attention 是**混合瓶颈**——GEMM 部分是 compute-bound，softmax 部分是 memory-bound：
 

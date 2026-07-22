@@ -33,7 +33,7 @@ Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共
 
 #### 4.1 FA1 的不足
 
-![FlashAttention Online Softmax 递推](../website/images/flash_attention_online_update.svg)
+![FlashAttention Online Softmax 递推](../images/flash_attention_online_update.svg)
 
 FA1 存在三个效率问题：
 
@@ -54,7 +54,7 @@ FA1 的 non-matmul FLOPs（softmax 的 exp/sum/rescale）与 matmul FLOPs 之比
 
 #### 4.2 FA2 改进一：减少 Non-Matmul FLOPs
 
-![FlashAttention Tiling 与线程映射](../website/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
 
 FA2 的核心改进：**让一个 warp group 负责输出 tile 的一个子块（sub-tile），在 group 内部独立完成该子块的全部 online softmax 计算**。
 

@@ -46,7 +46,7 @@
 
 #### 1.1 知识地图总览
 
-![面试基础篇知识地图：四大主题 × 核心考点](../website/images/interview_basics_knowledge_map.svg)
+![面试基础篇知识地图：四大主题 × 核心考点](../images/interview_basics_knowledge_map.svg)
 
 基础篇覆盖四大主题，每个主题 3-4 个核心考点：
 
@@ -156,7 +156,7 @@ nvcc-- default - stream per - thread
 
 #### 1.5 Profiling：Roofline Model
 
-![Roofline Model：判断 kernel 瓶颈](../website/images/roofline_model_interview.svg)
+![Roofline Model：判断 kernel 瓶颈](../images/roofline_model_interview.svg)
 
 ##### Roofline 三步法
 

@@ -17,7 +17,7 @@
 
 ### Week 6 知识地图
 
-![Week 6 知识地图：从凑批到并发服务](../website/images/week6_knowledge_map.svg)
+![Week 6 知识地图：从凑批到并发服务](../images/week6_knowledge_map.svg)
 
 Week 6 围绕一条主线展开：**从单请求串行到多请求高吞吐服务**。
 
@@ -98,7 +98,7 @@ P99 > 平均延迟 → 尾延迟是 SLA 关键
 
 ### 策略选择决策树
 
-![调度策略选择决策树](../website/images/scheduling_strategy_decision_tree.svg)
+![调度策略选择决策树](../images/scheduling_strategy_decision_tree.svg)
 
 ![Batching 策略选择决策树](../../images/week6_batching_strategy_decision.svg)
 
@@ -325,7 +325,7 @@ aiinfra/week6/
 ├── day5/kernels/mini_engine_v1.py # Mini 推理引擎 v1
 ├── day6/kernels/benchmark_engine_v1.py # Latency/Throughput benchmark
 ├── day7/kernels/week6_summary.py # 总结日自测脚本
-└── website/images/ # 18 张 SVG
+└── images/ # 18 张 SVG
 leetgpu/week6/day1-7/ # 7 道 LeetGPU 题解
 leetcode/daily/week6/day1-7/ # 7 道 LeetCode 题解
 ```

@@ -135,7 +135,7 @@ def convert_svg(path: Path):
 
 
 def main():
-    img_dir = Path("week1/website/images")
+    img_dir = Path("week1/images")
     svgs = sorted(img_dir.glob("*.svg"))
     print(f"Found {len(svgs)} SVGs to convert")
     success = 0

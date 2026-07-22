@@ -28,7 +28,7 @@
 
 #### 1.1 Prefill vs Decode 执行特征对比
 
-![Prefill vs Decode 执行特征对比](../website/images/prefill_vs_decode.svg)
+![Prefill vs Decode 执行特征对比](../images/prefill_vs_decode.svg)
 
 上图直观展示了两阶段的核心差异。下面用表格精确对比：
 
@@ -45,7 +45,7 @@
 
 #### 1.2 Transformer 单层数据流
 
-![Transformer 单层数据流](../website/images/transformer_dataflow.svg)
+![Transformer 单层数据流](../images/transformer_dataflow.svg)
 
 上图展示了一个标准 Transformer Block 的完整数据流。按执行顺序：
 
@@ -65,7 +65,7 @@
 
 #### 1.3 为什么 Decode 是 Memory-bound：M=1 的 GEMM
 
-![Decode 为什么是 Memory-bound](../website/images/decode_memory_bound.svg)
+![Decode 为什么是 Memory-bound](../images/decode_memory_bound.svg)
 
 上图用 QKV GEMM 为例，直观展示了 M 从 1024 变成 1 时，arithmetic intensity 的骤降：
 
@@ -103,7 +103,7 @@ KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
 
 #### 核心 API
 
-![torch.profiler 工作流](../website/images/torch_profiler_workflow.svg)
+![torch.profiler 工作流](../images/torch_profiler_workflow.svg)
 
 ```python
 import torch.profiler

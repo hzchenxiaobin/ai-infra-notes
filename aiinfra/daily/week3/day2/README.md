@@ -36,7 +36,7 @@ Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4
 
 #### 2.1 Softmax 数值稳定性与 safe softmax
 
-![Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出](../website/images/safe_softmax_three_pass.svg)
+![Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出](../images/safe_softmax_three_pass.svg)
 
 **朴素 Softmax 的问题**：
 
@@ -78,7 +78,7 @@ exp(xi - m) / Σ exp(xj - m)
 
 #### 2.2 Row-wise 并行与两级 Block Reduce
 
-![Block 级 Reduce 两级结构](../website/images/block_reduce_two_level.svg)
+![Block 级 Reduce 两级结构](../images/block_reduce_two_level.svg)
 
 **并行映射策略**：
 
@@ -139,7 +139,7 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 
 #### 2.3 LayerNorm 公式与两次 reduce
 
-![LayerNorm 两次 Reduce 流程](../website/images/layernorm_two_reduce.svg)
+![LayerNorm 两次 Reduce 流程](../images/layernorm_two_reduce.svg)
 
 **LayerNorm 公式**：
 

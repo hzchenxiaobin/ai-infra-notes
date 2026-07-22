@@ -36,7 +36,7 @@
 
 #### 1.1 Prefill 阶段：一次性处理整段 prompt
 
-![Prefill vs Decode 两阶段输入与 Attention 形状](../website/images/prefill_vs_decode_overview.svg)
+![Prefill vs Decode 两阶段输入与 Attention 形状](../images/prefill_vs_decode_overview.svg)
 
 Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 N×N self-attention，输出**第一个新 token** 的 logits。
 
@@ -109,7 +109,7 @@ Decode QKV GEMM (M=1):
 
 #### 1.4 Decode 为什么 memory-bound：Roofline 视角
 
-![Decode 的算术强度与 Ridge Point、四大优化方向](../website/images/decode_memory_bound.svg)
+![Decode 的算术强度与 Ridge Point、四大优化方向](../images/decode_memory_bound.svg)
 
 Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
 
@@ -134,7 +134,7 @@ RTX 5090 的 Ridge Point 约在 **12.6 FLOP/Byte**（312 TFLOPS ÷ 2 TB/s）。D
 
 #### 1.5 推理时延指标：TTFT / TBT / TPOT
 
-![TTFT 与 TBT 在推理时间线上的位置](../website/images/inference_metrics_timeline.svg)
+![TTFT 与 TBT 在推理时间线上的位置](../images/inference_metrics_timeline.svg)
 
 | 指标 | 全称 | 含义 | 决定阶段 |
 |------|------|------|---------|

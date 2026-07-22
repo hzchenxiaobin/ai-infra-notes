@@ -79,7 +79,7 @@ def _week_dir(week_num: int) -> Path:
 
 def rewrite_week1_resource_links(markdown_text: str, root_prefix: str = "") -> str:
     """Rewrite relative resource links so they resolve from pages under week1/."""
-    text = re.sub(r"\]\((?:\.\./)?(?:website/)?images/", f"]({root_prefix}images/", markdown_text)
+    text = re.sub(r"\]\((?:\.\./)?images/", f"]({root_prefix}images/", markdown_text)
     text = text.replace("](../tools/", "](tools/")
     text = text.replace("](../notes/", "](notes/")
     text = re.sub(r"\]\(\.\./day\d+/notes/", "](notes/", text)
@@ -373,7 +373,7 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
         raise FileNotFoundError(f"Course overview source not found: {COURSE_OVERVIEW_SOURCE}")
     course_overview = COURSE_OVERVIEW_SOURCE.read_text(encoding="utf-8")
     course_overview = rewrite_md_links_to_html_weeks(course_overview, root_prefix="")
-    course_overview = re.sub(r"\]\((?:\.\./)*(?:website/)?images/", "](images/", course_overview)
+    course_overview = re.sub(r"\]\((?:\.\./)*images/", "](images/", course_overview)
 
     course_overview_html = page_template(
         title="课程概览",

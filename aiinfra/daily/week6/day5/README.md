@@ -45,7 +45,7 @@ output = engine.generate(prompt, max_new_tokens=10) # 阻塞，跑完才返回
 
 #### 5.1 MiniEngineV1 架构
 
-![Mini 推理引擎 v1 架构](../website/images/mini_engine_v1_architecture.svg)
+![Mini 推理引擎 v1 架构](../images/mini_engine_v1_architecture.svg)
 
 v1 由四个核心组件构成，对应 vLLM 的 Engine + Scheduler + Worker：
 
@@ -75,7 +75,7 @@ class MiniEngineV1:
 
 #### 5.2 请求生命周期
 
-![请求生命周期：WAITING → RUNNING → FINISHED](../website/images/request_lifecycle_v1.svg)
+![请求生命周期：WAITING → RUNNING → FINISHED](../images/request_lifecycle_v1.svg)
 
 每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
 
@@ -162,7 +162,7 @@ if batch:
 
 #### 5.5 Continuous Batching 实测时间线
 
-![Continuous Batching in Mini Engine v1 实测](../website/images/continuous_batching_in_engine_v1.svg)
+![Continuous Batching in Mini Engine v1 实测](../images/continuous_batching_in_engine_v1.svg)
 
 实测 4 个请求（R0 高优先级 gen=8，R1-R3 普通 gen=4-6）的时间线：
 

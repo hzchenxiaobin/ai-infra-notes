@@ -45,7 +45,7 @@ vLLM 的 Scheduler 用 **Preemption（抢占）** 解决这个问题：显存不
 
 #### 3.1 Scheduler 的整体结构
 
-![schedule() 五步流程与三队列](../website/images/vllm_scheduler_schedule_flow.svg)
+![schedule() 五步流程与三队列](../images/vllm_scheduler_schedule_flow.svg)
 
 vLLM 的 `Scheduler` 类（`vllm/core/scheduler.py`）维护三个 FIFO 队列和一个块管理器：
 
@@ -121,7 +121,7 @@ def schedule(self) -> SchedulerOutputs:
 
 #### 3.3 SchedulingBudget：双预算约束
 
-![SchedulingBudget 双预算约束](../website/images/vllm_scheduler_budget.svg)
+![SchedulingBudget 双预算约束](../images/vllm_scheduler_budget.svg)
 
 `SchedulingBudget` 是每轮调度的"资源账本"，跟踪两个上限：
 
@@ -149,7 +149,7 @@ class SchedulingBudget:
 
 #### 3.4 Preemption：显存压力下的抢占
 
-![Recompute vs Swap 两种抢占模式](../website/images/vllm_scheduler_preemption_modes.svg)
+![Recompute vs Swap 两种抢占模式](../images/vllm_scheduler_preemption_modes.svg)
 
 当 Step 2 `_schedule_running` 发现某个 running 序列需要新 block 但显存不足时，触发 **preemption**。vLLM 提供两种模式：
 

@@ -42,7 +42,7 @@ Day 5 遗留的性能问题：
 
 #### 6.1 三层 Profiling 工具链
 
-![Profiling 工具链：三层分析](../website/images/profiling_toolchain.svg)
+![Profiling 工具链：三层分析](../images/profiling_toolchain.svg)
 
 ##### 三层工具的分工
 
@@ -157,7 +157,7 @@ for layer in range(num_layers):
 
 #### 6.3 五大系统级瓶颈
 
-![系统级瓶颈分类与优化](../website/images/bottleneck_analysis.svg)
+![系统级瓶颈分类与优化](../images/bottleneck_analysis.svg)
 
 | 瓶颈 | 症状 | nsys 表现 | ncu 表现 | 优化 |
 |------|------|---------|---------|------|

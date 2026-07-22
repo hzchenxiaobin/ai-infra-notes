@@ -42,7 +42,7 @@ Batch = [R1(gen=5), R2(gen=100)]
 
 #### 2.1 Continuous Batching 核心思想
 
-![Dynamic vs Continuous Batching 对比](../website/images/dynamic_vs_continuous_batching.svg)
+![Dynamic vs Continuous Batching 对比](../images/dynamic_vs_continuous_batching.svg)
 
 ```
 Iteration-level scheduling：
@@ -68,7 +68,7 @@ Iteration-level scheduling：
 
 #### 2.2 Iteration 时间线
 
-![Continuous Batching Iteration 时间线](../website/images/continuous_batching_timeline.svg)
+![Continuous Batching Iteration 时间线](../images/continuous_batching_timeline.svg)
 
 ![Continuous Batching 迭代时间线](../../images/week6_continuous_batching_timeline.svg)
 
@@ -81,7 +81,7 @@ Iteration-level scheduling：
 
 #### 2.3 Scheduler 状态机
 
-![Scheduler 状态机与每轮决策](../website/images/scheduler_state_machine.svg)
+![Scheduler 状态机与每轮决策](../images/scheduler_state_machine.svg)
 
 ##### Sequence 状态转换
 

@@ -55,7 +55,7 @@ cudaStreamDestroy(s2);
 
 #### 3.2 Default Stream 的"坑"
 
-![Default Stream 隐式同步陷阱](../website/images/default_stream_sync.svg)
+![Default Stream 隐式同步陷阱](../images/default_stream_sync.svg)
 
 | 特性 | Default Stream (Stream 0) | Explicit Stream |
 |------|-------------------------|-----------------|
@@ -160,7 +160,7 @@ cudaStreamDestroy(s);
 
 #### 3.4 多 Stream 重叠流水线
 
-![Multi-Stream 重叠流水线](../website/images/multi_stream_overlap.svg)
+![Multi-Stream 重叠流水线](../images/multi_stream_overlap.svg)
 
 ![单 Stream 顺序 vs 多 Stream 重叠](../../images/week2_stream_comparison.svg)
 
@@ -192,7 +192,7 @@ for (int i = 0; i < nStreams; ++i)
 
 #### 3.5 cudaEvent 跨 Stream 依赖
 
-![cudaEvent 跨 Stream 依赖管理](../website/images/stream_event_dependency.svg)
+![cudaEvent 跨 Stream 依赖管理](../images/stream_event_dependency.svg)
 
 当 Stream 间存在数据依赖时，用 Event 实现精确同步：
 
@@ -445,7 +445,7 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 **实际捕获的 Timeline 截图**（4 个 Stream 的 H2D / Kernel / D2H 重叠执行）：
 
-![Multi-Stream Timeline](../website/images/multi_stream_timeline.png)
+![Multi-Stream Timeline](../images/multi_stream_timeline.png)
 
 从图中可以看到：
 - 4 个 Stream 横向并行推进，每个 Stream 内部按 `H2D → Kernel → D2H` 顺序执行。
@@ -458,7 +458,7 @@ nsys profile -o multi_stream_timeline ./multi_stream
 >
 > 下面是把时间轴放大到微秒级、只看 **Stream 1 里一个 chunk** 的截图，可以清楚看到 `H2D → H2D → Kernel → D2H` 的完整流水线：
 
-![Multi-Stream Timeline Zoomed](../website/images/multi_stream_timeline_zoom.png)
+![Multi-Stream Timeline Zoomed](../images/multi_stream_timeline_zoom.png)
 
 #### 任务 4：LeetGPU 在线题目 —— 2D Convolution
 

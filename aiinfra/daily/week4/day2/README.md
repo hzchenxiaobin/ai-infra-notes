@@ -36,7 +36,7 @@ Day 1 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online sof
 
 #### 2.1 Kernel 线程配置设计
 
-![FlashAttention Tiling 与线程映射](../website/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
 
 一个 Block 处理一个 Q tile（Br 行 × d 列），grid 配置覆盖 batch × head × Q tile：
 
@@ -84,7 +84,7 @@ s_V: 64×64 = 4096 floats = 16 KB
 
 #### 2.3 Online Softmax 在 CUDA 中的实现
 
-![Warp Shuffle 归约原语](../website/images/reduction_warp_shuffle.svg)
+![Warp Shuffle 归约原语](../images/reduction_warp_shuffle.svg)
 
 每个 Q 行独立维护 `(m, l, acc[d])` 三组状态。对于第 `qi` 个 Q 行，处理流程：
 

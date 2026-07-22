@@ -42,7 +42,7 @@ if budget.can_schedule(num_new, 1): # ← 长 prompt 可能直接吃满整轮
 
 #### 4.1 Inflight Batching = Continuous Batching
 
-![Inflight Batching 数据流](../website/images/inflight_batching_flow.svg)
+![Inflight Batching 数据流](../images/inflight_batching_flow.svg)
 
 TensorRT-LLM 用 **"Inflight Batching"** 这个术语，但本质和 Day 2 的 Continuous Batching 完全一致：
 
@@ -91,7 +91,7 @@ TensorRT-LLM 的调度器与 vLLM 有关键差异：
 
 #### 4.3 Chunked Prefill：核心创新
 
-![Naive vs Chunked Prefill 延迟对比](../website/images/chunked_prefill_vs_naive.svg)
+![Naive vs Chunked Prefill 延迟对比](../images/chunked_prefill_vs_naive.svg)
 
 Chunked Prefill 是今天最核心的概念，解决"长 prefill 阻塞 decode"问题：
 
@@ -166,7 +166,7 @@ Token Attention（LightLLM）：
 
 #### 4.5 四框架横向对比
 
-![三大推理框架调度策略对比](../website/images/framework_comparison.svg)
+![三大推理框架调度策略对比](../images/framework_comparison.svg)
 
 |------|------|-------------|----------|------------|
 | Batching | Continuous | Inflight | Dynamic Split Fuse | 动态批处理 |

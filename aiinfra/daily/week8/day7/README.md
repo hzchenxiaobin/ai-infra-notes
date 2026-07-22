@@ -17,7 +17,7 @@
 
 ### Week 8 知识地图
 
-![Week 8 知识地图：项目打磨 + 面试准备](../website/images/week8_knowledge_map.svg)
+![Week 8 知识地图：项目打磨 + 面试准备](../images/week8_knowledge_map.svg)
 
 | Day | 主题 | 核心产出 |
 |-----|------|---------|
@@ -33,7 +33,7 @@
 
 ### 核心概念串讲：8 周知识体系
 
-![8 周学习路线总图：从 GPU 执行到推理系统](../website/images/eight_week_roadmap.svg)
+![8 周学习路线总图：从 GPU 执行到推理系统](../images/eight_week_roadmap.svg)
 
 8 周学习是一条从"底层硬件"到"上层系统"再到"工程表达"的完整进阶路径：
 
@@ -80,7 +80,7 @@
 
 ### 8 周能力地图
 
-![8 周能力地图：强项与待提升](../website/images/eight_week_capability_map.svg)
+![8 周能力地图：强项与待提升](../images/eight_week_capability_map.svg)
 
 #### 能力地图 Checklist
 
@@ -272,7 +272,7 @@ R (Result)：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
 
 ### 8 周总结 → 后续规划
 
-![后续学习路线：3 个月深化 + 6 个月拓展](../website/images/future_roadmap.svg)
+![后续学习路线：3 个月深化 + 6 个月拓展](../images/future_roadmap.svg)
 
 ```
 8 周完成：

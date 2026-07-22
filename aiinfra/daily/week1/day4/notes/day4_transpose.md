@@ -53,7 +53,7 @@ nsys profile -o profiles/day4_transpose_timeline ./kernels/transpose
 
 ### 思考题 2 详细解析：Shared memory 优化版如何做到 coalesced write？
 
-![Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转](../../website/images/transpose_tiled_process.svg)
+![Tiled 矩阵转置：数据划分、线程映射与 Shared Memory 中转](../../images/transpose_tiled_process.svg)
 
 上图以 `TILE_DIM=4`、矩阵 `8×8` 为例，展示了 Block(1,0) 的完整工作流程：
 
@@ -82,7 +82,7 @@ int y = blockIdx.y * TILE_DIM + threadIdx.y;
 tile[threadIdx.y][threadIdx.x] = in[y * width + x];
 ```
 
-![Coalesced Global Memory Access](../../website/images/coalesced_access.svg)
+![Coalesced Global Memory Access](../../images/coalesced_access.svg)
 
 一个 warp 内 `threadIdx.y` 相同，`threadIdx.x` 连续变化：
 
@@ -100,7 +100,7 @@ y = blockIdx.x * TILE_DIM + threadIdx.y;
 out[y * height + x] = tile[threadIdx.x][threadIdx.y];
 ```
 
-![Coalesced vs Stride Access](../../website/images/stride_access.svg)
+![Coalesced vs Stride Access](../../images/stride_access.svg)
 
 关键点：**交换了** `blockIdx.x` **和** `blockIdx.y`**，但** `threadIdx.x` **仍然对应输出地址的连续维度**。
 
@@ -114,7 +114,7 @@ out[y * height + x] = tile[threadIdx.x][threadIdx.y];
 
 #### 转置发生在哪里？
 
-![Shared Memory Tiling 原理](../../website/images/shared_memory_tiling.svg)
+![Shared Memory Tiling 原理](../../images/shared_memory_tiling.svg)
 
 在 shared memory 内部：
 

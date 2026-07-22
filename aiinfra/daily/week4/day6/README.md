@@ -35,7 +35,7 @@ Day 5 的 Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（
 
 #### 6.1 Benchmark 框架设计
 
-![O(N²) vs O(Nd) IO 增长对比](../website/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../images/on2_vs_ond_scaling.svg)
 
 ##### 对比维度
 

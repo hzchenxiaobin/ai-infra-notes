@@ -35,7 +35,7 @@
 
 #### 3.1 PyTorch ATen Softmax：warp 级 vs block 级 Dispatch
 
-![PyTorch Softmax 的两条 Dispatch 路径](../website/images/pytorch_softmax_dispatch.svg)
+![PyTorch Softmax 的两条 Dispatch 路径](../images/pytorch_softmax_dispatch.svg)
 
 **源码位置**：`aten/src/ATen/native/cuda/SoftMax.cu`
 
@@ -72,7 +72,7 @@ local_max = __shfl_sync(0xFFFFFFFF, local_max, 0); // 广播给全 warp
 
 #### 3.2 向量化加载：float4 与 half2
 
-![向量化加载：逐元素 vs float4 vs half2](../website/images/vectorized_load_comparison.svg)
+![向量化加载：逐元素 vs float4 vs half2](../images/vectorized_load_comparison.svg)
 
 这是 memory-bound kernel **最直接、收益最大**的优化。Day 2 我们逐元素加载：
 
@@ -121,7 +121,7 @@ __half2 val = *reinterpret_cast<const __half2*>(&input[i]);
 
 #### 3.3 FasterTransformer LayerNorm：Welford 一次遍历
 
-![LayerNorm：两次 Reduce vs Welford 一次遍历](../website/images/welford_vs_twopass.svg)
+![LayerNorm：两次 Reduce vs Welford 一次遍历](../images/welford_vs_twopass.svg)
 
 **源码位置**：`src/fastertransformer/kernels/layernorm_kernels.cu` 的 `generalLayerNorm`
 

@@ -40,11 +40,11 @@ weekN/dayM/
 ├── kernels/*.cu        # 完整可编译代码(教程中引用的真实文件)
 ├── exercise/           # 练习题与验证程序
 └── notes/              # 笔记/延伸阅读
-weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.svg)
+weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.svg)
 ```
 
 - 教程中用相对路径引用本地文件:`[kernels/hello_gpu.cu](kernels/hello_gpu.cu)`
-- SVG 引用:`![中文alt描述](../website/images/xxx.svg)`(从 dayM/ 出发,`../website/images/` 解析到 weekN/website/images/)
+- SVG 引用:`![中文alt描述](../images/xxx.svg)`(从 dayM/ 出发,`../images/` 解析到 weekN/images/)
 
 ## 3. 教学日 8 段骨架(固定顺序)
 
@@ -96,7 +96,7 @@ weekN/website/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_pri
 
 ### 3.4 `### 理论学习`(教学日必有)
 - 用 `#### N.1`、`#### N.2` 分小节
-- 配 SVG 图,插在小节首行:`![<中文alt>](../website/images/<filename>.svg)`
+- 配 SVG 图,插在小节首行:`![<中文alt>](../images/<filename>.svg)`
 - 表格化对比(延迟、带宽、容量等量化数据)
 - 善用 `##### 五级标题` 做深入解释(如"为什么 X?")
 - 形象类比(把 SM 比作教室、warp 比作班组等)
@@ -333,7 +333,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 
 写完 dayN/README.md 后,教程会被 `build/weeks.py` 自动读取并生成 `dayN.html`:
 - `build.py` 遍历 `weekN/day*/README.md`,解析首行 `## Day N：<title>`
-- 图片路径 `../website/images/` 会被重写为 `images/`(网站输出目录)
+- 图片路径 `../images/` 会被重写为 `images/`(网站输出目录)
 - `.md` 链接会被重写为 `.html`(GitHub Pages 部署)
 
 **验证命令**:
@@ -362,6 +362,6 @@ git push origin
 - [ ] `### 今日总结` 5-7 条加粗编号
 - [ ] `### 面试要点` 5 题问答
 - [ ] 所有文件链接用相对路径且指向真实文件
-- [ ] SVG 引用格式 `![中文alt](../website/images/xxx.svg)`
+- [ ] SVG 引用格式 `![中文alt](../images/xxx.svg)`
 - [ ] 运行 `python3 build.py` 成功生成 `dayN.html`
 - [ ] 提交并推送更改：`git add -A && git commit -m "docs(weekN/dayM): <主题>" && git push origin`

@@ -35,7 +35,7 @@
 
 #### 3.1 官方源码结构总览
 
-![FlashAttention Tiling 与线程映射](../website/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
 
 **仓库**：https://github.com/Dao-AILab/flash-attention
 
@@ -107,7 +107,7 @@ cp_async_wait(); // 计算完成后等待加载完成
 __syncthreads();
 ```
 
-![FlashAttention Naive vs Fused 对比](../website/images/flash_attention_naive_vs_fused.svg)
+![FlashAttention Naive vs Fused 对比](../images/flash_attention_naive_vs_fused.svg)
 
 ##### 双缓冲（Double Buffering）
 

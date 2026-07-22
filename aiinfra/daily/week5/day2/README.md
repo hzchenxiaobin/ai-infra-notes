@@ -46,7 +46,7 @@ if use_cache and k_cache is not None:
 
 #### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
 
-![KV Cache 生命周期：Prefill 填充 → Decode 追加](../website/images/kv_cache_append_decode.svg)
+![KV Cache 生命周期：Prefill 填充 → Decode 追加](../images/kv_cache_append_decode.svg)
 
 Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
 
@@ -83,7 +83,7 @@ KV Cache 工作流程：
 
 #### 2.2 KV Cache 的内存布局与显存占用
 
-![KV Cache 5D 内存布局](../website/images/kv_cache_memory_layout.svg)
+![KV Cache 5D 内存布局](../images/kv_cache_memory_layout.svg)
 
 KV Cache 是一个 5 维张量，K 和 V 各一份：
 
@@ -116,7 +116,7 @@ KV Cache 是一个 5 维张量，K 和 V 各一份：
 
 #### 2.3 分配策略：静态 vs 动态 vs PagedAttention
 
-![三种 KV Cache 分配策略对比](../website/images/kv_cache_allocation_strategies.svg)
+![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)
 
 | 策略 | 做法 | 优点 | 缺点 |
 |------|------|------|------|

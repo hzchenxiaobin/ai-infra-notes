@@ -43,7 +43,7 @@ PyTorch 原生算子的问题：
 
 #### 4.1 替换清单与集成策略
 
-![自定义 Kernel 集成：替换 PyTorch 算子](../website/images/kernel_integration_overview.svg)
+![自定义 Kernel 集成：替换 PyTorch 算子](../images/kernel_integration_overview.svg)
 
 ##### 替换清单
 
@@ -73,7 +73,7 @@ cuBLAS：
 
 #### 4.2 PyTorch C++ Extension 编译流水线
 
-![PyTorch C++ Extension 编译流水线](../website/images/cpp_extension_pipeline.svg)
+![PyTorch C++ Extension 编译流水线](../images/cpp_extension_pipeline.svg)
 
 ##### 四步流水线
 

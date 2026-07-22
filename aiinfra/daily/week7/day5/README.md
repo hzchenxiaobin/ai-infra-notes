@@ -44,7 +44,7 @@ Day 1-4 分别实现了并发引擎、调度器、高级特性、自定义 Kerne
 
 #### 5.1 六步分层验证策略
 
-![系统联调六步分层验证](../website/images/integration_checklist.svg)
+![系统联调六步分层验证](../images/integration_checklist.svg)
 
 系统联调的核心原则：**逐步叠加组件，每步验证正确性**。不要一次性把所有组件放在一起测试——出错时无法定位。
 
@@ -92,7 +92,7 @@ assert engine.used_kv_blocks == 0, "KV Cache not released after completion"
 
 #### 5.3 稳定性测试设计
 
-![系统联调常见问题排查](../website/images/troubleshooting_guide.svg)
+![系统联调常见问题排查](../images/troubleshooting_guide.svg)
 
 稳定性测试的核心指标：
 

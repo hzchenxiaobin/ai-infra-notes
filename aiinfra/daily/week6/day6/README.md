@@ -43,7 +43,7 @@ Day 5 的 MiniEngineV1 能并发处理多请求，但我们没回答几个关键
 
 #### 6.1 六大关键指标
 
-![Benchmark 六大关键指标](../website/images/benchmark_metrics_overview.svg)
+![Benchmark 六大关键指标](../images/benchmark_metrics_overview.svg)
 
 | 指标 | 含义 | 反映 |
 |------|------|------|
@@ -76,7 +76,7 @@ Day 5 的 MiniEngineV1 能并发处理多请求，但我们没回答几个关键
 
 #### 6.2 两种 Benchmark 方法
 
-![吞吐-延迟饱和曲线](../website/images/throughput_latency_saturation_curve.svg)
+![吞吐-延迟饱和曲线](../images/throughput_latency_saturation_curve.svg)
 
 ##### 方法一：固定并发数扫描
 
@@ -115,7 +115,7 @@ while time < duration:
 
 #### 6.3 Throughput-Latency 曲线与饱和点
 
-![Throughput-Latency 曲线与饱和点](../website/images/throughput_latency_saturation_curve.svg)
+![Throughput-Latency 曲线与饱和点](../images/throughput_latency_saturation_curve.svg)
 
 经典的 throughput-latency 曲线分三个区域：
 
@@ -153,7 +153,7 @@ while time < duration:
 
 #### 6.4 四种瓶颈类型
 
-![四种瓶颈类型与优化方向](../website/images/bottleneck_types_analysis.svg)
+![四种瓶颈类型与优化方向](../images/bottleneck_types_analysis.svg)
 
 | 瓶颈类型 | 表现 | 优化方向 |
 |---------|------|---------|

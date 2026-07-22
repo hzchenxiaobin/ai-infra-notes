@@ -101,7 +101,7 @@ nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lin
 
 #### 4.3 关键性能指标
 
-![ncu 关键性能指标分类](../website/images/ncu_metrics_overview.svg)
+![ncu 关键性能指标分类](../images/ncu_metrics_overview.svg)
 
 | 指标名称 | 正常范围 | 含义 | 优化方向 |
 |---------|---------|------|---------|
@@ -115,7 +115,7 @@ nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lin
 
 #### 4.4 Warp Stall Reasons 详解
 
-![Warp Stall Reasons 示例](../website/images/stall_reason_bar.svg)
+![Warp Stall Reasons 示例](../images/stall_reason_bar.svg)
 
 Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。ncu 会报告各种 stall 原因的占比：
 
@@ -134,7 +134,7 @@ Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。
 
 Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 
-![Roofline 模型](../website/images/roofline_model_day4.svg)
+![Roofline 模型](../images/roofline_model_day4.svg)
 
 - **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
 - AI 低 → **memory-bound**（位于斜线区域，优化内存访问）
@@ -221,7 +221,7 @@ Register Pressure: 72%
 
 #### 任务 4：优化实验与对比验证
 
-![Profile → 优化 → 验证 完整闭环](../website/images/profile_optimize_loop.svg)
+![Profile → 优化 → 验证 完整闭环](../images/profile_optimize_loop.svg)
 
 基于 Profile 结果，选择一项优化进行实验，然后重新 profile 对比：
 
