@@ -11,6 +11,7 @@ TOPICS_DIR = REPO_ROOT / "aiinfra" / "topics"
 IMAGES_SRC = TOPICS_DIR / "images"
 
 TOPIC_DISPLAY_NAMES = {
+    "cpp": "🖥️ C++",
     "cutlass": "⚡ CUTLASS",
     "triton": "🐍 Triton",
     "cute": "🔷 CuTe",
