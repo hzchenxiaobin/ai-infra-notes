@@ -54,6 +54,25 @@ def get_day_info(week_dir: Path) -> list:
     return sorted(info, key=lambda d: d["num"])
 
 
+def _rewrite_day_image_links(text: str) -> str:
+    """Rewrite image links in a day README (located at week/day/) to be relative
+    to the week directory, where the generated HTML page is emitted.
+
+    A link with N leading ``../`` segments is shifted up one level (N-1
+    segments): ``images/`` and ``../images/`` both resolve to the week's own
+    ``images/`` folder, while ``../../images/`` (shared daily images) resolves
+    to ``../images/`` from the week page. The previous pattern only matched
+    zero or one ``../`` segment, leaving ``../../images/`` untouched and
+    causing 404s under the ``/ai-infra-notes/`` subpath deployment.
+    """
+    def repl(match: "re.Match[str]") -> str:
+        prefix = match.group(1)
+        depth = len(prefix) // 3  # number of "../" segments
+        new_prefix = "../" * (depth - 1) if depth >= 1 else ""
+        return "](" + new_prefix + "images/"
+    return re.sub(r"\]\(((?:\.\./)*)images/", repl, text)
+
+
 def load_overview_and_days(week_dir: Path):
     """Load overview from weekN/README.md and per-day markdown from weekN/dayN/README.md.
 
@@ -72,7 +91,7 @@ def load_overview_and_days(week_dir: Path):
         if not readme.exists():
             continue
         text = readme.read_text(encoding="utf-8")
-        text = re.sub(r"\]\((?:\.\./)?images/", "](images/", text)
+        text = _rewrite_day_image_links(text)
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
         match = DAY_TITLE_PATTERN.match(first_line)
         if not match:
