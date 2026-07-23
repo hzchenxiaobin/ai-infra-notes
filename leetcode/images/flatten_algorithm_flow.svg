@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="440" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：反向后序递归 + prev 串接</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">时间 O(n)，空间 O(h)；原地修改，无需返回值</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: init -->
+    <rect x="40" y="64" width="480" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 初始化</text>
+    <text x="130" y="84" font-family="monospace" font-size="10" fill="#555">prev = null;</text>
+    <text x="130" y="98" font-size="9" fill="#888">prev = 已构建链表头（当前节点的后继）</text>
+
+    <path d="M 280 106 L 280 120" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: dfs right -->
+    <rect x="40" y="124" width="480" height="48" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="144" font-size="12" fill="#4a7a3a" font-weight="bold">② 先递归右子树</text>
+    <text x="180" y="144" font-family="monospace" font-size="10" fill="#555">flatten(root.right);</text>
+    <text x="54" y="162" font-size="9" fill="#888">让右子树链先构建好，prev 指向其头（链表后段）</text>
+
+    <path d="M 280 174 L 280 188" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: dfs left -->
+    <rect x="40" y="192" width="480" height="48" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="212" font-size="12" fill="#4a7a3a" font-weight="bold">③ 再递归左子树</text>
+    <text x="180" y="212" font-family="monospace" font-size="10" fill="#555">flatten(root.left);</text>
+    <text x="54" y="230" font-size="9" fill="#888">左子树链接在右子树链前面，prev 更新为左链头</text>
+
+    <path d="M 280 242 L 280 256" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 4: rewire -->
+    <rect x="40" y="260" width="480" height="74" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="280" font-size="12" fill="#d6a040" font-weight="bold">④ 串接当前节点</text>
+    <text x="54" y="298" font-family="monospace" font-size="10" fill="#555">root.right = prev;   // 接上已构建链表段</text>
+    <text x="54" y="314" font-family="monospace" font-size="10" fill="#555">root.left  = null;   // 左指针清空</text>
+    <text x="54" y="330" font-family="monospace" font-size="10" fill="#555">prev = root;         // 当前节点成为新链表头</text>
+
+    <path d="M 280 336 L 280 350" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 5: done -->
+    <rect x="40" y="354" width="480" height="34" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="375" font-size="12" fill="#b85450" font-weight="bold">⑤ 递归返回</text>
+    <text x="150" y="375" font-size="10" fill="#555">prev 指向整条链头，原地修改完成（无需 return）</text>
+  </g>
+
+  <!-- recursion order side note -->
+  <rect x="40" y="398" width="480" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="418" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">访问顺序 = 前序的逆序：6 → 5 → 4 → 3 → 2 → 1</text>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="440" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：[3,2,0,-4] pos=1</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">阶段一 3 轮相遇于 −4；阶段二 1 步到入口 2</text>
+
+  <!-- ===== the linked list ===== -->
+  <g font-size="11">
+    <circle cx="80" cy="90" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="80" y="95" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <text x="80" y="64" text-anchor="middle" font-size="9" fill="#888">下标0</text>
+
+    <circle cx="200" cy="90" r="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2.4" filter="url(#rough2)"/>
+    <text x="200" y="95" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="200" y="60" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">入口 下标1</text>
+
+    <circle cx="320" cy="90" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="320" y="95" text-anchor="middle" fill="#446688" font-weight="bold">0</text>
+    <text x="320" y="64" text-anchor="middle" font-size="9" fill="#888">下标2</text>
+
+    <circle cx="440" cy="90" r="20" fill="#fce4ec" stroke="#b85450" stroke-width="2.4" filter="url(#rough2)"/>
+    <text x="440" y="95" text-anchor="middle" fill="#b85450" font-weight="bold">-4</text>
+    <text x="440" y="60" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">相遇 下标3</text>
+
+    <path d="M 98 90 L 178 90" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 220 90 L 300 90" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 338 90 L 418 90" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 440 110 Q 440 170 320 170 Q 200 170 200 110" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="4,3" marker-end="url(#arrR)" filter="url(#rough2)"/>
+    <text x="320" y="190" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">环回（-4 → 2）</text>
+  </g>
+
+  <!-- ===== phase 1 table ===== -->
+  <text x="40" y="222" font-size="12" fill="#4a7a3a" font-weight="bold">阶段一（slow +1 / fast +2）</text>
+  <g font-size="10" fill="#333">
+    <!-- header -->
+    <rect x="40" y="232" width="480" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+    <text x="70" y="247" font-weight="bold">轮次</text>
+    <text x="160" y="247" font-weight="bold">slow 下标</text>
+    <text x="300" y="247" font-weight="bold">fast 下标</text>
+    <text x="410" y="247" font-weight="bold">说明</text>
+    <!-- rows -->
+    <rect x="40" y="254" width="480" height="20" fill="#fafafa" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="70" y="268">0</text><text x="160" y="268">0 (3)</text><text x="300" y="268">0 (3)</text><text x="410" y="268">起点</text>
+    <rect x="40" y="274" width="480" height="20" fill="#fafafa" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="70" y="288">1</text><text x="160" y="288">1 (2)</text><text x="300" y="288">2 (0)</text><text x="410" y="288">各 +1/+2</text>
+    <rect x="40" y="294" width="480" height="20" fill="#fafafa" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="70" y="308">2</text><text x="160" y="308">2 (0)</text><text x="300" y="308">1 (2)</text><text x="410" y="308">fast 环回 3→1</text>
+    <rect x="40" y="314" width="480" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="70" y="329" font-weight="bold" fill="#b85450">3</text>
+    <text x="160" y="329" font-weight="bold" fill="#b85450">3 (-4)</text>
+    <text x="300" y="329" font-weight="bold" fill="#b85450">3 (-4)</text>
+    <text x="410" y="329" font-weight="bold" fill="#b85450">相遇！</text>
+  </g>
+
+  <!-- ===== phase 2 table ===== -->
+  <text x="40" y="362" font-size="12" fill="#d6a040" font-weight="bold">阶段二（slow 回 head / fast 留相遇点，都 +1）</text>
+  <g font-size="10" fill="#333">
+    <rect x="40" y="372" width="480" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+    <text x="70" y="387" font-weight="bold">轮次</text>
+    <text x="160" y="387" font-weight="bold">slow 下标</text>
+    <text x="300" y="387" font-weight="bold">fast 下标</text>
+    <text x="410" y="387" font-weight="bold">说明</text>
+    <rect x="40" y="394" width="480" height="20" fill="#fafafa" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="70" y="408">0</text><text x="160" y="408">0 (3)</text><text x="300" y="408">3 (-4)</text><text x="410" y="408">slow 重置</text>
+    <rect x="40" y="414" width="480" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="4" filter="url(#rough2)"/>
+    <text x="70" y="429" font-weight="bold" fill="#4a7a3a">1</text>
+    <text x="160" y="429" font-weight="bold" fill="#4a7a3a">1 (2)</text>
+    <text x="300" y="429" font-weight="bold" fill="#4a7a3a">1 (2)</text>
+    <text x="410" y="429" font-weight="bold" fill="#4a7a3a">入口！✓</text>
+  </g>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="380" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">核心观察：从 head 与从相遇点同速走，会在入口相遇</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">a = (k−1)(b+c) + c  →  slow 回头，两人各走 1，必然在入口碰头</text>
+
+  <!-- ===== linked list with cycle ===== -->
+  <g font-size="11">
+    <!-- tail nodes before cycle: a region -->
+    <circle cx="70" cy="120" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="70" y="125" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <!-- entry node (highlighted green) -->
+    <circle cx="180" cy="120" r="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2.4" filter="url(#rough2)"/>
+    <text x="180" y="125" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="180" y="92" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">入口</text>
+    <!-- 0 -->
+    <circle cx="300" cy="120" r="18" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="300" y="125" text-anchor="middle" fill="#446688" font-weight="bold">0</text>
+    <!-- meeting point -4 (highlighted red) -->
+    <circle cx="420" cy="120" r="20" fill="#fce4ec" stroke="#b85450" stroke-width="2.4" filter="url(#rough2)"/>
+    <text x="420" y="125" text-anchor="middle" fill="#b85450" font-weight="bold">-4</text>
+    <text x="420" y="92" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">相遇点</text>
+
+    <!-- forward arrows -->
+    <path d="M 88 120 L 158 120" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 200 120 L 280 120" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 318 120 L 398 120" stroke="#446688" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <!-- cycle back: -4 -> 2 -->
+    <path d="M 420 140 Q 420 210 300 210 Q 180 210 180 140" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="4,3" marker-end="url(#arrR)" filter="url(#rough2)"/>
+  </g>
+
+  <!-- distance labels -->
+  <text x="125" y="148" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">a</text>
+  <text x="240" y="148" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">b</text>
+  <text x="300" y="232" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">c（环回）</text>
+
+  <!-- ===== phase 2 motion ===== -->
+  <text x="30" y="270" font-size="12" fill="#444" font-weight="bold">阶段二运动：</text>
+
+  <rect x="30" y="282" width="240" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="300" font-family="monospace" font-size="10" fill="#446688">slow = head;  // 回起点</text>
+  <text x="44" y="314" font-size="9" fill="#888">走 a 步到入口</text>
+
+  <rect x="290" y="282" width="240" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="304" y="300" font-family="monospace" font-size="10" fill="#b85450">fast 留相遇点;  // 都走 1</text>
+  <text x="304" y="314" font-size="9" fill="#888">走 c 步 + (k−1) 圈到入口</text>
+
+  <!-- convergence arrow -->
+  <path d="M 150 326 L 150 344" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 410 326 L 410 344" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- key insight -->
+  <rect x="30" y="346" width="500" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="280" y="364" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">a ≡ c (mod 环长)  →  两指针同速走，必在入口相遇</text>
+</svg>
