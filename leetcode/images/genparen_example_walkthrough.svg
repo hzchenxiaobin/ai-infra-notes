@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 480" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#666"/>
+    </marker>
+    <marker id="arrG" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#4a7a3a"/>
+    </marker>
+    <marker id="arrO" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#d6a040"/>
+    </marker>
+    <marker id="arrR" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="600" height="480" fill="#fafafa"/>
+
+  <text x="300" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：n=3 回溯树（节点标 open,close）</text>
+  <text x="300" y="44" text-anchor="middle" font-size="11" fill="#888">绿边=放(，橙边=放)，红虚=剪枝；5 条根到叶路径=5 个合法串</text>
+
+  <!-- ===== backtracking tree ===== -->
+  <g font-size="10" fill="#333">
+    <!-- root (3,3) -->
+    <ellipse cx="300" cy="72" rx="32" ry="15" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+    <text x="300" y="76" text-anchor="middle" font-size="11" font-weight="bold">3,3</text>
+    <text x="300" y="58" text-anchor="middle" font-size="9" fill="#888">root</text>
+
+    <!-- root → ( → (2,3) -->
+    <path d="M 288 85 Q 230 105 180 122" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <text x="232" y="108" font-size="11" fill="#4a7a3a" font-weight="bold">(</text>
+    <ellipse cx="170" cy="130" rx="30" ry="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="170" y="134" text-anchor="middle" font-size="10" font-weight="bold">2,3</text>
+
+    <!-- root → ) → (3,2) ✗ pruned (close=3>open=3 false) -->
+    <path d="M 312 85 Q 370 105 420 122" stroke="#b85450" stroke-width="1.4" fill="none" stroke-dasharray="3,2" marker-end="url(#arrR)" filter="url(#rough2)"/>
+    <text x="368" y="108" font-size="11" fill="#b85450" font-weight="bold">) ✗</text>
+    <ellipse cx="438" cy="130" rx="40" ry="14" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" stroke-dasharray="3,2" filter="url(#rough2)"/>
+    <text x="438" y="134" text-anchor="middle" font-size="9" fill="#b85450">3,2 剪枝</text>
+
+    <!-- (2,3) → ( → (1,3) -->
+    <path d="M 158 142 Q 120 162 95 180" stroke="#4a7a3a" stroke-width="1.4" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <text x="120" y="166" font-size="10" fill="#4a7a3a" font-weight="bold">(</text>
+    <ellipse cx="82" cy="188" rx="28" ry="13" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+    <text x="82" y="192" text-anchor="middle" font-size="10" font-weight="bold">1,3</text>
+
+    <!-- (2,3) → ) → (2,2) -->
+    <path d="M 182 142 Q 220 162 245 180" stroke="#d6a040" stroke-width="1.4" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="220" y="166" font-size="10" fill="#d6a040" font-weight="bold">)</text>
+    <ellipse cx="258" cy="188" rx="28" ry="13" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" filter="url(#rough2)"/>
+    <text x="258" y="192" text-anchor="middle" font-size="10" font-weight="bold">2,2</text>
+
+    <!-- (1,3) → ( → (0,3) -->
+    <path d="M 72 200 Q 55 215 48 232" stroke="#4a7a3a" stroke-width="1.3" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <text x="50" y="218" font-size="9" fill="#4a7a3a" font-weight="bold">(</text>
+    <ellipse cx="40" cy="240" rx="24" ry="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+    <text x="40" y="244" text-anchor="middle" font-size="9" font-weight="bold">0,3</text>
+
+    <!-- (1,3) → ) → (1,2) -->
+    <path d="M 92 200 Q 110 215 120 232" stroke="#d6a040" stroke-width="1.3" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="112" y="218" font-size="9" fill="#d6a040" font-weight="bold">)</text>
+    <ellipse cx="128" cy="240" rx="24" ry="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" filter="url(#rough2)"/>
+    <text x="128" y="244" text-anchor="middle" font-size="9" font-weight="bold">1,2</text>
+
+    <!-- (0,3) → ))) → ((())) leaf -->
+    <path d="M 40 252 L 40 275" stroke="#d6a040" stroke-width="1.3" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="52" y="266" font-size="9" fill="#d6a040" font-weight="bold">)))</text>
+    <rect x="2" y="278" width="100" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="4" filter="url(#rough2)"/>
+    <text x="52" y="293" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">((())) ✓</text>
+
+    <!-- (1,2) → ( → (0,2) → )) → (()()) -->
+    <path d="M 120 252 Q 105 262 100 272" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <ellipse cx="92" cy="280" rx="22" ry="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="92" y="283" text-anchor="middle" font-size="9" font-weight="bold">0,2</text>
+    <path d="M 92 291 L 92 305" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="104" y="300" font-size="8" fill="#d6a040" font-weight="bold">))</text>
+    <rect x="42" y="308" width="100" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="92" y="322" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">(()()) ✓</text>
+
+    <!-- (1,2) → ) → (1,1) → ( → (0,1) → ) → (())() -->
+    <path d="M 136 252 Q 152 262 160 272" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <ellipse cx="170" cy="280" rx="22" ry="11" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="170" y="283" text-anchor="middle" font-size="9" font-weight="bold">1,1</text>
+    <path d="M 170 291 L 170 305" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <ellipse cx="170" cy="312" rx="20" ry="10" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="170" y="315" text-anchor="middle" font-size="8" font-weight="bold">0,1</text>
+    <path d="M 170 322 L 170 334" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <rect x="120" y="338" width="100" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="170" y="352" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">(())() ✓</text>
+
+    <!-- (2,2) → ( → (1,2)' → ( → (0,2)' → )) → ()(()) -->
+    <path d="M 258 200 Q 280 215 295 232" stroke="#4a7a3a" stroke-width="1.3" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <text x="282" y="218" font-size="9" fill="#4a7a3a" font-weight="bold">(</text>
+    <ellipse cx="305" cy="240" rx="24" ry="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+    <text x="305" y="244" text-anchor="middle" font-size="9" font-weight="bold">1,2</text>
+    <path d="M 305 252 L 305 268" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <ellipse cx="305" cy="276" rx="22" ry="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="305" y="279" text-anchor="middle" font-size="9" font-weight="bold">0,2</text>
+    <path d="M 305 287 L 305 301" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="318" y="296" font-size="8" fill="#d6a040" font-weight="bold">))</text>
+    <rect x="255" y="304" width="100" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="305" y="318" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">()(()) ✓</text>
+
+    <!-- (2,2) → ) ✗ pruned (close=2>open=2 false) -->
+    <path d="M 270 200 Q 310 210 340 225" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,2" marker-end="url(#arrR)" filter="url(#rough2)"/>
+    <text x="335" y="212" font-size="9" fill="#b85450" font-weight="bold">) ✗</text>
+
+    <!-- from (1,2)' at x=305, also )→(1,1)'→(→(0,1)→) → ()()() -->
+    <path d="M 305 252 Q 270 262 255 272" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <text x="262" y="262" font-size="8" fill="#d6a040" font-weight="bold">)</text>
+
+    <!-- (1,1)' → ()()() -->
+    <ellipse cx="245" cy="280" rx="22" ry="11" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="245" y="283" text-anchor="middle" font-size="8" font-weight="bold">1,1</text>
+    <path d="M 245 291 L 245 301" stroke="#4a7a3a" stroke-width="1.1" fill="none" marker-end="url(#arrG)" filter="url(#rough2)"/>
+    <ellipse cx="245" cy="309" rx="20" ry="10" fill="#e8f0fe" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+    <text x="245" y="312" text-anchor="middle" font-size="8" font-weight="bold">0,1</text>
+    <path d="M 245 319 L 245 329" stroke="#d6a040" stroke-width="1.1" fill="none" marker-end="url(#arrO)" filter="url(#rough2)"/>
+    <rect x="195" y="332" width="100" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="245" y="346" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">()()() ✓</text>
+  </g>
+
+  <!-- ===== summary ===== -->
+  <rect x="40" y="380" width="520" height="84" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="300" y="402" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">5 个合法串 = 卡特兰数 C₃ = 5</text>
+  <text x="60" y="424" font-size="11" fill="#555">• 剪枝点：close > open 为假时不能放 )（如 root→)、(2,2)→)）</text>
+  <text x="60" y="442" font-size="11" fill="#555">• 每条根到叶路径长度恰为 2n=6，叶节点 open=close=0</text>
+  <text x="60" y="458" font-size="11" fill="#555">• 回溯树只长合法前缀，无冗余分支，效率远优于暴力枚举</text>
+</svg>

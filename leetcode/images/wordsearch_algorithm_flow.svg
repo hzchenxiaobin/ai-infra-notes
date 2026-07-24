@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="440" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：遍历找起点 → DFS 四方向 → 回溯</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">时间 O(m·n·3^L)，空间 O(L)</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: find start -->
+    <rect x="40" y="64" width="480" height="56" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 遍历网格找起点</text>
+    <text x="54" y="102" font-family="monospace" font-size="10" fill="#555">for i in 0..m: for j in 0..n:</text>
+    <text x="54" y="116" font-family="monospace" font-size="10" fill="#446688">    if board[i][j]==word[0] and dfs(i,j,0): return true</text>
+
+    <path d="M 280 122 L 280 136" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: prune -->
+    <rect x="40" y="140" width="480" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="160" font-size="12" fill="#b85450" font-weight="bold">② 剪枝（递归入口）</text>
+    <text x="54" y="178" font-family="monospace" font-size="10" fill="#555">if 越界 or board[i][j]≠word[index] or 已访问:</text>
+    <text x="54" y="192" font-family="monospace" font-size="10" fill="#b85450">    return false</text>
+
+    <path d="M 280 198 L 280 212" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: base case -->
+    <rect x="40" y="216" width="480" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="236" font-size="12" fill="#4a7a3a" font-weight="bold">③ 终止（成功）</text>
+    <text x="170" y="236" font-family="monospace" font-size="10" fill="#555">if index == len(word)-1: return true</text>
+    <text x="170" y="250" font-size="9" fill="#888">全部字符匹配</text>
+
+    <path d="M 280 258 L 280 272" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 4: mark + recurse + backtrack -->
+    <rect x="40" y="276" width="480" height="86" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="296" font-size="12" fill="#d6a040" font-weight="bold">④ 标记 → 四方向递归 → 回溯</text>
+    <text x="54" y="314" font-family="monospace" font-size="10" fill="#4a7a3a">board[i][j] = '#';                    // 选择</text>
+    <text x="54" y="330" font-family="monospace" font-size="10" fill="#446688">for d in 4方向: if dfs(i+dx[d], j+dy[d], index+1): return true  // 递归</text>
+    <text x="54" y="346" font-family="monospace" font-size="10" fill="#d6a040">board[i][j] = word[index];            // 撤销（回溯）</text>
+    <text x="54" y="360" font-family="monospace" font-size="10" fill="#555">return false</text>
+
+    <path d="M 280 364 L 280 378" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 5: done -->
+    <rect x="40" y="382" width="480" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="402" font-size="12" fill="#b85450" font-weight="bold">⑤ 所有起点失败</text>
+    <text x="180" y="402" font-family="monospace" font-size="10" fill="#555">return false</text>
+    <text x="180" y="416" font-size="9" fill="#888">无合法路径</text>
+  </g>
+
+  <!-- key note -->
+  <rect x="40" y="430" width="480" height="6" fill="none"/>
+</svg>

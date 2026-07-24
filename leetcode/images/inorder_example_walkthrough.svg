@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 470" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="600" height="470" fill="#fafafa"/>
+
+  <text x="300" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：root=[1,null,2,3] → 输出 [1,3,2]</text>
+  <text x="300" y="44" text-anchor="middle" font-size="11" fill="#888">7 步栈迭代，绿=压栈，红=弹出访问，蓝=转向右</text>
+
+  <!-- ===== tree ===== -->
+  <g font-size="11">
+    <circle cx="80" cy="80" r="15" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="80" y="84" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <circle cx="130" cy="140" r="15" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="130" y="144" text-anchor="middle" fill="#446688" font-weight="bold">2</text>
+    <line x1="92" y1="92" x2="118" y2="128" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+    <circle cx="80" cy="200" r="15" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+    <text x="80" y="204" text-anchor="middle" fill="#446688" font-weight="bold">3</text>
+    <line x1="118" y1="152" x2="92" y2="188" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+    <text x="150" y="140" font-size="9" fill="#888">右</text>
+    <text x="92" y="178" font-size="9" fill="#888">左</text>
+  </g>
+  <text x="100" y="240" text-anchor="middle" font-size="10" fill="#888">树形结构</text>
+
+  <!-- ===== steps table ===== -->
+  <g font-size="9" fill="#333">
+    <!-- header -->
+    <rect x="200" y="60" width="380" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="215" y="75" font-weight="bold">步</text>
+    <text x="245" y="75" font-weight="bold">curr</text>
+    <text x="305" y="75" font-weight="bold">栈(底→顶)</text>
+    <text x="410" y="75" font-weight="bold">操作</text>
+    <text x="545" y="75" font-weight="bold">ans</text>
+
+    <!-- row 1: push 1 -->
+    <rect x="200" y="82" width="380" height="22" fill="#e6f4ea" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="97">1</text><text x="245" y="97">1→null</text><text x="305" y="97" fill="#4a7a3a">[1]</text>
+    <text x="410" y="97" fill="#4a7a3a">向左压栈(压1)</text><text x="545" y="97">[]</text>
+
+    <!-- row 2: pop 1 -->
+    <rect x="200" y="104" width="380" height="22" fill="#fce4ec" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="119">2</text><text x="245" y="119">2</text><text x="305" y="119">[]</text>
+    <text x="410" y="119" fill="#b85450">弹出1,访问</text><text x="545" y="119" fill="#b85450">[1]</text>
+
+    <!-- row 3: push 2 -->
+    <rect x="200" y="126" width="380" height="22" fill="#e6f4ea" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="141">3</text><text x="245" y="141">2→3→null</text><text x="305" y="141" fill="#4a7a3a">[2,3]</text>
+    <text x="410" y="141" fill="#4a7a3a">向左压栈(压2,3)</text><text x="545" y="141">[1]</text>
+
+    <!-- row 4: pop 3 -->
+    <rect x="200" y="148" width="380" height="22" fill="#fce4ec" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="163">4</text><text x="245" y="163">null</text><text x="305" y="163">[2]</text>
+    <text x="410" y="163" fill="#b85450">弹出3,访问</text><text x="545" y="163" fill="#b85450">[1,3]</text>
+
+    <!-- row 5: curr=3.right=null skip -->
+    <rect x="200" y="170" width="380" height="22" fill="#e8f0fe" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="185">5</text><text x="245" y="185">null</text><text x="305" y="185">[2]</text>
+    <text x="410" y="185" fill="#446688">curr=3.right=null</text><text x="545" y="185">[1,3]</text>
+
+    <!-- row 6: pop 2 -->
+    <rect x="200" y="192" width="380" height="22" fill="#fce4ec" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="207">6</text><text x="245" y="207">null</text><text x="305" y="207">[]</text>
+    <text x="410" y="207" fill="#b85450">弹出2,访问</text><text x="545" y="207" fill="#b85450">[1,3,2]</text>
+
+    <!-- row 7: end -->
+    <rect x="200" y="214" width="380" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="215" y="229">7</text><text x="245" y="229">null</text><text x="305" y="229">[]</text>
+    <text x="410" y="229" fill="#4a7a3a" font-weight="bold">curr=null且栈空,结束</text><text x="545" y="229" fill="#4a7a3a" font-weight="bold">[1,3,2]✓</text>
+  </g>
+
+  <!-- ===== state snapshots ===== -->
+  <text x="300" y="262" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">栈状态快照（关键步骤）</text>
+  <g font-size="10">
+    <!-- snapshot step1: stack=[1] -->
+    <rect x="60" y="276" width="120" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+    <text x="120" y="294" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">步骤1后</text>
+    <rect x="95" y="304" width="50" height="20" fill="#fafafa" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="120" y="318" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <text x="120" y="346" text-anchor="middle" font-size="9" fill="#888">压 1（无左）</text>
+
+    <!-- snapshot step3: stack=[2,3] -->
+    <rect x="200" y="276" width="120" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+    <text x="260" y="294" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">步骤3后</text>
+    <rect x="235" y="304" width="50" height="20" fill="#fafafa" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="260" y="318" text-anchor="middle" fill="#446688" font-weight="bold">2</text>
+    <rect x="235" y="324" width="50" height="20" fill="#fafafa" stroke="#4a7a3a" stroke-width="2" rx="3" filter="url(#rough2)"/>
+    <text x="260" y="338" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <text x="260" y="354" text-anchor="middle" font-size="8" fill="#888">栈顶=3</text>
+
+    <!-- snapshot step4: pop 3 -->
+    <rect x="340" y="276" width="120" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+    <text x="400" y="294" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">步骤4：弹3</text>
+    <rect x="375" y="304" width="50" height="20" fill="#fafafa" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="400" y="318" text-anchor="middle" fill="#446688" font-weight="bold">2</text>
+    <text x="400" y="346" text-anchor="middle" font-size="9" fill="#b85450">访问3, ans=[1,3]</text>
+
+    <!-- snapshot step6: pop 2 -->
+    <rect x="480" y="276" width="120" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+    <text x="540" y="294" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">步骤6：弹2</text>
+    <text x="540" y="318" text-anchor="middle" font-size="9" fill="#888">(栈空)</text>
+    <text x="540" y="346" text-anchor="middle" font-size="9" fill="#b85450">访问2, ans=[1,3,2]</text>
+  </g>
+
+  <!-- ===== summary ===== -->
+  <rect x="40" y="376" width="520" height="84" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="300" y="398" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">观察规律</text>
+  <text x="60" y="420" font-size="10" fill="#555">• 弹栈后 curr 指向右子树：右子树非空则继续向左压栈（步骤2→3）</text>
+  <text x="60" y="438" font-size="10" fill="#555">• 右子树为空则 curr=null，跳过内层向左循环，直接弹栈顶继续（步骤4→5→6）</text>
+  <text x="60" y="456" font-size="10" fill="#555">• 这正是「左→根→右」的迭代化表达：压栈穷尽左链，弹栈访问根，转右重复</text>
+</svg>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="380" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：初始化边界 → 逐行填表 → 返回 dp[m][n]</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">时间 O(m×n)，空间 O(m×n) 或 O(n) 滚动数组</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: init -->
+    <rect x="40" y="64" width="480" height="48" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 初始化</text>
+    <text x="130" y="84" font-family="monospace" font-size="10" fill="#555">dp = (m+1)×(n+1) 矩阵, 全 0</text>
+    <text x="130" y="100" font-size="9" fill="#888">首行首列 = 空串边界, 天然为 0</text>
+
+    <path d="M 280 114 L 280 128" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: fill table -->
+    <rect x="40" y="132" width="480" height="110" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="152" font-size="12" fill="#4a7a3a" font-weight="bold">② 逐行填表（i=1..m, j=1..n）</text>
+    <text x="54" y="170" font-family="monospace" font-size="10" fill="#555">for i in 1..m:</text>
+    <text x="54" y="186" font-family="monospace" font-size="10" fill="#555">  for j in 1..n:</text>
+    <text x="70" y="202" font-family="monospace" font-size="10" fill="#4a7a3a">    if text1[i-1] == text2[j-1]:</text>
+    <text x="90" y="216" font-family="monospace" font-size="10" fill="#4a7a3a">        dp[i][j] = dp[i-1][j-1] + 1</text>
+    <text x="70" y="232" font-family="monospace" font-size="10" fill="#d6a040">    else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])</text>
+
+    <path d="M 280 244 L 280 258" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: return -->
+    <rect x="40" y="262" width="480" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="284" font-size="12" fill="#b85450" font-weight="bold">③ 返回</text>
+    <text x="110" y="284" font-family="monospace" font-size="10" fill="#555">return dp[m][n]   // 右下角 = LCS 长度</text>
+
+    <!-- key notes -->
+    <rect x="40" y="310" width="480" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+    <text x="60" y="330" font-size="11" fill="#444" font-weight="bold">关键点：</text>
+    <text x="60" y="346" font-size="10" fill="#555">• 填表顺序必须从左到右、从上到下（依赖左上、上、左三方）</text>
+    <text x="60" y="360" font-size="10" fill="#555">• text1[i-1] 对应 dp[i] 行（下标偏移 1，因 dp[0] 代表空串）</text>
+  </g>
+</svg>

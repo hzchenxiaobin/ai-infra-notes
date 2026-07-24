@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="420" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：栈迭代中序遍历</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">时间 O(n)，空间 O(h)；显式栈模拟递归</text>
+
+  <g font-size="10" fill="#333">
+    <!-- Step 1: init -->
+    <rect x="40" y="64" width="480" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="84" font-size="12" fill="#446688" font-weight="bold">① 初始化</text>
+    <text x="130" y="84" font-family="monospace" font-size="10" fill="#555">stack = []; curr = root; ans = []</text>
+    <text x="130" y="100" font-size="9" fill="#888">栈空，curr 指向根</text>
+
+    <path d="M 280 110 L 280 124" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 2: outer loop -->
+    <rect x="40" y="128" width="480" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="148" font-size="12" fill="#d6a040" font-weight="bold">② 外层循环</text>
+    <text x="150" y="148" font-family="monospace" font-size="10" fill="#555">while (curr != null || !stack.empty())</text>
+    <text x="150" y="162" font-size="9" fill="#888">curr 有待处理 或 栈有待访问</text>
+
+    <path d="M 280 170 L 280 184" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 3: push left -->
+    <rect x="40" y="188" width="480" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="208" font-size="12" fill="#4a7a3a" font-weight="bold">③ 向左压栈</text>
+    <text x="54" y="226" font-family="monospace" font-size="10" fill="#4a7a3a">while (curr) { stack.push(curr); curr = curr.left; }</text>
+    <text x="54" y="240" font-size="9" fill="#888">穷尽左链，栈顶 = 中序首节点</text>
+
+    <path d="M 280 246 L 280 260" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 4: pop & visit -->
+    <rect x="40" y="264" width="480" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="284" font-size="12" fill="#b85450" font-weight="bold">④ 弹出访问</text>
+    <text x="54" y="302" font-family="monospace" font-size="10" fill="#b85450">curr = stack.pop();  ans.push_back(curr.val);</text>
+    <text x="54" y="316" font-size="9" fill="#888">栈顶即中序下一节点，访问之</text>
+
+    <path d="M 280 322 L 280 336" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <!-- Step 5: go right -->
+    <rect x="40" y="340" width="480" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="54" y="360" font-size="12" fill="#446688" font-weight="bold">⑤ 转向右子树</text>
+    <text x="180" y="360" font-family="monospace" font-size="10" fill="#555">curr = curr.right;</text>
+    <text x="180" y="376" font-size="9" fill="#888">右子树作为新子问题，回到②继续</text>
+  </g>
+
+  <!-- key note -->
+  <rect x="40" y="392" width="480" height="20" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="280" y="406" text-anchor="middle" font-size="10" fill="#555">外层条件 curr≠null 或 栈非空：保证首次进入（栈空 curr=root）和右子树处理都覆盖</text>
+</svg>

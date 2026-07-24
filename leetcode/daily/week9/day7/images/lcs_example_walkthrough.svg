@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 460" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+    <marker id="arrO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#d6a040"/>
+    </marker>
+  </defs>
+
+  <rect width="620" height="460" fill="#fafafa"/>
+
+  <text x="310" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：text1="abcde" vs text2="ace" → LCS=3</text>
+  <text x="310" y="44" text-anchor="middle" font-size="11" fill="#888">绿色格=字符匹配(+1)，灰色格=不匹配(max)；答案 dp[5][3]=3</text>
+
+  <!-- ===== dp table ===== -->
+  <g font-size="11">
+    <!-- corner -->
+    <rect x="100" y="60" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="125" y="80" text-anchor="middle" font-size="9" fill="#888">text2→</text>
+
+    <!-- col headers: "" a c e -->
+    <rect x="150" y="60" width="50" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="175" y="80" text-anchor="middle" fill="#888">""</text>
+    <rect x="200" y="60" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="225" y="80" text-anchor="middle" fill="#446688" font-weight="bold">a</text>
+    <rect x="250" y="60" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="275" y="80" text-anchor="middle" fill="#446688" font-weight="bold">c</text>
+    <rect x="300" y="60" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="325" y="80" text-anchor="middle" fill="#446688" font-weight="bold">e</text>
+
+    <!-- row "" -->
+    <rect x="100" y="92" width="50" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="112" text-anchor="middle" fill="#888">""</text>
+    <rect x="150" y="92" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="112" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="92" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="225" y="112" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="250" y="92" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="275" y="112" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="300" y="92" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="325" y="112" text-anchor="middle" fill="#aaa">0</text>
+
+    <!-- row a -->
+    <rect x="100" y="124" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="144" text-anchor="middle" fill="#446688" font-weight="bold">a</text>
+    <rect x="150" y="124" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="144" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="124" width="50" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" filter="url(#rough2)"/>
+    <text x="225" y="144" text-anchor="middle" fill="#4a7a3a" font-weight="bold">1</text>
+    <rect x="250" y="124" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="275" y="144" text-anchor="middle" fill="#555">1</text>
+    <rect x="300" y="124" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="325" y="144" text-anchor="middle" fill="#555">1</text>
+
+    <!-- row b -->
+    <rect x="100" y="156" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="176" text-anchor="middle" fill="#446688" font-weight="bold">b</text>
+    <rect x="150" y="156" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="176" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="156" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="225" y="176" text-anchor="middle" fill="#555">1</text>
+    <rect x="250" y="156" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="275" y="176" text-anchor="middle" fill="#555">1</text>
+    <rect x="300" y="156" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="325" y="176" text-anchor="middle" fill="#555">1</text>
+
+    <!-- row c -->
+    <rect x="100" y="188" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="208" text-anchor="middle" fill="#446688" font-weight="bold">c</text>
+    <rect x="150" y="188" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="208" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="188" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="225" y="208" text-anchor="middle" fill="#555">1</text>
+    <rect x="250" y="188" width="50" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" filter="url(#rough2)"/>
+    <text x="275" y="208" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <rect x="300" y="188" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="325" y="208" text-anchor="middle" fill="#555">2</text>
+
+    <!-- row d -->
+    <rect x="100" y="220" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="240" text-anchor="middle" fill="#446688" font-weight="bold">d</text>
+    <rect x="150" y="220" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="240" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="220" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="225" y="240" text-anchor="middle" fill="#555">1</text>
+    <rect x="250" y="220" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="275" y="240" text-anchor="middle" fill="#555">2</text>
+    <rect x="300" y="220" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="325" y="240" text-anchor="middle" fill="#555">2</text>
+
+    <!-- row e -->
+    <rect x="100" y="252" width="50" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+    <text x="125" y="272" text-anchor="middle" fill="#446688" font-weight="bold">e</text>
+    <rect x="150" y="252" width="50" height="32" fill="#f0f0f0" stroke="#bbb" stroke-width="1" filter="url(#rough2)"/>
+    <text x="175" y="272" text-anchor="middle" fill="#aaa">0</text>
+    <rect x="200" y="252" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="225" y="272" text-anchor="middle" fill="#555">1</text>
+    <rect x="250" y="252" width="50" height="32" fill="#fafafa" stroke="#ccc" stroke-width="1" filter="url(#rough2)"/>
+    <text x="275" y="272" text-anchor="middle" fill="#555">2</text>
+    <rect x="300" y="252" width="50" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2.4" filter="url(#rough2)"/>
+    <text x="325" y="272" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+  </g>
+
+  <!-- match arrows (diagonal, green) -->
+  <path d="M 175 124 L 218 124" stroke="#4a7a3a" stroke-width="1.6" fill="none" stroke-dasharray="3,2" marker-end="url(#arrG)" filter="url(#rough2)"/>
+  <path d="M 225 188 L 268 188" stroke="#4a7a3a" stroke-width="1.6" fill="none" stroke-dasharray="3,2" marker-end="url(#arrG)" filter="url(#rough2)"/>
+  <path d="M 275 252 L 318 252" stroke="#4a7a3a" stroke-width="1.6" fill="none" stroke-dasharray="3,2" marker-end="url(#arrG)" filter="url(#rough2)"/>
+
+  <!-- ===== side notes ===== -->
+  <rect x="380" y="92" width="210" height="180" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="485" y="112" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">关键填表步骤</text>
+  <text x="394" y="132" font-size="10" fill="#4a7a3a" font-weight="bold">dp[1][1]: a==a → 0+1</text>
+  <text x="394" y="146" font-size="9" fill="#888">匹配, LCS="a"</text>
+  <text x="394" y="166" font-size="10" fill="#888">dp[1][2]: a≠c → max(0,1)</text>
+  <text x="394" y="178" font-size="9" fill="#888">跳过 c, 沿用 "a"</text>
+  <text x="394" y="198" font-size="10" fill="#4a7a3a" font-weight="bold">dp[3][2]: c==c → 1+1</text>
+  <text x="394" y="210" font-size="9" fill="#888">匹配, LCS="ac"</text>
+  <text x="394" y="230" font-size="10" fill="#888">dp[4][3]: d≠e → max(2,2)</text>
+  <text x="394" y="242" font-size="9" fill="#888">跳过 d, 沿用 "ac"</text>
+  <text x="394" y="262" font-size="10" fill="#4a7a3a" font-weight="bold">dp[5][3]: e==e → 2+1</text>
+  <text x="394" y="274" font-size="9" fill="#888">匹配, LCS="ace" ✓</text>
+
+  <!-- ===== answer ===== -->
+  <rect x="100" y="300" width="250" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="225" y="322" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">dp[5][3] = 3  →  LCS = "ace"</text>
+
+  <!-- ===== trace back ===== -->
+  <rect x="40" y="350" width="540" height="96" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="310" y="372" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">回溯还原 LCS 字符串</text>
+  <text x="60" y="392" font-size="10" fill="#555">从 dp[5][3]=3 回溯：text1[4]='e'==text2[2]='e' 且 dp[5][3]==dp[4][2]+1 → 记录 'e'，走到 [4][2]</text>
+  <text x="60" y="408" font-size="10" fill="#555">dp[4][2]=2: text1[3]='d'≠'c' → 走到较大方向 dp[3][2]=2 → text1[2]='c'=='c' 且 dp[3][2]==dp[2][1]+1 → 记录 'c'</text>
+  <text x="60" y="424" font-size="10" fill="#555">dp[2][1]=1: text1[1]='b'≠'a' → 走到 dp[1][1]=1 → text1[0]='a'=='a' → 记录 'a' → 到 [0][0] 结束</text>
+  <text x="60" y="440" font-size="10" fill="#4a7a3a" font-weight="bold">逆序拼接：e + c + a = "ace" ✓</text>
+</svg>
