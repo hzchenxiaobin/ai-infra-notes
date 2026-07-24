@@ -12,6 +12,7 @@ IMAGES_SRC = TOPICS_DIR / "images"
 
 TOPIC_DISPLAY_NAMES = {
     "cpp": "🖥️ C++",
+    "cuda": "🟢 CUDA",
     "cutlass": "⚡ CUTLASS",
     "triton": "🐍 Triton",
     "cute": "🔷 CuTe",
