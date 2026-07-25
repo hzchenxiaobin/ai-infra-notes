@@ -34,13 +34,41 @@ Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，
 
 ### 理论学习
 
+#### 前置知识：Cache Line 与 GPU 内存访问粒度
+
+GPU 访问 Global Memory 时，数据在 DRAM ↔ L2 ↔ L1 ↔ 寄存器之间以 **cache line（128 bytes）** 为最小单位传输。即使 kernel 只读 4 bytes，硬件也会把包含它的整个 128-byte cache line 加载进缓存。
+
+> 💡 **关键认知**：kernel 的访存效率不取决于"读了多少字节"，而取决于"触发了多少次 cache line 传输"。这是 float4、coalesced 访问、shared memory tiling 等所有内存优化的共同底层逻辑。
+
+**与 warp 的天然对齐**：一个 warp 有 32 个线程，每个读 4 bytes（一个 float），合计 32 × 4 = 128 bytes，恰好等于 1 个 cache line。当 32 个线程访问连续地址时，硬件合并成 **1 次 cache line 传输**；若地址分散，最多触发 32 次传输——带宽利用率相差 32 倍。这就是 coalesced 访问的本质。
+
+| warp 内 32 线程的地址模式 | 触发 cache line 数 | 带宽利用率 |
+|--------------------------|-------------------|-----------|
+| 连续（stride=1） | 1 | 100% |
+| stride=2 | 2 | 50% |
+| stride=32（跨行） | 32 | ~3% |
+
+**与 float4 的关系**：float4 是**指令层**优化——1 条 128-bit load 指令替代 4 条 32-bit 指令，减少指令发射开销。底层仍走 cache line。两者叠加：指令数 ↓（float4）+ cache line 利用率 ↑（coalesced）。所以 float4 要求"coalesced 访问模式"——否则单条 float4 取来的 16 bytes 可能横跨两个 cache line，反而更慢。
+
+**L1 / L2 cache 层次**：
+
+| 层次 | 位置 | 容量（典型） | 延迟 | 说明 |
+|------|------|-------------|------|------|
+| L1 cache | 每 SM 私有 | ~128 KB | ~20-30 cycles | 与 shared memory 共享物理存储，可配置划分 |
+| L2 cache | 全局共享 | 数 MB | ~200+ cycles | 所有 SM 共享，跨 block 数据复用走这里 |
+| DRAM (HBM) | 全局 | 数 GB～数十 GB | ~400-800 cycles | L2 miss 后走 DRAM，延迟最高 |
+
+cache line 在 L1 和 L2 两级都存在。L1 miss 查 L2，L2 miss 才走 DRAM。GEMM 的 shared memory tiling 本质是把热点数据从 DRAM/cache 搬进 shared memory，让多次复用只付一次 DRAM 延迟。
+
+> ⚠️ **易混淆**：shared memory 的 **bank**（32 个 × 4 bytes = 128 bytes）与 global memory 的 **cache line**（128 bytes）数值恰好相同，但概念不同——bank 是 shared memory 的并行访问通道（决定 bank conflict），cache line 是 global memory 的传输单位（决定 coalesced）。
+
 #### 6.1 float4 向量化加载
 
 ![float4 向量化加载对比](../images/float4_vectorized_load.svg)
 
 ##### 原理
 
-GPU 的 Global Memory 以 128-byte cache line 为单位访问。4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit load 指令更高效。
+如上文所述，GPU 以 128-byte cache line 为单位访问 Global Memory。在指令层，4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit load 指令更高效。
 
 ```cuda
 // 逐个加载：4 条 32-bit load 指令
