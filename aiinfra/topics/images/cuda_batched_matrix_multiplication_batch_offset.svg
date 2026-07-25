@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="480" fill="#fafafa"/>
+
+  <text x="380" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Batch Offset：扁平内存 → 3D 逻辑视图的指针算术</text>
+  <text x="380" y="44" text-anchor="middle" font-size="11" fill="#888">三组矩阵在 HBM 中各连续铺平，batch b 的起点 = 基址 + b × 单 batch 元素数</text>
+
+  <!-- ===== A memory layout ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">A: BATCH × M × K（行主序，连续铺平）</text>
+
+  <rect x="30" y="86" width="700" height="44" fill="none" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <!-- batch 0 -->
+  <rect x="30" y="86" width="175" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="117" y="104" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">batch 0</text>
+  <text x="117" y="120" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×K floats</text>
+  <!-- batch 1 -->
+  <rect x="205" y="86" width="175" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="292" y="104" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">batch 1</text>
+  <text x="292" y="120" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×K floats</text>
+  <!-- batch 2 -->
+  <rect x="380" y="86" width="175" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="467" y="104" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">batch 2</text>
+  <text x="467" y="120" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×K floats</text>
+  <!-- batch ... -->
+  <rect x="555" y="86" width="175" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="642" y="104" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">batch b</text>
+  <text x="642" y="120" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×K floats</text>
+
+  <!-- offset annotation -->
+  <path d="M 30 134 L 30 146" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="36" y="142" font-size="8" fill="#b85450">A[0]</text>
+
+  <path d="M 555 134 L 555 146" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="562" y="142" font-size="8" fill="#b85450">A + b×M×K</text>
+
+  <!-- ===== B memory layout ===== -->
+  <text x="30" y="170" font-size="12" fill="#4a7a3a" font-weight="bold">B: BATCH × K × N（行主序，连续铺平）</text>
+
+  <rect x="30" y="180" width="700" height="44" fill="none" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <rect x="30" y="180" width="175" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="117" y="198" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">batch 0</text>
+  <text x="117" y="214" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">K×N floats</text>
+  <rect x="205" y="180" width="175" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="292" y="198" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">batch 1</text>
+  <text x="292" y="214" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">K×N floats</text>
+  <rect x="380" y="180" width="175" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="467" y="198" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">batch 2</text>
+  <text x="467" y="214" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">K×N floats</text>
+  <rect x="555" y="180" width="175" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="642" y="198" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">batch b</text>
+  <text x="642" y="214" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">K×N floats</text>
+
+  <path d="M 555 228 L 555 240" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="562" y="236" font-size="8" fill="#b85450">B + b×K×N</text>
+
+  <!-- ===== C memory layout ===== -->
+  <text x="30" y="264" font-size="12" fill="#d6a040" font-weight="bold">C: BATCH × M × N（行主序，连续铺平）</text>
+
+  <rect x="30" y="274" width="700" height="44" fill="none" stroke="#d6a040" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <rect x="30" y="274" width="175" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="117" y="292" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">batch 0</text>
+  <text x="117" y="308" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×N floats</text>
+  <rect x="205" y="274" width="175" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="292" y="292" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">batch 1</text>
+  <text x="292" y="308" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×N floats</text>
+  <rect x="380" y="274" width="175" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="467" y="292" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">batch 2</text>
+  <text x="467" y="308" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×N floats</text>
+  <rect x="555" y="274" width="175" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+  <text x="642" y="292" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">batch b</text>
+  <text x="642" y="308" text-anchor="middle" font-family="monospace" font-size="9" fill="#555">M×N floats</text>
+
+  <path d="M 555 322 L 555 334" stroke="#b85450" stroke-width="1" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="562" y="330" font-size="8" fill="#b85450">C + b×M×N</text>
+
+  <!-- ===== Bottom: code snippet ===== -->
+  <rect x="30" y="346" width="700" height="120" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="368" font-size="12" fill="#444" font-weight="bold">kernel 内的 offset 计算（3 行指针算术，O(1)）</text>
+
+  <text x="56" y="392" font-family="monospace" font-size="10" fill="#446688">int b = blockIdx.z;  <tspan fill="#888">// batch index → z 维</tspan></text>
+  <text x="56" y="410" font-family="monospace" font-size="10" fill="#333">const float* Ab = A + (size_t)b * M * K;  <tspan fill="#888">// A[b] 起点</tspan></text>
+  <text x="56" y="428" font-family="monospace" font-size="10" fill="#333">const float* Bb = B + (size_t)b * K * N;  <tspan fill="#888">// B[b] 起点</tspan></text>
+  <text x="56" y="446" font-family="monospace" font-size="10" fill="#333">float*       Cb = C + (size_t)b * M * N;  <tspan fill="#888">// C[b] 起点</tspan></text>
+  <text x="56" y="460" font-size="9" fill="#888">此后 Ab/Bb/Cb 当作普通 M×K / K×N / M×N 矩阵用，kernel 主体与单矩阵 GEMM 完全一致</text>
+</svg>

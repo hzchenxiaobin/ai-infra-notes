@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="540" fill="#fafafa"/>
+
+  <text x="390" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Top-K Selection：分块 bitonic 排序 + 多 pass 归约</text>
+  <text x="390" y="44" text-anchor="middle" font-size="11" fill="#888">每个 block 把 TILE=4096 元素排序后只留 top-BK=128，逐层归约直到 top-k</text>
+
+  <!-- ===== Input ===== -->
+  <rect x="30" y="70" width="700" height="48" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="92" font-size="12" fill="#446688" font-weight="bold">输入 input[N]</text>
+  <text x="46" y="108" font-family="monospace" font-size="10" fill="#555">N = 50,000,000 floats（性能测点），k = 100</text>
+
+  <!-- arrow down -->
+  <path d="M 390 120 L 390 138" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="404" y="134" font-size="9" fill="#666">Pass 1</text>
+
+  <!-- ===== Pass 1: block-level bitonic ===== -->
+  <rect x="30" y="142" width="700" height="92" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="164" font-size="12" fill="#4a7a3a" font-weight="bold">Pass 1：每 block 取 TILE=4096 → bitonic 排序 → 留 top-BK=128</text>
+  <text x="46" y="180" font-family="monospace" font-size="9" fill="#555">blocks = ceil(N/4096) = 12,207 个 block，各管一个 4096-tile</text>
+
+  <!-- tile boxes -->
+  <rect x="46" y="190" width="80" height="34" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+  <text x="86" y="204" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">block 0</text>
+  <text x="86" y="217" text-anchor="middle" font-family="monospace" font-size="7" fill="#888">sort 4096</text>
+  <rect x="130" y="190" width="80" height="34" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+  <text x="170" y="204" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">block 1</text>
+  <text x="170" y="217" text-anchor="middle" font-family="monospace" font-size="7" fill="#888">sort 4096</text>
+  <text x="220" y="210" font-size="12" fill="#888">...</text>
+  <rect x="240" y="190" width="80" height="34" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+  <text x="280" y="204" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">block b</text>
+  <text x="280" y="217" text-anchor="middle" font-family="monospace" font-size="7" fill="#888">sort 4096</text>
+  <text x="330" y="210" font-size="12" fill="#888">...</text>
+  <rect x="350" y="190" width="90" height="34" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="395" y="204" text-anchor="middle" font-size="8" fill="#d6a040" font-weight="bold">block 12206</text>
+  <text x="395" y="217" text-anchor="middle" font-family="monospace" font-size="7" fill="#888">sort 4096</text>
+  <text x="460" y="206" font-size="10" fill="#888">→</text>
+  <text x="475" y="200" font-size="9" fill="#4a7a3a">每 block 输出 128</text>
+  <text x="475" y="214" font-size="9" fill="#888">合计 12,207×128 ≈ 1.56M</text>
+
+  <!-- arrow down -->
+  <path d="M 390 236 L 390 254" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="404" y="250" font-size="9" fill="#666">Pass 2</text>
+
+  <!-- ===== Pass 2 ===== -->
+  <rect x="30" y="258" width="700" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="280" font-size="12" fill="#d6a040" font-weight="bold">Pass 2：1.56M → 382 blocks × 128 = 48,896</text>
+  <text x="46" y="298" font-family="monospace" font-size="9" fill="#555">同样的 kernel，输入换成上轮输出，再排再留 top-128</text>
+
+  <!-- arrow down -->
+  <path d="M 390 316 L 390 334" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="404" y="330" font-size="9" fill="#666">Pass 3</text>
+
+  <!-- ===== Pass 3 ===== -->
+  <rect x="30" y="338" width="700" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="360" font-size="12" fill="#d6a040" font-weight="bold">Pass 3：48,896 → 12 blocks × 128 = 1,536</text>
+  <text x="46" y="378" font-family="monospace" font-size="9" fill="#555">归约比 = TILE/BK = 4096/128 = 32×，每 pass 元素数 ÷32</text>
+
+  <!-- arrow down -->
+  <path d="M 390 396 L 390 414" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="404" y="410" font-size="9" fill="#666">Final</text>
+
+  <!-- ===== Final pass ===== -->
+  <rect x="30" y="418" width="700" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="440" font-size="12" fill="#b85450" font-weight="bold">Final：1 个 block 排 1,536 → top-128，取前 k=100 写回 output</text>
+  <text x="46" y="458" font-family="monospace" font-size="9" fill="#555">cudaMemcpy(output, buf, k*sizeof(float), D2D)  —— 降序，与 torch.topk(largest=True) 对齐</text>
+
+  <!-- ===== Bottom: key insight ===== -->
+  <rect x="30" y="486" width="700" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="506" font-size="11" fill="#444" font-weight="bold">关键不变量：BK ≥ k（128 ≥ 100）保证全局 top-k 元素每轮必存活</text>
+  <text x="46" y="522" font-size="9" fill="#555">因为全局第 rank-k 元素在任一 tile 内至多有 k-1=99 个比它大 &lt; BK=128，必入该 tile 的 top-128</text>
+</svg>

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 500" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="500" fill="#fafafa"/>
+
+  <text x="380" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Block Tile 映射：64×64 tile 切为 16×16 = 256 个 thread tile</text>
+  <text x="380" y="44" text-anchor="middle" font-size="11" fill="#888">每 thread 负责 TM×TN = 4×4 输出，累加器 acc[4][4] 驻留寄存器</text>
+
+  <!-- ===== Left: block tile 8x8 overview (simplified from 16x16) ===== -->
+  <text x="20" y="74" font-size="12" fill="#446688" font-weight="bold">block tile：BM×BN = 64×64</text>
+  <text x="20" y="90" font-size="10" fill="#888">16×16 = 256 thread tile（图中 8×8 概览）</text>
+
+  <g font-size="8" fill="#888">
+    <rect x="20" y="100" width="240" height="240" fill="none" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <!-- 8x8 grid, each 30x30 -->
+    <rect x="20"  y="100" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="50"  y="100" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="80"  y="100" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="110" y="100" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="140" y="100" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="170" y="100" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="200" y="100" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="230" y="100" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+    <rect x="20"  y="130" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="50"  y="130" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="80"  y="130" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="110" y="130" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="140" y="130" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="170" y="130" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="200" y="130" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="230" y="130" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+    <rect x="20"  y="160" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="50"  y="160" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="80"  y="160" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="110" y="160" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="140" y="160" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="170" y="160" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="200" y="160" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="230" y="160" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+    <rect x="20"  y="190" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="50"  y="190" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="80"  y="190" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="110" y="190" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="140" y="190" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="170" y="190" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="200" y="190" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="230" y="190" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+    <g opacity="0.55">
+      <rect x="20"  y="220" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="50"  y="220" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="80"  y="220" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="110" y="220" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="140" y="220" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="170" y="220" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="200" y="220" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="230" y="220" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+      <rect x="20"  y="250" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="50"  y="250" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="80"  y="250" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="110" y="250" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="140" y="250" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="170" y="250" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="200" y="250" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="230" y="250" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+      <rect x="20"  y="280" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="50"  y="280" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="80"  y="280" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="110" y="280" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="140" y="280" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="170" y="280" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="200" y="280" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="230" y="280" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+
+      <rect x="20"  y="310" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="50"  y="310" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="80"  y="310" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="110" y="310" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="140" y="310" width="30" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="170" y="310" width="30" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="200" y="310" width="30" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+      <rect x="230" y="310" width="30" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    </g>
+
+    <!-- highlight one thread tile (top-left) -->
+    <rect x="20" y="100" width="30" height="30" fill="none" stroke="#b85450" stroke-width="2.5" rx="2" filter="url(#rough2)"/>
+    <text x="35" y="120" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">T0</text>
+  </g>
+  <text x="140" y="356" text-anchor="middle" font-size="9" fill="#888">（图为 8×8 概览，实际 16×16 = 256 个 thread tile）</text>
+
+  <!-- ===== Right: zoomed thread tile 4x4 ===== -->
+  <text x="310" y="74" font-size="12" fill="#b85450" font-weight="bold">单个 thread 的 TM×TN = 4×4 输出</text>
+  <text x="310" y="90" font-size="10" fill="#888">累加器 acc[4][4] 驻留寄存器，K 维循环累加</text>
+
+  <!-- rB label -->
+  <text x="430" y="104" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">← TN=4 →  rB[0..3]</text>
+
+  <!-- rA label -->
+  <text x="304" y="200" text-anchor="middle" font-size="9" fill="#446688" font-weight="bold" transform="rotate(-90 304 200)">TM=4  rA[0..3]</text>
+
+  <g font-size="9" fill="#333">
+    <rect x="310" y="110" width="240" height="180" fill="none" stroke="#b85450" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <!-- 4x4 grid, each 60x45 -->
+    <rect x="310" y="110" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="370" y="110" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="430" y="110" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="490" y="110" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+
+    <rect x="310" y="155" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="370" y="155" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="430" y="155" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="490" y="155" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+
+    <rect x="310" y="200" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="370" y="200" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="430" y="200" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="490" y="200" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+
+    <rect x="310" y="245" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="370" y="245" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="430" y="245" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+    <rect x="490" y="245" width="60" height="45" fill="#fce4ec" stroke="#b85450" stroke-width="0.6" filter="url(#rough2)"/>
+
+    <!-- acc labels -->
+    <text x="340" y="137" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[0][0]</text>
+    <text x="400" y="137" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[0][1]</text>
+    <text x="460" y="137" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[0][2]</text>
+    <text x="520" y="137" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[0][3]</text>
+    <text x="340" y="182" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[1][0]</text>
+    <text x="340" y="227" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[2][0]</text>
+    <text x="340" y="272" text-anchor="middle" font-family="monospace" font-size="8" fill="#b85450">acc[3][0]</text>
+  </g>
+
+  <!-- index formula -->
+  <rect x="310" y="304" width="240" height="64" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="322" y="324" font-family="monospace" font-size="9" fill="#333">ty = tid / (BN/TN)  // 0..15</text>
+  <text x="322" y="340" font-family="monospace" font-size="9" fill="#333">tx = tid % (BN/TN)  // 0..15</text>
+  <text x="322" y="356" font-size="8" fill="#888">→ 输出 C[b][by*64+ty*4+i][bx*64+tx*4+j]</text>
+
+  <!-- ===== Bottom: worked example + summary ===== -->
+  <rect x="20" y="384" width="720" height="100" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="36" y="406" font-size="12" fill="#444" font-weight="bold">Worked Example（BATCH=32, M=N=K=256, blockIdx=(0,0,1), tid=0）</text>
+  <text x="36" y="426" font-family="monospace" font-size="9" fill="#333">b=1 → Ab=A+65536, Bb=B+65536, Cb=C+65536    ty=0, tx=0 → 负责 C[1][0:4][0:4]</text>
+  <text x="36" y="442" font-family="monospace" font-size="9" fill="#333">bk 循环: 每次 256 thread 协作加载 As[64][16]+Bs[16][64] → __syncthreads → acc[i][j] += a[i]*b[j]</text>
+  <text x="36" y="458" font-size="9" fill="#555">① 每 thread 读 1 次 rA[i] 可给 TN=4 个 acc 乘加 → A 复用 ×4    ② 每 thread 读 1 次 rB[j] 可给 TM=4 个 acc 乘加 → B 复用 ×4</text>
+  <text x="36" y="474" font-size="9" fill="#555">③ 256 thread × 16 输出 = 4096 = 64×64 block tile，线程数减少 16×，shared 访问量降 4×</text>
+</svg>

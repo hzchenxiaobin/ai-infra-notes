@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="520" fill="#fafafa"/>
+
+  <text x="380" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Batched GEMM：batch 维 → blockIdx.z，3D Grid 并行调度</text>
+  <text x="380" y="44" text-anchor="middle" font-size="11" fill="#888">每组 (A[b], B[b], C[b]) 独立，blockIdx.z 索引 batch，互不干扰</text>
+
+  <!-- ===== Left: BATCH groups of matrices ===== -->
+  <text x="30" y="74" font-size="12" fill="#446688" font-weight="bold">输入：BATCH 组矩阵（BATCH=4 示意）</text>
+
+  <!-- batch 0 -->
+  <rect x="30" y="86" width="180" height="56" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="40" y="104" font-size="10" fill="#446688" font-weight="bold">batch 0</text>
+  <text x="40" y="120" font-family="monospace" font-size="9" fill="#555">A[0]: M×K  B[0]: K×N</text>
+  <text x="40" y="134" font-family="monospace" font-size="9" fill="#555">C[0] = A[0] @ B[0]</text>
+
+  <!-- batch 1 -->
+  <rect x="30" y="150" width="180" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="40" y="168" font-size="10" fill="#4a7a3a" font-weight="bold">batch 1</text>
+  <text x="40" y="184" font-family="monospace" font-size="9" fill="#555">A[1]: M×K  B[1]: K×N</text>
+  <text x="40" y="198" font-family="monospace" font-size="9" fill="#555">C[1] = A[1] @ B[1]</text>
+
+  <!-- batch 2 -->
+  <rect x="30" y="214" width="180" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="40" y="232" font-size="10" fill="#d6a040" font-weight="bold">batch 2</text>
+  <text x="40" y="248" font-family="monospace" font-size="9" fill="#555">A[2]: M×K  B[2]: K×N</text>
+  <text x="40" y="262" font-family="monospace" font-size="9" fill="#555">C[2] = A[2] @ B[2]</text>
+
+  <!-- batch 3 -->
+  <rect x="30" y="278" width="180" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="40" y="296" font-size="10" fill="#b85450" font-weight="bold">batch 3</text>
+  <text x="40" y="312" font-family="monospace" font-size="9" fill="#555">A[3]: M×K  B[3]: K×N</text>
+  <text x="40" y="326" font-family="monospace" font-size="9" fill="#555">C[3] = A[3] @ B[3]</text>
+
+  <text x="120" y="352" text-anchor="middle" font-size="9" fill="#888">各组形状相同，独立乘法</text>
+  <text x="120" y="366" text-anchor="middle" font-size="9" fill="#888">无跨 batch 依赖</text>
+
+  <!-- arrow right -->
+  <path d="M 218 214 L 270 214" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="244" y="208" text-anchor="middle" font-size="9" fill="#666">映射</text>
+
+  <!-- ===== Right: 3D Grid ===== -->
+  <text x="290" y="74" font-size="12" fill="#444" font-weight="bold">3D Grid：dim3(N/BN, M/BM, BATCH)</text>
+
+  <!-- grid.z axis label -->
+  <text x="440" y="92" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">blockIdx.z = batch（0..BATCH-1）</text>
+
+  <!-- batch layers (z-axis) -->
+  <!-- layer 0 -->
+  <g opacity="0.92">
+    <rect x="300" y="100" width="200" height="56" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="310" y="118" font-size="10" fill="#446688" font-weight="bold">z=0  (batch 0)</text>
+    <text x="310" y="134" font-family="monospace" font-size="8" fill="#555">grid.xy = (N/BN)×(M/BM) blocks</text>
+    <text x="310" y="148" font-family="monospace" font-size="8" fill="#888">每 block 算 64×64 输出 tile</text>
+  </g>
+
+  <!-- layer 1 -->
+  <g opacity="0.82">
+    <rect x="312" y="108" width="200" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="322" y="126" font-size="10" fill="#4a7a3a" font-weight="bold">z=1  (batch 1)</text>
+    <text x="322" y="142" font-family="monospace" font-size="8" fill="#555">同样 (N/BN)×(M/BM) blocks</text>
+  </g>
+
+  <!-- layer 2 -->
+  <g opacity="0.72">
+    <rect x="324" y="116" width="200" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="334" y="134" font-size="10" fill="#d6a040" font-weight="bold">z=2  (batch 2)</text>
+    <text x="334" y="150" font-family="monospace" font-size="8" fill="#555">同形状 tile 并行</text>
+  </g>
+
+  <!-- layer 3 -->
+  <g opacity="0.62">
+    <rect x="336" y="124" width="200" height="56" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="346" y="142" font-size="10" fill="#b85450" font-weight="bold">z=3  (batch 3)</text>
+  </g>
+
+  <!-- z-axis arrow -->
+  <path d="M 556 150 L 556 120" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="564" y="140" font-size="9" fill="#b85450">z ↑</text>
+
+  <!-- grid.x/y label -->
+  <text x="400" y="196" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">grid.x = N/BN（列方向 tile 数）</text>
+  <text x="400" y="212" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">grid.y = M/BM（行方向 tile 数）</text>
+
+  <!-- tile detail box -->
+  <rect x="290" y="226" width="260" height="72" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="300" y="246" font-family="monospace" font-size="9" fill="#333">BM=64, BN=64, BK=16</text>
+  <text x="300" y="262" font-family="monospace" font-size="9" fill="#333">TM=4, TN=4, 256 threads/block</text>
+  <text x="300" y="278" font-size="9" fill="#888">每 batch 产生 (N/64)×(M/64) 个 block</text>
+  <text x="300" y="292" font-size="9" fill="#888">总 block 数 = BATCH × (N/64) × (M/64)</text>
+
+  <!-- ===== Bottom: key insight ===== -->
+  <rect x="30" y="320" width="700" height="90" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="344" font-size="12" fill="#444" font-weight="bold">关键洞察：batch 维的「免费并行」</text>
+  <text x="46" y="364" font-size="10" fill="#555">① batch 间零依赖 → 直接映射到 blockIdx.z，无需同步、无需 atomic，每个 block 独立处理自己 batch 的 tile</text>
+  <text x="46" y="380" font-size="10" fill="#555">② batch 内部 = 标准 GEMM tiling（shared mem + register blocking），与单矩阵 GEMM 完全同构</text>
+  <text x="46" y="396" font-size="10" fill="#555">③ 唯一新增：batch offset 计算 Ab=A+b*M*K（一行指针算术，O(1)），kernel 主体一字不改</text>
+
+  <!-- ===== Bottom: parallelism formula ===== -->
+  <rect x="30" y="424" width="700" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="46" y="448" font-size="12" fill="#444" font-weight="bold">并行度分析（性能测点 BATCH=32, M=N=K=256）</text>
+  <text x="46" y="468" font-family="monospace" font-size="10" fill="#333">总 block 数 = 32 × (256/64) × (256/64) = 32 × 16 = 512 blocks</text>
+  <text x="46" y="484" font-size="10" fill="#555">单矩阵 256×256 GEMM 仅 16 个 block，GPU 占用率低；batch 维把并行度 ×32 → 充分打满 SM</text>
+  <text x="46" y="498" font-size="9" fill="#888">这正是 batched GEMM 比循环调用单 GEMM 更高效的根本原因</text>
+</svg>
