@@ -420,90 +420,71 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 - 为什么有时调整 block size 对 occupancy 没有帮助
 - `__launch_bounds__` 如何影响编译器的寄存器分配决策
 
-#### 任务 6：LeetGPU 在线题目 —— Matrix Addition
+#### 任务 6：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定两个相同形状的大矩阵 `A` 和 `B`，计算 `C = A + B`。约束：元素为 32-bit float，规模达数百万量级。
+**题目概述**：给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。约束：元素为 32-bit float，规模达数千万元素（性能测例 `rows=7000, cols=6000`）。
 
-**难度**：简单　**标签**：CUDA、Element-wise、Memory Coalescing、Occupancy
+**难度**：简单　**标签**：CUDA、Memory-bound、Memory Coalescing、Occupancy
 
-**与今日知识的关联**：Matrix Addition 是典型 memory-bound 算子（算术强度 ≈ 1 FLOP / 12 Byte），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block size（128/256/512/1024）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block size 越大越快，256 或 512 往往已经能占满带宽。
+**与今日知识的关联**：Matrix Transpose 是纯数据重排的 memory-bound 算子（算术强度 ≈ 0），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block 形状（16×16 / 32×8 / 32×16）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block 越大越快，中等规模往往已经能占满带宽。
 
 **解题思路**：
-1. 一维 grid-stride loop 映射，比二维更灵活
-2. 用 `float4` 向量化加载（一次 128-bit），把 4 条 load 合并为 1 条
-3. 处理剩余不足 4 个的尾部元素
-4. 尝试不同 block size，记录 occupancy 与 latency 的关系
+1. 2D grid + 2D block 映射，每个线程搬一个元素
+2. 注意读 `input` 按行合并时，写 `output` 按列不合并——读写无法同时 coalesced
+3. 尝试不同 block 形状，记录 occupancy 与 latency 的关系
+4. shared memory tiling 是 Day 4 的内容，今天先用朴素版做调参实验
 
 **参考实现**：
 
 ```cuda
-// matrix_addition.cu —— Matrix Addition（1D grid-stride + float4 向量化）
-// 编译命令: nvcc -o matrix_addition matrix_addition.cu -O3 -arch=sm_120
+// matrix_transpose.cu —— Matrix Transpose（朴素 2D 映射，用于 occupancy 调参实验）
+// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-__global__ void matrix_add_float4(const float* A, const float* B, float* C, int num_elements) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = gridDim.x * blockDim.x;
-    int vec_count = num_elements / 4;
-
-    for (int i = tid; i < vec_count; i += stride) {
-        float4 a = reinterpret_cast<const float4*>(A)[i];
-        float4 b = reinterpret_cast<const float4*>(B)[i];
-        float4 c;
-        c.x = a.x + b.x;
-        c.y = a.y + b.y;
-        c.z = a.z + b.z;
-        c.w = a.w + b.w;
-        reinterpret_cast<float4*>(C)[i] = c;
-    }
-
-    // 处理尾部不足 4 个的元素
-    int tail_start = vec_count * 4;
-    for (int i = tail_start + tid; i < num_elements; i += stride) {
-        C[i] = A[i] + B[i];
+__global__ void transpose_naive(const float* input, float* output, int rows, int cols) {
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    if (row < rows && col < cols) {
+        output[col * rows + row] = input[row * cols + col];
     }
 }
 
 int main() {
-    const int M = 4096, N = 4096, num_elements = M * N;
-    const size_t bytes = num_elements * sizeof(float);
-    float *h_A = (float*)malloc(bytes), *h_B = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < num_elements; ++i) {
+    const int rows = 6000, cols = 7000;
+    const size_t bytes = (size_t)rows * cols * sizeof(float);
+    float *h_A = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
+    for (int i = 0; i < rows * cols; ++i)
         h_A[i] = (float)(rand() % 100) * 0.01f;
-        h_B[i] = (float)(rand() % 100) * 0.01f;
-    }
-    float *d_A, *d_B, *d_C;
+    float *d_A, *d_C;
     cudaMalloc(&d_A, bytes);
-    cudaMalloc(&d_B, bytes);
     cudaMalloc(&d_C, bytes);
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
-    int threads = 256, blocks = min((num_elements / 4 + threads - 1) / threads, 1024);
-    matrix_add_float4<<<blocks, threads>>>(d_A, d_B, d_C, num_elements);
+    dim3 threads(16, 16);
+    dim3 blocks((cols + threads.x - 1) / threads.x, (rows + threads.y - 1) / threads.y);
+    transpose_naive<<<blocks, threads>>>(d_A, d_C, rows, cols);
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     bool pass = true;
-    for (int i = 0; i < num_elements; ++i)
-        if (fabsf(h_C[i] - (h_A[i] + h_B[i])) > 1e-5f) {
-            pass = false;
-            break;
-        }
-    printf("Matrix Addition %s\n", pass ? "PASS" : "FAIL");
+    for (int i = 0; i < rows && pass; ++i)
+        for (int j = 0; j < cols; ++j)
+            if (fabsf(h_C[j * rows + i] - h_A[i * cols + j]) > 1e-5f) {
+                pass = false;
+                break;
+            }
+    printf("Matrix Transpose %s\n", pass ? "PASS" : "FAIL");
     free(h_A);
-    free(h_B);
     free(h_C);
     cudaFree(d_A);
-    cudaFree(d_B);
     cudaFree(d_C);
     return 0;
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比 block size = 128/256/512/1024 的 `gpu__time_duration.sum`。完整题解（含 float4 向量化、occupancy 调优）见 [Matrix Addition 题解](../../../../leetgpu/week1/day3/leetgpu-matrix-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 7：LeetCode 面试题 —— 无重复字符的最长子串
 

@@ -342,21 +342,21 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
 
 **观察重点**：Prefill 的 `addmm`/`bmm` 尺寸大、耗时长；Decode 的同算子尺寸极小（M=1），算子 launch 开销占比上升——印证 Day1 的"Decode memory-bound，SM 空闲等数据"。
 
-#### 任务 4：LeetGPU 在线题目 —— Token Embedding Layer
+#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
 
-**题目链接**：<https://leetgpu.com/challenges/token-embedding-layer>
+**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
 **题目概述**：
 
-实现 Transformer 输入端的 **embedding 层**：对 batch 中每个 token，从 `token_embeddings[V,D]` 表里 gather 一行、从 `position_embeddings[P,D]` gather 一行，相加后做 LayerNorm（带可学习 `gamma`/`beta`）。输出 `[B,T,D]`。
+实现 GPT-2 124M 的一个 **transformer block 前向**（Pre-LN 结构）：输入 `x[seq_len, 768]` 和打包权重，依次串联 `LN1 → QKV 投影 → Multi-Head Attention → Attn 投影 → 残差 → LN2 → FC → GELU(tanh) → 投影 → 残差`，输出 `[seq_len, 768]`。
 
-**约束条件**：性能测试取 `B=32, T=512, V=30000, P=2048, D=768`（BERT-base 配置）；容差 `atol=rtol=1e-4`。
+**约束条件**：固定维度 `D=768, H=12, FFN=3072`；容差 `atol=rtol=1e-3`；性能测试取 `seq_len=1024`。
 
 **与今日知识的关联**：
 
-Token Embedding Layer 是 Mini 推理引擎 v0 的**第一个算子**——`self.embedding(input_ids)` 在 v0 里是 PyTorch 的 `nn.Embedding`，这道题就是它的手写 CUDA 版。引擎的 `model.forward` 第一步就是把 token id 转成向量，这道题把它拆成 `gather token emb + gather pos emb + 相加 + LayerNorm` 四步。Week7 替换 PyTorch 后端时，引擎的 embedding 层就要换成这个手写 kernel。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
+GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
 
-> 💡 提交后在 [LeetGPU Token Embedding Layer](https://leetgpu.com/challenges/token-embedding-layer) 上记录通过耗时。完整题解（含 gather + 加法 + LayerNorm 融合 kernel、ncu profiling）见 [Token Embedding Layer 题解](../../../../leetgpu/week5/day5/leetgpu-token-embedding-layer-solution.md)。
+> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](../../../../aiinfra/topics/cuda/high/reduction/gpt-2-transformer-block.md)。
 
 #### 任务 5：LeetCode 面试题 —— 从前序与中序遍历序列构造二叉树
 

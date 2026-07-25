@@ -504,38 +504,39 @@ ncu \
 - `sm__occupancy.avg.pct_of_peak_sustained_elapsed`：实际 occupancy 百分比
 - `launch__registers_per_thread`：每个线程的寄存器数
 
-#### 任务 4：LeetGPU 在线题目 —— ReLU
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/relu>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
 **题目概述**：
 
-给定长度为 N 的浮点数组 input，对其逐元素应用 ReLU 激活函数：output[i] = max(0, input[i])。
+给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。
 
-**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
+**约束条件**：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）
 
-**难度**：简单　**标签**：CUDA、Element-wise、Activation、Register Pressure
+**难度**：简单　**标签**：CUDA、Memory-bound、Index Mapping、Occupancy
 
 **与今日知识的关联**：
 
-本题代码极简（单条 fmaxf），适合观察 block size 与寄存器用量对 Occupancy 的影响。用 ncu 对比不同 blockDim 下的 achieved occupancy，直接验证 Day 2 的理论。
+转置是纯数据重排、零计算的 memory-bound kernel，代码极简，适合观察 block 形状（如 16×16 vs 32×8）与寄存器用量对 Occupancy 的影响。用 ncu 对比不同 blockDim 下的 achieved occupancy，直接验证 Day 2 的理论。
 
 **解题思路**：
 
-1D grid + 1D block，每个线程处理一个元素。关键不是算力而是内存带宽，用 ncu 观察 memory throughput 和 occupancy 随 block size 的变化。
+2D grid + 2D block，每个线程搬一个元素。关键不是算力而是内存带宽，用 ncu 观察 memory throughput 和 occupancy 随 block 形状的变化。
 
 **参考实现**：
 
 ```cuda
-__global__ void relu_kernel(const float* input, float* output, int N) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < N) {
-        output[idx] = fmaxf(input[idx], 0.0f);
+__global__ void transpose_kernel(const float* input, float* output, int rows, int cols) {
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    if (row < rows && col < cols) {
+        output[col * rows + row] = input[row * cols + col];
     }
 }
 ```
 
-> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [ReLU 题解](../../../../leetgpu/week1/day2/leetgpu-relu-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 最大子数组和
 

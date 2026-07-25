@@ -239,23 +239,23 @@ ncu --metrics \
 | Long Scoreboard Stall | 高 | 低 | 官方 async copy 隐藏了内存延迟 |
 | Occupancy | ~50-75% | ~60-80% | 官方 smem 更省，occupancy 更高 |
 
-#### 任务 4：LeetGPU 在线题目 —— Dot Product
+#### 任务 4：LeetGPU 在线题目 —— Reduction
 
-**题目链接**：<https://leetgpu.com/challenges/dot-product>
+**题目链接**：<https://leetgpu.com/challenges/reduction>
 
 **题目概述**：
 
-给定两个长度 N 的 float32 数组 `a` 和 `b`，计算点积 `sum(a[i] * b[i])`。约束 `1 ≤ N ≤ 10,000,000`，元素范围 `[-1000, 1000]`，结果不溢出 float。
+给定长度 N 的 float32 数组 `input`，计算所有元素之和 `output[0] = sum(input[i])`。测试规模可达 `N = 15,000,000`，容差 `atol=1e-5`——参考实现用 double 累加，线程局部累加也需全程 double 才能保证大 N 下的精度。
 
-**难度**：中等　**标签**：CUDA、Reduction、Kernel Fusion、Warp Shuffle
+**难度**：中等　**标签**：CUDA、Reduction、Warp Shuffle、grid-stride loop、精度控制
 
 **与今日知识的关联**：
 
-本题核心是 **element-wise 乘法 + 两级归约** 的 kernel 融合。FlashAttention 官方源码中，Q·K^T 的每一行本质上就是一批 dot product，随后紧跟 online softmax 和 PV 累加。通过本题掌握"乘法-归约 fusion"的最小原型，再读官方 `flash_fwd_kernel.h` 中 `gemm_kernel` 或 `compute_attn` 相关代码时，就能快速识别出相同的归约模式。
+本题核心是**两级归约**的通用骨架——"分块 → warp shuffle 块内归约 → 块间汇总"。FlashAttention 官方源码中，online softmax 的 running max `m` 和分母 `l` 都是归约，Q·K^T 每一行的求和也是归约。通过本题掌握归约的最纯粹形态，再读官方 `flash_fwd_kernel.h` 中 softmax 相关代码时，就能快速识别出相同的归约模式。
 
 **解题思路**：
 
-1. **grid-stride loop**：每个线程负责一段连续区间，先算局部点积
+1. **grid-stride loop**：每个线程负责一段连续区间，先算 double 局部和
 2. **warp shuffle 归约**：用 `__shfl_down_sync` 把 warp 内 32 个线程的局部和归约到 lane 0
 3. **shared memory 跨 warp**：每个 warp 的 lane 0 把部分和写到 smem，再由 warp 0 做最终归约
 4. **原子加或第二遍 kernel**：把每个 block 的部分和累加成全局结果
@@ -263,20 +263,20 @@ ncu --metrics \
 **参考实现**：
 
 ```cuda
-// dot_product.cu —— 点积（grid-stride + warp shuffle + shared memory 二级归约）
-// 编译命令: nvcc -o dot_product dot_product.cu -O3 -arch=sm_120
+// reduction.cu —— 数组求和（grid-stride + warp shuffle + shared memory 二级归约）
+// 编译命令: nvcc -o reduction reduction.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-__global__ void dot_kernel(const float* a, const float* b, float* block_sums, int N) {
+__global__ void reduce_kernel(const float* input, double* block_sums, int N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
-    float local_sum = 0.0f;
+    double local_sum = 0.0;   // 局部累加用 double（参考实现走 double 累加，大 N 下 float 会超容差）
 
     for (int i = tid; i < N; i += stride) {
-        local_sum += a[i] * b[i];
+        local_sum += (double)input[i];
     }
 
     // Warp 内归约
@@ -284,7 +284,7 @@ __global__ void dot_kernel(const float* a, const float* b, float* block_sums, in
         local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
     }
 
-    __shared__ float s_sum[32];
+    __shared__ double s_sum[32];
     int lane = threadIdx.x & 31;
     int wid = threadIdx.x >> 5;
     if (lane == 0)
@@ -293,7 +293,7 @@ __global__ void dot_kernel(const float* a, const float* b, float* block_sums, in
 
     // Warp 0 做跨 warp 归约
     if (wid == 0) {
-        local_sum = (lane < blockDim.x / 32) ? s_sum[lane] : 0.0f;
+        local_sum = (lane < blockDim.x / 32) ? s_sum[lane] : 0.0;
         for (int offset = 16; offset > 0; offset >>= 1) {
             local_sum += __shfl_down_sync(0xFFFFFFFF, local_sum, offset);
         }
@@ -302,8 +302,8 @@ __global__ void dot_kernel(const float* a, const float* b, float* block_sums, in
     }
 }
 
-__global__ void dot_final(const float* block_sums, float* out, int num_blocks) {
-    float sum = 0.0f;
+__global__ void reduce_final(const double* block_sums, float* out, int num_blocks) {
+    double sum = 0.0;
     for (int i = threadIdx.x; i < num_blocks; i += blockDim.x) {
         sum += block_sums[i];
     }
@@ -311,41 +311,38 @@ __global__ void dot_final(const float* block_sums, float* out, int num_blocks) {
         sum += __shfl_down_sync(0xFFFFFFFF, sum, offset);
     }
     if (threadIdx.x == 0)
-        *out = sum;
+        *out = (float)sum;   // 最后一步才转 float 写回
 }
 
 int main() {
     const int N = 1 << 20;
     size_t bytes = N * sizeof(float);
-    float *h_a = (float*)malloc(bytes), *h_b = (float*)malloc(bytes);
+    float* h_a = (float*)malloc(bytes);
     for (int i = 0; i < N; ++i) {
         h_a[i] = 0.001f;
-        h_b[i] = 0.001f;
     }
-    float *d_a, *d_b, *d_block, *d_out;
+    float* d_a;
+    double* d_block;
+    float* d_out;
     cudaMalloc(&d_a, bytes);
-    cudaMalloc(&d_b, bytes);
     int threads = 256, blocks = min((N + threads - 1) / threads, 1024);
-    cudaMalloc(&d_block, blocks * sizeof(float));
+    cudaMalloc(&d_block, blocks * sizeof(double));
     cudaMalloc(&d_out, sizeof(float));
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
-    dot_kernel<<<blocks, threads>>>(d_a, d_b, d_block, N);
-    dot_final<<<1, 256>>>(d_block, d_out, blocks);
+    reduce_kernel<<<blocks, threads>>>(d_a, d_block, N);
+    reduce_final<<<1, 256>>>(d_block, d_out, blocks);
     float h_out;
     cudaMemcpy(&h_out, d_out, sizeof(float), cudaMemcpyDeviceToHost);
-    printf("Dot Product = %.6f (expected %.6f)\n", h_out, N * 0.001f * 0.001f);
+    printf("Reduction = %.6f (expected %.6f)\n", h_out, N * 0.001f);
     free(h_a);
-    free(h_b);
     cudaFree(d_a);
-    cudaFree(d_b);
     cudaFree(d_block);
     cudaFree(d_out);
     return 0;
 }
 ```
 
-> 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时，用 ncu 对比 naive 两阶段（先乘后归约）与 fused 一阶段的 `dram__bytes_read` 差异。完整题解（含 kernel 融合、warp shuffle 归约）见 [Dot Product 题解](../../../../leetgpu/week4/day3/leetgpu-dot-product-solution.md)。
+> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 确认 `dram__bytes_read` 接近 4N bytes（memory-bound 下界）。完整题解（含 double 精度累加、warp shuffle 归约、block 间汇总）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
 
 #### 任务 5：LeetCode 面试题 —— 分割回文串
 

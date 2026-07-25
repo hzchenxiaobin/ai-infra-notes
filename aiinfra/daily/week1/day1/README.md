@@ -583,40 +583,41 @@ total_warps = warps_per_block × num_blocks
 
 > 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
 
-#### 任务 4：LeetGPU 在线题目 —— Vector Addition
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/vector-add>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
 **题目概述**：
 
-给定两个长度为 N 的浮点数组 A 和 B，计算逐元素和 C[i] = A[i] + B[i]。
+给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。
 
-**约束条件**：`1 ≤ N ≤ 10,000,000`，数组元素范围 `[-1000.0, 1000.0]`
+**约束条件**：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）
 
-**难度**：简单　**标签**：CUDA、Kernel Launch、Grid/Block、Coalesced Access
+**难度**：简单　**标签**：CUDA、Kernel Launch、2D Grid/Block、Coalesced Access
 
 **与今日知识的关联**：
 
-本题是最基础的 CUDA kernel，要求正确配置 grid/block 维度、计算全局线程 ID、处理越界边界。直接练习 Day 1 学的线程层次与 ID 映射。
+本题要求用 2D grid/block 覆盖二维矩阵、正确计算行列下标、处理越界边界，直接练习 Day 1 学的线程层次与 ID 映射（从 1D 数组推广到 2D 矩阵）。
 
 **解题思路**：
 
-1D grid + 1D block，每个线程处理一个元素。用 grid-stride loop 处理 N > total_threads 的情况，保证 coalesced access。
+2D grid + 2D block，每个线程搬一个元素：用 `blockIdx` / `threadIdx` 算出 `(row, col)`，读 `input[row][col]` 写 `output[col][row]`。注意读合并时写不合并的问题（Day 4 会用 shared memory tiling 解决，今天先保证正确性）。
 
 **参考实现**：
 
 ```cuda
 #include <cuda_runtime.h>
 
-__global__ void vector_add(const float* A, const float* B, float* C, int N) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < N) {
-        C[idx] = A[idx] + B[idx];
+__global__ void matrix_transpose(const float* input, float* output, int rows, int cols) {
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    if (row < rows && col < cols) {
+        output[col * rows + row] = input[row * cols + col];
     }
 }
 ```
 
-> 💡 提交后在 [LeetGPU Vector Addition 题目](https://leetgpu.com/challenges/vector-add)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Vector Addition 题解](../../../../leetgpu/week1/day1/leetgpu-vector-addition-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 接雨水
 

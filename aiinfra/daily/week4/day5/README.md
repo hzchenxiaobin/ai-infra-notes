@@ -296,23 +296,23 @@ Speedup: 1.5x ~ 3.0x
 
 > ⚠️ **预期结果**：N 较小时 FlashAttention 可能没有优势（甚至略慢），因为 kernel launch 和 shared memory 开销。N 越大优势越明显。
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Copy
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-copy>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
 **题目概述**：
 
-给定 M×N 矩阵 `input`，拷贝到 `output`。约束 `1 ≤ M, N ≤ 8192`，元素 float32。目标是达到高带宽利用率。
+给定 `rows × cols` 的 float32 行主序矩阵 `input`，计算转置 `output[j][i] = input[i][j]`。性能测例 `rows=7000, cols=6000`（约 168 MB）。无计算、纯数据重排，目标是达到高带宽利用率。
 
 **与今日知识的关联**：
 
-本题是纯 memory-bound kernel（算术强度 = 0），考察 coalesced access 和带宽利用率。今天集成 FlashAttention 到 Mini 引擎后，整个引擎的 Attention 部分从 O(N²) HBM 读写降到 O(Nd)。Matrix Copy 让你直观测量"纯拷贝能达到多少带宽"——这是评估 FlashAttention 是否跑满 HBM 带宽的基准线。如果 FA 的 HBM 读写量接近 Matrix Copy 的理论值，说明 IO 优化已到位。
+本题是纯 memory-bound kernel（算术强度 ≈ 0），考察 coalesced access 和带宽利用率。它比纯拷贝更进一步：读 `input` 按行连续时写 `output` 必然按列 strided，读写无法同时合并，需要 shared memory tile 中转。今天集成 FlashAttention 到 Mini 引擎后，整个引擎的 Attention 部分从 O(N²) HBM 读写降到 O(Nd)。Matrix Transpose 让你直观测量"memory-bound kernel 能达到多少带宽"——这是评估 FlashAttention 是否跑满 HBM 带宽的基准线。如果 FA 的 HBM 读写吞吐接近 Transpose 的实测值，说明 IO 优化已到位。
 
 **解题思路**：
 
-grid-stride loop 每线程拷贝多元素，保证 coalesced（相邻线程访问相邻地址），可选 float4 向量化（一次 128-bit 拷贝）。用 ncu 的 `dram__throughput` 验证带宽利用率是否 >80%。
+32×32 shared memory tile：block 内线程按行 coalesced 读 `input` tile 写入 smem（加一列 padding 消除 bank conflict），再按行 coalesced 写出到 `output` 的转置位置，让读写两侧都保持合并访问。用 ncu 的 `dram__throughput` 验证带宽利用率是否 >80%。
 
-> 💡 提交后在 [LeetGPU Matrix Copy 题目](https://leetgpu.com/challenges/matrix-copy)上记录通过耗时和带宽利用率。完整题解（含 coalesced access、float4 向量化、带宽测量）见 [Matrix Copy 题解](../../../../leetgpu/week4/day5/leetgpu-matrix-copy-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 删除链表的倒数第 N 个节点
 

@@ -387,7 +387,7 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Multiplication 题解](../../../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
 
 #### 任务 6：LeetCode 面试题 —— 全排列
 

@@ -194,13 +194,13 @@ python kernels/week8_summary.py
 - **能力地图**：24 项 checklist，标注 ✅/⚠️，汇总强项占比，待提升项即后续重点
 - **面试题速查**：30 道高频题按基础/进阶/项目/成长分组，可随机抽题口述
 
-#### 任务 2：LeetGPU 综合题 —— 1D Convolution
+#### 任务 2：LeetGPU 综合题 —— Matrix Multiplication
 
-**题目链接**：<https://leetgpu.com/challenges/1d-convolution>
+**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
-**与本周知识的关联**：1D Convolution 是 **shared memory + halo region** 模板的最简形态，是 8 周收官题——检验你最扎实的 shared memory 基本功。它对应能力地图中 Kernel 优化层的强项（Shared Memory Tiling + Bank Conflict）。掌握 1D halo 加载，2D/3D Conv / Stencil / Gaussian Blur 都是同构扩展。作为 8 周最后一道 LeetGPU，它把 Week 1-2 的 shared memory 教学画上句号。
+**与本周知识的关联**：Matrix Multiplication 是 **shared memory tiling** 模板的最经典形态，是 8 周收官题——检验你最扎实的 shared memory 基本功。它对应能力地图中 Kernel 优化层的强项（Shared Memory Tiling + Bank Conflict）。掌握 GEMM 的 tile 加载与复用，LayerNorm / Attention 里的分块技巧都是同构扩展。作为 8 周最后一道 LeetGPU，它把 Week 1-2 的 shared memory 教学画上句号。
 
-> 💡 完整题解见 [1D Convolution 题解](../../../../leetgpu/week8/day7/leetgpu-1d-convolution-solution.md)。
+> 💡 完整题解见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
 
 #### 任务 3：LeetCode 面试题 —— 排序链表
 
@@ -314,7 +314,7 @@ Day 7 我们完成了 8 周学习的最终复盘：
 4. **最终报告框架**：项目概述、核心产出、关键数据、技术难点、强项待提升
 5. **收官面试题**：最大收获/挑战、未来规划、项目深挖、系统设计综合题
 6. **自测系统**：`week8_summary.py` 五模块（知识地图/能力地图/面试题/公式参数/路线）
-7. **1D Convolution**：shared memory halo 模板收官题，检验最扎实的 shared memory 基本功
+7. **Matrix Multiplication**：shared memory tiling 模板收官题，检验最扎实的 shared memory 基本功
 8. **排序链表**：归并排序分治收官题，综合合并有序链表 + 快慢双指针
 
 > 💡 8 周学习的终点，也是职业生涯的新起点。强项给你面试底气，待提升给你后续方向。**保持学习、保持诚实、保持动手**——这是 AI Infra 工程师的三件法宝。祝面试顺利！

@@ -438,21 +438,21 @@ grep -n "_schedule_running\|_schedule_waiting\|_schedule_swapped" $(python -c "i
 
 > 💡 重点对照：vLLM 的 `_schedule_running()` 先处理已 running 的请求（continuous batching 基础），`_schedule_waiting()` 再从 waiting 补入新请求——正是我们 mini 版 `schedule()` 的 Step 1 + Step 2。
 
-#### 任务 4：LeetGPU 在线题目 —— Speculative Decoding Verification
+#### 任务 4：LeetGPU 在线题目 —— Top-P Sampling
 
-**题目链接**：<https://leetgpu.com/challenges/speculative-decoding-verification>
+**题目链接**：<https://leetgpu.com/challenges/top-p-sampling>
 
 **题目概述**：
 
-实现 **Speculative Decoding（投机解码）的验证步骤**：draft 模型一次提议 `T` 个 token，target 模型一次前向评估这 `T` 个 token，逐个接受/拒绝。给定 `B` 个序列的 draft_tokens、draft_probs、target_probs、uniform_samples，输出验证后的 token 序列。接受条件：`u < min(1, q/p)`；首次拒绝处用 `max(target - draft, 0)` 归一化后重采样；全部接受则 bonus 一个 token。
+实现 **Top-P（nucleus）采样**：给定 `logits[vocab_size]`、概率阈值 `p` 和随机种子 `seed`，① 对 logits 做 softmax；② 按概率降序排序；③ 计算累积概率（prefix sum）；④ 找到累积概率首次 ≥ `p` 的截断点（nucleus）；⑤ 在 nucleus 内重归一化并按 seed 采样一个 token。
 
-**约束条件**：`1 ≤ B ≤ 256`，`1 ≤ T ≤ 16`，`2 ≤ V ≤ 131072`；性能测试取 `B=64, T=8, V=32768`。
+**约束条件**：性能测试取 `vocab_size=50000`；容差 `1e-5`。
 
 **与今日知识的关联**：
 
-Speculative Decoding 是 vLLM 这类推理系统的**调度层优化**——Scheduler 编排"draft 模型批量生成 + target 模型批量验证"的迭代，Worker 执行验证 kernel。这道题就是 Worker 跑的**验证 kernel**：对 B 个序列并行做 accept/reject + resample，本质是一个 batched 的 scan（找首次拒绝位置）+ CDF 查找。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——验证步骤的并行度（B 序列）正是 Continuous Batching 拼出来的 batch。
+Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel**——Scheduler 拼好 batch、Worker 跑完 forward 得到 logits 后，最后一步就是在 GPU 上执行采样。这道题就是 Worker 跑的**采样 kernel**：把采样拆成 `softmax → sort → cumsum → searchsorted(p) → 重归一化 → multinomial`，本质是一条 sort + scan（prefix sum）+ CDF 查找的流水线。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——采样 kernel 喂入的 batch 正是 Continuous Batching 拼出来的。
 
-> 💡 提交后在 [LeetGPU Speculative Decoding Verification](https://leetgpu.com/challenges/speculative-decoding-verification) 上记录通过耗时。完整题解（含 accept/reject 逻辑、首次拒绝的 scan、resample 的 CDF 查找、ncu profiling）见 [Speculative Decoding Verification 题解](../../../../leetgpu/week5/day3/leetgpu-speculative-decoding-verification-solution.md)。
+> 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](../../../../aiinfra/topics/cuda/medium/selection/top-p-sampling.md)。
 
 #### 任务 5：LeetCode 面试题 —— 任务调度器
 

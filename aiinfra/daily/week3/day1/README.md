@@ -281,15 +281,15 @@ aten::softmax xxx us 5
 - **Prefill**：GEMM（`aten::mm`）占 CUDA 时间 60%+，是绝对主导 → compute-bound
 - **Decode**：GEMM 矩阵极小（M=1），时间占比下降；softmax/layernorm 相对占比上升；kernel 间 gap 更明显（launch overhead 占比增大）→ memory-bound
 
-#### 任务 4：LeetGPU 在线题目 —— Causal Depthwise Conv1d
+#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
 
-**题目链接**：<https://leetgpu.com/challenges/causal-depthwise-conv1d>
+**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
-**题目概述**：给定输入 `x` 形状 `(B, L, D)`、权重 `weight` 形状 `(D, K)`、偏置 `bias` 形状 `(D,)`，计算因果深度卷积：`output[b, l, d] = bias[d] + Σ_{k=0}^{K-1} weight[d, k] * x[b, l - K + 1 + k, d]`。因果性指输出位置 `l` 只依赖 `≤ l` 的输入（过去与当前），越界位置按 0 处理。每个通道 `d` 相互独立。
+**题目概述**：给定行主序 FP32 矩阵 `A`（`M×N`）、`B`（`N×K`），计算 `C = A @ B`：`C[i][j] = Σ_{k=0}^{N-1} A[i][k] * B[k][j]`，输出形状 `(M, K)`。无 α/β、无 FP16——纯 CUDA Core 的 tiled matmul。
 
-**与今日知识的关联**：Causal Depthwise Conv1d 是 1D 卷积的变体——在 Transformer 里常用于卷积前馈或局部上下文建模。它综合了卷积的边界处理（halo 区 + 因果 padding）与通道独立并行（depthwise 分组），是练习"卷积边界处理 + 通道独立并行"的好题。今天的 profiling 分析揭示了 Prefill（compute-bound）和 Decode（memory-bound）的差异，Causal Depthwise Conv1d 同样可以用 ncu 分析其 bound 类型，验证"element-wise + 局部窗口 = memory-bound"的规律。
+**与今日知识的关联**：Matrix Multiplication 是 GEMM 的最纯粹形态——今天 profiling 揭示了 Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+（compute-bound），本题就是手写这个主角：naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，算术强度仅 1/8 FLOP/Byte（memory-bound）；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。它是"用 ncu 判定 bound 类型"的最佳练习对象——同一份代码加 tiling 前后 `DRAM%` 与 `SM%` 的对比，就是今天 Roofline 分析的实战。
 
-> 💡 完整题解见 [Causal Depthwise Conv1d 题解](../../../../leetgpu/week3/day1/leetgpu-causal-depthwise-conv1d-solution.md)。
+> 💡 完整题解见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
 
 #### 任务 5：LeetCode 面试题 —— 盛最多水的容器
 

@@ -342,7 +342,7 @@ __shared__ float tile[32][33]; // 列维度 +1 padding
 // 行 stride 从 32×4=128B 变成 33×4=132B，132/4=33，33%32=1，相邻行错开 bank
 ```
 
-**注意**：padding 会浪费一点 shared memory，需评估是否影响 occupancy。对 16×16 方形 tile + block(16,16) 配置，warp 跨相邻两行且 broadcast，实际不触发 conflict（详见 [Week3 Day3 matmul 题解](../../../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md) 的 bank conflict 分析）。
+**注意**：padding 会浪费一点 shared memory，需评估是否影响 occupancy。对 16×16 方形 tile + block(16,16) 配置，warp 跨相邻两行且 broadcast，实际不触发 conflict（详见 [matmul 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md) 的 bank conflict 分析）。
 
 参见 [Day 4](../day4/README.md)、[Day 5](../day5/README.md)。
 
@@ -514,98 +514,91 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 
 | Day | 题目 | 核心考点 | 状态 |
 |-----|------|---------|------|
-| Day 1 | [Vector Add](https://leetgpu.com/challenges/vector-add) | grid-stride loop、coalesced access | ✅ 已做 |
-| Day 2 | [ReLU](https://leetgpu.com/challenges/relu) | element-wise、occupancy 调优 | ✅ 已做 |
-| Day 3 | [Matrix Addition](https://leetgpu.com/challenges/matrix-addition) | grid-stride、float4、occupancy | ✅ 已做 |
+| Day 1 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | 2D grid/block、行列下标映射 | ✅ 已做 |
+| Day 2 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | memory-bound、occupancy 调优 | ✅ 已做 |
+| Day 3 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | block 形状调参、occupancy 实测 | ✅ 已做 |
 | Day 4 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | coalescing + shared memory tiling + bank conflict | ✅ 已做 |
 | Day 5 | [Reduction](https://leetgpu.com/challenges/reduction) | warp shuffle、两级归约、divergence | ✅ 已做 |
 | Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | shared memory tiling、compute-bound | ✅ 已做 |
 
-#### 综合练习 1：Leaky ReLU —— 检验 memory-bound 优化
+#### 综合练习 1：Matrix Transpose —— 检验 memory-bound 优化
 
-**题目链接**：<https://leetgpu.com/challenges/leaky-relu>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定长度为 `N` 的浮点数组 `input`，逐元素计算 Leaky ReLU：`output[i] = input[i] > 0 ? input[i] : 0.01 * input[i]`。约束：元素为 32-bit float，规模可达数百万量级。
+**题目概述**：给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。约束：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）。
 
 **与 Week 1 知识的关联**：
 
-本题是 **memory-bound** elementwise 算子的典型代表（算术强度 ≈ 1 FLOP / 8 Byte），综合检验 Week 1 三个核心概念，并额外练习分支优化：
-1. **Coalesced access**（Day 4）：必须保证 warp 内线程访问连续地址
-2. **Occupancy 调优**（Day 2）：memory-bound kernel 不需 100% occupancy，block size 取 256/512 即可
-3. **Warp divergence**（Day 1）：`if (x > 0)` 会让 warp 内正负元素走向不同分支，可用三元运算或 `fmaxf` 改写成 branchless
+本题是 **memory-bound** 数据重排算子的典型代表（零计算，算术强度 ≈ 0），综合检验 Week 1 四个核心概念：
+1. **Coalesced access**（Day 4）：朴素转置读合并则写不合并，必须经 shared memory tiling 让读写都合并
+2. **Occupancy 调优**（Day 2）：memory-bound kernel 不需 100% occupancy，block 取 16×16 / 32×32 即可
+3. **Bank conflict**（Day 5）：tile 内按列访问会产生 32-way conflict，用 padding（`[32][33]`）消除
 4. **Roofline 判定**（Day 6）：AI << Ridge Point → memory-bound，优化方向是最大化带宽利用率
 
 **解题思路**：
-- 一维 grid-stride loop 映射，比二维更灵活
-- 用 `float4` 向量化加载（一次 128-bit），把 4 条 load 合并为 1 条
-- 用 branchless 写法（三元 `x > 0 ? x : 0.01f * x`）避免 warp divergence
-- 处理剩余不足 4 个的尾部元素
+- 2D grid + 2D block，每个线程搬一个元素
+- 用 32×32 shared memory tile 中转：读 `input` 行（coalesced）→ 写 tile → 读 tile 列 → 写 `output` 行（coalesced）
+- tile 声明为 `[32][33]`，用 padding 消除 bank conflict
+- 处理矩阵边界的越界判断
 
 **参考实现**：
 
 ```cuda
-// leaky_relu.cu —— Leaky ReLU（1D grid-stride + float4 向量化 + branchless）
-// 编译命令: nvcc -o leaky_relu leaky_relu.cu -O3 -arch=sm_120
+// matrix_transpose.cu —— Matrix Transpose（shared memory tiling + padding）
+// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-__device__ __forceinline__ float leaky_relu(float x) {
-    // branchless: 避免 warp divergence
-    return x > 0.0f ? x : 0.01f * x;
-}
+#define TILE 32
 
-__global__ void leaky_relu_float4(const float* input, float* output, int num_elements) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = gridDim.x * blockDim.x;
-    int vec_count = num_elements / 4;
+__global__ void transpose_tiled(const float* input, float* output, int rows, int cols) {
+    __shared__ float tile[TILE][TILE + 1];  // padding 消除 bank conflict
 
-    for (int i = tid; i < vec_count; i += stride) {
-        float4 a = reinterpret_cast<const float4*>(input)[i];
-        float4 c;
-        c.x = leaky_relu(a.x);
-        c.y = leaky_relu(a.y);
-        c.z = leaky_relu(a.z);
-        c.w = leaky_relu(a.w);
-        reinterpret_cast<float4*>(output)[i] = c;
-    }
+    int col = blockIdx.x * TILE + threadIdx.x;
+    int row = blockIdx.y * TILE + threadIdx.y;
 
-    // 处理尾部不足 4 个的元素
-    int tail_start = vec_count * 4;
-    for (int i = tail_start + tid; i < num_elements; i += stride) {
-        output[i] = leaky_relu(input[i]);
-    }
+    // 读 input 行（coalesced）写入 tile
+    if (row < rows && col < cols)
+        tile[threadIdx.y][threadIdx.x] = input[row * cols + col];
+    __syncthreads();
+
+    // block 行列对调，读 tile 列、写 output 行（coalesced）
+    int t_row = blockIdx.x * TILE + threadIdx.y;  // output 的行
+    int t_col = blockIdx.y * TILE + threadIdx.x;  // output 的列
+    if (t_row < cols && t_col < rows)
+        output[t_row * rows + t_col] = tile[threadIdx.x][threadIdx.y];
 }
 
 int main() {
-    const int N = 4096 * 4096;
-    const size_t bytes = N * sizeof(float);
+    const int rows = 6000, cols = 7000;
+    const size_t bytes = (size_t)rows * cols * sizeof(float);
 
     float *h_A = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < rows * cols; ++i)
         h_A[i] = (float)(rand() % 2000 - 1000) * 0.01f;  // [-10, 10]
-    }
 
     float *d_A, *d_C;
     cudaMalloc(&d_A, bytes);
     cudaMalloc(&d_C, bytes);
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
 
-    int threads = 256;
-    int blocks = min((N / 4 + threads - 1) / threads, 1024);
-    leaky_relu_float4<<<blocks, threads>>>(d_A, d_C, N);
+    dim3 threads(TILE, TILE);
+    dim3 blocks((cols + TILE - 1) / TILE, (rows + TILE - 1) / TILE);
+    transpose_tiled<<<blocks, threads>>>(d_A, d_C, rows, cols);
 
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     bool pass = true;
-    for (int i = 0; i < N; ++i) {
-        float expected = h_A[i] > 0.0f ? h_A[i] : 0.01f * h_A[i];
-        if (fabsf(h_C[i] - expected) > 1e-6f) {
-            pass = false;
-            break;
+    for (int i = 0; i < rows && pass; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            if (fabsf(h_C[j * rows + i] - h_A[i * cols + j]) > 1e-6f) {
+                pass = false;
+                break;
+            }
         }
     }
-    printf("Leaky ReLU %s\n", pass ? "PASS" : "FAIL");
+    printf("Matrix Transpose %s\n", pass ? "PASS" : "FAIL");
 
     free(h_A);
     free(h_C);
@@ -617,11 +610,11 @@ int main() {
 
 **自测问题**：
 - 用 `ncu` 看 `dram__throughput`，能否达到峰值带宽的 60%+？
-- 把 branchless 三元运算改回 `if (x > 0)`，观察 warp divergence 指标变化（混合正负数据时 divergence 明显）
-- 把 `float4` 改回逐元素加载，带宽利用率下降多少？
-- block size 从 128 调到 512，时间变化大吗？（memory-bound kernel 对 occupancy 不敏感）
+- 把 tile 声明改回 `[32][32]`（去掉 padding），bank conflict 指标变化多少？
+- 对比朴素版（无 shared memory）和 tiled 版的带宽利用率，差距多大？
+- block 从 16×16 调到 32×32，时间变化大吗？（memory-bound kernel 对 occupancy 不敏感）
 
-> 💡 完整题解见 [Leaky ReLU 题解](../../../../leetgpu/week1/day7/leetgpu-leaky-relu-solution.md)。
+> 💡 完整题解见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 综合练习 2：Matrix Multiplication —— 检验 shared memory tiling + bank conflict
 
@@ -720,7 +713,7 @@ int main() {
 - 给 `s_A` / `s_B` 加 padding `[16][17]`，性能有变化吗？（提示：16×16 方形配置下 conflict 实际不触发，详见题解的 bank conflict 分析）
 - 进阶：改成 Register Tiling（每线程算 4×4），能再提速 2-3x 吗？
 
-> 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](../../../../leetgpu/week1/day6/leetgpu-matrix-multiplication-solution.md)。
+> 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
 
 #### 练习提交记录
 
@@ -728,7 +721,7 @@ int main() {
 
 | 题目 | 耗时 | GFLOPS / 带宽利用率 | 瓶颈类型 | 优化尝试 |
 |------|------|---------------------|---------|---------|
-| Leaky ReLU | | | memory-bound | float4 / branchless / block size |
+| Matrix Transpose | | | memory-bound | tiling / padding / block size |
 | Matrix Multiplication | | | compute-bound | tiling / padding / register tiling |
 
 ---

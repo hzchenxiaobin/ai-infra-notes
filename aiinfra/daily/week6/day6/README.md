@@ -311,7 +311,7 @@ Throughput-Latency 曲线
 
 这道题的 **top-k 选择**与 benchmark 的 P99 latency 计算同构——P99 就是"找出延迟排第 99 百分位的那个值"，本质是 top-k 选择（k = N×0.01，选第 k 小的延迟）。benchmark 框架的 `percentile()` 函数对排序后的 latencies 取 `int(N×p/100)` 位置，正是 top-k selection 的串行版。这道题的 GPU 实现用 bitonic sort 或堆归约做并行 top-k，对应推理系统里用 GPU 加速 latency 分位数计算（百万级请求的 P99/P999 统计）。
 
-> 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](../../../../leetgpu/week6/day6/leetgpu-top-k-selection-solution.md)。
+> 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](../../../../aiinfra/topics/cuda/medium/selection/top-k-selection.md)。
 
 #### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
 

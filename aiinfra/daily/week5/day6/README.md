@@ -331,21 +331,21 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 3. 计算 kernel 间隙占总时间的比例（gap > 20% → launch overhead 严重）
 4. 判断系统主要瓶颈：compute / memory / launch overhead
 
-#### 任务 4：LeetGPU 在线题目 —— Weight Dequantization
+#### 任务 4：LeetGPU 在线题目 —— INT8 Quantized MatMul
 
-**题目链接**：<https://leetgpu.com/challenges/weight-dequantization>
+**题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
 
 **题目概述**：
 
-实现 **权重反量化** kernel：给定量化权重矩阵 `X[M,N]` 和分块 scale 矩阵 `S[ceil(M/T), ceil(N/T)]`（T 是 tile size），对每个 `X[i,j]` 乘以对应的 `S[i/T, j/T]`，输出 `Y[M,N] = X * S_expanded`。
+实现 **INT8 量化矩阵乘** `C = A @ B`：`A[M,K]`、`B[K,N]`、`C[M,N]` 均为 INT8，带 per-tensor scale/zero_point。计算时先反量化（`(X - zp) * scale`）、FP32 累加，写回时再 requantize 回 INT8（`round(acc * scale_A * scale_B / scale_C) + zp_C`）。
 
-**约束条件**：性能测试取 `M=N=8192, T=128`；容差 `atol=rtol=1e-5`。
+**约束条件**：性能测试取 `A 8192×2048, B 2048×4096`；容差 `0.05`。
 
 **与今日知识的关联**：
 
-Weight Dequantization 是一个**典型的 memory-bound element-wise kernel**——每元素只做一次乘法（FLOPs 极少），但要读 X 和 S、写 Y（HBM 流量大）。它正是今天 ncu profiling 的**理想分析对象**：用 `ncu` 测它的 `dram__throughput`（应接近峰值）和 `sm__throughput`（应很低），验证"AI 极低 → memory-bound"的判据。推理系统里，权重反量化是 INT8/INT4 量化推理的必经步骤——量化权重从 HBM 读出后要反量化成 fp16/fp32 再做 GEMM。今天我们测它的瓶颈特征，正是为后续"量化推理"优化打基础。
+INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里权重和激活以 INT8 存储以省 HBM 流量，GEMM 内部反量化、FP32 累加、再 requantize。它正是今天 ncu profiling 的**理想分析对象**：用 `ncu` 对比它与 FP32 GEMM 的 `dram__throughput`（INT8 数据量更小 → HBM 流量下降）和 `sm__throughput`，验证"量化既省带宽又提算力利用率"的判据。推理系统里，量化 GEMM 是 INT8/INT4 量化推理的必经路径——量化权重从 HBM 读出后在 kernel 内反量化再做乘加。今天我们测它的瓶颈特征，正是为后续"量化推理"优化打基础。
 
-> 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时。完整题解（含 element-wise kernel、ncu 测 memory-bound、Roofline 分析）见 [Weight Dequantization 题解](../../../../leetgpu/week5/day6/leetgpu-weight-dequantization-solution.md)。
+> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 tiled GEMM、反量化/requantize 的 scale 链、ncu profiling、Roofline 分析）见 [INT8 Quantized MatMul 题解](../../../../aiinfra/topics/cuda/medium/gemm/int8-quantized-matmul.md)。
 
 #### 任务 5：LeetCode 面试题 —— 组合总和
 

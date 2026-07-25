@@ -460,21 +460,21 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 ![Multi-Stream Timeline Zoomed](../images/multi_stream_timeline_zoom.png)
 
-#### 任务 4：LeetGPU 在线题目 —— 2D Convolution
+#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
 
-**题目链接**：<https://leetgpu.com/challenges/2d-convolution>
+**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
 **题目概述**：
 
-给定输入矩阵 input 和一个 K×K 的卷积核 kernel，计算 2D 卷积输出。要求用多 Stream 分块并行处理大矩阵。
+给定行主序 FP32 矩阵 A（M×N）和 B（N×K），计算 C = A @ B。要求用 Shared Memory tiling 实现分块矩阵乘，并可结合多 Stream 分块并行处理大矩阵。
 
-**约束条件**：`1 ≤ M, N ≤ 8192`，`1 ≤ K ≤ 15`（K 为奇数），元素范围 `[-1.0, 1.0]`
+**约束条件**：A、B、C 均为 FP32 行主序，容差 `atol=1e-4, rtol=1e-4`；性能测例 `M=8192, N=6144, K=4096`
 
-**难度**：中等　**标签**：CUDA、Convolution、CUDA Streams、Halo Exchange、Shared Memory
+**难度**：简单　**标签**：CUDA、GEMM、Shared Memory、Tiling、CUDA Streams
 
 **与今日知识的关联**：
 
-本题是 CUDA Streams 的典型应用场景——大矩阵分块，每块 H2D/Compute/D2H 在独立 Stream 上重叠执行。每个 chunk 的卷积计算用 Shared Memory 做 halo exchange。
+本题是 CUDA Streams 的典型应用场景——大矩阵分块，每块 H2D/Compute/D2H 在独立 Stream 上重叠执行。每个 block 内部用 Shared Memory tiling 减少对全局内存的重复访问。
 
 **解题思路**：
 
@@ -483,40 +483,40 @@ nsys profile -o multi_stream_timeline ./multi_stream
 **参考实现**：
 
 ```cuda
-#define K_RADIUS 3
-#define K_SIZE (2 * K_RADIUS + 1)
+#define TILE 16
 
-__global__ void conv2d(const float* input, const float* kernel, float* output, int width, int height) {
-    __shared__ float tile[BLOCK_SIZE + K_SIZE - 1][BLOCK_SIZE + K_SIZE - 1];
+__global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
+    __shared__ float tileA[TILE][TILE];
+    __shared__ float tileB[TILE][TILE];
 
     int tx = threadIdx.x, ty = threadIdx.y;
-    int gx = blockIdx.x * BLOCK_SIZE + tx;
-    int gy = blockIdx.y * BLOCK_SIZE + ty;
+    int row = blockIdx.y * TILE + ty;
+    int col = blockIdx.x * TILE + tx;
 
-    // 加载含 halo 的 tile (省略边界处理)
-    // tile[ty][tx] = input[(gy - K_RADIUS) * width + (gx - K_RADIUS)];
-    __syncthreads();
+    float acc = 0.0f;
+    for (int t = 0; t < (N + TILE - 1) / TILE; t++) {
+        // 加载 A/B 的子块到 Shared Memory (省略边界处理)
+        // tileA[ty][tx] = A[row * N + t * TILE + tx];
+        // tileB[ty][tx] = B[(t * TILE + ty) * K + col];
+        __syncthreads();
 
-    float sum = 0.0f;
-    #pragma unroll
-    for (int ky = 0; ky < K_SIZE; ky++) {
         #pragma unroll
-        for (int kx = 0; kx < K_SIZE; kx++) {
-            sum += tile[ty + ky][tx + kx] * kernel[ky * K_SIZE + kx];
-        }
+        for (int k = 0; k < TILE; k++)
+            acc += tileA[ty][k] * tileB[k][tx];
+        __syncthreads();
     }
-    if (gx < width && gy < height)
-        output[gy * width + gx] = sum;
+    if (row < M && col < K)
+        C[row * K + col] = acc;
 }
 
 // Host: 多 Stream 分块
 // for each chunk:
 // cudaMemcpyAsync(d_chunk, h_chunk, ..., stream[i % N]);
-// conv2d<<<grid, block, 0, stream[i % N]>>>(...);
+// matmul_tiled<<<grid, block, 0, stream[i % N]>>>(...);
 // cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
 ```
 
-> 💡 提交后在 [LeetGPU 2D Convolution 题目](https://leetgpu.com/challenges/2d-convolution)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [2D Convolution 题解](../../../../leetgpu/week2/day3/leetgpu-2d-convolution-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
 
 #### 任务 5：LeetCode 面试题 —— 三数之和
 

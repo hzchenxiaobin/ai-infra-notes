@@ -293,17 +293,17 @@ result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
 
 > 思考：什么场景下 Prefix Caching 不仅无收益反而有开销？（提示：每个请求前缀都不同时，hash 计算和缓存查找是纯开销。）
 
-#### 任务 4：LeetGPU 在线题目 —— Scalar Multiply
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/scalar-multiply>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定长度为 `N` 的 `float32` 数组 `input` 和标量 `alpha`，计算 `output[i] = input[i] * alpha`。
+**题目概述**：给定行主序的 `rows×cols` `float32` 矩阵，计算其转置 `output[j][i] = input[i][j]`（输出为 `cols×rows` 矩阵）。
 
-**约束条件**：`1 ≤ N ≤ 10,000,000`；性能测试取大数组。
+**约束条件**：性能测例 `rows=7000, cols=6000`（约 168 MB）；无计算、纯数据重排，典型 memory-bound。
 
-**与今日知识的关联**：Scalar Multiply 是 attention score scaling（`score /= sqrt(d_k)`）的核心操作——所有注意力计算都涉及标量缩放。Speculative Decoding 的接受/拒绝采样也涉及概率缩放。这个"最简单的 element-wise 操作"是推理系统中最频繁的操作之一：attention scale、softmax 温度缩放、LayerNorm 归一化中的方差缩放。理解它的 memory-bound 特性（零计算强度，纯带宽）是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低，GPU 大量算力闲置，draft model 正好利用这些闲置算力。
+**与今日知识的关联**：Matrix Transpose 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Transpose 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
 
-> 💡 提交后在 [LeetGPU Scalar Multiply](https://leetgpu.com/challenges/scalar-multiply) 上记录通过耗时。完整题解见 [Scalar Multiply 题解](../../../../leetgpu/week7/day3/leetgpu-scalar-multiply-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 单词拆分
 

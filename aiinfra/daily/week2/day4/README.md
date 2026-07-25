@@ -284,7 +284,7 @@ __global__ void softmax_kernel(const float* input, float* output, int N) {
 // sm__occupancy.avg.pct_of_peak_sustained_elapsed ./softmax
 ```
 
-> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](../../../../leetgpu/week2/day4/leetgpu-softmax-solution.md)。
+> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](../../../../aiinfra/topics/cuda/high/reduction/softmax.md)。
 
 #### 任务 6：LeetCode 面试题 —— 合并两个有序链表
 

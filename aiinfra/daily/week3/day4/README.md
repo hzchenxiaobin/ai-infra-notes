@@ -342,19 +342,19 @@ ncu --metrics \
 
 **关键验证**：N 翻倍时，实测 `dram__bytes_read + dram__bytes_write` 应接近 **4x**（如 1024→2048 时 16MB→64MB），这是 O(N²) 的直接证据。
 
-#### 任务 4：LeetGPU 在线题目 —— Attention
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
 
-**题目链接**：<https://leetgpu.com/challenges/attention>
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
 **题目概述**：
 
-给定 Query (`M×d`)、Key (`N×d`)、Value (`N×d`)，计算 Scaled Dot-Product Attention：`Attention(Q,K,V) = softmax(Q·K^T / √d) · V`。约束：`1 ≤ M, N ≤ 4096`，`1 ≤ d ≤ 128`，元素范围 `[-1.0, 1.0]`。
+给定 Query (`M×d`)、Key (`N×d`)、Value (`N×d`)，计算 Scaled Dot-Product Attention：`Attention(Q,K,V) = softmax(Q·K^T / √d) · V`。无 causal mask（全注意力），全 FP32，容差 `atol=1e-4`。
 
-**难度**：困难　**标签**：CUDA、Attention、Online Softmax、FlashAttention、分块计算
+**难度**：中等　**标签**：CUDA、Attention、Softmax、Fused Kernel、Online Softmax、分块计算
 
 **与今日知识的关联**：
 
-本题就是今天标准 Attention 的"进阶版"——今天我们写了物化 S/P 的 naive 版（O(N²) IO），本题要求实现 FlashAttention（O(Nd) IO）。核心区别：FlashAttention 用 **分块 + Online Softmax** 让 S/P 永远不落 HBM。今天学的"O(N²) 来源"正是理解 FlashAttention 为什么要这么做的关键。
+本题就是今天标准 Attention 的 fused 实战版——今天我们写了物化 S/P 的 naive 版（O(N²) IO），本题要求把 Q·Kᵀ / softmax / ·V 融进单 kernel，让 scores 不落 HBM；用 Online Softmax 分块递推可进一步把 IO 压到 O(Nd)。核心区别：fused 版用 **分块 + Online Softmax** 让 S/P 永远不落 HBM。今天学的"O(N²) 来源"正是理解 fused 实现为什么要这么做的关键。
 
 **解题思路**：
 
@@ -365,11 +365,11 @@ ncu --metrics \
  - `o_new = o * (l * exp(m - m_new) / l_new) + (Σ exp(s_j - m_new) / l_new) * v_j`（缩放历史输出 + 加新贡献）
 1. S/P 只在 SRAM/register 中存在，最终只写 O 到 HBM
 
-**参考实现**（FlashAttention 简化版，完整版 Week 4 深入）：
+**参考实现**（fused 简化版，完整版 Week 4 深入）：
 
 ```cuda
-// attention.cu —— FlashAttention 简化版 Forward Kernel（分块 + Online Softmax）
-// 编译命令: nvcc -o flash_attention attention.cu -O3 -arch=sm_120
+// softmax_attention.cu —— Fused Softmax Attention（分块 + Online Softmax）
+// 编译命令: nvcc -o softmax_attention softmax_attention.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
@@ -449,7 +449,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 }
 ```
 
-> 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 FlashAttention 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 三公式推导、HBM 访问对比）见 [Attention 题解](../../../../leetgpu/week3/day4/leetgpu-attention-solution.md)。
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 fused 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 递推、HBM 访问对比）见 [Softmax Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/softmax-attention.md)。
 
 #### 任务 5：LeetCode 面试题 —— 环形链表
 

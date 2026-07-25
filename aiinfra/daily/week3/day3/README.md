@@ -368,93 +368,86 @@ ncu --metrics \
 
 **关键观察**：float4 优化后 DRAM Throughput 应明显上升（因为同样时间内核读了更多数据），但 SM Throughput 变化不大（计算量没变）——这正是 memory-bound kernel 优化的特征：**提升的是带宽利用率，不是算力利用率**。
 
-#### 任务 4：LeetGPU 在线题目 —— Argmax
+#### 任务 4：LeetGPU 在线题目 —— Reduction
 
-**题目链接**：<https://leetgpu.com/challenges/argmax>
+**题目链接**：<https://leetgpu.com/challenges/reduction>
 
 **题目概述**：
 
-给定长度为 `N` 的浮点数组 `input`，找到最大值所在的下标。如果有多个相同最大值，返回最小的下标。约束 `1 ≤ N ≤ 10,000,000`，元素范围 `[-1000.0, 1000.0]`。
+给定长度为 `N` 的浮点数组 `input`，求所有元素之和，写入 `output[0]`。测试用例最大 `N = 15,000,000`。注意参考实现用 `double` 累加再转 `float`，容差 `atol=1e-5`——线程局部累加必须用 `double`，全程 `float` 累加在大 N 下精度直接挂掉。
 
-**难度**：中等　**标签**：CUDA、Reduction、Argmax、Warp Shuffle
+**难度**：中等　**标签**：CUDA、Reduction、Sum、Warp Shuffle、grid-stride loop、double 累加
 
 **与今日知识的关联**：
 
-Argmax 是一个**带状态追踪的归约**——不仅要找最大值，还要记录其下标。这正是今天"warp 级 vs block 级 reduce"的直接实战：用 `__shfl_down_sync` 在 warp 内归约 `(max_val, max_idx)`，比较逻辑比纯 sum/max 更复杂（值相同时取较小下标）。今天读了 PyTorch softmax 的 warp 级 dispatch，本题就是把这个模式应用到 argmax。
+Reduction 是**归约家族的基础形态**——"分块 → 块内归约 → 块间汇总"的骨架就是 softmax 的 max/sum 归约、LayerNorm 的统计归约的祖代码。这正是今天"warp 级 vs block 级 reduce"的直接实战：用 `__shfl_down_sync` 在 warp 内折半归约（5 步，走寄存器直连、零 bank conflict），warp 间用 shared memory 汇总，block 间用第二个 kernel 全局归约。今天读了 PyTorch softmax 的 warp 级 dispatch，本题就是把这个模式应用到最纯粹的 sum 归约。
 
 **解题思路**：
 
-1. **线程级**：每个线程用 grid-stride loop 扫描自己负责的区间，维护局部 `(max_val, max_idx)`
-2. **Warp 级**：用 `__shfl_down_sync` 在 warp 内归约，同时 shuffle 值和下标，比较时处理平局（值相同取较小 idx）
-3. **Block 级**：warp 部分结果写 shared memory，Warp 0 做最终归约
-4. **跨 Block**：用 `atomicMax` 或第二次 kernel 汇总所有 block 的结果
+1. **线程级**：每个线程用 grid-stride loop 扫描交错区间，维护局部 `double` 累加和
+2. **Warp 级**：用 `__shfl_down_sync` 折半归约，5 步后 lane 0 持有整个 warp 的和
+3. **Block 级**：各 warp 部分和写 shared memory，Warp 0 再 shuffle 一次，得到 block 部分和
+4. **跨 Block**：block 部分和写 `partial[]`，第二个 kernel（单 block）再跑一遍同样的块归约得到全局和——kernel 边界即隐式全局同步，比 `atomicAdd` 到单个地址（强串行）干净得多
 
 **参考实现**：
 
 ```cuda
-// argmax.cu —— Argmax 归约（两级归约 + Warp Shuffle）
-// 编译命令: nvcc -o argmax argmax.cu -O3 -arch=sm_120
+// reduction.cu —— 两阶段 Reduction（block reduce + global reduce），double 累加保精度
+// 编译命令: nvcc -o reduction reduction.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
-#include <cfloat>
 
-__global__ void argmax_kernel(const float* input, int* out_idx, int N) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    float local_max = -FLT_MAX;
-    int local_idx = 0;
+#define BLOCK 256
+#define NUM_WARPS (BLOCK / 32)
 
-    // 线程级：grid-stride loop 扫描区间
-    for (int i = tid; i < N; i += gridDim.x * blockDim.x) {
-        if (input[i] > local_max) {
-            local_max = input[i];
-            local_idx = i;
-        }
-    }
-
-    __shared__ float s_val[32];
-    __shared__ int s_idx[32];
-
+// 块内归约：warp shuffle + shared memory 两级，返回值仅 warp 0 lane 0 有效
+__device__ double block_reduce(double val) {
+    __shared__ double s_partial[NUM_WARPS];
     int lane = threadIdx.x & 31;
     int wid = threadIdx.x >> 5;
 
-    // Warp 级：shuffle 同时归约值和下标（平局取较小 idx）
-    for (int offset = 16; offset > 0; offset >>= 1) {
-        float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
-        int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
-        if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
-            local_max = other_val;
-            local_idx = other_idx;
-        }
-    }
+    // Warp 级：shuffle 折半归约
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
 
-    if (lane == 0) {
-        s_val[wid] = local_max;
-        s_idx[wid] = local_idx;
-    }
+    if (lane == 0)
+        s_partial[wid] = val;
     __syncthreads();
 
     // Block 级：Warp 0 收尾
+    val = (threadIdx.x < NUM_WARPS) ? s_partial[lane] : 0.0;
     if (wid == 0) {
-        int numWarps = (blockDim.x + 31) / 32;
-        local_max = (lane < numWarps) ? s_val[lane] : -FLT_MAX;
-        local_idx = (lane < numWarps) ? s_idx[lane] : 0;
-
-        for (int offset = 16; offset > 0; offset >>= 1) {
-            float other_val = __shfl_down_sync(0xFFFFFFFF, local_max, offset);
-            int other_idx = __shfl_down_sync(0xFFFFFFFF, local_idx, offset);
-            if (other_val > local_max || (other_val == local_max && other_idx < local_idx)) {
-                local_max = other_val;
-                local_idx = other_idx;
-            }
-        }
-        if (lane == 0)
-            atomicMax(out_idx, local_idx);
+        for (int offset = 16; offset > 0; offset >>= 1)
+            val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
+    return val;
+}
+
+// 阶段①：B 个 block 各归约一段（grid-stride），写 partial[B]
+__global__ void reduce_block_kernel(const float* input, double* partial, int N) {
+    double local_sum = 0.0;
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += gridDim.x * blockDim.x)
+        local_sum += (double)input[i];
+
+    local_sum = block_reduce(local_sum);
+    if (threadIdx.x == 0)
+        partial[blockIdx.x] = local_sum;
+}
+
+// 阶段②：单 block 归约 partial[B]，最后一步才转 float 写 output[0]
+__global__ void reduce_final_kernel(const double* partial, float* output, int B) {
+    double local_sum = 0.0;
+    for (int i = threadIdx.x; i < B; i += blockDim.x)
+        local_sum += partial[i];
+
+    local_sum = block_reduce(local_sum);
+    if (threadIdx.x == 0)
+        output[0] = (float)local_sum;
 }
 ```
 
-> 💡 提交后在 [LeetGPU Argmax 题目](https://leetgpu.com/challenges/argmax)上记录通过耗时。完整题解（含平局处理图解、`atomicMax` vs 两次 kernel 的权衡）见 [Argmax 题解](../../../../leetgpu/week3/day3/leetgpu-argmax-solution.md)。
+> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时。完整题解（含 double 累加精度分析、为什么用第二 kernel 而不是 `atomicAdd`）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
 
 #### 任务 5：LeetCode 面试题 —— 最长回文子串
 
@@ -462,7 +455,7 @@ __global__ void argmax_kernel(const float* input, int* out_idx, int N) {
 
 **题目概述**：给定字符串 `s`，找到 `s` 中最长的回文子串。
 
-**与今日知识的关联**：最长回文子串的**中心扩展法**与今日 Argmax 的**逐元素比较+状态追踪**同构——中心扩展从每个位置向两端逐步扩展并维护"最长回文"状态，Argmax 逐元素扫描并维护"最大值+索引"状态。两者都是"线性扫描 + 维护最优状态"的模式。
+**与今日知识的关联**：最长回文子串的**中心扩展法**与今日 Reduction 的**逐元素扫描+状态累积**同构——中心扩展从每个位置向两端逐步扩展并维护"最长回文"状态，Reduction 逐元素扫描并维护"局部累加和"状态。两者都是"线性扫描 + 维护累积状态"的模式。
 
 > 💡 完整题解见 [最长回文子串题解](../../../../leetcode/daily/week3/day3/最长回文子串.md)。
 

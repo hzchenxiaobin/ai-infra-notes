@@ -202,15 +202,15 @@ python kernels/mock_interview.py
 
 > 思考：哪个环节得分最低？针对该环节重写逐字稿，再练 3 遍。
 
-#### 任务 4：LeetGPU 在线题目 —— LoRA Linear
+#### 任务 4：LeetGPU 在线题目 —— GEMM
 
-**题目链接**：<https://leetgpu.com/challenges/lora-linear>
+**题目链接**：<https://leetgpu.com/challenges/general-matrix-multiplication-gemm>
 
-**题目概述**：实现 LoRA（Low-Rank Adaptation）线性层前向传播：`y = W·x + B·(A·x)/r`，其中 `W` 为预训练冻结权重，`A/B` 为低秩适配矩阵，`r << min(m,n)`。
+**题目概述**：实现通用矩阵乘法 `C = A·B`，其中 `A ∈ R^(M×K)`、`B ∈ R^(K×N)`，输出 `C ∈ R^(M×N)`。
 
-**与今日知识的关联**：Mock 面试中"项目深度拷问"环节常问参数高效微调。LoRA 把可训练参数量从 `m·n` 降到 `r·(m+n)`，是部署大模型时节省显存、支持多任务适配的关键技术。能讲清其 CUDA 实现（先算 `A·x` 共享给所有输出，再算 `W·x + B·h`）以及推理部署时的 merge/switch adapter 策略，能体现工程深度。
+**与今日知识的关联**：Mock 面试中"项目深度拷问"环节必问 GEMM——它是推理引擎中计算量最大的核心算子（Linear/FFN/投影层全是 GEMM）。能讲清其 CUDA 实现（shared memory tiling、register blocking、向量化加载）以及为什么它是 compute-bound、优化目标是对标 cuBLAS，能体现工程深度。
 
-> 💡 提交后在 [LeetGPU LoRA Linear](https://leetgpu.com/challenges/lora-linear) 上记录通过耗时。完整题解见 [LoRA Linear 题解](../../../../leetgpu/week8/day5/leetgpu-lora-linear-solution.md)。
+> 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](../../../../aiinfra/topics/cuda/medium/gemm/gemm.md)。
 
 #### 任务 5：LeetCode 面试题 —— 最长有效括号
 
@@ -286,7 +286,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 4. **Follow-up 应对**：常见追问包括“为什么不用现成方案”“差距多少”“怎么再优化”“显存不够怎么办”
 5. **计时系统**：`mock_interview.py` 提供倒计时和复盘清单，把练习标准化
 6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
-7. **LoRA Linear**：参数高效微调的核心算子，Mock 面试中“项目深度拷问”的常见考点
+7. **GEMM**：推理引擎的核心算子，Mock 面试中“项目深度拷问”的常见考点
 8. **最长有效括号**：栈 + DP 双解困难题，与推理系统状态追踪（请求状态机/KV Cache 生命周期）同构
 
 完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。

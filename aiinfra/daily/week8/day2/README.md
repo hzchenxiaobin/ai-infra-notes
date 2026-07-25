@@ -205,15 +205,15 @@ python kernels/architecture_diagrams.py
 
 > 思考：如果 30 秒画不完，是哪一层不熟？反复练习直到能在白板上流畅画出——面试中"画架构图"的限时通常就是 1-2 分钟。
 
-#### 任务 4：LeetGPU 在线题目 —— Rotary Positional Embedding
+#### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
 
-**题目链接**：<https://leetgpu.com/challenges/rope-embedding>
+**题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
 
-**题目概述**：给定 `M×D` 的 query 矩阵 `Q`、预计算的 `cos` 和 `sin` 向量（均为 `M×D`），计算 RoPE：`output = Q * cos + rotate_half(Q) * sin`，其中 `rotate_half` 将向量前半与后半交换并对前半取反。
+**题目概述**：给定 `Q, K, V ∈ R^(N×D)`，按 `H` 个头拆分为 `H` 组 `d = D/H` 维子空间，每个头独立做 scaled dot-product attention（`softmax(QK^T / sqrt(d))·V`），再将各头输出拼接为 `O ∈ R^(N×D)`。
 
-**与今日知识的关联**：RoPE 是 LLaMA 架构的核心组件——在今天画的五层架构图中，RoPE 位于第④层（模型层）的 Attention 之前。理解 RoPE 的数据流（Q 分两路：一路乘 cos，一路 rotate_half 后乘 sin，再相加）就是画一张"微型数据流图"，与今日的系统级数据流图同构。面试中"画一下 Transformer Block 的数据流"时，RoPE 这一步必须画对——它位于 RMSNorm 之后、Attention 之前，是位置编码注入点。
+**与今日知识的关联**：Multi-Head Attention 是 LLaMA 架构的核心组件——在今天画的五层架构图中，MHA 位于第④层（模型层）的 Transformer Block 内。理解 MHA 的数据流（Q/K/V 按头拆分 → 各头独立 attention → 拼接输出）就是画一张"微型数据流图"，与今日的系统级数据流图同构。面试中"画一下 Transformer Block 的数据流"时，MHA 这一步必须画对——它位于位置编码注入之后、FFN 之前，是模型的计算核心。
 
-> 💡 提交后在 [LeetGPU RoPE](https://leetgpu.com/challenges/rope-embedding) 上记录通过耗时。完整题解（含 rotate_half 详解、elementwise kernel、与架构图中位置编码数据流的对应）见 [RoPE 题解](../../../../leetgpu/week8/day2/leetgpu-rope-embedding-solution.md)。
+> 💡 提交后在 [LeetGPU Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention) 上记录通过耗时。完整题解（含多头拆分详解、kernel 实现、与架构图中 Attention 数据流的对应）见 [Multi-Head Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md)。
 
 #### 任务 5：LeetCode 面试题 —— 腐烂的橘子
 

@@ -510,87 +510,55 @@ ncu --metrics \
 - `sm__occupancy`：可能只有 50-75%（register 压力大），这是教学版的局限
 - `dram__throughput`：应远低于标准 Attention（因为消除了 O(N²) 读写）
 
-#### 任务 4：LeetGPU 在线题目 —— Adder Transformer
+#### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
 
-**题目链接**：<https://leetgpu.com/challenges/adder-transformer>
+**题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
 
 **题目概述**：
 
-实现一个极简 transformer 的批量自回归推理（该 transformer 完成两个 10 位数字的加法）。给定 prompt `[batch, 31]`（int32）和 10 个 float 权重，输出 `[batch, 11, 10]`（11 个解码步、每步对 10 个数字词表的 logits）。架构为单层 pre-norm transformer（embedding → RMSNorm → self-attention → MLP → final norm → logits），从 31 token prompt 出发自回归解码 11 步。
+实现多头注意力（Multi-Head Attention）。给定 `Q/K/V ∈ R^{N × d_model}` 和 head 数 `h`，`d_k = d_model / h`，head 沿 `d_model` 维**连续分块**（head `i` 取 `Q[:, i*d_k:(i+1)*d_k]`）。每个 head 独立做 scaled dot-product attention（无 mask）：`head_i = softmax(Q_i·K_i^T/√d_k)·V_i`，结果写回 `output[:, i*d_k:(i+1)*d_k]`。
 
-**难度**：中等　**标签**：CUDA、多 kernel 流水线、autoregressive 推理、kernel 融合
+**难度**：困难　**标签**：CUDA、MHA、head 并行、fused attention、online softmax
 
 **与今日知识的关联**：
 
-今天我们手写的是**单个 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题练习的是 transformer 推理的**另一面**：把多个小 kernel（embedding / attention / MLP / logits）串成自回归推理管线，循环 11 步生成。核心痛点相反——hidden_dim 极小时 launch overhead 淹没计算，需要**融合前向**把整条管线压进一个 kernel + batch 维并行。这是 multi-kernel orchestration 的典型练习，与今天的单 kernel fusion 互补。
+今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
 
 **解题思路**：
 
-1. **batch 维并行**：`grid = batch_size`，每 block 处理一个 batch 元素的完整推理
-2. **融合前向**：一个 block 完成整个前向（embedding → QKV → attention → MLP → logits → argmax），消除多 kernel launch 开销
-3. **last-only 优化**：输出只需最后位置 logits，K/V 只依赖前注意力的 embedding，因此只算所有位置的 K/V + last 位置的 attention/MLP，把 `O(seq²)` 降为 `O(seq)`
-4. **11 步循环在 host**：`solve` 里 for 循环 11 次，每步 launch 一次融合前向 kernel
+1. **head 维并行**：`grid = h`，一个 block 处理一个 head 的完整 attention
+2. **head 切分寻址**：head `i` 的 `Q_i/K_i/V_i` 是 `Q/K/V[:, i*d_k:(i+1)*d_k]`，列偏移乘 `d_k`
+3. **head 内复用 fused attention**：tiling + online softmax 三公式（同今天手写版），消除 O(N²) IO
+4. **scale 细节**：每个 head 用 `1/√d_k` 缩放，不是 `1/√d_model`
 
-**参考实现**（多 kernel 推理管线骨架，完整实现见题解）：
+**参考实现**（head 并行骨架，完整实现见题解）：
 
 ```cuda
-// adder_transformer.cu —— Adder Transformer Inference（融合前向 + 11 步自回归）
-// 编译命令: nvcc -o adder_transformer adder_transformer.cu -O3 -arch=sm_120
+// mha.cu —— Multi-Head Attention（一个 block 一个 head，head 内复用单 head fused attention）
+// 编译命令: nvcc -o mha mha.cu -O3 -arch=sm_120
 
 #include <cuda_runtime.h>
 #include <cstdio>
 #include <cmath>
 
-#define VOCAB_SIZE 10
-#define PROMPT_LEN 31
-#define OUTPUT_DIGITS 11
-#define MAX_LEN (PROMPT_LEN + OUTPUT_DIGITS)   // 42
-#define FORWARD_BLOCK 64
+// 一个 block 处理一个 head 的完整 attention：
+//   Q_i/K_i/V_i = Q/K/V[:, head*d_k : (head+1)*d_k]（head 沿 d_model 维连续分块）
+//   block 内复用单 head fused attention（tiling + online softmax 三公式）
+// （完整 kernel 体见题解：QK^T 分块、online softmax、PV 累加）
+__global__ void mha_kernel(const float* Q, const float* K, const float* V,
+                           float* output, int N, int d_model, int d_k);
 
-// 一个 block 处理一个 batch 元素的一步融合前向：
-//   ① 各 thread 并行算所有位置的 k/v（embedding → unit rms norm → QKV → RoPE）
-//   ② thread 0 串行算 last 位置的 attention + MLP + logits + argmax
-//   last-only 优化：输出只需 last 位置，把 O(seq²) attention 降为 O(seq)
-// （完整 kernel 体见题解：softmax attention + SwiGLU MLP + final norm + logits）
-__global__ void forward_step_kernel(const int* seq, float* output, const float* weights,
-                                    int batch_size, int cur_len, int step,
-                                    float omega, float attn_scale);
-
-// 初始化 seq[batch, MAX_LEN]：把 prompts[batch, 31] 拷到前 31 列
-__global__ void init_seq_kernel(const int* prompts, int* seq, int batch_size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int total = batch_size * PROMPT_LEN;
-    if (idx < total)
-        seq[(idx / PROMPT_LEN) * MAX_LEN + (idx % PROMPT_LEN)] = prompts[idx];
-}
-
-// prompts, output, weights are device pointers
-extern "C" void solve(const int* prompts, float* output, const float* weights, int batch_size) {
-    // host 端预计算派生常量（RoPE 角频率、attention scale），保证 batch 间一致
-    const double PI = 3.14159265358979323846;
-    double OMEGA = 2.0 * PI / 19.0;
-    double ATTN_AMPLITUDE = log(10.0) / (cos(OMEGA * 0.3) - cos(OMEGA * 0.7));
-    double QK_NORM_SCALE = sqrt(ATTN_AMPLITUDE / sqrt(2.0));
-    double ATTN_SCALE = (1.0 / sqrt(2.0)) * (QK_NORM_SCALE * QK_NORM_SCALE);
-    float omega = (float)OMEGA, attn_scale = (float)ATTN_SCALE;
-
-    int* seq;
-    cudaMalloc(&seq, (size_t)batch_size * MAX_LEN * sizeof(int));
-    init_seq_kernel<<<(batch_size * PROMPT_LEN + 255) / 256, 256>>>(prompts, seq, batch_size);
+// Q, K, V, output are device pointers
+extern "C" void solve(const float* Q, const float* K, const float* V,
+                      float* output, int N, int d_model, int h) {
+    int d_k = d_model / h;
+    // grid = h 个 block，一个 block 一个 head；head 间零同步、天然并行
+    mha_kernel<<<h, 128>>>(Q, K, V, output, N, d_model, d_k);
     cudaDeviceSynchronize();
-
-    // 11 步自回归：每步 launch 一次融合前向 kernel，序列从 31 增长到 42
-    for (int step = 0; step < OUTPUT_DIGITS; step++) {
-        int cur_len = PROMPT_LEN + step;
-        forward_step_kernel<<<batch_size, FORWARD_BLOCK>>>(
-            seq, output, weights, batch_size, cur_len, step, omega, attn_scale);
-        cudaDeviceSynchronize();
-    }
-    cudaFree(seq);
 }
 ```
 
-> 💡 提交后在 [LeetGPU Adder Transformer 题目](https://leetgpu.com/challenges/adder-transformer)上记录通过耗时。对比"朴素多 kernel（每步 5-6 个 kernel，60+ 次 launch）" vs "融合前向（每步 1 个 kernel）"的 launch overhead 差异。完整题解（含融合前向、last-only 优化、batch 维并行）见 [Adder Transformer 题解](../../../../leetgpu/week4/day2/leetgpu-adder-transformer-solution.md)。
+> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md)。
 
 #### 任务 5：LeetCode 面试题 —— 分割等和子集
 

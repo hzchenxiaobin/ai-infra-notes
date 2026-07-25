@@ -417,15 +417,15 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 > 思考：为什么 SiLU 的 AI 只有 ~0.25 而 GEMM 的 AI 有 ~275？（提示：SiLU 每元素只做几次运算但需读写 8B；GEMM 每 tile 做 2MNK 次运算但只读写 A+B+C。）
 
-#### 任务 4：LeetGPU 在线题目 —— SwiGLU
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/swiglu>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定长度为 `N` 的 `float` 输入向量，将其分为两半 `x₁ = x[:N/2]`、`x₂ = x[N/2:]`，计算 `output = SiLU(x₁) * x₂`，输出长度为 `N/2`。其中 `SiLU(x) = x * sigmoid(x)`。
+**题目概述**：给定 `M×N` 的 `float` 矩阵，计算其转置 `output[j][i] = input[i][j]`。
 
-**与今日知识的关联**：SwiGLU 是 LLaMA MLP 的核心激活函数——它把 SiLU 和 elementwise 乘法**融合**在一个 kernel 中，正是今日"Kernel 优化"主题的典型案例：不融合需要 3 个 kernel（SiLU → 临时矩阵 → 乘法 → 输出），3 次 HBM 往返；融合后 1 个 kernel 读写各 1 次。面试问"为什么要做 kernel fusion"时，SwiGLU 是最好的例子。同时它是 memory-bound elementwise kernel，AI ≈ 0.42，正好用 Roofline 验证"远低于 ridge point → 带宽瓶颈"。
+**与今日知识的关联**：Matrix Transpose 是今日"Kernel 优化"主题的典型案例：naive 实现必有一侧访存不连续（uncoalesced），带宽腰斩；用 shared memory tile 让读写两侧都合并访存后，带宽接近上限——一个 kernel 讲清"为什么访存模式决定性能"。面试问"memory-bound kernel 怎么优化"时，转置是最好的例子。同时它算术强度极低（接近纯搬运），正好用 Roofline 验证"远低于 ridge point → 带宽瓶颈"。
 
-> 💡 提交后在 [LeetGPU SwiGLU](https://leetgpu.com/challenges/swiglu) 上记录通过耗时。完整题解（含融合 kernel、SiLU+gate 数据流、与 kernel fusion 面试题的对应）见 [SwiGLU 题解](../../../../leetgpu/week8/day3/leetgpu-swiglu-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 零钱兑换
 
@@ -481,7 +481,7 @@ Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
 3. **CUDA 编程**：`__syncthreads()` block 级 vs Shuffle warp 级同步；Default Stream 隐式同步坑（用 non-blocking flag 解决）；`cudaMemcpyAsync` 需 pinned memory
 4. **Profiling**：Roofline 三步法（算 AI → 定位 memory/compute-bound → 定优化方向）；RTX 5090 ridge point = 19.5/1.55 ≈ 12.6 FLOP/Byte；ncu 三步法（SM/Mem Throughput → Roofline → Warp Stall Reasons）
 5. **自测系统**：12 道题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
-6. **SwiGLU**：kernel fusion 的典型案例（3 kernel → 1 kernel，省 2 次 HBM 往返），memory-bound AI≈0.42
+6. **Matrix Transpose**：访存合并（coalescing）的典型案例（naive 不连续 → shared memory tile 修复），memory-bound 纯搬运
 7. **零钱兑换**：完全背包 DP，子问题复用 ↔ shared memory tile 复用
 
 掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 4 进入进阶篇（Attention/推理系统/vLLM/调度），用更深入的问题区分"懂"和"精通"。

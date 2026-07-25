@@ -286,21 +286,21 @@ Submitting 3 sequences with staggered arrival...
 
 > 思考：Continuous Batching 在什么场景下优势最大？（提示：请求长度方差越大，Dynamic 的空等越多，Continuous 的收益越大。）
 
-#### 任务 4：LeetGPU 在线题目 —— Max Subarray Sum
+#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
 
-**题目链接**：<https://leetgpu.com/challenges/max-subarray-sum>
+**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
 
 **题目概述**：
 
-给定长度为 N 的 int32 数组和窗口大小 `window_size`，求所有长度恰好为 `window_size` 的连续子数组的**最大和**。
+给定长度为 `N` 的 FP32 数组，计算其 **inclusive 前缀和**：`output[i] = input[0] + input[1] + ... + input[i]`（与 `torch.cumsum` 对齐）。
 
-**约束条件**：`1 ≤ N ≤ 50000`，`1 ≤ window_size ≤ N`；性能测试取 `N=50000, window_size=25000`。
+**约束条件**：`1 ≤ N ≤ 10^6`；性能测试取大 `N`（如 `N=250000`）。
 
 **与今日知识的关联**：
 
-这道题的**滑动窗口**思想与 Continuous Batching 的 iteration-level 调度同构——窗口在数据上滑动，每步加入一个新元素、移出一个旧元素，正是 Continuous Batching "每轮加入新请求、移出完成请求"的微缩版。Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮有新请求滑入（prefill）、完成请求滑出（FINISHED），窗口大小（batch size）动态变化。这道题的 GPU 实现用 prefix sum 或滑动窗口累加，对应推理系统里 token budget 的窗口控制。
+这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。
 
-> 💡 提交后在 [LeetGPU Max Subarray Sum](https://leetgpu.com/challenges/max-subarray-sum) 上记录通过耗时。完整题解（含滑动窗口 kernel、prefix sum 优化、与 Continuous Batching 窗口调度的类比）见 [Max Subarray Sum 题解](../../../../leetgpu/week6/day2/leetgpu-max-subarray-sum-solution.md)。
+> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](../../../../aiinfra/topics/cuda/medium/scan/prefix-sum.md)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最大深度
 

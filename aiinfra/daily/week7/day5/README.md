@@ -241,17 +241,17 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 > 思考：`total_kv_blocks=4` 时，8 个并发请求会怎样？（提示：只有部分能加入 running，其余排队等待。如果等待超时则被取消。）
 
-#### 任务 4：LeetGPU 在线题目 —— Element Reversal
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/element-reversal>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定长度为 `N` 的 `float32` 数组，将每个元素的符号反转（`output[i] = -input[i]`）。
+**题目概述**：给定行主序的 `rows×cols` `float32` 矩阵，计算其转置 `output[j][i] = input[i][j]`（输出为 `cols×rows` 矩阵）。
 
-**约束条件**：`1 ≤ N ≤ 10,000,000`。
+**约束条件**：性能测例 `rows=7000, cols=6000`（约 168 MB）。
 
-**与今日知识的关联**：Element Reversal 是最简单的 element-wise 操作（`output[i] = -input[i]`），与系统联调中的**结果一致性验证**同构——联调时需要对比自定义 kernel 与 PyTorch 的输出，逐元素比较是否一致。Element Reversal 的"逐元素对比"正是联调验证的基础操作：`assert (custom_output - pytorch_output).abs().max() < threshold`。理解这种 element-wise 对比是联调精度验证的核心方法。
+**与今日知识的关联**：Matrix Transpose 是纯数据重排的索引映射 kernel（`output[j][i] = input[i][j]`），与系统联调中的**结果一致性验证**同构——联调时需要对比自定义 kernel 与 PyTorch 的输出，逐元素比较是否一致。Transpose 的验证正是联调验证的基础操作：`assert (custom_output - pytorch_output).abs().max() < threshold`；而其 shared memory tiling 优化版与朴素版的输出一致性对比，也正是"优化不改变语义"的验证范式。理解这种逐元素对比是联调精度验证的核心方法。
 
-> 💡 提交后在 [LeetGPU Element Reversal](https://leetgpu.com/challenges/element-reversal) 上记录通过耗时。完整题解见 [Element Reversal 题解](../../../../leetgpu/week7/day5/leetgpu-element-reversal-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 合并 K 个升序链表
 

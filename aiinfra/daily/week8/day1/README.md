@@ -320,15 +320,15 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 > 思考：为什么 SiLU 的"达到比例"用带宽百分比，而 GEMM 用 cuBLAS 百分比？（提示：SiLU 是 memory-bound，瓶颈是带宽；GEMM 是 compute-bound，瓶颈是算力，cuBLAS 是算力优化天花板。）
 
-#### 任务 4：LeetGPU 在线题目 —— SiLU
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/silu>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定长度为 `N` 的 `float` 输入向量，计算 SiLU 激活 `output[i] = input[i] * sigmoid(input[i])`，其中 `sigmoid(x) = 1 / (1 + e^{-x})`。
+**题目概述**：给定 `M×N` 的 `float` 矩阵，计算其转置 `output[j][i] = input[i][j]`。
 
-**与今日知识的关联**：SiLU 是**典型的 memory-bound elementwise kernel**——计算量极小（一次 exp + 乘法），瓶颈完全在数据搬运。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 HBM 峰值，验证你的 benchmark 流程是否正确。同时 SiLU 是 LLaMA 的 SwiGLU 激活核心，benchmark 它就是给 Mini 引擎的激活算子建立性能基线——README 的 Benchmark 表里就该有这类 elementwise 算子的带宽数据。
+**与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 HBM 峰值，验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
 
-> 💡 提交后在 [LeetGPU SiLU](https://leetgpu.com/challenges/silu) 上记录通过耗时。完整题解（含 fused kernel、`__expf` 快速数学函数、带宽测量、与今日 benchmark 方法论的对应）见 [SiLU 题解](../../../../leetgpu/week8/day1/leetgpu-silu-solution.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
 
 #### 任务 5：LeetCode 面试题 —— 合并区间
 

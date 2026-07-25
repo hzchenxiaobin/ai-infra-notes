@@ -348,15 +348,15 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 > 💡 **复盘标准**：能不看资料、5 分钟内完整讲清上述 5 点 + 三公式，即为通过。
 
-#### 任务 4：LeetGPU 综合验收题 —— Mean Squared Error
+#### 任务 4：LeetGPU 综合验收题 —— Reduction
 
-**题目链接**：<https://leetgpu.com/challenges/mean-squared-error>
+**题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**题目概述**：给定长度为 `N` 的预测值数组 `predictions` 和真实值数组 `targets`，计算均方误差 `mse = (1/N) * Σ (predictions[i] - targets[i])²`。
+**题目概述**：给定长度为 `N` 的 `float32` 数组 `input`，求所有元素之和并写入 `output[0]`。注意参考实现用 `double` 累加再转回 `float`，kernel 中线程局部累加也需用 `double` 才能保证精度达标。
 
-**与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 在损失函数中的典型应用。fused kernel 把 element-wise 平方差与 block reduction 融合：每个线程累加局部平方差 → Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总 → 最后除以 N。适合在验收日限时完成，检验 fused reduction 的综合掌握程度。
+**与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 最纯粹的形态。kernel 采用两阶段归约：每个线程用 grid-stride 循环累加局部和（`double`）→ Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总。适合在验收日限时完成，检验 block reduce + 跨 block 汇总的综合掌握程度。
 
-> 💡 完整题解（含 fused kernel 设计、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Mean Squared Error 题解](../../../../leetgpu/week2/day7/leetgpu-mean-squared-error-solution.md)。
+> 💡 完整题解（含 grid-stride 累加、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
 
 #### 任务 5：GitHub 仓库整理
 

@@ -364,7 +364,7 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
     overview, days = load_overview_and_days(week1_dir)
 
     for day in days:
-        day["markdown"] = rewrite_md_links_to_html_weeks(day["markdown"], root_prefix="")
+        day["markdown"] = rewrite_md_links_to_html_weeks(day["markdown"], root_prefix="../")
 
     week1_root_prefix = "../"
 

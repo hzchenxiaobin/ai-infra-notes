@@ -205,58 +205,71 @@ python kernels/week5_summary.py
 
 脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
 
-#### 任务 2：LeetGPU 综合压轴题 —— Simple Inference
+#### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
 
-**题目链接**：<https://leetgpu.com/challenges/simple-inference>
+**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
 **题目概述**：
 
-给定一个 PyTorch `nn.Linear` 模型和输入张量 `input[batch_size, input_size]`，计算 `output = input @ weight.T + bias`。性能测试取 `batch_size=1000, input_size=512, output_size=256`。
+实现 GPT-2 124M 的一个 transformer block 前向（Pre-LN 结构）：输入 `x[seq_len, 768]` 和打包权重，依次串联 `LN1 → QKV 投影 → Multi-Head Attention → Attn 投影 → 残差 → LN2 → FC → GELU(tanh) → 投影 → 残差`。固定维度 `D=768, H=12, FFN=3072`；容差 `atol=rtol=1e-3`；性能测试取 `seq_len=1024`。
 
-**难度**：简单　**标签**：PyTorch、GEMM、Batching、Inference
+**难度**：困难　**标签**：CUDA、Transformer、LayerNorm、Multi-Head Attention、FFN、多 kernel 流水线
 
 **与 Week 5 知识的关联**：
 
-Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化的最终目标都是让 GPU 在 Decode 阶段（M=1）尽可能逼近 Prefill 阶段（M=N）的 GEMM 利用率。本题 Simple Inference 是这一目标的微缩实验：固定一个 `nn.Linear`，只改变 `batch_size`，观察 latency 与 throughput 如何随 batch 增大而变化。它帮你建立直觉——为什么 Continuous Batching 要把多个 decode 请求拼成大 batch，以及为什么 Prefill 天然比 Decode 快。
+Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 5 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
 
 **解题思路**：
 
-1. 用 PyTorch 构造 `nn.Linear(input_size, output_size)`
-2. 分别测试 `batch_size = 1, 16, 64, 256, 1000` 的前向 latency
-3. 记录 `output = input @ weight.T + bias` 的耗时
-4. 绘制 latency-vs-batch_size 和 throughput-vs-batch_size 曲线
+1. 用 PyTorch 写一个 Pre-LN transformer block 作为参考实现，确认数值正确
+2. 拆解算子链：LN1 → QKV Proj → MHA → Attn Proj → 残差 → LN2 → FC → GELU(tanh) → Proj → 残差
+3. 逐个子 kernel 用 CUDA 实现并对齐参考输出（注意 GELU 用 tanh 近似、head 沿 D 维切分）
+4. 串联成完整 block 前向，提交测性能
 
 **参考实现**（PyTorch）：
 
 ```python
-# simple_inference.py —— 观察 batch_size 对 nn.Linear 性能的影响
+# gpt2_block.py —— GPT-2 124M 单层 transformer block 前向（参考实现）
 # 依赖: pip install torch
 
 import torch
 import torch.nn as nn
-import time
+import torch.nn.functional as F
 
-input_size, output_size = 512, 256
-model = nn.Linear(input_size, output_size).cuda()
+D, H, FFN = 768, 12, 3072
 
-for batch_size in [1, 16, 64, 256, 1000]:
-    x = torch.randn(batch_size, input_size, device='cuda')
-    # warmup
-    for _ in range(10):
-        _ = model(x)
-    torch.cuda.synchronize()
-    # measure
-    start = time.perf_counter()
-    for _ in range(100):
-        _ = model(x)
-    torch.cuda.synchronize()
-    elapsed = time.perf_counter() - start
-    latency_ms = elapsed / 100 * 1000
-    throughput = batch_size / (latency_ms / 1000)
-    print(f"batch={batch_size:4d} | latency={latency_ms:.4f} ms | throughput={throughput:.1f} samples/s")
+class GPT2Block(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(D)
+        self.qkv = nn.Linear(D, 3 * D)
+        self.attn_proj = nn.Linear(D, D)
+        self.ln2 = nn.LayerNorm(D)
+        self.fc = nn.Linear(D, FFN)
+        self.proj = nn.Linear(FFN, D)
+
+    def forward(self, x):                       # x: (seq_len, D)
+        h = self.ln1(x)
+        q, k, v = self.qkv(h).chunk(3, dim=-1)
+        q = q.view(-1, H, D // H).transpose(0, 1)   # (H, seq, 64)
+        k = k.view(-1, H, D // H).transpose(0, 1)
+        v = v.view(-1, H, D // H).transpose(0, 1)
+        attn = F.softmax(q @ k.transpose(-2, -1) / (D // H) ** 0.5, dim=-1) @ v
+        attn = attn.transpose(0, 1).reshape(-1, D)  # (seq, D)
+        x = x + self.attn_proj(attn)                # 残差 1
+        h = self.ln2(x)
+        x = x + self.proj(F.gelu(self.fc(h), approximate="tanh"))  # 残差 2
+        return x
+
+block = GPT2Block().cuda().eval()
+for seq_len in [1, 128, 1024]:
+    x = torch.randn(seq_len, D, device='cuda')
+    with torch.no_grad():
+        y = block(x)
+    print(f"seq_len={seq_len:5d} | output shape={tuple(y.shape)}")
 ```
 
-> 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时，重点对比 batch_size=1 与 batch_size=1000 的 latency 差异。完整题解（含 batch_size 对 GEMM 性能的影响分析、与 Prefill/Decode 算术强度的关联）见 [Simple Inference 题解](../../../../leetgpu/week5/day7/leetgpu-simple-inference-solution.md)。
+> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](../../../../aiinfra/topics/cuda/high/reduction/gpt-2-transformer-block.md)。
 
 #### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
 
@@ -407,7 +420,7 @@ aiinfra/week5/
 ├── day6/kernels/profile_engine_v0.py # 端到端 profiling
 ├── day7/kernels/week5_summary.py # 总结日自测脚本
 └── images/ # 22 张 SVG
-leetgpu/week5/day1-7/ # 7 道 LeetGPU 题解
+aiinfra/topics/cuda/ # LeetGPU 题解（已迁移至 topics/cuda）
 leetcode/daily/week5/day1-7/ # 7 道 LeetCode 题解
 ```
 
