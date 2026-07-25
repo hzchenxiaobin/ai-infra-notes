@@ -245,7 +245,8 @@ body {
     }
 
     html.sidebar-collapsed .main-content {
-        margin-left: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto;
         max-width: 1400px;
     }
 
