@@ -34,21 +34,25 @@ Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，
 
 ### 理论学习
 
-#### 前置知识：Cache Line 与 GPU 内存访问粒度
+#### 前置知识：Cache Line、Sector 与 GPU 内存访问粒度
 
-GPU 访问 Global Memory 时，数据在 DRAM ↔ L2 ↔ L1 ↔ 寄存器之间以 **cache line（128 bytes）** 为最小单位传输。即使 kernel 只读 4 bytes，硬件也会把包含它的整个 128-byte cache line 加载进缓存。
+GPU 访问 Global Memory 时，数据在 DRAM ↔ L2 ↔ L1 ↔ 寄存器之间以固定大小的"块"传输。本节先给简化模型（cache line），再细化到真实传输粒度（sector）。sector 的基础概念在 [Week1 Day4](../../day4/README.md#transaction-的大小由什么决定) 已介绍，这里聚焦它对 GEMM 优化的影响。
 
-> 💡 **关键认知**：kernel 的访存效率不取决于"读了多少字节"，而取决于"触发了多少次 cache line 传输"。这是 float4、coalesced 访问、shared memory tiling 等所有内存优化的共同底层逻辑。
+GPU 访问 Global Memory 时，数据在 DRAM ↔ L2 ↔ L1 ↔ 寄存器之间以 **cache line（128 bytes）** 为管理单位传输。即使 kernel 只读 4 bytes，硬件也会把包含它的整个 128-byte cache line 加载进缓存。
 
-**与 warp 的天然对齐**：一个 warp 有 32 个线程，每个读 4 bytes（一个 float），合计 32 × 4 = 128 bytes，恰好等于 1 个 cache line。当 32 个线程访问连续地址时，硬件合并成 **1 次 cache line 传输**；若地址分散，最多触发 32 次传输——带宽利用率相差 32 倍。这就是 coalesced 访问的本质。
+> 💡 **关键认知**：kernel 的访存效率不取决于"读了多少字节"，而取决于"触发了多少次 sector 传输"（sector = 32 bytes，见下文）。这是 float4、coalesced 访问、shared memory tiling 等所有内存优化的共同底层逻辑。
 
-| warp 内 32 线程的地址模式 | 触发 cache line 数 | 带宽利用率 |
-|--------------------------|-------------------|-----------|
-| 连续（stride=1） | 1 | 100% |
-| stride=2 | 2 | 50% |
-| stride=32（跨行） | 32 | ~3% |
+**与 warp 的天然对齐**：一个 warp 有 32 个线程，每个读 4 bytes（一个 float），合计 32 × 4 = 128 bytes，恰好等于 1 个 cache line（= 4 个 sector）。当 32 个线程访问连续地址时，硬件合并成 **4 个 sector 事务**（即 1 次完整的 cache line 传输）；若地址分散，最多触发 32 次 sector 传输——带宽利用率相差 8 倍。这就是 coalesced 访问的本质。
 
-**与 float4 的关系**：float4 是**指令层**优化——1 条 128-bit load 指令替代 4 条 32-bit 指令，减少指令发射开销。底层仍走 cache line。两者叠加：指令数 ↓（float4）+ cache line 利用率 ↑（coalesced）。所以 float4 要求"coalesced 访问模式"——否则单条 float4 取来的 16 bytes 可能横跨两个 cache line，反而更慢。
+| warp 内 32 线程的地址模式 | 触发 sector 数 | 带宽利用率 |
+|--------------------------|---------------|-----------|
+| 连续（stride=1） | 4 | 100% |
+| stride=2 | 4 | 50%（每 sector 只用一半） |
+| stride=32（跨行） | 32 | ~12.5% |
+
+> 💡 这里的 sector 计数是简化模型；实际场景下 L2 命中与否会影响最终 DRAM 传输量。详见下文「Sector：比 cache line 更细的传输粒度」小节。
+
+**与 float4 的关系**：float4 是**指令层**优化——1 条 128-bit load 指令替代 4 条 32-bit 指令，减少指令发射开销。底层仍走 sector（32-byte 粒度）。两者叠加：指令数 ↓（float4）+ sector 利用率 ↑（coalesced）。所以 float4 要求"coalesced 访问模式"——否则单条 float4 取来的 16 bytes 可能横跨两个 sector，反而更慢。
 
 **L1 / L2 cache 层次**：
 
@@ -62,13 +66,74 @@ cache line 在 L1 和 L2 两级都存在。L1 miss 查 L2，L2 miss 才走 DRAM�
 
 > ⚠️ **易混淆**：shared memory 的 **bank**（32 个 × 4 bytes = 128 bytes）与 global memory 的 **cache line**（128 bytes）数值恰好相同，但概念不同——bank 是 shared memory 的并行访问通道（决定 bank conflict），cache line 是 global memory 的传输单位（决定 coalesced）。
 
+##### Sector：比 cache line 更细的传输粒度
+
+上面的 cache line 模型是**简化版**。实际上，DRAM ↔ L2 之间的数据传输并非以整个 128-byte cache line 为单位，而是以更小的 **sector（扇区，32 bytes）** 为最小单位：
+
+```
+1 个 cache line (128 bytes) = 4 个 sector (每个 32 bytes)
+                                ┌──────────┬──────────┬──────────┬──────────┐
+                          L2    │ sector 0 │ sector 1 │ sector 2 │ sector 3 │
+                                └──────────┴──────────┴──────────┴──────────┘
+                              32B           32B           32B           32B
+```
+
+- **L2 cache line = 128 bytes = 4 sectors**：L2 缓存以 128-byte 为管理单位（分配、替换、一致性）
+- **DRAM 传输粒度 = 1 sector = 32 bytes**：L2 miss 时，DRAM 只把**被触碰的 sector** 搬进 L2，而非整个 cache line
+
+> 💡 **sector 是"运货卡车的最小载重"**：不管你只读 4 bytes，DRAM 都会至少搬 32 bytes（1 个 sector）进 L2。cache line 是 L2 的"货架大小"（4 个 sector 一组管理），但每次上货只搬被需要的那个 sector。
+
+**为什么 sector 对 GEMM 重要？**
+
+理解 sector 后，上面的 coalescing 表需要更精确地表述——关键不是"触发几个 cache line"，而是"触发几个 sector 事务"：
+
+| warp 内 32 线程的地址模式 | 触发 sector 数 | 实际 DRAM 传输量 | 带宽利用率 |
+|--------------------------|---------------|-----------------|-----------|
+| 连续（stride=1，32 个 float） | 4 个 | 128 bytes | 100% |
+| 连续读 16 个 float（半 warp 复用） | 2 个 | 64 bytes | 100% |
+| stride=2（间隔 8B） | 4 个 | 128 bytes | 50%（每 sector 只用一半） |
+| stride=32（跨行 128B） | 32 个 | 1024 bytes | ~12.5% |
+
+关键区别在于**部分利用**场景：若 warp 的 32 个线程只触碰了某个 cache line 中的 1 个 sector（32B 里的 4 个 float），DRAM 只搬那 1 个 sector（32B），而非整个 cache line（128B）。这比纯 cache-line 模型更省带宽——但浪费仍然存在：读了 32B 只用 16B，带宽利用率 50%。
+
+**与 float4 的精确关系**：
+
+```
+1 个 float4 = 16 bytes = 半个 sector
+2 个 float4 = 32 bytes = 1 个 sector
+
+warp (32 threads) × 1 float4/thread = 512 bytes = 16 sectors
+  → 若 coalesced（连续地址），16 个 sector 被 1 次高效事务取回
+  → 若 strided，可能散落到 32 个 sector，带宽利用率暴跌
+```
+
+所以 float4 的效率**不在于"1 条指令取 16B"本身**，而在于它让 warp 的 32 次访问天然落在连续地址上 → 16 个 sector 连续 → 最大化 sector 利用率。指令层（float4）与传输层（sector）两层叠加才是 float4 快的真正原因。
+
+**用 ncu 观察 sector**：
+
+GEMM profiling 时，ncu 的 `l1tex__t_sectors_pipe_lsu_mem_global_op_ld` 指标直接统计 global load 触发的 sector 事务数：
+
+```bash
+ncu --kernel-name regex:gemmIntegrated \
+    --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum, \
+              dram__bytes_read.sum \
+    ./gemm_series
+```
+
+| 场景 | sector 事务数 | 含义 |
+|------|-------------|------|
+| 理想 coalesced（v4/v5 的 float4 加载） | ≈ `数据量 / 32B` | 每 sector 被充分利用 |
+| strided 访问（如 naive 的 B 列读取） | ≈ `线程数`（每线程独占 1 sector） | 严重放大，带宽浪费 |
+
+> 💡 **面试要点**：被问到"coalesced access 的底层单位是什么"时，回答 **sector（32 bytes）** 而非 cache line（128 bytes），能展示对 GPU 内存子系统的精确理解。cache line 是 L2 管理单位，sector 才是 DRAM 传输单位——这个区分是入门与进阶的分水岭。
+
 #### 6.1 float4 向量化加载
 
 ![float4 向量化加载对比](../images/float4_vectorized_load.svg)
 
 ##### 原理
 
-如上文所述，GPU 以 128-byte cache line 为单位访问 Global Memory。在指令层，4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit load 指令更高效。
+如上文所述，GPU 以 sector（32 bytes）为最小传输粒度访问 Global Memory（L2 以 128-byte cache line = 4 sector 管理）。在指令层，4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效。
 
 ```cuda
 // 逐个加载：4 条 32-bit load 指令
