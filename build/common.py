@@ -253,7 +253,7 @@ def page_template(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=4">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=5">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -267,6 +267,8 @@ def page_template(
     <script>Prism.languages.cuda=Prism.languages.extend("c",{{builtin:/\\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\\b/}});</script>
     <script src="{root_prefix}js/prism-bash.min.js"></script>
     <script src="{root_prefix}js/prism-python.min.js"></script>
+    <!-- Restore collapsed sidebar before paint (desktop only) -->
+    <script>(function(){{try{{if(localStorage.getItem('sidebar-collapsed')==='1'&&window.innerWidth>768){{document.documentElement.classList.add('sidebar-collapsed');}}}}catch(e){{}}}})();</script>
 </head>
 <body>
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -326,7 +328,7 @@ def page_template(
         }}
     </script>
     {extra_scripts}
-    <script src="{root_prefix}js/main.js?v=5"></script>
+    <script src="{root_prefix}js/main.js?v=6"></script>
 </body>
 </html>
 """
@@ -360,7 +362,7 @@ def paper_page_template(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=4">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=5">
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -372,6 +374,8 @@ def paper_page_template(
     <script>Prism.languages.cuda=Prism.languages.extend("c",{{builtin:/\\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\\b/}});</script>
     <script src="{root_prefix}js/prism-bash.min.js"></script>
     <script src="{root_prefix}js/prism-python.min.js"></script>
+    <!-- Restore collapsed sidebar before paint (desktop only) -->
+    <script>(function(){{try{{if(localStorage.getItem('sidebar-collapsed')==='1'&&window.innerWidth>768){{document.documentElement.classList.add('sidebar-collapsed');}}}}catch(e){{}}}})();</script>
 </head>
 <body>
     <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -424,7 +428,7 @@ def paper_page_template(
             </script>
         </main>
     </div>
-    <script src="{root_prefix}js/main.js?v=5"></script>
+    <script src="{root_prefix}js/main.js?v=6"></script>
 </body>
 </html>
 '''

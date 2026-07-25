@@ -5,7 +5,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (menuToggle && sidebar) {
         menuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('open');
+            if (window.innerWidth <= 768) {
+                // Mobile: sidebar is an overlay
+                sidebar.classList.toggle('open');
+            } else {
+                // Desktop: collapse/expand sidebar to give content more room
+                const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+                try {
+                    localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+                } catch (e) {}
+            }
         });
 
         // Close sidebar when clicking on a link (mobile)

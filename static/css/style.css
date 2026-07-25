@@ -45,6 +45,7 @@ body {
     overflow-y: auto;
     z-index: 100;
     padding: 24px 0;
+    transition: transform 0.3s;
 }
 
 .sidebar-resizer {
@@ -66,7 +67,7 @@ body {
 }
 
 .sidebar-header {
-    padding: 0 24px 20px;
+    padding: 52px 24px 20px;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -222,9 +223,9 @@ body {
     padding: 40px 48px;
 }
 
-/* Mobile Menu Button */
+/* Menu Button (mobile: overlay toggle; desktop: sidebar collapse toggle) */
 .menu-toggle {
-    display: none;
+    display: block;
     position: fixed;
     top: 16px;
     left: 16px;
@@ -235,6 +236,22 @@ body {
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
+}
+
+/* Sidebar collapsed (desktop only): hide sidebar, give content full width */
+@media (min-width: 769px) {
+    html.sidebar-collapsed .sidebar {
+        transform: translateX(-100%);
+    }
+
+    html.sidebar-collapsed .main-content {
+        margin-left: 0 !important;
+        max-width: 1400px;
+    }
+
+    html.sidebar-collapsed .sidebar-resizer {
+        display: none;
+    }
 }
 
 /* Markdown Content Styling */
