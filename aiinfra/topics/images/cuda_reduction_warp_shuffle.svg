@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="660" height="560" fill="#fafafa"/>
+
+  <text x="330" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">warp shuffle 归约树：32 lane 折半 5 步收敛到 lane 0</text>
+  <text x="330" y="44" text-anchor="middle" font-size="11" fill="#888">__shfl_down_sync(0xffffffff, val, offset)，offset = 16 → 8 → 4 → 2 → 1，寄存器直传不过 shared</text>
+
+  <!-- ===== Step 0: initial ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">初始（每 lane 一个局部和）</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="99" text-anchor="middle">3</text>
+    <rect x="76"  y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="93"  y="99" text-anchor="middle">1</text>
+    <rect x="112" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="129" y="99" text-anchor="middle">4</text>
+    <rect x="148" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="165" y="99" text-anchor="middle">2</text>
+    <rect x="184" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="201" y="99" text-anchor="middle">5</text>
+    <rect x="220" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="237" y="99" text-anchor="middle">7</text>
+    <rect x="256" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="273" y="99" text-anchor="middle">6</text>
+    <rect x="292" y="84" width="34" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="309" y="99" text-anchor="middle">8</text>
+    <text x="346" y="99" font-size="10" fill="#888">... 共 32 lane</text>
+  </g>
+  <text x="470" y="99" font-size="9" fill="#888">lane 0..31 各持 val</text>
+
+  <!-- ===== offset=16 ===== -->
+  <path d="M 57 110 L 57 130" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="128" font-size="12" fill="#b85450" font-weight="bold">offset = 16</text>
+  <text x="120" y="128" font-size="10" fill="#888">val += __shfl_down_sync(mask, val, 16)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="134" width="34" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="149" text-anchor="middle">9</text>
+    <rect x="76"  y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="93"  y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="112" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="129" y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="148" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="165" y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="184" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="201" y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="220" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="237" y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="256" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="273" y="149" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="292" y="134" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="309" y="149" text-anchor="middle" fill="#bbb">×</text>
+  </g>
+  <text x="470" y="149" font-size="9" fill="#888">lane 0+16, 1+17, ... 配对相加，前 16 有效</text>
+
+  <!-- ===== offset=8 ===== -->
+  <path d="M 57 160 L 57 180" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="178" font-size="12" fill="#b85450" font-weight="bold">offset = 8</text>
+  <text x="120" y="178" font-size="10" fill="#888">val += __shfl_down_sync(mask, val, 8)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="184" width="34" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="199" text-anchor="middle">15</text>
+    <rect x="76"  y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="93"  y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="112" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="129" y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="148" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="165" y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="184" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="201" y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="220" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="237" y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="256" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="273" y="199" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="292" y="184" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="309" y="199" text-anchor="middle" fill="#bbb">×</text>
+  </g>
+  <text x="470" y="199" font-size="9" fill="#888">前 8 lane 各加上 lane+8，剩 8 有效</text>
+
+  <!-- ===== offset=4 ===== -->
+  <path d="M 57 210 L 57 230" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="228" font-size="12" fill="#b85450" font-weight="bold">offset = 4</text>
+  <text x="120" y="228" font-size="10" fill="#888">val += __shfl_down_sync(mask, val, 4)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="234" width="34" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="249" text-anchor="middle">26</text>
+    <rect x="76"  y="234" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="93"  y="249" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="112" y="234" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="129" y="249" text-anchor="middle" fill="#bbb">×</text>
+    <rect x="148" y="234" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="165" y="249" text-anchor="middle" fill="#bbb">×</text>
+  </g>
+  <text x="470" y="249" font-size="9" fill="#888">前 4 lane 各加上 lane+4，剩 4 有效</text>
+
+  <!-- ===== offset=2 ===== -->
+  <path d="M 57 260 L 57 280" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="278" font-size="12" fill="#b85450" font-weight="bold">offset = 2</text>
+  <text x="120" y="278" font-size="10" fill="#888">val += __shfl_down_sync(mask, val, 2)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="284" width="34" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="299" text-anchor="middle">33</text>
+    <rect x="76"  y="284" width="34" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="93"  y="299" text-anchor="middle" fill="#bbb">×</text>
+  </g>
+  <text x="470" y="299" font-size="9" fill="#888">前 2 lane 各加上 lane+2，剩 2 有效</text>
+
+  <!-- ===== offset=1 ===== -->
+  <path d="M 57 310 L 57 330" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="328" font-size="12" fill="#b85450" font-weight="bold">offset = 1</text>
+  <text x="120" y="328" font-size="10" fill="#888">val += __shfl_down_sync(mask, val, 1)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="334" width="34" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="57"  y="349" text-anchor="middle" fill="#4a7a3a" font-weight="bold">36</text>
+  </g>
+  <text x="470" y="349" font-size="9" fill="#888">lane 0 持有整个 warp 的和</text>
+
+  <!-- ===== Block two-level ===== -->
+  <line x1="20" y1="378" x2="640" y2="378" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="402" font-size="13" fill="#446688" font-weight="bold">block 两级归约：8 个 warp → shared 汇总 → warp 0 再 shuffle</text>
+
+  <!-- 8 warps -->
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="412" width="60" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="70"  y="428" text-anchor="middle">warp0: 36</text>
+    <rect x="106" y="412" width="60" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="136" y="428" text-anchor="middle">warp1: 28</text>
+    <rect x="172" y="412" width="60" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="202" y="428" text-anchor="middle">warp2: 41</text>
+    <rect x="238" y="412" width="60" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="268" y="428" text-anchor="middle">warp3: 19</text>
+    <text x="316" y="428" font-size="10" fill="#888">... 共 8 warp</text>
+  </g>
+  <text x="30" y="456" font-size="10" fill="#555">① lane 0 写 shared[warpId] → __syncthreads</text>
+
+  <!-- shared array -->
+  <path d="M 70 438 L 70 462" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 136 438 L 136 462" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 202 438 L 202 462" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 268 438 L 268 462" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <g font-size="9" fill="#333">
+    <rect x="40"  y="466" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="70"  y="481" text-anchor="middle">36</text>
+    <rect x="106" y="466" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="136" y="481" text-anchor="middle">28</text>
+    <rect x="172" y="466" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="202" y="481" text-anchor="middle">41</text>
+    <rect x="238" y="466" width="60" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="268" y="481" text-anchor="middle">19</text>
+    <text x="316" y="481" font-size="10" fill="#888">...</text>
+  </g>
+  <text x="370" y="481" font-size="10" fill="#888">shared[0..7]</text>
+
+  <text x="30" y="512" font-size="10" fill="#555">② warp 0 读 shared[0..7] 再 shuffle 归约 → shared[0] 广播</text>
+  <path d="M 70 492 L 70 514" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="380" y="500" width="120" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+  <text x="440" y="521" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">block_sum</text>
+  <path d="M 300 510 L 376 510" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="530" y="521" font-size="9" fill="#888">__syncthreads 后全 block 读 shared[0]</text>
+</svg>

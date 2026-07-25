@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 580" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="580" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">LN vs BN 访存模式对偶：归约轴决定合并性</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">同一 (N×D) 行主序张量，归约轴不同 → warp 32 lane 地址分布天差地别</text>
+
+  <!-- ===== Left: LayerNorm (reduce along D, contiguous) ===== -->
+  <rect x="30" y="60" width="300" height="300" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="180" y="84" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">LayerNorm：沿 D 归约（连续）</text>
+  <text x="180" y="100" text-anchor="middle" font-size="10" fill="#555">一个 block 一行，warp 内 32 lane 读同一行</text>
+
+  <!-- matrix -->
+  <g font-size="9" fill="#333">
+    <!-- header -->
+    <text x="78"  y="118" text-anchor="middle" fill="#888">d=0</text>
+    <text x="118" y="118" text-anchor="middle" fill="#888">d=1</text>
+    <text x="158" y="118" text-anchor="middle" fill="#888">d=2</text>
+    <text x="198" y="118" text-anchor="middle" fill="#888">...</text>
+    <text x="248" y="118" text-anchor="middle" fill="#888">d=D-1</text>
+
+    <!-- row 0 (warp reads this, contiguous, all green) -->
+    <rect x="58"  y="124" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="78"  y="139" text-anchor="middle">t0</text>
+    <rect x="98"  y="124" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="118" y="139" text-anchor="middle">t1</text>
+    <rect x="138" y="124" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="158" y="139" text-anchor="middle">t2</text>
+    <text x="198" y="139" font-size="10" fill="#888">...</text>
+    <rect x="228" y="124" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="248" y="139" text-anchor="middle">t31</text>
+    <text x="48" y="139" text-anchor="end" font-size="9" fill="#888">n=0</text>
+
+    <rect x="58"  y="150" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="98"  y="150" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="138" y="150" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="228" y="150" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="48" y="166" text-anchor="end" font-size="9" fill="#888">n=1</text>
+
+    <text x="78"  y="186" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <text x="248" y="186" text-anchor="middle" font-size="10" fill="#888">...</text>
+  </g>
+
+  <!-- coalesced indicator -->
+  <path d="M 58 152 L 268 152" stroke="#4a7a3a" stroke-width="2" fill="none" filter="url(#rough2)"/>
+  <text x="180" y="206" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">↑ 32 lane 地址连续 = 1 cache line</text>
+
+  <rect x="48" y="220" width="264" height="60" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="60" y="238" font-size="10" fill="#4a7a3a" font-weight="bold">✓ 合并访存（coalesced）</text>
+  <text x="60" y="254" font-size="9" fill="#555">addr = n*D + d，d 连续 → 32×4B=128B</text>
+  <text x="60" y="268" font-size="9" fill="#555">落在 1 个 128B sector → 1 事务</text>
+  <text x="60" y="280" font-size="9" fill="#555">有效带宽 ≈ 峰值</text>
+
+  <text x="48" y="304" font-size="10" fill="#888">grid = N blocks，block 沿 D 归约</text>
+  <text x="48" y="320" font-size="9" fill="#888">归约轴 = 最后一维 = 连续维 → 天然合并</text>
+
+  <!-- ===== Right: BatchNorm (reduce along N, strided) ===== -->
+  <rect x="350" y="60" width="300" height="300" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="500" y="84" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">BatchNorm：沿 N 归约（strided）</text>
+  <text x="500" y="100" text-anchor="middle" font-size="10" fill="#555">一个 block 一列，warp 内 32 lane 读同一列</text>
+
+  <g font-size="9" fill="#333">
+    <text x="398"  y="118" text-anchor="middle" fill="#888">d=0</text>
+    <text x="438" y="118" text-anchor="middle" fill="#888">d=1</text>
+    <text x="478" y="118" text-anchor="middle" fill="#888">d=2</text>
+    <text x="518" y="118" text-anchor="middle" fill="#888">...</text>
+    <text x="568" y="118" text-anchor="middle" fill="#888">d=D-1</text>
+
+    <!-- column d=0 (warp reads this, strided, all red, scattered) -->
+    <rect x="378" y="124" width="40" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="398" y="139" text-anchor="middle">t0</text>
+    <rect x="418" y="124" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="458" y="124" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="548" y="124" width="40" height="22" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="368" y="139" text-anchor="end" font-size="9" fill="#888">n=0</text>
+
+    <rect x="378" y="150" width="40" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="398" y="166" text-anchor="middle">t1</text>
+    <text x="368" y="166" text-anchor="end" font-size="9" fill="#888">n=1</text>
+
+    <rect x="378" y="176" width="40" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="398" y="191" text-anchor="middle">t2</text>
+    <text x="368" y="191" text-anchor="end" font-size="9" fill="#888">n=2</text>
+
+    <text x="398" y="212" text-anchor="middle" font-size="9" fill="#888">⋮</text>
+
+    <rect x="378" y="218" width="40" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="398" y="233" text-anchor="middle">t31</text>
+    <text x="368" y="233" text-anchor="end" font-size="9" fill="#888">n=31</text>
+  </g>
+
+  <!-- strided indicator (vertical scattered) -->
+  <text x="500" y="206" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">↑ 32 lane 地址间隔 D×4B → 散落</text>
+
+  <rect x="368" y="220" width="264" height="60" fill="#fff" stroke="#b85450" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="380" y="238" font-size="10" fill="#b85450" font-weight="bold">✗ 非合并访存（strided）</text>
+  <text x="380" y="254" font-size="9" fill="#555">addr = n*D + c，n 步长 = D</text>
+  <text x="380" y="268" font-size="9" fill="#555">32 lane 散落 32 个 sector → 32 事务</text>
+  <text x="380" y="280" font-size="9" fill="#555">有效带宽 ≈ 峰值 / 32（严重浪费）</text>
+
+  <text x="368" y="304" font-size="10" fill="#888">grid = D blocks，block 沿 N 归约</text>
+  <text x="368" y="320" font-size="9" fill="#888">归约轴 = 第 0 维 = 非连续 → 需 shared 转置</text>
+
+  <!-- ===== Bottom: comparison table ===== -->
+  <line x1="20" y1="378" x2="660" y2="378" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="402" font-size="12" fill="#444" font-weight="bold">对比总结（同规模 N×D）</text>
+
+  <g font-size="10" fill="#333">
+    <rect x="30" y="412" width="160" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="110" y="428" text-anchor="middle" font-weight="bold">维度</text>
+    <rect x="190" y="412" width="220" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="300" y="428" text-anchor="middle" font-weight="bold" fill="#4a7a3a">LayerNorm</text>
+    <rect x="410" y="412" width="220" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="520" y="428" text-anchor="middle" font-weight="bold" fill="#b85450">BatchNorm</text>
+
+    <rect x="30" y="438" width="160" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="453">归约轴</text>
+    <rect x="190" y="438" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="453" fill="#4a7a3a">沿 D（最后一维，连续）</text>
+    <rect x="410" y="438" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="453" fill="#b85450">沿 N（第 0 维，strided）</text>
+
+    <rect x="30" y="462" width="160" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="477">warp 32 lane 地址</text>
+    <rect x="190" y="462" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="477" fill="#4a7a3a">连续 128B（1 sector）</text>
+    <rect x="410" y="462" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="477" fill="#b85450">间隔 D×4B（32 sector）</text>
+
+    <rect x="30" y="486" width="160" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="501">访存事务数</text>
+    <rect x="190" y="486" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="501" fill="#4a7a3a">1（理想）</text>
+    <rect x="410" y="486" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="501" fill="#b85450">最多 32（放大 32×）</text>
+
+    <rect x="30" y="510" width="160" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="525">有效带宽</text>
+    <rect x="190" y="510" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="525" fill="#4a7a3a">≈ 峰值（高）</text>
+    <rect x="410" y="510" width="220" height="22" fill="#fff" stroke="#eee" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="525" fill="#b85450">远低于峰值（需转置优化）</text>
+  </g>
+
+  <text x="30" y="556" font-size="10" fill="#888">💡 面试关键：能讲清"归约轴决定合并性"是 BN/LN 区分的分水岭；LN 天然合并所以通常比 BN 快</text>
+</svg>

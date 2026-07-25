@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 620" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="620" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">kernel 链：10 个子 kernel 顺序调用 + 中间 tensor 流转</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">每个 kernel 由不同 grid 配置启动；中间结果落盘 HBM，kernel 边界即全局同步</text>
+
+  <!-- vertical timeline -->
+  <line x1="50" y1="70" x2="50" y2="580" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3 3" filter="url(#rough2)"/>
+
+  <!-- kernel boxes -->
+  <g font-size="10" fill="#333">
+    <!-- k0: LN1 -->
+    <rect x="70" y="66" width="200" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="82" font-weight="bold" fill="#d6a040">k0: LN1</text>
+    <text x="80" y="96" font-size="9" fill="#555">grid=N, block=256</text>
+    <text x="290" y="88" font-size="9" fill="#888">← x (seq,768)</text>
+    <text x="430" y="88" font-size="9" fill="#4a7a3a">→ x_norm (seq,768)</text>
+
+    <!-- k1: QKV GEMM -->
+    <rect x="70" y="112" width="200" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="128" font-weight="bold" fill="#b85450">k1: QKV Proj (GEMM)</text>
+    <text x="80" y="142" font-size="9" fill="#555">grid=N×3, block=tiled</text>
+    <text x="290" y="134" font-size="9" fill="#888">← x_norm</text>
+    <text x="430" y="134" font-size="9" fill="#4a7a3a">→ qkv (seq,2304)</text>
+
+    <!-- k2: MHA (fused softmax attn) -->
+    <rect x="70" y="158" width="200" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="174" font-weight="bold" fill="#4a7a3a">k2: Multi-Head Attn</text>
+    <text x="80" y="188" font-size="9" fill="#555">grid=H, block=256</text>
+    <text x="290" y="180" font-size="9" fill="#888">← qkv</text>
+    <text x="430" y="180" font-size="9" fill="#4a7a3a">→ attn_out (seq,768)</text>
+
+    <!-- k3: Attn Proj GEMM -->
+    <rect x="70" y="204" width="200" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="220" font-weight="bold" fill="#b85450">k3: Attn Proj (GEMM)</text>
+    <text x="80" y="234" font-size="9" fill="#555">grid=N, block=tiled</text>
+    <text x="290" y="226" font-size="9" fill="#888">← attn_out</text>
+    <text x="430" y="226" font-size="9" fill="#4a7a3a">→ attn_proj (seq,768)</text>
+
+    <!-- k4: Residual1 + Add -->
+    <rect x="70" y="250" width="200" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="266" font-weight="bold" fill="#446688">k4: Residual Add 1</text>
+    <text x="80" y="280" font-size="9" fill="#555">grid=N×D/256</text>
+    <text x="290" y="272" font-size="9" fill="#888">← x + attn_proj</text>
+    <text x="430" y="272" font-size="9" fill="#4a7a3a">→ hidden (seq,768)</text>
+
+    <!-- k5: LN2 -->
+    <rect x="70" y="296" width="200" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="312" font-weight="bold" fill="#d6a040">k5: LN2</text>
+    <text x="80" y="326" font-size="9" fill="#555">grid=N, block=256</text>
+    <text x="290" y="318" font-size="9" fill="#888">← hidden</text>
+    <text x="430" y="318" font-size="9" fill="#4a7a3a">→ h_norm (seq,768)</text>
+
+    <!-- k6: FC GEMM -->
+    <rect x="70" y="342" width="200" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="358" font-weight="bold" fill="#b85450">k6: FC (GEMM)</text>
+    <text x="80" y="372" font-size="9" fill="#555">grid=N×FFN/TILE</text>
+    <text x="290" y="364" font-size="9" fill="#888">← h_norm</text>
+    <text x="430" y="364" font-size="9" fill="#4a7a3a">→ fc (seq,3072)</text>
+
+    <!-- k7: GELU -->
+    <rect x="70" y="388" width="200" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="404" font-weight="bold" fill="#446688">k7: GELU (tanh)</text>
+    <text x="80" y="418" font-size="9" fill="#555">grid=seq×FFN/256</text>
+    <text x="290" y="410" font-size="9" fill="#888">← fc</text>
+    <text x="430" y="410" font-size="9" fill="#4a7a3a">→ gelu (seq,3072)</text>
+
+    <!-- k8: Proj GEMM -->
+    <rect x="70" y="434" width="200" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="450" font-weight="bold" fill="#b85450">k8: Proj (GEMM)</text>
+    <text x="80" y="464" font-size="9" fill="#555">grid=N×D/TILE</text>
+    <text x="290" y="456" font-size="9" fill="#888">← gelu</text>
+    <text x="430" y="456" font-size="9" fill="#4a7a3a">→ proj (seq,768)</text>
+
+    <!-- k9: Residual2 + Add -->
+    <rect x="70" y="480" width="200" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.1" rx="5" filter="url(#rough2)"/>
+    <text x="80" y="496" font-weight="bold" fill="#446688">k9: Residual Add 2</text>
+    <text x="80" y="510" font-size="9" fill="#555">grid=N×D/256</text>
+    <text x="290" y="502" font-size="9" fill="#888">← hidden + proj</text>
+    <text x="430" y="502" font-size="9" fill="#4a7a3a">→ output (seq,768)</text>
+  </g>
+
+  <!-- arrows on timeline -->
+  <g fill="none" stroke="#666" stroke-width="1.2">
+    <path d="M 50 102 L 50 112" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 148 L 50 158" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 194 L 50 204" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 240 L 50 250" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 286 L 50 296" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 332 L 50 342" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 378 L 50 388" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 424 L 50 434" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <path d="M 50 470 L 50 480" marker-end="url(#arr)" filter="url(#rough2)"/>
+  </g>
+
+  <!-- summary -->
+  <line x1="20" y1="536" x2="660" y2="536" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="546" width="610" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="335" y="566" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">10 个 kernel 严格顺序启动，中间 tensor 8 个落盘 HBM</text>
+  <text x="335" y="582" text-anchor="middle" font-size="10" fill="#888">kernel 边界 = 隐式全局同步（无需 cudaDeviceSynchronize，launch 即按序）</text>
+  <text x="335" y="596" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">优化主线：相邻 kernel 融合（LN+QKV、GELU+Proj、Residual+LN）减少 HBM 往返</text>
+</svg>

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="660" height="420" fill="#fafafa"/>
+
+  <text x="330" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">累加精度：float vs double（N=15M，uniform[0,1000]）</text>
+  <text x="330" y="44" text-anchor="middle" font-size="11" fill="#888">reference = torch.sum(input.double()).float()，故全程 double 累加才能匹配</text>
+
+  <!-- axes -->
+  <line x1="80" y1="340" x2="620" y2="340" stroke="#666" stroke-width="1.2" filter="url(#rough2)"/>
+  <line x1="80" y1="340" x2="80" y2="80" stroke="#666" stroke-width="1.2" filter="url(#rough2)"/>
+  <text x="350" y="368" text-anchor="middle" font-size="11" fill="#555">累加元素数 N（log）</text>
+  <text x="40" y="210" text-anchor="middle" font-size="11" fill="#555" transform="rotate(-90 40 210)">|gpu − ref|（log）</text>
+
+  <!-- x ticks -->
+  <g font-size="9" fill="#888">
+    <text x="120" y="356" text-anchor="middle">1K</text>
+    <text x="220" y="356" text-anchor="middle">100K</text>
+    <text x="330" y="356" text-anchor="middle">1M</text>
+    <text x="440" y="356" text-anchor="middle">10M</text>
+    <text x="560" y="356" text-anchor="middle">15M</text>
+  </g>
+  <!-- y ticks -->
+  <g font-size="9" fill="#888">
+    <text x="74" y="344" text-anchor="end">1e-6</text>
+    <text x="74" y="284" text-anchor="end">1e-3</text>
+    <text x="74" y="210" text-anchor="end">1e0</text>
+    <text x="74" y="136" text-anchor="end">1e3</text>
+    <text x="74" y="86" text-anchor="end">1e6</text>
+  </g>
+
+  <!-- tolerance line (atol=1e-5) -->
+  <line x1="80" y1="324" x2="620" y2="324" stroke="#4a7a3a" stroke-width="1" stroke-dasharray="5 3" filter="url(#rough2)"/>
+  <text x="612" y="320" text-anchor="end" font-size="9" fill="#4a7a3a">atol=1e-5</text>
+
+  <!-- float curve: low at small N, grows ~sqrt(N)*eps -->
+  <path d="M 120 330 Q 220 312 330 270 Q 440 220 560 170" stroke="#b85450" stroke-width="2" fill="none" filter="url(#rough2)"/>
+  <!-- float points -->
+  <circle cx="120" cy="330" r="3" fill="#b85450" filter="url(#rough2)"/>
+  <circle cx="220" cy="312" r="3" fill="#b85450" filter="url(#rough2)"/>
+  <circle cx="330" cy="270" r="3" fill="#b85450" filter="url(#rough2)"/>
+  <circle cx="440" cy="220" r="3" fill="#b85450" filter="url(#rough2)"/>
+  <circle cx="560" cy="170" r="3" fill="#b85450" filter="url(#rough2)"/>
+  <text x="566" y="166" font-size="10" fill="#b85450" font-weight="bold">float 累加</text>
+  <text x="566" y="178" font-size="9" fill="#b85450">误差 ~√N·eps·μ</text>
+
+  <!-- double curve: stays near 1e-6 -->
+  <path d="M 120 332 Q 220 332 330 330 Q 440 330 560 328" stroke="#446688" stroke-width="2" fill="none" filter="url(#rough2)"/>
+  <circle cx="120" cy="332" r="3" fill="#446688" filter="url(#rough2)"/>
+  <circle cx="220" cy="332" r="3" fill="#446688" filter="url(#rough2)"/>
+  <circle cx="330" cy="330" r="3" fill="#446688" filter="url(#rough2)"/>
+  <circle cx="440" cy="330" r="3" fill="#446688" filter="url(#rough2)"/>
+  <circle cx="560" cy="328" r="3" fill="#446688" filter="url(#rough2)"/>
+  <text x="566" y="330" font-size="10" fill="#446688" font-weight="bold">double 累加</text>
+  <text x="566" y="342" font-size="9" fill="#446688">误差恒 ~1e-6</text>
+
+  <!-- cross-over annotation -->
+  <path d="M 250 250 L 290 282" stroke="#888" stroke-width="0.8" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="150" y="246" font-size="10" fill="#b85450">N≈10⁴ 起超 atol</text>
+  <text x="150" y="258" font-size="9" fill="#888">（正负相消时更早 FAIL）</text>
+
+  <!-- ===== bottom: worked numbers ===== -->
+  <line x1="20" y1="380" x2="640" y2="380" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="388" width="290" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="175" y="404" text-anchor="middle" font-size="10" fill="#b85450">float: sum 7.5e9，ulp≈512，误差数百</text>
+  <rect x="340" y="388" width="290" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="485" y="404" text-anchor="middle" font-size="10" fill="#446688">double: sum 7.5e9，ulp≈1e-7，误差可忽略</text>
+</svg>

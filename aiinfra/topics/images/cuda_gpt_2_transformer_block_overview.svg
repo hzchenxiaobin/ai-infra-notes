@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">GPT-2 Block：LN1 → MHA → 残差 → LN2 → FFN → 残差</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">D=768, H=12, DH=64, FFN=3072；Pre-LN 结构，两条残差路径贯穿</text>
+
+  <!-- ===== input x ===== -->
+  <rect x="30" y="64" width="100" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="80" y="82" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">x</text>
+  <text x="80" y="96" text-anchor="middle" font-size="9" fill="#888">(seq, 768)</text>
+
+  <!-- ===== LN1 ===== -->
+  <path d="M 130 84 L 160 84" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="164" y="64" width="100" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="214" y="82" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">LayerNorm 1</text>
+  <text x="214" y="96" text-anchor="middle" font-size="9" fill="#888">沿 D 归约</text>
+
+  <!-- ===== QKV proj (GEMM) ===== -->
+  <path d="M 264 84 L 294 84" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="298" y="64" width="110" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="353" y="82" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">QKV Proj</text>
+  <text x="353" y="96" text-anchor="middle" font-size="9" fill="#888">GEMM (768→2304)</text>
+
+  <!-- ===== MHA ===== -->
+  <path d="M 408 84 L 438 84" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="442" y="56" width="150" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="74" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">Multi-Head Attn</text>
+  <text x="517" y="88" text-anchor="middle" font-size="9" fill="#555">Q·Kᵀ → softmax → ·V</text>
+  <text x="517" y="100" text-anchor="middle" font-size="9" fill="#888">12 heads × (seq, 64)</text>
+
+  <!-- ===== Attn proj ===== -->
+  <path d="M 517 116 L 517 136" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="462" y="140" width="110" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="158" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">Attn Proj</text>
+  <text x="517" y="172" text-anchor="middle" font-size="9" fill="#888">GEMM (768→768)</text>
+
+  <!-- ===== residual 1 (x + attn) ===== -->
+  <path d="M 462 160 L 350 160 L 350 220" stroke="#b85450" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="360" y="200" font-size="10" fill="#b85450" font-weight="bold">⊕ 残差 1</text>
+  <text x="360" y="214" font-size="9" fill="#888">x + attn_proj</text>
+
+  <!-- hidden after residual 1 -->
+  <path d="M 517 180 L 517 240" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="462" y="244" width="110" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="266" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">hidden</text>
+
+  <!-- ===== LN2 ===== -->
+  <path d="M 517 282 L 517 304" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="462" y="308" width="110" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="326" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">LayerNorm 2</text>
+  <text x="517" y="340" text-anchor="middle" font-size="9" fill="#888">沿 D 归约</text>
+
+  <!-- ===== FFN: fc -> gelu -> proj ===== -->
+  <path d="M 517 350 L 517 372" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="402" y="376" width="230" height="56" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="394" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">FFN</text>
+  <text x="517" y="408" text-anchor="middle" font-size="9" fill="#555">fc(768→3072) → GELU → proj(3072→768)</text>
+  <text x="517" y="422" text-anchor="middle" font-size="9" fill="#888">GELU(tanh 近似)</text>
+
+  <!-- ===== residual 2 ===== -->
+  <path d="M 517 434 L 517 460" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 462 452 L 350 452 L 350 470" stroke="#b85450" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="360" y="476" font-size="10" fill="#b85450" font-weight="bold">⊕ 残差 2</text>
+  <text x="360" y="490" font-size="9" fill="#888">hidden + proj</text>
+
+  <!-- output -->
+  <rect x="462" y="470" width="110" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="517" y="488" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">output</text>
+  <text x="517" y="502" text-anchor="middle" font-size="9" fill="#888">(seq, 768)</text>
+
+  <!-- ===== weights annotation ===== -->
+  <line x1="20" y1="520" x2="660" y2="520" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="528" width="610" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="4" filter="url(#rough2)"/>
+  <text x="335" y="544" text-anchor="middle" font-size="10" fill="#444" font-weight="bold">权重打包在一个 weights[] 缓冲区（约 7.1M floats）；LN/Attn/FFN 共 10 个子 kernel 串联</text>
+</svg>

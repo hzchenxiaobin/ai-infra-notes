@@ -63,6 +63,14 @@
 
 - 知乎面经中标注出现两次
 
+### 6. Top-K
+
+- 堆 / 部分排序；变形：Top-P 采样、MoE Top-K 路由
+
+### 7. Histogram
+
+- shared memory 私有化（privatization）+ 原子操作合并，考察 atomic 冲突优化
+
 ## 四、低频但出现过
 
 | 题目 | 说明 |
@@ -70,9 +78,7 @@
 | elementwise（vector add / relu / sigmoid） | 百度一面考过 vector add；追问 float4 向量化（注意是 **grid 除 4** 而不是 block 除 4，否则降低 occupancy） |
 | avg pooling、bbox IoU | CUDA 实现（CV 部署岗） |
 | NMS、conv2d、双线性插值 | 不好用 CUDA 写，要求 C++ 实现 |
-| histogram | shared memory + 原子操作 |
 | dot product | reduce 的直接应用 |
-| Top-K | 堆 / 部分排序 |
 | 量化 / 反量化 kernel | 推理优化岗 |
 | RoPE | 大模型算子岗 |
 
@@ -101,6 +107,8 @@
 | GEMV | 无纯 GEMV 题；最接近 [#17 Dot Product](https://leetgpu.com/challenges/dot-product)、[#18 Sparse Matrix-Vector Multiplication](https://leetgpu.com/challenges/sparse-matrix-vector-multiplication)（SpMV） |
 | FlashAttention / attention | [#6 Softmax Attention](https://leetgpu.com/challenges/softmax-attention)、[#53 Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention)（hard）、[#12 Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention)（hard）、[#80 Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) |
 | Scan（前缀和） | [#16 Prefix Sum](https://leetgpu.com/challenges/prefix-sum)（medium）、[#70 Segmented Prefix Sum](https://leetgpu.com/challenges/segmented-prefix-sum) |
+| Top-K | [#29 Top-K Selection](https://leetgpu.com/challenges/top-k-selection)（medium）、[#60 Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling)、[#67 MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) |
+| Histogram | [#13 Histogramming](https://leetgpu.com/challenges/histogramming)（medium） |
 
 ### 低频题
 
@@ -113,9 +121,7 @@
 | NMS | **无对应题** |
 | conv2d | [#10 2D Convolution](https://leetgpu.com/challenges/2d-convolution)（medium）；另有 [#9 1D Convolution](https://leetgpu.com/challenges/1d-convolution)、[#11 3D Convolution](https://leetgpu.com/challenges/3d-convolution) |
 | 双线性插值 | **无对应题**（图像类仅有 [#28 Gaussian Blur](https://leetgpu.com/challenges/gaussian-blur)、[#66 RGB to Grayscale](https://leetgpu.com/challenges/rgb-to-grayscale)） |
-| histogram | [#13 Histogramming](https://leetgpu.com/challenges/histogramming)（medium） |
 | dot product | [#17 Dot Product](https://leetgpu.com/challenges/dot-product)、[#58 FP16 Dot Product](https://leetgpu.com/challenges/fp16-dot-product) |
-| Top-K | [#29 Top-K Selection](https://leetgpu.com/challenges/top-k-selection)（medium）、[#60 Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling)、[#67 MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) |
 | 量化 / 反量化 kernel | [#64 Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization)、[#32 INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul)、[#81 INT4 MatMul](https://leetgpu.com/challenges/int4-matmul)、[#96 INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) |
 | RoPE | [#61 RoPE Embedding](https://leetgpu.com/challenges/rope-embedding)（medium） |
 

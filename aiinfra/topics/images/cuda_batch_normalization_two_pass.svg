@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">单 channel 两遍归约数据流（block c 内部）</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">256 threads grid-stride 扫 N 个元素 → warp shuffle 块归约 → 广播 mean/var → 写回</text>
+
+  <!-- ===== Pass 1: mean ===== -->
+  <text x="30" y="76" font-size="12" fill="#b85450" font-weight="bold">① Pass 1：求 mean[c]</text>
+
+  <!-- input column for channel c -->
+  <text x="30" y="98" font-size="10" fill="#446688">input[:, c]</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="104" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="118" text-anchor="middle">1.0</text>
+    <rect x="40" y="126" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="140" text-anchor="middle">3.0</text>
+    <text x="60" y="158" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <rect x="40" y="164" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="178" text-anchor="middle">5.0</text>
+  </g>
+  <text x="100" y="148" font-size="9" fill="#888">global memory（读 1 遍）</text>
+
+  <!-- grid-stride threads -->
+  <path d="M 84 134 L 160 134" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <g font-size="9" fill="#b85450">
+    <rect x="170" y="118" width="40" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="190" y="132" text-anchor="middle">t0: s=4</text>
+    <rect x="170" y="142" width="40" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="190" y="156" text-anchor="middle">t1: s=...</text>
+    <text x="230" y="156" font-size="9" fill="#888">grid-stride</text>
+    <rect x="170" y="166" width="40" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="190" y="180" text-anchor="middle">t255</text>
+  </g>
+  <text x="170" y="108" font-size="9" fill="#555">local_sum += input[n,c]</text>
+
+  <!-- block reduce -->
+  <path d="M 214 146 L 286 146" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="290" y="126" width="160" height="42" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="370" y="144" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">block_reduce_sum</text>
+  <text x="370" y="158" text-anchor="middle" font-size="9" fill="#555">warp shuffle 5 步</text>
+  <text x="370" y="170" text-anchor="middle" font-size="9" fill="#555">+ shared 广播</text>
+
+  <!-- mean result -->
+  <path d="M 454 146 L 500 146" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="504" y="126" width="80" height="42" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+  <text x="544" y="144" text-anchor="middle" font-size="9" fill="#888">sum/N</text>
+  <text x="544" y="160" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">mean=3.0</text>
+
+  <text x="504" y="186" font-size="9" fill="#888">广播给全 block</text>
+
+  <!-- ===== Pass 2: var ===== -->
+  <line x1="20" y1="208" x2="660" y2="208" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="230" font-size="12" fill="#4a7a3a" font-weight="bold">② Pass 2：求 var[c] = Σ(x - mean)² / N</text>
+
+  <text x="30" y="252" font-size="10" fill="#446688">input[:, c]</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="258" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="272" text-anchor="middle">1.0</text>
+    <rect x="40" y="280" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="294" text-anchor="middle">3.0</text>
+    <text x="60" y="312" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <rect x="40" y="318" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="332" text-anchor="middle">5.0</text>
+  </g>
+  <text x="100" y="300" font-size="9" fill="#888">global memory（重复读！）</text>
+
+  <path d="M 84 288 L 160 288" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <g font-size="9" fill="#4a7a3a">
+    <rect x="170" y="272" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="195" y="286" text-anchor="middle">t0: 4.0</text>
+    <rect x="170" y="296" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="195" y="310" text-anchor="middle">t1: ...</text>
+    <rect x="170" y="320" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="195" y="334" text-anchor="middle">t255</text>
+  </g>
+  <text x="170" y="262" font-size="9" fill="#555">local_sq += (x - mean)²</text>
+
+  <path d="M 224 290 L 286 290" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="290" y="270" width="160" height="42" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="370" y="288" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">block_reduce_sum</text>
+  <text x="370" y="302" text-anchor="middle" font-size="9" fill="#555">同一个模板复用</text>
+
+  <path d="M 454 290 L 500 290" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="504" y="270" width="80" height="42" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+  <text x="544" y="288" text-anchor="middle" font-size="9" fill="#888">sq/N</text>
+  <text x="544" y="304" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">var=2.67</text>
+
+  <!-- ===== Pass 3: normalize ===== -->
+  <line x1="20" y1="346" x2="660" y2="346" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="368" font-size="12" fill="#446688" font-weight="bold">③ Pass 3：写回 output[n,c] = γ·(x-mean)/√(var+ε) + β</text>
+
+  <g font-size="9" fill="#333">
+    <rect x="40" y="376" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="390" text-anchor="middle">1.0</text>
+    <rect x="40" y="398" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="412" text-anchor="middle">3.0</text>
+    <rect x="40" y="436" width="40" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="60" y="450" text-anchor="middle">5.0</text>
+  </g>
+  <text x="100" y="420" font-size="9" fill="#888">第 3 遍读 input</text>
+
+  <path d="M 84 412 L 220 412" stroke="#446688" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="224" y="392" width="240" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="344" y="410" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">逐元素计算（无归约）</text>
+  <text x="344" y="424" text-anchor="middle" font-size="9" fill="#555">(1-3)/√(2.67+ε) ≈ -1.22</text>
+  <text x="344" y="436" text-anchor="middle" font-size="9" fill="#555">(3-3)/√... = 0</text>
+
+  <path d="M 468 412 L 510 412" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <g font-size="9" fill="#333">
+    <rect x="514" y="376" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="539" y="390" text-anchor="middle">-1.22</text>
+    <rect x="514" y="398" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="539" y="412" text-anchor="middle">0</text>
+    <rect x="514" y="436" width="50" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="539" y="450" text-anchor="middle">1.22</text>
+  </g>
+  <text x="514" y="468" font-size="9" fill="#888">output[:, c]（写 1 遍）</text>
+
+  <!-- ===== Summary ===== -->
+  <line x1="20" y1="488" x2="660" y2="488" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="498" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="518" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">每 channel 访存：3 读 input + 1 写 output = 4N × 4B</text>
+  <text x="335" y="534" text-anchor="middle" font-size="10" fill="#888">全张量 = 4 × N×C × 4B；γ/β 只 C 个数可忽略；memory-bound，AI ≈ 5 FLOP / 16B</text>
+</svg>

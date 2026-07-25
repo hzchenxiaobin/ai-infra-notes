@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="540" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Layer Norm：一个 block 负责一个 sample，沿 D 维归约</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">input(N×D) 行主序，mean/var 沿最后一维 D 统计（连续！），γ/β 按特征维缩放</text>
+
+  <!-- ===== Input matrix (N x D) ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">input[N, D]  (行主序，每行 D 个特征连续存放)</text>
+  <g font-size="9" fill="#333">
+    <!-- row n=0 (highlighted, contiguous) -->
+    <rect x="58"  y="86" width="40" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="78"  y="102" text-anchor="middle">1.0</text>
+    <rect x="98"  y="86" width="40" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="118" y="102" text-anchor="middle">2.0</text>
+    <rect x="138" y="86" width="40" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="158" y="102" text-anchor="middle">3.0</text>
+    <text x="200" y="102" font-size="10" fill="#888">...</text>
+    <rect x="228" y="86" width="40" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="248" y="102" text-anchor="middle">D</text>
+    <text x="40" y="102" text-anchor="end" font-size="9" fill="#888">n=0</text>
+    <text x="288" y="102" font-size="9" fill="#b85450" font-weight="bold">← 连续（coalesced）</text>
+
+    <!-- row n=1 -->
+    <rect x="58"  y="114" width="40" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="78"  y="130" text-anchor="middle">3.0</text>
+    <rect x="98"  y="114" width="40" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="118" y="130" text-anchor="middle">4.0</text>
+    <rect x="138" y="114" width="40" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="158" y="130" text-anchor="middle">5.0</text>
+    <text x="200" y="130" font-size="10" fill="#888">...</text>
+    <rect x="228" y="114" width="40" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="248" y="130" text-anchor="middle">6.0</text>
+    <text x="40" y="130" text-anchor="end" font-size="9" fill="#888">n=1</text>
+
+    <text x="78"  y="158" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <text x="118" y="158" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <text x="158" y="158" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <text x="248" y="158" text-anchor="middle" font-size="10" fill="#888">...</text>
+    <text x="40" y="158" text-anchor="end" font-size="9" fill="#888">...</text>
+
+    <!-- row n=N-1 -->
+    <rect x="58"  y="166" width="40" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="78"  y="182" text-anchor="middle">5.0</text>
+    <rect x="98"  y="166" width="40" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="118" y="182" text-anchor="middle">6.0</text>
+    <rect x="138" y="166" width="40" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="158" y="182" text-anchor="middle">7.0</text>
+    <text x="200" y="182" font-size="10" fill="#888">...</text>
+    <rect x="228" y="166" width="40" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="248" y="182" text-anchor="middle">8.0</text>
+    <text x="40" y="182" text-anchor="end" font-size="9" fill="#888">n=N-1</text>
+  </g>
+
+  <!-- arrows down per row (each row -> one block) -->
+  <path d="M 148 194 L 148 216" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="290" y="212" font-size="12" fill="#444" font-weight="bold">grid = N 个 block（每 sample 一个 block，沿 D 维归约）</text>
+
+  <!-- ===== blocks (one per sample) ===== -->
+  <g font-size="9" fill="#333">
+    <rect x="58" y="220" width="180" height="44" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="148" y="238" text-anchor="middle" font-weight="bold" fill="#b85450">block 0 (sample n=0)</text>
+    <text x="148" y="254" text-anchor="middle" fill="#555">256 threads grid-stride over D</text>
+
+    <rect x="250" y="220" width="180" height="44" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="340" y="238" text-anchor="middle" font-weight="bold" fill="#4a7a3a">block 1 (sample n=1)</text>
+    <text x="340" y="254" text-anchor="middle" fill="#555">256 threads grid-stride over D</text>
+
+    <rect x="442" y="220" width="180" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="532" y="238" text-anchor="middle" font-weight="bold" fill="#d6a040">block N-1 (n=N-1)</text>
+    <text x="532" y="254" text-anchor="middle" fill="#555">256 threads grid-stride over D</text>
+  </g>
+
+  <!-- ===== per-sample stats ===== -->
+  <path d="M 148 268 L 148 288" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="200" y="284" font-size="12" fill="#444" font-weight="bold">每 block 产出 mean[n] / var[n]（块归约，warp shuffle）</text>
+
+  <g font-size="9" fill="#333">
+    <rect x="78" y="292" width="140" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="148" y="307" text-anchor="middle">mean=2.0, var=0.67</text>
+    <rect x="270" y="292" width="140" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="340" y="307" text-anchor="middle">mean=4.5, var=0.83</text>
+    <rect x="462" y="292" width="140" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="532" y="307" text-anchor="middle">mean=6.5, var=0.83</text>
+  </g>
+
+  <!-- ===== Three passes ===== -->
+  <line x1="20" y1="330" x2="660" y2="330" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="352" font-size="12" fill="#444" font-weight="bold">三遍扫描（沿 D 维，每个 block 独立，访问连续）：</text>
+
+  <rect x="30" y="362" width="190" height="64" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="382" font-size="11" fill="#b85450" font-weight="bold">① Pass 1：求 mean</text>
+  <text x="44" y="398" font-size="9" fill="#555">sum = Σ input[n,d]</text>
+  <text x="44" y="412" font-size="9" fill="#555">mean = sum / D（block_reduce）</text>
+  <text x="44" y="424" font-size="9" fill="#888">读 input 1 遍（连续）</text>
+
+  <rect x="240" y="362" width="190" height="64" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="254" y="382" font-size="11" fill="#4a7a3a" font-weight="bold">② Pass 2：求 var</text>
+  <text x="254" y="398" font-size="9" fill="#555">sq = Σ (x - mean)²</text>
+  <text x="254" y="412" font-size="9" fill="#555">var = sq / D（biased）</text>
+  <text x="254" y="424" font-size="9" fill="#888">再读 input 1 遍</text>
+
+  <rect x="450" y="362" width="190" height="64" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="464" y="382" font-size="11" fill="#446688" font-weight="bold">③ Pass 3：归一化写回</text>
+  <text x="464" y="398" font-size="9" fill="#555">y = γ·(x-mean)/√(var+ε) + β</text>
+  <text x="464" y="412" font-size="9" fill="#555">逐元素，γ/β 按 d 索引</text>
+  <text x="464" y="424" font-size="9" fill="#888">第 3 遍读 + 写 output</text>
+
+  <!-- ===== Summary ===== -->
+  <rect x="30" y="442" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="462" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">访存：每 sample 读 input 3 遍 + 写 output 1 遍，沿 D 连续 → coalesced → memory-bound</text>
+  <text x="335" y="478" text-anchor="middle" font-size="10" fill="#888">与 BN 对偶：BN 沿 N（strided 不合并），LN 沿 D（连续合并）→ 同规模 LN 有效带宽更高</text>
+
+  <text x="30" y="516" font-size="10" fill="#888">注：Transformer 默认 norm（Post-LN / Pre-LN）；RMSNorm 是 LN 去 mean 的简化；GroupNorm 是分组折中</text>
+</svg>

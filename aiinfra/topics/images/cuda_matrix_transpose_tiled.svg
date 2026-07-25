@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="540" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Matrix Transpose：shared memory 中转 + padding 消 bank conflict</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">读 input 行主序（coalesced）→ shared tile → 写 output 转置（coalesced）</text>
+
+  <!-- ===== input matrix ===== -->
+  <text x="40" y="76" font-size="12" fill="#446688" font-weight="bold">input (rows×cols)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="84" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="99" text-anchor="middle">行 0 (连续读)</text>
+    <rect x="40" y="108" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="123" text-anchor="middle">行 1</text>
+    <text x="100" y="142" text-anchor="middle" font-size="9" fill="#888">...</text>
+    <rect x="40" y="148" width="120" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="163" text-anchor="middle">行 TILE-1</text>
+  </g>
+  <text x="180" y="128" font-size="9" fill="#4a7a3a" font-weight="bold">← coalesced 读</text>
+
+  <!-- ===== shared tile ===== -->
+  <path d="M 160 130 L 220 130" stroke="#d6a040" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="225" y="84" width="100" height="100" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="275" y="104" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">shared</text>
+  <text x="275" y="120" text-anchor="middle" font-size="9" fill="#555">tile[TILE][TILE+1]</text>
+  <text x="275" y="136" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">+1 列 padding</text>
+  <text x="275" y="152" text-anchor="middle" font-size="9" fill="#555">消 bank conflict</text>
+  <text x="275" y="168" text-anchor="middle" font-size="8" fill="#888">列读时跨 bank</text>
+
+  <!-- ===== output (transposed) ===== -->
+  <path d="M 325 130 L 380 130" stroke="#d6a040" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="400" y="76" font-size="12" fill="#b85450" font-weight="bold">output (cols×rows)</text>
+  <g font-size="9" fill="#333">
+    <rect x="400" y="84" width="22" height="120" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="411" y="148" text-anchor="middle" font-size="8" transform="rotate(-90 411 148)">列 0</text>
+    <rect x="424" y="84" width="22" height="120" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="148" text-anchor="middle" font-size="8" transform="rotate(-90 435 148)">列 1</text>
+    <text x="465" y="148" text-anchor="middle" font-size="9" fill="#888">...</text>
+  </g>
+  <text x="500" y="128" font-size="9" fill="#4a7a3a" font-weight="bold">← coalesced 写</text>
+
+  <!-- ===== bank conflict explanation ===== -->
+  <line x1="20" y1="200" x2="660" y2="200" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="224" font-size="12" fill="#444" font-weight="bold">bank conflict 成因与 padding 消除</text>
+
+  <rect x="30" y="236" width="290" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="256" font-size="10" fill="#b85450" font-weight="bold">无 padding：列读冲突</text>
+  <text x="44" y="272" font-size="9" fill="#555">shared[0..31][k]，同列 32 元素</text>
+  <text x="44" y="286" font-size="9" fill="#555">地址间隔 TILE*4B，bank = (addr/4)%32</text>
+  <text x="44" y="300" font-size="9" fill="#555">TILE=32 时全落同一 bank → 32 路冲突</text>
+  <text x="44" y="314" font-size="9" fill="#b85450">事务放大 32×，带宽降为 1/32</text>
+
+  <rect x="340" y="236" width="290" height="80" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="354" y="256" font-size="10" fill="#4a7a3a" font-weight="bold">+1 列 padding：消除冲突</text>
+  <text x="354" y="272" font-size="9" fill="#555">shared[0..31][TILE+1]，步长变 (TILE+1)*4</text>
+  <text x="354" y="286" font-size="9" fill="#555">bank = (k*(TILE+1)) % 32，TILE+1=33 与 32 互质</text>
+  <text x="354" y="300" font-size="9" fill="#555">32 元素散落 32 个 bank → 无冲突</text>
+  <text x="354" y="314" font-size="9" fill="#4a7a3a">事务 = 1，带宽满</text>
+
+  <!-- ===== diagonal handling ===== -->
+  <line x1="20" y1="336" x2="660" y2="336" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="360" font-size="12" fill="#444" font-weight="bold">对角元素处理（方阵特例）</text>
+  <rect x="30" y="372" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="392" font-size="10" fill="#444">方阵转置时 tile (i,j) 与 (j,i) 互为转置，若两 block 同时读写同一 tile 会数据竞争</text>
+  <text x="44" y="408" font-size="9" fill="#555">解法：按对角线顺序处理，或 tile 内仅处理上/下三角 + 对角线单独写</text>
+
+  <!-- ===== summary ===== -->
+  <rect x="30" y="436" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="456" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">访存：input 读 1 遍（coalesced）+ output 写 1 遍（coalesced）= 2×rows×cols×4B</text>
+  <text x="335" y="472" text-anchor="middle" font-size="10" fill="#888">memory-bound（AI ≈ 0.25 FLOP/Byte）；优化核心是让读写都 coalesced + 消 bank conflict</text>
+
+  <text x="30" y="510" font-size="10" fill="#888">关键：读行连续（coalesced）写列不连续 → 经 shared 中转后写行连续；padding 消列读冲突</text>
+</svg>

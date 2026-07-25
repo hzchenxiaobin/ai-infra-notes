@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">两阶段归约：全局标量 rms 的并行计算（N=100k）</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">单 block 装不下大 N → 拆 B 个 block 各自归约 → 第二 kernel 汇总（同 #4 Reduction 骨架）</text>
+
+  <!-- ===== Why two-stage ===== -->
+  <rect x="30" y="60" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="80" font-size="11" fill="#444" font-weight="bold">为什么需要两阶段？</text>
+  <text x="44" y="96" font-size="10" fill="#555">rms 是整个数组的全局标量（不像 LN 每 row 独立）。N=100k 时单 block(256 thread) grid-stride 也能算，但并行度不足；</text>
+  <text x="44" y="110" font-size="10" fill="#555">用 B=min(⌈N/256⌉, 4096) 个 block 并行归约 → partial[B]，第二 kernel 汇总（kernel 边界 = 全局同步）</text>
+
+  <!-- ===== Stage 1: block reduce ===== -->
+  <line x1="20" y1="128" x2="660" y2="128" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="152" font-size="12" fill="#b85450" font-weight="bold">① Stage 1：reduce_block_kernel — B 个 block 并行累加平方和</text>
+
+  <!-- input -->
+  <text x="30" y="174" font-size="10" fill="#446688">input[N] (N=100k, 连续)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="180" width="30" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="194" text-anchor="middle">x₀</text>
+    <rect x="70" y="180" width="30" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="85" y="194" text-anchor="middle">x₁</text>
+    <text x="115" y="194" font-size="9" fill="#888">...</text>
+    <rect x="140" y="180" width="30" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="155" y="194" text-anchor="middle">x_{N-1}</text>
+  </g>
+
+  <!-- arrows to 3 blocks -->
+  <path d="M 55 204 L 55 220" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 85 204 L 200 220" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 155 204 L 345 220" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 3 blocks -->
+  <g font-size="9" fill="#b85450">
+    <rect x="30" y="224" width="160" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="40" y="240" font-weight="bold">block 0</text>
+    <text x="40" y="254" font-size="9" fill="#555">i = bx*256+tx + k*gridDim*256</text>
+    <text x="40" y="268" font-size="9" fill="#555">local_sq += (double)x[i]²</text>
+    <rect x="40" y="276" width="140" height="20" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="110" y="290" text-anchor="middle" font-size="9" fill="#d6a040">warp shuffle → partial[0]</text>
+  </g>
+  <g font-size="9" fill="#b85450">
+    <rect x="210" y="224" width="160" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="220" y="240" font-weight="bold">block 1</text>
+    <text x="220" y="254" font-size="9" fill="#555">grid-stride 累加</text>
+    <text x="220" y="268" font-size="9" fill="#555">local_sq += (double)x[i]²</text>
+    <rect x="220" y="276" width="140" height="20" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="290" y="290" text-anchor="middle" font-size="9" fill="#d6a040">warp shuffle → partial[1]</text>
+  </g>
+  <g font-size="9" fill="#b85450">
+    <rect x="390" y="224" width="160" height="80" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="400" y="240" font-weight="bold">block B-1</text>
+    <text x="400" y="254" font-size="9" fill="#555">grid-stride 累加</text>
+    <text x="400" y="268" font-size="9" fill="#555">local_sq += (double)x[i]²</text>
+    <rect x="400" y="276" width="140" height="20" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="470" y="290" text-anchor="middle" font-size="9" fill="#d6a040">warp shuffle → partial[B-1]</text>
+  </g>
+
+  <!-- partial -->
+  <path d="M 110 308 L 110 324" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 290 308 L 290 324" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 470 308 L 470 324" stroke="#4a7a3a" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <text x="30" y="320" font-size="12" fill="#4a7a3a" font-weight="bold">partial[B] (double, B≤4096)</text>
+  <g font-size="9" fill="#333">
+    <rect x="80" y="328" width="60" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="110" y="343" text-anchor="middle">sq₀</text>
+    <rect x="260" y="328" width="60" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="290" y="343" text-anchor="middle">sq₁</text>
+    <text x="345" y="343" font-size="10" fill="#888">...</text>
+    <rect x="440" y="328" width="60" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="470" y="343" text-anchor="middle">sq_{B-1}</text>
+  </g>
+
+  <!-- ===== Stage 2: final reduce + normalize ===== -->
+  <line x1="20" y1="368" x2="660" y2="368" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="392" font-size="12" fill="#446688" font-weight="bold">② Stage 2：rms_norm_finalize_kernel — 1 个 block 归约 partial + 写回 output</text>
+
+  <rect x="120" y="400" width="440" height="100" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="340" y="420" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">reduce_final_kernel (grid=1, block=256)</text>
+  <text x="140" y="438" font-size="9" fill="#555">1. grid-stride 读 partial[]，double 累加</text>
+  <text x="140" y="452" font-size="9" fill="#555">2. block_reduce_sum → total_sq</text>
+  <text x="140" y="466" font-size="9" fill="#555">3. rms = sqrt(total_sq / N + eps)  ← 全局标量，广播</text>
+  <text x="140" y="480" font-size="9" fill="#555">4. grid-stride 写回：output[i] = γ·x[i]/rms + β  ← 再读一遍 input</text>
+  <text x="140" y="494" font-size="9" fill="#888">注：第 4 步复用同一 kernel，省一次 launch 开销</text>
+
+  <!-- ===== Summary ===== -->
+  <rect x="30" y="514" width="610" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="335" y="532" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">2 个 kernel：block 归约 + finalize（归约+写回融合）</text>
+  <text x="335" y="546" text-anchor="middle" font-size="10" fill="#888">kernel 边界 = 隐式全局同步；全程 double 累加保精度（参考用 double）</text>
+</svg>

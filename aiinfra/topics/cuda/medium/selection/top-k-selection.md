@@ -74,7 +74,7 @@ __global__ void topk_full_sort(const float* input, float* output, int N, int k) 
 - **Block 级（单 pass）**：每个 block 取一个 `TILE=4096` 元素的 tile，在 shared memory 里做 **bitonic 排序**（降序），只保留前 `BK=128` 个写回 global，丢弃其余 3968 个；
 - **多 pass 归约**：重复上述 kernel，把上一轮的输出当下一轮输入，直到元素数 ≤ TILE，最后一个 block 排序后取前 `k` 个。
 
-![Top-K Selection：分块 bitonic 排序 + 多 pass 归约](../images/cuda_top_k_selection_overview.svg)
+![Top-K Selection：分块 bitonic 排序 + 多 pass 归约](../../../images/cuda_top_k_selection_overview.svg)
 
 **参数选择**：
 
@@ -108,11 +108,11 @@ Final:  1,536 ≤ 4096 → 1 block 排序 → 取前 k=100
 
 - **Bitonic 排序网络**：数据无关的 compare-swap 网络，`O(N log²N)` 但**完全并行**——每个 substage 内所有 compare-swap 互不冲突，可同时执行，是 GPU 排序的标准积木；
 
-![Bitonic 排序网络（降序，8 元素示例）](../images/cuda_top_k_selection_bitonic.svg)
+![Bitonic 排序网络（降序，8 元素示例）](../../../images/cuda_top_k_selection_bitonic.svg)
 
 - **BK ≥ k 不变量**：保证全局 top-k 元素每轮不被丢弃——这是分块归约正确性的**唯一**前提；
 
-![不变量 BK ≥ k：全局 top-k 元素每轮必存活](../images/cuda_top_k_selection_invariant.svg)
+![不变量 BK ≥ k：全局 top-k 元素每轮必存活](../../../images/cuda_top_k_selection_invariant.svg)
 
 - **`-INFINITY` 填充**：tile 末尾不足 `TILE` 的位置补 `-INFINITY`，排序后沉到底部，不影响 top-BK 的正确性，使内层排序无需边界判断；
 - **Ping-pong 缓冲**：两个 device buffer 交替充当输入/输出，避免每 pass 额外拷贝；
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
 }
 ```
 
-> 💡 提交 LeetGPU 平台时只需 `solve` + `topk_reduce` kernel；带 `main()` 的版本用于本地自测与 CPU 对比。本环境无 GPU，bitonic 排序逻辑已用 8 元素示例手验（见 §4.2），与 [Reduction](https://leetgpu.com/challenges/reduction) / [Softmax](softmax.md) 的 block 归约同源。
+> 💡 提交 LeetGPU 平台时只需 `solve` + `topk_reduce` kernel；带 `main()` 的版本用于本地自测与 CPU 对比。本环境无 GPU，bitonic 排序逻辑已用 8 元素示例手验（见 §4.2），与 [Reduction](https://leetgpu.com/challenges/reduction) / [Softmax](../../high/reduction/softmax.md) 的 block 归约同源。
 
 ### 4.1 面试手写版：bitonic 排序骨架
 

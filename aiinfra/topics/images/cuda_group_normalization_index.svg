@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">索引映射：组内线性下标 i → 全局地址（连续性证明）</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">NCHW 下组内元素天然连续：i = c_local·(H·W) + s ⇒ addr = base + i</text>
+
+  <!-- ===== group layout ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">组 (n, g) 的内存布局（NCHW，Cg=C/G 通道 × H × W）</text>
+  <text x="30" y="92" font-size="10" fill="#888">base = (n·C + g·Cg) · H·W</text>
+
+  <!-- contiguous block of Cg*H*W elements -->
+  <g font-size="9" fill="#333">
+    <!-- channel c_local=0 -->
+    <rect x="40"  y="104" width="28" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="54"  y="119" text-anchor="middle">x₀</text>
+    <rect x="68"  y="104" width="28" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="82"  y="119" text-anchor="middle">x₁</text>
+    <text x="100" y="119" font-size="9" fill="#888">...</text>
+    <rect x="120" y="104" width="28" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="134" y="119" text-anchor="middle">x_{HW-1}</text>
+    <text x="170" y="119" font-size="9" fill="#b85450" font-weight="bold">c_local=0 (H·W 个，连续)</text>
+
+    <!-- channel c_local=1 -->
+    <rect x="40"  y="132" width="28" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="54"  y="147" text-anchor="middle">x</text>
+    <rect x="68"  y="132" width="28" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="82"  y="147" text-anchor="middle">x</text>
+    <text x="100" y="147" font-size="9" fill="#888">...</text>
+    <rect x="120" y="132" width="28" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="134" y="147" text-anchor="middle">x</text>
+    <text x="170" y="147" font-size="9" fill="#4a7a3a" font-weight="bold">c_local=1 (H·W 个，连续)</text>
+
+    <text x="82" y="172" text-anchor="middle" font-size="10" fill="#888">⋮</text>
+
+    <!-- channel c_local=Cg-1 -->
+    <rect x="40"  y="180" width="28" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="54"  y="195" text-anchor="middle">x</text>
+    <rect x="68"  y="180" width="28" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="82"  y="195" text-anchor="middle">x</text>
+    <text x="100" y="195" font-size="9" fill="#888">...</text>
+    <rect x="120" y="180" width="28" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="134" y="195" text-anchor="middle">x</text>
+    <text x="170" y="195" font-size="9" fill="#446688" font-weight="bold">c_local=Cg-1 (H·W 个，连续)</text>
+  </g>
+
+  <!-- bracket showing whole group contiguous -->
+  <path d="M 38 100 L 34 100 L 34 206 L 38 206" stroke="#d6a040" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="20" y="158" text-anchor="middle" font-size="9" fill="#d6a040" font-weight="bold" transform="rotate(-90 20 158)">M=Cg·H·W 连续</text>
+
+  <!-- ===== linear index mapping ===== -->
+  <line x1="20" y1="220" x2="660" y2="220" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="244" font-size="12" fill="#444" font-weight="bold">线性下标 i ∈ [0, M) 到全局地址的推导</text>
+
+  <rect x="30" y="256" width="610" height="120" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="278" font-size="10" fill="#333" font-family="monospace">i = c_local · (H·W) + s          // c_local ∈ [0, Cg), s ∈ [0, H·W)</text>
+  <text x="44" y="296" font-size="10" fill="#333" font-family="monospace">channel c = g · Cg + c_local      // 全局通道号</text>
+  <text x="44" y="314" font-size="10" fill="#333" font-family="monospace">addr = n·C·H·W + c·H·W + s</text>
+  <text x="44" y="332" font-size="10" fill="#333" font-family="monospace">     = n·C·H·W + (g·Cg + c_local)·H·W + s</text>
+  <text x="44" y="350" font-size="10" fill="#333" font-family="monospace">     = [n·C + g·Cg]·H·W + c_local·H·W + s</text>
+  <text x="44" y="368" font-size="10" fill="#b85450" font-weight="bold" font-family="monospace">     = base + i     ✓ 连续！</text>
+
+  <!-- ===== implication ===== -->
+  <line x1="20" y1="390" x2="660" y2="390" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="414" font-size="12" fill="#444" font-weight="bold">推论：grid-stride loop 直接 base + i，warp 内地址连续 → coalesced</text>
+
+  <!-- grid-stride loop visual -->
+  <g font-size="9" fill="#333">
+    <rect x="40" y="424" width="20" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="50" y="438" text-anchor="middle">t0</text>
+    <rect x="60" y="424" width="20" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="70" y="438" text-anchor="middle">t1</text>
+    <text x="92" y="438" font-size="9" fill="#888">...</text>
+    <rect x="110" y="424" width="20" height="20" fill="#e8f0fe" stroke="#446688" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+    <text x="120" y="438" text-anchor="middle">t31</text>
+    <text x="150" y="438" font-size="9" fill="#4a7a3a">读 base+tid..base+tid+31（128B 连续 = 1 sector）</text>
+  </g>
+
+  <path d="M 180 448 L 180 468" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="40" y="472" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+  <text x="50" y="486" text-anchor="middle">t0</text>
+  <rect x="60" y="472" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+  <text x="70" y="486" text-anchor="middle">t1</text>
+  <text x="92" y="486" font-size="9" fill="#888">...</text>
+  <rect x="110" y="472" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.7" rx="2" filter="url(#rough2)"/>
+  <text x="120" y="486" text-anchor="middle">t31</text>
+  <text x="150" y="486" font-size="9" fill="#b85450">下一轮 i += BLOCK_SIZE（仍连续）</text>
+
+  <!-- ===== gamma/beta index ===== -->
+  <line x1="20" y1="506" x2="660" y2="506" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="516" width="610" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="536" font-size="10" fill="#446688" font-weight="bold">写回时 γ/β 按全局通道 c = g·Cg + (i / (H·W)) 索引（组内不同通道用不同 γ/β）</text>
+</svg>

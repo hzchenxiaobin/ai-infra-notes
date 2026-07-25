@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 580" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="580" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">RMSNorm vs LayerNorm：去 mean 让归约从 2 遍变 1 遍</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">RMSNorm 只算 Σx²（无 mean-centering），比 LN 少一遍 mean 归约 + 少一遍 global 读</text>
+
+  <!-- ===== LayerNorm (left) ===== -->
+  <rect x="30" y="60" width="300" height="340" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="180" y="84" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">LayerNorm（2 次归约 + 写回）</text>
+  <text x="180" y="100" text-anchor="middle" font-size="10" fill="#555">y = γ·(x - mean)/√(var+ε) + β</text>
+
+  <rect x="50" y="112" width="260" height="40" fill="#fff" stroke="#b85450" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="64" y="130" font-size="10" fill="#b85450" font-weight="bold">① Pass 1：求 mean</text>
+  <text x="64" y="144" font-size="9" fill="#555">读 input 1 遍，block_reduce_sum</text>
+
+  <rect x="50" y="160" width="260" height="40" fill="#fff" stroke="#b85450" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="64" y="178" font-size="10" fill="#b85450" font-weight="bold">② Pass 2：求 var</text>
+  <text x="64" y="192" font-size="9" fill="#555">再读 input 1 遍，Σ(x-mean)²</text>
+
+  <rect x="50" y="208" width="260" height="40" fill="#fff" stroke="#b85450" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="64" y="226" font-size="10" fill="#446688" font-weight="bold">③ Pass 3：归一化写回</text>
+  <text x="64" y="240" font-size="9" fill="#555">第 3 遍读 + 写 output</text>
+
+  <rect x="50" y="260" width="260" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="4" filter="url(#rough2)"/>
+  <text x="64" y="278" font-size="10" fill="#b85450" font-weight="bold">访存：3 读 + 1 写 = 4D × 4B</text>
+  <text x="64" y="292" font-size="9" fill="#555">归约次数：2 次（mean + var）</text>
+
+  <rect x="50" y="310" width="260" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="64" y="328" font-size="9" fill="#555">mean-centering：减均值后方差归一化</text>
+  <text x="64" y="340" font-size="9" fill="#888">per-row（沿特征维 D）</text>
+
+  <text x="180" y="372" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">γ/β 为 per-feature 向量</text>
+  <text x="180" y="386" text-anchor="middle" font-size="9" fill="#888">Transformer (GPT-2/BERT)</text>
+
+  <!-- ===== RMSNorm (right) ===== -->
+  <rect x="350" y="60" width="300" height="340" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="8" filter="url(#rough2)"/>
+  <text x="500" y="84" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">RMSNorm（1 次归约 + 写回）</text>
+  <text x="500" y="100" text-anchor="middle" font-size="10" fill="#555">y = γ·x/√(Σx²/N+ε) + β</text>
+
+  <rect x="370" y="112" width="260" height="40" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="130" font-size="10" fill="#4a7a3a" font-weight="bold">① Pass 1：求 Σx²（两阶段）</text>
+  <text x="384" y="144" font-size="9" fill="#555">读 input 1 遍，block_reduce_sum(x²)</text>
+
+  <rect x="370" y="160" width="260" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" stroke-dasharray="3 2" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="178" font-size="10" fill="#bbb" font-weight="bold">✗ 无 mean 归约（省 1 遍）</text>
+  <text x="384" y="192" font-size="9" fill="#bbb">RMSNorm 不减均值</text>
+
+  <rect x="370" y="208" width="260" height="40" fill="#fff" stroke="#4a7a3a" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="226" font-size="10" fill="#446688" font-weight="bold">② Pass 2：归一化写回</text>
+  <text x="384" y="240" font-size="9" fill="#555">第 2 遍读 + 写 output</text>
+
+  <rect x="370" y="260" width="260" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="278" font-size="10" fill="#4a7a3a" font-weight="bold">访存：2 读 + 1 写 = 3N × 4B</text>
+  <text x="384" y="292" font-size="9" fill="#555">归约次数：1 次（Σx²）</text>
+
+  <rect x="370" y="310" width="260" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="328" font-size="9" fill="#555">无 mean-centering：直接用 RMS</text>
+  <text x="384" y="340" font-size="9" fill="#888">全局标量（本题 1D，整个数组）</text>
+
+  <text x="500" y="372" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">γ/β 为标量（本题）</text>
+  <text x="500" y="386" text-anchor="middle" font-size="9" fill="#888">LLaMA / Qwen（per-feature 变体）</text>
+
+  <!-- ===== middle arrow ===== -->
+  <path d="M 326 200 L 356 200" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="341" y="192" text-anchor="middle" font-size="9" fill="#666">去 mean</text>
+
+  <!-- ===== comparison table ===== -->
+  <line x1="20" y1="416" x2="660" y2="416" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="440" font-size="12" fill="#444" font-weight="bold">对比总结</text>
+
+  <g font-size="10" fill="#333">
+    <rect x="30" y="450" width="160" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="110" y="466" text-anchor="middle" font-weight="bold">维度</text>
+    <rect x="190" y="450" width="220" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="300" y="466" text-anchor="middle" font-weight="bold" fill="#b85450">LayerNorm</text>
+    <rect x="410" y="450" width="220" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="520" y="466" text-anchor="middle" font-weight="bold" fill="#4a7a3a">RMSNorm</text>
+
+    <rect x="30" y="476" width="160" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="491">公式</text>
+    <rect x="190" y="476" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="491" fill="#555">(x-mean)/√var</text>
+    <rect x="410" y="476" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="491" fill="#555">x/√(Σx²/N)</text>
+
+    <rect x="30" y="500" width="160" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="515">归约次数</text>
+    <rect x="190" y="500" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="515" fill="#b85450">2 次（mean + var）</text>
+    <rect x="410" y="500" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="515" fill="#4a7a3a">1 次（Σx²）</text>
+
+    <rect x="30" y="524" width="160" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="539">global 读 input</text>
+    <rect x="190" y="524" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="539" fill="#b85450">3 遍</text>
+    <rect x="410" y="524" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="539" fill="#4a7a3a">2 遍（省 1 遍）</text>
+
+    <rect x="30" y="548" width="160" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="40" y="563">典型应用</text>
+    <rect x="190" y="548" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="200" y="563" fill="#555">GPT-2 / BERT</text>
+    <rect x="410" y="548" width="220" height="22" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="420" y="563" fill="#555">LLaMA / Qwen</text>
+  </g>
+</svg>

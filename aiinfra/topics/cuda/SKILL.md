@@ -36,6 +36,7 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 | `vector-reversal` | #19 Reverse Array（同类型基础题）· #63 Interleave（索引重排练习）· #62 Value Clipping（逐元素索引）· #31 Matrix Copy（coalesced 带宽优化） | 1D 向量反转 + coalesced，练习 in-place swap 与索引映射 |
 | `element-reversal` | #19 Reverse Array（同类型基础题）· #63 Interleave（索引重排练习）· #62 Value Clipping（逐元素索引）· #31 Matrix Copy（coalesced 带宽优化） | 逐元素反转 + 索引映射，练习 elementwise 重排 |
 | `leaky-relu` | #21 ReLU（最简激活函数对比，无负斜率）· #52 SiLU（融合激活函数，练习 __expf）· #68 Sigmoid（数学函数逐元素，练习 exp 实现）· #65 GeGLU（GELU 门控变体，更复杂激活） | 逐元素激活函数 family，练习分支/无分支 kernel 与合并访存 |
+| `geglu` | #54 SwiGLU（门控激活对比，SiLU vs GELU）· #65 GeGLU（同题，可对比不同实现）· #52 SiLU（SiLU 激活，GeGLU 的子组件）· #21 ReLU（最简激活对比） | GELU 门控激活 + 逐元素融合，练习 fused MLP 组件 |
 | `sigmoid` | #21 ReLU（最简激活函数对比）· #52 SiLU（融合 sigmoid+mul，练习 fused kernel）· #23 Leaky ReLU（分支激活对比）· #54 SwiGLU（SwiGLU 使用 sigmoid 组件） | 逐元素数学函数，练习 __expf 快速数学与合并访存 |
 | `color-inversion` | #1 Vector Addition（grid-stride + coalesced 基础）· #21 ReLU（逐元素 kernel，分支开销）· #66 RGB to Grayscale（多通道加权求和，类似逐元素）· #8 Matrix Addition（2D grid 逐元素） | 逐元素图像变换，练习多通道 coalesced 访存与索引映射 |
 | `interleave` | #1 Vector Addition（grid-stride + coalesced 基础）· #31 Matrix Copy（纯拷贝带宽优化）· #19 Reverse Array（1D 并行 in-place swap）· #62 Value Clipping（逐元素 clamp） | 写索引映射练习，coalesced 写回与数据重排 |
@@ -46,7 +47,10 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 |-------------|------------------------|----------|
 | `1d-convolution` | #10 2D Convolution（halo 扩展到二维）· #11 3D Convolution（体数据 halo）· #90 Causal Depthwise Conv1d（因果卷积变体）· #28 Gaussian Blur（可分离卷积） | 1D shared memory halo，练习卷积边界填充与 tile 加载 |
 | `2d-convolution` | #9 1D Convolution（halo 基础入门）· #11 3D Convolution（体数据 halo 扩展）· #28 Gaussian Blur（可分离卷积，行列分离优化）· #42 2D Max Pooling（滑窗 reduction，类似 tiling 模式） | shared memory halo + 常数内存，练习卷积类 kernel 的边界处理与 tiling |
+| `3d-convolution` | #9 1D Convolution（1D halo 基础）· #10 2D Convolution（2D shared memory halo）· #28 Gaussian Blur（可分离卷积）· #42 2D Max Pooling（滑窗 reduction） | 3D 体数据 halo + 常数内存，练习高维卷积边界处理 |
 | `causal-depthwise-conv1d` | #9 1D Convolution（1D 卷积基础，halo 填充入门）· #10 2D Convolution（2D shared memory halo + 常数内存）· #11 3D Convolution（3D 体数据 halo 扩展）· #28 Gaussian Blur（可分离卷积，行列分离优化） | 因果卷积 + depthwise 分组，练习卷积边界处理与通道独立并行 |
+| `gaussian-blur` | #10 2D Convolution（2D shared memory halo + tiling）· #9 1D Convolution（1D halo 基础）· #28 Gaussian Blur（可分离卷积，行列分离优化）· #42 2D Max Pooling（滑窗 reduction） | 可分离卷积（行列分离），练习 shared memory + 常数内存 |
+| `rgb-to-grayscale` | #1 Vector Addition（grid-stride + coalesced 基础）· #21 ReLU（逐元素 + 分支）· #66 RGB to Grayscale（多通道加权求和）· #7 Color Inversion（逐元素图像变换） | 多通道加权求和，练习 coalesced 访存与通道索引 |
 | `2d-max-pooling` | #10 2D Convolution（2D shared memory halo + tiling）· #9 1D Convolution（1D 卷积，halo 基础）· #28 Gaussian Blur（可分离卷积，滑窗模式）· #90 Causal Depthwise Conv1d（因果卷积变体） | 滑窗 reduction，练习 2D 索引映射与 padding 边界处理 |
 
 #### C. 归约与扫描（Reduction & Scan）
@@ -63,6 +67,7 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 | `count-array-element` | #4 Reduction（树形归约，count 的归约基础组件）· #44 Count 2D Array Element（2D 计数，扩展到多维 atomic）· #13 Histogramming（shared memory 直方图，atomic + reduction 综合应用）· #27 Mean Squared Error（平方差归约，归约在损失函数中的应用） | predicate 归约 + atomic 计数，练习 count 类 kernel 的归约与 atomic 权衡 |
 | `argmax` | #4 Reduction（树形归约，argmax 的基础组件）· #29 Top K Selection（排序归约进阶）· #5 Softmax（先求 max 再归一化）· #17 Dot Product（block 归约练习） | 归约变体（求最大值索引），练习比较归约与 warp shuffle |
 | `top-k-selection` | #60 Top-p Sampling（排序 + 累积概率 + 采样）· #15 Sorting（通用并行排序）· #36 Radix Sort（按位 histogram + scan 排序）· #71 Parallel Merge（归并排序网络） | bitonic 排序 + 堆归约，练习并行排序与选择 |
+| `top-p-sampling` | #29 Top K Selection（top-k 选择基础）· #67 MoE Top-K Gating（top-k + softmax 路由）· #16 Prefix Sum（累积概率的 scan 基础）· #5 Softmax（概率归一化） | 排序 + 累积概率 + 采样，练习 LLM 采样的并行实现 |
 | `subarray-sum` | #16 Prefix Sum（prefix sum 直接应用求子和）· #4 Reduction（树形归约基础组件）· #48 2D Subarray Sum（扩展到二维前缀和）· #51 Max Subarray Sum（scan + 归约综合练习） | prefix sum 直接应用，练习范围归约与 block reduce |
 | `mean-squared-error` | #4 Reduction（树形归约，MSE 的基础组件）· #17 Dot Product（block 归约，类似模式）· #25 Categorical Cross Entropy Loss（归约 + log，损失函数变体）· #58 FP16 Dot Product（半精度归约，低精度变体） | 归约在损失函数中的应用，练习 fused kernel + block reduce |
 | `fp16-dot-product` | #4 Reduction（树形归约基础组件）· #17 Dot Product（FP32 版 dot product 对比）· #57 FP16 Batched Matrix Multiplication（FP16 + Tensor Core，半精度 GEMM）· #27 Mean Squared Error（归约在损失函数中的应用） | 半精度归约，练习 __half 类型转换与 FP32 累加精度保证 |
@@ -97,8 +102,9 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 | 题解 (slug) | 推荐练习（编号 · 关联） | 选材主线 |
 |-------------|------------------------|----------|
 | `softmax` | #50 RMS Normalization（RMS Norm，归约 + 归一化变体）· #6 Softmax Attention（fused softmax+matmul，数值稳定进阶）· #4 Reduction（树形归约，softmax 的基础组件）· #40 Batch Normalization（Batch Norm，mean/var 归约归一化） | 三遍 kernel + 数值稳定，练习归约与归一化的融合 |
-| `rms-normalization` | #40 Batch Normalization（mean/var 归约归一化）· #105 Group Normalization（分组归约）· #5 Softmax（max+sum 归约 + 归一化）· #50 RMS Normalization（同题对比不同实现） | 归约 + 归一化（root mean square），练习 norm 类 kernel |
+| `rms-normalization` | #40 Batch Normalization（mean/var 归约归一化）· #105 Group Normalization（分组归约）· #5 Softmax（max+sum 归约 + 归一化）· #4 Reduction（平方和归约的基础组件） | 归约 + 归一化（root mean square），练习 norm 类 kernel |
 | `batch-normalization` | #50 RMS Normalization（归约 + 归一化变体）· #105 Group Normalization（分组归约）· #4 Reduction（mean/var 归约的基础组件）· #5 Softmax（max + sum 归约归一化） | mean/var 归约 + 归一化，练习统计归约类 norm kernel |
+| `layer-normalization` | #40 Batch Normalization（归约轴对偶：BN 沿 N strided，LN 沿 C 连续，对比访存合并）· #50 RMS Normalization（LN 去 mean 的简化变体）· #4 Reduction（mean/var 归约的基础组件）· #5 Softmax（max + sum 归约归一化） | 沿特征维归约 + 归一化，练习连续合并访存的 norm kernel |
 | `group-normalization` | #40 Batch Normalization（mean/var 归约归一化，跨 batch 维度）· #50 RMS Normalization（RMS Norm，归约 + 归一化变体）· #5 Softmax（max+sum 归约 + 归一化）· #4 Reduction（树形归约，norm 的基础组件） | 分组归约归一化，练习两遍 scan + shared memory reduction |
 | `token-embedding-layer` | #61 RoPE（位置嵌入的另一种实现）· #41 Simple Inference（embedding 的推理应用）· #64 Weight Dequantization（查表式反量化）· #106 Token Embedding Layer（同题，可对比不同实现） | gather / lookup table，练习嵌入查表类 kernel |
 | `rope-embedding` | #106 Token Embedding（嵌入查表基础）· #54 SwiGLU（融合 elementwise 进阶）· #52 SiLU（fused elementwise）· #50 RMS Normalization（归约 + elementwise） | 复数旋转 + elementwise，练习位置编码的并行实现 |
@@ -122,6 +128,7 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 | 题解 (slug) | 推荐练习（编号 · 关联） | 选材主线 |
 |-------------|------------------------|----------|
 | `weight-dequantization` | #32 INT8 Quantized MatMul（量化计算的应用）· #81 INT4 Weight-Only（4-bit 打包反量化）· #96 INT8 KV-Cache（量化 attention 应用）· #85 LoRA Linear（低秩 + 量化推理） | 量化反量化到 fp16/fp32，练习低精度推理的基础操作 |
+| `int4-matmul` | #32 INT8 Quantized MatMul（INT8 量化 GEMM 对比）· #64 Weight Dequantization（反量化基础操作）· #22 GEMM（GEMM tiling 基础）· #57 FP16 Batched MatMul（FP16 + Tensor Core，半精度 GEMM） | INT4 权重量化 GEMM，练习 4-bit 打包解包与低精度计算 |
 
 #### J. 高级算法与数学（Advanced Algorithms & Math）
 
@@ -134,7 +141,7 @@ description: 用于在 aiinfra/topics/cuda/ 下编写 LeetGPU (https://leetgpu.c
 
 ## 2. 目录组织
 
-所有题解**扁平存放**在 `aiinfra/topics/cuda/` 下，按题目 slug 命名，一篇题解一个文件：
+题解按「**面经频率 + 题目类型**」两级目录组织在 `aiinfra/topics/cuda/` 下，按题目 slug 命名，一篇题解一个文件：
 
 ```
 aiinfra/topics/
@@ -144,20 +151,30 @@ aiinfra/topics/
 └── cuda/
     ├── README.md                        # CUDA 手撕题专题（面经总结）
     ├── SKILL.md                         # 本文件
-    ├── vector-addition.md               # #1 Vector Addition
-    ├── relu.md                          # #21 ReLU
-    ├── prefix-sum.md                    # #16 Prefix Sum
-    └── ...                              # 每道题一个 <slug>.md
+    ├── high/                            # 高频题
+    │   └── reduction/                   # 归约类（softmax.md、reduction.md、各 normalization 等）
+    ├── medium/                          # 中频题
+    │   ├── attention/                   # 注意力类（softmax-attention.md、multi-head-attention.md 等）
+    │   ├── gemm/                        # 矩阵乘类（gemm.md、matrix-multiplication.md 等）
+    │   ├── gemv/                        # 矩阵向量类
+    │   ├── matrix-ops/                  # 矩阵操作类（matrix-transpose.md 等）
+    │   ├── reduction/                   # 归约类（histogramming.md 等）
+    │   ├── scan/                        # 前缀和类（prefix-sum.md、segmented-prefix-sum.md）
+    │   └── selection/                   # 选择类（top-k-selection.md、top-p-sampling.md、moe-topk-gating.md 等）
+    └── low/                             # 低频题
+        ├── convolution/                 # 卷积/池化/图像类（1d/2d/3d-convolution.md、gaussian-blur.md 等）
+        ├── elementwise/                 # 逐元素/激活类（vector-addition.md、relu.md、weight-dequantization.md 等）
+        └── reduction/                   # 归约类（dot-product.md、fp16-dot-product.md 等）
 ```
 
 **规则**：
 
 1. **题解根目录**：`aiinfra/topics/cuda/`，不要写到其他位置。
-2. **扁平组织**：所有题解直接放在 `aiinfra/topics/cuda/` 下，不按 `weekN/dayM/` 分层。
+2. **两级组织**：所有题解放在 `<频率>/<类型>/` 两级子目录下（频率：`high` / `medium` / `low`；类型：`reduction` / `gemm` / `gemv` / `matrix-ops` / `scan` / `attention` / `selection` / `elementwise` / `convolution` 等），不按 `weekN/dayM/` 分层。
 3. **题解文件名**：`<slug>.md`，其中 `<slug>` 是 LeetGPU 平台的题目 URL slug（如 `vector-addition`、`prefix-sum`），slug 即唯一标识。
-4. **图片目录**：`aiinfra/topics/images/`，topics 下各专题共享。题解插图建议加 `cuda_<slug>_` 前缀避免冲突（如 `cuda_prefix_sum_overview.svg`），在题解中用 `../images/xxx.svg` 相对路径引用。
+4. **图片目录**：`aiinfra/topics/images/`，topics 下各专题共享。题解插图建议加 `cuda_<slug>_` 前缀避免冲突（如 `cuda_prefix_sum_overview.svg`），在题解中用 `../../../images/xxx.svg` 相对路径引用（题解位于两级子目录下，需回退三级）。
 
-> 📌 **构建脚本**：`build/topics.py` 已支持本目录的扁平题解——扫描 `<slug>.md`（排除 `README.md` / `SKILL.md` / `dayN.md`），生成 `public/cuda/<slug>.html` 并在专题概览页与侧边栏自动加入口。
+> 📌 **构建脚本**：`build/topics.py` 递归扫描 `aiinfra/topics/cuda/` 下的 `<slug>.md`（排除 `README.md` / `SKILL.md` / `dayN.md` 及 `challenges/`、`kernels/`、`notes/`、`benchmark/`、`images/` 目录），按源目录结构镜像生成 `public/cuda/<频率>/<类型>/<slug>.html`，并自动处理图片路径与相对 `.md` → `.html` 链接改写。
 
 ## 3. 题解文档结构
 
@@ -199,7 +216,7 @@ aiinfra/topics/
 - 代码块标注语言：` ```cuda` / ` ```cpp` / ` ```bash` / ` ```text`。
 - **Kernel 代码必须完整可编译**：包含 `#include`、`__global__` kernel、`main()`、host 端 `cudaMalloc`/`cudaMemcpy`、验证逻辑、`cudaFree`。
 - 代码块首行带注释：`// <filename>.cu —— <说明>` + `// 编译命令: nvcc ...`。
-- 图片引用用相对路径：`![<中文alt>](../images/<filename>.svg)`（题解位于 `aiinfra/topics/cuda/` 下，`../images/` 解析到共享的 `aiinfra/topics/images/`）。
+- 图片引用用相对路径：`![<中文alt>](../../../images/<filename>.svg)`（题解位于 `aiinfra/topics/cuda/<频率>/<类型>/` 下，`../../../images/` 解析到共享的 `aiinfra/topics/images/`）。
 - 每篇题解引用 **2-4 张 SVG/PNG 插图**，并配 `### 4.2 代码详解` 子节（详见 §5）。
 
 ### 数学公式
@@ -315,11 +332,11 @@ aiinfra/topics/
 
 | Kernel 类型 | 详解深度 | 示例文件 |
 |-------------|----------|----------|
-| **简单 element-wise**（vector-add、relu、scalar-multiply） | 3-5 行表格 + 索引公式 | `vector-addition.md` |
-| **Shared memory tiling**（transpose、matmul、convolution） | 完整索引映射表 + worked example + bank conflict 分析 | `matrix-transpose.md` |
-| **归约类**（reduction、softmax、dot-product） | warp shuffle 步骤分解 + block reduce 两阶段流程图 | `reduction.md` |
-| **融合 kernel**（flash attention、online softmax） | 三公式逐步数值演算 + k 循环数据流图 + `__syncthreads` 作用表 | `softmax-attention.md` |
-| **多 kernel 流水线**（GPT-2 block、stream compaction） | kernel 链调用顺序表 + 每 kernel 一句话 + HBM IO 表 | `gpt-2-transformer-block.md` |
+| **简单 element-wise**（vector-add、relu、scalar-multiply） | 3-5 行表格 + 索引公式 | `low/elementwise/vector-addition.md` |
+| **Shared memory tiling**（transpose、matmul、convolution） | 完整索引映射表 + worked example + bank conflict 分析 | `medium/matrix-ops/matrix-transpose.md` |
+| **归约类**（reduction、softmax、dot-product） | warp shuffle 步骤分解 + block reduce 两阶段流程图 | `high/reduction/reduction.md` |
+| **融合 kernel**（flash attention、online softmax） | 三公式逐步数值演算 + k 循环数据流图 + `__syncthreads` 作用表 | `medium/attention/softmax-attention.md` |
+| **多 kernel 流水线**（GPT-2 block、stream compaction） | kernel 链调用顺序表 + 每 kernel 一句话 + HBM IO 表 | `high/reduction/gpt-2-transformer-block.md` |
 
 ### 5.2 SVG 图解规范
 
@@ -349,7 +366,7 @@ aiinfra/topics/
 题解位于 `aiinfra/topics/cuda/`，SVG 位于 `aiinfra/topics/images/`，因此引用路径为：
 
 ```markdown
-![<中文描述>](../images/<filename>.svg)
+![<中文描述>](../../../images/<filename>.svg)
 ```
 
 #### SVG 创建要点
@@ -368,7 +385,7 @@ aiinfra/topics/
 
 为题解补充 SVG + 代码详解后，用以下清单自检：
 
-- [ ] 至少 1 张 SVG 引用（`![...](../images/...svg)`）
+- [ ] 至少 1 张 SVG 引用（`![...](../../../images/...svg)`）
 - [ ] SVG 文件存在于 `aiinfra/topics/images/`
 - [ ] `### 4.2 代码详解` 子节存在（或等效的详解标题）
 - [ ] 详解覆盖 kernel 的关键代码段（索引计算、访存模式、同步屏障）
@@ -384,7 +401,7 @@ aiinfra/topics/
 
 - **扫描** `aiinfra/topics/cuda/` 下所有 `<slug>.md` 题解文件（排除 `README.md`、`SKILL.md`、`dayN.md`）。
 - 解析一级标题 `# LeetGPU <题目名> 题解` 作为侧边栏与卡片标题（取 `<题目名>`）。
-- 图片路径 `../images/xxx.svg` 在题解页被重写为 `./images/xxx.svg`（输出目录扁平化）。
+- 图片路径 `../../../images/xxx.svg` 在题解页被重写为 `./images/xxx.svg`（输出目录扁平化）。
 - 生成 `public/cuda/index.html`（概览页，自动追加「📝 LeetGPU 题解」卡片区）与 `public/cuda/<slug>.html`（各题解页）。
 - `aiinfra/topics/images/` 中 `cuda_*` 前缀的 SVG 自动复制到 `public/cuda/images/` 部署。
 
@@ -400,7 +417,7 @@ python3 build.py                     # 组合构建全站
 - [ ] 一级标题 `# LeetGPU <题目名> 题解`
 - [ ] 含 6 段结构（题目概述/CPU基线/GPU设计/Kernel实现/性能分析/复杂度分析）
 - [ ] Kernel 代码完整可编译（含 main、cudaMalloc、验证、cudaFree）
-- [ ] 含 2-4 张 SVG/PNG 插图，引用格式 `![中文alt](../images/xxx.svg)`
+- [ ] 含 2-4 张 SVG/PNG 插图，引用格式 `![中文alt](../../../images/xxx.svg)`
 - [ ] 含 `### 4.2 代码详解` 子节（逐行解释 + 索引表 + 关键洞察）
 - [ ] SVG 为手绘 sketch 风（含 `feTurbulence` 抖动滤镜 + Comic Sans/Kaiti SC 字体）
 - [ ] 复杂 kernel 有 worked example（具体数值逐步推演）

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Scaled Dot-Product Attention：Q·Kᵀ/√d → softmax → ·V</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">fused 在单 kernel：scores 留 shared/register，online softmax 增量更新</text>
+
+  <!-- ===== Q, K, V ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">Q (M×d)</text>
+  <g font-size="9" fill="#333">
+    <rect x="30" y="82" width="80" height="40" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="70" y="106" text-anchor="middle">Q</text>
+  </g>
+  <text x="130" y="76" font-size="12" fill="#4a7a3a" font-weight="bold">K (N×d)</text>
+  <g font-size="9" fill="#333">
+    <rect x="130" y="82" width="80" height="40" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="170" y="106" text-anchor="middle">K</text>
+  </g>
+  <text x="230" y="76" font-size="12" fill="#d6a040" font-weight="bold">V (N×d)</text>
+  <g font-size="9" fill="#333">
+    <rect x="230" y="82" width="80" height="40" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="270" y="106" text-anchor="middle">V</text>
+  </g>
+
+  <!-- step 1: Q·K^T -->
+  <path d="M 70 126 L 170 150" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 170 126 L 170 150" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="100" y="148" width="140" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="170" y="170" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">① scores = Q·Kᵀ / √d</text>
+  <text x="250" y="170" font-size="9" fill="#888">(M×N)</text>
+
+  <!-- step 2: softmax -->
+  <path d="M 170 188 L 170 210" stroke="#d6a040" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="100" y="212" width="140" height="36" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="170" y="234" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">② softmax(scores)</text>
+  <text x="250" y="234" font-size="9" fill="#888">逐行，safe softmax</text>
+
+  <!-- step 3: ·V -->
+  <path d="M 170 252 L 170 274" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 270 126 L 170 276" stroke="#d6a040" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)" stroke-dasharray="3 2"/>
+  <rect x="100" y="276" width="140" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="170" y="298" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">③ output = sm · V</text>
+  <text x="250" y="298" font-size="9" fill="#888">(M×d)</text>
+
+  <!-- ===== online softmax (flash) ===== -->
+  <line x1="20" y1="332" x2="660" y2="332" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="356" font-size="12" fill="#444" font-weight="bold">FlashAttention：online softmax 分块融合（scores 不落盘 HBM）</text>
+
+  <rect x="30" y="368" width="610" height="60" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="388" font-size="10" fill="#4a7a3a" font-weight="bold">朴素版：scores (M×N) 落盘 HBM，seq=1024 时 4MB/head</text>
+  <text x="44" y="404" font-size="10" fill="#4a7a3a" font-weight="bold">Flash 版：分块 K/V，scores 留 shared，online softmax 增量更新 m/s：</text>
+  <text x="44" y="420" font-size="9" fill="#555">m_new = max(m_old, m_block); s_new = s_old·e^(m_old-m_new) + s_block·e^(m_block-m_new)</text>
+
+  <!-- ===== causal mask ===== -->
+  <line x1="20" y1="448" x2="660" y2="448" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="472" font-size="12" fill="#444" font-weight="bold">Causal Mask（#53）：下三角，scores[i][j]=-∞ if j&gt;i</text>
+
+  <g font-size="9" fill="#333">
+    <rect x="40" y="482" width="24" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="52" y="498" text-anchor="middle">s</text>
+    <rect x="64" y="482" width="24" height="24" fill="#eee" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="76" y="498" text-anchor="middle" fill="#bbb">-∞</text>
+    <rect x="88" y="482" width="24" height="24" fill="#eee" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="498" text-anchor="middle" fill="#bbb">-∞</text>
+    <rect x="40" y="506" width="24" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="52" y="522" text-anchor="middle">s</text>
+    <rect x="64" y="506" width="24" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="76" y="522" text-anchor="middle">s</text>
+    <rect x="88" y="506" width="24" height="24" fill="#eee" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="522" text-anchor="middle" fill="#bbb">-∞</text>
+  </g>
+  <text x="140" y="510" font-size="9" fill="#555">行 i 只 attend j ≤ i（下三角）</text>
+  <text x="140" y="526" font-size="9" fill="#888">#6/#12/#80 无 mask（全注意力）；#53 有 causal mask</text>
+
+  <!-- ===== GQA ===== -->
+  <text x="350" y="488" font-size="11" fill="#d6a040" font-weight="bold">GQA（#80）：Q heads 共享 KV heads</text>
+  <g font-size="9" fill="#333">
+    <rect x="350" y="498" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="360" y="512" text-anchor="middle">Q0</text>
+    <rect x="372" y="498" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="382" y="512" text-anchor="middle">Q1</text>
+    <rect x="394" y="498" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="404" y="512" text-anchor="middle">Q2</text>
+    <rect x="416" y="498" width="20" height="20" fill="#fce4ec" stroke="#b85450" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="426" y="512" text-anchor="middle">Q3</text>
+    <text x="446" y="512" font-size="9" fill="#888">4 Q → 1 KV</text>
+    <rect x="510" y="498" width="40" height="20" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="530" y="512" text-anchor="middle">KV0</text>
+  </g>
+  <text x="350" y="536" font-size="9" fill="#555">num_groups = num_q_heads / num_kv_heads，组内共享 KV</text>
+</svg>

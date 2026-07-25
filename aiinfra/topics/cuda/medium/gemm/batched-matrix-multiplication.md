@@ -88,7 +88,7 @@ __global__ void bmm_naive(const float* A, const float* B, float* C,
 - **Block 级（grid.x/y + Shared Memory Tiling）**：每个 batch 内部，`C[b]` 切成 `BM×BN = 64×64` 的 block tile，block 内协作加载 `A` 的 `BM×BK` 与 `B` 的 `BK×BN` 子块到 shared memory，沿 `K` 维滑动累加；
 - **Thread 级（Register Blocking）**：每个 thread 负责 `TM×TN = 4×4` 个输出，累加器 `acc[4][4]` 常驻寄存器。
 
-![Batched GEMM：batch 维 → blockIdx.z，3D Grid 并行调度](../images/cuda_batched_matrix_multiplication_overview.svg)
+![Batched GEMM：batch 维 → blockIdx.z，3D Grid 并行调度](../../../images/cuda_batched_matrix_multiplication_overview.svg)
 
 **参数推导**：
 
@@ -120,7 +120,7 @@ grid = dim3(N/BN, M/BM, BATCH) = dim3(4, 4, 32) = 512 blocks
 
 - **Batch offset 指针算术**：kernel 开头算 `Ab = A + b*M*K`、`Bb = B + b*K*N`、`Cb = C + b*M*N`，此后 `Ab/Bb/Cb` 当普通矩阵用，kernel 主体与单矩阵 GEMM **一字不改**；
 
-![Batch Offset：扁平内存 → 3D 逻辑视图的指针算术](../images/cuda_batched_matrix_multiplication_batch_offset.svg)
+![Batch Offset：扁平内存 → 3D 逻辑视图的指针算术](../../../images/cuda_batched_matrix_multiplication_batch_offset.svg)
 
 - **3D grid 替代 batch 循环**：`dim3 blocks(N/BN, M/BM, BATCH)`，`blockIdx.z` 直接索引 batch，无需在 kernel 内循环 batch，每个 block 只管自己 batch 的一个 tile；
 - **Register blocking**：每 thread 算 `4×4` 个输出，`a[i]` 在寄存器里复用 `TN=4` 次、`b[j]` 复用 `TM=4` 次，shared 访问量降 4 倍；
@@ -418,7 +418,7 @@ bmm_tiled<<<blocks, NUM_THREADS>>>(A, B, C, M, N, K);
 | **同步 ②** | `__syncthreads()` | 本 tile 读完，下一轮才能覆盖 `As/Bs` |
 | **写回** | `Cb[gr * N + gc] = acc[i][j]` | 边界判断后写回，`Cb` 已含 batch offset |
 
-![Block Tile 映射：64×64 tile 切为 16×16 = 256 个 thread tile](../images/cuda_batched_matrix_multiplication_block_mapping.svg)
+![Block Tile 映射：64×64 tile 切为 16×16 = 256 个 thread tile](../../../images/cuda_batched_matrix_multiplication_block_mapping.svg)
 
 **关键索引关系**：
 

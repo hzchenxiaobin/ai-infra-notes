@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 620" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+  </defs>
+
+  <rect width="680" height="620" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">HBM IO 表：每个 kernel 的读写量（seq_len=1024, D=768）</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">单元 MB；R=读入, W=写出；红=可融合消除的冗余往返</text>
+
+  <!-- table header -->
+  <g font-size="10" fill="#333">
+    <rect x="30" y="60" width="50"  height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="55"  y="78" text-anchor="middle" font-weight="bold">#</text>
+    <rect x="80" y="60" width="130" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="145" y="78" text-anchor="middle" font-weight="bold">kernel</text>
+    <rect x="210" y="60" width="90" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="255" y="78" text-anchor="middle" font-weight="bold">读入 (R)</text>
+    <rect x="300" y="60" width="90" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="345" y="78" text-anchor="middle" font-weight="bold">写出 (W)</text>
+    <rect x="390" y="60" width="110" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="445" y="78" text-anchor="middle" font-weight="bold">大小 (MB)</text>
+    <rect x="500" y="60" width="150" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="575" y="78" text-anchor="middle" font-weight="bold">说明</text>
+  </g>
+
+  <!-- rows -->
+  <g font-size="9" fill="#333">
+    <!-- k0 LN1 -->
+    <rect x="30" y="92" width="50"  height="26" fill="#fff8e1" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="109" text-anchor="middle">k0</text>
+    <rect x="80" y="92" width="130" height="26" fill="#fff8e1" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="109">LN1</text>
+    <rect x="210" y="92" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="109">x + ln1_w/b</text>
+    <rect x="300" y="92" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="109" fill="#b85450">x_norm</text>
+    <rect x="390" y="92" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="109">3.0 + 0.006</text>
+    <rect x="500" y="92" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="109">读 x 3 遍（可优化）</text>
+
+    <!-- k1 QKV GEMM -->
+    <rect x="30" y="120" width="50"  height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="137" text-anchor="middle">k1</text>
+    <rect x="80" y="120" width="130" height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="137">QKV Proj GEMM</text>
+    <rect x="210" y="120" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="137" fill="#b85450">x_norm + W_qkv</text>
+    <rect x="300" y="120" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="137">qkv</text>
+    <rect x="390" y="120" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="137">3.0 + 6.75</text>
+    <rect x="500" y="120" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="137">compute-bound</text>
+
+    <!-- k2 MHA -->
+    <rect x="30" y="148" width="50"  height="26" fill="#e6f4ea" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="165" text-anchor="middle">k2</text>
+    <rect x="80" y="148" width="130" height="26" fill="#e6f4ea" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="165">Multi-Head Attn</text>
+    <rect x="210" y="148" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="165" fill="#b85450">qkv</text>
+    <rect x="300" y="148" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="165">attn_out</text>
+    <rect x="390" y="148" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="165">9.0 → 3.0</text>
+    <rect x="500" y="148" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="165">fused Q·Kᵀ·sm·V</text>
+
+    <!-- k3 Attn Proj -->
+    <rect x="30" y="176" width="50"  height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="193" text-anchor="middle">k3</text>
+    <rect x="80" y="176" width="130" height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="193">Attn Proj GEMM</text>
+    <rect x="210" y="176" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="193" fill="#b85450">attn_out + W_attn</text>
+    <rect x="300" y="176" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="193">attn_proj</text>
+    <rect x="390" y="176" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="193">3.0 + 2.25</text>
+    <rect x="500" y="176" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="193">compute-bound</text>
+
+    <!-- k4 Residual1 -->
+    <rect x="30" y="204" width="50"  height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="221" text-anchor="middle">k4</text>
+    <rect x="80" y="204" width="130" height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="221">Residual Add 1</text>
+    <rect x="210" y="204" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="221">x + attn_proj</text>
+    <rect x="300" y="204" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="221" fill="#b85450">hidden</text>
+    <rect x="390" y="204" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="221">6.0 → 3.0</text>
+    <rect x="500" y="204" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="221">可融进 k3 epilogue</text>
+
+    <!-- k5 LN2 -->
+    <rect x="30" y="232" width="50"  height="26" fill="#fff8e1" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="249" text-anchor="middle">k5</text>
+    <rect x="80" y="232" width="130" height="26" fill="#fff8e1" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="249">LN2</text>
+    <rect x="210" y="232" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="249" fill="#b85450">hidden + ln2_w/b</text>
+    <rect x="300" y="232" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="249" fill="#b85450">h_norm</text>
+    <rect x="390" y="232" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="249">3.0 + 0.006</text>
+    <rect x="500" y="232" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="249">读 hidden 3 遍</text>
+
+    <!-- k6 FC -->
+    <rect x="30" y="260" width="50"  height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="277" text-anchor="middle">k6</text>
+    <rect x="80" y="260" width="130" height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="277">FC GEMM</text>
+    <rect x="210" y="260" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="277" fill="#b85450">h_norm + W_fc</text>
+    <rect x="300" y="260" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="277">fc</text>
+    <rect x="390" y="260" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="277">3.0 + 9.0</text>
+    <rect x="500" y="260" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="277">compute-bound</text>
+
+    <!-- k7 GELU -->
+    <rect x="30" y="288" width="50"  height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="305" text-anchor="middle">k7</text>
+    <rect x="80" y="288" width="130" height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="305">GELU (tanh)</text>
+    <rect x="210" y="288" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="305" fill="#b85450">fc</text>
+    <rect x="300" y="288" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="305" fill="#b85450">gelu</text>
+    <rect x="390" y="288" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="305">12.0 → 12.0</text>
+    <rect x="500" y="288" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="305">可融进 k6 epilogue</text>
+
+    <!-- k8 Proj -->
+    <rect x="30" y="316" width="50"  height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="333" text-anchor="middle">k8</text>
+    <rect x="80" y="316" width="130" height="26" fill="#fce4ec" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="333">Proj GEMM</text>
+    <rect x="210" y="316" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="333" fill="#b85450">gelu + W_proj</text>
+    <rect x="300" y="316" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="333">proj</text>
+    <rect x="390" y="316" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="333">12.0 + 9.0</text>
+    <rect x="500" y="316" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="333">compute-bound</text>
+
+    <!-- k9 Residual2 -->
+    <rect x="30" y="344" width="50"  height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="55" y="361" text-anchor="middle">k9</text>
+    <rect x="80" y="344" width="130" height="26" fill="#e8f0fe" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="90" y="361">Residual Add 2</text>
+    <rect x="210" y="344" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="220" y="361">hidden + proj</text>
+    <rect x="300" y="344" width="90" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="310" y="361">output</text>
+    <rect x="390" y="344" width="110" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="400" y="361">6.0 → 3.0</text>
+    <rect x="500" y="344" width="150" height="26" fill="#fff" stroke="#eee" rx="2" filter="url(#rough2)"/>
+    <text x="510" y="361">可融进 k8 epilogue</text>
+  </g>
+
+  <!-- summary -->
+  <line x1="20" y1="384" x2="660" y2="384" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="394" width="610" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="335" y="412" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">朴素链总 HBM IO ≈ 120 MB（红色为可融合消除的冗余）</text>
+  <text x="335" y="426" text-anchor="middle" font-size="10" fill="#888">x_norm / attn_out / hidden / h_norm / fc / gelu 等 8 个中间 tensor 各读写一次</text>
+
+  <!-- ===== fused version ===== -->
+  <rect x="30" y="446" width="610" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="335" y="464" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">融合后：LN1+QKV / Attn+Res1 / LN2+FC / GELU+Proj / Res2</text>
+  <text x="335" y="478" text-anchor="middle" font-size="10" fill="#888">中间 tensor 留 register/shared，HBM IO 降到 ≈ 60 MB（节省 ~50%）</text>
+
+  <!-- ===== fusion opportunities ===== -->
+  <text x="30" y="506" font-size="12" fill="#444" font-weight="bold">融合机会（按收益排序）：</text>
+  <text x="30" y="526" font-size="10" fill="#555">① GELU + Proj（k7+k8）：fc 不落盘，直接喂给 Proj GEMM 的 epilogue（CUTLASS EVT）</text>
+  <text x="30" y="542" font-size="10" fill="#555">② Residual + LN（k4+k5 / k9+k1）：hidden 不落盘，LN 读 register/共享 + 下游 GEMM 直接用</text>
+  <text x="30" y="558" font-size="10" fill="#555">③ LN + QKV（k0+k1）：x_norm 不落盘，LN 输出直接喂 GEMM（fused LN-GEMM）</text>
+  <text x="30" y="574" font-size="10" fill="#555">④ Flash Attention：k2 内部融合 Q·Kᵀ / softmax / ·V，已是最优；无需跨 kernel</text>
+  <text x="30" y="598" font-size="9" fill="#888">生产实现（vLLM / TensorRT-LLM）已做 ①②③，CUTLASS 3.x EVT 是标准工具</text>
+</svg>

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="540" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Tiled Matmul：shared memory 分块复用 A 的行与 B 的列</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">C[M,K] = A[M,N] @ B[N,K]；沿 N 维分 tile，每 tile 加载到 shared，全 block 复用</text>
+
+  <!-- A matrix -->
+  <text x="40" y="80" font-size="12" fill="#446688" font-weight="bold">A (M×N)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="86" width="120" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="102" text-anchor="middle">行 i (N 个元素)</text>
+    <rect x="40" y="112" width="120" height="20" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="124" text-anchor="middle" font-size="9" fill="#888">...</text>
+    <rect x="40" y="134" width="120" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="100" y="150" text-anchor="middle">行 i+BM-1</text>
+    <rect x="40" y="86" width="32" height="72" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="2" filter="url(#rough2)" opacity="0.4"/>
+    <text x="56" y="170" text-anchor="middle" font-size="8" fill="#b85450">tile BN</text>
+  </g>
+
+  <!-- B matrix -->
+  <text x="240" y="80" font-size="12" fill="#4a7a3a" font-weight="bold">B (N×K)</text>
+  <g font-size="9" fill="#333">
+    <rect x="240" y="86" width="32" height="72" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="2" filter="url(#rough2)" opacity="0.4"/>
+    <text x="256" y="170" text-anchor="middle" font-size="8" fill="#4a7a3a">tile BN</text>
+    <rect x="272" y="86" width="120" height="24" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="332" y="102" text-anchor="middle" font-size="9" fill="#888">列 j..j+BK</text>
+    <rect x="272" y="112" width="120" height="20" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <rect x="272" y="134" width="120" height="24" fill="#fff" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+  </g>
+
+  <!-- shared memory tile -->
+  <path d="M 56 160 L 200 200" stroke="#d6a040" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 256 160 L 200 200" stroke="#d6a040" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="120" y="190" width="200" height="60" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="220" y="210" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">shared memory</text>
+  <text x="220" y="226" text-anchor="middle" font-size="9" fill="#555">sA[BM][BN] + sB[BN][BK]</text>
+  <text x="220" y="240" text-anchor="middle" font-size="9" fill="#888">全 block 共享，复用 BN 次</text>
+
+  <!-- C output -->
+  <path d="M 220 254 L 220 280" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="40" y="288" font-size="12" fill="#b85450" font-weight="bold">C (M×K)</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="294" width="160" height="40" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="120" y="318" text-anchor="middle">block 负责 C[i:i+BM, j:j+BK]</text>
+  </g>
+  <text x="240" y="318" font-size="10" fill="#888">grid = (M/BM) × (K/BK) 个 block</text>
+
+  <!-- ===== tiling loop ===== -->
+  <line x1="20" y1="350" x2="660" y2="350" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="374" font-size="12" fill="#444" font-weight="bold">沿 N 维分 tile 循环（每步累加 partial sum）</text>
+
+  <g font-size="9" fill="#333">
+    <rect x="40" y="384" width="80" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="80" y="402" text-anchor="middle">tile 0</text>
+    <text x="130" y="402" font-size="9" fill="#888">→</text>
+    <rect x="140" y="384" width="80" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="180" y="402" text-anchor="middle">tile 1</text>
+    <text x="230" y="402" font-size="9" fill="#888">→ ... →</text>
+    <rect x="290" y="384" width="80" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="330" y="402" text-anchor="middle">tile N/BN-1</text>
+  </g>
+  <text x="400" y="402" font-size="9" fill="#555">每 tile：acc += sA · sB</text>
+
+  <!-- ===== summary ===== -->
+  <rect x="30" y="430" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="450" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">访存：A/B 各读 1 遍（分块复用）→ 算术强度 = 2·BN FLOP / 8B</text>
+  <text x="335" y="466" text-anchor="middle" font-size="10" fill="#888">BN=32 时 AI=8 FLOP/B → compute-bound；naive 版 AI=1/8 → memory-bound</text>
+
+  <text x="30" y="500" font-size="10" fill="#888">关键：shared tile 让 A 的 1 个元素被 BK 个 C 元素复用，B 的 1 个元素被 BM 个复用</text>
+  <text x="30" y="516" font-size="10" fill="#888">进一步：register tiling（每 thread 算多个 C 元素）+ double buffering（cp.async 预取下 tile）</text>
+</svg>

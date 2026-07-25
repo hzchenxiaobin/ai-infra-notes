@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 540" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="540" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">RMS Norm：全局归约平方和 → 单标量 rms → 归一化写回</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">1D 数组 (N,)，γ/β 为标量；无 mean-centering，比 LN 少一遍归约</text>
+
+  <!-- ===== Input 1D array ===== -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">input[N]  (1D float 数组，N 个元素连续)</text>
+  <g font-size="10" fill="#333">
+    <rect x="40"  y="84" width="40" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="60"  y="101" text-anchor="middle">1.0</text>
+    <rect x="80"  y="84" width="40" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="100" y="101" text-anchor="middle">2.0</text>
+    <rect x="120" y="84" width="40" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="140" y="101" text-anchor="middle">3.0</text>
+    <rect x="160" y="84" width="40" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="180" y="101" text-anchor="middle">4.0</text>
+    <text x="215" y="101" font-size="11" fill="#888">...</text>
+    <rect x="240" y="84" width="40" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="260" y="101" text-anchor="middle">xₙ</text>
+  </g>
+  <text x="320" y="100" font-size="10" fill="#888">global memory（读 2 遍：归约 + 写回）</text>
+
+  <!-- ===== Pass 1: square-sum reduce ===== -->
+  <path d="M 160 114 L 160 138" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="136" font-size="12" fill="#b85450" font-weight="bold">① Pass 1：全局归约 sq = Σ x² （两阶段：block reduce → global reduce）</text>
+
+  <!-- block 0 -->
+  <g font-size="9" fill="#b85450">
+    <rect x="40" y="146" width="170" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="50" y="162" font-size="10" fill="#b85450" font-weight="bold">block 0 (256 threads)</text>
+    <text x="50" y="176" font-size="9" fill="#555">grid-stride: local_sq += x²</text>
+    <rect x="50" y="184" width="150" height="16" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="125" y="196" text-anchor="middle" font-size="9" fill="#d6a040" font-weight="bold">block_reduce → partial[0]</text>
+  </g>
+  <!-- block 1 -->
+  <g font-size="9" fill="#b85450">
+    <rect x="225" y="146" width="170" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="235" y="162" font-size="10" fill="#b85450" font-weight="bold">block 1 (256 threads)</text>
+    <text x="235" y="176" font-size="9" fill="#555">grid-stride: local_sq += x²</text>
+    <rect x="235" y="184" width="150" height="16" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="310" y="196" text-anchor="middle" font-size="9" fill="#d6a040" font-weight="bold">block_reduce → partial[1]</text>
+  </g>
+  <!-- block k -->
+  <g font-size="9" fill="#b85450">
+    <rect x="410" y="146" width="170" height="60" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+    <text x="420" y="162" font-size="10" fill="#b85450" font-weight="bold">block B (256 threads)</text>
+    <text x="420" y="176" font-size="9" fill="#555">grid-stride: local_sq += x²</text>
+    <rect x="420" y="184" width="150" height="16" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="495" y="196" text-anchor="middle" font-size="9" fill="#d6a040" font-weight="bold">block_reduce → partial[B]</text>
+  </g>
+
+  <!-- partial array -->
+  <path d="M 125 210 L 125 228" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 310 210 L 310 228" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 495 210 L 495 228" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <text x="30" y="224" font-size="12" fill="#4a7a3a" font-weight="bold">partial[B] (double)</text>
+  <g font-size="10" fill="#333">
+    <rect x="100" y="232" width="50" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="125" y="248" text-anchor="middle">5.0</text>
+    <rect x="285" y="232" width="50" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="310" y="248" text-anchor="middle">21.0</text>
+    <text x="355" y="248" font-size="11" fill="#888">...</text>
+    <rect x="470" y="232" width="50" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="495" y="248" text-anchor="middle">9.0</text>
+  </g>
+
+  <!-- ===== global reduce → rms ===== -->
+  <path d="M 310 260 L 310 282" stroke="#446688" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="360" y="278" font-size="12" fill="#446688" font-weight="bold">② 第二 kernel：单 block 归约 partial → rms</text>
+
+  <rect x="180" y="288" width="280" height="44" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="320" y="306" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">reduce_final_kernel (1 block)</text>
+  <text x="320" y="320" text-anchor="middle" font-size="9" fill="#555">rms = sqrt(Σ partial / N + ε)</text>
+
+  <path d="M 320 336 L 320 358" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="270" y="362" width="100" height="36" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+  <text x="320" y="380" text-anchor="middle" font-size="9" fill="#888">标量</text>
+  <text x="320" y="394" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">rms=2.74</text>
+
+  <!-- ===== Pass 2: normalize ===== -->
+  <line x1="20" y1="412" x2="660" y2="412" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <path d="M 320 400 L 320 416" stroke="#446688" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="30" y="430" font-size="12" fill="#446688" font-weight="bold">③ Pass 2：归一化写回 output[i] = γ·x[i]/rms + β（第二 kernel 内 grid-stride 写回）</text>
+
+  <g font-size="10" fill="#333">
+    <rect x="40"  y="438" width="40" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="60"  y="455" text-anchor="middle">.37</text>
+    <rect x="80"  y="438" width="40" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="100" y="455" text-anchor="middle">.73</text>
+    <rect x="120" y="438" width="40" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="140" y="455" text-anchor="middle">1.10</text>
+    <rect x="160" y="438" width="40" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="180" y="455" text-anchor="middle">1.46</text>
+    <text x="215" y="455" font-size="11" fill="#888">...</text>
+    <rect x="240" y="438" width="40" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="260" y="455" text-anchor="middle">γ·xₙ/rms+β</text>
+  </g>
+  <text x="320" y="455" font-size="10" fill="#888">← 第 2 遍读 input + 写 output</text>
+
+  <!-- ===== Summary ===== -->
+  <rect x="30" y="480" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="498" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">访存：读 input 2 遍（归约 + 写回）+ 写 output 1 遍 = 3N × 4B</text>
+  <text x="335" y="514" text-anchor="middle" font-size="10" fill="#888">对比 LN（4N×4B：3 读 + 1 写）少 1 遍 → RMSNorm 比 LN 省约 25% 带宽</text>
+
+  <text x="30" y="534" font-size="10" fill="#888">关键：rms 是全局标量（非 per-row/per-channel），需两阶段归约（同 #4 Reduction）</text>
+</svg>

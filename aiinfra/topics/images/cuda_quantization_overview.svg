@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 480" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="480" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">量化与反量化：INT8/INT4 ↔ FP16/FP32 转换</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">per-tensor / per-channel / per-group scale；反量化后做 FP32 累加</text>
+
+  <!-- dequant flow -->
+  <text x="30" y="76" font-size="12" fill="#446688" font-weight="bold">反量化（Weight Dequantization）</text>
+  <g font-size="9" fill="#333">
+    <rect x="40" y="86" width="80" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="80" y="105" text-anchor="middle">INT8/INT4</text>
+    <text x="135" y="105" font-size="9" fill="#888">→ ×scale →</text>
+    <rect x="200" y="86" width="80" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="240" y="105" text-anchor="middle">FP16/FP32</text>
+    <text x="295" y="105" font-size="9" fill="#888">→ matmul →</text>
+    <rect x="360" y="86" width="80" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="400" y="105" text-anchor="middle">output</text>
+  </g>
+
+  <!-- scale granularity -->
+  <line x1="20" y1="132" x2="660" y2="132" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="156" font-size="12" fill="#444" font-weight="bold">scale 粒度</text>
+  <g font-size="10" fill="#333">
+    <rect x="30" y="166" width="180" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="120" y="184" text-anchor="middle" fill="#446688">per-tensor（全矩阵 1 个 scale）</text>
+    <rect x="220" y="166" width="180" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="310" y="184" text-anchor="middle" fill="#4a7a3a">per-channel（每行 1 个）</text>
+    <rect x="410" y="166" width="220" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="520" y="184" text-anchor="middle" fill="#d6a040">per-group（每 group_size 个 1 个）</text>
+  </g>
+
+  <!-- INT4 packing -->
+  <line x1="20" y1="210" x2="660" y2="210" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="234" font-size="12" fill="#444" font-weight="bold">INT4 打包：2 个 nibble → 1 byte</text>
+  <rect x="30" y="244" width="610" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="264" font-size="10" fill="#444">byte = (w[n,2i] &lt;&lt; 4) | (w[n,2i+1] &amp; 0xF)</text>
+  <text x="44" y="280" font-size="10" fill="#555">解包：high nibble = byte&gt;&gt;4，low nibble = byte&amp;0xF</text>
+  <text x="44" y="294" font-size="10" fill="#b85450">signed: value = nibble - 8（INT4 范围 [-8,7]）</text>
+
+  <!-- INT8 KV cache -->
+  <line x1="20" y1="316" x2="660" y2="316" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="340" font-size="12" fill="#444" font-weight="bold">INT8 KV-Cache Attention</text>
+  <rect x="30" y="350" width="610" height="56" fill="#e6f4ea" stroke="#4a7a3a" font-size="9" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="370" font-size="10" fill="#444">K_fp = K_int8 × k_scale[head, seq]  （per-(head,seq) 粒度）</text>
+  <text x="44" y="386" font-size="10" fill="#555">scores = Q · K_fp^T / √d → softmax → ·V_fp</text>
+  <text x="44" y="400" font-size="10" fill="#888">KV cache 量化省显存（推理瓶颈），精度损失可接受</text>
+
+  <!-- summary -->
+  <rect x="30" y="424" width="610" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="335" y="444" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">核心：低精度存储省带宽/显存，FP32 累加保精度</text>
+  <text x="335" y="460" text-anchor="middle" font-size="10" fill="#888">INT8 省 4× / INT4 省 8× 带宽；量化推理的标配（AWQ/GPTQ/SmoothQuant）</text>
+</svg>

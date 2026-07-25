@@ -83,7 +83,7 @@ __global__ void softmax_naive(const float* x, float* y, int M, int D) {
 | ② sum | 扫行算 `exp(x - row_max)` 求和 | `block_reduce_sum` | `row_sum`（广播） |
 | ③ normalize | 再扫行写 `y = exp(x - row_max) / row_sum` | 无 | 输出 |
 
-![一个 block 负责一行：三遍扫描数据流](../images/cuda_softmax_overview.svg)
+![一个 block 负责一行：三遍扫描数据流](../../../images/cuda_softmax_overview.svg)
 
 > 💡 **为什么按行分 block？** 行间天然独立、无依赖，正好映射到 block 维；行内的 `max`/`sum` 是归约，正好用 block 内线程协作 + warp shuffle 解决。这个"行间 block 并行、行内块归约"的映射是 softmax / layernorm / rmsnorm 一整族 norm kernel 的通用骨架。
 
@@ -99,7 +99,7 @@ __global__ void softmax_naive(const float* x, float* y, int M, int D) {
 
 两次块归约共用同一套积木：`warp_reduce_*`（warp 内 `__shfl_down_sync` 折半归约）+ `block_reduce_*`（warp 间 shared 汇总 + 第一个 warp 再归约 + 广播）。sum 版和 max 版**几乎逐行对称**——把 `+=` 换成 `fmaxf`、初值 `0.0f` 换成 `-INFINITY` 即可。
 
-![warp shuffle 归约与 block 两级归约](../images/cuda_softmax_block_reduce.svg)
+![warp shuffle 归约与 block 两级归约](../../../images/cuda_softmax_block_reduce.svg)
 
 > 💡 **面试加分点**：能脱口而出"`__shfl_down_sync` 在寄存器间直接传数据，不过 shared memory，零 bank conflict，warp 内 32 个 lane 归约只需 `log₂32 = 5` 步"。
 
@@ -375,7 +375,7 @@ $$m_{\text{new}} = \max(m_{\text{old}}, m_{\text{block}}), \qquad s_{\text{new}}
 
 旧的部分和乘以修正因子 $e^{m_{\text{old}} - m_{\text{new}}}$ 重新对齐到新最大值，最后一遍只做归一化写回——global 读从 3 遍降到 2 遍。
 
-![online softmax：max 与 sum 单遍融合](../images/cuda_softmax_worked.svg)
+![online softmax：max 与 sum 单遍融合](../../../images/cuda_softmax_worked.svg)
 
 **Worked example**（`x = [1, 3, 2]`，逐元素递推）：
 

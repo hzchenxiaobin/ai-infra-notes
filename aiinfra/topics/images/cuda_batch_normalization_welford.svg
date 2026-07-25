@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="560" fill="#fafafa"/>
+
+  <text x="340" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">Welford 单遍算法：mean + M2 融合到一遍扫描</text>
+  <text x="340" y="44" text-anchor="middle" font-size="11" fill="#888">每来一个 x 增量更新 count/mean/M2，避免两遍扫描和大数抵消</text>
+
+  <!-- ===== left: two-pass ===== -->
+  <rect x="30" y="60" width="290" height="250" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="8" filter="url(#rough2)"/>
+  <text x="175" y="82" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">朴素两遍（3 遍 global 读）</text>
+  <text x="44" y="104" font-size="10" fill="#555">Pass 1: sum = Σx → mean = sum/N</text>
+  <text x="44" y="120" font-size="10" fill="#555">Pass 2: sq = Σ(x-mean)² → var = sq/N</text>
+  <text x="44" y="136" font-size="10" fill="#555">Pass 3: y = γ(x-mean)/√(var+ε)+β</text>
+
+  <text x="44" y="164" font-size="10" fill="#b85450" font-weight="bold">问题：</text>
+  <text x="44" y="180" font-size="9" fill="#555">① input 读 3 遍，带宽浪费</text>
+  <text x="44" y="194" font-size="9" fill="#555">② Σ(x-mean)² 展开为 Σx² − 2·mean·Σx + N·mean²</text>
+  <text x="44" y="208" font-size="9" fill="#555">   当 x 大、var 小时 Σx² 与 N·mean² 量级</text>
+  <text x="44" y="222" font-size="9" fill="#555">   接近，相减严重抵消 → var 可能为负！</text>
+
+  <rect x="44" y="234" width="262" height="40" fill="#fff" stroke="#b85450" stroke-width="0.7" rx="4" filter="url(#rough2)"/>
+  <text x="175" y="250" text-anchor="middle" font-size="9" fill="#888">例如 x=[1000, 1001, 999], mean=1000</text>
+  <text x="175" y="264" text-anchor="middle" font-size="9" fill="#b85450">Σx²=3,000,002 vs N·mean²=3,000,000 → 抵消剩 2</text>
+
+  <text x="44" y="294" font-size="9" fill="#888">访存：3 读 + 1 写 = 4N×4B</text>
+
+  <!-- ===== right: welford ===== -->
+  <rect x="360" y="60" width="290" height="250" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="8" filter="url(#rough2)"/>
+  <text x="505" y="82" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">Welford 单遍（2 遍 global 读）</text>
+  <text x="374" y="104" font-size="10" fill="#555">Pass 1: 增量更新 mean / M2</text>
+  <text x="374" y="120" font-size="10" fill="#555">Pass 2: y = γ(x-mean)/√(M2/N+ε)+β</text>
+
+  <text x="374" y="148" font-size="10" fill="#4a7a3a" font-weight="bold">递推公式（每个新 x）：</text>
+  <rect x="374" y="156" width="262" height="62" fill="#fff" stroke="#4a7a3a" stroke-width="0.7" rx="4" filter="url(#rough2)"/>
+  <text x="384" y="174" font-size="10" fill="#333">count++</text>
+  <text x="384" y="190" font-size="10" fill="#333">δ = x − mean</text>
+  <text x="384" y="206" font-size="10" fill="#333">mean += δ / count</text>
+  <text x="384" y="222" font-size="10" fill="#333">M2 += δ · (x − mean)</text>
+
+  <text x="374" y="240" font-size="10" fill="#4a7a3a" font-weight="bold">优点：</text>
+  <text x="374" y="256" font-size="9" fill="#555">① input 只读 2 遍（省 1/3 带宽）</text>
+  <text x="374" y="270" font-size="9" fill="#555">② 数值稳定，无大数抵消</text>
+  <text x="374" y="284" font-size="9" fill="#555">③ 天然支持流式/分块合并</text>
+
+  <text x="374" y="294" font-size="9" fill="#888">访存：2 读 + 1 写 = 3N×4B</text>
+
+  <!-- ===== middle arrow ===== -->
+  <path d="M 326 180 L 356 180" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="341" y="172" text-anchor="middle" font-size="9" fill="#666">优化</text>
+
+  <!-- ===== Welford merge (for block reduce) ===== -->
+  <line x1="20" y1="328" x2="660" y2="328" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <text x="30" y="352" font-size="12" fill="#446688" font-weight="bold">块归约：Welford 状态合并（线程间 / warp 间）</text>
+  <text x="30" y="370" font-size="10" fill="#555">每 thread 持有 (count_A, mean_A, M2_A)，合并 (count_B, mean_B, M2_B)：</text>
+
+  <rect x="30" y="380" width="620" height="100" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="44" y="400" font-size="10" fill="#333">count = count_A + count_B</text>
+  <text x="44" y="418" font-size="10" fill="#333">δ = mean_B − mean_A</text>
+  <text x="44" y="436" font-size="10" fill="#333">mean = mean_A + δ · count_B / count</text>
+  <text x="44" y="454" font-size="10" fill="#333">M2 = M2_A + M2_B + δ² · count_A · count_B / count</text>
+  <text x="44" y="472" font-size="9" fill="#888">合并后 var = M2 / count（biased）或 M2 / (count−1)（unbiased）</text>
+
+  <text x="30" y="502" font-size="10" fill="#444" font-weight="bold">实践建议：</text>
+  <text x="30" y="518" font-size="9" fill="#555">• N 小（本题 N≤5000）：朴素两遍足够，代码简单、精度可接受</text>
+  <text x="30" y="532" font-size="9" fill="#555">• N 极大 / 数据范围大：用 Welford，避免抵消 + 省 1 遍带宽</text>
+  <text x="350" y="518" font-size="9" fill="#555">• shuffle 合并 3 状态比单 sum 复杂，需</text>
+  <text x="350" y="532" font-size="9" fill="#555">  自定义 warp_reduce_welford</text>
+</svg>

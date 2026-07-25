@@ -82,7 +82,7 @@ __global__ void gemm_naive(const half* A, const half* B, half* C, int M, int N, 
 - **Warp 级（Warp Tile）**：每个 warp 负责 block tile 内 `32×64` 的子块，由 `FRAGS_M×FRAGS_N = 2×4` 个 WMMA fragment 拼成；
 - **Fragment 级（Tensor Core）**：每个 fragment 是 `16×16×16` 的 `mma` 运算，warp 内 32 lane 协作执行，fp32 累加器常驻寄存器。
 
-![GEMM 三级数据复用：global → shared → register](../images/cuda_gemm_overview.svg)
+![GEMM 三级数据复用：global → shared → register](../../../images/cuda_gemm_overview.svg)
 
 **参数推导**（`BK = WMMA_K = 16`，因为 `mma` 的 K 维固定为 16，shared tile 一列正好喂给一个 fragment）：
 
@@ -96,9 +96,9 @@ shared tiles  = As[128×16] + Bs[16×128] = 4096 half = 8 KB
 staging (dyn) = Cs[128×128] fp32 = 64 KB   （epilogue 暂存累加器）
 ```
 
-![GEMM 分块变量与层级关系](../images/cuda_gemm_variables.svg)
+![GEMM 分块变量与层级关系](../../../images/cuda_gemm_variables.svg)
 
-![128×128 block tile 内 warp 与 fragment 的映射](../images/cuda_gemm_block_mapping.svg)
+![128×128 block tile 内 warp 与 fragment 的映射](../../../images/cuda_gemm_block_mapping.svg)
 
 > 💡 **tiling 为什么有效**（面试必答）：block tile 内每个 `A` 元素被复用 `BN` 次、每个 `B` 元素被复用 `BM` 次，算术强度从朴素版的 `~0.5 FLOP/B` 提升到 `~BM/2 = 64 FLOP/B` 量级，越过 roofline 拐点，kernel 从 memory-bound 变成 compute-bound。三级 tiling 就是把数据逐层搬到离计算更近的存储里复用：global → shared（block 级）→ fragment 寄存器（warp 级）→ Tensor Core（指令级）。
 
