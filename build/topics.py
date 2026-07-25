@@ -96,14 +96,45 @@ def _extract_day_files(topic_dir: Path) -> list:
     return days
 
 
+def _extract_solution_files(topic_dir: Path) -> list:
+    """Extract standalone solution pages (<slug>.md, excluding README/SKILL/dayN)."""
+    solution_title_pattern = re.compile(r"^#\s+LeetGPU\s+(.+?)\s+题解\s*$")
+    solutions = []
+    for md_path in sorted(topic_dir.glob("*.md")):
+        name = md_path.name
+        if name in ("README.md", "SKILL.md") or re.match(r"day\d+\.md$", name):
+            continue
+        text = md_path.read_text(encoding="utf-8")
+        text = _rewrite_local_paths(text)
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        match = solution_title_pattern.match(first_line)
+        if match:
+            title = match.group(1).strip()
+        elif first_line.startswith("#"):
+            title = first_line.lstrip("# ").strip()
+        else:
+            print(f"Warning: skipping {md_path}, cannot parse solution title")
+            continue
+        solutions.append({
+            "slug": md_path.stem,
+            "title": title,
+            "markdown": "\n".join(text.strip().splitlines()[1:]),
+        })
+    solutions.sort(key=lambda s: s["slug"])
+    return solutions
+
+
 def _build_nav(topic_slug: str, topic_display_name: str,
                current_day: Optional[int] = None, nav_days: list = None,
-               day_files: list = None) -> str:
+               day_files: list = None, nav_solutions: list = None,
+               current_slug: Optional[str] = None) -> str:
     """Build sidebar navigation for a topic site."""
     if nav_days is None:
         nav_days = []
     if day_files is None:
         day_files = []
+    if nav_solutions is None:
+        nav_solutions = []
     has_day_files = bool(day_files)
 
     lines = []
@@ -113,7 +144,7 @@ def _build_nav(topic_slug: str, topic_display_name: str,
 
     lines.append(f'<div class="nav-section-title" style="margin-top:1rem;">{topic_display_name} 专题</div>')
 
-    overview_active = " active" if current_day is None else ""
+    overview_active = " active" if current_day is None and current_slug is None else ""
     lines.append(f'<a class="nav-link{overview_active}" href="index.html">📌 专题概览</a>')
 
     for day in nav_days:
@@ -127,6 +158,16 @@ def _build_nav(topic_slug: str, topic_display_name: str,
             f'Day {day["num"]}：{day["title"]}'
             f'</a>'
         )
+
+    if nav_solutions:
+        lines.append('<div class="nav-section-title" style="margin-top:1rem;">📝 LeetGPU 题解</div>')
+        for sol in nav_solutions:
+            sol_active = " active" if current_slug == sol["slug"] else ""
+            lines.append(
+                f'<a class="nav-link day-link{sol_active}" href="{sol["slug"]}.html">'
+                f'{sol["title"]}'
+                f'</a>'
+            )
 
     return "\n".join(lines)
 
@@ -166,6 +207,7 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
     overview = _rewrite_local_paths(readme_path.read_text(encoding="utf-8"))
     readme_days = _extract_day_headings_from_readme(overview)
     day_files = _extract_day_files(topic_dir)
+    solution_files = _extract_solution_files(topic_dir)
 
     if day_files:
         day_cards_html = '<div class="day-cards">\n'
@@ -193,11 +235,24 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
         else:
             overview_with_cards = overview
 
+    if solution_files:
+        sol_cards_html = '<div class="day-cards">\n'
+        for sol in solution_files:
+            sol_cards_html += (
+                f'<a class="day-card" href="{sol["slug"]}.html">\n'
+                f'  <div class="day-card-number">题解</div>\n'
+                f'  <div class="day-card-title">{sol["title"]}</div>\n'
+                f'</a>\n'
+            )
+        sol_cards_html += '</div>\n'
+        overview_with_cards += '\n\n## 📝 LeetGPU 题解\n\n' + sol_cards_html
+
     nav_days = day_files if day_files else readme_days
     root_prefix = "../"
     overview_html = page_template(
         title=f"{display} 专题",
-        nav_html=_build_nav(slug, display, current_day=None, nav_days=nav_days, day_files=day_files),
+        nav_html=_build_nav(slug, display, current_day=None, nav_days=nav_days,
+                            day_files=day_files, nav_solutions=solution_files),
         markdown=overview_with_cards,
         is_overview=True,
         root_prefix=root_prefix,
@@ -211,7 +266,8 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
     for day in day_files:
         html = page_template(
             title=f"Day {day['num']}：{day['title']}",
-            nav_html=_build_nav(slug, display, current_day=day["num"], nav_days=nav_days, day_files=day_files),
+            nav_html=_build_nav(slug, display, current_day=day["num"], nav_days=nav_days,
+                                day_files=day_files, nav_solutions=solution_files),
             markdown=day["markdown"],
             is_overview=False,
             root_prefix=root_prefix,
@@ -220,6 +276,22 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
             back_link_href="index.html",
         )
         filename = f"day{day['num']}.html"
+        (output_dir / filename).write_text(html, encoding="utf-8")
+        print(f"Generated: {output_dir / filename}")
+
+    for sol in solution_files:
+        html = page_template(
+            title=f"LeetGPU {sol['title']} 题解",
+            nav_html=_build_nav(slug, display, nav_days=nav_days, day_files=day_files,
+                                nav_solutions=solution_files, current_slug=sol["slug"]),
+            markdown=sol["markdown"],
+            is_overview=False,
+            root_prefix=root_prefix,
+            page_title=f"{display} 题解 - {sol['title']}",
+            heading_renderer_js=HEADING_RENDERER_TOPICS,
+            back_link_href="index.html",
+        )
+        filename = f"{sol['slug']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {output_dir / filename}")
 
