@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 170" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+      <rect width="6" height="6" fill="#fdecec"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#e8b4b4" stroke-width="1.2"/>
+    </pattern>
+  </defs>
+  <rect width="880" height="170" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">单流串行排列：全部 kernel 落在同一条 CUDA stream</text>
+  <text x="440" y="54" text-anchor="middle" font-size="12" fill="#888">tid=7，每个 kernel 必须等前一个结束才能开始 → 无 kernel 级并行</text>
+
+  <!-- stream label -->
+  <g filter="url(#sk)">
+    <text x="40" y="100" font-size="13" font-weight="bold" fill="#5a5a5a">stream 7</text>
+    <line x1="100" y1="96" x2="128" y2="96" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- kernels + gaps -->
+  <g filter="url(#sk)">
+    <!-- k0 -->
+    <rect x="140" y="76" width="48" height="36" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="164" y="99" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">k0</text>
+    <!-- gap 1 -->
+    <rect x="188" y="76" width="64" height="36" rx="3" fill="url(#hatch)" stroke="#d99"/>
+    <text x="220" y="98" text-anchor="middle" font-size="10" fill="#b85450">gap</text>
+    <!-- k1 -->
+    <rect x="252" y="76" width="48" height="36" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="276" y="99" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">k1</text>
+    <!-- gap 2 -->
+    <rect x="300" y="76" width="64" height="36" rx="3" fill="url(#hatch)" stroke="#d99"/>
+    <text x="332" y="98" text-anchor="middle" font-size="10" fill="#b85450">gap</text>
+    <!-- k2 -->
+    <rect x="364" y="76" width="42" height="36" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="385" y="99" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">k2</text>
+    <!-- ellipsis -->
+    <text x="438" y="100" text-anchor="middle" font-size="16" fill="#888">…</text>
+    <!-- gap N -->
+    <rect x="470" y="76" width="64" height="36" rx="3" fill="url(#hatch)" stroke="#d99"/>
+    <text x="502" y="98" text-anchor="middle" font-size="10" fill="#b85450">gap</text>
+    <!-- kN -->
+    <rect x="534" y="76" width="48" height="36" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="558" y="99" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">kN</text>
+
+    <!-- baseline arrow -->
+    <line x1="140" y1="128" x2="592" y2="128" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)"/>
+    <text x="600" y="132" font-size="11" fill="#5a5a5a">时间</text>
+  </g>
+
+  <!-- legend / annotation -->
+  <g>
+    <rect x="120" y="146" width="16" height="11" rx="2" fill="#dbeafe" stroke="#2563eb" stroke-width="1.2"/>
+    <text x="142" y="155" font-size="11" fill="#475569">kernel 执行</text>
+    <rect x="230" y="146" width="16" height="11" rx="2" fill="url(#hatch)" stroke="#d99"/>
+    <text x="252" y="155" font-size="11" fill="#b85450">gap = launch overhead（CPU dispatch → GPU 启动之间的空档）</text>
+  </g>
+</svg>

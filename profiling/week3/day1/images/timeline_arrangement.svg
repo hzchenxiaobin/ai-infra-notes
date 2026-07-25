@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 345" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.4"/>
+    </filter>
+  </defs>
+  <rect width="900" height="345" fill="#fdfcf7"/>
+
+  <text x="450" y="30" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">GPU Kernel 时间线排列对比（同时间刻度，稳态单轮）</text>
+  <text x="450" y="52" text-anchor="middle" font-size="12" fill="#888">蓝色 = kernel 执行｜红色 = gap（launch overhead，CPU dispatch → GPU 启动之间的空档）</text>
+
+  <!-- ===================== Prefill ===================== -->
+  <g filter="url(#sk)">
+    <text x="30" y="105" font-size="13" font-weight="bold" fill="#1e40af">Prefill</text>
+    <text x="30" y="120" font-size="10" fill="#888">(N=1024)</text>
+    <!-- gap background bar -->
+    <rect x="110" y="85" width="700" height="30" rx="3" fill="#fee2e2" stroke="#e8b4b4" stroke-width="1"/>
+    <!-- kernel segments (iter-1 actual positions) -->
+    <rect x="110.0" y="85" width="2.8" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="185.5" y="85" width="15.9" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="300.5" y="85" width="12.8" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="336.9" y="85" width="6.8" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="360.2" y="85" width="10.3" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="417.4" y="85" width="15.2" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="462.0" y="85" width="2.3" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="533.2" y="85" width="5.5" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="564.0" y="85" width="2.0" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="616.9" y="85" width="2.8" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="691.0" y="85" width="20.1" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="725.4" y="85" width="2.7" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="780.3" y="85" width="14.7" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <rect x="808.6" y="85" width="2.0" height="30" rx="1.5" fill="#3b82f6" stroke="#1e40af" stroke-width="0.6"/>
+    <!-- full-span bracket -->
+    <path d="M 110 124 L 110 130 L 810 130 L 810 124" fill="none" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="460" y="146" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">694 us 时间线跨度 ｜ kernel 执行仅 115 us (16.6%) ｜ 83% launch overhead</text>
+
+  <!-- ===================== Decode ===================== -->
+  <g filter="url(#sk)">
+    <text x="30" y="225" font-size="13" font-weight="bold" fill="#1e40af">Decode</text>
+    <text x="30" y="240" font-size="10" fill="#888">(N=1)</text>
+    <!-- gap background bar -->
+    <rect x="110" y="205" width="602" height="30" rx="3" fill="#fee2e2" stroke="#e8b4b4" stroke-width="1"/>
+    <!-- kernel segments -->
+    <rect x="110.0" y="205" width="1.8" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="171.5" y="205" width="3.7" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="274.5" y="205" width="1.6" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="308.7" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="331.1" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="382.0" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="457.7" y="205" width="1.9" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="487.9" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="535.2" y="205" width="1.9" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="601.5" y="205" width="3.7" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="633.6" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="683.4" y="205" width="2.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <rect x="710.8" y="205" width="1.5" height="30" rx="1" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"/>
+    <!-- full-span bracket -->
+    <path d="M 110 244 L 110 250 L 712 250 L 712 244" fill="none" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="411" y="266" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">605 us 时间线跨度 ｜ kernel 执行仅 23 us (3.8%) ｜ 96% launch overhead</text>
+
+  <!-- ===================== annotations ===================== -->
+  <g>
+    <rect x="110" y="285" width="14" height="10" rx="2" fill="#3b82f6" stroke="#1e40af" stroke-width="0.8"/>
+    <text x="130" y="294" font-size="11" fill="#475569">kernel 执行</text>
+    <rect x="220" y="285" width="14" height="10" rx="2" fill="#fee2e2" stroke="#e8b4b4" stroke-width="0.8"/>
+    <text x="240" y="294" font-size="11" fill="#b85450">gap（launch overhead）</text>
+
+    <text x="110" y="316" font-size="11" fill="#2b2b2b" font-weight="bold">关键观察：</text>
+    <text x="178" y="316" font-size="11" fill="#475569">Decode 的 13 个 kernel 总共仅 23 us 计算，却被 582 us gap 包夹 → 96% 时间 GPU 在空等 CPU dispatch（launch-overhead-bound）</text>
+    <text x="110" y="333" font-size="10" fill="#888">注：稳态单轮（iter 1+ 平均，已排除预热轮）。预热轮 iter 0 有 ~2500 us 额外 gap，使全时间线平均 gap 升至 89.8%（见上表）。数据：RTX 5090 / FP16。</text>
+  </g>
+</svg>

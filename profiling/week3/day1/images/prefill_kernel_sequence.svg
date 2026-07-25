@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+
+  <text x="470" y="30" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Prefill 每轮 kernel 序列 = Transformer Block 计算图</text>
+  <text x="470" y="52" text-anchor="middle" font-size="12" fill="#888">14 个 GPU kernel，GEMM 合计占单轮 CUDA 时间 80%+ → compute-bound</text>
+
+  <!-- ===== Row 1: Attention (kernels 1-7) ===== -->
+  <text x="40" y="84" font-size="12" font-weight="bold" fill="#2e6e8e">前 7 个 kernel（Attention 子层）</text>
+
+  <g filter="url(#sk)">
+    <!-- 1 LayerNorm -->
+    <rect x="40" y="92" width="112" height="58" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="96" y="113" text-anchor="middle" font-size="11" fill="#7a5415">LayerNorm</text>
+    <text x="96" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">3.2 us</text>
+    <!-- 2 GEMM cutlass -->
+    <rect x="165" y="92" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="221" y="113" text-anchor="middle" font-size="11" fill="#1e40af">GEMM cutlass</text>
+    <text x="221" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">17.4 us</text>
+    <!-- 3 GEMM wmma -->
+    <rect x="290" y="92" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="346" y="113" text-anchor="middle" font-size="11" fill="#1e40af">GEMM wmma</text>
+    <text x="346" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">12.8 us</text>
+    <!-- 4 elementwise -->
+    <rect x="415" y="92" width="112" height="58" rx="5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+    <text x="471" y="113" text-anchor="middle" font-size="11" fill="#475569">elementwise</text>
+    <text x="471" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">6.9 us</text>
+    <!-- 5 Softmax -->
+    <rect x="540" y="92" width="112" height="58" rx="5" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.4"/>
+    <text x="596" y="113" text-anchor="middle" font-size="11" fill="#6b21a8">Softmax</text>
+    <text x="596" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#6b21a8">10.5 us</text>
+    <!-- 6 GEMM wmma -->
+    <rect x="665" y="92" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="721" y="113" text-anchor="middle" font-size="11" fill="#1e40af">GEMM wmma</text>
+    <text x="721" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">15.4 us</text>
+    <!-- 7 elementwise -->
+    <rect x="790" y="92" width="112" height="58" rx="5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+    <text x="846" y="113" text-anchor="middle" font-size="11" fill="#475569">elementwise</text>
+    <text x="846" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">2.3 us</text>
+
+    <!-- compute-step labels row 1 -->
+    <text x="96" y="170" text-anchor="middle" font-size="10" fill="#666">norm1</text>
+    <text x="221" y="170" text-anchor="middle" font-size="10" fill="#666">qkv Linear</text>
+    <text x="346" y="170" text-anchor="middle" font-size="10" fill="#666">Q·Kᵀ</text>
+    <text x="471" y="170" text-anchor="middle" font-size="10" fill="#666">scale √d</text>
+    <text x="596" y="170" text-anchor="middle" font-size="10" fill="#666">attn weight</text>
+    <text x="721" y="170" text-anchor="middle" font-size="10" fill="#666">Attn·V</text>
+    <text x="846" y="170" text-anchor="middle" font-size="10" fill="#666">transpose</text>
+
+    <!-- arrows row1 between boxes -->
+    <line x1="152" y1="121" x2="163" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="277" y1="121" x2="288" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="402" y1="121" x2="413" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="527" y1="121" x2="538" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="652" y1="121" x2="663" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="777" y1="121" x2="788" y2="121" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+  </g>
+
+  <!-- wrap arrow: end of row1 -> start of row2 -->
+  <path d="M 902 121 Q 922 121 922 150 Q 922 230 902 230 Q 60 250 60 280" fill="none" stroke="#5a5a5a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <text x="928" y="180" font-size="10" fill="#888" transform="rotate(90 928 180)">衔接</text>
+
+  <!-- ===== Row 2: kernels 8-14 ===== -->
+  <text x="40" y="214" font-size="12" font-weight="bold" fill="#2e6e8e">后 7 个 kernel（out Linear + FFN 子层）</text>
+
+  <g filter="url(#sk)">
+    <!-- 8 GEMM cutlass -->
+    <rect x="40" y="222" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="96" y="243" text-anchor="middle" font-size="11" fill="#1e40af">GEMM cutlass</text>
+    <text x="96" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">5.4 us</text>
+    <!-- 9 elementwise -->
+    <rect x="165" y="222" width="112" height="58" rx="5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+    <text x="221" y="243" text-anchor="middle" font-size="11" fill="#475569">elementwise</text>
+    <text x="221" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">1.3 us</text>
+    <!-- 10 LayerNorm -->
+    <rect x="290" y="222" width="112" height="58" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="346" y="243" text-anchor="middle" font-size="11" fill="#7a5415">LayerNorm</text>
+    <text x="346" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">2.8 us</text>
+    <!-- 11 GEMM cutlass -->
+    <rect x="415" y="222" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="471" y="243" text-anchor="middle" font-size="11" fill="#1e40af">GEMM cutlass</text>
+    <text x="471" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">20.2 us</text>
+    <!-- 12 GELU -->
+    <rect x="540" y="222" width="112" height="58" rx="5" fill="#ffedd5" stroke="#ea580c" stroke-width="1.4"/>
+    <text x="596" y="243" text-anchor="middle" font-size="11" fill="#9a3412">GELU</text>
+    <text x="596" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#9a3412">2.8 us</text>
+    <!-- 13 GEMM cutlass -->
+    <rect x="665" y="222" width="112" height="58" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="721" y="243" text-anchor="middle" font-size="11" fill="#1e40af">GEMM cutlass</text>
+    <text x="721" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">14.8 us</text>
+    <!-- 14 elementwise -->
+    <rect x="790" y="222" width="112" height="58" rx="5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+    <text x="846" y="243" text-anchor="middle" font-size="11" fill="#475569">elementwise</text>
+    <text x="846" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">1.4 us</text>
+
+    <!-- compute-step labels row 2 -->
+    <text x="96" y="300" text-anchor="middle" font-size="10" fill="#666">out Linear</text>
+    <text x="221" y="300" text-anchor="middle" font-size="10" fill="#666">residual add</text>
+    <text x="346" y="300" text-anchor="middle" font-size="10" fill="#666">norm2</text>
+    <text x="471" y="300" text-anchor="middle" font-size="10" fill="#666">FFN Linear1</text>
+    <text x="596" y="300" text-anchor="middle" font-size="10" fill="#666">activation</text>
+    <text x="721" y="300" text-anchor="middle" font-size="10" fill="#666">FFN Linear2</text>
+    <text x="846" y="300" text-anchor="middle" font-size="10" fill="#666">residual add</text>
+
+    <!-- arrows row2 -->
+    <line x1="152" y1="251" x2="163" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="277" y1="251" x2="288" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="402" y1="251" x2="413" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="527" y1="251" x2="538" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="652" y1="251" x2="663" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <line x1="777" y1="251" x2="788" y2="251" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar2)"/>
+  </g>
+
+  <!-- ===== Legend ===== -->
+  <g>
+    <text x="40" y="350" font-size="12" font-weight="bold" fill="#2b2b2b">图例（kernel 类型）</text>
+    <rect x="40" y="362" width="18" height="13" rx="2" fill="#dbeafe" stroke="#2563eb" stroke-width="1.2"/>
+    <text x="64" y="373" font-size="11" fill="#475569">GEMM（compute-bound）</text>
+    <rect x="230" y="362" width="18" height="13" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="254" y="373" font-size="11" fill="#475569">LayerNorm</text>
+    <rect x="360" y="362" width="18" height="13" rx="2" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.2"/>
+    <text x="384" y="373" font-size="11" fill="#475569">Softmax</text>
+    <rect x="470" y="362" width="18" height="13" rx="2" fill="#ffedd5" stroke="#ea580c" stroke-width="1.2"/>
+    <text x="494" y="373" font-size="11" fill="#475569">GELU</text>
+    <rect x="560" y="362" width="18" height="13" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="584" y="373" font-size="11" fill="#475569">elementwise（scale / transpose / residual add）</text>
+
+    <text x="40" y="402" font-size="11" fill="#b85450" font-weight="bold">观察：6 个 GEMM kernel（#2/3/6/8/11/13）合计占单轮 80%+ CUDA 时间 → Prefill compute-bound</text>
+    <text x="40" y="421" font-size="10" fill="#888">数据来源：trace_prefill.json，RTX 5090 / FP16 / d_model=512 / n_heads=8，n_iter=5 取每轮平均</text>
+  </g>
+</svg>
