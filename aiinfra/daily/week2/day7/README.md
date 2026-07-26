@@ -513,37 +513,37 @@ Day 7 是本周的收尾与验收。通过限时手撕，我们把本周五大�
 
  参考答案要点（30 分钟内需写出的核心结构）：
 
- ```cuda
- // 1. warpReduceSum（~5 分钟）
- __inline__ __device__ float warpReduceSum(float val) {
- for (int offset = 16; offset > 0; offset >>= 1)
- val += __shfl_down_sync(0xFFFFFFFF, val, offset);
- return val;
- }
+```cuda
+// 1. warpReduceSum（~5 分钟）
+__inline__ __device__ float warpReduceSum(float val) {
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
 
- // 2. blockReduceSum Kernel（~15 分钟）
- __global__ void blockReduce(const float* in, float* out, int n) {
- __shared__ float warpS[32];
- int tid = blockIdx.x * blockDim.x + threadIdx.x;
- int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
- float sum = 0;
- for (int i = tid; i < n; i += gridDim.x * blockDim.x) sum += in[i];
- sum = warpReduceSum(sum);
- if (lane == 0) warpS[wid] = sum;
- __syncthreads();
- if (wid == 0) {
- int numWarps = (blockDim.x + 31) / 32;
- sum = (lane < numWarps) ? warpS[lane] : 0;
- sum = warpReduceSum(sum);
- if (lane == 0) out[blockIdx.x] = sum;
- }
- }
+// 2. blockReduceSum Kernel（~15 分钟）
+__global__ void blockReduce(const float* in, float* out, int n) {
+    __shared__ float warpS[32];
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
+    float sum = 0;
+    for (int i = tid; i < n; i += gridDim.x * blockDim.x) sum += in[i];
+    sum = warpReduceSum(sum);
+    if (lane == 0) warpS[wid] = sum;
+    __syncthreads();
+    if (wid == 0) {
+        int numWarps = (blockDim.x + 31) / 32;
+        sum = (lane < numWarps) ? warpS[lane] : 0;
+        sum = warpReduceSum(sum);
+        if (lane == 0) out[blockIdx.x] = sum;
+    }
+}
 
- // 3. Host 调用（~5 分钟）
- // blockReduce<<<numBlocks, 256>>>(d_in, d_tmp, n);
- // blockReduce<<<1, 256>>>(d_tmp, d_out, numBlocks);
- // 剩余时间处理边界条件和编译调试
- ```
+// 3. Host 调用（~5 分钟）
+// blockReduce<<<numBlocks, 256>>>(d_in, d_tmp, n);
+// blockReduce<<<1, 256>>>(d_tmp, d_out, numBlocks);
+// 剩余时间处理边界条件和编译调试
+```
 
  - **评分关键**：`__shfl_down_sync` 参数正确（30 分）、两级归约结构完整（30 分）、`__syncthreads` 位置正确（20 分）
 
