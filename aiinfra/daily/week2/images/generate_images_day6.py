@@ -325,12 +325,283 @@ def cache_line_sector() -> str:
 </svg>"""
 
 
+def l2_cache_line_management() -> str:
+    """「L2 以 128B cache line 管理」的含义：tag/命中/分配按行（128B），填充/传输按 sector（32B），
+    每 sector 独立 valid bit；含地址拆解与两次访问示例。"""
+
+    def line(x, y, w, h, filled, accent, tint):
+        """一条 cache line：Tag 单元 + 4 个带 valid bit 的 sector。"""
+        parts = [
+            f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="{tint}" '
+            f'stroke="{accent}" stroke-width="1.5" filter="url(#rough2)"/>'
+        ]
+        gap = 8
+        tag_w = 110
+        tx, ty, th = x + 10, y + 10, h - 20
+        parts.append(
+            f'    <rect x="{tx}" y="{ty}" width="{tag_w}" height="{th}" rx="4" '
+            f'fill="{accent}" opacity="0.35" stroke="{accent}" stroke-width="1.2" filter="url(#rough2)"/>'
+        )
+        parts.append(f'    <text x="{tx + tag_w/2}" y="{y + h/2 - 2}" text-anchor="middle" font-size="11" fill="{accent}" font-weight="bold">Tag</text>')
+        parts.append(f'    <text x="{tx + tag_w/2}" y="{y + h/2 + 14}" text-anchor="middle" font-size="9" fill="{accent}">地址高位</text>')
+        sx0 = tx + tag_w + gap
+        right = x + w - 10
+        sw = (right - sx0 - 3 * gap) / 4
+        for i in range(4):
+            sx = sx0 + i * (sw + gap)
+            cx = sx + sw / 2
+            if filled[i]:
+                parts.append(
+                    f'    <rect x="{sx:.1f}" y="{ty}" width="{sw:.1f}" height="{th}" rx="4" '
+                    f'fill="{accent}" opacity="0.30" stroke="{accent}" stroke-width="1.2" filter="url(#rough2)"/>'
+                )
+                vtxt, vfill, vextra = "V=1", accent, ""
+            else:
+                parts.append(
+                    f'    <rect x="{sx:.1f}" y="{ty}" width="{sw:.1f}" height="{th}" rx="4" '
+                    f'fill="#ffffff" stroke="{accent}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.6"/>'
+                )
+                vtxt, vfill, vextra = "V=0", "#bbb", "（空）"
+            sfill = accent if filled[i] else "#bbb"
+            parts.append(f'    <text x="{cx:.1f}" y="{y + h/2 - 2}" text-anchor="middle" font-size="10" fill="{sfill}" font-weight="bold">S{i} · 32B</text>')
+            parts.append(f'    <text x="{cx:.1f}" y="{y + h/2 + 14}" text-anchor="middle" font-size="9" fill="{vfill}">{vtxt}{vextra}</text>')
+        return "\n".join(parts)
+
+    # Part A：cache line 结构（完整行）
+    line_a = line(90, 96, 600, 60, [True, True, True, True], "#446688", "#e8f0fe")
+
+    # Part B：地址拆解 bar
+    bar_y, bar_h = 236, 44
+    cells = [
+        ("Tag", 220, "#446688", "#e8f0fe", "→ 命中判断"),
+        ("Index", 160, "#446688", "#e8f0fe", "→ 定位到哪一行"),
+        ("Sector（2 bit）", 110, "#4a7a3a", "#e6f4ea", "→ 行内哪个 sector"),
+        ("Byte（5 bit）", 110, "#888", "#f0f0f0", "→ sector 内字节"),
+    ]
+    bar_parts = []
+    bx = 90
+    for name, w, accent, tint, ann in cells:
+        bar_parts.append(
+            f'    <rect x="{bx}" y="{bar_y}" width="{w}" height="{bar_h}" rx="5" fill="{tint}" '
+            f'stroke="{accent}" stroke-width="1.3" filter="url(#rough2)"/>'
+        )
+        bar_parts.append(f'    <text x="{bx + w/2}" y="{bar_y + bar_h/2 + 4}" text-anchor="middle" font-size="11" fill="{accent}" font-weight="bold">{name}</text>')
+        bar_parts.append(f'    <text x="{bx + w/2}" y="{bar_y + bar_h + 18}" text-anchor="middle" font-size="10" fill="{accent}">{ann}</text>')
+        bx += w
+    bar_svg = "\n".join(bar_parts)
+
+    # Part C：两次访问
+    line_c1 = line(90, 372, 600, 56, [False, False, True, False], "#4a7a3a", "#e6f4ea")
+    line_c2 = line(90, 488, 600, 56, [True, False, True, False], "#4a7a3a", "#e6f4ea")
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 680" font-family="{FONT}">
+{DEFS}
+
+  <rect width="780" height="680" fill="#fafafa"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" fill="#444" font-weight="bold">「L2 以 128B cache line 管理」是什么意思</text>
+  <text x="390" y="52" text-anchor="middle" font-size="11" fill="#888">管理动作（tag / 命中 / 分配）按 128B 行 · 填充与传输按 32B sector</text>
+
+  <!-- Part A: cache line 结构 -->
+  <text x="390" y="84" text-anchor="middle" font-size="13" fill="#446688" font-weight="bold">① L2 的一行长什么样：Tag + 4 个 sector（各带 valid bit）</text>
+{line_a}
+  <text x="165" y="180" text-anchor="middle" font-size="10" fill="#446688">命中判断：Tag 匹配</text>
+  <text x="165" y="194" text-anchor="middle" font-size="10" fill="#446688">以 128B 行为单位</text>
+  <text x="470" y="180" text-anchor="middle" font-size="10" fill="#888">每 sector 独立 valid bit</text>
+  <text x="470" y="194" text-anchor="middle" font-size="10" fill="#888">填充 / 传输以 32B 为单位</text>
+
+  <!-- Part B: 地址拆解 -->
+  <text x="390" y="226" text-anchor="middle" font-size="13" fill="#446688" font-weight="bold">② 地址拆解：命中看 Tag + Index，搬运看 Sector 位</text>
+{bar_svg}
+
+  <!-- Part C: 两次访问 -->
+  <text x="390" y="330" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">③ 两次访问看「管理」与「传输」的分工</text>
+
+  <text x="90" y="364" font-size="12" fill="#444" font-weight="bold">第 1 次：读 4B（落在 S2）→ Tag miss，分配一行、写入 Tag</text>
+{line_c1}
+  <text x="390" y="450" text-anchor="middle" font-size="10" fill="#4a7a3a">→ 只从 DRAM 搬触达的 S2（32B），其余 sector 留空不搬</text>
+
+  <text x="90" y="480" font-size="12" fill="#444" font-weight="bold">第 2 次：读同一行的 S0 → Tag hit（行已存在），但 V0=0</text>
+{line_c2}
+  <text x="390" y="566" text-anchor="middle" font-size="10" fill="#4a7a3a">→ 行级命中、sector 级缺失：只补搬 S0（32B），无需整行重取</text>
+
+  <!-- 底部总结 -->
+  <g transform="translate(90, 588)">
+    <rect x="0" y="0" width="600" height="76" rx="8" fill="#f6f6f6" stroke="#888" stroke-width="1.4" filter="url(#rough2)"/>
+    <rect x="0" y="0" width="600" height="20" fill="#446688" opacity="0.12" rx="8" filter="url(#rough2)"/>
+    <text x="300" y="15" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">为什么「管理粗、传输细」</text>
+    <text x="20" y="40" font-size="11" fill="#444">tag 按行存：表项数 = 容量 ÷ 128B；若按 32B sector 存 tag，表项 ×4，硬件开销大</text>
+    <text x="20" y="58" font-size="11" fill="#444">valid bit 按 sector：支持按需填充，不规则访问不浪费 DRAM 带宽</text>
+  </g>
+</svg>"""
+
+
+def memory_hierarchy_transfer() -> str:
+    """GPU 访存层次：DRAM → L2 → L1 → Register，标注 cache line（128B 存储）与 sector（32B 传输）粒度。"""
+
+    def cache_line(x, y, w, h, filled, accent, tint, label, ann):
+        gap = 4
+        sw = (w - 5 * gap) / 4
+        parts = [
+            f'      <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="6" '
+            f'fill="{tint}" stroke="{accent}" stroke-width="1.5" filter="url(#rough2)"/>'
+        ]
+        for i in range(4):
+            sx = x + gap + i * (sw + gap)
+            cx = sx + sw / 2
+            cy = y + h / 2 + 3
+            if filled[i]:
+                parts.append(
+                    f'      <rect x="{sx:.1f}" y="{y + 5}" width="{sw:.1f}" height="{h - 10}" rx="3" '
+                    f'fill="{accent}" opacity="0.32" stroke="{accent}" stroke-width="1" filter="url(#rough2)"/>'
+                )
+                parts.append(
+                    f'      <text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" font-size="10" fill="{accent}">S{i}</text>'
+                )
+            else:
+                parts.append(
+                    f'      <rect x="{sx:.1f}" y="{y + 5}" width="{sw:.1f}" height="{h - 10}" rx="3" '
+                    f'fill="#ffffff" stroke="{accent}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.55"/>'
+                )
+                parts.append(
+                    f'      <text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" font-size="9" fill="#bbb">空</text>'
+                )
+        if label:
+            parts.append(
+                f'      <text x="{x - 6}" y="{y + h/2 + 3}" text-anchor="end" font-size="10" fill="#888">{label}</text>'
+            )
+        if ann:
+            parts.append(
+                f'      <text x="{x + w + 8}" y="{y + h/2 + 3}" font-size="10" fill="{accent}">{ann}</text>'
+            )
+        return "\n".join(parts)
+
+    # Register cells (8 registers)
+    nreg, rcw, rcgap = 8, 52, 4
+    reg_total = nreg * rcw + (nreg - 1) * rcgap
+    reg_x0 = (540 - reg_total) / 2
+    reg_parts = []
+    for i in range(nreg):
+        cx = reg_x0 + i * (rcw + rcgap)
+        reg_parts.append(
+            f'      <rect x="{cx:.1f}" y="22" width="{rcw}" height="26" rx="4" '
+            f'fill="#d6a040" opacity="0.25" stroke="#d6a040" stroke-width="1.1" filter="url(#rough2)"/>'
+        )
+        reg_parts.append(
+            f'      <text x="{cx + rcw/2:.1f}" y="39" text-anchor="middle" font-size="10" fill="#d6a040">r{i}</text>'
+        )
+    reg_svg = "\n".join(reg_parts)
+
+    # L1 cache lines: CL0 完整，CL1 仅 S2 驻留（演示按 sector 填充）
+    cl_w, cl_h, cl_x = 340, 40, 40
+    l1_cl0 = cache_line(cl_x, 26, cl_w, cl_h, [True, True, True, True], "#446688", "#e8f0fe", "CL0", "✓ 完整 128B")
+    l1_cl1 = cache_line(cl_x, 80, cl_w, cl_h, [False, False, True, False], "#446688", "#e8f0fe", "CL1", "只 1 sector 驻留")
+
+    # L2 cache lines：CL0 完整，CL1 有 3 sector（L1 的 S2 即来自此处）
+    l2_cl0 = cache_line(cl_x, 26, cl_w, cl_h, [True, True, True, True], "#4a7a3a", "#e6f4ea", "CL0", "128B")
+    l2_cl1 = cache_line(cl_x, 80, cl_w, cl_h, [True, True, True, False], "#4a7a3a", "#e6f4ea", "CL1", "3 sector 已驻留")
+
+    # DRAM grid：1 sector（绿）= 本次搬运，4 sector（蓝）= 其所在 cache line
+    cols, rows = 24, 3
+    dcw, dch, dgap = 18, 16, 2
+    dram_w = cols * dcw + (cols - 1) * dgap
+    dram_x0 = (540 - dram_w) / 2
+    dram_y0 = 22
+    cl_set = {(1, 10), (1, 11), (1, 12), (1, 13)}
+    fetch = (1, 11)
+    dram_parts = []
+    for r in range(rows):
+        for c in range(cols):
+            cx = dram_x0 + c * (dcw + dgap)
+            cy = dram_y0 + r * (dch + dgap)
+            if (r, c) == fetch:
+                fill, op, stroke = "#4a7a3a", "0.55", "#4a7a3a"
+            elif (r, c) in cl_set:
+                fill, op, stroke = "#446688", "0.28", "#446688"
+            else:
+                fill, op, stroke = "#ddd", "1", "#aaa"
+            dram_parts.append(
+                f'      <rect x="{cx:.1f}" y="{cy}" width="{dcw}" height="{dch}" rx="2" '
+                f'fill="{fill}" opacity="{op}" stroke="{stroke}" stroke-width="0.6"/>'
+            )
+    dram_svg = "\n".join(dram_parts)
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 740" font-family="{FONT}">
+{DEFS}
+
+  <rect width="780" height="740" fill="#fafafa"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" fill="#444" font-weight="bold">GPU 访存层次：Cache Line、Sector 与搬运单位</text>
+  <text x="390" y="52" text-anchor="middle" font-size="11" fill="#888">DRAM → L2 → L1 → Register：存储按 cache line（128B），传输按 sector（32B）</text>
+
+  <!-- Register layer -->
+  <g transform="translate(150, 64)">
+    <text x="0" y="0" font-size="13" fill="#d6a040" font-weight="bold">Register File · 每线程私有</text>
+    <rect x="0" y="8" width="540" height="56" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+{reg_svg}
+  </g>
+
+  <!-- Arrow 1: L1 -> Register -->
+  <line x1="420" y1="182" x2="420" y2="132" stroke="#888" stroke-width="1.6" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="432" y="150" font-size="11" fill="#d6a040" font-weight="bold">LDG.128 = 16B（float4）</text>
+  <text x="432" y="164" font-size="10" fill="#888">LDG.32 = 4B｜指令宽度由代码决定</text>
+
+  <!-- L1 Cache layer -->
+  <g transform="translate(150, 176)">
+    <text x="0" y="0" font-size="13" fill="#446688" font-weight="bold">L1 Cache · 每 SM 私有 · 按 cache line（128B = 4 sector）组织</text>
+    <rect x="0" y="8" width="540" height="140" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+{l1_cl0}
+{l1_cl1}
+    <text x="40" y="140" font-size="10" fill="#888">虚线扇区 = 该 sector 未被触达，位置留空（按 sector 填充，不必整行搬运）</text>
+  </g>
+
+  <!-- Arrow 2: L2 -> L1 -->
+  <line x1="420" y1="378" x2="420" y2="328" stroke="#888" stroke-width="1.6" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="432" y="346" font-size="11" fill="#446688" font-weight="bold">sector 32B</text>
+  <text x="432" y="360" font-size="10" fill="#888">传输原子单位，不可再分</text>
+
+  <!-- L2 Cache layer -->
+  <g transform="translate(150, 372)">
+    <text x="0" y="0" font-size="13" fill="#4a7a3a" font-weight="bold">L2 Cache · 所有 SM 共享 · 按 cache line（128B = 4 sector）组织</text>
+    <rect x="0" y="8" width="540" height="140" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+{l2_cl0}
+{l2_cl1}
+    <text x="40" y="140" font-size="10" fill="#888">L1 miss 后向 L2 取，L2 同样按 sector 粒度向 L1 供给</text>
+  </g>
+
+  <!-- Arrow 3: DRAM -> L2 -->
+  <line x1="420" y1="574" x2="420" y2="524" stroke="#888" stroke-width="1.6" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="432" y="542" font-size="11" fill="#4a7a3a" font-weight="bold">sector 32B</text>
+  <text x="432" y="556" font-size="10" fill="#888">整 sector 搬运，哪怕线程只用 4B</text>
+
+  <!-- DRAM layer -->
+  <g transform="translate(150, 568)">
+    <text x="0" y="0" font-size="13" fill="#666" font-weight="bold">DRAM / HBM · Global Memory · 海量数据</text>
+    <rect x="0" y="8" width="540" height="88" rx="8" fill="#f0f0f0" stroke="#888" stroke-width="1.5" filter="url(#rough2)"/>
+{dram_svg}
+    <text x="20" y="86" font-size="10" fill="#4a7a3a">■ 绿 = 本次搬运的 1 sector（32B）</text>
+    <text x="250" y="86" font-size="10" fill="#446688">■ 蓝 = 其所在 cache line（128B）区域</text>
+  </g>
+
+  <!-- Summary box -->
+  <g transform="translate(90, 672)">
+    <rect x="0" y="0" width="600" height="60" rx="8" fill="#f6f6f6" stroke="#888" stroke-width="1.4" filter="url(#rough2)"/>
+    <rect x="0" y="0" width="600" height="20" fill="#446688" opacity="0.12" rx="8" filter="url(#rough2)"/>
+    <text x="300" y="15" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">两个粒度的分工</text>
+    <text x="20" y="38" font-size="11" fill="#444">存储组织：L1/L2 按 cache line（128B = 4 sector）存 tag、做命中判断</text>
+    <text x="20" y="54" font-size="11" fill="#444">数据搬运：DRAM→L2、L2→L1 均按 sector（32B）传输，按 sector 填充 cache line</text>
+  </g>
+</svg>"""
+
+
 def main() -> None:
     diagrams = {
         "gemm_optimization_layers.svg": gemm_optimization_layers(),
         "float4_vectorized_load.svg": float4_vectorized_load(),
         "parameter_tuning_table.svg": parameter_tuning_table(),
         "cache_line_sector.svg": cache_line_sector(),
+        "l2_cache_line_management.svg": l2_cache_line_management(),
+        "memory_hierarchy_transfer.svg": memory_hierarchy_transfer(),
     }
     for filename, content in diagrams.items():
         save_svg(filename, content)

@@ -79,7 +79,17 @@ float4 val = reinterpret_cast<const float4*>(ptr)[0];
 
 **cache line（128B）——存储的组织单位。** L1/L2 cache 按 128B 一行来组织（存 tag、做命中判断），1 行正好含 4 个 sector。关键在于**填充粒度是 sector 而非整行**：一次访存若只触达某行的 1 个 sector，就只搬这 1 个 sector 进 cache，其余 3 个 sector 位置留空，不必把整条 128B 都拉回来。这种「按需 sector 填充」让 GPU 对不规则访问比 CPU 更宽容。
 
+**「以 128B cache line 管理」具体指什么？** 指 L2 的**管理动作——存 tag、命中判断、行的分配与替换——都以 128B 行为单位**：一次访问先用地址高位（Tag + Index）定位到某一行，命中与否看的是整行的 tag，而不是具体哪个字节。但每个 sector 有独立的 valid bit，**填充按 sector**：miss 后只从 DRAM 搬触达的那 32B，其余 3 个 sector 留空。为什么这样分工？tag 若按 32B sector 存，表项数翻 4 倍、硬件开销大；valid bit 按 sector 存，又保留了细粒度传输的好处——**存储组织粗（128B）、数据传输细（32B）**，两者兼顾。
+
+![L2 以 cache line 管理](../images/l2_cache_line_management.svg)
+
 > 💡 对比 CPU：CPU cache line 通常 64B，传输和一致性共用这一个粒度——取就取整行、一致性也按整行做；GPU 把两者拆开——cache line（128B）管存储组织，sector（32B）管传输，粒度更细，对不规则访问更友好，代价是 tag 表项更多。
+
+把这两个粒度放回完整的访存层次中，DRAM → L2 → L1 → Register 每一级之间的搬运单位如下图：
+
+![GPU 访存层次与搬运单位](../images/memory_hierarchy_transfer.svg)
+
+> 💡 图中要点：① **L1/L2 都按 cache line（128B = 4 sector）组织**，做 tag 与命中判断；② **DRAM→L2、L2→L1 的传输都按 sector（32B）**，且 cache line 按 sector 粒度填充——L1 中一条 cache line 可以只有 1 个 sector 驻留（虚线扇区位置留空）；③ **L1→Register 的粒度由指令宽度决定**：`LDG.32` 取 4B、`LDG.128`（float4）取 16B，这是代码层可控的，而 sector/cache line 是硬件固定的。
 
 **用 sector 定量描述合并访问（coalescing）。** 一个 warp 32 线程，每个读 1 个 float（4B），访存请求先被硬件合并：
 
