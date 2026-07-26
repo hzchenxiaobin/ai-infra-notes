@@ -116,6 +116,31 @@ coalesced：`128B / (4 × 32B) = 100%`　　scattered：`128B / (32 × 32B) = 12
 
 > ⚠️ 这三条收益都建立在"16B 对齐 + 访问连续"的前提上。不满足时，一条 128-bit load 可能横跨 2 条 cache line，反而多传 sector——这正是前面"使用条件"三条的由来。写回 C 用 `STG.128` 同理。
 
+##### 常见误区：单线程 float4 只有 16B，sector 利用率是 50% 吗？
+
+不是。**sector 利用率是按 warp 级合并后的内存事务来算的，不是按单条指令、单个线程来算的。**
+
+单线程执行 float4 load 确实只取 16B（半个 sector），但硬件不会为这 16B 单独去 DRAM 搬数据——访存请求先在 **warp 级合并**后才发出：
+
+```
+一个 warp = 32 线程 × 16B (float4) = 512B 连续数据
+512B = 4 条 cache line = 16 个 sector
+```
+
+两个相邻线程的 float4 恰好拼满一个 32B sector：
+
+```
+sector 0 [32B]:  thread 0 的 float4 [16B]  +  thread 1 的 float4 [16B]
+sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
+...
+```
+
+从 DRAM 拉回的每个 sector 的 32B **全部被用上**，利用率是 **100%**。GEMM 的加载模式（连续线程取连续 float4）天然保证相邻线程拼满 sector。
+
+**什么时候才真的是 50%**：warp 内访问模式让 sector 拼不满时，例如只有一半线程活跃（`if (threadIdx.x % 2 == 0)` 做 float4 load），或每线程间隔 32B 取一个 float4（stride = 8 floats）。
+
+顺带纠正一个直觉：coalesced 的 32-bit load（每线程 4B，warp 共 128B = 4 sector）利用率**也是 100%**。float4 的优势不在 sector 利用率本身，而在于前面说的指令/请求数砍到 1/4 和单线程 16B 在途数据（ILP）；前文"32-bit 散读时一个 sector 可能只用到 4B"指的是非合并的散乱场景，不是 coalesced 的 32-bit 连续读。
+
 #### 6.2 Warp Shuffle 在 GEMM 写回中的用途
 
 Day 1 我们用 Warp Shuffle 做 Reduce。在 GEMM 中，Shuffle 的用途不同：**优化累加器写回**。
