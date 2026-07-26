@@ -23,6 +23,27 @@ Transformer 是 Google 在 2017 年论文《Attention is All You Need》中提�
 
 今天所有主流大模型——GPT 系列、LLaMA、Qwen、DeepSeek、Claude——都是 Transformer 的 **decoder-only** 变体（只有解码器半边）。它们的差异在规模、数据、训练方法上，计算结构完全一样。
 
+##### 深入理解：Decoder 是什么
+
+Decoder（解码器）来自 2017 年原始 Transformer 论文的**编码器-解码器（Encoder-Decoder）**结构。当时的 Transformer 为机器翻译设计（英文 → 法文），分两半：
+
+- **Encoder（编码器）**：读入完整的源句子，用**双向** Self-Attention——每个 token 可以看前后所有 token，不带 mask。任务是把整句话"理解"成一组上下文表示，不生成文字
+- **Decoder（解码器）**：**逐个生成**目标句子，包含两种 attention：
+ 1. **带 Causal Mask 的 Self-Attention**：只看已生成的部分（不许看未来，因为它就是生成方）
+ 2. **Cross-Attention**：以已生成内容为 Q，去查询 Encoder 的输出（K/V 来自编码器）——"写下一个词时回头看原文"
+
+由此分出三个架构流派：
+
+| 流派 | 结构 | 代表模型 | 擅长 |
+|------|------|---------|------|
+| Encoder-only | 只有编码器，双向 attention | BERT | 理解类任务（分类、NER、检索） |
+| Encoder-Decoder | 完整两半 | 原始 Transformer、T5 | 序列到序列（翻译、摘要） |
+| **Decoder-only** | 只有解码器，causal mask | **GPT、LLaMA、Qwen、DeepSeek** | 生成（通用 LLM） |
+
+**Decoder-only 就是"把编码器扔掉"**：一叠带 Causal Mask 的 Transformer Block，没有 Cross-Attention（没有编码器可查），prompt 直接喂进去，用**下一个 token 预测**统一训练和推理。它胜出是因为训练目标极简（任何文本都能当训练数据，不需要翻译对/标注）、理解和生成统一在一个模型里、架构简单好扩展——BERT 那种 encoder-only 路线在大模型时代基本被这条路线吸收取代了。
+
+> 💡 **一句话**：Decoder 是原始 Transformer 里"负责逐词生成输出"的那一半，特征是因果掩码 + 自回归；现代 LLM 只保留这一半，所以叫 decoder-only。
+
 ##### 深入理解："并行处理整个序列"到底指什么
 
 这句话包含三个论断，逐个拆开：
