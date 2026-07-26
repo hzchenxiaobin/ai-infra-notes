@@ -190,6 +190,17 @@ int main() {
 | grid-stride 步长错 | 越界或漏元素 | 步长 = `gridDim.x * blockDim.x`（总线程数） |
 | `lane == 0` 写回遗漏 | 多 block 结果丢失 | 只有 lane 0 写 `out[blockIdx.x]` |
 
+> 💡 **知识补充：第二级为什么由 Warp 0 做？用 warp 1 行不行？**
+>
+> 用 warp 1 做**完全可以**，功能上没有任何区别。第二级的硬性要求只是"某一个 warp"，不是"warp 0"：
+>
+> 1. `__syncthreads()` 之后所有部分和已在 shared memory，对 block 内**任何** warp 都可见——sync 不偏心
+> 2. 归约靠 `__shfl_down_sync`，shuffle 只在 warp 内有效，所以必须由**单独一个** warp 完成（32 lane 正好装下 ≤32 个部分和）
+>
+> 选 warp 0 是约定而非硬件要求，原因是它**必然存在**：blockDim.x = 32 时 block 里只有 warp 0，写 `wid == 1` 会导致第二级永远不执行、结果直接错；`wid == 0` 则对任意 block 尺寸无条件成立。性能上选哪个 warp 都一样——其余 warp 都在 idle，分支发散程度相同，SM 内所有 warp 访问 shared memory 的延迟也相同。
+>
+> 真正要避开的坑是**让多个 warp 都做第二级**（比如只写 `if (lane < numWarps)` 忘了限制 `wid`）：多个 warp 同时写 `out[blockIdx.x]`，即使值相同也是数据竞争、未定义行为。正确模式是"恰好一个 warp 归约 + 恰好 lane 0 写回"，至于是 warp 几，纯属风格问题。
+
 ---
 
 #### 任务 2：60 分钟手写 Register Blocking GEMM
