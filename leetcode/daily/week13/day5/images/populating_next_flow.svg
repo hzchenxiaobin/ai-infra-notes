@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">O(1) 空间算法流程</text>
+
+  <!-- 入口 -->
+  <rect x="190" y="50" width="200" height="34" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="72" text-anchor="middle" font-size="12" fill="#333">levelStart = root</text>
+
+  <path d="M 290 84 L 290 100" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 外层判空 -->
+  <polygon points="290,104 420,146 290,188 160,146" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="290" y="142" text-anchor="middle" font-size="12" fill="#333">levelStart.left ?</text>
+  <text x="290" y="160" text-anchor="middle" font-size="11" fill="#888">还有下一层</text>
+
+  <path d="M 160 146 L 100 146 L 100 96" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="120" y="138" font-size="10" fill="#b85450">否</text>
+  <rect x="40" y="80" width="120" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="100" y="101" text-anchor="middle" font-size="12" fill="#333">返回 root</text>
+
+  <path d="M 290 188 L 290 206" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="202" font-size="10" fill="#82b366">是</text>
+
+  <!-- 内层循环 -->
+  <rect x="150" y="210" width="280" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="290" y="232" text-anchor="middle" font-size="12" fill="#333">cur = levelStart（横向遍历当前层）</text>
+
+  <path d="M 290 244 L 290 260" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 内层判空 -->
+  <polygon points="290,264 380,296 290,328 200,296" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6" filter="url(#rough2)"/>
+  <text x="290" y="300" text-anchor="middle" font-size="11" fill="#333">cur != null ?</text>
+
+  <path d="M 380 296 L 460 296" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="400" y="288" font-size="10" fill="#b85450">否</text>
+  <rect x="460" y="280" width="100" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="510" y="301" text-anchor="middle" font-size="10" fill="#333">进入下一层</text>
+
+  <path d="M 290 328 L 290 340" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="338" font-size="10" fill="#82b366">是</text>
+
+  <!-- 核心操作 -->
+  <rect x="60" y="344" width="220" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="5" filter="url(#rough2)"/>
+  <text x="170" y="363" text-anchor="middle" font-size="10" fill="#333">cur.left.next = cur.right</text>
+
+  <rect x="300" y="344" width="240" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="1.4" rx="5" filter="url(#rough2)"/>
+  <text x="420" y="363" text-anchor="middle" font-size="10" fill="#333">cur.right.next = cur.next.left</text>
+
+  <path d="M 540 296 L 540 372 L 290 372 L 290 376" stroke="#666" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 进入下层 -->
+  <path d="M 510 312 L 510 60 L 290 60" stroke="#b85450" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="520" y="200" font-size="10" fill="#b85450" transform="rotate(-90 520 200)">levelStart = levelStart.left</text>
+
+  <text x="170" y="392" text-anchor="middle" font-size="10" fill="#888">cur = cur.next（沿 next 横向前进）</text>
+</svg>

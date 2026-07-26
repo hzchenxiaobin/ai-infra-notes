@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 380" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#446688"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="380" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">快慢双指针：slow 走 1 步，fast 走 2 步</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">速度比 1:2 → 路程比 1:2，fast 到尾时 slow 恰在中间</text>
+
+  <!-- ===== 链表节点 ===== -->
+  <g font-size="13">
+    <rect x="40" y="70" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="68" y="92" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="96" y1="87" x2="124" y2="87" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <rect x="130" y="70" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="158" y="92" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="186" y1="87" x2="214" y2="87" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <rect x="220" y="70" width="56" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="6" filter="url(#rough2)"/>
+    <text x="248" y="92" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <text x="248" y="120" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">中点</text>
+    <line x1="276" y1="87" x2="304" y2="87" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <rect x="310" y="70" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="338" y="92" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="366" y1="87" x2="394" y2="87" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+    <rect x="400" y="70" width="56" height="34" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+    <text x="428" y="92" text-anchor="middle" fill="#333" font-weight="bold">5</text>
+    <line x1="456" y1="87" x2="484" y2="87" stroke="#446688" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="496" y="92" font-size="12" fill="#888">∅</text>
+  </g>
+
+  <!-- ===== slow 指针 ===== -->
+  <rect x="44" y="148" width="50" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="69" y="166" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">slow</text>
+  <text x="69" y="178" text-anchor="middle" font-size="9" fill="#888">走 1 步</text>
+  <path d="M 69 148 L 68 106" stroke="#4a7a3a" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+
+  <!-- ===== fast 指针 ===== -->
+  <rect x="430" y="148" width="50" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="6" filter="url(#rough2)"/>
+  <text x="455" y="166" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">fast</text>
+  <text x="455" y="178" text-anchor="middle" font-size="9" fill="#888">走 2 步</text>
+  <path d="M 455 148 L 428 106" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,2" filter="url(#rough2)"/>
+
+  <!-- ===== 速度比说明 ===== -->
+  <rect x="40" y="208" width="500" height="50" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="228" font-size="11" fill="#8a6a20" font-weight="bold">核心：速度比 = 路程比</text>
+  <text x="52" y="246" font-size="10" fill="#555">slow 每轮 +1，fast 每轮 +2，相同轮数下 fast 走 2 倍路程</text>
+
+  <!-- ===== 结束条件 ===== -->
+  <rect x="40" y="270" width="500" height="92" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="290" font-size="11" fill="#4a7a3a" font-weight="bold">循环条件 while (fast &amp;&amp; fast.next)：</text>
+  <text x="52" y="308" font-size="10" fill="#555">奇数链（5 个）：fast 停在最后一个节点，fast.next=null 退出</text>
+  <text x="52" y="308" font-size="10" fill="#555"></text>
+  <text x="52" y="326" font-size="10" fill="#555">偶数链（6 个）：fast 越过末尾变 null，fast=null 退出</text>
+  <text x="52" y="346" font-size="10" fill="#4a7a3a" font-weight="bold">两种情况 slow 都停在"第二个中间结点" ✓</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="360" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">最小深度 = 根到最近叶子的节点数</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">叶子 = 没有左右孩子的节点；最近 = 路径最短</text>
+
+  <!-- 树 -->
+  <circle cx="200" cy="80" r="16" fill="#e8f0fe" stroke="#446688" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="200" y="85" text-anchor="middle" font-size="12" fill="#446688" font-weight="bold">3</text>
+
+  <circle cx="120" cy="140" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="120" y="145" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">9</text>
+
+  <circle cx="280" cy="140" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="145" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">20</text>
+
+  <line x1="188" y1="92" x2="130" y2="128" stroke="#888" stroke-width="1.2" filter="url(#rough2)"/>
+  <line x1="212" y1="92" x2="270" y2="128" stroke="#888" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <circle cx="240" cy="210" r="13" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="240" y="215" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">15</text>
+
+  <circle cx="320" cy="210" r="13" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="320" y="215" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">7</text>
+
+  <line x1="270" y1="152" x2="248" y2="198" stroke="#888" stroke-width="1.1" filter="url(#rough2)"/>
+  <line x1="290" y1="152" x2="312" y2="198" stroke="#888" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <!-- 最短路径高亮：3→9 -->
+  <path d="M 200 96 L 120 128" stroke="#b85450" stroke-width="2.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="70" y="180" font-size="11" fill="#b85450" font-weight="bold">最短路径</text>
+  <text x="70" y="196" font-size="10" fill="#b85450">3→9（2 个节点）</text>
+
+  <!-- 最长路径标注 -->
+  <path d="M 200 96 L 280 128 L 280 155 L 280 175" stroke="#446688" stroke-width="1.5" fill="none" stroke-dasharray="4 3" filter="url(#rough2)"/>
+  <text x="360" y="180" font-size="11" fill="#446688" font-weight="bold">最长路径</text>
+  <text x="360" y="196" font-size="10" fill="#446688">3→20→15（3 个节点）</text>
+
+  <!-- 对比说明 -->
+  <rect x="20" y="250" width="520" height="90" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="40" y="274" font-size="12" fill="#333" font-weight="bold">关键区别：</text>
+  <text x="40" y="296" font-size="11" fill="#555">• 最大深度（104）：max(左, 右) + 1，走到最深叶子</text>
+  <text x="40" y="314" font-size="11" fill="#555">• 最小深度（111）：min(左, 右) + 1，走到最近叶子 ← 但有陷阱！</text>
+  <text x="40" y="332" font-size="11" fill="#b85450" font-weight="bold">⚠️ 「叶子」必须无左右孩子，单侧为空不算叶子</text>
+</svg>

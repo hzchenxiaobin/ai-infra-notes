@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 470" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="470" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：1→2→3→4→5，反转 [2,4] → 1→4→3→2→5</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">left=2 right=4，pre 走 1 步到节点 1，头插 2 次（right-left=2）</text>
+
+  <!-- ===== 定位 ===== -->
+  <text x="40" y="78" font-size="11" fill="#444" font-weight="bold">定位：pre 走 1 步到节点 1，curr=2（反转段 2,3,4）</text>
+  <g font-size="12">
+    <rect x="40" y="86" width="44" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="62" y="106" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="84" y1="101" x2="102" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="108" y="86" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="130" y="106" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="152" y1="101" x2="170" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="176" y="86" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="198" y="106" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="220" y1="101" x2="238" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="244" y="86" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="266" y="106" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="288" y1="101" x2="306" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="312" y="86" width="44" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="5" filter="url(#rough2)"/>
+    <text x="334" y="106" text-anchor="middle" fill="#888">5</text>
+  </g>
+  <text x="62" y="76" text-anchor="middle" font-size="8" fill="#d6a040" font-weight="bold">pre</text>
+  <text x="130" y="76" text-anchor="middle" font-size="8" fill="#446688" font-weight="bold">curr</text>
+  <text x="210" y="128" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">↑ 反转段 2,3,4</text>
+
+  <!-- ===== 第1轮 ===== -->
+  <text x="40" y="158" font-size="11" fill="#444" font-weight="bold">第 1 轮：摘 3 插到 pre 后 → 1→3→2→4→5</text>
+  <g font-size="12">
+    <rect x="40" y="166" width="44" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="62" y="186" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="84" y1="181" x2="102" y2="181" stroke="#d6a040" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="108" y="166" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="130" y="186" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="152" y1="181" x2="170" y2="181" stroke="#4a7a3a" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="176" y="166" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="198" y="186" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="220" y1="181" x2="238" y2="181" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="244" y="166" width="44" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="5" filter="url(#rough2)"/>
+    <text x="266" y="186" text-anchor="middle" fill="#888">4</text>
+    <line x1="288" y1="181" x2="306" y2="181" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="312" y="166" width="44" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="5" filter="url(#rough2)"/>
+    <text x="334" y="186" text-anchor="middle" fill="#888">5</text>
+  </g>
+  <text x="62" y="156" text-anchor="middle" font-size="8" fill="#d6a040" font-weight="bold">pre</text>
+  <text x="198" y="156" text-anchor="middle" font-size="8" fill="#446688" font-weight="bold">curr</text>
+  <text x="130" y="156" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">新段首</text>
+
+  <!-- ===== 第2轮 ===== -->
+  <text x="40" y="218" font-size="11" fill="#444" font-weight="bold">第 2 轮：摘 4 插到 pre 后 → 1→4→3→2→5</text>
+  <g font-size="12">
+    <rect x="40" y="226" width="44" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="62" y="246" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="84" y1="241" x2="102" y2="241" stroke="#d6a040" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="108" y="226" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="130" y="246" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="152" y1="241" x2="170" y2="241" stroke="#4a7a3a" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="176" y="226" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="198" y="246" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="220" y1="241" x2="238" y2="241" stroke="#4a7a3a" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="244" y="226" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="266" y="246" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="288" y1="241" x2="306" y2="241" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="312" y="226" width="44" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="5" filter="url(#rough2)"/>
+    <text x="334" y="246" text-anchor="middle" fill="#888">5</text>
+  </g>
+  <text x="62" y="216" text-anchor="middle" font-size="8" fill="#d6a040" font-weight="bold">pre</text>
+  <text x="266" y="216" text-anchor="middle" font-size="8" fill="#446688" font-weight="bold">curr</text>
+  <text x="130" y="216" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">新段首</text>
+
+  <!-- ===== 结果 ===== -->
+  <text x="40" y="278" font-size="11" fill="#444" font-weight="bold">结束：循环 2 次，curr（节点2）.next=5 自动接后段</text>
+  <g font-size="12">
+    <rect x="40" y="286" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="62" y="306" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="84" y1="301" x2="102" y2="301" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="108" y="286" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="130" y="306" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="152" y1="301" x2="170" y2="301" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="176" y="286" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="198" y="306" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="220" y1="301" x2="238" y2="301" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="244" y="286" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="266" y="306" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="288" y1="301" x2="306" y2="301" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="312" y="286" width="44" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="5" filter="url(#rough2)"/>
+    <text x="334" y="306" text-anchor="middle" fill="#888">5</text>
+  </g>
+
+  <!-- ===== 总结 ===== -->
+  <rect x="30" y="340" width="520" height="118" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="362" font-size="11" fill="#4a7a3a" font-weight="bold">结果：1→4→3→2→5 ✓</text>
+  <text x="50" y="382" font-size="10" fill="#555">curr（节点 2）全程不动：第1轮 next 从 3 变 4，第2轮 next 从 4 变 5</text>
+  <text x="50" y="400" font-size="10" fill="#555">pre（节点 1）全程不动：next 从 2→3→4（段首不断更新）</text>
+  <text x="50" y="420" font-size="10" fill="#555">循环结束 curr.next=5 自然接后段，无需额外衔接</text>
+  <text x="50" y="442" font-size="10" fill="#d6a040" font-weight="bold">循环次数 = right - left = 4 - 2 = 2（反转段 3 个节点，减 1）</text>
+</svg>

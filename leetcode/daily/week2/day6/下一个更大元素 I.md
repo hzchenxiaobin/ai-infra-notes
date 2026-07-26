@@ -288,7 +288,7 @@ return [next_greater.get(x, -1) for x in nums1]
 ---
 
 ## 7. 同类练习题
-- [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/)：循环数组，拼接两遍再用同模板
+- [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/)（[题解](下一个更大元素 II.md)）：循环数组，拼接两遍再用同模板
 - [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/)（[题解](每日温度.md)）：同模板存下标算距离，本题的"姊妹题"
-- [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/)：单调递减栈，弹栈时累加跨度
-- [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/)：找左右第一个更矮，递增栈两侧扫描
+- [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/)（[题解](股票价格跨度.md)）：单调递减栈，弹栈时累加跨度
+- [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/)（[题解](../../week1/day7/柱状图中最大的矩形.md)）：找左右第一个更矮，递增栈两侧扫描

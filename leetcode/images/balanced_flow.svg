@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="400" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">两种解法对比：自顶向下 O(n²) vs 自底向上 O(n)</text>
+
+  <!-- 左：自顶向下 -->
+  <rect x="20" y="46" width="250" height="340" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="145" y="70" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">解法 A：自顶向下</text>
+  <text x="145" y="88" text-anchor="middle" font-size="10" fill="#888">O(n²) 重复计算高度</text>
+
+  <rect x="40" y="100" width="210" height="34" fill="#fafafa" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="145" y="122" text-anchor="middle" font-size="11" fill="#333">对每个节点调 maxDepth</text>
+
+  <line x1="145" y1="134" x2="145" y2="152" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="40" y="154" width="210" height="50" fill="#fafafa" stroke="#b85450" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="145" y="174" text-anchor="middle" font-size="11" fill="#333">lh = maxDepth(node.left)</text>
+  <text x="145" y="192" text-anchor="middle" font-size="11" fill="#333">rh = maxDepth(node.right)</text>
+
+  <line x1="145" y1="204" x2="145" y2="222" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="40" y="224" width="210" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="145" y="244" text-anchor="middle" font-size="11" fill="#333">if |lh-rh| &gt; 1: false</text>
+  <text x="145" y="260" text-anchor="middle" font-size="11" fill="#333">else: 递归左右子树</text>
+
+  <line x1="145" y1="268" x2="145" y2="286" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="40" y="288" width="210" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="145" y="310" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">return 左平衡 and 右平衡</text>
+
+  <text x="145" y="348" text-anchor="middle" font-size="10" fill="#b85450">每层都重复算子树高度</text>
+  <text x="145" y="366" text-anchor="middle" font-size="10" fill="#b85450">最坏 O(n) 节点 × O(n) 高度 = O(n²)</text>
+
+  <!-- 右：自底向上 -->
+  <rect x="290" y="46" width="250" height="340" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="415" y="70" text-anchor="middle" font-size="13" fill="#4a7a3a" font-weight="bold">解法 B：自底向上 ✅</text>
+  <text x="415" y="88" text-anchor="middle" font-size="10" fill="#888">O(n) 一次遍历搞定</text>
+
+  <rect x="310" y="100" width="210" height="34" fill="#fafafa" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="415" y="122" text-anchor="middle" font-size="11" fill="#333">node == null ? 返回 0</text>
+
+  <line x1="415" y1="134" x2="415" y2="152" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="310" y="154" width="210" height="50" fill="#fafafa" stroke="#4a7a3a" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="415" y="174" text-anchor="middle" font-size="11" fill="#333">lh = dfs(node.left)</text>
+  <text x="415" y="192" text-anchor="middle" font-size="11" fill="#333">rh = dfs(node.right)</text>
+
+  <line x1="415" y1="204" x2="415" y2="222" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="310" y="224" width="210" height="50" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="415" y="244" text-anchor="middle" font-size="11" fill="#b85450">if lh==-1 or rh==-1: 返回 -1</text>
+  <text x="415" y="262" text-anchor="middle" font-size="11" fill="#b85450">if |lh-rh| &gt; 1: 返回 -1</text>
+
+  <line x1="415" y1="274" x2="415" y2="292" stroke="#666" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <rect x="310" y="294" width="210" height="34" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="415" y="316" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">return max(lh, rh) + 1</text>
+
+  <text x="415" y="348" text-anchor="middle" font-size="10" fill="#4a7a3a">-1 哨兵表示「已不平衡」</text>
+  <text x="415" y="366" text-anchor="middle" font-size="10" fill="#4a7a3a">每个节点只访问一次 → O(n)</text>
+</svg>

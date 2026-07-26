@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">示例演算：nums = [-10,-3,0,5,9]</text>
+
+  <!-- 第1层 -->
+  <text x="30" y="62" font-size="11" fill="#888">① 区间 [-10,-3,0,5,9]，mid=2</text>
+  <rect x="30" y="68" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="50" y="87" text-anchor="middle" font-size="11" fill="#333">-10</text>
+  <rect x="72" y="68" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="92" y="87" text-anchor="middle" font-size="11" fill="#333">-3</text>
+  <rect x="114" y="68" width="40" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="4" filter="url(#rough2)"/>
+  <text x="134" y="87" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">0</text>
+  <rect x="156" y="68" width="40" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="176" y="87" text-anchor="middle" font-size="11" fill="#333">5</text>
+  <rect x="198" y="68" width="40" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="218" y="87" text-anchor="middle" font-size="11" fill="#333">9</text>
+  <path d="M 134 100 L 280 135" stroke="#b85450" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 根 -->
+  <circle cx="300" cy="145" r="15" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="300" y="149" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">0</text>
+
+  <!-- 第2层左 -->
+  <text x="30" y="160" font-size="11" fill="#888">② 左区间 [-10,-3]，mid=1</text>
+  <rect x="30" y="166" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="50" y="185" text-anchor="middle" font-size="11" fill="#333">-10</text>
+  <rect x="72" y="166" width="40" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="4" filter="url(#rough2)"/>
+  <text x="92" y="185" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">-3</text>
+  <path d="M 92 198 L 240 225" stroke="#b85450" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <circle cx="255" cy="235" r="13" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="255" y="239" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">-3</text>
+  <line x1="288" y1="156" x2="262" y2="224" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <!-- 第2层右 -->
+  <text x="30" y="218" font-size="11" fill="#888">③ 右区间 [5,9]，mid=1</text>
+  <rect x="30" y="224" width="40" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="4" filter="url(#rough2)"/>
+  <text x="50" y="243" text-anchor="middle" font-size="11" fill="#333">5</text>
+  <rect x="72" y="224" width="40" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="4" filter="url(#rough2)"/>
+  <text x="92" y="243" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">9</text>
+  <path d="M 92 256 L 340 250" stroke="#b85450" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <circle cx="355" cy="245" r="13" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="355" y="249" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">9</text>
+  <line x1="312" y1="156" x2="348" y2="234" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <!-- 第3层 -->
+  <text x="30" y="278" font-size="11" fill="#888">④ 叶子 -10（左孩子 of -3）</text>
+  <circle cx="220" cy="305" r="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="220" y="309" text-anchor="middle" font-size="10" fill="#333">-10</text>
+  <line x1="248" y1="244" x2="226" y2="296" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <text x="280" y="278" font-size="11" fill="#888">⑤ 叶子 5（左孩子 of 9）</text>
+  <circle cx="330" cy="305" r="11" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="330" y="309" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <line x1="348" y1="256" x2="334" y2="296" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <!-- 结果说明 -->
+  <rect x="30" y="335" width="520" height="50" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="358" font-size="12" fill="#333" font-weight="bold">结果：左子树高 2，右子树高 2，平衡 ✓</text>
+  <text x="50" y="376" font-size="11" fill="#555">中序遍历 = [-10,-3,0,5,9]，与原数组一致，验证是合法 BST</text>
+</svg>

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">迭代算法流程（单向下降，无回溯）</text>
+
+  <!-- 入口 -->
+  <rect x="190" y="50" width="200" height="34" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="72" text-anchor="middle" font-size="12" fill="#333">cur = root</text>
+
+  <path d="M 290 84 L 290 100" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- while -->
+  <polygon points="290,104 430,156 290,208 150,156" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="290" y="150" text-anchor="middle" font-size="12" fill="#333">cur != null ?</text>
+  <text x="290" y="170" text-anchor="middle" font-size="11" fill="#888">（p、q 必在树中）</text>
+
+  <path d="M 430 156 L 490 156" stroke="#666" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="450" y="148" font-size="10" fill="#b85450">否</text>
+  <rect x="490" y="140" width="80" height="32" fill="#f5f5f5" stroke="#bbb" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="530" y="161" text-anchor="middle" font-size="11" fill="#888">返回 null</text>
+
+  <path d="M 290 208 L 290 226" stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="222" font-size="10" fill="#82b366">是</text>
+
+  <!-- 判断1: 都在左 -->
+  <polygon points="290,230 420,272 290,314 160,272" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="268" text-anchor="middle" font-size="11" fill="#333">p,q 都 &lt; cur.val ?</text>
+  <text x="290" y="286" text-anchor="middle" font-size="10" fill="#888">都在左子树</text>
+
+  <path d="M 160 272 L 90 272 L 90 230" stroke="#446688" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="110" y="264" font-size="10" fill="#446688">是</text>
+  <rect x="40" y="206" width="100" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="90" y="226" text-anchor="middle" font-size="10" fill="#333">cur = cur.left</text>
+
+  <!-- 判断2: 都在右 -->
+  <path d="M 290 314 L 290 328" stroke="#666" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="302" y="326" font-size="10" fill="#888">否</text>
+
+  <polygon points="290,332 420,362 290,392 160,362" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="290" y="360" text-anchor="middle" font-size="11" fill="#333">p,q 都 &gt; cur.val ?</text>
+  <text x="290" y="378" text-anchor="middle" font-size="10" fill="#888">都在右子树</text>
+
+  <path d="M 420 362 L 470 362 L 470 224" stroke="#4a7a3a" stroke-width="1.3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="430" y="354" font-size="10" fill="#4a7a3a">是</text>
+  <rect x="420" y="208" width="100" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" rx="6" filter="url(#rough2)"/>
+  <text x="470" y="228" text-anchor="middle" font-size="10" fill="#333">cur = cur.right</text>
+
+  <!-- 情况3 返回 -->
+  <path d="M 290 392 L 290 398" stroke="#b85450" stroke-width="1.5" fill="none" filter="url(#rough2)"/>
+  <text x="380" y="388" font-size="10" fill="#b85450">否 ⇒ 返回 cur（LCA）</text>
+
+  <!-- 回到while -->
+  <path d="M 90 206 L 90 156 L 150 156" stroke="#446688" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <path d="M 420 208 L 420 156 L 430 156" stroke="#4a7a3a" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+</svg>

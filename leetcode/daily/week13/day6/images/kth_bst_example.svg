@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+    <marker id="arrRed" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">示例演算：root=[5,3,6,2,4,null,null,1], k=3</text>
+
+  <!-- BST 树 -->
+  <circle cx="290" cy="70" r="16" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="290" y="74" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">5</text>
+
+  <circle cx="220" cy="130" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="220" y="134" text-anchor="middle" font-size="11" fill="#333">3</text>
+  <line x1="278" y1="82" x2="230" y2="120" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <circle cx="360" cy="130" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="360" y="134" text-anchor="middle" font-size="11" fill="#333">6</text>
+  <line x1="302" y1="82" x2="350" y2="120" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <circle cx="170" cy="190" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="170" y="194" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <line x1="210" y1="142" x2="178" y2="180" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <circle cx="270" cy="190" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="270" y="194" text-anchor="middle" font-size="10" fill="#333">4</text>
+  <line x1="230" y1="142" x2="262" y2="180" stroke="#446688" stroke-width="1.1" filter="url(#rough2)"/>
+
+  <circle cx="130" cy="250" r="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="130" y="254" text-anchor="middle" font-size="9" fill="#333">1</text>
+  <line x1="162" y1="200" x2="136" y2="240" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+
+  <!-- 栈演变 -->
+  <text x="410" y="70" font-size="12" fill="#888">栈演变（底→顶）：</text>
+
+  <text x="410" y="100" font-size="11" fill="#888">① 向左压栈：</text>
+  <rect x="410" y="106" width="34" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="427" y="122" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <rect x="446" y="106" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="463" y="122" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <rect x="482" y="106" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="499" y="122" text-anchor="middle" font-size="10" fill="#333">2</text>
+  <rect x="518" y="106" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.6" rx="4" filter="url(#rough2)"/>
+  <text x="535" y="122" text-anchor="middle" font-size="10" fill="#333">1</text>
+
+  <text x="410" y="150" font-size="11" fill="#888">② 弹1：k=3→2</text>
+  <rect x="410" y="156" width="34" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="427" y="172" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <rect x="446" y="156" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="463" y="172" text-anchor="middle" font-size="10" fill="#333">3</text>
+  <rect x="482" y="156" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="499" y="172" text-anchor="middle" font-size="10" fill="#333">2</text>
+
+  <text x="410" y="200" font-size="11" fill="#888">③ 弹2：k=2→1</text>
+  <rect x="410" y="206" width="34" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="427" y="222" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <rect x="446" y="206" width="34" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="463" y="222" text-anchor="middle" font-size="10" fill="#333">3</text>
+
+  <text x="410" y="250" font-size="11" fill="#b85450" font-weight="bold">④ 弹3：k=1→0 ✓</text>
+  <rect x="410" y="256" width="34" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="427" y="272" text-anchor="middle" font-size="10" fill="#333">5</text>
+
+  <!-- 结果标注 -->
+  <path d="M 234 130 L 408 264" stroke="#b85450" stroke-width="1.6" stroke-dasharray="4,3" fill="none" marker-end="url(#arrRed)" filter="url(#rough2)"/>
+  <text x="320" y="200" font-size="12" fill="#b85450" font-weight="bold">返回 3</text>
+
+  <!-- 说明框 -->
+  <rect x="40" y="300" width="500" height="80" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="60" y="324" font-size="12" fill="#333" font-weight="bold">中序序列 [1,2,3,4,5,6]：第3小 = 3 ✓</text>
+  <text x="60" y="344" font-size="11" fill="#555">弹栈顺序即中序访问顺序；k 减到 0 时立即返回，无需遍历右半部分</text>
+  <text x="60" y="362" font-size="11" fill="#b85450" font-weight="bold">时间 O(H+k) = O(4+3)，远优于全量 O(n)</text>
+</svg>

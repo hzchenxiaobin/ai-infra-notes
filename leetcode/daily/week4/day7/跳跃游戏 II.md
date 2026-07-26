@@ -146,5 +146,5 @@ class Solution:
 
 ## 7. 同类练习题
 - [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/)：贪心可达性
-- [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)：贪心最小跳跃
+- [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)（[题解](跳跃游戏 II.md)）：贪心最小跳跃
 - [1306. 跳跃游戏 III](https://leetcode.cn/problems/jump-game-iii/)：BFS 跳跃

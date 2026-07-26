@@ -273,6 +273,6 @@ class Solution:
 ---
 
 ## 7. 同类练习题
-- [19. 删除链表的倒数第 N 个节点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/)：快慢双指针
-- [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/)：一次遍历
-- [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/)：快慢指针
+- [19. 删除链表的倒数第 N 个节点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/)（[题解](删除链表的倒数第N个节点.md)）：快慢双指针
+- [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/)（[题解](../../week11/day2/删除排序链表中的重复元素.md)）：一次遍历
+- [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/)（[题解](../../week11/day1/链表的中间结点.md)）：快慢指针

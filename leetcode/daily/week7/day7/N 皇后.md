@@ -201,5 +201,5 @@ class Solution:
 ## 7. 同类练习题
 - [52. N 皇后 II](https://leetcode.cn/problems/n-queens-ii/)：只求方案数，位运算版最简洁
 - [37. 解数独](https://leetcode.cn/problems/sudoku-solver/)：同样回溯 + 约束集合剪枝
-- [46. 全排列](https://leetcode.cn/problems/permutations/)：回溯 + 单集合剪枝的基础版
-- [131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/)：回溯枚举方案
+- [46. 全排列](https://leetcode.cn/problems/permutations/)（[题解](../../week1/day6/全排列.md)）：回溯 + 单集合剪枝的基础版
+- [131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/)（[题解](../../week4/day3/分割回文串.md)）：回溯枚举方案

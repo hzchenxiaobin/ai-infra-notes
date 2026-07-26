@@ -256,5 +256,5 @@ LRU 只看"最近访问时间"，LFU（最不经常使用）看"访问频率"。
 
 ## 7. 同类练习题
 - [460. LFU 缓存](https://leetcode.cn/problems/lfu-cache/)：LFU 设计
-- [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)：LRU 设计
+- [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)（[题解](LRU缓存.md)）：LRU 设计
 - [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/)：设计题

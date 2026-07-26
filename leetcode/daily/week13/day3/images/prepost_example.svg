@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">示例演算：pre=[1,2,4,5,3,6,7] post=[4,5,2,6,7,3,1]</text>
+
+  <!-- 步骤1 -->
+  <text x="30" y="58" font-size="11" fill="#888">① 根=1，左根=2，post中2在idx=2 ⇒ 左[pre1..3,post0..2] 右[pre4..6,post3..5]</text>
+
+  <!-- 根1 -->
+  <circle cx="290" cy="90" r="16" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="290" y="94" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">1</text>
+
+  <line x1="276" y1="100" x2="200" y2="140" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+  <line x1="304" y1="100" x2="380" y2="140" stroke="#4a7a3a" stroke-width="1.3" filter="url(#rough2)"/>
+
+  <!-- 步骤2: 左子树根2 -->
+  <circle cx="190" cy="150" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="190" y="154" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">2</text>
+  <text x="30" y="148" font-size="10" fill="#888">② 根=2，左根=4，post中4在idx=0</text>
+
+  <line x1="180" y1="160" x2="150" y2="200" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <line x1="200" y1="160" x2="230" y2="200" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <!-- 步骤2: 右子树根3 -->
+  <circle cx="390" cy="150" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" filter="url(#rough2)"/>
+  <text x="390" y="154" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">3</text>
+  <text x="410" y="148" font-size="10" fill="#888">③ 根=3，左根=6</text>
+
+  <line x1="380" y1="160" x2="350" y2="200" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <line x1="400" y1="160" x2="430" y2="200" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <!-- 叶子 4 5 6 7 -->
+  <circle cx="140" cy="215" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="140" y="219" text-anchor="middle" font-size="10" fill="#333">4</text>
+  <text x="140" y="245" text-anchor="middle" font-size="9" fill="#888">叶子</text>
+
+  <circle cx="240" cy="215" r="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="240" y="219" text-anchor="middle" font-size="10" fill="#333">5</text>
+  <text x="240" y="245" text-anchor="middle" font-size="9" fill="#888">叶子</text>
+
+  <circle cx="340" cy="215" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="340" y="219" text-anchor="middle" font-size="10" fill="#333">6</text>
+  <text x="340" y="245" text-anchor="middle" font-size="9" fill="#888">叶子</text>
+
+  <circle cx="440" cy="215" r="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="440" y="219" text-anchor="middle" font-size="10" fill="#333">7</text>
+  <text x="440" y="245" text-anchor="middle" font-size="9" fill="#888">叶子</text>
+
+  <!-- 说明框 -->
+  <rect x="40" y="275" width="500" height="105" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="60" y="299" font-size="12" fill="#333" font-weight="bold">取根顺序（前序指针从左到右）：</text>
+  <text x="60" y="319" font-size="11" fill="#555">1（根） → 2（1的左子树根） → 4（2的左子树根，叶子） → 5（2的右子树根，叶子）</text>
+  <text x="60" y="337" font-size="11" fill="#555">→ 3（1的右子树根） → 6（3的左子树根，叶子） → 7（3的右子树根，叶子）</text>
+  <text x="60" y="361" font-size="11" fill="#b85450" font-weight="bold">关键：每次看 pre[preL+1] 定位后序中的左子树根，划分左右区间后递归</text>
+</svg>

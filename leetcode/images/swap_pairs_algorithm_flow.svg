@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="440" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：哑节点开头，每轮交换 prev 后两节点</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">prev 前进到交换后的 a（原第一个，现第二个，作下对前驱）</text>
+
+  <!-- Start: dummy -->
+  <rect x="190" y="62" width="180" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="14" filter="url(#rough2)"/>
+  <text x="280" y="82" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">dummy.next = head; prev = dummy</text>
+
+  <path d="M 280 94 L 280 112" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Diamond: 至少两个节点? -->
+  <polygon points="280,114 390,156 280,198 170,156" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="150" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">prev.next &amp;&amp;</text>
+  <text x="280" y="166" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">prev.next.next?</text>
+  <text x="280" y="180" text-anchor="middle" font-size="9" fill="#8a6a20">（至少两个可交换）</text>
+
+  <!-- No: return dummy.next -->
+  <text x="160" y="150" text-anchor="end" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <path d="M 170 156 L 110 156" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="30" y="140" width="80" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="14" filter="url(#rough2)"/>
+  <text x="70" y="160" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">return</text>
+  <text x="70" y="172" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">dummy.next</text>
+
+  <!-- Yes -->
+  <text x="296" y="214" font-size="10" fill="#4a7a3a" font-weight="bold">是</text>
+  <path d="M 280 198 L 280 218" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- a, b 取出 -->
+  <rect x="180" y="220" width="200" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="280" y="239" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">a = prev.next; b = a.next</text>
+
+  <path d="M 280 250 L 280 268" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- 三步交换 -->
+  <rect x="140" y="270" width="280" height="74" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="156" y="290" font-size="11" fill="#4a7a3a" font-weight="bold">三步交换：</text>
+  <text x="156" y="306" font-size="10" fill="#555">① prev.next = b</text>
+  <text x="156" y="320" font-size="10" fill="#555">② a.next = b.next</text>
+  <text x="156" y="334" font-size="10" fill="#555">③ b.next = a</text>
+
+  <path d="M 280 344 L 280 360" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- prev = a -->
+  <rect x="170" y="362" width="220" height="30" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="280" y="381" text-anchor="middle" font-size="11" fill="#d6a040" font-weight="bold">prev = a（交换后 a 是这对的尾）</text>
+
+  <!-- loop back -->
+  <path d="M 390 377 L 450 377 L 450 156 L 390 156" stroke="#666" stroke-width="1.1" fill="none" stroke-dasharray="3,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="456" y="270" font-size="8" fill="#888">继续</text>
+  <text x="456" y="282" font-size="8" fill="#888">下一对</text>
+
+  <!-- 注意 -->
+  <rect x="30" y="404" width="500" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="42" y="422" font-size="11" fill="#b85450" font-weight="bold">关键：prev 落在 a（交换后的尾），不是 b；下一轮从 a.next 取新一对</text>
+</svg>

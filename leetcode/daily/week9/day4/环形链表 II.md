@@ -292,7 +292,7 @@ class Solution:
 
 ## 7. 同类练习题
 
-- [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/)：本题前置题，只判环不找入口，同一套快慢指针阶段一
+- [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/)（[题解](../../week3/day4/环形链表.md)）：本题前置题，只判环不找入口，同一套快慢指针阶段一
 - [287. 寻找重复数](https://leetcode.cn/problems/find-the-duplicate-number/)：把数组下标当链表指针，Floyd 两阶段找环入口 = 重复数，要求 `O(1)` 空间不修改数组
 - [202. 快乐数](https://leetcode.cn/problems/happy-number/)：数位平方和序列判环，阶段一判是否进入循环（非快乐数必成环）
 - [457. 环形数组循环](https://leetcode.cn/problems/circular-array-loop/)：数组当下标链表，带方向约束的 Floyd 判圈

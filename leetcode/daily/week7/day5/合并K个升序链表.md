@@ -194,6 +194,6 @@ def mergeKLists_divide(self, lists):
 ---
 
 ## 7. 同类练习题
-- [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)：堆/分治合并
-- [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)：双指针合并
-- [148. 排序链表](https://leetcode.cn/problems/sort-list/)：归并排序
+- [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)（[题解](合并K个升序链表.md)）：堆/分治合并
+- [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)（[题解](../../week2/day4/合并两个有序链表.md)）：双指针合并
+- [148. 排序链表](https://leetcode.cn/problems/sort-list/)（[题解](../../week8/day7/排序链表.md)）：归并排序

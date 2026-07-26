@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 510" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrChild" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="510" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：嵌套子链逐层扁平化</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">3 的 child=7→8→9→10，8 的 child=11→12，DFS 先扁平最内层</text>
+
+  <!-- ===== 初始多级结构 ===== -->
+  <text x="40" y="76" font-size="11" fill="#444" font-weight="bold">初始：主链 1→2→3→4→5→6，3 有 child，8 有 child</text>
+  <!-- 主链 -->
+  <g font-size="11">
+    <rect x="40" y="84" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="58" y="101" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="76" y1="97" x2="88" y2="97" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="94" y="84" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="112" y="101" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="130" y1="97" x2="142" y2="97" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="148" y="84" width="36" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="4" filter="url(#rough2)"/>
+    <text x="166" y="101" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="184" y1="97" x2="196" y2="97" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="202" y="84" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="220" y="101" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="238" y1="97" x2="250" y2="97" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="256" y="84" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="274" y="101" text-anchor="middle" fill="#333" font-weight="bold">5</text>
+    <line x1="292" y1="97" x2="304" y2="97" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="310" y="84" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="328" y="101" text-anchor="middle" fill="#333" font-weight="bold">6</text>
+  </g>
+  <!-- 3 的 child -->
+  <path d="M 166 110 L 166 138" stroke="#b85450" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrChild)" filter="url(#rough2)"/>
+  <text x="178" y="128" font-size="8" fill="#b85450" font-weight="bold">child</text>
+  <!-- 子链1: 7→8→9→10 -->
+  <g font-size="11">
+    <rect x="120" y="142" width="36" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="138" y="159" text-anchor="middle" fill="#333" font-weight="bold">7</text>
+    <line x1="156" y1="155" x2="168" y2="155" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="174" y="142" width="36" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="2" rx="4" filter="url(#rough2)"/>
+    <text x="192" y="159" text-anchor="middle" fill="#333" font-weight="bold">8</text>
+    <line x1="210" y1="155" x2="222" y2="155" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="228" y="142" width="36" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="246" y="159" text-anchor="middle" fill="#333" font-weight="bold">9</text>
+    <line x1="264" y1="155" x2="276" y2="155" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="282" y="142" width="36" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="300" y="159" text-anchor="middle" fill="#333" font-weight="bold">10</text>
+  </g>
+  <!-- 8 的 child -->
+  <path d="M 192 168 L 192 196" stroke="#b85450" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrChild)" filter="url(#rough2)"/>
+  <text x="204" y="186" font-size="8" fill="#b85450" font-weight="bold">child</text>
+  <!-- 子链2: 11→12 -->
+  <g font-size="11">
+    <rect x="174" y="200" width="36" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="192" y="217" text-anchor="middle" fill="#333" font-weight="bold">11</text>
+    <line x1="210" y1="213" x2="222" y2="213" stroke="#b85450" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="228" y="200" width="36" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="246" y="217" text-anchor="middle" fill="#333" font-weight="bold">12</text>
+  </g>
+
+  <!-- ===== 步骤说明 ===== -->
+  <text x="40" y="252" font-size="11" fill="#444" font-weight="bold">DFS 步骤：</text>
+  <rect x="40" y="260" width="500" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="52" y="276" font-size="10" fill="#b85450" font-weight="bold">① 遍历到 3，发现 child，递归扁平化 7→8→9→10</text>
+
+  <rect x="40" y="288" width="500" height="24" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="52" y="304" font-size="10" fill="#b85450" font-weight="bold">② 扁平化 7→8 时发现 8 有 child，递归扁平化 11→12（最内层先处理）</text>
+
+  <rect x="40" y="316" width="500" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="52" y="332" font-size="10" fill="#4a7a3a" font-weight="bold">③ 11→12 无 child，直接返回；插入到 8 和 9 之间 → 7→8→11→12→9→10</text>
+
+  <rect x="40" y="344" width="500" height="24" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="52" y="360" font-size="10" fill="#4a7a3a" font-weight="bold">④ 子链 7→8→11→12→9→10 插入到 3 和 4 之间 → 完成扁平化</text>
+
+  <rect x="40" y="372" width="500" height="24" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="52" y="388" font-size="10" fill="#446688" font-weight="bold">⑤ curr 跳到 4，继续 4→5→6 无 child，结束</text>
+
+  <!-- ===== 最终扁平链 ===== -->
+  <text x="40" y="416" font-size="11" fill="#444" font-weight="bold">最终扁平链（所有 child 置空）：</text>
+  <g font-size="11">
+    <rect x="40" y="424" width="32" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="56" y="441" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <line x1="72" y1="437" x2="84" y2="437" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="88" y="424" width="32" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="104" y="441" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="120" y1="437" x2="132" y2="437" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="136" y="424" width="32" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="152" y="441" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+    <line x1="168" y1="437" x2="180" y2="437" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="184" y="424" width="32" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="200" y="441" text-anchor="middle" fill="#333" font-weight="bold">7</text>
+    <line x1="216" y1="437" x2="228" y2="437" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="232" y="424" width="32" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="248" y="441" text-anchor="middle" fill="#333" font-weight="bold">8</text>
+    <line x1="264" y1="437" x2="276" y2="437" stroke="#b85450" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="280" y="424" width="32" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="296" y="441" text-anchor="middle" fill="#333" font-weight="bold">11</text>
+    <line x1="312" y1="437" x2="324" y2="437" stroke="#b85450" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="328" y="424" width="32" height="26" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="344" y="441" text-anchor="middle" fill="#333" font-weight="bold">12</text>
+    <line x1="360" y1="437" x2="372" y2="437" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="376" y="424" width="32" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="392" y="441" text-anchor="middle" fill="#333" font-weight="bold">9</text>
+    <line x1="408" y1="437" x2="420" y2="437" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="424" y="424" width="32" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="440" y="441" text-anchor="middle" fill="#333" font-weight="bold">10</text>
+    <line x1="456" y1="437" x2="468" y2="437" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="472" y="424" width="32" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="488" y="441" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="504" y1="437" x2="516" y2="437" stroke="#446688" stroke-width="1.2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="520" y="424" width="32" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="536" y="441" text-anchor="middle" fill="#333" font-weight="bold">5</text>
+  </g>
+
+  <!-- ===== 结论 ===== -->
+  <rect x="30" y="464" width="520" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="44" y="482" font-size="11" fill="#4a7a3a" font-weight="bold">结果：1→2→3→7→8→11→12→9→10→4→5→6 ✓</text>
+  <text x="44" y="496" font-size="10" fill="#555">DFS 先扁平最内层 11→12，接回 8↔9；再扁平 7→8→11→12→9→10，接回 3↔4</text>
+</svg>

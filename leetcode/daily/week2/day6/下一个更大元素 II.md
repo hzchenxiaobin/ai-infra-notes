@@ -293,7 +293,7 @@ for i in range(2 * n):
 
 ## 7. 同类练习题
 - [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/)（[题解](每日温度.md)）：同模板存下标，非循环、输出距离
-- [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/)（[题解](下一个更大元素%20I.md)）：同模板存值 + 哈希，元素互不相同
+- [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/)（[题解](下一个更大元素 I.md)）：同模板存值 + 哈希，元素互不相同
 - [556. 下一个更大元素 III](https://leetcode.cn/problems/next-greater-element-iii/)：下一个排列变体，字符串处理
-- [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/)：单调递减栈，弹栈时累加跨度
-- [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/)：找左右第一个更矮，递增栈两侧扫描
+- [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/)（[题解](股票价格跨度.md)）：单调递减栈，弹栈时累加跨度
+- [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/)（[题解](../../week1/day7/柱状图中最大的矩形.md)）：找左右第一个更矮，递增栈两侧扫描

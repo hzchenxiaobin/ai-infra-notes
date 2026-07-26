@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 430" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrSlow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4a7a3a"/>
+    </marker>
+    <marker id="arrFast" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="430" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：1→2→3→4→5→6（偶数链）</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">slow 绿、fast 红，每轮 slow+1、fast+2，fast 越过末尾退出</text>
+
+  <!-- 列头 -->
+  <text x="36" y="66" font-size="10" fill="#888" font-weight="bold">轮次</text>
+  <text x="110" y="66" font-size="10" fill="#888" font-weight="bold">链表与指针位置</text>
+  <text x="430" y="66" font-size="10" fill="#888" font-weight="bold">fast 状态</text>
+
+  <!-- ===== 初始 ===== -->
+  <text x="44" y="100" font-size="10" fill="#888">初始</text>
+  <g font-size="11">
+    <rect x="80" y="84" width="50" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="105" y="103" text-anchor="middle" fill="#333" font-weight="bold">1</text>
+    <rect x="134" y="84" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="159" y="103" text-anchor="middle" fill="#888">2</text>
+    <rect x="188" y="84" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="213" y="103" text-anchor="middle" fill="#888">3</text>
+    <rect x="242" y="84" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="267" y="103" text-anchor="middle" fill="#888">4</text>
+    <rect x="296" y="84" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="321" y="103" text-anchor="middle" fill="#888">5</text>
+    <rect x="350" y="84" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="375" y="103" text-anchor="middle" fill="#888">6</text>
+  </g>
+  <text x="105" y="78" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">slow</text>
+  <text x="105" y="124" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">fast</text>
+  <text x="430" y="103" font-size="10" fill="#555">在节点 1，未到尾</text>
+
+  <!-- ===== 第 1 轮 ===== -->
+  <text x="44" y="168" font-size="10" fill="#888">第 1 轮</text>
+  <g font-size="11">
+    <rect x="80" y="152" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="105" y="171" text-anchor="middle" fill="#888">1</text>
+    <rect x="134" y="152" width="50" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="159" y="171" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <rect x="188" y="152" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="213" y="171" text-anchor="middle" fill="#888">3</text>
+    <rect x="242" y="152" width="50" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="267" y="171" text-anchor="middle" fill="#b85450" font-weight="bold">3</text>
+    <rect x="296" y="152" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="321" y="171" text-anchor="middle" fill="#888">4</text>
+    <rect x="350" y="152" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="375" y="171" text-anchor="middle" fill="#888">5</text>
+    <rect x="404" y="152" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="429" y="171" text-anchor="middle" fill="#888">6</text>
+  </g>
+  <text x="159" y="146" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">slow</text>
+  <text x="267" y="146" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">fast</text>
+  <text x="430" y="171" font-size="10" fill="#555">在节点 3，未到尾</text>
+
+  <!-- ===== 第 2 轮 ===== -->
+  <text x="44" y="236" font-size="10" fill="#888">第 2 轮</text>
+  <g font-size="11">
+    <rect x="80" y="220" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="105" y="239" text-anchor="middle" fill="#888">1</text>
+    <rect x="134" y="220" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="159" y="239" text-anchor="middle" fill="#888">2</text>
+    <rect x="188" y="220" width="50" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="213" y="239" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+    <rect x="242" y="220" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="267" y="239" text-anchor="middle" fill="#888">4</text>
+    <rect x="296" y="220" width="50" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="4" filter="url(#rough2)"/>
+    <text x="321" y="239" text-anchor="middle" fill="#b85450" font-weight="bold">5</text>
+    <rect x="350" y="220" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="375" y="239" text-anchor="middle" fill="#888">6</text>
+  </g>
+  <text x="213" y="214" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">slow</text>
+  <text x="321" y="214" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">fast</text>
+  <text x="430" y="239" font-size="10" fill="#555">在节点 5，fast.next=6 存在</text>
+
+  <!-- ===== 第 3 轮（退出）===== -->
+  <text x="44" y="304" font-size="10" fill="#888" font-weight="bold">第 3 轮</text>
+  <g font-size="11">
+    <rect x="80" y="288" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="105" y="307" text-anchor="middle" fill="#888">1</text>
+    <rect x="134" y="288" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="159" y="307" text-anchor="middle" fill="#888">2</text>
+    <rect x="188" y="288" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="213" y="307" text-anchor="middle" fill="#888">3</text>
+    <rect x="242" y="288" width="50" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="4" filter="url(#rough2)"/>
+    <text x="267" y="307" text-anchor="middle" fill="#4a7a3a" font-weight="bold">4</text>
+    <rect x="296" y="288" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="321" y="307" text-anchor="middle" fill="#888">5</text>
+    <rect x="350" y="288" width="50" height="28" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="4" filter="url(#rough2)"/>
+    <text x="375" y="307" text-anchor="middle" fill="#888">6</text>
+    <text x="412" y="307" font-size="12" fill="#b85450" font-weight="bold">→ ∅</text>
+  </g>
+  <text x="267" y="282" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">slow（中点！）</text>
+  <text x="412" y="282" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">fast 越过末尾</text>
+  <text x="430" y="307" font-size="10" fill="#b85450" font-weight="bold">fast=null 退出</text>
+
+  <!-- ===== 结果 ===== -->
+  <rect x="30" y="340" width="520" height="72" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="362" font-size="11" fill="#4a7a3a" font-weight="bold">结果：slow 停在节点 4 → 返回 [4,5,6] ✓</text>
+  <text x="50" y="380" font-size="10" fill="#555">偶数链 6 个节点，中点为 3 和 4，取第二个即 4</text>
+  <text x="50" y="398" font-size="10" fill="#4a7a3a" font-weight="bold">口诀：取后中点用 fast &amp;&amp; fast.next，取前中点用 fast.next &amp;&amp; fast.next.next</text>
+</svg>

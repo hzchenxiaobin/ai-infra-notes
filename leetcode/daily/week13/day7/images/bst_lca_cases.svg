@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+    <marker id="arrRed" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">BST LCA 三种情况</text>
+
+  <!-- 情况1: 都在左 -->
+  <text x="100" y="58" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">① p,q 都 &lt; root</text>
+  <text x="100" y="74" text-anchor="middle" font-size="10" fill="#888">LCA 在左子树</text>
+  <circle cx="100" cy="100" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6" filter="url(#rough2)"/>
+  <text x="100" y="104" text-anchor="middle" font-size="10" fill="#333">root</text>
+  <line x1="92" y1="112" x2="80" y2="140" stroke="#446688" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="75" cy="150" r="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="75" y="154" text-anchor="middle" font-size="9" fill="#333">LCA</text>
+  <circle cx="60" cy="195" r="9" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="60" y="198" text-anchor="middle" font-size="8" fill="#333">p</text>
+  <circle cx="90" cy="195" r="9" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="90" y="198" text-anchor="middle" font-size="8" fill="#333">q</text>
+  <line x1="70" y1="158" x2="62" y2="188" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <line x1="80" y1="158" x2="88" y2="188" stroke="#446688" stroke-width="1" filter="url(#rough2)"/>
+  <path d="M 86 112 L 140 112" stroke="#446688" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="150" y="115" font-size="10" fill="#446688">向左走</text>
+
+  <!-- 情况2: 都在右 -->
+  <text x="480" y="58" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">② p,q 都 &gt; root</text>
+  <text x="480" y="74" text-anchor="middle" font-size="10" fill="#888">LCA 在右子树</text>
+  <circle cx="480" cy="100" r="14" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6" filter="url(#rough2)"/>
+  <text x="480" y="104" text-anchor="middle" font-size="10" fill="#333">root</text>
+  <line x1="488" y1="112" x2="500" y2="140" stroke="#4a7a3a" stroke-width="1.2" filter="url(#rough2)"/>
+  <circle cx="505" cy="150" r="11" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="505" y="154" text-anchor="middle" font-size="9" fill="#333">LCA</text>
+  <circle cx="490" cy="195" r="9" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="490" y="198" text-anchor="middle" font-size="8" fill="#333">p</text>
+  <circle cx="520" cy="195" r="9" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#rough2)"/>
+  <text x="520" y="198" text-anchor="middle" font-size="8" fill="#333">q</text>
+  <line x1="500" y1="158" x2="492" y2="188" stroke="#4a7a3a" stroke-width="1" filter="url(#rough2)"/>
+  <line x1="510" y1="158" x2="518" y2="188" stroke="#4a7a3a" stroke-width="1" filter="url(#rough2)"/>
+  <path d="M 494 112 L 440 112" stroke="#4a7a3a" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="400" y="115" font-size="10" fill="#4a7a3a">向右走</text>
+
+  <!-- 情况3: 分属两侧 -->
+  <text x="290" y="58" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">③ p,q 分属两侧（或 root==p/q）</text>
+  <text x="290" y="74" text-anchor="middle" font-size="10" fill="#888">root 即 LCA</text>
+  <circle cx="290" cy="110" r="16" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="290" y="114" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">LCA</text>
+  <line x1="278" y1="122" x2="240" y2="150" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+  <line x1="302" y1="122" x2="340" y2="150" stroke="#4a7a3a" stroke-width="1.3" filter="url(#rough2)"/>
+  <circle cx="230" cy="160" r="11" fill="#e8f0fe" stroke="#446688" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="230" y="164" text-anchor="middle" font-size="9" fill="#333">p</text>
+  <circle cx="350" cy="160" r="11" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="350" y="164" text-anchor="middle" font-size="9" fill="#333">q</text>
+  <text x="230" y="185" text-anchor="middle" font-size="9" fill="#446688">&lt; root</text>
+  <text x="350" y="185" text-anchor="middle" font-size="9" fill="#4a7a3a">&gt; root</text>
+
+  <!-- 说明框 -->
+  <rect x="40" y="230" width="500" height="150" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="60" y="254" font-size="12" fill="#333" font-weight="bold">判断逻辑（设 p.val、q.val 与 root.val 比较）：</text>
+  <text x="60" y="276" font-size="11" fill="#446688">① p,q 都 &lt; root.val ⇒ LCA 在左子树，root = root.left</text>
+  <text x="60" y="296" font-size="11" fill="#4a7a3a">② p,q 都 &gt; root.val ⇒ LCA 在右子树，root = root.right</text>
+  <text x="60" y="316" font-size="11" fill="#b85450">③ 否则（分属两侧，或 root.val 等于 p/q 之一）⇒ root 即 LCA，返回</text>
+  <text x="60" y="348" font-size="11" fill="#555">BST 值域约束 ⇒ 每次单向下降，无需回溯 ⇒ O(H) 时间，O(1) 空间</text>
+  <text x="60" y="368" font-size="11" fill="#b85450" font-weight="bold">比通用 LCA(236) 的 O(n) 全遍历更优</text>
+</svg>

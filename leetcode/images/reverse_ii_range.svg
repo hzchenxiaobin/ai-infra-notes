@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#446688"/>
+    </marker>
+    <marker id="arrRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b85450"/>
+    </marker>
+    <marker id="arrGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a7a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="420" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">头插法：把 curr.next 摘下插到 pre 后，逐步构建反转段</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">curr 全程在段尾不动，pre 全程是段首前驱不动</text>
+
+  <!-- ===== 反转前 ===== -->
+  <text x="40" y="78" font-size="12" fill="#444" font-weight="bold">单步前：pre→[段首]→...→curr→nxt→[后]</text>
+  <g font-size="12">
+    <rect x="40" y="86" width="48" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="64" y="107" text-anchor="middle" fill="#333" font-weight="bold">pre</text>
+    <line x1="88" y1="102" x2="110" y2="102" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="116" y="86" width="44" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="138" y="107" text-anchor="middle" fill="#333" font-weight="bold">段首</text>
+    <line x1="160" y1="102" x2="182" y2="102" stroke="#446688" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="190" y="107" font-size="11" fill="#888">...</text>
+    <line x1="206" y1="102" x2="228" y2="102" stroke="#446688" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="234" y="86" width="44" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="256" y="107" text-anchor="middle" fill="#333" font-weight="bold">curr</text>
+    <line x1="278" y1="102" x2="300" y2="102" stroke="#b85450" stroke-width="1.8" marker-end="url(#arrRed)" filter="url(#rough2)"/>
+    <rect x="306" y="86" width="44" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="328" y="107" text-anchor="middle" fill="#b85450" font-weight="bold">nxt</text>
+    <line x1="350" y1="102" x2="372" y2="102" stroke="#446688" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="380" y="107" font-size="11" fill="#888">后段</text>
+  </g>
+  <text x="328" y="76" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">待摘</text>
+
+  <!-- ===== 三步 ===== -->
+  <text x="40" y="146" font-size="12" fill="#444" font-weight="bold">三步摘插：</text>
+  <rect x="40" y="154" width="500" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="52" y="173" font-size="11" fill="#333">① <tspan font-weight="bold" fill="#b85450">curr.next = nxt.next</tspan>　curr 跨过 nxt，保住后段入口</text>
+  <rect x="40" y="186" width="500" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="52" y="205" font-size="11" fill="#333">② <tspan font-weight="bold" fill="#4a7a3a">nxt.next = pre.next</tspan>　nxt 接到段首（pre 后面）</text>
+  <rect x="40" y="218" width="500" height="28" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="6" filter="url(#rough2)"/>
+  <text x="52" y="237" font-size="11" fill="#333">③ <tspan font-weight="bold" fill="#d6a040">pre.next = nxt</tspan>　pre 指向新段首 nxt</text>
+
+  <!-- ===== 单步后 ===== -->
+  <text x="40" y="278" font-size="12" fill="#444" font-weight="bold">单步后：pre→nxt→[原段首]→...→curr→[后]</text>
+  <g font-size="12">
+    <rect x="40" y="286" width="48" height="32" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="64" y="307" text-anchor="middle" fill="#333" font-weight="bold">pre</text>
+    <line x1="88" y1="302" x2="110" y2="302" stroke="#d6a040" stroke-width="1.8" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="116" y="286" width="44" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="138" y="307" text-anchor="middle" fill="#b85450" font-weight="bold">nxt</text>
+    <line x1="160" y1="302" x2="182" y2="302" stroke="#4a7a3a" stroke-width="1.8" marker-end="url(#arrGreen)" filter="url(#rough2)"/>
+    <rect x="188" y="286" width="44" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="210" y="307" text-anchor="middle" fill="#333" font-weight="bold">段首</text>
+    <line x1="232" y1="302" x2="254" y2="302" stroke="#446688" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <text x="262" y="307" font-size="11" fill="#888">...</text>
+    <line x1="278" y1="302" x2="300" y2="302" stroke="#446688" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="306" y="286" width="44" height="32" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="328" y="307" text-anchor="middle" fill="#333" font-weight="bold">curr</text>
+    <line x1="350" y1="302" x2="372" y2="302" stroke="#b85450" stroke-width="1.8" marker-end="url(#arrRed)" filter="url(#rough2)"/>
+    <text x="380" y="307" font-size="11" fill="#888">后段</text>
+  </g>
+  <text x="138" y="338" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">新段首</text>
+  <text x="328" y="338" text-anchor="middle" font-size="9" fill="#446688" font-weight="bold">curr 不动（仍段尾）</text>
+
+  <!-- ===== 关键 ===== -->
+  <rect x="30" y="354" width="520" height="54" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="44" y="374" font-size="11" fill="#4a7a3a" font-weight="bold">关键观察：</text>
+  <text x="44" y="392" font-size="10" fill="#555">curr 全程是段尾不动，pre 全程是段首前驱不动；每轮只改三根指针</text>
+  <text x="44" y="406" font-size="10" fill="#555">循环 right-left 次后，curr.next 自动指向后段，前后段自然衔接</text>
+</svg>

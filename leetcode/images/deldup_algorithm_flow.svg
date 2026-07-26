@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 430" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="430" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">算法流程：遍历比较，相等跳过不前进，不等前进</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">一遍遍历 O(n)，O(1) 空间，原地修改 next</text>
+
+  <!-- Start: 边界判断 -->
+  <polygon points="280,56 370,86 280,116 190,86" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="84" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">head == null?</text>
+
+  <!-- Yes: return null -->
+  <text x="380" y="82" font-size="10" fill="#b85450" font-weight="bold">是</text>
+  <path d="M 370 86 L 420 86" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="420" y="70" width="100" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="14" filter="url(#rough2)"/>
+  <text x="470" y="90" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">return null</text>
+
+  <!-- No: curr = head -->
+  <text x="280" y="134" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">否</text>
+  <path d="M 280 116 L 280 138" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="190" y="140" width="180" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="14" filter="url(#rough2)"/>
+  <text x="280" y="159" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">curr = head</text>
+
+  <path d="M 280 170 L 280 188" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Diamond: curr.next != null? -->
+  <polygon points="280,190 380,228 280,266 180,228" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="226" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">curr.next != null?</text>
+  <text x="280" y="240" text-anchor="middle" font-size="9" fill="#8a6a20">（继续遍历）</text>
+
+  <!-- No: return head -->
+  <text x="160" y="222" text-anchor="end" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <path d="M 180 228 L 100 228" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="40" y="212" width="60" height="32" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="14" filter="url(#rough2)"/>
+  <text x="70" y="232" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">return</text>
+  <text x="70" y="244" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">head</text>
+
+  <!-- Yes: compare -->
+  <text x="296" y="280" font-size="10" fill="#4a7a3a" font-weight="bold">是</text>
+  <path d="M 280 266 L 280 286" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- Diamond: val equal? -->
+  <polygon points="280,288 390,324 280,360 170,324" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="280" y="322" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">curr.val ==</text>
+  <text x="280" y="336" text-anchor="middle" font-size="10" fill="#8a6a20" font-weight="bold">curr.next.val?</text>
+
+  <!-- Yes: skip -->
+  <text x="160" y="318" text-anchor="end" font-size="10" fill="#4a7a3a" font-weight="bold">是</text>
+  <path d="M 170 324 L 120 324" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="20" y="306" width="100" height="36" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="70" y="322" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">curr.next =</text>
+  <text x="70" y="335" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">curr.next.next</text>
+  <text x="70" y="356" text-anchor="middle" font-size="8" fill="#888">跳过，curr 不动</text>
+  <!-- loop back to curr.next? diamond -->
+  <path d="M 70 306 L 70 210 L 180 228" stroke="#666" stroke-width="1.1" fill="none" stroke-dasharray="3,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- No: advance -->
+  <text x="296" y="376" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <path d="M 280 360 L 280 378" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <rect x="200" y="380" width="160" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+  <text x="280" y="399" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">curr = curr.next（前进）</text>
+  <!-- loop back -->
+  <path d="M 360 395 L 460 395 L 460 228 L 380 228" stroke="#666" stroke-width="1.1" fill="none" stroke-dasharray="3,3" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="466" y="312" font-size="8" fill="#888">回到</text>
+  <text x="466" y="324" font-size="8" fill="#888">判断</text>
+</svg>

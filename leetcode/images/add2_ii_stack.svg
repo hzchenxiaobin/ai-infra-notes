@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 420" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#446688"/>
+    </marker>
+    <marker id="arrDown" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+      <path d="M 0 0 L 10 0 L 5 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="420" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">栈反转访问顺序：高位在前 → 压栈 → 弹栈从低位开始</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">栈的"后进先出"把链表访问顺序反转，从最低位开始相加</text>
+
+  <!-- ===== 链表 l1: 7→2→4→3 ===== -->
+  <text x="40" y="78" font-size="12" fill="#446688" font-weight="bold">l1 = 7→2→4→3（高位在前，表 7243）</text>
+  <g font-size="12">
+    <rect x="40" y="86" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="62" y="106" text-anchor="middle" fill="#333" font-weight="bold">7</text>
+    <line x1="84" y1="101" x2="102" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="108" y="86" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="130" y="106" text-anchor="middle" fill="#333" font-weight="bold">2</text>
+    <line x1="152" y1="101" x2="170" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="176" y="86" width="44" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="5" filter="url(#rough2)"/>
+    <text x="198" y="106" text-anchor="middle" fill="#333" font-weight="bold">4</text>
+    <line x1="220" y1="101" x2="238" y2="101" stroke="#446688" stroke-width="1.5" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="244" y="86" width="44" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="5" filter="url(#rough2)"/>
+    <text x="266" y="106" text-anchor="middle" fill="#333" font-weight="bold">3</text>
+  </g>
+  <text x="62" y="76" text-anchor="middle" font-size="8" fill="#888">最高位</text>
+  <text x="266" y="76" text-anchor="middle" font-size="8" fill="#4a7a3a" font-weight="bold">最低位</text>
+
+  <!-- 压栈箭头 -->
+  <text x="310" y="106" font-size="10" fill="#b85450" font-weight="bold">压栈 →</text>
+  <path d="M 288 101 L 330 101" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- ===== 栈 s1（栈顶在底，视觉上 3 在最下）===== -->
+  <text x="370" y="78" font-size="12" fill="#d6a040" font-weight="bold">栈 s1</text>
+  <g font-size="11">
+    <rect x="350" y="60" width="40" height="22" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="370" y="75" text-anchor="middle" fill="#888">7</text>
+    <rect x="350" y="84" width="40" height="22" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="370" y="99" text-anchor="middle" fill="#888">2</text>
+    <rect x="350" y="108" width="40" height="22" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="370" y="123" text-anchor="middle" fill="#888">4</text>
+    <rect x="350" y="132" width="40" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="3" filter="url(#rough2)"/>
+    <text x="370" y="147" text-anchor="middle" fill="#4a7a3a" font-weight="bold">3</text>
+  </g>
+  <text x="400" y="143" font-size="9" fill="#4a7a3a" font-weight="bold">← 栈顶（最低位）</text>
+  <text x="400" y="75" font-size="9" fill="#888">栈底（最高位）</text>
+
+  <!-- 弹栈箭头向下 -->
+  <path d="M 370 156 L 370 186" stroke="#b85450" stroke-width="1.8" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="400" y="174" font-size="10" fill="#b85450" font-weight="bold">弹栈：从 3 开始</text>
+
+  <!-- ===== 核心：加法从低位起 ===== -->
+  <rect x="40" y="200" width="500" height="44" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="220" font-size="11" fill="#8a6a20" font-weight="bold">核心：加法从最低位算起，进位向高位传递</text>
+  <text x="52" y="236" font-size="10" fill="#555">链表高位在前 → 压栈 → 弹栈顺序 = 低位到高位 → 正好从最低位加</text>
+
+  <!-- ===== 头插法说明 ===== -->
+  <text x="40" y="270" font-size="12" fill="#444" font-weight="bold">结果用头插法构建：</text>
+  <g font-size="11">
+    <rect x="40" y="278" width="120" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="100" y="296" text-anchor="middle" fill="#446688" font-weight="bold">先算低位 7</text>
+    <path d="M 160 292 L 200 292" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="206" y="278" width="120" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="266" y="296" text-anchor="middle" fill="#4a7a3a" font-weight="bold">头插 → 7</text>
+    <path d="M 326 292 L 366 292" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="372" y="278" width="170" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="457" y="296" text-anchor="middle" fill="#b85450" font-weight="bold">先算的排到链表尾</text>
+  </g>
+
+  <g font-size="11">
+    <rect x="40" y="314" width="120" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="100" y="332" text-anchor="middle" fill="#446688" font-weight="bold">再算高位 0,8,7</text>
+    <path d="M 160 328 L 200 328" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="206" y="314" width="120" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="266" y="332" text-anchor="middle" fill="#4a7a3a" font-weight="bold">头插 → 7→8→0→7</text>
+    <path d="M 326 328 L 366 328" stroke="#666" stroke-width="1.2" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+    <rect x="372" y="314" width="170" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" rx="4" filter="url(#rough2)"/>
+    <text x="457" y="332" text-anchor="middle" fill="#b85450" font-weight="bold">后算的排到链表头</text>
+  </g>
+
+  <!-- ===== 结论 ===== -->
+  <rect x="40" y="354" width="500" height="54" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="52" y="374" font-size="11" fill="#4a7a3a" font-weight="bold">栈反转访问 + 头插反转输出 = 高位在前的结果</text>
+  <text x="52" y="392" font-size="10" fill="#555">计算顺序（低位→高位）与输出顺序（高位→低位）相反 → 用头插法自然翻转</text>
+  <text x="52" y="404" font-size="10" fill="#d6a040" font-weight="bold">关键：栈不改输入链表，满足"不能修改输入"的题意</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="400" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="14" fill="#555" font-weight="bold">单孩子节点：解不唯一</text>
+
+  <!-- 情况1：2 是左孩子 -->
+  <text x="120" y="64" text-anchor="middle" font-size="12" fill="#888">pre=[1,2] post=[2,1]</text>
+  <text x="120" y="84" text-anchor="middle" font-size="11" fill="#446688">情况 A：2 是 1 的左孩子</text>
+
+  <circle cx="120" cy="120" r="16" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="120" y="124" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">1</text>
+
+  <circle cx="90" cy="180" r="14" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="90" y="184" text-anchor="middle" font-size="11" fill="#333">2</text>
+  <line x1="110" y1="132" x2="96" y2="168" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>
+
+  <text x="120" y="220" text-anchor="middle" font-size="10" fill="#888">前序 [1,2] ✓</text>
+  <text x="120" y="236" text-anchor="middle" font-size="10" fill="#888">后序 [2,1] ✓</text>
+
+  <!-- 情况2：2 是右孩子 -->
+  <text x="440" y="64" text-anchor="middle" font-size="12" fill="#888">pre=[1,2] post=[2,1]</text>
+  <text x="440" y="84" text-anchor="middle" font-size="11" fill="#4a7a3a">情况 B：2 是 1 的右孩子</text>
+
+  <circle cx="440" cy="120" r="16" fill="#fce4ec" stroke="#b85450" stroke-width="2" filter="url(#rough2)"/>
+  <text x="440" y="124" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">1</text>
+
+  <circle cx="470" cy="180" r="14" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" filter="url(#rough2)"/>
+  <text x="470" y="184" text-anchor="middle" font-size="11" fill="#333">2</text>
+  <line x1="450" y1="132" x2="464" y2="168" stroke="#4a7a3a" stroke-width="1.3" filter="url(#rough2)"/>
+
+  <text x="440" y="220" text-anchor="middle" font-size="10" fill="#888">前序 [1,2] ✓</text>
+  <text x="440" y="236" text-anchor="middle" font-size="10" fill="#888">后序 [2,1] ✓</text>
+
+  <!-- 等号 -->
+  <text x="280" y="160" text-anchor="middle" font-size="28" fill="#b85450" font-weight="bold">≡</text>
+  <text x="280" y="184" text-anchor="middle" font-size="11" fill="#b85450">遍历相同</text>
+
+  <!-- 说明框 -->
+  <rect x="40" y="270" width="500" height="110" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5" rx="10" filter="url(#rough2)"/>
+  <text x="60" y="294" font-size="12" fill="#333" font-weight="bold">为什么不唯一？</text>
+  <text x="60" y="314" font-size="11" fill="#555">前序「根-左-右」与后序「左-右-根」在单孩子时退化为：</text>
+  <text x="60" y="332" font-size="11" fill="#555">  前序片段 = [根, 孩子, ...]，后序片段 = [..., 孩子, 根]</text>
+  <text x="60" y="350" font-size="11" fill="#555">孩子挂在左边或右边，这两个片段完全一样，无法区分。</text>
+  <text x="60" y="370" font-size="11" fill="#b85450" font-weight="bold">约定：单孩子归左子树 ⇒ 得到一个合法解</text>
+</svg>

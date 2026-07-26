@@ -206,6 +206,6 @@ class Solution:
 ---
 
 ## 7. 同类练习题
-- [92. 反转链表 II](https://leetcode.cn/problems/reverse-linked-list-ii/)：区间翻转
-- [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/)：基础翻转
-- [25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/)：分段翻转
+- [92. 反转链表 II](https://leetcode.cn/problems/reverse-linked-list-ii/)（[题解](../../week11/day4/反转链表 II.md)）：区间翻转
+- [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/)（[题解](../../week1/day4/反转链表.md)）：基础翻转
+- [25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/)（[题解](K个一组翻转链表.md)）：分段翻转
