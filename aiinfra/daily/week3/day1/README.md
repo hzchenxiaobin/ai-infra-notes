@@ -58,6 +58,30 @@ Transformer 是 Google 在 2017 年论文《Attention is All You Need》中提�
 
 经过这两步，一句话变成形状为 `(N, d_model)` 的矩阵——N 是序列长度（token 数），d_model 是每个 token 的向量维度（512 / 4096 / 8192 等）。**这个矩阵就是后面所有计算的输入**，d_model 也常简写为 d。
 
+##### 深入理解："Embedding 查表"到底在做什么
+
+**① Embedding 矩阵是什么。** 它是模型的**一个可学习参数**，形状 `(vocab_size, d_model)`——词表里每个 token 占一行，每行是一个 d 维向量。比如 vocab_size=5 万、d_model=4096，FP16 下约 400 MB。训练前随机初始化，训练中和 Linear 权重一样被梯度更新。直觉上，每行向量就是该 token 的"身份证"：训练后**语义相近的 token，向量在空间中也相近**（经典的 `king - man + woman ≈ queen` 就是这么来的）。
+
+**② "查表"是怎么查的。** 输入是 token id 序列 `[1024, 306, 998]`，查表就是**用 id 当行号，把对应行取出来**：
+
+```
+EmbeddingLookup([1024, 306, 998]) = [ E[1024],   # 第 1024 行，d 维
+                                      E[306],    # 第 306 行
+                                      E[998]  ]  # → 输出 (N, d_model)
+```
+
+每个 token id 独立取一行，输出从 `(N,)` 的整数序列变成 `(N, d_model)` 的浮点矩阵。
+
+**③ 为什么叫"查表"而不叫"矩阵乘"。** 数学上它**等价于** one-hot 乘矩阵：`one_hot(1024) @ E = E[1024]`。但 one-hot 向量长度 = vocab_size（5 万），只有一个位置是 1——真做 `(N, V) @ (V, d)` 的 GEMM 是 O(N·V·d)，其中 99.998% 的乘法都在乘 0。所以工程实现是 **gather（按索引收集）**：直接按行号读内存，O(N·d) 访存，一次乘法都不用。GPU 上对应 `aten::embedding` kernel：N 个 token 分给不同线程，各把自己那行的 d 个浮点数连续读出——行内是连续内存，天然 coalesced。它是典型的 **memory-bound** 算子（零计算、纯搬运），但数据量小，通常不是瓶颈。
+
+**④ 和本课其他内容的关联：**
+
+- **与 LM Head 对称**：输入侧"id → 向量"是查 E 的第 i 行；输出侧 LM Head"向量 → 词表 logits"是乘 E 的转置。很多模型两者**共享同一份权重**（weight tying），省一半参数
+- **不含位置信息**：查表只看 token 内容不看位置——「狗咬人」和「人咬狗」查出来是一样的行。位置信息靠位置编码（Positional Embedding / RoPE）注入
+- **Decode 阶段**：每步只查 1 行（新 token 那行），开销可忽略；Decode 的瓶颈在权重读取和 KV Cache，不在 embedding
+
+> 💡 **一句话**：Embedding 层就是一张"token id → 向量"的查找表，训练时学出来，推理时按行号读内存——数学上等价 one-hot 矩阵乘，工程上是 gather，零计算、纯访存。
+
 #### 0.3 Self-Attention：让 token 之间交换信息
 
 Attention 的核心思想：**每个 token 根据"谁和自己相关"，从其他 token 那里加权收集信息，更新自己的表示**。比如「苹果发布了新手机」中的「苹果」，看到「手机」后就应该更偏向公司含义。
