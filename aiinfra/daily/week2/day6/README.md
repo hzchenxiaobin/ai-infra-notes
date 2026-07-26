@@ -68,14 +68,34 @@ float4 val = reinterpret_cast<const float4*>(ptr)[0];
 
 理解 float4 为什么快，先要搞清楚 GPU 访存的两个粒度单位：
 
+![Cache Line 与 Sector](../images/cache_line_sector.svg)
+
 | 概念 | 大小 | 说明 |
 |------|------|------|
 | **sector（扇区）** | 32B | GPU 内存的**最小传输单位**。L1↔L2、L2↔DRAM 之间的数据搬运都按 sector 进行——线程只读 4B，硬件也会拉回整个 32B sector |
 | **cache line（缓存行）** | 128B | L1/L2 的组织单位，**1 行 = 4 个 sector**，可按 sector 粒度填充，不必整行搬运 |
 
-> 💡 对比 CPU：CPU cache line 通常 64B，传输和一致性共用这一个粒度；GPU 把两者拆开——cache line（128B）管存储组织，sector（32B）管传输，粒度更细，对不规则访问更友好。
+**sector（32B）——传输的原子单位。** 无论线程要读 1B 还是 4B，硬件从下一级存储搬数据时最小都搬一整个 32B sector，不可再分。这是 L2→L1、DRAM→L2 的搬运粒度。代价是：若一个 sector 里只有 4B 被用到，剩余 28B 也被白白搬过来，称为 **sector 浪费**。所以衡量访存效率的核心指标是「每个被搬来的 sector 里有百分之几的字节被真正用到」。
 
-用 sector 可以定量描述**合并访问（coalescing）**：一个 warp 32 线程连续读 float（4B），共 `32 × 4B = 128B`，恰好 1 条 cache line = 4 个 sector → 一次内存事务完成。若 32 个线程的地址散开各落一个 sector，就要传 32 个 sector（1024B）却只用到 128B，带宽利用率跌到 1/8。
+**cache line（128B）——存储的组织单位。** L1/L2 cache 按 128B 一行来组织（存 tag、做命中判断），1 行正好含 4 个 sector。关键在于**填充粒度是 sector 而非整行**：一次访存若只触达某行的 1 个 sector，就只搬这 1 个 sector 进 cache，其余 3 个 sector 位置留空，不必把整条 128B 都拉回来。这种「按需 sector 填充」让 GPU 对不规则访问比 CPU 更宽容。
+
+> 💡 对比 CPU：CPU cache line 通常 64B，传输和一致性共用这一个粒度——取就取整行、一致性也按整行做；GPU 把两者拆开——cache line（128B）管存储组织，sector（32B）管传输，粒度更细，对不规则访问更友好，代价是 tag 表项更多。
+
+**用 sector 定量描述合并访问（coalescing）。** 一个 warp 32 线程，每个读 1 个 float（4B），访存请求先被硬件合并：
+
+- **合并访问（coalesced）**：32 线程读连续地址，共 `32 × 4B = 128B`，恰好落在 1 条 cache line 的 4 个 sector 内 → 只需传 **4 个 sector = 128B**，1 次内存事务完成，**利用率 100%**。
+- **散乱访问（strided/scattered）**：32 线程地址各落一个不同 sector → 要传 **32 个 sector = 1024B**，却只用到 128B，**利用率仅 12.5%（1/8）**，其余 7/8 的带宽被浪费在搬来却用不上的 sector 上。
+
+带宽利用率公式：
+
+```
+带宽利用率 = 有效数据量 / 实际传输量
+         = (warp 真正读到的字节数) / (被触达的 sector 数 × 32B)
+```
+
+coalesced：`128B / (4 × 32B) = 100%`　　scattered：`128B / (32 × 32B) = 12.5%`
+
+> ⚠️ 这就是「coalesced」作为 CUDA 优化第一性原则的根因——它直接决定每个 sector 是否被榨干。float4 之所以更快，一大部分原因正是它强制每线程拿 16B 连续数据，天然把 sector 利用率顶满（见下一小节）。
 
 ##### 为什么 float4 更快
 

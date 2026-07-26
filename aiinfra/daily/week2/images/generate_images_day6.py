@@ -229,11 +229,108 @@ def parameter_tuning_table() -> str:
 </svg>"""
 
 
+def cache_line_sector() -> str:
+    """Cache Line (128B) 与 Sector (32B)：结构关系 + 合并访问 vs 散乱访问对比。"""
+    # ---- Part A: 1 cache line = 4 sectors ----
+    cl_x, cl_y, cl_w, cl_h = 90, 90, 600, 64
+    gap = 4
+    sw = (cl_w - 5 * gap) / 4  # 145
+    sec_a = []
+    for i in range(4):
+        sx = cl_x + gap + i * (sw + gap)
+        cx = sx + sw / 2
+        sec_a.append(
+            f'    <rect x="{sx:.1f}" y="{cl_y + 10}" width="{sw:.1f}" height="{cl_h - 20}" rx="4" '
+            f'fill="#d4e6f7" stroke="#446688" stroke-width="1.3" filter="url(#rough2)"/>\n'
+            f'    <text x="{cx:.1f}" y="{cl_y + 30}" text-anchor="middle" font-size="11" '
+            f'fill="#446688" font-weight="bold">Sector {i}</text>\n'
+            f'    <text x="{cx:.1f}" y="{cl_y + 49}" text-anchor="middle" font-size="11" fill="#446688">32 B</text>'
+        )
+    sec_a_svg = "\n".join(sec_a)
+
+    # ---- Part B: 32 thread cells (coalesced) ----
+    band_x, band_y, band_w = 90, 224, 600
+    cw = band_w / 32
+    cells_b = []
+    for i in range(32):
+        cx = band_x + i * cw
+        cells_b.append(
+            f'<rect x="{cx:.2f}" y="{band_y}" width="{cw:.2f}" height="22" '
+            f'fill="#cde9d4" stroke="#4a7a3a" stroke-width="0.5"/>'
+        )
+    cells_b_svg = "\n".join(cells_b)
+    brackets_b = []
+    for i in range(4):
+        bx = band_x + i * (band_w / 4)
+        bw = band_w / 4
+        brackets_b.append(
+            f'<rect x="{bx:.1f}" y="{band_y + 28}" width="{bw:.1f}" height="20" rx="3" '
+            f'fill="#4a7a3a" opacity="0.15" stroke="#4a7a3a" stroke-width="1.1" filter="url(#rough2)"/>'
+        )
+    brackets_b_svg = "\n".join(brackets_b)
+
+    # ---- Part C: 8 cache lines × 4 sectors grid (scattered) ----
+    gx0, gy0 = 90, 388
+    gsw, gsh = 147, 18
+    hgap, vgap = 4, 3
+    grid_c = []
+    for r in range(8):
+        for c in range(4):
+            sx = gx0 + c * (gsw + hgap)
+            sy = gy0 + r * (gsh + vgap)
+            grid_c.append(
+                f'<rect x="{sx}" y="{sy}" width="{gsw}" height="{gsh}" rx="3" '
+                f'fill="#fce4ec" stroke="#b85450" stroke-width="0.8" filter="url(#rough2)"/>'
+            )
+            grid_c.append(
+                f'<circle cx="{sx + gsw/2}" cy="{sy + gsh/2}" r="3.2" fill="#b85450"/>'
+            )
+    grid_c_svg = "\n".join(grid_c)
+    grid_top = gy0
+    grid_bot = gy0 + 7 * (gsh + vgap) + gsh
+    grid_mid = (grid_top + grid_bot) // 2
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 610" font-family="{FONT}">
+{DEFS}
+
+  <rect width="780" height="610" fill="#fafafa"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" fill="#444" font-weight="bold">Cache Line 与 Sector：GPU 访存的两级粒度</text>
+  <text x="390" y="52" text-anchor="middle" font-size="11" fill="#888">cache line（128B）管存储组织 · sector（32B）管数据传输</text>
+
+  <!-- Part A: 结构关系 -->
+  <text x="390" y="80" text-anchor="middle" font-size="13" fill="#446688" font-weight="bold">1 Cache Line（128B）= 4 Sectors（32B × 4）</text>
+  <rect x="{cl_x}" y="{cl_y}" width="{cl_w}" height="{cl_h}" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.8" filter="url(#rough2)"/>
+{sec_a_svg}
+  <text x="390" y="{cl_y + cl_h + 18}" text-anchor="middle" font-size="11" fill="#888">按 sector 粒度填充：只触达 1 个 sector 就只搬 1 个，不必整行搬运</text>
+
+  <!-- Part B: 合并访问 -->
+  <text x="40" y="204" font-size="13" fill="#4a7a3a" font-weight="bold">✓ 合并访问 Coalesced</text>
+  <text x="40" y="220" font-size="11" fill="#888">warp 32 线程读连续 float：32 × 4B = 128B</text>
+  <text x="{band_x + band_w + 6}" y="{band_y + 15}" font-size="10" fill="#4a7a3a">32 线程</text>
+{cells_b_svg}
+{brackets_b_svg}
+  <text x="390" y="{band_y + 62}" text-anchor="middle" font-size="10" fill="#4a7a3a">恰好 1 条 cache line = 4 sector</text>
+  <rect x="230" y="296" width="320" height="32" rx="16" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="390" y="317" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">1 次事务 · 传 128B · 利用率 100%</text>
+
+  <!-- Part C: 散乱访问 -->
+  <text x="40" y="366" font-size="13" fill="#b85450" font-weight="bold">✗ 散乱访问 Strided/Scattered</text>
+  <text x="40" y="382" font-size="11" fill="#888">32 线程地址各落一个 sector：8 cache line × 4 sector = 32 sector</text>
+  <line x1="78" y1="{grid_top}" x2="78" y2="{grid_bot}" stroke="#b85450" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="70" y="{grid_mid}" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold" transform="rotate(-90, 70, {grid_mid})">32 sector · 1024B</text>
+{grid_c_svg}
+  <rect x="190" y="568" width="400" height="32" rx="16" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" filter="url(#rough2)"/>
+  <text x="390" y="589" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">32 次事务 · 传 1024B · 有效 128B · 利用率 12.5%</text>
+</svg>"""
+
+
 def main() -> None:
     diagrams = {
         "gemm_optimization_layers.svg": gemm_optimization_layers(),
         "float4_vectorized_load.svg": float4_vectorized_load(),
         "parameter_tuning_table.svg": parameter_tuning_table(),
+        "cache_line_sector.svg": cache_line_sector(),
     }
     for filename, content in diagrams.items():
         save_svg(filename, content)
