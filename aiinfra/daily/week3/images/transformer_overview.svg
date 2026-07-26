@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="700" viewBox="0 0 880 700" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="37" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="880" height="700" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="440" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Transformer 整体架构与自回归生成</text>
+  <path d="M 260 44 Q 440 52 620 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="440" y="60" text-anchor="middle" font-size="11" fill="#888">Token → Embedding → Block × L → LM Head → 概率分布 → 采样 → 新 token 拼回输入</text>
+
+  <!-- ===== Left: main flow ===== -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="120" y="86" width="200" height="36" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="220" y="109" fill="#5d3a7e" font-weight="bold">输入文本「你好，世界」</text>
+
+    <rect x="120" y="156" width="200" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="220" y="173" fill="#2b6e9e" font-weight="bold">Token 化</text>
+    <text x="220" y="189" fill="#2b6e9e" font-size="10">→ [1024, 306, 998]（示意）</text>
+
+    <rect x="120" y="230" width="200" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="220" y="250" fill="#2b6e9e" font-weight="bold">Embedding 查表</text>
+    <text x="220" y="267" fill="#2b6e9e" font-size="10">每个 token → d 维向量，得 (N, d)</text>
+
+    <rect x="100" y="316" width="240" height="76" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+    <text x="220" y="348" fill="#2e6e2e" font-weight="bold" font-size="13">Transformer Block × L</text>
+    <text x="220" y="372" fill="#2e6e2e" font-size="10">L = 12 ~ 96 层，同一结构重复</text>
+
+    <rect x="120" y="436" width="200" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="220" y="459" fill="#2b6e9e" font-weight="bold">Final LayerNorm</text>
+
+    <rect x="120" y="506" width="200" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="220" y="526" fill="#2b6e9e" font-weight="bold">LM Head（大 GEMM）</text>
+    <text x="220" y="543" fill="#2b6e9e" font-size="10">d_model × vocab_size</text>
+
+    <rect x="120" y="584" width="200" height="36" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="220" y="607" fill="#7a5415" font-weight="bold">softmax → 词表概率分布</text>
+
+    <rect x="120" y="644" width="200" height="36" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="220" y="667" fill="#b85450" font-weight="bold">采样 → 新 token</text>
+  </g>
+
+  <!-- main flow arrows -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 220 122 L 220 153" marker-end="url(#ar)"/>
+    <path d="M 220 196 L 220 227" marker-end="url(#ar)"/>
+    <path d="M 220 274 L 220 313" marker-end="url(#ar)"/>
+    <path d="M 220 392 L 220 433" marker-end="url(#ar)"/>
+    <path d="M 220 472 L 220 503" marker-end="url(#ar)"/>
+    <path d="M 220 550 L 220 581" marker-end="url(#ar)"/>
+    <path d="M 220 620 L 220 641" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- autoregressive loop (left side) -->
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="6 4">
+    <path d="M 120 662 L 58 662 L 58 176 L 117 176" marker-end="url(#arr)"/>
+  </g>
+  <text x="44" y="420" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold" transform="rotate(-90 44 420)">自回归：新 token 拼回输入，再生成下一个</text>
+
+  <!-- expand arrow from Block to detail panel -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none" stroke-dasharray="5 3">
+    <path d="M 340 354 L 438 354" marker-end="url(#ar)"/>
+  </g>
+  <text x="390" y="344" text-anchor="middle" font-size="10" fill="#888">结构展开</text>
+
+  <!-- ===== Right: Block detail panel ===== -->
+  <g filter="url(#sk)">
+    <rect x="442" y="86" width="400" height="594" rx="12" fill="none" stroke="#9a9a9a" stroke-width="1.4" stroke-dasharray="7 4"/>
+  </g>
+  <text x="642" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="#555">Block 内部（Pre-LN 结构）</text>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="562" y="132" width="160" height="36" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+    <text x="642" y="155" fill="#5d3a7e" font-weight="bold">输入 x (N, d)</text>
+
+    <rect x="562" y="198" width="160" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <text x="642" y="221" fill="#2b6e9e" font-weight="bold">LayerNorm</text>
+
+    <rect x="542" y="264" width="200" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="642" y="288" fill="#2e6e2e" font-weight="bold">Multi-Head Attention</text>
+
+    <rect x="602" y="334" width="80" height="32" rx="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="642" y="355" fill="#7a5415" font-weight="bold">⊕ 残差</text>
+
+    <rect x="562" y="396" width="160" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <text x="642" y="419" fill="#2b6e9e" font-weight="bold">LayerNorm</text>
+
+    <rect x="522" y="462" width="240" height="104" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="642" y="488" fill="#2e6e2e" font-weight="bold">FFN</text>
+    <text x="642" y="510" fill="#2e6e2e" font-size="10">Linear (d → d_ff)</text>
+    <text x="642" y="528" fill="#2e6e2e" font-size="10">GELU 激活</text>
+    <text x="642" y="546" fill="#2e6e2e" font-size="10">Linear (d_ff → d)，d_ff = 4d</text>
+
+    <rect x="602" y="596" width="80" height="32" rx="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="642" y="617" fill="#7a5415" font-weight="bold">⊕ 残差</text>
+
+    <text x="642" y="662" fill="#888" font-size="11">输出 → 下一层 Block（共 L 层）</text>
+  </g>
+
+  <!-- detail chain arrows -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 642 168 L 642 195" marker-end="url(#ar)"/>
+    <path d="M 642 234 L 642 261" marker-end="url(#ar)"/>
+    <path d="M 642 304 L 642 331" marker-end="url(#ar)"/>
+    <path d="M 642 366 L 642 393" marker-end="url(#ar)"/>
+    <path d="M 642 432 L 642 459" marker-end="url(#ar)"/>
+    <path d="M 642 566 L 642 593" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- residual bypass arrows (right side of panel) -->
+  <g filter="url(#sk)" stroke="#8e5db8" stroke-width="1.4" fill="none" stroke-dasharray="5 3">
+    <path d="M 722 150 L 800 150 L 800 350 L 684 350" marker-end="url(#ar)"/>
+    <path d="M 682 350 L 808 350 L 808 612 L 684 612" marker-end="url(#ar)"/>
+  </g>
+</svg>

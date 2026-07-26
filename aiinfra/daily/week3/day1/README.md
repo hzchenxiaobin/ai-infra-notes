@@ -13,6 +13,99 @@
 
 ---
 
+### 背景知识：从零认识 Transformer
+
+> 📖 本节为零基础铺垫。如果你已经熟悉 Transformer 结构，可以直接跳到「学前导读」。
+
+#### 0.1 Transformer 是什么
+
+Transformer 是 Google 在 2017 年论文《Attention is All You Need》中提出的神经网络架构。在它之前，处理序列（文本、语音）靠 RNN/LSTM——逐 token 串行处理，第 t 步必须等第 t-1 步算完，无法并行。Transformer 用 **Self-Attention** 机制一次性并行处理整个序列，让序列里的每个 token 直接"看到"其他所有 token，彻底摆脱了串行依赖。
+
+今天所有主流大模型——GPT 系列、LLaMA、Qwen、DeepSeek、Claude——都是 Transformer 的 **decoder-only** 变体（只有解码器半边）。它们的差异在规模、数据、训练方法上，计算结构完全一样。
+
+> 💡 **对本课的意义**：Transformer 不是"很多种不同神经网络"的堆叠，而是**同一个 Block 重复 L 次**。只要彻底搞懂一层的算子构成（今天的任务），整个模型的执行特征就清楚了。
+
+#### 0.2 从文字到向量：Token 与 Embedding
+
+模型不认字，只认数字。输入文本先经过两步转换：
+
+1. **Token 化**：文本被切成 token（大致是"子词"），每个 token 对应词表里的一个 id。例：「你好，世界」→ `[1024, 306, 998]`（示意）。词表大小（vocab_size）通常 3 万~15 万
+2. **Embedding 查表**：每个 token id 在 embedding 矩阵（vocab_size × d_model）里查出对应的向量
+
+经过这两步，一句话变成形状为 `(N, d_model)` 的矩阵——N 是序列长度（token 数），d_model 是每个 token 的向量维度（512 / 4096 / 8192 等）。**这个矩阵就是后面所有计算的输入**，d_model 也常简写为 d。
+
+#### 0.3 Self-Attention：让 token 之间交换信息
+
+Attention 的核心思想：**每个 token 根据"谁和自己相关"，从其他 token 那里加权收集信息，更新自己的表示**。比如「苹果发布了新手机」中的「苹果」，看到「手机」后就应该更偏向公司含义。
+
+![Self-Attention QKV 流程](../images/self_attention_qkv.svg)
+
+每个 token 的向量 x 通过**三个独立的 Linear（就是 GEMM）**投影成三个角色：
+
+- **Query（查询）**："我想找什么信息"
+- **Key（键）**："我有什么特征，可以被别人检索到"
+- **Value（值）**："我实际提供的信息内容"
+
+然后分四步计算：
+
+1. **打分**：`S = Q × Kᵀ / √d_head`。S 是 N×N 矩阵，S[i][j] 表示 token i 对 token j 的关注度（点积越大越相关）。除以 √d_head 防止点积过大导致 softmax 饱和
+2. **Causal Mask**（decoder 专用）：把 S 的上三角（j > i）置为 -∞——第 i 个 token **不许偷看未来**，只能关注自己和历史。这保证了训练和推理行为一致
+3. **Softmax**：对 S 的每一行做 softmax，得到概率矩阵 P，每行和为 1
+4. **加权求和**：`out = P × V`。token i 的新表示 = 所有 token 的 V 按关注度加权混合
+
+> 💡 **和 Week 2 的联系**：步骤 1 和 4 是两个 GEMM（QKᵀ 和 PV），步骤 3 就是 Week 2 Day 5 讲的 softmax——Attention 的 IO 瓶颈就藏在这三个算子里，FlashAttention 正是为消除 S/P 写回 HBM 而生。
+
+#### 0.4 Multi-Head Attention：多角度同时看
+
+单个 attention 只能学到一种"关注模式"。Multi-Head Attention 把 d_model 拆成 h 个头（如 8 头 × 64 维），**每个头独立做一遍 attention**，各自学习不同的关系（有的头关注语法、有的关注指代），最后把 h 个头的输出拼接，再过一个 Output Linear 混合。
+
+工程视角：多头不是循环 h 次，而是把 Q/K/V reshape 成 `(B, h, N, d_head)` 做 **batched GEMM**——这就是 Attention kernel 的并行维度有 B×h 这么多的原因。
+
+#### 0.5 一层 Transformer Block 的完整组装
+
+一层 Block = 两个子层 + 两个残差连接：
+
+```
+x → LayerNorm → Multi-Head Attention → (⊕ 残差)
+  → LayerNorm → FFN                 → (⊕ 残差)
+```
+
+- **LayerNorm**：把每个 token 的 d 维向量归一化（均值 0、方差 1，再缩放平移），稳定训练。本质是 element-wise + 两次 reduce
+- **FFN**：`Linear2(GELU(Linear1(x)))`，把维度 d → d_ff → d（d_ff 通常是 4×d_model）。这是模型"知识存储"的主要场所，参数量占一层的大头
+- **残差连接（⊕）**：让梯度可以跳过子层直接传播，是几十上百层网络能训练起来的关键
+
+这是 **Pre-LN** 结构（LayerNorm 在子层之前），GPT-2 之后的现代模型几乎都用它。
+
+#### 0.6 整体架构与自回归生成
+
+![Transformer 整体架构与自回归生成](../images/transformer_overview.svg)
+
+把上面的 Block **堆叠 L 层**（GPT-3 是 96 层，小模型 12~32 层），再接：
+
+1. **Final LayerNorm**
+2. **LM Head**：一个巨大的 Linear（d_model × vocab_size），把最后一层输出投影到词表维度
+3. **Softmax**：得到下一个 token 在词表上的概率分布
+4. **采样**：按概率选出 1 个新 token（贪心 / top-k / top-p）
+
+关键特性——**自回归（autoregressive）**：新生成的 token 会被拼回输入序列末尾，再喂给模型生成下一个，如此循环直到生成结束符（EOS）。这个"一次只产一个 token"的循环，就是学前导读里 **Decode 阶段**的由来；而第一次并行处理整条 prompt，就是 **Prefill**。
+
+> 💡 现在回头看学前导读的 Prefill/Decode 对比，应该能明白：两阶段跑的是**同一套 Block、同一批权重**，差别只在输入矩阵的 N 维度（N = prompt 长度 vs N = 1）。
+
+#### 0.7 关键符号速查
+
+| 符号 | 含义 | 典型值 |
+|------|------|--------|
+| `N` | 序列长度（token 数） | Prefill 数百~数万；Decode 恒为 1 |
+| `d` / `d_model` | 隐藏维度（每个 token 的向量长度） | 512（本课 mini 模型）~ 8192 |
+| `h` | Attention 头数 | 8 ~ 128 |
+| `d_head` | 每个头的维度 = d / h | 64 或 128 |
+| `d_ff` | FFN 中间维度 | 通常 4 × d_model |
+| `vocab_size` | 词表大小 | 3 万 ~ 15 万 |
+| `B` | Batch size | 推理时通常 1 ~ 数百 |
+| `L` | 层数 | 12 ~ 96+ |
+
+---
+
 ### 学前导读：Transformer 推理不是一次 forward 那么简单
 
 在训练时，我们习惯把一整个 batch 的 token 喂给模型，一次 forward 得到所有位置的输出。但**推理场景完全不同**：

@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="500" viewBox="0 0 820 500" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="500" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Self-Attention 计算流程</text>
+  <path d="M 280 44 Q 410 52 540 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="60" text-anchor="middle" font-size="11" fill="#888">x → Q/K/V 三个投影 → 打分 → Mask → Softmax → 加权求和</text>
+
+  <!-- Input x -->
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="50" y="170" width="110" height="80" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="105" y="204" fill="#5d3a7e" font-weight="bold">输入 x</text>
+    <text x="105" y="226" fill="#5d3a7e" font-size="11">(N, d)</text>
+  </g>
+
+  <!-- Three Linear projections -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="225" y="90" width="140" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="295" y="114" fill="#2b6e9e" font-weight="bold">Linear W_Q</text>
+
+    <rect x="225" y="190" width="140" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="295" y="214" fill="#2b6e9e" font-weight="bold">Linear W_K</text>
+
+    <rect x="225" y="290" width="140" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="295" y="314" fill="#2b6e9e" font-weight="bold">Linear W_V</text>
+  </g>
+
+  <!-- arrows x -> linears -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 160 195 L 222 112" marker-end="url(#ar)"/>
+    <path d="M 160 210 L 223 210" marker-end="url(#ar)"/>
+    <path d="M 160 225 L 222 308" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Q K V boxes -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="425" y="90" width="110" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="480" y="114" fill="#2e6e2e" font-weight="bold">Q (N, d_h)</text>
+
+    <rect x="425" y="190" width="110" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="480" y="214" fill="#2e6e2e" font-weight="bold">K (N, d_h)</text>
+
+    <rect x="425" y="290" width="110" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="480" y="314" fill="#2e6e2e" font-weight="bold">V (N, d_h)</text>
+  </g>
+
+  <!-- arrows linear -> QKV -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 365 110 L 423 110" marker-end="url(#ar)"/>
+    <path d="M 365 210 L 423 210" marker-end="url(#ar)"/>
+    <path d="M 365 310 L 423 310" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- S = QK^T -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="605" y="80" width="175" height="52" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="692" y="103" fill="#2b6e9e" font-weight="bold">S = Q·Kᵀ / √d_h</text>
+    <text x="692" y="122" fill="#2b6e9e" font-size="10">(N×N 关注度矩阵)</text>
+  </g>
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 535 110 L 602 106" marker-end="url(#ar)"/>
+    <path d="M 535 205 L 602 126" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Causal Mask -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="605" y="172" width="175" height="44" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+    <text x="692" y="191" fill="#b85450" font-weight="bold">Causal Mask</text>
+    <text x="692" y="208" fill="#b85450" font-size="10">上三角置 -∞（不许看未来）</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 692 132 L 692 169" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Softmax -> P -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="605" y="248" width="175" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="692" y="267" fill="#7a5415" font-weight="bold">softmax → P</text>
+    <text x="692" y="284" fill="#7a5415" font-size="10">按行归一化，每行和为 1</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 692 216 L 692 245" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- out = P x V -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="605" y="324" width="175" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="692" y="343" fill="#2e6e2e" font-weight="bold">out = P × V</text>
+    <text x="692" y="360" fill="#2e6e2e" font-size="10">加权求和 (N, d_h)</text>
+  </g>
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
+    <path d="M 692 292 L 692 321" marker-end="url(#ar)"/>
+    <path d="M 535 312 L 602 342" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- GEMM tags -->
+  <g font-size="10" fill="#4a8edb" font-weight="bold" text-anchor="middle">
+    <text x="560" y="72">GEMM</text>
+    <text x="560" y="352">GEMM</text>
+  </g>
+
+  <!-- Bottom caption -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="120" y="412" width="580" height="56" rx="8" fill="#f5f5f0" stroke="#9a9a9a" stroke-width="1.3"/>
+    <text x="410" y="436" fill="#555">Linear / QKᵀ / PV 都是 GEMM（compute 密集）；softmax 是 memory-bound</text>
+    <text x="410" y="456" fill="#555">S、P 两个 N×N 矩阵是 IO 大户 —— FlashAttention 的优化对象</text>
+  </g>
+</svg>
