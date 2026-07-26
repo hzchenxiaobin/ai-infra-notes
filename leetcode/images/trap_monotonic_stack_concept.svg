@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 440" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="440" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">单调栈按“行”计算：弹栈形成凹槽，一次算一整层水</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">height = [4,2,0,3,2,5]，弹栈顶(bottom)时用新栈顶(左墙)和当前(右墙)算横向水层</text>
+
+  <!-- ===== Bars: scale 26px/unit, baseline y=300, bar w=38, start x=70 ===== -->
+  <!-- idx0 h=4 LEFT WALL (blue) -->
+  <rect x="70" y="196" width="38" height="104" fill="#e8f0fe" stroke="#446688" stroke-width="2" rx="2" filter="url(#rough2)"/>
+  <text x="89" y="316" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">4</text>
+  <text x="89" y="186" text-anchor="middle" font-size="9" fill="#446688" font-weight="bold">[0] 左墙</text>
+
+  <!-- idx1 h=2 -->
+  <rect x="112" y="248" width="38" height="52" fill="#f6f6f6" stroke="#bbb" stroke-width="1" rx="2" filter="url(#rough2)"/>
+  <text x="131" y="316" text-anchor="middle" font-size="10" fill="#888">2</text>
+  <text x="131" y="240" text-anchor="middle" font-size="8" fill="#aaa">[1]</text>
+
+  <!-- idx2 h=0 -->
+  <rect x="154" y="298" width="38" height="2" fill="#f6f6f6" stroke="#bbb" stroke-width="1" rx="2" filter="url(#rough2)"/>
+  <text x="173" y="316" text-anchor="middle" font-size="10" fill="#888">0</text>
+  <text x="173" y="292" text-anchor="middle" font-size="8" fill="#aaa">[2]</text>
+
+  <!-- idx3 h=3 BOTTOM (red, being popped) -->
+  <rect x="196" y="222" width="38" height="78" fill="#fce4ec" stroke="#b85450" stroke-width="2" rx="2" filter="url(#rough2)"/>
+  <text x="215" y="316" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">3</text>
+  <text x="215" y="212" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">[3] bottom←弹</text>
+
+  <!-- idx4 h=2 -->
+  <rect x="238" y="248" width="38" height="52" fill="#f6f6f6" stroke="#bbb" stroke-width="1" rx="2" filter="url(#rough2)"/>
+  <text x="257" y="316" text-anchor="middle" font-size="10" fill="#888">2</text>
+  <text x="257" y="240" text-anchor="middle" font-size="8" fill="#aaa">[4]</text>
+
+  <!-- idx5 h=5 RIGHT WALL (green, current) -->
+  <rect x="280" y="170" width="38" height="130" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2" rx="2" filter="url(#rough2)"/>
+  <text x="299" y="316" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">5</text>
+  <text x="299" y="160" text-anchor="middle" font-size="9" fill="#4a7a3a" font-weight="bold">[5] 右墙(当前)</text>
+
+  <!-- ===== Full water (light blue translucent), level = min(4,5)=4 → y=196 ===== -->
+  <!-- col1: 2 units above bar top 248 up to 196, h=52 -->
+  <rect x="112" y="196" width="38" height="52" fill="#bcd6f0" fill-opacity="0.55" stroke="#7aa6cf" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+  <!-- col2: 4 units, 300 up to 196, h=104 -->
+  <rect x="154" y="196" width="38" height="102" fill="#bcd6f0" fill-opacity="0.55" stroke="#7aa6cf" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+  <!-- col3: 1 unit, 222 up to 196, h=26 -->
+  <rect x="196" y="196" width="38" height="26" fill="#bcd6f0" fill-opacity="0.55" stroke="#7aa6cf" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+  <!-- col4: 2 units, 248 up to 196, h=52 -->
+  <rect x="238" y="196" width="38" height="52" fill="#bcd6f0" fill-opacity="0.55" stroke="#7aa6cf" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+
+  <!-- ===== Highlight strip D: level [3,4] across cols 1-4, y 196→222, h=26 ===== -->
+  <rect x="112" y="196" width="164" height="26" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="4,3" rx="1" filter="url(#rough2)"/>
+  <text x="194" y="214" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">本层(弹出[3]时算) = 1×4 = 4</text>
+
+  <!-- water level dashed line at y=196 (level 4) -->
+  <path d="M 60 196 L 330 196" stroke="#446688" stroke-width="1" stroke-dasharray="3,3" filter="url(#rough2)"/>
+  <text x="338" y="200" font-size="9" fill="#446688">水位 = min(4,5)=4</text>
+
+  <!-- baseline -->
+  <path d="M 60 300 L 330 300" stroke="#888" stroke-width="1.2" filter="url(#rough2)"/>
+
+  <!-- ===== Stack state ===== -->
+  <text x="370" y="80" font-size="11" fill="#d6a040" font-weight="bold">栈（存下标，高度递减）</text>
+  <g font-size="10">
+    <rect x="380" y="92" width="120" height="30" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="440" y="111" text-anchor="middle" fill="#446688" font-weight="bold">[0] h=4 ← 新栈顶(左墙)</text>
+
+    <rect x="380" y="126" width="120" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="3" filter="url(#rough2)"/>
+    <text x="440" y="145" text-anchor="middle" fill="#b85450" font-weight="bold">[3] h=3 ← 弹出(bottom)</text>
+  </g>
+  <!-- pop arrow -->
+  <path d="M 380 141 L 350 141" stroke="#b85450" stroke-width="1.4" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+  <text x="300" y="145" font-size="9" fill="#b85450" font-weight="bold">弹出</text>
+
+  <!-- current i=5 -->
+  <text x="370" y="172" font-size="11" fill="#4a7a3a" font-weight="bold">当前 i=5, h[5]=5 (右墙)</text>
+  <text x="370" y="188" font-size="9" fill="#888">5 &gt; h[3]=3 → 触发弹栈</text>
+
+  <!-- ===== Formula box ===== -->
+  <rect x="30" y="336" width="520" height="92" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="358" font-size="11" fill="#4a7a3a" font-weight="bold">弹栈时算一整层横向水：</text>
+  <text x="50" y="378" font-size="11" fill="#333">water = ( min(h[左墙], h[右墙]) − h[bottom] ) × ( 右墙 − 左墙 − 1 )</text>
+  <text x="50" y="397" font-size="10" fill="#555">= ( min(4, 5) − 3 ) × ( 5 − 0 − 1 ) = 1 × 4 = 4</text>
+  <text x="50" y="416" font-size="10" fill="#d6a040" font-weight="bold">区别：双指针/DP “按列”算每列水位；单调栈“按行”算每层水，弹一次结算一层</text>
+</svg>

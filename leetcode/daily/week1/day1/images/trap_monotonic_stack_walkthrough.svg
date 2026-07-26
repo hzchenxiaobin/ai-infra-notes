@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 470" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="600" height="470" fill="#fafafa"/>
+
+  <text x="300" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：height = [4,2,0,3,2,5]，单调栈逐行结算</text>
+  <text x="300" y="44" text-anchor="middle" font-size="11" fill="#888">栈存下标（高度递减）；h[i]&gt;栈顶时弹栈，用新栈顶(左)与 i(右)算一横层水</text>
+
+  <!-- Column headers -->
+  <text x="34" y="70" font-size="10" fill="#888" font-weight="bold">步</text>
+  <text x="62" y="70" font-size="10" fill="#888" font-weight="bold">i</text>
+  <text x="88" y="70" font-size="10" fill="#888" font-weight="bold">h[i]</text>
+  <text x="138" y="70" font-size="10" fill="#888" font-weight="bold">栈(处理后)</text>
+  <text x="250" y="70" font-size="10" fill="#888" font-weight="bold">动作（弹栈结算）</text>
+  <text x="528" y="70" font-size="10" fill="#888" font-weight="bold">累计水</text>
+
+  <!-- ===== Row 1: i=0 h=4 ===== -->
+  <text x="34" y="98" font-size="10" fill="#888">1</text>
+  <text x="62" y="98" font-size="10" fill="#333">0</text>
+  <text x="88" y="98" font-size="11" fill="#446688" font-weight="bold">4</text>
+  <rect x="130" y="84" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+  <text x="150" y="103" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">0</text>
+  <text x="250" y="98" font-size="10" fill="#555">栈空 → 入栈 [0]</text>
+  <text x="528" y="98" font-size="11" fill="#4a7a3a" font-weight="bold">0</text>
+
+  <!-- ===== Row 2: i=1 h=2 ===== -->
+  <text x="34" y="138" font-size="10" fill="#888">2</text>
+  <text x="62" y="138" font-size="10" fill="#333">1</text>
+  <text x="88" y="138" font-size="11" fill="#446688" font-weight="bold">2</text>
+  <g>
+    <rect x="130" y="124" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="143" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">0</text>
+    <rect x="172" y="124" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="192" y="143" text-anchor="middle" font-size="11" fill="#446688" font-weight="bold">1</text>
+  </g>
+  <text x="250" y="138" font-size="10" fill="#555">2&lt;4 → 入栈 [0,1]</text>
+  <text x="528" y="138" font-size="11" fill="#4a7a3a" font-weight="bold">0</text>
+
+  <!-- ===== Row 3: i=2 h=0 ===== -->
+  <text x="34" y="178" font-size="10" fill="#888">3</text>
+  <text x="62" y="178" font-size="10" fill="#333">2</text>
+  <text x="88" y="178" font-size="11" fill="#446688" font-weight="bold">0</text>
+  <g>
+    <rect x="130" y="164" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="183" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">0</text>
+    <rect x="172" y="164" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="192" y="183" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">1</text>
+    <rect x="214" y="164" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="234" y="183" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">2</text>
+  </g>
+  <text x="290" y="178" font-size="10" fill="#555">0&lt;2 → 入栈 [0,1,2]</text>
+  <text x="528" y="178" font-size="11" fill="#4a7a3a" font-weight="bold">0</text>
+
+  <!-- ===== Row 4: i=3 h=3 (pop 2 and 1) ===== -->
+  <text x="34" y="226" font-size="10" fill="#888" font-weight="bold">4</text>
+  <text x="62" y="226" font-size="10" fill="#333">3</text>
+  <text x="88" y="226" font-size="11" fill="#b85450" font-weight="bold">3</text>
+  <g>
+    <rect x="130" y="206" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="225" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">0</text>
+    <rect x="172" y="206" width="40" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="192" y="225" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">3</text>
+  </g>
+  <text x="250" y="216" font-size="9" fill="#b85450" font-weight="bold">3&gt;0 弹[2]: 左1 右3 → (2−0)×1=2</text>
+  <text x="250" y="230" font-size="9" fill="#b85450" font-weight="bold">3&gt;2 弹[1]: 左0 右3 → (3−2)×2=2</text>
+  <text x="250" y="244" font-size="9" fill="#555">3&lt;4 停 → 入栈 [0,3]</text>
+  <text x="528" y="226" font-size="11" fill="#b85450" font-weight="bold">4</text>
+
+  <!-- ===== Row 5: i=4 h=2 ===== -->
+  <text x="34" y="276" font-size="10" fill="#888">5</text>
+  <text x="62" y="276" font-size="10" fill="#333">4</text>
+  <text x="88" y="276" font-size="11" fill="#446688" font-weight="bold">2</text>
+  <g>
+    <rect x="130" y="262" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="281" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">0</text>
+    <rect x="172" y="262" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="192" y="281" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">3</text>
+    <rect x="214" y="262" width="40" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.3" rx="3" filter="url(#rough2)"/>
+    <text x="234" y="281" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">4</text>
+  </g>
+  <text x="290" y="276" font-size="10" fill="#555">2&lt;3 → 入栈 [0,3,4]</text>
+  <text x="528" y="276" font-size="11" fill="#4a7a3a" font-weight="bold">4</text>
+
+  <!-- ===== Row 6: i=5 h=5 (pop 4, 3, 0) ===== -->
+  <text x="34" y="332" font-size="10" fill="#888" font-weight="bold">6</text>
+  <text x="62" y="332" font-size="10" fill="#333">5</text>
+  <text x="88" y="332" font-size="11" fill="#4a7a3a" font-weight="bold">5</text>
+  <g>
+    <rect x="130" y="312" width="40" height="28" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="150" y="331" text-anchor="middle" font-size="11" fill="#4a7a3a" font-weight="bold">5</text>
+  </g>
+  <text x="250" y="316" font-size="9" fill="#b85450" font-weight="bold">5&gt;2 弹[4]: 左3 右5 → (3−2)×1=1</text>
+  <text x="250" y="330" font-size="9" fill="#b85450" font-weight="bold">5&gt;3 弹[3]: 左0 右5 → (4−3)×4=4</text>
+  <text x="250" y="344" font-size="9" fill="#555">5&gt;4 弹[0]: 栈空无左墙 → 0；入栈 [5]</text>
+  <text x="528" y="332" font-size="11" fill="#b85450" font-weight="bold">9</text>
+
+  <!-- ===== Summary ===== -->
+  <rect x="30" y="366" width="540" height="86" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="388" font-size="11" fill="#4a7a3a" font-weight="bold">总计：2 + 2 + 1 + 4 = 9 ✓（与示例 2 一致）</text>
+  <text x="50" y="408" font-size="10" fill="#555">每次弹栈算一横层水：左墙=新栈顶，右墙=当前 i，bottom=被弹元素</text>
+  <text x="50" y="424" font-size="10" fill="#555">栈空时无左墙，弹出的元素左侧没有更高柱子，接不住水 → 跳过</text>
+  <text x="50" y="442" font-size="10" fill="#d6a040" font-weight="bold">每元素入栈 1 次出栈 1 次 → O(n)；与每日温度/496 同骨架，结算内容改成“算面积”</text>
+</svg>
