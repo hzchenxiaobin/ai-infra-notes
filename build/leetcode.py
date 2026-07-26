@@ -12,20 +12,64 @@ from .common import REPO_ROOT, escape_for_template_string, page_template
 LEETCODE_DIR = REPO_ROOT / "leetcode"
 
 
-def _rewrite_md_links_to_html(markdown_text: str) -> str:
+def _classify(md_file: Path) -> Dict[str, Optional[str]]:
+    """Classify a solution file into contest/daily/other with its path metadata."""
+    rel_parts = md_file.relative_to(LEETCODE_DIR).parts
+    if rel_parts[0] == "contest" and len(rel_parts) > 1:
+        return {"category": "contest", "contest": rel_parts[1], "week": None, "day": None, "folder": rel_parts[1]}
+    if rel_parts[0] == "daily" and len(rel_parts) > 3:
+        return {"category": "daily", "contest": None, "week": rel_parts[1], "day": rel_parts[2], "folder": rel_parts[2]}
+    return {"category": "other", "contest": None, "week": None, "day": None, "folder": md_file.parent.name}
+
+
+def _compute_slugs(md_files: List[Path]) -> Dict[Path, str]:
+    """Assign each solution file its output slug (flat problems/<slug>.html).
+
+    Collision rule: the first file keeps its bare stem; later duplicates get
+    prefixed with contest / week-day / folder.
+    """
+    slug_by_path: Dict[Path, str] = {}
+    seen_slugs: Dict[str, int] = {}
+    for md_file in md_files:
+        info = _classify(md_file)
+        base_slug = md_file.stem
+        slug = base_slug
+        if slug in seen_slugs:
+            seen_slugs[slug] += 1
+            if info["category"] == "contest":
+                slug = f"{info['contest']}-{base_slug}"
+            elif info["category"] == "daily":
+                slug = f"{info['week']}-{info['day']}-{base_slug}"
+            else:
+                slug = f"{info['folder']}-{base_slug}"
+        else:
+            seen_slugs[slug] = 1
+        slug_by_path[md_file.resolve()] = slug
+    return slug_by_path
+
+
+def _rewrite_md_links_to_html(markdown_text: str, md_file: Path, slug_by_path: Dict[Path, str]) -> str:
     """Rewrite local .md links to .html for GitHub Pages deployment.
 
-    Solution pages are emitted flat in the problems/ output directory.
+    Solution pages are emitted flat in the problems/ output directory, so a
+    relative link to another solution collapses to ``./<slug>.html``. Links
+    to aiinfra daily READMEs map to the generated weekN/dayM.html pages.
     """
 
     def replace_link(match):
         url = match.group(1)
         if not url.endswith(".md"):
             return match.group(0)
+        target = (md_file.parent / url).resolve()
+        slug = slug_by_path.get(target)
+        if slug is not None:
+            return f"](./{slug}.html)"
         new_url = url[:-3] + ".html"
         if new_url.endswith("README.html"):
             new_url = new_url[: -len("README.html")] + "index.html"
-        new_url = re.sub(r"^(?:\.\./)+(?:daily|contest)/[^/]+/(?:[^/]+/)?", "./", new_url)
+        day_match = re.search(r"(?:^|/)week(\d+)/day(\d+)/index\.html$", new_url)
+        if day_match and "aiinfra" in target.parts:
+            return f"](../../week{day_match.group(1)}/day{day_match.group(2)}.html)"
         return f"]({new_url})"
 
     return re.sub(r"\]\((?!https?://|#)([^)]+)\)", replace_link, markdown_text)
@@ -199,55 +243,25 @@ def build(public_dir: Path) -> None:
         if local_images.exists() and local_images.is_dir():
             shutil.copytree(local_images, images_dir, dirs_exist_ok=True)
 
+    slug_by_path = _compute_slugs(md_files)
+
     problems = []
-    seen_slugs = {}
     for md_file in md_files:
         markdown_text = md_file.read_text(encoding="utf-8")
-        markdown_text = _rewrite_md_links_to_html(markdown_text)
+        markdown_text = _rewrite_md_links_to_html(markdown_text, md_file, slug_by_path)
 
         title = _parse_title(markdown_text, filename=md_file.name)
-        base_slug = md_file.stem
-        rel_parts = md_file.relative_to(LEETCODE_DIR).parts
-        if rel_parts[0] == "contest" and len(rel_parts) > 1:
-            category = "contest"
-            contest = rel_parts[1]
-            week = None
-            day = None
-            folder = contest
-        elif rel_parts[0] == "daily" and len(rel_parts) > 3:
-            category = "daily"
-            contest = None
-            week = rel_parts[1]
-            day = rel_parts[2]
-            folder = day
-        else:
-            category = "other"
-            contest = None
-            week = None
-            day = None
-            folder = md_file.parent.name
-
-        slug = base_slug
-        if slug in seen_slugs:
-            seen_slugs[slug] += 1
-            if category == "contest":
-                slug = f"{contest}-{base_slug}"
-            elif category == "daily":
-                slug = f"{week}-{day}-{base_slug}"
-            else:
-                slug = f"{folder}-{base_slug}"
-        else:
-            seen_slugs[slug] = 1
+        info = _classify(md_file)
 
         problems.append({
-            "slug": slug,
+            "slug": slug_by_path[md_file.resolve()],
             "title": title,
             "leetcode_url": _extract_leetcode_url(markdown_text),
-            "category": category,
-            "contest": contest,
-            "week": week,
-            "day": day,
-            "folder": folder,
+            "category": info["category"],
+            "contest": info["contest"],
+            "week": info["week"],
+            "day": info["day"],
+            "folder": info["folder"],
             "markdown": markdown_text,
         })
 
