@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 410" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+    <marker id="arrr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+
+  <rect width="540" height="410" fill="#fafafa"/>
+
+  <text x="270" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">单调递减栈 + 取模：第二遍绕回来时结算残留</text>
+  <text x="270" y="44" text-anchor="middle" font-size="11" fill="#888">i=4 (i%n=1, nums=2) 绕回来，弹掉栈中残留的 [2](值1)，写入 res[2]=2</text>
+
+  <!-- ===== nums array (unrolled view) ===== -->
+  <text x="30" y="74" font-size="11" fill="#446688" font-weight="bold">nums[]（取模展开视角）</text>
+  <g font-size="10">
+    <rect x="30" y="80" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="51" y="99" text-anchor="middle" fill="#888">1</text>
+    <text x="51" y="74" text-anchor="middle" font-size="7" fill="#888">i=0</text>
+
+    <rect x="76" y="80" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="97" y="99" text-anchor="middle" fill="#888">2</text>
+    <text x="97" y="74" text-anchor="middle" font-size="7" fill="#888">i=1</text>
+
+    <rect x="122" y="80" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="143" y="99" text-anchor="middle" fill="#888">1</text>
+    <text x="143" y="74" text-anchor="middle" font-size="7" fill="#888">i=2</text>
+
+    <!-- divider -->
+  </g>
+  <text x="174" y="99" font-size="14" fill="#bbb">|</text>
+  <text x="174" y="74" font-size="7" fill="#bbb">绕回</text>
+  <g font-size="10">
+    <rect x="184" y="80" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="205" y="99" text-anchor="middle" fill="#888">1</text>
+    <text x="205" y="74" text-anchor="middle" font-size="7" fill="#888">i=3→0</text>
+
+    <rect x="230" y="80" width="42" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" rx="3" filter="url(#rough2)"/>
+    <text x="251" y="99" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="251" y="74" text-anchor="middle" font-size="7" fill="#4a7a3a" font-weight="bold">i=4→1 当前</text>
+
+    <rect x="276" y="80" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="297" y="99" text-anchor="middle" fill="#bbb">1</text>
+    <text x="297" y="74" text-anchor="middle" font-size="7" fill="#bbb">i=5→2</text>
+  </g>
+
+  <!-- arrow from current i=4 down to stack -->
+  <path d="M 251 114 L 251 150" stroke="#4a7a3a" stroke-width="1.5" fill="none" marker-end="url(#arr)" filter="url(#rough2)"/>
+
+  <!-- ===== Stack (before processing i=4) ===== -->
+  <text x="30" y="146" font-size="11" fill="#d6a040" font-weight="bold">栈（存下标，值递减）</text>
+  <g font-size="10">
+    <rect x="160" y="156" width="92" height="28" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="206" y="174" text-anchor="middle" fill="#b85450" font-weight="bold">[1] = 2</text>
+
+    <rect x="160" y="188" width="92" height="28" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" rx="3" filter="url(#rough2)"/>
+    <text x="206" y="206" text-anchor="middle" fill="#446688" font-weight="bold">[2] = 1 ← 栈顶</text>
+
+    <text x="265" y="206" font-size="9" fill="#4a7a3a" font-weight="bold">2 &gt; 1 → 弹！</text>
+  </g>
+
+  <!-- pop arrow -->
+  <path d="M 160 202 L 120 202" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arrr)" filter="url(#rough2)"/>
+  <text x="70" y="206" font-size="9" fill="#b85450" font-weight="bold">弹出 [2]</text>
+  <text x="70" y="218" font-size="8" fill="#b85450">res[2] = nums[1] = 2</text>
+
+  <!-- ===== Result array ===== -->
+  <text x="30" y="244" font-size="11" fill="#d6a040" font-weight="bold">res[]（初始全 -1）</text>
+  <g font-size="10">
+    <rect x="120" y="252" width="42" height="30" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="3" filter="url(#rough2)"/>
+    <text x="141" y="271" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="141" y="246" text-anchor="middle" font-size="7" fill="#888">[0] 已结算</text>
+
+    <rect x="166" y="252" width="42" height="30" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="187" y="271" text-anchor="middle" fill="#bbb">-1</text>
+    <text x="187" y="246" text-anchor="middle" font-size="7" fill="#bbb">[1] 待定</text>
+
+    <rect x="212" y="252" width="42" height="30" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" rx="3" filter="url(#rough2)"/>
+    <text x="233" y="271" text-anchor="middle" fill="#b85450" font-weight="bold">2</text>
+    <text x="233" y="246" text-anchor="middle" font-size="7" fill="#b85450" font-weight="bold">[2] 刚结算！</text>
+  </g>
+  <path d="M 120 206 Q 90 230 141 250" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3,3" marker-end="url(#arrr)" filter="url(#rough2)"/>
+
+  <!-- ===== Summary ===== -->
+  <rect x="30" y="300" width="480" height="95" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="322" font-size="11" fill="#4a7a3a" font-weight="bold">第二遍的威力：残留元素靠“绕回来”结算</text>
+  <text x="50" y="342" font-size="10" fill="#555">第一遍结束后，[2](值1) 残留在栈中——它的下一个更大在数组开头（绕一圈）</text>
+  <text x="50" y="360" font-size="10" fill="#555">第二遍 i=4 (i%n=1) 时 nums[1]=2 绕回来，2 &gt; 1 弹出 [2]，res[2]=2</text>
+  <text x="50" y="378" font-size="10" fill="#555">弹完后 2 不 &gt; 2（栈顶 [1]=2），停止。[1] 残留 → res[1] 保持 -1 ✓</text>
+  <text x="50" y="394" font-size="10" fill="#b85450" font-weight="bold">存下标（非值）：数组有重复值，不能像 496 用值当哈希键</text>
+</svg>

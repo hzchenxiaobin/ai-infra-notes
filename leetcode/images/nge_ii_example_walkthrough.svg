@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 480" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="560" height="480" fill="#fafafa"/>
+
+  <text x="280" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：nums = [1, 2, 1] 的 6 步单调栈变化</text>
+  <text x="280" y="44" text-anchor="middle" font-size="11" fill="#888">遍历 2n=6 步，第一遍 i&lt;3 入栈，第二遍 i≥3 只弹不入栈</text>
+
+  <!-- ===== Table header ===== -->
+  <rect x="20" y="58" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="45" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">步</text>
+  <rect x="72" y="58" width="44" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="94" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">i</text>
+  <rect x="118" y="58" width="50" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="143" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">i%n</text>
+  <rect x="170" y="58" width="56" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="198" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">nums值</text>
+  <rect x="228" y="58" width="100" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="278" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">栈（下标）</text>
+  <rect x="330" y="58" width="210" height="24" fill="#fff8e1" stroke="#d6a040" stroke-width="1" rx="3" filter="url(#rough2)"/>
+  <text x="435" y="74" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">动作 / res 变化</text>
+
+  <!-- ===== Row 1: i=0 ===== -->
+  <g font-size="9">
+    <rect x="20" y="84" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="98" text-anchor="middle" fill="#666">1</text>
+    <rect x="72" y="84" width="44" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="98" text-anchor="middle" fill="#666">0</text>
+    <rect x="118" y="84" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="98" text-anchor="middle" fill="#666">0</text>
+    <rect x="170" y="84" width="56" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="98" text-anchor="middle" fill="#666">1</text>
+    <rect x="228" y="84" width="100" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="98" text-anchor="middle" fill="#888">[] → [0]</text>
+    <rect x="330" y="84" width="210" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="98" text-anchor="middle" fill="#555">栈空，入栈 0</text>
+  </g>
+
+  <!-- ===== Row 2: i=1 ===== -->
+  <g font-size="9">
+    <rect x="20" y="108" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="122" text-anchor="middle" fill="#666">2</text>
+    <rect x="72" y="108" width="44" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="122" text-anchor="middle" fill="#666">1</text>
+    <rect x="118" y="108" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="122" text-anchor="middle" fill="#666">1</text>
+    <rect x="170" y="108" width="56" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="122" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <rect x="228" y="108" width="100" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="122" text-anchor="middle" fill="#888">[0] → [1]</text>
+    <rect x="330" y="108" width="210" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.8" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="122" text-anchor="middle" fill="#4a7a3a">2&gt;1 弹0, res[0]=2；入栈1</text>
+  </g>
+
+  <!-- ===== Row 3: i=2 ===== -->
+  <g font-size="9">
+    <rect x="20" y="132" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="146" text-anchor="middle" fill="#666">3</text>
+    <rect x="72" y="132" width="44" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="146" text-anchor="middle" fill="#666">2</text>
+    <rect x="118" y="132" width="50" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="146" text-anchor="middle" fill="#666">2</text>
+    <rect x="170" y="132" width="56" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="146" text-anchor="middle" fill="#666">1</text>
+    <rect x="228" y="132" width="100" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="146" text-anchor="middle" fill="#888">[1] → [1,2]</text>
+    <rect x="330" y="132" width="210" height="22" fill="#f6f6f6" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="146" text-anchor="middle" fill="#555">1&lt;2，入栈2</text>
+  </g>
+
+  <!-- divider: 第一遍 / 第二遍 -->
+  <line x1="20" y1="156" x2="540" y2="156" stroke="#d6a040" stroke-width="1" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <text x="540" y="154" text-anchor="end" font-size="8" fill="#d6a040" font-weight="bold">↑ 第一遍结束（i&lt;n 入栈） | 第二遍开始（i≥n 只弹不入栈）↓</text>
+
+  <!-- ===== Row 4: i=3 → 0 ===== -->
+  <g font-size="9">
+    <rect x="20" y="160" width="50" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="174" text-anchor="middle" fill="#666">4</text>
+    <rect x="72" y="160" width="44" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="174" text-anchor="middle" fill="#b85450">3</text>
+    <rect x="118" y="160" width="50" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="174" text-anchor="middle" fill="#b85450">0</text>
+    <rect x="170" y="160" width="56" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="174" text-anchor="middle" fill="#666">1</text>
+    <rect x="228" y="160" width="100" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="174" text-anchor="middle" fill="#888">[1,2] 不变</text>
+    <rect x="330" y="160" width="210" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="174" text-anchor="middle" fill="#555">1≯1 不弹；i≥n 不入栈</text>
+  </g>
+
+  <!-- ===== Row 5: i=4 → 1  KEY STEP ===== -->
+  <g font-size="9">
+    <rect x="20" y="184" width="50" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="198" text-anchor="middle" fill="#b85450" font-weight="bold">5</text>
+    <rect x="72" y="184" width="44" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="198" text-anchor="middle" fill="#b85450" font-weight="bold">4</text>
+    <rect x="118" y="184" width="50" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="198" text-anchor="middle" fill="#b85450" font-weight="bold">1</text>
+    <rect x="170" y="184" width="56" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="198" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <rect x="228" y="184" width="100" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="198" text-anchor="middle" fill="#b85450" font-weight="bold">[1,2] → [1]</text>
+    <rect x="330" y="184" width="210" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="198" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2&gt;1 弹2, res[2]=2 ✓ 绕回结算！</text>
+  </g>
+
+  <!-- ===== Row 6: i=5 → 2 ===== -->
+  <g font-size="9">
+    <rect x="20" y="208" width="50" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="222" text-anchor="middle" fill="#666">6</text>
+    <rect x="72" y="208" width="44" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="222" text-anchor="middle" fill="#b85450">5</text>
+    <rect x="118" y="208" width="50" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="222" text-anchor="middle" fill="#b85450">2</text>
+    <rect x="170" y="208" width="56" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="222" text-anchor="middle" fill="#666">1</text>
+    <rect x="228" y="208" width="100" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="222" text-anchor="middle" fill="#888">[1] 不变</text>
+    <rect x="330" y="208" width="210" height="22" fill="#fce4ec" stroke="#ddd" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="222" text-anchor="middle" fill="#555">1≯2 不弹；i≥n 不入栈</text>
+  </g>
+
+  <!-- ===== Row 7: 结束 ===== -->
+  <g font-size="9">
+    <rect x="20" y="232" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="45" y="246" text-anchor="middle" fill="#4a7a3a" font-weight="bold">结束</text>
+    <rect x="72" y="232" width="44" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="94" y="246" text-anchor="middle" fill="#888">—</text>
+    <rect x="118" y="232" width="50" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="143" y="246" text-anchor="middle" fill="#888">—</text>
+    <rect x="170" y="232" width="56" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="198" y="246" text-anchor="middle" fill="#888">—</text>
+    <rect x="228" y="232" width="100" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="278" y="246" text-anchor="middle" fill="#888">[1] 残留</text>
+    <rect x="330" y="232" width="210" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1" rx="2" filter="url(#rough2)"/>
+    <text x="435" y="246" text-anchor="middle" fill="#4a7a3a" font-weight="bold">res = [2, -1, 2] ✓</text>
+  </g>
+
+  <!-- ===== Final result highlight ===== -->
+  <rect x="30" y="278" width="500" height="58" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="50" y="298" font-size="11" fill="#d6a040" font-weight="bold">关键瞬间：第 5 步（i=4 → i%n=1）</text>
+  <text x="50" y="316" font-size="10" fill="#555">第一遍结束后 [2](值1) 残留在栈里，它的下一个更大在数组开头（需绕一圈）</text>
+  <text x="50" y="330" font-size="10" fill="#b85450" font-weight="bold">第二遍 i=4 绕回到 nums[1]=2，2&gt;1 弹出 [2]，res[2]=2 —— 这就是“环形”的意义</text>
+
+  <!-- ===== res array visual ===== -->
+  <text x="30" y="362" font-size="11" fill="#446688" font-weight="bold">最终结果 res[]</text>
+  <g font-size="11">
+    <rect x="120" y="370" width="50" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="145" y="390" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="145" y="364" text-anchor="middle" font-size="8" fill="#888">[0]</text>
+
+    <rect x="174" y="370" width="50" height="32" fill="#f6f6f6" stroke="#ccc" stroke-width="0.8" rx="3" filter="url(#rough2)"/>
+    <text x="199" y="390" text-anchor="middle" fill="#888">-1</text>
+    <text x="199" y="364" text-anchor="middle" font-size="8" fill="#888">[1] 无更大</text>
+
+    <rect x="228" y="370" width="50" height="32" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+    <text x="253" y="390" text-anchor="middle" fill="#4a7a3a" font-weight="bold">2</text>
+    <text x="253" y="364" text-anchor="middle" font-size="8" fill="#888">[2] 绕回找到</text>
+  </g>
+  <text x="300" y="390" font-size="10" fill="#555">2 是最大值，栈中残留 [1] → res[1] = -1 ✓</text>
+
+  <!-- ===== Bottom note ===== -->
+  <text x="30" y="438" font-size="10" fill="#888">每步入栈/出栈 O(1) 均摊，6 步 = 2n 步 → 总 O(n)；栈最多 n 个下标 → O(n) 空间</text>
+  <text x="30" y="456" font-size="10" fill="#4a7a3a" font-weight="bold">与 739/496 同骨架，仅多“取模遍历 2n + 第二遍只弹不入栈”</text>
+</svg>

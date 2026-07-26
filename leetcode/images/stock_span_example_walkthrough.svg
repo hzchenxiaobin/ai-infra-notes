@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 470" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="580" height="470" fill="#fafafa"/>
+
+  <text x="290" y="26" text-anchor="middle" font-size="15" fill="#444" font-weight="bold">示例演算：next 序列 [100,80,60,70,60,75,85] 逐步栈变化</text>
+  <text x="290" y="44" text-anchor="middle" font-size="11" fill="#888">7 次 next，关注步骤 6、7 的「弹栈累加 span」合并</text>
+
+  <!-- table header -->
+  <g font-size="9" fill="#444" font-weight="bold">
+    <rect x="20" y="56" width="28" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="34" y="70" text-anchor="middle">步</text>
+    <rect x="48" y="56" width="38" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="67" y="70" text-anchor="middle">price</text>
+    <rect x="86" y="56" width="210" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="191" y="70" text-anchor="middle">弹栈过程</text>
+    <rect x="296" y="56" width="46" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="319" y="70" text-anchor="middle">span</text>
+    <rect x="342" y="56" width="190" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="437" y="70" text-anchor="middle">入栈后栈（底→顶）</text>
+    <rect x="532" y="56" width="36" height="20" fill="#f6f6f6" stroke="#ccc" stroke-width="0.6" rx="2" filter="url(#rough2)"/>
+    <text x="550" y="70" text-anchor="middle">返回</text>
+  </g>
+
+  <!-- rows -->
+  <g font-size="9" fill="#333">
+    <!-- step 1 -->
+    <rect x="20" y="78" width="28" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="94" text-anchor="middle">1</text>
+    <rect x="48" y="78" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="94" text-anchor="middle">100</text>
+    <rect x="86" y="78" width="210" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="94" text-anchor="middle">栈空，不弹</text>
+    <rect x="296" y="78" width="46" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="94" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <rect x="342" y="78" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="94" text-anchor="middle" font-size="8">(100,1)</text>
+    <rect x="532" y="78" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="94" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+
+    <!-- step 2 -->
+    <rect x="20" y="106" width="28" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="122" text-anchor="middle">2</text>
+    <rect x="48" y="106" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="122" text-anchor="middle">80</text>
+    <rect x="86" y="106" width="210" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="122" text-anchor="middle" fill="#4a7a3a">100&gt;80，不弹</text>
+    <rect x="296" y="106" width="46" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="122" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <rect x="342" y="106" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="122" text-anchor="middle" font-size="8">(100,1)(80,1)</text>
+    <rect x="532" y="106" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="122" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+
+    <!-- step 3 -->
+    <rect x="20" y="134" width="28" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="150" text-anchor="middle">3</text>
+    <rect x="48" y="134" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="150" text-anchor="middle">60</text>
+    <rect x="86" y="134" width="210" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="150" text-anchor="middle" fill="#4a7a3a">80&gt;60，不弹</text>
+    <rect x="296" y="134" width="46" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="150" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <rect x="342" y="134" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="150" text-anchor="middle" font-size="8">(100,1)(80,1)(60,1)</text>
+    <rect x="532" y="134" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="150" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+
+    <!-- step 4 -->
+    <rect x="20" y="162" width="28" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="178" text-anchor="middle" fill="#d6a040" font-weight="bold">4</text>
+    <rect x="48" y="162" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="178" text-anchor="middle">70</text>
+    <rect x="86" y="162" width="210" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="178" text-anchor="middle" fill="#d6a040" font-weight="bold">60≤70 弹(60,1)→span=2</text>
+    <rect x="296" y="162" width="46" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="178" text-anchor="middle" fill="#d6a040" font-weight="bold">2</text>
+    <rect x="342" y="162" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="178" text-anchor="middle" font-size="8">(100,1)(80,1)(70,2)</text>
+    <rect x="532" y="162" width="36" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="178" text-anchor="middle" fill="#d6a040" font-weight="bold">2</text>
+
+    <!-- step 5 -->
+    <rect x="20" y="190" width="28" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="206" text-anchor="middle">5</text>
+    <rect x="48" y="190" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="206" text-anchor="middle">60</text>
+    <rect x="86" y="190" width="210" height="26" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="206" text-anchor="middle" fill="#4a7a3a">70&gt;60，不弹</text>
+    <rect x="296" y="190" width="46" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="206" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+    <rect x="342" y="190" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="206" text-anchor="middle" font-size="8">(100,1)(80,1)(70,2)(60,1)</text>
+    <rect x="532" y="190" width="36" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="206" text-anchor="middle" fill="#446688" font-weight="bold">1</text>
+
+    <!-- step 6 (key) -->
+    <rect x="20" y="218" width="28" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="234" text-anchor="middle" fill="#d6a040" font-weight="bold">6</text>
+    <rect x="48" y="218" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="234" text-anchor="middle">75</text>
+    <rect x="86" y="218" width="210" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="234" text-anchor="middle" fill="#d6a040" font-weight="bold">弹(60,1)→2; 弹(70,2)→4</text>
+    <rect x="296" y="218" width="46" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="234" text-anchor="middle" fill="#d6a040" font-weight="bold">4</text>
+    <rect x="342" y="218" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="234" text-anchor="middle" font-size="8">(100,1)(80,1)(75,4)</text>
+    <rect x="532" y="218" width="36" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="234" text-anchor="middle" fill="#d6a040" font-weight="bold">4</text>
+
+    <!-- step 7 (key) -->
+    <rect x="20" y="246" width="28" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="34" y="262" text-anchor="middle" fill="#d6a040" font-weight="bold">7</text>
+    <rect x="48" y="246" width="38" height="26" fill="#e8f0fe" stroke="#446688" stroke-width="0.6" rx="1" filter="url(#rough2)"/>
+    <text x="67" y="262" text-anchor="middle">85</text>
+    <rect x="86" y="246" width="210" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="191" y="262" text-anchor="middle" fill="#d6a040" font-weight="bold">弹(75,4)→5; 弹(80,1)→6</text>
+    <rect x="296" y="246" width="46" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="319" y="262" text-anchor="middle" fill="#d6a040" font-weight="bold">6</text>
+    <rect x="342" y="246" width="190" height="26" fill="#fff" stroke="#eee" stroke-width="0.5" rx="1" filter="url(#rough2)"/>
+    <text x="437" y="262" text-anchor="middle" font-size="8">(100,1)(85,6)</text>
+    <rect x="532" y="246" width="36" height="26" fill="#fff8e1" stroke="#d6a040" stroke-width="0.8" rx="1" filter="url(#rough2)"/>
+    <text x="550" y="262" text-anchor="middle" fill="#d6a040" font-weight="bold">6</text>
+  </g>
+
+  <!-- ===== Final result ===== -->
+  <line x1="20" y1="284" x2="568" y2="284" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="30" y="298" width="520" height="92" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.3" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="320" text-anchor="middle" font-size="13" fill="#444" font-weight="bold">最终结果：[1, 1, 1, 2, 1, 4, 6]</text>
+  <text x="290" y="340" text-anchor="middle" font-size="10" fill="#555">栈剩 (100,1)(85,6)：100 是 85 的第一个屏障，85 吞并了它之前的 6 天</text>
+  <text x="290" y="358" text-anchor="middle" font-size="10" fill="#555">步骤 6、7 是关键：一个价格连续弹多个栈顶，把它们的 span 一次累加</text>
+  <text x="290" y="376" text-anchor="middle" font-size="9" fill="#888">7 次 next = 7 次入栈 + 6 次出栈 = 13 次操作，均摊每次 ≈ 1.86 步</text>
+
+  <!-- span accumulation note -->
+  <rect x="30" y="400" width="520" height="56" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="8" filter="url(#rough2)"/>
+  <text x="290" y="420" text-anchor="middle" font-size="10" fill="#d6a040" font-weight="bold">跨度累加 = 历史压缩</text>
+  <text x="290" y="436" text-anchor="middle" font-size="9" fill="#555">next(85) 不用逐个回溯 75,60,70,60,80，而是弹 (75,4) 和 (80,1) 直接得 6 = 1+4+1</text>
+  <text x="290" y="450" text-anchor="middle" font-size="9" fill="#555">每段被吞并后以 span 形式参与更高层合并 → 每元素只被「看」一次 → O(1) 均摊</text>
+</svg>
