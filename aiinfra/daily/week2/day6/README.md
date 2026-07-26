@@ -153,20 +153,101 @@ sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
 
 #### 6.2 Warp Shuffle 在 GEMM 写回中的用途
 
-Day 1 我们用 Warp Shuffle 做 Reduce。在 GEMM 中，Shuffle 的用途不同：**优化累加器写回**。
+Day 1 我们用 Warp Shuffle 做 Reduce（多对一求和）。在 GEMM 中，Shuffle 的用途不同：**写回前的 warp 内数据重排**——把累加器在 lane 之间换位，让随后的 `STG` 指令变成 coalesced 模式。一个是"多对一归约"，一个是"一对一置换"，用的 shuffle 原语和目的都不同。
 
-Register Blocking 中每个线程计算 TM×TN 子块，写回时如果线程分布不理想，可能产生非合并的全局内存写入。用 Warp Shuffle 在 warp 内重排累加器数据，使写回变成 coalesced 模式。
+##### 问题来源：写回是否合并，由线程映射决定
+
+Register Blocking 中每个线程持有 TM×TN 累加器子块，写回地址 = f(线程映射, tile 内偏移)。以本 kernel 的 16×16 线程网格（BN/TN=16）为例，两种常见映射的写回模式完全不同：
+
+| 线程映射 | 一个 warp（32 lane）覆盖 | 单条 `STG.128` 触达 | sector 情况 |
+|---------|------------------------|--------------------|-------------|
+| 行优先（本 kernel：`threadRow=tid/16, threadCol=tid%16`） | 2 行 × 128 列 | 2 段 512B 连续区 | 每条 sector 先写一半，TN/4 的第二次写补齐另一半 → L2 内合并为满 sector 写 |
+| 列优先（`threadRow=tid%16, threadCol=tid/16`） | 32 个不同行 | 32 行各 16B | 触达 32 条行、32 个 sector，每个只用一半；另一半要等相邻 warp 很久以后才来 → 部分 sector 写回 DRAM |
 
 ```
-不使用 Shuffle：
- Thread 0 写 C[0][0..7] ← 行连续，但只有 1 个线程在写
- Thread 1 写 C[1][0..7]
- ...
+行优先映射（lane 0-15 同行，写连续 512B）:
+  lane:  0    1    2  ... 15 | 16   17 ... 31
+  地址: [row0: col0  col8  col16 ...] [row0+8: col0 ...]
+        └─ 相邻 lane 地址相邻 → 合并友好
 
-使用 Shuffle 后：
- Warp 内 32 个线程协作，让相邻线程写相邻地址
- Thread 0 写 C[0][0], Thread 1 写 C[0][1], ... ← coalesced!
+列优先映射（lane 0-31 各占一行）:
+  lane:  0      1      2   ... 31
+  地址: [row0] [row1]  [row2] ... [row31]  ← 每格 16B 散落 32 行
+        └─ 单条指令触达 32 条 cache line → 写回放散
 ```
+
+线程映射往往是被 global→shared **加载端**的合并需求"逼"出来的；当加载和写回对映射的要求冲突时，就需要在写回前做一次数据重排。
+
+##### Warp Shuffle 回顾
+
+`__shfl_sync(mask, val, srcLane)`：warp 内 lane 间**直接交换寄存器**，每个 lane 从 `srcLane` 指定的 lane 拿到它的 `val`。特性：
+
+- 不经过 shared memory，无 bank conflict，无需 `__syncthreads()`（同步域就是 warp 本身）
+- `srcLane` 可以是任意 lane 编号 → 支持任意置换（permutation），不只是 reduce 用的 `__shfl_down` 树形折叠
+- 局限：只在 warp 内（32 lane）有效，不能跨 warp
+
+Day 1 的 reduce 是 `__shfl_down_sync` 逐层折叠（多对一）；写回重排是 `__shfl_sync` 指定任意源 lane（一对一置换）。
+
+##### 思路：写回前的 warp 内"寄存器转置"
+
+目标：执行 `STG` 的那一刻，**lane i 持有的数据恰好要写到连续地址的第 i 个位置**。如果当前持有关系不满足，就先用 shuffle 把数据换到正确的 lane 手里：
+
+```cuda
+// 重排前：lane i 持有自己 thread tile 的 acc[m][n]，
+// 它本应写到 C[row][colBase + ownerLane * TN + n]
+// 重排：让每个 lane 改持"目标行上自己该写的那一格"
+float mine    = acc[m][n];
+int   srcLane = /* 持有"我该写的那一格"的 lane 编号 */;
+float val     = __shfl_sync(0xFFFFFFFF, mine, srcLane);
+// 现在 32 个 lane 的值恰好是一行连续 32 个 float（或其分块），
+// 一次 coalesced 写回：
+C[row][colBase + lane] = val;
+```
+
+本质是一个 **warp 内转置**：把"按线程 tile 分布"的数据改成"按写回地址分布"。
+
+##### 收益与代价的定量账
+
+shuffle 不是免费的。以 TM=TN=8 为例，warp 共持有 32×64=2048 个 float；每条 `SHFL` 指令移动 32 个值（每 lane 一个），完整重排需要 2048/32 = **64 条 shuffle 指令**（对比：写回本身只有 16 条 `STG.128`/warp）。
+
+| | 不用 shuffle（列优先映射） | 用 shuffle 重排 |
+|--|--------------------------|----------------|
+| 写回指令 | 16 × `STG.128`，散落 32 行，半 sector 写 | 16 × `STG.128`，满 sector 合并写 |
+| 额外指令 | 0 | 64 × `SHFL` |
+| DRAM 写流量 | 可能翻倍（部分 sector 写） | 恰好写满 |
+
+##### 为什么不用 shared memory 中转做同样的重排？
+
+| | Warp Shuffle | Shared Memory 中转 |
+|--|-------------|-------------------|
+| 数据路径 | 寄存器 → 寄存器 | 寄存器 → shared → 寄存器（两次访问） |
+| 同步 | 不需要（warp 内天然同步） | 需要 `__syncthreads()` |
+| bank conflict | 无 | 转置访问模式容易踩 bank conflict，需 padding |
+| shared 占用 | 0 | 额外一份 staging buffer |
+| 作用范围 | 仅 warp 内 | 可跨 warp、跨任意线程 |
+
+重排范围能装进一个 warp 时用 shuffle 更省；需要跨 warp 重排时只能走 shared。
+
+##### 实测：整合版 kernel 为什么没有用 shuffle
+
+> ⚠️ 诚实地说，本 kernel 的写回路径**并没有调用 shuffle**（代码里的 `warpReduceSum` 是 Day 1 留下的归约函数，写回没用到它）。原因有三：
+
+1. **映射选对了，写回天然接近合并**：行优先映射 + float4 写回，单个 warp 覆盖 2 行各 512B，两次 `STG.128` 恰好互补拼满 sector，L2 内合并后就是满 sector 写（见上表第一行）
+2. **写回占比太小**：C 只写一次（BM×BN），主循环却跑 K/BK = 512 轮加载+计算。实测 v4→v5 的 coalesced 写回收益在噪声范围内（4096 矩阵 64.3% → 62.9%）
+3. **shuffle 全量重排要 64 条额外指令**：写回只占总时间百分之几时，这笔开销可能吃掉收益
+
+shuffle 写回真正值得用的场景：
+
+- **线程映射被迫不利于写回**：典型是 Tensor Core——WMMA/MMA 的累加器 fragment 布局由硬件定死（每个 lane 持有固定位置的小块），与 C 的理想写回模式不匹配，必须 shuffle 或 shared 重排
+- **加载端与写回端映射冲突**：加载要求列优先、写回要求行优先时，用 shuffle 做 warp 内转置
+- **小位宽打包写回**：half2/bf16 累加器先 shuffle 聚拢，再打包成 128-bit 写
+
+##### 常见误区
+
+1. **"shuffle 能跨 warp 交换数据"**——不能。shuffle 只在 32 lane 内有效，跨 warp 的重排必须走 shared memory
+2. **"shuffle 减少了写回的数据量"**——没有。和 float4 一样，它不改变搬运的字节数，只改变"哪个 lane 写哪个地址"，让每次 `STG` 触达的 sector 被写满
+3. **"写回重排和 reduce 用的是同一种 shuffle"**——reduce 用 `__shfl_down_sync` 做多对一折叠；写回重排是一对一置换，用 `__shfl_sync` 指定任意源 lane
+4. **"shuffle 免费，能加就加"**——TM×TN=64 时全量重排要 64 条 SHFL 指令；写回占比小的 kernel 加了可能反而变慢，一切以 ncu 实测为准
 
 #### 6.3 参数精调（Auto-tuning）
 
