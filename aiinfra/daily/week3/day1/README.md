@@ -36,7 +36,7 @@ Transformer 是 Google 在 2017 年论文《Attention is All You Need》中提�
 
 ##### 深入理解：Decoder 是什么
 
-Decoder（解码器）来自 2017 年原始 Transformer 论文的**编码器-解码器（Encoder-Decoder）**结构。当时的 Transformer 为机器翻译设计（英文 → 法文），分两半：
+Decoder（解码器）来自 2017 年原始 Transformer 论文的 **编码器-解码器（Encoder-Decoder）** 结构。当时的 Transformer 为机器翻译设计（英文 → 法文），分两半：
 
 - **Encoder（编码器）**：读入完整的源句子，用**双向** Self-Attention——每个 token 可以看前后所有 token，不带 mask。任务是把整句话"理解"成一组上下文表示，不生成文字
 - **Decoder（解码器）**：**逐个生成**目标句子，包含两种 attention：
@@ -120,7 +120,7 @@ Attention 的核心思想：**每个 token 根据"谁和自己相关"，从其�
 
 ![Self-Attention QKV 流程](../images/self_attention_qkv.svg)
 
-每个 token 的向量 x 通过**三个独立的 Linear（就是 GEMM）**投影成三个角色：
+每个 token 的向量 x 通过 **三个独立的 Linear（就是 GEMM）** 投影成三个角色：
 
 - **Query（查询）**："我想找什么信息"
 - **Key（键）**："我有什么特征，可以被别人检索到"
@@ -188,6 +188,77 @@ x → LayerNorm → Multi-Head Attention → (⊕ 残差)
 - **LayerNorm**：把每个 token 的 d 维向量归一化（均值 0、方差 1，再缩放平移），稳定训练。本质是 element-wise + 两次 reduce
 - **FFN**：`Linear2(GELU(Linear1(x)))`，把维度 d → d_ff → d（d_ff 通常是 4×d_model）。这是模型"知识存储"的主要场所，参数量占一层的大头
 - **残差连接（⊕）**：让梯度可以跳过子层直接传播，是几十上百层网络能训练起来的关键
+
+##### 深入理解：LayerNorm 是什么
+
+**① 定义：把每个 token 的向量拉成"标准分布"。** 对**每一个 token** 的 d 维向量 `x`，独立地做三件事——先算这 d 个数的均值 μ 和方差 σ²，再归一化，最后缩放平移：
+
+```
+μ = mean(x)           # 一个标量：这个 token 的 d 个分量的均值
+σ² = var(x)           # 一个标量：方差
+ŷ = (x - μ) / √(σ² + ε)   # 归一化 → 均值 0、方差 1（ε≈1e-5 防除零）
+y = γ ⊙ ŷ + β              # 可学习的逐元素缩放 γ 和平移 β
+```
+
+`γ` 和 `β` 是**可学习参数**（各 d 维）——归一化把分布压成标准的，γ/β 再允许模型"按需还原"出需要的尺度，表达能力不受损。注意归一化是沿**特征维 d** 做的：每个 token 只管自己的 d 个分量，与其他 token 无关。
+
+**② 为什么需要它：给数值"踩刹车"。** 深层网络里激活值的分布会逐层漂移——尤其有残差连接后，`x + F(x)` 不断累加，数值范围会逐层膨胀。数值一旦过大，softmax 饱和（梯度≈0）、GELU 进入平坦区，训练就崩了。LayerNorm 在每个子层入口把输入拉回均值 0、方差 1 的稳定分布，让信号和梯度都维持在健康范围，也让训练能容忍更大的学习率。可以把它理解成：**残差负责"信息无损传递"，LayerNorm 负责"数值不爆炸"**，两者配合才让 96 层堆叠可训练。
+
+**③ 和 BatchNorm 的区别（为什么是 Layer 不是 Batch）。** BatchNorm 沿 **batch 维**归一化：对每个特征，跨 batch 内所有样本算均值方差——它依赖 batch 统计量，batch 小就不稳，推理时还得改用滑动平均，训练和推理行为不一致。LayerNorm 沿**特征维**归一化：每个 token 独立，不依赖 batch，训练推理完全一致。NLP 里序列长度可变、推理时 batch 常为 1，BN 根本不适用，所以 Transformer 全系都用 LN。
+
+**④ GPU 视角。** LayerNorm 是"两次 reduce（求 μ 和 σ²）+ 一次 element-wise 归一化"：读写各一个 `(N, d)` 张量，零矩阵乘，典型 **memory-bound**——它的耗时几乎纯由 HBM 带宽决定。每个 token 的归一化天然独立，一行 d 个元素正好映射到一个 warp/block 做归约。**Day 2 手写的就是这个 kernel**：数值稳定写法、Welford 一次遍历合并两次 reduce、warp/block 两级归约，都是那两天的主题。
+
+> 💡 **一句话**：LayerNorm 对每个 token 的 d 维向量独立做"减均值、除方差、再缩放平移"，把每层输入拉回稳定分布——不依赖 batch、训练推理一致，是 Transformer 的标配；在 GPU 上它是两次 reduce + element-wise 的纯 memory-bound 算子。
+
+##### 深入理解：FFN 是什么
+
+**① 定义：每个 token 独立过一个小型两层 MLP。** FFN（Feed-Forward Network，前馈网络）的结构是"升维 → 非线性 → 降维"：
+
+```
+FFN(x) = Linear2( GELU( Linear1(x) ) )
+       = GELU(x·W1 + b1) · W2 + b2
+
+维度变化:  d  →  d_ff  →  d        （d_ff 通常是 4×d_model）
+```
+
+它是 **position-wise** 的：每个 token 的 d 维向量**各自独立**地过同一套 W1/W2，token 之间没有任何信息交换——这正好和 Attention 互补：**Attention 负责 token 之间的信息混合，FFN 负责每个 token 内部的特征加工**。
+
+**② 为什么需要它：模型的"知识仓库"和非线性来源。** 两个要点：
+
+- **非线性**：如果没有 GELU，`Linear2(Linear1(x))` 等价于一次 Linear（两个矩阵可以合并成一个），堆多少层都还是线性变换。GELU 这个非线性"折断"让网络能拟合复杂函数——GELU(x) = x·Φ(x)（Φ 是高斯累积分布），可以理解成平滑版的 ReLU
+- **容量**：先升到 4 倍维度，相当于把 token 的表示展开到一个更大的空间里做特征组合，再压回 d 维。这层是模型**存储"知识"的主要场所**——参数量上，Attention 的 QKV+Output 共 4d²，而 FFN 是 8d²（d×4d + 4d×d），**占一层参数的 2/3**。研究表明大量事实性知识（如"巴黎是法国首都"）就编码在 FFN 的权重里
+
+**③ GPU 视角。** FFN 是一层 Block 里**计算量和权重读取的双料大头**：
+
+- **Prefill**：两个 GEMM `(N, d)×(d, 4d)` 和 `(N, 4d)×(4d, d)`，N 大时是典型的 **compute-bound**，Tensor Core 的主战场
+- **Decode**：M=1 退化成两次 GEMV，计算量骤降但 8d² 的权重照样完整读一遍——FFN 权重占一层参数的 2/3，所以 **Decode 的权重读取大头就是 FFN**，这是 1.3 节"M=1 → memory-bound"的最大贡献者
+- 中间的 GELU 是 element-wise，memory-bound，工程上常融合进前一个 GEMM 的 epilogue（Day 6 的 fusion 主题）
+
+> 💡 **一句话**：FFN 是每个 token 独立过的"d → 4d → d"两层 MLP——GELU 提供非线性，4 倍升维提供容量，一层 2/3 的参数都堆在这里；GPU 上它是 Prefill 的算力主力、Decode 的访存主力。
+
+##### 深入理解：残差连接是什么
+
+**① 定义：就是把输入加回输出。** 每个子层的计算不是 `y = F(x)`，而是：
+
+```
+y = x + F(x)
+```
+
+`F` 是子层本身（Attention 或 FFN），`x` 是子层的输入，两者**逐元素相加**。它没有任何可学习参数，只是一次加法——要求 `F(x)` 和 `x` 形状相同，这也是整个 Transformer 里 d_model 从头到尾不变的原因之一。
+
+**② 为什么需要它：给梯度修一条"高速公路"。** 没有残差时，L 层网络反向传播的梯度是 L 个 Jacobian 矩阵**连乘**——每层都乘一次，几十层下来梯度要么指数级缩小（消失）要么放大（爆炸），深层网络根本训不动。有了 `+ x`，梯度变成：
+
+```
+∂y/∂x = I + ∂F/∂x
+```
+
+多出来的单位矩阵 `I` 意味着：无论 `∂F/∂x` 多小，梯度都能**原封不动地**通过加法支路传回浅层。这就是"梯度可以跳过子层直接传播"的含义——ResNet（2015）靠这个 trick 第一次把网络训练到上百层，Transformer 直接继承。
+
+**③ 直觉理解：子层只学"增量"，不学"重写"。** 没有残差时，每层必须把输入的完整信息重新表示一遍，任何一层学坏了信息就丢了；有残差时，浅层信息通过加法**默认原样保留**，每个子层只需学习"在现有表示上加什么修正"（残差 = 剩余的部分）。这让深层堆叠从"必须每层都完美"变成"每层做一点改进就行"，优化难度大幅降低。
+
+**④ GPU 视角。** 残差加法是一次 element-wise add：读两个 `(N, d)` 张量、写一个，零计算、纯访存，典型 **memory-bound**。单次开销极小，但每层有两次，L 层就是 2L 次 HBM 往返——它和 LayerNorm 一样，是 kernel fusion 的常见目标（例如 FFN 第二个 Linear 的 epilogue 直接融合残差加）。
+
+> 💡 **一句话**：残差连接就是 `y = x + F(x)`——一条无参数的加法支路，让信息默认保留、让梯度跨层直达，是深层网络能训练起来的前提；在 GPU 上它是最便宜的算子，也是 fusion 的常客。
 
 这是 **Pre-LN** 结构（LayerNorm 在子层之前），GPT-2 之后的现代模型几乎都用它。
 
