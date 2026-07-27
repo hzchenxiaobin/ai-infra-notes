@@ -13,9 +13,20 @@
 
 ---
 
+### 学前导读：Transformer 推理不是一次 forward 那么简单
+
+在训练时，我们习惯把一整个 batch 的 token 喂给模型，一次 forward 得到所有位置的输出。但**推理场景完全不同**：
+
+- 用户输入一条 prompt（可能几千个 token），模型需要**并行处理**整条 prompt → 这叫 **Prefill**
+- 然后**逐个 token 生成**回答，每次只产出 1 个 token，直到遇到 EOS → 这叫 **Decode**
+
+这两阶段虽然跑的是同一套 Transformer 层，但**算子形状截然不同**，导致性能特征天差地别。理解这个差异，是所有推理优化的起点——记住 Prefill / Decode 这两个词，今天的全部内容都围绕它们展开。
+
+---
+
 ### 背景知识：从零认识 Transformer
 
-> 📖 本节为零基础铺垫。如果你已经熟悉 Transformer 结构，可以直接跳到「学前导读」。
+> 📖 本节为零基础铺垫。如果你已经熟悉 Transformer 结构，可以直接跳到「理论学习」。
 
 #### 0.1 Transformer 是什么
 
@@ -210,17 +221,6 @@ x → LayerNorm → Multi-Head Attention → (⊕ 残差)
 
 ---
 
-### 学前导读：Transformer 推理不是一次 forward 那么简单
-
-在训练时，我们习惯把一整个 batch 的 token 喂给模型，一次 forward 得到所有位置的输出。但**推理场景完全不同**：
-
-- 用户输入一条 prompt（可能几千个 token），模型需要**并行处理**整条 prompt → 这叫 **Prefill**
-- 然后**逐个 token 生成**回答，每次只产出 1 个 token，直到遇到 EOS → 这叫 **Decode**
-
-这两阶段虽然跑的是同一套 Transformer 层，但**算子形状截然不同**，导致性能特征天差地别。理解这个差异，是所有推理优化的起点。
-
----
-
 ### 理论学习
 
 #### 1.1 Prefill vs Decode 执行特征对比
@@ -248,11 +248,16 @@ x → LayerNorm → Multi-Head Attention → (⊕ 残差)
 
 ![Transformer 单层前向数据流](../../images/week3_transformer_forward_flow.svg)
 
-**关键观察**：Transformer 单层包含 **6 个主要算子类型**：
+**关键观察**：Transformer 单层包含 **6 类主要算子**：
 
-1. **LayerNorm**（2 次）：element-wise + reduction，**memory-bound**
-2. **QKV/Output/FFN Linear**（4 个 GEMM）：compute-bound（Prefill）或 memory-bound（Decode）
-3. **Attention**：S=QK^T（GEMM）+ softmax（memory-bound）+ PV（GEMM）
+1. **QKV / Output / FFN Linear**（GEMM，本课 mini 模型共 4 个）：Prefill 时 compute-bound，Decode 时 memory-bound
+2. **Attention QKᵀ**（GEMM）：同上，bound 类型随 M 切换
+3. **Softmax**：element-wise + reduction，永远 **memory-bound**
+4. **Attention PV**（GEMM）：同 QKᵀ
+5. **LayerNorm**（2 次）：element-wise + reduction，永远 **memory-bound**
+6. **GELU**（FFN 中间）：element-wise，永远 **memory-bound**
+
+一句话记忆：**GEMM 的 bound 类型随 M 切换，其余算子永远是 memory-bound**——这就是面试题 2 的标准答案。
 
 **算子执行顺序与依赖**：
 
@@ -296,7 +301,7 @@ KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
 
 ---
 
-### torch.profiler 使用方法
+### 工具准备：torch.profiler 使用方法
 
 #### 核心 API
 
@@ -338,9 +343,9 @@ prof.export_chrome_trace("transformer_trace.json")
 
 ---
 
-### 晚间编程任务：Trace Transformer Forward
+### Coding 任务：Trace Transformer Forward
 
-#### 完整代码
+#### 任务 1：实现 Mini Transformer Block（`trace_transformer.py`）
 
 ```python
 # trace_transformer.py —— 最小 Transformer Block + Prefill/Decode profiling
@@ -434,7 +439,7 @@ if __name__ == "__main__":
  main()
 ```
 
-#### 运行步骤
+#### 任务 2：运行并采集 Prefill / Decode trace
 
 ```bash
 # 运行（需 CUDA GPU）
@@ -446,7 +451,7 @@ python trace_transformer.py
 # 3. 观察 GPU kernel 的时间线排列
 ```
 
-#### 预期输出与分析任务
+#### 任务 3：分析两阶段的算子差异
 
 ```
 ===== Prefill Phase (shape=(1, 1024, 512)) =====
@@ -500,20 +505,20 @@ aten::softmax xxx us 5
 
 ---
 
-### 练习题
+### 扩展实验
 
-**练习1（基础）**：修改 `d_model=1024, n_heads=16`，重新 profile，观察 GEMM 时间变化。
+**实验1（基础）**：修改 `d_model=1024, n_heads=16`，重新 profile，观察 GEMM 时间变化。
 > 提示：GEMM 计算量与 d_model 平方相关，layernorm/softmax 与 d_model 线性相关。
 
-**练习2（进阶）**：用 `nsys profile -o transformer_trace python trace_transformer.py` 采集系统级时间线，在 Nsight Systems GUI 中对比 Prefill 和 Decode 的 SM 利用率。
+**实验2（进阶）**：用 `nsys profile -o transformer_trace python trace_transformer.py` 采集系统级时间线，在 Nsight Systems GUI 中对比 Prefill 和 Decode 的 SM 利用率。
 > 提示：Decode 阶段 SM 利用率会很低（绿色 bar 很短），这就是 memory-bound 的直观表现。
 
-**练习3（综合）**：在 TransformerBlock 中加一个 `forward_with_fusion` 方法，用 `torch.compile(model, mode="reduce-overhead")` 自动做 kernel fusion，对比 fused vs unfused 的 kernel 数量。
+**实验3（综合）**：在 TransformerBlock 中加一个 `forward_with_fusion` 方法，用 `torch.compile(model, mode="reduce-overhead")` 自动做 kernel fusion，对比 fused vs unfused 的 kernel 数量。
 > 提示：`torch.compile` 会把 LayerNorm + GEMM 等相邻算子融合，kernel 数减少 30-50%。
 
 ---
 
-### 今日面试题
+### 面试要点
 
 **面试题1**：Transformer 推理的 Prefill 和 Decode 阶段有什么区别？为什么 Decode 通常是 memory-bound？（⭐⭐⭐ 高频）
 
@@ -540,7 +545,7 @@ aten::softmax xxx us 5
 
 ---
 
-### 今日自测清单
+### 验证 Checklist
 
 - [ ] 能解释 Prefill 和 Decode 的输入形状差异及其对性能的影响
 - [ ] 能列出 Transformer 单层的 6 类算子及其执行顺序
