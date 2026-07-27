@@ -135,11 +135,6 @@ def rewrite_md_links_to_html_weeks(markdown_text: str, root_prefix: str = "") ->
         if new_url.startswith("../../../../"):
             inner = new_url[len("../../../../"):]
             inner = re.sub(
-                r"^leetgpu/week\d+/day\d+/(leetgpu-.*-solution\.html)$",
-                r"leetgpu/\1",
-                inner,
-            )
-            inner = re.sub(
                 r"^aiinfra/topics/cuda/(.+)\.html$",
                 r"cuda/\1",
                 inner,

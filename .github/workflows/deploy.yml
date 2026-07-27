@@ -18,7 +18,6 @@ on:
       - 'aiinfra/daily/week8/**'
       - 'aiinfra/paper/**'
       - 'aiinfra/topics/**'
-      - 'leetgpu/**'
       - 'public/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:

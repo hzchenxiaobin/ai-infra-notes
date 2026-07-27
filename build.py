@@ -6,7 +6,6 @@ Generates:
     - Shared css/js (copied from static/)
     - Course overview + plan + week1 pages (built by build.weeks)
     - week2~week8 pages (built by build.weeks)
-    - leetgpu website (built by build.leetgpu)
     - topic websites (built by build.topics)
     - paper reading website (built by build.paper)
 """
@@ -16,7 +15,6 @@ from pathlib import Path
 
 from build.common import copy_static_assets, extract_plan_weeks
 from build.weeks import build_week, build_week1
-from build.leetgpu import build as build_leetgpu
 from build.topics import build as build_topics, discover_topics, topic_display
 from build.paper import build as build_paper
 
@@ -32,9 +30,6 @@ def compute_relative_path(from_file: Path, to_path: str) -> str:
 
 def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path, topics: list) -> str:
     """Insert extra cross-site links into the sidebar navigation."""
-    rel_leetgpu = compute_relative_path(
-        html_file.relative_to(public_dir), "leetgpu/index.html"
-    )
     rel_paper = compute_relative_path(
         html_file.relative_to(public_dir), "paper/index.html"
     )
@@ -42,7 +37,7 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path, topics: 
         '<div class="nav-section-title">更多</div>',
         f'<a class="nav-link" href="{rel_paper}">📄 论文精读</a>',
         '<a class="nav-link" href="https://hzchenxiaobin.github.io/leetcode/">🧩 LeetCode 题解</a>',
-        f'<a class="nav-link" href="{rel_leetgpu}">🎮 LeetGPU 题解</a>',
+        '<a class="nav-link" href="https://github.com/hzchenxiaobin/leetgpu">🎮 LeetGPU 题解</a>',
     ]
     for slug in sorted(topics):
         rel = compute_relative_path(html_file.relative_to(public_dir), f"{slug}/index.html")
@@ -97,9 +92,6 @@ def main() -> None:
             public_dir / f"week{week_num}" / "images",
         )
 
-    print("Building LeetGPU website...")
-    build_leetgpu(public_dir)
-
     print("Building topic websites...")
     build_topics(public_dir)
 
@@ -108,7 +100,7 @@ def main() -> None:
 
     print("Inserting extra navigation links...")
     topics = discover_topics()
-    excluded_parts = {"leetgpu"} | set(topics)
+    excluded_parts = set(topics)
     course_pages = [
         p for p in public_dir.rglob("*.html")
         if not any(part in excluded_parts for part in p.relative_to(public_dir).parts)

@@ -43,9 +43,6 @@ ai-infra-notes/
 │ │ └── week8/ ✅ # 项目打磨 + 面试准备（7 天）
 │ ├── topics/ # 专题学习（CUTLASS/Triton 等横向深挖）
 │ │ └── SKILL.md # 写专题教程的 Skill 规范
-├── leetgpu/ # LeetGPU CUDA 挑战题解（27 道）
-│ ├── week1~week5/dayM/ # 按周/日归档，与教程对齐
-│ └── images/ # 题解手绘 SVG 插图
 ├── images/ # 仓库根插图（路线图等）
 ├── build.py # 组合构建 GitHub Pages 全站
 ├── setup_cuda.sh # WSL 安装 CUDA Toolkit 脚本
@@ -92,11 +89,11 @@ ai-infra-notes/
 ### 面试要点 ← 5 题问答
 ```
 
-每天 Coding 任务包含：1 个完整可编译 kernel（带 `nvcc` 命令 + 预期输出）+ 1 道 [LeetGPU](https://leetgpu.com/) 在线题 + 1 道 [LeetCode](https://leetcode.cn/) 面试题，题解分别归档到 `leetgpu/` 与[独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/)。详细写作规范见 [aiinfra/daily-tutorial/SKILL.md](aiinfra/daily-tutorial/SKILL.md)。
+每天 Coding 任务包含：1 个完整可编译 kernel（带 `nvcc` 命令 + 预期输出）+ 1 道 [LeetGPU](https://leetgpu.com/) 在线题 + 1 道 [LeetCode](https://leetcode.cn/) 面试题，题解分别归档到[独立 LeetGPU 题解仓库](https://github.com/hzchenxiaobin/leetgpu)与[独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/)。详细写作规范见 [aiinfra/daily-tutorial/SKILL.md](aiinfra/daily-tutorial/SKILL.md)。
 
 ## 在线网站
 
-每次推送到 `main` 分支自动构建并部署到 GitHub Pages，内容包括 8 周每日教程、8 周计划总览、LeetGPU 题解、LeetCode 题解、CUTLASS 专题。
+每次推送到 `main` 分支自动构建并部署到 GitHub Pages，内容包括 8 周每日教程、8 周计划总览、LeetCode 题解、CUTLASS 专题。
 
 ## 本地预览
 
@@ -187,7 +184,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 2. 进入 [aiinfra/daily/week1/README.md](aiinfra/daily/week1/README.md) 按 Day 1 → Day 7 推进
 3. 每个 kernel 配套 Nsight Profiling 任务，参考各 day 的 `notes/` 目录
 4. Day 3 起配合 [aiinfra/daily/week1/tools/cuda_occupancy_calculator.py](aiinfra/daily/week1/tools/cuda_occupancy_calculator.py) 手算并验证 Occupancy
-5. 每天完成 LeetGPU 在线题目，题解归档到 `leetgpu/weekN/dayM/`
+5. 每天完成 LeetGPU 在线题目，题解归档到[独立 LeetGPU 题解仓库](https://github.com/hzchenxiaobin/leetgpu)
 6. 每天完成 LeetCode 面试题，题解归档到[独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/)
 
 ## 目录约定
@@ -195,7 +192,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 - `dayN/`：按天组织，含 `README.md`（教程）、`kernels/`、`exercise/`、`notes/`
 - `kernels/`：可直接编译运行的 `.cu` / `.py` 示例
 - `website/`：静态网站源码（`build.py` 从 `dayN/README.md` 生成 `dayN.html`）
-- `leetgpu/weekN/dayM/`：LeetGPU 题解，按周/日与教程对齐
+- LeetGPU 题解已迁移至[独立仓库](https://github.com/hzchenxiaobin/leetgpu)，按周/日与教程对齐
 - LeetCode 题解已迁移至[独立仓库](https://hzchenxiaobin.github.io/leetcode/)，按周/日与教程对齐
 - `images/`：所有手绘 sketch 风 SVG，统一 `feTurbulence` 抖动滤镜 + Comic Sans/Kaiti SC 字体
 
