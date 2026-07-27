@@ -288,7 +288,7 @@ __global__ void softmax_kernel(const float* input, float* output, int N) {
 
 #### 任务 6：LeetCode 面试题 —— 合并两个有序链表
 
-**题目链接**：[21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)
+**题目链接**：[21. 合并两个有序链表](https://hzchenxiaobin.github.io/leetcode/problems/合并两个有序链表.html)
 
 **题目概述**：
 
@@ -305,7 +305,7 @@ dummy 哑节点 + tail 尾指针；遍历两链表，每次取较小者接到 ta
 处理剩余；返回 dummy.next
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并两个有序链表题解](../../../../leetcode/daily/week2/day4/合并两个有序链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并两个有序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/合并两个有序链表.html)。
 
 ---
 

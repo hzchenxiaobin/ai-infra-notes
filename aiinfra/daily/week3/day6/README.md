@@ -482,13 +482,13 @@ int main() {
 
 #### 任务 5：LeetCode 面试题 —— 子集
 
-**题目链接**：[78. 子集](https://leetcode.cn/problems/subsets/)
+**题目链接**：[78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/子集.html)
 
 **题目概述**：给定一个不含重复元素的整数数组 `nums`，返回该数组所有可能的子集（幂集）。
 
 **与今日知识的关联**：子集的**回溯枚举**与今日 profiling 的"逐层拆解"同构——回溯对每个元素做"选/不选"二叉决策树，profiling 对每层 forward 做"layernorm→GEMM→attention→FFN"逐算子拆解。两者都是"将复杂问题分解为逐步决策"的模式。
 
-> 💡 完整题解见 [子集题解](../../../../leetcode/daily/week3/day6/子集.md)。
+> 💡 完整题解见 [子集题解](https://hzchenxiaobin.github.io/leetcode/problems/子集.html)。
 
 ---
 

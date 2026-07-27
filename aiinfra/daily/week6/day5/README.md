@@ -315,7 +315,7 @@ Iter | Batch | W/R | Batch 内容
 
 #### 任务 5：LeetCode 面试题 —— 岛屿数量
 
-**题目链接**：[200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/)
+**题目链接**：[200. 岛屿数量](https://hzchenxiaobin.github.io/leetcode/problems/岛屿数量.html)
 
 **题目概述**：
 
@@ -332,7 +332,7 @@ Iter | Batch | W/R | Batch 内容
  → DFS/BFS 标记整个连通块为已访问（沉岛，grid[i][j]='0'）
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、DFS 沉岛图解、与多请求 batch 分组的类比）见 [岛屿数量题解](../../../../leetcode/daily/week6/day5/岛屿数量.md)。
+> 💡 完整题解（含 C++/Python 参考代码、DFS 沉岛图解、与多请求 batch 分组的类比）见 [岛屿数量题解](https://hzchenxiaobin.github.io/leetcode/problems/岛屿数量.html)。
 
 ---
 

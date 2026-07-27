@@ -317,7 +317,7 @@ engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
 
 #### 任务 5：LeetCode 面试题 —— 数据流的中位数
 
-**题目链接**：[295. 数据流的中位数](https://leetcode.cn/problems/find-median-from-data-stream/)
+**题目链接**：[295. 数据流的中位数](https://hzchenxiaobin.github.io/leetcode/problems/数据流的中位数.html)
 
 **题目概述**：设计一个数据结构，支持 `addNum(num)` 添加数字和 `findMedian()` 返回当前所有数字的中位数。
 
@@ -332,7 +332,7 @@ engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
 中位数：奇数取多的那个堆顶，偶数取两堆顶平均
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、双堆图解、与 P50 统计的类比）见 [数据流的中位数题解](../../../../leetcode/daily/week7/day6/数据流的中位数.md)。
+> 💡 完整题解（含 C++/Python 参考代码、双堆图解、与 P50 统计的类比）见 [数据流的中位数题解](https://hzchenxiaobin.github.io/leetcode/problems/数据流的中位数.html)。
 
 ---
 

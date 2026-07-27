@@ -346,7 +346,7 @@ int main() {
 
 #### 任务 5：LeetCode 面试题 —— 分割回文串
 
-**题目链接**：[131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/)
+**题目链接**：[131. 分割回文串](https://hzchenxiaobin.github.io/leetcode/problems/分割回文串.html)
 
 **题目概述**：
 
@@ -367,7 +367,7 @@ int main() {
  path.push(s[start..end]); dfs(end+1); path.pop()
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割回文串题解](../../../../leetcode/daily/week4/day3/分割回文串.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割回文串题解](https://hzchenxiaobin.github.io/leetcode/problems/分割回文串.html)。
 
 ---
 

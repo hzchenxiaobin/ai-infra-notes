@@ -141,12 +141,7 @@ def rewrite_md_links_to_html_weeks(markdown_text: str, root_prefix: str = "") ->
             )
             inner = re.sub(
                 r"^aiinfra/topics/cuda/(.+)\.html$",
-                r"cuda/\1.html",
-                inner,
-            )
-            inner = re.sub(
-                r"^leetcode/daily/week\d+/day\d+/([^/]+\.html)$",
-                r"leetcode/problems/\1",
+                r"cuda/\1",
                 inner,
             )
             new_url = root_prefix + inner
@@ -211,7 +206,7 @@ HEADING_RENDERER_TOPICS = """renderer.heading = function(text, level, raw) {
 
 
 # ---------------------------------------------------------------------------
-# Unified page template (standard layout: weeks, leetcode, leetgpu, topics)
+# Unified page template (standard layout: weeks, leetgpu, topics)
 # ---------------------------------------------------------------------------
 
 def page_template(

@@ -349,7 +349,7 @@ INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里�
 
 #### 任务 5：LeetCode 面试题 —— 组合总和
 
-**题目链接**：[39. 组合总和](https://leetcode.cn/problems/combination-sum/)
+**题目链接**：[39. 组合总和](https://hzchenxiaobin.github.io/leetcode/problems/组合总和.html)
 
 **题目概述**：
 
@@ -372,7 +372,7 @@ dfs(remain, start):
  path.pop()
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 profiling 三层拆解的模式类比）见 [组合总和题解](../../../../leetcode/daily/week5/day6/组合总和.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 profiling 三层拆解的模式类比）见 [组合总和题解](https://hzchenxiaobin.github.io/leetcode/problems/组合总和.html)。
 
 ---
 

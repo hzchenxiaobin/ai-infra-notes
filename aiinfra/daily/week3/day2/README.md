@@ -512,13 +512,13 @@ __global__ void group_norm_kernel(const float* input, const float* gamma, const 
 
 #### 任务 5：LeetCode 面试题 —— 打家劫舍
 
-**题目链接**：[198. 打家劫舍](https://leetcode.cn/problems/house-robber/)
+**题目链接**：[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/打家劫舍.html)
 
 **题目概述**：给定一个非负整数数组 `nums`，表示沿街房屋的金额。不能偷窃相邻的房屋，求能偷窃到的最高金额。
 
 **与今日知识的关联**：打家劫舍的**动态规划**与今日 Softmax 的**三遍扫描**同构——DP 用 `dp[i] = max(dp[i-1], dp[i-2] + nums[i])` 逐步累积最优解，Softmax 用 pass1→pass2→pass3 逐步累积 max→sum→normalize。两者都是"多趟扫描，每趟基于前一趟的结果"的流水线模式。
 
-> 💡 完整题解见 [打家劫舍题解](../../../../leetcode/daily/week3/day2/打家劫舍.md)。
+> 💡 完整题解见 [打家劫舍题解](https://hzchenxiaobin.github.io/leetcode/problems/打家劫舍.html)。
 
 ---
 

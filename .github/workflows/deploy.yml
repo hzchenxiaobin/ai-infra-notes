@@ -18,7 +18,6 @@ on:
       - 'aiinfra/daily/week8/**'
       - 'aiinfra/paper/**'
       - 'aiinfra/topics/**'
-      - 'leetcode/**'
       - 'leetgpu/**'
       - 'public/**'
       - '.github/workflows/deploy.yml'
@@ -63,8 +62,6 @@ jobs:
           ls -la public/
           echo "--- topic directories ---"
           ls -la public/
-          echo "--- leetcode directory structure ---"
-          ls -la public/leetcode/
           echo "--- file count ---"
           find public -type f | wc -l
 

@@ -288,7 +288,7 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最近公共祖先
 
-**题目链接**：[236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/)
+**题目链接**：[236. 二叉树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的最近公共祖先.html)
 
 **题目概述**：
 
@@ -309,7 +309,7 @@ dfs(root, p, q):
  return left ?: right
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](../../../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的最近公共祖先.html)。
 
 ---
 

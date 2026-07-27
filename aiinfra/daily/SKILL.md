@@ -186,54 +186,54 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 
 #### LeetCode 面试题(任务 5,必有)
 
-每天 Coding 任务额外包含一道来自 **https://leetcode.cn/** 的面试高频题,作为算法基本功的日常练习。完整题解的写作规范(6 段结构、C++/Python 参考代码、手绘 SVG、复杂度分析)见 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md);教程"任务 5"只需给出题目链接 + 1-2 句核心套路点题,并用相对链接指向下表对应题解。
+每天 Coding 任务额外包含一道来自 **https://leetcode.cn/** 的面试高频题,作为算法基本功的日常练习。完整题解(6 段结构、C++/Python 参考代码、手绘 SVG、复杂度分析)已归档到独立的 [LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/);教程"任务 5"只需给出题目链接 + 1-2 句核心套路点题,并用相对链接指向下表对应题解。
 
-**已归档题解**(位于 `leetcode/daily/weekN/dayM/`):
+**已归档题解**(位于 [独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/)):
 
 | 教程 | 主题 | LeetCode 题目 | 题解链接 |
 |------|------|---------------|----------|
-| Week1 Day1 | 数组 / 双指针 | 42. 接雨水 | [接雨水.md](../../leetcode/daily/week1/day1/接雨水.md) |
-| Week1 Day2 | 动态规划 | 53. 最大子数组和 | [最大子数组和.md](../../leetcode/daily/week1/day2/最大子数组和.md) |
-| Week1 Day3 | 字符串 / 滑窗 | 3. 无重复字符的最长子串 | [无重复字符的最长子串.md](../../leetcode/daily/week1/day3/无重复字符的最长子串.md) |
-| Week1 Day4 | 链表 | 206. 反转链表 | [反转链表.md](../../leetcode/daily/week1/day4/反转链表.md) |
-| Week1 Day5 | 树 / DFS | 236. 二叉树的最近公共祖先 | [二叉树的最近公共祖先.md](../../leetcode/daily/week1/day5/二叉树的最近公共祖先.md) |
-| Week1 Day6 | 回溯 | 46. 全排列 | [全排列.md](../../leetcode/daily/week1/day6/全排列.md) |
-| Week1 Day7 | 栈 / 困难 | 84. 柱状图中最大的矩形 | [柱状图中最大的矩形.md](../../leetcode/daily/week1/day7/柱状图中最大的矩形.md) |
-| Week2 Day1 | 哈希表 | 1. 两数之和 | [两数之和.md](../../leetcode/daily/week2/day1/两数之和.md) |
-| Week2 Day2 | 动态规划 | 70. 爬楼梯 | [爬楼梯.md](../../leetcode/daily/week2/day2/爬楼梯.md) |
-| Week2 Day3 | 双指针 | 15. 三数之和 | [三数之和.md](../../leetcode/daily/week2/day3/三数之和.md) |
-| Week2 Day4 | 链表 | 21. 合并两个有序链表 | [合并两个有序链表.md](../../leetcode/daily/week2/day4/合并两个有序链表.md) |
-| Week2 Day5 | 树 / BFS | 102. 二叉树的层序遍历 | [二叉树的层序遍历.md](../../leetcode/daily/week2/day5/二叉树的层序遍历.md) |
-| Week2 Day6 | 单调栈 | 739. 每日温度 | [每日温度.md](../../leetcode/daily/week2/day6/每日温度.md) |
-| Week2 Day7 | 单调队列 | 239. 滑动窗口最大值 | [滑动窗口最大值.md](../../leetcode/daily/week2/day7/滑动窗口最大值.md) |
-| Week3 Day1 | 双指针 | 11. 盛最多水的容器 | [盛最多水的容器.md](../../leetcode/daily/week3/day1/盛最多水的容器.md) |
-| Week3 Day2 | 动态规划 | 198. 打家劫舍 | [打家劫舍.md](../../leetcode/daily/week3/day2/打家劫舍.md) |
-| Week3 Day3 | 字符串 | 5. 最长回文子串 | [最长回文子串.md](../../leetcode/daily/week3/day3/最长回文子串.md) |
-| Week3 Day4 | 链表 | 141. 环形链表 | [环形链表.md](../../leetcode/daily/week3/day4/环形链表.md) |
-| Week3 Day5 | 树 | 98. 验证二叉搜索树 | [验证二叉搜索树.md](../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
-| Week3 Day6 | 回溯 | 78. 子集 | [子集.md](../../leetcode/daily/week3/day6/子集.md) |
-| Week6 Day3 | 设计 / 哈希+双向链表 | 146. LRU 缓存 | [LRU缓存.md](../../leetcode/daily/week6/day3/LRU缓存.md) |
-| Week6 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
-| Week6 Day5 | 图 / DFS 连通分量 | 200. 岛屿数量 | [岛屿数量.md](../../leetcode/daily/week6/day5/岛屿数量.md) |
-| Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [买卖股票的最佳时机.md](../../leetcode/daily/week6/day6/买卖股票的最佳时机.md) |
-| Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [最小覆盖子串.md](../../leetcode/daily/week6/day7/最小覆盖子串.md) |
-| Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](../../leetcode/daily/week7/day1/最长连续序列.md) |
-| Week7 Day2 | 树 / 递归 | 101. 对称二叉树 | [对称二叉树.md](../../leetcode/daily/week7/day2/对称二叉树.md) |
-| Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](../../leetcode/daily/week7/day3/单词拆分.md) |
-| Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](../../leetcode/daily/week7/day4/实现Trie.md) |
-| Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](../../leetcode/daily/week7/day5/合并K个升序链表.md) |
-| Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](../../leetcode/daily/week7/day6/数据流的中位数.md) |
-| Week7 Day7 | 回溯 | 51. N 皇后 | [N 皇后.md](../../leetcode/daily/week7/day7/N 皇后.md) |
-| Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](../../leetcode/daily/week8/day1/合并区间.md) |
-| Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](../../leetcode/daily/week8/day2/腐烂的橘子.md) |
-| Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](../../leetcode/daily/week8/day3/零钱兑换.md) |
-| Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](../../leetcode/daily/week6/day4/课程表.md) |
-| Week8 Day4 | 动态规划 / 二维 DP | 72. 编辑距离 | [编辑距离.md](../../leetcode/daily/week8/day4/编辑距离.md) |
-| Week8 Day5 | 困难 / 栈 + DP | 32. 最长有效括号 | [最长有效括号.md](../../leetcode/daily/week8/day5/最长有效括号.md) |
-| Week8 Day6 | 动态规划 / 二分 | 300. 最长递增子序列 | [最长递增子序列.md](../../leetcode/daily/week8/day6/最长递增子序列.md) |
-| Week8 Day7 | 链表 / 归并排序 | 148. 排序链表 | [排序链表.md](../../leetcode/daily/week8/day7/排序链表.md) |
+| Week1 Day1 | 数组 / 双指针 | 42. 接雨水 | [接雨水.md](https://hzchenxiaobin.github.io/leetcode/problems/接雨水.html) |
+| Week1 Day2 | 动态规划 | 53. 最大子数组和 | [最大子数组和.md](https://hzchenxiaobin.github.io/leetcode/problems/最大子数组和.html) |
+| Week1 Day3 | 字符串 / 滑窗 | 3. 无重复字符的最长子串 | [无重复字符的最长子串.md](https://hzchenxiaobin.github.io/leetcode/problems/无重复字符的最长子串.html) |
+| Week1 Day4 | 链表 | 206. 反转链表 | [反转链表.md](https://hzchenxiaobin.github.io/leetcode/problems/反转链表.html) |
+| Week1 Day5 | 树 / DFS | 236. 二叉树的最近公共祖先 | [二叉树的最近公共祖先.md](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的最近公共祖先.html) |
+| Week1 Day6 | 回溯 | 46. 全排列 | [全排列.md](https://hzchenxiaobin.github.io/leetcode/problems/全排列.html) |
+| Week1 Day7 | 栈 / 困难 | 84. 柱状图中最大的矩形 | [柱状图中最大的矩形.md](https://hzchenxiaobin.github.io/leetcode/problems/柱状图中最大的矩形.html) |
+| Week2 Day1 | 哈希表 | 1. 两数之和 | [两数之和.md](https://hzchenxiaobin.github.io/leetcode/problems/两数之和.html) |
+| Week2 Day2 | 动态规划 | 70. 爬楼梯 | [爬楼梯.md](https://hzchenxiaobin.github.io/leetcode/problems/爬楼梯.html) |
+| Week2 Day3 | 双指针 | 15. 三数之和 | [三数之和.md](https://hzchenxiaobin.github.io/leetcode/problems/三数之和.html) |
+| Week2 Day4 | 链表 | 21. 合并两个有序链表 | [合并两个有序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/合并两个有序链表.html) |
+| Week2 Day5 | 树 / BFS | 102. 二叉树的层序遍历 | [二叉树的层序遍历.md](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的层序遍历.html) |
+| Week2 Day6 | 单调栈 | 739. 每日温度 | [每日温度.md](https://hzchenxiaobin.github.io/leetcode/problems/每日温度.html) |
+| Week2 Day7 | 单调队列 | 239. 滑动窗口最大值 | [滑动窗口最大值.md](https://hzchenxiaobin.github.io/leetcode/problems/滑动窗口最大值.html) |
+| Week3 Day1 | 双指针 | 11. 盛最多水的容器 | [盛最多水的容器.md](https://hzchenxiaobin.github.io/leetcode/problems/盛最多水的容器.html) |
+| Week3 Day2 | 动态规划 | 198. 打家劫舍 | [打家劫舍.md](https://hzchenxiaobin.github.io/leetcode/problems/打家劫舍.html) |
+| Week3 Day3 | 字符串 | 5. 最长回文子串 | [最长回文子串.md](https://hzchenxiaobin.github.io/leetcode/problems/最长回文子串.html) |
+| Week3 Day4 | 链表 | 141. 环形链表 | [环形链表.md](https://hzchenxiaobin.github.io/leetcode/problems/环形链表.html) |
+| Week3 Day5 | 树 | 98. 验证二叉搜索树 | [验证二叉搜索树.md](https://hzchenxiaobin.github.io/leetcode/problems/验证二叉搜索树.html) |
+| Week3 Day6 | 回溯 | 78. 子集 | [子集.md](https://hzchenxiaobin.github.io/leetcode/problems/子集.html) |
+| Week6 Day3 | 设计 / 哈希+双向链表 | 146. LRU 缓存 | [LRU缓存.md](https://hzchenxiaobin.github.io/leetcode/problems/LRU缓存.html) |
+| Week6 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](https://hzchenxiaobin.github.io/leetcode/problems/课程表.html) |
+| Week6 Day5 | 图 / DFS 连通分量 | 200. 岛屿数量 | [岛屿数量.md](https://hzchenxiaobin.github.io/leetcode/problems/岛屿数量.html) |
+| Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [买卖股票的最佳时机.md](https://hzchenxiaobin.github.io/leetcode/problems/买卖股票的最佳时机.html) |
+| Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [最小覆盖子串.md](https://hzchenxiaobin.github.io/leetcode/problems/最小覆盖子串.html) |
+| Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](https://hzchenxiaobin.github.io/leetcode/problems/最长连续序列.html) |
+| Week7 Day2 | 树 / 递归 | 101. 对称二叉树 | [对称二叉树.md](https://hzchenxiaobin.github.io/leetcode/problems/对称二叉树.html) |
+| Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](https://hzchenxiaobin.github.io/leetcode/problems/单词拆分.html) |
+| Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](https://hzchenxiaobin.github.io/leetcode/problems/实现Trie.html) |
+| Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/合并K个升序链表.html) |
+| Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](https://hzchenxiaobin.github.io/leetcode/problems/数据流的中位数.html) |
+| Week7 Day7 | 回溯 | 51. N 皇后 | [N 皇后.md](https://hzchenxiaobin.github.io/leetcode/problems/N 皇后.html) |
+| Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](https://hzchenxiaobin.github.io/leetcode/problems/合并区间.html) |
+| Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](https://hzchenxiaobin.github.io/leetcode/problems/腐烂的橘子.html) |
+| Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](https://hzchenxiaobin.github.io/leetcode/problems/零钱兑换.html) |
+| Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](https://hzchenxiaobin.github.io/leetcode/problems/课程表.html) |
+| Week8 Day4 | 动态规划 / 二维 DP | 72. 编辑距离 | [编辑距离.md](https://hzchenxiaobin.github.io/leetcode/problems/编辑距离.html) |
+| Week8 Day5 | 困难 / 栈 + DP | 32. 最长有效括号 | [最长有效括号.md](https://hzchenxiaobin.github.io/leetcode/problems/最长有效括号.html) |
+| Week8 Day6 | 动态规划 / 二分 | 300. 最长递增子序列 | [最长递增子序列.md](https://hzchenxiaobin.github.io/leetcode/problems/最长递增子序列.html) |
+| Week8 Day7 | 链表 / 归并排序 | 148. 排序链表 | [排序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/排序链表.html) |
 
-> 💡 新增 Day 若上表无对应题解,按 [`leetcode/daily/SKILL.md`](../../leetcode/daily/SKILL.md) 在 `leetcode/daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
+> 💡 新增 Day 若上表无对应题解,在 [独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/) 的 `daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 
 ### 3.6 `### 扩展实验`(教学日必有)
 - **3 个** `#### 实验 N:<描述>`,递进或对比
@@ -338,7 +338,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 
 **验证命令**:
 ```bash
-python3 build.py                   # 组合构建(含 week1~week8/leetcode/leetgpu/topics/paper)
+python3 build.py                   # 组合构建(含 week1~week8/leetgpu/topics/paper)
 ```
 
 **提交与推送**:
@@ -357,7 +357,7 @@ git push origin
 - [ ] `### 理论学习` 用 `#### N.x` 分节,配 SVG
 - [ ] `### Coding 任务` 含 5 个任务(含 1 道 LeetGPU 在线题目 + 1 道 LeetCode 面试题),代码完整可编译,带 nvcc 命令 + 预期输出
 - [ ] LeetGPU 题目与当日主题强相关,题解归档到 `leetgpu/leetgpu-<slug>-solution.md`
-- [ ] LeetCode 题目为面试高频题,题解归档到 `leetcode/daily/weekN/dayM/<题目名>.md`
+- [ ] LeetCode 题目为面试高频题,题解归档到[独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/)的 `daily/weekN/dayM/<题目名>.md`
 - [ ] `### 扩展实验` 3 个
 - [ ] `### 今日总结` 5-7 条加粗编号
 - [ ] `### 面试要点` 5 题问答

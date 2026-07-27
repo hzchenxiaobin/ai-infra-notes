@@ -314,7 +314,7 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的序列化与反序列化
 
-**题目链接**：[297. 二叉树的序列化与反序列化](https://leetcode.cn/problems/serialize-and-deserialize-binary-tree/)
+**题目链接**：[297. 二叉树的序列化与反序列化](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的序列化与反序列化.html)
 
 **题目概述**：
 
@@ -333,7 +333,7 @@ deserialize：全局指针按序消费
  build(): token=next(); if token=="#" return null; 建节点; left=build(); right=build()
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 Dynamic Batching 打包/分发模式的类比）见 [二叉树的序列化与反序列化题解](../../../../leetcode/daily/week6/day1/二叉树的序列化与反序列化.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 Dynamic Batching 打包/分发模式的类比）见 [二叉树的序列化与反序列化题解](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的序列化与反序列化.html)。
 
 ---
 

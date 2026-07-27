@@ -337,7 +337,7 @@ Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——
 
 #### 任务 5：LeetCode 面试题 —— 复制带随机指针的链表
 
-**题目链接**：[138. 复制带随机指针的链表](https://leetcode.cn/problems/copy-list-with-random-pointer/)
+**题目链接**：[138. 复制带随机指针的链表](https://hzchenxiaobin.github.io/leetcode/problems/复制带随机指针的链表.html)
 
 **题目概述**：
 
@@ -360,7 +360,7 @@ Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——
  3. 拆分奇偶链表
 ```
 
-> 💡 完整题解（含哈希表法 + O(1) 空间拼接拆分法、C++/Python 参考代码、与 CoW 的模式类比）见 [复制带随机指针的链表题解](../../../../leetcode/daily/week5/day4/复制带随机指针的链表.md)。
+> 💡 完整题解（含哈希表法 + O(1) 空间拼接拆分法、C++/Python 参考代码、与 CoW 的模式类比）见 [复制带随机指针的链表题解](https://hzchenxiaobin.github.io/leetcode/problems/复制带随机指针的链表.html)。
 
 ---
 

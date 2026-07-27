@@ -273,7 +273,7 @@ for seq_len in [1, 128, 1024]:
 
 #### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
 
-**题目链接**：[25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/)
+**题目链接**：[25. K 个一组翻转链表](https://hzchenxiaobin.github.io/leetcode/problems/K个一组翻转链表.html)
 
 **题目概述**：每 k 个节点一组翻转链表，不足 k 保持原序。dummy 节点 + 分组翻转 + 串接，O(n) 时间 O(1) 空间。
 
@@ -281,7 +281,7 @@ for seq_len in [1, 128, 1024]:
 
 **核心套路**：`dummy` + 外层按组 + 内层翻转（`prev` 初始化为 `nextGroup` 让翻转后尾自动接下一组）。
 
-> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](../../../../leetcode/daily/week5/day7/K个一组翻转链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](https://hzchenxiaobin.github.io/leetcode/problems/K个一组翻转链表.html)。
 
 ---
 
@@ -421,7 +421,7 @@ aiinfra/week5/
 ├── day7/kernels/week5_summary.py # 总结日自测脚本
 └── images/ # 22 张 SVG
 aiinfra/topics/cuda/ # LeetGPU 题解（已迁移至 topics/cuda）
-leetcode/daily/week5/day1-7/ # 7 道 LeetCode 题解
+https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
 ```
 
 ## 🔗 推荐资源

@@ -288,7 +288,7 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 
 #### 任务 5：LeetCode 面试题 —— 最长连续序列
 
-**题目链接**：[128. 最长连续序列](https://leetcode.cn/problems/longest-consecutive-sequence/)
+**题目链接**：[128. 最长连续序列](https://hzchenxiaobin.github.io/leetcode/problems/最长连续序列.html)
 
 **题目概述**：给定未排序整数数组 `nums`，找出最长连续序列的长度（要求 `O(n)` 时间）。
 
@@ -303,7 +303,7 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 O(n)：每个数最多被查 2 次（起点枚举 + 被后续查到）
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、哈希集合图解、与引擎 request_id 索引的类比）见 [最长连续序列题解](../../../../leetcode/daily/week7/day1/最长连续序列.md)。
+> 💡 完整题解（含 C++/Python 参考代码、哈希集合图解、与引擎 request_id 索引的类比）见 [最长连续序列题解](https://hzchenxiaobin.github.io/leetcode/problems/最长连续序列.html)。
 
 ---
 

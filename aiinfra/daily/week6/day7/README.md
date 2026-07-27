@@ -132,13 +132,13 @@ python kernels/week6_summary.py
 
 #### 任务 3：LeetCode 面试题 —— 最小覆盖子串
 
-**题目链接**：[76. 最小覆盖子串](https://leetcode.cn/problems/minimum-window-substring/)
+**题目链接**：[76. 最小覆盖子串](https://hzchenxiaobin.github.io/leetcode/problems/最小覆盖子串.html)
 
 **题目概述**：给你字符串 `s` 和 `t`，找 `s` 中涵盖 `t` 所有字符的最小子串。
 
 **与本周总结的关联**：最小覆盖子串的**滑动窗口**与本周 Scheduler 的 token budget 窗口控制同构——Scheduler 每轮维护一个"活动窗口"（running 序列），窗口大小（batch）动态变化，窗口内元素满足约束（token budget + 显存）。滑动窗口的"扩张-收缩"对应 Scheduler 的"补入 waiting - 退出 finished"，都是**动态窗口 + 约束满足**问题。
 
-> 💡 完整题解（含 C++/Python 参考代码、滑动窗口图解、与 Scheduler 窗口控制的类比）见 [最小覆盖子串题解](../../../../leetcode/daily/week6/day7/最小覆盖子串.md)。
+> 💡 完整题解（含 C++/Python 参考代码、滑动窗口图解、与 Scheduler 窗口控制的类比）见 [最小覆盖子串题解](https://hzchenxiaobin.github.io/leetcode/problems/最小覆盖子串.html)。
 
 ---
 
@@ -327,7 +327,7 @@ aiinfra/week6/
 ├── day7/kernels/week6_summary.py # 总结日自测脚本
 └── images/ # 18 张 SVG
 aiinfra/topics/cuda/ # LeetGPU 题解（已迁移至 topics/cuda）
-leetcode/daily/week6/day1-7/ # 7 道 LeetCode 题解
+https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
 ```
 
 ## 🔗 推荐资源

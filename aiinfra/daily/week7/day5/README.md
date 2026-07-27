@@ -255,7 +255,7 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 #### 任务 5：LeetCode 面试题 —— 合并 K 个升序链表
 
-**题目链接**：[23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)
+**题目链接**：[23. 合并 K 个升序链表](https://hzchenxiaobin.github.io/leetcode/problems/合并K个升序链表.html)
 
 **题目概述**：给定 `k` 个升序链表，合并为一个升序链表。
 
@@ -269,7 +269,7 @@ engine = MiniEngine(forward_time=0.1, ...)
 O(N log K)：N=总节点数，K=链表数
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、堆归并图解、与 Scheduler 优先级调度的类比）见 [合并K个升序链表题解](../../../../leetcode/daily/week7/day5/合并K个升序链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、堆归并图解、与 Scheduler 优先级调度的类比）见 [合并K个升序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/合并K个升序链表.html)。
 
 ---
 

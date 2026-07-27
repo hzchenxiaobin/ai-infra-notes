@@ -178,12 +178,12 @@ CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再
 
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
-| Day 1 | [Causal Self-Attention](../../../../aiinfra/topics/cuda/medium/attention/causal-self-attention.md) | [152. 乘积最大子数组](../../../../leetcode/daily/week4/day1/乘积最大子数组.md) |
-| Day 2 | [Multi-Head Attention](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md) | [416. 分割等和子集](../../../../leetcode/daily/week4/day2/分割等和子集.md) |
-| Day 3 | [Reduction](../../../../aiinfra/topics/cuda/high/reduction/reduction.md) | [131. 分割回文串](../../../../leetcode/daily/week4/day3/分割回文串.md) |
-| Day 4 | [Batched Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/batched-matrix-multiplication.md) | [226. 翻转二叉树](../../../../leetcode/daily/week4/day4/翻转二叉树.md) |
-| Day 5 | [Matrix Transpose](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md) | [19. 删除链表的倒数第N个节点](../../../../leetcode/daily/week4/day5/删除链表的倒数第N个节点.md) |
-| Day 6 | [Multi-Head Attention](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md) | [2. 两数相加](../../../../leetcode/daily/week4/day6/两数相加.md) |
+| Day 1 | [Causal Self-Attention](../../../../aiinfra/topics/cuda/medium/attention/causal-self-attention.md) | [152. 乘积最大子数组](https://hzchenxiaobin.github.io/leetcode/problems/乘积最大子数组.html) |
+| Day 2 | [Multi-Head Attention](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md) | [416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/分割等和子集.html) |
+| Day 3 | [Reduction](../../../../aiinfra/topics/cuda/high/reduction/reduction.md) | [131. 分割回文串](https://hzchenxiaobin.github.io/leetcode/problems/分割回文串.html) |
+| Day 4 | [Batched Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/batched-matrix-multiplication.md) | [226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/翻转二叉树.html) |
+| Day 5 | [Matrix Transpose](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md) | [19. 删除链表的倒数第N个节点](https://hzchenxiaobin.github.io/leetcode/problems/删除链表的倒数第N个节点.html) |
+| Day 6 | [Multi-Head Attention](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md) | [2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/两数相加.html) |
 | Day 7 | [GPT-2 Transformer Block](../../../../aiinfra/topics/cuda/high/reduction/gpt-2-transformer-block.md) | — |
 
 > 💡 回顾重点：Causal Self-Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/背包/回溯/树/双指针/链表六大标签。把没做完的题目今天补上。

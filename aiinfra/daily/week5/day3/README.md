@@ -456,7 +456,7 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 
 #### 任务 5：LeetCode 面试题 —— 任务调度器
 
-**题目链接**：[621. 任务调度器](https://leetcode.cn/problems/task-schedule/)
+**题目链接**：[621. 任务调度器](https://hzchenxiaobin.github.io/leetcode/problems/任务调度器.html)
 
 **题目概述**：
 
@@ -474,7 +474,7 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 取 max(上式, len(tasks)) # 任务总数可能超过框架
 ```
 
-> 💡 完整题解（含贪心公式推导、C++/Python 参考代码、模拟画图、与 Continuous Batching 的模式类比）见 [任务调度器题解](../../../../leetcode/daily/week5/day3/任务调度器.md)。
+> 💡 完整题解（含贪心公式推导、C++/Python 参考代码、模拟画图、与 Continuous Batching 的模式类比）见 [任务调度器题解](https://hzchenxiaobin.github.io/leetcode/problems/任务调度器.html)。
 
 ---
 

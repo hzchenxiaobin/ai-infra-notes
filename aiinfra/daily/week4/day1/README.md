@@ -383,7 +383,7 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 #### 任务 5：LeetCode 面试题 —— 乘积最大子数组
 
-**题目链接**：[152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/)
+**题目链接**：[152. 乘积最大子数组](https://hzchenxiaobin.github.io/leetcode/problems/乘积最大子数组.html)
 
 **题目概述**：
 
@@ -404,7 +404,7 @@ for cur in nums[1:]:
  ans = max(ans, maxP)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [乘积最大子数组题解](../../../../leetcode/daily/week4/day1/乘积最大子数组.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [乘积最大子数组题解](https://hzchenxiaobin.github.io/leetcode/problems/乘积最大子数组.html)。
 
 ---
 

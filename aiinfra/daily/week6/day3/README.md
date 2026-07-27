@@ -473,7 +473,7 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 #### 任务 5：LeetCode 面试题 —— LRU 缓存
 
-**题目链接**：[146. LRU 缓存](https://leetcode.cn/problems/lru-cache/)
+**题目链接**：[146. LRU 缓存](https://hzchenxiaobin.github.io/leetcode/problems/LRU缓存.html)
 
 **题目概述**：
 
@@ -491,7 +491,7 @@ LRU 的**哈希表 + 双向链表**淘汰机制与 vLLM Scheduler 的 KV Cache b
 get/put 命中 → 移到链表头；容量满 put → 删除链表尾节点 + 哈希表项
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、哈希+双向链表图解、与 vLLM BlockSpaceManager 空闲池回收的类比）见 [LRU 缓存题解](../../../../leetcode/daily/week6/day3/LRU缓存.md)。
+> 💡 完整题解（含 C++/Python 参考代码、哈希+双向链表图解、与 vLLM BlockSpaceManager 空闲池回收的类比）见 [LRU 缓存题解](https://hzchenxiaobin.github.io/leetcode/problems/LRU缓存.html)。
 
 ---
 

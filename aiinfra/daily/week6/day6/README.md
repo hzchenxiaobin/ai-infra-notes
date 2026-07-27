@@ -315,7 +315,7 @@ Throughput-Latency 曲线
 
 #### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
 
-**题目链接**：[121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+**题目链接**：[121. 买卖股票的最佳时机](https://hzchenxiaobin.github.io/leetcode/problems/买卖股票的最佳时机.html)
 
 **题目概述**：
 
@@ -334,7 +334,7 @@ Throughput-Latency 曲线
  更新 min_price = min(min_price, 当前价)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、一次遍历图解、与 benchmark 找饱和拐点的类比）见 [买卖股票的最佳时机题解](../../../../leetcode/daily/week6/day6/买卖股票的最佳时机.md)。
+> 💡 完整题解（含 C++/Python 参考代码、一次遍历图解、与 benchmark 找饱和拐点的类比）见 [买卖股票的最佳时机题解](https://hzchenxiaobin.github.io/leetcode/problems/买卖股票的最佳时机.html)。
 
 ---
 

@@ -302,7 +302,7 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 
 #### 任务 5：LeetCode 面试题 —— 最长递增子序列
 
-**题目链接**：[300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/)
+**题目链接**：[300. 最长递增子序列](https://hzchenxiaobin.github.io/leetcode/problems/最长递增子序列.html)
 
 **题目概述**：
 
@@ -323,7 +323,7 @@ LIS 是动态规划的经典题，也是"查漏补缺"的最佳载体——它�
  答案 = len(tails)
 ```
 
-> 💡 完整题解（含 DP 与贪心+二分两种解法、复杂度对比、还原子序列、面试要点）见 [最长递增子序列题解](../../../../leetcode/daily/week8/day6/最长递增子序列.md)。
+> 💡 完整题解（含 DP 与贪心+二分两种解法、复杂度对比、还原子序列、面试要点）见 [最长递增子序列题解](https://hzchenxiaobin.github.io/leetcode/problems/最长递增子序列.html)。
 
 ---
 

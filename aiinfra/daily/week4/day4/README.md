@@ -280,7 +280,7 @@ __global__ void batched_gemm_kernel(const float* A, const float* B, float* C, in
 
 #### 任务 5：LeetCode 面试题 —— 翻转二叉树
 
-**题目链接**：[226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/)
+**题目链接**：[226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/翻转二叉树.html)
 
 **题目概述**：
 
@@ -300,7 +300,7 @@ invert(root):
  return root
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [翻转二叉树题解](../../../../leetcode/daily/week4/day4/翻转二叉树.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [翻转二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/翻转二叉树.html)。
 
 ---
 

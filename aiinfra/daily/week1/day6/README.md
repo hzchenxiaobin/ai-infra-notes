@@ -391,7 +391,7 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 
 #### 任务 6：LeetCode 面试题 —— 全排列
 
-**题目链接**：[46. 全排列](https://leetcode.cn/problems/permutations/)
+**题目链接**：[46. 全排列](https://hzchenxiaobin.github.io/leetcode/problems/全排列.html)
 
 **题目概述**：
 
@@ -410,7 +410,7 @@ backtrack(path, used):
  if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](../../../../leetcode/daily/week1/day6/全排列.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](https://hzchenxiaobin.github.io/leetcode/problems/全排列.html)。
 
 ---
 

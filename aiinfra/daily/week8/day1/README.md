@@ -332,7 +332,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 #### 任务 5：LeetCode 面试题 —— 合并区间
 
-**题目链接**：[56. 合并区间](https://leetcode.cn/problems/merge-intervals/)
+**题目链接**：[56. 合并区间](https://hzchenxiaobin.github.io/leetcode/problems/合并区间.html)
 
 **题目概述**：给定若干区间的集合 `intervals`，合并所有重叠的区间，返回不重叠的区间数组。
 
@@ -347,7 +347,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 O(n log n)：排序主导；扫描 O(n)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、排序+扫描图解、与项目文档整合的类比）见 [合并区间题解](../../../../leetcode/daily/week8/day1/合并区间.md)。
+> 💡 完整题解（含 C++/Python 参考代码、排序+扫描图解、与项目文档整合的类比）见 [合并区间题解](https://hzchenxiaobin.github.io/leetcode/problems/合并区间.html)。
 
 ---
 

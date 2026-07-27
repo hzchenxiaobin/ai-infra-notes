@@ -214,7 +214,7 @@ python kernels/mock_interview.py
 
 #### 任务 5：LeetCode 面试题 —— 最长有效括号
 
-**题目链接**：[32. 最长有效括号](https://leetcode.cn/problems/longest-valid-parentheses/)
+**题目链接**：[32. 最长有效括号](https://hzchenxiaobin.github.io/leetcode/problems/最长有效括号.html)
 
 **题目概述**：给定只包含 `(` 和 `)` 的字符串，找出最长的有效（正确闭合）括号子串的长度。
 
@@ -239,7 +239,7 @@ def longestValidParentheses(s):
     return max_len
 ```
 
-> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](../../../../leetcode/daily/week8/day5/最长有效括号.md)。
+> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](https://hzchenxiaobin.github.io/leetcode/problems/最长有效括号.html)。
 
 ---
 

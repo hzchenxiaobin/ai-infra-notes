@@ -290,7 +290,7 @@ python kernels/custom_ops_module.py
 
 #### 任务 5：LeetCode 面试题 —— 实现 Trie（前缀树）
 
-**题目链接**：[208. 实现 Trie (前缀树)](https://leetcode.cn/problems/implement-trie-prefix-tree/)
+**题目链接**：[208. 实现 Trie (前缀树)](https://hzchenxiaobin.github.io/leetcode/problems/实现Trie.html)
 
 **题目概述**：实现一个 Trie（前缀树），支持 `insert`、`search`、`startsWith` 操作。
 
@@ -305,7 +305,7 @@ search: 逐字符走子节点，返回 is_end
 startsWith: 逐字符走子节点，能走完就返回 True
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、Trie 结构图解、与 Module 树的类比）见 [实现 Trie 题解](../../../../leetcode/daily/week7/day4/实现Trie.md)。
+> 💡 完整题解（含 C++/Python 参考代码、Trie 结构图解、与 Module 树的类比）见 [实现 Trie 题解](https://hzchenxiaobin.github.io/leetcode/problems/实现Trie.html)。
 
 ---
 

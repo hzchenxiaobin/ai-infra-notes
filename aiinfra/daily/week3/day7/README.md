@@ -226,12 +226,12 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
-| Day 1 | [Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md) | [11. 盛最多水的容器](../../../../leetcode/daily/week3/day1/盛最多水的容器.md) |
-| Day 2 | [Group Normalization](../../../../aiinfra/topics/cuda/high/reduction/group-normalization.md) | [198. 打家劫舍](../../../../leetcode/daily/week3/day2/打家劫舍.md) |
-| Day 3 | [Reduction](../../../../aiinfra/topics/cuda/high/reduction/reduction.md) | [5. 最长回文子串](../../../../leetcode/daily/week3/day3/最长回文子串.md) |
-| Day 4 | [Softmax Attention](../../../../aiinfra/topics/cuda/medium/attention/softmax-attention.md) | [141. 环形链表](../../../../leetcode/daily/week3/day4/环形链表.md) |
-| Day 5 | [Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md) | [98. 验证二叉搜索树](../../../../leetcode/daily/week3/day5/验证二叉搜索树.md) |
-| Day 6 | [RMS Normalization](../../../../aiinfra/topics/cuda/high/reduction/rms-normalization.md) | [78. 子集](../../../../leetcode/daily/week3/day6/子集.md) |
+| Day 1 | [Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md) | [11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/盛最多水的容器.html) |
+| Day 2 | [Group Normalization](../../../../aiinfra/topics/cuda/high/reduction/group-normalization.md) | [198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/打家劫舍.html) |
+| Day 3 | [Reduction](../../../../aiinfra/topics/cuda/high/reduction/reduction.md) | [5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/最长回文子串.html) |
+| Day 4 | [Softmax Attention](../../../../aiinfra/topics/cuda/medium/attention/softmax-attention.md) | [141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/环形链表.html) |
+| Day 5 | [Matrix Multiplication](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md) | [98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/验证二叉搜索树.html) |
+| Day 6 | [RMS Normalization](../../../../aiinfra/topics/cuda/high/reduction/rms-normalization.md) | [78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/子集.html) |
 | Day 7 | [Softmax Attention](../../../../aiinfra/topics/cuda/medium/attention/softmax-attention.md) | — |
 
 > 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。

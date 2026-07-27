@@ -429,7 +429,7 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 
 #### 任务 5：LeetCode 面试题 —— 爬楼梯
 
-**题目链接**：[70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/)
+**题目链接**：[70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/爬楼梯.html)
 
 **题目概述**：
 
@@ -446,7 +446,7 @@ f(1)=1, f(2)=2
 f(n) = f(n-1) + f(n-2) // 滚动两个变量即可，O(1) 空间
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [爬楼梯题解](../../../../leetcode/daily/week2/day2/爬楼梯.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [爬楼梯题解](https://hzchenxiaobin.github.io/leetcode/problems/爬楼梯.html)。
 
 ---
 

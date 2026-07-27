@@ -578,7 +578,7 @@ __global__ void matrix_transpose(const float* input, float* output, int M, int N
 
 #### 任务 5：LeetCode 面试题 —— 反转链表
 
-**题目链接**：[206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/)
+**题目链接**：[206. 反转链表](https://hzchenxiaobin.github.io/leetcode/problems/反转链表.html)
 
 **题目概述**：
 
@@ -596,7 +596,7 @@ while curr: next=curr.next; curr.next=prev; prev=curr; curr=next
 return prev
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [反转链表题解](../../../../leetcode/daily/week1/day4/反转链表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [反转链表题解](https://hzchenxiaobin.github.io/leetcode/problems/反转链表.html)。
 
 ---
 

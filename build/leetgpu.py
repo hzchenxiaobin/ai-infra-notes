@@ -116,7 +116,7 @@ def _build_nav(current_slug: Optional[str], solutions: List[Dict]) -> str:
 
     lines.append('<div class="nav-section-title">更多</div>')
     lines.append('<a class="nav-link" href="https://hzchenxiaobin.github.io/ai-infra-notes/index.html">📚 AI Infra 学习笔记</a>')
-    lines.append('<a class="nav-link" href="../leetcode/index.html">🧩 LeetCode 题解</a>')
+    lines.append('<a class="nav-link" href="https://hzchenxiaobin.github.io/leetcode/">🧩 LeetCode 题解</a>')
     return "\n".join(lines)
 
 

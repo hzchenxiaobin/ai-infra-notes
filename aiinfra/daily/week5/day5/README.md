@@ -360,7 +360,7 @@ GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单�
 
 #### 任务 5：LeetCode 面试题 —— 从前序与中序遍历序列构造二叉树
 
-**题目链接**：[105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/)
+**题目链接**：[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/从前序与中序遍历序列构造二叉树.html)
 
 **题目概述**：
 
@@ -382,7 +382,7 @@ build(inL, inR):
  root.left = build(inL, mid-1); root.right = build(mid+1, inR)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 KV Cache 复用模式的类比）见 [从前序与中序遍历序列构造二叉树题解](../../../../leetcode/daily/week5/day5/从前序与中序遍历序列构造二叉树.md)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 KV Cache 复用模式的类比）见 [从前序与中序遍历序列构造二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/从前序与中序遍历序列构造二叉树.html)。
 
 ---
 

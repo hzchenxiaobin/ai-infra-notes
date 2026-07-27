@@ -326,7 +326,7 @@ for cs in [4, 8, 16, 24]:
 
 #### 任务 5：LeetCode 面试题 —— 课程表
 
-**题目链接**：[207. 课程表](https://leetcode.cn/problems/course-schedule/)
+**题目链接**：[207. 课程表](https://hzchenxiaobin.github.io/leetcode/problems/课程表.html)
 
 **题目概述**：
 
@@ -344,7 +344,7 @@ for cs in [4, 8, 16, 24]:
  最终访问数 == numCourses → 无环（可完成）；否则有环
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、BFS 拓扑排序图解、与推理 Scheduler 依赖调度的类比）见 [课程表题解](../../../../leetcode/daily/week6/day4/课程表.md)。
+> 💡 完整题解（含 C++/Python 参考代码、BFS 拓扑排序图解、与推理 Scheduler 依赖调度的类比）见 [课程表题解](https://hzchenxiaobin.github.io/leetcode/problems/课程表.html)。
 
 ---
 
