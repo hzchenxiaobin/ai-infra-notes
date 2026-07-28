@@ -378,7 +378,10 @@ Transformer 训练早期梯度尖峰常见，`torch.nn.utils.clip_grad_norm_(mod
 ```
 aiinfra/topics/transformer/
 ├── README.md                          # 本文件（一周学习计划）
+├── day1.md                            # Day 1: 序列建模与注意力直觉
+├── day2.md                            # Day 2: Scaled Dot-Product Attention
 └── kernels/                           # 可运行代码示例
+    ├── attention_intuition.py         # Day 1: embedding 语义 + toy 注意力热力图
     └── attention_from_scratch.py      # Day 2: 手写 attention，与官方实现对齐
 ```
 
