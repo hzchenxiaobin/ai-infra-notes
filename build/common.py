@@ -135,8 +135,8 @@ def rewrite_md_links_to_html_weeks(markdown_text: str, root_prefix: str = "") ->
         if new_url.startswith("../../../../"):
             inner = new_url[len("../../../../"):]
             inner = re.sub(
-                r"^aiinfra/topics/cuda/(.+)\.html$",
-                r"cuda/\1",
+                r"^aiinfra/topics/([a-zA-Z0-9_-]+)/(.+)\.html$",
+                r"\1/\2",
                 inner,
             )
             new_url = root_prefix + inner

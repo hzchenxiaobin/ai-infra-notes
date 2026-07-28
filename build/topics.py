@@ -18,6 +18,8 @@ TOPIC_DISPLAY_NAMES = {
     "cute": "🔷 CuTe",
     "deepgemm": "🔶 DeepGEMM",
     "moe": "🧩 MoE",
+    "interview": "💼 Interview",
+    "transformer": "🤖 Transformer",
 }
 
 
