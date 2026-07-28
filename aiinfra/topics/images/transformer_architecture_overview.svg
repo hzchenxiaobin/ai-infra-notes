@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 660" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="560" height="660" fill="#fdfcf7"/>
+
+  <text x="280" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Decoder-only Transformer 架构</text>
+  <path d="M 120 38 Q 280 46 440 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 输出概率 -->
+  <text x="280" y="66" text-anchor="middle" font-size="12" fill="#666">下一个 token 的概率分布</text>
+
+  <!-- Softmax -->
+  <g filter="url(#sk)">
+    <rect x="200" y="76" width="160" height="34" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="280" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Softmax</text>
+
+  <path d="M 280 146 L 280 116" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- LM Head -->
+  <g filter="url(#sk)">
+    <rect x="180" y="146" width="200" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="280" y="169" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Linear（LM Head）</text>
+
+  <path d="M 280 220 L 280 190" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Final LayerNorm -->
+  <g filter="url(#sk)">
+    <rect x="200" y="220" width="160" height="34" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="280" y="242" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">LayerNorm</text>
+
+  <path d="M 280 292 L 280 262" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Block x N -->
+  <g filter="url(#sk)">
+    <rect x="110" y="292" width="340" height="238" rx="10" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="8 5"/>
+  </g>
+  <text x="280" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">Transformer Block × N</text>
+
+  <!-- Add & Norm 2 -->
+  <g filter="url(#sk)">
+    <rect x="170" y="326" width="220" height="30" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="280" y="346" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Add &amp; Norm（残差）</text>
+
+  <!-- FFN -->
+  <g filter="url(#sk)">
+    <rect x="170" y="372" width="220" height="30" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="280" y="392" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">FFN（升维 4x → 激活 → 降维）</text>
+
+  <!-- Add & Norm 1 -->
+  <g filter="url(#sk)">
+    <rect x="170" y="418" width="220" height="30" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="280" y="438" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">Add &amp; Norm（残差）</text>
+
+  <!-- Masked MHA -->
+  <g filter="url(#sk)">
+    <rect x="170" y="464" width="220" height="30" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="280" y="484" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Masked Multi-Head Attention</text>
+
+  <!-- 块内箭头 -->
+  <path d="M 280 494 L 280 456" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 280 418 L 280 410" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 280 372 L 280 364" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 残差旁路 -->
+  <path d="M 150 510 L 150 433 L 162 433" stroke="#c98a2b" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 410 479 L 420 479 L 420 387 L 398 387" stroke="#c98a2b" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="128" y="470" text-anchor="end" font-size="10" fill="#c98a2b">残差</text>
+
+  <path d="M 280 560 L 280 538" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Embedding -->
+  <g filter="url(#sk)">
+    <rect x="170" y="560" width="220" height="34" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="280" y="582" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">Embedding + 位置编码</text>
+
+  <path d="M 280 620 L 280 602" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="280" y="638" text-anchor="middle" font-size="12" fill="#666">token ids：[15496, 995, 13, ...]</text>
+</svg>
