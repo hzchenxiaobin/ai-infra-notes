@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arR" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="820" height="360" fill="#fdfcf7"/>
+
+  <text x="410" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Pre-Norm vs Post-Norm：残差路径是否经过 LayerNorm</text>
+  <path d="M 220 38 Q 410 46 600 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Post-Norm 行 ===== -->
+  <text x="40" y="100" font-size="12" fill="#b85450" font-weight="bold">Post-Norm</text>
+  <text x="40" y="116" font-size="10" fill="#888">x'=LN(x+Sub(x))</text>
+
+  <!-- x -->
+  <g filter="url(#sk)"><rect x="110" y="86" width="60" height="40" rx="6" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="140" y="111" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">x</text>
+
+  <path d="M 170 106 L 210 106" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- SubLayer -->
+  <g filter="url(#sk)"><rect x="210" y="86" width="90" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="255" y="111" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">SubLayer</text>
+
+  <path d="M 300 106 L 340 106" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- (+x) -->
+  <g filter="url(#sk)"><circle cx="360" cy="106" r="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="360" y="111" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">(+x)</text>
+
+  <path d="M 380 106 L 420 106" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- LN -->
+  <g filter="url(#sk)"><rect x="420" y="86" width="60" height="40" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="450" y="111" text-anchor="middle" font-size="13" fill="#5a3a7a" font-weight="bold">LN</text>
+
+  <path d="M 480 106 L 520 106" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- x' -->
+  <g filter="url(#sk)"><rect x="520" y="86" width="60" height="40" rx="6" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="550" y="111" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">x'</text>
+
+  <!-- 残差弧线：x → (+x)，绕下方 -->
+  <path d="M 140 126 L 140 156 L 360 156 L 360 126" stroke="#b85450" stroke-width="1.8" fill="none" stroke-linejoin="round" marker-end="url(#arR)" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="250" y="172" text-anchor="middle" font-size="10" fill="#b85450" font-style="italic">残差路径</text>
+
+  <!-- 关键标注 -->
+  <g filter="url(#sk)"><rect x="620" y="80" width="185" height="56" rx="8" fill="none" stroke="#b85450" stroke-width="1.4" stroke-dasharray="5 3"/></g>
+  <text x="712" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">残差路径经过 LN</text>
+  <text x="712" y="118" text-anchor="middle" font-size="10" fill="#b85450">梯度被 LN 缩放压缩</text>
+  <text x="712" y="132" text-anchor="middle" font-size="10" fill="#888">深层堆叠 → 梯度消失</text>
+
+  <!-- ===== Pre-Norm 行 ===== -->
+  <text x="40" y="230" font-size="12" fill="#2e6e2e" font-weight="bold">Pre-Norm</text>
+  <text x="40" y="246" font-size="10" fill="#888">x'=x+Sub(LN(x))</text>
+
+  <!-- x -->
+  <g filter="url(#sk)"><rect x="110" y="216" width="60" height="40" rx="6" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="140" y="241" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">x</text>
+
+  <path d="M 170 236 L 210 236" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- LN -->
+  <g filter="url(#sk)"><rect x="210" y="216" width="60" height="40" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="240" y="241" text-anchor="middle" font-size="13" fill="#5a3a7a" font-weight="bold">LN</text>
+
+  <path d="M 270 236 L 310 236" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- SubLayer -->
+  <g filter="url(#sk)"><rect x="310" y="216" width="90" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="355" y="241" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">SubLayer</text>
+
+  <path d="M 400 236 L 440 236" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- (+x) -->
+  <g filter="url(#sk)"><circle cx="460" cy="236" r="20" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="460" y="241" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">(+x)</text>
+
+  <path d="M 480 236 L 520 236" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- x' -->
+  <g filter="url(#sk)"><rect x="520" y="216" width="60" height="40" rx="6" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.4"/></g>
+  <text x="550" y="241" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">x'</text>
+
+  <!-- 残差弧线：x → (+x)，绕下方，不经过 LN -->
+  <path d="M 140 256 L 140 286 L 460 286 L 460 256" stroke="#2e6e2e" stroke-width="1.8" fill="none" stroke-linejoin="round" marker-end="url(#ar)" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="300" y="302" text-anchor="middle" font-size="10" fill="#2e6e2e" font-style="italic">残差路径（绕过 LN，直通）</text>
+
+  <!-- 关键标注 -->
+  <g filter="url(#sk)"><rect x="620" y="210" width="185" height="56" rx="8" fill="none" stroke="#2e6e2e" stroke-width="1.4" stroke-dasharray="5 3"/></g>
+  <text x="712" y="230" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">残差路径不经过 LN</text>
+  <text x="712" y="248" text-anchor="middle" font-size="10" fill="#2e6e2e">梯度有 I 保底直通</text>
+  <text x="712" y="262" text-anchor="middle" font-size="10" fill="#888">深层堆叠 → 梯度 Highway</text>
+
+  <!-- 底部注释 -->
+  <text x="410" y="340" text-anchor="middle" font-size="10" fill="#888" font-style="italic">关键差异：Post-Norm 的 LN 在残差汇合点之后（梯度必经 LN 压缩）；Pre-Norm 的 LN 只在子层入口（残差旁路绕过 LN）</text>
+</svg>

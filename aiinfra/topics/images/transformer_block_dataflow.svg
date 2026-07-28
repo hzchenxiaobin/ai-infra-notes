@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="55" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arR" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="560" height="560" fill="#fdfcf7"/>
+
+  <text x="280" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#2b2b2b">Pre-Norm Transformer Block 数据流（Decoder-only）</text>
+  <path d="M 140 36 Q 280 44 420 36" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== 输入 x ===== -->
+  <g filter="url(#sk)"><rect x="200" y="50" width="160" height="34" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="4 3"/></g>
+  <text x="280" y="72" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">输入 x: (B, T, d)</text>
+
+  <!-- 主线向下 -->
+  <path d="M 280 84 L 280 104" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== 子层 1 分支 ===== -->
+  <!-- 分支点 -->
+  <circle cx="280" cy="110" r="4" fill="#5a5a5a"/>
+
+  <!-- 左分支：→ LN1 → MHA -->
+  <path d="M 280 110 L 180 110" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="100" y="92" width="80" height="36" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="140" y="115" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">LN1</text>
+
+  <path d="M 100 110 L 100 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <path d="M 100 150 L 180 150" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="180" y="132" width="120" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="240" y="155" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">MHA(causal)</text>
+
+  <!-- MHA 输出向下到 (+) -->
+  <path d="M 240 168 L 240 200 L 280 200" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 右分支：残差直通 -->
+  <path d="M 280 110 L 380 110 L 380 200" stroke="#b85450" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="395" y="150" font-size="10" fill="#b85450" font-style="italic">残差</text>
+  <text x="395" y="164" font-size="10" fill="#b85450" font-style="italic">+x</text>
+
+  <!-- (+) 汇合 -->
+  <g filter="url(#sk)"><circle cx="280" cy="200" r="18" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="280" y="205" text-anchor="middle" font-size="14" fill="#7a5415" font-weight="bold">+</text>
+
+  <!-- (+) → x1 -->
+  <path d="M 298 200 L 360 200" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="360" y="184" width="130" height="32" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="425" y="205" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">x1: (B, T, d)</text>
+
+  <!-- x1 向下继续 -->
+  <path d="M 280 218 L 280 250" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== 子层 2 分支 ===== -->
+  <circle cx="280" cy="256" r="4" fill="#5a5a5a"/>
+
+  <!-- 左分支：→ LN2 → FFN -->
+  <path d="M 280 256 L 180 256" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="100" y="238" width="80" height="36" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="140" y="261" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">LN2</text>
+
+  <path d="M 100 256 L 100 296" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <path d="M 100 296 L 180 296" stroke="#5a5a5a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="180" y="278" width="120" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="240" y="301" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">FFN</text>
+
+  <!-- FFN 输出向下到 (+) -->
+  <path d="M 240 314 L 240 346 L 280 346" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 右分支：残差直通 -->
+  <path d="M 280 256 L 380 256 L 380 346" stroke="#b85450" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-dasharray="6 3" filter="url(#sk)"/>
+  <text x="395" y="296" font-size="10" fill="#b85450" font-style="italic">残差</text>
+  <text x="395" y="310" font-size="10" fill="#b85450" font-style="italic">+x1</text>
+
+  <!-- (+) 汇合 -->
+  <g filter="url(#sk)"><circle cx="280" cy="346" r="18" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="280" y="351" text-anchor="middle" font-size="14" fill="#7a5415" font-weight="bold">+</text>
+
+  <!-- (+) → x2 -->
+  <path d="M 298 346 L 360 346" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="360" y="330" width="130" height="32" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="425" y="351" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">x2: (B, T, d)</text>
+
+  <!-- x2 向下到输出 -->
+  <path d="M 280 364 L 280 394" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 输出 x2 -->
+  <g filter="url(#sk)"><rect x="200" y="396" width="160" height="34" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="4 3"/></g>
+  <text x="280" y="418" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">输出 x2: (B, T, d)</text>
+
+  <!-- ===== 底部注释 ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="450" width="500" height="92" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="474" font-size="11" font-weight="bold" fill="#444">Shape 不变性：(B, T, d) → (B, T, d)，Block 可堆叠 N 次</text>
+  <text x="50" y="494" font-size="10" fill="#444">残差旁路（红色虚线）不经过 LN → 梯度 Highway，深层堆叠仍稳定</text>
+  <text x="50" y="512" font-size="10" fill="#444">LN 只作用于子层入口（LN1→MHA, LN2→FFN），不约束残差输出</text>
+  <text x="50" y="530" font-size="10" fill="#888" font-style="italic">公式：x1 = x + MHA(LN1(x))；x2 = x1 + FFN(LN2(x1))</text>
+</svg>

@@ -135,13 +135,7 @@ $$\text{RMSNorm}(x)_i = \gamma_i \cdot \frac{x_i}{\text{RMS}(x)}$$
 | **Post-Norm** | $x' = \text{LN}(x + \text{SubLayer}(x))$ | 残差 → 加 → LN |
 | **Pre-Norm** | $x' = x + \text{SubLayer}(\text{LN}(x))$ | LN → SubLayer → 加 |
 
-```
-Post-Norm:  x ──→ SubLayer ──→ (+x) ──→ LN ──→ x'
-             └───────────────────↑
-
-Pre-Norm:   x ──→ LN ──→ SubLayer ──→ (+x) ──→ x'
-             └──────────────────────────────↑
-```
+![Pre-Norm vs Post-Norm：残差路径是否经过 LayerNorm](../images/transformer_pre_post_norm_comparison.svg)
 
 #### 梯度路径差异
 
@@ -555,20 +549,7 @@ python3 stack_blocks.py
 
 #### Pre-Norm Block 数据流（Decoder-only）
 
-```
-输入 x: (B, T, d)
-  │
-  ├──→ LN1 ──→ MHA(causal) ──┐
-  │                           ↓
-  └───────────────────────── (+) ──→ x1: (B, T, d)
-                                    │
-                                    ├──→ LN2 ──→ FFN ──┐
-                                    │                   ↓
-                                    └───────────────── (+) ──→ x2: (B, T, d)
-                                                                  │
-                                                                  ↓
-                                                              输出 x2: (B, T, d)
-```
+![Pre-Norm Transformer Block 数据流（Decoder-only）](../images/transformer_block_dataflow.svg)
 
 #### Shape 不变性
 

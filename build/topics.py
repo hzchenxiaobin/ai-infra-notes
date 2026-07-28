@@ -54,9 +54,21 @@ def _rewrite_local_paths(markdown_text: str) -> str:
         r"](../paper/\1/index.html)",
         markdown_text,
     )
+    def daily_repl(match):
+        rel = match.group(1)
+        day_match = re.fullmatch(r"(week\d+)/day(\d+)", rel)
+        if day_match:
+            return f"](../{day_match.group(1)}/day{day_match.group(2)}.html)"
+        return f"](../{rel}/index.html)"
+
     markdown_text = re.sub(
         r"\]\(\.\./\.\./daily/([^)]+)/README\.md\)",
-        r"](../daily/\1.html)",
+        daily_repl,
+        markdown_text,
+    )
+    markdown_text = re.sub(
+        r"\]\((day\d+)\.md\)",
+        r"](\1.html)",
         markdown_text,
     )
     return markdown_text
