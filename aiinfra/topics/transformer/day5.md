@@ -1,9 +1,13 @@
 # Day 5（周五）：Transformer Block 组装
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 2-4 把"零件"都造好了（Self-Attention、Multi-Head、位置编码），Day 5 开始"组装"——把 MHA + FFN + LayerNorm + 残差连接拼成一个可堆叠的 Transformer Block，理解每个组件的作用与 Pre-Norm / Post-Norm 的差异。
+>
 > **前置要求**：已完成 [Day 2](day2.md)（Self-Attention）、[Day 3](day3.md)（Multi-Head）、[Day 4](day4.md)（位置编码）；理解梯度反传与反向传播的基本原理
+>
 > **今日目标**：理解残差连接为什么能缓解梯度消失（梯度 Highway 直觉），掌握 LayerNorm 的公式与 Pre-Norm / Post-Norm 的梯度路径差异，理解 FFN 的结构（两层线性 + 激活，中间维度 $4d$）与三种激活函数（ReLU / GELU / SwiGLU），能用 PyTorch 组装一个完整的 Pre-Norm Transformer Block 并验证前向/反向传播
+>
 > **时间投入**：2.5h（早间 1.5h 精读组件原理 + 晚间 1h 跑代码组装与验证）
+>
 > **面试考察度**：⭐⭐⭐⭐⭐ 核心考点，"Pre-Norm vs Post-Norm"、"为什么用残差"、"FFN 中间维度为什么 4d"都是高频题
 
 ---

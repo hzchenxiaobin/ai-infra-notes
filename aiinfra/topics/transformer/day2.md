@@ -1,9 +1,13 @@
 # Day 2（周二）：Self-Attention 数学推导与实现
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 1 搞清了"为什么需要 Attention"，Day 2 解决"Self-Attention 到底怎么算"——把 Bahdanau 的三步（对齐打分 → 归一化 → 加权求和）推广为 QKV 矩阵乘法，逐 shape 推演每一步的计算，并用 PyTorch 从零实现。
+>
 > **前置要求**：已完成 [Day 1](day1.md)（理解 RNN 缺陷、Bahdanau Attention 三步、从 Bahdanau 到 Self-Attention 的对应关系）；掌握矩阵乘法与 softmax 的基本性质
+>
 > **今日目标**：理解 Q/K/V 三个矩阵的物理含义与生成方式，掌握 $\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V$ 的四步计算（打分 → 缩放 → 归一化 → 加权求和），能逐 shape 推演每一步的维度变化，掌握缩放因子 $\sqrt{d_k}$ 的方差推导，理解 Cross-Attention 与 Self-Attention 的区别，动手实现一个完整的单头 Self-Attention 并与 PyTorch 内置 `nn.MultiheadAttention` 对齐验证
+>
 > **时间投入**：2.5h（早间 1.5h 精读数学推导 + 晚间 1h 跑代码实现与验证）
+>
 > **面试考察度**：⭐⭐⭐⭐⭐ 核心考点，"手写 Self-Attention 公式 + 解释 $\sqrt{d_k}$"几乎必考
 
 ---

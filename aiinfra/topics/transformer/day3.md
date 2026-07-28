@@ -1,9 +1,13 @@
 # Day 3（周三）：Multi-Head Attention
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 2 把单头 Self-Attention 的四步计算吃透了，Day 3 解决"为什么要多头、怎么拆 head"——把 $d$ 维空间切成 $h$ 个子空间并行做 Attention，理解 shape 操作的精髓，掌握参数量/计算量不变的证明，并动手实现 + 可视化多头注意力。
+>
 > **前置要求**：已完成 [Day 2](day2.md)（理解 QKV 生成、$\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V$ 四步、逐 shape 推演、缩放因子推导、`self_attention.py` 实现）
+>
 > **今日目标**：理解 Multi-Head 的动机（子空间并行关注不同模式），掌握 head 拆分与拼接的 shape 操作（`view` + `transpose` + `contiguous`），证明多头与单头的参数量和 FLOPs 相同，理解缩放因子用 $d/h$ 而非 $d$ 的原因，动手实现 `MultiHeadAttention` 类并可视化不同 head 的注意力模式
+>
 > **时间投入**：2.5h（早间 1.5h 精读 shape 操作 + 晚间 1h 跑代码与可视化）
+>
 > **面试考察度**：⭐⭐⭐⭐⭐ 核心考点，"Multi-Head 怎么拆、为什么计算量不变"是高频题
 
 ---

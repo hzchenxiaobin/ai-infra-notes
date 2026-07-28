@@ -1,9 +1,13 @@
 # Day 6（周六）：完整架构与变体
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 5 把"零件"组装成了一个可堆叠的 Transformer Block，Day 6 解决"怎么用 Block 拼成不同架构"——同样一个 Block，配上不同的注意力 mask 与堆叠方式，就得到 Encoder-Decoder / Decoder-only / Encoder-only 三种架构变体。今天把三种架构的 mask 差异、适用任务、推理方式彻底理清，为 Day 7 用 Block 堆出 mini-GPT 做最后铺垫。
+>
 > **前置要求**：已完成 [Day 2](day2.md)（Self-Attention）、[Day 3](day3.md)（Multi-Head）、[Day 4](day4.md)（位置编码）、[Day 5](day5.md)（Transformer Block：残差 + LayerNorm + FFN + Pre/Post-Norm）；理解因果 mask 的作用（Day 5 的 `MultiHeadAttention` 已带 causal mask）
+>
 > **今日目标**：掌握三种架构变体（Encoder-Decoder / Decoder-only / Encoder-only）的结构与 Block 堆叠方式，理解注意力 mask 是区分三种架构的关键（双向 vs 因果 vs 交叉），搞清 Cross-Attention 的 Q/K/V 来源，建立 KV Cache 的直觉（为什么只缓存 K/V 不缓存 Q、内存开销如何），能说清现代大模型为什么几乎都用 Decoder-only（scaling law + 任务通用性 + 训练效率 + 推理友好），动手实现三种 mask 与三种架构的前向并对比
+>
 > **时间投入**：5h（早间 2h 精读三种架构 + Cross-Attention + KV Cache；下午 2h 跑代码实现三种 mask 与架构对比；晚间 1h 整理 `notes/architecture_variants.md` 笔记与面试题）
+>
 > **面试考察度**：⭐⭐⭐⭐⭐ 核心考点，"三种架构区别与适用任务"、"为什么都用 Decoder-only"、"Cross-Attention 的 QKV 来自哪"、"KV Cache 原理"都是高频题
 
 ---

@@ -1,9 +1,13 @@
 # Day 1（周一）：序列建模演化与 Attention 动机
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 1 是全周的地基：搞清楚"为什么需要 Attention"——从 RNN 的两个根本缺陷（长程依赖衰减 + 串行计算）出发，理解 Bahdanau Attention 如何破局，最终引向"Attention is all you need"的核心洞察。
+>
 > **前置要求**：Python + PyTorch 基础，了解线性代数（矩阵乘法、softmax）与基本 ML 概念（梯度、反向传播）；无需 RNN/LSTM 先验经验，本日从零讲起
+>
 > **今日目标**：理解序列建模的核心挑战（变长输入 + 顺序依赖），掌握 RNN/LSTM 的隐藏状态传递机制及其两大缺陷（梯度消失/爆炸 + 串行不可并行），理解 Bahdanau Attention 如何用"对齐 + 加权求和"解决固定上下文向量瓶颈，能说清从"RNN+Attention"到"纯 Self-Attention"的演化逻辑，动手实现一个最小 RNN 与 Bahdanau Attention 并观察梯度行为
+>
 > **时间投入**：2.5h（早间 1.5h 精读理论 + 晚间 1h 跑代码实验）
+>
 > **面试考察度**：⭐⭐⭐⭐ 高频考点，"为什么 Transformer 用 Attention 取代 RNN"几乎是必问题
 
 ---

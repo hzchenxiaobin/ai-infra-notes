@@ -1,9 +1,13 @@
 # Day 4（周四）：位置编码——Sinusoidal / Learned / RoPE
 
 > **本周定位**：本专题是模型层"从零"起步——不涉及 CUDA kernel，聚焦 Transformer 的数学原理与 PyTorch 实现。本周目标是理解 Self-Attention、Multi-Head、位置编码、Transformer Block，最终用纯 PyTorch 从零手写一个可训练的 mini-GPT。Day 2-3 把 Self-Attention 的计算吃透了，但遗留了一个关键问题：Attention 是置换等变的，不感知顺序。Day 4 解决"如何给无序的注意力注入位置信息"——从绝对位置编码（Sinusoidal / Learned）到相对位置编码（RoPE），理解三种方案的设计动机与 tradeoff。
+>
 > **前置要求**：已完成 [Day 2](day2.md)（QKV 四步计算）与 [Day 3](day3.md)（Multi-Head shape 操作）；理解矩阵乘法与点积的性质
+>
 > **今日目标**：理解 Self-Attention 的置换等变性（为什么需要位置编码），掌握 Sinusoidal 位置编码的公式与"相对位置可由绝对位置线性组合表示"的性质，理解 Learned 位置编码的优劣，掌握 RoPE 的旋转矩阵推导与"点积只依赖相对位置"的证明，能用 PyTorch 实现三种位置编码并对比，理解 RoPE 为何成为现代大模型标配
+>
 > **时间投入**：2.5h（早间 1.5h 精读三种方案 + 晚间 1h 跑代码实现与对比）
+>
 > **面试考察度**：⭐⭐⭐⭐ 高频考点，"为什么需要位置编码、RoPE 原理"是常见题
 
 ---
