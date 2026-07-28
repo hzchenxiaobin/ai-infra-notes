@@ -380,9 +380,11 @@ aiinfra/topics/transformer/
 ├── README.md                          # 本文件（一周学习计划）
 ├── day1.md                            # Day 1: 序列建模与注意力直觉
 ├── day2.md                            # Day 2: Scaled Dot-Product Attention
+├── day3.md                            # Day 3: Multi-Head Attention + 位置编码
 └── kernels/                           # 可运行代码示例
     ├── attention_intuition.py         # Day 1: embedding 语义 + toy 注意力热力图
-    └── attention_from_scratch.py      # Day 2: 手写 attention，与官方实现对齐
+    ├── attention_from_scratch.py      # Day 2: 手写 attention，与官方实现对齐
+    └── mha_and_positional.py          # Day 3: MHA + sinusoidal/RoPE 位置编码
 ```
 
 > 💡 **后续延伸**：完成本专题后，推荐两条路线——① 偏系统：接 [Triton 专题](../triton/README.md) Day 5 的 FlashAttention，亲手把 Day 2 写的 attention 变成 GPU kernel；② 偏架构：接 [MoE 专题](../moe/README.md)，看现代大模型如何把 FFN 换成稀疏专家继续 scale。两条路的起点都是你本周手写的这个小 GPT。
