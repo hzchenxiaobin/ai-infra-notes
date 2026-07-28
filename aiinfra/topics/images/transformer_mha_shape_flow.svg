@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 720" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="720" fill="#fdfcf7"/>
+
+  <text x="410" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Multi-Head Attention：Head 拆分与拼接的 Shape 推演</text>
+  <path d="M 220 38 Q 410 46 600 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Step 0: 输入 ===== -->
+  <g filter="url(#sk)"><rect x="290" y="56" width="240" height="42" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="4 3"/></g>
+  <text x="410" y="74" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">Step 0: 输入 x</text>
+  <text x="410" y="91" text-anchor="middle" font-size="11" fill="#666" font-family="monospace">(B, T, C)   ← B=batch, T=seq_len, C=embed_dim</text>
+
+  <path d="M 410 98 L 410 112" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 1: QKV 投影 ===== -->
+  <g filter="url(#sk)"><rect x="230" y="114" width="360" height="62" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="410" y="134" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Step 1: QKV 投影（一次 matmul）</text>
+  <text x="410" y="152" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">qkv = x @ Wqkv: (B, T, 3C)  →  chunk(3, dim=-1)</text>
+  <text x="410" y="168" text-anchor="middle" font-size="10" fill="#28455c" font-family="monospace">q, k, v: 各 (B, T, C)</text>
+
+  <path d="M 410 176 L 410 190" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 2: 拆 head（关键） ===== -->
+  <g filter="url(#sk)"><rect x="180" y="192" width="460" height="92" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.7"/></g>
+  <text x="410" y="212" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">Step 2: 拆 head（关键！）</text>
+  <text x="410" y="232" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">q: (B, T, C) → view(B, T, num_heads, head_dim) → transpose(1,2)</text>
+  <text x="410" y="250" text-anchor="middle" font-size="10" fill="#2e6e2e" font-family="monospace">→ (B, num_heads, T, head_dim)</text>
+  <text x="410" y="269" text-anchor="middle" font-size="9" fill="#5a3a7a" font-style="italic">reshape 拆 C 为 (num_heads, head_dim)，transpose 把 head 移到 batch 后</text>
+
+  <path d="M 410 284 L 410 298" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 3: 注意力计算 ===== -->
+  <g filter="url(#sk)"><rect x="170" y="300" width="480" height="92" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/></g>
+  <text x="410" y="320" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">Step 3: 注意力计算（所有 head 同时）</text>
+  <text x="410" y="340" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">scores = q @ k.transpose(-2,-1) * scale: (B, num_heads, T, T)</text>
+  <text x="410" y="358" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">attn = softmax(scores, dim=-1): (B, num_heads, T, T)</text>
+  <text x="410" y="376" text-anchor="middle" font-size="10" fill="#5a3a7a" font-family="monospace">out = attn @ v: (B, num_heads, T, head_dim)</text>
+
+  <path d="M 410 392 L 410 406" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 4: 拼回 ===== -->
+  <g filter="url(#sk)"><rect x="190" y="408" width="440" height="80" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="410" y="428" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Step 4: 拼回（transpose + reshape）</text>
+  <text x="410" y="448" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">out: (B, num_heads, T, head_dim)</text>
+  <text x="410" y="466" text-anchor="middle" font-size="10" fill="#7a5415" font-family="monospace">→ transpose(1,2): (B, T, num_heads, head_dim) → contiguous().view: (B, T, C)</text>
+
+  <path d="M 410 488 L 410 502" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 5: 输出投影 ===== -->
+  <g filter="url(#sk)"><rect x="270" y="504" width="280" height="52" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="410" y="524" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Step 5: 输出投影</text>
+  <text x="410" y="544" text-anchor="middle" font-size="10" fill="#28455c" font-family="monospace">out = out @ Wo: (B, T, C)</text>
+
+  <!-- ===== 右侧侧注：num_heads 位置说明 ===== -->
+  <g filter="url(#sk)"><rect x="640" y="300" width="170" height="92" rx="8" fill="none" stroke="#c98a2b" stroke-width="1.4" stroke-dasharray="5 3"/></g>
+  <text x="725" y="322" text-anchor="middle" font-size="11" font-weight="bold" fill="#5c4a28">为什么 head 在 dim=1？</text>
+  <text x="725" y="342" text-anchor="middle" font-size="9" fill="#5c4a28">(B, num_heads, T, hd)</text>
+  <text x="725" y="358" text-anchor="middle" font-size="9" fill="#5c4a28">@ 把 (B, num_heads)</text>
+  <text x="725" y="372" text-anchor="middle" font-size="9" fill="#5c4a28">都当 batch 维并行</text>
+  <text x="725" y="386" text-anchor="middle" font-size="9" fill="#888" font-style="italic">若在 dim=2 语义就错</text>
+
+  <!-- ===== 底部关键提示 ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="582" width="740" height="120" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="606" font-size="12" font-weight="bold" fill="#444">关键操作速查：</text>
+  <text x="60" y="628" font-size="10" fill="#444"><tspan font-family="monospace" fill="#2e6e2e">view(B, T, nh, hd)</tspan>：逻辑拆分最后一维 C → (num_heads, head_dim)，仅改 stride 不拷贝</text>
+  <text x="60" y="648" font-size="10" fill="#444"><tspan font-family="monospace" fill="#2e6e2e">transpose(1, 2)</tspan>：交换 dim 1/2，把 head 移到 batch 后，变非连续</text>
+  <text x="60" y="668" font-size="10" fill="#444"><tspan font-family="monospace" fill="#c98a2b">contiguous()</tspan>：拷贝为连续内存（transpose 后 view 前必须调用，否则报错）</text>
+  <text x="60" y="688" font-size="10" fill="#888" font-style="italic">缩放因子用 head_dim（d/h）而非 embed_dim（d）：方差正比于 d/h，除 √(d/h) 拉回 1</text>
+</svg>
