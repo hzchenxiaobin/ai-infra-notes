@@ -58,7 +58,7 @@
 2. 从 [Week 1](week1/README.md) 开始，按 Day 1 → Day 7 推进；每天先读教程，再跑 `kernels/` 中的代码。
 3. 每个 kernel 配套 Nsight Profiling 任务，记录指标并对比理论预期。
 4. 从 Week 3 起，将手写算子逐步接入 Mini 推理引擎，关注端到端正确性与性能。
-5. 每天完成 LeetGPU 在线题目与 LeetCode 面试题，题解分别归档在 `leetgpu/` 与 `leetcode/`。
+5. 每天完成 LeetGPU 在线题目与 LeetCode 面试题，题解分别归档在 [独立 leetgpu 仓库](https://github.com/hzchenxiaobin/leetgpu) 与 `leetcode/`。
 6. 每周末用 Day 7 复盘，整理笔记、补全未完成任务，并更新项目文档。
 
 ---
@@ -83,7 +83,7 @@
 
 ## 📚 更多资源
 
-- [LeetGPU 题解](../leetgpu/README.md) — CUDA 在线挑战题解
+- [LeetGPU 题解](https://hzchenxiaobin.github.io/leetgpu/) — CUDA 在线挑战题解
 - [LeetCode 题解](../leetcode/README.md) — 面试高频算法题解
 - [CUTLASS 专题](https://hzchenxiaobin.github.io/ai-infra-notes/cutlass/index.html) — 横向深挖 CUTLASS
 - [Triton 专题](https://hzchenxiaobin.github.io/ai-infra-notes/triton/index.html) — 横向深挖 Triton
