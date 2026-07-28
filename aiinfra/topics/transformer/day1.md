@@ -186,7 +186,7 @@ $$e_{t,i} = a(s_{t-1}, h_i)$$
 
 **Step 2：归一化**——softmax 得到注意力权重：
 
-$$\alpha_{t,i} = \frac{\exp(e_{t,i})}{\sum_{j=1}^{n} \exp(e_{t,j})}}$$
+$$\alpha_{t,i} = \frac{\exp(e_{t,i})}{\sum_{j=1}^{n} \exp(e_{t,j})}$$
 
 - $\alpha_{t,i} \in [0, 1]$，所有 $i$ 的 $\alpha_{t,i}$ 之和为 1（概率分布）
 
