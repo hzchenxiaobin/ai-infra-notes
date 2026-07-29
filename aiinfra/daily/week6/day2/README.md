@@ -300,7 +300,7 @@ Submitting 3 sequences with staggered arrival...
 
 这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。
 
-> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](../../../../aiinfra/topics/cuda/medium/scan/prefix-sum.md)。
+> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最大深度
 

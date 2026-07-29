@@ -328,7 +328,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 **与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 HBM 峰值，验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 合并区间
 

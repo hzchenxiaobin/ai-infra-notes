@@ -200,7 +200,7 @@ python kernels/week8_summary.py
 
 **与本周知识的关联**：Matrix Multiplication 是 **shared memory tiling** 模板的最经典形态，是 8 周收官题——检验你最扎实的 shared memory 基本功。它对应能力地图中 Kernel 优化层的强项（Shared Memory Tiling + Bank Conflict）。掌握 GEMM 的 tile 加载与复用，LayerNorm / Attention 里的分块技巧都是同构扩展。作为 8 周最后一道 LeetGPU，它把 Week 1-2 的 shared memory 教学画上句号。
 
-> 💡 完整题解见 [Matrix Multiplication 题解](../../../../aiinfra/topics/cuda/medium/gemm/matrix-multiplication.md)。
+> 💡 完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
 #### 任务 3：LeetCode 面试题 —— 排序链表
 

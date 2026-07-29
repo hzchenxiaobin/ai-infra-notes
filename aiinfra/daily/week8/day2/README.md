@@ -213,7 +213,7 @@ python kernels/architecture_diagrams.py
 
 **与今日知识的关联**：Multi-Head Attention 是 LLaMA 架构的核心组件——在今天画的五层架构图中，MHA 位于第④层（模型层）的 Transformer Block 内。理解 MHA 的数据流（Q/K/V 按头拆分 → 各头独立 attention → 拼接输出）就是画一张"微型数据流图"，与今日的系统级数据流图同构。面试中"画一下 Transformer Block 的数据流"时，MHA 这一步必须画对——它位于位置编码注入之后、FFN 之前，是模型的计算核心。
 
-> 💡 提交后在 [LeetGPU Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention) 上记录通过耗时。完整题解（含多头拆分详解、kernel 实现、与架构图中 Attention 数据流的对应）见 [Multi-Head Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md)。
+> 💡 提交后在 [LeetGPU Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention) 上记录通过耗时。完整题解（含多头拆分详解、kernel 实现、与架构图中 Attention 数据流的对应）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 腐烂的橘子
 

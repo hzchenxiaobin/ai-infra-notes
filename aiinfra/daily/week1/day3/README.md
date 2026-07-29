@@ -484,7 +484,7 @@ int main() {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 7：LeetCode 面试题 —— 无重复字符的最长子串
 

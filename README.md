@@ -79,7 +79,7 @@ ai-infra-notes/
 
 | 专题 | 主题 | 核心产出 | 入口 |
 |------|------|---------|------|
-| CUDA 手撕题 | AI Infra 面经高频 CUDA 算子 | 43 道 LeetGPU 题解（按 low/medium/high 分级） | [topics/cuda/](aiinfra/topics/cuda/README.md) |
+| CUDA 手撕题 | AI Infra 面经高频 CUDA 算子 | 面经高频题总结 + LeetGPU 题目对照与备考优先级 | [topics/cuda/](aiinfra/topics/cuda/README.md) |
 | CUTLASS | 三层抽象 + CuTe + Epilogue 融合 | CUTLASS 3.x GEMM、融合 Epilogue、cuBLAS 90%+ | [topics/cutlass/](aiinfra/topics/cutlass/README.md) |
 | CuTe | Layout 代数 + Tensor + Copy + TMA | 用 CuTe 原语手写 GEMM（cuBLAS 70%+） | [topics/cute/](aiinfra/topics/cute/README.md) |
 | DeepGEMM | DeepSeek FP8 GEMM + Grouped GEMM + Mega MoE | FP8 GEMM 源码精读、ncu 调优报告 | [topics/deepgemm/](aiinfra/topics/deepgemm/README.md) |
@@ -185,7 +185,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 
 ## 题解索引
 
-### LeetGPU（43 道，按难度归档于 CUDA 专题）
+### LeetGPU（43 道，题解已迁移至[独立站点](https://hzchenxiaobin.github.io/leetgpu/)）
 
 | 难度 | 分类 | 题目 |
 |------|------|------|
@@ -199,7 +199,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 | Medium | 其他 | Matrix Transpose · Sparse Matrix-Vector Multiplication · Histogramming |
 | High | Reduction | Reduction · Softmax · Layer Normalization · RMS Normalization · Batch Normalization · Group Normalization · GPT-2 Transformer Block |
 
-每道题解含完整可编译 kernel + ncu profiling + 手绘 SVG，与面试高频考点对照。详见 [topics/cuda/](aiinfra/topics/cuda/README.md)。
+每道题解含完整可编译 kernel + ncu profiling + 手绘 SVG。题解全文见 [LeetGPU 题解站点](https://hzchenxiaobin.github.io/leetgpu/)，面试高频考点对照见 [topics/cuda/](aiinfra/topics/cuda/README.md)。
 
 ### 独立题解仓库
 
@@ -231,7 +231,7 @@ nsys stats -t cuda_gpu_kern_sum timeline.nsys-rep
 - `kernels/`：可直接编译运行的 `.cu` / `.py` 示例
 - `images/`：所有手绘 sketch 风 SVG，统一 `feTurbulence` 抖动滤镜 + Comic Sans/Kaiti SC 字体
 - `build/` + `build.py`：从 `dayN/README.md`、专题、论文生成静态网站到 `public/`（构建产物，勿手改）
-- LeetGPU 题解：本仓库 [topics/cuda/](aiinfra/topics/cuda/README.md) 内有 43 道完整题解；独立仓库 [leetgpu](https://github.com/hzchenxiaobin/leetgpu) 按周/日与教程对齐
+- LeetGPU 题解：归档于[独立站点](https://hzchenxiaobin.github.io/leetgpu/)（[仓库](https://github.com/hzchenxiaobin/leetgpu)），按周/日与教程对齐
 - LeetCode 题解：归档于[独立仓库](https://hzchenxiaobin.github.io/leetcode/)，按周/日与教程对齐
 
 > 💡 本计划为理想节奏，实际执行中可根据个人进度调整。建议每周保留 Day 7 作为缓冲，避免进度积压。

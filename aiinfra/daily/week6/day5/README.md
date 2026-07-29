@@ -311,7 +311,7 @@ Iter | Batch | W/R | Batch 内容
 
 这道题的**INT8 量化 GEMM** 是 Mini Engine v1 的 forward 优化的关键方向——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 GEMM。当 batch 增大让 GEMM 进入 compute-bound（饱和点）后，进一步降延迟的手段就是**低精度量化**（INT8/FP8）：用 INT8 替代 FP32 让 Tensor Core 吞吐提升 2-4x、显存带宽压力减半。这道题练习"反量化→INT32 乘加→重量化"的三段式量化 GEMM，正是 Week 6 Day 6 benchmark 识别出 compute-bound 瓶颈后的优化路径——量化是缩小与 vLLM 性能差距的核心手段之一。
 
-> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](../../../../aiinfra/topics/cuda/medium/gemm/int8-quantized-matmul.md)。
+> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 岛屿数量
 

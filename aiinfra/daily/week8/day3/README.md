@@ -425,7 +425,7 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 **与今日知识的关联**：Matrix Transpose 是今日"Kernel 优化"主题的典型案例：naive 实现必有一侧访存不连续（uncoalesced），带宽腰斩；用 shared memory tile 让读写两侧都合并访存后，带宽接近上限——一个 kernel 讲清"为什么访存模式决定性能"。面试问"memory-bound kernel 怎么优化"时，转置是最好的例子。同时它算术强度极低（接近纯搬运），正好用 Roofline 验证"远低于 ridge point → 带宽瓶颈"。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 零钱兑换
 

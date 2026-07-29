@@ -452,7 +452,7 @@ grep -n "_schedule_running\|_schedule_waiting\|_schedule_swapped" $(python -c "i
 
 Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel**——Scheduler 拼好 batch、Worker 跑完 forward 得到 logits 后，最后一步就是在 GPU 上执行采样。这道题就是 Worker 跑的**采样 kernel**：把采样拆成 `softmax → sort → cumsum → searchsorted(p) → 重归一化 → multinomial`，本质是一条 sort + scan（prefix sum）+ CDF 查找的流水线。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——采样 kernel 喂入的 batch 正是 Continuous Batching 拼出来的。
 
-> 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](../../../../aiinfra/topics/cuda/medium/selection/top-p-sampling.md)。
+> 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 任务调度器
 

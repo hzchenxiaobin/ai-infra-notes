@@ -310,7 +310,7 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 这道题直接展示了 **token 到专家的路由（routing）**——MoE 门控对每个 token 选 top-k 专家，正是"把输入分派到不同计算路径"的决策。今天的 Dynamic Batcher 在系统层面做类似的"路由"：把到达的请求分派到不同 batch（按到达顺序/长度分组），让 GPU 满载。两者的本质都是**基于策略的分流**：MoE 用 logits + top-k 决定 token 去哪个专家，Dynamic Batcher 用队列 + timeout 决定请求进哪个 batch。这道题练习 top-k 选择 + softmax，是 MoE 推理服务的核心 kernel——Week 7 系统整合中 MoE 模型会频繁用到。
 
-> 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](../../../../aiinfra/topics/cuda/medium/selection/moe-topk-gating.md)。
+> 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-moe-topk-gating-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的序列化与反序列化
 

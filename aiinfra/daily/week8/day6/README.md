@@ -298,7 +298,7 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 
 朴素方法是三遍 kernel（mean → var → normalize），每遍读一遍全局内存。优化思路是**融合单 kernel**：一个 block 处理一个通道，block 内用 warp shuffle reduce 算 mean/var，再融合 normalize 写回，IO 从 3 遍降到 1 遍。BatchNorm 算术强度极低（~0.5 FLOP/Byte），远低于 Ridge Point，是典型 memory-bound，优化重点是减少 IO 遍数。
 
-> 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](../../../../aiinfra/topics/cuda/high/reduction/batch-normalization.md)。
+> 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 最长递增子序列
 

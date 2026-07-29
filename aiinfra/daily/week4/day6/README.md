@@ -295,7 +295,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 `gridDim.z=batch, blockIdx.y=head`，每组内用 FlashAttention tiling（Q tile 常驻 shared memory，KV tile 逐块滑入）+ online softmax 三公式。batch offset 寻址 `base = (batch*H + head) * N * d`。
 
-> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/multi-head-attention.md)。
+> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 两数相加
 

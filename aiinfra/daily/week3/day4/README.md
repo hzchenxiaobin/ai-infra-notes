@@ -449,7 +449,7 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 }
 ```
 
-> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 fused 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 递推、HBM 访问对比）见 [Softmax Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/softmax-attention.md)。
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 fused 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 递推、HBM 访问对比）见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 环形链表
 

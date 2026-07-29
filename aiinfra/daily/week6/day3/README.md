@@ -469,7 +469,7 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 这道题的**前缀和（scan）**是 vLLM Scheduler 每轮"过滤已完成序列"（stream compaction）的核心步骤——Scheduler 每轮 iteration 都要把 `FINISHED` 的序列从 running 队列移除、把仍活跃的紧凑保留，GPU 上做这件事就是"谓词标记 + 前缀和算新位置 + scatter"三段式，其中前缀和是唯一的并行难点。`_free_finished_seq_groups()` 的 GPU 化本质就是先做一次 scan 再按新下标重排。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 算前缀和，对应 Scheduler 用预算计数器累加决定每个序列的槽位。
 
-> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Scheduler 过滤/重排 running 队列的类比）见 [Prefix Sum 题解](../../../../aiinfra/topics/cuda/medium/scan/prefix-sum.md)。
+> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Scheduler 过滤/重排 running 队列的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— LRU 缓存
 

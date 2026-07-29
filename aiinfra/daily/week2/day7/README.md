@@ -367,7 +367,7 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 **与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 最纯粹的形态。kernel 采用两阶段归约：每个线程用 grid-stride 循环累加局部和（`double`）→ Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总。适合在验收日限时完成，检验 block reduce + 跨 block 汇总的综合掌握程度。
 
-> 💡 完整题解（含 grid-stride 累加、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
+> 💡 完整题解（含 grid-stride 累加、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
 #### 任务 5：GitHub 仓库整理
 

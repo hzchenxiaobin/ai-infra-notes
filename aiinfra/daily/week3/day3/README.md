@@ -447,7 +447,7 @@ __global__ void reduce_final_kernel(const double* partial, float* output, int B)
 }
 ```
 
-> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时。完整题解（含 double 累加精度分析、为什么用第二 kernel 而不是 `atomicAdd`）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
+> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时。完整题解（含 double 累加精度分析、为什么用第二 kernel 而不是 `atomicAdd`）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 最长回文子串
 

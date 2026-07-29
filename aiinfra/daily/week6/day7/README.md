@@ -128,7 +128,7 @@ python kernels/week6_summary.py
 
 **与本周总结的关联**：Reduction 是所有归约类 kernel（softmax 分母、LayerNorm 均值方差、dot product、attention 分数累加）的基础组件——block 内归约 + 跨 block 归约的两段式结构是通用模板。本周所有"累加/统计"操作（`percentile()`、token budget 累加、batch 聚合）的本质都是归约。这道题还藏着一个精度要点：大 `N` 下必须用 `double` 高精度累加、最后一步才转回 FP32，否则累加误差直接超容差——正是 Day 6 benchmark 结论"量化提吞吐、但累加必须升精度控误差"的同构练习。这道题练 warp shuffle 归约 + 两阶段汇总——Week 7 系统整合中所有统计/归约 kernel 都会用到。
 
-> 💡 完整题解（含 warp shuffle 归约、block 间两阶段汇总、double 高精度累加的精度处理）见 [Reduction 题解](../../../../aiinfra/topics/cuda/high/reduction/reduction.md)。
+> 💡 完整题解（含 warp shuffle 归约、block 间两阶段汇总、double 高精度累加的精度处理）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
 #### 任务 3：LeetCode 面试题 —— 最小覆盖子串
 
@@ -326,7 +326,7 @@ aiinfra/week6/
 ├── day6/kernels/benchmark_engine_v1.py # Latency/Throughput benchmark
 ├── day7/kernels/week6_summary.py # 总结日自测脚本
 └── images/ # 18 张 SVG
-aiinfra/topics/cuda/ # LeetGPU 题解（已迁移至 topics/cuda）
+https://hzchenxiaobin.github.io/leetgpu/ # LeetGPU 题解（已迁移至独立站点）
 https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
 ```
 

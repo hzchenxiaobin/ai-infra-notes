@@ -379,7 +379,7 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 本题是 Day 1 主题的 attention mask 最基础练习——它完整保留了 softmax 归一化，与今天推导的 online softmax 三公式直接对应：第 `i` 行的输出只需前 `i+1` 个 KV 的 running `(m, l, o)`，是 online softmax 最自然的应用场景。mask 的实现要点是把 `j > i` 的 score 置 `-∞`（`e^{-∞}=0` 真正归零，置 0 则 softmax 后仍有权重），再用 FlashAttention 的 tiling 跳过上三角 tile。
 
-> 💡 提交后在 [LeetGPU Causal Self-Attention 题目](https://leetgpu.com/challenges/causal-self-attention)上记录通过耗时。完整题解（含下三角 mask 实现、跳过上三角 tile、online softmax 融合）见 [Causal Self-Attention 题解](../../../../aiinfra/topics/cuda/medium/attention/causal-self-attention.md)。
+> 💡 提交后在 [LeetGPU Causal Self-Attention 题目](https://leetgpu.com/challenges/causal-self-attention)上记录通过耗时。完整题解（含下三角 mask 实现、跳过上三角 tile、online softmax 融合）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 乘积最大子数组
 

@@ -312,7 +312,7 @@ Speedup: 1.5x ~ 3.0x
 
 32×32 shared memory tile：block 内线程按行 coalesced 读 `input` tile 写入 smem（加一列 padding 消除 bank conflict），再按行 coalesced 写出到 `output` 的转置位置，让读写两侧都保持合并访问。用 ncu 的 `dram__throughput` 验证带宽利用率是否 >80%。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 删除链表的倒数第 N 个节点
 

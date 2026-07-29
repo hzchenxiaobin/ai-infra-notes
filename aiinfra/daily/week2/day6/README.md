@@ -707,7 +707,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 }
 ```
 
-> 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](../../../../aiinfra/topics/cuda/medium/reduction/histogramming.md)。
+> 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 每日温度
 

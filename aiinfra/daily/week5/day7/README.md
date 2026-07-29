@@ -269,7 +269,7 @@ for seq_len in [1, 128, 1024]:
     print(f"seq_len={seq_len:5d} | output shape={tuple(y.shape)}")
 ```
 
-> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](../../../../aiinfra/topics/cuda/high/reduction/gpt-2-transformer-block.md)。
+> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
 #### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
 
@@ -420,7 +420,7 @@ aiinfra/week5/
 ├── day6/kernels/profile_engine_v0.py # 端到端 profiling
 ├── day7/kernels/week5_summary.py # 总结日自测脚本
 └── images/ # 22 张 SVG
-aiinfra/topics/cuda/ # LeetGPU 题解（已迁移至 topics/cuda）
+https://hzchenxiaobin.github.io/leetgpu/ # LeetGPU 题解（已迁移至独立站点）
 https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
 ```
 

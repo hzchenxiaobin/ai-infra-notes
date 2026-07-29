@@ -284,7 +284,7 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 
 **与今日知识的关联**：Matrix Transpose 是**内存受限的索引重排 kernel** 的典型——每个元素独立搬运、无计算依赖，瓶颈在显存带宽而非算力；其核心矛盾是"读连续则写不连续"，需用 shared memory tile 中转让读写都 coalesced。这与并发引擎的"请求独立搬运"同构：队列的 `put`/`get_batch` 把每个请求从 submit 线程搬到 worker 线程，请求间无依赖（像矩阵元素间无依赖），搬运效率（coalesced 访存 + 条件变量 notify 的及时性）决定整体吞吐。Matrix Transpose 练习 coalesced 访存和 shared memory tiling——这是并发引擎高效处理海量独立请求的底层模式：把"每个请求独立搬运"映射到 GPU 就是"每个元素独立重排"。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Transpose 题解](../../../../aiinfra/topics/cuda/medium/matrix-ops/matrix-transpose.md)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 5：LeetCode 面试题 —— 最长连续序列
 
