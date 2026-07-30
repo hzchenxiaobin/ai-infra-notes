@@ -435,7 +435,7 @@ __inline__ __device__ float warp_exclusive_scan(float val) {
 
 #### 任务 5：LeetCode 面试题 —— 两数之和
 
-**题目链接**：[1. 两数之和](https://hzchenxiaobin.github.io/leetcode/problems/两数之和.html)
+**题目链接**：[1. 两数之和](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html)
 
 **题目概述**：
 
@@ -453,7 +453,7 @@ __inline__ __device__ float warp_exclusive_scan(float val) {
  - 不在 → 把 nums[i] → i 存入哈希表
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数之和题解](https://hzchenxiaobin.github.io/leetcode/problems/两数之和.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数之和题解](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html)。
 
 ---
 

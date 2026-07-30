@@ -316,7 +316,7 @@ Speedup: 1.5x ~ 3.0x
 
 #### 任务 5：LeetCode 面试题 —— 删除链表的倒数第 N 个节点
 
-**题目链接**：[19. 删除链表的倒数第 N 个节点](https://hzchenxiaobin.github.io/leetcode/problems/删除链表的倒数第N个节点.html)
+**题目链接**：[19. 删除链表的倒数第 N 个节点](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)
 
 **题目概述**：
 
@@ -335,7 +335,7 @@ slow.next = slow.next.next # 删除倒数第 n 个
 return dummy.next
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [删除链表的倒数第N个节点题解](https://hzchenxiaobin.github.io/leetcode/problems/删除链表的倒数第N个节点.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [删除链表的倒数第N个节点题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)。
 
 ---
 

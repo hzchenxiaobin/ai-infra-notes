@@ -451,13 +451,13 @@ __global__ void reduce_final_kernel(const double* partial, float* output, int B)
 
 #### 任务 5：LeetCode 面试题 —— 最长回文子串
 
-**题目链接**：[5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/最长回文子串.html)
+**题目链接**：[5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html)
 
 **题目概述**：给定字符串 `s`，找到 `s` 中最长的回文子串。
 
 **与今日知识的关联**：最长回文子串的**中心扩展法**与今日 Reduction 的**逐元素扫描+状态累积**同构——中心扩展从每个位置向两端逐步扩展并维护"最长回文"状态，Reduction 逐元素扫描并维护"局部累加和"状态。两者都是"线性扫描 + 维护累积状态"的模式。
 
-> 💡 完整题解见 [最长回文子串题解](https://hzchenxiaobin.github.io/leetcode/problems/最长回文子串.html)。
+> 💡 完整题解见 [最长回文子串题解](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html)。
 
 ---
 

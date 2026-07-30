@@ -217,21 +217,21 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week6 Day5 | 图 / DFS 连通分量 | 200. 岛屿数量 | [200_岛屿数量.md](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
 | Week6 Day6 | 数组 / 一次遍历 | 121. 买卖股票的最佳时机 | [121_买卖股票的最佳时机.md](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html) |
 | Week6 Day7 | 滑动窗口 / 困难 | 76. 最小覆盖子串 | [76_最小覆盖子串.md](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html) |
-| Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](https://hzchenxiaobin.github.io/leetcode/problems/最长连续序列.html) |
-| Week7 Day2 | 树 / 递归 | 101. 对称二叉树 | [对称二叉树.md](https://hzchenxiaobin.github.io/leetcode/problems/对称二叉树.html) |
-| Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](https://hzchenxiaobin.github.io/leetcode/problems/单词拆分.html) |
-| Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](https://hzchenxiaobin.github.io/leetcode/problems/实现Trie.html) |
-| Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/合并K个升序链表.html) |
-| Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](https://hzchenxiaobin.github.io/leetcode/problems/数据流的中位数.html) |
-| Week7 Day7 | 回溯 | 51. N 皇后 | [N 皇后.md](https://hzchenxiaobin.github.io/leetcode/problems/N 皇后.html) |
-| Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](https://hzchenxiaobin.github.io/leetcode/problems/合并区间.html) |
-| Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](https://hzchenxiaobin.github.io/leetcode/problems/腐烂的橘子.html) |
-| Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](https://hzchenxiaobin.github.io/leetcode/problems/零钱兑换.html) |
-| Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](https://hzchenxiaobin.github.io/leetcode/problems/课程表.html) |
-| Week8 Day4 | 动态规划 / 二维 DP | 72. 编辑距离 | [编辑距离.md](https://hzchenxiaobin.github.io/leetcode/problems/编辑距离.html) |
-| Week8 Day5 | 困难 / 栈 + DP | 32. 最长有效括号 | [最长有效括号.md](https://hzchenxiaobin.github.io/leetcode/problems/最长有效括号.html) |
-| Week8 Day6 | 动态规划 / 二分 | 300. 最长递增子序列 | [最长递增子序列.md](https://hzchenxiaobin.github.io/leetcode/problems/最长递增子序列.html) |
-| Week8 Day7 | 链表 / 归并排序 | 148. 排序链表 | [排序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/排序链表.html) |
+| Week7 Day1 | 哈希表 | 128. 最长连续序列 | [最长连续序列.md](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html) |
+| Week7 Day2 | 树 / 递归 | 101. 对称二叉树 | [对称二叉树.md](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
+| Week7 Day3 | 动态规划 | 139. 单词拆分 | [单词拆分.md](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+| Week7 Day4 | 设计 / 树 | 208. 实现 Trie (前缀树) | [实现Trie.md](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
+| Week7 Day5 | 堆 / 优先队列 | 23. 合并 K 个升序链表 | [合并K个升序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
+| Week7 Day6 | 堆 / 设计 | 295. 数据流的中位数 | [数据流的中位数.md](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html) |
+| Week7 Day7 | 回溯 | 51. N 皇后 | [N 皇后.md](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html) |
+| Week8 Day1 | 数组 / 排序 / 贪心 | 56. 合并区间 | [合并区间.md](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html) |
+| Week8 Day2 | 图 / 多源 BFS | 994. 腐烂的橘子 | [腐烂的橘子.md](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html) |
+| Week8 Day3 | 动态规划 / 完全背包 | 322. 零钱兑换 | [零钱兑换.md](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+| Week8 Day4 | 图 / 拓扑排序 | 207. 课程表 | [课程表.md](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
+| Week8 Day4 | 动态规划 / 二维 DP | 72. 编辑距离 | [编辑距离.md](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
+| Week8 Day5 | 困难 / 栈 + DP | 32. 最长有效括号 | [最长有效括号.md](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html) |
+| Week8 Day6 | 动态规划 / 二分 | 300. 最长递增子序列 | [最长递增子序列.md](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+| Week8 Day7 | 链表 / 归并排序 | 148. 排序链表 | [排序链表.md](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html) |
 
 > 💡 新增 Day 若上表无对应题解,在 [独立 LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/) 的 `daily/weekN/dayM/` 下新建 `<题目名>.md` 并补入上表。
 

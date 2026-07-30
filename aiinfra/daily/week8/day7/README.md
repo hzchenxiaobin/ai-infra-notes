@@ -204,11 +204,11 @@ python kernels/week8_summary.py
 
 #### 任务 3：LeetCode 面试题 —— 排序链表
 
-**题目链接**：[148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/排序链表.html)
+**题目链接**：[148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)
 
 **与本周知识的关联**：排序链表是**归并排序（分治）**的经典应用，要求 `O(n log n)` 时间 + `O(1)` 空间。它综合了 Week 2/Day4「合并两个有序链表」+ 快慢双指针找中点，是"分治 + 合并"思维的收官题。这与 8 周学习的整体结构同构：把复杂系统拆成可解的子问题（Week 1-4 算子 / Week 5-7 系统），各部分独立优化后再整合（Week 8 工程）。迭代归并的"自底向上倍增"也呼应系统优化中"用迭代代替递归省栈空间"的思想（如 CUDA kernel 用循环替代递归归约）。
 
-> 💡 完整题解（含递归归并与迭代归并双解、复杂度对比、链表归并 vs 快排对比）见 [排序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/排序链表.html)。
+> 💡 完整题解（含递归归并与迭代归并双解、复杂度对比、链表归并 vs 快排对比）见 [排序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)。
 
 ---
 

@@ -417,7 +417,7 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 #### 任务 5：LeetCode 面试题 —— 除自身以外数组的乘积
 
-**题目链接**：[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/除自身以外数组的乘积.html)
+**题目链接**：[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)
 
 **题目概述**：
 
@@ -435,7 +435,7 @@ right[i] = nums[i+1..n-1] 的乘积 （逆序一遍扫）
 answer[i] = left[i] * right[i]
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、O(1) 空间滚动写法、复杂度分析、面试要点）见 [除自身以外数组的乘积题解](https://hzchenxiaobin.github.io/leetcode/problems/除自身以外数组的乘积.html)。
+> 💡 完整题解（含 C++/Python 参考代码、O(1) 空间滚动写法、复杂度分析、面试要点）见 [除自身以外数组的乘积题解](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)。
 
 ---
 

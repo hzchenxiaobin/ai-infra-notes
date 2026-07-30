@@ -299,7 +299,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 #### 任务 5：LeetCode 面试题 —— 两数相加
 
-**题目链接**：[2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/两数相加.html)
+**题目链接**：[2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)
 
 **题目概述**：
 
@@ -320,7 +320,7 @@ while l1 or l2 or carry:
 return dummy.next
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数相加题解](https://hzchenxiaobin.github.io/leetcode/problems/两数相加.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数相加题解](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)。
 
 ---
 

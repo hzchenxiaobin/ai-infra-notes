@@ -711,7 +711,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 
 #### 任务 5：LeetCode 面试题 —— 每日温度
 
-**题目链接**：[739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/每日温度.html)
+**题目链接**：[739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)
 
 **题目概述**：
 
@@ -730,7 +730,7 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
  当前下标入栈
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](https://hzchenxiaobin.github.io/leetcode/problems/每日温度.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)。
 
 ---
 

@@ -520,7 +520,7 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 
 #### 任务 5：LeetCode 面试题 —— 三数之和
 
-**题目链接**：[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/三数之和.html)
+**题目链接**：[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)
 
 **题目概述**：
 
@@ -538,7 +538,7 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
  sum<0 → left++；sum>0 → right--；sum==0 → 记录并去重
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](https://hzchenxiaobin.github.io/leetcode/problems/三数之和.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)。
 
 ---
 

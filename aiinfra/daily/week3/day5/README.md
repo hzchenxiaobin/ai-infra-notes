@@ -498,13 +498,13 @@ int main() {
 
 #### 任务 5：LeetCode 面试题 —— 验证二叉搜索树
 
-**题目链接**：[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/验证二叉搜索树.html)
+**题目链接**：[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)
 
 **题目概述**：给定二叉树根节点 `root`，判断其是否是一个有效的二叉搜索树（BST）。
 
 **与今日知识的关联**：验证 BST 的**中序遍历有序性**与今日 `load_inline` 的**编译流水线**同构——中序遍历按"左→根→右"顺序检查节点值递增，编译流水线按"源码→编译→链接"顺序检查每步正确。两者都是"按固定顺序逐步验证"的模式。
 
-> 💡 完整题解见 [验证二叉搜索树题解](https://hzchenxiaobin.github.io/leetcode/problems/验证二叉搜索树.html)。
+> 💡 完整题解见 [验证二叉搜索树题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)。
 
 ---
 

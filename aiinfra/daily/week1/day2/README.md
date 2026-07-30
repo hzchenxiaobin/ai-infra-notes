@@ -540,7 +540,7 @@ __global__ void transpose_kernel(const float* input, float* output, int rows, in
 
 #### 任务 5：LeetCode 面试题 —— 最大子数组和
 
-**题目链接**：[53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/最大子数组和.html)
+**题目链接**：[53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)
 
 **题目概述**：
 
@@ -559,7 +559,7 @@ for i in 1..n-1:
  maxSum = max(maxSum, curSum)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最大子数组和题解](https://hzchenxiaobin.github.io/leetcode/problems/最大子数组和.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最大子数组和题解](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)。
 
 ---
 

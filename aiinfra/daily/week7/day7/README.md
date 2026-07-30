@@ -182,11 +182,11 @@ python kernels/week7_summary.py
 
 #### 任务 3：LeetCode 面试题 —— N 皇后
 
-**题目链接**：[51. N 皇后](https://hzchenxiaobin.github.io/leetcode/problems/N 皇后.html)
+**题目链接**：[51. N 皇后](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html)
 
 **与本周知识的关联**：N 皇后的"多重约束集合 + 回溯剪枝"与 Week 7 的 **Prefix Caching（Day 3）** 同构——Prefix Cache 在容量约束（`max_entries`）下用 LRU 策略淘汰最久未用的 KV Cache，N 皇后在同行/列/对角线约束下用三集合（`cols`/`diag1`/`diag2`）剪枝冲突放置。两者都是"约束集合驱动的决策 + 回溯"：Prefix Cache 容量满时淘汰一项再尝试，N 皇后位置冲突时回溯换列再尝试——都是"多重约束下做放置/淘汰决策，冲突即回退"。
 
-> 💡 完整题解见 [N 皇后题解](https://hzchenxiaobin.github.io/leetcode/problems/N 皇后.html)。
+> 💡 完整题解见 [N 皇后题解](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html)。
 
 ---
 

@@ -340,7 +340,7 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 
 #### 任务 5：LeetCode 面试题 —— 最小栈
 
-**题目链接**：[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/最小栈.html)
+**题目链接**：[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)
 
 **题目概述**：
 
@@ -358,7 +358,7 @@ pop(): data.pop(); min_stack.pop()
 getMin(): return min_stack.top() // O(1)，不遍历 data
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、辅助栈图解、复杂度分析、与 KV Cache 的模式类比）见 [最小栈题解](https://hzchenxiaobin.github.io/leetcode/problems/最小栈.html)。
+> 💡 完整题解（含 C++/Python 参考代码、辅助栈图解、复杂度分析、与 KV Cache 的模式类比）见 [最小栈题解](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)。
 
 ---
 

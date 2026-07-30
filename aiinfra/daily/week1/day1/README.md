@@ -621,7 +621,7 @@ __global__ void matrix_transpose(const float* input, float* output, int rows, in
 
 #### 任务 5：LeetCode 面试题 —— 接雨水
 
-**题目链接**：[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/接雨水.html)
+**题目链接**：[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html)
 
 **题目概述**：
 
@@ -640,7 +640,7 @@ while left<right:
  else: 处理右侧, right--
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](https://hzchenxiaobin.github.io/leetcode/problems/接雨水.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html)。
 
 ---
 

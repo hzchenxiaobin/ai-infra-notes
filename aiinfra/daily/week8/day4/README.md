@@ -275,7 +275,7 @@ FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 
 
 #### 任务 5：LeetCode 面试题 —— 编辑距离
 
-**题目链接**：[72. 编辑距离](https://hzchenxiaobin.github.io/leetcode/problems/编辑距离.html)
+**题目链接**：[72. 编辑距离](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)
 
 **题目概述**：给定两个字符串 `word1` 和 `word2`，返回把 `word1` 转换成 `word2` 所使用的最少操作数（插入/删除/替换）。
 
@@ -303,7 +303,7 @@ for i in range(1, m + 1):
 return dp[m][n]
 ```
 
-> 💡 完整题解（含二维 DP 与滚动数组 O(n) 空间优化、最优路径回溯、与 speculative decoding 的关联）见 [编辑距离题解](https://hzchenxiaobin.github.io/leetcode/problems/编辑距离.html)。
+> 💡 完整题解（含二维 DP 与滚动数组 O(n) 空间优化、最优路径回溯、与 speculative decoding 的关联）见 [编辑距离题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)。
 
 ---
 

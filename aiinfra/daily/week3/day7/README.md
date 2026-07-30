@@ -226,12 +226,12 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 | Day | LeetGPU 题目 | LeetCode 题目 |
 |-----|--------------|---------------|
-| Day 1 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/盛最多水的容器.html) |
-| Day 2 | [Group Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html) | [198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/打家劫舍.html) |
-| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/最长回文子串.html) |
-| Day 4 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | [141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/环形链表.html) |
-| Day 5 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/验证二叉搜索树.html) |
-| Day 6 | [RMS Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) | [78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/子集.html) |
+| Day 1 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html) |
+| Day 2 | [Group Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html) | [198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
+| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html) |
+| Day 4 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | [141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
+| Day 5 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
+| Day 6 | [RMS Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) | [78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html) |
 | Day 7 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | — |
 
 > 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题覆盖双指针/DP/字符串/链表/树/回溯六大标签。把没做完的题目今天补上。

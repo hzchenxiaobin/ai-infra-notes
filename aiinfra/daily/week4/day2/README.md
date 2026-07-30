@@ -562,7 +562,7 @@ extern "C" void solve(const float* Q, const float* K, const float* V,
 
 #### 任务 5：LeetCode 面试题 —— 分割等和子集
 
-**题目链接**：[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/分割等和子集.html)
+**题目链接**：[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)
 
 **题目概述**：
 
@@ -582,7 +582,7 @@ for num in nums:
  dp[j] = dp[j] | dp[j-num]
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割等和子集题解](https://hzchenxiaobin.github.io/leetcode/problems/分割等和子集.html)。
+> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割等和子集题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)。
 
 ---
 

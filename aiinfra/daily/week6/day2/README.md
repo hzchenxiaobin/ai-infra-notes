@@ -304,7 +304,7 @@ Submitting 3 sequences with staggered arrival...
 
 #### 任务 5：LeetCode 面试题 —— 二叉树的最大深度
 
-**题目链接**：[104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的最大深度.html)
+**题目链接**：[104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)
 
 **题目概述**：
 
@@ -325,7 +325,7 @@ BFS: q = [root]; depth = 0
  for 当前层全部节点: 出队、子节点入队
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、DFS/BFS 双解、与 Continuous Batching 队列驱动批处理的类比）见 [二叉树的最大深度题解](https://hzchenxiaobin.github.io/leetcode/problems/二叉树的最大深度.html)。
+> 💡 完整题解（含 C++/Python 参考代码、DFS/BFS 双解、与 Continuous Batching 队列驱动批处理的类比）见 [二叉树的最大深度题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)。
 
 ---
 

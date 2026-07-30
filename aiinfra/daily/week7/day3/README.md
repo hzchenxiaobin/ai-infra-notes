@@ -307,7 +307,7 @@ result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
 
 #### 任务 5：LeetCode 面试题 —— 单词拆分
 
-**题目链接**：[139. 单词拆分](https://hzchenxiaobin.github.io/leetcode/problems/单词拆分.html)
+**题目链接**：[139. 单词拆分](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html)
 
 **题目概述**：给定字符串 `s` 和字典 `wordDict`，判断 `s` 是否可以被拆分为字典中单词的序列。
 
@@ -322,7 +322,7 @@ dp[i] = OR(dp[j] AND s[j..i] in wordDict) for j in 0..i-1
 → 类比 Prefix Caching：dp[j] 是前缀缓存命中，s[j..i] 是增量计算
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、DP 图解、与 Prefix Caching 的类比）见 [单词拆分题解](https://hzchenxiaobin.github.io/leetcode/problems/单词拆分.html)。
+> 💡 完整题解（含 C++/Python 参考代码、DP 图解、与 Prefix Caching 的类比）见 [单词拆分题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html)。
 
 ---
 

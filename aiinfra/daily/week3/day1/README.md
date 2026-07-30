@@ -317,13 +317,13 @@ aten::softmax xxx us 5
 
 #### 任务 5：LeetCode 面试题 —— 盛最多水的容器
 
-**题目链接**：[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/盛最多水的容器.html)
+**题目链接**：[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)
 
 **题目概述**：给定 `n` 个非负整数 `a1, a2, ..., an`，每个代表坐标中的一个点 `(i, ai)`。找出两条线，使得它们与 x 轴构成的容器能容纳最多的水。
 
 **与今日知识的关联**：盛最多水容器的**双指针贪心**与今日 profiling 中"缩小搜索范围"的思路同构——双指针从两端向中间逼近，每次移动较短的一边（因为移动较长的一边不可能得到更大面积），就像 profiling 中逐步缩小瓶颈范围。两者都是"通过排除不可能的候选来高效定位最优解"。
 
-> 💡 完整题解见 [盛最多水的容器题解](https://hzchenxiaobin.github.io/leetcode/problems/盛最多水的容器.html)。
+> 💡 完整题解见 [盛最多水的容器题解](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)。
 
 ---
 

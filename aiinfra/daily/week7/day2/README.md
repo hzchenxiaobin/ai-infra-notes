@@ -305,7 +305,7 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
 
 #### 任务 5：LeetCode 面试题 —— 对称二叉树
 
-**题目链接**：[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/对称二叉树.html)
+**题目链接**：[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)
 
 **题目概述**：给定二叉树根节点，判断其是否轴对称（左右子树互为镜像）。递归交叉比较：左子树的左孩子对右子树的右孩子、左子树的右孩子对右子树的左孩子。
 
@@ -320,7 +320,7 @@ check(p, q):
  return p.val==q.val && check(p.left, q.right) && check(p.right, q.left)
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、递归/迭代双解、与调度器约束配对验证的类比）见 [对称二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/对称二叉树.html)。
+> 💡 完整题解（含 C++/Python 参考代码、递归/迭代双解、与调度器约束配对验证的类比）见 [对称二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)。
 
 ---
 

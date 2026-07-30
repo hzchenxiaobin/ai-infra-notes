@@ -429,7 +429,7 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 #### 任务 5：LeetCode 面试题 —— 零钱兑换
 
-**题目链接**：[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/零钱兑换.html)
+**题目链接**：[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)
 
 **题目概述**：给定硬币面额数组 `coins` 和总金额 `amount`，求凑成该金额所需的最少硬币数。无法凑出返回 `-1`。
 
@@ -446,7 +446,7 @@ return dp[amount] if dp[amount] != INF else -1
 完全背包：外层金额，内层硬币，每硬币可重复用
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、DP 表演算、与 shared memory tile 复用的类比）见 [零钱兑换题解](https://hzchenxiaobin.github.io/leetcode/problems/零钱兑换.html)。
+> 💡 完整题解（含 C++/Python 参考代码、DP 表演算、与 shared memory tile 复用的类比）见 [零钱兑换题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)。
 
 ---
 

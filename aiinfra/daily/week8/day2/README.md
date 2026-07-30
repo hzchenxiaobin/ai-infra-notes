@@ -217,7 +217,7 @@ python kernels/architecture_diagrams.py
 
 #### 任务 5：LeetCode 面试题 —— 腐烂的橘子
 
-**题目链接**：[994. 腐烂的橘子](https://hzchenxiaobin.github.io/leetcode/problems/腐烂的橘子.html)
+**题目链接**：[994. 腐烂的橘子](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html)
 
 **题目概述**：给定 `m×n` 网格，`2`=腐烂橘子，`1`=新鲜橘子，`0`=空。每分钟腐烂橘子会感染四邻居。返回所有橘子腐烂的最少分钟数；若不可能返回 `-1`。
 
@@ -233,7 +233,7 @@ python kernels/architecture_diagrams.py
   结束后若 fresh_count > 0 → 返回 -1（有孤立橘子）
 ```
 
-> 💡 完整题解（含 C++/Python 参考代码、多源 BFS 图解、与 Continuous Batching 时间线的类比）见 [腐烂的橘子题解](https://hzchenxiaobin.github.io/leetcode/problems/腐烂的橘子.html)。
+> 💡 完整题解（含 C++/Python 参考代码、多源 BFS 图解、与 Continuous Batching 时间线的类比）见 [腐烂的橘子题解](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html)。
 
 ---
 
