@@ -1,0 +1,269 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+    <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/>
+    </marker>
+    <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#10b981"/>
+    </marker>
+    <marker id="arO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="arP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="720" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="450" y="28" text-anchor="middle" font-size="19" font-weight="700" fill="#111827">昇腾950 L2 Cache：512B 低位交织 &amp; 高位异或交织</text>
+  <text x="450" y="48" text-anchor="middle" font-size="12" fill="#6b7280">交织粒度 = 512B（一个 Cache Line） · 示意：4 个 Bank，地址 bit[10:9] 作 Bank 索引</text>
+
+  <!-- ===== Part A: 低位交织 ===== -->
+  <rect x="20" y="62" width="860" height="290" rx="8" fill="#f9fafb" stroke="#e5e7eb"/>
+  <text x="40" y="84" font-size="14" font-weight="700" fill="#111827">A. 512B 低位交织：用地址低位段选 Bank</text>
+  <text x="40" y="100" font-size="11" fill="#6b7280">512 = 2⁹（每缓存行 512B）· 4 Bank = 2² → 取 bit[10:9] · 相邻行循环落到 Bank 0/1/2/3 → 连续访问可并行</text>
+
+  <!-- 左侧:8 个地址块 -->
+  <text x="40" y="122" font-size="11" font-weight="600" fill="#374151">物理地址空间（8 × 512B）</text>
+
+  <!-- 块0 B0 -->
+  <rect x="40" y="128" width="240" height="22" rx="3" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="52" y="143" font-size="11" fill="#1f2937">0x000–0x1FF</text>
+  <text x="168" y="143" font-size="10" fill="#6b7280">bit[10:9]=00</text>
+  <rect x="252" y="131" width="22" height="16" rx="2" fill="#3b82f6"/>
+  <text x="263" y="143" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B0</text>
+
+  <!-- 块1 B1 -->
+  <rect x="40" y="152" width="240" height="22" rx="3" fill="#d1fae5" stroke="#10b981"/>
+  <text x="52" y="167" font-size="11" fill="#1f2937">0x200–0x3FF</text>
+  <text x="168" y="167" font-size="10" fill="#6b7280">bit[10:9]=01</text>
+  <rect x="252" y="155" width="22" height="16" rx="2" fill="#10b981"/>
+  <text x="263" y="167" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B1</text>
+
+  <!-- 块2 B2 -->
+  <rect x="40" y="176" width="240" height="22" rx="3" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="52" y="191" font-size="11" fill="#1f2937">0x400–0x5FF</text>
+  <text x="168" y="191" font-size="10" fill="#6b7280">bit[10:9]=10</text>
+  <rect x="252" y="179" width="22" height="16" rx="2" fill="#f59e0b"/>
+  <text x="263" y="191" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B2</text>
+
+  <!-- 块3 B3 -->
+  <rect x="40" y="200" width="240" height="22" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="52" y="215" font-size="11" fill="#1f2937">0x600–0x7FF</text>
+  <text x="168" y="215" font-size="10" fill="#6b7280">bit[10:9]=11</text>
+  <rect x="252" y="203" width="22" height="16" rx="2" fill="#8b5cf6"/>
+  <text x="263" y="215" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B3</text>
+
+  <!-- 块4 B0 (循环) -->
+  <rect x="40" y="224" width="240" height="22" rx="3" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="52" y="239" font-size="11" fill="#1f2937">0x800–0x9FF</text>
+  <text x="168" y="239" font-size="10" fill="#6b7280">bit[10:9]=00</text>
+  <rect x="252" y="227" width="22" height="16" rx="2" fill="#3b82f6"/>
+  <text x="263" y="239" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B0</text>
+
+  <!-- 块5 B1 -->
+  <rect x="40" y="248" width="240" height="22" rx="3" fill="#d1fae5" stroke="#10b981"/>
+  <text x="52" y="263" font-size="11" fill="#1f2937">0xA00–0xBFF</text>
+  <text x="168" y="263" font-size="10" fill="#6b7280">bit[10:9]=01</text>
+  <rect x="252" y="251" width="22" height="16" rx="2" fill="#10b981"/>
+  <text x="263" y="263" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B1</text>
+
+  <!-- 块6 B2 -->
+  <rect x="40" y="272" width="240" height="22" rx="3" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="52" y="287" font-size="11" fill="#1f2937">0xC00–0xDFF</text>
+  <text x="168" y="287" font-size="10" fill="#6b7280">bit[10:9]=10</text>
+  <rect x="252" y="275" width="22" height="16" rx="2" fill="#f59e0b"/>
+  <text x="263" y="287" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B2</text>
+
+  <!-- 块7 B3 -->
+  <rect x="40" y="296" width="240" height="22" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="52" y="311" font-size="11" fill="#1f2937">0xE00–0xFFF</text>
+  <text x="168" y="311" font-size="10" fill="#6b7280">bit[10:9]=11</text>
+  <rect x="252" y="299" width="22" height="16" rx="2" fill="#8b5cf6"/>
+  <text x="263" y="311" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">B3</text>
+
+  <!-- 循环标注 -->
+  <text x="160" y="332" text-anchor="middle" font-size="9" fill="#6b7280" font-style="italic">↑ 颜色循环：B0→B1→B2→B3→B0…（每 512B 换 Bank）</text>
+
+  <!-- 中间映射框 -->
+  <text x="390" y="122" text-anchor="middle" font-size="11" font-weight="600" fill="#374151">映射规则</text>
+  <rect x="330" y="195" width="120" height="56" rx="6" fill="#ffffff" stroke="#9ca3af"/>
+  <text x="390" y="215" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">Bank Index</text>
+  <text x="390" y="233" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="600">= addr[10:9]</text>
+  <text x="390" y="246" text-anchor="middle" font-size="9" fill="#6b7280">mod 4</text>
+
+  <!-- 箭头 -->
+  <line x1="285" y1="223" x2="325" y2="223" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="455" y1="223" x2="495" y2="223" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- 右侧:4 个 Bank -->
+  <text x="680" y="122" text-anchor="middle" font-size="11" font-weight="600" fill="#374151">L2 Cache Banks（每 Bank 独立读写）</text>
+
+  <!-- Bank 0 -->
+  <rect x="490" y="136" width="90" height="180" rx="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <rect x="490" y="136" width="90" height="22" rx="4" fill="#3b82f6"/>
+  <text x="535" y="152" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Bank 0</text>
+  <rect x="502" y="168" width="66" height="42" rx="3" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="535" y="186" text-anchor="middle" font-size="10" fill="#1f2937">0x000</text>
+  <text x="535" y="200" text-anchor="middle" font-size="9" fill="#6b7280">–0x1FF</text>
+  <rect x="502" y="218" width="66" height="42" rx="3" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="535" y="236" text-anchor="middle" font-size="10" fill="#1f2937">0x800</text>
+  <text x="535" y="250" text-anchor="middle" font-size="9" fill="#6b7280">–0x9FF</text>
+  <text x="535" y="300" text-anchor="middle" font-size="9" fill="#3b82f6" font-weight="600">存 2 行</text>
+
+  <!-- Bank 1 -->
+  <rect x="600" y="136" width="90" height="180" rx="4" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <rect x="600" y="136" width="90" height="22" rx="4" fill="#10b981"/>
+  <text x="645" y="152" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Bank 1</text>
+  <rect x="612" y="168" width="66" height="42" rx="3" fill="#d1fae5" stroke="#10b981"/>
+  <text x="645" y="186" text-anchor="middle" font-size="10" fill="#1f2937">0x200</text>
+  <text x="645" y="200" text-anchor="middle" font-size="9" fill="#6b7280">–0x3FF</text>
+  <rect x="612" y="218" width="66" height="42" rx="3" fill="#d1fae5" stroke="#10b981"/>
+  <text x="645" y="236" text-anchor="middle" font-size="10" fill="#1f2937">0xA00</text>
+  <text x="645" y="250" text-anchor="middle" font-size="9" fill="#6b7280">–0xBFF</text>
+  <text x="645" y="300" text-anchor="middle" font-size="9" fill="#10b981" font-weight="600">存 2 行</text>
+
+  <!-- Bank 2 -->
+  <rect x="710" y="136" width="90" height="180" rx="4" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+  <rect x="710" y="136" width="90" height="22" rx="4" fill="#f59e0b"/>
+  <text x="755" y="152" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Bank 2</text>
+  <rect x="722" y="168" width="66" height="42" rx="3" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="755" y="186" text-anchor="middle" font-size="10" fill="#1f2937">0x400</text>
+  <text x="755" y="200" text-anchor="middle" font-size="9" fill="#6b7280">–0x5FF</text>
+  <rect x="722" y="218" width="66" height="42" rx="3" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="755" y="236" text-anchor="middle" font-size="10" fill="#1f2937">0xC00</text>
+  <text x="755" y="250" text-anchor="middle" font-size="9" fill="#6b7280">–0xDFF</text>
+  <text x="755" y="300" text-anchor="middle" font-size="9" fill="#f59e0b" font-weight="600">存 2 行</text>
+
+  <!-- Bank 3 -->
+  <rect x="820" y="136" width="90" height="180" rx="4" fill="#ffffff" stroke="#8b5cf6" stroke-width="2"/>
+  <rect x="820" y="136" width="90" height="22" rx="4" fill="#8b5cf6"/>
+  <text x="865" y="152" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">Bank 3</text>
+  <rect x="832" y="168" width="66" height="42" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="865" y="186" text-anchor="middle" font-size="10" fill="#1f2937">0x600</text>
+  <text x="865" y="200" text-anchor="middle" font-size="9" fill="#6b7280">–0x7FF</text>
+  <rect x="832" y="218" width="66" height="42" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="865" y="236" text-anchor="middle" font-size="10" fill="#1f2937">0xE00</text>
+  <text x="865" y="250" text-anchor="middle" font-size="9" fill="#6b7280">–0xFFF</text>
+  <text x="865" y="300" text-anchor="middle" font-size="9" fill="#8b5cf6" font-weight="600">存 2 行</text>
+
+  <!-- 并行说明 -->
+  <text x="680" y="330" text-anchor="middle" font-size="11" fill="#10b981" font-weight="600">✓ 连续访问 → 4 Bank 并行服务，带宽 ≈ ×4</text>
+
+  <!-- ===== Part B: stride 冲突 ===== -->
+  <rect x="20" y="362" width="420" height="190" rx="8" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="40" y="384" font-size="13" font-weight="700" fill="#991b1b">B. 纯低位交织的缺陷：等步长访问 Bank 冲突</text>
+  <text x="40" y="400" font-size="10" fill="#7f1d1d">步长 = 0x800（2048B = 4×512B）→ bit[10:9] 恒为 00 → 全部命中 Bank 0</text>
+
+  <text x="40" y="418" font-size="10" font-weight="600" fill="#374151">访问序列（stride=0x800）</text>
+
+  <rect x="40" y="424" width="140" height="22" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+  <text x="52" y="439" font-size="11" fill="#1f2937">A0: 0x000</text>
+  <text x="148" y="439" font-size="10" fill="#6b7280">→B0</text>
+
+  <rect x="40" y="450" width="140" height="22" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+  <text x="52" y="465" font-size="11" fill="#1f2937">A1: 0x800</text>
+  <text x="148" y="465" font-size="10" fill="#6b7280">→B0</text>
+
+  <rect x="40" y="476" width="140" height="22" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+  <text x="52" y="491" font-size="11" fill="#1f2937">A2: 0x1000</text>
+  <text x="148" y="491" font-size="10" fill="#6b7280">→B0</text>
+
+  <rect x="40" y="502" width="140" height="22" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+  <text x="52" y="517" font-size="11" fill="#1f2937">A3: 0x1800</text>
+  <text x="148" y="517" font-size="10" fill="#6b7280">→B0</text>
+
+  <!-- 汇聚箭头 -->
+  <path d="M185,435 L220,435" stroke="#ef4444" stroke-width="1.5" fill="none"/>
+  <path d="M185,461 L220,461 L220,435" stroke="#ef4444" stroke-width="1.5" fill="none"/>
+  <path d="M185,487 L220,487 L220,435" stroke="#ef4444" stroke-width="1.5" fill="none"/>
+  <path d="M185,513 L220,513 L220,435" stroke="#ef4444" stroke-width="1.5" fill="none"/>
+  <path d="M220,435 L300,435" stroke="#ef4444" stroke-width="2.5" marker-end="url(#arR)"/>
+  <text x="255" y="428" text-anchor="middle" font-size="9" fill="#ef4444" font-weight="600">×4 汇聚</text>
+
+  <!-- 右侧 4 个 Bank -->
+  <rect x="305" y="424" width="110" height="22" rx="3" fill="#ef4444" stroke="#991b1b" stroke-width="2"/>
+  <text x="360" y="439" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Bank 0 过载</text>
+
+  <rect x="305" y="450" width="110" height="22" rx="3" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="465" text-anchor="middle" font-size="11" fill="#9ca3af">Bank 1 空闲</text>
+
+  <rect x="305" y="476" width="110" height="22" rx="3" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="491" text-anchor="middle" font-size="11" fill="#9ca3af">Bank 2 空闲</text>
+
+  <rect x="305" y="502" width="110" height="22" rx="3" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="517" text-anchor="middle" font-size="11" fill="#9ca3af">Bank 3 空闲</text>
+
+  <text x="230" y="542" text-anchor="middle" font-size="10" fill="#991b1b" font-weight="600">✗ 带宽退化为 1/4，Bank 0 成瓶颈</text>
+
+  <!-- ===== Part C: 异或交织 ===== -->
+  <rect x="460" y="362" width="420" height="190" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="480" y="384" font-size="13" font-weight="700" fill="#14532d">C. 高位异或交织：打散规则访问</text>
+  <text x="480" y="400" font-size="10" fill="#14532d">bank = bit[10:9] ⊕ f(高位) → 步长访问被散列到不同 Bank</text>
+
+  <!-- 公式框 -->
+  <rect x="600" y="408" width="260" height="0" fill="none"/>
+
+  <text x="480" y="418" font-size="10" font-weight="600" fill="#374151">访问序列（stride=0x800，高位不同）</text>
+
+  <rect x="480" y="424" width="140" height="22" rx="3" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="492" y="439" font-size="11" fill="#1f2937">A0: 0x000</text>
+  <text x="588" y="439" font-size="10" fill="#3b82f6" font-weight="600">→B0</text>
+
+  <rect x="480" y="450" width="140" height="22" rx="3" fill="#d1fae5" stroke="#10b981"/>
+  <text x="492" y="465" font-size="11" fill="#1f2937">A1: 0x800</text>
+  <text x="588" y="465" font-size="10" fill="#10b981" font-weight="600">→B1</text>
+
+  <rect x="480" y="476" width="140" height="22" rx="3" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="492" y="491" font-size="11" fill="#1f2937">A2: 0x1000</text>
+  <text x="588" y="491" font-size="10" fill="#f59e0b" font-weight="600">→B2</text>
+
+  <rect x="480" y="502" width="140" height="22" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="492" y="517" font-size="11" fill="#1f2937">A3: 0x1800</text>
+  <text x="588" y="517" font-size="10" fill="#8b5cf6" font-weight="600">→B3</text>
+
+  <!-- 独立彩色箭头 -->
+  <line x1="625" y1="435" x2="745" y2="435" stroke="#3b82f6" stroke-width="1.8" marker-end="url(#arB)"/>
+  <line x1="625" y1="461" x2="745" y2="461" stroke="#10b981" stroke-width="1.8" marker-end="url(#arG)"/>
+  <line x1="625" y1="487" x2="745" y2="487" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#arO)"/>
+  <line x1="625" y1="513" x2="745" y2="513" stroke="#8b5cf6" stroke-width="1.8" marker-end="url(#arP)"/>
+
+  <!-- 4 个 Bank 正常 -->
+  <rect x="750" y="424" width="110" height="22" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+  <text x="805" y="439" text-anchor="middle" font-size="11" fill="#3b82f6" font-weight="700">Bank 0</text>
+
+  <rect x="750" y="450" width="110" height="22" rx="3" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+  <text x="805" y="465" text-anchor="middle" font-size="11" fill="#10b981" font-weight="700">Bank 1</text>
+
+  <rect x="750" y="476" width="110" height="22" rx="3" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="805" y="491" text-anchor="middle" font-size="11" fill="#f59e0b" font-weight="700">Bank 2</text>
+
+  <rect x="750" y="502" width="110" height="22" rx="3" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="805" y="517" text-anchor="middle" font-size="11" fill="#8b5cf6" font-weight="700">Bank 3</text>
+
+  <text x="690" y="542" text-anchor="middle" font-size="10" fill="#14532d" font-weight="600">✓ 4 Bank 并行，带宽恢复</text>
+
+  <!-- ===== 总结 ===== -->
+  <rect x="20" y="560" width="860" height="150" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="40" y="582" font-size="14" font-weight="700" fill="#1e3a8a">总结</text>
+
+  <circle cx="50" cy="606" r="4" fill="#3b82f6"/>
+  <text x="62" y="610" font-size="11" fill="#1f2937"><tspan font-weight="700">512B 低位交织：</tspan>以 Cache Line（512B）为粒度，用地址低位（bit[10:9]）选 Bank，连续缓存行循环分散到 Bank 0/1/2/3，</text>
+  <text x="62" y="624" font-size="11" fill="#1f2937">连续流式访问可被多 Bank 并行服务，带宽近似线性扩展。</text>
+
+  <circle cx="50" cy="648" r="4" fill="#ef4444"/>
+  <text x="62" y="652" font-size="11" fill="#1f2937"><tspan font-weight="700">缺陷：</tspan>纯低位交织对等步长（stride）访问存在 Bank 冲突——步长 = Bank数×512B 时，所有访问的低位段相同，</text>
+  <text x="62" y="666" font-size="11" fill="#1f2937">全部命中同一 Bank，带宽退化为 1/Bank数。</text>
+
+  <circle cx="50" cy="690" r="4" fill="#10b981"/>
+  <text x="62" y="694" font-size="11" fill="#1f2937"><tspan font-weight="700">高位异或交织（算法升级）：</tspan>在低位索引上 XOR 地址高位的函数 f()，把“地址→Bank”从线性循环变为伪随机散列，</text>
+  <text x="62" y="708" font-size="11" fill="#1f2937">消除 stride 冲突；配合 128B Sector Cache，离散小包/随机访存场景同带宽性能较上代提升 2 倍以上。</text>
+</svg>
