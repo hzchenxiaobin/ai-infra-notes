@@ -75,7 +75,7 @@ ai-infra-notes/
 
 ## 专题深挖
 
-9 个横向专题，每个围绕一个主题深入展开（多数为 7 天计划），与每日教程互补：
+10 个横向专题，每个围绕一个主题深入展开（多数为 7 天计划），与每日教程互补：
 
 | 专题 | 主题 | 核心产出 | 入口 |
 |------|------|---------|------|
@@ -88,6 +88,7 @@ ai-infra-notes/
 | MoE | 稀疏路由 + Grouped GEMM + Expert Parallelism | Triton MoE FFN 层、all-to-all dispatch demo | [topics/moe/](aiinfra/topics/moe/README.md) |
 | C++ 面试 | 内存模型 / 智能指针 / 移动语义 / 模板 / 并发 | 7 份可编译代码 + 40+ 道高频面试问答 | [topics/cpp/](aiinfra/topics/cpp/README.md) |
 | 面经整理 | 知乎 / 牛客网公开面经分类 | 北美 + 社招面试实录、高频考点与公司风格 | [topics/interview/](aiinfra/topics/interview/README.md) |
+| vLLM | PagedAttention + Continuous Batching 推理引擎 | 一周入门提纲：架构走读、调度器、优化特性、部署压测 | [topics/vllm/](aiinfra/topics/vllm/README.md) |
 
 ## 论文精读
 
