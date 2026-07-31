@@ -315,15 +315,16 @@ aten::softmax xxx us 5
 
 > 💡 完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 盛最多水的容器
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 1）
 
-**题目链接**：[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 1（反转与合并），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定 `n` 个非负整数 `a1, a2, ..., an`，每个代表坐标中的一个点 `(i, ai)`。找出两条线，使得它们与 x 轴构成的容器能容纳最多的水。
-
-**与今日知识的关联**：盛最多水容器的**双指针贪心**与今日 profiling 中"缩小搜索范围"的思路同构——双指针从两端向中间逼近，每次移动较短的一边（因为移动较长的一边不可能得到更大面积），就像 profiling 中逐步缩小瓶颈范围。两者都是"通过排除不可能的候选来高效定位最优解"。
-
-> 💡 完整题解见 [盛最多水的容器题解](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/) | 简单 | 指针翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html) |
+| [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/) | 简单 | 哑节点 + 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html) |
+| [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/) | 简单 | 一次遍历去重 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html) |
+| [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/876_链表的中间结点.html) |
 
 ---
 

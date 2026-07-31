@@ -538,28 +538,16 @@ __global__ void transpose_kernel(const float* input, float* output, int rows, in
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 最大子数组和
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 2）
 
-**题目链接**：[53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 2（双指针），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定整数数组 `nums`，找出和最大的连续子数组，返回其最大和。
-
-**与今日知识的关联**：
-
-本题核心是 **Kadane 动态规划**——`dp[i] = max(dp[i-1]+nums[i], nums[i])`，滚动一个变量即可。这与今天学 Occupancy 的思路呼应：Occupancy 受寄存器/共享内存/block 数量多重约束，取最严格的瓶颈；Kadane 在每个位置做"延续前缀 vs 重新开始"的局部最优决策——都是**在多重约束下做局部最优选择**的工程思维。
-
-**核心套路**：
-
-```
-maxSum = curSum = nums[0]
-for i in 1..n-1:
- curSum = max(curSum + nums[i], nums[i])
- maxSum = max(maxSum, curSum)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [最大子数组和题解](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [283. 移动零](https://leetcode.cn/problems/move-zeroes/) | 简单 | 双指针填非零 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html) |
+| [11. 盛最多水的容器](https://leetcode.cn/problems/container-with-most-water/) | 中等 | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html) |
+| [15. 三数之和](https://leetcode.cn/problems/3sum/) | 中等 | 排序 + 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html) |
+| [42. 接雨水](https://leetcode.cn/problems/trapping-rain-water/) | 困难 | 双指针 / 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html) |
 
 ---
 

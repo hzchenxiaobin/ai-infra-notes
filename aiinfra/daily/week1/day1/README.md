@@ -619,28 +619,17 @@ __global__ void matrix_transpose(const float* input, float* output, int rows, in
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 接雨水
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 1）
 
-**题目链接**：[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 1（哈希），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定 `n` 个非负整数表示柱子高度，计算下雨后能接多少雨水。
-
-**与今日知识的关联**：
-
-本题核心是**双指针**——左右指针从两端向中间逼近，每次移动较矮一侧，维护左右最大值。这与今天学 Grid/Block/Thread 层次映射的思路呼应：CUDA 把全局问题拆成 block 级子任务并行处理，双指针把全局接水量拆成"每个位置由左右最大值中的较小者决定"逐位置求解——都是**把大问题分解为可独立处理的子单元**。
-
-**核心套路**：
-
-```
-left=0, right=n-1, leftMax=0, rightMax=0
-while left<right:
- if height[left]<height[right]: 处理左侧, left++
- else: 处理右侧, right--
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [接雨水题解](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [1. 两数之和](https://leetcode.cn/problems/two-sum/) | 简单 | 哈希表一次遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html) |
+| [49. 字母异位词分组](https://leetcode.cn/problems/group-anagrams/) | 中等 | 排序/计数作键分组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/49_字母异位词分组.html) |
+| [128. 最长连续序列](https://leetcode.cn/problems/longest-consecutive-sequence/) | 中等 | 哈希集合 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html) |
+| [136. 只出现一次的数字](https://leetcode.cn/problems/single-number/) | 简单 | 异或 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/136_只出现一次的数字.html) |
+| [169. 多数元素](https://leetcode.cn/problems/majority-element/) | 简单 | Boyer-Moore 投票 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/169_多数元素.html) |
 
 ---
 

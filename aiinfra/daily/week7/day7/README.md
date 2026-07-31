@@ -180,13 +180,20 @@ python kernels/week7_summary.py
 
 > 💡 完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 3：LeetCode 面试题 —— N 皇后
+#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 7 周）
 
-**题目链接**：[51. N 皇后](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html)
+本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」（点击查看题解）：
 
-**与本周知识的关联**：N 皇后的"多重约束集合 + 回溯剪枝"与 Week 7 的 **Prefix Caching（Day 3）** 同构——Prefix Cache 在容量约束（`max_entries`）下用 LRU 策略淘汰最久未用的 KV Cache，N 皇后在同行/列/对角线约束下用三集合（`cols`/`diag1`/`diag2`）剪枝冲突放置。两者都是"约束集合驱动的决策 + 回溯"：Prefix Cache 容量满时淘汰一项再尝试，N 皇后位置冲突时回溯换列再尝试——都是"多重约束下做放置/淘汰决策，冲突即回退"。
+| Day | 主题 | LeetCode 题目 |
+|-----|------|---------------|
+| Day 1 | 二分模板 | [704. 二分查找](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html)、[35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/)、[69. x 的平方根](https://leetcode.cn/problems/sqrtx/)、[74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) |
+| Day 2 | 旋转数组与峰值 | [153. 寻找旋转排序数组中的最小值](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html)、[33. 搜索旋转排序数组](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html)、[34. 在排序数组中查找元素的第一个和最后一个位置](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html)、[162. 寻找峰值](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html)、[540. 有序数组中的单一元素](https://hzchenxiaobin.github.io/leetcode/problems/540_有序数组中的单一元素.html) |
+| Day 3 | 二分答案 | [875. 爱吃香蕉的珂珂](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html)、[1011. 在 D 天内送达包裹的能力](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html)、[378. 有序矩阵中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
+| Day 4 | 二分进阶 | [410. 分割数组的最大值](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html)、[719. 找出第 K 小的数对距离](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html)、[4. 寻找两个正序数组的中位数](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
+| Day 5 | 一维 DP | [70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)、[118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/)、[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)、[213. 打家劫舍 II](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html)、[337. 打家劫舍 III](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
+| Day 6 | 背包 DP | [279. 完全平方数](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html)、[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)、[518. 零钱兑换 II](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html)、[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)、[494. 目标和](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
 
-> 💡 完整题解见 [N 皇后题解](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html)。
+> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 7 周「二分查找与动态规划基础」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

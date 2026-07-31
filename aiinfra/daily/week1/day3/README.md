@@ -486,28 +486,16 @@ int main() {
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 7：LeetCode 面试题 —— 无重复字符的最长子串
+#### 任务 7：LeetCode 面试题（8 周计划 · 第 1 周 Day 3）
 
-**题目链接**：[3. 无重复字符的最长子串](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 3（数组 DP / 前缀和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定字符串 `s`，找出不含重复字符的最长子串的长度。
-
-**与今日知识的关联**：
-
-本题核心是**滑动窗口 + 哈希表**——双指针维护窗口，哈希表记录字符上次出现位置，遇到重复就收缩左边界。这与今天学 Occupancy Calculator 的思路呼应：Occupancy 受寄存器/共享内存/block 数量多重约束，需要找到"刚好不溢出"的配置；滑动窗口也是在"刚好不含重复"的约束下找最长窗口——都是**在约束边界上做动态调整**。
-
-**核心套路**：
-
-```
-left=0, maxLen=0, map=字符→上次索引
-for right in 0..n-1:
- if s[right] in map and map[s[right]]>=left: left=map[s[right]]+1
- map[s[right]]=right; maxLen=max(maxLen, right-left+1)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [无重复字符的最长子串题解](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [53. 最大子数组和](https://leetcode.cn/problems/maximum-subarray/) | 中等 | Kadane DP / 前缀和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html) |
+| [56. 合并区间](https://leetcode.cn/problems/merge-intervals/) | 中等 | 排序 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html) |
+| [238. 除自身以外数组的乘积](https://leetcode.cn/problems/product-of-array-except-self/) | 中等 | 前后缀积 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html) |
+| [41. 缺失的第一个正数](https://leetcode.cn/problems/first-missing-positive/) | 困难 | 原地哈希置换 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/41_缺失的第一个正数.html) |
 
 ---
 

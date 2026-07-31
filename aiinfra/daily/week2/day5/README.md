@@ -712,26 +712,16 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 
 > 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 二叉树的层序遍历
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 5）
 
-**题目链接**：[102. 二叉树的层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定二叉树根节点 `root`，返回其节点值的层序遍历结果（逐层从左到右，每层一个子数组）。
-
-**与今日知识的关联**：
-
-本题核心是 **BFS 队列**——用队列逐层处理节点，每层批量进出。这与今天 FlashAttention 的 **tiling 分块**思路一致：FlashAttention 把 N 个 key/value 分成一块块 KV tile 逐块滑入 SRAM 处理，BFS 把树分成一层层逐层处理。两者都是**把全局问题切成块/层，用缓冲区（队列/SRAM）承载当前块，逐块推进**的流水线化思维。
-
-**核心套路**：
-
-```
-队列存当前层节点；每轮取队列全部节点（=当前层），
-记录值，把子节点入队（=下一层）；重复直到队空
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的层序遍历题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列作标记位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
+| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩按层模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
+| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
+| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 左下角阶梯搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
 
 ---
 

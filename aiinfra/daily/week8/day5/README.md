@@ -212,17 +212,18 @@ python kernels/mock_interview.py
 
 > 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 最长有效括号
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 5）
 
-**题目链接**：[32. 最长有效括号](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 5（图论基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定只包含 `(` 和 `)` 的字符串，找出最长的有效（正确闭合）括号子串的长度。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [207. 课程表](https://leetcode.cn/problems/course-schedule/) | 中等 | 拓扑排序 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
+| [208. 实现 Trie（前缀树）](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 中等 | 字典树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
+| [547. 省份数量](https://leetcode.cn/problems/number-of-provinces/) | 中等 | 并查集模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html) |
+| [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
+| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
 
-**与今日知识的关联**：括号匹配的本质是**状态追踪**——用栈维护"未闭合的状态"，遇到匹配时消解。这与推理系统中的状态管理同构：vLLM 的 `WAITING → RUNNING → FINISHED` 状态流转就像括号的 `(` 压栈 → `)` 弹栈；PagedAttention 的 block table 维护"哪些 block 还在使用"，本质是括号匹配的变体。面试中"栈 + DP 双解"是高频困难题，训练的是在 Mock 面试高压下快速给出多种解法的能力。
-
-**核心套路**：
-
-```python
 # 栈解法：存下标，栈底保留基准
 def longestValidParentheses(s):
     stack = [-1]

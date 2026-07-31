@@ -314,28 +314,17 @@ Speedup: 1.5x ~ 3.0x
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 删除链表的倒数第 N 个节点
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 5）
 
-**题目链接**：[19. 删除链表的倒数第 N 个节点](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 5（贪心），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定链表头节点 `head`，删除链表的倒数第 `n` 个节点，返回头节点。
-
-**与今日知识的关联**：
-
-本题核心是**快慢双指针**——快指针先走 n 步，然后快慢同步走，快指针到尾时慢指针恰好在倒数第 n+1 个节点。这与今天 FlashAttention 集成的"两阶段验证"思路呼应：先用正确性验证（快指针 = 标准 Attention 结果）跑一遍，再用性能验证（慢指针 = FA 结果）对比——都是**两路并行前进，一路到位后另一路恰好定位目标**的模式。
-
-**核心套路**：
-
-```
-dummy 哑节点; fast=dummy, slow=dummy
-fast 先走 n+1 步; 然后 fast/slow 同步走直到 fast到尾
-slow.next = slow.next.next # 删除倒数第 n 个
-return dummy.next
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [删除链表的倒数第N个节点题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 简单 | 一次遍历 / DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html) |
+| [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) | 中等 | 贪心维护最远可达 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html) |
+| [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/) | 中等 | 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html) |
+| [763. 划分字母区间](https://leetcode.cn/problems/partition-labels/) | 中等 | 最后出现位置 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html) |
+| [621. 任务调度器](https://leetcode.cn/problems/task-scheduler/) | 中等 | 贪心（最大频数公式） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
 
 ---
 

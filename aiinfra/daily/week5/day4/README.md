@@ -335,32 +335,17 @@ Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——
 
 > 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解（含 causal mask 的 online softmax 实现、上三角屏蔽、与 PagedAttention 的 prefill 对偶关系）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 复制带随机指针的链表
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 4）
 
-**题目链接**：[138. 复制带随机指针的链表](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 4（BST 进阶与构造），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定一个长度为 `n` 的链表，每个节点除了 `next` 指针外还有一个 `random` 指针，可指向链表中任意节点或 `null`。请**深拷贝**整个链表（构造一个全新链表，节点关系与原链表一致），返回头节点。
-
-**与今日知识的关联**：
-
-这道题是 **Copy-on-Write 机制的算法直觉**——PagedAttention 的 CoW 要"复制一个被多个 sequence 共享的 block table 结构"，本质就是"深拷贝带复杂引用的结构"。链表的 `random` 指针就像 block table 里的"逻辑→物理映射"：复制时不能简单复制指针值（否则新结构指向旧结构），要建立"旧节点→新节点"的映射，再据此修正所有引用。两者的核心都是**复制带共享引用的结构时，先建映射再修正指针**——CoW 复制 block table 后要更新各 sequence 对物理 block 的引用，正是"深拷贝带随机指针链表"的工程化版本。
-
-**核心套路**：
-
-```
-方法一（哈希表）：建立 old→new 的映射，两次遍历
- 第一遍：创建所有新节点，存 map[old]=new
- 第二遍：new.next = map[old.next], new.random = map[old.random]
-
-方法二（拼接拆分，O(1) 空间）：
- 1. 在每个 old 节点后插入它的副本：A→A'→B→B'→...
- 2. 设副本的 random：old.random.next 就是 new.random
- 3. 拆分奇偶链表
-```
-
-> 💡 完整题解（含哈希表法 + O(1) 空间拼接拆分法、C++/Python 参考代码、与 CoW 的模式类比）见 [复制带随机指针的链表题解](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [235. 二叉搜索树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-search-tree/) | 中等 | 利用 BST 性质遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html) |
+| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 中序 + 显式栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
+| [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/) | 中等 | 递归 / 二分定插入界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html) |
+| [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
+| [889. 根据前序与后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/) | 中等 | 递归分治（前后序互定界） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
 
 ---
 

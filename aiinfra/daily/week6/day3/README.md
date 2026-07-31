@@ -471,27 +471,15 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 > 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Scheduler 过滤/重排 running 队列的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— LRU 缓存
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 3）
 
-**题目链接**：[146. LRU 缓存](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 3（序列化与宽度），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-设计并实现满足 LRU（最近最少使用）缓存约束的数据结构 `LRUCache`，支持 `get(key)` 和 `put(key, value)`，两者都需 `O(1)` 平均时间。容量满时 `put` 应淘汰最近最少使用的元素。
-
-**与今日知识的关联**：
-
-LRU 的**哈希表 + 双向链表**淘汰机制与 vLLM Scheduler 的 KV Cache block 管理同构——vLLM 的 `BlockSpaceManager` 维护一个 `free_blocks` 空闲链表，序列释放 block 时回收到链表尾，分配时从链表头取；当显存压力触发 preemption 时，被抢占序列的 block 被"淘汰"回空闲池供他人复用。LRU 的"最近最少使用先淘汰"对应 vLLM 抢占时"最后加入的最先被 preempt"（近似 LIFO）。两者都是**有限资源池的分配/回收/淘汰**问题：LRU 淘汰的是缓存条目，vLLM 淘汰的是 KV Cache block。
-
-**核心套路**：
-
-```
-哈希表：key → 链表节点（O(1) 定位）
-双向链表：维护访问顺序（最近访问在头，最久未访问在尾）
-get/put 命中 → 移到链表头；容量满 put → 删除链表尾节点 + 哈希表项
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、哈希+双向链表图解、与 vLLM BlockSpaceManager 空闲池回收的类比）见 [LRU 缓存题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [297. 二叉树的序列化与反序列化](https://leetcode.cn/problems/serialize-and-deserialize-binary-tree/) | 困难 | 前序 + 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html) |
+| [662. 二叉树最大宽度](https://leetcode.cn/problems/maximum-width-of-binary-tree/) | 中等 | BFS/DFS + 节点编号 | — |
+| [958. 二叉树的完全性检验](https://leetcode.cn/problems/check-completeness-of-a-binary-tree/) | 中等 | 层序遍历判空节点 | — |
 
 ---
 

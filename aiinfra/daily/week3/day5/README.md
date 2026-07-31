@@ -496,15 +496,15 @@ int main() {
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时。完整题解（含 tiling 数据复用分析、naive → block tile → thread tile 优化链路）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matmul_forward`，在 Python 里调用验证。
 
-#### 任务 5：LeetCode 面试题 —— 验证二叉搜索树
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
 
-**题目链接**：[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定二叉树根节点 `root`，判断其是否是一个有效的二叉搜索树（BST）。
-
-**与今日知识的关联**：验证 BST 的**中序遍历有序性**与今日 `load_inline` 的**编译流水线**同构——中序遍历按"左→根→右"顺序检查节点值递增，编译流水线按"源码→编译→链接"顺序检查每步正确。两者都是"按固定顺序逐步验证"的模式。
-
-> 💡 完整题解见 [验证二叉搜索树题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [148. 排序链表](https://leetcode.cn/problems/sort-list/) | 中等 | 归并排序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html) |
+| [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/) | 困难 | 小顶堆 k 路归并 / 分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
+| [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/) | 中等 | 哈希 + 双向链表 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
 
 ---
 

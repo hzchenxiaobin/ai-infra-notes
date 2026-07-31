@@ -518,27 +518,16 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 三数之和
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 3）
 
-**题目链接**：[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 3（字符串模拟），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定整数数组 `nums`，找出所有和为 0 的不重复三元组 `[nums[i], nums[j], nums[k]]`。
-
-**与今日知识的关联**：
-
-本题核心套路是**排序 + 双指针**——先排序固定一个数，再用左右双指针在剩余区间扫描。这与今天 Multi-Stream 的"分块 + 流水线重叠"思路异曲同工：都是通过**预处理（排序/分块）把无序工作变成可流水线化的有序流**，从而避免重复劳动（双指针 O(n²) vs 暴力 O(n³)；多 Stream 重叠 vs 串行等待）。
-
-**核心套路**：
-
-```
-排序后固定 nums[i]，left=i+1, right=n-1：
- sum = nums[i]+nums[left]+nums[right]
- sum<0 → left++；sum>0 → right--；sum==0 → 记录并去重
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、去重技巧）见 [三数之和题解](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [415. 字符串相加](https://leetcode.cn/problems/add-strings/) | 简单 | 大数加法模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html) |
+| [43. 字符串相乘](https://leetcode.cn/problems/multiply-strings/) | 中等 | 竖式乘法模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html) |
+| [151. 反转字符串中的单词](https://leetcode.cn/problems/reverse-words-in-a-string/) | 中等 | 切分逆序 / 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html) |
+| [14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) | 简单 | 纵向 / 横向扫描 | — |
 
 ---
 

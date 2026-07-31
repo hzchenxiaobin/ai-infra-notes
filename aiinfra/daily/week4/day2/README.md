@@ -560,29 +560,17 @@ extern "C" void solve(const float* Q, const float* K, const float* V,
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 分割等和子集
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 2）
 
-**题目链接**：[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 2（表达式与计算器），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定只含正整数的数组 `nums`，判断能否分割成两个元素之和相等的子集（等价于能否选若干元素凑出总和一半，0-1 背包判定）。
-
-**与今日知识的关联**：
-
-本题核心是**状态空间降维**——把二维 `dp[i][j]` 压成一维 `dp[j]` 滚动更新（内层倒序保证每个元素只用一次）。这与今天 FlashAttention Kernel 的"shared memory + register"分层思路呼应：FA 用 shared memory 做共享数据（KV tile），用 register 做每 warp 私有状态（m/l/acc）；0-1 背包用一维 dp 做滚动状态，用倒序遍历保证"用旧值"——都是**用更小的状态空间表示等价信息**。FA 把 O(N²) attention 的 IO 压成 O(N) tiling，背包把 O(n·target) 二维压成 O(target) 一维——都是"状态空间降维 + 边界条件保证正确性"。
-
-**核心套路**：
-
-```
-target = sum/2 （奇数直接 false）
-dp[0] = true
-for num in nums:
- for j = target ↓ num:     # 倒序，保证每个 num 只用一次
- dp[j] = dp[j] | dp[j-num]
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割等和子集题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [394. 字符串解码](https://leetcode.cn/problems/decode-string/) | 中等 | 栈 / 递归解码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html) |
+| [224. 基本计算器](https://leetcode.cn/problems/basic-calculator/) | 困难 | 栈处理括号与一元符号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html) |
+| [227. 基本计算器 II](https://leetcode.cn/problems/basic-calculator-ii/) | 中等 | 栈处理乘除优先级 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html) |
+| [402. 移掉 K 位数字](https://leetcode.cn/problems/remove-k-digits/) | 中等 | 单调栈删大留小 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html) |
+| [316. 去除重复字母](https://leetcode.cn/problems/remove-duplicate-letters/) | 中等 | 单调栈 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
 
 ---
 

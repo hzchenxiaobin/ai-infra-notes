@@ -415,27 +415,17 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 > 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时。完整题解（含 int8 反量化、decode attention kernel、ncu 带宽 profiling、与 prefill 的算术强度对比）见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 除自身以外数组的乘积
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 1）
 
-**题目链接**：[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 1（遍历），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定整数数组 `nums`，返回数组 `answer`，其中 `answer[i]` 等于 `nums` 中除 `nums[i]` 之外其余各元素的乘积。要求 **O(n) 时间**且**不使用除法**。
-
-**与今日知识的关联**：
-
-本题核心是**用前缀积 × 后缀积预计算，避免对每个位置重复乘**——这和 KV Cache 的思想同构：Decode 每步都要"历史 K/V"，如果每次重新算就是 O(n²)；把历史结果**缓存下来直接复用**，就降到 O(n)。238 题用 `left[]`/`right[]` 把"每个位置左/右的乘积"预先存好，正是"用空间换时间、避免重复计算"的范本——这也是 Day 2 手写 KV Cache 的算法直觉。
-
-**核心套路**：
-
-```
-left[i] = nums[0..i-1] 的乘积 （正序一遍扫）
-right[i] = nums[i+1..n-1] 的乘积 （逆序一遍扫）
-answer[i] = left[i] * right[i]
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、O(1) 空间滚动写法、复杂度分析、面试要点）见 [除自身以外数组的乘积题解](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
+| [144. 二叉树的前序遍历](https://leetcode.cn/problems/binary-tree-preorder-traversal/) | 简单 | 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html) |
+| [145. 二叉树的后序遍历](https://leetcode.cn/problems/binary-tree-postorder-traversal/) | 简单 | 栈迭代（根右左逆序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html) |
+| [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | 中等 | BFS 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html) |
+| [103. 二叉树的锯齿形层序遍历](https://leetcode.cn/problems/binary-tree-zigzag-level-order-traversal/) | 中等 | BFS + 奇偶层反向 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
 
 ---
 

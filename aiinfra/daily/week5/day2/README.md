@@ -338,27 +338,17 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 
 > 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 最小栈
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
 
-**题目链接**：[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-设计一个栈，支持 `push`、`pop`、`top` 和 `getMin` 操作，且 `getMin` **要在 O(1) 时间**完成。**辅助栈**解法：维护一个额外的 `min_stack`，每次 `push` 时同步压入"当前最小值"，`getMin` 直接读 `min_stack.top()`。
-
-**与今日知识的关联**：
-
-最小栈和 KV Cache 是**同一设计模式的两种应用**——"维护辅助状态以避免从头重算"。最小栈把"栈内最小值"缓存到 `min_stack`，`getMin` 不必遍历整个栈（O(n) → O(1)）；KV Cache 把"历史 K/V"缓存到 `k_cache`，Decode 不必重算整个前缀（O(L·d²) → O(d²)）。两者都是**空间换时间**：多存一份辅助数据，换取查询时跳过重算。最小栈的 `min_stack` 随 `push/pop` 增删同步更新，正是 KV Cache 的 `append` 操作的算法直觉——**缓存不是静态的，要随主数据流增量维护**。
-
-**核心套路**：
-
-```
-push(x): data.push(x); min_stack.push(min(x, min_stack.top()))
-pop(): data.pop(); min_stack.pop()
-getMin(): return min_stack.top() // O(1)，不遍历 data
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、辅助栈图解、复杂度分析、与 KV Cache 的模式类比）见 [最小栈题解](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
+| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
+| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
+| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | DFS 左右深度和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
+| [110. 平衡二叉树](https://leetcode.cn/problems/balanced-binary-tree/) | 简单 | 后序 DFS 返回高度 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
 
 ---
 

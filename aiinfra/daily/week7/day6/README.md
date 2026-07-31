@@ -315,24 +315,17 @@ engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
 
 > 💡 提交后在 [LeetGPU Reduction](https://leetgpu.com/challenges/reduction) 上记录通过耗时。完整题解见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 数据流的中位数
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 6）
 
-**题目链接**：[295. 数据流的中位数](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 6（背包 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：设计一个数据结构，支持 `addNum(num)` 添加数字和 `findMedian()` 返回当前所有数字的中位数。
-
-**与今日知识的关联**：数据流中位数的**双堆（大顶堆+小顶堆）**与全链路 Profiling 中的**P50 延迟统计**同构——P50 就是中位数，用堆维护可以 O(log N) 插入 + O(1) 查中位数。Profiling 脚本中的 `statistics.median()` 对应 `findMedian()`，`PhaseTimer` 的 `times` 列表对应数据流。两者都是"动态维护中位数"的核心模式：双堆保证大顶堆的最大值 ≤ 小顶堆的最小值，中位数在堆顶。
-
-**核心套路**：
-
-```
-大顶堆（left）：存较小的一半，堆顶是其中的最大值
-小顶堆（right）：存较大的一半，堆顶是其中的最小值
-平衡：|left.size - right.size| <= 1
-中位数：奇数取多的那个堆顶，偶数取两堆顶平均
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、双堆图解、与 P50 统计的类比）见 [数据流的中位数题解](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [279. 完全平方数](https://leetcode.cn/problems/perfect-squares/) | 中等 | 完全背包 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html) |
+| [322. 零钱兑换](https://leetcode.cn/problems/coin-change/) | 中等 | 完全背包 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+| [518. 零钱兑换 II](https://leetcode.cn/problems/coin-change-ii/) | 中等 | 完全背包求方案数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html) |
+| [416. 分割等和子集](https://leetcode.cn/problems/partition-equal-subset-sum/) | 中等 | 0-1 背包 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
+| [494. 目标和](https://leetcode.cn/problems/target-sum/) | 中等 | 01 背包（正负分组） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
 
 ---
 

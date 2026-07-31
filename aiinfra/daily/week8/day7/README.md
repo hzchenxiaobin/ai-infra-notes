@@ -202,13 +202,20 @@ python kernels/week8_summary.py
 
 > 💡 完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 3：LeetCode 面试题 —— 排序链表
+#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 8 周）
 
-**题目链接**：[148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)
+本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」（点击查看题解）：
 
-**与本周知识的关联**：排序链表是**归并排序（分治）**的经典应用，要求 `O(n log n)` 时间 + `O(1)` 空间。它综合了 Week 2/Day4「合并两个有序链表」+ 快慢双指针找中点，是"分治 + 合并"思维的收官题。这与 8 周学习的整体结构同构：把复杂系统拆成可解的子问题（Week 1-4 算子 / Week 5-7 系统），各部分独立优化后再整合（Week 8 工程）。迭代归并的"自底向上倍增"也呼应系统优化中"用迭代代替递归省栈空间"的思想（如 CUDA kernel 用循环替代递归归约）。
+| Day | 主题 | LeetCode 题目 |
+|-----|------|---------------|
+| Day 1 | 子数组与子序列 | [139. 单词拆分](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html)、[152. 乘积最大子数组](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html)、[300. 最长递增子序列](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html)、[354. 俄罗斯套娃信封问题](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
+| Day 2 | 回文与区间 DP | [647. 回文子串](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html)、[516. 最长回文子序列](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html)、[5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html)、[312. 戳气球](https://hzchenxiaobin.github.io/leetcode/problems/312_戳气球.html)、[32. 最长有效括号](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html) |
+| Day 3 | 二维 DP | [62. 不同路径](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html)、[64. 最小路径和](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html)、[1143. 最长公共子序列](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html)、[72. 编辑距离](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)、[221. 最大正方形](https://hzchenxiaobin.github.io/leetcode/problems/221_最大正方形.html) |
+| Day 4 | 股票与划分 | [122. 买卖股票的最佳时机 II](https://hzchenxiaobin.github.io/leetcode/problems/122_买卖股票的最佳时机II.html)、[188. 买卖股票的最佳时机 IV](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html)、[309. 买卖股票的最佳时机含冷冻期](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html)、[714. 买卖股票的最佳时机含手续费](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html)、[698. 划分为 K 个相等的子集](https://hzchenxiaobin.github.io/leetcode/problems/698_划分为K个相等的子集.html) |
+| Day 5 | 图论基础 | [207. 课程表](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html)、[208. 实现 Trie（前缀树）](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html)、[547. 省份数量](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html)、[785. 判断二分图](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html)、[133. 克隆图](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+| Day 6 | 最短路与 BFS | [743. 网络延迟时间](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html)、[399. 除法求值](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html)、[752. 打开转盘锁](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html)、[127. 单词接龙](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html)、[329. 矩阵中的最长递增路径](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
 
-> 💡 完整题解（含递归归并与迭代归并双解、复杂度对比、链表归并 vs 快排对比）见 [排序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)。
+> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 8 周「动态规划进阶与图论」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

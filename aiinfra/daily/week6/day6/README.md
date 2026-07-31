@@ -313,28 +313,17 @@ Throughput-Latency 曲线
 
 > 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 买卖股票的最佳时机
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 6）
 
-**题目链接**：[121. 买卖股票的最佳时机](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 6（回溯进阶），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定一个数组 `prices`，它的第 `i` 个元素 `prices[i]` 表示一支股票第 `i` 天的价格。你只能选择**某一天买入**并在**未来某一天卖出**，计算能获取的**最大利润**（卖-买）。如果不能获利返回 0。
-
-**与今日知识的关联**：
-
-买卖股票的**一次遍历求最大差值**与 benchmark 扫描并发数找最优工作点同构——benchmark 扫描 concurrency=1,2,4,...,64，找"throughput 增长率开始下降"或"latency 开始飙升"的拐点（最优工作点），正如股票在价格序列中找"最低买入+最高卖出"的最大利润。两者都是**一次遍历维护极值**的问题：股票维护"历史最低价"算当前卖出利润，benchmark 维护"throughput 增长率"判断是否到饱和点。benchmark 的 `find_saturation_point` 用 `growth < 5%` 找拐点，对应股票用 `min_price` 算 `max_profit`。
-
-**核心套路**：
-
-```
-一次遍历：维护历史最低价 min_price
- 当前价 - min_price = 今天卖出的利润
- 更新 max_profit = max(max_profit, 当前利润)
- 更新 min_price = min(min_price, 当前价)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、一次遍历图解、与 benchmark 找饱和拐点的类比）见 [买卖股票的最佳时机题解](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [22. 括号生成](https://leetcode.cn/problems/generate-parentheses/) | 中等 | 回溯剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/22_括号生成.html) |
+| [79. 单词搜索](https://leetcode.cn/problems/word-search/) | 中等 | DFS 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/79_单词搜索.html) |
+| [131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/) | 中等 | 回溯 + 判断 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html) |
+| [51. N 皇后](https://leetcode.cn/problems/n-queens/) | 困难 | 回溯 + 位运算 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html) |
+| [93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/) | 中等 | 回溯 + 分段合法性剪枝 | — |
 
 ---
 

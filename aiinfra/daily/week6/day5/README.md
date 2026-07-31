@@ -313,26 +313,16 @@ Iter | Batch | W/R | Batch 内容
 
 > 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 岛屿数量
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 5）
 
-**题目链接**：[200. 岛屿数量](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 5（回溯基础），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给你一个由 `'1'`（陆地）和 `'0'`（水）组成的二维网格 `grid`，计算网格中**岛屿的数量**。岛屿是被水包围的一块连通的陆地（水平/垂直相邻连通）。
-
-**与今日知识的关联**：
-
-岛屿数量的**连通分量计数**与 Mini Engine v1 的请求分组/批处理同构——v1 每轮把多个请求组成一个 batch 一起 forward，类似把网格中相邻的 '1' 归为同一个岛屿（连通分量）。DFS/BFS 遍历标记同一岛屿的所有格子，对应 Scheduler 把同一轮能调度的请求归入同一 batch。岛屿计数的"遍历一个连通分量、标记已访问、计数+1"与 v1 的"调度一个 batch、标记 running、forward"同构。两者都是**连通分量的发现与分组**问题：岛屿找空间连通的格子，v1 找预算约束下可并发的请求。
-
-**核心套路**：
-
-```
-遍历每个格子 → 遇到 '1' 且未访问 → 岛屿数 +1
- → DFS/BFS 标记整个连通块为已访问（沉岛，grid[i][j]='0'）
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、DFS 沉岛图解、与多请求 batch 分组的类比）见 [岛屿数量题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [46. 全排列](https://leetcode.cn/problems/permutations/) | 中等 | 回溯模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html) |
+| [78. 子集](https://leetcode.cn/problems/subsets/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html) |
+| [39. 组合总和](https://leetcode.cn/problems/combination-sum/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html) |
+| [17. 电话号码的字母组合](https://leetcode.cn/problems/letter-combinations-of-a-phone-number/) | 中等 | 回溯 / 队列 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/17_电话号码的字母组合.html) |
 
 ---
 

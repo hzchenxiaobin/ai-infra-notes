@@ -454,27 +454,17 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 
 > 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 任务调度器
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 3）
 
-**题目链接**：[621. 任务调度器](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定一个用字符数组 `tasks` 表示的 CPU 任务列表（每个字母代表一种任务），以及冷却时间 `n`。同一类任务执行后必须间隔 `n` 个单位时间才能再执行同类任务。每个单位时间可执行一个任务或待命。求完成所有任务的最少时间。
-
-**与今日知识的关联**：
-
-这道题是 vLLM Scheduler 的**算法直觉**——Scheduler 每轮决定"跑哪个请求"，受 KV cache 显存约束（类似冷却：一个请求占的 block 释放后才能给别的用）。任务调度器的核心是"贪心安排最高频任务 + 用其他任务/待命填充冷却间隙"，与 Continuous Batching"用新请求填满完成请求留下的 slot"思路同构：都是**在资源约束下最大化吞吐、用填充消除空闲**。任务调度器用低频任务填高频任务的冷却，Continuous Batching 用 waiting 请求填 running 完成后的 slot。
-
-**核心套路**：
-
-```
-最多任务数 max_freq，有 max_count 个任务并列最多
-最少时间 = (max_freq - 1) × (n + 1) + max_count
-取 max(上式, len(tasks)) # 任务总数可能超过框架
-```
-
-> 💡 完整题解（含贪心公式推导、C++/Python 参考代码、模拟画图、与 Continuous Batching 的模式类比）见 [任务调度器题解](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [111. 二叉树的最小深度](https://leetcode.cn/problems/minimum-depth-of-binary-tree/) | 简单 | BFS/DFS（注意单边子树） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html) |
+| [559. N 叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-n-ary-tree/) | 简单 | DFS/BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html) |
+| [108. 将有序数组转换为二叉搜索树](https://leetcode.cn/problems/convert-sorted-array-to-binary-search-tree/) | 简单 | 取中点递归构建 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html) |
+| [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/) | 中等 | 中序单调性 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
+| [230. 二叉搜索树中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-bst/) | 中等 | 中序第 k 个 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
 
 ---
 

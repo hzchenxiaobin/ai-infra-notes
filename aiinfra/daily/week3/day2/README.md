@@ -510,15 +510,17 @@ __global__ void group_norm_kernel(const float* input, const float* gamma, const 
 
 > 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 打家劫舍
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
 
-**题目链接**：[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定一个非负整数数组 `nums`，表示沿街房屋的金额。不能偷窃相邻的房屋，求能偷窃到的最高金额。
-
-**与今日知识的关联**：打家劫舍的**动态规划**与今日 Softmax 的**三遍扫描**同构——DP 用 `dp[i] = max(dp[i-1], dp[i-2] + nums[i])` 逐步累积最优解，Softmax 用 pass1→pass2→pass3 逐步累积 max→sum→normalize。两者都是"多趟扫描，每趟基于前一趟的结果"的流水线模式。
-
-> 💡 完整题解见 [打家劫舍题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
+| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html) |
+| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
+| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
+| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
 
 ---
 

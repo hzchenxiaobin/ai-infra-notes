@@ -330,24 +330,16 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 合并区间
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 1）
 
-**题目链接**：[56. 合并区间](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定若干区间的集合 `intervals`，合并所有重叠的区间，返回不重叠的区间数组。
-
-**与今日知识的关联**：合并区间的**排序 + 一次扫描合并**与项目文档整合同构——前 7 周的代码散落在各 `weekN/dayM/` 目录，就像一堆"区间"（每段代码有起止边界），写 README 时要把它们"合并"成连贯的项目叙述：相邻/重叠的内容合并成一段，不重叠的各自独立。排序对应"按主题归类代码"，扫描合并对应"把重复概念归并、把缺口补上"。两者都是**先排序再线性归并**的核心模式。
-
-**核心套路**：
-
-```
-按区间左端点排序 → 依次扫描：
-  若当前区间左 <= 上一区间右 → 重叠，合并（右端取 max）
-  否则 → 不重叠，上一区间入结果，开始新区间
-O(n log n)：排序主导；扫描 O(n)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、排序+扫描图解、与项目文档整合的类比）见 [合并区间题解](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [139. 单词拆分](https://leetcode.cn/problems/word-break/) | 中等 | DP / BFS + 字典哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+| [152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/) | 中等 | 滚动 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
+| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP / 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+| [354. 俄罗斯套娃信封问题](https://leetcode.cn/problems/russian-doll-envelopes/) | 困难 | 排序 + LIS（二分） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
 
 ---
 

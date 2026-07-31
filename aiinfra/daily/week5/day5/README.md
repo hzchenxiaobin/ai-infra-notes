@@ -358,31 +358,9 @@ GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单�
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 从前序与中序遍历序列构造二叉树
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
 
-**题目链接**：[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)
-
-**题目概述**：
-
-给定同一棵二叉树的前序和中序遍历，构造出这棵树。用哈希表缓存中序下标，O(1) 定位根并划分左右子树后递归。
-
-**与今日知识的关联**：
-
-本题核心是**用哈希表缓存下标，把每次定位根的 O(n) 线性扫描压成 O(1) 查询**——避免重复扫描中序数组。这与今天 KV Cache 的"复用历史 K/V 避免重算"思想同构：KV Cache 缓存历史 K/V 让 Decode 每步 O(1) 取用而非 O(n) 重算 attention，哈希表缓存 inorder 下标让每次定位根 O(1) 而非 O(n) 扫描——都是**用缓存/预处理换时间，把 O(n) 的重复查找压成 O(1)**。Mini 引擎的 generate 循环每步复用 cache 就像递归每步复用 idx 哈希——都是"增量推进 + 复用缓存"。
-
-**核心套路**：
-
-```
-idx = {v: i for i,v in enumerate(inorder)}   # 预缓存
-preIdx = 0
-build(inL, inR):
- if inL > inR: return null
- rootVal = preorder[preIdx++]
- mid = idx[rootVal]                          # O(1) 定位根
- root.left = build(inL, mid-1); root.right = build(mid+1, inR)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 KV Cache 复用模式的类比）见 [从前序与中序遍历序列构造二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)。
+> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

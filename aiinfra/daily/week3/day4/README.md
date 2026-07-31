@@ -451,15 +451,16 @@ __global__ void flash_attention(const float* Q, const float* K, const float* V, 
 
 > 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 fused 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 递推、HBM 访问对比）见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 环形链表
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 4）
 
-**题目链接**：[141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 4（相加与复制），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定链表头节点 `head`，判断链表中是否有环。
-
-**与今日知识的关联**：环形链表的**快慢指针**与今日 Attention 的**分块计算**同构——快慢指针以不同步长遍历链表检测环，Attention 以不同 tile 大小遍历 Q/K 矩阵计算 score。两者都是"用不同粒度的遍历策略高效处理数据依赖"。
-
-> 💡 完整题解见 [环形链表题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [2. 两数相加](https://leetcode.cn/problems/add-two-numbers/) | 中等 | 模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html) |
+| [445. 两数相加 II](https://leetcode.cn/problems/add-two-numbers-ii/) | 中等 | 栈逆序相加 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/445_两数相加 II.html) |
+| [138. 随机链表的复制](https://leetcode.cn/problems/copy-list-with-random-pointer/) | 中等 | 哈希 / 拼接拆分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html) |
+| [430. 扁平化多级双向链表](https://leetcode.cn/problems/flatten-a-multilevel-doubly-linked-list/) | 中等 | DFS 栈扁平化 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/430_扁平化多级双向链表.html) |
 
 ---
 

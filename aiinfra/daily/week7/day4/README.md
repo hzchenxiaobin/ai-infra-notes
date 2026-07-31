@@ -288,24 +288,15 @@ python kernels/custom_ops_module.py
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 实现 Trie（前缀树）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 4）
 
-**题目链接**：[208. 实现 Trie (前缀树)](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 4（二分进阶），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：实现一个 Trie（前缀树），支持 `insert`、`search`、`startsWith` 操作。
-
-**与今日知识的关联**：Trie 的**前缀共享结构**与自定义 Kernel 集成中的 **PyTorch Module 树**同构——Trie 用子节点指针构建共享前缀树，PyTorch 用 `nn.Module` 的 `children()` 构建模型算子树。两者都是**树形结构的递归遍历 + 节点查找**：Trie 按字符逐层查找子节点，PyTorch 遍历 Module 子模块加载 kernel。Trie 的 `startsWith` 前缀匹配对应集成时的"按名称前缀查找算子"。
-
-**核心套路**：
-
-```
-TrieNode = { children: dict[char→TrieNode], is_end: bool }
-insert: 逐字符走/建子节点，末尾标记 is_end
-search: 逐字符走子节点，返回 is_end
-startsWith: 逐字符走子节点，能走完就返回 True
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、Trie 结构图解、与 Module 树的类比）见 [实现 Trie 题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [410. 分割数组的最大值](https://leetcode.cn/problems/split-array-largest-sum/) | 困难 | 二分答案 + 贪心划分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
+| [719. 找出第 K 小的数对距离](https://leetcode.cn/problems/find-k-th-smallest-pair-distance/) | 困难 | 二分答案 + 双指针计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html) |
+| [4. 寻找两个正序数组的中位数](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | 困难 | 二分划分（合并第 k 小） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
 
 ---
 

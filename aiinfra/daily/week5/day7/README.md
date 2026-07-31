@@ -271,17 +271,18 @@ for seq_len in [1, 128, 1024]:
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
-#### 任务 3：LeetCode 面试题 —— K 个一组翻转链表
+#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 5 周）
 
-**题目链接**：[25. K 个一组翻转链表](https://hzchenxiaobin.github.io/leetcode/problems/25_K个一组翻转链表.html)
+本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
 
-**题目概述**：每 k 个节点一组翻转链表，不足 k 保持原序。dummy 节点 + 分组翻转 + 串接，O(n) 时间 O(1) 空间。
+| Day | 主题 | LeetCode 题目 |
+|-----|------|---------------|
+| Day 1 | 遍历 | [94. 二叉树的中序遍历](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html)、[144. 二叉树的前序遍历](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html)、[145. 二叉树的后序遍历](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html)、[102. 二叉树的层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)、[103. 二叉树的锯齿形层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
+| Day 2 | 形态与深度 | [104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)、[226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html)、[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)、[543. 二叉树的直径](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html)、[110. 平衡二叉树](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
+| Day 3 | BST 基础 | [111. 二叉树的最小深度](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html)、[559. N 叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html)、[108. 将有序数组转换为二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html)、[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)、[230. 二叉搜索树中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
+| Day 4 | BST 进阶与构造 | [235. 二叉搜索树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html)、[173. 二叉搜索树迭代器](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html)、[1008. 前序遍历构造二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html)、[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)、[889. 根据前序与后序遍历构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
 
-**与本周总结的关联**：本题是 **Chunked Prefill 的算法直觉**——把"大块连续处理"拆成"固定大小分段处理，尾段特殊处理"。翻转链表的"不足 k 保持原序" = Chunked Prefill 的"最后一块可能不满"。两者都是推理系统处理变长输入的通用分治范式，正是本周四大核心问题中"Latency 隐藏"（chunked prefill 与 decode 交错）的算法基础。
-
-**核心套路**：`dummy` + 外层按组 + 内层翻转（`prev` 初始化为 `nextGroup` 让翻转后尾自动接下一组）。
-
-> 💡 完整题解（含 C++/Python 参考代码、分组翻转流程图、与 Chunked Prefill 的模式类比）见 [K 个一组翻转链表题解](https://hzchenxiaobin.github.io/leetcode/problems/25_K个一组翻转链表.html)。
+> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 5 周「二叉树（上）——遍历、形态与 BST」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

@@ -480,15 +480,15 @@ int main() {
 
 > 💡 提交后在 [LeetGPU RMS Normalization 题目](https://leetgpu.com/challenges/rms-normalization)上记录通过耗时，用 ncu 验证 `DRAM% >> SM%`（memory-bound），并对比 RMSNorm（一次 reduce）vs Day 2 LayerNorm（两次 reduce）的 latency。完整题解（含 RMSNorm vs LayerNorm 对比、Roofline 分析、与 Llama 的关联）见 [RMS Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 子集
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
 
-**题目链接**：[78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定一个不含重复元素的整数数组 `nums`，返回该数组所有可能的子集（幂集）。
-
-**与今日知识的关联**：子集的**回溯枚举**与今日 profiling 的"逐层拆解"同构——回溯对每个元素做"选/不选"二叉决策树，profiling 对每层 forward 做"layernorm→GEMM→attention→FFN"逐算子拆解。两者都是"将复杂问题分解为逐步决策"的模式。
-
-> 💡 完整题解见 [子集题解](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
+| [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
+| [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
 
 ---
 

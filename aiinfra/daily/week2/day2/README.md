@@ -427,26 +427,17 @@ __global__ void gemm_register_blocking(const float* A, const float* B, float* C,
 
 > 💡 提交后在 [LeetGPU GEMM 题目](https://leetgpu.com/challenges/general-matrix-multiplication-gemm)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 爬楼梯
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 2）
 
-**题目链接**：[70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 2（滑动窗口进阶），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-假设你正在爬楼梯，需要 `n` 阶才能到达楼顶。每次可以爬 1 或 2 个台阶，问有多少种不同的方法可以爬到楼顶。
-
-**与今日知识的关联**：
-
-本题是经典的一维 DP 入门题，状态转移 `f(n) = f(n-1) + f(n-2)` 恰好是斐波那契数列。虽然不涉及 GPU/CUDA，但 DP 的"用额外空间记录子问题解避免重复计算"思路与今天 Register Blocking 的"用累加器 acc 驻留寄存器避免重复访存"异曲同工——两者都是**空间换时间**，把高频中间结果留在离计算最近的存储层。
-
-**核心套路**：
-
-```
-f(1)=1, f(2)=2
-f(n) = f(n-1) + f(n-2) // 滚动两个变量即可，O(1) 空间
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [爬楼梯题解](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [239. 滑动窗口最大值](https://leetcode.cn/problems/sliding-window-maximum/) | 困难 | 单调队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/239_滑动窗口最大值.html) |
+| [76. 最小覆盖子串](https://leetcode.cn/problems/minimum-window-substring/) | 困难 | 滑动窗口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html) |
+| [209. 长度最小的子数组](https://leetcode.cn/problems/minimum-size-subarray-sum/) | 中等 | 滑动窗口（正数单调） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/209_长度最小的子数组.html) |
+| [424. 替换后的最长重复字符](https://leetcode.cn/problems/longest-repeating-character-replacement/) | 中等 | 滑窗维护 maxCount | [题解](https://hzchenxiaobin.github.io/leetcode/problems/424_替换后的最长重复字符.html) |
+| [713. 乘积小于 K 的子数组](https://leetcode.cn/problems/subarray-product-less-than-k/) | 中等 | 滑动窗口 + 计数(right−left+1) | [题解](https://hzchenxiaobin.github.io/leetcode/problems/713_乘积小于K的子数组.html) |
 
 ---
 

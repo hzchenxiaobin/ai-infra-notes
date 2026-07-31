@@ -300,30 +300,17 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 
 > 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 最长递增子序列
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 6）
 
-**题目链接**：[300. 最长递增子序列](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 6（最短路与 BFS），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定整数数组 `nums`，找到最长**严格递增子序列**的长度。子序列不要求连续，但保持原顺序。
-
-**与今日知识的关联**：
-
-LIS 是动态规划的经典题，也是"查漏补缺"的最佳载体——它有 `O(n²)` DP 和 `O(n log n)` 贪心+二分两种解法，考察的是**能否从暴力优化到最优**的思维能力。这与 AI Infra 的优化思路同构：DP `O(n²)` → 贪心 `O(n log n)` 对应 Naive GEMM `1%` → cuBLAS `90%+`，都是"识别冗余、用更优数据结构/策略消除冗余"。此外，LIS 的"维护最小末尾以最大化未来可能性"和推理调度的"维护最小 TBT 以最大化吞吐"是同构的贪心思想。
-
-**核心套路**：
-
-```text
-贪心 + 二分：维护 tails 数组，tails[k] = 长度 k+1 的最小末尾
- 遍历 nums，对每个 x：
-   pos = lower_bound(tails, x)   // 第一个 >= x
-   if pos == len(tails): tails.append(x)   // 追加，LIS +1
-   else: tails[pos] = x                     // 替换，保持最小末尾
- 答案 = len(tails)
-```
-
-> 💡 完整题解（含 DP 与贪心+二分两种解法、复杂度对比、还原子序列、面试要点）见 [最长递增子序列题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [743. 网络延迟时间](https://leetcode.cn/problems/network-delay-time/) | 中等 | 堆优化 Dijkstra 单源最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html) |
+| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
+| [752. 打开转盘锁](https://leetcode.cn/problems/open-the-lock/) | 中等 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html) |
+| [127. 单词接龙](https://leetcode.cn/problems/word-ladder/) | 困难 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html) |
+| [329. 矩阵中的最长递增路径](https://leetcode.cn/problems/longest-increasing-path-in-a-matrix/) | 困难 | 记忆化搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
 
 ---
 

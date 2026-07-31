@@ -389,28 +389,17 @@ __global__ void matmul_tiled(const float* A, const float* B, float* C, int M, in
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 6：LeetCode 面试题 —— 全排列
+#### 任务 6：LeetCode 面试题（8 周计划 · 第 1 周 Day 6）
 
-**题目链接**：[46. 全排列](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 6（位运算与其他），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定不含重复数字的整数数组 `nums`，返回其所有可能的全排列。
-
-**与今日知识的关联**：
-
-本题核心是**回溯法**——递归选择/撤销选择，用 `used` 数组标记已选元素。这与今天 Profiling 的"Profile → 优化 → 重新 Profile 验证"闭环思路呼应：回溯是"选一条路走到底，不行就退回换一条"，profiling 优化是"试一种优化，ncu 验证不行就退回换另一种"——都是**试探 + 回退 + 换路径**的搜索模式。
-
-**核心套路**：
-
-```
-backtrack(path, used):
- if path.size()==n: 记录结果; return
- for i in 0..n-1:
- if not used[i]: used[i]=true; path.add(nums[i]); backtrack(...); path.pop(); used[i]=false
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [全排列题解](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [137. 只出现一次的数字 II](https://leetcode.cn/problems/single-number-ii/) | 中等 | 位运算按位计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/137_只出现一次的数字II.html) |
+| [260. 只出现一次的数字 III](https://leetcode.cn/problems/single-number-iii/) | 中等 | 异或 + lowbit 分组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/260_只出现一次的数字III.html) |
+| [338. 比特位计数](https://leetcode.cn/problems/counting-bits/) | 简单 | DP + lowbit | [题解](https://hzchenxiaobin.github.io/leetcode/problems/338_比特位计数.html) |
+| [349. 两个数组的交集](https://leetcode.cn/problems/intersection-of-two-arrays/) | 简单 | 哈希集合 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/349_两个数组的交集.html) |
+| [581. 最短无序连续子数组](https://leetcode.cn/problems/shortest-unsorted-continuous-subarray/) | 中等 | 双指针找乱序边界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/581_最短无序连续子数组.html) |
 
 ---
 

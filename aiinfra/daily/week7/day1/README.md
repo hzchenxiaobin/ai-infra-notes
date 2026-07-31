@@ -286,24 +286,16 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 最长连续序列
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 1）
 
-**题目链接**：[128. 最长连续序列](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 1（二分模板），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定未排序整数数组 `nums`，找出最长连续序列的长度（要求 `O(n)` 时间）。
-
-**与今日知识的关联**：最长连续序列的**哈希集合 + 序列起点枚举**与并发引擎的请求 ID 管理同构——引擎用 `request_id` 唯一标识每个请求（类似集合中的元素），连续序列的"从起点向后查"对应引擎按 ID 顺序处理请求。哈希集合的 `O(1)` 查找对应引擎用 dict（哈希表）`O(1)` 索引 `running[request_id]`。两者都是**用哈希实现 O(1) 查找**的核心模式：集合查元素存在性，引擎查请求状态。
-
-**核心套路**：
-
-```
-全部数入哈希集合 → 枚举每个数：
- 若 num-1 不在集合（num 是序列起点）→ 向后查 num+1, num+2... 计长度
- 更新 max_len
-O(n)：每个数最多被查 2 次（起点枚举 + 被后续查到）
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、哈希集合图解、与引擎 request_id 索引的类比）见 [最长连续序列题解](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [704. 二分查找](https://leetcode.cn/problems/binary-search/) | 简单 | 闭区间模板（一切二分的母题） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html) |
+| [35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/) | 简单 | 二分找下界 | — |
+| [69. x 的平方根](https://leetcode.cn/problems/sqrtx/) | 简单 | 二分答案 | — |
+| [74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) | 中等 | 二维一维化二分 | — |
 
 ---
 

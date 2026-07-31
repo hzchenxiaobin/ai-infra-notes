@@ -302,30 +302,16 @@ Submitting 3 sequences with staggered arrival...
 
 > 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 二叉树的最大深度
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 2）
 
-**题目链接**：[104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定二叉树根节点，返回最大深度（根到最远叶子的节点数）。后序递归 `max(left,right)+1`，或 BFS 逐层计数。
-
-**与今日知识的关联**：
-
-本题的 **BFS 层序解法**与 Continuous Batching 的序列生命周期管理同构——BFS 用队列逐层处理节点（入队 push、处理出队 pop、每层 depth++），Continuous Batching 用 running 队列管理请求（新请求 push 入队、完成的 pop 出队、每轮 step 处理一批）。两者都是**队列驱动的迭代式批处理**：BFS 每轮处理一整层节点后深度 +1，Scheduler 每轮 step 处理一批 running 请求后推进 generation——都是"外层循环管批次/层数，内层处理当前批次全部元素"的队列骨架。
-
-**核心套路**：
-
-```
-DFS: depth(root) = max(depth(left), depth(right)) + 1   # 空树 0
-
-BFS: q = [root]; depth = 0
- while q 非空:
- depth++
- for 当前层全部节点: 出队、子节点入队
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、DFS/BFS 双解、与 Continuous Batching 队列驱动批处理的类比）见 [二叉树的最大深度题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/) | 中等 | 后序 DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html) |
+| [124. 二叉树中的最大路径和](https://leetcode.cn/problems/binary-tree-maximum-path-sum/) | 困难 | 后序 DFS（单边贡献） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/124_二叉树中的最大路径和.html) |
+| [199. 二叉树的右视图](https://leetcode.cn/problems/binary-tree-right-side-view/) | 中等 | BFS/DFS 取每层最右 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/199_二叉树的右视图.html) |
+| [114. 二叉树展开为链表](https://leetcode.cn/problems/flatten-binary-tree-to-linked-list/) | 中等 | 后序 / 迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/114_二叉树展开为链表.html) |
 
 ---
 

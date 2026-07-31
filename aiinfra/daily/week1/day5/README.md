@@ -286,30 +286,16 @@ __global__ void reduction_kernel(const float* input, float* output, int N) {
 
 > 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size 的性能差异。完整题解见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 二叉树的最近公共祖先
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 5）
 
-**题目链接**：[236. 二叉树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 5（数组技巧），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定二叉树及两个节点 `p` 和 `q`，找到它们的最近公共祖先（LCA）。
-
-**与今日知识的关联**：
-
-本题核心是**后序 DFS 递归**——左右子树分别查找，汇总结果做决策。这与今天 Bank Conflict 的思路呼应：bank conflict 是多个线程访问同一 bank 导致串行化，需要 padding 错开访问；LCA 递归是左右子树各自搜索再汇总，如果某侧找到就向上传递——都是**多路并行探索 + 汇总决策**的模式（GPU warp 内多 lane 并行 + reduce 汇总）。
-
-**核心套路**：
-
-```
-dfs(root, p, q):
- if root==null or root==p or root==q: return root
- left = dfs(root.left, p, q)
- right = dfs(root.right, p, q)
- if left and right: return root // p,q 分布在两侧
- return left ?: right
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [二叉树的最近公共祖先题解](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [75. 颜色分类](https://leetcode.cn/problems/sort-colors/) | 中等 | 三指针 Dutch Flag | [题解](https://hzchenxiaobin.github.io/leetcode/problems/75_颜色分类.html) |
+| [31. 下一个排列](https://leetcode.cn/problems/next-permutation/) | 中等 | 从右找降序 + 交换反转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/31_下一个排列.html) |
+| [287. 寻找重复数](https://leetcode.cn/problems/find-the-duplicate-number/) | 中等 | Floyd 判圈 / 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/287_寻找重复数.html) |
+| [189. 轮转数组](https://leetcode.cn/problems/rotate-array/) | 中等 | 三次翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/189_轮转数组.html) |
 
 ---
 

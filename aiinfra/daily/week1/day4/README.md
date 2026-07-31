@@ -576,27 +576,16 @@ __global__ void matrix_transpose(const float* input, float* output, int M, int N
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 反转链表
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 4）
 
-**题目链接**：[206. 反转链表](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 4（手撕排序），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定单链表头节点 `head`，反转链表并返回新的头节点。
-
-**与今日知识的关联**：
-
-本题核心是**三指针迭代**——`prev, curr, next` 逐节点翻转指向。这与今天 Shared Memory Tiling 的思路呼应：tiling 把全局矩阵分块搬运到 shared memory 逐块处理，反转链表把链表逐节点"搬运"到新方向——都是**用局部缓冲（shared memory / prev 指针）暂存中间状态，逐块/逐节点推进**的流水线思维。
-
-**核心套路**：
-
-```
-prev=null, curr=head
-while curr: next=curr.next; curr.next=prev; prev=curr; curr=next
-return prev
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [反转链表题解](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [912. 排序数组](https://leetcode.cn/problems/sort-an-array/) | 中等 | 手撕快排 / 归并 / 堆排 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/912_排序数组.html) |
+| [88. 合并两个有序数组](https://leetcode.cn/problems/merge-sorted-array/) | 简单 | 三指针从后往前 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/88_合并两个有序数组.html) |
+| [179. 最大数](https://leetcode.cn/problems/largest-number/) | 中等 | 自定义排序（拼接比较） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/179_最大数.html) |
+| [274. H 指数](https://leetcode.cn/problems/h-index/) | 中等 | 计数排序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/274_H指数.html) |
 
 ---
 

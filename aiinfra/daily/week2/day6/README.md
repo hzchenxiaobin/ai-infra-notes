@@ -709,28 +709,9 @@ __global__ void histogram_shared(const int* input, int* hist, int N, int B) {
 
 > 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 每日温度
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周机动补漏）
 
-**题目链接**：[739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)
-
-**题目概述**：
-
-给定每日温度数组 `temperatures`，对每一天求"下一次出现更高温度还需等几天"，结果存入数组。若无更高天则填 0。
-
-**与今日知识的关联**：
-
-本题核心是**单调栈**——维护一个递减栈，遇到更高温度就弹出栈顶并记录答案。这与今天 GEMM 整合优化的"逐层叠加 + 每层用 ncu 验证收益"思路呼应：单调栈是"用栈缓存未解决的元素，等条件满足再弹出结算"，GEMM 优化是"用 ncu 缓存每层指标，等优化叠加后验证收益"——都是**延迟结算 + 批量回溯**的工作模式。
-
-**核心套路**：
-
-```
-单调递减栈存下标；遍历温度：
- while 栈非空且当前温度 > 栈顶温度：
- 弹出 idx，ans[idx] = 当前下标 - idx
- 当前下标入栈
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [每日温度题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)。
+> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

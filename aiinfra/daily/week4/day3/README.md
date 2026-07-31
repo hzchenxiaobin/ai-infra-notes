@@ -344,30 +344,17 @@ int main() {
 
 > 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 确认 `dram__bytes_read` 接近 4N bytes（memory-bound 下界）。完整题解（含 double 精度累加、warp shuffle 归约、block 间汇总）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 分割回文串
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 3）
 
-**题目链接**：[131. 分割回文串](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 3（单调栈），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定字符串 `s`，将其分割成若干子串使每段都是回文，返回所有分割方案（回溯枚举）。
-
-**与今日知识的关联**：
-
-本题核心是**预处理回文表 + 回溯查表**——先用区间 DP 预处理 `isPal[i][j]`，回溯中判回文降到 O(1)。这与今天读官方源码的"按 d 预先 dispatch 不同 Kernel_traits"思路呼应：官方把"运行时按参数选 kernel"前移到"编译期/初始化期建分发表"，分割回文串把"回溯时每次判回文 O(n)"前移到"预处理建表 O(n²) 一次"——都是**把重复判定前移到预处理阶段，运行时 O(1) 查表**。两者都是"预处理换运行时效率"的工程套路。
-
-**核心套路**：
-
-```
-预处理 isPal[i][j] = (s[i]==s[j]) && isPal[i+1][j-1]
-回溯 dfs(start):
- if start == n: 记录方案
- for end = start..n-1:
- if isPal[start][end]:
- path.push(s[start..end]); dfs(end+1); path.pop()
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [分割回文串题解](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/) | 中等 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html) |
+| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html) |
+| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html) |
+| [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/) | 中等 | 单调栈 + 跨度合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html) |
+| [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/) | 困难 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
 
 ---
 

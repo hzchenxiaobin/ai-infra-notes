@@ -427,26 +427,17 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 零钱兑换
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 3）
 
-**题目链接**：[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 3（二维 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定硬币面额数组 `coins` 和总金额 `amount`，求凑成该金额所需的最少硬币数。无法凑出返回 `-1`。
-
-**与今日知识的关联**：零钱兑换的 **DP 子问题复用** 与 GPU **shared memory tile 复用** 同构——DP 中 `dp[i]` 查 `dp[i-coin]`（已算好的子问题解），避免重算；GPU kernel 从 shared memory 读 tile（已从 HBM 加载），避免重读。两者都是"缓存已计算/已加载的结果，避免重复"的核心模式。面试中"为什么 DP 比暴力快"和"为什么 tiling 比 naive 快"是同一个答案：复用缓存。
-
-**核心套路**：
-
-```
-dp[0] = 0, dp[1..amount] = INF
-for i in 1..amount:
-    for coin in coins:
-        if i >= coin: dp[i] = min(dp[i], dp[i-coin] + 1)
-return dp[amount] if dp[amount] != INF else -1
-完全背包：外层金额，内层硬币，每硬币可重复用
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、DP 表演算、与 shared memory tile 复用的类比）见 [零钱兑换题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [62. 不同路径](https://leetcode.cn/problems/unique-paths/) | 中等 | 组合数 / 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html) |
+| [64. 最小路径和](https://leetcode.cn/problems/minimum-path-sum/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html) |
+| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
+| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
+| [221. 最大正方形](https://leetcode.cn/problems/maximal-square/) | 中等 | DP（右下角最长边） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/221_最大正方形.html) |
 
 ---
 

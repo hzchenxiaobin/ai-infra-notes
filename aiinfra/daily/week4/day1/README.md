@@ -381,30 +381,17 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 > 💡 提交后在 [LeetGPU Causal Self-Attention 题目](https://leetgpu.com/challenges/causal-self-attention)上记录通过耗时。完整题解（含下三角 mask 实现、跳过上三角 tile、online softmax 融合）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 乘积最大子数组
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 1）
 
-**题目链接**：[152. 乘积最大子数组](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 1（栈基础与设计），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定整数数组 `nums`，找出乘积最大的连续子数组，返回其乘积。负数会让"最大"与"最小"互换，需同时维护两者。
-
-**与今日知识的关联**：
-
-本题核心是**单遍扫描中用 O(1) 滚动状态维护两个极值**——同时维护以 `i` 结尾的最大乘积 `maxP` 和最小乘积 `minP`，因为遇到负数时最小值翻正可能成为新的最大值。这与今天 online softmax 的"边遍历边维护 running max/sum"思路完全一致：都是**无法回头的单遍扫描中增量维护全局统计量**。online softmax 维护 (m, l, o) 三态，乘积问题维护 (maxP, minP) 两态——核心都是"用 O(1) 状态压缩一次扫描"，且都需同时跟踪多个关联量以应对翻转。
-
-**核心套路**：
-
-```
-maxP = minP = ans = nums[0]
-for cur in nums[1:]:
- a, b = maxP*cur, minP*cur
- maxP = max(cur, a, b)   # 三候选：新开段 / 接正乘积 / 接负乘积翻正
- minP = min(cur, a, b)
- ans = max(ans, maxP)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [乘积最大子数组题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [20. 有效的括号](https://leetcode.cn/problems/valid-parentheses/) | 简单 | 栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html) |
+| [155. 最小栈](https://leetcode.cn/problems/min-stack/) | 中等 | 辅助栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html) |
+| [232. 用栈实现队列](https://leetcode.cn/problems/implement-queue-using-stacks/) | 简单 | 双栈倒换（摊还 O(1)） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html) |
+| [150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/) | 中等 | 操作数栈求值 | — |
+| [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/) | 中等 | 哈希 + 数组交换删除 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html) |
 
 ---
 

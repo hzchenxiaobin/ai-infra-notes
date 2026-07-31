@@ -312,28 +312,17 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 > 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-moe-topk-gating-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 二叉树的序列化与反序列化
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 1）
 
-**题目链接**：[297. 二叉树的序列化与反序列化](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 1（路径问题），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-设计算法把二叉树序列化为字符串，并能从字符串反序列化重建原树。前序遍历显式记录 null 标记，单序列即可无损往返。
-
-**与今日知识的关联**：
-
-本题核心是**把结构化数据编码成线性序列、再从序列无损重建**——序列化把树的前序 + null 标记写成字符串，反序列化按序消费重建。这与 Dynamic Batching 的"请求打包成 batch、再分发执行"同构：Dynamic Batcher 把多个请求序列化成 batch 张量送入 engine，scheduler 再从 batch 重建执行计划；序列化把树打包成 token 串以便存储/传输，反序列化从 token 串重建树——都是**结构与线性序列的双向转换**。null 标记保留结构信息，正如 batch 里 padding/request_id 保留每个请求的边界信息——都是"编码时显式标注边界以保证无损往返"。
-
-**核心套路**：
-
-```
-serialize（前序）：null 写 "#"，值间用分隔符
- serialize(node): if null 写"#"; 否则 写 val; serialize(left); serialize(right)
-deserialize：全局指针按序消费
- build(): token=next(); if token=="#" return null; 建节点; left=build(); right=build()
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 Dynamic Batching 打包/分发模式的类比）见 [二叉树的序列化与反序列化题解](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [112. 路径总和](https://leetcode.cn/problems/path-sum/) | 简单 | DFS 递归 | — |
+| [113. 路径总和 II](https://leetcode.cn/problems/path-sum-ii/) | 中等 | DFS 回溯收集路径 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/113_路径总和II.html) |
+| [129. 求根节点到叶节点数字之和](https://leetcode.cn/problems/sum-root-to-leaf-numbers/) | 中等 | DFS 前缀累积 | — |
+| [222. 完全二叉树的节点个数](https://leetcode.cn/problems/count-complete-tree-nodes/) | 简单 | 完全二叉树性质 + 二分 | — |
+| [437. 路径总和 III](https://leetcode.cn/problems/path-sum-iii/) | 中等 | 前缀和 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/437_路径总和III.html) |
 
 ---
 

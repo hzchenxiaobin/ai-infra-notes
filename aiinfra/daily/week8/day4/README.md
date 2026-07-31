@@ -273,17 +273,18 @@ FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 
 
 > 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 编辑距离
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 4）
 
-**题目链接**：[72. 编辑距离](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 4（股票与划分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定两个字符串 `word1` 和 `word2`，返回把 `word1` 转换成 `word2` 所使用的最少操作数（插入/删除/替换）。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [122. 买卖股票的最佳时机 II](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/) | 中等 | 贪心收集所有上涨段 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/122_买卖股票的最佳时机II.html) |
+| [188. 买卖股票的最佳时机 IV](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/) | 困难 | DP 状态机（k 次交易） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html) |
+| [309. 买卖股票的最佳时机含冷冻期](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-cooldown/) | 中等 | DP 三状态（含冷冻期） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html) |
+| [714. 买卖股票的最佳时机含手续费](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/) | 中等 | DP 两状态 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html) |
+| [698. 划分为 K 个相等的子集](https://leetcode.cn/problems/partition-to-k-equal-sum-subsets/) | 中等 | 回溯 + 排序剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/698_划分为K个相等的子集.html) |
 
-**与今日知识的关联**：编辑距离在 LLM 推理系统中有直接应用——**Speculative Decoding Verification** 中 draft token 与 target token 的对齐、**Beam Search** 中候选序列的去重比较，本质上都是序列间的编辑距离问题。此外，编辑距离的 `O(m×n)` 二维 DP 与 Attention Score 矩阵计算同构（两序列逐位置交互），GPU 分块并行化思路相同。面试中"二维 DP 状态转移"和"空间优化"是高频考点。
-
-**核心套路**：
-
-```python
 # 二维 DP：dp[i][j] = word1[0..i-1] → word2[0..j-1] 的最少操作数
 m, n = len(word1), len(word2)
 dp = [[0] * (n + 1) for _ in range(m + 1)]

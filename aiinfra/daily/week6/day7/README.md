@@ -130,15 +130,20 @@ python kernels/week6_summary.py
 
 > 💡 完整题解（含 warp shuffle 归约、block 间两阶段汇总、double 高精度累加的精度处理）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
-#### 任务 3：LeetCode 面试题 —— 最小覆盖子串
+#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 6 周）
 
-**题目链接**：[76. 最小覆盖子串](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html)
+本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」（点击查看题解）：
 
-**题目概述**：给你字符串 `s` 和 `t`，找 `s` 中涵盖 `t` 所有字符的最小子串。
+| Day | 主题 | LeetCode 题目 |
+|-----|------|---------------|
+| Day 1 | 路径问题 | [112. 路径总和](https://leetcode.cn/problems/path-sum/)、[113. 路径总和 II](https://hzchenxiaobin.github.io/leetcode/problems/113_路径总和II.html)、[129. 求根节点到叶节点数字之和](https://leetcode.cn/problems/sum-root-to-leaf-numbers/)、[222. 完全二叉树的节点个数](https://leetcode.cn/problems/count-complete-tree-nodes/)、[437. 路径总和 III](https://hzchenxiaobin.github.io/leetcode/problems/437_路径总和III.html) |
+| Day 2 | LCA 与路径和 | [236. 二叉树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html)、[124. 二叉树中的最大路径和](https://hzchenxiaobin.github.io/leetcode/problems/124_二叉树中的最大路径和.html)、[199. 二叉树的右视图](https://hzchenxiaobin.github.io/leetcode/problems/199_二叉树的右视图.html)、[114. 二叉树展开为链表](https://hzchenxiaobin.github.io/leetcode/problems/114_二叉树展开为链表.html) |
+| Day 3 | 序列化与宽度 | [297. 二叉树的序列化与反序列化](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html)、[662. 二叉树最大宽度](https://hzchenxiaobin.github.io/leetcode/problems/662_二叉树最大宽度.html)、[958. 二叉树的完全性检验](https://hzchenxiaobin.github.io/leetcode/problems/958_二叉树的完全性检验.html) |
+| Day 4 | 网格 DFS/BFS | [200. 岛屿数量](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html)、[994. 腐烂的橘子](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html)、[695. 岛屿的最大面积](https://hzchenxiaobin.github.io/leetcode/problems/695_岛屿的最大面积.html)、[130. 被围绕的区域](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
+| Day 5 | 回溯基础 | [46. 全排列](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html)、[78. 子集](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html)、[39. 组合总和](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html)、[17. 电话号码的字母组合](https://hzchenxiaobin.github.io/leetcode/problems/17_电话号码的字母组合.html) |
+| Day 6 | 回溯进阶 | [22. 括号生成](https://hzchenxiaobin.github.io/leetcode/problems/22_括号生成.html)、[79. 单词搜索](https://hzchenxiaobin.github.io/leetcode/problems/79_单词搜索.html)、[131. 分割回文串](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html)、[51. N 皇后](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html)、[93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/) |
 
-**与本周总结的关联**：最小覆盖子串的**滑动窗口**与本周 Scheduler 的 token budget 窗口控制同构——Scheduler 每轮维护一个"活动窗口"（running 序列），窗口大小（batch）动态变化，窗口内元素满足约束（token budget + 显存）。滑动窗口的"扩张-收缩"对应 Scheduler 的"补入 waiting - 退出 finished"，都是**动态窗口 + 约束满足**问题。
-
-> 💡 完整题解（含 C++/Python 参考代码、滑动窗口图解、与 Scheduler 窗口控制的类比）见 [最小覆盖子串题解](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html)。
+> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 6 周「二叉树（下）+ 回溯 + 网格搜索」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

@@ -347,32 +347,9 @@ INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里�
 
 > 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 tiled GEMM、反量化/requantize 的 scale 链、ncu profiling、Roofline 分析）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 组合总和
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
 
-**题目链接**：[39. 组合总和](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html)
-
-**题目概述**：
-
-给定无重复正整数数组 `candidates` 和目标 `target`，找出所有和为 `target` 的组合（数字可无限重复选取），结果不重复（回溯 + 剪枝）。
-
-**与今日知识的关联**：
-
-本题核心是**决策树展开 + 剪枝**——自顶向下逐层选数（`remain` 递减），排序后 `candidates[i] > remain` 直接 `break` 砍掉整棵子树。这与今天的 **profiling 三层方法论**同构：都是"自顶向下分层探索 + 剪掉不可行分支"。profiling 逐层细化（Prefill/Decode → forward/sampling/sync → 单 kernel），每层排除无关阶段定位瓶颈；组合总和逐层选数，每层用排序 + break 排除超 target 的分支——都是"树形探索 + 剪枝定位"。profiling 的"锁定最慢 kernel"对应回溯的"找到合法组合"——都是分层收敛到目标。
-
-**核心套路**：
-
-```
-sort(candidates)
-dfs(remain, start):
- if remain == 0: 记录方案
- for i = start..n-1:
- if candidates[i] > remain: break   # 有序 → 整枝剪掉
- path.push(candidates[i])
- dfs(remain - candidates[i], i)     # 传 i（非 i+1）→ 可重复选
- path.pop()
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、与 profiling 三层拆解的模式类比）见 [组合总和题解](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html)。
+> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

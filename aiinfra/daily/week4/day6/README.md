@@ -297,30 +297,17 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 两数相加
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 6）
 
-**题目链接**：[2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 6（区间与差分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-给定两个非空链表，表示两个非负整数（逆序存储，每个节点一个数字），相加并返回结果链表。
-
-**与今日知识的关联**：
-
-本题核心是**模拟竖式加法**——逐位相加 + 进位传递。这与今天 benchmark 的"逐配置扫描 + 结果累积"思路呼应：竖式加法是"逐位处理 + carry 累积"，benchmark 是"逐配置测试 + 结果累积"——都是**线性扫描 + 增量累积**的工作模式。另外，进位的传递与 online softmax 的 running state 更新类似：每步都依赖前一步的状态。
-
-**核心套路**：
-
-```
-dummy 哑节点; carry=0
-while l1 or l2 or carry:
- sum = (l1?.val||0) + (l2?.val||0) + carry
- carry = sum / 10; digit = sum % 10
- append digit; l1=l1?.next; l2=l2?.next
-return dummy.next
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [两数相加题解](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [253. 会议室 II](https://leetcode.cn/problems/meeting-rooms-ii/) | 中等 | 扫描线 / 小顶堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html) |
+| [435. 无重叠区间](https://leetcode.cn/problems/non-overlapping-intervals/) | 中等 | 贪心区间调度（按右端点） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html) |
+| [452. 用最少数量的箭引爆气球](https://leetcode.cn/problems/minimum-number-of-arrows-to-burst-balloons/) | 中等 | 按右端点排序贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html) |
+| [406. 根据身高重建队列](https://leetcode.cn/problems/queue-reconstruction-by-height/) | 中等 | 降序排序 + 按 k 插队 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html) |
+| [1109. 航班预订统计](https://leetcode.cn/problems/corporate-flight-bookings/) | 中等 | 差分数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
 
 ---
 

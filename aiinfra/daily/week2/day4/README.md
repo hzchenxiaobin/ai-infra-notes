@@ -286,26 +286,16 @@ __global__ void softmax_kernel(const float* input, float* output, int N) {
 
 > 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html)。
 
-#### 任务 6：LeetCode 面试题 —— 合并两个有序链表
+#### 任务 6：LeetCode 面试题（8 周计划 · 第 2 周 Day 4）
 
-**题目链接**：[21. 合并两个有序链表](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 4（字符串匹配），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：
-
-将两个升序链表 `list1` 和 `list2` 合并为一个新的升序链表。
-
-**与今日知识的关联**：
-
-本题核心是**哑节点 + 双指针归并**——用一个 dummy 头简化边界处理，两个指针分别遍历两条链表取较小者接上。这与今天 Profiling 的"先建立 baseline 再逐层定位瓶颈"思路呼应：归并是"逐步比较取最优"，profiling 是"逐步对比找最慢"，都是**有序推进 + 增量决策**的工作模式。
-
-**核心套路**：
-
-```
-dummy 哑节点 + tail 尾指针；遍历两链表，每次取较小者接到 tail 后；
-处理剩余；返回 dummy.next
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、复杂度分析、面试要点）见 [合并两个有序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [165. 比较版本号](https://leetcode.cn/problems/compare-version-numbers/) | 中等 | 字符串切分 + 逐段比较 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html) |
+| [8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/) | 中等 | 模拟 + 溢出边界处理 | — |
+| [28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/) | 简单 | KMP / 内置查找 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html) |
+| [468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) | 中等 | 分段 + 规则校验 | — |
 
 ---
 

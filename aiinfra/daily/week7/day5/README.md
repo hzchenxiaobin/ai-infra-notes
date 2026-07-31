@@ -253,23 +253,17 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 合并 K 个升序链表
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 5）
 
-**题目链接**：[23. 合并 K 个升序链表](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 5（一维 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定 `k` 个升序链表，合并为一个升序链表。
-
-**与今日知识的关联**：合并 K 个链表的**优先队列（最小堆）**与系统联调中的 **Scheduler 优先级调度**同构——Scheduler 用 `heapq` 从 waiting 队列中按优先级弹出请求（类似从 K 个链表中弹最小值），每次弹出后补充下一个（类似链表前进一格）。两者都是"多路归并用堆维护全局最优"的核心模式：合并链表每次取最小节点，调度器每次取最高优先级请求。
-
-**核心套路**：
-
-```
-最小堆：每个链表头节点入堆
-循环：弹出堆顶（最小）→ 接到结果 → 该链表前进一格→ 新头入堆
-O(N log K)：N=总节点数，K=链表数
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、堆归并图解、与 Scheduler 优先级调度的类比）见 [合并K个升序链表题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/) | 简单 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html) |
+| [118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/) | 简单 | 递推模拟 | — |
+| [198. 打家劫舍](https://leetcode.cn/problems/house-robber/) | 中等 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
+| [213. 打家劫舍 II](https://leetcode.cn/problems/house-robber-ii/) | 中等 | 拆环为线 + 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html) |
+| [337. 打家劫舍 III](https://leetcode.cn/problems/house-robber-iii/) | 中等 | 树形 DP（选/不选） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
 
 ---
 

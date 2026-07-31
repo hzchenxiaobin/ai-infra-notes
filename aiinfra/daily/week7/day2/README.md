@@ -303,24 +303,17 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题 —— 对称二叉树
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 2）
 
-**题目链接**：[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 2（旋转数组与峰值），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
-**题目概述**：给定二叉树根节点，判断其是否轴对称（左右子树互为镜像）。递归交叉比较：左子树的左孩子对右子树的右孩子、左子树的右孩子对右子树的左孩子。
-
-**与今日知识的关联**：对称二叉树的"交叉配对验证约束"与今日调度器的**请求-资源配对验证**同构——调度器每轮检查请求是否满足约束（token_budget、KV 空间）才分配资源，对称树每层检查节点对是否满足镜像约束（值相等 + 子树交叉镜像）才返回 true。两者都是**递归/迭代地验证约束配对**：调度器在配对不满足时让请求等待下一轮，对称树在配对不满足时立即返回 false——都是"约束驱动的成对匹配 + 不满足即拒绝"。
-
-**核心套路**：
-
-```
-check(p, q):
- if p 和 q 都空: return true
- if 一空一非空: return false
- return p.val==q.val && check(p.left, q.right) && check(p.right, q.left)
-```
-
-> 💡 完整题解（含 C++/Python 参考代码、递归/迭代双解、与调度器约束配对验证的类比）见 [对称二叉树题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [153. 寻找旋转排序数组中的最小值](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | 中等 | 二分缩区间（与右端点比较） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html) |
+| [33. 搜索旋转排序数组](https://leetcode.cn/problems/search-in-rotated-sorted-array/) | 中等 | 二分（先判哪半有序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html) |
+| [34. 在排序数组中查找元素的第一个和最后一个位置](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | 中等 | 二分找左右边界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
+| [162. 寻找峰值](https://leetcode.cn/problems/find-peak-element/) | 中等 | 二分往高处走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
+| [540. 有序数组中的单一元素](https://leetcode.cn/problems/single-element-in-a-sorted-array/) | 中等 | 二分（奇偶下标配对） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/540_有序数组中的单一元素.html) |
 
 ---
 
