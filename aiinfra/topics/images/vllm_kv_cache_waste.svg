@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#fff8e1"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#d6a040" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+  <rect width="760" height="380" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">传统 KV Cache 分配的三种浪费（论文实测 60-80%）</text>
+
+  <!-- 浪费 1: 内部碎片 -->
+  <text x="40" y="66" font-size="13" font-weight="bold" fill="#7a5415">① 内部碎片：按最大长度预分配，实际只生成一小段</text>
+  <g filter="url(#sk)"><rect x="40" y="78" width="200" height="34" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/></g>
+  <g filter="url(#sk)"><rect x="240" y="78" width="440" height="34" rx="4" fill="url(#hatch)" stroke="#d6a040" stroke-width="1.8"/></g>
+  <text x="140" y="99" text-anchor="middle" font-size="11" fill="#356130">实际生成 512 token</text>
+  <text x="460" y="99" text-anchor="middle" font-size="11" fill="#7a5415">预留但未用（按 max_len=2048 分配）</text>
+  <text x="700" y="99" font-size="10" fill="#888">请求 A</text>
+
+  <!-- 浪费 2: 外部碎片 -->
+  <text x="40" y="156" font-size="13" font-weight="bold" fill="#7a5415">② 外部碎片：连续分配留下无法利用的空隙</text>
+  <g filter="url(#sk)"><rect x="40" y="168" width="180" height="34" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <g filter="url(#sk)"><rect x="220" y="168" width="70" height="34" rx="4" fill="#eeeeee" stroke="#999999" stroke-width="1.5" stroke-dasharray="4,3"/></g>
+  <g filter="url(#sk)"><rect x="290" y="168" width="200" height="34" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <g filter="url(#sk)"><rect x="490" y="168" width="50" height="34" rx="4" fill="#eeeeee" stroke="#999999" stroke-width="1.5" stroke-dasharray="4,3"/></g>
+  <g filter="url(#sk)"><rect x="540" y="168" width="140" height="34" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="130" y="189" text-anchor="middle" font-size="11" fill="#2b6e9e">请求 A</text>
+  <text x="255" y="189" text-anchor="middle" font-size="10" fill="#888">空隙</text>
+  <text x="390" y="189" text-anchor="middle" font-size="11" fill="#2b6e9e">请求 B</text>
+  <text x="515" y="189" text-anchor="middle" font-size="10" fill="#888">空隙</text>
+  <text x="610" y="189" text-anchor="middle" font-size="11" fill="#2b6e9e">请求 C</text>
+  <text x="700" y="189" font-size="10" fill="#888">有空闲但不连续</text>
+
+  <!-- 浪费 3: 无法共享 -->
+  <text x="40" y="246" font-size="13" font-weight="bold" fill="#8d3f3b">③ 无法共享：相同前缀（system prompt）每个请求各存一份</text>
+  <g filter="url(#sk)"><rect x="40" y="258" width="180" height="34" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+  <g filter="url(#sk)"><rect x="220" y="258" width="120" height="34" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/></g>
+  <text x="130" y="279" text-anchor="middle" font-size="11" fill="#8d3f3b">system prompt 副本 1</text>
+  <text x="280" y="279" text-anchor="middle" font-size="11" fill="#356130">请求 A 私有</text>
+
+  <g filter="url(#sk)"><rect x="380" y="258" width="180" height="34" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+  <g filter="url(#sk)"><rect x="560" y="258" width="120" height="34" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/></g>
+  <text x="470" y="279" text-anchor="middle" font-size="11" fill="#8d3f3b">system prompt 副本 2</text>
+  <text x="620" y="279" text-anchor="middle" font-size="11" fill="#356130">请求 B 私有</text>
+
+  <!-- 结论 -->
+  <g filter="url(#sk)"><rect x="40" y="320" width="640" height="42" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="360" y="346" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b6e9e">PagedAttention：分页 + 按需分配 + 引用计数共享 → 浪费降到 ~4%</text>
+</svg>

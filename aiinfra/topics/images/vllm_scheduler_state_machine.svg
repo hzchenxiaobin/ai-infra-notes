@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="47" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="420" fill="#fdfcf7"/>
+
+  <text x="390" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Scheduler 三队列状态机与抢占</text>
+
+  <!-- waiting -->
+  <g filter="url(#sk)"><rect x="50" y="70" width="180" height="90" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="140" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">waiting 队列</text>
+  <text x="140" y="118" text-anchor="middle" font-size="10" fill="#7a5415">新到达 / 被抢占待重算</text>
+  <text x="140" y="136" text-anchor="middle" font-size="10" fill="#7a5415">FCFS（或按优先级）</text>
+
+  <!-- running -->
+  <g filter="url(#sk)"><rect x="300" y="70" width="180" height="90" rx="10" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/></g>
+  <text x="390" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#356130">running 队列</text>
+  <text x="390" y="118" text-anchor="middle" font-size="10" fill="#356130">本 step 在 GPU 上跑</text>
+  <text x="390" y="136" text-anchor="middle" font-size="10" fill="#356130">受块配额 + token 预算约束</text>
+
+  <!-- swapped -->
+  <g filter="url(#sk)"><rect x="550" y="70" width="180" height="90" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="640" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#8d3f3b">swapped 队列</text>
+  <text x="640" y="118" text-anchor="middle" font-size="10" fill="#8d3f3b">KV 块换出到 CPU 内存</text>
+  <text x="640" y="136" text-anchor="middle" font-size="10" fill="#8d3f3b">（仅 swap 抢占模式）</text>
+
+  <!-- finished -->
+  <g filter="url(#sk)"><rect x="300" y="220" width="180" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="390" y="243" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">finished</text>
+  <text x="390" y="262" text-anchor="middle" font-size="10" fill="#2b6e9e">EOS / max_tokens / stop</text>
+
+  <!-- 箭头 -->
+  <path d="M 230 105 L 295 105" stroke="#4a7a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="262" y="94" text-anchor="middle" font-size="9.5" fill="#356130">调度：分配块</text>
+
+  <path d="M 390 160 L 390 214" stroke="#4a8edb" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="440" y="192" font-size="9.5" fill="#2b6e9e">生成完毕</text>
+
+  <path d="M 480 96 L 545 96" stroke="#b85450" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="513" y="85" text-anchor="middle" font-size="9.5" fill="#8d3f3b">swap-out</text>
+
+  <path d="M 545 138 L 485 138" stroke="#4a7a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="513" y="152" text-anchor="middle" font-size="9.5" fill="#356130">swap-in（有块了）</text>
+
+  <path d="M 300 148 C 240 160 200 160 172 162" stroke="#d6a040" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="205" y="180" font-size="9.5" fill="#7a5415">recompute 抢占：释放块，回 waiting</text>
+
+  <!-- 每个 step 的决策流程 -->
+  <g filter="url(#sk)"><rect x="50" y="300" width="680" height="100" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="390" y="326" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b6e9e">每个 step 的 schedule() 决策顺序</text>
+  <g font-size="10.5" fill="#444">
+    <text x="80" y="352">① 先保 running：按序检查每条序列的块配额，不够 → 抢占队尾序列（swap 或 recompute）</text>
+    <text x="80" y="372">② 再补 waiting：按 FCFS 取请求，能分配块 + 不超 max_num_seqs / token 预算 → 进 running</text>
+    <text x="80" y="392">③ 输出本 step 的执行计划：跑哪些序列、swap_in/out 哪些块、CoW 复制哪些块</text>
+  </g>
+</svg>

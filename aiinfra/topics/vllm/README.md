@@ -259,6 +259,9 @@ curl http://localhost:8000/v1/completions \
 aiinfra/topics/vllm/
 ├── README.md                    # 本文件（专题概览 + 一周提纲）
 ├── day1.md                      # Day 1: 快速上手与全景（两种模式、Engine Args、六层架构）
+├── day2.md                      # Day 2: PagedAttention 原理（分页、block table、CoW）
+├── day3.md                      # Day 3: Continuous Batching 与调度器（状态机、配额、抢占）
+├── day4.md                      # Day 4: 源码架构走读（step 三段式、slot_mapping、V0/V1）
 ├── kernels/                     # 可运行示例（规划中）
 │   └── quickstart.py            # Day 1: 最小离线推理示例
 ├── notes/                       # 走读笔记（规划中）

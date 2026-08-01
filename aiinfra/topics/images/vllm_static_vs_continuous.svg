@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="31" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="400" fill="#fdfcf7"/>
+
+  <text x="390" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Static Batching vs Continuous Batching（batch=4，横轴=时间步）</text>
+
+  <!-- Static batching -->
+  <text x="40" y="66" font-size="13" font-weight="bold" fill="#8d3f3b">Static：整批齐步走，等最慢的</text>
+  <g font-size="10" fill="#666">
+    <text x="40" y="92">槽位1</text>
+    <text x="40" y="120">槽位2</text>
+    <text x="40" y="148">槽位3</text>
+    <text x="40" y="176">槽位4</text>
+  </g>
+  <!-- 批1：长度 90/40/60/90，等 90 -->
+  <g filter="url(#sk)"><rect x="90" y="80" width="180" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="108" width="80" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="136" width="120" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="164" width="180" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <!-- 空转区 -->
+  <g filter="url(#sk)"><rect x="170" y="108" width="100" height="16" rx="3" fill="#eeeeee" stroke="#aaaaaa" stroke-width="1" stroke-dasharray="3,2"/></g>
+  <g filter="url(#sk)"><rect x="210" y="136" width="60" height="16" rx="3" fill="#eeeeee" stroke="#aaaaaa" stroke-width="1" stroke-dasharray="3,2"/></g>
+  <text x="215" y="121" font-size="9" fill="#999">空转</text>
+  <text x="245" y="149" font-size="9" fill="#999">空转</text>
+  <!-- 批2：从 180 之后开始 -->
+  <g filter="url(#sk)"><rect x="280" y="80" width="60" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="280" y="108" width="100" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="280" y="136" width="40" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="280" y="164" width="140" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <text x="90" y="200" font-size="10" fill="#8d3f3b">批 1 全部结束（t=90）批 2 才能进 → 槽位大量空转</text>
+
+  <!-- Continuous batching -->
+  <text x="40" y="248" font-size="13" font-weight="bold" fill="#356130">Continuous：每个 step 重新组批，完成即补位</text>
+  <g font-size="10" fill="#666">
+    <text x="40" y="274">槽位1</text>
+    <text x="40" y="302">槽位2</text>
+    <text x="40" y="330">槽位3</text>
+    <text x="40" y="358">槽位4</text>
+  </g>
+  <g filter="url(#sk)"><rect x="90" y="262" width="180" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="290" width="80" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="170" y="290" width="100" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="318" width="120" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="210" y="318" width="40" height="16" rx="3" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="90" y="346" width="180" height="16" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="270" y="262" width="60" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="270" y="290" width="100" height="16" rx="3" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="250" y="318" width="120" height="16" rx="3" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="270" y="346" width="140" height="16" rx="3" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="420" y="296" font-size="10" fill="#356130">t=40：请求 2 完成，立刻补入新请求</text>
+  <text x="420" y="316" font-size="10" fill="#356130">t=90：请求 1/4 完成，继续补入</text>
+  <text x="420" y="336" font-size="10" fill="#356130">GPU 槽位始终跑满，无空转</text>
+
+  <text x="90" y="390" font-size="10" fill="#888">蓝 = 批 1 原始请求　绿/黄 = 后续补入的请求　虚线灰 = 空转</text>
+</svg>
