@@ -258,6 +258,7 @@ curl http://localhost:8000/v1/completions \
 ```
 aiinfra/topics/vllm/
 ├── README.md                    # 本文件（专题概览 + 一周提纲）
+├── day1.md                      # Day 1: 快速上手与全景（两种模式、Engine Args、六层架构）
 ├── kernels/                     # 可运行示例（规划中）
 │   └── quickstart.py            # Day 1: 最小离线推理示例
 ├── notes/                       # 走读笔记（规划中）

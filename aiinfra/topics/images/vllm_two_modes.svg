@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="340" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">vLLM 的两种使用模式</text>
+
+  <!-- 左：离线批推理 -->
+  <g filter="url(#sk)"><rect x="30" y="55" width="330" height="250" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="195" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">离线批推理（LLM 类）</text>
+
+  <g filter="url(#sk)"><rect x="55" y="100" width="280" height="46" rx="6" fill="#ffffff" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="195" y="119" text-anchor="middle" font-size="10.5" fill="#444">from vllm import LLM, SamplingParams</text>
+  <text x="195" y="136" text-anchor="middle" font-size="10.5" fill="#444">llm.generate(prompts, params)</text>
+
+  <g filter="url(#sk)"><rect x="55" y="162" width="280" height="52" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/></g>
+  <text x="195" y="183" text-anchor="middle" font-size="11" fill="#7a5415">进程内直接调用，一次性跑完整个 batch</text>
+  <text x="195" y="200" text-anchor="middle" font-size="11" fill="#7a5415">同步返回所有结果</text>
+
+  <g filter="url(#sk)"><rect x="55" y="230" width="280" height="56" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+  <text x="195" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#356130">适用：批量离线任务</text>
+  <text x="195" y="268" text-anchor="middle" font-size="10" fill="#356130">数据标注 / 评测 / 离线批处理</text>
+
+  <!-- 右：在线服务 -->
+  <g filter="url(#sk)"><rect x="400" y="55" width="330" height="250" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="565" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#8d3f3b">在线服务（vllm serve）</text>
+
+  <g filter="url(#sk)"><rect x="425" y="100" width="280" height="46" rx="6" fill="#ffffff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="565" y="119" text-anchor="middle" font-size="10.5" fill="#444">vllm serve Qwen/Qwen2.5-0.5B-Instruct</text>
+  <text x="565" y="136" text-anchor="middle" font-size="10.5" fill="#444">POST /v1/chat/completions</text>
+
+  <g filter="url(#sk)"><rect x="425" y="162" width="280" height="52" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/></g>
+  <text x="565" y="183" text-anchor="middle" font-size="11" fill="#7a5415">HTTP 长驻服务，OpenAI 兼容 API</text>
+  <text x="565" y="200" text-anchor="middle" font-size="11" fill="#7a5415">请求随时到达，Continuous Batching 调度</text>
+
+  <g filter="url(#sk)"><rect x="425" y="230" width="280" height="56" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2"/></g>
+  <text x="565" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#356130">适用：在线推理服务</text>
+  <text x="565" y="268" text-anchor="middle" font-size="10" fill="#356130">聊天应用 / API 网关 / 生产部署</text>
+
+  <!-- 底部：同一个引擎 -->
+  <path d="M 195 305 L 195 322 L 565 322 L 565 305" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="380" y="318" text-anchor="middle" font-size="11" fill="#5a5a5a">同一个 LLMEngine，只是入口不同</text>
+</svg>

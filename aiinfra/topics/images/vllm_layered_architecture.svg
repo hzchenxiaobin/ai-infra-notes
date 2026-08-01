@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 470" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="470" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">vLLM 分层架构（Day 1 全景版）</text>
+
+  <!-- 层 1: 用户 API 层 -->
+  <g filter="url(#sk)"><rect x="60" y="50" width="480" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="80" y="73" font-size="13" font-weight="bold" fill="#2b6e9e">用户 API 层</text>
+  <text x="80" y="93" font-size="11" fill="#444">LLM（离线）/ OpenAI API Server（在线）— entrypoints/</text>
+  <text x="560" y="82" font-size="10.5" fill="#888">请求入口</text>
+
+  <!-- 层 2: 引擎层 -->
+  <g filter="url(#sk)"><rect x="60" y="122" width="480" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="80" y="145" font-size="13" font-weight="bold" fill="#2b6e9e">引擎层</text>
+  <text x="80" y="165" font-size="11" fill="#444">LLMEngine：add_request + step 循环驱动 — engine/</text>
+  <text x="560" y="154" font-size="10.5" fill="#888">Day 4 走读</text>
+
+  <!-- 层 3: 调度层 -->
+  <g filter="url(#sk)"><rect x="60" y="194" width="480" height="56" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="80" y="217" font-size="13" font-weight="bold" fill="#7a5415">调度层</text>
+  <text x="80" y="237" font-size="11" fill="#444">Scheduler：waiting / running / swapped 队列，配额决策 — core/</text>
+  <text x="560" y="226" font-size="10.5" fill="#888">Day 3 深入</text>
+
+  <!-- 层 4: 块管理层 -->
+  <g filter="url(#sk)"><rect x="60" y="266" width="480" height="56" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="80" y="289" font-size="13" font-weight="bold" fill="#7a5415">块管理层</text>
+  <text x="80" y="309" font-size="11" fill="#444">BlockSpaceManager：block table、物理块分配与回收</text>
+  <text x="560" y="298" font-size="10.5" fill="#888">Day 2 深入</text>
+
+  <!-- 层 5: 执行层 -->
+  <g filter="url(#sk)"><rect x="60" y="338" width="480" height="56" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/></g>
+  <text x="80" y="361" font-size="13" font-weight="bold" fill="#356130">执行层</text>
+  <text x="80" y="381" font-size="11" fill="#444">ModelRunner / Worker：构造输入张量、调用模型前向 — worker/</text>
+  <text x="560" y="370" font-size="10.5" fill="#888">Day 4 走读</text>
+
+  <!-- 层 6: 算子层 -->
+  <g filter="url(#sk)"><rect x="60" y="410" width="480" height="48" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="80" y="431" font-size="13" font-weight="bold" fill="#8d3f3b">算子层</text>
+  <text x="80" y="449" font-size="11" fill="#444">PagedAttention kernel / 量化 GEMM / CUDA Graph — csrc/</text>
+  <text x="560" y="436" font-size="10.5" fill="#888">Week 5 已手写</text>
+
+  <!-- 箭头：请求流向 -->
+  <path d="M 588 106 L 588 122" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 588 178 L 588 194" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 588 250 L 588 266" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 588 322 L 588 338" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 588 394 L 588 410" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="620" y="250" font-size="11" fill="#5a5a5a">请求逐层向下</text>
+  <text x="620" y="266" font-size="11" fill="#5a5a5a">token 逐层向上</text>
+</svg>
