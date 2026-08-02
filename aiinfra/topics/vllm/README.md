@@ -262,6 +262,9 @@ aiinfra/topics/vllm/
 ├── day2.md                      # Day 2: PagedAttention 原理（分页、block table、CoW）
 ├── day3.md                      # Day 3: Continuous Batching 与调度器（状态机、配额、抢占）
 ├── day4.md                      # Day 4: 源码架构走读（step 三段式、slot_mapping、V0/V1）
+├── day5.md                      # Day 5: 吞吐优化特性（Chunked Prefill、Prefix Caching、CUDA Graph、量化）
+├── day6.md                      # Day 6: 分布式与解码优化（TP/PP、Speculative Decoding、Structured Output、LoRA）
+├── day7.md                      # Day 7: 部署实战与 Benchmark（并发扫描、饱和点分析、一周复盘）
 ├── kernels/                     # 可运行示例（规划中）
 │   └── quickstart.py            # Day 1: 最小离线推理示例
 ├── notes/                       # 走读笔记（规划中）

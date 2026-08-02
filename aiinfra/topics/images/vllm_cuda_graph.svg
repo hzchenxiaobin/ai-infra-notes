@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="67" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="340" fill="#fdfcf7"/>
+
+  <text x="390" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">CUDA Graph：捕获一次，重放 N 次</text>
+
+  <!-- Eager 模式 -->
+  <text x="40" y="70" font-size="13" font-weight="bold" fill="#8d3f3b">Eager：每个 kernel 都有 launch 开销（CPU 侧）</text>
+  <g font-size="9.5">
+    <g filter="url(#sk)"><rect x="60" y="86" width="46" height="20" rx="3" fill="#eeeeee" stroke="#999" stroke-width="1.2"/></g><text x="83" y="100" text-anchor="middle" fill="#888">launch</text>
+    <g filter="url(#sk)"><rect x="106" y="86" width="60" height="20" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g><text x="136" y="100" text-anchor="middle" fill="#2b6e9e">kernel</text>
+    <g filter="url(#sk)"><rect x="166" y="86" width="46" height="20" rx="3" fill="#eeeeee" stroke="#999" stroke-width="1.2"/></g><text x="189" y="100" text-anchor="middle" fill="#888">launch</text>
+    <g filter="url(#sk)"><rect x="212" y="86" width="60" height="20" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g><text x="242" y="100" text-anchor="middle" fill="#2b6e9e">kernel</text>
+    <g filter="url(#sk)"><rect x="272" y="86" width="46" height="20" rx="3" fill="#eeeeee" stroke="#999" stroke-width="1.2"/></g><text x="295" y="100" text-anchor="middle" fill="#888">launch</text>
+    <g filter="url(#sk)"><rect x="318" y="86" width="60" height="20" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g><text x="348" y="100" text-anchor="middle" fill="#2b6e9e">kernel</text>
+    <g filter="url(#sk)"><rect x="378" y="86" width="46" height="20" rx="3" fill="#eeeeee" stroke="#999" stroke-width="1.2"/></g><text x="401" y="100" text-anchor="middle" fill="#888">launch</text>
+    <g filter="url(#sk)"><rect x="424" y="86" width="60" height="20" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g><text x="454" y="100" text-anchor="middle" fill="#2b6e9e">kernel</text>
+  </g>
+  <text x="510" y="100" font-size="10" fill="#8d3f3b">decode 一步上百个 kernel，launch 开销叠加</text>
+
+  <!-- CUDA Graph -->
+  <text x="40" y="160" font-size="13" font-weight="bold" fill="#356130">CUDA Graph：整个前向一张图，一次 launch 重放</text>
+  <g filter="url(#sk)"><rect x="60" y="176" width="90" height="26" rx="4" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="105" y="193" text-anchor="middle" font-size="10" fill="#7a5415">启动时捕获</text>
+  <path d="M 150 189 L 190 189" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="195" y="176" width="290" height="26" rx="4" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/></g>
+  <text x="340" y="193" text-anchor="middle" font-size="10.5" fill="#356130">重放：一次 launch 跑完整个前向（每个 step）</text>
+  <text x="510" y="193" font-size="10" fill="#356130">CPU 开销趋近于零，GPU 不再等 CPU</text>
+
+  <!-- 限制条件 -->
+  <g filter="url(#sk)"><rect x="60" y="232" width="680" height="88" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+  <text x="400" y="256" text-anchor="middle" font-size="12" font-weight="bold" fill="#8d3f3b">代价与限制</text>
+  <g font-size="10.5" fill="#8d3f3b">
+    <text x="90" y="280">① 图的输入 shape 必须固定 → 按 batch size 分桶捕获，桶内 padding 补齐</text>
+    <text x="90" y="300">② 启动时要逐桶捕获 → 首次启动慢（Day 1 的"启动慢"主因之一）</text>
+  </g>
+  <text x="480" y="280" font-size="10.5" fill="#666">调试时用 --enforce-eager 关闭</text>
+  <text x="480" y="300" font-size="10.5" fill="#666">prefill 形状多变，一般不走 graph</text>
+</svg>
