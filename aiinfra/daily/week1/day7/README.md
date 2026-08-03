@@ -559,8 +559,6 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。约束：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）。
-
 **与 Week 1 知识的关联**：
 
 本题是 **memory-bound** 数据重排算子的典型代表（零计算，算术强度 ≈ 0），综合检验 Week 1 四个核心概念：
@@ -569,92 +567,11 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 3. **Bank conflict**（Day 5）：tile 内按列访问会产生 32-way conflict，用 padding（`[32][33]`）消除
 4. **Roofline 判定**（Day 6）：AI << Ridge Point → memory-bound，优化方向是最大化带宽利用率
 
-**解题思路**：
-- 2D grid + 2D block，每个线程搬一个元素
-- 用 32×32 shared memory tile 中转：读 `input` 行（coalesced）→ 写 tile → 读 tile 列 → 写 `output` 行（coalesced）
-- tile 声明为 `[32][33]`，用 padding 消除 bank conflict
-- 处理矩阵边界的越界判断
-
-**参考实现**：
-
-```cuda
-// matrix_transpose.cu —— Matrix Transpose（shared memory tiling + padding）
-// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_120
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cmath>
-
-#define TILE 32
-
-__global__ void transpose_tiled(const float* input, float* output, int rows, int cols) {
-    __shared__ float tile[TILE][TILE + 1];  // padding 消除 bank conflict
-
-    int col = blockIdx.x * TILE + threadIdx.x;
-    int row = blockIdx.y * TILE + threadIdx.y;
-
-    // 读 input 行（coalesced）写入 tile
-    if (row < rows && col < cols)
-        tile[threadIdx.y][threadIdx.x] = input[row * cols + col];
-    __syncthreads();
-
-    // block 行列对调，读 tile 列、写 output 行（coalesced）
-    int t_row = blockIdx.x * TILE + threadIdx.y;  // output 的行
-    int t_col = blockIdx.y * TILE + threadIdx.x;  // output 的列
-    if (t_row < cols && t_col < rows)
-        output[t_row * rows + t_col] = tile[threadIdx.x][threadIdx.y];
-}
-
-int main() {
-    const int rows = 6000, cols = 7000;
-    const size_t bytes = (size_t)rows * cols * sizeof(float);
-
-    float *h_A = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < rows * cols; ++i)
-        h_A[i] = (float)(rand() % 2000 - 1000) * 0.01f;  // [-10, 10]
-
-    float *d_A, *d_C;
-    cudaMalloc(&d_A, bytes);
-    cudaMalloc(&d_C, bytes);
-    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-
-    dim3 threads(TILE, TILE);
-    dim3 blocks((cols + TILE - 1) / TILE, (rows + TILE - 1) / TILE);
-    transpose_tiled<<<blocks, threads>>>(d_A, d_C, rows, cols);
-
-    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
-    bool pass = true;
-    for (int i = 0; i < rows && pass; ++i) {
-        for (int j = 0; j < cols; ++j) {
-            if (fabsf(h_C[j * rows + i] - h_A[i * cols + j]) > 1e-6f) {
-                pass = false;
-                break;
-            }
-        }
-    }
-    printf("Matrix Transpose %s\n", pass ? "PASS" : "FAIL");
-
-    free(h_A);
-    free(h_C);
-    cudaFree(d_A);
-    cudaFree(d_C);
-    return 0;
-}
-```
-
-**自测问题**：
-- 用 `ncu` 看 `dram__throughput`，能否达到峰值带宽的 60%+？
-- 把 tile 声明改回 `[32][32]`（去掉 padding），bank conflict 指标变化多少？
-- 对比朴素版（无 shared memory）和 tiled 版的带宽利用率，差距多大？
-- block 从 16×16 调到 32×32，时间变化大吗？（memory-bound kernel 对 occupancy 不敏感）
-
 > 💡 完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 综合练习 2：Matrix Multiplication —— 检验 shared memory tiling + bank conflict
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
-
-**题目概述**：给定 `M×K` 矩阵 `A` 和 `K×N` 矩阵 `B`，计算 `C = A × B`。约束：`1 ≤ M, N, K ≤ 1024`。
 
 **与 Week 1 知识的关联**：
 
@@ -663,89 +580,6 @@ int main() {
 2. **Coalesced Access**（Day 4）：全局加载阶段必须 coalesced
 3. **Bank Conflict**（Day 4-5）：shared memory 布局要避免 bank conflict（padding）
 4. **Roofline 判定**（Day 6）：大矩阵 AI ≈ 85 >> Ridge Point → compute-bound，优化方向是减少 shared memory 访问
-
-**解题思路**：
-- Block tile `16×16`，每个 block 算 C 的一个 tile
-- 协作加载 A/B 的 `16×16` tile 到 `__shared__`，`__syncthreads` 后做乘加
-- 沿 K 维滑动 tile，累加部分和
-- 可选：给 shared memory 加 padding（`[16][17]`）避免 bank conflict
-
-**参考实现**（Tiled 版，含 bank conflict 分析）：
-
-```cuda
-// matrix_multiplication.cu —— Shared Memory Tiling GEMM
-// 编译命令: nvcc -o matmul matmul.cu -O3 -arch=sm_120
-
-#include <cuda_runtime.h>
-#include <cstdio>
-
-#define TILE_SIZE 16
-
-__global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
-    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
-
-    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
-    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
-    float sum = 0.0f;
-
-    for (int bk = 0; bk < K; bk += TILE_SIZE) {
-        // 协作加载 A/B tile（注意边界）
-        if (row < M && bk + threadIdx.x < K)
-            s_A[threadIdx.y][threadIdx.x] = A[row * K + bk + threadIdx.x];
-        else
-            s_A[threadIdx.y][threadIdx.x] = 0.0f;
-        if (bk + threadIdx.y < K && col < N)
-            s_B[threadIdx.y][threadIdx.x] = B[(bk + threadIdx.y) * N + col];
-        else
-            s_B[threadIdx.y][threadIdx.x] = 0.0f;
-        __syncthreads();
-
-        #pragma unroll
-        for (int k = 0; k < TILE_SIZE; k++)
-            sum += s_A[threadIdx.y][k] * s_B[k][threadIdx.x];
-        __syncthreads();
-    }
-
-    if (row < M && col < N)
-        C[row * N + col] = sum;
-}
-
-int main() {
-    int M = 512, N = 512, K = 512;
-    size_t bytesA = M * K * sizeof(float), bytesB = K * N * sizeof(float), bytesC = M * N * sizeof(float);
-    float *h_A = (float*)malloc(bytesA), *h_B = (float*)malloc(bytesB);
-    for (int i = 0; i < M * K; i++)
-        h_A[i] = (float)rand() / RAND_MAX * 2 - 1;
-    for (int i = 0; i < K * N; i++)
-        h_B[i] = (float)rand() / RAND_MAX * 2 - 1;
-
-    float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, bytesA);
-    cudaMalloc(&d_B, bytesB);
-    cudaMalloc(&d_C, bytesC);
-    cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
-
-    dim3 block(TILE_SIZE, TILE_SIZE);
-    dim3 grid((N + TILE_SIZE - 1) / TILE_SIZE, (M + TILE_SIZE - 1) / TILE_SIZE);
-    matmul_tiled<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
-
-    printf("GEMM %dx%dx%d done\n", M, N, K);
-    free(h_A);
-    free(h_B);
-    cudaFree(d_A);
-    cudaFree(d_B);
-    cudaFree(d_C);
-    return 0;
-}
-```
-
-**自测问题**：
-- 用 `ncu` 看 `sm__throughput` 和 `dram__throughput`，哪个高？（预期 SM >> DRAM → compute-bound）
-- 对比 Naive 版（无 shared memory）和 Tiled 版的 GFLOPS，提速多少倍？
-- 给 `s_A` / `s_B` 加 padding `[16][17]`，性能有变化吗？（提示：16×16 方形配置下 conflict 实际不触发，详见题解的 bank conflict 分析）
-- 进阶：改成 Register Tiling（每线程算 4×4），能再提速 2-3x 吗？
 
 > 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 

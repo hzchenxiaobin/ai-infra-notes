@@ -290,12 +290,6 @@ Submitting 3 sequences with staggered arrival...
 
 **题目链接**：<https://leetgpu.com/challenges/prefix-sum>
 
-**题目概述**：
-
-给定长度为 `N` 的 FP32 数组，计算其 **inclusive 前缀和**：`output[i] = input[0] + input[1] + ... + input[i]`（与 `torch.cumsum` 对齐）。
-
-**约束条件**：`1 ≤ N ≤ 10^6`；性能测试取大 `N`（如 `N=250000`）。
-
 **与今日知识的关联**：
 
 这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。

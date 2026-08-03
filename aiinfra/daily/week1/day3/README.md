@@ -424,65 +424,7 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。约束：元素为 32-bit float，规模达数千万元素（性能测例 `rows=7000, cols=6000`）。
-
-**难度**：简单　**标签**：CUDA、Memory-bound、Memory Coalescing、Occupancy
-
 **与今日知识的关联**：Matrix Transpose 是纯数据重排的 memory-bound 算子（算术强度 ≈ 0），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block 形状（16×16 / 32×8 / 32×16）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block 越大越快，中等规模往往已经能占满带宽。
-
-**解题思路**：
-1. 2D grid + 2D block 映射，每个线程搬一个元素
-2. 注意读 `input` 按行合并时，写 `output` 按列不合并——读写无法同时 coalesced
-3. 尝试不同 block 形状，记录 occupancy 与 latency 的关系
-4. shared memory tiling 是 Day 4 的内容，今天先用朴素版做调参实验
-
-**参考实现**：
-
-```cuda
-// matrix_transpose.cu —— Matrix Transpose（朴素 2D 映射，用于 occupancy 调参实验）
-// 编译命令: nvcc -o matrix_transpose matrix_transpose.cu -O3 -arch=sm_120
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cmath>
-
-__global__ void transpose_naive(const float* input, float* output, int rows, int cols) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    if (row < rows && col < cols) {
-        output[col * rows + row] = input[row * cols + col];
-    }
-}
-
-int main() {
-    const int rows = 6000, cols = 7000;
-    const size_t bytes = (size_t)rows * cols * sizeof(float);
-    float *h_A = (float*)malloc(bytes), *h_C = (float*)malloc(bytes);
-    for (int i = 0; i < rows * cols; ++i)
-        h_A[i] = (float)(rand() % 100) * 0.01f;
-    float *d_A, *d_C;
-    cudaMalloc(&d_A, bytes);
-    cudaMalloc(&d_C, bytes);
-    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-    dim3 threads(16, 16);
-    dim3 blocks((cols + threads.x - 1) / threads.x, (rows + threads.y - 1) / threads.y);
-    transpose_naive<<<blocks, threads>>>(d_A, d_C, rows, cols);
-    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
-    bool pass = true;
-    for (int i = 0; i < rows && pass; ++i)
-        for (int j = 0; j < cols; ++j)
-            if (fabsf(h_C[j * rows + i] - h_A[i * cols + j]) > 1e-5f) {
-                pass = false;
-                break;
-            }
-    printf("Matrix Transpose %s\n", pass ? "PASS" : "FAIL");
-    free(h_A);
-    free(h_C);
-    cudaFree(d_A);
-    cudaFree(d_C);
-    return 0;
-}
-```
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 

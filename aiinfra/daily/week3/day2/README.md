@@ -419,94 +419,9 @@ ncu --metrics \
 
 **题目链接**：<https://leetgpu.com/challenges/group-normalization>
 
-**题目概述**：
-
-给定输入 `X` 形状 `(N, C, H, W)`、缩放参数 `gamma` 形状 `(C,)`、平移参数 `beta` 形状 `(C,)`、分组数 `G`（`G` 整除 `C`）和 `eps`，计算 Group Normalization：把 `C` 个通道分成 `G` 组，每组 `C/G` 个通道，对每个样本 `(n, g)` 在 `C/G × H × W` 个元素上求 `mean` 与 `var`，归一化后按通道 `c` 用 `gamma[c]`、`beta[c]` 做 affine。约束 `1 ≤ N, C, H, W ≤ 1024`，`G` 整除 `C`。
-
-**难度**：中等　**标签**：CUDA、Normalization、Reduction、Shared Memory、Memory-bound
-
 **与今日知识的关联**：
 
 本题是今天 normalization 主题的变体实战——Group Norm 与 LayerNorm 同构（都是"在一组元素上做 mean/var 两次 reduce + affine"），只是归约的维度从"一行"换成了"一个 group"。核心仍是两遍 scan + shared memory reduction：第一遍求 `mean`，第二遍求 `var`（依赖 `mean`，不能合并）。把今天的 `layernorm_kernel` 思路扩展到"一个 block 处理一个 group"即可。
-
-**解题思路**：
-
-1. 一个 block 处理一个 `(n, g)`（`gridDim.x = N * G`），block 内线程协作处理 `C/G × H × W` 个元素
-2. Pass 1 grid-stride 扫描求 `group_sum`，用 `blockReduceSum` 归约并广播，`mean = group_sum / (C/G * H * W)`
-3. Pass 2 扫描求 `group_sq_sum = Σ (x - mean)²`，用 `blockReduceSum` 归约并广播，`rstd = rsqrt(group_sq_sum / count + eps)`
-4. Pass 3 归一化 + affine：`y[n,c,h,w] = (x - mean) * rstd * gamma[c] + beta[c]`，注意按通道 `c` 取 affine 参数
-5. 通道 `c` 到组 `g` 的映射：`g = c / (C/G)`，组内通道偏移 `c % (C/G)`
-
-**参考实现**（核心 kernel，按题目签名微调）：
-
-```cuda
-// group_norm.cu —— LeetGPU Group Normalization 提交版（两遍 scan + block reduce）
-// 编译命令: nvcc -o group_norm group_norm.cu -O3 -arch=sm_120
-
-__inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int o = 16; o > 0; o >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, o);
-    return val;
-}
-__inline__ __device__ float blockReduceSum(float v, float* sm) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
-    v = warpReduceSum(v);
-    if (lane == 0)
-        sm[wid] = v;
-    __syncthreads();
-    int nw = (blockDim.x + 31) / 32;
-    v = (lane < nw) ? sm[lane] : 0.0f;
-    if (wid == 0)
-        v = warpReduceSum(v);
-    return v;
-}
-
-__global__ void group_norm_kernel(const float* input, const float* gamma, const float* beta,
-                                  float* output, int N, int C, int H, int W, int G, float eps) {
-    int ng = blockIdx.x;           // 处理第 ng 个 (n, g)
-    int n = ng / G;
-    int g = ng % G;
-    int Cg = C / G;                // 每组通道数
-    int HW = H * W;
-    int count = Cg * HW;           // 每个 group 的元素数
-
-    __shared__ float smem[32];
-    __shared__ float group_mean, group_rstd;
-    int tid = threadIdx.x;
-
-    // base 指向本 group 的起始元素: x[n, g*Cg, 0, 0]
-    const float* x = input + (n * C + g * Cg) * HW;
-    float* y = output + (n * C + g * Cg) * HW;
-
-    // Pass 1: 求 mean = sum(x) / count
-    float local_sum = 0.0f;
-    for (int i = tid; i < count; i += blockDim.x)
-        local_sum += x[i];
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0)
-        group_mean = local_sum / count;
-    __syncthreads();
-
-    // Pass 2: 求 var = sum((x - mean)^2) / count，rstd = 1/sqrt(var + eps)
-    float local_sq = 0.0f;
-    for (int i = tid; i < count; i += blockDim.x) {
-        float diff = x[i] - group_mean;
-        local_sq += diff * diff;
-    }
-    local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0)
-        group_rstd = rsqrtf(local_sq / count + eps);
-    __syncthreads();
-
-    // Pass 3: 归一化 + affine（按通道 c 取 gamma/beta）
-    for (int i = tid; i < count; i += blockDim.x) {
-        int c_local = i / HW;          // 组内通道偏移
-        int c = g * Cg + c_local;      // 全局通道号
-        y[i] = (x[i] - group_mean) * group_rstd * gamma[c] + beta[c];
-    }
-}
-```
 
 > 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
 

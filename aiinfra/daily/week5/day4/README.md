@@ -323,12 +323,6 @@ ncu --kernel-name regex:paged_attention_kernel \
 
 **题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
 
-**题目概述**：
-
-实现 **Causal（masked）Self-Attention**：给定 `Q/K/V ∈ R^{M×d}`，计算 `softmax(masked(QK^T/√d))·V`，其中 causal mask 把 query `i` 对 key `j>i` 的位置设为 `-∞`（下三角允许，上三角屏蔽）。
-
-**约束条件**：性能测试取 `M=5000, d=128`；容差 `atol=rtol=1e-5`。
-
 **与今日知识的关联**：
 
 Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——LLM 推理的 prefill 阶段跑的就是 causal self-attention（生成第 i 个 token 时只能看到前 i 个 token）。今天我们手写了 PagedAttention kernel（decode 场景：1 query 对 N key），这道题是它的 prefill 对偶——M 个 query 互相做 causal masked attention。PagedAttention 的 block table 机制同样适用于 causal attention：prefill 时把 prompt 的 KV 按 block 分块存入 paged pool，kernel 通过 block table 间接寻址。两者的核心都是"间接寻址 + online softmax 融合"。

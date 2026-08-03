@@ -206,8 +206,6 @@ python kernels/mock_interview.py
 
 **题目链接**：<https://leetgpu.com/challenges/general-matrix-multiplication-gemm>
 
-**题目概述**：实现通用矩阵乘法 `C = A·B`，其中 `A ∈ R^(M×K)`、`B ∈ R^(K×N)`，输出 `C ∈ R^(M×N)`。
-
 **与今日知识的关联**：Mock 面试中"项目深度拷问"环节必问 GEMM——它是推理引擎中计算量最大的核心算子（Linear/FFN/投影层全是 GEMM）。能讲清其 CUDA 实现（shared memory tiling、register blocking、向量化加载）以及为什么它是 compute-bound、优化目标是对标 cuBLAS，能体现工程深度。
 
 > 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。

@@ -307,10 +307,6 @@ engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
 
 **题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**题目概述**：给定长度为 `N` 的 `float32` 数组，计算所有元素的和。
-
-**约束条件**：`1 ≤ N ≤ 10,000,000`。
-
 **与今日知识的关联**：Reduction 是 profiling 中最常分析的 kernel 之一——它是 memory-bound 的代表（算术强度极低），也是 warp shuffle 的经典应用。在全链路 profiling 中，LayerNorm 和 Softmax 内部都包含 reduction 操作（求 mean/var/max/sum）。理解 reduction 的性能特征（memory-bound、warp shuffle 优化）是分析 LayerNorm/Softmax kernel 瓶颈的基础。ncu 分析 reduction kernel 时，`dram__throughput` 应接近 100%（memory-bound），`sm__throughput` 很低。
 
 > 💡 提交后在 [LeetGPU Reduction](https://leetgpu.com/challenges/reduction) 上记录通过耗时。完整题解见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。

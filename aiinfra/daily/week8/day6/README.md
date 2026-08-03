@@ -282,21 +282,9 @@ LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 
 
 **题目链接**：<https://leetgpu.com/challenges/batch-normalization>
 
-**题目概述**：
-
-给定 4D 输入 `x ∈ R^(N×C×H×W)`、`gamma[C]`、`beta[C]`，对每个通道 `c` 在 `(N, H, W)` 维度归一化：`y = gamma · (x - mean) / sqrt(var + eps) + beta`。
-
-**约束条件**：`N,H,W` 较大（每通道 `NHW=65536`），`eps=1e-5`
-
-**难度**：中等　**标签**：CUDA、Normalization、Reduction、数值稳定性
-
 **与今日知识的关联**：
 
 BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它考察 **reduce 的维度**（BatchNorm 跨 batch/spatial、LayerNorm 跨 feature）和 **memory-bound kernel 的优化**（融合 reduce + normalize，IO 从 3 遍降到 1 遍）。面试中能讲清"两者 reduce 维度差异 + 融合实现 + 为什么 memory-bound"，归一化家族（RMSNorm / GroupNorm）就都是同构变体。
-
-**解题思路**：
-
-朴素方法是三遍 kernel（mean → var → normalize），每遍读一遍全局内存。优化思路是**融合单 kernel**：一个 block 处理一个通道，block 内用 warp shuffle reduce 算 mean/var，再融合 normalize 写回，IO 从 3 遍降到 1 遍。BatchNorm 算术强度极低（~0.5 FLOP/Byte），远低于 Ridge Point，是典型 memory-bound，优化重点是减少 IO 遍数。
 
 > 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
 

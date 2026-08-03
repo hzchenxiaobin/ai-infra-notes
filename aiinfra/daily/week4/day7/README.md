@@ -435,8 +435,6 @@ week4/
 
 **题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
-**题目概述**：实现一个完整的 GPT-2 Transformer Block，包含 LayerNorm → Causal Self-Attention → Residual → LayerNorm → FFN → Residual。
-
 **与今日知识的关联**：GPT-2 Transformer Block 是 Week 4 IO 优化主线的终极验收——融合了 FlashAttention（Week 4 核心）+ LayerNorm（Week 3）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
 
 > 💡 完整题解见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。

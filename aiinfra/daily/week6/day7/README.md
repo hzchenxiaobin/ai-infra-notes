@@ -124,8 +124,6 @@ python kernels/week6_summary.py
 
 **题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**题目概述**：给定长度为 `N` 的 FP32 数组，求所有元素之和写入标量 `output[0]`——经典的并行归约问题。性能测试取大 `N`（数百万级）。
-
 **与本周总结的关联**：Reduction 是所有归约类 kernel（softmax 分母、LayerNorm 均值方差、dot product、attention 分数累加）的基础组件——block 内归约 + 跨 block 归约的两段式结构是通用模板。本周所有"累加/统计"操作（`percentile()`、token budget 累加、batch 聚合）的本质都是归约。这道题还藏着一个精度要点：大 `N` 下必须用 `double` 高精度累加、最后一步才转回 FP32，否则累加误差直接超容差——正是 Day 6 benchmark 结论"量化提吞吐、但累加必须升精度控误差"的同构练习。这道题练 warp shuffle 归约 + 两阶段汇总——Week 7 系统整合中所有统计/归约 kernel 都会用到。
 
 > 💡 完整题解（含 warp shuffle 归约、block 间两阶段汇总、double 高精度累加的精度处理）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。

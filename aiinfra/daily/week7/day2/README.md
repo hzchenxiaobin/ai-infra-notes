@@ -295,10 +295,6 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定行主序的 `rows×cols` `float32` 矩阵，计算其转置 `output[j][i] = input[i][j]`（输出为 `cols×rows` 矩阵）。
-
-**约束条件**：性能测例 `rows=7000, cols=6000`（约 168 MB）；无计算、纯数据重排，典型 memory-bound。
-
 **与今日知识的关联**：Matrix Transpose 的核心是**索引映射**——`output[j][i] = input[i][j]`，每个线程处理一个元素的"调度"。这与调度器的**请求到资源的映射**同构：调度器把请求按优先级分配到 batch 槽位（`batch[i] = waiting[best_priority]`），Matrix Transpose 把数据按转置坐标映射到输出位置。两者都是**用索引规则做资源映射**：调度器用优先级+预算做"哪个请求进 batch"的映射，Transpose 用 `(i,j) → (j,i)` 做"哪个输入对应哪个输出"的映射；shared memory tile 中转则保证重排后读写仍 coalesced。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。

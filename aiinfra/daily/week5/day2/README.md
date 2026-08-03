@@ -326,12 +326,6 @@ ncu --kernel-name regex:memcpy \
 
 **题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
 
-**题目概述**：
-
-实现 **Grouped Query Attention (GQA)**：给定 `num_q_heads` 个 query 头和 `num_kv_heads` 个 KV 头（`num_q_heads` 是 `num_kv_heads` 的整数倍），每 `num_q_heads / num_kv_heads` 个连续 query 头共享同一组 K/V 头，做 scaled dot-product attention。
-
-**约束条件**：`1 ≤ num_kv_heads ≤ num_q_heads ≤ 64`，`1 ≤ seq_len ≤ 4096`，`8 ≤ head_dim ≤ 256`；性能测试取 LLaMA-3 8B 配置 `num_q_heads=32, num_kv_heads=8, seq_len=1024, head_dim=128`。
-
 **与今日知识的关联**：
 
 GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。

@@ -346,12 +346,6 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
 
 **题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
-**题目概述**：
-
-实现 GPT-2 124M 的一个 **transformer block 前向**（Pre-LN 结构）：输入 `x[seq_len, 768]` 和打包权重，依次串联 `LN1 → QKV 投影 → Multi-Head Attention → Attn 投影 → 残差 → LN2 → FC → GELU(tanh) → 投影 → 残差`，输出 `[seq_len, 768]`。
-
-**约束条件**：固定维度 `D=768, H=12, FFN=3072`；容差 `atol=rtol=1e-3`；性能测试取 `seq_len=1024`。
-
 **与今日知识的关联**：
 
 GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。

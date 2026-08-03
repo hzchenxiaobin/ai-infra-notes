@@ -369,12 +369,6 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 **题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
 
-**题目概述**：
-
-实现因果自注意力（Causal Self-Attention）。给定 `Q/K/V ∈ R^{M × d}`（方阵 `M×M` score），计算带 causal mask 的 scaled dot-product attention：`scores[i][j] = Q[i]·K[j]/√d`，当 `j > i` 时置 `-∞`（下三角 mask），`output = softmax(scores)·V`。关键点：causal mask 让第 `i` 行只 attend 前 `i+1` 个 key（自回归、不能看未来），上三角直接跳过可省约一半计算。
-
-**约束条件**：性能测试取 `M=5000, d=128`，元素为 float32，容差 `atol=1e-5`
-
 **与今日知识的关联**：
 
 本题是 Day 1 主题的 attention mask 最基础练习——它完整保留了 softmax 归一化，与今天推导的 online softmax 三公式直接对应：第 `i` 行的输出只需前 `i+1` 个 KV 的 running `(m, l, o)`，是 online softmax 最自然的应用场景。mask 的实现要点是把 `j > i` 的 score 置 `-∞`（`e^{-∞}=0` 真正归零，置 0 则 softmax 后仍有权重），再用 FlashAttention 的 tiling 跳过上三角 tile。

@@ -282,8 +282,6 @@ python kernels/custom_ops_module.py
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定行主序的 `rows×cols` `float32` 矩阵，计算其转置 `output[j][i] = input[i][j]`（输出为 `cols×rows` 矩阵）。
-
 **与今日知识的关联**：Matrix Transpose 的核心是**索引映射 + coalesced 访存**——读 input 按行连续（coalesced），写 output 按列不连续（strided），需用 shared memory tile 中转让读写都合并。这与自定义 Kernel 集成中的**内存布局处理**同构：PyTorch Tensor 默认 row-major，自定义 kernel 必须正确处理 stride 和布局，否则写错位置或性能崩塌。Transpose 的 tile 中转练习是 FlashAttention 分块读写的基础——FlashAttention 的 Q/K/V tile 在 shared memory 中的布局管理与转置的 tile 索引计算同源。做好这题说明你掌握了"读连续 + 写重排"的索引映射模板，Week 7 自定义 kernel 集成中会频繁用到。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。

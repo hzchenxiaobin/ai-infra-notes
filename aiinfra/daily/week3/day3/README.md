@@ -372,80 +372,9 @@ ncu --metrics \
 
 **题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**题目概述**：
-
-给定长度为 `N` 的浮点数组 `input`，求所有元素之和，写入 `output[0]`。测试用例最大 `N = 15,000,000`。注意参考实现用 `double` 累加再转 `float`，容差 `atol=1e-5`——线程局部累加必须用 `double`，全程 `float` 累加在大 N 下精度直接挂掉。
-
-**难度**：中等　**标签**：CUDA、Reduction、Sum、Warp Shuffle、grid-stride loop、double 累加
-
 **与今日知识的关联**：
 
 Reduction 是**归约家族的基础形态**——"分块 → 块内归约 → 块间汇总"的骨架就是 softmax 的 max/sum 归约、LayerNorm 的统计归约的祖代码。这正是今天"warp 级 vs block 级 reduce"的直接实战：用 `__shfl_down_sync` 在 warp 内折半归约（5 步，走寄存器直连、零 bank conflict），warp 间用 shared memory 汇总，block 间用第二个 kernel 全局归约。今天读了 PyTorch softmax 的 warp 级 dispatch，本题就是把这个模式应用到最纯粹的 sum 归约。
-
-**解题思路**：
-
-1. **线程级**：每个线程用 grid-stride loop 扫描交错区间，维护局部 `double` 累加和
-2. **Warp 级**：用 `__shfl_down_sync` 折半归约，5 步后 lane 0 持有整个 warp 的和
-3. **Block 级**：各 warp 部分和写 shared memory，Warp 0 再 shuffle 一次，得到 block 部分和
-4. **跨 Block**：block 部分和写 `partial[]`，第二个 kernel（单 block）再跑一遍同样的块归约得到全局和——kernel 边界即隐式全局同步，比 `atomicAdd` 到单个地址（强串行）干净得多
-
-**参考实现**：
-
-```cuda
-// reduction.cu —— 两阶段 Reduction（block reduce + global reduce），double 累加保精度
-// 编译命令: nvcc -o reduction reduction.cu -O3 -arch=sm_120
-
-#include <cuda_runtime.h>
-#include <cstdio>
-
-#define BLOCK 256
-#define NUM_WARPS (BLOCK / 32)
-
-// 块内归约：warp shuffle + shared memory 两级，返回值仅 warp 0 lane 0 有效
-__device__ double block_reduce(double val) {
-    __shared__ double s_partial[NUM_WARPS];
-    int lane = threadIdx.x & 31;
-    int wid = threadIdx.x >> 5;
-
-    // Warp 级：shuffle 折半归约
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-
-    if (lane == 0)
-        s_partial[wid] = val;
-    __syncthreads();
-
-    // Block 级：Warp 0 收尾
-    val = (threadIdx.x < NUM_WARPS) ? s_partial[lane] : 0.0;
-    if (wid == 0) {
-        for (int offset = 16; offset > 0; offset >>= 1)
-            val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    }
-    return val;
-}
-
-// 阶段①：B 个 block 各归约一段（grid-stride），写 partial[B]
-__global__ void reduce_block_kernel(const float* input, double* partial, int N) {
-    double local_sum = 0.0;
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += gridDim.x * blockDim.x)
-        local_sum += (double)input[i];
-
-    local_sum = block_reduce(local_sum);
-    if (threadIdx.x == 0)
-        partial[blockIdx.x] = local_sum;
-}
-
-// 阶段②：单 block 归约 partial[B]，最后一步才转 float 写 output[0]
-__global__ void reduce_final_kernel(const double* partial, float* output, int B) {
-    double local_sum = 0.0;
-    for (int i = threadIdx.x; i < B; i += blockDim.x)
-        local_sum += partial[i];
-
-    local_sum = block_reduce(local_sum);
-    if (threadIdx.x == 0)
-        output[0] = (float)local_sum;
-}
-```
 
 > 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时。完整题解（含 double 累加精度分析、为什么用第二 kernel 而不是 `atomicAdd`）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 

@@ -363,8 +363,6 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 **题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**题目概述**：给定长度为 `N` 的 `float32` 数组 `input`，求所有元素之和并写入 `output[0]`。注意参考实现用 `double` 累加再转回 `float`，kernel 中线程局部累加也需用 `double` 才能保证精度达标。
-
 **与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 最纯粹的形态。kernel 采用两阶段归约：每个线程用 grid-stride 循环累加局部和（`double`）→ Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总。适合在验收日限时完成，检验 block reduce + 跨 block 汇总的综合掌握程度。
 
 > 💡 完整题解（含 grid-stride 累加、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。

@@ -587,35 +587,9 @@ total_warps = warps_per_block × num_blocks
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：
-
-给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。
-
-**约束条件**：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）
-
-**难度**：简单　**标签**：CUDA、Kernel Launch、2D Grid/Block、Coalesced Access
-
 **与今日知识的关联**：
 
 本题要求用 2D grid/block 覆盖二维矩阵、正确计算行列下标、处理越界边界，直接练习 Day 1 学的线程层次与 ID 映射（从 1D 数组推广到 2D 矩阵）。
-
-**解题思路**：
-
-2D grid + 2D block，每个线程搬一个元素：用 `blockIdx` / `threadIdx` 算出 `(row, col)`，读 `input[row][col]` 写 `output[col][row]`。注意读合并时写不合并的问题（Day 4 会用 shared memory tiling 解决，今天先保证正确性）。
-
-**参考实现**：
-
-```cuda
-#include <cuda_runtime.h>
-
-__global__ void matrix_transpose(const float* input, float* output, int rows, int cols) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    if (row < rows && col < cols) {
-        output[col * rows + row] = input[row * cols + col];
-    }
-}
-```
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 

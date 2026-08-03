@@ -403,12 +403,6 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 **题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
 
-**题目概述**：
-
-实现 **Decode 阶段**的多头注意力：给定单个新 token 的 Query（`Q` 形状 `[num_heads, head_dim]`）和以 **int8** 存储的 KV Cache（`K_int8`/`V_int8` 形状 `[num_heads, seq_len, head_dim]`，配 per-token scale `k_scale`/`v_scale`），反量化后做 scaled dot-product attention，输出 `[num_heads, head_dim]`。
-
-**约束条件**：`1 ≤ num_heads ≤ 64`，`1 ≤ seq_len ≤ 32768`，`8 ≤ head_dim ≤ 256`（8 的倍数）；性能测试取 `num_heads=32, seq_len=8192, head_dim=128`。
-
 **与今日知识的关联**：
 
 这道题就是**今天 Decode 阶段的核心算子**——单 query 对 KV Cache 做 1×N attention，是典型的 memory-bound。更关键的是，题目把 KV Cache 存成 **int8 + per-token scale**，这正是今天"减少 KV Cache 读取"优化方向里的**KV Cache 量化**：int8 相比 fp32 把 KV 的 HBM 流量直接砍到 1/4，Decode 的带宽瓶颈立刻缓解。生产级推理系统（TensorRT-LLM、vLLM）都用这套。

@@ -297,10 +297,6 @@ result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：给定行主序的 `rows×cols` `float32` 矩阵，计算其转置 `output[j][i] = input[i][j]`（输出为 `cols×rows` 矩阵）。
-
-**约束条件**：性能测例 `rows=7000, cols=6000`（约 168 MB）；无计算、纯数据重排，典型 memory-bound。
-
 **与今日知识的关联**：Matrix Transpose 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Transpose 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。

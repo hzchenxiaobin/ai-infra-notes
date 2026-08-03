@@ -464,57 +464,9 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
-**题目概述**：
-
-给定行主序 FP32 矩阵 A（M×N）和 B（N×K），计算 C = A @ B。要求用 Shared Memory tiling 实现分块矩阵乘，并可结合多 Stream 分块并行处理大矩阵。
-
-**约束条件**：A、B、C 均为 FP32 行主序，容差 `atol=1e-4, rtol=1e-4`；性能测例 `M=8192, N=6144, K=4096`
-
-**难度**：简单　**标签**：CUDA、GEMM、Shared Memory、Tiling、CUDA Streams
-
 **与今日知识的关联**：
 
 本题是 CUDA Streams 的典型应用场景——大矩阵分块，每块 H2D/Compute/D2H 在独立 Stream 上重叠执行。每个 block 内部用 Shared Memory tiling 减少对全局内存的重复访问。
-
-**解题思路**：
-
-把矩阵按行分块，每块用独立 Stream 处理：`cudaMemcpyAsync` H2D + kernel launch + `cudaMemcpyAsync` D2H。用 pinned memory 保证异步传输生效，Copy Engine 和 Compute Engine 重叠。
-
-**参考实现**：
-
-```cuda
-#define TILE 16
-
-__global__ void matmul_tiled(const float* A, const float* B, float* C, int M, int N, int K) {
-    __shared__ float tileA[TILE][TILE];
-    __shared__ float tileB[TILE][TILE];
-
-    int tx = threadIdx.x, ty = threadIdx.y;
-    int row = blockIdx.y * TILE + ty;
-    int col = blockIdx.x * TILE + tx;
-
-    float acc = 0.0f;
-    for (int t = 0; t < (N + TILE - 1) / TILE; t++) {
-        // 加载 A/B 的子块到 Shared Memory (省略边界处理)
-        // tileA[ty][tx] = A[row * N + t * TILE + tx];
-        // tileB[ty][tx] = B[(t * TILE + ty) * K + col];
-        __syncthreads();
-
-        #pragma unroll
-        for (int k = 0; k < TILE; k++)
-            acc += tileA[ty][k] * tileB[k][tx];
-        __syncthreads();
-    }
-    if (row < M && col < K)
-        C[row * K + col] = acc;
-}
-
-// Host: 多 Stream 分块
-// for each chunk:
-// cudaMemcpyAsync(d_chunk, h_chunk, ..., stream[i % N]);
-// matmul_tiled<<<grid, block, 0, stream[i % N]>>>(...);
-// cudaMemcpyAsync(h_out, d_out, ..., stream[i % N]);
-```
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 

@@ -302,10 +302,6 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 **题目链接**：<https://leetgpu.com/challenges/moe-topk-gating>
 
-**题目概述**：
-
-给定 logits 张量 `[M, E]`（M 个 token、E 个专家），对每一行选出 top-k 个最大值，对这 k 个值做 softmax 得到门控权重，返回权重 `[M, k]` 和对应的专家索引 `[M, k]`。性能测试取大 M、E。
-
 **与今日知识的关联**：
 
 这道题直接展示了 **token 到专家的路由（routing）**——MoE 门控对每个 token 选 top-k 专家，正是"把输入分派到不同计算路径"的决策。今天的 Dynamic Batcher 在系统层面做类似的"路由"：把到达的请求分派到不同 batch（按到达顺序/长度分组），让 GPU 满载。两者的本质都是**基于策略的分流**：MoE 用 logits + top-k 决定 token 去哪个专家，Dynamic Batcher 用队列 + timeout 决定请求进哪个 batch。这道题练习 top-k 选择 + softmax，是 MoE 推理服务的核心 kernel——Week 7 系统整合中 MoE 模型会频繁用到。

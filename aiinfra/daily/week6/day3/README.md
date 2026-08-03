@@ -459,12 +459,6 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 **题目链接**：<https://leetgpu.com/challenges/prefix-sum>
 
-**题目概述**：
-
-给定长度为 `N` 的 FP32 数组，计算其 **inclusive 前缀和**：`output[i] = input[0] + input[1] + ... + input[i]`（与 `torch.cumsum` 对齐）。
-
-**约束条件**：`1 ≤ N ≤ 10^6`；性能测试取大 `N`（如 `N=250000`）。
-
 **与今日知识的关联**：
 
 这道题的**前缀和（scan）**是 vLLM Scheduler 每轮"过滤已完成序列"（stream compaction）的核心步骤——Scheduler 每轮 iteration 都要把 `FINISHED` 的序列从 running 队列移除、把仍活跃的紧凑保留，GPU 上做这件事就是"谓词标记 + 前缀和算新位置 + scatter"三段式，其中前缀和是唯一的并行难点。`_free_finished_seq_groups()` 的 GPU 化本质就是先做一次 scan 再按新下标重排。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 算前缀和，对应 Scheduler 用预算计数器累加决定每个序列的槽位。

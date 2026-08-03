@@ -514,49 +514,9 @@ ncu --metrics \
 
 **题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
 
-**题目概述**：
-
-实现多头注意力（Multi-Head Attention）。给定 `Q/K/V ∈ R^{N × d_model}` 和 head 数 `h`，`d_k = d_model / h`，head 沿 `d_model` 维**连续分块**（head `i` 取 `Q[:, i*d_k:(i+1)*d_k]`）。每个 head 独立做 scaled dot-product attention（无 mask）：`head_i = softmax(Q_i·K_i^T/√d_k)·V_i`，结果写回 `output[:, i*d_k:(i+1)*d_k]`。
-
-**难度**：困难　**标签**：CUDA、MHA、head 并行、fused attention、online softmax
-
 **与今日知识的关联**：
 
 今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
-
-**解题思路**：
-
-1. **head 维并行**：`grid = h`，一个 block 处理一个 head 的完整 attention
-2. **head 切分寻址**：head `i` 的 `Q_i/K_i/V_i` 是 `Q/K/V[:, i*d_k:(i+1)*d_k]`，列偏移乘 `d_k`
-3. **head 内复用 fused attention**：tiling + online softmax 三公式（同今天手写版），消除 O(N²) IO
-4. **scale 细节**：每个 head 用 `1/√d_k` 缩放，不是 `1/√d_model`
-
-**参考实现**（head 并行骨架，完整实现见题解）：
-
-```cuda
-// mha.cu —— Multi-Head Attention（一个 block 一个 head，head 内复用单 head fused attention）
-// 编译命令: nvcc -o mha mha.cu -O3 -arch=sm_120
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cmath>
-
-// 一个 block 处理一个 head 的完整 attention：
-//   Q_i/K_i/V_i = Q/K/V[:, head*d_k : (head+1)*d_k]（head 沿 d_model 维连续分块）
-//   block 内复用单 head fused attention（tiling + online softmax 三公式）
-// （完整 kernel 体见题解：QK^T 分块、online softmax、PV 累加）
-__global__ void mha_kernel(const float* Q, const float* K, const float* V,
-                           float* output, int N, int d_model, int d_k);
-
-// Q, K, V, output are device pointers
-extern "C" void solve(const float* Q, const float* K, const float* V,
-                      float* output, int N, int d_model, int h) {
-    int d_k = d_model / h;
-    // grid = h 个 block，一个 block 一个 head；head 间零同步、天然并行
-    mha_kernel<<<h, 128>>>(Q, K, V, output, N, d_model, d_k);
-    cudaDeviceSynchronize();
-}
-```
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 

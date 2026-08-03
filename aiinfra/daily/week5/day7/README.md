@@ -209,65 +209,9 @@ python kernels/week5_summary.py
 
 **题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
-**题目概述**：
-
-实现 GPT-2 124M 的一个 transformer block 前向（Pre-LN 结构）：输入 `x[seq_len, 768]` 和打包权重，依次串联 `LN1 → QKV 投影 → Multi-Head Attention → Attn 投影 → 残差 → LN2 → FC → GELU(tanh) → 投影 → 残差`。固定维度 `D=768, H=12, FFN=3072`；容差 `atol=rtol=1e-3`；性能测试取 `seq_len=1024`。
-
-**难度**：困难　**标签**：CUDA、Transformer、LayerNorm、Multi-Head Attention、FFN、多 kernel 流水线
-
 **与 Week 5 知识的关联**：
 
 Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 5 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
-
-**解题思路**：
-
-1. 用 PyTorch 写一个 Pre-LN transformer block 作为参考实现，确认数值正确
-2. 拆解算子链：LN1 → QKV Proj → MHA → Attn Proj → 残差 → LN2 → FC → GELU(tanh) → Proj → 残差
-3. 逐个子 kernel 用 CUDA 实现并对齐参考输出（注意 GELU 用 tanh 近似、head 沿 D 维切分）
-4. 串联成完整 block 前向，提交测性能
-
-**参考实现**（PyTorch）：
-
-```python
-# gpt2_block.py —— GPT-2 124M 单层 transformer block 前向（参考实现）
-# 依赖: pip install torch
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-D, H, FFN = 768, 12, 3072
-
-class GPT2Block(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.ln1 = nn.LayerNorm(D)
-        self.qkv = nn.Linear(D, 3 * D)
-        self.attn_proj = nn.Linear(D, D)
-        self.ln2 = nn.LayerNorm(D)
-        self.fc = nn.Linear(D, FFN)
-        self.proj = nn.Linear(FFN, D)
-
-    def forward(self, x):                       # x: (seq_len, D)
-        h = self.ln1(x)
-        q, k, v = self.qkv(h).chunk(3, dim=-1)
-        q = q.view(-1, H, D // H).transpose(0, 1)   # (H, seq, 64)
-        k = k.view(-1, H, D // H).transpose(0, 1)
-        v = v.view(-1, H, D // H).transpose(0, 1)
-        attn = F.softmax(q @ k.transpose(-2, -1) / (D // H) ** 0.5, dim=-1) @ v
-        attn = attn.transpose(0, 1).reshape(-1, D)  # (seq, D)
-        x = x + self.attn_proj(attn)                # 残差 1
-        h = self.ln2(x)
-        x = x + self.proj(F.gelu(self.fc(h), approximate="tanh"))  # 残差 2
-        return x
-
-block = GPT2Block().cuda().eval()
-for seq_len in [1, 128, 1024]:
-    x = torch.randn(seq_len, D, device='cuda')
-    with torch.no_grad():
-        y = block(x)
-    print(f"seq_len={seq_len:5d} | output shape={tuple(y.shape)}")
-```
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
@@ -352,7 +296,6 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 
 </details>
 
-
 2. **Continuous Batching 和 Dynamic Batching 有什么区别？**
 
 <details>
@@ -363,7 +306,6 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
  - 对比：Continuous 更适合 LLM 自回归生成（生成长度差异大），吞吐提升 2-8x。前提是 PagedAttention 的细粒度 block 管理（否则完成请求的 cache 释放碎片化）
 
 </details>
-
 
 3. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
 
@@ -377,7 +319,6 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 
 </details>
 
-
 4. **PagedAttention 和 Continuous Batching 是什么关系？**
 
 <details>
@@ -389,7 +330,6 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
  - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；没有 Continuous Batching，PagedAttention 的动态分配无用武之地
 
 </details>
-
 
 5. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
 

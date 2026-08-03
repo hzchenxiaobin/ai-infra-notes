@@ -301,12 +301,6 @@ Throughput-Latency 曲线
 
 **题目链接**：<https://leetgpu.com/challenges/top-k-selection>
 
-**题目概述**：
-
-给定长度为 `N` 的数组和一个整数 `k`，找出其中**最大的 k 个元素**（或第 k 大）。
-
-**约束条件**：`1 ≤ k ≤ N ≤ 10^6`；性能测试取大 `N`。
-
 **与今日知识的关联**：
 
 这道题的 **top-k 选择**与 benchmark 的 P99 latency 计算同构——P99 就是"找出延迟排第 99 百分位的那个值"，本质是 top-k 选择（k = N×0.01，选第 k 小的延迟）。benchmark 框架的 `percentile()` 函数对排序后的 latencies 取 `int(N×p/100)` 位置，正是 top-k selection 的串行版。这道题的 GPU 实现用 bitonic sort 或堆归约做并行 top-k，对应推理系统里用 GPU 加速 latency 分位数计算（百万级请求的 P99/P999 统计）。

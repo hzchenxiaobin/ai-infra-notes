@@ -508,33 +508,9 @@ ncu \
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**题目概述**：
-
-给定 `rows × cols` 的行主序 FP32 矩阵 `input`，计算其转置 `output[j][i] = input[i][j]`（`output` 为 `cols × rows`）。
-
-**约束条件**：元素为 32-bit float，规模可达数千万元素（性能测例 `rows=7000, cols=6000`）
-
-**难度**：简单　**标签**：CUDA、Memory-bound、Index Mapping、Occupancy
-
 **与今日知识的关联**：
 
 转置是纯数据重排、零计算的 memory-bound kernel，代码极简，适合观察 block 形状（如 16×16 vs 32×8）与寄存器用量对 Occupancy 的影响。用 ncu 对比不同 blockDim 下的 achieved occupancy，直接验证 Day 2 的理论。
-
-**解题思路**：
-
-2D grid + 2D block，每个线程搬一个元素。关键不是算力而是内存带宽，用 ncu 观察 memory throughput 和 occupancy 随 block 形状的变化。
-
-**参考实现**：
-
-```cuda
-__global__ void transpose_kernel(const float* input, float* output, int rows, int cols) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    if (row < rows && col < cols) {
-        output[col * rows + row] = input[row * cols + col];
-    }
-}
-```
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 

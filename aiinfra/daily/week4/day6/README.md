@@ -283,17 +283,9 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 **题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
 
-**题目概述**：
-
-给定 Q, K, V ∈ R^{B×H×N×d}，计算 multi-head scaled dot-product attention：`O = softmax(Q·K^T/√d)·V` per head。约束 `1 ≤ B ≤ 128`，`1 ≤ H ≤ 16`，`1 ≤ N ≤ 4096`，`1 ≤ d ≤ 128`。
-
 **与今日知识的关联**：
 
 本题是 FlashAttention 的完整多 head 版本——正是今天 benchmark 的核心对象。Day 2 我们手写了单 head 版 FA，今天 benchmark 对比的就是它。本题要求支持 batch + multi-head，用 `gridDim=(N/Br, H, B)` 并行，内部复用 FA 的 tiling + online softmax。这是 Week 4 的收官 CUDA 题，融合了本周所有知识点。
-
-**解题思路**：
-
-`gridDim.z=batch, blockIdx.y=head`，每组内用 FlashAttention tiling（Q tile 常驻 shared memory，KV tile 逐块滑入）+ online softmax 三公式。batch offset 寻址 `base = (batch*H + head) * N * d`。
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 

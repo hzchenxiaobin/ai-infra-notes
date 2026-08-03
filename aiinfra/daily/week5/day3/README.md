@@ -442,12 +442,6 @@ grep -n "_schedule_running\|_schedule_waiting\|_schedule_swapped" $(python -c "i
 
 **题目链接**：<https://leetgpu.com/challenges/top-p-sampling>
 
-**题目概述**：
-
-实现 **Top-P（nucleus）采样**：给定 `logits[vocab_size]`、概率阈值 `p` 和随机种子 `seed`，① 对 logits 做 softmax；② 按概率降序排序；③ 计算累积概率（prefix sum）；④ 找到累积概率首次 ≥ `p` 的截断点（nucleus）；⑤ 在 nucleus 内重归一化并按 seed 采样一个 token。
-
-**约束条件**：性能测试取 `vocab_size=50000`；容差 `1e-5`。
-
 **与今日知识的关联**：
 
 Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel**——Scheduler 拼好 batch、Worker 跑完 forward 得到 logits 后，最后一步就是在 GPU 上执行采样。这道题就是 Worker 跑的**采样 kernel**：把采样拆成 `softmax → sort → cumsum → searchsorted(p) → 重归一化 → multinomial`，本质是一条 sort + scan（prefix sum）+ CDF 查找的流水线。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——采样 kernel 喂入的 batch 正是 Continuous Batching 拼出来的。

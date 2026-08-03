@@ -267,8 +267,6 @@ FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 
 
 **题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
 
-**题目概述**：给定输入序列 `X ∈ R^(N×d)`，实现 **Causal Self-Attention**：每个位置 `i` 的 query 只与左侧 `[0, i]` 内的 key 做 attention（上三角 mask），输出 `O ∈ R^(N×d)`。
-
 **与今日知识的关联**：今日进阶篇核心主题之一是**长文本推理优化**。Causal mask 是自回归解码的语义基础——decode 阶段每个新 token 只能 attend 到历史 token，正对应 causal attention 的下三角结构，KV Cache 逐 token 复用历史 K/V 之所以成立也依赖它。面试中回答"长文本怎么优化"时，能讲清 causal mask 的 kernel 实现、显存收益和与 KV Cache 的配合，是加分项。
 
 > 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。

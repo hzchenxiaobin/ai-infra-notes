@@ -2,6 +2,8 @@
 
 > 图示说明：[l2_cache_interleaving.svg](l2_cache_interleaving.svg)
 >
+> ![昇腾950 L2 Cache：512B 低位交织与高位异或交织示意图](l2_cache_interleaving.svg)
+>
 > 对应白皮书第 4.3.2 节《L2 Cache 特性》原文：
 > “多 Bank 分布式架构，512B 低位交织（采用高位异或交织，交织算法升级）；Cache Line 粒度 512B，新增支持 128B Sector Cache 特性，128B/256B 访问更高效；每个 Bank 支持同时读写。”
 

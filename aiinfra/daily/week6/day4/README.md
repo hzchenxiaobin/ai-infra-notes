@@ -312,12 +312,6 @@ for cs in [4, 8, 16, 24]:
 
 **题目链接**：<https://leetgpu.com/challenges/segmented-prefix-sum>
 
-**题目概述**：
-
-给定长度为 `N` 的数组和一组**段边界**（segment boundaries），对每一段独立做 exclusive prefix sum（段内前缀和，段间互不影响）。
-
-**约束条件**：`1 ≤ N ≤ 10^6`，段数 `1 ≤ S ≤ N`；性能测试取大 `N`。
-
 **与今日知识的关联**：
 
 这道题的**分段扫描 + 段间边界 carry** 与 Chunked Prefill 把长 prompt 拆成多个 chunk 的处理同构——Chunked Prefill 把一个长 prompt（一个"大段"）拆成多个 chunk（多个"小段"），每个 chunk 独立做 attention（段内 prefix sum），chunk 之间通过 KV Cache 累积（段间边界 carry）。segmented prefix sum 的"段内独立 + 段间修正"两阶段，正是 chunked prefill 的"per-chunk attention + cross-chunk KV 传递"。这道题的 GPU 实现用 warp scan 做段内前缀和 + 段边界处理，对应推理系统里 chunk 内计算 + chunk 间状态累积。

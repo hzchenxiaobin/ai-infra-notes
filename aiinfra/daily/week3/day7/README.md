@@ -468,8 +468,6 @@ week3/
 
 **题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
-**题目概述**：实现 scaled dot-product attention（无 causal mask）。给定 `Q ∈ R^{M×d}`、`K ∈ R^{N×d}`、`V ∈ R^{N×d}`，计算 `output = softmax(Q·K^T / √d) @ V`。三个关键点：`scale = 1/√d` 防止点积过大导致 softmax 饱和；safe softmax 减行最大值防 `exp` 溢出；fused 单 kernel 把 Q·Kᵀ / softmax / ·V 融合，避免 `scores (M×N)` 落 HBM。
-
 **与今日知识的关联**：Softmax Attention 是 Week 3 算子主线的综合验收——它融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：用 online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，无需物化 S/P。
 
 > 💡 完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。

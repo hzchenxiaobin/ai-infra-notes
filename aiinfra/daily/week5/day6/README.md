@@ -335,12 +335,6 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 
 **题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
 
-**题目概述**：
-
-实现 **INT8 量化矩阵乘** `C = A @ B`：`A[M,K]`、`B[K,N]`、`C[M,N]` 均为 INT8，带 per-tensor scale/zero_point。计算时先反量化（`(X - zp) * scale`）、FP32 累加，写回时再 requantize 回 INT8（`round(acc * scale_A * scale_B / scale_C) + zp_C`）。
-
-**约束条件**：性能测试取 `A 8192×2048, B 2048×4096`；容差 `0.05`。
-
 **与今日知识的关联**：
 
 INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里权重和激活以 INT8 存储以省 HBM 流量，GEMM 内部反量化、FP32 累加、再 requantize。它正是今天 ncu profiling 的**理想分析对象**：用 `ncu` 对比它与 FP32 GEMM 的 `dram__throughput`（INT8 数据量更小 → HBM 流量下降）和 `sm__throughput`，验证"量化既省带宽又提算力利用率"的判据。推理系统里，量化 GEMM 是 INT8/INT4 量化推理的必经路径——量化权重从 HBM 读出后在 kernel 内反量化再做乘加。今天我们测它的瓶颈特征，正是为后续"量化推理"优化打基础。
