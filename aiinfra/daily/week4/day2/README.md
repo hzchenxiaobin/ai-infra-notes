@@ -1,640 +1,506 @@
-## Day 2：手写完整 FlashAttention Forward Kernel
+## Day 2：端到端 Profiling 与 Kernel Fusion
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 在 Day 1 理论基础上，设计支持 **batch + multi-head** 的完整 FlashAttention Forward Kernel 线程配置<br>
-2. 掌握 **每个 warp 负责若干 Q 行** 的 work partitioning 策略，理解跨 warp 无需通信的原因<br>
-3. 复用 Week 2 Day 1 的 `warpReduceSum` / `warpReduceMax` 原语，在 Kernel 内完成 online softmax 的分块归约<br>
-4. 实现并运行 `flash_attention_v2.cu`，与 CPU 标准 Attention 对比误差 < 1e-3，支持 `grid=(N/Br, H, B)` 配置<br>
-5. 能正确处理 **N 不是 Br 倍数** 的边界情况，理解 `__syncthreads()` 只需在 tile 加载后使用<br>
+1. 掌握 **两级 Profiling 工具体系**：用 Nsight Systems（nsys）采集系统级时间线、用 Nsight Compute（ncu）分析 kernel 级指标，理解"先全局定位、再单点深挖"的标准流程
+2. 学会用 nsys 的 `cuda_gpu_kern_sum` 统计找出 Transformer forward 的 top3 耗时算子，并从时间线识别 kernel 间隙（launch overhead）
+3. 能用 ncu 的 `sm__throughput` / `dram__throughput` 指标判定算子是 **compute-bound 还是 memory-bound**，并用 Warp Stall Reasons 定位具体阻塞原因
+4. 理解 **Kernel Fusion** 的收益来源（省 HBM 中间读写），能列出 Transformer 中至少 3 个 fusion 候选并估算 IO 收益
+5. 用 `torch.compile` 验证自动融合对 kernel 数量和 latency 的影响，理解自定义 C++ Extension 算子为何无法被融合
 
-> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 3 读官方源码、Day 4 学 FA2 改进、Day 5 集成到 Mini 引擎，全部建立在今天的 Kernel 之上。
+> 💡 **为什么重要**：Day 1-5 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine。但"算子各自正确"不等于"系统跑得快"——真实优化必须先**定位瓶颈**再动手。今天就是把"会写 kernel"升级为"会用工具诊断系统"的关键一天，五步 Profiling 法是所有 GPU 性能优化的标准工作流。Day 7 会把今天的结论整理成算子分类表。
 
 ---
 
-### 学前导读：从 PyTorch 教学版到 CUDA Kernel
+### 学前导读：从"单算子正确"到"系统级瓶颈定位"
 
-Day 1 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online softmax 正确性。但那个版本用 Python for 循环遍历 Q tile 和 KV tile，速度比标准 Attention 还慢——它只验证了算法，没有发挥 GPU 并行。
+Day 5 的 Mini Engine 跑通了：自定义 Softmax/LayerNorm + cuBLAS GEMM，端到端误差 < 1e-4。但你可能注意到一个尴尬的现象——**自定义版比 PyTorch 还慢一点（0.8x ~ 0.95x）**。问题来了：慢在哪里？是 Softmax 拖后腿，还是 GEMM 没跑满，还是 kernel 之间的空隙太大？
 
-今天的任务是把三公式"翻译"成真正的 CUDA Kernel。核心难点有三个：
+回答这个问题，靠"猜"是不行的。Day 1 我们用过 `torch.profiler` 看算子时间表，但它只告诉你"哪个算子慢"，不告诉你"为什么慢"——是算力不够，还是带宽喂不饱？要回答"为什么"，需要更底层的工具：
 
-| 难点 | PyTorch 教学版 | CUDA Kernel 版 |
-|------|---------------|----------------|
-| 并行维度 | 串行遍历 Q tile | 一个 Block 处理一个 Q tile，`blockIdx.z` 区分 batch |
-| 归约操作 | `torch.max` / `torch.sum` | `warpReduceMax` / `warpReduceSum`（复用 Week 2 Day 1） |
-| 状态维护 | 每个 Q 行独立的 (m, l, o) | 每个 warp 在 register 中维护 ROWS_PER_WARP 组 (m, l, acc) |
+| 问题层级 | 工具 | 能回答的问题 |
+|---------|------|------------|
+| 哪个算子最慢？ | torch.profiler / nsys | top3 耗时算子、kernel 间隙 |
+| 这个算子为什么慢？ | ncu | SM/DRAM 占用、Stall 原因 |
+| 怎么优化？ | Roofline + Fusion 分析 | memory-bound → 融合；compute-bound → Tensor Core |
 
-关键洞察：**每个 Q 行的 online softmax 是完全独立的**——不同 Q 行之间不共享数据，不需要跨 warp 通信。因此可以自然地把不同 Q 行分配给不同 warp 并行处理。
+**今天的核心方法论**：**nsys 先看全局（找 top3）→ ncu 再看单点（判 bound 类型）→ Roofline 定方向 → Fusion 出方案**。这是一套"从宏观到微观"的诊断闭环，适用于任何 GPU 程序，不只是 Transformer。
 
-> 💡 **一句话总结**：FlashAttention Kernel 的并行设计很优雅——Block 并行处理 Q tile（grid 维度），warp 并行处理 Q 行（block 内维度），warp 内 32 线程协作做归约。三层并行，层间无依赖，只需 `__syncthreads` 同步 tile 加载。
+> 💡 **一句话总结**：profiling 不是"跑个工具看个数字"，而是"用数字回答问题"——先问"哪里慢"，再问"为什么慢"，最后问"怎么让它不慢"。
 
 ---
 
 ### 理论学习
 
-#### 2.1 Kernel 线程配置设计
+#### 20.1 两级 Profiling 工具体系：nsys + ncu
 
-![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
+![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
 
-一个 Block 处理一个 Q tile（Br 行 × d 列），grid 配置覆盖 batch × head × Q tile：
+GPU 性能诊断有且只有两个核心工具（NVIDIA 体系），分工明确：
 
-```
-grid = (ceil(N / Br), H, B) // x: Q tile, y: head, z: batch
-block = (THREADS_PER_BLOCK,) // 推荐 256 = 8 warps × 32 threads
-```
+| 工具 | 层级 | 看什么 | 类比 |
+|------|------|--------|------|
+| **Nsight Systems（nsys）** | 系统级 | 完整时间线、kernel 排列、CPU/GPU 交互、多 stream | "全景地图" |
+| **Nsight Compute（ncu）** | kernel 级 | 单个 kernel 的 SM/DRAM 占用、Stall 原因、寄存器/shared 用量 | "放大镜" |
 
-Block 内部的 warp 分工：
+##### nsys：系统级全景
 
-| 参数 | 含义 | 典型值 |
-|------|------|--------|
-| Br | Q tile 行数（一个 Block 处理） | 64 |
-| Bc | KV tile 行数（一次内循环处理） | 64 |
-| d | Head dimension | 64 |
-| WARPS_PER_BLOCK | Block 内 warp 数 | 8 |
-| THREADS_PER_BLOCK | Block 内线程数 = WARPS × 32 | 256 |
-| ROWS_PER_WARP | 每个 warp 负责的 Q 行数 = Br / WARPS | 8 |
-
-![FlashAttention Warp → Q 行映射](../../images/week4_warp_qrow_mapping.svg)
-
-##### 为什么每个 warp 负责多行 Q 而不是一行？
-
-- Br=64, WARPS=8 → 每个 warp 8 行。如果每 warp 只 1 行，需要 64 个 warp = 2048 线程，超过 block 上限 1024
-- 每个 warp 内 32 线程协作处理一行的 d=64 个元素（每线程 2 个），再用 `__shfl` 归约
-
-#### 2.2 Shared Memory 分配
-
-```cuda
-__shared__ float s_Q[Br][D]; // Q tile，常驻
-__shared__ float s_K[Bc][D]; // K tile，每轮 KV 循环更新
-__shared__ float s_V[Bc][D]; // V tile，每轮 KV 循环更新
-```
-
-SRAM 使用量 = `Br×d + 2×Bc×d` 个 float。以 Br=Bc=64, d=64 为例：
-
-```
-s_Q: 64×64 = 4096 floats = 16 KB
-s_K: 64×64 = 4096 floats = 16 KB
-s_V: 64×64 = 4096 floats = 16 KB
-总计: 48 KB ≤ 164 KB (RTX 5090 上限) ✓
-```
-
-> ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 S=QK^T 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
-
-#### 2.3 Online Softmax 在 CUDA 中的实现
-
-![Warp Shuffle 归约原语](../images/reduction_warp_shuffle.svg)
-
-每个 Q 行独立维护 `(m, l, acc[d])` 三组状态。对于第 `qi` 个 Q 行，处理流程：
-
-```
-初始化: m = -inf, l = 0, acc[d] = 0
-
-对于每个 KV tile j:
- Step 1: Sij[c] = Qi · Kj[c]^T (c = 0..Bc-1)
- // 每个线程算 Bc/32 个点积，warp shuffle 汇总
-
- Step 2: mij = max(Sij) // warpReduceMax
- m_new = max(m, mij)
-
- Step 3: 缩放旧状态
- scale_old = exp(m - m_new)
- l *= scale_old
- acc[d] *= scale_old
-
- Step 4: 处理新块
- for c in 0..Bc-1:
- p = exp(Sij[c] - m_new)
- l += p
- acc[d] += p * Vj[c][:] // warpReduceSum 汇总
-
- Step 5: m = m_new
-
-归一化输出: O[qi][:] = acc / l
-```
-
-##### `__syncthreads()` 只需在 tile 加载后使用
-
-```cuda
-// 加载 KV tile 到 shared memory
-for (...)
-    s_K[r][c] = K[...];
-for (...)
-    s_V[r][c] = V[...];
-__syncthreads(); // ← 确保所有 warp 看到完整的 KV tile
-
-// 每个 warp 独立处理自己的 Q 行，无需 block 级同步
-// warp 内用 __shfl（硬件同步），不需要 __syncthreads
-
-__syncthreads(); // ← 切换到下一个 KV tile 前，确保计算完成
-```
-
-> 💡 **关键洞察**：online softmax 的计算完全在 warp 内完成（register + `__shfl`），不涉及跨 warp 数据共享。`__syncthreads()` 只在两处需要：① tile 加载后确保可见 ② 切换 tile 前确保计算完成。这是 FA2 减少同步点的关键思路。
-
-#### 2.4 边界处理
-
-当 N 不是 Br 的倍数时，最后一个 Q tile 的部分行无效：
-
-```cuda
-int globalRow = qTileRow + r;
-s_Q[r][c] = (globalRow < N) ? Q[bhOffset + globalRow * d + c] : 0.0f;
-// 无效行填 0，不影响累加结果
-```
-
-KV tile 同理：`kvStart + c < N` 判断，无效位置 score 设为 `-1e30f`（exp 后为 0）。
-
----
-
-### Coding 任务：完整 FlashAttention Forward Kernel
-
-#### 任务 1：创建 flash_attention_v2.cu
-
-创建文件 `kernels/flash_attention_v2.cu`：
-
-```cuda
-// flash_attention_v2.cu —— 完整 FlashAttention Forward Kernel（batch + multi-head）
-// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120
-// 运行命令: ./flash_attention_v2
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <algorithm>
-
-constexpr int Br = 64;
-constexpr int Bc = 64;
-constexpr int D = 64;
-
-constexpr int WARPS_PER_BLOCK = 8;
-constexpr int THREADS_PER_BLOCK = WARPS_PER_BLOCK * 32;
-static_assert(Br % WARPS_PER_BLOCK == 0, "Br must be divisible by WARPS_PER_BLOCK");
-constexpr int ROWS_PER_WARP = Br / WARPS_PER_BLOCK;
-
-__inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1) {
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    }
-    return val;
-}
-
-__inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1) {
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    }
-    return val;
-}
-
-__global__ void flashAttentionForward(const float* __restrict__ Q, const float* __restrict__ K,
-                                      const float* __restrict__ V, float* __restrict__ O, int B, int H, int N, int d) {
-
-    __shared__ float s_Q[Br][D];
-    __shared__ float s_K[Bc][D];
-    __shared__ float s_V[Bc][D];
-
-    int batch = blockIdx.z;
-    int head = blockIdx.y;
-    int qTileRow = blockIdx.x * Br;
-
-    int tid = threadIdx.x;
-    int lane = tid % 32;
-    int warpId = tid / 32;
-    int qRowStart = warpId * ROWS_PER_WARP;
-
-    int bhOffset = ((batch * H + head) * N) * d;
-
-// 协作加载 Q tile
-    #pragma unroll
-    for (int idx = tid; idx < Br * d; idx += THREADS_PER_BLOCK) {
-        int r = idx / d;
-        int c = idx % d;
-        int globalRow = qTileRow + r;
-        s_Q[r][c] = (globalRow < N) ? Q[bhOffset + globalRow * d + c] : 0.0f;
-    }
-    __syncthreads();
-
-    // 每个 warp 维护 ROWS_PER_WARP 个 Q 行的 running 状态
-    float m_arr[ROWS_PER_WARP];
-    float l_arr[ROWS_PER_WARP];
-    float acc[ROWS_PER_WARP][D];
-
-    #pragma unroll
-    for (int i = 0; i < ROWS_PER_WARP; i++) {
-        m_arr[i] = -1e30f;
-        l_arr[i] = 0.0f;
-        #pragma unroll
-        for (int j = 0; j < d; j++) {
-            acc[i][j] = 0.0f;
-        }
-    }
-
-    float scale = 1.0f / sqrtf((float)d);
-
-    // 内层循环：遍历 KV tile
-    for (int kvStart = 0; kvStart < N; kvStart += Bc) {
-// 协作加载 K/V tile
-        #pragma unroll
-        for (int idx = tid; idx < Bc * d; idx += THREADS_PER_BLOCK) {
-            int r = idx / d;
-            int c = idx % d;
-            int globalRow = kvStart + r;
-            s_K[r][c] = (globalRow < N) ? K[bhOffset + globalRow * d + c] : 0.0f;
-            s_V[r][c] = (globalRow < N) ? V[bhOffset + globalRow * d + c] : 0.0f;
-        }
-        __syncthreads();
-
-// 每个 warp 处理 ROWS_PER_WARP 个 Q 行
-        #pragma unroll
-        for (int localRow = 0; localRow < ROWS_PER_WARP; localRow++) {
-            int qi = qRowStart + localRow;
-            int globalQi = qTileRow + qi;
-            if (qi >= Br || globalQi >= N)
-                continue;
-
-            // Step 1: Sij[c] = Qi · Kj[c]^T (每线程算 Bc/32 个)
-            float Sij[Bc / 32];
-            #pragma unroll
-            for (int c = lane; c < Bc; c += 32) {
-                float dot = 0.0f;
-                #pragma unroll
-                for (int di = 0; di < d; di++) {
-                    dot += s_Q[qi][di] * s_K[c][di];
-                }
-                Sij[c / 32] = dot * scale;
-            }
-
-            // Step 2: 局部 max (warp reduce)
-            float localMax = -1e30f;
-            #pragma unroll
-            for (int i = 0; i < Bc / 32; i++) {
-                localMax = fmaxf(localMax, Sij[i]);
-            }
-            localMax = warpReduceMax(localMax);
-
-            // Step 3: online softmax update
-            float m_prev = m_arr[localRow];
-            float m_new = fmaxf(m_prev, localMax);
-            float scale_old = expf(m_prev - m_new);
-
-            m_arr[localRow] = m_new;
-            l_arr[localRow] *= scale_old;
-            #pragma unroll
-            for (int di = 0; di < d; di++) {
-                acc[localRow][di] *= scale_old;
-            }
-
-// Step 4: 处理新块
-            #pragma unroll
-            for (int i = 0; i < Bc / 32; i++) {
-                int c = lane + i * 32;
-                bool valid = c < Bc && (kvStart + c) < N;
-                float s_val = valid ? Sij[i] : -1e30f;
-                float p_val = valid ? expf(s_val - m_new) : 0.0f;
-
-                float p_sum = warpReduceSum(p_val);
-                if (lane == 0) {
-                    l_arr[localRow] += p_sum;
-                }
-
-                #pragma unroll
-                for (int di = 0; di < d; di++) {
-                    float contrib = valid ? p_val * s_V[c][di] : 0.0f;
-                    float sum_contrib = warpReduceSum(contrib);
-                    if (lane == 0) {
-                        acc[localRow][di] += sum_contrib;
-                    }
-                }
-            }
-
-            // 广播 l 和 acc 到 warp 内所有线程
-            l_arr[localRow] = __shfl_sync(0xFFFFFFFF, l_arr[localRow], 0);
-            #pragma unroll
-            for (int di = 0; di < d; di++) {
-                acc[localRow][di] = __shfl_sync(0xFFFFFFFF, acc[localRow][di], 0);
-            }
-        }
-
-        __syncthreads();
-    }
-
-// 写回 O
-    #pragma unroll
-    for (int localRow = 0; localRow < ROWS_PER_WARP; localRow++) {
-        int qi = qRowStart + localRow;
-        int globalRow = qTileRow + qi;
-        if (qi >= Br || globalRow >= N)
-            continue;
-
-        float inv_l = 1.0f / l_arr[localRow];
-        #pragma unroll
-        for (int di = lane; di < d; di += 32) {
-            O[bhOffset + globalRow * d + di] = acc[localRow][di] * inv_l;
-        }
-    }
-}
-
-void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int d) {
-    float* S = (float*)malloc(N * N * sizeof(float));
-    float scale = 1.0f / sqrtf((float)d);
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0.0f;
-            for (int k = 0; k < d; k++) {
-                sum += Q[i * d + k] * K[j * d + k];
-            }
-            S[i * N + j] = sum * scale;
-        }
-
-        float mx = S[i * N];
-        for (int j = 1; j < N; j++)
-            mx = fmaxf(mx, S[i * N + j]);
-        float sm = 0.0f;
-        for (int j = 0; j < N; j++) {
-            S[i * N + j] = expf(S[i * N + j] - mx);
-            sm += S[i * N + j];
-        }
-        for (int j = 0; j < N; j++)
-            S[i * N + j] /= sm;
-
-        for (int k = 0; k < d; k++) {
-            float sum = 0.0f;
-            for (int j = 0; j < N; j++) {
-                sum += S[i * N + j] * V[j * d + k];
-            }
-            O[i * d + k] = sum;
-        }
-    }
-    free(S);
-}
-
-void initData(float* data, int n) {
-    srand(42);
-    for (int i = 0; i < n; i++) {
-        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
-    }
-}
-
-bool checkResult(const float* a, const float* b, int n, float eps) {
-    float maxDiff = 0.0f;
-    for (int i = 0; i < n; i++) {
-        maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
-    }
-    bool ok = maxDiff < eps;
-    printf(" maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
-    return ok;
-}
-
-int main() {
-    int B = 2, H = 4, N = 256, d = D;
-
-    printf("=== FlashAttention v2 Forward Kernel ===\n");
-    printf("Config: B=%d, H=%d, N=%d, d=%d\n", B, H, N, d);
-    printf("Tile: Br=%d, Bc=%d, Threads=%d\n\n", Br, Bc, THREADS_PER_BLOCK);
-
-    size_t totalElems = (size_t)B * H * N * d;
-    size_t bytes = totalElems * sizeof(float);
-
-    float* h_Q = (float*)malloc(bytes);
-    float* h_K = (float*)malloc(bytes);
-    float* h_V = (float*)malloc(bytes);
-    float* h_O = (float*)malloc(bytes);
-    float* h_O_CPU = (float*)malloc(bytes);
-
-    initData(h_Q, totalElems);
-    initData(h_K, totalElems);
-    initData(h_V, totalElems);
-
-    float *d_Q, *d_K, *d_V, *d_O;
-    cudaMalloc(&d_Q, bytes);
-    cudaMalloc(&d_K, bytes);
-    cudaMalloc(&d_V, bytes);
-    cudaMalloc(&d_O, bytes);
-    cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
-
-    dim3 grid((N + Br - 1) / Br, H, B);
-    dim3 block(THREADS_PER_BLOCK);
-
-    // warmup
-    flashAttentionForward<<<grid, block>>>(d_Q, d_K, d_V, d_O, B, H, N, d);
-    cudaDeviceSynchronize();
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-    flashAttentionForward<<<grid, block>>>(d_Q, d_K, d_V, d_O, B, H, N, d);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float ms;
-    cudaEventElapsedTime(&ms, start, stop);
-    cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
-
-    // CPU 验证（只验证第一个 head）
-    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, d);
-    printf("[B=0, H=0] First head check:\n");
-    checkResult(h_O, h_O_CPU, N * d, 1e-3f);
-    printf("GPU Time: %.3f ms\n", ms);
-
-    free(h_Q);
-    free(h_K);
-    free(h_V);
-    free(h_O);
-    free(h_O_CPU);
-    cudaFree(d_Q);
-    cudaFree(d_K);
-    cudaFree(d_V);
-    cudaFree(d_O);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-
-    return 0;
-}
-```
-
-#### 任务 2：编译运行
+nsys 采集一次完整的程序运行，输出时间线（`.nsys-rep`，可用 GUI 打开，也可命令行导出统计）：
 
 ```bash
-# 编译
-nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
+# 采集 Mini Engine 时间线
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx python profile_mini_engine.py
 
-# 运行
-./flash_attention_v2
+# 命令行导出 kernel 统计（按 GPU 时间降序）
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+```
+
+`cuda_gpu_kern_sum` 输出形如：
+
+```text
+Time(%) Total Time Instances Avg Module Kernel
+-------- ----------- --------- -------- --------- ------
+ 45.2 1.234 ms 20 61.7 us libcublas ...gemm...
+ 12.1 0.331 ms 10 33.1 us my_ops layernorm_kernel
+ 8.5 0.232 ms 5 46.4 us my_ops softmax_kernel
+ ...
+```
+
+**三个观察重点**：
+1. **top3 算子**：按 `Time(%)` 排序，前三个就是优化目标
+2. **kernel 间隙（gap）**：在 GUI 时间线上看相邻 kernel 之间的空白 = launch overhead（CPU 调度延迟）
+3. **调用次数**：`# Calls` 异常多说明 launch overhead 累积，Decode 阶段尤其明显
+
+##### ncu：kernel 级放大镜
+
+ncu 对单个 kernel 做深度分析，关键是**对比 SM Throughput 和 DRAM Throughput**判断 bound 类型：
+
+```bash
+# 分析自定义 Softmax / GEMM 的 bound 类型
+ncu --metrics \
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|gemm_kernel" ./profiling_targets
+```
+
+> ⚠️ **注意**：ncu 会让 kernel 执行慢 10-100x（它要反复 replay 采集指标）。**永远不要在 ncu 下测 latency**，latency 用 nsys 或 cudaEvent 测。ncu 只看"占比"和"Stall 原因"。
+
+#### 20.2 瓶颈判定：Roofline 与 SM/DRAM Throughput
+
+判定一个 kernel 是 compute-bound 还是 memory-bound，有**理论**和**实测**两条路径，互相印证：
+
+##### 理论路径：Arithmetic Intensity vs Ridge Point
+
+```
+Arithmetic Intensity (AI) = FLOPs / Bytes（每读 1 字节做多少次运算）
+Ridge Point = Peak FLOP/s / Peak Bandwidth
+
+RTX 5090 FP32: 104.75 TFLOP/s / 1.792 TB/s ≈ 58.45 FLOP/Byte
+```
+
+- AI < 58.45 → **memory-bound**（数据喂不饱计算单元）
+- AI > 58.45 → **compute-bound**（算力是瓶颈）
+
+以 Softmax 为例（N=1024, d=1024, FP32）：
+- FLOPs ≈ 3·N²（每元素 exp+add+div）
+- Bytes = 2·N²·4（读 S + 写 P）
+- AI = 3N² / (8N²) = **0.375 FLOP/Byte** → 远低于 58.45 → **memory-bound** ✓
+
+##### 实测路径：SM% vs DRAM%
+
+| ncu 指标 | 含义 |
+|---------|------|
+| `sm__throughput.avg.pct_of_peak_sustained_elapsed` | SM 计算单元占用率（%） |
+| `dram__throughput.avg.pct_of_peak_sustained_elapsed` | HBM 带宽占用率（%） |
+
+判定规则：
+
+| 观察 | 结论 | 优化方向 |
+|------|------|---------|
+| DRAM% >> SM% | **memory-bound** | Kernel Fusion、向量化加载、减少 HBM 读写 |
+| SM% >> DRAM% | **compute-bound** | Tensor Core、增加 ILP、auto-tuning |
+| 两者都低（< 30%） | **latency-bound** | 减少 `__syncthreads`、增加并行度、消除 Stall |
+
+##### Warp Stall Reasons：精确定位"为什么慢"
+
+ncu 的 `smsp__average_warps_issue_stalled_*` 系列指标告诉你 warp 卡在哪：
+
+| Stall 原因 | 含义 | 典型场景 |
+|-----------|------|---------|
+| **Long Scoreboard** | 等 HBM 加载 | memory-bound kernel 的主因（Softmax/LayerNorm） |
+| **Math Pipe Throttle** | 计算单元饱和 | compute-bound kernel（大 GEMM） |
+| **Barrier** | 等 `__syncthreads` | reduce kernel 同步开销 |
+| **Short Scoreboard** | 等 shared memory | bank conflict 或 shared 访问密集 |
+
+**Softmax 的 Long Scoreboard 会很高**——三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存。这正是 memory-bound 的微观表现。
+
+#### 20.3 Kernel Fusion 机会识别
+
+![Kernel Fusion：省的是 HBM 中间读写](../../week3/images/kernel_fusion_opportunities.svg)
+
+找到 memory-bound 算子后，最重要的优化手段是 **Kernel Fusion**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM。
+
+##### Transformer 中的 Fusion 候选
+
+| Fusion 候选 | 当前开销 | 融合后收益 | 实现难度 |
+|------------|---------|-----------|---------|
+| **LayerNorm + QKV GEMM** | LN 写 (B,N,d) 到 HBM，GEMM 再读 | 省去 (B,N,d) 一次读写 | 高（需融合 LN+GEMM） |
+| **Softmax + Dropout** | Softmax 写 P，Dropout 读 P 再写 | 省去 P 一次 O(N²) 读写 | 低（element-wise 融合） |
+| **GEMM + Bias + GELU** | GEMM 写结果，加 bias，过 GELU | 省去中间结果 | 中（epilogue fusion） |
+| **Residual Add + LayerNorm** | Add 写结果，LN 读结果 | 省去一次读写 | 中 |
+
+##### Fusion 收益估算（LayerNorm + QKV GEMM）
+
+以 B=1, N=1024, d=512, FP32 为例：
+
+```
+未融合：
+ LayerNorm: 读 x(2MB) + 写 y(2MB) = 4MB HBM IO
+ QKV GEMM: 读 y(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB HBM IO
+ 合计: 15MB
+
+融合后：
+ Fused LN+GEMM: 读 x(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB
+ 节省: 4MB（LayerNorm 中间结果 y 的读写被消除）
+```
+
+##### torch.compile 的自动融合
+
+PyTorch 2.0 的 `torch.compile` 会自动做这些 fusion：
+
+```python
+compiled_model = torch.compile(model, mode="reduce-overhead")
+# nsys 对比：compiled 版 kernel 数量减少 30-50%
+```
+
+> ⚠️ **注意**：`torch.compile` 的 fusion 作用于 PyTorch 原生 ATen 算子。**自定义 C++ Extension 算子对 Inductor 是"黑盒"**，无法被融合（除非注册为 custom op + 提供 fake tensor）。这是 Day 5 自定义算子的一大代价——也是为什么"能不自定义就不自定义，先用 torch.compile"。
+
+##### Fusion 的限制
+
+1. **只有相邻 + 数据依赖**的算子能融合（A→B→C 可融，A→B 和 A→C 不行）
+2. **融合 kernel 增加 register/shared memory 压力**，可能降低 occupancy
+3. **复杂融合**需要 CUTLASS（epilogue fusion）或 Triton（`torch.compile` 后端）
+
+### Coding 任务：端到端 Profiling Mini Engine
+
+#### 任务 1：创建 `kernels/profiling_targets.cu`
+
+ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的 kernel，干扰判断。所以我们先准备一个**干净的独立靶点程序**：一个 memory-bound 的 Softmax + 一个 compute-bound 的 GEMM，让 ncu 直接分析。完整文件见 [kernels/profiling_targets.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profiling_targets.cu)。
+
+核心是两个对比 kernel：
+
+```cuda
+// kernels/profiling_targets.cu —— 端到端 Profiling 靶点：memory-bound Softmax + compute-bound GEMM
+// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
+// 运行命令: ./profiling_targets
+
+// [Memory-bound] Softmax：一行一个 block，三遍扫描 safe softmax（复用 Day 2）
+// 预期 ncu：DRAM Throughput >> SM Throughput
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
+    __shared__ float smem[32];
+    __shared__ float row_max, row_sum;
+    int tid = threadIdx.x;
+    // Step 1: 求 max（数值稳定性）
+    float local_max = -INFINITY;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_max = fmaxf(local_max, in_row[i]);
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
+    // Step 2: 求 sum(exp(x - max))
+    float local_sum = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_sum += expf(in_row[i] - row_max);
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
+    // Step 3: 归一化写出
+    float inv_sum = 1.0f / row_sum;
+    for (int i = tid; i < D; i += blockDim.x)
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+}
+
+// [Compute-bound] Naive GEMM：C = A·B（故意不做 tiling，但仍体现 compute 特征）
+// 预期 ncu：SM Throughput >> DRAM Throughput
+__global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                            int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= N)
+        return;
+    float acc = 0.0f;
+    for (int k = 0; k < K; k++)
+        acc += A[row * K + k] * B[k * N + col];
+    C[row * N + col] = acc;
+}
+```
+
+`main()` 分别运行两个 kernel 并计时、验证，末尾打印 ncu 分析指引命令。`-lineinfo` 是给 ncu Source View 用的（保留源码行号映射）。
+
+#### 任务 2：用 nsys 采集 Mini Engine 时间线
+
+先运行独立的 Mini Engine profiling 脚本（[kernels/profile_mini_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profile_mini_engine.py)），它内置 `torch.profiler` 输出 Prefill/Decode 的算子时间表：
+
+```bash
+# 运行（输出 Prefill/Decode 算子表 + 导出 Chrome trace）
+python kernels/profile_mini_engine.py
 ```
 
 **预期输出**：
 
 ```text
-=== FlashAttention v2 Forward Kernel ===
-Config: B=2, H=4, N=256, d=64
-Tile: Br=64, Bc=64, Threads=256
+===== Prefill Phase (shape=(1, 1024, 512)) =====
+Name Self CUDA Calls
+aten::mm            128 us  20  ← QKV/Out/FFN GEMM（compute-bound）
+aten::layer_norm     19 us  10
+aten::softmax        24 us   5
+aten::gelu           ...      5
+...
 
-[B=0, H=0] First head check:
- maxDiff = 1.31e-04 (PASS)
- GPU Time: 0.777 ms
+===== Decode Phase (shape=(1, 1, 512)) =====
+Name Self CUDA Calls
+aten::mm             15 us  20  ← GEMM 但矩阵极小（M=1）
+aten::layer_norm     ...      10
+aten::softmax        ...       5
+...
+
+Prefill (N=1024): 0.135 ms / forward
+Decode  (N=1): 0.118 ms / forward
+Per-token: Prefill=0.1 us/token, Decode=117.6 us/token
 ```
 
-#### 任务 3：验证 SRAM 使用量与 ncu 分析
-
-**检查 SRAM 使用量**：
+然后用 nsys 采集系统级时间线：
 
 ```bash
-# 编译时查看 shared memory 使用
-nvcc -Xptxas -v -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
-# 观察 ptxas info: 'Used N registers, Z bytes spill stores, W bytes cmem'
-# shared memory 应为 48 KB (Br*d + 2*Bc*d = 3×4096×4 = 49152 bytes)
+# nsys 采集
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx python kernels/profile_mini_engine.py
+
+# 导出 kernel 统计
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 ```
 
-**用 ncu 分析 kernel**：
+**分析任务**：
+1. 找出 Prefill 阶段 CUDA 时间 top3 算子（预期是 `mm`/`gemm` 类 GEMM）
+2. 对比 Prefill vs Decode 的 per-token 时间（Prefill 远快于 Decode，因为并行度高）
+3. 在 Nsight Systems GUI（或 chrome://tracing 打开 `trace_prefill.json`）观察 kernel 之间的 gap（launch overhead）
+
+#### 任务 3：用 ncu 判定 Softmax / GEMM 的 bound 类型
+
+编译独立靶点并用 ncu 分析：
 
 ```bash
-nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
+# 编译（带 -lineinfo 供 ncu Source View）
+nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
 
+# 运行验证正确性
+./profiling_targets
+
+# ncu 分析 bound 类型
 ncu --metrics \
  sm__throughput.avg.pct_of_peak_sustained_elapsed,\
  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
- sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
- launch__registers_per_thread \
- --kernel-name regex:flashAttentionForward \
- ./flash_attention_v2
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|gemm_kernel" \
+ ./profiling_targets
 ```
 
-**观察重点**：
-- `launch__registers_per_thread`：每个线程约 88-120 个 register（acc[8][64] 是大头）
-- `sm__occupancy`：可能只有 50-75%（register 压力大），这是教学版的局限
-- `dram__throughput`：应远低于标准 Attention（因为消除了 O(N²) 读写）
+**预期结果**：
 
-#### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
+```text
+=== Profiling Targets: Softmax(memory-bound) + GEMM(compute-bound) ===
+Softmax: M=256, D=1024
+GEMM: M=512, N=512, K=512
 
-**题目链接**：<https://leetgpu.com/challenges/multi-head-attention>
+[Softmax] time=0.062 ms maxDiff=4.42e-09 (PASS)
+[GEMM] time=0.072 ms TFLOPS=3.74 (naive, no tiling)
 
-**与今日知识的关联**：
+ softmax_kernel (M=256, D=1024)
+ DRAM Throughput : ~55-70% ← 高
+ SM Throughput : ~15-25% ← 低
+ Long Scoreboard : ~40-55% ← 等 HBM（memory-bound 特征）
+ → 结论：DRAM% >> SM% → memory-bound ✓
 
-今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
+ gemm_kernel (M=512, N=512, K=512) — naive 无 tiling
+ DRAM Throughput : ~55-70% ← 高
+ SM Throughput : ~15-25% ← 低
+ Long Scoreboard : ~40-55% ← 等 HBM
+ → 结论：naive GEMM（无 tiling）AI ≈ 0.25 << 58.45 → 仍为 memory-bound ✓
+ → 对比：Week2 的 tiled GEMM（有 shared memory 复用）才为 compute-bound
+```
 
-> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
+**判定印证**：Softmax 和 naive GEMM 的 DRAM% >> SM% 且 Long Scoreboard 高 → 都是 memory-bound。naive GEMM 的 AI ≈ 2K/(8K) = 0.25 FLOP/Byte，远低于 ridge point（58.45），理论上确为 memory-bound。只有经过 tiling + shared memory 优化的 GEMM（如 Week2 Day6 的 v4-v6）才转变为 compute-bound。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 2）
+> ⚠️ **常见坑**：① ncu 看不到自定义 kernel → 用 `--kernel-name regex:softmax_kernel` 模糊匹配（C++ 会 mangle 符号名）；② `dram__throughput` 指标名报错 → 不同架构指标名有差异，用 `ncu --query-metrics` 查可用指标；③ nsys 采集到的 kernel 很少 → 加 warmup 2-3 轮再采集。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 2（表达式与计算器），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 为什么 ncu 下 latency 不可信？
+
+ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运行时间膨胀 10-100x。所以：
+- **latency** → 用 nsys 或 `cudaEventElapsedTime` 测（任务 2 已做）
+- **bound 类型 / Stall 原因** → 用 ncu 看（任务 3 已做）
+
+两者分工，不可混用。
+
+#### 任务 4：LeetGPU 在线题目 —— RMS Normalization
+
+今天的主题是"定位 memory-bound 算子 + fusion 机会"。本题用一个 Llama 风格的归一化算子（RMSNorm）练手：它比 LayerNorm 少一次 reduce，是典型的 memory-bound 算子，正好用今天的 ncu 流程验证。
+
+**题目链接**：<https://leetgpu.com/challenges/rms-normalization>
+
+**与今日知识的关联**：RMSNorm 是 Llama/T5 等现代模型替代 LayerNorm 的首选——它**只做一次 reduce（sum of squares）**，比 LayerNorm 的两次（mean + variance）更省。它纯 memory-bound（AI ≈ 0.5 FLOP/Byte），是练习"用 ncu 判定 memory-bound → 用 fusion 优化"的完美靶点。今天学了五步 Profiling 法，本题直接套用：先写 kernel → 用 ncu 看 DRAM% >> SM% → 思考 RMSNorm + GEMM 的 fusion。
+
+> 💡 提交后在 [LeetGPU RMS Normalization 题目](https://leetgpu.com/challenges/rms-normalization)上记录通过耗时，用 ncu 验证 `DRAM% >> SM%`（memory-bound），并对比 RMSNorm（一次 reduce）vs Day 2 LayerNorm（两次 reduce）的 latency。完整题解（含 RMSNorm vs LayerNorm 对比、Roofline 分析、与 Llama 的关联）见 [RMS Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [394. 字符串解码](https://leetcode.cn/problems/decode-string/) | 中等 | 栈 / 递归解码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html) |
-| [224. 基本计算器](https://leetcode.cn/problems/basic-calculator/) | 困难 | 栈处理括号与一元符号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html) |
-| [227. 基本计算器 II](https://leetcode.cn/problems/basic-calculator-ii/) | 中等 | 栈处理乘除优先级 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html) |
-| [402. 移掉 K 位数字](https://leetcode.cn/problems/remove-k-digits/) | 中等 | 单调栈删大留小 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html) |
-| [316. 去除重复字母](https://leetcode.cn/problems/remove-duplicate-letters/) | 中等 | 单调栈 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
+| [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
+| [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
+| [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：调整 Br 和 Bc
+#### 实验 1：用 `torch.compile` 减少 kernel 数量
 
-修改 Br=128, Bc=128，重新编译运行，观察 SRAM 使用量和性能变化。
+对 Mini Engine 用 `torch.compile(mode="reduce-overhead")` 编译，再用 nsys 采集时间线，对比编译前后的 kernel 总数和 latency。
 
-> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB，仍在 RTX 5090 上限内但 occupancy 可能下降。
+```python
+compiled_model = torch.compile(model, mode="reduce-overhead")
+# nsys profile -o compiled_timeline python ...
+# nsys stats -t cuda_gpu_kern_sum compiled_timeline.nsys-rep
+```
 
-#### 实验 2：实现向量化加载
+**思考问题**：`torch.compile` 把 kernel 数减少了多少？哪些算子被融合了？
+> 提示：`torch.compile` 通常把 LayerNorm+GEMM、Softmax+Dropout 等融合，kernel 数减少 30-50%。观察 `aten::layer_norm` 和 `aten::mm` 是否合并成了 fused kernel。
 
-用 `float4` 加载 Q/K/V tile（每线程一次加载 4 个 float），对比性能提升。
+#### 实验 2：分析 Softmax 的 Long Scoreboard Stall 占比
 
-> 提示：将加载循环 `idx += THREADS_PER_BLOCK` 改为 `idx += THREADS_PER_BLOCK * 4`，用 `reinterpret_cast<const float4*>` 加载。
+用 ncu 分析 `softmax_kernel` 的 `smsp__average_warps_issue_stalled_long_scoreboard.pct`，解释为什么它高。
 
-#### 实验 3：增大序列长度测试
+```bash
+ncu --metrics smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ smsp__average_warps_issue_stalled_barrier.pct \
+ --kernel-name regex:softmax_kernel ./profiling_targets
+```
 
-在 N=512, 1024, 2048, 4096 上测试，记录运行时间和最大误差。观察 N 增大时误差是否可控。
+**思考问题**：Softmax 的 Long Scoreboard 占比约多少？三遍扫描中哪一遍贡献最大？
+> 提示：Softmax 三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存加载 → Long Scoreboard 高（40-55%）。第二遍（求 sum）和第三遍（归一化）都要重新读 HBM，是主要贡献。这正是 online softmax（两遍）优化的动机。
 
-> 提示：N 增大时 online softmax 的递推次数增加，浮点累加误差可能累积。如果误差 > 1e-3，考虑用 double 做累加。
+#### 实验 3：列出 Mini Engine 的 top3 瓶颈算子并给优化方向
+
+综合 nsys 的 top3 算子 + ncu 的 bound 判定，写一份诊断报告：每个 top 算子标注（compute/memory-bound + 优化方向）。
+
+**思考问题**：Prefill 和 Decode 的 top3 瓶颈算子一样吗？优化重点有何不同？
+> 提示：Prefill 的 top3 通常是 GEMM（compute-bound → Tensor Core）；Decode 的 top3 可能包含 LayerNorm/Softmax（memory-bound → fusion），且 launch overhead 占比更高 → CUDA Graph。这正是 Day 7 算子分类表的核心内容。
 
 ---
 
 ### 今日总结
 
-Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
+Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了"五步诊断法"：
 
-1. **线程配置**：一个 Block 处理一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
-2. **Warp 分工**：每个 warp 负责 ROWS_PER_WARP 行 Q，warp 内 32 线程协作做归约，跨 warp 无需通信
-3. **Shared Memory**：Q tile 常驻，KV tile 逐块加载，SRAM 用量 = Br×d + 2×Bc×d
-4. **Online Softmax CUDA 实现**：warpReduceMax 求局部 max → 缩放旧状态 → 处理新块 → `__shfl_sync` 广播
-5. **同步策略**：`__syncthreads` 只需在 tile 加载后和切换 tile 前使用，warp 内用 `__shfl` 硬件同步
-6. **边界处理**：N 不是 Br 倍数时无效行填 0，不影响累加结果
+1. **两级工具体系**：nsys 看系统级全景（top3 算子、kernel 间隙），ncu 看 kernel 级微观（SM/DRAM 占用、Stall 原因），先全局后单点
+2. **瓶颈判定**：DRAM% >> SM% → memory-bound；SM% >> DRAM% → compute-bound；理论 AI 计算与实测 ncu 互相印证
+3. **Warp Stall**：Long Scoreboard = 等 HBM（memory-bound 特征），Math Pipe Throttle = 计算饱和（compute-bound 特征）
+4. **Kernel Fusion**：把相邻 memory-bound 算子合并，省中间结果 HBM 读写；LayerNorm+GEMM、Softmax+Dropout 是 Transformer 典型候选
+5. **torch.compile**：自动融合 ATen 算子，kernel 数减 30-50%；但自定义 C++ Extension 是"黑盒"无法被融合
 
-掌握这些后，你就拥有了手写 FlashAttention 的完整能力。明天读官方源码会发现，我们的教学版与官方的差距主要在 async copy、双缓冲和 Tensor Core。
+掌握五步法后，任何 GPU 程序的瓶颈诊断都有章可循。Day 7 会把今天的结论整理成 Prefill/Decode 算子分类表，为 Week 4 FlashAttention 收尾。
 
 ---
 
 ### 面试要点
 
-1. **手写 FlashAttention Forward Kernel 时，线程如何分配？每个 warp 负责什么？**
+1. **如何做端到端 profiling 定位 Transformer 推理的瓶颈？完整流程是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 每个 Block 负责一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
- - 每个 warp 负责 ROWS_PER_WARP = Br/WARPS 行 Q 的完整 online softmax 计算
- - warp 内 32 线程协作：分别计算 Sij 向量的不同部分，用 `warpReduceMax` 求局部 max，用 `warpReduceSum` 求 p 的局部和与 p×V 的局部和
- - 跨 warp 不需要通信，因为每个 Q 行的计算是独立的
- - KV tile 通过 shared memory 共享给所有 warp
+ - **第一步（nsys 系统级）**：用 Nsight Systems 采集完整时间线，`nsys stats -t cuda_gpu_kern_sum` 按 CUDA 时间排序找 top3 算子
+ - **第二步（ncu kernel 级）**：对 top3 算子用 Nsight Compute 分析 `sm__throughput` 和 `dram__throughput`
+ - **第三步（瓶颈判定）**：
+ - DRAM% >> SM% → memory-bound → 优化方向：kernel fusion、向量化加载、减少 HBM 读写
+ - SM% >> DRAM% → compute-bound → 优化方向：Tensor Core、增加 ILP、auto-tuning
+ - **第四步（Stall 分析）**：看 Warp Stall Reasons 定位具体阻塞（Long Scoreboard = 等内存，Math Pipe = 计算饱和，Barrier = 同步开销）
+ - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
+ - **关键分工**：latency 用 nsys/cudaEvent 测，bound 类型/Stall 用 ncu 看（ncu 下 latency 不可信，会膨胀 10-100x）
 
 </details>
 
 
-2. **FlashAttention Kernel 中为什么不需要** `__syncthreads()` **在 online softmax 内部？**
+2. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 在 warp 内部，`__shfl` 是硬件同步的，不需要 `__syncthreads()`
- - 每个 Q 行的 online softmax 完全在一个 warp 内完成，不涉及跨 warp 数据共享
- - `__syncthreads()` 只在两个地方需要：① Q/K/V tile 加载到 shared memory 后，确保所有线程可见 ② 切换到下一个 KV tile 前，确保当前 tile 计算完成
- - 这种设计避免了频繁的 block 级同步，是 FA2 减少同步点的关键思路之一
+ - **定义**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM
+ - **收益来源**：减少 HBM 读写次数。A→B→C 未融合要写 B 到 HBM 再读；融合后在 register/SRAM 中直接传递
+ - **Transformer 例子**：LayerNorm + QKV GEMM。未融合时 LayerNorm 输出 `y(B,N,d)` 写 HBM，GEMM 再读；融合后在 GEMM kernel 内部直接做归一化，省去 `y` 的一次读写（约 4MB，B=1,N=1024,d=512）
+ - **限制**：① 只有相邻且数据依赖的算子能融合 ② 融合 kernel 可能增加 register/shared 压力降低 occupancy ③ 复杂融合需 CUTLASS/Triton
 
 </details>
 
 
-3. **FlashAttention Kernel 的 register 使用量为什么很大？会导致什么问题？**
+3. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 每个 warp 维护 ROWS_PER_WARP 组 (m, l, acc[d]) 状态，其中 acc[d] 是大头：ROWS_PER_WARP × d 个 float
- - 以 ROWS_PER_WARP=8, d=64 为例：acc 占 512 个 float，加上 m/l/索引，每线程约 88-120 个 register
- - 问题：register 压力大 → occupancy 下降（RTX 5090 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
- - 缓解：减小 ROWS_PER_WARP（增加 WARPS_PER_BLOCK）或减小 d；官方实现用 warp group 子块划分优化
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 58.45 FLOP/Byte）
+ - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
+ - DRAM% >> SM% → memory-bound
+ - SM% >> DRAM% → compute-bound
+ - **Roofline 定位**：在 Roofline 图上标出算子位置，落在斜线段是 memory-bound，水平段是 compute-bound
+ - **经验法则**：
+ - element-wise（relu、layernorm、softmax）→ 几乎总是 memory-bound
+ - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
+ - 小 GEMM（M=1 或某维很小，如 Decode）→ 通常 memory-bound
+ - reduction（sum、max）→ memory-bound
 
 </details>
 
 
-4. **SRAM 使用量如何计算？Br/Bc 选太大或太小有什么问题？**
+4. **ncu 和 nsys 有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - SRAM = (Br × d + 2 × Bc × d) × 4 bytes（K/V 不复用）
- - 太大：超过 shared memory 上限（RTX 5090 164 KB/SM）→ 编译失败；或 occupancy 暴跌
- - 太小：KV tile 循环次数多（N/Bc 轮），每轮的 tile 加载和 `__syncthreads` 开销占比增大
- - 典型值：d=64, Br=Bc=64 时 SRAM = 48 KB，occupancy 与计算效率的平衡点
+ - **nsys（系统级）**：采集完整程序时间线，看 kernel 排列、CPU/GPU 交互、多 stream、kernel 间隙。**测 latency、找 top3 算子、看 launch overhead**
+ - **ncu（kernel 级）**：对单个 kernel 做深度分析，看 SM/DRAM 占用、Stall 原因、寄存器/shared 用量。**判 bound 类型、看 Stall 原因、做优化对比**
+ - **关键区别**：ncu 会让 kernel 慢 10-100x（反复 replay），所以**latency 永远用 nsys 测，ncu 只看占比**
+ - **协作流程**：nsys 找到慢的 kernel → ncu 分析它为什么慢 → 优化后用 nsys 验证整体 latency 改善
 
 </details>
 
 
-5. **如何处理 N 不是 Br 倍数的边界情况？**
+5. **为什么** `torch.compile` **能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Q tile 边界：`globalRow = qTileRow + r`，若 `globalRow >= N` 则填 0（不参与累加）
- - KV tile 边界：`kvStart + c < N` 判断，无效位置的 score 设为 `-1e30f`（exp 后为 0，不贡献到 l 和 acc）
- - 写回边界：`if (qi >= Br || globalRow >= N) continue` 跳过无效行
- - 关键：无效位置的 0 不会影响 online softmax 的正确性，因为 exp(-inf)=0 且 0+v=v
+ - **原理**：`torch.compile`（Inductor 后端）把 PyTorch 原生 ATen 算子图做 fusion——相邻的 element-wise 算子（LayerNorm、Softmax、GELU、Residual Add）合并成单个 fused kernel，省中间结果 HBM 读写
+ - **效果**：通常 kernel 数减少 30-50%，Decode 阶段（kernel 小而多）收益更明显
+ - **对自定义 C++ Extension 无效**：自定义算子对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法融合。这是 Day 5 自定义算子的代价之一
+ - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（`torch.compile` 原生支持融合）
+ - **实践建议**：优先用原生算子 + `torch.compile`；只有官方没覆盖的场景（如 FlashAttention）才自定义
+
+---
 
 </details>
 

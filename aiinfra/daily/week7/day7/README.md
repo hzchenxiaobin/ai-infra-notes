@@ -1,419 +1,440 @@
-## Day 7：代码重构与文档
+## Day 7：Latency / Throughput 测试
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 回顾 **Week 7 全部知识点**——多请求并发、完整调度器、高级特性、Kernel 集成、系统联调、全链路 Profiling<br>
-2. 理解 **Mini AI Infra 系统架构**——从用户 API 到 GPU Kernel 的六层架构与数据流<br>
-3. 掌握 **代码重构目标**——统一接口、模块化、类型注解、文档完善<br>
-4. 能产出 **项目文档**——README、架构图、性能报告、API 文档<br>
-5. 掌握 **13 道核心面试题**——按主题分组，覆盖并发、调度、特性、集成、联调、Profiling<br>
+1. 理解 **评估推理系统性能的六大关键指标**——Throughput、Avg/P50/P99 Latency、TTFT、TPOT、Batch Size Distribution、GPU Utilization，各自反映什么问题<br>
+2. 掌握 **两种 benchmark 方法**——固定并发数扫描（看能力上限与饱和点）和固定 QPS 测试（看真实负载下的尾延迟）<br>
+3. 能绘制 **Throughput-Latency 曲线**，识别系统的**饱和点**——throughput 不再增长、latency 开始急剧上升的拐点<br>
+4. 理解 **四种瓶颈类型**——Compute-bound、Memory-bound、Launch overhead、Scheduling overhead，各自的表现与优化方向<br>
+5. 学会用 **nsys / ncu** 做 profiling，根据 SM utilization、kernel 间隙、Memory Throughput 判断瓶颈类型<br>
+6. 用 Python 手写一个 **benchmark 框架**，实测 Mini 引擎 v1 在不同并发数下的 throughput-latency 曲线，定位饱和点并给出优化建议
 
-> 💡 **为什么重要**：Week 7 把前六周所学整合为完整的 Mini AI Infra 系统。Day 7 是收官日——整理代码、完善文档、复盘面试题、规划下一步。这是从"学习者"到"工程师"的转折点：代码质量和文档能力是面试考察点，也是项目可维护性的基础。
-
----
-
-### Week 7 知识地图
-
-![Week 7 知识地图：系统整合](../images/week7_knowledge_map.svg)
-
-| Day | 主题 | 核心产出 |
-|-----|------|---------|
-| Day 1 | 多请求并发支持 | ConcurrentEngine（条件变量 + 三线程 + Future/CB/Stream） |
-| Day 2 | 完整调度器 | FullScheduler（双预算 + 抢占 + aging + Continuous Batching） |
-| Day 3 | SGLang/LightLLM 高级特性 | 三大特性模拟 + 收益评估报告 |
-| Day 4 | 整合全部自定义 Kernel | CustomKernelTransformerLayer（C++ Extension 集成） |
-| Day 5 | 系统联调 | 六步分层验证 + 稳定性测试（500+ 请求） |
-| Day 6 | 全链路 Profiling | 阶段计时 + kernel 分解 + vLLM 对比 |
-| Day 7 | 代码重构与文档 | 统一接口 + README + 架构图 + 面试复盘 |
+> 💡 **为什么重要**：Day 5 我们实现了 Mini 引擎 v1，但"能跑"和"跑得好"是两回事。真实推理服务要回答："我的系统能撑多少 QPS？延迟达标吗？瓶颈在哪？"今天用 benchmark 把这些问题量化——画出 throughput-latency 曲线、找到饱和点、判断瓶颈类型。这是系统优化的起点，也是面试高频题"如何评估推理系统性能"。
 
 ---
 
-### 核心概念串讲
+### 学前导读：Day 5 的引擎"能跑"，但性能如何？
 
-#### 1. 多请求并发（Day 1）
-
-从 Week 6 的"单 worker + Future"升级为"三线程协作 + 条件变量 + 三种返回 + 超时控制"：
-- **ThreadSafeRequestQueue**：`Condition` 保护队列，`wait`/`notify` 不空转，优先级插入
-- **三种返回**：Future（阻塞）、Callback（事件触发）、Streaming（逐 token）
-- **三线程**：调度线程凑批 + 执行线程 forward（锁外）+ 超时线程清理
-- **生命周期**：WAITING → RUNNING → FINISHED/TIMEOUT/CANCELLED
-
-#### 2. 完整调度器（Day 2）
-
-从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"：
-- **双预算**：token_budget（计算，每轮 token 总数）+ memory_budget（显存，KV Cache 块）
-- **抢占**：显存不足时选最低优先级 victim，recompute（丢弃 KV Cache）或 swap（换出到 CPU）
-- **Aging**：等待超阈值自动提升优先级，防止低优先级饥饿
-- **调度循环**：恢复 swapped → 继续 running decode → 加入新请求 prefill → aging → 超时检查
-
-#### 3. 高级特性（Day 3）
-
-评估三大推理加速特性的收益与复杂度：
-- **Speculative Decoding**：小模型 draft k 个 + 大模型 verify，加速 1.5-2.7x；α 低 + k 大时可能变慢
-- **Chunked Prefill**：长 prompt 分块与 decode 交错，延迟降低 50-97%
-- **Prefix Caching**：缓存公共前缀 KV Cache，TTFT 降低 3-5x
-- **集成优先级**：Prefix Caching + Chunked Prefill（Phase 1）→ CUDA Graph + Spec Decoding（Phase 2）
-
-#### 4. Kernel 集成（Day 4）
-
-通过 PyTorch C++ Extension 将自定义 kernel 接入 Transformer Layer：
-- **编译流水线**：`.cu` + `.cpp` → `load_inline` → nvcc/g++ → `.so` → Python 模块
-- **替换清单**：Softmax/LayerNorm/FlashAttention 替换 PyTorch 原生；大 GEMM 保留 cuBLAS
-- **六大注意**：stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理
-- **分层验证**：单算子（< 1e-5）→ 多算子 → 端到端（< 1e-2）→ 性能对比
-
-#### 5. 系统联调（Day 5）
-
-六步分层验证，确保组件组合正确：
-- **六步**：单请求 → 多请求并发 → KV Cache 隔离 → Scheduler → 自定义 Kernel → 稳定性
-- **KV Cache 隔离**：多请求互不干扰，完成后全释放（`used_kv_blocks = 0`）
-- **稳定性**：500 请求 100% 成功，P50/P99 延迟稳定，无内存泄漏
-- **五大问题**：结果不一致、内存泄漏、请求卡住、OOM、性能下降
-
-#### 6. 全链路 Profiling（Day 6）
-
-三层工具链从粗到细定位瓶颈：
-- **三层**：nsys（系统级时间线）→ ncu（kernel 级指标）→ 自定义计时（阶段级拆分）
-- **阶段占比**：forward 80-95%（绝对主瓶颈），schedule 2-10%，submit/result <1%
-- **五大瓶颈**：Python Scheduler、内存分配、kernel launch、GIL、CPU-GPU 传输
-- **vLLM 差距**：forward ~2.3x（FlashAttention-2 + CUDA Graph），调度 ~10x（C++ vs Python）
-
----
-
-### Mini AI Infra 系统架构
-
-![Mini AI Infra 系统架构](../images/mini_ai_infra_architecture.svg)
-
-#### 六层架构
-
-![Mini AI Infra 系统架构](../../images/week7_system_architecture.svg)
-
-#### 建议目录结构
+Day 5 的 MiniEngineV1 能并发处理多请求，但我们没回答几个关键问题：
 
 ```
-mini_ai_infra/
-├── README.md
-├── requirements.txt
-├── mini_infra/
-│ ├── engine.py # ConcurrentEngine
-│ ├── scheduler.py # FullScheduler
-│ ├── request.py # InferenceRequest + RequestStatus
-│ ├── kv_cache.py # KVCacheManager + MemoryBudget
-│ ├── model.py # MiniLLM + TransformerLayer
-│ └── kernels/
-│ ├── softmax_kernel.cu
-│ ├── layernorm_kernel.cu
-│ └── flash_attention_kernel.cu
-├── tests/
-│ ├── test_engine.py # 六步分层验证
-│ ├── test_scheduler.py # 调度器测试
-│ └── test_stability.py # 稳定性测试
-├── benchmarks/
-│ ├── full_chain_profile.py
-│ └── benchmark_results/
-└── docs/
- ├── architecture.md
- └── performance_report.md
+未量化的性能问题：
+ - v1 能撑多少并发？throughput 上限是多少？
+ - 并发从 1 涨到 64，latency 怎么变？
+ - 什么时候 throughput 不再涨（饱和点）？
+ - 饱和后是算力瓶颈还是显存瓶颈？
+ - 用户的 P99 延迟（尾延迟）达标吗？
 ```
 
-#### 统一接口
+| 不做 benchmark 的风险 | 后果 |
+|---------------------|------|
+| 不知道饱和点 | 超载部署 → 队列爆炸、延迟雪崩 |
+| 只看平均延迟 | P99 尾延迟可能差 10x，用户感知卡顿 |
+| 不知瓶颈类型 | 乱优化——显存瓶颈去加算力，白费功夫 |
+| 无 QPS 容量规划 | 无法回答"几块卡能扛 1000 QPS" |
+
+> 💡 **一句话总结**：Benchmark 是系统优化的"诊断仪"——用 throughput-latency 曲线找饱和点，用 nsys/ncu 判瓶颈类型，用 P99 看尾延迟。不做 benchmark 的优化都是盲猜。
+
+---
+
+### 理论学习
+
+#### 6.1 六大关键指标
+
+![Benchmark 六大关键指标](../../week6/images/benchmark_metrics_overview.svg)
+
+| 指标 | 含义 | 反映 |
+|------|------|------|
+| **Throughput** | 每秒生成 tokens 数（tok/s） | 系统吞吐能力 |
+| **Avg / P50 / P99 Latency** | 端到端延迟（submit→finish） | 用户感知响应速度，P99 看尾延迟 |
+| **TTFT** | Time To First Token | 首 token 延迟（prefill 阶段） |
+| **TPOT** | Time Per Output Token | decode 每 token 时间（流畅度） |
+| **Batch Size Distribution** | 每轮 batch 大小分布 | 调度效率（batch 越满 GPU 越忙） |
+
+##### 为什么 P99 比平均延迟重要？
+
+```
+100 个请求，99 个 50ms，1 个 500ms
+ 平均延迟 = (99×50 + 500)/100 = 54.5ms ← 看起来不错
+ P99 延迟 = 500ms ← 真实：1% 用户体验极差！
+
+在线服务的 SLA 通常看 P99/P999，因为：
+ - 用户记得的是"最慢的那次"
+ - 尾延迟常由 GC、排队、preemption 等异常引起
+```
+
+##### TTFT vs TPOT
+
+| 指标 | 阶段 | 影响因素 |
+|------|------|---------|
+| **TTFT** | prefill | prompt 长度、prefill batch 大小、queue 等待 |
+| **TPOT** | decode | KV Cache 大小、decode batch 大小、显存带宽 |
+
+> 💡 流式输出场景，用户先等 TTFT（首字出现），然后感受 TPOT（后续字流出速度）。两者要分别优化——TTFT 靠 chunked prefill + 短队列，TPOT 靠 KV Cache 优化 + decode batch。
+
+#### 6.2 两种 Benchmark 方法
+
+![吞吐-延迟饱和曲线](../../week6/images/throughput_latency_saturation_curve.svg)
+
+##### 方法一：固定并发数扫描
 
 ```python
-class InferenceEngine:
-    """Mini AI Infra 推理引擎"""
-
-    def __init__(self, model_config, scheduler_config, device="cuda"):
-        ...
-
-    def submit(self, prompt: str, max_new_tokens: int = 20,
-               priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
-        """提交请求，返回 Future"""
-        ...
-
-    def shutdown(self):
-        """关闭引擎"""
-        ...
+# 同时提交 N 个请求，等全部完成，扫 N=1,2,4,8,16,32,64
+for concurrency in [1, 2, 4, 8, 16, 32, 64]:
+ futures = [engine.submit() for _ in range(concurrency)]
+ wait(futures)
+ throughput = total_tokens / total_time
+ latency = finish_time - submit_time
 ```
 
----
+- **看什么**：throughput 随并发怎么变、latency 在哪个并发开始飙升
+- **找什么**：饱和点（throughput 不再增长的拐点）
 
-### 总结任务 / Coding 任务
+##### 方法二：固定 QPS 测试
 
-#### 任务 1：运行总结自测脚本
+```python
+# 以恒定速率发请求（如 50 QPS），持续 N 秒
+while time < duration:
+    if time >= next_send:
+        engine.submit()
+        next_send += 1.0 / qps
+        sleep(0.001)
+```
 
-创建并运行 [kernels/week7_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day7/kernels/week7_summary.py)，汇总 Week 7 全部知识点：
+- **看什么**：在给定 QPS 下，P50/P99 延迟是否达标
+- **找什么**：能达标 SLA 的最大 QPS（容量上限）
+
+##### 两者互补
+
+| 方法 | 适合回答 | 类比 |
+|------|---------|------|
+| 固定并发扫描 | "系统能力上限在哪？" | 压测到极限 |
+| 固定 QPS 测试 | "真实负载下延迟达标吗？" | 模拟生产流量 |
+
+#### 6.3 Throughput-Latency 曲线与饱和点
+
+![Throughput-Latency 曲线与饱和点](../../week6/images/throughput_latency_saturation_curve.svg)
+
+经典的 throughput-latency 曲线分三个区域：
+
+```
+并发数 ↑：
+ 线性增长区（conc ≤ max_num_seqs）：
+ throughput 随并发线性增长，latency 平稳
+ → GPU 未饱和，batch 在攒大
+
+ 饱和点（拐点）：
+ throughput 增长率 < 5%，开始封顶
+ latency 开始快速上升
+ → GPU 算力打满，batch 已达上限
+
+ 排队区（conc > max_num_seqs）：
+ throughput 不再增长（封顶）
+ latency 因排队线性增长（conc 翻倍 → latency 翻倍）
+ → 请求排队等下一波 batch
+```
+
+##### 饱和点判定
+
+| 信号 | 含义 |
+|------|------|
+| throughput 增长率 < 5% | 算力打满 |
+| latency 开始快速上升 | 排队出现 |
+| GPU util ≈ 100% | 硬件饱和 |
+| 请求队列堆积 | 超过处理能力 |
+
+##### 形象类比：高速公路
+
+- **线性增长区** = 车少，提速畅通（throughput↑ latency 平稳）
+- **饱和点** = 车流刚好满（ throughput 到顶，开始堵）
+- **排队区** = 拥堵（throughput 封顶，latency 因排队飙升）
+
+#### 6.4 四种瓶颈类型
+
+![四种瓶颈类型与优化方向](../../week6/images/bottleneck_types_analysis.svg)
+
+| 瓶颈类型 | 表现 | 优化方向 |
+|---------|------|---------|
+| **Compute-bound** | throughput 不涨、SM util 高 | 量化(INT8/FP8)、模型蒸馏、更大 batch |
+| **Memory-bound** | latency 随并发线性涨、SM util 不高 | KV Cache 量化、PagedAttention、FlashAttention |
+| **Launch overhead** | kernel 间隙大、GPU 空闲 | CUDA Graph、kernel fusion |
+| **Scheduling overhead** | Python scheduler 成瓶颈 | C++ scheduler（TensorRT-LLM）、预分配 buffer |
+
+##### 如何用 nsys / ncu 判断？
 
 ```bash
-python kernels/week7_summary.py
+# nsys：看时间线
+nsys profile ./engine
+# kernel 间隙大 → Launch overhead
+# SM util 高 + throughput 不涨 → Compute-bound
+
+# ncu：看单 kernel
+ncu --set full ./engine
+# Memory Throughput 接近峰值 → Memory-bound
+# Achieved Occupancy 低 → 资源约束
+```
+
+### Coding 任务：手写 Benchmark 框架
+
+#### 任务 1：创建 benchmark_engine_v1.py
+
+创建文件 [kernels/benchmark_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/benchmark_engine_v1.py)，对 Mini 引擎 v1 做 concurrency 扫描 + QPS 测试 + 饱和点识别：
+
+```python
+# benchmark_engine_v1.py —— Mini 引擎 v1 Latency/Throughput Benchmark
+# 运行命令: python benchmark_engine_v1.py
+# 依赖: 仅标准库（用 SimulatedEngine 复刻 v1 的 Continuous Batching 调度行为）
+
+import threading
+import time
+from collections import deque
+from concurrent.futures import Future
+
+class SimulatedEngine:
+    """模拟 MiniEngineV1：Continuous Batching + max_num_seqs + 摊销算力模型。
+
+    forward 时间 = base + per_seq × batch × amort^(batch-1)
+    - batch 越大 per-token 越省（摊销），但有 max_num_seqs 上限
+    - 超过 max_num_seqs 的并发请求排队 → throughput 封顶、latency 线性涨
+    """
+    def __init__(self, max_num_seqs=8, base_iter_ms=5.0, per_seq_ms=2.0, amort=0.85):
+        self.max_num_seqs = max_num_seqs
+        self.base_iter = base_iter_ms / 1000.0
+        self.per_seq = per_seq_ms / 1000.0
+        self.amort = amort
+        # ... waiting/running 队列 + worker 线程
+
+        def run_fixed_concurrency(engine, concurrency, max_new_tokens=8):
+            """固定并发数测试：同时提交 N 个请求，等全部完成，记录各请求 latency。"""
+            reqs = [SimRequest(...) for _ in range(concurrency)]
+            for r in reqs:
+                engine.waiting.append(r)
+                for r in reqs:
+                    r.future.result()
+                    latencies = sorted([r.finish_time - r.submit_time for r in reqs])
+                    return {
+                    "throughput": total_tokens / total_time,
+                    "avg_latency": mean(latencies),
+                    "p99_latency": percentile(latencies, 99),
+                    }
+
+                    def find_saturation_point(results):
+                        """识别饱和点：throughput 增长率 < 5% 的拐点。"""
+                        for i in range(1, len(results)):
+                            growth = (results[i].tp - results[i-1].tp) / results[i-1].tp
+                            if growth < 0.05:
+                                return results[i] # throughput 不再显著增长 → 饱和
+```
+
+完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/benchmark_engine_v1.py)。
+
+代码要点：
+- `SimulatedEngine`：用摊销算力模型（`base + per_seq × batch × amort^(batch-1)`）模拟真实 GPU 的 batch 摊销行为，`max_num_seqs` 限制每轮 batch 上限
+- `run_fixed_concurrency`：同时提交 N 个请求，记录每个请求的真实 `finish_time - submit_time` 作为 latency（不是用总时间近似）
+- `find_saturation_point`：扫描结果中 throughput 增长率 < 5% 的拐点
+- `run_qps_test`：以恒定 `1/qps` 间隔发请求，持续 duration 秒，看 P50/P99
+
+#### 任务 2：运行并观察 throughput-latency 曲线
+
+```bash
+python kernels/benchmark_engine_v1.py
 ```
 
 **预期输出**（节选）：
 
 ```text
-📊 1. 知识地图
- Day 1: 多请求并发支持 → 线程安全队列、Future/CB/Stream...
- Day 2: 完整调度器 → 双预算 + 抢占 + aging...
- ...
+① 固定并发数扫描（concurrency = 1,2,4,8,16,32,64）
+ concurrency= 1 | throughput= 140.2 tok/s | avg_lat= 57.0ms | p99_lat= 57.0ms
+ concurrency= 2 | throughput= 234.5 tok/s | avg_lat= 68.2ms | p99_lat= 68.2ms
+ concurrency= 4 | throughput= 398.1 tok/s | avg_lat= 80.3ms | p99_lat= 80.3ms
+ concurrency= 8 | throughput= 779.6 tok/s | avg_lat= 82.0ms | p99_lat= 82.0ms
+ concurrency= 16 | throughput= 781.9 tok/s | avg_lat= 122.8ms | p99_lat= 163.6ms
+ concurrency= 32 | throughput= 782.5 tok/s | avg_lat= 204.6ms | p99_lat= 327.0ms
+ concurrency= 64 | throughput= 783.7 tok/s | avg_lat= 367.5ms | p99_lat= 652.9ms
 
-📊 3. 面试题速查（13 道）
- # Day 频率 题目
- 1 Day 1 ⭐⭐⭐⭐ 多请求并发如何实现？线程安全问题？
- 2 Day 1 ⭐⭐⭐ Future/Callback/Streaming 区别？
- ...
+Throughput-Latency 曲线
+ conc | throughput | avg_lat | p99_lat | 区域
+ 1 | 140.2 | 57.0ms | 57.0ms | 线性增长区
+ 8 | 779.6 | 82.0ms | 82.0ms | 线性增长区
+ 16 | 781.9 | 122.8ms | 163.6ms | ← 饱和点
+ 32 | 782.5 | 204.6ms | 327.0ms | 饱和后(排队)
+ 64 | 783.7 | 367.5ms | 652.9ms | 饱和后(排队)
 
-📊 4. Mini AI Infra 架构
- 用户 API → ConcurrentEngine → FullScheduler → Custom Kernel → KV Cache → Profiling
-
-📊 5. Week 7 完成标准 Checklist
- [✓] Day 1: ConcurrentEngine 运行成功...
- [✓] Day 5: 稳定性测试 500+ 请求 100% 成功...
- ...
+ 饱和点：concurrency=16, throughput≈781.9 tok/s, latency=122.8ms
 ```
 
-#### 任务 2：LeetGPU 综合题 —— Matrix Addition
+##### 观察重点
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+1. **线性增长区（conc 1→8）**：throughput 从 140 涨到 780（5.5x），latency 仅 57→82ms（平稳）
+2. **饱和点（conc=8→16）**：throughput 780→782（< 0.5% 增长），latency 82→123ms（开始上升）
+3. **排队区（conc 16→64）**：throughput 封顶 782，latency 123→205→368ms（**conc 翻倍 → latency 翻倍**）
+4. **P99 尾延迟**：conc=64 时 P99=653ms，是 avg 的 1.8x——排队导致尾延迟恶化
+5. **max_num_seqs=8 是瓶颈**：超过 8 并发后请求排队等下一波 batch，throughput 封顶
 
-**与本周知识的关联**：Matrix Addition 是 Week 7 的"收官题"——本周每天的 LeetGPU 练习都围绕 memory-bound 的数据搬运/归约，而 Addition 把"能搬数据"推向"能高效合并数据"：用 shared memory tile 中转解决"读写不能同时 coalesced"的核心矛盾。它也是自定义 kernel 集成中内存布局处理的基础（Day 4 自定义 kernel 集成的 Q/K/V tile 读写、FlashAttention 的分块布局都建立在同一套索引映射 + tiling 技术上）。
+##### QPS 测试观察
 
-> 💡 完整题解见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
+```text
+② 固定 QPS 测试
+ qps= 50 | throughput= 392.6 tok/s | avg= 82.9ms | p99= 87.5ms ← 未饱和
+ qps= 100 | throughput= 766.9 tok/s | avg= 113.8ms | p99= 143.9ms ← 接近饱和
+ qps= 200 | throughput= 779.0 tok/s | avg=1626.0ms | p99=3167.3ms ← 超载！P99 飙升
+```
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 7 周）
+- qps=100（≈800 tok/s）接近饱和吞吐 782，P99 开始上升（144ms）
+- qps=200 超过饱和吞吐 → 请求堆积，P99 飙到 3167ms（**超载雪崩**）
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」（点击查看题解）：
+#### 任务 3：分析瓶颈与优化方向
 
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 二分模板 | [704. 二分查找](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html)、[35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/)、[69. x 的平方根](https://leetcode.cn/problems/sqrtx/)、[74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) |
-| Day 2 | 旋转数组与峰值 | [153. 寻找旋转排序数组中的最小值](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html)、[33. 搜索旋转排序数组](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html)、[34. 在排序数组中查找元素的第一个和最后一个位置](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html)、[162. 寻找峰值](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html)、[540. 有序数组中的单一元素](https://hzchenxiaobin.github.io/leetcode/problems/540_有序数组中的单一元素.html) |
-| Day 3 | 二分答案 | [875. 爱吃香蕉的珂珂](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html)、[1011. 在 D 天内送达包裹的能力](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html)、[378. 有序矩阵中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
-| Day 4 | 二分进阶 | [410. 分割数组的最大值](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html)、[719. 找出第 K 小的数对距离](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html)、[4. 寻找两个正序数组的中位数](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
-| Day 5 | 一维 DP | [70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)、[118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/)、[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)、[213. 打家劫舍 II](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html)、[337. 打家劫舍 III](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
-| Day 6 | 背包 DP | [279. 完全平方数](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html)、[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)、[518. 零钱兑换 II](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html)、[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)、[494. 目标和](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
+根据饱和点分析，`max_num_seqs=8` 是当前瓶颈——throughput 封顶在 `8 tokens / iter_time`。优化方向：
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 7 周「二分查找与动态规划基础」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+| 优化 | 效果 |
+|------|------|
+| 增大 `max_num_seqs`（如 16/32） | 每轮 batch 更大 → throughput 上限提高 |
+| 减小 `iter_time`（kernel 优化） | 每轮更快 → throughput 提高 |
+| 降低 `per_seq`（batch 摊销更好） | 大 batch 时 per-token 更省 |
+
+> 思考：为什么不能无限增大 `max_num_seqs`？（提示：显存限制——每请求 KV Cache 占显存，batch 太大 OOM。Day 3 的 BlockSpaceManager 管这个。）
+
+#### 任务 4：LeetGPU 在线题目 —— Top K Selection
+
+**题目链接**：<https://leetgpu.com/challenges/top-k-selection>
+
+**与今日知识的关联**：
+
+这道题的 **top-k 选择**与 benchmark 的 P99 latency 计算同构——P99 就是"找出延迟排第 99 百分位的那个值"，本质是 top-k 选择（k = N×0.01，选第 k 小的延迟）。benchmark 框架的 `percentile()` 函数对排序后的 latencies 取 `int(N×p/100)` 位置，正是 top-k selection 的串行版。这道题的 GPU 实现用 bitonic sort 或堆归约做并行 top-k，对应推理系统里用 GPU 加速 latency 分位数计算（百万级请求的 P99/P999 统计）。
+
+> 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 6）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 6（回溯进阶），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [22. 括号生成](https://leetcode.cn/problems/generate-parentheses/) | 中等 | 回溯剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/22_括号生成.html) |
+| [79. 单词搜索](https://leetcode.cn/problems/word-search/) | 中等 | DFS 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/79_单词搜索.html) |
+| [131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/) | 中等 | 回溯 + 判断 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html) |
+| [51. N 皇后](https://leetcode.cn/problems/n-queens/) | 困难 | 回溯 + 位运算 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html) |
+| [93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/) | 中等 | 回溯 + 分段合法性剪枝 | — |
 
 ---
 
-### 面试准备框架
+### 扩展实验
 
-#### 本周 13 道核心面试题（按主题分组）
+#### 实验 1：增大 max_num_seqs 观察饱和点变化
 
-| # | 主题 | 题目 | 频率 | Day |
-|---|------|------|------|-----|
-| 1 | 并发 | 多请求并发如何实现？线程安全问题？ | ⭐⭐⭐⭐ | 1 |
-| 2 | 并发 | Future/Callback/Streaming 区别？ | ⭐⭐⭐ | 1 |
-| 3 | 调度 | 完整调度器设计需要考虑什么？ | ⭐⭐⭐⭐⭐ | 2 |
-| 4 | 调度 | 抢占策略如何选择？recompute vs swap？ | ⭐⭐⭐⭐ | 2 |
-| 5 | 特性 | Speculative Decoding 原理？为什么加速？ | ⭐⭐⭐⭐ | 3 |
-| 6 | 特性 | Chunked Prefill 和 Prefix Caching 解决什么？ | ⭐⭐⭐⭐ | 3 |
-| 7 | 集成 | 自定义 kernel 如何集成到 PyTorch？ | ⭐⭐⭐⭐⭐ | 4 |
-| 8 | 集成 | 算子融合为什么能提升性能？ | ⭐⭐⭐⭐ | 4 |
-| 9 | 联调 | 系统联调如何确保多请求并发正确性？ | ⭐⭐⭐⭐⭐ | 5 |
-| 10 | 联调 | 稳定性测试关注哪些指标？ | ⭐⭐⭐⭐ | 5 |
-| 11 | Profiling | 全链路性能分析怎么做？ | ⭐⭐⭐⭐ | 6 |
-| 12 | Profiling | Mini 系统和 vLLM 差距在哪？如何缩小？ | ⭐⭐⭐⭐⭐ | 6 |
-| 13 | 综合 | 项目最大技术难点是什么？如何解决？ | ⭐⭐⭐⭐⭐ | 7 |
+修改 `SimulatedEngine(max_num_seqs=16/32)`，重新扫描并发数。观察：饱和点从 conc=8 移到 16/32，throughput 上限提高，但 latency 在更高并发才飙升。
 
-#### 答题框架
+> 思考：max_num_seqs 翻倍，throughput 上限是否翻倍？（提示：受 iter_time 摊销影响——batch 越大 per-token 越省，但有算力上限。不一定线性。）
 
-```
-1. 先说"是什么"（定义 + 一句话概括）
-2. 再说"怎么做"（核心机制 + 数据结构）
-3. 然后说"为什么"（设计权衡 + 替代方案）
-4. 最后说"效果"（量化指标 + 实测数据）
-```
+#### 实验 2：混合请求分布测试
 
----
+修改 `run_fixed_concurrency`，让一半请求 `max_new_tokens=4`（短）、一半 `max_new_tokens=16`（长）。观察：短请求的 P99 是否被长请求拖累？Continuous Batching 是否让短请求先完成？
 
-### 常见误区澄清
+> 思考：混合分布下 P99 比纯短请求高多少？（提示：长请求占据 batch slot，短请求可能排队。Day 2 的 Continuous Batching 让短请求完成即走，缓解这点。）
 
-1. **"并发就是多线程"** → 不完全。并发还需要条件变量（不空转）、锁粒度（锁内不做 forward）、生命周期管理（状态机）
+#### 实验 3：用 nsys profiling 真实引擎
 
-2. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
+如果有 GPU，给 Day 5 的 `mini_engine_v1.py` 加 `torch.cuda.Event` 计时，用 `nsys profile python mini_engine_v1.py` 看 kernel 时间线。观察：kernel 间隙大不大？SM utilization 多少？判断是 Compute-bound 还是 Launch overhead。
 
-3. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
-
-4. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
-
-5. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
-
-6. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
-
----
-
-### Week 7 → Week 8 衔接
-
-```
-Week 7 完成：
- ✓ Mini AI Infra 系统可运行（500+ 请求稳定）
- ✓ 自定义 Kernel 集成（Softmax/LN/FlashAttention）
- ✓ 全链路 Profiling 报告完成
- ✓ 13 道面试题已整理
-
-Week 8 规划：
- 1. 项目打磨：README 完善、性能优化（CUDA Graph、官方 FlashAttention）
- 2. 面试准备：系统设计题模拟、项目深度问答、白板编码
- 3. 开源贡献：整理代码结构、写博客、发布 GitHub
- 4. 持续学习：跟踪 vLLM/SGLang/TensorRT-LLM 最新进展
-```
-
----
-
-### 弹性安排
-
-| 时间 | 充足版（6h） | 紧凑版（3h） |
-|------|------------|------------|
-| 代码重构 | 2h：统一接口+类型注解+测试 | 30min：统一接口命名 |
-| 文档编写 | 2h：README+架构图+性能报告 | 1h：README+架构图 |
-| 面试复盘 | 2h：13 题口述练习 | 1.5h：重点 5 题练习 |
+> 思考：Python scheduler 的 `schedule()` 在 nsys 时间线上占比多少？（提示：若 schedule() 耗时 > forward 的 10%，说明 Scheduling overhead 显著，可考虑 C++ scheduler。Day 4 讲的 TensorRT-LLM 就是 C++ 调度。）
 
 ---
 
 ### 今日总结
 
-Day 7 我们完成了 Week 7 的代码重构与文档总结：
+Day 6 我们用 benchmark 框架量化了 Mini 引擎 v1 的性能，学会了找饱和点和判瓶颈：
 
-1. **知识地图**：7 天从多请求并发到全链路 Profiling，构建了完整的 Mini AI Infra 系统
-2. **系统架构**：六层架构（API → Engine → Scheduler → Kernel → KV Cache → Profiling），数据流从 submit 到 result
-3. **代码重构**：统一接口（submit/shutdown）、模块化（engine/scheduler/kv_cache/kernels）、类型注解
-4. **项目文档**：README + 架构图 + 性能报告 + API 文档
+1. **六大指标**：Throughput（吞吐）、Avg/P50/P99 Latency（延迟+尾延迟）、TTFT（首 token）、TPOT（每 token）、Batch Size Distribution、GPU Utilization
+2. **两种 benchmark**：固定并发扫描（看能力上限/饱和点）+ 固定 QPS 测试（看真实负载尾延迟），两者互补
+3. **饱和点**：throughput 增长率 < 5% 的拐点，超过后 throughput 封顶、latency 因排队线性涨（conc 翻倍 → latency 翻倍）
+4. **实测曲线**：v1 在 max_num_seqs=8 下，conc 1→8 线性增长（140→780 tok/s），conc=16 饱和（782 封顶），conc=64 时 P99 飙到 653ms
+5. **四种瓶颈**：Compute-bound（量化）、Memory-bound（KV Cache 优化）、Launch overhead（CUDA Graph）、Scheduling overhead（C++ scheduler）
+6. **P99 重要性**：conc=64 时 P99=653ms 是 avg 的 1.8x，超载雪崩时 P99 飙到 3167ms——只看平均延迟会误判
+7. **nsys/ncu 判瓶颈**：kernel 间隙大→Launch overhead；SM util 高+throughput 不涨→Compute-bound；Memory Throughput 接近峰值→Memory-bound
 
-> 💡 掌握 Week 7 后，你就有了从零构建 LLM 推理系统的完整能力——从并发引擎到调度器，从自定义 kernel 到系统联调，从 profiling 到文档。Week 8 将把这些能力转化为面试竞争力。
+掌握这些后，你就有了系统优化的"诊断能力"——明天 Day 7 总结本周调度策略，复盘面试题，整理 GitHub 仓库。
 
 ---
 
 ### 面试要点
 
-1. **你的 Mini AI Infra 项目最大的技术难点是什么？如何解决？**（⭐⭐⭐⭐⭐ 必考）
+1. **如何做 LLM 推理系统的 throughput-latency benchmark？需要关注哪些指标？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **难点 1：Continuous Batching 的正确性**
- - 每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache
- - 解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
- - **难点 2：自定义 Kernel 与 PyTorch 的集成**
- - stream 一致性、内存布局、精度问题
- - 解决：逐步替换（单算子→多算子→端到端）、充分对比验证、六大注意事项
- - **难点 3：调度器性能**
- - Python scheduler 可能成为瓶颈（GIL 限制）
- - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
- - **难点 4：系统联调**
- - 组件多，边界问题复杂（KV Cache 串台、请求卡住、内存泄漏）
- - 解决：分层验证（六步）、逐步集成、五大问题排查表
+ - **测试方法**：
+ - 固定并发数扫描：同时提交 N 个请求，扫 N=1,2,4,...,找饱和点
+ - 固定 QPS 测试：恒定速率发请求，看 P50/P99 是否达标
+ - **关键指标**：
+ - Throughput（tok/s）、Avg/P50/P99 Latency（尾延迟）
+ - TTFT（首 token，prefill）、TPOT（每 token，decode）
+ - Batch Size Distribution、GPU Utilization
+ - **分析**：画 throughput-latency 曲线，找饱和点，用 nsys/ncu 判瓶颈
 
 </details>
 
 
-2. **如何设计一个可维护的 LLM 推理系统代码结构？**（⭐⭐⭐⭐ 高频）
+2. **如何识别推理系统的饱和点？饱和后如何优化？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **模块化**：Engine、Scheduler、Worker、KV Cache、Model、Kernel 分离
- - **统一接口**：明确的 submit/result/shutdown API
- - **配置驱动**：模型配置、调度配置独立
- - **测试覆盖**：单元测试 + 集成测试 + 性能测试
- - **文档完善**：README、架构图、API 文档、性能报告
- - **可观测性**：metrics、profiling 接口
+ - **识别饱和点**：
+ - throughput 不再随并发增长（增长率 < 5%）
+ - latency 开始快速上升（排队出现）
+ - GPU util ≈ 100%、请求队列堆积
+ - **饱和后优化**（按瓶颈类型）：
+ - Compute-bound：量化(INT8/FP8)、模型蒸馏、更大 batch
+ - Memory-bound：KV Cache 量化、PagedAttention、FlashAttention
+ - Launch overhead：CUDA Graph、kernel fusion
+ - Scheduling overhead：C++ scheduler（TensorRT-LLM）
 
 </details>
 
 
-3. **Week 7 你学到的最重要的三件事是什么？**
+3. **P99 latency 为什么比平均延迟重要？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **系统整合不是堆砌组件**：要在接口、状态、资源、性能四个层面做统一设计
- - **分层验证是联调的关键**：逐步叠加组件，每步验证，出错时精确定位
- - **Profiling 驱动优化**：先测量（三层工具链），再优化（按收益/复杂度排序），最后验证
+ - 平均延迟掩盖尾延迟——99 个 50ms + 1 个 500ms，平均 54.5ms 看起来好，但 1% 用户体验极差
+ - 在线服务 SLA 看 P99/P999，因为用户记得"最慢的那次"
+ - 尾延迟常由排队、preemption、GC 等异常引起，是系统稳定性的信号
+ - 超载雪崩时 P99 增长远快于平均——benchmark 必须看 P99
 
 </details>
 
 
-4. **如果给你一个月优化 Mini 系统，你会怎么做？**
+4. **固定并发扫描和固定 QPS 测试有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Week 1**：用官方 FlashAttention-2 替换教学版 → forward 降低 30-50%
- - **Week 2**：引入 CUDA Graph → launch overhead 降低 80%
- - **Week 3**：C++ 重写 Scheduler → 调度时间降低 10x
- - **Week 4**：实现 PagedAttention + Prefix Caching → KV Cache 利用率提升 50%
+ - **固定并发扫描**：同时提交 N 个请求等全部完成，扫 N 找能力上限和饱和点。适合"压测到极限"
+ - **固定 QPS 测试**：恒定速率发请求持续 N 秒，看给定负载下 P50/P99。适合"模拟生产流量"
+ - 两者互补：扫描看"能撑多少"，QPS 测"真实负载下延迟达标吗"
+ - 生产容量规划：先用扫描找饱和点，再用 QPS 在饱和点以下测 SLA 达标
 
 </details>
 
-## 📁 本周目录结构
 
-```
-aiinfra/daily/week7/
-├── README.md # 周总览
-├── day1/ # 多请求并发支持
-│ ├── README.md
-│ └── kernels/concurrent_engine.py # ConcurrentEngine 实现
-├── day2/ # 完整调度器
-│ ├── README.md
-│ └── kernels/full_scheduler.py # FullScheduler 实现
-├── day3/ # SGLang/LightLLM 高级特性
-│ ├── README.md
-│ └── kernels/advanced_features.py # 三大特性模拟
-├── day3b/ # 分布式推理专题：TP/PP/DP（补充日）
-│ ├── README.md
-│ └── kernels/ # tp_inference_demo.py / comm_overlap_demo.py
-├── day4/ # 整合全部自定义 Kernel
-│ ├── README.md
-│ └── kernels/custom_ops_module.py # C++ Extension 集成
-├── day4b/ # Ring Attention（补充日）
-│ ├── README.md
-│ └── kernels/ring_attention_sim.py
-├── day5/ # 系统联调
-│ ├── README.md
-│ └── kernels/ # mini_engine_v2.py / stability_test.py
-├── day6/ # 全链路 Profiling
-│ ├── README.md
-│ └── kernels/full_chain_profile.py # Profiling 脚本
-├── day6b/ # CUDA Graph 实操（补充日）
-│ ├── README.md
-│ └── kernels/ # cuda_graph_capture.py / shape_bucketing.py
-├── day7/ # 代码重构与文档（本文件）
-│ ├── README.md
-│ └── kernels/week7_summary.py # 总结自测脚本
-└── images/ # 本周 SVG 插图
-```
+5. **benchmark 发现 throughput 在 conc=8 后封顶，可能是什么瓶颈？怎么确认？**
 
----
+<details>
+<summary>点击查看答案</summary>
 
-## 🔗 推荐资源
+ - **可能瓶颈**：max_num_seqs=8 限制每轮 batch 上限，超过的请求排队
+ - **确认方法**：
+ - 看 batch size distribution：是否每轮 batch=8（打满 max_num_seqs）
+ - nsys 看 GPU util：若 ≈100% 是 Compute-bound；若低且有排队是 max_num_seqs 限制
+ - 增大 max_num_seqs 重测：若 throughput 提高，确认是 batch 上限瓶颈
+ - **优化**：增大 max_num_seqs（受显存限制）、减小 iter_time（kernel 优化）
 
-- **vLLM**：<https://github.com/vllm-project/vllm> — PagedAttention + Continuous Batching
-- **SGLang**：<https://github.com/sgl-project/sglang> — RadixAttention + Speculative Decoding
-- **FlashAttention-2**：<https://arxiv.org/abs/2307.08691> — 分块 tiling + online softmax
-- **Speculative Decoding 论文**：<https://arxiv.org/abs/2211.17192>
-- **Orca 论文（Continuous Batching）**：<https://www.usenix.org/conference/osdi22/presentation/yu>
-- **PyTorch C++ Extension**：<https://pytorch.org/tutorials/advanced/cpp_extension.html>
-- **Nsight Systems 文档**：<https://docs.nvidia.com/nsight-systems/>
-- **LeetGPU**：<https://leetgpu.com/> — CUDA 在线编程练习
+ - 饱和点判定方法相同：throughput 封顶 + latency 飙升 + util ≈100%
 
----
+</details>
 
-## ✅ Week 7 完成标准
-
-- [ ] Day 1：ConcurrentEngine 运行成功，Future/Callback/Streaming 三种返回均验证
-- [ ] Day 1：优先级调度 + 超时取消功能正常
-- [ ] Day 2：FullScheduler 支持优先级/超时/资源预算/抢占
-- [ ] Day 2：aging 公平性机制工作正常
-- [ ] Day 3：三大高级特性模拟脚本运行，收益评估报告完成
-- [ ] Day 4：自定义 kernel 通过 load_inline 编译，精度 PASS
-- [ ] Day 4：TransformerLayer use_custom 开关工作正常
-- [ ] Day 5：六步分层验证全部 PASS
-- [ ] Day 5：稳定性测试 500+ 请求 100% 成功，无内存泄漏
-- [ ] Day 5：异常输入（空/超长/超时）不崩溃
-- [ ] Day 6：全链路 profiling 报告完成，瓶颈 Top3 已识别
-- [ ] Day 6：vLLM 差距分析完成，优化建议已列出
-- [ ] Day 7：代码重构完成，接口统一
-- [ ] Day 7：README + 架构图 + 性能报告完成
-- [ ] Day 7：13 道面试题能口述回答

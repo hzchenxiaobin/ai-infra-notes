@@ -1,528 +1,695 @@
-## Day 3：SGLang / LightLLM 高级特性
+## Day 3：TensorRT-LLM / LightLLM 调度对比
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token（近似上界，精确期望为 `(1-α^(k+1))/(1-α)`）<br>
-2. 掌握 **Chunked Prefill（分块预填充）**——将长 prompt 分成多个 chunk，与 decode 请求交错执行，平滑 decode 延迟<br>
-3. 理解 **Prefix Caching（前缀缓存）**——缓存公共前缀（如系统提示）的 KV Cache，命中时跳过 prefill，降低 TTFT<br>
-4. 能评估 **三大特性的收益与复杂度**——通过模拟脚本量化加速比、延迟降低、命中率<br>
-5. 掌握 **特性集成优先级**——Prefix Caching 和 Chunked Prefill 优先（收益高、复杂度中），Speculative Decoding 可选（复杂度高）<br>
+1. 理解 **Inflight Batching 就是 Continuous Batching**——TensorRT-LLM 用了不同术语，本质都是 iteration-level 调度、请求动态加入退出<br>
+2. 掌握 **TensorRT-LLM 调度器特点**——C++ 层实现、与 TensorRT engine 深度集成、原生支持 chunked prefill，对比 vLLM Python 调度器的灵活性与开销权衡<br>
+3. 理解 **Chunked Prefill 的原理与收益**——长 prompt 拆成小 chunk 与 decode 交错，避免 prefill 占满整轮算力导致 decode 延迟突增<br>
+4. 了解 **LightLLM 的 Dynamic Split Fuse 与 Token Attention**——动态组合 prefill/decode、内存池式 KV Cache 管理的差异化思路<br>
+5. 用 Python 手写一个 **Chunked Prefill 模拟器**，实测 naive vs chunked 两种策略下 decode 延迟曲线，验证 TPOT（time-per-output-token）平滑效果
 
-> 💡 **为什么重要**：Day 2 的 FullScheduler 解决了"怎么调度"的问题，但推理系统还有"怎么更快"的问题。生产级系统（vLLM、SGLang、TensorRT-LLM）通过三大高级特性进一步提升性能：Speculative Decoding 降低 TBT（token 间延迟），Chunked Prefill 平滑 decode 延迟，Prefix Caching 降低 TTFT（首 token 延迟）。这些特性是面试"高级推理优化"的加分项，也是 Mini 引擎从"能跑"到"跑得快"的关键。
+> 💡 **为什么重要**：Day 3 我们拆解了 vLLM Scheduler 的 `schedule()` 5 步流程，但它有个隐患——`_schedule_waiting` 一次性 prefill 整个 prompt，长 prompt 会占满整轮 token budget，导致同 batch 的 decode 请求延迟突增。今天我们看 TensorRT-LLM 和 LightLLM 怎么解决这个"长 prefill 阻塞 decode"问题，核心答案就是 **Chunked Prefill**。这也是面试高频加分题："不同推理框架的 batching 策略对比"。
 
 ---
 
-### 学前导读：Day 2 调度器的"不够快"
+### 学前导读：Day 3 Scheduler 的"长 prefill 阻塞"问题
 
-Day 2 的 FullScheduler 解决了调度公平性和资源管理，但仍有性能瓶颈：
+Day 3 的 `_schedule_waiting` 有这么一行：
 
+```python
+num_new = seq.prompt_len # prefill 一次性消耗 prompt_len 个 token budget
+if budget.can_schedule(num_new, 1): # ← 长 prompt 可能直接吃满整轮
+ ...
 ```
-Day 2 调度器遗留的性能问题：
- 1. Decode 每步只出 1 token → 大模型 GPU 算力浪费（Speculative Decoding 解决）
- 2. 长 prompt prefill 阻塞 decode → decode 延迟尖峰（Chunked Prefill 解决）
- 3. 重复 prefix 每次重新 prefill → TTFT 高（Prefix Caching 解决）
-```
 
-| 瓶颈 | 表现 | 解决方案 | 收益 |
-|------|------|---------|------|
-| Decode 算力浪费 | 每步 1 token，GPU 利用率低 | Speculative Decoding | TBT 降低 2-3x |
-| Prefill 阻塞 decode | 长 prompt 导致 decode 延迟尖峰 | Chunked Prefill | 延迟降低 50-97% |
-| 重复 prefix 计算 | 多轮对话重复 prefill 系统提示 | Prefix Caching | TTFT 降低 3-5x |
+假设 `token_budget=32`，一个 `prompt_len=24` 的请求 prefill 时消耗 24 budget，只剩 8 给 decode。如果 `prompt_len=512`（长文档问答），它要么被拒绝（budget 不够），要么如果调大 budget 就会占满整轮——**decode 请求被"卡住"一轮，TPOT 突增**：
 
-> 💡 **一句话总结**：Day 3 从"会调度"升级为"跑得快"——三大特性分别解决 decode 效率、延迟平滑、前缀复用三个维度。
+![没有 Chunked Prefill 时](../../images/week6_chunked_prefill_timeline.svg)
+
+| 问题 | 原因 | 影响 |
+|------|------|------|
+| 长 prefill 占满整轮 | 一次性 prefill prompt_len token | decode 请求被阻塞一轮 |
+| TPOT 突增 | decode 等待 prefill 完成 | 用户感知"卡顿"、流式输出抖动 |
+| 长请求饿死短请求 | token budget 被长 prefill 吃光 | 短请求 decode 延迟不可控 |
+
+> 💡 **一句话总结**：Chunked Prefill 把长 prompt 的 prefill 拆成多个小 chunk（如每块 512 token），每轮只 prefill 一个 chunk，剩余预算给 decode——prefill 不再霸占整轮，decode 延迟平滑。TensorRT-LLM 原生支持，vLLM 0.5+ 也已跟进。
 
 ---
 
 ### 理论学习
 
-#### 3.1 Speculative Decoding（投机采样）
+#### 4.1 Inflight Batching = Continuous Batching
 
-![Speculative Decoding：小模型 Draft + 大模型 Verify](../images/speculative_decoding.svg)
+![Inflight Batching 数据流](../../week6/images/inflight_batching_flow.svg)
 
-##### 基本原理
-
-```
-传统 Decode：
- 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
- 缺点：大模型每次只处理 1 个 token，GPU 算力浪费
-
-Speculative Decoding：
- 1. 小模型（draft model）连续生成 k 个候选 tokens
- 2. 大模型（target model）一次验证这 k+1 个 tokens（batch 验证，高效）
- 3. 接受匹配的 tokens，从第一个不匹配处重新采样
- 4. 保持输出分布不变（与原始大模型一致）
-```
-
-##### 加速原理
+TensorRT-LLM 用 **"Inflight Batching"** 这个术语，但本质和 Day 2 的 Continuous Batching 完全一致：
 
 ```
-假设：
- t_d = draft model 生成 1 个 token 的时间（小，如 0.005s）
- T_fwd = target model 一次 forward 的时间（大，如 0.03s）
- α = 平均接受率（如 0.7）
-
-传统每 token 时间 ≈ T_fwd
-Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens（近似上界）
-Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
-
-当 t_d ≪ T_fwd 且 α 高时，加速明显。
-
-> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
+Inflight Batching（TensorRT-LLM）：
+ - 请求可以在 engine 运行过程中加入（in-flight）
+ - 请求完成后立即退出
+ - 每轮 iteration 重新构建 batch
+ = Continuous Batching（vLLM）的同一思想
 ```
 
-##### 关键属性
+##### 术语对照
 
-| 属性 | 说明 |
-|------|------|
-| **输出一致性** | 通过特殊的接受/拒绝采样，保证输出分布与大模型自回归采样一致 |
-| **加速条件** | draft 快（t_d ≪ T_fwd）+ 接受率高（α > 0.5） |
-| **k 的选择** | k 太小加速不够，k 太大 draft 开销大；通常 k=4~8 |
-| **适用场景** | decode 延迟敏感、有合适 draft model |
-| **限制** | 需要额外内存放 draft model；α 低时可能变慢 |
+| 概念 | vLLM 术语 | TensorRT-LLM 术语 | 本质 |
+|------|----------|-------------------|------|
+| iteration-level 调度 | Continuous Batching | **Inflight Batching** | 每轮重建 batch |
+| 请求动态加入 | schedule() waiting→running | in-flight 加入 | 同一机制 |
+| 请求完成退出 | FINISHED 移除 | context 释放 | 同一机制 |
+| 调度预算 | SchedulingBudget | max_tokens_in_batch | token/seq 上限 |
 
-> ⚠️ **保持分布不变的原理**：对每个 draft token，大模型计算其概率分布 p_target。若 draft 的采样值在 p_target 下有足够概率（≥ p_draft），则接受；否则以 (p_target - p_draft) 的残差概率重新采样。这保证最终分布 = p_target。
+> 💡 不要被不同术语迷惑——**Inflight 和 Continuous 是同一个东西**。面试时直接说"Inflight Batching 本质就是 Continuous Batching，TensorRT-LLM 换了个名字"即可。
 
-##### 模拟结果（k=4, α=0.7, t_d=0.005, T_fwd=0.03）
+#### 4.2 TensorRT-LLM 调度器特点
 
-| k | α | 传统时间 | Spec 时间 | 加速比 |
-|---|---|---------|----------|--------|
-| 2 | 0.7 | 3.00s | 1.72s | 1.74x |
-| 4 | 0.7 | 3.00s | 1.55s | 1.94x |
-| 4 | 0.9 | 3.00s | 1.20s | 2.50x |
-| 8 | 0.9 | 3.00s | 1.12s | 2.68x |
-| 8 | 0.5 | 3.00s | 3.50s | **0.86x（变慢！）** |
+TensorRT-LLM 的调度器与 vLLM 有关键差异：
 
-> 💡 **k=8, α=0.5 时变慢**——draft token 太多但接受率低，draft 开销超过了加速收益。这说明 k 和 α 必须匹配。
+| 维度 | vLLM | TensorRT-LLM |
+|------|------|-------------|
+| 调度器语言 | **Python** | **C++** |
+| 与 engine 关系 | 松耦合（调 PyTorch） | **深度集成**（调预编译 plan） |
+| 灵活性 | 高（易扩展、易调试） | 中（需重新编译 engine） |
+| 调度开销 | 较高（Python GIL、解释执行） | **低**（C++ 原生） |
+| Chunked Prefill | 0.5+ 支持 | **原生支持** |
+| 部署 | pip install | 需构建 engine（trtexec） |
 
-#### 3.2 Chunked Prefill（分块预填充）
+##### 为什么 TensorRT-LLM 性能更高？
 
-![Chunked Prefill：长 Prompt 分块 + Decode 交错](../images/chunked_prefill.svg)
+![vLLM vs TensorRT-LLM 调度链路](../../images/week6_vllm_vs_trtllm.svg)
 
-##### 问题与方案
+**代价**：灵活性低——换模型结构要重新构建 engine（trtexec 编译，耗时几分钟到几十分钟）；vLLM 改模型只需改 Python 代码。
 
+##### 形象类比
+
+- **vLLM** = 灵活的出租车（Python 调度，随时改路线，但每单有调度开销）
+- **TensorRT-LLM** = 高铁（C++ 预编译 plan，固定线路极速，但改线路要重新铺轨）
+
+#### 4.3 Chunked Prefill：核心创新
+
+![Naive vs Chunked Prefill 延迟对比](../../week6/images/chunked_prefill_vs_naive.svg)
+
+Chunked Prefill 是今天最核心的概念，解决"长 prefill 阻塞 decode"问题：
+
+```python
+# Naive Prefill（Day 3 的做法）：
+# 一次性 prefill 整个 prompt
+def prefill_naive(seq, budget):
+ budget.consume(seq.prompt_len) # 一次吃光
+
+# Chunked Prefill：
+# 长 prompt 拆成多个 chunk，每轮只 prefill 一块
+def prefill_chunked(seq, budget, chunk_size):
+ remaining = seq.prompt_len - seq.prefilled_tokens
+ n = min(chunk_size, remaining) # 每轮最多 chunk_size
+ seq.prefilled_tokens += n
+ budget.consume(n) # 只消耗 chunk_size
+ # 剩余预算留给 decode
 ```
-问题：
- - 长 prompt（如 2048 tokens）的 prefill 一次性处理 → 占用全部 token budget
- - 同 batch 的 decode 请求被阻塞 → 延迟尖峰
- - 用户感知：decode token 突然卡顿
 
-Chunked Prefill：
- - 将长 prompt 分成多个 chunk（如每 chunk 512 tokens）
- - 每个 chunk 与 decode 请求一起执行（共享 token budget）
- - 逐步完成 prefill，同时不中断 decode
-```
+##### Chunked Prefill 的工作流程
+
+![Chunked Prefill 迭代时间线](../../images/week6_chunked_prefill_iteration.svg)
 
 ##### 收益量化
 
-| Prompt 长度 | Chunk 大小 | Chunks | 传统 max 延迟 | Chunked max 延迟 | 降低 |
-|------------|-----------|--------|-------------|-----------------|------|
-| 512 | 256 | 2 | 5.2s | 2.6s | -50% |
-| 2048 | 512 | 4 | 20.6s | 5.1s | -75% |
-| 8192 | 256 | 32 | 82.0s | 2.6s | -97% |
+| 指标 | Naive Prefill | Chunked Prefill |
+|------|--------------|----------------|
+| iter 1 decode 延迟 | **2.0ms**（被 prefill 24 挤压） | **1.2ms**（只被 chunk 8 挤压） |
+| 延迟尖峰 | 高（=prompt_len 相关） | 低（=chunk_size 封顶） |
+| TPOT 稳定性 | 抖动 | **平滑** |
+| 总 iterations | 7 | 8（多 1 轮，但延迟更稳） |
 
-> 💡 **关键洞察**：总 prefill 时间不变，但 decode 请求的**最大等待延迟**从"整个 prefill"降到"一个 chunk"。prompt 越长、chunk 越小 → 效果越显著。
+> ⚠️ **注意**：Chunked Prefill 会让总 iterations 略增（prefill 拆成多轮），但换来 decode 延迟的稳定性——这是**吞吐 vs 延迟**的权衡。对在线服务（用户感知 TPOT），稳定性通常更重要。
 
-##### Chunk 大小的权衡
-
-| Chunk 大小 | 优点 | 缺点 |
-|-----------|------|------|
-| 太小（128） | 延迟极平滑 | prefill 效率低（小 batch GEMM） |
-| 太大（2048） | prefill 效率高 | 延迟平滑效果差 |
-| **推荐（512）** | **平衡** | **vLLM 默认值** |
-
-#### 3.3 Prefix Caching（前缀缓存）
-
-![Prefix Caching：公共前缀 KV Cache 复用](../images/prefix_caching.svg)
-
-##### 问题与方案
+##### chunk_size 的选择
 
 ```
-问题：
- - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
- - 每次都要重新计算 prefix 的 KV Cache → 重复计算
+chunk_size 太小（如 64）：
+ → 长 prompt 要很多轮才 prefill 完，首 token 延迟（TTFT）增加
+ → 但 decode 延迟最平滑
 
-Prefix Caching：
- - 缓存公共 prefix 的 KV Cache（key = prefix token 序列的 hash）
- - 新请求匹配到缓存 prefix 时，直接复用 KV Cache
- - 只 prefill prefix 之后的新增 tokens
+chunk_size 太大（如 8192）：
+ → 退化为 naive prefill，decode 延迟又突增
 
-收益：
- - 降低 TTFT（首 token 延迟）
- - 减少重复计算
- - 特别适合多轮对话和模板化请求
+经验值：chunk_size = 512 ~ 2048（vLLM 默认 2048）
+ → 在 TTFT 和 TPOT 间取平衡
 ```
 
-##### 缓存 Key 设计
+#### 4.4 LightLLM：Dynamic Split Fuse 与 Token Attention
+
+LightLLM 走了另一条差异化路线：
+
+| 机制 | LightLLM 做法 | 与 vLLM/TRT-LLM 区别 |
+|------|--------------|---------------------|
+| **Dynamic Split Fuse** | prefill 和 decode 动态组合，按算力自动 split | 类似 chunked prefill，但更激进地混合 |
+| **Token Attention** | 不预分配固定 KV Cache，用内存池动态管理 | vs PagedAttention 的 block 分配 |
+| **Router 分层** | 多级 router 调度，支持分布式 | 适合多卡高并发 |
+
+##### Token Attention vs PagedAttention
+
+```
+PagedAttention（vLLM/TRT-LLM）：
+ - KV Cache 切成固定大小 block（如 16 token/block）
+ - block 是分配/回收的最小单位
+ - 优点：管理简单；缺点：block 内可能有空洞
+
+Token Attention（LightLLM）：
+ - 以 token 为粒度动态管理 KV Cache
+ - 类似内存池：按需分配 token 级空间
+ - 优点：无 block 空洞，利用率更高；缺点：管理开销略大
+```
+
+#### 4.5 四框架横向对比
+
+![三大推理框架调度策略对比](../../week6/images/framework_comparison.svg)
+
+| 维度 | vLLM | TensorRT-LLM | SGLang | LightLLM | 说明 |
+|------|------|-------------|--------|----------|------|
+| Batching | Continuous | Inflight | Continuous | Dynamic Split Fuse | 动态批处理 |
+| KV Cache | PagedAttention | PagedAttention | PagedAttention | Token Attention | 分页 KV Cache |
+| Chunked Prefill | 0.5+ | 原生 | 原生 | Split Fuse | 分块 prefill |
+| Prefix Caching | block-hash | RadixAttention | RadixAttention | block-hash | 前缀复用 |
+| 灵活性 | 高 | 中 | 高 | 中 | 中 |
+| 语言 | Python | C++ | Python | Python | — |
+
+##### SGLang 与 RadixAttention
+
+**SGLang**（SG-Lang）是 2024+ 兴起的推理框架，核心创新是 **RadixAttention**——用基数树（radix tree）管理 prefix caching，比 vLLM 的 block-hash 方案更高效。
+
+**RadixAttention vs block-hash prefix caching**：
+
+| 维度 | block-hash（vLLM） | RadixAttention（SGLang） |
+|------|-------------------|------------------------|
+| 数据结构 | block 级哈希表 | 前缀树（radix tree） |
+| 匹配粒度 | block（如 16 token） | 任意前缀长度 |
+| 共享前缀复用 | 需手动 block 对齐 | 自动识别任意公共前缀 |
+| 多轮对话 | 每轮重新哈希 | 前缀树自动增量 |
+| 适用场景 | 短/无共享前缀 | 共享前缀多且长（如多轮对话、few-shot） |
+
+> 💡 **何时 RadixAttention 更优**：共享前缀多且长时（多轮对话、few-shot batch、共享 system prompt）。RadixAttention 的前缀树自动识别任意公共前缀，避免 block-hash 的对齐损失。SGLang 在这类场景的 KV Cache 命中率远高于 vLLM。
+
+##### 选型建议
+
+| 场景 | 推荐框架 | 原因 |
+|------|---------|------|
+| 快速迭代、多模型 | **vLLM** | Python 灵活、生态成熟 |
+| 极致性能、模型固定 | **TensorRT-LLM** | C++ 调度、kernel 融合 |
+| 高并发、长上下文 | **LightLLM** | Token Attention 内存利用率高 |
+
+### Coding 任务：手写 Chunked Prefill 模拟器
+
+#### 任务 1：创建 chunked_prefill_simulator.py
+
+创建文件 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/chunked_prefill_simulator.py)，对比 naive 与 chunked 两种 prefill 策略的 decode 延迟曲线：
 
 ```python
-# Key = prefix token 序列的 hash
-key = hashlib.md5(str(prefix_tokens).encode()).hexdigest()
-
-# 查找：O(1) hash 查找
-cached = cache.get(system_prompt_tokens)
-if cached:
- # 命中：跳过 prefix prefill，只 prefill 新增 tokens
- prefill(user_prompt_tokens)
-else:
- # 未命中：全量 prefill + 缓存
- prefill(full_prompt)
- cache.put(system_prompt_tokens, kv_cache)
-```
-
-##### 模拟结果（3 请求，系统提示 50 tok，用户 20 tok）
-
-| 指标 | 无缓存 | 有缓存 | 改善 |
-|------|--------|--------|------|
-| 总 prefill tokens | 210 | 110 | -48% |
-| 命中率 | — | 99% | — |
-| TTFT（首请求） | 70×t | 70×t | 不变 |
-| TTFT（后续请求） | 70×t | 20×t | -71% |
-| 加速比 | 1.0x | 3.4x | — |
-
-> ⚠️ **LRU 淘汰**：缓存有大小上限（如 64 entries），满了按 LRU 淘汰最久未用的。vLLM 的 PagedAttention 天然支持 block 级别的 prefix caching。
-
-##### 适用场景
-
-| 场景 | 前缀重复度 | 收益 |
-|------|-----------|------|
-| 多轮对话 | 高（历史消息累积） | ★★★★★ |
-| 模板化请求 | 高（系统提示固定） | ★★★★★ |
-| Few-shot learning | 中（示例固定） | ★★★★ |
-| 独立请求 | 低（无公共前缀） | ★ |
-
-#### 3.4 特性收益对比与集成优先级
-
-| 特性 | 收益 | 复杂度 | 依赖 | 集成优先级 |
-|------|------|--------|------|-----------|
-| **Prefix Caching** | TTFT 降低 3-5x | 中 | KV Cache 管理 | **Phase 1 优先** |
-| **Chunked Prefill** | 延迟降低 50-97% | 中 | 调度器改造 | **Phase 1** |
-| **CUDA Graph** | launch 开销降低 | 中 | 静态 shape | Phase 2 |
-| **Speculative Decoding** | TBT 降低 2-3x | 高 | Draft model | Phase 2 可选 |
-
-> 💡 **集成建议**：Prefix Caching 和 Chunked Prefill 收益高、复杂度中等，优先集成。Speculative Decoding 虽然收益可观，但需要 draft model 和分布对齐，实现复杂度高，适合作为 Phase 2 的可选优化。
-
-### Coding 任务：高级特性模拟与评估
-
-#### 任务 1：创建 advanced_features.py
-
-创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day3/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
-
-```python
-# advanced_features.py —— 高级特性模拟（Speculative Decoding + Chunked Prefill + Prefix Caching）
-# 运行命令: python advanced_features.py
+# chunked_prefill_simulator.py —— Chunked Prefill vs Naive Prefill 延迟对比模拟
+# 运行命令: python chunked_prefill_simulator.py
 # 依赖: 仅标准库
+#
+# 本文件模拟两种 prefill 调度策略对 decode 延迟的影响：
+#   1. Naive Prefill：长 prompt 一次性 prefill，整轮算力被 prefill 占满 → decode 请求被阻塞、latency 突增
+#   2. Chunked Prefill：长 prompt 拆成多个小 chunk，每轮只 prefill 一个 chunk，剩余预算给 decode → latency 平滑
+#
+# 对应 TensorRT-LLM / vLLM(0.5+) 的 Chunked Prefill 机制：
+#   - vLLM 默认把长 prompt 一次性 prefill（naive）
+#   - vLLM 0.5+ 与 TensorRT-LLM 原生支持 chunked prefill（长 prompt 分块与 decode 交错）
+#
+# 与 Day2 ContinuousBatcher / Day3 Scheduler 的关系：
+#   - Day2/Day3 的 _schedule_waiting 一次性 prefill 整个 prompt（消耗 prompt_len token budget）
+#   - 本文件把 prefill 改成"每轮只消耗 chunk_size token"，多轮完成一个长 prefill
 
-# 1. Speculative Decoding 模拟
-def simulate_speculative_decoding(num_tokens=100, draft_k=4, accept_rate=0.7, ...):
- """模拟 draft+verify 过程，测量加速比"""
+from collections import deque
+from dataclasses import dataclass, field
+from typing import Deque, Dict, List
 
-# 2. Chunked Prefill 模拟
-def simulate_chunked_prefill(prompt_len=2048, chunk_size=512, ...):
- """模拟分块 prefill 与 decode 交错，测量延迟降低"""
 
-# 3. Prefix Caching 模拟
-class PrefixCache:
- """LRU 前缀缓存，模拟 KV Cache 复用"""
-def simulate_prefix_caching(num_requests=100, ...):
- """模拟多轮对话场景，测量命中率和加速比"""
+class SeqStatus:
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
 
-# 4. 综合评估
-def evaluate_features():
- """运行三大特性模拟，输出收益评估报告"""
+
+@dataclass
+class Sequence:
+    """一个推理序列。prefill 进度用 prefilled_tokens 追踪（chunked 模式下分块累加）。"""
+    seq_id: int
+    prompt_len: int
+    max_new_tokens: int = 6
+    status: str = SeqStatus.WAITING
+    prefilled_tokens: int = 0       # 已 prefill 的 prompt token 数（=prompt_len 时 prefill 完成）
+    generated_count: int = 0
+    start_iter: int = -1
+    finish_iter: int = -1
+
+    @property
+    def is_prefill_done(self) -> bool:
+        return self.prefilled_tokens >= self.prompt_len
+
+    def prefill_chunk(self, chunk_size: int) -> int:
+        """prefill 一块，返回实际处理的 token 数。"""
+        remaining = self.prompt_len - self.prefilled_tokens
+        n = min(chunk_size, remaining)
+        self.prefilled_tokens += n
+        return n
+
+    def decode_step(self):
+        """生成 1 个 token。"""
+        self.generated_count += 1
+        if self.generated_count >= self.max_new_tokens:
+            self.status = SeqStatus.FINISHED
+
+
+@dataclass
+class IterRecord:
+    """一轮 iteration 的记录，用于画延迟曲线。"""
+    iter: int
+    prefill_tokens: int          # 本轮 prefill 的 token 数（大 → decode 被挤压）
+    decode_seqs: int             # 本轮 decode 的序列数
+    decode_latencies: List[float] = field(default_factory=list)  # 本轮各 decode 序列的感知延迟
+    events: List[str] = field(default_factory=list)              # 本轮发生的事件
+
+
+class PrefillScheduler:
+    """支持 naive / chunked 两种 prefill 策略的调度器。
+
+    token_budget：每轮 iteration 最多处理的 token 数（prefill + decode 共享）。
+    - naive 模式：新请求一次性 prefill 整个 prompt（消耗 prompt_len）
+    - chunked 模式：新请求每轮只 prefill chunk_size 个 token，剩余预算给 decode
+    """
+
+    def __init__(self, max_token_budget: int = 32, max_num_seqs: int = 8,
+                 chunk_size: int = 8, use_chunked: bool = False):
+        self.max_token_budget = max_token_budget
+        self.max_num_seqs = max_num_seqs
+        self.chunk_size = chunk_size
+        self.use_chunked = use_chunked
+        self.waiting: Deque[Sequence] = deque()
+        self.running: Dict[int, Sequence] = {}
+        self.iteration = 0
+        self.history: List[IterRecord] = []
+
+    def submit(self, seq: Sequence):
+        self.waiting.append(seq)
+
+    def _decode_cost(self, num_decode: int) -> float:
+        """模拟 decode 延迟：decode 越多每 token 越省（batch 摊销），但有下限。"""
+        if num_decode == 0:
+            return 0.0
+        return 0.5 + 0.3 / num_decode   # 纯 decode 时 ~0.8ms/token；decode 越多越接近 0.5
+
+    def _prefill_cost_per_token(self, prefill_tokens: int, num_decode: int) -> float:
+        """模拟 prefill 对 decode 延迟的挤压：prefill tokens 越多，本轮 decode 越慢。
+
+        naive 模式下 prefill_tokens 可能很大（=prompt_len）→ decode 延迟飙升
+        chunked 模式下 prefill_tokens 被 chunk_size 封顶 → decode 延迟可控
+        """
+        base = 0.8
+        # prefill 是 compute-bound，会抢占 SM 资源，decode 被拖慢
+        pressure = 0.05 * prefill_tokens
+        return base + pressure
+
+    def schedule_iteration(self) -> IterRecord:
+        budget = self.max_token_budget
+        rec = IterRecord(iter=self.iteration + 1, prefill_tokens=0, decode_seqs=0)
+
+        # 1. 移除已完成
+        finished = [sid for sid, s in self.running.items() if s.status == SeqStatus.FINISHED]
+        for sid in finished:
+            self.running.pop(sid)
+
+        # 2. 保留 running 的 decode（若 prefill 已完成）或继续 prefill chunk
+        decode_batch: List[Sequence] = []
+        for seq in self.running.values():
+            if not seq.is_prefill_done:
+                # chunked 模式下，未完成 prefill 的序列本轮继续 prefill 一个 chunk
+                if self.use_chunked and budget >= self.chunk_size:
+                    n = seq.prefill_chunk(self.chunk_size)
+                    budget -= n
+                    rec.prefill_tokens += n
+                    rec.events.append(f"S{seq.seq_id} prefill +{n}({seq.prefilled_tokens}/{seq.prompt_len})")
+                elif not self.use_chunked:
+                    # naive 模式：prefill 应该早已一次性完成，不应到这里
+                    pass
+                # naive 模式且未完成：什么都不做（等一次性 prefill，见 step 3）
+            else:
+                # prefill 完成，本轮 decode 1 步
+                if budget >= 1 and len(decode_batch) < self.max_num_seqs:
+                    decode_batch.append(seq)
+                    budget -= 1
+
+        # 3. 从 waiting 加入新请求
+        still_waiting: Deque[Sequence] = deque()
+        for seq in self.waiting:
+            if len(self.running) >= self.max_num_seqs:
+                still_waiting.append(seq)
+                continue
+            if self.use_chunked:
+                # chunked：本轮只 prefill 一个 chunk
+                if budget >= self.chunk_size:
+                    seq.status = SeqStatus.RUNNING
+                    if seq.start_iter < 0:
+                        seq.start_iter = self.iteration + 1
+                    n = seq.prefill_chunk(self.chunk_size)
+                    budget -= n
+                    rec.prefill_tokens += n
+                    self.running[seq.seq_id] = seq
+                    rec.events.append(f"S{seq.seq_id} prefill +{n}({seq.prefilled_tokens}/{seq.prompt_len}) [new]")
+                else:
+                    still_waiting.append(seq)
+            else:
+                # naive：一次性 prefill 整个 prompt
+                if budget >= seq.prompt_len:
+                    seq.status = SeqStatus.RUNNING
+                    seq.start_iter = self.iteration + 1
+                    n = seq.prefill_chunk(seq.prompt_len)   # 一次到位
+                    budget -= n
+                    rec.prefill_tokens += n
+                    self.running[seq.seq_id] = seq
+                    rec.events.append(f"S{seq.seq_id} prefill ALL {n} [new]")
+                else:
+                    still_waiting.append(seq)
+        self.waiting = still_waiting
+
+        # 4. 执行 decode
+        rec.decode_seqs = len(decode_batch)
+        # 本轮每个 decode 序列的感知延迟 = prefill 挤压后的 per-token 成本
+        per_token = self._prefill_cost_per_token(rec.prefill_tokens, len(decode_batch))
+        decode_per_token = self._decode_cost(len(decode_batch))
+        # 实际延迟：prefill 挤压 + decode 本身
+        actual = per_token if rec.prefill_tokens > 0 else decode_per_token
+        for seq in decode_batch:
+            seq.decode_step()
+            if seq.status == SeqStatus.FINISHED:
+                seq.finish_iter = self.iteration + 1
+            rec.decode_latencies.append(actual)
+
+        self.iteration += 1
+        self.history.append(rec)
+        return rec
+
+    def has_work(self) -> bool:
+        return bool(self.waiting or self.running)
+
+
+def run_scenario(use_chunked: bool, label: str) -> List[IterRecord]:
+    """跑一个场景：2 个短 decode 请求 + 1 个长 prompt 请求同时到达。
+
+    短请求 S1/S2 正在 decode，此时 S3（prompt=24）到达。
+    - naive：S3 一次性 prefill 24 token，整轮算力被占 → S1/S2 decode 延迟飙升
+    - chunked：S3 分 3 轮 prefill（chunk=8），每轮 S1/S2 仍能 decode → 延迟平滑
+    """
+    print("=" * 78)
+    print(f"场景：{label}")
+    print("=" * 78)
+
+    sched = PrefillScheduler(
+        max_token_budget=32, max_num_seqs=8,
+        chunk_size=8, use_chunked=use_chunked,
+    )
+
+    # S1/S2：短请求，已 prefill 完成，正在 decode
+    s1 = Sequence(seq_id=1, prompt_len=4, max_new_tokens=6)
+    s1.prefilled_tokens = 4   # 已 prefill
+    s1.status = SeqStatus.RUNNING
+    s1.start_iter = 0
+    sched.running[1] = s1
+
+    s2 = Sequence(seq_id=2, prompt_len=4, max_new_tokens=6)
+    s2.prefilled_tokens = 4
+    s2.status = SeqStatus.RUNNING
+    s2.start_iter = 0
+    sched.running[2] = s2
+
+    # S3：长 prompt 请求，到达后开始 prefill
+    s3 = Sequence(seq_id=3, prompt_len=24, max_new_tokens=4)
+    sched.submit(s3)
+
+    print("\n初始：S1/S2 正在 decode(gen=0/6)，S3 等待 prefill(prompt=24)\n")
+
+    while sched.has_work() and sched.iteration < 25:
+        rec = sched.schedule_iteration()
+        lat_str = ", ".join(f"{l:.1f}" for l in rec.decode_latencies) or "-"
+        ev_str = "; ".join(rec.events)
+        print(f"  iter{rec.iter:>2} | prefill_tk={rec.prefill_tokens:>2} | "
+              f"decode={rec.decode_seqs} | lat=[{lat_str}] | {ev_str}")
+
+    print(f"\n  总 iterations: {sched.iteration}")
+    print(f"  S1 finish_iter={s1.finish_iter}, S2 finish_iter={s2.finish_iter}, "
+          f"S3 finish_iter={s3.finish_iter}")
+    return sched.history
+
+
+def print_latency_comparison(naive_hist: List[IterRecord], chunked_hist: List[IterRecord]):
+    """对比两种策略下 decode 序列的延迟曲线。"""
+    print("\n" + "=" * 78)
+    print("Decode 延迟对比（S1/S2 的每轮感知延迟 ms/token）")
+    print("=" * 78)
+
+    print(f"\n{'iter':>4} | {'naive 延迟':>22} | {'chunked 延迟':>22} | {'差异':>8}")
+    print("-" * 78)
+    max_iter = max(len(naive_hist), len(chunked_hist))
+    naive_max_spike = 0.0
+    chunked_max_spike = 0.0
+    for i in range(max_iter):
+        n_lats = naive_hist[i].decode_latencies if i < len(naive_hist) else []
+        c_lats = chunked_hist[i].decode_latencies if i < len(chunked_hist) else []
+        n_str = ", ".join(f"{l:.1f}" for l in n_lats) or "(无decode)"
+        c_str = ", ".join(f"{l:.1f}" for l in c_lats) or "(无decode)"
+        n_max = max(n_lats) if n_lats else 0
+        c_max = max(c_lats) if c_lats else 0
+        naive_max_spike = max(naive_max_spike, n_max)
+        chunked_max_spike = max(chunked_max_spike, c_max)
+        diff = n_max - c_max if (n_lats and c_lats) else 0
+        print(f"{i+1:>4} | {n_str:>22} | {c_str:>22} | {diff:>+7.1f}")
+
+    print(f"\n  Naive   最大延迟尖峰: {naive_max_spike:.1f} ms/token")
+    print(f"  Chunked 最大延迟尖峰: {chunked_max_spike:.1f} ms/token")
+    print(f"  延迟尖峰降低: {naive_max_spike - chunked_max_spike:.1f} ms/token "
+          f"({(1 - chunked_max_spike/naive_max_spike)*100:.0f}%)" if naive_max_spike > 0 else "")
+
+    print(f"\n  Naive   总 iterations: {len(naive_hist)}")
+    print(f"  Chunked 总 iterations: {len(chunked_hist)}")
+    print("\n  结论：chunked prefill 把长 prompt 的 prefill 拆成小块与 decode 交错，")
+    print("        decode 延迟尖峰大幅降低，TPOT（time-per-output-token）更稳定。")
+
+
+def main():
+    print("Chunked Prefill vs Naive Prefill —— 延迟对比模拟")
+    print("对应：TensorRT-LLM Inflight Batching + Chunked Prefill / vLLM 0.5+ chunked prefill\n")
+
+    naive_hist = run_scenario(use_chunked=False, label="Naive Prefill（一次性 prefill 整个 prompt）")
+    chunked_hist = run_scenario(use_chunked=True, label="Chunked Prefill（prompt 分块与 decode 交错）")
+
+    print_latency_comparison(naive_hist, chunked_hist)
+
+    print("\n" + "=" * 78)
+    print("✅ 核心机制验证完毕：")
+    print("  1. Inflight/Continuous Batching：请求动态加入/退出，每轮重建 batch")
+    print("  2. Chunked Prefill：长 prompt 拆 chunk 与 decode 交错，平滑 TPOT")
+    print("  3. TensorRT-LLM C++ scheduler 原生支持；vLLM 0.5+ 也已支持")
+    print("=" * 78)
+
+
+if __name__ == "__main__":
+    main()
+
 ```
 
-完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day3/kernels/advanced_features.py)。
+完整代码（含延迟模型、对比输出）见 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/chunked_prefill_simulator.py)。
 
 代码要点：
-- `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
-- `simulate_chunked_prefill`：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
-- `PrefixCache`：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
-- `evaluate_features`：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
+- `Sequence.prefill_chunk(chunk_size)`：核心方法——每轮只 prefill `min(chunk_size, remaining)` 个 token，`prefilled_tokens` 累加追踪进度
+- `is_prefill_done`：`prefilled_tokens >= prompt_len` 时 prefill 完成，序列转入 decode
+- **naive vs chunked 的分支**：`_schedule_waiting` 中，naive 一次 `prefill_chunk(prompt_len)`，chunked 每轮 `prefill_chunk(chunk_size)`
+- **延迟模型**：`_prefill_cost_per_token` 模拟 prefill tokens 对 decode 延迟的挤压——prefill tokens 越多，本轮 decode 越慢
+- **与 Day 3 Scheduler 的区别**：Day 3 一次性 prefill（naive），本文件多了 chunked 分支和延迟追踪
 
-#### 任务 2：运行并分析收益报告
+#### 任务 2：运行并观察延迟曲线
 
 ```bash
-python kernels/advanced_features.py
+python kernels/chunked_prefill_simulator.py
 ```
 
-**预期输出**（节选）：
+**预期输出**（延迟对比，节选）：
 
 ```text
-📊 1. Speculative Decoding
- k=4, α=0.7: traditional=3.00s, spec=1.55s, speedup=1.94x, accepted=69, rejected=55
- k=4, α=0.9: traditional=3.00s, spec=1.20s, speedup=2.50x, accepted=79, rejected=17
- k=8, α=0.5: traditional=3.00s, spec=3.50s, speedup=0.86x, accepted=50, rejected=350
+Decode 延迟对比（S1/S2 的每轮感知延迟 ms/token）
 
-📊 2. Chunked Prefill
- prompt=2048, chunk=512: chunks=4, max_latency: 20.58s → 5.14s (-75%)
- prompt=8192, chunk=256: chunks=32, max_latency: 82.02s → 2.56s (-97%)
+iter | naive 延迟 | chunked 延迟 | 差异
+------------------------------------------------------------------------------
+ 1 | 2.0, 2.0 | 1.2, 1.2 | +0.8
+ 2 | 0.6, 0.6, 0.6 | 1.2, 1.2 | -0.6
+ 3 | 0.6, 0.6, 0.6 | 1.2, 1.2 | -0.6
+ 4 | 0.6, 0.6, 0.6 | 0.6, 0.6, 0.6 | +0.0
+ ...
 
-📊 3. Prefix Caching
- cache_size=64: hits=99, misses=1, hit_rate=99.0%, time: 70.00s → 20.50s, speedup=3.41x
-
-📋 集成优先级建议
- 1. Prefix Caching — 收益高、复杂度中 → Phase 1 优先
- 2. Chunked Prefill — 平滑延迟、复杂度中 → Phase 1
- 3. CUDA Graph — 降 launch 开销、复杂度中 → Phase 2
- 4. Speculative Decoding — 降 TBT、复杂度高 → Phase 2 可选
+ Naive 最大延迟尖峰: 2.0 ms/token
+ Chunked 最大延迟尖峰: 1.2 ms/token
+ 延迟尖峰降低: 0.8 ms/token (40%)
 ```
 
 ##### 观察重点
 
-1. **Speculative Decoding**：α=0.7 时加速 ~2x，但 α=0.5 + k=8 时**变慢**（draft 开销超过收益）
-2. **Chunked Prefill**：prompt 越长、chunk 越小，延迟降低越显著（8192 tok 从 82s → 2.6s）
-3. **Prefix Caching**：固定系统提示场景命中率接近 100%，加速比 3.4x
-4. **集成优先级**：Prefix Caching 和 Chunked Prefill 性价比最高
+1. **iter 1 naive 延迟 2.0ms**：S3 一次性 prefill 24 token，挤压 S1/S2 decode → 尖峰
+2. **iter 1 chunked 延迟 1.2ms**：S3 只 prefill 8 token（chunk_size），挤压小 → 平滑
+3. **chunked 的 S3 分 3 轮 prefill**：8→16→24，每轮都和 decode 交错
+4. **延迟尖峰降低 40%**：2.0 → 1.2，TPOT 更稳定
+5. **总 iterations chunked 多 1 轮**（8 vs 7）：吞吐略降，换延迟稳定性
 
-#### 任务 3：修改参数观察特性边界
+> 💡 这正是 TensorRT-LLM 原生支持 chunked prefill 的原因——在线服务对 TPOT 稳定性敏感，chunked 避免长 prompt 导致的"卡顿"。
 
-尝试修改以下参数，观察特性失效的边界条件：
+#### 任务 3：调整 chunk_size 观察权衡
+
+修改 `chunk_size` 从 4 到 24（极端情况=naive），观察延迟尖峰和总 iterations 的变化：
 
 ```python
-# 实验 A：Speculative Decoding 失效条件
-# 设置 accept_rate=0.3, draft_k=8 → draft 开销大但接受少，应变慢
-result = simulate_speculative_decoding(num_tokens=100, draft_k=8, accept_rate=0.3, ...)
-
-# 实验 B：Chunked Prefill chunk 太小
-# 设置 chunk_size=64 → prefill 效率极低（小 batch GEMM），总时间可能增加
-result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
-
-# 实验 C：Prefix Caching 无公共前缀
-# 修改为每个请求有不同的系统提示 → 命中率应接近 0
+# 在 main() 中试不同 chunk_size
+for cs in [4, 8, 16, 24]:
+ sched = PrefillScheduler(max_token_budget=32, chunk_size=cs, use_chunked=True)
+ # ... 跑场景，记录最大延迟和总 iterations
 ```
 
-> 思考：什么场景下 Prefix Caching 不仅无收益反而有开销？（提示：每个请求前缀都不同时，hash 计算和缓存查找是纯开销。）
+> 思考：chunk_size 越小，延迟越平滑但总 iterations 越多（TTFT 增加）。如何根据 SLA 选择？（提示：TTFT SLA 严 → 大 chunk；TPOT SLA 严 → 小 chunk。）
 
-#### 任务 4：LeetGPU 在线题目 —— Scalar Multiply
+#### 任务 4：LeetGPU 在线题目 —— Segmented Prefix Sum
 
-**题目链接**：<https://leetgpu.com/challenges/scalar-multiply>
+**题目链接**：<https://leetgpu.com/challenges/segmented-prefix-sum>
 
-**与今日知识的关联**：Scalar Multiply 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Scalar Multiply 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
+**与今日知识的关联**：
 
-> 💡 提交后在 [LeetGPU Scalar Multiply](https://leetgpu.com/challenges/scalar-multiply) 上记录通过耗时。完整题解见 [Scalar Multiply 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html)。
+这道题的**分段扫描 + 段间边界 carry** 与 Chunked Prefill 把长 prompt 拆成多个 chunk 的处理同构——Chunked Prefill 把一个长 prompt（一个"大段"）拆成多个 chunk（多个"小段"），每个 chunk 独立做 attention（段内 prefix sum），chunk 之间通过 KV Cache 累积（段间边界 carry）。segmented prefix sum 的"段内独立 + 段间修正"两阶段，正是 chunked prefill 的"per-chunk attention + cross-chunk KV 传递"。这道题的 GPU 实现用 warp scan 做段内前缀和 + 段边界处理，对应推理系统里 chunk 内计算 + chunk 间状态累积。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 3）
+> 💡 提交后在 [LeetGPU Segmented Prefix Sum](https://leetgpu.com/challenges/segmented-prefix-sum) 上记录通过耗时。完整题解（含分段 scan kernel、段边界 carry、与 Chunked Prefill 分块累积的类比）见 [Segmented Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html)。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 3（二分答案），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 4）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 4（网格 DFS/BFS），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [875. 爱吃香蕉的珂珂](https://leetcode.cn/problems/koko-eating-bananas/) | 中等 | 二分答案 + O(n) 验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html) |
-| [1011. 在 D 天内送达包裹的能力](https://leetcode.cn/problems/capacity-to-ship-packages-within-d-days/) | 中等 | 二分答案 + 贪心验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html) |
-| [378. 有序矩阵中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-sorted-matrix/) | 中等 | 二分值域 + 左下角计数 / 小顶堆 k 路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
+| [200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/) | 中等 | DFS / BFS / 并查集 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
+| [994. 腐烂的橘子](https://leetcode.cn/problems/rotting-oranges/) | 中等 | 多源 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html) |
+| [695. 岛屿的最大面积](https://leetcode.cn/problems/max-area-of-island/) | 中等 | DFS/BFS 连通块面积 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/695_岛屿的最大面积.html) |
+| [130. 被围绕的区域](https://leetcode.cn/problems/surrounded-regions/) | 中等 | 从边界 DFS/BFS 标记 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现 Speculative Decoding 的接受/拒绝采样
+#### 实验 1：实现混合 prefill + decode 的 token budget 分配
 
-当前模拟用随机数模拟接受/拒绝。修改为真实分布对齐：draft 和 target 各自输出概率分布，按论文公式接受/拒绝，验证最终分布与 target 一致。
+修改 `schedule_iteration()`，在同一轮中同时处理新请求的 prefill chunk 和 running 的 decode，用 token budget 分配：prefill 消耗 `chunk_size`，decode 消耗 1。测试：长 prompt 的 prefill chunk 不阻塞短 decode。
 
-> 思考：为什么"接受/拒绝采样"能保证分布不变？（提示：对 draft 采样值 x，若 p_target(x) ≥ p_draft(x) 则接受；否则以 (p_target - p_draft) 残差概率拒绝并重新采样。）
+> 思考：混合调度时如何保证 decode 的延迟下限？（提示：给 decode 预留固定预算，如 `decode_budget = max(1, total_budget - chunk_size)`。）
 
-#### 实验 2：实现 Chunked Prefill 的动态 chunk 大小
+#### 实验 2：对比不同 chunk_size 的 TTFT vs TPOT
 
-当前 chunk 大小固定。修改为动态：根据当前 decode 请求数量和 token budget 剩余动态调整 chunk 大小。decode 请求多时 chunk 小（多留预算给 decode），decode 少时 chunk 大（提高 prefill 效率）。
+让被抢占的请求 prompt 长度从 64 到 2048，chunk_size 从 64 到 1024，绘制"chunk_size vs 最大延迟尖峰"和"chunk_size vs TTFT"双曲线。验证：存在最优 chunk_size 使 TPOT 和 TTFT 都达标。
 
-> 思考：动态 chunk 大小的上限和下限应该怎么设？（提示：下限不能太小否则 GEMM 效率低，上限不能太大否则失去平滑效果。）
+> 思考：为什么 chunk_size 不能太小？（提示：TTFT = prefill 总轮数 × 每轮时间，chunk_size 小 → 轮数多 → 首 token 延迟增加。）
 
-#### 实验 3：Prefix Caching 的 block 级别匹配
+#### 实验 3：实现 LightLLM 风格的 Dynamic Split Fuse
 
-当前匹配整个 prefix token 序列。修改为 block 级别匹配（如 vLLM PagedAttention）：把 token 序列分成 block（每 16 token 一 block），逐 block 匹配，部分命中也能复用。
+修改调度器，不固定 chunk_size，而是根据当前 decode 请求数动态调整：decode 多时 chunk_size 缩小（保 decode），decode 少时 chunk_size 放大（加速 prefill）。测试：自适应 chunk 比固定 chunk 的延迟方差更小。
 
-> 思考：block 级别匹配 vs 整体匹配的 trade-off？（提示：block 级别更灵活但 hash 查找次数多；整体匹配简单但一旦有一个 token 不同就全部 miss。）
+> 思考：Dynamic Split Fuse 与固定 chunked prefill 的本质区别？（提示：一个是"按 decode 负载自适应分块"，一个是"固定分块大小"。前者更激进地利用空闲算力。）
 
 ---
 
 ### 今日总结
 
-Day 3 我们分析评估了三大高级推理特性：
+Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Prefill 模拟器：
 
-1. **Speculative Decoding**：小模型 draft k 个 token + 大模型一次 verify，加速比 1.5-2.7x；关键条件是 draft 快 + 接受率高；k 和 α 必须匹配，否则可能变慢
-2. **Chunked Prefill**：长 prompt 分块与 decode 交错，decode 最大延迟降低 50-97%；总 prefill 时间不变，但平滑了延迟尖峰；chunk 大小 512 是推荐平衡点
-3. **Prefix Caching**：缓存公共前缀的 KV Cache，命中率接近 100%，加速比 3.4x；特别适合多轮对话和模板化请求
-4. **特性对比**：Prefix Caching 和 Chunked Prefill 收益高/复杂度中→优先集成；Speculative Decoding 收益高/复杂度高→可选
-5. **模拟验证**：通过 `advanced_features.py` 量化了不同参数下的加速比、延迟降低、命中率
-6. **集成优先级**：Phase 1（Prefix Caching + Chunked Prefill）→ Phase 2（CUDA Graph + Speculative Decoding）
+1. **Inflight = Continuous**：TensorRT-LLM 的 Inflight Batching 本质就是 iteration-level 调度，请求动态加入退出，与 vLLM Continuous Batching 同一思想
+2. **TensorRT-LLM 特点**：C++ 调度器 + 预编译 plan + kernel 融合，性能更高但灵活性低（换模型要重编译）
+3. **Chunked Prefill**：长 prompt 拆成小 chunk 与 decode 交错，每轮 prefill 被 chunk_size 封顶，decode 延迟平滑（实测尖峰降 40%）
+4. **TTFT vs TPOT 权衡**：chunk_size 小 → TPOT 平滑但 TTFT 增加；chunk_size 大 → TTFT 短但 TPOT 抖动；经验值 512-2048
+5. **LightLLM 差异化**：Dynamic Split Fuse（自适应分块）+ Token Attention（token 粒度内存池），高并发长上下文场景优势
+6. **手写模拟器**：实测 naive 延迟尖峰 2.0ms、chunked 1.2ms，验证 chunked prefill 的 TPOT 平滑效果
 
-掌握这些后，你就有了推理系统的"加速武器库"——明天 Day 4 整合全部自定义 Kernel（GEMM、FlashAttention、Softmax、LayerNorm），替换 PyTorch 算子。
+掌握这些后，你就有了推理框架的全局视野——明天 Day 5 把 Continuous Batching + Scheduler + Chunked Prefill 整合进 Mini 推理引擎 v1，构建支持多请求并发的完整引擎。
 
 ---
 
 ### 面试要点
 
-1. **什么是 Speculative Decoding？它为什么能加速 LLM 推理？**（⭐⭐⭐⭐ 高频）
+1. **TensorRT-LLM 的 Inflight Batching 和 vLLM 的 Continuous Batching 有什么区别？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k+1 个 tokens
- - **加速原因**：
- - 小模型生成速度快（t_d ≪ T_fwd）
- - 大模型一次验证多个 tokens，提高 batch 利用率
- - 如果 draft 质量高（α 高），每步可接受多个 tokens
- - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`（近似上界，精确期望用 `(1-α^(k+1))/(1-α)` 替换 k×α+1），典型 1.5-2.7x
- - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
- - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
+ - **本质相同**：都是 iteration-level scheduling，支持请求动态加入和退出，每轮重建 batch
+ - **实现差异**：
+ - vLLM 调度器在 **Python** 层，灵活、易扩展调试，但有解释开销
+ - TensorRT-LLM 调度器在 **C++** 层，与 TensorRT engine 深度集成，性能更高但灵活性低
+ - **其他**：TensorRT-LLM 原生支持 chunked prefill；vLLM 0.5+ 也已支持
+ - **选型**：极致性能且模型固定 → TensorRT-LLM；灵活性和生态 → vLLM
 
 </details>
 
 
-2. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
+2. **什么是 Chunked Prefill？它解决了什么问题？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Chunked Prefill**：
- - 解决长 prompt prefill 阻塞 decode 的问题
- - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
- - 效果：decode 最大延迟从"整个 prefill"降到"一个 chunk"，降低 50-97%
- - **Prefix Caching**：
- - 解决重复 prefix 的 KV Cache 重复计算问题
- - 缓存公共前缀的 KV Cache，新请求匹配时复用
- - 效果：TTFT 降低 3-5x，特别适合多轮对话和模板化请求
+ - **Chunked Prefill**：将长 prompt 的 prefill 拆分成多个小 chunk（如每块 512-2048 token），每轮只 prefill 一个 chunk，剩余 token budget 给 decode
+ - **解决的问题**：
+ - 长 prompt 的 prefill 一次性占满整轮 token budget → decode 请求被阻塞一轮
+ - 导致 TPOT（time-per-output-token）突增，用户感知"卡顿"
+ - **效果**：
+ - prefill 被 chunk_size 封顶，decode 延迟平滑（实测尖峰降 40%）
+ - 更好地 mix prefill 和 decode，提高系统稳定性
+ - **代价**：总 iterations 略增（prefill 拆多轮），TTFT（首 token 延迟）可能增加
 
 </details>
 
 
-3. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
+3. **Chunked Prefill 的 chunk_size 怎么选？TTFT 和 TPOT 如何权衡？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 对每个 draft token，target 计算其概率分布 p_target
- - 若 draft 采样值 x 满足 p_target(x) ≥ p_draft(x) → 接受
- - 否则以 (p_target - p_draft) 的残差概率拒绝，从残差分布重新采样
- - 数学上可证明：最终输出分布 = p_target（与纯 target 自回归一致）
- - 这保证了 speculative decoding 不会牺牲输出质量
+ - chunk_size 太小（如 64）：TTFT 增加（prefill 要很多轮），但 TPOT 最平滑
+ - chunk_size 太大（如 8192）：退化为 naive prefill，TPOT 又抖动
+ - **经验值**：512 ~ 2048（vLLM 默认 2048），在 TTFT 和 TPOT 间取平衡
+ - **依据 SLA**：TTFT SLA 严 → 大 chunk；TPOT SLA 严 → 小 chunk
+ - LightLLM 的 Dynamic Split Fuse 更激进：按 decode 负载自适应调整 chunk_size
 
 </details>
 
 
-4. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
+4. **LightLLM 的 Token Attention 和 vLLM 的 PagedAttention 有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Key**：prefix token 序列的 hash（如 MD5），O(1) 查找
- - **Value**：KV Cache 数据（K 矩阵和 V 矩阵的 block）
- - **淘汰策略**：LRU（最近最少使用），缓存满时淘汰最久未用的
- - **Block 级别匹配**（vLLM PagedAttention）：把 prefix 分成 block 逐 block 匹配，部分命中也能复用
- - **命中率因素**：前缀重复度越高、缓存越大 → 命中率越高
+ - **PagedAttention**（vLLM/TRT-LLM）：KV Cache 切成固定大小 block（如 16 token/block），block 是分配/回收最小单位。管理简单，但 block 内可能有空洞
+ - **Token Attention**（LightLLM）：以 token 为粒度动态管理 KV Cache，类似内存池按需分配。无 block 空洞、利用率更高，但管理开销略大
+ - **适用**：PagedAttention 通用性好；Token Attention 在长上下文、高并发场景内存利用率更高
 
 </details>
 
 
-5. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
+5. **为什么 TensorRT-LLM 比 vLLM 性能更高？有什么代价？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Phase 1（优先）**：Prefix Caching + Chunked Prefill
- - 收益高（3-5x TTFT / 50-97% 延迟降低）、复杂度中等
- - 不需要额外模型，只需改造调度器和 KV Cache 管理
- - **Phase 2（可选）**：CUDA Graph + Speculative Decoding
- - CUDA Graph 降低 launch 开销，复杂度中等
- - Speculative Decoding 收益高但需要 draft model + 分布对齐，复杂度高
- - **排序逻辑**：按"收益/复杂度"性价比排序，优先做性价比高的
-
- - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）
-
-</details>
-
----
-
-### 投机解码深化：三条路线 + 接受率分析（C3 补充）
-
-#### 三条 draft 路线对比
-
-| 路线 | draft 来源 | 代表 | 特点 |
-|------|-----------|------|------|
-| **独立小模型** | 单独训练的小 LLM | 传统 speculative decoding | 需维护两个模型，draft 质量依赖小模型能力 |
-| **Medusa** | target 模型的多个额外 head | Medusa | 无需独立小模型，target 模型加几个 head 并行预测 k 个 token |
-| **EAGLE** | target 模型的特征层草稿 | EAGLE | 在 target 的 hidden states 上建草稿，质量更高 |
-| **MTP** | target 模型的 MTP head | DeepSeek-V3 | DeepSeek 的 Multi-Token Prediction，训练时联合优化 |
-
-##### Medusa vs EAGLE vs MTP 详细对比
-
-| 维度 | Medusa | EAGLE | MTP（DeepSeek） |
-|------|--------|-------|----------------|
-| draft 位置 | target 顶层加 head | target 隐藏层后接草稿网络 | target 的 MTP head（训练联合） |
-| 额外参数 | 几个 head（小） | 草稿网络（中等） | MTP head（与 target 同量级） |
-| draft 质量 | 中（token 级预测） | 高（特征级，更准） | 高（训练时联合优化） |
-| 接受率 α | ~0.5-0.6 | ~0.6-0.7 | ~0.7-0.8 |
-| 加速比 | 2-3x | 2.5-3.5x | 3-4x |
-| 训练成本 | 微调加 head | 需训练草稿网络 | 联合训练（成本高） |
-| 部署复杂度 | 低（加 head） | 中（加网络） | 高（改训练流程） |
-
-> 💡 **面试要点**：Medusa 是"最简单的投机解码"（加 head 即可），EAGLE 是"质量更高的 Medusa"（特征层草稿），MTP 是"DeepSeek 的训练时联合优化"（质量最高但改训练）。2024+ 趋势是 EAGLE/MTP，因为 draft 质量决定接受率上限。
-
-#### 接受率与加速比的关系
-
-**精确期望公式**（k 个 draft token，接受率 α）：
-
-```
-E[accepted] = (1 - α^(k+1)) / (1 - α)
-加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
-```
-
-##### 接受率扫描（k=1..8, α=0.5..0.9）
-
-| k \ α | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
-|-------|-----|-----|-----|-----|-----|
-| 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
-| 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
-| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
-| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
-
-**关键观察**：
-- α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
-- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
-- **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
-
-> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
-
-#### 新增面试题
-
-6. **为什么接受率 α 决定加速比上限？**（⭐⭐⭐⭐ 高频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - 加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
-  - E[accepted] = (1 - α^(k+1)) / (1 - α)，随 α 增大趋近 k+1（上界）
-  - α 低时 E[accepted] 小，k 大反而被 t_d 拖累（draft 开销 k×t_d 增长）
-  - α=0.5、k=8 时 E[accepted]=2.00，但 k×t_d=8×t_d，若 t_d 不够小则变慢
-  - **结论**：α 是上限，k 是杠杆——α 高才适合大 k
-
-</details>
-
-7. **draft 模型怎么选？独立小模型 vs Medusa vs EAGLE vs MTP？**（⭐⭐⭐⭐ 高频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - **独立小模型**：需维护两模型，draft 质量受小模型能力限制，部署复杂
-  - **Medusa**：target 加 head，无独立模型，但 token 级预测质量中等（α~0.5-0.6）
-  - **EAGLE**：特征层草稿，质量更高（α~0.6-0.7），但需训练草稿网络
-  - **MTP**：训练时联合优化，质量最高（α~0.7-0.8），但改训练流程，成本高
-  - **选择**：快速验证用 Medusa，质量要求用 EAGLE，训练可控用 MTP（DeepSeek 路线）
-
-</details>
-
-8. **verify 阶段的 kernel 实现要点？**（⭐⭐⭐ 中频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - verify 是"大模型一次 forward 验证 k+1 个 token"，本质是 batch=GEMM
-  - 关键：Q 是 k+1 个 token（draft + 1），K/V 是历史 + draft 的 K/V
-  - kernel 要点：causal mask 的块级跳过（draft token 间是 causal，与历史是 full attention）
-  - 优化：FlashAttention 的 causal 变体可省一半块计算（见 C2 任务）
-  - **接受/拒绝采样**：verify 后用 target 的 logits 做接受/拒绝，保持分布不变
+ - **性能更高的原因**：
+ - C++ 调度器无 Python 解释开销和 GIL
+ - 与 TensorRT engine 深度集成，使用预编译 plan（kernel 融合、显存预分配）
+ - 原生 C++ 实现 chunked prefill、KV Cache 管理
+ - **代价**：
+ - 灵活性低：换模型结构要重新构建 engine（trtexec 编译，几分钟到几十分钟）
+ - vLLM 改模型只需改 Python 代码，迭代快
+ - **选择**：生产部署固定模型选 TensorRT-LLM；研发迭代选 vLLM
 
 </details>
 

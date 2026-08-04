@@ -1,433 +1,372 @@
-## Day 4：整合全部自定义 Kernel
+## Day 4：Chunked Prefill 与 Prefix Caching 实操
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **自定义 Kernel 集成的替换清单**——Softmax、LayerNorm、FlashAttention 替换 PyTorch 原生算子，大 GEMM 保留 cuBLAS<br>
-2. 掌握 **PyTorch C++ Extension 集成流程**——`.cu` kernel + `.cpp` wrapper → `load_inline` 动态编译 → Python 模块调用<br>
-3. 能实现 **C++ Wrapper 接口**——`at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出、`getCurrentCUDAStream()` 保持 stream 一致<br>
-4. 理解 **集成的六大注意事项**——stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理<br>
-5. 掌握 **分层验证策略**——单算子对比 PyTorch → 多算子组合 → 端到端输出 → 性能对比<br>
-6. 用 Python + `load_inline` 手写一个 **CustomKernelTransformerLayer**，实测自定义 kernel vs PyTorch eager 的精度和性能
+1. 理解 Chunked Prefill 的核心思想：将长 prompt 分块处理，与 decode 迭代混合调度<br>
+2. 掌握 Prefix Caching 的实现原理：基于 block hash 的 KV cache 复用与 LRU 淘汰<br>
+3. 理解两者如何协同工作以同时改善 TTFT 和 TBT<br>
+4. 实现一个带 Prefix Caching 的简化推理引擎<br>
+5. 能用实测数据量化 prefix caching 对共享 system prompt 场景的加速<br>
+6. 能在面试中清晰阐述 chunked prefill 和 prefix caching 的适用场景与 trade-off<br>
 
-> 💡 **为什么重要**：Day 3 分析了高级特性的收益，但 Mini 引擎仍用 PyTorch 原生算子。自定义 Kernel 集成是 Infra 工程师的核心能力——把 Week 2-4 手写的 GEMM、FlashAttention、Softmax、LayerNorm 接入推理引擎，替换 PyTorch 对应算子。这要求理解 PyTorch C++ Extension 的编译流水线、tensor 内存布局、stream 一致性等工程细节，是面试必考题"如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎"。
+> 💡 **为什么重要**：Day 4 学习了 TRT-LLM 的 chunked prefill 和 vLLM 的 prefix caching 概念，但只是模拟器。今天把它们真实实现到一个简化引擎中，是从"知道概念"到"能讲实现细节"的关键一步。面试中"如何优化多轮对话的推理延迟"是高频场景题。
 
 ---
 
-### 学前导读：为什么不能直接用 PyTorch 算子
+### 学前导读：长 Prompt 与共享 System Prompt 的两个痛点
 
-PyTorch 原生算子功能正确，但在推理场景下有几个不足：
+Day 4 的 chunked prefill simulator 和 Day 2 的 continuous batcher 解决了调度层面的问题，但有两个实际场景的痛点尚未覆盖：
 
-```
-PyTorch 原生算子的问题：
- 1. 融合度低 → Softmax + Scale + MatMul 分 3 个 kernel launch，开销大
- 2. 显存占用高 → 中间结果（attention matrix）全量物化到 HBM
- 3. 无法定制 → 推理特化（如 KV Cache、PagedAttention）需要自定义逻辑
- 4. 缺乏控制 → 无法精细控制 tiling、shared memory、warp 调度
-```
+**痛点 1：长 Prompt 阻塞 Decode**
 
-| 维度 | PyTorch 原生 | 自定义 Kernel |
-|------|-------------|--------------|
-| FlashAttention | QK^T 物化到 HBM | **分块 tiling，中间结果留在 SRAM** |
-| Softmax + Attention | 2 个 kernel | **1 个融合 kernel** |
-| LayerNorm | 3 趟（mean→var→norm） | **1 趟融合** |
-| KV Cache 支持 | 需手动拼接 | **直接写入 cache 位置** |
-| 大 GEMM | cuBLAS | **cuBLAS（教学 kernel 太慢，保留官方库）** |
+当一个 4096-token 的 prompt 进入 prefill 时，它会占用大量 token budget，导致已在 decode 的请求 TBT 飙升。chunked prefill 将 4096 拆成 8 个 512-token 的 chunk，每个 chunk 只占 512 budget，与 decode 混合调度。
 
-> 💡 **一句话总结**：自定义 kernel 的核心价值是**算子融合**（减少 launch 和 HBM 往返）和**推理特化**（KV Cache、PagedAttention）。大 GEMM 仍用 cuBLAS（教学版 register blocking 比 cuBLAS 慢 5-10x）。
+**痛点 2：重复计算共享 System Prompt**
+
+多个请求共享同一个 system prompt（如 "You are a helpful assistant..."），但每个请求都重新计算这段 prefix 的 KV cache。prefix caching 通过 block hash 匹配，直接复用已缓存的 KV block，跳过 prefill。
+
+| 优化 | 解决的问题 | TTFT 改善 | TBT 改善 | 实现复杂度 |
+|------|-----------|----------|---------|-----------|
+| Chunked Prefill | 长 prompt 阻塞 decode | ↓ 30-50% | ↓ 20-40% | 中 |
+| Prefix Caching | 重复计算共享 prefix | ↓ 50-90% (命中时) | 不变 | 中 |
+| 两者联合 | 上述两个 | ↓ 50-90% | ↓ 20-40% | 高 |
+
+> 💡 **一句话总结**：chunked prefill 解决"长 prompt 挤占 decode"，prefix caching 解决"重复计算 prefix"。两者正交，可同时启用。
 
 ---
 
 ### 理论学习
 
-#### 4.1 替换清单与集成策略
+#### 1.1 Chunked Prefill 深入
 
-![自定义 Kernel 集成：替换 PyTorch 算子](../images/kernel_integration_overview.svg)
+Day 4 已介绍了 chunked prefill 的基本概念，今天深入实现细节。
 
-##### 替换清单
+##### chunk_size 选择
 
-| PyTorch 算子 | 自定义 Kernel | 替换原因 | 保留/替换 |
-|-------------|--------------|---------|----------|
-| `F.softmax` | `softmax_kernel` | 可与 attention 融合 | **替换** |
-| `F.layer_norm` | `layernorm_kernel` | 3 趟→1 趟融合 | **替换** |
-| `torch.matmul` (Attention) | `flash_attention_kernel` | 分块 tiling，省 HBM | **替换** |
-| `torch.matmul` (QKV/FFN GEMM) | cuBLAS | 教学 kernel 太慢 | **保留 cuBLAS** |
+| chunk_size | 优点 | 缺点 | 适用场景 |
+|-----------|------|------|---------|
+| 128 | TBT 波动最小 | 长 prompt 完成慢 | 对 TBT 敏感的在线服务 |
+| 512 | 平衡 TTFT 和 TBT | — | 通用场景（vLLM 默认） |
+| 2048 | TTFT 最低 | TBT 波动大 | 对 TTFT 敏感的批处理 |
+| ∞（不切分） | 最简单 | 长 prompt 阻塞 | 短 prompt 场景 |
 
-##### 为什么大 GEMM 保留 cuBLAS？
+**关键约束**：`chunk_tokens + decode_tokens ≤ max_num_batched_tokens`（token budget）
 
-```
-教学版 register blocking GEMM：
- - 手写 tiling + shared memory
- - 无 Tensor Core 加速
- - 性能约为 cuBLAS 的 10-20%
-
-cuBLAS：
- - 高度优化的 SASS 指令
- - Tensor Core 加速（WMMA/MMA）
- - 自动选择最优 tiling
- → 大 GEMM 必须用 cuBLAS
-```
-
-> ⚠️ **生产环境**：FlashAttention 和 Softmax/LayerNorm 用官方实现（FlashAttention 库、Apex Normalization），教学版用于理解原理。
-
-#### 4.2 PyTorch C++ Extension 编译流水线
-
-![PyTorch C++ Extension 编译流水线](../images/cpp_extension_pipeline.svg)
-
-##### 四步流水线
-
-![PyTorch C++ Extension 编译流水线](../../images/week7_cpp_extension_pipeline.svg)
-
-##### C++ Wrapper 关键模式
-
-```cpp
-at::Tensor softmax_forward(at::Tensor input) {
-    int M = input.size(0); // 从 Tensor 获取形状
-    int N = input.size(1);
-    auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
-
-    int threads = std::min(N, 256);
-    softmax_kernel<<<M, threads>>>( // launch kernel
-        input.data_ptr<float>(),    // Tensor → 裸指针
-        output.data_ptr<float>(), M, N);
-    return output; // 返回 Tensor 给 Python
-}
-```
-
-> 💡 **关键 API**：`at::empty_like()` 分配输出、`data_ptr<float>()` 取裸指针、`size()`/`dim()` 取形状。这些是 PyTorch C++ Extension 的"三板斧"。
-
-#### 4.3 集成的六大注意事项
-
-##### ① Stream 一致性
-
-```cpp
-// ❌ 错误：kernel 可能在错误 stream 上执行
-softmax_kernel<<<M, threads>>>(input.data_ptr<float>(), ...);
-
-// ✓ 正确：使用 PyTorch 当前 stream
-cudaStream_t stream = at::cuda::getCurrentCUDAStream();
-softmax_kernel<<<M, threads, 0, stream>>>(input.data_ptr<float>(), ...);
-```
-
-> ⚠️ PyTorch 的 stream 可能与默认 stream 不同。如果不指定 stream，kernel 在默认 stream 执行，可能与其他 stream 的操作乱序。
-
-##### ② FP32 精度
-
-```cuda
-// reduce 用 atomicAdd 时，float 累积误差
-// 建议：用 double 做中间 reduce，或 Kahan summation
-__shared__ double s_sum; // 用 double 而非 float
-```
-
-##### ③ 内存布局
-
-```
-PyTorch Tensor 默认 row-major (contiguous)
-自定义 kernel 必须假设 row-major
-→ 调用前用 tensor.contiguous() 确保
-→ 跨 stride 访问需用 input.stride(0/1)
-```
-
-##### ④ 边界处理
-
-```
-N 不是 blockDim.x 的整数倍 → 用 if (i < N) 保护
-空输入 → 提前 return
-非对齐尺寸 → 不能用 float4 向量化
-```
-
-##### ⑤ 形状检查
-
-```cpp
-TORCH_CHECK(input.dim() == 2, "Expected 2D tensor");
-TORCH_CHECK(input.is_cuda(), "Expected CUDA tensor");
-TORCH_CHECK(input.is_contiguous(), "Expected contiguous tensor");
-```
-
-##### ⑥ 错误处理
-
-```cpp
-// kernel launch 后检查错误
-cudaError_t err = cudaGetLastError();
-TORCH_CHECK(err == cudaSuccess, "Kernel launch failed: ", cudaGetErrorString(err));
-```
-
-#### 4.4 分层验证策略
-
-```
-Step 1: 单算子验证
- softmax_forward vs F.softmax → max_diff < 1e-5
- layernorm_forward vs F.layer_norm → max_diff < 1e-4
- flash_attention_forward vs manual QK^T·softmax·V → max_diff < 1e-3
-
-Step 2: 多算子组合
- LayerNorm + QKV + Attention + Output → 逐层对比
-
-Step 3: 端到端
- 完整 TransformerLayer forward → max_diff < 1e-2（FP32 累积误差容忍）
-
-Step 4: 性能对比
- PyTorch eager vs Custom kernel → 测量 latency
- （教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）
-```
-
-> 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 float24 尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
-
-### Coding 任务：实现 CustomKernelTransformerLayer
-
-#### 任务 1：创建 custom_ops_module.py
-
-创建文件 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/custom_ops_module.py)，实现自定义 Kernel 的 PyTorch C++ Extension 集成：
+##### 与 Continuous Batching 的集成
 
 ```python
-# custom_ops_module.py —— 自定义 Kernel 封装模块
-# 运行命令: python custom_ops_module.py
-# 依赖: torch（有 CUDA 时编译真实 kernel；无 CUDA 时用 PyTorch fallback）
-
-# 1. CUDA 源码（内嵌字符串）
-CUDA_SOURCE = r"""
-__global__ void softmax_kernel(...) { ... }
-__global__ void layernorm_kernel(...) { ... }
-__global__ void flash_attention_kernel(...) { ... }
-
-// C++ wrappers
-at::Tensor softmax_forward(at::Tensor input) { ... }
-at::Tensor layernorm_forward(at::Tensor input, ...) { ... }
-at::Tensor flash_attention_forward(at::Tensor Q, ...) { ... }
-"""
-
-# 2. 动态编译
-custom_ops = load_inline(
- cpp_sources=CPP_SOURCE,
- cuda_sources=CUDA_SOURCE,
- functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
-)
-
-# 3. Transformer Layer（use_custom 开关）
-class TransformerLayer(nn.Module):
-    def forward(self, x, use_custom=True):
-        # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
-        # use_custom=True → 调用自定义 kernel
-        # use_custom=False → 调用 PyTorch 原生
-        ...
+# 每个 iteration 的调度决策：
+def schedule_iteration():
+    # 1. 保留 running 请求的 decode（每请求 1 token）
+    decode_tokens = len(running_seqs)
+    
+    # 2. 计算剩余 token budget
+    remaining = max_budget - decode_tokens
+    
+    # 3. 如果有 waiting 的 prefill 请求，切分 chunk
+    if waiting_seqs and remaining > 0:
+        chunk_size = min(remaining, waiting_seqs[0].remaining_prefill)
+        admit_chunk(waiting_seqs[0], chunk_size)
+    
+    # 4. 如果还有剩余 budget，继续 decode
+    # → decode 和 prefill chunk 在同一 batch 中执行
 ```
 
-完整代码见 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/custom_ops_module.py)。
+#### 1.2 Prefix Caching 深入
 
-代码要点：
-- `CUDA_SOURCE`：内嵌完整的 CUDA kernel 源码（softmax/layernorm/flash_attention），通过字符串传给 `load_inline`
-- `load_custom_ops()`：有 CUDA 时用 `load_inline` 动态编译，无 CUDA 时返回 None（用 PyTorch fallback 演示）
-- `TransformerLayer`：`use_custom` 开关控制使用自定义 kernel 还是 PyTorch 原生，便于对比验证
-- `PyTorchOps`：PyTorch 原生实现，作为 fallback 和正确性验证基准
-- `verify_and_benchmark()`：单算子精度验证 + 端到端精度验证 + 性能对比 + 集成 checklist
+##### Block Hash 机制
 
-#### 任务 2：运行并验证精度与性能
+```python
+# 每个 KV cache block 对应一段 token sequence
+# 用 token sequence 的 hash 作为 block 的唯一标识
+block_hash = hash(token_ids[start : start + block_size])
+
+# 请求进来时，逐 block 计算 hash，匹配已缓存的 block
+for block in request.token_blocks:
+    h = hash(block.tokens)
+    if h in cache_pool:
+        # 命中！直接引用，不需要重新 prefill
+        request.kv_blocks.append(cache_pool[h])
+    else:
+        # 未命中，需要 prefill
+        break  # prefix 匹配到此为止
+```
+
+##### LRU 淘汰策略
+
+```python
+class PrefixCache:
+    def __init__(self, max_blocks):
+        self.cache = OrderedDict()  # hash -> block_data
+        self.max_blocks = max_blocks
+    
+    def get(self, h):
+        if h in self.cache:
+            self.cache.move_to_end(h)  # LRU: 移到末尾（最近使用）
+            return self.cache[h]
+        return None
+    
+    def put(self, h, block_data):
+        if h not in self.cache:
+            self.cache[h] = block_data
+            if len(self.cache) > self.max_blocks:
+                self.cache.popitem(last=False)  # 淘汰最久未使用
+```
+
+##### 命中率分析
+
+| 场景 | Prefix 长度 | 命中率 | 节省计算 |
+|------|-----------|--------|---------|
+| 单轮对话 | 0 | 0% | 0% |
+| 多轮对话（同一 session） | 历史 tokens | 80-95% | 60-80% |
+| 共享 system prompt | system prompt 长度 | 90-99% | 30-50% |
+| Few-shot（相同 examples） | examples 长度 | 80-90% | 40-60% |
+
+##### RadixAttention：前缀树替代 block-hash（SGLang 方案）
+
+上述 block-hash 方案（vLLM）有一个局限：**block 对齐损失**。若共享前缀长度不是 block_size 的整数倍，尾部不对齐的部分无法复用。SGLang 的 **RadixAttention** 用基数树（radix tree / 前缀树）替代 block-hash，解决对齐损失。
+
+**数据结构对比**：
+
+```
+block-hash（vLLM）:
+  每 16 token 算一个 hash，命中需严格对齐到 block 边界
+  请求: [sys_prompt(100 token) | user_input]
+         ← 6 个完整 block 命中(96 token) → 4 token 丢弃
+
+RadixAttention（SGLang）:
+  前缀树存任意长度的前缀，命中无对齐要求
+  请求: [sys_prompt(100 token) | user_input]
+         ← 100 token 全部命中（前缀树精确匹配）→
+```
+
+| 维度 | block-hash（vLLM） | RadixAttention（SGLang） |
+|------|-------------------|------------------------|
+| 数据结构 | block 级哈希表 | 前缀树（radix tree） |
+| 匹配粒度 | block（如 16 token） | 任意前缀长度 |
+| 对齐损失 | 有（尾部不对齐丢弃） | 无（精确匹配） |
+| 多轮对话 | 每轮重新哈希 | 前缀树自动增量 |
+| 共享前缀多 | 命中率高但浪费尾部 | 命中率更高且无浪费 |
+| 实现复杂度 | 简单（哈希表） | 中等（树 + 引用计数） |
+
+> 💡 **何时 RadixAttention 更优**：共享前缀多且长时（多轮对话、few-shot batch、共享 system prompt）。SGLang 在这类场景的 KV Cache 命中率比 vLLM 高 5-15%（无对齐损失）。vLLM 0.5+ 也在改进 prefix caching 的对齐处理，但数据结构仍是 block-hash。
+
+> 📖 品读论文：SGLang 论文（RadixAttention 的原论文），vLLM prefix caching RFC
+
+#### 1.3 两者协同
+
+chunked prefill 和 prefix caching 是正交的：
+
+```
+请求到达 → prefix caching 匹配 → 剩余未命中部分 → chunked prefill 切分
+```
+
+例如：system prompt 1024 tokens + user input 3072 tokens
+- prefix caching 命中 1024 tokens（跳过 prefill）
+- 剩余 3072 tokens 用 chunked prefill，chunk_size=512，分 6 个 chunk
+
+#### 1.4 vLLM 中的实现
+
+vLLM v0.5+ 默认启用 `--enable-prefix-caching`：
+- `BlockPool` 管理物理 block，每个 block 有 `ref_count` 和 `hash`
+- `SequenceGroup` 计算其 token sequence 的 block hash
+- 调度时优先匹配已缓存的 block
+- 使用 copy-on-write：多个请求共享同一物理 block，写时才复制
+
+---
+
+### Coding 任务：实现带 Prefix Caching 的推理引擎
+
+#### 任务 1：创建 `prefix_cache_engine.py`
+
+完整代码见 [kernels/prefix_cache_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/prefix_cache_engine.py)。
+
+代码实现：
+- `BlockPool`：管理 KV cache blocks，支持 allocate/free/hash 匹配
+- `PrefixCache`：基于 `OrderedDict` 的 LRU 缓存，block hash → physical block
+- `Request`：含 token_ids、已匹配的 prefix blocks、待 prefill 的 tokens
+- `PrefixCacheEngine`：调度器，每个请求先做 prefix 匹配，剩余部分 prefill
+
+#### 任务 2：运行与验证
 
 ```bash
-python kernels/custom_ops_module.py
+python3 kernels/prefix_cache_engine.py
 ```
 
-**预期输出**（有 CUDA 环境）：
+预期输出：
 
 ```text
-[INFO] Custom CUDA kernels compiled successfully
+=== Prefix Caching Engine Demo ===
+System prompt: 64 tokens, User input: 128 tokens
 
-============================================================
-1. 精度验证：自定义 kernel vs PyTorch
-============================================================
- Max diff: 3.2e-04
- Mean diff: 5.1e-06
- Status: PASS
+--- Scenario 1: No prefix caching ---
+Request 1: prefill 192 tokens, latency = 19.2 ms
+Request 2: prefill 192 tokens, latency = 19.2 ms
+Request 3: prefill 192 tokens, latency = 19.2 ms
+Total: 57.6 ms
 
---- 单算子精度 ---
- Softmax max diff: 1.2e-07 PASS
- LayerNorm max diff: 8.4e-06 PASS
+--- Scenario 2: With prefix caching ---
+Request 1: prefill 192 tokens (cache miss), latency = 19.2 ms
+Request 2: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
+Request 3: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
+Total: 44.8 ms
+Speedup: 1.29x
 
-============================================================
-1. 性能对比：自定义 kernel vs PyTorch
-============================================================
- PyTorch eager: 2.834 ms/layer
- Custom kernel: 3.512 ms/layer
- Speedup: 0.81x
- (教学版 kernel 可能比 PyTorch 慢，因为 PyTorch 用了高度优化的 cuDNN/cuBLAS)
-
-============================================================
-1. 集成 Checklist
-============================================================
- [✓] Softmax 替换
- [✓] LayerNorm 替换
- [✓] FlashAttention 替换
- [✓] 端到端精度 < 1e-2
- [✓] 无内存泄漏
- [✓] stream 一致性
+--- Scenario 3: Multi-turn dialogue ---
+Turn 1: prefill 32 tokens, latency = 3.2 ms
+Turn 2: prefill 8 tokens (56 prefix hit), latency = 0.8 ms
+Turn 3: prefill 8 tokens (64 prefix hit), latency = 0.8 ms
+Total: 4.8 ms
+Without cache: 19.2 ms
+Speedup: 4.00x
 ```
 
-##### 观察重点
+#### 任务 3：Profiling
 
-1. **精度**：自定义 kernel 与 PyTorch 的 max_diff 应 < 1e-2（FP32 累积误差），单算子更小（< 1e-5）
-2. **性能**：教学版 kernel 可能比 PyTorch **慢**（因为 PyTorch 用 cuDNN/cuBLAS 高度优化），这是正常的——教学目的是理解集成流程
-3. **Fallback**：无 CUDA 时自动切换到 PyTorch 原生实现，代码仍可运行验证逻辑
+```bash
+# 用 cProfile 分析 prefix matching 的开销
+python3 -m cProfile -s cumtime kernels/prefix_cache_engine.py | head -20
+```
 
-#### 任务 3：分析性能差距
+关注：
+- prefix matching 耗时 vs prefill 耗时（应 << 1%）
+- cache 命中率随请求数增长的趋势
 
-思考：为什么教学版 kernel 比 PyTorch 慢？
+#### 任务 4：LeetGPU 在线题目
 
-> 思考：
-> 1. PyTorch 的 Softmax/LayerNorm 用了 warp shuffle + 向量化访存
-> 2. PyTorch 的 Attention 底层调用 FlashAttention-2（高度优化的 tiling）
-> 3. 教学 kernel 用 `atomicAdd` 做 reduce（有竞争），PyTorch 用 warp shuffle（无竞争）
-> 4. 教学 kernel 没有 Tensor Core 加速
+[Segmented Prefix Sum](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html)
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+prefix caching 的 block hash 计算类似于 segmented prefix sum 中按段累积——每个 block 是一个"段"，hash 是段的标识。
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
-
-**与今日知识的关联**：Matrix Transpose 的核心是**索引映射 + coalesced 访存**——读 input 按行连续（coalesced），写 output 按列不连续（strided），需用 shared memory tile 中转让读写都合并。这与自定义 Kernel 集成中的**内存布局处理**同构：PyTorch Tensor 默认 row-major，自定义 kernel 必须正确处理 stride 和布局，否则写错位置或性能崩塌。Transpose 的 tile 中转练习是 FlashAttention 分块读写的基础——FlashAttention 的 Q/K/V tile 在 shared memory 中的布局管理与转置的 tile 索引计算同源。做好这题说明你掌握了"读连续 + 写重排"的索引映射模板，Week 7 自定义 kernel 集成中会频繁用到。
-
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
-
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 4）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 4（二分进阶），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [410. 分割数组的最大值](https://leetcode.cn/problems/split-array-largest-sum/) | 困难 | 二分答案 + 贪心划分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
-| [719. 找出第 K 小的数对距离](https://leetcode.cn/problems/find-k-th-smallest-pair-distance/) | 困难 | 二分答案 + 双指针计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html) |
-| [4. 寻找两个正序数组的中位数](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | 困难 | 二分划分（合并第 k 小） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
+|------|------|---------|------|
+| [146](https://leetcode.cn/problems/lru-cache/) | Medium | LRU Cache（直接对应 prefix cache 淘汰） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_lru-cache.html) |
+| [460](https://leetcode.cn/problems/lfu-cache/) | Hard | LFU Cache（扩展：频率感知淘汰） | — |
+| [200](https://leetcode.cn/problems/number-of-islands/) | Medium | DFS/BFS（连通分量） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_number-of-islands.html) |
+| [130](https://leetcode.cn/problems/surrounded-regions/) | Medium | DFS（边界 flood fill） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_surrounded-regions.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现算子融合（Softmax + Scale + MatMul）
+#### 实验 1：调整 block_size 对命中率的影响
 
-当前 attention 分 3 步：`scores = QK^T` → `scores *= scale` → `attn = softmax(scores)` → `out = attn·V`。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
+修改 `block_size` 为 8, 16, 32, 64，观察命中率变化：
+- block_size 越小，匹配粒度越细，命中率越高，但 hash 计算开销越大
+- block_size 越大，匹配粒度越粗，命中率越低，但管理开销越小
 
-> 思考：融合后精度会变化吗？（提示：不会，融合只是减少中间结果的存储，计算逻辑不变。但减少 HBM 往返可能改善数值稳定性——中间结果不经过 FP32→HBM→FP32 的精度损失。）
+#### 实验 2：实现 Chunked Prefill + Prefix Caching 联合
 
-#### 实验 2：实现 FP16 混合精度
+在 `PrefixCacheEngine` 中添加 chunked prefill：
+- prefix 匹配后，剩余 tokens 按 chunk_size 切分
+- 每个 chunk 与 decode 迭代混合调度
+- 测量 TTFT 和 TBT 改善
 
-将 kernel 改为 FP16 输入、FP32 内部计算、FP16 输出。测量精度变化和性能提升。
+#### 实验 3：Copy-on-Write 实现
 
-> 思考：FP16 的 reduce 误差有多大？（提示：FP16 只有 3 位有效数字，reduce 必须用 FP32 累加。输出转回 FP16。）
-
-#### 实验 3：用 Triton 重写一个算子
-
-将 softmax 或 layernorm 用 Triton（`import triton; import triton.language as tl`）重写，对比与 CUDA C++ Extension 的开发体验和性能。
-
-> 思考：Triton 相比 CUDA C++ Extension 有什么优缺点？（提示：Triton 更易写（Python 语法）、自动 tiling；CUDA C++ 更底层、控制更精细。生产环境两者都用。）
+当多个请求共享同一 prefix block 时，某个请求需要 append 新 token 到该 block：
+- 当前实现：直接复制 block（简单但浪费内存）
+- COW 实现：`ref_count` 管理，写时才复制，读时共享
 
 ---
 
 ### 今日总结
 
-Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 集成到 Transformer Layer：
+Day 4b 我们将 chunked prefill 和 prefix caching 从概念推进到了真实实现：
 
-1. **替换清单**：Softmax、LayerNorm、FlashAttention 替换 PyTorch 原生算子；大 GEMM 保留 cuBLAS（教学 kernel 太慢）
-2. **编译流水线**：`.cu` + `.cpp` → `load_inline` → nvcc/g++ 编译 → `.so` → Python 模块 → 集成到 TransformerLayer
-3. **C++ Wrapper 三板斧**：`at::empty_like()` 分配输出、`data_ptr<float>()` 取裸指针、`size()`/`dim()` 取形状
-4. **六大注意事项**：stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理
-5. **分层验证**：单算子（< 1e-5）→ 多算子组合 → 端到端（< 1e-2）→ 性能对比
-6. **实测验证**：教学版 kernel 精度 PASS，性能可能比 PyTorch 慢（PyTorch 用 cuDNN/cuBLAS 高度优化），核心目的是理解集成流程
-
-掌握这些后，你就有了自定义 Kernel 的工程集成能力——明天 Day 5 进行系统联调，把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，端到端测试。
+1. **Chunked Prefill**：长 prompt 分块与 decode 混合调度，chunk_size 选择影响 TTFT/TBT 权衡
+2. **Prefix Caching**：block hash 匹配 + LRU 淘汰，共享 system prompt 场景命中率达 90%+
+3. **两者协同**：正交互补，prefix caching 先跳过已知 prefix，chunked prefill 再切分剩余部分
+4. **实测验证**：多轮对话场景 4x 加速，共享 system prompt 场景 1.3x 加速
+5. **工程要点**：block hash 计算、LRU 淘汰、ref_count/COW、token budget 管理
+6. **面试核心**：能讲清 prefix caching 的 block hash 机制和 LRU 淘汰策略，能量化命中场景的加速比
 
 ---
 
 ### 面试要点
 
-1. **如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎中？需要注意什么？**（⭐⭐⭐⭐⭐ 必考）
+1. **Prefix Caching 的 block hash 是怎么计算的？为什么不用 token sequence 直接比较？**
 
-<details>
-<summary>点击查看答案</summary>
+   <details>
+   <summary>点击查看答案</summary>
 
- - **集成流程**：
- 1. 写 CUDA kernel（`.cu`）和 C++ wrapper（`.cpp`）
- 2. 用 `torch.utils.cpp_extension.load_inline` 或 `setup.py` 编译
- 3. wrapper 中用 `at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出
- 4. 用 `at::cuda::getCurrentCUDAStream()` 确保 stream 一致
- - **六大注意事项**：
- 1. **stream 一致性**：用 PyTorch 当前 stream，避免乱序
- 2. **精度**：FP32 reduce 用 atomicAdd 注意累积误差，可用 double 中间值
- 3. **内存布局**：确保 contiguous，row-major 与 PyTorch 一致
- 4. **边界处理**：非对齐尺寸、空输入、越界保护
- 5. **形状检查**：`TORCH_CHECK(dim/is_cuda/is_contiguous)`
- 6. **错误处理**：`cudaGetLastError` + `TORCH_CHECK`
+   - **计算方式**：将每个 block（block_size 个 token）的 token sequence 做 hash（如 MD5/xxhash），得到一个固定长度的 hash 值作为 block 的唯一标识
+   - **为什么不用直接比较**：
+     1. **性能**：直接比较 token sequence 是 O(block_size)，而 hash 比较是 O(1)
+     2. **存储**：cache pool 只需存 hash → physical block 映射，不需存完整 sequence
+     3. **匹配效率**：请求进来时逐 block 计算 hash，O(1) 查表即可判断是否命中
+   - **注意事项**：hash 碰撞概率极低（MD5/xxhash），但生产环境可加 sequence 验证作为兜底
 
-</details>
+   </details>
 
+2. **Chunked Prefill 的 chunk_size 怎么选？太大和太小各有什么问题？**
 
-2. **自定义 Kernel 集成后，如何验证正确性和性能？**（⭐⭐⭐⭐ 高频）
+   <details>
+   <summary>点击查看答案</summary>
 
-<details>
-<summary>点击查看答案</summary>
+   - **太大**（如 2048）：
+     - TTFT 低（长 prompt 快速完成 prefill）
+     - TBT 波动大（大 chunk 占满 token budget，decode 被挤压）
+     - 适合对 TTFT 敏感的批处理场景
+   - **太小**（如 128）：
+     - TBT 波动小（decode 不被挤压）
+     - TTFT 高（长 prompt 需多个 iteration 才完成 prefill）
+     - 适合对 TBT 敏感的在线服务
+   - **vLLM 默认**：512（平衡 TTFT 和 TBT）
+   - **关键约束**：`chunk_tokens + decode_tokens ≤ max_num_batched_tokens`
 
- - **正确性**：
- 1. 单算子对比 PyTorch 实现，误差 < 阈值（Softmax < 1e-5，LayerNorm < 1e-4，Attention < 1e-3）
- 2. 多算子组合后对比端到端输出（< 1e-2，累积误差容忍）
- 3. 不同尺寸和边界条件测试（非对齐、空输入、大 batch）
- - **性能**：
- 1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
- 2. 用 `nsys` 看时间线和 kernel 间隙
- 3. 用 `ncu` 分析 kernel 的 SM/DRAM throughput
- 4. 对比 throughput-latency 曲线
- - **教学版可能比 PyTorch 慢**——因为 PyTorch 用 cuDNN/cuBLAS 高度优化
+   </details>
 
-</details>
+3. **Prefix Caching 在什么场景下收益最大？什么场景下收益不明显？**
 
+   <details>
+   <summary>点击查看答案</summary>
 
-3. **为什么大 GEMM 保留 cuBLAS，而 Softmax/LayerNorm 用自定义 kernel？**（⭐⭐⭐⭐ 高频）
+   - **收益最大**：
+     1. 多轮对话（历史 tokens 完全复用，命中率 80-95%）
+     2. 共享 system prompt（多个请求用同一 system prompt，命中率 90-99%）
+     3. Few-shot learning（相同的 examples 前缀）
+   - **收益不明显**：
+     1. 单轮对话（无历史可复用）
+     2. 请求间无共享 prefix（每个请求的 prompt 完全不同）
+     3. prefix 很短（即使命中也只省几个 token 的计算）
+   - **面试技巧**：能说出"命中率取决于请求间的 prefix 重叠度"即可
 
-<details>
-<summary>点击查看答案</summary>
+   </details>
 
- - **大 GEMM 保留 cuBLAS**：
- - cuBLAS 用 Tensor Core（WMMA/MMA）加速，高度优化的 SASS 指令
- - 教学版 register blocking GEMM 无 Tensor Core，约为 cuBLAS 的 10-20%
- - 大 GEMM 是 compute-bound，cuBLAS 接近理论峰值
- - **Softmax/LayerNorm 用自定义**：
- - 这些是 memory-bound，计算极轻
- - 自定义 kernel 可以**融合**（Softmax+Attention 一趟、LayerNorm 3趟→1趟）
- - 融合减少 kernel launch 和 HBM 往返，收益大
- - PyTorch 原生不融合，有优化空间
+4. **Prefix Caching 的 LRU 淘汰策略有什么问题？有没有更好的策略？**
 
-</details>
+   <details>
+   <summary>点击查看答案</summary>
 
+   - **LRU 的问题**：
+     1. 扫描场景：大量一次性请求会冲刷掉高频 prefix（cache pollution）
+     2. 冷启动：cache 空时所有请求都 miss
+   - **改进策略**：
+     1. **LFU（Least Frequently Used）**：按访问频率淘汰，不受扫描影响
+     2. **Segmented LRU**：分 hot/cold 两个区，新 block 先进 cold，被再次访问才升 hot
+     3. **引用计数 + 延迟淘汰**：正在被请求引用的 block 不淘汰（vLLM 的 `ref_count` 机制）
+   - **vLLM 的做法**：`ref_count` > 0 的 block 不可淘汰；`ref_count` = 0 的 block 按 LRU 淘汰
 
-4. **什么是算子融合？为什么能提升性能？**（⭐⭐⭐⭐ 高频）
+   </details>
 
-<details>
-<summary>点击查看答案</summary>
+5. **Chunked Prefill 和 Prefix Caching 能同时启用吗？它们是如何协同的？**
 
- - **算子融合**：把多个连续算子合并为一个 kernel
- - **提升原因**：
- 1. **减少 kernel launch**：每次 launch 有 5-10μs 开销
- 2. **减少 HBM 往返**：中间结果留在 register/shared memory，不写回 HBM
- 3. **减少显存占用**：不物化中间结果
- - **典型例子**：
- - FlashAttention：QK^T + Softmax + MatMul 融合为 1 个 kernel
- - Fused LayerNorm：mean + var + normalize 融合为 1 趟
- - Fused Softmax + CrossEntropy：减少一次 HBM 往返
+   <details>
+   <summary>点击查看答案</summary>
 
-</details>
+   - **可以同时启用，且是正交的**：
+     1. 请求到达 → 先做 prefix caching 匹配（跳过已知 prefix 的 prefill）
+     2. 剩余未命中的 tokens → 用 chunked prefill 切分为 chunk
+     3. 每个 chunk 与 decode 迭代混合调度
+   - **协同效果**：
+     - prefix caching 减少 prefill 总量（跳过已知部分）
+     - chunked prefill 平滑剩余 prefill 对 decode 的影响
+     - 两者叠加：既减少计算量，又平滑调度
+   - **vLLM 实现**：`--enable-prefix-caching` + 默认 chunked prefill（v0.5+）
 
-
-5. **load_inline 和 setup.py 两种编译方式有什么区别？**（⭐⭐⭐ 中频）
-
-<details>
-<summary>点击查看答案</summary>
-
- - `load_inline`：
- - 源码以字符串传入，运行时动态编译
- - 适合原型开发和小规模 kernel
- - 首次编译慢，后续有缓存
- - `setup.py`：
- - 离线编译为 `.so`，安装到 site-packages
- - 适合生产环境，编译一次反复使用
- - 需要 `setup.py` + `__init__.py` 配置
- - **生产推荐**：setup.py（稳定、可分发）；教学推荐：load_inline（快速迭代）
-
-</details>
-
+   </details>

@@ -1,432 +1,528 @@
-## Day 4：高频面试题进阶篇
+## Day 4：SGLang / LightLLM 高级特性
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 掌握 **Attention 优化三件套**——FlashAttention 的 IO 优势、online softmax 推导、FA1 vs FA2 差异<br>
-2. 理解 **推理系统核心矛盾**——Prefill vs Decode、KV Cache 显存压力、TTFT/TBT 优化目标<br>
-3. 讲清楚 **PagedAttention 设计**——block table、逻辑连续物理离散、copy-on-write、碎片消除<br>
-4. 复述 **vLLM 架构与调度**——LLMEngine/Scheduler/Worker 分层、Continuous Batching、抢占策略<br>
-5. 能回答 **2 道场景设计题**——长文本推理优化、LLM 推理服务架构<br>
-6. 产出一份 **进阶篇面试题自问自答笔记**，每道题限时 5 分钟口述并录音回放
+1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token（近似上界，精确期望为 `(1-α^(k+1))/(1-α)`）<br>
+2. 掌握 **Chunked Prefill（分块预填充）**——将长 prompt 分成多个 chunk，与 decode 请求交错执行，平滑 decode 延迟<br>
+3. 理解 **Prefix Caching（前缀缓存）**——缓存公共前缀（如系统提示）的 KV Cache，命中时跳过 prefill，降低 TTFT<br>
+4. 能评估 **三大特性的收益与复杂度**——通过模拟脚本量化加速比、延迟降低、命中率<br>
+5. 掌握 **特性集成优先级**——Prefix Caching 和 Chunked Prefill 优先（收益高、复杂度中），Speculative Decoding 可选（复杂度高）<br>
 
-> 💡 **为什么重要**：Day 3 的基础篇帮你拿到入场券，Day 4 的进阶篇决定你能否进入下一轮。FlashAttention、KV Cache、PagedAttention、Continuous Batching 是 AI Infra 面试的“分水岭”问题——答得清楚说明你真的做过推理系统，答得模糊会被直接归到“只会背概念”。
+> 💡 **为什么重要**：Day 2 的 FullScheduler 解决了"怎么调度"的问题，但推理系统还有"怎么更快"的问题。生产级系统（vLLM、SGLang、TensorRT-LLM）通过三大高级特性进一步提升性能：Speculative Decoding 降低 TBT（token 间延迟），Chunked Prefill 平滑 decode 延迟，Prefix Caching 降低 TTFT（首 token 延迟）。这些特性是面试"高级推理优化"的加分项，也是 Mini 引擎从"能跑"到"跑得快"的关键。
 
 ---
 
-### 学前导读：为什么进阶篇是面试分水岭
+### 学前导读：Day 2 调度器的"不够快"
 
-面试官问基础题是为了“排除不会的人”，问进阶题是为了“区分懂的人和精通的人”。
+Day 2 的 FullScheduler 解决了调度公平性和资源管理，但仍有性能瓶颈：
 
 ```
-基础题（Day 3）                进阶题（Day 4）
-"SM 是什么？"                  "FlashAttention 为什么能减少 IO？"
-"Occupancy 怎么算？"            "PagedAttention 的 block 多大合适？"
-"__syncthreads 是干嘛的？"      "Continuous Batching 怎么解决生成长度不均？"
+Day 2 调度器遗留的性能问题：
+ 1. Decode 每步只出 1 token → 大模型 GPU 算力浪费（Speculative Decoding 解决）
+ 2. 长 prompt prefill 阻塞 decode → decode 延迟尖峰（Chunked Prefill 解决）
+ 3. 重复 prefix 每次重新 prefill → TTFT 高（Prefix Caching 解决）
 ```
 
-| 考察层级 | 进阶题特征 | 面试官想听到什么 |
-|----------|-----------|-----------------|
-| 原理层 | 推导 online softmax | 能写出三公式并解释缩放因子 |
-| 系统层 | 讲清 vLLM 架构 | 能说清模块职责和数据流 |
-| 优化层 | 长文本推理怎么优化 | 能给出 3-5 条具体手段并讲出 trade-off |
-| 设计层 | 设计 LLM 推理服务 | 能从请求接入到 GPU 调度完整展开 |
+| 瓶颈 | 表现 | 解决方案 | 收益 |
+|------|------|---------|------|
+| Decode 算力浪费 | 每步 1 token，GPU 利用率低 | Speculative Decoding | TBT 降低 2-3x |
+| Prefill 阻塞 decode | 长 prompt 导致 decode 延迟尖峰 | Chunked Prefill | 延迟降低 50-97% |
+| 重复 prefix 计算 | 多轮对话重复 prefill 系统提示 | Prefix Caching | TTFT 降低 3-5x |
 
-> 💡 **一句话总结**：进阶篇不是考记忆力，而是考你是否能把“算法原理 → 系统设计 → 工程 trade-off”串成一条线。
+> 💡 **一句话总结**：Day 3 从"会调度"升级为"跑得快"——三大特性分别解决 decode 效率、延迟平滑、前缀复用三个维度。
 
 ---
 
 ### 理论学习
 
-#### 1.1 进阶篇知识地图
+#### 3.1 Speculative Decoding（投机采样）
 
-![进阶篇知识地图：四大主题 × 核心考点](../images/interview_advanced_knowledge_map.svg)
+![Speculative Decoding：小模型 Draft + 大模型 Verify](../../week7/images/speculative_decoding.svg)
 
-进阶篇覆盖四大主题，每个主题 3-4 个高频考点：
+##### 基本原理
 
-| 主题 | 核心考点 | 面试高频度 |
-|------|---------|-----------|
-| **① Attention 优化** | FlashAttention IO 分析、online softmax 推导、FA1 vs FA2、GQA/MQA/MHA | ⭐⭐⭐⭐⭐ |
-| **② 推理系统** | Prefill vs Decode、KV Cache 显存、TTFT/TBT、量化 | ⭐⭐⭐⭐⭐ |
-| **③ vLLM / PagedAttention** | block table、copy-on-write、内存碎片、调度状态机 | ⭐⭐⭐⭐⭐ |
-| **④ 调度与 Batching** | Continuous vs Dynamic Batching、抢占策略、优先级调度 | ⭐⭐⭐⭐⭐ |
+```
+传统 Decode：
+ 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
+ 缺点：大模型每次只处理 1 个 token，GPU 算力浪费
 
-#### 1.2 Attention 优化
-
-##### FlashAttention 为什么快
-
-![FlashAttention Tiling：在 SRAM 中完成 Attention 计算](../images/flash_attention_tiling.svg)
-
-标准 Attention 需要把 `S = QK^T` 和 `P = softmax(S)` 两个 `N×N` 矩阵写回 HBM：
-
-```text
-IO(标准 Attention) = O(N²)   # N 为序列长度
-IO(FlashAttention) = O(Nd)   # d 为 head dim，通常 d << N
+Speculative Decoding：
+ 1. 小模型（draft model）连续生成 k 个候选 tokens
+ 2. 大模型（target model）一次验证这 k+1 个 tokens（batch 验证，高效）
+ 3. 接受匹配的 tokens，从第一个不匹配处重新采样
+ 4. 保持输出分布不变（与原始大模型一致）
 ```
 
-FlashAttention 的关键不是减少 FLOPs，而是**把计算搬到 SRAM，减少 HBM 往返**。它通过两个技术实现：
+##### 加速原理
 
-1. **Tiling**：把 Q/K/V 切成小块加载到 shared memory，在片上完成 softmax 和加权求和
-2. **Online Softmax**：分块计算时维护 running max 和 running sum，避免先完整 softmax 再求和
+```
+假设：
+ t_d = draft model 生成 1 个 token 的时间（小，如 0.005s）
+ T_fwd = target model 一次 forward 的时间（大，如 0.03s）
+ α = 平均接受率（如 0.7）
 
-##### Online Softmax 三公式
+传统每 token 时间 ≈ T_fwd
+Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens（近似上界）
+Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
 
-```text
-m_new = max(m_old, max(x_j))                                       (1)
-l_new = l_old × exp(m_old - m_new) + Σ exp(x_j - m_new)             (2)
-o_new = o_old × (l_old × exp(m_old - m_new) / l_new)                (3)
-        + Σ (exp(x_j - m_new) / l_new) × v_j
+当 t_d ≪ T_fwd 且 α 高时，加速明显。
+
+> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
 ```
 
-- `m`：当前已见元素的最大值（参考点）
-- `l`：当前已见元素 softmax 分母的和
-- `o`：当前已见元素的加权输出
-- `exp(m_old - m_new)`：把旧参考点统一到新参考点的缩放因子
+##### 关键属性
 
-> ⚠️ 面试常考：为什么需要 `exp(m_old - m_new)`？答：因为不同 block 的 softmax 参考点不同，必须统一参考点才能正确累加。
+| 属性 | 说明 |
+|------|------|
+| **输出一致性** | 通过特殊的接受/拒绝采样，保证输出分布与大模型自回归采样一致 |
+| **加速条件** | draft 快（t_d ≪ T_fwd）+ 接受率高（α > 0.5） |
+| **k 的选择** | k 太小加速不够，k 太大 draft 开销大；通常 k=4~8 |
+| **适用场景** | decode 延迟敏感、有合适 draft model |
+| **限制** | 需要额外内存放 draft model；α 低时可能变慢 |
 
-##### FlashAttention-1 vs FlashAttention-2
+> ⚠️ **保持分布不变的原理**：对每个 draft token，大模型计算其概率分布 p_target。若 draft 的采样值在 p_target 下有足够概率（≥ p_draft），则接受；否则以 (p_target - p_draft) 的残差概率重新采样。这保证最终分布 = p_target。
 
-| 维度 | FA1 | FA2 |
-|------|-----|-----|
-| non-matmul FLOPs | 较多（online softmax 在主循环外） | 更少（融合到 warp 组） |
-| work partitioning | block 级 | warp group 级，减少同步 |
-| 同步点 | 每 tile 结束需同步 | 更少 |
-| occupancy | 一般 | 更高 |
-| 训练/推理 | 主要优化训练 | 对推理 decode 更友好 |
+##### 模拟结果（k=4, α=0.7, t_d=0.005, T_fwd=0.03）
 
-##### MHA / GQA / MQA
+| k | α | 传统时间 | Spec 时间 | 加速比 |
+|---|---|---------|----------|--------|
+| 2 | 0.7 | 3.00s | 1.72s | 1.74x |
+| 4 | 0.7 | 3.00s | 1.55s | 1.94x |
+| 4 | 0.9 | 3.00s | 1.20s | 2.50x |
+| 8 | 0.9 | 3.00s | 1.12s | 2.68x |
+| 8 | 0.5 | 3.00s | 3.50s | **0.86x（变慢！）** |
 
-| 结构 | K/V 共享方式 | 显存占用 | 生成质量 |
-|------|-------------|---------|---------|
-| MHA | 每个 head 独立 K/V | 最大 | 最好 |
-| GQA | 每 group 共享 K/V | 中等 | 接近 MHA |
-| MQA | 所有 head 共享一组 K/V | 最小 | 可能下降 |
+> 💡 **k=8, α=0.5 时变慢**——draft token 太多但接受率低，draft 开销超过了加速收益。这说明 k 和 α 必须匹配。
 
-> 💡 工程上 LLaMA2-70B 用 GQA，在显存和质量之间取平衡。
+#### 3.2 Chunked Prefill（分块预填充）
 
-#### 1.3 推理系统核心问题
+![Chunked Prefill：长 Prompt 分块 + Decode 交错](../../week7/images/chunked_prefill.svg)
 
-##### Prefill vs Decode
+##### 问题与方案
 
-| 阶段 | 输入形状 | 计算特征 | 瓶颈 | 优化目标 |
-|------|---------|---------|------|---------|
-| **Prefill** | `(B, N_prompt, d)` | 可并行 | compute-bound | TTFT（首 token 延迟） |
-| **Decode** | `(B, 1, d)` | 自回归串行 | memory-bound | TBT（相邻 token 间隔） |
+```
+问题：
+ - 长 prompt（如 2048 tokens）的 prefill 一次性处理 → 占用全部 token budget
+ - 同 batch 的 decode 请求被阻塞 → 延迟尖峰
+ - 用户感知：decode token 突然卡顿
 
-Decode 阶段 M=1，GEMM 退化，arithmetic intensity 极低，瓶颈在读取权重和 KV Cache。
-
-##### KV Cache 显存压力
-
-```text
-每 token KV Cache ≈ 2 × layers × heads × d_head × bytes
-例如 LLaMA2-7B：2 × 32 × 32 × 128 × 2B = 524,288 B ≈ 524 KB/token (FP16)
-4k 序列单请求 ≈ 2 GB，batch=16 ≈ 32 GB
+Chunked Prefill：
+ - 将长 prompt 分成多个 chunk（如每 chunk 512 tokens）
+ - 每个 chunk 与 decode 请求一起执行（共享 token budget）
+ - 逐步完成 prefill，同时不中断 decode
 ```
 
-优化方向：
+##### 收益量化
 
-1. **量化**：INT8/INT4 KV Cache，显存减半或四分之一
-2. **分页**：PagedAttention 避免碎片和 over-allocation
-3. **压缩**：滑动窗口 attention、H2O 等稀疏策略
-4. **offload**：长序列 KV Cache 换到 CPU/SSD
+| Prompt 长度 | Chunk 大小 | Chunks | 传统 max 延迟 | Chunked max 延迟 | 降低 |
+|------------|-----------|--------|-------------|-----------------|------|
+| 512 | 256 | 2 | 5.2s | 2.6s | -50% |
+| 2048 | 512 | 4 | 20.6s | 5.1s | -75% |
+| 8192 | 256 | 32 | 82.0s | 2.6s | -97% |
 
-#### 1.4 PagedAttention
+> 💡 **关键洞察**：总 prefill 时间不变，但 decode 请求的**最大等待延迟**从"整个 prefill"降到"一个 chunk"。prompt 越长、chunk 越小 → 效果越显著。
 
-![PagedAttention Block Table：逻辑连续、物理离散](../images/paged_attention_block_table.svg)
+##### Chunk 大小的权衡
 
-核心设计：
+| Chunk 大小 | 优点 | 缺点 |
+|-----------|------|------|
+| 太小（128） | 延迟极平滑 | prefill 效率低（小 batch GEMM） |
+| 太大（2048） | prefill 效率高 | 延迟平滑效果差 |
+| **推荐（512）** | **平衡** | **vLLM 默认值** |
 
-- 把 KV Cache 分成固定大小 block（如 16 tokens）
-- 每个请求维护一个 **block table**：逻辑 block id → 物理 block id
-- 物理 block 可以不连续，由 allocator 按需分配
-- 支持 **copy-on-write**：prefix 共享时多个请求指向同一块物理 block，写时复制
+#### 3.3 Prefix Caching（前缀缓存）
 
-解决的问题：
+![Prefix Caching：公共前缀 KV Cache 复用](../../week7/images/prefix_caching.svg)
 
-| 问题 | 传统 KV Cache | PagedAttention |
-|------|--------------|----------------|
-| 内存碎片 | 预分配最大长度，大量浪费 | 按需分配 block |
-| 动态长度 | 需要 contiguous 内存 | 逻辑连续即可 |
-| Prefix 共享 | 复制多份 | copy-on-write 共享 |
+##### 问题与方案
 
-#### 1.5 vLLM 架构与调度
+```
+问题：
+ - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
+ - 每次都要重新计算 prefix 的 KV Cache → 重复计算
 
-![vLLM 分层架构](../images/vllm_layered_architecture.svg)
+Prefix Caching：
+ - 缓存公共 prefix 的 KV Cache（key = prefix token 序列的 hash）
+ - 新请求匹配到缓存 prefix 时，直接复用 KV Cache
+ - 只 prefill prefix 之后的新增 tokens
 
-![vLLM 推理引擎架构](../../images/week8_inference_engine_architecture.svg)
+收益：
+ - 降低 TTFT（首 token 延迟）
+ - 减少重复计算
+ - 特别适合多轮对话和模板化请求
+```
 
-请求状态机：
-
-![请求状态转移图](../../images/week8_request_state_transition.svg)
-
-##### Continuous Batching
-
-![Continuous Batching Timeline：iteration 级动态进出](../images/continuous_batching_timeline.svg)
-
-- **Dynamic Batching**：request-level，一批请求一起开始、一起结束，生成长度不一时 GPU 空转
-- **Continuous Batching**：iteration-level，每轮 forward 后重新组装 batch，完成的请求退出、新请求加入
-
-> 💡 Continuous Batching 是 vLLM 高吞吐的关键，也是面试“为什么 vLLM 比传统服务快”的标准答案。
-
-##### 抢占策略
-
-| 策略 | 做法 | 优点 | 缺点 |
-|------|------|------|------|
-| **Recompute** | 丢弃 KV Cache，之后重算 prompt | 通常更快 | 浪费算力 |
-| **Swap** | KV Cache 换出到 CPU | 不浪费算力 | CPU↔GPU 带宽受限 |
-
-vLLM 默认 **Recompute**，因为大部分情况下重算比 swap 快。
-
----
-
-### Coding 任务：进阶篇面试题自问自答笔记
-
-#### 任务 1：创建 interview_advanced.py
-
-创建文件 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)，将 21 道进阶篇高频题整理为可自测的 Q&A 系统：
+##### 缓存 Key 设计
 
 ```python
-# interview_advanced.py —— 进阶篇面试题自测系统
-# 运行命令: python interview_advanced.py
-# 依赖: 仅标准库
+# Key = prefix token 序列的 hash
+key = hashlib.md5(str(prefix_tokens).encode()).hexdigest()
 
-import random
-
-QUESTIONS = [
-    {
-        "id": 1,
-        "topic": "Attention 优化",
-        "question": "FlashAttention 为什么比标准 Attention 快？",
-        "answer": (
-            "标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)\n"
-            "FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 O(Nd)"
-        ),
-        "freq": 5,
-    },
-    # ... 共 21 道题
-]
-
-# 完整代码见 kernels/interview_advanced.py
+# 查找：O(1) hash 查找
+cached = cache.get(system_prompt_tokens)
+if cached:
+ # 命中：跳过 prefix prefill，只 prefill 新增 tokens
+ prefill(user_prompt_tokens)
+else:
+ # 未命中：全量 prefill + 缓存
+ prefill(full_prompt)
+ cache.put(system_prompt_tokens, kv_cache)
 ```
 
-完整代码见 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)。
+##### 模拟结果（3 请求，系统提示 50 tok，用户 20 tok）
+
+| 指标 | 无缓存 | 有缓存 | 改善 |
+|------|--------|--------|------|
+| 总 prefill tokens | 210 | 110 | -48% |
+| 命中率 | — | 99% | — |
+| TTFT（首请求） | 70×t | 70×t | 不变 |
+| TTFT（后续请求） | 70×t | 20×t | -71% |
+| 加速比 | 1.0x | 3.4x | — |
+
+> ⚠️ **LRU 淘汰**：缓存有大小上限（如 64 entries），满了按 LRU 淘汰最久未用的。vLLM 的 PagedAttention 天然支持 block 级别的 prefix caching。
+
+##### 适用场景
+
+| 场景 | 前缀重复度 | 收益 |
+|------|-----------|------|
+| 多轮对话 | 高（历史消息累积） | ★★★★★ |
+| 模板化请求 | 高（系统提示固定） | ★★★★★ |
+| Few-shot learning | 中（示例固定） | ★★★★ |
+| 独立请求 | 低（无公共前缀） | ★ |
+
+#### 3.4 特性收益对比与集成优先级
+
+| 特性 | 收益 | 复杂度 | 依赖 | 集成优先级 |
+|------|------|--------|------|-----------|
+| **Prefix Caching** | TTFT 降低 3-5x | 中 | KV Cache 管理 | **Phase 1 优先** |
+| **Chunked Prefill** | 延迟降低 50-97% | 中 | 调度器改造 | **Phase 1** |
+| **CUDA Graph** | launch 开销降低 | 中 | 静态 shape | Phase 2 |
+| **Speculative Decoding** | TBT 降低 2-3x | 高 | Draft model | Phase 2 可选 |
+
+> 💡 **集成建议**：Prefix Caching 和 Chunked Prefill 收益高、复杂度中等，优先集成。Speculative Decoding 虽然收益可观，但需要 draft model 和分布对齐，实现复杂度高，适合作为 Phase 2 的可选优化。
+
+### Coding 任务：高级特性模拟与评估
+
+#### 任务 1：创建 advanced_features.py
+
+创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
+
+```python
+# advanced_features.py —— 高级特性模拟（Speculative Decoding + Chunked Prefill + Prefix Caching）
+# 运行命令: python advanced_features.py
+# 依赖: 仅标准库
+
+# 1. Speculative Decoding 模拟
+def simulate_speculative_decoding(num_tokens=100, draft_k=4, accept_rate=0.7, ...):
+ """模拟 draft+verify 过程，测量加速比"""
+
+# 2. Chunked Prefill 模拟
+def simulate_chunked_prefill(prompt_len=2048, chunk_size=512, ...):
+ """模拟分块 prefill 与 decode 交错，测量延迟降低"""
+
+# 3. Prefix Caching 模拟
+class PrefixCache:
+ """LRU 前缀缓存，模拟 KV Cache 复用"""
+def simulate_prefix_caching(num_requests=100, ...):
+ """模拟多轮对话场景，测量命中率和加速比"""
+
+# 4. 综合评估
+def evaluate_features():
+ """运行三大特性模拟，输出收益评估报告"""
+```
+
+完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/advanced_features.py)。
 
 代码要点：
-- **21 道题** 覆盖六大主题（Attention 优化 6 题 + 推理系统 3 题 + vLLM/调度 3 题 + 场景题 2 题 + 系统设计 4 题 + 项目话术 2 题 + 进阶对比 1 题）
-- **自测模式**：随机抽题 → 口述答案 → 按回车看参考 → 自评
-- **高频度标记**：`freq` 字段（3-5 星），5 星 = 必考
-- **交互式**：`input()` 暂停让你口述，模拟真实面试节奏
+- `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
+- `simulate_chunked_prefill`：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
+- `PrefixCache`：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
+- `evaluate_features`：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
 
-#### 任务 2：运行自测系统
+#### 任务 2：运行并分析收益报告
 
 ```bash
-python kernels/interview_advanced.py
+python kernels/advanced_features.py
 ```
 
 **预期输出**（节选）：
 
 ```text
-=== AI Infra 面试进阶篇自测系统 ===
-共 21 道题
+📊 1. Speculative Decoding
+ k=4, α=0.7: traditional=3.00s, spec=1.55s, speedup=1.94x, accepted=69, rejected=55
+ k=4, α=0.9: traditional=3.00s, spec=1.20s, speedup=2.50x, accepted=79, rejected=17
+ k=8, α=0.5: traditional=3.00s, spec=3.50s, speedup=0.86x, accepted=50, rejected=350
 
-命令：
-  list  — 列出所有题目
-  test  — 随机抽 5 题自测（默认）
-  test N — 随机抽 N 题自测
+📊 2. Chunked Prefill
+ prompt=2048, chunk=512: chunks=4, max_latency: 20.58s → 5.14s (-75%)
+ prompt=8192, chunk=256: chunks=32, max_latency: 82.02s → 2.56s (-97%)
 
-输入命令: test 5
+📊 3. Prefix Caching
+ cache_size=64: hits=99, misses=1, hit_rate=99.0%, time: 70.00s → 20.50s, speedup=3.41x
 
-=== 进阶篇面试自测（随机 5 题）===
-
-[1/5] ⭐⭐⭐⭐⭐ [Attention 优化]
-Q: FlashAttention 为什么比标准 Attention 快？
-口述答案后按回车查看参考...
-A: 标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)
-FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 O(Nd)
+📋 集成优先级建议
+ 1. Prefix Caching — 收益高、复杂度中 → Phase 1 优先
+ 2. Chunked Prefill — 平滑延迟、复杂度中 → Phase 1
+ 3. CUDA Graph — 降 launch 开销、复杂度中 → Phase 2
+ 4. Speculative Decoding — 降 TBT、复杂度高 → Phase 2 可选
 ```
 
 ##### 观察重点
 
-1. **限时 5 分钟**：每道题口述不超过 5 分钟，超时说明理解不深
-2. **录音回放**：录下自己的口述，回放找卡壳点和口头禅
-3. **追问答法**：每道题准备 1 个 follow-up 答案，例如讲完 FlashAttention 后立刻能讲 FA1 vs FA2
+1. **Speculative Decoding**：α=0.7 时加速 ~2x，但 α=0.5 + k=8 时**变慢**（draft 开销超过收益）
+2. **Chunked Prefill**：prompt 越长、chunk 越小，延迟降低越显著（8192 tok 从 82s → 2.6s）
+3. **Prefix Caching**：固定系统提示场景命中率接近 100%，加速比 3.4x
+4. **集成优先级**：Prefix Caching 和 Chunked Prefill 性价比最高
 
-#### 任务 3：白板推导 online softmax
+#### 任务 3：修改参数观察特性边界
 
-不看资料，在纸上完整写出 online softmax 三公式，并解释：
+尝试修改以下参数，观察特性失效的边界条件：
 
-1. 为什么需要维护 `m` 和 `l` 两个状态？
-2. `exp(m_old - m_new)` 的物理意义是什么？
-3. 如果直接对每个 block 做 softmax 再相加，错在哪里？
+```python
+# 实验 A：Speculative Decoding 失效条件
+# 设置 accept_rate=0.3, draft_k=8 → draft 开销大但接受少，应变慢
+result = simulate_speculative_decoding(num_tokens=100, draft_k=8, accept_rate=0.3, ...)
 
-> 思考：标准 softmax 的分母是全局 `Σ exp(x_i)`，online softmax 的分母是“统一参考点后的局部和累加”，这是 FlashAttention 能在 SRAM 完成计算的核心。
+# 实验 B：Chunked Prefill chunk 太小
+# 设置 chunk_size=64 → prefill 效率极低（小 batch GEMM），总时间可能增加
+result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
 
-#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+# 实验 C：Prefix Caching 无公共前缀
+# 修改为每个请求有不同的系统提示 → 命中率应接近 0
+```
 
-**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+> 思考：什么场景下 Prefix Caching 不仅无收益反而有开销？（提示：每个请求前缀都不同时，hash 计算和缓存查找是纯开销。）
 
-**与今日知识的关联**：今日进阶篇核心主题之一是**长文本推理优化**。Causal mask 是自回归解码的语义基础——decode 阶段每个新 token 只能 attend 到历史 token，正对应 causal attention 的下三角结构，KV Cache 逐 token 复用历史 K/V 之所以成立也依赖它。面试中回答"长文本怎么优化"时，能讲清 causal mask 的 kernel 实现、显存收益和与 KV Cache 的配合，是加分项。
+#### 任务 4：LeetGPU 在线题目 —— Scalar Multiply
 
-> 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
+**题目链接**：<https://leetgpu.com/challenges/scalar-multiply>
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 4）
+**与今日知识的关联**：Scalar Multiply 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Scalar Multiply 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 4（股票与划分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 💡 提交后在 [LeetGPU Scalar Multiply](https://leetgpu.com/challenges/scalar-multiply) 上记录通过耗时。完整题解见 [Scalar Multiply 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 3）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 3（二分答案），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [122. 买卖股票的最佳时机 II](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/) | 中等 | 贪心收集所有上涨段 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/122_买卖股票的最佳时机II.html) |
-| [188. 买卖股票的最佳时机 IV](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/) | 困难 | DP 状态机（k 次交易） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html) |
-| [309. 买卖股票的最佳时机含冷冻期](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-cooldown/) | 中等 | DP 三状态（含冷冻期） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html) |
-| [714. 买卖股票的最佳时机含手续费](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/) | 中等 | DP 两状态 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html) |
-| [698. 划分为 K 个相等的子集](https://leetcode.cn/problems/partition-to-k-equal-sum-subsets/) | 中等 | 回溯 + 排序剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/698_划分为K个相等的子集.html) |
-
-# 二维 DP：dp[i][j] = word1[0..i-1] → word2[0..j-1] 的最少操作数
-m, n = len(word1), len(word2)
-dp = [[0] * (n + 1) for _ in range(m + 1)]
-for i in range(m + 1): dp[i][0] = i
-for j in range(n + 1): dp[0][j] = j
-
-for i in range(1, m + 1):
-    for j in range(1, n + 1):
-        if word1[i-1] == word2[j-1]:
-            dp[i][j] = dp[i-1][j-1]          # 字符相同，无操作
-        else:
-            dp[i][j] = 1 + min(
-                dp[i-1][j-1],   # 替换
-                dp[i-1][j],     # 删除
-                dp[i][j-1]      # 插入
-            )
-return dp[m][n]
-```
-
-> 💡 完整题解（含二维 DP 与滚动数组 O(n) 空间优化、最优路径回溯、与 speculative decoding 的关联）见 [编辑距离题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)。
+| [875. 爱吃香蕉的珂珂](https://leetcode.cn/problems/koko-eating-bananas/) | 中等 | 二分答案 + O(n) 验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html) |
+| [1011. 在 D 天内送达包裹的能力](https://leetcode.cn/problems/capacity-to-ship-packages-within-d-days/) | 中等 | 二分答案 + 贪心验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html) |
+| [378. 有序矩阵中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-sorted-matrix/) | 中等 | 二分值域 + 左下角计数 / 小顶堆 k 路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：限时口述 vLLM 架构
+#### 实验 1：实现 Speculative Decoding 的接受/拒绝采样
 
-不看资料，限时 5 分钟，从用户请求进入开始，口述 LLMEngine → Scheduler → Worker → Model Runner 的完整数据流，并说明请求状态机。录音回放，检查是否漏掉 block table 或抢占策略。
+当前模拟用随机数模拟接受/拒绝。修改为真实分布对齐：draft 和 target 各自输出概率分布，按论文公式接受/拒绝，验证最终分布与 target 一致。
 
-> 思考：哪个模块你讲得最模糊？针对那一模块重读 Week5/Week6 对应教程。
+> 思考：为什么"接受/拒绝采样"能保证分布不变？（提示：对 draft 采样值 x，若 p_target(x) ≥ p_draft(x) 则接受；否则以 (p_target - p_draft) 残差概率拒绝并重新采样。）
 
-#### 实验 2：用数字解释 KV Cache 压力
+#### 实验 2：实现 Chunked Prefill 的动态 chunk 大小
 
-选一个你熟悉的模型（如 LLaMA2-7B/13B/70B），计算：
+当前 chunk 大小固定。修改为动态：根据当前 decode 请求数量和 token budget 剩余动态调整 chunk 大小。decode 请求多时 chunk 小（多留预算给 decode），decode 少时 chunk 大（提高 prefill 效率）。
 
-1. 单请求 4k/8k 序列的 KV Cache 显存占用
-2. batch=8/16/32 时的总显存
-3. INT8 量化后能省多少显存
+> 思考：动态 chunk 大小的上限和下限应该怎么设？（提示：下限不能太小否则 GEMM 效率低，上限不能太大否则失去平滑效果。）
 
-> 思考：为什么 Decode 阶段 batch 越大越能隐藏权重读取延迟？（提示：同一权重被多个请求共享，amortize 读取成本。）
+#### 实验 3：Prefix Caching 的 block 级别匹配
 
-#### 实验 3：设计题 mock
+当前匹配整个 prefix token 序列。修改为 block 级别匹配（如 vLLM PagedAttention）：把 token 序列分成 block（每 16 token 一 block），逐 block 匹配，部分命中也能复用。
 
-选一道场景题（“长文本推理优化”或“设计 LLM 推理服务”），准备 3 分钟版本和 10 分钟版本：
-
-- **3 分钟版本**：给出 5 个关键词，每个词一句话解释
-- **10 分钟版本**：从请求接入、调度、KV Cache、Attention、量化、监控完整展开
-
-> 思考：面试官最可能在哪个点打断追问？提前准备 2-3 个 follow-up。
+> 思考：block 级别匹配 vs 整体匹配的 trade-off？（提示：block 级别更灵活但 hash 查找次数多；整体匹配简单但一旦有一个 token 不同就全部 miss。）
 
 ---
 
 ### 今日总结
 
-Day 4 我们系统复习了 AI Infra 面试进阶篇的四大主题：
+Day 3 我们分析评估了三大高级推理特性：
 
-1. **Attention 优化**：FlashAttention 通过 tiling + online softmax 把 IO 从 `O(N²)` 降到 `O(Nd)`；FA2 比 FA1 减少了 non-matmul FLOPs 和同步点；MHA/GQA/MQA 是显存与质量的 trade-off
-2. **推理系统**：Prefill compute-bound 关注 TTFT，Decode memory-bound 关注 TBT；KV Cache 是显存瓶颈，量化/分页/压缩/offload 是四大优化方向
-3. **PagedAttention**：block table 实现逻辑连续物理离散，copy-on-write 支持 prefix 共享，解决碎片和 over-allocation
-4. **vLLM 调度**：LLMEngine → Scheduler → Worker → Model Runner；Continuous Batching 在 iteration 级别动态组 batch；抢占默认 Recompute
-5. **自测系统**：21 道进阶题覆盖六大主题，随机抽题 + 限时口述 + 录音回放
-6. **Causal Self-Attention**：自回归解码典型 CUDA 题，理解 causal mask 的实现要点与 KV Cache 的配合
-7. **课程表**：拓扑排序与调度依赖同构，训练算法基本功
+1. **Speculative Decoding**：小模型 draft k 个 token + 大模型一次 verify，加速比 1.5-2.7x；关键条件是 draft 快 + 接受率高；k 和 α 必须匹配，否则可能变慢
+2. **Chunked Prefill**：长 prompt 分块与 decode 交错，decode 最大延迟降低 50-97%；总 prefill 时间不变，但平滑了延迟尖峰；chunk 大小 512 是推荐平衡点
+3. **Prefix Caching**：缓存公共前缀的 KV Cache，命中率接近 100%，加速比 3.4x；特别适合多轮对话和模板化请求
+4. **特性对比**：Prefix Caching 和 Chunked Prefill 收益高/复杂度中→优先集成；Speculative Decoding 收益高/复杂度高→可选
+5. **模拟验证**：通过 `advanced_features.py` 量化了不同参数下的加速比、延迟降低、命中率
+6. **集成优先级**：Phase 1（Prefix Caching + Chunked Prefill）→ Phase 2（CUDA Graph + Speculative Decoding）
 
-掌握这些后，你就有了面试进阶篇的“深度弹药”——明天 Day 5 进入 Mock 面试，把知识转化为可表达的面试语言。
+掌握这些后，你就有了推理系统的"加速武器库"——明天 Day 4 整合全部自定义 Kernel（GEMM、FlashAttention、Softmax、LayerNorm），替换 PyTorch 算子。
 
 ---
 
 ### 面试要点
 
-1. **FlashAttention 为什么比标准 Attention 快？**（⭐⭐⭐⭐⭐ 必考）
+1. **什么是 Speculative Decoding？它为什么能加速 LLM 推理？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 标准 Attention 需要把 `S=QK^T` 和 `P=softmax(S)` 两个 `N×N` 矩阵写回 HBM，IO 是 `O(N²)`
- - FlashAttention 用 tiling 把 Q/K/V 切成小块加载到 SRAM，在片上完成 softmax 和加权求和
- - 配合 online softmax 维护 running max 和 running sum，避免物化完整 N×N 矩阵
- - IO 降为 `O(Nd)`，速度来自减少数据移动而非减少 FLOPs
- - 长序列、小 head dim 时收益最大
+ - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k+1 个 tokens
+ - **加速原因**：
+ - 小模型生成速度快（t_d ≪ T_fwd）
+ - 大模型一次验证多个 tokens，提高 batch 利用率
+ - 如果 draft 质量高（α 高），每步可接受多个 tokens
+ - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`（近似上界，精确期望用 `(1-α^(k+1))/(1-α)` 替换 k×α+1），典型 1.5-2.7x
+ - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
+ - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
 
 </details>
 
 
-2. **推导 online softmax 的三个公式。**（⭐⭐⭐⭐⭐ 必考）
+2. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- ```text
- m_new = max(m_old, max(x_j))
- l_new = l_old × exp(m_old - m_new) + Σ exp(x_j - m_new)
- o_new = o_old × (l_old × exp(m_old - m_new) / l_new) + Σ (exp(x_j - m_new) / l_new) × v_j
- ```
-
- - `m`：当前已见元素最大值（参考点）
- - `l`：统一参考点后的 softmax 分母累加和
- - `o`：统一参考点后的加权输出累加和
- - `exp(m_old - m_new)`：把旧参考点统一到新参考点的缩放因子
- - 作用：分块计算时不需要等所有 block 到齐，可以边算边更新
+ - **Chunked Prefill**：
+ - 解决长 prompt prefill 阻塞 decode 的问题
+ - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
+ - 效果：decode 最大延迟从"整个 prefill"降到"一个 chunk"，降低 50-97%
+ - **Prefix Caching**：
+ - 解决重复 prefix 的 KV Cache 重复计算问题
+ - 缓存公共前缀的 KV Cache，新请求匹配时复用
+ - 效果：TTFT 降低 3-5x，特别适合多轮对话和模板化请求
 
 </details>
 
 
-3. **Prefill 和 Decode 的区别？各自优化目标？**（⭐⭐⭐⭐⭐ 必考）
+3. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：输入完整 prompt，形状 `(B, N_prompt, d)`，可并行，compute-bound
-   - 优化目标：**TTFT**（Time To First Token），用 FlashAttention 降低 attention IO
- - **Decode**：自回归逐 token 生成，形状 `(B, 1, d)`，M=1 导致 GEMM 退化，memory-bound
-   - 优化目标：**TBT**（Time Between Tokens），用 KV Cache + Continuous Batching 提升吞吐
- - Decode 的 arithmetic intensity 极低，瓶颈在权重和 KV Cache 读取
+ - 对每个 draft token，target 计算其概率分布 p_target
+ - 若 draft 采样值 x 满足 p_target(x) ≥ p_draft(x) → 接受
+ - 否则以 (p_target - p_draft) 的残差概率拒绝，从残差分布重新采样
+ - 数学上可证明：最终输出分布 = p_target（与纯 target 自回归一致）
+ - 这保证了 speculative decoding 不会牺牲输出质量
 
 </details>
 
 
-4. **PagedAttention 解决了什么问题？核心设计是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **解决问题**：KV Cache 静态/动态分配造成的显存碎片和浪费，以及 contiguous 内存要求
- - **核心设计**：
-   - 把 KV Cache 分成固定大小 block（如 16 tokens）
-   - 每个请求维护 block table：逻辑 block → 物理 block
-   - 物理 block 可以不连续，allocator 按需分配
-   - 支持 copy-on-write，多个请求共享同一块物理 block，写时复制
- - **收益**：消除碎片、支持动态长度、支持 prefix 共享、提高显存利用率
+ - **Key**：prefix token 序列的 hash（如 MD5），O(1) 查找
+ - **Value**：KV Cache 数据（K 矩阵和 V 矩阵的 block）
+ - **淘汰策略**：LRU（最近最少使用），缓存满时淘汰最久未用的
+ - **Block 级别匹配**（vLLM PagedAttention）：把 prefix 分成 block 逐 block 匹配，部分命中也能复用
+ - **命中率因素**：前缀重复度越高、缓存越大 → 命中率越高
 
 </details>
 
 
-5. **Continuous Batching 和 Dynamic Batching 的区别？为什么 LLM 更适合 Continuous？**（⭐⭐⭐⭐⭐ 必考）
+5. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：request-level，一批请求一起开始、一起结束
-   - 问题：LLM 生成长度差异大，先完成的请求要等后完成的，GPU 空转
- - **Continuous Batching**：iteration-level，每轮 forward 后重新组装 batch
-   - 完成的请求退出，新请求加入，GPU 几乎不空转
- - **为什么 LLM 更适合 Continuous**：生成长度不可预测且差异大，iteration 级调度能最大化 GPU 利用率
- - vLLM 的高吞吐主要来自 Continuous Batching + PagedAttention
+ - **Phase 1（优先）**：Prefix Caching + Chunked Prefill
+ - 收益高（3-5x TTFT / 50-97% 延迟降低）、复杂度中等
+ - 不需要额外模型，只需改造调度器和 KV Cache 管理
+ - **Phase 2（可选）**：CUDA Graph + Speculative Decoding
+ - CUDA Graph 降低 launch 开销，复杂度中等
+ - Speculative Decoding 收益高但需要 draft model + 分布对齐，复杂度高
+ - **排序逻辑**：按"收益/复杂度"性价比排序，优先做性价比高的
+
+ - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）
 
 </details>
+
+---
+
+### 投机解码深化：三条路线 + 接受率分析（C3 补充）
+
+#### 三条 draft 路线对比
+
+| 路线 | draft 来源 | 代表 | 特点 |
+|------|-----------|------|------|
+| **独立小模型** | 单独训练的小 LLM | 传统 speculative decoding | 需维护两个模型，draft 质量依赖小模型能力 |
+| **Medusa** | target 模型的多个额外 head | Medusa | 无需独立小模型，target 模型加几个 head 并行预测 k 个 token |
+| **EAGLE** | target 模型的特征层草稿 | EAGLE | 在 target 的 hidden states 上建草稿，质量更高 |
+| **MTP** | target 模型的 MTP head | DeepSeek-V3 | DeepSeek 的 Multi-Token Prediction，训练时联合优化 |
+
+##### Medusa vs EAGLE vs MTP 详细对比
+
+| 维度 | Medusa | EAGLE | MTP（DeepSeek） |
+|------|--------|-------|----------------|
+| draft 位置 | target 顶层加 head | target 隐藏层后接草稿网络 | target 的 MTP head（训练联合） |
+| 额外参数 | 几个 head（小） | 草稿网络（中等） | MTP head（与 target 同量级） |
+| draft 质量 | 中（token 级预测） | 高（特征级，更准） | 高（训练时联合优化） |
+| 接受率 α | ~0.5-0.6 | ~0.6-0.7 | ~0.7-0.8 |
+| 加速比 | 2-3x | 2.5-3.5x | 3-4x |
+| 训练成本 | 微调加 head | 需训练草稿网络 | 联合训练（成本高） |
+| 部署复杂度 | 低（加 head） | 中（加网络） | 高（改训练流程） |
+
+> 💡 **面试要点**：Medusa 是"最简单的投机解码"（加 head 即可），EAGLE 是"质量更高的 Medusa"（特征层草稿），MTP 是"DeepSeek 的训练时联合优化"（质量最高但改训练）。2024+ 趋势是 EAGLE/MTP，因为 draft 质量决定接受率上限。
+
+#### 接受率与加速比的关系
+
+**精确期望公式**（k 个 draft token，接受率 α）：
+
+```
+E[accepted] = (1 - α^(k+1)) / (1 - α)
+加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+```
+
+##### 接受率扫描（k=1..8, α=0.5..0.9）
+
+| k \ α | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
+|-------|-----|-----|-----|-----|-----|
+| 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
+| 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
+| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
+| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
+
+**关键观察**：
+- α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
+- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
+- **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
+
+> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
+
+#### 新增面试题
+
+6. **为什么接受率 α 决定加速比上限？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - 加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+  - E[accepted] = (1 - α^(k+1)) / (1 - α)，随 α 增大趋近 k+1（上界）
+  - α 低时 E[accepted] 小，k 大反而被 t_d 拖累（draft 开销 k×t_d 增长）
+  - α=0.5、k=8 时 E[accepted]=2.00，但 k×t_d=8×t_d，若 t_d 不够小则变慢
+  - **结论**：α 是上限，k 是杠杆——α 高才适合大 k
+
+</details>
+
+7. **draft 模型怎么选？独立小模型 vs Medusa vs EAGLE vs MTP？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **独立小模型**：需维护两模型，draft 质量受小模型能力限制，部署复杂
+  - **Medusa**：target 加 head，无独立模型，但 token 级预测质量中等（α~0.5-0.6）
+  - **EAGLE**：特征层草稿，质量更高（α~0.6-0.7），但需训练草稿网络
+  - **MTP**：训练时联合优化，质量最高（α~0.7-0.8），但改训练流程，成本高
+  - **选择**：快速验证用 Medusa，质量要求用 EAGLE，训练可控用 MTP（DeepSeek 路线）
+
+</details>
+
+8. **verify 阶段的 kernel 实现要点？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - verify 是"大模型一次 forward 验证 k+1 个 token"，本质是 batch=GEMM
+  - 关键：Q 是 k+1 个 token（draft + 1），K/V 是历史 + draft 的 K/V
+  - kernel 要点：causal mask 的块级跳过（draft token 间是 causal，与历史是 full attention）
+  - 优化：FlashAttention 的 causal 变体可省一半块计算（见 C2 任务）
+  - **接受/拒绝采样**：verify 后用 target 的 logits 做接受/拒绝，保持分布不变
+
+</details>
+

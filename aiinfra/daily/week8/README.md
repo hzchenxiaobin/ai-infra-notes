@@ -1,37 +1,32 @@
-# Week 8：项目打磨 + 面试准备
+# Week 8：系统整合与分布式并行
 
-> 核心目标：将前七周的学习成果转化为面试能力，完善项目文档和架构图，准备高频面试题，进行 mock 面试和查漏补缺
+> 核心目标：掌握多请求并发、完整调度器、投机解码、分布式并行（TP/PP/DP）、Ring Attention、MoE+EP
 
-| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　  |
-| ------------| -----------------------------------------------------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 7 学习，掌握完整 Mini AI Infra 系统、多请求并发调度、自定义 Kernel 整合、全链路 Profiling　　 |
-| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　  |
-| 本周产出　 | 完善的 README、系统架构图与数据流图、43+ 高频面试题库、Mock 面试记录、8 周总结报告、后续学习路线图　　　  |
-| 周日里程碑 | 打磨项目文档与架构图（5+ 核心模块），建立 43+ 高频面试题库并能自问自答，完成 8 周能力地图与后续学习路线图 |
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| --------------------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 7，掌握 Continuous Batching、vLLM Scheduler、PD 分离、Mini 引擎 v1　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | 完整调度器（优先级/超时/抢占）、投机解码模拟、分布式推理分析、MoE 路由模拟器　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | 完整调度器 500 请求不崩溃，理解 TP/PP/DP/EP 四维并行与 all-to-all/all-reduce 通信模式　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
 ## 🧭 本周学习地图
 
 ```
-Day 1: 项目文档完善 → README、Quick Start、依赖安装、Benchmark 结果
-  ↓
-Day 2: 架构图与数据流图 → 系统架构、数据流、模块交互图
-  ↓
-Day 3: 高频面试题基础篇 → GPU、Kernel、CUDA、Profiling
-  ↓
-Day 3b: 多硬件对比 → NVIDIA CUDA vs Ascend CANN（概念对照-only）
-  ↓
-Day 4: 高频面试题进阶篇 → Attention、推理系统、vLLM、调度
-  ↓
-Day 5: Mock 面试 → 自我介绍、项目介绍、技术难点、优化思路
-  ↓
-Day 6: 查漏补缺 → 薄弱点复习、易混淆概念、关键公式
-  ↓
-Day 6b（补充专题）: 诊断流程实战剧本 + 手撕限时清单（C1 + C2）
-  ↓
-Day 7: 最终复盘 → 8 周能力地图、强项/待提升、后续规划
-```
+Day 1: 调度优化策略总结
+        ↓
+Day 2: 多请求并发支持
+        ↓
+Day 3: 完整调度器（优先级/超时/抢占）
+        ↓
+Day 4: SGLang / 投机解码
+        ↓
+Day 5: 分布式推理 —— TP/PP/DP 与通信计算重叠
+        ↓
+Day 6: Ring Attention —— 长上下文分布式注意力
+        ↓
+Day 7: MoE + EP 并行专题
 
 ---
 
@@ -41,12 +36,10 @@ Day 7: 最终复盘 → 8 周能力地图、强项/待提升、后续规划
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | 项目文档完善 | [day1/](day1/README.md) |
-| Day 2 | 架构图与数据流图 | [day2/](day2/README.md) |
-| Day 3 | 高频面试题基础篇 | [day3/](day3/README.md) |
-| Day 3b | 多硬件对比：CUDA vs Ascend CANN | [day3b/](day3b/README.md) |
-| Day 4 | 高频面试题进阶篇 | [day4/](day4/README.md) |
-| Day 5 | Mock 面试 | [day5/](day5/README.md) |
-| Day 6 | 查漏补缺 | [day6/](day6/README.md) |
-| **Day 6b** | **诊断流程实战剧本 + 手撕限时清单（C1 + C2）** | **[day6b/](day6b/README.md)** |
-| Day 7 | 最终复盘 | [day7/](day7/README.md) |
+| Day 1 | 调度优化策略总结 | [day1/](day1/README.md) |
+| Day 2 | 多请求并发支持 | [day2/](day2/README.md) |
+| Day 3 | 完整调度器（优先级/超时/抢占） | [day3/](day3/README.md) |
+| Day 4 | SGLang / 投机解码 | [day4/](day4/README.md) |
+| Day 5 | 分布式推理 —— TP/PP/DP 与通信计算重叠 | [day5/](day5/README.md) |
+| Day 6 | Ring Attention —— 长上下文分布式注意力 | [day6/](day6/README.md) |
+| Day 7 | MoE + EP 并行专题 | [day7/](day7/README.md) |

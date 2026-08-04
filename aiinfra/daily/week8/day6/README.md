@@ -1,440 +1,449 @@
-## Day 6：查漏补缺
+## Day 6：Ring Attention —— 长上下文分布式注意力
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 能根据 Day 5 Mock 面试的**复盘记录**定位 3-5 个个人薄弱点<br>
-2. 掌握**六大高频薄弱点**（Online Softmax / GEMM 层次 / vLLM Scheduler / KV Cache 内存 / Roofline / Prefill-Decode）的复习方法<br>
-3. 整理一张**十大易混淆概念对比表**，面试时能一句话说清区别<br>
-4. 熟练背诵**关键公式**（online softmax 三公式、KV Cache 内存、Ridge Point）和 **RTX 5090 参数**<br>
-5. 能不看资料**默画** 8 个核心流程图（memory hierarchy、GEMM 层次、FA tiling、vLLM 架构等）<br>
-6. 用自测系统 `knowledge_selftest.py` 完成至少一轮知识自检，薄弱点清零
+1. 理解**长上下文的显存墙**——百万 token context 下 KV Cache 显存压力线性膨胀（$O(Nd)$），单卡放不下，标准 FlashAttention 仍需在单卡 SRAM/HBM 内持有全量 KV<br>
+2. 掌握 **Ring Attention 原理**——KV 跨 GPU 流式传输，每个 GPU 持有一部分 Q，KV 在 GPU 间环形传递，本地 attention 计算与通信重叠<br>
+3. 理解**与 FlashAttention 的关系**——Ring Attention = FlashAttention + 分布式 KV 传输，**online softmax 天然支持跨 GPU 合并**（每块 KV 算完增量更新 $(m, l, O)$，无需物化全局 attention matrix）<br>
+4. 掌握 **Ring Attention 实现细节**——NCCL `send/recv` 通信、双流重叠（compute stream + comm stream）、load balancing（按 Q 长度均衡切分）<br>
+5. 学会**量化 Ring Attention 的收益**——KV buffer 峰值显存降至 $1/N$、通信与计算重叠把总时间从 $T_c + T_{comm}$ 降到 $\max(T_c, T_{comm}) \times N$ 步<br>
+6. 用 Python + numpy 手写 **单机 Ring Attention 模拟器**（N=4 GPU 环形 KV 传递 + online softmax 增量合并），实测与标准 attention 数值一致
 
-> 💡 **为什么重要**：Day 5 的 Mock 面试暴露了"懂但讲不清楚"的问题。查漏补缺是把"模糊印象"变成"肌肉记忆"的最后一步——面试官追问时，你要能在 3 秒内给出准确数字和公式，而不是"大概是……"。
+> 💡 **为什么重要**：Day 4 整合了自定义 Kernel（FlashAttention 等），但默认假设"KV Cache 能放进单卡"。当上下文长到百万 token（如长文档、长对话、RAG 拼接），KV Cache 显存会爆炸——70B 模型 1M token 的 KV Cache 单卡就要上百 GB，单卡必然 OOM。Ring Attention 是把"放不下"的 KV 切到多卡环形流式传输的标配方案（Lucasz 2023 论文后被 FlashAttention-3 / vLLM / Megatron-LM 集成）。它本质上是把 FlashAttention 的"分块扫描 + online softmax"从单卡 SRAM 内部扩展到多卡互联——这是面试"长上下文分布式注意力"的高频考点，也是 Day 3b TP/PP/DP 之外的第四种分布式并行维度。
 
 ---
 
-### 学前导读：从 Mock 到查漏补缺
+### 学前导读：长上下文为什么撞墙
 
-Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些卡壳的点，怎么从"记不住"变成"张口就来"？**
+Day 4 集成的 FlashAttention 解决了"单卡内 attention 中间矩阵 $O(N^2)$ 显存爆炸"，但留下了另一个问题：**KV Cache 本身随上下文线性增长**，长到一定程度单卡就放不下。
 
 ```
-❌ "Ridge Point 大概是十几？"
-❌ "KV Cache 好像几百 KB？具体记不清了"
-❌ "online softmax 公式我知道，但写不出来"
-❌ "LayerNorm 和 BatchNorm 都是归一化，区别是……嗯……"
+KV Cache 显存估算（FP16，2(K+V) × n_layer × n_head × d_head × seq_len × batch × 2B）：
+  Llama-7B  (32层, h=32, dh=128)  1M token, B=1 → 2×32×32×128×2B×1e6 ≈ 524 GB   （单卡 OOM）
+  Llama-70B (80层, h=64, dh=128)  1M token, B=1 → 2×80×64×128×2B×1e6 ≈ 2.6 TB   （单卡 OOM）
+  Llama-70B                       1M token, B=8 → 2.6 TB × 8 ≈ 21 TB            （多卡也吃紧）
+  → 百万 token + 多请求并发，KV Cache 远超单卡 80GB
 ```
 
-| 学习阶段 | 目标 | 方法 |
-|----------|------|------|
-| Day 3-4 | 理解概念 | 看笔记、做面试题 |
-| Day 5 | 检验表达 | Mock 面试、录音 |
-| **Day 6** | **补齐漏洞** | **定位薄弱点 → 重学 → 默写 → 二次 Mock** |
-| Day 7 | 全局复盘 | 能力地图、后续规划 |
+| 上下文长度 | KV Cache / 卡（7B, B=1） | 单卡能否放下 | 方案 |
+|-----------|--------------------------|-------------|------|
+| 32K | ~17 GB | ✅ 轻松 | 标准 FlashAttention |
+| 128K | ~69 GB | ⚠️ 紧张 | FlashAttention + PagedAttention |
+| 1M | ~524 GB | ❌ OOM | **Ring Attention**（KV 切多卡） |
+| 1M + B=8 | ~4.2 TB | ❌ OOM | **Ring Attention**（必须） |
 
-查漏补缺的核心是**闭环**：不是"再读一遍"，而是"测→学→默→测"，直到薄弱点消除。
-
-> 💡 **一句话总结**：面试准备的最后冲刺不是"学新东西"，而是"把模糊变精确"——每个数字、每个公式、每个对比，都要能秒答。
+> 💡 **一句话总结**：FlashAttention 解决"attention 中间矩阵 $O(N^2)$"，Ring Attention 解决"KV Cache $O(Nd)$ 放不下"——两者叠加才能撑百万 token 长上下文。
 
 ---
 
 ### 理论学习
 
-#### 6.1 六大高频薄弱点定位与复习
+#### 4b.1 长上下文挑战
 
-![六大高频薄弱点与复习方法](../images/weak_points_review.svg)
+##### KV Cache 显存压力
 
-从历次 Mock 面试和真实面经中，反复出现的薄弱点集中在以下六个。每个点给出"卡壳表现"和"复习方法"：
+Attention 的核心计算是 $O = \text{softmax}(QK^T / \sqrt{d}) V$。推理时 Q 随 query 变化，但 K/V 是**历史 token 的缓存**（KV Cache），随序列长度 $N$ 线性增长：
 
-| 薄弱点 | 典型卡壳表现 | 复习方法 |
-|--------|-------------|---------|
-| **Online Softmax 推导** | "公式我知道，但写不全" | 手写 5 遍三公式，理解 `exp(m-m_new)` 缩放因子 |
-| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 8 层阶梯图，背理论阶梯（1%→15%→40%→55%→60%→70%→80%+→90%+）+ 实测阶梯（week2/day6：10.6%→13.3%→30.8%→64.3%→62.9%→63.8%） |
-| **vLLM Scheduler** | "知道有调度，但状态机讲不清" | 看源码 + 画 WAITING/RUNNING/FINISHED 流程图 |
-| **KV Cache 内存** | "公式记不住，算不出数字" | 用 3 个不同模型算 10 次，背 LLaMA-7B = 524KB |
-| **Roofline Model** | "会画图但 Ridge 算不出" | 记 Ridge = PeakFLOP/BW，RTX5090 = 104.75/1.792 ≈ 58.45 |
-| **Prefill/Decode 强度** | "知道不同但说不清为什么" | 推导 M=1 时 AI 极低 → memory-bound |
+$$
+\text{KV Cache 显存} = 2 \times n_{\text{layer}} \times n_{\text{head}} \times d_{\text{head}} \times N \times B \times \text{bytes}
+$$
 
-##### 为什么这些点最容易卡壳？
+百万 token（$N=10^6$）下，单层 KV Cache 就可达几十 GB，**单卡 HBM（80GB）放不下**整个模型的 KV。
 
-这六个点的共同特征是**需要精确的数字或公式**，而不是模糊的概念描述。面试官区分"背了"和"懂了"的方法，就是追问数字：
+##### 标准 FlashAttention 仍是"单卡内"优化
 
-- "Ridge Point 具体是多少？怎么算的？"
-- "LLaMA-7B 每 token KV Cache 占多少？4096 token 呢？"
-- "GEMM 到 cuBLAS 80%，每一层各占多少？"
-
-回答"大概是"直接扣分，回答"58.45 FLOP/Byte，因为 104.75 TFLOPS 除以 1.792 TB/s"才达标。
-
-#### 6.2 十大易混淆概念对比
-
-![十大易混淆概念对比](../images/confusable_concepts.svg)
-
-面试官最爱用**对比题**区分候选人的理解深度。下面十个对比是高频考点，每个都要能一句话说清区别：
-
-##### 为什么对比题这么重要？
-
-对比题考察的不是"知不知道 A 和 B"，而是"能不能说清 A 和 B 的边界"。回答对比题的**通用套路**：
+FlashAttention（Day 4）用**分块 tiling + online softmax**把 attention 中间矩阵 $N \times N$ 从 HBM 移到 SRAM，避免 $O(N^2)$ 显存。但它假设**所有 Q, K, V 都在同一张卡上**：
 
 ```
-1. 说"粒度/维度/阶段"的差异（最本质）
-2. 给一句量化或场景（佐证）
-3. （可选）说一个容易搞错的点
+FlashAttention 的隐性前提：
+  - Q, K, V 全部在单卡 HBM
+  - 分块在单卡 SRAM 内扫描
+  - 单卡 HBM 必须装得下全部 KV
 ```
 
-**示例**（Prefill vs Decode）：
+当 KV 超过单卡 HBM 时，FlashAttention 也无能为力——需要**跨卡分布 KV**，这就是 Ring Attention 的动机。
 
-> "粒度差异：Prefill 输入 `(B, N, d)` 是 compute-bound，Decode 输入 `(B, 1, d)` 是 memory-bound。
-> 量化：Decode 时 M=1，arithmetic intensity 极低，远低于 Ridge Point。
-> 易错：Decode 不是'慢'，而是'带宽没吃满'，优化方向是 KV Cache 和 PagedAttention，不是加算力。"
+> ⚠️ **常见误解**："FlashAttention 已经解决了长上下文显存问题"。错——它解决的是 attention **中间结果**的 $O(N^2)$，不是 **KV Cache** 的 $O(Nd)$。后者随 $N$ 线性增长，百万 token 时单卡仍放不下。
 
-##### 五级深入：LayerNorm vs BatchNorm
+#### 4b.2 Ring Attention 原理
 
-这两个是归一化家族里最容易混淆的。本质区别是 **reduce 的维度**：
+![Ring Attention：KV 环形流式传输 + 本地 online softmax](../../week7/images/ring_attention_overview.svg)
 
-- **BatchNorm**：reduce 跨 `(N, H, W)`，按**通道**归一化。每个通道 `c` 算一个 mean/var。
-- **LayerNorm**：reduce 跨 `(C, H, W)`（或 feature 维），按**样本**归一化。每个样本算一个 mean/var。
+Ring Attention 的核心思想：**把 Q 和 KV 沿 sequence 维切分到 N 张 GPU，KV 块在 GPU 间环形传递，每张 GPU 用本地 Q + 当前到达的 KV 块做局部 attention，online softmax 增量合并结果**。
 
-| 维度 | BatchNorm | LayerNorm |
-|------|-----------|-----------|
-| reduce 轴 | batch + spatial | feature |
-| mean/var 数量 | C 个（每通道一组） | N 个（每样本一组） |
-| 训练/推理差异 | 有（推理用 running stats） | 无 |
-| 适用场景 | CNN（图像） | Transformer / NLP |
-| CUDA 实现 | 一个 block 一个通道 | 一个 block 一个样本 |
+##### 数据切分与环形传递
 
-> ⚠️ BatchNorm 在推理时用**训练期累积的 running mean/var**，而不是实时计算——这是面试高频追问点。
+```
+切分：Q, K, V 沿 sequence 维均分到 N 张 GPU
+  GPU 0 持有 Q₀, K₀, V₀  （Q₀ 固定不动，KV₀ 每步传给右邻）
+  GPU 1 持有 Q₁, K₁, V₁
+  GPU 2 持有 Q₂, K₂, V₂
+  GPU 3 持有 Q₃, K₃, V₃
 
-#### 6.3 关键公式与参数速查
-
-![关键公式与参数速查表](../images/key_formulas_cheatsheet.svg)
-
-面试前必须能**秒写、秒背、秒算**的五组公式和一组参数：
-
-##### 五组必背公式
-
-```text
-① Online Softmax
-   m_new = max(m, max(xj))
-   l_new = l · exp(m - m_new) + Σ exp(xj - m_new)
-   o_new = o · (l · exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) · vj
-
-② KV Cache 内存
-   bytes/token = 2 × L × H × d × bytes_per_elem
-   LLaMA-7B (32层/32头/d=128/fp16): 2×32×32×128×2 = 524288 B ≈ 524 KB
-
-③ FLOPs 与算术强度
-   FLOPs = 2 · M · N · K    （GEMM）
-   AI = FLOPs / Bytes       （Arithmetic Intensity）
-
-④ Roofline Ridge Point
-   Ridge = Peak FLOP/s / Peak Bandwidth
-   RTX 5090 = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte
-   AI < Ridge → memory-bound；AI > Ridge → compute-bound
-
-⑤ FlashAttention HBM IO
-   Standard: O(N² + Nd)    FlashAttention: O(Nd)
+环形传递（每步）：
+  GPU i 把当前持有的 KV 块 send 给 GPU (i+1) % N
+  GPU i 从 GPU (i-1) % N recv 新的 KV 块
+  → N 步后，每张 GPU 都"看过"全部 N 个 KV 块
 ```
 
-##### RTX 5090 关键参数
+##### 本地 attention + online softmax 增量合并
 
-```text
-FP32 Peak:            104.75 TFLOPS
-Tensor Core FP16:     ~209 TFLOPS (dense)
-Memory Bandwidth:     1.792 TB/s (GDDR7)
-Ridge Point:          ~58.45 FLOP/Byte
-Shared Memory / SM:   100 KB
-Max Threads / SM:     1536
-Warp Size:            32
-Max Registers/Thread: 255
-Compute Capability:   sm_120
+每张 GPU 维护一个**在线 softmax 状态** $(m, l, O)$（同 FlashAttention），每收到一个 KV 块就增量更新：
+
+$$
+\begin{aligned}
+m_{\text{new}} &= \max(m_{\text{old}},\ \max(S_{\text{block}})) \\
+\alpha &= \exp(m_{\text{old}} - m_{\text{new}}) \\
+l_{\text{new}} &= l_{\text{old}} \cdot \alpha + \sum_j \exp(S_{\text{block},j} - m_{\text{new}}) \\
+O_{\text{new}} &= O_{\text{old}} \cdot \alpha + \sum_j \exp(S_{\text{block},j} - m_{\text{new}}) \cdot V_{\text{block},j}
+\end{aligned}
+$$
+
+其中 $S_{\text{block}} = Q_{\text{local}} \cdot K_{\text{block}}^T / \sqrt{d}$。N 步后 $O / l$ 即为完整 attention 输出。
+
+> 💡 **关键洞察**：online softmax 的"增量累加 + 末尾归一化"特性，使得**每个 KV 块的 attention 可以独立计算再合并**，无需看到全局 softmax 分母。这正是 Ring Attention 能跨 GPU 流式合并的数学基础。
+
+#### 4b.3 与 FlashAttention 的关系
+
+![Online Softmax：(m, l, O) 三元组增量更新](https://github.com/hzchenxiaobin/ai-infra-notes/raw/main/aiinfra/daily/week4/images/flash_attention_online_update.svg)
+
+Ring Attention 与 FlashAttention 的关系可以用一句话概括：
+
+> **Ring Attention = FlashAttention + 分布式 KV 传输**
+
+| 维度 | FlashAttention | Ring Attention |
+|------|---------------|----------------|
+| 分块扫描 | 单卡 SRAM 内扫描 KV tile | 多卡环形传输 KV block，每卡扫一个 block |
+| online softmax | $(m, l, O)$ 在单卡内更新 | $(m, l, O)$ 在每卡内跨 block 更新（**同样的数学**） |
+| KV 存放 | 单卡 HBM | 分布式：每卡只持 $1/N$，环形轮转 |
+| 通信 | 无（单卡） | NCCL `send/recv` 环形传 KV |
+| 解决的瓶颈 | attention 中间矩阵 $O(N^2)$ | KV Cache $O(Nd)$ 放不下 |
+| 适用场景 | 单卡能放下全量 KV | 单卡放不下 KV（长上下文） |
+
+##### 为什么 online softmax 天然支持跨 GPU 合并
+
+FlashAttention 的 online softmax 把"全局 softmax"拆成"每块算局部 exp + 增量更新 $m, l$"，**每块的贡献可独立累加**。Ring Attention 把这个"块"从单卡 SRAM 内的 tile，扩展到多卡间的 KV block——**数学完全相同**，只是块的粒度从"SRAM tile"变成"GPU 持有的 KV shard"。
+
+```
+FlashAttention：Q 在单卡，扫 N 个 SRAM tile 的 KV  → 每块更新 (m, l, O)
+Ring Attention：Q 在本卡，扫 N 个跨 GPU 的 KV block → 每块更新 (m, l, O)
+                  ↑ 数学完全相同，只是"块"的粒度不同 ↑
 ```
 
-##### 背诵技巧
+> 💡 **一句话总结**：Ring Attention 不是新算法，而是把 FlashAttention 的"分块 + online softmax"从单卡扩展到多卡——SRAM tile → GPU shard，同样的增量合并公式。
 
-不要硬背数字，而是**记量纲，再推数字**：
+#### 4b.4 实现细节
 
-- Ridge Point 的量纲是 `FLOP/Byte` → 用 `算力 ÷ 带宽` 自己推：`104.75 / 1.792 = 58.45`
-- KV Cache 的量纲是 `Byte/token` → 用 `2 × L × H × d × bytes` 推
-- GEMM FLOPs 的量纲是 `FLOP` → `2 × M × N × K`（2 是一次乘 + 一次加）
+##### NCCL send/recv 通信
 
-> 💡 **一句话总结**：面试官追求数字时，能**当场推导**比"背对了"更有说服力——这说明你理解公式，不是死记。
-
----
-
-### Coding 任务：知识自测与薄弱点攻坚
-
-#### 任务 1：创建 knowledge_selftest.py
-
-创建文件 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day6/kernels/knowledge_selftest.py)，把六大薄弱点 + 关键公式 + RTX 5090 参数做成一个自测系统：
+Ring Attention 用 NCCL 的**点对点通信**（不是 collectives）实现环形传递：
 
 ```python
-# knowledge_selftest.py —— AI Infra 知识点自测系统
-# 运行命令: python knowledge_selftest.py
-# 依赖: 仅标准库
-#
-# 覆盖六大薄弱点：Online Softmax / GEMM 层次 / vLLM Scheduler /
-#                  KV Cache 内存 / Roofline / Prefill-Decode
-# 三种模式：
-#   quiz    —— 随机抽题，限时口述后看答案
-#   formula —— 关键公式默写（填空）
-#   param   —— RTX 5090 关键参数快问快答
+# 每步：GPU i 把当前 KV 发给右邻 (i+1)%N，同时从左邻 (i-1)%N 收新 KV
+# 用 nccl.send / nccl.recv（需要 send/recv 配对，否则死锁）
+k_send, v_send = cur_k, cur_v           # 要发出的 KV
+k_recv = torch.empty_like(k_send)
+v_recv = torch.empty_like(v_send)
 
-import random
-import time
-
-QUIZ_BANK = [
-    {
-        "topic": "Online Softmax",
-        "q": "写出 online softmax 的三个更新公式（m / l / o）。",
-        "a": (
-            "m_new = max(m, max(xj))\n"
-            "l_new = l * exp(m - m_new) + Σ exp(xj - m_new)\n"
-            "o_new = o * (l * exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) * vj\n"
-            "\n要点：exp(m - m_new) 是统一参考点的缩放因子；"
-            "避免物化 N×N 矩阵，IO 从 O(N²) 降到 O(Nd)。"
-        ),
-    },
-    # ... 共 8 道题，覆盖六大薄弱点 + FlashAttention + PagedAttention
-]
-
-FORMULA_BLANKS = [
-    {"prompt": "Online Softmax 的 m_new = ", "answer": "max(m, max(xj))"},
-    {"prompt": "Online Softmax 的 l_new = l * ___ + Σ exp(xj - m_new)", "answer": "exp(m - m_new)"},
-    {"prompt": "KV Cache bytes/token = 2 × L × H × ___ × bytes_per_elem", "answer": "d"},
-    # ... 共 7 道填空
-]
-
-PARAM_QUIZ = [
-    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "104.75"},
-    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.792"},
-    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "58.45"},
-    # ... 共 10 道参数题
-]
-
-# 完整代码见 kernels/knowledge_selftest.py
+# 双缓冲：send 和 recv 并行（避免 send 等 recv 的死锁）
+req_k = dist.isend(k_send, dst=(rank+1) % N)
+req_v = dist.isend(v_send, dst=(rank+1) % N)
+dist.recv(k_recv, src=(rank-1) % N)
+dist.recv(v_recv, src=(rank-1) % N)
+req_k.wait(); req_v.wait()
+cur_k, cur_v = k_recv, v_recv
 ```
 
-完整代码见 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day6/kernels/knowledge_selftest.py)。
+##### 双流重叠（compute stream + comm stream）
+
+参考 Day 3b 的通信-计算重叠，Ring Attention 把"用当前 KV 算 attention"和"把当前 KV 发给右邻"放到两个 stream 并发：
+
+| Stream | 每步做的事 |
+|--------|-----------|
+| **compute_stream** | $S = Q \cdot K_{\text{cur}}^T$，online softmax 更新 $(m, l, O)$ |
+| **comm_stream** | `isend(K_cur, V_cur)` 给右邻，`recv` 左邻的下一块 KV |
+
+```
+串行：  |attn KV0|send KV0|attn KV1|send KV1| ...   total = (Tc+Ta) × N
+重叠：  |attn KV0|attn KV1|attn KV2| ...             total ≈ max(Tc,Ta) × N
+        ........|send KV0|send KV1|send KV2| ..
+        （compute 用 KV[t]，同时 comm 发 KV[t] 给右邻，右邻下一步用）
+```
+
+> ⚠️ **重叠前提**：compute 用的 KV 与 comm 发送的 KV **是同一份只读数据**（compute 读、comm 发，无写冲突），所以可安全并发。多卡场景下通信走 NVLink/IB 独立硬件，与计算 SM 完全解耦，重叠效果远好于单卡双流。
+
+##### Load Balancing
+
+理想情况下每卡持有等长的 Q shard（compute 均衡）和等长的 KV shard（comm 均衡）。但实际场景（变长请求拼接、causal mask 导致下三角不均匀）需要**按 Q 长度均衡切分**：
+
+- **均衡切分**：按每卡 Q 行数相等切，保证 compute 均衡
+- **causal mask 处理**：下三角 mask 使得前面的 Q 行计算量更大（要 attend 更多 KV），需用斜对角切分（striped partitioning）让每卡总计算量均衡
+- **通信均衡**：KV shard 等大则 comm 均衡；变长时按 KV token 数切分
+
+> 💡 **生产实现**：Megatron-LM 的 `ring_attention` 支持变长序列的均衡切分；FlashAttention-3 在 H100 上用 TMA + async copy 实现更高效的重叠。完整实现远比本 Day 的模拟复杂，但核心数学（online softmax 跨块合并）不变。
+
+### Coding 任务：单机模拟 Ring Attention
+
+#### 任务 1：创建 ring_attention_sim.py
+
+创建文件 [kernels/ring_attention_sim.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/ring_attention_sim.py)，用 numpy 单机模拟 N=4 GPU 的 Ring Attention（无需真实多卡 / GPU）：
+
+```python
+# ring_attention_sim.py —— 单机模拟 Ring Attention（N GPU 环形 KV 传输 + online softmax）
+# 运行命令: python ring_attention_sim.py
+# 依赖: numpy（无需 GPU / torch，纯 CPU 模拟分布式逻辑）
+
+def online_softmax_update(m_old, l_old, o_old, s_block, v_block):
+    m_block = s_block.max(axis=-1)
+    m_new = np.maximum(m_old, m_block)
+    alpha = np.exp(m_old - m_new)[:, None]
+    beta = np.exp(s_block - m_new[:, None])
+    l_new = l_old * alpha[:, 0] + beta.sum(axis=-1)
+    o_new = o_old * alpha + beta @ v_block
+    return m_new, l_new, o_new
+
+def ring_attention(Q, K, V, n=N_GPUS, log=False):
+    q_shards = np.array_split(Q, n, axis=0)    # 每卡持 1/N 的 Q（固定）
+    k_shards = np.array_split(K, n, axis=0)    # 每卡持 1/N 的 KV（环形轮转）
+    v_shards = np.array_split(V, n, axis=0)
+    states = [(np.full((q.shape[0],), -np.inf),
+               np.zeros(q.shape[0]),
+               np.zeros((q.shape[0], D))) for q in q_shards]
+    cur_k, cur_v = list(k_shards), list(v_shards)
+
+    for step in range(n):                      # N 步环形轮转
+        for i in range(n):                     # 每卡本地算 attn
+            q = q_shards[i]
+            s = (q @ cur_k[i].T) * SCALE
+            m, l, o = states[i]
+            states[i] = online_softmax_update(m, l, o, s, cur_v[i])
+        # ring comm: GPU i 的新 KV = GPU (i-1) 的旧 KV
+        cur_k = [cur_k[(i - 1) % n] for i in range(n)]
+        cur_v = [cur_v[(i - 1) % n] for i in range(n)]
+
+    outs = [states[i][2] / states[i][1][:, None] for i in range(n)]
+    return np.concatenate(outs, axis=0)
+```
+
+完整代码见 [kernels/ring_attention_sim.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/ring_attention_sim.py)。
 
 代码要点：
-- **三种模式**：`quiz`（随机抽题口述）、`formula`（公式填空默写）、`param`（参数快问快答）
-- **quiz 模式**：每题限时口述，回车看参考答案，记录用时
-- **formula/param 模式**：自动判分，答错显示正确答案
-- **覆盖全面**：8 道口述题 + 7 道填空 + 10 道参数，对应六大薄弱点
+- **数据切分**：`np.array_split` 沿 sequence 维把 Q/K/V 均分到 N=4 个"GPU"
+- **online softmax**：`online_softmax_update` 实现 $(m, l, O)$ 三元组增量更新，与 FlashAttention 公式一致
+- **环形通信**：每步 `cur_k = [cur_k[(i-1)%n] ...]` 模拟"GPU i 收到左邻的 KV"（等价于 GPU i 发给右邻 (i+1)%N）
+- **正确性校验**：与 `standard_attention`（全量 Q@K^T softmax @V）逐元素比对 `max_diff`
 
-#### 任务 2：运行自测系统
+#### 任务 2：运行并对比 standard vs ring
 
 ```bash
-python kernels/knowledge_selftest.py
+python kernels/ring_attention_sim.py
 ```
 
-**预期流程**（节选）：
+**预期输出**（节选，数值固定因 seed=42）：
 
 ```text
-============================================================
-       AI Infra 知识点自测系统（查漏补缺）
-============================================================
-覆盖六大薄弱点 + 关键公式 + RTX 5090 参数
+==============================================================
+  Ring Attention 单机模拟（N=4 GPU）
+==============================================================
+  seq=16, d=8, scale=0.3536, N_GPUS=4
 
-命令：
-  quiz    —— 随机抽题，限时口述后看答案
-  formula —— 关键公式默写（填空）
-  param   —— RTX 5090 关键参数快问快答
-  all     —— 依次执行三种模式
-  q       —— 退出
+[1] standard attention（全部在一张卡上）:
+    output[0, :3] = [0.3300225  0.29101914 0.25489855]
 
-输入命令: quiz
+[2] ring attention（KV 环形传输 + online softmax 增量合并）:
+    step 0 GPU0: 用 KV0 本地算 attn → 更新 (m,l,O)
+  step 0 完成: 各卡把 KV 发给右邻 (i+1)%4
+    step 1 GPU0: 用 KV3 本地算 attn → 更新 (m,l,O)
+  ...
+    output[0, :3] = [0.33002249 0.29101917 0.25489856]
 
-=== 模式：随机抽题口述 ===
+[3] 正确性校验:
+    max|ref - ring| = 1.888e-07
+    结果: PASS ✅
 
-【第 1 题 / KV Cache 内存】
-LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 token 呢？
---------------------------------------------------
-回车看答案（q 退出）:
+[4] 显存与通信分析:
+    全量 KV = 1024 B, 每块 KV = 1024/4 = 256 B
+    Ring 每卡峰值 KV buffer = 1 块 = 256 B（流式轮转，只留当前块）
+    朴素(全量 gather)每卡 KV buffer = 1024 B → Ring 省 75%
+    → 核心收益: KV buffer 显存省 (N-1)/N + comm/compute 重叠, 而非总通信量减少
+
+[5] compute / comm 重叠示意（双流）:
+    compute: |attn KV0|attn KV1|attn KV2|attn KV3|
+    comm:    ........|send KV0|send KV1|send KV2|..
+    重叠后:  total ≈ max(T_compute, T_comm) × N 步
 ```
 
 ##### 观察重点
 
-1. **quiz 模式**：每题能否在 3 分钟内口述完？超时说明还没形成肌肉记忆
-2. **formula 模式**：7 道填空正确率是否 > 80%？错的题回到理论学习重学
-3. **param 模式**：10 道参数是否全对？Ridge Point 必须能秒答 58.45
-4. **二次自测**：针对错误项重学后，再跑一遍，直到全对
+1. **正确性 PASS**：`max_diff = 1.888e-07`（FP32 浮点误差量级），证明环形 N 步 online softmax 合并等价于一次性全量 attention
+2. **KV 轮转路径**：GPU0 依次用 KV0 → KV3 → KV2 → KV1（每步从左邻收到新块），N 步后看完全部
+3. **显存省 75%**：Ring 每卡峰值 KV buffer = 256 B vs 朴素 1024 B，省 $(N-1)/N = 75\%$
+4. **通信量未减**：总通信量与"全量 gather"相同（≈ $N \times KV$），但 Ring 切成分块与计算重叠，且每卡峰值 buffer 更小
 
-#### 任务 3：默写关键公式与流程图
+> 思考：为什么 Ring Attention 的总通信量并不比"全量 gather KV 到每卡"少，却仍是大长上下文的首选？（提示：核心收益不在总通信量，而在①每卡峰值 KV buffer 降至 $1/N$（显存），②通信切成分块与计算重叠（延迟隐藏），③无需先 gather 再计算，可流式启动。）
 
-不看任何资料，完成以下默写（用纸笔或文本编辑器）：
+#### 任务 3：验证 / 分析
 
-| 默写项 | 验收标准 | 用时目标 |
-|--------|---------|---------|
-| Online Softmax 三公式 | m_new / l_new / o_new 完整写出 | < 2 min |
-| KV Cache 内存公式 + LLaMA-7B 数字 | 公式 + 524KB + 4096→2GB | < 1 min |
-| GEMM 8 层优化 + 增益 % | 理论阶梯 1%→90%+ + 实测阶梯（week2/day6）10.6%→63.8% | < 3 min |
-| Roofline 图 + Ridge 计算 | 斜线/水平线 + 58.45 推导 | < 2 min |
-| vLLM 架构图 | Engine→Scheduler→Worker→KV | < 3 min |
-| Continuous Batching 时间线 | 3 个请求动态进出 | < 3 min |
-| FlashAttention tiling 示意 | Q/K/V block + online softmax | < 3 min |
-| GPU memory hierarchy | Register→Shared→L1/L2→HBM + 延迟 | < 2 min |
+修改 `ring_attention_sim.py`，做以下验证：
 
-> 验收：8 项全部达标。某项卡壳 → 回到理论学习对应小节重学 → 重新默写。
+1. **改 N=8**：把 `N_GPUS = 8`（确保 `SEQ % N == 0`），重跑正确性，确认 `max_diff` 仍 $< 10^{-5}$
+2. **改 SEQ=64**：增大序列长度，观察 `max_diff` 是否仍稳定（online softmax 数值稳定性）
+3. **数值稳定性**：把 `D=8` 改成 `D=64`（logit 更大），观察不带 `scale` 时的数值溢出，理解 `SCALE = D**-0.5` 的作用
 
-#### 任务 4：LeetGPU 在线题目 —— Batch Normalization
+```bash
+# 改参数后重跑
+python kernels/ring_attention_sim.py
+```
 
-**题目链接**：<https://leetgpu.com/challenges/batch-normalization>
+> 思考：N=8 时 max_diff 会变大还是变小？（提示：浮点累加次数翻倍，误差略增但仍 $< 10^{-5}$。online softmax 的 $m$ rescale 保证了每步 exp 的最大值有界，数值稳定。）
 
-**与今日知识的关联**：
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
 
-BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它考察 **reduce 的维度**（BatchNorm 跨 batch/spatial、LayerNorm 跨 feature）和 **memory-bound kernel 的优化**（融合 reduce + normalize，IO 从 3 遍降到 1 遍）。面试中能讲清"两者 reduce 维度差异 + 融合实现 + 为什么 memory-bound"，归一化家族（RMSNorm / GroupNorm）就都是同构变体。
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
-> 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
+**与今日知识的关联**：Ring Attention 的每一步本地计算，就是一道标准的 **Softmax Attention**——给定 Q, K, V，算 $\text{softmax}(QK^T/\sqrt{d})V$。Ring Attention 把这个 kernel 在 N 步里重复 N 次（每次用不同的 KV block），靠 online softmax 把 N 次的结果增量合并。换言之，**Ring Attention = N 次本地 Softmax Attention + online softmax 跨块合并**。把这道题做透（手写融合的 softmax + matmul kernel，避免物化 $N \times N$ attention matrix），你就掌握了 Ring Attention 每一步本地 kernel 的优化要点——分块 tiling、shared memory 复用、online softmax。这正是 Day 4 FlashAttention 集成时强调的"算子融合"在分布式场景的延伸。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 6）
+> 💡 提交后在 [LeetGPU Softmax Attention](https://leetgpu.com/challenges/softmax-attention) 上记录通过耗时。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 6（最短路与 BFS），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+
+> 📅 今日为 Ring Attention 长上下文专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 4 道高频题（二分变种 + 一维 DP + 字符串 DP），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [743. 网络延迟时间](https://leetcode.cn/problems/network-delay-time/) | 中等 | 堆优化 Dijkstra 单源最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html) |
-| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
-| [752. 打开转盘锁](https://leetcode.cn/problems/open-the-lock/) | 中等 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html) |
-| [127. 单词接龙](https://leetcode.cn/problems/word-ladder/) | 困难 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html) |
-| [329. 矩阵中的最长递增路径](https://leetcode.cn/problems/longest-increasing-path-in-a-matrix/) | 困难 | 记忆化搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
+| [74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) | 中等 | 二分（二维展平为一维，$O(\log mn)$） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/74_搜索二维矩阵.html) |
+| [33. 搜索旋转排序数组](https://leetcode.cn/problems/search-in-rotated-sorted-array/) | 中等 | 旋转数组二分（判断哪半有序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html) |
+| [70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/) | 简单 | 一维 DP（$f(n)=f(n-1)+f(n-2)$） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html) |
+| [139. 单词拆分](https://leetcode.cn/problems/word-break/) | 中等 | 字符串 DP（$dp[i]=$ 前 i 个字符可拆分） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+
+> 💡 刷题建议：74 把二维坐标映射成一维index（`mid -> [mid//n, mid%n]`）即可套标准二分模板；33 是旋转数组二分经典题，关键判断"哪半边有序"再决定往哪缩；70 是 DP 入门，5 分钟默写，注意初始值 $f(0)=1, f(1)=1$；139 是字符串 DP，用集合存字典做 $O(n^2)$ 转移，理解"dp[i] 依赖于 dp[j] && s[j:i] in dict"。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：薄弱点清零挑战
+#### 实验 1：把 N 改成 2 和 8，对比 max_diff 与显存收益
 
-运行 `python kernels/knowledge_selftest.py`，执行 `all` 模式（quiz + formula + param）。记录得分：
+修改 `N_GPUS` 为 2 和 8（同步调整 `SEQ` 为 8 的倍数），重跑正确性测试。记录 `max_diff` 与"KV buffer 节省比例"，绘制"N vs max_diff"和"N vs 显存节省"曲线。
 
-| 模式 | 第一次得分 | 重学后得分 | 是否清零 |
-|------|----------|----------|---------|
-| quiz（8 题） | /8 | /8 | |
-| formula（7 题） | /7 | /7 | |
-| param（10 题） | /10 | /10 | |
+> 思考：N 增大时显存节省趋于多少？（提示：节省比例 = $(N-1)/N$，$N \to \infty$ 时趋近 100%，但通信步数也线性增长，实际 N 受拓扑限制通常 4-8。）
 
-> 思考：哪类题错最多？是"公式记不住"还是"概念混淆"？前者靠默写，后者靠对比表。
+#### 实验 2：实现 causal mask 的 Ring Attention
 
-#### 实验 2：默画 8 张核心图
+长上下文推理通常是 **causal attention**（下三角 mask）。修改 `ring_attention`，在算 $S = Q \cdot K^T$ 后应用 causal mask（$S_{ij} = -\infty$ if $j > i$）。注意：Q 和 K 在不同卡上时，全局 index 需要偏移（Q 行的全局 index = `q_start + i`，KV 列的全局 index = `kv_start + j`）。
 
-不看资料，用纸笔默画以下 8 张图，每张限时 3 分钟，画完对照资料打分：
+> 思考：causal mask 下，前面的 Q 行要 attend 更多 KV block，后面的 Q 行只需 attend 少数 block——如何切分 Q 才能让每卡 compute 均衡？（提示：striped partitioning，把 Q 行交错分配，让每卡的总 attend KV 数相近。）
 
-1. GPU memory hierarchy（含延迟数字）
-2. GEMM 8 层优化阶梯（含 %）
-3. FlashAttention tiling 示意
-4. Online softmax 状态更新
-5. vLLM 架构图
-6. Continuous Batching 时间线（3 请求）
-7. Prefill/Decode 数据流对比
-8. Roofline Model（含 Ridge Point）
+#### 实验 3：用 torch.distributed 真实多卡跑 Ring Attention
 
-> 思考：哪张图画不全？画不全的图对应的知识点，就是你的盲区——回到对应 Day 的教程重学。
+若有 2+ GPU，把 numpy 模拟替换为 `torch.distributed` + NCCL：用 `dist.isend/irecv` 实现环形 KV 传递，双 `torch.cuda.Stream` 重叠 compute/comm。用 `torchrun --nproc_per_node=4 ring_attention_dist.py` 启动。用 nsys 验证 compute_stream 和 comm_stream 的 kernel 是否真的在时间轴上重叠。
 
-#### 实验 3：二次 Mock 面试
-
-针对 Day 5 暴露的薄弱点和今天重学的内容，再做一轮 Mock 面试（用 `week8/day5/kernels/mock_interview.py`）。重点观察：
-
-1. 之前卡壳的题，现在能否 3 分钟内流畅回答？
-2. 被追问数字时，能否秒答（Ridge 58.45、KV 524KB、GEMM 实测峰值 ~64%）？
-3. 对比题能否一句话说清区别（Prefill/Decode、LayerNorm/BatchNorm）？
-
-> 思考：如果二次 Mock 仍有卡壳，说明薄弱点没真正消除——回到理论学习，用手写 5 遍的方式强制记忆。
+> 思考：真实多卡下重叠效果为什么远好于单卡双流？（提示：通信走 NVLink/IB 独立硬件，与计算 SM 完全解耦；单卡双流共享 SM，大 GEMM 占满时通信 kernel 被迫排队。参考 Day 3b 通信-计算重叠实验。）
 
 ---
 
 ### 今日总结
 
-Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
+Day 4b 我们学习了长上下文分布式注意力的核心方案 Ring Attention：
 
-1. **六大薄弱点定位**：Online Softmax 推导、GEMM 层次、vLLM Scheduler、KV Cache 内存、Roofline、Prefill/Decode 强度
-2. **易混淆概念对比**：十大对比表（Prefill/Decode、LayerNorm/BatchNorm、float4/half2 等），用"粒度→量化→易错"三步法回答
-3. **关键公式背诵**：online softmax 三公式、KV Cache 内存、FLOPs/AI、Ridge Point、FA HBM IO
-4. **RTX 5090 参数**：104.75 TFLOPS、1.792 TB/s、Ridge 58.45、100KB shared mem 等，用"记量纲推数字"法
-5. **自测系统**：`knowledge_selftest.py` 提供 quiz/formula/param 三模式，闭环测→学→默→测
-6. **默画训练**：8 张核心流程图限时默画，画不全即盲区
-7. **二次 Mock**：针对薄弱点重测，确认卡壳点清零
+1. **长上下文显存墙**：百万 token 下 KV Cache 显存 $O(Nd)$ 线性膨胀，单卡放不下；FlashAttention 只解决 attention 中间矩阵 $O(N^2)$，不解决 KV Cache 放不下
+2. **Ring Attention 原理**：Q 与 KV 沿 sequence 维切到 N 卡，KV 在 GPU 间环形传递，每卡用本地 Q + 当前 KV 块做局部 attention，N 步后看完全部 KV
+3. **与 FlashAttention 的关系**：Ring Attention = FlashAttention + 分布式 KV 传输；online softmax 的"增量累加 + 末尾归一化"天然支持跨 GPU 合并，块粒度从 SRAM tile 扩展到 GPU shard
+4. **实现细节**：NCCL `send/recv` 点对点通信（非 collectives）实现环形传递；双流重叠（compute stream 算 attention + comm stream 发 KV）；load balancing 按 Q/KV 长度均衡切分
+5. **核心收益**：KV buffer 峰值显存降至 $1/N$（省 $(N-1)/N$）、通信与计算重叠把总时间从 $(T_c+T_{comm}) \times N$ 降到 $\max(T_c, T_{comm}) \times N$；总通信量不减，靠重叠和流式 buffer 取胜
+6. **实测验证**：`ring_attention_sim.py` 量化 ring vs standard attention `max_diff = 1.9e-7`（PASS）、KV buffer 显存省 75%（N=4）
 
-完成今天的查漏补缺后，你应该能对每个高频面试题在 3 秒内给出准确数字和公式。明天 Day 7 进入最终复盘，画 8 周能力地图、规划后续路线，完成整个学习闭环。
+掌握这些后，你就有了长上下文分布式注意力的理论基础——后续可结合 Megatron-LM 的 `ring_attention` 实现和 FlashAttention-3 的 TMA + async copy 做真实多卡长上下文部署。
 
 ---
 
 ### 面试要点
 
-1. **RTX 5090 的 Ridge Point 是多少？如何计算？含义是什么？**（⭐⭐⭐⭐ 高频）
+1. **什么是 Ring Attention？为什么需要它？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **数值**：约 58.45 FLOP/Byte
- - **计算**：Ridge Point = Peak FLOP/s / Peak Bandwidth = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45
- - **含义**：算术强度 AI < 58.45 → memory-bound；AI > 58.45 → compute-bound
- - **推导**：不要硬背，用"算力 ÷ 带宽"当场推。Ridge 是 Roofline 图上斜线与水平线的交点。
+- **动机**：长上下文（百万 token）下 KV Cache 显存 $O(Nd)$ 单卡放不下，FlashAttention 只解决 attention 中间矩阵 $O(N^2)$，不解决 KV 放不下
+- **原理**：Q 与 KV 沿 sequence 维切到 N 张 GPU，每卡持 $1/N$ 的 Q（固定）和 $1/N$ 的 KV（环形轮转）；每步 KV 块在 GPU 间环形传递（GPU i 发给 (i+1)%N），每卡用本地 Q + 当前 KV 块做局部 attention
+- **合并机制**：online softmax 的 $(m, l, O)$ 增量更新，每收到一个 KV 块就更新一次，N 步后 $O/l$ 即完整 attention 输出
+- **收益**：KV buffer 峰值显存降至 $1/N$（省 $(N-1)/N$）、通信与计算重叠
+- **本质**：把 FlashAttention 的"分块扫描 + online softmax"从单卡 SRAM 扩展到多卡互联，块粒度从 SRAM tile 变成 GPU shard
 
 </details>
 
 
-2. **LLaMA-7B 每 token 的 KV Cache 占多少内存？4096 token 呢？**（⭐⭐⭐⭐ 高频）
+2. **Ring Attention 和 FlashAttention 是什么关系？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **公式**：`bytes/token = 2 × L × H × d × bytes_per_elem`
- - **LLaMA-7B**：32 层、32 头、d_head=128、fp16（2 bytes）
- - **计算**：2 × 32 × 32 × 128 × 2 = 524288 B ≈ 524 KB/token
- - **4096 token**：4096 × 524 KB ≈ 2 GB
- - **易错**：H 是 head 数，d 是 head_dim；多头时 H × d = hidden_dim
+- **一句话**：Ring Attention = FlashAttention + 分布式 KV 传输
+- **相同点**：
+  - 都用 online softmax 的 $(m, l, O)$ 三元组增量更新，避免物化 $N \times N$ attention matrix
+  - 都分块扫描 KV，每块算 $S = QK^T$ 后增量合并
+- **不同点**：
+  - FlashAttention：单卡内分块，KV tile 在 SRAM/HBM 间搬运，无跨 GPU 通信
+  - Ring Attention：多卡间分块，KV block 在 GPU 间环形传递，用 NCCL send/recv
+- **数学一致**：online softmax 的"每块独立累加 + 末尾归一化"使得块粒度可任意——SRAM tile 或 GPU shard 都行，这正是 Ring Attention 能跨 GPU 合并的数学基础
+- **解决的瓶颈**：FlashAttention 解决 attention 中间矩阵 $O(N^2)$，Ring Attention 解决 KV Cache $O(Nd)$ 放不下
 
 </details>
 
 
-3. **LayerNorm 和 BatchNorm 的区别？reduce 维度分别是什么？**（⭐⭐⭐⭐ 高频）
+3. **online softmax 为什么能支持跨 GPU 合并？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **BatchNorm**：reduce 跨 `(N, H, W)`，按**通道**归一化，每通道一组 mean/var（共 C 组）
- - **LayerNorm**：reduce 跨 `(C, H, W)`，按**样本**归一化，每样本一组 mean/var（共 N 组）
- - **训练/推理**：BatchNorm 推理用 running stats（不实时算）；LayerNorm 训练推理一致
- - **场景**：BatchNorm 用于 CNN（图像）；LayerNorm 用于 Transformer（NLP）
- - **CUDA 实现**：BatchNorm 一个 block 一个通道；LayerNorm 一个 block 一个样本
+- **核心性质**：online softmax 把"全局 softmax"拆成"每块算局部 exp + 增量更新 $m, l$"，**每块的贡献可独立累加**，无需先看到全局 softmax 分母
+- **更新公式**（max 从 $m$ → $m_{\text{new}}$）：
+  - $\alpha = \exp(m - m_{\text{new}})$（旧状态缩放因子）
+  - $l = l \cdot \alpha + \sum_j \exp(s_j - m_{\text{new}})$
+  - $O = O \cdot \alpha + \sum_j \exp(s_j - m_{\text{new}}) \cdot V_j$
+- **跨 GPU 合并**：每个 GPU 独立维护一份 $(m, l, O)$，每收到一个 KV block 就用本地 $Q$ 算 $S$ 并更新——**N 步后每卡的 $(m, l, O)$ 等价于单卡扫完所有 KV 的结果**
+- **数值稳定**：$m$ 一直在追踪全局最大值，每步 rescale 保证 exp 的输入有界，不会溢出
+- **对比朴素方法**：朴素 attention 需要先算完全局 $S = QK^T$ 再做 softmax（必须看到所有 KV）；online softmax 把"看到所有 KV"拆成增量，天然支持流式
 
 </details>
 
 
-4. **写出 online softmax 的三个更新公式。**`exp(m - m_new)` **的作用是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **Ring Attention 的通信怎么实现？如何与计算重叠？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- ```
- m_new = max(m, max(xj))
- l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
- o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
- ```
- - `exp(m - m_new)` **的作用**：统一参考点的缩放因子。当新 block 的 max 比旧的大时，旧的累加值 `l` 和 `o` 需要按 `exp(m - m_new)` 缩小（因为 m 变大了，旧的 exp 值相对变小）。
- - **为什么避免物化 N×N**：online softmax 在 SRAM 内增量更新 m/l/o，不需要把完整的 S=QK^T 和 P=softmax(S) 写到 HBM，IO 从 O(N²) 降到 O(Nd)。
+- **通信实现**：NCCL 点对点 `send/recv`（不是 all-reduce 等 collectives）
+  - 每步：GPU i `isend(KV, dst=(i+1)%N)` + `recv(KV, src=(i-1)%N)`
+  - 用 `isend/irecv`（非阻塞）配合双缓冲，避免 send 等 recv 死锁
+- **重叠实现**：双 CUDA Stream
+  - `compute_stream`：用当前 KV 块算 $QK^T$ + online softmax 更新 $(m, l, O)$
+  - `comm_stream`：把当前 KV 块 `isend` 给右邻 + `recv` 左邻的下一块
+  - 两流并发：compute 读 KV[t]，comm 发 KV[t]（同一份只读数据，无冲突）
+- **重叠前提**：
+  1. compute 与 comm 操作的 KV 是同一份只读数据（无写冲突）
+  2. 多卡场景通信走 NVLink/IB 独立硬件，与计算 SM 完全解耦（单卡双流共享 SM，重叠受限）
+- **收益**：total 从 $(T_c + T_{\text{comm}}) \times N$ 降到 $\max(T_c, T_{\text{comm}}) \times N$
+- **进阶**：H100 上用 TMA + async copy（FlashAttention-3）实现更细粒度的重叠，比 NCCL send/recv 更高效
 
 </details>
 
 
-5. **你的 GEMM 优化到 cuBLAS ~64%，每一层优化的收益来源是什么？要达到 90% 还需做什么？**（⭐⭐⭐⭐⭐ 必考）
+5. **Ring Attention 的核心收益是什么？总通信量减少了吗？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- 实测数据（week2/day6 · RTX 5090 · M=N=K=4096，cuBLAS 基线 68.2 TFLOPS = 100%）：
-
- | 层次 | 实测增益 | 收益来源 |
- |------|---------|---------|
- | Naive → Shared Memory Tiling | 10.6%→13.3% | K 维数据复用，减少全局重复读 |
- | → Register Blocking | 13.3%→30.8% | 累加器驻留寄存器，减少 shared mem 访问 |
- | → float4 向量化 | 30.8%→64.3% | 128-bit load 提升带宽利用率（最大单步收益） |
- | → 合并写回（Integrated） | 64.3%→62.9% | 写回占比小，收益在噪声范围内 |
- | → Double Buffering | 62.9%→63.8% | 同步实现未真正重叠，需 cp.async/TMA |
- | Tensor Core | 未实现（理论 80%+） | WMMA/mma 硬件矩阵乘加 |
- | Auto-tuning | 未实现（理论 90%+） | 按尺寸选最优分块参数 |
-
- 达到 90% 还需：① Tensor Core（WMMA 指令）② 真异步 Double Buffering（cp.async/TMA）③ CUTLASS 模板库 ④ 针对目标尺寸 exhaustive search
+- **核心收益不是总通信量减少**，而是两点：
+  1. **KV buffer 峰值显存降至 $1/N$**：每卡只需容纳 1 个 KV block（流式轮转），朴素 gather 需要全量 KV；省 $(N-1)/N$ 显存，是长上下文能放进多卡的关键
+  2. **通信与计算重叠**：把全量通信切成 N 个小块，每块与本地 attention 并发，隐藏延迟
+- **总通信量对比**：
+  - Ring：每卡 N 步各发 1 块 KV（每块 $KV_{\text{total}}/N$），每卡总发 $KV_{\text{total}}$，N 卡共 $N \times KV_{\text{total}}$
+  - 朴素 all-gather：每卡收全量 $KV_{\text{total}}$，N 卡共 $N \times KV_{\text{total}}$
+  - **两者总通信量相同**，但 Ring 流式切分 + 重叠 + 小 buffer
+- **类比**：像流水线 vs 批处理——总工作量一样，但流水线把每段切小并发，峰值资源占用低、延迟隐藏好
+- **何时用 Ring Attention**：KV Cache 单卡放不下时（百万 token）；单卡能放下时用标准 FlashAttention 更简单（无通信开销）
 
 </details>

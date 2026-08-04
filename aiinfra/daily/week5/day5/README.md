@@ -1,160 +1,180 @@
-## Day 5：项目推进 —— Mini 推理引擎 v0
+## Day 5：推理流程 —— Prefill vs Decode
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解一个 LLM 推理引擎的 **5 大核心组件**——Tokenizer、模型后端、KV Cache、采样器、Prefill/Decode 循环——各自的职责与协作<br>
-2. 能用 PyTorch 从零搭建一个 **MiniLLM**（embedding + n_layers 层 transformer + lm_head），支持 `use_cache` 参数区分 Prefill/Decode<br>
-3. 掌握 `generate()` 的 **Prefill + Decode Loop** 两阶段实现——Prefill 一次性填入 prompt 的 K/V，Decode 每步追加 1 个 token 复用 cache<br>
-4. 能验证 **with cache 与 without cache 输出一致**，证明 KV Cache 不改变生成结果只加速<br>
-5. 理解多轮对话中 **KV Cache 复用** 的设计，以及引擎从"单请求"扩展到"多请求 + Continuous Batching"的演进方向<br>
+1. 理解 LLM 推理的 **Prefill 与 Decode 两阶段本质差异**——输入形状、Attention 矩阵形状、瓶颈类型完全不同<br>
+2. 掌握 **TTFT / TBT / TPOT** 三大推理时延指标的定义，能说清各自由哪个阶段决定、如何优化<br>
+3. 能用 **Arithmetic Intensity + Roofline** 解释为什么 Decode 是 memory-bound、Prefill 是 compute-bound<br>
+4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
+5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 O(L·d²) 降到 O(d²)），为 Day 2 手写 KV Cache 打基础<br>
 
-> 💡 **为什么重要**：Day 1-4 我们把推理系统的"零件"逐个造好了——Prefill/Decode（Day1）、KV Cache（Day2）、Scheduler（Day3）、PagedAttention（Day4）。但零件不等于引擎。今天我们把它们组装成第一辆能跑的车：Mini 推理引擎 v0。`generate("hello world", max_new_tokens=10)` 一行调用就能从 prompt 生成 10 个 token——这是从"理解原理"到"动手造系统"的关键一跃。"如何构建一个最简单的 LLM 推理引擎"是工程能力的直接体现，也是面试高频题。
+> 💡 **为什么重要**：Week 4 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 5 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
 
 ---
 
-### 学前导读：从"零件"到"引擎"，还差什么？
+### 学前导读：为什么"推理"和"训练"是两回事，且推理更难优化
 
-Day 4 结束时，我们有了 KV Cache 类、PagedAttention kernel、Scheduler 逻辑——但它们是散的。一个真实推理引擎要让用户只需 `generate(prompt)` 就拿到生成文本，背后需要一个**编排层**把它们串起来：
+训练时，模型一次吞进一大批数据（`batch` 大、序列长），GEMM 都是"大矩阵乘"，Tensor Core 打满，瓶颈在算力——这正是 Week 1-4 我们反复优化的场景。但**推理（inference / serving）完全不同**：用户输入一段 prompt，模型要**一个一个 token 自回归地吐出来**。
 
-| Day | 造的"零件" | 今天怎么用 |
-|-----|-----------|-----------|
-| Day1 | Prefill/Decode 两阶段分析 | 引擎的 `generate` 主体就是这两阶段 |
-| Day2 | KVCache 类（append/get_cache/reset） | 引擎在 Prefill 填充、Decode 追加 |
-| Day3 | LLMEngine + Scheduler + Worker | Mini 引擎的架构蓝本（简化为单请求） |
-| Day4 | PagedAttention kernel | Week7 替换 PyTorch 后端时用（v0 用 PyTorch） |
+这两件事的硬件特征天差地别：
 
-Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching）、**PyTorch 后端**（Week7 换自定义 kernel）、**argmax 采样**（暂不做 temperature/top-k）。这是最小可运行版本——目标是跑通"encode → prefill → decode loop → decode"的完整闭环，验证 KV Cache 的正确性与收益。后续 Day6 做端到端 profiling，Week7+ 逐步替换后端、加多请求调度。
+| 场景 | 每步处理的 token 数 | GEMM 形状 | 瓶颈 |
+|------|------------------|-----------|------|
+| 训练 | 一整批（M 很大） | 大矩阵乘 | compute-bound |
+| 推理 Prefill | 整段 prompt（M = N_prompt） | 大矩阵乘 | compute-bound |
+| 推理 Decode | **1 个 token（M = 1）** | 向量×矩阵（退化） | **memory-bound** |
 
-> 💡 **一句话总结**：Mini 引擎 v0 = Tokenizer + 模型后端（PyTorch）+ KV Cache + 采样器 + Prefill/Decode 循环。它把 Day1-4 的零件组装成一辆能跑的车，用"单请求 + PyTorch"的最简组合验证推理引擎的核心闭环。
+关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
+
+> 💡 **一句话总结**：推理难优化，是因为 Decode 把"大矩阵乘的 compute-bound"退化成了"M=1 的 memory-bound"——Tensor Core 使不上劲，瓶颈从算力变成了带宽。本周所有技术都在和这个矛盾搏斗。
 
 ---
 
 ### 理论学习
 
-#### 5.1 推理引擎的 5 大核心组件
+#### 1.1 Prefill 阶段：一次性处理整段 prompt
 
-![Mini 推理引擎 v0 架构：5 大组件 + 数据流](../images/mini_engine_architecture.svg)
+![Prefill vs Decode 两阶段输入与 Attention 形状](../images/prefill_vs_decode_overview.svg)
 
-| 组件 | 职责 | Mini v0 实现 | 对应 vLLM |
-|------|------|-------------|----------|
-| **Tokenizer** | 文本 ↔ token id 转换 | `MiniTokenizer`（空格分词） | `transformers.AutoTokenizer` |
-| **模型后端** | 执行 transformer forward | `MiniLLM`（PyTorch） | Worker + ModelRunner |
-| **KV Cache** | 存历史 K/V，避免重算 | `model.forward(use_cache=True)` 返回的 list | BlockSpaceManager |
-| **采样器** | logits → next token id | `argmax`（greedy） | Sampler（支持 top-k/top-p） |
-| **Prefill/Decode 循环** | 编排两阶段生成 | `generate()` | LLMEngine.step() 循环 |
+Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 N×N self-attention，输出**第一个新 token** 的 logits。
 
-##### 为什么是这 5 个？
+```
+输入: prompt tokens, shape = (B, N_prompt, d)
+处理:
+ 1. 一次性并行处理所有 prompt tokens
+ 2. 计算所有 token 的 Q, K, V
+ 3. 对 prompt 内部做 self-attention（N×N 完整矩阵）
+ 4. 输出第一个新 token 的 logits
+特征:
+ - GEMM 是大矩阵乘（M = N_prompt 较大）→ 打满 Tensor Core
+ - Attention 是 O(N²) 计算，算术强度高
+ - 瓶颈: compute-bound（算力）
+ - 时延关注: TTFT (Time To First Token)
+```
 
-- **Tokenizer**：用户输入是文本，模型只认 token id——必须有个转换层
-- **模型后端**：执行实际的矩阵乘 + attention，是算力的消耗者
-- **KV Cache**：没有它，Decode 每步重算前缀，latency 爆炸（Day1-2 已证）
-- **采样器**：模型输出的是 logits（vocab 维概率分布），要采样成具体 token id
-- **循环编排**：自回归生成要"生成一个、喂回一个、再生成"的循环，且区分 Prefill（一次性）和 Decode（逐个）
+Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 4 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
 
-#### 5.2 MiniLLM 模型结构
+#### 1.2 Decode 阶段：自回归逐 token 生成
 
-![Transformer 层栈与 KV Cache（Layer 0..n-1）](../../images/week5_kvcache_stack.svg)
+第一个 token 由 Prefill 产出后，接下来就是 Decode：每次只输入**上一步生成的 1 个 token**，计算它的 Q，从 **KV Cache** 读取所有历史 K/V，做一次 1×N 的 attention，输出下一个 token。如此循环直到 `<eos>` 或达到最大长度。
 
-##### `use_cache` 参数区分 Prefill/Decode
+```
+输入: 上一个生成的 token, shape = (B, 1, d)
+处理:
+ 1. 只计算新 token 的 Q（以及它的 K/V，追加到 cache）
+ 2. 从 KV Cache 读取所有历史 K, V
+ 3. 新 Q 与所有历史 K/V 做 attention（1×N 矩阵）
+ 4. 输出下一个 token 的 logits
+特征:
+ - GEMM 退化为向量×矩阵（M = 1）→ Tensor Core 闲置
+ - 每次都要读取完整 KV Cache（2·L·d bytes）
+ - 瓶颈: memory-bound（带宽）
+ - 时延关注: TBT / TPOT
+```
+
+> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 O(L·d²) 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 O(d²)——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
+
+#### 1.3 两大阶段对比表
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 输入形状 | (B, N_prompt, d) | (B, 1, d) |
+| 每步处理 token 数 | N_prompt（大） | 1 |
+| QKV GEMM 的 M | N_prompt | **1**（退化为向量×矩阵） |
+| Attention 矩阵形状 | N×N | **1×N** |
+| 每步 FLOPs | O(N²·d) | O(L·d) |
+| 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
+| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte |
+| 瓶颈类型 | **compute-bound** | **memory-bound** |
+| 关注指标 | TTFT | TBT / TPOT |
+| 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
+
+##### 两阶段算术强度的粗算（B=1, N=1024, d=512）
+
+```
+Prefill QKV GEMM:
+ FLOPs = 2 × B × N × d × 3d = 2 × 1 × 1024 × 512 × 1536 ≈ 1.6 G
+ Bytes = B×N×d + 3d² + 3×B×N×d ≈ 4 MB
+ AI ≈ 400 FLOP/Byte → compute-bound（远高于 Ridge Point）
+
+Decode QKV GEMM (M=1):
+ FLOPs = 2 × B × 1 × d × 3d ≈ 1.6 M
+ Bytes = B×1×d + 3d² + 历史 KV(2·L·d) ≈ 数 MB
+ AI ≈ 0.1 FLOP/Byte → memory-bound（远低于 Ridge Point）
+```
+
+> 💡 直觉类比：Prefill 像"一群人一起搬砖"，人多活也多，瓶颈是人力（算力）；Decode 像"一个人重复跑腿取材料"，每次只干一点活，却要从仓库（HBM）取一大堆材料——瓶颈是腿（带宽）。
+
+#### 1.4 Decode 为什么 memory-bound：Roofline 视角
+
+![Decode 的算术强度与 Ridge Point、四大优化方向](../images/decode_memory_bound.svg)
+
+Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
+
+```
+AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float) ≈ 0.125 FLOP/Byte (fp16)
+```
+
+RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
+
+反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
+
+##### Decode 的四大优化方向
+
+| 方向 | 目标 | 代表技术 | 本周对应 |
+|------|------|---------|---------|
+| ① 减少 KV Cache 读取 | 降低 Bytes | KV Cache 量化（INT8/FP8）、PagedAttention、滑动窗口 | Day 2 / Day 4 |
+| ② 抬高 M | 让 GEMM 变大 | Continuous Batching、Inflight Batching | Day 3 |
+| ③ 减调度开销 | 降低 launch 成本 | CUDA Graph、torch.compile | Day 6 |
+| ④ 隐藏传输延迟 | overlap 计算与通信 | Pipeline Parallelism、Async | Day 7 |
+
+> 💡 方向②（Continuous Batching）尤其巧妙：既然 Decode 单请求 M=1 浪费算力，那就把**多个正在 decode 的请求拼成一个大 batch**，让 M 从 1 变成几十——同样是 memory-bound，但带宽利用率成倍提高。这是 vLLM 的核心 trick，Day 3-4 详读。
+
+#### 1.5 推理时延指标：TTFT / TBT / TPOT
+
+![TTFT 与 TBT 在推理时间线上的位置](../images/inference_metrics_timeline.svg)
+
+| 指标 | 全称 | 含义 | 决定阶段 |
+|------|------|------|---------|
+| **TTFT** | Time To First Token | 从请求进入到输出第一个 token 的时间 | Prefill |
+| **TBT** | Time Between Tokens | 相邻输出 token 之间的间隔 | Decode |
+| **TPOT** | Time Per Output Token | 每个输出 token 的平均时间 | Decode |
+| **TPS** | Tokens Per Second | 吞吐（token/秒） | Decode |
+| **E2E Latency** | End-to-End Latency | 总延迟 | 全程 |
+
+关键关系式：
+
+```
+E2E Latency = TTFT + (输出 token 数 − 1) × TBT
+TPOT = 总 Decode 时延 / 输出 token 数
+```
+
+- **TTFT 由 Prefill 决定**：优化方向是 FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill。
+- **TBT/TPOT 由 Decode 决定**：优化方向是 KV Cache、PagedAttention、Continuous Batching、CUDA Graph、量化 KV Cache。
+
+> ⚠️ **注意**：TTFT 和 TBT 的优化手段**几乎不重叠**——前者是算力问题，后者是带宽问题。这就是为什么推理系统要分别对待两个阶段（vLLM 甚至把 Prefill 和 Decode 拆成不同的 batch 调度，叫 chunked prefill / mixed batching）。Day 3 读 vLLM 时会看到这一点。
+
+### Coding 任务：PyTorch 模拟 Prefill/Decode 流程
+
+#### 任务 1：创建 prefill_decode_simulation.py
+
+创建文件 [kernels/prefill_decode_simulation.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/prefill_decode_simulation.py)，它实现一个最小 Transformer Block，并模拟完整的 Prefill + KV Cache + Decode 循环：
 
 ```python
-def forward(self, x, kv_cache=None, use_cache=False):
-    ...
-    if use_cache and kv_cache is not None:
-        # Decode: 把新 K/V 拼到历史 cache 后面
-        k = torch.cat([k_cache, k], dim=2)
-        v = torch.cat([v_cache, v], dim=2)
-        # Prefill 时 kv_cache=None，直接用本次的 k/v
-        ...
-        return x, (k, v) # 返回更新后的 cache
-```
-
-- **Prefill**：`use_cache=True, kv_cache=None` → 算完整 attention，返回 prompt 的 K/V 作为初始 cache
-- **Decode**：`use_cache=True, kv_cache=上一步的` → 新 K/V 拼到 cache，attention 是 1×(L+1)
-
-#### 5.3 Prefill + Decode 循环
-
-![Prefill → Decode 执行流程与 KV Cache 状态](../images/mini_engine_prefill_decode_flow.svg)
-
-```python
-def generate(self, prompt, max_new_tokens=20):
-    input_ids = encode(prompt) # (B, N)
-
-    # ===== Prefill：一次性处理整段 prompt =====
-    logits, kv_cache = model(input_ids, use_cache=True)
-    next_token = argmax(logits[:, -1, :]) # first token
-    generated = [next_token]
-
-    # ===== Decode Loop：每步 1 个 token，复用 cache =====
-    for _ in range(max_new_tokens - 1):
-        logits, kv_cache = model(next_token, kv_cache=kv_cache, use_cache=True)
-        next_token = argmax(logits[:, -1, :])
-        generated.append(next_token)
-
-        return decode(generated)
-```
-
-##### KV Cache 状态变化
-
-| 阶段 | 输入 | KV Cache 长度 | FLOPs |
-|------|------|--------------|-------|
-| Prefill | prompt (N tokens) | 0 → N | O(N·d²)（大 GEMM） |
-| Decode step 1 | token N+1 (1 token) | N → N+1 | O(d²)（向量×矩阵） |
-| Decode step k | token N+k | N+k-1 → N+k | O(d²)（与 k 无关） |
-
-#### 5.4 With vs Without Cache：收益量化
-
-![With vs Without KV Cache：latency 与 FLOPs 对比](../images/mini_engine_cache_comparison.svg)
-
-| 维度 | Without Cache | With Cache |
-|------|--------------|------------|
-| 每步 FLOPs | O((N+k)·d²)，随步数增长 | **O(d²)**，与步数无关 |
-| 总 FLOPs（K 步） | O(K·N·d² + K²·d²/2) | O(N·d² + K·d²) |
-| TBT（逐 token 延迟） | 随生成长度线性增长 | **基本稳定** |
-| 生成结果 | 与 with cache **一致** | 基准 |
-| 内存 | 低 | 高（存 K/V cache） |
-
-> 💡 关键验证：**with cache 与 without cache 生成的 token 序列必须完全一致**——KV Cache 只影响速度不影响结果。今天的 Coding 任务会专门验证这一点。
-
-#### 5.5 多轮对话的 KV Cache 复用
-
-```
-Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- → KV Cache 保存了 [系统提示 + Round1 user + Round1 assistant] 的 K/V
-
-Round 2: User: "请介绍一下 FlashAttention"
- → prompt = [Round1 全部 + Round2 user]
- → 前 Round1 部分的 K/V 已在 cache，只需 prefill Round2 新增部分
- → 大幅降低 Round2 的 TTFT
-```
-
-实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week6 再加。
-
-### Coding 任务：构建 Mini 推理引擎 v0
-
-#### 任务 1：创建 mini_engine_v0.py
-
-创建文件 [kernels/mini_engine_v0.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day5/kernels/mini_engine_v0.py)，整合 5 大组件，实现端到端生成：
-
-```python
-# mini_engine_v0.py —— Mini 推理引擎 v0（单请求 + KV Cache + Prefill/Decode 循环）
-# 运行命令: python mini_engine_v0.py
+# prefill_decode_simulation.py —— 模拟 Transformer 推理的 Prefill/Decode 两阶段
+# 运行命令: python prefill_decode_simulation.py
 # 依赖: pip install torch
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from typing import List, Optional, Tuple
+import time
 
-# ============================================================
-# 模型定义（对应 vLLM 的 ModelRunner 执行的 transformer）
-# ============================================================
-
-class MiniTransformerLayer(nn.Module):
-    """单层 Transformer Block：Pre-LN + Self-Attention + FFN，支持 KV Cache"""
+class MiniTransformer(nn.Module):
+    """最小 Transformer Block，用于演示 Prefill/Decode"""
 
     def __init__(self, d_model=512, n_heads=8, d_ff=2048):
         super().__init__()
@@ -171,317 +191,346 @@ class MiniTransformerLayer(nn.Module):
         nn.Linear(d_ff, d_model),
         )
 
-        def forward(self, x, kv_cache=None, use_cache=False):
+        def forward(self, x, use_cache=False, k_cache=None, v_cache=None):
+            """
+            x: (B, N, d_model)
+            use_cache: 是否使用 KV Cache
+            k_cache/v_cache: 历史 KV，shape (B, H, L, d_head)
+            返回: output, (new_k_cache, new_v_cache)
+            """
             B, N, _ = x.shape
+
+            # LayerNorm + QKV
             x_norm = self.norm1(x)
             qkv = self.qkv(x_norm)
             qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
             q, k, v = qkv[0], qkv[1], qkv[2]
 
-            if use_cache and kv_cache is not None:
-                k_cache, v_cache = kv_cache
-                k = torch.cat([k_cache, k], dim=2) # 拼历史 cache
+            # Attention
+            scale = self.d_head ** -0.5
+            if use_cache and k_cache is not None:
+                # Decode: 把新 K/V 拼到历史 cache 后面
+                k = torch.cat([k_cache, k], dim=2) # (B, H, L+1, d)
                 v = torch.cat([v_cache, v], dim=2)
 
-                scale = self.d_head ** -0.5
                 attn = torch.matmul(q, k.transpose(-2, -1)) * scale
                 attn = F.softmax(attn, dim=-1)
                 out = torch.matmul(attn, v)
 
                 out = out.transpose(1, 2).reshape(B, N, self.d_model)
                 x = x + self.out(out)
+
+                # FFN
                 x = x + self.ffn(self.norm2(x))
+
                 return x, (k, v)
 
-                class MiniLLM(nn.Module):
-                    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
-                        super().__init__()
-                        self.embedding = nn.Embedding(vocab_size, d_model)
-                        self.layers = nn.ModuleList([
-                        MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
-                        ])
-                        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+                def simulate_inference(model, prompt, max_new_tokens=20):
+                    """模拟完整推理流程：Prefill + Decode"""
+                    device = next(model.parameters()).device
+                    B, N = prompt.size(0), prompt.size(1)
 
-                        def forward(self, input_ids, kv_cache=None, use_cache=False):
-                            x = self.embedding(input_ids)
-                            new_kv_cache = []
-                            for i, layer in enumerate(self.layers):
-                                layer_cache = kv_cache[i] if kv_cache is not None else None
-                                x, layer_new_cache = layer(x, layer_cache, use_cache)
-                                new_kv_cache.append(layer_new_cache)
-                                logits = self.lm_head(x)
-                                return logits, new_kv_cache
+                    # ========== Prefill 阶段 ==========
+                    torch.cuda.synchronize()
+                    t_start = time.time()
 
-                                class MiniTokenizer:
-                                    def __init__(self, vocab_size=1000):
-                                        self.vocab_size = vocab_size
-                                        self.word_to_id = {}
-                                        self.id_to_word = {}
-                                        self.next_id = 1
+                    with torch.no_grad():
+                        logits, (k_cache, v_cache) = model(prompt, use_cache=False)
+                        first_token_logits = logits[:, -1, :] # 取最后一个位置的 logits
 
-                                        def encode(self, text: str) -> List[int]:
-                                            tokens = []
-                                            for word in text.lower().split():
-                                                if word not in self.word_to_id:
-                                                    if self.next_id >= self.vocab_size:
-                                                        break
-                                                        self.word_to_id[word] = self.next_id
-                                                        self.id_to_word[self.next_id] = word
-                                                        self.next_id += 1
-                                                        tokens.append(self.word_to_id[word])
-                                                        return tokens
+                        torch.cuda.synchronize()
+                        ttft = (time.time() - t_start) * 1000 # ms
 
-                                                        def decode(self, ids: List[int]) -> str:
-                                                            return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+                        print(f"=== Prefill Phase ===")
+                        print(f" Input shape: {tuple(prompt.shape)}")
+                        print(f" TTFT: {ttft:.3f} ms")
+                        print(f" KV Cache shape: {tuple(k_cache.shape)}")
 
-                                                            class MiniEngineV0:
-                                                                """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+                        # ========== Decode 阶段 ==========
+                        generated = []
+                        decode_times = []
 
-                                                                def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
-                                                                    self.model = model.to(device).eval()
-                                                                    self.tokenizer = tokenizer
-                                                                    self.device = device
+                        # 简化：用 argmax 采样；decode 的输入用随机向量模拟新生成 token 的 embedding
+                        next_token = first_token_logits.argmax(dim=-1, keepdim=True)
+                        generated.append(next_token.item())
 
-                                                                    @torch.no_grad()
-                                                                    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
-                                                                        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+                        for step in range(max_new_tokens - 1):
+                            next_token_emb = model.qkv.weight.new_zeros(B, 1, model.d_model).normal_(0, 0.02)
 
-                                                                        # ========== Prefill ==========
-                                                                        logits, kv_cache = self.model(input_ids, use_cache=True)
-                                                                        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                        generated_ids = [next_token.item()]
+                            torch.cuda.synchronize()
+                            t_start = time.time()
 
-                                                                        # ========== Decode Loop ==========
-                                                                        for _ in range(max_new_tokens - 1):
-                                                                            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
-                                                                            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                            generated_ids.append(next_token.item())
+                            with torch.no_grad():
+                                logits, (k_cache, v_cache) = model(
+                                next_token_emb, use_cache=True, k_cache=k_cache, v_cache=v_cache
+                                )
+                                next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
 
-                                                                            return self.tokenizer.decode(generated_ids)
+                                torch.cuda.synchronize()
+                                decode_times.append((time.time() - t_start) * 1000)
+                                generated.append(next_token.item())
 
-                                                                            @torch.no_grad()
-                                                                            def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
-                                                                                """对照版：不用 KV Cache，每步重算完整历史"""
-                                                                                input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
-                                                                                current_ids = input_ids.clone()
-                                                                                generated = []
-                                                                                for _ in range(max_new_tokens):
-                                                                                    logits, _ = self.model(current_ids, use_cache=False)
-                                                                                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                                    generated.append(next_token.item())
-                                                                                    current_ids = torch.cat([current_ids, next_token], dim=1)
-                                                                                    return generated
+                                print(f"\n=== Decode Phase ===")
+                                print(f" Generated {len(generated)} tokens")
+                                print(f" Mean TBT: {sum(decode_times)/len(decode_times):.3f} ms")
+                                print(f" Max TBT: {max(decode_times):.3f} ms")
+                                print(f" Min TBT: {min(decode_times):.3f} ms")
+                                print(f" Generated token IDs: {generated}")
+
+                                return ttft, decode_times
+
+                                def profile_phase(model, x, name, n_iter=10):
+                                    """Profile 一个阶段"""
+                                    for _ in range(3):
+                                        _ = model(x)
+                                        torch.cuda.synchronize()
+
+                                        start = torch.cuda.Event(enable_timing=True)
+                                        end = torch.cuda.Event(enable_timing=True)
+                                        start.record()
+                                        for _ in range(n_iter):
+                                            with torch.no_grad():
+                                                _ = model(x)
+                                                end.record()
+                                                torch.cuda.synchronize()
+                                                ms = start.elapsed_time(end) / n_iter
+                                                print(f"{name}: {ms:.3f} ms")
+                                                return ms
+
+                                                def main():
+                                                    torch.manual_seed(42)
+                                                    device = "cuda"
+                                                    d_model, n_heads = 512, 8
+                                                    model = MiniTransformer(d_model, n_heads).to(device).eval().half()
+
+                                                    # Prefill: 处理长 prompt
+                                                    N = 1024
+                                                    prompt = torch.randn(1, N, d_model, device=device, dtype=torch.float16)
+
+                                                    print(f"Model: d_model={d_model}, n_heads={n_heads}")
+                                                    print(f"Prompt length: {N}\n")
+
+                                                    simulate_inference(model, prompt, max_new_tokens=10)
+
+                                                    # 单独 profile prefill vs decode
+                                                    print("\n=== Standalone Profiling ===")
+                                                    profile_phase(model, prompt, f"Prefill (N={N})")
+
+                                                    decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
+                                                    profile_phase(model, decode_input, f"Decode single token")
+
+                                                    if __name__ == "__main__":
+                                                        main()
 ```
 
 代码要点：
-- `MiniTransformerLayer.forward` 通过 `use_cache + kv_cache` 区分 Prefill（`kv_cache=None`）与 Decode（拼历史 cache）
-- `MiniLLM.forward` 逐层执行 transformer，每层返回更新后的 `(k, v)`，组成 `new_kv_cache` 列表
-- `MiniEngineV0.generate` = Prefill（一次性）+ Decode Loop（逐 token 复用 cache）+ argmax 采样
-- `generate_no_cache` 对照版：每步重算完整历史，用于验证 with cache 输出一致
+- `MiniTransformer.forward` 通过 `use_cache` 参数区分 Prefill/Decode：Prefill 时 `use_cache=False` 算完整 attention；Decode 时把新 K/V `torch.cat` 到历史 cache 上，做 1×(L+1) attention。
+- `simulate_inference` 用 `torch.cuda.synchronize()` + `time.time()` 分别测 TTFT 和每步 TBT。
+- `profile_phase` 用 `cuda.Event` 做更稳的多轮计时（warmup 3 次 + 平均 10 次）。
 
 #### 任务 2：运行并观察输出
 
 ```bash
-python kernels/mini_engine_v0.py
+# 需 CUDA GPU + PyTorch
+python kernels/prefill_decode_simulation.py
 ```
 
-**预期输出**（CPU/GPU 均可，token id 因随机种子而异）：
+预期输出（数值因 GPU 型号而异）：
 
 ```text
-Using device: cuda
-Prompt: hello world this is a test
-Generated (with cache): is <unk_497> <unk_592> ...
+Model: d_model=512, n_heads=8
+Prompt length: 1024
 
-=== KV Cache Correctness Check ===
- with cache:    'is <unk_497> <unk_592> <unk_534> <unk_130>'
- without cache: 'is <unk_497> <unk_592> <unk_534> <unk_130>'
- ✅ PASS: with/without KV Cache 逐 token 输出一致
+=== Prefill Phase ===
+  Input shape: (1, 1024, 512)
+  TTFT: 115.696 ms
+  KV Cache shape: (1, 8, 1024, 64)
 
-=== Multi-turn Cache Reuse Demo ===
- Round 1: '<unk_177> <unk_493> ...'
- Round 2: '<unk_443> <unk_491> ...' (新 prompt，独立 cache)
+=== Decode Phase ===
+  Generated 10 tokens
+  Mean TBT: 2.138 ms
+  Max TBT: 17.947 ms
+  Min TBT: 0.143 ms
+  Generated token IDs: [348, 264, 264, 264, 357, 304, 475, 264, 264, 357]
 
-=== KV Cache Memory ===
- config: layers=4, heads=8, d_head=64, fp32
- bytes per token: 16384 (16.0 KB)
- seq_len=256: 4.0 MB
- seq_len=1024: 16.0 MB
- seq_len=4096: 64.0 MB
+=== Standalone Profiling ===
+Prefill (N=1024): 0.132 ms
+Decode single token: 0.105 ms
 ```
 
-##### 验证逻辑解读
+##### 观察重点
 
-1. **with cache 与 without cache 逐 token 一致**：脚本用 `assert` 强制比较两条路径的完整输出序列（`decode` 是 id→word 的确定性映射，字符串相等即逐 token 相等），打印 `✅ PASS` 才通过——证明 KV Cache 只加速不改变结果
-2. **生成的 token 是"乱码"**：因为模型是随机初始化的（没训练），生成无语义——我们只验证**引擎流程正确**，不关心生成质量
-3. **KV Cache 内存占用**：4 层 × 8 头 × 64 d_head × fp32 → 每 token 16 KB，4096 token 64 MB
+1. **TTFT 明显大于单步 TBT**：Prefill 要算 1024×1024 的完整 attention，是 compute-bound 的大活。
+2. **TBT 基本稳定**：每步 Decode 都只多读一个 token 的 KV，TBT 不随步数显著增长（前提是用了 KV Cache）。
+3. **Prefill 单次 vs Decode 单次的绝对值**：注意 Prefill 处理了 1024 个 token，Decode 只处理 1 个——比较时要看"每 token 成本"，而非总时间。
 
-> ⚠️ **注意**：本引擎用随机初始化模型，生成无语义。要生成有意义文本需接入预训练权重（如 HuggingFace 的 GPT-2）——Week7 替换后端时再做。v0 的目标是跑通流程 + 验证 KV Cache 正确性。
+> ⚠️ **注意**：本脚本用随机向量模拟 decode 的输入 embedding（`next_token_emb`），所以生成的 token ID 没有语义意义——我们只关心**时延特征**，不关心生成内容。Day 5 的 Mini 引擎会接入真正的 tokenizer + embedding。
 
-#### 任务 3：用 torch.profiler 对比 Prefill/Decode 算子
+#### 任务 3：用 torch.profiler 对比两阶段的算子特征
+
+用 `torch.profiler` 观察 Prefill 和 Decode 触发的算子与显存特征差异：
 
 ```bash
 python -c "
-import torch
-from kernels.mini_engine_v0 import MiniLLM, MiniTokenizer
+import torch, torch.nn.functional as F
+from kernels.prefill_decode_simulation import MiniTransformer
 
 torch.manual_seed(42)
-model = MiniLLM(1000, 512, 8, n_layers=4).to('cuda').eval()
-prompt = torch.tensor([[1,2,3,4,5,6,7,8]], device='cuda')
-decode_in = torch.tensor([[9]], device='cuda')
+model = MiniTransformer(512, 8).to('cuda').eval().half()
+prompt = torch.randn(1, 1024, 512, device='cuda', dtype=torch.float16)
+decode_in = torch.randn(1, 1, 512, device='cuda', dtype=torch.float16)
 
 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- model(prompt, use_cache=False)
-print('=== Prefill (N=8) ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
+ with torch.no_grad():
+ model(prompt)
+print('=== Prefill (N=1024) 算子 ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- model(decode_in, use_cache=False)
-print('=== Decode (N=1) ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
+ with torch.no_grad():
+ model(decode_in)
+print('=== Decode (N=1) 算子 ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 "
 ```
 
-**观察重点**：Prefill 的 `addmm`/`bmm` 尺寸大、耗时长；Decode 的同算子尺寸极小（M=1），算子 launch 开销占比上升——印证 Day1 的"Decode memory-bound，SM 空闲等数据"。
+**观察重点**：
+- Prefill 的 `gemm` 算子（`addmm`/`bmm`）尺寸大、耗时长，是主角；
+- Decode 的同样 `gemm` 算子尺寸极小（M=1），耗时长但**算子 launch 开销占比上升**——这正是 memory-bound 的表现：算得快，但启动/等待开销凸显。
+- Decode 的 attention `bmm` 是 1×N，FLOPs 极低，但每次都要读 KV。
 
-#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
+#### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
 
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+**题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
 
 **与今日知识的关联**：
 
-GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
+这道题就是**今天 Decode 阶段的核心算子**——单 query 对 KV Cache 做 1×N attention，是典型的 memory-bound。更关键的是，题目把 KV Cache 存成 **int8 + per-token scale**，这正是今天"减少 KV Cache 读取"优化方向里的**KV Cache 量化**：int8 相比 fp32 把 KV 的 HBM 流量直接砍到 1/4，Decode 的带宽瓶颈立刻缓解。生产级推理系统（TensorRT-LLM、vLLM）都用这套。
 
-> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+> 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时。完整题解（含 int8 反量化、decode attention kernel、ncu 带宽 profiling、与 prefill 的算术强度对比）见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 1）
 
-> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 1（遍历），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
+| [144. 二叉树的前序遍历](https://leetcode.cn/problems/binary-tree-preorder-traversal/) | 简单 | 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html) |
+| [145. 二叉树的后序遍历](https://leetcode.cn/problems/binary-tree-postorder-traversal/) | 简单 | 栈迭代（根右左逆序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html) |
+| [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | 中等 | BFS 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html) |
+| [103. 二叉树的锯齿形层序遍历](https://leetcode.cn/problems/binary-tree-zigzag-level-order-traversal/) | 中等 | BFS + 奇偶层反向 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：加温度采样和 top-k 采样
+#### 实验 1：扫描 prompt 长度，绘制 TTFT 曲线
 
-修改 `generate` 的采样部分，把 `argmax` 换成 `temperature + top-k` 采样：
+修改 `main()` 中的 `N`，分别在 `N = 256, 512, 1024, 2048` 下测量 TTFT，记录成表：
 
-```python
-logits = logits[:, -1, :] / temperature
-top_k_logits, top_k_indices = torch.topk(logits, k)
-probs = F.softmax(top_k_logits, dim=-1)
-next_token = top_k_indices[torch.multinomial(probs, 1)]
+| N | TTFT (ms) | 理论 FLOPs (O(N²·d)) |
+|---|-----------|----------------------|
+| 256 | | |
+| 512 | | |
+| 1024 | | |
+| 2048 | | |
+
+> 思考：TTFT 随 N 大致呈什么关系？为什么？（提示：Prefill 的 attention 是 O(N²)，但 QKV GEMM 是 O(N·d²)；N 较大时 attention 主导，TTFT ≈ O(N²)。）
+
+#### 实验 2：对比 use_cache=True / False 的 Decode latency
+
+修改 `simulate_inference`，加一个分支：每步 Decode 不用 cache，而是把"prompt + 已生成 token"全部重新喂进 `model(..., use_cache=False)`，测量这种"无 cache"模式的 TBT，与有 cache 的 TBT 对比。
+
+> 思考：无 cache 时 TBT 应该随生成步数**线性增长**（每步都要重算越来越长的前向），而有 cache 时 TBT 基本稳定。这正解释了 KV Cache 能让 decode latency 降低 10x+。Day 2 会量化这个收益。
+
+#### 实验 3：用 nsys 抓 Prefill/Decode 的时间线
+
+```bash
+nsys profile -o prefill_decode --force-flush \
+ python kernels/prefill_decode_simulation.py
+nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
 ```
 
-> 思考：temperature→0 时采样退化为 argmax（greedy）；temperature→∞ 时趋向均匀分布。top-k 控制候选范围，避免长尾噪声。vLLM 的采样器还支持 top-p（nucleus sampling）。
-
-#### 实验 2：验证 with/without cache 在长序列下的 latency 差异
-
-修改 `main()`，用 `cuda.Event` 分别计时 `generate`（with cache）和 `generate_no_cache`（without cache），扫描 `max_new_tokens = 10, 50, 100`。绘制 TBT 随步数变化曲线。
-
-> 思考：without cache 的 TBT 应随步数线性增长（每步重算更长前缀），with cache 基本稳定——这就是 KV Cache 让 decode latency 降低 10x+ 的量化体现。Day6 会做完整 profiling。
-
-#### 实验 3：实现多轮对话 chat() API
-
-给 `MiniEngineV0` 加 `chat(messages: List[dict])` 方法，维护跨轮的 KV Cache：Round 2 只 prefill 新增 token，复用 Round 1 的 cache。
-
-```python
-def chat(self, messages):
- # 把 messages 拼成 prompt，检查已有 cache 长度
- # 只对新增部分 prefill，追加到 cache
- # decode 生成回复
- ...
-```
-
-> 思考：多轮复用的前提是 prompt 格式严格一致（Round2 prompt = Round1 全部 + 新输入）。如果用户改写历史，cache 失效要重新 prefill。vLLM 用 prefix caching 显式管理这一点。
+> 思考：在 nsys 时间线上，Prefill 是一坨大块的 GEMM kernel，Decode 是一连串极小的 kernel——观察 Decode 阶段 kernel 之间的 **gap（空闲）**，那就是 memory-bound 下 SM 等数据的时间。这个 gap 占比越大，说明带宽瓶颈越严重。
 
 ---
 
 ### 今日总结
 
-Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推理引擎 v0：
+Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
 
-1. **5 大核心组件**：Tokenizer（文本↔id）、模型后端（MiniLLM PyTorch）、KV Cache（use_cache 控制）、采样器（argmax）、Prefill/Decode 循环（generate 主体）
-2. **MiniLLM 结构**：embedding + n_layers 层 transformer（Pre-LN + self-attention + FFN）+ lm_head，每层返回 `(k,v)` 供 cache 复用
-3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（O(N·d²) 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（O(d²) 向量×矩阵）
-4. **with/without cache 验证**：两者生成 token 序列完全一致，证明 KV Cache 只加速不改结果；without cache 的 TBT 随步数增长，with cache 基本稳定
-5. **KV Cache 内存**：每 token = 2 × n_layers × n_heads × d_head × bytes，4 层 × 8 头 × 64 d_head fp32 = 16 KB/token，4096 token 64 MB
-6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week6 加 session 管理
-7. **工程演进路径**：v0（单请求+PyTorch）→ v1（多请求+Continuous Batching）→ v2（自定义 kernel 替换 PyTorch）——每个组件都能独立替换优化
+1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + N×N attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
+2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~0.1，跨过 Ridge Point，瓶颈从算力翻转到带宽
+3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
+4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 O(L·d²) 降到 O(d²)，但代价是每步要搬整个 cache 过 HBM
+5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
+6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
 
-掌握这些后，你就有了第一个可运行的推理引擎——明天 Day6 对它做端到端 profiling，测量 TTFT/TBT、定位瓶颈，为后续优化提供数据依据。
+掌握这些后，你就有了 Day 2 手写 KV Cache 的全部动机和算法直觉——明天我们用 C++/CUDA 把这个 cache 真正实现出来，支持多轮对话的历史复用。
 
 ---
 
 ### 面试要点
 
-1. **如何构建一个最简单的 LLM 推理引擎？需要哪些核心组件？**
+1. **LLM 推理的 Prefill 和 Decode 阶段有什么区别？各自的瓶颈是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 5 大核心组件：
- 1. **Tokenizer**：文本 ↔ token id 转换
- 2. **模型后端**：执行 transformer forward（PyTorch/TensorRT/vLLM）
- 3. **KV Cache**：存储历史 K/V，避免重复计算
- 4. **采样器**：argmax/greedy/temperature/top-k/top-p
- 5. **Prefill/Decode 循环**：prefill 处理 prompt，decode 自回归生成
- - 最小流程：encode prompt → prefill forward（填 cache）→ first token → decode loop（复用 cache）→ next tokens → decode token ids → text
- - 可选第 6 组件：调度器（多请求时决定 batch 组合，如 vLLM 的 Scheduler）
+ - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 N×N attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
+ - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~0.1），**memory-bound**，关注 TBT/TPOT
+ - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
 
 </details>
 
 
-2. **在推理引擎中，Prefill 和 Decode 阶段分别需要保存什么到 KV Cache？**
+2. **什么是 TTFT 和 TBT？在系统优化中分别如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill 阶段**：保存 prompt 中每个 token 的 K 和 V。对第 i 层 transformer，保存 shape `(B, H, N_prompt, d_head)` 的 K 和 V
- - **Decode 阶段**：每步保存 1 个新生成 token 的 K 和 V，shape `(B, H, 1, d_head)`，追加到 cache
- - 最终 KV Cache 长度 = prompt_len + generated_len
- - 只有 K 和 V 需要保存，Q 是每步实时计算的（Q 只依赖当前 token）
+ - **TTFT (Time To First Token)**：从请求进入到输出第一个 token 的时间，主要由 Prefill 决定。优化：FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill
+ - **TBT (Time Between Tokens)**：相邻输出 token 之间的间隔，主要由 Decode 决定。优化：KV Cache、PagedAttention、Continuous Batching、CUDA Graph、KV Cache 量化
+ - 两者优化手段几乎不重叠（一个算力问题、一个带宽问题），所以推理系统要把两阶段分开调度（如 vLLM 的 chunked prefill / mixed batching）
 
 </details>
 
 
-3. **with cache 和 without cache 生成的 token 为什么一致？**
+3. **为什么 Decode 是 memory-bound？请用 Roofline / 算术强度解释。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 数学上等价：Decode 第 t 步的 attention = `softmax(Q_t · K_{1..t}^T / √d) · V_{1..t}`
- - with cache：`K_{1..t}` 从 cache 读取（之前算过的）+ 当前新算的 `K_t`
- - without cache：`K_{1..t}` 全部本次重新算
- - 两者算的是同一个 `K_{1..t}`（权重没变，输入 token 相同），所以 attention 结果逐元素一致，采样出的 token 一致
- - KV Cache 只是把"重算历史 K/V"换成"读缓存"，是纯加速，不改变数学结果
+ - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
+ - 算术强度 `AI = FLOPs/Bytes ≈ 0.125 FLOP/Byte (fp16)`
+ - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近三个数量级
+ - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
 
 </details>
 
 
-4. **Mini 引擎 v0 的 generate 循环里，Prefill 和 Decode 的 forward 调用有什么区别？**
+4. **KV Cache 解决了什么问题？它的代价是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：`model(input_ids, use_cache=True)`，input_ids 是整段 prompt `(B, N)`，`kv_cache=None`。attention 是 N×N 完整矩阵，返回 prompt 的 K/V 作为初始 cache
- - **Decode**：`model(next_token, kv_cache=上一步, use_cache=True)`，next_token 是 `(B, 1)`。层内把新 K/V `torch.cat` 到 cache，attention 是 1×(L+1)
- - 关键：同一个 `model.forward` 通过 `use_cache + kv_cache` 参数区分两种模式——Prefill 时 cache 为空，Decode 时 cache 非空
+ - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 O(L·d²) 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 O(d²)，decode latency 降低 10x+
+ - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 524 KB，4096 tokens 约 2 GB，batch=16 就 32 GB
+ - 这正是后续 PagedAttention（Day 4）、KV Cache 量化要解决的"显存爆炸"问题
 
 </details>
 
 
-5. **KV Cache 在多轮对话中如何复用？有什么前提条件？**
+5. **同一个模型，为什么 Prefill 能打满 Tensor Core 而 Decode 不能？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 为每个对话 session 维护独立 KV Cache，Round1 算完的 K/V 保留
- - Round2 的 prompt = [Round1 全部 + 新输入]，其中 Round1 部分的 K/V 已在 cache，只需 prefill 新增 token 并追加
- - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
- - **前提**：Round2 prompt 必须严格是"Round1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 的前缀对不上无法复用。生产系统用 prefix caching 显式管理
- - v0 暂每轮独立 cache（不复用），Week6 加 session 级 cache 管理
-
- - KV Cache 概念一致（存历史 K/V 避免重算），实现细节不同：v0 用 `torch.cat` 拼接张量，生产级用 PagedAttention 的 block 分页
+ - Tensor Core 靠"大矩阵乘"摊销指令开销：M 越大，每 byte 数据能做的 FLOPs 越多，算术强度越高
+ - Prefill 的 M=N_prompt（几百到几千），GEMM 是真正的大矩阵乘，算术强度远超 Ridge Point，卡在算力线，Tensor Core 满载
+ - Decode 的 M=1，GEMM 退化成"向量×矩阵"，每个 byte 数据只做极少 FLOPs，算术强度极低，卡在带宽线，Tensor Core 大量空闲
+ - 这也解释了 Continuous Batching 的原理：把多个 decode 请求拼成大 batch，把 M 从 1 抬到几十，让 Tensor Core 重新有事可做
 
 </details>
 

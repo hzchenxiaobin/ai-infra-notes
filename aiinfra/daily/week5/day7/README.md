@@ -1,391 +1,700 @@
-## Day 7：推理系统核心问题总结与 Week 5 收官
+## Day 7：vLLM 整体架构分析
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 系统梳理 Week 5 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
-2. 掌握推理系统的**四大核心问题**——内存管理、Batch 策略、Latency 隐藏、调度开销——及其解决方案<br>
-3. 建立**优化速查表**，拿到任意推理性能现象能查表找到检查方法与解决方案<br>
-4. 复盘本周 **17 道面试题**，建立推理系统专题的答题框架<br>
-5. 整理本周所有产出（Mini 引擎、KV Cache、profiling 脚本），形成可复用的工程资产<br>
-6. 为 Week 6（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
+1. 理解 vLLM 的 **三层分层架构**——LLMEngine（对外接口）→ Scheduler（调度决策）→ Worker（执行前向）的职责划分<br>
+2. 掌握 `LLMEngine.step()` 的 **4 步执行流程**，能说清一个请求从 `add_request` 到 `finished` 的完整生命周期<br>
+3. 理解 **Sequence / SequenceGroup / SequenceStatus** 三个核心数据结构，以及 WAITING / RUNNING / SWAPPED / FINISHED 四种状态转换<br>
+4. 掌握 **Continuous Batching** 的实现原理——每轮 iteration 重建 batch，完成的请求立即让位、新请求随时插入<br>
+5. 理解 Scheduler 的 **SchedulingBudget**（token / num_seqs / 显存三重预算）与抢占（preemption）的两种策略<br>
+6. 能用 Python 手写一个最小化的 vLLM 调度器模拟，实测 Continuous Batching 的请求交错执行
 
-> 💡 **为什么重要**：Day 1-6 我们分别学了推理系统的各个机制——两阶段、KV Cache、vLLM 调度、PagedAttention、Mini 引擎、profiling。但"各个机制都懂"不等于"系统全局掌握"——今天把碎片连成网络，用四大核心问题的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何性能现象，你能立刻判断它属于哪个核心问题、该查什么、怎么解决。Week 6 的 Continuous Batching 深入、CUDA Graph、Chunked Prefill 都建立在这张地图上。
-
----
-
-### Week 5 知识地图
-
-![Week 5 知识地图：从两阶段到推理引擎](../images/week5_knowledge_map.svg)
-
-Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
-
-![Week 5 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../../images/week5_learning_pipeline.svg)
-
-| Day | 主题 | 核心产出 | 关键概念 |
-|-----|------|---------|---------|
-| Day 1 | Prefill vs Decode | PyTorch 模拟脚本 | 两阶段、compute vs memory-bound、TTFT/TBT |
-| Day 2 | 实现 KV Cache | kv_cache.cu（KVCache 类） | 5D 布局、append/reset、静态/动态/Paged 分配 |
-| Day 3 | vLLM 整体架构 | mini_vllm_scheduler.py | LLMEngine→Scheduler→Worker、Continuous Batching |
-| Day 4 | PagedAttention | paged_attention.cu | block table、CoW、解决碎片 |
-| Day 5 | Mini 引擎 v0 | mini_engine_v0.py | 5 大组件、generate 循环、with/without cache |
-| Day 6 | 端到端 Profiling | profile_engine_v0.py | 三层方法论、TTFT/TBT breakdown、决策树 |
-| **Day 7** | **核心问题总结** | **四大问题 + 速查表** | **内存管理/Batch/Latency 隐藏/调度开销** |
-
-> 💡 **一句话总结**：Week 5 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
+> 💡 **为什么重要**：Day 1-2 我们从"算子层面"理解了 Prefill/Decode 和 KV Cache——但真实推理系统不是"跑完一个请求再跑下一个"，而是**同时服务成百上千个并发请求**。怎么把这些请求高效地塞进 GPU？这就是 vLLM 的 Scheduler 回答的问题。vLLM 是推理系统面试的核心素材——"画出 vLLM 架构图并解释请求生命周期"几乎是 AI Infra 岗的必考题。今天我们把它的分层架构和调度逻辑吃透，Day 4 再深入它的 PagedAttention 内存管理。
 
 ---
 
-### 核心概念串讲
+### 学前导读：为什么不能"一个请求一个请求地跑"？
 
-#### 1. Prefill/Decode 两阶段：一切优化的起点
+Day 1 我们算过：Decode 阶段每个请求的 GEMM 退化成 M=1 的向量×矩阵，Tensor Core 大量空闲——单请求 decode 时 GPU 算力利用率可能只有 1-3%。如果系统串行地"跑完 A 再跑 B 再跑 C"，GPU 就一直半饿不饱。
 
-```
-Prefill：一次性处理 N 个 prompt token，大 GEMM + N×N attention → compute-bound
-Decode：逐 token 生成，M=1 的退化 GEMM + 1×N attention → memory-bound
-```
+直觉解法是**把多个请求拼成一个大 batch 一起 decode**——这就是 Continuous Batching。但传统 Static Batching 有个致命问题：必须**凑齐一整批**才开始，且要**等最慢的请求跑完**才能释放 slot 接下一批。如果 batch 里 A 生成 5 个 token、B 生成 50 个 token，那 A 跑完后它的 GPU slot 就空等 B 跑完 45 个 token——白白浪费。
 
-| 阶段 | 瓶颈 | 关注指标 | 优化方向 |
-|------|------|---------|---------|
-| Prefill | compute-bound | TTFT | FlashAttention、Tensor Core、并行 prefill |
-| Decode | memory-bound | TBT/TPOT | KV Cache、量化、GQA、Continuous Batching |
+| 策略 | 凑批方式 | 完成处理 | GPU 利用率 |
+|------|---------|---------|-----------|
+| Static Batching | 凑齐 N 个才开始 | 等最慢的，整批结束才接新 | 低（空等严重） |
+| Continuous Batching | 每轮 iteration 重建 batch | 完成即走，立即接新请求 | 高（满载） |
 
-> 这两阶段的差异是推理系统所有优化的出发点——KV Cache 解决 Decode 的重算，PagedAttention 解决 KV Cache 的碎片，Continuous Batching 抬高 Decode 的 M。
+vLLM 的 Scheduler 让"每轮 iteration 都重新决策 batch 成员"成为可能——完成的请求立即释放 KV cache，waiting 里的新请求立刻补位。但要做到这一点，KV cache 必须能**按小块动态分配/释放**（否则碎片爆炸）——这就是 Day 4 PagedAttention 要解决的。今天先聚焦 Scheduler 的调度逻辑。
 
-#### 2. KV Cache：用空间换时间
-
-```
-无 Cache：每步重算历史 K/V，FLOPs O(L·d²)，TBT 随 L 增长
-有 Cache：存历史 K/V，每步只算 1 个新 token，FLOPs O(d²)，TBT 稳定
-代价：显存 = 2 × n_layers × n_heads × L × d_head × bytes
-```
-
-#### 3. vLLM 架构：调度 + 内存管理双支柱
-
-```
-LLMEngine（接口）→ Scheduler（调度）→ Worker（执行）
- Scheduler: Continuous Batching + SchedulingBudget + 抢占
- Worker: PagedAttention（block table + CoW）
-```
-
-> Continuous Batching（Day3）解决"吞吐"，PagedAttention（Day4）解决"碎片让吞吐可持续"——两者缺一不可。
-
-#### 4. Mini 引擎：5 大组件组装
-
-```
-Tokenizer → 模型后端（MiniLLM）→ KV Cache → 采样器 → Prefill/Decode 循环
-generate() = Prefill(填cache) + Decode Loop(复用cache) + argmax 采样
-```
-
-#### 5. Profiling 三层方法论
-
-```
-nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT）→ ncu（kernel 级，看带宽/算力）
-判据：dram__throughput 高 + sm__throughput 低 = memory-bound
-```
+> 💡 **一句话总结**：Continuous Batching 是 vLLM 吞吐提升的核心——它把"串行服务"变成"每轮重建 batch 的流水线服务"，让 GPU 始终满载。代价是需要一个聪明的 Scheduler 和细粒度的 KV cache 管理。
 
 ---
 
-### 推理系统四大核心问题
+### 理论学习
 
-![推理系统四大核心问题](../images/four_core_problems.svg)
+#### 3.1 vLLM 三层分层架构
 
-#### ① 内存管理（Day2/Day4）
+![vLLM 分层架构：LLMEngine → Scheduler → Worker](../images/vllm_layered_architecture.svg)
 
-| 问题 | 解决方案 |
-|------|---------|
-| KV Cache 显存占用大 | 量化（INT8/FP8）、GQA/MQA、PagedAttention |
-| 动态长度碎片 | PagedAttention（分页+block table） |
-| 长文本 OOM | 滑动窗口、稀疏 attention、offloading |
-| 多轮对话累积 | Cache 复用、prefix caching |
+vLLM 把推理系统分成三层，各司其职：
 
-#### ② Batch 策略（Day3）
+| 层 | 类 | 职责 | 对外 API |
+|----|----|------|---------|
+| **接口层** | `LLMEngine` | 管理整个推理生命周期，对用户暴露 `add_request` / `step` | `add_request()`, `step()` |
+| **调度层** | `Scheduler` | 决定每轮运行哪些 sequence，管理三个队列 + 预算 | `schedule()` |
+| **执行层** | `Worker` | 执行实际模型前向，管理 GPU / 模型权重 / KV cache | `execute_model()` |
 
-| 策略 | 原理 | 优缺点 |
-|------|------|--------|
-| Static Batching | 凑齐才开始 | 简单但长请求阻塞 |
-| Dynamic Batching | 请求级聚合+超时 | 提吞吐但引入等待 |
-| **Continuous Batching** | 每轮 iteration 重建 batch | 吞吐+延迟兼顾，实现复杂 |
+![vLLM 三层分层架构：LLMEngine → Scheduler → Worker](../../images/week5_vllm_architecture.svg)
 
-#### ③ Latency 隐藏（Day6）
+##### 为什么分三层？
 
-| 手段 | 作用 |
-|------|------|
-| CUDA Graph | 消除 per-step launch overhead |
-| torch.compile / kernel fusion | 减少 kernel 数 |
-| Async Copy | overlap 传输与计算 |
-| Speculative Decoding | 小模型预测+大模型验证 |
-| Chunked Prefill | 大 prefill 拆块与 decode 交错 |
+- **接口层**让用户无需关心调度细节，只管 `add_request` + 读 `step` 的输出
+- **执行层**封装硬件细节，Worker 可以是多卡（TP/PP）的协调者
 
-#### ④ 调度开销（Day3/Day6）
+#### 3.2 核心数据结构：Sequence / SequenceGroup / SequenceStatus
 
-| 来源 | 优化 |
-|------|------|
-| Python GIL | 核心逻辑 C++ |
-| 重建 input tensors | 预分配 buffer |
-| 内存 alloc/free | 预分配 + 复用 |
-| CPU-GPU 同步 | 异步采样、减少 cudaSynchronize |
+| 类名 | 作用 | 关键字段 |
+|------|------|---------|
+| `Sequence` | 单个序列（一条采样链） | `seq_id`, `prompt_token_ids`, `output_token_ids`, `status` |
+| `SequenceGroup` | 一个请求对应一个 group（含 prompt + 1~N 个采样序列） | `request_id`, `seqs: List[Sequence]` |
+| `SequenceStatus` | 序列状态枚举 | `WAITING` / `RUNNING` / `SWAPPED` / `FINISHED` |
+| `SchedulerOutputs` | scheduler 一轮的输出 | `scheduled_seq_groups`, `num_batched_tokens` |
+| `SamplerOutput` | 采样结果 | 每个 sequence 的下一个 token id |
 
-> 💡 四大问题交织：内存管理决定能服务多少请求，Batch 策略决定吞吐，Latency 隐藏决定单请求延迟，调度开销决定系统效率。
+##### 为什么用 SequenceGroup 而不是直接用 Sequence？
 
----
+一个用户请求可能需要**多个候选序列**——比如 beam search（保留 top-K 条路径）或 `n>1` 采样（一次生成多个回答）。这些候选共享同一个 prompt，所以用一个 `SequenceGroup` 包起来。group 内的 sequences 共享 prompt 的 KV cache（Day 4 的 Copy-on-Write 就是为这个设计的）。
 
-### 优化速查表（现象 → 检查 → 解决）
+#### 3.3 请求生命周期
 
-![推理系统优化速查表](../images/optimization_cheatsheet.svg)
+![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../images/request_lifecycle.svg)
 
-| 现象 | 检查方法 | 解决方案 |
-|------|---------|---------|
-| TTFT 过高 | profile prefill，看 TTFT vs N 增长 | FlashAttention、Tensor Core、并行 prefill |
-| TBT 过高 | profile decode，看 breakdown | KV Cache、PagedAttention、量化、GQA |
-| TBT 随 L 增长 | 扫描不同 L | GQA/MQA、滑动窗口、稀疏 attention |
-| 显存 OOM | 监控显存，算 cache 占用 | PagedAttention、INT8 KV、减 batch |
-| Kernel 间隙大 | nsys timeline，看 gap 占比 | CUDA Graph、torch.compile、kernel fusion |
-| 长请求阻塞 batch | 观察完成时间 | Continuous Batching |
-| 多轮对话 TTFT 高 | 检查 cache 复用 | session KV Cache / prefix caching |
-| 显存碎片 | block allocator 看 free block | PagedAttention |
-| Throughput 低 | nsys SM util | 增大 batch、continuous batching |
+![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../../images/week5_request_state_flow.svg)
 
-> 使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day6 决策树验证。
+##### `LLMEngine.step()` 的 4 步流程
 
----
+```python
+def step(self):
+ # 1. Scheduler 决定本轮运行哪些 sequence
+ seq_group_metadata_list, scheduler_outputs = self.scheduler.schedule()
 
-### 面试准备框架
+ # 2. Worker 执行模型前向
+ outputs = self.model_executor.execute_model(seq_group_metadata_list)
 
-#### 本周 17 道核心面试题（按主题分组）
+ # 3. 处理输出（采样、更新 sequence 状态、回收完成请求的 cache）
+ request_outputs = self._process_model_outputs(outputs, scheduler_outputs)
 
-**Prefill/Decode（Day1/Day6）**
-1. Prefill vs Decode 的区别和瓶颈？
-2. TTFT 和 TBT 是什么？如何优化？
-3. 如何做端到端 profiling？
-4. TBT 为什么随序列长度增长？
-
-**KV Cache（Day2/Day5）**
-1. KV Cache 核心思想和收益？
-2. KV Cache 内存占用如何计算？
-3. 静态 vs 动态 KV Cache 分配？
-4. Prefill/Decode 各存什么到 KV Cache？
-5. 如何构建最简单的推理引擎？
-
-**vLLM 架构（Day3）**
-1. vLLM 整体架构？
-2. SequenceGroup 是什么？
-3. Scheduler 依据什么决策？
-4. Preemption 两种策略？
-
-**PagedAttention（Day4）**
-1. PagedAttention 解决什么问题？
-2. Copy-on-Write 应用场景？
-
-**核心问题（Day7）**
-1. 推理系统四大核心问题？
-2. Continuous vs Dynamic Batching？
-
-#### 答题框架
-
-```
-1. 先定性：这属于哪个核心问题（内存/Batch/Latency/调度）？
-2. 给机制：底层原理是什么（compute vs memory-bound、碎片、launch overhead）？
-3. 量化：数据/公式支撑（AI≈0.1、cache=2×L×...、gap>20%）
-4. 给方案：3 个以上优化方向，分"治标"和"治本"
+ # 4. 返回本轮结果
+ return request_outputs
 ```
 
----
+每调用一次 `step()`，系统就推进一个 iteration：所有 running 的 sequence 各生成 1 个 token。用户在循环里反复调 `step()` 直到所有请求 `FINISHED`。
 
-### 总结任务 / Coding 任务
+#### 3.4 Continuous Batching：每轮重建 batch
 
-#### 任务 1：运行总结自测脚本
+![Continuous Batching vs Static Batching](../images/continuous_vs_static_batching.svg)
 
-运行 [kernels/week5_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day7/kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
+Continuous Batching 的核心：**每个 iteration 都重新构建 batch**。
+
+```python
+def schedule(self):
+    # 1. 保留所有 running 的 sequence（continuous batching 的基础）
+    # 2. 如果还有预算（num_seqs / 显存），从 waiting 队列补入新请求
+    # 3. 如果显存不足，抢占（preempt）低优先级的 running 请求
+    # 4. 返回本轮的 SchedulerOutputs
+    pass
+```
+
+**关键**：新请求可以在**任意 iteration** 加入 batch——不需要等当前 batch 跑完。请求 A 在 iter 5 完成后，它的 slot 立刻被 waiting 里的请求 D 填上，GPU 不空等。
+
+##### 为什么能提升吞吐？
+
+![Static vs Continuous Batching：slot 利用率对比](../../images/week5_batching_comparison.svg)
+
+> 💡 请求长度方差越大，Continuous Batching 收益越大——因为 Static 下"短板请求"造成的空等越多。这也是为什么推理服务的请求长度往往差异巨大（有人问一句话，有人输入长文档），Continuous Batching 几乎是标配。
+
+#### 3.5 SchedulingBudget 与抢占
+
+Scheduler 每轮决策受三重预算约束：
+
+| 预算 | 含义 | 约束 |
+|------|------|------|
+| **token budget** | 本轮最多处理的 token 数 | 限制 prefill 的总 token（大 prompt 会占满） |
+| **num_seqs budget** | 本轮最多并行的 sequence 数 | 限制 batch 大小（防显存爆 / 调度开销） |
+| **显存预算** | KV cache 剩余 block 数 | block allocator 报告（Day 4 PagedAttention） |
+
+##### 抢占（Preemption）的两种策略
+
+当高优先级请求到来但显存不足时，Scheduler 抢占 running 队列里最后加入的请求：
+
+| 策略 | 做法 | 适用场景 |
+|------|------|---------|
+| **Recomputation**（默认） | 丢弃被抢占请求的 KV cache，之后重新 prefill | 短 prompt（重算便宜），通常更快 |
+| **Swapping** | 把被抢占请求的 KV cache 换出到 CPU 内存 | 长 prompt（重算太贵），显存恢复后换回 |
+
+> ⚠️ **注意**：Recomputation 看似浪费（白算了），但对短 prompt 通常比 Swapping 快——因为 CPU↔GPU 的 KV 搬运带宽远低于重算的小 GEMM。vLLM 默认用 Recomputation，长上下文场景才切 Swapping。
+
+### Coding 任务：手写 mini vLLM 调度器
+
+#### 任务 1：创建 mini_vllm_scheduler.py
+
+创建文件 [kernels/mini_vllm_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/mini_vllm_scheduler.py)，用纯 Python 模拟 vLLM 的 LLMEngine + Scheduler + Worker，演示 Continuous Batching：
+
+```python
+# mini_vllm_scheduler.py —— vLLM 核心架构的最小化模拟（LLMEngine + Scheduler + Worker）
+# 运行命令: python mini_vllm_scheduler.py
+# 依赖: 仅标准库（无需 torch / vllm）
+#
+# 演示三大核心机制：
+#   1. 请求生命周期：WAITING → RUNNING → FINISHED（含 SWAPPED 抢占）
+#   2. Continuous Batching：每轮 iteration 重新构建 batch，新请求随时加入
+#   3. SchedulingBudget：token / num_seqs / 显存 三重预算约束
+
+import random
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, Optional
+
+
+# ============================================================
+# 数据模型（对应 vllm/sequence.py）
+# ============================================================
+
+class SequenceStatus(Enum):
+    WAITING = "WAITING"
+    RUNNING = "RUNNING"
+    SWAPPED = "SWAPPED"      # 被抢占，KV cache 换出到 CPU
+    FINISHED = "FINISHED"
+
+
+@dataclass
+class Sequence:
+    """单个序列（对应 vllm.Sequence）"""
+    seq_id: int
+    prompt_len: int          # prefill 的 token 数
+    max_output_len: int      # 最多生成多少 token
+    output_len: int = 0      # 已生成的 token 数
+    status: SequenceStatus = SequenceStatus.WAITING
+    kv_blocks: int = 0       # 当前占用的 KV cache block 数
+
+    def total_len(self) -> int:
+        return self.prompt_len + self.output_len
+
+    def is_finished(self) -> bool:
+        return self.status == SequenceStatus.FINISHED
+
+
+@dataclass
+class SequenceGroup:
+    """一个请求对应一个 group（对应 vllm.SequenceGroup）
+    实际 vLLM 中一个 group 可含多个采样序列（beam search / n>1），
+    这里简化为单序列。"""
+    request_id: int
+    seq: Sequence
+    arrival_iter: int        # 在第几个 iteration 到达
+
+
+# ============================================================
+# Scheduler（对应 vllm/core/scheduler.py）
+# ============================================================
+
+@dataclass
+class SchedulingBudget:
+    """调度预算（对应 vllm.core.scheduling_budget.SchedulingBudget）"""
+    max_num_seqs: int        # 本轮最多并行多少 sequence
+    max_tokens: int          # 本轮最多处理多少 token（prefill+decode）
+    max_blocks: int          # KV cache 剩余 block 数
+
+    def can_add(self, seq: Sequence, block_size: int) -> bool:
+        # 新 sequence 进 running 需要的 block 数（向上取整）
+        need_blocks = (seq.total_len() + block_size - 1) // block_size
+        return (self.num_seqs < self.max_num_seqs
+                and self.tokens + seq.total_len() <= self.max_tokens
+                and self.blocks + need_blocks <= self.max_blocks)
+
+    def add(self, seq: Sequence, block_size: int):
+        need_blocks = (seq.total_len() + block_size - 1) // block_size
+        self.num_seqs += 1
+        self.tokens += seq.total_len()
+        self.blocks += need_blocks
+
+    # 三个当前已用计数
+    num_seqs: int = 0
+    tokens: int = 0
+    blocks: int = 0
+
+
+@dataclass
+class SchedulerOutputs:
+    """scheduler 一轮的输出：本轮要运行哪些 sequence"""
+    running_seqs: List[Sequence] = field(default_factory=list)
+    preempted_seqs: List[Sequence] = field(default_factory=list)
+    num_batched_tokens: int = 0
+
+
+class Scheduler:
+    """vLLM Scheduler 的核心逻辑（简化版）"""
+
+    def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
+                 max_blocks: int = 64):
+        self.block_size = block_size
+        self.max_num_seqs = max_num_seqs
+        self.max_blocks = max_blocks        # 总 KV cache block 池
+        self.used_blocks = 0                # 已分配 block 数
+
+        self.waiting: List[SequenceGroup] = []     # WAITING 队列
+        self.running: List[SequenceGroup] = []     # RUNNING 队列
+        self.swapped: List[SequenceGroup] = []     # SWAPPED 队列（换出到 CPU）
+
+    def add_request(self, sg: SequenceGroup):
+        sg.seq.status = SequenceStatus.WAITING
+        self.waiting.append(sg)
+
+    def _alloc_blocks(self, seq: Sequence) -> int:
+        """计算 seq 当前需要的 block 数"""
+        return (seq.total_len() + self.block_size - 1) // self.block_size
+
+    def _try_preempt(self) -> Optional[SequenceGroup]:
+        """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）。
+        返回被抢占的 victim（由调用方放回 waiting 队列），无可抢占时返回 None。"""
+        if not self.running:
+            return None
+        # LIFO 抢占：弹出最后加入的
+        victim = self.running.pop()
+        released_blocks = victim.seq.kv_blocks
+        victim.seq.status = SequenceStatus.WAITING
+        victim.seq.output_len = 0          # recomputation：丢弃 KV cache
+        self.used_blocks -= released_blocks
+        victim.seq.kv_blocks = 0
+        print(f"    ⚡ PREEMPT request {victim.request_id} "
+              f"(recomputation, 释放 {released_blocks} blocks)")
+        return victim
+
+    def schedule(self) -> SchedulerOutputs:
+        """一轮调度：决定本轮运行哪些 sequence（Continuous Batching 核心）"""
+        out = SchedulerOutputs()
+
+        # ---- Step 1: 保留所有 running（continuous batching 的基础）----
+        running_seqs = [sg.seq for sg in self.running]
+        out.running_seqs = list(running_seqs)
+
+        # ---- Step 2: 从 waiting 中尽可能加入新请求 ----
+        budget = SchedulingBudget(
+            max_num_seqs=self.max_num_seqs,
+            max_tokens=999999,                 # 简化：不限制 token 总数
+            max_blocks=self.max_blocks - self.used_blocks,
+        )
+        for sg in running_seqs:
+            budget.add(sg, self.block_size)
+
+        still_waiting = []
+        # 注意：必须遍历快照（list(...)），不能直接在 self.waiting 上迭代——
+        # _try_preempt() 会向 self.waiting 头部 insert 被抢占的请求，
+        # 原地迭代会导致同一请求被反复检查，陷入无限循环（livelock）。
+        for sg in list(self.waiting):
+            if budget.can_add(sg.seq, self.block_size):
+                # 加入 running
+                sg.seq.status = SequenceStatus.RUNNING
+                need = self._alloc_blocks(sg.seq)
+                self.used_blocks += need
+                sg.seq.kv_blocks = need
+                self.running.append(sg)
+                out.running_seqs.append(sg.seq)
+                budget.add(sg.seq, self.block_size)
+                print(f"    + ADMIT  request {sg.request_id} "
+                      f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
+            else:
+                # 预算不足：尝试抢占
+                victim = self._try_preempt()
+                if victim is not None:
+                    # 被抢占的请求放回 waiting 队首（加入 still_waiting，
+                    # 循环结束后统一重建 self.waiting，避免迭代中被修改/覆盖丢失）
+                    still_waiting.insert(0, victim)
+                    # 抢占后重试
+                    if budget.can_add(sg.seq, self.block_size):
+                        sg.seq.status = SequenceStatus.RUNNING
+                        need = self._alloc_blocks(sg.seq)
+                        self.used_blocks += need
+                        sg.seq.kv_blocks = need
+                        self.running.append(sg)
+                        out.running_seqs.append(sg.seq)
+                        budget.add(sg.seq, self.block_size)
+                        print(f"    + ADMIT  request {sg.request_id} "
+                              f"(after preempt, alloc {need} blocks)")
+                    else:
+                        still_waiting.append(sg)
+                else:
+                    still_waiting.append(sg)
+        self.waiting = still_waiting
+
+        out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
+        return out
+
+
+# ============================================================
+# Worker（对应 vllm/worker/worker.py）
+# ============================================================
+
+class Worker:
+    """执行模型前向（这里只模拟，不跑真模型）"""
+
+    def execute_model(self, running_seqs: List[Sequence]) -> List[int]:
+        """对每个 running sequence 执行一步：生成 1 个 token（decode）
+        或完成 prefill。返回每个 seq 的新 token id。"""
+        new_tokens = []
+        for seq in running_seqs:
+            # prefill 后第一个 token 由 prompt 末尾产出
+            seq.output_len += 1
+            tok = random.randint(0, 999)     # 假 token id
+            new_tokens.append(tok)
+        return new_tokens
+
+
+# ============================================================
+# LLMEngine（对应 vllm/engine/llm_engine.py）
+# ============================================================
+
+class LLMEngine:
+    """vLLM 对外接口：管理整个推理生命周期"""
+
+    def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
+                 max_blocks: int = 64):
+        self.scheduler = Scheduler(block_size, max_num_seqs, max_blocks)
+        self.worker = Worker()
+        self.iteration = 0
+        self.finished: List[SequenceGroup] = []
+
+    def add_request(self, request_id: int, prompt_len: int,
+                    max_output_len: int):
+        sg = SequenceGroup(
+            request_id=request_id,
+            seq=Sequence(seq_id=request_id, prompt_len=prompt_len,
+                         max_output_len=max_output_len),
+            arrival_iter=self.iteration,
+        )
+        self.scheduler.add_request(sg)
+        print(f"[iter {self.iteration}] ➕ add_request {request_id} "
+              f"(prompt={prompt_len}, max_out={max_output_len})")
+
+    def step(self) -> List[int]:
+        """一轮推理：schedule → execute → 更新状态（对应 LLMEngine.step）"""
+        self.iteration += 1
+        print(f"\n[iter {self.iteration}] === step ===")
+
+        # 1. Scheduler 决定本轮运行哪些 sequence
+        sched_out = self.scheduler.schedule()
+        if not sched_out.running_seqs:
+            print("    (no running seqs)")
+            return []
+
+        print(f"    batch: {len(sched_out.running_seqs)} seqs, "
+              f"{sched_out.num_batched_tokens} tokens, "
+              f"used_blocks={self.scheduler.used_blocks}/{self.scheduler.max_blocks}")
+
+        # 2. Worker 执行模型前向（每 seq 生成 1 个 token）
+        new_tokens = self.worker.execute_model(sched_out.running_seqs)
+
+        # 3. 更新 sequence 状态
+        finished_this_step = []
+        for sg in self.scheduler.running[:]:
+            seq = sg.seq
+            # 检查是否完成
+            if seq.output_len >= seq.max_output_len:
+                seq.status = SequenceStatus.FINISHED
+                self.scheduler.used_blocks -= seq.kv_blocks
+                seq.kv_blocks = 0
+                self.scheduler.running.remove(sg)
+                self.finished.append(sg)
+                finished_this_step.append(sg.request_id)
+                print(f"    ✔ FINISH request {sg.request_id} "
+                      f"(generated {seq.output_len} tokens, free {seq.total_len()//self.scheduler.block_size + 1} blocks)")
+        return finished_this_step
+
+    def has_unfinished(self) -> bool:
+        return bool(self.scheduler.waiting or self.scheduler.running)
+
+
+# ============================================================
+# 主流程：模拟 3 个请求交错到达，演示 Continuous Batching
+# ============================================================
+
+def main():
+    random.seed(42)
+    # block_size=16, 最多 4 并发, 总 64 blocks
+    # （减小 max_blocks 可触发抢占，见扩展实验）
+    engine = LLMEngine(block_size=16, max_num_seqs=4, max_blocks=64)
+
+    print("=" * 60)
+    print("Mini vLLM Scheduler Simulation")
+    print("=" * 60)
+
+    # iter 0: 请求 0 到达（长 prompt + 长输出）
+    engine.add_request(0, prompt_len=32, max_output_len=8)
+
+    # 跑几步
+    for _ in range(2):
+        engine.step()
+
+    # iter 2: 请求 1、2 到达（制造 interleaving）
+    engine.add_request(1, prompt_len=16, max_output_len=5)
+    engine.add_request(2, prompt_len=48, max_output_len=6)
+
+    # 继续跑到全部完成
+    while engine.has_unfinished():
+        engine.step()
+
+    print("\n" + "=" * 60)
+    print(f"All requests finished. Total iterations: {engine.iteration}")
+    print(f"Finished order: {[sg.request_id for sg in engine.finished]}")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+
+```
+```
+
+代码要点：
+- `Sequence` **/** `SequenceGroup` **/** `SequenceStatus`：对应 vLLM 的数据模型，`SequenceGroup` 包一个 `Sequence`（简化为单序列）。
+- `Scheduler.schedule()`：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`）。
+- `Worker.execute_model()`：每 seq 生成 1 个 token（随机模拟，不跑真模型）。
+- `LLMEngine.step()`：schedule → execute → 更新状态（完成则释放 cache），对应 vLLM 的 4 步流程。
+
+#### 任务 2：运行并观察 Continuous Batching
 
 ```bash
-python kernels/week5_summary.py
+python kernels/mini_vllm_scheduler.py
 ```
 
-脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
+**预期输出**（节选）：
 
-#### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
+```text
+[iter 1] === step ===
+ + ADMIT request 0 (prefill 32 tok, alloc 2 blocks)
+ batch: 1 seqs, 32 tokens, used_blocks=2/64
 
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+[iter 3] === step ===
+ + ADMIT request 1 (prefill 16 tok, alloc 1 blocks)
+ + ADMIT request 2 (prefill 48 tok, alloc 3 blocks)
+ batch: 3 seqs, 98 tokens, used_blocks=6/64
 
-**与 Week 5 知识的关联**：
+[iter 7] === step ===
+ batch: 3 seqs, 110 tokens, used_blocks=6/64
+ ✔ FINISH request 1 (generated 5 tokens)
 
-Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 5 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
+[iter 8] === step ===
+ batch: 2 seqs, 92 tokens, used_blocks=5/64
+ ✔ FINISH request 0 (generated 8 tokens)
+ ✔ FINISH request 2 (generated 6 tokens)
 
-> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+All requests finished. Total iterations: 8
+Finished order: [1, 0, 2]
+```
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 5 周）
+##### 观察重点
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
+1. **请求交错执行**：req0 先到先跑 2 轮，req1/req2 在 iter 3 加入，三者同 batch 并行 decode——这就是 Continuous Batching。
+2. **完成即走**：req1（max_out=5）在 iter 7 最先完成，req0/req2 继续跑到 iter 8——完成的不拖累未完成的。
+3. **完成顺序 ≠ 到达顺序**：req1 最晚到但最早完成（max_out 最短），说明 Continuous Batching 让短请求快速返回。
+4. **显存动态回收**：req1 完成后 `used_blocks` 从 6 降到 5，slot 立刻可用。
 
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 遍历 | [94. 二叉树的中序遍历](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html)、[144. 二叉树的前序遍历](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html)、[145. 二叉树的后序遍历](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html)、[102. 二叉树的层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)、[103. 二叉树的锯齿形层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
-| Day 2 | 形态与深度 | [104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)、[226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html)、[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)、[543. 二叉树的直径](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html)、[110. 平衡二叉树](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
-| Day 3 | BST 基础 | [111. 二叉树的最小深度](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html)、[559. N 叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html)、[108. 将有序数组转换为二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html)、[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)、[230. 二叉搜索树中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
-| Day 4 | BST 进阶与构造 | [235. 二叉搜索树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html)、[173. 二叉搜索树迭代器](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html)、[1008. 前序遍历构造二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html)、[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)、[889. 根据前序与后序遍历构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
+#### 任务 3：阅读 vLLM 源码对照
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 5 周「二叉树（上）——遍历、形态与 BST」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+在 vLLM 源码（`pip install vllm` 后或 GitHub）中找到以下三个方法，与我们的 mini 实现对照：
+
+| mini 实现 | vLLM 源码位置 | 对照点 |
+|-----------|--------------|--------|
+| `LLMEngine.step()` | `vllm/engine/llm_engine.py` | 4 步流程：schedule → execute → process_outputs → return |
+| `Scheduler.schedule()` | `vllm/core/scheduler.py` | `_schedule_running()` + `_schedule_waiting()`，Continuous Batching 实现 |
+| `Worker.execute_model()` | `vllm/worker/worker.py` | 构建 input metadata（含 block table）→ ModelRunner.run() |
+
+```bash
+# 找到 step() 的 4 个主要步骤
+python -c "import vllm.engine.llm_engine as m; import inspect; print(inspect.getsourcefile(m))"
+
+# 在源码中搜索 schedule 的三个子方法
+grep -n "_schedule_running\|_schedule_waiting\|_schedule_swapped" $(python -c "import vllm.core.scheduler as m; print(m.__file__)")
+```
+
+> 💡 重点对照：vLLM 的 `_schedule_running()` 先处理已 running 的请求（continuous batching 基础），`_schedule_waiting()` 再从 waiting 补入新请求——正是我们 mini 版 `schedule()` 的 Step 1 + Step 2。
+
+#### 任务 4：LeetGPU 在线题目 —— Top-P Sampling
+
+**题目链接**：<https://leetgpu.com/challenges/top-p-sampling>
+
+**与今日知识的关联**：
+
+Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel**——Scheduler 拼好 batch、Worker 跑完 forward 得到 logits 后，最后一步就是在 GPU 上执行采样。这道题就是 Worker 跑的**采样 kernel**：把采样拆成 `softmax → sort → cumsum → searchsorted(p) → 重归一化 → multinomial`，本质是一条 sort + scan（prefix sum）+ CDF 查找的流水线。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——采样 kernel 喂入的 batch 正是 Continuous Batching 拼出来的。
+
+> 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 3）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [111. 二叉树的最小深度](https://leetcode.cn/problems/minimum-depth-of-binary-tree/) | 简单 | BFS/DFS（注意单边子树） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html) |
+| [559. N 叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-n-ary-tree/) | 简单 | DFS/BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html) |
+| [108. 将有序数组转换为二叉搜索树](https://leetcode.cn/problems/convert-sorted-array-to-binary-search-tree/) | 简单 | 取中点递归构建 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html) |
+| [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/) | 中等 | 中序单调性 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
+| [230. 二叉搜索树中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-bst/) | 中等 | 中序第 k 个 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
 
 ---
 
-### 常见误区澄清
+### 扩展实验
 
-1. **"Decode 慢是因为算力不够"** —— 错。Decode 慢是 memory-bound（M=1，AI≈0.1），SM 空闲等数据。加算力没用，要减数据搬运（KV 量化/GQA）或抬 M（Continuous Batching）。
-2. **"KV Cache 越大越好"** —— 错。Cache 大显存压力，长文本/大 batch OOM。要在"避免重算"和"显存占用"间权衡，用量化/GQA 压缩。
-3. **"Continuous Batching 就是 Dynamic Batching"** —— 错。Dynamic 是请求级聚合（凑一批一起开始结束），Continuous 是 iteration 级（每轮重建 batch，完成即走）。后者才是 LLM 推理标配。
-4. **"PagedAttention 是为了加速"** —— 错。PagedAttention 是内存管理（解决碎片），不直接加速单次 attention。它让 Continuous Batching 的 slot 回收无碎片化，间接提吞吐。
-5. **"profiling 就是测时间"** —— 不全。profiling 三层：nsys 看时间线/gap、cuda.Event 测阶段指标、ncu 看 kernel 带宽/算力利用率。要定位"为什么慢"而非只测"多慢"。
+#### 实验 1：减小 max_blocks 触发抢占
 
----
+把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=8`，观察抢占（PREEMPT）是否触发。注意 Recomputation 策略会重置 `output_len`，被抢占请求的进度全部作废。
 
-### Week 5 → Week 6 衔接
+**实测结果**（RTX 5090 环境非必需，纯 Python 可直接复现）：抢占正常触发且调度收敛——req1 被反复抢占 **6 次**（每次 progress 清零重新 prefill），最终 14 个 iteration 全部完成，完成顺序 `[0, 1, 2]`：
 
-Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 6 深入**Batching & 调度优化**：
+```text
+⚡ PREEMPT request 1 (recomputation, 释放 1 blocks)
+⚡ PREEMPT request 1 (recomputation, 释放 2 blocks)
+... （共 6 次 PREEMPT，全是 req1）
+✔ FINISH request 0 (generated 8 tokens, free 3 blocks)
+✔ FINISH request 1 (generated 5 tokens, free 2 blocks)
+✔ FINISH request 2 (generated 6 tokens, free 4 blocks)
+All requests finished. Total iterations: 14
+Finished order: [0, 1, 2]
+```
 
-| Week 5（理解 + 造引擎） | Week 6（深入优化） |
-|------------------------|-------------------|
-| Continuous Batching 概念 | 深入实现 + chunked prefill + mixed batching |
-| CUDA Graph 提及 | 手写 CUDA Graph 录制 decode 循环 |
-| Mini 引擎 v0（单请求） | 引擎 v1（多请求 + Continuous Batching） |
-| profiling 方法论 | 用 profiling 数据驱动 v0→v1 优化 |
-| 调度开销概念 | torch.compile / 自定义 C++ scheduler |
+可以看到 Recomputation 的代价：req1 最早被 admit 却反复被抢占（LIFO 抢最后加入的），8 轮活干了 14 轮才结束。若 max_blocks 小到连单个请求都放不下，则会真正 livelock（反复抢占谁也无法推进）。
 
-> 💡 Week 6 的核心问题：怎么把 Week 5 的单请求引擎变成高吞吐的多请求服务？Continuous Batching 怎么真正实现？CUDA Graph 怎么录制动态长度的 decode？这些都在 Week 6 展开。
+> 思考：为什么 max_blocks 太小会 livelock？（提示：Recomputation 把 output_len 清零，被抢占的请求重新 prefill 又抢别人的显存。）如何改进？（提示：Swapping 策略不丢 progress；或限制抢占次数。）
 
----
+#### 实验 2：支持 SWAPPED 队列与换出
 
-### 弹性安排
+当前 mini 版的 `_try_preempt` 用 Recomputation（重置 output_len）。修改为 Swapping：被抢占的请求 `status=SWAPPED`，进入 `self.swapped` 队列，`output_len` 保留；显存恢复时 swap in 回 running。对比两种策略在长 prompt 下的行为差异。
 
-- **时间紧（≤4h）**：跑 `week5_summary.py` 自测 17 题 + 过一遍四大核心问题 + 速查表
-- **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成性能报告模板
-- **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week5 学习总结博客
+> 思考：Swapping 何时比 Recomputation 更优？（提示：prompt 很长时重算成本 > CPU↔GPU 搬运成本。）
+
+#### 实验 3：添加请求优先级
+
+给 `SequenceGroup` 加 `priority` 字段，修改 `schedule()` 让高优先级请求优先被 admit、低优先级请求优先被 preempt。测试：低优先级长请求先到，高优先级短请求后到，观察抢占行为。
+
+> 思考：优先级调度可能产生什么问题？（提示：低优先级请求 starvation 饿死。如何解决？老化 aging 策略。）
 
 ---
 
 ### 今日总结
 
-Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
+Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
-1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 profiling 仪表盘 → Day7 核心问题地图
-2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
-3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
-4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
-5. **常见误区澄清**：Decode 慢≠算力不够、Continuous≠Dynamic、PagedAttention 非直接加速、profiling 非只测时间
-6. **Week6 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
+1. **三层分层架构**：LLMEngine（接口）→ Scheduler（调度）→ Worker（执行），职责清晰、解耦——Scheduler 只管"跑谁"，Worker 只管"怎么跑"
+2. **核心数据结构**：Sequence（单序列）、SequenceGroup（一请求多候选）、SequenceStatus（WAITING/RUNNING/SWAPPED/FINISHED 四态）
+3. **请求生命周期**：add_request → WAITING → schedule 选中 → RUNNING → 达到 max_tokens → FINISHED（或显存不足 → SWAPPED → 恢复回 RUNNING）
+4. **Continuous Batching**：每轮 iteration 重建 batch，完成即走、新请求随时插入——GPU 始终满载，吞吐提升 2-8×，请求长度方差越大收益越大
+5. **SchedulingBudget**：token / num_seqs / 显存三重预算约束调度决策；显存不足时抢占（Recomputation 默认 / Swapping 备选）
+6. **手写 mini 调度器**：Python 模拟 LLMEngine+Scheduler+Worker，实测 3 请求交错执行，验证 Continuous Batching 的完成即走、完成顺序≠到达顺序
+7. **step() 4 步流程**：schedule → execute_model → process_outputs → return，每步推进一个 iteration
 
-掌握这些后，你就有了推理系统的全局视角——Week 6 我们深入 Batching 与调度优化，把 Week 5 的单请求引擎升级为高吞吐服务。
+掌握这些后，你就有了 vLLM 的调度层全景——明天 Day 4 深入 Worker 内部的 PagedAttention，看它如何用分页 + block table 让 KV cache 的动态分配/释放不产生碎片，从而支撑 Continuous Batching 的高频 slot 回收。
 
 ---
 
 ### 面试要点
 
-1. **设计一个 LLM 推理服务时，需要考虑哪些核心问题？**
+1. **vLLM 的整体架构是怎样的？一个请求从进入到输出经历哪些阶段？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 四大核心问题：
- 1. **内存管理**：KV Cache 动态增长与显存限制 → PagedAttention、量化、GQA/MQA
- 2. **Batch 策略**：如何组合请求平衡吞吐和延迟 → Continuous Batching（每轮重建 batch）
- 3. **Latency 隐藏**：compute 与 communication overlap → CUDA Graph、async copy、speculative decoding、chunked prefill
- 4. **调度开销**：最小化调度延迟 → 核心逻辑 C++、预分配 buffer、异步采样
- - 另需考虑：扩展性（多 GPU TP/PP）、正确性（数值精度、cache 一致性）
- - 四者交织：内存决定能服务多少请求，Batch 决定吞吐，Latency 隐藏决定单请求延迟，调度决定效率
+ - 三层分层架构：LLMEngine（对外接口，编排 step 循环）→ Scheduler（调度决策，管理三个队列+预算）→ Worker（执行模型前向）
+ - 请求生命周期：
+ 1. 用户调 `LLMEngine.add_request()`，请求进入 WAITING 队列
+ 2. `Scheduler.schedule()` 依预算决定哪些请求进本轮 batch（从 waiting 补入 running）
+ 3. `Worker.execute_model()` 执行模型前向，每 seq 生成 1 个 token
+ 4. `_process_model_outputs` 采样、更新状态——达到 max_tokens 则 FINISHED（释放 cache），显存不足则 SWAPPED
+ 5. 反复 `step()` 直到所有请求 FINISHED
+ - Continuous Batching：每轮重建 batch，新请求可在任意 iteration 加入
 
 </details>
 
-2. **Continuous Batching 和 Dynamic Batching 有什么区别？**
+
+2. **什么是 Continuous Batching？它比 Static Batching 好在哪里？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：请求级别聚合，等待凑够 batch size 或超时。一个 batch 内所有请求一起开始、一起结束——长请求阻塞整个 batch
- - **Continuous Batching（Inflight Batching）**：iteration 级别 batching，每轮重新构建 batch。新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
- - 对比：Continuous 更适合 LLM 自回归生成（生成长度差异大），吞吐提升 2-8x。前提是 PagedAttention 的细粒度 block 管理（否则完成请求的 cache 释放碎片化）
+ - Continuous Batching：每个 iteration 都重新构建 batch，完成的请求立即释放 slot，waiting 里的新请求立刻补位
+ - Static Batching：凑齐 N 个才开始，等最慢的请求跑完才接下一批——完成的请求 slot 空等
+ - 收益：GPU 始终满载，吞吐提升 2-8×；请求长度方差越大收益越大（短板请求造成的空等越多）
+ - 前提：需要细粒度 KV cache 管理（PagedAttention 的 block 级分配/释放），否则完成请求的 cache 释放会碎片爆炸
 
 </details>
 
-3. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
+
+3. **vLLM 的 Scheduler 依据什么做调度决策？什么是 SchedulingBudget？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + N×N attention）。优化：FlashAttention（IO 从 O(N²) 降到 O(Nd)）、Tensor Core、并行 prefill、reduce prompt 长度
- - **TBT 高（Decode 慢）**：Decode 是 memory-bound（M=1，读 KV Cache）。优化：KV Cache 量化（INT8/FP8）、GQA/MQA（减 KV 头）、PagedAttention、Continuous Batching（抬 M）
- - 若 TBT 随 L 增长 → 读 KV 随 L 增大 → 滑动窗口/稀疏 attention
- - 若 TBT 稳定但绝对值高 → launch overhead → CUDA Graph、torch.compile
+ - Scheduler 依据三重预算：
+ - token budget：本轮最多处理的 token 数（限制 prefill 总量）
+ - num_seqs budget：本轮最多并行的 sequence 数（限制 batch 大小）
+ - 显存预算：block allocator 报告的剩余 block 数（Day 4 PagedAttention）
+ - `SchedulingBudget` 封装这些预算，scheduler 在 add 请求时检查是否超出
+ - 调度目标：最大化 throughput，同时控制 latency（通过 budget 限制 batch 大小）
+ - 决策顺序：先保留 running（continuous batching 基础）→ 从 waiting 补入 → 显存不足则抢占
 
 </details>
 
-4. **PagedAttention 和 Continuous Batching 是什么关系？**
+
+4. **vLLM 中抢占（preemption）的两种策略是什么？各自适用什么场景？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
- - Continuous Batching：每轮重建 batch，完成即走——但"释放 slot"要无碎片，否则回收的显存拼不出大块
- - PagedAttention：block 粒度分配/回收，空闲 block 随时复用——让 Continuous Batching 的高频 slot 回收无碎片化
- - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；没有 Continuous Batching，PagedAttention 的动态分配无用武之地
+ - **Recomputation**（默认）：丢弃被抢占请求的 KV cache，之后重新 prefill。适用于短 prompt——重算成本低于 CPU↔GPU 搬运
+ - **Swapping**：把被抢占请求的 KV cache 换出到 CPU 内存，显存恢复后换回。适用于长 prompt——重算太贵
+ - vLLM 默认 Recomputation，因为大多数请求 prompt 不长，重算比搬运快
+ - 抢占对象：通常抢占 running 队列里最后加入的请求（LIFO）
 
 </details>
 
-5. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+
+5. **SequenceGroup 是什么？为什么不直接用 Sequence？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原因**：序列变长，KV Cache 变大，每步 Decode 读更多历史 K/V（attention 的 1×L 部分）。KV 超出 L2/L1 cache 后掉 HBM，访存随 L 增长 → TBT 增长
- - **优化方向**：
- 1. KV Cache 量化（INT8/FP8）：减半/减 1/4 数据量
- 2. GQA/MQA：减少 KV 头数，cache 缩 4x+
- 3. 滑动窗口/稀疏 attention：只保留最近 K 个 token
- 4. PagedAttention：高效管理 cache（间接支持更大 batch）
- 5. Continuous Batching：合并多个 decode 请求，抬高 M 提升带宽利用
+ - `SequenceGroup` 包含一个请求的 prompt + 1~N 个采样序列（`Sequence`）
+ - 一个用户请求可能需要多个候选序列：beam search（保留 top-K 路径）、`n>1` 采样（一次生成多个回答）
+ - 这些候选共享同一个 prompt，用 group 包起来统一管理；prompt 的 KV cache 在 group 内共享（Day 4 的 Copy-on-Write 机制）
+ - 单序列场景（n=1, no beam）group 内只有一个 Sequence，退化为直接用 Sequence
+
+ - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用
+
+</details>
+
 
 ---
 
-</details>
+### 附录：vLLM V1 架构演进（2024-2025）
 
-## 📁 本周目录结构
+> 上述内容描述的是 vLLM 的 SOSP 2023 原版架构。vLLM 在 2024-2025 年进行了 V1 重构，以下是关键变化：
 
-```
-aiinfra/daily/week5/
-├── README.md # 周概览
-├── day1/kernels/prefill_decode_simulation.py # Prefill/Decode 模拟
-├── day2/kernels/kv_cache.cu # KVCache 类
-├── day3/kernels/mini_vllm_scheduler.py # mini vLLM 调度器
-├── day4/kernels/paged_attention.cu # PagedAttention kernel
-├── day4b/kernels/flash_decoding.cu # FlashDecoding（补充日）
-├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
-├── day6/kernels/profile_engine_v0.py # 端到端 profiling
-├── day6b/kernels/ # 量化推理专题：w8a16_dequant.cu + int8_kv_cache.cu（补充日）
-├── day7/kernels/week5_summary.py # 总结日自测脚本
-└── images/ # 本周 SVG 插图
-```
+| 维度 | vLLM V0 (SOSP 2023) | vLLM V1 (2024-2025) |
+|------|---------------------|---------------------|
+| 异步 API | `LLMEngine`（同步） | `AsyncLLMEngine`（原生 async） |
+| Scheduler | 单线程 `Scheduler` | V1 Scheduler（支持 prefix caching 默认开启） |
+| Chunked Prefill | 需手动启用 | **默认启用** |
+| Prefix Caching | `--enable-prefix-caching`（可选） | **默认启用**（block hash 匹配） |
+| Speculative Decoding | 实验性 | 一等公民支持 |
+| CUDA Graph | 需手动配置 | 自动捕获 decode 迭代 |
+| 多模态 | 后期添加 | 原生设计支持 |
+| 架构 | Engine → Scheduler → Worker | AsyncLLMEngine → V1 Scheduler → WorkerPool |
 
-> 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
+**V1 的核心改进**：
+1. **默认启用 chunked prefill + prefix caching**：不再需要手动配置，开箱即优
+2. **异步引擎**：`AsyncLLMEngine` 原生支持 async/await，减少 Python GIL 瓶颈
+3. **统一调度器**：V1 Scheduler 合并了 prefill/decode 的调度逻辑，简化代码路径
+4. **CUDA Graph 自动化**：decode 迭代自动捕获为 CUDA Graph，消除 launch overhead
 
-## 🔗 推荐资源
-
-- **vLLM 论文**：Efficient Memory Management for Large Language Model Serving with PagedAttention (SOSP 2023)
-- **vLLM 源码**：<https://github.com/vllm-project/vllm>
-- **FlashAttention 论文**：Dao et al., NeurIPS 2022（Week4 已读，推理 prefill 直接适用）
-- **Continuous Batching 博客**：AnyScale "Continuous Batching" / vLLM blog
-- **CUDA Graph 文档**：NVIDIA CUDA C++ Programming Guide → Graphs
-- **nsys/ncu 文档**：NVIDIA Nsight Systems / Nsight Compute
-
-## ✅ Week 5 完成标准
-
-- [ ] 能清晰区分 Prefill 和 Decode 的计算/内存特征，说清各自瓶颈
-- [ ] KV Cache 输出与无 cache 版本一致，理解 5D 布局与显存占用
-- [ ] 能画出 vLLM 架构图（LLMEngine→Scheduler→Worker）并解释请求生命周期
-- [ ] 理解 PagedAttention 的 block table 与 CoW，说清它解决什么碎片问题
-- [ ] Mini 引擎 v0 能完成单条请求完整推理（Prefill+Decode）
-- [ ] 能用 profiling 脚本测量 TTFT 和 per-token decode latency
-- [ ] 能列出推理系统四大核心问题，每个给出 2-3 个解决方案
-- [ ] 能对比 Continuous Batching 和 Dynamic Batching
-- [ ] 完成本周 17 道面试题的自问自答
-- [ ] 整理 GitHub 仓库，生成 Week 5 性能报告
-- [ ] 规划 Week 6（Batching & 调度）的学习重点
+> 💡 **面试技巧**：被问"vLLM 架构"时，先描述 V0 核心创新（PagedAttention + Continuous Batching），再补充"V1 重构后默认启用 chunked prefill + prefix caching + CUDA Graph"。这显示你不仅读过论文，还跟踪了最新进展。

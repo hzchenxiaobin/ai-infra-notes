@@ -1,536 +1,452 @@
-## Day 1：推理流程 —— Prefill vs Decode
+## Day 1：FlashAttention-2 论文与源码差异
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 LLM 推理的 **Prefill 与 Decode 两阶段本质差异**——输入形状、Attention 矩阵形状、瓶颈类型完全不同<br>
-2. 掌握 **TTFT / TBT / TPOT** 三大推理时延指标的定义，能说清各自由哪个阶段决定、如何优化<br>
-3. 能用 **Arithmetic Intensity + Roofline** 解释为什么 Decode 是 memory-bound、Prefill 是 compute-bound<br>
-4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
-5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 O(L·d²) 降到 O(d²)），为 Day 2 手写 KV Cache 打基础<br>
+1. 理解 FlashAttention-2 相对 FA1 的三大关键改进：**减少 non-matmul FLOPs**、**更好的 work partitioning**、**更高的 occupancy**<br>
+2. 掌握 FA2 的 **warp group 子块划分**策略，对比 Day 2 的"每 warp 若干 Q 行"划分<br>
+3. 理解 **seq 并行 vs head 并行**的 trade-off，知道什么时候该用 seq 并行<br>
+4. 能列出 FA1 vs FA2 的至少 5 个关键差异，解释每个改进的收益来源<br>
+5. 能基于 FA2 思想优化 Day 2 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
 
-> 💡 **为什么重要**：Week 4 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 5 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
+> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们读了官方源码的结构，今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天把 FA 集成到 Mini 引擎时，会用今天学到的 work partitioning 思想评估集成效果。
 
 ---
 
-### 学前导读：为什么"推理"和"训练"是两回事，且推理更难优化
+### 学前导读：FA1 跑对了，但为什么还能更快
 
-训练时，模型一次吞进一大批数据（`batch` 大、序列长），GEMM 都是"大矩阵乘"，Tensor Core 打满，瓶颈在算力——这正是 Week 1-4 我们反复优化的场景。但**推理（inference / serving）完全不同**：用户输入一段 prompt，模型要**一个一个 token 自回归地吐出来**。
+Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
 
-这两件事的硬件特征天差地别：
+| 维度 | FA1 的问题 | FA2 的改进 | 收益 |
+|------|-----------|-----------|------|
+| Non-matmul FLOPs | softmax/rescale 跨 warp 冗余 | warp group 内独立完成 | ~2x 减少 |
+| Work partitioning | 按 Q tile，warp 共享 | 按 Q tile 子块 + seq 并行 | 更高并行度 |
+| Warp 同步 | 较多 block 级同步 | warp group 内自治 | 更少同步点 |
+| Occupancy | register/smem 压力大 | 优化用量，更多 block 驻留 | 更高 occupancy |
 
-| 场景 | 每步处理的 token 数 | GEMM 形状 | 瓶颈 |
-|------|------------------|-----------|------|
-| 训练 | 一整批（M 很大） | 大矩阵乘 | compute-bound |
-| 推理 Prefill | 整段 prompt（M = N_prompt） | 大矩阵乘 | compute-bound |
-| 推理 Decode | **1 个 token（M = 1）** | 向量×矩阵（退化） | **memory-bound** |
-
-关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
-
-> 💡 **一句话总结**：推理难优化，是因为 Decode 把"大矩阵乘的 compute-bound"退化成了"M=1 的 memory-bound"——Tensor Core 使不上劲，瓶颈从算力变成了带宽。本周所有技术都在和这个矛盾搏斗。
+> 💡 **一句话总结**：FA2 不是算法变了（三公式不变），而是把"谁做什么"重新分配——让 warp group 自治，减少不必要的通信和重复计算。这跟管理学一样：减少跨团队同步，让小组自治，效率更高。
 
 ---
 
 ### 理论学习
 
-#### 1.1 Prefill 阶段：一次性处理整段 prompt
+#### 4.1 FA1 的不足
 
-![Prefill vs Decode 两阶段输入与 Attention 形状](../images/prefill_vs_decode_overview.svg)
+![FlashAttention Online Softmax 递推](../../week4/images/flash_attention_online_update.svg)
 
-Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 N×N self-attention，输出**第一个新 token** 的 logits。
-
-```
-输入: prompt tokens, shape = (B, N_prompt, d)
-处理:
- 1. 一次性并行处理所有 prompt tokens
- 2. 计算所有 token 的 Q, K, V
- 3. 对 prompt 内部做 self-attention（N×N 完整矩阵）
- 4. 输出第一个新 token 的 logits
-特征:
- - GEMM 是大矩阵乘（M = N_prompt 较大）→ 打满 Tensor Core
- - Attention 是 O(N²) 计算，算术强度高
- - 瓶颈: compute-bound（算力）
- - 时延关注: TTFT (Time To First Token)
-```
-
-Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 4 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
-
-#### 1.2 Decode 阶段：自回归逐 token 生成
-
-第一个 token 由 Prefill 产出后，接下来就是 Decode：每次只输入**上一步生成的 1 个 token**，计算它的 Q，从 **KV Cache** 读取所有历史 K/V，做一次 1×N 的 attention，输出下一个 token。如此循环直到 `<eos>` 或达到最大长度。
+FA1 存在三个效率问题：
 
 ```
-输入: 上一个生成的 token, shape = (B, 1, d)
-处理:
- 1. 只计算新 token 的 Q（以及它的 K/V，追加到 cache）
- 2. 从 KV Cache 读取所有历史 K, V
- 3. 新 Q 与所有历史 K/V 做 attention（1×N 矩阵）
- 4. 输出下一个 token 的 logits
-特征:
- - GEMM 退化为向量×矩阵（M = 1）→ Tensor Core 闲置
- - 每次都要读取完整 KV Cache（2·L·d bytes）
- - 瓶颈: memory-bound（带宽）
- - 时延关注: TBT / TPOT
+FA1 的问题：
+1. 不同 warp group 之间存在冗余的 softmax 统计量同步
+2. 非 matmul 计算（online softmax 的 reduce/rescale）没有充分并行
+3. Q tile 行 block 内部的 warp 分工不够细，导致部分 warp 空闲
 ```
 
-> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 O(L·d²) 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 O(d²)——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
+##### 问题 1：跨 warp 冗余同步
 
-#### 1.3 两大阶段对比表
+FA1 中，一个 Block 的所有 warp 共同处理 Q tile。每个 warp 计算部分 S=QK^T，然后需要跨 warp 汇总 max 和 sum——这引入了 `__syncthreads` 和 shared memory 中转。
 
-| 维度 | Prefill | Decode |
-|------|---------|--------|
-| 输入形状 | (B, N_prompt, d) | (B, 1, d) |
-| 每步处理 token 数 | N_prompt（大） | 1 |
-| QKV GEMM 的 M | N_prompt | **1**（退化为向量×矩阵） |
-| Attention 矩阵形状 | N×N | **1×N** |
-| 每步 FLOPs | O(N²·d) | O(L·d) |
-| 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
-| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte |
-| 瓶颈类型 | **compute-bound** | **memory-bound** |
-| 关注指标 | TTFT | TBT / TPOT |
-| 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
+##### 问题 2：Non-matmul FLOPs 占比高
 
-##### 两阶段算术强度的粗算（B=1, N=1024, d=512）
+FA1 的 non-matmul FLOPs（softmax 的 exp/sum/rescale）与 matmul FLOPs 之比约为 1:10。在现代 GPU 上，matmul 有 Tensor Core 加速（吞吐远超 FMA），而 non-matmul 只能跑标量指令——non-matmul 成了瓶颈。
+
+#### 4.2 FA2 改进一：减少 Non-Matmul FLOPs
+
+![FlashAttention Tiling 与线程映射](../../week4/images/flash_attention_tiling.svg)
+
+FA2 的核心改进：**让一个 warp group 负责输出 tile 的一个子块（sub-tile），在 group 内部独立完成该子块的全部 online softmax 计算**。
 
 ```
-Prefill QKV GEMM:
- FLOPs = 2 × B × N × d × 3d = 2 × 1 × 1024 × 512 × 1536 ≈ 1.6 G
- Bytes = B×N×d + 3d² + 3×B×N×d ≈ 4 MB
- AI ≈ 400 FLOP/Byte → compute-bound（远高于 Ridge Point）
+FA1: Block 内所有 warp 共享 Q tile → 跨 warp 同步 max/sum
+FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group 同步
 
-Decode QKV GEMM (M=1):
- FLOPs = 2 × B × 1 × d × 3d ≈ 1.6 M
- Bytes = B×1×d + 3d² + 历史 KV(2·L·d) ≈ 数 MB
- AI ≈ 0.1 FLOP/Byte → memory-bound（远低于 Ridge Point）
+效果：
+ FA1: non-matmul : matmul ≈ 1:10
+ FA2: non-matmul : matmul ≈ 1:20 或更少
 ```
 
-> 💡 直觉类比：Prefill 像"一群人一起搬砖"，人多活也多，瓶颈是人力（算力）；Decode 像"一个人重复跑腿取材料"，每次只干一点活，却要从仓库（HBM）取一大堆材料——瓶颈是腿（带宽）。
+##### 为什么减少 non-matmul 很重要？
 
-#### 1.4 Decode 为什么 memory-bound：Roofline 视角
+现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 上 FP16 Tensor Core matmul 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）。因此即使 non-matmul FLOPs 只占 10%，它的执行时间可能占 50%+——因为标量指令慢得多。FA2 把 non-matmul 减半，直接缩小了这个瓶颈。
 
-![Decode 的算术强度与 Ridge Point、四大优化方向](../images/decode_memory_bound.svg)
-
-Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
+#### 4.3 FA2 改进二：更好的 Work Partitioning
 
 ```
-AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float) ≈ 0.125 FLOP/Byte (fp16)
+FA1 的 work partitioning：
+ - 一个 Block 处理一个 Q tile
+ - Block 内 warps 共同完成整个 Q tile
+ - 并行维度: Batch × Head × Q tile
+
+FA2 的 work partitioning：
+ - 一个 Block 仍处理一个 Q tile
+ - 但将 Q tile 在行方向划分给不同 warp groups
+ - 新增 seq 并行维度: 一个 head 的序列可分多个 block
 ```
 
-RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
+##### 三层并行维度
 
-反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
+| 并行维度 | FA1 | FA2 | 说明 |
+|---------|-----|-----|------|
+| Batch × Head | ✅ `blockIdx.z/y` | ✅ | 首选，天然无依赖 |
+| Sequence length | ❌ | ✅ 新增 | 长 sequence 分多个 block |
+| Warp group 内部 | 简单共享 | ✅ 子块自治 | 减少跨 warp 同步 |
 
-##### Decode 的四大优化方向
+##### Seq 并行 vs Head 并行
 
-| 方向 | 目标 | 代表技术 | 本周对应 |
-|------|------|---------|---------|
-| ① 减少 KV Cache 读取 | 降低 Bytes | KV Cache 量化（INT8/FP8）、PagedAttention、滑动窗口 | Day 2 / Day 4 |
-| ② 抬高 M | 让 GEMM 变大 | Continuous Batching、Inflight Batching | Day 3 |
-| ③ 减调度开销 | 降低 launch 成本 | CUDA Graph、torch.compile | Day 6 |
-| ④ 隐藏传输延迟 | overlap 计算与通信 | Pipeline Parallelism、Async | Day 7 |
+```
+Head 并行（Batch/Head 维度）：
+ - 不同 head 在不同 block 上并行
+ - 优点：自然，不需要同步
+ - 缺点：head 数少时（如 8 头），并行度不够
 
-> 💡 方向②（Continuous Batching）尤其巧妙：既然 Decode 单请求 M=1 浪费算力，那就把**多个正在 decode 的请求拼成一个大 batch**，让 M 从 1 变成几十——同样是 memory-bound，但带宽利用率成倍提高。这是 vLLM 的核心 trick，Day 3-4 详读。
+Seq 并行（Sequence 长度维度）：
+ - 同一个 head 的序列分成多个 block 并行
+ - 优点：增加并行度，尤其适合长序列
+ - 缺点：需要处理 Q tile 边界（但 FA 的 tiling 天然支持）
+```
 
-#### 1.5 推理时延指标：TTFT / TBT / TPOT
+**选择策略**：先充分利用 Batch × Head 并行（gridDim.y × gridDim.z）。如果 B×H 不够大（如小 batch 推理），再开启 seq 并行。
 
-![TTFT 与 TBT 在推理时间线上的位置](../images/inference_metrics_timeline.svg)
+#### 4.4 FA2 改进三：更高的 Occupancy
 
-| 指标 | 全称 | 含义 | 决定阶段 |
+```
+FA1: register 和 shared memory 使用较大，每 SM 可能只跑 1 个 block
+FA2: 优化用量，每 SM 可跑 2-3 个 block → occupancy 提升
+```
+
+FA2 通过以下方式减少资源占用：
+- warp group 自治减少了 shared memory 中转缓冲
+- 更紧凑的 register 复用（子块划分让 acc 更小）
+- 减少同步点 → 编译器有更多优化空间
+
+#### 4.5 FA1 vs FA2 关键差异总结
+
+| 维度 | FlashAttention-1 | FlashAttention-2 |
+|------|------------------|------------------|
+| Non-matmul 并行 | 不够充分（跨 warp 共享） | warp group 内独立完成 |
+| Work partitioning | 按 Q tile，warp 共享 | 按 Q tile 子块 + seq 并行 |
+| Warp 同步 | 较多 block 级 `__syncthreads` | 较少（group 内自治） |
+| Occupancy | 较低（1 block/SM） | 较高（2-3 blocks/SM） |
+| Non-matmul:matmul 比 | ~1:10 | ~1:20 |
+| 反向传播 | 支持 | 更高效 |
+| 长序列收益 | 好 | 更好 |
+| 整体加速（vs FA1） | 基准 | ~2x |
+
+#### 4.6 FlashAttention-3：Hopper 架构的终极优化
+
+FA2 的设计面向 Ampere（A100）的同步执行模型——warp 同步发射 GEMM、串行 softmax。但搬到 Hopper（H100）后，FA2 **只有 ~35% 的利用率**：H100 新增的异步 Tensor Core（WGMMA）、异步拷贝引擎（TMA）、FP8 单元全部闲置。FA3 的目标就是**让 attention kernel 原生于 Hopper 的异步执行模型**，把利用率和精度同时推到极限。
+
+> 📄 **深入阅读**：FA3 的 warp 特化、pingpong 调度、FP8 布局手术等完整分析见 [FA3 论文笔记](../../../../paper/flashattention3/README.md)。
+
+##### 改进一：Async Pipeline（异步数据加载）
+
+FA2 中，一个 warp group 既要搬数据又要算——搬数时 Tensor Core 空转，算时搬运单元空闲。FA3 利用 Hopper 的 **TMA（Tensor Memory Accelerator）**——一个独立的拷贝硬件，不占 SM 发射带宽：
+
+```
+FA2（Ampere）：
+  warp group: load K_j → wait → GEMM(QKᵀ) → softmax → GEMM(PV) → load K_{j+1} → ...
+  ↑ 搬数和计算串行，Tensor Core 在 softmax/搬数期间空转
+
+FA3（Hopper）：
+  producer warp group: TMA(K_j) → mbarrier.arrive → TMA(V_j) → mbarrier.arrive → ...
+  consumer warp group: wait mbarrier → GEMMA_async(QKᵀ) → softmax → GEMMA_async(PV) → ...
+  ↑ TMA 搬数与 Tensor Core 计算并行，搬运开销被完全隐藏
+```
+
+TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器）。producer/consumer 之间用 **mbarrier**（硬件级同步原语）做块级握手的多 stage 流水。
+
+##### 改进二：Warp Specialization（producer-consumer 模式）
+
+FA3 把 CTA 内的 warp group 分为两种角色：
+
+| 角色 | 数量 | 职责 | 硬件通路 |
 |------|------|------|---------|
-| **TTFT** | Time To First Token | 从请求进入到输出第一个 token 的时间 | Prefill |
-| **TBT** | Time Between Tokens | 相邻输出 token 之间的间隔 | Decode |
-| **TPOT** | Time Per Output Token | 每个输出 token 的平均时间 | Decode |
-| **TPS** | Tokens Per Second | 吞吐（token/秒） | Decode |
-| **E2E Latency** | End-to-End Latency | 总延迟 | 全程 |
+| **Producer** | 1 个 wg | 只发 TMA 搬 K/V tile 到 shared memory | TMA（拷贝硬件） |
+| **Consumer** | 2 个 wg | 只做 GEMMA + softmax | WGMMA（Tensor Core）+ CUDA core/SFU |
 
-关键关系式：
+两个 consumer 以 **pingpong 调度**交替：wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然——**一个 SM 的 Tensor Core 与 CUDA core 同时有活干**。
 
 ```
-E2E Latency = TTFT + (输出 token 数 − 1) × TBT
-TPOT = 总 Decode 时延 / 输出 token 数
+时间线（pingpong）：
+  wg0: GEMM(QK₀ᵀ) | softmax₀ | GEMM(PV₀) | GEMM(QK₂ᵀ) | softmax₂ | ...
+  wg1:    idle     | GEMM(QK₁ᵀ) | softmax₁ | GEMM(PV₁) |    idle  | ...
+                ↑ 两个 consumer 相位错开，Tensor Core 不空转
 ```
 
-- **TTFT 由 Prefill 决定**：优化方向是 FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill。
-- **TBT/TPOT 由 Decode 决定**：优化方向是 KV Cache、PagedAttention、Continuous Batching、CUDA Graph、量化 KV Cache。
+此外，warpgroup 内部还有 **2-stage GEMM-softmax 流水**：块 $j$ 的 softmax 在 CUDA core 上执行的同时，块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行——打破 FA2 "GEMM→softmax→GEMM" 的串行链。
 
-> ⚠️ **注意**：TTFT 和 TBT 的优化手段**几乎不重叠**——前者是算力问题，后者是带宽问题。这就是为什么推理系统要分别对待两个阶段（vLLM 甚至把 Prefill 和 Decode 拆成不同的 batch 调度，叫 chunked prefill / mixed batching）。Day 3 读 vLLM 时会看到这一点。
+##### 改进三：FP8 支持（吞吐翻倍）
 
-### Coding 任务：PyTorch 模拟 Prefill/Decode 流程
+H100 的 FP8 Tensor Core 吞吐是 FP16 的 **2×**（989 → ~1979 TFLOPs/s）。FA3 支持 FP8（E4M3/E5M2）输入：
 
-#### 任务 1：创建 prefill_decode_simulation.py
+| 精度 | FA2 | FA3 | 吞吐（H100） |
+|------|-----|-----|-------------|
+| FP16 | ✅ | ✅ | ~989 TFLOPs/s |
+| FP8 | ❌ | ✅ | ~1979 TFLOPs/s（2×） |
 
-创建文件 [kernels/prefill_decode_simulation.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day1/kernels/prefill_decode_simulation.py)，它实现一个最小 Transformer Block，并模拟完整的 Prefill + KV Cache + Decode 循环：
+FP8 的难点不在算法而在**数据布局工程**——FP8 WGMMA 只接受 k-major 操作数，而 V 通常按 head dim 连续存储。FA3 在 kernel 内用 LDSM/STSM 指令做片上转置，全部安排在异步 WGMMA 的影子下执行。精度侧用**分块量化**（每 block 独立 scale factor）+ **incoherent processing**（Hadamard 旋转摊平 outlier），FP8 误差比 per-tensor 量化基线低 **2.6×**。
 
-```python
-# prefill_decode_simulation.py —— 模拟 Transformer 推理的 Prefill/Decode 两阶段
-# 运行命令: python prefill_decode_simulation.py
-# 依赖: pip install torch
+> 💡 FA3 的 FP8 中间计算（softmax 的 exp/sum/rescale）保持 **FP32**——这与 FA1/FA2 "中间结果留高精度" 的原则一脉相承。
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-import time
-
-class MiniTransformer(nn.Module):
-    """最小 Transformer Block，用于演示 Prefill/Decode"""
-
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.ffn = nn.Sequential(
-        nn.Linear(d_model, d_ff),
-        nn.GELU(),
-        nn.Linear(d_ff, d_model),
-        )
-
-        def forward(self, x, use_cache=False, k_cache=None, v_cache=None):
-            """
-            x: (B, N, d_model)
-            use_cache: 是否使用 KV Cache
-            k_cache/v_cache: 历史 KV，shape (B, H, L, d_head)
-            返回: output, (new_k_cache, new_v_cache)
-            """
-            B, N, _ = x.shape
-
-            # LayerNorm + QKV
-            x_norm = self.norm1(x)
-            qkv = self.qkv(x_norm)
-            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-            q, k, v = qkv[0], qkv[1], qkv[2]
-
-            # Attention
-            scale = self.d_head ** -0.5
-            if use_cache and k_cache is not None:
-                # Decode: 把新 K/V 拼到历史 cache 后面
-                k = torch.cat([k_cache, k], dim=2) # (B, H, L+1, d)
-                v = torch.cat([v_cache, v], dim=2)
-
-                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-                attn = F.softmax(attn, dim=-1)
-                out = torch.matmul(attn, v)
-
-                out = out.transpose(1, 2).reshape(B, N, self.d_model)
-                x = x + self.out(out)
-
-                # FFN
-                x = x + self.ffn(self.norm2(x))
-
-                return x, (k, v)
-
-                def simulate_inference(model, prompt, max_new_tokens=20):
-                    """模拟完整推理流程：Prefill + Decode"""
-                    device = next(model.parameters()).device
-                    B, N = prompt.size(0), prompt.size(1)
-
-                    # ========== Prefill 阶段 ==========
-                    torch.cuda.synchronize()
-                    t_start = time.time()
-
-                    with torch.no_grad():
-                        logits, (k_cache, v_cache) = model(prompt, use_cache=False)
-                        first_token_logits = logits[:, -1, :] # 取最后一个位置的 logits
-
-                        torch.cuda.synchronize()
-                        ttft = (time.time() - t_start) * 1000 # ms
-
-                        print(f"=== Prefill Phase ===")
-                        print(f" Input shape: {tuple(prompt.shape)}")
-                        print(f" TTFT: {ttft:.3f} ms")
-                        print(f" KV Cache shape: {tuple(k_cache.shape)}")
-
-                        # ========== Decode 阶段 ==========
-                        generated = []
-                        decode_times = []
-
-                        # 简化：用 argmax 采样；decode 的输入用随机向量模拟新生成 token 的 embedding
-                        next_token = first_token_logits.argmax(dim=-1, keepdim=True)
-                        generated.append(next_token.item())
-
-                        for step in range(max_new_tokens - 1):
-                            next_token_emb = model.qkv.weight.new_zeros(B, 1, model.d_model).normal_(0, 0.02)
-
-                            torch.cuda.synchronize()
-                            t_start = time.time()
-
-                            with torch.no_grad():
-                                logits, (k_cache, v_cache) = model(
-                                next_token_emb, use_cache=True, k_cache=k_cache, v_cache=v_cache
-                                )
-                                next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
-
-                                torch.cuda.synchronize()
-                                decode_times.append((time.time() - t_start) * 1000)
-                                generated.append(next_token.item())
-
-                                print(f"\n=== Decode Phase ===")
-                                print(f" Generated {len(generated)} tokens")
-                                print(f" Mean TBT: {sum(decode_times)/len(decode_times):.3f} ms")
-                                print(f" Max TBT: {max(decode_times):.3f} ms")
-                                print(f" Min TBT: {min(decode_times):.3f} ms")
-                                print(f" Generated token IDs: {generated}")
-
-                                return ttft, decode_times
-
-                                def profile_phase(model, x, name, n_iter=10):
-                                    """Profile 一个阶段"""
-                                    for _ in range(3):
-                                        _ = model(x)
-                                        torch.cuda.synchronize()
-
-                                        start = torch.cuda.Event(enable_timing=True)
-                                        end = torch.cuda.Event(enable_timing=True)
-                                        start.record()
-                                        for _ in range(n_iter):
-                                            with torch.no_grad():
-                                                _ = model(x)
-                                                end.record()
-                                                torch.cuda.synchronize()
-                                                ms = start.elapsed_time(end) / n_iter
-                                                print(f"{name}: {ms:.3f} ms")
-                                                return ms
-
-                                                def main():
-                                                    torch.manual_seed(42)
-                                                    device = "cuda"
-                                                    d_model, n_heads = 512, 8
-                                                    model = MiniTransformer(d_model, n_heads).to(device).eval().half()
-
-                                                    # Prefill: 处理长 prompt
-                                                    N = 1024
-                                                    prompt = torch.randn(1, N, d_model, device=device, dtype=torch.float16)
-
-                                                    print(f"Model: d_model={d_model}, n_heads={n_heads}")
-                                                    print(f"Prompt length: {N}\n")
-
-                                                    simulate_inference(model, prompt, max_new_tokens=10)
-
-                                                    # 单独 profile prefill vs decode
-                                                    print("\n=== Standalone Profiling ===")
-                                                    profile_phase(model, prompt, f"Prefill (N={N})")
-
-                                                    decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
-                                                    profile_phase(model, decode_input, f"Decode single token")
-
-                                                    if __name__ == "__main__":
-                                                        main()
-```
-
-代码要点：
-- `MiniTransformer.forward` 通过 `use_cache` 参数区分 Prefill/Decode：Prefill 时 `use_cache=False` 算完整 attention；Decode 时把新 K/V `torch.cat` 到历史 cache 上，做 1×(L+1) attention。
-- `simulate_inference` 用 `torch.cuda.synchronize()` + `time.time()` 分别测 TTFT 和每步 TBT。
-- `profile_phase` 用 `cuda.Event` 做更稳的多轮计时（warmup 3 次 + 平均 10 次）。
-
-#### 任务 2：运行并观察输出
-
-```bash
-# 需 CUDA GPU + PyTorch
-python kernels/prefill_decode_simulation.py
-```
-
-预期输出（数值因 GPU 型号而异）：
+##### 概念级伪代码：producer/consumer 模式
 
 ```text
-Model: d_model=512, n_heads=8
-Prompt length: 1024
+# === Producer warp group ===（只搬数据，不计算）
+for j in 0..Tc:
+    TMA.load_async(K[j], smem_K[stage % S])     # 异步搬 K tile
+    TMA.load_async(V[j], smem_V[stage % S])     # 异步搬 V tile
+    mbarrier.arrive(smem_K[stage % S])           # 通知 consumer：数据就绪
+    mbarrier.arrive(smem_V[stage % S])
+    stage += 1
 
-=== Prefill Phase ===
-  Input shape: (1, 1024, 512)
-  TTFT: 115.696 ms
-  KV Cache shape: (1, 8, 1024, 64)
-
-=== Decode Phase ===
-  Generated 10 tokens
-  Mean TBT: 2.138 ms
-  Max TBT: 17.947 ms
-  Min TBT: 0.143 ms
-  Generated token IDs: [348, 264, 264, 264, 357, 304, 475, 264, 264, 357]
-
-=== Standalone Profiling ===
-Prefill (N=1024): 0.132 ms
-Decode single token: 0.105 ms
+# === Consumer warp group ===（只计算，不搬数据，pingpong 错相）
+for j in 0..Tc:
+    mbarrier.wait(smem_K[j % S])                 # 等 producer 搬完
+    WGMMA.async(S[j+1] = Q · K[j+1]ᵀ)          # ← 先发射下一个块的 QKᵀ（异步）
+    softmax_本地计算(j):                          # CUDA core/SFU 上跑
+        m_new = max(m, S[j])
+        alpha = exp(m - m_new); p = exp(S[j] - m_new)
+        l = l * alpha + sum(p); O = O * alpha
+    WGMMA.wait(S[j+1])                           # 等异步 GEMM 完成
+    WGMMA.async(O += P[j] · V[j])               # 发射 PV GEMM
+    m = m_new
+# 两个 consumer wg 的循环相位错开 → Tensor Core 与 CUDA core 互补
 ```
 
-##### 观察重点
+##### FA1 → FA2 → FA3 演进对比
 
-1. **TTFT 明显大于单步 TBT**：Prefill 要算 1024×1024 的完整 attention，是 compute-bound 的大活。
-2. **TBT 基本稳定**：每步 Decode 都只多读一个 token 的 KV，TBT 不随步数显著增长（前提是用了 KV Cache）。
-3. **Prefill 单次 vs Decode 单次的绝对值**：注意 Prefill 处理了 1024 个 token，Decode 只处理 1 个——比较时要看"每 token 成本"，而非总时间。
+| 维度 | FlashAttention-1 | FlashAttention-2 | FlashAttention-3 |
+|------|------------------|------------------|------------------|
+| 目标硬件 | A100（Ampere） | A100（Ampere） | H100（Hopper） |
+| 核心优化 | IO 复杂度（tiling） | work partitioning | 异步流水 + 低精度 |
+| Non-matmul:matmul | ~1:10 | ~1:20 | softmax 完全隐藏 |
+| Warp 分工 | 共享 Q tile | warp group 子块自治 | producer/consumer 特化 |
+| 并行维度 | Batch×Head | + seq 并行 | + warp group pingpong |
+| 异步执行 | ❌ | ❌ | ✅ TMA + WGMMA async |
+| FP8 支持 | ❌ | ❌ | ✅ E4M3/E5M2 |
+| Occupancy（H100） | — | ~35% 峰值 | ~75% 峰值 |
+| FP16 forward 峰值 | 基准 | ~570 TFLOPs/s | **740 TFLOPs/s** |
+| vs 前代加速 | 基准 | ~2× vs FA1 | ~1.5–2× vs FA2 |
+| 同步原语 | `__syncthreads` | warp group 内自治 | mbarrier（硬件级） |
 
-> ⚠️ **注意**：本脚本用随机向量模拟 decode 的输入 embedding（`next_token_emb`），所以生成的 token ID 没有语义意义——我们只关心**时延特征**，不关心生成内容。Day 5 的 Mini 引擎会接入真正的 tokenizer + embedding。
+> 💡 **一句话总结**：FA1 解决了 IO（tiling），FA2 解决了分工（warp group 自治），FA3 解决了异步（producer/consumer 流水）+ 低精度（FP8）。三代演进的核心线索是：**把越来越多的"非计算"工作藏进计算的影子**——先是减少 non-matmul FLOPs，再是把搬数和 softmax 完全异步化。
 
-#### 任务 3：用 torch.profiler 对比两阶段的算子特征
+##### FA3 面试速问
 
-用 `torch.profiler` 观察 Prefill 和 Decode 触发的算子与显存特征差异：
+1. **FA3 相比 FA2 的关键差异是什么？**
+2. **Warp specialization 的 producer-consumer 模式是怎么工作的？**
+3. **FP8 对精度有什么影响？FA3 如何应对？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  1. **FA3 vs FA2 关键差异**：① **异步流水**——用 TMA 异步搬数 + WGMMA 异步 GEMM，producer 搬数与 consumer 计算重叠，消除 FA2 的串行等待；② **Warp 特化**——producer/consumer 分工 + pingpong 调度，两个 consumer warpgroup 交替执行 GEMM 和 softmax，Tensor Core 不空转；③ **FP8 支持**——FP8 Tensor Core 吞吐翻倍，配合分块量化和 Hadamard 旋转控制误差。FA3 在 H100 上从 FA2 的 35% 利用率提升到 75%，FP16 forward 达 740 TFLOPs/s。
+
+  2. **Warp specialization 原理**：CTA 内 warp group 分为 1 个 producer（用 TMA 搬 K/V tile 到 shared memory）和 2 个 consumer（做 WGMMA + softmax）。Producer 发 TMA 后立即返回（不占 SM 算力），consumer 通过 mbarrier 感知数据就绪后开始计算。两个 consumer 以 pingpong 交替——wg0 做 softmax（CUDA core）时 wg1 做 GEMM（Tensor Core），让 SM 上不同执行单元同时有活。`setmaxnreg` 把 producer 省下的寄存器划给 consumer。
+
+  3. **FP8 对精度的影响**：FP8（E4M3）只有 3 位尾数，精度脆弱——LLM 激活的 outlier 会导致大量量化误差。FA3 用两招应对：① **分块量化**——Q/K/V 按 block 各自一个 scale factor（而非 per-tensor 一个），FA3 的分块结构天然按块反缩放 S，零计算成本；② **Incoherent processing**——Q、K 先乘随机正交矩阵 $M$（$O(d\log d)$，融入 RoPE），因 $MM^\top=I$ 不改变 $QK^\top$ 输出，但 outlier 被摊平到所有维度。最终 FP8 误差比 per-tensor 量化基线低 2.6×，且 softmax 全程保持 FP32。
+
+</details>
+
+---
+
+### Coding 任务：基于 FA2 思想优化手写 Kernel
+
+#### 任务 1：阅读 FA2 论文 Section 3
+
+**论文**："FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning" (Dao, 2023)
+
+**地址**：https://arxiv.org/abs/2307.08691
+
+**阅读范围**：
+- Section 3.1：减少 non-matmul FLOPs（warp group 子块划分）
+- Section 3.2：更好的 work partitioning（seq 并行）
+
+**记录要点**：在 `notes/fa2_paper_notes.md`（自行创建）中记录 FA2 的三大改进和你的理解。
+
+#### 任务 2：修改 Day 2 Kernel 的 warp 分工
+
+将 Day 2 的 `flash_attention_v2.cu` 修改为 FA2 风格的 warp group 划分：
+
+```cuda
+// Day 2 原版：每 warp 负责 ROWS_PER_WARP 行
+// FA2 风格：把 warps 分成 groups，每 group 负责一个子块
+
+// 修改示例：ROWS_PER_WARP 从 8 改为 4，增加 warp 间并行度
+constexpr int WARPS_PER_BLOCK_FA2 = 16;                     // 16 warps = 512 threads
+constexpr int ROWS_PER_WARP_FA2 = Br / WARPS_PER_BLOCK_FA2; // 64/16 = 4
+// 每 warp 负责更少的行，但更多 warp 并行
+// acc 从 [8][64] 缩小到 [4][64]，register 压力降低
+```
+
+编译运行，对比修改前后的 latency 和 register 使用量：
 
 ```bash
-python -c "
-import torch, torch.nn.functional as F
-from kernels.prefill_decode_simulation import MiniTransformer
+# 编译原版
+nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -Xptxas -v
 
-torch.manual_seed(42)
-model = MiniTransformer(512, 8).to('cuda').eval().half()
-prompt = torch.randn(1, 1024, 512, device='cuda', dtype=torch.float16)
-decode_in = torch.randn(1, 1, 512, device='cuda', dtype=torch.float16)
+# 编译 FA2 风格版
+nvcc -o flash_attention_fa2 kernels/flash_attention_fa2.cu -O3 -arch=sm_120 -Xptxas -v
 
-with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- with torch.no_grad():
- model(prompt)
-print('=== Prefill (N=1024) 算子 ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
+# 对比 register 使用量（-Xptxas -v 输出）
+# 预期：FA2 版 register/thread 更少，occupancy 更高
+```
 
-with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- with torch.no_grad():
- model(decode_in)
-print('=== Decode (N=1) 算子 ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
-"
+#### 任务 3：用 ncu 对比 occupancy 和同步开销
+
+```bash
+ncu --metrics \
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread \
+ --kernel-name regex:flashAttention \
+ ./flash_attention_v2 # 原版
+
+ncu --metrics \
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread \
+ --kernel-name regex:flashAttention \
+ ./flash_attention_fa2 # FA2 风格版
 ```
 
 **观察重点**：
-- Prefill 的 `gemm` 算子（`addmm`/`bmm`）尺寸大、耗时长，是主角；
-- Decode 的同样 `gemm` 算子尺寸极小（M=1），耗时长但**算子 launch 开销占比上升**——这正是 memory-bound 的表现：算得快，但启动/等待开销凸显。
-- Decode 的 attention `bmm` 是 1×N，FLOPs 极低，但每次都要读 KV。
 
-#### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
+| 指标 | 原版 (Day 2) | FA2 风格版 | 预期变化 |
+|------|-------------|-----------|---------|
+| Registers/thread | ~88-120 | ~60-80 | ↓（acc 更小） |
+| Occupancy | ~50-75% | ~60-85% | ↑（register 减少后更多 block 驻留） |
+| SM Throughput | ~30-40% | ~35-45% | ↑（并行度更高） |
 
-**题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
+#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
+
+**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
 
 **与今日知识的关联**：
 
-这道题就是**今天 Decode 阶段的核心算子**——单 query 对 KV Cache 做 1×N attention，是典型的 memory-bound。更关键的是，题目把 KV Cache 存成 **int8 + per-token scale**，这正是今天"减少 KV Cache 读取"优化方向里的**KV Cache 量化**：int8 相比 fp32 把 KV 的 HBM 流量直接砍到 1/4，Decode 的带宽瓶颈立刻缓解。生产级推理系统（TensorRT-LLM、vLLM）都用这套。
+FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**：把 batch 维和 head 维提升到 grid 的最高维度，让每个 thread block 处理更小的子任务，从而减少同步、提高 occupancy。本题 Batched Matrix Multiplication 正是练习这种"多维 grid + batch offset 寻址"的最简场景——用 `blockIdx.z` 区分 batch，`blockIdx.x/y` 处理 M/N tile，与 FA2 官方 kernel 的 launch 策略同构。
 
-> 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时。完整题解（含 int8 反量化、decode attention kernel、ncu 带宽 profiling、与 prefill 的算术强度对比）见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时，重点观察 batch size 增大时 latency 的增长曲线。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 1）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 4）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 1（遍历），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 4（堆），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
-| [144. 二叉树的前序遍历](https://leetcode.cn/problems/binary-tree-preorder-traversal/) | 简单 | 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html) |
-| [145. 二叉树的后序遍历](https://leetcode.cn/problems/binary-tree-postorder-traversal/) | 简单 | 栈迭代（根右左逆序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html) |
-| [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | 中等 | BFS 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html) |
-| [103. 二叉树的锯齿形层序遍历](https://leetcode.cn/problems/binary-tree-zigzag-level-order-traversal/) | 中等 | BFS + 奇偶层反向 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
+| [215. 数组中的第 K 个最大元素](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | 中等 | 快速选择 / 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
+| [347. 前 K 个高频元素](https://leetcode.cn/problems/top-k-frequent-elements/) | 中等 | 桶排序 / 快选 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html) |
+| [295. 数据流的中位数](https://leetcode.cn/problems/find-median-from-data-stream/) | 困难 | 双堆（大顶 + 小顶） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html) |
+| [264. 丑数 II](https://leetcode.cn/problems/ugly-number-ii/) | 中等 | 三指针多路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：扫描 prompt 长度，绘制 TTFT 曲线
+#### 实验 1：手动计算 non-matmul FLOPs
 
-修改 `main()` 中的 `N`，分别在 `N = 256, 512, 1024, 2048` 下测量 TTFT，记录成表：
+对于 N=1024, d=64, Br=Bc=128，计算 FA1 和 FA2 的 non-matmul FLOPs 占比。
 
-| N | TTFT (ms) | 理论 FLOPs (O(N²·d)) |
-|---|-----------|----------------------|
-| 256 | | |
-| 512 | | |
-| 1024 | | |
-| 2048 | | |
+> 提示：matmul FLOPs = 2×N²×d（QK^T + PV）。non-matmul = exp/add/rescale，约 3×N×(N/Bc) 次。FA2 通过 group 自治减半。
 
-> 思考：TTFT 随 N 大致呈什么关系？为什么？（提示：Prefill 的 attention 是 O(N²)，但 QKV GEMM 是 O(N·d²)；N 较大时 attention 主导，TTFT ≈ O(N²)。）
+#### 实验 2：实现 seq 并行
 
-#### 实验 2：对比 use_cache=True / False 的 Decode latency
+修改 Day 2 Kernel，当 B×H 较小时（如 B=1, H=1），在 x 维度使用更多 block 处理同一个 head 的不同 Q tile 段。
 
-修改 `simulate_inference`，加一个分支：每步 Decode 不用 cache，而是把"prompt + 已生成 token"全部重新喂进 `model(..., use_cache=False)`，测量这种"无 cache"模式的 TBT，与有 cache 的 TBT 对比。
+> 提示：FA 的 tiling 天然支持——每个 block 处理 Br 行 Q，不同 block 处理不同段，无需额外同步。
 
-> 思考：无 cache 时 TBT 应该随生成步数**线性增长**（每步都要重算越来越长的前向），而有 cache 时 TBT 基本稳定。这正解释了 KV Cache 能让 decode latency 降低 10x+。Day 2 会量化这个收益。
+#### 实验 3：对比 FA1 和 FA2 官方性能
 
-#### 实验 3：用 nsys 抓 Prefill/Decode 的时间线
+如果环境允许（`pip install flash-attn`），用官方 FA1 和 FA2 跑同一组 N/B/H/d，记录加速比。
 
-```bash
-nsys profile -o prefill_decode --force-flush \
- python kernels/prefill_decode_simulation.py
-nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
-```
-
-> 思考：在 nsys 时间线上，Prefill 是一坨大块的 GEMM kernel，Decode 是一连串极小的 kernel——观察 Decode 阶段 kernel 之间的 **gap（空闲）**，那就是 memory-bound 下 SM 等数据的时间。这个 gap 占比越大，说明带宽瓶颈越严重。
+> 提示：长序列（N=4096+）时 FA2 优势最明显，因为 seq 并行和 reduced non-matmul 的收益随 N 增长。
 
 ---
 
 ### 今日总结
 
-Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
+Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 
-1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + N×N attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
-2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~0.1，跨过 Ridge Point，瓶颈从算力翻转到带宽
-3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
-4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 O(L·d²) 降到 O(d²)，但代价是每步要搬整个 cache 过 HBM
-5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
-6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
+1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
+2. **更好的 work partitioning**：新增 seq 并行维度，长序列下并行度更高；warp group 自治减少跨 group 同步
+3. **更高的 occupancy**：优化 register/smem 用量，每 SM 从 1 block 提升到 2-3 blocks
+4. **核心思想**：算法不变（三公式不变），改进全在"谁做什么"——减少跨团队同步，让小组自治
+5. **Seq 并行 vs Head 并行**：先用 Batch×Head 并行，不够时再开 seq 并行；长序列场景 seq 并行收益最大
+6. **实践验证**：修改 Day 2 Kernel 的 warp 分工（ROWS_PER_WARP 减小），用 ncu 验证 occupancy 提升
 
-掌握这些后，你就有了 Day 2 手写 KV Cache 的全部动机和算法直觉——明天我们用 C++/CUDA 把这个 cache 真正实现出来，支持多轮对话的历史复用。
+掌握这些后，你就理解了 FlashAttention 从 FA1 到 FA2 的演进逻辑。明天把 FA 集成到 Mini 引擎，做端到端性能对比。
 
 ---
 
 ### 面试要点
 
-1. **LLM 推理的 Prefill 和 Decode 阶段有什么区别？各自的瓶颈是什么？**
+1. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 N×N attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
- - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~0.1），**memory-bound**，关注 TBT/TPOT
- - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
+ 1. **减少 non-matmul FLOPs**：通过 warp group 子块划分，让 softmax/rescale 计算在 warp group 内独立完成，减少冗余。non-matmul:matmul 从 1:10 降到 1:20
+ 2. **更好的 work partitioning**：除了 batch/head 并行，还引入 sequence 长度方向并行，提高长序列下的并行度
+ 3. **更高的 occupancy**：优化 register 和 shared memory 使用，每个 SM 可驻留更多 block（1→2-3）
+ 4. **更少的 warp 同步**：减少 block 级同步点，warp group 内自治
+ 5. **反向传播更高效**
 
 </details>
 
 
-2. **什么是 TTFT 和 TBT？在系统优化中分别如何优化？**
+2. **FlashAttention-2 中，seq 并行和 head 并行有什么区别？什么时候用 seq 并行？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **TTFT (Time To First Token)**：从请求进入到输出第一个 token 的时间，主要由 Prefill 决定。优化：FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill
- - **TBT (Time Between Tokens)**：相邻输出 token 之间的间隔，主要由 Decode 决定。优化：KV Cache、PagedAttention、Continuous Batching、CUDA Graph、KV Cache 量化
- - 两者优化手段几乎不重叠（一个算力问题、一个带宽问题），所以推理系统要把两阶段分开调度（如 vLLM 的 chunked prefill / mixed batching）
+ - **Head 并行**：不同 attention head 在不同 block 上并行，天然无依赖，是首选
+ - **Seq 并行**：同一个 head 的序列分成多个 block 并行，增加并行度
+ - **使用时机**：当 batch×head 数量不足以填满 GPU 时使用 seq 并行，尤其长序列场景
+ - **注意**：seq 并行需要处理 Q tile 的边界，但 FlashAttention 的 tiling 天然适合这种划分
 
 </details>
 
 
-3. **为什么 Decode 是 memory-bound？请用 Roofline / 算术强度解释。**
+3. **为什么减少 non-matmul FLOPs 对性能影响这么大？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
- - 算术强度 `AI = FLOPs/Bytes ≈ 0.125 FLOP/Byte (fp16)`
- - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近三个数量级
- - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
+ - 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 FP16 Tensor Core 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）
+ - 即使 non-matmul FLOPs 只占总 FLOPs 的 10%，它的执行时间可能占 50%+——因为标量指令慢 16x
+ - FA2 把 non-matmul 减半，直接缩小了这个瓶颈
+ - FA2 论文目标：让 non-matmul 占比降到 ~1:20，使 matmul 主导
 
 </details>
 
 
-4. **KV Cache 解决了什么问题？它的代价是什么？**
+4. **FA2 的 warp group 子块划分与 FA1 的 warp 共享有什么具体区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 O(L·d²) 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 O(d²)，decode latency 降低 10x+
- - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 524 KB，4096 tokens 约 2 GB，batch=16 就 32 GB
- - 这正是后续 PagedAttention（Day 4）、KV Cache 量化要解决的"显存爆炸"问题
+ - FA1：一个 Block 的所有 warp 共同处理 Q tile，跨 warp 需要同步 max/sum（`__syncthreads` + shared memory 中转）
+ - FA2：把 Q tile 在行方向划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax
+ - 区别：FA2 的 group 内自治，消除跨 group 同步；acc 更小（子块行数少），register 压力降低
+ - 收益：non-matmul FLOPs 减半 + occupancy 提升 + 同步点减少
+
+ - 核心一致：都是"减少跨组同步，让计算单元自治"
 
 </details>
 
 
-5. **同一个模型，为什么 Prefill 能打满 Tensor Core 而 Decode 不能？**
+5. **如果让你继续优化 FlashAttention（FA3 方向），你会怎么做？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Tensor Core 靠"大矩阵乘"摊销指令开销：M 越大，每 byte 数据能做的 FLOPs 越多，算术强度越高
- - Prefill 的 M=N_prompt（几百到几千），GEMM 是真正的大矩阵乘，算术强度远超 Ridge Point，卡在算力线，Tensor Core 满载
- - Decode 的 M=1，GEMM 退化成"向量×矩阵"，每个 byte 数据只做极少 FLOPs，算术强度极低，卡在带宽线，Tensor Core 大量空闲
- - 这也解释了 Continuous Batching 的原理：把多个 decode 请求拼成大 batch，把 M 从 1 抬到几十，让 Tensor Core 重新有事可做
+ - **异步量化**：在 KV tile 加载时就做量化（FP16→INT8），减少 HBM 带宽
+ - **更细粒度的 seq 并行**：结合 KV block 级并行，类似 PagedAttention 的分块
+ - **Tensor Core 利用率**：确保 QK^T 和 PV 的 GEMM 形状适合 WMMA（M/N/K 对齐 16）
+ - **减少 register spilling**：用 `__launch_bounds__` 控制编译器寄存器分配
+ - **硬件感知调度**：根据 SM 数量、L2 cache 大小动态选择 Br/Bc
 
 </details>
 

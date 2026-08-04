@@ -1,37 +1,32 @@
-# Week 5：推理系统与 KV Cache
+# Week 5：FlashAttention（后半）+ 推理系统基础
 
-> 核心目标：进入 AI Infra 核心，理解 LLM 推理的 Prefill/Decode 两阶段，实现 KV Cache，阅读 vLLM 源码，构建第一个可运行的 Mini 推理引擎
+> 核心目标：理解 FA-2 改进、性能对比、IO 优化方法论，掌握 Prefill/Decode 本质、KV Cache 实现（含 GQA/MQA/MLA）、vLLM 架构
 
-| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　  |
-| ------------| -------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 4 学习，掌握 FlashAttention Forward Kernel、Online Softmax 推导、IO 优化方法论、Mini 引擎 Attention 集成　　　　　　　　　　　　　　　　  |
-| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　  |
-| 本周产出　 | Prefill/Decode 模拟脚本、KV Cache CUDA 实现（C++ 类）、vLLM 架构分析报告、PagedAttention 笔记、Mini 推理引擎 v0、Profiling 报告、推理系统核心问题清单 |
-| 周日里程碑 | 实现 KV Cache（decode latency 降低 10x+），构建 Mini 推理引擎 v0 完成单请求推理，能画出 vLLM 架构图并测量 TTFT/per-token decode latency　　　　　　　 |
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| --------------------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 4，掌握 C++ Extension 集成、FlashAttention Forward/Backward　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | FA 性能对比报告、IO 优化方法论总结、KV Cache CUDA kernel、vLLM 架构分析笔记　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | FA 端到端性能对比留档，KV Cache kernel 正确性 PASS，理解 vLLM 三层架构　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
 ## 🧭 本周学习地图
 
 ```
-Day 1: Prefill vs Decode → 两阶段特征对比 + PyTorch 模拟 + 算术强度分析
-  ↓
-Day 2: KV Cache 实现 → C++/CUDA 缓存分配、更新、查询、多轮对话
-  ↓
-Day 3: vLLM 整体架构 → LLMEngine / Scheduler / Worker / SequenceGroup
-  ↓
-Day 4: vLLM Worker + PagedAttention → BlockSpaceManager / Block Table / Copy-on-Write
-  ↓
-Day 4b（补充专题）: FlashDecoding → Decode 阶段并行度突破
-  ↓
-Day 5: Mini 推理引擎 v0 → 单请求 + KV Cache + Prefill/Decode 循环
-  ↓
-Day 6: 端到端 Profiling → TTFT / TBT / 阶段 latency / 瓶颈定位
-  ↓
-Day 6b（补充专题）: 量化推理 → W8A16 / INT8 KV Cache / FP8
-  ↓
-Day 7: 推理系统核心问题总结 → 内存管理、Batch 策略、Latency 隐藏、调度开销
-```
+Day 1: FlashAttention-2 论文与源码差异
+        ↓
+Day 2: 算子接入 Mini 引擎 —— FlashAttention 集成
+        ↓
+Day 3: 性能对比分析 —— 标准 vs 手写 vs 官方
+        ↓
+Day 4: IO 优化方法论总结与收官
+        ↓
+Day 5: 推理流程 —— Prefill vs Decode
+        ↓
+Day 6: 实现 KV Cache（含 GQA/MQA/MLA 变体）
+        ↓
+Day 7: vLLM 整体架构分析
 
 ---
 
@@ -41,12 +36,10 @@ Day 7: 推理系统核心问题总结 → 内存管理、Batch 策略、Latency 
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | 推理流程 —— Prefill vs Decode | [day1/](day1/README.md) |
-| Day 2 | 实现 KV Cache | [day2/](day2/README.md) |
-| Day 3 | vLLM 整体架构分析 | [day3/](day3/README.md) |
-| Day 4 | vLLM Worker 与 PagedAttention | [day4/](day4/README.md) |
-| **Day 4b** | **FlashDecoding —— Decode 阶段的并行度突破（补充专题）** | **[day4b/](day4b/README.md)** |
-| Day 5 | 项目推进 —— Mini 推理引擎 v0 | [day5/](day5/README.md) |
-| Day 6 | 端到端 Profiling | [day6/](day6/README.md) |
-| **Day 6b** | **量化推理专题 —— W8A16/INT8 KV Cache/FP8（补充专题）** | **[day6b/](day6b/README.md)** |
-| Day 7 | 推理系统核心问题总结与 Week 5 收官 | [day7/](day7/README.md) |
+| Day 1 | FlashAttention-2 论文与源码差异 | [day1/](day1/README.md) |
+| Day 2 | 算子接入 Mini 引擎 —— FlashAttention 集成 | [day2/](day2/README.md) |
+| Day 3 | 性能对比分析 —— 标准 vs 手写 vs 官方 | [day3/](day3/README.md) |
+| Day 4 | IO 优化方法论总结与收官 | [day4/](day4/README.md) |
+| Day 5 | 推理流程 —— Prefill vs Decode | [day5/](day5/README.md) |
+| Day 6 | 实现 KV Cache（含 GQA/MQA/MLA 变体） | [day6/](day6/README.md) |
+| Day 7 | vLLM 整体架构分析 | [day7/](day7/README.md) |

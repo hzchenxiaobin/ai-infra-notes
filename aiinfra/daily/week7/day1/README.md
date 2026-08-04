@@ -1,408 +1,419 @@
-## Day 1：多请求并发支持
+## Day 1：Continuous Batching
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **多请求并发系统的五大核心组件**——线程安全请求队列、异步处理线程、结果返回机制、请求生命周期管理、错误处理与超时控制<br>
-2. 掌握 **三种并发模型**——单 Worker+共享队列、调度线程+执行线程分离、线程池+任务队列，各自适用场景与权衡<br>
-3. 能实现 **ThreadSafeRequestQueue**——条件变量 + 优先级插入 + 批量获取，理解锁的粒度（锁内只做队列操作，锁外做 forward）<br>
-4. 理解 **Future / Callback / Streaming** 三种结果返回方式的优缺点，实际系统通常同时支持<br>
-5. 掌握 **请求生命周期**——WAITING → RUNNING → FINISHED/TIMEOUT/CANCELLED，超时线程自动清理过期请求<br>
-6. 用 Python 手写一个 **ConcurrentEngine**，实测 Future 阻塞等待、Callback 事件触发、Streaming token 流式、优先级调度、超时取消
+1. 理解 **Dynamic Batching 的致命缺陷**——request-level 聚合导致长请求阻塞短请求，完成的请求必须等整批结束<br>
+2. 掌握 **Continuous Batching** 的核心思想——iteration-level 调度，每轮重建 batch，完成即走、新请求随时插入<br>
+3. 能画出 **iteration 时间线**，理解 batch size 如何随请求加入/退出动态变化<br>
+4. 理解 **Scheduler 状态机**（WAITING → RUNNING → FINISHED/SWAPPED）与每轮调度决策的 4 个步骤<br>
+5. 掌握 **Prefill + Decode 混合调度**的原理与挑战——token budget 分配、latency 抖动、chunked prefill<br>
+6. 用 Python 手写一个 **ContinuousBatcher**，实测请求动态加入/退出，验证短请求不被长请求阻塞
 
-> 💡 **为什么重要**：Week 6 Day 5 的 MiniEngineV1 已支持 `submit()` 异步并发，但它的并发模型较简单（单 worker 线程，只有 Future）。Week 7 系统整合的第一步是把并发能力做"实"——加入条件变量、优先级队列、Streaming、超时控制、三线程协作。这是推理系统从"能跑的 demo"到"可用的产品"的关键一步，也是面试高频题"多请求并发如何实现、线程安全问题"。
+> 💡 **为什么重要**：Day 1 的 Dynamic Batching 解决了"凑批"问题，但它有个致命缺陷：一个 batch 里所有请求一起开始一起结束——生成 5 个 token 的短请求要等生成 100 个 token 的长请求。Continuous Batching 把调度粒度从 request-level 降到 iteration-level，每轮重建 batch，完成的立即退出、新请求随时插入。这是现代 LLM 推理服务（vLLM、TensorRT-LLM）的核心技术，也是面试必考题。Week 5 Day 3 我们读过 vLLM 的 Continuous Batching 概念，今天亲手实现它。
 
 ---
 
-### 学前导读：Week 6 引擎的并发"不够实"
+### 学前导读：Dynamic Batching 的"长请求阻塞"问题
 
-Week 6 Day 5 的 MiniEngineV1 已有 `submit()` → Future 异步返回，但存在几个不足：
+Day 1 的 Dynamic Batcher 把请求凑成一批一起 forward。但 LLM 是自回归生成——每个请求的生成长度不同且事先不确定。当 batch 里有一个长请求（gen=100）和多个短请求（gen=5）时：
 
 ```
-Week 6 v1 的并发短板：
- 1. 请求队列是普通 deque + Lock，无条件变量 → worker 空转 sleep(0.001) 浪费 CPU
- 2. 只有 Future，无 Callback / Streaming → 不支持流式输出（ChatGPT 打字机效果）
- 3. 无优先级插入 → 队列纯 FIFO，高优先级请求不能插队
- 4. 无超时控制 → 请求堆积时无法自动取消过期请求
- 5. 单 worker 线程 → forward 时无法接收新请求
+Batch = [R1(gen=5), R2(gen=100)]
+ iter 1-5: R1 和 R2 都在 decode
+ iter 6: R1 完成了！但 R2 还在跑...
+ iter 6-100: R1 的 GPU slot 空等 R2 → 95 iterations 的浪费
 ```
 
-| 维度 | Week 6 v1 | Week 7 Day1 |
-|------|----------|-------------|
-| 队列 | deque + Lock | **条件变量 + 优先级插入** |
-| 结果返回 | Future | **Future + Callback + Streaming** |
-| 优先级 | schedule 内排序 | **入队即按优先级插** |
-| 超时 | 无 | **超时线程自动取消** |
-| 线程模型 | 单 worker | **调度线程 + 执行线程 + 超时线程** |
+| 维度 | Dynamic Batching | Continuous Batching |
+|------|-----------------|---------------------|
+| 调度粒度 | request-level（整批） | **iteration-level**（每轮） |
+| 请求加入 | 凑满/超时后整批加入 | **任意 iteration** 加入 |
+| 请求退出 | 整批完成后一起退出 | **完成即退出**（不等他人） |
+| 短请求等待长请求 | 是（阻塞） | **否**（独立退出） |
+| GPU 利用率 | 中（有空等） | **高**（始终满载） |
 
-> 💡 **一句话总结**：Day 1 把 Week 6 的"单 worker + Future"升级为"三线程协作 + 条件变量 + 三种返回 + 超时控制"——从"能并发"到"并发可控"。
+> 💡 **一句话总结**：Continuous Batching = 把 Dynamic 的"整批一起跑完"改成"每轮 iteration 重建 batch"——完成的退出、新请求插入，GPU 始终满载。它是现代 LLM 推理服务的核心技术。
 
 ---
 
 ### 理论学习
 
-#### 1.1 五大核心组件
+#### 2.1 Continuous Batching 核心思想
 
-多请求并发推理系统需要五大组件，缺一不可：
-
-| 组件 | 职责 | Week7 实现 |
-|------|------|-----------|
-| 线程安全请求队列 | 接收并发提交的请求 | `ThreadSafeRequestQueue`（条件变量+优先级） |
-| 异步处理线程 | 后台处理请求 | 调度线程 + 执行线程 |
-| 结果返回机制 | 异步返回结果 | Future / Callback / Streaming |
-| 请求生命周期 | 状态管理 | WAITING→RUNNING→FINISHED/TIMEOUT/CANCELLED |
-| 错误处理与超时 | 异常恢复 | 超时线程 + `set_exception` |
-
-#### 1.2 三种并发模型
-
-![三种并发模型对比](../images/concurrency_models.svg)
-
-| 模型 | 结构 | 优点 | 缺点 | 适用 |
-|------|------|------|------|------|
-| 模型1：单 Worker + 共享队列 | 一个线程做调度+执行 | 最简单 | forward 时无法接收请求 | 教学（Week6 v1） |
-| **模型2：调度线程 + 执行线程** | 调度凑批 + 执行 forward 分离 | 调度与执行并行 | 线程间需同步 | **Week7 选此** |
-| 模型3：线程池 + 任务队列 | 多 Worker 并行 | 多卡并行 | 调度复杂 | 多 GPU 扩展 |
-
-##### 为什么选模型2？
+![Dynamic vs Continuous Batching 对比](../../week6/images/dynamic_vs_continuous_batching.svg)
 
 ```
-模型1的问题：worker 正在 forward（10ms），此时 submit() 的请求要等 forward 完成才能入队
- → 高并发下 submit 被阻塞，请求丢失风险
+Iteration-level scheduling：
+ - 每个 iteration 都重新构建 batch
+ - 新请求可以在任意 iteration 加入
+ - 完成的请求可以在任意 iteration 退出
+ - 不再存在"一个 batch 一起结束"的概念
 
-模型2：调度线程专门 get_batch，执行线程专门 forward
- → forward 期间调度线程仍可接收新请求，无阻塞
- → 代价：两线程需同步 running map（用锁）
+效果：
+ - GPU 始终满负荷运行
+ - 短请求不会被长请求阻塞
+ - Throughput 和 latency 都更好
 ```
 
-##### 形象类比
+##### 核心区别：request-level vs iteration-level
 
-- **模型1** = 单人餐厅（老板一人接单+做菜，做菜时没人接单）
-- **模型2** = 前台+后厨（前台接单，后厨做菜，接单做菜并行）
-- **模型3** = 多窗口餐厅（多个窗口同时接单做菜，适合高峰）
+| 概念 | Dynamic Batching | Continuous Batching |
+|------|-----------------|---------------------|
+| 调度单位 | 一个 request batch | 一个 **iteration**（单步 decode） |
+| batch 生命周期 | 从开始到整批完成 | **单轮**，下轮重建 |
+| 完成处理 | 整批完成后统一返回 | **完成即返回**，立即释放 slot |
+| 新请求 | 等下一批 | **当前 iteration 即可加入** |
 
-#### 1.3 ThreadSafeRequestQueue：条件变量 + 优先级
+#### 2.2 Iteration 时间线
+
+![Continuous Batching Iteration 时间线](../../week6/images/continuous_batching_timeline.svg)
+
+![Continuous Batching 迭代时间线](../../images/week6_continuous_batching_timeline.svg)
+
+##### 关键观察
+
+1. **S1 在 iter 4 完成，立即退出** → S4 在 iter 5 填入 S1 的 slot（GPU 不空等）
+2. **S3 在 iter 3 到达，立刻加入** batch（不需等"下一批"）
+3. **batch size 动态变化**：2→2→3→3→3→2→2（完成的退出、新请求加入）
+4. **S3 (短请求) 不等 S2 (长请求)** → 比 Dynamic 节省等待
+
+#### 2.3 Scheduler 状态机
+
+![Scheduler 状态机与每轮决策](../../week6/images/scheduler_state_machine.svg)
+
+##### Sequence 状态转换
+
+![Scheduler 请求状态机](../../images/week6_request_state_machine.svg)
+
+##### 每轮调度决策
+
+Scheduler 每轮需要决定 4 件事：
+
+1. **继续运行哪些 RUNNING 请求**（保留 running 队列中的序列，decode 1 步）
+2. **从 WAITING 加入哪些新请求**（在 token budget 允许时做 prefill）
+3. **是否抢占某些 RUNNING 请求**（显存不足时 preempt）
+4. **处理 FINISHED 请求**（释放 KV Cache、返回结果）
+
+约束条件：
+- **Token budget**：prefill + decode 总 token 数 ≤ 上限
+- **显存预算**：KV Cache block 数 ≤ 上限
+- **Max num_seqs**：并发 sequence 数 ≤ 上限
+
+#### 2.4 Prefill + Decode 混合调度
+
+```
+Continuous Batching 可以混合 prefill 和 decode：
+ - 一个 iteration 中同时处理：
+ - 新请求的 prefill（一次性处理多个 prompt tokens）
+ - 正在生成的请求的 decode（每次 1 个 token）
+ - 这是 vLLM 和许多现代推理系统的标准做法
+
+挑战：
+ - Prefill 和 decode 的计算特征不同（prefill compute-bound, decode memory-bound）
+ - Prefill 会"打断" decode 的 smooth latency
+ - 需要 token budget 控制每轮的计算量
+
+解决方案：Chunked Prefill
+ - 将长 prompt 的 prefill 拆成多个小 chunk
+ - 每个 chunk 与 decode 请求一起执行
+ - 平滑 latency，避免长 prompt 阻塞
+```
+
+| 挑战 | 原因 | 解决方案 |
+|------|------|---------|
+| Token budget 分配 | prefill 消耗大量 budget，影响 decode | 限制每轮 prefill token 数 |
+| 内存需求 | prefill 需要临时 KV Cache 空间 | 动态 block 分配 |
+| Latency 抖动 | prefill 加入时 decode latency 突增 | chunked prefill 平滑 |
+
+### Coding 任务：手写 Continuous Batcher
+
+#### 任务 1：创建 continuous_batcher.py
+
+创建文件 [kernels/continuous_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day7/kernels/continuous_batcher.py)，实现 iteration-level 调度：
 
 ```python
-class ThreadSafeRequestQueue:
-    def __init__(self):
-        self._queue = deque()
-        self._cond = threading.Condition() # Lock + wait/notify
-
-        def put(self, request):
-            with self._cond:
-                # 按优先级插入（高优先级在前）
-                for i, req in enumerate(self._queue):
-                    if request.priority > req.priority:
-                        self._queue.insert(i, request)
-                        break
-                    else:
-                        self._queue.append(request)
-                        self._cond.notify() # 唤醒等待的 worker
-
-                        def get_batch(self, max_size, max_wait):
-                            with self._cond:
-                                while len(batch) < max_size:
-                                    if not self._queue:
-                                        self._cond.wait(remaining) # 无请求时挂起（不空转）
-                                        batch.append(self._queue.popleft())
-```
-
-##### 条件变量 vs 轮询
-
-| 方式 | Week6 v1（轮询） | Week7（条件变量） |
-|------|-----------------|------------------|
-| 无请求时 | `sleep(0.001)` 空转 | `cond.wait()` 挂起 |
-| CPU 占用 | 持续轮询浪费 CPU | 挂起零 CPU |
-| 响应延迟 | ≤1ms（轮询间隔） | 立即（notify 唤醒） |
-
-> ⚠️ **线程安全要点**：①锁保护共享状态 ②条件变量通知新请求 ③**避免锁内执行 CUDA forward**（防死锁+性能下降）④原子操作更新计数器 ⑤注意 Python GIL
-
-#### 1.4 Future / Callback / Streaming
-
-![Future / Callback / Streaming 三种结果返回](../images/future_callback_streaming.svg)
-
-| 方式 | 机制 | 优点 | 缺点 | 适合 |
-|------|------|------|------|------|
-| **Future** | `submit()`→Future，`result()`阻塞 | 接口简单 | 不适合流式 | 简单调用 |
-| **Callback** | 完成时自动调 `fn(req_id, result)` | 不阻塞调用方 | 嵌套回调复杂 | 事件驱动 |
-| **Streaming** | 每生成 1 token 调 `fn(req_id, token)` | 体验最好（打字机） | 需维护流状态 | 流式输出 |
-
-##### 三者时间线对比
-
-```
-Future: submit...[等待全部完成]...result 一次性返回
-Callback: submit...[后台处理]...完成时触发 fn
-Streaming: submit → tok0 → tok1 → tok2 → ... → done（逐个返回）
-```
-
-> 💡 实际系统（vLLM/OpenAI API）通常同时支持三种：Future 用于简单调用，Callback 用于事件驱动，Streaming 用于流式输出（ChatGPT 的 SSE 打字机效果）。
-
-#### 1.5 请求生命周期
-
-![请求生命周期状态机](../images/request_lifecycle_states.svg)
-
-![请求生命周期状态分支](../../images/week7_request_lifecycle_states.svg)
-
-##### 三线程协作
-
-| 线程 | 职责 |
-|------|------|
-| **调度线程** | `get_batch` 从队列凑批 → 加入 running |
-| **执行线程** | 处理 running 请求（forward），完成 `set_result`（锁外执行） |
-| **超时线程** | 检查 waiting/running 中的过期请求，自动 `set_exception` |
-
-> 💡 锁的粒度：调度线程和执行线程都操作 `running` map，用 `running_lock` 保护。但 forward（sleep/CUDA）在锁外执行——避免 forward 期间阻塞调度。
-
-### Coding 任务：实现 ConcurrentEngine
-
-#### 任务 1：创建 concurrent_engine.py
-
-创建文件 [kernels/concurrent_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day1/kernels/concurrent_engine.py)，实现三线程协作的并发推理引擎：
-
-```python
-# concurrent_engine.py —— 多请求并发支持（线程安全队列 + Future/Callback/Streaming + 生命周期）
-# 运行命令: python concurrent_engine.py
+# continuous_batcher.py —— Continuous Batching 实现（iteration-level 调度）
+# 运行命令: python continuous_batcher.py
 # 依赖: 仅标准库
 
+import time
 import threading
 from collections import deque
-from concurrent.futures import Future
+from enum import Enum
+from typing import List, Dict
 
-class RequestStatus:
- WAITING = "waiting"
- RUNNING = "running"
- FINISHED = "finished"
- TIMEOUT = "timeout"
- CANCELLED = "cancelled"
+class SeqStatus(Enum):
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
 
-class InferenceRequest:
-    """一个推理请求，支持 Future / Callback / Streaming 三种结果返回。"""
-    def __init__(self, prompt, max_new_tokens=8, priority=0,
-                 timeout=None, callback=None, stream_callback=None):
-        self.future = Future()
-        self.status = RequestStatus.WAITING
-        # ... priority, timeout, callback, stream_callback
+    class Sequence:
+        """一个推理序列（对应 vLLM 的 Sequence）"""
+        def __init__(self, seq_id: int, prompt_len: int, max_new_tokens: int = 10):
+            self.seq_id = seq_id
+            self.prompt_len = prompt_len
+            self.max_new_tokens = max_new_tokens
+            self.generated_count = 0
+            self.status = SeqStatus.WAITING
+            self.start_iter = -1
+            self.finish_iter = -1
+            self.done_event = threading.Event()
 
-    def emit_token(self, token):
-        """Streaming：每生成一个 token 调用 stream_callback。"""
-        self.generated_tokens.append(token)
-        if self.stream_callback:
-            self.stream_callback(self.request_id, token)
+            def append_token(self):
+                self.generated_count += 1
+                if self.generated_count >= self.max_new_tokens:
+                    self.status = SeqStatus.FINISHED
+                    self.done_event.set()
 
-    def set_result(self, result):
-        """完成时：Future + Callback。"""
-        self.status = RequestStatus.FINISHED
-        self.future.set_result(result)
-        if self.callback:
-            self.callback(self.request_id, result)
+                    class ContinuousBatcher:
+                        """Continuous Batcher：每轮 iteration 重新构建 batch"""
 
-class ThreadSafeRequestQueue:
-    """条件变量 + 优先级插入 + 批量获取。"""
-    def put(self, request):
-        with self._cond:
-            # 按优先级插入，notify 唤醒 worker
-            ...
-    def get_batch(self, max_size, max_wait):
-        with self._cond:
-            # 批量获取，无请求时 cond.wait 挂起
-            ...
+                        def __init__(self, max_token_budget: int = 50, max_num_seqs: int = 8):
+                            self.max_token_budget = max_token_budget
+                            self.max_num_seqs = max_num_seqs
+                            self.waiting_queue: deque[Sequence] = deque()
+                            self.running: Dict[int, Sequence] = {}
+                            self.lock = threading.Lock()
+                            self.stop_event = threading.Event()
+                            self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+                            self.worker_thread.start()
+                            self.iteration = 0
 
-class ConcurrentEngine:
- """模型2：调度线程 + 执行线程 + 超时线程。"""
- def submit(self, prompt, ..., callback=None, stream_callback=None):
- # 入队，返回 InferenceRequest（含 Future）
- def _scheduler_loop(self):
- # get_batch → 加入 running
- def _worker_loop(self):
- # forward（锁外）→ set_result（Future+Callback+Streaming）
- def _timeout_loop(self):
- # 检查过期请求 → set_exception
+                            def submit(self, seq: Sequence):
+                                with self.lock:
+                                    self.waiting_queue.append(seq)
+
+                                    def _schedule(self) -> List[Sequence]:
+                                        """每轮调度：保留 running + 从 waiting 补入（token budget 约束）"""
+                                        batch = []
+                                        token_budget = self.max_token_budget
+                                        with self.lock:
+                                            # 1. 移除已完成的 running 序列
+                                            finished_ids = [sid for sid, s in self.running.items()
+                                            if s.status == SeqStatus.FINISHED]
+                                            for sid in finished_ids:
+                                                self.running.pop(sid)
+                                                # 2. 保留正在运行的序列（decode 每步消耗 1 token budget）
+                                                for seq in self.running.values():
+                                                    if token_budget >= 1 and len(batch) < self.max_num_seqs:
+                                                        batch.append(seq)
+                                                        token_budget -= 1
+                                                        # 3. 从 waiting 补入新请求（prefill 消耗 prompt_len token budget）
+                                                        still_waiting = deque()
+                                                        for seq in self.waiting_queue:
+                                                            cost = seq.prompt_len
+                                                            if token_budget >= cost and len(batch) < self.max_num_seqs:
+                                                                seq.status = SeqStatus.RUNNING
+                                                                seq.start_iter = self.iteration + 1
+                                                                self.running[seq.seq_id] = seq
+                                                                batch.append(seq)
+                                                                token_budget -= cost
+                                                            else:
+                                                                still_waiting.append(seq)
+                                                                self.waiting_queue = still_waiting
+                                                                return batch
+
+                                                                def _run_iteration(self, batch: List[Sequence]):
+                                                                    """运行一个 iteration：每个序列生成 1 个 token"""
+                                                                    forward_time = 0.002 + 0.0005 * len(batch)
+                                                                    time.sleep(forward_time)
+                                                                    for seq in batch:
+                                                                        if seq.status == SeqStatus.RUNNING:
+                                                                            seq.append_token()
+                                                                            if seq.status == SeqStatus.FINISHED:
+                                                                                seq.finish_iter = self.iteration + 1
+
+                                                                                def _worker_loop(self):
+                                                                                    while not self.stop_event.is_set():
+                                                                                        batch = self._schedule()
+                                                                                        if batch:
+                                                                                            self.iteration += 1
+                                                                                            self._run_iteration(batch)
+                                                                                        else:
+                                                                                            time.sleep(0.001)
 ```
 
-完整代码（含 5 个 demo）见 [kernels/concurrent_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day1/kernels/concurrent_engine.py)。
-
 代码要点：
-- `ThreadSafeRequestQueue`：`Condition` 保护队列，`put` 按优先级插入 + `notify`，`get_batch` 批量获取 + `wait` 挂起（不空转）
-- `InferenceRequest`：同时支持 Future（`future.result()` 阻塞）、Callback（`set_result` 时触发）、Streaming（`emit_token` 每 token 触发）
-- `ConcurrentEngine`：三线程协作——调度线程凑批、执行线程 forward（锁外）、超时线程清理
-- **锁的粒度**：`running_lock` 保护 running map，forward 在锁外执行（避免阻塞 submit/scheduler）
-- **与 Week6 v1 的区别**：v1 单 worker + 轮询 + 仅 Future；本文件三线程 + 条件变量 + 三种返回 + 优先级 + 超时
+- `_schedule()`：每轮调度的核心——①移除已完成序列 → ②保留 running（decode）→ ③从 waiting 补入新请求（prefill），受 token budget 约束
+- `_run_iteration()`：每轮 forward，每个序列生成 1 个 token；完成的序列设置 `FINISHED` 状态
+- **与 Day 1 Dynamic Batcher 的区别**：Dynamic 的 `_collect_batch` 凑满一批发一次；Continuous 的 `_schedule` 每轮都调用，完成即走、新请求随时加入
 
-#### 任务 2：运行并观察五种机制
+#### 任务 2：运行并观察 iteration 时间线
 
 ```bash
-python kernels/concurrent_engine.py
+python kernels/continuous_batcher.py
 ```
 
 **预期输出**（节选）：
 
 ```text
-Demo 1: Future（阻塞等待结果）
- Submitted request 1, waiting...
- Result: tok0 tok1 tok2 tok3 tok4
- Latency: 21.0ms, status=finished
+Submitting 3 sequences with staggered arrival...
 
-Demo 2: Callback（结果到达时触发）
- [Callback] Request 2 done: tok0 tok1 tok2 tok3...
- Callback triggered 3 times
+ S1 submitted: prompt=3, gen=4
+ S2 submitted: prompt=5, gen=8 (long request)
+ S3 submitted: prompt=2, gen=3 (arrives during S1/S2 decode, short)
 
-Demo 3: Streaming（token 逐个返回）
- [Stream] Request 5 -> tok0
- [Stream] Request 5 -> tok1
+ Iter BatchSize States Finished
+----------------------------------------------------------------------
+ 1 2 S1(decode), S2(decode) 0
+ 2 2 S1(decode), S2(decode) 0
+ 3 3 S1(decode), S2(decode), S3(decode) 0
+ 4 3 S1(done), S2(decode), S3(decode) 1
+ 5 2 S2(decode), S3(done) 1
+ 6 1 S2(decode) 0
  ...
- Total streamed tokens: 5
+ 8 1 S2(done) 1
 
-Demo 4: 优先级调度（高优先级先处理）
- Completion order: [8, 6, 7]
- HIGH(priority=10) 应该最先完成
-
-Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
- Expected timeout: Request 9 timed out
- status=timeout
+=== Continuous vs Dynamic Batching Comparison ===
+ Continuous: S3 (短请求) 在 iter 6 完成，立即退出，不等待 S2
+ Dynamic: S1,S2,S3 同 batch 开始，S3 完成后要等 S2（到 iter 9）
+ S3 等待节省: 3 iterations
 ```
 
 ##### 观察重点
 
-1. **Demo 1 Future**：`future.result()` 阻塞直到完成，返回全部 token
-2. **Demo 2 Callback**：3 个请求完成时各自触发 callback，无需手动等待
-3. **Demo 3 Streaming**：5 个 token 逐个通过 `stream_callback` 返回（打字机效果）
-4. **Demo 4 优先级**：HIGH(priority=10) 虽后提交但最先完成（优先级插入队列）
-5. **Demo 5 超时**：timeout=0.05s 但 forward 需 0.1s → 超时线程自动取消，`future.result()` 抛 TimeoutError
+1. **S3 在 iter 3 加入**：S1/S2 正在 decode 时 S3 到达，立刻被调度加入（不需等"下一批"）
+2. **S1 在 iter 4 完成**：立即退出，iter 5 的 batch size 从 3 降到 2
+3. **S3 在 iter 6 完成**：短请求（gen=3）先于 S2（gen=8）完成，**不等 S2**
+4. **batch size 动态变化**：2→2→3→3→2→1→1→1（完成退出、新请求加入）
+5. **对比 Dynamic**：S3 节省 3 个 iteration 的等待（Dynamic 下 S3 要等 S2 到 iter 9）
 
-#### 任务 3：对比 Week 6 v1 的并发模型
+#### 任务 3：对比 Dynamic Batcher
 
-思考：同样 3 个请求，Week 6 v1（单 worker + 轮询）和 Week 7（三线程 + 条件变量）在 CPU 占用和响应延迟上有什么区别？
+修改 `main()`，同时运行 Day 1 的 DynamicBatcher 和今天的 ContinuousBatcher，对比相同请求集合的总完成时间和 S3 的等待 iterations。
 
-> 思考：v1 的 `sleep(0.001)` 轮询每秒 1000 次，CPU 浪费；Week7 的 `cond.wait()` 无请求时挂起零 CPU，有请求时 `notify` 立即唤醒。
+> 思考：Continuous Batching 在什么场景下优势最大？（提示：请求长度方差越大，Dynamic 的空等越多，Continuous 的收益越大。）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Copy
+#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-copy>
+**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
 
-**与今日知识的关联**：Matrix Copy 是**内存拷贝 kernel** 的典型——每个元素独立搬运、无计算依赖，瓶颈在显存带宽而非算力；其核心矛盾是"读连续则写不连续"，需用 shared memory tile 中转让读写都 coalesced。这与并发引擎的"请求独立搬运"同构：队列的 `put`/`get_batch` 把每个请求从 submit 线程搬到 worker 线程，请求间无依赖（像矩阵元素间无依赖），搬运效率（coalesced 访存 + 条件变量 notify 的及时性）决定整体吞吐。Matrix Copy 练习 coalesced 访存和 shared memory tiling——这是并发引擎高效处理海量独立请求的底层模式：把"每个请求独立搬运"映射到 GPU 就是"每个元素独立重排"。
+**与今日知识的关联**：
 
-> 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Copy 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html)。
+这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 1）
+> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 1（二分模板），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 2）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [704. 二分查找](https://leetcode.cn/problems/binary-search/) | 简单 | 闭区间模板（一切二分的母题） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html) |
-| [35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/) | 简单 | 二分找下界 | — |
-| [69. x 的平方根](https://leetcode.cn/problems/sqrtx/) | 简单 | 二分答案 | — |
-| [74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) | 中等 | 二维一维化二分 | — |
+| [236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/) | 中等 | 后序 DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html) |
+| [124. 二叉树中的最大路径和](https://leetcode.cn/problems/binary-tree-maximum-path-sum/) | 困难 | 后序 DFS（单边贡献） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/124_二叉树中的最大路径和.html) |
+| [199. 二叉树的右视图](https://leetcode.cn/problems/binary-tree-right-side-view/) | 中等 | BFS/DFS 取每层最右 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/199_二叉树的右视图.html) |
+| [114. 二叉树展开为链表](https://leetcode.cn/problems/flatten-binary-tree-to-linked-list/) | 中等 | 后序 / 迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/114_二叉树展开为链表.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现 Streaming 的真实流式输出
+#### 实验 1：实现 preemption
 
-当前 `emit_token` 在 forward 内一次性调用 `max_new_tokens` 次。修改为每轮 decode 调用一次（模拟真实逐 token 生成），观察 stream_callback 的触发节奏更接近打字机效果。
+当 token budget 不足时，抢占最后加入的 running 序列（LIFO），将其状态设回 WAITING，释放其 KV Cache 预算。测试：提交超过 max_num_seqs 的请求，观察抢占行为。
 
-> 思考：真实 Streaming 输出对前端有什么要求？（提示：SSE/WebSocket 长连接，前端逐 token 渲染。OpenAI API 用 SSE。）
+> 思考：被抢占的请求重新调度时，是重新 prefill 还是恢复 KV Cache？（提示：Recomputation 重 prefill，Swapping 保留 cache 换出到 CPU。Week 5 Day 3 详讲。）
 
-#### 实验 2：实现请求取消 API
+#### 实验 2：实现优先级调度
 
-当前 `cancel()` 已实现骨架。测试：提交 3 个请求后立即 cancel 第 2 个，验证它的 `future.result()` 抛异常、且不影响 1 和 3。
+给 `Sequence` 加 `priority` 字段，修改 `_schedule()` 按优先级排序：高优先级请求优先加入 batch、低优先级请求先被抢占。测试：高优先级短请求后到但先完成。
 
-> 思考：cancel 一个正在 running 的请求需要注意什么？（提示：worker 可能正在 forward 它，需标记 status=CANCELLED，worker 检查后跳过；KV Cache 释放。）
+> 思考：优先级调度可能产生什么问题？（提示：低优先级 starvation 饥死。解决：aging 老化策略。）
 
-#### 实验 3：模型3 线程池实现
+#### 实验 3：实现 prefill + decode 混合调度
 
-将模型2（调度+执行两线程）扩展为模型3（多 Worker 线程池）：`ThreadPoolExecutor` 中多个 worker 并行处理 running 请求。测试：多 worker 能否真正并行（在多核 CPU 上）？
+修改 `_schedule()`，在同一轮 iteration 中同时处理新请求的 prefill 和 running 的 decode，用 token budget 分配：prefill 消耗 `prompt_len`，decode 消耗 1。测试：长 prompt 的 prefill 不阻塞短 decode。
 
-> 思考：Python GIL 对多线程推理有什么影响？（提示：Python 线程无法真并行 CPU 任务，但 CUDA forward 会释放 GIL，所以多线程+GPU 能并行。纯 Python 模拟则受 GIL 限制。）
+> 思考：混合调度时 prefill 的 latency 抖动怎么解决？（提示：chunked prefill，拆成小块。Day 4 详讲。）
 
 ---
 
 ### 今日总结
 
-Day 1 我们把 Week 6 的并发引擎从"单 worker + Future"升级为"三线程协作 + 条件变量 + 三种返回 + 超时控制"：
+Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Batching 的 iteration-level 调度：
 
-1. **五大核心组件**：线程安全队列、异步处理线程、结果返回（Future/Callback/Streaming）、请求生命周期、错误处理与超时
-2. **三种并发模型**：单 Worker（简单）、调度+执行分离（Week7 选此）、线程池（多卡）；选模型2因 forward 时仍可接收请求
-3. **ThreadSafeRequestQueue**：条件变量（`wait`/`notify`，不空转）+ 优先级插入 + 批量获取；锁内只做队列操作
-4. **三种结果返回**：Future（阻塞等待）、Callback（事件触发）、Streaming（token 逐个返回）；实际系统同时支持
-5. **请求生命周期**：WAITING→RUNNING→FINISHED/TIMEOUT/CANCELLED；超时线程自动清理过期请求
-6. **三线程协作**：调度线程凑批 + 执行线程 forward（锁外）+ 超时线程清理
-7. **实测验证**：Future 阻塞等待、Callback 3 次触发、Streaming 5 token 流式、优先级 HIGH 先完成、超时自动取消
+1. **Dynamic 的缺陷**：request-level 聚合，长请求阻塞短请求，完成的必须等整批结束 → GPU slot 空等
+2. **Continuous 核心思想**：iteration-level 调度，每轮重建 batch，完成即走、新请求随时插入 → GPU 始终满载
+3. **Iteration 时间线**：batch size 随请求加入/退出动态变化（2→3→2→1...），短请求先完成不等长请求
+4. **Scheduler 状态机**：WAITING → RUNNING → FINISHED/SWAPPED，每轮决策 4 步（保留 running / 补入 waiting / 抢占 / 释放 finished）
+5. **Prefill + Decode 混合**：一个 iteration 同时处理新请求 prefill 和 running 的 decode，挑战是 token budget 分配和 latency 抖动
+6. **Chunked Prefill**：长 prompt 拆成小 chunk 与 decode 交错，平滑 latency（Day 4 详讲）
+7. **手写 ContinuousBatcher**：实测 S3（短请求）在 iter 6 完成，比 Dynamic 节省 3 个 iteration 等待
 
-掌握这些后，你就有了推理引擎的并发骨架——明天 Day 2 实现完整调度器（优先级+超时+资源预算+抢占），让并发引擎有"调度大脑"。
+掌握这些后，你就有了现代 LLM 推理服务的核心技术——明天 Day 3 深入 vLLM Scheduler 源码，看它的 `schedule()` 具体怎么实现 iteration-level 调度、preemption 和 swapping。
 
 ---
 
 ### 面试要点
 
-1. **推理系统中如何实现多请求并发？需要注意哪些线程安全问题？**（⭐⭐⭐⭐ 高频）
+1. **Continuous Batching 和 Dynamic Batching 有什么区别？为什么 Continuous Batching 更适合 LLM 推理？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **核心组件**：线程安全请求队列（条件变量）、异步处理线程、结果返回（Future/Callback/Streaming）、生命周期管理、超时控制
- - **线程安全要点**：
- 1. 锁保护共享状态（waiting queue、running map、KV cache metadata）
- 2. 条件变量通知新请求到达（避免轮询空转）
- 3. **避免锁内执行 CUDA forward**（防死锁+性能下降）
- 4. 原子操作更新计数器
- 5. 注意 Python GIL 对多线程的限制（CUDA forward 释放 GIL 可并行，纯 Python 受限）
- - **生命周期**：waiting → running → finished / timeout / cancelled
+ - **Dynamic Batching**：request-level，请求一起开始一起结束，一个长请求会阻塞整个 batch
+ - **Continuous Batching**：iteration-level，每轮重新构建 batch，请求可动态加入和退出
+ - **为什么更适合 LLM**：LLM 生成长度差异大（有人问一句话，有人输入长文档），Dynamic 下短请求要等长请求；Continuous 让 GPU 始终满载，吞吐和延迟都更好，还能混合 prefill 和 decode
 
 </details>
 
 
-2. **Future、Callback、Streaming 三种结果返回方式各有什么优缺点？**
+2. **Continuous Batching 中，如何混合 Prefill 和 Decode？有什么挑战？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Future**：接口简单，调用方阻塞等待；不适合大结果或流式输出
- - **Callback**：不阻塞调用方，结果到达即触发；嵌套回调复杂、错误处理麻烦
- - **Streaming**：体验最好（token 逐个返回，打字机效果）；需维护流状态、连接管理复杂
- - **实际系统**：同时支持三种——Future 用于简单调用，Callback 用于事件驱动，Streaming 用于流式输出（OpenAI SSE）
+ - **混合方式**：每轮 scheduler 同时选择新请求做 prefill + 正在生成的做 decode
+ - **挑战 1：Token budget 分配**——prefill 消耗大量 token budget，影响 decode 的 smooth latency
+ - **挑战 2：内存需求**——prefill 需要临时 KV Cache 空间
+ - **挑战 3：Latency 抖动**——prefill 请求加入时 decode 的 latency 突增
+ - **解决**：chunked prefill（拆小块）、限制每轮 prefill token 数、优先保证 decode 节奏
 
 </details>
 
 
-3. **为什么选择调度线程+执行线程分离的模型，而不是单 Worker？**
+3. **Continuous Batching 的 Scheduler 每轮需要做哪些决策？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 单 Worker：forward 时无法接收新请求 → 高并发下 submit 被阻塞
- - 调度+执行分离：调度线程专门 get_batch，执行线程专门 forward → forward 期间仍可接收请求
- - 代价：两线程需同步 running map（用锁保护）
- - 多 Worker 线程池适合多 GPU，但调度更复杂
+ - ① 继续运行哪些 RUNNING 请求（保留 running 队列的 decode）
+ - ② 从 WAITING 加入哪些新请求（在 token budget 允许时做 prefill）
+ - ③ 是否抢占某些 RUNNING 请求（显存不足时 preempt）
+ - ④ 处理 FINISHED 请求（释放 KV Cache、返回结果）
+ - 约束：token budget（总 token ≤ 上限）、显存预算（KV Cache block ≤ 上限）、max_num_seqs
 
 </details>
 
 
-4. **条件变量相比轮询（sleep+check）有什么优势？**
+4. **Continuous Batching 为什么需要 PagedAttention？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 轮询：无请求时 `sleep(0.001)` 空转，每秒 1000 次检查，浪费 CPU
- - 条件变量：无请求时 `cond.wait()` 挂起，零 CPU 占用；有请求时 `notify()` 立即唤醒
- - 响应延迟：轮询 ≤1ms（sleep 间隔），条件变量立即（notify 即唤醒）
- - 生产环境必用条件变量，轮询只适合教学
+ - Continuous Batching 每轮有请求完成退出、新请求加入——KV Cache 需要频繁分配/释放
+ - 如果用连续分配，频繁 alloc/free 产生外部碎片——完成的请求释放的小空洞拼不回来，新请求放不下就 OOM
+ - PagedAttention 的 block 粒度分配/回收让 slot 回收无碎片化——空闲 block 随时被任意序列复用
+ - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；两者是 vLLM 的双支柱
 
 </details>
 
 
-5. **如何实现请求超时自动取消？**
+5. **Continuous Batching 中，短请求的完成时间比 Dynamic Batching 快多少？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 给 `InferenceRequest` 加 `timeout` 字段和 `submit_time`
- - 后台超时线程定期扫描 waiting 和 running 中的请求
- - `is_expired()`：`(time.time() - submit_time) > timeout`
- - 过期则移除 + `set_exception(TimeoutError)`，future.result() 抛异常
- - 注意：running 中超时的请求需标记 status=TIMEOUT，worker 检查后跳过
+ - 取决于请求长度方差。极端例子：batch=[R1(gen=5), R2(gen=100)]
+ - Dynamic：R1 在 iter 5 生成完，但要等 R2 到 iter 100 才能退出 → R1 空等 95 iterations
+ - Continuous：R1 在 iter 5 生成完，立即退出 → R1 节省 95 iterations
+ - 实际场景（请求长度方差大）下，Continuous 的吞吐通常比 Dynamic 高 2-8x
+ - 请求长度方差越小（所有请求等长），Continuous 的优势越小（退化为 Dynamic）
+
+ - token budget / max_num_seqs / preemption 等调度参数跨平台通用
 
 </details>
 

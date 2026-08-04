@@ -1,182 +1,234 @@
-## Day 4：Attention IO 分析
+## Day 4：手写 Softmax 与 LayerNorm Kernel
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解标准 Attention 的**三阶段计算流程**（S=QK^T → softmax → PV）及各阶段的 HBM 读写量
-2. 手推标准 Attention 的 IO 复杂度，解释为什么是 **O(N²)**——O(N²) 项来自物化两个 N×N 中间矩阵 S 和 P
-3. 实现标准 Attention Forward Kernel（物化 S/P 到 HBM），与 CPU 对比误差 < 1e-3
-4. 能用 ncu 的 `dram__bytes_read/write` 验证实测 HBM 读写量与理论值一致（误差 < 30%）
-5. 能计算 softmax 部分的 arithmetic intensity（AI≈0.375）并判定为 memory-bound，解释 FlashAttention 的优化动机
+1. 理解 **朴素 Softmax 的数值溢出问题**，掌握 safe softmax（减 max）的数学等价性与数值稳定性
+2. 学会用 **三遍扫描**实现 row-wise Softmax，复用 Week 2 的 `warpReduceSum` / `warpReduceMax` 搭出 `blockReduceSum` / `blockReduceMax`
+3. 理解 **LayerNorm 的两次 reduce**（先 mean 后 variance），能解释为什么方差依赖均值而无法合并
+4. 实现并运行 Softmax + LayerNorm Kernel，与 CPU 参考结果误差 < 1e-5
+5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
 
-> 💡 **为什么重要**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心前置知识。不理解"物化 S/P 导致 O(N²)"，就无法理解 FlashAttention 的 online softmax + tiling 为什么能把 IO 降到 O(Nd)。今天是 Week 4 FlashAttention 深挖的最后一块基石。
+> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
 
 ---
 
-### 学前导读：标准 Attention 为什么"慢"
+### 学前导读：为什么 Softmax/LayerNorm 是 Transformer 里最该手写的算子
 
-Day 2 我们手写了 Softmax/LayerNorm，发现它们是 memory-bound（AI≈0.4）。Day 3 读了官方源码，学会用向量化 + reduce 合并来优化。今天把视线放到 Attention——Transformer 里最复杂的算子。
+Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
 
-标准 Attention 的计算公式是：
+- 它们的核心是 **reduce（归约）**——正是 Week 2 Day 1 学的 Warp Shuffle 的直接应用场景
+- 它们是 **memory-bound**，AI ≈ 0.4 ~ 0.6 FLOP/Byte，优化空间不在算力而在访存
+- 它们的并行结构清晰（一行一个 block），代码量适中（~50 行 kernel），适合教学
+- 它们是 FlashAttention 的前置知识——FlashAttention 的 online softmax 就是把今天的三遍扫描压成两遍
 
-```
-Attention(Q, K, V) = softmax(Q·K^T / √d) · V
-```
+| 算子 | reduce 次数 | AI (FLOP/Byte) | 瓶颈 | 今日实现 |
+|------|------------|----------------|------|---------|
+| Softmax | 2（max + sum） | ~0.375 | memory-bound | 三遍扫描 safe softmax |
+| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce + affine |
 
-看起来只是两个 GEMM + 一个 softmax，但**关键问题在中间矩阵 S 和 P 的物化**：
-
-| 阶段 | 操作 | 中间矩阵 | 大小 | 是否物化到 HBM |
-|------|------|---------|------|---------------|
-| Step 1 | S = Q·K^T / √d | S | N×N | ✅ 写入 HBM |
-| Step 2 | P = softmax(S) | P | N×N | ✅ 读 S，写 P |
-| Step 3 | O = P·V | O | N×d | 读 P，写 O |
-
-当 N=4096（长序列），S 和 P 各占 64MB——两个 N×N 矩阵的读写让 HBM IO 爆炸到 ~206MB。这就是 FlashAttention 要解决的核心问题。
-
-> 💡 **一句话总结**：标准 Attention 的"慢"不在计算（GEMM 是 compute-bound），而在中间矩阵 S/P 的 O(N²) 物化读写。今天用 ncu 实测验证这一点，为 Week 4 的 FlashAttention 做铺垫。
+> 💡 **一句话总结**：Softmax/LayerNorm 不难，但它们是"reduce 工程化"的最小完整案例——掌握了今天这两段代码，你就拥有了写任何 row-wise reduce 算子的模板。
 
 ---
 
 ### 理论学习
 
-#### 4.1 标准 Attention 的三阶段 HBM 读写量推导
+#### 2.1 Softmax 数值稳定性与 safe softmax
 
-![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
+![Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出](../images/safe_softmax_three_pass.svg)
 
-**计算流程**：
-
-```
-输入: Q ∈ R^{N×d}, K ∈ R^{N×d}, V ∈ R^{N×d}
-
-Step 1: S = Q × K^T / sqrt(d) → S ∈ R^{N×N} （写 HBM）
-Step 2: P = softmax(S, dim=-1) → P ∈ R^{N×N} （读 S，写 P）
-Step 3: O = P × V → O ∈ R^{N×d} （读 P，写 O）
-```
-
-**各阶段 HBM 读写量**（以 N=4096, d=64, FP32 为例）：
-
-| 阶段 | 操作 | 读 HBM | 写 HBM | 小计 |
-|------|------|--------|--------|------|
-| Step 1: S=QK^T | 读 Q,K；写 S | N·d + N·d = 2Nd | N² | 2Nd + N² |
-| Step 2: P=softmax(S) | 读 S；写 P | N² | N² | 2N² |
-| Step 3: O=PV | 读 P,V；写 O | N² + N·d | N·d | N² + 2Nd |
-| **总计** | | **2N² + 3Nd** | **2N² + Nd** | **4N² + 4Nd** |
-
-代入 N=4096, d=64：
-- `4N² = 4 × 4096² = 67,108,864` 元素 × 4 bytes = 256 MB
-- `4Nd = 4 × 4096 × 64 = 1,048,576` 元素 × 4 bytes = 4 MB
-- **总计 ≈ 260 MB**（N² 项主导）
-
-> ⚠️ **注意**：计划文档中"3N² + 4Nd"是按"读+写合并统计且 S/P 各算一次读一次写"的口径；本教程按"读/写分开统计，S 写 1 次读 1 次、P 写 1 次读 1 次"得到 4N² + 4Nd。两种口径都说明同一结论：**当 N >> d 时，N² 项主导，IO 是 O(N²)**。面试时说清口径即可。
-
-##### 关键洞察：O(N²) 项的来源
-
-O(N²) 来自**物化两个 N×N 中间矩阵**：
-
-- **S = QK^T**（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
-- **P = softmax(S)**（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
-- 合计 **4N²** 的 N² 项读写
-
-而 Q/K/V/O 的读写是 O(Nd)（线性于 N），当 N >> d 时被 N² 项淹没。这就是 FlashAttention 要消除的——通过分块 + online softmax，让 S/P 永远不落 HBM，IO 降到 O(Nd)。
-
-#### 4.2 O(N²) 的危害：长序列下 IO 爆炸与 OOM
-
-![O(N²) vs O(Nd) HBM IO 随序列长度增长](../images/on2_vs_ond_scaling.svg)
-
-**S/P 矩阵显存占用**：
+**朴素 Softmax 的问题**：
 
 ```
-N = 1024: S/P = 1024² × 4 bytes = 4 MB （L2 cache 可容纳）
-N = 4096: S/P = 4096² × 4 bytes = 64 MB （超出 L2，频繁 HBM 读写）
-N = 16384: S/P = 16384² × 4 bytes = 1 GB （HBM 都吃紧，OOM 风险）
-N = 65536: S/P = 65536² × 4 bytes = 16 GB （直接 OOM）
+朴素 Softmax（会溢出）：
+ yi = exp(xi) / Σ exp(xj)
+ 问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
 ```
 
-| N | S/P 显存 | 能否放入 L2(~40MB) | 能否放入 HBM(40GB) |
-|---|---------|------------------|------------------|
-| 1024 | 4 MB | ✅ | ✅ |
-| 4096 | 64 MB | ❌ | ✅ |
-| 16384 | 1 GB | ❌ | ✅（紧张） |
-| 65536 | 16 GB | ❌ | ❌（OOM） |
+FP16 的最大值只有 ~65504，而 `exp(11) ≈ 60000` 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
 
-**结论**：长序列下，物化 S/P 不仅导致 HBM 读写量大，还可能直接 OOM。FlashAttention 不物化 S/P，显存始终是 O(Nd)。
-
-##### IO 复杂度对比
-
-| 实现 | HBM 读写量 | 当 N=4096, d=64 | 当 N=8192, d=64 |
-|------|-----------|----------------|----------------|
-| 标准 Attention | O(N² + Nd) | ~206 MB | ~805 MB（4x） |
-| FlashAttention | O(Nd) | ~2 MB | ~4 MB（2x） |
-| **加速比** | | **~100x** | **~200x** |
-
-> 💡 **为什么长序列加速更明显？** 标准 Attention 的 IO 随 N² 增长，FlashAttention 随 N 线性增长。N 翻倍时，标准 Attention IO 变 4x，FlashAttention 只变 2x。差距随 N 指数级拉大。
-
-#### 4.3 Memory-bound 判定：softmax 是瓶颈
-
-![标准 Attention 的 Roofline 与瓶颈判定](../images/attention_memory_bound.svg)
-
-标准 Attention 是**混合瓶颈**——GEMM 部分是 compute-bound，softmax 部分是 memory-bound：
-
-**GEMM 部分（QK^T 和 PV）**：
+**Safe Softmax（减去 max）**：
 
 ```
-FLOPs ≈ 2·N²·d + 2·N²·d = 4·N²·d
-Bytes ≈ 3N²（S/P 读写）
-AI = 4·N²·d / 3N² = (4/3)·d ≈ 85 FLOP/Byte（d=64）
+m = max(xj)
+yi = exp(xi - m) / Σ exp(xj - m)
+原理：exp(xi - m) ≤ exp(0) = 1，不会溢出
 ```
 
-AI=85 > Ridge Point(58.45) → **GEMM 部分是 compute-bound**（大矩阵乘，算力主导）。
-
-**softmax 部分**：
+**数学等价性证明**：
 
 ```
-FLOPs ≈ 3N²（每元素 exp + add + div）
-Bytes = 2N² × 4 bytes（读 S + 写 P）
-AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte
+exp(xi - m) / Σ exp(xj - m)
+ = exp(xi)·exp(-m) / (Σ exp(xj))·exp(-m)
+ = exp(xi) / Σ exp(xj) ← 分子分母同时乘 exp(-m)，结果不变
 ```
 
-AI=0.375 << Ridge Point(58.45) → **softmax 部分是纯 memory-bound**。
+减 max 不改变结果，但把所有 exp 的输入压到 `(-∞, 0]`，数值上彻底安全。
 
-**结论**：标准 Attention 是 `GEMM(compute) + softmax(memory) + GEMM(compute)` 的混合，其中 **softmax 的 O(N²) 读写是瓶颈**。FlashAttention 正是消除这一项——把 softmax 从 HBM 搬到 SRAM，在片上完成归约。
+##### 三遍扫描 vs 两遍扫描 vs FlashAttention
 
-##### 为什么 GEMM 是 compute-bound 却救不了整体？
+| 方法 | 扫描次数 | 操作 | 适用场景 |
+|------|---------|------|---------|
+| 三遍扫描 | 3 | ① 求 max ② 求 sum(exp(x-m)) ③ 归一化 | 教学版，清晰易读 ← **今日实现** |
+| 两遍扫描（online） | 2 | ① 同时求 max 和 sum ② 归一化 | 生产版，减少一次全局读 |
+| FlashAttention 版 | 1.x | 分块 online，边算边更新 | 极致优化，Week 4 主题 |
 
-虽然 QK^T 和 PV 各自是 compute-bound，但它们中间夹着一个 memory-bound 的 softmax，必须把 S 写回 HBM 再读出来做 softmax，再把 P 写回 HBM 读出来做 PV。这个"写回-读出"的 O(N²) 读写无法被 GEMM 的算力掩盖——**中间结果的物化是结构性瓶颈，与 GEMM 本身快不快无关**。
+本日实现**三遍扫描版**（教学清晰），两遍 online 版留作扩展实验，分块版留到 Week 4 FlashAttention。
 
----
+#### 2.2 Row-wise 并行与两级 Block Reduce
 
-### Coding 任务：标准 Attention Forward + IO 验证
+![Block 级 Reduce 两级结构](../images/block_reduce_two_level.svg)
 
-#### 任务 1：创建 `kernels/attention_naive.cu`
+**并行映射策略**：
 
-下面是完整可编译的标准 Attention Forward Kernel。它**故意物化 S 和 P 到 HBM**，用于 IO 分析——这正是我们要"暴露问题"的版本。完整文件见 [kernels/attention_naive.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day4/kernels/attention_naive.cu)。
+```
+矩阵 shape: (M, D)，M 行，每行 D 个元素
+并行映射: 一个 block 处理一行
+ blockIdx.x = row index（0 ~ M-1）
+ blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
+
+每个 block 内：
+ Step 1: 所有线程协作求本行 max（block reduce max）
+ Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
+ Step 3: 所有线程协作做归一化写出
+```
+
+**为什么一个 block 处理一行？** 因为 softmax 的归一化分母 `Σ exp(xj - m)` 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
+
+##### 两级 Block Reduce 的结构（复用 Week 2 Day 1）
+
+一个 block 可能有 256 / 512 / 1024 个线程（8/16/32 个 warp），而单次 `__shfl_down_sync` 只能归约一个 warp（32 lane）。因此需要两级：
+
+```
+第一级（Warp 级）：每个 warp 用 __shfl_down_sync 折半累加/取 max，结果存在 lane 0
+中转（Shared Memory）：lane 0 把 32 个 warp 的部分和写入 smem[32]
+第二级（Warp 0）：warp 0 的 lane 0~31 读取 smem，再做一次 warpReduce
+```
+
+关键工程细节：
+
+- `smem[32]` 正好放下 32 个 warp 的部分和——这就是 block 最多 32 个 warp（1024 线程）设计的来源
+- 两处 `__syncthreads()`：① 写 smem 后保证可见 ② 广播归约结果前保证 warp0 读到完整结果
+- 返回值只有 lane0 正确，必须经 `__shared__` 变量 + `__syncthreads` 广播给全 block
+- `blockReduceMax` 与 `blockReduceSum` 同构，仅把 `+=` 换成 `fmaxf`、初值换 `-INFINITY`
 
 ```cuda
-// kernels/attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
-// 编译命令: nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -lineinfo
-// 运行命令: ./attention_naive
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-
-// 复用 Week 2 Day 1 / Day 2 的 warp reduce 原语
+// 复用 Week 2 Day 1 的 warp 原语
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1)
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     return val;
 }
+
+__inline__ __device__ float blockReduceSum(float val, float* smem) {
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val; // 第一级结果写 smem
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val); // 第二级 warp0 收尾
+    return val;
+}
+```
+
+#### 2.3 LayerNorm 公式与两次 reduce
+
+![LayerNorm 两次 Reduce 流程](../images/layernorm_two_reduce.svg)
+
+**LayerNorm 公式**：
+
+```
+输入: x ∈ R^D（一行 D 个元素）
+参数: γ (gamma), β (beta) ∈ R^D
+
+计算:
+ μ = (1/D) Σ xi （均值）
+ σ² = (1/D) Σ (xi - μ)² （方差）
+ yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
+```
+
+##### LayerNorm 的 reduce 需求
+
+LayerNorm 需要**两次 reduce**：
+
+1. 第一次：求 `μ = mean(x)` → reduce sum，然后除以 D
+2. 第二次：求 `σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
+
+```
+Step 1: 所有线程协作求 sum(x) → μ = sum / N
+Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
+Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
+```
+
+> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
+
+##### LayerNorm vs BatchNorm
+
+| 特性 | LayerNorm | BatchNorm |
+|------|-----------|-----------|
+| 归一化维度 | 沿 feature 维（一行） | 沿 batch 维（一列） |
+| 依赖 batch | 否（每样本独立） | 是（需 batch 统计） |
+| 推理行为 | 训练/推理一致 | 推理用 running mean/var |
+| 适用场景 | Transformer、RNN | CNN |
+
+Transformer 用 LayerNorm 而非 BatchNorm：因为序列长度可变、batch 可能只有 1（推理），BatchNorm 的 batch 统计不稳定。
+
+##### 为什么 LayerNorm 是 memory-bound？
+
+每个元素读 1 次（x）、写 1 次（y），γ/β 另读，但只做 ~5 次浮点运算（减、平方、rsqrt、乘、加）：
+
+```
+Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
+远低于 Ridge Point（~58.45）→ 纯 memory-bound
+```
+
+---
+
+### Coding 任务：手写 Softmax + LayerNorm Kernel
+
+#### 任务 1：创建 `kernels/softmax_layernorm.cu`
+
+下面是完整可编译的 kernel 实现。代码分三部分：① 复用 Week 2 的 warp 原语 ② 搭出 blockReduceSum / blockReduceMax ③ Softmax kernel（三遍扫描）+ LayerNorm kernel（两次 reduce）。完整文件见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/softmax_layernorm.cu)。
+
+```cuda
+// kernels/softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
+// 编译命令: nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
+// 运行命令: ./softmax_layernorm
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+// ============================================================
+// 复用 Week 2 Day 1 的 Warp Shuffle 原语
+// ============================================================
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1)
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     return val;
 }
+
+// ============================================================
+// Block 级 reduce：warp 级 → shared memory → warp 0 最终 reduce
+// ============================================================
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
     val = warpReduceSum(val);
     if (lane == 0)
         smem[wid] = val;
@@ -187,8 +239,10 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
         val = warpReduceSum(val);
     return val;
 }
+
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
     val = warpReduceMax(val);
     if (lane == 0)
         smem[wid] = val;
@@ -201,305 +255,331 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 }
 
 // ============================================================
-// 标准 Attention Forward Kernel（物化 S 和 P 到 HBM）
-// 一个 block 处理一行 query（qrow）
-// 三步：S=QK^T → P=softmax(S) → O=PV，S/P 全部写回 HBM
+// Softmax Kernel：一行一个 block，三遍扫描 safe softmax
+// 输入: input[M][D]，输出: output[M][D]
 // ============================================================
-__global__ void attention_naive_kernel(const float* __restrict__ Q, const float* __restrict__ K,
-                                       const float* __restrict__ V, float* __restrict__ S, float* __restrict__ P,
-                                       float* __restrict__ O, int N, int d) {
-    int qrow = blockIdx.x;
-    if (qrow >= N)
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
         return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
 
-    __shared__ float smem[32];
+    __shared__ float smem[32]; // warp 间 reduce 缓冲区
     __shared__ float row_max;
     __shared__ float row_sum;
 
     int tid = threadIdx.x;
-    float scale = 1.0f / sqrtf((float)d);
 
-    // Step 1: S[qrow][j] = sum_d Q[qrow][d] * K[j][d] * scale
-    // 物化 S 到 HBM（这就是 O(N²) 写入的来源）
-    for (int j = tid; j < N; j += blockDim.x) {
-        float s_val = 0.0f;
-        for (int dd = 0; dd < d; dd++) {
-            s_val += Q[qrow * d + dd] * K[j * d + dd];
-        }
-        S[qrow * N + j] = s_val * scale;
-    }
-    __syncthreads();
-
-    // Step 2: P[qrow][j] = softmax(S[qrow][:])
-    // 读 S（O(N²) 读），写 P（O(N²) 写）
+    // Step 1: 求 max（数值稳定性）
     float local_max = -INFINITY;
-    for (int j = tid; j < N; j += blockDim.x) {
-        local_max = fmaxf(local_max, S[qrow * N + j]);
+    for (int i = tid; i < D; i += blockDim.x) {
+        local_max = fmaxf(local_max, in_row[i]);
     }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0)
         row_max = local_max;
     __syncthreads();
 
+    // Step 2: 求 sum(exp(x - max))
     float local_sum = 0.0f;
-    for (int j = tid; j < N; j += blockDim.x) {
-        float p_val = expf(S[qrow * N + j] - row_max);
-        P[qrow * N + j] = p_val;
-        local_sum += p_val;
+    for (int i = tid; i < D; i += blockDim.x) {
+        local_sum += expf(in_row[i] - row_max);
     }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0)
         row_sum = local_sum;
     __syncthreads();
 
-    // Step 3: O[qrow][dd] = sum_j P[qrow][j] * V[j][dd]
-    // 读 P（O(N²) 读），读 V，写 O
+    // Step 3: 归一化写出
     float inv_sum = 1.0f / row_sum;
-    for (int dd = tid; dd < d; dd += blockDim.x) {
-        float o_val = 0.0f;
-        for (int j = 0; j < N; j++) {
-            o_val += (P[qrow * N + j] * inv_sum) * V[j * d + dd];
-        }
-        O[qrow * d + dd] = o_val;
+    for (int i = tid; i < D; i += blockDim.x) {
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
+}
+
+// ============================================================
+// LayerNorm Kernel：一行一个 block，两次 reduce
+// 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
+// ============================================================
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * N;
+    float* out_row = output + row * N;
+
+    __shared__ float smem[32];
+    __shared__ float row_mean;
+    __shared__ float row_rstd;
+
+    int tid = threadIdx.x;
+
+    // Step 1: 求 mean = sum(x) / N
+    float local_sum = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        local_sum += in_row[i];
+    }
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_mean = local_sum / N;
+    __syncthreads();
+
+    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
+    float local_sq = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        float diff = in_row[i] - row_mean;
+        local_sq += diff * diff;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
+    __syncthreads();
+
+    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
+    for (int i = tid; i < N; i += blockDim.x) {
+        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
     }
 }
 ```
 
-Host 端的验证逻辑（`cpuAttention` / `checkResult` / `main`）见 [kernels/attention_naive.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day4/kernels/attention_naive.cu) 完整文件。核心是：对 N=256/512/1024/2048 四个序列长度分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-3` 判定 PASS，同时打印理论 HBM IO 量供对比。
+Host 端的验证逻辑（`cpuSoftmax` / `cpuLayerNorm` / `checkResult` / `main`）见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/softmax_layernorm.cu) 文件后半部分，核心是：随机初始化 `M=128, D=1024` 的矩阵，分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-5` 判定 PASS。
 
-#### 为什么这个 kernel 故意"慢"？
+#### 为什么 Softmax 要读三遍 HBM？
 
-看 Step 1 的这行：
-
-```cuda
-S[qrow * N + j] = s_val * scale; // ← 把 N×N 的 S 写回 HBM
-```
-
-以及 Step 2 的：
+这是三遍扫描的核心代价。看 Softmax kernel 的三个 `for` 循环：
 
 ```cuda
-P[qrow * N + j] = p_val; // ← 把 N×N 的 P 写回 HBM
+// Pass 1: 读 in_row[i] 求 max
+for (int i = tid; i < D; i += blockDim.x)
+    local_max = fmaxf(local_max, in_row[i]);
+// Pass 2: 再读 in_row[i] 求 sum
+for (int i = tid; i < D; i += blockDim.x)
+    local_sum += expf(in_row[i] - row_max);
+// Pass 3: 第三次读 in_row[i] 写出
+for (int i = tid; i < D; i += blockDim.x)
+    out_row[i] = expf(in_row[i] - row_max) * inv_sum;
 ```
 
-这两处物化就是 O(N²) IO 的根源。今天我们**故意保留它们**，是为了用 ncu 实测验证 O(N²) 的存在。Week 4 的 FlashAttention 会通过 tiling + online softmax 把 S/P 永远留在 SRAM，消除这两次写回。
+每个元素从 HBM 读 3 次（如果 L2 cache 没命中）、写 1 次。这正是 memory-bound 的来源，也是 online softmax（两遍）和 FlashAttention（分块）要消除的冗余。今天先理解三遍的清晰性，优化留到扩展实验。
 
 #### 任务 2：编译与运行
 
 ```bash
-# 编译（带 -lineinfo 供 ncu Source View 使用）
+# 编译（根据 GPU 架构选择 arch 参数）
 # Blackwell (RTX 5090): sm_120
-nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
+nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行
-./attention_naive
+./softmax_layernorm
 ```
 
 **预期输出**：
 
 ```text
-=== Standard Attention Forward (naive, materialize S/P) ===
-N        S/P size(MB)   HBM IO(MB)       Time(ms)     Check     
-------------------------------------------------------------------
-256      0.25           1.25             0.083        PASS      
-512      1.00           4.50             0.082        PASS      
-1024     4.00           17.00            0.265        PASS      
-2048     16.00          66.00            0.787        PASS      
+=== Softmax + LayerNorm Kernel Test ===
+Config: M=128, D=1024, threads=256
 
-观察要点：
-1. S/P size 随 N² 增长（N 翻倍 → size 4x）
-2. HBM IO 随 N² 增长（N 翻倍 → IO 4x）
-3. Time 近似随 N² 增长（长序列下 O(N²) IO 主导）
-4. 用 ncu 验证 dram__bytes_read.sum + dram__bytes_write.sum ≈ 理论 HBM IO
+[Softmax]
+  Softmax vs CPU: maxDiff = 4.19e-09 (PASS)
+  Time: 0.063 ms
+[LayerNorm]
+  LayerNorm vs CPU: maxDiff = 1.07e-06 (PASS)
+  Time: 0.015 ms
 ```
 
-**分析任务**：
-1. 观察 N 从 256→2048 时，HBM IO 从 1MB→64MB（64x，而 N 只变 8x → 验证 O(N²)）
-2. 观察 Time 的增长趋势是否接近 4x（N 翻倍时）
-3. 确认所有 `PASS`（与 CPU 误差 < 1e-3）
+两个 `PASS` 且 `maxDiff < 1e-5` 即正确。Softmax 误差通常更小（~1e-7，因为只有 exp/add/div），LayerNorm 略大（~1e-6，因为多了平方和 rsqrt）。
 
-#### 任务 3：用 ncu 验证 HBM 读写量
+#### 任务 3：用 ncu 验证 memory-bound
 
 ```bash
-# profile N=1024 的 HBM 读写量
+# 编译带 lineinfo 的版本（ncu Source View 需要）
+nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_120 -lineinfo
+
+# profile 两个 kernel 的 SM / DRAM Throughput
 ncu --metrics \
- dram__bytes_read.sum,\
- dram__bytes_write.sum,\
- dram__throughput.avg.pct_of_peak_sustained_elapsed \
- --kernel-name regex:attention_naive \
- ./attention_naive
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|layernorm_kernel" \
+ ./softmax_layernorm_nl
 ```
 
-**预期实测结果**：
+**观察重点**：
 
-| N | 理论 HBM IO | 预期 ncu 实测 | 误差 |
-|---|-----------|--------------|------|
-| 256 | 1.00 MB | ~1.1-1.4 MB | < 30% |
-| 512 | 4.00 MB | ~4.5-5.5 MB | < 30% |
-| 1024 | 16.00 MB | ~18-22 MB | < 30% |
-| 2048 | 64.00 MB | ~72-85 MB | < 30% |
+| Kernel | 预期 DRAM Throughput | 预期 SM Throughput | 判定 |
+|--------|---------------------|-------------------|------|
+| `softmax_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
+| `layernorm_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 
-> ⚠️ **注意**：实测值会略大于理论值（cache miss、额外访问、index 计算等），误差 < 30% 属正常。如果误差 > 50%，检查是否有意外的全局内存访问（如 `__shared__` 误用为全局）。
+如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 3 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
 
-**关键验证**：N 翻倍时，实测 `dram__bytes_read + dram__bytes_write` 应接近 **4x**（如 1024→2048 时 16MB→64MB），这是 O(N²) 的直接证据。
+#### 任务 4：LeetGPU 在线题目 —— Group Normalization
 
-#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
-
-**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
+**题目链接**：<https://leetgpu.com/challenges/group-normalization>
 
 **与今日知识的关联**：
 
-本题就是今天标准 Attention 的 fused 实战版——今天我们写了物化 S/P 的 naive 版（O(N²) IO），本题要求把 Q·Kᵀ / softmax / ·V 融进单 kernel，让 scores 不落 HBM；用 Online Softmax 分块递推可进一步把 IO 压到 O(Nd)。核心区别：fused 版用 **分块 + Online Softmax** 让 S/P 永远不落 HBM。今天学的"O(N²) 来源"正是理解 fused 实现为什么要这么做的关键。
+本题是今天 normalization 主题的变体实战——Group Norm 与 LayerNorm 同构（都是"在一组元素上做 mean/var 两次 reduce + affine"），只是归约的维度从"一行"换成了"一个 group"。核心仍是两遍 scan + shared memory reduction：第一遍求 `mean`，第二遍求 `var`（依赖 `mean`，不能合并）。把今天的 `layernorm_kernel` 思路扩展到"一个 block 处理一个 group"即可。
 
-> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比 naive 版（O(N²)）和 fused 版（O(Nd)）的 `dram__bytes_read` 差异。完整题解（含 online softmax 递推、HBM 访问对比）见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 4）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 4（相加与复制），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [2. 两数相加](https://leetcode.cn/problems/add-two-numbers/) | 中等 | 模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html) |
-| [445. 两数相加 II](https://leetcode.cn/problems/add-two-numbers-ii/) | 中等 | 栈逆序相加 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/445_两数相加 II.html) |
-| [138. 随机链表的复制](https://leetcode.cn/problems/copy-list-with-random-pointer/) | 中等 | 哈希 / 拼接拆分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html) |
-| [430. 扁平化多级双向链表](https://leetcode.cn/problems/flatten-a-multilevel-doubly-linked-list/) | 中等 | DFS 栈扁平化 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/430_扁平化多级双向链表.html) |
+| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
+| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html) |
+| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
+| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
+| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：手动计算 N=512 的理论 HBM IO
+#### 实验 1：修改 D 观察 memory-bound 的性能尺度律
 
-不用运行程序，手算 N=512, d=64 时的理论 HBM IO 量，再与程序输出对比。
-
-**思考问题**：`4N² + 4Nd` 代入 N=512, d=64 得多少？为什么 N² 项远大于 Nd 项？
-> 提示：`4×512² = 1,048,576`，`4×512×64 = 131,072`，合计 1,179,648 元素 × 4B = 4.5 MB。N² 项是 Nd 项的 8 倍（N/d = 8）。
-
-#### 实验 2：减少一个中间矩阵的物化
-
-修改 kernel，只保留 S=QK^T 一步物化，softmax 在 register 里做完不写 P，直接做 PV。对比 HBM 读写量。
+把 `D` 分别改为 768、1024、4096，重新运行，记录时间并解释：
 
 ```cuda
-// 修改 Step 2/3：不写 P 到 HBM，在 register 里做 softmax 后直接累加 PV
-// 省去 P[qrow * N + j] = p_val; 这一行
+const int D = 4096; // 从 1024 改成 4096
 ```
 
-**思考问题**：少物化 P 能减少多少 HBM IO？为什么 FlashAttention 连 S 也不物化？
-> 提示：少物化 P 省了 2N²（P 的写+读）。但 S 仍物化（2N²），所以 IO 从 4N² 降到 2N²，仍是 O(N²)。FlashAttention 连 S 也不物化，才把 IO 降到 O(Nd)。
+**思考问题**：D 翻倍时，kernel 时间应该接近翻倍还是 4 倍？为什么？
+> 提示：D 决定了每行的 HBM 读写量（`2D × 4B`），三遍扫描使总读量约 `3D`。时间是线性的，因为 memory-bound kernel 的耗时≈ `Bytes / Bandwidth`，与 D 成正比。reduce 次数不变（仍是 warp shuffle 的固定 5 步）。
 
-#### 实验 3：绘制 IO 随 N 增长的曲线
+#### 实验 2：实现 Online Softmax（两遍扫描）
 
-用 ncu 测量 N=256/512/1024/2048 的实际 `dram__bytes_read + dram__bytes_write`，在纸上或用工具绘制 IO-N 曲线，验证 O(N²)。
+把三遍扫描压缩为两遍——第一遍同时求 max 和 sum，第二遍归一化。核心是 online 更新公式：
 
-```bash
-for N in 256 512 1024 2048; do
- ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum \
- --kernel-name regex:attention_naive \
- ./attention_naive 2>&1 | grep -E "dram__bytes"
-done
+```cuda
+// online softmax：一次遍历同时维护 running max 和 running sum
+float m_old = m_val;
+m_val = fmaxf(m_val, x);
+s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 ```
 
-**思考问题**：N 翻倍时实测 IO 应该接近几倍？为什么不是精确的 4x？
-> 提示：应接近 4x（O(N²) 的特征）。不精确是因为有固定的 overhead（kernel launch、index 计算的少量访问），N 越大 overhead 占比越小，越接近 4x。
+对比三遍扫描的 HBM 读次数（3D → 2D）和实测时间。
+
+**思考问题**：online 版本为什么能减少一次 HBM 读？它的代价是什么？
+> 提示：online 版本在遍历中实时"重整"已累积的 sum（乘 `exp(m_old - m_new)`），代价是每个元素多一次 exp 和乘法——用少量额外计算换一次全局访存，对 memory-bound 算子是划算的。这正是 FlashAttention 的基石。
+
+#### 实验 3：LayerNorm 用 Welford 合并成一次 reduce
+
+参考 Welford 在线均值/方差算法，把 mean 和 variance 在**一次遍历**内同时求出：
+
+```
+遍历每个元素 xi：
+ count++
+ delta = xi - mean
+ mean += delta / count
+ M2 += delta * (xi - mean) // M2 累积平方差
+最终：variance = M2 / count
+```
+
+对比两次 reduce 版本与 Welford 一次 reduce 版本的 HBM 读次数（2N → N）和数值精度差异。
+
+**思考问题**：Welford 并行化（多线程合并各自的 mean/M2/count）比串行复杂在哪？
+> 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 3 要读的 FasterTransformer `generalLayerNorm` 的核心优化点。
 
 ### 验证 Checklist
 
-- [ ] 能手推标准 Attention 三阶段的 HBM 读写量（4N² + 4Nd）
-- [ ] 能解释 O(N²) 项的来源（物化 S 和 P 两个 N×N 矩阵，各读写一次）
-- [ ] 标准 Attention kernel 编译运行正确，与 CPU 对比误差 < 1e-3
-- [ ] 能用 ncu 验证实测 HBM 读写量与理论值一致（误差 < 30%）
-- [ ] 能计算 softmax 部分的 arithmetic intensity（AI≈0.375）并判定为 memory-bound
-- [ ] 能解释 N 翻倍时 HBM IO 变 4x 的原因（O(N²) 的数学性质）
-- [ ] 能解释标准 Attention 是混合瓶颈（GEMM compute-bound + softmax memory-bound）
+- [ ] 能解释 safe softmax 为什么要减 max（数值稳定性 + 数学等价性证明）
+- [ ] 能画出 Softmax 三遍扫描的流程（求 max → 求 sum → 归一化）及每遍的 HBM 读写量
+- [ ] 能复用 Week 2 的 `warpReduceSum`/`warpReduceMax` 实现 `blockReduceSum`/`blockReduceMax`，并说出两处 `__syncthreads` 的作用
+- [ ] Softmax Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
+- [ ] LayerNorm Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
+- [ ] 能解释 LayerNorm 为什么需要两次 reduce（方差依赖均值，不能合并）
+- [ ] 能用 ncu 验证 Softmax 是 memory-bound（DRAM Throughput >> SM Throughput）
 
 ---
 
 ### 今日总结
 
-Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
+Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transformer 算子：
 
-1. **三阶段流程**：S=QK^T（写 S）→ softmax（读 S 写 P）→ PV（读 P 写 O），中间矩阵 S/P 各 N×N
-2. **O(N²) 来源**：物化两个 N×N 矩阵（S 和 P），各读写一次共 4N²，当 N >> d 时主导 IO
-3. **混合瓶颈**：GEMM 部分是 compute-bound（AI≈85），softmax 部分是纯 memory-bound（AI≈0.375）——softmax 的 O(N²) 读写是结构性瓶颈
-4. **长序列危害**：N=4096 时 S/P 各 64MB，N=16384 时各 1GB，N=65536 直接 OOM
-5. **ncu 验证**：实测 `dram__bytes_read + write` 与理论 4N²+4Nd 一致，N 翻倍时 IO 变 4x
-6. **FlashAttention 预告**：通过 tiling + online softmax 不物化 S/P，IO 从 O(N²) 降到 O(Nd)，Week 4 深入
+1. **Safe Softmax**：减 max 保证数值稳定，三遍扫描（max → sum → normalize），数学上与朴素 softmax 完全等价
+2. **两级 Block Reduce**：warp shuffle → shared memory → warp0 收尾，是 256/512/1024 线程协作 reduce 的标准模板
+3. **LayerNorm 两次 reduce**：先 mean 后 variance，第二次依赖第一次结果——这是无法合并的根本原因
+4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 58.45，优化重点在减少 HBM 读写
+5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
 
-掌握这些后，你就理解了 FlashAttention 的全部动机——Week 4 我们会手写完整的 FlashAttention kernel，把今天的 O(N²) 降到 O(Nd)。
+掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
 
 ---
 
 ### 面试要点
 
-1. **标准 Attention 的 HBM 读写复杂度是多少？为什么是 O(N²)？**
+1. **Softmax 为什么要减去 max？不减会怎样？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **复杂度**：O(N² + Nd)，当 N >> d 时简化为 O(N²)
- - **O(N²) 来源**：标准 Attention 物化两个 N×N 中间矩阵：
- - S = QK^T（N×N）：Step 1 写入 HBM，Step 2 读出 → 2N²
- - P = softmax(S)（N×N）：Step 2 写入 HBM，Step 3 读出 → 2N²
- - 合计 4N² 的 N² 项读写
- - **O(Nd) 来源**：Q/K/V 的读写（3Nd）和 O 的读写（Nd），线性于 N
- - **危害**：N=4096 时 S/P 各 64MB，N=16384 时各 1GB，长序列下显存和带宽都吃紧
- - **FlashAttention 解决**：不物化 S/P，在 SRAM 中完成 softmax，IO 降到 O(Nd)
+ - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
+ - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
+ - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
+ - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 
 </details>
 
 
-2. **标准 Attention 中 softmax 部分的 arithmetic intensity 是多少？是 compute-bound 还是 memory-bound？**
+2. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **softmax 的 FLOPs**：每元素约 3 次运算（exp + add + div），共 3N² FLOPs
- - **softmax 的 Bytes**：读 S（N²）+ 写 P（N²）= 2N² × 4 bytes
- - **AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte**
- - **判定**：AI=0.375 远低于 Ridge Point（~58.45）→ **纯 memory-bound**
- - **优化方向**：FlashAttention 把 softmax 从 HBM 搬到 SRAM，消除 O(N²) 读写
+ - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
+ - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
+ - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
+ - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
 </details>
 
 
-3. **标准 Attention 的 GEMM 部分是 compute-bound，为什么整体还是慢？**
+3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - GEMM（QK^T 和 PV）的 AI ≈ (4/3)·d ≈ 85（d=64）>> Ridge Point 58.45 → 确实 compute-bound
- - 但 GEMM 中间夹着 memory-bound 的 softmax，必须把 S 写回 HBM 再读出做 softmax，再把 P 写回读出做 PV
- - 这个"写回-读出"的 O(N²) 读写**无法被 GEMM 的算力掩盖**——中间结果的物化是结构性瓶颈
- - 类比：流水线中间有个慢工序，前后快工序都得等它
- - **结论**：整体性能受限于 softmax 的 O(N²) IO，而非 GEMM 的算力
+ - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~58.45）
+ - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
+ - **优化方向**：
+ 1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
+ 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
+ 3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
+ 4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
 </details>
 
 
-4. **N 翻倍时，标准 Attention 的 HBM IO 变几倍？为什么？**
+4. `blockReduceSum` **的两级结构是怎样的？为什么需要两级？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **变 4 倍**（O(N²) 的数学性质）
- - IO = 4N² + 4Nd，N 翻倍（N→2N）：4(2N)² = 16N² = 4 × 4N²（N² 项变 4x）
- - 而 FlashAttention 的 O(Nd)：N→2N 时 4(2N)d = 8Nd = 2 × 4Nd（只变 2x）
- - **这就是长序列下 FlashAttention 优势爆炸的原因**：N 越大，O(N²) 与 O(Nd) 的差距越大
- - 实例：N=4096 时 64x，N=16384 时 256x，N=65536 时 1024x
+ - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
+ - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
+ - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
+ - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
+ - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
+ - `smem[32]` **的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
 
 </details>
 
 
-5. **为什么 FlashAttention 能把 IO 从 O(N²) 降到 O(Nd)？核心思想是什么？**
+5. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **核心思想**：分块（tiling）+ Online Softmax，让 S/P 永远不落 HBM
- - **tiling**：把 Q 按行分 tile 驻留 SRAM，K/V 按列分 tile 逐块滑入。每个 Q tile 与所有 K/V tile 在 SRAM 中完成计算
- - **Online Softmax**：分块时每个 K/V tile 只能看到局部数据，用在线算法增量更新 (m, l, o) 三个 running state，不需要先看完所有 S 再做 softmax
- - **结果**：S/P 只在 SRAM/register 中存在，HBM 只读写 Q/K/V/O 各一次 → O(Nd)
- - **代价**：SRAM 容量有限，tile 大小受限；online softmax 的缩放有额外 exp 计算
- - **前提条件**：需要足够大的 SRAM（RTX 5090 每 SM 100KB）容纳 Q tile + K/V tile
+ - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
+ - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
+ - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
+ - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
 
 ---
 

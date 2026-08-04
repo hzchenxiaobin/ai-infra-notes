@@ -1,376 +1,896 @@
-## Day 1：Trace Transformer 推理流程
+## Day 1：FlashAttention CUDA 实现（简化版）
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 Transformer 推理的 **Prefill / Decode 两阶段**执行特征及其对 GPU 性能的根本影响
-2. 掌握 `torch.profiler` 的使用方法，能独立采集并分析一次 forward 的算子时间线
-3. 能列出 Transformer 单层的 **6 类算子**及其执行顺序，理解哪些是 compute-bound、哪些是 memory-bound
-4. 理解 Decode 阶段 M=1 的 GEMM 为什么退化为 memory-bound
+1. 理解标准 Attention 的 O(N²) HBM 访问瓶颈
+2. 掌握 FlashAttention 的核心创新：分块（Tiling）+ Online Softmax
+3. 能完整推导 Online Softmax 三个更新公式（m_new, l_new, o_new）
+4. 理解 `exp(m - m_new)` 缩放因子的作用
+5. 手写简化版 FlashAttention Forward Kernel
 
-> 💡 **为什么重要**：Prefill vs Decode 是推理系统入门必考题。不理解两阶段差异，就无法理解 KV Cache、PagedAttention、Continuous Batching 等推理优化的动机。今天的内容是 Week 3 全周的地基——后续手写 Softmax/LayerNorm Kernel、Attention IO 分析、端到端 Profiling 都建立在这套认知之上。
-
----
-
-### 学前导读：Transformer 推理不是一次 forward 那么简单
-
-在训练时，我们习惯把一整个 batch 的 token 喂给模型，一次 forward 得到所有位置的输出。但**推理场景完全不同**：
-
-- 用户输入一条 prompt（可能几千个 token），模型需要**并行处理**整条 prompt → 这叫 **Prefill**
-- 然后**逐个 token 生成**回答，每次只产出 1 个 token，直到遇到 EOS → 这叫 **Decode**
-
-这两阶段虽然跑的是同一套 Transformer 层，但**算子形状截然不同**，导致性能特征天差地别。理解这个差异，是所有推理优化的起点——记住 Prefill / Decode 这两个词，今天的全部内容都围绕它们展开。
+> 💡 **为什么重要**：FlashAttention 是推理优化的第一考点，大模型 Infra 面试标配。它不是靠减少 FLOPS 加速（计算量相同），而是靠**减少 HBM 数据移动**——这体现了 AI Infra 的核心原则：减少数据移动比减少计算更重要。
 
 ---
 
-### 背景知识：Transformer 结构基础
+### 学前导读：标准 Attention 的问题
 
-> 📖 Transformer 的结构基础——RNN/LSTM 演化、Self-Attention 与 QKV 数学推导、Multi-Head Attention、位置编码、残差/LayerNorm/FFN、Block 组装——在 **Transformer 专题** 里有完整的 7 天教程（每天配手写实现）：[Transformer 专题](../../../../aiinfra/topics/transformer/README.md)。已熟悉这些内容或学完专题的同学直接往下读，本文不再重复，只保留后续章节要用的符号约定。
+![FlashAttention HBM 访问对比](../../week2/images/hbm_comparison.svg)
 
-#### 关键符号速查
+#### 标准 Attention 计算
 
-| 符号 | 含义 | 典型值 |
-|------|------|--------|
-| `N` | 序列长度（token 数） | Prefill 数百~数万；Decode 恒为 1 |
-| `d` / `d_model` | 隐藏维度（每个 token 的向量长度） | 512（本课 mini 模型）~ 8192 |
-| `h` | Attention 头数 | 8 ~ 128 |
-| `d_head` | 每个头的维度 = d / h | 64 或 128 |
-| `d_ff` | FFN 中间维度 | 通常 4 × d_model |
-| `vocab_size` | 词表大小 | 3 万 ~ 15 万 |
-| `B` | Batch size | 推理时通常 1 ~ 数百 |
-| `L` | 层数 | 12 ~ 96+ |
+```
+S = Q × K^T (N×N 矩阵，O(N²) 显存)
+P = softmax(S) (N×N 矩阵，O(N²) 显存)
+O = P × V (输出，O(N×d) 显存)
+```
+
+#### HBM 访问瓶颈
+
+以 N=4096, d=64 为例，标准 Attention 的 HBM 读写量：
+
+```
+读 Q: N×d = 262K
+读 K: N×d = 262K
+写 S: N×N = 16M ← O(N²) 瓶颈
+读 S: N×N = 16M
+写 P: N×N = 16M ← O(N²) 瓶颈
+读 P: N×N = 16M
+读 V: N×d = 262K
+写 O: N×d = 262K
+总计 HBM 读写: ~48M elements ≈ 192MB
+```
+
+**核心问题**：S 和 P 两个 N×N 中间矩阵必须写入 HBM 再读回，导致 O(N²) 的 HBM 访问。
+
+#### FlashAttention 的核心洞察
+
+> 不需要把 S 和 P 完整写入 HBM。通过分块计算，在 SRAM（Shared Memory）+ 寄存器中完成 softmax 和输出累加，HBM 访问降为 O(Nd) 级别（d 为 head dim；把 d 看作常数时即 O(N)）。
+
+---
+
+### Attention 基础回顾
+
+在深入 FlashAttention 之前，先把 Attention 本身的基础打牢——这些是面试的“开胃题”，答不好后面就不用聊了。
+
+#### 0.1 为什么需要 Attention
+
+RNN/LSTM 按时间步串行处理序列，有两个致命问题：
+
+- **无法并行**：第 t 步依赖第 t-1 步的隐状态，GPU 的并行能力完全用不上
+- **长程依赖衰减**：远距离信息要逐格传递，梯度在长链上消失
+
+Attention 让序列中**任意两个位置直接交互**，一步建立连接，且所有位置的计算互相独立、可以完全并行——这正是它能吃满 GPU 的根本原因。
+
+#### 0.2 Scaled Dot-Product Attention 公式
+
+```
+Attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
+
+其中 Q = X·W_Q, K = X·W_K, V = X·W_V（self-attention 时三者同源，都来自输入 X）
+Q/K/V 形状均为 (N × d)：N 是序列长度，d 是 head 维度
+```
+
+**直觉类比（查字典）**：每个 token 拿着自己的 Query 去和所有 token 的 Key 比相似度（点积），相似度经 softmax 归一化成权重，再对 Value 加权求和——就像用查询词在字典里检索：Key 是索引，Value 是取回的内容。
+
+**三步拆解**：
+
+1. **算相似度**：`S = Q·Kᵀ / √d`，形状 (N×N)，`s_ij` 表示第 i 个 token 对第 j 个 token 的关注度
+2. **归一化**：softmax 按行做，每行变成一个和为 1 的概率分布
+3. **加权求和**：`O = P·V`，每个位置的输出是全体 Value 按关注度的加权和
+
+#### 0.3 为什么除以 √d
+
+- 假设 q、k 的各分量独立、均值为 0、方差为 1，则点积 `q·k = Σ q_i·k_i` 的**方差等于 d**
+- d 越大，score 的量级越大（约 √d 倍），softmax 的输入落在**饱和区**：输出逼近 one-hot，梯度趋近于 0，训练难以收敛
+- 除以 √d 把 score 的方差归一回 1，softmax 工作在梯度敏感区
+- **面试加分点**：这个系数不是拍的常数，是从方差推导出来的——BERT/GPT 的 d_head=64 时 `1/√d = 0.125`
+
+#### 0.4 Softmax 为什么减 max（数值稳定性）
+
+```
+softmax(x)_i = exp(x_i) / Σ exp(x_j)  ← 直接算，x_i 稍大 exp 就溢出（float32 exp(89) ≈ inf）
+softmax(x)_i = exp(x_i - c) / Σ exp(x_j - c)  ← 数学上严格相等（分子分母同乘 exp(-c)）
+取 c = max(x)，保证指数 ≤ 0，exp 结果落在 (0, 1]，不会溢出
+```
+
+**与今天的联系**：减 max 需要**全局**最大值，而分块计算时每块只能看到局部——这就是 Online Softmax 要递推维护 running max 的原因，5.2 节会展开。
+
+#### 0.5 Multi-Head Attention
+
+```
+MultiHead(X) = Concat(head_1, ..., head_h) · W_O
+head_i = Attention(X·W_Qⁱ, X·W_Kⁱ, X·W_Vⁱ)
+```
+
+- **单头只有一个表示子空间**；多头把 d_model 切成 h 份（`d_head = d_model / h`，如 d_model=512、h=8 → d_head=64），各自独立做 attention，最后拼接过 W_O
+- 不同头可以学不同类型的关系（语法、指代、位置、语义……），类似 CNN 里多个卷积核
+- 总计算量与“单头全维度”基本相当——多头不增加 FLOPs，增加的是表达能力
+- 代码层面：今天的 kernel 用 `blockIdx.y` 索引 head，**各 head 之间完全独立**，天然按 block 并行
+
+#### 0.6 Self / Cross Attention 与 Causal Mask
+
+| 类型 | Q 来自 | K/V 来自 | 典型场景 |
+|---|---|---|---|
+| Self-Attention | X 本身 | X 本身 | Encoder（BERT）、Decoder 单层内部 |
+| Cross-Attention | Decoder 当前状态 | Encoder 输出 | 机器翻译、T5/BART 的解码层 |
+
+**Causal Mask（因果掩码）**：Decoder 自回归生成时，位置 i 只能看到 ≤ i 的 token，即对 S 加一个下三角为 0、上三角为 `-inf` 的掩码（`-inf` 经 softmax 后权重为 0）。实验 4 会动手在本 kernel 上加 causal mask。
+
+#### 0.7 复杂度总览（引出今天的主线）
+
+| 项目 | 复杂度 | 说明 |
+|---|---|---|
+| 计算量 | O(N²d) | QKᵀ 和 P·V 各一次 (N×N)×(N×d) 的 GEMM |
+| 显存/访存 | O(N²) | S、P 两个 N×N 中间矩阵 |
+
+d 固定时，**长序列的瓶颈是 N² 的显存和 HBM 访问，而不是计算**——这正是 FlashAttention 要解决的问题，也是 5.1 节分块策略的动机。
 
 ---
 
 ### 理论学习
 
-#### 1.1 Prefill vs Decode 执行特征对比
+#### 5.1 分块策略（Tiling）
 
-![Prefill vs Decode 执行特征对比](../images/prefill_vs_decode.svg)
+![FlashAttention 分块策略](../../week2/images/flash_attention_tiling.svg)
 
-上图直观展示了两阶段的核心差异。下面用表格精确对比：
+FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：外循环遍历 Q tile（行方向，步长 Br），内循环遍历 KV tile（行方向，步长 Bc），每步计算 `S_tile = Q_tile × KV_tile^T (Br×Bc)` 并在线更新 softmax 和输出累加。
 
-| 维度 | Prefill 阶段 | Decode 阶段 |
-|------|-------------|-------------|
-| **输入形状** | `(B, N_prompt, d)`，N_prompt 可达数千 | `(B, 1, d)`，每次只处理 1 个 token |
-| **Attention 矩阵** | N×N 完整矩阵 | 1×N（单 query 对所有历史 key） |
-| **计算量** | 大（GEMM 是 M×N×K 的大矩阵乘） | 小（GEMM 退化为向量×矩阵） |
-| **瓶颈类型** | 通常是 **Compute-bound**（GEMM 主导） | 通常是 **Memory-bound**（KV Cache 读取主导） |
-| **GPU 利用率** | 高（SM 充分利用，60-85%） | 低（大量 SM 空闲，等显存，10-30%） |
-| **典型优化** | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
+**关键**：Q tile 驻留在 SRAM 中（不移动），K/V tile 逐块滑入。每计算完一个 KV tile，立即更新 running softmax 状态和输出累加器。
 
-> 💡 **一句话总结**：Prefill 是"一大堆数据一起算"，算力是瓶颈；Decode 是"一次只算一个 token，但要翻一遍历史"，访存是瓶颈。
+**分块大小约束**：SRAM 只需容纳 Q/K/V 三个 tile：`Br×d + 2×Bc×d ≤ SRAM 容量`。S/P 中间结果只活在寄存器里，不占 SRAM、更不落 HBM（FlashAttention 论文也是这个口径）。在静态 `__shared__` 48 KB/block 的统一硬上限下，Br、Bc 不能取得太大。
 
-#### 1.2 Transformer 单层数据流
+#### 5.2 Online Softmax 三公式推导
 
-![Transformer 单层数据流](../images/transformer_dataflow.svg)
+![Online Softmax 三个更新公式](../../week2/images/online_softmax_formula.svg)
 
-上图展示了一个标准 Transformer Block 的完整数据流。按执行顺序：
+![Online Softmax 三公式推导](../../week2/images/online_softmax_derivation.svg)
 
-![Transformer 单层前向数据流](../../images/week3_transformer_forward_flow.svg)
+这是 FlashAttention 的核心创新，也是面试必考的白板推导题。下面先**只推导 softmax**（只涉及 $m$ 和 $l$），再把注意力输出 $o$ 引入，逐步得到三个增量更新公式。
 
-**关键观察**：Transformer 单层包含 **6 类主要算子**：
+##### 1. 为什么需要 Online Softmax？
 
-1. **QKV / Output / FFN Linear**（GEMM，本课 mini 模型共 4 个）：Prefill 时 compute-bound，Decode 时 memory-bound
-2. **Attention QKᵀ**（GEMM）：同上，bound 类型随 M 切换
-3. **Softmax**：element-wise + reduction，永远 **memory-bound**
-4. **Attention PV**（GEMM）：同 QKᵀ
-5. **LayerNorm**（2 次）：element-wise + reduction，永远 **memory-bound**
-6. **GELU**（FFN 中间）：element-wise，永远 **memory-bound**
+标准 softmax 需要先知道整个 score 向量的最大值：
 
-一句话记忆：**GEMM 的 bound 类型随 M 切换，其余算子永远是 memory-bound**——这就是面试题 2 的标准答案。
+$$
+y_i = \frac{\exp(x_i - m)}{l}, \qquad m = \max_j x_j, \qquad l = \sum_j \exp(x_j - m)
+$$
 
-**算子执行顺序与依赖**：
+减去 $m$ 是为了**数值稳定**（防止 $\exp$ 上溢），且 softmax 对整体减常数是不变的：
 
-![Transformer 单层算子执行流水线](../../images/week3_transformer_layer_pipeline.svg)
+$$
+\operatorname{softmax}(x_i - c) = \frac{\exp(x_i - c)}{\sum_j \exp(x_j - c)} = \operatorname{softmax}(x_i)
+$$
 
-> 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。Day 6 会详细分析 fusion 机会。
+但在 FlashAttention 里，score 是按 KV tile 一块一块流进来的，处理第 $k$ 块时**还没看到后面的块**，无法提前知道全局 max $m$。于是只能边读边算，用"当前已知的 max"先做近似，等更大的 max 出现时再把之前的计算**修正**过来。
 
-#### 1.3 为什么 Decode 是 Memory-bound：M=1 的 GEMM
+##### 2. 先推导 Online Softmax：只维护 $(m, l)$
 
-![Decode 为什么是 Memory-bound](../images/decode_memory_bound.svg)
+设已经处理过的所有 score 组成集合 $X_{\text{old}}$。为了在线计算 softmax，只需要维护两个量：
 
-上图用 QKV GEMM 为例，直观展示了 M 从 1024 变成 1 时，arithmetic intensity 的骤降：
+- $m$：已处理 score 的 running maximum
 
-**Prefill 阶段 QKV GEMM**：
-- 矩阵形状：`(1024, 512) × (512, 1536)`
-- FLOPs = 2×1024×512×1536 ≈ 1.6G
-- Bytes ≈ 1.3M（读 x + W，写 QKV）
-- **AI ≈ 384 FLOP/Byte >> Ridge Point(58.45) → Compute-bound**
+  $$
+  m = \max_{x \in X_{\text{old}}} x
+  $$
 
-**Decode 阶段 QKV GEMM**：
-- 矩阵形状：`(1, 512) × (512, 1536)` — M=1，退化为向量×矩阵
-- FLOPs = 2×1×512×1536 ≈ 1.6M（少了 1024 倍）
-- Bytes ≈ 0.8M（W 的大小没变，还是要读完整权重）
-- **AI ≈ 2 FLOP/Byte << Ridge Point(58.45) → Memory-bound**
+- $l$：以 $m$ 为参考点的指数和（softmax 的分母）
 
-**根本原因**：M=1 时计算量与 M 成正比骤降，但权重矩阵 W 的大小不变，读取量几乎没减。AI = FLOPs/Bytes 极低，数据喂不饱计算单元。
+  $$
+  l = \sum_{x \in X_{\text{old}}} \exp(x - m)
+  $$
 
-**Decode 阶段的 Attention 更严重**——每次生成 1 个 token，都要读取**整个 KV Cache**（所有历史 token 的 K 和 V）：
+**初始状态**：$m = -\infty,\; l = 0$。
 
-```
-KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
- N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 256 MB
- 每生成 1 个 token 要读 256 MB → 纯访存瓶颈
-```
+有了 $(m, l)$，已处理部分的 softmax 概率可以直接写成：
 
-**优化方向**：
-- **KV Cache**：避免重算历史 K/V（空间换时间）
-- **PagedAttention**（vLLM）：减少 KV 显存碎片
-- **CUDA Graph**：减少 Decode 阶段 kernel launch overhead
-- **Continuous Batching**：合并多个 decode 请求提高 M
+$$
+p(x) = \frac{\exp(x - m)}{l}, \qquad x \in X_{\text{old}}
+$$
+
+**新块到来时，先更新 max（公式 1）**
+
+现在来了新块 $X_{\text{new}} = \{x_j\}$。新的全局 max 是：
+
+$$
+m_{\text{new}} = \max\left(m,\; \max_{x_j \in X_{\text{new}}} x_j\right)
+$$
+
+这就是**公式 1**。含义：全局 max 要么是旧 max，要么是新块里的最大值。
+
+**参考点平移**
+
+旧的 $l$ 是在旧参考点 $m$ 下算的。现在参考点变成 $m_{\text{new}}$，需要把所有旧指数"换算"到新参考点：
+
+$$
+\exp(x - m_{\text{new}}) = \exp(x - m) \cdot \exp(m - m_{\text{new}})
+$$
+
+记缩放因子
+
+$$
+\alpha = \exp(m - m_{\text{new}})
+$$
+
+因为 $m_{\text{new}} \ge m$，所以 $m - m_{\text{new}} \le 0$，$\alpha \in (0, 1]$，永远不会放大数值——这正是 online softmax 数值稳定的关键。
+
+**更新 sum（公式 2）**
+
+新的分母要把旧部分和新部分都统一到 $m_{\text{new}}$：
+
+$$
+\begin{aligned}
+l_{\text{new}}
+&= \sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) + \sum_{x_j \in X_{\text{new}}} \exp(x_j - m_{\text{new}})\\
+&= \alpha \sum_{x \in X_{\text{old}}} \exp(x - m) + \sum_{j} \exp(x_j - m_{\text{new}})\\
+&= \alpha \cdot l + \sum_{j} \exp(x_j - m_{\text{new}})
+\end{aligned}
+$$
+
+即：
+
+$$
+\boxed{\,l_{\text{new}} = l \cdot \exp(m - m_{\text{new}}) + \sum_{j} \exp(x_j - m_{\text{new}})\,}
+$$
+
+含义：旧 sum 乘汇率 $\alpha$ 缩放到新参考点，再加上新块的指数和。
+
+到这里，**Online Softmax 已经完整**：处理完所有 tile 后，$m$ 是全局 max，$l$ 是全局指数和，任意 score $x$ 的 softmax 概率就是 $\exp(x - m)/l$。
+
+##### 3. 再引入输出 $o$：从 softmax 到 Attention
+
+Attention 不只是算概率，还要用概率对 $V$ 加权求和：
+
+$$
+o = \sum_{x \in X_{\text{old}}} p(x) \cdot v_x
+= \frac{\sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x}{l}
+$$
+
+也就是说，$o$ 是**已归一化的部分输出**（softmax 加权平均）。初始状态 $o = \mathbf{0}$（零向量）。
+
+$l \cdot o$ 是旧参考点下的**未归一化**加权和：
+
+$$
+l \cdot o = \sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x
+$$
+
+新块到来后，参考点从 $m$ 变成 $m_{\text{new}}$，把旧加权和也按汇率 $\alpha$ 换算：
+
+$$
+\sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) \cdot v_x = \alpha \cdot l \cdot o
+$$
+
+新块的未归一化贡献是：
+
+$$
+\sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j
+$$
+
+所以新的全局 softmax 加权平均为：
+
+$$
+o_{\text{new}} = \frac{\alpha \cdot l \cdot o + \sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}
+$$
+
+拆成两项就是**公式 3**：
+
+$$
+\boxed{\,o_{\text{new}} = o \cdot \frac{l \cdot \exp(m - m_{\text{new}})}{l_{\text{new}}} + \frac{\sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}\,}
+$$
+
+直观理解：
+
+- 第一项把旧输出按"旧概率质量 $l\alpha$ / 新总质量 $l_{\text{new}}$"重新归一化；
+- 第二项把新块按其在全局 softmax 下的概率权重 $\exp(x_j - m_{\text{new}})/l_{\text{new}}$ 对 $v_j$ 加权。
+
+##### 4. 为什么这样就是对的？
+
+可以把所有 tile 的 score 全部收集起来，用标准 softmax 一次性计算：
+
+$$
+O = \frac{\sum_{j=1}^{N} \exp(x_j - m^*) \cdot v_j}{\sum_{j=1}^{N} \exp(x_j - m^*)}, \qquad m^* = \max_j x_j
+$$
+
+Online Softmax 每步都严格维护"当前已见部分"的全局 max、指数和、加权平均。当处理完最后一块时，$m = m^*$，$l = \sum \exp(x_j - m^*)$，$o = O$，与全量计算**完全相等**。
+
+##### 5. 与论文写法的等价性
+
+本教程采用"**每步归一化**"：$o$ 始终是已归一化的部分结果，所有 tile 处理完后 $o$ 就是最终输出，末尾无需再除 $l$。
+
+FlashAttention 论文的原始写法是"**末尾归一化**"：$o$ 只累加未归一化加权和，每步只做
+
+$$
+o_{\text{new}} = o \cdot \exp(m - m_{\text{new}}) + \sum_j \exp(x_j - m_{\text{new}}) \cdot v_j
+$$
+
+全部 tile 处理完最后做一次 $O = o / l$。
+
+两种写法数学严格等价：
+
+- 前者每步多一次除法，状态更直观；
+- 后者把 $N/B_c$ 次除法省成 1 次，FlashAttention-2 正是靠这种"推迟归一化"减少了 non-matmul FLOPs。
+
+面试手写推导时用任何一种都可以，但要能讲清两者的差别。
+
+##### 关键理解点
+
+1. 三个公式是**递推的**：每次新块到来时，用旧 $(m, l, o)$ 和新块 $(x_j, v_j)$ 计算新 $(m_{\text{new}}, l_{\text{new}}, o_{\text{new}})$；
+2. $\exp(m - m_{\text{new}})$ 是**关键缩放因子**（汇率），保证全局参考点一致，且 $\le 1$ 保证数值稳定；
+3. 整个过程 HBM 访问量为 $O(Nd)$ 级别，因为不需要存储中间 $S$ 和 $P$ 矩阵。
 
 ---
 
-### 工具准备：torch.profiler 使用方法
+#### 5.3 FlashAttention 论文原始伪代码（Algorithm 1）
 
-#### 核心 API
+下面给出论文中的 Forward 伪代码，可直接与 5.2 节的三个更新公式对照。注意这是**论文原始形式**：$O_i$ 每一步都做一次归一化，状态 `(m, l, O)` 都写在 HBM 里；下面「Coding 任务」的简化 CUDA kernel 把归一化摊进了 `acc`，数学完全等价。
 
-![torch.profiler 工作流](../images/torch_profiler_workflow.svg)
+```text
+# 块大小：保证 Q/K/V/O 四个块加中间结果能同时驻留 SRAM
+Bc = ceil(M / 4d)
+Br = min(ceil(M / 4d), d)
 
-```python
-import torch.profiler
+O = 0_{N×d}          # 输出，存在 HBM
+l = 0_N              # running sum，存在 HBM
+m = -inf_N           # running max，存在 HBM
 
-with torch.profiler.profile(
-    activities=[
-        torch.profiler.ProfilerActivity.CPU,   # 采集 CPU 端调度
-        torch.profiler.ProfilerActivity.CUDA,  # 采集 GPU 端 kernel
-    ],
-) as prof:
-    for _ in range(5):
-        out = model(x)
+for j = 1 .. Tc:                       # 外循环：遍历 K/V tile（共 Tc=ceil(N/Bc) 个）
+    load K_j, V_j  → SRAM              # 当前 KV 块从 HBM 搬到片上
 
-# 按 CUDA 时间排序，输出 top 算子
-print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
+    for i = 1 .. Tr:                   # 内循环：遍历 Q tile（共 Tr=ceil(N/Br) 个）
+        load Q_i, O_i, l_i, m_i → SRAM # Q 块和当前 running 状态搬到片上
 
-# 导出 Chrome trace（可用 chrome://tracing 打开）
-prof.export_chrome_trace("transformer_trace.json")
+        S̃ = Q_i · K_jᵀ                 # 片上计算 Br×Bc 的 score 块
+        m̃ = rowmax(S̃)                  # 当前块的局部行最大值
+        P̃ = exp(S̃ - m̃)                 # 未归一化的注意力权重
+        l̃ = rowsum(P̃)                  # 当前块未归一化的指数和
+
+        m_new = max(m_i, m̃)            # 公式 1：更新全局 running max
+
+        # 公式 2：把旧的 running sum 缩放到新的参考点，再加当前块
+        l_new = e^(m_i - m_new) · l_i + e^(m̃ - m_new) · l̃
+
+        # 公式 3：把旧的输出 O_i 按新的参考点重归一化，再加当前块的贡献
+        O_i ← diag(l_new)⁻¹ · (diag(l_i) · e^(m_i - m_new) · O_i
+                                + e^(m̃ - m_new) · P̃ · V_j)
+
+        write O_i, l_i ← l_new, m_i ← m_new  → HBM   # 写回当前 Q tile 的状态
+
+return O
 ```
 
-#### 关键指标解读
+**与公式的对应关系**：
 
-| 指标 | 含义 | 关注点 |
-|------|------|--------|
-| `Self CUDA` | 该算子自身的 GPU 执行时间（不含子算子） | 排序依据，找 top3 |
-| `Self CPU` | 该算子的 CPU 调度时间 | 判断 launch overhead |
-| `CPU Mem` | CPU 端内存分配 | 判断是否有频繁分配 |
-| `# Calls` | 调用次数 | 判断是否过度 launch |
+| 伪代码 | 5.2 节公式 |
+|---|---|
+| `m_new = max(m_i, m̃)` | 公式 1：$m_{new} = \max(m, \max(x_j))$ |
+| `l_new = ...` | 公式 2：$l_{new} = l \cdot e^{m - m_{new}} + \sum e^{x_j - m_{new}}$ |
+| `O_i ← diag(l_new)⁻¹·(...)` | 公式 3 的论文归一化变体：先把旧的累加输出缩放到新的全局参考点，再加新块并按新 sum 归一化 |
+| `e^(m_i - m_new)` / `e^(m̃ - m_new)` | 关键缩放因子：旧参考点 / 新参考点切换到当前全局 max |
 
-**分析流程**：
-1. 按 `Self CUDA` 排序找 top3 算子 → 定位耗时最重的计算
-2. 看 `Self CPU` vs `Self CUDA` 比值 → 若 CPU 远大于 CUDA，说明 launch overhead 高
-3. 在 Chrome trace 中观察 kernel 之间的空白（gap）→ gap = CPU 调度延迟
-4. 对比 Prefill 和 Decode 的算子分布差异
+> 💡 **内存访问视角**：循环里唯一从 HBM 来回搬的"大件"是 Q/K/V 块与 running 状态；$S̃$、$P̃$ 两个 $B_r \times B_c$ 小矩阵只活在 SRAM/寄存器里，**从不写 HBM**——这就是 FlashAttention 从 $O(N^2)$ 降到 $O(N^2 d^2 / M)$ HBM 访问的原因。
 
 ---
 
-### Coding 任务：Trace Transformer Forward
+### Coding 任务：FlashAttention 简化版 Forward Kernel
 
-#### 任务 1：实现 Mini Transformer Block（`trace_transformer.py`）
+> ⚠️ **关于 1/√d scale**：标准 Attention 的 score 是 `Q·K^T / √d`。本简化版为了聚焦 online softmax 的结构，**省略了 scale**（GPU kernel 与 CPU 参考实现同步省略，数值对比仍然自洽）。LeetGPU 提交和面试手写时记得加回——在 `s` 算出后乘 `1.0f / sqrtf(D)` 即可，[LeetGPU 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)的 kernel 有完整示范。
 
-```python
-# trace_transformer.py —— 最小 Transformer Block + Prefill/Decode profiling
-# 运行命令: python trace_transformer.py
-# 依赖: pip install torch
+#### 任务 1：创建 flash_attention.cu
 
-import torch
-import torch.nn as nn
-import math
+创建文件 `kernels/flash_attention.cu`：
 
-class MiniAttention(nn.Module):
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
+```cuda
+// flash_attention.cu —— FlashAttention 简化版 Forward Kernel
+// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
+// 运行命令: ./flash_attention
 
-    def forward(self, x):
-        B, N, _ = x.shape
-        qkv = self.qkv(x)                                    # GEMM: B*N*d x d*3d
-        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
-        qkv = qkv.permute(2, 0, 3, 1, 4)                     # 3, B, n_heads, N, d_head
-        q, k, v = qkv[0], qkv[1], qkv[2]
-        scale = self.d_head ** -0.5
-        attn = torch.matmul(q, k.transpose(-2, -1)) * scale  # GEMM: Q x K^T -> N x N
-        attn = torch.softmax(attn, dim=-1)                   # softmax（memory-bound）
-        out = torch.matmul(attn, v)                          # GEMM: attn x V -> N x d_head
-        out = out.transpose(1, 2).reshape(B, N, self.d_model)
-        return self.out(out)                                 # GEMM: Output Linear
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
 
-class TransformerBlock(nn.Module):
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.attn = MiniAttention(d_model, n_heads)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, d_ff),
-            nn.GELU(),
-            nn.Linear(d_ff, d_model),
-        )
+#define Br 64 // Q tile 的行数；本实现一个 block 固定 Br 个线程，每个线程负责 Q tile 的一行
+#define Bc 32 // K/V tile 的行数；Bc=32 时 SRAM 占 32 KB，Bc=64 会顶到 48 KB 静态上限、每 SM 只能驻留 1 个 block
+#define D 64  // Head dimension
 
-    def forward(self, x):
-        x = x + self.attn(self.norm1(x))   # Attention + residual
-        x = x + self.ffn(self.norm2(x))    # FFN + residual
-        return x
+__global__ void flashAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K, const float* __restrict__ V,
+                                  float* __restrict__ O, int N, int numHeads) {
+    __shared__ float s_Q[Br][D]; // Q tile: Br×D
+    __shared__ float s_K[Bc][D]; // K tile: Bc×D
+    __shared__ float s_V[Bc][D]; // V tile: Bc×D
+    // 注意：S/P 中间结果不放 shared memory，每个线程用寄存器/local 保存自己那一行的值
 
-def profile_phase(model, x, name, n_iter=5):
-    """对一个阶段做 profiling 并输出 top 算子"""
-    # warmup
-    for _ in range(2):
-        _ = model(x)
-    torch.cuda.synchronize()
+    int batch = blockIdx.z;
+    int head = blockIdx.y;
+    int qTileRow = blockIdx.x * Br;
 
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA,
-        ],
-    ) as prof:
-        for _ in range(n_iter):
-            _ = model(x)
-        torch.cuda.synchronize()
+    int tid = threadIdx.x;        // 本线程负责的 Q 行（tile 内偏移）
+    int qRow = qTileRow + tid;    // 全局行号
+    int bhOffset = (batch * numHeads + head) * N;
 
-    print(f"\n===== {name} Phase (shape={tuple(x.shape)}) =====")
-    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
-    prof.export_chrome_trace(f"trace_{name}.json")
+    // 每个线程维护自己那一行的 running 状态
+    float m = -1e30f;   // running max
+    float l = 0.0f;     // running sum
+    float acc[D] = {0}; // running output accumulator（每步归一化变体，末尾无需再除 l）
 
-def main():
-    torch.manual_seed(42)
-    d_model, n_heads = 512, 8
-    model = TransformerBlock(d_model, n_heads).cuda().half()
+    // Step 1: 全 block 协作加载 Q tile 到 Shared Memory（全局内存合并访问）
+    for (int idx = tid; idx < Br * D; idx += Br) {
+        int r = idx / D, c = idx % D;
+        s_Q[r][c] = (qTileRow + r < N) ? Q[bhOffset * D + (qTileRow + r) * D + c] : 0.0f;
+    }
+    __syncthreads();
 
-    # Prefill: 处理长 prompt（N=1024）
-    x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_prefill, "prefill", n_iter=5)
+    // Step 2: 内循环遍历 K/V tile
+    for (int kvStart = 0; kvStart < N; kvStart += Bc) {
+        // 2a: 协作加载 K 和 V tile
+        for (int idx = tid; idx < Bc * D; idx += Br) {
+            int r = idx / D, c = idx % D;
+            s_K[r][c] = (kvStart + r < N) ? K[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
+            s_V[r][c] = (kvStart + r < N) ? V[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
+        }
+        __syncthreads();
 
-    # Decode: 逐 token 生成（N=1）
-    x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
-    profile_phase(model, x_decode, "decode", n_iter=10)
+        // 2b+2c: 每个线程独立计算自己那一行的 score，并做 Online Softmax 更新
+        if (qRow < N) {
+            int kvLen = min(Bc, N - kvStart); // 最后一个 tile 可能不满
 
-    print("\n===== 观察要点 =====")
-    print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
-    print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
-    print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
-    print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
+            // 2b: s_row[c] = Q[qRow] · K[kvStart+c]，本行对当前 KV tile 的 kvLen 个 score
+            float s_row[Bc];
+            float m_tile = -1e30f;
+            for (int c = 0; c < kvLen; c++) {
+                float s = 0.0f;
+                #pragma unroll
+                for (int d = 0; d < D; d++)
+                    s += s_Q[tid][d] * s_K[c][d];
+                s_row[c] = s; // 面试/LeetGPU 版本这里要乘 1/sqrtf(D)
+                m_tile = fmaxf(m_tile, s);
+            }
 
-if __name__ == "__main__":
-    main()
+            // 公式1: max 更新
+            float m_new = fmaxf(m, m_tile);
+
+            // 公式2: sum 更新（l_scale 把旧 sum 从参考点 m 缩放到 m_new）
+            float l_scale = expf(m - m_new);
+            float l_new = l * l_scale;
+            for (int c = 0; c < kvLen; c++) {
+                s_row[c] = expf(s_row[c] - m_new); // p_c = exp(s_c - m_new)
+                l_new += s_row[c];
+            }
+
+            // 公式3: output 更新（每步归一化变体）
+            float o_scale = (l * l_scale) / l_new;
+            #pragma unroll
+            for (int d = 0; d < D; d++)
+                acc[d] *= o_scale;
+            for (int c = 0; c < kvLen; c++) {
+                float p_norm = s_row[c] / l_new;
+                #pragma unroll
+                for (int d = 0; d < D; d++)
+                    acc[d] += p_norm * s_V[c][d];
+            }
+
+            m = m_new;
+            l = l_new;
+        }
+        __syncthreads(); // 等所有线程用完 s_K/s_V，再加载下一个 tile
+    }
+
+    // Step 3: 写回最终结果
+    if (qRow < N) {
+        for (int d = 0; d < D; d++)
+            O[bhOffset * D + qRow * D + d] = acc[d];
+    }
+}
+
+// 避免宏 D 与函数参数名冲突
+#undef D
+
+// CPU 参考实现（标准 Attention，用于验证正确性；与 kernel 同步省略 1/√d scale）
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int D) {
+    float* S = (float*)malloc(N * N * sizeof(float));
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0;
+            for (int d = 0; d < D; d++)
+                sum += Q[i * D + d] * K[j * D + d];
+            S[i * N + j] = sum;
+        }
+    }
+    for (int i = 0; i < N; i++) {
+        float maxVal = S[i * N];
+        for (int j = 1; j < N; j++)
+            maxVal = fmaxf(maxVal, S[i * N + j]);
+        float sum = 0;
+        for (int j = 0; j < N; j++) {
+            S[i * N + j] = expf(S[i * N + j] - maxVal);
+            sum += S[i * N + j];
+        }
+        for (int j = 0; j < N; j++)
+            S[i * N + j] /= sum;
+    }
+    for (int i = 0; i < N; i++) {
+        for (int d = 0; d < D; d++) {
+            float sum = 0;
+            for (int j = 0; j < N; j++)
+                sum += S[i * N + j] * V[j * D + d];
+            O[i * D + d] = sum;
+        }
+    }
+    free(S);
+}
+
+void initMatrix(float* mat, int rows, int cols) {
+    for (int i = 0; i < rows * cols; i++)
+        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+}
+
+bool checkResult(const float* gpu, const float* cpu, int n, float eps) {
+    for (int i = 0; i < n; i++) {
+        if (fabs(gpu[i] - cpu[i]) > eps) {
+            printf("Mismatch at %d: GPU=%.6f, CPU=%.6f\n", i, gpu[i], cpu[i]);
+            return false;
+        }
+    }
+    return true;
+}
+
+int main() {
+    const int N = 256;
+    const int D = 64;
+    const int batchSize = 1;
+    const int numHeads = 1;
+
+    printf("=== FlashAttention Simplified Forward ===\n");
+    printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
+    printf("SRAM usage per block: %.2f KB\n", (Br * D + Bc * D * 2) * sizeof(float) / 1024.0);
+
+    size_t totalElements = batchSize * numHeads * N * D;
+    size_t bytes = totalElements * sizeof(float);
+
+    float* h_Q = (float*)malloc(bytes);
+    float* h_K = (float*)malloc(bytes);
+    float* h_V = (float*)malloc(bytes);
+    float* h_O = (float*)malloc(bytes);
+    float* h_O_CPU = (float*)malloc(bytes);
+
+    srand(42); // 只播种一次：若在 initMatrix 里每次 srand(42)，Q/K/V 会被初始化成完全相同的矩阵
+    initMatrix(h_Q, batchSize * numHeads * N, D);
+    initMatrix(h_K, batchSize * numHeads * N, D);
+    initMatrix(h_V, batchSize * numHeads * N, D);
+
+    float *d_Q, *d_K, *d_V, *d_O;
+    cudaMalloc(&d_Q, bytes);
+    cudaMalloc(&d_K, bytes);
+    cudaMalloc(&d_V, bytes);
+    cudaMalloc(&d_O, bytes);
+    cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
+
+    dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
+    dim3 blockDim(Br); // 一个 block Br 个线程，每个线程负责 Q tile 的一行
+
+    printf("Grid: (%d, %d, %d), Block: %d\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+    flashAttentionFwd<<<gridDim, blockDim>>>(d_Q, d_K, d_V, d_O, N, numHeads);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
+
+    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, D);
+    bool correct = checkResult(h_O, h_O_CPU, totalElements, 1e-3);
+
+    printf("GPU Time: %.3f ms\n", ms);
+    printf("Result check: %s\n", correct ? "PASS" : "FAIL");
+
+    free(h_Q);
+    free(h_K);
+    free(h_V);
+    free(h_O);
+    free(h_O_CPU);
+    cudaFree(d_Q);
+    cudaFree(d_K);
+    cudaFree(d_V);
+    cudaFree(d_O);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    return 0;
+}
 ```
 
-#### 任务 2：运行并采集 Prefill / Decode trace
+**实现要点**（与标准实现的差异，面试可以主动讲）：
+
+- **一个线程负责 Q tile 的一行**：running 状态 `(m, l, acc)` 天然按行隔离，每个线程独立跑自己的 online softmax，无需跨线程通信
+- **S/P 不落 shared memory**：`s_row[Bc]` 和 `acc[D]` 在寄存器/local 中，shared memory 只放 Q/K/V 三个 tile——这正是 5.1 节"SRAM 只需 `Br×d + 2×Bc×d`"的原因
+- **边界处理**：`qRow >= N` 的线程只参与 tile 加载和 `__syncthreads`，不做计算；最后一个 KV tile 用 `kvLen` 截断
+
+#### 任务 2：编译运行
 
 ```bash
-# 运行（需 CUDA GPU）
-python trace_transformer.py
-
-# 打开 Chrome trace 可视化
-# 1. 浏览器访问 chrome://tracing
-# 2. Load trace_prefill.json 和 trace_decode.json
-# 3. 观察 GPU kernel 的时间线排列
+nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
+./flash_attention
 ```
 
-#### 任务 3：分析两阶段的算子差异
+**预期输出**：
 
 ```
-===== Prefill Phase (shape=(1, 1024, 512)) =====
---------------------------------- ... ---------------------------------
-Name Self CUDA Calls ...
-aten::_scaled_dot_product... xxx us 5
-aten::mm xxx us 20 ← QKV/Out/FFN GEMM
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
-...
-
-===== Decode Phase (shape=(1, 1, 512)) =====
---------------------------------- ... ---------------------------------
-Name Self CUDA Calls ...
-aten::mm xxx us 20 ← GEMM 但矩阵极小
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
-...
+=== FlashAttention Simplified Forward ===
+Config: N=256, D=64, batch=1, heads=1
+SRAM usage per block: 32.00 KB
+Grid: (4, 1, 1), Block: 64
+GPU Time: 0.141 ms
+Result check: PASS
 ```
 
-**分析任务清单**：
+#### 任务 3：验证 SRAM 使用量
 
-1. 找出 Prefill 阶段 CUDA 时间 top3 算子（预期是 mm/linear 类 GEMM）
-2. 找出 Decode 阶段 CUDA 时间 top3 算子（预期 GEMM 占比下降，layernorm/softmax 占比上升）
-3. 计算 Prefill 单 token 时间 vs Decode 单 token 时间（Prefill 快得多，因为并行度高）
-4. 在 Chrome trace 中观察 kernel 之间的间隙（gap = launch overhead）
+代码中打印了 SRAM 使用量。验证计算（Br=64, Bc=32, D=64, float32）：
 
-**预期发现**：
-- **Prefill**：GEMM（`aten::mm`）占 CUDA 时间 60%+，是绝对主导 → compute-bound
-- **Decode**：GEMM 矩阵极小（M=1），时间占比下降；softmax/layernorm 相对占比上升；kernel 间 gap 更明显（launch overhead 占比增大）→ memory-bound
+```
+s_Q[Br][D] = 64×64×4 = 16 KB
+s_K[Bc][D] = 32×64×4 =  8 KB
+s_V[Bc][D] = 32×64×4 =  8 KB
+总计 = 32 KB（S/P 在寄存器中，不占 shared memory）
+```
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
+几个容易记混的数字（面试常作为追问）：
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
+- **静态** `__shared__` **上限统一是 48 KB/block**（所有 CUDA 架构）；要超过它必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
+- **每 SM 的 shared memory 上限**：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = **100 KB**（128 KB unified cache，carveout 可调 0–100 KB，每 block 动态上限 99 KB）
+- 本配置 32 KB 在静态上限内，且每 SM 可同时驻留 ⌊100/32⌋ = 3 个 block；Bc 改成 64 会顶到 48 KB 静态上限，occupancy 掉到 1 block/SM
 
-**与今日知识的关联**：Matrix Multiplication 是 GEMM 的最纯粹形态——今天 profiling 揭示了 Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+（compute-bound），本题就是手写这个主角：naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，算术强度仅 1/8 FLOP/Byte（memory-bound）；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。它是"用 ncu 判定 bound 类型"的最佳练习对象——同一份代码加 tiling 前后 `DRAM%` 与 `SM%` 的对比，就是今天 Roofline 分析的实战。
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
 
-> 💡 完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 1）
+**与今日知识的关联**：
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 1（反转与合并），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。注意**题目要求带 1/√d scale**，提交时别忘了。
+
+> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 5）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/) | 简单 | 指针翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html) |
-| [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/) | 简单 | 哑节点 + 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html) |
-| [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/) | 简单 | 一次遍历去重 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html) |
-| [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/876_链表的中间结点.html) |
+| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列作标记位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
+| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩按层模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
+| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
+| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 左下角阶梯搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
 
 ---
 
 ### 扩展实验
 
-**实验1（基础）**：修改 `d_model=1024, n_heads=16`，重新 profile，观察 GEMM 时间变化。
-> 提示：GEMM 计算量与 d_model 平方相关，layernorm/softmax 与 d_model 线性相关。
+#### 实验 1：手动推导 Online Softmax
 
-**实验2（进阶）**：用 `nsys profile -o transformer_trace python trace_transformer.py` 采集系统级时间线，在 Nsight Systems GUI 中对比 Prefill 和 Decode 的 SM 利用率。
-> 提示：Decode 阶段 SM 利用率会很低（绿色 bar 很短），这就是 memory-bound 的直观表现。
+假设已处理块的 `m=2.0, l=3.0`，已归一化的旧输出 `o=0.5`（为简单起见假设 V 是一维标量），新块的 score 为 `[3.0, 1.0, 4.0]`，对应的 `v = [1.0, 2.0, 3.0]`，计算新的 `m_new, l_new, o_new`。
 
-**实验3（综合）**：在 TransformerBlock 中加一个 `forward_with_fusion` 方法，用 `torch.compile(model, mode="reduce-overhead")` 自动做 kernel fusion，对比 fused vs unfused 的 kernel 数量。
-> 提示：`torch.compile` 会把 LayerNorm + GEMM 等相邻算子融合，kernel 数减少 30-50%。
+> 提示：
+> - `m_new = max(2.0, max(3.0, 1.0, 4.0)) = 4.0`
+> - `l_scale = exp(2.0 - 4.0) = exp(-2.0) ≈ 0.1353`
+> - `l_new = 3.0 × 0.1353 + exp(3-4) + exp(1-4) + exp(4-4)`
+>   `= 0.406 + 0.368 + 0.050 + 1.0 = 1.824`
+> - `o_scale = l × l_scale / l_new = 0.406 / 1.824 ≈ 0.2225`
+> - `o_new = 0.5 × 0.2225 + (0.368×1.0 + 0.050×2.0 + 1.0×3.0) / 1.824`
+>   `≈ 0.1113 + 3.4676 / 1.824 ≈ 0.1113 + 1.9012 ≈ 2.01`
+>
+> **验证**（按全局 softmax 重新算一遍）：旧块质量缩放到新参考点 = `3.0×exp(-2) = 0.406`，其分子贡献 = `0.5×0.406 = 0.203`；最终输出 = `(0.203 + 3.4676) / 1.824 ≈ 2.01` ✓ 与递推结果一致——这说明 online 更新与"全量算一遍"严格等价。
+
+#### 实验 2：增大序列长度对比 HBM 访问量
+
+修改测试尺寸到 N=1024 或 N=2048，对比 FlashAttention 和标准 Attention 的理论 HBM 访问量：
+
+| N | 标准 Attention HBM | FlashAttention HBM | 加速比 |
+|---|---|---|---|
+| 256 | O(N²+Nd) | O(Nd) | ~N/d |
+| 1024 | | | |
+| 2048 | | | |
+
+> FlashAttention 的 HBM 访问 = O(Nd)（只读 Q/K/V，只写 O）；标准 Attention = O(N²+Nd)。
+
+#### 实验 3：用 ncu 分析 FlashAttention Kernel
+
+```bash
+nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
+ncu --kernel-name regex:flashAttentionFwd \
+    --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+sm__occupancy.avg.pct_of_peak_sustained_elapsed \
+    ./flash_attn_profile
+```
+
+观察 FlashAttention 是 memory-bound 还是 compute-bound，对比标准 Attention 的指标。
+
+#### 实验 4：给 Kernel 加 Causal Mask（思考题）
+
+Decoder 推理要求位置 i 只能 attend 到 ≤ i 的 key（下三角 mask）。在本 kernel 上的改法：
+
+1. **整块跳过**：当 `kvStart > qRow` 时直接 `break`——对角线以右的 KV tile 对本行毫无贡献
+2. **对角线 tile 内逐元素判断**：当 `kvStart + c > qRow` 时跳过该 c（或把 `s_row[c]` 置为 `-inf`，让它在 exp 后权重为 0）
+3. 完全在对角线左侧的 tile（`kvStart + Bc - 1 <= qRow`）不需要任何判断，全速跑
+
+注意加了 mask 之后计算量减半，但 tiling 的访存结构不变——这就是 causal attention 依然适合 FlashAttention 的原因。
+
+> 💡 LeetGPU 上有专门的 [Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 题目，做完今天的 kernel 可以直接去挑战。
+
+---
+
+### 延伸：FlashAttention-2 / 3 改了什么（面试高频追问）
+
+| 版本 | 核心改进 | 效果 |
+|---|---|---|
+| **FA1**（2022） | Tiling + Online Softmax，S/P 不物化 | HBM IO 从 O(N²) 降到 O(Nd) 级别，2-4x 加速 |
+| **FA2**（2023） | ① 外循环从 KV tile 换成 Q tile：每个 block 独占一个 Q tile 的输出，消除跨 block 通信 ② 推迟归一化（`o` 最后才除 `l`）+ 减少 rescale 次数，降低 non-matmul FLOPs ③ warp 之间按 Q 行切分，减少 shared memory 读写和 barrier | 再快 ~2x，A100 上从 ~30% 峰值提到 50-70% |
+| **FA3**（2024，Hopper） | ① FP8 低精度 ② warp specialization：producer/consumer 异步流水（TMA + wgmma）③ GEMM 与 softmax 块间 overlap 隐藏延迟 | H100 上达 ~75% 理论峰值利用率 |
+
+> 💡 **面试答法**：先讲 FA1 的 IO 感知（今天的内容），再补一句"FA2 主要是工程优化——减少 non-matmul FLOPs、更好的并行划分；FA3 是挖掘 Hopper 硬件特性——异步流水 + FP8"。共同主线：**让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上**，softmax 的 exp/除法吞吐远低于 GEMM 单元，能省则省、能藏则藏。
+
+### 验证 Checklist
+
+- [ ] 能推导出 Online Softmax 的三个更新公式（m_new, l_new, o_new）
+- [ ] 能理解每个公式中 `exp(m - m_new)` 缩放因子的作用（统一参考点）
+- [ ] 能讲清 online softmax 两种变体的等价性（每步归一化 vs 末尾 `o/l`）
+- [ ] FlashAttention Kernel 编译运行正确，小尺寸测试通过（与 CPU 对比误差 < 1e-3）
+- [ ] 能解释 FlashAttention 的 HBM 访问复杂度为什么是 O(Nd) 而非 O(N²)
+- [ ] 能画出 FlashAttention 的 tiling 示意图（Q tile 驻留 SRAM，K/V tile 逐块滑入）
+- [ ] 能计算 SRAM 使用量：`Br×D + Bc×D×2`（S/P 在寄存器），确认不超过 48 KB 静态上限
+- [ ] 能解释 FlashAttention 的加速来源（减少 HBM 访问，而非减少计算量）
+- [ ] 能写出 Attention 完整公式并解释 Q/K/V 的含义（检索类比）
+- [ ] 能推导为什么除以 √d（q·k 方差 ∝ d，softmax 饱和导致梯度消失）
+- [ ] 知道本简化版省略了 1/√d scale，并能指出该在哪一行加回
+
+---
+
+### 今日总结
+
+Day 5 我们掌握了 FlashAttention 的核心思想和实现：
+
+1. **标准 Attention 的瓶颈**：S 和 P 两个 N×N 中间矩阵导致 O(N²) HBM 访问
+2. **FlashAttention 的核心**：分块 Tiling + Online Softmax，S/P 只在 SRAM/寄存器中存活，不落 HBM
+3. **Online Softmax 三公式**：`m_new = max(m, max(xj))`、`l_new = l×exp(m-m_new) + Σexp(xj-m_new)`、`o_new = o×(l×exp(m-m_new)/l_new) + (exp(xj-m_new)/l_new)×vj`
+4. **关键缩放因子**：`exp(m - m_new)` 保证全局参考点一致
+5. **HBM 复杂度**：从 O(N²) 降到 O(Nd)，长序列加速 2-4x
+6. **加速来源**：不是 FLOPS 减少（计算量相同），而是数据移动减少
 
 ---
 
 ### 面试要点
 
-**面试题1**：Transformer 推理的 Prefill 和 Decode 阶段有什么区别？为什么 Decode 通常是 memory-bound？（⭐⭐⭐ 高频）
+1. **FlashAttention 为什么快？请从 HBM 访问量的角度分析。**
 
-**参考答案要点**：
-- **Prefill**：输入是 `(B, N_prompt, d)`，N_prompt 可达数千。所有 GEMM 是大矩阵乘，计算量大，GPU SM 充分利用 → **Compute-bound**
-- **Decode**：输入是 `(B, 1, d)`，每次只生成 1 个 token。GEMM 退化为向量×矩阵（M=1），计算量极小，但每次都要读取整个 KV Cache（N 个历史 token） → **Memory-bound**
-- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 2 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）
-- **优化方向**：KV Cache（避免重算 K/V）、PagedAttention（减少 KV 显存碎片）、CUDA Graph（减少 launch overhead）、Continuous Batching（合并多个 decode 请求提高 M）
+<details>
+<summary>点击查看答案</summary>
 
-**面试题2**：Transformer 单层包含哪些算子？哪些是 compute-bound，哪些是 memory-bound？（⭐⭐⭐ 高频）
+ - **核心问题**：标准 Attention 需要存储和读取 S=Q×K^T 和 P=softmax(S) 两个 N×N 中间矩阵，HBM 访问量为 O(N²)
+ - **FlashAttention 方案**：通过分块 tiling + online softmax，在 SRAM/寄存器中完成所有中间计算，不需要将 S 和 P 写入 HBM
+ - **HBM 访问对比**：标准 = O(N² + Nd)；FlashAttention = O(Nd)（只读 Q/K/V，只写 O）
+ - **速度来源**：不是 FLOPS 减少了（计算量相同），而是**数据移动减少了**——减少数据移动比减少计算更重要
+ - **实际加速**：长序列（N>2048）时加速明显（2-4x），因为 HBM 带宽是瓶颈
 
-**参考答案要点**：
+</details>
 
-| 算子 | 类型（Prefill） | 类型（Decode） | 原因 |
-|------|----------------|----------------|------|
-| QKV/Out/FFN Linear (GEMM) | Compute-bound | Memory-bound | Prefill M 大；Decode M=1 |
-| Attention QK^T (GEMM) | Compute-bound | Memory-bound | 同上 |
-| Attention Softmax | Memory-bound | Memory-bound | element-wise + reduction |
-| Attention PV (GEMM) | Compute-bound | Memory-bound | 同上 |
-| LayerNorm | Memory-bound | Memory-bound | element-wise + reduction |
-| GELU | Memory-bound | Memory-bound | element-wise |
 
-> 关键洞察：GEMM 在 Prefill 和 Decode 之间会切换 bound 类型，而 Softmax/LayerNorm/GELU 永远是 memory-bound（与 M 无关）。
+2. **请完整推导 Online Softmax 的三个更新公式，并解释每个公式的含义。**
 
----
+<details>
+<summary>点击查看答案</summary>
 
-### 验证 Checklist
+ ```
+ 状态：(m, l, o) —— running max、running sum、running output
+ 新块：(xj, vj) —— 新的 KV tile 的 score 和 value
 
-- [ ] 能解释 Prefill 和 Decode 的输入形状差异及其对性能的影响
-- [ ] 能列出 Transformer 单层的 6 类算子及其执行顺序
-- [ ] torch.profiler 代码运行成功，输出 Prefill/Decode 的算子时间表
-- [ ] 找出 Prefill 阶段 CUDA 时间 top3 算子
-- [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致计算强度低）
-- [ ] 能用 chrome://tracing 打开 trace 文件并观察 kernel 间隙
+ 公式1 - Max 更新：
+ m_new = max(m, max(xj))
+ 含义：全局 max 可能是之前的 m，也可能是新块中的某个值
+
+ 公式2 - Sum 更新：
+ l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+ 含义：l × exp(m - m_new) 将旧 sum 从旧参考点 m 缩放到新参考点 m_new；
+       Σ exp(xj - m_new) 是新块的指数和
+
+ 公式3 - Output 更新：
+ o_new = o × (l × exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) × vj
+ 含义：前半部分将旧输出按新概率重新归一化；后半部分是新块贡献
+
+ 关键点：exp(m - m_new) 是统一参考点的缩放因子
+ 注意：这是"每步归一化"变体（o 始终已归一化）；FA 论文用的是
+       "末尾归一化"变体——o 只累加未归一化加权和，最后 O = o/l，
+       两者数学等价
+ ```
+
+</details>
+
+
+3. **FlashAttention 的分块大小 Br×Bc 如何确定？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 硬约束是 SRAM：`Br×d + 2×Bc×d ≤ shared memory 容量`（Q/K/V 三个 tile；S/P 中间结果放寄存器，不占 SRAM）
+ - 注意**静态** `__shared__` **有 48 KB/block 的统一硬上限**，超过必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
+ - 各代 GPU 每 SM shared memory 上限：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = 100 KB（每 block 动态上限 99 KB）——别把数字记混
+ - 本教程 Br=64, Bc=32, D=64：`(64×64 + 2×32×64)×4B = 32 KB`，在静态上限内，每 SM 可驻留 3 个 block
+ - 权衡：tile 越大 → K/V 复用率越高、HBM 流量越低，但单 block 占 SRAM 多、occupancy 下降；tile 太小则循环开销占比上升
+
+</details>
+
+
+4. `exp(m - m_new)` **这个缩放因子为什么重要？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - Softmax 需要减去全局 max 保证数值稳定性
+ - 分块计算时每个块只看到局部数据，全局 max 是递推更新的
+ - 当 max 从 m 变为 m_new 时，之前所有 exp 值的参考点都变了
+ - `exp(m - m_new)` 就是把旧值从参考点 m 缩放到新参考点 m_new 的因子
+ - 没有它，不同块计算的概率无法统一到同一个归一化基
+
+</details>
+
+
+5. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **Prefill**：序列长 N 大，标准 Attention 的 O(N²) S/P 物化是主要瓶颈，FlashAttention 把 IO 从 O(N²) 降到 O(Nd)，加速 2-4x 最明显
+ - **Decode**：M=1，没有 N×N 矩阵，标准 Attention 退化为 1×N，S/P 本就不大。但 FlashAttention 仍受益——它把 softmax+PV 融合在 SRAM 里，减少 kernel launch 数量和中间 HBM 读写，配合 KV Cache 优化 decode 的 memory-bound
+ - **关键洞察**：Prefill 的收益主要来自"消除 O(N²) 物化"，Decode 的收益主要来自"kernel fusion 减少 HBM 往返"，两者瓶颈不同但 FlashAttention 都能覆盖
+
+</details>
+
+
+6. **FlashAttention-2 相比初代做了哪些改进？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **循环结构**：外循环从 KV tile 换成 Q tile，每个 block 独占一个 Q tile 的输出，消除跨 block 通信（初代需要跨 block 协调 rescale）
+ - **减少 non-matmul FLOPs**：推迟归一化（`o` 最后才除 `l`）、减少每步 rescale 次数——softmax 的 exp/除法吞吐远低于 GEMM 单元，省这些比省 matmul 更值
+ - **warp 划分**：warp 之间按 Q 行切分（初代按 KV 切分需要跨 warp 通信归约），减少 shared memory 读写和 barrier
+ - **结果**：A100 上从 FA1 的 ~30% 峰值利用率提到 50-70%
+ - **主线思想**：让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上（FA3 沿这条路继续：Hopper 异步流水 + FP8）
+
+</details>
+
+
+7. **Attention 为什么要除以 √d？不除会发生什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 设 q、k 各分量独立、均值 0、方差 1，则点积 `q·k = Σ_{i=1..d} q_i·k_i` 的均值为 0、**方差为 d**
+ - d 越大，score 量级越大，softmax 输入落在饱和区：输出接近 one-hot
+ - softmax 饱和区的梯度趋近于 0 → 反向传播信号消失，训练难以收敛
+ - 除以 √d 把 score 方差归一回 1，让 softmax 工作在梯度敏感区
+ - 加分回答：`1/√d` 不是拍的常数，是方差归一化推出来的；d_head=64 时为 0.125
+
+</details>
+
+
+8. **Self-Attention 和 Cross-Attention 有什么区别？Causal Mask 是怎么实现的？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **Self-Attention**：Q/K/V 同源，都由同一个输入 X 经不同投影得到，建模序列内部依赖
+ - **Cross-Attention**：Q 来自一个序列（如 decoder 当前状态），K/V 来自另一个序列（如 encoder 输出），用于跨序列对齐
+ - **Causal Mask**：对 score 矩阵 S 加上三角掩码——上三角置 `-inf`，softmax 后这些位置权重为 0，位置 i 只能 attend 到 ≤ i 的 token
+ - **实现要点**（结合今天的 kernel）：整块在对角线右侧的 KV tile 可直接跳过；对角线 tile 内逐元素判断；完全在左侧的 tile 无需判断全速跑——加 mask 后计算量减半，tiling 访存结构不变
+
+</details>

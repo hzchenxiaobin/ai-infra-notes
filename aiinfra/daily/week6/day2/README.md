@@ -1,419 +1,422 @@
-## Day 2：Continuous Batching
+## Day 2：FlashDecoding —— Decode 阶段的并行度突破
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **Dynamic Batching 的致命缺陷**——request-level 聚合导致长请求阻塞短请求，完成的请求必须等整批结束<br>
-2. 掌握 **Continuous Batching** 的核心思想——iteration-level 调度，每轮重建 batch，完成即走、新请求随时插入<br>
-3. 能画出 **iteration 时间线**，理解 batch size 如何随请求加入/退出动态变化<br>
-4. 理解 **Scheduler 状态机**（WAITING → RUNNING → FINISHED/SWAPPED）与每轮调度决策的 4 个步骤<br>
-5. 掌握 **Prefill + Decode 混合调度**的原理与挑战——token budget 分配、latency 抖动、chunked prefill<br>
-6. 用 Python 手写一个 **ContinuousBatcher**，实测请求动态加入/退出，验证短请求不被长请求阻塞
+1. 理解 **Decode 阶段的并行度瓶颈**——M=1 时 standard attention / FlashAttention 的并行度只有 1 个 block 处理整个 KV sequence，GPU 大量 SM 空闲<br>
+2. 掌握 **FlashDecoding 核心思想**——将 KV sequence 切分到不同 block/SM，每个 block 独立计算 partial softmax，最后 all-reduce 合并<br>
+3. 能画出 FlashDecoding 的 **两阶段执行流程**（Phase 1: 各 block 独立算 partial attention; Phase 2: 跨 block 合并 partial max/sum/output）<br>
+4. 理解 **Online softmax 跨 block 合并**的数学原理——每个 block 输出 partial max/sum/output，合并时用 rescaling factor 保证数值正确<br>
+5. 了解 **FlashDecoding++** 的改进——提前估算 max（避免二次 rescale）、固定 chunk size<br>
+6. 能用 CUDA 手写一个简化版 FlashDecoding kernel，验证 KV 切分 + 跨 block 合并的正确性
 
-> 💡 **为什么重要**：Day 1 的 Dynamic Batching 解决了"凑批"问题，但它有个致命缺陷：一个 batch 里所有请求一起开始一起结束——生成 5 个 token 的短请求要等生成 100 个 token 的长请求。Continuous Batching 把调度粒度从 request-level 降到 iteration-level，每轮重建 batch，完成的立即退出、新请求随时插入。这是现代 LLM 推理服务（vLLM、TensorRT-LLM）的核心技术，也是面试必考题。Week 5 Day 3 我们读过 vLLM 的 Continuous Batching 概念，今天亲手实现它。
+> 💡 **为什么重要**：Day 4 的 PagedAttention 解决了 KV cache 的**内存管理**问题（碎片、CoW），但没解决 decode 阶段的**并行度**问题——M=1 时整个 GPU 只有一个 block 在算 attention，80 个 SM 里 79 个闲着。FlashDecoding 就是补上这块拼图：把 KV sequence 切到多个 SM 上并行算，把 decode 阶段的"1 block 串行"变成"N blocks 并行"。这是长序列 decode 加速的关键技术，也是 vLLM/TGI 等推理框架的标配优化。
 
 ---
 
-### 学前导读：Dynamic Batching 的"长请求阻塞"问题
+### 学前导读：Decode 阶段的并行度瓶颈
 
-Day 1 的 Dynamic Batcher 把请求凑成一批一起 forward。但 LLM 是自回归生成——每个请求的生成长度不同且事先不确定。当 batch 里有一个长请求（gen=100）和多个短请求（gen=5）时：
+Day 1 我们分析过 Prefill vs Decode 的算术强度差异：Prefill 阶段 M 很大（prompt 有 N 个 token），attention 是 O(N²d) 的 compute-bound 操作，FlashAttention 通过 tiling 让多个 block 并行处理 Q tile，GPU 利用率高。但 Decode 阶段 M=1（每次只生成 1 个 token），情况完全不同：
+
+![Decode 阶段 Memory-bound 示意](../../week5/images/decode_memory_bound.svg)
 
 ```
-Batch = [R1(gen=5), R2(gen=100)]
- iter 1-5: R1 和 R2 都在 decode
- iter 6: R1 完成了！但 R2 还在跑...
- iter 6-100: R1 的 GPU slot 空等 R2 → 95 iterations 的浪费
+Prefill 阶段（M=N）：
+  Q 有 N 行 → 按 Br 切成 N/Br 个 Q tile → N/Br 个 block 并行
+  并行度 = N/Br × Batch × Head（数百~数千 block，打满 GPU）
+
+Decode 阶段（M=1）：
+  Q 只有 1 行 → 无法按 Q tile 切分 → 只有 1 个 block 处理整个 KV
+  并行度 = 1 × Batch × Head（可能 < SM 数，大量 SM 空闲）
 ```
 
-| 维度 | Dynamic Batching | Continuous Batching |
-|------|-----------------|---------------------|
-| 调度粒度 | request-level（整批） | **iteration-level**（每轮） |
-| 请求加入 | 凑满/超时后整批加入 | **任意 iteration** 加入 |
-| 请求退出 | 整批完成后一起退出 | **完成即退出**（不等他人） |
-| 短请求等待长请求 | 是（阻塞） | **否**（独立退出） |
-| GPU 利用率 | 中（有空等） | **高**（始终满载） |
+| 维度 | Prefill (M=N) | Decode (M=1) | 问题 |
+|------|---------------|--------------|------|
+| Q 行数 | N | 1 | 无法按 Q tile 切分 |
+| FlashAttention 并行度 | N/Br blocks | 1 block | SM 大量空闲 |
+| 瓶颈类型 | compute-bound | memory-bound | 算力闲置 + 带宽不足 |
+| KV 序列越长 | 计算变多（正常） | **串行扫描变慢** | 越长越浪费 |
 
-> 💡 **一句话总结**：Continuous Batching = 把 Dynamic 的"整批一起跑完"改成"每轮 iteration 重建 batch"——完成的退出、新请求插入，GPU 始终满载。它是现代 LLM 推理服务的核心技术。
+**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 80 个 SM 里 79 个在干等**。
+
+> 💡 **一句话总结**：Decode 慢不仅因为 memory-bound（M=1 算术强度低），还因为**并行度不足**——FlashAttention 的 Q-tile 并行在 M=1 时失效，KV sequence 再长也只能串行。FlashDecoding 的破局思路：**Q 切不了，那就切 KV**。
 
 ---
 
 ### 理论学习
 
-#### 2.1 Continuous Batching 核心思想
+#### 1.1 FlashDecoding 核心思想：切 KV sequence
 
-![Dynamic vs Continuous Batching 对比](../images/dynamic_vs_continuous_batching.svg)
-
-```
-Iteration-level scheduling：
- - 每个 iteration 都重新构建 batch
- - 新请求可以在任意 iteration 加入
- - 完成的请求可以在任意 iteration 退出
- - 不再存在"一个 batch 一起结束"的概念
-
-效果：
- - GPU 始终满负荷运行
- - 短请求不会被长请求阻塞
- - Throughput 和 latency 都更好
-```
-
-##### 核心区别：request-level vs iteration-level
-
-| 概念 | Dynamic Batching | Continuous Batching |
-|------|-----------------|---------------------|
-| 调度单位 | 一个 request batch | 一个 **iteration**（单步 decode） |
-| batch 生命周期 | 从开始到整批完成 | **单轮**，下轮重建 |
-| 完成处理 | 整批完成后统一返回 | **完成即返回**，立即释放 slot |
-| 新请求 | 等下一批 | **当前 iteration 即可加入** |
-
-#### 2.2 Iteration 时间线
-
-![Continuous Batching Iteration 时间线](../images/continuous_batching_timeline.svg)
-
-![Continuous Batching 迭代时间线](../../images/week6_continuous_batching_timeline.svg)
-
-##### 关键观察
-
-1. **S1 在 iter 4 完成，立即退出** → S4 在 iter 5 填入 S1 的 slot（GPU 不空等）
-2. **S3 在 iter 3 到达，立刻加入** batch（不需等"下一批"）
-3. **batch size 动态变化**：2→2→3→3→3→2→2（完成的退出、新请求加入）
-4. **S3 (短请求) 不等 S2 (长请求)** → 比 Dynamic 节省等待
-
-#### 2.3 Scheduler 状态机
-
-![Scheduler 状态机与每轮决策](../images/scheduler_state_machine.svg)
-
-##### Sequence 状态转换
-
-![Scheduler 请求状态机](../../images/week6_request_state_machine.svg)
-
-##### 每轮调度决策
-
-Scheduler 每轮需要决定 4 件事：
-
-1. **继续运行哪些 RUNNING 请求**（保留 running 队列中的序列，decode 1 步）
-2. **从 WAITING 加入哪些新请求**（在 token budget 允许时做 prefill）
-3. **是否抢占某些 RUNNING 请求**（显存不足时 preempt）
-4. **处理 FINISHED 请求**（释放 KV Cache、返回结果）
-
-约束条件：
-- **Token budget**：prefill + decode 总 token 数 ≤ 上限
-- **显存预算**：KV Cache block 数 ≤ 上限
-- **Max num_seqs**：并发 sequence 数 ≤ 上限
-
-#### 2.4 Prefill + Decode 混合调度
+FlashAttention 的并行维度是 Q tile（行方向），Decode 时 M=1 切不了。FlashDecoding 的洞察：**既然 Q 只有 1 行不能切，那就把 KV sequence 按列方向切分到不同 block**——每个 block 独立处理一段 KV，最后合并结果。
 
 ```
-Continuous Batching 可以混合 prefill 和 decode：
- - 一个 iteration 中同时处理：
- - 新请求的 prefill（一次性处理多个 prompt tokens）
- - 正在生成的请求的 decode（每次 1 个 token）
- - 这是 vLLM 和许多现代推理系统的标准做法
+Standard Decode Attention（1 block 串行）：
+  Block 0: Q · [K_0, K_1, K_2, ..., K_{N-1}] → softmax → · [V_0, ..., V_{N-1}]
+           └─────────── 1 个 SM 串行扫描整个 KV ───────────┘
 
-挑战：
- - Prefill 和 decode 的计算特征不同（prefill compute-bound, decode memory-bound）
- - Prefill 会"打断" decode 的 smooth latency
- - 需要 token budget 控制每轮的计算量
-
-解决方案：Chunked Prefill
- - 将长 prompt 的 prefill 拆成多个小 chunk
- - 每个 chunk 与 decode 请求一起执行
- - 平滑 latency，避免长 prompt 阻塞
+FlashDecoding（N/Bc blocks 并行）：
+  Block 0: Q · [K_0, ..., K_{Bc-1}]       → partial softmax → · [V_0, ..., V_{Bc-1}]       → partial_0
+  Block 1: Q · [K_Bc, ..., K_{2Bc-1}]     → partial softmax → · [V_Bc, ..., V_{2Bc-1}]     → partial_1
+  ...
+  Block T: Q · [K_{(T-1)Bc}, ..., K_{N-1}]] → partial softmax → · [V_{(T-1)Bc}, ..., V_{N-1}] → partial_T
+           └── T 个 SM 并行，每 block 只扫 Bc 个 KV ──┘
+  
+  Merge: 用 online softmax 合并 partial_0, partial_1, ..., partial_T → 最终 output
 ```
 
-| 挑战 | 原因 | 解决方案 |
-|------|------|---------|
-| Token budget 分配 | prefill 消耗大量 budget，影响 decode | 限制每轮 prefill token 数 |
-| 内存需求 | prefill 需要临时 KV Cache 空间 | 动态 block 分配 |
-| Latency 抖动 | prefill 加入时 decode latency 突增 | chunked prefill 平滑 |
+| 维度 | Standard Decode | FlashDecoding |
+|------|----------------|---------------|
+| 切分方向 | 不切（1 block 全扫） | **KV sequence 方向** |
+| 并行 block 数 | 1 | **N / Bc**（KV 序列越长，并行越多） |
+| 每 block 工作量 | 扫描整个 N | 只扫 Bc 个 token |
+| 额外开销 | 无 | Phase 2 合并（开销极小） |
+| SM 利用率 | ~1/80（1 个 SM 干活） | **~min(N/Bc, 80)/80** |
 
-### Coding 任务：手写 Continuous Batcher
+> 💡 **类比**：FlashAttention 是"把作业本撕成几份分给几个人写"（Q tile 切分），FlashDecoding 是"把参考书撕成几份分给几个人查"（KV 切分）。Prefill 时作业本厚（M 大）撕得开；Decode 时作业本只有 1 页（M=1）撕不了，但参考书（KV）很厚，撕参考书一样能并行。
 
-#### 任务 1：创建 continuous_batcher.py
+#### 1.2 并行度分析
 
-创建文件 [kernels/continuous_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day2/kernels/continuous_batcher.py)，实现 iteration-level 调度：
+```
+Standard decode:
+  并行度 = 1 block（处理整个 KV sequence）
+  → GPU 有 80 个 SM，只用了 1 个，利用率 ~1.25%
 
-```python
-# continuous_batcher.py —— Continuous Batching 实现（iteration-level 调度）
-# 运行命令: python continuous_batcher.py
-# 依赖: 仅标准库
+FlashDecoding:
+  并行度 = ceil(seq_len / tokens_per_block) blocks
+  → seq_len=2048, tokens_per_block=64 → 32 blocks
+  → seq_len=8192, tokens_per_block=64 → 128 blocks（远超 SM 数，排队）
+  → 利用率随 seq_len 增长而提升，直到打满所有 SM
+```
 
-import time
-import threading
-from collections import deque
-from enum import Enum
-from typing import List, Dict
+| seq_len | Standard (blocks) | FlashDecoding (blocks) | SM 利用率提升 |
+|---------|-------------------|----------------------|-------------|
+| 256 | 1 | 4 | 4× |
+| 1024 | 1 | 16 | 16× |
+| 2048 | 1 | 32 | 32× |
+| 8192 | 1 | 128 | 80×（受 SM 数限制） |
 
-class SeqStatus(Enum):
-    WAITING = "waiting"
-    RUNNING = "running"
-    FINISHED = "finished"
+**关键结论**：KV 序列越长，FlashDecoding 的并行度收益越大。长文本生成（如 4K+ context）是 FlashDecoding 的最佳场景。
 
-    class Sequence:
-        """一个推理序列（对应 vLLM 的 Sequence）"""
-        def __init__(self, seq_id: int, prompt_len: int, max_new_tokens: int = 10):
-            self.seq_id = seq_id
-            self.prompt_len = prompt_len
-            self.max_new_tokens = max_new_tokens
-            self.generated_count = 0
-            self.status = SeqStatus.WAITING
-            self.start_iter = -1
-            self.finish_iter = -1
-            self.done_event = threading.Event()
+> ⚠️ **注意**：tokens_per_block（Bc）的选择需要权衡。太大 → 并行度不够（block 数少）；太小 → 每 block 工作量太少，合并开销占比上升。经验值通常 64–256，与 SM 数和 seq_len 相关。
 
-            def append_token(self):
-                self.generated_count += 1
-                if self.generated_count >= self.max_new_tokens:
-                    self.status = SeqStatus.FINISHED
-                    self.done_event.set()
+#### 1.3 Online Softmax 跨 block 合并
 
-                    class ContinuousBatcher:
-                        """Continuous Batcher：每轮 iteration 重新构建 batch"""
+FlashDecoding 的核心难点：每个 block 只看到一段 KV，算出的 softmax 是 **partial** 的——不能直接加权平均。需要用 **online softmax 的跨 block 合并**保证数值正确。
 
-                        def __init__(self, max_token_budget: int = 50, max_num_seqs: int = 8):
-                            self.max_token_budget = max_token_budget
-                            self.max_num_seqs = max_num_seqs
-                            self.waiting_queue: deque[Sequence] = deque()
-                            self.running: Dict[int, Sequence] = {}
-                            self.lock = threading.Lock()
-                            self.stop_event = threading.Event()
-                            self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
-                            self.worker_thread.start()
-                            self.iteration = 0
+##### 每个 block 输出的 partial 结果
 
-                            def submit(self, seq: Sequence):
-                                with self.lock:
-                                    self.waiting_queue.append(seq)
+```
+Block j 处理 KV 段 [j*Bc, (j+1)*Bc)，输出：
+  partial_m_j = max(score in block j)        # 本段 score 最大值
+  partial_l_j = Σ exp(score - partial_m_j)   # 本段 exp 之和（已 rescale 到本段 max）
+  partial_o_j = Σ p_i * V_i                  # 本段加权 V 输出（已 rescale）
+```
 
-                                    def _schedule(self) -> List[Sequence]:
-                                        """每轮调度：保留 running + 从 waiting 补入（token budget 约束）"""
-                                        batch = []
-                                        token_budget = self.max_token_budget
-                                        with self.lock:
-                                            # 1. 移除已完成的 running 序列
-                                            finished_ids = [sid for sid, s in self.running.items()
-                                            if s.status == SeqStatus.FINISHED]
-                                            for sid in finished_ids:
-                                                self.running.pop(sid)
-                                                # 2. 保留正在运行的序列（decode 每步消耗 1 token budget）
-                                                for seq in self.running.values():
-                                                    if token_budget >= 1 and len(batch) < self.max_num_seqs:
-                                                        batch.append(seq)
-                                                        token_budget -= 1
-                                                        # 3. 从 waiting 补入新请求（prefill 消耗 prompt_len token budget）
-                                                        still_waiting = deque()
-                                                        for seq in self.waiting_queue:
-                                                            cost = seq.prompt_len
-                                                            if token_budget >= cost and len(batch) < self.max_num_seqs:
-                                                                seq.status = SeqStatus.RUNNING
-                                                                seq.start_iter = self.iteration + 1
-                                                                self.running[seq.seq_id] = seq
-                                                                batch.append(seq)
-                                                                token_budget -= cost
-                                                            else:
-                                                                still_waiting.append(seq)
-                                                                self.waiting_queue = still_waiting
-                                                                return batch
+##### 跨 block 合并公式
 
-                                                                def _run_iteration(self, batch: List[Sequence]):
-                                                                    """运行一个 iteration：每个序列生成 1 个 token"""
-                                                                    forward_time = 0.002 + 0.0005 * len(batch)
-                                                                    time.sleep(forward_time)
-                                                                    for seq in batch:
-                                                                        if seq.status == SeqStatus.RUNNING:
-                                                                            seq.append_token()
-                                                                            if seq.status == SeqStatus.FINISHED:
-                                                                                seq.finish_iter = self.iteration + 1
+```
+合并 Block 0..T-1 的 partial 结果：
 
-                                                                                def _worker_loop(self):
-                                                                                    while not self.stop_event.is_set():
-                                                                                        batch = self._schedule()
-                                                                                        if batch:
-                                                                                            self.iteration += 1
-                                                                                            self._run_iteration(batch)
-                                                                                        else:
-                                                                                            time.sleep(0.001)
+Step 1: 找全局 max
+  global_max = max(partial_m_0, partial_m_1, ..., partial_m_{T-1})
+
+Step 2: 每 block 的 rescale factor
+  w_j = exp(partial_m_j - global_max) * partial_l_j
+  ↑ 把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
+
+Step 3: 加权合并
+  global_sum = Σ_j w_j                          # 全局 exp 之和
+  output = Σ_j (w_j * partial_o_j) / global_sum # 归一化输出
+```
+
+##### 数学正确性证明
+
+```
+标准 softmax: O = Σ_i exp(s_i - m) * V_i / Σ_i exp(s_i - m)
+  其中 m = max(all s_i)
+
+Block j 的 partial: 
+  partial_l_j = Σ_{i∈block_j} exp(s_i - partial_m_j)
+  partial_o_j = Σ_{i∈block_j} exp(s_i - partial_m_j) * V_i
+
+合并时 rescale:
+  w_j = exp(partial_m_j - global_max) * partial_l_j
+      = exp(partial_m_j - global_max) * Σ_{i∈block_j} exp(s_i - partial_m_j)
+      = Σ_{i∈block_j} exp(s_i - global_max)        ← 回到全局 max 基准！
+
+  Σ_j w_j = Σ_j Σ_{i∈block_j} exp(s_i - global_max) = Σ_all exp(s_i - global_max) = global_sum ✓
+  Σ_j w_j * partial_o_j / global_sum 
+    = Σ_j exp(partial_m_j - global_max) * Σ_{i∈j} exp(s_i - partial_m_j) * V_i / global_sum
+    = Σ_all exp(s_i - global_max) * V_i / global_sum = O ✓
+```
+
+> 💡 这跟 FlashAttention 的 online softmax 三公式是**同一个数学结构**——只是 FlashAttention 在 block 内跨 KV tile 做 rescale，FlashDecoding 在 block 间跨 KV segment 做同样的 rescale。核心都是"先算 partial，再用 max 差做 rescale 合并"。
+
+#### 1.4 FlashDecoding++ 改进
+
+FlashDecoding 有两个效率问题，FlashDecoding++（2023）针对它们做了改进：
+
+##### 问题 1：二次 rescale
+
+FlashDecoding 的 Phase 2 合并需要先找 `global_max`，再用 `exp(partial_m_j - global_max)` rescale 每个 block 的 partial。这意味着 **每个 partial 要被 rescale 两次**（Phase 1 内部一次，Phase 2 合并一次），引入额外计算。
+
+```
+FlashDecoding:
+  Phase 1: partial_l_j = Σ exp(s_i - partial_m_j)          ← 第一次 rescale
+  Phase 2: w_j = exp(partial_m_j - global_max) * partial_l_j ← 第二次 rescale
+```
+
+**FlashDecoding++ 改进**：提前估算 `global_max`（用各 block 的 partial_m 的近似值或历史值），让 Phase 1 直接用估算的 global_max 做 rescale，省掉 Phase 2 的第二次 rescale。
+
+```
+FlashDecoding++:
+  Phase 1: partial_l_j = Σ exp(s_i - estimated_global_max)  ← 只 rescale 一次
+  Phase 2: output = Σ_j partial_l_j * partial_o_j / Σ_j partial_l_j  ← 无需再 rescale
+```
+
+> ⚠️ 估算的 global_max 不精确时，partial_l_j 可能数值不稳定（exp(s_i - overestimated_max) → 很小）。实际实现中用"宽松上界"保证安全。
+
+##### 问题 2：不定长 chunk
+
+FlashDecoding 的最后一个 block 可能只有少量 token（`seq_len % Bc != 0`），导致各 block 工作量不均——最后一个 block 早完成等合并，拖慢整体。
+
+**FlashDecoding++ 改进**：固定 chunk size 并均匀分配，让所有 block 工作量一致（最后一个 block 不足时用 padding 或提前退出）。
+
+| 维度 | FlashDecoding | FlashDecoding++ |
+|------|---------------|-----------------|
+| rescale 次数 | 2 次（Phase 1 + Phase 2） | 1 次（Phase 1 用估算 max） |
+| chunk 分配 | 不定长（最后 block 可能不满） | 固定大小（均匀分配） |
+| 合并开销 | 需要 rescale | 直接加权平均 |
+| 精度风险 | 无（exact max） | 估算 max 不准时需兜底 |
+
+> 💡 **一句话总结**：FlashDecoding 证明了"切 KV 可以并行 decode"，FlashDecoding++ 优化了"切得更均匀、合并更省"。两者解决的是同一个问题的不同效率层面。
+
+---
+
+### Coding 任务：手写 FlashDecoding kernel
+
+#### 任务 1：创建 flash_decoding.cu
+
+创建文件 [kernels/flash_decoding.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day7/kernels/flash_decoding.cu)，实现简化版 FlashDecoding kernel（单 query, KV 按 block 切分, online softmax 跨 block 合并）：
+
+```cuda
+// flash_decoding.cu —— FlashDecoding 最小化实现（KV 按 block 切分 + 跨 block 合并）
+// 编译命令: nvcc -o flash_decoding flash_decoding.cu -O3 -arch=sm_120
+//
+// 演示 FlashDecoding 的三大核心机制：
+//   1. Decode 阶段（M=1）：单 query 对 N 个历史 key
+//   2. KV sequence 按 block 切分到不同 SM，每个 block 独立计算 partial attention
+//   3. 跨 block 合并：用 online softmax 的 rescaling factor 合并 partial max/sum/output
+
+// ---------- Phase 1: FlashDecoding kernel ----------
+// 每个 block 处理 KV sequence 的一段 [kv_start, kv_end)
+// 输出 partial: partial_o[block_id][d], partial_m[block_id], partial_l[block_id]
+__global__ void flash_decoding_kernel(
+    const float* q, const float* k_cache, const float* v_cache,
+    float* partial_o, float* partial_m, float* partial_l,
+    int seq_len, int d, int tokens_per_block)
+{
+    // 加载 q 到 shared memory
+    // 遍历本段 KV tokens:
+    //   score = Q · K_s (block reduce)
+    //   online softmax 更新 m_local, l_local
+    //   rescale: o_local = o_local * alpha + p * V_s
+    // 写出 partial_o, partial_m, partial_l
+}
+
+// ---------- Phase 2: 合并 kernel ----------
+// 用 online softmax 合并所有 block 的 partial 结果
+__global__ void flash_decoding_merge_kernel(
+    const float* partial_o, const float* partial_m, const float* partial_l,
+    float* output, int num_blocks, int d)
+{
+    // Step 1: global_max = max(partial_m[0..num_blocks-1])
+    // Step 2: global_sum = Σ exp(partial_m[j] - global_max) * partial_l[j]
+    // Step 3: output = Σ (w_j * partial_o_j) / global_sum
+}
 ```
 
 代码要点：
-- `_schedule()`：每轮调度的核心——①移除已完成序列 → ②保留 running（decode）→ ③从 waiting 补入新请求（prefill），受 token budget 约束
-- `_run_iteration()`：每轮 forward，每个序列生成 1 个 token；完成的序列设置 `FINISHED` 状态
-- **与 Day 1 Dynamic Batcher 的区别**：Dynamic 的 `_collect_batch` 凑满一批发一次；Continuous 的 `_schedule` 每轮都调用，完成即走、新请求随时加入
+- **Phase 1（`flash_decoding_kernel`）**：每个 block 处理 `tokens_per_block` 个 KV token，内部用 online softmax 累积 partial max/sum/output。每个 thread 负责一个 d 维度的累加器（`o_local`），block 内通过 `block_reduce_sum` 汇总 score
+- **Phase 2（`flash_decoding_merge_kernel`）**：1 个 block 合并所有 partial 结果——先找 `global_max`，再用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor 加权合并
+- **CPU 参考实现**：标准 attention（先算全部 score → softmax → 加权 V），用于验证 FlashDecoding 的两阶段结果正确
+- **并行度对比**：打印 standard decode（1 block）vs FlashDecoding（N/Bc blocks）的并行度倍数
 
-#### 任务 2：运行并观察 iteration 时间线
+#### 任务 2：编译与运行
 
 ```bash
-python kernels/continuous_batcher.py
+nvcc -o flash_decoding kernels/flash_decoding.cu -O3 -arch=sm_120
+./flash_decoding
 ```
 
-**预期输出**（节选）：
+**预期输出**：
 
 ```text
-Submitting 3 sequences with staggered arrival...
+=== FlashDecoding Test ===
+d=64, seq_len=1024, tokens_per_block=64, num_blocks=16
 
- S1 submitted: prompt=3, gen=4
- S2 submitted: prompt=5, gen=8 (long request)
- S3 submitted: prompt=2, gen=3 (arrives during S1/S2 decode, short)
+max diff (FlashDecoding vs CPU ref): 1.2345e-06
+result: PASS
 
- Iter BatchSize States Finished
-----------------------------------------------------------------------
- 1 2 S1(decode), S2(decode) 0
- 2 2 S1(decode), S2(decode) 0
- 3 3 S1(decode), S2(decode), S3(decode) 0
- 4 3 S1(done), S2(decode), S3(decode) 1
- 5 2 S2(decode), S3(done) 1
- 6 1 S2(decode) 0
- ...
- 8 1 S2(done) 1
-
-=== Continuous vs Dynamic Batching Comparison ===
- Continuous: S3 (短请求) 在 iter 6 完成，立即退出，不等待 S2
- Dynamic: S1,S2,S3 同 batch 开始，S3 完成后要等 S2（到 iter 9）
- S3 等待节省: 3 iterations
+[Parallelism analysis]
+  Standard decode: 1 block handles entire KV (seq_len=1024)
+  FlashDecoding:   16 blocks handle 64 tokens each
+  Parallelism:     16x improvement (utilizing idle SMs)
 ```
 
-##### 观察重点
+##### 验证逻辑解读
 
-1. **S3 在 iter 3 加入**：S1/S2 正在 decode 时 S3 到达，立刻被调度加入（不需等"下一批"）
-2. **S1 在 iter 4 完成**：立即退出，iter 5 的 batch size 从 3 降到 2
-3. **S3 在 iter 6 完成**：短请求（gen=3）先于 S2（gen=8）完成，**不等 S2**
-4. **batch size 动态变化**：2→2→3→3→2→1→1→1（完成退出、新请求加入）
-5. **对比 Dynamic**：S3 节省 3 个 iteration 的等待（Dynamic 下 S3 要等 S2 到 iter 9）
+- **KV 切分正确性**：FlashDecoding 的两阶段结果与 CPU 标准 attention 逐元素比对 `max_diff < 1e-3`，证明 KV 切分 + 跨 block 合并数学正确
+- **并行度提升**：seq_len=1024 时，standard decode 只有 1 个 block，FlashDecoding 有 16 个 block——16× 并行度提升
+- **partial 结果不可独立使用**：每个 block 的 partial_o 是未归一化的（除以 partial_l 后只对本段 softmax 有效），必须经过 Phase 2 合并才能得到正确输出
 
-#### 任务 3：对比 Dynamic Batcher
+#### 任务 3：用 ncu 对比 standard decode vs FlashDecoding
 
-修改 `main()`，同时运行 Day 1 的 DynamicBatcher 和今天的 ContinuousBatcher，对比相同请求集合的总完成时间和 S3 的等待 iterations。
+```bash
+# 编译一个 standard decode 版（1 block 扫全 KV）用于对比
+ncu --kernel-name regex:flash_decoding \
+  --metrics gpu__time_duration.sum,\
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+  sm__throughput.avg.pct_of_peak_sustained_elapsed \
+  ./flash_decoding
+```
 
-> 思考：Continuous Batching 在什么场景下优势最大？（提示：请求长度方差越大，Dynamic 的空等越多，Continuous 的收益越大。）
+**观察重点**：
 
-#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
+| 指标 | Standard Decode | FlashDecoding | 预期变化 |
+|------|----------------|---------------|---------|
+| SM Occupancy | ~1-5% | ~30-60% | ↑（多 block 并行） |
+| Kernel Duration | 基准 | 更短 | ↓（并行度提升） |
+| SM Throughput | ~1-5% | ~20-50% | ↑（更多 SM 有活干） |
 
-**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
+> 💡 思考：为什么 FlashDecoding 的 throughput 提升没有并行度提升那么大？（提示：Decode 阶段是 memory-bound，多 block 并行只是让更多 SM 同时读 KV，但总 HBM 带宽不变——并行度提升主要缩短 wall-clock，带宽利用率提升有限。）
+
+#### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
+
+**题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
 
 **与今日知识的关联**：
 
-这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。
+INT8 KV-Cache Attention 正是 **FlashDecoding 服务的 decode 场景**——LLM 推理的 decode 阶段，1 个 query 对 N 个历史 key，KV cache 以 INT8 量化存储省 HBM 带宽。今天我们手写了 FlashDecoding kernel（FP32 版，KV 按 block 切分 + 跨 block 合并），这道题是它的 **量化变体**——KV cache 用 INT8 存储减少带宽压力，kernel 内反量化再做 attention。两者的核心都是"decode 阶段的 M=1 attention 优化"：FlashDecoding 切 KV 提升并行度，INT8 量化减数据量提升带宽效率，经常组合使用。
 
-> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
+> 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时，重点观察 INT8 KV cache 相比 FP32 的带宽节省。完整题解见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 2）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周高频回顾）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日为补充 Day（Day 4b），LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/) | 中等 | 后序 DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html) |
-| [124. 二叉树中的最大路径和](https://leetcode.cn/problems/binary-tree-maximum-path-sum/) | 困难 | 后序 DFS（单边贡献） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/124_二叉树中的最大路径和.html) |
-| [199. 二叉树的右视图](https://leetcode.cn/problems/binary-tree-right-side-view/) | 中等 | BFS/DFS 取每层最右 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/199_二叉树的右视图.html) |
-| [114. 二叉树展开为链表](https://leetcode.cn/problems/flatten-binary-tree-to-linked-list/) | 中等 | 后序 / 迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/114_二叉树展开为链表.html) |
+| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
+| [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
+| [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/) | 中等 | 中序单调性 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
+| [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现 preemption
+#### 实验 1：扫描 tokens_per_block 观察最优切分
 
-当 token budget 不足时，抢占最后加入的 running 序列（LIFO），将其状态设回 WAITING，释放其 KV Cache 预算。测试：提交超过 max_num_seqs 的请求，观察抢占行为。
+修改 `main()`，固定 `seq_len=2048`，扫描 `tokens_per_block = 16, 32, 64, 128, 256, 512`，用 `cudaEvent` 计时，绘制 latency 随 tokens_per_block 变化的曲线。
 
-> 思考：被抢占的请求重新调度时，是重新 prefill 还是恢复 KV Cache？（提示：Recomputation 重 prefill，Swapping 保留 cache 换出到 CPU。Week 5 Day 3 详讲。）
+> 思考：tokens_per_block 太小时为什么变慢？（提示：block 数太多 → 合并开销增大 + kernel launch 开销占比上升。太大时为什么也慢？→ 并行度不足，SM 空闲。最优值在两者之间。）
 
-#### 实验 2：实现优先级调度
+#### 实验 2：对比 standard decode vs FlashDecoding 的 latency
 
-给 `Sequence` 加 `priority` 字段，修改 `_schedule()` 按优先级排序：高优先级请求优先加入 batch、低优先级请求先被抢占。测试：高优先级短请求后到但先完成。
+写一个 `standard_decode_kernel`（1 个 block 串行扫描整个 KV，用 online softmax），与 `flash_decoding_kernel` 对比 wall-clock。用 `cudaEvent` 计时，扫描 `seq_len = 256, 512, 1024, 2048, 4096, 8192`。
 
-> 思考：优先级调度可能产生什么问题？（提示：低优先级 starvation 饥死。解决：aging 老化策略。）
+> 思考：seq_len 多大时 FlashDecoding 开始明显领先？（提示：seq_len > SM 数 × tokens_per_block 时 standard decode 仍 1 block，FlashDecoding 已打满所有 SM。如 80 SM × 64 token = 5120，seq_len > 5120 时 FlashDecoding 的优势最大。）
 
-#### 实验 3：实现 prefill + decode 混合调度
+#### 实验 3：实现 FlashDecoding++ 的提前估算 max
 
-修改 `_schedule()`，在同一轮 iteration 中同时处理新请求的 prefill 和 running 的 decode，用 token budget 分配：prefill 消耗 `prompt_len`，decode 消耗 1。测试：长 prompt 的 prefill 不阻塞短 decode。
+修改 `flash_decoding_kernel`，在 Phase 1 之前先快速扫描一遍 KV 估算 `estimated_global_max`（可以采样每隔 K 个 token 算 score 取 max），Phase 1 直接用 `exp(s_i - estimated_global_max)` 做 rescale。Phase 2 合并时省掉第二次 rescale，直接加权平均。
 
-> 思考：混合调度时 prefill 的 latency 抖动怎么解决？（提示：chunked prefill，拆成小块。Day 4 详讲。）
+> 思考：估算的 max 不精确时，输出会有误差吗？（提示：只要 Phase 2 最后做了归一化（除以 global_sum），输出数学上正确——estimated_max 只影响中间数值稳定性，不影响最终结果。但如果 estimated_max 远大于真实 max，exp 值太小会丢精度。）
 
 ---
 
 ### 今日总结
 
-Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Batching 的 iteration-level 调度：
+Day 4b 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破：
 
-1. **Dynamic 的缺陷**：request-level 聚合，长请求阻塞短请求，完成的必须等整批结束 → GPU slot 空等
-2. **Continuous 核心思想**：iteration-level 调度，每轮重建 batch，完成即走、新请求随时插入 → GPU 始终满载
-3. **Iteration 时间线**：batch size 随请求加入/退出动态变化（2→3→2→1...），短请求先完成不等长请求
-4. **Scheduler 状态机**：WAITING → RUNNING → FINISHED/SWAPPED，每轮决策 4 步（保留 running / 补入 waiting / 抢占 / 释放 finished）
-5. **Prefill + Decode 混合**：一个 iteration 同时处理新请求 prefill 和 running 的 decode，挑战是 token budget 分配和 latency 抖动
-6. **Chunked Prefill**：长 prompt 拆成小 chunk 与 decode 交错，平滑 latency（Day 4 详讲）
-7. **手写 ContinuousBatcher**：实测 S3（短请求）在 iter 6 完成，比 Dynamic 节省 3 个 iteration 等待
+1. **Decode 并行度瓶颈**：M=1 时 FlashAttention 的 Q-tile 切分失效，只有 1 个 block 串行扫描整个 KV，GPU 大量 SM 空闲
+2. **FlashDecoding 核心思想**：把 KV sequence 按列方向切分到不同 block/SM，每个 block 独立处理一段 KV，最后合并——Q 切不了就切 KV
+3. **并行度分析**：standard decode = 1 block；FlashDecoding = N/Bc blocks，seq_len 越长并行度收益越大
+4. **Online softmax 跨 block 合并**：每个 block 输出 partial max/sum/output，合并时用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor——与 FlashAttention 的三公式同构
+5. **FlashDecoding++ 改进**：提前估算 max 省掉二次 rescale；固定 chunk size 让各 block 工作量均匀
+6. **手写 FlashDecoding kernel**：两阶段实现（Phase 1 切分并行 + Phase 2 合并），与 CPU 标准 attention 结果一致，验证 KV 切分 + 跨 block 合并的数学正确性
+7. **与 PagedAttention 的关系**：PagedAttention 解决 KV cache 的内存管理（碎片/CoW），FlashDecoding 解决 decode 的并行度——两者正交，可组合使用
 
-掌握这些后，你就有了现代 LLM 推理服务的核心技术——明天 Day 3 深入 vLLM Scheduler 源码，看它的 `schedule()` 具体怎么实现 iteration-level 调度、preemption 和 swapping。
+掌握这些后，你就理解了 decode 阶段的两类核心优化：**内存管理**（Day 4 PagedAttention）+ **并行度**（Day 4b FlashDecoding）。Day 5 把它们整合进 Mini 推理引擎时，可以用 FlashDecoding 加速 decode 阶段的 attention。
 
 ---
 
 ### 面试要点
 
-1. **Continuous Batching 和 Dynamic Batching 有什么区别？为什么 Continuous Batching 更适合 LLM 推理？**
+1. **FlashDecoding 解决了什么问题？它的核心思想是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：request-level，请求一起开始一起结束，一个长请求会阻塞整个 batch
- - **Continuous Batching**：iteration-level，每轮重新构建 batch，请求可动态加入和退出
- - **为什么更适合 LLM**：LLM 生成长度差异大（有人问一句话，有人输入长文档），Dynamic 下短请求要等长请求；Continuous 让 GPU 始终满载，吞吐和延迟都更好，还能混合 prefill 和 decode
+  - **问题**：Decode 阶段 M=1，FlashAttention 的 Q-tile 并行失效——只有 1 个 block 串行扫描整个 KV sequence，GPU 大量 SM 空闲（~1.25% 利用率）
+  - **核心思想**：既然 Q 只有 1 行切不了，那就把 KV sequence 按列方向切分到不同 block/SM——每个 block 独立处理一段 KV，算 partial attention，最后合并
+  - **效果**：并行度从 1 block 提升到 N/Bc blocks，seq_len 越长收益越大
+  - **关键**：FlashAttention 切 Q（行方向），FlashDecoding 切 KV（列方向）——两者正交
 
 </details>
 
 
-2. **Continuous Batching 中，如何混合 Prefill 和 Decode？有什么挑战？**
+2. **FlashDecoding 的跨 block 合并是怎么做的？为什么不能直接加权平均？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **混合方式**：每轮 scheduler 同时选择新请求做 prefill + 正在生成的做 decode
- - **挑战 1：Token budget 分配**——prefill 消耗大量 token budget，影响 decode 的 smooth latency
- - **挑战 2：内存需求**——prefill 需要临时 KV Cache 空间
- - **挑战 3：Latency 抖动**——prefill 请求加入时 decode 的 latency 突增
- - **解决**：chunked prefill（拆小块）、限制每轮 prefill token 数、优先保证 decode 节奏
+  - **不能直接加权平均**：每个 block 只看到一段 KV，算出的 softmax 是 partial 的——partial_l_j 是以 partial_m_j 为基准的 exp 之和，不同 block 的基准不同，直接加会数值错误
+  - **合并步骤**：
+    1. 找全局 `global_max = max(partial_m_0, ..., partial_m_{T-1})`
+    2. 每 block 的 rescale factor：`w_j = exp(partial_m_j - global_max) * partial_l_j`——把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
+    3. 加权合并：`output = Σ_j (w_j * partial_o_j) / Σ_j w_j`
+  - **数学本质**：与 FlashAttention 的 online softmax 三公式同构——都是"先算 partial，用 max 差做 rescale 合并"
 
 </details>
 
 
-3. **Continuous Batching 的 Scheduler 每轮需要做哪些决策？**
+3. **FlashDecoding 和 FlashAttention 是什么关系？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - ① 继续运行哪些 RUNNING 请求（保留 running 队列的 decode）
- - ② 从 WAITING 加入哪些新请求（在 token budget 允许时做 prefill）
- - ③ 是否抢占某些 RUNNING 请求（显存不足时 preempt）
- - ④ 处理 FINISHED 请求（释放 KV Cache、返回结果）
- - 约束：token budget（总 token ≤ 上限）、显存预算（KV Cache block ≤ 上限）、max_num_seqs
+  - **FlashAttention**：Prefill 阶段的优化——按 Q tile（行方向）切分，多个 block 并行处理不同 Q 行，用 online softmax 在 block 内跨 KV tile 合并
+  - **FlashDecoding**：Decode 阶段的优化——Q 只有 1 行切不了，改为按 KV sequence（列方向）切分，多个 block 并行处理不同 KV 段，用 online softmax 跨 block 合并
+  - **关系**：两者都用 online softmax，但切分方向不同（Q 行 vs KV 列），适用阶段不同（Prefill vs Decode）
+  - **组合**：推理引擎中 Prefill 用 FlashAttention，Decode 用 FlashDecoding——同一序列两阶段用不同 kernel
 
 </details>
 
 
-4. **Continuous Batching 为什么需要 PagedAttention？**
+4. **FlashDecoding++ 相比 FlashDecoding 有什么改进？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Continuous Batching 每轮有请求完成退出、新请求加入——KV Cache 需要频繁分配/释放
- - 如果用连续分配，频繁 alloc/free 产生外部碎片——完成的请求释放的小空洞拼不回来，新请求放不下就 OOM
- - PagedAttention 的 block 粒度分配/回收让 slot 回收无碎片化——空闲 block 随时被任意序列复用
- - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；两者是 vLLM 的双支柱
+  - **改进 1（提前估算 max）**：FlashDecoding 的合并需要二次 rescale（Phase 1 内一次，Phase 2 合并一次）。FlashDecoding++ 提前估算 `global_max`，让 Phase 1 直接用估算值做 rescale，省掉 Phase 2 的第二次 rescale——合并时直接加权平均
+  - **改进 2（固定 chunk size）**：FlashDecoding 最后一个 block 可能不满（`seq_len % Bc != 0`），各 block 工作量不均。FlashDecoding++ 固定 chunk size 均匀分配，避免最后一个 block 拖慢
+  - **trade-off**：估算 max 不精确时有数值稳定性风险（需用宽松上界兜底），但最终结果数学正确（归一化消除误差）
 
 </details>
 
 
-5. **Continuous Batching 中，短请求的完成时间比 Dynamic Batching 快多少？**
+5. **FlashDecoding 和 PagedAttention 是什么关系？可以一起用吗？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 取决于请求长度方差。极端例子：batch=[R1(gen=5), R2(gen=100)]
- - Dynamic：R1 在 iter 5 生成完，但要等 R2 到 iter 100 才能退出 → R1 空等 95 iterations
- - Continuous：R1 在 iter 5 生成完，立即退出 → R1 节省 95 iterations
- - 实际场景（请求长度方差大）下，Continuous 的吞吐通常比 Dynamic 高 2-8x
- - 请求长度方差越小（所有请求等长），Continuous 的优势越小（退化为 Dynamic）
-
- - token budget / max_num_seqs / preemption 等调度参数跨平台通用
+  - **PagedAttention**：解决 KV cache 的**内存管理**问题——分页存储 + block table 间接寻址，消除碎片，支持 CoW
+  - **FlashDecoding**：解决 decode 阶段的**并行度**问题——KV sequence 切分到多 SM 并行，提升 SM 利用率
+  - **两者正交**：PagedAttention 管"KV 怎么存"（物理不连续 + block table），FlashDecoding 管"KV 怎么算"（切分并行 + 合并）
+  - **组合使用**：完全可以一起用——FlashDecoding 的每个 block 通过 PagedAttention 的 block table 间接寻址读取自己的 KV 段。vLLM 等推理框架就是这么做的：PagedAttention 管理 KV cache 内存，FlashDecoding 提供并行度
+  - **一句话**：PagedAttention 是"存储层"优化，FlashDecoding 是"计算层"优化，两者叠加才是完整的 decode 加速方案
 
 </details>
-

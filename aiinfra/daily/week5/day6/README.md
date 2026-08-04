@@ -1,475 +1,494 @@
-## Day 6：端到端 Profiling
+## Day 6：实现 KV Cache
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 掌握推理系统 profiling 的 **三层方法论**——系统级（nsys）→ 阶段级（cuda.Event）→ Kernel 级（ncu），自顶向下定位瓶颈<br>
-2. 能用 PyTorch 手写 **profiling 脚本**，测量 TTFT、mean/P50/P99 TBT、Decode 的 forward/sampling/sync 三段 breakdown<br>
-3. 理解 **TTFT 随 prompt 长度** 的增长规律（O(N²) 的 attention 主导时近似平方增长），能从扫描数据判断瓶颈<br>
-4. 理解 **TBT 是否随生成长度增长** 的判据——增长说明 Decode memory-bound 读 KV Cache 成瓶颈，稳定但绝对值高说明 launch overhead 主导<br>
-5. 能用 **瓶颈定位决策树** 从"TTFT 高 / TBT 高 / gap 大"三类现象映射到具体优化方向（FlashAttention / KV 量化 / CUDA Graph）<br>
+1. 理解 KV Cache 的核心思想——**把每步新生成的 K/V 存下来**，避免 Decode 阶段重复计算历史 K/V<br>
+2. 掌握 KV Cache 的 **5D 内存布局** `(num_layers, B, H, max_seq_len, d_head)`，能计算给定模型配置下的显存占用<br>
+3. 能区分 **静态分配 / 动态分配 / PagedAttention** 三种 cache 分配策略的优缺点，理解为什么 vLLM 要借鉴 OS 虚拟内存分页<br>
+4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
+5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
 
-> 💡 **为什么重要**：Day 5 我们造出了 Mini 引擎 v0，但它到底快不快、慢在哪、怎么优化——没有 profiling 就是盲人摸象。今天给引擎装上"仪表盘"：测 TTFT/TBT、拆 breakdown、用 nsys 看 kernel 间隙、用 ncu 钻进单 kernel。profiling 是系统优化的标准流程——"先测量再优化"，没有数据支撑的优化都是猜。"如何做推理系统 profiling"是面试高频题，也是工程能力的硬指标。
+> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
 
 ---
 
-### 学前导读：优化之前，先测量
+### 学前导读：Decode 每步都在重算历史，能不能存下来？
 
-Day 1-5 我们反复说"Decode 是 memory-bound""Prefill 是 compute-bound"——这些结论怎么来的？不是背的，是测出来的。今天我们就把 Mini 引擎 v0 拆开测：
+Day 1 的 PyTorch 模拟里，`MiniTransformer.forward` 有这么一段：
 
-- Prefill 到底比 Decode 单步慢多少倍？（TTFT vs TBT）
-- Decode 单步里，forward / sampling / sync 各占多少？
-- prompt 变长，TTFT 怎么涨？（O(N) 还是 O(N²)）
-- 生成长度增加，TBT 会涨吗？（涨说明 memory-bound 读 KV 是瓶颈）
+```python
+if use_cache and k_cache is not None:
+ k = torch.cat([k_cache, k], dim=2) # 把新 K 拼到历史 cache 后面
+ v = torch.cat([v_cache, v], dim=2)
+```
 
-| 问题 | 测量工具 | 看什么 |
-|------|---------|--------|
-| 时间花在哪 | nsys（系统级时间线） | kernel 排列、gap 间隙 |
-| Prefill 还是 Decode 慢 | cuda.Event（阶段级计时） | TTFT、TBT |
-| 哪个算子卡 | ncu（kernel 级指标） | dram__bytes、sm__throughput |
+这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
 
-> 💡 **一句话总结**：profiling 三层方法论 = nsys 看全局 → cuda.Event 量化阶段 → ncu 钻进单 kernel。先测再优，用数据驱动决策——这是系统工程师的基本功。
+关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
+
+| 维度 | 无 KV Cache | 有 KV Cache |
+|------|------------|------------|
+| 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
+| 每步 FLOPs | O(L × d²) | **O(d²)** |
+| 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
+| 内存使用 | 低 | 高（2 × L × d × bytes） |
+| Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
+
+收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
+
+> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
 
 ---
 
 ### 理论学习
 
-#### 6.1 三层 profiling 方法论
+#### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
 
-![推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级](../images/profiling_three_layers.svg)
+![KV Cache 生命周期：Prefill 填充 → Decode 追加](../images/kv_cache_append_decode.svg)
 
-| 层级 | 工具 | 粒度 | 回答的问题 |
-|------|------|------|-----------|
-| **① 系统级** | Nsight Systems (`nsys`) | ms 级 | "时间花在哪？kernel 间隙大不大？CPU/GPU 谁等谁？" |
-| **② 阶段级** | `cuda.Event` + `perf_counter` | ms 级，分阶段 | "Prefill 还是 Decode 慢？TTFT/TBT 多少？" |
-| **③ Kernel 级** | Nsight Compute (`ncu`) | ns 级，单 kernel | "哪个算子卡？compute 还是 memory-bound？" |
-
-##### 自顶向下的工作流
-
-![Profiling 三层方法论决策流：nsys → cuda.Event → ncu](../../images/week5_profiling_methodology.svg)
-
-#### 6.2 阶段级指标：TTFT / TBT / breakdown
+Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
 
 ```
-TTFT (Time To First Token) = Prefill 延迟
- = encode + model(prefill) + argmax(first token)
+KV Cache 工作流程：
+ Prefill 阶段：
+ 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
+ cache 从空 → 填入 N_prompt 个 token 的 K/V
 
-TBT (Time Between Tokens) = 单步 Decode 延迟
- = forward + sampling + sync
-
-Decode 单步 breakdown:
- forward = model(decode_step) 的矩阵乘 + attention
- sampling = argmax / temperature / top-k（通常在 CPU）
- sync = cudaSynchronize 等待 GPU（含 launch overhead 间隙）
+ Decode 阶段（每步）：
+ 1. 只计算新 token 的 K_t, V_t
+ 2. 把 K_t/V_t 追加（append）到 cache
+ 3. 从 cache 读取所有历史 K/V 做 attention
+ 4. 输出下一个 token
+ 5. 重复直到 EOS
 ```
 
-![Decode 单步 Breakdown：forward / sampling / sync 占比](../images/decode_breakdown.svg)
-
-| 部分 | 典型占比（GPU） | 偏大时说明 | 优化方向 |
-|------|---------------|-----------|---------|
-| **forward** | 85-95% | 绝对值高 = Decode memory-bound | KV 量化、GQA、fused kernel |
-| **sampling** | 2-5% | >10% = CPU 瓶颈 | 采样搬到 GPU、批处理 |
-| **sync/gap** | 3-10% | >15% = launch overhead 主导 | CUDA Graph、torch.compile、kernel fusion |
-
-##### TTFT 随 prompt 长度的增长规律
-
-| 增长规律 | 主导项 | 瓶颈类型 | 优化 |
-|---------|--------|---------|------|
-| TTFT ∝ O(N²) | attention 的 N×N 矩阵 | compute-bound | FlashAttention（O(Nd) IO） |
-| TTFT ∝ O(N) | QKV GEMM 的 O(N·d²) | memory/compute 混合 | Tensor Core、并行 prefill |
-
-> 💡 实测时，扫描 `N = 32, 64, 128, 256, 512`，看 `TTFT/N`（per-token）是否近似常数（O(N)）还是 `TTFT/N²` 近似常数（O(N²)）。N 较大时 attention 主导，趋近 O(N²)。
-
-##### TBT 是否随生成长度增长
-
-| 现象 | 说明 | 优化方向 |
-|------|------|---------|
-| TBT 随 L 增长 | Decode 读 KV Cache 随 L 增大 → memory-bound 确证 | KV 量化、GQA/MQA、滑动窗口 |
-| TBT 稳定但绝对值高 | 每步计算量与 L 无关，但 launch/sync 开销大 | CUDA Graph、kernel fusion |
-| TBT 随 L 增长但缓慢 | KV 在 L2 cache 内时影响小，超出后掉崖 | 减小 KV（量化）使其留在 cache |
-
-#### 6.3 系统级：nsys 看 kernel 时间线
-
-```bash
-nsys profile -o mini_engine_timeline --trace=cuda,nvtx \
- python aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
-
-# 统计各 kernel 耗时
-nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
-```
-
-**观察重点**：
-1. **Prefill 阶段**：少量大 GEMM kernel，时间长（compute-bound 特征）
-2. **Decode 阶段**：大量极小 kernel，kernel 间有明显 gap（memory-bound + launch overhead 特征）
-3. **kernel gap 占比**：gap = 相邻 kernel 间的空白时间。gap > 20% 说明 launch overhead 严重
-
-##### gap 的本质
+**收益量化**：
 
 ```
-Decode 每步触发多个 kernel：embedding → qkv GEMM → attention → ffn GEMM → lm_head
-每个 kernel launch 有 ~5-10 μs 开销（CPU 提交 → GPU 执行的握手）
-kernel 本身只算几十 μs（M=1 太小），但 launch 开销占比高 → gap 大
+无 Cache 时每步：
+ FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
+ 每步都要重算前 L 个 token 的 QKV projection
+
+有 Cache 时每步：
+ FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
+ 只算 1 个新 token 的 QKV projection + 1×L 的 attention
+
+ attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
+ 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
 ```
 
-> ⚠️ 这正是 CUDA Graph 的用武之地：把整个 decode 循环录制成一张图，一次提交全部 kernel，消除 per-step launch 开销。Day 7 总结会提。
+> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
 
-#### 6.4 Kernel 级：ncu 钻进单 kernel
+#### 2.2 KV Cache 的内存布局与显存占用
 
-```bash
-ncu --kernel-name regex:your_kernel \
- --metrics gpu__time_duration.sum, \
- dram__bytes.sum, \
- dram__throughput.avg.pct_of_peak_sustained_elapsed, \
- sm__throughput.avg.pct_of_peak_sustained_elapsed \
- ./your_program
+![KV Cache 5D 内存布局](../images/kv_cache_memory_layout.svg)
+
+KV Cache 是一个 5 维张量，K 和 V 各一份：
+
+```
+布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+ v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+
+每 token KV Cache 大小：
+ = 2 × num_layers × num_heads × d_head × bytes_per_elem
+ （2 = K 和 V 各一份）
+
+总 KV Cache 大小：
+ = batch_size × seq_len × per_token_size
+ = B × L × 2 × n_layers × n_heads × d_head × bytes
 ```
 
-| 指标 | 含义 | 判断瓶颈 |
-|------|------|---------|
-| `dram__throughput` 高 + `sm__throughput` 低 | 带宽打满、算力闲置 | **memory-bound** |
-| `sm__throughput` 高 + `dram__throughput` 低 | 算力打满、带宽没用满 | **compute-bound** |
-| 两者都低 | 可能 launch/occupancy 问题 | 查 occupancy、warp 数 |
+##### 为什么 d_head 维放最内层？
 
-##### Roofline 视角
+`d_head` 维连续排列，保证同一 token 同一 head 的 `d` 个元素内存连续——attention 做点积时一次 coalesced 读 `d` 个 float，带宽利用率最高。`seq_len` 维在外层，使得 append 新 token 时只需在尾部写入，不搬移已有数据。
 
-算术强度 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 58.45 FLOP/Byte）：
-- `AI < Ridge` → memory-bound（在带宽斜线上）
-- `AI > Ridge` → compute-bound（在算力水平线上）
+##### 真实模型的显存占用
 
-#### 6.5 瓶颈定位决策树
+| 模型 | n_layers | n_heads | d_head | dtype | 每 token KV Cache | 4096 tokens | batch=16 |
+|------|----------|---------|--------|-------|-------------------|-------------|----------|
+| LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
+| LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
+| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
 
-![瓶颈定位决策树：从现象到优化方向](../images/bottleneck_decision_tree.svg)
+> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
 
-| 现象 | 判断 | 优化方向 |
-|------|------|---------|
-| TTFT 随 N² 增长 | Prefill compute-bound（attention 主导） | FlashAttention、Tensor Core |
-| TTFT 随 N 线性增长 | Prefill 偏 GEMM（memory/compute 混合） | Tensor Core、并行 prefill、reduce prompt |
-| TBT 随 L 增长 | Decode memory-bound（读 KV Cache） | KV 量化、GQA/MQA、PagedAttention、滑动窗口 |
-| TBT 稳定但绝对值高 | launch overhead 主导 | CUDA Graph、torch.compile、kernel fusion |
-| kernel gap > 20% | launch overhead 严重 | CUDA Graph（消除 per-step launch） |
-| sampling 占比 > 10% | CPU 瓶颈 | 采样搬到 GPU、批处理采样 |
+##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
 
-### Coding 任务：Mini 引擎端到端 Profiling
+上表的 `n_heads` 是 **KV head 数**（`n_kv_head`）。不同注意力变体通过缩减 `n_kv_head` 来压缩 KV Cache，这是 2023+ 模型降低推理显存的主流手段。
 
-#### 任务 1：创建 profile_engine_v0.py
+| 变体 | n_kv_head | 每 token KV bytes（相对 MHA） | 代表模型 | 说明 |
+|------|-----------|------------------------------|---------|------|
+| **MHA**（标准） | = n_head | 1×（基准） | LLaMA-7B（32/32） | 每个 query head 独立一份 K/V |
+| **GQA**（Grouped） | n_head / g（g=分组数） | 1/g | LLaMA-3-8B（8/32，g=4→1/4） | g 个 query head 共享一组 K/V；g=n_head 退化为 MQA |
+| **MQA**（Multi-Query） | 1 | 1/n_head | PaLM、Falcon | 所有 query head 共享同一份 K/V，KV Cache 最小但精度损失 |
+| **MLA**（Multi-head Latent） | 压缩到 d_c（低秩） | ~d_c/(n_head·d_head) | DeepSeek-V2/V3 | K/V 不直接存，存低秩"潜在向量"（d_c 维），attention 时现场解压 |
 
-创建文件 [kernels/profile_engine_v0.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day6/kernels/profile_engine_v0.py)，对 Day 5 的 Mini 引擎做端到端 profiling：
+**口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
 
-```python
-# profile_engine_v0.py —— Mini 推理引擎 v0 端到端 Profiling
-# 运行命令: python profile_engine_v0.py
-# 依赖: pip install torch
+```
+MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
+GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
+MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
+MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
+```
 
-import sys, os, time, statistics, torch
-_DAY5 = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "day5", "kernels")
-sys.path.insert(0, _DAY5)
-from mini_engine_v0 import MiniLLM, MiniTokenizer, MiniEngineV0
+> 💡 **面试要点**：
+> - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
+> - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
+> - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
+>
+> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
 
-_HAS_CUDA = torch.cuda.is_available()
-def sync():
-    if _HAS_CUDA: torch.cuda.synchronize()
+#### 2.3 分配策略：静态 vs 动态 vs PagedAttention
 
-    def profile_engine(engine, prompt, max_new_tokens=20):
-        input_ids = torch.tensor([engine.tokenizer.encode(prompt)], device=engine.device)
-        for _ in range(3): _ = engine.model(input_ids, use_cache=False)
-        sync()
+![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)
 
-        # Prefill
-        sync(); t0 = time.perf_counter()
-        with torch.no_grad():
-            logits, kv_cache = engine.model(input_ids, use_cache=True)
-            first_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-            sync(); ttft = (time.perf_counter() - t0) * 1000
+| 策略 | 做法 | 优点 | 缺点 |
+|------|------|------|------|
+| **静态分配** | 为每个请求预分配 `max_seq_len` 空间 | 简单，无碎片 | 内存浪费严重（实际长度常远小于 max） |
+| **动态分配** | 按实际长度分配/扩展 | 内存利用率高 | 频繁 alloc/free 产生外部碎片，大请求可能 OOM |
+| **PagedAttention** | 分成固定大小 block + block table 映射 | 无碎片、利用率高、支持共享/CoW | 实现复杂，block table 有额外开销 |
 
-            print(f"=== Prefill Phase ===")
-            print(f" Prompt length: {input_ids.size(1)} tokens")
-            print(f" TTFT: {ttft:.3f} ms")
-            print(f" KV Cache shape per layer: {tuple(kv_cache[0][0].shape)}")
+##### PagedAttention 核心思想（Day 4 详读）
 
-            # Decode
-            decode_times = []; breakdown = {"forward": [], "sampling": [], "sync": []}
-            next_token = first_token
-            for _ in range(max_new_tokens):
-                t0 = time.perf_counter()
-                with torch.no_grad():
-                    logits, kv_cache = engine.model(next_token, kv_cache=kv_cache, use_cache=True)
-                    t1 = time.perf_counter()
-                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                    t2 = time.perf_counter()
-                    sync(); t3 = time.perf_counter()
-                    decode_times.append((t3 - t0) * 1000)
-                    breakdown["forward"].append((t1 - t0) * 1000)
-                    breakdown["sampling"].append((t2 - t1) * 1000)
-                    breakdown["sync"].append((t3 - t2) * 1000)
+借鉴 OS 虚拟内存分页：
+- 把 KV cache 分成固定大小的 **block**（如 16 tokens/block）
+- **逻辑 block** 号对序列连续，**物理 block** 号在显存中可以不连续
+- 用 **block table** 维护逻辑→物理映射（类似页表）
+- 多个 sequence 共享同一 prompt 的物理 block，写入时 **Copy-on-Write**
 
-                    mean_tbt = statistics.mean(decode_times)
-                    p50 = statistics.median(decode_times)
-                    p99 = sorted(decode_times)[int(len(decode_times)*0.99)] if len(decode_times)>1 else decode_times[0]
-                    print(f"\n=== Decode Phase ({max_new_tokens} tokens) ===")
-                    print(f" Mean TBT: {mean_tbt:.3f} ms P50: {p50:.3f} P99: {p99:.3f}")
-                    print(f" Max: {max(decode_times):.3f} Min: {min(decode_times):.3f}")
-                    print(f"\n=== Decode Breakdown (mean ms, % of TBT) ===")
-                    for k, ts in breakdown.items():
-                        m = statistics.mean(ts); print(f" {k:12s}: {m:.3f} ms ({m/mean_tbt*100:.1f}%)")
-                        print(f"\n=== Throughput ===")
-                        print(f" Output: {max_new_tokens/(sum(decode_times)/1000):.2f} tokens/s")
-                        print(f" TTFT/TBT ratio: {ttft/mean_tbt:.1f}x")
-                        return {"ttft": ttft, "decode_times": decode_times}
+> 💡 PagedAttention 解决的是"动态分配的碎片"问题——不是消除碎片（分页本身也有内部碎片），而是让碎片**可回收**。这是 Day 4 的核心，今天先建直觉。
 
-                        def scan_prompt_lengths(engine, lengths=[32,64,128,256,512]):
-                            print("\n=== TTFT vs Prompt Length ===")
-                            print(f"{'N':>8} {'TTFT(ms)':>10} {'TTFT/N':>10} {'TTFT/N²':>10}")
-                            for L in lengths:
-                                ids = torch.randint(1,1000,(1,L),device=engine.device)
-                                for _ in range(2): _ = engine.model(ids, use_cache=False)
-                                sync(); t0 = time.perf_counter()
-                                with torch.no_grad(): _ = engine.model(ids, use_cache=True)
-                                sync(); ttft = (time.perf_counter()-t0)*1000
-                                print(f"{L:>8} {ttft:>10.3f} {ttft/L:>10.3f} {ttft/(L*L):>10.6f}")
+#### 2.4 多轮对话中的 Cache 复用
 
-                                def scan_decode_length(engine, prompt_len=64, Ks=[10,30,50,100]):
-                                    print("\n=== TBT vs Generated Length (prompt fixed) ===")
-                                    print(f"{'Gen':>8} {'Mean TBT':>12} {'Last TBT':>12}")
-                                    for K in Ks:
-                                        ids = torch.randint(1,1000,(1,prompt_len),device=engine.device)
-                                        with torch.no_grad():
-                                            logits, kv = engine.model(ids, use_cache=True)
-                                            nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
-                                            sync(); dts = []
-                                            for _ in range(K):
-                                                t0 = time.perf_counter()
-                                                with torch.no_grad():
-                                                    logits, kv = engine.model(nt, kv_cache=kv, use_cache=True)
-                                                    nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
-                                                    sync(); dts.append((time.perf_counter()-t0)*1000)
-                                                    print(f"{K:>8} {statistics.mean(dts):>12.3f} {dts[-1]:>12.3f}")
+```
+多轮对话：
+ Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
+ Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
 
-                                                    def main():
-                                                        device = "cuda" if _HAS_CUDA else "cpu"
-                                                        print(f"Using device: {device}\n")
-                                                        torch.manual_seed(42)
-                                                        model = MiniLLM(1000, 512, 8, n_layers=4)
-                                                        engine = MiniEngineV0(model, MiniTokenizer(1000), device)
-                                                        profile_engine(engine, "hello world this is a test prompt for profiling", 20)
-                                                        scan_prompt_lengths(engine)
-                                                        scan_decode_length(engine)
+Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
 
-                                                        if __name__ == "__main__":
-                                                            main()
+Cache 复用：
+ - Round 1 已经计算过的 K/V 直接保留在 cache 里
+ - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
+ - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
+```
+
+实现要点：
+1. 为每个对话 session 维护一个 KV Cache
+2. 每次用户输入时，先复用已有 cache（检查已缓存长度）
+3. 对新输入 tokens 做 prefill，将新 K/V 追加到 cache
+4. 生成 assistant 回复时，每步 decode 用 append 模式更新 cache
+5. 释放已完成/超时的 session cache（LRU 或显式释放）
+
+> ⚠️ **注意**：多轮复用的前提是 **prompt 格式严格一致**——如果 Round 2 的 prompt 不是"Round1 全部 + 新输入"的拼接，而是重新构造，cache 就无法复用。生产系统（如 vLLM）通过 prefix caching 显式管理这一点。
+
+### Coding 任务：手写 KV Cache
+
+#### 任务 1：创建 kv_cache.cu
+
+创建文件 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
+
+```cuda
+// kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
+// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
+// 运行命令: ./kv_cache
+
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+
+// --------------------------------------------------
+// KVCache 类
+// 存储 layout: (num_layers, batch_size, num_heads, max_seq_len, d_head)
+// 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
+// --------------------------------------------------
+class KVCache {
+  public:
+    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
+        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
+          d_head_(d_head) {
+
+        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        total_size_ = (size_t)num_layers_ * size_per_layer_;
+
+        cudaMalloc(&k_cache_, total_size_);
+        cudaMalloc(&v_cache_, total_size_);
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+
+        // 每个 batch 当前已缓存的序列长度
+        seq_lens_ = std::vector<int>(batch_size_, 0);
+    }
+
+    ~KVCache() {
+        cudaFree(k_cache_);
+        cudaFree(v_cache_);
+    }
+
+    // 追加新的 K/V 到 cache
+    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)，在 device 上
+    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
+        for (int b = 0; b < batch_size_; b++) {
+            int start = seq_lens_[b];
+            int end = start + new_len;
+            if (end > max_seq_len_) {
+                printf("Error: seq len %d exceeds max_seq_len %d\n", end, max_seq_len_);
+                return;
+            }
+
+            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
+            for (int h = 0; h < num_heads_; h++) {
+                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
+                size_t dst_offset =
+                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
+                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
+                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+            }
+            seq_lens_[b] = end;
+        }
+    }
+
+    // 获取某层 cache 指针和各 batch 序列长度
+    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
+        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *seq_lens = seq_lens_;
+    }
+
+    int get_seq_len(int batch_id) const {
+        return seq_lens_[batch_id];
+    }
+
+    void reset() {
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
+    }
+
+    void reset_batch(int batch_id) {
+        size_t batch_bytes = (size_t)num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        for (int l = 0; l < num_layers_; l++) {
+            size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                             batch_id * num_heads_ * max_seq_len_ * d_head_);
+            cudaMemset(k_cache_ + offset, 0, batch_bytes);
+            cudaMemset(v_cache_ + offset, 0, batch_bytes);
+        }
+        seq_lens_[batch_id] = 0;
+    }
+
+  private:
+    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
+    size_t size_per_layer_, total_size_;
+    float* k_cache_;
+    float* v_cache_;
+    std::vector<int> seq_lens_;
+};
 ```
 
 代码要点：
-- `profile_engine`：测 TTFT（Prefill）+ mean/P50/P99 TBT（Decode）+ forward/sampling/sync 三段 breakdown
-- `scan_prompt_lengths`：扫描 N，看 `TTFT/N`（O(N) 判据）和 `TTFT/N²`（O(N²) 判据）哪个近似常数
-- `scan_decode_length`：固定 prompt、扫描生成长度，看 TBT 是否随 L 增长（memory-bound 判据）
-- `sync()` **包装**：CPU/GPU 都能跑（CPU 上 `sync` 是空操作）
+- **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
+- `append`：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
+- `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
+- `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
 
-#### 任务 2：运行并观察输出
+#### 任务 2：编译与运行
 
 ```bash
-python kernels/profile_engine_v0.py
+# 编译
+nvcc -o kv_cache kernels/kv_cache.cu -O3 -arch=sm_120
+
+# 运行
+./kv_cache
 ```
 
-**预期输出**（GPU；CPU 上数值不同但流程一致）：
+**预期输出**：
 
 ```text
-Using device: cuda
+=== KV Cache Test ===
+Config: layers=2, batch=1, heads=8, max_len=1024, d_head=64
+After Round 1 (len=10): seq_len=10
+After Round 2 (len=5): seq_len=15
+After Round 3 (len=8): seq_len=23
+PASS: seq_len = 23 (expected 23)
+Data verification (Round 1 K in cache): max_diff = 0.00e+00 (PASS)
+KV Cache bytes per token: 8192
+Max memory usage: 8 MB
 
-=== Prefill Phase ===
-  Prompt length: 11 tokens
-  TTFT: 0.582 ms
-  KV Cache shape per layer: (1, 8, 11, 64)
-
-=== Decode Phase (20 tokens) ===
-  Mean TBT: 2.198 ms P50: 0.510 P99: 17.947
-  Max: 17.947 Min: 0.143
-
-=== Decode Breakdown (mean ms, % of TBT) ===
-  forward : 2.178 ms (99.1%)
-  sampling : 0.010 ms (0.4%)
-  sync : 0.010 ms (0.5%)
-
-=== Throughput ===
-  Output: 454.89 tokens/s
-  TTFT/TBT ratio: 1.6x  (Prefill 比 Decode 单步重多少倍)
-
-=== TTFT vs Prompt Length ===
-  N (tokens)    TTFT (ms)   Per-token (ms)      TTFT/N²
-          32        0.652            0.020     0.000637
-          64        0.645            0.010     0.000158
-         128        0.774            0.006     0.000047
-         256        0.732            0.003     0.000011
-         512        1.098            0.002     0.000004
-
-=== TBT vs Generated Length (prompt_len fixed) ===
-  Gen tokens    Mean TBT (ms)    Last TBT (ms)
-          10            0.519            0.508
-          30            0.508            0.509
-          50            0.504            0.507
-         100            0.502            0.499
+[LLaMA-7B reference] bytes per token: 524288 (512.0 KB)
+[LLaMA-7B reference] 4096 tokens: 2048 MB
+[LLaMA-7B reference] batch=16, 4096 tokens: 32 GB
 ```
 
-##### 观察重点
+##### 验证逻辑解读
 
-1. **TTFT vs TBT**：GPU 上 TTFT 通常远大于单步 TBT（Prefill 算 N×N，Decode 算 1×N）。CPU 上可能相反（PyTorch CPU 的 M=1 开销大）——这正说明 CPU 跑不出 GPU 的 compute/memory 特性，profiling 要在 GPU 上做。
-2. **TTFT/N vs TTFT/N²**：N 大时，`TTFT/N²` 趋于常数 → attention O(N²) 主导（compute-bound）。
-3. **TBT vs L**：若 TBT 随生成长度增长 → memory-bound（读 KV Cache 变慢）；若稳定 → launch overhead 主导。
-4. **breakdown**：forward 应占大头（85%+）；sync/gap 占比高说明 launch overhead。
+- **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
+- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
+- **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
 
-> ⚠️ **注意**：本环境若为 CPU，TTFT/TBT 的绝对值和占比不代表 GPU 真实行为（CPU 上 PyTorch 的 M=1 GEMM 开销大，TTFT/TBT ratio 会失真）。profiling 结论要在 GPU 上得出。教程的脚本在 GPU 上能正确反映 compute/memory-bound 特征。
-
-#### 任务 3：用 nsys 采集时间线
+#### 任务 3：用 ncu 观察 append 的内存拷贝模式
 
 ```bash
-nsys profile -o mini_engine_timeline --trace=cuda,nvtx \
- python aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
-
-# 统计各 kernel 耗时
-nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+# profile append 阶段的 memcpy
+ncu --kernel-name regex:memcpy \
+ --metrics gpu__time_duration.sum, \
+ dram__bytes.sum \
+ ./kv_cache
 ```
 
-**分析任务**：
-1. 找出 Prefill 阶段 CUDA 时间 top3 算子（应是 GEMM 类）
-2. 找出 Decode 阶段 CUDA 时间 top3 算子（应是同算子但尺寸极小）
-3. 计算 kernel 间隙占总时间的比例（gap > 20% → launch overhead 严重）
-4. 判断系统主要瓶颈：compute / memory / launch overhead
+**观察重点**：
+- 每次 `append` 会触发 `num_heads` 次 device-to-device `cudaMemcpy`（逐 head 拷贝）——这是教学版的低效点。
+- 生产级实现会用一个 CUDA kernel 一次性把整个 `(B, H, new_len, d_head)` 的块写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。
 
-#### 任务 4：LeetGPU 在线题目 —— INT8 Quantized MatMul
+> 💡 思考：这个教学版 `append` 用 host 端循环 + `cudaMemcpy`，每次拷贝有 launch 开销。如果 `num_heads=32`、每步 decode 追加 1 个 token，就是 32 次小拷贝。优化方向：写一个 `append_kernel`，让 GPU 端一次性完成所有 head 的拷贝。
 
-**题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
+#### 任务 4：LeetGPU 在线题目 —— Grouped Query Attention (GQA)
+
+**题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
 
 **与今日知识的关联**：
 
-INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里权重和激活以 INT8 存储以省 HBM 流量，GEMM 内部反量化、FP32 累加、再 requantize。它正是今天 ncu profiling 的**理想分析对象**：用 `ncu` 对比它与 FP32 GEMM 的 `dram__throughput`（INT8 数据量更小 → HBM 流量下降）和 `sm__throughput`，验证"量化既省带宽又提算力利用率"的判据。推理系统里，量化 GEMM 是 INT8/INT4 量化推理的必经路径——量化权重从 HBM 读出后在 kernel 内反量化再做乘加。今天我们测它的瓶颈特征，正是为后续"量化推理"优化打基础。
+GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。
 
-> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 tiled GEMM、反量化/requantize 的 scale 链、ncu profiling、Roofline 分析）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
+> 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
 
-> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
+| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
+| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
+| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | DFS 左右深度和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
+| [110. 平衡二叉树](https://leetcode.cn/problems/balanced-binary-tree/) | 简单 | 后序 DFS 返回高度 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：扫描不同 d_model 的 TTFT
+#### 实验 1：扩展支持多 batch 不同序列长度
 
-修改 `scan_prompt_lengths`，固定 N=256，扫描 `d_model = 128, 256, 512, 1024`，观察 TTFT 随 d_model 的增长（QKV GEMM 是 O(N·d²)，应近似 d² 增长）。
+修改 `KVCache`，让每个 batch 有独立的 `seq_lens_[b]`，`append` 时各 batch 独立追加不同长度。测试：`batch_size=2`，batch 0 追加 10+5，batch 1 追加 8+3，验证两者 `seq_len` 独立正确。
 
-> 思考：d_model 翻倍，TTFT 变几倍？（提示：QKV GEMM FLOPs ∝ d²，attention ∝ d，GEMM 主导时约 4x。）
+> 思考：多 batch 独立长度时，attention kernel 如何知道每个 batch 该读多少 cache？（提示：把 `seq_lens[]` 传进 kernel，每 batch 用各自的长度。这正是 vLLM 的 `seq_group_metadata` 做的事。）
 
-#### 实验 2：对比 with/without cache 的 TBT 随 L 增长
+#### 实验 2：实现 FP16 版本
 
-修改 `scan_decode_length`，分别测 with cache 和 without cache 的 TBT 随生成长度变化。without cache 应随 L 线性增长（每步重算更长前缀），with cache 基本稳定。
+把 `KVCache` 的 `float*` 改成 `__half*`（`#include <cuda_fp16.h>`），`cudaMalloc`/`cudaMemcpy` 的字节数除以 2。对比 fp32 与 fp16 的显存占用，验证内存减半。
 
-> 思考：这正量化了 KV Cache 的收益——without cache 的 TBT 增长斜率 = KV Cache 让 decode 稳定的程度。Day 5 的正确性验证 + 今天的 latency 对比，完整刻画了 KV Cache 的"正确且加速"。
+> 思考：fp16 cache 的数值精度是否足够？什么场景下必须用 fp32？（提示：长序列累积误差、量化感知训练时 fp16 可能不够；Day 1 的 int8 量化是更激进的压缩。）
 
-#### 实验 3：用 ncu 测 forward 里最慢的 GEMM kernel
+#### 实验 3：把 append 换成单个 CUDA kernel
 
-```bash
-ncu --kernel-name regex:addmm \
- --metrics gpu__time_duration.sum, dram__bytes.sum, \
- dram__throughput.avg.pct_of_peak_sustained_elapsed, \
- sm__throughput.avg.pct_of_peak_sustained_elapsed \
- python aiinfra/week5/day6/kernels/profile_engine_v0.py
-```
+当前 `append` 在 host 端用 for 循环 + `cudaMemcpy` 逐 head 拷贝。写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、`block=(num_heads * new_len * d_head)` 一次性把新 K/V 写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。用 `nvprof` 或 `ncu` 对比两种实现的 append 耗时。
 
-> 思考：Prefill 的 GEMM 应 `sm__throughput` 高（compute-bound），Decode 的同 GEMM 应 `dram__throughput` 高（M=1 memory-bound）——同一个算子，M 不同瓶颈翻转，这正是 Day 1 的核心结论的 ncu 实证。
+> 思考：kernel 版本的 append 应该比 memcpy 版快多少？瓶颈从"launch 开销"变成什么？（提示：变成实际的显存写入带宽，更接近理论极限。）
 
 ---
 
 ### 今日总结
 
-Day 6 我们给 Mini 引擎装上了"仪表盘"，建立了推理 profiling 的完整方法论：
+Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 
-1. **三层方法论**：系统级（nsys 看时间线/gap）→ 阶段级（cuda.Event 测 TTFT/TBT）→ Kernel 级（ncu 测带宽/算力利用率），自顶向下定位瓶颈
-2. **阶段级指标**：TTFT（Prefill）、TBT（Decode）、Decode 的 forward/sampling/sync breakdown——forward 应占 85%+，sync 大说明 launch overhead
-3. **TTFT 增长规律**：扫描 N，`TTFT/N²` 趋常数 → attention O(N²) 主导（compute-bound）；`TTFT/N` 趋常数 → GEMM O(N·d²) 主导
-4. **TBT 是否随 L 增长**：增长 → memory-bound（读 KV Cache 变慢）；稳定但绝对值高 → launch overhead 主导 → CUDA Graph
-5. **瓶颈决策树**：TTFT 高→FlashAttention；TBT 随 L 增长→KV 量化/GQA；gap 大→CUDA Graph；sampling 大→搬 GPU
-6. **手写 profiling 脚本**：测 TTFT/mean/P50/P99 TBT + 三段 breakdown + 扫描 prompt/生成长度，从数据判断瓶颈类型
-7. **ncu 判据**：`dram__throughput` 高 + `sm__throughput` 低 = memory-bound；反之 compute-bound——同算子 M 不同瓶颈翻转
+1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
+2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
+3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
+4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
+5. **多轮对话复用**：Round 1 的 cache 保留，Round 2 只算新增 token 的 K/V，TTFT 大幅降低；前提是 prompt 格式严格一致
+6. **手写 KVCache 类**：`append`/`get_cache`/`reset` 三件套，多轮追加 + 数据落位验证通过，并打印 LLaMA-7B 真实显存参考值
+7. **GQA 优化**：从模型结构层面减少 KV 头数，把 cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`（LLaMA-3 缩小 4×）
 
-掌握这些后，你就有了"先测量再优化"的工程能力——明天 Day 7 总结本周，把推理系统四大核心问题（内存管理、Batch 策略、Latency 隐藏、调度开销）系统化，为 Week 6+ 的深入优化做准备。
+掌握这些后，你就有了 Day 3-4 读 vLLM 源码的全部数据结构基础——明天的 PagedAttention 就建在今天的 KVCache 之上，只是把"连续分配"换成了"分页 + block table"。
 
 ---
 
 ### 面试要点
 
-1. **如何做 LLM 推理系统的端到端 profiling？需要关注哪些指标？**
+1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 三层方法论：
- 1. **系统级**（nsys）：看 kernel 时间线排列、gap 间隙、CPU/GPU 并行关系
- 2. **阶段级**（cuda.Event）：测 TTFT（Prefill）、TBT/TPOT（Decode）、throughput
- 3. **Kernel 级**（ncu）：分析 top 算子是 compute-bound 还是 memory-bound（看 dram/sm throughput）
- - 关键指标：TTFT、TBT 的 mean/P50/P99、kernel gap 占比、SM/Memory utilization、KV Cache 内存占用
- - 瓶颈定位：TTFT 高→Prefill；TBT 高→Decode；gap 大→launch overhead；逐层细化到单 kernel 的带宽/算力利用率
+ - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
+ - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
+ - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
+ - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
 
 </details>
 
 
-2. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原因**：序列变长，KV Cache 变大，每步 Decode 要读取更多历史 K/V（attention 的 1×L 部分）。当 KV 超出 L2/L1 cache，掉到 HBM，访存随 L 增长 → TBT 增长
- - 计算量：projection O(d²) 与 L 无关，但 attention 的 QK^T 和 PV 是 O(L·d)，随 L 增长
- - **优化方向**：
- 1. KV Cache 量化（INT8/FP8）：减半/减 1/4 数据量
- 2. GQA/MQA：减少 KV 头数，cache 缩 4x+
- 3. 滑动窗口/稀疏 attention：只保留最近 K 个 token
- 4. PagedAttention：高效管理 cache 内存（不直接降 TBT，但支持更大 batch 间接提吞吐）
- 5. Continuous Batching：合并多个 decode 请求，抬高 M，让 memory-bound 的带宽利用率提升
+ - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
+ - 总 KV Cache = `batch_size × seq_len × per_token_size`
+ - LLaMA-7B（32 层、32 头、d_head=128、fp16）：每 token ≈ 524 KB，4096 tokens ≈ 2 GB，batch=16 ≈ 32 GB
+ - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
+ - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
 
 </details>
 
 
-3. **Decode 的 breakdown 里 sync/gap 占比很大说明什么？怎么优化？**
+3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 说明 **launch overhead 主导**——每步 decode 触发多个小 kernel（embedding→qkv→attention→ffn→lm_head），每个 launch 有 5-10μs 开销，而 kernel 本身只算几十 μs（M=1 太小），launch 开销占比高 → gap 大
- - 优化：
- 1. **CUDA Graph**：把整个 decode 循环录制成图，一次提交全部 kernel，消除 per-step launch
- 2. **torch.compile**：自动 fuse 多个 element-wise kernel，减少 launch 数
- 3. **手写 fused kernel**：把 attention 的 softmax+matmul 融合（如 FlashAttention），减 kernel 数
- 4. **减少 cudaSynchronize**：异步采样、减少 CPU-GPU 同步点
+ - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
+ - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
+ - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
+ - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
 
 </details>
 
 
-4. **如何判断一个 kernel 是 compute-bound 还是 memory-bound？**
+4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 用 ncu 测两个指标：
- - `dram__throughput`（带宽利用率）高 + `sm__throughput`（算力利用率）低 → **memory-bound**
- - `sm__throughput` 高 + `dram__throughput` 低 → **compute-bound**
- - 或用 Roofline：算 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 58.45 FLOP/Byte）：AI < Ridge → memory-bound，AI > Ridge → compute-bound
- - 实例：Decode 的 GEMM（M=1）AI≈0.1 → memory-bound；Prefill 的同 GEMM（M=N）AI≈400 → compute-bound。同算子 M 不同瓶颈翻转
+ - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
+ - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
+ - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
+ - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
+ - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
 
 </details>
 
 
-5. **TTFT 随 prompt 长度怎么增长？怎么判断是 O(N) 还是 O(N²)？**
+5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 扫描 N=32,64,128,256,512，测 TTFT
- - 看 `TTFT/N` 是否趋常数（O(N)）或 `TTFT/N²` 是否趋常数（O(N²)）
- - N 较大时 attention 的 N×N 矩阵主导 → 趋 O(N²)；N 较小时 GEMM 的 O(N·d²) 主导 → 趋 O(N)
- - 若 TTFT 随 N² 增长 → Prefill compute-bound → 优化用 FlashAttention（把 IO 从 O(N²) 降到 O(Nd)）
- - 若 TTFT 随 N 线性增长 → GEMM 主导 → 优化用 Tensor Core、并行 prefill
+ - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
+ - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
+ - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
+ - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
 
- - 语义一致：都是"测时间、拆阶段、看带宽/算力利用率"，判据（memory vs compute-bound）相同
+</details>
+
+
+6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
+ - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
+ - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
+ - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
 
 </details>
 

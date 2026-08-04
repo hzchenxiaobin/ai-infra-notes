@@ -1,369 +1,573 @@
-## Day 5：Mock 面试
+## Day 5：分布式推理专题 —— TP/PP/DP 与通信计算重叠
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 掌握 **Mock 面试的完整流程**——自我介绍、项目介绍、技术难点、优化思路、场景题、反问<br>
-2. 学会用 **STAR 法** 结构化讲述项目，突出技术决策和量化成果<br>
-3. 能针对 **2-3 个技术难点** 准备 5-10 分钟深度讲解，并预判 follow-up<br>
-4. 练习 **限时口述** 与时间控制，避免面试中说不完或说太多<br>
-5. 建立 **个人面试题库** 和 **复盘清单**，把每次练习转化为可改进的反馈<br>
-6. 完成 **至少 1 轮完整 Mock 面试** 并录音/文字复盘
+1. 理解**为什么单卡不够**——模型太大（70B FP16 ≈ 140GB，单卡 A100 80GB 放不下）、吞吐需求（单卡 tok/s 上限低）、延迟需求（单层 GEMM 算力受限）三大动机<br>
+2. 掌握 **Tensor Parallelism (TP)**——column-parallel linear（QKV 投影按 head 切）、row-parallel linear（Output 投影按 input 切 + all-reduce）、TP=2/4/8 的通信/算力权衡<br>
+3. 掌握 **Pipeline Parallelism (PP)**——GPipe vs 1F1B、micro-batching、bubble ratio 公式 $\text{bubble} = (P-1)/(M+P-1)$<br>
+4. 理解 **Data Parallelism (DP)** 在推理中的定位——与 TP/PP 的区别，适合高吞吐多请求场景而非单大模型放置<br>
+5. 掌握 **NCCL collectives**——all-reduce（ring 拓扑，$2(N-1)$ 步通信）、all-gather、reduce-scatter 的通信量对比<br>
+6. 学会**通信计算重叠**——`torch.cuda.Stream` 双流（compute stream + comm stream）、CUDA Graph 捕获双流 launch 序列
 
-> 💡 **为什么重要**：Day 3-4 积累了大量知识点，但知识 ≠ 面试表现。很多人“懂”却“讲不清楚”，Mock 面试是把知识转化为表达的唯一途径。今天你要当自己的面试官，逼自己在限时内把项目和技术点讲明白。
+> 💡 **为什么重要**：Day 3 分析了 SGLang/LightLLM 的高级特性（Speculative Decoding、Chunked Prefill、Prefix Caching），但它们都假设"模型能放进单卡"。当模型大到单卡放不下（如 70B+），或吞吐需求超过单卡上限时，就必须上**分布式推理**。TP/PP/DP 是分布式推理的三大基石，NCCL 通信与通信-计算重叠是把"分布式开销"压到最低的关键工程能力——这是面试"大模型分布式推理"的高频考点，也是 Mini 引擎从"单卡 demo"走向"多卡生产"的必经之路。
 
 ---
 
-### 学前导读：为什么需要 Mock 面试
+### 学前导读：为什么单卡不够
 
-面试不是开卷考试，而是**限时口述 + 临场互动**。你以为自己“会”的内容，一旦面对面试官的追问，很可能会：
+Day 1-3 的 Mini 引擎都跑在单卡上。但当模型规模和业务需求增长时，单卡会从三个维度撞墙：
 
 ```
-❌ 开场 5 分钟还没讲清楚项目是做什么的
-❌ 技术点只停留在“是什么”，讲不出“为什么”
-❌ 被 follow-up 一问就卡壳，开始绕圈子
-❌ 时间分配失控，重点没讲完就被打断
-❌ 口头禅严重：然后、那个、就是
+单卡撞墙的三个维度：
+  1. 显存墙：70B FP16 权重 ≈ 140GB，A100 80GB / H100 80GB 单卡放不下
+     → 需要 TP/PP 把权重切到多卡
+  2. 吞吐墙：单卡 decode tok/s 有上限（如 ~2000 tok/s），高 QPS 场景不够
+     → 需要 DP 多副本并行处理请求
+  3. 延迟墙：单层大 GEMM 受单卡算力限制，prefill 长 prompt 时延迟高
+     → 需要 TP 把单层 GEMM 拆到多卡，降低单步延迟
 ```
 
-| 学习方式 | 效果 |
-|----------|------|
-| 看书/看代码 | 理解 30% |
-| 写笔记 | 理解 50% |
-| 自己口述一遍 | 理解 70% |
-| **Mock 面试 + 录音复盘** | **理解 90%** |
+| 维度 | 单卡瓶颈 | 分布式方案 | 代价 |
+|------|---------|-----------|------|
+| 显存 | 模型放不下 | TP（切权重）/ PP（切层） | 通信开销 |
+| 吞吐 | tok/s 上限 | DP（切数据，多副本） | 显存翻倍 + grad all-reduce |
+| 延迟 | 单层 GEMM 慢 | TP（单层算力 x N） | 每层 all-reduce |
 
-> 💡 **一句话总结**：Mock 面试的目的不是“背答案”，而是训练你在压力下**清晰、有逻辑、有重点**地表达技术思考。
+> 💡 **一句话总结**：TP 解决"放不下 + 单层慢"，PP 解决"放不下"，DP 解决"吞吐不够"。实际系统常组合 DP+TP 或 DP+PP——外层 DP 切请求扩吞吐，内层 TP/PP 切模型放显存。
 
 ---
 
 ### 理论学习
 
-#### 1.1 Mock 面试流程
+#### 3b.1 为什么需要分布式推理
 
-![Mock 面试流程：7 个环节约 34 分钟](../images/mock_interview_framework.svg)
+分布式推理的三大动机，对应三种不同的并行策略：
 
-完整 Mock 面试分为 7 个环节，总时长约 34 分钟：
+##### 动机 1：模型太大，单卡显存放不下
 
-| 环节 | 时长 | 核心目标 |
-|------|------|---------|
-| 自我介绍 | 1-2 min | 建立第一印象，点明背景和方向 |
-| 项目介绍 | 3-5 min | 用 STAR 法讲清项目价值 |
-| 技术难点 1 | 5-6 min | 深入讲一个你最强的技术点 |
-| 技术难点 2 | 5-6 min | 展示另一个维度的能力 |
-| 优化思路 | 5-6 min | 展示从问题到方案到验证的完整链路 |
-| 场景设计题 | 6-7 min | 展示系统设计和 trade-off 能力 |
-| 反问环节 | 1-2 min | 展示主动性和岗位匹配度 |
-
-#### 1.2 自我介绍的 STAR-mini 模板
-
-```text
-1. 我是谁：姓名 + 背景 + 当前方向
-2. 我做了什么：一句话概括项目（Mini AI Infra / 手写 CUDA kernel / Mini 推理引擎）
-3. 核心亮点：1-2 个量化成果（如 GEMM 达到 cuBLAS ~64%（RTX 5090 实测 4096³）、支持 Continuous Batching）
-4. 我想做什么：应聘岗位方向
+```
+模型显存估算（FP16，2 bytes/param）：
+  7B  → 14 GB   （单卡 A100 80GB 轻松）
+  13B → 26 GB   （单卡够，但 KV Cache 空间紧张）
+  70B → 140 GB  （单卡放不下，必须切）
+  175B→ 350 GB  （需 4-8 卡 TP/PP）
+额外显存：KV Cache（随 batch 和序列长度增长）+ activation
 ```
 
-示例：
+> ⚠️ **KV Cache 容易被忽略**：70B 模型即便权重切到 2 卡（每卡 70GB），KV Cache 在大 batch 长序列下可能再吃几十 GB，导致单卡仍 OOM。这就是为什么 TP=2 不一定够，常需 TP=4/8。
 
-```text
-"我叫陈斌斌，最近 8 周集中学习 AI Infra。
-我手写了一套 CUDA kernel，包括 GEMM、FlashAttention、Softmax、LayerNorm，
-并构建了一个支持 KV Cache、Continuous Batching 和优先级调度的 Mini 推理引擎。
-希望应聘 AI Infra / 推理优化相关岗位。"
+##### 动机 2：吞吐需求（throughput）
+
+单卡 decode 吞吐有上限（受算力和带宽限制）。高 QPS 场景（如多人同时聊天）需要多副本并行——这就是 DP。每张卡跑一个完整模型副本，独立处理不同请求，吞吐近似线性扩展。
+
+##### 动机 3：延迟需求（latency）
+
+单层大 GEMM（如 70B 的 FFN，矩阵 [B, 8192]×[8192, 28672]）在单卡上耗时较长。TP 把这个 GEMM 切到 N 卡，每卡算 1/N，单步延迟近似降至 1/N（扣除通信开销后）。
+
+#### 3b.2 Tensor Parallelism (TP)
+
+![TP/PP/DP 三种分布式并行对比](../../week7/images/tp_pp_dp_overview.svg)
+
+TP 的核心思想：**把每一层的权重矩阵切到多卡，各卡并行计算同一层的不同部分，通过通信聚合结果**。
+
+##### Column-Parallel Linear（QKV 投影用）
+
+权重 $W \in \mathbb{R}^{out \times in}$ 按 **output 维**切分，每个 rank 持有 $W_i \in \mathbb{R}^{out/N \times in}$：
+
+```
+输入 X[B, in]  → 各 rank 相同（broadcast 或各 rank 自有）
+各 rank 计算 Y_i = X @ W_i^T  →  Y_i[B, out/N]
+输出：各 rank 持有 [B, out/N]，按 head 天然并行
+通信量：0（无需 all-reduce，下游 attention 按 head 消费）
 ```
 
-#### 1.3 项目介绍的 STAR 法
+> 💡 **为什么 QKV 用 column-parallel**：Attention 天然按 head 分组，column 切分正好让每个 rank 持有若干 head 的 Q/K/V，后续 attention 计算完全本地化，无需跨 rank 通信。
 
-| 部分 | 内容 | 示例 |
-|------|------|------|
-| **S**ituation | 项目背景 | LLM 推理部署对延迟和吞吐要求高，我想理解底层优化 |
-| **T**ask | 你的目标 | 手写高性能 kernel 并搭建一个可运行的 Mini 推理引擎 |
-| **A**ction | 你做了什么 | GEMM 优化到 cuBLAS ~64%（RTX 5090 实测 4096³）、实现 FlashAttention、Continuous Batching Scheduler |
-| **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms |
+##### Row-Parallel Linear（Output 投影用）
 
-> ⚠️ 避免只列技术栈，要突出：**你解决了什么问题、为什么难、你怎么权衡、结果如何**。
+权重 $W \in \mathbb{R}^{out \times in}$ 按 **input 维**切分，每个 rank 持有 $W_i \in \mathbb{R}^{out \times in/N}$：
 
-#### 1.4 技术难点讲解模板
-
-选一个你真正深入做过的点，按以下结构准备：
-
-```text
-1. 问题是什么：标准 Attention IO 是 O(N²)，长序列跑不动
-2. 现有方案局限：朴素 tiling 需要物化 N×N 矩阵
-3. 你的方案：FlashAttention = tiling + online softmax，IO 降到 O(Nd)
-4. 实现细节：block 切分、shared memory 分配、warp 同步
-5. 验证结果：相比 naive 快 X 倍、接近 cuBLAS/FAI
-6. 还可以怎么优化：FA2 的 warp group、double buffering、量化
+```
+输入 X_i[B, in/N]  → 各 rank 不同（来自上一层 column 切分）
+各 rank 计算 Y_i = X_i @ W_i^T  →  Y_i[B, out]（部分和）
+输出：all-reduce(sum) 聚合各 rank 部分和 → Y[B, out]
+通信量：all-reduce [B, out] 元素
 ```
 
-每个点准备 **3 分钟精简版** 和 **6 分钟完整版**，根据面试官反应切换。
+##### TP 的经典 pattern：Column + Row 配对
 
-#### 1.5 常见 Follow-up 与应对
+一个 Attention Block = ColumnParallel(QKV) + Attention + RowParallel(Output)，**全程只需 1 次 all-reduce**（在 Output 投影处）：
 
-| Follow-up | 考察点 | 应对策略 |
-|-----------|--------|---------|
-| "为什么不用 vLLM 直接部署？" | 技术选型思考 | 承认 vLLM 成熟，但手写是为了理解底层、做定制优化 |
-| "你的 kernel 和官方实现差距多少？" | 量化意识 | 给出具体数字（GEMM 达 cuBLAS ~64%，RTX 5090 实测 4096³），并讲清差距来源 |
-| "如果 batch 从 8 加到 64，系统会怎样？" | 系统扩展性 | 分析显存、吞吐、latency 的变化 |
-| "如何再优化 TBT？" | 持续优化能力 | 列出 3 个方向：量化、CUDA Graph、调度策略 |
-| "如果显存不够怎么办？" | trade-off | KV Cache 量化、swap、recompute、稀疏 attention |
+```
+X → ColumnParallel(QKV) → [各 rank 算自己 head 的 QKV，无通信]
+  → Attention（各 head 独立，无通信）
+  → RowParallel(Output) → [各 rank 算部分和，1 次 all-reduce 聚合]
+  → Y
+```
 
-#### 1.6 反问环节
+##### TP=2/4/8 权衡
 
-准备 2-3 个问题，避免只问薪资：
+| TP size | 算力提升 | 每层通信量 | 显存节省 | 适用场景 |
+|---------|---------|-----------|---------|---------|
+| TP=2 | x2 | 1 次 all-reduce（小） | 权重 ÷2 | 13B-34B 模型 |
+| TP=4 | x4 | 1 次 all-reduce（中） | 权重 ÷4 | 70B 模型 |
+| TP=8 | x8 | 1 次 all-reduce（大） | 权重 ÷8 | 175B 模型 |
 
-1. 团队目前在推理优化的重点方向是什么？
-2. 这个岗位日常更多做 kernel 优化还是系统架构？
-3. 团队对新人的培养机制是怎样的？
-4. 目前推理服务最大的技术挑战是什么？
+> ⚠️ **TP 不是越大越好**：TP 增大后，all-reduce 通信量不变（每层都全量 all-reduce 输出），但每卡算的 GEMM 变小（算力利用率下降），且通信占比升高。通常 TP≤8，再大用 PP 补充。
 
----
+#### 3b.3 Pipeline Parallelism (PP)
 
-### Coding 任务：Mock 面试练习
+![NCCL Ring All-Reduce 拓扑](../../week7/images/nccl_ring_topology.svg)
 
-#### 任务 1：创建 mock_interview.py
+PP 的核心思想：**把模型的不同层切到不同卡（stage），数据像流水线一样流过各 stage**。
 
-创建文件 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day5/kernels/mock_interview.py)，把 Mock 面试的 7 个环节做成一个带计时器的练习系统：
+##### GPipe vs 1F1B
+
+```
+GPipe（朴素流水线）：
+  - 一次性把整个 mini-batch forward 完所有 stage，再 backward
+  - 空泡大：前 P-1 步只有部分 stage 在工作
+  - 显存大：要存所有 micro-batch 的 activation
+
+1F1B（One Forward One Backward）：
+  - 交错执行 forward 和 backward：做完一个 micro-batch 的 forward 立刻 backward
+  - 空泡一样大，但显存省（activation 数量稳定在 P）
+  - 推理只需 forward，1F1B 的 backward 优势不体现，但 prefill 可借鉴 micro-batch 流水
+```
+
+##### Micro-batching 与 bubble ratio
+
+把一个 mini-batch 切成 $M$ 个 micro-batch，依次注入 $P$ 个 stage 的流水线：
+
+$$\text{bubble ratio} = \frac{P-1}{M+P-1}$$
+
+| P (stage) | M (micro-batch) | bubble | 说明 |
+|-----------|----------------|--------|------|
+| 4 | 1 | 75% | 空泡占主导，效率低 |
+| 4 | 4 | 43% | 仍较差 |
+| 4 | 16 | 16% | 较好 |
+| 8 | 64 | 10% | 大 M 下空泡可忽略 |
+
+> 💡 **关键洞察**：增大 $M$（micro-batch 数）是降低 bubble 的主要手段。推理场景下，prefill 长 prompt 可切成多个 chunk 走流水线（与 Day 3 的 Chunked Prefill 思路一致），相当于增大 $M$。
+
+##### 推理场景下的 PP
+
+推理只有 forward，没有 backward，PP 的收益主要在**显存**（每卡只存部分层）。代价是 stage 间点对点通信（send/recv activation）和流水线空泡。PP 适合**超大模型**（TP=8 仍放不下时叠加 PP）。
+
+#### 3b.4 Data Parallelism (DP)
+
+DP 的核心思想：**每张卡持有完整模型副本，各卡处理不同的请求/batch**。
+
+##### DP vs TP/PP 的区别
+
+| 维度 | DP | TP / PP |
+|------|----|---------|
+| 切分对象 | 输入数据 | 模型权重 |
+| 每卡模型 | 完整副本 | 部分权重 |
+| 通信 | grad all-reduce（训练）/ 无或很少（推理） | 每层 all-reduce（TP）/ send-recv（PP） |
+| 扩展性 | 吞吐近似线性 | 受通信限制 |
+
+##### DP 在推理中的定位
+
+- **训练**：DP 是主流，每步 backward 后 grad all-reduce
+- **推理**：DP 更简单——各卡独立处理请求，**无需跨卡通信**（除了请求路由）。吞吐近似线性扩展，是高 QPS 场景的首选
+- **推理 DP 的通信**：仅请求分发（CPU 层面），GPU 间几乎无通信
+
+> 💡 **推理 DP 的优势**：零 GPU 通信、实现简单、吞吐线性扩展。劣势是每卡要放完整模型（显存不省）。所以"模型放得下单卡"时，DP 是推理扩吞吐的最佳选择。
+
+#### 3b.5 NCCL collectives
+
+NCCL（NVIDIA Collective Communications Library）是 GPU 间集合通信的标准库，PyTorch 通过 `torch.distributed` 调用。
+
+##### all-reduce（TP/DP 最常用）
+
+所有 rank 的张量做逐元素规约（sum/max/avg），结果分发到所有 rank。
+
+**Ring all-reduce** 分两阶段，共 $2(N-1)$ 步：
+
+```
+阶段 1：reduce-scatter（N-1 步）
+  - 每步：每卡 send 一块给右邻 + recv 左邻的块，累加
+  - N-1 步后：每卡持有一个块的完整和
+  - 通信量 = V × (N-1)/N（V = 张量大小）
+
+阶段 2：all-gather（N-1 步）
+  - 每步：每卡把自己那块完整和 send 给右邻 + recv
+  - N-1 步后：每卡都有完整结果
+  - 通信量 = V × (N-1)/N
+
+总计：2 × V × (N-1)/N
+```
+
+##### all-gather / reduce-scatter
+
+| collective | 作用 | 通信量 | 典型用途 |
+|-----------|------|--------|---------|
+| **all-reduce** | 全聚合 + 全分发 | $2V(N-1)/N$ | TP 输出聚合、DP 梯度同步 |
+| **all-gather** | 各 rank 拼接不同块 | $V(N-1)/N$ | column-parallel 输出收集 |
+| **reduce-scatter** | 全聚合 + 分散结果 | $V(N-1)/N$ | 拆分 all-reduce 的前半段 |
+| **broadcast** | 单卡数据广播到所有 | $V$ | 初始化、参数同步 |
+| **send/recv** | 点对点传输 | $V$ | PP stage 间传 activation |
+
+> 💡 **为什么用 ring**：ring 拓扑每卡只与左右邻居通信，带宽利用率高、无拥塞点；通信量与 $N$ 无关（$2V(N-1)/N \approx 2V$），只步数随 $N$ 线性增长。NCCL 还支持 tree 拓扑（延迟更低，适合小数据）和 NVLink/InfiniBand 自适应。
+
+##### 通信量对比示例（V = 1GB, N=8）
+
+```
+all-reduce:    2 × 1GB × 7/8 ≈ 1.75 GB  （每卡发送+接收）
+all-gather:    1GB × 7/8    ≈ 0.875 GB
+reduce-scatter: 1GB × 7/8   ≈ 0.875 GB
+```
+
+#### 3b.6 通信计算重叠
+
+![通信-计算重叠：双 CUDA Stream](../../week7/images/comm_compute_overlap.svg)
+
+分布式推理的通信开销如果不能被计算掩盖，TP/PP 的加速比会被严重吃掉。**通信-计算重叠**是核心优化手段。
+
+##### 双流（dual stream）方案
+
+```
+compute_stream: 执行 GEMM / Attention 等前向计算
+comm_stream:    执行 all-reduce / send-recv 等通信
+
+不重叠（串行）：
+  compute_stream: [==== GEMM ====]
+  comm_stream:                            [== all-reduce ==]
+  total = T_compute + T_comm
+
+重叠（双流并行）：
+  compute_stream: [==== GEMM ====]
+  comm_stream:        [== all-reduce ==]   ← 与 GEMM 并行
+  total ≈ max(T_compute, T_comm)
+```
+
+`torch.cuda.Stream` 实现要点：
 
 ```python
-# mock_interview.py —— Mock 面试计时与提纲系统
-# 运行命令: python mock_interview.py
-# 依赖: 仅标准库
+compute_stream = torch.cuda.Stream()
+comm_stream = torch.cuda.Stream()
 
-import time
-
-SECTIONS = [
-    {"name": "自我介绍", "duration": 120, "prompt": "..."},
-    {"name": "项目介绍", "duration": 300, "prompt": "..."},
-    # ... 共 7 个环节
-]
-
-# 完整代码见 kernels/mock_interview.py
+with torch.cuda.stream(compute_stream):
+    y = gemm(x)                      # compute on compute_stream
+with torch.cuda.stream(comm_stream):
+    torch.distributed.all_reduce(g)  # comm on comm_stream
+# 两流并发执行，GPU 硬件调度（需有空闲 SM）
 ```
 
-完整代码见 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day5/kernels/mock_interview.py)。
+##### 重叠的前提条件
+
+- **数据无依赖**：通信的数据与计算的数据不重叠（如本层 GEMM 与上一层的 all-reduce 可重叠）
+- **GPU 资源足够**：两路 kernel 需有足够空闲 SM 并发，否则仍串行
+- **流同步正确**：有依赖时用 `stream.wait_stream()` 建立顺序
+
+##### CUDA Graph + 通信重叠
+
+decode 阶段每步 shape 固定，可用 CUDA Graph 捕获整个 forward（含双流 launch 序列），消除 Python/CPU launch 开销：
+
+```python
+g = torch.cuda.CUDAGraph()
+with torch.cuda.graph(g):
+    with torch.cuda.stream(compute_stream):
+        compute(...)
+    with torch.cuda.stream(comm_stream):
+        all_reduce(...)
+# 每步 decode 只需 g.replay()，一次 launch 整个图
+```
+
+> ⚠️ **CUDA Graph 的限制**：要求 shape 静态（decode 每步 token 数固定，适合；prefill shape 变化，需多个 graph 或回退 eager）。vLLM/TensorRT-LLM 在 decode 路径广泛使用 CUDA Graph。
+
+### Coding 任务：TP 推理 demo + 通信重叠
+
+#### 任务 1：创建 tp_inference_demo.py
+
+创建文件 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/tp_inference_demo.py)，用 `torch.chunk` 在单卡上模拟 2-GPU TP 推理：
+
+```python
+# tp_inference_demo.py —— 2-GPU Tensor Parallelism 推理 Demo（单卡模拟）
+# 运行命令: python tp_inference_demo.py
+# 依赖: torch（CPU 或单 GPU 均可）
+
+class ColumnParallelLinear(nn.Module):
+    """列并行：W 按 output dim 切分，各 rank 输出 [B, out/tp]，无需通信"""
+    def forward(self, x):
+        shards = [x @ w.t() + b for w, b in zip(self.weights, self.bias)]
+        return torch.cat(shards, dim=-1)
+
+class RowParallelLinear(nn.Module):
+    """行并行：W 按 input dim 切分，各 rank 输出部分和，all-reduce 聚合"""
+    def forward(self, x):
+        x_shards = torch.chunk(x, self.tp_size, dim=-1)
+        partial = [x_i @ w.t() for x_i, w in zip(x_shards, self.weights)]
+        # 模拟 all-reduce(sum)：真实场景用 torch.distributed.all_reduce(y)
+        return torch.stack(partial, dim=0).sum(dim=0) + self.bias
+
+class TPAttentionBlock(nn.Module):
+    """ColumnParallel(QKV) + Attention + RowParallel(Output)，1 次 all-reduce"""
+    ...
+```
+
+完整代码见 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/tp_inference_demo.py)。
 
 代码要点：
-- **7 个环节** 覆盖完整面试流程，每个环节有明确的时间限制和提示
-- **倒计时显示**：实时显示剩余时间，可提前结束
-- **复盘清单**：结束后输出时间控制、口头禅、技术点清晰度等检查项
-- **两种模式**：`start` 完整模拟、`outline` 查看提纲
+- `ColumnParallelLinear`：权重按 output dim 切成 `tp_size` 片，各片独立计算后 `torch.cat` 模拟拼接（真实 TP 下游按 head 消费，常无需 concat）
+- `RowParallelLinear`：权重按 input dim 切，输入也按 input dim chunk，各 rank 算部分和后 `torch.stack().sum()` 模拟 all-reduce
+- `TPAttentionBlock`：组合 Column(QKV) + Attention + Row(Output)，验证一个 block 仅需 1 次通信
+- `single_gpu_forward`：用拼接后的完整权重做等价单卡 forward，用于正确性对比
 
-#### 任务 2：运行一次完整 Mock 面试
+#### 任务 2：运行 tp_inference_demo.py 并验证正确性
 
 ```bash
-python kernels/mock_interview.py
+python kernels/tp_inference_demo.py
 ```
 
-**预期流程**（节选）：
+**预期输出**（节选）：
 
 ```text
-=== AI Infra Mock 面试 ===
-共 7 个环节，全程约 34 分钟
+================================================================
+  正确性测试：TP=2 模拟 vs 单卡等价
+================================================================
+  output shape : TP=(2, 128, 512), single=(2, 128, 512)
+  max abs diff : 2.53e-07
+  result       : PASS
 
-命令：
-  start  — 开始完整 Mock 面试
-  outline — 查看面试提纲
+================================================================
+  通信模式分析（TP=2，一个 Attention Block）
+================================================================
+  ColumnParallelLinear (QKV 投影):
+    通信量: 0（无需 all-reduce，下游 attention 按 head 消费）
+  RowParallelLinear (Output 投影):
+    通信量: all-reduce(sum) [B, out] 元素，FP32 每元素 4B
+  => 一个 Attention Block 共 1 次 all-reduce（在 output 投影处）
 
-输入命令: start
-============================================================
-【自我介绍】限时 120 秒
-------------------------------------------------------------
-1. 姓名、背景
-2. 目前方向
-3. 项目核心亮点（一句话）
-4. 希望应聘的岗位
-------------------------------------------------------------
-准备就绪后按回车开始...
+================================================================
+  Demo 完成！TP 推理模拟 通过
 ```
 
 ##### 观察重点
 
-1. **是否超时**：每个环节超时说明内容没压缩好
-2. **是否卡壳**：记录卡壳点，回到 Day 3-4 重新复习
-3. **口头禅统计**：重点听“然后、那个、就是、嗯”
-4. **量化是否清晰**：项目介绍中是否给出了具体数字
+1. **正确性**：TP=2 模拟输出与单卡等价输出 max diff < 1e-5（浮点累加顺序导致微小误差）
+2. **通信 pattern**：一个 Attention Block 仅 1 次 all-reduce（Row(Output) 处），Column(QKV) 零通信
+3. **单卡模拟局限**：无法体现真实多卡加速（GEMM 算力 x2），仅验证切分正确性与通信结构
 
-#### 任务 3：录制并复盘
+#### 任务 3：创建并运行 comm_overlap_demo.py + nsys profiling
 
-用手机或电脑录下自己的 Mock 面试过程，回放后填写复盘表：
+创建文件 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/comm_overlap_demo.py)，演示双 CUDA Stream 通信-计算重叠：
 
-| 环节 | 用时 | 流畅度 1-5 | 主要问题 | 改进动作 |
-|------|------|-----------|---------|---------|
-| 自我介绍 | | | | |
-| 项目介绍 | | | | |
-| 技术难点 1 | | | | |
-| 技术难点 2 | | | | |
-| 优化思路 | | | | |
-| 场景设计题 | | | | |
-| 反问 | | | | |
+```python
+# comm_overlap_demo.py —— 通信-计算重叠 Demo（双 CUDA Stream）
+# 运行命令: python comm_overlap_demo.py
+# Profiling: nsys profile -o comm_overlap --trace=cuda python comm_overlap_demo.py
 
-> 思考：哪个环节得分最低？针对该环节重写逐字稿，再练 3 遍。
+compute_stream = torch.cuda.Stream()
+comm_stream = torch.cuda.Stream()
 
-#### 任务 4：LeetGPU 在线题目 —— GEMM
+def serial_step():
+    dummy_gemm(compute_stream, SIZE)       # compute 先做完
+    comm_stream.wait_stream(compute_stream) # 依赖：comm 等 compute
+    dummy_comm(comm_stream, SIZE)
 
-**题目链接**：<https://leetgpu.com/challenges/general-matrix-multiplication-gemm>
+def overlap_step():
+    dummy_gemm(compute_stream, SIZE)       # 两流无依赖，并行 launch
+    dummy_comm(comm_stream, SIZE)
 
-**与今日知识的关联**：Mock 面试中"项目深度拷问"环节必问 GEMM——它是推理引擎中计算量最大的核心算子（Linear/FFN/投影层全是 GEMM）。能讲清其 CUDA 实现（shared memory tiling、register blocking、向量化加载）以及为什么它是 compute-bound、优化目标是对标 cuBLAS，能体现工程深度。
+# 用 torch.cuda.Event 计时
+serial_ms = measure(serial_step, ...)
+overlap_ms = measure(overlap_step, ...)
+```
 
-> 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
+完整代码见 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/comm_overlap_demo.py)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 5）
+运行与 profiling：
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 5（图论基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+```bash
+# 运行（需 CUDA 环境）
+python kernels/comm_overlap_demo.py
+
+# nsys 采集时间线
+nsys profile -o comm_overlap --trace=cuda,nvtx python kernels/comm_overlap_demo.py
+
+# 查看报告
+nsys-ui comm_overlap.nsys-rep
+# 在 timeline 中应看到 compute_stream 与 comm_stream 的 kernel 交错或重叠
+```
+
+**预期输出**（节选，具体数值随 GPU 而变）：
+
+```text
+================================================================
+  通信-计算重叠 Demo（双 CUDA Stream）
+================================================================
+  iters=10, size=2048x2048 FP16
+
+  compute alone : 0.85 ms
+  comm alone    : 0.62 ms
+
+  [串行] total  : 1.47 ms  (compute + comm = 1.47)
+  [重叠] total  : 0.91 ms  (max = 0.85)
+
+  加速比        : 1.62x
+  理论上限      : 1.73x (完全重叠)
+```
+
+##### 观察重点
+
+1. **串行**：total ≈ compute + comm（两段串接）
+2. **重叠**：total ≈ max(compute, comm)（两流并发，受限于较长者）
+3. **加速比**：1.5-1.7x（取决于 GPU 空闲 SM 是否足够容纳两路 kernel）
+4. **nsys timeline**：compute_stream 和 comm_stream 的 kernel 在时间轴上交错或重叠
+
+> ⚠️ **单 GPU 重叠局限**：两路 kernel 能否真正并发取决于 GPU 是否有空闲 SM。大 GEMM 占满所有 SM 时，通信 kernel 会被迫排队。真实多卡场景下，通信走 NVLink/IB（独立硬件），与计算 SM 完全解耦，重叠效果更好。
+
+#### 任务 4：LeetGPU 在线题目 —— Matrix Copy
+
+**题目链接**：<https://leetgpu.com/challenges/matrix-copy>
+
+**与今日知识的关联**：分布式推理的核心开销是**通信**（all-reduce / send-recv），而通信的本质是**数据在 GPU 间搬运**——与 Matrix Copy 同构：都是 bandwidth-bound 的纯数据搬移。Matrix Copy 练习的是如何高效搬运（coalesced 读写、避免 bank conflict、用满显存带宽），这正是 NCCL kernel 内部的优化目标。理解 Matrix Copy 的带宽利用率分析，就能估算 all-reduce 的通信下限：`T_comm = V / bandwidth`。做好这题说明你掌握了"数据搬运的性能上限"，是分析通信开销的基础。
+
+> 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解见 [Matrix Copy 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+
+> 📅 今日为分布式推理专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 4 道高频题（二分模板 + 一维 DP + 背包 DP），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [207. 课程表](https://leetcode.cn/problems/course-schedule/) | 中等 | 拓扑排序 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
-| [208. 实现 Trie（前缀树）](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 中等 | 字典树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
-| [547. 省份数量](https://leetcode.cn/problems/number-of-provinces/) | 中等 | 并查集模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html) |
-| [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
-| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+| [704. 二分查找](https://leetcode.cn/problems/binary-search/) | 简单 | 二分模板（闭区间 / 左闭右开） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html) |
+| [198. 打家劫舍](https://leetcode.cn/problems/house-robber/) | 中等 | 一维 DP（选/不选状态转移） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
+| [322. 零钱兑换](https://leetcode.cn/problems/coin-change/) | 中等 | 完全背包 DP（求最少硬币） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+| [416. 分割等和子集](https://leetcode.cn/problems/partition-equal-subset-sum/) | 中等 | 0-1 背包 DP（求能否装满） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
 
-# 栈解法：存下标，栈底保留基准
-def longestValidParentheses(s):
-    stack = [-1]
-    max_len = 0
-    for i, c in enumerate(s):
-        if c == '(':
-            stack.append(i)
-        else:
-            stack.pop()
-            if not stack:
-                stack.append(i)  # 未匹配的 ) 作新基准
-            else:
-                max_len = max(max_len, i - stack[-1])
-    return max_len
-```
-
-> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html)。
+> 💡 刷题建议：704 是二分模板，5 分钟默写一遍确保边界无错；198 是 DP 入门，理解"选/不选"状态转移；322 和 416 分别是完全背包与 0-1 背包，对比记忆"内外层循环顺序"的差异（完全背包正向、0-1 背包逆向）。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：准备 3 分钟项目 elevator pitch
+#### 实验 1：把 TP 模拟改成 TP=4
 
-不看资料，限时 3 分钟，向别人介绍你的项目。要求：
+修改 `TP_SIZE = 4`（要求 `n_heads % 4 == 0`），重新运行正确性测试。观察：max diff 是否仍 < 1e-5？通信 pattern 分析中"每 block 1 次 all-reduce"是否不变？
 
-- 第 1 句话说明项目是什么
-- 第 2-3 句话说明解决了什么问题
-- 第 4-5 句话说明最难的技术点
-- 最后一句给出量化成果
+> 思考：TP=4 时单卡 GEMM 算力 x4，但 all-reduce 通信量是否变化？（提示：不变，每层仍全量 all-reduce 输出 [B, out]。这正是 TP 通信占比随 N 升高的原因。）
 
-> 思考：如果对方听完 3 分钟仍不知道你的项目价值，说明 pitch 需要再压缩。
+#### 实验 2：用 torch.distributed 真实多卡跑 TP
 
-#### 实验 2：模拟高压追问
+若有 2+ GPU，把 `ColumnParallelLinear` / `RowParallelLinear` 中的 `torch.cat` / `torch.stack().sum()` 替换为真实的 `torch.distributed.all_reduce(y, op=ReduceOp.SUM)`。用 `torchrun --nproc_per_node=2 tp_inference_demo.py` 启动。对比真实多卡下的加速比与单卡模拟的差异。
 
-选一个技术难点（如 FlashAttention），让朋友或自己扮演面试官连续追问 5 个 why：
+> 思考：真实 2-GPU TP 的加速比为什么远不到 2x？（提示：all-reduce 通信开销 + kernel launch + 数据依赖。可通过 nsys 测量通信占比。）
 
-1. 为什么 FlashAttention 能减少 IO？
-2. 为什么 online softmax 能避免物化 N×N 矩阵？
-3. 为什么 FA2 比 FA1 快？
-4. 为什么长序列收益更大？
-5. 如果 head dim 很大，FlashAttention 还值得用吗？
+#### 实验 3：实现"上一层 all-reduce 与本层 GEMM 重叠"
 
-> 思考：每个 why 是否都能用一句话 + 一个数字回答？
+当前 `comm_overlap_demo.py` 演示的是无依赖的 GEMM + 通信重叠。修改为更贴近真实 TP 的场景：上一层的 all-reduce（comm_stream）与本层的 QKV GEMM（compute_stream）重叠——两者数据无依赖（all-reduce 的是上一层输出，GEMM 用的是本层权重 + 上一层已就绪的输入）。用 nsys 验证两流 kernel 是否真的交错。
 
-#### 实验 3：写一份面试逐字稿
-
-把“自我介绍 + 项目介绍 + 一个技术难点”写成逐字稿，控制在 800 字以内。朗读一遍，记录时间。然后删掉 30% 的冗余词，再朗读。目标：信息密度高、没有口头禅。
-
-> 思考：哪些词可以删除？通常是修饰词和重复解释。
+> 思考：为什么"上一层通信"能与"本层计算"重叠，而"同一层的通信"不能？（提示：同层内 Output 投影的 all-reduce 依赖该投影的部分和，存在数据依赖；跨层则无。）
 
 ---
 
 ### 今日总结
 
-Day 5 我们把前四天的知识转化为面试表达能力：
+Day 3b 我们系统学习了分布式推理的三大并行策略与通信-计算重叠：
 
-1. **Mock 面试流程**：7 个环节、约 34 分钟、每个环节有明确时间限制
-2. **STAR 法**：Situation → Task → Action → Result，用量化成果支撑每个技术决策
-3. **技术难点讲解**：问题 → 局限 → 方案 → 细节 → 验证 → 进一步优化，准备 3 分钟和 6 分钟两个版本
-4. **Follow-up 应对**：常见追问包括“为什么不用现成方案”“差距多少”“怎么再优化”“显存不够怎么办”
-5. **计时系统**：`mock_interview.py` 提供倒计时和复盘清单，把练习标准化
-6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
-7. **GEMM**：推理引擎的核心算子，Mock 面试中“项目深度拷问”的常见考点
-8. **最长有效括号**：栈 + DP 双解困难题，与推理系统状态追踪（请求状态机/KV Cache 生命周期）同构
+1. **三大动机**：显存墙（模型放不下）、吞吐墙（tok/s 不够）、延迟墙（单层 GEMM 慢），分别对应 TP/PP、DP、TP
+2. **Tensor Parallelism**：column-parallel 切 QKV（按 head，零通信）+ row-parallel 切 Output（all-reduce 聚合），一个 Attention Block 仅 1 次通信
+3. **Pipeline Parallelism**：按层切 stage，micro-batching 流水，bubble ratio = $(P-1)/(M+P-1)$，增大 $M$ 降空泡；1F1B 省 activation 显存
+4. **Data Parallelism**：推理中各卡独立处理请求，零 GPU 通信，吞吐线性扩展，是高 QPS 首选
+5. **NCCL collectives**：all-reduce = reduce-scatter + all-gather，ring 拓扑 $2V(N-1)/N$ 通信量；all-gather / reduce-scatter 各 $V(N-1)/N$
+6. **通信-计算重叠**：双 CUDA Stream（compute + comm）让 total 从 $T_c+T_a$ 降到 $\max(T_c, T_a)$；CUDA Graph 捕获双流序列消除 launch 开销
+7. **实测验证**：`tp_inference_demo.py` 验证 TP 切分正确性（max diff 2.5e-7）与通信 pattern；`comm_overlap_demo.py` 量化重叠加速比 1.5-1.7x
 
-完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。
+掌握这些后，你就有了分布式推理的理论基础——后续可结合 vLLM 的多卡支持（TP 后端）和 TensorRT-LLM 的 TP+PP 组合实践真实多卡部署。
 
 ---
 
 ### 面试要点
 
-1. **用 STAR 法介绍你的项目。**（⭐⭐⭐⭐⭐ 必考）
+1. **TP 下 QKV 怎么切？为什么这样切？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **S**ituation：项目背景，为什么要做
- - **T**ask：你的目标是什么
- - **A**ction：你做了什么（技术点 1、2、3）
- - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
- - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
+- **QKV 投影用 column-parallel**：权重 $W \in \mathbb{R}^{3d \times d}$ 按 **output 维**切分，每个 rank 持有 $W_i \in \mathbb{R}^{3d/N \times d}$
+- **切 output 维的原因**：
+  - Attention 天然按 head 分组，column 切分让每个 rank 持有若干完整 head 的 Q/K/V
+  - 后续 attention 计算（$QK^T$、softmax、$\cdot V$）各 head 独立，完全本地化，**无需跨 rank 通信**
+- **Output 投影用 row-parallel**：权重按 input 维切，各 rank 算部分和，**1 次 all-reduce 聚合**
+- **整体通信**：一个 Attention Block 仅 1 次 all-reduce（在 Output 投影处），QKV 投影零通信
+- **TP 经典配对**：Column + Row 配对是 TP 的标准 pattern，最小化通信次数
 
 </details>
 
 
-2. **讲清楚一个你最熟悉的技术难点。**（⭐⭐⭐⭐⭐ 必考）
+2. **all-reduce 的通信量是多少？ring 拓扑怎么工作？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 结构：问题 → 现有方案局限 → 你的方案 → 实现细节 → 验证结果 → 还能怎么优化
- - 示例（FlashAttention）：
-   - 问题：标准 Attention 物化 N×N 矩阵，IO 是 O(N²)
-   - 局限：朴素 tiling 仍需写回中间结果
-   - 方案：FlashAttention = tiling + online softmax
-   - 细节：block 切分、shared memory、warp 同步
-   - 验证：相比 naive 快 X 倍
-   - 优化：FA2、double buffering、量化
+- **通信量**：ring all-reduce 总通信量 = $2V(N-1)/N$（$V$ = 张量大小，$N$ = GPU 数）
+  - 每卡发送 + 接收 = $2V(N-1)/N$，与 $N$ 近似无关（$N$ 大时趋近 $2V$）
+- **ring 两阶段**：
+  1. **reduce-scatter**（$N-1$ 步）：每步每卡 send 一块给右邻 + recv 左邻的块并累加，$N-1$ 步后每卡持有一个块的完整和
+  2. **all-gather**（$N-1$ 步）：每步每卡 send 自己那块完整和给右邻，$N-1$ 步后每卡都有完整结果
+- **为什么用 ring**：每卡只与左右邻居通信，带宽利用率高、无拥塞点；步数随 $N$ 线性增长但单步数据量小
+- **对比**：朴素 all-reduce（全部发到一个卡再广播）通信量 $O(VN)$ 且中心卡拥塞，ring 是 $O(V)$
 
 </details>
 
 
-3. **Dynamic Batching 和 Continuous Batching 有什么区别？为什么 LLM 更适合 Continuous？**（⭐⭐⭐⭐⭐ 必考）
+3. **1F1B 的 bubble ratio 怎么算？如何降低？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：request-level，一批请求一起开始一起结束
- - **Continuous Batching**：iteration-level，每轮 forward 后重新组 batch
- - LLM 生成长度差异大，Dynamic Batching 会导致先完成的请求等待 GPU 空转
- - Continuous Batching 让请求动态加入/退出，最大化 GPU 利用率
- - vLLM 的高吞吐主要来自 Continuous Batching + PagedAttention
+- **bubble ratio**：$\text{bubble} = (P-1)/(M+P-1)$
+  - $P$ = pipeline stage 数（GPU 数）
+  - $M$ = micro-batch 数
+- **推导**：总时间 = $(M+P-1) \times t_{mb}$（从第一个 micro-batch 进入第一个 stage 到最后一个 micro-batch 离开最后一个 stage）。每个 stage 处理 $M$ 个 micro-batch，忙碌 $M \times t_{mb}$，空闲 $(P-1) \times t_{mb}$（启动填满 $P$ 个 stage 期间该 stage 在等待）。因此 bubble 占比 $= (P-1)/(M+P-1)$
+- **降低方法**：
+  1. **增大 $M$**（micro-batch 数）：$M \gg P$ 时 bubble → 0（主要手段）
+  2. **减小 $P$**：但 $P$ 小则显存省得少，需权衡
+  3. **interleaved schedule**（1F1B interleaved）：把每个 stage 再细分，进一步压空泡
+- **推理场景**：prefill 长 prompt 可切 chunk 走流水线（类比 Chunked Prefill），相当于增大 $M$
 
 </details>
 
 
-4. **PagedAttention 解决了什么问题？核心设计是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **NCCL 的 ring 拓扑相比 tree 拓扑有什么优劣？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 解决问题：KV Cache 静态分配造成的显存碎片和浪费
- - 核心设计：
-   - 把 KV Cache 分成固定大小 block
-   - block table：逻辑 block 连续，物理 block 可不连续
-   - copy-on-write 支持 prefix 共享
- - 收益：提高显存利用率、支持动态长度、方便调度
+- **ring 拓扑**：
+  - 优势：带宽利用率高（每卡只与左右邻居通信，链路不争抢）、通信量与 $N$ 无关（$\approx 2V$）
+  - 劣势：延迟随 $N$ 线性增长（$2(N-1)$ 步），小数据时步数开销显著
+  - 适用：大数据 all-reduce（TP 输出聚合、DP 梯度同步）
+- **tree 拓扑**：
+  - 优势：延迟低（$\log N$ 步）
+  - 劣势：根节点带宽争抢、通信量随 $N$ 增长
+  - 适用：小数据 broadcast / reduce（参数同步、控制信息）
+- **NCCL 自适应**：运行时根据 GPU 拓扑（NVLink、PCIe、InfiniBand）和数据大小自动选 ring/tree 或混合
+- **实际**：TP/DP 大张量 all-reduce 几乎都用 ring；初始化小 broadcast 用 tree
 
 </details>
 
 
-5. **面试中常见的 follow-up 有哪些？怎么准备？**（⭐⭐⭐⭐ 高频）
+5. **通信-计算重叠怎么实现？有什么前提和限制？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - "为什么不用现成方案？" → 说明学习/定制/优化的目标
- - "你的实现和官方差距多少？" → 给出具体数字和差距来源
- - "如果 batch 增大 10 倍会怎样？" → 分析显存、吞吐、latency
- - "如何再优化？" → 列出 3 个方向并讲优先级
- - "显存不够怎么办？" → KV Cache 量化、swap、recompute、稀疏 attention
- - 准备方法：为每个技术点准备 3 分钟精简版和 6 分钟完整版，提前写逐字稿并录音
+- **实现**：双 CUDA Stream
+  - `compute_stream` 跑 GEMM/Attention，`comm_stream` 跑 all-reduce
+  - 无依赖时两流并发 launch，GPU 硬件调度并发执行
+  - 有依赖时用 `stream.wait_stream()` 建立顺序
+- **重叠前提**：
+  1. **数据无依赖**：通信的数据与计算的数据不重叠（如上一层 all-reduce 与本层 GEMM 可重叠）
+  2. **GPU 资源足够**：两路 kernel 需有空闲 SM 并发，否则单卡上仍串行
+  3. **多卡场景更有效**：通信走 NVLink/IB（独立硬件），与计算 SM 完全解耦，重叠效果远好于单卡双流
+- **收益**：total 从 $T_c + T_a$ 降到 $\max(T_c, T_a)$，典型加速 1.5-1.8x
+- **CUDA Graph 进阶**：捕获双流 launch 序列，消除 Python/CPU launch 开销，decode 阶段 shape 固定时收益最大
+- **限制**：prefill shape 动态变化，CUDA Graph 难以捕获，需多 graph 或回退 eager
 
 </details>

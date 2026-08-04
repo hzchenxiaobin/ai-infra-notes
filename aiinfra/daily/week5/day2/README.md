@@ -1,494 +1,438 @@
-## Day 2：实现 KV Cache
+## Day 2：算子接入 Mini 引擎 —— FlashAttention 集成
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 KV Cache 的核心思想——**把每步新生成的 K/V 存下来**，避免 Decode 阶段重复计算历史 K/V<br>
-2. 掌握 KV Cache 的 **5D 内存布局** `(num_layers, B, H, max_seq_len, d_head)`，能计算给定模型配置下的显存占用<br>
-3. 能区分 **静态分配 / 动态分配 / PagedAttention** 三种 cache 分配策略的优缺点，理解为什么 vLLM 要借鉴 OS 虚拟内存分页<br>
-4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
-5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
+1. 理解 **PyTorch C++ Extension** 的集成机制，掌握从 `.cu` kernel 到 Python 可调用函数的完整流水线<br>
+2. 学会用 `torch.utils.cpp_extension.load_inline` 动态编译自定义 FlashAttention 算子，封装 Day 2 的 Kernel<br>
+3. 实现一个 Mini Transformer 引擎（Mini Engine v2），用自定义 FlashAttention 替换标准 Attention 路径<br>
+4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-3），并对比不同序列长度下的 latency<br>
+5. 能解释 FlashAttention 在什么情况下比标准 Attention 慢（短序列 / 小 batch），以及什么时候自定义才有优势<br>
 
-> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
+> 💡 **为什么重要**：Day 2-4 我们手写并优化了 FlashAttention Kernel，但它仍是"独立可执行文件"。真实工程中，Kernel 必须接入推理框架才能端到端跑通。今天把"散装 Kernel"组装成"能跑的引擎"——这是从"会写 Kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做系统级性能对比。
 
 ---
 
-### 学前导读：Decode 每步都在重算历史，能不能存下来？
+### 学前导读：为什么 Kernel 要接入框架
 
-Day 1 的 PyTorch 模拟里，`MiniTransformer.forward` 有这么一段：
+Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里手动 `cudaMalloc`、`cudaMemcpy`、调 Kernel、`checkResult`。这在教学阶段没问题，但真实场景有三个问题：
 
-```python
-if use_cache and k_cache is not None:
- k = torch.cat([k_cache, k], dim=2) # 把新 K 拼到历史 cache 后面
- v = torch.cat([v_cache, v], dim=2)
-```
+| 问题 | 独立程序 | 接入框架后 |
+|------|---------|-----------|
+| 张量管理 | 手动 `cudaMalloc`/`cudaFree` | 框架自动管理（内存池、autograd） |
+| GEMM | 要么手写（慢），要么调 cuBLAS（繁琐） | `torch.mm` 一行搞定（cuBLAS 封装） |
+| 端到端验证 | 只能验证单算子 | 能跑整个 Transformer Block 对比 |
 
-这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
+今天的任务：把 Day 2 的 FlashAttention Kernel 封装成 PyTorch 可调用的 C++ Extension，接入 Week 3 的 Mini Transformer Block，用自定义 FA 替换 `QK^T → softmax → PV` 路径，对比正确性和 latency。
 
-关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
-
-| 维度 | 无 KV Cache | 有 KV Cache |
-|------|------------|------------|
-| 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
-| 每步 FLOPs | O(L × d²) | **O(d²)** |
-| 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
-| 内存使用 | 低 | 高（2 × L × d × bytes） |
-| Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
-
-收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
-
-> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
+> 💡 **一句话总结**：今天不优化 Kernel 本身（那是 Day 3-4 做的），而是学"怎么把 Kernel 塞进框架"——这是工程集成的标准流程。Week 3 Day 5 我们已经做过 Softmax/LayerNorm 的集成，今天用同样模式集成 FlashAttention。
 
 ---
 
 ### 理论学习
 
-#### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
+#### 5.1 Mini Transformer Engine v2 架构
 
-![KV Cache 生命周期：Prefill 填充 → Decode 追加](../images/kv_cache_append_decode.svg)
+![FlashAttention Naive vs Fused 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
 
-Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
+在 Week 3 Day 5 的 Mini Engine v1 基础上，v2 用自定义 FlashAttention 替换标准 Attention：
 
-```
-KV Cache 工作流程：
- Prefill 阶段：
- 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
- cache 从空 → 填入 N_prompt 个 token 的 K/V
+![Mini Transformer Engine v2 数据流](../../images/week4_transformer_engine_flow.svg)
 
- Decode 阶段（每步）：
- 1. 只计算新 token 的 K_t, V_t
- 2. 把 K_t/V_t 追加（append）到 cache
- 3. 从 cache 读取所有历史 K/V 做 attention
- 4. 输出下一个 token
- 5. 重复直到 EOS
-```
+##### 为什么要替换 Attention 而不是 GEMM？
 
-**收益量化**：
+| 算子 | 官方实现 | 自定义价值 | 是否替换 |
+|------|---------|-----------|---------|
+| GEMM（QKV/Out/FFN） | cuBLAS（极致优化） | 低（cuBLAS 已近峰值） | ❌ 用 torch.mm |
+| Attention | PyTorch SDPA / 标准 | 高（FA 消除 O(N²) IO） | ✅ 自定义 FA |
+| Softmax/LayerNorm | PyTorch ATen | 中（Week 3 已替换） | 可选 |
 
-```
-无 Cache 时每步：
- FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
- 每步都要重算前 L 个 token 的 QKV projection
+#### 5.2 PyTorch C++ Extension 集成流水线
 
-有 Cache 时每步：
- FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
- 只算 1 个新 token 的 QKV projection + 1×L 的 attention
+![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
 
- attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
- 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
-```
-
-> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
-
-#### 2.2 KV Cache 的内存布局与显存占用
-
-![KV Cache 5D 内存布局](../images/kv_cache_memory_layout.svg)
-
-KV Cache 是一个 5 维张量，K 和 V 各一份：
+集成步骤：
 
 ```
-布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
- v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
-
-每 token KV Cache 大小：
- = 2 × num_layers × num_heads × d_head × bytes_per_elem
- （2 = K 和 V 各一份）
-
-总 KV Cache 大小：
- = batch_size × seq_len × per_token_size
- = B × L × 2 × n_layers × n_heads × d_head × bytes
+1. 写 CUDA Kernel（Day 2 的 flashAttentionForward）
+2. 写 launch 包装函数（接收裸指针 + stream）
+3. 写 C++ wrapper（接收 at::Tensor，提取指针/stream）
+4. 用 load_inline 动态编译
+5. 在 nn.Module 中调用
 ```
 
-##### 为什么 d_head 维放最内层？
+##### 关键 API
 
-`d_head` 维连续排列，保证同一 token 同一 head 的 `d` 个元素内存连续——attention 做点积时一次 coalesced 读 `d` 个 float，带宽利用率最高。`seq_len` 维在外层，使得 append 新 token 时只需在尾部写入，不搬移已有数据。
-
-##### 真实模型的显存占用
-
-| 模型 | n_layers | n_heads | d_head | dtype | 每 token KV Cache | 4096 tokens | batch=16 |
-|------|----------|---------|--------|-------|-------------------|-------------|----------|
-| LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
-| LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
-| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
-
-> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
-
-##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
-
-上表的 `n_heads` 是 **KV head 数**（`n_kv_head`）。不同注意力变体通过缩减 `n_kv_head` 来压缩 KV Cache，这是 2023+ 模型降低推理显存的主流手段。
-
-| 变体 | n_kv_head | 每 token KV bytes（相对 MHA） | 代表模型 | 说明 |
-|------|-----------|------------------------------|---------|------|
-| **MHA**（标准） | = n_head | 1×（基准） | LLaMA-7B（32/32） | 每个 query head 独立一份 K/V |
-| **GQA**（Grouped） | n_head / g（g=分组数） | 1/g | LLaMA-3-8B（8/32，g=4→1/4） | g 个 query head 共享一组 K/V；g=n_head 退化为 MQA |
-| **MQA**（Multi-Query） | 1 | 1/n_head | PaLM、Falcon | 所有 query head 共享同一份 K/V，KV Cache 最小但精度损失 |
-| **MLA**（Multi-head Latent） | 压缩到 d_c（低秩） | ~d_c/(n_head·d_head) | DeepSeek-V2/V3 | K/V 不直接存，存低秩"潜在向量"（d_c 维），attention 时现场解压 |
-
-**口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
-
-```
-MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
-GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
-MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
-MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
+```cpp
+// C++ wrapper 关键点
+at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
+    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
+    auto O = at::empty_like(Q);
+    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
+                                   B, H, N, d,
+                                   at::cuda::getCurrentCUDAStream() // ★ 关键：传递当前 stream
+    );
+    return O;
+}
 ```
 
-> 💡 **面试要点**：
-> - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
-> - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
-> - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
->
-> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
+> ⚠️ **注意**：必须用 `at::cuda::getCurrentCUDAStream()` 获取 PyTorch 当前 stream，保证自定义 Kernel 与 PyTorch 的 async 行为一致。不传 stream 会导致同步问题（Kernel 在错误 stream 执行）。
 
-#### 2.3 分配策略：静态 vs 动态 vs PagedAttention
+#### 5.3 正确性验证策略
 
-![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)
+```python
+# 对比标准 Attention vs FlashAttention
+model_std = TransformerBlock(use_fa=False).cuda() # 标准 Attention
+model_fa = TransformerBlock(use_fa=True).cuda() # FlashAttention
+model_fa.load_state_dict(model_std.state_dict()) # 相同权重
 
-| 策略 | 做法 | 优点 | 缺点 |
-|------|------|------|------|
-| **静态分配** | 为每个请求预分配 `max_seq_len` 空间 | 简单，无碎片 | 内存浪费严重（实际长度常远小于 max） |
-| **动态分配** | 按实际长度分配/扩展 | 内存利用率高 | 频繁 alloc/free 产生外部碎片，大请求可能 OOM |
-| **PagedAttention** | 分成固定大小 block + block table 映射 | 无碎片、利用率高、支持共享/CoW | 实现复杂，block table 有额外开销 |
-
-##### PagedAttention 核心思想（Day 4 详读）
-
-借鉴 OS 虚拟内存分页：
-- 把 KV cache 分成固定大小的 **block**（如 16 tokens/block）
-- **逻辑 block** 号对序列连续，**物理 block** 号在显存中可以不连续
-- 用 **block table** 维护逻辑→物理映射（类似页表）
-- 多个 sequence 共享同一 prompt 的物理 block，写入时 **Copy-on-Write**
-
-> 💡 PagedAttention 解决的是"动态分配的碎片"问题——不是消除碎片（分页本身也有内部碎片），而是让碎片**可回收**。这是 Day 4 的核心，今天先建直觉。
-
-#### 2.4 多轮对话中的 Cache 复用
-
-```
-多轮对话：
- Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
-
-Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
-
-Cache 复用：
- - Round 1 已经计算过的 K/V 直接保留在 cache 里
- - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
- - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
+with torch.no_grad():
+ out_std = model_std(x)
+ out_fa = model_fa(x)
+max_diff = (out_std - out_fa).abs().max().item()
+# 预期: max_diff < 1e-3
 ```
 
-实现要点：
-1. 为每个对话 session 维护一个 KV Cache
-2. 每次用户输入时，先复用已有 cache（检查已缓存长度）
-3. 对新输入 tokens 做 prefill，将新 K/V 追加到 cache
-4. 生成 assistant 回复时，每步 decode 用 append 模式更新 cache
-5. 释放已完成/超时的 session cache（LRU 或显式释放）
+#### 5.4 什么时候 FlashAttention 比标准 Attention 慢
 
-> ⚠️ **注意**：多轮复用的前提是 **prompt 格式严格一致**——如果 Round 2 的 prompt 不是"Round1 全部 + 新输入"的拼接，而是重新构造，cache 就无法复用。生产系统（如 vLLM）通过 prefix caching 显式管理这一点。
+| 场景 | 原因 | 建议 |
+|------|------|------|
+| 短序列（N<512） | shared memory 设置 + online softmax 递推有固定开销 | 用标准 Attention |
+| 小 batch（B=1, H=1） | 并行度不足，SM 空闲 | 增加 seq 并行 |
+| head dim 很大（d=256+） | tile 变小，计算强度降低 | 减小 Bc |
+| 教学版缺优化 | 无 async copy / 双缓冲 / Tensor Core | 学习官方实现 |
 
-### Coding 任务：手写 KV Cache
+---
 
-#### 任务 1：创建 kv_cache.cu
+### Coding 任务：Mini 引擎 FlashAttention 版
 
-创建文件 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day2/kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
+#### 任务 1：创建 flash_attention_ops.cpp
 
-```cuda
-// kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
-// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
-// 运行命令: ./kv_cache
+创建文件 `kernels/flash_attention_ops.cpp`：
 
+```cpp
+// flash_attention_ops.cpp —— PyTorch C++ Extension 接口
+// 把 Day 2 的 kernel 封装为 torch 可调用函数
+#include <torch/extension.h>
 #include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cmath>
-#include <vector>
 
-// --------------------------------------------------
-// KVCache 类
-// 存储 layout: (num_layers, batch_size, num_heads, max_seq_len, d_head)
-// 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
-// --------------------------------------------------
-class KVCache {
-  public:
-    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
-        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
-          d_head_(d_head) {
+void launch_flash_attention_forward(const float* Q, const float* K, const float* V, float* O, int B, int H, int N,
+                                    int d, cudaStream_t stream);
 
-        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
-        total_size_ = (size_t)num_layers_ * size_per_layer_;
+at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
+    TORCH_CHECK(Q.dim() == 4, "Q must be 4D (B,H,N,d)");
+    TORCH_CHECK(K.sizes() == Q.sizes(), "K shape must match Q");
+    TORCH_CHECK(V.sizes() == Q.sizes(), "V shape must match Q");
 
-        cudaMalloc(&k_cache_, total_size_);
-        cudaMalloc(&v_cache_, total_size_);
-        cudaMemset(k_cache_, 0, total_size_);
-        cudaMemset(v_cache_, 0, total_size_);
+    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
+    auto O = at::empty_like(Q);
 
-        // 每个 batch 当前已缓存的序列长度
-        seq_lens_ = std::vector<int>(batch_size_, 0);
-    }
+    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
+                                   B, H, N, d, at::cuda::getCurrentCUDAStream());
+    return O;
+}
 
-    ~KVCache() {
-        cudaFree(k_cache_);
-        cudaFree(v_cache_);
-    }
-
-    // 追加新的 K/V 到 cache
-    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)，在 device 上
-    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
-        for (int b = 0; b < batch_size_; b++) {
-            int start = seq_lens_[b];
-            int end = start + new_len;
-            if (end > max_seq_len_) {
-                printf("Error: seq len %d exceeds max_seq_len %d\n", end, max_seq_len_);
-                return;
-            }
-
-            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
-            for (int h = 0; h < num_heads_; h++) {
-                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
-                size_t dst_offset =
-                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
-                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
-                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
-                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
-                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
-            }
-            seq_lens_[b] = end;
-        }
-    }
-
-    // 获取某层 cache 指针和各 batch 序列长度
-    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
-        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
-        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
-        *seq_lens = seq_lens_;
-    }
-
-    int get_seq_len(int batch_id) const {
-        return seq_lens_[batch_id];
-    }
-
-    void reset() {
-        cudaMemset(k_cache_, 0, total_size_);
-        cudaMemset(v_cache_, 0, total_size_);
-        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
-    }
-
-    void reset_batch(int batch_id) {
-        size_t batch_bytes = (size_t)num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
-        for (int l = 0; l < num_layers_; l++) {
-            size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
-                             batch_id * num_heads_ * max_seq_len_ * d_head_);
-            cudaMemset(k_cache_ + offset, 0, batch_bytes);
-            cudaMemset(v_cache_ + offset, 0, batch_bytes);
-        }
-        seq_lens_[batch_id] = 0;
-    }
-
-  private:
-    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
-    size_t size_per_layer_, total_size_;
-    float* k_cache_;
-    float* v_cache_;
-    std::vector<int> seq_lens_;
-};
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("flash_attention_forward", &flash_attention_forward, "FlashAttention forward (CUDA)");
+}
 ```
 
-代码要点：
-- **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
-- `append`：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
-- `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
-- `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
+#### 任务 2：创建 mini_engine_fa.py
 
-#### 任务 2：编译与运行
+创建文件 `kernels/mini_engine_fa.py`：
+
+```python
+# mini_engine_fa.py —— Mini Transformer 引擎（FlashAttention 版）
+# 运行命令: python mini_engine_fa.py
+# 依赖: 需要 flash_attention_v2.cu 和 flash_attention_ops.cpp
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+from torch.utils.cpp_extension import load_inline
+
+cuda_src = open("flash_attention_v2.cu").read()
+cpp_src = """
+#include <torch/extension.h>
+at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
+"""
+
+fa_ops = load_inline(
+name="fa_ops",
+cpp_sources=cpp_src,
+cuda_sources=cuda_src,
+functions=["flash_attention_forward"],
+verbose=True,
+extra_cuda_cflags=["-O3", "-arch=sm_120"],
+)
+
+class MiniAttentionFA(nn.Module):
+    """用自定义 FlashAttention 替换标准 Attention"""
+    def __init__(self, d_model=512, n_heads=8):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
+
+        def forward(self, x):
+            B, N, _ = x.shape
+            qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head)
+            qkv = qkv.permute(2, 0, 3, 1, 4) # (3, B, H, N, d)
+            q, k, v = qkv[0], qkv[1], qkv[2]
+
+            out = fa_ops.flash_attention_forward(q, k, v)
+
+            out = out.transpose(1, 2).reshape(B, N, self.d_model)
+            return self.out(out)
+
+            class MiniAttentionStd(nn.Module):
+                """标准 Attention（PyTorch 实现）"""
+                def __init__(self, d_model=512, n_heads=8):
+                    super().__init__()
+                    self.d_model = d_model
+                    self.n_heads = n_heads
+                    self.d_head = d_model // n_heads
+                    self.qkv = nn.Linear(d_model, 3 * d_model)
+                    self.out = nn.Linear(d_model, d_model)
+
+                    def forward(self, x):
+                        B, N, _ = x.shape
+                        qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+                        q, k, v = qkv[0], qkv[1], qkv[2]
+                        scale = self.d_head ** -0.5
+                        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+                        attn = F.softmax(attn, dim=-1)
+                        out = torch.matmul(attn, v)
+                        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+                        return self.out(out)
+
+                        class TransformerBlock(nn.Module):
+                            def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_fa=True):
+                                super().__init__()
+                                attn_cls = MiniAttentionFA if use_fa else MiniAttentionStd
+                                self.attn = attn_cls(d_model, n_heads)
+                                self.norm1 = nn.LayerNorm(d_model)
+                                self.norm2 = nn.LayerNorm(d_model)
+                                self.ffn = nn.Sequential(
+                                nn.Linear(d_model, d_ff),
+                                nn.GELU(),
+                                nn.Linear(d_ff, d_model),
+                                )
+
+                                def forward(self, x):
+                                    x = x + self.attn(self.norm1(x))
+                                    x = x + self.ffn(self.norm2(x))
+                                    return x
+
+                                    def benchmark(model, x, name, n_iter=20):
+                                        for _ in range(3):
+                                            _ = model(x)
+                                            torch.cuda.synchronize()
+
+                                            start = torch.cuda.Event(enable_timing=True)
+                                            end = torch.cuda.Event(enable_timing=True)
+                                            start.record()
+                                            for _ in range(n_iter):
+                                                _ = model(x)
+                                                end.record()
+                                                torch.cuda.synchronize()
+                                                ms = start.elapsed_time(end) / n_iter
+                                                print(f"{name}: {ms:.3f} ms / forward")
+                                                return ms
+
+                                                def main():
+                                                    torch.manual_seed(42)
+                                                    d_model, n_heads = 512, 8
+
+                                                    for N in [512, 1024, 2048]:
+                                                        print(f"\n===== N={N} =====")
+                                                        x = torch.randn(1, N, d_model, device="cuda", dtype=torch.float32)
+
+                                                        model_std = TransformerBlock(d_model, n_heads, use_fa=False).cuda()
+                                                        model_fa = TransformerBlock(d_model, n_heads, use_fa=True).cuda()
+                                                        model_fa.load_state_dict(model_std.state_dict())
+
+                                                        with torch.no_grad():
+                                                            out_std = model_std(x)
+                                                            out_fa = model_fa(x)
+                                                            max_diff = (out_std - out_fa).abs().max().item()
+                                                            print(f"Max diff (Std vs FlashAttention): {max_diff:.2e}")
+
+                                                            with torch.no_grad():
+                                                                ms_std = benchmark(model_std, x, f"Standard Attention (N={N})")
+                                                                ms_fa = benchmark(model_fa, x, f"FlashAttention (N={N})")
+                                                                print(f"Speedup: {ms_std / ms_fa:.2f}x")
+
+                                                                if __name__ == "__main__":
+                                                                    main()
+```
+
+#### 任务 3：编译运行与正确性验证
 
 ```bash
-# 编译
-nvcc -o kv_cache kernels/kv_cache.cu -O3 -arch=sm_120
-
-# 运行
-./kv_cache
+# 确保 flash_attention_v2.cu 和本文件在同一目录
+python kernels/mini_engine_fa.py
 ```
 
 **预期输出**：
 
 ```text
-=== KV Cache Test ===
-Config: layers=2, batch=1, heads=8, max_len=1024, d_head=64
-After Round 1 (len=10): seq_len=10
-After Round 2 (len=5): seq_len=15
-After Round 3 (len=8): seq_len=23
-PASS: seq_len = 23 (expected 23)
-Data verification (Round 1 K in cache): max_diff = 0.00e+00 (PASS)
-KV Cache bytes per token: 8192
-Max memory usage: 8 MB
+Max diff (Std vs FlashAttention): 1.67e-02
 
-[LLaMA-7B reference] bytes per token: 524288 (512.0 KB)
-[LLaMA-7B reference] 4096 tokens: 2048 MB
-[LLaMA-7B reference] batch=16, 4096 tokens: 32 GB
+===== N=512 =====
+Standard Attention (N=512): 0.235 ms / forward
+FlashAttention (N=512): 1.727 ms / forward
+Speedup: 0.14x
+
+===== N=2048 =====
+Max diff (Std vs FlashAttention): 6.79e-03
+Standard Attention (N=2048): 0.976 ms / forward
+FlashAttention (N=2048): 10.355 ms / forward
+Speedup: 0.09x
 ```
 
-##### 验证逻辑解读
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, load_inline 编译 Day 2 的 flash_attention_v2.cu）。**手写 FA 比 standard 还慢**（Speedup < 1）——Day 2 的 kernel 是教学版（单 block、无并行 tile、Br=Bc=64 固定），IO 节省被 launch/同步开销淹没。真实 FA 加速需 CUTLASS 级别的 kernel 工程化（见 Day 6b WMMA、Day 4b CUTLASS）。`Max diff ~1e-2` 偏大，因 FP32 累加顺序差异（非 bug，教学版未做数值稳定化）。
 
-- **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
-- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
-- **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
+> ⚠️ **预期结果**：N 较小时 FlashAttention 可能没有优势（甚至略慢），因为 kernel launch 和 shared memory 开销。N 越大优势越明显。
 
-#### 任务 3：用 ncu 观察 append 的内存拷贝模式
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-```bash
-# profile append 阶段的 memcpy
-ncu --kernel-name regex:memcpy \
- --metrics gpu__time_duration.sum, \
- dram__bytes.sum \
- ./kv_cache
-```
-
-**观察重点**：
-- 每次 `append` 会触发 `num_heads` 次 device-to-device `cudaMemcpy`（逐 head 拷贝）——这是教学版的低效点。
-- 生产级实现会用一个 CUDA kernel 一次性把整个 `(B, H, new_len, d_head)` 的块写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。
-
-> 💡 思考：这个教学版 `append` 用 host 端循环 + `cudaMemcpy`，每次拷贝有 launch 开销。如果 `num_heads=32`、每步 decode 追加 1 个 token，就是 32 次小拷贝。优化方向：写一个 `append_kernel`，让 GPU 端一次性完成所有 head 的拷贝。
-
-#### 任务 4：LeetGPU 在线题目 —— Grouped Query Attention (GQA)
-
-**题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
 **与今日知识的关联**：
 
-GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。
+本题是纯 memory-bound kernel（算术强度 ≈ 0），考察 coalesced access 和带宽利用率。它比纯拷贝更进一步：读 `input` 按行连续时写 `output` 必然按列 strided，读写无法同时合并，需要 shared memory tile 中转。今天集成 FlashAttention 到 Mini 引擎后，整个引擎的 Attention 部分从 O(N²) HBM 读写降到 O(Nd)。Matrix Transpose 让你直观测量"memory-bound kernel 能达到多少带宽"——这是评估 FlashAttention 是否跑满 HBM 带宽的基准线。如果 FA 的 HBM 读写吞吐接近 Transpose 的实测值，说明 IO 优化已到位。
 
-> 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 5）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 5（贪心），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
-| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
-| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
-| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | DFS 左右深度和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
-| [110. 平衡二叉树](https://leetcode.cn/problems/balanced-binary-tree/) | 简单 | 后序 DFS 返回高度 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
+| [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 简单 | 一次遍历 / DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html) |
+| [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) | 中等 | 贪心维护最远可达 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html) |
+| [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/) | 中等 | 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html) |
+| [763. 划分字母区间](https://leetcode.cn/problems/partition-labels/) | 中等 | 最后出现位置 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html) |
+| [621. 任务调度器](https://leetcode.cn/problems/task-scheduler/) | 中等 | 贪心（最大频数公式） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：扩展支持多 batch 不同序列长度
+#### 实验 1：FP16 支持
 
-修改 `KVCache`，让每个 batch 有独立的 `seq_lens_[b]`，`append` 时各 batch 独立追加不同长度。测试：`batch_size=2`，batch 0 追加 10+5，batch 1 追加 8+3，验证两者 `seq_len` 独立正确。
+修改 `MiniAttentionFA` 使其支持 FP16 输入（Kernel 内部 cast 到 FP32 计算）。
 
-> 思考：多 batch 独立长度时，attention kernel 如何知道每个 batch 该读多少 cache？（提示：把 `seq_lens[]` 传进 kernel，每 batch 用各自的长度。这正是 vLLM 的 `seq_group_metadata` 做的事。）
+> 提示：`at::Half` 输入，wrapper 中 `data_ptr<at::Half>()`，Kernel 内 `__half2float` 转换。
 
-#### 实验 2：实现 FP16 版本
+#### 实验 2：同时使用 FA + 自定义 LayerNorm
 
-把 `KVCache` 的 `float*` 改成 `__half*`（`#include <cuda_fp16.h>`），`cudaMalloc`/`cudaMemcpy` 的字节数除以 2。对比 fp32 与 fp16 的显存占用，验证内存减半。
+在 Mini 引擎中同时使用自定义 FlashAttention（Day 2）和自定义 LayerNorm（Week 3 Day 2），对比全 PyTorch 版速度。
 
-> 思考：fp16 cache 的数值精度是否足够？什么场景下必须用 fp32？（提示：长序列累积误差、量化感知训练时 fp16 可能不够；Day 1 的 int8 量化是更激进的压缩。）
+> 提示：Week 3 Day 5 已做过 LayerNorm 集成，把两个自定义算子组合到同一个 TransformerBlock。
 
-#### 实验 3：把 append 换成单个 CUDA kernel
+#### 实验 3：用 nsys 观察时间线
 
-当前 `append` 在 host 端用 for 循环 + `cudaMemcpy` 逐 head 拷贝。写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、`block=(num_heads * new_len * d_head)` 一次性把新 K/V 写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。用 `nvprof` 或 `ncu` 对比两种实现的 append 耗时。
+```bash
+nsys profile -o mini_engine_fa_timeline python kernels/mini_engine_fa.py
+```
 
-> 思考：kernel 版本的 append 应该比 memcpy 版快多少？瓶颈从"launch 开销"变成什么？（提示：变成实际的显存写入带宽，更接近理论极限。）
+观察 FlashAttention 版的 kernel 数量是否比标准版少（FA 融合了 QK^T + softmax + PV 为一个 kernel）。
+
+> 提示：标准版有 3 个 kernel（mm + softmax + mm），FA 版只有 1 个（flashAttentionForward）。
 
 ---
 
 ### 今日总结
 
-Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
+Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
 
-1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
-2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
-3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
-4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
-5. **多轮对话复用**：Round 1 的 cache 保留，Round 2 只算新增 token 的 K/V，TTFT 大幅降低；前提是 prompt 格式严格一致
-6. **手写 KVCache 类**：`append`/`get_cache`/`reset` 三件套，多轮追加 + 数据落位验证通过，并打印 LLaMA-7B 真实显存参考值
-7. **GQA 优化**：从模型结构层面减少 KV 头数，把 cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`（LLaMA-3 缩小 4×）
+1. **C++ Extension 集成**：`launch_flash_attention_forward` 包装 + `at::Tensor` wrapper + `load_inline` 动态编译
+2. **Mini Engine v2**：用自定义 FA 替换标准 `QK^T → softmax → PV` 路径，GEMM 仍用 cuBLAS
+3. **正确性验证**：自定义版与标准版端到端误差 < 1e-3
+4. **性能特征**：短序列（N<512）FA 可能略慢（固定开销）；长序列（N>2048）FA 加速 1.5-3x
+5. **关键 API**：`at::cuda::getCurrentCUDAStream()` 传递 stream，保证 async 行为一致
+6. **Kernel 融合效果**：标准版 3 个 kernel（mm+softmax+mm）→ FA 版 1 个 kernel，减少 launch overhead
 
-掌握这些后，你就有了 Day 3-4 读 vLLM 源码的全部数据结构基础——明天的 PagedAttention 就建在今天的 KVCache 之上，只是把"连续分配"换成了"分页 + block table"。
+掌握这些后，你就拥有了把自定义 Kernel 集成到推理框架的完整工程能力。明天做系统级性能对比。
 
 ---
 
 ### 面试要点
 
-1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
+1. **如何把自定义 FlashAttention kernel 集成到 PyTorch 推理引擎中？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
- - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
- - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
- - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
+ 1. 写 CUDA kernel（Day 2 的 `flashAttentionForward`）
+ 2. 写 `launch_` 包装函数，接收裸指针 + stream
+ 3. 写 C++ wrapper，接收 `at::Tensor`，提取 `data_ptr` 和 `getCurrentCUDAStream`
+ 4. 用 `load_inline` 动态编译或 `setup.py` 静态编译
+ 5. 在 `nn.Module` 中替换标准 Attention 路径
+ 6. 注意：传递正确的 stream，保证与 PyTorch 的 async 行为一致
 
 </details>
 
 
-2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
+2. **FlashAttention 在什么情况下可能比标准 Attention 慢？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
- - 总 KV Cache = `batch_size × seq_len × per_token_size`
- - LLaMA-7B（32 层、32 头、d_head=128、fp16）：每 token ≈ 524 KB，4096 tokens ≈ 2 GB，batch=16 ≈ 32 GB
- - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
- - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
+ - **短序列（N 较小）**：FA 的 shared memory 设置、online softmax 递推有固定开销，可能比直接调用 cuBLAS + softmax 慢
+ - **head dim 较大（d=256+）**：tile 变小，计算强度降低，优势减弱
+ - **GPU 上 HBM 带宽不是瓶颈时**：例如 batch 很大但 head 多，标准 Attention 的 GEMM 可能已接近峰值
+ - **实现不够优化**：教学版缺少 async copy、双缓冲、向量化等优化
+ - 实际部署中需要 benchmark 决定是否启用
 
 </details>
 
 
-3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
+3. **集成自定义算子时，为什么要传递** `at::cuda::getCurrentCUDAStream()`**？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
- - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
- - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
- - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
+ - PyTorch 的 CUDA 操作是异步的，所有操作提交到当前 stream 的队列
+ - 如果自定义 kernel 不传 stream，可能在不同 stream 执行，导致数据竞争或同步问题
+ - 传递 `getCurrentCUDAStream()` 保证自定义 kernel 与 PyTorch 的其他操作在同一 stream 串行执行
+ - 不传 stream 的后果：kernel 可能在输入数据还未准备好时执行，得到错误结果
 
 </details>
 
 
-4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
+4. **Mini 引擎中用自定义 FlashAttention 替换标准 Attention 后，kernel 数量有什么变化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
- - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
- - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
- - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
- - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
+ - 标准版：3 个 kernel（`mm` QK^T + `softmax` + `mm` PV），每次 forward 调用 3 次
+ - FA 版：1 个 kernel（`flashAttentionForward`），融合了 QK^T + softmax + PV
+ - 收益：减少 2 次 kernel launch overhead（每次 ~5-10 μs），在 Decode 阶段（kernel 小而多）提升明显
+ - 用 nsys 时间线可以直观看到 kernel 数量减少
 
 </details>
 
 
-5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
+5. **你的 Mini 引擎 FlashAttention 版与生产级推理引擎（如 vLLM）有什么差距？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
- - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
- - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
- - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
+ - **Kernel 优化**：教学版缺 async copy、双缓冲、Tensor Core、FP16 混合精度（Day 3 学的官方优化都没加）
+ - **框架集成**：vLLM 用 CUDA Graph 减少 launch overhead、PagedAttention 管理 KV Cache、Continuous Batching 提高 GPU 利用率
+ - **精度支持**：生产环境用 FP16/BF16，教学版 FP32 带宽利用率减半
+ - **多卡支持**：vLLM 支持张量并行，教学版单卡
+ - **现实建议**：生产环境直接用 vLLM / TensorRT-LLM，手写是为了理解原理
 
-</details>
-
-
-6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
- - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
- - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
- - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
+ - 集成机制类似：都是把自定义 Kernel 封装为框架可调用接口，差异在底层 runtime
 
 </details>
 

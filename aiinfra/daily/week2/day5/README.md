@@ -1,896 +1,814 @@
-## Day 5：FlashAttention CUDA 实现（简化版）
+## Day 5：整合优化到 cuBLAS 70%+
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解标准 Attention 的 O(N²) HBM 访问瓶颈
-2. 掌握 FlashAttention 的核心创新：分块（Tiling）+ Online Softmax
-3. 能完整推导 Online Softmax 三个更新公式（m_new, l_new, o_new）
-4. 理解 `exp(m - m_new)` 缩放因子的作用
-5. 手写简化版 FlashAttention Forward Kernel
+1. 理解从 Register Blocking（~45%）到 cuBLAS 70%+ 还需要哪些优化
+2. 掌握 `float4` 向量化加载的原理和使用条件
+3. 理解 Warp Shuffle 在 GEMM 写回优化中的作用
+4. 实现整合版 GEMM：Register Blocking + float4 + Warp Shuffle + Coalesced Write
+5. 掌握参数精调（Auto-tuning）的方法论
+6. 能用 ncu 验证整合版 GEMM 的性能提升
 
-> 💡 **为什么重要**：FlashAttention 是推理优化的第一考点，大模型 Infra 面试标配。它不是靠减少 FLOPS 加速（计算量相同），而是靠**减少 HBM 数据移动**——这体现了 AI Infra 的核心原则：减少数据移动比减少计算更重要。
-
----
-
-### 学前导读：标准 Attention 的问题
-
-![FlashAttention HBM 访问对比](../images/hbm_comparison.svg)
-
-#### 标准 Attention 计算
-
-```
-S = Q × K^T (N×N 矩阵，O(N²) 显存)
-P = softmax(S) (N×N 矩阵，O(N²) 显存)
-O = P × V (输出，O(N×d) 显存)
-```
-
-#### HBM 访问瓶颈
-
-以 N=4096, d=64 为例，标准 Attention 的 HBM 读写量：
-
-```
-读 Q: N×d = 262K
-读 K: N×d = 262K
-写 S: N×N = 16M ← O(N²) 瓶颈
-读 S: N×N = 16M
-写 P: N×N = 16M ← O(N²) 瓶颈
-读 P: N×N = 16M
-读 V: N×d = 262K
-写 O: N×d = 262K
-总计 HBM 读写: ~48M elements ≈ 192MB
-```
-
-**核心问题**：S 和 P 两个 N×N 中间矩阵必须写入 HBM 再读回，导致 O(N²) 的 HBM 访问。
-
-#### FlashAttention 的核心洞察
-
-> 不需要把 S 和 P 完整写入 HBM。通过分块计算，在 SRAM（Shared Memory）+ 寄存器中完成 softmax 和输出累加，HBM 访问降为 O(Nd) 级别（d 为 head dim；把 d 看作常数时即 O(N)）。
+> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 80%」是顶级 AI Infra 面试题，今天是从 45% 跨越到 70% 的关键一步。每一层优化都有明确的收益来源，理解这些才能在面试中逐层展开。
 
 ---
 
-### Attention 基础回顾
+### 学前导读：从 45% 到 70% 的优化路线
 
-在深入 FlashAttention 之前，先把 Attention 本身的基础打牢——这些是面试的“开胃题”，答不好后面就不用聊了。
+![GEMM 优化层次](../images/gemm_optimization_layers.svg)
 
-#### 0.1 为什么需要 Attention
+Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，需要叠加以下优化：
 
-RNN/LSTM 按时间步串行处理序列，有两个致命问题：
+| 优化点 | 增益 | 实现复杂度 | 原理 |
+|--------|------|-----------|------|
+| **float4 向量化加载** | +10-15% | 中 | 128-bit 访问提升 Global Memory 带宽利用率 |
+| **Warp Shuffle 累加** | +5-10% | 中 | Warp 内协作优化写回模式，减少非合并访问 |
+| **Coalesced 写回** | +3-5% | 低 | 用 float4 做合并写入 |
+| **参数精调** | +5-10% | 低 | Auto-tune BM/BN/BK/TM/TN |
 
-- **无法并行**：第 t 步依赖第 t-1 步的隐状态，GPU 的并行能力完全用不上
-- **长程依赖衰减**：远距离信息要逐格传递，梯度在长链上消失
-
-Attention 让序列中**任意两个位置直接交互**，一步建立连接，且所有位置的计算互相独立、可以完全并行——这正是它能吃满 GPU 的根本原因。
-
-#### 0.2 Scaled Dot-Product Attention 公式
-
-```
-Attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
-
-其中 Q = X·W_Q, K = X·W_K, V = X·W_V（self-attention 时三者同源，都来自输入 X）
-Q/K/V 形状均为 (N × d)：N 是序列长度，d 是 head 维度
-```
-
-**直觉类比（查字典）**：每个 token 拿着自己的 Query 去和所有 token 的 Key 比相似度（点积），相似度经 softmax 归一化成权重，再对 Value 加权求和——就像用查询词在字典里检索：Key 是索引，Value 是取回的内容。
-
-**三步拆解**：
-
-1. **算相似度**：`S = Q·Kᵀ / √d`，形状 (N×N)，`s_ij` 表示第 i 个 token 对第 j 个 token 的关注度
-2. **归一化**：softmax 按行做，每行变成一个和为 1 的概率分布
-3. **加权求和**：`O = P·V`，每个位置的输出是全体 Value 按关注度的加权和
-
-#### 0.3 为什么除以 √d
-
-- 假设 q、k 的各分量独立、均值为 0、方差为 1，则点积 `q·k = Σ q_i·k_i` 的**方差等于 d**
-- d 越大，score 的量级越大（约 √d 倍），softmax 的输入落在**饱和区**：输出逼近 one-hot，梯度趋近于 0，训练难以收敛
-- 除以 √d 把 score 的方差归一回 1，softmax 工作在梯度敏感区
-- **面试加分点**：这个系数不是拍的常数，是从方差推导出来的——BERT/GPT 的 d_head=64 时 `1/√d = 0.125`
-
-#### 0.4 Softmax 为什么减 max（数值稳定性）
-
-```
-softmax(x)_i = exp(x_i) / Σ exp(x_j)  ← 直接算，x_i 稍大 exp 就溢出（float32 exp(89) ≈ inf）
-softmax(x)_i = exp(x_i - c) / Σ exp(x_j - c)  ← 数学上严格相等（分子分母同乘 exp(-c)）
-取 c = max(x)，保证指数 ≤ 0，exp 结果落在 (0, 1]，不会溢出
-```
-
-**与今天的联系**：减 max 需要**全局**最大值，而分块计算时每块只能看到局部——这就是 Online Softmax 要递推维护 running max 的原因，5.2 节会展开。
-
-#### 0.5 Multi-Head Attention
-
-```
-MultiHead(X) = Concat(head_1, ..., head_h) · W_O
-head_i = Attention(X·W_Qⁱ, X·W_Kⁱ, X·W_Vⁱ)
-```
-
-- **单头只有一个表示子空间**；多头把 d_model 切成 h 份（`d_head = d_model / h`，如 d_model=512、h=8 → d_head=64），各自独立做 attention，最后拼接过 W_O
-- 不同头可以学不同类型的关系（语法、指代、位置、语义……），类似 CNN 里多个卷积核
-- 总计算量与“单头全维度”基本相当——多头不增加 FLOPs，增加的是表达能力
-- 代码层面：今天的 kernel 用 `blockIdx.y` 索引 head，**各 head 之间完全独立**，天然按 block 并行
-
-#### 0.6 Self / Cross Attention 与 Causal Mask
-
-| 类型 | Q 来自 | K/V 来自 | 典型场景 |
-|---|---|---|---|
-| Self-Attention | X 本身 | X 本身 | Encoder（BERT）、Decoder 单层内部 |
-| Cross-Attention | Decoder 当前状态 | Encoder 输出 | 机器翻译、T5/BART 的解码层 |
-
-**Causal Mask（因果掩码）**：Decoder 自回归生成时，位置 i 只能看到 ≤ i 的 token，即对 S 加一个下三角为 0、上三角为 `-inf` 的掩码（`-inf` 经 softmax 后权重为 0）。实验 4 会动手在本 kernel 上加 causal mask。
-
-#### 0.7 复杂度总览（引出今天的主线）
-
-| 项目 | 复杂度 | 说明 |
-|---|---|---|
-| 计算量 | O(N²d) | QKᵀ 和 P·V 各一次 (N×N)×(N×d) 的 GEMM |
-| 显存/访存 | O(N²) | S、P 两个 N×N 中间矩阵 |
-
-d 固定时，**长序列的瓶颈是 N² 的显存和 HBM 访问，而不是计算**——这正是 FlashAttention 要解决的问题，也是 5.1 节分块策略的动机。
+这些优化不是孤立的——它们叠加在一起才能达到 70%+。
 
 ---
 
 ### 理论学习
 
-#### 5.1 分块策略（Tiling）
+#### 6.1 float4 向量化加载
 
-![FlashAttention 分块策略](../images/flash_attention_tiling.svg)
+![float4 向量化加载对比](../images/float4_vectorized_load.svg)
 
-FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：外循环遍历 Q tile（行方向，步长 Br），内循环遍历 KV tile（行方向，步长 Bc），每步计算 `S_tile = Q_tile × KV_tile^T (Br×Bc)` 并在线更新 softmax 和输出累加。
+##### 原理
 
-**关键**：Q tile 驻留在 SRAM 中（不移动），K/V tile 逐块滑入。每计算完一个 KV tile，立即更新 running softmax 状态和输出累加器。
-
-**分块大小约束**：SRAM 只需容纳 Q/K/V 三个 tile：`Br×d + 2×Bc×d ≤ SRAM 容量`。S/P 中间结果只活在寄存器里，不占 SRAM、更不落 HBM（FlashAttention 论文也是这个口径）。在静态 `__shared__` 48 KB/block 的统一硬上限下，Br、Bc 不能取得太大。
-
-#### 5.2 Online Softmax 三公式推导
-
-![Online Softmax 三个更新公式](../images/online_softmax_formula.svg)
-
-![Online Softmax 三公式推导](../images/online_softmax_derivation.svg)
-
-这是 FlashAttention 的核心创新，也是面试必考的白板推导题。下面先**只推导 softmax**（只涉及 $m$ 和 $l$），再把注意力输出 $o$ 引入，逐步得到三个增量更新公式。
-
-##### 1. 为什么需要 Online Softmax？
-
-标准 softmax 需要先知道整个 score 向量的最大值：
-
-$$
-y_i = \frac{\exp(x_i - m)}{l}, \qquad m = \max_j x_j, \qquad l = \sum_j \exp(x_j - m)
-$$
-
-减去 $m$ 是为了**数值稳定**（防止 $\exp$ 上溢），且 softmax 对整体减常数是不变的：
-
-$$
-\operatorname{softmax}(x_i - c) = \frac{\exp(x_i - c)}{\sum_j \exp(x_j - c)} = \operatorname{softmax}(x_i)
-$$
-
-但在 FlashAttention 里，score 是按 KV tile 一块一块流进来的，处理第 $k$ 块时**还没看到后面的块**，无法提前知道全局 max $m$。于是只能边读边算，用"当前已知的 max"先做近似，等更大的 max 出现时再把之前的计算**修正**过来。
-
-##### 2. 先推导 Online Softmax：只维护 $(m, l)$
-
-设已经处理过的所有 score 组成集合 $X_{\text{old}}$。为了在线计算 softmax，只需要维护两个量：
-
-- $m$：已处理 score 的 running maximum
-
-  $$
-  m = \max_{x \in X_{\text{old}}} x
-  $$
-
-- $l$：以 $m$ 为参考点的指数和（softmax 的分母）
-
-  $$
-  l = \sum_{x \in X_{\text{old}}} \exp(x - m)
-  $$
-
-**初始状态**：$m = -\infty,\; l = 0$。
-
-有了 $(m, l)$，已处理部分的 softmax 概率可以直接写成：
-
-$$
-p(x) = \frac{\exp(x - m)}{l}, \qquad x \in X_{\text{old}}
-$$
-
-**新块到来时，先更新 max（公式 1）**
-
-现在来了新块 $X_{\text{new}} = \{x_j\}$。新的全局 max 是：
-
-$$
-m_{\text{new}} = \max\left(m,\; \max_{x_j \in X_{\text{new}}} x_j\right)
-$$
-
-这就是**公式 1**。含义：全局 max 要么是旧 max，要么是新块里的最大值。
-
-**参考点平移**
-
-旧的 $l$ 是在旧参考点 $m$ 下算的。现在参考点变成 $m_{\text{new}}$，需要把所有旧指数"换算"到新参考点：
-
-$$
-\exp(x - m_{\text{new}}) = \exp(x - m) \cdot \exp(m - m_{\text{new}})
-$$
-
-记缩放因子
-
-$$
-\alpha = \exp(m - m_{\text{new}})
-$$
-
-因为 $m_{\text{new}} \ge m$，所以 $m - m_{\text{new}} \le 0$，$\alpha \in (0, 1]$，永远不会放大数值——这正是 online softmax 数值稳定的关键。
-
-**更新 sum（公式 2）**
-
-新的分母要把旧部分和新部分都统一到 $m_{\text{new}}$：
-
-$$
-\begin{aligned}
-l_{\text{new}}
-&= \sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) + \sum_{x_j \in X_{\text{new}}} \exp(x_j - m_{\text{new}})\\
-&= \alpha \sum_{x \in X_{\text{old}}} \exp(x - m) + \sum_{j} \exp(x_j - m_{\text{new}})\\
-&= \alpha \cdot l + \sum_{j} \exp(x_j - m_{\text{new}})
-\end{aligned}
-$$
-
-即：
-
-$$
-\boxed{\,l_{\text{new}} = l \cdot \exp(m - m_{\text{new}}) + \sum_{j} \exp(x_j - m_{\text{new}})\,}
-$$
-
-含义：旧 sum 乘汇率 $\alpha$ 缩放到新参考点，再加上新块的指数和。
-
-到这里，**Online Softmax 已经完整**：处理完所有 tile 后，$m$ 是全局 max，$l$ 是全局指数和，任意 score $x$ 的 softmax 概率就是 $\exp(x - m)/l$。
-
-##### 3. 再引入输出 $o$：从 softmax 到 Attention
-
-Attention 不只是算概率，还要用概率对 $V$ 加权求和：
-
-$$
-o = \sum_{x \in X_{\text{old}}} p(x) \cdot v_x
-= \frac{\sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x}{l}
-$$
-
-也就是说，$o$ 是**已归一化的部分输出**（softmax 加权平均）。初始状态 $o = \mathbf{0}$（零向量）。
-
-$l \cdot o$ 是旧参考点下的**未归一化**加权和：
-
-$$
-l \cdot o = \sum_{x \in X_{\text{old}}} \exp(x - m) \cdot v_x
-$$
-
-新块到来后，参考点从 $m$ 变成 $m_{\text{new}}$，把旧加权和也按汇率 $\alpha$ 换算：
-
-$$
-\sum_{x \in X_{\text{old}}} \exp(x - m_{\text{new}}) \cdot v_x = \alpha \cdot l \cdot o
-$$
-
-新块的未归一化贡献是：
-
-$$
-\sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j
-$$
-
-所以新的全局 softmax 加权平均为：
-
-$$
-o_{\text{new}} = \frac{\alpha \cdot l \cdot o + \sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}
-$$
-
-拆成两项就是**公式 3**：
-
-$$
-\boxed{\,o_{\text{new}} = o \cdot \frac{l \cdot \exp(m - m_{\text{new}})}{l_{\text{new}}} + \frac{\sum_{j} \exp(x_j - m_{\text{new}}) \cdot v_j}{l_{\text{new}}}\,}
-$$
-
-直观理解：
-
-- 第一项把旧输出按"旧概率质量 $l\alpha$ / 新总质量 $l_{\text{new}}$"重新归一化；
-- 第二项把新块按其在全局 softmax 下的概率权重 $\exp(x_j - m_{\text{new}})/l_{\text{new}}$ 对 $v_j$ 加权。
-
-##### 4. 为什么这样就是对的？
-
-可以把所有 tile 的 score 全部收集起来，用标准 softmax 一次性计算：
-
-$$
-O = \frac{\sum_{j=1}^{N} \exp(x_j - m^*) \cdot v_j}{\sum_{j=1}^{N} \exp(x_j - m^*)}, \qquad m^* = \max_j x_j
-$$
-
-Online Softmax 每步都严格维护"当前已见部分"的全局 max、指数和、加权平均。当处理完最后一块时，$m = m^*$，$l = \sum \exp(x_j - m^*)$，$o = O$，与全量计算**完全相等**。
-
-##### 5. 与论文写法的等价性
-
-本教程采用"**每步归一化**"：$o$ 始终是已归一化的部分结果，所有 tile 处理完后 $o$ 就是最终输出，末尾无需再除 $l$。
-
-FlashAttention 论文的原始写法是"**末尾归一化**"：$o$ 只累加未归一化加权和，每步只做
-
-$$
-o_{\text{new}} = o \cdot \exp(m - m_{\text{new}}) + \sum_j \exp(x_j - m_{\text{new}}) \cdot v_j
-$$
-
-全部 tile 处理完最后做一次 $O = o / l$。
-
-两种写法数学严格等价：
-
-- 前者每步多一次除法，状态更直观；
-- 后者把 $N/B_c$ 次除法省成 1 次，FlashAttention-2 正是靠这种"推迟归一化"减少了 non-matmul FLOPs。
-
-面试手写推导时用任何一种都可以，但要能讲清两者的差别。
-
-##### 关键理解点
-
-1. 三个公式是**递推的**：每次新块到来时，用旧 $(m, l, o)$ 和新块 $(x_j, v_j)$ 计算新 $(m_{\text{new}}, l_{\text{new}}, o_{\text{new}})$；
-2. $\exp(m - m_{\text{new}})$ 是**关键缩放因子**（汇率），保证全局参考点一致，且 $\le 1$ 保证数值稳定；
-3. 整个过程 HBM 访问量为 $O(Nd)$ 级别，因为不需要存储中间 $S$ 和 $P$ 矩阵。
-
----
-
-#### 5.3 FlashAttention 论文原始伪代码（Algorithm 1）
-
-下面给出论文中的 Forward 伪代码，可直接与 5.2 节的三个更新公式对照。注意这是**论文原始形式**：$O_i$ 每一步都做一次归一化，状态 `(m, l, O)` 都写在 HBM 里；下面「Coding 任务」的简化 CUDA kernel 把归一化摊进了 `acc`，数学完全等价。
-
-```text
-# 块大小：保证 Q/K/V/O 四个块加中间结果能同时驻留 SRAM
-Bc = ceil(M / 4d)
-Br = min(ceil(M / 4d), d)
-
-O = 0_{N×d}          # 输出，存在 HBM
-l = 0_N              # running sum，存在 HBM
-m = -inf_N           # running max，存在 HBM
-
-for j = 1 .. Tc:                       # 外循环：遍历 K/V tile（共 Tc=ceil(N/Bc) 个）
-    load K_j, V_j  → SRAM              # 当前 KV 块从 HBM 搬到片上
-
-    for i = 1 .. Tr:                   # 内循环：遍历 Q tile（共 Tr=ceil(N/Br) 个）
-        load Q_i, O_i, l_i, m_i → SRAM # Q 块和当前 running 状态搬到片上
-
-        S̃ = Q_i · K_jᵀ                 # 片上计算 Br×Bc 的 score 块
-        m̃ = rowmax(S̃)                  # 当前块的局部行最大值
-        P̃ = exp(S̃ - m̃)                 # 未归一化的注意力权重
-        l̃ = rowsum(P̃)                  # 当前块未归一化的指数和
-
-        m_new = max(m_i, m̃)            # 公式 1：更新全局 running max
-
-        # 公式 2：把旧的 running sum 缩放到新的参考点，再加当前块
-        l_new = e^(m_i - m_new) · l_i + e^(m̃ - m_new) · l̃
-
-        # 公式 3：把旧的输出 O_i 按新的参考点重归一化，再加当前块的贡献
-        O_i ← diag(l_new)⁻¹ · (diag(l_i) · e^(m_i - m_new) · O_i
-                                + e^(m̃ - m_new) · P̃ · V_j)
-
-        write O_i, l_i ← l_new, m_i ← m_new  → HBM   # 写回当前 Q tile 的状态
-
-return O
-```
-
-**与公式的对应关系**：
-
-| 伪代码 | 5.2 节公式 |
-|---|---|
-| `m_new = max(m_i, m̃)` | 公式 1：$m_{new} = \max(m, \max(x_j))$ |
-| `l_new = ...` | 公式 2：$l_{new} = l \cdot e^{m - m_{new}} + \sum e^{x_j - m_{new}}$ |
-| `O_i ← diag(l_new)⁻¹·(...)` | 公式 3 的论文归一化变体：先把旧的累加输出缩放到新的全局参考点，再加新块并按新 sum 归一化 |
-| `e^(m_i - m_new)` / `e^(m̃ - m_new)` | 关键缩放因子：旧参考点 / 新参考点切换到当前全局 max |
-
-> 💡 **内存访问视角**：循环里唯一从 HBM 来回搬的"大件"是 Q/K/V 块与 running 状态；$S̃$、$P̃$ 两个 $B_r \times B_c$ 小矩阵只活在 SRAM/寄存器里，**从不写 HBM**——这就是 FlashAttention 从 $O(N^2)$ 降到 $O(N^2 d^2 / M)$ HBM 访问的原因。
-
----
-
-### Coding 任务：FlashAttention 简化版 Forward Kernel
-
-> ⚠️ **关于 1/√d scale**：标准 Attention 的 score 是 `Q·K^T / √d`。本简化版为了聚焦 online softmax 的结构，**省略了 scale**（GPU kernel 与 CPU 参考实现同步省略，数值对比仍然自洽）。LeetGPU 提交和面试手写时记得加回——在 `s` 算出后乘 `1.0f / sqrtf(D)` 即可，[LeetGPU 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)的 kernel 有完整示范。
-
-#### 任务 1：创建 flash_attention.cu
-
-创建文件 `kernels/flash_attention.cu`：
+GPU 以 sector（32 bytes）为最小传输粒度访问 Global Memory（L2 以 128-byte cache line = 4 sector 管理）。在指令层，4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效。
 
 ```cuda
-// flash_attention.cu —— FlashAttention 简化版 Forward Kernel
-// 编译命令: nvcc -o flash_attention flash_attention.cu -O3 -arch=sm_120
-// 运行命令: ./flash_attention
+// 逐个加载：4 条 32-bit load 指令
+float a0 = ptr[0];
+float a1 = ptr[1];
+float a2 = ptr[2];
+float a3 = ptr[3];
+
+// float4 向量化加载：1 条 128-bit load 指令
+float4 val = reinterpret_cast<const float4*>(ptr)[0];
+// val.x, val.y, val.z, val.w 分别是 4 个 float
+```
+
+##### 使用条件
+
+1. **内存地址 16 字节对齐**：`cudaMalloc` 分配的内存天然对齐
+2. **访问模式 coalesced**：连续线程访问连续地址，warp 内 32 线程的访问合并为最少数量的 cache line 传输
+3. **数据布局支持**：行优先矩阵的连续行元素天然连续
+
+##### 风险
+
+如果地址不对齐或访问不连续，float4 可能触发更多 cache line 加载，反而降低性能。
+
+##### 知识补充：cache line 与 sector
+
+理解 float4 为什么快，先要搞清楚 GPU 访存的两个粒度单位：
+
+![Cache Line 与 Sector](../images/cache_line_sector.svg)
+
+| 概念 | 大小 | 说明 |
+|------|------|------|
+| **sector（扇区）** | 32B | GPU 内存的**最小传输单位**。L1↔L2、L2↔DRAM 之间的数据搬运都按 sector 进行——线程只读 4B，硬件也会拉回整个 32B sector |
+| **cache line（缓存行）** | 128B | L1/L2 的组织单位，**1 行 = 4 个 sector**，可按 sector 粒度填充，不必整行搬运 |
+
+**sector（32B）——传输的原子单位。** 无论线程要读 1B 还是 4B，硬件从下一级存储搬数据时最小都搬一整个 32B sector，不可再分。这是 L2→L1、DRAM→L2 的搬运粒度。代价是：若一个 sector 里只有 4B 被用到，剩余 28B 也被白白搬过来，称为 **sector 浪费**。所以衡量访存效率的核心指标是「每个被搬来的 sector 里有百分之几的字节被真正用到」。
+
+**cache line（128B）——存储的组织单位。** L1/L2 cache 按 128B 一行来组织（存 tag、做命中判断），1 行正好含 4 个 sector。关键在于**填充粒度是 sector 而非整行**：一次访存若只触达某行的 1 个 sector，就只搬这 1 个 sector 进 cache，其余 3 个 sector 位置留空，不必把整条 128B 都拉回来。这种「按需 sector 填充」让 GPU 对不规则访问比 CPU 更宽容。
+
+**「以 128B cache line 管理」具体指什么？** 指 L2 的**管理动作——存 tag、命中判断、行的分配与替换——都以 128B 行为单位**：一次访问先用地址高位（Tag + Index）定位到某一行，命中与否看的是整行的 tag，而不是具体哪个字节。但每个 sector 有独立的 valid bit，**填充按 sector**：miss 后只从 DRAM 搬触达的那 32B，其余 3 个 sector 留空。为什么这样分工？tag 若按 32B sector 存，表项数翻 4 倍、硬件开销大；valid bit 按 sector 存，又保留了细粒度传输的好处——**存储组织粗（128B）、数据传输细（32B）**，两者兼顾。
+
+![L2 以 cache line 管理](../images/l2_cache_line_management.svg)
+
+> 💡 对比 CPU：CPU cache line 通常 64B，传输和一致性共用这一个粒度——取就取整行、一致性也按整行做；GPU 把两者拆开——cache line（128B）管存储组织，sector（32B）管传输，粒度更细，对不规则访问更友好，代价是 tag 表项更多。
+
+把这两个粒度放回完整的访存层次中，DRAM → L2 → L1 → Register 每一级之间的搬运单位如下图：
+
+![GPU 访存层次与搬运单位](../images/memory_hierarchy_transfer.svg)
+
+> 💡 图中要点：① **L1/L2 都按 cache line（128B = 4 sector）组织**，做 tag 与命中判断；② **DRAM→L2、L2→L1 的传输都按 sector（32B）**，且 cache line 按 sector 粒度填充——L1 中一条 cache line 可以只有 1 个 sector 驻留（虚线扇区位置留空）；③ **L1→Register 的粒度由指令宽度决定**：`LDG.32` 取 4B、`LDG.128`（float4）取 16B，这是代码层可控的，而 sector/cache line 是硬件固定的。
+
+**用 sector 定量描述合并访问（coalescing）。** 一个 warp 32 线程，每个读 1 个 float（4B），访存请求先被硬件合并：
+
+- **合并访问（coalesced）**：32 线程读连续地址，共 `32 × 4B = 128B`，恰好落在 1 条 cache line 的 4 个 sector 内 → 只需传 **4 个 sector = 128B**，1 次内存事务完成，**利用率 100%**。
+- **散乱访问（strided/scattered）**：32 线程地址各落一个不同 sector → 要传 **32 个 sector = 1024B**，却只用到 128B，**利用率仅 12.5%（1/8）**，其余 7/8 的带宽被浪费在搬来却用不上的 sector 上。
+
+带宽利用率公式：
+
+```
+带宽利用率 = 有效数据量 / 实际传输量
+         = (warp 真正读到的字节数) / (被触达的 sector 数 × 32B)
+```
+
+coalesced：`128B / (4 × 32B) = 100%`　　scattered：`128B / (32 × 32B) = 12.5%`
+
+> ⚠️ 这就是「coalesced」作为 CUDA 优化第一性原则的根因——它直接决定每个 sector 是否被榨干。float4 之所以更快，一大部分原因正是它强制每线程拿 16B 连续数据，天然把 sector 利用率顶满（见下一小节）。
+
+##### 为什么 float4 更快
+
+关键认知：**float4 并没有减少要搬运的字节数**（数据总量不变），它减少的是**指令数和内存请求数**，并提升每个线程的在途数据量。以"warp 加载 512B 连续数据"为例对比：
+
+| | 32-bit load × 4 | 128-bit load × 1（float4） |
+|--|------------------|----------------------------|
+| 每线程指令数 | 4 条 `LDG.32` | 1 条 `LDG.128` |
+| warp 级内存请求 | 4 次（每次 128B = 4 sector） | 1 次（512B，L1 内部分 4 个 128B wavefront 处理） |
+| 地址计算 | 4 次基址 + 偏移 | 1 次 |
+| 每线程在途数据 | 4B，拿到才能往下算 | 16B 一次到位，4 个 float 的使用可流水线化 |
+
+收益来源具体有三条：
+
+1. **指令与请求数砍到 1/4**：LSU（加载存储单元）每周期能处理的请求数有限，请求少了 pipeline 就不堵；省下的指令发射槽留给 FMA。GEMM 主循环里最重的访存就是 global→shared 加载，这里指令数砍掉 3/4，直接反映为 SM 吞吐提升——实测 4096 矩阵 v3→v4 从 30.8% 跳到 64.3%，是全天最大的单步增益。
+2. **sector 利用率打满**：32-bit 散读时一个 32B sector 可能只用到 4B；float4 保证每线程拿满 16B、warp 拿满 128B 的整数倍，每个被拉回的 sector 都 100% 被用上， DRAM 带宽一点不浪费。
+3. **更多数据在途（MLP / ILP）**：一条 `LDG.128` 让 4 个 float 同时 in-flight，访存延迟只需掩盖一次；写成 4 条独立 `LDG.32` 时，编译器还可能因寄存器压力或调度把它们串行化。
+
+> ⚠️ 这三条收益都建立在"16B 对齐 + 访问连续"的前提上。不满足时，一条 128-bit load 可能横跨 2 条 cache line，反而多传 sector——这正是前面"使用条件"三条的由来。写回 C 用 `STG.128` 同理。
+
+##### 常见误区：单线程 float4 只有 16B，sector 利用率是 50% 吗？
+
+不是。**sector 利用率是按 warp 级合并后的内存事务来算的，不是按单条指令、单个线程来算的。**
+
+单线程执行 float4 load 确实只取 16B（半个 sector），但硬件不会为这 16B 单独去 DRAM 搬数据——访存请求先在 **warp 级合并**后才发出：
+
+```
+一个 warp = 32 线程 × 16B (float4) = 512B 连续数据
+512B = 4 条 cache line = 16 个 sector
+```
+
+两个相邻线程的 float4 恰好拼满一个 32B sector：
+
+```
+sector 0 [32B]:  thread 0 的 float4 [16B]  +  thread 1 的 float4 [16B]
+sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
+...
+```
+
+从 DRAM 拉回的每个 sector 的 32B **全部被用上**，利用率是 **100%**。GEMM 的加载模式（连续线程取连续 float4）天然保证相邻线程拼满 sector。
+
+**什么时候才真的是 50%**：warp 内访问模式让 sector 拼不满时，例如只有一半线程活跃（`if (threadIdx.x % 2 == 0)` 做 float4 load），或每线程间隔 32B 取一个 float4（stride = 8 floats）。
+
+顺带纠正一个直觉：coalesced 的 32-bit load（每线程 4B，warp 共 128B = 4 sector）利用率**也是 100%**。float4 的优势不在 sector 利用率本身，而在于前面说的指令/请求数砍到 1/4 和单线程 16B 在途数据（ILP）；前文"32-bit 散读时一个 sector 可能只用到 4B"指的是非合并的散乱场景，不是 coalesced 的 32-bit 连续读。
+
+#### 6.2 Warp Shuffle 在 GEMM 写回中的用途
+
+Day 1 我们用 Warp Shuffle 做 Reduce（多对一求和）。在 GEMM 中，Shuffle 的用途不同：**写回前的 warp 内数据重排**——把累加器在 lane 之间换位，让随后的 `STG` 指令变成 coalesced 模式。一个是"多对一归约"，一个是"一对一置换"，用的 shuffle 原语和目的都不同。
+
+##### 问题来源：写回是否合并，由线程映射决定
+
+Register Blocking 中每个线程持有 TM×TN 累加器子块，写回地址 = f(线程映射, tile 内偏移)。以本 kernel 的 16×16 线程网格（BN/TN=16）为例，两种常见映射的写回模式完全不同：
+
+| 线程映射 | 一个 warp（32 lane）覆盖 | 单条 `STG.128` 触达 | sector 情况 |
+|---------|------------------------|--------------------|-------------|
+| 行优先（本 kernel：`threadRow=tid/16, threadCol=tid%16`） | 2 行 × 128 列 | 2 段 512B 连续区 | 每条 sector 先写一半，TN/4 的第二次写补齐另一半 → L2 内合并为满 sector 写 |
+| 列优先（`threadRow=tid%16, threadCol=tid/16`） | 32 个不同行 | 32 行各 16B | 触达 32 条行、32 个 sector，每个只用一半；另一半要等相邻 warp 很久以后才来 → 部分 sector 写回 DRAM |
+
+```
+行优先映射（lane 0-15 同行，写连续 512B）:
+  lane:  0    1    2  ... 15 | 16   17 ... 31
+  地址: [row0: col0  col8  col16 ...] [row0+8: col0 ...]
+        └─ 相邻 lane 地址相邻 → 合并友好
+
+列优先映射（lane 0-31 各占一行）:
+  lane:  0      1      2   ... 31
+  地址: [row0] [row1]  [row2] ... [row31]  ← 每格 16B 散落 32 行
+        └─ 单条指令触达 32 条 cache line → 写回放散
+```
+
+线程映射往往是被 global→shared **加载端**的合并需求"逼"出来的；当加载和写回对映射的要求冲突时，就需要在写回前做一次数据重排。
+
+##### Warp Shuffle 回顾
+
+`__shfl_sync(mask, val, srcLane)`：warp 内 lane 间**直接交换寄存器**，每个 lane 从 `srcLane` 指定的 lane 拿到它的 `val`。特性：
+
+- 不经过 shared memory，无 bank conflict，无需 `__syncthreads()`（同步域就是 warp 本身）
+- `srcLane` 可以是任意 lane 编号 → 支持任意置换（permutation），不只是 reduce 用的 `__shfl_down` 树形折叠
+- 局限：只在 warp 内（32 lane）有效，不能跨 warp
+
+Day 1 的 reduce 是 `__shfl_down_sync` 逐层折叠（多对一）；写回重排是 `__shfl_sync` 指定任意源 lane（一对一置换）。
+
+##### 思路：写回前的 warp 内"寄存器转置"
+
+目标：执行 `STG` 的那一刻，**lane i 持有的数据恰好要写到连续地址的第 i 个位置**。如果当前持有关系不满足，就先用 shuffle 把数据换到正确的 lane 手里：
+
+```cuda
+// 重排前：lane i 持有自己 thread tile 的 acc[m][n]，
+// 它本应写到 C[row][colBase + ownerLane * TN + n]
+// 重排：让每个 lane 改持"目标行上自己该写的那一格"
+float mine    = acc[m][n];
+int   srcLane = /* 持有"我该写的那一格"的 lane 编号 */;
+float val     = __shfl_sync(0xFFFFFFFF, mine, srcLane);
+// 现在 32 个 lane 的值恰好是一行连续 32 个 float（或其分块），
+// 一次 coalesced 写回：
+C[row][colBase + lane] = val;
+```
+
+本质是一个 **warp 内转置**：把"按线程 tile 分布"的数据改成"按写回地址分布"。
+
+##### 收益与代价的定量账
+
+shuffle 不是免费的。以 TM=TN=8 为例，warp 共持有 32×64=2048 个 float；每条 `SHFL` 指令移动 32 个值（每 lane 一个），完整重排需要 2048/32 = **64 条 shuffle 指令**（对比：写回本身只有 16 条 `STG.128`/warp）。
+
+| | 不用 shuffle（列优先映射） | 用 shuffle 重排 |
+|--|--------------------------|----------------|
+| 写回指令 | 16 × `STG.128`，散落 32 行，半 sector 写 | 16 × `STG.128`，满 sector 合并写 |
+| 额外指令 | 0 | 64 × `SHFL` |
+| DRAM 写流量 | 可能翻倍（部分 sector 写） | 恰好写满 |
+
+##### 为什么不用 shared memory 中转做同样的重排？
+
+| | Warp Shuffle | Shared Memory 中转 |
+|--|-------------|-------------------|
+| 数据路径 | 寄存器 → 寄存器 | 寄存器 → shared → 寄存器（两次访问） |
+| 同步 | 不需要（warp 内天然同步） | 需要 `__syncthreads()` |
+| bank conflict | 无 | 转置访问模式容易踩 bank conflict，需 padding |
+| shared 占用 | 0 | 额外一份 staging buffer |
+| 作用范围 | 仅 warp 内 | 可跨 warp、跨任意线程 |
+
+重排范围能装进一个 warp 时用 shuffle 更省；需要跨 warp 重排时只能走 shared。
+
+##### 实测：整合版 kernel 为什么没有用 shuffle
+
+> ⚠️ 诚实地说，本 kernel 的写回路径**并没有调用 shuffle**（代码里的 `warpReduceSum` 是 Day 1 留下的归约函数，写回没用到它）。原因有三：
+
+1. **映射选对了，写回天然接近合并**：行优先映射 + float4 写回，单个 warp 覆盖 2 行各 512B，两次 `STG.128` 恰好互补拼满 sector，L2 内合并后就是满 sector 写（见上表第一行）
+2. **写回占比太小**：C 只写一次（BM×BN），主循环却跑 K/BK = 512 轮加载+计算。实测 v4→v5 的 coalesced 写回收益在噪声范围内（4096 矩阵 64.3% → 62.9%）
+3. **shuffle 全量重排要 64 条额外指令**：写回只占总时间百分之几时，这笔开销可能吃掉收益
+
+shuffle 写回真正值得用的场景：
+
+- **线程映射被迫不利于写回**：典型是 Tensor Core——WMMA/MMA 的累加器 fragment 布局由硬件定死（每个 lane 持有固定位置的小块），与 C 的理想写回模式不匹配，必须 shuffle 或 shared 重排
+- **加载端与写回端映射冲突**：加载要求列优先、写回要求行优先时，用 shuffle 做 warp 内转置
+- **小位宽打包写回**：half2/bf16 累加器先 shuffle 聚拢，再打包成 128-bit 写
+
+##### 常见误区
+
+1. **"shuffle 能跨 warp 交换数据"**——不能。shuffle 只在 32 lane 内有效，跨 warp 的重排必须走 shared memory
+2. **"shuffle 减少了写回的数据量"**——没有。和 float4 一样，它不改变搬运的字节数，只改变"哪个 lane 写哪个地址"，让每次 `STG` 触达的 sector 被写满
+3. **"写回重排和 reduce 用的是同一种 shuffle"**——reduce 用 `__shfl_down_sync` 做多对一折叠；写回重排是一对一置换，用 `__shfl_sync` 指定任意源 lane
+4. **"shuffle 免费，能加就加"**——TM×TN=64 时全量重排要 64 条 SHFL 指令；写回占比小的 kernel 加了可能反而变慢，一切以 ncu 实测为准
+
+#### 6.3 参数精调（Auto-tuning）
+
+![参数精调扫描表](../images/parameter_tuning_table.svg)
+
+不同矩阵尺寸的最优参数组合不同。参数精调就是扫描参数空间，找到每个尺寸的最优配置：
+
+| 参数 | 扫描范围 | 影响 |
+|------|---------|------|
+| TM × TN | 4×4, 8×4, 8×8, 16×8 | Register 使用量、计算强度 |
+| BK | 4, 8, 16 | Shared Memory 占用、外循环次数 |
+| BM × BN | 64×128, 128×128, 128×256 | Block tile 大小、occupancy |
+
+精调步骤：
+1. 固定 BM=BN=128，扫描 TM×TN 组合（4×4, 8×4, 8×8, 16×8, 16×16）
+2. 选择最优 TM×TN 后，扫描 BK（4, 8, 16）
+3. 最后扫描 BM/BN（64, 128, 256）
+4. 记录每个矩阵尺寸的最优参数组合
+
+---
+
+### Coding 任务：整合版 GEMM
+
+#### 任务 1：创建 integrated_gemm.cu
+
+创建文件 `kernels/integrated_gemm.cu`：
+
+```cuda
+// integrated_gemm.cu —— 整合优化 GEMM
+// Warp Shuffle + Register Blocking + float4 向量化加载 + Coalesced 写回
+// 目标性能：cuBLAS 70%+（RTX 5090 上 4096x4096 矩阵）
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+// 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <algorithm>
 
-#define Br 64 // Q tile 的行数；本实现一个 block 固定 Br 个线程，每个线程负责 Q tile 的一行
-#define Bc 32 // K/V tile 的行数；Bc=32 时 SRAM 占 32 KB，Bc=64 会顶到 48 KB 静态上限、每 SM 只能驻留 1 个 block
-#define D 64  // Head dimension
+#define BM 128
+#define BN 128
+#define BK 8
+#define TM 8
+#define TN 8
+#define NUM_THREADS ((BM / TM) * (BN / TN)) // 256
 
-__global__ void flashAttentionFwd(const float* __restrict__ Q, const float* __restrict__ K, const float* __restrict__ V,
-                                  float* __restrict__ O, int N, int numHeads) {
-    __shared__ float s_Q[Br][D]; // Q tile: Br×D
-    __shared__ float s_K[Bc][D]; // K tile: Bc×D
-    __shared__ float s_V[Bc][D]; // V tile: Bc×D
-    // 注意：S/P 中间结果不放 shared memory，每个线程用寄存器/local 保存自己那一行的值
+// float4 辅助
+__device__ __forceinline__ float4 make_float4_from_float(const float* p) {
+    return make_float4(p[0], p[1], p[2], p[3]);
+}
 
-    int batch = blockIdx.z;
-    int head = blockIdx.y;
-    int qTileRow = blockIdx.x * Br;
-
-    int tid = threadIdx.x;        // 本线程负责的 Q 行（tile 内偏移）
-    int qRow = qTileRow + tid;    // 全局行号
-    int bhOffset = (batch * numHeads + head) * N;
-
-    // 每个线程维护自己那一行的 running 状态
-    float m = -1e30f;   // running max
-    float l = 0.0f;     // running sum
-    float acc[D] = {0}; // running output accumulator（每步归一化变体，末尾无需再除 l）
-
-    // Step 1: 全 block 协作加载 Q tile 到 Shared Memory（全局内存合并访问）
-    for (int idx = tid; idx < Br * D; idx += Br) {
-        int r = idx / D, c = idx % D;
-        s_Q[r][c] = (qTileRow + r < N) ? Q[bhOffset * D + (qTileRow + r) * D + c] : 0.0f;
+// Warp 级归约（用于累加器写回优化）
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
-    __syncthreads();
+    return val;
+}
 
-    // Step 2: 内循环遍历 K/V tile
-    for (int kvStart = 0; kvStart < N; kvStart += Bc) {
-        // 2a: 协作加载 K 和 V tile
-        for (int idx = tid; idx < Bc * D; idx += Br) {
-            int r = idx / D, c = idx % D;
-            s_K[r][c] = (kvStart + r < N) ? K[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
-            s_V[r][c] = (kvStart + r < N) ? V[bhOffset * D + (kvStart + r) * D + c] : 0.0f;
+// 整合版 GEMM Kernel
+// 优化点：
+// 1. Register Blocking (TM×TN thread tile)
+// 2. float4 向量化 Global→Shared 加载
+// 3. Warp Shuffle 辅助累加
+// 4. Coalesced 写回
+__global__ void gemmIntegrated(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                               int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
+
+    float r_A[TM];
+    float r_B[TN];
+    float acc[TM][TN] = {0};
+
+    int threadRow = threadIdx.x / (BN / TN);
+    int threadCol = threadIdx.x % (BN / TN);
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
+
+    // 主循环沿 K 维度
+    for (int bk = 0; bk < K; bk += BK) {
+        // ---- 协作加载 A tile (BM×BK)，使用 float4 ----
+        int aRow = threadIdx.x / (BK / 4);
+        int aCol4 = threadIdx.x % (BK / 4);
+
+        #pragma unroll
+        for (int i = 0; i < BM; i += NUM_THREADS / (BK / 4)) {
+            int loadRow = aRow + i;
+            int globalRow = cRow + loadRow;
+            int globalCol = bk + aCol4 * 4;
+
+            if (loadRow < BM && globalRow < M && globalCol + 3 < K) {
+                float4 val = reinterpret_cast<const float4*>(&A[globalRow * K + globalCol])[0];
+                s_A[loadRow][aCol4 * 4 + 0] = val.x;
+                s_A[loadRow][aCol4 * 4 + 1] = val.y;
+                s_A[loadRow][aCol4 * 4 + 2] = val.z;
+                s_A[loadRow][aCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BM) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_A[loadRow][aCol4 * 4 + c] = (globalRow < M && gc < K) ? A[globalRow * K + gc] : 0.0f;
+                }
+            }
         }
+
+        // ---- 协作加载 B tile (BK×BN)，使用 float4 ----
+        int bRow = threadIdx.x / (BN / 4);
+        int bCol4 = threadIdx.x % (BN / 4);
+
+        #pragma unroll
+        for (int i = 0; i < BK; i += NUM_THREADS / (BN / 4)) {
+            int loadRow = bRow + i;
+            int globalRow = bk + loadRow;
+            int globalCol = cCol + bCol4 * 4;
+
+            if (loadRow < BK && globalRow < K && globalCol + 3 < N) {
+                float4 val = reinterpret_cast<const float4*>(&B[globalRow * N + globalCol])[0];
+                s_B[loadRow][bCol4 * 4 + 0] = val.x;
+                s_B[loadRow][bCol4 * 4 + 1] = val.y;
+                s_B[loadRow][bCol4 * 4 + 2] = val.z;
+                s_B[loadRow][bCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BK) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_B[loadRow][bCol4 * 4 + c] = (globalRow < K && gc < N) ? B[globalRow * N + gc] : 0.0f;
+                }
+            }
+        }
+
         __syncthreads();
 
-        // 2b+2c: 每个线程独立计算自己那一行的 score，并做 Online Softmax 更新
-        if (qRow < N) {
-            int kvLen = min(Bc, N - kvStart); // 最后一个 tile 可能不满
-
-            // 2b: s_row[c] = Q[qRow] · K[kvStart+c]，本行对当前 KV tile 的 kvLen 个 score
-            float s_row[Bc];
-            float m_tile = -1e30f;
-            for (int c = 0; c < kvLen; c++) {
-                float s = 0.0f;
-                #pragma unroll
-                for (int d = 0; d < D; d++)
-                    s += s_Q[tid][d] * s_K[c][d];
-                s_row[c] = s; // 面试/LeetGPU 版本这里要乘 1/sqrtf(D)
-                m_tile = fmaxf(m_tile, s);
-            }
-
-            // 公式1: max 更新
-            float m_new = fmaxf(m, m_tile);
-
-            // 公式2: sum 更新（l_scale 把旧 sum 从参考点 m 缩放到 m_new）
-            float l_scale = expf(m - m_new);
-            float l_new = l * l_scale;
-            for (int c = 0; c < kvLen; c++) {
-                s_row[c] = expf(s_row[c] - m_new); // p_c = exp(s_c - m_new)
-                l_new += s_row[c];
-            }
-
-            // 公式3: output 更新（每步归一化变体）
-            float o_scale = (l * l_scale) / l_new;
+// ---- Register Blocking 计算 ----
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
             #pragma unroll
-            for (int d = 0; d < D; d++)
-                acc[d] *= o_scale;
-            for (int c = 0; c < kvLen; c++) {
-                float p_norm = s_row[c] / l_new;
-                #pragma unroll
-                for (int d = 0; d < D; d++)
-                    acc[d] += p_norm * s_V[c][d];
+            for (int m = 0; m < TM; m++) {
+                r_A[m] = s_A[threadRow * TM + m][k];
             }
-
-            m = m_new;
-            l = l_new;
+            #pragma unroll
+            for (int n = 0; n < TN; n++) {
+                r_B[n] = s_B[k][threadCol * TN + n];
+            }
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                #pragma unroll
+                for (int n = 0; n < TN; n++) {
+                    acc[m][n] += r_A[m] * r_B[n];
+                }
+            }
         }
-        __syncthreads(); // 等所有线程用完 s_K/s_V，再加载下一个 tile
+        __syncthreads();
     }
 
-    // Step 3: 写回最终结果
-    if (qRow < N) {
-        for (int d = 0; d < D; d++)
-            O[bhOffset * D + qRow * D + d] = acc[d];
+// ---- Coalesced 写回 Global Memory，使用 float4 ----
+    #pragma unroll
+    for (int m = 0; m < TM; m++) {
+        int gRow = cRow + threadRow * TM + m;
+        if (gRow < M) {
+            #pragma unroll
+            for (int n = 0; n < TN; n += 4) {
+                int gCol = cCol + threadCol * TN + n;
+                if (gCol + 3 < N) {
+                    float4 val = make_float4(acc[m][n + 0], acc[m][n + 1], acc[m][n + 2], acc[m][n + 3]);
+                    reinterpret_cast<float4*>(&C[gRow * N + gCol])[0] = val;
+                } else {
+                    #pragma unroll
+                    for (int c = 0; c < 4 && gCol + c < N; c++) {
+                        C[gRow * N + gCol + c] = acc[m][n + c];
+                    }
+                }
+            }
+        }
     }
 }
 
-// 避免宏 D 与函数参数名冲突
-#undef D
+// cuBLAS 基准
+float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    float alpha = 1.0f, beta = 0.0f;
 
-// CPU 参考实现（标准 Attention，用于验证正确性；与 kernel 同步省略 1/√d scale）
-void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int D) {
-    float* S = (float*)malloc(N * N * sizeof(float));
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            float sum = 0;
-            for (int d = 0; d < D; d++)
-                sum += Q[i * D + d] * K[j * D + d];
-            S[i * N + j] = sum;
-        }
-    }
-    for (int i = 0; i < N; i++) {
-        float maxVal = S[i * N];
-        for (int j = 1; j < N; j++)
-            maxVal = fmaxf(maxVal, S[i * N + j]);
-        float sum = 0;
-        for (int j = 0; j < N; j++) {
-            S[i * N + j] = expf(S[i * N + j] - maxVal);
-            sum += S[i * N + j];
-        }
-        for (int j = 0; j < N; j++)
-            S[i * N + j] /= sum;
-    }
-    for (int i = 0; i < N; i++) {
-        for (int d = 0; d < D; d++) {
-            float sum = 0;
-            for (int j = 0; j < N; j++)
-                sum += S[i * N + j] * V[j * D + d];
-            O[i * D + d] = sum;
-        }
-    }
-    free(S);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaDeviceSynchronize();
+
+    cudaEventRecord(start);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cublasDestroy(handle);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
+}
+
+float runOurKernel(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
+    dim3 block(NUM_THREADS);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaDeviceSynchronize();
+
+    cudaEventRecord(start);
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
 }
 
 void initMatrix(float* mat, int rows, int cols) {
+    srand(42);
     for (int i = 0; i < rows * cols; i++)
-        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
 }
 
-bool checkResult(const float* gpu, const float* cpu, int n, float eps) {
+bool checkResult(const float* a, const float* b, int n, float eps) {
     for (int i = 0; i < n; i++) {
-        if (fabs(gpu[i] - cpu[i]) > eps) {
-            printf("Mismatch at %d: GPU=%.6f, CPU=%.6f\n", i, gpu[i], cpu[i]);
+        if (fabs(a[i] - b[i]) > eps) {
+            printf("First mismatch at %d: %.6f vs %.6f\n", i, a[i], b[i]);
             return false;
         }
     }
     return true;
 }
 
+float getGFLOPS(int M, int N, int K, float ms) {
+    return 2.0f * M * N * K / (ms * 1e6);
+}
+
 int main() {
-    const int N = 256;
-    const int D = 64;
-    const int batchSize = 1;
-    const int numHeads = 1;
+    int sizes[][3] = {
+        {1024, 1024, 1024},
+        {2048, 2048, 2048},
+        {4096, 4096, 4096},
+        {8192, 8192, 8192},
+    };
 
-    printf("=== FlashAttention Simplified Forward ===\n");
-    printf("Config: N=%d, D=%d, batch=%d, heads=%d\n", N, D, batchSize, numHeads);
-    printf("SRAM usage per block: %.2f KB\n", (Br * D + Bc * D * 2) * sizeof(float) / 1024.0);
+    printf("=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===\n");
+    printf("BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-8s %-8s %-8s %-10s %-10s %-10s %-8s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "GFLOPS", "Percent");
+    printf("----------------------------------------------------------------\n");
 
-    size_t totalElements = batchSize * numHeads * N * D;
-    size_t bytes = totalElements * sizeof(float);
+    for (int s = 0; s < 4; s++) {
+        int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
+        size_t bytesA = M * K * sizeof(float);
+        size_t bytesB = K * N * sizeof(float);
+        size_t bytesC = M * N * sizeof(float);
 
-    float* h_Q = (float*)malloc(bytes);
-    float* h_K = (float*)malloc(bytes);
-    float* h_V = (float*)malloc(bytes);
-    float* h_O = (float*)malloc(bytes);
-    float* h_O_CPU = (float*)malloc(bytes);
+        float* h_A = (float*)malloc(bytesA);
+        float* h_B = (float*)malloc(bytesB);
+        float* h_C = (float*)malloc(bytesC);
+        float* h_C_ref = (float*)malloc(bytesC);
 
-    srand(42); // 只播种一次：若在 initMatrix 里每次 srand(42)，Q/K/V 会被初始化成完全相同的矩阵
-    initMatrix(h_Q, batchSize * numHeads * N, D);
-    initMatrix(h_K, batchSize * numHeads * N, D);
-    initMatrix(h_V, batchSize * numHeads * N, D);
+        initMatrix(h_A, M, K);
+        initMatrix(h_B, K, N);
 
-    float *d_Q, *d_K, *d_V, *d_O;
-    cudaMalloc(&d_Q, bytes);
-    cudaMalloc(&d_K, bytes);
-    cudaMalloc(&d_V, bytes);
-    cudaMalloc(&d_O, bytes);
-    cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
+        float *d_A, *d_B, *d_C;
+        cudaMalloc(&d_A, bytesA);
+        cudaMalloc(&d_B, bytesB);
+        cudaMalloc(&d_C, bytesC);
+        cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
 
-    dim3 gridDim((N + Br - 1) / Br, numHeads, batchSize);
-    dim3 blockDim(Br); // 一个 block Br 个线程，每个线程负责 Q tile 的一行
+        float ourMs = runOurKernel(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C, d_C, bytesC, cudaMemcpyDeviceToHost);
 
-    printf("Grid: (%d, %d, %d), Block: %d\n", gridDim.x, gridDim.y, gridDim.z, blockDim.x);
+        float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C_ref, d_C, bytesC, cudaMemcpyDeviceToHost);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+        bool correct = checkResult(h_C, h_C_ref, M * N, 1e-2);
+        float ourGFLOPS = getGFLOPS(M, N, K, ourMs);
+        float percent = (cublasMs / ourMs) * 100;
 
-    cudaEventRecord(start);
-    flashAttentionFwd<<<gridDim, blockDim>>>(d_Q, d_K, d_V, d_O, N, numHeads);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
+        printf("%-8d %-8d %-8d %-10.3f %-10.3f %-10.1f %-7.1f%% %s\n", M, N, K, ourMs, cublasMs, ourGFLOPS, percent,
+               correct ? "PASS" : "FAIL");
 
-    float ms;
-    cudaEventElapsedTime(&ms, start, stop);
-    cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
-
-    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, D);
-    bool correct = checkResult(h_O, h_O_CPU, totalElements, 1e-3);
-
-    printf("GPU Time: %.3f ms\n", ms);
-    printf("Result check: %s\n", correct ? "PASS" : "FAIL");
-
-    free(h_Q);
-    free(h_K);
-    free(h_V);
-    free(h_O);
-    free(h_O_CPU);
-    cudaFree(d_Q);
-    cudaFree(d_K);
-    cudaFree(d_V);
-    cudaFree(d_O);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        free(h_C_ref);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+    }
 
     return 0;
 }
 ```
 
-**实现要点**（与标准实现的差异，面试可以主动讲）：
-
-- **一个线程负责 Q tile 的一行**：running 状态 `(m, l, acc)` 天然按行隔离，每个线程独立跑自己的 online softmax，无需跨线程通信
-- **S/P 不落 shared memory**：`s_row[Bc]` 和 `acc[D]` 在寄存器/local 中，shared memory 只放 Q/K/V 三个 tile——这正是 5.1 节"SRAM 只需 `Br×d + 2×Bc×d`"的原因
-- **边界处理**：`qRow >= N` 的线程只参与 tile 加载和 `__syncthreads`，不做计算；最后一个 KV tile 用 `kvLen` 截断
-
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
-./flash_attention
+nvcc -o integrated_gemm kernels/integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+./integrated_gemm
 ```
 
-**预期输出**：
+**实测输出（RTX 5090，sm_120，CUDA 12.8）**：
 
 ```
-=== FlashAttention Simplified Forward ===
-Config: N=256, D=64, batch=1, heads=1
-SRAM usage per block: 32.00 KB
-Grid: (4, 1, 1), Block: 64
-GPU Time: 0.141 ms
-Result check: PASS
+=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===
+BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
+
+M        N        K        Our(ms)    cuBLAS(ms) GFLOPS    Percent
+----------------------------------------------------------------
+1024     1024     1024     0.143      0.064      15.1      44.8%   PASS
+2048     2048     2048     0.427      0.267      40.7      62.3%   PASS
+4096     4096     4096     3.178      2.015      43.1      63.4%   PASS
+8192     8192     8192     24.830     15.920     44.4      64.1%   PASS
 ```
 
-#### 任务 3：验证 SRAM 使用量
+#### 任务 2b：全优化系列对比
 
-代码中打印了 SRAM 使用量。验证计算（Br=64, Bc=32, D=64, float32）：
+`kernels/gemm_optimization_series.cu` 把 6 个优化版本 + cuBLAS 基线放在同一文件中逐层对比，直观展示每层优化的收益来源。
 
-```
-s_Q[Br][D] = 64×64×4 = 16 KB
-s_K[Bc][D] = 32×64×4 =  8 KB
-s_V[Bc][D] = 32×64×4 =  8 KB
-总计 = 32 KB（S/P 在寄存器中，不占 shared memory）
+```bash
+nvcc -O3 -arch=sm_120 kernels/gemm_optimization_series.cu -o gemm_series -lcublas
+./gemm_series
 ```
 
-几个容易记混的数字（面试常作为追问）：
+**cuBLAS 占比（Our TFLOPS / cuBLAS TFLOPS）**：
 
-- **静态** `__shared__` **上限统一是 48 KB/block**（所有 CUDA 架构）；要超过它必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
-- **每 SM 的 shared memory 上限**：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = **100 KB**（128 KB unified cache，carveout 可调 0–100 KB，每 block 动态上限 99 KB）
-- 本配置 32 KB 在静态上限内，且每 SM 可同时驻留 ⌊100/32⌋ = 3 个 block；Bc 改成 64 会顶到 48 KB 静态上限，occupancy 掉到 1 block/SM
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 18.5% | 22.8% | 21.3% | 41.1% | **42.2%** | 42.1% | 37.0 TFLOPS |
+| 2048 | 10.9% | 14.2% | 37.0% | 59.8% | **62.3%** | 60.1% | 63.0 TFLOPS |
+| 4096 | 10.6% | 13.3% | 30.8% | 64.3% | **62.9%** | 63.8% | 68.2 TFLOPS |
 
-#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
+**TFLOPS 明细**：
 
-**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 6.6 | 8.1 | 7.6 | 14.6 | 15.1 | 15.1 | 37.0 |
+| 2048 | 7.1 | 9.3 | 24.2 | 39.2 | 40.7 | 39.5 | 63.0 |
+| 4096 | 7.3 | 9.1 | 21.1 | 44.1 | 43.1 | 43.9 | 68.2 |
+
+**耗时明细（ms）**：
+
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 0.325 | 0.264 | 0.280 | 0.149 | 0.143 | 0.142 | 0.064 |
+| 2048 | 2.409 | 1.847 | 0.709 | 0.453 | 0.427 | 0.439 | 0.267 |
+| 4096 | 18.936 | 15.107 | 6.574 | 3.121 | 3.178 | 3.134 | 2.015 |
+
+**寄存器与 shared memory 用量**（`nvcc -Xptxas -v`，全部 0 spill）：
+
+| Kernel | Registers | Shared Mem | 说明 |
+|--------|-----------|------------|------|
+| v1 gemmNaive | 40 | 0 | 无 tiling，纯 global 读 |
+| v2 gemmSharedMem | 40 | 8 KB | 32×32 tile，每 thread 算 1 个 C 元素 |
+| v3 gemmRegisterBlocking | 128 | 8 KB | TM×TN=8×8 thread tile，acc 驻留寄存器 |
+| v4 gemmRegisterBlockingF4 | 128 | 8 KB | + float4 向量化加载 |
+| v5 gemmIntegrated | 126 | 8 KB | + float4 coalesced 写回 |
+| v6 gemmDoubleBuffer | 127 | 16 KB | + 双缓冲（shared 翻倍） |
+
+> 💡 **关键发现**：
+> 1. **float4 向量化加载是最大单步收益**（v3→v4）：4096 矩阵从 30.8% 跃升至 64.3%，几乎翻倍。128-bit load 把 global→shared 的加载指令数砍掉 3/4，有效提升带宽利用率。
+> 2. **Register Blocking 在大矩阵才发力**（v2→v3）：1024 时 RegBlk 反而比 SharedMem 慢（21.3% vs 22.8%），因为小矩阵 block 数少、寄存器开销不划算；4096 时飙到 30.8%，是 SharedMem 的 2.3 倍。
+> 3. **coalesced 写回收益有限**（v4→v5）：写回只占总时间的一小部分（C 只写一次），float4 写回在 4096 时甚至略降（64.3%→62.9%），在噪声范围内。
+> 4. **Double Buffering 未显著加速**（v5→v6）：因为本实现用同步加载（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute。真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令，让加载与计算在指令级并行——这是 CUTLASS 的范畴。
+> 5. **1024 矩阵天花板低**（~42%）：因为 block 数 = (1024/128)² = 64，RTX 5090 有 170 个 SM，wave 不满；4096 时 block 数 = 1024，wave 充足，占比升至 ~63%。
+
+
+
+#### 任务 3：用 ncu 验证优化效果
+
+```bash
+# Profile 整合版 GEMM
+nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+ncu \
+ --kernel-name regex:gemmIntegrated \
+ -o integrated_profile \
+ --metrics \
+sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+launch__registers_per_thread,\
+smsp__average_warps_issue_stalled_long_scoreboard.pct \
+ ./gemm_profile
+```
+
+**检查目标指标**：
+
+| 指标 | Day 2 (Register Blocking) | Day 6 (整合版) 目标 |
+|------|--------------------------|-------------------|
+| SM Throughput | ~45% | > 60% |
+| Memory Throughput | ~78% | ~70-80% |
+| Achieved Occupancy | ~56% | > 70% |
+| Long Scoreboard Stall | ~35% | < 20% |
+
+#### 任务 4：LeetGPU 在线题目 —— Histogramming
+
+**题目链接**：<https://leetgpu.com/challenges/histogramming>
 
 **与今日知识的关联**：
 
-本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。注意**题目要求带 1/√d scale**，提交时别忘了。
+本题用 atomicAdd 做 histogram，是 GEMM 之外的另一类典型 kernel。Day 6 学了整合优化和 ncu profiling，本题适合用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic 两种实现的性能差异。
 
-> 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 5）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周机动补漏）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列作标记位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
-| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩按层模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
-| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
-| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 左下角阶梯搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
+> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：手动推导 Online Softmax
+#### 实验 1：对比 Register Blocking 与整合版
 
-假设已处理块的 `m=2.0, l=3.0`，已归一化的旧输出 `o=0.5`（为简单起见假设 V 是一维标量），新块的 score 为 `[3.0, 1.0, 4.0]`，对应的 `v = [1.0, 2.0, 3.0]`，计算新的 `m_new, l_new, o_new`。
+`kernels/gemm_optimization_series.cu` 已包含全系列对比（见任务 2b）。实测数据汇总如下：
 
-> 提示：
-> - `m_new = max(2.0, max(3.0, 1.0, 4.0)) = 4.0`
-> - `l_scale = exp(2.0 - 4.0) = exp(-2.0) ≈ 0.1353`
-> - `l_new = 3.0 × 0.1353 + exp(3-4) + exp(1-4) + exp(4-4)`
->   `= 0.406 + 0.368 + 0.050 + 1.0 = 1.824`
-> - `o_scale = l × l_scale / l_new = 0.406 / 1.824 ≈ 0.2225`
-> - `o_new = 0.5 × 0.2225 + (0.368×1.0 + 0.050×2.0 + 1.0×3.0) / 1.824`
->   `≈ 0.1113 + 3.4676 / 1.824 ≈ 0.1113 + 1.9012 ≈ 2.01`
->
-> **验证**（按全局 softmax 重新算一遍）：旧块质量缩放到新参考点 = `3.0×exp(-2) = 0.406`，其分子贡献 = `0.5×0.406 = 0.203`；最终输出 = `(0.203 + 3.4676) / 1.824 ≈ 2.01` ✓ 与递推结果一致——这说明 online 更新与"全量算一遍"严格等价。
+| 指标 | Register Blocking (v3) | + float4 (v4) | + Coalesced 写回 (v5) |
+|------|----------------------|---------------|----------------------|
+| cuBLAS % (4096) | 30.8% | 64.3% | 62.9% |
+| TFLOPS (4096) | 21.1 | 44.1 | 43.1 |
+| Registers | 128 | 128 | 126 |
+| Shared Mem | 8 KB | 8 KB | 8 KB |
 
-#### 实验 2：增大序列长度对比 HBM 访问量
+> 💡 float4 向量化加载是最大单步增益（30.8% → 64.3%），coalesced 写回收益在噪声范围内（写回只占总时间的一小部分）。
 
-修改测试尺寸到 N=1024 或 N=2048，对比 FlashAttention 和标准 Attention 的理论 HBM 访问量：
+#### 实验 2：参数精调扫描
 
-| N | 标准 Attention HBM | FlashAttention HBM | 加速比 |
-|---|---|---|---|
-| 256 | O(N²+Nd) | O(Nd) | ~N/d |
-| 1024 | | | |
-| 2048 | | | |
+修改 TM 和 TN 的值，运行并记录性能：
 
-> FlashAttention 的 HBM 访问 = O(Nd)（只读 Q/K/V，只写 O）；标准 Attention = O(N²+Nd)。
+| TM×TN | 1024 矩阵 | 2048 矩阵 | 4096 矩阵 | Register 使用量 |
+|-------|----------|----------|----------|---------------|
+| 8×8 | 基准 | | | ~88 |
+| 8×16 | | | | |
+| 16×8 | | | | |
+| 16×16 | | | | ~256 (会 spill!) |
 
-#### 实验 3：用 ncu 分析 FlashAttention Kernel
+> 用 `nvcc -Xptxas -v` 查看 register 使用量，TM=TN=16 时累加器有 256 个 register，会溢出。
 
-```bash
-nvcc -o flash_attn_profile kernels/flash_attention.cu -O3 -arch=sm_120 -g -lineinfo
-ncu --kernel-name regex:flashAttentionFwd \
-    --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
-dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-sm__occupancy.avg.pct_of_peak_sustained_elapsed \
-    ./flash_attn_profile
-```
+#### 实验 3：实现 Double Buffering
 
-观察 FlashAttention 是 memory-bound 还是 compute-bound，对比标准 Attention 的指标。
+在整合版基础上，声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，用计算掩盖 global→shared 的传输延迟。
 
-#### 实验 4：给 Kernel 加 Causal Mask（思考题）
-
-Decoder 推理要求位置 i 只能 attend 到 ≤ i 的 key（下三角 mask）。在本 kernel 上的改法：
-
-1. **整块跳过**：当 `kvStart > qRow` 时直接 `break`——对角线以右的 KV tile 对本行毫无贡献
-2. **对角线 tile 内逐元素判断**：当 `kvStart + c > qRow` 时跳过该 c（或把 `s_row[c]` 置为 `-inf`，让它在 exp 后权重为 0）
-3. 完全在对角线左侧的 tile（`kvStart + Bc - 1 <= qRow`）不需要任何判断，全速跑
-
-注意加了 mask 之后计算量减半，但 tiling 的访存结构不变——这就是 causal attention 依然适合 FlashAttention 的原因。
-
-> 💡 LeetGPU 上有专门的 [Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 题目，做完今天的 kernel 可以直接去挑战。
-
----
-
-### 延伸：FlashAttention-2 / 3 改了什么（面试高频追问）
-
-| 版本 | 核心改进 | 效果 |
-|---|---|---|
-| **FA1**（2022） | Tiling + Online Softmax，S/P 不物化 | HBM IO 从 O(N²) 降到 O(Nd) 级别，2-4x 加速 |
-| **FA2**（2023） | ① 外循环从 KV tile 换成 Q tile：每个 block 独占一个 Q tile 的输出，消除跨 block 通信 ② 推迟归一化（`o` 最后才除 `l`）+ 减少 rescale 次数，降低 non-matmul FLOPs ③ warp 之间按 Q 行切分，减少 shared memory 读写和 barrier | 再快 ~2x，A100 上从 ~30% 峰值提到 50-70% |
-| **FA3**（2024，Hopper） | ① FP8 低精度 ② warp specialization：producer/consumer 异步流水（TMA + wgmma）③ GEMM 与 softmax 块间 overlap 隐藏延迟 | H100 上达 ~75% 理论峰值利用率 |
-
-> 💡 **面试答法**：先讲 FA1 的 IO 感知（今天的内容），再补一句"FA2 主要是工程优化——减少 non-matmul FLOPs、更好的并行划分；FA3 是挖掘 Hopper 硬件特性——异步流水 + FP8"。共同主线：**让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上**，softmax 的 exp/除法吞吐远低于 GEMM 单元，能省则省、能藏则藏。
+> 💡 **实测发现**（见任务 2b 的 v6 DblBuf）：本实现用同步加载（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute，因此 v6 与 v5 性能基本持平（4096 矩阵 63.8% vs 62.9%）。真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令——这是 CUTLASS 的范畴。
 
 ### 验证 Checklist
 
-- [ ] 能推导出 Online Softmax 的三个更新公式（m_new, l_new, o_new）
-- [ ] 能理解每个公式中 `exp(m - m_new)` 缩放因子的作用（统一参考点）
-- [ ] 能讲清 online softmax 两种变体的等价性（每步归一化 vs 末尾 `o/l`）
-- [ ] FlashAttention Kernel 编译运行正确，小尺寸测试通过（与 CPU 对比误差 < 1e-3）
-- [ ] 能解释 FlashAttention 的 HBM 访问复杂度为什么是 O(Nd) 而非 O(N²)
-- [ ] 能画出 FlashAttention 的 tiling 示意图（Q tile 驻留 SRAM，K/V tile 逐块滑入）
-- [ ] 能计算 SRAM 使用量：`Br×D + Bc×D×2`（S/P 在寄存器），确认不超过 48 KB 静态上限
-- [ ] 能解释 FlashAttention 的加速来源（减少 HBM 访问，而非减少计算量）
-- [ ] 能写出 Attention 完整公式并解释 Q/K/V 的含义（检索类比）
-- [ ] 能推导为什么除以 √d（q·k 方差 ∝ d，softmax 饱和导致梯度消失）
-- [ ] 知道本简化版省略了 1/√d scale，并能指出该在哪一行加回
+- [x] 整合版 GEMM 编译运行正确，4096 矩阵达到 cuBLAS ~63%
+- [x] float4 向量化加载正确实现（Global→Shared 和写回 C 都使用 float4）
+- [x] 能解释 float4 需要的三个条件（对齐、coalesced、数据布局）
+- [x] 全优化系列对比（v1–v6）完成，记录了每层收益来源
+- [x] 能按层次说出每个优化点的收益来源和量化增益
 
 ---
 
 ### 今日总结
 
-Day 5 我们掌握了 FlashAttention 的核心思想和实现：
+Day 6 我们把 GEMM 从 cuBLAS ~30%（Register Blocking）提升到了 ~63%（整合版），关键步骤：
 
-1. **标准 Attention 的瓶颈**：S 和 P 两个 N×N 中间矩阵导致 O(N²) HBM 访问
-2. **FlashAttention 的核心**：分块 Tiling + Online Softmax，S/P 只在 SRAM/寄存器中存活，不落 HBM
-3. **Online Softmax 三公式**：`m_new = max(m, max(xj))`、`l_new = l×exp(m-m_new) + Σexp(xj-m_new)`、`o_new = o×(l×exp(m-m_new)/l_new) + (exp(xj-m_new)/l_new)×vj`
-4. **关键缩放因子**：`exp(m - m_new)` 保证全局参考点一致
-5. **HBM 复杂度**：从 O(N²) 降到 O(Nd)，长序列加速 2-4x
-6. **加速来源**：不是 FLOPS 减少（计算量相同），而是数据移动减少
+1. **float4 向量化加载**：128-bit load 替代 32-bit，提升 Global Memory 带宽利用率（30.8% → 64.3%，**最大单步增益**）
+2. **Coalesced 写回**：float4 合并写入 Global Memory（收益在噪声范围内，写回只占总时间一小部分）
+3. **参数精调**：针对不同矩阵尺寸扫描 BM/BN/BK/TM/TN（+5-10%）
+4. **验证闭环**：全优化系列（v1–v6）对比，量化每层收益来源
+
+实测发现：同步式 Double Buffering（无 `cp.async`）收益有限，真正的软件流水线需要异步拷贝指令。从 Naive（~11%）到整合版（~63%），我们走过了完整的 GEMM 优化路径：
+
+![GEMM 优化进阶之路](../../images/week2_gemm_optimization_progress.svg)
 
 ---
 
 ### 面试要点
 
-1. **FlashAttention 为什么快？请从 HBM 访问量的角度分析。**
+1. **从 Shared Memory Tiling 到 cuBLAS 80%，每一层优化的收益来源是什么？请按层次回答。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **核心问题**：标准 Attention 需要存储和读取 S=Q×K^T 和 P=softmax(S) 两个 N×N 中间矩阵，HBM 访问量为 O(N²)
- - **FlashAttention 方案**：通过分块 tiling + online softmax，在 SRAM/寄存器中完成所有中间计算，不需要将 S 和 P 写入 HBM
- - **HBM 访问对比**：标准 = O(N² + Nd)；FlashAttention = O(Nd)（只读 Q/K/V，只写 O）
- - **速度来源**：不是 FLOPS 减少了（计算量相同），而是**数据移动减少了**——减少数据移动比减少计算更重要
- - **实际加速**：长序列（N>2048）时加速明显（2-4x），因为 HBM 带宽是瓶颈
+ | 优化层次 | 收益来源 | 量化增益 |
+ |---------|---------|---------|
+ | Shared Memory Tiling | 减少 Global Memory 重复读取，K 维度数据复用 | 1% → 15% |
+ | Register Blocking | 数据驻留 Register，减少 Shared Memory 访问延迟 | 15% → 45% |
+ | float4 向量化加载 | 128-bit 访问提升 Global Memory 带宽利用率 | 45% → 55% |
+ | Warp Shuffle | Warp 内协作优化写回，减少非合并访问 | 55% → 60% |
+ | Double Buffering | 软件流水线掩盖 Global→Shared 传输延迟 | 60% → 70% |
+ | 参数 Auto-tuning | 针对不同矩阵尺寸选择最优分块参数 | 70% → 80%+ |
+ | 指令级优化 / Tensor Core | 循环展开、PTX 内联、WMMA 指令 | 80% → 90%+ |
 
 </details>
 
 
-2. **请完整推导 Online Softmax 的三个更新公式，并解释每个公式的含义。**
+2. `float4` **向量化加载为什么能提升性能？需要什么条件？**
 
 <details>
 <summary>点击查看答案</summary>
 
- ```
- 状态：(m, l, o) —— running max、running sum、running output
- 新块：(xj, vj) —— 新的 KV tile 的 score 和 value
-
- 公式1 - Max 更新：
- m_new = max(m, max(xj))
- 含义：全局 max 可能是之前的 m，也可能是新块中的某个值
-
- 公式2 - Sum 更新：
- l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
- 含义：l × exp(m - m_new) 将旧 sum 从旧参考点 m 缩放到新参考点 m_new；
-       Σ exp(xj - m_new) 是新块的指数和
-
- 公式3 - Output 更新：
- o_new = o × (l × exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) × vj
- 含义：前半部分将旧输出按新概率重新归一化；后半部分是新块贡献
-
- 关键点：exp(m - m_new) 是统一参考点的缩放因子
- 注意：这是"每步归一化"变体（o 始终已归一化）；FA 论文用的是
-       "末尾归一化"变体——o 只累加未归一化加权和，最后 O = o/l，
-       两者数学等价
- ```
+ - **原理**：4 个连续 float（16 bytes）通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效。注意 float4 **不减少搬运的字节数**，它的收益来自三点：
+   1. **指令与内存请求数砍到 1/4**：减轻 LSU 压力，省下的发射槽留给 FMA（这是 GEMM 中 30.8% → 64.3% 大跳跃的主因）
+   2. **sector 利用率打满**：GPU 按 32B sector 传输，32-bit 散读时一个 sector 可能只用 4B；float4 保证每个被拉回的 sector 100% 用上
+   3. **更多数据在途**：一条 `LDG.128` 让 16B 同时 in-flight，访存延迟只需掩盖一次，ILP 更好
+ - **条件 1**：内存地址 16 字节对齐（`cudaMalloc` 天然对齐）
+ - **条件 2**：访问模式 coalesced（连续线程访问连续地址）
+ - **条件 3**：数据布局支持（行优先矩阵连续行元素天然连续）
+ - **风险**：地址不对齐或访问不连续时，一条 128-bit load 可能横跨 2 条 cache line（128B = 4 sector），反而多传数据降低性能
 
 </details>
 
 
-3. **FlashAttention 的分块大小 Br×Bc 如何确定？**
+3. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 硬约束是 SRAM：`Br×d + 2×Bc×d ≤ shared memory 容量`（Q/K/V 三个 tile；S/P 中间结果放寄存器，不占 SRAM）
- - 注意**静态** `__shared__` **有 48 KB/block 的统一硬上限**，超过必须改用动态 shared memory + `cudaFuncSetAttribute` opt-in
- - 各代 GPU 每 SM shared memory 上限：A100 = 164 KB，H100 = 228 KB，RTX 5090 (sm_120) = 100 KB（每 block 动态上限 99 KB）——别把数字记混
- - 本教程 Br=64, Bc=32, D=64：`(64×64 + 2×32×64)×4B = 32 KB`，在静态上限内，每 SM 可驻留 3 个 block
- - 权衡：tile 越大 → K/V 复用率越高、HBM 流量越低，但单 block 占 SRAM 多、occupancy 下降；tile 太小则循环开销占比上升
+ - **当前差距**：
+ 1. 缺少指令级调度优化（cuBLAS 用 PTX 内联汇编精确控制指令发射）
+ 2. 缺少 Double Buffering（软件流水线）
+ 3. 缺少针对特定尺寸的 auto-tuning（cuBLAS 有庞大参数查找表）
+ 4. 缺少 Tensor Core（cuBLAS 默认用 WMMA，吞吐远超 FMA）
+ - **达到 90% 的路径**：
+ 1. 引入 Tensor Core（`mma.sync.aligned` 等 WMMA 指令）
+ 2. 实现完整 Double Buffering
+ 3. 使用 CUTLASS 库（NVIDIA 开源高性能 GEMM 模板库）
+ 4. 针对目标尺寸做 exhaustive search 找最优参数
 
 </details>
 
 
-4. `exp(m - m_new)` **这个缩放因子为什么重要？**
+4. **为什么 TM=TN=16 会导致性能下降？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Softmax 需要减去全局 max 保证数值稳定性
- - 分块计算时每个块只看到局部数据，全局 max 是递推更新的
- - 当 max 从 m 变为 m_new 时，之前所有 exp 值的参考点都变了
- - `exp(m - m_new)` 就是把旧值从参考点 m 缩放到新参考点 m_new 的因子
- - 没有它，不同块计算的概率无法统一到同一个归一化基
+ - TM=TN=16 时累加器 `acc[16][16]` = 256 个 register，加上 r_A、r_B 和索引变量，总 register 超过 255 上限
+ - 编译器会把多余的变量 spill 到 local memory（实际在 global memory），访问延迟从 ~1 cycle 变成 ~400-800 cycles
+ - Register spilling 会导致性能暴跌，远不如 TM=TN=8 的 88 register 安全配置
 
 </details>
 
 
-5. **FlashAttention 在 Prefill 和 Decode 阶段的表现有何不同？为什么 Decode 仍受益？**
+5. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：序列长 N 大，标准 Attention 的 O(N²) S/P 物化是主要瓶颈，FlashAttention 把 IO 从 O(N²) 降到 O(Nd)，加速 2-4x 最明显
- - **Decode**：M=1，没有 N×N 矩阵，标准 Attention 退化为 1×N，S/P 本就不大。但 FlashAttention 仍受益——它把 softmax+PV 融合在 SRAM 里，减少 kernel launch 数量和中间 HBM 读写，配合 KV Cache 优化 decode 的 memory-bound
- - **关键洞察**：Prefill 的收益主要来自"消除 O(N²) 物化"，Decode 的收益主要来自"kernel fusion 减少 HBM 往返"，两者瓶颈不同但 FlashAttention 都能覆盖
+ - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟，典型提升 10-20%（从 ~55% 到 ~70%）
+ - **代价**：① shared memory 用量翻倍（两份 buffer），可能降低 occupancy ② 代码复杂度增加（奇偶切换、prologue/epilogue 处理）③ 首块需预取，末块不再加载
+ - **值得用的场景**：global→shared 传输是瓶颈（ncu 显示 Long Scoreboard stall 高）、shared memory 余量充足（不会因翻倍而降 occupancy）
+ - **不值得用的场景**：计算本身就 memory-bound 且 shared memory 已紧张，或数据量太小启动开销主导
+
+---
 
 </details>
 
-
-6. **FlashAttention-2 相比初代做了哪些改进？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **循环结构**：外循环从 KV tile 换成 Q tile，每个 block 独占一个 Q tile 的输出，消除跨 block 通信（初代需要跨 block 协调 rescale）
- - **减少 non-matmul FLOPs**：推迟归一化（`o` 最后才除 `l`）、减少每步 rescale 次数——softmax 的 exp/除法吞吐远低于 GEMM 单元，省这些比省 matmul 更值
- - **warp 划分**：warp 之间按 Q 行切分（初代按 KV 切分需要跨 warp 通信归约），减少 shared memory 读写和 barrier
- - **结果**：A100 上从 FA1 的 ~30% 峰值利用率提到 50-70%
- - **主线思想**：让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上（FA3 沿这条路继续：Hopper 异步流水 + FP8）
-
-</details>
-
-
-7. **Attention 为什么要除以 √d？不除会发生什么？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - 设 q、k 各分量独立、均值 0、方差 1，则点积 `q·k = Σ_{i=1..d} q_i·k_i` 的均值为 0、**方差为 d**
- - d 越大，score 量级越大，softmax 输入落在饱和区：输出接近 one-hot
- - softmax 饱和区的梯度趋近于 0 → 反向传播信号消失，训练难以收敛
- - 除以 √d 把 score 方差归一回 1，让 softmax 工作在梯度敏感区
- - 加分回答：`1/√d` 不是拍的常数，是方差归一化推出来的；d_head=64 时为 0.125
-
-</details>
-
-
-8. **Self-Attention 和 Cross-Attention 有什么区别？Causal Mask 是怎么实现的？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **Self-Attention**：Q/K/V 同源，都由同一个输入 X 经不同投影得到，建模序列内部依赖
- - **Cross-Attention**：Q 来自一个序列（如 decoder 当前状态），K/V 来自另一个序列（如 encoder 输出），用于跨序列对齐
- - **Causal Mask**：对 score 矩阵 S 加上三角掩码——上三角置 `-inf`，softmax 后这些位置权重为 0，位置 i 只能 attend 到 ≤ i 的 token
- - **实现要点**（结合今天的 kernel）：整块在对角线右侧的 KV tile 可直接跳过；对角线 tile 内逐元素判断；完全在左侧的 tile 无需判断全速跑——加 mask 后计算量减半，tiling 访存结构不变
-
-</details>

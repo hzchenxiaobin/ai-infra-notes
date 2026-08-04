@@ -1,399 +1,435 @@
-## Day 5：系统联调
+## Day 5：Mini 推理引擎 v1
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **六步分层验证策略**——单请求→多请求并发→KV Cache→Scheduler→自定义 Kernel→稳定性，每步叠加一个组件<br>
-2. 掌握 **KV Cache 隔离性验证**——多请求的 KV Cache 互不干扰，完成后全部释放，无内存泄漏<br>
-3. 能实现 **稳定性测试脚本**——连续处理 500+ 请求，监控成功率、延迟分布（P50/P99）、显存增长<br>
-4. 理解 **五大常见联调问题**——结果不一致、内存泄漏、请求卡住、显存 OOM、性能下降的排查方法<br>
-5. 掌握 **异常输入测试**——空 prompt、超长 prompt、超时取消的容错处理<br>
-6. 用 Python 手写一个 **完整的系统联调测试套件**，实测六步验证 + 稳定性 + 异常处理
+1. 理解 **Mini 引擎从 v0 到 v1 的升级路径**——v0 单请求同步 `generate()`，v1 多请求异步 `submit()` 返回 Future，后台 worker 线程做 Continuous Batching<br>
+2. 掌握 **MiniEngineV1 的架构**——Request Queue + Scheduler + Worker + Result Future 四组件，线程安全队列与后台 daemon 线程的协作<br>
+3. 能实现 **MiniScheduler**——token budget + max_num_seqs 双约束 + 优先级排序，每轮保留 running decode、从 waiting 补入 prefill<br>
+4. 理解 **请求生命周期**——WAITING → RUNNING（prefill → decode 循环）→ FINISHED，Future 异步返回、KV Cache 独立维护<br>
+5. 能用 Python 手写一个 **完整可运行的 Mini 推理引擎 v1**，实测多请求并发、Continuous Batching 时间线、优先级调度效果<br>
 
-> 💡 **为什么重要**：Day 4 集成了自定义 Kernel，但各组件（KV Cache、Batching、Scheduler、Kernel）尚未串联测试。系统联调是 Infra 工程师的分水岭——组件单独正确不代表组合正确，KV Cache 泄漏、Scheduler 死锁、请求结果串台等问题只有在端到端联调时才会暴露。Day 5 把所有组件串联，分层验证 + 稳定性压测，确保 Mini 系统能连续处理 500+ 请求不崩溃。
+> 💡 **为什么重要**：Week 5 Day 5 的 Mini 引擎 v0 只能 `generate(prompt)` 单请求同步跑——一个请求生成完才能跑下一个，GPU 空闲、用户排队。Week 6 Day 1-4 我们学了 Dynamic Batching、Continuous Batching、vLLM Scheduler、Chunked Prefill。今天把这些概念**整合**成一个真正能并发处理多请求的 Mini 引擎 v1：`submit()` 异步返回 Future，后台线程每轮重建 batch。这是"从理论到工程"的关键一步，也是面试必考的"如何支持多请求并发"。
 
 ---
 
-### 学前导读：组件正确 ≠ 系统正确
+### 学前导读：Mini 引擎 v0 的"单请求同步"瓶颈
 
-Day 1-4 分别实现了并发引擎、调度器、高级特性、自定义 Kernel，每个组件单独测试都 PASS。但组合后会出现新的问题：
+Week 5 Day 5 的 Mini 引擎 v0 接口是同步的：
 
-```
-组件单独正确，组合后出错的典型场景：
- 1. KV Cache 串台 → 请求 A 的 decode 读到请求 B 的 KV Cache（结果错误）
- 2. 资源泄漏 → finished 请求的 KV Cache 未释放 → 累积 OOM
- 3. Scheduler 死锁 → 请求被 still_waiting 丢弃 → future 永远不完成
- 4. 超时传播 → waiting 超时但 running 不检查 → 请求卡在 running
- 5. 竞态条件 → submit 和 schedule 并发操作 running map → 数据竞争
+```python
+# v0：单请求同步
+output = engine.generate(prompt, max_new_tokens=10) # 阻塞，跑完才返回
+# 用户 B 必须等用户 A 的 generate() 返回才能开始
 ```
 
-| 问题 | 单组件测试 | 联调才暴露 |
-|------|-----------|-----------|
-| KV Cache 串台 | 单请求不会 | **多请求并发才暴露** |
-| 资源泄漏 | 少量请求不明显 | **500+ 请求累积暴露** |
-| 请求丢失 | 请求少不触发 | **超 max_num_seqs 才暴露** |
-| 死锁 | 单线程不会 | **多线程协作才暴露** |
-| 性能退化 | 小 batch 测不出 | **大 batch + 长时间才暴露** |
+真实推理服务同时有几十上百个并发请求。v0 的"跑完一个再跑下一个"导致：
+- **GPU 空闲**：单请求 decode 是 M=1 的 memory-bound，算力利用率 1-3%（Week 6 Day 1 算过）
+- **用户排队**：用户 B 等 A 跑完才开始，延迟 = A 的延迟 + B 的延迟
+- **无法 batching**：没有"把多个请求拼成 batch 一起 forward"的机制
 
-> 💡 **一句话总结**：联调的核心不是"测试每个组件"，而是"测试组件之间的交互"——KV Cache 隔离、资源生命周期、线程安全、超时传播等跨组件问题。
+| 维度 | v0 单请求同步 | v1 多请求并发 |
+|------|-------------|-------------|
+| 接口 | `generate()` 阻塞 | `submit()` **→ Future** 异步 |
+| 并发 | 1 | **max_num_seqs（如 4-256）** |
+| Batching | 无 | **Continuous Batching**（每轮重建 batch） |
+| 调度 | 无 | **Scheduler**（token budget + 优先级） |
+| 结果返回 | 同步返回 | **Future.set_result()** 完成即返回 |
+
+> 💡 **一句话总结**：v1 = v0 的模型前向 + Day 2 的 Continuous Batching + Day 3 的 Scheduler + 异步 Future。把"单请求同步跑"升级为"多请求异步并发 + 每轮重建 batch"。
 
 ---
 
 ### 理论学习
 
-#### 5.1 六步分层验证策略
+#### 5.1 MiniEngineV1 架构
 
-![系统联调六步分层验证](../images/integration_checklist.svg)
+![Mini 推理引擎 v1 架构](../../week6/images/mini_engine_v1_architecture.svg)
 
-系统联调的核心原则：**逐步叠加组件，每步验证正确性**。不要一次性把所有组件放在一起测试——出错时无法定位。
-
-| 步骤 | 验证内容 | 叠加组件 | 验收标准 |
-|------|---------|---------|---------|
-| Step 1 | 单请求正确性 | MiniLLM | token 数 = max_new_tokens |
-| Step 2 | 多请求并发 | + Queue（Day1） | 全部 FINISHED，结果隔离 |
-| Step 3 | KV Cache 一致性 | + KV Cache（Week5） | 完成后 KV blocks = 0 |
-| Step 4 | Scheduler 正确性 | + Scheduler（Day2） | 优先级、超时、预算正确 |
-| Step 5 | 自定义 Kernel | + Custom Kernel（Day4） | 结果一致，性能可解释 |
-| Step 6 | 稳定性 | 全部组件 | 500+ 请求，成功率 > 95% |
-
-##### 为什么是这个顺序？
-
-![调试方法论 · 增量集成](../../images/week7_debugging_methodology.svg)
-
-> ⚠️ **反向例子**：如果一次性集成所有组件，发现"请求 3 的结果错了"，无法判断是 KV Cache 串台、Scheduler 调度错误、还是 Kernel 精度问题。
-
-#### 5.2 KV Cache 隔离性验证
-
-KV Cache 隔离是多请求并发的核心正确性问题：
+v1 由四个核心组件构成，对应 vLLM 的 Engine + Scheduler + Worker：
 
 ```python
-# 验证方法：两个请求并发，检查结果不互相干扰
-req1 = engine.submit("request one", max_new_tokens=3)
-req2 = engine.submit("request two", max_new_tokens=3)
-
-r1 = req1.future.result(timeout=10)
-r2 = req2.future.result(timeout=10)
-
-# 隔离性检查
-assert r1 != r2, "Results should be different (KV Cache isolation)"
-# 释放检查
-assert engine.used_kv_blocks == 0, "KV Cache not released after completion"
+class MiniEngineV1:
+    def __init__(self, model, tokenizer, max_token_budget, max_num_seqs, device):
+        self.model = model                # ① 模型（MiniLLM，带 KV Cache）
+        self.scheduler = MiniScheduler(...)  # ② 调度器（token budget + 优先级）
+        self.waiting_queue = deque()      # ③ 请求队列（线程安全）
+        self.running_requests = {}        # 运行中请求（按 id 索引）
+        self.worker_thread = Thread(...)  # ④ 后台 worker（daemon，持续 _worker_loop）
 ```
 
-##### 常见 KV Cache 问题
+##### 四组件职责
 
-| 问题 | 症状 | 原因 |
-|------|------|------|
-| 串台 | 请求 A 的输出包含请求 B 的 token | KV Cache block 被错误共享 |
-| 未释放 | 显存持续增长 | finished 请求的 KV blocks 未 free |
-| 重复释放 | double free 崩溃 | 超时和 finish 同时释放同一 block |
-| 越界写 | 结果随机错误 | block 索引计算错误 |
+| 组件 | 对应 vLLM | 职责 |
+|------|----------|------|
+| Request Queue | Engine 的 waiting | 线程安全 deque，`submit()` 入队 |
+| Scheduler | `Scheduler.schedule()` | 每轮选 batch：保留 running decode + waiting prefill |
+| Worker | `ModelRunner.execute_model()` | 执行 model forward（prefill/decode 一步） |
+| Future | `LLMEngine.generate()` 返回 | 异步返回结果，完成即 `set_result()` |
 
-#### 5.3 稳定性测试设计
+##### 形象类比
 
-![系统联调常见问题排查](../images/troubleshooting_guide.svg)
+- **v0** = 单窗口银行（一个客户办完才叫下一个，窗口闲着等）
+- **v1** = 多窗口银行（叫号机 submit 入队 → 调度员 Scheduler 决定哪几个客户上窗 → 窗口 Worker 并行办 → 办完 Future 通知）
 
-稳定性测试的核心指标：
+#### 5.2 请求生命周期
 
-| 指标 | 含义 | 验收标准 |
-|------|------|---------|
-| 成功率 | success / total | > 95% |
-| 内存泄漏 | 500 请求后 KV blocks | = 0（全释放） |
-| P50 延迟 | 中位数延迟 | 稳定不漂移 |
-| P99 延迟 | 尾部延迟 | < P50 × 3 |
-| 吞吐 | req/s | 稳定不下降 |
+![请求生命周期：WAITING → RUNNING → FINISHED](../../week6/images/request_lifecycle_v1.svg)
 
-##### 稳定性测试脚本结构
+每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
+
+![请求生命周期](../../images/week6_request_lifecycle.svg)
+
+##### Request 关键字段（v1 新增 vs v0）
+
+| 字段 | v0 | v1 | 说明 |
+|------|----|----|------|
+| `future` | 无 | **Future** | submit() 立即返回，完成时 set_result() |
+| `status` | 无 | **waiting/running/finished** | 生命周期状态机 |
+| `priority` | 无 | **int** | 优先级，Scheduler 按此排序 |
+| `kv_cache` | 有 | **有（每请求独立）** | v0 单请求一份；v1 多请求各自一份 |
+| `generated_ids` | 有 | 有 | 生成的 token 列表 |
+
+#### 5.3 MiniScheduler：token budget + 优先级
 
 ```python
-def stability_test(num_requests=500):
-    engine = MiniEngine(...)
-    engine.start()
+class MiniScheduler:
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
 
-    for i in range(num_requests):
-        req = engine.submit(prompts[i % len(prompts)], ...)
-        result = req.future.result(timeout=20)
-        # 每 100 请求打印一次状态
-        if i % 100 == 0:
-            print(f" [{i}] kv={engine.stats()['kv_used']}")
+        # 1. 保留 running 的 decode（按优先级降序，高优先级先保）
+        running_sorted = sorted(running.values(), key=lambda r: -r.priority)
+        for req in running_sorted:
+            if req.is_prefill_done and token_budget >= 1:
+                batch.append(req)
+                token_budget -= 1
 
-            # 最终检查
-            assert engine.used_kv_blocks == 0, "Memory leak!"
-            assert success_rate > 0.95, "Success rate too low"
+        # 2. 从 waiting 加入新请求做 prefill（按优先级降序）
+        waiting_sorted = sorted(waiting, key=lambda r: -r.priority)
+        for req in waiting_sorted:
+            if token_budget >= len(req.input_ids):
+                batch.append(req)
+                token_budget -= len(req.input_ids)
+        return batch, still_waiting
 ```
 
-#### 5.4 异常输入测试
+##### 调度决策与 Day 2-3 的对应
 
-```
-异常输入场景：
- 1. 空 prompt → 应正常处理（生成 max_new_tokens 个 token）
- 2. 超长 prompt（200+ words）→ 可能触发 KV Cache 不足，应排队等待或超时
- 3. 超时取消 → future.result(timeout=0.1) 应抛 TimeoutError
- 4. 请求突然大量涌入 → 应受 max_num_seqs 限制，排队不崩溃
- 5. OOM 模拟 → total_kv_blocks 极小时，应拒绝或排队
-```
+| 决策 | Day 2-3 概念 | v1 实现 |
+|------|-------------|---------|
+| 保留 running decode | Continuous Batching 的"完成即走、保留运行" | 按优先级排序，token_budget -= 1 |
+| 从 waiting prefill | SchedulingBudget 的 `can_schedule` | `token_budget >= prompt_len` 才加入 |
+| 优先级排序 | Day 3 扩展实验的优先级抢占 | `sorted(key=-priority)` |
+| 完成移除 | `_free_finished_seq_groups` | worker_loop 中移除 finished + set_result |
 
-> ⚠️ **异常处理原则**：系统不应因异常输入崩溃，应优雅降级（排队、超时、拒绝）并返回有意义的错误。
+> ⚠️ **注意**：v1 的 Scheduler 是 Day 2 ContinuousBatcher 的简化版——没有显存预算（BlockSpaceManager）和抢占（preemption）。真实 vLLM 的 Scheduler（Day 3）在显存压力下会 preempt，v1 假设显存够用，只做 token budget 约束。
 
-### Coding 任务：系统联调与稳定性测试
-
-#### 任务 1：创建 stability_test.py
-
-创建文件 [kernels/stability_test.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day5/kernels/stability_test.py)，实现完整的系统联调测试套件：
+#### 5.4 Worker Loop：每轮重建 batch
 
 ```python
-# stability_test.py —— 系统联调与稳定性测试
-# 运行命令: python stability_test.py
-# 依赖: 仅标准库（模拟 Mini 引擎，无需 GPU/PyTorch）
+def _worker_loop(self):
+    while not self.stop_event.is_set():
+        with self.lock:
+            # 1. 移除已完成的 running 请求，异步返回结果
+            for rid in finished_ids:
+                req = self.running_requests.pop(rid)
+                req.future.set_result(decode(req.generated_ids))
 
-class MiniEngine:
-    """模拟 Mini 推理引擎：KV Cache + Batching + Scheduler。"""
-    def submit(self, prompt, max_new_tokens=8, priority=0) -> InferenceRequest:
-        # 入队，返回含 Future 的请求
-        ...
-    def _schedule(self):
-        # 从 waiting 按优先级+预算加入 running
-        ...
-    def _forward(self):
-        # 模拟 forward，生成 token，完成后释放 KV Cache
-        ...
+            # 2. 调度：保留 running + 从 waiting 补入
+            batch, self.waiting_queue = self.scheduler.schedule(...)
 
-def test_single_request(): ...            # Step 1
-def test_multi_request_concurrency(): ...  # Step 2
-def test_kv_cache_isolation(): ...         # Step 3
-def test_scheduler_priority(): ...         # Step 4
-def test_custom_kernel_integration(): ...  # Step 5
-def stability_test(num_requests=500): ...  # Step 6
-def test_abnormal_inputs(): ...            # 异常输入
+        # 3. 执行 forward（锁外，避免阻塞 submit）
+        if batch:
+            self._run_iteration(batch)   # prefill 或 decode 一步
+        else:
+            time.sleep(0.001)
 ```
 
-完整代码见 [kernels/stability_test.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day5/kernels/stability_test.py)。
+##### 关键设计：锁的粒度
+
+```python
+with self.lock:                  # 锁内：操作共享队列（快速）
+    # 调度 + 状态更新
+    ...
+if batch:
+    self._run_iteration(batch)   # 锁外：model forward（慢，不阻塞 submit）
+```
+
+- **锁内**只做队列操作（调度、移除完成、登记新 running）——快速，毫秒级
+- **锁外**做 model forward——慢（GPU 计算），不阻塞 `submit()` 入队
+- 这是生产者-消费者模式的标准做法，避免 forward 期间无法接收新请求
+
+#### 5.5 Continuous Batching 实测时间线
+
+![Continuous Batching in Mini Engine v1 实测](../../week6/images/continuous_batching_in_engine_v1.svg)
+
+实测 4 个请求（R0 高优先级 gen=8，R1-R3 普通 gen=4-6）的时间线：
+
+![Mini 引擎 v1 实测时间线](../../images/week6_batch_iteration_timeline.svg)
+
+##### 关键观察
+
+1. **R2(gen=4) iter 4 完成立即退出**，不等 R1(gen=6)——Continuous Batching 的核心收益
+2. **batch size 动态变化**：4→4→4→4→3→2→1→1（完成退出，不空等）
+3. **R0 高优先级**先被 schedule prefill，但 gen 长(8)，最后完成——优先级影响调度顺序不等于完成顺序
+4. **无空等**：每轮 GPU 都在 forward 真实请求，不像 v0 串行排队
+
+### Coding 任务：实现 Mini 推理引擎 v1
+
+#### 任务 1：创建 mini_engine_v1.py
+
+创建文件 [kernels/mini_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day2/kernels/mini_engine_v1.py)，实现多请求并发 + Continuous Batching + 优先级调度的完整引擎：
+
+```python
+# mini_engine_v1.py —— Mini 推理引擎 v1（多请求 + Continuous Batching + Scheduler + 优先级）
+# 运行命令: python mini_engine_v1.py
+# 依赖: pip install torch（无 GPU 时自动用 CPU）
+
+import threading
+import time
+from collections import deque
+from concurrent.futures import Future
+from typing import Dict, List, Tuple
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class MiniLLM(nn.Module):
+    """最小 LLM：embedding + n_layers 层 transformer + lm_head，支持 KV Cache"""
+    # ...（自包含，内嵌 MiniTransformerLayer，见完整文件）
+
+class RequestStatus:
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
+
+class Request:
+    """一个推理请求，带优先级、Future 异步返回、独立 KV Cache。"""
+    def __init__(self, request_id, input_ids, max_new_tokens=8, priority=0):
+        self.request_id = request_id
+        self.input_ids = input_ids
+        self.max_new_tokens = max_new_tokens
+        self.priority = priority
+        self.generated_ids = []
+        self.kv_cache = None
+        self.status = RequestStatus.WAITING
+        self.future = Future()
+
+class MiniScheduler:
+    """基础 Scheduler：token budget + max num_seqs + 优先级。"""
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
+        # 1. 保留 running decode（按优先级降序）
+        # 2. 从 waiting prefill（按优先级降序，token budget 约束）
+        return batch, still_waiting
+
+class MiniEngineV1:
+    """Mini 推理引擎 v1：多请求并发 + Continuous Batching + 优先级调度。"""
+    def submit(self, prompt, max_new_tokens=8, priority=0) -> Future:
+        # 入队，返回 Future
+        ...
+    def _run_iteration(self, batch):
+        # 每个请求 prefill 1 步或 decode 1 步
+        ...
+    def _worker_loop(self):
+        # 后台循环：移除完成 → 调度 → forward
+        ...
+```
+
+完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day2/kernels/mini_engine_v1.py)。
 
 代码要点：
-- `MiniEngine`：模拟推理引擎，包含线程安全队列、优先级调度、KV Cache 管理、超时控制、自定义 kernel 模拟
-- **六步分层验证**：每步只叠加一个组件，出错时精确定位
-- **稳定性测试**：500 请求连续处理，每 100 请求打印 KV Cache 状态，最终检查内存泄漏
-- **异常输入**：空 prompt、超长 prompt、超时取消、OOM 模拟
-- **验收标准**：成功率 > 95%、无内存泄漏、P99 延迟稳定
+- `submit()` **异步返回 Future**：入队后立即返回，不阻塞；worker 完成后 `future.set_result()`
+- `MiniScheduler.schedule()`：①保留 running decode（按优先级）②从 waiting prefill（token budget 约束），对应 Day 2-3
+- `_run_iteration()`：区分 prefill（处理整段 prompt，建 KV Cache）和 decode（输入 1 token，复用 KV Cache）
+- **锁的粒度**：锁内只做队列操作，锁外做 model forward——避免 forward 期间阻塞 submit
+- **与 v0 的区别**：v0 的 `generate()` 同步阻塞；v1 的 `submit()` 异步，后台 worker 持续 batching
 
-#### 任务 2：运行并观察六步验证
+#### 任务 2：运行并观察 Continuous Batching 时间线
 
 ```bash
-python kernels/stability_test.py
+python kernels/mini_engine_v1.py
 ```
 
 **预期输出**（节选）：
 
 ```text
-Step 1: 单请求正确性
- Result: 'r1_tok0 r1_tok1 r1_tok2 r1_tok3 r1_tok4'
- ✓ PASS
+=== Mini 推理引擎 v1：多请求 + Continuous Batching + 优先级 ===
 
-Step 2: 多请求并发正确性
- Submitted 5 requests, all finished: True
- ✓ PASS
+ Submitted R0: 'hello world' (gen=8, priority=1)
+ Submitted R1: 'this is a longer prompt for testing' (gen=6, priority=0)
+ Submitted R2: 'short' (gen=4, priority=0)
+ Submitted R3: 'another test prompt here now' (gen=5, priority=0)
 
-Step 3: KV Cache 隔离性
- Results isolated: True
- KV cache after completion: 0/32
- ✓ PASS (KV Cache released after completion)
+Waiting for all results...
+ R0 (pri=1) done: '<unk_333> <unk_541> ...'
+ R1 (pri=0) done: '<unk_244> <unk_60> ...'
+ R2 (pri=0) done: '<unk_310> <unk_179> ...'
+ R3 (pri=0) done: '<unk_476> <unk_587> ...'
 
-Step 4: Scheduler 优先级和资源预算
- ✓ PASS (Resources released correctly)
+=== Iteration 时间线（Continuous Batching）===
+Iter | Batch | W/R | Batch 内容
+----------------------------------------------------------------------
+ 1 | 4 | 0/4 | R0(p1,prefill), R1(p0,prefill), R2(p0,prefill), R3(p0,prefill)
+ 2 | 4 | 0/4 | R0(p1,decode), R1(p0,decode), R2(p0,decode), R3(p0,decode)
+ ...
+ 4 | 4 | 0/4 | R0(p1,decode), R1(p0,decode), R2(p0,done), R3(p0,decode)
+ 5 | 3 | 0/3 | R0(p1,decode), R1(p0,decode), R3(p0,done)
+ 6 | 2 | 0/2 | R0(p1,decode), R1(p0,done)
+ 7 | 1 | 0/1 | R0(p1,decode)
+ 8 | 1 | 0/0 | R0(p1,done)
 
-Step 5: 自定义 Kernel 集成（性能模拟对比）
- Speedup (simulated): 1.23x
- ✓ PASS (Results identical, custom kernel faster)
-
-Step 6: 稳定性测试（500 请求）
- [100/500] success=101, kv=0/64
- [200/500] success=201, kv=0/64
- Success: 500 (100.0%)
- P50 latency: 25.6 ms
- P99 latency: 25.7 ms
- Memory leak: NO
- ✓ 成功率 > 95%
- ✓ 无内存泄漏
- ✓ 失败率 < 5%
+总 iterations: 8
+完成请求数: 4
 ```
 
 ##### 观察重点
 
-1. **Step 2 多请求**：5 个请求全部 FINISHED，结果互不干扰（`r1_tok0 ≠ r2_tok0`）
-2. **Step 3 KV Cache**：完成后 `kv_used = 0/32`，证明 KV Cache 全释放
-3. **Step 4 Scheduler**：4 个请求在 `total_kv_blocks=16` 限制下全部完成，资源全释放
-4. **Step 5 Kernel**：自定义 kernel 模拟更快（0.8x forward time），结果与 PyTorch 一致
-5. **Step 6 稳定性**：500 请求 100% 成功，KV Cache 始终归零（无泄漏），P99 ≈ P50（延迟稳定）
+1. **iter 1 全部 prefill**：4 个请求一次性 prefill，token budget=40 够 4 个 prompt
+2. **iter 4 R2(done)**：R2(gen=4) 完成立即退出，iter 5 batch 从 4 降到 3
+3. **batch size 动态变化**：4→4→4→4→3→2→1→1（完成退出不空等）
+4. **R0 高优先级**先 prefill，但 gen=8 最长，最后完成
+5. **异步返回**：`future.result()` 在完成时立即拿到结果，不等其他请求
 
-#### 任务 3：修改参数观察边界行为
+#### 任务 3：对比 v0 单请求同步
 
-```python
-# 实验 A：减小 KV Cache → 更早排队等待
-engine = MiniEngine(total_kv_blocks=4, ...) # 极小显存
+思考：同样 4 个请求，v0 串行 `generate()` 要多少轮？（R0:8 + R1:6 + R2:4 + R3:5 = 23 次 forward，无并发）。v1 用 8 轮完成 4 个请求，**并发收益约 2.9x**。
 
-# 实验 B：减小 max_num_seqs → 更多请求排队
-engine = MiniEngine(max_num_seqs=2, ...)
+> 思考：v1 的并发收益在什么场景下最大？（提示：请求长度方差越大、batch 不超预算时，并发收益越大。与 Day 1 Dynamic Batching 的"凑批"不同，v1 每轮都跑。）
 
-# 实验 C：减小 max_waiting_time → 更多请求超时
-engine = MiniEngine(max_waiting_time=0.5, ...)
+#### 任务 4：LeetGPU 在线题目 —— INT8 Quantized MatMul
 
-# 实验 D：增大 forward_time → 延迟升高
-engine = MiniEngine(forward_time=0.1, ...)
-```
+**题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
 
-> 思考：`total_kv_blocks=4` 时，8 个并发请求会怎样？（提示：只有部分能加入 running，其余排队等待。如果等待超时则被取消。）
+**与今日知识的关联**：
 
-#### 任务 4：LeetGPU 在线题目 —— Element Reversal
+这道题的**INT8 量化 GEMM** 是 Mini Engine v1 的 forward 优化的关键方向——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 GEMM。当 batch 增大让 GEMM 进入 compute-bound（饱和点）后，进一步降延迟的手段就是**低精度量化**（INT8/FP8）：用 INT8 替代 FP32 让 Tensor Core 吞吐提升 2-4x、显存带宽压力减半。这道题练习"反量化→INT32 乘加→重量化"的三段式量化 GEMM，正是 Week 6 Day 6 benchmark 识别出 compute-bound 瓶颈后的优化路径——量化是缩小与 vLLM 性能差距的核心手段之一。
 
-**题目链接**：<https://leetgpu.com/challenges/element-reversal>
+> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
 
-**与今日知识的关联**：Element Reversal 是纯数据重排的索引映射 kernel（`output[j][i] = input[i][j]`），与系统联调中的**结果一致性验证**同构——联调时需要对比自定义 kernel 与 PyTorch 的输出，逐元素比较是否一致。Element Reversal 的验证正是联调验证的基础操作：`assert (custom_output - pytorch_output).abs().max() < threshold`；而其 shared memory tiling 优化版与朴素版的输出一致性对比，也正是"优化不改变语义"的验证范式。理解这种逐元素对比是联调精度验证的核心方法。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 5）
 
-> 💡 提交后在 [LeetGPU Element Reversal](https://leetgpu.com/challenges/element-reversal) 上记录通过耗时。完整题解见 [Element Reversal 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html)。
-
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 5）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 5（一维 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 5（回溯基础），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/) | 简单 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html) |
-| [118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/) | 简单 | 递推模拟 | — |
-| [198. 打家劫舍](https://leetcode.cn/problems/house-robber/) | 中等 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
-| [213. 打家劫舍 II](https://leetcode.cn/problems/house-robber-ii/) | 中等 | 拆环为线 + 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html) |
-| [337. 打家劫舍 III](https://leetcode.cn/problems/house-robber-iii/) | 中等 | 树形 DP（选/不选） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
+| [46. 全排列](https://leetcode.cn/problems/permutations/) | 中等 | 回溯模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html) |
+| [78. 子集](https://leetcode.cn/problems/subsets/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html) |
+| [39. 组合总和](https://leetcode.cn/problems/combination-sum/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html) |
+| [17. 电话号码的字母组合](https://leetcode.cn/problems/letter-combinations-of-a-phone-number/) | 中等 | 回溯 / 队列 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/17_电话号码的字母组合.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现显存监控曲线
+#### 实验 1：实现真正的 batch 合并 forward
 
-当前稳定性测试每 100 请求打印一次 KV Cache 状态。修改为每 10 请求记录一次 `used_kv_blocks`，最终绘制显存使用曲线（ASCII 或 matplotlib），观察是否有持续增长趋势。
+当前 `_run_iteration()` 对每个请求单独 forward（循环内逐个 `model(input)`）。实现真正的 batch 合并：把同一轮的多个请求 input padding 到等长，拼成 `(batch, max_len)` 一个 tensor，一次 forward。测试：forward 次数从 batch_size 降到 1。
 
-> 思考：正常的显存曲线应该是什么形态？（提示：锯齿状——请求完成释放、新请求分配，但无持续上升趋势。持续上升 = 内存泄漏。）
+> 思考：padding 带来什么浪费？（提示：短请求被 pad 到最长请求的长度，多余计算。Day 1 讲过 padding 代价和 attention mask 优化。）
 
-#### 实验 2：模拟请求突增场景
+#### 实验 2：添加超时与取消机制
 
-修改稳定性测试：在第 200 个请求时突然提交 50 个请求（模拟流量突增），观察系统行为：是否排队等待？是否有请求超时？KV Cache 是否够用？
+给 `Request` 加 `timeout` 和 `cancel()`：超过最大等待时间返回错误；`cancel(request_id)` 从 waiting/running 移除并 `future.set_exception(CancelledError)`。测试：提交后立即取消，验证 Future 抛异常。
 
-> 思考：流量突增时系统应该如何应对？（提示：排队等待 + 超时取消 + 降级到更小 batch。不应崩溃。）
+> 思考：取消一个 running 请求需要做什么？（提示：从 running 移除、释放 KV Cache、set_exception。注意 worker 线程可能正在 forward 它，需锁保护。）
 
-#### 实验 3：实现并发安全审计
+#### 实验 3：加入 Chunked Prefill（Day 4）
 
-检查 `MiniEngine` 的所有共享状态访问（`waiting`、`running`、`used_kv_blocks`、`kv_cache_pool`），确认是否都在 `self._lock` 保护下。尝试去掉某个锁，运行稳定性测试，观察是否出现数据竞争。
+修改 `_run_iteration()`，长 prompt 不一次性 prefill，而是每轮只 prefill `chunk_size` 个 token（Day 4 的 chunked prefill）。测试：长 prompt 的 prefill 不阻塞短 decode，TPOT 更平滑。
 
-> 思考：哪些操作最容易忘记加锁？（提示：`_forward` 中修改 `req.result` 和 `used_kv_blocks`；`_check_timeouts` 中删除 `running` 中的请求。）
+> 思考：chunked prefill 在 v1 中如何与 Continuous Batching 配合？（提示：每轮 budget 分给一个 prefill chunk + 多个 decode，chunk_size 封顶 prefill 占用。Day 4 详讲。）
 
 ---
 
 ### 今日总结
 
-Day 5 我们把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，完成系统联调：
+Day 5 我们把 Week 6 Day 1-4 的调度概念整合成了真正能并发处理多请求的 Mini 推理引擎 v1：
 
-1. **六步分层验证**：单请求→多请求→KV Cache→Scheduler→Kernel→稳定性，每步只叠加一个组件
-2. **KV Cache 隔离**：多请求的 KV Cache 互不干扰，完成后全释放（`used_kv_blocks = 0`）
-3. **稳定性测试**：500 请求 100% 成功，P50/P99 延迟稳定，无内存泄漏
-4. **五大常见问题**：结果不一致（边界处理）、内存泄漏（KV Cache 未释放）、请求卡住（Scheduler 死锁）、显存 OOM（预算不足）、性能下降（kernel 未优化）
-5. **异常输入**：空 prompt、超长 prompt、超时取消，系统不崩溃
-6. **排查原则**：分层定位 + 逐步缩小范围 + 监控关键指标
+1. **v0 → v1 升级**：单请求同步 `generate()` → 多请求异步 `submit()` 返回 Future，后台 worker 做 Continuous Batching
+2. **四组件架构**：Request Queue（线程安全 deque）+ Scheduler（token budget + 优先级）+ Worker（model forward）+ Future（异步返回）
+3. **MiniScheduler**：每轮保留 running decode（按优先级）+ 从 waiting prefill（token budget 约束），对应 Day 2-3 的 Continuous Batching
+4. **请求生命周期**：WAITING → RUNNING（prefill → decode 循环）→ FINISHED（future.set_result），每请求独立 KV Cache
+5. **锁的粒度**：锁内只做队列操作（快速），锁外做 forward（慢但不阻塞 submit）——生产者-消费者模式
+6. **实测 Continuous Batching**：4 请求 8 轮完成，R2(短) iter4 退出不等 R1(长)，batch size 动态 4→3→2→1
+7. **并发收益**：v0 串行 23 次 forward，v1 并发 8 轮，收益约 2.9x
 
-掌握这些后，你就有了系统联调的完整能力——明天 Day 6 进行全链路 Profiling，用 nsys/ncu 定位系统级瓶颈，与 vLLM 对比性能。
+掌握这些后，你就有了推理引擎的完整骨架——明天 Day 6 对 v1 做 Latency/Throughput benchmark，绘制 throughput-latency 曲线，识别饱和点。
 
 ---
 
 ### 面试要点
 
-1. **系统联调时，如何确保多请求并发的正确性？**（⭐⭐⭐⭐⭐ 必考）
+1. **如何将单请求推理引擎扩展为多请求并发？需要解决哪些问题？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **分层验证**：
- 1. 单请求正确性（排除并发干扰）
- 2. 多请求并发正确性（排除 KV Cache 干扰）
- 3. KV Cache 隔离性（排除调度干扰）
- 4. Scheduler 正确性（排除 kernel 干扰）
- 5. 自定义 Kernel 集成
- - **关键检查点**：
- - 每个请求的 KV Cache 隔离（结果不串台）
- - 请求生命周期状态正确转换（WAITING→RUNNING→FINISHED）
- - Scheduler 不丢失请求（`still_waiting` 合并修复）
- - 异步结果正确返回给对应请求（Future 不串台）
- - **测试方法**：与 PyTorch eager 版对比输出 + 长时间稳定性测试 + 边界条件测试
+ - **请求队列**：线程安全的缓冲（deque + lock），支持异步 submit
+ - **调度器**：每轮决定运行哪些请求（Continuous Batching：保留 running + 补入 waiting）
+ - **KV Cache 管理**：每个请求独立维护一份 KV Cache，prefill 建立、decode 复用
+ - **异步返回**：Future/callback，完成即 set_result，不等其他请求
+ - **资源隔离**：token budget + max_num_seqs 双约束，防止一个请求耗尽资源
+ - **生命周期管理**：waiting → running → finished，超时/取消处理
 
 </details>
 
 
-2. **如何做推理系统的稳定性测试？需要关注哪些指标？**（⭐⭐⭐⭐ 高频）
+2. **Mini Engine v1 的 Scheduler 每轮做哪些决策？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **测试规模**：连续处理 500+、1000+、10000+ 请求
- - **关键指标**：
- - 成功率（> 95%）
- - 平均延迟 / P50 / P99 延迟（P99 < P50 × 3）
- - 吞吐（req/s，稳定不下降）
- - 显存使用是否持续增长（内存泄漏检测）
- - **异常情况**：
- - OOM 处理（排队或拒绝，不崩溃）
- - 非法输入（空 prompt、超长 prompt）
- - 超时取消（future.result 抛 TimeoutError）
- - 请求突增（排队等待，不丢请求）
+ - ① 移除已完成的 running 请求，`future.set_result()` 异步返回
+ - ② 保留 running 的 decode（按优先级降序，token_budget -= 1）
+ - ③ 从 waiting 加入新请求 prefill（按优先级降序，`token_budget >= prompt_len` 才加入）
+ - 约束：token_budget（每轮 token 上限）、max_num_seqs（并发上限）
+ - 与 vLLM Scheduler 的区别：v1 无显存预算和抢占（preemption），只做 token budget
 
 </details>
 
 
-3. **KV Cache 隔离性怎么验证？常见问题有哪些？**（⭐⭐⭐⭐ 高频）
+3. **推理引擎中，优先级调度有什么优缺点？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **验证方法**：两个请求并发，检查结果不互相干扰 + 完成后 KV blocks = 0
- - **常见问题**：
- - 串台：请求 A 读到请求 B 的 KV Cache（block 共享错误）
- - 未释放：finished 请求的 KV blocks 未 free（内存泄漏）
- - 重复释放：超时和 finish 同时释放（double free）
- - 越界写：block 索引计算错误（结果随机错误）
+ - **优点**：高优先级请求（付费用户、交互式）获得更快响应；可配置不同 SLA
+ - **缺点**：
+ - 低优先级请求可能饥饿（starvation）
+ - 需要复杂的调度逻辑和预算管理
+ - 优先级反转（高优先级等待低优先级占用的资源）
+ - **缓解**：设置最大等待时间（timeout）、动态调整优先级（aging 老化）、资源预留
 
 </details>
 
 
-4. **联调时发现"请求卡住"（future 永不完成），怎么排查？**（⭐⭐⭐⭐ 高频）
+4. **为什么 _worker_loop 中锁内只做队列操作，锁外做 forward？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **可能原因**：
- 1. Scheduler 死锁（锁内执行 forward）
- 2. 请求被 `still_waiting` 丢弃（合并 bug）
- 3. 超时检查不完整（waiting 超时但 running 不检查）
- 4. 竞态条件（submit 和 schedule 并发操作 running map）
- - **排查方法**：
- - 打印调度日志（waiting/running/finished 各多少）
- - 检查 `still_waiting` 是否包含卡住的请求
- - 检查锁是否被长时间持有
- - 加超时自动取消作为兜底
+ - forward 是慢操作（GPU 计算，毫秒到秒级），若在锁内会阻塞 `submit()` 入队
+ - 锁内只做队列操作（调度、移除完成、登记 running）——快速，微秒级
+ - 锁外做 forward——慢但不阻塞其他线程提交请求
+ - 这是生产者-消费者模式的标准做法，保证 submit 不被 forward 阻塞
 
 </details>
 
 
-5. **联调时发现"显存持续增长"，怎么定位和修复？**（⭐⭐⭐⭐ 高频）
+5. **v1 的 Continuous Batching 和 v0 的串行 generate 有什么本质区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **定位**：
- - 每 100 请求打印 `used_kv_blocks`，看是否归零
- - 检查 finished 请求的 KV Cache 是否释放
- - 检查超时请求的 KV Cache 是否释放
- - **常见原因**：
- - finish 后忘记 `self.used_kv_blocks -= req.kv_cache_blocks`
- - 超时取消时只 `set_exception` 但不释放资源
- - `running` dict 中删除了请求但 `kv_cache_pool` 没删
- - **修复**：确保所有退出路径（finish/timeout/cancel）都释放 KV Cache
+ - **v0**：`generate()` 同步阻塞，一个请求跑完才能跑下一个 → GPU 空闲、用户排队
+ - **v1**：`submit()` 异步返回 Future，后台 worker 每轮重建 batch → 多请求并发 forward、完成即退出
+ - **收益**：实测 4 请求 v0 需 23 次 forward（串行），v1 只需 8 轮（并发），收益约 2.9x
+ - **关键**：v1 每轮把多个请求拼 batch 一起 forward，GPU 满载；v0 每次只 forward 一个请求
 
 </details>
 

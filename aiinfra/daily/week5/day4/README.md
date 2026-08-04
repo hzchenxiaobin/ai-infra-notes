@@ -1,459 +1,460 @@
-## Day 4：vLLM Worker 与 PagedAttention
+## Day 4：IO 优化方法论总结与 Week 4 收官
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 vLLM **Worker 层**的职责——接收 Scheduler 输出、构建 attention metadata（含 block table）、调用 ModelRunner 执行前向<br>
-2. 掌握 **PagedAttention** 的核心思想——借鉴 OS 虚拟内存分页，把 KV cache 分成固定大小 block，逻辑连续、物理不连续<br>
-3. 能画出 **block table** 的逻辑→物理映射图，理解 attention kernel 如何通过 block table 间接寻址读取 KV<br>
-4. 掌握 **Copy-on-Write（写时复制）** 机制——多个 sequence 共享 prompt block，写入时才复制，节省显存<br>
-5. 理解 PagedAttention 如何解决 **静态分配的浪费** 与 **动态分配的碎片** 两大内存管理难题<br>
-6. 能用 CUDA 手写一个最小化的 PagedAttention kernel，通过 block table 间接寻址并验证正确性
+1. 从 FlashAttention 中提炼出通用的 **IO 优化方法论**——Tiling、Online Algorithm、Kernel Fusion、Recomputation、Async Copy、Data Layout 六大策略<br>
+2. 建立 IO 优化的 **场景决策树**，拿到任意 memory-bound 算子能判断用哪种策略<br>
+3. 系统梳理 Week 4 的核心知识链：论文精读 → online softmax → 手写 Kernel → 官方源码 → FA2 改进 → Mini 引擎集成 → 性能对比<br>
+4. 整理本周所有产出（Kernel、引擎、benchmark 报告），形成可复用的工程资产<br>
+5. 回顾本周 15 道面试题，建立 FlashAttention 与 IO 优化的答题框架<br>
+6. 为 Week 5 的推理系统学习做好知识衔接，明确 KV Cache、vLLM、Continuous Batching 的前置基础
 
-> 💡 **为什么重要**：Day 3 我们读完了 vLLM 的 Scheduler——它靠 Continuous Batching 每轮重建 batch，完成的请求立即释放 slot。但"释放 slot"要能真正做到不产生碎片，否则 slot 回收了也拼不出大块。PagedAttention 就是解决这个的——它是 vLLM 最核心的创新，也是 SOSP 2023 论文的主题。没有 PagedAttention，Continuous Batching 的吞吐收益会被内存碎片吃掉一大半。今天我们把它从原理到 kernel 实现彻底吃透。
-
----
-
-### 学前导读：Continuous Batching 的"隐形杀手"——内存碎片
-
-Day 3 的 mini 调度器里，请求完成时我们 `used_blocks -= seq.kv_blocks` 就算"释放"了。但真实场景下，KV cache 不是按"整个序列"连续分配的——如果按序列连续分配，长度不确定的请求频繁 alloc/free 会产生大量**外部碎片**：释放的小空洞拼不回来，新请求放不下就 OOM。
-
-![Static / Dynamic / PagedAttention 三种分配的碎片对比](../images/paged_attention_fragmentation.svg)
-
-| 策略 | 内部碎片 | 外部碎片 | 问题 |
-|------|---------|---------|------|
-| **静态**（预分配 max_seq_len） | 严重（实际长度常远小于 max） | 无 | 80% 显存浪费在"预占未用" |
-| **动态**（按实际长度连续分配） | 无 | 严重 | 完成释放后留空洞，大请求 OOM |
-| **PagedAttention**（分页） | 极小（最后一块的空 slot） | 无 | block 粒度回收，空闲 block 随时复用 |
-
-PagedAttention 的破局思路：**别按序列连续分配，改成按固定大小 block 分配**——就像 OS 的虚拟内存分页。一个序列的 KV cache 由若干 block 拼成，block 之间物理上可以不连续，用一张 **block table** 记录"第几个逻辑 block 在哪个物理 block"。完成时整 block 回收到池子，下次任意序列都能用——无外部碎片。
-
-> 💡 **一句话总结**：PagedAttention 把"连续分配的 KV cache"变成"分页 + block table 映射"，让 Continuous Batching 的高频 slot 回收不再产生碎片——这是 vLLM 吞吐优势的地基。
+> 💡 **为什么重要**：Day 1-6 我们分别学了 FlashAttention 的理论、实现、源码、改进、集成、benchmark。但"各个模块都懂"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张 IO 优化方法论的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何 memory-bound 算子，你能立刻判断它为什么慢、该用哪种策略优化。Week 5 的 KV Cache、PagedAttention 都建立在这张地图上。
 
 ---
 
-### 理论学习
+### Week 4 知识地图
 
-#### 4.1 vLLM Worker 的执行流程
+![FlashAttention Tiling 与线程映射](../../week4/images/flash_attention_tiling.svg)
 
-Worker 是 vLLM 三层架构的最底层，负责执行实际模型前向：
+Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
 
-```
-Worker.execute_model(seq_group_metadata_list):
- 1. 构建 input tokens 和 positions
- 2. 构建 attention metadata（含 block table） ← PagedAttention 的关键
- 3. 调用 ModelRunner.run() 执行模型前向
- 4. 采样得到 next token
- 5. 返回 outputs
-```
+![Week 4 学习主线](../../images/week4_learning_pipeline.svg)
 
-##### Block Table 如何传入 Kernel
+| Day | 主题 | 核心产出 | 关键概念 |
+|-----|------|---------|---------|
+| Day 1 | FlashAttention 论文精读 | online softmax 三公式推导 | Tiling、Online Softmax、O(N²)→O(Nd) |
+| Day 2 | 手写完整 Forward Kernel | flash_attention_v2.cu | warp 分工、shared memory tile、边界处理 |
+| Day 3 | 官方 CUDA 源码分析 | 源码分析笔记 | cp_async、K/V 复用、Kernel_traits 模板 |
+| Day 4 | FlashAttention-2 论文 | FA1 vs FA2 差异 | 减少 non-matmul、seq 并行、warp group |
+| Day 5 | 算子接入 Mini 引擎 | mini_engine_fa.py | C++ Extension、load_inline、stream 传递 |
+| Day 6 | 性能对比分析 | benchmark 报告 | 3-way 对比、ncu 验证 O(Nd)、speedup 矩阵 |
+| **Day 7** | **IO 优化方法论总结** | **方法论 checklist** | **六大策略 + 决策树** |
 
-```python
-# Attention metadata 中的 block_tables
-# shape: (num_seqs, max_num_blocks_per_seq)
-# 每个元素是物理 block 编号
-block_tables = [
- [7, 1, 12, 3], # seq 0 的逻辑 block 0..3 → 物理 block 7,1,12,3
- [2, 5, 8], # seq 1 的逻辑 block 0..2 → 物理 block 2,5,8
-]
-# Kernel 内部根据 block_table 找到 KV cache 的物理位置
-```
-
-Scheduler 在每轮 `schedule()` 时更新 block table（分配新 block、回收完成的 block），Worker 把它打包进 attention metadata 传给 kernel。**kernel 看到 KV cache 的方式不再是"连续地址"，而是"经 block table 间接寻址"**。
-
-#### 4.2 PagedAttention 核心思想：分页 + block table
-
-![Block Table：逻辑连续 ↔ 物理不连续](../images/paged_attention_block_table.svg)
-
-借鉴 OS 虚拟内存分页：
-
-| OS 虚拟内存 | PagedAttention | 对照 |
-|------------|----------------|------|
-| 虚拟页（virtual page） | 逻辑 block | 序列视角连续编号 |
-| 物理页框（physical frame） | 物理 block | 显存中实际位置，可不连续 |
-| 页表（page table） | block table | 逻辑→物理映射 |
-| MMU | block allocator | 分配/回收物理 block |
-
-##### 关键参数
-
-```
-block_size：每 block 容纳多少 token（vLLM 默认 16）
-num_blocks：物理 block 池总大小（按可用显存 / block 大小算）
-max_num_blocks_per_seq = ceil(max_seq_len / block_size)
-```
-
-##### 逻辑 view vs 物理 view
-
-![PagedAttention 逻辑→物理 block 映射（block table）](../../images/week5_pagedattention_mapping.svg)
-
-> ⚠️ **注意**：block_size 选 16 是经验值。太大 → 内部碎片（最后一块空 slot 多）+ block table 变短但单 block 大；太小 → block table 变长（占显存）+ kernel 间接寻址次数多。16 在大多数场景下是 sweet spot。
-
-#### 4.3 attention kernel 如何通过 block table 读取 KV
-
-传统 attention kernel 读 KV 是连续地址：`K[s * d]`。PagedAttention kernel 多一步**间接寻址**：
-
-```cuda
-// 传统（连续布局）：
-float k_val = K[s * d + t]; // 直接算地址
-
-// PagedAttention（分页布局）：
-int logical_block = s / BLOCK_SIZE;                                     // 第几个逻辑 block
-int offset = s % BLOCK_SIZE;                                            // block 内第几个 token
-int physical_block = block_table[logical_block];                        // 查表得物理 block
-float k_val = k_pool[physical_block * BLOCK_SIZE * d + offset * d + t]; // 物理 block 内读取
-```
-
-kernel 遍历所有历史 key 时，按逻辑 block 顺序（0, 1, 2, ...），每步查 `block_table[lb]` 得物理 block，再读该 block 内的 KV 数据。今天 Coding 任务就实现这个 kernel。
-
-#### 4.4 Copy-on-Write：共享 prompt block
-
-![Copy-on-Write：共享 prompt block，写入时才复制](../images/paged_attention_copy_on_write.svg)
-
-**场景**：并行采样（`n>1`，一个 prompt 生成多个回答）、beam search、多轮对话共享历史。这些场景下多个 sequence 共享同一份 prompt 的 KV cache。
-
-**机制**：
-1. **共享**：Seq A 和 Seq B 共享 prompt 的物理 block，`refcount=2`，只读不冲突
-2. **写入触发复制**：当 Seq B 要往最后一个共享 block 追加新 token 时，发现该 block `refcount>1`（被共享）→ 复制一份到新物理 block，Seq B 的 block table 指向新 block，原 block 的 `refcount` 降为 1
-3. **收益**：prompt 部分（可能很长）的 KV cache 只存一份，各 sequence 只为自己的新 token 分配独立 block
-
-##### 引用计数实现
-
-```python
-class PhysicalTokenBlock:
-    block_number: int
-    refcount: int = 1
-
-    def incr_refcount(self): self.refcount += 1
-    def decr_refcount(self):
-        self.refcount -= 1
-        if self.refcount == 0:
-            allocator.free(self) # refcount 归零才回收到池子
-```
-
-`fork(parent_block_table)` 操作：复制一份 block table，所有 block 的 `refcount+1`——这是 beam search / 并行采样的起点。之后各 sequence 写新 token 时，只对"要写入的那个 block"做 CoW。
-
-> 💡 CoW 的本质：**读共享、写复制**。多个 sequence 读同一份 prompt 的 KV（attention 只读不写历史 KV），零开销共享；只有要追加新 token 时才复制那一个 block。prompt 越长、候选越多，省的显存越多。
-
-#### 4.5 Block Allocator
-
-```python
-class BlockAllocator:
-    def allocate(self) -> PhysicalTokenBlock:
-        # 从 free block pool 取一个空闲物理 block
-        ...
-
-    def free(self, block):
-        # refcount 归零时，block 回收到 free pool
-        ...
-
-    def fork(self, parent_block_table) -> List[PhysicalTokenBlock]:
-        # 复制 block table，所有 block refcount+1（CoW 的基础）
-        ...
-```
-
-BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，free 归零后归还。因为 block 大小固定，归还的 block 立刻能被任意序列复用——**无外部碎片**。
-
-### Coding 任务：手写 PagedAttention kernel
-
-#### 任务 1：创建 paged_attention.cu
-
-创建文件 [kernels/paged_attention.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day4/kernels/paged_attention.cu)，实现一个最小化的 PagedAttention kernel（block table 间接寻址 + online softmax）：
-
-```cuda
-// paged_attention.cu —— PagedAttention 最小化实现（block table + 分块 KV cache attention）
-// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_120
-// 运行命令: ./paged_attention
-//
-// 演示 PagedAttention 的三大核心机制：
-// 1. KV cache 按 block 分块存储（物理 block 可不连续）
-// 2. block table 维护 逻辑 block → 物理 block 映射
-// 3. attention kernel 通过 block table 间接寻址读取 KV
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <vector>
-
-#define BLOCK_SIZE 256
-#define WARP_SIZE 32
-#define NUM_WARPS (BLOCK_SIZE / WARP_SIZE)
-#define KV_BLOCK_SIZE 16 // 每个 KV cache block 容纳 16 个 token（vLLM 默认）
-
-// ---------- 块归约 ----------
-__inline__ __device__ float warp_reduce_sum(float v) {
-    #pragma unroll
-    for (int o = WARP_SIZE / 2; o > 0; o >>= 1)
-        v += __shfl_down_sync(0xffffffff, v, o);
-    return v;
-}
-__inline__ __device__ float block_reduce_sum(float v, float* sh) {
-    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
-    v = warp_reduce_sum(v);
-    if (lane == 0)
-        sh[wid] = v;
-    __syncthreads();
-    if (wid == 0) {
-        v = (lane < NUM_WARPS) ? sh[lane] : 0.f;
-        v = warp_reduce_sum(v);
-        if (lane == 0)
-            sh[0] = v;
-    }
-    __syncthreads();
-    return sh[0];
-}
-
-// ---------- PagedAttention kernel（decode：1 query 对 N 历史 key）----------
-// kv_cache_pool: 物理 block 池，布局 [num_blocks, KV_BLOCK_SIZE, d]
-// block_table: [max_num_blocks_per_seq]，block_table[l] = 第 l 个逻辑 block 的物理 block 号
-// q: [d]，当前 query 向量
-// output: [d]，attention 输出
-// seq_len: 历史 key 数量
-__global__ void paged_attention_kernel(const float* __restrict__ k_cache_pool, const float* __restrict__ v_cache_pool,
-                                       const int* __restrict__ block_table, const float* __restrict__ q,
-                                       float* __restrict__ output, int seq_len, int d, int max_blocks_per_seq) {
-
-    __shared__ float q_shm[256];
-    __shared__ float red[NUM_WARPS + 1];
-    __shared__ float s_k_shm, alpha_shm, beta_shm;
-
-    int tid = threadIdx.x;
-    const float scale = 1.0f / sqrtf((float)d);
-
-    for (int t = tid; t < d; t += BLOCK_SIZE)
-        q_shm[t] = q[t];
-    __syncthreads();
-
-    float m = -INFINITY, l = 0.f;
-    float o_local = 0.f;
-
-    // 遍历所有历史 key（按逻辑 block 顺序，通过 block_table 找物理 block）
-    int num_logical_blocks = (seq_len + KV_BLOCK_SIZE - 1) / KV_BLOCK_SIZE;
-    for (int lb = 0; lb < num_logical_blocks; ++lb) {
-        int physical_block = block_table[lb]; // ★ 核心：逻辑→物理映射
-        const float* k_block = k_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
-        const float* v_block = v_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
-
-        int tokens_in_block = min(KV_BLOCK_SIZE, seq_len - lb * KV_BLOCK_SIZE);
-        for (int s = 0; s < tokens_in_block; ++s) {
-            const float* k_vec = k_block + s * d;
-            const float* v_vec = v_block + s * d;
-
-            float part = 0.f;
-            for (int t = tid; t < d; t += BLOCK_SIZE)
-                part += q_shm[t] * k_vec[t];
-            float s_k = block_reduce_sum(part, red) * scale;
-            if (tid == 0)
-                s_k_shm = s_k;
-            __syncthreads();
-            s_k = s_k_shm;
-
-            if (tid == 0) {
-                float m_new = fmaxf(m, s_k);
-                float alpha = expf(m - m_new);
-                float p = expf(s_k - m_new);
-                float l_new = l * alpha + p;
-                alpha_shm = (l * alpha) / l_new;
-                beta_shm = p / l_new;
-                m = m_new;
-                l = l_new;
-            }
-            __syncthreads();
-
-            for (int t = tid; t < d; t += BLOCK_SIZE)
-                o_local = o_local * alpha_shm + beta_shm * v_vec[t];
-            __syncthreads();
-        }
-    }
-    for (int t = tid; t < d; t += BLOCK_SIZE)
-        output[t] = o_local;
-}
-```
-
-代码要点：
-- `block_table[lb]`：核心间接寻址——逻辑 block `lb` 映射到物理 block `block_table[lb]`，kernel 据此算出 `k_block`/`v_block` 的实际地址
-- **双层循环**：外层遍历逻辑 block（连续），内层遍历 block 内 token（最后一块可能不满）
-- **online softmax**：复用 Week 4 的三公式，把点积→softmax→加权 V 融合成一遍扫描，无需物化 score 矩阵
-- **CPU 参考用连续布局**：验证 paged 版（物理散布）与连续版结果一致，证明 block table 映射正确
-
-#### 任务 2：编译与运行
-
-```bash
-nvcc -o paged_attention kernels/paged_attention.cu -O3 -arch=sm_120
-./paged_attention
-```
-
-**预期输出**：
-
-```text
-=== PagedAttention Test ===
-d=64, seq_len=50, KV_BLOCK_SIZE=16, num_logical_blocks=4
-block_table (logical→physical): 0→7 1→1 2→12 3→3
-max diff (paged vs contiguous): 0.00e+00 (PASS)
-
-[Memory utilization]
- Static alloc (max=128): waste 61% (allocated 128, used 50)
- PagedAttention: use 50% of static (4 blocks × 16 tok = 64 slots, 50 actual)
- PagedAttention 的物理 block 可不连续（本例 7,1,12,3），逻辑连续由 block table 保证
-```
-
-##### 验证逻辑解读
-
-- **block_table 故意打乱**：逻辑 block 0→7、1→1、2→12、3→3，物理上散布——证明逻辑连续不依赖物理连续
-- **数据落位**：按 block_table 把连续的 K/V 数据写入物理 pool 的散布位置，kernel 再按 block_table 读回
-- **正确性**：paged 版输出与连续版 CPU 参考逐元素比对 `max_diff=0`，证明间接寻址无误
-- **内存利用率**：静态分配浪费 61%，PagedAttention 只用 4 个 block（含 14 个空 slot 的内部碎片）
-
-#### 任务 3：用 ncu 观察间接寻址的开销
-
-```bash
-ncu --kernel-name regex:paged_attention_kernel \
- --metrics gpu__time_duration.sum, \
- dram__bytes.sum, \
- sm__inst_executed.avg.per_cycle_active \
- ./paged_attention
-```
-
-**观察重点**：
-- PagedAttention 比"连续布局 attention"多了 block_table 查表（一次额外 global 读 `block_table[lb]`），但这个开销极小（每 16 个 token 才查一次表）
-- 主要 IO 仍是读 K/V 数据（`dram__bytes` 与连续版相当），block table 本身很小（每序列几十个 int）
-
-> 💡 思考：block_table 查表的开销为什么可忽略？（提示：block_size=16 意味着每 16 个 token 才查一次表，而每个 token 要读 `d` 个 float——表查询的 amortized 开销 = 1 次 int 读 / (16 × d 次 float 读) ≈ 极小。）
-
-#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
-
-**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
-
-**与今日知识的关联**：
-
-Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——LLM 推理的 prefill 阶段跑的就是 causal self-attention（生成第 i 个 token 时只能看到前 i 个 token）。今天我们手写了 PagedAttention kernel（decode 场景：1 query 对 N key），这道题是它的 prefill 对偶——M 个 query 互相做 causal masked attention。PagedAttention 的 block table 机制同样适用于 causal attention：prefill 时把 prompt 的 KV 按 block 分块存入 paged pool，kernel 通过 block table 间接寻址。两者的核心都是"间接寻址 + online softmax 融合"。
-
-> 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解（含 causal mask 的 online softmax 实现、上三角屏蔽、与 PagedAttention 的 prefill 对偶关系）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
-
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 4）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 4（BST 进阶与构造），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [235. 二叉搜索树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-search-tree/) | 中等 | 利用 BST 性质遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html) |
-| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 中序 + 显式栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
-| [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/) | 中等 | 递归 / 二分定插入界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html) |
-| [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
-| [889. 根据前序与后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/) | 中等 | 递归分治（前后序互定界） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
+> 💡 **一句话总结**：Week 4 的本质是"理解 FlashAttention 为什么快，并建立可迁移的 IO 优化方法论"。Day 7 的方法论 checklist 就是这 7 天学习的最终答卷。
 
 ---
 
-### 扩展实验
+### 核心概念串讲
 
-#### 实验 1：手动构造 block table 示例
+#### 1. FlashAttention 的核心思想：减少 HBM 访问
 
-序列长度 50，block_size=16，给出逻辑/物理映射：
-- 逻辑 block 数 = ceil(50/16) = 4
-- 假设物理池有 20 个 block，本序列分到物理 block 7, 1, 12, 3
-- 画出 block_table = [7, 1, 12, 3]，标注每个逻辑 block 的 token 范围（0-15, 16-31, 32-47, 48-49）
+![标准 Attention vs FlashAttention IO 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
 
-> 思考：最后一块只有 2 个 token（48-49），空了 14 个 slot——这是内部碎片。block_size 越大内部碎片越严重，怎么权衡？（提示：vLLM 选 16 是经验最优。）
+```
+标准 Attention：
+ S = Q × K^T (N×N) → 写 HBM
+ P = softmax(S) (N×N) → 读 S、写 P
+ O = P × V (N×d) → 读 P、写 O
+ HBM IO: O(N²) ← 瓶颈
 
-#### 实验 2：模拟 Copy-on-Write
+FlashAttention：
+ 分块 Tiling + Online Softmax
+ S/P 不落 HBM，在 SRAM 中完成
+ HBM IO: O(Nd) ← 消除 N² 项
+```
 
-扩展 `paged_attention.cu` 的 main 函数：构造两个 sequence 共享同一个 prompt 的物理 block（block_table 前缀相同），然后让 Seq B "写入"新 token——检测到最后一个共享 block 的 refcount>1 时，分配新物理 block、复制内容、更新 Seq B 的 block_table。打印 CoW 前后的 block_table 和 refcount 变化。
+**关键洞察**：FlashAttention 的"快"不在于减少 FLOPs（计算量相同），而在于**减少数据移动**——"You can hide compute, but you can't hide memory"。
 
-> 思考：CoW 什么时候不触发？（提示：refcount==1 时直接写，无需复制。所以并行采样只在"第一个 sequence 写新 token"时才 CoW，后续各 sequence 已独立。）
+#### 2. Online Softmax 三公式
 
-#### 实验 3：对比 PagedAttention vs 连续布局的 kernel 性能
+![Online Softmax 递推更新流程](../../week4/images/flash_attention_online_update.svg)
 
-写一个 `continuous_attention_kernel`（KV cache 连续布局，直接 `K[s*d+t]`），与 `paged_attention_kernel` 对比 wall-clock。用 `cudaEvent` 计时，扫描 `seq_len = 128, 512, 2048, 8192`。
+```
+公式1: m_new = max(m, max(xj))
+公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+```
 
-> 思考：PagedAttention 的间接寻址开销占多少？（提示：理论上每 16 token 一次查表，开销应 < 1%。实测若差异显著，可能是 cache 局部性差异——物理不连续导致 L2 命中率下降。）
+`exp(m - m_new)` 是统一参考点的缩放因子——当全局 max 从 m 更新到 m_new 时，把旧值从"以 m 为参考"缩放到"以 m_new 为参考"。
+
+#### 3. FA1 → FA2 的演进
+
+| 维度 | FA1 | FA2 | 改进 |
+|------|-----|-----|------|
+| Non-matmul FLOPs | 跨 warp 冗余 | warp group 自治 | ~2x 减少 |
+| Work partitioning | Batch×Head | +Seq 并行 | 长序列更高并行度 |
+| Occupancy | 1 block/SM | 2-3 blocks/SM | 更高 |
+| Warp 同步 | 较多 | 较少 | 减少同步点 |
+
+#### 4. 手写版 vs 官方版的差距
+
+| 维度 | 手写版 | 官方版 | 差距来源 |
+|------|-------|-------|---------|
+| 数据加载 | 同步 | cp_async + 双缓冲 | 隐藏加载延迟 |
+| 精度 | FP32 | FP16/BF16 + FP32 acc | 带宽翻倍 |
+| Shared Memory | K/V 分开 | K/V 分时复用 | smem 减半 |
+| 计算单元 | FMA | Tensor Core (WMMA) | 峰值 4-8x |
+| 整体性能 | ~1x | ~3-5x | 工程细节累积 |
+
+---
+
+### IO 优化方法论：六大策略决策树
+
+![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
+
+从 FlashAttention 中提炼的通用 IO 优化方法论——适用于任何 memory-bound 算子：
+
+#### 六大策略清单
+
+| 策略 | 含义 | 适用场景 | FlashAttention 中的应用 |
+|------|------|---------|------------------------|
+| **Tiling** | 将大数据分块到 fast memory | 数据量 > SRAM 容量 | Q/K/V 分块加载到 shared memory |
+| **Online Algorithm** | 避免全局同步，边算边更新 | 需要全局 reduce 的分块场景 | online softmax 递推 m/l/o |
+| **Kernel Fusion** | 合并相邻算子，避免中间结果写回 HBM | memory-bound 算子相邻时 | QK^T + softmax + PV 融合为一个 kernel |
+| **Recomputation** | 用计算换内存访问 | 重算代价 < 读写代价时 | backward 重算 forward 中间值 |
+| **Data Layout 优化** | 调整数据排布提高访问局部性 | 不规则访问模式 | Q/K/V 按 (B,H,N,d) 连续存储 |
+| **Async Copy / 双缓冲** | 隐藏数据传输延迟 | 数据搬运与计算可重叠 | cp_async、double buffering |
+
+#### 场景决策树
+
+![IO 优化方法论决策树](../../images/week4_io_optimization_decision.svg)
+
+#### IO 优化与计算优化的关系
+
+```
+优化优先级（通常）：
+ 1. 减少不必要的数据移动（IO 优化）
+ 2. 融合 kernel 减少 launch overhead
+ 3. 提升计算吞吐量（Tensor Core、指令级优化）
+
+原因：
+ - 数据移动能耗和延迟通常远高于计算
+ - "You can hide compute, but you can't hide memory"
+ - 现代 GPU 算力增长快于内存带宽增长，memory wall 越来越严重
+```
+
+> 💡 **不是绝对**：如果系统已经是 compute-bound，再优化 IO 收益很小，应该优化计算（Tensor Core、更好的 work partitioning）。**正确做法**：先用 profiling 判断瓶颈类型，再针对性优化。
+
+---
+
+### 总结任务
+
+#### 任务 1：完成 IO 优化方法论文档
+
+将上文六大策略和决策树整理到 `notes/io_optimization_methodology.md`（自行创建），并补充至少一个 Transformer 外的应用例子：
+
+```markdown
+# 从 FlashAttention 提炼的 IO 优化方法论
+
+## 核心原则
+减少 HBM 访问，在 fast memory 中完成计算。
+
+## 六大策略
+1. Tiling — 卷积中的 im2col + 分块
+2. Online Algorithm — 流式计算中的 online mean/variance
+3. Kernel Fusion — CNN 中的 conv + bn + relu 融合
+4. Recomputation — activation checkpointing 反向传播
+5. Async Copy / 双缓冲 — 矩阵乘法的双缓冲 tiling
+6. 数据布局优化 — NHWC vs NCHW
+
+## 决策树
+[见 Day 7 教程]
+
+## Transformer 外的应用例子
+CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再读；
+融合后在 register 中直接传递，省去一次 HBM 读写。
+```
+
+#### 任务 2：整理本周产出
+
+按下表清点本周所有代码和报告，补全缺失项：
+
+| 产出物 | 文件 | 验收标准 | 状态 |
+|--------|------|---------|------|
+| Online Softmax 对比脚本 | `day1/kernels/compare_attention_io.py` | 标准 vs FA 误差 < 1e-5 | ☐ |
+| 完整 FlashAttention Kernel | `day2/kernels/flash_attention_v2.cu` | 与 CPU 误差 < 1e-3，支持 batch/head | ☐ |
+| 官方源码分析笔记 | `day3/notes/source_analysis.md` | 5 个差距点对比 | ☐ |
+| FA2 改进笔记 | `day4/notes/fa2_paper_notes.md` | FA1 vs FA2 三大差异 | ☐ |
+| Mini 引擎 FA 版 | `day5/kernels/mini_engine_fa.py` | 端到端误差 < 1e-3 | ☐ |
+| Benchmark 报告 | `day6/kernels/benchmark_results.json` | 含 N/B/H/d 扫描矩阵 | ☐ |
+| IO 优化方法论文档 | `day7/notes/io_optimization_methodology.md` | 六大策略 + 决策树 | ☐ |
+
+#### 任务 3：本周 LeetGPU / LeetCode 题目回顾
+
+本周实战题目汇总（点击查看完整题解）：
+
+| Day | LeetGPU 题目 | LeetCode 题目 |
+|-----|--------------|---------------|
+| Day 1 | [Causal Self-Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) | [20. 有效的括号](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html)、[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)、[232. 用栈实现队列](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html)、[150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/)、[380. O(1) 时间插入、删除和获取随机元素](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html) |
+| Day 2 | [Multi-Head Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) | [394. 字符串解码](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html)、[224. 基本计算器](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html)、[227. 基本计算器 II](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html)、[402. 移掉 K 位数字](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html)、[316. 去除重复字母](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
+| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)、[496. 下一个更大元素 I](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html)、[503. 下一个更大元素 II](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html)、[901. 股票价格跨度](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html)、[84. 柱状图中最大的矩形](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
+| Day 4 | [Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) | [215. 数组中的第 K 个最大元素](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html)、[347. 前 K 个高频元素](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html)、[295. 数据流的中位数](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html)、[264. 丑数 II](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html) |
+| Day 5 | [Matrix Transpose](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) | [121. 买卖股票的最佳时机](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html)、[55. 跳跃游戏](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html)、[45. 跳跃游戏 II](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html)、[763. 划分字母区间](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html)、[621. 任务调度器](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
+| Day 6 | [Multi-Head Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) | [253. 会议室 II](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html)、[435. 无重叠区间](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html)、[452. 用最少数量的箭引爆气球](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html)、[406. 根据身高重建队列](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html)、[1109. 航班预订统计](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
+| Day 7 | [GPT-2 Transformer Block](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html) | — |
+
+> 💡 回顾重点：Causal Self-Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/背包/回溯/树/双指针/链表六大标签。把没做完的题目今天补上。
+
+#### 任务 4：Week 5 预热 + 面试复盘
+
+**Week 5 预热**：本周我们掌握了 FlashAttention 和 IO 优化方法论。Week 5 将进入推理系统：
+
+1. **KV Cache**：Decode 阶段的核心优化，避免重算 K/V
+2. **vLLM 架构**：PagedAttention（减少 KV 显存碎片）、Continuous Batching（提高 GPU 利用率）
+3. **CUDA Graph**：减少 Decode 阶段的 launch overhead
+4. **推理系统端到端**：从 Prefill 到 Decode 的完整 pipeline
+
+**本周铺垫的关键概念**：
+- ✅ FlashAttention 的 tiling + online softmax（Day 1-2）→ Week 5 的 PagedAttention 分块思想
+- ✅ Kernel Fusion（Day 5 集成）→ Week 5 的算子融合策略
+- ✅ IO 优化方法论（Day 7）→ Week 5 的推理系统优化工具箱
+- ✅ ncu 验证 HBM IO（Day 6）→ Week 5 的推理性能分析
+
+**面试复盘**：回顾本周 15 道面试题，自问自答（答案见下方"面试要点"）：
+
+1. FlashAttention 为什么快？HBM 角度分析
+2. 推导 online softmax 三公式
+3. 实际 wall-clock 加速为什么只有 2-8x？
+4. FlashAttention Kernel 线程如何分配？
+5. Kernel 中为什么不需要频繁 `__syncthreads`？
+6. 官方实现中 d 越大 Bc 越小？
+7. K/V 如何复用 shared memory？
+8. FA1 vs FA2 的关键差异？
+9. seq 并行 vs head 并行？
+10. 如何把自定义 FlashAttention 集成到 PyTorch？
+11. FlashAttention 什么时候比标准 Attention 慢？
+12. 如何设计 FlashAttention benchmark？
+13. 如何用 ncu 验证 HBM 访问 O(Nd)？
+14. IO 优化方法论有哪些？
+15. IO 优化和计算优化哪个更优先？
+
+---
+
+### 面试准备框架
+
+面试中回答 FlashAttention / IO 优化问题，建议用这个结构：
+
+1. **先给结论**：FlashAttention 快在减少 HBM 访问，不在减少 FLOPs
+2. **给数据**：O(N²) → O(Nd)，N=4096 时 206MB → 4MB
+3. **讲算法**：Tiling（Q tile 驻留 SRAM）+ Online Softmax（递推 m/l/o）
+4. **讲工程**：cp_async、双缓冲、K/V 复用、Tensor Core（官方优化）
+5. **讲演进**：FA1 → FA2 的三大改进
+6. **迁移**：IO 优化方法论（六大策略）适用于任何 memory-bound 算子
+
+**示例**：
+
+> **Q：FlashAttention 为什么快？**
+>
+> **A**：标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)。FlashAttention 用 Tiling 把 Q/K/V 分块加载到 SRAM，用 Online Softmax 在 SRAM 中完成 softmax+累加，不物化 S/P，IO 降到 O(Nd)。速度来源不是减少计算量，而是减少数据移动。长序列（N>2048）时收益最大，实际加速 2-8x。
+
+---
+
+### 常见误区澄清
+
+| 误区 | 正确理解 |
+|------|---------|
+| FlashAttention 减少了计算量 | 计算量相同（2N²d FLOPs），减少的是 HBM 数据移动 |
+| Online softmax 是近似算法 | 是精确算法，数学上与标准 softmax 完全等价 |
+| FA2 改了算法 | 算法不变（三公式不变），改进全在 work partitioning 和 occupancy |
+| 自定义 FA 一定能超过 PyTorch | 官方已高度优化，只有官方没覆盖的场景自定义才有优势 |
+| IO 优化总是优先于计算优化 | 需先 profiling 判断瓶颈类型；compute-bound 时优化 IO 无收益 |
+| Tiling 越大越好 | 受 SRAM 容量约束，太大导致 occupancy 下降 |
+| cp_async 总是有收益 | 需要计算与加载可重叠；数据量小时启动开销主导 |
+
+---
+
+### Week 4 → Week 5 衔接
+
+Week 5 我们将学习 **推理系统**。为了做好准备，请确保你掌握了：
+
+1. **FlashAttention 原理与实现**（Day 1-2）：推理引擎的 Attention 算子基础
+2. **IO 优化方法论**（Day 7）：推理系统的通用优化工具箱
+3. **Kernel 集成**（Day 5）：自定义算子接入框架的工程能力
+4. **ncu 性能分析**（Day 6）：推理性能瓶颈定位
+5. **Prefill vs Decode**（Week 3 Day 1）：推理两阶段的性能特征差异
+
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 5 会从 KV Cache 开始，逐步搭建推理系统的完整图景。
+
+---
+
+### 弹性安排
+
+根据本周完成情况，选择以下一项或多项：
+
+- **补进度**：完成未做的 LeetGPU/LeetCode 题目和 benchmark 报告
+- **深入方向 1**：实现 Tensor Core 版 FlashAttention（WMMA 指令），对比 FMA 版性能
+- **深入方向 2**：用 CUTLASS 库实现 FlashAttention，对比手写版与官方模板
+- **深入方向 3**：阅读 vLLM 论文（PagedAttention），预习 Week 5
+- **面试准备**：和同学互相模拟面试，重点练白板推导 online softmax 三公式 + 口述 FA1 vs FA2 差异
 
 ---
 
 ### 今日总结
 
-Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 kernel 实现彻底吃透：
+Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 
-1. **Worker 执行流程**：接收 Scheduler 输出 → 构建 attention metadata（含 block table）→ ModelRunner.run() → 采样返回
-2. **PagedAttention 核心思想**：借鉴 OS 虚拟内存分页，KV cache 按 block_size（默认 16）分块，逻辑连续、物理不连续，block table 维护映射
-3. **block table 间接寻址**：kernel 读 KV 时多一步 `physical_block = block_table[logical_block]`，开销极小（每 16 token 查一次表，amortized 可忽略）
-4. **Copy-on-Write**：多 sequence 共享 prompt block（refcount>1），写入时才复制——读共享、写复制，prompt 越长候选越多省得越多
-5. **解决两大碎片**：无静态浪费（按需分配 block）+ 无外部碎片（block 粒度回收，空闲 block 随时复用）
-6. **block allocator**：维护空闲物理 block 池，allocate/free/fork 三件套，fork 是 CoW 的基础
-7. **手写 PagedAttention kernel**：block table 间接寻址 + online softmax，物理散布的 KV 与连续布局结果逐元素一致，证明映射正确
+1. **FlashAttention 核心思想**：Tiling + Online Softmax，把 HBM IO 从 O(N²) 降到 O(Nd)，速度来源是减少数据移动而非减少计算
+2. **Online Softmax 三公式**：`m_new`/`l_new`/`o_new` 递推更新，`exp(m-m_new)` 统一参考点缩放因子
+3. **FA1 → FA2 演进**：减少 non-matmul FLOPs（warp group 自治）、更好的 work partitioning（seq 并行）、更高的 occupancy
+4. **手写 vs 官方差距**：cp_async、双缓冲、K/V 复用、Tensor Core、混合精度——工程细节的累积差距
+5. **IO 优化六大策略**：Tiling、Online Algorithm、Kernel Fusion、Recomputation、Data Layout、Async Copy——适用于任何 memory-bound 算子
+6. **决策树**：拿到任意 memory-bound 算子，先判能否 tiling、再判能否 fusion、再判能否 recomputation
 
-掌握这些后，vLLM 的"调度（Day 3）+ 内存管理（Day 4）"双支柱就完整了——明天 Day 5 把它们整合进 Mini 推理引擎 v0，Day 6 再做端到端 profiling。
+如果你能清晰回答"FlashAttention 为什么快，以及 IO 优化的六大策略是什么"，说明 Week 4 过关了。
 
 ---
 
 ### 面试要点
 
-1. **什么是 PagedAttention？它解决了什么问题？**
+1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - PagedAttention 借鉴 OS 虚拟内存分页，把 KV cache 分成固定大小 block（默认 16 token/block）
- - 逻辑 block 对序列连续编号，物理 block 在显存中可以不连续，用 block table 维护映射
- - 解决的问题：① 静态分配的内部碎片（预分配 max_seq_len 浪费严重）② 动态分配的外部碎片（频繁 alloc/free 留空洞）③ 长文本显存管理困难
- - 收益：显存利用率从 ~20%（静态）提升到 ~90%+，支持更大 batch、更长序列，是 vLLM 吞吐优势的地基
+ - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
+ - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
+ - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
+ - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
+ - 长序列（N>2048）、小 head dim 时收益最大
 
 </details>
 
 
-2. **block table 是什么？attention kernel 怎么用它？**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释** `exp(m - m_new)` **的作用。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - block table 是"逻辑 block → 物理 block"的映射数组，`block_table[l] = 第 l 个逻辑 block 的物理 block 号`
- - kernel 读 KV 时间接寻址：`logical_block = s / block_size; physical_block = block_table[logical_block]; addr = pool + physical_block * block_size * d + offset * d`
- - 开销极小：每 block_size（16）个 token 才查一次表，amortized 到每 token 是 1 次 int 读 / (16×d 次 float 读)
- - block table 由 Scheduler 在每轮 schedule() 时更新（分配/回收 block），Worker 打包进 attention metadata 传给 kernel
+ ```
+ 公式1: m_new = max(m, max(xj))
+ 公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+ 公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+ ```
+ - `exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"
+ - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
 
 </details>
 
 
-3. **PagedAttention 中的 Copy-on-Write 是什么？在什么场景下使用？**
+3. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - CoW（写时复制）：多个 sequence 共享同一物理 block 时，读共享、写复制
- - 触发：当 sequence 要往一个 `refcount>1` 的 block 追加新 token 时，复制该 block 到新物理 block，更新自己的 block table，原 block refcount-1
- - 使用场景：并行采样（n>1，一 prompt 多回答）、beam search（多候选共享 prompt）、多轮对话共享历史
- - 收益：prompt 部分的 KV cache 只存一份，各 sequence 只为新 token 分配独立 block——prompt 越长候选越多省得越多
- - 实现：PhysicalTokenBlock 带 refcount，fork 操作对所有 block refcount+1，free 时 refcount-1 归零才回收
+ 1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
+ 2. **更好的 work partitioning**：新增 sequence 长度方向并行，长序列下并行度更高
+ 3. **更高的 occupancy**：优化 register 和 shared memory 使用，每 SM 可驻留更多 block（1→2-3）
+ 4. **更少的 warp 同步**：减少 block 级同步点
+ 5. **反向传播更高效**
 
 </details>
 
 
-4. **block_size 怎么选？太大太小各有什么问题？**
+4. **从 FlashAttention 中提炼出通用的 IO 优化方法论，并举一个 Transformer 外的应用例子。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - vLLM 默认 16，是经验最优
- - 太大：① 内部碎片严重（最后一块空 slot 多）② 单 block 大，cache 局部性差
- - 太小：① block table 变长（每序列占更多 int 显存）② kernel 间接寻址次数多（查表频率升高）③ block allocator 管理开销大
- - 16 在大多数场景是 sweet spot：内部碎片可控（平均每序列浪费 < 8 token）、block table 短（4096 token 只需 256 个 int）、查表开销可忽略
+ - **Tiling**：把大矩阵/张量分块到 SRAM，例如卷积中的 im2col + 分块
+ - **Online Algorithm**：避免全局同步，例如流式计算中的 online mean/variance
+ - **Kernel Fusion**：合并相邻算子，例如 CNN 中的 conv + bn + relu 融合
+ - **Recomputation**：用计算换内存，例如 activation checkpointing 反向传播
+ - **例子**：CNN 中的 conv + bn + relu 融合。未融合时要写卷积结果到 HBM，BN 再读；融合后在 register 中直接传递，省去一次 HBM 读写
 
 </details>
 
 
-5. **PagedAttention 与 Continuous Batching 是什么关系？**
+5. **IO 优化和计算优化哪个更优先？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
- - Continuous Batching（Day 3）：每轮 iteration 重建 batch，完成的请求立即释放 slot——但"释放 slot"要能真正不产生碎片，否则回收的显存拼不出大块
- - PagedAttention（Day 4）：block 粒度分配/回收，空闲 block 随时被任意序列复用——让 Continuous Batching 的高频 slot 回收无碎片化
- - 没有 PagedAttention，Continuous Batching 的吞吐收益会被内存碎片吃掉一大半；没有 Continuous Batching，PagedAttention 的动态分配优势也无用武之地
-
- - PagedAttention 是内存管理层面的创新，与硬件无关——OS 分页思想跨平台通用
- - block_size、CoW 策略、refcount 机制都是可配置/跨平台一致的
+ - **通常 IO 优化更优先**，原因：① 数据移动能耗和延迟远高于计算 ② 现代 GPU 算力增长快于内存带宽增长，memory wall 越来越严重 ③ 很多推理场景本来就是 memory-bound
+ - **不是绝对**：如果系统已经是 compute-bound，再优化 IO 收益很小，应该优化计算（Tensor Core、更好的 work partitioning）
+ - **正确做法**：先用 profiling 判断瓶颈类型，再针对性优化
 
 </details>
 
+
+6. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 使用 `ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum`
+ - 测试 N=512, 1024, 2048, 4096，固定 d
+ - 如果 HBM 访问量 ≈ N 的线性倍数（N 翻倍，IO 翻倍），则是 O(Nd)
+ - 如果 HBM 访问量 ≈ N² 的倍数（N 翻倍，IO 4x），则是 O(N²)
+ - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
+
+---
+
+</details>
+
+## 📁 本周目录结构
+
+```
+week4/
+├── README.md # Week 4 概览
+├── day1/ # Day 1: FlashAttention 论文精读
+│ ├── README.md
+│ └── kernels/compare_attention_io.py
+├── day2/ # Day 2: 手写完整 Forward Kernel
+│ ├── README.md
+│ └── kernels/flash_attention_v2.cu
+├── day3/ # Day 3: 官方 CUDA 源码分析
+│ ├── README.md
+│ └── notes/source_analysis.md
+├── day4/ # Day 4: FlashAttention-2 论文
+│ ├── README.md
+│ └── notes/fa2_paper_notes.md
+├── day5/ # Day 5: 算子接入 Mini 引擎
+│ ├── README.md
+│ └── kernels/mini_engine_fa.py
+├── day6/ # Day 6: 性能对比分析
+│ ├── README.md
+│ └── kernels/benchmark_flash_attention.py
+├── day7/ # Day 7: IO 优化方法论总结
+│ ├── README.md
+│ └── notes/io_optimization_methodology.md
+└── website/ # 网站构建
+ ├── build.py
+ └── images/ # SVG 插图
+```
+
+---
+
+## 🔗 推荐资源
+
+| 资源 | 说明 |
+|------|------|
+| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | FA1 核心论文，Section 2-3 必读 |
+| [FlashAttention-2 论文](https://arxiv.org/abs/2307.08691) | FA2 改进，Section 3 重点 |
+| [FlashAttention 官方仓库](https://github.com/Dao-AILab/flash-attention) | 官方 CUDA 源码 |
+| [CUTLASS](https://github.com/NVIDIA/cutlass) | NVIDIA 开源高性能 GEMM 模板库 |
+| [vLLM 论文](https://arxiv.org/abs/2309.06180) | Week 5 预习：PagedAttention |
+| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
+| [Princeton NLP FlashAttention 博客](https://princeton-nlp.github.io/flash-attention-blog/) | 图解 FlashAttention |
+
+---
+
+#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
+
+**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+
+**与今日知识的关联**：GPT-2 Transformer Block 是 Week 4 IO 优化主线的终极验收——融合了 FlashAttention（Week 4 核心）+ LayerNorm（Week 3）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
+
+> 💡 完整题解见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+
+---
+
+## ✅ Week 4 完成标准
+
+- [ ] 能白板推导 online softmax 三公式（m_new / l_new / o_new）
+- [ ] 手写 FlashAttention Kernel 在 N=256 时与 CPU 误差 < 1e-3
+- [ ] 能解释 FA1 vs FA2 的至少 3 个关键差异
+- [ ] Mini 引擎 FlashAttention 版端到端误差 < 1e-3
+- [ ] 长序列（N=2048+）下 FA 加速 1.5x+
+- [ ] 能用 ncu 验证 FA 的 HBM IO 随 N 线性增长（O(Nd)）
+- [ ] 能列出 IO 优化六大策略并解释每种含义
+- [ ] 能用决策树分析一个陌生算子是否适合 tiling/fusion/recomputation
+- [ ] 生成性能对比报告（含 top3 配置的 speedup）
+- [ ] 完成本周 LeetGPU（Causal Self-Attention/Multi-Head Attention/Reduction/Batched GEMM/Matrix Transpose/GPT-2 Transformer Block）与 LeetCode 题目
+- [ ] 理解 Week 5 推理系统的前置概念（KV Cache、PagedAttention、Continuous Batching）
+
+---
+
+> 💡 **提示**：Week 4 是 8 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 5 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。

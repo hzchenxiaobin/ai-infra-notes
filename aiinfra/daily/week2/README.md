@@ -1,37 +1,32 @@
-# Week 2：CUDA 进阶优化与性能分析
+# Week 2：CUDA Kernel 优化 + Tensor Core
 
-> 核心目标：掌握 Warp Shuffle、Register Blocking、CUDA Stream 异步执行、Nsight 性能分析和 FlashAttention CUDA 实现
+> 核心目标：掌握 Warp Shuffle、Register Blocking、float4 向量化、GEMM 七层优化路径，理解 Tensor Core（WMMA）与 CUTLASS 工业级 GEMM 库
 
-| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| ------------| -----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 1 学习，掌握向量加法、Naive GEMM、Shared Memory Tiling GEMM、Softmax Kernel　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
-| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 本周产出　 | Warp Reduce Kernel、Register Blocking GEMM（cuBLAS 40%+）、Multi-Stream 重叠执行、Nsight 分析报告、FlashAttention 简化版 Forward Kernel、整合优化 GEMM（cuBLAS 70%+） |
-| 周日里程碑 | 手写优化 GEMM 达到 cuBLAS 70%+ 性能，完成简化版 FlashAttention Forward Kernel　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 |
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| --------------------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 1，掌握 SM/Warp/Thread 模型、Occupancy、Memory Hierarchy、ncu/nsys 基础　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | warp_reduce / register_blocking_gemm / wmma_gemm 等 kernel、GEMM 优化性能对比表、WMMA 实测数据、CUTLASS 源码分析笔记　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | GEMM 优化达 cuBLAS 60%+（FMA 路线），理解 WMMA fragment 编程与 CUTLASS 三级 tiling　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
 ## 🧭 本周学习地图
 
 ```
-Day 1: Warp Shuffle 原语 → Warp Reduce Kernel（两级归约）
+Day 1: Warp Shuffle 原语与 Warp/Block Reduce
         ↓
-Day 2: Register Blocking + 2D Tiling → GEMM cuBLAS 40%+
+Day 2: Register Blocking 与 2D Tiling
         ↓
-Day 3: CUDA Streams 异步 → H2D/Compute/D2H 重叠流水线
+Day 3: CUDA Streams 与异步执行
         ↓
-Day 4: Nsight Compute → Register Blocking GEMM 瓶颈分析
+Day 4: Nsight Compute 性能分析
         ↓
-Day 4b（扩展专题）: CUTLASS 源码分析 → 工业级 GEMM 三级 Tiling
+Day 5: 整合优化到 cuBLAS 70%+（GEMM 七层路径）
         ↓
-Day 5: FlashAttention → Online Softmax 推导 + Forward Kernel
+Day 6: Tensor Core 与 WMMA —— 从 FMA 到 Tensor Core
         ↓
-Day 6: 整合 Warp Shuffle + Register Blocking → GEMM cuBLAS 70%+
-        ↓
-Day 6b（扩展专题）: Tensor Core 与 WMMA → 从 65% 到 85%+
-        ↓
-Day 7: 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
-```
+Day 7: CUTLASS 源码分析 + CuTe 概念铺垫
 
 ---
 
@@ -45,8 +40,6 @@ Day 7: 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
 | Day 2 | Register Blocking 与 2D Tiling | [day2/](day2/README.md) |
 | Day 3 | CUDA Streams 与异步执行 | [day3/](day3/README.md) |
 | Day 4 | Nsight Compute 性能分析 | [day4/](day4/README.md) |
-| **Day 4b** | **CUTLASS 源码分析（扩展专题）** | **[day4b/](day4b/README.md)** |
-| Day 5 | FlashAttention CUDA 实现（简化版） | [day5/](day5/README.md) |
-| Day 6 | 整合优化到 cuBLAS 70%+ | [day6/](day6/README.md) |
-| **Day 6b** | **Tensor Core 与 WMMA（扩展专题）** | **[day6b/](day6b/README.md)** |
-| Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [day7/](day7/README.md) |
+| Day 5 | 整合优化到 cuBLAS 70%+（GEMM 七层路径） | [day5/](day5/README.md) |
+| Day 6 | Tensor Core 与 WMMA —— 从 FMA 到 Tensor Core | [day6/](day6/README.md) |
+| Day 7 | CUTLASS 源码分析 + CuTe 概念铺垫 | [day7/](day7/README.md) |
