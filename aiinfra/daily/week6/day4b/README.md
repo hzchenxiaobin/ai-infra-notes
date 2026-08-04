@@ -124,6 +124,37 @@ class PrefixCache:
 | 共享 system prompt | system prompt 长度 | 90-99% | 30-50% |
 | Few-shot（相同 examples） | examples 长度 | 80-90% | 40-60% |
 
+##### RadixAttention：前缀树替代 block-hash（SGLang 方案）
+
+上述 block-hash 方案（vLLM）有一个局限：**block 对齐损失**。若共享前缀长度不是 block_size 的整数倍，尾部不对齐的部分无法复用。SGLang 的 **RadixAttention** 用基数树（radix tree / 前缀树）替代 block-hash，解决对齐损失。
+
+**数据结构对比**：
+
+```
+block-hash（vLLM）:
+  每 16 token 算一个 hash，命中需严格对齐到 block 边界
+  请求: [sys_prompt(100 token) | user_input]
+         ← 6 个完整 block 命中(96 token) → 4 token 丢弃
+
+RadixAttention（SGLang）:
+  前缀树存任意长度的前缀，命中无对齐要求
+  请求: [sys_prompt(100 token) | user_input]
+         ← 100 token 全部命中（前缀树精确匹配）→
+```
+
+| 维度 | block-hash（vLLM） | RadixAttention（SGLang） |
+|------|-------------------|------------------------|
+| 数据结构 | block 级哈希表 | 前缀树（radix tree） |
+| 匹配粒度 | block（如 16 token） | 任意前缀长度 |
+| 对齐损失 | 有（尾部不对齐丢弃） | 无（精确匹配） |
+| 多轮对话 | 每轮重新哈希 | 前缀树自动增量 |
+| 共享前缀多 | 命中率高但浪费尾部 | 命中率更高且无浪费 |
+| 实现复杂度 | 简单（哈希表） | 中等（树 + 引用计数） |
+
+> 💡 **何时 RadixAttention 更优**：共享前缀多且长时（多轮对话、few-shot batch、共享 system prompt）。SGLang 在这类场景的 KV Cache 命中率比 vLLM 高 5-15%（无对齐损失）。vLLM 0.5+ 也在改进 prefix caching 的对齐处理，但数据结构仍是 block-hash。
+
+> 📖 品读论文：SGLang 论文（RadixAttention 的原论文），vLLM prefix caching RFC
+
 #### 1.3 两者协同
 
 chunked prefill 和 prefix caching 是正交的：

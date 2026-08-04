@@ -433,3 +433,96 @@ Day 3 我们分析评估了三大高级推理特性：
 
 </details>
 
+---
+
+### 投机解码深化：三条路线 + 接受率分析（C3 补充）
+
+#### 三条 draft 路线对比
+
+| 路线 | draft 来源 | 代表 | 特点 |
+|------|-----------|------|------|
+| **独立小模型** | 单独训练的小 LLM | 传统 speculative decoding | 需维护两个模型，draft 质量依赖小模型能力 |
+| **Medusa** | target 模型的多个额外 head | Medusa | 无需独立小模型，target 模型加几个 head 并行预测 k 个 token |
+| **EAGLE** | target 模型的特征层草稿 | EAGLE | 在 target 的 hidden states 上建草稿，质量更高 |
+| **MTP** | target 模型的 MTP head | DeepSeek-V3 | DeepSeek 的 Multi-Token Prediction，训练时联合优化 |
+
+##### Medusa vs EAGLE vs MTP 详细对比
+
+| 维度 | Medusa | EAGLE | MTP（DeepSeek） |
+|------|--------|-------|----------------|
+| draft 位置 | target 顶层加 head | target 隐藏层后接草稿网络 | target 的 MTP head（训练联合） |
+| 额外参数 | 几个 head（小） | 草稿网络（中等） | MTP head（与 target 同量级） |
+| draft 质量 | 中（token 级预测） | 高（特征级，更准） | 高（训练时联合优化） |
+| 接受率 α | ~0.5-0.6 | ~0.6-0.7 | ~0.7-0.8 |
+| 加速比 | 2-3x | 2.5-3.5x | 3-4x |
+| 训练成本 | 微调加 head | 需训练草稿网络 | 联合训练（成本高） |
+| 部署复杂度 | 低（加 head） | 中（加网络） | 高（改训练流程） |
+
+> 💡 **面试要点**：Medusa 是"最简单的投机解码"（加 head 即可），EAGLE 是"质量更高的 Medusa"（特征层草稿），MTP 是"DeepSeek 的训练时联合优化"（质量最高但改训练）。2024+ 趋势是 EAGLE/MTP，因为 draft 质量决定接受率上限。
+
+#### 接受率与加速比的关系
+
+**精确期望公式**（k 个 draft token，接受率 α）：
+
+```
+E[accepted] = (1 - α^(k+1)) / (1 - α)
+加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+```
+
+##### 接受率扫描（k=1..8, α=0.5..0.9）
+
+| k \ α | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
+|-------|-----|-----|-----|-----|-----|
+| 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
+| 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
+| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
+| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
+
+**关键观察**：
+- α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
+- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
+- **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
+
+> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
+
+#### 新增面试题
+
+6. **为什么接受率 α 决定加速比上限？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - 加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+  - E[accepted] = (1 - α^(k+1)) / (1 - α)，随 α 增大趋近 k+1（上界）
+  - α 低时 E[accepted] 小，k 大反而被 t_d 拖累（draft 开销 k×t_d 增长）
+  - α=0.5、k=8 时 E[accepted]=2.00，但 k×t_d=8×t_d，若 t_d 不够小则变慢
+  - **结论**：α 是上限，k 是杠杆——α 高才适合大 k
+
+</details>
+
+7. **draft 模型怎么选？独立小模型 vs Medusa vs EAGLE vs MTP？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **独立小模型**：需维护两模型，draft 质量受小模型能力限制，部署复杂
+  - **Medusa**：target 加 head，无独立模型，但 token 级预测质量中等（α~0.5-0.6）
+  - **EAGLE**：特征层草稿，质量更高（α~0.6-0.7），但需训练草稿网络
+  - **MTP**：训练时联合优化，质量最高（α~0.7-0.8），但改训练流程，成本高
+  - **选择**：快速验证用 Medusa，质量要求用 EAGLE，训练可控用 MTP（DeepSeek 路线）
+
+</details>
+
+8. **verify 阶段的 kernel 实现要点？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - verify 是"大模型一次 forward 验证 k+1 个 token"，本质是 batch=GEMM
+  - 关键：Q 是 k+1 个 token（draft + 1），K/V 是历史 + draft 的 K/V
+  - kernel 要点：causal mask 的块级跳过（draft token 间是 causal，与历史是 full attention）
+  - 优化：FlashAttention 的 causal 变体可省一半块计算（见 C2 任务）
+  - **接受/拒绝采样**：verify 后用 target 的 logits 做接受/拒绝，保持分布不变
+
+</details>
+

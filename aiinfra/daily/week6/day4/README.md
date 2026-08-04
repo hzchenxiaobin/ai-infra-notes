@@ -168,12 +168,30 @@ Token Attention（LightLLM）：
 
 ![三大推理框架调度策略对比](../images/framework_comparison.svg)
 
-| 维度 | vLLM | TensorRT-LLM | LightLLM | 说明 |
-|------|------|-------------|----------|------------|
-| Batching | Continuous | Inflight | Dynamic Split Fuse | 动态批处理 |
-| KV Cache | PagedAttention | PagedAttention | Token Attention | 分页 KV Cache |
-| Chunked Prefill | 0.5+ | 原生 | Split Fuse | 分块 prefill |
-| 灵活性 | 高 | 中 | 中 | 中 |
+| 维度 | vLLM | TensorRT-LLM | SGLang | LightLLM | 说明 |
+|------|------|-------------|--------|----------|------|
+| Batching | Continuous | Inflight | Continuous | Dynamic Split Fuse | 动态批处理 |
+| KV Cache | PagedAttention | PagedAttention | PagedAttention | Token Attention | 分页 KV Cache |
+| Chunked Prefill | 0.5+ | 原生 | 原生 | Split Fuse | 分块 prefill |
+| Prefix Caching | block-hash | RadixAttention | RadixAttention | block-hash | 前缀复用 |
+| 灵活性 | 高 | 中 | 高 | 中 | 中 |
+| 语言 | Python | C++ | Python | Python | — |
+
+##### SGLang 与 RadixAttention
+
+**SGLang**（SG-Lang）是 2024+ 兴起的推理框架，核心创新是 **RadixAttention**——用基数树（radix tree）管理 prefix caching，比 vLLM 的 block-hash 方案更高效。
+
+**RadixAttention vs block-hash prefix caching**：
+
+| 维度 | block-hash（vLLM） | RadixAttention（SGLang） |
+|------|-------------------|------------------------|
+| 数据结构 | block 级哈希表 | 前缀树（radix tree） |
+| 匹配粒度 | block（如 16 token） | 任意前缀长度 |
+| 共享前缀复用 | 需手动 block 对齐 | 自动识别任意公共前缀 |
+| 多轮对话 | 每轮重新哈希 | 前缀树自动增量 |
+| 适用场景 | 短/无共享前缀 | 共享前缀多且长（如多轮对话、few-shot） |
+
+> 💡 **何时 RadixAttention 更优**：共享前缀多且长时（多轮对话、few-shot batch、共享 system prompt）。RadixAttention 的前缀树自动识别任意公共前缀，避免 block-hash 的对齐损失。SGLang 在这类场景的 KV Cache 命中率远高于 vLLM。
 
 ##### 选型建议
 

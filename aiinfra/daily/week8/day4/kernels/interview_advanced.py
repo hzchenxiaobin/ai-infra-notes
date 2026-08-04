@@ -184,6 +184,96 @@ QUESTIONS = [
         ),
         "freq": 3,
     },
+    {
+        "id": 16,
+        "topic": "系统设计",
+        "question": "设计百万 QPS LLM serving 系统（澄清→估算→架构→权衡→延伸）",
+        "answer": (
+            "澄清: QPS=100w/s, 单请求 ~100 token, TTFT<500ms, TPOT<50ms\n"
+            "估算: 100w×100=1亿 token/s, 单卡 ~1000 token/s → 需 ~10万卡\n"
+            "架构: 异构调度(PD分离) + EP大规模并行 + KV传输层(RDMA) + 多级缓存\n"
+            "  prefill池: compute-bound, 少GPU高算力; decode池: memory-bound, 多GPU大显存\n"
+            "  EP: 专家切多节点, decode用EP(all-to-all小), prefill用TP(all-reduce摊薄)\n"
+            "权衡: PD分离省TTFT/TPOT但增KV传输; EP省显存但增all-to-all; 量化省显存但损精度\n"
+            "延伸: 成本=$/1M tokens = GPU时价×利用率/吞吐; 监控TTFT/TPOT/GPU利用率/显存"
+        ),
+        "freq": 5,
+    },
+    {
+        "id": 17,
+        "topic": "系统设计",
+        "question": "给定 SLO(TTFT<200ms, TPOT<50ms)，反推集群配置与并行策略",
+        "answer": (
+            "反推: TTFT<200ms → prefill时间<200ms → 单卡prefill吞吐够或用PD分离\n"
+            "  TPOT<50ms → decode单步<50ms → KV Cache读取+attention<50ms\n"
+            "集群: 若单卡TPOT=80ms, 用TP=2降到40ms(通信开销~10ms)\n"
+            "  或用PD分离: decode专用池无prefill干扰, TPOT稳定<50ms\n"
+            "KV: 长序列用GQA-8/MLA降显存, INT8/FP8量化降带宽\n"
+            "batch: 连续batching+chunked prefill, max_batch_size由显存反推\n"
+            "验证: ncu测单kernel, nsys测端到端, 压测验SLO"
+        ),
+        "freq": 4,
+    },
+    {
+        "id": 18,
+        "topic": "系统设计",
+        "question": "推理成本 $/1M tokens 怎么算？如何优化？",
+        "answer": (
+            "公式: $/1M tokens = (GPU时价$/h × 3600s) / (吞吐token/s × 1e6)\n"
+            "  例: A100 $2/h, 吞吐 5000 token/s → $/1M = 2×3600/(5000×1e6)=$1.44\n"
+            "优化: ①提升吞吐(量化/ batching/FA) ②降低GPU单价(spot实例/异构集群)\n"
+            "  ③提升利用率(PD分离削峰填谷, 避免资源浪费)\n"
+            "  ④KV Cache复用(prefix caching省重复计算)\n"
+            "权衡: 量化降本但损精度; 大batch提吞吐但增延迟; PD分离省资源但增KV传输"
+        ),
+        "freq": 4,
+    },
+    {
+        "id": 19,
+        "topic": "系统设计",
+        "question": "万卡训练系统设计（选学，训练岗）",
+        "answer": (
+            "并行: DP+TP+PP+EP四维并行, 万卡=如 8节点×8卡×125(EP)\n"
+            "通信: TP用NVLink(节点内), PP用流水线micro-batch, EP用all-to-all\n"
+            "  DP用all-reduce(梯度同步), ZeRO切优化器状态/梯度/参数\n"
+            "容错: checkpoint频率(如每1000步), 故障检测(心跳+nccl超时), 热替换\n"
+            "  显存: 激活重计算(省显存换计算), ZeRO分片, 梯度累积\n"
+            "调度: Megatron/DeepSpeed框架, 资源管理(K8s/Slurm), 监控(GPU利用率/通信开销)"
+        ),
+        "freq": 3,
+    },
+    {
+        "id": 20,
+        "topic": "项目话术",
+        "question": "STAR 法讲 GEMM 优化项目（含可追问细节与诚实局限）",
+        "answer": (
+            "Situation: 8周课程中手写GEMM从naive到优化, 目标cuBLAS 90%+\n"
+            "Task: 在RTX 5090上实现GEMM优化系列, 量化每层收益\n"
+            "Action: naive→tiling→reg blocking→float4→shuffle→dblbuf, 7个版本递进\n"
+            "  关键决策: float4向量化加载(128-bit load)是最大单步收益(30.8%→64.3%)\n"
+            "  同步dblbuf基本无效(62.9%→63.8%), 因未用cp.async真双缓冲\n"
+            "Result: 4096³达cuBLAS 62.9%(FMA路线), 诚实声明未达90%(需Tensor Core/CUTLASS)\n"
+            "可追问: ①为何float4收益最大(砍3/4指令) ②dblbuf为何无效(同步式) ③如何到90%(WMMA+smem tiling)\n"
+            "诚实局限: 未实现Tensor Core版, 未做autotune, 小矩阵(1024)仅42%(wave填不满)"
+        ),
+        "freq": 4,
+    },
+    {
+        "id": 21,
+        "topic": "项目话术",
+        "question": "STAR 法讲 Mini 推理引擎项目（含可追问细节与诚实局限）",
+        "answer": (
+            "Situation: 8周课程整合, 手写Mini推理引擎(从v0单请求到v1多请求并发)\n"
+            "Task: 实现Continuous Batching+Scheduler+KV Cache+自定义kernel集成\n"
+            "Action: v0(单请求同步)→v1(多请求异步Future+MiniScheduler)→v2(优先级/超时/抢占)\n"
+            "  关键决策: token budget+num_seqs双约束, 锁内队列操作/锁外forward\n"
+            "  稳定性: 500请求连续测试不崩溃(sleep模拟forward, 非真实GPU)\n"
+            "Result: 端到端可跑, 调度逻辑正确(含RECOMPUTE/SWAP抢占), 但性能非真实(模拟)\n"
+            "可追问: ①为何500非1000(模拟引擎) ②livelock怎么防(快照迭代) ③真实性能(需Mini引擎真整合)\n"
+            "诚实局限: sleep模拟非真实forward, 无真实GPU推理性能, 无生产级容错(如OOM恢复)"
+        ),
+        "freq": 4,
+    },
 ]
 
 
