@@ -119,6 +119,133 @@ __half2 val = *reinterpret_cast<const __half2*>(&input[i]);
 
 > ⚠️ **注意**：`float4` 要求 D 是 4 的倍数且指针 16-byte 对齐。不满足时需 fall back 到标量——这也是 PyTorch 用模板 `ILP` 参数做 dispatch 的原因。
 
+##### float4 的类型本质
+
+`float4` 是 CUDA 内置的向量类型（定义在 `vector_types.h`），本质是一个 16 字节的结构体，包含 4 个连续的 `float`：
+
+```cuda
+// CUDA 内置定义（简化）
+struct __builtin_align__(16) float4 {  // __builtin_align__(16) 强制 16 字节对齐
+    float x, y, z, w;
+};
+// sizeof(float4) == 16，对齐要求 == 16
+```
+
+`__builtin_align__(16)` 是关键：它让编译器保证 `float4` 变量本身 16 字节对齐。但**指针 reinterpret 不会继承这个保证**——见下文"指针 reinterpret 陷阱"。
+
+与之同族的还有 `float1`/`float2`/`float3`，对应 4/8/12 字节（注意 `float3` 因对齐仍占 16 字节）。选择哪一种取决于"每条指令加载多少数据"和"维度对齐情况"：
+
+| 类型 | 字节数 | 对齐要求 | 对应加载指令 | 典型用途 |
+|------|-------|---------|------------|---------|
+| `float`（标量） | 4 | 4 | `LDG.32` | 通用、维度不齐时兜底 |
+| `float2` | 8 | 8 | `LDG.64` | 中等向量化、维度是 2 的倍数 |
+| `float4` | 16 | 16 | `LDG.128` | 最大向量化、memory-bound kernel 首选 |
+| `int4` / `double2` | 16 | 16 | `LDG.128` | 整型/双精度场景同样向量化 |
+
+> 💡 **经验法则**：memory-bound kernel 优先选 `float4`（128-bit 是 GPU memory transaction 的最大自然粒度）。只有当维度不是 4 的倍数、或指针无法保证 16-byte 对齐时，才降级到 `float2` 或标量。
+
+##### 硬件指令映射：LDG.128 vs LDG.32
+
+`float4` 不是"4 条标量 load 的语法糖"——它直接映射到**一条** `LDG.128` 指令（Load Global, 128-bit），在 SASS 层就是一次内存事务：
+
+```cuda
+// PTX 层
+ld.global.v4.f32 {%f0, %f1, %f2, %f3}, [%rd5];  // 一条指令加载 4 个 float
+
+// 对比标量
+ld.global.f32 %f0, [%rd5];   // 需要 4 条才能加载同样数据
+```
+
+`LDG.128` 的硬件行为：
+- **单次事务**：向 L2 发起一次 128-bit 的 load 请求，不拆成 4 次 32-bit
+- **对齐检查**：地址必须 16-byte 对齐，否则触发 misaligned access（性能骤降或 undefined behavior）
+- **warp 合并**：一个 warp 内 32 个 lane 各发一条 `LDG.128`，若地址连续则合并成 32×16B = 512B 的少量 sector 事务（GPU DRAM 以 32B sector 为单位传输）
+
+这就是"指令数减 4x"的根因——不是"4 条变 1 条"的抽象，而是 SASS 层实实在在从 4 条 `LDG.32` 变成 1 条 `LDG.128`。用 `cuobjdump -sass` 可以验证：
+
+```bash
+# 反汇编 kernel 的 SASS，确认 LDG.128
+cuobjdump -sass softmax_layernorm_opt | grep -E "LDG\.(32|64|128)"
+# 期望看到 LDG.128 出现在 float4 版本的循环里
+```
+
+##### 对齐要求详解
+
+`float4` 要求指针 **16-byte 对齐**。三个层面的保证：
+
+1. **`cudaMalloc` 返回的指针天然 16-byte 对齐**（实际是 256-byte 对齐），所以 `input`、`output` 这些大 buffer 起点是安全的
+2. **行起始地址 `input + row * D`**：当 `D * sizeof(float)` 是 16 的倍数（即 `D % 4 == 0`）时，每行起始也对齐；否则从第二行开始失配
+3. **`reinterpret_cast<const float4*>(ptr)` 不做运行时对齐检查**——它只是告诉编译器"按 16 字节一组解释"，对齐出错时是 UB
+
+```cuda
+// ✅ 安全：cudaMalloc + D 是 4 的倍数
+float* input;
+cudaMalloc(&input, M * D * sizeof(float));  // 256-byte 对齐
+// D = 1024 → row stride = 4096B，每行起始 16-byte 对齐
+const float4* in4 = reinterpret_cast<const float4*>(input + row * D);  // OK
+
+// ⚠️ 危险：D 不是 4 的倍数
+// D = 1023 → row 1 起始地址 = input + 1023，offset = 4092B
+// 4092 % 16 = 12 ≠ 0 → misaligned，LDG.128 行为未定义
+const float4* in4 = reinterpret_cast<const float4*>(input + 1 * 1023);  // UB!
+```
+
+> ⚠️ **注意**：`torch.randn(M, D)` 在 CUDA 上分配的 tensor 是 64-byte 对齐的，但 `tensor[row, :]` 的起始地址取决于 `D * element_size` 是否 16-byte 对齐。PyTorch 的 softmax dispatch 里专门检查 `features_size % 4 == 0` 才走 `ILP=4` 路径，否则降级——这就是"对齐决定 dispatch"的工程实践。
+
+##### 尾部元素处理（Tail Handling）
+
+当 `D` 不是 4 的倍数时，前 `D/4`（整除）组用 `float4`，剩下的 `D % 4` 个元素用标量兜底。这是工业 kernel 的标准写法：
+
+```cuda
+// 工业级写法：float4 主体 + 标量尾部
+int N4 = D / 4;
+int tail = D % 4;  // 0..3 个尾部元素
+
+// 主体：float4 批量加载
+for (int i = tid; i < N4; i += blockDim.x) {
+    float4 v = in4[i];
+    local_sum += v.x + v.y + v.z + v.w;
+}
+// 尾部：标量逐个处理（只有 0-3 个元素，不影响性能）
+const float* tail_ptr = input + row * D + N4 * 4;
+for (int i = tid; i < tail; i += blockDim.x) {
+    local_sum += tail_ptr[i];
+}
+```
+
+尾部元素最多 3 个，对性能影响可忽略（整体仍接近 4x 向量化收益）。但**必须处理**——否则结果错误。PyTorch/CUTLASS 的模板通常用 `ILP` 参数 + `if constexpr` 在编译期决定是否生成尾部循环，避免运行时分支开销。
+
+##### 指针 reinterpret 的陷阱
+
+`reinterpret_cast<const float4*>(ptr)` 是 zero-cost（编译期完成），但有两个易错点：
+
+**陷阱 1：跨类型 stride 误算**
+
+```cuda
+// ❌ 错误：float* 的索引和 float4* 的索引混用
+const float4* in4 = reinterpret_cast<const float4*>(input + row * D);
+for (int i = tid; i < D; i += blockDim.x) {  // ← 这里用 D 而不是 D/4
+    float4 v = in4[i];  // 越界！in4[i] 跳过 16 字节，i 上界应是 D/4
+}
+```
+
+`float4*` 的 `++` 和 `[]` 按 16 字节步进，所以循环上界必须从 `D` 改成 `D/4`（即 `N4`）。这是 Day 3 代码里 `int N4 = N / 4` 存在的原因。
+
+**陷阱 2：const 与 `__restrict__` 丢失**
+
+```cuda
+// ❌ reinterpret 后丢了 const 和 __restrict__
+float4* in4 = reinterpret_cast<float4*>(input);  // 丢了 const
+// 编译器无法假设 in4 不被别名，可能错失 LDG（只读缓存）优化
+
+// ✅ 正确：保持 const + __restrict__
+const float4* in4 = reinterpret_cast<const float4*>(input);
+```
+
+`__restrict__` 告诉编译器"该指针指向的数据不会被其他指针修改"，编译器可大胆使用只读数据缓存（`LDG.CA` / `__ldg`）。reinterpret 时若丢掉 `const` 或 `__restrict__`，编译器会退化成保守的普通 load，损失一部分性能。
+
+> 💡 **一句话总结**：`float4` 不是"写法更紧凑的 float 循环"，而是从 **类型系统**（16 字节对齐结构体）、**硬件指令**（LDG.128 单次事务）、**内存事务**（128-bit 自然粒度合并）三层一致发力的向量化机制。理解这三层，就能解释"为什么 float4 能让 memory-bound kernel 提速 2-4x"——以及为什么对齐不满足时会突然变慢。
+
 #### 3.3 FasterTransformer LayerNorm：Welford 一次遍历
 
 ![LayerNorm：两次 Reduce vs Welford 一次遍历](../images/welford_vs_twopass.svg)
