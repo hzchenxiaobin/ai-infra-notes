@@ -1,2 +1,3 @@
 # Python dependencies for building the website and generating figures
 matplotlib>=3.7.0
+numpy>=1.24.0  # ring_attention_sim.py, moe_routing_simulator.py 依赖

@@ -1,5 +1,7 @@
 # AI Infra 8 周冲刺学习计划（工程实战版）
 
+> ⚠️ **已过时**：本文件是早期极简总览，**以 `weekN/` 教程与 `learning_plan_weekN_expanded.md` 为准**。保留此文件仅供历史参考。
+>
 > 📌 本文件是**极简总览**（164 行），完整版见 [AI_Infra_8_week_plan_detailed.md](AI_Infra_8_week_plan_detailed.md)（883 行，含每日详细任务）。
 > 每周概览见各周 [README.md](../week1/README.md)。
 
