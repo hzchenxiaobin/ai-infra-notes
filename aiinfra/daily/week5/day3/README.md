@@ -190,7 +190,7 @@ class SequenceGroup:
  arrival_iter: int # 在第几个 iteration 到达
 
 # ============================================================
-# Scheduler（对应 vllm/engine/scheduler.py）
+# Scheduler（对应 vllm/core/scheduler.py）
 # ============================================================
 
 @dataclass
@@ -425,7 +425,7 @@ Finished order: [1, 0, 2]
 | mini 实现 | vLLM 源码位置 | 对照点 |
 |-----------|--------------|--------|
 | `LLMEngine.step()` | `vllm/engine/llm_engine.py` | 4 步流程：schedule → execute → process_outputs → return |
-| `Scheduler.schedule()` | `vllm/engine/scheduler.py` | `_schedule_running()` + `_schedule_waiting()`，Continuous Batching 实现 |
+| `Scheduler.schedule()` | `vllm/core/scheduler.py` | `_schedule_running()` + `_schedule_waiting()`，Continuous Batching 实现 |
 | `Worker.execute_model()` | `vllm/worker/worker.py` | 构建 input metadata（含 block table）→ ModelRunner.run() |
 
 ```bash
@@ -466,7 +466,22 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 
 #### 实验 1：减小 max_blocks 触发抢占
 
-把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=8`，观察抢占（PREEMPT）是否触发。注意 Recomputation 策略会重置 `output_len`，可能产生 livelock（反复抢占无法推进）。
+把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=8`，观察抢占（PREEMPT）是否触发。注意 Recomputation 策略会重置 `output_len`，被抢占请求的进度全部作废。
+
+**实测结果**（RTX 5090 环境非必需，纯 Python 可直接复现）：抢占正常触发且调度收敛——req1 被反复抢占 **6 次**（每次 progress 清零重新 prefill），最终 14 个 iteration 全部完成，完成顺序 `[0, 1, 2]`：
+
+```text
+⚡ PREEMPT request 1 (recomputation, 释放 1 blocks)
+⚡ PREEMPT request 1 (recomputation, 释放 2 blocks)
+... （共 6 次 PREEMPT，全是 req1）
+✔ FINISH request 0 (generated 8 tokens, free 3 blocks)
+✔ FINISH request 1 (generated 5 tokens, free 2 blocks)
+✔ FINISH request 2 (generated 6 tokens, free 4 blocks)
+All requests finished. Total iterations: 14
+Finished order: [0, 1, 2]
+```
+
+可以看到 Recomputation 的代价：req1 最早被 admit 却反复被抢占（LIFO 抢最后加入的），8 轮活干了 14 轮才结束。若 max_blocks 小到连单个请求都放不下，则会真正 livelock（反复抢占谁也无法推进）。
 
 > 思考：为什么 max_blocks 太小会 livelock？（提示：Recomputation 把 output_len 清零，被抢占的请求重新 prefill 又抢别人的显存。）如何改进？（提示：Swapping 策略不丢 progress；或限制抢占次数。）
 

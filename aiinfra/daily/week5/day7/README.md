@@ -351,19 +351,21 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 ## 📁 本周目录结构
 
 ```
-aiinfra/week5/
+aiinfra/daily/week5/
 ├── README.md # 周概览
 ├── day1/kernels/prefill_decode_simulation.py # Prefill/Decode 模拟
 ├── day2/kernels/kv_cache.cu # KVCache 类
 ├── day3/kernels/mini_vllm_scheduler.py # mini vLLM 调度器
 ├── day4/kernels/paged_attention.cu # PagedAttention kernel
+├── day4b/kernels/flash_decoding.cu # FlashDecoding（补充日）
 ├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
 ├── day6/kernels/profile_engine_v0.py # 端到端 profiling
+├── day6b/kernels/ # 量化推理专题：w8a16_dequant.cu + int8_kv_cache.cu（补充日）
 ├── day7/kernels/week5_summary.py # 总结日自测脚本
-└── images/ # 22 张 SVG
-https://hzchenxiaobin.github.io/leetgpu/ # LeetGPU 题解（已迁移至独立站点）
-https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
+└── images/ # 本周 SVG 插图
 ```
+
+> 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
 
 ## 🔗 推荐资源
 

@@ -61,7 +61,7 @@
 ```text
 1. 我是谁：姓名 + 背景 + 当前方向
 2. 我做了什么：一句话概括项目（Mini AI Infra / 手写 CUDA kernel / Mini 推理引擎）
-3. 核心亮点：1-2 个量化成果（如 GEMM 达到 cuBLAS 70%、支持 Continuous Batching）
+3. 核心亮点：1-2 个量化成果（如 GEMM 达到 cuBLAS ~64%（RTX 5090 实测 4096³）、支持 Continuous Batching）
 4. 我想做什么：应聘岗位方向
 ```
 
@@ -80,7 +80,7 @@
 |------|------|------|
 | **S**ituation | 项目背景 | LLM 推理部署对延迟和吞吐要求高，我想理解底层优化 |
 | **T**ask | 你的目标 | 手写高性能 kernel 并搭建一个可运行的 Mini 推理引擎 |
-| **A**ction | 你做了什么 | GEMM 优化到 cuBLAS 70%、实现 FlashAttention、Continuous Batching Scheduler |
+| **A**ction | 你做了什么 | GEMM 优化到 cuBLAS ~64%（RTX 5090 实测 4096³）、实现 FlashAttention、Continuous Batching Scheduler |
 | **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms |
 
 > ⚠️ 避免只列技术栈，要突出：**你解决了什么问题、为什么难、你怎么权衡、结果如何**。
@@ -105,7 +105,7 @@
 | Follow-up | 考察点 | 应对策略 |
 |-----------|--------|---------|
 | "为什么不用 vLLM 直接部署？" | 技术选型思考 | 承认 vLLM 成熟，但手写是为了理解底层、做定制优化 |
-| "你的 kernel 和官方实现差距多少？" | 量化意识 | 给出具体数字（70% cuBLAS），并讲清差距来源 |
+| "你的 kernel 和官方实现差距多少？" | 量化意识 | 给出具体数字（GEMM 达 cuBLAS ~64%，RTX 5090 实测 4096³），并讲清差距来源 |
 | "如果 batch 从 8 加到 64，系统会怎样？" | 系统扩展性 | 分析显存、吞吐、latency 的变化 |
 | "如何再优化 TBT？" | 持续优化能力 | 列出 3 个方向：量化、CUDA Graph、调度策略 |
 | "如果显存不够怎么办？" | trade-off | KV Cache 量化、swap、recompute、稀疏 attention |
@@ -302,7 +302,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
  - **S**ituation：项目背景，为什么要做
  - **T**ask：你的目标是什么
  - **A**ction：你做了什么（技术点 1、2、3）
- - **R**esult：量化成果（cuBLAS 70%、吞吐 X tokens/s、TTFT Y ms）
+ - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
 
 </details>

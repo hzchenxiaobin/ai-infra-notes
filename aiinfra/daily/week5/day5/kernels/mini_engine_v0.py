@@ -193,17 +193,17 @@ def main():
     generated = engine.generate(prompt, max_new_tokens=10)
     print(f"Generated (with cache): {generated}")
 
-    # ② 正确性验证：with cache vs without cache 输出一致
+    # ② 正确性验证：with cache vs without cache 逐 token 一致
     print("\n=== KV Cache Correctness Check ===")
-    gen_cache = engine.generate(prompt, max_new_tokens=5)
-    gen_no_cache = engine.generate_no_cache(prompt, max_new_tokens=5)
-    # 比较首 token（prefill 输出应一致）
-    input_ids = torch.tensor([tokenizer.encode(prompt)], device=device)
-    with torch.no_grad():
-        logits, _ = model(input_ids, use_cache=False)
-    first_with_cache = engine.generate(prompt, max_new_tokens=1)
-    print(f"  with cache first token:    {tokenizer.encode(first_with_cache)}")
-    print(f"  without cache tokens:       {gen_no_cache}")
+    gen_cache = engine.generate(prompt, max_new_tokens=5)          # str
+    gen_no_cache = engine.generate_no_cache(prompt, max_new_tokens=5)  # List[int]
+    gen_no_cache_str = tokenizer.decode(gen_no_cache)
+    print(f"  with cache:    '{gen_cache}'")
+    print(f"  without cache: '{gen_no_cache_str}'")
+    # 逐 token 比较：decode 是确定性的（id → word 一一映射），字符串相等即逐 token 相等
+    assert gen_cache == gen_no_cache_str, \
+        "KV Cache 实现与无 cache 重算结果不一致，存在 bug！"
+    print("  ✅ PASS: with/without KV Cache 逐 token 输出一致")
 
     # ③ 多轮对话 KV Cache 复用演示
     print("\n=== Multi-turn Cache Reuse Demo ===")

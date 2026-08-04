@@ -54,9 +54,12 @@ QUESTIONS = [
         "topic": "Kernel 优化",
         "question": "如何把 GEMM 优化到 cuBLAS 80%？",
         "answer": (
-            "Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)\n"
+            "理论阶梯：Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)\n"
             "→ Warp Shuffle(60%) → Double Buffer(70%) → Tensor Core(80%+)\n"
-            "→ Auto-tuning(90%+)"
+            "→ Auto-tuning(90%+)\n"
+            "实测（week2/day6 · RTX 5090 · 4096³，cuBLAS=68.2 TFLOPS）：\n"
+            "Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%\n"
+            "→ 合并写回 62.9% → DblBuf 63.8%；FMA 路线峰值 ~64%，TC/Auto-tuning 未做"
         ),
         "freq": 5,
     },

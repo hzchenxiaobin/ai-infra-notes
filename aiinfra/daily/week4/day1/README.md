@@ -10,13 +10,13 @@
 4. 理解 FlashAttention 的 HBM 访问从 O(N²) 降到 O(Nd) 的理论推导，以及实际 wall-clock 加速只有 2-8x 的原因<br>
 5. 能计算给定 Br/Bc/d 下的 **SRAM 使用量**，判断分块参数是否超限<br>
 
-> 💡 **为什么重要**：FlashAttention 是推理系统面试的第一考点。Week 3 Day 18 我们分析了标准 Attention 的 O(N²) IO 问题，今天从论文出发完整推导 online softmax——这是 Week 4 全周的理论基石。明天手写完整 Forward Kernel、后天读官方源码、大后天学 FA2 改进，全部建立在今天的三公式之上。能白板推导这三行公式，是 AI Infra 岗位的硬门槛。
+> 💡 **为什么重要**：FlashAttention 是推理系统面试的第一考点。Week 3 Day 4 我们分析了标准 Attention 的 O(N²) IO 问题，今天从论文出发完整推导 online softmax——这是 Week 4 全周的理论基石。明天手写完整 Forward Kernel、后天读官方源码、大后天学 FA2 改进，全部建立在今天的三公式之上。能白板推导这三行公式，是 AI Infra 岗位的硬门槛。
 
 ---
 
 ### 学前导读：标准 Attention 的 O(N²) 瓶颈，FlashAttention 怎么破
 
-Week 3 Day 18 我们用 ncu 实测了标准 Attention 的 HBM 读写量：当 N=4096 时，S 和 P 两个 N×N 中间矩阵各占 64MB，总 HBM IO 高达 ~206MB。这就是 O(N²) 瓶颈的来源——**softmax 和第二个 GEMM 之间必须物化 P 矩阵到 HBM**，因为 cuBLAS 要求输入是连续内存矩阵，softmax 与 GEMM 之间没有原生融合接口。
+Week 3 Day 4 我们用 ncu 实测了标准 Attention 的 HBM 读写量：当 N=4096 时，S 和 P 两个 N×N 中间矩阵各占 64MB，总 HBM IO 高达 ~206MB。这就是 O(N²) 瓶颈的来源——**softmax 和第二个 GEMM 之间必须物化 P 矩阵到 HBM**，因为 cuBLAS 要求输入是连续内存矩阵，softmax 与 GEMM 之间没有原生融合接口。
 
 FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Shared Memory）中完成 softmax + 累加**。但这里有个数学障碍——标准 softmax 需要全局 max 做数值稳定（safe softmax），分块后每个 tile 只能看到局部数据，无法直接得到全局 max。
 

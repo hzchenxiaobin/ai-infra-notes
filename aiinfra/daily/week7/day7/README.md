@@ -350,58 +350,39 @@ Day 7 我们完成了 Week 7 的代码重构与文档总结：
 ## 📁 本周目录结构
 
 ```
-aiinfra/week7/
+aiinfra/daily/week7/
 ├── README.md # 周总览
-├── day1/
-│ ├── README.md # 多请求并发支持
-│ └── kernels/
-│ └── concurrent_engine.py # ConcurrentEngine 实现
-├── day2/
-│ ├── README.md # 完整调度器
-│ └── kernels/
-│ └── full_scheduler.py # FullScheduler 实现
-├── day3/
-│ ├── README.md # SGLang/LightLLM 高级特性
-│ └── kernels/
-│ └── advanced_features.py # 三大特性模拟
-├── day4/
-│ ├── README.md # 整合全部自定义 Kernel
-│ └── kernels/
-│ └── custom_ops_module.py # C++ Extension 集成
-├── day5/
-│ ├── README.md # 系统联调
-│ └── kernels/
-│ └── stability_test.py # 六步验证 + 稳定性测试
-├── day6/
-│ ├── README.md # 全链路 Profiling
-│ └── kernels/
-│ └── full_chain_profile.py # Profiling 脚本
-├── day7/
-│ ├── README.md # 代码重构与文档（本文件）
-│ └── kernels/
-│ └── week7_summary.py # 总结自测脚本
-└── website/
- ├── build.py
- ├── index.html
- ├── day1.html ~ day7.html
- └── images/ # 15 张 SVG
- ├── concurrency_models.svg
- ├── future_callback_streaming.svg
- ├── request_lifecycle_states.svg
- ├── scheduler_architecture.svg
- ├── preemption_strategy.svg
- ├── resource_budget.svg
- ├── speculative_decoding.svg
- ├── chunked_prefill.svg
- ├── prefix_caching.svg
- ├── kernel_integration_overview.svg
- ├── cpp_extension_pipeline.svg
- ├── integration_checklist.svg
- ├── troubleshooting_guide.svg
- ├── profiling_toolchain.svg
- ├── bottleneck_analysis.svg
- ├── week7_knowledge_map.svg
- └── mini_ai_infra_architecture.svg
+├── day1/ # 多请求并发支持
+│ ├── README.md
+│ └── kernels/concurrent_engine.py # ConcurrentEngine 实现
+├── day2/ # 完整调度器
+│ ├── README.md
+│ └── kernels/full_scheduler.py # FullScheduler 实现
+├── day3/ # SGLang/LightLLM 高级特性
+│ ├── README.md
+│ └── kernels/advanced_features.py # 三大特性模拟
+├── day3b/ # 分布式推理专题：TP/PP/DP（补充日）
+│ ├── README.md
+│ └── kernels/ # tp_inference_demo.py / comm_overlap_demo.py
+├── day4/ # 整合全部自定义 Kernel
+│ ├── README.md
+│ └── kernels/custom_ops_module.py # C++ Extension 集成
+├── day4b/ # Ring Attention（补充日）
+│ ├── README.md
+│ └── kernels/ring_attention_sim.py
+├── day5/ # 系统联调
+│ ├── README.md
+│ └── kernels/ # mini_engine_v2.py / stability_test.py
+├── day6/ # 全链路 Profiling
+│ ├── README.md
+│ └── kernels/full_chain_profile.py # Profiling 脚本
+├── day6b/ # CUDA Graph 实操（补充日）
+│ ├── README.md
+│ └── kernels/ # cuda_graph_capture.py / shape_bucketing.py
+├── day7/ # 代码重构与文档（本文件）
+│ ├── README.md
+│ └── kernels/week7_summary.py # 总结自测脚本
+└── images/ # 本周 SVG 插图
 ```
 
 ---

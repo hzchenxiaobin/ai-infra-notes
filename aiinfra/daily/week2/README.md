@@ -22,9 +22,13 @@ Day 3: CUDA Streams 异步 → H2D/Compute/D2H 重叠流水线
         ↓
 Day 4: Nsight Compute → Register Blocking GEMM 瓶颈分析
         ↓
+Day 4b（扩展专题）: CUTLASS 源码分析 → 工业级 GEMM 三级 Tiling
+        ↓
 Day 5: FlashAttention → Online Softmax 推导 + Forward Kernel
         ↓
 Day 6: 整合 Warp Shuffle + Register Blocking → GEMM cuBLAS 70%+
+        ↓
+Day 6b（扩展专题）: Tensor Core 与 WMMA → 从 65% 到 85%+
         ↓
 Day 7: 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
 ```

@@ -57,7 +57,7 @@
   </g>
   <text x="310" y="220" font-size="13" fill="#8e5db8" font-weight="bold">⑤ Roofline Model</text>
   <text x="310" y="242" font-size="11" fill="#444">Ridge = PeakFLOP/BW</text>
-  <text x="310" y="260" font-size="11" fill="#444">RTX5090 ≈ 12.6 FLOP/Byte</text>
+  <text x="310" y="260" font-size="11" fill="#444">RTX5090 ≈ 58.45 FLOP/Byte</text>
   <text x="310" y="278" font-size="11" fill="#4a8e4a" font-weight="bold">→ 画 3 遍，判 bound</text>
 
   <!-- 6. Prefill/Decode -->

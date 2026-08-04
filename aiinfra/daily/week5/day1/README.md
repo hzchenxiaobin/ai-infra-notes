@@ -26,7 +26,7 @@
 | 推理 Prefill | 整段 prompt（M = N_prompt） | 大矩阵乘 | compute-bound |
 | 推理 Decode | **1 个 token（M = 1）** | 向量×矩阵（退化） | **memory-bound** |
 
-关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 15 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
+关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
 
 > 💡 **一句话总结**：推理难优化，是因为 Decode 把"大矩阵乘的 compute-bound"退化成了"M=1 的 memory-bound"——Tensor Core 使不上劲，瓶颈从算力变成了带宽。本周所有技术都在和这个矛盾搏斗。
 

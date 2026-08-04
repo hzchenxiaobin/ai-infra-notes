@@ -52,7 +52,7 @@ class SequenceGroup:
 
 
 # ============================================================
-# Scheduler（对应 vllm/engine/scheduler.py）
+# Scheduler（对应 vllm/core/scheduler.py）
 # ============================================================
 
 @dataclass
@@ -111,10 +111,11 @@ class Scheduler:
         """计算 seq 当前需要的 block 数"""
         return (seq.total_len() + self.block_size - 1) // self.block_size
 
-    def _try_preempt(self) -> bool:
-        """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）"""
+    def _try_preempt(self) -> Optional[SequenceGroup]:
+        """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）。
+        返回被抢占的 victim（由调用方放回 waiting 队列），无可抢占时返回 None。"""
         if not self.running:
-            return False
+            return None
         # LIFO 抢占：弹出最后加入的
         victim = self.running.pop()
         released_blocks = victim.seq.kv_blocks
@@ -122,10 +123,9 @@ class Scheduler:
         victim.seq.output_len = 0          # recomputation：丢弃 KV cache
         self.used_blocks -= released_blocks
         victim.seq.kv_blocks = 0
-        self.waiting.insert(0, victim)     # 放回 waiting 队首，下次重新 prefill
         print(f"    ⚡ PREEMPT request {victim.request_id} "
               f"(recomputation, 释放 {released_blocks} blocks)")
-        return True
+        return victim
 
     def schedule(self) -> SchedulerOutputs:
         """一轮调度：决定本轮运行哪些 sequence（Continuous Batching 核心）"""
@@ -145,7 +145,10 @@ class Scheduler:
             budget.add(sg, self.block_size)
 
         still_waiting = []
-        for sg in self.waiting:
+        # 注意：必须遍历快照（list(...)），不能直接在 self.waiting 上迭代——
+        # _try_preempt() 会向 self.waiting 头部 insert 被抢占的请求，
+        # 原地迭代会导致同一请求被反复检查，陷入无限循环（livelock）。
+        for sg in list(self.waiting):
             if budget.can_add(sg.seq, self.block_size):
                 # 加入 running
                 sg.seq.status = SequenceStatus.RUNNING
@@ -159,7 +162,11 @@ class Scheduler:
                       f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
             else:
                 # 预算不足：尝试抢占
-                if self._try_preempt():
+                victim = self._try_preempt()
+                if victim is not None:
+                    # 被抢占的请求放回 waiting 队首（加入 still_waiting，
+                    # 循环结束后统一重建 self.waiting，避免迭代中被修改/覆盖丢失）
+                    still_waiting.insert(0, victim)
                     # 抢占后重试
                     if budget.can_add(sg.seq, self.block_size):
                         sg.seq.status = SequenceStatus.RUNNING

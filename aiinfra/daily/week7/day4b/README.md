@@ -20,19 +20,19 @@
 Day 4 集成的 FlashAttention 解决了"单卡内 attention 中间矩阵 $O(N^2)$ 显存爆炸"，但留下了另一个问题：**KV Cache 本身随上下文线性增长**，长到一定程度单卡就放不下。
 
 ```
-KV Cache 显存估算（FP16，heads × head_dim × 2(K+V) × seq_len × batch）：
-  Llama-7B  (h=32, dh=128)  1M token, B=1 → 32×128×2×2×1e6 = 16 GB   （单卡勉强）
-  Llama-70B (h=64, dh=128)  1M token, B=1 → 64×128×2×2×1e6 = 32 GB   （单卡紧张）
-  Llama-70B                1M token, B=8 → 32 GB × 8 = 256 GB         （单卡 OOM）
+KV Cache 显存估算（FP16，2(K+V) × n_layer × n_head × d_head × seq_len × batch × 2B）：
+  Llama-7B  (32层, h=32, dh=128)  1M token, B=1 → 2×32×32×128×2B×1e6 ≈ 524 GB   （单卡 OOM）
+  Llama-70B (80层, h=64, dh=128)  1M token, B=1 → 2×80×64×128×2B×1e6 ≈ 2.6 TB   （单卡 OOM）
+  Llama-70B                       1M token, B=8 → 2.6 TB × 8 ≈ 21 TB            （多卡也吃紧）
   → 百万 token + 多请求并发，KV Cache 远超单卡 80GB
 ```
 
-| 上下文长度 | KV Cache / 卡（70B, B=1） | 单卡能否放下 | 方案 |
+| 上下文长度 | KV Cache / 卡（7B, B=1） | 单卡能否放下 | 方案 |
 |-----------|--------------------------|-------------|------|
-| 32K | ~1 GB | ✅ 轻松 | 标准 FlashAttention |
-| 128K | ~4 GB | ✅ 够 | FlashAttention + PagedAttention |
-| 1M | ~32 GB | ⚠️ 紧张 | **Ring Attention**（KV 切多卡） |
-| 1M + B=8 | ~256 GB | ❌ OOM | **Ring Attention**（必须） |
+| 32K | ~17 GB | ✅ 轻松 | 标准 FlashAttention |
+| 128K | ~69 GB | ⚠️ 紧张 | FlashAttention + PagedAttention |
+| 1M | ~524 GB | ❌ OOM | **Ring Attention**（KV 切多卡） |
+| 1M + B=8 | ~4.2 TB | ❌ OOM | **Ring Attention**（必须） |
 
 > 💡 **一句话总结**：FlashAttention 解决"attention 中间矩阵 $O(N^2)$"，Ring Attention 解决"KV Cache $O(Nd)$ 放不下"——两者叠加才能撑百万 token 长上下文。
 

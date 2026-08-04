@@ -186,7 +186,7 @@ python kernels/week8_summary.py
 
 📊 4. 关键公式 + RTX 5090 参数速答
   • Online Softmax: m_new=max(m,max(xj)); ...
-  • Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX5090 ≈ 12.6）
+  • Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX5090 ≈ 58.45）
 ```
 
 代码要点：

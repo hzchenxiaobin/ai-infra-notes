@@ -10,7 +10,7 @@
 4. 理解 **Kernel Fusion** 的收益来源（省 HBM 中间读写），能列出 Transformer 中至少 3 个 fusion 候选并估算 IO 收益
 5. 用 `torch.compile` 验证自动融合对 kernel 数量和 latency 的影响，理解自定义 C++ Extension 算子为何无法被融合
 
-> 💡 **为什么重要**：Day 1-19 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine。但"算子各自正确"不等于"系统跑得快"——真实优化必须先**定位瓶颈**再动手。今天就是把"会写 kernel"升级为"会用工具诊断系统"的关键一天，五步 Profiling 法是所有 GPU 性能优化的标准工作流。Day 7 会把今天的结论整理成算子分类表。
+> 💡 **为什么重要**：Day 1-5 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine。但"算子各自正确"不等于"系统跑得快"——真实优化必须先**定位瓶颈**再动手。今天就是把"会写 kernel"升级为"会用工具诊断系统"的关键一天，五步 Profiling 法是所有 GPU 性能优化的标准工作流。Day 7 会把今天的结论整理成算子分类表。
 
 ---
 

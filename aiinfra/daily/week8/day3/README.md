@@ -107,16 +107,18 @@ Shared Memory 分为 32 个 bank（对应 warp 内 32 thread）。同一 warp �
 
 #### 1.3 Kernel 优化：GEMM 八层路径
 
-| 层级 | 优化手段 | 达到比例 | 关键原理 |
-|------|---------|---------|---------|
-| 1 | Naive（1 thread 1 元素） | ~1% | 无复用，全走 global memory |
-| 2 | Shared Memory Tiling | ~15% | K 维 tile 加载到 SMem 复用 |
-| 3 | Register Blocking（TM×TN） | ~40% | 每 thread 算一个小块，复用 register |
-| 4 | float4 向量化加载 | ~55% | 一次读 16B，减少指令数 |
-| 5 | Warp Shuffle | ~60% | warp 内直接传寄存器，不经 SMem |
-| 6 | Double Buffering | ~70% | 前台算 + 后台加载，隐藏延迟 |
-| 7 | Tensor Core (WMMA/mma) | ~80%+ | 矩阵乘加速单元 |
-| 8 | Auto-tuning | ~90%+ | 参数搜索（tile 大小、block 维度） |
+> 两套口径：**理论占比**是教学通用的经验阶梯（背这个应对"每层收益来源"）；**实测占比**是 week2/day6 在 RTX 5090、M=N=K=4096 上的真实数据（cuBLAS 基线 68.2 TFLOPS = 100%）。面试答"理论阶梯 + 自己实测峰值 ~64%"。
+
+| 层级 | 优化手段 | 理论占比 | 实测占比（week2/day6 · RTX 5090 · 4096³） | 关键原理 |
+|------|---------|---------|---------|---------|
+| 1 | Naive（1 thread 1 元素） | ~1% | 10.6%（7.3 TFLOPS） | 无复用，全走 global memory |
+| 2 | Shared Memory Tiling | ~15% | 13.3%（9.1 TFLOPS） | K 维 tile 加载到 SMem 复用 |
+| 3 | Register Blocking（TM×TN） | ~40% | 30.8%（21.1 TFLOPS） | 每 thread 算一个小块，复用 register |
+| 4 | float4 向量化加载 | ~55% | 64.3%（44.1 TFLOPS） | 一次读 16B，减少指令数（实测最大单步收益） |
+| 5 | Warp Shuffle / 合并写回 | ~60% | 62.9%（43.1 TFLOPS，v5 合并写回，收益在噪声内） | warp 内直接传寄存器，不经 SMem |
+| 6 | Double Buffering | ~70% | 63.8%（43.9 TFLOPS，同步实现未重叠，需 cp.async/TMA） | 前台算 + 后台加载，隐藏延迟 |
+| 7 | Tensor Core (WMMA/mma) | ~80%+ | 未实现（CUTLASS 范畴） | 矩阵乘加速单元 |
+| 8 | Auto-tuning | ~90%+ | 未实现（CUTLASS 范畴） | 参数搜索（tile 大小、block 维度） |
 
 ##### float4 向量化
 
@@ -247,9 +249,12 @@ QUESTIONS = [
         "topic": "Kernel 优化",
         "question": "如何把 GEMM 优化到 cuBLAS 80%？",
         "answer": (
-            "Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)\n"
+            "理论阶梯：Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)\n"
             "→ Warp Shuffle(60%) → Double Buffer(70%) → Tensor Core(80%+)\n"
-            "→ Auto-tuning(90%+)"
+            "→ Auto-tuning(90%+)\n"
+            "实测（week2/day6 · RTX 5090 · 4096³，cuBLAS=68.2 TFLOPS）：\n"
+            "Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%\n"
+            "→ 合并写回 62.9% → DblBuf 63.8%；FMA 路线峰值 ~64%，TC/Auto-tuning 未做"
         ),
         "freq": 5,
     },
@@ -400,9 +405,12 @@ python kernels/interview_basics.py
 [1/5] ⭐⭐⭐⭐⭐ [Kernel 优化]
 Q: 如何把 GEMM 优化到 cuBLAS 80%？
 口述答案后按回车查看参考...
-A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
+A: 理论阶梯：Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 → Warp Shuffle(60%) → Double Buffer(70%) → Tensor Core(80%+)
 → Auto-tuning(90%+)
+实测（week2/day6 · RTX 5090 · 4096³，cuBLAS=68.2 TFLOPS）：
+Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%
+→ 合并写回 62.9% → DblBuf 63.8%；FMA 路线峰值 ~64%，TC/Auto-tuning 未做
 ```
 
 ##### 观察重点
@@ -466,7 +474,7 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
 
 1. **GPU 基础**：SM/Warp/Thread 层次（Grid>Block>Warp>Thread，warp=32 是调度单位）；Occupancy（active_warp/max_warp，寄存器/SMem 过多会降低）；Memory Hierarchy（Register~0c < SMem~30c < L2~200c < HBM~500c）；Bank Conflict（32 bank，padding 避免）
-2. **Kernel 优化**：GEMM 八层路径（Naive 1% → Tiling 15% → Reg Blocking 40% → float4 55% → Shuffle 60% → Double Buffer 70% → Tensor Core 80%+ → Auto-tuning 90%+）；float4 = 一条 128-bit load；Shuffle ~1-2 cycles vs SMem ~30 cycles
+2. **Kernel 优化**：GEMM 八层路径（理论阶梯 Naive 1% → Tiling 15% → Reg Blocking 40% → float4 55% → Shuffle 60% → Double Buffer 70% → Tensor Core 80%+ → Auto-tuning 90%+；RTX 5090 实测 4096³：10.6% → 13.3% → 30.8% → 64.3% → 62.9% → 63.8%，FMA 峰值 ~64%）；float4 = 一条 128-bit load；Shuffle ~1-2 cycles vs SMem ~30 cycles
 3. **CUDA 编程**：`__syncthreads()` block 级 vs Shuffle warp 级同步；Default Stream 隐式同步坑（用 non-blocking flag 解决）；`cudaMemcpyAsync` 需 pinned memory
 4. **Profiling**：Roofline 三步法（算 AI → 定位 memory/compute-bound → 定优化方向）；RTX 5090 ridge point = 104.75/1.792 ≈ 58.45 FLOP/Byte；ncu 三步法（SM/Mem Throughput → Roofline → Warp Stall Reasons）
 5. **自测系统**：12 道题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
@@ -498,16 +506,16 @@ Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
 <details>
 <summary>点击查看答案</summary>
 
- - 八层优化路径：
-   1. Naive（~1%）：1 thread 算 1 元素
-   2. Shared Memory Tiling（~15%）：K 维 tile 加载到 SMem 复用
-   3. Register Blocking（~40%）：TM×TN thread tile，复用 register
-   4. float4 向量化（~55%）：一次读 16B
-   5. Warp Shuffle（~60%）：warp 内直接传寄存器
-   6. Double Buffering（~70%）：前台算+后台加载
-   7. Tensor Core / WMMA（~80%+）：矩阵乘加速单元
-   8. Auto-tuning（~90%+）：参数搜索
- - 每层的关键：减少 global memory 访问、提高数据复用、隐藏延迟
+ - 八层优化路径（理论占比 / week2/day6 实测占比，RTX 5090 · 4096³，cuBLAS 68.2 TFLOPS = 100%）：
+   1. Naive（~1% / 10.6%）：1 thread 算 1 元素
+   2. Shared Memory Tiling（~15% / 13.3%）：K 维 tile 加载到 SMem 复用
+   3. Register Blocking（~40% / 30.8%）：TM×TN thread tile，复用 register
+   4. float4 向量化（~55% / 64.3%）：一次读 16B，实测最大单步收益
+   5. Warp Shuffle / 合并写回（~60% / 62.9%）：收益在噪声内
+   6. Double Buffering（~70% / 63.8%）：同步实现未重叠，需 cp.async/TMA
+   7. Tensor Core / WMMA（~80%+ / 未实现）：矩阵乘加速单元
+   8. Auto-tuning（~90%+ / 未实现）：参数搜索
+ - FMA 路线实测峰值 ~64%（v4 float4）；每层的关键：减少 global memory 访问、提高数据复用、隐藏延迟
 
 </details>
 

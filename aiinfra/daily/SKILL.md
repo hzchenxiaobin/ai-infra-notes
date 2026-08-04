@@ -286,6 +286,13 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 - 开篇日(Day1)和含完整 kernel 实现的日代码块最多(~26)
 - 总结日代码块最少(~6-8)
 
+### 硬件参数与必背数字（唯一事实源，硬性条款）
+
+- **教程正文一律引用 `reference/hardware_specs.md` 与 `reference/key_numbers.md`，禁止在正文中新写硬件参数数字**（算力、带宽、SM 数、Ridge Point、KV Cache 口算结果、GEMM 优化增益、Attention IO 加速比等）。正文中需要时用一句话 + 链接引用，如"RTX 5090 峰值 FP32 见 [硬件参数事实源](../../reference/hardware_specs.md)"（从 `weekN/dayM/` 出发为 `../../reference/`）
+- 确需在正文出现数字时（如推导中间步骤），必须与事实源**逐位一致**；事实源中标注 `[需核实]` 的数字禁止写入正文
+- RTX 5090 基准三数：**104.75 TFLOPS / 1792 GB/s / Ridge Point 58.45**（实测，源自 `week1/day3/exercise/my_gpu_info.md`）；`19.5 TFLOPS`、`1.55 TB/s`、`12.6` 是 **A100** 的参数，只允许出现在"A100 对比 / 错误示范"的显式标注语境
+- 发现正文数字与事实源冲突时，以事实源为准修正正文，并在提交信息中注明
+
 ### 图片
 - **禁止 ASCII 图片**:所有示意图、流程图、架构图一律用 SVG,不要在 Markdown 中嵌入 ASCII 字符画(如用 `+---+`、`|   |` 拼成的表格或流程图)
 - SVG 命名:全小写 + 下划线,语义化(如 `register_blocking_dataflow.svg`)
@@ -339,4 +346,11 @@ git push origin
 - [ ] 所有文件链接用相对路径且指向真实文件
 - [ ] SVG 引用格式 `![中文alt](../images/xxx.svg)`
 - [ ] 运行 `python3 build.py` 成功生成 `dayN.html`
+- [ ] 硬件参数/必背数字引用唯一事实源，正文无新写硬件参数数字；grep 自检：
+  ```bash
+  # 新写/修改的 dayN 中出现的算力、带宽数字应与 reference/ 完全一致
+  grep -n "TFLOPS\|GB/s\|Ridge Point" aiinfra/daily/weekN/dayM/README.md
+  # A100 旧数字只允许出现在显式标注的对比/错误示范语境
+  grep -rn "19\.5 TFLOP\|1\.55 TB/s\|12\.6" aiinfra/daily/weekN/dayM/README.md
+  ```
 - [ ] 提交并推送更改：`git add -A && git commit -m "docs(weekN/dayM): <主题>" && git push origin`

@@ -10,7 +10,7 @@
 4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-4），并对比 latency
 5. 能解释为什么自定义算子通常比 PyTorch 慢（0.8x ~ 0.95x），以及什么场景下自定义才有优势
 
-> 💡 **为什么重要**：Day 2-18 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做端到端 profiling。
+> 💡 **为什么重要**：Day 2-4 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做端到端 profiling。
 
 ---
 

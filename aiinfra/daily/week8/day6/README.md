@@ -50,7 +50,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 | 薄弱点 | 典型卡壳表现 | 复习方法 |
 |--------|-------------|---------|
 | **Online Softmax 推导** | "公式我知道，但写不全" | 手写 5 遍三公式，理解 `exp(m-m_new)` 缩放因子 |
-| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 8 层阶梯图，背每层增益（1%→15%→31%→64%→...→90%） |
+| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 8 层阶梯图，背理论阶梯（1%→15%→40%→55%→60%→70%→80%+→90%+）+ 实测阶梯（week2/day6：10.6%→13.3%→30.8%→64.3%→62.9%→63.8%） |
 | **vLLM Scheduler** | "知道有调度，但状态机讲不清" | 看源码 + 画 WAITING/RUNNING/FINISHED 流程图 |
 | **KV Cache 内存** | "公式记不住，算不出数字" | 用 3 个不同模型算 10 次，背 LLaMA-7B = 524KB |
 | **Roofline Model** | "会画图但 Ridge 算不出" | 记 Ridge = PeakFLOP/BW，RTX5090 = 104.75/1.792 ≈ 58.45 |
@@ -258,7 +258,7 @@ LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 
 
 1. **quiz 模式**：每题能否在 3 分钟内口述完？超时说明还没形成肌肉记忆
 2. **formula 模式**：7 道填空正确率是否 > 80%？错的题回到理论学习重学
-3. **param 模式**：10 道参数是否全对？Ridge Point 必须能秒答 12.6
+3. **param 模式**：10 道参数是否全对？Ridge Point 必须能秒答 58.45
 4. **二次自测**：针对错误项重学后，再跑一遍，直到全对
 
 #### 任务 3：默写关键公式与流程图
@@ -269,8 +269,8 @@ LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 
 |--------|---------|---------|
 | Online Softmax 三公式 | m_new / l_new / o_new 完整写出 | < 2 min |
 | KV Cache 内存公式 + LLaMA-7B 数字 | 公式 + 524KB + 4096→2GB | < 1 min |
-| GEMM 8 层优化 + 增益 % | Naive 1% → cuBLAS 90%+ | < 3 min |
-| Roofline 图 + Ridge 计算 | 斜线/水平线 + 12.6 推导 | < 2 min |
+| GEMM 8 层优化 + 增益 % | 理论阶梯 1%→90%+ + 实测阶梯（week2/day6）10.6%→63.8% | < 3 min |
+| Roofline 图 + Ridge 计算 | 斜线/水平线 + 58.45 推导 | < 2 min |
 | vLLM 架构图 | Engine→Scheduler→Worker→KV | < 3 min |
 | Continuous Batching 时间线 | 3 个请求动态进出 | < 3 min |
 | FlashAttention tiling 示意 | Q/K/V block + online softmax | < 3 min |
@@ -336,7 +336,7 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 针对 Day 5 暴露的薄弱点和今天重学的内容，再做一轮 Mock 面试（用 `week8/day5/kernels/mock_interview.py`）。重点观察：
 
 1. 之前卡壳的题，现在能否 3 分钟内流畅回答？
-2. 被追问数字时，能否秒答（Ridge 12.6、KV 524KB、GEMM 70%）？
+2. 被追问数字时，能否秒答（Ridge 58.45、KV 524KB、GEMM 实测峰值 ~64%）？
 3. 对比题能否一句话说清区别（Prefill/Decode、LayerNorm/BatchNorm）？
 
 > 思考：如果二次 Mock 仍有卡壳，说明薄弱点没真正消除——回到理论学习，用手写 5 遍的方式强制记忆。
@@ -418,21 +418,23 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
 </details>
 
 
-5. **你的 GEMM 优化到 cuBLAS 70%+，每一层优化的收益来源是什么？要达到 90% 还需做什么？**（⭐⭐⭐⭐⭐ 必考）
+5. **你的 GEMM 优化到 cuBLAS ~64%，每一层优化的收益来源是什么？要达到 90% 还需做什么？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- | 层次 | 增益 | 收益来源 |
- |------|------|---------|
- | Shared Memory Tiling | 1%→15% | K 维数据复用，减少全局重复读 |
- | Register Blocking | 15%→31% | 累加器驻留寄存器，减少 shared mem 访问 |
- | float4 向量化 | 31%→64% | 128-bit load 提升带宽利用率 |
- | Warp Shuffle | 55%→60% | 优化写回，减少非合并访问 |
- | Double Buffering | 60%→70% | 软件流水线掩盖传输延迟 |
- | Tensor Core | 70%→80%+ | WMMA/mma 硬件矩阵乘加 |
- | Auto-tuning | 80%→90%+ | 按尺寸选最优分块参数 |
+ 实测数据（week2/day6 · RTX 5090 · M=N=K=4096，cuBLAS 基线 68.2 TFLOPS = 100%）：
 
- 达到 90% 还需：① Tensor Core（WMMA 指令）② 完整 Double Buffering ③ CUTLASS 模板库 ④ 针对目标尺寸 exhaustive search
+ | 层次 | 实测增益 | 收益来源 |
+ |------|---------|---------|
+ | Naive → Shared Memory Tiling | 10.6%→13.3% | K 维数据复用，减少全局重复读 |
+ | → Register Blocking | 13.3%→30.8% | 累加器驻留寄存器，减少 shared mem 访问 |
+ | → float4 向量化 | 30.8%→64.3% | 128-bit load 提升带宽利用率（最大单步收益） |
+ | → 合并写回（Integrated） | 64.3%→62.9% | 写回占比小，收益在噪声范围内 |
+ | → Double Buffering | 62.9%→63.8% | 同步实现未真正重叠，需 cp.async/TMA |
+ | Tensor Core | 未实现（理论 80%+） | WMMA/mma 硬件矩阵乘加 |
+ | Auto-tuning | 未实现（理论 90%+） | 按尺寸选最优分块参数 |
+
+ 达到 90% 还需：① Tensor Core（WMMA 指令）② 真异步 Double Buffering（cp.async/TMA）③ CUTLASS 模板库 ④ 针对目标尺寸 exhaustive search
 
 </details>

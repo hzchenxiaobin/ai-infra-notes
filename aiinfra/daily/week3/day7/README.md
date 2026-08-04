@@ -11,7 +11,7 @@
 5. 回顾本周 10+ 道面试题，建立 Transformer 算子优化的答题框架
 6. 为 Week 4 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
 
-> 💡 **为什么重要**：Day 1-20 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
+> 💡 **为什么重要**：Day 1-6 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
 
 ---
 
@@ -62,7 +62,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 | Softmax | 2（max + sum） | ~0.375 | memory-bound | safe softmax 减 max、三遍扫描 |
 | LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce、affine |
 
-两个算子的核心都是 **block reduce**：warp 级 `__shfl_down_sync` → shared memory 中转 → warp 0 最终归约。这是 Week 2 Day 8 Warp Shuffle 原语的直接工程化。
+两个算子的核心都是 **block reduce**：warp 级 `__shfl_down_sync` → shared memory 中转 → warp 0 最终归约。这是 Week 2 Day 1 Warp Shuffle 原语的直接工程化。
 
 > ⚠️ **注意**：LayerNorm 的两次 reduce 无法合并——第二次（variance）依赖第一次（mean）的结果。FasterTransformer 用 Welford 在线算法合并成一次遍历，是工程优化而非算法等价。
 
@@ -240,16 +240,16 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 **Week 4 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 4 将深入 FlashAttention：
 
-1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 12 已学简化版，Week 4 学完整版）
+1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 5 已学简化版，Week 4 学完整版）
 2. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
 3. **手写完整 FlashAttention kernel**：支持 batch、multi-head、不同 seq_len
 4. **性能对比**：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
 
 **本周铺垫的关键概念**：
 - ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 4 用 FlashAttention 解决
-- ✅ Online Softmax 三公式（Week 2 Day 12）→ Week 4 完整实现
+- ✅ Online Softmax 三公式（Week 2 Day 5）→ Week 4 完整实现
 - ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 4 在 SRAM 中做 softmax
-- ✅ Warp Shuffle reduce（Week 2 Day 8）→ Week 4 用于 online softmax 的分块 reduce
+- ✅ Warp Shuffle reduce（Week 2 Day 1）→ Week 4 用于 online softmax 的分块 reduce
 
 **面试复盘**：回顾本周面试题，自问自答（答案见下方"面试要点"）：
 
@@ -307,9 +307,9 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
 
 1. **标准 Attention 的三阶段 IO**（Day 4）：不理解 O(N²) 物化，就无法理解 FlashAttention 的动机
-2. **Online Softmax 三公式**（Week 2 Day 12）：FlashAttention 的算法核心
-3. **Warp Shuffle reduce**（Week 2 Day 8）：FlashAttention 分块 reduce 的基础
-4. **Shared Memory tiling**（Week 1 Day 5）：FlashAttention 的 Q/K/V tile 驻留机制
+2. **Online Softmax 三公式**（Week 2 Day 5）：FlashAttention 的算法核心
+3. **Warp Shuffle reduce**（Week 2 Day 1）：FlashAttention 分块 reduce 的基础
+4. **Shared Memory tiling**（Week 1 Day 4）：FlashAttention 的 Q/K/V tile 驻留机制
 5. **Arithmetic intensity 判定**（Day 7）：理解为什么把 softmax 搬到 SRAM 能消除瓶颈
 
 如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 4 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。

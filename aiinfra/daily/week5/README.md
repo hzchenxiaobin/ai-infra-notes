@@ -22,9 +22,13 @@ Day 3: vLLM 整体架构 → LLMEngine / Scheduler / Worker / SequenceGroup
   ↓
 Day 4: vLLM Worker + PagedAttention → BlockSpaceManager / Block Table / Copy-on-Write
   ↓
+Day 4b（补充专题）: FlashDecoding → Decode 阶段并行度突破
+  ↓
 Day 5: Mini 推理引擎 v0 → 单请求 + KV Cache + Prefill/Decode 循环
   ↓
 Day 6: 端到端 Profiling → TTFT / TBT / 阶段 latency / 瓶颈定位
+  ↓
+Day 6b（补充专题）: 量化推理 → W8A16 / INT8 KV Cache / FP8
   ↓
 Day 7: 推理系统核心问题总结 → 内存管理、Batch 策略、Latency 隐藏、调度开销
 ```
@@ -41,6 +45,8 @@ Day 7: 推理系统核心问题总结 → 内存管理、Batch 策略、Latency 
 | Day 2 | 实现 KV Cache | [day2/](day2/README.md) |
 | Day 3 | vLLM 整体架构分析 | [day3/](day3/README.md) |
 | Day 4 | vLLM Worker 与 PagedAttention | [day4/](day4/README.md) |
+| **Day 4b** | **FlashDecoding —— Decode 阶段的并行度突破（补充专题）** | **[day4b/](day4b/README.md)** |
 | Day 5 | 项目推进 —— Mini 推理引擎 v0 | [day5/](day5/README.md) |
 | Day 6 | 端到端 Profiling | [day6/](day6/README.md) |
+| **Day 6b** | **量化推理专题 —— W8A16/INT8 KV Cache/FP8（补充专题）** | **[day6b/](day6b/README.md)** |
 | Day 7 | 推理系统核心问题总结与 Week 5 收官 | [day7/](day7/README.md) |

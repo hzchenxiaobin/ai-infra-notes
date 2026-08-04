@@ -26,7 +26,7 @@ Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里�
 
 今天的任务：把 Day 2 的 FlashAttention Kernel 封装成 PyTorch 可调用的 C++ Extension，接入 Week 3 的 Mini Transformer Block，用自定义 FA 替换 `QK^T → softmax → PV` 路径，对比正确性和 latency。
 
-> 💡 **一句话总结**：今天不优化 Kernel 本身（那是 Day 3-4 做的），而是学"怎么把 Kernel 塞进框架"——这是工程集成的标准流程。Week 3 Day 19 我们已经做过 Softmax/LayerNorm 的集成，今天用同样模式集成 FlashAttention。
+> 💡 **一句话总结**：今天不优化 Kernel 本身（那是 Day 3-4 做的），而是学"怎么把 Kernel 塞进框架"——这是工程集成的标准流程。Week 3 Day 5 我们已经做过 Softmax/LayerNorm 的集成，今天用同样模式集成 FlashAttention。
 
 ---
 
@@ -36,7 +36,7 @@ Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里�
 
 ![FlashAttention Naive vs Fused 对比](../images/flash_attention_naive_vs_fused.svg)
 
-在 Week 3 Day 19 的 Mini Engine v1 基础上，v2 用自定义 FlashAttention 替换标准 Attention：
+在 Week 3 Day 5 的 Mini Engine v1 基础上，v2 用自定义 FlashAttention 替换标准 Attention：
 
 ![Mini Transformer Engine v2 数据流](../../images/week4_transformer_engine_flow.svg)
 
@@ -330,9 +330,9 @@ Speedup: 1.5x ~ 3.0x
 
 #### 实验 2：同时使用 FA + 自定义 LayerNorm
 
-在 Mini 引擎中同时使用自定义 FlashAttention（Day 2）和自定义 LayerNorm（Week 3 Day 16），对比全 PyTorch 版速度。
+在 Mini 引擎中同时使用自定义 FlashAttention（Day 2）和自定义 LayerNorm（Week 3 Day 2），对比全 PyTorch 版速度。
 
-> 提示：Week 3 Day 19 已做过 LayerNorm 集成，把两个自定义算子组合到同一个 TransformerBlock。
+> 提示：Week 3 Day 5 已做过 LayerNorm 集成，把两个自定义算子组合到同一个 TransformerBlock。
 
 #### 实验 3：用 nsys 观察时间线
 

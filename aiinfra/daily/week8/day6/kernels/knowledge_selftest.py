@@ -64,8 +64,8 @@ QUIZ_BANK = [
         "q": "RTX 5090 的 Ridge Point 是多少？如何计算？含义是什么？",
         "a": (
             "Ridge Point = Peak FLOP/s / Peak Bandwidth\n"
-            "            = 19.5 TFLOPS / 1.55 TB/s ≈ 12.6 FLOP/Byte\n"
-            "含义：算术强度 AI < 12.6 → memory-bound；AI > 12.6 → compute-bound。\n"
+            "            = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte\n"
+            "含义：算术强度 AI < 58.45 → memory-bound；AI > 58.45 → compute-bound。\n"
             "横轴 AI(FLOP/Byte)，纵轴 Performance(FLOP/s)；"
             "斜线段 = 带宽限制，水平段 = 算力限制。"
         ),

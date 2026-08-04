@@ -24,9 +24,9 @@ Day 1 我们用 Arithmetic Intensity + Roofline 论证过：**Decode 阶段 M=1�
 ```
 Decode 单步要读的数据：
   权重 W：model_size 字节（每步都读一遍，M=1 无法 amortize）
-  KV Cache：2 × seq_len × d × layers × 2 字节（FP16，随 L 线性增长）
+  KV Cache：2 × seq_len × n_heads × d_head × layers × 2 字节（FP16，随 L 线性增长）
 
-例：7B 模型，FP16 → 权重 14 GB；seq=4096, d=128, layers=32 → KV ≈ 134 MB
+例：7B 模型，FP16 → 权重 14 GB；seq=4096, n_heads=32, d_head=128, layers=32 → KV ≈ 2 GB（与 Day 2 口径一致）
   → 每步读 14 GB 权重（HBM 带宽 ~1 TB/s → ~14 ms 下限）
   → 权重带宽是 Decode 延迟的硬地板
 ```
@@ -175,7 +175,7 @@ $$\mathrm{score}^{(t)} = \frac{1}{\sqrt{d}}\,Q\cdot \hat{K}^{(t)} = \frac{1}{\sq
 | 维度 | FP16 KV Cache | INT8 KV Cache |
 |------|---------------|---------------|
 | 每元素字节 | 2 B | 1 B + per-token scale（均摊 ~0） |
-| seq=4096 KV 总量 | 134 MB | 67 MB |
+| seq=4096 KV 总量（7B 单请求，32层×32头×128维） | ~2 GB | ~1 GB |
 | Decode 读 KV 带宽 | 1× | ~0.5× |
 | TBT 随 L 增长斜率 | 基准 | 减半 |
 | 精度损失（ppl） | 0 | <1%（per-token 保护 outlier） |
@@ -229,16 +229,16 @@ $$\text{FP8 E4M3: }(-1)^{\text{sign}}\cdot 2^{e-7}\cdot(1+\frac{m}{8}),\qquad \t
 ##### 显存节省计算
 
 ```
-7B 模型示例（FP16 基线）：
+7B 模型示例（FP16 基线，单请求）：
   权重:    7B × 2B       = 14 GB
-  KV(seq=4096, d=128, L=32): 2 × 4096 × 128 × 32 × 2B = 64 MB
-  （单请求；并发 batch=32 时 KV = 2 GB）
+  KV(seq=4096, n_heads=32, d_head=128, L=32): 2 × 4096 × 32 × 128 × 32 × 2B ≈ 2 GB
+  （单请求 ≈ 2 GB；并发 batch=16 时 KV ≈ 32 GB，见 Day 2 显存表）
 
-量化后：
+量化后（单请求）：
   W4A16:   7B × 0.5B     = 3.5 GB  (权重 1/4)
   W8A16:   7B × 1B       = 7 GB    (权重 1/2)
-  INT8 KV: KV × 0.5      = 1 GB    (batch=32 KV, 1/2)
-  W4A16 + INT8 KV: 3.5 GB + 1 GB = 4.5 GB  (总 14→4.5 GB, 3.1×)
+  INT8 KV: KV × 0.5      ≈ 1 GB    (KV 1/2)
+  W4A16 + INT8 KV: 3.5 GB + 1 GB ≈ 4.5 GB  (总 16→4.5 GB, 3.6×)
 ```
 
 显存节省直接转化为 **更大并发 batch**（同样显存能塞更多请求）→ **吞吐提升**。

@@ -369,31 +369,26 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 #### 任务 5：GitHub 仓库整理
 
-把本周 Day 1–Day 6 的产出整理成可展示的仓库结构。建议在 `week2/` 下补充：
+把本周 Day 1–Day 6 的产出整理成可展示的仓库结构。当前实际结构如下（按天分目录，kernel 在各天的 `kernels/` 下）：
 
 ```
 week2/
-├── README.md # 本周教程（已有）
-├── kernels/
-│ ├── warp_reduce.cu # Day 1 产出
-│ ├── register_blocking_gemm.cu # Day 2 产出
-│ ├── multi_stream_pipeline.cu # Day 3 产出
-│ ├── flash_attention.cu # Day 5 产出
-│ └── integrated_gemm.cu # Day 6 产出
-├── notes/
-│ ├── nsight_profile_report.md # Day 4 报告
-│ └── week2_summary.md # 本周总结
-├── exercise/
-│ ├── block_reduce_timed.cu # Day 7 手撕产出
-│ └── gemm_timed.cu # Day 7 手撕产出
-└── website/ # 静态网站（已有）
+├── README.md # 本周教程
+├── day1/kernels/warp_reduce.cu # Day 1 产出
+├── day2/kernels/register_blocking_gemm.cu # Day 2 产出
+├── day3/kernels/multi_stream_pipeline.cu # Day 3 产出
+├── day4b/kernels/cutlass_gemm_example.cu # Day 4b 产出（扩展专题）
+├── day5/kernels/flash_attention.cu # Day 5 产出
+├── day6/kernels/ # Day 6 产出（gemm_optimization_series / integrated_gemm / integrated_gemm_leetgpu）
+├── day6b/kernels/wmma_gemm.cu # Day 6b 产出（扩展专题）
+└── day7/ # Day 7 手撕与总结（本目录）
 ```
 
 ##### 整理 Checklist
 
 - [ ] 每个 `.cu` 文件顶部有注释：编译命令、功能说明、对应 Day
-- [ ] `notes/week2_summary.md` 记录本周学习心得、踩坑、性能数据
-- [ ] `kernels/` 中所有 kernel 能独立编译运行
+- [ ] 在 `day7/notes/` 下补充 `week2_summary.md`，记录本周学习心得、踩坑、性能数据
+- [ ] 各天 `dayN/kernels/` 中的 kernel 能独立编译运行
 - [ ] 顶层 `README.md` 的 Week 2 链接可跳转
 
 ---
@@ -696,19 +691,22 @@ week2/
 │ ├── README.md
 │ └── kernels/multi_stream_pipeline.cu
 ├── day4/ # Day 4: Nsight Compute Profiling
+│ └── README.md
+├── day4b/ # Day 4b: CUTLASS 源码分析（扩展专题）
 │ ├── README.md
-│ └── profiles/ # ncu 报告
+│ └── kernels/cutlass_gemm_example.cu
 ├── day5/ # Day 5: FlashAttention 简化版
 │ ├── README.md
 │ └── kernels/flash_attention.cu
 ├── day6/ # Day 6: 整合优化 GEMM
 │ ├── README.md
-│ └── kernels/integrated_gemm.cu
+│ └── kernels/ # gemm_optimization_series.cu / integrated_gemm.cu / integrated_gemm_leetgpu.cu
+├── day6b/ # Day 6b: Tensor Core 与 WMMA（扩展专题）
+│ ├── README.md
+│ └── kernels/wmma_gemm.cu
 ├── day7/ # Day 7: 限时手撕 + 验收
 │ └── README.md
-└── website/ # 网站构建
- ├── build.py
- └── images/ # SVG 插图
+└── images/ # 本周 SVG 插图
 ```
 
 ---

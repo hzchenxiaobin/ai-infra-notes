@@ -319,19 +319,20 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 ## 📁 本周目录结构
 
 ```
-aiinfra/week6/
+aiinfra/daily/week6/
 ├── README.md # 周概览
 ├── day1/kernels/dynamic_batcher.py # Dynamic Batching 实现
 ├── day2/kernels/continuous_batcher.py # Continuous Batching 实现
 ├── day3/kernels/vllm_scheduler_analyzer.py # vLLM Scheduler 复刻
 ├── day4/kernels/chunked_prefill_simulator.py # Chunked Prefill 延迟模拟
+├── day4b/kernels/prefix_cache_engine.py # Chunked Prefill 与 Prefix Caching 实操（补充日）
 ├── day5/kernels/mini_engine_v1.py # Mini 推理引擎 v1
 ├── day6/kernels/benchmark_engine_v1.py # Latency/Throughput benchmark
 ├── day7/kernels/week6_summary.py # 总结日自测脚本
-└── images/ # 18 张 SVG
-https://hzchenxiaobin.github.io/leetgpu/ # LeetGPU 题解（已迁移至独立站点）
-https://hzchenxiaobin.github.io/leetcode/ # LeetCode 题解（已迁移至独立站点）
+└── images/ # 本周 SVG 插图
 ```
+
+> 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
 
 ## 🔗 推荐资源
 

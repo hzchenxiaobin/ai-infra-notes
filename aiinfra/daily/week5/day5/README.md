@@ -293,8 +293,9 @@ Prompt: hello world this is a test
 Generated (with cache): is <unk_497> <unk_592> ...
 
 === KV Cache Correctness Check ===
- with cache first token: [4]
- without cache tokens: [4, 497, 592, 534, 130]
+ with cache:    'is <unk_497> <unk_592> <unk_534> <unk_130>'
+ without cache: 'is <unk_497> <unk_592> <unk_534> <unk_130>'
+ ✅ PASS: with/without KV Cache 逐 token 输出一致
 
 === Multi-turn Cache Reuse Demo ===
  Round 1: '<unk_177> <unk_493> ...'
@@ -310,7 +311,7 @@ Generated (with cache): is <unk_497> <unk_592> ...
 
 ##### 验证逻辑解读
 
-1. **with cache 与 without cache 输出一致**：`without cache tokens: [4, 497, 592, 534, 130]` 与 with cache 的首 token `[4]` 及后续 token 完全一致——证明 KV Cache 只加速不改变结果
+1. **with cache 与 without cache 逐 token 一致**：脚本用 `assert` 强制比较两条路径的完整输出序列（`decode` 是 id→word 的确定性映射，字符串相等即逐 token 相等），打印 `✅ PASS` 才通过——证明 KV Cache 只加速不改变结果
 2. **生成的 token 是"乱码"**：因为模型是随机初始化的（没训练），生成无语义——我们只验证**引擎流程正确**，不关心生成质量
 3. **KV Cache 内存占用**：4 层 × 8 头 × 64 d_head × fp32 → 每 token 16 KB，4096 token 64 MB
 

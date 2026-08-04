@@ -62,17 +62,17 @@
     <rect x="430" y="96" width="360" height="354" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
   </g>
   <text x="450" y="124" font-size="12" fill="#2b2b2b">FP32 Peak</text>
-  <text x="770" y="124" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">19.5 TFLOPS</text>
+  <text x="770" y="124" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">104.75 TFLOPS</text>
   <text x="450" y="152" font-size="12" fill="#2b2b2b">Tensor Core FP16</text>
-  <text x="770" y="152" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">312 TFLOPS</text>
+  <text x="770" y="152" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">209 TFLOPS</text>
   <text x="450" y="180" font-size="12" fill="#2b2b2b">Memory Bandwidth</text>
-  <text x="770" y="180" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">1.55 TB/s</text>
+  <text x="770" y="180" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">1.792 TB/s</text>
   <text x="450" y="208" font-size="12" fill="#2b2b2b">Ridge Point</text>
-  <text x="770" y="208" text-anchor="end" font-size="12" fill="#8e5db8" font-weight="bold">~12.6 FLOP/Byte</text>
+  <text x="770" y="208" text-anchor="end" font-size="12" fill="#8e5db8" font-weight="bold">~58.45 FLOP/Byte</text>
   <text x="450" y="236" font-size="12" fill="#2b2b2b">Shared Memory / SM</text>
-  <text x="770" y="236" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">164 KB</text>
+  <text x="770" y="236" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">100 KB</text>
   <text x="450" y="264" font-size="12" fill="#2b2b2b">Max Threads / SM</text>
-  <text x="770" y="264" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">2048</text>
+  <text x="770" y="264" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">1536</text>
   <text x="450" y="292" font-size="12" fill="#2b2b2b">Warp Size</text>
   <text x="770" y="292" text-anchor="end" font-size="12" fill="#4a8edb" font-weight="bold">32</text>
   <text x="450" y="320" font-size="12" fill="#2b2b2b">Max Registers / Thread</text>
@@ -86,5 +86,5 @@
   <text x="770" y="412" text-anchor="end" font-size="12" fill="#4a8e4a" font-weight="bold">~137 GFLOP</text>
 
   <text x="410" y="488" text-anchor="middle" font-size="12" fill="#888">背诵技巧：先记"量纲"（FLOP/Byte、TFLOPS），再记"数字"，最后记"含义"</text>
-  <text x="410" y="508" text-anchor="middle" font-size="11" fill="#888">Ridge = 19.5/1.55 = 12.6 → 用算力÷带宽自己推，不要硬背</text>
+  <text x="410" y="508" text-anchor="middle" font-size="11" fill="#888">Ridge = 104.75/1.792 ≈ 58.45 → 用算力÷带宽自己推，不要硬背</text>
 </svg>

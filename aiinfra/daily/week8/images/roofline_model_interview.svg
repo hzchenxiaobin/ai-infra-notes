@@ -52,7 +52,7 @@
   <!-- ridge point -->
   <g filter="url(#sk)"><circle cx="400" cy="180" r="6" fill="#c98a2b" stroke="#7a5415" stroke-width="1.5"/></g>
   <text x="412" y="176" font-size="10" fill="#7a5415" font-weight="bold">Ridge Point</text>
-  <text x="412" y="190" font-size="9" fill="#7a5415">≈ 12.6 FLOP/Byte (RTX 5090)</text>
+  <text x="412" y="190" font-size="9" fill="#7a5415">≈ 58.45 FLOP/Byte (RTX 5090)</text>
 
   <!-- ===== Kernel dots ===== -->
   <!-- SiLU: low AI, low perf (memory-bound) -->
@@ -81,11 +81,11 @@
   </g>
   <text x="680" y="322" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">RTX 5090 关键参数</text>
   <g font-size="10" fill="#444">
-    <text x="596" y="344">FP32 峰值: 19.5 TFLOPS</text>
-    <text x="596" y="362">Tensor Core FP16: 312 TFLOPS</text>
-    <text x="596" y="380">HBM 带宽: 1.55 TB/s</text>
-    <text x="596" y="400" fill="#c98a2b" font-weight="bold">Ridge = 19.5/1.55</text>
-    <text x="596" y="414" fill="#c98a2b" font-weight="bold">      ≈ 12.6 FLOP/Byte</text>
+    <text x="596" y="344">FP32 峰值: 104.75 TFLOPS</text>
+    <text x="596" y="362">Tensor Core FP16: 209 TFLOPS</text>
+    <text x="596" y="380">HBM 带宽: 1.792 TB/s</text>
+    <text x="596" y="400" fill="#c98a2b" font-weight="bold">Ridge = 104.75/1.792</text>
+    <text x="596" y="414" fill="#c98a2b" font-weight="bold">      ≈ 58.45 FLOP/Byte</text>
   </g>
 
   <!-- ===== How to use ===== -->

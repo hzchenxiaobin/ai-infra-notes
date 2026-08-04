@@ -20,11 +20,17 @@ Day 2: 完整调度器 → 优先级、超时、资源预算、抢占
   ↓
 Day 3: SGLang / LightLLM 高级特性 → Speculative Decoding、Chunked Prefill、Prefix Caching
   ↓
+Day 3b（补充专题）: 分布式推理 → TP/PP/DP 与通信计算重叠
+  ↓
 Day 4: 整合全部自定义 Kernel → GEMM、FlashAttention、Softmax、LayerNorm 接入
+  ↓
+Day 4b（补充专题）: Ring Attention → 长上下文分布式注意力
   ↓
 Day 5: 系统联调 → KV Cache + Batching + Scheduler + Kernel 端到端测试
   ↓
 Day 6: 全链路 Profiling → 系统级瓶颈定位、与 vLLM 对比
+  ↓
+Day 6b（补充专题）: CUDA Graph 实操 → 消除 Kernel Launch Overhead
   ↓
 Day 7: 代码重构与文档 → README、架构图、接口统一、稳定性测试
 ```
@@ -40,7 +46,10 @@ Day 7: 代码重构与文档 → README、架构图、接口统一、稳定性�
 | Day 1 | 多请求并发支持 | [day1/](day1/README.md) |
 | Day 2 | 完整调度器 | [day2/](day2/README.md) |
 | Day 3 | SGLang / LightLLM 高级特性 | [day3/](day3/README.md) |
+| **Day 3b** | **分布式推理专题 —— TP/PP/DP 与通信计算重叠（补充专题）** | **[day3b/](day3b/README.md)** |
 | Day 4 | 整合全部自定义 Kernel | [day4/](day4/README.md) |
+| **Day 4b** | **Ring Attention —— 长上下文分布式注意力（补充专题）** | **[day4b/](day4b/README.md)** |
 | Day 5 | 系统联调 | [day5/](day5/README.md) |
 | Day 6 | 全链路 Profiling | [day6/](day6/README.md) |
+| **Day 6b** | **CUDA Graph 实操 —— 消除 Kernel Launch Overhead（补充专题）** | **[day6b/](day6b/README.md)** |
 | Day 7 | 代码重构与文档 | [day7/](day7/README.md) |
