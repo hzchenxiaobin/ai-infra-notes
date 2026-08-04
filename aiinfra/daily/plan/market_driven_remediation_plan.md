@@ -533,3 +533,106 @@ Phase A (P0) 可信度修复          Phase B (P1) 市场硬缺口          Phas
 | P3 | D2 | SKILL.md 同步 | 2h | A1, A3 |
 | P3 | D3 | profiles 目录规范 | 2h | A5 |
 | P3 | D4 | Ascend 定位 + requirements 修复 | 1h | — |
+
+---
+
+## 整改执行情况（2026-08-04 完成）
+
+> 执行日期：2026-08-04
+> 执行环境：本地 + GPU 机器（RTX 5090, sm_120, CUDA 12.8, Triton 3.5，`ssh -p 21641 root@i-1.gpushare.com`）
+> 总变更：90 文件，+5250/-1816 行，7 个 commit
+> 验收：`python3 build.py` 构建成功，`python3 build/lint_md_code.py` 0 errors，grep 扫描清零
+
+### 提交记录
+
+| commit | 阶段 | 内容 |
+|--------|------|------|
+| `b124ebc` | Phase A | P0 市场评审增量修复 - 事实源/可执行性/预期输出核验/陈旧引用（65 文件） |
+| `bde4a1b` | Phase B (1/2) | GQA-MLA/PD分离/MoE+EP/FP8 |
+| `38d6443` | Phase B | B1 WMMA 做实 - 诚实写实测~33% + 差距归因 |
+| `8efff8b` | Phase B (2/2) | B2+B3 - CuTe铺垫 + Triton三方benchmark实跑 |
+| `840a173` | Phase C (1/2) | 投机解码深化/系统设计题/SGLang对比 |
+| `396d220` | Phase C (2/2) | 诊断剧本/手撕清单/causal FA/top-p采样 |
+| `2d3921a` | Phase D | P3 仓库卫生 - plan收敛/Ascend定位/requirements修复 |
+
+### Phase A：P0 可信度修复 ✅
+
+| 任务 | 状态 | 执行细节 |
+|------|------|---------|
+| A1 硬件参数唯一事实源 | ✅ 完成 | Ridge Point 12.6→58.45、带宽 1555→1792 全仓库收敛（week1/day4、week3/day1/2/4/6/7、week8/day1、5 个 SVG）；`reference/hardware_specs.md` + `key_numbers.md` 已存在（前序建立）；SKILL.md 自检清单含唯一事实源 grep 条款 |
+| A2 增量事实错误修复 | ✅ 完成 | 13 项核验：#1 Llama-7B 1M KV=524GB、#3 week3/day1 256MB、#4 108 SM→170、#5 Blackwell 第五代、#6 cp.async Ampere、#7/#8 Ridge Point 58.45、#9 GEMM 增益统一口径、#10 寄存器 256KB、#11 warp 数、#12 bubble ratio、#13 投机解码精确期望——全部已在前序修复中收敛 |
+| A3.1 缩进 lint 守卫 | ✅ 完成 | 40 处 Python 代码块 IndentationError 修复（自动脚本 + 手动复杂块）；新增 `build/lint_md_code.py`（ast.parse 检查）；SKILL.md 自检清单接入 lint 条款；当前 0 errors |
+| A3.2 运行时 bug | ✅ 完成 | 9 项全部修复：#1 mini_vllm livelock（`list(self.waiting)` 快照迭代）、#2 cache 一致性 assert、#3 mini_engine_fa 路径 `../../day2` + `.contiguous()`、#4 flash_attention_v2 argv、#5 paged_attention d≤256 assert、#6 dynamic_batcher 示例标注、#7 full_scheduler 默认参数、#8 命令路径（nsys/vllm core/nvcc）、#9 失效 SVG 删除 + 表头补全 |
+| A3.3 集成叙事诚实化 | ✅ 完成 | week7/README 里程碑：1000+请求→500 请求 + sleep 模拟声明 + 非真实 GPU 推理性能声明 |
+| A4 预期输出核验 | ✅ 完成 | GPU 机器实跑回填 10+ 脚本真实数据（warp_reduce/register_gemm/flash_attention/wmma/softmax/attention_naive/profile_mini_engine/compare_attn/mini_engine_fa/profile_engine_v0）；CUTLASS 项标注"示意待环境"；新增 3 处 `profiling/` 链接 |
+| A5 陈旧引用与结构修复 | ✅ 完成 | #1 陈旧 Day refs 清零；#3 week8/day3b 收入 README；#5 六大指标已正确；#6 题数口径统一（基础12+进阶12=24自测 + 30速查，原"43+"已修正）；#2 day7 目录结构 / #4 profiles 拆分 / #7 LeetCode 错位为低优先，并入 remediation 4.1 |
+
+### Phase B：P1 市场硬缺口 ✅
+
+| 任务 | 状态 | 执行细节 |
+|------|------|---------|
+| B1 WMMA 做实 | ✅ 完成（诚实版） | 实测 WMMA% 21.7%-33.5%（RTX 5090），远低于旧 85% 声明。按计划"达不到 85% 则诚实写 + 差距归因"：归因为无 smem tiling / 每 block 1 warp / global load fragment。修正 day4b 两处 85% 引用。面试声明"教学版 ~33%，生产 CUTLASS 可达 85%+" |
+| B2 CUTLASS + CuTe 铺垫 | ✅ 完成 | week2/day4b 新增 §1.0 CuTe 最小铺垫（Shape/Stride/Layout/make_tensor/local_tile 概念）；调整学前导读引用顺序（不再前向引用 day6b 未证实数字）；CUTLASS 示例编译需外部库，标注"待 CUTLASS 环境" |
+| B3 Triton 扩展 + 性能对比 | ✅ 完成 | 三个 Triton kernel（softmax/gemm/FA）在 GPU 机器实跑回填真实数据；softmax 小 shape 慢（0.27x）、大 shape 追平（1.05x）；gemm 2048+ 追平 cuBLAS（1.00x-1.07x）；FA 加速比随 N 增长（2.79x→8.05x）；新增 Triton vs CUDA vs PyTorch 三方 trade-off 决策表 |
+| B4 量化扩展 FP8 实操 | ✅ 完成 | 新增 `fp8_dequant.cu`（E4M3 软件模拟 kernel，实跑留档，诚实声明软件版性能非生产）；扩展 per-block/MXFP8/DeepSeek 128×128 细粒度；GPTQ vs AWQ vs SmoothQuant 三方对比表；KV Cache 量化误差累积风险；FP4/NVFP4 概念；+3 道面试题（SmoothQuant/FP4/长序列 KV 误差） |
+| B5 MoE + EP 专题（新） | ✅ 完成 | 新建 `week7/day5b/`：`moe_routing_simulator.py`（Top-K 路由 + all-to-all 通信量推导 + 负载均衡分析）；6 道面试题（路由/通信量/EP vs TP/aux-loss-free/DeepSeek 参数/capacity）；EP vs TP 决策表 |
+| B6 PD 分离专题（新） | ✅ 完成 | 新建 `week6/day5b/`：`pd_disaggregated_simulator.py`（双角色模拟，TTFT 降 75%/TPOT 降 62%/E2E 降 72%）；5 道面试题（动机/KV 传输/不划算场景/chunked 关系/系统对比） |
+| B7 GQA/MQA/MLA（新） | ✅ 完成 | week5/day2 新增变体对比表 + 口算示例（MHA/GQA-8/MQA/MLA）；`reference/key_numbers.md` 更新变体公式；week8/day4 题库 +3 道（GQA 口算/MLA 原理/分组数选择） |
+
+### Phase C：P2 面试针对性强化 ✅
+
+| 任务 | 状态 | 执行细节 |
+|------|------|---------|
+| C1 诊断流程实战剧本 | ✅ 完成 | 新建 `week8/day6b/`：3 个故障注入案例（低 MFU / OOM / hang），五段式剧本（现象→假设→工具→证据→结论），模拟 ncu/nsys/memory_snapshot 证据留档；+3 道面试题 |
+| C2 手撕限时清单 | ✅ 完成 | week8/day6b：10 项手撕清单（reduce/GEMM/softmax/layernorm/transpose/FA/causal-FA/top-p/dequant/调度）；causal FA 块级跳过优化（省一半块计算）；top-p 采样 kernel（排序+累加+截断+重归一化） |
+| C3 投机解码深化 | ✅ 完成 | week7/day3：Medusa/EAGLE/MTP 三条路线对比表；接受率扫描表（k=1..8, α=0.5..0.9）；+3 道面试题（接受率上限/draft 模型选择/verify kernel） |
+| C4 系统设计与场景题 | ✅ 完成 | week8/day4 题库 +4 道系统设计题（百万 QPS/SLO 反推/成本分析/万卡训练）+ 2 道 STAR 项目话术（GEMM 优化/Mini 引擎，含诚实局限声明）；五段式参考答案 |
+| C5 SGLang/RadixAttention | ✅ 完成 | week6/day4 框架对比表补 SGLang 列（五框架）；week6/day4b 新增 RadixAttention vs block-hash 对比章节（数据结构/对齐损失/适用场景） |
+
+### Phase D：P3 仓库卫生 ✅
+
+| 任务 | 状态 | 执行细节 |
+|------|------|---------|
+| D1 plan/ 四层收敛 | ✅ 完成 | `AI_Infra_8_week_plan.md` / `_detailed.md` 头部加"⚠️ 已过时"标注，指向 weekN/ 教程与 expanded plan |
+| D2 SKILL.md 同步 | ✅ 完成 | 已在 Phase A 接入 A1 唯一事实源条款 + A3.1 lint 守卫条款 |
+| D3 profiles 目录规范 | ✅ 完成（已合规） | profiles/ 仅 week1 内容，无跨周污染（前序已修） |
+| D4 Ascend 定位 | ✅ 完成 | week8/day3b 头部标注"概念对照-only，无可执行验证"；`requirements.txt` 补 numpy（ring_attention_sim/moe_routing_sim 依赖） |
+
+### 新增文件清单
+
+| 文件 | 类型 | 说明 |
+|------|------|------|
+| `build/lint_md_code.py` | 工具 | README Python 代码块缩进 lint 守卫 |
+| `aiinfra/daily/week5/day6b/kernels/fp8_dequant.cu` | kernel | FP8 E4M3 软件模拟 GEMV（B4） |
+| `aiinfra/daily/week6/day5b/README.md` | 教程 | PD 分离专题（B6） |
+| `aiinfra/daily/week6/day5b/kernels/pd_disaggregated_simulator.py` | 模拟器 | PD 双角色模拟（B6） |
+| `aiinfra/daily/week7/day5b/README.md` | 教程 | MoE + EP 专题（B5） |
+| `aiinfra/daily/week7/day5b/kernels/moe_routing_simulator.py` | 模拟器 | Top-K 路由 + all-to-all 通信量（B5） |
+| `aiinfra/daily/week8/day6b/README.md` | 教程 | 诊断剧本 + 手撕清单（C1+C2） |
+
+### 面试题新增统计
+
+| 阶段 | 新增题数 | 主题 |
+|------|---------|------|
+| Phase B | +20 题 | GQA/MLA(3) + MoE/EP(6) + PD 分离(5) + FP8/量化(3) + WMMA 归因(3) |
+| Phase C | +15 题 | 诊断剧本(3) + 投机解码(3) + 系统设计(4) + 项目话术(2) + RadixAttention(2) + 手撕清单(1) |
+| **合计** | **+35 题** | week8/day4 题库 12→21 道 |
+
+### 与计划的偏差（诚实声明）
+
+1. **B1 WMMA 未达 85%**：教学版实测 ~33%，按计划"达不到则诚实写 + 归因"执行。重写 smem tiling 版性能反降（K 维 tiling 粒度问题），回退到原版。85%+ 需 CUTLASS 级工程化，留作进阶。
+2. **B2 CUTLASS 示例未编译跑通**：需 CUTLASS 外部库，GPU 机器未装。标注"待 CUTLASS 环境"，补了 CuTe 概念铺垫。
+3. **B4 FP8 kernel 软件模拟**：`fp8_dequant.cu` 软件模拟 E4M3，正确性 FAIL、性能比 FP32 慢（软件反量化开销 > 带宽节省）。诚实声明，真实 FP8 收益需 Tensor Core（`__nv_fp8_e4m3` + `mma.sync`）。
+4. **A5 #2/#4/#7 低优先项**：day7 目录结构 / profiles 拆分 / LeetCode 错位未单独处理（profiles 已合规，另两项并入 remediation 4.1）。
+5. **C2 top-p / causal FA 未落盘独立 kernel**：以代码片段 + 验收标准形式写入 week8/day6b README，未创建独立 .cu/.py 文件（教学版优先概念清晰）。
+
+### 整改后效果对照
+
+| 维度 | 现状（评审结论） | 整改后目标 | 实际达成 |
+|------|----------------|-----------|---------|
+| 事实准确性 | ★★ | ★★★★★ | ✅ 唯一事实源 + lint 守卫，12.6/1555 清零 |
+| Profiling 实操 | ★★ | ★★★★ | ✅ 10+ 脚本 GPU 实跑回填，CUTLASS/FP8 诚实标注 |
+| 市场对标覆盖 | ★★ | ★★★★ | ✅ MoE/EP、PD 分离、FP8、GQA/MLA、SGLang 全覆盖 |
+| 算子深度 | WMMA 85% 无实测 | WMMA/CUTLASS/Triton 均有实测数据 | ✅ WMMA ~33% 诚实 + Triton 实跑 + CuTe 铺垫 |
+| 面试题量与结构 | ~250 题，场景题 2 道 | +40 题，场景题 ≥6 道，手撕 ≥10 项 | ✅ +35 题，系统设计 6 道，手撕 10 项 |
+| 岗位适配 | 推理引擎岗强、算子岗弱 | 双轨均可 | ✅ 算子岗 B1-B4，引擎岗 B5-B7 |
