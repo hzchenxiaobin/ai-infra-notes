@@ -114,6 +114,33 @@ KV Cache 是一个 5 维张量，K 和 V 各一份：
 
 > 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
 
+##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
+
+上表的 `n_heads` 是 **KV head 数**（`n_kv_head`）。不同注意力变体通过缩减 `n_kv_head` 来压缩 KV Cache，这是 2023+ 模型降低推理显存的主流手段。
+
+| 变体 | n_kv_head | 每 token KV bytes（相对 MHA） | 代表模型 | 说明 |
+|------|-----------|------------------------------|---------|------|
+| **MHA**（标准） | = n_head | 1×（基准） | LLaMA-7B（32/32） | 每个 query head 独立一份 K/V |
+| **GQA**（Grouped） | n_head / g（g=分组数） | 1/g | LLaMA-3-8B（8/32，g=4→1/4） | g 个 query head 共享一组 K/V；g=n_head 退化为 MQA |
+| **MQA**（Multi-Query） | 1 | 1/n_head | PaLM、Falcon | 所有 query head 共享同一份 K/V，KV Cache 最小但精度损失 |
+| **MLA**（Multi-head Latent） | 压缩到 d_c（低秩） | ~d_c/(n_head·d_head) | DeepSeek-V2/V3 | K/V 不直接存，存低秩"潜在向量"（d_c 维），attention 时现场解压 |
+
+**口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
+
+```
+MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
+GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
+MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
+MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
+```
+
+> 💡 **面试要点**：
+> - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
+> - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
+> - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
+>
+> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
+
 #### 2.3 分配策略：静态 vs 动态 vs PagedAttention
 
 ![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)

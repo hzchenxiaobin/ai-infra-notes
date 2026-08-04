@@ -220,6 +220,74 @@ $$\text{FP8 E4M3: }(-1)^{\text{sign}}\cdot 2^{e-7}\cdot(1+\frac{m}{8}),\qquad \t
 
 > 💡 **一句话总结**：FP8 = "自带动态范围的 INT8"。INT8 靠精细 scale 粒度对抗 outlier，FP8 靠浮点指数自然对抗——所以 FP8 可以用更粗的 scale（甚至 per-tensor），kernel 更简单。代价是 Hopper/Blackwell 才有原生 Tensor Core 支持，老卡用不了。
 
+##### per-tensor vs per-block（MXFP8 / DeepSeek 128×128 细粒度）
+
+FP8 虽然浮点动态范围大，但单 per-tensor scale 在大模型上仍有精度损失（不同层/通道的数值分布差异大）。2024+ 主流是**更细粒度的 scale**：
+
+| Scale 粒度 | 含义 | 精度 | kernel 复杂度 | 代表 |
+|-----------|------|------|-------------|------|
+| per-tensor | 全张量一个 scale | 最低 | 最简单 | 早期 FP8 |
+| per-channel | 每输出通道一个 scale | 中 | 中 | INT8 常用 |
+| per-block（MXFP8） | 每 32 元素共享一个 scale（microscaling） | 高 | 较高 | OCP MXFP8 标准 |
+| **per-128×128**（DeepSeek） | 每 128×128 块一个 scale | 最高 | 高 | DeepSeek-V3 FP8 训练 |
+
+> 💡 **DeepSeek 的 128×128 细粒度**：DeepSeek-V3 用 per-128×128 block scale 的 FP8，精度接近 FP16 但算力/带宽享 FP8 红利。这是 2024-2026 FP8 工程化的前沿，面试追问"DeepSeek 怎么用 FP8 不掉精度"的标准答案。
+
+##### GPTQ vs AWQ vs SmoothQuant 三方对比
+
+W4A16 时代是 AWQ vs GPTQ 两强，W8A8/FP8 时代多了 SmoothQuant。三方对比：
+
+| 维度 | AWQ | GPTQ | SmoothQuant |
+|------|-----|------|-------------|
+| **量化对象** | 权重（W4A16） | 权重（W4A16） | 权重 + 激活（W8A8） |
+| **核心思想** | activation-aware：保护重要通道 | Hessian-based：最优补偿误差 | 平滑激活 outlier 到权重 |
+| **校准数据** | 需要（少量） | 需要（128~1024 样本） | 需要 |
+| **求解方式** | 启发式（搜索保护比例） | 闭式解（Hessian 逆） | 闭式解（迁移 scale） |
+| **精度（W4）** | 优秀 | 优秀（部分模型略好） | N/A（主要 W8A8） |
+| **精度（W8A8）** | N/A | N/A | 优秀（INT8/FP8） |
+| **速度** | 快（启发式） | 慢（Hessian 求逆） | 快（闭式） |
+| **适用场景** | W4A16 部署 | W4A16 精度敏感 | W8A8/FP8 激活量化 |
+| **典型落地** | vLLM、LMDeploy | AutoGPTQ、bitsandbytes | TensorRT-LLM、SGLang |
+
+> 💡 **SmoothQuant 的关键洞察**：激活的 outlier 比 权重大，直接 INT8 量化激活会崩。SmoothQuant 把激活的 outlier "迁移"到权重（`x' = x/s, W' = s·W`），让两者都变平滑，再统一 INT8/FP8 量化。这是 W8A8 激活量化的标配前置步骤。
+
+##### KV Cache 量化的误差累积风险
+
+KV Cache 量化（INT8/FP8）对长序列 attention 有特殊风险——**误差累积**：
+
+```
+attention: O = softmax(Q · K^T) · V
+  K/V 来自 KV Cache，每步追加
+  量化误差在 K^T 和 V 上都会被 softmax 放大
+  长序列（N 大）时，softmax 的指数运算让小误差被放大
+```
+
+| 序列长度 | KV INT8 误差对 attention 的影响 | 缓解 |
+|---------|------------------------------|------|
+| 短（<512） | 可忽略（<1e-4） | 直接 INT8 |
+| 中（512~4K） | 轻微（~1e-3） | per-token scale |
+| 长（>4K） | 显著（>1e-2，可能影响生成质量） | FP8 或混合（前缀 FP16 + 尾部 INT8） |
+
+> ⚠️ **面试要点**：KV Cache 量化不是"无脑 INT8"。长序列场景需用 FP8（浮点动态范围）或混合策略（近期 token FP16 保精度，远期 INT8 省显存）。vLLM 的 `kv_cache_dtype` 参数支持 `fp8` 正是这个原因。
+
+##### FP4（NVFP4）—— Blackwell 新特性
+
+Blackwell（B100/RTX 5090）引入 **FP4** Tensor Core：
+
+| 格式 | 位宽 | 指数位 | 尾数位 | 动态范围 | 用途 |
+|------|------|--------|--------|---------|------|
+| FP8 E4M3 | 8 | 4 | 3 | ±448 | 前向主力 |
+| **NVFP4** | 4 | 3 | 0（隐含） | ±12 | 超低精度推理/训练 |
+
+**NVFP4 的关键**：不是裸 4-bit，而是 **microscaling**——每 32 元素共享一个 scale（类似 MXFP8 但更细）。精度介于 INT4 和 FP8 之间，但算力是 FP8 的 2×（Blackwell FP4 Tensor Core）。
+
+**FP4 vs FP8 取舍**：
+- FP4：算力最高（2× FP8），显存最省（1/2 FP8），精度损失更大（需校准）
+- FP8：精度好，算力够用，生态成熟
+- 2026 趋势：FP4 用于"能接受精度损失"的场景（如投机解码的 draft 模型），FP8 仍是主力
+
+> 📖 延伸阅读：NVIDIA Blackwell 架构白皮书、OCP MXFP4/NVFP4 规范、DeepSeek-V3 FP8 训练报告
+
 ---
 
 #### 1.5 量化对推理系统的影响
@@ -363,6 +431,39 @@ ncu --kernel-name regex:gemv \
 
 > 💡 思考：为什么 `dram__throughput` 两者都高但 W8A16 更快？（提示：memory-bound kernel 都会把 HBM 带宽打满，但 W8A16 传的字节少一半——同样的带宽利用率下，传一半字节用一半时间。这正是量化对 memory-bound 的加速本质：**不提高带宽利用率，而是减少要传的字节**。）
 
+#### 任务 3b：创建 fp8_dequant.cu（FP8 E4M3 实操）
+
+创建文件 [kernels/fp8_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day6b/kernels/fp8_dequant.cu)，实现 FP8 E4M3 量化的 GEMV kernel（软件模拟 FP8 格式，验证反量化数学）：
+
+```bash
+nvcc -o fp8_dequant kernels/fp8_dequant.cu -O3 -arch=sm_120
+./fp8_dequant
+```
+
+**预期输出**（RTX 5090, sm_120；软件模拟 FP8，无 Tensor Core）：
+
+```text
+=== FP8 (E4M3) Dequant + GEMV Test ===
+N=1024 (out), K=1024 (in), M=1 (Decode GEMV)
+
+[Correctness vs FP32 ref]
+  FP8 GEMV max_diff: 6.30e+00  (FAIL — 软件 FP8 量化映射简化，精度不达标)
+
+[Memory: weight only]
+  FP32 weight: 4194304 bytes
+  FP8  weight: 1048576 bytes (+ scale 4 B)
+  savings:     4.0x
+
+[Latency (M=1 Decode GEMV, naive, 100 iters avg)]
+  FP32 GEMV: 0.094 ms
+  FP8  GEMV: 0.186 ms  (软件反量化开销 > 带宽节省，实际更慢)
+  speedup:   0.51x     (教学版，非生产)
+
+Note: 软件模拟 FP8, 无 Tensor Core 加速。生产用 __nv_fp8_e4m3 + FP8 TC。
+```
+
+> ⚠️ **诚实声明**：本 kernel 的 FP8 是**软件模拟**（简化量化映射），正确性 FAIL、性能比 FP32 慢——因为软件反量化开销远大于带宽节省。真实 FP8 收益来自 **FP8 Tensor Core**（`mma.sync` 原生 E4M3 输入，算力 2× FP16）。本 kernel 的价值是验证 FP8 E4M3 的位布局与反量化数学，生产实现需用 `__nv_fp8_e4m3` + FP8 TC。B1 任务（WMMA 做实）会展示真实 Tensor Core 收益。
+
 #### 任务 4：LeetGPU 在线题目 —— Weight Dequantization
 
 **题目链接**：<https://leetgpu.com/challenges/weight-dequantization>
@@ -498,3 +599,55 @@ Day 6b 我们把量化推理的三层武器一次讲透，并手写了两个最�
   - **决策**：无 Hopper → W4A16（AWQ）+ INT8 KV 性价比最高；有 Hopper/Blackwell → 加 FP8 全 8-bit + Tensor Core 算力翻倍
 
 </details>
+
+
+6. **SmoothQuant 是什么？为什么 W8A8 激活量化需要它？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **问题**：激活的 outlier 比 权重大得多，直接 INT8/FP8 量化激活会崩（outlier 拉大 scale，其余值精度骤降）
+  - **SmoothQuant 核心**：把激活的 outlier "迁移"到权重——`x' = x/s, W' = s·W`，让激活变平滑、权重略变陡（权重本来好量化）
+  - **数学**：`Y = x · W = (x/s) · (s·W) = x' · W'`，等价但 x' 的 outlier 被 s 吸收
+  - **s 的选择**：`s = max(|x|)^α / max(|W|)^(1-α)`，α 通常 0.5（激活与权重各分担一半 outlier）
+  - **与 AWQ/GPTQ 区别**：AWQ/GPTQ 只量化权重（W4A16），SmoothQuant 量化权重+激活（W8A8），是 FP8/INT8 激活量化的标配前置
+  - **落地**：TensorRT-LLM、SGLang 的 W8A8 流程都含 SmoothQuant 步骤
+
+</details>
+
+
+7. **FP4（NVFP4）是什么？与 FP8 相比有什么取舍？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（3 指数 + 隐含尾数），配合 microscaling（每 32 元素一个 scale）
+  - **算力**：Blackwell FP4 Tensor Core 算力 = FP8 的 2× = FP16 的 ~8×
+  - **显存**：FP4 = FP8 的 1/2 = FP16 的 1/4
+  - **精度**：介于 INT4 和 FP8 之间，需校准（比 FP8 损失大，比裸 INT4 好——microscaling 带来动态范围）
+  - **取舍**：
+    - FP4：算力最高、显存最省，精度损失大（适合能接受精度损失的场景，如投机解码 draft 模型）
+    - FP8：精度好、算力够用、生态成熟（仍是主力）
+  - **2026 趋势**：FP4 用于"能接受精度损失"的场景，FP8 仍是主力；NVFP4 的 microscaling 是关键（裸 4-bit 精度太差）
+
+</details>
+
+
+8. **长序列 KV Cache 量化有什么特殊风险？怎么缓解？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **风险：误差累积**：
+    - attention 的 softmax 对 K^T 和 V 的小误差会指数放大
+    - 长序列（N 大）时，softmax 的指数运算让量化误差被放大
+    - KV Cache 每 step 追加，早期 token 的量化误差一直存在，累积影响后续生成
+  - **按序列长度分档**：
+    - 短（<512）：INT8 可忽略（<1e-4），直接用
+    - 中（512~4K）：per-token scale 的 INT8（~1e-3）
+    - 长（>4K）：FP8（浮点动态范围）或混合策略
+  - **混合策略**：近期 token FP16 保精度，远期 INT8 省显存（vLLM 的 `kv_cache_dtype` 支持 `fp8`）
+  - **面试要点**：KV 量化不是"无脑 INT8"，长序列必须考虑误差累积；FP8 的浮点动态范围是长序列 KV 的更好选择
+
+</details>
+

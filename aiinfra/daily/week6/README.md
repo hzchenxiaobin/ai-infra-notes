@@ -26,6 +26,8 @@ Day 4b（补充专题）: Chunked Prefill 与 Prefix Caching 实操
   ↓
 Day 5: Mini 推理引擎 v1 → Continuous Batching + Scheduler + 多请求并发
   ↓
+Day 5b（补充专题）: Prefill/Decode 分离推理（PD Disaggregated Serving）
+  ↓
 Day 6: Latency / Throughput 测试 → 不同 batch size / 请求分布 / 饱和点
   ↓
 Day 7: 调度优化策略总结 → 策略对比表 + 面试复盘 + GitHub 整理
@@ -45,5 +47,6 @@ Day 7: 调度优化策略总结 → 策略对比表 + 面试复盘 + GitHub 整�
 | Day 4 | TensorRT-LLM / LightLLM 调度对比 | [day4/](day4/README.md) |
 | **Day 4b** | **Chunked Prefill 与 Prefix Caching 实操（补充专题）** | **[day4b/](day4b/README.md)** |
 | Day 5 | Mini 推理引擎 v1 | [day5/](day5/README.md) |
+| **Day 5b** | **Prefill/Decode 分离推理（PD Disaggregated Serving）** | **[day5b/](day5b/README.md)** |
 | Day 6 | Latency / Throughput 测试 | [day6/](day6/README.md) |
 | Day 7 | 调度优化策略总结与 Week 6 收官 | [day7/](day7/README.md) |

@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="680" viewBox="0 0 960 680" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="680" fill="#fdfcf7"/>
+  <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Triton vs CUDA vs torch.compile：三条"让算子变快"的路线</text>
+  <path d="M 280 42 Q 480 50 680 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Column headers -->
+  <text x="180" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">手写 CUDA C++</text>
+  <text x="480" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">Triton</text>
+  <text x="780" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">torch.compile</text>
+
+  <!-- abstraction level row -->
+  <g filter="url(#sk2)"><rect x="40" y="90" width="280" height="40" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="90" width="280" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="90" width="280" height="40" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="108" text-anchor="middle" font-size="10" fill="#444">抽象：thread / warp / block</text>
+  <text x="180" y="122" text-anchor="middle" font-size="10" fill="#b03a3a" font-weight="bold">三层（程序员全管）</text>
+  <text x="480" y="108" text-anchor="middle" font-size="10" fill="#444">抽象：program (block)</text>
+  <text x="480" y="122" text-anchor="middle" font-size="10" fill="#1b5e8c" font-weight="bold">一层（编译器管下层）</text>
+  <text x="780" y="108" text-anchor="middle" font-size="10" fill="#444">抽象：graph (whole model)</text>
+  <text x="780" y="122" text-anchor="middle" font-size="10" fill="#1b5e3a" font-weight="bold">整图（编译器决定）</text>
+
+  <!-- code volume row -->
+  <g filter="url(#sk2)"><rect x="40" y="138" width="280" height="50" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="138" width="280" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="138" width="280" height="50" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="156" text-anchor="middle" font-size="10" fill="#444">softmax 代码量</text>
+  <text x="180" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">~140 行</text>
+  <text x="480" y="156" text-anchor="middle" font-size="10" fill="#444">softmax 代码量</text>
+  <text x="480" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b5e8c">~25 行</text>
+  <text x="780" y="156" text-anchor="middle" font-size="10" fill="#444">softmax 代码量</text>
+  <text x="780" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b5e3a">0 行（自动编译）</text>
+
+  <!-- performance row -->
+  <g filter="url(#sk2)"><rect x="40" y="196" width="280" height="50" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="196" width="280" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="196" width="280" height="50" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="214" text-anchor="middle" font-size="10" fill="#444">性能</text>
+  <text x="180" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">最高（手工极致）</text>
+  <text x="480" y="214" text-anchor="middle" font-size="10" fill="#444">性能</text>
+  <text x="480" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#1b5e8c">高（~cuBLAS 70-90%）</text>
+  <text x="780" y="214" text-anchor="middle" font-size="10" fill="#444">性能</text>
+  <text x="780" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#1b5e3a">中（fused 但 tile 通用）</text>
+
+  <!-- flexibility row -->
+  <g filter="url(#sk2)"><rect x="40" y="254" width="280" height="44" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="254" width="280" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="254" width="280" height="44" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="272" text-anchor="middle" font-size="10" fill="#444">灵活性</text>
+  <text x="180" y="290" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">完全自由</text>
+  <text x="480" y="272" text-anchor="middle" font-size="10" fill="#444">灵活性</text>
+  <text x="480" y="290" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e8c">中（受限 block 内）</text>
+  <text x="780" y="272" text-anchor="middle" font-size="10" fill="#444">灵活性</text>
+  <text x="780" y="290" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e3a">低（编译器决定）</text>
+
+  <!-- learning curve row -->
+  <g filter="url(#sk2)"><rect x="40" y="306" width="280" height="44" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="306" width="280" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="306" width="280" height="44" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="324" text-anchor="middle" font-size="10" fill="#444">学习曲线</text>
+  <text x="180" y="342" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">陡（PTX/wmma/smem）</text>
+  <text x="480" y="324" text-anchor="middle" font-size="10" fill="#444">学习曲线</text>
+  <text x="480" y="342" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e8c">平缓（Python + 原语）</text>
+  <text x="780" y="324" text-anchor="middle" font-size="10" fill="#444">学习曲线</text>
+  <text x="780" y="342" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e3a">几乎零（装饰器）</text>
+
+  <!-- Tensor Core + cross-hardware row -->
+  <g filter="url(#sk2)"><rect x="40" y="358" width="280" height="56" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="358" width="280" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="358" width="280" height="56" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="376" text-anchor="middle" font-size="10" fill="#444">Tensor Core</text>
+  <text x="180" y="392" text-anchor="middle" font-size="10" fill="#b03a3a">手写 mma PTX</text>
+  <text x="180" y="408" text-anchor="middle" font-size="10" fill="#444">跨硬件：仅 NVIDIA</text>
+  <text x="480" y="376" text-anchor="middle" font-size="10" fill="#444">Tensor Core</text>
+  <text x="480" y="392" text-anchor="middle" font-size="10" fill="#1b5e8c">tl.dot 自动</text>
+  <text x="480" y="408" text-anchor="middle" font-size="10" fill="#444">跨硬件：NVIDIA/AMD/Intel</text>
+  <text x="780" y="376" text-anchor="middle" font-size="10" fill="#444">Tensor Core</text>
+  <text x="780" y="392" text-anchor="middle" font-size="10" fill="#1b5e3a">自动</text>
+  <text x="780" y="408" text-anchor="middle" font-size="10" fill="#444">跨硬件：NVIDIA/AMD/Intel</text>
+
+  <!-- typical users + scenarios -->
+  <g filter="url(#sk2)"><rect x="40" y="422" width="280" height="56" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="422" width="280" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="422" width="280" height="56" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/></g>
+  <text x="180" y="440" text-anchor="middle" font-size="10" fill="#444">典型用户</text>
+  <text x="180" y="456" text-anchor="middle" font-size="9" fill="#b03a3a">cuBLAS / CUTLASS 开发者</text>
+  <text x="180" y="470" text-anchor="middle" font-size="9" fill="#b03a3a">场景：极致性能 / 新硬件</text>
+  <text x="480" y="440" text-anchor="middle" font-size="10" fill="#444">典型用户</text>
+  <text x="480" y="456" text-anchor="middle" font-size="9" fill="#1b5e8c">vLLM / Megatron 算子工程师</text>
+  <text x="480" y="470" text-anchor="middle" font-size="9" fill="#1b5e8c">场景：自定义算子 / fusion</text>
+  <text x="780" y="440" text-anchor="middle" font-size="10" fill="#444">典型用户</text>
+  <text x="780" y="456" text-anchor="middle" font-size="9" fill="#1b5e3a">全体 PyTorch 用户</text>
+  <text x="780" y="470" text-anchor="middle" font-size="9" fill="#1b5e3a">场景：整模型加速</text>
+
+  <!-- metaphor -->
+  <text x="480" y="506" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">三种生产力层级（生产里并存）</text>
+  <g filter="url(#sk2)"><rect x="40" y="518" width="280" height="44" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/></g>
+  <g filter="url(#sk2)"><rect x="340" y="518" width="280" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <g filter="url(#sk2)"><rect x="640" y="518" width="280" height="44" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/></g>
+  <text x="180" y="544" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">手工打造</text>
+  <text x="480" y="544" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b5e8c">半自动机床</text>
+  <text x="780" y="544" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b5e3a">全自动流水线</text>
+
+  <!-- relationship note -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="576" width="880" height="86" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="598" font-size="12" font-weight="bold" fill="#2b2b2b">torch.compile 与 Triton 的关系</text>
+  <text x="60" y="618" font-size="11" fill="#444">torch.compile(mode="max-autotune") 会自动生成 Triton kernel 并 autotune——某些场景下就是"自动写 Triton"</text>
+  <text x="60" y="636" font-size="11" fill="#444">生产策略：标准算子用 torch.compile，自定义算子（FlashAttention/PagedAttention/Rotary）用 Triton，性能瓶颈点用手写 CUDA</text>
+  <text x="60" y="654" font-size="11" fill="#b03a3a">选 Triton 场景：① PyTorch 没有的自定义算子 ② fusion 不够 ③ 跨硬件可移植 ④ 快速原型（5x 生产力）</text>
+</svg>

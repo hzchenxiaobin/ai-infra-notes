@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Triton 编程模型：program = block（一层抽象压三层）</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Left: CUDA view -->
+  <text x="180" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">CUDA 视角（thread-level）</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="88" width="280" height="300" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <!-- hierarchy -->
+  <g font-size="11" fill="#2b2b2b">
+    <g filter="url(#sk2)"><rect x="60" y="104" width="240" height="26" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="180" y="121" text-anchor="middle">grid</text></g>
+    <path d="M 180 132 L 180 142" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+    <g filter="url(#sk2)"><rect x="80" y="146" width="200" height="26" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="180" y="163" text-anchor="middle">block</text></g>
+    <path d="M 180 174 L 180 184" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+    <g filter="url(#sk2)"><rect x="100" y="188" width="160" height="26" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="180" y="205" text-anchor="middle">warp (32 lanes)</text></g>
+    <path d="M 180 216 L 180 226" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+    <g filter="url(#sk2)"><rect x="120" y="230" width="120" height="26" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/><text x="180" y="247" text-anchor="middle">thread</text></g>
+  </g>
+  <text x="60" y="276" font-size="10" fill="#444">你写：threadIdx.x 的代码</text>
+  <text x="60" y="292" font-size="10" fill="#444" font-family="monospace">for (i=tid; i&lt;D; i+=bd)</text>
+  <text x="60" y="312" font-size="10" fill="#b03a3a">同步需手写：</text>
+  <text x="60" y="328" font-size="10" fill="#b03a3a" font-family="monospace">__syncthreads()  // block 级</text>
+  <text x="60" y="344" font-size="10" fill="#b03a3a" font-family="monospace">__shfl_down_sync // warp 级</text>
+  <text x="60" y="366" font-size="10" fill="#888">三层抽象，程序员全管</text>
+
+  <!-- Right: Triton view -->
+  <text x="660" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">Triton 视角（block-level）</text>
+  <g filter="url(#sk2)">
+    <rect x="520" y="88" width="280" height="300" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <g font-size="11" fill="#2b2b2b">
+    <g filter="url(#sk2)"><rect x="540" y="104" width="240" height="26" rx="4" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="660" y="121" text-anchor="middle">grid</text></g>
+    <path d="M 660 132 L 660 142" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+    <g filter="url(#sk2)"><rect x="560" y="146" width="200" height="26" rx="4" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="660" y="163" text-anchor="middle">program (≈ block)</text></g>
+  </g>
+  <text x="540" y="196" font-size="10" fill="#444">thread / warp / smem 全隐藏</text>
+  <text x="540" y="216" font-size="10" fill="#444">你写：一个 program 做什么</text>
+  <text x="540" y="236" font-size="10" fill="#1b5e3a" font-family="monospace">cols = tl.arange(0, BLOCK_SIZE)</text>
+  <text x="540" y="252" font-size="10" fill="#1b5e3a" font-family="monospace">x = tl.load(ptr + cols)  # 块加载</text>
+  <text x="540" y="268" font-size="10" fill="#1b5e3a" font-family="monospace">y = tl.sum(x, axis=0)    # 块归约</text>
+  <text x="540" y="290" font-size="10" fill="#2e7d4f">同步隐式：</text>
+  <text x="540" y="306" font-size="10" fill="#2e7d4f" font-family="monospace"># program 内操作天然同步</text>
+  <text x="540" y="322" font-size="10" fill="#2e7d4f" font-family="monospace"># 无需 __syncthreads / __shfl</text>
+  <text x="540" y="348" font-size="10" fill="#888">一层抽象，编译器管下层</text>
+  <text x="540" y="366" font-size="10" fill="#888" font-style="italic">向量化 / smem / warp 同步自动生成</text>
+
+  <!-- center arrow -->
+  <path d="M 340 230 L 500 230" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar3)" stroke-dasharray="5 3"/>
+  <text x="420" y="222" text-anchor="middle" font-size="10" fill="#666" font-style="italic">抽象压扁</text>
+
+  <!-- tl.arange explanation -->
+  <text x="470" y="412" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">tl.arange(0, BLOCK_SIZE) = block 级向量（不是 threadIdx）</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="428" width="860" height="78" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="450" font-size="11" fill="#444">对它的每次操作（+、*、tl.exp）由编译器自动并行化到 block 内所有线程</text>
+  <text x="60" y="468" font-size="11" fill="#444">→ 自动生成最优向量化指令（float4 / half2）+ shared memory 布局 + warp 同步</text>
+  <text x="60" y="488" font-size="11" fill="#1b5e8c" font-weight="bold">BLOCK_SIZE=1024 → 每 thread 4 元素(float4)；BLOCK_SIZE=16384 → 16 元素 + smem 中转</text>
+
+  <!-- key takeaways -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="524" width="860" height="100" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <text x="60" y="546" font-size="12" font-weight="bold" fill="#2b2b2b">CUDA ↔ Triton 概念对应</text>
+    <text x="60" y="566" font-size="11" fill="#444">① blockIdx.x → tl.program_id(0)   ② threadIdx.x + for 循环 → tl.arange(0, N)</text>
+    <text x="60" y="584" font-size="11" fill="#444">③ __shared__ 数组 → 编译器自动管理   ④ __syncthreads() → 隐式（program 内天然同步）</text>
+    <text x="60" y="602" font-size="11" fill="#444">⑤ __shfl_down_sync reduce → tl.max / tl.sum / tl.min（编译器生成最优 warp shuffle）</text>
+    <text x="60" y="618" font-size="11" fill="#b03a3a">⑥ &lt;&lt;&lt;grid,block&gt;&gt;&gt; launch → kernel[grid](...)（Python 直接调用）</text>
+  </g>
+</svg>

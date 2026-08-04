@@ -185,7 +185,7 @@ vLLM 默认 **Recompute**，因为大部分情况下重算比 swap 快。
 
 #### 任务 1：创建 interview_advanced.py
 
-创建文件 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)，将 12 道进阶篇高频题整理为可自测的 Q&A 系统：
+创建文件 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)，将 15 道进阶篇高频题整理为可自测的 Q&A 系统：
 
 ```python
 # interview_advanced.py —— 进阶篇面试题自测系统
@@ -205,7 +205,7 @@ QUESTIONS = [
         ),
         "freq": 5,
     },
-    # ... 共 12 道题
+    # ... 共 15 道题
 ]
 
 # 完整代码见 kernels/interview_advanced.py
@@ -214,7 +214,7 @@ QUESTIONS = [
 完整代码见 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)。
 
 代码要点：
-- **12 道题** 覆盖四大主题（Attention 优化 3 题 + 推理系统 3 题 + vLLM/调度 3 题 + 场景题 3 题）
+- **15 道题** 覆盖四大主题（Attention 优化 6 题 + 推理系统 3 题 + vLLM/调度 3 题 + 场景题 3 题）
 - **自测模式**：随机抽题 → 口述答案 → 按回车看参考 → 自评
 - **高频度标记**：`freq` 字段（3-5 星），5 星 = 必考
 - **交互式**：`input()` 暂停让你口述，模拟真实面试节奏
@@ -229,7 +229,7 @@ python kernels/interview_advanced.py
 
 ```text
 === AI Infra 面试进阶篇自测系统 ===
-共 12 道题
+共 15 道题
 
 命令：
   list  — 列出所有题目
@@ -343,7 +343,7 @@ Day 4 我们系统复习了 AI Infra 面试进阶篇的四大主题：
 2. **推理系统**：Prefill compute-bound 关注 TTFT，Decode memory-bound 关注 TBT；KV Cache 是显存瓶颈，量化/分页/压缩/offload 是四大优化方向
 3. **PagedAttention**：block table 实现逻辑连续物理离散，copy-on-write 支持 prefix 共享，解决碎片和 over-allocation
 4. **vLLM 调度**：LLMEngine → Scheduler → Worker → Model Runner；Continuous Batching 在 iteration 级别动态组 batch；抢占默认 Recompute
-5. **自测系统**：12 道进阶题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
+5. **自测系统**：15 道进阶题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
 6. **Causal Self-Attention**：自回归解码典型 CUDA 题，理解 causal mask 的实现要点与 KV Cache 的配合
 7. **课程表**：拓扑排序与调度依赖同构，训练算法基本功
 

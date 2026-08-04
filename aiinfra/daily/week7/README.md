@@ -28,6 +28,8 @@ Day 4b（补充专题）: Ring Attention → 长上下文分布式注意力
   ↓
 Day 5: 系统联调 → KV Cache + Batching + Scheduler + Kernel 端到端测试
   ↓
+Day 5b（补充专题）: MoE + EP 并行专题（Top-K 路由 + all-to-all 通信量）
+  ↓
 Day 6: 全链路 Profiling → 系统级瓶颈定位、与 vLLM 对比
   ↓
 Day 6b（补充专题）: CUDA Graph 实操 → 消除 Kernel Launch Overhead
@@ -50,6 +52,7 @@ Day 7: 代码重构与文档 → README、架构图、接口统一、稳定性�
 | Day 4 | 整合全部自定义 Kernel | [day4/](day4/README.md) |
 | **Day 4b** | **Ring Attention —— 长上下文分布式注意力（补充专题）** | **[day4b/](day4b/README.md)** |
 | Day 5 | 系统联调 | [day5/](day5/README.md) |
+| **Day 5b** | **MoE + EP 并行专题（Top-K 路由 + all-to-all 通信量）** | **[day5b/](day5b/README.md)** |
 | Day 6 | 全链路 Profiling | [day6/](day6/README.md) |
 | **Day 6b** | **CUDA Graph 实操 —— 消除 Kernel Launch Overhead（补充专题）** | **[day6b/](day6b/README.md)** |
 | Day 7 | 代码重构与文档 | [day7/](day7/README.md) |

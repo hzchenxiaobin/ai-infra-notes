@@ -139,12 +139,50 @@ QUESTIONS = [
         "topic": "进阶对比",
         "question": "GQA / MQA / MHA 的区别和 trade-off？",
         "answer": (
-            "MHA：每个 head 都有独立 K/V，显存和计算最大\n"
-            "MQA：所有 head 共享一组 K/V，显存最小但可能损失质量\n"
-            "GQA：head 分组共享 K/V，平衡显存和质量\n"
-            "trade-off：显存占用 MHA > GQA > MQA；生成质量通常 MHA ≥ GQA > MQA"
+            "MHA：每个 head 都有独立 K/V（n_kv_head=n_head），显存最大\n"
+            "MQA：所有 head 共享一组 K/V（n_kv_head=1），显存最小但可能损失质量\n"
+            "GQA：head 分组共享 K/V（n_kv_head=n_head/g），平衡显存和质量\n"
+            "trade-off：显存占用 MHA > GQA > MQA；生成质量通常 MHA ≥ GQA > MQA\n"
+            "2024+ 主流选 GQA-8（LLaMA-3、Qwen-2），KV Cache 降到 1/4 而精度几乎不掉"
         ),
         "freq": 4,
+    },
+    {
+        "id": 13,
+        "topic": "Attention 优化",
+        "question": "手算：LLaMA-7B（32层, 32头, d=128, fp16）的每 token KV Cache？GQA-8 和 MQA 各降到多少？",
+        "answer": (
+            "公式：bytes/token = 2(K+V) × n_layer × n_kv_head × d_head × 2B\n"
+            "MHA:  2×32×32×128×2B = 524 KB/token\n"
+            "GQA-8 (n_kv_head=8):  524/4 = 131 KB/token\n"
+            "MQA   (n_kv_head=1):  524/32 = 16.4 KB/token\n"
+            "1M token 时 MHA 要 524 GB（漏乘 n_layer=32 是经典错误，会算成 16 GB）"
+        ),
+        "freq": 5,
+    },
+    {
+        "id": 14,
+        "topic": "Attention 优化",
+        "question": "MLA（Multi-head Latent Attention）为什么 KV Cache 这么小？",
+        "answer": (
+            "MLA 不存完整 K/V，存一个低秩'潜在向量'（d_c 维，DeepSeek-V3 d_c≈512）\n"
+            "每 token KV bytes ≈ 2×n_layer×d_c×2B，远小于 MHA 的 2×n_layer×n_head×d_head×2B\n"
+            "attention 时用上投影矩阵现场解压 K/V，代价是额外解压 GEMM\n"
+            "DeepSeek-V3：MLA 比 MHA 小 ~10x 且精度持平，是 2024-2026 推理优化的热门方向"
+        ),
+        "freq": 4,
+    },
+    {
+        "id": 15,
+        "topic": "Attention 优化",
+        "question": "为什么 GQA 比 MQA 更受青睐？分组数 g 怎么选？",
+        "answer": (
+            "MQA（n_kv_head=1）显存最小但 perplexity 上升明显，质量损失不可接受\n"
+            "GQA 通过分组（g=4~8）在显存与精度间取折中，LLaMA-3 用 GQA-8 实测精度接近 MHA\n"
+            "g 的选择：g 太小接近 MQA（质量差），g 太大接近 MHA（显存大）；通常 g=4 或 8\n"
+            "经验：d_head=128 时 GQA-8 的 KV Cache 降到 1/4，精度损失 <0.5%，性价比最高"
+        ),
+        "freq": 3,
     },
 ]
 

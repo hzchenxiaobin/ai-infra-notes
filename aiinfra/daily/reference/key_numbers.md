@@ -40,7 +40,16 @@ bytes/token = 2(K,V) × n_layer × n_kv_head × d_head × 2 bytes
 | 32K tokens | ~16 GB |
 | 1M tokens | **~524 GB**（2×32×32×128×2B×1M；注意不是 16 GB——16 GB 是漏乘 n_layer=32 的经典错误） |
 
-**注意力变体（一般形式）**：把 `n_kv_head` 换成变体实际值即可——GQA-8（如 LLaMA-3-8B）降为 1/4，MQA 降为 1/n_head，MLA 压缩到低秩维度 d_c。变体对比表待 B7 任务填充（占位）。
+**注意力变体（一般形式）**：把 `n_kv_head` 换成变体实际值即可——GQA-8（如 LLaMA-3-8B）降为 1/4，MQA 降为 1/n_head，MLA 压缩到低秩维度 d_c。变体对比表见 `week5/day2` §2.2。
+
+**变体口算示例**（LLaMA-7B 级别：n_layer=32, n_head=32, d_head=128, fp16，MHA 基准 524 KB/token）：
+
+```text
+MHA  (n_kv_head=32):  524 KB/token
+GQA-8(n_kv_head=8):   131 KB/token   (1/4)
+MQA  (n_kv_head=1):    16 KB/token   (1/32)
+MLA  (d_c=512):        65 KB/token   (存潜在向量，形态不同)
+```
 
 来源：[实测/手算] 与 `week5/day2`、`week7/day4b` 教程口径一致；公式本身为教科书定义。
 
