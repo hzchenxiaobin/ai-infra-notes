@@ -37,6 +37,43 @@ CUTLASS 是 NVIDIA 开源的 GEMM/Conv 模板库，提供了上述所有优化�
 
 ### 理论学习
 
+#### 1.0 CuTe 最小铺垫（CUTLASS 3.x 的 layout 抽象）
+
+CUTLASS 3.x 引入了 **CuTe（CUTLASS Tensors and Layout）**——一个用 C++ 模板表达"张量形状 + 内存布局"的抽象层。读 CUTLASS 3.x 源码或 Hopper+ 的 FlashAttention 源码（如 `flash_fwd_kernel.h`）都依赖 CuTe 概念。
+
+##### CuTe 的三个核心概念
+
+| 概念 | 含义 | 示例 |
+|------|------|------|
+| **Shape** | 张量的形状（编译期已知） | `Shape<64, 128, 16>` = 一个 64×128×16 的 tile |
+| **Stride** | 每维的步长（决定 row-major/col-major 等） | `Stride<128, 1, 8192>` = row-major（行步长 128） |
+| **Layout** | Shape + Stride 的组合，描述"逻辑坐标 → 物理偏移" | `Layout<Shape<64,128>, Stride<128,1>>` |
+
+##### `make_tensor` 与 `local_tile`
+
+CuTe 用 `make_tensor` 把裸指针 + Layout 绑定成一个 `Tensor` 对象，用 `local_tile` 切出 block 负责的子块：
+
+```cpp
+// CUTLASS 3.x CuTe 风格（概念示意）
+auto A_layout = make_layout(make_shape(M, K), make_stride(K, 1));  // row-major
+auto A_tensor = make_tensor(d_A, A_layout);                         // 指针 + Layout
+
+// 切出当前 block 负责的 tile
+auto A_block = local_tile(A_tensor, make_shape(BM, BK), block_idx); // (BM, BK) tile
+```
+
+##### 为什么读 CUTLASS 3.x / FA 源码需要 CuTe？
+
+- **layout 解耦**：同一个 kernel 源码支持 row-major/col-major/混合布局，靠 Layout 模板参数切换，不需写多份代码
+- **TMA 配合**：Hopper 的 TMA（Tensor Memory Accelerator）直接吃 CuTe Layout 描述符，硬件级异步搬运
+- **FlashAttention 源码**：`flash_fwd_kernel.h` 用 CuTe 描述 `kBlockM`/`kBlockN` 等 tile 参数，读源码必须理解 CuTe
+
+> 💡 **面试要点**：CuTe 是 CUTLASS 3.x 的核心抽象，用"Shape + Stride = Layout"把张量形状与内存布局解耦。读 Hopper+ 的 CUTLASS/FA 源码需先过 CuTe 这一关。本教程基于 CUTLASS 2.x（无 CuTe），3.x 的 CuTe 留作进阶阅读。
+
+> 📖 延伸阅读：CUTLASS CuTe 官方教程、`flash_fwd_kernel.h` 源码导读（Week4/Day3）
+
+---
+
 #### 1.1 CUTLASS 概述
 
 ![CUTLASS 三级 Tiling 架构](../images/cutlass_tiling_hierarchy.svg)

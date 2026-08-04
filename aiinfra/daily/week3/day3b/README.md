@@ -392,29 +392,65 @@ python3 kernels/triton_gemm.py
 python3 kernels/triton_flash_attention.py
 ```
 
-**预期输出（softmax）**：
+**预期输出（softmax，RTX 5090, Triton 3.5）**：
 
 ```text
 === Triton Softmax vs torch.softmax ===
-shape              torch(ms)     triton(ms)     max_diff       speedup   check
---------------------------------------------------------------------------------
-(128, 256)         0.0xxx        0.0xxx         x.xx e-07      1.xx x    PASS
-(256, 1024)        0.0xxx        0.0xxx         x.xx e-07      1.xx x    PASS
-(1024, 1024)       0.0xxx        0.0xxx         x.xx e-07      1.xx x    PASS
-(4096, 4096)       0.0xxx        0.0xxx         x.xx e-07      1.xx x    PASS
+shape             torch(ms)     triton(ms)    max_diff      speedup   check 
+----------------------------------------------------------------------------
+(128, 256)        0.0029        0.0110        7.45e-09      0.27      PASS  
+(256, 1024)       0.0041        0.0107        5.59e-09      0.38      PASS  
+(1024, 1024)      0.0041        0.0121        7.45e-09      0.34      PASS  
+(4096, 4096)      0.0757        0.0724        1.86e-09      1.05      PASS  
 ```
 
-**预期输出（gemm）**：
+> ⚠️ 小 shape 下 Triton 比 torch 慢（0.27x-0.38x）——launch overhead + autotune 占比大；大 shape（4096²）才追平（1.05x）。这是 Triton 的典型特征：**小 kernel 的 launch 开销不划算，大 kernel 才发挥 tiling 优势**。
+
+**预期输出（gemm，RTX 5090, Triton 3.5）**：
 
 ```text
 === Triton GEMM (autotune) vs torch.matmul (cuBLAS) ===
-M=N=K     cuBLAS(ms)    triton(ms)    max_diff       speedup   check
-----------------------------------------------------------------------
-512       0.0xxx        0.0xxx        x.xx e-03      0.xx x    PASS
-1024      0.0xxx        0.0xxx        x.xx e-03      0.xx x    PASS
-2048      0.0xxx        0.0xxx        x.xx e-03      0.xx x    PASS
-4096      0.0xxx        0.0xxx        x.xx e-03      0.xx x    PASS
+M=N=K     cuBLAS(ms)    triton(ms)    max_diff      speedup   check 
+--------------------------------------------------------------------
+512       0.0062        0.0214        0.00e+00      0.29      PASS  
+1024      0.0145        0.0213        0.00e+00      0.68      PASS  
+2048      0.0964        0.0898        0.00e+00      1.07      PASS  
+4096      0.6378        0.6391        0.00e+00      1.00      PASS  
 ```
+
+> ⚠️ Triton GEMM 在 2048+ 追平 cuBLAS（1.00x-1.07x），小矩阵落后（0.29x）。autotune 选出的 config 在大矩阵发挥 Tensor Core，小矩阵 launch overhead 主导。
+
+**预期输出（flash_attention，RTX 5090, Triton 3.5）**：
+
+```text
+=== Triton FlashAttention (causal) vs naive attention ===
+(B,H,N,D)             naive(ms)     triton(ms)    max_diff      speedup   check 
+--------------------------------------------------------------------------------
+(2, 4, 512, 64)       0.0456        0.0163        1.95e-03      2.79      PASS  
+(1, 8, 1024, 64)      0.0991        0.0209        1.95e-03      4.74      PASS  
+(1, 8, 2048, 64)      0.4977        0.0618        1.95e-03      8.05      PASS  
+```
+
+> 💡 Triton FA 加速比随 N 增长（2.79x → 8.05x）——N 越大，naive 的 O(N²) IO 越多，FA 的 O(Nd) 优势越明显。这与 Day 1 的 IO 理论一致。
+
+##### Triton vs CUDA vs PyTorch 三方 trade-off 决策表
+
+| 维度 | Triton | 手写 CUDA | PyTorch 原生 |
+|------|--------|----------|------------|
+| **开发效率** | ⭐⭐⭐⭐⭐（Python，~10 行 softmax） | ⭐⭐（C++，60+ 行 kernel + host） | ⭐⭐⭐⭐⭐（一行 `torch.softmax`） |
+| **性能（大矩阵）** | ⭐⭐⭐⭐（追平 cuBLAS） | ⭐⭐⭐⭐⭐（CUTLASS 级可达 95%+） | ⭐⭐⭐⭐（cuBLAS 后端） |
+| **性能（小矩阵）** | ⭐⭐（launch overhead） | ⭐⭐⭐⭐（低开销） | ⭐⭐⭐⭐（cuBLAS） |
+| **Tensor Core** | ✅（`tl.dot` 自动） | ✅（需手写 WMMA/mma.sync） | ✅（cuBLAS 自动） |
+| **autotune** | ✅（`@triton.autotune`） | ❌（手动） | ❌ |
+| **调试** | ⭐⭐⭐⭐（Python，可 print） | ⭐⭐（cuda-gdb） | ⭐⭐⭐⭐⭐ |
+| **控制粒度** | ⭐⭐⭐（block 级） | ⭐⭐⭐⭐⭐（thread/warp 级） | ⭐（黑盒） |
+| **适用场景** | 快速原型 + 中等性能要求 | 极致性能 + 细粒度控制 | 直接用，不写 kernel |
+
+**面试口述版**：
+- **快速验证算法想法** → Triton（Python，autotune，大矩阵追平 cuBLAS）
+- **极致性能 / 新硬件特性** → 手写 CUDA（TMA、cp.async、warp specialization）
+- **不写 kernel 也能跑** → PyTorch 原生（cuBLAS/torch.compile 后端）
+- **什么时候必须 CUDA**：Triton 不支持的硬件特性（如 Hopper TMA 的 async 拷贝配合 warp specialization），或需要细粒度 warp 调度
 
 > ⚠️ **注意**：GEMM 首次运行会明显慢（autotune 阶段试所有 config），但 benchmark 函数有 10 次 warmup，warmup 期间完成 autotune。FP16 GEMM 的 `max_diff` 容忍度设为 1e-2（FP16 精度限制），softmax 用 1e-5（FP32）。
 
