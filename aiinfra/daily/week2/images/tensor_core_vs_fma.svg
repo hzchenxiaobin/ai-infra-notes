@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="620" viewBox="0 0 940 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="620" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Tensor Core vs FMA：从 65% 到 85%+ 的关键跨越</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Bar chart: peak FLOPs -->
+  <text x="470" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">RTX 5090 (sm_120) 峰值算力对比</text>
+  <!-- Y axis -->
+  <line x1="120" y1="100" x2="120" y2="320" stroke="#3a3a3a" stroke-width="1.4"/>
+  <line x1="120" y1="320" x2="820" y2="320" stroke="#3a3a3a" stroke-width="1.4"/>
+  <text x="70" y="210" font-size="11" fill="#666" font-weight="bold" transform="rotate(-90, 70, 210)" text-anchor="middle">TFLOPS</text>
+  <!-- grid lines + labels -->
+  <g font-size="9" fill="#888">
+    <line x1="120" y1="320" x2="820" y2="320" stroke="#e0e0e0" stroke-width="0.8"/>
+    <text x="112" y="324" text-anchor="end">0</text>
+    <line x1="120" y1="265" x2="820" y2="265" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <text x="112" y="269" text-anchor="end">~55</text>
+    <line x1="120" y1="210" x2="820" y2="210" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <text x="112" y="214" text-anchor="end">~110</text>
+    <line x1="120" y1="155" x2="820" y2="155" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <text x="112" y="159" text-anchor="end">~165</text>
+    <line x1="120" y1="100" x2="820" y2="100" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <text x="112" y="104" text-anchor="end">~220</text>
+  </g>
+  <!-- Bar 1: FP32 FMA -->
+  <g filter="url(#sk2)">
+    <rect x="200" y="238" width="120" height="82" fill="#b85450" opacity="0.65" stroke="#7a2828" stroke-width="1.2"/>
+  </g>
+  <text x="260" y="230" text-anchor="middle" font-size="12" fill="#7a2828" font-weight="bold">104.75</text>
+  <text x="260" y="340" text-anchor="middle" font-size="11" fill="#444">FP32 FMA</text>
+  <text x="260" y="354" text-anchor="middle" font-size="9" fill="#888">CUDA Core</text>
+  <!-- Bar 2: FP16 Tensor Core dense -->
+  <g filter="url(#sk2)">
+    <rect x="380" y="115" width="120" height="205" fill="#4a7a3a" opacity="0.65" stroke="#2e5a1a" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="107" text-anchor="middle" font-size="12" fill="#2e5a1a" font-weight="bold">~209</text>
+  <text x="440" y="340" text-anchor="middle" font-size="11" fill="#444">FP16 Tensor Core</text>
+  <text x="440" y="354" text-anchor="middle" font-size="9" fill="#888">(dense)</text>
+  <!-- Bar 3: cuBLAS FP32 (uses TC) -->
+  <g filter="url(#sk2)">
+    <rect x="560" y="180" width="120" height="140" fill="#446688" opacity="0.65" stroke="#2a4868" stroke-width="1.2"/>
+  </g>
+  <text x="620" y="172" text-anchor="middle" font-size="12" fill="#2a4868" font-weight="bold">~140+</text>
+  <text x="620" y="340" text-anchor="middle" font-size="11" fill="#444">cuBLAS FP32</text>
+  <text x="620" y="354" text-anchor="middle" font-size="9" fill="#888">(默认走 TC)</text>
+  <!-- ratio annotation -->
+  <path d="M 320 265 L 370 265" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M 375 265 L 375 160 L 500 160" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" stroke-dasharray="4 3"/>
+  <text x="420" y="258" text-anchor="middle" font-size="10" fill="#b03a3a" font-weight="bold">~2x 峰值差</text>
+
+  <!-- Actual GEMM % comparison -->
+  <text x="470" y="390" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">手写 GEMM 实际性能（vs cuBLAS 100%）</text>
+  <g filter="url(#sk2)">
+    <rect x="60" y="404" width="820" height="56" rx="8" fill="#fdecec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <!-- FMA bar 64.3% -->
+  <g filter="url(#sk2)"><rect x="80" y="416" width="416" height="32" fill="#b85450" opacity="0.55" stroke="#7a2828" stroke-width="0.8"/></g>
+  <text x="80" y="438" font-size="11" fill="#444" font-weight="bold">Day 6 FMA GEMM (Reg Blocking + float4)</text>
+  <text x="505" y="438" font-size="13" fill="#7a2828" font-weight="bold">64.3%</text>
+  <text x="560" y="438" font-size="10" fill="#888">← 卡在这里（FMA 理论上限）</text>
+
+  <g filter="url(#sk2)">
+    <rect x="60" y="468" width="820" height="56" rx="8" fill="#eaf6ee" stroke="#4a7a3a" stroke-width="1.2"/>
+  </g>
+  <!-- WMMA bar 85%+ -->
+  <g filter="url(#sk2)"><rect x="80" y="480" width="550" height="32" fill="#4a7a3a" opacity="0.55" stroke="#2e5a1a" stroke-width="0.8"/></g>
+  <text x="80" y="502" font-size="11" fill="#444" font-weight="bold">Day 6b WMMA GEMM (Tensor Core)</text>
+  <text x="639" y="502" font-size="13" fill="#2e5a1a" font-weight="bold">85%+</text>
+  <text x="690" y="502" font-size="10" fill="#888">+20-25% 跨越</text>
+  <!-- arrow between -->
+  <path d="M 500 432 L 500 476" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+  <text x="540" y="460" font-size="10" fill="#3a3a3a" font-weight="bold">加 Tensor Core</text>
+
+  <!-- key takeaways -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="536" width="860" height="72" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="558" font-size="11" font-weight="bold" fill="#2b2b2b">核心洞察</text>
+  <text x="60" y="576" font-size="10" fill="#444">① cuBLAS 默认使用 Tensor Core，FMA GEMM 理论上限 = FP32峰值/FP16峰值 ≈ 50% FP16 峰值</text>
+  <text x="60" y="592" font-size="10" fill="#444">② 一条 WMMA 指令完成 16×16×16 矩阵乘加，吞吐是 FMA 的 2-8 倍；不用 TC = 浪费一半以上算力</text>
+  <text x="60" y="606" font-size="10" fill="#b85450">③ 65% → 85%+ 的跨越只能靠 Tensor Core，其他优化（double buffer/auto-tune）只贡献个位数</text>
+</svg>

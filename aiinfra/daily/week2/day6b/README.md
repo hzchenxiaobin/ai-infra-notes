@@ -1,4 +1,4 @@
-## Day 6b：Tensor Core 与 WMMA —— 从 65% 到 85%+ 的关键跨越
+## Day 6b：Tensor Core 与 WMMA —— 从 FMA 到 Tensor Core 的跨越
 
 ### 🎯 目标
 
@@ -7,11 +7,11 @@
 1. 理解 Tensor Core 的硬件架构与 WMMA（Warp Matrix Multiply Accumulate）编程接口<br>
 2. 掌握 `nvcuda::wmma` fragment 的生命周期（load → mma_sync → store）<br>
 3. 理解 FP16 输入 / FP32 累加的混合精度策略及其精度-性能权衡<br>
-4. 实现手写 WMMA GEMM，达到 cuBLAS 85%+ 性能<br>
+4. 实现手写 WMMA GEMM，实测 cuBLAS ~33%（教学版，诚实归因差距）<br>
 5. 能用 ncu 分析 Tensor Core 利用率，对比 FMA GEMM 与 WMMA GEMM 的瓶颈差异<br>
 6. 理解 CUTLASS 的三级 tiling 抽象与 WMMA 的关系<br>
 
-> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 90%」是顶级算子工程师面试题，而 cuBLAS 默认使用 Tensor Core。不掌握 WMMA，手写 GEMM 永远卡在 65%（FMA 上限）。今天是从 64% 跨越到 85%+ 的关键一步。
+> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 90%」是顶级算子工程师面试题，而 cuBLAS 默认使用 Tensor Core。不掌握 WMMA，手写 GEMM 永远卡在 FMA 上限（~64%）。今天是从 FMA 跨越到 Tensor Core 的第一步——教学版实测 ~33%，诚实归因差距，理解 85%+ 需要的工程深度（CUTLASS 级 smem tiling + double buffering）。
 
 ---
 
@@ -169,7 +169,7 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 |------|------------|-----------------|------|
 | FMA Naive GEMM | ~7 | ~10% | Memory-bound（无 tiling） |
 | FMA Register Blocking + float4 | ~44 | ~64% | FMA 峰值限制 |
-| **WMMA GEMM (本教程)** | **~55-65** | **~85%** | Memory 带宽 + fragment 开销 |
+| **WMMA GEMM (本教程)** | **~55-65** | **~33%**（教学版） | 无 smem tiling、每 block 1 warp、global load fragment |
 | cuBLAS (FP32 sgemm) | ~68 | 100% | Tensor Core + 深度优化 |
 | cuBLAS (FP16) | ~100+ | N/A | 接近 FP16 峰值 |
 
@@ -180,7 +180,7 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 3. **缺少 Auto-tuning**：不同矩阵大小需要不同的 block/warp 配置
 4. **Fragment 开销**：WMMA 的 fragment 比 `mma.sync` PTX 指令有少量额外开销
 
-> 💡 **一句话总结**：WMMA 是 Tensor Core 的高层接口，手写 WMMA GEMM 能达到 cuBLAS 85%+。要达到 95%+，需要用 CUTLASS 或手写 `mma.sync` PTX + cp.async。
+> 💡 **一句话总结**：WMMA 是 Tensor Core 的高层接口。本教程教学版实测 cuBLAS ~33%（诚实归因：无 smem tiling、单 warp/block）。要达到 85%+，需要 CUTLASS 级 smem tiling + double buffering + 多 warp；要 95%+，需手写 `mma.sync` PTX + cp.async。
 
 ---
 
@@ -202,7 +202,7 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm.cu -o wmma_gemm
 ./wmma_gemm
 ```
 
-预期输出：
+预期输出（RTX 5090, sm_120, CUDA 12.8，FP16 输入 FP32 累加）：
 
 ```text
 M=N=K    | FMA(ms)      WMMA(ms)     cuBLAS(ms)   | FMA%     WMMA%    WMMA/FMA
@@ -213,6 +213,15 @@ M=N=K    | FMA(ms)      WMMA(ms)     cuBLAS(ms)   | FMA%     WMMA%    WMMA/FMA
 4096     | 18.604       4.098        1.963        | 7.4      33.5     70.0
 WMMA vs cuBLAS max_diff = 1.00e-02 (FP16 input precision loss expected)
 ```
+
+> ⚠️ **诚实声明：WMMA% 仅 21.7%-33.5%，远低于 85%**。本 kernel 是教学版（每 block 1 warp、无 shared memory tiling、直接从 global memory load fragment），远未发挥 RTX 5090 FP16 Tensor Core 峰值（~209 TFLOPS）。
+>
+> **差距归因**：
+> - **无 shared memory staging**：每 cycle 从 global memory 加载 fragment，HBM 带宽成瓶颈（5090 Ridge Point 58.45，FP16 GEMM 的 AI 不足以打满算力）
+> - **每 block 1 warp**：occupancy 低，无法隐藏 global memory latency
+> - **K 维无 tiling**：未复用 smem 中的 A/B tile，数据搬运远多于计算
+>
+> **真实 85%+ 需要**：多 warp/block + smem tiling + double buffering + K 维分块（CUTLASS 级工程化，见 Day 4b）。本 kernel 的价值是**验证 WMMA fragment 的正确性与 FP16→FP32 累加链路**，不是性能基准。面试时声明"教学版实测 ~33%，生产 CUTLASS 可达 85%+"。
 
 #### 任务 3：Profiling
 

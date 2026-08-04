@@ -15,9 +15,9 @@
 
 ---
 
-### 学前导读：为什么手写 GEMM 卡在 85%
+### 学前导读：为什么手写 WMMA 教学版只有 ~33%，而 CUTLASS 能达 95%+
 
-Day 6b 的 WMMA GEMM 达到了 cuBLAS 85%。剩下的 15% 差距不是算法问题，而是**工程深度**：
+Day 6b 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
 
 | 优化点 | 手写 WMMA | CUTLASS | cuBLAS |
 |--------|-----------|---------|--------|
@@ -319,7 +319,7 @@ Day 4b 我们深入分析了 CUTLASS 源码：
 2. **模板参数**：精度、布局、架构、tiling 形状、epilogue、swizzle、stages 可独立配置
 3. **工程优化**：Double Buffer(cp.async)、Epilogue Fusion、Swizzle 调度、Auto-tuning
 4. **与 cuBLAS 关系**：cuBLAS = 预编译的 CUTLASS，理解 CUTLASS = 理解 cuBLAS 内部实现
-5. **性能对比**：CUTLASS 达到 cuBLAS 95%+，手写 WMMA 达到 85%，差距来自工程深度
+5. **性能对比**：CUTLASS 达到 cuBLAS 95%+，手写 WMMA 教学版 ~33%，差距来自工程深度（smem tiling / dblbuf / 多warp）
 6. **面试核心**：能解释三级 tiling 的层级关系，能说出 CUTLASS 比手写 WMMA 多了哪些优化
 
 ---

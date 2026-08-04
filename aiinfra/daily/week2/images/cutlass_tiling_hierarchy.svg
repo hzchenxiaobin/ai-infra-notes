@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">CUTLASS 三级 Tiling 架构（Threadblock → Warp → Instruction）</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- C matrix grid -->
+  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">C[M,N] = A[M,K] × B[K,N]   (示例: 4096×4096×4096, FP16)</text>
+  <g filter="url(#sk2)">
+    <rect x="280" y="86" width="380" height="160" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <!-- Threadblock tiles 128x128 -->
+  <g font-size="8" fill="#666">
+    <g filter="url(#sk2)"><rect x="288" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="318" y="120" text-anchor="middle">TB 128×128</text></g>
+    <g filter="url(#sk2)"><rect x="350" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="380" y="120" text-anchor="middle">TB</text></g>
+    <g filter="url(#sk2)"><rect x="412" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="442" y="120" text-anchor="middle">TB</text></g>
+    <g filter="url(#sk2)"><rect x="474" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="504" y="120" text-anchor="middle">TB</text></g>
+    <g filter="url(#sk2)"><rect x="536" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke="0.8"/><text x="566" y="120" text-anchor="middle">TB</text></g>
+    <g filter="url(#sk2)"><rect x="598" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="628" y="120" text-anchor="middle">TB</text></g>
+    <text x="540" y="158" text-anchor="middle" font-size="9" fill="#888">... (4096/128)² = 1024 blocks</text>
+    <text x="540" y="172" text-anchor="middle" font-size="9" fill="#888">每个 block 处理一个 ThreadblockTile</text>
+    <text x="540" y="192" text-anchor="middle" font-size="9" fill="#888">K 维循环：每次加载 BK=32 切片</text>
+    <text x="540" y="210" text-anchor="middle" font-size="9" fill="#888">smem 缓存 A/B tile 复用</text>
+  </g>
+  <!-- highlight one TB tile for next level -->
+  <g filter="url(#sk2)"><rect x="288" y="146" width="60" height="48" fill="none" stroke="#b03a3a" stroke-width="2" stroke-dasharray="3 2"/></g>
+  <path d="M 318 196 L 318 216 L 180 216 L 180 236" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="250" y="210" font-size="9" fill="#b03a3a" font-style="italic">放大一个 ThreadblockTile</text>
+
+  <!-- Level 1: Threadblock -->
+  <text x="180" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">Level 1: ThreadblockTile 128×128</text>
+  <g filter="url(#sk2)">
+    <rect x="80" y="260" width="200" height="120" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <!-- 4 warp tiles 64x64 -->
+  <g font-size="9" fill="#444">
+    <g filter="url(#sk2)"><rect x="88" y="268" width="92" height="52" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="134" y="296" text-anchor="middle">Warp 0</text><text x="134" y="310" text-anchor="middle" font-size="8">64×64</text></g>
+    <g filter="url(#sk2)"><rect x="184" y="268" width="92" height="52" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="230" y="296" text-anchor="middle">Warp 1</text><text x="230" y="310" text-anchor="middle" font-size="8">64×64</text></g>
+    <g filter="url(#sk2)"><rect x="88" y="324" width="92" height="52" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="134" y="352" text-anchor="middle">Warp 2</text><text x="134" y="366" text-anchor="middle" font-size="8">64×64</text></g>
+    <g filter="url(#sk2)"><rect x="184" y="324" width="92" height="52" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/><text x="230" y="352" text-anchor="middle">Warp 3</text><text x="230" y="366" text-anchor="middle" font-size="8">64×64</text></g>
+  </g>
+  <text x="180" y="396" text-anchor="middle" font-size="9" fill="#888">4 warps/block (128/64)²</text>
+  <!-- arrow to level 2 -->
+  <path d="M 134 376 L 134 396 L 134 416" stroke="#2e7d4f" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <g filter="url(#sk2)"><rect x="88" y="324" width="46" height="26" fill="none" stroke="#b03a3a" stroke-width="1.5" stroke-dasharray="3 2"/></g>
+
+  <!-- Level 2: Warp -->
+  <text x="470" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e7d4f">Level 2: WarpTile 64×64</text>
+  <g filter="url(#sk2)">
+    <rect x="360" y="260" width="220" height="120" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <!-- MMA instruction tiles 16x8 -->
+  <g font-size="7" fill="#666">
+    <g filter="url(#sk2)"><rect x="368" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="383" y="281" text-anchor="middle">16×8</text></g>
+    <g filter="url(#sk2)"><rect x="400" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="415" y="281" text-anchor="middle">16×8</text></g>
+    <g filter="url(#sk2)"><rect x="432" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="447" y="281" text-anchor="middle">16×8</text></g>
+    <g filter="url(#sk2)"><rect x="464" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="479" y="281" text-anchor="middle">16×8</text></g>
+    <g filter="url(#sk2)"><rect x="496" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="511" y="281" text-anchor="middle">16×8</text></g>
+    <g filter="url(#sk2)"><rect x="528" y="268" width="30" height="20" fill="#fff3cf" stroke="#e8a838" stroke-width="0.6"/><text x="543" y="281" text-anchor="middle">16×8</text></g>
+    <text x="470" y="304" text-anchor="middle" font-size="8" fill="#888">每行 8 个 MMA (64/8)</text>
+    <text x="470" y="318" text-anchor="middle" font-size="8" fill="#888">每列 4 个 MMA (64/16)</text>
+    <text x="470" y="334" text-anchor="middle" font-size="9" fill="#2e7d4f" font-weight="bold">= 32 条 mma.sync / warp</text>
+    <text x="470" y="352" text-anchor="middle" font-size="8" fill="#888">K 维循环 BK=32，每次 1 条 MMA</text>
+    <text x="470" y="366" text-anchor="middle" font-size="8" fill="#888">→ K/BK = 32 次/warp</text>
+  </g>
+  <!-- arrow to level 3 -->
+  <path d="M 470 382 L 470 416" stroke="#e8a838" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- Level 3: Instruction -->
+  <text x="780" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#e8a838">Level 3: InstructionShape 16×8×16</text>
+  <g filter="url(#sk2)">
+    <rect x="680" y="260" width="220" height="120" rx="6" fill="#fff8e1" stroke="#e8a838" stroke-width="1.4"/>
+  </g>
+  <text x="700" y="282" font-size="10" fill="#8a6d18" font-family="monospace">mma.sync m16n8k16</text>
+  <text x="700" y="300" font-size="9" fill="#444">A: 16×16 (FP16) row-major</text>
+  <text x="700" y="314" font-size="9" fill="#444">B: 16×8 (FP16) col-major</text>
+  <text x="700" y="328" font-size="9" fill="#444">C/D: 16×8 (FP32 累加)</text>
+  <text x="700" y="348" font-size="9" fill="#e8a838" font-weight="bold">一条指令 = 16×8×16×2 = 4096 FLOPs</text>
+  <text x="700" y="364" font-size="9" fill="#888">warp 32 线程协作，fragment 分布寄存器</text>
+
+  <!-- relationship + summary -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="420" width="860" height="200" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="444" font-size="12" font-weight="bold" fill="#2b2b2b">层级关系与数量推导（GEMM 4096×4096×4096, FP16）</text>
+  <text x="60" y="466" font-size="11" fill="#444">ThreadblockShape (128×128×32)  →  blocks = (4096/128)² = 1024 个 block，每个 K 维循环加载 BK=32 切片到 smem</text>
+  <text x="60" y="484" font-size="11" fill="#444">WarpShape (64×64×32)            →  warps/block = (128/64)² = 4 个 warp，从 smem 读到 fragment 寄存器</text>
+  <text x="60" y="502" font-size="11" fill="#444">InstructionShape (16×8×16)      →  mma/warp = (64/16)×(64/8) = 4×8 = 32 条，每条 K 步 16</text>
+  <text x="60" y="524" font-size="11" fill="#b03a3a">公式：warps_per_block = ThreadblockShape / WarpShape ；mma_per_warp = WarpShape / InstructionShape</text>
+  <text x="60" y="548" font-size="12" font-weight="bold" fill="#2b2b2b">CUTLASS 2.x vs 3.x</text>
+  <text x="60" y="568" font-size="11" fill="#444">2.x (sm_70~89): 显式 Threadblock/Warp/Thread 三级 tiling，本教程使用</text>
+  <text x="60" y="586" font-size="11" fill="#444">3.x (sm_90+ Hopper): CuTe layout 抽象 + TMA（Tensor Memory Accelerator），学习曲线陡峭</text>
+  <text x="60" y="608" font-size="11" fill="#2e7d4f">可组合性：三级可独立配置，模板参数选择 → 编译时生成接近 cuBLAS 性能的 kernel</text>
+</svg>
