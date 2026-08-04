@@ -1,4 +1,4 @@
-## Day 2：NVIDIA CUDA vs Ascend CANN
+## Day 2：多硬件对比：NVIDIA CUDA vs Ascend CANNNVIDIA CUDA vs Ascend CANN
 
 > ⚠️ **定位声明**：本日为**概念对照-only**——无可执行验证练习（需昇腾环境）。内容是 NVIDIA/Ascend 的架构与编程模型对照，用于面试"多硬件适配"类问题。有昇腾环境时，可补充一个 Ascend CANN kernel 练习（见延伸阅读）。
 

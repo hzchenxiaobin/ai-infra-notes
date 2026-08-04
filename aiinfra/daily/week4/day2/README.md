@@ -1,205 +1,201 @@
-## Day 2：端到端 Profiling 与 Kernel Fusion
+## Day 2：算子接入 Mini 引擎（C++ Extension）算子接入 Mini 引擎
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 掌握 **两级 Profiling 工具体系**：用 Nsight Systems（nsys）采集系统级时间线、用 Nsight Compute（ncu）分析 kernel 级指标，理解"先全局定位、再单点深挖"的标准流程
-2. 学会用 nsys 的 `cuda_gpu_kern_sum` 统计找出 Transformer forward 的 top3 耗时算子，并从时间线识别 kernel 间隙（launch overhead）
-3. 能用 ncu 的 `sm__throughput` / `dram__throughput` 指标判定算子是 **compute-bound 还是 memory-bound**，并用 Warp Stall Reasons 定位具体阻塞原因
-4. 理解 **Kernel Fusion** 的收益来源（省 HBM 中间读写），能列出 Transformer 中至少 3 个 fusion 候选并估算 IO 收益
-5. 用 `torch.compile` 验证自动融合对 kernel 数量和 latency 的影响，理解自定义 C++ Extension 算子为何无法被融合
+1. 理解 **PyTorch C++ Extension** 的集成机制，掌握从 `.cu` kernel 到 Python 可调用函数的完整流水线
+2. 学会用 `torch.utils.cpp_extension.load_inline` 动态编译自定义 CUDA 算子，掌握 `at::Tensor` / `data_ptr` / `getCurrentCUDAStream` 三个关键 API
+3. 实现一个最小化 Transformer 推理引擎（Mini Engine），用 Day 2 的 Softmax/LayerNorm kernel 替换 PyTorch 官方算子
+4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-4），并对比 latency
+5. 能解释为什么自定义算子通常比 PyTorch 慢（0.8x ~ 0.95x），以及什么场景下自定义才有优势
 
-> 💡 **为什么重要**：Day 1-5 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine。但"算子各自正确"不等于"系统跑得快"——真实优化必须先**定位瓶颈**再动手。今天就是把"会写 kernel"升级为"会用工具诊断系统"的关键一天，五步 Profiling 法是所有 GPU 性能优化的标准工作流。Day 7 会把今天的结论整理成算子分类表。
+> 💡 **为什么重要**：Day 2-4 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做端到端 profiling。
 
 ---
 
-### 学前导读：从"单算子正确"到"系统级瓶颈定位"
+### 学前导读：为什么 kernel 要接入框架
 
-Day 5 的 Mini Engine 跑通了：自定义 Softmax/LayerNorm + cuBLAS GEMM，端到端误差 < 1e-4。但你可能注意到一个尴尬的现象——**自定义版比 PyTorch 还慢一点（0.8x ~ 0.95x）**。问题来了：慢在哪里？是 Softmax 拖后腿，还是 GEMM 没跑满，还是 kernel 之间的空隙太大？
+Day 2 我们写的 `softmax_layernorm.cu` 是一个独立程序：`main()` 里手动 `cudaMalloc`、`cudaMemcpy`、调 kernel、`checkResult`。这在教学阶段没问题，但真实场景有三个问题：
 
-回答这个问题，靠"猜"是不行的。Day 1 我们用过 `torch.profiler` 看算子时间表，但它只告诉你"哪个算子慢"，不告诉你"为什么慢"——是算力不够，还是带宽喂不饱？要回答"为什么"，需要更底层的工具：
+| 问题 | 独立程序 | 接入框架后 |
+|------|---------|-----------|
+| 张量管理 | 手动 `cudaMalloc`/`cudaFree` | 框架自动管理（autograd、内存池） |
+| GEMM | 要么手写（慢），要么调 cuBLAS（繁琐） | `torch.mm` 一行搞定（cuBLAS 封装） |
+| 端到端验证 | 只能验证单算子 | 能跑整个 Transformer Block 对比 |
 
-| 问题层级 | 工具 | 能回答的问题 |
-|---------|------|------------|
-| 哪个算子最慢？ | torch.profiler / nsys | top3 耗时算子、kernel 间隙 |
-| 这个算子为什么慢？ | ncu | SM/DRAM 占用、Stall 原因 |
-| 怎么优化？ | Roofline + Fusion 分析 | memory-bound → 融合；compute-bound → Tensor Core |
+**今天的任务**：把 Day 2 的 Softmax/LayerNorm kernel 封装成 PyTorch 可调用的 C++ Extension，接入一个最小 Transformer Block，用自定义算子替换 `F.softmax` / `F.layer_norm`，GEMM 仍用 `torch.mm`（cuBLAS）。然后对比"全 PyTorch" vs "自定义算子"的正确性和 latency。
 
-**今天的核心方法论**：**nsys 先看全局（找 top3）→ ncu 再看单点（判 bound 类型）→ Roofline 定方向 → Fusion 出方案**。这是一套"从宏观到微观"的诊断闭环，适用于任何 GPU 程序，不只是 Transformer。
-
-> 💡 **一句话总结**：profiling 不是"跑个工具看个数字"，而是"用数字回答问题"——先问"哪里慢"，再问"为什么慢"，最后问"怎么让它不慢"。
+> 💡 **一句话总结**：今天不优化 kernel 本身（那是 Day 3 做的），而是学"怎么把 kernel 塞进框架"——这是工程集成的标准流程。
 
 ---
 
 ### 理论学习
 
-#### 20.1 两级 Profiling 工具体系：nsys + ncu
+#### 5.1 Mini Transformer Engine 架构
 
-![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
+![Mini Transformer Engine 架构](../../week3/images/mini_engine_architecture.svg)
 
-GPU 性能诊断有且只有两个核心工具（NVIDIA 体系），分工明确：
+Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标：
 
-| 工具 | 层级 | 看什么 | 类比 |
-|------|------|--------|------|
-| **Nsight Systems（nsys）** | 系统级 | 完整时间线、kernel 排列、CPU/GPU 交互、多 stream | "全景地图" |
-| **Nsight Compute（ncu）** | kernel 级 | 单个 kernel 的 SM/DRAM 占用、Stall 原因、寄存器/shared 用量 | "放大镜" |
+1. 用 PyTorch 做张量管理（malloc/autograd 不需要）
+2. 用自定义 CUDA kernel 替换 Softmax/LayerNorm（Day 2 实现）
+3. GEMM 仍用 `torch.mm`（cuBLAS），本周不优化 GEMM
+4. 对比"全 PyTorch" vs "自定义算子"的 latency 和正确性
 
-##### nsys：系统级全景
+**架构关键点**：一个 Transformer Block 包含 6 类算子，其中 4 个 GEMM 用 cuBLAS（compute-bound），2 个 LayerNorm + 1 个 Softmax 用自定义 kernel（memory-bound）。这种"混合调用"是真实推理引擎的常见模式——不是所有算子都要自己写，只替换需要特殊优化的。
 
-nsys 采集一次完整的程序运行，输出时间线（`.nsys-rep`，可用 GUI 打开，也可命令行导出统计）：
+##### 为什么要替换 Softmax/LayerNorm 而不是 GEMM？
 
-```bash
-# 采集 Mini Engine 时间线
-nsys profile -o mini_engine_timeline --trace=cuda,nvtx python profile_mini_engine.py
+| 算子 | 官方实现 | 自定义价值 | 本周是否替换 |
+|------|---------|-----------|------------|
+| GEMM（QKV/Out/FFN） | cuBLAS（极致优化） | 低（cuBLAS 已近峰值） | ❌ 用 torch.mm |
+| Softmax | PyTorch ATen | 中（学习目的） | ✅ 自定义 |
+| LayerNorm | PyTorch ATen | 中（学习目的） | ✅ 自定义 |
+| Attention | FlashAttention | 高（Week 4 主题） | ❌ 本周用 torch.matmul |
 
-# 命令行导出 kernel 统计（按 GPU 时间降序）
-nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
-```
+**结论**：本周替换 Softmax/LayerNorm 是为了**学习集成流程**，不是追求性能。真正有性能优势的自定义场景是 FlashAttention（Week 4）——官方实现没覆盖分块 softmax，自定义才有意义。
 
-`cuda_gpu_kern_sum` 输出形如：
+#### 5.2 PyTorch C++ Extension 集成流水线
 
-```text
-Time(%) Total Time Instances Avg Module Kernel
--------- ----------- --------- -------- --------- ------
- 45.2 1.234 ms 20 61.7 us libcublas ...gemm...
- 12.1 0.331 ms 10 33.1 us my_ops layernorm_kernel
- 8.5 0.232 ms 5 46.4 us my_ops softmax_kernel
- ...
-```
+![PyTorch C++ Extension 集成流水线](../../week3/images/cpp_extension_pipeline.svg)
 
-**三个观察重点**：
-1. **top3 算子**：按 `Time(%)` 排序，前三个就是优化目标
-2. **kernel 间隙（gap）**：在 GUI 时间线上看相邻 kernel 之间的空白 = launch overhead（CPU 调度延迟）
-3. **调用次数**：`# Calls` 异常多说明 launch overhead 累积，Decode 阶段尤其明显
-
-##### ncu：kernel 级放大镜
-
-ncu 对单个 kernel 做深度分析，关键是**对比 SM Throughput 和 DRAM Throughput**判断 bound 类型：
-
-```bash
-# 分析自定义 Softmax / GEMM 的 bound 类型
-ncu --metrics \
- sm__throughput.avg.pct_of_peak_sustained_elapsed,\
- dram__throughput.avg.pct_of_peak_sustained_elapsed,\
- smsp__average_warps_issue_stalled_long_scoreboard.pct,\
- gpu__time_duration.sum \
- --kernel-name regex:"softmax_kernel|gemm_kernel" ./profiling_targets
-```
-
-> ⚠️ **注意**：ncu 会让 kernel 执行慢 10-100x（它要反复 replay 采集指标）。**永远不要在 ncu 下测 latency**，latency 用 nsys 或 cudaEvent 测。ncu 只看"占比"和"Stall 原因"。
-
-#### 20.2 瓶颈判定：Roofline 与 SM/DRAM Throughput
-
-判定一个 kernel 是 compute-bound 还是 memory-bound，有**理论**和**实测**两条路径，互相印证：
-
-##### 理论路径：Arithmetic Intensity vs Ridge Point
+从 `.cu` kernel 到 Python 可调用，经过 6 步：
 
 ```
-Arithmetic Intensity (AI) = FLOPs / Bytes（每读 1 字节做多少次运算）
-Ridge Point = Peak FLOP/s / Peak Bandwidth
-
-RTX 5090 FP32: 104.75 TFLOP/s / 1.792 TB/s ≈ 58.45 FLOP/Byte
+① .cu Kernel → ② Launch Wrapper → ③ C++ Binding → ④ load_inline → ⑤ Python 调用 → ⑥ Mini Engine
 ```
 
-- AI < 58.45 → **memory-bound**（数据喂不饱计算单元）
-- AI > 58.45 → **compute-bound**（算力是瓶颈）
+**各步职责**：
 
-以 Softmax 为例（N=1024, d=1024, FP32）：
-- FLOPs ≈ 3·N²（每元素 exp+add+div）
-- Bytes = 2·N²·4（读 S + 写 P）
-- AI = 3N² / (8N²) = **0.375 FLOP/Byte** → 远低于 58.45 → **memory-bound** ✓
-
-##### 实测路径：SM% vs DRAM%
-
-| ncu 指标 | 含义 |
-|---------|------|
-| `sm__throughput.avg.pct_of_peak_sustained_elapsed` | SM 计算单元占用率（%） |
-| `dram__throughput.avg.pct_of_peak_sustained_elapsed` | HBM 带宽占用率（%） |
-
-判定规则：
-
-| 观察 | 结论 | 优化方向 |
+| 步骤 | 职责 | 关键 API |
 |------|------|---------|
-| DRAM% >> SM% | **memory-bound** | Kernel Fusion、向量化加载、减少 HBM 读写 |
-| SM% >> DRAM% | **compute-bound** | Tensor Core、增加 ILP、auto-tuning |
-| 两者都低（< 30%） | **latency-bound** | 减少 `__syncthreads`、增加并行度、消除 Stall |
+| ① Kernel | `__global__` 函数，纯 CUDA 计算 | `__global__`、`__shared__`、`__shfl_down_sync` |
+| ② Launch Wrapper | 封装 grid/block 配置 + stream 传递 | `kernel<<<grid,block,0,stream>>>` |
+| ③ C++ Binding | `at::Tensor` ↔ 裸指针转换 | `data_ptr<float>()`、`at::empty_like`、`getCurrentCUDAStream` |
+| ④ load_inline | 运行时 JIT 编译为 `.so` | `torch.utils.cpp_extension.load_inline` |
+| ⑤ Python 调用 | 像普通函数调用 | `my_ops.softmax_forward(x)` |
+| ⑥ Mini Engine | 替换框架默认算子 | `attn = my_ops.softmax_forward(attn)` |
 
-##### Warp Stall Reasons：精确定位"为什么慢"
+##### C++ Binding 的三个关键 API
 
-ncu 的 `smsp__average_warps_issue_stalled_*` 系列指标告诉你 warp 卡在哪：
-
-| Stall 原因 | 含义 | 典型场景 |
-|-----------|------|---------|
-| **Long Scoreboard** | 等 HBM 加载 | memory-bound kernel 的主因（Softmax/LayerNorm） |
-| **Math Pipe Throttle** | 计算单元饱和 | compute-bound kernel（大 GEMM） |
-| **Barrier** | 等 `__syncthreads` | reduce kernel 同步开销 |
-| **Short Scoreboard** | 等 shared memory | bank conflict 或 shared 访问密集 |
-
-**Softmax 的 Long Scoreboard 会很高**——三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存。这正是 memory-bound 的微观表现。
-
-#### 20.3 Kernel Fusion 机会识别
-
-![Kernel Fusion：省的是 HBM 中间读写](../../week3/images/kernel_fusion_opportunities.svg)
-
-找到 memory-bound 算子后，最重要的优化手段是 **Kernel Fusion**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM。
-
-##### Transformer 中的 Fusion 候选
-
-| Fusion 候选 | 当前开销 | 融合后收益 | 实现难度 |
-|------------|---------|-----------|---------|
-| **LayerNorm + QKV GEMM** | LN 写 (B,N,d) 到 HBM，GEMM 再读 | 省去 (B,N,d) 一次读写 | 高（需融合 LN+GEMM） |
-| **Softmax + Dropout** | Softmax 写 P，Dropout 读 P 再写 | 省去 P 一次 O(N²) 读写 | 低（element-wise 融合） |
-| **GEMM + Bias + GELU** | GEMM 写结果，加 bias，过 GELU | 省去中间结果 | 中（epilogue fusion） |
-| **Residual Add + LayerNorm** | Add 写结果，LN 读结果 | 省去一次读写 | 中 |
-
-##### Fusion 收益估算（LayerNorm + QKV GEMM）
-
-以 B=1, N=1024, d=512, FP32 为例：
-
-```
-未融合：
- LayerNorm: 读 x(2MB) + 写 y(2MB) = 4MB HBM IO
- QKV GEMM: 读 y(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB HBM IO
- 合计: 15MB
-
-融合后：
- Fused LN+GEMM: 读 x(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB
- 节省: 4MB（LayerNorm 中间结果 y 的读写被消除）
+```cpp
+at::Tensor softmax_forward(at::Tensor input) {
+    int M = input.size(0), D = input.size(1);
+    auto output = at::empty_like(input);    // ① 让 PyTorch 分配输出显存
+    launch_softmax(input.data_ptr<float>(), // ② 从 Tensor 提取裸指针
+                   output.data_ptr<float>(), M, D,
+                   at::cuda::getCurrentCUDAStream() // ③ 获取当前 stream（多 stream 正确性）
+    );
+    return output;
+}
 ```
 
-##### torch.compile 的自动融合
+- `at::empty_like(input)`：让 PyTorch 管理显存（走 caching allocator），无需手动 `cudaMalloc`/`cudaFree`
+- `data_ptr<float>()`：从 `at::Tensor` 提取 `float*` 裸指针，传给 CUDA kernel
+- `at::cuda::getCurrentCUDAStream()`：获取 PyTorch 当前 stream，保证 kernel 在正确 stream 上执行（多 stream 场景关键）
 
-PyTorch 2.0 的 `torch.compile` 会自动做这些 fusion：
+> ⚠️ **注意**：忘记传 stream 是常见 bug——默认用 stream 0（default stream），会破坏多 stream 并行。务必用 `getCurrentCUDAStream()`。
 
-```python
-compiled_model = torch.compile(model, mode="reduce-overhead")
-# nsys 对比：compiled 版 kernel 数量减少 30-50%
-```
+##### load_inline vs setup.py
 
-> ⚠️ **注意**：`torch.compile` 的 fusion 作用于 PyTorch 原生 ATen 算子。**自定义 C++ Extension 算子对 Inductor 是"黑盒"**，无法被融合（除非注册为 custom op + 提供 fake tensor）。这是 Day 5 自定义算子的一大代价——也是为什么"能不自定义就不自定义，先用 torch.compile"。
+| 方式 | 适用场景 | 优势 | 劣势 |
+|------|---------|------|------|
+| `load_inline`（动态） | 原型开发、教学 | 无需预编译，改代码即生效 | 首次编译 ~30s |
+| `setup.py`（静态） | 生产部署 | 编译一次，import 即用 | 改代码需重装 |
 
-##### Fusion 的限制
+今天用 `load_inline`（教学灵活），生产环境用 `setup.py`。
 
-1. **只有相邻 + 数据依赖**的算子能融合（A→B→C 可融，A→B 和 A→C 不行）
-2. **融合 kernel 增加 register/shared memory 压力**，可能降低 occupancy
-3. **复杂融合**需要 CUTLASS（epilogue fusion）或 Triton（`torch.compile` 后端）
+#### 5.3 正确性与 Latency 对比
 
-### Coding 任务：端到端 Profiling Mini Engine
+![Latency 对比 PyTorch 官方 vs 自定义算子](../../week3/images/latency_comparison.svg)
 
-#### 任务 1：创建 `kernels/profiling_targets.cu`
+**预期结果**：
 
-ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的 kernel，干扰判断。所以我们先准备一个**干净的独立靶点程序**：一个 memory-bound 的 Softmax + 一个 compute-bound 的 GEMM，让 ncu 直接分析。完整文件见 [kernels/profiling_targets.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profiling_targets.cu)。
+| 版本 | 相对延迟 | 原因 |
+|------|---------|------|
+| PyTorch 官方 | 1.0x（baseline） | 向量化 + warp 级 + Welford + 混合精度 + kernel fusion |
+| 自定义（Day 2） | ~0.8x（更慢） | 逐元素加载 + 两次 reduce + 全程 FP32 |
+| 自定义 + float4（Day 3） | ~0.95x（接近） | 向量化弥补部分差距 |
 
-核心是两个对比 kernel：
+> ⚠️ **预期结果**：自定义算子可能比 PyTorch **慢**（0.8x），这正常——PyTorch 的 softmax/layernorm 已经过高度优化（Day 3 读过源码）。本周的目标是**理解算子集成流程**，不是超越官方实现。只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有性能优势。
+
+##### 为什么自定义通常比 PyTorch 慢？
+
+回顾 Day 3 的源码分析，PyTorch 官方实现有 4 个我们没做的优化：
+
+1. **向量化加载**（float4/half2）：我们逐元素加载，带宽利用仅 ~25%
+2. **Welford 一次 reduce**：LayerNorm 我们用两次 reduce，多读一次 HBM
+3. **warp 级特化路径**：D≤1024 时 PyTorch 用 warp 级（无 `__syncthreads`）
+4. **kernel fusion**：PyTorch 2.0 的 `torch.compile` 会融合相邻算子
+
+**何时自定义才划算？**
+- 官方没覆盖的场景（如 FlashAttention 的分块 online softmax）
+- 需要融合特殊算子（如 LayerNorm + GEMM 融合）
+- 特殊硬件指令（如 Tensor Core WMMA）
+
+---
+
+### Coding 任务：算子接入 Mini 引擎
+
+#### 任务 1：创建 `kernels/softmax_layernorm_ext.cu`
+
+下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 2 的基础上增加了：① `launch_softmax`/`launch_layernorm` 封装层 ② `#ifdef WITH_TORCH` 的 PyTorch 绑定 ③ 独立 `main()` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/softmax_layernorm_ext.cu)。
 
 ```cuda
-// kernels/profiling_targets.cu —— 端到端 Profiling 靶点：memory-bound Softmax + compute-bound GEMM
-// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
-// 运行命令: ./profiling_targets
+// kernels/softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）
+// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
+// 集成编译（PyTorch load_inline）: 见 mini_engine.py
+// 运行命令: ./softmax_layernorm_ext
 
-// [Memory-bound] Softmax：一行一个 block，三遍扫描 safe softmax（复用 Day 2）
-// 预期 ncu：DRAM Throughput >> SM Throughput
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+// ============================================================
+// 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
+// ============================================================
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+__inline__ __device__ float warpReduceMax(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    return val;
+}
+__inline__ __device__ float blockReduceSum(float val, float* smem) {
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val);
+    return val;
+}
+__inline__ __device__ float blockReduceMax(float val, float* smem) {
+    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    val = warpReduceMax(val);
+    if (lane == 0)
+        smem[wid] = val;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : -INFINITY;
+    if (wid == 0)
+        val = warpReduceMax(val);
+    return val;
+}
+
+// ============================================================
+// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
+// ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int row = blockIdx.x;
     if (row >= M)
@@ -209,7 +205,6 @@ __global__ void softmax_kernel(const float* __restrict__ input, float* __restric
     __shared__ float smem[32];
     __shared__ float row_max, row_sum;
     int tid = threadIdx.x;
-    // Step 1: 求 max（数值稳定性）
     float local_max = -INFINITY;
     for (int i = tid; i < D; i += blockDim.x)
         local_max = fmaxf(local_max, in_row[i]);
@@ -217,7 +212,6 @@ __global__ void softmax_kernel(const float* __restrict__ input, float* __restric
     if (tid == 0)
         row_max = local_max;
     __syncthreads();
-    // Step 2: 求 sum(exp(x - max))
     float local_sum = 0.0f;
     for (int i = tid; i < D; i += blockDim.x)
         local_sum += expf(in_row[i] - row_max);
@@ -225,280 +219,306 @@ __global__ void softmax_kernel(const float* __restrict__ input, float* __restric
     if (tid == 0)
         row_sum = local_sum;
     __syncthreads();
-    // Step 3: 归一化写出
     float inv_sum = 1.0f / row_sum;
     for (int i = tid; i < D; i += blockDim.x)
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
 }
 
-// [Compute-bound] Naive GEMM：C = A·B（故意不做 tiling，但仍体现 compute 特征）
-// 预期 ncu：SM Throughput >> DRAM Throughput
-__global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
-                            int N, int K) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row >= M || col >= N)
+// ============================================================
+// LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
+// ============================================================
+__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
         return;
-    float acc = 0.0f;
-    for (int k = 0; k < K; k++)
-        acc += A[row * K + k] * B[k * N + col];
-    C[row * N + col] = acc;
+    const float* in_row = input + row * N;
+    float* out_row = output + row * N;
+    __shared__ float smem[32];
+    __shared__ float row_mean, row_rstd;
+    int tid = threadIdx.x;
+    float local_sum = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x)
+        local_sum += in_row[i];
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_mean = local_sum / N;
+    __syncthreads();
+    float local_sq = 0.0f;
+    for (int i = tid; i < N; i += blockDim.x) {
+        float diff = in_row[i] - row_mean;
+        local_sq += diff * diff;
+    }
+    local_sq = blockReduceSum(local_sq, smem);
+    if (tid == 0)
+        row_rstd = rsqrtf(local_sq / N + eps);
+    __syncthreads();
+    for (int i = tid; i < N; i += blockDim.x)
+        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
+}
+
+// ============================================================
+// Launch Wrappers：供 C++ Extension 和独立 main 共用
+// 封装 grid/block 配置 + stream 传递
+// ============================================================
+void launch_softmax(const float* input, float* output, int M, int D, cudaStream_t stream) {
+    int threads = 256;
+    softmax_kernel<<<M, threads, 0, stream>>>(input, output, M, D);
+}
+
+void launch_layernorm(const float* input, const float* gamma, const float* beta, float* output, int M, int N, float eps,
+                      cudaStream_t stream) {
+    int threads = 256;
+    layernorm_kernel<<<M, threads, 0, stream>>>(input, gamma, beta, output, M, N, eps);
 }
 ```
 
-`main()` 分别运行两个 kernel 并计时、验证，末尾打印 ncu 分析指引命令。`-lineinfo` 是给 ncu Source View 用的（保留源码行号映射）。
+文件后半部分包含独立 `main()` 验证（不依赖 PyTorch，可直接 nvcc 编译）和 `#ifdef WITH_TORCH` 的 PyTorch 绑定：
 
-#### 任务 2：用 nsys 采集 Mini Engine 时间线
+```cuda
+// ============================================================
+// PyTorch C++ Extension 绑定（仅 load_inline 编译时启用）
+// ============================================================
+#ifdef WITH_TORCH
+#include <torch/extension.h>
 
-先运行独立的 Mini Engine profiling 脚本（[kernels/profile_mini_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profile_mini_engine.py)），它内置 `torch.profiler` 输出 Prefill/Decode 的算子时间表：
+at::Tensor softmax_forward(at::Tensor input) {
+    int M = input.size(0), D = input.size(1);
+    auto output = at::empty_like(input);
+    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(), M, D, at::cuda::getCurrentCUDAStream());
+    return output;
+}
 
-```bash
-# 运行（输出 Prefill/Decode 算子表 + 导出 Chrome trace）
-python kernels/profile_mini_engine.py
+at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
+    int M = input.size(0), N = input.size(1);
+    auto output = at::empty_like(input);
+    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(), beta.data_ptr<float>(), output.data_ptr<float>(),
+                     M, N, (float)eps, at::cuda::getCurrentCUDAStream());
+    return output;
+}
+
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
+    m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
+}
+#endif
 ```
 
-**预期输出**：
+#### 为什么用 `#ifdef WITH_TORCH` 隔离绑定代码？
+
+同一个 `.cu` 文件要支持两种编译模式：
+
+| 模式 | 编译命令 | 启用部分 | 用途 |
+|------|---------|---------|------|
+| 独立 | `nvcc ... kernels/...cu` | kernel + launch + main | 不依赖 PyTorch，快速验证 kernel 正确性 |
+| 集成 | `load_inline(extra_cuda_cflags=["-DWITH_TORCH"])` | kernel + launch + binding | 接入 PyTorch，端到端运行 |
+
+`#ifdef WITH_TORCH` 让 `#include <torch/extension.h>` 只在集成模式编译，避免独立模式缺 PyTorch 头文件报错。
+
+#### 任务 2：编译运行（独立模式 + PyTorch 集成）
+
+**独立模式验证 kernel 正确性**：
+
+```bash
+# 独立编译（不依赖 PyTorch）
+nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
+
+# 运行
+./softmax_layernorm_ext
+```
+
+**预期输出**（独立模式）：
 
 ```text
-===== Prefill Phase (shape=(1, 1024, 512)) =====
-Name Self CUDA Calls
-aten::mm            128 us  20  ← QKV/Out/FFN GEMM（compute-bound）
-aten::layer_norm     19 us  10
-aten::softmax        24 us   5
-aten::gelu           ...      5
-...
+=== Softmax + LayerNorm (ext version, launch wrappers) ===
+Config: M=128, D=1024
 
-===== Decode Phase (shape=(1, 1, 512)) =====
-Name Self CUDA Calls
-aten::mm             15 us  20  ← GEMM 但矩阵极小（M=1）
-aten::layer_norm     ...      10
-aten::softmax        ...       5
-...
+[Softmax]
+ Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
+[LayerNorm]
+ LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
 
-Prefill (N=1024): 0.135 ms / forward
-Decode  (N=1): 0.118 ms / forward
-Per-token: Prefill=0.1 us/token, Decode=117.6 us/token
+这两个 launch wrapper 就是 PyTorch C++ Extension 要调用的入口。
+集成方式见 mini_engine.py 的 load_inline 调用。
 ```
 
-然后用 nsys 采集系统级时间线：
+**PyTorch 集成模式（Mini Engine）**：
 
 ```bash
-# nsys 采集
-nsys profile -o mini_engine_timeline --trace=cuda,nvtx python kernels/profile_mini_engine.py
-
-# 导出 kernel 统计
-nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+# 运行 Mini Engine（load_inline 会自动 JIT 编译 kernel）
+python mini_engine.py
 ```
 
-**分析任务**：
-1. 找出 Prefill 阶段 CUDA 时间 top3 算子（预期是 `mm`/`gemm` 类 GEMM）
-2. 对比 Prefill vs Decode 的 per-token 时间（Prefill 远快于 Decode，因为并行度高）
-3. 在 Nsight Systems GUI（或 chrome://tracing 打开 `trace_prefill.json`）观察 kernel 之间的 gap（launch overhead）
-
-#### 任务 3：用 ncu 判定 Softmax / GEMM 的 bound 类型
-
-编译独立靶点并用 ncu 分析：
-
-```bash
-# 编译（带 -lineinfo 供 ncu Source View）
-nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
-
-# 运行验证正确性
-./profiling_targets
-
-# ncu 分析 bound 类型
-ncu --metrics \
- sm__throughput.avg.pct_of_peak_sustained_elapsed,\
- dram__throughput.avg.pct_of_peak_sustained_elapsed,\
- smsp__average_warps_issue_stalled_long_scoreboard.pct,\
- gpu__time_duration.sum \
- --kernel-name regex:"softmax_kernel|gemm_kernel" \
- ./profiling_targets
-```
-
-**预期结果**：
+**预期输出**（集成模式）：
 
 ```text
-=== Profiling Targets: Softmax(memory-bound) + GEMM(compute-bound) ===
-Softmax: M=256, D=1024
-GEMM: M=512, N=512, K=512
+Max diff (PyTorch vs Custom): 1.07e-06
 
-[Softmax] time=0.062 ms maxDiff=4.42e-09 (PASS)
-[GEMM] time=0.072 ms TFLOPS=3.74 (naive, no tiling)
-
- softmax_kernel (M=256, D=1024)
- DRAM Throughput : ~55-70% ← 高
- SM Throughput : ~15-25% ← 低
- Long Scoreboard : ~40-55% ← 等 HBM（memory-bound 特征）
- → 结论：DRAM% >> SM% → memory-bound ✓
-
- gemm_kernel (M=512, N=512, K=512) — naive 无 tiling
- DRAM Throughput : ~55-70% ← 高
- SM Throughput : ~15-25% ← 低
- Long Scoreboard : ~40-55% ← 等 HBM
- → 结论：naive GEMM（无 tiling）AI ≈ 0.25 << 58.45 → 仍为 memory-bound ✓
- → 对比：Week2 的 tiled GEMM（有 shared memory 复用）才为 compute-bound
+=== Latency Comparison (Prefill, N=1024) ===
+PyTorch (F.softmax + F.layer_norm): 0.063 ms / forward
+Custom (my_ops.softmax + my_ops.layernorm): 0.078 ms / forward
+Speedup: 0.8x ~ 1.2x
 ```
 
-**判定印证**：Softmax 和 naive GEMM 的 DRAM% >> SM% 且 Long Scoreboard 高 → 都是 memory-bound。naive GEMM 的 AI ≈ 2K/(8K) = 0.25 FLOP/Byte，远低于 ridge point（58.45），理论上确为 memory-bound。只有经过 tiling + shared memory 优化的 GEMM（如 Week2 Day6 的 v4-v6）才转变为 compute-bound。
+- `Max diff < 1e-4` 确认自定义版与 PyTorch 版数值一致
+- `Speedup` 通常在 0.8x ~ 0.95x（自定义版略慢，符合预期）
 
-> ⚠️ **常见坑**：① ncu 看不到自定义 kernel → 用 `--kernel-name regex:softmax_kernel` 模糊匹配（C++ 会 mangle 符号名）；② `dram__throughput` 指标名报错 → 不同架构指标名有差异，用 `ncu --query-metrics` 查可用指标；③ nsys 采集到的 kernel 很少 → 加 warmup 2-3 轮再采集。
+#### 任务 3：用 nsys 对比 kernel 数量
 
-#### 为什么 ncu 下 latency 不可信？
+```bash
+# 采集 PyTorch 版时间线
+nsys profile -o mini_engine_pytorch python mini_engine.py
 
-ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运行时间膨胀 10-100x。所以：
-- **latency** → 用 nsys 或 `cudaEventElapsedTime` 测（任务 2 已做）
-- **bound 类型 / Stall 原因** → 用 ncu 看（任务 3 已做）
+# 查看自定义版多出了哪些 kernel
+nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
+```
 
-两者分工，不可混用。
+**观察重点**：
+- 自定义版应多出 `softmax_kernel` 和 `layernorm_kernel`（来自 `my_ops`）
+- PyTorch 版对应的是 `aten::_softmax` 和 `aten::layer_norm`（可能融合了）
+- 自定义版的 kernel 数量可能更多（未做 fusion）
 
-#### 任务 4：LeetGPU 在线题目 —— RMS Normalization
+#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
 
-今天的主题是"定位 memory-bound 算子 + fusion 机会"。本题用一个 Llama 风格的归一化算子（RMSNorm）练手：它比 LayerNorm 少一次 reduce，是典型的 memory-bound 算子，正好用今天的 ncu 流程验证。
+今天的主题是"把自定义算子封装为框架可调用接口"。本题用一个 compute-bound 的 tiling 乘加算子（Matrix Multiplication）练习这个集成模式——先写 kernel，再封装为 PyTorch 可调用函数，套用今天的 `load_inline` + `at::Tensor` + `data_ptr` 模板。
 
-**题目链接**：<https://leetgpu.com/challenges/rms-normalization>
+**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
-**与今日知识的关联**：RMSNorm 是 Llama/T5 等现代模型替代 LayerNorm 的首选——它**只做一次 reduce（sum of squares）**，比 LayerNorm 的两次（mean + variance）更省。它纯 memory-bound（AI ≈ 0.5 FLOP/Byte），是练习"用 ncu 判定 memory-bound → 用 fusion 优化"的完美靶点。今天学了五步 Profiling 法，本题直接套用：先写 kernel → 用 ncu 看 DRAM% >> SM% → 思考 RMSNorm + GEMM 的 fusion。
+**与今日知识的关联**：本题是"自定义算子集成"模式的典型 case。Matrix Multiplication 是 compute-bound 的 tiling 乘加算子——naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，AI 仅 1/8 FLOP/Byte；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。核心是 2D block/thread 映射 + shared memory 分块 + 边界补 0。用今天的 C++ Extension 流程把它封装为 `my_ops.matmul_forward`，就掌握了"任何自定义 kernel 接入 PyTorch"的通用模板——和今天把 Softmax/LayerNorm 封装成 `my_ops.softmax_forward` 是同一套流程。
 
-> 💡 提交后在 [LeetGPU RMS Normalization 题目](https://leetgpu.com/challenges/rms-normalization)上记录通过耗时，用 ncu 验证 `DRAM% >> SM%`（memory-bound），并对比 RMSNorm（一次 reduce）vs Day 2 LayerNorm（两次 reduce）的 latency。完整题解（含 RMSNorm vs LayerNorm 对比、Roofline 分析、与 Llama 的关联）见 [RMS Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时。完整题解（含 tiling 数据复用分析、naive → block tile → thread tile 优化链路）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matmul_forward`，在 Python 里调用验证。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
-| [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
-| [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
+| [148. 排序链表](https://leetcode.cn/problems/sort-list/) | 中等 | 归并排序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html) |
+| [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/) | 困难 | 小顶堆 k 路归并 / 分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
+| [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/) | 中等 | 哈希 + 双向链表 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：用 `torch.compile` 减少 kernel 数量
+#### 实验 1：在自定义 LayerNorm 中加入 float4 向量化
 
-对 Mini Engine 用 `torch.compile(mode="reduce-overhead")` 编译，再用 nsys 采集时间线，对比编译前后的 kernel 总数和 latency。
+参考 Day 3 的 float4 优化，修改 `launch_layernorm` 内部的 kernel，把逐元素加载改为 `float4` 批量加载，对比 latency 变化。
+
+**思考问题**：float4 优化后，自定义版能接近 PyTorch 性能吗？还差什么？
+> 提示：float4 能弥补"逐元素加载"的差距（~1.5-2x），但还缺 Welford 一次 reduce、warp 级特化、kernel fusion。要完全追平需要全部补齐。
+
+#### 实验 2：用 `torch.compile` 编译 Mini Engine
 
 ```python
-compiled_model = torch.compile(model, mode="reduce-overhead")
-# nsys profile -o compiled_timeline python ...
-# nsys stats -t cuda_gpu_kern_sum compiled_timeline.nsys-rep
+compiled_model = torch.compile(model_custom, mode="reduce-overhead")
+benchmark(compiled_model, x, "Custom + torch.compile")
 ```
 
-**思考问题**：`torch.compile` 把 kernel 数减少了多少？哪些算子被融合了？
-> 提示：`torch.compile` 通常把 LayerNorm+GEMM、Softmax+Dropout 等融合，kernel 数减少 30-50%。观察 `aten::layer_norm` 和 `aten::mm` 是否合并成了 fused kernel。
+对比编译前后的 latency 和 kernel 数量。
 
-#### 实验 2：分析 Softmax 的 Long Scoreboard Stall 占比
+**思考问题**：`torch.compile` 能融合自定义算子吗？为什么？
+> 提示：`torch.compile` 的 fusion 主要作用于 PyTorch 原生算子（ATen）。自定义 C++ Extension 算子对 torch.compile 是"黑盒"，无法被融合（除非注册为 custom op + 提供 fake tensor）。这是自定义算子的一个代价。
 
-用 ncu 分析 `softmax_kernel` 的 `smsp__average_warps_issue_stalled_long_scoreboard.pct`，解释为什么它高。
+#### 实验 3：Decode 阶段（N=1）的 speedup 差异
 
-```bash
-ncu --metrics smsp__average_warps_issue_stalled_long_scoreboard.pct,\
- smsp__average_warps_issue_stalled_barrier.pct \
- --kernel-name regex:softmax_kernel ./profiling_targets
-```
+把输入改为 `x = torch.randn(1, 1, d_model)`（Decode 形状），对比自定义版 vs PyTorch 版的 latency。
 
-**思考问题**：Softmax 的 Long Scoreboard 占比约多少？三遍扫描中哪一遍贡献最大？
-> 提示：Softmax 三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存加载 → Long Scoreboard 高（40-55%）。第二遍（求 sum）和第三遍（归一化）都要重新读 HBM，是主要贡献。这正是 online softmax（两遍）优化的动机。
+**思考问题**：Decode 阶段自定义版的相对劣势更大还是更小？为什么？
+> 提示：Decode 下矩阵极小（M=1），launch overhead 占比上升。PyTorch 对小张量有特化路径（避免过度并行），自定义版没有这种特化，劣势可能更大。
 
-#### 实验 3：列出 Mini Engine 的 top3 瓶颈算子并给优化方向
+### 验证 Checklist
 
-综合 nsys 的 top3 算子 + ncu 的 bound 判定，写一份诊断报告：每个 top 算子标注（compute/memory-bound + 优化方向）。
-
-**思考问题**：Prefill 和 Decode 的 top3 瓶颈算子一样吗？优化重点有何不同？
-> 提示：Prefill 的 top3 通常是 GEMM（compute-bound → Tensor Core）；Decode 的 top3 可能包含 LayerNorm/Softmax（memory-bound → fusion），且 launch overhead 占比更高 → CUDA Graph。这正是 Day 7 算子分类表的核心内容。
+- [ ] 能用 `load_inline` 把 Day 2 kernel 集成到 PyTorch（`my_ops.softmax_forward` / `layernorm_forward`）
+- [ ] 自定义算子版 Mini Engine 编译运行成功（`python mini_engine.py`）
+- [ ] 自定义版与 PyTorch 版输出误差 < 1e-4
+- [ ] 记录了 Prefill 阶段自定义版 vs PyTorch 版的 latency（预期 0.8x ~ 0.95x）
+- [ ] 能解释为什么自定义版通常比 PyTorch 慢（缺失向量化 / warp 级 / Welford / fusion）
+- [ ] 理解 C++ Extension 的三个关键 API（`at::Tensor` / `data_ptr` / `getCurrentCUDAStream`）
+- [ ] 能说出何时自定义算子才有性能优势（官方未覆盖的场景，如 FlashAttention）
 
 ---
 
 ### 今日总结
 
-Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了"五步诊断法"：
+Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
 
-1. **两级工具体系**：nsys 看系统级全景（top3 算子、kernel 间隙），ncu 看 kernel 级微观（SM/DRAM 占用、Stall 原因），先全局后单点
-2. **瓶颈判定**：DRAM% >> SM% → memory-bound；SM% >> DRAM% → compute-bound；理论 AI 计算与实测 ncu 互相印证
-3. **Warp Stall**：Long Scoreboard = 等 HBM（memory-bound 特征），Math Pipe Throttle = 计算饱和（compute-bound 特征）
-4. **Kernel Fusion**：把相邻 memory-bound 算子合并，省中间结果 HBM 读写；LayerNorm+GEMM、Softmax+Dropout 是 Transformer 典型候选
-5. **torch.compile**：自动融合 ATen 算子，kernel 数减 30-50%；但自定义 C++ Extension 是"黑盒"无法被融合
+1. **集成流水线**：`.cu` kernel → launch wrapper → C++ binding（`at::Tensor`）→ `load_inline` JIT 编译 → Python 调用，6 步把裸 kernel 变成框架可调用算子
+2. **三个关键 API**：`at::empty_like`（让 PyTorch 管显存）、`data_ptr<float>()`（提取裸指针）、`getCurrentCUDAStream`（保证 stream 正确）
+3. **Mini Engine**：Transformer Block 中 GEMM 用 cuBLAS、Softmax/LayerNorm 用自定义，混合调用是真实引擎的常见模式
+4. **性能预期**：自定义版比 PyTorch 慢 0.8x ~ 0.95x——因为缺失向量化、Welford、warp 级、fusion 四项优化
+5. `#ifdef WITH_TORCH`：同一 `.cu` 支持独立编译（快速验证）和 PyTorch 集成（端到端）两种模式
 
-掌握五步法后，任何 GPU 程序的瓶颈诊断都有章可循。Day 7 会把今天的结论整理成 Prefill/Decode 算子分类表，为 Week 4 FlashAttention 收尾。
+掌握这套集成流程后，任何自定义 CUDA kernel 都能接入 PyTorch。Day 6 会对 Mini Engine 做端到端 profiling，定位瓶颈算子和 fusion 机会。
 
 ---
 
 ### 面试要点
 
-1. **如何做端到端 profiling 定位 Transformer 推理的瓶颈？完整流程是什么？**
+1. **如何把自定义 CUDA 算子集成到 PyTorch 中？有几种方式？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **第一步（nsys 系统级）**：用 Nsight Systems 采集完整时间线，`nsys stats -t cuda_gpu_kern_sum` 按 CUDA 时间排序找 top3 算子
- - **第二步（ncu kernel 级）**：对 top3 算子用 Nsight Compute 分析 `sm__throughput` 和 `dram__throughput`
- - **第三步（瓶颈判定）**：
- - DRAM% >> SM% → memory-bound → 优化方向：kernel fusion、向量化加载、减少 HBM 读写
- - SM% >> DRAM% → compute-bound → 优化方向：Tensor Core、增加 ILP、auto-tuning
- - **第四步（Stall 分析）**：看 Warp Stall Reasons 定位具体阻塞（Long Scoreboard = 等内存，Math Pipe = 计算饱和，Barrier = 同步开销）
- - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
- - **关键分工**：latency 用 nsys/cudaEvent 测，bound 类型/Stall 用 ncu 看（ncu 下 latency 不可信，会膨胀 10-100x）
+ - **方式 1：C++ Extension（推荐）**：写 `.cpp`（接口）+ `.cu`（kernel），用 `torch.utils.cpp_extension.load_inline` 动态编译或 `setup.py` 静态编译
+ - **方式 2：TorchScript/Custom Operator**：用 `torch.ops.register` 注册自定义 op
+ - **方式 3：Triton**：用 Python 写 kernel，`torch.compile` 自动集成（无需 C++）
+ - **集成要点**：① 用 `at::Tensor` 接收张量 ② 用 `data_ptr<float>()` 获取裸指针 ③ 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream ④ 用 `auto out = at::empty_like(input)` 分配输出
 
 </details>
 
 
-2. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
+2. **为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **定义**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM
- - **收益来源**：减少 HBM 读写次数。A→B→C 未融合要写 B 到 HBM 再读；融合后在 register/SRAM 中直接传递
- - **Transformer 例子**：LayerNorm + QKV GEMM。未融合时 LayerNorm 输出 `y(B,N,d)` 写 HBM，GEMM 再读；融合后在 GEMM kernel 内部直接做归一化，省去 `y` 的一次读写（约 4MB，B=1,N=1024,d=512）
- - **限制**：① 只有相邻且数据依赖的算子能融合 ② 融合 kernel 可能增加 register/shared 压力降低 occupancy ③ 复杂融合需 CUTLASS/Triton
+ - **PyTorch 已高度优化**：warp 级特化路径、float4/half2 向量化、Welford 一次 reduce、FP32 混合精度
+ - **教学版缺失优化**：逐元素加载、两次 reduce、全程 FP32、无 kernel fusion
+ - **JIT/编译优化**：PyTorch 2.0 的 `torch.compile` 会做 kernel fusion，进一步拉开差距
+ - **超越场景**：只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有优势
 
 </details>
 
 
-3. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+3. `load_inline` **和** `setup.py` **有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 58.45 FLOP/Byte）
- - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
- - DRAM% >> SM% → memory-bound
- - SM% >> DRAM% → compute-bound
- - **Roofline 定位**：在 Roofline 图上标出算子位置，落在斜线段是 memory-bound，水平段是 compute-bound
- - **经验法则**：
- - element-wise（relu、layernorm、softmax）→ 几乎总是 memory-bound
- - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
- - 小 GEMM（M=1 或某维很小，如 Decode）→ 通常 memory-bound
- - reduction（sum、max）→ memory-bound
+ - `load_inline`**（动态）**：运行时 JIT 编译，改代码即生效，适合原型开发和教学。首次编译 ~30s，后续从缓存加载
+ - `setup.py`**（静态）**：预先编译为 `.so`，`import` 即用，适合生产部署。改代码需重新 `pip install`
+ - **选择原则**：开发期用 `load_inline`（迭代快），上线用 `setup.py`（无 JIT 开销）
+ - **共同点**：两者都走 PyTorch 的 C++ Extension 机制，最终都是把 `.cu` 编译为 `.so` 并注册到 Python
 
 </details>
 
 
-4. **ncu 和 nsys 有什么区别？分别什么场景用？**
+4. **集成自定义算子时，为什么要传** `getCurrentCUDAStream()`**？不传会怎样？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **nsys（系统级）**：采集完整程序时间线，看 kernel 排列、CPU/GPU 交互、多 stream、kernel 间隙。**测 latency、找 top3 算子、看 launch overhead**
- - **ncu（kernel 级）**：对单个 kernel 做深度分析，看 SM/DRAM 占用、Stall 原因、寄存器/shared 用量。**判 bound 类型、看 Stall 原因、做优化对比**
- - **关键区别**：ncu 会让 kernel 慢 10-100x（反复 replay），所以**latency 永远用 nsys 测，ncu 只看占比**
- - **协作流程**：nsys 找到慢的 kernel → ncu 分析它为什么慢 → 优化后用 nsys 验证整体 latency 改善
+ - **原因**：PyTorch 用多 stream 管理异步执行（如 `torch.cuda.stream()`）。自定义 kernel 必须在 PyTorch 当前 stream 上执行，否则会破坏异步依赖
+ - **不传的后果**：kernel 默认走 stream 0（default stream），与 PyTorch 的 stream 隔离，可能导致：
+ - 数据竞争（kernel 在 PyTorch tensor 未就绪时执行）
+ - 死锁（stream 间等待）
+ - 多 stream 并行失效（所有操作串行到 default stream）
+ - **正确做法**：launch wrapper 接收 `cudaStream_t` 参数，从 `at::cuda::getCurrentCUDAStream()` 获取
 
 </details>
 
 
-5. **为什么** `torch.compile` **能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
+5. `torch.compile` **能融合自定义 C++ Extension 算子吗？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原理**：`torch.compile`（Inductor 后端）把 PyTorch 原生 ATen 算子图做 fusion——相邻的 element-wise 算子（LayerNorm、Softmax、GELU、Residual Add）合并成单个 fused kernel，省中间结果 HBM 读写
- - **效果**：通常 kernel 数减少 30-50%，Decode 阶段（kernel 小而多）收益更明显
- - **对自定义 C++ Extension 无效**：自定义算子对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法融合。这是 Day 5 自定义算子的代价之一
+ - **不能直接融合**：`torch.compile`（Inductor）的 fusion 作用于 PyTorch 原生 ATen 算子。自定义 C++ Extension 对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法做 fusion
  - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（`torch.compile` 原生支持融合）
- - **实践建议**：优先用原生算子 + `torch.compile`；只有官方没覆盖的场景（如 FlashAttention）才自定义
+ - **代价**：自定义算子无法被 fusion 是性能劣势之一——PyTorch 原生算子经 `torch.compile` 后 kernel 数减少 30-50%，自定义版无法享受
+ - **实践建议**：如果追求 fusion，优先用 Triton；如果追求极致单算子性能或复用 CUDA 代码，用 C++ Extension（接受无法 fusion 的代价）
 
 ---
 

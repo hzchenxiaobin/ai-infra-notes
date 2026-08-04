@@ -1,4 +1,4 @@
-## Day 6：Nsight Profiling 实战
+## Day 6：Nsight Profiling 实战（ncu + nsys）Nsight Profiling 实战
 
 ### 🎯 目标
 

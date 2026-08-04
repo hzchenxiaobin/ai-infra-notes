@@ -1,741 +1,447 @@
-## Day 2：限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
+## Day 2：CUTLASS 源码分析 + CuTe 概念铺垫CUTLASS 源码分析 —— 工业级 GEMM 库的三级 Tiling
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 用限时手撕的方式检验本周 6 天的学习成果，把「看懂」变成「写得出」
-2. 在 30 分钟内手写一个带 Warp Shuffle 的 Block Reduce Kernel
-3. 在 60 分钟内手写一个含 Shared Memory Tiling + Register Blocking 的 GEMM Kernel
-4. 不看资料口述 FlashAttention 的完整算法流程与 Online Softmax 三公式
-5. 整理本周所有产出代码与 README，形成可展示的 GitHub 仓库
-6. 编写从 Naive 到 cuBLAS 的性能对比报告，量化每一层优化的收益
+1. 理解 CUTLASS 的设计哲学：可组合的 GEMM 模板库<br>
+2. 掌握 CUTLASS 的三级 tiling 抽象：Device → Kernel → Warp → Thread<br>
+3. 能阅读 `cutlass::gemm::device::Gemm` 的模板参数并实例化调用<br>
+4. 理解 `ThreadblockShape`/`WarpShape`/`InstructionShape` 的层级关系<br>
+5. 能用 CUTLASS 实例化一个 GEMM 调用并对比手写 WMMA 的性能<br>
+6. 理解 CUTLASS 与 cuBLAS 的关系：cuBLAS 底层使用 CUTLASS 级别的优化<br>
 
-> 💡 **为什么重要**：面试现场就是限时手写 + 口述。能否在白板上写出 Warp Shuffle 循环、画出两级归约结构、推导 Online Softmax，直接决定 AI Infra 岗位的成败。同时，一份干净的 GitHub 仓库和性能报告，是项目深度的最佳证明。
+> 💡 **为什么重要**：大厂算子岗 JD 明确要求"CUTLASS 熟悉"。面试中被问"手写 GEMM 到 cuBLAS 95% 怎么做"，标准答案是"用 CUTLASS"。理解 CUTLASS 的三级 tiling 是从"会写 kernel"到"能读工业级库"的关键跨越。
 
 ---
 
-### 学前导读：为什么要限时手撕
+### 学前导读：为什么手写 WMMA 教学版只有 ~33%，而 CUTLASS 能达 95%+
 
-本周 Day 1–Day 6 覆盖了五大主题：Warp Shuffle、Register Blocking、CUDA Streams、Nsight Profiling、FlashAttention。但「读懂代码」和「白板写出代码」之间有一道巨大的鸿沟。
+Day 6b 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
 
-**读懂 ≠ 会写**：
+| 优化点 | 手写 WMMA | CUTLASS | cuBLAS |
+|--------|-----------|---------|--------|
+| Tensor Core (WMMA) | ✅ | ✅ | ✅ |
+| Shared Memory Tiling | ❌ | ✅ | ✅ |
+| Double Buffer (cp.async) | ❌ | ✅ | ✅ |
+| K 分割并行 | ❌ | ✅ | ✅ |
+| Auto-tuning | ❌ | ✅ | ✅ |
+| Epilogue Fusion | ❌ | ✅ | ✅ |
+| 预编译 kernel 库 | ❌ | ❌ | ✅ |
 
-| 状态 | 典型表现 | 面试结果 |
-|------|---------|---------|
-| 看懂 | 能解释每行代码的作用 | 被追问细节时卡壳 |
-| 会写 | 闭卷能写出核心结构 | 通过手撕题 |
-| 会调 | 能定位 bug 并修复 | 拿到 offer |
+CUTLASS 是 NVIDIA 开源的 GEMM/Conv 模板库，提供了上述所有优化。cuBLAS 底层使用的就是 CUTLASS 级别的优化代码。
 
-限时手撕的训练目的，是把知识从「短期记忆」固化到「肌肉记忆」。当你能在 30 分钟内不查资料写出 `__shfl_down_sync` 的 butterfly 循环，说明 Warp Shuffle 真正内化了。
+> 💡 **一句话总结**：CUTLASS = 可组合的 GEMM 模板库。你不需要从零写所有优化，只需要选择合适的模板参数，CUTLASS 会生成接近 cuBLAS 性能的 kernel。
 
-**今日节奏建议**（全天 6 小时）：
+---
 
-| 时段 | 任务 | 时长 |
+### 理论学习
+
+#### 1.0 CuTe 最小铺垫（CUTLASS 3.x 的 layout 抽象）
+
+CUTLASS 3.x 引入了 **CuTe（CUTLASS Tensors and Layout）**——一个用 C++ 模板表达"张量形状 + 内存布局"的抽象层。读 CUTLASS 3.x 源码或 Hopper+ 的 FlashAttention 源码（如 `flash_fwd_kernel.h`）都依赖 CuTe 概念。
+
+##### CuTe 的三个核心概念
+
+| 概念 | 含义 | 示例 |
 |------|------|------|
-| 上午 | 30 分钟手撕 Reduce + 复盘 | 2h |
-| 上午 | 60 分钟手撕 GEMM + 复盘 | 2h |
-| 下午 | FlashAttention 口述训练 | 1h |
-| 下午 | GitHub 仓库整理 + 性能报告 | 1h |
+| **Shape** | 张量的形状（编译期已知） | `Shape<64, 128, 16>` = 一个 64×128×16 的 tile |
+| **Stride** | 每维的步长（决定 row-major/col-major 等） | `Stride<128, 1, 8192>` = row-major（行步长 128） |
+| **Layout** | Shape + Stride 的组合，描述"逻辑坐标 → 物理偏移" | `Layout<Shape<64,128>, Stride<128,1>>` |
+
+##### `make_tensor` 与 `local_tile`
+
+CuTe 用 `make_tensor` 把裸指针 + Layout 绑定成一个 `Tensor` 对象，用 `local_tile` 切出 block 负责的子块：
+
+```cpp
+// CUTLASS 3.x CuTe 风格（概念示意）
+auto A_layout = make_layout(make_shape(M, K), make_stride(K, 1));  // row-major
+auto A_tensor = make_tensor(d_A, A_layout);                         // 指针 + Layout
+
+// 切出当前 block 负责的 tile
+auto A_block = local_tile(A_tensor, make_shape(BM, BK), block_idx); // (BM, BK) tile
+```
+
+##### 为什么读 CUTLASS 3.x / FA 源码需要 CuTe？
+
+- **layout 解耦**：同一个 kernel 源码支持 row-major/col-major/混合布局，靠 Layout 模板参数切换，不需写多份代码
+- **TMA 配合**：Hopper 的 TMA（Tensor Memory Accelerator）直接吃 CuTe Layout 描述符，硬件级异步搬运
+- **FlashAttention 源码**：`flash_fwd_kernel.h` 用 CuTe 描述 `kBlockM`/`kBlockN` 等 tile 参数，读源码必须理解 CuTe
+
+> 💡 **面试要点**：CuTe 是 CUTLASS 3.x 的核心抽象，用"Shape + Stride = Layout"把张量形状与内存布局解耦。读 Hopper+ 的 CUTLASS/FA 源码需先过 CuTe 这一关。本教程基于 CUTLASS 2.x（无 CuTe），3.x 的 CuTe 留作进阶阅读。
+
+> 📖 延伸阅读：CUTLASS CuTe 官方教程、`flash_fwd_kernel.h` 源码导读（Week4/Day3）
 
 ---
 
-### 理论学习：本周知识图谱回顾
+#### 1.1 CUTLASS 概述
 
-在开始手撕前，先用 10 分钟回顾本周的知识脉络，确保脑子里有完整的优化层次图。
+![CUTLASS 三级 Tiling 架构](../../week2/images/cutlass_tiling_hierarchy.svg)
 
-#### 1. 本周优化层次全景
+CUTLASS（CUDA Templates for Linear Algebra Subroutines）是 NVIDIA 开源的高性能线性代数模板库：
 
-![GEMM 优化层次全景](../../images/week2_gemm_levels.svg)
+| 特性 | 说明 |
+|------|------|
+| 开源 | https://github.com/NVIDIA/cutlass |
+| 模板化 | C++ template，编译时生成优化 kernel |
+| 可组合 | Threadblock → Warp → Instruction 三级可独立配置 |
+| 多精度 | FP64/FP32/FP16/BF16/INT8/FP8 |
+| 多架构 | Volta → Blackwell |
+| 底层用 WMMA/mma.sync | 但添加了大量工程优化 |
 
-#### 2. 三大核心数据结构回忆
+##### CUTLASS 2.x vs 3.x
 
-手撕前必须默写出来的三个结构：
+| 版本 | 架构支持 | 核心抽象 | 编程模型 |
+|------|---------|---------|---------|
+| CUTLASS 2.x | sm_70 ~ sm_89 | Threadblock/Warp/Thread | 显式 tiling |
+| CUTLASS 3.x | sm_90+ (Hopper) | CuTe (CUTLASS Tensors) | layout 抽象，TMA |
 
-| 结构 | 代码 | 出处 |
-|------|------|------|
-| Warp Reduce | `for (offset=16; offset>0; offset>>=1) val += __shfl_down_sync(0xFFFFFFFF, val, offset);` | Day 1 |
-| Register 累加器 | `float acc[TM][TN] = {0}; float r_A[TM], r_B[TN];` | Day 2 |
-| Online Softmax | `m_new=max(m,mj); l_new=l*exp(m-m_new)+Σexp(xj-m_new);` | Day 5 |
+本教程基于 CUTLASS 2.x（兼容 sm_120），3.x 的 CuTe 抽象更高级但学习曲线陡峭。
 
-#### 3. 本周面试高频题自测
+#### 1.2 三级 Tiling 抽象
 
-开始手撕前，先快速自测能否口答以下问题（每题不超过 30 秒）：
+CUTLASS 的核心设计是三级 tiling，从粗到细：
 
-1. `__shfl_down_sync(0xFFFFFFFF, val, 16)` 四个参数含义？
-2. 两级归约中，第二级为什么由 Warp 0 做？
-3. Register Blocking 的 register 用量怎么算？TM=TN=8 是多少？
-4. Default Stream 有什么坑？
-5. FlashAttention 为什么比标准 Attention 快？（用 HBM 访问次数回答）
+```
+GEMM: C[M, N] = A[M, K] × B[K, N]
 
-> 如果以上任何一题卡壳，先回看对应 Day 的「面试要点」再开始手撕。
+Level 1: Device (Grid 级)
+  → 将 M×N 分成 Threadblock tiles，每个 block 处理一个 ThreadblockTile
 
----
+Level 2: Kernel (Warp 级)  
+  → 将 ThreadblockTile 分成 Warp tiles，每个 warp 处理一个 WarpTile
 
-### Coding 任务
+Level 3: Warp (Instruction 级)
+  → 将 WarpTile 分成 MMA tiles，每个 MMA 指令处理一个 InstructionTile (16×16×16)
+```
 
-#### 任务 1：30 分钟手写 Block Reduce Kernel
+##### 具体示例（GEMM 4096×4096×4096, FP16）
 
-##### 模拟规则
+| 层级 | 形状 | 含义 | 数量 |
+|------|------|------|------|
+| ThreadblockShape | 128×128×32 | 每个 block 计算 C 的 128×128 子矩阵 | (4096/128)² = 1024 blocks |
+| WarpShape | 64×64×32 | 每个 warp 计算 C 的 64×64 子矩阵 | 4 warps/block |
+| InstructionShape | 16×8×16 | 每条 mma.sync 指令 | (64/16)×(64/8) = 32 条/warp |
 
-- **条件**：关闭所有参考资料，打开一个空的 `.cu` 文件
-- **时间**：30 分钟（含编译调试）
-- **要求**：
- - [ ] 包含 `warpReduceSum` 函数（使用 `__shfl_down_sync`）
- - [ ] 包含 `blockReduceSum` Kernel（Warp 级 + Shared Memory + Warp 0 二级归约）
- - [ ] 包含 Host 端的 grid-stride 调用（两次 kernel launch 汇总多 block）
- - [ ] 代码能编译运行，结果与 CPU 对比误差 < 1e-3
+**层级关系**：`ThreadblockShape / WarpShape = warps_per_block`，`WarpShape / InstructionShape = mma_per_warp`
 
-##### 评分标准
+#### 1.3 `cutlass::gemm::device::Gemm` 接口
 
-| 项目 | 分值 | 评分要点 |
+CUTLASS 的 device 级 GEMM 是最常用的入口：
+
+```cpp
+#include <cutlass/gemm/device/gemm.h>
+
+// 定义 GEMM 类型
+using Gemm = cutlass::gemm::device::Gemm<
+    cutlass::half_t,                          // InputType A
+    cutlass::layout::RowMajor,                // LayoutA
+    cutlass::half_t,                          // InputType B
+    cutlass::layout::ColumnMajor,             // LayoutB
+    float,                                    // OutputType C
+    cutlass::layout::RowMajor,                // LayoutC
+    float,                                    // AccumulatorType
+    cutlass::arch::OpClassTensorOp,           // OpClass (Tensor Core)
+    cutlass::arch::Sm80,                      // ArchTag
+    cutlass::gemm::GemmShape<128, 128, 32>,   // ThreadblockShape
+    cutlass::gemm::GemmShape<64, 64, 32>,     // WarpShape
+    cutlass::gemm::GemmShape<16, 8, 16>,      // InstructionShape
+    cutlass::epilogue::thread::LinearCombination<float, float>,  // Epilogue
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>, // Swizzle
+    2                                         // NumStages (double buffer)
+>;
+
+// 实例化并运行
+Gemm gemm;
+Gemm::Arguments args(
+    {M, N, K},
+    {d_A, K},    // A (row-major: ld=K)
+    {d_B, K},    // B (col-major: ld=K)
+    {d_C, N},    // C (row-major: ld=N)
+    {d_C, N},    // D (in-place)
+    {1.0f, 0.0f} // alpha, beta
+);
+gemm.initialize(args);
+gemm();
+```
+
+##### 模板参数详解
+
+| 参数 | 含义 | 常见选择 |
 |------|------|---------|
-| `__shfl_down_sync` 正确使用 | 30 | mask=0xFFFFFFFF、butterfly 循环 offset=16→8→4→2→1 |
-| 两级归约结构 | 30 | Warp 级 → Shared Memory 中转 → Warp 0 最终归约 |
-| `__syncthreads()` 位置 | 20 | Shared Memory 写后 sync、Warp 0 reduce 前已 sync |
-| grid-stride 循环 | 10 | `for (i=tid; i<n; i+=gridDim.x*blockDim.x)` |
-| 代码整洁度 | 10 | 命名规范、无内存泄漏 |
+| `InputType A` | A 矩阵元素类型 | `half_t`, `float`, `bfloat16_t` |
+| `LayoutA` | A 矩阵布局 | `RowMajor`, `ColumnMajor` |
+| `InputType B` | B 矩阵元素类型 | 同上 |
+| `LayoutB` | B 矩阵布局 | 同上 |
+| `OutputType C` | 输出类型 | 通常 `float` |
+| `LayoutC` | C 矩阵布局 | 同上 |
+| `AccumulatorType` | 累加器类型 | `float`（FP32 累加） |
+| `OpClass` | 运算类型 | `OpClassTensorOp`（Tensor Core）, `OpClassSimt`（FMA） |
+| `ArchTag` | 目标架构 | `Sm70`, `Sm80`, `Sm89` |
+| `ThreadblockShape` | block 级 tile | `<128, 128, 32>` 或 `<256, 128, 32>` |
+| `WarpShape` | warp 级 tile | `<64, 64, 32>` |
+| `InstructionShape` | MMA 指令形状 | `<16, 8, 16>` (FP16), `<16, 8, 8>` (TF32) |
+| `Epilogue` | 输出处理 | `LinearCombination` (alpha*A*B + beta*C) |
+| `Swizzle` | block 调度策略 | `GemmIdentityThreadblockSwizzle` |
+| `NumStages` | pipeline 深度 | 2 (double buffer), 3 (triple buffer) |
 
-##### 参考答案（复盘时对比）
+#### 1.4 CUTLASS 的工程优化
+
+##### Double Buffer (NumStages)
+
+```
+Stage 0: load A[0], B[0] → smem[0]
+Stage 1: load A[1], B[1] → smem[1]  ||  compute C[0] from smem[0]
+Stage 2: load A[2], B[2] → smem[0]  ||  compute C[1] from smem[1]
+...
+```
+
+`NumStages=2` 表示 double buffer，`NumStages=3` 表示 triple buffer。更多 stage 可以更好地隐藏 latency，但占用更多 shared memory。
+
+##### Epilogue Fusion
+
+CUTLASS 的 Epilogue 可以融合后续操作：
+- `LinearCombination`: `D = alpha * A*B + beta * C`（标准 GEMM）
+- `LinearCombinationRelu`: `D = relu(alpha * A*B + beta * C)`（融合 ReLU）
+- `LinearCombinationBiasRelu`: `D = relu(alpha * A*B + beta * C + bias)`（融合 bias+ReLU）
+
+Epilogue fusion 避免了额外的 kernel launch 和 HBM 读写。
+
+##### Swizzle
+
+Block 调度策略影响 L2 cache 命中率：
+- `GemmIdentityThreadblockSwizzle`: 顺序调度
+- `GemmHorizontalThreadblockSwizzle`: 水平调度（提高 L2 复用）
+- `GemmBatchedThreadblockSwizzle`: batched 场景
+
+#### 1.5 CUTLASS 与 cuBLAS 的关系
+
+| 维度 | CUTLASS | cuBLAS |
+|------|---------|--------|
+| 开源 | ✅ | ❌ |
+| 编译方式 | 源码模板，编译时生成 | 预编译 .so |
+| 灵活性 | 高（可自定义 epilogue/swizzle） | 低（固定接口） |
+| 性能 | 接近 cuBLAS (95%+) | 100% (基准) |
+| 适用场景 | 自定义算子、研究 | 生产环境 |
+| 底层实现 | mma.sync + cp.async + auto-tune | 同 CUTLASS 级别 |
+
+> 💡 **一句话总结**：cuBLAS 是预编译的 CUTLASS。理解 CUTLASS = 理解 cuBLAS 的内部实现。
+
+---
+
+### Coding 任务：实例化 CUTLASS GEMM
+
+#### 任务 1：创建 `cutlass_gemm_example.cu`
+
+完整代码见 [kernels/cutlass_gemm_example.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cutlass_gemm_example.cu)。
+
+代码实例化 `cutlass::gemm::device::Gemm` 并对比 cuBLAS：
 
 ```cuda
-// block_reduce_timed.cu —— 30 分钟手撕参考实现
-// 编译: nvcc -o block_reduce block_reduce_timed.cu -O3 -arch=sm_120
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cmath>
-
-__inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1) {
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    }
-    return val;
-}
-
-__global__ void blockReduceSum(const float* in, float* out, int n) {
-    __shared__ float warpSums[32];
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int lane = threadIdx.x & 31;
-    int wid = threadIdx.x >> 5;
-
-    // Step 1: grid-stride 累加
-    float sum = 0.0f;
-    for (int i = tid; i < n; i += gridDim.x * blockDim.x) {
-        sum += in[i];
-    }
-
-    // Step 2: Warp 级归约
-    sum = warpReduceSum(sum);
-
-    // Step 3: lane 0 写入 Shared Memory
-    if (lane == 0)
-        warpSums[wid] = sum;
-    __syncthreads();
-
-    // Step 4: Warp 0 做最终归约
-    if (wid == 0) {
-        int numWarps = (blockDim.x + 31) >> 5;
-        sum = (lane < numWarps) ? warpSums[lane] : 0.0f;
-        sum = warpReduceSum(sum);
-        if (lane == 0)
-            out[blockIdx.x] = sum;
-    }
-}
-
-int main() {
-    const int N = 1 << 22;
-    float* h_in = (float*)malloc(N * sizeof(float));
-    for (int i = 0; i < N; i++)
-        h_in[i] = (float)(rand() % 1000) * 0.001f;
-
-    float *d_in, *d_tmp, *d_out;
-    cudaMalloc(&d_in, N * sizeof(float));
-    cudaMalloc(&d_tmp, 1024 * sizeof(float));
-    cudaMalloc(&d_out, sizeof(float));
-    cudaMemcpy(d_in, h_in, N * sizeof(float), cudaMemcpyHostToDevice);
-
-    int threads = 256;
-    int blocks = min((N + threads - 1) / threads, 1024);
-    blockReduceSum<<<blocks, threads>>>(d_in, d_tmp, N);
-    blockReduceSum<<<1, 256>>>(d_tmp, d_out, blocks);
-
-    float gpuSum;
-    cudaMemcpy(&gpuSum, d_out, sizeof(float), cudaMemcpyDeviceToHost);
-
-    double cpuSum = 0.0;
-    for (int i = 0; i < N; i++)
-        cpuSum += h_in[i];
-
-    printf("GPU=%.4f CPU=%.4f diff=%.6f %s\n", gpuSum, (float)cpuSum, fabs(gpuSum - (float)cpuSum),
-           fabs(gpuSum - (float)cpuSum) < 1e-3 ? "PASS" : "FAIL");
-
-    free(h_in);
-    cudaFree(d_in);
-    cudaFree(d_tmp);
-    cudaFree(d_out);
-    return 0;
-}
+// 关键模板实例化
+using Gemm = cutlass::gemm::device::Gemm<
+    cutlass::half_t, cutlass::layout::RowMajor,    // A
+    cutlass::half_t, cutlass::layout::ColumnMajor,  // B
+    float, cutlass::layout::RowMajor,                // C
+    float,                                           // Accumulator
+    cutlass::arch::OpClassTensorOp,                  // Tensor Core
+    cutlass::arch::Sm80,                             // ArchTag
+    cutlass::gemm::GemmShape<128, 128, 32>,          // ThreadblockShape
+    cutlass::gemm::GemmShape<64, 64, 32>,            // WarpShape
+    cutlass::gemm::GemmShape<16, 8, 16>,             // InstructionShape
+    cutlass::epilogue::thread::LinearCombination<float, float>,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
+    2                                                // NumStages (double buffer)
+>;
 ```
 
-##### 复盘要点
+#### 任务 2：编译与运行
 
-手撕后对照参考实现，重点检查这些易错点：
+```bash
+# 需要先 clone CUTLASS
+git clone https://github.com/NVIDIA/cutlass.git /path/to/cutlass
 
-| 易错点 | 现象 | 正确做法 |
-|--------|------|---------|
-| 忘记 `__syncthreads()` | Warp 0 读到脏数据 | Shared Memory 写入后、Warp 0 读取前必须 sync |
-| `numWarps` 算错 | block 不是 32 整数倍时漏 warp | `numWarps = (blockDim.x + 31) / 32` |
-| 第二级归约不用 Shuffle | 性能差 | Warp 0 有 32 lane，正好处理 32 个 warp 的部分和 |
-| grid-stride 步长错 | 越界或漏元素 | 步长 = `gridDim.x * blockDim.x`（总线程数） |
-| `lane == 0` 写回遗漏 | 多 block 结果丢失 | 只有 lane 0 写 `out[blockIdx.x]` |
+# 编译
+nvcc -O3 -arch=sm_120 \
+    -I/path/to/cutlass/include \
+    -lcublas \
+    kernels/cutlass_gemm_example.cu -o cutlass_gemm
 
-> 💡 **知识补充：第二级为什么由 Warp 0 做？用 warp 1 行不行？**
->
-> 用 warp 1 做**完全可以**，功能上没有任何区别。第二级的硬性要求只是"某一个 warp"，不是"warp 0"：
->
-> 1. `__syncthreads()` 之后所有部分和已在 shared memory，对 block 内**任何** warp 都可见——sync 不偏心
-> 2. 归约靠 `__shfl_down_sync`，shuffle 只在 warp 内有效，所以必须由**单独一个** warp 完成（32 lane 正好装下 ≤32 个部分和）
->
-> 选 warp 0 是约定而非硬件要求，原因是它**必然存在**：blockDim.x = 32 时 block 里只有 warp 0，写 `wid == 1` 会导致第二级永远不执行、结果直接错；`wid == 0` 则对任意 block 尺寸无条件成立。性能上选哪个 warp 都一样——其余 warp 都在 idle，分支发散程度相同，SM 内所有 warp 访问 shared memory 的延迟也相同。
->
-> 真正要避开的坑是**让多个 warp 都做第二级**（比如只写 `if (lane < numWarps)` 忘了限制 `wid`）：多个 warp 同时写 `out[blockIdx.x]`，即使值相同也是数据竞争、未定义行为。正确模式是"恰好一个 warp 归约 + 恰好 lane 0 写回"，至于是 warp 几，纯属风格问题。
-
----
-
-#### 任务 2：60 分钟手写 Register Blocking GEMM
-
-##### 模拟规则
-
-- **条件**：关闭所有参考资料，空文件
-- **时间**：60 分钟（含编译调试）
-- **要求**：
- - [ ] 包含 Shared Memory Tiling（`s_A[BM][BK]`, `s_B[BK][BN]`）
- - [ ] 包含 Register Blocking（`acc[TM][TN]` 累加器、`r_A[TM]`、`r_B[TN]`）
- - [ ] 包含协作加载 Global → Shared
- - [ ] 包含正确的线程到输出 tile 的二维映射
- - [ ] 三重循环结构正确（外层 bk、内层 k、最内层 m×n FMA）
- - [ ] 代码能编译运行，与 cuBLAS 结果误差 < 1e-2
-
-##### 评分标准
-
-| 项目 | 分值 | 评分要点 |
-|------|------|---------|
-| Shared Memory 声明与加载 | 25 | `s_A[BM][BK]`/`s_B[BK][BN]` 声明、协作加载逻辑 |
-| Register Blocking 结构 | 25 | `acc[TM][TN]` 累加器、`r_A`/`r_B` 加载 |
-| 线程映射 | 20 | `threadRow = tid/(BN/TN)`、`threadCol = tid%(BN/TN)` |
-| 三重循环结构 | 15 | 外循环 `bk`、中循环 `k`、内循环 `m`×`n` |
-| 写回 Global Memory | 10 | 全局索引 `cRow + threadRow*TM + m` 计算 |
-| 代码整洁度 | 5 | 命名规范、`__syncthreads` 位置正确 |
-
-##### 参考答案骨架（复盘时对比）
-
-```cuda
-// gemm_timed.cu —— 60 分钟手撕参考骨架（BM=BN=128, BK=8, TM=TN=8）
-#include <cuda_runtime.h>
-#include <cstdio>
-
-#define BM 128
-#define BN 128
-#define BK 8
-#define TM 8
-#define TN 8
-#define NUM_THREADS ((BM / TM) * (BN / TN)) // 256
-
-__global__ void gemmRegisterBlocking(const float* A, const float* B, float* C, int M, int N, int K) {
-    __shared__ float s_A[BM][BK];
-    __shared__ float s_B[BK][BN];
-
-    float r_A[TM];
-    float r_B[TN];
-    float acc[TM][TN] = {{0}};
-
-    int threadRow = threadIdx.x / (BN / TN); // 0~15
-    int threadCol = threadIdx.x % (BN / TN); // 0~15
-    int cRow = blockIdx.y * BM;
-    int cCol = blockIdx.x * BN;
-
-    for (int bk = 0; bk < K; bk += BK) {
-// 协作加载 A tile: 256 线程加载 128*8=1024 元素，每线程 4 个
-        #pragma unroll
-        for (int i = 0; i < BM; i += NUM_THREADS / BK) {
-            int row = threadIdx.x / BK + i;
-            int col = threadIdx.x % BK;
-            if (cRow + row < M && bk + col < K)
-                s_A[row][col] = A[(cRow + row) * K + (bk + col)];
-            else
-                s_A[row][col] = 0.0f;
-        }
-// 协作加载 B tile: 256 线程加载 8*128=1024 元素，每线程 4 个
-        #pragma unroll
-        for (int i = 0; i < BK; i += NUM_THREADS / BN) {
-            int row = threadIdx.x / BN + i;
-            int col = threadIdx.x % BN;
-            if (bk + row < K && cCol + col < N)
-                s_B[row][col] = B[(bk + row) * N + (cCol + col)];
-            else
-                s_B[row][col] = 0.0f;
-        }
-        __syncthreads();
-
-// Register Blocking 计算
-        #pragma unroll
-        for (int k = 0; k < BK; k++) {
-            #pragma unroll
-            for (int m = 0; m < TM; m++)
-                r_A[m] = s_A[threadRow * TM + m][k];
-            #pragma unroll
-            for (int n = 0; n < TN; n++)
-                r_B[n] = s_B[k][threadCol * TN + n];
-            #pragma unroll
-            for (int m = 0; m < TM; m++)
-                #pragma unroll
-                for (int n = 0; n < TN; n++)
-                    acc[m][n] += r_A[m] * r_B[n];
-        }
-        __syncthreads();
-    }
-
-// 写回
-    #pragma unroll
-    for (int m = 0; m < TM; m++) {
-        #pragma unroll
-        for (int n = 0; n < TN; n++) {
-            int gRow = cRow + threadRow * TM + m;
-            int gCol = cCol + threadCol * TN + n;
-            if (gRow < M && gCol < N)
-                C[gRow * N + gCol] = acc[m][n];
-        }
-    }
-}
+./cutlass_gemm
 ```
 
-> ⚠️ 上述骨架省略了 `main` 函数和 cuBLAS 对比部分，手撕时主函数可简化（只需能跑通正确性即可），把时间留给 kernel 本身。
+预期输出：
 
-##### 复盘要点
+> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 B2 任务）。待 CUTLASS 环境就绪后补真实数据。
 
-| 易错点 | 现象 | 正确做法 |
-|--------|------|---------|
-| `threadRow`/`threadCol` 算反 | 结果矩阵错位 | `threadRow = tid/(BN/TN)`，`threadCol = tid%(BN/TN)` |
-| 协作加载越界 | 段错误或脏数据 | 所有加载加 `if (gRow < M && ...)` 边界判断 |
-| `__syncthreads` 缺失 | 数据竞争 | 每次 bk 迭代：加载后 sync、计算后 sync |
-| `acc` 未初始化 | 结果随机 | `float acc[TM][TN] = {{0}}` |
-| 内层循环顺序错 | 性能差 | 最内层是 m×n FMA，k 在中间，bk 在最外 |
-| `r_A`/`r_B` 在 k 循环外加载 | 结果错误 | 必须在每个 k 迭代内重新加载 |
-
----
-
-#### 任务 3：FlashAttention 口述训练
-
-##### 模拟规则
-
-- **条件**：不看任何资料，对着空气或录音口述
-- **时间**：5 分钟口述 + 5 分钟自问自答
-- **口述内容要求**：
- 1. FlashAttention 解决的问题（标准 Attention 的 O(N²) HBM 访问）
- 2. 分块策略（Q tile 驻留 SRAM，K/V tile 逐块滑入）
- 3. Online Softmax 三公式推导（`m_new`、`l_new`、`o_new`）
- 4. 复杂度分析（HBM 从 O(N²) 降到 O(Nd)）
-
-##### Online Softmax 三公式默写
-
-在白板上写出以下三式，并解释每一项含义：
-
-```
-m_new = max(m, max(xj))
-l_new = l * exp(m - m_new) + Σ exp(xj - m_new)
-o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
+```text
+CUTLASS vs cuBLAS benchmark (FP16 input, FP32 accumulate)
+M=N=K    | CUTLASS(ms)  cuBLAS(ms)  Ratio    | CUTLASS TFLOPS
+512      | 0.0xx        0.0xx       xx.x%    | xx.x
+1024     | 0.0xx        0.0xx       xx.x%    | xx.x
+2048     | 0.0xx        0.0xx       xx.x%    | xx.x
+4096     | 0.0xx        0.0xx       xx.x%    | xx.x
+CUTLASS vs cuBLAS max_diff = x.xx e-xx
 ```
 
-**自问自答清单**（口述时自问自答）：
+#### 任务 3：Profiling
 
-| 问题 | 参考答案 |
-|------|---------|
-| 为什么不用全局 softmax，非要 online 递推？ | 每个 KV tile 看不到全局 max，必须增量更新 |
-| `exp(m - m_new)` 的作用？ | 统一参考点的缩放因子，把历史累加值对齐到新 max |
-| FlashAttention 的加速上限是多少？ | 受限于 HBM 带宽和 SRAM 容量，无法突破 memory bound |
-| 标准 Attention 的 HBM 访问次数？ | O(N²d)，S 和 P 矩阵各读写一次 |
-| FlashAttention 的 HBM 访问次数？ | O(Nd)，Q/K/V 只读写一次，S/P 不落 HBM |
+```bash
+# 分析 CUTLASS kernel 的 Tensor Core 利用率
+ncu --set full --kernel-name regex:Gemm \
+    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
+sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+launch__registers_per_thread,\
+launch__shared_mem_per_block \
+    ./cutlass_gemm
 
-> 💡 **复盘标准**：能不看资料、5 分钟内完整讲清上述 5 点 + 三公式，即为通过。
-
-#### 任务 4：LeetGPU 综合验收题 —— Reduction
-
-**题目链接**：<https://leetgpu.com/challenges/reduction>
-
-**与本周知识的关联**：本题综合了 Week2 的 Reduction 主线（Week1 Day4/Day5 + Week2 Day1 的 Warp Shuffle），是 reduction 最纯粹的形态。kernel 采用两阶段归约：每个线程用 grid-stride 循环累加局部和（`double`）→ Warp Shuffle 归约 → Shared Memory 中转 → `atomicAdd` 跨 block 汇总。适合在验收日限时完成，检验 block reduce + 跨 block 汇总的综合掌握程度。
-
-> 💡 完整题解（含 grid-stride 累加、warp shuffle sum 归约、atomicAdd 跨 block 汇总）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
-
-#### 任务 5：GitHub 仓库整理
-
-把本周 Day 1–Day 6 的产出整理成可展示的仓库结构。当前实际结构如下（按天分目录，kernel 在各天的 `kernels/` 下）：
-
-```
-week2/
-├── README.md # 本周教程
-├── day1/kernels/warp_reduce.cu # Day 1 产出
-├── day2/kernels/register_blocking_gemm.cu # Day 2 产出
-├── day3/kernels/multi_stream_pipeline.cu # Day 3 产出
-├── （CUTLASS 已移至 Week 2 Day 7）
-├── day5/kernels/flash_attention.cu # Day 5 产出
-├── day6/kernels/ # Day 6 产出（gemm_optimization_series / integrated_gemm / integrated_gemm_leetgpu）
-├── （WMMA 已移至 Week 2 Day 6）
-└── day7/ # Day 7 手撕与总结（本目录）
+# 对比 Day 6b 的手写 WMMA vs CUTLASS
+ncu --kernel-name regex:"wmma_gemm|Gemm" \
+    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
+sm__throughput.avg.pct_of_peak_sustained_elapsed \
+    ./wmma_gemm && ./cutlass_gemm
 ```
 
-##### 整理 Checklist
+#### 任务 4：LeetGPU 在线题目
 
-- [ ] 每个 `.cu` 文件顶部有注释：编译命令、功能说明、对应 Day
-- [ ] 在 `day7/notes/` 下补充 `week2_summary.md`，记录本周学习心得、踩坑、性能数据
-- [ ] 各天 `dayN/kernels/` 中的 kernel 能独立编译运行
-- [ ] 顶层 `README.md` 的 Week 2 链接可跳转
+[Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)
 
----
+思考：CUTLASS 的 batched GEMM 接口 `cutlass::gemm::device::GemmBatched` 如何利用三级 tiling 处理 batch 维度？
 
-#### 任务 6：性能对比报告
+#### 任务 5：LeetCode 面试题
 
-在 `week9/day6/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
-
-##### 报告模板
-
-```markdown
-# Week 2 GEMM 性能优化报告
-
-## 测试环境
-- GPU: <你的型号，如 NVIDIA GeForce RTX 5090>
-- Compute Capability: <如 8.6>
-- CUDA Version: <如 12.4>
-- cuBLAS 版本: <如 12.4>
-
-## 性能对比表（M=N=K=4096）
-
-| 版本 | 时间(ms) | GFLOPS | cuBLAS 百分比 | 关键优化点 |
-|------|---------|--------|--------------|-----------|
-| Naive | | | ~1-3% | 无优化 |
-| Shared Memory Tiling | | | ~15% | Shared Memory 复用 |
-| Register Blocking | | | ~45% | + Register 累加器 |
-| + float4 向量化 | | | ~55% | + 128-bit 加载 |
-| + Warp Shuffle | | | ~60% | + Warp 级协作 |
-| + Double Buffering | | | ~70% | + 软件流水线 |
-| cuBLAS | | | 100% | NVIDIA 官方优化 |
-
-## 优化层次收益分析
-
-（记录每一层优化带来的实际增益，与理论值对比，分析差异原因）
-
-## 瓶颈诊断记录
-
-（用 ncu 的关键指标说明每层优化前后瓶颈的变化）
-```
-
-##### GFLOPS 计算公式
-
-```
-GFLOPS = 2.0 * M * N * K / (time_ms * 1e6)
-```
-
-##### 测试矩阵尺寸建议
-
-扫描 `512, 1024, 2048, 4096, 8192`，观察性能百分比随尺寸的变化趋势（通常尺寸越大，手写 kernel 越接近 cuBLAS，因为分块开销被摊薄）。
-
----
-
-#### 任务 7：本周 LeetCode 题目回顾（8 周计划 · 第 2 周）
-
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」（点击查看题解）：
-
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 滑动窗口基础 | [3. 无重复字符的最长子串](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)、[438. 找到字符串中所有字母异位词](https://hzchenxiaobin.github.io/leetcode/problems/438_找到字符串中所有字母异位词.html)、[560. 和为 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/560_和为K的子数组.html) |
-| Day 2 | 滑动窗口进阶 | [239. 滑动窗口最大值](https://hzchenxiaobin.github.io/leetcode/problems/239_滑动窗口最大值.html)、[76. 最小覆盖子串](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html)、[209. 长度最小的子数组](https://hzchenxiaobin.github.io/leetcode/problems/209_长度最小的子数组.html)、[424. 替换后的最长重复字符](https://hzchenxiaobin.github.io/leetcode/problems/424_替换后的最长重复字符.html)、[713. 乘积小于 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/713_乘积小于K的子数组.html) |
-| Day 3 | 字符串模拟 | [415. 字符串相加](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html)、[43. 字符串相乘](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html)、[151. 反转字符串中的单词](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html)、[14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) |
-| Day 4 | 字符串匹配 | [165. 比较版本号](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html)、[8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/)、[28. 找出字符串中第一个匹配项的下标](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html)、[468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) |
-| Day 5 | 矩阵 | [73. 矩阵置零](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html)、[54. 螺旋矩阵](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html)、[48. 旋转图像](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html)、[240. 搜索二维矩阵 II](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
-
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 2 周「字符串、滑动窗口与矩阵」。重做本周错题、总结模板笔记；没做完的题目今天补上。
-
----
-
-#### 任务 7：本周 LeetCode 题目回顾（8 周计划 · 第 2 周）
-
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」（点击查看题解）：
-
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 滑动窗口基础 | [3. 无重复字符的最长子串](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)、[438. 找到字符串中所有字母异位词](https://hzchenxiaobin.github.io/leetcode/problems/438_找到字符串中所有字母异位词.html)、[560. 和为 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/560_和为K的子数组.html) |
-| Day 2 | 滑动窗口进阶 | [239. 滑动窗口最大值](https://hzchenxiaobin.github.io/leetcode/problems/239_滑动窗口最大值.html)、[76. 最小覆盖子串](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html)、[209. 长度最小的子数组](https://hzchenxiaobin.github.io/leetcode/problems/209_长度最小的子数组.html)、[424. 替换后的最长重复字符](https://hzchenxiaobin.github.io/leetcode/problems/424_替换后的最长重复字符.html)、[713. 乘积小于 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/713_乘积小于K的子数组.html) |
-| Day 3 | 字符串模拟 | [415. 字符串相加](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html)、[43. 字符串相乘](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html)、[151. 反转字符串中的单词](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html)、[14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) |
-| Day 4 | 字符串匹配 | [165. 比较版本号](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html)、[8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/)、[28. 找出字符串中第一个匹配项的下标](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html)、[468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) |
-| Day 5 | 矩阵 | [73. 矩阵置零](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html)、[54. 螺旋矩阵](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html)、[48. 旋转图像](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html)、[240. 搜索二维矩阵 II](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
-
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 2 周「字符串、滑动窗口与矩阵」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|---------|------|
+| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z 字搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_search-a-2d-matrix-ii.html) |
+| [283](https://leetcode.cn/problems/move-zeroes/) | Easy | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_move-zeroes.html) |
+| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_kth-largest-element-in-an-array.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：手撕 Warp Reduce Max
+#### 实验 1：修改 ThreadblockShape 和 WarpShape
 
-把任务 1 的 sum 改成 max，限时 15 分钟。关键改动：
+尝试不同的 tiling 配置，观察性能变化：
 
-```cuda
-__inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1) {
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    }
-    return val;
-}
-```
+| 配置 | ThreadblockShape | WarpShape | 预期 |
+|------|-----------------|-----------|------|
+| A | 128×128×32 | 64×64×32 | 基准 |
+| B | 256×128×32 | 64×64×32 | 更大 tile，适合大矩阵 |
+| C | 64×64×32 | 32×32×32 | 更小 tile，适合小矩阵 |
 
-思考：为什么 max 归约的 butterfly 循环结构和 sum 完全一样？（答：因为 `max` 满足结合律和交换律，butterfly 模式只依赖这两个性质。）
+思考：为什么没有一种"万能"配置？
 
-#### 实验 2：手撕带 `__launch_bounds__` 的 Kernel
+#### 实验 2：修改 NumStages
 
-限时 20 分钟，写一个故意触发 register spilling 的 kernel 并用 `nvcc -Xptxas -v` 验证。参考 Day 2 的 `register_spill.cu`。
+将 `NumStages` 从 2 改为 3（triple buffer），观察：
+- 性能是否提升？
+- Shared Memory 使用量是否增加？
+- Occupancy 是否下降？
 
-#### 实验 3：BLAS 标准接口扩展
+#### 实验 3：Epilogue Fusion
 
-把整合版 GEMM 扩展为 `C = alpha * A * B + beta * C`（BLAS `sgemm` 接口），限时 30 分钟。关键改动：写回时 `C[gRow*N+gCol] = alpha*acc[m][n] + beta*C[gRow*N+gCol]`。
-
-#### 实验 4：benchmark 脚本
-
-写一个 shell 或 Python 脚本，自动扫描矩阵尺寸 `512, 1024, 2048, 4096, 8192`，记录每个版本的性能并生成 CSV 报告。
-
-### 验证 Checklist
-
-- [ ] 30 分钟内完成 Reduce Kernel 手撕，结果与 CPU 误差 < 1e-3
-- [ ] 60 分钟内完成 GEMM Kernel 手撕，含 Shared Memory Tiling + Register Blocking
-- [ ] 能不看资料口述 FlashAttention 完整流程（5 分钟版本）
-- [ ] 能默写 Online Softmax 三公式（`m_new`、`l_new`、`o_new`）
-- [ ] GitHub 仓库整理完成，`week2/day*/kernels/` 下所有 `.cu` 可独立编译
-- [ ] 性能对比报告完成，包含从 Naive 到 cuBLAS 的完整性能曲线
-- [ ] 能回答「和 cuBLAS 的差距在哪」并给出达到 90% 的优化路径
+将 `LinearCombination` 改为 `LinearCombinationRelu`，对比：
+- 融合 ReLU vs 先 GEMM 再单独 relu kernel
+- 性能差异（减少一次 HBM 读写 + kernel launch）
 
 ---
 
 ### 今日总结
 
-Day 7 是本周的收尾与验收。通过限时手撕，我们把本周五大主题从「看懂」固化到「写得出」：
+Day 4b 我们深入分析了 CUTLASS 源码：
 
-1. **Reduce 手撕**：验证 Warp Shuffle butterfly 循环 + 两级归约结构的肌肉记忆
-2. **GEMM 手撕**：验证 Shared Memory Tiling + Register Blocking + 线程映射的内化程度
-3. **FlashAttention 口述**：验证 Online Softmax 三公式与 HBM 复杂度分析的掌握
-4. **GitHub 整理**：把零散产出组织成可展示的项目，体现工程能力
-5. **性能报告**：量化每一层优化的收益，形成完整的优化方法论闭环
-
-本周从 Day 1 的 Warp Shuffle 原语，到 Day 6 的整合 GEMM 达到 cuBLAS 70%，再到 Day 7 的限时手撕验收，构成了一条完整的「CUDA 进阶优化」学习闭环。掌握这些后，你已经具备了手写高性能 kernel 并系统分析其性能瓶颈的能力，这是 AI Infra 工程师的核心竞争力。
+1. **三级 Tiling**：Device(ThreadblockShape) → Kernel(WarpShape) → Warp(InstructionShape)，从粗到细的矩阵分块
+2. **模板参数**：精度、布局、架构、tiling 形状、epilogue、swizzle、stages 可独立配置
+3. **工程优化**：Double Buffer(cp.async)、Epilogue Fusion、Swizzle 调度、Auto-tuning
+4. **与 cuBLAS 关系**：cuBLAS = 预编译的 CUTLASS，理解 CUTLASS = 理解 cuBLAS 内部实现
+5. **性能对比**：CUTLASS 达到 cuBLAS 95%+，手写 WMMA 教学版 ~33%，差距来自工程深度（smem tiling / dblbuf / 多warp）
+6. **面试核心**：能解释三级 tiling 的层级关系，能说出 CUTLASS 比手写 WMMA 多了哪些优化
 
 ---
 
 ### 面试要点
 
-1. **给你 30 分钟，手写一个带 Warp Shuffle 的 Block Reduce Kernel。要求：输入 N 个元素，输出一个总和。**
+1. **CUTLASS 的三级 tiling 是什么？为什么需要多级 tiling？**
 
-<details>
-<summary>点击查看答案</summary>
+   <details>
+   <summary>点击查看答案</summary>
 
- 参考答案要点（30 分钟内需写出的核心结构）：
+   - **三级 tiling**：
+     1. **ThreadblockShape**（如 128×128×32）：每个 block 计算的 C 子矩阵大小，决定 shared memory 用量
+     2. **WarpShape**（如 64×64×32）：每个 warp 计算的 C 子矩阵大小，决定寄存器用量和 warp 间并行度
+     3. **InstructionShape**（如 16×8×16）：单条 mma.sync 指令的矩阵大小，由硬件决定
+   - **为什么需要多级**：
+     - 单级 tiling 无法同时满足 shared memory 容量、寄存器数量、Tensor Core 形状约束
+     - Threadblock 级决定数据复用（shared memory 缓存多少 A/B tile）
+     - Warp 级决定并行度（多少 warp 协作同一 block）
+     - Instruction 级对接硬件（Tensor Core 的固定形状）
+   - **层级关系**：`ThreadblockShape / WarpShape = warps_per_block`，`WarpShape / InstructionShape = mma_instructions_per_warp`
 
-```cuda
-// 1. warpReduceSum（~5 分钟）
-__inline__ __device__ float warpReduceSum(float val) {
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
-}
+   </details>
 
-// 2. blockReduceSum Kernel（~15 分钟）
-__global__ void blockReduce(const float* in, float* out, int n) {
-    __shared__ float warpS[32];
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
-    float sum = 0;
-    for (int i = tid; i < n; i += gridDim.x * blockDim.x) sum += in[i];
-    sum = warpReduceSum(sum);
-    if (lane == 0) warpS[wid] = sum;
-    __syncthreads();
-    if (wid == 0) {
-        int numWarps = (blockDim.x + 31) / 32;
-        sum = (lane < numWarps) ? warpS[lane] : 0;
-        sum = warpReduceSum(sum);
-        if (lane == 0) out[blockIdx.x] = sum;
-    }
-}
+2. **CUTLASS 的 `NumStages` 是什么？它如何影响性能？**
 
-// 3. Host 调用（~5 分钟）
-// blockReduce<<<numBlocks, 256>>>(d_in, d_tmp, n);
-// blockReduce<<<1, 256>>>(d_tmp, d_out, numBlocks);
-// 剩余时间处理边界条件和编译调试
-```
+   <details>
+   <summary>点击查看答案</summary>
 
- - **评分关键**：`__shfl_down_sync` 参数正确（30 分）、两级归约结构完整（30 分）、`__syncthreads` 位置正确（20 分）
+   - `NumStages` = pipeline 深度（软件流水线的阶段数）
+   - `NumStages=2`：double buffer，加载下一块数据到 smem[1] 的同时计算 smem[0]
+   - `NumStages=3`：triple buffer，可以更好地隐藏 latency
+   - **性能影响**：
+     - 更多的 stage → 更好的 latency 隐藏 → 更高性能
+     - 但每个 stage 占用一份 shared memory → 可能降低 occupancy
+     - 需要在 latency 隐藏和 occupancy 之间权衡
+   - **底层实现**：CUTLASS 使用 `cp.async`（Ampere+）或 `__pipeline_memcpy_async` 实现异步加载
 
-</details>
+   </details>
 
+3. **CUTLASS 的 Epilogue Fusion 解决什么问题？有哪些常见的 Epilogue？**
 
-2. **手写 GEMM 时，Register Blocking 的三重循环结构是怎样的？为什么是这个顺序？**
+   <details>
+   <summary>点击查看答案</summary>
 
-<details>
-<summary>点击查看答案</summary>
+   - **解决的问题**：标准 GEMM 后通常跟 element-wise 操作（ReLU、bias、GELU 等），如果不融合，需要额外的 kernel launch 和 HBM 读写
+   - **常见 Epilogue**：
+     - `LinearCombination`: `D = alpha * A*B + beta * C`（标准 GEMM）
+     - `LinearCombinationRelu`: `D = relu(alpha * A*B + beta * C)`
+     - `LinearCombinationBiasRelu`: `D = relu(alpha * A*B + beta * C + bias)`
+     - `LinearCombinationGELU`: `D = GELU(alpha * A*B + beta * C)`
+   - **收益**：减少 1 次 HBM 读 + 1 次 HBM 写 + 1 次 kernel launch，典型收益 5-15%
 
- - 外层 `bk`（遍历 K 维度的 tile）、中层 `k`（遍历 BK 内的元素）、内层 `m`×`n`（TM×TN FMA）
- - 顺序原因：`k` 在外会让 `acc` 累加顺序错乱；`m`×`n` 在最内层是因为 FMA 是最密集的计算，放在最内层有利于指令级并行（ILP）和寄存器复用
- - `r_A`/`r_B` 必须在每个 `k` 迭代内重新加载，否则用的是上一个 k 的数据
+   </details>
 
-</details>
+4. **为什么 CUTLASS 的 `InstructionShape` 不能随意设置？**
 
+   <details>
+   <summary>点击查看答案</summary>
 
-3. **不看资料，口述 FlashAttention 为什么比标准 Attention 快。**
+   - `InstructionShape` 必须匹配硬件 Tensor Core 支持的形状
+   - 不同精度有不同的合法形状：
+     - FP16: `m16n8k16` 或 `m16n16k16`（WMMA 接口）
+     - TF32: `m16n8k8`
+     - INT8: `m16n8k32`
+     - FP8: `m16n8k32`（Hopper+）
+   - 如果设置不合法的形状，编译时会报错（template static_assert）
+   - **与 WMMA 的关系**：CUTLASS 底层调用 `mma.sync` PTX 指令（比 WMMA 更底层），`InstructionShape` 对应 PTX 指令的形状参数
 
-<details>
-<summary>点击查看答案</summary>
+   </details>
 
- - **核心**：标准 Attention 把 S=QK^T 和 P=softmax(S) 写回 HBM，HBM 访问 O(N²d)；FlashAttention 用分块 + Online Softmax，S/P 不落 HBM，HBM 访问降到 O(Nd)
- - **分块**：Q tile 驻留 SRAM，K/V tile 逐块滑入，每次只算一个 block 的局部 softmax
- - **Online Softmax**：增量更新 `m`/`l`/`o`，无需等到看到全局数据再做 softmax
- - **复杂度**：HBM 从 O(N²d) → O(Nd)，长序列下加速比显著
+5. **如何为不同矩阵大小选择最优的 ThreadblockShape？**
 
-</details>
+   <details>
+   <summary>点击查看答案</summary>
 
+   - **Auto-tuning 方法**：
+     1. 定义候选配置集：`{(128,128,32), (256,128,32), (128,64,32), (64,64,32)}`
+     2. 对每种配置编译并运行，记录 latency
+     3. 选择最快的配置
+   - **启发式规则**：
+     - 大矩阵（M,N > 2048）：用大 ThreadblockShape（256×128），充分利用 SM
+     - 小矩阵（M,N < 512）：用小 ThreadblockShape（64×64），确保足够的 block 数量
+     - K 很大：增加 NumStages（3 或 4），更好地隐藏 K 维 latency
+   - **cuBLAS 的做法**：预编译所有常见配置的 kernel，运行时根据矩阵大小查表选择最优配置
+   - **CUTLASS 3.x 的改进**：提供 `cutlass::gemm::collective::CollectiveBuilder`，自动根据架构和精度推荐配置
 
-4. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **当前差距**：
- 1. 缺少指令级调度优化（cuBLAS 用 PTX 内联汇编精确控制指令发射）
- 2. 缺少完整 Double Buffering（软件流水线）
- 3. 缺少针对特定尺寸的 auto-tuning（cuBLAS 有庞大参数查找表）
- 4. 缺少 Tensor Core（cuBLAS 默认用 WMMA，吞吐远超 FMA）
- - **达到 90% 的路径**：
- 1. 引入 Tensor Core（`mma.sync.aligned` 等 WMMA 指令）
- 2. 实现完整 Double Buffering
- 3. 使用 CUTLASS 库（NVIDIA 开源高性能 GEMM 模板库）
- 4. 针对目标尺寸做 exhaustive search 找最优参数
-
----
-
-</details>
-
-### 面试准备框架
-
-面试中回答 CUDA 优化问题，建议用这个结构：
-
-1. **先给结论**：这个 kernel 是 memory-bound 还是 compute-bound？给出 AI 估算
-2. **分层次**：从 Naive 到当前优化，逐层说明每层的收益来源
-3. **给数据**：用 ncu 的 SM%/DRAM% 支撑判断
-4. **说局限**：和 cuBLAS 的差距在哪，还要做什么
-
-**示例**：
-
-> **Q：你的 GEMM 达到了 cuBLAS 70%，剩下的 30% 差在哪？**
->
-> **A**：主要四个差距。第一，没用 Tensor Core，cuBLAS 默认走 WMMA 指令，吞吐远超 FMA。第二，Double Buffering 不完整，global→shared 传输没被计算完全掩盖。第三，缺少 auto-tuning，cuBLAS 有针对每种尺寸的参数查找表。第四，缺少 PTX 内联汇编做指令级调度。达到 90% 的路径是引入 CUTLASS 模板 + Tensor Core + 完整双缓冲。
-
----
-
-### 常见误区澄清
-
-| 误区 | 正确理解 |
-|------|---------|
-| Register Blocking 一定比 Shared Memory Tiling 快 | 只有当 TM×TN 不溢出 register（≤255）时才快；TM=TN=16 会 spill 反而暴跌 |
-| Double Buffering 总是有收益 | shared memory 翻倍可能降 occupancy；数据量小时启动开销主导 |
-| Occupancy 越高 GEMM 越快 | GEMM 是 compute-bound，寄存器压力大时低 occupancy 高 ILP 可能更快 |
-| FlashAttention 减少了计算量 | 计算量相同，减少的是 HBM 数据移动（O(N²)→O(Nd)） |
-| 多 Stream 一定能加速 | 需 Copy/Compute Engine 独立 + Pinned Memory + 非 Default Stream，缺一不可 |
-| ncu 报告的带宽就是峰值 | 需对比 `dram__throughput.pct_of_peak`，实测通常 70-85% 已优秀 |
-
----
-
-### Week 2 → Week 3 衔接
-
-Week 3 我们将学习 **Transformer 执行本质与算子手写**。为了做好准备，请确保你掌握了：
-
-1. **Warp Shuffle 原语**（Day 1）：Week 3 手写 Softmax/LayerNorm 的 reduce 基础
-2. **Register Blocking + Shared Memory Tiling**（Day 2/6）：Week 3 理解 Attention 的 QK^T/PV GEMM 基础
-3. **Nsight Profiling**（Day 4）：Week 3 端到端 Profiling Transformer 的工具基础
-4. **FlashAttention 简化版**（Day 5）：Week 3 学完整版 FlashAttention 的算法基础
-5. **Kernel Fusion 思想**（Day 6）：Week 3 算子接入与融合的工程基础
-
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 3 会从 GPU 视角拆解 Transformer 推理流程，手写 memory-bound 算子，是 8 周计划里承上启下的关键一周。
-
----
-
-### 弹性安排
-
-根据本周完成情况，选择以下一项或多项：
-
-- **补进度**：完成未做的限时手撕和性能对比报告
-- **深入方向 1**：实现 Tensor Core 版 GEMM（WMMA 指令），对比 FMA 版性能
-- **深入方向 2**：用 CUTLASS 库跑同尺寸 GEMM，对比手写版与官方模板的差距
-- **深入方向 3**：阅读 FlashAttention 论文 Section 3，预习 Week 3 完整版
-- **面试准备**：和同学互相模拟面试，重点练 30 分钟手撕 + FlashAttention 口述
-
----
-
-## 📁 本周目录结构
-
-```
-week2/
-├── README.md # Week 2 概览
-├── day1/ # Day 1: Warp Shuffle + Warp/Block Reduce
-│ ├── README.md
-│ └── kernels/warp_reduce.cu
-├── day2/ # Day 2: Register Blocking + 2D Tiling
-│ ├── README.md
-│ └── kernels/register_blocking_gemm.cu
-├── day3/ # Day 3: Multi-Stream + 异步流水线
-│ ├── README.md
-│ └── kernels/multi_stream_pipeline.cu
-├── day4/ # Day 4: Nsight Compute Profiling
-│ └── README.md
-（CUTLASS 已移至 Week 2 Day 7）
-│ ├── README.md
-│ └── kernels/cutlass_gemm_example.cu
-├── day5/ # Day 5: FlashAttention 简化版
-│ ├── README.md
-│ └── kernels/flash_attention.cu
-├── day6/ # Day 6: 整合优化 GEMM
-│ ├── README.md
-│ └── kernels/ # gemm_optimization_series.cu / integrated_gemm.cu / integrated_gemm_leetgpu.cu
-（WMMA 已移至 Week 2 Day 6）
-│ ├── README.md
-│ └── kernels/wmma_gemm.cu
-├── day7/ # Day 7: 限时手撕 + 验收
-│ └── README.md
-└── images/ # 本周 SVG 插图
-```
-
----
-
-## 🔗 推荐资源
-
-| 资源 | 说明 |
-|------|------|
-| [CUDA C Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/) | Warp Shuffle / Shared Memory 官方文档 |
-| [CUTLASS](https://github.com/NVIDIA/cutlass) | NVIDIA 开源高性能 GEMM 模板库 |
-| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Online Softmax + Tiling 核心论文 |
-| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
-| [NVIDIA GEMM Optimization](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/) | 官方 GEMM 优化指南 |
-
----
-
-## ✅ Week 2 完成标准
-
-- [ ] Warp Reduce Kernel 编译运行正确，GPU 结果与 CPU 误差 < 1e-3
-- [ ] Register Blocking GEMM 达到 cuBLAS 40%+（4096 矩阵）
-- [ ] 整合版 GEMM 达到 cuBLAS 65%+（含 float4 + Warp Shuffle）
-- [ ] FlashAttention 简化版小尺寸测试通过（误差 < 1e-3）
-- [ ] 能用 ncu 判断 kernel 是 memory-bound 还是 compute-bound
-- [ ] 30 分钟内手写 Block Reduce Kernel（含 Warp Shuffle + 两级归约）
-- [ ] 60 分钟内手写 Register Blocking GEMM Kernel
-- [ ] 不看资料口述 FlashAttention 算法流程 + Online Softmax 三公式
-- [ ] 生成性能对比报告（Naive → cuBLAS 各层 GFLOPS + 占比）
-- [ ] 完成本周 LeetGPU（Prefix Sum/GEMM/Convolution/Softmax/Attention/Histogram）与 LeetCode 题目
-
----
-
-> 💡 **提示**：Week 2 是从"会写 kernel"到"能优化到 cuBLAS 70%"的关键跃迁。限时手撕是面试的硬门槛，性能报告是项目深度的证明。如果 GEMM 还没到 65%，建议回到 Day 2/6 重新做 float4 + Double Buffering 实验。Week 3 会进入 Transformer 算子手写，GEMM 优化经验是理解 Attention 的基础。
+   </details>

@@ -1,4 +1,4 @@
-## Day 6：实现 KV Cache
+## Day 6：实现 KV Cache（含 GQA/MQA/MLA 变体）实现 KV Cache
 
 ### 🎯 目标
 

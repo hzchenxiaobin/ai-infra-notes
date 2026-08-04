@@ -1,4 +1,4 @@
-## Day 1：GPU 执行模型基础
+## Day 1：GPU 执行模型基础（SM/Warp/Thread）GPU 执行模型基础
 
 ### 🎯 目标
 

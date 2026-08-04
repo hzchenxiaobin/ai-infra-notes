@@ -1,13 +1,13 @@
 # Week 5：FlashAttention（后半）+ 推理系统基础
 
-> 核心目标：理解 FA-2 改进、性能对比、IO 优化方法论，掌握 Prefill/Decode 本质、KV Cache 实现（含 GQA/MQA/MLA）、vLLM 架构
+> 核心目标：FA-2 改进、性能对比、IO 方法论、Prefill/Decode、KV Cache（含 GQA/MLA）、vLLM 架构
 
-| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| ------------| --------------------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 4，掌握 C++ Extension 集成、FlashAttention Forward/Backward　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　|
-| 本周产出　 | FA 性能对比报告、IO 优化方法论总结、KV Cache CUDA kernel、vLLM 架构分析笔记　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 周日里程碑 | FA 端到端性能对比留档，KV Cache kernel 正确性 PASS，理解 vLLM 三层架构　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| ------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 4，掌握 C++ Extension、FA Forward/Backward　　　　　　　　　　　　　　　　　　　　　　　|
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　|
+| 本周产出　 | FA 性能对比报告、IO 方法论总结、KV Cache kernel、vLLM 架构分析　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | FA 端到端性能对比留档，KV Cache kernel PASS，理解 vLLM 三层架构　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
@@ -27,6 +27,7 @@ Day 5: 推理流程 —— Prefill vs Decode
 Day 6: 实现 KV Cache（含 GQA/MQA/MLA 变体）
         ↓
 Day 7: vLLM 整体架构分析
+```
 
 ---
 

@@ -1,4 +1,4 @@
-## Day 4：CUDA Graph 实操 —— 消除 Kernel Launch Overhead
+## Day 4：CUDA Graph 实操 —— 消除 Launch OverheadCUDA Graph 实操 —— 消除 Kernel Launch Overhead
 
 ### 🎯 目标
 

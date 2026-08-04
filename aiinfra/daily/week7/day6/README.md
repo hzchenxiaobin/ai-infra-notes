@@ -1,4 +1,4 @@
-## Day 6：Prefill/Decode 分离推理（PD Disaggregated Serving）
+## Day 6：Prefill/Decode 分离推理（PD Disaggregated）Prefill/Decode 分离推理（PD Disaggregated Serving）
 
 ### 🎯 目标
 

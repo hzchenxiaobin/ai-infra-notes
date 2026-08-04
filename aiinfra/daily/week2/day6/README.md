@@ -1,4 +1,4 @@
-## Day 6：Tensor Core 与 WMMA —— 从 FMA 到 Tensor Core 的跨越
+## Day 6：Tensor Core 与 WMMA —— 从 FMA 到 Tensor CoreTensor Core 与 WMMA —— 从 FMA 到 Tensor Core 的跨越
 
 ### 🎯 目标
 

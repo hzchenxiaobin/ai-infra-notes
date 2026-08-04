@@ -1,493 +1,506 @@
-## Day 3：Transformer 算子分类与 Week 3 总结
+## Day 3：端到端 Profiling 与 Kernel Fusion
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 把 Transformer 单层的全部算子按 **arithmetic intensity (AI)** 分类，产出一张 Prefill / Decode 两阶段的算子分类表
-2. 建立从"算子形状"到"compute-bound / memory-bound"的判断直觉，拿到任意算子能秒判 bound 类型
-3. 系统梳理 Week 3 的核心知识链：Prefill vs Decode → 手写 Softmax/LayerNorm → 源码优化 → Attention IO → 端到端 Profiling → Fusion
-4. 整理本周所有产出（kernel、引擎、profiling 报告），形成可复用的工程资产
-5. 回顾本周 10+ 道面试题，建立 Transformer 算子优化的答题框架
-6. 为 Week 4 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
+1. 掌握 **两级 Profiling 工具体系**：用 Nsight Systems（nsys）采集系统级时间线、用 Nsight Compute（ncu）分析 kernel 级指标，理解"先全局定位、再单点深挖"的标准流程
+2. 学会用 nsys 的 `cuda_gpu_kern_sum` 统计找出 Transformer forward 的 top3 耗时算子，并从时间线识别 kernel 间隙（launch overhead）
+3. 能用 ncu 的 `sm__throughput` / `dram__throughput` 指标判定算子是 **compute-bound 还是 memory-bound**，并用 Warp Stall Reasons 定位具体阻塞原因
+4. 理解 **Kernel Fusion** 的收益来源（省 HBM 中间读写），能列出 Transformer 中至少 3 个 fusion 候选并估算 IO 收益
+5. 用 `torch.compile` 验证自动融合对 kernel 数量和 latency 的影响，理解自定义 C++ Extension 算子为何无法被融合
 
-> 💡 **为什么重要**：Day 1-6 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
-
----
-
-### Week 3 知识地图
-
-![Transformer 单层数据流](../../week3/images/transformer_dataflow.svg)
-
-Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
-
-![Week 3 学习主线](../../images/week3_learning_pipeline.svg)
-
-| Day | 主题 | 核心产出 | 关键概念 |
-|-----|------|---------|---------|
-| Day 1 | Trace Transformer 推理流程 | torch.profiler 时间线 | Prefill vs Decode、6 类算子 |
-| Day 2 | 手写 Softmax / LayerNorm Kernel | softmax_layernorm.cu | safe softmax 三遍扫描、两级 block reduce |
-| Day 3 | 源码分析 PyTorch / FasterTransformer | 优化对比表 | 向量化加载、warp vs block dispatch、Welford |
-| Day 4 | Attention IO 分析 | attention_naive.cu | O(N²) 物化、HBM 读写量化 |
-| Day 5 | 算子接入 Mini 引擎 | mini_engine.py | C++ Extension、load_inline |
-| Day 6 | 端到端 Profiling + Fusion | profiling 报告 | nsys + ncu 五步法、kernel fusion 候选 |
-| **Day 7** | **算子分类 + 总结** | **算子分类表** | **arithmetic intensity 判定** |
-
-> 💡 **一句话总结**：Week 3 的本质是"理解 Transformer 推理为什么慢，并定位慢在哪些算子"。Day 7 的算子分类表就是这 7 天学习的最终答卷。
+> 💡 **为什么重要**：Day 1-5 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine。但"算子各自正确"不等于"系统跑得快"——真实优化必须先**定位瓶颈**再动手。今天就是把"会写 kernel"升级为"会用工具诊断系统"的关键一天，五步 Profiling 法是所有 GPU 性能优化的标准工作流。Day 7 会把今天的结论整理成算子分类表。
 
 ---
 
-### 核心概念串讲
+### 学前导读：从"单算子正确"到"系统级瓶颈定位"
 
-#### 1. Prefill vs Decode：同一套层，两种性能特征
+Day 5 的 Mini Engine 跑通了：自定义 Softmax/LayerNorm + cuBLAS GEMM，端到端误差 < 1e-4。但你可能注意到一个尴尬的现象——**自定义版比 PyTorch 还慢一点（0.8x ~ 0.95x）**。问题来了：慢在哪里？是 Softmax 拖后腿，还是 GEMM 没跑满，还是 kernel 之间的空隙太大？
 
-![Prefill vs Decode 执行特征对比](../../week3/images/prefill_vs_decode.svg)
+回答这个问题，靠"猜"是不行的。Day 1 我们用过 `torch.profiler` 看算子时间表，但它只告诉你"哪个算子慢"，不告诉你"为什么慢"——是算力不够，还是带宽喂不饱？要回答"为什么"，需要更底层的工具：
 
-Transformer 推理分两阶段，跑的是同一套层，但算子形状截然不同，导致 bound 类型天差地别：
+| 问题层级 | 工具 | 能回答的问题 |
+|---------|------|------------|
+| 哪个算子最慢？ | torch.profiler / nsys | top3 耗时算子、kernel 间隙 |
+| 这个算子为什么慢？ | ncu | SM/DRAM 占用、Stall 原因 |
+| 怎么优化？ | Roofline + Fusion 分析 | memory-bound → 融合；compute-bound → Tensor Core |
 
-| 维度 | Prefill | Decode |
-|------|---------|--------|
-| 输入形状 | `(B, N_prompt, d)`，N 可达数千 | `(B, 1, d)`，每次 1 个 token |
-| GEMM 的 M | 大（N） | 极小（1） |
-| 算子整体 bound | **Compute-bound**（GEMM 主导） | **Memory-bound**（KV Cache 读取主导） |
-| SM 利用率 | 60-85% | 10-30% |
-| 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
+**今天的核心方法论**：**nsys 先看全局（找 top3）→ ncu 再看单点（判 bound 类型）→ Roofline 定方向 → Fusion 出方案**。这是一套"从宏观到微观"的诊断闭环，适用于任何 GPU 程序，不只是 Transformer。
 
-**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，AI 骤降到 ~1 → memory-bound。
+> 💡 **一句话总结**：profiling 不是"跑个工具看个数字"，而是"用数字回答问题"——先问"哪里慢"，再问"为什么慢"，最后问"怎么让它不慢"。
 
-#### 2. Softmax / LayerNorm：memory-bound 算子的典型代表
+---
 
-| 算子 | reduce 次数 | AI (FLOP/Byte) | bound | 关键技巧 |
-|------|------------|----------------|-------|---------|
-| Softmax | 2（max + sum） | ~0.375 | memory-bound | safe softmax 减 max、三遍扫描 |
-| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce、affine |
+### 理论学习
 
-两个算子的核心都是 **block reduce**：warp 级 `__shfl_down_sync` → shared memory 中转 → warp 0 最终归约。这是 Week 2 Day 1 Warp Shuffle 原语的直接工程化。
-
-> ⚠️ **注意**：LayerNorm 的两次 reduce 无法合并——第二次（variance）依赖第一次（mean）的结果。FasterTransformer 用 Welford 在线算法合并成一次遍历，是工程优化而非算法等价。
-
-#### 3. 标准 Attention：O(N²) IO 的根源
-
-![标准 Attention IO 拆解](../../week3/images/attention_io_breakdown.svg)
-
-标准 Attention 三阶段把两个 N×N 中间矩阵 S 和 P 物化到 HBM，这是 O(N²) IO 的根源：
-
-```
-Step 1: S = QK^T / √d → 写 S (N²)
-Step 2: P = softmax(S) → 读 S (N²) + 写 P (N²)
-Step 3: O = PV → 读 P (N²) + 写 O (Nd)
-总计: 3N² + 4Nd → O(N²) when N ≫ d
-```
-
-| N | S/P 显存 | 能否入 L2(~40MB) | 能否入 HBM(40GB) |
-|---|---------|------------------|------------------|
-| 1024 | 4 MB | ✅ | ✅ |
-| 4096 | 64 MB | ❌ | ✅ |
-| 16384 | 1 GB | ❌ | ✅（紧张） |
-| 65536 | 16 GB | ❌ | ❌（OOM） |
-
-FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 softmax**，把 IO 从 O(N²) 降到 O(Nd)。
-
-#### 4. 端到端 Profiling：五步诊断法
+#### 20.1 两级 Profiling 工具体系：nsys + ncu
 
 ![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
 
-| 步骤 | 工具 | 回答的问题 |
-|------|------|-----------|
-| 1. 系统级时间线 | nsys | 哪个算子最慢？（top3） |
-| 2. kernel 级指标 | ncu | 这个算子为什么慢？（SM/DRAM 占用） |
-| 3. 瓶颈判定 | Roofline | memory-bound 还是 compute-bound？ |
-| 4. Stall 分析 | ncu Warp Stall Reasons | 具体阻塞原因（Long Scoreboard = 等内存） |
-| 5. Fusion 机会 | 时间线 + Roofline | 哪些相邻 memory-bound 算子可融合？ |
+GPU 性能诊断有且只有两个核心工具（NVIDIA 体系），分工明确：
 
-**判定法则**：`dram__throughput ≫ sm__throughput` → memory-bound；反之 compute-bound；两者都低 → latency-bound。
+| 工具 | 层级 | 看什么 | 类比 |
+|------|------|--------|------|
+| **Nsight Systems（nsys）** | 系统级 | 完整时间线、kernel 排列、CPU/GPU 交互、多 stream | "全景地图" |
+| **Nsight Compute（ncu）** | kernel 级 | 单个 kernel 的 SM/DRAM 占用、Stall 原因、寄存器/shared 用量 | "放大镜" |
 
-#### 5. Kernel Fusion：省 HBM 中间读写
+##### nsys：系统级全景
 
-![Kernel Fusion 机会](../../week3/images/kernel_fusion_opportunities.svg)
+nsys 采集一次完整的程序运行，输出时间线（`.nsys-rep`，可用 GUI 打开，也可命令行导出统计）：
 
-| Fusion 候选 | 收益来源 | 难度 |
-|------------|---------|------|
-| LayerNorm + QKV GEMM | 省去 LN 输出 (B,N,d) 一次读写 | 高 |
-| Softmax + Dropout | 省去 P 一次读写 | 低 |
-| Residual Add + LayerNorm | 省去中间结果 | 中 |
-| GEMM + Bias + GELU | epilogue fusion | 中 |
+```bash
+# 采集 Mini Engine 时间线
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx python profile_mini_engine.py
 
-`torch.compile` 会自动做这些 fusion，kernel 数量减少 30-50%。
-
----
-
-### 算子分类决策树：拿到任意算子如何判 bound
-
-![O(N²) vs O(Nd) IO 增长对比](../../week3/images/on2_vs_ond_scaling.svg)
-
-**判定流程**（从理论到验证）：
-
-```
-1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
-2. 与 Ridge Point 比较（RTX 5090 ≈ 58.45 FLOP/Byte）
- - AI < 58.45 → memory-bound
- - AI > 58.45 → compute-bound
-1. 用 ncu 验证：sm__throughput vs dram__throughput
-2. 经验法则：
- - element-wise（relu/layernorm/softmax）→ 几乎总是 memory-bound
- - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
- - 小 GEMM（M=1 或某维极小）→ 通常 memory-bound
- - reduction（sum/max）→ memory-bound
+# 命令行导出 kernel 统计（按 GPU 时间降序）
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
 ```
 
-#### Prefill 阶段算子分类表（B=1, N=1024, d=512, FP32）
+`cuda_gpu_kern_sum` 输出形如：
 
-| 算子 | FLOPs | Bytes | AI | bound | 优化方向 |
-|------|-------|-------|-----|-------|---------|
-| QKV GEMM | 2·N·d·3d ≈ 1.6G | 8·N·d ≈ 4MB | ~384 | **Compute** | Tensor Core |
-| QK^T GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
-| Attention Softmax | 3·N² ≈ 3.1M | 2·N²·4 ≈ 8MB | ~0.4 | **Memory** | FlashAttention (SRAM) |
-| PV GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
-| Output GEMM | 2·N·d² ≈ 0.5G | 2·N·d ≈ 4MB | ~128 | **Compute** | Tensor Core |
-| LayerNorm | 5·N·d ≈ 2.6M | 2·N·d·4 ≈ 4MB | ~0.6 | **Memory** | Fusion |
-| FFN GEMM1/2 | 2·N·d·4d ≈ 2.1G | ~5MB | ~400 | **Compute** | Tensor Core |
-| GELU | 4·N·4d ≈ 8.4M | 2·N·4d·4 ≈ 16MB | ~0.5 | **Memory** | Epilogue fusion |
-
-> 💡 **关键洞察**：Prefill 阶段 GEMM 是 compute-bound，softmax/layernorm/gelu 是 memory-bound。整体性能由 GEMM 主导（时间占比 60%+），所以 **Prefill 是 compute-bound**。
-
-#### Decode 阶段算子分类表（B=1, M=1, KV Cache 长度 L=1024, d=512）
-
-| 算子 | FLOPs | Bytes | AI | bound | 与 Prefill 差异 |
-|------|-------|-------|-----|-------|---------------|
-| QKV GEMM (M=1) | 2·d·3d ≈ 1.6M | 4·d ≈ 8KB | ~200* | **Memory** | GEMM 退化为向量×矩阵 |
-| QK^T (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 读 KV Cache 大 |
-| Attention Softmax | 3·L ≈ 3K | 2·L·4 ≈ 8KB | ~0.4 | **Memory** | 不变 |
-| PV GEMM (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 同上 |
-| LayerNorm | 5·d ≈ 2.6K | 2·d·4 ≈ 4KB | ~0.6 | **Memory** | 不变 |
-
-> *Decode 的 GEMM 虽然理论 AI 较高，但因矩阵极小（M=1），SM 无法充分利用，实际表现为 memory-bound。
-
-> 💡 **关键洞察**：Decode 阶段 **几乎所有算子都是 memory-bound**（M=1 导致 GEMM 的 AI 骤降）。这就是为什么 Decode 是 memory-bound，优化重点是减少 HBM 读写（KV Cache）和 launch overhead（CUDA Graph）。
-
-#### Prefill vs Decode 总览
-
-![延迟对比](../../week3/images/latency_comparison.svg)
-
-| 维度 | Prefill | Decode |
-|------|---------|--------|
-| 主导算子类型 | GEMM（compute-bound） | KV Cache 读取（memory-bound） |
-| 优化重点 | Tensor Core、FlashAttention | KV Cache、CUDA Graph、Continuous Batching |
-| SM 利用率 | 高（60-85%） | 低（10-30%） |
-| 单 token 延迟 | 低（并行处理 N 个 token） | 高（串行生成，每次 1 token） |
-| 吞吐量瓶颈 | 算力 | 显存带宽 |
-
----
-
-### 总结任务
-
-#### 任务 1：完成 Transformer 算子分类表
-
-将上文两张分类表整理到 [notes/operator_classification.md](../notes/operator_classification.md)，并补充你自己 Mini Engine 的实测数据：
-
-```markdown
-# Week 3 Transformer 算子分类表
-
-## 测试环境
-- GPU: [你的型号]
-- CUDA: 12.x / PyTorch: 2.x
-
-## Prefill 阶段（N=1024, d=512）
-| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
-|------|---------|---------|-----------|-------|
-| QKV GEMM | 384 | xx | xx | Compute |
-| Softmax | 0.4 | xx | xx | Memory |
-| ... | | | | |
-
-## Decode 阶段（M=1, L=1024）
-| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
-| ... | | | | |
+```text
+Time(%) Total Time Instances Avg Module Kernel
+-------- ----------- --------- -------- --------- ------
+ 45.2 1.234 ms 20 61.7 us libcublas ...gemm...
+ 12.1 0.331 ms 10 33.1 us my_ops layernorm_kernel
+ 8.5 0.232 ms 5 46.4 us my_ops softmax_kernel
+ ...
 ```
 
-> 💡 用 Day 6 的 ncu 命令采集实测 SM%/DRAM%，对比理论与实测，误差大时排查原因（cache、launch overhead）。
+**三个观察重点**：
+1. **top3 算子**：按 `Time(%)` 排序，前三个就是优化目标
+2. **kernel 间隙（gap）**：在 GUI 时间线上看相邻 kernel 之间的空白 = launch overhead（CPU 调度延迟）
+3. **调用次数**：`# Calls` 异常多说明 launch overhead 累积，Decode 阶段尤其明显
 
-#### 任务 2：整理本周产出
+##### ncu：kernel 级放大镜
 
-按下表清点本周所有代码和报告，补全缺失项：
+ncu 对单个 kernel 做深度分析，关键是**对比 SM Throughput 和 DRAM Throughput**判断 bound 类型：
 
-| 产出物 | 文件 | 验收标准 | 状态 |
-|--------|------|---------|------|
-| Transformer profiler trace | `day1/trace_transformer.py` + trace_*.json | Prefill/Decode 算子时间表 | ☐ |
-| Softmax + LayerNorm Kernel | `day2/softmax_layernorm.cu` | 与 CPU 误差 < 1e-5 | ☐ |
-| 源码分析笔记 | `day3/notes/source_analysis.md` | 3 个优化点对比 | ☐ |
-| 标准 Attention Kernel | `day4/attention_naive.cu` | 与 CPU 误差 < 1e-3 | ☐ |
-| Mini 引擎 | `day5/mini_engine.py` | 自定义版端到端 PASS | ☐ |
-| Profiling 报告 | `day6/profiling_report.md` | 含 top3 瓶颈分析 | ☐ |
-| 算子分类表 | `day7/notes/operator_classification.md` | Prefill/Decode 分类完整 | ☐ |
+```bash
+# 分析自定义 Softmax / GEMM 的 bound 类型
+ncu --metrics \
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|gemm_kernel" ./profiling_targets
+```
 
-#### 任务 3：本周 LeetGPU / LeetCode 题目回顾
+> ⚠️ **注意**：ncu 会让 kernel 执行慢 10-100x（它要反复 replay 采集指标）。**永远不要在 ncu 下测 latency**，latency 用 nsys 或 cudaEvent 测。ncu 只看"占比"和"Stall 原因"。
 
-本周实战题目汇总（点击查看完整题解）：
+#### 20.2 瓶颈判定：Roofline 与 SM/DRAM Throughput
 
-| Day | LeetGPU 题目 | LeetCode 题目 |
-|-----|--------------|---------------|
-| Day 1 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [206. 反转链表](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html)、[21. 合并两个有序链表](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html)、[83. 删除排序链表中的重复元素](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html)、[876. 链表的中间结点](https://hzchenxiaobin.github.io/leetcode/problems/876_链表的中间结点.html) |
-| Day 2 | [Group Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html) | [141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html)、[142. 环形链表 II](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html)、[160. 相交链表](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html)、[19. 删除链表的倒数第 N 个结点](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)、[234. 回文链表](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
-| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [24. 两两交换链表中的节点](https://hzchenxiaobin.github.io/leetcode/problems/24_两两交换链表中的节点.html)、[25. K 个一组翻转链表](https://hzchenxiaobin.github.io/leetcode/problems/25_K个一组翻转链表.html)、[92. 反转链表 II](https://hzchenxiaobin.github.io/leetcode/problems/92_反转链表 II.html)、[143. 重排链表](https://hzchenxiaobin.github.io/leetcode/problems/143_重排链表.html)、[328. 奇偶链表](https://hzchenxiaobin.github.io/leetcode/problems/328_奇偶链表.html) |
-| Day 4 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | [2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)、[445. 两数相加 II](https://hzchenxiaobin.github.io/leetcode/problems/445_两数相加 II.html)、[138. 随机链表的复制](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html)、[430. 扁平化多级双向链表](https://hzchenxiaobin.github.io/leetcode/problems/430_扁平化多级双向链表.html) |
-| Day 5 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)、[23. 合并 K 个升序链表](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html)、[146. LRU 缓存](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
-| Day 6 | [RMS Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) | [50. Pow(x, n)](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html)、[470. 用 Rand7() 实现 Rand10()](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html)、[289. 生命游戏](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
-| Day 7 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | — |
+判定一个 kernel 是 compute-bound 还是 memory-bound，有**理论**和**实测**两条路径，互相印证：
 
-> 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题对应 8 周刷题计划第 3 周「链表与数学技巧」。把没做完的题目今天补上。
+##### 理论路径：Arithmetic Intensity vs Ridge Point
 
-#### 任务 4：Week 4 预热 + 面试复盘
+```
+Arithmetic Intensity (AI) = FLOPs / Bytes（每读 1 字节做多少次运算）
+Ridge Point = Peak FLOP/s / Peak Bandwidth
 
-**Week 4 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 4 将深入 FlashAttention：
+RTX 5090 FP32: 104.75 TFLOP/s / 1.792 TB/s ≈ 58.45 FLOP/Byte
+```
 
-1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 5 已学简化版，Week 4 学完整版）
-2. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
-3. **手写完整 FlashAttention kernel**：支持 batch、multi-head、不同 seq_len
-4. **性能对比**：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
+- AI < 58.45 → **memory-bound**（数据喂不饱计算单元）
+- AI > 58.45 → **compute-bound**（算力是瓶颈）
 
-**本周铺垫的关键概念**：
-- ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 4 用 FlashAttention 解决
-- ✅ Online Softmax 三公式（Week 2 Day 5）→ Week 4 完整实现
-- ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 4 在 SRAM 中做 softmax
-- ✅ Warp Shuffle reduce（Week 2 Day 1）→ Week 4 用于 online softmax 的分块 reduce
+以 Softmax 为例（N=1024, d=1024, FP32）：
+- FLOPs ≈ 3·N²（每元素 exp+add+div）
+- Bytes = 2·N²·4（读 S + 写 P）
+- AI = 3N² / (8N²) = **0.375 FLOP/Byte** → 远低于 58.45 → **memory-bound** ✓
 
-**面试复盘**：回顾本周面试题，自问自答（答案见下方"面试要点"）：
+##### 实测路径：SM% vs DRAM%
 
-1. Prefill vs Decode 的区别？为什么 Decode 是 memory-bound？
-2. Transformer 单层算子分类（compute vs memory）？
-3. Softmax 为什么要减 max？
-4. LayerNorm 需要几次 reduce？
-5. 为什么 Softmax/LayerNorm 是 memory-bound？
-6. PyTorch Softmax 为什么 D 小时用 warp 级？
-7. FP16 reduce 为什么要用 FP32？
-8. 标准 Attention 的 IO 复杂度？O(N²) 来源？
-9. 如何做端到端 profiling 定位瓶颈？
-10. 什么是 kernel fusion？举例。
+| ncu 指标 | 含义 |
+|---------|------|
+| `sm__throughput.avg.pct_of_peak_sustained_elapsed` | SM 计算单元占用率（%） |
+| `dram__throughput.avg.pct_of_peak_sustained_elapsed` | HBM 带宽占用率（%） |
+
+判定规则：
+
+| 观察 | 结论 | 优化方向 |
+|------|------|---------|
+| DRAM% >> SM% | **memory-bound** | Kernel Fusion、向量化加载、减少 HBM 读写 |
+| SM% >> DRAM% | **compute-bound** | Tensor Core、增加 ILP、auto-tuning |
+| 两者都低（< 30%） | **latency-bound** | 减少 `__syncthreads`、增加并行度、消除 Stall |
+
+##### Warp Stall Reasons：精确定位"为什么慢"
+
+ncu 的 `smsp__average_warps_issue_stalled_*` 系列指标告诉你 warp 卡在哪：
+
+| Stall 原因 | 含义 | 典型场景 |
+|-----------|------|---------|
+| **Long Scoreboard** | 等 HBM 加载 | memory-bound kernel 的主因（Softmax/LayerNorm） |
+| **Math Pipe Throttle** | 计算单元饱和 | compute-bound kernel（大 GEMM） |
+| **Barrier** | 等 `__syncthreads` | reduce kernel 同步开销 |
+| **Short Scoreboard** | 等 shared memory | bank conflict 或 shared 访问密集 |
+
+**Softmax 的 Long Scoreboard 会很高**——三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存。这正是 memory-bound 的微观表现。
+
+#### 20.3 Kernel Fusion 机会识别
+
+![Kernel Fusion：省的是 HBM 中间读写](../../week3/images/kernel_fusion_opportunities.svg)
+
+找到 memory-bound 算子后，最重要的优化手段是 **Kernel Fusion**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM。
+
+##### Transformer 中的 Fusion 候选
+
+| Fusion 候选 | 当前开销 | 融合后收益 | 实现难度 |
+|------------|---------|-----------|---------|
+| **LayerNorm + QKV GEMM** | LN 写 (B,N,d) 到 HBM，GEMM 再读 | 省去 (B,N,d) 一次读写 | 高（需融合 LN+GEMM） |
+| **Softmax + Dropout** | Softmax 写 P，Dropout 读 P 再写 | 省去 P 一次 O(N²) 读写 | 低（element-wise 融合） |
+| **GEMM + Bias + GELU** | GEMM 写结果，加 bias，过 GELU | 省去中间结果 | 中（epilogue fusion） |
+| **Residual Add + LayerNorm** | Add 写结果，LN 读结果 | 省去一次读写 | 中 |
+
+##### Fusion 收益估算（LayerNorm + QKV GEMM）
+
+以 B=1, N=1024, d=512, FP32 为例：
+
+```
+未融合：
+ LayerNorm: 读 x(2MB) + 写 y(2MB) = 4MB HBM IO
+ QKV GEMM: 读 y(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB HBM IO
+ 合计: 15MB
+
+融合后：
+ Fused LN+GEMM: 读 x(2MB) + 读 W(3MB) + 写 QKV(6MB) = 11MB
+ 节省: 4MB（LayerNorm 中间结果 y 的读写被消除）
+```
+
+##### torch.compile 的自动融合
+
+PyTorch 2.0 的 `torch.compile` 会自动做这些 fusion：
+
+```python
+compiled_model = torch.compile(model, mode="reduce-overhead")
+# nsys 对比：compiled 版 kernel 数量减少 30-50%
+```
+
+> ⚠️ **注意**：`torch.compile` 的 fusion 作用于 PyTorch 原生 ATen 算子。**自定义 C++ Extension 算子对 Inductor 是"黑盒"**，无法被融合（除非注册为 custom op + 提供 fake tensor）。这是 Day 5 自定义算子的一大代价——也是为什么"能不自定义就不自定义，先用 torch.compile"。
+
+##### Fusion 的限制
+
+1. **只有相邻 + 数据依赖**的算子能融合（A→B→C 可融，A→B 和 A→C 不行）
+2. **融合 kernel 增加 register/shared memory 压力**，可能降低 occupancy
+3. **复杂融合**需要 CUTLASS（epilogue fusion）或 Triton（`torch.compile` 后端）
+
+### Coding 任务：端到端 Profiling Mini Engine
+
+#### 任务 1：创建 `kernels/profiling_targets.cu`
+
+ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的 kernel，干扰判断。所以我们先准备一个**干净的独立靶点程序**：一个 memory-bound 的 Softmax + 一个 compute-bound 的 GEMM，让 ncu 直接分析。完整文件见 [kernels/profiling_targets.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profiling_targets.cu)。
+
+核心是两个对比 kernel：
+
+```cuda
+// kernels/profiling_targets.cu —— 端到端 Profiling 靶点：memory-bound Softmax + compute-bound GEMM
+// 编译命令: nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
+// 运行命令: ./profiling_targets
+
+// [Memory-bound] Softmax：一行一个 block，三遍扫描 safe softmax（复用 Day 2）
+// 预期 ncu：DRAM Throughput >> SM Throughput
+__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+    const float* in_row = input + row * D;
+    float* out_row = output + row * D;
+    __shared__ float smem[32];
+    __shared__ float row_max, row_sum;
+    int tid = threadIdx.x;
+    // Step 1: 求 max（数值稳定性）
+    float local_max = -INFINITY;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_max = fmaxf(local_max, in_row[i]);
+    local_max = blockReduceMax(local_max, smem);
+    if (tid == 0)
+        row_max = local_max;
+    __syncthreads();
+    // Step 2: 求 sum(exp(x - max))
+    float local_sum = 0.0f;
+    for (int i = tid; i < D; i += blockDim.x)
+        local_sum += expf(in_row[i] - row_max);
+    local_sum = blockReduceSum(local_sum, smem);
+    if (tid == 0)
+        row_sum = local_sum;
+    __syncthreads();
+    // Step 3: 归一化写出
+    float inv_sum = 1.0f / row_sum;
+    for (int i = tid; i < D; i += blockDim.x)
+        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+}
+
+// [Compute-bound] Naive GEMM：C = A·B（故意不做 tiling，但仍体现 compute 特征）
+// 预期 ncu：SM Throughput >> DRAM Throughput
+__global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                            int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= N)
+        return;
+    float acc = 0.0f;
+    for (int k = 0; k < K; k++)
+        acc += A[row * K + k] * B[k * N + col];
+    C[row * N + col] = acc;
+}
+```
+
+`main()` 分别运行两个 kernel 并计时、验证，末尾打印 ncu 分析指引命令。`-lineinfo` 是给 ncu Source View 用的（保留源码行号映射）。
+
+#### 任务 2：用 nsys 采集 Mini Engine 时间线
+
+先运行独立的 Mini Engine profiling 脚本（[kernels/profile_mini_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/profile_mini_engine.py)），它内置 `torch.profiler` 输出 Prefill/Decode 的算子时间表：
+
+```bash
+# 运行（输出 Prefill/Decode 算子表 + 导出 Chrome trace）
+python kernels/profile_mini_engine.py
+```
+
+**预期输出**：
+
+```text
+===== Prefill Phase (shape=(1, 1024, 512)) =====
+Name Self CUDA Calls
+aten::mm            128 us  20  ← QKV/Out/FFN GEMM（compute-bound）
+aten::layer_norm     19 us  10
+aten::softmax        24 us   5
+aten::gelu           ...      5
+...
+
+===== Decode Phase (shape=(1, 1, 512)) =====
+Name Self CUDA Calls
+aten::mm             15 us  20  ← GEMM 但矩阵极小（M=1）
+aten::layer_norm     ...      10
+aten::softmax        ...       5
+...
+
+Prefill (N=1024): 0.135 ms / forward
+Decode  (N=1): 0.118 ms / forward
+Per-token: Prefill=0.1 us/token, Decode=117.6 us/token
+```
+
+然后用 nsys 采集系统级时间线：
+
+```bash
+# nsys 采集
+nsys profile -o mini_engine_timeline --trace=cuda,nvtx python kernels/profile_mini_engine.py
+
+# 导出 kernel 统计
+nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
+```
+
+**分析任务**：
+1. 找出 Prefill 阶段 CUDA 时间 top3 算子（预期是 `mm`/`gemm` 类 GEMM）
+2. 对比 Prefill vs Decode 的 per-token 时间（Prefill 远快于 Decode，因为并行度高）
+3. 在 Nsight Systems GUI（或 chrome://tracing 打开 `trace_prefill.json`）观察 kernel 之间的 gap（launch overhead）
+
+#### 任务 3：用 ncu 判定 Softmax / GEMM 的 bound 类型
+
+编译独立靶点并用 ncu 分析：
+
+```bash
+# 编译（带 -lineinfo 供 ncu Source View）
+nvcc -o profiling_targets kernels/profiling_targets.cu -O3 -arch=sm_120 -lineinfo
+
+# 运行验证正确性
+./profiling_targets
+
+# ncu 分析 bound 类型
+ncu --metrics \
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|gemm_kernel" \
+ ./profiling_targets
+```
+
+**预期结果**：
+
+```text
+=== Profiling Targets: Softmax(memory-bound) + GEMM(compute-bound) ===
+Softmax: M=256, D=1024
+GEMM: M=512, N=512, K=512
+
+[Softmax] time=0.062 ms maxDiff=4.42e-09 (PASS)
+[GEMM] time=0.072 ms TFLOPS=3.74 (naive, no tiling)
+
+ softmax_kernel (M=256, D=1024)
+ DRAM Throughput : ~55-70% ← 高
+ SM Throughput : ~15-25% ← 低
+ Long Scoreboard : ~40-55% ← 等 HBM（memory-bound 特征）
+ → 结论：DRAM% >> SM% → memory-bound ✓
+
+ gemm_kernel (M=512, N=512, K=512) — naive 无 tiling
+ DRAM Throughput : ~55-70% ← 高
+ SM Throughput : ~15-25% ← 低
+ Long Scoreboard : ~40-55% ← 等 HBM
+ → 结论：naive GEMM（无 tiling）AI ≈ 0.25 << 58.45 → 仍为 memory-bound ✓
+ → 对比：Week2 的 tiled GEMM（有 shared memory 复用）才为 compute-bound
+```
+
+**判定印证**：Softmax 和 naive GEMM 的 DRAM% >> SM% 且 Long Scoreboard 高 → 都是 memory-bound。naive GEMM 的 AI ≈ 2K/(8K) = 0.25 FLOP/Byte，远低于 ridge point（58.45），理论上确为 memory-bound。只有经过 tiling + shared memory 优化的 GEMM（如 Week2 Day6 的 v4-v6）才转变为 compute-bound。
+
+> ⚠️ **常见坑**：① ncu 看不到自定义 kernel → 用 `--kernel-name regex:softmax_kernel` 模糊匹配（C++ 会 mangle 符号名）；② `dram__throughput` 指标名报错 → 不同架构指标名有差异，用 `ncu --query-metrics` 查可用指标；③ nsys 采集到的 kernel 很少 → 加 warmup 2-3 轮再采集。
+
+#### 为什么 ncu 下 latency 不可信？
+
+ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运行时间膨胀 10-100x。所以：
+- **latency** → 用 nsys 或 `cudaEventElapsedTime` 测（任务 2 已做）
+- **bound 类型 / Stall 原因** → 用 ncu 看（任务 3 已做）
+
+两者分工，不可混用。
+
+#### 任务 4：LeetGPU 在线题目 —— RMS Normalization
+
+今天的主题是"定位 memory-bound 算子 + fusion 机会"。本题用一个 Llama 风格的归一化算子（RMSNorm）练手：它比 LayerNorm 少一次 reduce，是典型的 memory-bound 算子，正好用今天的 ncu 流程验证。
+
+**题目链接**：<https://leetgpu.com/challenges/rms-normalization>
+
+**与今日知识的关联**：RMSNorm 是 Llama/T5 等现代模型替代 LayerNorm 的首选——它**只做一次 reduce（sum of squares）**，比 LayerNorm 的两次（mean + variance）更省。它纯 memory-bound（AI ≈ 0.5 FLOP/Byte），是练习"用 ncu 判定 memory-bound → 用 fusion 优化"的完美靶点。今天学了五步 Profiling 法，本题直接套用：先写 kernel → 用 ncu 看 DRAM% >> SM% → 思考 RMSNorm + GEMM 的 fusion。
+
+> 💡 提交后在 [LeetGPU RMS Normalization 题目](https://leetgpu.com/challenges/rms-normalization)上记录通过耗时，用 ncu 验证 `DRAM% >> SM%`（memory-bound），并对比 RMSNorm（一次 reduce）vs Day 2 LayerNorm（两次 reduce）的 latency。完整题解（含 RMSNorm vs LayerNorm 对比、Roofline 分析、与 Llama 的关联）见 [RMS Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
+| [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
+| [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
 
 ---
 
-### 面试准备框架
+### 扩展实验
 
-面试中回答 Transformer 算子优化问题，建议用这个结构：
+#### 实验 1：用 `torch.compile` 减少 kernel 数量
 
-1. **先分类**：这个算子是 GEMM 还是 element-wise/reduction？
-2. **判 bound**：compute-bound 还是 memory-bound？给出 AI 估算
-3. **分阶段**：Prefill 和 Decode 表现是否不同？（GEMM 会随 M 变化）
-4. **给方案**：memory-bound → fusion / 向量化 / 减少读写；compute-bound → Tensor Core / ILP
-5. **联系工具**：用 nsys 找 top3，用 ncu 看 SM/DRAM 占用验证
+对 Mini Engine 用 `torch.compile(mode="reduce-overhead")` 编译，再用 nsys 采集时间线，对比编译前后的 kernel 总数和 latency。
 
-**示例**：
+```python
+compiled_model = torch.compile(model, mode="reduce-overhead")
+# nsys profile -o compiled_timeline python ...
+# nsys stats -t cuda_gpu_kern_sum compiled_timeline.nsys-rep
+```
 
-> **Q：Attention 的 softmax 部分为什么慢？怎么优化？**
->
-> **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~58.45），纯 memory-bound。
->
-> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。
->
-> 用 ncu 验证：标准 Attention 的 softmax 部分 DRAM Throughput ≫ SM Throughput，符合 memory-bound 判定。
+**思考问题**：`torch.compile` 把 kernel 数减少了多少？哪些算子被融合了？
+> 提示：`torch.compile` 通常把 LayerNorm+GEMM、Softmax+Dropout 等融合，kernel 数减少 30-50%。观察 `aten::layer_norm` 和 `aten::mm` 是否合并成了 fused kernel。
 
----
+#### 实验 2：分析 Softmax 的 Long Scoreboard Stall 占比
 
-### 常见误区澄清
+用 ncu 分析 `softmax_kernel` 的 `smsp__average_warps_issue_stalled_long_scoreboard.pct`，解释为什么它高。
 
-| 误区 | 正确理解 |
-|------|---------|
-| Decode 的 GEMM 也是 compute-bound | M=1 时 GEMM 退化为向量×矩阵，AI 骤降，实际是 memory-bound |
-| 自定义 kernel 一定能超过 PyTorch | 官方已高度优化（向量化、warp 级、Welford），只有官方没覆盖的场景（如 FlashAttention）自定义才有优势 |
-| LayerNorm 两次 reduce 能随便合并 | 第二次（variance）依赖第一次（mean），必须 Welford 在线算法才能合并成一次遍历 |
-| Softmax 减 max 只是防溢出 | 还保证数值等价性，是数学恒等变换，不影响结果 |
-| O(N²) 是计算复杂度问题 | O(N²) 是 **IO 复杂度**问题——物化两个 N×N 矩阵的 HBM 读写，计算本身（GEMM）是 compute-bound |
-| Fusion 总是有收益 | 融合 kernel 可能增加 register/shared memory 压力降低 occupancy；只有相邻且数据依赖的算子才能融合 |
-| Profiling 是优化最后一步 | Profiling 应该是优化循环的起点和终点——先定位再优化再验证 |
+```bash
+ncu --metrics smsp__average_warps_issue_stalled_long_scoreboard.pct,\
+ smsp__average_warps_issue_stalled_barrier.pct \
+ --kernel-name regex:softmax_kernel ./profiling_targets
+```
 
----
+**思考问题**：Softmax 的 Long Scoreboard 占比约多少？三遍扫描中哪一遍贡献最大？
+> 提示：Softmax 三遍扫描每遍都从 HBM 读数据，warp 大部分时间在等内存加载 → Long Scoreboard 高（40-55%）。第二遍（求 sum）和第三遍（归一化）都要重新读 HBM，是主要贡献。这正是 online softmax（两遍）优化的动机。
 
-### Week 3 → Week 4 衔接
+#### 实验 3：列出 Mini Engine 的 top3 瓶颈算子并给优化方向
 
-Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
+综合 nsys 的 top3 算子 + ncu 的 bound 判定，写一份诊断报告：每个 top 算子标注（compute/memory-bound + 优化方向）。
 
-1. **标准 Attention 的三阶段 IO**（Day 4）：不理解 O(N²) 物化，就无法理解 FlashAttention 的动机
-2. **Online Softmax 三公式**（Week 2 Day 5）：FlashAttention 的算法核心
-3. **Warp Shuffle reduce**（Week 2 Day 1）：FlashAttention 分块 reduce 的基础
-4. **Shared Memory tiling**（Week 1 Day 4）：FlashAttention 的 Q/K/V tile 驻留机制
-5. **Arithmetic intensity 判定**（Day 7）：理解为什么把 softmax 搬到 SRAM 能消除瓶颈
-
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 4 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。
-
----
-
-### 弹性安排
-
-根据本周完成情况，选择以下一项或多项：
-
-- **补进度**：完成未做的 LeetGPU/LeetCode 题目和实验
-- **深入方向 1**：把 Day 2 的 Softmax 改为 online 两遍扫描版，对比三遍扫描性能
-- **深入方向 2**：用 ncu 详细分析 Mini Engine 中 cuBLAS GEMM 的所有指标，理解它为什么接近峰值
-- **深入方向 3**：阅读 FlashAttention 论文 Section 2-3，预习 tiling + online softmax
-- **面试准备**：和同学互相模拟面试，重点练 Day 7 的 10 道题
+**思考问题**：Prefill 和 Decode 的 top3 瓶颈算子一样吗？优化重点有何不同？
+> 提示：Prefill 的 top3 通常是 GEMM（compute-bound → Tensor Core）；Decode 的 top3 可能包含 LayerNorm/Softmax（memory-bound → fusion），且 launch overhead 占比更高 → CUDA Graph。这正是 Day 7 算子分类表的核心内容。
 
 ---
 
 ### 今日总结
 
-Day 7 我们完成了 Week 3 的系统复盘与算子分类：
+Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了"五步诊断法"：
 
-1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
-2. **算子分类表**：用 arithmetic intensity 把 Transformer 全部算子分到 compute/memory 两类，Prefill 的 GEMM 是 compute，softmax/layernorm/gelu 是 memory
-3. **memory-bound 算子三件套**：Softmax（safe softmax 三遍扫描）、LayerNorm（两次 reduce）、Attention softmax（O(N²) 物化）
-4. **源码优化差距**：向量化加载、warp vs block dispatch、Welford 一次 reduce、FP32 混合精度
-5. **端到端 Profiling 五步法**：nsys 找 top3 → ncu 判 bound → Roofline 定方向 → Stall 分析 → Fusion 出方案
-6. **Week 4 衔接**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心动机，本周已铺好全部前置概念
+1. **两级工具体系**：nsys 看系统级全景（top3 算子、kernel 间隙），ncu 看 kernel 级微观（SM/DRAM 占用、Stall 原因），先全局后单点
+2. **瓶颈判定**：DRAM% >> SM% → memory-bound；SM% >> DRAM% → compute-bound；理论 AI 计算与实测 ncu 互相印证
+3. **Warp Stall**：Long Scoreboard = 等 HBM（memory-bound 特征），Math Pipe Throttle = 计算饱和（compute-bound 特征）
+4. **Kernel Fusion**：把相邻 memory-bound 算子合并，省中间结果 HBM 读写；LayerNorm+GEMM、Softmax+Dropout 是 Transformer 典型候选
+5. **torch.compile**：自动融合 ATen 算子，kernel 数减 30-50%；但自定义 C++ Extension 是"黑盒"无法被融合
 
-如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么"，说明 Week 3 过关了。
+掌握五步法后，任何 GPU 程序的瓶颈诊断都有章可循。Day 7 会把今天的结论整理成 Prefill/Decode 算子分类表，为 Week 4 FlashAttention 收尾。
 
 ---
 
 ### 面试要点
 
-1. **Transformer 的 Prefill 和 Decode 阶段分别是什么 bound？为什么？**
+1. **如何做端到端 profiling 定位 Transformer 推理的瓶颈？完整流程是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 58.45，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
- - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，AI 从 384 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
- - **根本原因**：M=1 导致 GEMM 的计算量（与 M 成正比）远小于数据读取量（与 N·d 成正比），AI = FLOPs/Bytes 极低
- - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
+ - **第一步（nsys 系统级）**：用 Nsight Systems 采集完整时间线，`nsys stats -t cuda_gpu_kern_sum` 按 CUDA 时间排序找 top3 算子
+ - **第二步（ncu kernel 级）**：对 top3 算子用 Nsight Compute 分析 `sm__throughput` 和 `dram__throughput`
+ - **第三步（瓶颈判定）**：
+ - DRAM% >> SM% → memory-bound → 优化方向：kernel fusion、向量化加载、减少 HBM 读写
+ - SM% >> DRAM% → compute-bound → 优化方向：Tensor Core、增加 ILP、auto-tuning
+ - **第四步（Stall 分析）**：看 Warp Stall Reasons 定位具体阻塞（Long Scoreboard = 等内存，Math Pipe = 计算饱和，Barrier = 同步开销）
+ - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子，评估融合收益
+ - **关键分工**：latency 用 nsys/cudaEvent 测，bound 类型/Stall 用 ncu 看（ncu 下 latency 不可信，会膨胀 10-100x）
 
 </details>
 
 
-2. **给一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
+2. **什么是 kernel fusion？为什么能提升性能？举一个 Transformer 中的例子。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 58.45）比较
- - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
- - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
+ - **定义**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM
+ - **收益来源**：减少 HBM 读写次数。A→B→C 未融合要写 B 到 HBM 再读；融合后在 register/SRAM 中直接传递
+ - **Transformer 例子**：LayerNorm + QKV GEMM。未融合时 LayerNorm 输出 `y(B,N,d)` 写 HBM，GEMM 再读；融合后在 GEMM kernel 内部直接做归一化，省去 `y` 的一次读写（约 4MB，B=1,N=1024,d=512）
+ - **限制**：① 只有相邻且数据依赖的算子能融合 ② 融合 kernel 可能增加 register/shared 压力降低 occupancy ③ 复杂融合需 CUTLASS/Triton
 
 </details>
 
 
-3. **标准 Attention 的 IO 复杂度是多少？O(N²) 来自哪里？**
+3. **给定一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **复杂度**：O(N² + Nd)，当 N ≫ d 时简化为 O(N²)
- - **O(N²) 来源**：物化两个 N×N 中间矩阵——S=QK^T 写入 + softmax 读出 = 2N²，P=softmax(S) 写入 + PV 读出 = 2N²，合计 4N²
- - **FlashAttention 解决**：不物化 S/P，在 SRAM 中分块完成 online softmax，IO 降到 O(Nd)
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 58.45 FLOP/Byte）
+ - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
+ - DRAM% >> SM% → memory-bound
+ - SM% >> DRAM% → compute-bound
+ - **Roofline 定位**：在 Roofline 图上标出算子位置，落在斜线段是 memory-bound，水平段是 compute-bound
+ - **经验法则**：
+ - element-wise（relu、layernorm、softmax）→ 几乎总是 memory-bound
+ - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
+ - 小 GEMM（M=1 或某维很小，如 Decode）→ 通常 memory-bound
+ - reduction（sum、max）→ memory-bound
 
 </details>
 
 
-4. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+4. **ncu 和 nsys 有什么区别？分别什么场景用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **AI 低**：Softmax 每元素读 1 写 1（8 bytes）只做 ~3 次运算，AI ≈ 0.375；LayerNorm AI ≈ 0.6，都远低于 Ridge Point
- - **优化方向**：① Kernel Fusion（与相邻算子融合省 HBM 中间读写）② 向量化加载（float4/half2）③ 减少 reduce 次数（online softmax / Welford）④ FP16 存储减带宽（reduce 用 FP32 保精度）
+ - **nsys（系统级）**：采集完整程序时间线，看 kernel 排列、CPU/GPU 交互、多 stream、kernel 间隙。**测 latency、找 top3 算子、看 launch overhead**
+ - **ncu（kernel 级）**：对单个 kernel 做深度分析，看 SM/DRAM 占用、Stall 原因、寄存器/shared 用量。**判 bound 类型、看 Stall 原因、做优化对比**
+ - **关键区别**：ncu 会让 kernel 慢 10-100x（反复 replay），所以**latency 永远用 nsys 测，ncu 只看占比**
+ - **协作流程**：nsys 找到慢的 kernel → ncu 分析它为什么慢 → 优化后用 nsys 验证整体 latency 改善
 
 </details>
 
 
-5. **如何做端到端 profiling 定位 Transformer 推理瓶颈？完整流程是什么？**
+5. **为什么** `torch.compile` **能减少 kernel 数量？它对自定义 C++ Extension 算子有效吗？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **第一步（nsys 系统级）**：采集完整时间线，按 CUDA 时间排序找 top3 算子
- - **第二步（ncu kernel 级）**：对 top3 分析 SM Throughput 和 DRAM Throughput
- - **第三步（瓶颈判定）**：DRAM ≫ SM → memory-bound → fusion/向量化/减读写；SM ≫ DRAM → compute-bound → Tensor Core/ILP
- - **第四步（Stall 分析）**：Long Scoreboard = 等内存，Math Pipe = 计算饱和
- - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子评估融合收益
-
-</details>
-
-
-6. **Week 3 你最大的收获是什么？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - 建立"算子形状 → bound 类型 → 优化方向"的完整直觉：拿到任意 Transformer 算子，能从 M/N/K/d 形状秒判 compute-bound 还是 memory-bound，并给出对应优化路径。
+ - **原理**：`torch.compile`（Inductor 后端）把 PyTorch 原生 ATen 算子图做 fusion——相邻的 element-wise 算子（LayerNorm、Softmax、GELU、Residual Add）合并成单个 fused kernel，省中间结果 HBM 读写
+ - **效果**：通常 kernel 数减少 30-50%，Decode 阶段（kernel 小而多）收益更明显
+ - **对自定义 C++ Extension 无效**：自定义算子对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法融合。这是 Day 5 自定义算子的代价之一
+ - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（`torch.compile` 原生支持融合）
+ - **实践建议**：优先用原生算子 + `torch.compile`；只有官方没覆盖的场景（如 FlashAttention）才自定义
 
 ---
 
 </details>
 
-## 📁 本周目录结构
-
-```
-week3/
-├── README.md # Week 3 概览
-├── day1/ # Day 1: Trace Transformer 推理流程
-│ ├── README.md
-│ └── trace_transformer.py
-├── day2/ # Day 2: 手写 Softmax/LayerNorm Kernel
-│ ├── README.md
-│ └── kernels/softmax_layernorm.cu
-├── day3/ # Day 3: 源码分析 PyTorch/FasterTransformer
-│ ├── README.md
-│ └── notes/source_analysis.md
-├── day4/ # Day 4: Attention IO 分析
-│ ├── README.md
-│ └── kernels/attention_naive.cu
-├── day5/ # Day 5: 算子接入 Mini 引擎
-│ ├── README.md
-│ └── mini_engine.py
-├── day6/ # Day 6: 端到端 Profiling + Fusion
-│ ├── README.md
-│ └── profiling_report.md
-├── day7/ # Day 7: 算子分类 + 总结
-│ ├── README.md
-│ └── notes/operator_classification.md
-└── website/ # 网站构建
- ├── build.py
- └── images/ # SVG 插图
-```
-
----
-
-## 🔗 推荐资源
-
-| 资源 | 说明 |
-|------|------|
-| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Week 4 核心论文，预习 Section 2-3 |
-| [PyTorch ATen Softmax 源码](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/SoftMax.cu) | Day 3 阅读的官方 softmax 实现 |
-| [FasterTransformer LayerNorm 源码](https://github.com/NVIDIA/FasterTransformer/blob/main/src/fastertransformer/kernels/layernorm_kernels.cu) | Welford 一次 reduce 参考 |
-| [vLLM 博客: How vLLM serves LLM](https://blog.vllm.ai/) | Prefill/Decode 与 PagedAttention |
-| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
-| [Nsight Systems 文档](https://docs.nvidia.com/nsight-systems/) | nsys 时间线采集 |
-
----
-
-#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
-
-**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
-
-**与今日知识的关联**：Softmax Attention 是 Week 3 算子主线的综合验收——它融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：用 online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，无需物化 S/P。
-
-> 💡 完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
-
----
-
-## ✅ Week 3 完成标准
-
-- [ ] 能列出 Prefill 阶段算子分类表（GEMM=compute，softmax/LN=memory）
-- [ ] 能列出 Decode 阶段算子分类表（几乎全是 memory-bound）
-- [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致 AI 骤降）
-- [ ] 能计算给定算子的 arithmetic intensity 并判定 bound 类型
-- [ ] Softmax/LayerNorm Kernel 与 CPU 误差 < 1e-5
-- [ ] 标准 Attention Kernel 与 CPU 误差 < 1e-3，ncu 实测 HBM IO 与理论值误差 < 30%
-- [ ] Mini Engine 自定义版端到端 PASS，与 PyTorch 误差 < 1e-4
-- [ ] 生成 profiling 报告（含 top3 瓶颈算子 + 优化方向）
-- [ ] 能口述本周 10 道面试题的答案要点
-- [ ] 理解 Week 4 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
-- [ ] 完成本周 LeetGPU（Group Normalization/Softmax Attention/RMS Normalization）与 LeetCode 题目
-
----
-
-> 💡 **提示**：Week 3 是从"手写单算子"到"理解系统执行"的转折点。算子分类表是推理系统优化的"地图"——看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。Week 4 的 FlashAttention 是这张地图上最重要的优化案例，务必把本周的 O(N²) IO 和 online softmax 基础打牢。

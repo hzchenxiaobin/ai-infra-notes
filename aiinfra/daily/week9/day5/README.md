@@ -1,419 +1,265 @@
-## Day 5：代码重构与文档
+## Day 5：MoE + EP 并行专题MoE + EP 并行专题（Mixture of Experts + Expert Parallelism）
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 回顾 **Week 7 全部知识点**——多请求并发、完整调度器、高级特性、Kernel 集成、系统联调、全链路 Profiling<br>
-2. 理解 **Mini AI Infra 系统架构**——从用户 API 到 GPU Kernel 的六层架构与数据流<br>
-3. 掌握 **代码重构目标**——统一接口、模块化、类型注解、文档完善<br>
-4. 能产出 **项目文档**——README、架构图、性能报告、API 文档<br>
-5. 掌握 **13 道核心面试题**——按主题分组，覆盖并发、调度、特性、集成、联调、Profiling<br>
+1. 理解 **MoE 结构**——Top-K 路由、load balancing loss、capacity factor
+2. 掌握 **EP 并行的通信模式**——all-to-all dispatch/combine、大 EP 部署（EP32/EP144）、DeepEP/EPLB 概念
+3. 理解 **MoE 推理的显存/通信权衡**——为何 decode 阶段 EP 优于 TP
+4. 手写 **Top-K 路由 kernel** 模拟 + **all-to-all 通信量推导**
 
-> 💡 **为什么重要**：Week 7 把前六周所学整合为完整的 Mini AI Infra 系统。Day 7 是收官日——整理代码、完善文档、复盘面试题、规划下一步。这是从"学习者"到"工程师"的转折点：代码质量和文档能力是面试考察点，也是项目可维护性的基础。
-
----
-
-### Week 7 知识地图
-
-![Week 7 知识地图：系统整合](../../week7/images/week7_knowledge_map.svg)
-
-| Day | 主题 | 核心产出 |
-|-----|------|---------|
-| Day 1 | 多请求并发支持 | ConcurrentEngine（条件变量 + 三线程 + Future/CB/Stream） |
-| Day 2 | 完整调度器 | FullScheduler（双预算 + 抢占 + aging + Continuous Batching） |
-| Day 3 | SGLang/LightLLM 高级特性 | 三大特性模拟 + 收益评估报告 |
-| Day 4 | 整合全部自定义 Kernel | CustomKernelTransformerLayer（C++ Extension 集成） |
-| Day 5 | 系统联调 | 六步分层验证 + 稳定性测试（500+ 请求） |
-| Day 6 | 全链路 Profiling | 阶段计时 + kernel 分解 + vLLM 对比 |
-| Day 7 | 代码重构与文档 | 统一接口 + README + 架构图 + 面试复盘 |
+> 💡 **为什么重要**：DeepSeek-V3/R1、Mixtral、GPT-4 等前沿模型都用 MoE。2024-2026 JD 中 MoE/EP 是推理引擎岗的核心关键词，面试几乎必问"EP vs TP 怎么选""all-to-all 通信量怎么算"。
 
 ---
 
-### 核心概念串讲
+### 1. MoE 结构基础
 
-#### 1. 多请求并发（Day 1）
+#### 1.1 MoE 是什么？
 
-从 Week 6 的"单 worker + Future"升级为"三线程协作 + 条件变量 + 三种返回 + 超时控制"：
-- **ThreadSafeRequestQueue**：`Condition` 保护队列，`wait`/`notify` 不空转，优先级插入
-- **三种返回**：Future（阻塞）、Callback（事件触发）、Streaming（逐 token）
-- **三线程**：调度线程凑批 + 执行线程 forward（锁外）+ 超时线程清理
-- **生命周期**：WAITING → RUNNING → FINISHED/TIMEOUT/CANCELLED
-
-#### 2. 完整调度器（Day 2）
-
-从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"：
-- **双预算**：token_budget（计算，每轮 token 总数）+ memory_budget（显存，KV Cache 块）
-- **抢占**：显存不足时选最低优先级 victim，recompute（丢弃 KV Cache）或 swap（换出到 CPU）
-- **Aging**：等待超阈值自动提升优先级，防止低优先级饥饿
-- **调度循环**：恢复 swapped → 继续 running decode → 加入新请求 prefill → aging → 超时检查
-
-#### 3. 高级特性（Day 3）
-
-评估三大推理加速特性的收益与复杂度：
-- **Speculative Decoding**：小模型 draft k 个 + 大模型 verify，加速 1.5-2.7x；α 低 + k 大时可能变慢
-- **Chunked Prefill**：长 prompt 分块与 decode 交错，延迟降低 50-97%
-- **Prefix Caching**：缓存公共前缀 KV Cache，TTFT 降低 3-5x
-- **集成优先级**：Prefix Caching + Chunked Prefill（Phase 1）→ CUDA Graph + Spec Decoding（Phase 2）
-
-#### 4. Kernel 集成（Day 4）
-
-通过 PyTorch C++ Extension 将自定义 kernel 接入 Transformer Layer：
-- **编译流水线**：`.cu` + `.cpp` → `load_inline` → nvcc/g++ → `.so` → Python 模块
-- **替换清单**：Softmax/LayerNorm/FlashAttention 替换 PyTorch 原生；大 GEMM 保留 cuBLAS
-- **六大注意**：stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理
-- **分层验证**：单算子（< 1e-5）→ 多算子 → 端到端（< 1e-2）→ 性能对比
-
-#### 5. 系统联调（Day 5）
-
-六步分层验证，确保组件组合正确：
-- **六步**：单请求 → 多请求并发 → KV Cache 隔离 → Scheduler → 自定义 Kernel → 稳定性
-- **KV Cache 隔离**：多请求互不干扰，完成后全释放（`used_kv_blocks = 0`）
-- **稳定性**：500 请求 100% 成功，P50/P99 延迟稳定，无内存泄漏
-- **五大问题**：结果不一致、内存泄漏、请求卡住、OOM、性能下降
-
-#### 6. 全链路 Profiling（Day 6）
-
-三层工具链从粗到细定位瓶颈：
-- **三层**：nsys（系统级时间线）→ ncu（kernel 级指标）→ 自定义计时（阶段级拆分）
-- **阶段占比**：forward 80-95%（绝对主瓶颈），schedule 2-10%，submit/result <1%
-- **五大瓶颈**：Python Scheduler、内存分配、kernel launch、GIL、CPU-GPU 传输
-- **vLLM 差距**：forward ~2.3x（FlashAttention-2 + CUDA Graph），调度 ~10x（C++ vs Python）
-
----
-
-### Mini AI Infra 系统架构
-
-![Mini AI Infra 系统架构](../../week7/images/mini_ai_infra_architecture.svg)
-
-#### 六层架构
-
-![Mini AI Infra 系统架构](../../images/week7_system_architecture.svg)
-
-#### 建议目录结构
+MoE（Mixture of Experts）用"稀疏激活"替代稠密 FFN：每个 token 只激活 top-k 个专家，总参数量大但单次 forward 只用一小部分。
 
 ```
-mini_ai_infra/
-├── README.md
-├── requirements.txt
-├── mini_infra/
-│ ├── engine.py # ConcurrentEngine
-│ ├── scheduler.py # FullScheduler
-│ ├── request.py # InferenceRequest + RequestStatus
-│ ├── kv_cache.py # KVCacheManager + MemoryBudget
-│ ├── model.py # MiniLLM + TransformerLayer
-│ └── kernels/
-│ ├── softmax_kernel.cu
-│ ├── layernorm_kernel.cu
-│ └── flash_attention_kernel.cu
-├── tests/
-│ ├── test_engine.py # 六步分层验证
-│ ├── test_scheduler.py # 调度器测试
-│ └── test_stability.py # 稳定性测试
-├── benchmarks/
-│ ├── full_chain_profile.py
-│ └── benchmark_results/
-└── docs/
- ├── architecture.md
- └── performance_report.md
+token x
+   │
+   ▼
+gate(x) = softmax(x @ W_gate)   ← 路由网络（小 GEMM）
+   │
+   ▼
+top-k(gate)                      ← 选 k 个专家（如 k=2）
+   │
+   ▼
+dispatch: x 发给 k 个专家         ← all-to-all（EP 时跨节点）
+   │
+   ▼
+expert_i(x) = FFN_i(x)           ← k 个专家并行计算
+   │
+   ▼
+combine: 加权求和 Σ w_i · expert_i(x)  ← all-to-all 回收
+   │
+   ▼
+output
 ```
 
-#### 统一接口
+| 概念 | 说明 | 典型值 |
+|------|------|--------|
+| num_experts | 总专家数 | 8（Mixtral）/ 64（DeepSeek-V3）/ 128 |
+| top_k | 每 token 激活专家数 | 2（Mixtral）/ 6（DeepSeek-V3） |
+| 稀疏比 | top_k / num_experts | 1/4 ~ 1/10 |
+| gate network | 路由网络（小线性层） | hidden → num_experts |
 
-```python
-class InferenceEngine:
-    """Mini AI Infra 推理引擎"""
+#### 1.2 Load Balancing Loss
 
-    def __init__(self, model_config, scheduler_config, device="cuda"):
-        ...
+**问题**：若不加约束，gate 会把大部分 token 路由给少数"热门"专家，导致：
+- 热门专家过载（capacity 溢出，token 被丢弃）
+- 冷门专家闲置（参数浪费）
 
-    def submit(self, prompt: str, max_new_tokens: int = 20,
-               priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
-        """提交请求，返回 Future"""
-        ...
+**解法**：训练时加 aux loss，鼓励专家负载均匀：
 
-    def shutdown(self):
-        """关闭引擎"""
-        ...
 ```
+aux_loss = α × num_experts × Σ (f_i × P_i)
+  f_i = 实际分给专家 i 的 token 比例
+  P_i = gate 给专家 i 的平均概率
+```
+
+**DeepSeek 的 aux-loss-free 策略**：不加 aux loss，而是给每个专家一个偏置项 `b_i`，动态调整 `b_i` 让负载均衡（推理时无 loss 开销）。这是 2024+ MoE 面试热点。
+
+#### 1.3 Capacity Factor
+
+每个专家预分配的 token 容量 = `capacity_factor × (num_tokens × top_k / num_experts)`。
+
+- capacity_factor=1.0：正好装下均匀分布的 token；超出的丢弃
+- capacity_factor=1.25：留 25% 余量，减少丢弃但浪费显存
+
+> 💡 **面试要点**：capacity factor 是显存与丢弃率的权衡。Drop token 会损失信息，但过大 capacity 浪费资源——这是 MoE 工程化的关键调参点。
 
 ---
 
-### 总结任务 / Coding 任务
+### 2. EP 并行的通信模式
 
-#### 任务 1：运行总结自测脚本
+#### 2.1 EP 是什么？
 
-创建并运行 [kernels/week7_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/week7_summary.py)，汇总 Week 7 全部知识点：
+Expert Parallelism：把 `num_experts` 个专家分布到 `ep_size` 个节点上，每节点 `num_experts / ep_size` 个专家。
+
+```
+Node 0: Expert 0, 1        Node 1: Expert 2, 3
+Node 2: Expert 4, 5        Node 3: Expert 6, 7
+```
+
+每个 token 选 top_k 个专家，这些专家可能跨节点 → 需要 **all-to-all** 通信。
+
+#### 2.2 all-to-all 通信量推导
+
+**Dispatch 阶段**（输入分发）：
+```
+每 token 发送量 = top_k × hidden_dim × dtype_bytes
+  （token 的 hidden 向量发给 k 个专家）
+总量 = num_tokens × top_k × hidden_dim × dtype_bytes
+```
+
+**Combine 阶段**（输出回收）：
+```
+每 token 回收量 = top_k × expert_hidden × dtype_bytes
+  （k 个专家的输出向量回收）
+总量 = num_tokens × top_k × expert_hidden × dtype_bytes
+```
+
+**跨节点流量**（均匀分布假设）：
+```
+远程比例 = 1 - 1/ep_size
+  （top_k 中平均有 k × (1 - 1/EP) 个专家在远程）
+跨节点总量 = (dispatch + combine) × (1 - 1/ep_size)
+```
+
+**LLaMA-MoE 示例**（Mixtral 8×7B：8 专家, top_k=2, hidden=4096, EP=4, fp16）：
+
+| 阶段 | 每 token | 1024 tokens 总量 | 跨节点(EP4, 比例 0.75) |
+|------|---------|-----------------|----------------------|
+| Dispatch | 2 × 4096 × 2B = 16 KB | 16 MB | 12 MB |
+| Combine | 2 × 4096 × 2B = 16 KB | 16 MB | 12 MB |
+| **合计** | 32 KB | 32 MB | **24 MB** |
+
+> 💡 **面试口述**：EP all-to-all 通信量 = `2 × num_tokens × top_k × hidden × dtype × (1 - 1/EP)`。EP 越大，远程比例越高（EP=32 时 97% 流量跨节点），对网络带宽要求极高——这就是 DeepSeek 提出 DeepEP（专用 EP 通信库）的原因。
+
+---
+
+### 3. Coding：Top-K 路由 + EP 通信量模拟
+
+#### 任务 1：运行 MoE 路由模拟器
 
 ```bash
-python kernels/week7_summary.py
+python kernels/moe_routing_simulator.py
 ```
 
-**预期输出**（节选）：
+**预期输出**（8 专家, top_k=2, 1024 tokens, EP=4, fp16）：
 
 ```text
-📊 1. 知识地图
- Day 1: 多请求并发支持 → 线程安全队列、Future/CB/Stream...
- Day 2: 完整调度器 → 双预算 + 抢占 + aging...
- ...
+配置: 8 专家, top_k=2, 1024 tokens, hidden=512, EP=4
 
-📊 3. 面试题速查（13 道）
- # Day 频率 题目
- 1 Day 1 ⭐⭐⭐⭐ 多请求并发如何实现？线程安全问题？
- 2 Day 1 ⭐⭐⭐ Future/Callback/Streaming 区别？
- ...
+===== 1. Top-K 路由（gate softmax + top-k）=====
+  前 5 个 token 的路由:
+    token 0: experts=[3 6], weights=['0.256', '0.177']
+    token 1: experts=[3 4], weights=['0.312', '0.188']
+    ...
 
-📊 4. Mini AI Infra 架构
- 用户 API → ConcurrentEngine → FullScheduler → Custom Kernel → KV Cache → Profiling
+===== 2. 负载均衡分析 =====
+  专家负载（期望/token: 256.0）:
+    Expert 0:  248  ...
+    Expert 7:  274  ██████████████████████████████
+  最大偏差: 7.0%  (均衡)
 
-📊 5. Week 7 完成标准 Checklist
- [✓] Day 1: ConcurrentEngine 运行成功...
- [✓] Day 5: 稳定性测试 500+ 请求 100% 成功...
- ...
+===== 3. EP all-to-all 通信量推导 =====
+  Dispatch（输入分发）:
+    每 token: 2 KB (top_k × hidden × 2B)
+    总量(最坏): 2.1 MB
+    总量(远程,比例0.75): 1.6 MB
+  Combine（输出回收）:
+    每 token: 2 KB
+    总量(远程): 1.6 MB
+  all-to-all 总跨节点流量: 3.1 MB
+
+===== 4. EP vs TP 选择 =====
+  EP4: 专家切到 4 节点, all-to-all 流量 3.1 MB
+  TP4: 权重切到 4 节点, 每层 2 次 all-reduce
+  → Decode 阶段 EP 优于 TP: decode batch 小, all-reduce 开销占比大
+  → Prefill 阶段 TP 可能更优: batch 大, all-reduce 摊薄, 且无 all-to-all
 ```
 
-#### 任务 2：LeetGPU 综合题 —— Matrix Addition
+##### 观察重点
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
+1. **Top-K 路由**：gate softmax 后选 top-2，每 token 激活 2 个专家（稀疏激活）
+2. **负载均衡**：随机 gate 下偏差 ~7%（1024 token 样本小）；真实训练需 aux-loss 或 bias 调整
+3. **EP 通信量**：∝ num_tokens × top_k × hidden × (1 - 1/EP)，EP4 时 75% 流量跨节点
+4. **EP vs TP**：decode 选 EP（all-to-all 小），prefill 可能选 TP（all-reduce 摊薄）
 
-**与本周知识的关联**：Matrix Addition 是 Week 7 的"收官题"——本周每天的 LeetGPU 练习都围绕 memory-bound 的数据搬运/归约，而 Addition 把"能搬数据"推向"能高效合并数据"：用 shared memory tile 中转解决"读写不能同时 coalesced"的核心矛盾。它也是自定义 kernel 集成中内存布局处理的基础（Day 4 自定义 kernel 集成的 Q/K/V tile 读写、FlashAttention 的分块布局都建立在同一套索引映射 + tiling 技术上）。
+#### 任务 2：扫描 EP 规模，观察远程比例变化
 
-> 💡 完整题解见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
+修改 `MoEConfig.ep_size`，扫描 2/4/8/32，观察 `1 - 1/EP` 如何趋近 1（EP32 时 96.9% 流量跨节点）。
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 7 周）
-
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」（点击查看题解）：
-
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 二分模板 | [704. 二分查找](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html)、[35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/)、[69. x 的平方根](https://leetcode.cn/problems/sqrtx/)、[74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) |
-| Day 2 | 旋转数组与峰值 | [153. 寻找旋转排序数组中的最小值](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html)、[33. 搜索旋转排序数组](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html)、[34. 在排序数组中查找元素的第一个和最后一个位置](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html)、[162. 寻找峰值](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html)、[540. 有序数组中的单一元素](https://hzchenxiaobin.github.io/leetcode/problems/540_有序数组中的单一元素.html) |
-| Day 3 | 二分答案 | [875. 爱吃香蕉的珂珂](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html)、[1011. 在 D 天内送达包裹的能力](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html)、[378. 有序矩阵中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
-| Day 4 | 二分进阶 | [410. 分割数组的最大值](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html)、[719. 找出第 K 小的数对距离](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html)、[4. 寻找两个正序数组的中位数](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
-| Day 5 | 一维 DP | [70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)、[118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/)、[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)、[213. 打家劫舍 II](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html)、[337. 打家劫舍 III](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
-| Day 6 | 背包 DP | [279. 完全平方数](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html)、[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)、[518. 零钱兑换 II](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html)、[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)、[494. 目标和](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
-
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 7 周「二分查找与动态规划基础」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+> 思考：为什么 DeepSeek 用 EP32 甚至 EP144？（提示：专家数多（256+），单节点放不下，必须大 EP；且 decode batch 小，EP 的 all-to-all 流量可控。）
 
 ---
 
-### 面试准备框架
+### 4. 为什么 decode 阶段 EP 优于 TP？
 
-#### 本周 13 道核心面试题（按主题分组）
+| 维度 | EP（专家并行） | TP（张量并行） |
+|------|--------------|--------------|
+| 切分对象 | 专家（不同 token 去不同专家） | 权重（同一 token 的 GEMM 切到多卡） |
+| 通信模式 | all-to-all（dispatch + combine） | all-reduce（每层 2 次） |
+| 通信量（decode, M=1） | `2 × k × hidden × (1-1/EP)`（小，~KB） | `2 × hidden × EP`（大，all-reduce 不随 batch 减小） |
+| 通信量（prefill, M=N） | `2 × N × k × hidden × (1-1/EP)`（大） | `2 × hidden × EP`（不变，摊薄） |
+| decode 适合度 | ✅ all-to-all 随 batch 小而小 | ❌ all-reduce 不随 batch 减小，M=1 时开销占比大 |
+| prefill 适合度 | ❌ all-to-all 大 | ✅ all-reduce 摊薄 |
 
-| # | 主题 | 题目 | 频率 | Day |
-|---|------|------|------|-----|
-| 1 | 并发 | 多请求并发如何实现？线程安全问题？ | ⭐⭐⭐⭐ | 1 |
-| 2 | 并发 | Future/Callback/Streaming 区别？ | ⭐⭐⭐ | 1 |
-| 3 | 调度 | 完整调度器设计需要考虑什么？ | ⭐⭐⭐⭐⭐ | 2 |
-| 4 | 调度 | 抢占策略如何选择？recompute vs swap？ | ⭐⭐⭐⭐ | 2 |
-| 5 | 特性 | Speculative Decoding 原理？为什么加速？ | ⭐⭐⭐⭐ | 3 |
-| 6 | 特性 | Chunked Prefill 和 Prefix Caching 解决什么？ | ⭐⭐⭐⭐ | 3 |
-| 7 | 集成 | 自定义 kernel 如何集成到 PyTorch？ | ⭐⭐⭐⭐⭐ | 4 |
-| 8 | 集成 | 算子融合为什么能提升性能？ | ⭐⭐⭐⭐ | 4 |
-| 9 | 联调 | 系统联调如何确保多请求并发正确性？ | ⭐⭐⭐⭐⭐ | 5 |
-| 10 | 联调 | 稳定性测试关注哪些指标？ | ⭐⭐⭐⭐ | 5 |
-| 11 | Profiling | 全链路性能分析怎么做？ | ⭐⭐⭐⭐ | 6 |
-| 12 | Profiling | Mini 系统和 vLLM 差距在哪？如何缩小？ | ⭐⭐⭐⭐⭐ | 6 |
-| 13 | 综合 | 项目最大技术难点是什么？如何解决？ | ⭐⭐⭐⭐⭐ | 7 |
-
-#### 答题框架
-
-```
-1. 先说"是什么"（定义 + 一句话概括）
-2. 再说"怎么做"（核心机制 + 数据结构）
-3. 然后说"为什么"（设计权衡 + 替代方案）
-4. 最后说"效果"（量化指标 + 实测数据）
-```
+> 💡 **面试核心结论**：
+> - **decode 选 EP**：batch 小（M=1~8），EP 的 all-to-all 流量小，而 TP 的 all-reduce 不随 batch 减小
+> - **prefill 可能选 TP**：batch 大（M=N），TP 的 all-reduce 摊薄，且无 all-to-all
+> - **DeepSeek 的选择**：prefill 用 TP+EP 混合，decode 用纯 EP（EP32/EP144）
 
 ---
 
-### 常见误区澄清
+### 5. 大 EP 部署：DeepEP / EPLB
 
-1. **"并发就是多线程"** → 不完全。并发还需要条件变量（不空转）、锁粒度（锁内不做 forward）、生命周期管理（状态机）
+#### 5.1 DeepEP
 
-2. **"调度器就是优先队列"** → 不够。还需要双预算（防 OOM）、抢占（高优先级保障）、aging（防饥饿）、Continuous Batching（持续批处理）
+DeepSeek 开源的专用 EP 通信库，针对 MoE all-to-all 优化：
+- **低延迟 dispatch/combine kernel**：RDMA + NVLink 混合拓扑感知
+- **节点内/节点间分层**：节点内 NVLink（高带宽），节点间 RDMA（较低带宽）
+- **支持 EP32/EP144**：DeepSeek-V3 生产部署规模
 
-3. **"自定义 kernel 一定比 PyTorch 快"** → 不一定。教学版 kernel 可能比 PyTorch 慢（cuDNN/cuBLAS 高度优化），核心价值是**算子融合**和**推理特化**
+#### 5.2 EPLB（Expert Parallelism Load Balancer）
 
-4. **"联调就是跑一遍"** → 不够。必须分层验证（单请求→多请求→KV Cache→Scheduler→Kernel→稳定性），否则出错无法定位
+DeepSeek 的负载均衡策略：
+- 训练时记录每个专家的负载
+- 推理时动态调整专家到节点的映射，让每节点负载均匀
+- 配合 aux-loss-free 的 bias 调整
 
-5. **"Profiling 就是看时间"** → 不够。必须三层工具链（nsys 找间隙 → ncu 判 bound → 阶段计时算占比），才能精确定位
-
-6. **"vLLM 差距只在 kernel"** → 不完全。差距来自五个维度：FlashAttention-2、CUDA Graph、C++ Scheduler、PagedAttention、torch.compile
-
----
-
-### Week 7 → Week 8 衔接
-
-```
-Week 7 完成：
- ✓ Mini AI Infra 系统可运行（500+ 请求稳定）
- ✓ 自定义 Kernel 集成（Softmax/LN/FlashAttention）
- ✓ 全链路 Profiling 报告完成
- ✓ 13 道面试题已整理
-
-Week 8 规划：
- 1. 项目打磨：README 完善、性能优化（CUDA Graph、官方 FlashAttention）
- 2. 面试准备：系统设计题模拟、项目深度问答、白板编码
- 3. 开源贡献：整理代码结构、写博客、发布 GitHub
- 4. 持续学习：跟踪 vLLM/SGLang/TensorRT-LLM 最新进展
-```
+> 📖 延伸阅读：DeepSeek-V3 技术报告 §3.3（MoE 架构）、DeepEP GitHub、EPLB 文档
 
 ---
 
-### 弹性安排
+### 6. 面试要点
 
-| 时间 | 充足版（6h） | 紧凑版（3h） |
-|------|------------|------------|
-| 代码重构 | 2h：统一接口+类型注解+测试 | 30min：统一接口命名 |
-| 文档编写 | 2h：README+架构图+性能报告 | 1h：README+架构图 |
-| 面试复盘 | 2h：13 题口述练习 | 1.5h：重点 5 题练习 |
+1. **MoE 的 Top-K 路由是怎么工作的？**（⭐⭐⭐⭐⭐ 必考）
+   - gate(x) = softmax(x @ W_gate) → top-k 选 k 个专家
+   - dispatch: token 发给 k 个专家 → 专家并行计算 → combine 加权求和
+   - 稀疏激活：总参数大但单次 forward 只用 top_k/num_experts
+
+2. **EP all-to-all 通信量怎么算？**（⭐⭐⭐⭐⭐ 必考）
+   - dispatch: `num_tokens × top_k × hidden × dtype`
+   - combine: `num_tokens × top_k × expert_hidden × dtype`
+   - 跨节点比例: `1 - 1/EP`（均匀分布假设）
+   - 总量: `2 × num_tokens × top_k × hidden × dtype × (1 - 1/EP)`
+
+3. **EP vs TP 怎么选？为什么 decode 用 EP？**（⭐⭐⭐⭐⭐ 必考）
+   - decode batch 小（M=1~8）：EP all-to-all 流量小，TP all-reduce 不随 batch 减小
+   - prefill batch 大（M=N）：TP all-reduce 摊薄，EP all-to-all 大
+   - DeepSeek：prefill TP+EP 混合，decode 纯 EP
+
+4. **aux-loss-free 均衡是什么？**（⭐⭐⭐⭐ 高频）
+   - 传统 MoE 加 aux loss 鼓励负载均衡，但推理时 loss 无意义
+   - DeepSeek 给每个专家一个 bias 项，动态调整 bias 让负载均衡
+   - 推理时无 loss 开销，且均衡效果不依赖训练数据
+
+5. **DeepSeek-V3 的 MoE 结构参数？**（⭐⭐⭐ 中频）
+   - 256 专家（ routed），top_k=6，共享专家 1 个
+   - hidden=7168，expert_hidden=2048（细粒度专家，单专家小）
+   - EP32~EP144 部署，用 DeepEP 通信库
+
+6. **capacity factor 是什么？**（⭐⭐⭐ 中频）
+   - 每专家预分配容量 = `capacity_factor × (N × top_k / num_experts)`
+   - factor=1.0 刚好均匀，超出丢弃；1.25 留余量但浪费显存
+   - drop token 损失信息，是 MoE 工程化调参点
 
 ---
 
 ### 今日总结
 
-Day 7 我们完成了 Week 7 的代码重构与文档总结：
+1. **MoE 结构**：gate + top-k 路由 + 稀疏激活，总参数大但单次 forward 只用一小部分
+2. **EP 并行**：专家分布到多节点，dispatch/combine 用 all-to-all
+3. **通信量公式**：`2 × num_tokens × top_k × hidden × dtype × (1 - 1/EP)`
+4. **EP vs TP**：decode 选 EP（all-to-all 小），prefill 可能选 TP（all-reduce 摊薄）
+5. **负载均衡**：aux-loss（训练）或 aux-loss-free bias（推理，DeepSeek）
+6. **大 EP 部署**：DeepEP 通信库 + EPLB 负载均衡，支持 EP32/EP144
 
-1. **知识地图**：7 天从多请求并发到全链路 Profiling，构建了完整的 Mini AI Infra 系统
-2. **系统架构**：六层架构（API → Engine → Scheduler → Kernel → KV Cache → Profiling），数据流从 submit 到 result
-3. **代码重构**：统一接口（submit/shutdown）、模块化（engine/scheduler/kv_cache/kernels）、类型注解
-4. **项目文档**：README + 架构图 + 性能报告 + API 文档
-
-> 💡 掌握 Week 7 后，你就有了从零构建 LLM 推理系统的完整能力——从并发引擎到调度器，从自定义 kernel 到系统联调，从 profiling 到文档。Week 8 将把这些能力转化为面试竞争力。
-
----
-
-### 面试要点
-
-1. **你的 Mini AI Infra 项目最大的技术难点是什么？如何解决？**（⭐⭐⭐⭐⭐ 必考）
-
-<details>
-<summary>点击查看答案</summary>
-
- - **难点 1：Continuous Batching 的正确性**
- - 每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache
- - 解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
- - **难点 2：自定义 Kernel 与 PyTorch 的集成**
- - stream 一致性、内存布局、精度问题
- - 解决：逐步替换（单算子→多算子→端到端）、充分对比验证、六大注意事项
- - **难点 3：调度器性能**
- - Python scheduler 可能成为瓶颈（GIL 限制）
- - 解决：简化调度逻辑、预分配 buffer、后续可用 C++ 重写
- - **难点 4：系统联调**
- - 组件多，边界问题复杂（KV Cache 串台、请求卡住、内存泄漏）
- - 解决：分层验证（六步）、逐步集成、五大问题排查表
-
-</details>
-
-
-2. **如何设计一个可维护的 LLM 推理系统代码结构？**（⭐⭐⭐⭐ 高频）
-
-<details>
-<summary>点击查看答案</summary>
-
- - **模块化**：Engine、Scheduler、Worker、KV Cache、Model、Kernel 分离
- - **统一接口**：明确的 submit/result/shutdown API
- - **配置驱动**：模型配置、调度配置独立
- - **测试覆盖**：单元测试 + 集成测试 + 性能测试
- - **文档完善**：README、架构图、API 文档、性能报告
- - **可观测性**：metrics、profiling 接口
-
-</details>
-
-
-3. **Week 7 你学到的最重要的三件事是什么？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **系统整合不是堆砌组件**：要在接口、状态、资源、性能四个层面做统一设计
- - **分层验证是联调的关键**：逐步叠加组件，每步验证，出错时精确定位
- - **Profiling 驱动优化**：先测量（三层工具链），再优化（按收益/复杂度排序），最后验证
-
-</details>
-
-
-4. **如果给你一个月优化 Mini 系统，你会怎么做？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **Week 1**：用官方 FlashAttention-2 替换教学版 → forward 降低 30-50%
- - **Week 2**：引入 CUDA Graph → launch overhead 降低 80%
- - **Week 3**：C++ 重写 Scheduler → 调度时间降低 10x
- - **Week 4**：实现 PagedAttention + Prefix Caching → KV Cache 利用率提升 50%
-
-</details>
-
-## 📁 本周目录结构
-
-```
-aiinfra/daily/week7/
-├── README.md # 周总览
-├── day1/ # 多请求并发支持
-│ ├── README.md
-│ └── kernels/concurrent_engine.py # ConcurrentEngine 实现
-├── day2/ # 完整调度器
-│ ├── README.md
-│ └── kernels/full_scheduler.py # FullScheduler 实现
-├── day3/ # SGLang/LightLLM 高级特性
-│ ├── README.md
-│ └── kernels/advanced_features.py # 三大特性模拟
-（分布式推理已移至 Week 8 Day 5）
-│ ├── README.md
-│ └── kernels/ # tp_inference_demo.py / comm_overlap_demo.py
-├── day4/ # 整合全部自定义 Kernel
-│ ├── README.md
-│ └── kernels/custom_ops_module.py # C++ Extension 集成
-（Ring Attention 已移至 Week 8 Day 6）
-│ ├── README.md
-│ └── kernels/ring_attention_sim.py
-├── day5/ # 系统联调
-│ ├── README.md
-│ └── kernels/ # mini_engine_v2.py / stability_test.py
-├── day6/ # 全链路 Profiling
-│ ├── README.md
-│ └── kernels/full_chain_profile.py # Profiling 脚本
-（CUDA Graph 已移至 Week 9 Day 4）
-│ ├── README.md
-│ └── kernels/ # cuda_graph_capture.py / shape_bucketing.py
-├── day7/ # 代码重构与文档（本文件）
-│ ├── README.md
-│ └── kernels/week7_summary.py # 总结自测脚本
-└── images/ # 本周 SVG 插图
-```
-
----
-
-## 🔗 推荐资源
-
-- **vLLM**：<https://github.com/vllm-project/vllm> — PagedAttention + Continuous Batching
-- **SGLang**：<https://github.com/sgl-project/sglang> — RadixAttention + Speculative Decoding
-- **FlashAttention-2**：<https://arxiv.org/abs/2307.08691> — 分块 tiling + online softmax
-- **Speculative Decoding 论文**：<https://arxiv.org/abs/2211.17192>
-- **Orca 论文（Continuous Batching）**：<https://www.usenix.org/conference/osdi22/presentation/yu>
-- **PyTorch C++ Extension**：<https://pytorch.org/tutorials/advanced/cpp_extension.html>
-- **Nsight Systems 文档**：<https://docs.nvidia.com/nsight-systems/>
-- **LeetGPU**：<https://leetgpu.com/> — CUDA 在线编程练习
-
----
-
-## ✅ Week 7 完成标准
-
-- [ ] Day 1：ConcurrentEngine 运行成功，Future/Callback/Streaming 三种返回均验证
-- [ ] Day 1：优先级调度 + 超时取消功能正常
-- [ ] Day 2：FullScheduler 支持优先级/超时/资源预算/抢占
-- [ ] Day 2：aging 公平性机制工作正常
-- [ ] Day 3：三大高级特性模拟脚本运行，收益评估报告完成
-- [ ] Day 4：自定义 kernel 通过 load_inline 编译，精度 PASS
-- [ ] Day 4：TransformerLayer use_custom 开关工作正常
-- [ ] Day 5：六步分层验证全部 PASS
-- [ ] Day 5：稳定性测试 500+ 请求 100% 成功，无内存泄漏
-- [ ] Day 5：异常输入（空/超长/超时）不崩溃
-- [ ] Day 6：全链路 profiling 报告完成，瓶颈 Top3 已识别
-- [ ] Day 6：vLLM 差距分析完成，优化建议已列出
-- [ ] Day 7：代码重构完成，接口统一
-- [ ] Day 7：README + 架构图 + 性能报告完成
-- [ ] Day 7：13 道面试题能口述回答
+> 📖 延伸阅读：DeepSeek-V3 技术报告、Mixtral 论文、DeepEP GitHub、GShard（MoE 并行开创性论文）

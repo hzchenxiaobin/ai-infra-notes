@@ -1,13 +1,13 @@
 # Week 7：Batching 与调度
 
-> 核心目标：掌握 Continuous Batching、vLLM Scheduler 源码、Chunked Prefill、PD 分离、Mini 引擎 v1、性能测试
+> 核心目标：Continuous Batching、vLLM Scheduler、框架对比、Chunked Prefill、PD 分离、Mini 引擎 v1、调度总结
 
-| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| ------------| --------------------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 6，掌握 PagedAttention、Mini 引擎 v0、量化、Dynamic Batching　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　|
-| 本周产出　 | Continuous Batching 模拟器、vLLM Scheduler 复刻、Chunked Prefill simulator、PD 分离模拟器、Mini 引擎 v1　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 周日里程碑 | Mini 引擎 v1 多请求并发可跑，PD 分离模拟器验证 TTFT/TPOT 改善，理解 vLLM schedule() 5 步流程　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
+| ------------| ------------------------------------------------------------|
+| 前置要求　 | 已完成 Week 6，掌握 PagedAttention、Mini 引擎 v0、量化、Dynamic Batching　　　　　　　　　　　　　　　　　　　　　　　|
+| 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　|
+| 本周产出　 | Continuous Batching 模拟器、Scheduler 复刻、Chunked Prefill simulator、PD 分离模拟器、Mini 引擎 v1　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | Mini 引擎 v1 多请求并发可跑，PD 分离模拟器验证 TTFT/TPOT 改善　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
@@ -26,7 +26,8 @@ Day 5: Mini 推理引擎 v1（多请求并发）
         ↓
 Day 6: Prefill/Decode 分离推理（PD Disaggregated）
         ↓
-Day 7: Latency / Throughput 测试
+Day 7: 调度优化策略总结
+```
 
 ---
 
@@ -42,4 +43,4 @@ Day 7: Latency / Throughput 测试
 | Day 4 | Chunked Prefill 与 Prefix Caching 实操 | [day4/](day4/README.md) |
 | Day 5 | Mini 推理引擎 v1（多请求并发） | [day5/](day5/README.md) |
 | Day 6 | Prefill/Decode 分离推理（PD Disaggregated） | [day6/](day6/README.md) |
-| Day 7 | Latency / Throughput 测试 | [day7/](day7/README.md) |
+| Day 7 | 调度优化策略总结 | [day7/](day7/README.md) |

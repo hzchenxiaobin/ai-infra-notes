@@ -1,4 +1,4 @@
-## Day 2：FlashDecoding —— Decode 阶段的并行度突破
+## Day 2：FlashDecoding —— Decode 阶段并行度突破FlashDecoding —— Decode 阶段的并行度突破
 
 ### 🎯 目标
 

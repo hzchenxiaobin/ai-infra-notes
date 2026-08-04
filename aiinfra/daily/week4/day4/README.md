@@ -1,4 +1,4 @@
-## Day 4：FlashAttention 论文精读与 Online Softmax 完整推导
+## Day 4：FlashAttention 论文精读与 Online Softmax 推导FlashAttention 论文精读与 Online Softmax 完整推导
 
 ### 🎯 目标
 

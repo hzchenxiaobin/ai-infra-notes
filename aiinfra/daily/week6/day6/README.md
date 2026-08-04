@@ -1,391 +1,435 @@
-## Day 6：推理系统核心问题总结与 Week 5 收官
+## Day 6：Dynamic Batching
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 系统梳理 Week 5 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
-2. 掌握推理系统的**四大核心问题**——内存管理、Batch 策略、Latency 隐藏、调度开销——及其解决方案<br>
-3. 建立**优化速查表**，拿到任意推理性能现象能查表找到检查方法与解决方案<br>
-4. 复盘本周 **17 道面试题**，建立推理系统专题的答题框架<br>
-5. 整理本周所有产出（Mini 引擎、KV Cache、profiling 脚本），形成可复用的工程资产<br>
-6. 为 Week 6（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
+1. 理解为什么 **Batching 是推理服务的基础能力**——单个请求的 GEMM 退化成 M=1 的 memory-bound，合并多个请求才能让 GPU 满载<br>
+2. 掌握 **Dynamic Batching** 的工作流程——请求队列 + 超时等待 + 最大 batch size 限制，在吞吐和延迟间用参数调节<br>
+3. 理解 **Padding 的代价**——不同长度请求 pad 到同一长度浪费计算，以及 3 种优化方向（长度分组 / attention mask / padding-free）<br>
+4. 能画出 **Throughput-Latency 曲线**，理解饱和点的概念——batch size 增大到某点后吞吐不再涨但延迟急剧上升<br>
+5. 用 Python 手写一个 **DynamicBatcher** 类（线程安全队列 + timer + 聚合 + 异步返回），实测多请求聚合效果<br>
 
-> 💡 **为什么重要**：Day 1-6 我们分别学了推理系统的各个机制——两阶段、KV Cache、vLLM 调度、PagedAttention、Mini 引擎、profiling。但"各个机制都懂"不等于"系统全局掌握"——今天把碎片连成网络，用四大核心问题的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何性能现象，你能立刻判断它属于哪个核心问题、该查什么、怎么解决。Week 6 的 Continuous Batching 深入、CUDA Graph、Chunked Prefill 都建立在这张地图上。
-
----
-
-### Week 5 知识地图
-
-![Week 5 知识地图：从两阶段到推理引擎](../../week5/images/week5_knowledge_map.svg)
-
-Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
-
-![Week 5 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../../images/week5_learning_pipeline.svg)
-
-| Day | 主题 | 核心产出 | 关键概念 |
-|-----|------|---------|---------|
-| Day 1 | Prefill vs Decode | PyTorch 模拟脚本 | 两阶段、compute vs memory-bound、TTFT/TBT |
-| Day 2 | 实现 KV Cache | kv_cache.cu（KVCache 类） | 5D 布局、append/reset、静态/动态/Paged 分配 |
-| Day 3 | vLLM 整体架构 | mini_vllm_scheduler.py | LLMEngine→Scheduler→Worker、Continuous Batching |
-| Day 4 | PagedAttention | paged_attention.cu | block table、CoW、解决碎片 |
-| Day 5 | Mini 引擎 v0 | mini_engine_v0.py | 5 大组件、generate 循环、with/without cache |
-| Day 6 | 端到端 Profiling | profile_engine_v0.py | 三层方法论、TTFT/TBT breakdown、决策树 |
-| **Day 7** | **核心问题总结** | **四大问题 + 速查表** | **内存管理/Batch/Latency 隐藏/调度开销** |
-
-> 💡 **一句话总结**：Week 5 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
+> 💡 **为什么重要**：Week 5 的 Mini 引擎 v0 只能处理**单请求**——`generate(prompt)` 一个跑完再跑下一个。但真实推理服务同时有几十上百个并发请求，串行处理 GPU 利用率极低。Week 6 解决"如何让多个请求共享 GPU"——第一步就是 Dynamic Batching：把到达的请求暂时放入队列，凑够一批或超时后一起 forward。它是推理服务的基础能力，也是后续 Continuous Batching（Day2）的前置知识。
 
 ---
 
-### 核心概念串讲
+### 学前导读：单请求推理为什么浪费 GPU
 
-#### 1. Prefill/Decode 两阶段：一切优化的起点
+Day 1 of Week 5 我们算过：Decode 阶段每个请求的 GEMM 退化成 M=1 的向量×矩阵，算术强度 ≈ 0.1，GPU 算力利用率只有 1-3%。如果服务串行地"跑完 A 再跑 B"，GPU 就一直半饿不饱。
 
-```
-Prefill：一次性处理 N 个 prompt token，大 GEMM + N×N attention → compute-bound
-Decode：逐 token 生成，M=1 的退化 GEMM + 1×N attention → memory-bound
-```
+直觉解法：**把多个请求拼成一个大 batch 一起 forward**。batch=1 时 M=1（memory-bound），batch=8 时 M=8（更接近 compute-bound），吞吐近似线性提升——直到 GPU 算力/显存打满（饱和点）。
 
-| 阶段 | 瓶颈 | 关注指标 | 优化方向 |
-|------|------|---------|---------|
-| Prefill | compute-bound | TTFT | FlashAttention、Tensor Core、并行 prefill |
-| Decode | memory-bound | TBT/TPOT | KV Cache、量化、GQA、Continuous Batching |
+| 策略 | 做法 | 吞吐 | 延迟 | 问题 |
+|------|------|------|------|------|
+| No Batching | 每请求单独 forward | 最低 | 最低（无等待） | GPU 空闲 |
+| Static Batching | 凑齐 N 个才开始 | 中 | 中（等凑齐） | 长请求阻塞 |
+| **Dynamic Batching** | 入队 → 等满/超时 → 聚合 | **高** | **中** | request-level 聚合，长请求仍阻塞 |
 
-> 这两阶段的差异是推理系统所有优化的出发点——KV Cache 解决 Decode 的重算，PagedAttention 解决 KV Cache 的碎片，Continuous Batching 抬高 Decode 的 M。
-
-#### 2. KV Cache：用空间换时间
-
-```
-无 Cache：每步重算历史 K/V，FLOPs O(L·d²)，TBT 随 L 增长
-有 Cache：存历史 K/V，每步只算 1 个新 token，FLOPs O(d²)，TBT 稳定
-代价：显存 = 2 × n_layers × n_heads × L × d_head × bytes
-```
-
-#### 3. vLLM 架构：调度 + 内存管理双支柱
-
-```
-LLMEngine（接口）→ Scheduler（调度）→ Worker（执行）
- Scheduler: Continuous Batching + SchedulingBudget + 抢占
- Worker: PagedAttention（block table + CoW）
-```
-
-> Continuous Batching（Day3）解决"吞吐"，PagedAttention（Day4）解决"碎片让吞吐可持续"——两者缺一不可。
-
-#### 4. Mini 引擎：5 大组件组装
-
-```
-Tokenizer → 模型后端（MiniLLM）→ KV Cache → 采样器 → Prefill/Decode 循环
-generate() = Prefill(填cache) + Decode Loop(复用cache) + argmax 采样
-```
-
-#### 5. Profiling 三层方法论
-
-```
-nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT）→ ncu（kernel 级，看带宽/算力）
-判据：dram__throughput 高 + sm__throughput 低 = memory-bound
-```
+> 💡 **一句话总结**：Dynamic Batching = 请求队列 + timer + 聚合。它把"串行服务"变成"凑一批一起跑"，用 timeout/batch_size 在吞吐和延迟间调参。但它仍是 request-level 的——一个 batch 里所有请求一起开始一起结束，长请求会阻塞短请求。这个缺陷由 Day 2 的 Continuous Batching 解决。
 
 ---
 
-### 推理系统四大核心问题
+### 理论学习
 
-![推理系统四大核心问题](../../week5/images/four_core_problems.svg)
+#### 1.1 为什么需要 Batching
 
-#### ① 内存管理（Day2/Day4）
-
-| 问题 | 解决方案 |
-|------|---------|
-| KV Cache 显存占用大 | 量化（INT8/FP8）、GQA/MQA、PagedAttention |
-| 动态长度碎片 | PagedAttention（分页+block table） |
-| 长文本 OOM | 滑动窗口、稀疏 attention、offloading |
-| 多轮对话累积 | Cache 复用、prefix caching |
-
-#### ② Batch 策略（Day3）
-
-| 策略 | 原理 | 优缺点 |
-|------|------|--------|
-| Static Batching | 凑齐才开始 | 简单但长请求阻塞 |
-| Dynamic Batching | 请求级聚合+超时 | 提吞吐但引入等待 |
-| **Continuous Batching** | 每轮 iteration 重建 batch | 吞吐+延迟兼顾，实现复杂 |
-
-#### ③ Latency 隐藏（Day6）
-
-| 手段 | 作用 |
-|------|------|
-| CUDA Graph | 消除 per-step launch overhead |
-| torch.compile / kernel fusion | 减少 kernel 数 |
-| Async Copy | overlap 传输与计算 |
-| Speculative Decoding | 小模型预测+大模型验证 |
-| Chunked Prefill | 大 prefill 拆块与 decode 交错 |
-
-#### ④ 调度开销（Day3/Day6）
-
-| 来源 | 优化 |
-|------|------|
-| Python GIL | 核心逻辑 C++ |
-| 重建 input tensors | 预分配 buffer |
-| 内存 alloc/free | 预分配 + 复用 |
-| CPU-GPU 同步 | 异步采样、减少 cudaSynchronize |
-
-> 💡 四大问题交织：内存管理决定能服务多少请求，Batch 策略决定吞吐，Latency 隐藏决定单请求延迟，调度开销决定系统效率。
-
----
-
-### 优化速查表（现象 → 检查 → 解决）
-
-![推理系统优化速查表](../../week5/images/optimization_cheatsheet.svg)
-
-| 现象 | 检查方法 | 解决方案 |
-|------|---------|---------|
-| TTFT 过高 | profile prefill，看 TTFT vs N 增长 | FlashAttention、Tensor Core、并行 prefill |
-| TBT 过高 | profile decode，看 breakdown | KV Cache、PagedAttention、量化、GQA |
-| TBT 随 L 增长 | 扫描不同 L | GQA/MQA、滑动窗口、稀疏 attention |
-| 显存 OOM | 监控显存，算 cache 占用 | PagedAttention、INT8 KV、减 batch |
-| Kernel 间隙大 | nsys timeline，看 gap 占比 | CUDA Graph、torch.compile、kernel fusion |
-| 长请求阻塞 batch | 观察完成时间 | Continuous Batching |
-| 多轮对话 TTFT 高 | 检查 cache 复用 | session KV Cache / prefix caching |
-| 显存碎片 | block allocator 看 free block | PagedAttention |
-| Throughput 低 | nsys SM util | 增大 batch、continuous batching |
-
-> 使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day6 决策树验证。
-
----
-
-### 面试准备框架
-
-#### 本周 17 道核心面试题（按主题分组）
-
-**Prefill/Decode（Day1/Day6）**
-1. Prefill vs Decode 的区别和瓶颈？
-2. TTFT 和 TBT 是什么？如何优化？
-3. 如何做端到端 profiling？
-4. TBT 为什么随序列长度增长？
-
-**KV Cache（Day2/Day5）**
-1. KV Cache 核心思想和收益？
-2. KV Cache 内存占用如何计算？
-3. 静态 vs 动态 KV Cache 分配？
-4. Prefill/Decode 各存什么到 KV Cache？
-5. 如何构建最简单的推理引擎？
-
-**vLLM 架构（Day3）**
-1. vLLM 整体架构？
-2. SequenceGroup 是什么？
-3. Scheduler 依据什么决策？
-4. Preemption 两种策略？
-
-**PagedAttention（Day4）**
-1. PagedAttention 解决什么问题？
-2. Copy-on-Write 应用场景？
-
-**核心问题（Day7）**
-1. 推理系统四大核心问题？
-2. Continuous vs Dynamic Batching？
-
-#### 答题框架
+![No Batching vs Static vs Dynamic Batching](../images/batching_strategies_comparison.svg)
 
 ```
-1. 先定性：这属于哪个核心问题（内存/Batch/Latency/调度）？
-2. 给机制：底层原理是什么（compute vs memory-bound、碎片、launch overhead）？
-3. 量化：数据/公式支撑（AI≈0.1、cache=2×L×...、gap>20%）
-4. 给方案：3 个以上优化方向，分"治标"和"治本"
+单个 decode 请求：
+ QKV GEMM: M=1, N=d, K=3d
+ FLOPs ≈ 2 × 1 × d × 3d = 6d²
+ 但 M=1 无法充分利用 Tensor Core，实际 throughput 很低
+
+Batch=4 的 decode 请求：
+ QKV GEMM: M=4, N=d, K=3d
+ FLOPs ≈ 2 × 4 × d × 3d = 24d²
+ M=4 比 M=1 更容易利用 GPU 并行
+
+理论吞吐提升：
+ batch 从 1 增加到 B，throughput 近似线性增长（直到饱和点）
 ```
 
----
+##### Batch 增大的收益量化
 
-### 总结任务 / Coding 任务
+| Batch Size | M (GEMM) | 算术强度 | 瓶颈类型 | 吞吐（相对） |
+|-----------|----------|---------|---------|------------|
+| 1 | 1 | ~0.1 | memory-bound | 1× |
+| 4 | 4 | ~0.4 | memory-bound（改善） | ~3× |
+| 16 | 16 | ~1.6 | 接近 Ridge Point | ~10× |
+| 64 | 64 | ~6.4 | compute-bound | ~30×（饱和） |
 
-#### 任务 1：运行总结自测脚本
+> ⚠️ 吞吐不会无限增长——当 batch 大到 GPU 算力打满（compute-bound），继续加 batch 只增加延迟不增加吞吐。这个转折点就是**饱和点**。
 
-运行 [kernels/week5_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
+#### 1.2 Dynamic Batching 工作流程
+
+![Dynamic Batcher 工作流程](../images/dynamic_batcher_flow.svg)
+
+```
+请求队列: [R1, R2, R3, R4, R5, ...]
+
+调度策略:
+ 1. 请求到达 → submit() 入队
+ 2. Worker 线程启动 timer
+ 3. 等待 max_wait_time 或凑够 max_batch_size
+ 4. 将队列中的请求聚合成一个 batch
+ 5. Padding 到统一长度 + attention mask
+ 6. 对 batch 做 forward
+ 7. 返回每个请求的结果（异步）
+ 8. 回到步骤 2
+
+参数：
+ max_batch_size: 最大 batch 大小（控制 GPU 利用率）
+ max_wait_time: 最大等待时间（控制延迟）
+```
+
+##### Timeout 与 Batch Size 的 Trade-off
+
+| 参数组合 | 吞吐 | 延迟 | 适用场景 |
+|---------|------|------|---------|
+| 大 batch + 长 timeout | 高（batch 更满） | 高（等待久） | 吞吐优先、离线批处理 |
+| 小 batch + 短 timeout | 低（batch 不满） | 低（几乎不等） | 延迟优先、交互式服务 |
+
+实际系统按 SLA 调参：latency SLO → 短 timeout；throughput SLO → 大 batch。
+
+#### 1.3 Padding 的代价与优化
+
+```
+问题：一个 batch 中不同请求长度不同
+ R1: [a, b, c] len=3
+ R2: [d, e, f, g, h] len=5
+ R3: [i, j] len=2
+
+Naive padding（pad 到 max_len=5）:
+ [a, b, c, 0, 0] ← R1 浪费 2 个 pad token
+ [d, e, f, g, h]
+ [i, j, 0, 0, 0] ← R3 浪费 3 个 pad token
+ 浪费率 = (2+3) / (5×3) = 33%
+```
+
+| 优化方法 | 做法 | 效果 |
+|---------|------|------|
+| **长度分组** | 将长度相近的请求分到同一 batch | 减少单 batch 内的 padding |
+| **Attention mask** | 让 pad token 不参与 attention | 避免错误注意力，但仍浪费 GEMM 计算 |
+| **Padding-free / Pack sequence** | 直接拼接序列，用 position ids 区分 | 零 padding，但实现复杂 |
+| **Continuous Batching** | iteration 级调度，减少固定 batch 的 padding | Day 2 详讲 |
+
+#### 1.4 Throughput-Latency 曲线与饱和点
+
+![Throughput vs Latency 曲线与饱和点](../images/throughput_latency_curve.svg)
+
+```
+曲线特征：
+ - 低 batch 时：吞吐线性增长，延迟可控（安全区）
+ - 到达饱和点：GPU 算力/显存打满，吞吐不再增长
+ - 超过饱和点：延迟急剧上升（危险区）
+
+目标：在饱和点左侧运行 —— 吞吐接近峰值、延迟可控
+Dynamic Batching 用 timeout/max_batch 调节工作点
+```
+
+##### 如何确定饱和点
+
+1. 固定并发数扫描（batch = 1, 2, 4, 8, 16, 32, 64）
+2. 测量每个点的 throughput 和 P99 latency
+3. 找 throughput 增长率显著下降、latency 开始飙升的拐点
+4. 实际工作点设在饱和点的 70-80%（留余量应对突发）
+
+### Coding 任务：手写 Dynamic Batcher
+
+#### 任务 1：创建 dynamic_batcher.py
+
+创建文件 [kernels/dynamic_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/dynamic_batcher.py)，实现线程安全的 Dynamic Batcher：
+
+```python
+# dynamic_batcher.py —— Dynamic Batching 实现（请求队列 + 超时等待 + 最大 batch size）
+# 运行命令: python dynamic_batcher.py
+# 依赖: 仅标准库
+
+import time
+import threading
+from collections import deque
+from typing import List, Optional
+
+class Request:
+    """一个推理请求"""
+    def __init__(self, request_id: int, prompt_len: int, max_new_tokens: int = 10):
+        self.request_id = request_id
+        self.prompt_len = prompt_len
+        self.max_new_tokens = max_new_tokens
+        self.arrival_time = time.time()
+        self.batch_id = -1
+        self.batch_size = 0
+        self.result = None
+        self.done_event = threading.Event()
+
+        @property
+        def wait_time(self) -> float:
+            return (time.time() - self.arrival_time) * 1000
+
+            class DynamicBatcher:
+                """Dynamic Batcher：请求队列 + 超时等待 + 最大 batch size"""
+
+                def __init__(self, max_batch_size: int = 4, max_wait_time: float = 0.05):
+                    self.max_batch_size = max_batch_size
+                    self.max_wait_time = max_wait_time
+                    self.queue: deque[Request] = deque()
+                    self.lock = threading.Lock()
+                    self.stop_event = threading.Event()
+                    self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+                    self.worker_thread.start()
+                    self.batch_count = 0
+
+                    def submit(self, request: Request):
+                        with self.lock:
+                            self.queue.append(request)
+
+                            def _collect_batch(self) -> List[Request]:
+                                """收集一个 batch：等第一个请求 → timer 等更多 → 凑满或超时"""
+                                batch = []
+                                # 先等第一个请求到达
+                                while not batch and not self.stop_event.is_set():
+                                    with self.lock:
+                                        if self.queue:
+                                            batch.append(self.queue.popleft())
+                                            if not batch:
+                                                time.sleep(0.0005)
+                                                if not batch:
+                                                    return []
+                                                    # 第一个请求到了，启动 timer 等更多
+                                                    deadline = time.time() + self.max_wait_time
+                                                    while len(batch) < self.max_batch_size:
+                                                        remaining = deadline - time.time()
+                                                        if remaining <= 0:
+                                                            break
+                                                            with self.lock:
+                                                                if self.queue:
+                                                                    batch.append(self.queue.popleft())
+                                                                else:
+                                                                    time.sleep(min(0.001, remaining))
+                                                                    return batch
+
+                                                                    def _process_batch(self, batch: List[Request]):
+                                                                        """处理一个 batch（用 sleep 模拟模型 forward）"""
+                                                                        self.batch_count += 1
+                                                                        batch_size = len(batch)
+                                                                        max_len = max(r.prompt_len for r in batch)
+                                                                        total_padded = batch_size * max_len
+                                                                        total_actual = sum(r.prompt_len for r in batch)
+                                                                        padding_waste = total_padded - total_actual
+                                                                        forward_time = 0.001 + 0.0005 * batch_size # batch 越大 per-request 越省
+                                                                        time.sleep(forward_time)
+                                                                        for req in batch:
+                                                                            req.batch_id = self.batch_count
+                                                                            req.batch_size = batch_size
+                                                                            req.result = f"ok(batch={self.batch_count},bs={batch_size})"
+                                                                            req.done_event.set()
+                                                                            if batch_size > 1:
+                                                                                print(f" Batch {self.batch_count}: size={batch_size}, "
+                                                                                f"forward={forward_time*1000:.1f}ms, "
+                                                                                f"padding_waste={padding_waste} tokens ({100*padding_waste/total_padded:.0f}%)")
+
+                                                                                def _worker_loop(self):
+                                                                                    while not self.stop_event.is_set():
+                                                                                        batch = self._collect_batch()
+                                                                                        if batch:
+                                                                                            self._process_batch(batch)
+
+                                                                                            def shutdown(self):
+                                                                                                self.stop_event.set()
+                                                                                                self.worker_thread.join(timeout=2)
+```
+
+代码要点：
+- `Request`：封装请求元数据 + `done_event`（异步通知完成）
+- `_collect_batch`：先等第一个请求到达（阻塞），再启动 timer 等更多（非阻塞轮询），凑满 `max_batch_size` 或超时即返回
+- `_process_batch`：模拟 forward（`sleep`），计算 padding waste，设置每个请求的结果和 `done_event`
+- **线程安全**：`threading.Lock` 保护队列访问，worker 线程后台运行
+
+#### 任务 2：运行并观察聚合效果
 
 ```bash
-python kernels/week5_summary.py
+python kernels/dynamic_batcher.py
 ```
 
-脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
+**输出因时序而异，以下为一次示例**：
 
-#### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
+```text
+Submitting 10 requests (interval=5ms, max_batch=4, wait=20ms)...
 
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+ Batch 1: size=2, forward=2.0ms, padding_waste=1 tokens (12%)
+ Batch 2: size=3, forward=2.5ms, padding_waste=3 tokens (14%)
+ Batch 6: size=2, forward=2.0ms, padding_waste=1 tokens (7%)
 
-**与 Week 5 知识的关联**：
+ ID Batch BS Wait(ms) PromptLen Result
+----------------------------------------------------------------------
+ 0 1 2 136.4 3 ok(batch=1,bs=2)
+ 1 1 2 131.3 4 ok(batch=1,bs=2)
+ 2 2 3 111.7 5 ok(batch=2,bs=3)
+ ...
 
-Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 5 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
+Total batches: 6
+Avg wait time: 87.4 ms
 
-> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+=== Throughput Comparison ===
+ Single (B=1): 1.5ms/req, throughput=667 req/s
+ Batch (B=4): 3.0ms/req, throughput=1333 req/s
+ Speedup: 2.00x
+```
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 5 周）
+##### 观察重点
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
+1. **请求被聚合**：10 个请求聚合为 4-7 个 batch（batch size 在 1 到 max_batch_size 之间），而非 10 个单独 forward
+2. **Padding waste 可见**：不等长请求 pad 到 max_len，batch 内有 7-14% 的 padding 浪费
+3. **吞吐提升**：batch=4 vs batch=1 的理论加速 1.5x-2x（forward_time 非线性增长，per-request 时间减少）
 
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 遍历 | [94. 二叉树的中序遍历](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html)、[144. 二叉树的前序遍历](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html)、[145. 二叉树的后序遍历](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html)、[102. 二叉树的层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)、[103. 二叉树的锯齿形层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
-| Day 2 | 形态与深度 | [104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)、[226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html)、[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)、[543. 二叉树的直径](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html)、[110. 平衡二叉树](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
-| Day 3 | BST 基础 | [111. 二叉树的最小深度](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html)、[559. N 叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html)、[108. 将有序数组转换为二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html)、[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)、[230. 二叉搜索树中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
-| Day 4 | BST 进阶与构造 | [235. 二叉搜索树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html)、[173. 二叉搜索树迭代器](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html)、[1008. 前序遍历构造二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html)、[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)、[889. 根据前序与后序遍历构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
+#### 任务 3：扫描不同参数的吞吐-延迟
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 5 周「二叉树（上）——遍历、形态与 BST」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+修改 `main()` 的参数，对比不同 `max_batch_size` 和 `max_wait_time`：
+
+```python
+# 短 timeout → 低延迟但 batch 小
+batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.005)
+
+# 长 timeout → 大 batch 但延迟高
+batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
+```
+
+观察：短 timeout 时 batch size 偏小（来不及凑齐），长 timeout 时 batch 更满但 wait_time 更大。
+
+#### 任务 4：LeetGPU 在线题目 —— MoE Top-K Gating
+
+**题目链接**：<https://leetgpu.com/challenges/moe-topk-gating>
+
+**与今日知识的关联**：
+
+这道题直接展示了 **token 到专家的路由（routing）**——MoE 门控对每个 token 选 top-k 专家，正是"把输入分派到不同计算路径"的决策。今天的 Dynamic Batcher 在系统层面做类似的"路由"：把到达的请求分派到不同 batch（按到达顺序/长度分组），让 GPU 满载。两者的本质都是**基于策略的分流**：MoE 用 logits + top-k 决定 token 去哪个专家，Dynamic Batcher 用队列 + timeout 决定请求进哪个 batch。这道题练习 top-k 选择 + softmax，是 MoE 推理服务的核心 kernel——Week 7 系统整合中 MoE 模型会频繁用到。
+
+> 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-moe-topk-gating-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 1）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 1（路径问题），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [112. 路径总和](https://leetcode.cn/problems/path-sum/) | 简单 | DFS 递归 | — |
+| [113. 路径总和 II](https://leetcode.cn/problems/path-sum-ii/) | 中等 | DFS 回溯收集路径 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/113_路径总和II.html) |
+| [129. 求根节点到叶节点数字之和](https://leetcode.cn/problems/sum-root-to-leaf-numbers/) | 中等 | DFS 前缀累积 | — |
+| [222. 完全二叉树的节点个数](https://leetcode.cn/problems/count-complete-tree-nodes/) | 简单 | 完全二叉树性质 + 二分 | — |
+| [437. 路径总和 III](https://leetcode.cn/problems/path-sum-iii/) | 中等 | 前缀和 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/437_路径总和III.html) |
 
 ---
 
-### 常见误区澄清
+### 扩展实验
 
-1. **"Decode 慢是因为算力不够"** —— 错。Decode 慢是 memory-bound（M=1，AI≈0.1），SM 空闲等数据。加算力没用，要减数据搬运（KV 量化/GQA）或抬 M（Continuous Batching）。
-2. **"KV Cache 越大越好"** —— 错。Cache 大显存压力，长文本/大 batch OOM。要在"避免重算"和"显存占用"间权衡，用量化/GQA 压缩。
-3. **"Continuous Batching 就是 Dynamic Batching"** —— 错。Dynamic 是请求级聚合（凑一批一起开始结束），Continuous 是 iteration 级（每轮重建 batch，完成即走）。后者才是 LLM 推理标配。
-4. **"PagedAttention 是为了加速"** —— 错。PagedAttention 是内存管理（解决碎片），不直接加速单次 attention。它让 Continuous Batching 的 slot 回收无碎片化，间接提吞吐。
-5. **"profiling 就是测时间"** —— 不全。profiling 三层：nsys 看时间线/gap、cuda.Event 测阶段指标、ncu 看 kernel 带宽/算力利用率。要定位"为什么慢"而非只测"多慢"。
+#### 实验 1：用真实 PyTorch 模型替换 sleep
 
----
+修改 `_process_batch`，用 Week 5 的 `MiniLLM` 做真实 forward：
 
-### Week 5 → Week 6 衔接
+```python
+def _process_batch(self, batch):
+ input_ids = torch.tensor([req.input_ids for req in batch], device=device)
+ logits, _ = model(input_ids, use_cache=False)
+ # ...
+```
 
-Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 6 深入**Batching & 调度优化**：
+> 思考：真实 forward 时 batch size 对 latency 的影响是线性的吗？（提示：memory-bound 阶段近似线性，到达 compute-bound 后增长变缓。）
 
-| Week 5（理解 + 造引擎） | Week 6（深入优化） |
-|------------------------|-------------------|
-| Continuous Batching 概念 | 深入实现 + chunked prefill + mixed batching |
-| CUDA Graph 提及 | 手写 CUDA Graph 录制 decode 循环 |
-| Mini 引擎 v0（单请求） | 引擎 v1（多请求 + Continuous Batching） |
-| profiling 方法论 | 用 profiling 数据驱动 v0→v1 优化 |
-| 调度开销概念 | torch.compile / 自定义 C++ scheduler |
+#### 实验 2：实现长度分组策略
 
-> 💡 Week 6 的核心问题：怎么把 Week 5 的单请求引擎变成高吞吐的多请求服务？Continuous Batching 怎么真正实现？CUDA Graph 怎么录制动态长度的 decode？这些都在 Week 6 展开。
+修改 `_collect_batch`，优先将 prompt 长度相近的请求分到同一 batch，减少 padding waste。
 
----
+> 思考：长度分组能减少多少 padding？（提示：取决于请求长度方差。方差越大收益越大。极端情况：所有请求等长 → 零 padding。）
 
-### 弹性安排
+#### 实验 3：绘制 throughput-latency 曲线
 
-- **时间紧（≤4h）**：跑 `week5_summary.py` 自测 17 题 + 过一遍四大核心问题 + 速查表
-- **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成性能报告模板
-- **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week5 学习总结博客
+扫描 `max_batch_size = 1, 2, 4, 8, 16, 32`，记录每个点的 throughput 和 avg latency，用 matplotlib 绘制曲线，找饱和点。
+
+> 思考：饱和点在哪个 batch size？（提示：取决于模型大小和 GPU 算力。模型越大、GPU 越弱，饱和点越早到来。）
 
 ---
 
 ### 今日总结
 
-Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
+Day 1 我们进入了 Week 6 的第一个主题——Dynamic Batching：
 
-1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 profiling 仪表盘 → Day7 核心问题地图
-2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
-3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
-4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
-5. **常见误区澄清**：Decode 慢≠算力不够、Continuous≠Dynamic、PagedAttention 非直接加速、profiling 非只测时间
-6. **Week6 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
+1. **Batching 的必要性**：单请求 GEMM 的 M=1 是 memory-bound，GPU 利用率 1-3%；合并多个请求让 M 增大，吞吐近似线性提升
+2. **Dynamic Batching 流程**：请求入队 → timer 等待 → 凑满 max_batch 或超时 → 聚合 + padding → forward → 异步返回
+3. **参数 Trade-off**：大 batch+长 timeout → 高吞吐高延迟（离线）；小 batch+短 timeout → 低吞吐低延迟（交互式）
+4. **Padding 代价**：不等长请求 pad 到 max_len 浪费计算，优化方向：长度分组 / attention mask / padding-free / Continuous Batching
+5. **饱和点**：batch size 增大到某点后吞吐不再涨但延迟急剧上升，实际工作点设在饱和点的 70-80%
+6. **手写 DynamicBatcher**：线程安全队列 + timer + 聚合 + padding waste 统计 + 异步返回，实测 10 请求聚合为 6 个 batch
+7. **Dynamic Batching 的缺陷**：request-level 聚合，长请求阻塞整个 batch → Day 2 Continuous Batching 解决
 
-掌握这些后，你就有了推理系统的全局视角——Week 6 我们深入 Batching 与调度优化，把 Week 5 的单请求引擎升级为高吞吐服务。
+掌握这些后，你就有了推理服务"凑批"的基础能力——明天 Day 2 我们学 Continuous Batching，把 request-level 聚合升级为 iteration-level 调度，让长请求不再阻塞短请求。
 
 ---
 
 ### 面试要点
 
-1. **设计一个 LLM 推理服务时，需要考虑哪些核心问题？**
+1. **什么是 Dynamic Batching？它的优缺点是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 四大核心问题：
- 1. **内存管理**：KV Cache 动态增长与显存限制 → PagedAttention、量化、GQA/MQA
- 2. **Batch 策略**：如何组合请求平衡吞吐和延迟 → Continuous Batching（每轮重建 batch）
- 3. **Latency 隐藏**：compute 与 communication overlap → CUDA Graph、async copy、speculative decoding、chunked prefill
- 4. **调度开销**：最小化调度延迟 → 核心逻辑 C++、预分配 buffer、异步采样
- - 另需考虑：扩展性（多 GPU TP/PP）、正确性（数值精度、cache 一致性）
- - 四者交织：内存决定能服务多少请求，Batch 决定吞吐，Latency 隐藏决定单请求延迟，调度决定效率
+ - **Dynamic Batching**：将到达的请求暂时放入队列，等待一定时间（timeout）或凑够一定数量（max_batch_size）后，聚合成一个 batch 一起执行
+ - **优点**：提高 GPU 利用率（decode 阶段 M 增大，从 memory-bound 逼近 compute-bound）；提高 throughput
+ - **缺点**：引入等待延迟（request-level latency 增加）；需要 padding 造成计算浪费；一个长请求会阻塞整个 batch（request-level 聚合的固有问题）
+ - **适用场景**：吞吐优先、请求到达率高的服务
 
 </details>
 
-2. **Continuous Batching 和 Dynamic Batching 有什么区别？**
+
+2. **Dynamic Batching 中的 padding 有什么问题？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：请求级别聚合，等待凑够 batch size 或超时。一个 batch 内所有请求一起开始、一起结束——长请求阻塞整个 batch
- - **Continuous Batching（Inflight Batching）**：iteration 级别 batching，每轮重新构建 batch。新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
- - 对比：Continuous 更适合 LLM 自回归生成（生成长度差异大），吞吐提升 2-8x。前提是 PagedAttention 的细粒度 block 管理（否则完成请求的 cache 释放碎片化）
+ - **Padding 问题**：不同长度请求需 pad 到同一长度，pad token 也要参与 forward，浪费计算。序列长度差异越大浪费越严重（极端：len=2 和 len=100 同 batch → 98% 浪费）
+ - **优化方法**：① 长度分组（相近长度的分到同 batch）② Attention mask（pad 不参与 attention，但 GEMM 仍浪费）③ Padding-free / Pack sequence（直接拼接，用 position ids 区分）④ Continuous Batching（iteration 级调度，减少固定 batch 的 padding）
 
 </details>
 
-3. **推理系统的 TTFT 高和 TBT 高分别怎么优化？**
+
+3. **max_batch_size 和 timeout 怎么调？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + N×N attention）。优化：FlashAttention（IO 从 O(N²) 降到 O(Nd)）、Tensor Core、并行 prefill、reduce prompt 长度
- - **TBT 高（Decode 慢）**：Decode 是 memory-bound（M=1，读 KV Cache）。优化：KV Cache 量化（INT8/FP8）、GQA/MQA（减 KV 头）、PagedAttention、Continuous Batching（抬 M）
- - 若 TBT 随 L 增长 → 读 KV 随 L 增大 → 滑动窗口/稀疏 attention
- - 若 TBT 稳定但绝对值高 → launch overhead → CUDA Graph、torch.compile
+ - **吞吐优先（离线批处理）**：大 batch + 长 timeout → batch 更满，GPU 利用率高，但延迟高
+ - **延迟优先（交互式服务）**：小 batch + 短 timeout → 请求几乎不等，但 batch 不满，GPU 利用率低
+ - **实际调参**：按 SLA 调——latency SLO → 短 timeout；throughput SLO → 大 batch。通常先确定 latency 上限，再找满足延迟约束的最大 batch size
+ - **饱和点参考**：扫描 batch size 找 throughput-latency 曲线的拐点，工作点设在饱和点的 70-80%
 
 </details>
 
-4. **PagedAttention 和 Continuous Batching 是什么关系？**
+
+4. **Dynamic Batching 和 Continuous Batching 有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
- - Continuous Batching：每轮重建 batch，完成即走——但"释放 slot"要无碎片，否则回收的显存拼不出大块
- - PagedAttention：block 粒度分配/回收，空闲 block 随时复用——让 Continuous Batching 的高频 slot 回收无碎片化
- - 没有 PagedAttention，Continuous Batching 的吞吐收益被碎片吃掉大半；没有 Continuous Batching，PagedAttention 的动态分配无用武之地
+ - **Dynamic Batching**：request-level 聚合——一个 batch 里所有请求一起开始一起结束。长请求会阻塞短请求（R1 生成 5 token，R2 生成 100 token，R1 完成后要等 R2）
+ - **Continuous Batching**：iteration-level 调度——每轮 iteration 重新构建 batch，新请求可在任意 iteration 加入，完成的请求立即退出不阻塞其他
+ - **为什么 Continuous 更好**：LLM 生成长度差异大，Dynamic 下短请求等长请求浪费资源；Continuous 让 GPU 始终满载，吞吐和延迟都更好
+ - **Dynamic 的适用场景**：请求长度方差小、吞吐优先的离线场景
 
 </details>
 
-5. **Decode 阶段的 TBT 为什么会随序列长度增长？如何优化？**
+
+5. **什么是推理系统的饱和点？如何确定？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原因**：序列变长，KV Cache 变大，每步 Decode 读更多历史 K/V（attention 的 1×L 部分）。KV 超出 L2/L1 cache 后掉 HBM，访存随 L 增长 → TBT 增长
- - **优化方向**：
- 1. KV Cache 量化（INT8/FP8）：减半/减 1/4 数据量
- 2. GQA/MQA：减少 KV 头数，cache 缩 4x+
- 3. 滑动窗口/稀疏 attention：只保留最近 K 个 token
- 4. PagedAttention：高效管理 cache（间接支持更大 batch）
- 5. Continuous Batching：合并多个 decode 请求，抬高 M 提升带宽利用
+ - **饱和点**：batch size 增大到某点后，GPU 算力或显存打满，throughput 不再增长但 latency 急剧上升
+ - **确定方法**：固定并发数扫描（batch=1,2,4,8,16,32,64），测量每点的 throughput 和 P99 latency，找 throughput 增长率显著下降、latency 开始飙升的拐点
+ - **工作点选择**：设在饱和点的 70-80%，留余量应对突发流量
+ - **影响饱和点的因素**：模型大小（越大越早饱和）、GPU 算力（越弱越早）、KV Cache 显存（长序列更早 OOM）
 
----
+ - timeout / max_batch_size / padding 策略 / 长度分组等调参方法跨平台通用
 
 </details>
 
-## 📁 本周目录结构
-
-```
-aiinfra/daily/week5/
-├── README.md # 周概览
-├── day1/kernels/prefill_decode_simulation.py # Prefill/Decode 模拟
-├── day2/kernels/kv_cache.cu # KVCache 类
-├── day3/kernels/mini_vllm_scheduler.py # mini vLLM 调度器
-├── day4/kernels/paged_attention.cu # PagedAttention kernel
-├── （FlashDecoding 已移至 Week 6 Day 2）
-├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
-├── day6/kernels/profile_engine_v0.py # 端到端 profiling
-├── （量化专题已移至 Week 6 Day 5）
-├── day7/kernels/week5_summary.py # 总结日自测脚本
-└── images/ # 本周 SVG 插图
-```
-
-> 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
-
-## 🔗 推荐资源
-
-- **vLLM 论文**：Efficient Memory Management for Large Language Model Serving with PagedAttention (SOSP 2023)
-- **vLLM 源码**：<https://github.com/vllm-project/vllm>
-- **FlashAttention 论文**：Dao et al., NeurIPS 2022（Week4 已读，推理 prefill 直接适用）
-- **Continuous Batching 博客**：AnyScale "Continuous Batching" / vLLM blog
-- **CUDA Graph 文档**：NVIDIA CUDA C++ Programming Guide → Graphs
-- **nsys/ncu 文档**：NVIDIA Nsight Systems / Nsight Compute
-
-## ✅ Week 5 完成标准
-
-- [ ] 能清晰区分 Prefill 和 Decode 的计算/内存特征，说清各自瓶颈
-- [ ] KV Cache 输出与无 cache 版本一致，理解 5D 布局与显存占用
-- [ ] 能画出 vLLM 架构图（LLMEngine→Scheduler→Worker）并解释请求生命周期
-- [ ] 理解 PagedAttention 的 block table 与 CoW，说清它解决什么碎片问题
-- [ ] Mini 引擎 v0 能完成单条请求完整推理（Prefill+Decode）
-- [ ] 能用 profiling 脚本测量 TTFT 和 per-token decode latency
-- [ ] 能列出推理系统四大核心问题，每个给出 2-3 个解决方案
-- [ ] 能对比 Continuous Batching 和 Dynamic Batching
-- [ ] 完成本周 17 道面试题的自问自答
-- [ ] 整理 GitHub 仓库，生成 Week 5 性能报告
-- [ ] 规划 Week 6（Batching & 调度）的学习重点
