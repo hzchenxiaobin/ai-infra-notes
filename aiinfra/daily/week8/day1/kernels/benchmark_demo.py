@@ -20,14 +20,14 @@ def benchmark_torch_silu(n, warmup=5, iters=100, torch=None):
     y = torch.empty_like(x)
 
     for _ in range(warmup):
-        torch.nn.functional.silu(x, out=y)
+        y.copy_(torch.nn.functional.silu(x))
     torch.cuda.synchronize()
 
     start = torch.cuda.Event(enable_timing=True)
     stop = torch.cuda.Event(enable_timing=True)
     start.record()
     for _ in range(iters):
-        torch.nn.functional.silu(x, out=y)
+        y.copy_(torch.nn.functional.silu(x))
     stop.record()
     torch.cuda.synchronize()
 

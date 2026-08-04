@@ -65,12 +65,12 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 - 当 `AI < Ridge Point` 时 → **Memory-Bound**（算力富余，数据喂不饱）
 - 当 `AI > Ridge Point` 时 → **Compute-Bound**（数据充足，算力是瓶颈）
 
-以 RTX 5090 为例：
-- Peak FP32 算力：19.5 TFLOP/s
-- Peak HBM 带宽：1.55 TB/s
-- **Ridge Point = 19.5 / 1.55 ≈ 12.6 FLOP/Byte**
+以 RTX 5090 为例（实测值，详见 [Day 3](../day3/exercise/my_gpu_info.md)）：
+- Peak FP32 算力：104.75 TFLOP/s
+- Peak 显存带宽：1.792 TB/s（GDDR7）
+- **Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte**
 
-这意味着：每读写 1 字节数据，需要做 12.6 次浮点运算才能打满计算单元。
+这意味着：每读写 1 字节数据，需要做 58.45 次浮点运算才能打满计算单元。
 
 ##### Element-wise 操作的计算强度分析
 
@@ -83,9 +83,9 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 计算强度 AI = 1 FLOP / 12 Bytes ≈ 0.083 FLOP/Byte
 ```
 
-对比 RTX 5090 的 Ridge Point（12.6 FLOP/Byte）：
+对比 RTX 5090 的 Ridge Point（58.45 FLOP/Byte）：
 
-> AI_element-wise / Ridge Point = 0.083 / 12.6 ≈ 0.66%
+> AI_element-wise / Ridge Point = 0.083 / 58.45 ≈ 0.14%
 
 **结论**：element-wise 操作的计算强度只有平衡点的 **0.66%**！这意味着计算单元 99.3% 的时间在等数据。这就是为什么我们说它是**纯 memory-bound**。
 
@@ -175,7 +175,7 @@ Transaction 的大小由两层因素共同决定：**硬件固定的 sector size
 
 **1. 硬件固定的 sector size（主因）**
 
-现代 NVIDIA GPU（Blackwell 架构之后）的 L2 cache 以 **32 字节为一个 sector（扇区）**——这是芯片设计时固定的硬件常量，程序员无法改变：
+现代 NVIDIA GPU（自 Kepler 架构起）的 L2 cache 以 **32 字节为一个 sector（扇区）**——这是芯片设计时固定的硬件常量，程序员无法改变：
 
 ```
 L2 Cache 的最小访问粒度 = 32 字节（1 个 sector）
@@ -282,7 +282,7 @@ __global__ void stride_read(const float* x, float* y) {
 **L1 Cache**：
 - 每个 SM 一个
 - 与 Shared Memory 共享物理存储
-- 可配置比例：如 48 KB shared + 16 KB L1，或 96 KB shared + 0 KB L1
+- 可配置比例：如 RTX 5090（Blackwell）为 100 KB 总量，可在 shared memory 和 L1 之间动态分配
 - 自动缓存 global memory 访问
 
 **L2 Cache**：

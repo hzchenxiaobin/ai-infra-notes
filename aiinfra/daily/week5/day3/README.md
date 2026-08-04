@@ -575,3 +575,28 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
 </details>
 
+
+---
+
+### 附录：vLLM V1 架构演进（2024-2025）
+
+> 上述内容描述的是 vLLM 的 SOSP 2023 原版架构。vLLM 在 2024-2025 年进行了 V1 重构，以下是关键变化：
+
+| 维度 | vLLM V0 (SOSP 2023) | vLLM V1 (2024-2025) |
+|------|---------------------|---------------------|
+| 异步 API | `LLMEngine`（同步） | `AsyncLLMEngine`（原生 async） |
+| Scheduler | 单线程 `Scheduler` | V1 Scheduler（支持 prefix caching 默认开启） |
+| Chunked Prefill | 需手动启用 | **默认启用** |
+| Prefix Caching | `--enable-prefix-caching`（可选） | **默认启用**（block hash 匹配） |
+| Speculative Decoding | 实验性 | 一等公民支持 |
+| CUDA Graph | 需手动配置 | 自动捕获 decode 迭代 |
+| 多模态 | 后期添加 | 原生设计支持 |
+| 架构 | Engine → Scheduler → Worker | AsyncLLMEngine → V1 Scheduler → WorkerPool |
+
+**V1 的核心改进**：
+1. **默认启用 chunked prefill + prefix caching**：不再需要手动配置，开箱即优
+2. **异步引擎**：`AsyncLLMEngine` 原生支持 async/await，减少 Python GIL 瓶颈
+3. **统一调度器**：V1 Scheduler 合并了 prefill/decode 的调度逻辑，简化代码路径
+4. **CUDA Graph 自动化**：decode 迭代自动捕获为 CUDA Graph，消除 launch overhead
+
+> 💡 **面试技巧**：被问"vLLM 架构"时，先描述 V0 核心创新（PagedAttention + Continuous Batching），再补充"V1 重构后默认启用 chunked prefill + prefix caching + CUDA Graph"。这显示你不仅读过论文，还跟踪了最新进展。

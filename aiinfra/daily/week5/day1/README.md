@@ -117,7 +117,7 @@ Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·
 AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float) ≈ 0.125 FLOP/Byte (fp16)
 ```
 
-RTX 5090 的 Ridge Point 约在 **12.6 FLOP/Byte**（312 TFLOPS ÷ 2 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低两个数量级**，完全卡在 HBM 带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
+RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
 
 反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
 
@@ -504,8 +504,8 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 
  - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
  - 算术强度 `AI = FLOPs/Bytes ≈ 0.125 FLOP/Byte (fp16)`
- - RTX 5090 的 Ridge Point ≈ 12.6 FLOP/Byte（312 TFLOPS ÷ 2 TB/s），Decode 的 AI 比它低两个数量级
- - 因此 Decode 完全卡在 HBM 带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
+ - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近三个数量级
+ - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
 
 </details>
 

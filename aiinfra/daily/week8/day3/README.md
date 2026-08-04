@@ -87,9 +87,9 @@ Occupancy = active_warp / max_warp_per_SM
 | 层级 | 延迟 | 带宽 | 容量 |
 |------|------|------|------|
 | Register | ~0 cycle | 极高 | ~256KB/SM |
-| Shared Memory / L1 | ~20-30 cycles | ~128B/clock/SM | 164KB/SM (5090) |
-| L2 Cache | ~200 cycles | — | ~64MB |
-| Global Memory (HBM) | ~400-800 cycles | 1.55 TB/s (5090) | 24-32GB |
+| Shared Memory / L1 | ~20-30 cycles | ~128B/clock/SM | 100KB/SM (5090) |
+| L2 Cache | ~200 cycles | — | ~96MB |
+| Global Memory (GDDR7) | ~400-800 cycles | 1.792 TB/s (5090) | 32GB |
 
 优化原则：**让热点数据驻留在 register/shared memory，合并访问 global memory**。
 
@@ -146,7 +146,7 @@ Default Stream（Stream 0）会**隐式同步**所有 explicit stream。如果�
 // 解决：创建 non-blocking stream
 cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 // 或编译选项
-nvcc-- default - stream per - thread
+nvcc --default-stream per-thread
 ```
 
 ##### `cudaMemcpyAsync` vs `cudaMemcpy`
@@ -167,9 +167,9 @@ nvcc-- default - stream per - thread
 ##### RTX 5090 关键参数
 
 ```
-FP32 峰值: 19.5 TFLOPS
-HBM 带宽: 1.55 TB/s
-Ridge Point = 19.5 / 1.55 ≈ 12.6 FLOP/Byte
+FP32 峰值: 104.75 TFLOPS
+显存带宽: 1.792 TB/s (GDDR7)
+Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
 ```
 
 ##### Kernel 瓶颈分析三步
@@ -324,7 +324,7 @@ QUESTIONS = [
         "answer": (
             "横轴=算术强度(FLOP/Byte)，纵轴=性能(FLOP/s)\n"
             "斜线=带宽限制，水平线=算力限制，交点=ridge point\n"
-            "RTX 5090: 19.5 TFLOPS / 1.55 TB/s ≈ 12.6 FLOP/Byte"
+            "RTX 5090: 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte"
         ),
         "freq": 4,
     },
@@ -413,7 +413,7 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 #### 任务 3：白板默写 Roofline 图
 
-不看资料，在纸上画出 Roofline Model：横轴（算术强度）、纵轴（性能）、斜线（带宽限制）、水平线（算力限制）、ridge point（标注 RTX 5090 的 12.6 FLOP/Byte）。标注 SiLU（memory-bound）和 GEMM（compute-bound）的大致位置。
+不看资料，在纸上画出 Roofline Model：横轴（算术强度）、纵轴（性能）、斜线（带宽限制）、水平线（算力限制）、ridge point（标注 RTX 5090 的 58.45 FLOP/Byte）。标注 SiLU（memory-bound）和 GEMM（compute-bound）的大致位置。
 
 > 思考：为什么 SiLU 的 AI 只有 ~0.25 而 GEMM 的 AI 有 ~275？（提示：SiLU 每元素只做几次运算但需读写 8B；GEMM 每 tile 做 2MNK 次运算但只读写 A+B+C。）
 
@@ -455,7 +455,7 @@ A: Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
 
 #### 实验 3：默写 Memory Hierarchy 延迟表
 
-不看资料，默写 GPU 五级存储层次的延迟（Register、L1/Shared Memory、L2、HBM），标注数量级。标注 RTX 5090 的 HBM 带宽（1.55 TB/s）和 shared memory 容量（164KB/SM）。
+不看资料，默写 GPU 五级存储层次的延迟（Register、L1/Shared Memory、L2、GDDR7），标注数量级。标注 RTX 5090 的显存带宽（1.792 TB/s）和 shared memory 容量（100KB/SM）。
 
 > 思考：为什么 shared memory 延迟只有 ~30 cycles 而 HBM 要 ~500 cycles？（提示：shared memory 在 SM 内部，HBM 在芯片外部需走内存总线。）
 
@@ -468,7 +468,7 @@ Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
 1. **GPU 基础**：SM/Warp/Thread 层次（Grid>Block>Warp>Thread，warp=32 是调度单位）；Occupancy（active_warp/max_warp，寄存器/SMem 过多会降低）；Memory Hierarchy（Register~0c < SMem~30c < L2~200c < HBM~500c）；Bank Conflict（32 bank，padding 避免）
 2. **Kernel 优化**：GEMM 八层路径（Naive 1% → Tiling 15% → Reg Blocking 40% → float4 55% → Shuffle 60% → Double Buffer 70% → Tensor Core 80%+ → Auto-tuning 90%+）；float4 = 一条 128-bit load；Shuffle ~1-2 cycles vs SMem ~30 cycles
 3. **CUDA 编程**：`__syncthreads()` block 级 vs Shuffle warp 级同步；Default Stream 隐式同步坑（用 non-blocking flag 解决）；`cudaMemcpyAsync` 需 pinned memory
-4. **Profiling**：Roofline 三步法（算 AI → 定位 memory/compute-bound → 定优化方向）；RTX 5090 ridge point = 19.5/1.55 ≈ 12.6 FLOP/Byte；ncu 三步法（SM/Mem Throughput → Roofline → Warp Stall Reasons）
+4. **Profiling**：Roofline 三步法（算 AI → 定位 memory/compute-bound → 定优化方向）；RTX 5090 ridge point = 104.75/1.792 ≈ 58.45 FLOP/Byte；ncu 三步法（SM/Mem Throughput → Roofline → Warp Stall Reasons）
 5. **自测系统**：12 道题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
 6. **Matrix Transpose**：访存合并（coalescing）的典型案例（naive 不连续 → shared memory tile 修复），memory-bound 纯搬运
 7. **零钱兑换**：完全背包 DP，子问题复用 ↔ shared memory tile 复用
@@ -520,8 +520,8 @@ Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
  - **Roofline Model**：横轴 = 算术强度（FLOP/Byte），纵轴 = 性能（FLOP/s）
  - 斜线 = 带宽限制区（性能 = AI × 带宽），水平线 = 算力限制区（峰值 FLOP/s）
  - **交点 = ridge point**：AI < ridge → memory-bound，AI > ridge → compute-bound
- - **RTX 5090**：FP32 峰值 19.5 TFLOPS，HBM 带宽 1.55 TB/s
- - **Ridge Point = 19.5 / 1.55 ≈ 12.6 FLOP/Byte**
+ - **RTX 5090**：FP32 峰值 104.75 TFLOPS，显存带宽 1.792 TB/s（GDDR7）
+ - **Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte**
  - 用法：算 kernel 的 AI → 定位瓶颈 → 定优化方向
 
 </details>

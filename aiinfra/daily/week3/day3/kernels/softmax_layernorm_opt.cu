@@ -460,7 +460,7 @@ int main() {
     int iters = 50;
 
     // ---- Softmax 对比 ----
-    printf("[Softmax: block-level (Day16) vs warp-level (optimized)]\n");
+    printf("[Softmax: block-level (week3/day2) vs warp-level (optimized)]\n");
 
     // warmup + bench block
     for (int i = 0; i < 3; i++) {
@@ -489,12 +489,12 @@ int main() {
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     cpuSoftmax(h_in, h_ref, M, D);
     checkResult(h_out, h_ref, M * D, 1e-5f, "  warp-level correctness");
-    printf("  block-level (Day16): %.4f ms\n", ms_block);
+    printf("  block-level (week3/day2): %.4f ms\n", ms_block);
     printf("  warp-level (optim) : %.4f ms\n", ms_warp);
     printf("  speedup            : %.2fx\n\n", ms_block / ms_warp);
 
     // ---- LayerNorm 对比 ----
-    printf("[LayerNorm: scalar load (Day16) vs float4 vectorized vs Welford one-pass]\n");
+    printf("[LayerNorm: scalar load (week3/day2) vs float4 vectorized vs Welford one-pass]\n");
 
     for (int i = 0; i < 3; i++) {
         layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
@@ -532,7 +532,7 @@ int main() {
 
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     checkResult(h_out, h_ref, M * D, 1e-5f, "  welford correctness");
-    printf("  scalar (Day16)       : %.4f ms\n", ms_scalar);
+    printf("  scalar (week3/day2) : %.4f ms\n", ms_scalar);
     printf("  float4 (optim)       : %.4f ms\n", ms_f4);
     printf("  welford one-pass     : %.4f ms\n", ms_welford);
     printf("  speedup (float4)     : %.2fx\n", ms_scalar / ms_f4);

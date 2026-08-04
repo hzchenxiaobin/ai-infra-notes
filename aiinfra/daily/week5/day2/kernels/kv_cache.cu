@@ -152,12 +152,24 @@ int main() {
     cache.append(0, d_k2, d_v2, round2_len);
     printf("After Round 2 (len=%d): seq_len=%d\n", round2_len, cache.get_seq_len(0));
 
-    // Round 3: 新增 8 个 tokens
-    cache.append(0, d_k2, d_v2, 8);
-    printf("After Round 3 (len=8): seq_len=%d\n", cache.get_seq_len(0));
+    // Round 3: 新增 8 个 tokens（需要新分配 8 token 的缓冲）
+    int round3_len = 8;
+    size_t round3_bytes = (size_t)batch_size * num_heads * round3_len * d_head * sizeof(float);
+    float *d_k3, *d_v3;
+    cudaMalloc(&d_k3, round3_bytes);
+    cudaMalloc(&d_v3, round3_bytes);
+    float* h_k3 = (float*)malloc(round3_bytes);
+    float* h_v3 = (float*)malloc(round3_bytes);
+    initData(h_k3, batch_size * num_heads * round3_len * d_head);
+    initData(h_v3, batch_size * num_heads * round3_len * d_head);
+    cudaMemcpy(d_k3, h_k3, round3_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_v3, h_v3, round3_bytes, cudaMemcpyHostToDevice);
+
+    cache.append(0, d_k3, d_v3, round3_len);
+    printf("After Round 3 (len=%d): seq_len=%d\n", round3_len, cache.get_seq_len(0));
 
     // 验证总长度
-    int expected = round1_len + round2_len + 8;
+    int expected = round1_len + round2_len + round3_len;
     if (cache.get_seq_len(0) == expected) {
         printf("PASS: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
     } else {
@@ -196,11 +208,15 @@ int main() {
     free(h_v1);
     free(h_k2);
     free(h_v2);
+    free(h_k3);
+    free(h_v3);
     free(h_check);
     cudaFree(d_k1);
     cudaFree(d_v1);
     cudaFree(d_k2);
     cudaFree(d_v2);
+    cudaFree(d_k3);
+    cudaFree(d_v3);
 
     return 0;
 }

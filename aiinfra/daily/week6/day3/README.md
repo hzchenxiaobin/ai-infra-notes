@@ -587,3 +587,21 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 
 </details>
 
+
+---
+
+### 附录：vLLM V1 Scheduler 演进
+
+> Day 3 分析的 `Scheduler.schedule()` 5 步流程是 vLLM V0 的实现。V1 重构后有以下变化：
+
+| V0 Scheduler | V1 Scheduler |
+|-------------|-------------|
+| 5 步：running → swapped → waiting → preempt → execute | 统一调度：prefill/decode 混合，无显式 swapped 队列 |
+| `SchedulingBudget`（token + block） | 统一 token budget（block 管理内置 prefix caching） |
+| Prefix caching 可选（`--enable-prefix-caching`） | **默认启用**（block hash 匹配内置） |
+| Chunked prefill 可选 | **默认启用**（chunk_size=2048） |
+| 抢占：Recompute/Swap 二选一 | 优先 Recompute，Swap 作为 fallback |
+
+**V1 简化的核心**：V0 的 3 队列（waiting/running/swapped）在 V1 中被合并为统一调度——prefix caching 命中后不需要 swap（直接复用 block），chunked prefill 让长 prompt 不会阻塞 decode，因此 swapped 队列几乎不再需要。
+
+> 💡 **面试技巧**：被问"vLLM 调度器"时，先讲 V0 的 5 步流程（展示原理理解），再补充"V1 简化为统一调度，默认启用 prefix caching + chunked prefill"。

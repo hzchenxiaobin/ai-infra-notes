@@ -50,10 +50,10 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 | 薄弱点 | 典型卡壳表现 | 复习方法 |
 |--------|-------------|---------|
 | **Online Softmax 推导** | "公式我知道，但写不全" | 手写 5 遍三公式，理解 `exp(m-m_new)` 缩放因子 |
-| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 9 层阶梯图，背每层增益（1%→15%→45%→...→90%） |
+| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 8 层阶梯图，背每层增益（1%→15%→31%→64%→...→90%） |
 | **vLLM Scheduler** | "知道有调度，但状态机讲不清" | 看源码 + 画 WAITING/RUNNING/FINISHED 流程图 |
 | **KV Cache 内存** | "公式记不住，算不出数字" | 用 3 个不同模型算 10 次，背 LLaMA-7B = 524KB |
-| **Roofline Model** | "会画图但 Ridge 算不出" | 记 Ridge = PeakFLOP/BW，RTX5090 = 19.5/1.55 ≈ 12.6 |
+| **Roofline Model** | "会画图但 Ridge 算不出" | 记 Ridge = PeakFLOP/BW，RTX5090 = 104.75/1.792 ≈ 58.45 |
 | **Prefill/Decode 强度** | "知道不同但说不清为什么" | 推导 M=1 时 AI 极低 → memory-bound |
 
 ##### 为什么这些点最容易卡壳？
@@ -64,7 +64,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 - "LLaMA-7B 每 token KV Cache 占多少？4096 token 呢？"
 - "GEMM 到 cuBLAS 80%，每一层各占多少？"
 
-回答"大概是"直接扣分，回答"12.6 FLOP/Byte，因为 19.5 TFLOPS 除以 1.55 TB/s"才达标。
+回答"大概是"直接扣分，回答"58.45 FLOP/Byte，因为 104.75 TFLOPS 除以 1.792 TB/s"才达标。
 
 #### 6.2 十大易混淆概念对比
 
@@ -129,7 +129,7 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 
 ④ Roofline Ridge Point
    Ridge = Peak FLOP/s / Peak Bandwidth
-   RTX 5090 = 19.5 TFLOPS / 1.55 TB/s ≈ 12.6 FLOP/Byte
+   RTX 5090 = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte
    AI < Ridge → memory-bound；AI > Ridge → compute-bound
 
 ⑤ FlashAttention HBM IO
@@ -139,12 +139,12 @@ Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些
 ##### RTX 5090 关键参数
 
 ```text
-FP32 Peak:            19.5 TFLOPS
-Tensor Core FP16:     312 TFLOPS
-Memory Bandwidth:     1.55 TB/s
-Ridge Point:          ~12.6 FLOP/Byte
-Shared Memory / SM:   164 KB
-Max Threads / SM:     2048
+FP32 Peak:            104.75 TFLOPS
+Tensor Core FP16:     ~209 TFLOPS (dense)
+Memory Bandwidth:     1.792 TB/s (GDDR7)
+Ridge Point:          ~58.45 FLOP/Byte
+Shared Memory / SM:   100 KB
+Max Threads / SM:     1536
 Warp Size:            32
 Max Registers/Thread: 255
 Compute Capability:   sm_120
@@ -154,7 +154,7 @@ Compute Capability:   sm_120
 
 不要硬背数字，而是**记量纲，再推数字**：
 
-- Ridge Point 的量纲是 `FLOP/Byte` → 用 `算力 ÷ 带宽` 自己推：`19.5 / 1.55 = 12.6`
+- Ridge Point 的量纲是 `FLOP/Byte` → 用 `算力 ÷ 带宽` 自己推：`104.75 / 1.792 = 58.45`
 - KV Cache 的量纲是 `Byte/token` → 用 `2 × L × H × d × bytes` 推
 - GEMM FLOPs 的量纲是 `FLOP` → `2 × M × N × K`（2 是一次乘 + 一次加）
 
@@ -206,9 +206,9 @@ FORMULA_BLANKS = [
 ]
 
 PARAM_QUIZ = [
-    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "19.5"},
-    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.55"},
-    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "12.6"},
+    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "104.75"},
+    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.792"},
+    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "58.45"},
     # ... 共 10 道参数题
 ]
 
@@ -269,7 +269,7 @@ LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 
 |--------|---------|---------|
 | Online Softmax 三公式 | m_new / l_new / o_new 完整写出 | < 2 min |
 | KV Cache 内存公式 + LLaMA-7B 数字 | 公式 + 524KB + 4096→2GB | < 1 min |
-| GEMM 9 层优化 + 增益 % | Naive 1% → cuBLAS 90%+ | < 3 min |
+| GEMM 8 层优化 + 增益 % | Naive 1% → cuBLAS 90%+ | < 3 min |
 | Roofline 图 + Ridge 计算 | 斜线/水平线 + 12.6 推导 | < 2 min |
 | vLLM 架构图 | Engine→Scheduler→Worker→KV | < 3 min |
 | Continuous Batching 时间线 | 3 个请求动态进出 | < 3 min |
@@ -321,7 +321,7 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 不看资料，用纸笔默画以下 8 张图，每张限时 3 分钟，画完对照资料打分：
 
 1. GPU memory hierarchy（含延迟数字）
-2. GEMM 9 层优化阶梯（含 %）
+2. GEMM 8 层优化阶梯（含 %）
 3. FlashAttention tiling 示意
 4. Online softmax 状态更新
 5. vLLM 架构图
@@ -350,7 +350,7 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
 1. **六大薄弱点定位**：Online Softmax 推导、GEMM 层次、vLLM Scheduler、KV Cache 内存、Roofline、Prefill/Decode 强度
 2. **易混淆概念对比**：十大对比表（Prefill/Decode、LayerNorm/BatchNorm、float4/half2 等），用"粒度→量化→易错"三步法回答
 3. **关键公式背诵**：online softmax 三公式、KV Cache 内存、FLOPs/AI、Ridge Point、FA HBM IO
-4. **RTX 5090 参数**：19.5 TFLOPS、1.55 TB/s、Ridge 12.6、164KB shared mem 等，用"记量纲推数字"法
+4. **RTX 5090 参数**：104.75 TFLOPS、1.792 TB/s、Ridge 58.45、100KB shared mem 等，用"记量纲推数字"法
 5. **自测系统**：`knowledge_selftest.py` 提供 quiz/formula/param 三模式，闭环测→学→默→测
 6. **默画训练**：8 张核心流程图限时默画，画不全即盲区
 7. **二次 Mock**：针对薄弱点重测，确认卡壳点清零
@@ -366,9 +366,9 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
 <details>
 <summary>点击查看答案</summary>
 
- - **数值**：约 12.6 FLOP/Byte
- - **计算**：Ridge Point = Peak FLOP/s / Peak Bandwidth = 19.5 TFLOPS / 1.55 TB/s ≈ 12.6
- - **含义**：算术强度 AI < 12.6 → memory-bound；AI > 12.6 → compute-bound
+ - **数值**：约 58.45 FLOP/Byte
+ - **计算**：Ridge Point = Peak FLOP/s / Peak Bandwidth = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45
+ - **含义**：算术强度 AI < 58.45 → memory-bound；AI > 58.45 → compute-bound
  - **推导**：不要硬背，用"算力 ÷ 带宽"当场推。Ridge 是 Roofline 图上斜线与水平线的交点。
 
 </details>
@@ -426,8 +426,8 @@ Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
  | 层次 | 增益 | 收益来源 |
  |------|------|---------|
  | Shared Memory Tiling | 1%→15% | K 维数据复用，减少全局重复读 |
- | Register Blocking | 15%→45% | 累加器驻留寄存器，减少 shared mem 访问 |
- | float4 向量化 | 45%→55% | 128-bit load 提升带宽利用率 |
+ | Register Blocking | 15%→31% | 累加器驻留寄存器，减少 shared mem 访问 |
+ | float4 向量化 | 31%→64% | 128-bit load 提升带宽利用率 |
  | Warp Shuffle | 55%→60% | 优化写回，减少非合并访问 |
  | Double Buffering | 60%→70% | 软件流水线掩盖传输延迟 |
  | Tensor Core | 70%→80%+ | WMMA/mma 硬件矩阵乘加 |

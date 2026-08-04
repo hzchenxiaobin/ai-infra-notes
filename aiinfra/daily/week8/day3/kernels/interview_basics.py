@@ -131,7 +131,7 @@ QUESTIONS = [
         "answer": (
             "横轴=算术强度(FLOP/Byte)，纵轴=性能(FLOP/s)\n"
             "斜线=带宽限制，水平线=算力限制，交点=ridge point\n"
-            "RTX 5090: 19.5 TFLOPS / 1.55 TB/s ≈ 12.6 FLOP/Byte"
+            "RTX 5090: 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte"
         ),
         "freq": 4,
     },

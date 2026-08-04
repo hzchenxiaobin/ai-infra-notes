@@ -51,9 +51,9 @@ FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Share
 | Step 1: S=QK^T | 2Nd | N² | 2Nd + N² |
 | Step 2: P=softmax(S) | N² | N² | 2N² |
 | Step 3: O=PV | N² + Nd | Nd | N² + 2Nd |
-| **总计** | **2Nd + 3N²** | **N² + N² + Nd** | **3N² + 4Nd ≈ O(N²)** |
+| **总计** | **2Nd + 3N²** | **N² + N² + Nd** | **4N² + 4Nd ≈ O(N²)** |
 
-> ⚠️ **注意**：O(N²) 项来自物化两个 N×N 矩阵 S 和 P。当 N ≫ d 时，3N² 主导。
+> ⚠️ **注意**：O(N²) 项来自物化两个 N×N 矩阵 S 和 P（写 S N² + 读 S N² + 写 P N² + 读 P N² = 4N²）。当 N ≫ d 时，4N² 主导。
 
 #### 1.2 FlashAttention 的两大核心创新
 
@@ -169,8 +169,10 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 | 实现 | HBM 访问量 | N=4096, d=64, FP32 | N=8192, d=64 |
 |------|-----------|-------------------|--------------|
 | 标准 Attention | O(N² + Nd) | ~206 MB | ~805 MB |
-| FlashAttention | O(Nd) | ~2 MB | ~4 MB |
-| **IO 加速比** | | **~100x** | **~200x** |
+| FlashAttention | O(Nd) | ~4 MB | ~8 MB |
+| **IO 加速比** | | **~50x** | **~100x** |
+
+> 💡 **严格界**：FlashAttention 的 HBM IO 严格界为 **Θ(N²d²/M)**（M 为 SRAM 大小），当 M = Θ(Nd) 时简化为 O(Nd)。教程中统一使用 O(Nd) 这一简化形式，详见 [FlashAttention 论文 Theorem 2](../../../../paper/flashattention/README.md)。
 
 ##### 为什么实际 wall-clock 加速只有 2-8x？
 

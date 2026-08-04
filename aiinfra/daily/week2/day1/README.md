@@ -28,7 +28,7 @@ Shared Memory 虽然比 Global Memory 快得多（~20-30 cycles vs ~400-800 cycl
 
 #### Warp Shuffle 的优势
 
-从 Blackwell 架构（Compute Capability 12.0）起，NVIDIA 引入了 Warp Shuffle 原语，允许同一 Warp 内的线程**直接交换寄存器数据**，无需经过 Shared Memory：
+从 Kepler 架构（Compute Capability 3.0, 2012）起，NVIDIA 引入了 Warp Shuffle 原语，允许同一 Warp 内的线程**直接交换寄存器数据**，无需经过 Shared Memory：
 
 | 通信方式 | 延迟（周期） | 是否需要 `__syncthreads()` | 指令数 | 适用场景 |
 |---------|------------|-------------------------|--------|---------|
@@ -81,7 +81,7 @@ float val = __shfl_down_sync(0xFFFFFFFF, myVal, 16, 32);
 - `0x0000FFFF`：表示只有 lane 0-15 参与
 - `0xFFFF0000`：表示只有 lane 16-31 参与
 
-> ⚠️ **注意**：从 Blackwell 架构（CC 12.0）开始，必须使用 `_sync` 后缀版本（带显式 mask）。旧版 `__shfl_down`（无 mask）已被弃用，因为 Blackwell 引入了独立线程调度，需要显式指定哪些线程参与 shuffle。
+> ⚠️ **注意**：从 Volta 架构（CC 7.0, 2017）开始，必须使用 `_sync` 后缀版本（带显式 mask）。旧版 `__shfl_down`（无 mask）已被弃用，因为 Volta 引入了 Independent Thread Scheduling（独立线程调度），需要显式指定哪些线程参与 shuffle。
 
 ##### width 参数详解
 

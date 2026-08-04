@@ -274,13 +274,13 @@ Demo 5: 超时控制（0.05s 超时，forward 需0.1s）
 
 > 思考：v1 的 `sleep(0.001)` 轮询每秒 1000 次，CPU 浪费；Week7 的 `cond.wait()` 无请求时挂起零 CPU，有请求时 `notify` 立即唤醒。
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— Matrix Copy
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/matrix-copy>
 
-**与今日知识的关联**：Matrix Transpose 是**内存受限的索引重排 kernel** 的典型——每个元素独立搬运、无计算依赖，瓶颈在显存带宽而非算力；其核心矛盾是"读连续则写不连续"，需用 shared memory tile 中转让读写都 coalesced。这与并发引擎的"请求独立搬运"同构：队列的 `put`/`get_batch` 把每个请求从 submit 线程搬到 worker 线程，请求间无依赖（像矩阵元素间无依赖），搬运效率（coalesced 访存 + 条件变量 notify 的及时性）决定整体吞吐。Matrix Transpose 练习 coalesced 访存和 shared memory tiling——这是并发引擎高效处理海量独立请求的底层模式：把"每个请求独立搬运"映射到 GPU 就是"每个元素独立重排"。
+**与今日知识的关联**：Matrix Copy 是**内存拷贝 kernel** 的典型——每个元素独立搬运、无计算依赖，瓶颈在显存带宽而非算力；其核心矛盾是"读连续则写不连续"，需用 shared memory tile 中转让读写都 coalesced。这与并发引擎的"请求独立搬运"同构：队列的 `put`/`get_batch` 把每个请求从 submit 线程搬到 worker 线程，请求间无依赖（像矩阵元素间无依赖），搬运效率（coalesced 访存 + 条件变量 notify 的及时性）决定整体吞吐。Matrix Copy 练习 coalesced 访存和 shared memory tiling——这是并发引擎高效处理海量独立请求的底层模式：把"每个请求独立搬运"映射到 GPU 就是"每个元素独立重排"。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解（含 shared memory tiling、bank conflict 消除、coalesced 访存）见 [Matrix Copy 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 1）
 

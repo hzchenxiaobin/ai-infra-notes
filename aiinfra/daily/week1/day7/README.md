@@ -85,7 +85,7 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 |------|--------------|----------|----------|
 | **物理位置** | 每 SM 内（SRAM） | 每 SM 内（与 smem 共享同一块 SRAM） | 全局共享（所有 SM 可见） |
 | **可编程性** | ✅ 显式管理（`__shared__`） | ❌ 硬件自动管理 | ❌ 硬件自动管理 |
-| **容量（RTX 5090）** | 0-100KB / SM（可配） | 0-64KB / SM（与 smem 共享 192KB） | 40MB（全局共享） |
+| **容量（RTX 5090）** | 0-100KB / SM（可配） | 与 smem 共享 100KB SRAM | 96MB（全局共享） |
 | **访问延迟** | ~30 cycles | ~30 cycles | ~200 cycles |
 | **带宽** | ~128 bytes/cycle/SM | ~128 bytes/cycle/SM | 远低于 smem/L1（全局互联） |
 | **一致性范围** | block 内（`__syncthreads` 保证可见） | SM 内（warp 间不保证） | 全局（所有 SM 可见） |
@@ -276,7 +276,7 @@ else { B分支 } // lane 16-31 走 B
 **三大资源约束**（哪个先耗尽哪个就是瓶颈）：
 1. **寄存器**：每线程用 255 个寄存器，每 SM 64K 个 → 线程数上限 = 64K / 255 ≈ 256
 2. **Shared Memory**：每 SM 100KB（RTX 5090），block 用多少 smem 决定能放几个 block
-3. **Block / Warp 数上限**：每 SM 最多 32 个 block 或 64 个 warp
+3. **Block / Warp 数上限**：每 SM 最多 24 个 block 或 48 个 warp（RTX 5090）
 
 **不是越高越好**：
 - Occupancy 只是"候选 warp 数"，真正起作用的是"能掩盖延迟的 warp 数"
@@ -358,11 +358,11 @@ __shared__ float tile[32][33]; // 列维度 +1 padding
 **方法 1：理论 Roofline**
 ```
 Arithmetic Intensity (AI) = FLOPs / Bytes
-Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX 5090 ≈ 12.6 FLOP/Byte）
+Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX 5090 ≈ 58.45 FLOP/Byte）
 - AI < Ridge Point → memory-bound
 - AI > Ridge Point → compute-bound
 ```
-例：矩阵加法 AI = 1 FLOP / 12 Byte ≈ 0.083 << 12.6 → memory-bound
+例：矩阵加法 AI = 1 FLOP / 12 Byte ≈ 0.083 << 58.45 → memory-bound
 例：大 GEMM AI ≈ 85 >> 12.6 → compute-bound
 
 **方法 2：ncu 实测指标**
@@ -424,7 +424,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 - **左斜坡段**（AI < Ridge Point）：受内存带宽限制 → memory-bound，提升靠减少访存
 - **右平顶段**（AI ≥ Ridge Point）：受算力限制 → compute-bound，提升靠 Tensor Core / 更多 ILP
 
-**Ridge Point** = Peak FLOP/s / Peak Bandwidth（RTX 5090 FP32 ≈ 19.5T / 1.55T ≈ 12.6 FLOP/Byte）
+**Ridge Point** = Peak FLOP/s / Peak Bandwidth（RTX 5090 FP32 ≈ 104.75T / 1.792T ≈ 58.45 FLOP/Byte）
 
 **用途**：
 1. 判断 kernel 瓶颈类型（把 kernel 的 AI 标在图上，看落在斜坡还是平顶）
@@ -503,40 +503,6 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 6. Roofline 简图
 
 画图是检验理解深度的最好方法。
-
----
-
-### 本周 LeetCode 题目回顾（8 周计划 · 第 1 周）
-
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」（点击查看题解）：
-
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 哈希 | [1. 两数之和](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html)、[49. 字母异位词分组](https://hzchenxiaobin.github.io/leetcode/problems/49_字母异位词分组.html)、[128. 最长连续序列](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html)、[136. 只出现一次的数字](https://hzchenxiaobin.github.io/leetcode/problems/136_只出现一次的数字.html)、[169. 多数元素](https://hzchenxiaobin.github.io/leetcode/problems/169_多数元素.html) |
-| Day 2 | 双指针 | [283. 移动零](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html)、[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)、[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)、[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html) |
-| Day 3 | 数组 DP / 前缀和 | [53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)、[56. 合并区间](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html)、[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)、[41. 缺失的第一个正数](https://hzchenxiaobin.github.io/leetcode/problems/41_缺失的第一个正数.html) |
-| Day 4 | 手撕排序 | [912. 排序数组](https://hzchenxiaobin.github.io/leetcode/problems/912_排序数组.html)、[88. 合并两个有序数组](https://hzchenxiaobin.github.io/leetcode/problems/88_合并两个有序数组.html)、[179. 最大数](https://hzchenxiaobin.github.io/leetcode/problems/179_最大数.html)、[274. H 指数](https://hzchenxiaobin.github.io/leetcode/problems/274_H指数.html) |
-| Day 5 | 数组技巧 | [75. 颜色分类](https://hzchenxiaobin.github.io/leetcode/problems/75_颜色分类.html)、[31. 下一个排列](https://hzchenxiaobin.github.io/leetcode/problems/31_下一个排列.html)、[287. 寻找重复数](https://hzchenxiaobin.github.io/leetcode/problems/287_寻找重复数.html)、[189. 轮转数组](https://hzchenxiaobin.github.io/leetcode/problems/189_轮转数组.html) |
-| Day 6 | 位运算与其他 | [137. 只出现一次的数字 II](https://hzchenxiaobin.github.io/leetcode/problems/137_只出现一次的数字II.html)、[260. 只出现一次的数字 III](https://hzchenxiaobin.github.io/leetcode/problems/260_只出现一次的数字III.html)、[338. 比特位计数](https://hzchenxiaobin.github.io/leetcode/problems/338_比特位计数.html)、[349. 两个数组的交集](https://hzchenxiaobin.github.io/leetcode/problems/349_两个数组的交集.html)、[581. 最短无序连续子数组](https://hzchenxiaobin.github.io/leetcode/problems/581_最短无序连续子数组.html) |
-
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 1 周「数组、哈希与双指针（含手撕排序）」。重做本周错题、总结模板笔记；没做完的题目今天补上。
-
----
-
-### 本周 LeetCode 题目回顾（8 周计划 · 第 1 周）
-
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」（点击查看题解）：
-
-| Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 哈希 | [1. 两数之和](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html)、[49. 字母异位词分组](https://hzchenxiaobin.github.io/leetcode/problems/49_字母异位词分组.html)、[128. 最长连续序列](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html)、[136. 只出现一次的数字](https://hzchenxiaobin.github.io/leetcode/problems/136_只出现一次的数字.html)、[169. 多数元素](https://hzchenxiaobin.github.io/leetcode/problems/169_多数元素.html) |
-| Day 2 | 双指针 | [283. 移动零](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html)、[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)、[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)、[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html) |
-| Day 3 | 数组 DP / 前缀和 | [53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)、[56. 合并区间](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html)、[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)、[41. 缺失的第一个正数](https://hzchenxiaobin.github.io/leetcode/problems/41_缺失的第一个正数.html) |
-| Day 4 | 手撕排序 | [912. 排序数组](https://hzchenxiaobin.github.io/leetcode/problems/912_排序数组.html)、[88. 合并两个有序数组](https://hzchenxiaobin.github.io/leetcode/problems/88_合并两个有序数组.html)、[179. 最大数](https://hzchenxiaobin.github.io/leetcode/problems/179_最大数.html)、[274. H 指数](https://hzchenxiaobin.github.io/leetcode/problems/274_H指数.html) |
-| Day 5 | 数组技巧 | [75. 颜色分类](https://hzchenxiaobin.github.io/leetcode/problems/75_颜色分类.html)、[31. 下一个排列](https://hzchenxiaobin.github.io/leetcode/problems/31_下一个排列.html)、[287. 寻找重复数](https://hzchenxiaobin.github.io/leetcode/problems/287_寻找重复数.html)、[189. 轮转数组](https://hzchenxiaobin.github.io/leetcode/problems/189_轮转数组.html) |
-| Day 6 | 位运算与其他 | [137. 只出现一次的数字 II](https://hzchenxiaobin.github.io/leetcode/problems/137_只出现一次的数字II.html)、[260. 只出现一次的数字 III](https://hzchenxiaobin.github.io/leetcode/problems/260_只出现一次的数字III.html)、[338. 比特位计数](https://hzchenxiaobin.github.io/leetcode/problems/338_比特位计数.html)、[349. 两个数组的交集](https://hzchenxiaobin.github.io/leetcode/problems/349_两个数组的交集.html)、[581. 最短无序连续子数组](https://hzchenxiaobin.github.io/leetcode/problems/581_最短无序连续子数组.html) |
-
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 1 周「数组、哈希与双指针（含手撕排序）」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

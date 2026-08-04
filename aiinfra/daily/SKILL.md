@@ -43,7 +43,7 @@ weekN/dayM/
 weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.svg)
 ```
 
-- 教程中用相对路径引用本地文件:`[kernels/hello_gpu.cu](kernels/hello_gpu.cu)`
+- 教程中用 GitHub 完整链接引用本地文件:`[kernels/hello_gpu.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/weekN/dayM/kernels/hello_gpu.cu)`(GitHub Pages 上相对路径会 404)
 - SVG 引用:`![中文alt描述](../images/xxx.svg)`(从 dayM/ 出发,`../images/` 解析到 weekN/images/)
 
 ## 3. 教学日 8 段骨架(固定顺序)
@@ -114,7 +114,7 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
   - 代码块首行带注释:`// xxx.cu —— <说明>` + `// 编译命令: nvcc ...`
 - **编译命令**:单独用 ` ```bash ` 代码块
 - **预期输出**:用 ` ```text ` 代码块
-- **文件链接**:用相对路径 `[kernels/xxx.cu](kernels/xxx.cu)` 引用真实文件
+- **文件链接**:用 GitHub 完整链接 `[kernels/xxx.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/weekN/dayM/kernels/xxx.cu)` 引用真实文件(GitHub Pages 上相对路径会 404)
 - 可插入 `#### 为什么 <反直觉问题>?` 解释型小节
 
 #### LeetGPU 在线题目(任务 4,必有)

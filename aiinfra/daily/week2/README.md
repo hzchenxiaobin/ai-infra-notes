@@ -41,6 +41,8 @@ Day 7: 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告
 | Day 2 | Register Blocking 与 2D Tiling | [day2/](day2/README.md) |
 | Day 3 | CUDA Streams 与异步执行 | [day3/](day3/README.md) |
 | Day 4 | Nsight Compute 性能分析 | [day4/](day4/README.md) |
+| **Day 4b** | **CUTLASS 源码分析（扩展专题）** | **[day4b/](day4b/README.md)** |
 | Day 5 | FlashAttention CUDA 实现（简化版） | [day5/](day5/README.md) |
 | Day 6 | 整合优化到 cuBLAS 70%+ | [day6/](day6/README.md) |
+| **Day 6b** | **Tensor Core 与 WMMA（扩展专题）** | **[day6b/](day6b/README.md)** |
 | Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [day7/](day7/README.md) |

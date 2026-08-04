@@ -92,7 +92,9 @@ __global__ void softmax_kernel(const float* __restrict__ input, float* __restric
 
 // ============================================================
 // [Compute-bound] Naive GEMM Kernel：C = A·B，A∈R^{M×K}, B∈R^{K×N}
-// 故意不做 tiling，但仍能体现 compute-bound 特征（SM >> DRAM）
+// 故意不做 tiling，AI ≈ 2K/(8K) = 0.25 FLOP/Byte，远低于 ridge point
+// 实际为 memory-bound（未优化的 GEMM 数据复用极差）
+// 教学对比：此处展示"未优化 GEMM 也是 memory-bound"，与 Week2 的 tiled GEMM（compute-bound）形成对比
 // ============================================================
 __global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
                             int N, int K) {

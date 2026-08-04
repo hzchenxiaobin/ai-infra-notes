@@ -78,15 +78,17 @@ float v = tile[0];
 
 **一句话记忆**：同地址 → 广播（快，无 conflict）；同 bank 不同地址 → bank conflict（慢，串行）。
 
-**模式 3：2-way Conflict**
+**模式 3：多路广播（无 Conflict，易误判）**
 ```cuda
-// 线程分成两组，访问两个不同地址但同一 bank
+// 线程分成两组，访问两个不同地址
 float v = tile[threadIdx.x % 2];
 ```
-- 16 个线程访问 bank 0 的地址 0
-- 16 个线程访问 bank 0 的地址 1？不对，%2 得到 0 或 1
-- 实际上是 2 个地址，分别在 bank 0 和 bank 1
-- 这是 2-way conflict
+- 16 个线程访问地址 0（bank 0）→ 广播，无 conflict
+- 16 个线程访问地址 1（bank 1）→ 广播，无 conflict
+- 这是两个**多路广播**（multicast），**不是 2-way conflict**
+- > ⚠️ **常见误区**：看到"多个线程访问同 bank"就以为是 conflict。关键看是否访问**同一 bank 的不同地址**——同地址是广播（无 conflict），不同地址才是 conflict。
+
+> 💡 真正的 2-way conflict 示例：线程 0 访问 `tile[0]`（bank 0），线程 1 访问 `tile[32]`（bank 0 的另一个地址）——两个线程访问同一 bank 的**不同地址**，才会产生 2-way conflict。
 
 **模式 4：32-way Conflict（最坏情况）**
 ```cuda

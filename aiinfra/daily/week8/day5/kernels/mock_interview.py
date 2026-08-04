@@ -116,7 +116,7 @@ def run_section(section):
 
 def run_full_mock():
     print("=== AI Infra Mock 面试 ===")
-    print("共 7 个环节，全程约 30 分钟\n")
+    print("共 7 个环节，全程约 34 分钟\n")
     times = []
     for sec in SECTIONS:
         times.append(run_section(sec))

@@ -35,18 +35,27 @@ __global__ void softmax_kernel(const float* input, float* output, int M, int N) 
     const float* in_row = input + row * N;
     float* out_row = output + row * N;
 
-    // 1. 找 max（数值稳定）
+    // 1. 找 max（数值稳定）—— 使用 warp shuffle block reduce
     float max_val = -1e30f;
     for (int i = threadIdx.x; i < N; i += blockDim.x) {
         max_val = fmaxf(max_val, in_row[i]);
     }
-    // block reduce max
-    __shared__ float s_max;
-    if (threadIdx.x == 0) s_max = -1e30f;
+    __shared__ float s_max[32];
+    int warp_id = threadIdx.x / 32;
+    int lane = threadIdx.x % 32;
+    for (int offset = 16; offset > 0; offset >>= 1)
+        max_val = fmaxf(max_val, __shfl_down_sync(0xFFFFFFFF, max_val, offset));
+    if (lane == 0) s_max[warp_id] = max_val;
     __syncthreads();
-    atomicMax((int*)&s_max, __float_as_int(max_val));
+    int num_warps = (blockDim.x + 31) / 32;
+    if (warp_id == 0) {
+        max_val = (lane < num_warps) ? s_max[lane] : -1e30f;
+        for (int offset = 16; offset > 0; offset >>= 1)
+            max_val = fmaxf(max_val, __shfl_down_sync(0xFFFFFFFF, max_val, offset));
+        if (lane == 0) s_max[0] = max_val;
+    }
     __syncthreads();
-    max_val = s_max;
+    max_val = s_max[0];
 
     // 2. exp + sum
     float sum = 0.0f;
@@ -172,23 +181,33 @@ __global__ void flash_attention_kernel(
 
 // ---------- C++ Wrappers ----------
 #include <torch/extension.h>
+#include <ATen/cuda/CUDAContext.h>
 
 at::Tensor softmax_forward(at::Tensor input) {
+    TORCH_CHECK(input.is_contiguous(), "input must be contiguous");
+    TORCH_CHECK(input.dtype() == torch::kFloat32, "input must be float32");
+    TORCH_CHECK(input.dim() == 2, "input must be 2D");
     int M = input.size(0);
     int N = input.size(1);
     auto output = at::empty_like(input);
     int threads = min(N, 256);
-    softmax_kernel<<<M, threads>>>(
+    auto stream = at::cuda::getCurrentCUDAStream();
+    softmax_kernel<<<M, threads, 0, stream>>>(
         input.data_ptr<float>(), output.data_ptr<float>(), M, N);
     return output;
 }
 
 at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
+    TORCH_CHECK(input.is_contiguous(), "input must be contiguous");
+    TORCH_CHECK(input.dtype() == torch::kFloat32, "input must be float32");
+    TORCH_CHECK(gamma.is_contiguous(), "gamma must be contiguous");
+    TORCH_CHECK(beta.is_contiguous(), "beta must be contiguous");
     int M = input.size(0);
     int N = input.size(1);
     auto output = at::empty_like(input);
     int threads = min(N, 256);
-    layernorm_kernel<<<M, threads>>>(
+    auto stream = at::cuda::getCurrentCUDAStream();
+    layernorm_kernel<<<M, threads, 0, stream>>>(
         input.data_ptr<float>(), output.data_ptr<float>(),
         gamma.data_ptr<float>(), beta.data_ptr<float>(),
         M, N, (float)eps);
@@ -196,6 +215,12 @@ at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta
 }
 
 at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
+    TORCH_CHECK(Q.is_contiguous(), "Q must be contiguous");
+    TORCH_CHECK(K.is_contiguous(), "K must be contiguous");
+    TORCH_CHECK(V.is_contiguous(), "V must be contiguous");
+    TORCH_CHECK(Q.dtype() == torch::kFloat32, "Q must be float32");
+    TORCH_CHECK(Q.dim() == 4, "Q must be 4D [B, H, S, D]");
+    TORCH_CHECK(Q.size(3) <= 256, "D must be <= 256");
     int B = Q.size(0);
     int H = Q.size(1);
     int S = Q.size(2);
@@ -203,7 +228,8 @@ at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
     auto output = at::empty_like(Q);
     dim3 grid(B * H, S);
     int threads = min(D, 128);
-    flash_attention_kernel<<<grid, threads>>>(
+    auto stream = at::cuda::getCurrentCUDAStream();
+    flash_attention_kernel<<<grid, threads, 0, stream>>>(
         Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(),
         output.data_ptr<float>(), B, H, S, D);
     return output;
@@ -313,7 +339,7 @@ class TransformerLayer(nn.Module):
 
     def _attention(self, q, k, v):
         if self.custom_ops is not None:
-            return self.custom_ops.flash_attention_forward(q, k, v)
+            return self.custom_ops.flash_attention_forward(q.contiguous(), k.contiguous(), v.contiguous())
         else:
             return PyTorchOps.flash_attention_forward(q, k, v)
 

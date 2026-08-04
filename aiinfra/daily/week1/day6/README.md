@@ -185,12 +185,12 @@ Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
 Ridge Point = Peak FLOP/s / Peak Bandwidth
 ```
 
-以 RTX 5090 为例：
+以 RTX 5090 为例（实测值，详见 [Day 3](../day3/exercise/my_gpu_info.md)）：
 
 ```text
-Peak FP32 算力 ≈ 19.5 TFLOP/s
-Peak HBM 带宽 ≈ 1.55 TB/s
-Ridge Point ≈ 19.5 / 1.55 ≈ 12.6 FLOP/Byte
+Peak FP32 算力 ≈ 104.75 TFLOP/s
+Peak 显存带宽 ≈ 1.792 TB/s（GDDR7）
+Ridge Point ≈ 104.75 / 1.792 ≈ 58.45 FLOP/Byte
 ```
 
 - **AI < Ridge Point** → **memory-bound**（位于斜线区域，算力喂不饱，瓶颈在带宽）
@@ -209,7 +209,7 @@ Ridge Point ≈ 19.5 / 1.55 ≈ 12.6 FLOP/Byte
 **Step 1：运行 ncu**
 
 ```bash
-cd /Users/chenbinbin/GitHub/aiinfra/week1/day5
+# cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1/day5
 nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
 
 ncu --metrics \
@@ -258,7 +258,7 @@ ncu --metrics \
 #### 任务 1：profiling hello_gpu
 
 ```bash
-cd /Users/chenbinbin/GitHub/aiinfra/week1
+# cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
 nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
 nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
 ```

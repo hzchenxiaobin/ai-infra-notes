@@ -6,7 +6,7 @@
 ## 需要编译的代码
 
 ```bash
-cd /Users/chenbinbin/GitHub/aiinfra/week1
+# cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
 nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
 nvcc -o kernels/occupancy_test kernels/occupancy_test.cu
 nvcc -o kernels/transpose kernels/transpose.cu
@@ -76,12 +76,12 @@ Ridge Point = Peak FLOP/s / Peak Bandwidth
 以 RTX 5090 为例：
 
 ```text
-Peak FP32 算力 ≈ 19.5 TFLOP/s
-Peak HBM 带宽 ≈ 1.55 TB/s
-Ridge Point ≈ 19.5 / 1.55 ≈ 12.6 FLOP/Byte
+Peak FP32 算力 ≈ 104.75 TFLOP/s
+Peak 显存带宽 ≈ 1.792 TB/s（GDDR7）
+Ridge Point ≈ 104.75 / 1.792 ≈ 58.45 FLOP/Byte
 ```
 
-含义：**每读 1 byte 数据要做约 12.6 次浮点运算，才能打满 GPU 算力**。
+含义：**每读 1 byte 数据要做约 58.45 次浮点运算，才能打满 GPU 算力**。
 
 - `AI < Ridge Point` → **Memory-bound**（算力喂不饱，瓶颈在带宽）
 - `AI > Ridge Point` → **Compute-bound**（数据充足，瓶颈在算力）

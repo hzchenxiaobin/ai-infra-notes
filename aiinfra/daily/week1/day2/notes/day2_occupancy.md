@@ -6,7 +6,7 @@
 ## 需要编译的代码
 
 ```bash
-cd /Users/chenbinbin/GitHub/aiinfra/week1
+# cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
 nvcc -o kernels/occupancy_test kernels/occupancy_test.cu
 ```
 

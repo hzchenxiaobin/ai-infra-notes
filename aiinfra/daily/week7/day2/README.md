@@ -291,13 +291,13 @@ scheduler = FullScheduler(aging_threshold=999.0, ...)
 
 > 思考：token_budget=20 时，长 prompt（如 prompt_len=22）会发生什么？（提示：prompt_len > remaining_tokens，请求被放回 waiting，可能等待超时。）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— Vector Reversal
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/vector-reversal>
 
-**与今日知识的关联**：Matrix Transpose 的核心是**索引映射**——`output[j][i] = input[i][j]`，每个线程处理一个元素的"调度"。这与调度器的**请求到资源的映射**同构：调度器把请求按优先级分配到 batch 槽位（`batch[i] = waiting[best_priority]`），Matrix Transpose 把数据按转置坐标映射到输出位置。两者都是**用索引规则做资源映射**：调度器用优先级+预算做"哪个请求进 batch"的映射，Transpose 用 `(i,j) → (j,i)` 做"哪个输入对应哪个输出"的映射；shared memory tile 中转则保证重排后读写仍 coalesced。
+**与今日知识的关联**：Vector Reversal 的核心是**索引映射**——`output[j][i] = input[i][j]`，每个线程处理一个元素的"调度"。这与调度器的**请求到资源的映射**同构：调度器把请求按优先级分配到 batch 槽位（`batch[i] = waiting[best_priority]`），Vector Reversal 把数据按反向索引映射到输出位置。两者都是**用索引规则做资源映射**：调度器用优先级+预算做"哪个请求进 batch"的映射，Reversal 用 `i → N-1-i` 做"哪个输入对应哪个输出"的映射；shared memory tile 中转则保证重排后读写仍 coalesced。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Vector Reversal](https://leetgpu.com/challenges/vector-reversal) 上记录通过耗时。完整题解见 [Vector Reversal 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-reversal-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 2）
 

@@ -13,7 +13,7 @@ COURSE_OVERVIEW_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "README.md"
 DAILY_DIR = REPO_ROOT / "aiinfra" / "daily"
 STATIC_DIR = REPO_ROOT / "static"
 
-DAY_TITLE_PATTERN = re.compile(r"^## Day (\d+)[：:]\s*(.+)$")
+DAY_TITLE_PATTERN = re.compile(r"^## Day (\d+[a-z]?)[：:]\s*(.+)$")
 
 
 def escape_for_template_string(text: str) -> str:
@@ -40,7 +40,12 @@ def extract_plan_weeks(plan_path: Path = None) -> list:
 
 
 def get_day_info(week_dir: Path) -> list:
-    """Return sorted day info [{'num': int, 'title': str}, ...] by parsing README titles."""
+    """Return sorted day info [{'num': str, 'title': str}, ...] by parsing README titles.
+
+    num is a string like "1" or "3b" (letter-suffixed supplementary days).
+    Sorting is lexicographic, which is correct for single-digit days with
+    optional single-letter suffixes (e.g. "3" < "3b" < "4").
+    """
     info = []
     for day_dir in sorted(week_dir.glob("day*")):
         readme = day_dir / "README.md"
@@ -50,7 +55,7 @@ def get_day_info(week_dir: Path) -> list:
         first_line = text.lstrip().splitlines()[0] if text.strip() else ""
         match = DAY_TITLE_PATTERN.match(first_line)
         if match:
-            info.append({"num": int(match.group(1)), "title": match.group(2).strip()})
+            info.append({"num": match.group(1), "title": match.group(2).strip()})
     return sorted(info, key=lambda d: d["num"])
 
 
@@ -97,7 +102,7 @@ def load_overview_and_days(week_dir: Path):
         if not match:
             raise ValueError(f"Cannot parse Day title from first line of {readme}: {first_line!r}")
         days.append({
-            "num": int(match.group(1)),
+            "num": match.group(1),
             "title": match.group(2).strip(),
             "markdown": "\n".join(text.strip().splitlines()[1:]),
         })

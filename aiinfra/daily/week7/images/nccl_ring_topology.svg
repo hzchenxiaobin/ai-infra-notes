@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="53" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="arB" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#4a6fa5"/>
+    </marker>
+    <marker id="arG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">NCCL Ring All-Reduce：2(N-1) 步通信</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Ring topology (N=4) ============ -->
+  <text x="470" y="74" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a6fa5">Ring 拓扑（N=4 GPU）</text>
+
+  <!-- 4 nodes in a ring -->
+  <g filter="url(#sk)">
+    <circle cx="470" cy="150" r="30" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.4"/>
+    <circle cx="590" cy="230" r="30" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.4"/>
+    <circle cx="470" cy="310" r="30" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.4"/>
+    <circle cx="350" cy="230" r="30" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.4"/>
+  </g>
+  <g font-size="11" fill="#3a5a8a" text-anchor="middle" font-weight="bold">
+    <text x="470" y="154">GPU0</text>
+    <text x="590" y="234">GPU1</text>
+    <text x="470" y="314">GPU2</text>
+    <text x="350" y="234">GPU3</text>
+  </g>
+  <!-- ring arrows (clockwise) -->
+  <path d="M 495 168 Q 560 190 575 215" stroke="#4a6fa5" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 575 255 Q 560 280 495 295" stroke="#4a6fa5" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 445 295 Q 380 280 365 255" stroke="#4a6fa5" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+  <path d="M 365 215 Q 380 190 445 168" stroke="#4a6fa5" stroke-width="1.4" fill="none" marker-end="url(#arB)" filter="url(#sk)"/>
+
+  <!-- chunk labels on each node -->
+  <text x="470" y="106" text-anchor="middle" font-size="9" fill="#888">数据分 N 块：[a0, a1, a2, a3]</text>
+
+  <!-- ============ Two phases ============ -->
+  <line x1="40" y1="356" x2="900" y2="356" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <text x="40" y="380" font-size="12" font-weight="bold" fill="#c04050">阶段 1：reduce-scatter</text>
+  <g font-size="10" fill="#444">
+    <text x="40" y="398">每步：每卡把一块 send 给右邻 + recv 左邻的块，累加</text>
+    <text x="40" y="414">N-1 步后：每卡持有一个块的完整和（reduce 结果分散在各卡）</text>
+    <text x="40" y="430">通信量 = (N-1) × (V/N) = V×(N-1)/N</text>
+  </g>
+
+  <text x="500" y="380" font-size="12" font-weight="bold" fill="#2e8b57">阶段 2：all-gather</text>
+  <g font-size="10" fill="#444">
+    <text x="500" y="398">每步：每卡把自己那块完整和 send 给右邻 + recv</text>
+    <text x="500" y="414">N-1 步后：每卡都有完整 reduce 结果</text>
+    <text x="500" y="430">通信量 = V×(N-1)/N，总计 2V×(N-1)/N</text>
+  </g>
+</svg>

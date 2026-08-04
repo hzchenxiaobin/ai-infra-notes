@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="400" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">CUDA Graph：Capture / Replay 消除 Launch 间隙</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Eager timeline ============ -->
+  <text x="40" y="78" font-size="13" font-weight="bold" fill="#c04050">Eager（逐个 launch）：kernel 间有 5-10μs 间隙</text>
+  <path d="M 40 96 L 900 96" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="40" y="92" font-size="9" fill="#888">CPU 提交</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="115" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="170" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="225" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="280" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="335" y="104" width="40" height="22" rx="3" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.1"/>
+  </g>
+  <!-- launch overhead gaps -->
+  <path d="M 100 138 L 115 138 M 155 138 L 170 138 M 210 138 L 225 138 M 265 138 L 280 138 M 320 138 L 335 138" stroke="#c04050" stroke-width="1.2" filter="url(#sk)"/>
+  <text x="210" y="152" text-anchor="middle" font-size="9" fill="#a03040">↑ launch overhead（CPU 开销，GPU 空闲）</text>
+
+  <!-- ============ Capture phase ============ -->
+  <line x1="40" y1="172" x2="900" y2="172" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="198" font-size="13" font-weight="bold" fill="#8a7a06">Capture：录制所有 launch 为一张 Graph</text>
+  <text x="40" y="220" font-size="10" fill="#444">cudaStreamBeginCapture()</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+    <rect x="115" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+    <rect x="170" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+    <rect x="225" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+    <rect x="280" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+    <rect x="335" y="230" width="40" height="20" rx="3" fill="#fff7c0" stroke="#b8a040" stroke-width="1.1"/>
+  </g>
+  <path d="M 380 240 L 460 240" stroke="#8a7a06" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="470" y="226" width="80" height="28" rx="5" fill="#fce4ec" stroke="#c04050" stroke-width="1.4"/>
+  </g>
+  <text x="510" y="245" text-anchor="middle" font-size="11" fill="#a03040" font-weight="bold">Graph</text>
+  <text x="570" y="244" font-size="10" fill="#444">cudaStreamEndCapture()</text>
+
+  <!-- ============ Replay timeline ============ -->
+  <line x1="40" y1="276" x2="900" y2="276" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="302" font-size="13" font-weight="bold" fill="#2e8b57">Replay：一次 launch 全部 kernel，间隙消失</text>
+  <path d="M 40 320 L 900 320" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="40" y="316" font-size="9" fill="#888">一次 replay</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="101" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="142" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="183" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="224" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="265" y="328" width="40" height="22" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+  </g>
+  <text x="210" y="372" text-anchor="middle" font-size="10" fill="#2e8b57">kernel 背靠背执行，launch overhead ≈ 0（仅 1 次提交）</text>
+</svg>

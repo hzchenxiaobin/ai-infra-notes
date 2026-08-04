@@ -133,7 +133,7 @@ ncu --kernel-name regex:your_kernel \
 
 ##### Roofline 视角
 
-算术强度 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 12.6 FLOP/Byte）：
+算术强度 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 58.45 FLOP/Byte）：
 - `AI < Ridge` → memory-bound（在带宽斜线上）
 - `AI > Ridge` → compute-bound（在算力水平线上）
 
@@ -448,7 +448,7 @@ Day 6 我们给 Mini 引擎装上了"仪表盘"，建立了推理 profiling 的�
  - 用 ncu 测两个指标：
  - `dram__throughput`（带宽利用率）高 + `sm__throughput`（算力利用率）低 → **memory-bound**
  - `sm__throughput` 高 + `dram__throughput` 低 → **compute-bound**
- - 或用 Roofline：算 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 12.6 FLOP/Byte）：AI < Ridge → memory-bound，AI > Ridge → compute-bound
+ - 或用 Roofline：算 `AI = FLOPs / Bytes`，对照 Ridge Point（RTX 5090 ≈ 58.45 FLOP/Byte）：AI < Ridge → memory-bound，AI > Ridge → compute-bound
  - 实例：Decode 的 GEMM（M=1）AI≈0.1 → memory-bound；Prefill 的同 GEMM（M=N）AI≈400 → compute-bound。同算子 M 不同瓶颈翻转
 
 </details>

@@ -29,7 +29,7 @@ QUIZ_BANK = [
         "topic": "GEMM 优化层次",
         "q": "从 Naive 到 cuBLAS 80%+，按层次说出每层优化及增益。",
         "a": (
-            "Naive (~1%) → Shared Memory Tiling (~15%) → Register Blocking (~45%)\n"
+            "Naive (~1%) → Shared Memory Tiling (~15%) → Register Blocking (~31%)\n"
             "→ float4 向量化 (~55%) → Warp Shuffle (~60%)\n"
             "→ Double Buffering (~70%) → Tensor Core (~80%+) → Auto-tuning (~90%+)\n"
             "\n每层收益：Tiling 减少全局重复读；RegBlock 数据驻留寄存器；"
@@ -136,12 +136,12 @@ FORMULA_BLANKS = [
 ]
 
 PARAM_QUIZ = [
-    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "19.5"},
-    {"q": "RTX 5090 Tensor Core FP16 (TFLOPS)?", "a": "312"},
-    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.55"},
-    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "12.6"},
-    {"q": "RTX 5090 Shared Memory per SM (KB)?", "a": "164"},
-    {"q": "RTX 5090 Max Threads per SM?", "a": "2048"},
+    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "104.75"},
+    {"q": "RTX 5090 Tensor Core FP16 (TFLOPS)?", "a": "209"},
+    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.792"},
+    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "58.45"},
+    {"q": "RTX 5090 Shared Memory per SM (KB)?", "a": "100"},
+    {"q": "RTX 5090 Max Threads per SM?", "a": "1536"},
     {"q": "Warp Size?", "a": "32"},
     {"q": "Max Registers per Thread?", "a": "255"},
     {"q": "RTX 5090 Compute Capability (sm_?)?", "a": "120"},
@@ -168,6 +168,34 @@ def mode_quiz():
         print("\n" + "=" * 60 + "\n")
 
 
+def _normalize_answer(ans: str) -> str:
+    """归一化答案：strip + lower + 去除多余空格，支持数值容差。"""
+    ans = ans.strip().lower().replace(" ", "")
+    # 尝试数值匹配：如果答案是数字，允许 ±1% 容差
+    try:
+        val = float(ans)
+        return f"__num__{val}"
+    except ValueError:
+        pass
+    return ans
+
+
+def _check_answer(user_ans: str, correct_ans: str) -> bool:
+    """归一化匹配：支持数值容差、大小写不敏感、空格不敏感。"""
+    norm_user = _normalize_answer(user_ans)
+    norm_correct = _normalize_answer(correct_ans)
+    if norm_user == norm_correct:
+        return True
+    # 数值容差：±1%
+    if norm_user.startswith("__num__") and norm_correct.startswith("__num__"):
+        u = float(norm_user[7:])
+        c = float(norm_correct[7:])
+        if c == 0:
+            return u == 0
+        return abs(u - c) / abs(c) < 0.01
+    return False
+
+
 def mode_formula():
     print("\n=== 模式：关键公式默写 ===")
     print("填空，回车提交。输入 q 退出。\n")
@@ -179,7 +207,7 @@ def mode_formula():
         ans = input("你的答案: ").strip()
         if ans == "q":
             break
-        if ans == item["answer"]:
+        if _check_answer(ans, item["answer"]):
             print("  ✓ 正确\n")
             correct += 1
         else:
@@ -198,7 +226,7 @@ def mode_param():
         ans = input("你的答案: ").strip()
         if ans == "q":
             break
-        if ans == item["a"]:
+        if _check_answer(ans, item["a"]):
             print("  ✓ 正确\n")
             correct += 1
         else:

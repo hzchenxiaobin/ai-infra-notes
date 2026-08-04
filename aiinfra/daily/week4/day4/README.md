@@ -69,7 +69,7 @@ FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group �
 
 ##### 为什么减少 non-matmul 很重要？
 
-现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 上 FP16 matmul 312 TFLOPS vs FP32 FMA 19.5 TFLOPS，16x 差距）。因此即使 non-matmul FLOPs 只占 10%，它的执行时间可能占 50%+——因为标量指令慢 16x。FA2 把 non-matmul 减半，直接缩小了这个瓶颈。
+现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 上 FP16 Tensor Core matmul 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）。因此即使 non-matmul FLOPs 只占 10%，它的执行时间可能占 50%+——因为标量指令慢得多。FA2 把 non-matmul 减半，直接缩小了这个瓶颈。
 
 #### 4.3 FA2 改进二：更好的 Work Partitioning
 
@@ -133,6 +133,122 @@ FA2 通过以下方式减少资源占用：
 | 反向传播 | 支持 | 更高效 |
 | 长序列收益 | 好 | 更好 |
 | 整体加速（vs FA1） | 基准 | ~2x |
+
+#### 4.6 FlashAttention-3：Hopper 架构的终极优化
+
+FA2 的设计面向 Ampere（A100）的同步执行模型——warp 同步发射 GEMM、串行 softmax。但搬到 Hopper（H100）后，FA2 **只有 ~35% 的利用率**：H100 新增的异步 Tensor Core（WGMMA）、异步拷贝引擎（TMA）、FP8 单元全部闲置。FA3 的目标就是**让 attention kernel 原生于 Hopper 的异步执行模型**，把利用率和精度同时推到极限。
+
+> 📄 **深入阅读**：FA3 的 warp 特化、pingpong 调度、FP8 布局手术等完整分析见 [FA3 论文笔记](../../../../paper/flashattention3/README.md)。
+
+##### 改进一：Async Pipeline（异步数据加载）
+
+FA2 中，一个 warp group 既要搬数据又要算——搬数时 Tensor Core 空转，算时搬运单元空闲。FA3 利用 Hopper 的 **TMA（Tensor Memory Accelerator）**——一个独立的拷贝硬件，不占 SM 发射带宽：
+
+```
+FA2（Ampere）：
+  warp group: load K_j → wait → GEMM(QKᵀ) → softmax → GEMM(PV) → load K_{j+1} → ...
+  ↑ 搬数和计算串行，Tensor Core 在 softmax/搬数期间空转
+
+FA3（Hopper）：
+  producer warp group: TMA(K_j) → mbarrier.arrive → TMA(V_j) → mbarrier.arrive → ...
+  consumer warp group: wait mbarrier → GEMMA_async(QKᵀ) → softmax → GEMMA_async(PV) → ...
+  ↑ TMA 搬数与 Tensor Core 计算并行，搬运开销被完全隐藏
+```
+
+TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器）。producer/consumer 之间用 **mbarrier**（硬件级同步原语）做块级握手的多 stage 流水。
+
+##### 改进二：Warp Specialization（producer-consumer 模式）
+
+FA3 把 CTA 内的 warp group 分为两种角色：
+
+| 角色 | 数量 | 职责 | 硬件通路 |
+|------|------|------|---------|
+| **Producer** | 1 个 wg | 只发 TMA 搬 K/V tile 到 shared memory | TMA（拷贝硬件） |
+| **Consumer** | 2 个 wg | 只做 GEMMA + softmax | WGMMA（Tensor Core）+ CUDA core/SFU |
+
+两个 consumer 以 **pingpong 调度**交替：wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然——**一个 SM 的 Tensor Core 与 CUDA core 同时有活干**。
+
+```
+时间线（pingpong）：
+  wg0: GEMM(QK₀ᵀ) | softmax₀ | GEMM(PV₀) | GEMM(QK₂ᵀ) | softmax₂ | ...
+  wg1:    idle     | GEMM(QK₁ᵀ) | softmax₁ | GEMM(PV₁) |    idle  | ...
+                ↑ 两个 consumer 相位错开，Tensor Core 不空转
+```
+
+此外，warpgroup 内部还有 **2-stage GEMM-softmax 流水**：块 $j$ 的 softmax 在 CUDA core 上执行的同时，块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行——打破 FA2 "GEMM→softmax→GEMM" 的串行链。
+
+##### 改进三：FP8 支持（吞吐翻倍）
+
+H100 的 FP8 Tensor Core 吞吐是 FP16 的 **2×**（989 → ~1979 TFLOPs/s）。FA3 支持 FP8（E4M3/E5M2）输入：
+
+| 精度 | FA2 | FA3 | 吞吐（H100） |
+|------|-----|-----|-------------|
+| FP16 | ✅ | ✅ | ~989 TFLOPs/s |
+| FP8 | ❌ | ✅ | ~1979 TFLOPs/s（2×） |
+
+FP8 的难点不在算法而在**数据布局工程**——FP8 WGMMA 只接受 k-major 操作数，而 V 通常按 head dim 连续存储。FA3 在 kernel 内用 LDSM/STSM 指令做片上转置，全部安排在异步 WGMMA 的影子下执行。精度侧用**分块量化**（每 block 独立 scale factor）+ **incoherent processing**（Hadamard 旋转摊平 outlier），FP8 误差比 per-tensor 量化基线低 **2.6×**。
+
+> 💡 FA3 的 FP8 中间计算（softmax 的 exp/sum/rescale）保持 **FP32**——这与 FA1/FA2 "中间结果留高精度" 的原则一脉相承。
+
+##### 概念级伪代码：producer/consumer 模式
+
+```text
+# === Producer warp group ===（只搬数据，不计算）
+for j in 0..Tc:
+    TMA.load_async(K[j], smem_K[stage % S])     # 异步搬 K tile
+    TMA.load_async(V[j], smem_V[stage % S])     # 异步搬 V tile
+    mbarrier.arrive(smem_K[stage % S])           # 通知 consumer：数据就绪
+    mbarrier.arrive(smem_V[stage % S])
+    stage += 1
+
+# === Consumer warp group ===（只计算，不搬数据，pingpong 错相）
+for j in 0..Tc:
+    mbarrier.wait(smem_K[j % S])                 # 等 producer 搬完
+    WGMMA.async(S[j+1] = Q · K[j+1]ᵀ)          # ← 先发射下一个块的 QKᵀ（异步）
+    softmax_本地计算(j):                          # CUDA core/SFU 上跑
+        m_new = max(m, S[j])
+        alpha = exp(m - m_new); p = exp(S[j] - m_new)
+        l = l * alpha + sum(p); O = O * alpha
+    WGMMA.wait(S[j+1])                           # 等异步 GEMM 完成
+    WGMMA.async(O += P[j] · V[j])               # 发射 PV GEMM
+    m = m_new
+# 两个 consumer wg 的循环相位错开 → Tensor Core 与 CUDA core 互补
+```
+
+##### FA1 → FA2 → FA3 演进对比
+
+| 维度 | FlashAttention-1 | FlashAttention-2 | FlashAttention-3 |
+|------|------------------|------------------|------------------|
+| 目标硬件 | A100（Ampere） | A100（Ampere） | H100（Hopper） |
+| 核心优化 | IO 复杂度（tiling） | work partitioning | 异步流水 + 低精度 |
+| Non-matmul:matmul | ~1:10 | ~1:20 | softmax 完全隐藏 |
+| Warp 分工 | 共享 Q tile | warp group 子块自治 | producer/consumer 特化 |
+| 并行维度 | Batch×Head | + seq 并行 | + warp group pingpong |
+| 异步执行 | ❌ | ❌ | ✅ TMA + WGMMA async |
+| FP8 支持 | ❌ | ❌ | ✅ E4M3/E5M2 |
+| Occupancy（H100） | — | ~35% 峰值 | ~75% 峰值 |
+| FP16 forward 峰值 | 基准 | ~570 TFLOPs/s | **740 TFLOPs/s** |
+| vs 前代加速 | 基准 | ~2× vs FA1 | ~1.5–2× vs FA2 |
+| 同步原语 | `__syncthreads` | warp group 内自治 | mbarrier（硬件级） |
+
+> 💡 **一句话总结**：FA1 解决了 IO（tiling），FA2 解决了分工（warp group 自治），FA3 解决了异步（producer/consumer 流水）+ 低精度（FP8）。三代演进的核心线索是：**把越来越多的"非计算"工作藏进计算的影子**——先是减少 non-matmul FLOPs，再是把搬数和 softmax 完全异步化。
+
+##### FA3 面试速问
+
+1. **FA3 相比 FA2 的关键差异是什么？**
+2. **Warp specialization 的 producer-consumer 模式是怎么工作的？**
+3. **FP8 对精度有什么影响？FA3 如何应对？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  1. **FA3 vs FA2 关键差异**：① **异步流水**——用 TMA 异步搬数 + WGMMA 异步 GEMM，producer 搬数与 consumer 计算重叠，消除 FA2 的串行等待；② **Warp 特化**——producer/consumer 分工 + pingpong 调度，两个 consumer warpgroup 交替执行 GEMM 和 softmax，Tensor Core 不空转；③ **FP8 支持**——FP8 Tensor Core 吞吐翻倍，配合分块量化和 Hadamard 旋转控制误差。FA3 在 H100 上从 FA2 的 35% 利用率提升到 75%，FP16 forward 达 740 TFLOPs/s。
+
+  2. **Warp specialization 原理**：CTA 内 warp group 分为 1 个 producer（用 TMA 搬 K/V tile 到 shared memory）和 2 个 consumer（做 WGMMA + softmax）。Producer 发 TMA 后立即返回（不占 SM 算力），consumer 通过 mbarrier 感知数据就绪后开始计算。两个 consumer 以 pingpong 交替——wg0 做 softmax（CUDA core）时 wg1 做 GEMM（Tensor Core），让 SM 上不同执行单元同时有活。`setmaxnreg` 把 producer 省下的寄存器划给 consumer。
+
+  3. **FP8 对精度的影响**：FP8（E4M3）只有 3 位尾数，精度脆弱——LLM 激活的 outlier 会导致大量量化误差。FA3 用两招应对：① **分块量化**——Q/K/V 按 block 各自一个 scale factor（而非 per-tensor 一个），FA3 的分块结构天然按块反缩放 S，零计算成本；② **Incoherent processing**——Q、K 先乘随机正交矩阵 $M$（$O(d\log d)$，融入 RoPE），因 $MM^\top=I$ 不改变 $QK^\top$ 输出，但 outlier 被摊平到所有维度。最终 FP8 误差比 per-tensor 量化基线低 2.6×，且 softmax 全程保持 FP32。
+
+</details>
 
 ---
 
@@ -298,7 +414,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 <details>
 <summary>点击查看答案</summary>
 
- - 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 FP16 matmul 312 TFLOPS vs FP32 FMA 19.5 TFLOPS，16x 差距）
+ - 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 FP16 Tensor Core 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）
  - 即使 non-matmul FLOPs 只占总 FLOPs 的 10%，它的执行时间可能占 50%+——因为标量指令慢 16x
  - FA2 把 non-matmul 减半，直接缩小了这个瓶颈
  - FA2 论文目标：让 non-matmul 占比降到 ~1:20，使 matmul 主导

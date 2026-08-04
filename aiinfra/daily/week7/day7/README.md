@@ -172,13 +172,13 @@ python kernels/week7_summary.py
  ...
 ```
 
-#### 任务 2：LeetGPU 综合题 —— Matrix Transpose
+#### 任务 2：LeetGPU 综合题 —— Matrix Addition
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
 
-**与本周知识的关联**：Matrix Transpose 是 Week 7 的"收官题"——本周每天的 LeetGPU 练习都围绕 memory-bound 的数据搬运/归约，而 Transpose 把"能搬数据"推向"能高效重排数据"：用 shared memory tile 中转解决"读写不能同时 coalesced"的核心矛盾。它也是自定义 kernel 集成中内存布局处理的基础（Day 4 自定义 kernel 集成的 Q/K/V tile 读写、FlashAttention 的分块布局都建立在同一套索引映射 + tiling 技术上）。
+**与本周知识的关联**：Matrix Addition 是 Week 7 的"收官题"——本周每天的 LeetGPU 练习都围绕 memory-bound 的数据搬运/归约，而 Addition 把"能搬数据"推向"能高效合并数据"：用 shared memory tile 中转解决"读写不能同时 coalesced"的核心矛盾。它也是自定义 kernel 集成中内存布局处理的基础（Day 4 自定义 kernel 集成的 Q/K/V tile 读写、FlashAttention 的分块布局都建立在同一套索引映射 + tiling 技术上）。
 
-> 💡 完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 完整题解见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
 #### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 7 周）
 

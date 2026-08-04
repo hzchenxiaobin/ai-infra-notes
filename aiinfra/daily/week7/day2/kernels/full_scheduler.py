@@ -190,7 +190,7 @@ class FullScheduler:
                 batch.append(req)
                 remaining_tokens -= 1
             else:
-                break
+                continue
 
         return remaining_tokens
 

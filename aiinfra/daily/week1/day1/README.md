@@ -105,70 +105,66 @@ AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的�
 ![SM 架构简图](../images/sm_architecture.svg)
 
 以 NVIDIA RTX 5090 为例：
-- 108 个 SM
-- 每个 SM：64 个 FP32 CUDA Cores、32 个 FP64 CUDA Cores、4 个 Tensor Core
+- 170 个 SM
+- 每个 SM：128 个 FP32 CUDA Cores、4 个 Tensor Core
 - 每个 SM：256 KB 寄存器文件
-- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
+- 每个 SM：最多 1536 个 thread / 48 个 warp / 24 个 block
 
-**GPU 代际对比（RTX 5090）**：
+**GPU 代际对比**：
 
-| 指标　　　　　　　　　| RTX 5090　　　　　| RTX 5090　　　 | RTX 5090　　　　　　　　 |
-| -----------------------| ---------------| ------------| ----------------------|
-| 架构　　　　　　　　　| Blackwell　　　　| Blackwell　　 | Blackwell　　　　　　　 |
-| 显存　　　　　　　　　| 80 GB HBM2e　 | 80 GB HBM3 | 141 GB HBM3e　　　　 |
-| 内存带宽　　　　　　　| ~2 TB/s　　　 | ~3.35 TB/s | ~4.8 TB/s　　　　　　|
-| FP16 Tensor Core 算力 | 312 TFLOPS　　| 989 TFLOPS | 989 TFLOPS　　　　　 |
-| SM 数量　　　　　　　 | 108　　　　　 | 132　　　　| 132　　　　　　　　　|
-| 典型场景　　　　　　　| 通用训练/推理 | 大规模训练 | 大模型推理、长上下文 |
+| 指标　　　　　　　　　| RTX 5090 (消费级)　| A100 40GB (数据中心) | B200 (数据中心)　　　 |
+| -----------------------| ---------------| -------------------| --------------------|
+| 架构　　　　　　　　　| Blackwell (GB202)| Ampere　　　　　　 | Blackwell (GB100)　　|
+| 显存　　　　　　　　　| 32 GB GDDR7　　| 40 GB HBM2e　　　　| 192 GB HBM3e　　　　 |
+| 内存带宽　　　　　　　| ~1.79 TB/s　　 | ~1.55 TB/s　　　　 | ~8 TB/s　　　　　　　|
+| FP32 算力　　　　　　 | 104.75 TFLOPS　| 19.5 TFLOPS　　　　| ~90 TFLOPS　　　　　 |
+| FP16 Tensor Core 算力 | ~209 TFLOPS　　| 312 TFLOPS　　　　 | ~989 TFLOPS (sparse) |
+| SM 数量　　　　　　　 | 170　　　　　　| 108　　　　　　　　| 132　　　　　　　　　|
+| 典型场景　　　　　　　| 本课程开发/学习 | 通用训练/推理　　　| 大模型推理、长上下文 |
 
-**989 TFLOPS 是怎么算出来的？**
+> ⚠️ **注意**：本课程所有代码均在 **RTX 5090（170 SM, 128 FP32 cores/SM, 1536 threads/SM, 48 warps/SM, 24 blocks/SM, 32 GB GDDR7, 1792 GB/s, 104.75 TFLOPS FP32, Ridge Point ≈ 58.45 FLOP/Byte）** 上测试。上表中 A100/B200 仅供对比参考，不是本课程的硬件基准。
 
-表格中 RTX 5090 的 **989 TFLOPS** 指的是 FP16 Tensor Core 峰值算力，且是启用了 **2:4 structured sparsity** 后的理论值。如果不启用稀疏化，dense 峰值为约 **495 TFLOPS**。
-
-以 RTX 5090 为例，计算方式如下：
+**RTX 5090 的 FP32 峰值算力是怎么算出来的？**
 
 ```
-峰值算力 = SM 数量 × 每 SM Tensor Core 数量
- × 每 Tensor Core 每周期 FMA 次数
- × 2（FMA 包含一次乘法和一次加法）
- × 时钟频率
- × 2（仅 sparse 峰值，利用 2:4 稀疏化带来的翻倍）
+Peak FP32 (FLOPS) = CUDA Cores × Clock × 2
 ```
 
-代入数值（以 sparse 峰值为例）：
+其中 `×2` 是因为 FMA（乘加）算 2 个 FLOP。代入 RTX 5090 实测值（来源：deviceQuery）：
 
 | 参数 | 数值 |
 |------|------|
-| SM 数量 | 132 |
-| 每 SM Tensor Core 数量 | 4 |
-| 每 Tensor Core 每周期 FMA 次数 | 约 512 |
+| SM 数量 | 170 |
+| 每 SM FP32 CUDA Cores | 128 |
+| 总 FP32 CUDA Cores | 170 × 128 = 21,760 |
+| Boost Clock | ~2.407 GHz |
 | FMA 折算操作数 | × 2 |
-| 时钟频率 | 约 1.83 GHz |
-| Structured Sparsity 翻倍 | × 2 |
 
 ```
-132 × 4 × 512 × 2 × 1.83 × 10^9 × 2 ≈ 989 × 10^12 FLOPS = 989 TFLOPS
+21,760 × 2.407 × 2 ≈ 104,752.64 GFLOPS ≈ 104.75 TFLOPS
 ```
+
+> 与 RTX 5090 官方标称 ~104.8 TFLOPS 一致。详细推导见 [Day 3 实测数据](../day3/exercise/my_gpu_info.md)。
 
 需要注意：
 
 1. **这是理论峰值**，实际 kernel 能达到 50%–80% 已属优秀，受限于内存带宽、算子融合、warp divergence 等因素。
-2. **稀疏化不是无条件翻倍**：2:4 structured sparsity 要求权重满足特定稀疏模式，且需要硬件和算法同时支持。
-3. **FP8 峰值更高**：RTX 5090 在 FP8 精度下，sparse 峰值可达约 1979 TFLOPS，是大模型推理中常见的精度选择。
+2. **FP16 Tensor Core 峰值更高**：RTX 5090 在 FP16 精度下，Tensor Core 理论峰值约 ~209 TFLOPS（dense），是 FP32 的约 2 倍。
+3. **FP8 峰值更高**：RTX 5090 支持 FP8 精度，推理场景下可进一步提升吞吐。
 
-**RTX 5090 的核心价值不是算力翻倍，而是显存容量和带宽的大幅提升**。对于 LLM 推理，模型权重和 KV Cache 都占用大量显存，RTX 5090 的 141 GB 显存可以运行更大模型或支持更长上下文；同时更高的内存带宽能显著加速 memory-bound 的推理负载（如 Attention、采样阶段）。
+**RTX 5090 的核心价值**在于 Blackwell 架构带来的 Tensor Core 升级与 FP8 支持，适合本课程的学习与面试准备。对于大模型推理场景，需注意 RTX 5090 为消费级显卡（32 GB GDDR7），与数据中心卡（A100/H100/B200 等）在显存容量、HBM 带宽上有较大差距。
 
-**RTX 5090 的 SM 内部数据（Blackwell 架构）**：
+**RTX 5090 的 SM 内部数据（Blackwell GB202 架构）**：
 
-RTX 5090 采用 Blackwell SM 设计，具体参数如下：
+RTX 5090 采用 Blackwell GB202 芯片，具体参数如下：
 
-- 132 个 SM
-- 每个 SM：128 个 FP32 CUDA Cores、64 个 FP64 CUDA Cores、4 个 Fourth-Generation Tensor Core
+- 170 个 SM
+- 每个 SM：128 个 FP32 CUDA Cores、4 个 Fourth-Generation Tensor Core
 - 每个 SM：256 KB 寄存器文件
-- 每个 SM：最多 2048 个 thread / 64 个 warp / 32 个 block
-- 每个 SM：最大 228 KB Shared Memory / L1 Cache（可配置）
+- 每个 SM：最多 1536 个 thread / 48 个 warp / 24 个 block
+- 每个 SM：最大 100 KB Shared Memory / L1 Cache（可配置）
 
-与 RTX 5090 相比，Blackwell 每个 SM 的 FP32 CUDA Core 数量从 64 提升到 128，Tensor Core 升级到第四代，支持 FP8 精度，矩阵乘加吞吐显著提高。
+> ⚠️ **注意**：消费级 RTX 5090（GB202, sm_120）与数据中心 Blackwell（B100/B200, GB100, sm_100）参数不同。数据中心卡有 2048 threads/SM、64 warps/SM、32 blocks/SM、228 KB smem，且使用 HBM3e。**不要将数据中心 Blackwell 参数误用于 RTX 5090**。本课程所有 Occupancy 计算和 Roofline 分析均基于 RTX 5090 实测参数（见 `day3/exercise/my_gpu_info.md`）。
 
 **Tensor Core** 是专门用于矩阵乘加的硬件单元，是现代深度学习算力的核心来源。
 
@@ -378,11 +374,11 @@ GPU 把海量线程组织成 block，主要目的是：
 
 | 资源 | 每 SM 上限 |
 |------|-----------|
-| 最大 thread 数 | 2048 |
-| 最大 warp 数 | 64 |
-| 最大 block 数 | 32 |
+| 最大 thread 数 | 1536 |
+| 最大 warp 数 | 48 |
+| 最大 block 数 | 24 |
 | 寄存器文件 | 256 KB |
-| Shared Memory | 最多 164 KB（可配置）|
+| Shared Memory | 最多 100 KB（可配置）|
 
 这些限制决定了单个 block 的大小不能无限大。例如，一个 block 有 1024 个线程，每个线程用 64 个寄存器，则寄存器总量为 64 KB，仍在 SM 的 256 KB 寄存器文件内；但如果每个线程用 256 个寄存器，则一个 block 就需要 256 KB，一个 SM 同时就只能跑这一个 block。
 

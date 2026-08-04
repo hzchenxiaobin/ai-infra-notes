@@ -121,8 +121,8 @@ Decode 阶段 M=1，GEMM 退化，arithmetic intensity 极低，瓶颈在读取�
 
 ```text
 每 token KV Cache ≈ 2 × layers × heads × d_head × bytes
-例如 LLaMA2-7B：2 × 32 × 32 × 128 × 2B ≈ 1 MB/token (FP16)
-4k 序列单请求 ≈ 4 GB，batch=16 ≈ 64 GB
+例如 LLaMA2-7B：2 × 32 × 32 × 128 × 2B = 524,288 B ≈ 524 KB/token (FP16)
+4k 序列单请求 ≈ 2 GB，batch=16 ≈ 32 GB
 ```
 
 优化方向：

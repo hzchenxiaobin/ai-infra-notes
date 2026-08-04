@@ -94,8 +94,8 @@ cudaGetDeviceProperties(&prop, dev);
 | 字段 | 含义 | 用途 |
 |------|------|------|
 | `maxThreadsPerBlock` | 每个 block 最大线程数 | 通常为 1024 |
-| `maxThreadsPerMultiProcessor` | 每个 SM 最大线程数 | RTX 5090 为 2048 |
-| `maxBlocksPerMultiProcessor` | 每个 SM 最大 block 数 | RTX 5090 为 32 |
+| `maxThreadsPerMultiProcessor` | 每个 SM 最大线程数 | RTX 5090 为 1536 |
+| `maxBlocksPerMultiProcessor` | 每个 SM 最大 block 数 | RTX 5090 为 24 |
 | `maxGridSize` | Grid 最大维度 | 决定能启动多少 block |
 
 ###### 内存相关
@@ -179,41 +179,41 @@ Peak FLOP/s = SM数量 × 每个SM的FP32 CUDA Cores × GPU频率 × 2
 
 乘以 2 是因为一条 FMA（Fused Multiply-Add）指令包含乘法与加法两次浮点运算。
 
-以 RTX 5090 为例：
-- SM 数量：108
-- 每个 SM FP32 CUDA Cores：64
-- GPU 频率：1.41 GHz
+以 RTX 5090 为例（实测值，来源：deviceQuery，详见 [`day3/exercise/my_gpu_info.md`](exercise/my_gpu_info.md)）：
+- SM 数量：170
+- 每个 SM FP32 CUDA Cores：128（总计 21,760）
+- GPU 频率：2.407 GHz
 
 ```text
-Peak FP32 = 108 × 64 × 1.41 × 2 = 19.49 TFLOP/s
+Peak FP32 = 21760 × 2.407 × 2 = 104,752.64 GFLOPS ≈ 104.75 TFLOP/s
 ```
 
 ##### 理论显存带宽
 
 ```text
-Bandwidth = memoryClockRate × memoryBusWidth / 8
+Bandwidth = memoryClockRate × 2 (DDR) × memoryBusWidth / 8
 ```
 
-除以 8 是将 bits 转换为 bytes。以 RTX 5090 为例：
-- memoryClockRate：1215 MHz = 1.215 × 10⁹ Hz
-- memoryBusWidth：5120 bits
+除以 8 是将 bits 转换为 bytes。GDDR 为双倍数据速率（DDR），实际传输速率是 Memory Clock 的 2 倍。以 RTX 5090 为例：
+- memoryClockRate：14001 MHz = 14.001 × 10⁹ Hz
+- memoryBusWidth：512 bits（GDDR7）
 
 ```text
-Bandwidth = 1.215 × 10⁹ × 5120 / 8 = 777.6 GB/s
+Bandwidth = 14001 × 10⁶ × 2 × 512 / 8 / 10⁹ = 1792.13 GB/s
 ```
 
-> ⚠️ 注意：`memoryClockRate` 的单位是 kHz，计算前需要先转换成 Hz。
+> ⚠️ 注意：`memoryClockRate` 的单位是 kHz，计算前需要先转换成 Hz。GDDR 显存需额外乘以 2（DDR 倍速）。
 
 ##### 算力带宽比：判断 kernel 类型
 
 有了峰值算力和带宽，可以计算**算术强度平衡点**：
 
 ```text
-Balance Point = Peak FLOP/s / Peak Bandwidth
-RTX 5090: 19.49T / 777.6G ≈ 25 FLOP/byte
+Ridge Point = Peak FLOP/s / Peak Bandwidth
+RTX 5090: 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/byte
 ```
 
-这意味着：如果一个 kernel 每读取 1 byte 数据做的浮点运算**少于 25 次**，它就是 **memory-bound**；**多于 25 次**则是 **compute-bound**。大多数深度学习 kernel（Softmax、LayerNorm、Attention）都是 memory-bound。
+这意味着：如果一个 kernel 每读取 1 byte 数据做的浮点运算**少于 58.45 次**，它就是 **memory-bound**；**多于 58.45 次**则是 **compute-bound**。大多数深度学习 kernel（Softmax、LayerNorm、Attention）都是 memory-bound。
 
 > 💡 **面试技巧**：能说出自己 GPU 的峰值算力、带宽和平衡点，是 AI Infra 工程师的基本功。Day 6 的 Roofline 模型会深入用到这个概念。
 
@@ -299,18 +299,18 @@ occupancy = active_warps / max_warps_per_sm * 100%
 
 | 资源 | 计算 | blocks |
 |------|------|--------|
-| Threads | floor(2048 / 256) | 8 |
+| Threads | floor(1536 / 256) | 6 |
 | Registers | ceil(256×64/256)×256 = 16384 → floor(65536 / 16384) | **4** ← 瓶颈 |
 | Shared Memory | 未使用 | ∞ |
-| 硬上限 | — | 32 |
+| 硬上限 | — | 24 |
 
 ```text
-active_blocks = min(8, 4, ∞, 32) = 4
+active_blocks = min(6, 4, ∞, 24) = 4
 active_warps = 4 × 8 = 32
-occupancy = 32 / 64 = 50%
+occupancy = 32 / 48 = 66.7%
 ```
 
-> 💡 上述计算基于 SM 资源上限做简化建模，用于**理解原理和快速估算**。要得到与硬件完全一致的精确值，建议使用官方 CUDA Occupancy Calculator 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`。
+> 💡 上述计算基于 SM 资源上限做简化建模，用于**理解原理和快速估算**。要得到与硬件完全一致的精确值，建议使用官方 CUDA Occupancy Calculator 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`。注意 RTX 5090（消费级 GB202）的 SM 参数（1536 threads, 48 warps, 24 blocks, 100KB smem）与数据中心 Blackwell（B200: 2048 threads, 64 warps, 32 blocks, 228KB smem）不同，请勿混用。
 
 ---
 

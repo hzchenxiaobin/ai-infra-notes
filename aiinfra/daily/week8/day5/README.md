@@ -42,9 +42,9 @@
 
 #### 1.1 Mock 面试流程
 
-![Mock 面试流程：7 个环节约 30 分钟](../images/mock_interview_framework.svg)
+![Mock 面试流程：7 个环节约 34 分钟](../images/mock_interview_framework.svg)
 
-完整 Mock 面试分为 7 个环节，总时长约 30 分钟：
+完整 Mock 面试分为 7 个环节，总时长约 34 分钟：
 
 | 环节 | 时长 | 核心目标 |
 |------|------|---------|
@@ -161,7 +161,7 @@ python kernels/mock_interview.py
 
 ```text
 === AI Infra Mock 面试 ===
-共 7 个环节，全程约 30 分钟
+共 7 个环节，全程约 34 分钟
 
 命令：
   start  — 开始完整 Mock 面试
@@ -279,7 +279,7 @@ def longestValidParentheses(s):
 
 Day 5 我们把前四天的知识转化为面试表达能力：
 
-1. **Mock 面试流程**：7 个环节、约 30 分钟、每个环节有明确时间限制
+1. **Mock 面试流程**：7 个环节、约 34 分钟、每个环节有明确时间限制
 2. **STAR 法**：Situation → Task → Action → Result，用量化成果支撑每个技术决策
 3. **技术难点讲解**：问题 → 局限 → 方案 → 细节 → 验证 → 进一步优化，准备 3 分钟和 6 分钟两个版本
 4. **Follow-up 应对**：常见追问包括“为什么不用现成方案”“差距多少”“怎么再优化”“显存不够怎么办”

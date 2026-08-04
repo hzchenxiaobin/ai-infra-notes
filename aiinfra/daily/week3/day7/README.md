@@ -125,9 +125,9 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 ```
 1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
-2. 与 Ridge Point 比较（RTX 5090 ≈ 12.6 FLOP/Byte）
- - AI < 12.6 → memory-bound
- - AI > 12.6 → compute-bound
+2. 与 Ridge Point 比较（RTX 5090 ≈ 58.45 FLOP/Byte）
+ - AI < 58.45 → memory-bound
+ - AI > 58.45 → compute-bound
 1. 用 ncu 验证：sm__throughput vs dram__throughput
 2. 经验法则：
  - element-wise（relu/layernorm/softmax）→ 几乎总是 memory-bound

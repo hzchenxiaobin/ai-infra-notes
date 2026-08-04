@@ -169,7 +169,7 @@ cudaStreamSynchronize(stream);
 
 ### 3.3 Warp-Level Primitives
 
-从 Compute Capability 12.0 起，CUDA 提供 warp shuffle，允许同一 warp 内线程直接交换寄存器数据，无需经过 shared memory：
+从 Compute Capability 3.0（Kepler, 2012）起，CUDA 提供 warp shuffle，允许同一 warp 内线程直接交换寄存器数据，无需经过 shared memory。从 CC 7.0（Volta, 2017）起需使用 `_sync` 后缀版本：
 
 ```cuda
 // 从 lane 0 广播到整个 warp

@@ -264,6 +264,7 @@ int main() {
 // ============================================================
 #ifdef WITH_TORCH
 #include <torch/extension.h>
+#include <ATen/cuda/CUDAContext.h>
 
 at::Tensor softmax_forward(at::Tensor input) {
     int M = input.size(0), D = input.size(1);
@@ -280,8 +281,10 @@ at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta
     return output;
 }
 
+#ifndef LOAD_INLINE_BUILD
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
     m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
 }
+#endif
 #endif

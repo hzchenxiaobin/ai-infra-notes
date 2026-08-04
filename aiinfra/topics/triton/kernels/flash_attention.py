@@ -41,7 +41,7 @@ def flash_attn_kernel(
         k = tl.load(k_ptrs)
         v = tl.load(v_ptrs)
 
-        s = tl.dot(q, tl.trans(k))
+        s = tl.dot(q.to(tl.float32), tl.trans(k).to(tl.float32))
 
         m_block = tl.max(s, axis=1)
         m_new = tl.maximum(m_i, m_block)
@@ -95,13 +95,13 @@ def standard_attention(q, k, v):
 
 
 if __name__ == "__main__":
-    B, N, D = 2, 512, 64
+    B, N, D = 2, 256, 64
     q = torch.randn(B, N, D, device='cuda', dtype=torch.float16)
     k = torch.randn(B, N, D, device='cuda', dtype=torch.float16)
     v = torch.randn(B, N, D, device='cuda', dtype=torch.float16)
 
-    o_flash = flash_attention(q, k, v)
     o_std = standard_attention(q, k, v)
+    o_flash = flash_attention(q, k, v)
 
     max_diff = (o_flash - o_std).abs().max().item()
     print(f"Shape: B={B}, N={N}, D={D}")

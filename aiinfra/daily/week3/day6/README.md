@@ -99,7 +99,7 @@ ncu --metrics \
 Arithmetic Intensity (AI) = FLOPs / Bytes（每读 1 字节做多少次运算）
 Ridge Point = Peak FLOP/s / Peak Bandwidth
 
-RTX 5090 FP32: 19.5 TFLOP/s / 1.55 TB/s ≈ 12.6 FLOP/Byte
+RTX 5090 FP32: 104.75 TFLOP/s / 1.792 TB/s ≈ 58.45 FLOP/Byte
 ```
 
 - AI < 12.6 → **memory-bound**（数据喂不饱计算单元）
@@ -332,14 +332,15 @@ GEMM: M=512, N=512, K=512
  Long Scoreboard : ~40-55% ← 等 HBM（memory-bound 特征）
  → 结论：DRAM% >> SM% → memory-bound ✓
 
- gemm_kernel (M=512, N=512, K=512)
- DRAM Throughput : ~25-40% ← 低
- SM Throughput : ~60-80% ← 高
- Long Scoreboard : ~10-20%
- → 结论：SM% >> DRAM% → compute-bound ✓
+ gemm_kernel (M=512, N=512, K=512) — naive 无 tiling
+ DRAM Throughput : ~55-70% ← 高
+ SM Throughput : ~15-25% ← 低
+ Long Scoreboard : ~40-55% ← 等 HBM
+ → 结论：naive GEMM（无 tiling）AI ≈ 0.25 << 58.45 → 仍为 memory-bound ✓
+ → 对比：Week2 的 tiled GEMM（有 shared memory 复用）才为 compute-bound
 ```
 
-**判定印证**：Softmax 的 DRAM% >> SM% 且 Long Scoreboard 高 → memory-bound；GEMM 的 SM% >> DRAM% → compute-bound。这与 20.2 节的理论 AI 计算完全一致。
+**判定印证**：Softmax 和 naive GEMM 的 DRAM% >> SM% 且 Long Scoreboard 高 → 都是 memory-bound。naive GEMM 的 AI ≈ 2K/(8K) = 0.25 FLOP/Byte，远低于 ridge point（58.45），理论上确为 memory-bound。只有经过 tiling + shared memory 优化的 GEMM（如 Week2 Day6 的 v4-v6）才转变为 compute-bound。
 
 > ⚠️ **常见坑**：① ncu 看不到自定义 kernel → 用 `--kernel-name regex:softmax_kernel` 模糊匹配（C++ 会 mangle 符号名）；② `dram__throughput` 指标名报错 → 不同架构指标名有差异，用 `ncu --query-metrics` 查可用指标；③ nsys 采集到的 kernel 很少 → 加 warmup 2-3 轮再采集。
 
@@ -461,7 +462,7 @@ Day 6 我们用 nsys + ncu 对 Mini Engine 做了端到端 Profiling，建立了
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 12.6 FLOP/Byte）
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point 比较（RTX 5090 FP32 ≈ 58.45 FLOP/Byte）
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput
  - DRAM% >> SM% → memory-bound
  - SM% >> DRAM% → compute-bound

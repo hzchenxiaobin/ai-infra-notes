@@ -42,7 +42,7 @@
 从 GPU 执行模型出发，掌握"如何写一个快的 kernel"：
 
 - **Week 1**：SM/Warp/Occupancy 三层结构、Memory Hierarchy、Coalesced/Bank Conflict、nsys/ncu Profiling、Roofline Model
-- **Week 2**：GEMM 优化九层阶梯（Naive 1% → cuBLAS 70%+）——Shared Memory Tiling、Register Blocking、float4、Warp Shuffle、Double Buffering、参数精调
+- **Week 2**：GEMM 优化八层阶梯（Naive 1% → cuBLAS 70%+）——Shared Memory Tiling、Register Blocking、float4、Warp Shuffle、Double Buffering、参数精调
 
 > 核心能力：**能手写 GEMM 并用 ncu 分析瓶颈**，理解 memory-bound vs compute-bound。
 
@@ -70,7 +70,7 @@
 把前 7 周的代码和知识转化为面试竞争力：
 
 - **Day 1-2 项目打磨**：README 让新用户 10 分钟跑通、架构图 + 数据流图、Benchmark 对比表
-- **Day 3-4 面试题库**：50+ 高频题（基础 GPU/Kernel/CUDA/Profiling + 进阶 Attention/推理/vLLM/调度/场景设计）
+- **Day 3-4 面试题库**：43+ 高频题（基础 GPU/Kernel/CUDA/Profiling + 进阶 Attention/推理/vLLM/调度/场景设计）
 - **Day 5-6 面试冲刺**：Mock 面试 + 录音复盘 + 查漏补缺（六大薄弱点 + 易混淆概念 + 公式默写）
 - **Day 7 最终复盘**：能力地图 + 后续路线 + 报告（本日）
 
@@ -117,7 +117,7 @@ Profiling：
 
 工程表达：
   [✓] README + 架构图 + Benchmark 报告
-  [✓] 50+ 面试题自问自答
+  [✓] 43+ 面试题自问自答
   [✓] Mock 面试 + 录音复盘
   [✓] STAR 法项目介绍 + 技术难点深挖
   [✓] 关键公式 / 参数秒答
@@ -286,7 +286,7 @@ R (Result)：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
   ✓ CUDA Kernel：GEMM / FlashAttention / Softmax / LayerNorm
   ✓ Mini 推理引擎：KV Cache · Continuous Batching · Scheduler（500+ 请求稳定）
   ✓ Profiling 报告：nsys / ncu / 端到端 + vLLM 对比
-  ✓ 面试素材：README + 架构图 + 50+ 面试题 + Mock 记录
+  ✓ 面试素材：README + 架构图 + 43+ 面试题 + Mock 记录
   ✓ 能力地图：18 项强项 / 6 项待提升
 
 后续 6 个月规划：

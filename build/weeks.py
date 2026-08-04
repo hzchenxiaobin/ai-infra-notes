@@ -88,7 +88,7 @@ def rewrite_week1_resource_links(markdown_text: str, root_prefix: str = "") -> s
 
 def build_week_nav(
     current_week: Optional[int],
-    current_day: Optional[int] = None,
+    current_day: Optional[str] = None,
     current_page: str = "week",
     current_is_overview: bool = False,
     root_prefix: str = "",

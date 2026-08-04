@@ -60,12 +60,12 @@ Day 5 的 Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（
 #### 6.2 理论 HBM IO 计算
 
 ```
-标准 Attention HBM IO:
- 读 Q,K,V: 3·N·d
- 读/写 S: 2·N²
- 读/写 P: 2·N²
- 写 O: N·d
- 总计: 3N² + 4Nd ≈ O(N²) when N >> d
+ 标准 Attention HBM IO:
+  读 Q,K,V: 3·N·d
+  读/写 S: 2·N²
+  读/写 P: 2·N²
+  写 O: N·d
+  总计: 4N² + 4Nd ≈ O(N²) when N >> d
 
 FlashAttention HBM IO:
  读 Q,K,V: 3·N·d (每元素读一次，tile 复用)
@@ -315,7 +315,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 在 benchmark 脚本中加入每个配置的 memory bandwidth utilization 和 FLOPS 估算。
 
-> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.55 TB/s 带宽，19.5 TFLOPS FP32）。
+> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
 
 #### 实验 3：绘制 latency vs N 曲线
 

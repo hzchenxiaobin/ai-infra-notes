@@ -449,15 +449,15 @@ nvcc -o softmax_layernorm_opt kernels/softmax_layernorm_opt.cu -O3 -arch=sm_120 
 === Softmax + LayerNorm Optimization Comparison ===
 Config: M=1024, D=1024 (D must be multiple of 4 for float4)
 
-[Softmax: block-level (Day16) vs warp-level (optimized)]
+[Softmax: block-level (Day2) vs warp-level (optimized)]
  warp-level correctness: maxDiff = x.xx e-07 (PASS)
- block-level (Day16): 0.xxxx ms
+ block-level (Day2): 0.xxxx ms
  warp-level (optim) : 0.xxxx ms
  speedup : 1.xx x
 
-[LayerNorm: scalar load (Day16) vs float4 vectorized]
+[LayerNorm: scalar load (Day2) vs float4 vectorized]
  float4 correctness: maxDiff = x.xx e-06 (PASS)
- scalar (Day16) : 0.xxxx ms
+ scalar (Day2) : 0.xxxx ms
  float4 (optim) : 0.xxxx ms
  speedup : 1.xx x
 ```
@@ -488,9 +488,9 @@ ncu --metrics \
 
 | Kernel | DRAM Throughput | SM Throughput | Time | 观察 |
 |--------|-----------------|---------------|------|------|
-| `softmax_block_kernel`（Day16） | ~50-60% | ~15-20% | 基准 | memory-bound，带宽未喂饱 |
+| `softmax_block_kernel`（Day2） | ~50-60% | ~15-20% | 基准 | memory-bound，带宽未喂饱 |
 | `softmax_warp_kernel`（优化） | ~60-75% | ~15-22% | 更快 | DRAM 利用率提升（省了同步开销） |
-| `layernorm_scalar_kernel`（Day16） | ~45-55% | ~12-18% | 基准 | 逐元素加载，指令多 |
+| `layernorm_scalar_kernel`（Day2） | ~45-55% | ~12-18% | 基准 | 逐元素加载，指令多 |
 | `layernorm_float4_kernel`（优化） | ~65-80% | ~18-25% | 更快 | DRAM 利用率明显提升（向量化） |
 
 **关键观察**：float4 优化后 DRAM Throughput 应明显上升（因为同样时间内核读了更多数据），但 SM Throughput 变化不大（计算量没变）——这正是 memory-bound kernel 优化的特征：**提升的是带宽利用率，不是算力利用率**。
