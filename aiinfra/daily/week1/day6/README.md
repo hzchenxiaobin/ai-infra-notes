@@ -259,8 +259,8 @@ ncu --metrics \
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
-nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
+nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu
+nsys profile -o profiles/day1_hello_gpu_timeline ./day1/kernels/hello_gpu
 ```
 
 **观察重点**：

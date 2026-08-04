@@ -100,7 +100,7 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 计算强度 AI = 137 GFLOP / 192 MB ≈ 715 FLOP/Byte
 ```
 
-GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound**。
+GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](../../reference/hardware_specs.md)），所以 GEMM 是 **compute-bound**。
 
 ##### 直观对比表
 
@@ -111,7 +111,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 12.6，所以 GEMM 是 **compute-bound
 | LayerNorm | ~5 | 12 | ~0.42 | **Memory** |
 | GEMM (4096³) | ~137G | ~192M | ~715 | **Compute** |
 
-> 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 GPU 需要做 12+ 次运算才能不吃亏。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
+> 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 RTX 5090 需要做 58+ 次运算才能不吃亏（Ridge Point 58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
 
 ![Element-wise 操作为什么是纯 Memory-Bound](../images/element_wise_memory_bound.svg)
 
@@ -520,7 +520,7 @@ out[(bx*TILE_DIM + b) * height + (by*TILE_DIM + a)]
 
 ```bash
 # 编译
-nvcc -o transpose kernels/transpose.cu
+nvcc -o transpose day4/kernels/transpose.cu
 
 # 运行
 ./transpose

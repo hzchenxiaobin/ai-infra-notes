@@ -122,14 +122,14 @@ kernel 遍历所有历史 key 时，按逻辑 block 顺序（0, 1, 2, ...），�
 
 ```python
 class PhysicalTokenBlock:
- block_number: int
- refcount: int = 1
+    block_number: int
+    refcount: int = 1
 
- def incr_refcount(self): self.refcount += 1
- def decr_refcount(self):
- self.refcount -= 1
- if self.refcount == 0:
- allocator.free(self) # refcount 归零才回收到池子
+    def incr_refcount(self): self.refcount += 1
+    def decr_refcount(self):
+        self.refcount -= 1
+        if self.refcount == 0:
+            allocator.free(self) # refcount 归零才回收到池子
 ```
 
 `fork(parent_block_table)` 操作：复制一份 block table，所有 block 的 `refcount+1`——这是 beam search / 并行采样的起点。之后各 sequence 写新 token 时，只对"要写入的那个 block"做 CoW。
@@ -140,14 +140,17 @@ class PhysicalTokenBlock:
 
 ```python
 class BlockAllocator:
- def allocate(self) -> PhysicalTokenBlock:
- # 从 free block pool 取一个空闲物理 block
+    def allocate(self) -> PhysicalTokenBlock:
+        # 从 free block pool 取一个空闲物理 block
+        ...
 
- def free(self, block):
- # refcount 归零时，block 回收到 free pool
+    def free(self, block):
+        # refcount 归零时，block 回收到 free pool
+        ...
 
- def fork(self, parent_block_table) -> List[PhysicalTokenBlock]:
- # 复制 block table，所有 block refcount+1（CoW 的基础）
+    def fork(self, parent_block_table) -> List[PhysicalTokenBlock]:
+        # 复制 block table，所有 block refcount+1（CoW 的基础）
+        ...
 ```
 
 BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，free 归零后归还。因为 block 大小固定，归还的 block 立刻能被任意序列复用——**无外部碎片**。

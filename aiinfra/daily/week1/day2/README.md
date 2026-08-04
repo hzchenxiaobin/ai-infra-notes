@@ -147,7 +147,7 @@ warp 3: 也等内存中...
 **如何检测 spilling**：
 
 ```bash
-nvcc -Xptxas -v kernels/your_kernel.cu
+nvcc -Xptxas -v day2/kernels/your_kernel.cu
 ```
 
 输出中的 `lmem` 就是 local memory 使用量。如果 `lmem > 0`，说明发生了 spilling。
@@ -471,7 +471,7 @@ for (int i = 0; i < n; ++i) {
 
 ```bash
 # 编译
-nvcc -o occupancy_test kernels/occupancy_test.cu
+nvcc -o occupancy_test day2/kernels/occupancy_test.cu
 
 # 运行
 ./occupancy_test
@@ -596,7 +596,7 @@ __launch_bounds__(256, 4) __global__ void version_c(const float* in, float* out,
 用以下命令编译版本 B：
 
 ```bash
-nvcc -Xptxas -v -o occupancy_test_b kernels/occupancy_test_b.cu
+nvcc -Xptxas -v -o occupancy_test_b day2/kernels/occupancy_test_b.cu
 ```
 
 观察输出中是否有 `lmem`（local memory）非零。

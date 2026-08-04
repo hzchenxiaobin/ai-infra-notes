@@ -44,7 +44,7 @@
   <text x="50" y="210" font-size="10" fill="#444">FLOPs = 2×1024×512×1536 ≈ 1.6G</text>
   <text x="50" y="232" font-size="10" fill="#444">Bytes ≈ 1.3M (读 x + W, 写 QKV)</text>
   <text x="50" y="258" font-size="11" fill="#4a8edb" font-weight="bold">AI ≈ 384 FLOP/Byte</text>
-  <text x="50" y="278" font-size="10" fill="#4a8edb" font-weight="bold">>> Ridge 12.6 → Compute-bound ✓</text>
+  <text x="50" y="278" font-size="10" fill="#4a8edb" font-weight="bold">> Ridge 58.45 → Compute-bound ✓</text>
 
   <!-- ====== Decode Box ====== -->
   <g filter="url(#sk5)">
@@ -78,7 +78,7 @@
   <text x="470" y="210" font-size="10" fill="#444">FLOPs = 2×1×512×1536 ≈ 1.6M (↓1024×)</text>
   <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 0.8M (W 不变, 仍读完整权重)</text>
   <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 2 FLOP/Byte</text>
-  <text x="470" y="278" font-size="10" fill="#e57373" font-weight="bold">&lt;&lt; Ridge 12.6 → Memory-bound ✗</text>
+  <text x="470" y="278" font-size="10" fill="#e57373" font-weight="bold">&lt;&lt; Ridge 58.45 → Memory-bound ✗</text>
 
   <!-- ====== Transition arrow between boxes ====== -->
   <text x="435" y="170" text-anchor="middle" font-size="9" fill="#888">M: 1024→1</text>
@@ -87,7 +87,7 @@
   <!-- ====== Ridge Point comparison ====== -->
   <g filter="url(#sk5)">
     <rect x="30" y="345" width="800" height="250" rx="12" fill="#fff3e0" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="6 4"/>
-    <text x="430" y="369" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Ridge Point 对比 (RTX 5090: ~12.6 FLOP/Byte)</text>
+    <text x="430" y="369" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Ridge Point 对比 (RTX 5090: ~58.45 FLOP/Byte)</text>
     <text x="430" y="388" text-anchor="middle" font-size="10" fill="#888">Arithmetic Intensity (FLOP/Byte, 对数轴)</text>
   </g>
 
@@ -109,7 +109,7 @@
   </g>
   <text x="90" y="464" text-anchor="middle" font-size="9" fill="#666">0.4</text>
   <text x="242" y="464" text-anchor="middle" font-size="9" fill="#666">2</text>
-  <text x="417" y="464" text-anchor="middle" font-size="9" fill="#666">12.6</text>
+  <text x="417" y="464" text-anchor="middle" font-size="9" fill="#666">58.45</text>
   <text x="740" y="464" text-anchor="middle" font-size="9" fill="#666">384</text>
 
   <!-- Ridge point vertical line -->

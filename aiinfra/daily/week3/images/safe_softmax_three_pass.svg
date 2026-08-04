@@ -92,7 +92,7 @@
     <rect x="80" y="540" width="760" height="78" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
     <text x="100" y="562" font-size="12" font-weight="bold" fill="#2b2b2b">HBM 读写量与 Arithmetic Intensity</text>
     <text x="100" y="582" font-size="11" fill="#444">• 每元素读 1 次 + 写 1 次 = 8 bytes；约 3 次浮点运算（exp/add/div）</text>
-    <text x="100" y="600" font-size="11" fill="#b03a3a">• AI = 3 / 8 ≈ 0.375 FLOP/Byte &lt;&lt; Ridge Point 12.6 → 纯 memory-bound</text>
+    <text x="100" y="600" font-size="11" fill="#b03a3a">• AI = 3 / 8 ≈ 0.375 FLOP/Byte &lt;&lt; Ridge Point 58.45 → 纯 memory-bound</text>
     <text x="100" y="616" font-size="11" fill="#2e7d4f">• 优化方向：kernel fusion（消除中间写回）/ 向量化 float4 / online 两遍扫描</text>
   </g>
 </svg>

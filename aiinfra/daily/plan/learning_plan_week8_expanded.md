@@ -942,11 +942,11 @@ o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
 #### 关键参数
 
 ```
-RTX 5090:
- - FP32 Peak: 19.5 TFLOPS
- - Tensor Core FP16: 312 TFLOPS
- - Memory Bandwidth: 1.55-2.0 TB/s
- - Ridge Point: ~12.6 FLOP/Byte
+RTX 5090 (实测, 见 reference/hardware_specs.md):
+ - FP32 Peak: 104.75 TFLOPS
+ - Tensor Core FP16: ~209 TFLOPS [需核实]
+ - Memory Bandwidth: 1.792 TB/s (GDDR7)
+ - Ridge Point: ~58.45 FLOP/Byte
  - Shared Memory per SM: 164 KB
  - Max threads per SM: 2048
  - Warp size: 32
@@ -984,10 +984,11 @@ RTX 5090:
 **面试题1**：RTX 5090 的 Ridge Point 是多少？如何计算？**
 
 **参考答案要点**：
-- RTX 5090 FP32 Peak ≈ 19.5 TFLOPS
-- Memory Bandwidth ≈ 1.55 TB/s
-- Ridge Point = 19.5 / 1.55 ≈ 12.6 FLOP/Byte
-- 含义：当 AI < 12.6 时是 memory-bound，AI > 12.6 时是 compute-bound
+- RTX 5090 FP32 Peak ≈ 104.75 TFLOPS（实测）
+- Memory Bandwidth ≈ 1.792 TB/s（GDDR7，实测）
+- Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
+- 含义：当 AI < 58.45 时是 memory-bound，AI > 58.45 时是 compute-bound
+- ⚠️ 注意：19.5 TFLOPS / 1.55 TB/s / 12.6 是 **A100** 的参数，常被误用于 5090（见 reference/hardware_specs.md 历史错误对照）
 
 **面试题2**：LLaMA-7B 的 KV Cache 每 token 占用多少内存？**
 

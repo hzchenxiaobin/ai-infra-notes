@@ -107,8 +107,8 @@ class FullScheduler:
                  enable_preemption: bool = True,
                  preempt_strategy: str = "recompute",    # "recompute" or "swap"
                  reserved_blocks: int = 8,
-                 aging_threshold: float = 5.0,
-                 total_memory_blocks: int = 64):
+                 aging_threshold: float = 4.0,
+                 total_memory_blocks: int = 32):
         self.token_budget = token_budget
         self.max_num_seqs = max_num_seqs
         self.max_waiting_time = max_waiting_time

@@ -122,19 +122,19 @@ mini_ai_infra/
 
 ```python
 class InferenceEngine:
- """Mini AI Infra 推理引擎"""
+    """Mini AI Infra 推理引擎"""
 
- def __init__(self, model_config, scheduler_config, device="cuda"):
- ...
+    def __init__(self, model_config, scheduler_config, device="cuda"):
+        ...
 
- def submit(self, prompt: str, max_new_tokens: int = 20,
- priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
- """提交请求，返回 Future"""
- ...
+    def submit(self, prompt: str, max_new_tokens: int = 20,
+               priority: int = 0, timeout: Optional[float] = None) -> Future[str]:
+        """提交请求，返回 Future"""
+        ...
 
- def shutdown(self):
- """关闭引擎"""
- ...
+    def shutdown(self):
+        """关闭引擎"""
+        ...
 ```
 
 ---

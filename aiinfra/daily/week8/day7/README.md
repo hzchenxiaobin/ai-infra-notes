@@ -42,7 +42,7 @@
 从 GPU 执行模型出发，掌握"如何写一个快的 kernel"：
 
 - **Week 1**：SM/Warp/Occupancy 三层结构、Memory Hierarchy、Coalesced/Bank Conflict、nsys/ncu Profiling、Roofline Model
-- **Week 2**：GEMM 优化八层阶梯（Naive 1% → cuBLAS 70%+）——Shared Memory Tiling、Register Blocking、float4、Warp Shuffle、Double Buffering、参数精调
+- **Week 2**：GEMM 优化八层阶梯（Naive 1% → cuBLAS ~64% 实测）——Shared Memory Tiling、Register Blocking、float4、Warp Shuffle、Double Buffering、参数精调
 
 > 核心能力：**能手写 GEMM 并用 ncu 分析瓶颈**，理解 memory-bound vs compute-bound。
 
@@ -70,7 +70,7 @@
 把前 7 周的代码和知识转化为面试竞争力：
 
 - **Day 1-2 项目打磨**：README 让新用户 10 分钟跑通、架构图 + 数据流图、Benchmark 对比表
-- **Day 3-4 面试题库**：43+ 高频题（基础 GPU/Kernel/CUDA/Profiling + 进阶 Attention/推理/vLLM/调度/场景设计）
+- **Day 3-4 面试题库**：基础篇 12 道（GPU/Kernel/CUDA/Profiling）+ 进阶篇 12 道（Attention/推理/vLLM/调度/场景）= 24 道自测题；Day 7 另有 30 道速查高频题（从全课程精选，含项目/成长类）
 - **Day 5-6 面试冲刺**：Mock 面试 + 录音复盘 + 查漏补缺（六大薄弱点 + 易混淆概念 + 公式默写）
 - **Day 7 最终复盘**：能力地图 + 后续路线 + 报告（本日）
 
@@ -117,7 +117,7 @@ Profiling：
 
 工程表达：
   [✓] README + 架构图 + Benchmark 报告
-  [✓] 43+ 面试题自问自答
+  [✓] 24 道自测题（基础 12 + 进阶 12）+ 30 道速查高频题
   [✓] Mock 面试 + 录音复盘
   [✓] STAR 法项目介绍 + 技术难点深挖
   [✓] 关键公式 / 参数秒答
@@ -129,7 +129,7 @@ Profiling：
 ```text
 强项（面试底气）：
   - 手写 FlashAttention + online softmax 推导
-  - GEMM 优化到 cuBLAS 70%+ 的完整路径
+  - GEMM 优化到 cuBLAS ~64% 的完整路径（理论目标 70%+）
   - Continuous Batching + Scheduler 实现
   - ncu profiling + Roofline 瓶颈分析
   - 完整 Mini 推理引擎（500+ 请求稳定）
@@ -253,7 +253,7 @@ python kernels/week8_summary.py
 S (Situation)：LLM 推理部署对延迟和吞吐要求高，我想理解底层优化
 T (Task)：手写高性能 kernel 并搭建可运行的 Mini 推理引擎
 A (Action)：
-  - GEMM 优化到 cuBLAS 70%（Tiling + RegBlock + float4 + Shuffle）
+  - GEMM 优化到 cuBLAS ~64%（Tiling + RegBlock + float4 + Shuffle）
   - 手写 FlashAttention（online softmax + tiling）
   - Continuous Batching + Scheduler（双预算 + 抢占）
 R (Result)：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
@@ -337,7 +337,7 @@ Day 7 我们完成了 8 周学习的最终复盘：
 
  - **最大收获**：
    - 建立了从 kernel 到系统的完整 AI Infra 知识体系
-   - 能手写并优化核心 CUDA kernel（GEMM 达 cuBLAS 70%、FlashAttention）
+    - 能手写并优化核心 CUDA kernel（GEMM 达 cuBLAS ~64%、FlashAttention）
    - 能理解并设计推理系统的关键组件（Continuous Batching、Scheduler、KV Cache）
    - 建立了 profiling 驱动优化的方法论（nsys/ncu + Roofline）
  - **最大挑战**：
@@ -375,7 +375,7 @@ Day 7 我们完成了 8 周学习的最终复盘：
 
  - **S**ituation：LLM 推理部署对延迟和吞吐要求高，我想理解 vLLM 调度与 Attention 优化的底层
  - **T**ask：手写高性能 kernel 并搭建可运行的 Mini 推理引擎
- - **A**ction：GEMM 优化到 cuBLAS 70%（Tiling+RegBlock+float4+Shuffle）；手写 FlashAttention（online softmax + tiling）；Continuous Batching + Scheduler（双预算 + 抢占）
+  - **A**ction：GEMM 优化到 cuBLAS ~64%（Tiling+RegBlock+float4+Shuffle）；手写 FlashAttention（online softmax + tiling）；Continuous Batching + Scheduler（双预算 + 抢占）
  - **R**esult：单卡吞吐 X tokens/s · TTFT Y ms · 500+ 请求稳定
  - **最大难点**：Continuous Batching 的正确性——每轮重新构建 batch，需精确管理每个请求的状态和 KV Cache。解决：清晰的状态机（WAITING→RUNNING→FINISHED）、六步分层验证、长时间稳定性测试
 

@@ -352,11 +352,11 @@ python mini_engine.py
 **预期输出**（集成模式）：
 
 ```text
-Max diff (PyTorch vs Custom): x.xx e-06
+Max diff (PyTorch vs Custom): 1.07e-06
 
 === Latency Comparison (Prefill, N=1024) ===
-PyTorch (F.softmax + F.layer_norm): x.xxx ms / forward
-Custom (my_ops.softmax + my_ops.layernorm): x.xxx ms / forward
+PyTorch (F.softmax + F.layer_norm): 0.063 ms / forward
+Custom (my_ops.softmax + my_ops.layernorm): 0.078 ms / forward
 Speedup: 0.8x ~ 1.2x
 ```
 

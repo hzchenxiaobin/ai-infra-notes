@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <cassert>
 #include <vector>
 
 #define BLOCK_SIZE 256
@@ -45,6 +46,7 @@ __inline__ __device__ float block_reduce_sum(float v, float* sh) {
 }
 
 // ---------- PagedAttention kernel（decode：1 query 对 N 历史 key）----------
+// 约束：d ≤ 256（shared memory 中 q_shm 固定为 256），host 侧需 assert 检查
 // kv_cache_pool: 物理 block 池，布局 [num_blocks, KV_BLOCK_SIZE, d]
 //                block i 的数据在 kv_cache_pool[i * KV_BLOCK_SIZE * d ...]
 // block_table:   [max_num_blocks_per_seq]，block_table[l] = 第 l 个逻辑 block 的物理 block 号
@@ -213,6 +215,7 @@ int main() {
     cudaMalloc(&d_out, d * sizeof(float));
 
     // ---- 运行 PagedAttention kernel ----
+    assert(d <= 256 && "d must be <= 256 for this simplified kernel");
     paged_attention_kernel<<<1, BLOCK_SIZE>>>(d_k_pool, d_v_pool, d_block_table, d_q, d_out, seq_len, d,
                                               num_logical_blocks);
     cudaDeviceSynchronize();

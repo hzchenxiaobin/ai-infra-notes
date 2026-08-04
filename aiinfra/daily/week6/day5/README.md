@@ -51,12 +51,12 @@ v1 由四个核心组件构成，对应 vLLM 的 Engine + Scheduler + Worker：
 
 ```python
 class MiniEngineV1:
- def __init__(self, model, tokenizer, max_token_budget, max_num_seqs, device):
- self.model = model # ① 模型（MiniLLM，带 KV Cache）
- self.scheduler = MiniScheduler(...) # ② 调度器（token budget + 优先级）
- self.waiting_queue = deque() # ③ 请求队列（线程安全）
- self.running_requests = {} # 运行中请求（按 id 索引）
- self.worker_thread = Thread(...) # ④ 后台 worker（daemon，持续 _worker_loop）
+    def __init__(self, model, tokenizer, max_token_budget, max_num_seqs, device):
+        self.model = model                # ① 模型（MiniLLM，带 KV Cache）
+        self.scheduler = MiniScheduler(...)  # ② 调度器（token budget + 优先级）
+        self.waiting_queue = deque()      # ③ 请求队列（线程安全）
+        self.running_requests = {}        # 运行中请求（按 id 索引）
+        self.worker_thread = Thread(...)  # ④ 后台 worker（daemon，持续 _worker_loop）
 ```
 
 ##### 四组件职责
@@ -95,24 +95,24 @@ class MiniEngineV1:
 
 ```python
 class MiniScheduler:
- def schedule(self, waiting, running):
- batch = []
- token_budget = self.max_token_budget
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
 
- # 1. 保留 running 的 decode（按优先级降序，高优先级先保）
- running_sorted = sorted(running.values(), key=lambda r: -r.priority)
- for req in running_sorted:
- if req.is_prefill_done and token_budget >= 1:
- batch.append(req)
- token_budget -= 1
+        # 1. 保留 running 的 decode（按优先级降序，高优先级先保）
+        running_sorted = sorted(running.values(), key=lambda r: -r.priority)
+        for req in running_sorted:
+            if req.is_prefill_done and token_budget >= 1:
+                batch.append(req)
+                token_budget -= 1
 
- # 2. 从 waiting 加入新请求做 prefill（按优先级降序）
- waiting_sorted = sorted(waiting, key=lambda r: -r.priority)
- for req in waiting_sorted:
- if token_budget >= len(req.input_ids):
- batch.append(req)
- token_budget -= len(req.input_ids)
- return batch, still_waiting
+        # 2. 从 waiting 加入新请求做 prefill（按优先级降序）
+        waiting_sorted = sorted(waiting, key=lambda r: -r.priority)
+        for req in waiting_sorted:
+            if token_budget >= len(req.input_ids):
+                batch.append(req)
+                token_budget -= len(req.input_ids)
+        return batch, still_waiting
 ```
 
 ##### 调度决策与 Day 2-3 的对应
@@ -130,30 +130,31 @@ class MiniScheduler:
 
 ```python
 def _worker_loop(self):
- while not self.stop_event.is_set():
- with self.lock:
- # 1. 移除已完成的 running 请求，异步返回结果
- for rid in finished_ids:
- req = self.running_requests.pop(rid)
- req.future.set_result(decode(req.generated_ids))
+    while not self.stop_event.is_set():
+        with self.lock:
+            # 1. 移除已完成的 running 请求，异步返回结果
+            for rid in finished_ids:
+                req = self.running_requests.pop(rid)
+                req.future.set_result(decode(req.generated_ids))
 
- # 2. 调度：保留 running + 从 waiting 补入
- batch, self.waiting_queue = self.scheduler.schedule(...)
+            # 2. 调度：保留 running + 从 waiting 补入
+            batch, self.waiting_queue = self.scheduler.schedule(...)
 
- # 3. 执行 forward（锁外，避免阻塞 submit）
- if batch:
- self._run_iteration(batch) # prefill 或 decode 一步
- else:
- time.sleep(0.001)
+        # 3. 执行 forward（锁外，避免阻塞 submit）
+        if batch:
+            self._run_iteration(batch)   # prefill 或 decode 一步
+        else:
+            time.sleep(0.001)
 ```
 
 ##### 关键设计：锁的粒度
 
 ```python
-with self.lock: # 锁内：操作共享队列（快速）
- # 调度 + 状态更新
+with self.lock:                  # 锁内：操作共享队列（快速）
+    # 调度 + 状态更新
+    ...
 if batch:
- self._run_iteration(batch) # 锁外：model forward（慢，不阻塞 submit）
+    self._run_iteration(batch)   # 锁外：model forward（慢，不阻塞 submit）
 ```
 
 - **锁内**只做队列操作（调度、移除完成、登记新 running）——快速，毫秒级
@@ -197,43 +198,46 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class MiniLLM(nn.Module):
- """最小 LLM：embedding + n_layers 层 transformer + lm_head，支持 KV Cache"""
- # ...（自包含，内嵌 MiniTransformerLayer，见完整文件）
+    """最小 LLM：embedding + n_layers 层 transformer + lm_head，支持 KV Cache"""
+    # ...（自包含，内嵌 MiniTransformerLayer，见完整文件）
 
 class RequestStatus:
- WAITING = "waiting"
- RUNNING = "running"
- FINISHED = "finished"
+    WAITING = "waiting"
+    RUNNING = "running"
+    FINISHED = "finished"
 
 class Request:
- """一个推理请求，带优先级、Future 异步返回、独立 KV Cache。"""
- def __init__(self, request_id, input_ids, max_new_tokens=8, priority=0):
- self.request_id = request_id
- self.input_ids = input_ids
- self.max_new_tokens = max_new_tokens
- self.priority = priority
- self.generated_ids = []
- self.kv_cache = None
- self.status = RequestStatus.WAITING
- self.future = Future()
+    """一个推理请求，带优先级、Future 异步返回、独立 KV Cache。"""
+    def __init__(self, request_id, input_ids, max_new_tokens=8, priority=0):
+        self.request_id = request_id
+        self.input_ids = input_ids
+        self.max_new_tokens = max_new_tokens
+        self.priority = priority
+        self.generated_ids = []
+        self.kv_cache = None
+        self.status = RequestStatus.WAITING
+        self.future = Future()
 
 class MiniScheduler:
- """基础 Scheduler：token budget + max num_seqs + 优先级。"""
- def schedule(self, waiting, running):
- batch = []
- token_budget = self.max_token_budget
- # 1. 保留 running decode（按优先级降序）
- # 2. 从 waiting prefill（按优先级降序，token budget 约束）
- return batch, still_waiting
+    """基础 Scheduler：token budget + max num_seqs + 优先级。"""
+    def schedule(self, waiting, running):
+        batch = []
+        token_budget = self.max_token_budget
+        # 1. 保留 running decode（按优先级降序）
+        # 2. 从 waiting prefill（按优先级降序，token budget 约束）
+        return batch, still_waiting
 
 class MiniEngineV1:
- """Mini 推理引擎 v1：多请求并发 + Continuous Batching + 优先级调度。"""
- def submit(self, prompt, max_new_tokens=8, priority=0) -> Future:
- # 入队，返回 Future
- def _run_iteration(self, batch):
- # 每个请求 prefill 1 步或 decode 1 步
- def _worker_loop(self):
- # 后台循环：移除完成 → 调度 → forward
+    """Mini 推理引擎 v1：多请求并发 + Continuous Batching + 优先级调度。"""
+    def submit(self, prompt, max_new_tokens=8, priority=0) -> Future:
+        # 入队，返回 Future
+        ...
+    def _run_iteration(self, batch):
+        # 每个请求 prefill 1 步或 decode 1 步
+        ...
+    def _worker_loop(self):
+        # 后台循环：移除完成 → 调度 → forward
+        ...
 ```
 
 完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day5/kernels/mini_engine_v1.py)。

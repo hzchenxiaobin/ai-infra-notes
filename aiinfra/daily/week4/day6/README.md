@@ -136,101 +136,101 @@ import math
 import json
 
 try:
- from flash_attn import flash_attn_func
- HAS_OFFICIAL = True
+    from flash_attn import flash_attn_func
+    HAS_OFFICIAL = True
 except ImportError:
- HAS_OFFICIAL = False
- print("Warning: official flash_attn not installed, skipping official benchmark")
+    HAS_OFFICIAL = False
+    print("Warning: official flash_attn not installed, skipping official benchmark")
 
-def standard_attention(Q, K, V):
- d = Q.size(-1)
- S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
- P = F.softmax(S, dim=-1)
- O = torch.matmul(P, V)
- return O
+    def standard_attention(Q, K, V):
+        d = Q.size(-1)
+        S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
+        P = F.softmax(S, dim=-1)
+        O = torch.matmul(P, V)
+        return O
 
-def benchmark(func, Q, K, V, n_iter=10):
- for _ in range(3):
- _ = func(Q, K, V)
- torch.cuda.synchronize()
+        def benchmark(func, Q, K, V, n_iter=10):
+            for _ in range(3):
+                _ = func(Q, K, V)
+                torch.cuda.synchronize()
 
- start = torch.cuda.Event(enable_timing=True)
- end = torch.cuda.Event(enable_timing=True)
- start.record()
- for _ in range(n_iter):
- out = func(Q, K, V)
- end.record()
- torch.cuda.synchronize()
- ms = start.elapsed_time(end) / n_iter
- return ms
+                start = torch.cuda.Event(enable_timing=True)
+                end = torch.cuda.Event(enable_timing=True)
+                start.record()
+                for _ in range(n_iter):
+                    out = func(Q, K, V)
+                    end.record()
+                    torch.cuda.synchronize()
+                    ms = start.elapsed_time(end) / n_iter
+                    return ms
 
-def theoretical_io(N, d, dtype_size=4):
- std_io = (3 * N * N + 4 * N * d) * dtype_size / (1024 * 1024)
- fa_io = (4 * N * d) * dtype_size / (1024 * 1024)
- return std_io, fa_io
+                    def theoretical_io(N, d, dtype_size=4):
+                        std_io = (3 * N * N + 4 * N * d) * dtype_size / (1024 * 1024)
+                        fa_io = (4 * N * d) * dtype_size / (1024 * 1024)
+                        return std_io, fa_io
 
-def main():
- torch.manual_seed(42)
- device = "cuda"
- dtype = torch.float32
+                        def main():
+                            torch.manual_seed(42)
+                            device = "cuda"
+                            dtype = torch.float32
 
- configs = [
- {"B": 1, "H": 8, "N": 512, "d": 64},
- {"B": 1, "H": 8, "N": 1024, "d": 64},
- {"B": 1, "H": 8, "N": 2048, "d": 64},
- {"B": 1, "H": 8, "N": 4096, "d": 64},
- {"B": 1, "H": 8, "N": 8192, "d": 64},
- {"B": 4, "H": 8, "N": 2048, "d": 64},
- {"B": 1, "H": 16, "N": 2048, "d": 128},
- ]
+                            configs = [
+                            {"B": 1, "H": 8, "N": 512, "d": 64},
+                            {"B": 1, "H": 8, "N": 1024, "d": 64},
+                            {"B": 1, "H": 8, "N": 2048, "d": 64},
+                            {"B": 1, "H": 8, "N": 4096, "d": 64},
+                            {"B": 1, "H": 8, "N": 8192, "d": 64},
+                            {"B": 4, "H": 8, "N": 2048, "d": 64},
+                            {"B": 1, "H": 16, "N": 2048, "d": 128},
+                            ]
 
- results = []
+                            results = []
 
- print("=== FlashAttention Performance Benchmark ===")
- print(f"{'B':>3} {'H':>3} {'N':>5} {'d':>4} | {'Std(ms)':>10} {'Hand(ms)':>10} {'Off(ms)':>10} | {'Hand-Spd':>10} {'Off-Spd':>10} | {'StdIO(MB)':>10} {'FAIO(MB)':>10}")
- print("-" * 110)
+                            print("=== FlashAttention Performance Benchmark ===")
+                            print(f"{'B':>3} {'H':>3} {'N':>5} {'d':>4} | {'Std(ms)':>10} {'Hand(ms)':>10} {'Off(ms)':>10} | {'Hand-Spd':>10} {'Off-Spd':>10} | {'StdIO(MB)':>10} {'FAIO(MB)':>10}")
+                            print("-" * 110)
 
- for cfg in configs:
- B, H, N, d = cfg["B"], cfg["H"], cfg["N"], cfg["d"]
+                            for cfg in configs:
+                                B, H, N, d = cfg["B"], cfg["H"], cfg["N"], cfg["d"]
 
- Q = torch.randn(B, H, N, d, device=device, dtype=dtype)
- K = torch.randn(B, H, N, d, device=device, dtype=dtype)
- V = torch.randn(B, H, N, d, device=device, dtype=dtype)
+                                Q = torch.randn(B, H, N, d, device=device, dtype=dtype)
+                                K = torch.randn(B, H, N, d, device=device, dtype=dtype)
+                                V = torch.randn(B, H, N, d, device=device, dtype=dtype)
 
- ms_std = benchmark(standard_attention, Q, K, V)
+                                ms_std = benchmark(standard_attention, Q, K, V)
 
- try:
- from mini_engine_fa import fa_ops
- ms_hand = benchmark(fa_ops.flash_attention_forward, Q, K, V)
- hand_speedup = ms_std / ms_hand
- except Exception:
- ms_hand = float('nan')
- hand_speedup = float('nan')
+                                try:
+                                    from mini_engine_fa import fa_ops
+                                    ms_hand = benchmark(fa_ops.flash_attention_forward, Q, K, V)
+                                    hand_speedup = ms_std / ms_hand
+                                except Exception:
+                                    ms_hand = float('nan')
+                                    hand_speedup = float('nan')
 
- if HAS_OFFICIAL:
- ms_off = benchmark(flash_attn_func, Q, K, V)
- off_speedup = ms_std / ms_off
- else:
- ms_off = float('nan')
- off_speedup = float('nan')
+                                    if HAS_OFFICIAL:
+                                        ms_off = benchmark(flash_attn_func, Q, K, V)
+                                        off_speedup = ms_std / ms_off
+                                    else:
+                                        ms_off = float('nan')
+                                        off_speedup = float('nan')
 
- std_io, fa_io = theoretical_io(N, d)
+                                        std_io, fa_io = theoretical_io(N, d)
 
- print(f"{B:>3} {H:>3} {N:>5} {d:>4} | {ms_std:>10.3f} {ms_hand:>10.3f} {ms_off:>10.3f} | {hand_speedup:>10.2f}x {off_speedup:>10.2f}x | {std_io:>10.2f} {fa_io:>10.2f}")
+                                        print(f"{B:>3} {H:>3} {N:>5} {d:>4} | {ms_std:>10.3f} {ms_hand:>10.3f} {ms_off:>10.3f} | {hand_speedup:>10.2f}x {off_speedup:>10.2f}x | {std_io:>10.2f} {fa_io:>10.2f}")
 
- results.append({
- "B": B, "H": H, "N": N, "d": d,
- "std_ms": ms_std, "hand_ms": ms_hand, "off_ms": ms_off,
- "hand_speedup": hand_speedup, "off_speedup": off_speedup,
- "std_io_mb": std_io, "fa_io_mb": fa_io,
- })
+                                        results.append({
+                                        "B": B, "H": H, "N": N, "d": d,
+                                        "std_ms": ms_std, "hand_ms": ms_hand, "off_ms": ms_off,
+                                        "hand_speedup": hand_speedup, "off_speedup": off_speedup,
+                                        "std_io_mb": std_io, "fa_io_mb": fa_io,
+                                        })
 
- with open("benchmark_results.json", "w") as f:
- json.dump(results, f, indent=2)
- print("\nResults saved to benchmark_results.json")
+                                        with open("benchmark_results.json", "w") as f:
+                                            json.dump(results, f, indent=2)
+                                            print("\nResults saved to benchmark_results.json")
 
-if __name__ == "__main__":
- main()
+                                            if __name__ == "__main__":
+                                                main()
 ```
 
 #### 任务 2：运行 Benchmark
@@ -243,14 +243,16 @@ python kernels/benchmark_flash_attention.py
 
 ```text
 === FlashAttention Performance Benchmark ===
- B H N d | Std(ms) Hand(ms) Off(ms) | Hand-Spd Off-Spd | StdIO(MB) FAIO(MB)
+  B   H     N    d |    Std(ms)   Hand(ms)    Off(ms) |   Hand-Spd    Off-Spd |  StdIO(MB)   FAIO(MB)
 --------------------------------------------------------------------------------------------------------------
- 1 8 512 64 | 0.xxx 0.xxx 0.xxx | 0.8x 1.2x | 3.06 0.50
- 1 8 1024 64 | x.xxx x.xxx x.xxx | 1.5x 2.1x | 12.25 1.00
- 1 8 2048 64 | x.xxx x.xxx x.xxx | 2.0x 3.5x | 48.75 2.00
- 1 8 4096 64 | x.xxx x.xxx x.xxx | 2.5x 5.0x | 195.00 4.00
- 1 8 8192 64 | xx.xxx xx.xxx xx.xxx | 3.0x 6.0x | 780.00 8.00
+  1   8   512   64 |      0.053        nan        nan |        nanx        nanx |       3.50       0.50
+  1   8  1024   64 |      0.099        nan        nan |        nanx        nanx |      13.00       1.00
+  1   8  2048   64 |      0.605        nan        nan |        nanx        nanx |      50.00       2.00
+  1   8  4096   64 |      2.458        nan        nan |        nanx        nanx |     196.00       4.00
+  1   8  8192   64 |      9.611        nan        nan |        nanx        nanx |     776.00       8.00
 ```
+
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8）。`Hand`（手写 FA v2）与 `Off`（官方 flash_attn 包）列为 `nan`——前者需 `load_inline` 动态编译 Day 2 的 .cu（C++ Extension 环境敏感），后者需 `pip install flash-attn`。**Std（标准 Attention）列为真实数据**，IO 列为理论值。Hand/Off 列待 C++ Extension 环境就绪后补测。
 
 #### 任务 3：用 ncu 验证 HBM IO 复杂度
 

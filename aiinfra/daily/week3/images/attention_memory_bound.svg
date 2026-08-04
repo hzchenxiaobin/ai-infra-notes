@@ -18,10 +18,10 @@
   <!--
     X-axis (log): AI from 0.1 to 1000, x = 100 + (log10(AI)+1)*110
       0.1→100  1→210  10→320  100→430  1000→540
-      softmax AI=0.375 → x=163   ridge AI=12.6 → x=331   GEMM AI=85 → x=419
+      softmax AI=0.375 → x=163   ridge AI=58.45 → x=404   GEMM AI=85 → x=422
     Y-axis (log): perf from 0.01 to 100 TFLOP/s, y = 420 - (log10(p)+2)*80
       0.01→420  0.1→340  1→260  10→180  100→100
-      bw=19.5/12.6=1.55TB/s  softmax perf=0.375*1.55=0.58→y=279  peak=19.5→y=157  bw@0.1→y=325
+      bw=104.75/58.45=1.792TB/s  softmax perf=0.375*1.792=0.672→y=274  peak=104.75→y=98  bw@0.1→y=320
   -->
   <text x="270" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Roofline 图（RTX 5090 FP32，对数坐标）</text>
 
@@ -75,33 +75,33 @@
     <line x1="540" y1="420" x2="540" y2="424"/>
   </g>
 
-  <!-- Ridge point vertical line (AI=12.6 → x=331) -->
-  <line x1="331" y1="100" x2="331" y2="420" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 3" filter="url(#sk)"/>
-  <text x="338" y="116" font-size="10" fill="#c98a2b" font-weight="bold">Ridge Point</text>
-  <text x="338" y="130" font-size="9" fill="#c98a2b">AI=12.6</text>
+  <!-- Ridge point vertical line (AI=58.45 → x=404) -->
+  <line x1="404" y1="100" x2="404" y2="420" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 3" filter="url(#sk)"/>
+  <text x="411" y="116" font-size="10" fill="#c98a2b" font-weight="bold">Ridge Point</text>
+  <text x="411" y="130" font-size="9" fill="#c98a2b">AI=58.45</text>
 
-  <!-- Memory bandwidth line: (100, 325) → (331, 157), slope=1 on log-log -->
-  <path d="M 100 325 L 331 157" stroke="#4a8edb" stroke-width="2.4" fill="none" filter="url(#sk)"/>
-  <text x="180" y="252" font-size="10" fill="#4a8edb" font-weight="bold" transform="rotate(-36 180 252)">内存带宽线 (1.55 TB/s)</text>
+  <!-- Memory bandwidth line: (100, 320) → (404, 98), slope=1 on log-log -->
+  <path d="M 100 320 L 404 98" stroke="#4a8edb" stroke-width="2.4" fill="none" filter="url(#sk)"/>
+  <text x="180" y="262" font-size="10" fill="#4a8edb" font-weight="bold" transform="rotate(-36 180 262)">内存带宽线 (1.792 TB/s)</text>
 
-  <!-- Compute ceiling: (331, 157) → (540, 157), horizontal -->
-  <path d="M 331 157 L 540 157" stroke="#4a8e4a" stroke-width="2.4" fill="none" filter="url(#sk)"/>
-  <text x="340" y="150" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">算力天花板 19.5 TFLOP/s</text>
+  <!-- Compute ceiling: (404, 98) → (540, 98), horizontal -->
+  <path d="M 404 98 L 540 98" stroke="#4a8e4a" stroke-width="2.4" fill="none" filter="url(#sk)"/>
+  <text x="472" y="91" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">算力天花板 104.75 TFLOP/s</text>
 
-  <!-- softmax point (163, 279) — ON the memory bandwidth line -->
+  <!-- softmax point (163, 274) — ON the memory bandwidth line -->
   <g filter="url(#sk)">
-    <circle cx="163" cy="279" r="8" fill="#b03a3a" stroke="#7a2828" stroke-width="1.5"/>
+    <circle cx="163" cy="274" r="8" fill="#b03a3a" stroke="#7a2828" stroke-width="1.5"/>
   </g>
-  <text x="175" y="273" font-size="10" fill="#b03a3a" font-weight="bold">softmax</text>
-  <text x="175" y="287" font-size="9" fill="#7a2828">AI≈0.375</text>
-  <text x="175" y="299" font-size="9" fill="#7a2828">→ memory-bound</text>
+  <text x="175" y="268" font-size="10" fill="#b03a3a" font-weight="bold">softmax</text>
+  <text x="175" y="282" font-size="9" fill="#7a2828">AI≈0.375</text>
+  <text x="175" y="294" font-size="9" fill="#7a2828">→ memory-bound</text>
 
-  <!-- GEMM point (419, 157) — ON the compute ceiling -->
+  <!-- GEMM point (422, 98) — ON the compute ceiling -->
   <g filter="url(#sk)">
-    <circle cx="419" cy="157" r="8" fill="#4a8e4a" stroke="#2e6e2e" stroke-width="1.5"/>
+    <circle cx="422" cy="98" r="8" fill="#4a8e4a" stroke="#2e6e2e" stroke-width="1.5"/>
   </g>
-  <text x="435" y="148" font-size="10" fill="#2e6e2e" font-weight="bold">QK^T / PV GEMM</text>
-  <text x="435" y="172" font-size="9" fill="#2e6e2e">AI≈85 → compute-bound</text>
+  <text x="438" y="92" font-size="10" fill="#2e6e2e" font-weight="bold">QK^T / PV GEMM</text>
+  <text x="438" y="115" font-size="9" fill="#2e6e2e">AI≈85 → compute-bound</text>
 
   <!-- Region labels -->
   <text x="165" y="405" font-size="10" fill="#aaa" font-style="italic">memory-bound 区</text>
@@ -116,7 +116,7 @@
   <text x="598" y="128" font-size="11" fill="#444" font-family="monospace">FLOPs ≈ 4N²·d</text>
   <text x="598" y="146" font-size="11" fill="#444" font-family="monospace">Bytes ≈ 3N²</text>
   <text x="598" y="166" font-size="12" fill="#4a8e4a" font-weight="bold" font-family="monospace">AI = (4/3)d ≈ 85</text>
-  <text x="598" y="184" font-size="11" fill="#2e6e2e">85 >> 12.6 → compute-bound</text>
+  <text x="598" y="184" font-size="11" fill="#2e6e2e">85 > 58.45 → compute-bound</text>
 
   <!-- softmax calculation box (bottom, red) -->
   <g filter="url(#sk)">
@@ -126,7 +126,7 @@
   <text x="598" y="248" font-size="11" fill="#444" font-family="monospace">FLOPs ≈ 3N² (exp+add+div)</text>
   <text x="598" y="268" font-size="11" fill="#444" font-family="monospace">Bytes = 2N² × 4B (读S+写P)</text>
   <text x="598" y="290" font-size="12" fill="#b03a3a" font-weight="bold" font-family="monospace">AI = 3/8 ≈ 0.375</text>
-  <text x="598" y="310" font-size="11" fill="#b03a3a">0.375 << 12.6 → memory-bound</text>
+  <text x="598" y="310" font-size="11" fill="#b03a3a">0.375 << 58.45 → memory-bound</text>
 
   <!-- FlashAttention hint box -->
   <g filter="url(#sk)">
@@ -141,6 +141,6 @@
     <rect x="60" y="470" width="840" height="92" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
   </g>
   <text x="80" y="494" font-size="13" font-weight="bold" fill="#2b2b2b">结论：标准 Attention 是混合瓶颈</text>
-  <text x="80" y="518" font-size="12" fill="#444">① QK^T / PV 两个 GEMM：AI≈85 >> 12.6 → <tspan font-weight="bold" fill="#4a8e4a">compute-bound</tspan>（大矩阵乘，算力主导）</text>
-  <text x="80" y="540" font-size="12" fill="#444">② softmax：AI≈0.375 << 12.6 → <tspan font-weight="bold" fill="#b03a3a">memory-bound</tspan>（O(N²) 读写，带宽主导）← FlashAttention 要消除的瓶颈</text>
+  <text x="80" y="518" font-size="12" fill="#444">① QK^T / PV 两个 GEMM：AI≈85 > 58.45 → <tspan font-weight="bold" fill="#4a8e4a">compute-bound</tspan>（大矩阵乘，算力主导）</text>
+  <text x="80" y="540" font-size="12" fill="#444">② softmax：AI≈0.375 << 58.45 → <tspan font-weight="bold" fill="#b03a3a">memory-bound</tspan>（O(N²) 读写，带宽主导）← FlashAttention 要消除的瓶颈</text>
 </svg>

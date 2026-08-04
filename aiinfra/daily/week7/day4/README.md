@@ -206,10 +206,11 @@ custom_ops = load_inline(
 
 # 3. Transformer Layer（use_custom 开关）
 class TransformerLayer(nn.Module):
- def forward(self, x, use_custom=True):
- # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
- # use_custom=True → 调用自定义 kernel
- # use_custom=False → 调用 PyTorch 原生
+    def forward(self, x, use_custom=True):
+        # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
+        # use_custom=True → 调用自定义 kernel
+        # use_custom=False → 调用 PyTorch 原生
+        ...
 ```
 
 完整代码见 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/custom_ops_module.py)。

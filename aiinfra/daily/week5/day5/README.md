@@ -61,14 +61,14 @@ Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching�
 
 ```python
 def forward(self, x, kv_cache=None, use_cache=False):
- ...
- if use_cache and kv_cache is not None:
- # Decode: 把新 K/V 拼到历史 cache 后面
- k = torch.cat([k_cache, k], dim=2)
- v = torch.cat([v_cache, v], dim=2)
- # Prefill 时 kv_cache=None，直接用本次的 k/v
- ...
- return x, (k, v) # 返回更新后的 cache
+    ...
+    if use_cache and kv_cache is not None:
+        # Decode: 把新 K/V 拼到历史 cache 后面
+        k = torch.cat([k_cache, k], dim=2)
+        v = torch.cat([v_cache, v], dim=2)
+        # Prefill 时 kv_cache=None，直接用本次的 k/v
+        ...
+        return x, (k, v) # 返回更新后的 cache
 ```
 
 - **Prefill**：`use_cache=True, kv_cache=None` → 算完整 attention，返回 prompt 的 K/V 作为初始 cache
@@ -80,20 +80,20 @@ def forward(self, x, kv_cache=None, use_cache=False):
 
 ```python
 def generate(self, prompt, max_new_tokens=20):
- input_ids = encode(prompt) # (B, N)
+    input_ids = encode(prompt) # (B, N)
 
- # ===== Prefill：一次性处理整段 prompt =====
- logits, kv_cache = model(input_ids, use_cache=True)
- next_token = argmax(logits[:, -1, :]) # first token
- generated = [next_token]
+    # ===== Prefill：一次性处理整段 prompt =====
+    logits, kv_cache = model(input_ids, use_cache=True)
+    next_token = argmax(logits[:, -1, :]) # first token
+    generated = [next_token]
 
- # ===== Decode Loop：每步 1 个 token，复用 cache =====
- for _ in range(max_new_tokens - 1):
- logits, kv_cache = model(next_token, kv_cache=kv_cache, use_cache=True)
- next_token = argmax(logits[:, -1, :])
- generated.append(next_token)
+    # ===== Decode Loop：每步 1 个 token，复用 cache =====
+    for _ in range(max_new_tokens - 1):
+        logits, kv_cache = model(next_token, kv_cache=kv_cache, use_cache=True)
+        next_token = argmax(logits[:, -1, :])
+        generated.append(next_token)
 
- return decode(generated)
+        return decode(generated)
 ```
 
 ##### KV Cache 状态变化
@@ -154,123 +154,123 @@ from typing import List, Optional, Tuple
 # ============================================================
 
 class MiniTransformerLayer(nn.Module):
- """单层 Transformer Block：Pre-LN + Self-Attention + FFN，支持 KV Cache"""
+    """单层 Transformer Block：Pre-LN + Self-Attention + FFN，支持 KV Cache"""
 
- def __init__(self, d_model=512, n_heads=8, d_ff=2048):
- super().__init__()
- self.d_model = d_model
- self.n_heads = n_heads
- self.d_head = d_model // n_heads
- self.qkv = nn.Linear(d_model, 3 * d_model)
- self.out = nn.Linear(d_model, d_model)
- self.norm1 = nn.LayerNorm(d_model)
- self.norm2 = nn.LayerNorm(d_model)
- self.ffn = nn.Sequential(
- nn.Linear(d_model, d_ff),
- nn.GELU(),
- nn.Linear(d_ff, d_model),
- )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn = nn.Sequential(
+        nn.Linear(d_model, d_ff),
+        nn.GELU(),
+        nn.Linear(d_ff, d_model),
+        )
 
- def forward(self, x, kv_cache=None, use_cache=False):
- B, N, _ = x.shape
- x_norm = self.norm1(x)
- qkv = self.qkv(x_norm)
- qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
- q, k, v = qkv[0], qkv[1], qkv[2]
+        def forward(self, x, kv_cache=None, use_cache=False):
+            B, N, _ = x.shape
+            x_norm = self.norm1(x)
+            qkv = self.qkv(x_norm)
+            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+            q, k, v = qkv[0], qkv[1], qkv[2]
 
- if use_cache and kv_cache is not None:
- k_cache, v_cache = kv_cache
- k = torch.cat([k_cache, k], dim=2) # 拼历史 cache
- v = torch.cat([v_cache, v], dim=2)
+            if use_cache and kv_cache is not None:
+                k_cache, v_cache = kv_cache
+                k = torch.cat([k_cache, k], dim=2) # 拼历史 cache
+                v = torch.cat([v_cache, v], dim=2)
 
- scale = self.d_head ** -0.5
- attn = torch.matmul(q, k.transpose(-2, -1)) * scale
- attn = F.softmax(attn, dim=-1)
- out = torch.matmul(attn, v)
+                scale = self.d_head ** -0.5
+                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+                attn = F.softmax(attn, dim=-1)
+                out = torch.matmul(attn, v)
 
- out = out.transpose(1, 2).reshape(B, N, self.d_model)
- x = x + self.out(out)
- x = x + self.ffn(self.norm2(x))
- return x, (k, v)
+                out = out.transpose(1, 2).reshape(B, N, self.d_model)
+                x = x + self.out(out)
+                x = x + self.ffn(self.norm2(x))
+                return x, (k, v)
 
-class MiniLLM(nn.Module):
- def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
- super().__init__()
- self.embedding = nn.Embedding(vocab_size, d_model)
- self.layers = nn.ModuleList([
- MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
- ])
- self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+                class MiniLLM(nn.Module):
+                    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
+                        super().__init__()
+                        self.embedding = nn.Embedding(vocab_size, d_model)
+                        self.layers = nn.ModuleList([
+                        MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
+                        ])
+                        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
 
- def forward(self, input_ids, kv_cache=None, use_cache=False):
- x = self.embedding(input_ids)
- new_kv_cache = []
- for i, layer in enumerate(self.layers):
- layer_cache = kv_cache[i] if kv_cache is not None else None
- x, layer_new_cache = layer(x, layer_cache, use_cache)
- new_kv_cache.append(layer_new_cache)
- logits = self.lm_head(x)
- return logits, new_kv_cache
+                        def forward(self, input_ids, kv_cache=None, use_cache=False):
+                            x = self.embedding(input_ids)
+                            new_kv_cache = []
+                            for i, layer in enumerate(self.layers):
+                                layer_cache = kv_cache[i] if kv_cache is not None else None
+                                x, layer_new_cache = layer(x, layer_cache, use_cache)
+                                new_kv_cache.append(layer_new_cache)
+                                logits = self.lm_head(x)
+                                return logits, new_kv_cache
 
-class MiniTokenizer:
- def __init__(self, vocab_size=1000):
- self.vocab_size = vocab_size
- self.word_to_id = {}
- self.id_to_word = {}
- self.next_id = 1
+                                class MiniTokenizer:
+                                    def __init__(self, vocab_size=1000):
+                                        self.vocab_size = vocab_size
+                                        self.word_to_id = {}
+                                        self.id_to_word = {}
+                                        self.next_id = 1
 
- def encode(self, text: str) -> List[int]:
- tokens = []
- for word in text.lower().split():
- if word not in self.word_to_id:
- if self.next_id >= self.vocab_size:
- break
- self.word_to_id[word] = self.next_id
- self.id_to_word[self.next_id] = word
- self.next_id += 1
- tokens.append(self.word_to_id[word])
- return tokens
+                                        def encode(self, text: str) -> List[int]:
+                                            tokens = []
+                                            for word in text.lower().split():
+                                                if word not in self.word_to_id:
+                                                    if self.next_id >= self.vocab_size:
+                                                        break
+                                                        self.word_to_id[word] = self.next_id
+                                                        self.id_to_word[self.next_id] = word
+                                                        self.next_id += 1
+                                                        tokens.append(self.word_to_id[word])
+                                                        return tokens
 
- def decode(self, ids: List[int]) -> str:
- return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+                                                        def decode(self, ids: List[int]) -> str:
+                                                            return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
 
-class MiniEngineV0:
- """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+                                                            class MiniEngineV0:
+                                                                """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
 
- def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
- self.model = model.to(device).eval()
- self.tokenizer = tokenizer
- self.device = device
+                                                                def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
+                                                                    self.model = model.to(device).eval()
+                                                                    self.tokenizer = tokenizer
+                                                                    self.device = device
 
- @torch.no_grad()
- def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
- input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+                                                                    @torch.no_grad()
+                                                                    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
+                                                                        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
 
- # ========== Prefill ==========
- logits, kv_cache = self.model(input_ids, use_cache=True)
- next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
- generated_ids = [next_token.item()]
+                                                                        # ========== Prefill ==========
+                                                                        logits, kv_cache = self.model(input_ids, use_cache=True)
+                                                                        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+                                                                        generated_ids = [next_token.item()]
 
- # ========== Decode Loop ==========
- for _ in range(max_new_tokens - 1):
- logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
- next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
- generated_ids.append(next_token.item())
+                                                                        # ========== Decode Loop ==========
+                                                                        for _ in range(max_new_tokens - 1):
+                                                                            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
+                                                                            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+                                                                            generated_ids.append(next_token.item())
 
- return self.tokenizer.decode(generated_ids)
+                                                                            return self.tokenizer.decode(generated_ids)
 
- @torch.no_grad()
- def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
- """对照版：不用 KV Cache，每步重算完整历史"""
- input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
- current_ids = input_ids.clone()
- generated = []
- for _ in range(max_new_tokens):
- logits, _ = self.model(current_ids, use_cache=False)
- next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
- generated.append(next_token.item())
- current_ids = torch.cat([current_ids, next_token], dim=1)
- return generated
+                                                                            @torch.no_grad()
+                                                                            def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
+                                                                                """对照版：不用 KV Cache，每步重算完整历史"""
+                                                                                input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+                                                                                current_ids = input_ids.clone()
+                                                                                generated = []
+                                                                                for _ in range(max_new_tokens):
+                                                                                    logits, _ = self.model(current_ids, use_cache=False)
+                                                                                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+                                                                                    generated.append(next_token.item())
+                                                                                    current_ids = torch.cat([current_ids, next_token], dim=1)
+                                                                                    return generated
 ```
 
 代码要点：

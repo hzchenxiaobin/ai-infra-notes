@@ -109,6 +109,6 @@
     <text x="470" y="486">copy 读+写=2x；GEMM 读 A+B 写 C=2MN+... </text>
 
     <text x="470" y="510" font-weight="bold" fill="#b03a3a">坑6：不对比基线</text>
-    <text x="470" y="526">"1100 GB/s" 无意义 → 须除以峰值 ~1555</text>
+    <text x="470" y="526">"1100 GB/s" 无意义 → 须除以峰值 ~1792</text>
   </g>
 </svg>

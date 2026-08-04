@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import math
 from torch.utils.cpp_extension import load_inline
 
-cuda_src = open(os.path.join(os.path.dirname(__file__), "..", "day2", "kernels", "flash_attention_v2.cu")).read()
+cuda_src = open(os.path.join(os.path.dirname(__file__), "..", "..", "day2", "kernels", "flash_attention_v2.cu")).read()
 cpp_src = """
 #include <torch/extension.h>
 at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);

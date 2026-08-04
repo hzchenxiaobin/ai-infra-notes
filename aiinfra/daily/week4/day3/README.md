@@ -97,7 +97,7 @@ __syncthreads();           // 等待所有线程加载完成
 
 问题：**加载期间 SM 空闲**——所有线程都在等 HBM 数据到达，计算单元空转。
 
-官方用 `cp_async`（Blackwell+ CC 12.0）实现异步拷贝：
+官方用 `cp_async`（Ampere+ CC 8.0）实现异步拷贝：
 
 ```cuda
 // 官方实现：异步加载 + 双缓冲
@@ -340,7 +340,7 @@ Day 3 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与�
  - `cp_async` 是异步的：发起加载后线程不等待，可以继续做计算（用前一个 buffer 的数据）
  - 双缓冲：声明两份 shared memory buffer（buf0/buf1），"计算 buf0 ‖ 加载 buf1"并行，掩盖加载延迟
  - 收益：global → shared 的传输延迟被计算掩盖，典型提升 30-50%
- - 限制：需要 Blackwell+（CC 12.0），多消耗一倍 smem（可能降 occupancy）
+  - 限制：需要 Ampere+（CC 8.0），多消耗一倍 smem（可能降 occupancy）
 
 </details>
 

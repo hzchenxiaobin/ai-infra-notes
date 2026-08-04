@@ -378,7 +378,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 
  - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
  - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
- - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 12.6-25）比较，AI < Ridge → memory-bound
+ - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）比较，AI < Ridge → memory-bound
  - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
 
 ---

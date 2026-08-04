@@ -363,7 +363,7 @@ Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX 5090 ≈ 58.45 FLOP/Byte）
 - AI > Ridge Point → compute-bound
 ```
 例：矩阵加法 AI = 1 FLOP / 12 Byte ≈ 0.083 << 58.45 → memory-bound
-例：大 GEMM AI ≈ 85 >> 12.6 → compute-bound
+例：大 GEMM AI ≈ 85 > 58.45 → compute-bound
 
 **方法 2：ncu 实测指标**
 

@@ -97,10 +97,10 @@ for concurrency in [1, 2, 4, 8, 16, 32, 64]:
 ```python
 # 以恒定速率发请求（如 50 QPS），持续 N 秒
 while time < duration:
- if time >= next_send:
- engine.submit()
- next_send += 1.0 / qps
- sleep(0.001)
+    if time >= next_send:
+        engine.submit()
+        next_send += 1.0 / qps
+        sleep(0.001)
 ```
 
 - **看什么**：在给定 QPS 下，P50/P99 延迟是否达标
@@ -193,39 +193,39 @@ from collections import deque
 from concurrent.futures import Future
 
 class SimulatedEngine:
- """模拟 MiniEngineV1：Continuous Batching + max_num_seqs + 摊销算力模型。
+    """模拟 MiniEngineV1：Continuous Batching + max_num_seqs + 摊销算力模型。
 
- forward 时间 = base + per_seq × batch × amort^(batch-1)
- - batch 越大 per-token 越省（摊销），但有 max_num_seqs 上限
- - 超过 max_num_seqs 的并发请求排队 → throughput 封顶、latency 线性涨
- """
- def __init__(self, max_num_seqs=8, base_iter_ms=5.0, per_seq_ms=2.0, amort=0.85):
- self.max_num_seqs = max_num_seqs
- self.base_iter = base_iter_ms / 1000.0
- self.per_seq = per_seq_ms / 1000.0
- self.amort = amort
- # ... waiting/running 队列 + worker 线程
+    forward 时间 = base + per_seq × batch × amort^(batch-1)
+    - batch 越大 per-token 越省（摊销），但有 max_num_seqs 上限
+    - 超过 max_num_seqs 的并发请求排队 → throughput 封顶、latency 线性涨
+    """
+    def __init__(self, max_num_seqs=8, base_iter_ms=5.0, per_seq_ms=2.0, amort=0.85):
+        self.max_num_seqs = max_num_seqs
+        self.base_iter = base_iter_ms / 1000.0
+        self.per_seq = per_seq_ms / 1000.0
+        self.amort = amort
+        # ... waiting/running 队列 + worker 线程
 
-def run_fixed_concurrency(engine, concurrency, max_new_tokens=8):
- """固定并发数测试：同时提交 N 个请求，等全部完成，记录各请求 latency。"""
- reqs = [SimRequest(...) for _ in range(concurrency)]
- for r in reqs:
- engine.waiting.append(r)
- for r in reqs:
- r.future.result()
- latencies = sorted([r.finish_time - r.submit_time for r in reqs])
- return {
- "throughput": total_tokens / total_time,
- "avg_latency": mean(latencies),
- "p99_latency": percentile(latencies, 99),
- }
+        def run_fixed_concurrency(engine, concurrency, max_new_tokens=8):
+            """固定并发数测试：同时提交 N 个请求，等全部完成，记录各请求 latency。"""
+            reqs = [SimRequest(...) for _ in range(concurrency)]
+            for r in reqs:
+                engine.waiting.append(r)
+                for r in reqs:
+                    r.future.result()
+                    latencies = sorted([r.finish_time - r.submit_time for r in reqs])
+                    return {
+                    "throughput": total_tokens / total_time,
+                    "avg_latency": mean(latencies),
+                    "p99_latency": percentile(latencies, 99),
+                    }
 
-def find_saturation_point(results):
- """识别饱和点：throughput 增长率 < 5% 的拐点。"""
- for i in range(1, len(results)):
- growth = (results[i].tp - results[i-1].tp) / results[i-1].tp
- if growth < 0.05:
- return results[i] # throughput 不再显著增长 → 饱和
+                    def find_saturation_point(results):
+                        """识别饱和点：throughput 增长率 < 5% 的拐点。"""
+                        for i in range(1, len(results)):
+                            growth = (results[i].tp - results[i-1].tp) / results[i-1].tp
+                            if growth < 0.05:
+                                return results[i] # throughput 不再显著增长 → 饱和
 ```
 
 完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day6/kernels/benchmark_engine_v1.py)。

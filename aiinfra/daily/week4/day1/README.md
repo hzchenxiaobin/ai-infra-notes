@@ -208,110 +208,110 @@ import math
 import time
 
 def standard_attention(Q, K, V):
- """标准 Attention，物化 S 和 P"""
- d = Q.size(-1)
- S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
- P = F.softmax(S, dim=-1)
- O = torch.matmul(P, V)
- return O
+    """标准 Attention，物化 S 和 P"""
+    d = Q.size(-1)
+    S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
+    P = F.softmax(S, dim=-1)
+    O = torch.matmul(P, V)
+    return O
 
-def flash_attention_pytorch(Q, K, V, Br=64, Bc=64):
- """
- 纯 PyTorch 实现的 FlashAttention 算法（教学版，不追求速度）
- 用于验证 online softmax 正确性
- """
- N, d = Q.size(-2), Q.size(-1)
- scale = 1.0 / math.sqrt(d)
- O = torch.zeros_like(Q)
- L = torch.zeros(Q.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
+    def flash_attention_pytorch(Q, K, V, Br=64, Bc=64):
+        """
+        纯 PyTorch 实现的 FlashAttention 算法（教学版，不追求速度）
+        用于验证 online softmax 正确性
+        """
+        N, d = Q.size(-2), Q.size(-1)
+        scale = 1.0 / math.sqrt(d)
+        O = torch.zeros_like(Q)
+        L = torch.zeros(Q.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
 
- for q_start in range(0, N, Br):
- q_end = min(q_start + Br, N)
- Qi = Q[..., q_start:q_end, :] * scale
+        for q_start in range(0, N, Br):
+            q_end = min(q_start + Br, N)
+            Qi = Q[..., q_start:q_end, :] * scale
 
- m = torch.full((Qi.size()[:-1] + (1,)), -1e30, device=Q.device, dtype=Q.dtype)
- l = torch.zeros(Qi.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
- o = torch.zeros_like(Qi)
+            m = torch.full((Qi.size()[:-1] + (1,)), -1e30, device=Q.device, dtype=Q.dtype)
+            l = torch.zeros(Qi.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
+            o = torch.zeros_like(Qi)
 
- for kv_start in range(0, N, Bc):
- kv_end = min(kv_start + Bc, N)
- Kj = K[..., kv_start:kv_end, :]
- Vj = V[..., kv_start:kv_end, :]
+            for kv_start in range(0, N, Bc):
+                kv_end = min(kv_start + Bc, N)
+                Kj = K[..., kv_start:kv_end, :]
+                Vj = V[..., kv_start:kv_end, :]
 
- Sij = torch.matmul(Qi, Kj.transpose(-2, -1))
+                Sij = torch.matmul(Qi, Kj.transpose(-2, -1))
 
- # Online softmax update
- mij = torch.max(Sij, dim=-1, keepdim=True).values
- m_new = torch.max(m, mij)
+                # Online softmax update
+                mij = torch.max(Sij, dim=-1, keepdim=True).values
+                m_new = torch.max(m, mij)
 
- # Scale old l and o
- l_scale = torch.exp(m - m_new)
- l_new = l * l_scale + torch.sum(torch.exp(Sij - m_new), dim=-1, keepdim=True)
+                # Scale old l and o
+                l_scale = torch.exp(m - m_new)
+                l_new = l * l_scale + torch.sum(torch.exp(Sij - m_new), dim=-1, keepdim=True)
 
- # Compute P weights for new block
- Pij = torch.exp(Sij - m_new) / l_new
+                # Compute P weights for new block
+                Pij = torch.exp(Sij - m_new) / l_new
 
- # Scale old o and add new contribution
- o = o * (l * l_scale / l_new) + torch.matmul(Pij, Vj)
+                # Scale old o and add new contribution
+                o = o * (l * l_scale / l_new) + torch.matmul(Pij, Vj)
 
- m = m_new
- l = l_new
+                m = m_new
+                l = l_new
 
- O[..., q_start:q_end, :] = o
+                O[..., q_start:q_end, :] = o
 
- return O
+                return O
 
-def benchmark(func, Q, K, V, name, n_iter=10):
- # warmup
- for _ in range(3):
- _ = func(Q, K, V)
- torch.cuda.synchronize()
+                def benchmark(func, Q, K, V, name, n_iter=10):
+                    # warmup
+                    for _ in range(3):
+                        _ = func(Q, K, V)
+                        torch.cuda.synchronize()
 
- start = torch.cuda.Event(enable_timing=True)
- end = torch.cuda.Event(enable_timing=True)
- start.record()
- for _ in range(n_iter):
- out = func(Q, K, V)
- end.record()
- torch.cuda.synchronize()
- ms = start.elapsed_time(end) / n_iter
- print(f"{name}: {ms:.3f} ms")
- return out
+                        start = torch.cuda.Event(enable_timing=True)
+                        end = torch.cuda.Event(enable_timing=True)
+                        start.record()
+                        for _ in range(n_iter):
+                            out = func(Q, K, V)
+                            end.record()
+                            torch.cuda.synchronize()
+                            ms = start.elapsed_time(end) / n_iter
+                            print(f"{name}: {ms:.3f} ms")
+                            return out
 
-def main():
- torch.manual_seed(42)
- device = "cuda"
- dtype = torch.float32
- d = 64
- seq_lens = [512, 1024, 2048, 4096]
+                            def main():
+                                torch.manual_seed(42)
+                                device = "cuda"
+                                dtype = torch.float32
+                                d = 64
+                                seq_lens = [512, 1024, 2048, 4096]
 
- print("=== Attention IO & Speed Comparison ===")
- print(f"head dim d={d}, FP32\n")
+                                print("=== Attention IO & Speed Comparison ===")
+                                print(f"head dim d={d}, FP32\n")
 
- for N in seq_lens:
- print(f"--- N={N} ---")
- Q = torch.randn(1, 1, N, d, device=device, dtype=dtype)
- K = torch.randn(1, 1, N, d, device=device, dtype=dtype)
- V = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+                                for N in seq_lens:
+                                    print(f"--- N={N} ---")
+                                    Q = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+                                    K = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+                                    V = torch.randn(1, 1, N, d, device=device, dtype=dtype)
 
- # 正确性验证
- O_std = standard_attention(Q, K, V)
- O_fa = flash_attention_pytorch(Q, K, V)
- max_diff = (O_std - O_fa).abs().max().item()
- print(f"Max diff (standard vs flash): {max_diff:.2e}")
+                                    # 正确性验证
+                                    O_std = standard_attention(Q, K, V)
+                                    O_fa = flash_attention_pytorch(Q, K, V)
+                                    max_diff = (O_std - O_fa).abs().max().item()
+                                    print(f"Max diff (standard vs flash): {max_diff:.2e}")
 
- # 速度对比
- benchmark(standard_attention, Q, K, V, "Standard Attention")
- benchmark(flash_attention_pytorch, Q, K, V, "FlashAttention (PyTorch)")
+                                    # 速度对比
+                                    benchmark(standard_attention, Q, K, V, "Standard Attention")
+                                    benchmark(flash_attention_pytorch, Q, K, V, "FlashAttention (PyTorch)")
 
- # 理论 IO 对比
- bytes_per_elem = 4
- std_io = (3 * N * N + 4 * N * d) * bytes_per_elem / (1024 * 1024)
- fa_io = (4 * N * d) * bytes_per_elem / (1024 * 1024)
- print(f"Theoretical HBM IO: Standard={std_io:.2f} MB, FlashAttention={fa_io:.2f} MB, ratio={std_io/fa_io:.1f}x\n")
+                                    # 理论 IO 对比
+                                    bytes_per_elem = 4
+                                    std_io = (3 * N * N + 4 * N * d) * bytes_per_elem / (1024 * 1024)
+                                    fa_io = (4 * N * d) * bytes_per_elem / (1024 * 1024)
+                                    print(f"Theoretical HBM IO: Standard={std_io:.2f} MB, FlashAttention={fa_io:.2f} MB, ratio={std_io/fa_io:.1f}x\n")
 
-if __name__ == "__main__":
- main()
+                                    if __name__ == "__main__":
+                                        main()
 ```
 
 #### 任务 2：编译与运行
@@ -328,17 +328,19 @@ python kernels/compare_attention_io.py
 head dim d=64, FP32
 
 --- N=512 ---
-Max diff (standard vs flash): x.xx e-06
-Standard Attention: x.xxx ms
-FlashAttention (PyTorch): x.xxx ms
-Theoretical HBM IO: Standard=3.06 MB, FlashAttention=0.50 MB, ratio=6.1x
+Max diff (standard vs flash): 3.87e-07
+Standard Attention: 0.042 ms
+FlashAttention (PyTorch): 4.161 ms
+Theoretical HBM IO: Standard=3.67 MB, FlashAttention=0.52 MB, ratio=7.0x
 
 --- N=4096 ---
-Max diff (standard vs flash): x.xx e-06
-Standard Attention: x.xxx ms
-FlashAttention (PyTorch): x.xxx ms
-Theoretical HBM IO: Standard=206.25 MB, FlashAttention=4.00 MB, ratio=51.6x
+Max diff (standard vs flash): 4.77e-07
+Standard Attention: 2.460 ms
+FlashAttention (PyTorch): 252.053 ms
+Theoretical HBM IO: Standard=205.52 MB, FlashAttention=4.19 MB, ratio=49.0x
 ```
+
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, PyTorch SDPA 关闭）。**PyTorch 教学版 FA 比 standard 还慢**——因为 Python 双层 for 循环的 launch overhead 远超 IO 节省；真实 FA 加速来自 CUDA kernel 融合（见 Day 2）。IO 理论比值（49x）才是面试该背的数。
 
 #### 任务 3：手动推导验证 + ncu 观察中间矩阵
 

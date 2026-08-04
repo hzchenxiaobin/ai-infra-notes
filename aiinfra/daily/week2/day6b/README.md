@@ -50,7 +50,7 @@ Tensor Core 是 NVIDIA GPU 中专门用于矩阵乘加（MMA）的硬件单元�
 | Turing | sm_75 | 第二代 | FP16, INT8 | 支持 INT8 推理 |
 | Ampere | sm_80 | 第三代 | FP16, BF16, TF32, INT8, INT4 | TF32 自动加速 FP32 |
 | Hopper | sm_90 | 第四代 | + FP8 | TMA, warp specialization |
-| **Blackwell** | **sm_120** | **第四代** | **+ FP8** | **RTX 5090 使用** |
+| **Blackwell** | **sm_120** | **第五代** | **+ FP8** | **RTX 5090 使用** |
 
 **Tensor Core 的工作方式**：
 
@@ -206,12 +206,12 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm.cu -o wmma_gemm
 
 ```text
 M=N=K    | FMA(ms)      WMMA(ms)     cuBLAS(ms)   | FMA%     WMMA%    WMMA/FMA
----------|------------------------------------------------|------------------------------
-512      | 0.0xx        0.0xx         0.0xx        | xx.x     xx.x     xx.x
-1024     | 0.0xx        0.0xx         0.0xx        | xx.x     xx.x     xx.x
-2048     | 0.0xx        0.0xx         0.0xx        | xx.x     xx.x     xx.x
-4096     | 0.0xx        0.0xx         0.0xx        | xx.x     xx.x     xx.x
-WMMA vs cuBLAS max_diff = x.xx e-xx (FP16 input precision loss expected)
+---------|------------------------------------------------|----------------------------
+512      | 0.051        0.012        0.025        | 5.3      21.7     10.6
+1024     | 0.310        0.080        0.044        | 6.9      26.8     48.9
+2048     | 2.317        0.565        0.242        | 7.4      30.4     71.1
+4096     | 18.604       4.098        1.963        | 7.4      33.5     70.0
+WMMA vs cuBLAS max_diff = 1.00e-02 (FP16 input precision loss expected)
 ```
 
 #### 任务 3：Profiling

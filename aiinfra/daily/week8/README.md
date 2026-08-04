@@ -20,6 +20,8 @@ Day 2: 架构图与数据流图 → 系统架构、数据流、模块交互图
   ↓
 Day 3: 高频面试题基础篇 → GPU、Kernel、CUDA、Profiling
   ↓
+Day 3b: 多硬件对比 → NVIDIA CUDA vs Ascend CANN（概念对照-only）
+  ↓
 Day 4: 高频面试题进阶篇 → Attention、推理系统、vLLM、调度
   ↓
 Day 5: Mock 面试 → 自我介绍、项目介绍、技术难点、优化思路
@@ -40,6 +42,7 @@ Day 7: 最终复盘 → 8 周能力地图、强项/待提升、后续规划
 | Day 1 | 项目文档完善 | [day1/](day1/README.md) |
 | Day 2 | 架构图与数据流图 | [day2/](day2/README.md) |
 | Day 3 | 高频面试题基础篇 | [day3/](day3/README.md) |
+| Day 3b | 多硬件对比：CUDA vs Ascend CANN | [day3b/](day3b/README.md) |
 | Day 4 | 高频面试题进阶篇 | [day4/](day4/README.md) |
 | Day 5 | Mock 面试 | [day5/](day5/README.md) |
 | Day 6 | 查漏补缺 | [day6/](day6/README.md) |

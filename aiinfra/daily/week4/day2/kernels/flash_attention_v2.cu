@@ -233,8 +233,9 @@ bool checkResult(const float* a, const float* b, int n, float eps) {
     return ok;
 }
 
-int main() {
-    int B = 2, H = 4, N = 256, d = D;
+int main(int argc, char** argv) {
+    int N = (argc > 1) ? atoi(argv[1]) : 256;
+    int B = 2, H = 4, d = D;
 
     printf("=== FlashAttention v2 Forward Kernel ===\n");
     printf("Config: B=%d, H=%d, N=%d, d=%d\n", B, H, N, d);

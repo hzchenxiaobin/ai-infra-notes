@@ -353,4 +353,10 @@ git push origin
   # A100 旧数字只允许出现在显式标注的对比/错误示范语境
   grep -rn "19\.5 TFLOP\|1\.55 TB/s\|12\.6" aiinfra/daily/weekN/dayM/README.md
   ```
+- [ ] README 内嵌 ```python 代码块缩进无损坏（禁止"单前导空格"剥落）：
+  ```bash
+  # 提取所有 python 代码块做 ast.parse，IndentationError 即报错
+  python3 build/lint_md_code.py
+  # 期望输出：Checked N files, M code blocks, 0 errors
+  ```
 - [ ] 提交并推送更改：`git add -A && git commit -m "docs(weekN/dayM): <主题>" && git push origin`

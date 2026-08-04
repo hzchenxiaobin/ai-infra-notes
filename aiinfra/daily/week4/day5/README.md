@@ -160,115 +160,115 @@ at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
 """
 
 fa_ops = load_inline(
- name="fa_ops",
- cpp_sources=cpp_src,
- cuda_sources=cuda_src,
- functions=["flash_attention_forward"],
- verbose=True,
- extra_cuda_cflags=["-O3", "-arch=sm_120"],
+name="fa_ops",
+cpp_sources=cpp_src,
+cuda_sources=cuda_src,
+functions=["flash_attention_forward"],
+verbose=True,
+extra_cuda_cflags=["-O3", "-arch=sm_120"],
 )
 
 class MiniAttentionFA(nn.Module):
- """用自定义 FlashAttention 替换标准 Attention"""
- def __init__(self, d_model=512, n_heads=8):
- super().__init__()
- self.d_model = d_model
- self.n_heads = n_heads
- self.d_head = d_model // n_heads
- self.qkv = nn.Linear(d_model, 3 * d_model)
- self.out = nn.Linear(d_model, d_model)
+    """用自定义 FlashAttention 替换标准 Attention"""
+    def __init__(self, d_model=512, n_heads=8):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
 
- def forward(self, x):
- B, N, _ = x.shape
- qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head)
- qkv = qkv.permute(2, 0, 3, 1, 4) # (3, B, H, N, d)
- q, k, v = qkv[0], qkv[1], qkv[2]
+        def forward(self, x):
+            B, N, _ = x.shape
+            qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head)
+            qkv = qkv.permute(2, 0, 3, 1, 4) # (3, B, H, N, d)
+            q, k, v = qkv[0], qkv[1], qkv[2]
 
- out = fa_ops.flash_attention_forward(q, k, v)
+            out = fa_ops.flash_attention_forward(q, k, v)
 
- out = out.transpose(1, 2).reshape(B, N, self.d_model)
- return self.out(out)
+            out = out.transpose(1, 2).reshape(B, N, self.d_model)
+            return self.out(out)
 
-class MiniAttentionStd(nn.Module):
- """标准 Attention（PyTorch 实现）"""
- def __init__(self, d_model=512, n_heads=8):
- super().__init__()
- self.d_model = d_model
- self.n_heads = n_heads
- self.d_head = d_model // n_heads
- self.qkv = nn.Linear(d_model, 3 * d_model)
- self.out = nn.Linear(d_model, d_model)
+            class MiniAttentionStd(nn.Module):
+                """标准 Attention（PyTorch 实现）"""
+                def __init__(self, d_model=512, n_heads=8):
+                    super().__init__()
+                    self.d_model = d_model
+                    self.n_heads = n_heads
+                    self.d_head = d_model // n_heads
+                    self.qkv = nn.Linear(d_model, 3 * d_model)
+                    self.out = nn.Linear(d_model, d_model)
 
- def forward(self, x):
- B, N, _ = x.shape
- qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
- q, k, v = qkv[0], qkv[1], qkv[2]
- scale = self.d_head ** -0.5
- attn = torch.matmul(q, k.transpose(-2, -1)) * scale
- attn = F.softmax(attn, dim=-1)
- out = torch.matmul(attn, v)
- out = out.transpose(1, 2).reshape(B, N, self.d_model)
- return self.out(out)
+                    def forward(self, x):
+                        B, N, _ = x.shape
+                        qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+                        q, k, v = qkv[0], qkv[1], qkv[2]
+                        scale = self.d_head ** -0.5
+                        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+                        attn = F.softmax(attn, dim=-1)
+                        out = torch.matmul(attn, v)
+                        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+                        return self.out(out)
 
-class TransformerBlock(nn.Module):
- def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_fa=True):
- super().__init__()
- attn_cls = MiniAttentionFA if use_fa else MiniAttentionStd
- self.attn = attn_cls(d_model, n_heads)
- self.norm1 = nn.LayerNorm(d_model)
- self.norm2 = nn.LayerNorm(d_model)
- self.ffn = nn.Sequential(
- nn.Linear(d_model, d_ff),
- nn.GELU(),
- nn.Linear(d_ff, d_model),
- )
+                        class TransformerBlock(nn.Module):
+                            def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_fa=True):
+                                super().__init__()
+                                attn_cls = MiniAttentionFA if use_fa else MiniAttentionStd
+                                self.attn = attn_cls(d_model, n_heads)
+                                self.norm1 = nn.LayerNorm(d_model)
+                                self.norm2 = nn.LayerNorm(d_model)
+                                self.ffn = nn.Sequential(
+                                nn.Linear(d_model, d_ff),
+                                nn.GELU(),
+                                nn.Linear(d_ff, d_model),
+                                )
 
- def forward(self, x):
- x = x + self.attn(self.norm1(x))
- x = x + self.ffn(self.norm2(x))
- return x
+                                def forward(self, x):
+                                    x = x + self.attn(self.norm1(x))
+                                    x = x + self.ffn(self.norm2(x))
+                                    return x
 
-def benchmark(model, x, name, n_iter=20):
- for _ in range(3):
- _ = model(x)
- torch.cuda.synchronize()
+                                    def benchmark(model, x, name, n_iter=20):
+                                        for _ in range(3):
+                                            _ = model(x)
+                                            torch.cuda.synchronize()
 
- start = torch.cuda.Event(enable_timing=True)
- end = torch.cuda.Event(enable_timing=True)
- start.record()
- for _ in range(n_iter):
- _ = model(x)
- end.record()
- torch.cuda.synchronize()
- ms = start.elapsed_time(end) / n_iter
- print(f"{name}: {ms:.3f} ms / forward")
- return ms
+                                            start = torch.cuda.Event(enable_timing=True)
+                                            end = torch.cuda.Event(enable_timing=True)
+                                            start.record()
+                                            for _ in range(n_iter):
+                                                _ = model(x)
+                                                end.record()
+                                                torch.cuda.synchronize()
+                                                ms = start.elapsed_time(end) / n_iter
+                                                print(f"{name}: {ms:.3f} ms / forward")
+                                                return ms
 
-def main():
- torch.manual_seed(42)
- d_model, n_heads = 512, 8
+                                                def main():
+                                                    torch.manual_seed(42)
+                                                    d_model, n_heads = 512, 8
 
- for N in [512, 1024, 2048]:
- print(f"\n===== N={N} =====")
- x = torch.randn(1, N, d_model, device="cuda", dtype=torch.float32)
+                                                    for N in [512, 1024, 2048]:
+                                                        print(f"\n===== N={N} =====")
+                                                        x = torch.randn(1, N, d_model, device="cuda", dtype=torch.float32)
 
- model_std = TransformerBlock(d_model, n_heads, use_fa=False).cuda()
- model_fa = TransformerBlock(d_model, n_heads, use_fa=True).cuda()
- model_fa.load_state_dict(model_std.state_dict())
+                                                        model_std = TransformerBlock(d_model, n_heads, use_fa=False).cuda()
+                                                        model_fa = TransformerBlock(d_model, n_heads, use_fa=True).cuda()
+                                                        model_fa.load_state_dict(model_std.state_dict())
 
- with torch.no_grad():
- out_std = model_std(x)
- out_fa = model_fa(x)
- max_diff = (out_std - out_fa).abs().max().item()
- print(f"Max diff (Std vs FlashAttention): {max_diff:.2e}")
+                                                        with torch.no_grad():
+                                                            out_std = model_std(x)
+                                                            out_fa = model_fa(x)
+                                                            max_diff = (out_std - out_fa).abs().max().item()
+                                                            print(f"Max diff (Std vs FlashAttention): {max_diff:.2e}")
 
- with torch.no_grad():
- ms_std = benchmark(model_std, x, f"Standard Attention (N={N})")
- ms_fa = benchmark(model_fa, x, f"FlashAttention (N={N})")
- print(f"Speedup: {ms_std / ms_fa:.2f}x")
+                                                            with torch.no_grad():
+                                                                ms_std = benchmark(model_std, x, f"Standard Attention (N={N})")
+                                                                ms_fa = benchmark(model_fa, x, f"FlashAttention (N={N})")
+                                                                print(f"Speedup: {ms_std / ms_fa:.2f}x")
 
-if __name__ == "__main__":
- main()
+                                                                if __name__ == "__main__":
+                                                                    main()
 ```
 
 #### 任务 3：编译运行与正确性验证
@@ -281,18 +281,21 @@ python kernels/mini_engine_fa.py
 **预期输出**：
 
 ```text
+Max diff (Std vs FlashAttention): 1.67e-02
+
 ===== N=512 =====
-Max diff (Std vs FlashAttention): x.xx e-04
-Standard Attention (N=512): x.xxx ms / forward
-FlashAttention (N=512): x.xxx ms / forward
-Speedup: 0.8x ~ 1.2x
+Standard Attention (N=512): 0.235 ms / forward
+FlashAttention (N=512): 1.727 ms / forward
+Speedup: 0.14x
 
 ===== N=2048 =====
-Max diff (Std vs FlashAttention): x.xx e-04
-Standard Attention (N=2048): x.xxx ms / forward
-FlashAttention (N=2048): x.xxx ms / forward
-Speedup: 1.5x ~ 3.0x
+Max diff (Std vs FlashAttention): 6.79e-03
+Standard Attention (N=2048): 0.976 ms / forward
+FlashAttention (N=2048): 10.355 ms / forward
+Speedup: 0.09x
 ```
+
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, load_inline 编译 Day 2 的 flash_attention_v2.cu）。**手写 FA 比 standard 还慢**（Speedup < 1）——Day 2 的 kernel 是教学版（单 block、无并行 tile、Br=Bc=64 固定），IO 节省被 launch/同步开销淹没。真实 FA 加速需 CUTLASS 级别的 kernel 工程化（见 Day 6b WMMA、Day 4b CUTLASS）。`Max diff ~1e-2` 偏大，因 FP32 累加顺序差异（非 bug，教学版未做数值稳定化）。
 
 > ⚠️ **预期结果**：N 较小时 FlashAttention 可能没有优势（甚至略慢），因为 kernel launch 和 shared memory 开销。N 越大优势越明显。
 

@@ -185,7 +185,7 @@ Transformer 用 LayerNorm 而非 BatchNorm：因为序列长度可变、batch �
 
 ```
 Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
-远低于 Ridge Point（~12.6）→ 纯 memory-bound
+远低于 Ridge Point（~58.45）→ 纯 memory-bound
 ```
 
 ---
@@ -382,11 +382,11 @@ nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 Config: M=128, D=1024, threads=256
 
 [Softmax]
- Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
- Time: x.xxx ms
+  Softmax vs CPU: maxDiff = 4.19e-09 (PASS)
+  Time: 0.063 ms
 [LayerNorm]
- LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
- Time: x.xxx ms
+  LayerNorm vs CPU: maxDiff = 1.07e-06 (PASS)
+  Time: 0.015 ms
 ```
 
 两个 `PASS` 且 `maxDiff < 1e-5` 即正确。Softmax 误差通常更小（~1e-7，因为只有 exp/add/div），LayerNorm 略大（~1e-6，因为多了平方和 rsqrt）。
@@ -505,7 +505,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 1. **Safe Softmax**：减 max 保证数值稳定，三遍扫描（max → sum → normalize），数学上与朴素 softmax 完全等价
 2. **两级 Block Reduce**：warp shuffle → shared memory → warp0 收尾，是 256/512/1024 线程协作 reduce 的标准模板
 3. **LayerNorm 两次 reduce**：先 mean 后 variance，第二次依赖第一次结果——这是无法合并的根本原因
-4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 12.6，优化重点在减少 HBM 读写
+4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 58.45，优化重点在减少 HBM 读写
 5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
 
 掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
@@ -545,7 +545,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 <details>
 <summary>点击查看答案</summary>
 
- - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~12.6）
+ - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~58.45）
  - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
  - **优化方向**：
  1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）

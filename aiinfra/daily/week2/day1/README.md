@@ -343,10 +343,10 @@ nvcc -o warp_reduce kernels/warp_reduce.cu -O3 -arch=sm_120
 ```
 === Warp Shuffle Block Reduce ===
 Array size: 4194304 (16.00 MB)
-GPU Sum: 20973.4xxxx
-CPU Sum: 20973.4xxxx
-Diff: 0.00xxxx (PASS)
-Time: 0.xxx ms (xx.xx GB/s bandwidth)
+GPU Sum: 20971.052734
+CPU Sum: 20971.052734
+Diff: 0.000000 (PASS)
+Time: 0.068 ms (247.77 GB/s bandwidth)
 ```
 
 #### 任务 3：使用 ncu 查看 Warp Shuffle 效率

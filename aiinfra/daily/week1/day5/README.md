@@ -212,7 +212,7 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o bank_conflict kernels/bank_conflict.cu
+nvcc -o bank_conflict day5/kernels/bank_conflict.cu
 ./bank_conflict
 ```
 

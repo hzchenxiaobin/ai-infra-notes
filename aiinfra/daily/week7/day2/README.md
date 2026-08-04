@@ -112,8 +112,8 @@ if req.priority > 0:
 
 ```python
 class MemoryBudget:
- def can_allocate(self, blocks: int) -> bool:
- return self.used_blocks + blocks <= self.total_blocks
+    def can_allocate(self, blocks: int) -> bool:
+        return self.used_blocks + blocks <= self.total_blocks
 ```
 
 类比 vLLM PagedAttention 的 block allocator：显存被划分为固定大小的 block（如每 block 存 16 个 token 的 KV Cache），调度器在加入新请求时检查是否有足够空闲 block。
@@ -157,16 +157,16 @@ def _select_victim(self, new_req):
 
 ```python
 def _apply_aging(self):
- for neg_priority, submit_time, req in self.waiting:
- wait_time = self.time - submit_time
- if wait_time > self.aging_threshold:
- # 每超过一个 threshold 周期，优先级 +1
- req.priority = req.original_priority + int(wait_time // self.aging_threshold)
+    for neg_priority, submit_time, req in self.waiting:
+        wait_time = self.time - submit_time
+        if wait_time > self.aging_threshold:
+            # 每超过一个 threshold 周期，优先级 +1
+            req.priority = req.original_priority + int(wait_time // self.aging_threshold)
 ```
 
 | 参数 | 典型值 | 效果 |
 |------|--------|------|
-| `aging_threshold` | 5.0s | 等待超过 5s 开始升优先级 |
+| `aging_threshold` | 4.0s | 等待超过 4s 开始升优先级 |
 | 提升幅度 | +1/threshold | 5s→+1, 10s→+2, 15s→+3... |
 | 上限 | `original + 5` | 防止无限提升 |
 
@@ -201,30 +201,35 @@ def _apply_aging(self):
 # 依赖: 仅标准库
 
 class FullScheduler:
- """生产级调度器，支持六大功能。"""
- def __init__(self, token_budget=100, max_num_seqs=8,
- max_waiting_time=10.0, max_execution_time=60.0,
- enable_preemption=True, preempt_strategy="recompute",
- reserved_blocks=8, aging_threshold=5.0,
- total_memory_blocks=64):
- # ...
+    """生产级调度器，支持六大功能。"""
+    def __init__(self, token_budget=100, max_num_seqs=8,
+                 max_waiting_time=10.0, max_execution_time=60.0,
+                 enable_preemption=True, preempt_strategy="recompute",
+                 reserved_blocks=8, aging_threshold=4.0,
+                 total_memory_blocks=32):
+        # ...
+        ...
 
- def schedule(self) -> List[ScheduledRequest]:
- """每轮 iteration 调用一次，返回本轮要执行的 batch。"""
- # ① 恢复 swapped
- # ② 继续 running decode
- # ③ 从 waiting 加入新请求
- # ④ aging
- # ⑤ 超时检查
+    def schedule(self) -> List[ScheduledRequest]:
+        """每轮 iteration 调用一次，返回本轮要执行的 batch。"""
+        # ① 恢复 swapped
+        # ② 继续 running decode
+        # ③ 从 waiting 加入新请求
+        # ④ aging
+        # ⑤ 超时检查
+        ...
 
- def _select_victim(self, new_req):
- """选择被抢占的请求：最低优先级 → 最少剩余 token → 最晚提交"""
+    def _select_victim(self, new_req):
+        """选择被抢占的请求：最低优先级 → 最少剩余 token → 最晚提交"""
+        ...
 
- def _preempt(self, victim):
- """抢占：recompute（放回 waiting）或 swap（放 swapped 列表）"""
+    def _preempt(self, victim):
+        """抢占：recompute（放回 waiting）或 swap（放 swapped 列表）"""
+        ...
 
- def _apply_aging(self):
- """等待超阈值的请求自动提升优先级"""
+    def _apply_aging(self):
+        """等待超阈值的请求自动提升优先级"""
+        ...
 ```
 
 完整代码见 [kernels/full_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day2/kernels/full_scheduler.py)。

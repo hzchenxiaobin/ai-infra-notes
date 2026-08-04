@@ -343,11 +343,11 @@ nvcc -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcubla
 ```
 === Register Blocking GEMM ===
 Parameters: BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
-M N K Our(ms) cuBLAS(ms) Percent
+M          N          K          Our(ms)      cuBLAS(ms)   Percent   
 ------------------------------------------------------------
-1024 1024 1024 0.xxx 0.xxx 35.2% PASS
-2048 2048 2048 x.xxx x.xxx 42.1% PASS
-4096 4096 4096 xx.xxx xx.xxx 45.8% PASS
+1024       1024       1024       0.255        0.053        20.9     % PASS
+2048       2048       2048       0.647        0.254        39.2     % PASS
+4096       4096       4096       5.972        1.932        32.3     % PASS
 ```
 
 #### 任务 3：检查 Register 使用量

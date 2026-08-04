@@ -97,13 +97,13 @@
 - 矩阵形状：`(1024, 512) × (512, 1536)`
 - FLOPs = 2×1024×512×1536 ≈ 1.6G
 - Bytes ≈ 1.3M（读 x + W，写 QKV）
-- **AI ≈ 384 FLOP/Byte >> Ridge Point(12.6) → Compute-bound**
+- **AI ≈ 384 FLOP/Byte >> Ridge Point(58.45) → Compute-bound**
 
 **Decode 阶段 QKV GEMM**：
 - 矩阵形状：`(1, 512) × (512, 1536)` — M=1，退化为向量×矩阵
 - FLOPs = 2×1×512×1536 ≈ 1.6M（少了 1024 倍）
 - Bytes ≈ 0.8M（W 的大小没变，还是要读完整权重）
-- **AI ≈ 2 FLOP/Byte << Ridge Point(12.6) → Memory-bound**
+- **AI ≈ 2 FLOP/Byte << Ridge Point(58.45) → Memory-bound**
 
 **根本原因**：M=1 时计算量与 M 成正比骤降，但权重矩阵 W 的大小不变，读取量几乎没减。AI = FLOPs/Bytes 极低，数据喂不饱计算单元。
 
@@ -111,8 +111,8 @@
 
 ```
 KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
- N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 512 MB
- 每生成 1 个 token 要读 512 MB → 纯访存瓶颈
+ N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 256 MB
+ 每生成 1 个 token 要读 256 MB → 纯访存瓶颈
 ```
 
 **优化方向**：
@@ -133,13 +133,13 @@ KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
 import torch.profiler
 
 with torch.profiler.profile(
- activities=[
- torch.profiler.ProfilerActivity.CPU, # 采集 CPU 端调度
- torch.profiler.ProfilerActivity.CUDA, # 采集 GPU 端 kernel
- ],
+    activities=[
+        torch.profiler.ProfilerActivity.CPU,   # 采集 CPU 端调度
+        torch.profiler.ProfilerActivity.CUDA,  # 采集 GPU 端 kernel
+    ],
 ) as prof:
- for _ in range(5):
- out = model(x)
+    for _ in range(5):
+        out = model(x)
 
 # 按 CUDA 时间排序，输出 top 算子
 print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
@@ -179,86 +179,86 @@ import torch.nn as nn
 import math
 
 class MiniAttention(nn.Module):
- def __init__(self, d_model=512, n_heads=8):
- super().__init__()
- self.d_model = d_model
- self.n_heads = n_heads
- self.d_head = d_model // n_heads
- self.qkv = nn.Linear(d_model, 3 * d_model)
- self.out = nn.Linear(d_model, d_model)
+    def __init__(self, d_model=512, n_heads=8):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
 
- def forward(self, x):
- B, N, _ = x.shape
- qkv = self.qkv(x) # GEMM: B*N*d x d*3d
- qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
- qkv = qkv.permute(2, 0, 3, 1, 4) # 3, B, n_heads, N, d_head
- q, k, v = qkv[0], qkv[1], qkv[2]
- scale = self.d_head ** -0.5
- attn = torch.matmul(q, k.transpose(-2, -1)) * scale # GEMM: Q x K^T -> N x N
- attn = torch.softmax(attn, dim=-1) # softmax（memory-bound）
- out = torch.matmul(attn, v) # GEMM: attn x V -> N x d_head
- out = out.transpose(1, 2).reshape(B, N, self.d_model)
- return self.out(out) # GEMM: Output Linear
+    def forward(self, x):
+        B, N, _ = x.shape
+        qkv = self.qkv(x)                                    # GEMM: B*N*d x d*3d
+        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head)
+        qkv = qkv.permute(2, 0, 3, 1, 4)                     # 3, B, n_heads, N, d_head
+        q, k, v = qkv[0], qkv[1], qkv[2]
+        scale = self.d_head ** -0.5
+        attn = torch.matmul(q, k.transpose(-2, -1)) * scale  # GEMM: Q x K^T -> N x N
+        attn = torch.softmax(attn, dim=-1)                   # softmax（memory-bound）
+        out = torch.matmul(attn, v)                          # GEMM: attn x V -> N x d_head
+        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+        return self.out(out)                                 # GEMM: Output Linear
 
 class TransformerBlock(nn.Module):
- def __init__(self, d_model=512, n_heads=8, d_ff=2048):
- super().__init__()
- self.attn = MiniAttention(d_model, n_heads)
- self.norm1 = nn.LayerNorm(d_model)
- self.norm2 = nn.LayerNorm(d_model)
- self.ffn = nn.Sequential(
- nn.Linear(d_model, d_ff),
- nn.GELU(),
- nn.Linear(d_ff, d_model),
- )
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+        super().__init__()
+        self.attn = MiniAttention(d_model, n_heads)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.GELU(),
+            nn.Linear(d_ff, d_model),
+        )
 
- def forward(self, x):
- x = x + self.attn(self.norm1(x)) # Attention + residual
- x = x + self.ffn(self.norm2(x)) # FFN + residual
- return x
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))   # Attention + residual
+        x = x + self.ffn(self.norm2(x))    # FFN + residual
+        return x
 
 def profile_phase(model, x, name, n_iter=5):
- """对一个阶段做 profiling 并输出 top 算子"""
- # warmup
- for _ in range(2):
- _ = model(x)
- torch.cuda.synchronize()
+    """对一个阶段做 profiling 并输出 top 算子"""
+    # warmup
+    for _ in range(2):
+        _ = model(x)
+    torch.cuda.synchronize()
 
- with torch.profiler.profile(
- activities=[
- torch.profiler.ProfilerActivity.CPU,
- torch.profiler.ProfilerActivity.CUDA,
- ],
- ) as prof:
- for _ in range(n_iter):
- _ = model(x)
- torch.cuda.synchronize()
+    with torch.profiler.profile(
+        activities=[
+            torch.profiler.ProfilerActivity.CPU,
+            torch.profiler.ProfilerActivity.CUDA,
+        ],
+    ) as prof:
+        for _ in range(n_iter):
+            _ = model(x)
+        torch.cuda.synchronize()
 
- print(f"\n===== {name} Phase (shape={tuple(x.shape)}) =====")
- print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
- prof.export_chrome_trace(f"trace_{name}.json")
+    print(f"\n===== {name} Phase (shape={tuple(x.shape)}) =====")
+    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=12))
+    prof.export_chrome_trace(f"trace_{name}.json")
 
 def main():
- torch.manual_seed(42)
- d_model, n_heads = 512, 8
- model = TransformerBlock(d_model, n_heads).cuda().half()
+    torch.manual_seed(42)
+    d_model, n_heads = 512, 8
+    model = TransformerBlock(d_model, n_heads).cuda().half()
 
- # Prefill: 处理长 prompt（N=1024）
- x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
- profile_phase(model, x_prefill, "prefill", n_iter=5)
+    # Prefill: 处理长 prompt（N=1024）
+    x_prefill = torch.randn(1, 1024, d_model, device="cuda", dtype=torch.float16)
+    profile_phase(model, x_prefill, "prefill", n_iter=5)
 
- # Decode: 逐 token 生成（N=1）
- x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
- profile_phase(model, x_decode, "decode", n_iter=10)
+    # Decode: 逐 token 生成（N=1）
+    x_decode = torch.randn(1, 1, d_model, device="cuda", dtype=torch.float16)
+    profile_phase(model, x_decode, "decode", n_iter=10)
 
- print("\n===== 观察要点 =====")
- print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
- print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
- print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
- print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
+    print("\n===== 观察要点 =====")
+    print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
+    print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
+    print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
+    print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
 
 if __name__ == "__main__":
- main()
+    main()
 ```
 
 #### 任务 2：运行并采集 Prefill / Decode trace
@@ -346,7 +346,7 @@ aten::softmax xxx us 5
 **参考答案要点**：
 - **Prefill**：输入是 `(B, N_prompt, d)`，N_prompt 可达数千。所有 GEMM 是大矩阵乘，计算量大，GPU SM 充分利用 → **Compute-bound**
 - **Decode**：输入是 `(B, 1, d)`，每次只生成 1 个 token。GEMM 退化为向量×矩阵（M=1），计算量极小，但每次都要读取整个 KV Cache（N 个历史 token） → **Memory-bound**
-- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 2 FLOP/Byte，远低于 Ridge Point（~12.6）
+- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 2 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）
 - **优化方向**：KV Cache（避免重算 K/V）、PagedAttention（减少 KV 显存碎片）、CUDA Graph（减少 launch overhead）、Continuous Batching（合并多个 decode 请求提高 M）
 
 **面试题2**：Transformer 单层包含哪些算子？哪些是 compute-bound，哪些是 memory-bound？（⭐⭐⭐ 高频）

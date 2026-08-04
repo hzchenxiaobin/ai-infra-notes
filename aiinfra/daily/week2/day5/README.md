@@ -629,7 +629,7 @@ nvcc -o flash_attention kernels/flash_attention.cu -O3 -arch=sm_120
 Config: N=256, D=64, batch=1, heads=1
 SRAM usage per block: 32.00 KB
 Grid: (4, 1, 1), Block: 64
-GPU Time: x.xxx ms
+GPU Time: 0.141 ms
 Result check: PASS
 ```
 

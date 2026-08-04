@@ -1557,8 +1557,8 @@ def element_wise_memory_bound() -> str:
 
   <!-- Ridge point line -->
   <line x1="300" y1="400" x2="300" y2="150" stroke="#d29922" stroke-width="2" stroke-dasharray="5,5"/>
-  <text x="305" y="145" font-size="11" fill="#d29922">Ridge Point ≈ 12.6</text>
-  <text x="305" y="160" font-size="10" fill="#8b949e">(RTX 5090: 19.5T / 1.55T)</text>
+  <text x="305" y="145" font-size="11" fill="#d29922">Ridge Point ≈ 58.45</text>
+  <text x="305" y="160" font-size="10" fill="#8b949e">(RTX 5090: 104.75T / 1.792T)</text>
 
   <!-- Memory slope -->
   <line x1="80" y1="400" x2="300" y2="150" stroke="#58a6ff" stroke-width="2"/>

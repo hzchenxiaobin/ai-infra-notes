@@ -126,7 +126,7 @@ Bytes ≈ 3N²（S/P 读写）
 AI = 4·N²·d / 3N² = (4/3)·d ≈ 85 FLOP/Byte（d=64）
 ```
 
-AI=85 > Ridge Point(12.6) → **GEMM 部分是 compute-bound**（大矩阵乘，算力主导）。
+AI=85 > Ridge Point(58.45) → **GEMM 部分是 compute-bound**（大矩阵乘，算力主导）。
 
 **softmax 部分**：
 
@@ -136,7 +136,7 @@ Bytes = 2N² × 4 bytes（读 S + 写 P）
 AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte
 ```
 
-AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
+AI=0.375 << Ridge Point(58.45) → **softmax 部分是纯 memory-bound**。
 
 **结论**：标准 Attention 是 `GEMM(compute) + softmax(memory) + GEMM(compute)` 的混合，其中 **softmax 的 O(N²) 读写是瓶颈**。FlashAttention 正是消除这一项——把 softmax 从 HBM 搬到 SRAM，在片上完成归约。
 
@@ -298,12 +298,12 @@ nvcc -o attention_naive kernels/attention_naive.cu -O3 -arch=sm_120 -g -lineinfo
 
 ```text
 === Standard Attention Forward (naive, materialize S/P) ===
-N S/P size(MB) HBM IO(MB) Time(ms) Check
+N        S/P size(MB)   HBM IO(MB)       Time(ms)     Check     
 ------------------------------------------------------------------
-256 0.25 1.00 0.xxx PASS
-512 1.00 4.00 x.xxx PASS
-1024 4.00 16.00 x.xxx PASS
-2048 16.00 64.00 xx.xxx PASS
+256      0.25           1.25             0.083        PASS      
+512      1.00           4.50             0.082        PASS      
+1024     4.00           17.00            0.265        PASS      
+2048     16.00          66.00            0.787        PASS      
 
 观察要点：
 1. S/P size 随 N² 增长（N 翻倍 → size 4x）
@@ -455,7 +455,7 @@ Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问�
  - **softmax 的 FLOPs**：每元素约 3 次运算（exp + add + div），共 3N² FLOPs
  - **softmax 的 Bytes**：读 S（N²）+ 写 P（N²）= 2N² × 4 bytes
  - **AI = 3N² / (2N² × 4) = 3/8 ≈ 0.375 FLOP/Byte**
- - **判定**：AI=0.375 远低于 Ridge Point（~12.6）→ **纯 memory-bound**
+ - **判定**：AI=0.375 远低于 Ridge Point（~58.45）→ **纯 memory-bound**
  - **优化方向**：FlashAttention 把 softmax 从 HBM 搬到 SRAM，消除 O(N²) 读写
 
 </details>
@@ -466,7 +466,7 @@ Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问�
 <details>
 <summary>点击查看答案</summary>
 
- - GEMM（QK^T 和 PV）的 AI ≈ (4/3)·d ≈ 85（d=64）>> Ridge Point 12.6 → 确实 compute-bound
+ - GEMM（QK^T 和 PV）的 AI ≈ (4/3)·d ≈ 85（d=64）>> Ridge Point 58.45 → 确实 compute-bound
  - 但 GEMM 中间夹着 memory-bound 的 softmax，必须把 S 写回 HBM 再读出做 softmax，再把 P 写回读出做 PV
  - 这个"写回-读出"的 O(N²) 读写**无法被 GEMM 的算力掩盖**——中间结果的物化是结构性瓶颈
  - 类比：流水线中间有个慢工序，前后快工序都得等它

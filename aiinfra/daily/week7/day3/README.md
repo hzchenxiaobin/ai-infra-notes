@@ -4,7 +4,7 @@
 
 通过今天的学习，你将：
 
-1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token<br>
+1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token（近似上界，精确期望为 `(1-α^(k+1))/(1-α)`）<br>
 2. 掌握 **Chunked Prefill（分块预填充）**——将长 prompt 分成多个 chunk，与 decode 请求交错执行，平滑 decode 延迟<br>
 3. 理解 **Prefix Caching（前缀缓存）**——缓存公共前缀（如系统提示）的 KV Cache，命中时跳过 prefill，降低 TTFT<br>
 4. 能评估 **三大特性的收益与复杂度**——通过模拟脚本量化加速比、延迟降低、命中率<br>
@@ -64,10 +64,12 @@ Speculative Decoding：
  α = 平均接受率（如 0.7）
 
 传统每 token 时间 ≈ T_fwd
-Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens
+Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens（近似上界）
 Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
 
 当 t_d ≪ T_fwd 且 α 高时，加速明显。
+
+> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
 ```
 
 ##### 关键属性
@@ -362,7 +364,7 @@ Day 3 我们分析评估了三大高级推理特性：
  - 小模型生成速度快（t_d ≪ T_fwd）
  - 大模型一次验证多个 tokens，提高 batch 利用率
  - 如果 draft 质量高（α 高），每步可接受多个 tokens
- - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`，典型 1.5-2.7x
+ - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`（近似上界，精确期望用 `(1-α^(k+1))/(1-α)` 替换 k×α+1），典型 1.5-2.7x
  - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
  - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
 

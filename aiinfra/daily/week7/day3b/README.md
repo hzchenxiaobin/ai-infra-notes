@@ -524,7 +524,7 @@ Day 3b 我们系统学习了分布式推理的三大并行策略与通信-计算
 - **bubble ratio**：$\text{bubble} = (P-1)/(M+P-1)$
   - $P$ = pipeline stage 数（GPU 数）
   - $M$ = micro-batch 数
-- **推导**：流水线启动阶段（填满 $P$ 个 stage）和排空阶段各 $P-1$ 步只有部分 stage 工作，总空泡 $= 2(P-1)$，理想满载 $= M+P-1$，bubble 占比 $= (P-1)/(M+P-1)$
+- **推导**：总时间 = $(M+P-1) \times t_{mb}$（从第一个 micro-batch 进入第一个 stage 到最后一个 micro-batch 离开最后一个 stage）。每个 stage 处理 $M$ 个 micro-batch，忙碌 $M \times t_{mb}$，空闲 $(P-1) \times t_{mb}$（启动填满 $P$ 个 stage 期间该 stage 在等待）。因此 bubble 占比 $= (P-1)/(M+P-1)$
 - **降低方法**：
   1. **增大 $M$**（micro-batch 数）：$M \gg P$ 时 bubble → 0（主要手段）
   2. **减小 $P$**：但 $P$ 小则显存省得少，需权衡

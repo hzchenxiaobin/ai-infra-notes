@@ -7,7 +7,7 @@
 | 前置要求　 | 已完成 Week 6 学习，掌握 Dynamic/Continuous Batching、vLLM Scheduler、Mini 推理引擎 v1、Throughput/Latency 测试　　　　　　　　　　　　　　　　　　　　　 |
 | 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　  |
 | 本周产出　 | 多请求并发支持、完整调度器（优先级/超时/资源预算/抢占）、SGLang/LightLLM 高级特性分析、全部自定义 Kernel 整合、系统联调、全链路 Profiling、代码重构与文档 |
-| 周日里程碑 | 整合为完整 Mini AI Infra 系统，支持多请求并发与完整调度器，连续处理 1000+ 请求不崩溃，端到端性能优于或等于 PyTorch eager　　　　　　　　　　　　　　　　  |
+| 周日里程碑 | 整合为完整 Mini AI Infra 系统，支持多请求并发与完整调度器；连续处理 500 请求不崩溃（模拟引擎，sleep 模拟 forward，非真实 GPU 推理）；端到端延迟/吞吐对比仅作为调度开销验证，不等于真实推理性能——真实 GPU 推理性能留待 Mini 引擎真整合后补测 |
 
 ---
 

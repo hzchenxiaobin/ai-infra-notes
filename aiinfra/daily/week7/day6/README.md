@@ -214,26 +214,26 @@ for layer in range(num_layers):
 # ncu --metrics sm__throughput,dram__throughput python full_chain_profile.py
 
 class PhaseTimer:
- """记录每个阶段的耗时，支持嵌套和聚合。"""
+    """记录每个阶段的耗时，支持嵌套和聚合。"""
 
-class ProfiledMiniEngine:
- """带全链路计时的模拟推理引擎。"""
- def run_single(self, prompt, max_new_tokens):
- # submit → schedule → forward×N → result
- def run_batch(self, prompts, max_new_tokens):
- # 批量 continuous batching
+    class ProfiledMiniEngine:
+        """带全链路计时的模拟推理引擎。"""
+        def run_single(self, prompt, max_new_tokens):
+            # submit → schedule → forward×N → result
+            def run_batch(self, prompts, max_new_tokens):
+                # 批量 continuous batching
 
-def generate_report(engine, reqs):
- """生成全链路 profiling 报告：
- 1. 阶段时间分解（submit/schedule/forward/result）
- 2. Kernel 级分解（layernorm/qkv/attention/ffn）
- 3. 系统级指标（吞吐/P50/P99）
- 4. 瓶颈分析 Top3
- 5. 优化建议
- """
+                def generate_report(engine, reqs):
+                    """生成全链路 profiling 报告：
+                    1. 阶段时间分解（submit/schedule/forward/result）
+                    2. Kernel 级分解（layernorm/qkv/attention/ffn）
+                    3. 系统级指标（吞吐/P50/P99）
+                    4. 瓶颈分析 Top3
+                    5. 优化建议
+                    """
 
-def compare_with_vllm():
- """模拟与 vLLM 的同条件对比。"""
+                    def compare_with_vllm():
+                        """模拟与 vLLM 的同条件对比。"""
 ```
 
 完整代码见 [kernels/full_chain_profile.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day6/kernels/full_chain_profile.py)。

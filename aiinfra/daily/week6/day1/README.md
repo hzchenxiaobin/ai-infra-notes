@@ -153,92 +153,92 @@ from collections import deque
 from typing import List, Optional
 
 class Request:
- """一个推理请求"""
- def __init__(self, request_id: int, prompt_len: int, max_new_tokens: int = 10):
- self.request_id = request_id
- self.prompt_len = prompt_len
- self.max_new_tokens = max_new_tokens
- self.arrival_time = time.time()
- self.batch_id = -1
- self.batch_size = 0
- self.result = None
- self.done_event = threading.Event()
+    """一个推理请求"""
+    def __init__(self, request_id: int, prompt_len: int, max_new_tokens: int = 10):
+        self.request_id = request_id
+        self.prompt_len = prompt_len
+        self.max_new_tokens = max_new_tokens
+        self.arrival_time = time.time()
+        self.batch_id = -1
+        self.batch_size = 0
+        self.result = None
+        self.done_event = threading.Event()
 
- @property
- def wait_time(self) -> float:
- return (time.time() - self.arrival_time) * 1000
+        @property
+        def wait_time(self) -> float:
+            return (time.time() - self.arrival_time) * 1000
 
-class DynamicBatcher:
- """Dynamic Batcher：请求队列 + 超时等待 + 最大 batch size"""
+            class DynamicBatcher:
+                """Dynamic Batcher：请求队列 + 超时等待 + 最大 batch size"""
 
- def __init__(self, max_batch_size: int = 4, max_wait_time: float = 0.05):
- self.max_batch_size = max_batch_size
- self.max_wait_time = max_wait_time
- self.queue: deque[Request] = deque()
- self.lock = threading.Lock()
- self.stop_event = threading.Event()
- self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
- self.worker_thread.start()
- self.batch_count = 0
+                def __init__(self, max_batch_size: int = 4, max_wait_time: float = 0.05):
+                    self.max_batch_size = max_batch_size
+                    self.max_wait_time = max_wait_time
+                    self.queue: deque[Request] = deque()
+                    self.lock = threading.Lock()
+                    self.stop_event = threading.Event()
+                    self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+                    self.worker_thread.start()
+                    self.batch_count = 0
 
- def submit(self, request: Request):
- with self.lock:
- self.queue.append(request)
+                    def submit(self, request: Request):
+                        with self.lock:
+                            self.queue.append(request)
 
- def _collect_batch(self) -> List[Request]:
- """收集一个 batch：等第一个请求 → timer 等更多 → 凑满或超时"""
- batch = []
- # 先等第一个请求到达
- while not batch and not self.stop_event.is_set():
- with self.lock:
- if self.queue:
- batch.append(self.queue.popleft())
- if not batch:
- time.sleep(0.0005)
- if not batch:
- return []
- # 第一个请求到了，启动 timer 等更多
- deadline = time.time() + self.max_wait_time
- while len(batch) < self.max_batch_size:
- remaining = deadline - time.time()
- if remaining <= 0:
- break
- with self.lock:
- if self.queue:
- batch.append(self.queue.popleft())
- else:
- time.sleep(min(0.001, remaining))
- return batch
+                            def _collect_batch(self) -> List[Request]:
+                                """收集一个 batch：等第一个请求 → timer 等更多 → 凑满或超时"""
+                                batch = []
+                                # 先等第一个请求到达
+                                while not batch and not self.stop_event.is_set():
+                                    with self.lock:
+                                        if self.queue:
+                                            batch.append(self.queue.popleft())
+                                            if not batch:
+                                                time.sleep(0.0005)
+                                                if not batch:
+                                                    return []
+                                                    # 第一个请求到了，启动 timer 等更多
+                                                    deadline = time.time() + self.max_wait_time
+                                                    while len(batch) < self.max_batch_size:
+                                                        remaining = deadline - time.time()
+                                                        if remaining <= 0:
+                                                            break
+                                                            with self.lock:
+                                                                if self.queue:
+                                                                    batch.append(self.queue.popleft())
+                                                                else:
+                                                                    time.sleep(min(0.001, remaining))
+                                                                    return batch
 
- def _process_batch(self, batch: List[Request]):
- """处理一个 batch（用 sleep 模拟模型 forward）"""
- self.batch_count += 1
- batch_size = len(batch)
- max_len = max(r.prompt_len for r in batch)
- total_padded = batch_size * max_len
- total_actual = sum(r.prompt_len for r in batch)
- padding_waste = total_padded - total_actual
- forward_time = 0.001 + 0.0005 * batch_size # batch 越大 per-request 越省
- time.sleep(forward_time)
- for req in batch:
- req.batch_id = self.batch_count
- req.batch_size = batch_size
- req.result = f"ok(batch={self.batch_count},bs={batch_size})"
- req.done_event.set()
- if batch_size > 1:
- print(f" Batch {self.batch_count}: size={batch_size}, "
- f"forward={forward_time*1000:.1f}ms, "
- f"padding_waste={padding_waste} tokens ({100*padding_waste/total_padded:.0f}%)")
+                                                                    def _process_batch(self, batch: List[Request]):
+                                                                        """处理一个 batch（用 sleep 模拟模型 forward）"""
+                                                                        self.batch_count += 1
+                                                                        batch_size = len(batch)
+                                                                        max_len = max(r.prompt_len for r in batch)
+                                                                        total_padded = batch_size * max_len
+                                                                        total_actual = sum(r.prompt_len for r in batch)
+                                                                        padding_waste = total_padded - total_actual
+                                                                        forward_time = 0.001 + 0.0005 * batch_size # batch 越大 per-request 越省
+                                                                        time.sleep(forward_time)
+                                                                        for req in batch:
+                                                                            req.batch_id = self.batch_count
+                                                                            req.batch_size = batch_size
+                                                                            req.result = f"ok(batch={self.batch_count},bs={batch_size})"
+                                                                            req.done_event.set()
+                                                                            if batch_size > 1:
+                                                                                print(f" Batch {self.batch_count}: size={batch_size}, "
+                                                                                f"forward={forward_time*1000:.1f}ms, "
+                                                                                f"padding_waste={padding_waste} tokens ({100*padding_waste/total_padded:.0f}%)")
 
- def _worker_loop(self):
- while not self.stop_event.is_set():
- batch = self._collect_batch()
- if batch:
- self._process_batch(batch)
+                                                                                def _worker_loop(self):
+                                                                                    while not self.stop_event.is_set():
+                                                                                        batch = self._collect_batch()
+                                                                                        if batch:
+                                                                                            self._process_batch(batch)
 
- def shutdown(self):
- self.stop_event.set()
- self.worker_thread.join(timeout=2)
+                                                                                            def shutdown(self):
+                                                                                                self.stop_event.set()
+                                                                                                self.worker_thread.join(timeout=2)
 ```
 
 代码要点：
@@ -253,7 +253,7 @@ class DynamicBatcher:
 python kernels/dynamic_batcher.py
 ```
 
-**预期输出**（节选）：
+**输出因时序而异，以下为一次示例**：
 
 ```text
 Submitting 10 requests (interval=5ms, max_batch=4, wait=20ms)...
@@ -280,9 +280,9 @@ Avg wait time: 87.4 ms
 
 ##### 观察重点
 
-1. **请求被聚合**：10 个请求只产生 6 个 batch（部分 batch size=2 或 3），不是 10 个单独 forward
+1. **请求被聚合**：10 个请求聚合为 4-7 个 batch（batch size 在 1 到 max_batch_size 之间），而非 10 个单独 forward
 2. **Padding waste 可见**：不等长请求 pad 到 max_len，batch 内有 7-14% 的 padding 浪费
-3. **吞吐提升**：batch=4 vs batch=1 的理论加速 2x（forward_time 非线性增长，per-request 时间减少）
+3. **吞吐提升**：batch=4 vs batch=1 的理论加速 1.5x-2x（forward_time 非线性增长，per-request 时间减少）
 
 #### 任务 3：扫描不同参数的吞吐-延迟
 

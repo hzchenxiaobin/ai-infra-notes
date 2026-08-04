@@ -102,13 +102,13 @@ Ridge Point = Peak FLOP/s / Peak Bandwidth
 RTX 5090 FP32: 104.75 TFLOP/s / 1.792 TB/s ≈ 58.45 FLOP/Byte
 ```
 
-- AI < 12.6 → **memory-bound**（数据喂不饱计算单元）
-- AI > 12.6 → **compute-bound**（算力是瓶颈）
+- AI < 58.45 → **memory-bound**（数据喂不饱计算单元）
+- AI > 58.45 → **compute-bound**（算力是瓶颈）
 
 以 Softmax 为例（N=1024, d=1024, FP32）：
 - FLOPs ≈ 3·N²（每元素 exp+add+div）
 - Bytes = 2·N²·4（读 S + 写 P）
-- AI = 3N² / (8N²) = **0.375 FLOP/Byte** → 远低于 12.6 → **memory-bound** ✓
+- AI = 3N² / (8N²) = **0.375 FLOP/Byte** → 远低于 58.45 → **memory-bound** ✓
 
 ##### 实测路径：SM% vs DRAM%
 
@@ -262,22 +262,22 @@ python kernels/profile_mini_engine.py
 ```text
 ===== Prefill Phase (shape=(1, 1024, 512)) =====
 Name Self CUDA Calls
-aten::mm xxx us 20 ← QKV/Out/FFN GEMM（compute-bound）
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
-aten::gelu xxx us 5
+aten::mm            128 us  20  ← QKV/Out/FFN GEMM（compute-bound）
+aten::layer_norm     19 us  10
+aten::softmax        24 us   5
+aten::gelu           ...      5
 ...
 
 ===== Decode Phase (shape=(1, 1, 512)) =====
 Name Self CUDA Calls
-aten::mm xxx us 20 ← GEMM 但矩阵极小（M=1）
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
+aten::mm             15 us  20  ← GEMM 但矩阵极小（M=1）
+aten::layer_norm     ...      10
+aten::softmax        ...       5
 ...
 
-Prefill (N=1024): x.xxx ms / forward
-Decode (N=1): x.xxx ms / forward
-Per-token: Prefill=x.x us/token, Decode=xxx.x us/token
+Prefill (N=1024): 0.135 ms / forward
+Decode  (N=1): 0.118 ms / forward
+Per-token: Prefill=0.1 us/token, Decode=117.6 us/token
 ```
 
 然后用 nsys 采集系统级时间线：
@@ -323,8 +323,8 @@ ncu --metrics \
 Softmax: M=256, D=1024
 GEMM: M=512, N=512, K=512
 
-[Softmax] time=x.xxx ms maxDiff=x.xx e-07 (PASS)
-[GEMM] time=x.xxx ms TFLOPS=x.xx (naive, no tiling)
+[Softmax] time=0.062 ms maxDiff=4.42e-09 (PASS)
+[GEMM] time=0.072 ms TFLOPS=3.74 (naive, no tiling)
 
  softmax_kernel (M=256, D=1024)
  DRAM Throughput : ~55-70% ← 高

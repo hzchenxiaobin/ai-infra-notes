@@ -38,7 +38,7 @@ def benchmark_torch_silu(n, warmup=5, iters=100, torch=None):
     return {"n": n, "time_ms": t, "bandwidth_gbs": bw_gbs}
 
 
-def fmt_markdown_table(rows, peak_bw=1555):
+def fmt_markdown_table(rows, peak_bw=1792):
     cols = ["规模 N", "单次耗时(ms)", "带宽(GB/s)", "带宽利用率"]
     lines = ["| " + " | ".join(cols) + " |",
              "|" + "|".join(["---"] * len(cols)) + "|"]

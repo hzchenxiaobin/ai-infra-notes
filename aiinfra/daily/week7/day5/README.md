@@ -108,19 +108,19 @@ assert engine.used_kv_blocks == 0, "KV Cache not released after completion"
 
 ```python
 def stability_test(num_requests=500):
- engine = MiniEngine(...)
- engine.start()
+    engine = MiniEngine(...)
+    engine.start()
 
- for i in range(num_requests):
- req = engine.submit(prompts[i % len(prompts)], ...)
- result = req.future.result(timeout=20)
- # 每 100 请求打印一次状态
- if i % 100 == 0:
- print(f" [{i}] kv={engine.stats()['kv_used']}")
+    for i in range(num_requests):
+        req = engine.submit(prompts[i % len(prompts)], ...)
+        result = req.future.result(timeout=20)
+        # 每 100 请求打印一次状态
+        if i % 100 == 0:
+            print(f" [{i}] kv={engine.stats()['kv_used']}")
 
- # 最终检查
- assert engine.used_kv_blocks == 0, "Memory leak!"
- assert success_rate > 0.95, "Success rate too low"
+            # 最终检查
+            assert engine.used_kv_blocks == 0, "Memory leak!"
+            assert success_rate > 0.95, "Success rate too low"
 ```
 
 #### 5.4 异常输入测试
@@ -148,21 +148,24 @@ def stability_test(num_requests=500):
 # 依赖: 仅标准库（模拟 Mini 引擎，无需 GPU/PyTorch）
 
 class MiniEngine:
- """模拟 Mini 推理引擎：KV Cache + Batching + Scheduler。"""
- def submit(self, prompt, max_new_tokens=8, priority=0) -> InferenceRequest:
- # 入队，返回含 Future 的请求
- def _schedule(self):
- # 从 waiting 按优先级+预算加入 running
- def _forward(self):
- # 模拟 forward，生成 token，完成后释放 KV Cache
+    """模拟 Mini 推理引擎：KV Cache + Batching + Scheduler。"""
+    def submit(self, prompt, max_new_tokens=8, priority=0) -> InferenceRequest:
+        # 入队，返回含 Future 的请求
+        ...
+    def _schedule(self):
+        # 从 waiting 按优先级+预算加入 running
+        ...
+    def _forward(self):
+        # 模拟 forward，生成 token，完成后释放 KV Cache
+        ...
 
-def test_single_request(): # Step 1
-def test_multi_request_concurrency(): # Step 2
-def test_kv_cache_isolation(): # Step 3
-def test_scheduler_priority(): # Step 4
-def test_custom_kernel_integration(): # Step 5
-def stability_test(num_requests=500): # Step 6
-def test_abnormal_inputs(): # 异常输入
+def test_single_request(): ...            # Step 1
+def test_multi_request_concurrency(): ...  # Step 2
+def test_kv_cache_isolation(): ...         # Step 3
+def test_scheduler_priority(): ...         # Step 4
+def test_custom_kernel_integration(): ...  # Step 5
+def stability_test(num_requests=500): ...  # Step 6
+def test_abnormal_inputs(): ...            # 异常输入
 ```
 
 完整代码见 [kernels/stability_test.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day5/kernels/stability_test.py)。

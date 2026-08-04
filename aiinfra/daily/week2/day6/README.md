@@ -626,7 +626,7 @@ nvcc -O3 -arch=sm_120 kernels/gemm_optimization_series.cu -o gemm_series -lcubla
 > 2. **Register Blocking 在大矩阵才发力**（v2→v3）：1024 时 RegBlk 反而比 SharedMem 慢（21.3% vs 22.8%），因为小矩阵 block 数少、寄存器开销不划算；4096 时飙到 30.8%，是 SharedMem 的 2.3 倍。
 > 3. **coalesced 写回收益有限**（v4→v5）：写回只占总时间的一小部分（C 只写一次），float4 写回在 4096 时甚至略降（64.3%→62.9%），在噪声范围内。
 > 4. **Double Buffering 未显著加速**（v5→v6）：因为本实现用同步加载（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute。真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令，让加载与计算在指令级并行——这是 CUTLASS 的范畴。
-> 5. **1024 矩阵天花板低**（~42%）：因为 block 数 = (1024/128)² = 64，RTX 5090 有 108 个 SM，wave 不满；4096 时 block 数 = 1024，wave 充足，占比升至 ~63%。
+> 5. **1024 矩阵天花板低**（~42%）：因为 block 数 = (1024/128)² = 64，RTX 5090 有 170 个 SM，wave 不满；4096 时 block 数 = 1024，wave 充足，占比升至 ~63%。
 
 
 

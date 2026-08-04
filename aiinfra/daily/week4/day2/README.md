@@ -476,8 +476,8 @@ Config: B=2, H=4, N=256, d=64
 Tile: Br=64, Bc=64, Threads=256
 
 [B=0, H=0] First head check:
- maxDiff = x.xx e-04 (PASS)
-GPU Time: x.xxx ms
+ maxDiff = 1.31e-04 (PASS)
+ GPU Time: 0.777 ms
 ```
 
 #### 任务 3：验证 SRAM 使用量与 ncu 分析

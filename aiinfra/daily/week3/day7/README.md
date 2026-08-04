@@ -53,7 +53,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 | SM 利用率 | 60-85% | 10-30% |
 | 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
 
-**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≫ Ridge Point（~12.6）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，AI 骤降到 ~1 → memory-bound。
+**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，AI 骤降到 ~1 → memory-bound。
 
 #### 2. Softmax / LayerNorm：memory-bound 算子的典型代表
 
@@ -280,7 +280,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 > **Q：Attention 的 softmax 部分为什么慢？怎么优化？**
 >
-> **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~12.6），纯 memory-bound。
+> **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~58.45），纯 memory-bound。
 >
 > 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。
 >
@@ -350,7 +350,7 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 12.6，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
+ - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 58.45，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
  - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，AI 从 384 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
  - **根本原因**：M=1 导致 GEMM 的计算量（与 M 成正比）远小于数据读取量（与 N·d 成正比），AI = FLOPs/Bytes 极低
  - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
@@ -363,7 +363,7 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 12.6）比较
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 58.45）比较
  - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
  - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
 

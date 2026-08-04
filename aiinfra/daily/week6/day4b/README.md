@@ -41,8 +41,6 @@ Day 4 的 chunked prefill simulator 和 Day 2 的 continuous batcher 解决了�
 
 #### 1.1 Chunked Prefill 深入
 
-![Chunked Prefill 调度时间线](../images/chunked_prefill_timeline.svg)
-
 Day 4 已介绍了 chunked prefill 的基本概念，今天深入实现细节。
 
 ##### chunk_size 选择
@@ -77,8 +75,6 @@ def schedule_iteration():
 ```
 
 #### 1.2 Prefix Caching 深入
-
-![Prefix Caching 工作原理](../images/prefix_caching_mechanism.svg)
 
 ##### Block Hash 机制
 

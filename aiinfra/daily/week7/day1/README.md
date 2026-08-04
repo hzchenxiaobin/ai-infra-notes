@@ -85,27 +85,27 @@ Week 6 v1 的并发短板：
 
 ```python
 class ThreadSafeRequestQueue:
- def __init__(self):
- self._queue = deque()
- self._cond = threading.Condition() # Lock + wait/notify
+    def __init__(self):
+        self._queue = deque()
+        self._cond = threading.Condition() # Lock + wait/notify
 
- def put(self, request):
- with self._cond:
- # 按优先级插入（高优先级在前）
- for i, req in enumerate(self._queue):
- if request.priority > req.priority:
- self._queue.insert(i, request)
- break
- else:
- self._queue.append(request)
- self._cond.notify() # 唤醒等待的 worker
+        def put(self, request):
+            with self._cond:
+                # 按优先级插入（高优先级在前）
+                for i, req in enumerate(self._queue):
+                    if request.priority > req.priority:
+                        self._queue.insert(i, request)
+                        break
+                    else:
+                        self._queue.append(request)
+                        self._cond.notify() # 唤醒等待的 worker
 
- def get_batch(self, max_size, max_wait):
- with self._cond:
- while len(batch) < max_size:
- if not self._queue:
- self._cond.wait(remaining) # 无请求时挂起（不空转）
- batch.append(self._queue.popleft())
+                        def get_batch(self, max_size, max_wait):
+                            with self._cond:
+                                while len(batch) < max_size:
+                                    if not self._queue:
+                                        self._cond.wait(remaining) # 无请求时挂起（不空转）
+                                        batch.append(self._queue.popleft())
 ```
 
 ##### 条件变量 vs 轮询
@@ -177,34 +177,36 @@ class RequestStatus:
  CANCELLED = "cancelled"
 
 class InferenceRequest:
- """一个推理请求，支持 Future / Callback / Streaming 三种结果返回。"""
- def __init__(self, prompt, max_new_tokens=8, priority=0,
- timeout=None, callback=None, stream_callback=None):
- self.future = Future()
- self.status = RequestStatus.WAITING
- # ... priority, timeout, callback, stream_callback
+    """一个推理请求，支持 Future / Callback / Streaming 三种结果返回。"""
+    def __init__(self, prompt, max_new_tokens=8, priority=0,
+                 timeout=None, callback=None, stream_callback=None):
+        self.future = Future()
+        self.status = RequestStatus.WAITING
+        # ... priority, timeout, callback, stream_callback
 
- def emit_token(self, token):
- """Streaming：每生成一个 token 调用 stream_callback。"""
- self.generated_tokens.append(token)
- if self.stream_callback:
- self.stream_callback(self.request_id, token)
+    def emit_token(self, token):
+        """Streaming：每生成一个 token 调用 stream_callback。"""
+        self.generated_tokens.append(token)
+        if self.stream_callback:
+            self.stream_callback(self.request_id, token)
 
- def set_result(self, result):
- """完成时：Future + Callback。"""
- self.status = RequestStatus.FINISHED
- self.future.set_result(result)
- if self.callback:
- self.callback(self.request_id, result)
+    def set_result(self, result):
+        """完成时：Future + Callback。"""
+        self.status = RequestStatus.FINISHED
+        self.future.set_result(result)
+        if self.callback:
+            self.callback(self.request_id, result)
 
 class ThreadSafeRequestQueue:
- """条件变量 + 优先级插入 + 批量获取。"""
- def put(self, request):
- with self._cond:
- # 按优先级插入，notify 唤醒 worker
- def get_batch(self, max_size, max_wait):
- with self._cond:
- # 批量获取，无请求时 cond.wait 挂起
+    """条件变量 + 优先级插入 + 批量获取。"""
+    def put(self, request):
+        with self._cond:
+            # 按优先级插入，notify 唤醒 worker
+            ...
+    def get_batch(self, max_size, max_wait):
+        with self._cond:
+            # 批量获取，无请求时 cond.wait 挂起
+            ...
 
 class ConcurrentEngine:
  """模型2：调度线程 + 执行线程 + 超时线程。"""

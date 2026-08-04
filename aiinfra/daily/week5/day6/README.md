@@ -93,7 +93,7 @@ Decode 单步 breakdown:
 
 ```bash
 nsys profile -o mini_engine_timeline --trace=cuda,nvtx \
- python aiinfra/week5/day5/kernels/mini_engine_v0.py
+ python aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
 
 # 统计各 kernel 耗时
 nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep
@@ -168,95 +168,95 @@ from mini_engine_v0 import MiniLLM, MiniTokenizer, MiniEngineV0
 
 _HAS_CUDA = torch.cuda.is_available()
 def sync():
- if _HAS_CUDA: torch.cuda.synchronize()
+    if _HAS_CUDA: torch.cuda.synchronize()
 
-def profile_engine(engine, prompt, max_new_tokens=20):
- input_ids = torch.tensor([engine.tokenizer.encode(prompt)], device=engine.device)
- for _ in range(3): _ = engine.model(input_ids, use_cache=False)
- sync()
+    def profile_engine(engine, prompt, max_new_tokens=20):
+        input_ids = torch.tensor([engine.tokenizer.encode(prompt)], device=engine.device)
+        for _ in range(3): _ = engine.model(input_ids, use_cache=False)
+        sync()
 
- # Prefill
- sync(); t0 = time.perf_counter()
- with torch.no_grad():
- logits, kv_cache = engine.model(input_ids, use_cache=True)
- first_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
- sync(); ttft = (time.perf_counter() - t0) * 1000
+        # Prefill
+        sync(); t0 = time.perf_counter()
+        with torch.no_grad():
+            logits, kv_cache = engine.model(input_ids, use_cache=True)
+            first_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+            sync(); ttft = (time.perf_counter() - t0) * 1000
 
- print(f"=== Prefill Phase ===")
- print(f" Prompt length: {input_ids.size(1)} tokens")
- print(f" TTFT: {ttft:.3f} ms")
- print(f" KV Cache shape per layer: {tuple(kv_cache[0][0].shape)}")
+            print(f"=== Prefill Phase ===")
+            print(f" Prompt length: {input_ids.size(1)} tokens")
+            print(f" TTFT: {ttft:.3f} ms")
+            print(f" KV Cache shape per layer: {tuple(kv_cache[0][0].shape)}")
 
- # Decode
- decode_times = []; breakdown = {"forward": [], "sampling": [], "sync": []}
- next_token = first_token
- for _ in range(max_new_tokens):
- t0 = time.perf_counter()
- with torch.no_grad():
- logits, kv_cache = engine.model(next_token, kv_cache=kv_cache, use_cache=True)
- t1 = time.perf_counter()
- next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
- t2 = time.perf_counter()
- sync(); t3 = time.perf_counter()
- decode_times.append((t3 - t0) * 1000)
- breakdown["forward"].append((t1 - t0) * 1000)
- breakdown["sampling"].append((t2 - t1) * 1000)
- breakdown["sync"].append((t3 - t2) * 1000)
+            # Decode
+            decode_times = []; breakdown = {"forward": [], "sampling": [], "sync": []}
+            next_token = first_token
+            for _ in range(max_new_tokens):
+                t0 = time.perf_counter()
+                with torch.no_grad():
+                    logits, kv_cache = engine.model(next_token, kv_cache=kv_cache, use_cache=True)
+                    t1 = time.perf_counter()
+                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+                    t2 = time.perf_counter()
+                    sync(); t3 = time.perf_counter()
+                    decode_times.append((t3 - t0) * 1000)
+                    breakdown["forward"].append((t1 - t0) * 1000)
+                    breakdown["sampling"].append((t2 - t1) * 1000)
+                    breakdown["sync"].append((t3 - t2) * 1000)
 
- mean_tbt = statistics.mean(decode_times)
- p50 = statistics.median(decode_times)
- p99 = sorted(decode_times)[int(len(decode_times)*0.99)] if len(decode_times)>1 else decode_times[0]
- print(f"\n=== Decode Phase ({max_new_tokens} tokens) ===")
- print(f" Mean TBT: {mean_tbt:.3f} ms P50: {p50:.3f} P99: {p99:.3f}")
- print(f" Max: {max(decode_times):.3f} Min: {min(decode_times):.3f}")
- print(f"\n=== Decode Breakdown (mean ms, % of TBT) ===")
- for k, ts in breakdown.items():
- m = statistics.mean(ts); print(f" {k:12s}: {m:.3f} ms ({m/mean_tbt*100:.1f}%)")
- print(f"\n=== Throughput ===")
- print(f" Output: {max_new_tokens/(sum(decode_times)/1000):.2f} tokens/s")
- print(f" TTFT/TBT ratio: {ttft/mean_tbt:.1f}x")
- return {"ttft": ttft, "decode_times": decode_times}
+                    mean_tbt = statistics.mean(decode_times)
+                    p50 = statistics.median(decode_times)
+                    p99 = sorted(decode_times)[int(len(decode_times)*0.99)] if len(decode_times)>1 else decode_times[0]
+                    print(f"\n=== Decode Phase ({max_new_tokens} tokens) ===")
+                    print(f" Mean TBT: {mean_tbt:.3f} ms P50: {p50:.3f} P99: {p99:.3f}")
+                    print(f" Max: {max(decode_times):.3f} Min: {min(decode_times):.3f}")
+                    print(f"\n=== Decode Breakdown (mean ms, % of TBT) ===")
+                    for k, ts in breakdown.items():
+                        m = statistics.mean(ts); print(f" {k:12s}: {m:.3f} ms ({m/mean_tbt*100:.1f}%)")
+                        print(f"\n=== Throughput ===")
+                        print(f" Output: {max_new_tokens/(sum(decode_times)/1000):.2f} tokens/s")
+                        print(f" TTFT/TBT ratio: {ttft/mean_tbt:.1f}x")
+                        return {"ttft": ttft, "decode_times": decode_times}
 
-def scan_prompt_lengths(engine, lengths=[32,64,128,256,512]):
- print("\n=== TTFT vs Prompt Length ===")
- print(f"{'N':>8} {'TTFT(ms)':>10} {'TTFT/N':>10} {'TTFT/N²':>10}")
- for L in lengths:
- ids = torch.randint(1,1000,(1,L),device=engine.device)
- for _ in range(2): _ = engine.model(ids, use_cache=False)
- sync(); t0 = time.perf_counter()
- with torch.no_grad(): _ = engine.model(ids, use_cache=True)
- sync(); ttft = (time.perf_counter()-t0)*1000
- print(f"{L:>8} {ttft:>10.3f} {ttft/L:>10.3f} {ttft/(L*L):>10.6f}")
+                        def scan_prompt_lengths(engine, lengths=[32,64,128,256,512]):
+                            print("\n=== TTFT vs Prompt Length ===")
+                            print(f"{'N':>8} {'TTFT(ms)':>10} {'TTFT/N':>10} {'TTFT/N²':>10}")
+                            for L in lengths:
+                                ids = torch.randint(1,1000,(1,L),device=engine.device)
+                                for _ in range(2): _ = engine.model(ids, use_cache=False)
+                                sync(); t0 = time.perf_counter()
+                                with torch.no_grad(): _ = engine.model(ids, use_cache=True)
+                                sync(); ttft = (time.perf_counter()-t0)*1000
+                                print(f"{L:>8} {ttft:>10.3f} {ttft/L:>10.3f} {ttft/(L*L):>10.6f}")
 
-def scan_decode_length(engine, prompt_len=64, Ks=[10,30,50,100]):
- print("\n=== TBT vs Generated Length (prompt fixed) ===")
- print(f"{'Gen':>8} {'Mean TBT':>12} {'Last TBT':>12}")
- for K in Ks:
- ids = torch.randint(1,1000,(1,prompt_len),device=engine.device)
- with torch.no_grad():
- logits, kv = engine.model(ids, use_cache=True)
- nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
- sync(); dts = []
- for _ in range(K):
- t0 = time.perf_counter()
- with torch.no_grad():
- logits, kv = engine.model(nt, kv_cache=kv, use_cache=True)
- nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
- sync(); dts.append((time.perf_counter()-t0)*1000)
- print(f"{K:>8} {statistics.mean(dts):>12.3f} {dts[-1]:>12.3f}")
+                                def scan_decode_length(engine, prompt_len=64, Ks=[10,30,50,100]):
+                                    print("\n=== TBT vs Generated Length (prompt fixed) ===")
+                                    print(f"{'Gen':>8} {'Mean TBT':>12} {'Last TBT':>12}")
+                                    for K in Ks:
+                                        ids = torch.randint(1,1000,(1,prompt_len),device=engine.device)
+                                        with torch.no_grad():
+                                            logits, kv = engine.model(ids, use_cache=True)
+                                            nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
+                                            sync(); dts = []
+                                            for _ in range(K):
+                                                t0 = time.perf_counter()
+                                                with torch.no_grad():
+                                                    logits, kv = engine.model(nt, kv_cache=kv, use_cache=True)
+                                                    nt = torch.argmax(logits[:,-1,:],dim=-1,keepdim=True)
+                                                    sync(); dts.append((time.perf_counter()-t0)*1000)
+                                                    print(f"{K:>8} {statistics.mean(dts):>12.3f} {dts[-1]:>12.3f}")
 
-def main():
- device = "cuda" if _HAS_CUDA else "cpu"
- print(f"Using device: {device}\n")
- torch.manual_seed(42)
- model = MiniLLM(1000, 512, 8, n_layers=4)
- engine = MiniEngineV0(model, MiniTokenizer(1000), device)
- profile_engine(engine, "hello world this is a test prompt for profiling", 20)
- scan_prompt_lengths(engine)
- scan_decode_length(engine)
+                                                    def main():
+                                                        device = "cuda" if _HAS_CUDA else "cpu"
+                                                        print(f"Using device: {device}\n")
+                                                        torch.manual_seed(42)
+                                                        model = MiniLLM(1000, 512, 8, n_layers=4)
+                                                        engine = MiniEngineV0(model, MiniTokenizer(1000), device)
+                                                        profile_engine(engine, "hello world this is a test prompt for profiling", 20)
+                                                        scan_prompt_lengths(engine)
+                                                        scan_decode_length(engine)
 
-if __name__ == "__main__":
- main()
+                                                        if __name__ == "__main__":
+                                                            main()
 ```
 
 代码要点：
@@ -277,33 +277,37 @@ python kernels/profile_engine_v0.py
 Using device: cuda
 
 === Prefill Phase ===
- Prompt length: 11 tokens
- TTFT: x.xxx ms
- KV Cache shape per layer: (1, 8, 11, 64)
+  Prompt length: 11 tokens
+  TTFT: 0.582 ms
+  KV Cache shape per layer: (1, 8, 11, 64)
 
 === Decode Phase (20 tokens) ===
- Mean TBT: x.xxx ms P50: x.xxx P99: x.xxx
- Max: x.xxx Min: x.xxx
+  Mean TBT: 2.198 ms P50: 0.510 P99: 17.947
+  Max: 17.947 Min: 0.143
 
 === Decode Breakdown (mean ms, % of TBT) ===
- forward : x.xxx ms (xx.x%)
- sampling : x.xxx ms (x.x%)
- sync : x.xxx ms (x.x%)
+  forward : 2.178 ms (99.1%)
+  sampling : 0.010 ms (0.4%)
+  sync : 0.010 ms (0.5%)
 
 === Throughput ===
- Output: xx.xx tokens/s
- TTFT/TBT ratio: x.xxx
+  Output: 454.89 tokens/s
+  TTFT/TBT ratio: 1.6x  (Prefill 比 Decode 单步重多少倍)
 
 === TTFT vs Prompt Length ===
- N TTFT(ms) TTFT/N TTFT/N²
- 32 x.xxx x.xxx x.xxxxxx
- ...
- 512 x.xxx x.xxx x.xxxxxx
+  N (tokens)    TTFT (ms)   Per-token (ms)      TTFT/N²
+          32        0.652            0.020     0.000637
+          64        0.645            0.010     0.000158
+         128        0.774            0.006     0.000047
+         256        0.732            0.003     0.000011
+         512        1.098            0.002     0.000004
 
-=== TBT vs Generated Length (prompt fixed) ===
- Gen Mean TBT Last TBT
- 10 x.xxx x.xxx
- ...
+=== TBT vs Generated Length (prompt_len fixed) ===
+  Gen tokens    Mean TBT (ms)    Last TBT (ms)
+          10            0.519            0.508
+          30            0.508            0.509
+          50            0.504            0.507
+         100            0.502            0.499
 ```
 
 ##### 观察重点
@@ -319,7 +323,7 @@ Using device: cuda
 
 ```bash
 nsys profile -o mini_engine_timeline --trace=cuda,nvtx \
- python aiinfra/week5/day5/kernels/mini_engine_v0.py
+ python aiinfra/daily/week5/day5/kernels/mini_engine_v0.py
 
 # 统计各 kernel 耗时
 nsys stats -t cuda_gpu_kern_sum mini_engine_timeline.nsys-rep

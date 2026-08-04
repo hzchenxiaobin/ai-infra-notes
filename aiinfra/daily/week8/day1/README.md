@@ -149,7 +149,7 @@ float t_per_call = ms / N; // 单次毫秒
 坑3：只跑 1 次         → 单次抖动大，取 N 次平均
 坑4：忘了 sync         → kernel 异步，stop 立刻触发，时间≈0
 坑5：带宽算错 R+W      → copy 读+写=2x；GEMM 读A+B 写C
-坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1555
+坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1792（见 [硬件参数事实源](../../reference/hardware_specs.md)）
 ```
 
 > 💡 **一句话总结**：benchmark 的可信度 = warmup + N 次平均 + 排除拷贝 + 对比峰值。少任何一步，数字都会失真，面试官一追问就露馅。
@@ -165,7 +165,7 @@ README 里的 benchmark 不能只给绝对数字，必须**对比基线**才有�
 |--------|------|--------|------|---------|
 | GEMM 4096³ | 12.3 ms | 1.8 ms | cuBLAS 1.3 ms | 72% |
 | FlashAttention N=4096 | 8.5 ms | 4.0 ms | 标准 attn 8.5 ms | 2.1x 加速 |
-| SiLU N=1M | 0.05 ms | 0.008 ms | 带宽峰值 1555 GB/s | 84% 带宽 |
+| SiLu N=1M | 0.05 ms | 0.008 ms | 带宽峰值 1792 GB/s | 56% 带宽 |
 ```
 
 ##### 为什么必须给"达到比例"？
@@ -235,7 +235,7 @@ def naive_python_silu(arr):
 def fmt_markdown_table(rows):
     """把 benchmark 结果列表渲染成 Markdown 表格，直接贴 README。"""
     cols = ["规模 N", "单次耗时(ms)", "带宽(GB/s)", "带宽利用率"]
-    peak_bw = 1555  # RTX 5090 HBM 峰值
+    peak_bw = 1792  # RTX 5090 GDDR7 峰值（见 reference/hardware_specs.md）
     lines = ["| " + " | ".join(cols) + " |",
              "|" + "|".join(["---"] * len(cols)) + "|"]
     for r in rows:
@@ -283,7 +283,7 @@ if __name__ == "__main__":
 python kernels/benchmark_demo.py --sizes 1m,4m,16m
 ```
 
-**预期输出**（节选，RTX 5090）：
+**预期输出**（节选，RTX 5090，CUDA 12.8，sm_120；峰值带宽 1792 GB/s，见 [硬件参数事实源](../../reference/hardware_specs.md)）：
 
 ```text
 N=     1,000,000  time=0.0083 ms  BW=963.9 GB/s
@@ -294,14 +294,16 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 | 规模 N | 单次耗时(ms) | 带宽(GB/s) | 带宽利用率 |
 |---|---|---|---|
-| 1,000,000 | 0.0083 | 963.9 | 62.0% |
-| 4,000,000 | 0.0297 | 1077.4 | 69.3% |
+| 1,000,000 | 0.0083 | 963.9 | 53.8% |
+| 4,000,000 | 0.0297 | 1077.4 | 60.1% |
 ```
+
+> ⚠️ 以上为一次实跑留档（warmup=5, iters=100），带宽绝对值受卡间显存颗粒、驱动版本、风扇曲线影响会小幅波动；**带宽利用率 = 实测带宽 / 1792 GB/s**。若你的环境跑出明显不同结果，以你自己留档为准。
 
 ##### 观察重点
 
 1. **N 越大带宽利用率越高**：小 N 时 launch overhead 占比大，大 N 才能打满带宽
-2. **带宽利用率 < 100%**：RTX 5090 峰值 ~1555 GB/s，实测 ~1100 GB/s ≈ 70-85% 已是 elementwise 上限
+2. **带宽利用率 < 100%**：RTX 5090 峰值 ~1792 GB/s（GDDR7），实测 ~1100 GB/s ≈ 60-65% 已是 elementwise 上限
 3. **输出可直接贴 README**：`fmt_markdown_table` 生成的表格就是 README 的 Benchmark 段
 
 #### 任务 3：把 benchmark 结果写进 README
@@ -313,7 +315,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 | 算子 | 规模 | 耗时 | 带宽/算力 | 基线 | 达到比例 |
 |------|------|------|----------|------|---------|
-| SiLU | 16M | 0.116 ms | 1107 GB/s | HBM 峰值 1555 GB/s | 71% 带宽 |
+| SiLU | 16M | 0.116 ms | 1107 GB/s | GDDR7 峰值 1792 GB/s | 62% 带宽 |
 | GEMM | 4096³ | 1.8 ms | 77.3 TFLOPS | cuBLAS 1.3 ms | 72% |
 | FlashAttention | N=4096 | 4.0 ms | — | 标准 attn 8.5 ms | 2.1x 加速 |
 ```
@@ -324,7 +326,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 HBM 峰值，验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
+**与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 GDDR7 峰值（1792 GB/s），验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
@@ -353,7 +355,7 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 写一个错误版本：把 `cudaMemcpy`（H2D）放进 cudaEvent 计时区间内，对比正确测法的带宽数字。观察：错误测法的带宽会低多少？
 
-> 思考：为什么 memcpy 会让带宽假低？（提示：H2D 走 PCIe（~32 GB/s），远慢于 HBM 内 kernel（~1555 GB/s）。把 PCIe 搬运算进 kernel 时间，等于用慢速总线拖累了快速计算。）
+> 思考：为什么 memcpy 会让带宽假低？（提示：H2D 走 PCIe（~32 GB/s），远慢于 GDDR7 内 kernel（~1792 GB/s）。把 PCIe 搬运算进 kernel 时间，等于用慢速总线拖累了快速计算。）
 
 #### 实验 3：为 Mini 引擎补一份 README 模板
 
@@ -431,9 +433,9 @@ Day 1 我们把 7 周散落的代码与笔记，打磨成一份面向面试的�
 <summary>点击查看答案</summary>
 
  - **瓶颈是内存带宽**：SiLU 计算量极小（一次 exp + 乘），数据搬运是瓶颈 → memory-bound
- - **判断到头**：测带宽利用率 `实测 BW / HBM 峰值`，达到 80-90% 即接近上限（剩余开销是 launch overhead 和指令调度，无法消除）
+ - **判断到头**：测带宽利用率 `实测 BW / GDDR7 峰值(1792 GB/s)`，达到 80-90% 即接近上限（剩余开销是 launch overhead 和指令调度，无法消除）
  - **小 N 时利用率低**：launch overhead 占比大；大 N 才能打满带宽
- - **优化方向**：① `__expf` 快速数学函数 ② float4 向量化访问 ③ 融合到上游 kernel（避免中间写回 HBM）
+ - **优化方向**：① `__expf` 快速数学函数 ② float4 向量化访问 ③ 融合到上游 kernel（避免中间写回显存）
 
 </details>
 

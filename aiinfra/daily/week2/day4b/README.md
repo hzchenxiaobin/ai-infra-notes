@@ -235,6 +235,8 @@ nvcc -O3 -arch=sm_120 \
 
 预期输出：
 
+> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 B2 任务）。待 CUTLASS 环境就绪后补真实数据。
+
 ```text
 CUTLASS vs cuBLAS benchmark (FP16 input, FP32 accumulate)
 M=N=K    | CUTLASS(ms)  cuBLAS(ms)  Ratio    | CUTLASS TFLOPS
