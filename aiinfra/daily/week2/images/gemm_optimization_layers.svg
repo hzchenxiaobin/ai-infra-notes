@@ -29,7 +29,7 @@
       <rect x="0" y="0" width="600" height="46" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#rough2)"/>
       <rect x="0" y="0" width="6" height="46" fill="#4a7a3a" opacity="0.6" rx="3" filter="url(#rough2)"/>
       <text x="18" y="29" font-size="13" fill="#444" font-weight="bold">+ Tensor Core / CUTLASS (进阶)</text>
-      <text x="210" y="29" font-size="11" fill="#777">WMMA 指令，矩阵乘加硬件加速</text>
+      <text x="250" y="29" font-size="11" fill="#777">WMMA 指令，矩阵乘加硬件加速</text>
       <text x="572" y="30" text-anchor="middle" font-size="16" fill="#4a7a3a" font-weight="bold">~90%+</text>
     </g>
     <g transform="translate(90, 180)">
@@ -50,7 +50,7 @@
       <rect x="0" y="0" width="600" height="46" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5" filter="url(#rough2)"/>
       <rect x="0" y="0" width="6" height="46" fill="#446688" opacity="0.6" rx="3" filter="url(#rough2)"/>
       <text x="18" y="29" font-size="13" fill="#444" font-weight="bold">+ Warp Shuffle 写回优化 (Day 6)</text>
-      <text x="210" y="29" font-size="11" fill="#777">Warp 内协作，减少非合并访问</text>
+      <text x="250" y="29" font-size="11" fill="#777">Warp 内协作，减少非合并访问</text>
       <text x="572" y="30" text-anchor="middle" font-size="16" fill="#446688" font-weight="bold">~60%</text>
     </g>
     <g transform="translate(90, 342)">

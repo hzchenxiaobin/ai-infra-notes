@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="460" viewBox="0 0 720 460" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
@@ -9,7 +9,7 @@
     </marker>
   </defs>
 
-  <rect width="720" height="460" fill="#fdfcf7"/>
+  <rect width="720" height="480" fill="#fdfcf7"/>
 
   <!-- Title -->
   <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">PagedAttention 逻辑→物理 block 映射</text>
@@ -112,5 +112,5 @@
   </g>
 
   <!-- bottom note -->
-  <text x="360" y="450" text-anchor="middle" font-size="9" fill="#aaa">kernel 通过 block_table[lb] 间接寻址 · 每 16 token 查一次表 · amortized 开销可忽略</text>
+  <text x="360" y="470" text-anchor="middle" font-size="9" fill="#aaa">kernel 通过 block_table[lb] 间接寻址 · 每 16 token 查一次表 · amortized 开销可忽略</text>
 </svg>

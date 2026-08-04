@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="620" viewBox="0 0 860 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="29" result="n"/>
@@ -8,7 +8,7 @@
       <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
     </marker>
   </defs>
-  <rect width="860" height="540" fill="#fdfcf7"/>
+  <rect width="860" height="620" fill="#fdfcf7"/>
   <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Roofline Model：判断 kernel 瓶颈</text>
   <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
@@ -43,7 +43,7 @@
 
   <!-- slope label -->
   <text x="240" y="300" font-size="10" fill="#4a8edb" font-weight="bold" transform="rotate(-35 240 300)">带宽限制区</text>
-  <text x="260" y="320" font-size="9" fill="#4a8edb" transform="rotate(-35 260 320)">性能 = AI × 带宽</text>
+  <text x="170" y="400" font-size="9" fill="#4a8edb">性能 = AI × 带宽</text>
 
   <!-- ceiling label -->
   <text x="520" y="168" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">算力限制区</text>
@@ -90,12 +90,12 @@
 
   <!-- ===== How to use ===== -->
   <g filter="url(#sk)">
-    <rect x="80" y="430" width="480" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="80" y="510" width="700" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
   </g>
-  <text x="100" y="452" font-size="11" font-weight="bold" fill="#2e6e2e">面试用法（3 步）</text>
+  <text x="100" y="532" font-size="11" font-weight="bold" fill="#2e6e2e">面试用法（3 步）</text>
   <g font-size="10" fill="#444">
-    <text x="100" y="470">1. 算 AI = FLOP / Bytes → 在 x 轴定位</text>
-    <text x="100" y="486">2. 看落在斜线还是水平线 → memory-bound / compute-bound</text>
-    <text x="100" y="502">3. 优化方向：memory-bound → 减少访存/提升带宽；compute-bound → 用 Tensor Core</text>
+    <text x="100" y="550">1. 算 AI = FLOP / Bytes → 在 x 轴定位</text>
+    <text x="100" y="566">2. 看落在斜线还是水平线 → memory-bound / compute-bound</text>
+    <text x="100" y="582">3. 优化方向：memory-bound → 减少访存/提升带宽；compute-bound → 用 Tensor Core</text>
   </g>
 </svg>

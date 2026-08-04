@@ -240,7 +240,7 @@ cudaStreamDestroy(streamConsume);
 
 #### 任务 1：创建 multi_stream_pipeline.cu
 
-创建文件 [kernels/multi_stream_pipeline.cu](kernels/multi_stream_pipeline.cu)：
+创建文件 [kernels/multi_stream_pipeline.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week2/day3/kernels/multi_stream_pipeline.cu)：
 
 ```cuda
 // multi_stream_pipeline.cu —— 多 Stream 重叠流水线完整实现

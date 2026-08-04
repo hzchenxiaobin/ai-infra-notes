@@ -204,7 +204,7 @@ for layer in range(num_layers):
 
 #### 任务 1：创建 full_chain_profile.py
 
-创建文件 [kernels/full_chain_profile.py](kernels/full_chain_profile.py)，实现全链路 Profiling：
+创建文件 [kernels/full_chain_profile.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day6/kernels/full_chain_profile.py)，实现全链路 Profiling：
 
 ```python
 # full_chain_profile.py —— Mini 系统全链路 Profiling
@@ -236,7 +236,7 @@ def compare_with_vllm():
  """模拟与 vLLM 的同条件对比。"""
 ```
 
-完整代码见 [kernels/full_chain_profile.py](kernels/full_chain_profile.py)。
+完整代码见 [kernels/full_chain_profile.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day6/kernels/full_chain_profile.py)。
 
 代码要点：
 - `PhaseTimer`：通用阶段计时器，支持任意层级的 start/end，自动计算 total/avg/P50/P99/占比

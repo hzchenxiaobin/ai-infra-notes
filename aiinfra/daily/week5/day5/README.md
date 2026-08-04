@@ -136,7 +136,7 @@ Round 2: User: "请介绍一下 FlashAttention"
 
 #### 任务 1：创建 mini_engine_v0.py
 
-创建文件 [kernels/mini_engine_v0.py](kernels/mini_engine_v0.py)，整合 5 大组件，实现端到端生成：
+创建文件 [kernels/mini_engine_v0.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day5/kernels/mini_engine_v0.py)，整合 5 大组件，实现端到端生成：
 
 ```python
 # mini_engine_v0.py —— Mini 推理引擎 v0（单请求 + KV Cache + Prefill/Decode 循环）

@@ -180,7 +180,7 @@ ncu --set full ./engine
 
 #### 任务 1：创建 benchmark_engine_v1.py
 
-创建文件 [kernels/benchmark_engine_v1.py](kernels/benchmark_engine_v1.py)，对 Mini 引擎 v1 做 concurrency 扫描 + QPS 测试 + 饱和点识别：
+创建文件 [kernels/benchmark_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day6/kernels/benchmark_engine_v1.py)，对 Mini 引擎 v1 做 concurrency 扫描 + QPS 测试 + 饱和点识别：
 
 ```python
 # benchmark_engine_v1.py —— Mini 引擎 v1 Latency/Throughput Benchmark
@@ -228,7 +228,7 @@ def find_saturation_point(results):
  return results[i] # throughput 不再显著增长 → 饱和
 ```
 
-完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](kernels/benchmark_engine_v1.py)。
+完整代码（含 SimulatedEngine、两种测试方法、饱和点识别、瓶颈分析）见 [kernels/benchmark_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day6/kernels/benchmark_engine_v1.py)。
 
 代码要点：
 - `SimulatedEngine`：用摊销算力模型（`base + per_seq × batch × amort^(batch-1)`）模拟真实 GPU 的 batch 摊销行为，`max_num_seqs` 限制每轮 batch 上限

@@ -140,7 +140,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 
 #### 任务 1：创建 `kernels/softmax_layernorm_ext.cu`
 
-下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 2 的基础上增加了：① `launch_softmax`/`launch_layernorm` 封装层 ② `#ifdef WITH_TORCH` 的 PyTorch 绑定 ③ 独立 `main()` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](kernels/softmax_layernorm_ext.cu)。
+下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 2 的基础上增加了：① `launch_softmax`/`launch_layernorm` 封装层 ② `#ifdef WITH_TORCH` 的 PyTorch 绑定 ③ 独立 `main()` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day5/kernels/softmax_layernorm_ext.cu)。
 
 ```cuda
 // kernels/softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）

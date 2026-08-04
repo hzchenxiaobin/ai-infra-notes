@@ -303,7 +303,7 @@ Day 2 的版本在归一化阶段每次都从 HBM 读 gamma/beta。register 缓�
 
 #### 任务 1：创建 `kernels/softmax_layernorm_opt.cu`
 
-下面是优化版 kernel，包含两项改进：① warp 级 Softmax（参考 PyTorch `softmax_warp_forward`）② float4 向量化 LayerNorm（参考 FasterTransformer 向量化加载）。同时保留 Day 2 的 block 级 / 标量版本做对比基准。完整文件见 [kernels/softmax_layernorm_opt.cu](kernels/softmax_layernorm_opt.cu)。
+下面是优化版 kernel，包含两项改进：① warp 级 Softmax（参考 PyTorch `softmax_warp_forward`）② float4 向量化 LayerNorm（参考 FasterTransformer 向量化加载）。同时保留 Day 2 的 block 级 / 标量版本做对比基准。完整文件见 [kernels/softmax_layernorm_opt.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu)。
 
 **优化 1：warp 级 Softmax**（一个 warp 处理一行，无 shared memory）：
 
@@ -412,7 +412,7 @@ __global__ void layernorm_float4_kernel(const float* __restrict__ input, const f
 }
 ```
 
-Host 端的对比基准（`softmax_block_kernel` / `layernorm_scalar_kernel`）和计时逻辑（50 次迭代取平均）见 [kernels/softmax_layernorm_opt.cu](kernels/softmax_layernorm_opt.cu) 完整文件。
+Host 端的对比基准（`softmax_block_kernel` / `layernorm_scalar_kernel`）和计时逻辑（50 次迭代取平均）见 [kernels/softmax_layernorm_opt.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu) 完整文件。
 
 #### 为什么 warp 级 softmax 不需要 `__syncthreads`？
 
@@ -527,15 +527,19 @@ Reduction 是**归约家族的基础形态**——"分块 → 块内归约 → �
 
 ```cuda
 // Welford：一次遍历同时维护 mean 和 M2
-float local_mean = 0.0f, local_M2 = 0.0f;
-int local_count = 0;
+WelfordData w = {0.0f, 0.0f, 0};
 for (int i = tid; i < N4; i += blockDim.x) {
     float4 v = in4[i];
-    // 对 v.x, v.y, v.z, v.w 依次做 Welford 更新
-    // ... mean += delta / count; M2 += delta * (x - mean);
+    w = welfordUpdate(w, v.x);  // delta = x - mean; mean += delta/count; M2 += delta*(x-mean_new)
+    w = welfordUpdate(w, v.y);
+    w = welfordUpdate(w, v.z);
+    w = welfordUpdate(w, v.w);
 }
-// 然后合并多线程的 (count, mean, M2) —— 需要按 count 加权
+// 合并多线程的 (count, mean, M2)：warp 内 shuffle + block 内 shared memory 按 count 加权合并
+w = blockReduceWelford(w, wsmem);
 ```
+
+完整实现（`WelfordData` 结构体 + `welfordUpdate`/`welfordMerge`/`warpReduceWelford`/`blockReduceWelford` 原语 + `layernorm_welford_kernel`）已加入 [kernels/softmax_layernorm_opt.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day3/kernels/softmax_layernorm_opt.cu)，`main()` 中与 scalar / float4 版本三方对比计时并校验正确性。
 
 **思考问题**：并行 Welford 合并多线程的 `(count, mean, M2)` 比简单 sum 复杂在哪？合并公式是什么？
 > 提示：合并 `(n_a, mean_a, M2_a)` 和 `(n_b, mean_b, M2_b)`：`delta = mean_b - mean_a; n = n_a + n_b; mean = mean_a + delta * n_b / n; M2 = M2_a + M2_b + delta² * n_a * n_b / n`。参考论文 "Welford's Algorithm for Parallel Variance"。

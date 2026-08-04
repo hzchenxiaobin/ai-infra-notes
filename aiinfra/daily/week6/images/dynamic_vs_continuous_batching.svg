@@ -56,7 +56,7 @@
   <g filter="url(#sk)">
     <rect x="520" y="100" width="100" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a"/>
   </g>
-  <text x="570" y="116" text-anchor="middle" font-size="10" fill="#2e6e2e">R1 (5 tok)</text>
+  <text x="540" y="116" text-anchor="middle" font-size="10" fill="#2e6e2e">R1 (5 tok)</text>
 
   <!-- R2: starts iter 1, continues -->
   <g filter="url(#sk)">

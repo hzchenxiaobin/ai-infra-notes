@@ -237,7 +237,7 @@ __launch_bounds__(256, 4) __global__ void compute_limited(const float* in, float
 
 ##### 示例 2：故意制造 register spilling
 
-参考 [week1/day2/exercise/register_spill.cu](exercise/register_spill.cu)：
+参考 [week1/day2/exercise/register_spill.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day2/exercise/register_spill.cu)：
 
 ```cuda
 __launch_bounds__(128, 8) __global__ void spill_kernel(const float* in, float* out, int n) {
@@ -313,7 +313,7 @@ ptxas info : Used 96 registers, 340 bytes cmem[0], 4 bytes cmem[2]
 
 #### 任务 1：基础版 occupancy_test.cu
 
-创建文件 [kernels/occupancy_test.cu](kernels/occupancy_test.cu)：
+创建文件 [kernels/occupancy_test.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day2/kernels/occupancy_test.cu)：
 
 ```cuda
 #include <cuda_runtime.h>

@@ -174,11 +174,11 @@ sequenceDiagram
 ### Coding 任务：绘制 Mini 引擎架构图集并验证
 
 #### 任务 1：创建 architecture_diagrams.py
-创建文件 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)，用 Python 生成 Mini 引擎的 Mermaid 架构图集，可直接贴进 README。
+创建文件 [kernels/architecture_diagrams.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day2/kernels/architecture_diagrams.py)，用 Python 生成 Mini 引擎的 Mermaid 架构图集，可直接贴进 README。
 
-> 💡 完整代码见 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)。运行 `python kernels/architecture_diagrams.py` 输出 4 张 Mermaid 图（系统架构 / 请求时序 / 状态机 / Batching 时间线）的 Markdown 代码，可直接贴进 README。
+> 💡 完整代码见 [kernels/architecture_diagrams.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day2/kernels/architecture_diagrams.py)。运行 `python kernels/architecture_diagrams.py` 输出 4 张 Mermaid 图（系统架构 / 请求时序 / 状态机 / Batching 时间线）的 Markdown 代码，可直接贴进 README。
 
-完整代码见 [kernels/architecture_diagrams.py](kernels/architecture_diagrams.py)。
+完整代码见 [kernels/architecture_diagrams.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day2/kernels/architecture_diagrams.py)。
 
 #### 任务 2：运行并生成架构图集
 

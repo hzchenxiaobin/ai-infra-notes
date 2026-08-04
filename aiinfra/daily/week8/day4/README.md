@@ -185,7 +185,7 @@ vLLM 默认 **Recompute**，因为大部分情况下重算比 swap 快。
 
 #### 任务 1：创建 interview_advanced.py
 
-创建文件 [kernels/interview_advanced.py](kernels/interview_advanced.py)，将 12 道进阶篇高频题整理为可自测的 Q&A 系统：
+创建文件 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)，将 12 道进阶篇高频题整理为可自测的 Q&A 系统：
 
 ```python
 # interview_advanced.py —— 进阶篇面试题自测系统
@@ -211,7 +211,7 @@ QUESTIONS = [
 # 完整代码见 kernels/interview_advanced.py
 ```
 
-完整代码见 [kernels/interview_advanced.py](kernels/interview_advanced.py)。
+完整代码见 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/interview_advanced.py)。
 
 代码要点：
 - **12 道题** 覆盖四大主题（Attention 优化 3 题 + 推理系统 3 题 + vLLM/调度 3 题 + 场景题 3 题）

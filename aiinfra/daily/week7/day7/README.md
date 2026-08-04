@@ -143,7 +143,7 @@ class InferenceEngine:
 
 #### 任务 1：运行总结自测脚本
 
-创建并运行 [kernels/week7_summary.py](kernels/week7_summary.py)，汇总 Week 7 全部知识点：
+创建并运行 [kernels/week7_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day7/kernels/week7_summary.py)，汇总 Week 7 全部知识点：
 
 ```bash
 python kernels/week7_summary.py

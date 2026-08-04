@@ -178,7 +178,7 @@ Step 4: 性能对比
 
 #### 任务 1：创建 custom_ops_module.py
 
-创建文件 [kernels/custom_ops_module.py](kernels/custom_ops_module.py)，实现自定义 Kernel 的 PyTorch C++ Extension 集成：
+创建文件 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/custom_ops_module.py)，实现自定义 Kernel 的 PyTorch C++ Extension 集成：
 
 ```python
 # custom_ops_module.py —— 自定义 Kernel 封装模块
@@ -212,7 +212,7 @@ class TransformerLayer(nn.Module):
  # use_custom=False → 调用 PyTorch 原生
 ```
 
-完整代码见 [kernels/custom_ops_module.py](kernels/custom_ops_module.py)。
+完整代码见 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/custom_ops_module.py)。
 
 代码要点：
 - `CUDA_SOURCE`：内嵌完整的 CUDA kernel 源码（softmax/layernorm/flash_attention），通过字符串传给 `load_inline`

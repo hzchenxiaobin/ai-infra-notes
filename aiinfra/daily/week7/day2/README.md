@@ -193,7 +193,7 @@ def _apply_aging(self):
 
 #### 任务 1：创建 full_scheduler.py
 
-创建文件 [kernels/full_scheduler.py](kernels/full_scheduler.py)，实现支持六大功能的完整调度器：
+创建文件 [kernels/full_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day2/kernels/full_scheduler.py)，实现支持六大功能的完整调度器：
 
 ```python
 # full_scheduler.py —— 完整调度器（优先级 + 超时 + 资源预算 + 抢占）
@@ -227,7 +227,7 @@ class FullScheduler:
  """等待超阈值的请求自动提升优先级"""
 ```
 
-完整代码见 [kernels/full_scheduler.py](kernels/full_scheduler.py)。
+完整代码见 [kernels/full_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day2/kernels/full_scheduler.py)。
 
 代码要点：
 - `MemoryBudget`：模拟 GPU 显存的 block 分配，`can_allocate` / `allocate` / `free` 三板斧，类比 PagedAttention 的 block allocator

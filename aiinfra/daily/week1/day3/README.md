@@ -161,7 +161,7 @@ nvcc -o mini_device_query mini_device_query.cu
 ./mini_device_query
 ```
 
-> 💡 这个 mini 版就是 [day3/exercise/mini_device_query.cu](exercise/mini_device_query.cu)，你可以直接编译运行。
+> 💡 这个 mini 版就是 [day3/exercise/mini_device_query.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day3/exercise/mini_device_query.cu)，你可以直接编译运行。
 
 ---
 
@@ -329,7 +329,7 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks,      // 输出：每 S
 
 这个函数会考虑所有资源约束（寄存器、共享内存、线程数、block 数），返回精确的 `active_blocks`。它比手算更准确，因为编译器可能对寄存器做了额外优化。
 
-[day3/exercise/occupancy_verify.cu](exercise/occupancy_verify.cu) 就是用来对比手算与 API 结果的验证程序。
+[day3/exercise/occupancy_verify.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day3/exercise/occupancy_verify.cu) 就是用来对比手算与 API 结果的验证程序。
 
 ---
 
@@ -373,7 +373,7 @@ find /usr/local/cuda -name deviceQuery
 
 #### 任务 2：创建自己的 mini_device_query
 
-参考上面的代码，编译运行 [day3/exercise/mini_device_query.cu](exercise/mini_device_query.cu)：
+参考上面的代码，编译运行 [day3/exercise/mini_device_query.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day3/exercise/mini_device_query.cu)：
 
 ```bash
 cd week1/day3/exercise
@@ -393,7 +393,7 @@ nvcc -o mini_device_query mini_device_query.cu
 
 #### 任务 4：使用 Python 版 Occupancy Calculator
 
-仓库提供了 [tools/cuda_occupancy_calculator.py](../tools/cuda_occupancy_calculator.py)，无需 Excel 即可计算：
+仓库提供了 [tools/cuda_occupancy_calculator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/tools/cuda_occupancy_calculator.py)，无需 Excel 即可计算：
 
 ```bash
 python3 tools/cuda_occupancy_calculator.py \
@@ -484,7 +484,7 @@ Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming
 ### 验证 Checklist
 
 - [ ] 能独立运行 `deviceQuery` 并解读所有输出字段
-- [ ] 能自己写一个简化版 deviceQuery（[mini_device_query.cu](exercise/mini_device_query.cu)）
+- [ ] 能自己写一个简化版 deviceQuery（[mini_device_query.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day3/exercise/mini_device_query.cu)）
 - [ ] 理解自己 GPU 的硬件限制参数
 - [ ] 能计算 GPU 的理论峰值算力
 - [ ] 能计算 GPU 的理论显存带宽

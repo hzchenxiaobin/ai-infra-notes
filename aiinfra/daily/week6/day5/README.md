@@ -179,7 +179,7 @@ if batch:
 
 #### 任务 1：创建 mini_engine_v1.py
 
-创建文件 [kernels/mini_engine_v1.py](kernels/mini_engine_v1.py)，实现多请求并发 + Continuous Batching + 优先级调度的完整引擎：
+创建文件 [kernels/mini_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day5/kernels/mini_engine_v1.py)，实现多请求并发 + Continuous Batching + 优先级调度的完整引擎：
 
 ```python
 # mini_engine_v1.py —— Mini 推理引擎 v1（多请求 + Continuous Batching + Scheduler + 优先级）
@@ -236,7 +236,7 @@ class MiniEngineV1:
  # 后台循环：移除完成 → 调度 → forward
 ```
 
-完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](kernels/mini_engine_v1.py)。
+完整代码（含自包含 MiniLLM、Tokenizer、3 个 demo 场景）见 [kernels/mini_engine_v1.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day5/kernels/mini_engine_v1.py)。
 
 代码要点：
 - `submit()` **异步返回 Future**：入队后立即返回，不阻塞；worker 完成后 `future.set_result()`

@@ -189,7 +189,7 @@ compiled_model = torch.compile(model, mode="reduce-overhead")
 
 #### 任务 1：创建 `kernels/profiling_targets.cu`
 
-ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的 kernel，干扰判断。所以我们先准备一个**干净的独立靶点程序**：一个 memory-bound 的 Softmax + 一个 compute-bound 的 GEMM，让 ncu 直接分析。完整文件见 [kernels/profiling_targets.cu](kernels/profiling_targets.cu)。
+ncu 分析 PyTorch 模型时，kernel 名字会被 mangle、还混着 cuBLAS 的 kernel，干扰判断。所以我们先准备一个**干净的独立靶点程序**：一个 memory-bound 的 Softmax + 一个 compute-bound 的 GEMM，让 ncu 直接分析。完整文件见 [kernels/profiling_targets.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day6/kernels/profiling_targets.cu)。
 
 核心是两个对比 kernel：
 
@@ -250,7 +250,7 @@ __global__ void gemm_kernel(const float* __restrict__ A, const float* __restrict
 
 #### 任务 2：用 nsys 采集 Mini Engine 时间线
 
-先运行独立的 Mini Engine profiling 脚本（[kernels/profile_mini_engine.py](kernels/profile_mini_engine.py)），它内置 `torch.profiler` 输出 Prefill/Decode 的算子时间表：
+先运行独立的 Mini Engine profiling 脚本（[kernels/profile_mini_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day6/kernels/profile_mini_engine.py)），它内置 `torch.profiler` 输出 Prefill/Decode 的算子时间表：
 
 ```bash
 # 运行（输出 Prefill/Decode 算子表 + 导出 Chrome trace）

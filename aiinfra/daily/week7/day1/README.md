@@ -158,7 +158,7 @@ Streaming: submit → tok0 → tok1 → tok2 → ... → done（逐个返回）
 
 #### 任务 1：创建 concurrent_engine.py
 
-创建文件 [kernels/concurrent_engine.py](kernels/concurrent_engine.py)，实现三线程协作的并发推理引擎：
+创建文件 [kernels/concurrent_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day1/kernels/concurrent_engine.py)，实现三线程协作的并发推理引擎：
 
 ```python
 # concurrent_engine.py —— 多请求并发支持（线程安全队列 + Future/Callback/Streaming + 生命周期）
@@ -218,7 +218,7 @@ class ConcurrentEngine:
  # 检查过期请求 → set_exception
 ```
 
-完整代码（含 5 个 demo）见 [kernels/concurrent_engine.py](kernels/concurrent_engine.py)。
+完整代码（含 5 个 demo）见 [kernels/concurrent_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day1/kernels/concurrent_engine.py)。
 
 代码要点：
 - `ThreadSafeRequestQueue`：`Condition` 保护队列，`put` 按优先级插入 + `notify`，`get_batch` 批量获取 + `wait` 挂起（不空转）

@@ -162,7 +162,7 @@ Cache 复用：
 
 #### 任务 1：创建 kv_cache.cu
 
-创建文件 [kernels/kv_cache.cu](kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
+创建文件 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day2/kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
 
 ```cuda
 // kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现

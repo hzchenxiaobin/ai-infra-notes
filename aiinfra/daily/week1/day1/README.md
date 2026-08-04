@@ -463,7 +463,7 @@ total_warps = warps_per_block * gridDim.x * gridDim.y * gridDim.z
 
 #### 任务 1：hello_gpu.cu
 
-创建文件 [kernels/hello_gpu.cu](kernels/hello_gpu.cu)：
+创建文件 [kernels/hello_gpu.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day1/kernels/hello_gpu.cu)：
 
 ```cuda
 #include <stdio.h>

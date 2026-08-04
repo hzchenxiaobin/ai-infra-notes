@@ -135,7 +135,7 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 padding
 
 #### 任务 1：创建 bank_conflict.cu
 
-创建文件 [kernels/bank_conflict.cu](kernels/bank_conflict.cu)：
+创建文件 [kernels/bank_conflict.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day5/kernels/bank_conflict.cu)：
 
 ```cuda
 #include <cuda_runtime.h>

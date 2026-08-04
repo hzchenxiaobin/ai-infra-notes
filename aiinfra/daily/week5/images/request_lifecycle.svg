@@ -67,7 +67,7 @@
 
   <!-- SWAPPED → RUNNING (显存恢复) -->
   <path d="M 710 130 Q 710 300 520 300 Q 450 300 450 130" stroke="#4a8e4a" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#ar2)" filter="url(#sk)"/>
-  <text x="600" y="294" text-anchor="middle" font-size="10" fill="#2e6e2e">显存恢复 → swap in 回 RUNNING</text>
+  <text x="600" y="312" text-anchor="middle" font-size="10" fill="#2e6e2e">显存恢复 → swap in 回 RUNNING</text>
 
   <!-- 抢占的两种策略 -->
   <g filter="url(#sk)">

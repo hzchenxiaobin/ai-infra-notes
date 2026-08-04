@@ -154,7 +154,7 @@ ncu --kernel-name regex:your_kernel \
 
 #### 任务 1：创建 profile_engine_v0.py
 
-创建文件 [kernels/profile_engine_v0.py](kernels/profile_engine_v0.py)，对 Day 5 的 Mini 引擎做端到端 profiling：
+创建文件 [kernels/profile_engine_v0.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day6/kernels/profile_engine_v0.py)，对 Day 5 的 Mini 引擎做端到端 profiling：
 
 ```python
 # profile_engine_v0.py —— Mini 推理引擎 v0 端到端 Profiling

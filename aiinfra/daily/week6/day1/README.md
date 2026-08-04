@@ -140,7 +140,7 @@ Dynamic Batching 用 timeout/max_batch 调节工作点
 
 #### 任务 1：创建 dynamic_batcher.py
 
-创建文件 [kernels/dynamic_batcher.py](kernels/dynamic_batcher.py)，实现线程安全的 Dynamic Batcher：
+创建文件 [kernels/dynamic_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day1/kernels/dynamic_batcher.py)，实现线程安全的 Dynamic Batcher：
 
 ```python
 # dynamic_batcher.py —— Dynamic Batching 实现（请求队列 + 超时等待 + 最大 batch size）

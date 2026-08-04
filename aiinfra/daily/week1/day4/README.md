@@ -315,7 +315,7 @@ __global__ void stride_read(const float* x, float* y) {
 
 #### 任务 1：Naive 版本
 
-创建 [kernels/transpose.cu](kernels/transpose.cu)，实现 naive 转置：
+创建 [kernels/transpose.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day4/kernels/transpose.cu)，实现 naive 转置：
 
 ```cuda
 #include <cuda_runtime.h>

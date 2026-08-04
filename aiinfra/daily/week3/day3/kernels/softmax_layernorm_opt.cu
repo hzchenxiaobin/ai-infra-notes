@@ -57,6 +57,72 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 }
 
 // ============================================================
+// Welford 在线算法原语（参考 FasterTransformer generalLayerNorm）
+// 一次遍历同时维护 (count, mean, M2)，最终 var = M2 / count
+// ============================================================
+struct WelfordData {
+    float mean;
+    float m2;
+    int count;
+};
+
+// 单元素在线更新：delta = x - mean_old; mean += delta / count; M2 += delta * (x - mean_new)
+__inline__ __device__ WelfordData welfordUpdate(WelfordData w, float x) {
+    w.count += 1;
+    float delta = x - w.mean;
+    w.mean += delta / (float)w.count;
+    float delta2 = x - w.mean;
+    w.m2 += delta * delta2;
+    return w;
+}
+
+// 并行合并两个统计块，按 count 加权：
+// delta = mean_b - mean_a; mean = mean_a + delta * n_b / n; M2 = M2_a + M2_b + delta^2 * n_a * n_b / n
+__inline__ __device__ WelfordData welfordMerge(WelfordData a, WelfordData b) {
+    if (a.count == 0)
+        return b;
+    if (b.count == 0)
+        return a;
+    float delta = b.mean - a.mean;
+    int n = a.count + b.count;
+    WelfordData r;
+    r.mean = a.mean + delta * (float)b.count / (float)n;
+    r.m2 = a.m2 + b.m2 + delta * delta * (float)a.count * (float)b.count / (float)n;
+    r.count = n;
+    return r;
+}
+
+// warp 内折半合并：shuffle 3 个字段（mean / m2 / count）
+__inline__ __device__ WelfordData warpReduceWelford(WelfordData w) {
+#pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        WelfordData other;
+        other.mean = __shfl_down_sync(0xFFFFFFFF, w.mean, offset);
+        other.m2 = __shfl_down_sync(0xFFFFFFFF, w.m2, offset);
+        other.count = __shfl_down_sync(0xFFFFFFFF, w.count, offset);
+        w = welfordMerge(w, other);
+    }
+    return w;
+}
+
+// block 级合并：warp 内 shuffle + 每 warp 结果写 shared memory，再由 warp 0 合并
+// 返回值只在 warp 0 的 lane 0 有效
+__inline__ __device__ WelfordData blockReduceWelford(WelfordData w, WelfordData* smem) {
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    w = warpReduceWelford(w);
+    if (lane == 0)
+        smem[wid] = w;
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    if (wid == 0) {
+        w = (lane < numWarps) ? smem[lane] : WelfordData{0.0f, 0.0f, 0};
+        w = warpReduceWelford(w);
+    }
+    return w;
+}
+
+// ============================================================
 // 优化 1：Warp 级 Softmax（参考 PyTorch softmax_warp_forward）
 // 一个 warp 处理一行（D ≤ 1024），无需 shared memory 和 __syncthreads
 // ============================================================
@@ -183,6 +249,58 @@ __global__ void layernorm_float4_kernel(const float* __restrict__ input, const f
     __syncthreads();
 
     // Step 3: 归一化 + affine（float4 批量写出）
+    for (int i = tid; i < N4; i += blockDim.x) {
+        float4 v = in4[i];
+        float4 g = g4[i];
+        float4 b = b4[i];
+        float4 r;
+        r.x = (v.x - row_mean) * row_rstd * g.x + b.x;
+        r.y = (v.y - row_mean) * row_rstd * g.y + b.y;
+        r.z = (v.z - row_mean) * row_rstd * g.z + b.z;
+        r.w = (v.w - row_mean) * row_rstd * g.w + b.w;
+        out4[i] = r;
+    }
+}
+
+// ============================================================
+// 优化 3：Welford 一次遍历 LayerNorm（参考 FasterTransformer generalLayerNorm）
+// float4 加载 + 一次遍历同时求 mean/variance，比两次 reduce 省一遍全局读
+// ============================================================
+__global__ void layernorm_welford_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
+                                         const float* __restrict__ beta, float* __restrict__ output, int M, int N,
+                                         float eps) {
+    int row = blockIdx.x;
+    if (row >= M)
+        return;
+
+    const float4* in4 = reinterpret_cast<const float4*>(input + row * N);
+    const float4* g4 = reinterpret_cast<const float4*>(gamma);
+    const float4* b4 = reinterpret_cast<const float4*>(beta);
+    float4* out4 = reinterpret_cast<float4*>(output + row * N);
+
+    int N4 = N / 4;
+    int tid = threadIdx.x;
+
+    __shared__ WelfordData wsmem[32];
+    __shared__ float row_mean, row_rstd;
+
+    // Pass 1: 一次遍历，float4 批量加载 + Welford 在线更新 mean/M2
+    WelfordData w = {0.0f, 0.0f, 0};
+    for (int i = tid; i < N4; i += blockDim.x) {
+        float4 v = in4[i];
+        w = welfordUpdate(w, v.x);
+        w = welfordUpdate(w, v.y);
+        w = welfordUpdate(w, v.z);
+        w = welfordUpdate(w, v.w);
+    }
+    w = blockReduceWelford(w, wsmem);
+    if (tid == 0) {
+        row_mean = w.mean;
+        row_rstd = rsqrtf(w.m2 / N + eps);
+    }
+    __syncthreads();
+
+    // Pass 2: 归一化 + affine（float4 批量写出；这一遍读不可省，除非 register 缓存）
     for (int i = tid; i < N4; i += blockDim.x) {
         float4 v = in4[i];
         float4 g = g4[i];
@@ -376,7 +494,7 @@ int main() {
     printf("  speedup            : %.2fx\n\n", ms_block / ms_warp);
 
     // ---- LayerNorm 对比 ----
-    printf("[LayerNorm: scalar load (Day16) vs float4 vectorized]\n");
+    printf("[LayerNorm: scalar load (Day16) vs float4 vectorized vs Welford one-pass]\n");
 
     for (int i = 0; i < 3; i++) {
         layernorm_scalar_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
@@ -401,15 +519,30 @@ int main() {
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     cpuLayerNorm(h_in, h_gamma, h_beta, h_ref, M, D, eps);
     checkResult(h_out, h_ref, M * D, 1e-5f, "  float4 correctness");
-    printf("  scalar (Day16) : %.4f ms\n", ms_scalar);
-    printf("  float4 (optim) : %.4f ms\n", ms_f4);
-    printf("  speedup        : %.2fx\n\n", ms_scalar / ms_f4);
+
+    for (int i = 0; i < 3; i++) {
+        layernorm_welford_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
+    cudaEventRecord(start);
+    for (int i = 0; i < iters; i++) {
+        layernorm_welford_kernel<<<M, threads_block>>>(d_in, d_gamma, d_beta, d_out, M, D, eps);
+    }
+    cudaEventRecord(stop);
+    float ms_welford = timeKernel(start, stop) / iters;
+
+    cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
+    checkResult(h_out, h_ref, M * D, 1e-5f, "  welford correctness");
+    printf("  scalar (Day16)       : %.4f ms\n", ms_scalar);
+    printf("  float4 (optim)       : %.4f ms\n", ms_f4);
+    printf("  welford one-pass     : %.4f ms\n", ms_welford);
+    printf("  speedup (float4)     : %.2fx\n", ms_scalar / ms_f4);
+    printf("  speedup (welford)    : %.2fx\n\n", ms_scalar / ms_welford);
 
     printf("=== ncu 验证命令 ===\n");
     printf("ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\\\n");
     printf("  sm__throughput.avg.pct_of_peak_sustained_elapsed,\\\n");
     printf("  gpu__time_duration.sum \\\n");
-    printf("  --kernel-name regex:\"softmax_warp_kernel|layernorm_float4_kernel\" \\\n");
+    printf("  --kernel-name regex:\"softmax_warp_kernel|layernorm_float4_kernel|layernorm_welford_kernel\" \\\n");
     printf("  ./softmax_layernorm_opt\n");
 
     free(h_in);

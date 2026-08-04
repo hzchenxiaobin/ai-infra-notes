@@ -41,11 +41,11 @@
   </g>
 
   <!-- Lane labels -->
-  <g font-size="12" fill="#444" text-anchor="end">
-    <text x="92" y="148" font-weight="bold">R0 (gen=8)</text>
-    <text x="92" y="198" font-weight="bold">R1 (gen=6)</text>
-    <text x="92" y="248" font-weight="bold">R2 (gen=4)</text>
-    <text x="92" y="298" font-weight="bold">R3 (gen=5)</text>
+  <g font-size="12" fill="#444">
+    <text x="92" y="148" font-weight="bold" text-anchor="end">R0 (gen=8)</text>
+    <text x="92" y="198" font-weight="bold" text-anchor="end">R1 (gen=6)</text>
+    <text x="92" y="248" font-weight="bold" text-anchor="end">R2 (gen=4)</text>
+    <text x="92" y="298" font-weight="bold" text-anchor="end">R3 (gen=5)</text>
   </g>
 
   <!-- cell geometry: width 78, x centers 150,235,320,405,490,575,660,745 -->

@@ -140,7 +140,7 @@ def stability_test(num_requests=500):
 
 #### 任务 1：创建 stability_test.py
 
-创建文件 [kernels/stability_test.py](kernels/stability_test.py)，实现完整的系统联调测试套件：
+创建文件 [kernels/stability_test.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day5/kernels/stability_test.py)，实现完整的系统联调测试套件：
 
 ```python
 # stability_test.py —— 系统联调与稳定性测试
@@ -165,7 +165,7 @@ def stability_test(num_requests=500): # Step 6
 def test_abnormal_inputs(): # 异常输入
 ```
 
-完整代码见 [kernels/stability_test.py](kernels/stability_test.py)。
+完整代码见 [kernels/stability_test.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day5/kernels/stability_test.py)。
 
 代码要点：
 - `MiniEngine`：模拟推理引擎，包含线程安全队列、优先级调度、KV Cache 管理、超时控制、自定义 kernel 模拟

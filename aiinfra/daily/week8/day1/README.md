@@ -180,7 +180,7 @@ README 里的 benchmark 不能只给绝对数字，必须**对比基线**才有�
 
 #### 任务 1：创建 benchmark_demo.py
 
-创建文件 [kernels/benchmark_demo.py](kernels/benchmark_demo.py)，实现一个可复用的 kernel benchmark 框架（以 SiLU 为例），输出能直接贴进 README 的 Markdown 表格：
+创建文件 [kernels/benchmark_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/benchmark_demo.py)，实现一个可复用的 kernel benchmark 框架（以 SiLU 为例），输出能直接贴进 README 的 Markdown 表格：
 
 ```python
 # benchmark_demo.py —— Kernel Benchmark 框架（SiLU 示例）
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     print(fmt_markdown_table(results))
 ```
 
-完整代码见 [kernels/benchmark_demo.py](kernels/benchmark_demo.py)。
+完整代码见 [kernels/benchmark_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/benchmark_demo.py)。
 
 代码要点：
 - **① warmup**：先跑 5 次，避免首次 cold miss / JIT 偏慢

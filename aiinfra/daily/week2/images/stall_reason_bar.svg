@@ -7,7 +7,7 @@
     <!-- Axes -->
     <line x1="0" y1="280" x2="500" y2="280" stroke="#8b949e" stroke-width="2"/>
     <line x1="0" y1="0" x2="0" y2="280" stroke="#8b949e" stroke-width="2"/>
-    <text x="-10" y="145" text-anchor="middle" font-size="13" fill="#c9d1d9" transform="rotate(-90, -10, 145)">Stall 占比 (%)</text>
+    <text x="-30" y="145" text-anchor="middle" font-size="13" fill="#c9d1d9" transform="rotate(-90, -30, 145)">Stall 占比 (%)</text>
 
     <!-- Grid lines -->
     <line x1="0" y1="56" x2="500" y2="56" stroke="#30363d" stroke-width="0.5"/>

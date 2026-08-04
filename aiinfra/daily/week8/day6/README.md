@@ -166,7 +166,7 @@ Compute Capability:   sm_120
 
 #### 任务 1：创建 knowledge_selftest.py
 
-创建文件 [kernels/knowledge_selftest.py](kernels/knowledge_selftest.py)，把六大薄弱点 + 关键公式 + RTX 5090 参数做成一个自测系统：
+创建文件 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day6/kernels/knowledge_selftest.py)，把六大薄弱点 + 关键公式 + RTX 5090 参数做成一个自测系统：
 
 ```python
 # knowledge_selftest.py —— AI Infra 知识点自测系统
@@ -215,7 +215,7 @@ PARAM_QUIZ = [
 # 完整代码见 kernels/knowledge_selftest.py
 ```
 
-完整代码见 [kernels/knowledge_selftest.py](kernels/knowledge_selftest.py)。
+完整代码见 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day6/kernels/knowledge_selftest.py)。
 
 代码要点：
 - **三种模式**：`quiz`（随机抽题口述）、`formula`（公式填空默写）、`param`（参数快问快答）

@@ -150,7 +150,7 @@ Profiling：
 
 #### 任务 1：运行 8 周总复盘自测系统
 
-创建并运行 [kernels/week8_summary.py](kernels/week8_summary.py)，汇总 8 周全部知识点：
+创建并运行 [kernels/week8_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day7/kernels/week8_summary.py)，汇总 8 周全部知识点：
 
 ```bash
 python kernels/week8_summary.py

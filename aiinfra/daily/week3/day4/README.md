@@ -150,7 +150,7 @@ AI=0.375 << Ridge Point(12.6) → **softmax 部分是纯 memory-bound**。
 
 #### 任务 1：创建 `kernels/attention_naive.cu`
 
-下面是完整可编译的标准 Attention Forward Kernel。它**故意物化 S 和 P 到 HBM**，用于 IO 分析——这正是我们要"暴露问题"的版本。完整文件见 [kernels/attention_naive.cu](kernels/attention_naive.cu)。
+下面是完整可编译的标准 Attention Forward Kernel。它**故意物化 S 和 P 到 HBM**，用于 IO 分析——这正是我们要"暴露问题"的版本。完整文件见 [kernels/attention_naive.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day4/kernels/attention_naive.cu)。
 
 ```cuda
 // kernels/attention_naive.cu —— 标准 Attention Forward（物化 S 和 P，用于 IO 分析）
@@ -265,7 +265,7 @@ __global__ void attention_naive_kernel(const float* __restrict__ Q, const float*
 }
 ```
 
-Host 端的验证逻辑（`cpuAttention` / `checkResult` / `main`）见 [kernels/attention_naive.cu](kernels/attention_naive.cu) 完整文件。核心是：对 N=256/512/1024/2048 四个序列长度分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-3` 判定 PASS，同时打印理论 HBM IO 量供对比。
+Host 端的验证逻辑（`cpuAttention` / `checkResult` / `main`）见 [kernels/attention_naive.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day4/kernels/attention_naive.cu) 完整文件。核心是：对 N=256/512/1024/2048 四个序列长度分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-3` 判定 PASS，同时打印理论 HBM IO 量供对比。
 
 #### 为什么这个 kernel 故意"慢"？
 

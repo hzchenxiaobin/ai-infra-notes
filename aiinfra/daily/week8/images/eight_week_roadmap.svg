@@ -124,8 +124,8 @@
   <text x="420" y="422" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">8 周核心产出</text>
   <text x="60" y="448" font-size="11" fill="#4a8edb" font-weight="bold">① CUDA Kernel</text>
   <text x="60" y="466" font-size="10" fill="#444">GEMM / FlashAttention / Softmax / LayerNorm</text>
-  <text x="290" y="448" font-size="11" fill="#4a8e4a" font-weight="bold">② Mini 推理引擎</text>
-  <text x="290" y="466" font-size="10" fill="#444">KV Cache · Continuous Batching · Scheduler</text>
+  <text x="310" y="448" font-size="11" fill="#4a8e4a" font-weight="bold">② Mini 推理引擎</text>
+  <text x="310" y="466" font-size="10" fill="#444">KV Cache · Continuous Batching · Scheduler</text>
   <text x="540" y="448" font-size="11" fill="#c98a2b" font-weight="bold">③ 面试素材</text>
   <text x="540" y="466" font-size="10" fill="#444">50+ 题 · Mock 记录 · 能力地图</text>
   <text x="60" y="492" font-size="11" fill="#888">关键数据：GEMM cuBLAS 70%+ · FlashAttention 长序列 2x+ · Mini 引擎 1000+ 请求稳定 · RTX 5090 Ridge 12.6</text>
