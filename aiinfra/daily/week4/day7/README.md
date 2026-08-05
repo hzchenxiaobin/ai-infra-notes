@@ -17,7 +17,7 @@
 
 ### Week 3 知识地图
 
-![Transformer 单层数据流](../../week3/images/transformer_dataflow.svg)
+![Transformer 单层数据流](../images/transformer_dataflow.svg)
 
 Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
 
@@ -41,7 +41,7 @@ Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到�
 
 #### 1. Prefill vs Decode：同一套层，两种性能特征
 
-![Prefill vs Decode 执行特征对比](../../week3/images/prefill_vs_decode.svg)
+![Prefill vs Decode 执行特征对比](../images/prefill_vs_decode.svg)
 
 Transformer 推理分两阶段，跑的是同一套层，但算子形状截然不同，导致 bound 类型天差地别：
 
@@ -68,7 +68,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 
 #### 3. 标准 Attention：O(N²) IO 的根源
 
-![标准 Attention IO 拆解](../../week3/images/attention_io_breakdown.svg)
+![标准 Attention IO 拆解](../images/attention_io_breakdown.svg)
 
 标准 Attention 三阶段把两个 N×N 中间矩阵 S 和 P 物化到 HBM，这是 O(N²) IO 的根源：
 
@@ -90,7 +90,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 #### 4. 端到端 Profiling：五步诊断法
 
-![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
+![端到端 Profiling 五步法](../images/end_to_end_profiling_workflow.svg)
 
 | 步骤 | 工具 | 回答的问题 |
 |------|------|-----------|
@@ -104,7 +104,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 #### 5. Kernel Fusion：省 HBM 中间读写
 
-![Kernel Fusion 机会](../../week3/images/kernel_fusion_opportunities.svg)
+![Kernel Fusion 机会](../images/kernel_fusion_opportunities.svg)
 
 | Fusion 候选 | 收益来源 | 难度 |
 |------------|---------|------|
@@ -119,7 +119,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 ### 算子分类决策树：拿到任意算子如何判 bound
 
-![O(N²) vs O(Nd) IO 增长对比](../../week3/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../images/on2_vs_ond_scaling.svg)
 
 **判定流程**（从理论到验证）：
 
@@ -167,7 +167,7 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 #### Prefill vs Decode 总览
 
-![延迟对比](../../week3/images/latency_comparison.svg)
+![延迟对比](../images/latency_comparison.svg)
 
 | 维度 | Prefill | Decode |
 |------|---------|--------|

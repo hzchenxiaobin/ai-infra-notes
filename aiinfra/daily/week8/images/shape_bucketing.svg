@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="360" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Shape Bucketing：动态 batch 映射到预捕获 Graph</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 运行时 batch（动态） ============ -->
+  <text x="40" y="78" font-size="13" font-weight="bold" fill="#c04050">运行时：batch size 动态变化</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="92" width="40" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+    <rect x="200" y="92" width="60" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+    <rect x="340" y="92" width="84" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+    <rect x="500" y="92" width="96" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="100" y="136" text-anchor="middle" font-size="10" fill="#a03040">b=1</text>
+  <text x="230" y="136" text-anchor="middle" font-size="10" fill="#a03040">b=3</text>
+  <text x="382" y="136" text-anchor="middle" font-size="10" fill="#a03040">b=7</text>
+  <text x="548" y="136" text-anchor="middle" font-size="10" fill="#a03040">b=12</text>
+
+  <!-- ============ 映射箭头（选最近 bucket） ============ -->
+  <path d="M 100 146 Q 100 180 100 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 230 146 Q 250 180 270 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 382 146 Q 400 180 440 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 548 146 Q 580 180 610 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <text x="780" y="180" font-size="10" fill="#8a7a06">↑ 向上取整到最近 bucket</text>
+  <text x="780" y="194" font-size="10" fill="#8a7a06">copy 输入 → pad → replay</text>
+
+  <!-- ============ Bucket 行（预捕获 graph） ============ -->
+  <line x1="40" y1="200" x2="900" y2="200" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="226" font-size="13" font-weight="bold" fill="#2e8b57">预捕获：每个 bucket 一张静态 Graph</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="238" width="40" height="34" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+    <rect x="270" y="238" width="60" height="34" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+    <rect x="440" y="238" width="84" height="34" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+    <rect x="610" y="238" width="96" height="34" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+    <rect x="760" y="238" width="100" height="34" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="100" y="290" text-anchor="middle" font-size="10" fill="#2e8b57" font-weight="bold">G[1]</text>
+  <text x="300" y="290" text-anchor="middle" font-size="10" fill="#2e8b57" font-weight="bold">G[2]</text>
+  <text x="482" y="290" text-anchor="middle" font-size="10" fill="#2e8b57" font-weight="bold">G[4]</text>
+  <text x="658" y="290" text-anchor="middle" font-size="10" fill="#2e8b57" font-weight="bold">G[8]</text>
+  <text x="810" y="290" text-anchor="middle" font-size="10" fill="#2e8b57" font-weight="bold">G[16]</text>
+
+  <!-- ============ summary ============ -->
+  <line x1="40" y1="306" x2="900" y2="306" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="470" y="330" text-anchor="middle" font-size="11" fill="#444">
+    b=3 → bucket=4（pad 1 行）；b=7 → bucket=8；b=12 → bucket=16
+  </text>
+  <text x="470" y="348" text-anchor="middle" font-size="11" fill="#444">
+    代价：每 bucket 一套静态 buffer，显存 ∝ bucket 数；收益：动态 batch 无需重捕获
+  </text>
+</svg>

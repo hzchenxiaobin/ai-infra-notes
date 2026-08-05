@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#f8f9fa" rx="12"/>
+  <text x="400" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#1a1a2e">Mock 面试流程</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Boxes -->
+  <rect x="60" y="80" width="140" height="70" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="8"/>
+  <text x="130" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#0d47a1">自我介绍</text>
+  <text x="130" y="135" text-anchor="middle" font-size="12" fill="#1a237e">2 min</text>
+
+  <rect x="240" y="80" width="140" height="70" fill="#fff3e0" stroke="#f57c00" stroke-width="2" rx="8"/>
+  <text x="310" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#e65100">项目介绍</text>
+  <text x="310" y="135" text-anchor="middle" font-size="12" fill="#bf360c">5 min</text>
+
+  <rect x="420" y="80" width="140" height="70" fill="#e8f5e9" stroke="#388e3c" stroke-width="2" rx="8"/>
+  <text x="490" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b5e20">技术难点</text>
+  <text x="490" y="135" text-anchor="middle" font-size="12" fill="#2e7d32">2 × 6 min</text>
+
+  <rect x="600" y="80" width="140" height="70" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2" rx="8"/>
+  <text x="670" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a148c">优化思路</text>
+  <text x="670" y="135" text-anchor="middle" font-size="12" fill="#6a1b9a">6 min</text>
+
+  <rect x="180" y="200" width="180" height="70" fill="#fce4ec" stroke="#c2185b" stroke-width="2" rx="8"/>
+  <text x="270" y="235" text-anchor="middle" font-size="14" font-weight="bold" fill="#880e4f">场景设计题</text>
+  <text x="270" y="255" text-anchor="middle" font-size="12" fill="#ad1457">7 min</text>
+
+  <rect x="440" y="200" width="180" height="70" fill="#e0f2f1" stroke="#00796b" stroke-width="2" rx="8"/>
+  <text x="530" y="235" text-anchor="middle" font-size="14" font-weight="bold" fill="#004d40">反问环节</text>
+  <text x="530" y="255" text-anchor="middle" font-size="12" fill="#00695c">2 min</text>
+
+  <!-- Arrows -->
+  <line x1="200" y1="115" x2="240" y2="115" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="380" y1="115" x2="420" y2="115" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="560" y1="115" x2="600" y2="115" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="670" y1="150" x2="670" y2="180" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="670" y1="180" x2="620" y2="235" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="440" y1="235" x2="360" y2="235" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Tips -->
+  <text x="400" y="330" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">核心原则</text>
+  <text x="400" y="355" text-anchor="middle" font-size="13" fill="#555">STAR 法讲项目 · 量化结果 · 讲清 why · 准备 follow-up · 录音复盘</text>
+  <text x="400" y="380" text-anchor="middle" font-size="13" fill="#555">总时长约 30 分钟，每环节可提前结束，重点练习时间控制</text>
+</svg>

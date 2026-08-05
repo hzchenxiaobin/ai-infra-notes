@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="1280" viewBox="0 0 940 1280" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="36" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="1280" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Online Softmax 三公式推导</text>
+  <path d="M 290 42 Q 470 50 650 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="470" y="62" text-anchor="middle" font-size="11" fill="#888">从「标准 softmax 需要全局 max」一步步推出分块递推的三公式</text>
+
+  <!-- ===== Step 0: Standard softmax ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="80" width="840" height="100" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="104" font-size="13" fill="#4a8edb" font-weight="bold">Step 0 · 起点：标准 softmax（需要全局 max）</text>
+  <text x="70" y="128" font-size="13" fill="#2b2b2b" font-family="monospace">y_i = exp(x_i − m) / l,   m = max_j x_j,   l = Σ_j exp(x_j − m)</text>
+  <text x="70" y="150" font-size="13" fill="#2b2b2b" font-family="monospace">o   = Σ_i ( exp(x_i − m) / l ) · v_i          ← softmax 加权平均</text>
+  <text x="70" y="170" font-size="11" fill="#888">减 max 是为数值稳定；但 m、l 都要"看完整个向量"才能算 → 分块时做不到</text>
+
+  <path d="M 470 184 L 470 200" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 1: Blocking problem ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="206" width="840" height="96" rx="8" fill="#fde9ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="230" font-size="13" fill="#7a2a2a" font-weight="bold">Step 1 · 分块的困境：处理第 k 块时还没看到后面的块</text>
+  <text x="70" y="254" font-size="13" fill="#2b2b2b" font-family="monospace">score 被切成 tile:  [x_1..x_Bc] | [x_Bc+1..] | ... | [.. x_N]</text>
+  <text x="70" y="276" font-size="13" fill="#2b2b2b" font-family="monospace">处理 tile k 时 → 不知道全局 m → 无法直接算 exp(x − m)</text>
+  <text x="70" y="294" font-size="11" fill="#888">出路：用"当前已知 max"先算，等更大 max 出现时再把旧结果"修正"过来 → 递推维护 (m, l, o)</text>
+
+  <path d="M 470 306 L 470 322" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 2: Running state ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="328" width="840" height="116" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="352" font-size="13" fill="#4a8edb" font-weight="bold">Step 2 · 运行状态 (m, l, o) —— 每行 query 维护一份</text>
+  <text x="70" y="376" font-size="13" fill="#2b2b2b" font-family="monospace">m = max_{x ∈ X_old} x                    ← 已见 score 的 running max</text>
+  <text x="70" y="398" font-size="13" fill="#2b2b2b" font-family="monospace">l = Σ_{x ∈ X_old} exp(x − m)              ← 以 m 为参考点的指数和（分母）</text>
+  <text x="70" y="420" font-size="13" fill="#2b2b2b" font-family="monospace">o = ( Σ_{x ∈ X_old} exp(x − m) · v_x ) / l    ← 已归一化的部分输出</text>
+  <text x="70" y="438" font-size="11" fill="#888">初始：m = −∞,  l = 0,  o = 0</text>
+
+  <path d="M 470 448 L 470 464" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 3: Formula 1 ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="470" width="840" height="96" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="494" font-size="13" fill="#2b6e9e" font-weight="bold">Step 3 · 新块 X_new 到来 → 公式 1（max 更新）</text>
+  <text x="70" y="518" font-size="13" fill="#2b2b2b" font-family="monospace">m_new = max( m,  max_{x_j ∈ X_new} x_j )</text>
+  <text x="70" y="540" font-size="11" fill="#888">含义：全局 max 要么是旧 m，要么在新块里 → 取两者较大（这一步最平凡）</text>
+  <text x="70" y="558" font-size="11" fill="#b85450" font-weight="bold">关键副作用：参考点从 m 抬到 m_new，旧的 l / o 全部要"换算"</text>
+
+  <path d="M 470 570 L 470 586" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 4: Reference point shift ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="592" width="840" height="120" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="616" font-size="13" fill="#7a5415" font-weight="bold">Step 4 · 关键恒等式：参考点平移（"汇率"的来源）</text>
+  <text x="70" y="640" font-size="13" fill="#2b2b2b" font-family="monospace">exp(x − m_new) = exp( (x − m) + (m − m_new) )         ← 拆项</text>
+  <text x="70" y="662" font-size="13" fill="#2b2b2b" font-family="monospace">               = exp(x − m) · exp(m − m_new)          ← 乘法拆分</text>
+  <text x="70" y="684" font-size="13" fill="#b85450" font-family="monospace" font-weight="bold">记  α = exp(m − m_new)   ∈ (0, 1]       ← m_new ≥ m ⇒ 永不放大，数值稳定</text>
+  <text x="70" y="704" font-size="11" fill="#888">作用：旧的指数和 / 加权和只需乘 α 就换算到新参考点，不必重新遍历旧块</text>
+
+  <path d="M 470 716 L 470 732" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 5: Formula 2 ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="738" width="840" height="120" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="762" font-size="13" fill="#7a5415" font-weight="bold">Step 5 · 公式 2（sum 更新）：旧 sum 乘 α + 新块指数和</text>
+  <text x="70" y="786" font-size="13" fill="#2b2b2b" font-family="monospace">l_new = Σ_old exp(x − m_new) + Σ_new exp(x_j − m_new)</text>
+  <text x="70" y="808" font-size="13" fill="#2b2b2b" font-family="monospace">     = α · Σ_old exp(x − m) + Σ_new exp(x_j − m_new)     ← 代入 Step 4</text>
+  <text x="70" y="830" font-size="13" fill="#b85450" font-family="monospace" font-weight="bold">     = α · l + Σ_j exp(x_j − m_new)                       ← Σ_old exp(x−m) = l</text>
+  <text x="70" y="850" font-size="11" fill="#888">旧分母按汇率 α 缩到新参考点，再加上新块以 m_new 算的指数和</text>
+
+  <path d="M 470 862 L 470 878" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 6: Formula 3 ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="884" width="840" height="148" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="908" font-size="13" fill="#2e6e2e" font-weight="bold">Step 6 · 公式 3（output 更新）：旧加权和乘 α + 新块加权和，再除 l_new</text>
+  <text x="70" y="932" font-size="13" fill="#2b2b2b" font-family="monospace">旧未归一化加权和  l · o = Σ_old exp(x − m) · v_x         ← 由 Step 2 的 o 反解</text>
+  <text x="70" y="954" font-size="13" fill="#2b2b2b" font-family="monospace">换算到 m_new:    Σ_old exp(x − m_new) · v_x = α · l · o   ← 再用 Step 4</text>
+  <text x="70" y="976" font-size="13" fill="#2b2b2b" font-family="monospace">新块贡献:        Σ_j exp(x_j − m_new) · v_j</text>
+  <text x="70" y="998" font-size="13" fill="#b85450" font-family="monospace" font-weight="bold">o_new = ( α · l · o + Σ_j exp(x_j − m_new) · v_j ) / l_new</text>
+  <text x="70" y="1020" font-size="11" fill="#2e6e2e">拆两项 → o · (α·l / l_new) + ( Σ_j exp(x_j − m_new) · v_j ) / l_new：旧输出重归一化 + 新块加权</text>
+
+  <path d="M 470 1036 L 470 1052" stroke="#888" stroke-width="1.4" marker-end="url(#arr)" fill="none"/>
+
+  <!-- ===== Step 7: Conclusion ===== -->
+  <g filter="url(#sk)">
+    <rect x="50" y="1058" width="840" height="120" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="70" y="1082" font-size="13" fill="#5a3a7a" font-weight="bold">Step 7 · 结论：三公式构成递推，处理完最后一块即得最终输出</text>
+  <text x="70" y="1106" font-size="12" fill="#2b2b2b" font-family="monospace">m_new = max(m, max(x_j))</text>
+  <text x="70" y="1126" font-size="12" fill="#2b2b2b" font-family="monospace">l_new = l · exp(m − m_new) + Σ_j exp(x_j − m_new)</text>
+  <text x="70" y="1146" font-size="12" fill="#2b2b2b" font-family="monospace">o_new = o · (l · exp(m − m_new) / l_new) + ( Σ_j exp(x_j − m_new) · v_j ) / l_new</text>
+  <text x="70" y="1168" font-size="11" fill="#5a3a7a">α = exp(m − m_new) 是参考点平移的"汇率"；S/P 不落 HBM → 访存从 O(N²) 降到 O(Nd)</text>
+
+  <!-- Footer -->
+  <text x="470" y="1258" text-anchor="middle" font-size="11" fill="#888">公式 3 的更细粒度推导见 online_softmax_formula3_derivation.svg</text>
+</svg>

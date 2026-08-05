@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="540" viewBox="0 0 940 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="540" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">瓶颈定位决策树：从现象到优化方向</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 根节点 -->
+  <g filter="url(#sk)">
+    <rect x="370" y="64" width="200" height="44" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6"/>
+  </g>
+  <text x="470" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">测量 TTFT 和 TBT</text>
+
+  <!-- 第一层分支 -->
+  <path d="M 470 108 L 200 140" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 470 108 L 740 140" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="100" y="142" width="200" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="200" y="166" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">TTFT 高？</text>
+
+  <g filter="url(#sk)">
+    <rect x="640" y="142" width="200" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="740" y="166" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">TBT 高？</text>
+
+  <!-- TTFT 分支 -->
+  <path d="M 200 182 L 110 210" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 200 182 L 290 210" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="30" y="212" width="160" height="36" rx="5" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="110" y="234" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a2828">TTFT 随 N² 增长</text>
+
+  <g filter="url(#sk)">
+    <rect x="210" y="212" width="160" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="290" y="234" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">TTFT 随 N 线性增长</text>
+
+  <path d="M 110 248 L 110 276" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 290 248 L 290 276" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="20" y="278" width="180" height="64" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="110" y="298" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a2828">→ Prefill compute-bound</text>
+  <text x="110" y="316" text-anchor="middle" font-size="10" fill="#444">attention O(N²) 主导</text>
+  <text x="110" y="332" text-anchor="middle" font-size="10" fill="#2e6e2e">优化：FlashAttention</text>
+
+  <g filter="url(#sk)">
+    <rect x="200" y="278" width="180" height="64" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="290" y="298" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">→ Prefill 偏 memory</text>
+  <text x="290" y="316" text-anchor="middle" font-size="10" fill="#444">GEMM O(N·d²) 主导</text>
+  <text x="290" y="332" text-anchor="middle" font-size="10" fill="#2e6e2e">优化：Tensor Core / 并行</text>
+
+  <!-- TBT 分支 -->
+  <path d="M 740 182 L 650 210" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 740 182 L 830 210" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="570" y="212" width="160" height="36" rx="5" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="650" y="234" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a2828">TBT 随 L 增长</text>
+
+  <g filter="url(#sk)">
+    <rect x="750" y="212" width="160" height="36" rx="5" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="830" y="234" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">TBT 稳定但绝对值高</text>
+
+  <path d="M 650 248 L 650 276" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+  <path d="M 830 248 L 830 276" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="560" y="278" width="180" height="64" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="650" y="298" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a2828">→ Decode memory-bound</text>
+  <text x="650" y="316" text-anchor="middle" font-size="10" fill="#444">读 KV Cache 随 L 增长</text>
+  <text x="650" y="332" text-anchor="middle" font-size="10" fill="#2e6e2e">优化：KV 量化/GQA/滑窗</text>
+
+  <g filter="url(#sk)">
+    <rect x="740" y="278" width="180" height="64" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="4 3"/>
+  </g>
+  <text x="830" y="298" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a2828">→ launch overhead 主导</text>
+  <text x="830" y="316" text-anchor="middle" font-size="10" fill="#444">kernel 太小太多</text>
+  <text x="830" y="332" text-anchor="middle" font-size="10" fill="#2e6e2e">优化：CUDA Graph / fusion</text>
+
+  <!-- 第三层：sync/gap 检查 -->
+  <path d="M 740 182 L 740 360" stroke="#3a3a3a" stroke-width="1.2" fill="none" stroke-dasharray="4 3" marker-end="url(#ar3)" filter="url(#sk)" transform="translate(0,180)"/>
+
+  <g filter="url(#sk)">
+    <rect x="350" y="372" width="240" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="470" y="392" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">nsys 看 kernel gap 占比</text>
+  <text x="470" y="408" text-anchor="middle" font-size="10" fill="#666">gap &gt; 20% → launch overhead 严重</text>
+
+  <path d="M 470 416 L 470 446" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="300" y="448" width="340" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="472" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">通用优化手段</text>
+  <text x="470" y="492" text-anchor="middle" font-size="11" fill="#444">CUDA Graph（消除 launch）</text>
+  <text x="470" y="510" text-anchor="middle" font-size="11" fill="#444">torch.compile（自动 fusion）</text>
+</svg>

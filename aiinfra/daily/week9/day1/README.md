@@ -68,7 +68,7 @@ Day 1-3 的 Mini 引擎都跑在单卡上。但当模型规模和业务需求增
 
 #### 3b.2 Tensor Parallelism (TP)
 
-![TP/PP/DP 三种分布式并行对比](../../week7/images/tp_pp_dp_overview.svg)
+![TP/PP/DP 三种分布式并行对比](../images/tp_pp_dp_overview.svg)
 
 TP 的核心思想：**把每一层的权重矩阵切到多卡，各卡并行计算同一层的不同部分，通过通信聚合结果**。
 
@@ -119,7 +119,7 @@ X → ColumnParallel(QKV) → [各 rank 算自己 head 的 QKV，无通信]
 
 #### 3b.3 Pipeline Parallelism (PP)
 
-![NCCL Ring All-Reduce 拓扑](../../week7/images/nccl_ring_topology.svg)
+![NCCL Ring All-Reduce 拓扑](../images/nccl_ring_topology.svg)
 
 PP 的核心思想：**把模型的不同层切到不同卡（stage），数据像流水线一样流过各 stage**。
 
@@ -223,7 +223,7 @@ reduce-scatter: 1GB × 7/8   ≈ 0.875 GB
 
 #### 3b.6 通信计算重叠
 
-![通信-计算重叠：双 CUDA Stream](../../week7/images/comm_compute_overlap.svg)
+![通信-计算重叠：双 CUDA Stream](../images/comm_compute_overlap.svg)
 
 分布式推理的通信开销如果不能被计算掩盖，TP/PP 的加速比会被严重吃掉。**通信-计算重叠**是核心优化手段。
 

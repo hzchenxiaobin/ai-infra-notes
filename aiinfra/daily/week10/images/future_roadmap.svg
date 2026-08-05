@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 480" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="480" fill="#fdfcf7"/>
+
+  <text x="410" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">后续学习路线：3 个月深化 + 6 个月拓展</text>
+  <path d="M 250 44 Q 410 52 570 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="58" text-anchor="middle" font-size="11" fill="#888">从"会写 kernel + 能做系统"到"能做生产级优化 + 分布式"</text>
+
+  <!-- Month 1 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="240" height="170" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="150" y="104" text-anchor="middle" font-size="13" fill="#4a8edb" font-weight="bold">Month 1：深化 Kernel</text>
+  <text x="46" y="128" font-size="11" fill="#2b2b2b">• PagedAttention 完整 CUDA 实现</text>
+  <text x="46" y="148" font-size="11" fill="#2b2b2b">• Tensor Core / WMMA / mma.sync</text>
+  <text x="46" y="168" font-size="11" fill="#2b2b2b">• CUTLASS 源码阅读</text>
+  <text x="46" y="188" font-size="11" fill="#2b2b2b">• Double Buffering 实践</text>
+  <text x="46" y="214" font-size="10" fill="#888">目标：GEMM 达 cuBLAS 90%+</text>
+  <text x="46" y="232" font-size="10" fill="#888">手写 PagedAttention kernel</text>
+
+  <!-- Month 2 -->
+  <g filter="url(#sk)">
+    <rect x="290" y="80" width="240" height="170" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="410" y="104" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">Month 2：系统强化</text>
+  <text x="306" y="128" font-size="11" fill="#2b2b2b">• C++ 重写 Scheduler</text>
+  <text x="306" y="148" font-size="11" fill="#2b2b2b">• CUDA Graph（降 launch 开销）</text>
+  <text x="306" y="168" font-size="11" fill="#2b2b2b">• Chunked Prefill + Prefix Caching</text>
+  <text x="306" y="188" font-size="11" fill="#2b2b2b">• Speculative Decoding 集成</text>
+  <text x="306" y="214" font-size="10" fill="#888">目标：调度延迟降 10x</text>
+  <text x="306" y="232" font-size="10" fill="#888">Mini 引擎接近 vLLM 60%</text>
+
+  <!-- Month 3 -->
+  <g filter="url(#sk)">
+    <rect x="550" y="80" width="240" height="170" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="670" y="104" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">Month 3：分布式与生产</text>
+  <text x="566" y="128" font-size="11" fill="#2b2b2b">• Tensor / Pipeline Parallelism</text>
+  <text x="566" y="148" font-size="11" fill="#2b2b2b">• 模型量化（INT8/FP8/AWQ/GPTQ）</text>
+  <text x="566" y="168" font-size="11" fill="#2b2b2b">• 生产部署 + 监控</text>
+  <text x="566" y="188" font-size="11" fill="#2b2b2b">• 投递实习/工作 + 面试反馈</text>
+  <text x="566" y="214" font-size="10" fill="#888">目标：多 GPU 推理跑通</text>
+  <text x="566" y="232" font-size="10" fill="#888">拿到 offer / 开源贡献</text>
+
+  <!-- arrows -->
+  <path d="M 270 165 L 288 165" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 530 165 L 548 165" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Month 4-5 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="280" width="380" height="120" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="220" y="304" text-anchor="middle" font-size="13" fill="#8e5db8" font-weight="bold">Month 4-5：多模态与长文本</text>
+  <text x="46" y="328" font-size="11" fill="#2b2b2b">• Multimodal LLM 推理（图文混合）</text>
+  <text x="46" y="348" font-size="11" fill="#2b2b2b">• 超长上下文优化（ring attention / 滑窗）</text>
+  <text x="46" y="368" font-size="11" fill="#2b2b2b">• MoE 推理优化（expert 路由 / 负载均衡）</text>
+  <text x="46" y="388" font-size="10" fill="#888">目标：支持 100K+ 上下文 / MoE 模型</text>
+
+  <!-- Month 6 -->
+  <g filter="url(#sk)">
+    <rect x="425" y="280" width="365" height="120" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="607" y="304" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">Month 6：面试与影响力</text>
+  <text x="441" y="328" font-size="11" fill="#2b2b2b">• 根据面试反馈持续查漏补缺</text>
+  <text x="441" y="348" font-size="11" fill="#2b2b2b">• 发表技术博客 / 参与开源（vLLM/SGLang）</text>
+  <text x="441" y="368" font-size="11" fill="#2b2b2b">• 跟踪 TensorRT-LLM / FlashAttention-3</text>
+  <text x="441" y="388" font-size="10" fill="#888">目标：建立 AI Infra 个人影响力</text>
+
+  <!-- 底部原则 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="420" width="760" height="44" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5,3"/>
+  </g>
+  <text x="410" y="440" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">规划原则：每月一个主线 + 一个量化目标 + 一个可展示产出</text>
+  <text x="410" y="458" text-anchor="middle" font-size="11" fill="#888">优先级：Tensor Core / PagedAttention（补强项）&gt; C++ Scheduler &gt; 分布式</text>
+</svg>

@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="640" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">项目 README 解剖：面试官想看到什么</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- left: README outline mock -->
+  <g font-size="11">
+    <g filter="url(#sk)"><rect x="60" y="70" width="380" height="540" rx="10" fill="#fff" stroke="#bbb" stroke-width="1.4"/></g>
+    <text x="250" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">README.md</text>
+    <line x1="80" y1="104" x2="420" y2="104" stroke="#eee" filter="url(#sk)"/>
+
+    <!-- title block -->
+    <g filter="url(#sk)"><rect x="80" y="114" width="340" height="34" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="92" y="135" font-size="12" font-weight="bold" fill="#2b6e9e"># Mini AI Infra</text>
+    <text x="270" y="135" font-size="9" fill="#888">→ 项目名 + 一句话定位</text>
+
+    <!-- highlights -->
+    <g filter="url(#sk)"><rect x="80" y="154" width="340" height="50" rx="5" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="92" y="173" font-size="11" font-weight="bold" fill="#2e6e2e">## 项目亮点</text>
+    <text x="92" y="190" font-size="9" fill="#444">• 手写 kernel  • 推理系统  • benchmark 对比</text>
+    <text x="350" y="173" font-size="9" fill="#888">→ 3 秒抓住眼球</text>
+
+    <!-- quick start -->
+    <g filter="url(#sk)"><rect x="80" y="210" width="340" height="66" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="92" y="229" font-size="11" font-weight="bold" fill="#7a5415">## 快速开始</text>
+    <text x="92" y="246" font-size="9" fill="#444" font-family="monospace">git clone ... &amp;&amp; pip install ...</text>
+    <text x="92" y="262" font-size="9" fill="#444" font-family="monospace">python examples/single_request.py</text>
+    <text x="350" y="229" font-size="9" fill="#888">→ 10 分钟跑通</text>
+
+    <!-- architecture -->
+    <g filter="url(#sk)"><rect x="80" y="282" width="340" height="42" rx="5" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+    <text x="92" y="300" font-size="11" font-weight="bold" fill="#5a3a7a">## 系统架构</text>
+    <text x="92" y="316" font-size="9" fill="#444">[架构图] Engine → Scheduler → Worker → Kernel</text>
+    <text x="350" y="300" font-size="9" fill="#888">→ 一图胜千言</text>
+
+    <!-- benchmark -->
+    <g filter="url(#sk)"><rect x="80" y="330" width="340" height="58" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="92" y="349" font-size="11" font-weight="bold" fill="#b03a3a">## Benchmark 结果</text>
+    <text x="92" y="366" font-size="9" fill="#444" font-family="monospace">FA vs 标准 attn: 2.1x  (N=4096)</text>
+    <text x="92" y="380" font-size="9" fill="#444" font-family="monospace">GEMM vs cuBLAS: 72%</text>
+    <text x="350" y="349" font-size="9" fill="#888">→ 量化成果</text>
+
+    <!-- project structure -->
+    <g filter="url(#sk)"><rect x="80" y="394" width="340" height="50" rx="5" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/></g>
+    <text x="92" y="413" font-size="11" font-weight="bold" fill="#7a5415">## 项目结构</text>
+    <text x="92" y="430" font-size="9" fill="#444" font-family="monospace">mini_infra/  examples/  benchmarks/  tests/</text>
+
+    <!-- roadmap -->
+    <g filter="url(#sk)"><rect x="80" y="450" width="340" height="42" rx="5" fill="#fff" stroke="#bbb" stroke-width="1.2"/></g>
+    <text x="92" y="468" font-size="11" font-weight="bold" fill="#555">## 后续规划</text>
+    <text x="92" y="484" font-size="9" fill="#444">PagedAttention  •  CUDA Graph  •  FP16</text>
+
+    <!-- tech stack -->
+    <g filter="url(#sk)"><rect x="80" y="498" width="340" height="34" rx="5" fill="#fff" stroke="#bbb" stroke-width="1.2"/></g>
+    <text x="92" y="519" font-size="11" font-weight="bold" fill="#555">## 技术栈</text>
+    <text x="180" y="519" font-size="9" fill="#444">CUDA / PyTorch / Continuous Batching</text>
+
+    <text x="250" y="568" text-anchor="middle" font-size="9" fill="#888" font-style="italic">↑ 每一块都直接回答一个面试问题</text>
+    <text x="250" y="586" text-anchor="middle" font-size="9" fill="#888" font-style="italic">（介绍项目 / 难点 / 成果 / 后续）</text>
+  </g>
+
+  <!-- right: interview question mapping -->
+  <g filter="url(#sk)">
+    <rect x="480" y="70" width="380" height="540" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="670" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">README 段落 ↔ 面试问题</text>
+  <line x1="500" y1="106" x2="840" y2="106" stroke="#eee" filter="url(#sk)"/>
+
+  <g font-size="11">
+    <!-- row 1 -->
+    <g filter="url(#sk)"><rect x="500" y="120" width="120" height="40" rx="5" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="560" y="144" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">标题+亮点</text>
+    <path d="M 624 140 L 668 140" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="120" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="138" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"介绍一下你的项目"</text>
+    <text x="761" y="152" text-anchor="middle" font-size="8" fill="#888">⭐⭐⭐⭐⭐ 必考</text>
+
+    <!-- row 2 -->
+    <g filter="url(#sk)"><rect x="500" y="172" width="120" height="40" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="560" y="196" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">快速开始</text>
+    <path d="M 624 192 L 668 192" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="172" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="190" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"代码能跑吗？"</text>
+    <text x="761" y="204" text-anchor="middle" font-size="8" fill="#888">可复现性 = 工程素养</text>
+
+    <!-- row 3 -->
+    <g filter="url(#sk)"><rect x="500" y="224" width="120" height="40" rx="5" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+    <text x="560" y="248" text-anchor="middle" font-size="10" fill="#5a3a7a" font-weight="bold">系统架构</text>
+    <path d="M 624 244 L 668 244" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="224" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="242" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"画一下架构图"</text>
+    <text x="761" y="256" text-anchor="middle" font-size="8" fill="#888">⭐⭐⭐⭐⭐ 必考</text>
+
+    <!-- row 4 -->
+    <g filter="url(#sk)"><rect x="500" y="276" width="120" height="40" rx="5" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+    <text x="560" y="300" text-anchor="middle" font-size="10" fill="#b03a3a" font-weight="bold">Benchmark</text>
+    <path d="M 624 296 L 668 296" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="276" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="294" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"成果？加速多少？"</text>
+    <text x="761" y="308" text-anchor="middle" font-size="8" fill="#888">数字最有说服力</text>
+
+    <!-- row 5 -->
+    <g filter="url(#sk)"><rect x="500" y="328" width="120" height="40" rx="5" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/></g>
+    <text x="560" y="352" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">项目结构</text>
+    <path d="M 624 348 L 668 348" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="328" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="346" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"代码怎么组织的？"</text>
+    <text x="761" y="360" text-anchor="middle" font-size="8" fill="#888">工程规范度</text>
+
+    <!-- row 6 -->
+    <g filter="url(#sk)"><rect x="500" y="380" width="120" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1.2"/></g>
+    <text x="560" y="404" text-anchor="middle" font-size="10" fill="#555" font-weight="bold">后续规划</text>
+    <path d="M 624 400 L 668 400" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="676" y="380" width="170" height="40" rx="5" fill="#fff" stroke="#bbb" stroke-width="1"/></g>
+    <text x="761" y="398" text-anchor="middle" font-size="9" fill="#444" font-weight="bold">"继续优化做什么？"</text>
+    <text x="761" y="412" text-anchor="middle" font-size="8" fill="#888">⭐⭐⭐⭐⭐ 必考</text>
+  </g>
+
+  <!-- bottom takeaway -->
+  <g filter="url(#sk)">
+    <rect x="500" y="440" width="340" height="150" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="670" y="464" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">README = 面试的自我介绍稿</text>
+  <text x="520" y="488" font-size="10" fill="#444">① 标题+亮点：3 秒说清"做了什么"</text>
+  <text x="520" y="508" font-size="10" fill="#444">② 快速开始：证明"能跑"（可复现）</text>
+  <text x="520" y="528" font-size="10" fill="#444">③ 架构图：证明"想清楚了"</text>
+  <text x="520" y="548" font-size="10" fill="#444">④ Benchmark：用数字证明"做得好"</text>
+  <text x="520" y="568" font-size="10" fill="#444">⑤ 后续规划：证明"有成长性"</text>
+  <text x="670" y="586" text-anchor="middle" font-size="9" fill="#888" font-style="italic">缺任何一块，面试官都会追问</text>
+</svg>

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="440" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Chunked Prefill：长 Prompt 分块 + Decode 交错</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Traditional (top) ===== -->
+  <text x="40" y="68" font-size="12" font-weight="bold" fill="#c04050">传统 Prefill：长 prompt 一次性处理 → decode 被阻塞</text>
+
+  <!-- Timeline bar -->
+  <g filter="url(#sk)">
+    <rect x="40" y="78" width="500" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="290" y="97" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">Prefill 2048 tokens（阻塞！）</text>
+
+  <!-- Decode after prefill -->
+  <g filter="url(#sk)">
+    <rect x="540" y="78" width="60" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="600" y="78" width="60" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="660" y="78" width="60" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <g font-size="9" fill="#2b6e9e" text-anchor="middle">
+    <text x="570" y="97">D</text>
+    <text x="630" y="97">D</text>
+    <text x="690" y="97">D</text>
+  </g>
+
+  <!-- Blocked decode requests -->
+  <text x="40" y="124" font-size="10" fill="#c04050">⚠ decode 请求被迫等待 prefill 完成 → 延迟尖峰</text>
+  <path d="M 540 88 L 540 120 L 420 120" stroke="#c04050" stroke-width="1" stroke-dasharray="3,2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="300" y="118" font-size="9" fill="#c04050">等待 20.5s</text>
+
+  <!-- ===== Chunked (bottom) ===== -->
+  <line x1="40" y1="138" x2="900" y2="138" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="162" font-size="12" font-weight="bold" fill="#2e8b57">Chunked Prefill：prompt 分 4 块，每块后服务 decode</text>
+
+  <!-- Chunk 1 + decode -->
+  <g filter="url(#sk)">
+    <rect x="40" y="172" width="120" height="28" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="100" y="191" text-anchor="middle" font-size="9" fill="#2e6e2e">Chunk 1 (512)</text>
+  <g filter="url(#sk)">
+    <rect x="160" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="180" y="191" text-anchor="middle" font-size="9" fill="#2b6e9e">D</text>
+
+  <!-- Chunk 2 + decode -->
+  <g filter="url(#sk)">
+    <rect x="200" y="172" width="120" height="28" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="260" y="191" text-anchor="middle" font-size="9" fill="#2e6e2e">Chunk 2 (512)</text>
+  <g filter="url(#sk)">
+    <rect x="320" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="340" y="191" text-anchor="middle" font-size="9" fill="#2b6e9e">D</text>
+
+  <!-- Chunk 3 + decode -->
+  <g filter="url(#sk)">
+    <rect x="360" y="172" width="120" height="28" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="420" y="191" text-anchor="middle" font-size="9" fill="#2e6e2e">Chunk 3 (512)</text>
+  <g filter="url(#sk)">
+    <rect x="480" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="500" y="191" text-anchor="middle" font-size="9" fill="#2b6e9e">D</text>
+
+  <!-- Chunk 4 + decode -->
+  <g filter="url(#sk)">
+    <rect x="520" y="172" width="120" height="28" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="580" y="191" text-anchor="middle" font-size="9" fill="#2e6e2e">Chunk 4 (512)</text>
+  <g filter="url(#sk)">
+    <rect x="640" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="660" y="191" text-anchor="middle" font-size="9" fill="#2b6e9e">D</text>
+
+  <!-- Remaining decode -->
+  <g filter="url(#sk)">
+    <rect x="680" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+    <rect x="720" y="172" width="40" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <g font-size="9" fill="#2b6e9e" text-anchor="middle">
+    <text x="700" y="191">D</text>
+    <text x="740" y="191">D</text>
+  </g>
+
+  <text x="40" y="218" font-size="10" fill="#2e8b57">✓ decode 请求每 chunk 后获得服务 → 最大延迟从 20.5s 降到 5.1s（-75%）</text>
+
+  <!-- ===== Legend ===== -->
+  <g filter="url(#sk)">
+    <rect x="120" y="234" width="12" height="10" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1"/>
+    <rect x="300" y="234" width="12" height="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <rect x="480" y="234" width="12" height="10" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="136" y="243" font-size="9" fill="#555">Prefill chunk</text>
+  <text x="316" y="243" font-size="9" fill="#555">Decode token</text>
+  <text x="496" y="243" font-size="9" fill="#555">传统阻塞 prefill</text>
+
+  <!-- ===== Comparison table ===== -->
+  <line x1="40" y1="260" x2="900" y2="260" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="284" font-size="13" font-weight="bold" fill="#2b2b2b">延迟对比（prompt=2048, chunk=512, decode=10 tokens）</text>
+
+  <!-- Table header -->
+  <g filter="url(#sk)">
+    <rect x="40" y="294" width="200" height="26" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="240" y="294" width="180" height="26" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="420" y="294" width="180" height="26" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+    <rect x="600" y="294" width="180" height="26" fill="#f6f6f6" stroke="#ccc" stroke-width="1" rx="3"/>
+  </g>
+  <g font-size="10" fill="#555" font-weight="bold" text-anchor="middle">
+    <text x="140" y="311">方式</text>
+    <text x="330" y="311">decode 最大延迟</text>
+    <text x="510" y="311">总 prefill 时间</text>
+    <text x="690" y="311">延迟降低</text>
+  </g>
+
+  <!-- Row: Traditional -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="200" height="24" fill="#fce4ec" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="240" y="320" width="180" height="24" fill="#fce4ec" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="420" y="320" width="180" height="24" fill="#fce4ec" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="600" y="320" width="180" height="24" fill="#fce4ec" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="10" text-anchor="middle">
+    <text x="140" y="336" fill="#a03040">传统</text>
+    <text x="330" y="336" fill="#444">20.5s</text>
+    <text x="510" y="336" fill="#444">20.5s</text>
+    <text x="690" y="336" fill="#888">—</text>
+  </g>
+
+  <!-- Row: Chunked -->
+  <g filter="url(#sk)">
+    <rect x="40" y="344" width="200" height="24" fill="#e6f4ea" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="240" y="344" width="180" height="24" fill="#e6f4ea" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="420" y="344" width="180" height="24" fill="#e6f4ea" stroke="#ddd" stroke-width="1" rx="2"/>
+    <rect x="600" y="344" width="180" height="24" fill="#e6f4ea" stroke="#ddd" stroke-width="1" rx="2"/>
+  </g>
+  <g font-size="10" text-anchor="middle">
+    <text x="140" y="360" fill="#2e6e2e">Chunked</text>
+    <text x="330" y="360" fill="#444">5.1s</text>
+    <text x="510" y="360" fill="#444">20.5s（不变）</text>
+    <text x="690" y="360" fill="#2e8b57" font-weight="bold">-75%</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="384" width="860" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="470" y="402" text-anchor="middle" font-size="10" fill="#2b6e9e">💡 总 prefill 时间不变，但 decode 请求的<strong>最大等待延迟</strong>从"整个 prefill"降到"一个 chunk"</text>
+  <text x="470" y="420" text-anchor="middle" font-size="10" fill="#2b6e9e">prompt 越长、chunk 越小 → 延迟平滑效果越显著（8192 token 从 82s 降到 2.6s，-97%）</text>
+</svg>

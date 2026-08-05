@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">三大推理框架调度策略对比</text>
+  <path d="M 300 40 Q 470 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- column headers -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="200" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="140" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">vLLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="260" y="60" width="200" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="360" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">TensorRT-LLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="480" y="60" width="200" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="580" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">LightLLM</text>
+
+  <g filter="url(#sk)">
+    <rect x="700" y="60" width="200" height="34" rx="6" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5"/>
+  </g>
+  <!-- row: Batching 术语 -->
+  <text x="20" y="116" font-size="11" fill="#444" font-weight="bold">Batching</text>
+  <g filter="url(#sk)"><rect x="40" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="119" text-anchor="middle" font-size="10" fill="#2b6e9e">Continuous Batching</text>
+  <g filter="url(#sk)"><rect x="260" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="119" text-anchor="middle" font-size="10" fill="#2e6e2e">Inflight Batching</text>
+  <g filter="url(#sk)"><rect x="480" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="119" text-anchor="middle" font-size="10" fill="#7a5415">Dynamic Split Fuse</text>
+  <g filter="url(#sk)"><rect x="700" y="100" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="119" text-anchor="middle" font-size="10" fill="#5a2e7e">动态批处理</text>
+
+  <!-- row: 调度器语言 -->
+  <text x="20" y="150" font-size="11" fill="#444" font-weight="bold">调度器</text>
+  <g filter="url(#sk)"><rect x="40" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="153" text-anchor="middle" font-size="10" fill="#2b6e9e">Python</text>
+  <g filter="url(#sk)"><rect x="260" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="153" text-anchor="middle" font-size="10" fill="#2e6e2e">C++</text>
+  <g filter="url(#sk)"><rect x="480" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="153" text-anchor="middle" font-size="10" fill="#7a5415">Python/C++</text>
+  <g filter="url(#sk)"><rect x="700" y="134" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <!-- row: KV Cache 管理 -->
+  <text x="20" y="184" font-size="11" fill="#444" font-weight="bold">KV Cache</text>
+  <g filter="url(#sk)"><rect x="40" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="140" y="187" text-anchor="middle" font-size="10" fill="#2b6e9e">PagedAttention</text>
+  <g filter="url(#sk)"><rect x="260" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="360" y="187" text-anchor="middle" font-size="10" fill="#2e6e2e">PagedAttention</text>
+  <g filter="url(#sk)"><rect x="480" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="580" y="187" text-anchor="middle" font-size="10" fill="#7a5415">Token Attention</text>
+  <g filter="url(#sk)"><rect x="700" y="168" width="200" height="28" rx="4" fill="#fff" stroke="#ccc"/></g>
+  <text x="800" y="187" text-anchor="middle" font-size="10" fill="#5a2e7e">分页 KV Cache</text>
+
+  <!-- row: Chunked Prefill -->
+  </svg>

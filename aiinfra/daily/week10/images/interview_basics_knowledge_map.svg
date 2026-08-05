@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="720" viewBox="0 0 940 720" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="51" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="720" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">面试基础篇知识地图：四大主题 × 核心考点</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Topic 1: GPU 基础 ===== -->
+  <g filter="url(#sk)"><rect x="40" y="64" width="420" height="300" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="250" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">① GPU 基础</text>
+  <line x1="60" y1="100" x2="440" y2="100" stroke="#bbb" filter="url(#sk)"/>
+
+  <g font-size="11" fill="#444">
+    <text x="60" y="124" font-weight="bold" fill="#2b6e9e">SM / Warp / Thread 层次</text>
+    <text x="70" y="142">Grid &gt; Block &gt; Warp(32) &gt; Thread</text>
+    <text x="70" y="158" fill="#888">SM 含多核心+寄存器+shared mem；Warp 是调度基本单位</text>
+
+    <text x="60" y="184" font-weight="bold" fill="#2b6e9e">Occupancy = active_warp / max_warp</text>
+    <text x="70" y="202">降低原因：寄存器过多 / shared mem 过多 / block 非对齐</text>
+    <text x="70" y="218" fill="#888">低 occupancy → 无法隐藏延迟 → 性能下降</text>
+
+    <text x="60" y="244" font-weight="bold" fill="#2b6e9e">Memory Hierarchy（延迟）</text>
+    <text x="70" y="262" font-family="monospace" fill="#444">Register(~0) &lt; L1(~20c) &lt; SMem(~30c) &lt; L2(~200c) &lt; HBM(~500c)</text>
+    <text x="70" y="278" fill="#888">优化目标：热点数据驻留在 register/shared memory</text>
+
+    <text x="60" y="304" font-weight="bold" fill="#2b6e9e">Bank Conflict</text>
+    <text x="70" y="322">多个 thread 同周期访问同一 bank → 串行化</text>
+    <text x="70" y="338" fill="#888">避免：padding（s_A[BM][BK+1]）/ 向量化 / 连续 thread 访问不同 bank</text>
+  </g>
+
+  <!-- ===== Topic 2: Kernel 优化 ===== -->
+  <g filter="url(#sk)"><rect x="480" y="64" width="420" height="300" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="690" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">② Kernel 优化</text>
+  <line x1="500" y1="100" x2="880" y2="100" stroke="#bbb" filter="url(#sk)"/>
+
+  <g font-size="11" fill="#444">
+    <text x="500" y="124" font-weight="bold" fill="#2e6e2e">GEMM 优化到 cuBLAS 80% 路径</text>
+    <text x="510" y="142" font-family="monospace">1. Naive(~1%) → 2. Tiling(~15%)</text>
+    <text x="510" y="158" font-family="monospace">3. Register Blocking(~40%) → 4. float4(~55%)</text>
+    <text x="510" y="174" font-family="monospace">5. Warp Shuffle(~60%) → 6. Double Buffer(~70%)</text>
+    <text x="510" y="190" font-family="monospace">7. Tensor Core(~80%+) → 8. Auto-tuning(~90%+)</text>
+
+    <text x="500" y="216" font-weight="bold" fill="#2e6e2e">float4 向量化加载</text>
+    <text x="510" y="234">4 个连续 float = 16B = 一条 128-bit load 指令</text>
+    <text x="510" y="250" fill="#888">减少指令数、提升带宽利用率；需地址对齐</text>
+
+    <text x="500" y="276" font-weight="bold" fill="#2e6e2e">Warp Shuffle（__shfl_sync）</text>
+    <text x="510" y="294">延迟 ~1-2 cycles（SMem ~20-30 cycles）</text>
+    <text x="510" y="310">warp 内直接读寄存器，无需 __syncthreads</text>
+    <text x="510" y="326" fill="#888">局限：只限 warp 内（32 thread）</text>
+
+    <text x="500" y="352" font-weight="bold" fill="#2e6e2e">Double Buffering</text>
+    <text x="500" y="352" font-weight="bold" fill="#2e6e2e"></text>
+  </g>
+
+  <!-- ===== Topic 3: CUDA 编程 ===== -->
+  <g filter="url(#sk)"><rect x="40" y="384" width="420" height="160" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="250" y="410" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">③ CUDA 编程</text>
+  <line x1="60" y1="420" x2="440" y2="420" stroke="#bbb" filter="url(#sk)"/>
+
+  <g font-size="11" fill="#444">
+    <text x="60" y="444" font-weight="bold" fill="#7a5415">__syncthreads() vs Warp Shuffle</text>
+    <text x="70" y="462">block 级同步（有开销） vs warp 内隐式同步（零开销）</text>
+
+    <text x="60" y="488" font-weight="bold" fill="#7a5415">Default Stream 的坑</text>
+    <text x="70" y="506">Stream 0 隐式同步所有 explicit stream → 并发被打断</text>
+    <text x="70" y="522" fill="#888">解决：cudaStreamCreateWithFlags(&amp;s, cudaStreamNonBlocking)</text>
+  </g>
+
+  <!-- ===== Topic 4: Profiling ===== -->
+  <g filter="url(#sk)"><rect x="480" y="384" width="420" height="160" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="690" y="410" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">④ Profiling</text>
+  <line x1="500" y1="420" x2="880" y2="420" stroke="#bbb" filter="url(#sk)"/>
+
+  <g font-size="11" fill="#444">
+    <text x="500" y="444" font-weight="bold" fill="#b03a3a">Kernel 瓶颈分析三步</text>
+    <text x="510" y="462">1. ncu 看 SM/Memory Throughput + Occupancy</text>
+    <text x="510" y="478">2. Roofline 判 memory-bound vs compute-bound</text>
+    <text x="510" y="494">3. Warp Stall Reasons（Long Scoreboard = mem 延迟）</text>
+
+    <text x="500" y="520" font-weight="bold" fill="#b03a3a">Roofline Model</text>
+    <text x="510" y="538" fill="#888">横轴=算术强度(FLOP/Byte)，纵轴=性能(FLOP/s)</text>
+  </g>
+
+  <!-- ===== Bottom: interview frequency ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="568" width="860" height="136" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="470" y="592" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">面试高频度排序（基础篇）</text>
+
+  <g font-size="10" fill="#444">
+    <text x="60" y="616"><tspan fill="#b03a3a" font-weight="bold">⭐⭐⭐⭐⭐ 必考</tspan>：GEMM 优化路径 · FlashAttention 为什么快 · Prefill vs Decode · KV Cache · 介绍项目</text>
+    <text x="60" y="636"><tspan fill="#c98a2b" font-weight="bold">⭐⭐⭐⭐ 高频</tspan>：SM/Warp/Thread · Occupancy · Memory Hierarchy · Bank Conflict · float4 · Warp Shuffle</text>
+    <text x="60" y="656"><tspan fill="#2b6e9e" font-weight="bold">⭐⭐⭐ 中频</tspan>：__syncthreads vs shuffle · Default Stream · Roofline · Kernel 瓶颈分析 · Continuous vs Dynamic</text>
+    <text x="60" y="676"><tspan fill="#888" font-weight="bold">⭐⭐ 了解</tspan>：cudaMemcpyAsync · PagedAttention 抢占 · ncu 具体指标名</text>
+    <text x="60" y="696" fill="#888" font-style="italic">练习方法：每道题限时 3 分钟口述 → 录音回放 → 修正卡壳点 → 再练直到流畅</text>
+  </g>
+</svg>

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="560" viewBox="0 0 940 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="940" height="560" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">推理系统四大核心问题</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ① 内存管理 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="64" width="430" height="220" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="245" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">① 内存管理（Day2/Day4）</text>
+  <text x="46" y="114" font-size="11" fill="#b03a3a" font-weight="bold">问题</text>
+  <text x="46" y="132" font-size="11" fill="#444">• KV Cache 占用大：2×L×layers×heads×d_head×bytes</text>
+  <text x="46" y="150" font-size="11" fill="#444">• 生成长度不确定 → 动态分配碎片</text>
+  <text x="46" y="168" font-size="11" fill="#444">• 长文本 OOM（序列超显存）</text>
+  <text x="46" y="186" font-size="11" fill="#444">• 多轮对话历史累积</text>
+  <text x="46" y="214" font-size="11" fill="#2e6e2e" font-weight="bold">解决方案</text>
+  <text x="46" y="232" font-size="11" fill="#444">✓ KV 量化(INT8/FP8)  ✓ GQA/MQA(减KV头)</text>
+  <text x="46" y="250" font-size="11" fill="#444">✓ PagedAttention(分页+block table)</text>
+  <text x="46" y="268" font-size="11" fill="#444">✓ 滑动窗口/稀疏  ✓ Cache 复用</text>
+
+  <!-- ② Batch 策略 -->
+  <g filter="url(#sk)">
+    <rect x="480" y="64" width="430" height="220" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="695" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">② Batch 策略（Day3）</text>
+  <text x="496" y="114" font-size="11" fill="#b03a3a" font-weight="bold">问题</text>
+  <text x="496" y="132" font-size="11" fill="#444">• Static：凑齐才开始，长请求阻塞 batch</text>
+  <text x="496" y="150" font-size="11" fill="#444">• Dynamic：请求级聚合，引入等待延迟</text>
+  <text x="496" y="168" font-size="11" fill="#444">• 生成长度方差大 → 利用率低</text>
+  <text x="496" y="214" font-size="11" fill="#2e6e2e" font-weight="bold">解决方案</text>
+  <text x="496" y="232" font-size="11" fill="#444">✓ Continuous Batching：每轮 iteration 重建 batch</text>
+  <text x="496" y="250" font-size="11" fill="#444">✓ 完成即走，新请求随时插入</text>
+  <text x="496" y="268" font-size="11" fill="#444">✓ Chunked Prefill：大 prefill 拆块与 decode 交错</text>
+
+  <!-- ③ Latency 隐藏 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="300" width="430" height="220" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="245" y="326" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">③ Latency 隐藏（Day6）</text>
+  <text x="46" y="350" font-size="11" fill="#b03a3a" font-weight="bold">问题</text>
+  <text x="46" y="368" font-size="11" fill="#444">• Decode launch overhead 主导（kernel 小而多）</text>
+  <text x="46" y="386" font-size="11" fill="#444">• compute 与 communication 串行</text>
+  <text x="46" y="404" font-size="11" fill="#444">• 大 Prefill 阻塞 decode</text>
+  <text x="46" y="432" font-size="11" fill="#2e6e2e" font-weight="bold">解决方案</text>
+  <text x="46" y="450" font-size="11" fill="#444">✓ CUDA Graph（消除 per-step launch）</text>
+  <text x="46" y="468" font-size="11" fill="#444">✓ torch.compile / kernel fusion</text>
+  <text x="46" y="486" font-size="11" fill="#444">✓ Async Copy / Speculative Decoding</text>
+  <text x="46" y="504" font-size="11" fill="#444">✓ Chunked Prefill（prefill 与 decode 交错）</text>
+
+  <!-- ④ 调度开销 -->
+  <g filter="url(#sk)">
+    <rect x="480" y="300" width="430" height="220" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="695" y="326" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">④ 调度开销（Day3/Day6）</text>
+  <text x="496" y="350" font-size="11" fill="#b03a3a" font-weight="bold">问题</text>
+  <text x="496" y="368" font-size="11" fill="#444">• Python GIL / 多线程竞争</text>
+  <text x="496" y="386" font-size="11" fill="#444">• 每 iteration 重建 input tensors</text>
+  <text x="496" y="404" font-size="11" fill="#444">• 内存分配/释放开销</text>
+  <text x="496" y="422" font-size="11" fill="#444">• CPU-GPU 同步点（cudaSynchronize）</text>
+  <text x="496" y="450" font-size="11" fill="#2e6e2e" font-weight="bold">解决方案</text>
+  <text x="496" y="468" font-size="11" fill="#444">✓ 核心逻辑 C++（减少 Python 层）</text>
+  <text x="496" y="486" font-size="11" fill="#444">✓ 预分配 tensor buffer</text>
+  <text x="496" y="504" font-size="11" fill="#444">✓ 异步采样 / 减少 cudaSynchronize</text>
+
+  <text x="470" y="544" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">四大问题交织：内存管理决定能服务多少请求，Batch 策略决定吞吐，Latency 隐藏决定单请求延迟，调度开销决定系统效率</text>
+</svg>

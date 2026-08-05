@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="500" viewBox="0 0 940 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="500" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Copy-on-Write：共享 prompt block，写入时才复制</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">场景：并行采样 / beam search —— 多个 sequence 共享同一 prompt 的 KV cache，只读共享，写入新 token 时才复制</text>
+
+  <!-- ============ 初始：共享 prompt ============ -->
+  <text x="40" y="100" font-size="14" font-weight="bold" fill="#2b6e9e">① 初始：Seq A、Seq B 共享 prompt 的物理 block（refcount=2）</text>
+
+  <text x="40" y="128" font-size="12" fill="#444">Seq A block table:</text>
+  <g filter="url(#sk)">
+    <g stroke="#4a8edb">
+      <rect x="180" y="114" width="60" height="28" rx="3" fill="#bcd6f0"/>
+      <rect x="242" y="114" width="60" height="28" rx="3" fill="#bcd6f0"/>
+    </g>
+  </g>
+  <text x="210" y="132" text-anchor="middle" font-size="10" fill="#2b6e9e">→P5</text>
+  <text x="272" y="132" text-anchor="middle" font-size="10" fill="#2b6e9e">→P9</text>
+
+  <text x="40" y="160" font-size="12" fill="#444">Seq B block table:</text>
+  <g filter="url(#sk)">
+    <g stroke="#4a8e4a">
+      <rect x="180" y="146" width="60" height="28" rx="3" fill="#bfe0bf"/>
+      <rect x="242" y="146" width="60" height="28" rx="3" fill="#bfe0bf"/>
+    </g>
+  </g>
+  <text x="210" y="164" text-anchor="middle" font-size="10" fill="#2e6e2e">→P5</text>
+  <text x="272" y="164" text-anchor="middle" font-size="10" fill="#2e6e2e">→P9</text>
+
+  <!-- 物理 block P5, P9（被两个 seq 指向，refcount=2）-->
+  <g filter="url(#sk)">
+    <rect x="500" y="120" width="80" height="50" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.8"/>
+    <rect x="590" y="120" width="80" height="50" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.8"/>
+  </g>
+  <text x="540" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">P5</text>
+  <text x="540" y="160" text-anchor="middle" font-size="10" fill="#7a5415">refcount=2</text>
+  <text x="630" y="142" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">P9</text>
+  <text x="630" y="160" text-anchor="middle" font-size="10" fill="#7a5415">refcount=2</text>
+
+  <!-- 共享箭头 -->
+  <path d="M 240 114 L 520 120" stroke="#4a8edb" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 240 174 L 520 168" stroke="#4a8e4a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="720" y="120" width="180" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="810" y="142" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">✓ 共享，省一份显存</text>
+  <text x="810" y="160" text-anchor="middle" font-size="10" fill="#444">prompt 的 KV 只存一份</text>
+
+  <!-- ============ Seq B 要写入新 token ============ -->
+  <text x="40" y="220" font-size="14" font-weight="bold" fill="#7a5415">② Seq B 要写入新 token：P9 被共享 → Copy-on-Write</text>
+
+  <!-- 最后一个共享 block P9 要被 Seq B 写入 -->
+  <g filter="url(#sk)">
+    <rect x="500" y="240" width="80" height="50" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.8"/>
+    <rect x="590" y="240" width="80" height="50" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="540" y="262" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">P5</text>
+  <text x="540" y="280" text-anchor="middle" font-size="10" fill="#7a5415">refcount=2</text>
+  <text x="630" y="262" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">P9</text>
+  <text x="630" y="280" text-anchor="middle" font-size="10" fill="#b03a3a">refcount=2 ⚠</text>
+
+  <!-- 分配新 block P2，复制 P9 内容 -->
+  <g filter="url(#sk)">
+    <rect x="720" y="240" width="80" height="50" rx="4" fill="#d9e8f7" stroke="#4a8edb" stroke-width="1.8"/>
+  </g>
+  <text x="760" y="262" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">P2 (新)</text>
+  <text x="760" y="280" text-anchor="middle" font-size="10" fill="#2b6e9e">复制 P9 内容</text>
+  <path d="M 670 265 L 716 265" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <text x="693" y="256" text-anchor="middle" font-size="9" fill="#b85450">复制</text>
+
+  <!-- ============ 写入后 ============ -->
+  <text x="40" y="330" font-size="14" font-weight="bold" fill="#2e6e2e">③ 写入后：Seq B 的 block table 指向新 P2，P9 的 refcount 降回 1</text>
+
+  <text x="40" y="358" font-size="12" fill="#444">Seq A block table:</text>
+  <g filter="url(#sk)">
+    <g stroke="#4a8edb">
+      <rect x="180" y="344" width="60" height="28" rx="3" fill="#bcd6f0"/>
+      <rect x="242" y="344" width="60" height="28" rx="3" fill="#bcd6f0"/>
+    </g>
+  </g>
+  <text x="210" y="362" text-anchor="middle" font-size="10" fill="#2b6e9e">→P5</text>
+  <text x="272" y="362" text-anchor="middle" font-size="10" fill="#2b6e9e">→P9</text>
+
+  <text x="40" y="390" font-size="12" fill="#444">Seq B block table:</text>
+  <g filter="url(#sk)">
+    <g stroke="#4a8e4a">
+      <rect x="180" y="376" width="60" height="28" rx="3" fill="#bfe0bf"/>
+      <rect x="242" y="376" width="60" height="28" rx="3" fill="#bfe0bf"/>
+      <rect x="304" y="376" width="60" height="28" rx="3" fill="#bfe0bf" stroke-dasharray="3 2"/>
+    </g>
+  </g>
+  <text x="210" y="394" text-anchor="middle" font-size="10" fill="#2e6e2e">→P5</text>
+  <text x="272" y="394" text-anchor="middle" font-size="10" fill="#2e6e2e">→P2</text>
+  <text x="334" y="394" text-anchor="middle" font-size="10" fill="#2e6e2e">新 block</text>
+
+  <!-- 物理 block 状态 -->
+  <g filter="url(#sk)">
+    <rect x="500" y="344" width="60" height="40" rx="4" fill="#fef6e6" stroke="#c98a2b"/>
+    <rect x="570" y="344" width="60" height="40" rx="4" fill="#fef6e6" stroke="#c98a2b"/>
+    <rect x="640" y="344" width="60" height="40" rx="4" fill="#d9e8f7" stroke="#4a8edb"/>
+  </g>
+  <text x="530" y="362" text-anchor="middle" font-size="11" fill="#7a5415">P5</text>
+  <text x="530" y="378" text-anchor="middle" font-size="9" fill="#7a5415">rc=2 共享</text>
+  <text x="600" y="362" text-anchor="middle" font-size="11" fill="#7a5415">P9</text>
+  <text x="600" y="378" text-anchor="middle" font-size="9" fill="#7a5415">rc=1 只A</text>
+  <text x="670" y="362" text-anchor="middle" font-size="11" fill="#2b6e9e">P2</text>
+  <text x="670" y="378" text-anchor="middle" font-size="9" fill="#2b6e9e">rc=1 只B</text>
+
+  <!-- 收益 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="430" width="860" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="454" font-size="12" font-weight="bold" fill="#2b2b2b">收益：prompt 部分（可能很长）的 KV cache 只存一份，各 sequence 只为自己的新 token 分配独立 block</text>
+  <text x="60" y="474" font-size="11" fill="#444">场景：并行采样（n>1）、beam search、多轮对话共享历史 —— prompt 越长、候选越多，省的显存越多</text>
+</svg>

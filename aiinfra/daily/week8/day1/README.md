@@ -19,7 +19,7 @@
 
 Day 1 我们用 Arithmetic Intensity + Roofline 论证过：**Decode 阶段 M=1，算术强度极低（≈0.1 FLOP/Byte），是 memory-bound**——每生成一个 token，要把整个模型权重 + 全部历史 KV Cache 从 HBM 搬到 SM。权重和 KV 的字节数直接决定 Decode 延迟。Day 6 的扫描实验也证实：TBT 随生成长度 L 增长，因为 KV Cache 越来越大，HBM 读取越来越多。
 
-![Decode 阶段 Memory-bound 示意](../../week5/images/decode_memory_bound.svg)
+![Decode 阶段 Memory-bound 示意](../images/decode_memory_bound.svg)
 
 ```
 Decode 单步要读的数据：
@@ -334,7 +334,7 @@ Blackwell（B100/RTX 5090）引入 **FP4** Tensor Core：
 | W8A16 + INT8 KV | 0.5× | 0.5× | <1% | 组合，常用 |
 | FP8 E4M3（W8A8） | 0.5× | 0.5× | <1% | Hopper+ 原生，未来主流 |
 
-![瓶颈定位决策树：量化在优化路径中的位置](../../week5/images/bottleneck_decision_tree.svg)
+![瓶颈定位决策树：量化在优化路径中的位置](../images/bottleneck_decision_tree.svg)
 
 > 💡 **决策建议**：无 Hopper 卡 → W4A16（AWQ）+ INT8 KV，性价比最高；有 Hopper/Blackwell → 加 FP8，权重+激活+KV 全 8-bit，Tensor Core 算力再翻倍。精度敏感场景 → W8A16 起步，ppl 几乎无损。
 

@@ -17,7 +17,7 @@
 
 ### Week 6 知识地图
 
-![Week 6 知识地图：从凑批到并发服务](../../week6/images/week6_knowledge_map.svg)
+![Week 6 知识地图：从凑批到并发服务](../images/week6_knowledge_map.svg)
 
 Week 6 围绕一条主线展开：**从单请求串行到多请求高吞吐服务**。
 
@@ -98,7 +98,7 @@ P99 > 平均延迟 → 尾延迟是 SLA 关键
 
 ### 策略选择决策树
 
-![调度策略选择决策树](../../week6/images/scheduling_strategy_decision_tree.svg)
+![调度策略选择决策树](../images/scheduling_strategy_decision_tree.svg)
 
 ![Batching 策略选择决策树](../../images/week6_batching_strategy_decision.svg)
 

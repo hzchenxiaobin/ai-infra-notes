@@ -88,7 +88,7 @@ Decode M=1 估算（单 kernel ~10μs 计算 + 7μs launch）：
 
 #### 1.2 CUDA Graph 原理
 
-![CUDA Graph：Capture / Replay 消除 Launch 间隙](../../week7/images/cuda_graph_capture_replay.svg)
+![CUDA Graph：Capture / Replay 消除 Launch 间隙](../images/cuda_graph_capture_replay.svg)
 
 CUDA Graph 把"一系列 kernel launch"录制为一张 **DAG 图**（节点 = kernel，边 = 依赖），回放时由 GPU 端的 **graph executor** 一次性提交整图，CPU 只介入 1 次。
 
@@ -181,7 +181,7 @@ result = static_out.clone()               # 拷走结果
 
 #### 1.4 动态 Shape 处理
 
-![Shape Bucketing：动态 batch 映射到预捕获 Graph](../../week7/images/shape_bucketing.svg)
+![Shape Bucketing：动态 batch 映射到预捕获 Graph](../images/shape_bucketing.svg)
 
 CUDA Graph 要求静态 shape，但推理时 **batch size 随请求数变化**（continuous batching 下每步 batch 都不同）。三种应对方案：
 

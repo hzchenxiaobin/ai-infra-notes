@@ -123,7 +123,7 @@ CUDA 和 Ascend 的编程模型都有"层级 + 片上存储 + 同步"三件套�
 
 #### 1.4 性能优化方法论对比
 
-![Roofline Model：硬件无关的瓶颈分析法](../../week8/images/roofline_model_interview.svg)
+![Roofline Model：硬件无关的瓶颈分析法](../images/roofline_model_interview.svg)
 
 优化原理在两边**高度相通**，差异主要在"用什么机制实现"：
 

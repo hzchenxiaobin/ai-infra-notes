@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="480" viewBox="0 0 940 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="480" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Prefill → Decode 执行流程与 KV Cache 状态</text>
+  <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Prefill ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="400" height="380" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="240" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Prefill 阶段</text>
+
+  <!-- prompt tokens -->
+  <text x="60" y="116" font-size="11" fill="#444">输入 prompt (B, N)</text>
+  <g filter="url(#sk)">
+    <g fill="#bcd6f0" stroke="#4a8edb">
+      <rect x="60" y="124" width="30" height="26" rx="3"/>
+      <rect x="92" y="124" width="30" height="26" rx="3"/>
+      <rect x="124" y="124" width="30" height="26" rx="3"/>
+      <rect x="156" y="124" width="30" height="26" rx="3"/>
+      <rect x="188" y="124" width="30" height="26" rx="3"/>
+    </g>
+  </g>
+  <text x="230" y="142" font-size="10" fill="#666">N 个 token 并行</text>
+
+  <text x="60" y="172" font-size="11" fill="#444">QKV GEMM (M=N，大矩阵)</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="180" width="200" height="32" rx="4" fill="#4a8edb" opacity="0.3" stroke="#4a8edb"/>
+  </g>
+  <text x="160" y="200" text-anchor="middle" font-size="10" fill="#2b6e9e">Tensor Core 打满 (compute-bound)</text>
+
+  <text x="60" y="234" font-size="11" fill="#444">Attention: N×N 完整矩阵</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="242" width="100" height="60" rx="4" fill="#d9e8f7" stroke="#4a8edb"/>
+    <line x1="85" y1="242" x2="85" y2="302" stroke="#4a8edb" stroke-width="0.6"/>
+    <line x1="110" y1="242" x2="110" y2="302" stroke="#4a8edb" stroke-width="0.6"/>
+    <line x1="135" y1="242" x2="135" y2="302" stroke="#4a8edb" stroke-width="0.6"/>
+    <line x1="60" y1="262" x2="160" y2="262" stroke="#4a8edb" stroke-width="0.6"/>
+    <line x1="60" y1="282" x2="160" y2="282" stroke="#4a8edb" stroke-width="0.6"/>
+  </g>
+  <text x="180" y="276" font-size="10" fill="#666">N×N</text>
+
+  <text x="60" y="324" font-size="11" fill="#b03a3a" font-weight="bold">KV Cache: 空 → 填入 N 个 token 的 K/V</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="332" width="340" height="40" rx="4" fill="#fff8e1" stroke="#d6a040"/>
+    <g fill="#bfe0bf" stroke="#4a8e4a">
+      <rect x="66" y="338" width="20" height="28" rx="2"/>
+      <rect x="88" y="338" width="20" height="28" rx="2"/>
+      <rect x="110" y="338" width="20" height="28" rx="2"/>
+      <rect x="132" y="338" width="20" height="28" rx="2"/>
+      <rect x="154" y="338" width="20" height="28" rx="2"/>
+    </g>
+    <text x="190" y="356" font-size="10" fill="#2e6e2e">cache 长度 = N</text>
+  </g>
+
+  <text x="60" y="400" font-size="11" fill="#2e6e2e" font-weight="bold">输出: first token logits → 采样得 token N+1</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="408" width="60" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="90" y="426" text-anchor="middle" font-size="11" fill="#2e6e2e">tok N+1</text>
+
+  <!-- ============ Decode Loop ============ -->
+  <g filter="url(#sk)">
+    <rect x="500" y="64" width="400" height="380" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="700" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Decode Loop（每步）</text>
+
+  <text x="520" y="116" font-size="11" fill="#444">输入: 上一个 token (B, 1)</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="124" width="30" height="26" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+  </g>
+  <text x="560" y="142" font-size="10" fill="#666">M=1，单 token</text>
+
+  <text x="520" y="172" font-size="11" fill="#444">QKV GEMM (M=1，退化为向量×矩阵)</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="180" width="200" height="32" rx="4" fill="#c98a2b" opacity="0.25" stroke="#c98a2b"/>
+  </g>
+  <text x="620" y="200" text-anchor="middle" font-size="10" fill="#7a5415">SM 空闲 (memory-bound)</text>
+
+  <text x="520" y="234" font-size="11" fill="#444">Attention: 1×(N+k)，读历史 KV Cache</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="242" width="160" height="22" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="600" y="257" text-anchor="middle" font-size="10" fill="#7a5415">1 行 × (N+k) 列</text>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="520" y="270" width="160" height="32" rx="3" fill="#fce4ec" stroke="#b85450" stroke-dasharray="3 2"/>
+    <text x="600" y="290" text-anchor="middle" font-size="10" fill="#7a2828">读 KV Cache (2·L·d bytes)</text>
+  </g>
+
+  <text x="520" y="324" font-size="11" fill="#b03a3a" font-weight="bold">KV Cache: 追加 1 个新 token 的 K/V</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="332" width="340" height="40" rx="4" fill="#fff8e1" stroke="#d6a040"/>
+    <g fill="#bfe0bf" stroke="#4a8e4a">
+      <rect x="526" y="338" width="18" height="28" rx="2"/>
+      <rect x="546" y="338" width="18" height="28" rx="2"/>
+      <rect x="566" y="338" width="18" height="28" rx="2"/>
+      <rect x="586" y="338" width="18" height="28" rx="2"/>
+      <rect x="606" y="338" width="18" height="28" rx="2"/>
+    </g>
+    <g fill="#fce4ec" stroke="#b85450" stroke-width="1.8">
+      <rect x="626" y="338" width="18" height="28" rx="2"/>
+    </g>
+    <text x="660" y="356" font-size="10" fill="#b03a3a">↑ 追加</text>
+  </g>
+
+  <text x="520" y="400" font-size="11" fill="#2e6e2e" font-weight="bold">输出: next token logits → 采样 → 循环</text>
+  <g filter="url(#sk)">
+    <rect x="520" y="408" width="60" height="28" rx="3" fill="#bfe0bf" stroke="#4a8e4a"/>
+  </g>
+  <text x="550" y="426" text-anchor="middle" font-size="11" fill="#2e6e2e">tok N+2</text>
+
+  <!-- 中间衔接箭头 -->
+  <path d="M 440 200 L 500 200" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <text x="470" y="194" text-anchor="middle" font-size="9" fill="#666">first token</text>
+</svg>

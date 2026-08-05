@@ -1,0 +1,96 @@
+<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <ns0:defs>
+    <ns0:filter id="sk5" x="-3%" y="-3%" width="106%" height="106%">
+      <ns0:feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n" />
+      <ns0:feDisplacementMap in="SourceGraphic" in2="n" scale="1.8" />
+    </ns0:filter>
+    <ns0:marker id="ar5" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <ns0:path d="M0,0 L9,4.5 L0,9 z" fill="#3a3a3a" />
+    </ns0:marker>
+  </ns0:defs>
+  <ns0:rect width="900" height="520" fill="#fdfcf7" />
+  <ns0:text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">端到端 Profiling 五步法</ns0:text>
+  <ns0:path d="M 250 42 Q 450 50 650 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk5)" />
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="30" y="70" width="250" height="150" rx="12" fill="#e8f0fe" stroke="#446688" stroke-width="1.8" />
+    <ns0:text x="155" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">① nsys 系统级采集</ns0:text>
+    <ns0:line x1="40" y1="102" x2="270" y2="102" stroke="#446688" stroke-width="0.6" stroke-dasharray="3 3" />
+  </ns0:g>
+  <ns0:text x="40" y="120" font-size="9" fill="#444" font-family="monospace">nsys profile -o tl --trace=cuda</ns0:text>
+  <ns0:text x="40" y="136" font-size="9" fill="#444" font-family="monospace">  python mini_engine.py</ns0:text>
+  <ns0:text x="40" y="158" font-size="10" fill="#666" font-style="italic">→ 完整 kernel 时间线</ns0:text>
+  <ns0:text x="40" y="174" font-size="10" fill="#666" font-style="italic">→ 按 CUDA 时间排序找 top3</ns0:text>
+  <ns0:text x="40" y="196" font-size="10" fill="#4a7a3a" font-weight="bold">问题：哪几个 kernel 最慢？</ns0:text>
+
+  
+  <ns0:path d="M 284 145 L 318 145" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)" />
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="320" y="70" width="250" height="150" rx="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8" />
+    <ns0:text x="445" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">② ncu kernel 级分析</ns0:text>
+    <ns0:line x1="330" y1="102" x2="560" y2="102" stroke="#d6a040" stroke-width="0.6" stroke-dasharray="3 3" />
+  </ns0:g>
+  <ns0:text x="330" y="120" font-size="9" fill="#444" font-family="monospace">ncu --metrics sm__throughput,\\</ns0:text>
+  <ns0:text x="330" y="134" font-size="9" fill="#444" font-family="monospace">  dram__throughput ./target</ns0:text>
+  <ns0:text x="330" y="158" font-size="10" fill="#666" font-style="italic">→ SM% vs DRAM% 对比</ns0:text>
+  <ns0:text x="330" y="174" font-size="10" fill="#666" font-style="italic">→ Warp Stall Reasons</ns0:text>
+  <ns0:text x="330" y="196" font-size="10" fill="#b85450" font-weight="bold">问题：compute 还是 memory？</ns0:text>
+
+  
+  <ns0:path d="M 574 145 L 608 145" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)" />
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="610" y="70" width="260" height="150" rx="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8" />
+    <ns0:text x="740" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">③ 瓶颈判定（Roofline）</ns0:text>
+    <ns0:line x1="620" y1="102" x2="860" y2="102" stroke="#4a7a3a" stroke-width="0.6" stroke-dasharray="3 3" />
+  </ns0:g>
+  <ns0:text x="620" y="120" font-size="10" fill="#b85450" font-weight="bold">DRAM% &gt;&gt; SM% → memory-bound</ns0:text>
+  <ns0:text x="620" y="136" font-size="10" fill="#446688" font-weight="bold">SM% &gt;&gt; DRAM% → compute-bound</ns0:text>
+  <ns0:text x="620" y="158" font-size="10" fill="#666" font-style="italic">→ 在 Roofline 上标位置</ns0:text>
+  <ns0:text x="620" y="174" font-size="10" fill="#666" font-style="italic">→ AI = FLOPs / Bytes</ns0:text>
+  <ns0:text x="620" y="196" font-size="10" fill="#4a7a3a" font-weight="bold">问题：优化方向是什么？</ns0:text>
+
+  
+  <ns0:path d="M 740 224 L 740 258" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)" />
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="460" y="260" width="410" height="120" rx="12" fill="#fce4ec" stroke="#b85450" stroke-width="1.8" />
+    <ns0:text x="665" y="284" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">④ Warp Stall 原因定位</ns0:text>
+    <ns0:line x1="470" y1="292" x2="860" y2="292" stroke="#b85450" stroke-width="0.6" stroke-dasharray="3 3" />
+  </ns0:g>
+  <ns0:text x="470" y="312" font-size="10" fill="#b85450" font-weight="bold">Long Scoreboard</ns0:text>
+  <ns0:text x="560" y="312" font-size="10" fill="#666">→ 等 HBM 加载（memory-bound 特征）</ns0:text>
+  <ns0:text x="470" y="330" font-size="10" fill="#446688" font-weight="bold">Math Pipe Throttle</ns0:text>
+  <ns0:text x="600" y="330" font-size="10" fill="#666">→ 计算单元饱和（compute-bound）</ns0:text>
+  <ns0:text x="470" y="348" font-size="10" fill="#d6a040" font-weight="bold">Barrier</ns0:text>
+  <ns0:text x="540" y="348" font-size="10" fill="#666">→ __syncthreads 过多</ns0:text>
+  <ns0:text x="470" y="368" font-size="10" fill="#4a7a3a" font-style="italic">→ 精确定位"为什么慢"</ns0:text>
+
+  
+  <ns0:path d="M 460 320 L 426 320" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar5)" />
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="30" y="260" width="390" height="120" rx="12" fill="#f3e8ff" stroke="#7a4a8a" stroke-width="1.8" />
+    <ns0:text x="225" y="284" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">⑤ Kernel Fusion 机会</ns0:text>
+    <ns0:line x1="40" y1="292" x2="410" y2="292" stroke="#7a4a8a" stroke-width="0.6" stroke-dasharray="3 3" />
+  </ns0:g>
+  <ns0:text x="40" y="312" font-size="10" fill="#666">从时间线找相邻 memory-bound 算子：</ns0:text>
+  <ns0:text x="50" y="330" font-size="10" fill="#7a4a8a" font-weight="bold">LayerNorm + QKV GEMM</ns0:text>
+  <ns0:text x="240" y="330" font-size="10" fill="#666">省 1 次 (B,N,d) 读写</ns0:text>
+  <ns0:text x="50" y="348" font-size="10" fill="#7a4a8a" font-weight="bold">Softmax + Dropout</ns0:text>
+  <ns0:text x="220" y="348" font-size="10" fill="#666">省 1 次 N² 读写</ns0:text>
+  <ns0:text x="40" y="370" font-size="10" fill="#4a7a3a" font-style="italic">→ torch.compile 自动融合 / 手写 CUTLASS</ns0:text>
+
+  
+  <ns0:g filter="url(#sk5)">
+    <ns0:rect x="30" y="410" width="840" height="86" rx="10" fill="#fdfcf7" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="6 4" />
+    </ns0:g>
+  <ns0:text x="50" y="456" font-size="10" fill="#446688" font-weight="bold">nsys</ns0:text>
+  <ns0:text x="50" y="474" font-size="10" fill="#d6a040" font-weight="bold">ncu</ns0:text>
+  </ns0:svg>

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 560" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <rect width="820" height="560" fill="#fdfcf7"/>
+
+  <text x="410" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">8 周能力地图：强项与待提升</text>
+  <path d="M 270 44 Q 410 52 550 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="58" text-anchor="middle" font-size="11" fill="#888">✅ 强项　⚠️ 待提升　勾选 = 已掌握</text>
+
+  <!-- Kernel 优化 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="380" height="220" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="106" font-size="14" fill="#4a8edb" font-weight="bold">Kernel 优化</text>
+  <text x="50" y="132" font-size="11" fill="#2b2b2b">✅ GPU 执行模型（SM/Warp/Occupancy）</text>
+  <text x="50" y="152" font-size="11" fill="#2b2b2b">✅ Shared Memory Tiling + Bank Conflict</text>
+  <text x="50" y="172" font-size="11" fill="#2b2b2b">✅ Register Blocking + float4 + Warp Shuffle</text>
+  <text x="50" y="192" font-size="11" fill="#2b2b2b">✅ ncu 瓶颈分析（Roofline / Stall）</text>
+  <text x="50" y="212" font-size="11" fill="#2b2b2b">✅ 手写 FlashAttention Forward Kernel</text>
+  <text x="50" y="234" font-size="11" fill="#c98a2b">⚠️ Double Buffering 完整实现</text>
+  <text x="50" y="254" font-size="11" fill="#c98a2b">⚠️ Tensor Core / WMMA / mma.sync</text>
+  <text x="50" y="274" font-size="11" fill="#c98a2b">⚠️ CUTLASS 源码阅读</text>
+  <text x="50" y="294" font-size="10" fill="#888">强项：手写 kernel + profiling　待提升：Tensor Core 生态</text>
+
+  <!-- 推理系统 -->
+  <g filter="url(#sk)">
+    <rect x="425" y="80" width="365" height="220" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="445" y="106" font-size="14" fill="#4a8e4a" font-weight="bold">推理系统</text>
+  <text x="445" y="132" font-size="11" fill="#2b2b2b">✅ Prefill / Decode 区别与瓶颈</text>
+  <text x="445" y="152" font-size="11" fill="#2b2b2b">✅ KV Cache 设计与内存计算</text>
+  <text x="445" y="172" font-size="11" fill="#2b2b2b">✅ PagedAttention 概念与 block table</text>
+  <text x="445" y="192" font-size="11" fill="#2b2b2b">✅ Continuous Batching 实现</text>
+  <text x="445" y="212" font-size="11" fill="#2b2b2b">✅ Scheduler（双预算 + 抢占 + aging）</text>
+  <text x="445" y="232" font-size="11" fill="#2b2b2b">✅ Mini 推理引擎（500+ 请求稳定）</text>
+  <text x="445" y="254" font-size="11" fill="#c98a2b">⚠️ PagedAttention 完整 CUDA 实现</text>
+  <text x="445" y="274" font-size="11" fill="#c98a2b">⚠️ C++ Scheduler（降 CPU overhead）</text>
+  <text x="445" y="294" font-size="10" fill="#888">强项：调度 + Batching　待提升：C++ 化 + 完整 PagedAttention</text>
+
+  <!-- Profiling -->
+  <g filter="url(#sk)">
+    <rect x="30" y="315" width="380" height="110" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="341" font-size="14" fill="#c98a2b" font-weight="bold">Profiling</text>
+  <text x="50" y="367" font-size="11" fill="#2b2b2b">✅ nsys 系统级时间线</text>
+  <text x="50" y="387" font-size="11" fill="#2b2b2b">✅ ncu kernel 级指标 + Roofline 判 bound</text>
+  <text x="50" y="407" font-size="11" fill="#2b2b2b">✅ 端到端阶段计时 + vLLM 对比</text>
+
+  <!-- 系统设计 -->
+  <g filter="url(#sk)">
+    <rect x="425" y="315" width="365" height="110" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="445" y="341" font-size="14" fill="#8e5db8" font-weight="bold">系统设计</text>
+  <text x="445" y="367" font-size="11" fill="#2b2b2b">✅ 设计 LLM 推理服务（6 要素）</text>
+  <text x="445" y="387" font-size="11" fill="#2b2b2b">✅ vLLM 架构讲解 + trade-off</text>
+  <text x="445" y="407" font-size="11" fill="#c98a2b">⚠️ 多 GPU / TP / PP 分布式</text>
+
+  <!-- 工程表达 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="440" width="760" height="100" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="466" font-size="14" fill="#b03a3a" font-weight="bold">工程表达（Week 8 重点）</text>
+  <text x="50" y="492" font-size="11" fill="#2b2b2b">✅ README + 架构图 + Benchmark 报告</text>
+  <text x="280" y="492" font-size="11" fill="#2b2b2b">✅ 50+ 面试题自问自答</text>
+  <text x="500" y="492" font-size="11" fill="#2b2b2b">✅ Mock 面试 + 录音复盘</text>
+  <text x="50" y="516" font-size="11" fill="#2b2b2b">✅ STAR 法项目介绍 + 技术难点深挖</text>
+  <text x="280" y="516" font-size="11" fill="#2b2b2b">✅ 关键公式 / 参数秒答</text>
+  <text x="500" y="516" font-size="11" fill="#2b2b2b">✅ 8 张核心流程图默画</text>
+</svg>

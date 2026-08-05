@@ -17,7 +17,7 @@
 
 ### Week 5 知识地图
 
-![Week 5 知识地图：从两阶段到推理引擎](../../week5/images/week5_knowledge_map.svg)
+![Week 5 知识地图：从两阶段到推理引擎](../images/week5_knowledge_map.svg)
 
 Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
 
@@ -89,7 +89,7 @@ nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT�
 
 ### 推理系统四大核心问题
 
-![推理系统四大核心问题](../../week5/images/four_core_problems.svg)
+![推理系统四大核心问题](../images/four_core_problems.svg)
 
 #### ① 内存管理（Day2/Day4）
 
@@ -133,7 +133,7 @@ nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT�
 
 ### 优化速查表（现象 → 检查 → 解决）
 
-![推理系统优化速查表](../../week5/images/optimization_cheatsheet.svg)
+![推理系统优化速查表](../images/optimization_cheatsheet.svg)
 
 | 现象 | 检查方法 | 解决方案 |
 |------|---------|---------|

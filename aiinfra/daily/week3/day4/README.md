@@ -76,7 +76,7 @@ auto A_block = local_tile(A_tensor, make_shape(BM, BK), block_idx); // (BM, BK) 
 
 #### 1.1 CUTLASS 概述
 
-![CUTLASS 三级 Tiling 架构](../../week2/images/cutlass_tiling_hierarchy.svg)
+![CUTLASS 三级 Tiling 架构](../images/cutlass_tiling_hierarchy.svg)
 
 CUTLASS（CUDA Templates for Linear Algebra Subroutines）是 NVIDIA 开源的高性能线性代数模板库：
 

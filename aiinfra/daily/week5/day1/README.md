@@ -16,7 +16,7 @@
 
 ### 学前导读：标准 Attention 的问题
 
-![FlashAttention HBM 访问对比](../../week2/images/hbm_comparison.svg)
+![FlashAttention HBM 访问对比](../images/hbm_comparison.svg)
 
 #### 标准 Attention 计算
 
@@ -133,7 +133,7 @@ d 固定时，**长序列的瓶颈是 N² 的显存和 HBM 访问，而不是计
 
 #### 5.1 分块策略（Tiling）
 
-![FlashAttention 分块策略](../../week2/images/flash_attention_tiling.svg)
+![FlashAttention 分块策略](../images/flash_attention_tiling.svg)
 
 FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：外循环遍历 Q tile（行方向，步长 Br），内循环遍历 KV tile（行方向，步长 Bc），每步计算 `S_tile = Q_tile × KV_tile^T (Br×Bc)` 并在线更新 softmax 和输出累加。
 
@@ -143,9 +143,9 @@ FlashAttention 将 Q/K/V 分块装入 SRAM，在片上完成计算：外循环�
 
 #### 5.2 Online Softmax 三公式推导
 
-![Online Softmax 三个更新公式](../../week2/images/online_softmax_formula.svg)
+![Online Softmax 三个更新公式](../images/online_softmax_formula.svg)
 
-![Online Softmax 三公式推导](../../week2/images/online_softmax_derivation.svg)
+![Online Softmax 三公式推导](../images/online_softmax_derivation.svg)
 
 这是 FlashAttention 的核心创新，也是面试必考的白板推导题。下面先**只推导 softmax**（只涉及 $m$ 和 $l$），再把注意力输出 $o$ 引入，逐步得到三个增量更新公式。
 

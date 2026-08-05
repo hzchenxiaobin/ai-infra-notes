@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="500" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">自定义 Kernel 集成：替换 PyTorch 算子</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Transformer Layer (left) ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="66" width="340" height="420" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Transformer Layer</text>
+
+  <!-- LayerNorm 1 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="100" width="300" height="36" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="123" text-anchor="middle" font-size="11" fill="#444">LayerNorm 1</text>
+  <text x="360" y="123" font-size="9" fill="#c04050">→ layernorm_kernel</text>
+
+  <!-- QKV GEMM -->
+  <g filter="url(#sk)">
+    <rect x="50" y="146" width="300" height="36" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="169" text-anchor="middle" font-size="11" fill="#444">QKV Projection (GEMM)</text>
+  <text x="360" y="169" font-size="9" fill="#c98a2b">→ cuBLAS / GEMM kernel</text>
+
+  <!-- Attention -->
+  <g filter="url(#sk)">
+    <rect x="50" y="192" width="300" height="50" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="212" text-anchor="middle" font-size="11" fill="#444">Self-Attention</text>
+  <text x="200" y="228" text-anchor="middle" font-size="9" fill="#888">(Softmax + QK^T·V)</text>
+  <text x="360" y="215" font-size="9" fill="#c04050">→ flash_attention_kernel</text>
+  <text x="360" y="230" font-size="9" fill="#c04050">  (内含 softmax)</text>
+
+  <!-- Out Proj -->
+  <g filter="url(#sk)">
+    <rect x="50" y="252" width="300" height="36" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="275" text-anchor="middle" font-size="11" fill="#444">Output Projection (GEMM)</text>
+  <text x="360" y="275" font-size="9" fill="#c98a2b">→ cuBLAS / GEMM kernel</text>
+
+  <!-- LayerNorm 2 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="298" width="300" height="36" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="321" text-anchor="middle" font-size="11" fill="#444">LayerNorm 2</text>
+  <text x="360" y="321" font-size="9" fill="#c04050">→ layernorm_kernel</text>
+
+  <!-- FFN -->
+  <g filter="url(#sk)">
+    <rect x="50" y="344" width="300" height="36" rx="5" fill="#fff" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="367" text-anchor="middle" font-size="11" fill="#444">FFN (GEMM + GELU + GEMM)</text>
+  <text x="360" y="367" font-size="9" fill="#c98a2b">→ cuBLAS</text>
+
+  <!-- Arrows -->
+  <g stroke="#888" stroke-width="1" fill="none" filter="url(#sk)">
+    <path d="M 200 136 L 200 146" marker-end="url(#ar)"/>
+    <path d="M 200 182 L 200 192" marker-end="url(#ar)"/>
+    <path d="M 200 242 L 200 252" marker-end="url(#ar)"/>
+    <path d="M 200 288 L 200 298" marker-end="url(#ar)"/>
+    <path d="M 200 334 L 200 344" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- ===== Custom Kernels (right) ===== -->
+  <g filter="url(#sk)">
+    <rect x="520" y="66" width="390" height="420" rx="10" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="715" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">自定义 CUDA Kernel（Week 2-4）</text>
+
+  <!-- Softmax -->
+  <g filter="url(#sk)">
+    <rect x="540" y="100" width="160" height="44" rx="5" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="620" y="118" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">softmax_kernel</text>
+  <text x="620" y="134" text-anchor="middle" font-size="9" fill="#888">Row-wise · online max+sum</text>
+  <text x="710" y="124" font-size="9" fill="#555">替换 F.softmax</text>
+
+  <!-- LayerNorm -->
+  <g filter="url(#sk)">
+    <rect x="540" y="154" width="160" height="44" rx="5" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="620" y="172" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">layernorm_kernel</text>
+  <text x="620" y="188" text-anchor="middle" font-size="9" fill="#888">mean + var + rsqrt + scale</text>
+  <text x="710" y="178" font-size="9" fill="#555">替换 F.layer_norm</text>
+
+  <!-- FlashAttention -->
+  <g filter="url(#sk)">
+    <rect x="540" y="208" width="160" height="44" rx="5" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="620" y="226" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">flash_attention_kernel</text>
+  <text x="620" y="242" text-anchor="middle" font-size="9" fill="#888">Online softmax · tiling</text>
+  <text x="710" y="232" font-size="9" fill="#555">替换 QK^T·softmax·V</text>
+
+  <!-- GEMM -->
+  <g filter="url(#sk)">
+    <rect x="540" y="262" width="160" height="44" rx="5" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="620" y="280" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">cuBLAS GEMM</text>
+  <text x="620" y="296" text-anchor="middle" font-size="9" fill="#888">官方库（教学 kernel 太慢）</text>
+  <text x="710" y="286" font-size="9" fill="#555">替换 torch.matmul</text>
+
+  <!-- Arrows from layer to kernels -->
+  <g stroke="#888" stroke-width="1" stroke-dasharray="3,2" fill="none" filter="url(#sk)">
+    <path d="M 360 118 L 536 122" marker-end="url(#ar)"/>
+    <path d="M 360 315 L 536 176" marker-end="url(#ar)"/>
+    <path d="M 360 217 L 536 230" marker-end="url(#ar)"/>
+    <path d="M 360 164 L 536 284" marker-end="url(#ar)"/>
+    <path d="M 360 273 L 536 284" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- ===== Bottom: integration flow ===== -->
+  <text x="540" y="330" font-size="10" fill="#555" font-weight="bold">集成方式：PyTorch C++ Extension</text>
+  <g filter="url(#sk)">
+    <rect x="540" y="338" width="350" height="130" rx="6" fill="#f6f6f6" stroke="#ccc" stroke-width="1"/>
+  </g>
+  <text x="554" y="358" font-family="monospace" font-size="9" fill="#333">load_inline(</text>
+  <text x="566" y="372" font-family="monospace" font-size="9" fill="#333">cpp_sources=CPP_SOURCE,  # C++ wrapper</text>
+  <text x="566" y="386" font-family="monospace" font-size="9" fill="#333">cuda_sources=CUDA_SOURCE, # .cu kernel</text>
+  <text x="566" y="400" font-family="monospace" font-size="9" fill="#333">functions=[</text>
+  <text x="578" y="414" font-family="monospace" font-size="9" fill="#c04050">"softmax_forward",</text>
+  <text x="578" y="428" font-family="monospace" font-size="9" fill="#c04050">"layernorm_forward",</text>
+  <text x="578" y="442" font-family="monospace" font-size="9" fill="#c04050">"flash_attention_forward"</text>
+  <text x="566" y="456" font-family="monospace" font-size="9" fill="#333">])</text>
+
+  <!-- Legend -->
+  <g filter="url(#sk)">
+    <rect x="50" y="398" width="10" height="10" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+    <rect x="50" y="418" width="10" height="10" fill="#fff8e1" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="66" y="407" font-size="9" fill="#555">自定义 kernel（替换）</text>
+  <text x="66" y="427" font-size="9" fill="#555">官方库（保留）</text>
+</svg>

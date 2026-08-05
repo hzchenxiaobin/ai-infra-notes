@@ -19,7 +19,7 @@
 
 Day 3 的 mini 调度器里，请求完成时我们 `used_blocks -= seq.kv_blocks` 就算"释放"了。但真实场景下，KV cache 不是按"整个序列"连续分配的——如果按序列连续分配，长度不确定的请求频繁 alloc/free 会产生大量**外部碎片**：释放的小空洞拼不回来，新请求放不下就 OOM。
 
-![Static / Dynamic / PagedAttention 三种分配的碎片对比](../../week5/images/paged_attention_fragmentation.svg)
+![Static / Dynamic / PagedAttention 三种分配的碎片对比](../images/paged_attention_fragmentation.svg)
 
 | 策略 | 内部碎片 | 外部碎片 | 问题 |
 |------|---------|---------|------|
@@ -65,7 +65,7 @@ Scheduler 在每轮 `schedule()` 时更新 block table（分配新 block、回�
 
 #### 4.2 PagedAttention 核心思想：分页 + block table
 
-![Block Table：逻辑连续 ↔ 物理不连续](../../week5/images/paged_attention_block_table.svg)
+![Block Table：逻辑连续 ↔ 物理不连续](../images/paged_attention_block_table.svg)
 
 借鉴 OS 虚拟内存分页：
 
@@ -109,7 +109,7 @@ kernel 遍历所有历史 key 时，按逻辑 block 顺序（0, 1, 2, ...），�
 
 #### 4.4 Copy-on-Write：共享 prompt block
 
-![Copy-on-Write：共享 prompt block，写入时才复制](../../week5/images/paged_attention_copy_on_write.svg)
+![Copy-on-Write：共享 prompt block，写入时才复制](../images/paged_attention_copy_on_write.svg)
 
 **场景**：并行采样（`n>1`，一个 prompt 生成多个回答）、beam search、多轮对话共享历史。这些场景下多个 sequence 共享同一份 prompt 的 KV cache。
 

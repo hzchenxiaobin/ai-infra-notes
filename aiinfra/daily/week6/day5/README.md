@@ -35,7 +35,7 @@ Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching�
 
 #### 5.1 推理引擎的 5 大核心组件
 
-![Mini 推理引擎 v0 架构：5 大组件 + 数据流](../../week5/images/mini_engine_architecture.svg)
+![Mini 推理引擎 v0 架构：5 大组件 + 数据流](../images/mini_engine_architecture.svg)
 
 | 组件 | 职责 | Mini v0 实现 | 对应 vLLM |
 |------|------|-------------|----------|
@@ -76,7 +76,7 @@ def forward(self, x, kv_cache=None, use_cache=False):
 
 #### 5.3 Prefill + Decode 循环
 
-![Prefill → Decode 执行流程与 KV Cache 状态](../../week5/images/mini_engine_prefill_decode_flow.svg)
+![Prefill → Decode 执行流程与 KV Cache 状态](../images/mini_engine_prefill_decode_flow.svg)
 
 ```python
 def generate(self, prompt, max_new_tokens=20):
@@ -106,7 +106,7 @@ def generate(self, prompt, max_new_tokens=20):
 
 #### 5.4 With vs Without Cache：收益量化
 
-![With vs Without KV Cache：latency 与 FLOPs 对比](../../week5/images/mini_engine_cache_comparison.svg)
+![With vs Without KV Cache：latency 与 FLOPs 对比](../images/mini_engine_cache_comparison.svg)
 
 | 维度 | Without Cache | With Cache |
 |------|--------------|------------|

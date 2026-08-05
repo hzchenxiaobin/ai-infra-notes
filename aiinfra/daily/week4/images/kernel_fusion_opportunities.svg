@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="540" viewBox="0 0 920 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk6" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar6" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="540" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Kernel Fusion：省的是 HBM 中间读写</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk6)"/>
+
+  <!-- Left: 未融合 -->
+  <g filter="url(#sk6)">
+    <rect x="30" y="70" width="400" height="380" rx="12" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/>
+    <text x="230" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">未融合（3 个 kernel）</text>
+    <line x1="40" y1="102" x2="420" y2="102" stroke="#b85450" stroke-width="0.6" stroke-dasharray="4 4"/>
+  </g>
+
+  <!-- LayerNorm box -->
+  <g filter="url(#sk6)">
+    <rect x="60" y="120" width="140" height="60" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/>
+    <text x="130" y="144" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">LayerNorm</text>
+    <text x="130" y="162" text-anchor="middle" font-size="9" fill="#666">读 x → 写 y</text>
+  </g>
+  <text x="210" y="156" font-size="9" fill="#b85450" font-family="monospace">y→HBM (2MB)</text>
+  <path d="M 210 150 L 248 150" stroke="#b85450" stroke-width="1.6" fill="none" marker-end="url(#ar6)"/>
+
+  <!-- HBM bubble 1 -->
+  <g filter="url(#sk6)">
+    <ellipse cx="280" cy="150" rx="34" ry="20" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" stroke-dasharray="3 2"/>
+    <text x="280" y="148" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">HBM</text>
+    <text x="280" y="160" text-anchor="middle" font-size="8" fill="#b85450">y</text>
+  </g>
+  <text x="248" y="180" font-size="9" fill="#b85450" font-family="monospace">← 写 + 读 = 4MB</text>
+
+  <!-- QKV GEMM box -->
+  <g filter="url(#sk6)">
+    <rect x="60" y="210" width="140" height="60" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="130" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">QKV GEMM</text>
+    <text x="130" y="252" text-anchor="middle" font-size="9" fill="#666">读 y + W → 写 QKV</text>
+  </g>
+  <path d="M 246 168 L 130 210" stroke="#b85450" stroke-width="1.4" fill="none" marker-end="url(#ar6)" stroke-dasharray="4 3"/>
+
+  <!-- Softmax box -->
+  <g filter="url(#sk6)">
+    <rect x="60" y="300" width="140" height="60" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="130" y="324" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Softmax</text>
+    <text x="130" y="342" text-anchor="middle" font-size="9" fill="#666">读 S → 写 P</text>
+  </g>
+  <g filter="url(#sk6)">
+    <ellipse cx="280" cy="330" rx="34" ry="20" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" stroke-dasharray="3 2"/>
+    <text x="280" y="328" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">HBM</text>
+    <text x="280" y="340" text-anchor="middle" font-size="8" fill="#b85450">S/P</text>
+  </g>
+  <text x="248" y="360" font-size="9" fill="#b85450" font-family="monospace">← 写 + 读 = O(N²)</text>
+
+  <!-- 总计 -->
+  <g filter="url(#sk6)">
+    <rect x="60" y="390" width="340" height="44" rx="8" fill="#fff3e0" stroke="#b85450" stroke-width="1.4"/>
+    <text x="230" y="410" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">中间结果经 HBM 中转</text>
+    <text x="230" y="426" text-anchor="middle" font-size="10" fill="#666">LN 的 y + Softmax 的 S/P 都要写回再读</text>
+  </g>
+
+  <!-- Right: 融合后 -->
+  <g filter="url(#sk6)">
+    <rect x="490" y="70" width="400" height="380" rx="12" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/>
+    <text x="690" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a7a3a">融合后（1 个 kernel）</text>
+    <line x1="500" y1="102" x2="880" y2="102" stroke="#4a7a3a" stroke-width="0.6" stroke-dasharray="4 4"/>
+  </g>
+
+  <!-- Fused LN+GEMM -->
+  <g filter="url(#sk6)">
+    <rect x="520" y="130" width="180" height="70" rx="8" fill="#e8f0fe" stroke="#446688" stroke-width="1.5"/>
+    <text x="610" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Fused LN + QKV</text>
+    <text x="610" y="176" text-anchor="middle" font-size="9" fill="#666">读 x + W → 写 QKV</text>
+    <text x="610" y="190" text-anchor="middle" font-size="9" fill="#4a7a3a">（SRAM 内做归一化）</text>
+  </g>
+  <text x="710" y="166" font-size="9" fill="#4a7a3a" font-weight="bold">省 y 的 4MB</text>
+
+  <!-- Fused Attn -->
+  <g filter="url(#sk6)">
+    <rect x="520" y="240" width="180" height="70" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/>
+    <text x="610" y="266" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">FlashAttention</text>
+    <text x="610" y="286" text-anchor="middle" font-size="9" fill="#666">Q,K,V → O</text>
+    <text x="610" y="300" text-anchor="middle" font-size="9" fill="#4a7a3a">（SRAM 内做 softmax）</text>
+  </g>
+  <text x="710" y="276" font-size="9" fill="#4a7a3a" font-weight="bold">省 S/P 的 O(N²)</text>
+
+  <!-- 收益 -->
+  <g filter="url(#sk6)">
+    <rect x="520" y="340" width="340" height="94" rx="8" fill="#e8f5e9" stroke="#4a7a3a" stroke-width="1.4"/>
+    <text x="690" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a7a3a">收益来源</text>
+    <text x="535" y="382" font-size="10" fill="#444">① 中间结果不写 HBM，在 SRAM/Register 传递</text>
+    <text x="535" y="400" font-size="10" fill="#444">② kernel 数量减少 → launch overhead 下降</text>
+    <text x="535" y="418" font-size="10" fill="#444">③ Decode 阶段（kernel 小而多）收益更明显</text>
+  </g>
+
+  <!-- 中间箭头 -->
+  <path d="M 430 260 L 486 260" stroke="#3a3a3a" stroke-width="2.2" fill="none" marker-end="url(#ar6)"/>
+  <text x="458" y="252" text-anchor="middle" font-size="10" fill="#3a3a3a" font-weight="bold">融合</text>
+
+  <!-- 底部注解 -->
+  <text x="460" y="490" text-anchor="middle" font-size="11" fill="#666" font-style="italic">torch.compile 自动做这类融合；自定义 C++ Extension 是"黑盒"无法被融合</text>
+  <text x="460" y="510" text-anchor="middle" font-size="10" fill="#888">限制：只有相邻 + 数据依赖的算子能融合；融合 kernel 可能降低 occupancy</text>
+</svg>

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+    <marker id="arO" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Prefix Caching：公共前缀 KV Cache 复用</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Scenario: multi-turn conversation ===== -->
+  <text x="40" y="66" font-size="11" fill="#555" font-weight="bold">场景：多轮对话 / 模板化请求 → 系统提示固定，用户输入变化</text>
+
+  <!-- Request 1 -->
+  <text x="40" y="90" font-size="10" fill="#444" font-weight="bold">Request 1:</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="76" width="200" height="24" rx="3" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="310" y="76" width="100" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="210" y="92" text-anchor="middle" font-size="9" fill="#7a5415">System Prompt (50 tok)</text>
+  <text x="360" y="92" text-anchor="middle" font-size="9" fill="#2b6e9e">User (20 tok)</text>
+
+  <!-- Request 2 -->
+  <text x="40" y="118" font-size="10" fill="#444" font-weight="bold">Request 2:</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="104" width="200" height="24" rx="3" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="310" y="104" width="100" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="210" y="120" text-anchor="middle" font-size="9" fill="#7a5415">System Prompt (相同!)</text>
+  <text x="360" y="120" text-anchor="middle" font-size="9" fill="#2b6e9e">User (20 tok)</text>
+
+  <!-- Request 3 -->
+  <text x="40" y="146" font-size="10" fill="#444" font-weight="bold">Request 3:</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="132" width="200" height="24" rx="3" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="310" y="132" width="100" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="210" y="148" text-anchor="middle" font-size="9" fill="#7a5415">System Prompt (相同!)</text>
+  <text x="360" y="148" text-anchor="middle" font-size="9" fill="#2b6e9e">User (20 tok)</text>
+
+  <!-- ===== Without cache ===== -->
+  <line x1="40" y1="170" x2="900" y2="170" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="192" font-size="12" font-weight="bold" fill="#c04050">无缓存：每次全量 prefill（50+20=70 tokens）</text>
+
+  <g filter="url(#sk)">
+    <rect x="110" y="200" width="300" height="22" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="260" y="215" text-anchor="middle" font-size="10" fill="#a03040">prefill 70 tokens × 3 次 = 210 tokens 总计算</text>
+  <text x="430" y="215" font-size="10" fill="#c04050" font-weight="bold">→ TTFT 高，重复计算浪费</text>
+
+  <!-- ===== With cache ===== -->
+  <line x1="40" y1="234" x2="900" y2="234" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="256" font-size="12" font-weight="bold" fill="#2e8b57">有缓存：首次 prefill 系统提示 → 后续复用 KV Cache</text>
+
+  <!-- Cache box -->
+  <g filter="url(#sk)">
+    <rect x="560" y="248" width="180" height="100" rx="8" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="650" y="270" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Prefix Cache (LRU)</text>
+
+  <!-- Cache entries -->
+  <g filter="url(#sk)">
+    <rect x="576" y="278" width="148" height="20" rx="3" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="650" y="292" text-anchor="middle" font-size="9" fill="#2e6e2e">hash(sys_prompt) → KV Cache</text>
+  <text x="650" y="316" text-anchor="middle" font-size="9" fill="#888">key = MD5(token 序列)</text>
+  <text x="650" y="332" text-anchor="middle" font-size="9" fill="#888">value = {K[], V[]} blocks</text>
+
+  <!-- Request 1: miss → full prefill + cache -->
+  <text x="40" y="276" font-size="10" fill="#444" font-weight="bold">Req 1: MISS</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="264" width="200" height="22" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+    <rect x="310" y="264" width="100" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="210" y="279" text-anchor="middle" font-size="9" fill="#a03040">prefill 50 (首次)</text>
+  <text x="360" y="279" text-anchor="middle" font-size="9" fill="#2b6e9e">prefill 20</text>
+  <path d="M 310 275 L 556 275" stroke="#c98a2b" stroke-width="1" stroke-dasharray="3,2" fill="none" marker-end="url(#arO)" filter="url(#sk)"/>
+  <text x="430" y="273" font-size="8" fill="#c98a2b">缓存写入</text>
+
+  <!-- Request 2: hit → skip prefill -->
+  <text x="40" y="304" font-size="10" fill="#444" font-weight="bold">Req 2: HIT ✓</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="292" width="200" height="22" rx="3" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+    <rect x="310" y="292" width="100" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="210" y="307" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">复用 KV Cache (0 计算!)</text>
+  <text x="360" y="307" text-anchor="middle" font-size="9" fill="#2b6e9e">prefill 20</text>
+  <path d="M 556 303 L 310 303" stroke="#2e8b57" stroke-width="1.2" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <text x="430" y="301" font-size="8" fill="#2e8b57" font-weight="bold">缓存命中</text>
+
+  <!-- Request 3: hit -->
+  <text x="40" y="332" font-size="10" fill="#444" font-weight="bold">Req 3: HIT ✓</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="320" width="200" height="22" rx="3" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+    <rect x="310" y="320" width="100" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="210" y="335" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">复用 KV Cache (0 计算!)</text>
+  <text x="360" y="335" text-anchor="middle" font-size="9" fill="#2b6e9e">prefill 20</text>
+  <path d="M 556 331 L 310 331" stroke="#2e8b57" stroke-width="1.2" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- ===== Stats ===== -->
+  <line x1="40" y1="360" x2="900" y2="360" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="120" y="374" width="700" height="72" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="140" y="396" font-size="11" fill="#7a5415" font-weight="bold">收益对比（3 个请求，系统提示 50 tok，用户 20 tok）：</text>
+  <text x="140" y="414" font-size="10" fill="#444">无缓存：3 × 70 = <tspan font-weight="bold" fill="#c04050">210 tokens</tspan> prefill → TTFT = 70×t</text>
+  <text x="140" y="430" font-size="10" fill="#444">有缓存：50 + 3×20 = <tspan font-weight="bold" fill="#2e8b57">110 tokens</tspan> prefill → TTFT = 20×t（首次 70×t）</text>
+  <text x="500" y="422" font-size="14" fill="#2e8b57" font-weight="bold">speedup ≈ 3.4x</text>
+  <text x="500" y="438" font-size="9" fill="#888">（请求越多、prefix 越长 → 加速比越高）</text>
+</svg>
