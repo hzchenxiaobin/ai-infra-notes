@@ -121,27 +121,32 @@ def measure(fn, *args, iters=100, warmup=10):
     return start.elapsed_time(end) / iters
 ```
 
-#### 5.3 预期性能对比
+#### 5.3 实测性能对比
 
-##### GEMM
+##### GEMM（实测，RTX 5090 sm_120，FP16 输入）
 
-| M=N=K | Triton (ms) | CUDA 手写 (ms) | cuBLAS (ms) | Triton %cuBLAS | CUDA %cuBLAS |
-|-------|------------|--------------|------------|---------------|-------------|
-| 512   | ~0.02      | ~0.05        | ~0.008     | ~40%           | ~16%        |
-| 1024  | ~0.04      | ~0.12        | ~0.027     | ~67%           | ~23%        |
-| 2048  | ~0.25      | ~0.60        | ~0.19      | ~76%           | ~32%        |
-| 4096  | ~1.8       | ~4.3         | ~1.3       | ~72%           | ~30%        |
+| M=N=K | Triton (ms) | cuBLAS FP16 (ms) | cuBLAS FP16→FP32 (ms) | Triton %FP16 | Triton %FP32out |
+|-------|------------|------------------|----------------------|-------------|-----------------|
+| 512   | 0.015      | 0.006            | 0.010                | 42.6%       | 70.0%           |
+| 1024  | 0.031      | 0.014            | 0.019                | 46.6%       | 59.6%           |
+| 2048  | 0.105      | 0.098            | 0.109                | 93.8%       | 103.6%          |
+| 4096  | 0.661      | 0.644            | 0.695                | 97.5%       | 105.2%          |
 
-> ⚠️ **预期说明**：Triton GEMM 经 autotune 后达 cuBLAS 70-80%（自动 tiling + Tensor Core），远超 Day 1 手写 CUDA 的 30%。PyTorch 的 `torch.matmul` 直接调 cuBLAS，是 100% 基准。
+> ⚠️ **实测发现**：
+> - **大矩阵（4096）Triton 达 FP16 cuBLAS 的 97.5%**——比预期 70-80% 更好！`tl.dot` 自动调 Tensor Core + autotune 选最优 tiling
+> - **小矩阵（512）仅 42.6%**——autotune 的 config 搜索空间不够 + block 数少 SM 利用率低
+> - **对比 FP16→FP32 输出口径时 Triton 甚至超过 cuBLAS**（105.2%）——因 `torch.matmul(a.half,b.half).float()` 多了一次类型转换
+> - **max_diff ~0.03-0.13**（FP16 精度损失，正常）
 
-##### Softmax
+##### Softmax（实测，FP32）
 
-| M×D | Triton (ms) | CUDA 手写 (ms) | PyTorch (ms) | Triton vs PyTorch |
-|-----|------------|--------------|------------|-------------------|
-| 1024×1024 | ~0.01 | ~0.03 | ~0.02 | ~2x faster |
-| 4096×1024 | ~0.04 | ~0.12 | ~0.08 | ~2x faster |
+| M×D | Triton (ms) | PyTorch (ms) | Triton / PyTorch |
+|-----|------------|------------|-------------------|
+| 1024×1024 | 0.008 | 0.004 | 0.52x |
+| 4096×1024 | 0.008 | 0.008 | 0.99x |
+| 4096×4096 | 0.072 | 0.073 | 1.01x |
 
-> Softmax 是 memory-bound，Triton 的自动 tiling + 向量化比手写 CUDA 更高效（编译器优化更好）。PyTorch 的 `torch.softmax` 调用的是优化过的 CUDA kernel，Triton 与之接近或略快。
+> ⚠️ **实测发现**：Triton Softmax 与 PyTorch `torch.softmax` 基本持平（大矩阵 1.01x），小矩阵反而更慢（0.52x）。原因：PyTorch 的 softmax kernel 已高度优化，Triton 在 memory-bound 算子上无明显优势。max_diff ~1e-9（精度一致）。
 
 ##### FlashAttention
 

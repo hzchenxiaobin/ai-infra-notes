@@ -1,20 +1,341 @@
 ## Day 2：Pipeline Parallelism 与 DP —— 1F1B/bubble ratio/数据并行
 
-> 🚧 **内容待开发** —— 本日为周级结构重组后的新增日，内容正在规划中。
-> 参见 `plan/weekly_structure_review_and_replan.md` 中的重组方案了解本日在整体路线中的定位。
+### 🎯 目标
 
-## 学习目标
+通过今天的学习，你将：
 
-（待补充）
+1. 深化 Day 1 的 PP 基础——从 GPipe 理解到 **1F1B 调度**的演进动机与内存优势<br>
+2. 掌握 **bubble ratio** 公式 $\text{bubble} = (P-1)/(M+P-1)$，能计算不同 micro-batch 数 M 下的流水线气泡占比<br>
+3. 理解 **DP（Data Parallelism）** 在推理中的定位——与训练 DP 的区别、高吞吐多请求场景的适用性<br>
+4. 能推导 TP/PP/DP 三者的**通信量与显存权衡**，为给定模型选最优并行策略<br>
+5. 理解 ** interleaved 1F1B**（virtual pipeline）如何进一步压缩 bubble<br>
 
-## 理论学习
+> 💡 **为什么重要**：PP 的 bubble ratio 和 1F1B 调度是面试"大模型分布式训练/推理"的高频追问点。DP 在推理中的定位（vs 训练）也常被考察。Day 1 给了 TP/PP/DP 的概览，今天深化 PP 和 DP 的工程细节。
 
-（待补充）
+---
 
-## Coding 任务
+### 学前导读：从 GPipe 到 1F1B
 
-（待补充）
+Day 1 介绍了 PP 的基本概念：模型按层切分到 P 个 stage，micro-batch 流水线执行。但 Day 1 没展开 PP 的两种调度策略——GPipe 和 1F1B——以及它们的内存/气泡权衡：
 
-## 面试要点
+| 调度 | 气泡占比 | 显存占用 | 复杂度 |
+|------|---------|---------|--------|
+| GPipe | (P-1)/(M+P-1) | 高（M 份 activation 同时驻留） | 简单 |
+| **1F1B** | (P-1)/(M+P-1)（同） | **低**（稳态 1 份 activation） | 中 |
+| Interleaved 1F1B | 更低 | 中 | 高 |
 
-（待补充）
+> 💡 **一句话总结**：1F1B 和 GPipe 的气泡相同，但 1F1B 的显存占用从 O(M) 降到 O(P)，是"相同速度 + 更省显存"的改进。
+
+---
+
+### 理论学习
+
+#### 2.1 GPipe 调度
+
+##### 执行模式
+
+GPipe（2019）是最简单的 PP 调度：先做全部 forward，再做全部 backward。
+
+```
+Stage 1: F1 F2 F3 F4 · · · · · · · · B4 B3 B2 B1
+Stage 2: · F1 F2 F3 F4 · · · · · · B4 B3 B2 B1 ·
+Stage 3: · · F1 F2 F3 F4 · · · · B4 B3 B2 B1 · ·
+Stage 4: · · · F1 F2 F3 F4 · · B4 B3 B2 B1 · · ·
+         ↑   ↑               ↑   ↑
+         填充气泡            排空气泡  反向气泡
+```
+
+- M=4 个 micro-batch，P=4 个 stage
+- **填充气泡**（fill bubble）：前 P-1 步，后面的 stage 在等前面的 forward 到来
+- **排空气泡**（drain bubble）：后 P-1 步，前面的 stage 在等 backward 回来
+- 气泡总数 = 2(P-1)，有用工作 = M×P，bubble ratio = 2(P-1) / (M×P + 2(P-1)) ≈ (P-1)/(M+P-1)
+
+##### GPipe 的显存问题
+
+GPipe 在 forward 阶段要**保存所有 M 个 micro-batch 的 activation**（用于 backward）：
+
+```
+Stage 1 显存: M 份 activation × 层大小
+```
+
+M=4, 每份 activation 1GB → 4GB。大模型下显存压力大。
+
+#### 2.2 1F1B 调度
+
+##### 核心改进：交错 forward/backward
+
+1F1B（One Forward One Backward）在 forward 第 i 个 micro-batch 后，尽快做 backward 第 i-(P-1) 个 micro-batch：
+
+```
+Stage 1: F1 F2 F3 F4 B1 · B2 · B3 · B4 ·
+Stage 2: · F1 F2 F3 B1 F4 B2 · B3 · B4 ·
+Stage 3: · · F1 F2 B1 F3 B2 F4 B3 · B4 ·
+Stage 4: · · · F1 B1 F2 B2 F3 B3 F4 B4 ·
+```
+
+##### 显存优势
+
+1F1B 的稳态阶段，每个 stage 只需保存 **P 份 activation**（而非 M 份）：
+
+```
+Stage i 在 forward 第 k 个 micro-batch 时, 已有未 backward 的 activation 数 = P (稳态)
+```
+
+| 调度 | 稳态 activation 数 | M=8, P=4 时 |
+|------|-------------------|------------|
+| GPipe | M | 8 份 |
+| 1F1B | P | 4 份 |
+
+##### 气泡相同
+
+1F1B 的 bubble ratio 与 GPipe **相同**：`(P-1)/(M+P-1)`。改进只在于显存，不在于速度。
+
+#### 2.3 Bubble Ratio 推导
+
+##### 公式
+
+```
+bubble = (P - 1) / (M + P - 1)
+```
+
+- P = pipeline stage 数
+- M = micro-batch 数
+- 分子 P-1 = 填充 + 排空气泡（各 P-1 步，但 1F1B 下部分重叠）
+- 分母 M+P-1 = 总步数
+
+##### 典型值
+
+| M | P | bubble | 利用率 |
+|---|---|--------|--------|
+| 4 | 4 | 3/7 = 43% | 57% |
+| 8 | 4 | 3/11 = 27% | 73% |
+| 16 | 4 | 3/19 = 16% | 84% |
+| 32 | 4 | 3/35 = 9% | 91% |
+| 8 | 8 | 7/15 = 47% | 53% |
+| 32 | 8 | 7/39 = 18% | 82% |
+
+> 💡 **面试要点**：bubble 随 M 增大而减小，随 P 增大而增大。实践平衡点：M ≥ 4P（如 P=8 时 M≥32），bubble < 20%。
+
+#### 2.4 Interleaved 1F1B（Virtual Pipeline）
+
+##### 动机
+
+标准 1F1B 的 bubble = (P-1)/(M+P-1)，当 P 大时（如 P=8）即使 M 大仍有可观气泡。
+
+##### Interleaved 的思路
+
+把每个 stage 的层再分成 V 个 **virtual stage**（sub-stage），让通信更频繁、bubble 更小：
+
+```
+V=2 时, 每个 device 负责两段层 (stage_0 和 stage_P)
+forward 顺序: device0 的 stage_0 → device1 的 stage_0 → ... → device0 的 stage_P → ...
+```
+
+##### Bubble 公式
+
+```
+interleaved bubble = (P - 1) / (V × M + P - 1) × V
+```
+
+V=1 退化为标准 1F1B。V 越大 bubble 越小，但通信次数增 V 倍。
+
+| V | P | M | bubble (标准) | bubble (interleaved) |
+|---|---|---|-------------|---------------------|
+| 1 | 8 | 16 | 7/23 = 30% | 30% (同) |
+| 2 | 8 | 16 | 30% | 7/39 × 2 = 18% |
+| 4 | 8 | 16 | 30% | 7/71 × 4 = 10% |
+
+> ⚠️ **代价**：interleaved 增加通信次数 V 倍，且需要更复杂的调度。Megatron-LM 用 V=2~4。
+
+#### 2.5 Data Parallelism（DP）在推理中的定位
+
+##### 训练 DP vs 推理 DP
+
+| 维度 | 训练 DP | 推理 DP |
+|------|--------|--------|
+| 目标 | 多卡并行梯度计算 | 多卡并行多请求 |
+| 通信 | all-reduce 梯度（每步） | 无（各卡独立处理不同请求） |
+| 模型副本 | 每卡完整模型 | 每卡完整模型 |
+| 适用 | 大 batch 训练 | 高吞吐推理（多请求并发） |
+
+##### 推理 DP 的通信
+
+推理 DP **几乎无通信**——每个 worker 独立处理不同请求，只在前端做负载均衡：
+
+```
+Request 1 → GPU 0 (完整模型)
+Request 2 → GPU 1 (完整模型)
+Request 3 → GPU 0
+Request 4 → GPU 1
+```
+
+##### DP + TP/PP 组合
+
+| 策略 | 模型放置 | 通信 | 适用 |
+|------|---------|------|------|
+| DP only | 每卡完整模型 | 无 | 模型 ≤ 单卡显存，高吞吐 |
+| TP only | 模型分到 N 卡 | all-reduce（每层） | 模型 > 单卡，低延迟 |
+| DP + TP | TP 组内分模型，DP 组间复制 | TP 组内 all-reduce | 模型 > 单卡 + 高吞吐 |
+
+> 💡 **面试要点**：推理中 DP 适合"模型能放进单卡 + 高吞吐"场景。模型放不下时用 TP/PP，再用 DP 做吞吐扩展。vLLM 的 `tensor_parallel_size` + `pipeline_parallel_size` + 数据并行就是这套。
+
+#### 2.6 三维并行的通信量对比
+
+| 并行 | 通信原语 | 通信量 | 频率 |
+|------|---------|--------|------|
+| DP (训练) | all-reduce | 2×模型参数量 | 每步 |
+| DP (推理) | 无 | 0 | — |
+| TP | all-reduce | 2×activation 大小 | 每层 |
+| PP | send/recv | activation 大小 | 每 stage 边界 |
+| EP | all-to-all | top-k×token×expert_dim | 每层 MoE |
+
+##### 显存权衡
+
+| 并行 | 显存节省 | 通信代价 |
+|------|---------|---------|
+| TP | 参数分到 N 卡，但 activation 不分 | 每层 all-reduce |
+| PP | 参数 + activation 都分到 P 卡 | 每 stage 边界 send/recv + bubble |
+| DP | 无显存节省（每卡完整副本） | 无（推理）/ all-reduce（训练） |
+
+---
+
+### Coding 任务
+
+#### 任务 1：1F1B 调度模拟器
+
+创建 `kernels/pipeline_schedule_sim.py`，模拟 GPipe vs 1F1B 的调度时间线：
+
+```python
+def simulate_gpipe(P, M):
+    """模拟 GPipe 调度, 返回时间线和 bubble ratio"""
+    timeline = [[] for _ in range(P)]
+    t = 0
+    # Forward phase: M 个 micro-batch 依次穿过 P 个 stage
+    for m in range(M):
+        for s in range(P):
+            start = max(t, timeline[s][-1][1] if timeline[s] else 0)
+            timeline[s].append(('F', m, start, start + 1))
+            t = start + 1
+    # Backward phase
+    for m in reversed(range(M)):
+        for s in reversed(range(P)):
+            start = max(t, timeline[s][-1][1] if timeline[s] else 0)
+            timeline[s].append(('B', m, start, start + 1))
+            t = start + 1
+    total = max(ts[-1][1] for ts in timeline if ts)
+    bubble = 2 * (P - 1) / (M + P - 1)
+    return timeline, bubble, total
+
+def simulate_1f1b(P, M):
+    """模拟 1F1B 调度"""
+    # ... 交错 forward/backward ...
+    pass
+
+# 对比
+for P, M in [(4, 4), (4, 8), (8, 8), (8, 32)]:
+    tl_g, bub_g, total_g = simulate_gpipe(P, M)
+    tl_1, bub_1, total_1 = simulate_1f1b(P, M)
+    print(f"P={P} M={M}: GPipe bubble={bub_g:.2%}, 1F1B bubble={bub_1:.2%}")
+```
+
+#### 任务 2：Bubble Ratio 计算器
+
+```python
+def bubble_ratio(P, M, V=1):
+    if V == 1:
+        return (P - 1) / (M + P - 1)
+    else:
+        return (P - 1) / (V * M + P - 1) * V
+
+# 打印不同配置的 bubble
+print("P | M | V | bubble")
+for P in [4, 8]:
+    for M in [4, 8, 16, 32]:
+        for V in [1, 2, 4]:
+            print(f"{P} | {M} | {V} | {bubble_ratio(P, M, V):.2%}")
+```
+
+#### 任务 3：LeetCode 面试题
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|---------|------|
+| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_coin-change.html) |
+| [279](https://leetcode.cn/problems/perfect-squares/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_perfect-squares.html) |
+| [343](https://leetcode.cn/problems/integer-break/) | Medium | DP（数学） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/343_integer-break.html) |
+
+---
+
+### 扩展实验
+
+#### 实验 1：Interleaved 1F1B 调度模拟
+
+扩展模拟器支持 V=2/4 的 interleaved 调度，对比 bubble 和通信次数。
+
+#### 实验 2：显存占用模拟
+
+模拟 GPipe vs 1F1B 的峰值显存（稳态 activation 数），验证 1F1B 的显存优势。
+
+---
+
+### 今日总结
+
+1. **1F1B vs GPipe**：气泡相同，但 1F1B 稳态显存从 O(M) 降到 O(P)
+2. **Bubble ratio**：`(P-1)/(M+P-1)`，M≥4P 时 < 20%
+3. **Interleaved 1F1B**：V 个 virtual stage，bubble 降为 `(P-1)/(VM+P-1)×V`，代价是通信增 V 倍
+4. **推理 DP**：无通信，每卡独立处理请求，适合"模型 ≤ 单卡 + 高吞吐"
+5. **三维并行**：TP（每层 all-reduce）+ PP（stage 边界 send/recv + bubble）+ DP（无通信）的组合
+
+---
+
+### 面试要点
+
+1. **1F1B 和 GPipe 的区别是什么？为什么 1F1B 更省显存？**
+
+   <details>
+   <summary>答案</summary>
+
+   - **气泡相同**：都是 `(P-1)/(M+P-1)`
+   - **显存差异**：GPipe 稳态保存 M 份 activation，1F1B 只保存 P 份
+   - **原因**：1F1B 在 forward 第 k 个 micro-batch 后尽快 backward 第 k-(P-1) 个，释放 activation
+   - **稳态**：1F1B 的每个 stage 同时只有 P 份未 backward 的 activation
+
+   </details>
+
+2. **Pipeline 的 bubble ratio 怎么算？如何减少？**
+
+   <details>
+   <summary>答案</summary>
+
+   - 公式：`bubble = (P-1)/(M+P-1)`
+   - 减少 bubble 的方法：
+     1. 增大 M（micro-batch 数）——M≥4P 时 bubble < 20%
+     2. Interleaved 1F1B（V 个 virtual stage）——bubble 降为 `(P-1)/(VM+P-1)×V`
+     3. 减小 P（但会增大单 stage 显存）
+   - 代价：interleaved 增加通信次数 V 倍
+
+   </details>
+
+3. **推理中的 DP 和训练中的 DP 有什么区别？**
+
+   <details>
+   <summary>答案</summary>
+
+   - 训练 DP：每卡完整模型副本，每步 all-reduce 梯度
+   - 推理 DP：每卡完整模型副本，各处理不同请求，**无通信**
+   - 推理 DP 适合"模型 ≤ 单卡 + 高吞吐"场景
+   - 模型放不下时用 TP/PP，再用 DP 做吞吐扩展（DP + TP 组合）
+
+   </details>
+
+4. **TP/PP/DP 三者的通信量怎么比较？**
+
+   <details>
+   <summary>答案</summary>
+
+   - TP：每层 all-reduce，通信量 = 2×activation 大小（频率最高）
+   - PP：每 stage 边界 send/recv，通信量 = activation 大小（频率低但有 bubble）
+   - DP（训练）：每步 all-reduce 梯度，通信量 = 2×参数量（频率中）
+   - DP（推理）：无通信
+   - EP：每层 MoE all-to-all，通信量 = top-k×token×expert_dim
+
+   </details>
