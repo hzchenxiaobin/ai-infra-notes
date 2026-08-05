@@ -138,14 +138,14 @@ K 维循环：每次加载 16×16 的 A tile 和 16×16 的 B tile
 
 > ⚠️ **常见坑**：WMMA 的 `load_matrix_sync` 要求 leading dimension 正确。A row-major 的 ld = K（每行跨度），B col-major 的 ld = K（每列跨度）。
 
-##### Kernel 实现代码
+##### 完整代码：Kernel + Host 调用流程
 
-下面是完整的 `wmma_gemm.cu` kernel 实现（完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)）：
+下面是完整的 `wmma_gemm.cu`，包含 kernel 定义和 host 端调用流程（数据准备 → kernel launch → cuBLAS 对比 → 正确性验证）。完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)：
 
 ```cuda
 // wmma_gemm.cu —— Tensor Core (WMMA) GEMM: FP16 输入, FP32 累加
 // 编译命令: nvcc -O3 -arch=sm_120 -lcublas wmma_gemm.cu -o wmma_gemm
-// 对比 FMA GEMM vs WMMA GEMM vs cuBLAS
+// 对比 WMMA GEMM vs cuBLAS
 
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
@@ -170,52 +170,181 @@ __global__ void wmma_gemm_kernel(
     float* __restrict__ C,
     int M, int N, int K)
 {
-    int warpM = blockIdx.y;
-    int warpN = blockIdx.x;
+    // 1. 根据 block 索引确定本 warp 负责的输出 tile 位置
+    int warpM = blockIdx.y;  // tile 行索引
+    int warpN = blockIdx.x;  // tile 列索引
 
     if (warpM * WMMA_M >= M || warpN * WMMA_N >= N) return;
 
+    // 2. 声明 fragment（编译时确定形状和精度）
+    //    A: FP16 row-major, B: FP16 col-major, C: FP32 累加器
     wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> a_frag;
     wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::col_major> b_frag;
     wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
 
+    // 3. 初始化累加器为 0
     wmma::fill_fragment(c_frag, 0.0f);
 
+    // 4. K 维循环：每次加载 16×16 的 A/B tile 并执行 MMA
     for (int k = 0; k < K; k += WMMA_K) {
+        // A tile 起始地址：第 warpM*16 行、第 k 列（row-major，ld=K）
         const __half* tileA = A + warpM * WMMA_M * K + k;
+        // B tile 起始地址：第 k 行、第 warpN*16 列（col-major，ld=K）
         const __half* tileB = B + k + warpN * WMMA_N * K;
 
+        // 从 global memory 加载 fragment（warp 内 32 线程协作）
         wmma::load_matrix_sync(a_frag, tileA, K);
         wmma::load_matrix_sync(b_frag, tileB, K);
 
+        // 执行矩阵乘加：C = A × B + C（Tensor Core 硬件执行）
         wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
     }
 
+    // 5. 存储结果到 C（row-major，ld=N）
     float* tileC = C + warpM * WMMA_M * N + warpN * WMMA_N;
     wmma::store_matrix_sync(tileC, c_frag, N, wmma::mem_row_major);
 }
 
-// ---------- FMA GEMM (naive baseline, FP32) ----------
-#define BLOCK_SIZE 16
-__global__ void fma_gemm_kernel(
-    const float* __restrict__ A,
-    const float* __restrict__ B,
-    float* __restrict__ C,
-    int M, int N, int K)
+// ---------- Host 端：数据准备 + kernel launch + cuBLAS 对比 ----------
+int main(int argc, char** argv)
 {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row >= M || col >= N) return;
+    int sizes[] = {512, 1024, 2048, 4096};
 
-    float acc = 0.0f;
-    for (int k = 0; k < K; k++) {
-        acc += A[row * K + k] * B[k * N + col];
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+
+    printf("%-8s | %-12s %-12s | %-8s %-8s\n",
+           "M=N=K", "WMMA(ms)", "cuBLAS(ms)", "WMMA_TF", "cuBLAS_TF");
+    printf("---------|--------------------------------|----------------------\n");
+
+    for (int si = 0; si < sizeof(sizes)/sizeof(sizes[0]); si++) {
+        int M = sizes[si], N = sizes[si], K = sizes[si];
+
+        // --- 1. Host 端准备数据 ---
+        // FP32 原始数据（用于 cuBLAS 对比）
+        float *h_A_f32 = (float*)malloc(M * K * sizeof(float));
+        float *h_B_f32 = (float*)malloc(K * N * sizeof(float));
+        for (int i = 0; i < M * K; i++) h_A_f32[i] = (float)(rand() % 100) / 100.0f;
+        for (int i = 0; i < K * N; i++) h_B_f32[i] = (float)(rand() % 100) / 100.0f;
+
+        // FP16 数据（WMMA 需要）：A row-major, B col-major
+        __half *h_A_f16 = (__half*)malloc(M * K * sizeof(__half));
+        __half *h_B_f16 = (__half*)malloc(K * N * sizeof(__half));
+        for (int i = 0; i < M * K; i++) h_A_f16[i] = __float2half(h_A_f32[i]);
+        // B 从 row-major 转为 col-major: B[k*N+n] -> B_col[k + n*K]
+        for (int k = 0; k < K; k++)
+            for (int n = 0; n < N; n++)
+                h_B_f16[k + n * K] = __float2half(h_B_f32[k * N + n]);
+
+        // --- 2. Device 端分配 + 拷贝 ---
+        __half *d_A_f16, *d_B_f16;
+        float *d_C_wmma, *d_C_cublas;
+        float *d_A_f32, *d_B_f32;  // cuBLAS 用 FP32 输入
+        cudaMalloc(&d_A_f16, M * K * sizeof(__half));
+        cudaMalloc(&d_B_f16, K * N * sizeof(__half));
+        cudaMalloc(&d_C_wmma, M * N * sizeof(float));
+        cudaMalloc(&d_A_f32, M * K * sizeof(float));
+        cudaMalloc(&d_B_f32, K * N * sizeof(float));
+        cudaMalloc(&d_C_cublas, M * N * sizeof(float));
+        cudaMemcpy(d_A_f16, h_A_f16, M * K * sizeof(__half), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B_f16, h_B_f16, K * N * sizeof(__half), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_A_f32, h_A_f32, M * K * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B_f32, h_B_f32, K * N * sizeof(float), cudaMemcpyHostToDevice);
+
+        // --- 3. WMMA kernel launch ---
+        // Grid: (N/16, M/16)，每个 block = 1 warp (32 threads)
+        dim3 wmma_grid((N + WMMA_N - 1) / WMMA_N, (M + WMMA_M - 1) / WMMA_M);
+        dim3 wmma_block(32, 1);
+
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+
+        // warmup
+        wmma_gemm_kernel<<<wmma_grid, wmma_block>>>(d_A_f16, d_B_f16, d_C_wmma, M, N, K);
+        cudaDeviceSynchronize();
+
+        // 计时（10 次取平均）
+        cudaEventRecord(start);
+        for (int iter = 0; iter < 10; iter++)
+            wmma_gemm_kernel<<<wmma_grid, wmma_block>>>(d_A_f16, d_B_f16, d_C_wmma, M, N, K);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float ms_wmma = 0;
+        cudaEventElapsedTime(&ms_wmma, start, stop);
+        ms_wmma /= 10.0f;
+
+        // --- 4. cuBLAS sgemm 参考 ---
+        float alpha = 1.0f, beta = 0.0f;
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                    N, M, K, &alpha, d_B_f32, N, d_A_f32, K, &beta, d_C_cublas, N);
+        cudaDeviceSynchronize();
+
+        cudaEventRecord(start);
+        for (int iter = 0; iter < 10; iter++)
+            cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                        N, M, K, &alpha, d_B_f32, N, d_A_f32, K, &beta, d_C_cublas, N);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float ms_cublas = 0;
+        cudaEventElapsedTime(&ms_cublas, start, stop);
+        ms_cublas /= 10.0f;
+
+        // --- 5. 输出结果 ---
+        double tflops_wmma = 2.0 * M * N * K / (ms_wmma * 1e9);
+        double tflops_cublas = 2.0 * M * N * K / (ms_cublas * 1e9);
+
+        printf("%-8d | %-12.3f %-12.3f | %-8.1f %-8.1f\n",
+               M, ms_wmma, ms_cublas, tflops_wmma, tflops_cublas);
+
+        // --- 6. 正确性验证（WMMA vs cuBLAS）---
+        float *h_C_wmma = (float*)malloc(M * N * sizeof(float));
+        float *h_C_cublas = (float*)malloc(M * N * sizeof(float));
+        cudaMemcpy(h_C_wmma, d_C_wmma, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_C_cublas, d_C_cublas, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+
+        float max_diff = 0.0f;
+        for (int i = 0; i < M * N; i++) {
+            float diff = fabsf(h_C_wmma[i] - h_C_cublas[i]);
+            if (diff > max_diff) max_diff = diff;
+        }
+        if (M == sizes[0])
+            printf("  WMMA vs cuBLAS max_diff = %.2e (FP16 input precision loss expected)\n", max_diff);
+
+        // --- 7. 释放资源 ---
+        free(h_C_wmma); free(h_C_cublas);
+        free(h_A_f32); free(h_B_f32);
+        free(h_A_f16); free(h_B_f16);
+        cudaFree(d_A_f16); cudaFree(d_B_f16); cudaFree(d_C_wmma);
+        cudaFree(d_A_f32); cudaFree(d_B_f32); cudaFree(d_C_cublas);
     }
-    C[row * N + col] = acc;
+
+    cublasDestroy(handle);
+    return 0;
 }
 ```
 
-完整的 benchmark 逻辑（`main` 函数：初始化数据、warmup、计时、正确性验证、TFLOPS 计算）见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu) 文件后半部分。
+##### 调用流程总结
+
+```
+Host 端:
+  1. 准备 FP16 数据（A row-major, B col-major）
+  2. cudaMalloc + cudaMemcpy 到 Device
+  3. 配置 Grid = (N/16, M/16), Block = (32, 1)  ← 每 block 1 个 warp
+  4. wmma_gemm_kernel<<<grid, block>>>(d_A, d_B, d_C, M, N, K)
+  5. cuBLAS sgemm 作为参考
+  6. cudaMemcpy 回 Host，对比 max_diff
+
+Device 端 (每个 warp):
+  1. blockIdx 确定输出 tile 位置 (warpM, warpN)
+  2. 声明 fragment (a_frag, b_frag, c_frag)
+  3. fill_fragment(c_frag, 0)  ← 初始化累加器
+  4. for k in range(0, K, 16):
+       load_matrix_sync(a_frag, A + ...)  ← 从 global memory 加载
+       load_matrix_sync(b_frag, B + ...)
+       mma_sync(c_frag, a_frag, b_frag, c_frag)  ← Tensor Core 执行
+  5. store_matrix_sync(C + ..., c_frag, N, mem_row_major)  ← 写回结果
+```
 
 #### 1.4 混合精度策略
 
@@ -265,14 +394,13 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 
 ### Coding 任务：手写 WMMA GEMM
 
-#### 任务 1：理解 WMMA GEMM Kernel
+#### 任务 1：理解 WMMA GEMM 完整调用流程
 
-上方 1.3 节已给出完整的 `wmma_gemm_kernel` 和 `fma_gemm_kernel` 实现。完整文件（含 benchmark `main` 函数）见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
+上方 1.3 节已给出完整的 `wmma_gemm.cu`——包含 kernel 定义和 host 端调用流程（数据准备 → kernel launch → cuBLAS 对比 → 正确性验证）。完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
 
-代码包含三个 GEMM 实现并对比：
-- `fma_gemm_kernel`：FMA baseline（FP32, naive）
-- `wmma_gemm_kernel`：WMMA GEMM（FP16 输入, FP32 累加）
-- `cublasSgemm`：cuBLAS 参考
+代码包含：
+- `wmma_gemm_kernel`：WMMA GEMM kernel（FP16 输入, FP32 累加, Tensor Core 执行）
+- `main`：host 端调用流程——数据准备、kernel launch、cuBLAS sgemm 对比、正确性验证
 
 #### 任务 2：编译与运行
 
@@ -315,8 +443,8 @@ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
 launch__registers_per_thread \
     ./wmma_gemm
 
-# 对比 FMA vs WMMA 的 Tensor Core 利用率
-ncu --kernel-name regex:"fma_gemm|wmma_gemm" \
+# 对比 WMMA 的 Tensor Core 利用率
+ncu --kernel-name regex:"wmma_gemm" \
     --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
 sm__throughput.avg.pct_of_peak_sustained_elapsed \
     ./wmma_gemm
@@ -324,12 +452,12 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 **关注指标**：
 
-| 指标 | FMA GEMM 预期 | WMMA GEMM 预期 | 说明 |
-|------|-------------|---------------|------|
-| `sm__pipe_tensor_op_hmma` | 0% | 50-80% | Tensor Core 利用率 |
-| `sm__throughput` | 30-50% | 60-80% | SM 总吞吐 |
-| `dram__throughput` | 40-60% | 30-50% | 带宽利用率 |
-| `launch__registers_per_thread` | ~128 | ~64-96 | 寄存器用量 |
+| 指标 | WMMA GEMM 预期 | 说明 |
+|------|---------------|------|
+| `sm__pipe_tensor_op_hmma` | 50-80% | Tensor Core 利用率 |
+| `sm__throughput` | 60-80% | SM 总吞吐 |
+| `dram__throughput` | 30-50% | 带宽利用率 |
+| `launch__registers_per_thread` | ~64-96 | 寄存器用量 |
 
 #### 任务 4：LeetGPU 在线题目
 

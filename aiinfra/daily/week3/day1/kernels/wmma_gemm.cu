@@ -1,6 +1,6 @@
 // wmma_gemm.cu —— Tensor Core (WMMA) GEMM: FP16 输入, FP32 累加
 // 编译命令: nvcc -O3 -arch=sm_120 -lcublas wmma_gemm.cu -o wmma_gemm
-// 对比 FMA GEMM vs WMMA GEMM vs cuBLAS
+// 对比 WMMA GEMM vs cuBLAS
 
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
@@ -50,36 +50,7 @@ __global__ void wmma_gemm_kernel(
     wmma::store_matrix_sync(tileC, c_frag, N, wmma::mem_row_major);
 }
 
-// ---------- FMA GEMM (Register Blocking baseline, FP32) ----------
-#define BLOCK_SIZE 16
-__global__ void fma_gemm_kernel(
-    const float* __restrict__ A,
-    const float* __restrict__ B,
-    float* __restrict__ C,
-    int M, int N, int K)
-{
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row >= M || col >= N) return;
-
-    float acc = 0.0f;
-    for (int k = 0; k < K; k++) {
-        acc += A[row * K + k] * B[k * N + col];
-    }
-    C[row * N + col] = acc;
-}
-
-// ---------- Helper: cuBLAS sgemm ----------
-void cublas_sgemm(
-    cublasHandle_t handle, int M, int N, int K,
-    const float* d_A, const float* d_B, float* d_C)
-{
-    float alpha = 1.0f, beta = 0.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
-                N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
-}
-
-// ---------- Main: benchmark FMA vs WMMA vs cuBLAS ----------
+// ---------- Main: benchmark WMMA vs cuBLAS ----------
 int main(int argc, char** argv)
 {
     int sizes[] = {512, 1024, 2048, 4096};
@@ -88,20 +59,16 @@ int main(int argc, char** argv)
     cublasHandle_t handle;
     cublasCreate(&handle);
 
-    printf("%-8s | %-12s %-12s %-12s | %-8s %-8s %-8s\n",
-           "M=N=K", "FMA(ms)", "WMMA(ms)", "cuBLAS(ms)",
-           "FMA%", "WMMA%", "WMMA/FMA");
-    printf("---------|------------------------------------------------|----------------------------\n");
+    printf("%-8s | %-12s %-12s | %-8s %-8s\n",
+           "M=N=K", "WMMA(ms)", "cuBLAS(ms)", "WMMA_TF", "cuBLAS_TF");
+    printf("---------|--------------------------------|----------------------\n");
 
     for (int si = 0; si < num_sizes; si++) {
         int M = sizes[si], N = sizes[si], K = sizes[si];
-        size_t bytes_f32 = (size_t)M * N * sizeof(float);
-        size_t bytes_f16 = (size_t)M * K * sizeof(__half);
 
-        // FP32 buffers for FMA + cuBLAS
+        // FP32 buffers for cuBLAS
         float *h_A_f32 = (float*)malloc(M * K * sizeof(float));
         float *h_B_f32 = (float*)malloc(K * N * sizeof(float));
-        float *h_C_f32 = (float*)malloc(M * N * sizeof(float));
         for (int i = 0; i < M * K; i++) h_A_f32[i] = (float)(rand() % 100) / 100.0f;
         for (int i = 0; i < K * N; i++) h_B_f32[i] = (float)(rand() % 100) / 100.0f;
 
@@ -130,30 +97,13 @@ int main(int argc, char** argv)
         float *d_C_wmma;
         cudaMalloc(&d_C_wmma, M * N * sizeof(float));
 
-        // --- FMA GEMM ---
-        dim3 fma_block(BLOCK_SIZE, BLOCK_SIZE);
-        dim3 fma_grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE, (M + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        // --- WMMA GEMM ---
+        dim3 wmma_grid((N + WMMA_N - 1) / WMMA_N, (M + WMMA_M - 1) / WMMA_M);
+        dim3 wmma_block(32, 1); // 1 warp per block
 
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
-
-        // warmup
-        fma_gemm_kernel<<<fma_grid, fma_block>>>(d_A_f32, d_B_f32, d_C_f32, M, N, K);
-        cudaDeviceSynchronize();
-
-        cudaEventRecord(start);
-        for (int iter = 0; iter < 10; iter++)
-            fma_gemm_kernel<<<fma_grid, fma_block>>>(d_A_f32, d_B_f32, d_C_f32, M, N, K);
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float ms_fma = 0;
-        cudaEventElapsedTime(&ms_fma, start, stop);
-        ms_fma /= 10.0f;
-
-        // --- WMMA GEMM ---
-        dim3 wmma_grid((N + WMMA_N - 1) / WMMA_N, (M + WMMA_M - 1) / WMMA_M);
-        dim3 wmma_block(32, 1); // 1 warp per block
 
         // warmup
         wmma_gemm_kernel<<<wmma_grid, wmma_block>>>(d_A_f16, d_B_f16, d_C_wmma, M, N, K);
@@ -169,12 +119,15 @@ int main(int argc, char** argv)
         ms_wmma /= 10.0f;
 
         // --- cuBLAS sgemm ---
-        cublas_sgemm(handle, M, N, K, d_A_f32, d_B_f32, d_C_f32);
+        float alpha = 1.0f, beta = 0.0f;
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                    N, M, K, &alpha, d_B_f32, N, d_A_f32, K, &beta, d_C_f32, N);
         cudaDeviceSynchronize();
 
         cudaEventRecord(start);
         for (int iter = 0; iter < 10; iter++)
-            cublas_sgemm(handle, M, N, K, d_A_f32, d_B_f32, d_C_f32);
+            cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                        N, M, K, &alpha, d_B_f32, N, d_A_f32, K, &beta, d_C_f32, N);
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         float ms_cublas = 0;
@@ -183,13 +136,11 @@ int main(int argc, char** argv)
 
         // --- TFLOPS ---
         double flops = 2.0 * M * N * K;
-        double tflops_fma = flops / (ms_fma * 1e9);
         double tflops_wmma = flops / (ms_wmma * 1e9);
         double tflops_cublas = flops / (ms_cublas * 1e9);
 
-        printf("%-8d | %-12.3f %-12.3f %-12.3f | %-8.1f %-8.1f %-8.1f\n",
-               M, ms_fma, ms_wmma, ms_cublas,
-               tflops_fma, tflops_wmma, tflops_cublas);
+        printf("%-8d | %-12.3f %-12.3f | %-8.1f %-8.1f\n",
+               M, ms_wmma, ms_cublas, tflops_wmma, tflops_cublas);
 
         // --- Correctness check (WMMA vs cuBLAS) ---
         float *h_C_wmma = (float*)malloc(M * N * sizeof(float));
@@ -207,15 +158,14 @@ int main(int argc, char** argv)
 
         free(h_C_wmma);
         free(h_C_cublas);
-        free(h_A_f32); free(h_B_f32); free(h_C_f32);
+        free(h_A_f32); free(h_B_f32);
         free(h_A_f16); free(h_B_f16);
         cudaFree(d_A_f32); cudaFree(d_B_f32); cudaFree(d_C_f32);
         cudaFree(d_A_f16); cudaFree(d_B_f16); cudaFree(d_C_wmma);
     }
 
     cublasDestroy(handle);
-    printf("\nNote: WMMA uses FP16 input + FP32 accumulate.\n");
-    printf("      FMA uses FP32 throughout. cuBLAS uses FP32 (sgemm).\n");
+    printf("\nNote: WMMA uses FP16 input + FP32 accumulate. cuBLAS uses FP32 (sgemm).\n");
     printf("      RTX 5090 FP16 Tensor Core peak ~209 TFLOPS (dense).\n");
     return 0;
 }
