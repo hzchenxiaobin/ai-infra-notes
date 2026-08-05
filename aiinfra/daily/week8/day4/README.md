@@ -437,7 +437,7 @@ python kernels/shape_bucketing.py
 
 ### 今日总结
 
-Day 6b 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead 瓶颈：
+Day 4 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead 瓶颈：
 
 1. **Launch overhead 本质**：每次 kernel launch 有 5-10μs CPU 提交开销（参数解析、驱动切换、stream 入队），与 kernel 计算量无关；Decode M=1 时 kernel 极快，launch 占比可达 **30-60%**，是 launch-bound 的典型场景
 2. **CUDA Graph 原理**：capture（录制 kernel launch 序列为 DAG）/ replay（一次提交整图）两阶段，把 N 次 CPU launch 压成 1 次，kernel 间隙几乎消失；硬约束是 **shape/拓扑/指针地址静态**

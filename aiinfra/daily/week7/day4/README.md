@@ -276,7 +276,7 @@ prefix caching 的 block hash 计算类似于 segmented prefix sum 中按段累�
 
 ### 今日总结
 
-Day 4b 我们将 chunked prefill 和 prefix caching 从概念推进到了真实实现：
+Day 4 我们将 chunked prefill 和 prefix caching 从概念推进到了真实实现：
 
 1. **Chunked Prefill**：长 prompt 分块与 decode 混合调度，chunk_size 选择影响 TTFT/TBT 权衡
 2. **Prefix Caching**：block hash 匹配 + LRU 淘汰，共享 system prompt 场景命中率达 90%+

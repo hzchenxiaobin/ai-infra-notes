@@ -17,7 +17,7 @@
 
 ### 学前导读：为什么手写 WMMA 教学版只有 ~33%，而 CUTLASS 能达 95%+
 
-Day 6b 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
+Day 4 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
 
 | 优化点 | 手写 WMMA | CUTLASS | cuBLAS |
 |--------|-----------|---------|--------|
@@ -296,7 +296,7 @@ launch__registers_per_thread,\
 launch__shared_mem_per_block \
     ./cutlass_gemm
 
-# 对比 Day 6b 的手写 WMMA vs CUTLASS
+# 对比 Day 4 的手写 WMMA vs CUTLASS
 ncu --kernel-name regex:"wmma_gemm|Gemm" \
     --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
 sm__throughput.avg.pct_of_peak_sustained_elapsed \
@@ -350,7 +350,7 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 ### 今日总结
 
-Day 4b 我们深入分析了 CUTLASS 源码：
+Day 4 我们深入分析了 CUTLASS 源码：
 
 1. **三级 Tiling**：Device(ThreadblockShape) → Kernel(WarpShape) → Warp(InstructionShape)，从粗到细的矩阵分块
 2. **模板参数**：精度、布局、架构、tiling 形状、epilogue、swizzle、stages 可独立配置

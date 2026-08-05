@@ -13,7 +13,7 @@
 5. 学会 **CUDA kernel → Ascend kernel 的通用迁移策略**——哪些概念可直接迁移（tiling/合并/矩阵加速/双缓冲）、哪些必须重新设计（warp/thread 级优化）
 6. 产出一份 **cuda_vs_ascend_comparison.py 速查脚本**，打印 6 张对比表（架构/编程模型/存储/工具/优化/迁移），面试前快速复习
 
-> 💡 **为什么重要**：前 7 周 + Day 3 都围绕 NVIDIA CUDA。但国内 AI Infra 岗位越来越多要求"多硬件适配"——华为 Ascend 是国产算力主力。面试官问"你的 kernel 能不能跑在 Ascend 上"时，答"没了解过"直接丢分；答"我理解两边的架构映射，知道哪些可迁移、哪些要重设计"则体现全局视野。Day 3b 用一张对比表把 CUDA 和 Ascend 的概念打通，是"单硬件工程师"到"多硬件视野"的关键一课。
+> 💡 **为什么重要**：前 7 周 + Day 3 都围绕 NVIDIA CUDA。但国内 AI Infra 岗位越来越多要求"多硬件适配"——华为 Ascend 是国产算力主力。面试官问"你的 kernel 能不能跑在 Ascend 上"时，答"没了解过"直接丢分；答"我理解两边的架构映射，知道哪些可迁移、哪些要重设计"则体现全局视野。Day 6 用一张对比表把 CUDA 和 Ascend 的概念打通，是"单硬件工程师"到"多硬件视野"的关键一课。
 
 ---
 
@@ -392,7 +392,7 @@ python kernels/cuda_vs_ascend_comparison.py
 
 ### 今日总结
 
-Day 3b 我们用一张对比表把 NVIDIA CUDA 和 Ascend CANN 的概念打通：
+Day 6 我们用一张对比表把 NVIDIA CUDA 和 Ascend CANN 的概念打通：
 
 1. **架构对比**：SM ↔ AI Core（Cube+Vector+Scalar+MTE）；执行模型 **SIMT（warp=32）** vs **指令级并行（三单元流水）**；延迟隐藏 **warp 切换** vs **MTE/Cube/Vector 流水**
 2. **编程模型映射五对**：`shared memory↔UB`、`warp shuffle↔UB DataCopy`、`__syncthreads↔sync barrier`、`Tensor Core↔Cube Unit`、`float4↔DataCopy`

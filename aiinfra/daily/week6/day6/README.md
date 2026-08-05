@@ -304,7 +304,7 @@ INT8 KV-Cache Attention 正是 **FlashDecoding 服务的 decode 场景**——LL
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周高频回顾）
 
-> 📅 今日为补充 Day（Day 4b），LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日，LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
@@ -339,7 +339,7 @@ INT8 KV-Cache Attention 正是 **FlashDecoding 服务的 decode 场景**——LL
 
 ### 今日总结
 
-Day 4b 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破：
+Day 6 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破：
 
 1. **Decode 并行度瓶颈**：M=1 时 FlashAttention 的 Q-tile 切分失效，只有 1 个 block 串行扫描整个 KV，GPU 大量 SM 空闲
 2. **FlashDecoding 核心思想**：把 KV sequence 按列方向切分到不同 block/SM，每个 block 独立处理一段 KV，最后合并——Q 切不了就切 KV
@@ -349,7 +349,7 @@ Day 4b 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突�
 6. **手写 FlashDecoding kernel**：两阶段实现（Phase 1 切分并行 + Phase 2 合并），与 CPU 标准 attention 结果一致，验证 KV 切分 + 跨 block 合并的数学正确性
 7. **与 PagedAttention 的关系**：PagedAttention 解决 KV cache 的内存管理（碎片/CoW），FlashDecoding 解决 decode 的并行度——两者正交，可组合使用
 
-掌握这些后，你就理解了 decode 阶段的两类核心优化：**内存管理**（Day 4 PagedAttention）+ **并行度**（Day 4b FlashDecoding）。Day 5 把它们整合进 Mini 推理引擎时，可以用 FlashDecoding 加速 decode 阶段的 attention。
+掌握这些后，你就理解了 decode 阶段的两类核心优化：**内存管理**（Day 4 PagedAttention）+ **并行度**（Day 6 FlashDecoding）。Day 5 把它们整合进 Mini 推理引擎时，可以用 FlashDecoding 加速 decode 阶段的 attention。
 
 ---
 

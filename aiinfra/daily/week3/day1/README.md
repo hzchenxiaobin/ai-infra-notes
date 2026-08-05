@@ -21,7 +21,7 @@
 
 Day 6 的整合版 GEMM（Register Blocking + float4 + coalesced writeback）在 RTX 5090 上达到 cuBLAS 的 64.3%。剩下的 35% 差距来自哪里？
 
-| 优化层 | Day 6 已做 | Day 6b 新增 | 收益预期 |
+| 优化层 | Day 6 已做 | Day 1 新增 | 收益预期 |
 |--------|-----------|------------|---------|
 | Register Blocking | ✅ | — | — |
 | float4 向量化加载 | ✅ | — | — |
@@ -458,7 +458,7 @@ Batched GEMM 是推理中 Multi-Head Attention 的核心操作。用 WMMA 实现
 
 ### 今日总结
 
-Day 6b 我们掌握了 Tensor Core 与 WMMA 编程：
+Day 1 我们掌握了 Tensor Core 与 WMMA 编程：
 
 1. **Tensor Core 架构**：每周期执行 16×16×16 矩阵乘加，吞吐是 FMA 的 2-8 倍
 2. **WMMA 接口**：`fragment` 生命周期（声明→fill→load→mma_sync→store），warp 级编程模型

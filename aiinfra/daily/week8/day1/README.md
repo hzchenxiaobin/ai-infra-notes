@@ -476,7 +476,7 @@ Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 +
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周高频回顾）
 
-> 📅 今日为量化专题补充 Day（Day 6b），LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日为量化专题，LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
@@ -511,7 +511,7 @@ Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 +
 
 ### 今日总结
 
-Day 6b 我们把量化推理的三层武器一次讲透，并手写了两个最小化 kernel：
+Day 1 我们把量化推理的三层武器一次讲透，并手写了两个最小化 kernel：
 
 1. **量化基础**：对称（零点 0）vs 非对称（zero point），per-tensor/per-channel/per-token 三种 scale 粒度——outlier 是误差之源，细化粒度是把 outlier 影响局部化
 2. **W8A16/W4A16**：权重 INT8/INT4 + 激活 FP16，per-channel scale 可提到点积外省一次乘法；W4A16 必须用 AWQ/GPTQ（RTN 在 4-bit 下崩坏）

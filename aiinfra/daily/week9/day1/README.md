@@ -468,7 +468,7 @@ nsys-ui comm_overlap.nsys-rep
 
 ### 今日总结
 
-Day 3b 我们系统学习了分布式推理的三大并行策略与通信-计算重叠：
+Day 1 我们系统学习了分布式推理的三大并行策略与通信-计算重叠：
 
 1. **三大动机**：显存墙（模型放不下）、吞吐墙（tok/s 不够）、延迟墙（单层 GEMM 慢），分别对应 TP/PP、DP、TP
 2. **Tensor Parallelism**：column-parallel 切 QKV（按 head，零通信）+ row-parallel 切 Output（all-reduce 聚合），一个 Attention Block 仅 1 次通信
