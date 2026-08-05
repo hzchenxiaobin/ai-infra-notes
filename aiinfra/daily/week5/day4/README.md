@@ -259,7 +259,7 @@ $$\text{IO}_{\text{bwd}} = \Theta\left(\frac{N^2 d^2}{M}\right) \quad \text{（M
 
 #### 任务 1：编写 gemm_backward.cu
 
-完整文件：[kernels/gemm_backward.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/gemm_backward.cu)
+完整文件：[kernels/gemm_backward.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day4/kernels/gemm_backward.cu)
 
 ```cuda
 // gemm_backward.cu —— Naive GEMM Backward: dA = dC @ B^T, dB = A^T @ dC
@@ -328,7 +328,7 @@ GPU Time (dA + dB kernels): 0.0xx ms
 
 #### 任务 3：编写 flash_attention_backward.py 并 gradcheck
 
-完整文件：[kernels/flash_attention_backward.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/flash_attention_backward.py)
+完整文件：[kernels/flash_attention_backward.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week5/day4/kernels/flash_attention_backward.py)
 
 ```python
 # flash_attention_backward.py —— Simplified FlashAttention Backward (PyTorch, teaching)

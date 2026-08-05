@@ -283,7 +283,7 @@ with torch.cuda.graph(g):
 
 #### 任务 1：创建 tp_inference_demo.py
 
-创建文件 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/tp_inference_demo.py)，用 `torch.chunk` 在单卡上模拟 2-GPU TP 推理：
+创建文件 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/tp_inference_demo.py)，用 `torch.chunk` 在单卡上模拟 2-GPU TP 推理：
 
 ```python
 # tp_inference_demo.py —— 2-GPU Tensor Parallelism 推理 Demo（单卡模拟）
@@ -309,7 +309,7 @@ class TPAttentionBlock(nn.Module):
     ...
 ```
 
-完整代码见 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/tp_inference_demo.py)。
+完整代码见 [kernels/tp_inference_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/tp_inference_demo.py)。
 
 代码要点：
 - `ColumnParallelLinear`：权重按 output dim 切成 `tp_size` 片，各片独立计算后 `torch.cat` 模拟拼接（真实 TP 下游按 head 消费，常无需 concat）
@@ -354,7 +354,7 @@ python kernels/tp_inference_demo.py
 
 #### 任务 3：创建并运行 comm_overlap_demo.py + nsys profiling
 
-创建文件 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/comm_overlap_demo.py)，演示双 CUDA Stream 通信-计算重叠：
+创建文件 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py)，演示双 CUDA Stream 通信-计算重叠：
 
 ```python
 # comm_overlap_demo.py —— 通信-计算重叠 Demo（双 CUDA Stream）
@@ -378,7 +378,7 @@ serial_ms = measure(serial_step, ...)
 overlap_ms = measure(overlap_step, ...)
 ```
 
-完整代码见 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/comm_overlap_demo.py)。
+完整代码见 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py)。
 
 运行与 profiling：
 

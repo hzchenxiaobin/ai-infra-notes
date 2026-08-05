@@ -106,7 +106,7 @@ $$W^{\mathrm{int}}_{n,k}\in[-127,127],\qquad W_{n,k}\approx s_n\cdot W^{\mathrm{
 
 $$Y_{m,n}=\sum_k X_{m,k}\cdot W_{n,k}\approx \sum_k X_{m,k}\cdot s_n\cdot W^{\mathrm{int}}_{n,k}=s_n\cdot\sum_k X_{m,k}\cdot W^{\mathrm{int}}_{n,k}$$
 
-**关键洞察**：per-channel scale $s_n$ 与 $k$ 无关，可以**提到求和外面**——kernel 内只需做一次 INT8×FP16 点积（FP32 累加），最后乘一次 $s_n$，**省掉逐元素反量化**。这正是 [kernels/w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/w8a16_dequant.cu) 的核心设计。
+**关键洞察**：per-channel scale $s_n$ 与 $k$ 无关，可以**提到求和外面**——kernel 内只需做一次 INT8×FP16 点积（FP32 累加），最后乘一次 $s_n$，**省掉逐元素反量化**。这正是 [kernels/w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/w8a16_dequant.cu) 的核心设计。
 
 ```cuda
 // W8A16 GEMV: Y[n] = scale[n] * Σ_k X[k] * W_int8[n,k]
@@ -170,7 +170,7 @@ Decode 阶段 attention（M=1）：
 
 $$\mathrm{score}^{(t)} = \frac{1}{\sqrt{d}}\,Q\cdot \hat{K}^{(t)} = \frac{1}{\sqrt{d}}\sum_j Q_j\cdot K^{\mathrm{int}}[t,j]\cdot s^{(t)}_K = s^{(t)}_K\cdot\frac{1}{\sqrt{d}}\sum_j Q_j\cdot K^{\mathrm{int}}[t,j]$$
 
-**scale $s^{(t)}_K$ 又可以提到点积外面**——INT8 点积（FP32 累加）后乘一次 scale。V 同理：$O = \sum_t p_t\,\hat{V}^{(t)} = \sum_t p_t\,s^{(t)}_V\,V^{\mathrm{int}}[t]$。这正是 [kernels/int8_kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/int8_kv_cache.cu) 的 kernel 设计。
+**scale $s^{(t)}_K$ 又可以提到点积外面**——INT8 点积（FP32 累加）后乘一次 scale。V 同理：$O = \sum_t p_t\,\hat{V}^{(t)} = \sum_t p_t\,s^{(t)}_V\,V^{\mathrm{int}}[t]$。这正是 [kernels/int8_kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/int8_kv_cache.cu) 的 kernel 设计。
 
 | 维度 | FP16 KV Cache | INT8 KV Cache |
 |------|---------------|---------------|
@@ -344,7 +344,7 @@ Blackwell（B100/RTX 5090）引入 **FP4** Tensor Core：
 
 #### 任务 1：创建 w8a16_dequant.cu
 
-创建文件 [kernels/w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/w8a16_dequant.cu)，实现 W8A16 weight-only 量化的 GEMV kernel（M=1 Decode 场景），对比 FP16 GEMV 的显存与延迟：
+创建文件 [kernels/w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/w8a16_dequant.cu)，实现 W8A16 weight-only 量化的 GEMV kernel（M=1 Decode 场景），对比 FP16 GEMV 的显存与延迟：
 
 ```cuda
 // w8a16_dequant.cu —— W8A16 Weight-only 量化：INT8 权重 + FP16 激活，GEMM 内在线反量化
@@ -433,7 +433,7 @@ ncu --kernel-name regex:gemv \
 
 #### 任务 3b：创建 fp8_dequant.cu（FP8 E4M3 实操）
 
-创建文件 [kernels/fp8_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/fp8_dequant.cu)，实现 FP8 E4M3 量化的 GEMV kernel（软件模拟 FP8 格式，验证反量化数学）：
+创建文件 [kernels/fp8_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/fp8_dequant.cu)，实现 FP8 E4M3 量化的 GEMV kernel（软件模拟 FP8 格式，验证反量化数学）：
 
 ```bash
 nvcc -o fp8_dequant kernels/fp8_dequant.cu -O3 -arch=sm_120
@@ -470,7 +470,7 @@ Note: 软件模拟 FP8, 无 Tensor Core 加速。生产用 __nv_fp8_e4m3 + FP8 T
 
 **与今日知识的关联**：
 
-Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 + per-channel scale 反量化为 FP16，供后续 GEMM 使用。今天我们在 [w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/w8a16_dequant.cu) 里做了"更激进"的版本——**不单独反量化**，而是把 dequant 融进 GEMM（在线反量化，scale 提到点积外）。这道题则是"显式反量化"版本：单独写一个 kernel 把 INT8 权重展开成 FP16。两者是同一思想的两种实现策略：fused（在线，省中间带宽）vs unfused（显式，便于复用现有 FP16 GEMM）。工业界两条路线都用——fused 性能更好，unfused 工程更简单（可接 cuBLAS FP16 GEMM）。
+Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 + per-channel scale 反量化为 FP16，供后续 GEMM 使用。今天我们在 [w8a16_dequant.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/w8a16_dequant.cu) 里做了"更激进"的版本——**不单独反量化**，而是把 dequant 融进 GEMM（在线反量化，scale 提到点积外）。这道题则是"显式反量化"版本：单独写一个 kernel 把 INT8 权重展开成 FP16。两者是同一思想的两种实现策略：fused（在线，省中间带宽）vs unfused（显式，便于复用现有 FP16 GEMM）。工业界两条路线都用——fused 性能更好，unfused 工程更简单（可接 cuBLAS FP16 GEMM）。
 
 > 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时，重点对比"fused 在线反量化"（今日 kernel）vs "unfused 显式反量化"（本题）的带宽差异。完整题解（含 per-channel scale 处理、向量化加载、ncu 带宽分析）见 [Weight Dequantization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html)。
 
@@ -503,7 +503,7 @@ Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 +
 
 #### 实验 3：扫描 seq_len 观察 INT8 KV Cache 的延迟收益
 
-修改 [kernels/int8_kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day2/kernels/int8_kv_cache.cu) 的 `main()`，增加一个 FP16 KV attention kernel（K/V 存 FP16）作基线，扫描 `seq_len = 256, 512, 1024, 2048, 4096`，对比两者 latency。
+修改 [kernels/int8_kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day1/kernels/int8_kv_cache.cu) 的 `main()`，增加一个 FP16 KV attention kernel（K/V 存 FP16）作基线，扫描 `seq_len = 256, 512, 1024, 2048, 4096`，对比两者 latency。
 
 > 思考：seq_len 多大时 INT8 KV 的加速比开始明显？（提示：seq 越长 → KV 字节越多 → INT8 减半的收益越大。seq 小时 Q 读取与 softmax 开销占比大，加速比小。长上下文（4K+）是 INT8 KV Cache 的最佳场景，与 Day 6 "TBT 随 L 增长"的结论呼应。）
 

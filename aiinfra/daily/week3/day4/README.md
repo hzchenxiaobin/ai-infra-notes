@@ -233,7 +233,7 @@ Block 调度策略影响 L2 cache 命中率：
 
 #### 任务 1：创建 `cutlass_gemm_example.cu`
 
-完整代码见 [kernels/cutlass_gemm_example.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/cutlass_gemm_example.cu)。
+完整代码见 [kernels/cutlass_gemm_example.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day4/kernels/cutlass_gemm_example.cu)。
 
 代码实例化 `cutlass::gemm::device::Gemm` 并对比 cuBLAS：
 

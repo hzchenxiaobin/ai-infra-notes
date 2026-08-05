@@ -294,7 +294,7 @@ def f(x):
 
 ##### 1a. triton_softmax.py —— Triton softmax kernel
 
-完整文件：[kernels/triton_softmax.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/triton_softmax.py)
+完整文件：[kernels/triton_softmax.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day4/kernels/triton_softmax.py)
 
 ```python
 # triton_softmax.py —— Triton softmax kernel + benchmark vs torch.softmax
@@ -323,7 +323,7 @@ def softmax_kernel(x_ptr, y_ptr, x_stride, y_stride, n_rows, n_cols, BLOCK_SIZE:
 
 ##### 1b. triton_gemm.py —— Triton GEMM with autotune
 
-完整文件：[kernels/triton_gemm.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/triton_gemm.py)
+完整文件：[kernels/triton_gemm.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day4/kernels/triton_gemm.py)
 
 ```python
 # triton_gemm.py —— Triton GEMM (autotune) + benchmark vs torch.matmul (cuBLAS)
@@ -350,7 +350,7 @@ def gemm_kernel(a_ptr, b_ptr, c_ptr, M, N, K,
 
 ##### 1c. triton_flash_attention.py —— Simplified FlashAttention forward
 
-完整文件：[kernels/triton_flash_attention.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/triton_flash_attention.py)
+完整文件：[kernels/triton_flash_attention.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day4/kernels/triton_flash_attention.py)
 
 ```python
 # triton_flash_attention.py —— Simplified Triton FlashAttention (causal, online softmax)

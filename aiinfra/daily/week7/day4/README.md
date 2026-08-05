@@ -181,7 +181,7 @@ vLLM v0.5+ 默认启用 `--enable-prefix-caching`：
 
 #### 任务 1：创建 `prefix_cache_engine.py`
 
-完整代码见 [kernels/prefix_cache_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/prefix_cache_engine.py)。
+完整代码见 [kernels/prefix_cache_engine.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day4/kernels/prefix_cache_engine.py)。
 
 代码实现：
 - `BlockPool`：管理 KV cache blocks，支持 allocate/free/hash 匹配

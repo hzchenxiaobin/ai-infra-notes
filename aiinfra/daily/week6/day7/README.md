@@ -197,7 +197,7 @@ nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT�
 
 #### 任务 1：运行总结自测脚本
 
-运行 [kernels/week5_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
+运行 [kernels/week5_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day7/kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
 
 ```bash
 python kernels/week5_summary.py

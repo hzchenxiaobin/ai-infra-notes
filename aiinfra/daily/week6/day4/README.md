@@ -159,7 +159,7 @@ BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，
 
 #### 任务 1：创建 paged_attention.cu
 
-创建文件 [kernels/paged_attention.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/paged_attention.cu)，实现一个最小化的 PagedAttention kernel（block table 间接寻址 + online softmax）：
+创建文件 [kernels/paged_attention.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day4/kernels/paged_attention.cu)，实现一个最小化的 PagedAttention kernel（block table 间接寻址 + online softmax）：
 
 ```cuda
 // paged_attention.cu —— PagedAttention 最小化实现（block table + 分块 KV cache attention）

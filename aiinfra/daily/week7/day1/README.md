@@ -131,7 +131,7 @@ Continuous Batching 可以混合 prefill 和 decode：
 
 #### 任务 1：创建 continuous_batcher.py
 
-创建文件 [kernels/continuous_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/continuous_batcher.py)，实现 iteration-level 调度：
+创建文件 [kernels/continuous_batcher.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day1/kernels/continuous_batcher.py)，实现 iteration-level 调度：
 
 ```python
 # continuous_batcher.py —— Continuous Batching 实现（iteration-level 调度）

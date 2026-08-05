@@ -125,7 +125,7 @@
 
 #### 任务 1：创建 mock_interview.py
 
-创建文件 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/mock_interview.py)，把 Mock 面试的 7 个环节做成一个带计时器的练习系统：
+创建文件 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/mock_interview.py)，把 Mock 面试的 7 个环节做成一个带计时器的练习系统：
 
 ```python
 # mock_interview.py —— Mock 面试计时与提纲系统
@@ -143,7 +143,7 @@ SECTIONS = [
 # 完整代码见 kernels/mock_interview.py
 ```
 
-完整代码见 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/mock_interview.py)。
+完整代码见 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/mock_interview.py)。
 
 代码要点：
 - **7 个环节** 覆盖完整面试流程，每个环节有明确的时间限制和提示

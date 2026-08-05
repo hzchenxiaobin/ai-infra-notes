@@ -207,7 +207,7 @@ else:
 
 #### 任务 1：创建 advanced_features.py
 
-创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
+创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day3/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
 
 ```python
 # advanced_features.py —— 高级特性模拟（Speculative Decoding + Chunked Prefill + Prefix Caching）
@@ -233,7 +233,7 @@ def evaluate_features():
  """运行三大特性模拟，输出收益评估报告"""
 ```
 
-完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/advanced_features.py)。
+完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day3/kernels/advanced_features.py)。
 
 代码要点：
 - `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比

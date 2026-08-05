@@ -140,7 +140,7 @@ Scheduler 每轮决策受三重预算约束：
 
 #### 任务 1：创建 mini_vllm_scheduler.py
 
-创建文件 [kernels/mini_vllm_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/mini_vllm_scheduler.py)，用纯 Python 模拟 vLLM 的 LLMEngine + Scheduler + Worker，演示 Continuous Batching：
+创建文件 [kernels/mini_vllm_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day3/kernels/mini_vllm_scheduler.py)，用纯 Python 模拟 vLLM 的 LLMEngine + Scheduler + Worker，演示 Continuous Batching：
 
 ```python
 # mini_vllm_scheduler.py —— vLLM 核心架构的最小化模拟（LLMEngine + Scheduler + Worker）

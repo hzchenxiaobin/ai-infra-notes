@@ -160,7 +160,7 @@ TPOT = 总 Decode 时延 / 输出 token 数
 
 #### 任务 1：创建 prefill_decode_simulation.py
 
-创建文件 [kernels/prefill_decode_simulation.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/prefill_decode_simulation.py)，它实现一个最小 Transformer Block，并模拟完整的 Prefill + KV Cache + Decode 循环：
+创建文件 [kernels/prefill_decode_simulation.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day1/kernels/prefill_decode_simulation.py)，它实现一个最小 Transformer Block，并模拟完整的 Prefill + KV Cache + Decode 循环：
 
 ```python
 # prefill_decode_simulation.py —— 模拟 Transformer 推理的 Prefill/Decode 两阶段

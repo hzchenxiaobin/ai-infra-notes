@@ -108,7 +108,7 @@ P99 > 平均延迟 → 尾延迟是 SLA 关键
 
 #### 任务 1：运行总结自测脚本
 
-运行 [kernels/week6_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/week6_summary.py)，复盘 7 种策略对比 + 决策树 + 15 道面试题自测：
+运行 [kernels/week6_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day7/kernels/week6_summary.py)，复盘 7 种策略对比 + 决策树 + 15 道面试题自测：
 
 ```bash
 python kernels/week6_summary.py

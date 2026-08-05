@@ -205,7 +205,7 @@ Token Attention（LightLLM）：
 
 #### 任务 1：创建 chunked_prefill_simulator.py
 
-创建文件 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/chunked_prefill_simulator.py)，对比 naive 与 chunked 两种 prefill 策略的 decode 延迟曲线：
+创建文件 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day3/kernels/chunked_prefill_simulator.py)，对比 naive 与 chunked 两种 prefill 策略的 decode 延迟曲线：
 
 ```python
 # chunked_prefill_simulator.py —— Chunked Prefill vs Naive Prefill 延迟对比模拟
@@ -501,7 +501,7 @@ if __name__ == "__main__":
 
 ```
 
-完整代码（含延迟模型、对比输出）见 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/chunked_prefill_simulator.py)。
+完整代码（含延迟模型、对比输出）见 [kernels/chunked_prefill_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day3/kernels/chunked_prefill_simulator.py)。
 
 代码要点：
 - `Sequence.prefill_chunk(chunk_size)`：核心方法——每轮只 prefill `min(chunk_size, remaining)` 个 token，`prefilled_tokens` 累加追踪进度

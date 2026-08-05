@@ -13,7 +13,7 @@
   <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
 
   <!-- Grid mapping -->
-  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Grid 映射：block = 1 warp = 32 threads，每个 warp 负责 C 的 16×16 子矩阵</text>
+  <text x="300" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Grid 映射：1 block = 1 warp，负责 C 的 16×16 tile</text>
   <!-- C matrix big -->
   <g filter="url(#sk2)">
     <rect x="120" y="92" width="360" height="360" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
@@ -37,7 +37,7 @@
   <text x="300" y="486" text-anchor="middle" font-size="10" fill="#888">block 内 1 个 warp（32 threads）协作</text>
 
   <!-- K loop on right -->
-  <text x="700" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">K 维循环（累加 16×16 切片）</text>
+  <text x="700" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">K 维循环（累加 16×16 切片）</text>
   <g filter="url(#sk2)">
     <rect x="540" y="92" width="360" height="360" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4"/>
   </g>

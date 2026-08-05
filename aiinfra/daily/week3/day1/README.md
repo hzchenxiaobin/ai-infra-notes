@@ -138,7 +138,7 @@ K 维循环：每次加载 16×16 的 A tile 和 16×16 的 B tile
 
 > ⚠️ **常见坑**：WMMA 的 `load_matrix_sync` 要求 leading dimension 正确。A row-major 的 ld = K（每行跨度），B col-major 的 ld = K（每列跨度）。
 
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/wmma_gemm.cu)。
+完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
 
 #### 1.4 混合精度策略
 
@@ -190,7 +190,7 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 
 #### 任务 1：创建 `wmma_gemm.cu`
 
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/wmma_gemm.cu)。
+完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
 
 代码包含三个 GEMM 实现并对比：
 - `fma_gemm_kernel`：FMA baseline（FP32, naive）

@@ -194,7 +194,7 @@ Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
 
 #### 任务 1：创建 `kernels/softmax_layernorm.cu`
 
-下面是完整可编译的 kernel 实现。代码分三部分：① 复用 Week 2 的 warp 原语 ② 搭出 blockReduceSum / blockReduceMax ③ Softmax kernel（三遍扫描）+ LayerNorm kernel（两次 reduce）。完整文件见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/softmax_layernorm.cu)。
+下面是完整可编译的 kernel 实现。代码分三部分：① 复用 Week 2 的 warp 原语 ② 搭出 blockReduceSum / blockReduceMax ③ Softmax kernel（三遍扫描）+ LayerNorm kernel（两次 reduce）。完整文件见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day2/kernels/softmax_layernorm.cu)。
 
 ```cuda
 // kernels/softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
@@ -344,7 +344,7 @@ __global__ void layernorm_kernel(const float* __restrict__ input, const float* _
 }
 ```
 
-Host 端的验证逻辑（`cpuSoftmax` / `cpuLayerNorm` / `checkResult` / `main`）见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/softmax_layernorm.cu) 文件后半部分，核心是：随机初始化 `M=128, D=1024` 的矩阵，分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-5` 判定 PASS。
+Host 端的验证逻辑（`cpuSoftmax` / `cpuLayerNorm` / `checkResult` / `main`）见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day2/kernels/softmax_layernorm.cu) 文件后半部分，核心是：随机初始化 `M=128, D=1024` 的矩阵，分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-5` 判定 PASS。
 
 #### 为什么 Softmax 要读三遍 HBM？
 

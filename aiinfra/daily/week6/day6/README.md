@@ -198,7 +198,7 @@ FlashDecoding 的最后一个 block 可能只有少量 token（`seq_len % Bc != 
 
 #### 任务 1：创建 flash_decoding.cu
 
-创建文件 [kernels/flash_decoding.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/flash_decoding.cu)，实现简化版 FlashDecoding kernel（单 query, KV 按 block 切分, online softmax 跨 block 合并）：
+创建文件 [kernels/flash_decoding.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day6/kernels/flash_decoding.cu)，实现简化版 FlashDecoding kernel（单 query, KV 按 block 切分, online softmax 跨 block 合并）：
 
 ```cuda
 // flash_decoding.cu —— FlashDecoding 最小化实现（KV 按 block 切分 + 跨 block 合并）

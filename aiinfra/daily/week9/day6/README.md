@@ -191,7 +191,7 @@ CUDA 和 Ascend 的编程模型都有"层级 + 片上存储 + 同步"三件套�
 | 13 | Profiler | Nsight Compute/Systems | msprof / Ascend Profiler |
 | 14 | 运行时库 | cuBLAS/cuDNN/NCCL | ACL BLAS/ACL NN/HCCL |
 
-完整可打印版见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/cuda_vs_ascend_comparison.py)。
+完整可打印版见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)。
 
 ---
 
@@ -199,7 +199,7 @@ CUDA 和 Ascend 的编程模型都有"层级 + 片上存储 + 同步"三件套�
 
 #### 任务 1：创建 cuda_vs_ascend_comparison.py
 
-创建文件 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/cuda_vs_ascend_comparison.py)，把 6 张对比表（架构/编程模型/存储/工具/优化/迁移）整理为可打印的速查脚本：
+创建文件 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)，把 6 张对比表（架构/编程模型/存储/工具/优化/迁移）整理为可打印的速查脚本：
 
 ```python
 # cuda_vs_ascend_comparison.py —— CUDA vs Ascend CANN 对比速查表
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     main()
 ```
 
-完整代码见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/cuda_vs_ascend_comparison.py)。
+完整代码见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)。
 
 代码要点：
 - **6 张对比表**：架构 / 编程模型 / 存储层次 / 工具链 / 优化技术 / 迁移策略，覆盖面试全部考点

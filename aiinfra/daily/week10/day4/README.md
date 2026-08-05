@@ -190,7 +190,7 @@ Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
 
 #### 任务 1：创建 interview_basics.py
 
-创建文件 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/interview_basics.py)，将 12 道基础篇高频题整理为可自测的 Q&A 系统：
+创建文件 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/interview_basics.py)，将 12 道基础篇高频题整理为可自测的 Q&A 系统：
 
 ```python
 # interview_basics.py —— 基础篇面试题自测系统
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         list_all()
 ```
 
-完整代码见 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/interview_basics.py)。
+完整代码见 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day4/kernels/interview_basics.py)。
 
 代码要点：
 - **12 道题** 覆盖四大主题（GPU 基础 4 题 + Kernel 优化 3 题 + CUDA 编程 3 题 + Profiling 2 题）
