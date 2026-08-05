@@ -32,8 +32,8 @@
   </g>
   <!-- highlight one TB tile for next level -->
   <g filter="url(#sk2)"><rect x="288" y="146" width="60" height="48" fill="none" stroke="#b03a3a" stroke-width="2" stroke-dasharray="3 2"/></g>
-  <path d="M 318 196 L 318 216 L 180 216 L 180 236" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
-  <text x="250" y="210" font-size="9" fill="#b03a3a" font-style="italic">放大一个 ThreadblockTile</text>
+  <path d="M 318 196 L 318 222 L 180 222 L 180 236" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="250" y="200" font-size="9" fill="#b03a3a" font-style="italic">放大一个 ThreadblockTile</text>
 
   <!-- Level 1: Threadblock -->
   <text x="180" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">Level 1: ThreadblockTile 128×128</text>
