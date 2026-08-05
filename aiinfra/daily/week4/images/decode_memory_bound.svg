@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="620" viewBox="0 0 860 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk5" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar5" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="620" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="430" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Decode 为什么是 Memory-bound：M=1 的 GEMM</text>
+  <path d="M 200 40 Q 430 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk5)"/>
+
+  <!-- ====== Prefill Box ====== -->
+  <g filter="url(#sk5)">
+    <rect x="30" y="56" width="380" height="270" rx="12" fill="#e8f5e9" stroke="#3a3a3a" stroke-width="1.8"/>
+    <text x="220" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Prefill: QKV GEMM (M=1024)</text>
+  </g>
+  <!-- Prefill matrices -->
+  <g filter="url(#sk5)">
+    <rect x="55" y="98" width="60" height="60" rx="4" fill="#4a8edb" opacity="0.5" stroke="#3a3a3a" stroke-width="1.2"/>
+    <text x="85" y="133" text-anchor="middle" font-size="12" fill="#2b2b2b">x</text>
+  </g>
+  <text x="128" y="133" font-size="16" fill="#3a3a3a">×</text>
+  <g filter="url(#sk5)">
+    <rect x="145" y="98" width="60" height="60" rx="4" fill="#e8a838" opacity="0.5" stroke="#3a3a3a" stroke-width="1.2"/>
+    <text x="175" y="133" text-anchor="middle" font-size="12" fill="#2b2b2b">W</text>
+  </g>
+  <text x="218" y="133" font-size="16" fill="#3a3a3a">=</text>
+  <g filter="url(#sk5)">
+    <rect x="235" y="98" width="60" height="60" rx="4" fill="#4a9d5f" opacity="0.5" stroke="#3a3a3a" stroke-width="1.2"/>
+    <text x="265" y="133" text-anchor="middle" font-size="11" fill="#2b2b2b">QKV</text>
+  </g>
+  <!-- Prefill shape labels -->
+  <text x="85" y="174" text-anchor="middle" font-size="9" fill="#666">(1024, 512)</text>
+  <text x="175" y="174" text-anchor="middle" font-size="9" fill="#666">(512, 1536)</text>
+  <text x="265" y="174" text-anchor="middle" font-size="9" fill="#666">(1024, 1536)</text>
+  <!-- Prefill metrics -->
+  <line x1="50" y1="190" x2="390" y2="190" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
+  <text x="50" y="210" font-size="10" fill="#444">FLOPs = 2×1024×512×1536 ≈ 1.6G</text>
+  <text x="50" y="232" font-size="10" fill="#444">Bytes ≈ 1.3M (读 x + W, 写 QKV)</text>
+  <text x="50" y="258" font-size="11" fill="#4a8edb" font-weight="bold">AI ≈ 384 FLOP/Byte</text>
+  <text x="50" y="278" font-size="10" fill="#4a8edb" font-weight="bold">> Ridge 58.45 → Compute-bound ✓</text>
+
+  <!-- ====== Decode Box ====== -->
+  <g filter="url(#sk5)">
+    <rect x="450" y="56" width="380" height="270" rx="12" fill="#fce4ec" stroke="#3a3a3a" stroke-width="1.8"/>
+    <text x="640" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Decode: QKV GEMM (M=1)</text>
+  </g>
+  <!-- Decode matrices: tiny x, big W, tiny QKV -->
+  <g filter="url(#sk5)">
+    <rect x="478" y="126" width="36" height="8" rx="2" fill="#4a8edb" opacity="0.7" stroke="#3a3a3a" stroke-width="1"/>
+    <text x="496" y="121" text-anchor="middle" font-size="9" fill="#2b2b2b">x</text>
+  </g>
+  <text x="525" y="133" font-size="14" fill="#3a3a3a">×</text>
+  <g filter="url(#sk5)">
+    <rect x="545" y="98" width="60" height="60" rx="4" fill="#e8a838" opacity="0.5" stroke="#3a3a3a" stroke-width="1.2"/>
+    <text x="575" y="133" text-anchor="middle" font-size="12" fill="#2b2b2b">W</text>
+  </g>
+  <text x="618" y="133" font-size="14" fill="#3a3a3a">=</text>
+  <g filter="url(#sk5)">
+    <rect x="640" y="126" width="36" height="8" rx="2" fill="#4a9d5f" opacity="0.7" stroke="#3a3a3a" stroke-width="1"/>
+    <text x="658" y="121" text-anchor="middle" font-size="8" fill="#2b2b2b">QKV</text>
+  </g>
+  <!-- Decode M=1 callout -->
+  <text x="496" y="148" text-anchor="middle" font-size="8" fill="#e57373" font-weight="bold">M=1</text>
+  <text x="658" y="148" text-anchor="middle" font-size="8" fill="#e57373" font-weight="bold">M=1</text>
+  <!-- Decode shape labels -->
+  <text x="496" y="174" text-anchor="middle" font-size="9" fill="#666">(1, 512)</text>
+  <text x="575" y="174" text-anchor="middle" font-size="9" fill="#666">(512, 1536)</text>
+  <text x="658" y="174" text-anchor="middle" font-size="9" fill="#666">(1, 1536)</text>
+  <!-- Decode metrics -->
+  <line x1="470" y1="190" x2="810" y2="190" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
+  <text x="470" y="210" font-size="10" fill="#444">FLOPs = 2×1×512×1536 ≈ 1.6M (↓1024×)</text>
+  <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 0.8M (W 不变, 仍读完整权重)</text>
+  <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 2 FLOP/Byte</text>
+  <text x="470" y="278" font-size="10" fill="#e57373" font-weight="bold">&lt;&lt; Ridge 58.45 → Memory-bound ✗</text>
+
+  <!-- ====== Transition arrow between boxes ====== -->
+  <text x="435" y="170" text-anchor="middle" font-size="9" fill="#888">M: 1024→1</text>
+  <path d="M 418 180 L 448 180" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar5)" filter="url(#sk5)"/>
+
+  <!-- ====== Ridge Point comparison ====== -->
+  <g filter="url(#sk5)">
+    <rect x="30" y="345" width="800" height="250" rx="12" fill="#fff3e0" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <text x="430" y="369" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Ridge Point 对比 (RTX 5090: ~58.45 FLOP/Byte)</text>
+    <text x="430" y="388" text-anchor="middle" font-size="10" fill="#888">Arithmetic Intensity (FLOP/Byte, 对数轴)</text>
+  </g>
+
+  <!-- Zone backgrounds -->
+  <rect x="70" y="425" width="347" height="42" rx="4" fill="#fce4ec" opacity="0.35"/>
+  <rect x="417" y="425" width="343" height="42" rx="4" fill="#e8f5e9" opacity="0.35"/>
+
+  <!-- Number line (log scale) -->
+  <g filter="url(#sk5)">
+    <line x1="70" y1="446" x2="760" y2="446" stroke="#3a3a3a" stroke-width="2"/>
+  </g>
+
+  <!-- Tick marks and labels -->
+  <g filter="url(#sk5)">
+    <line x1="90" y1="442" x2="90" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
+    <line x1="242" y1="442" x2="242" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
+    <line x1="417" y1="442" x2="417" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
+    <line x1="740" y1="442" x2="740" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="464" text-anchor="middle" font-size="9" fill="#666">0.4</text>
+  <text x="242" y="464" text-anchor="middle" font-size="9" fill="#666">2</text>
+  <text x="417" y="464" text-anchor="middle" font-size="9" fill="#666">58.45</text>
+  <text x="740" y="464" text-anchor="middle" font-size="9" fill="#666">384</text>
+
+  <!-- Ridge point vertical line -->
+  <g filter="url(#sk5)">
+    <line x1="417" y1="420" x2="417" y2="470" stroke="#e57373" stroke-width="2" stroke-dasharray="4 3"/>
+  </g>
+  <text x="417" y="414" text-anchor="middle" font-size="9" fill="#e57373" font-weight="bold">Ridge Point</text>
+
+  <!-- Softmax marker -->
+  <g filter="url(#sk5)">
+    <circle cx="90" cy="446" r="7" fill="#e8a838" stroke="#3a3a3a" stroke-width="1"/>
+  </g>
+  <text x="90" y="490" text-anchor="middle" font-size="9" fill="#e8a838" font-weight="bold">Softmax</text>
+  <text x="90" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈0.4</text>
+
+  <!-- Decode marker -->
+  <g filter="url(#sk5)">
+    <circle cx="242" cy="446" r="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1"/>
+  </g>
+  <text x="242" y="490" text-anchor="middle" font-size="10" fill="#e57373" font-weight="bold">Decode</text>
+  <text x="242" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈2</text>
+
+  <!-- Prefill marker -->
+  <g filter="url(#sk5)">
+    <circle cx="740" cy="446" r="8" fill="#4a9d5f" stroke="#3a3a3a" stroke-width="1"/>
+  </g>
+  <text x="740" y="490" text-anchor="middle" font-size="10" fill="#4a9d5f" font-weight="bold">Prefill</text>
+  <text x="740" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈384</text>
+
+  <!-- Zone labels -->
+  <text x="220" y="530" text-anchor="middle" font-size="10" fill="#e57373" font-style="italic">← Memory-bound 区间</text>
+  <text x="580" y="530" text-anchor="middle" font-size="10" fill="#4a9d5f" font-style="italic">Compute-bound 区间 →</text>
+
+  <!-- Summary -->
+  <line x1="60" y1="548" x2="800" y2="548" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
+  <text x="430" y="572" text-anchor="middle" font-size="10" fill="#444">根本原因：M=1 时 FLOPs 与 M 成正比骤降 (↓1024×)，但权重 W 大小不变、Bytes 几乎没减</text>
+  <text x="430" y="590" text-anchor="middle" font-size="10" fill="#444">→ AI = FLOPs/Bytes 暴跌，从 Compute-bound 跌入 Memory-bound，数据喂不饱计算单元</text>
+</svg>

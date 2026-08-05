@@ -5,7 +5,7 @@
 通过今天的学习，你将：
 
 1. 掌握 **3 个故障注入案例**——低 MFU / OOM / hang 的诊断剧本（现象→假设→工具→证据→结论）
-2. 把 week9/day6 的手撕模式推广为 **全课程手撕限时清单**（≥10 项）
+2. 把 week10/day3 的手撕模式推广为 **全课程手撕限时清单**（≥10 项）
 3. 补齐 **top-p 采样 kernel + causal FA** 两个手撕高频题
 
 > 💡 **为什么重要**：面试中"低 MFU 怎么排查""OOM 怎么定位"几乎必问。从方法论升级为实战剧本，让你能口述"五段式排查流程"并给出真实工具输出留档。手撕清单把散落各周的 kernel 题统一限时化。
@@ -109,20 +109,20 @@ Thread 1 (worker):
 
 | # | kernel | 限时 | 通过标准 | 来源 |
 |---|--------|------|---------|------|
-| 1 | Reduce（warp shuffle） | 30 min | 正确性 PASS + 带宽 >50% | week9/day6 |
-| 2 | GEMM tiling（smem） | 60 min | cuBLAS >15% | week9/day6 |
-| 3 | Softmax（online） | 30 min | max_diff <1e-5 | week9/day6 |
-| 4 | LayerNorm | 30 min | max_diff <1e-5 | week9/day6 |
+| 1 | Reduce（warp shuffle） | 30 min | 正确性 PASS + 带宽 >50% | week10/day3 |
+| 2 | GEMM tiling（smem） | 60 min | cuBLAS >15% | week10/day3 |
+| 3 | Softmax（online） | 30 min | max_diff <1e-5 | week10/day3 |
+| 4 | LayerNorm | 30 min | max_diff <1e-5 | week10/day3 |
 | 5 | Matrix Transpose | 20 min | 带宽 >70% | week1/day4 |
-| 6 | FA 简化版（non-causal） | 60 min | 正确性 PASS | week10/day3 |
+| 6 | FA 简化版（non-causal） | 60 min | 正确性 PASS | week10/day7 |
 | 7 | **FA causal 变体** | +20 min | 正确性 PASS + 比 non-causal 快 1.5x+ | C2 新增 |
 | 8 | **top-p 采样** | 30 min | 正确性 PASS | C2 新增 |
-| 9 | W8A16 dequant GEMV | 30 min | 2x 带宽节省 | week9/day2 |
-| 10 | Continuous Batching 调度循环 | 45 min | 4 请求正确调度 | week9/day7 |
+| 9 | W8A16 dequant GEMV | 30 min | 2x 带宽节省 | week10/day2 |
+| 10 | Continuous Batching 调度循环 | 45 min | 4 请求正确调度 | week10/day3 |
 
 ##### C2 新增 1：causal FA kernel（块级跳过优化）
 
-**要求**：在 week10/day3 的 FA kernel 上加 causal mask 分支，且利用 causal 的下三角结构跳过被 mask 的块。
+**要求**：在 week10/day7 的 FA kernel 上加 causal mask 分支，且利用 causal 的下三角结构跳过被 mask 的块。
 
 **关键优化**：causal 下三角意味着 Q block i 只需遍历 K block j ≤ i。当 `j > i` 时整个 block 被 mask 掉，可直接 break——**省一半块计算**。
 

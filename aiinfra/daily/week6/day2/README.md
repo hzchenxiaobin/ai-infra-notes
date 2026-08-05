@@ -1,422 +1,494 @@
-## Day 2：FlashDecoding —— Decode 阶段并行度突破FlashDecoding —— Decode 阶段的并行度突破
+## Day 2：实现 KV Cache（含 GQA/MQA/MLA 变体）实现 KV Cache
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **Decode 阶段的并行度瓶颈**——M=1 时 standard attention / FlashAttention 的并行度只有 1 个 block 处理整个 KV sequence，GPU 大量 SM 空闲<br>
-2. 掌握 **FlashDecoding 核心思想**——将 KV sequence 切分到不同 block/SM，每个 block 独立计算 partial softmax，最后 all-reduce 合并<br>
-3. 能画出 FlashDecoding 的 **两阶段执行流程**（Phase 1: 各 block 独立算 partial attention; Phase 2: 跨 block 合并 partial max/sum/output）<br>
-4. 理解 **Online softmax 跨 block 合并**的数学原理——每个 block 输出 partial max/sum/output，合并时用 rescaling factor 保证数值正确<br>
-5. 了解 **FlashDecoding++** 的改进——提前估算 max（避免二次 rescale）、固定 chunk size<br>
-6. 能用 CUDA 手写一个简化版 FlashDecoding kernel，验证 KV 切分 + 跨 block 合并的正确性
+1. 理解 KV Cache 的核心思想——**把每步新生成的 K/V 存下来**，避免 Decode 阶段重复计算历史 K/V<br>
+2. 掌握 KV Cache 的 **5D 内存布局** `(num_layers, B, H, max_seq_len, d_head)`，能计算给定模型配置下的显存占用<br>
+3. 能区分 **静态分配 / 动态分配 / PagedAttention** 三种 cache 分配策略的优缺点，理解为什么 vLLM 要借鉴 OS 虚拟内存分页<br>
+4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
+5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
 
-> 💡 **为什么重要**：Day 4 的 PagedAttention 解决了 KV cache 的**内存管理**问题（碎片、CoW），但没解决 decode 阶段的**并行度**问题——M=1 时整个 GPU 只有一个 block 在算 attention，80 个 SM 里 79 个闲着。FlashDecoding 就是补上这块拼图：把 KV sequence 切到多个 SM 上并行算，把 decode 阶段的"1 block 串行"变成"N blocks 并行"。这是长序列 decode 加速的关键技术，也是 vLLM/TGI 等推理框架的标配优化。
+> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
 
 ---
 
-### 学前导读：Decode 阶段的并行度瓶颈
+### 学前导读：Decode 每步都在重算历史，能不能存下来？
 
-Day 1 我们分析过 Prefill vs Decode 的算术强度差异：Prefill 阶段 M 很大（prompt 有 N 个 token），attention 是 O(N²d) 的 compute-bound 操作，FlashAttention 通过 tiling 让多个 block 并行处理 Q tile，GPU 利用率高。但 Decode 阶段 M=1（每次只生成 1 个 token），情况完全不同：
+Day 1 的 PyTorch 模拟里，`MiniTransformer.forward` 有这么一段：
 
-![Decode 阶段 Memory-bound 示意](../../week5/images/decode_memory_bound.svg)
-
-```
-Prefill 阶段（M=N）：
-  Q 有 N 行 → 按 Br 切成 N/Br 个 Q tile → N/Br 个 block 并行
-  并行度 = N/Br × Batch × Head（数百~数千 block，打满 GPU）
-
-Decode 阶段（M=1）：
-  Q 只有 1 行 → 无法按 Q tile 切分 → 只有 1 个 block 处理整个 KV
-  并行度 = 1 × Batch × Head（可能 < SM 数，大量 SM 空闲）
+```python
+if use_cache and k_cache is not None:
+ k = torch.cat([k_cache, k], dim=2) # 把新 K 拼到历史 cache 后面
+ v = torch.cat([v_cache, v], dim=2)
 ```
 
-| 维度 | Prefill (M=N) | Decode (M=1) | 问题 |
-|------|---------------|--------------|------|
-| Q 行数 | N | 1 | 无法按 Q tile 切分 |
-| FlashAttention 并行度 | N/Br blocks | 1 block | SM 大量空闲 |
-| 瓶颈类型 | compute-bound | memory-bound | 算力闲置 + 带宽不足 |
-| KV 序列越长 | 计算变多（正常） | **串行扫描变慢** | 越长越浪费 |
+这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
 
-**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 80 个 SM 里 79 个在干等**。
+关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
 
-> 💡 **一句话总结**：Decode 慢不仅因为 memory-bound（M=1 算术强度低），还因为**并行度不足**——FlashAttention 的 Q-tile 并行在 M=1 时失效，KV sequence 再长也只能串行。FlashDecoding 的破局思路：**Q 切不了，那就切 KV**。
+| 维度 | 无 KV Cache | 有 KV Cache |
+|------|------------|------------|
+| 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
+| 每步 FLOPs | O(L × d²) | **O(d²)** |
+| 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
+| 内存使用 | 低 | 高（2 × L × d × bytes） |
+| Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
+
+收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
+
+> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
 
 ---
 
 ### 理论学习
 
-#### 1.1 FlashDecoding 核心思想：切 KV sequence
+#### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
 
-FlashAttention 的并行维度是 Q tile（行方向），Decode 时 M=1 切不了。FlashDecoding 的洞察：**既然 Q 只有 1 行不能切，那就把 KV sequence 按列方向切分到不同 block**——每个 block 独立处理一段 KV，最后合并结果。
+![KV Cache 生命周期：Prefill 填充 → Decode 追加](../images/kv_cache_append_decode.svg)
 
-```
-Standard Decode Attention（1 block 串行）：
-  Block 0: Q · [K_0, K_1, K_2, ..., K_{N-1}] → softmax → · [V_0, ..., V_{N-1}]
-           └─────────── 1 个 SM 串行扫描整个 KV ───────────┘
-
-FlashDecoding（N/Bc blocks 并行）：
-  Block 0: Q · [K_0, ..., K_{Bc-1}]       → partial softmax → · [V_0, ..., V_{Bc-1}]       → partial_0
-  Block 1: Q · [K_Bc, ..., K_{2Bc-1}]     → partial softmax → · [V_Bc, ..., V_{2Bc-1}]     → partial_1
-  ...
-  Block T: Q · [K_{(T-1)Bc}, ..., K_{N-1}]] → partial softmax → · [V_{(T-1)Bc}, ..., V_{N-1}] → partial_T
-           └── T 个 SM 并行，每 block 只扫 Bc 个 KV ──┘
-  
-  Merge: 用 online softmax 合并 partial_0, partial_1, ..., partial_T → 最终 output
-```
-
-| 维度 | Standard Decode | FlashDecoding |
-|------|----------------|---------------|
-| 切分方向 | 不切（1 block 全扫） | **KV sequence 方向** |
-| 并行 block 数 | 1 | **N / Bc**（KV 序列越长，并行越多） |
-| 每 block 工作量 | 扫描整个 N | 只扫 Bc 个 token |
-| 额外开销 | 无 | Phase 2 合并（开销极小） |
-| SM 利用率 | ~1/80（1 个 SM 干活） | **~min(N/Bc, 80)/80** |
-
-> 💡 **类比**：FlashAttention 是"把作业本撕成几份分给几个人写"（Q tile 切分），FlashDecoding 是"把参考书撕成几份分给几个人查"（KV 切分）。Prefill 时作业本厚（M 大）撕得开；Decode 时作业本只有 1 页（M=1）撕不了，但参考书（KV）很厚，撕参考书一样能并行。
-
-#### 1.2 并行度分析
+Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
 
 ```
-Standard decode:
-  并行度 = 1 block（处理整个 KV sequence）
-  → GPU 有 80 个 SM，只用了 1 个，利用率 ~1.25%
+KV Cache 工作流程：
+ Prefill 阶段：
+ 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
+ cache 从空 → 填入 N_prompt 个 token 的 K/V
 
-FlashDecoding:
-  并行度 = ceil(seq_len / tokens_per_block) blocks
-  → seq_len=2048, tokens_per_block=64 → 32 blocks
-  → seq_len=8192, tokens_per_block=64 → 128 blocks（远超 SM 数，排队）
-  → 利用率随 seq_len 增长而提升，直到打满所有 SM
+ Decode 阶段（每步）：
+ 1. 只计算新 token 的 K_t, V_t
+ 2. 把 K_t/V_t 追加（append）到 cache
+ 3. 从 cache 读取所有历史 K/V 做 attention
+ 4. 输出下一个 token
+ 5. 重复直到 EOS
 ```
 
-| seq_len | Standard (blocks) | FlashDecoding (blocks) | SM 利用率提升 |
-|---------|-------------------|----------------------|-------------|
-| 256 | 1 | 4 | 4× |
-| 1024 | 1 | 16 | 16× |
-| 2048 | 1 | 32 | 32× |
-| 8192 | 1 | 128 | 80×（受 SM 数限制） |
-
-**关键结论**：KV 序列越长，FlashDecoding 的并行度收益越大。长文本生成（如 4K+ context）是 FlashDecoding 的最佳场景。
-
-> ⚠️ **注意**：tokens_per_block（Bc）的选择需要权衡。太大 → 并行度不够（block 数少）；太小 → 每 block 工作量太少，合并开销占比上升。经验值通常 64–256，与 SM 数和 seq_len 相关。
-
-#### 1.3 Online Softmax 跨 block 合并
-
-FlashDecoding 的核心难点：每个 block 只看到一段 KV，算出的 softmax 是 **partial** 的——不能直接加权平均。需要用 **online softmax 的跨 block 合并**保证数值正确。
-
-##### 每个 block 输出的 partial 结果
+**收益量化**：
 
 ```
-Block j 处理 KV 段 [j*Bc, (j+1)*Bc)，输出：
-  partial_m_j = max(score in block j)        # 本段 score 最大值
-  partial_l_j = Σ exp(score - partial_m_j)   # 本段 exp 之和（已 rescale 到本段 max）
-  partial_o_j = Σ p_i * V_i                  # 本段加权 V 输出（已 rescale）
+无 Cache 时每步：
+ FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
+ 每步都要重算前 L 个 token 的 QKV projection
+
+有 Cache 时每步：
+ FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
+ 只算 1 个新 token 的 QKV projection + 1×L 的 attention
+
+ attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
+ 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
 ```
 
-##### 跨 block 合并公式
+> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
+
+#### 2.2 KV Cache 的内存布局与显存占用
+
+![KV Cache 5D 内存布局](../images/kv_cache_memory_layout.svg)
+
+KV Cache 是一个 5 维张量，K 和 V 各一份：
 
 ```
-合并 Block 0..T-1 的 partial 结果：
+布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+ v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
 
-Step 1: 找全局 max
-  global_max = max(partial_m_0, partial_m_1, ..., partial_m_{T-1})
+每 token KV Cache 大小：
+ = 2 × num_layers × num_heads × d_head × bytes_per_elem
+ （2 = K 和 V 各一份）
 
-Step 2: 每 block 的 rescale factor
-  w_j = exp(partial_m_j - global_max) * partial_l_j
-  ↑ 把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
-
-Step 3: 加权合并
-  global_sum = Σ_j w_j                          # 全局 exp 之和
-  output = Σ_j (w_j * partial_o_j) / global_sum # 归一化输出
+总 KV Cache 大小：
+ = batch_size × seq_len × per_token_size
+ = B × L × 2 × n_layers × n_heads × d_head × bytes
 ```
 
-##### 数学正确性证明
+##### 为什么 d_head 维放最内层？
+
+`d_head` 维连续排列，保证同一 token 同一 head 的 `d` 个元素内存连续——attention 做点积时一次 coalesced 读 `d` 个 float，带宽利用率最高。`seq_len` 维在外层，使得 append 新 token 时只需在尾部写入，不搬移已有数据。
+
+##### 真实模型的显存占用
+
+| 模型 | n_layers | n_heads | d_head | dtype | 每 token KV Cache | 4096 tokens | batch=16 |
+|------|----------|---------|--------|-------|-------------------|-------------|----------|
+| LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
+| LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
+| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
+
+> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
+
+##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
+
+上表的 `n_heads` 是 **KV head 数**（`n_kv_head`）。不同注意力变体通过缩减 `n_kv_head` 来压缩 KV Cache，这是 2023+ 模型降低推理显存的主流手段。
+
+| 变体 | n_kv_head | 每 token KV bytes（相对 MHA） | 代表模型 | 说明 |
+|------|-----------|------------------------------|---------|------|
+| **MHA**（标准） | = n_head | 1×（基准） | LLaMA-7B（32/32） | 每个 query head 独立一份 K/V |
+| **GQA**（Grouped） | n_head / g（g=分组数） | 1/g | LLaMA-3-8B（8/32，g=4→1/4） | g 个 query head 共享一组 K/V；g=n_head 退化为 MQA |
+| **MQA**（Multi-Query） | 1 | 1/n_head | PaLM、Falcon | 所有 query head 共享同一份 K/V，KV Cache 最小但精度损失 |
+| **MLA**（Multi-head Latent） | 压缩到 d_c（低秩） | ~d_c/(n_head·d_head) | DeepSeek-V2/V3 | K/V 不直接存，存低秩"潜在向量"（d_c 维），attention 时现场解压 |
+
+**口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
 
 ```
-标准 softmax: O = Σ_i exp(s_i - m) * V_i / Σ_i exp(s_i - m)
-  其中 m = max(all s_i)
-
-Block j 的 partial: 
-  partial_l_j = Σ_{i∈block_j} exp(s_i - partial_m_j)
-  partial_o_j = Σ_{i∈block_j} exp(s_i - partial_m_j) * V_i
-
-合并时 rescale:
-  w_j = exp(partial_m_j - global_max) * partial_l_j
-      = exp(partial_m_j - global_max) * Σ_{i∈block_j} exp(s_i - partial_m_j)
-      = Σ_{i∈block_j} exp(s_i - global_max)        ← 回到全局 max 基准！
-
-  Σ_j w_j = Σ_j Σ_{i∈block_j} exp(s_i - global_max) = Σ_all exp(s_i - global_max) = global_sum ✓
-  Σ_j w_j * partial_o_j / global_sum 
-    = Σ_j exp(partial_m_j - global_max) * Σ_{i∈j} exp(s_i - partial_m_j) * V_i / global_sum
-    = Σ_all exp(s_i - global_max) * V_i / global_sum = O ✓
+MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
+GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
+MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
+MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
 ```
 
-> 💡 这跟 FlashAttention 的 online softmax 三公式是**同一个数学结构**——只是 FlashAttention 在 block 内跨 KV tile 做 rescale，FlashDecoding 在 block 间跨 KV segment 做同样的 rescale。核心都是"先算 partial，再用 max 差做 rescale 合并"。
+> 💡 **面试要点**：
+> - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
+> - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
+> - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
+>
+> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
 
-#### 1.4 FlashDecoding++ 改进
+#### 2.3 分配策略：静态 vs 动态 vs PagedAttention
 
-FlashDecoding 有两个效率问题，FlashDecoding++（2023）针对它们做了改进：
+![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)
 
-##### 问题 1：二次 rescale
+| 策略 | 做法 | 优点 | 缺点 |
+|------|------|------|------|
+| **静态分配** | 为每个请求预分配 `max_seq_len` 空间 | 简单，无碎片 | 内存浪费严重（实际长度常远小于 max） |
+| **动态分配** | 按实际长度分配/扩展 | 内存利用率高 | 频繁 alloc/free 产生外部碎片，大请求可能 OOM |
+| **PagedAttention** | 分成固定大小 block + block table 映射 | 无碎片、利用率高、支持共享/CoW | 实现复杂，block table 有额外开销 |
 
-FlashDecoding 的 Phase 2 合并需要先找 `global_max`，再用 `exp(partial_m_j - global_max)` rescale 每个 block 的 partial。这意味着 **每个 partial 要被 rescale 两次**（Phase 1 内部一次，Phase 2 合并一次），引入额外计算。
+##### PagedAttention 核心思想（Day 4 详读）
+
+借鉴 OS 虚拟内存分页：
+- 把 KV cache 分成固定大小的 **block**（如 16 tokens/block）
+- **逻辑 block** 号对序列连续，**物理 block** 号在显存中可以不连续
+- 用 **block table** 维护逻辑→物理映射（类似页表）
+- 多个 sequence 共享同一 prompt 的物理 block，写入时 **Copy-on-Write**
+
+> 💡 PagedAttention 解决的是"动态分配的碎片"问题——不是消除碎片（分页本身也有内部碎片），而是让碎片**可回收**。这是 Day 4 的核心，今天先建直觉。
+
+#### 2.4 多轮对话中的 Cache 复用
 
 ```
-FlashDecoding:
-  Phase 1: partial_l_j = Σ exp(s_i - partial_m_j)          ← 第一次 rescale
-  Phase 2: w_j = exp(partial_m_j - global_max) * partial_l_j ← 第二次 rescale
+多轮对话：
+ Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
+ Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
+
+Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
+
+Cache 复用：
+ - Round 1 已经计算过的 K/V 直接保留在 cache 里
+ - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
+ - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
 ```
 
-**FlashDecoding++ 改进**：提前估算 `global_max`（用各 block 的 partial_m 的近似值或历史值），让 Phase 1 直接用估算的 global_max 做 rescale，省掉 Phase 2 的第二次 rescale。
+实现要点：
+1. 为每个对话 session 维护一个 KV Cache
+2. 每次用户输入时，先复用已有 cache（检查已缓存长度）
+3. 对新输入 tokens 做 prefill，将新 K/V 追加到 cache
+4. 生成 assistant 回复时，每步 decode 用 append 模式更新 cache
+5. 释放已完成/超时的 session cache（LRU 或显式释放）
 
-```
-FlashDecoding++:
-  Phase 1: partial_l_j = Σ exp(s_i - estimated_global_max)  ← 只 rescale 一次
-  Phase 2: output = Σ_j partial_l_j * partial_o_j / Σ_j partial_l_j  ← 无需再 rescale
-```
+> ⚠️ **注意**：多轮复用的前提是 **prompt 格式严格一致**——如果 Round 2 的 prompt 不是"Round1 全部 + 新输入"的拼接，而是重新构造，cache 就无法复用。生产系统（如 vLLM）通过 prefix caching 显式管理这一点。
 
-> ⚠️ 估算的 global_max 不精确时，partial_l_j 可能数值不稳定（exp(s_i - overestimated_max) → 很小）。实际实现中用"宽松上界"保证安全。
+### Coding 任务：手写 KV Cache
 
-##### 问题 2：不定长 chunk
+#### 任务 1：创建 kv_cache.cu
 
-FlashDecoding 的最后一个 block 可能只有少量 token（`seq_len % Bc != 0`），导致各 block 工作量不均——最后一个 block 早完成等合并，拖慢整体。
-
-**FlashDecoding++ 改进**：固定 chunk size 并均匀分配，让所有 block 工作量一致（最后一个 block 不足时用 padding 或提前退出）。
-
-| 维度 | FlashDecoding | FlashDecoding++ |
-|------|---------------|-----------------|
-| rescale 次数 | 2 次（Phase 1 + Phase 2） | 1 次（Phase 1 用估算 max） |
-| chunk 分配 | 不定长（最后 block 可能不满） | 固定大小（均匀分配） |
-| 合并开销 | 需要 rescale | 直接加权平均 |
-| 精度风险 | 无（exact max） | 估算 max 不准时需兜底 |
-
-> 💡 **一句话总结**：FlashDecoding 证明了"切 KV 可以并行 decode"，FlashDecoding++ 优化了"切得更均匀、合并更省"。两者解决的是同一个问题的不同效率层面。
-
----
-
-### Coding 任务：手写 FlashDecoding kernel
-
-#### 任务 1：创建 flash_decoding.cu
-
-创建文件 [kernels/flash_decoding.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day7/kernels/flash_decoding.cu)，实现简化版 FlashDecoding kernel（单 query, KV 按 block 切分, online softmax 跨 block 合并）：
+创建文件 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
 
 ```cuda
-// flash_decoding.cu —— FlashDecoding 最小化实现（KV 按 block 切分 + 跨 block 合并）
-// 编译命令: nvcc -o flash_decoding flash_decoding.cu -O3 -arch=sm_120
-//
-// 演示 FlashDecoding 的三大核心机制：
-//   1. Decode 阶段（M=1）：单 query 对 N 个历史 key
-//   2. KV sequence 按 block 切分到不同 SM，每个 block 独立计算 partial attention
-//   3. 跨 block 合并：用 online softmax 的 rescaling factor 合并 partial max/sum/output
+// kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
+// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
+// 运行命令: ./kv_cache
 
-// ---------- Phase 1: FlashDecoding kernel ----------
-// 每个 block 处理 KV sequence 的一段 [kv_start, kv_end)
-// 输出 partial: partial_o[block_id][d], partial_m[block_id], partial_l[block_id]
-__global__ void flash_decoding_kernel(
-    const float* q, const float* k_cache, const float* v_cache,
-    float* partial_o, float* partial_m, float* partial_l,
-    int seq_len, int d, int tokens_per_block)
-{
-    // 加载 q 到 shared memory
-    // 遍历本段 KV tokens:
-    //   score = Q · K_s (block reduce)
-    //   online softmax 更新 m_local, l_local
-    //   rescale: o_local = o_local * alpha + p * V_s
-    // 写出 partial_o, partial_m, partial_l
-}
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
 
-// ---------- Phase 2: 合并 kernel ----------
-// 用 online softmax 合并所有 block 的 partial 结果
-__global__ void flash_decoding_merge_kernel(
-    const float* partial_o, const float* partial_m, const float* partial_l,
-    float* output, int num_blocks, int d)
-{
-    // Step 1: global_max = max(partial_m[0..num_blocks-1])
-    // Step 2: global_sum = Σ exp(partial_m[j] - global_max) * partial_l[j]
-    // Step 3: output = Σ (w_j * partial_o_j) / global_sum
-}
+// --------------------------------------------------
+// KVCache 类
+// 存储 layout: (num_layers, batch_size, num_heads, max_seq_len, d_head)
+// 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
+// --------------------------------------------------
+class KVCache {
+  public:
+    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
+        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
+          d_head_(d_head) {
+
+        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        total_size_ = (size_t)num_layers_ * size_per_layer_;
+
+        cudaMalloc(&k_cache_, total_size_);
+        cudaMalloc(&v_cache_, total_size_);
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+
+        // 每个 batch 当前已缓存的序列长度
+        seq_lens_ = std::vector<int>(batch_size_, 0);
+    }
+
+    ~KVCache() {
+        cudaFree(k_cache_);
+        cudaFree(v_cache_);
+    }
+
+    // 追加新的 K/V 到 cache
+    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)，在 device 上
+    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
+        for (int b = 0; b < batch_size_; b++) {
+            int start = seq_lens_[b];
+            int end = start + new_len;
+            if (end > max_seq_len_) {
+                printf("Error: seq len %d exceeds max_seq_len %d\n", end, max_seq_len_);
+                return;
+            }
+
+            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
+            for (int h = 0; h < num_heads_; h++) {
+                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
+                size_t dst_offset =
+                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
+                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
+                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
+            }
+            seq_lens_[b] = end;
+        }
+    }
+
+    // 获取某层 cache 指针和各 batch 序列长度
+    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
+        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
+        *seq_lens = seq_lens_;
+    }
+
+    int get_seq_len(int batch_id) const {
+        return seq_lens_[batch_id];
+    }
+
+    void reset() {
+        cudaMemset(k_cache_, 0, total_size_);
+        cudaMemset(v_cache_, 0, total_size_);
+        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
+    }
+
+    void reset_batch(int batch_id) {
+        size_t batch_bytes = (size_t)num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
+        for (int l = 0; l < num_layers_; l++) {
+            size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
+                             batch_id * num_heads_ * max_seq_len_ * d_head_);
+            cudaMemset(k_cache_ + offset, 0, batch_bytes);
+            cudaMemset(v_cache_ + offset, 0, batch_bytes);
+        }
+        seq_lens_[batch_id] = 0;
+    }
+
+  private:
+    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
+    size_t size_per_layer_, total_size_;
+    float* k_cache_;
+    float* v_cache_;
+    std::vector<int> seq_lens_;
+};
 ```
 
 代码要点：
-- **Phase 1（`flash_decoding_kernel`）**：每个 block 处理 `tokens_per_block` 个 KV token，内部用 online softmax 累积 partial max/sum/output。每个 thread 负责一个 d 维度的累加器（`o_local`），block 内通过 `block_reduce_sum` 汇总 score
-- **Phase 2（`flash_decoding_merge_kernel`）**：1 个 block 合并所有 partial 结果——先找 `global_max`，再用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor 加权合并
-- **CPU 参考实现**：标准 attention（先算全部 score → softmax → 加权 V），用于验证 FlashDecoding 的两阶段结果正确
-- **并行度对比**：打印 standard decode（1 block）vs FlashDecoding（N/Bc blocks）的并行度倍数
+- **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
+- `append`：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
+- `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
+- `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
 
 #### 任务 2：编译与运行
 
 ```bash
-nvcc -o flash_decoding kernels/flash_decoding.cu -O3 -arch=sm_120
-./flash_decoding
+# 编译
+nvcc -o kv_cache kernels/kv_cache.cu -O3 -arch=sm_120
+
+# 运行
+./kv_cache
 ```
 
 **预期输出**：
 
 ```text
-=== FlashDecoding Test ===
-d=64, seq_len=1024, tokens_per_block=64, num_blocks=16
+=== KV Cache Test ===
+Config: layers=2, batch=1, heads=8, max_len=1024, d_head=64
+After Round 1 (len=10): seq_len=10
+After Round 2 (len=5): seq_len=15
+After Round 3 (len=8): seq_len=23
+PASS: seq_len = 23 (expected 23)
+Data verification (Round 1 K in cache): max_diff = 0.00e+00 (PASS)
+KV Cache bytes per token: 8192
+Max memory usage: 8 MB
 
-max diff (FlashDecoding vs CPU ref): 1.2345e-06
-result: PASS
-
-[Parallelism analysis]
-  Standard decode: 1 block handles entire KV (seq_len=1024)
-  FlashDecoding:   16 blocks handle 64 tokens each
-  Parallelism:     16x improvement (utilizing idle SMs)
+[LLaMA-7B reference] bytes per token: 524288 (512.0 KB)
+[LLaMA-7B reference] 4096 tokens: 2048 MB
+[LLaMA-7B reference] batch=16, 4096 tokens: 32 GB
 ```
 
 ##### 验证逻辑解读
 
-- **KV 切分正确性**：FlashDecoding 的两阶段结果与 CPU 标准 attention 逐元素比对 `max_diff < 1e-3`，证明 KV 切分 + 跨 block 合并数学正确
-- **并行度提升**：seq_len=1024 时，standard decode 只有 1 个 block，FlashDecoding 有 16 个 block——16× 并行度提升
-- **partial 结果不可独立使用**：每个 block 的 partial_o 是未归一化的（除以 partial_l 后只对本段 softmax 有效），必须经过 Phase 2 合并才能得到正确输出
+- **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
+- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
+- **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
 
-#### 任务 3：用 ncu 对比 standard decode vs FlashDecoding
+#### 任务 3：用 ncu 观察 append 的内存拷贝模式
 
 ```bash
-# 编译一个 standard decode 版（1 block 扫全 KV）用于对比
-ncu --kernel-name regex:flash_decoding \
-  --metrics gpu__time_duration.sum,\
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-  sm__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./flash_decoding
+# profile append 阶段的 memcpy
+ncu --kernel-name regex:memcpy \
+ --metrics gpu__time_duration.sum, \
+ dram__bytes.sum \
+ ./kv_cache
 ```
 
 **观察重点**：
+- 每次 `append` 会触发 `num_heads` 次 device-to-device `cudaMemcpy`（逐 head 拷贝）——这是教学版的低效点。
+- 生产级实现会用一个 CUDA kernel 一次性把整个 `(B, H, new_len, d_head)` 的块写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。
 
-| 指标 | Standard Decode | FlashDecoding | 预期变化 |
-|------|----------------|---------------|---------|
-| SM Occupancy | ~1-5% | ~30-60% | ↑（多 block 并行） |
-| Kernel Duration | 基准 | 更短 | ↓（并行度提升） |
-| SM Throughput | ~1-5% | ~20-50% | ↑（更多 SM 有活干） |
+> 💡 思考：这个教学版 `append` 用 host 端循环 + `cudaMemcpy`，每次拷贝有 launch 开销。如果 `num_heads=32`、每步 decode 追加 1 个 token，就是 32 次小拷贝。优化方向：写一个 `append_kernel`，让 GPU 端一次性完成所有 head 的拷贝。
 
-> 💡 思考：为什么 FlashDecoding 的 throughput 提升没有并行度提升那么大？（提示：Decode 阶段是 memory-bound，多 block 并行只是让更多 SM 同时读 KV，但总 HBM 带宽不变——并行度提升主要缩短 wall-clock，带宽利用率提升有限。）
+#### 任务 4：LeetGPU 在线题目 —— Grouped Query Attention (GQA)
 
-#### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
-
-**题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
+**题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
 
 **与今日知识的关联**：
 
-INT8 KV-Cache Attention 正是 **FlashDecoding 服务的 decode 场景**——LLM 推理的 decode 阶段，1 个 query 对 N 个历史 key，KV cache 以 INT8 量化存储省 HBM 带宽。今天我们手写了 FlashDecoding kernel（FP32 版，KV 按 block 切分 + 跨 block 合并），这道题是它的 **量化变体**——KV cache 用 INT8 存储减少带宽压力，kernel 内反量化再做 attention。两者的核心都是"decode 阶段的 M=1 attention 优化"：FlashDecoding 切 KV 提升并行度，INT8 量化减数据量提升带宽效率，经常组合使用。
+GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。
 
-> 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时，重点观察 INT8 KV cache 相比 FP32 的带宽节省。完整题解见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周高频回顾）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
 
-> 📅 今日为补充 Day（Day 4b），LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
 | [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
-| [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/) | 中等 | 中序单调性 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
-| [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
+| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
+| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
+| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | DFS 左右深度和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
+| [110. 平衡二叉树](https://leetcode.cn/problems/balanced-binary-tree/) | 简单 | 后序 DFS 返回高度 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：扫描 tokens_per_block 观察最优切分
+#### 实验 1：扩展支持多 batch 不同序列长度
 
-修改 `main()`，固定 `seq_len=2048`，扫描 `tokens_per_block = 16, 32, 64, 128, 256, 512`，用 `cudaEvent` 计时，绘制 latency 随 tokens_per_block 变化的曲线。
+修改 `KVCache`，让每个 batch 有独立的 `seq_lens_[b]`，`append` 时各 batch 独立追加不同长度。测试：`batch_size=2`，batch 0 追加 10+5，batch 1 追加 8+3，验证两者 `seq_len` 独立正确。
 
-> 思考：tokens_per_block 太小时为什么变慢？（提示：block 数太多 → 合并开销增大 + kernel launch 开销占比上升。太大时为什么也慢？→ 并行度不足，SM 空闲。最优值在两者之间。）
+> 思考：多 batch 独立长度时，attention kernel 如何知道每个 batch 该读多少 cache？（提示：把 `seq_lens[]` 传进 kernel，每 batch 用各自的长度。这正是 vLLM 的 `seq_group_metadata` 做的事。）
 
-#### 实验 2：对比 standard decode vs FlashDecoding 的 latency
+#### 实验 2：实现 FP16 版本
 
-写一个 `standard_decode_kernel`（1 个 block 串行扫描整个 KV，用 online softmax），与 `flash_decoding_kernel` 对比 wall-clock。用 `cudaEvent` 计时，扫描 `seq_len = 256, 512, 1024, 2048, 4096, 8192`。
+把 `KVCache` 的 `float*` 改成 `__half*`（`#include <cuda_fp16.h>`），`cudaMalloc`/`cudaMemcpy` 的字节数除以 2。对比 fp32 与 fp16 的显存占用，验证内存减半。
 
-> 思考：seq_len 多大时 FlashDecoding 开始明显领先？（提示：seq_len > SM 数 × tokens_per_block 时 standard decode 仍 1 block，FlashDecoding 已打满所有 SM。如 80 SM × 64 token = 5120，seq_len > 5120 时 FlashDecoding 的优势最大。）
+> 思考：fp16 cache 的数值精度是否足够？什么场景下必须用 fp32？（提示：长序列累积误差、量化感知训练时 fp16 可能不够；Day 1 的 int8 量化是更激进的压缩。）
 
-#### 实验 3：实现 FlashDecoding++ 的提前估算 max
+#### 实验 3：把 append 换成单个 CUDA kernel
 
-修改 `flash_decoding_kernel`，在 Phase 1 之前先快速扫描一遍 KV 估算 `estimated_global_max`（可以采样每隔 K 个 token 算 score 取 max），Phase 1 直接用 `exp(s_i - estimated_global_max)` 做 rescale。Phase 2 合并时省掉第二次 rescale，直接加权平均。
+当前 `append` 在 host 端用 for 循环 + `cudaMemcpy` 逐 head 拷贝。写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、`block=(num_heads * new_len * d_head)` 一次性把新 K/V 写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。用 `nvprof` 或 `ncu` 对比两种实现的 append 耗时。
 
-> 思考：估算的 max 不精确时，输出会有误差吗？（提示：只要 Phase 2 最后做了归一化（除以 global_sum），输出数学上正确——estimated_max 只影响中间数值稳定性，不影响最终结果。但如果 estimated_max 远大于真实 max，exp 值太小会丢精度。）
+> 思考：kernel 版本的 append 应该比 memcpy 版快多少？瓶颈从"launch 开销"变成什么？（提示：变成实际的显存写入带宽，更接近理论极限。）
 
 ---
 
 ### 今日总结
 
-Day 4b 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破：
+Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 
-1. **Decode 并行度瓶颈**：M=1 时 FlashAttention 的 Q-tile 切分失效，只有 1 个 block 串行扫描整个 KV，GPU 大量 SM 空闲
-2. **FlashDecoding 核心思想**：把 KV sequence 按列方向切分到不同 block/SM，每个 block 独立处理一段 KV，最后合并——Q 切不了就切 KV
-3. **并行度分析**：standard decode = 1 block；FlashDecoding = N/Bc blocks，seq_len 越长并行度收益越大
-4. **Online softmax 跨 block 合并**：每个 block 输出 partial max/sum/output，合并时用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor——与 FlashAttention 的三公式同构
-5. **FlashDecoding++ 改进**：提前估算 max 省掉二次 rescale；固定 chunk size 让各 block 工作量均匀
-6. **手写 FlashDecoding kernel**：两阶段实现（Phase 1 切分并行 + Phase 2 合并），与 CPU 标准 attention 结果一致，验证 KV 切分 + 跨 block 合并的数学正确性
-7. **与 PagedAttention 的关系**：PagedAttention 解决 KV cache 的内存管理（碎片/CoW），FlashDecoding 解决 decode 的并行度——两者正交，可组合使用
+1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
+2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
+3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
+4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
+5. **多轮对话复用**：Round 1 的 cache 保留，Round 2 只算新增 token 的 K/V，TTFT 大幅降低；前提是 prompt 格式严格一致
+6. **手写 KVCache 类**：`append`/`get_cache`/`reset` 三件套，多轮追加 + 数据落位验证通过，并打印 LLaMA-7B 真实显存参考值
+7. **GQA 优化**：从模型结构层面减少 KV 头数，把 cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`（LLaMA-3 缩小 4×）
 
-掌握这些后，你就理解了 decode 阶段的两类核心优化：**内存管理**（Day 4 PagedAttention）+ **并行度**（Day 4b FlashDecoding）。Day 5 把它们整合进 Mini 推理引擎时，可以用 FlashDecoding 加速 decode 阶段的 attention。
+掌握这些后，你就有了 Day 3-4 读 vLLM 源码的全部数据结构基础——明天的 PagedAttention 就建在今天的 KVCache 之上，只是把"连续分配"换成了"分页 + block table"。
 
 ---
 
 ### 面试要点
 
-1. **FlashDecoding 解决了什么问题？它的核心思想是什么？**
+1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
 
 <details>
 <summary>点击查看答案</summary>
 
-  - **问题**：Decode 阶段 M=1，FlashAttention 的 Q-tile 并行失效——只有 1 个 block 串行扫描整个 KV sequence，GPU 大量 SM 空闲（~1.25% 利用率）
-  - **核心思想**：既然 Q 只有 1 行切不了，那就把 KV sequence 按列方向切分到不同 block/SM——每个 block 独立处理一段 KV，算 partial attention，最后合并
-  - **效果**：并行度从 1 block 提升到 N/Bc blocks，seq_len 越长收益越大
-  - **关键**：FlashAttention 切 Q（行方向），FlashDecoding 切 KV（列方向）——两者正交
+ - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
+ - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
+ - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
+ - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
 
 </details>
 
 
-2. **FlashDecoding 的跨 block 合并是怎么做的？为什么不能直接加权平均？**
+2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
 
-  - **不能直接加权平均**：每个 block 只看到一段 KV，算出的 softmax 是 partial 的——partial_l_j 是以 partial_m_j 为基准的 exp 之和，不同 block 的基准不同，直接加会数值错误
-  - **合并步骤**：
-    1. 找全局 `global_max = max(partial_m_0, ..., partial_m_{T-1})`
-    2. 每 block 的 rescale factor：`w_j = exp(partial_m_j - global_max) * partial_l_j`——把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
-    3. 加权合并：`output = Σ_j (w_j * partial_o_j) / Σ_j w_j`
-  - **数学本质**：与 FlashAttention 的 online softmax 三公式同构——都是"先算 partial，用 max 差做 rescale 合并"
+ - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
+ - 总 KV Cache = `batch_size × seq_len × per_token_size`
+ - LLaMA-7B（32 层、32 头、d_head=128、fp16）：每 token ≈ 524 KB，4096 tokens ≈ 2 GB，batch=16 ≈ 32 GB
+ - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
+ - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
 
 </details>
 
 
-3. **FlashDecoding 和 FlashAttention 是什么关系？**
+3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
-  - **FlashAttention**：Prefill 阶段的优化——按 Q tile（行方向）切分，多个 block 并行处理不同 Q 行，用 online softmax 在 block 内跨 KV tile 合并
-  - **FlashDecoding**：Decode 阶段的优化——Q 只有 1 行切不了，改为按 KV sequence（列方向）切分，多个 block 并行处理不同 KV 段，用 online softmax 跨 block 合并
-  - **关系**：两者都用 online softmax，但切分方向不同（Q 行 vs KV 列），适用阶段不同（Prefill vs Decode）
-  - **组合**：推理引擎中 Prefill 用 FlashAttention，Decode 用 FlashDecoding——同一序列两阶段用不同 kernel
+ - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
+ - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
+ - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
+ - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
 
 </details>
 
 
-4. **FlashDecoding++ 相比 FlashDecoding 有什么改进？**
+4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
 
 <details>
 <summary>点击查看答案</summary>
 
-  - **改进 1（提前估算 max）**：FlashDecoding 的合并需要二次 rescale（Phase 1 内一次，Phase 2 合并一次）。FlashDecoding++ 提前估算 `global_max`，让 Phase 1 直接用估算值做 rescale，省掉 Phase 2 的第二次 rescale——合并时直接加权平均
-  - **改进 2（固定 chunk size）**：FlashDecoding 最后一个 block 可能不满（`seq_len % Bc != 0`），各 block 工作量不均。FlashDecoding++ 固定 chunk size 均匀分配，避免最后一个 block 拖慢
-  - **trade-off**：估算 max 不精确时有数值稳定性风险（需用宽松上界兜底），但最终结果数学正确（归一化消除误差）
+ - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
+ - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
+ - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
+ - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
+ - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
 
 </details>
 
 
-5. **FlashDecoding 和 PagedAttention 是什么关系？可以一起用吗？**
+5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
-  - **PagedAttention**：解决 KV cache 的**内存管理**问题——分页存储 + block table 间接寻址，消除碎片，支持 CoW
-  - **FlashDecoding**：解决 decode 阶段的**并行度**问题——KV sequence 切分到多 SM 并行，提升 SM 利用率
-  - **两者正交**：PagedAttention 管"KV 怎么存"（物理不连续 + block table），FlashDecoding 管"KV 怎么算"（切分并行 + 合并）
-  - **组合使用**：完全可以一起用——FlashDecoding 的每个 block 通过 PagedAttention 的 block table 间接寻址读取自己的 KV 段。vLLM 等推理框架就是这么做的：PagedAttention 管理 KV cache 内存，FlashDecoding 提供并行度
-  - **一句话**：PagedAttention 是"存储层"优化，FlashDecoding 是"计算层"优化，两者叠加才是完整的 decode 加速方案
+ - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
+ - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
+ - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
+ - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
 
 </details>
+
+
+6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
+ - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
+ - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
+ - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
+
+</details>
+

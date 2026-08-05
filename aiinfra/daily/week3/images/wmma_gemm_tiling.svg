@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">WMMA GEMM 分块策略：每个 warp 计算 16×16 输出</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Grid mapping -->
+  <text x="470" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Grid 映射：block = 1 warp = 32 threads，每个 warp 负责 C 的 16×16 子矩阵</text>
+  <!-- C matrix big -->
+  <g filter="url(#sk2)">
+    <rect x="120" y="92" width="360" height="360" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <text x="300" y="88" text-anchor="middle" font-size="11" fill="#444">C[M, N] (row-major)</text>
+  <!-- 16x16 tiles inside C -->
+  <g font-size="8" fill="#666">
+    <g filter="url(#sk2)"><rect x="128" y="100" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="152" y="128" text-anchor="middle">(0,0)</text></g>
+    <g filter="url(#sk2)"><rect x="178" y="100" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="202" y="128" text-anchor="middle">(0,1)</text></g>
+    <g filter="url(#sk2)"><rect x="228" y="100" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="252" y="128" text-anchor="middle">(0,2)</text></g>
+    <text x="290" y="128" font-size="10" fill="#888">...</text>
+    <g filter="url(#sk2)"><rect x="424" y="100" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="448" y="128" text-anchor="middle">(0,N/16)</text></g>
+    <g filter="url(#sk2)"><rect x="128" y="150" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="152" y="178" text-anchor="middle">(1,0)</text></g>
+    <text x="200" y="178" font-size="10" fill="#888">...</text>
+    <g filter="url(#sk2)"><rect x="128" y="396" width="48" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="152" y="424" text-anchor="middle">(M/16,0)</text></g>
+    <text x="220" y="424" font-size="10" fill="#888">...</text>
+  </g>
+  <!-- highlight one tile -->
+  <g filter="url(#sk2)"><rect x="128" y="100" width="48" height="48" fill="none" stroke="#b03a3a" stroke-width="2.5" stroke-dasharray="3 2"/></g>
+  <text x="300" y="470" text-anchor="middle" font-size="10" fill="#888">Grid = (N/16, M/16)，每个 block 计算 C 的一个 16×16 tile</text>
+  <text x="300" y="486" text-anchor="middle" font-size="10" fill="#888">block 内 1 个 warp（32 threads）协作</text>
+
+  <!-- K loop on right -->
+  <text x="700" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">K 维循环（累加 16×16 切片）</text>
+  <g filter="url(#sk2)">
+    <rect x="540" y="92" width="360" height="360" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4"/>
+  </g>
+  <!-- A tile -->
+  <text x="720" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e8c">每次迭代加载 A、B 的 16×16 tile</text>
+  <g filter="url(#sk2)">
+    <rect x="560" y="128" width="100" height="80" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="610" y="150" text-anchor="middle" font-size="11" fill="#1b5e8c" font-weight="bold">A tile</text>
+  <text x="610" y="168" text-anchor="middle" font-size="9" fill="#444">16×16 (FP16)</text>
+  <text x="610" y="182" text-anchor="middle" font-size="9" fill="#444">row-major</text>
+  <text x="610" y="198" text-anchor="middle" font-size="8" fill="#888">从 smem load_matrix_sync</text>
+  <!-- B tile -->
+  <g filter="url(#sk2)">
+    <rect x="680" y="128" width="100" height="80" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/>
+  </g>
+  <text x="730" y="150" text-anchor="middle" font-size="11" fill="#1b5e3a" font-weight="bold">B tile</text>
+  <text x="730" y="168" text-anchor="middle" font-size="9" fill="#444">16×16 (FP16)</text>
+  <text x="730" y="182" text-anchor="middle" font-size="9" fill="#444">col-major</text>
+  <text x="730" y="198" text-anchor="middle" font-size="8" fill="#888">从 smem load_matrix_sync</text>
+  <!-- mma_sync -->
+  <path d="M 610 212 L 610 226" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+  <path d="M 730 212 L 730 226" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+  <g filter="url(#sk2)">
+    <rect x="580" y="232" width="160" height="44" rx="8" fill="#4a8edb" stroke="#3a3a3a" stroke-width="1.4" opacity="0.7"/>
+  </g>
+  <text x="660" y="252" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">wmma::mma_sync</text>
+  <text x="660" y="268" text-anchor="middle" font-size="9" fill="#444">C = A×B + C (FP32 累加)</text>
+  <!-- loop -->
+  <path d="M 660 278 L 660 292" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+  <g filter="url(#sk2)">
+    <rect x="560" y="296" width="200" height="56" rx="6" fill="#fff3cf" stroke="#e8a838" stroke-width="1.2"/>
+  </g>
+  <text x="660" y="316" text-anchor="middle" font-size="10" fill="#8a6d18" font-family="monospace">for (k=0; k&lt;K; k+=16)</text>
+  <text x="660" y="332" text-anchor="middle" font-size="9" fill="#444">循环 K/16 次，累加到 C fragment</text>
+  <text x="660" y="346" text-anchor="middle" font-size="9" fill="#888">fill_fragment(c, 0) 初始化</text>
+  <!-- loop back arrow -->
+  <path d="M 560 324 Q 540 324 540 254 Q 540 238 580 238" stroke="#e8a838" stroke-width="1.2" fill="none" marker-end="url(#ar3)" stroke-dasharray="4 3"/>
+  <text x="528" y="284" font-size="9" fill="#e8a838" font-style="italic">下一块</text>
+  <!-- store -->
+  <path d="M 660 354 L 660 368" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+  <g filter="url(#sk2)">
+    <rect x="560" y="372" width="200" height="44" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="660" y="392" text-anchor="middle" font-size="10" fill="#7a2828" font-family="monospace">store_matrix_sync(C, ld)</text>
+  <text x="660" y="408" text-anchor="middle" font-size="9" fill="#444">写回 16×16 结果到 Global Memory</text>
+  <text x="660" y="432" text-anchor="middle" font-size="9" fill="#888">Fragment 生命周期：声明→fill→[load→mma]*→store</text>
+
+  <!-- data layout requirements -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="500" width="860" height="124" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="522" font-size="12" font-weight="bold" fill="#2b2b2b">数据布局要求与常见坑</text>
+  <text x="60" y="544" font-size="11" fill="#444">A 矩阵：row-major（wmma::row_major），leading dimension ld = K（每行跨度）</text>
+  <text x="60" y="562" font-size="11" fill="#444">B 矩阵：col-major（wmma::col_major），leading dimension ld = K（每列跨度）</text>
+  <text x="60" y="580" font-size="11" fill="#444">C 矩阵：row-major（wmma::mem_row_major），leading dimension ld = N</text>
+  <text x="60" y="602" font-size="11" fill="#b03a3a">⚠ load_matrix_sync 要求 ld 正确；A row-major 的 ld=K，B col-major 的 ld=K（易错点）</text>
+  <text x="60" y="620" font-size="11" fill="#2e7d4f">对比 Register Blocking：每个 warp 算 16×16（vs 8×8），tile 更大 → 算术强度更高 → Tensor Core 充分利用</text>
+</svg>

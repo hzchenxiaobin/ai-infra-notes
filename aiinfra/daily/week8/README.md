@@ -1,46 +1,44 @@
-# Week 8：系统整合与分布式并行
+# Week 8：推理加速技术
 
-> 核心目标：Latency/Throughput 测试、多请求并发、完整调度器、投机解码、TP/PP/DP、Ring Attention、代码重构
+> 核心目标：掌握量化（W8A16/INT8 KV/FP8）、投机解码（Medusa/EAGLE/MTP）、CUDA Graph 与采样 kernel
 
 | 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
 | ------------| ------------------------------------------------------------|
 | 前置要求　 | 已完成 Week 7，掌握 Continuous Batching、Scheduler、PD 分离、Mini 引擎 v1　　　　　　　　　　　　　　　　　　　　　　　|
 | 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　|
-| 本周产出　 | 完整调度器、投机解码模拟、分布式推理分析、Latency/Throughput 报告　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 周日里程碑 | 完整调度器 500 请求不崩溃，理解 TP/PP/DP/EP 四维并行与通信模式　　　　　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | W8A16/FP8 dequant kernel、投机解码模拟器（接受率扫描）、CUDA Graph 集成、top-p 采样 kernel、量化前后性能对比表　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | 量化 kernel PASS，投机解码接受率扫描数据留档，CUDA Graph launch gap 实测留档　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
 ## 🧭 本周学习地图
 
 ```
-Day 1: Latency / Throughput 测试
+Day 1: 量化基础 + W8A16 dequant kernel + INT8 KV Cache 量化
         ↓
-Day 2: 多请求并发支持
+Day 2: FP8 量化深入 —— E4M3/E5M2 kernel + GPTQ vs AWQ vs SmoothQuant + FP4
         ↓
-Day 3: 完整调度器（优先级/超时/抢占）
+Day 3: 投机解码 —— 接受率精确期望 + Medusa/EAGLE/MTP 三路线
         ↓
-Day 4: SGLang / 投机解码
+Day 4: CUDA Graph —— 静态捕获 + 动态 shape bucketing + 采样 kernel（top-p/top-k）
         ↓
-Day 5: 分布式推理 —— TP/PP/DP 与通信计算重叠
+Day 5: 项目推进 —— 量化/投机解码/CUDA Graph 选一接入 Mini 引擎
         ↓
-Day 6: Ring Attention —— 长上下文分布式注意力
+Day 6: Profiling —— 量化前后精度性能对比 + CUDA Graph launch gap 实测
         ↓
-Day 7: 代码重构与文档
+Day 7: 复盘 + 面试 Q&A（量化/投机解码/CUDA Graph/采样）
 ```
 
 ---
 
 ## 📚 每日学习材料
 
-每天的学习内容已拆分为独立目录 `dayN/`（含该天的 kernels、exercise、notes）：
-
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | Latency / Throughput 测试 | [day1/](day1/README.md) |
-| Day 2 | 多请求并发支持 | [day2/](day2/README.md) |
-| Day 3 | 完整调度器（优先级/超时/抢占） | [day3/](day3/README.md) |
-| Day 4 | SGLang / 投机解码 | [day4/](day4/README.md) |
-| Day 5 | 分布式推理 —— TP/PP/DP 与通信计算重叠 | [day5/](day5/README.md) |
-| Day 6 | Ring Attention —— 长上下文分布式注意力 | [day6/](day6/README.md) |
-| Day 7 | 代码重构与文档 | [day7/](day7/README.md) |
+| Day 1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | [day1/](day1/README.md) |
+| Day 2 | FP8 量化深入 —— E4M3/E5M2 kernel 与 GPTQ vs AWQ 对比 | [day2/](day2/README.md) |
+| Day 3 | SGLang / 投机解码 | [day3/](day3/README.md) |
+| Day 4 | CUDA Graph 实操 —— 消除 Launch Overhead | [day4/](day4/README.md) |
+| Day 5 | 项目推进 —— 量化/投机解码/CUDA Graph 接入 Mini 引擎 | [day5/](day5/README.md) |
+| Day 6 | Profiling —— 量化前后精度性能对比与 CUDA Graph Launch Gap | [day6/](day6/README.md) |
+| Day 7 | 复盘与面试 Q&A —— 量化/投机解码/CUDA Graph/采样 | [day7/](day7/README.md) |

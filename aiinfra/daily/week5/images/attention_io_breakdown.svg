@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="620" viewBox="0 0 940 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="620" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">标准 Attention 三阶段 HBM 读写量拆解</text>
+  <path d="M 280 42 Q 470 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- inputs: Q, K, V -->
+  <text x="470" y="74" text-anchor="middle" font-size="12" fill="#666">输入：Q, K, V ∈ R^(N×d)，均从 HBM 读入</text>
+
+  <!-- Step 1 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="92" width="820" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="114" font-size="13" font-weight="bold" fill="#2b6e9e">Step 1：S = Q × K^T / √d</text>
+  <text x="80" y="132" font-size="11" fill="#444">读 Q(Nd) + 读 K(Nd) → 写 S(N²)</text>
+  <g filter="url(#sk)">
+    <rect x="600" y="120" width="130" height="28" rx="5" fill="#4a8edb" opacity="0.3" stroke="#4a8edb"/>
+  </g>
+  <text x="665" y="139" text-anchor="middle" font-size="11" fill="#2b2b2b">读 = 2Nd</text>
+  <g filter="url(#sk)">
+    <rect x="740" y="120" width="130" height="28" rx="5" fill="#b03a3a" opacity="0.3" stroke="#b03a3a"/>
+  </g>
+  <text x="805" y="139" text-anchor="middle" font-size="11" fill="#7a2828">写 = N²</text>
+  <text x="80" y="166" font-size="10" fill="#888">S 是 N×N 中间矩阵，必须物化到 HBM ← O(N²) 写入来源</text>
+  <path d="M 470 194 L 470 206" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- Step 2 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="210" width="820" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="232" font-size="13" font-weight="bold" fill="#7a5415">Step 2：P = softmax(S, dim=-1)</text>
+  <text x="80" y="250" font-size="11" fill="#444">读 S(N²) → 写 P(N²)</text>
+  <g filter="url(#sk)">
+    <rect x="600" y="238" width="130" height="28" rx="5" fill="#4a8edb" opacity="0.3" stroke="#4a8edb"/>
+  </g>
+  <text x="665" y="257" text-anchor="middle" font-size="11" fill="#2b2b2b">读 = N²</text>
+  <g filter="url(#sk)">
+    <rect x="740" y="238" width="130" height="28" rx="5" fill="#b03a3a" opacity="0.3" stroke="#b03a3a"/>
+  </g>
+  <text x="805" y="257" text-anchor="middle" font-size="11" fill="#7a2828">写 = N²</text>
+  <text x="80" y="284" font-size="10" fill="#888">softmax 是 memory-bound：AI ≈ 0.375 FLOP/Byte，N² 读写 2 次</text>
+  <path d="M 470 312 L 470 324" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- Step 3 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="328" width="820" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="350" font-size="13" font-weight="bold" fill="#2e6e2e">Step 3：O = P × V</text>
+  <text x="80" y="368" font-size="11" fill="#444">读 P(N²) + 读 V(Nd) → 写 O(Nd)</text>
+  <g filter="url(#sk)">
+    <rect x="600" y="356" width="130" height="28" rx="5" fill="#4a8edb" opacity="0.3" stroke="#4a8edb"/>
+  </g>
+  <text x="665" y="375" text-anchor="middle" font-size="11" fill="#2b2b2b">读 = N² + Nd</text>
+  <g filter="url(#sk)">
+    <rect x="740" y="356" width="130" height="28" rx="5" fill="#b03a3a" opacity="0.3" stroke="#b03a3a"/>
+  </g>
+  <text x="805" y="375" text-anchor="middle" font-size="11" fill="#7a2828">写 = Nd</text>
+  <text x="80" y="402" font-size="10" fill="#888">PV 是大 GEMM（N 大时 compute-bound），但 P 必须从 HBM 读 ← O(N²) 读来源</text>
+  <path d="M 470 430 L 470 442" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- Total summary -->
+  <g filter="url(#sk)">
+    <rect x="60" y="446" width="820" height="150" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="470" font-size="13" font-weight="bold" fill="#2b2b2b">总计 HBM 读写量</text>
+  <text x="80" y="492" font-size="12" fill="#444">读：2Nd + N² + (N² + Nd) = <tspan font-weight="bold" fill="#b03a3a">2N² + 3Nd</tspan></text>
+  <text x="80" y="512" font-size="12" fill="#444">写：N² + N² + Nd = <tspan font-weight="bold" fill="#b03a3a">2N² + Nd</tspan></text>
+  <text x="80" y="532" font-size="12" fill="#444">合计：<tspan font-weight="bold" fill="#b03a3a">4N² + 4Nd</tspan> ≈ 4N²（当 N >> d）→ <tspan font-weight="bold" fill="#b03a3a">O(N²)</tspan></text>
+  <text x="80" y="556" font-size="11" fill="#2e6e2e" font-weight="bold">N=4096, d=64 实例：4×4096²×4B + 4×4096×64×4B ≈ 201 MB + 1 MB ≈ 206 MB</text>
+  <text x="80" y="576" font-size="11" fill="#4a8edb" font-weight="bold">FlashAttention：不物化 S/P，IO 降到 O(Nd) ≈ 2 MB（~100x 提升）</text>
+</svg>

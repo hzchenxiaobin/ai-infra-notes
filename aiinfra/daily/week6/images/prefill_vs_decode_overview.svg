@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#fdfcf7"/>
+  <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Prefill vs Decode：两阶段输入与 Attention 形状</text>
+  <path d="M 300 42 Q 480 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Prefill 侧 ============ -->
+  <text x="240" y="74" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Prefill（首 token / 一次性处理）</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="86" width="360" height="442" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="80" y="110" font-size="12" fill="#444">输入 prompt: (B, N_prompt, d)</text>
+  <!-- N 个 token 并排 -->
+  <g filter="url(#sk)">
+    <g fill="#bcd6f0" stroke="#4a8edb">
+      <rect x="80" y="124" width="34" height="30" rx="3"/>
+      <rect x="116" y="124" width="34" height="30" rx="3"/>
+      <rect x="152" y="124" width="34" height="30" rx="3"/>
+      <rect x="188" y="124" width="34" height="30" rx="3"/>
+      <rect x="224" y="124" width="34" height="30" rx="3"/>
+    </g>
+    <text x="266" y="143" font-size="11" fill="#666">... N 个 token 并行</text>
+  </g>
+  <text x="80" y="176" font-size="12" font-weight="bold" fill="#2b6e9e">Q / K / V GEMM：M = N_prompt（大）</text>
+  <!-- 大 GEMM 矩阵 -->
+  <g filter="url(#sk)">
+    <rect x="80" y="186" width="150" height="46" rx="4" fill="#4a8edb" opacity="0.35" stroke="#4a8edb"/>
+    <text x="155" y="213" text-anchor="middle" font-size="11" fill="#234">GEMM 大矩阵 → Tensor Core 打满</text>
+  </g>
+  <text x="80" y="252" font-size="12" font-weight="bold" fill="#2b6e9e">Attention：Q×K^T = N×N 完整矩阵</text>
+  <!-- N×N attention 网格 -->
+  <g filter="url(#sk)">
+    <g stroke="#4a8edb" fill="#d9e8f7">
+      <rect x="80" y="262" width="120" height="90" rx="3"/>
+      <line x1="110" y1="262" x2="110" y2="352"/>
+      <line x1="140" y1="262" x2="140" y2="352"/>
+      <line x1="170" y1="262" x2="170" y2="352"/>
+      <line x1="80" y1="292" x2="200" y2="292"/>
+      <line x1="80" y1="322" x2="200" y2="322"/>
+    </g>
+    <text x="210" y="312" font-size="11" fill="#666">N×N，O(N²) 计算</text>
+  </g>
+  <text x="80" y="378" font-size="12" fill="#b03a3a" font-weight="bold">瓶颈：compute-bound（算力）</text>
+  <text x="80" y="398" font-size="11" fill="#444">FLOPs ≈ O(N²·d)，算术强度高</text>
+  <text x="80" y="416" font-size="11" fill="#444">SM 满载，打满 Tensor Core</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="432" width="320" height="80" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="92" y="454" font-size="12" font-weight="bold" fill="#2b2b2b">关注指标：TTFT</text>
+  <text x="92" y="474" font-size="11" fill="#444">首 token 生成时间，由 Prefill 决定</text>
+  <text x="92" y="494" font-size="11" fill="#2e6e2e">优化：FlashAttention / Tensor Core / 并行 prefill</text>
+
+  <!-- ============ 中间箭头 ============ -->
+  <path d="M 432 300 L 516 300" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="474" y="290" text-anchor="middle" font-size="11" fill="#666">第一个 token</text>
+  <text x="474" y="316" text-anchor="middle" font-size="11" fill="#666">已生成</text>
+
+  <!-- ============ Decode 侧 ============ -->
+  <text x="720" y="74" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">Decode（自回归 / 逐 token 生成）</text>
+  <g filter="url(#sk)">
+    <rect x="540" y="86" width="360" height="442" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="560" y="110" font-size="12" fill="#444">输入: (B, 1, d) —— 仅 1 个新 token</text>
+  <!-- 单个 token -->
+  <g filter="url(#sk)">
+    <rect x="560" y="124" width="34" height="30" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="604" y="143" font-size="11" fill="#666">M = 1，单 query</text>
+  </g>
+  <text x="560" y="176" font-size="12" font-weight="bold" fill="#7a5415">Q / K / V GEMM：M = 1（退化）</text>
+  <!-- 退化为向量×矩阵 -->
+  <g filter="url(#sk)">
+    <rect x="560" y="186" width="150" height="46" rx="4" fill="#c98a2b" opacity="0.30" stroke="#c98a2b"/>
+    <text x="635" y="213" text-anchor="middle" font-size="11" fill="#5a3a0a">向量×矩阵，SM 大量空闲</text>
+  </g>
+  <text x="560" y="252" font-size="12" font-weight="bold" fill="#7a5415">Attention：1×N（读历史 KV Cache）</text>
+  <!-- 1×N -->
+  <g filter="url(#sk)">
+    <rect x="560" y="262" width="120" height="22" rx="3" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="690" y="277" font-size="11" fill="#666">1×N</text>
+  </g>
+  <!-- KV cache 从 HBM 读 -->
+  <g filter="url(#sk)">
+    <rect x="560" y="296" width="200" height="56" rx="4" fill="#fce4ec" stroke="#b85450" stroke-dasharray="4 3"/>
+    <text x="660" y="316" text-anchor="middle" font-size="11" fill="#7a2828">KV Cache 从 HBM 读</text>
+    <text x="660" y="336" text-anchor="middle" font-size="11" fill="#7a2828">2·L·d bytes / 步</text>
+  </g>
+  <text x="560" y="378" font-size="12" fill="#b03a3a" font-weight="bold">瓶颈：memory-bound（带宽）</text>
+  <text x="560" y="398" font-size="11" fill="#444">FLOPs ≈ O(L·d)，计算量极小</text>
+  <text x="560" y="416" font-size="11" fill="#444">算术强度 ≈ 0.1，远低于 Ridge Point</text>
+  <g filter="url(#sk)">
+    <rect x="560" y="432" width="320" height="80" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="572" y="454" font-size="12" font-weight="bold" fill="#2b2b2b">关注指标：TBT / TPOT</text>
+  <text x="572" y="474" font-size="11" fill="#444">逐 token 间隔，由 Decode 决定</text>
+  <text x="572" y="494" font-size="11" fill="#2e6e2e">优化：KV Cache / Continuous Batching / 量化</text>
+</svg>

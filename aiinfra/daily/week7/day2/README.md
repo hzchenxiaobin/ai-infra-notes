@@ -254,7 +254,7 @@ def _schedule_waiting(self, budget, outputs):
 
 #### 任务 1：创建 vllm_scheduler_analyzer.py
 
-创建文件 [kernels/vllm_scheduler_analyzer.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/vllm_scheduler_analyzer.py)，复刻 vLLM Scheduler 的三大核心机制——`schedule()` 5 步流程、`SchedulingBudget` 双预算、Preemption 两种模式：
+创建文件 [kernels/vllm_scheduler_analyzer.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/vllm_scheduler_analyzer.py)，复刻 vLLM Scheduler 的三大核心机制——`schedule()` 5 步流程、`SchedulingBudget` 双预算、Preemption 两种模式：
 
 ```python
 # vllm_scheduler_analyzer.py —— vLLM Scheduler 源码分析教学模型
@@ -780,7 +780,7 @@ if __name__ == "__main__":
 
 ```
 
-完整代码（含三个内部方法、抢占逻辑、三个 demo 场景）见 [kernels/vllm_scheduler_analyzer.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/vllm_scheduler_analyzer.py)。
+完整代码（含三个内部方法、抢占逻辑、三个 demo 场景）见 [kernels/vllm_scheduler_analyzer.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/vllm_scheduler_analyzer.py)。
 
 代码要点：
 - `SchedulingBudget`：`can_schedule()` 同时检查 token 和 seq 两个约束，任一不满足就拒绝调度

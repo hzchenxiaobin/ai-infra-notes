@@ -134,53 +134,67 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week1 Day7 | 总结与复盘 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
 | Week2 Day1 | Warp Shuffle 原语与 Warp/Block Reduce | Prefix Sum | [leetgpu-prefix-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html) |
 | Week2 Day2 | Register Blocking 与 2D Tiling | GEMM | [leetgpu-gemm-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html) |
-| Week2 Day3 | CUDA Streams 与异步执行 | 2D Convolution | [leetgpu-2d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-2d-convolution-solution.html) |
-| Week2 Day4 | Nsight Compute 性能分析 | Softmax | [leetgpu-softmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html) |
-| Week2 Day5 | FlashAttention CUDA 实现（简化版） | Softmax Attention | [leetgpu-softmax-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) |
-| Week2 Day6 | 整合优化到 cuBLAS 70%+ | Histogramming | [leetgpu-histogramming-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html) |
-| Week2 Day7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-max-subarray-sum-solution.html) |
-| Week3 Day1 | Trace Transformer 推理流程 | 1D Convolution | [leetgpu-1d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html) |
-| Week3 Day2 | 手写 Softmax 与 LayerNorm Kernel | Softmax | [leetgpu-softmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html) |
-| Week3 Day3 | 源码分析 —— PyTorch / FasterTransformer | Argmax | [leetgpu-argmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-argmax-solution.html) |
-| Week3 Day4 | Attention IO 分析 | Attention | [leetgpu-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-attention-solution.html) |
-| Week3 Day5 | 算子接入 Mini 引擎 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
-| Week3 Day6 | 端到端 Profiling 与 Kernel Fusion | RMS Normalization | [leetgpu-rms-normalization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) |
-| Week3 Day7 | Transformer 算子分类与 Week 3 总结 | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) |
-| Week4 Day1 | FlashAttention 论文精读与 Online Softmax 完整推导 | Softmax Attention | [leetgpu-softmax-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) |
-| Week4 Day2 | 手写完整 FlashAttention Forward Kernel | Attention | [leetgpu-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-attention-solution.html) |
-| Week4 Day3 | FlashAttention 官方 CUDA 源码分析 | Dot Product | [leetgpu-dot-product-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html) |
-| Week4 Day4 | FlashAttention-2 论文与源码差异 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) |
-| Week4 Day5 | 算子接入 Mini 引擎 —— FlashAttention 集成 | Matrix Copy | [leetgpu-matrix-copy-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html) |
-| Week4 Day6 | 性能对比分析 —— 标准 vs 手写 vs 官方 | Multi-Head Attention | [leetgpu-multi-head-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) |
-| Week4 Day7 | IO 优化方法论总结与 Week 4 收官 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html) |
-| Week5 Day1 | 推理流程 —— Prefill vs Decode | INT8 KV-Cache Attention | [leetgpu-int8-kv-cache-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html) |
-| Week5 Day2 | 实现 KV Cache | Grouped Query Attention (GQA) | [leetgpu-grouped-query-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html) |
-| Week5 Day3 | vLLM 整体架构分析 | Speculative Decoding Verification | [leetgpu-speculative-decoding-verification-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-speculative-decoding-verification-solution.html) |
-| Week5 Day4 | vLLM Worker 与 PagedAttention | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) |
-| Week5 Day5 | 项目推进 —— Mini 推理引擎 v0 | Token Embedding Layer | [leetgpu-token-embedding-layer-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-token-embedding-layer-solution.html) |
-| Week5 Day6 | 端到端 Profiling | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
-| Week5 Day7 | 推理系统核心问题总结与 Week 5 收官 | Simple Inference | [leetgpu-simple-inference-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html) |
-| Week6 Day1 | Dynamic Batching | Simple Inference | [leetgpu-simple-inference-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html) |
-| Week6 Day2 | Continuous Batching | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-max-subarray-sum-solution.html) |
-| Week6 Day3 | vLLM Scheduler 源码分析 | Stream Compaction | [leetgpu-stream-compaction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-stream-compaction-solution.html) |
-| Week6 Day4 | TensorRT-LLM / LightLLM 调度对比 | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html) |
-| Week6 Day5 | Mini 推理引擎 v1 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) |
-| Week6 Day6 | Latency / Throughput 测试 | Top K Selection | [leetgpu-top-k-selection-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html) |
-| Week6 Day7 | 调度优化策略总结与 Week 6 收官 | Dot Product | [leetgpu-dot-product-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html) |
-| Week7 Day1 | 多请求并发支持 | Matrix Copy | [leetgpu-matrix-copy-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html) |
-| Week7 Day2 | 完整调度器 | Vector Reversal | [leetgpu-vector-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-reversal-solution.html) |
-| Week7 Day3 | SGLang / LightLLM 高级特性 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html) |
-| Week7 Day4 | 整合全部自定义 Kernel | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
-| Week7 Day5 | 系统联调 | Element Reversal | [leetgpu-element-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html) |
-| Week7 Day6 | 全链路 Profiling | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
-| Week7 Day7 | 代码重构与文档 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
-| Week8 Day1 | 项目文档完善 | SiLU | [leetgpu-silu-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-silu-solution.html) |
-| Week8 Day2 | 架构图与数据流图 | Rotary Positional Embedding | [leetgpu-rope-embedding-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rope-embedding-solution.html) |
-| Week8 Day3 | 高频面试题基础篇 | SwiGLU | [leetgpu-swiglu-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-swiglu-solution.html) |
-| Week8 Day4 | 高频面试题进阶篇 | Sliding Window Self-Attention | [leetgpu-sliding-window-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-sliding-window-self-attention-solution.html) |
-| Week8 Day5 | Mock 面试 | LoRA Linear | [leetgpu-lora-linear-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-lora-linear-solution.html) |
-| Week8 Day6 | 查漏补缺 | Batch Normalization | [leetgpu-batch-normalization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html) |
-| Week8 Day7 | 最终复盘 | 1D Convolution | [leetgpu-1d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html) |
+| Week2 Day3 | float4 向量化 + GEMM 七层路径（前四层） | GEMM | [leetgpu-gemm-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html) |
+| Week2 Day4 | GEMM 七层路径（后三层）+ cuBLAS 对比 | 待定 | — |
+| Week2 Day5 | CUDA Streams 与异步执行 | 2D Convolution | [leetgpu-2d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-2d-convolution-solution.html) |
+| Week2 Day6 | Nsight Compute 性能分析 | Softmax | [leetgpu-softmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html) |
+| Week2 Day7 | 限时 Kernel 手撕 + GitHub 整理 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-max-subarray-sum-solution.html) |
+| Week3 Day1 | Tensor Core 与 WMMA | Histogramming | [leetgpu-histogramming-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html) |
+| Week3 Day2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 | 待定 | — |
+| Week3 Day3 | mma.sync 指令与 ldmatrix | 待定 | — |
+| Week3 Day4 | CUTLASS 源码分析 + CuTe 概念铺垫 | 待定 | — |
+| Week3 Day5 | 项目推进 —— WMMA GEMM 接入 Benchmark | 待定 | — |
+| Week3 Day6 | Profiling —— Tensor Core 利用率 | 待定 | — |
+| Week3 Day7 | 复盘与手撕 —— Tensor Core/CUTLASS | 待定 | — |
+| Week4 Day1 | Trace Transformer 推理流程（Prefill/Decode） | 1D Convolution | [leetgpu-1d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html) |
+| Week4 Day2 | 手写 Softmax 与 LayerNorm Kernel | Softmax | [leetgpu-softmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html) |
+| Week4 Day3 | LayerNorm 优化与 GEMM Backward 数据流 | RMS Normalization | [leetgpu-rms-normalization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) |
+| Week4 Day4 | Triton 语言专题 | Argmax | [leetgpu-argmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-argmax-solution.html) |
+| Week4 Day5 | 项目推进 —— Triton 三方 Benchmark | 待定 | — |
+| Week4 Day6 | Profiling —— Triton vs CUDA vs PyTorch | 待定 | — |
+| Week4 Day7 | Transformer 算子分类与总结 | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) |
+| Week5 Day1 | FA CUDA 实现（简化版）+ Attention IO 分析 | Softmax Attention | [leetgpu-softmax-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) |
+| Week5 Day2 | FA 论文精读与 Online Softmax 推导 | Attention | [leetgpu-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-attention-solution.html) |
+| Week5 Day3 | 手写完整 FA Forward Kernel | Multi-Head Attention | [leetgpu-multi-head-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) |
+| Week5 Day4 | FA Backward 与 GEMM Backward | Dot Product | [leetgpu-dot-product-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html) |
+| Week5 Day5 | 性能对比 + FA 接入 Mini 引擎 | Matrix Copy | [leetgpu-matrix-copy-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html) |
+| Week5 Day6 | FA-2 + 官方源码 + IO 方法论 | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) |
+| Week5 Day7 | 复盘与手撕 —— FA 限时手写 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html) |
+| Week6 Day1 | 推理流程 —— Prefill vs Decode | INT8 KV-Cache Attention | [leetgpu-int8-kv-cache-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html) |
+| Week6 Day2 | 实现 KV Cache（含 GQA/MQA/MLA） | Grouped Query Attention (GQA) | [leetgpu-grouped-query-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html) |
+| Week6 Day3 | vLLM 整体架构分析 | Speculative Decoding Verification | [leetgpu-speculative-decoding-verification-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-speculative-decoding-verification-solution.html) |
+| Week6 Day4 | vLLM Worker 与 PagedAttention | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) |
+| Week6 Day5 | 项目推进 —— Mini 推理引擎 v0 | Token Embedding Layer | [leetgpu-token-embedding-layer-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-token-embedding-layer-solution.html) |
+| Week6 Day6 | FlashDecoding | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
+| Week6 Day7 | 推理系统核心问题总结 | Simple Inference | [leetgpu-simple-inference-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html) |
+| Week7 Day1 | Continuous Batching（含 Dynamic Batching） | Simple Inference | [leetgpu-simple-inference-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html) |
+| Week7 Day2 | vLLM Scheduler 源码分析 | Stream Compaction | [leetgpu-stream-compaction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-stream-compaction-solution.html) |
+| Week7 Day3 | TRT-LLM / LightLLM / SGLang 调度对比 | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html) |
+| Week7 Day4 | Chunked Prefill 与 Prefix Caching | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) |
+| Week7 Day5 | Mini 推理引擎 v1（多请求并发） | Top K Selection | [leetgpu-top-k-selection-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html) |
+| Week7 Day6 | PD 分离推理 | Dot Product | [leetgpu-dot-product-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html) |
+| Week7 Day7 | 调度优化策略总结 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
+| Week8 Day1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
+| Week8 Day2 | FP8 量化深入 | 待定 | — |
+| Week8 Day3 | SGLang / 投机解码 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html) |
+| Week8 Day4 | CUDA Graph 实操 | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
+| Week8 Day5 | 项目推进 —— 加速技术接入 | 待定 | — |
+| Week8 Day6 | Profiling —— 量化/CUDA Graph | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
+| Week8 Day7 | 复盘与面试 Q&A | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
+| Week9 Day1 | 分布式推理 —— TP/PP/DP | Matrix Copy | [leetgpu-matrix-copy-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html) |
+| Week9 Day2 | Pipeline Parallelism 与 DP | Vector Reversal | [leetgpu-vector-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-reversal-solution.html) |
+| Week9 Day3 | NCCL Collectives | 待定 | — |
+| Week9 Day4 | 通信计算重叠 | 待定 | — |
+| Week9 Day5 | MoE + EP 并行专题 | 待定 | — |
+| Week9 Day6 | 多硬件对比：CUDA vs Ascend | 待定 | — |
+| Week9 Day7 | 复盘与面试 Q&A | Element Reversal | [leetgpu-element-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html) |
+| Week10 Day1 | 整合全部自定义 Kernel | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
+| Week10 Day2 | 系统联调（六步分层验证） | Element Reversal | [leetgpu-element-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html) |
+| Week10 Day3 | 项目文档完善（README） | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
+| Week10 Day4 | 高频面试题基础篇 | SiLU | [leetgpu-silu-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-silu-solution.html) |
+| Week10 Day5 | Mock 面试 | LoRA Linear | [leetgpu-lora-linear-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-lora-linear-solution.html) |
+| Week10 Day6 | 诊断流程实战剧本 + 手撕清单 | Sliding Window Self-Attention | [leetgpu-sliding-window-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-sliding-window-self-attention-solution.html) |
+| Week10 Day7 | 最终复盘 —— 10 周能力地图 | 1D Convolution | [leetgpu-1d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html) |
 
 > 💡 新增 Day 若上表无对应题解,按 [`leetgpu/SKILL.md`](https://github.com/hzchenxiaobin/leetgpu/blob/main/SKILL.md) 在独立仓库的 `weekN/dayM/` 下新建 `leetgpu-<slug>-solution.md` 并补入上表。
 
@@ -238,7 +252,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
      - <答案要点 2>
   ```
 - 答案可含代码块或子编号
-- 验收日(如 week9/day6)的面试题可含"评分关键"
+- 验收日(如 week10/day3)的面试题可含"评分关键"
 
 ## 4. 总结日(Day7)变体
 
@@ -262,7 +276,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 ## ✅ Week N 完成标准
 ```
 
-**验收型 Day7**(如 week9/day6)额外含:
+**验收型 Day7**(如 week10/day3)额外含:
 - 限时手撕任务 + **评分标准表**(`| 项目 | 分值 | 评分要点 |`)
 - 性能对比报告模板
 - GitHub 仓库整理 Checklist

@@ -1,294 +1,474 @@
-## Day 3：CUDA Streams 与异步执行
+## Day 3：整合优化到 cuBLAS 70%+（GEMM 七层路径）整合优化到 cuBLAS 70%+
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 CUDA Stream 异步执行模型
-2. 掌握 Default Stream 的隐式同步行为及其"坑"
-3. 掌握多 Stream 并行策略与 `cudaMemcpyAsync` 的使用
-4. 理解 Pinned Memory 对异步传输的必要性
-5. 实现多 Stream H2D/Compute/D2H 重叠流水线
-6. 能使用 `cudaEvent` 管理跨 Stream 依赖
+1. 理解从 Register Blocking（~45%）到 cuBLAS 70%+ 还需要哪些优化
+2. 掌握 `float4` 向量化加载的原理和使用条件
+3. 理解 Warp Shuffle 在 GEMM 写回优化中的作用
+4. 实现整合版 GEMM：Register Blocking + float4 + Warp Shuffle + Coalesced Write
+5. 掌握参数精调（Auto-tuning）的方法论
+6. 能用 ncu 验证整合版 GEMM 的性能提升
 
-> 💡 **为什么重要**：多 Stream 异步执行是提升端到端吞吐的关键技术。理解 Default Stream 的隐式同步行为，能避免"看似创建了多 Stream 却没有任何并发"的性能陷阱。
+> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 80%」是顶级 AI Infra 面试题，今天是从 45% 跨越到 70% 的关键一步。每一层优化都有明确的收益来源，理解这些才能在面试中逐层展开。
 
 ---
 
-### 学前导读：为什么需要异步执行
+### 学前导读：从 45% 到 70% 的优化路线
 
-CPU 和 GPU 是独立的计算资源。如果所有操作都同步执行（CPU 提交后等 GPU 完成），CPU 大量时间在空等。异步执行让 CPU 提交任务后立即返回，GPU 在后台执行，二者并行工作。
+![GEMM 优化层次](../images/gemm_optimization_layers.svg)
 
-更进一步，GPU 内部有独立的硬件引擎：**Copy Engine**（负责 H2D/D2H 传输）和 **Compute Engine**（负责 Kernel 执行）。如果安排得当，拷贝和计算可以同时进行，这就是 Multi-Stream 重叠流水线的核心。
+Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，需要叠加以下优化：
+
+| 优化点 | 增益 | 实现复杂度 | 原理 |
+|--------|------|-----------|------|
+| **float4 向量化加载** | +10-15% | 中 | 128-bit 访问提升 Global Memory 带宽利用率 |
+| **Warp Shuffle 累加** | +5-10% | 中 | Warp 内协作优化写回模式，减少非合并访问 |
+| **Coalesced 写回** | +3-5% | 低 | 用 float4 做合并写入 |
+| **参数精调** | +5-10% | 低 | Auto-tune BM/BN/BK/TM/TN |
+
+这些优化不是孤立的——它们叠加在一起才能达到 70%+。
 
 ---
 
 ### 理论学习
 
-#### 3.1 Stream 的本质
+#### 6.1 float4 向量化加载
 
-Stream 是 GPU 上操作（Kernel 执行、内存拷贝）的队列。同一个 Stream 内的操作按 FIFO 顺序执行，不同 Stream 之间的操作可以并发（只要资源允许）。
+![float4 向量化加载对比](../images/float4_vectorized_load.svg)
 
-![多 Stream 并发流水线](../../images/week2_multistream_pipeline.svg)
+##### 原理
 
-**示例代码**：
-
-```cuda
-cudaStream_t s1, s2;
-cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking);
-cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking);
-
-// Stream 1 内按 FIFO 顺序执行
-cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, s1);
-kernel<<<grid, block, 0, s1>>>(d_A);
-cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, s1);
-
-// Stream 2 的操作可以与 Stream 1 并发
-cudaMemcpyAsync(d_B, h_B, bytes, cudaMemcpyHostToDevice, s2);
-kernel<<<grid, block, 0, s2>>>(d_B);
-
-cudaStreamSynchronize(s1);
-cudaStreamSynchronize(s2);
-cudaStreamDestroy(s1);
-cudaStreamDestroy(s2);
-```
-
-#### 3.2 Default Stream 的"坑"
-
-![Default Stream 隐式同步陷阱](../images/default_stream_sync.svg)
-
-| 特性 | Default Stream (Stream 0) | Explicit Stream |
-|------|-------------------------|-----------------|
-| 创建方式 | 隐式存在，无需创建 | `cudaStreamCreate(&stream)` |
-| 同步行为 | **隐式同步所有其他 Stream** | 只同步本 Stream 的操作 |
-| 与 Host 关系 | `cudaMemcpy` 阻塞 Host | `cudaMemcpyAsync` 非阻塞 Host |
-| 适用场景 | 简单程序、调试 | 生产环境、性能优化 |
-
-**Default Stream 的隐式同步规则（极易出错）**：
-- 规则 1：Default Stream 上的操作会等待所有其他 Stream 的先前操作完成
-- 规则 2：其他 Stream 上的操作会等待 Default Stream 的先前操作完成
-- **后果**：即使创建了多 Stream，只要在 Default Stream 上做一次 `cudaMemcpy`，所有并发都被打断
-
-**错误示例**：
+GPU 以 sector（32 bytes）为最小传输粒度访问 Global Memory（L2 以 128-byte cache line = 4 sector 管理）。在指令层，4 个连续 float（16 bytes）可以通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效。
 
 ```cuda
-cudaStream_t s;
-cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking);
+// 逐个加载：4 条 32-bit load 指令
+float a0 = ptr[0];
+float a1 = ptr[1];
+float a2 = ptr[2];
+float a3 = ptr[3];
 
-kernel<<<grid, block, 0, s>>>(d_A); // 提交到显式 Stream
-
-// ❌ Default Stream 上的同步 cudaMemcpy 会隐式同步 s
-cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
-
-kernel<<<grid, block, 0, s>>>(d_B); // 实际要等到上面的 cudaMemcpy 完成后才开始
+// float4 向量化加载：1 条 128-bit load 指令
+float4 val = reinterpret_cast<const float4*>(ptr)[0];
+// val.x, val.y, val.z, val.w 分别是 4 个 float
 ```
 
-**正确写法**：
+##### 使用条件
+
+1. **内存地址 16 字节对齐**：`cudaMalloc` 分配的内存天然对齐
+2. **访问模式 coalesced**：连续线程访问连续地址，warp 内 32 线程的访问合并为最少数量的 cache line 传输
+3. **数据布局支持**：行优先矩阵的连续行元素天然连续
+
+##### 风险
+
+如果地址不对齐或访问不连续，float4 可能触发更多 cache line 加载，反而降低性能。
+
+##### 知识补充：cache line 与 sector
+
+理解 float4 为什么快，先要搞清楚 GPU 访存的两个粒度单位：
+
+![Cache Line 与 Sector](../images/cache_line_sector.svg)
+
+| 概念 | 大小 | 说明 |
+|------|------|------|
+| **sector（扇区）** | 32B | GPU 内存的**最小传输单位**。L1↔L2、L2↔DRAM 之间的数据搬运都按 sector 进行——线程只读 4B，硬件也会拉回整个 32B sector |
+| **cache line（缓存行）** | 128B | L1/L2 的组织单位，**1 行 = 4 个 sector**，可按 sector 粒度填充，不必整行搬运 |
+
+**sector（32B）——传输的原子单位。** 无论线程要读 1B 还是 4B，硬件从下一级存储搬数据时最小都搬一整个 32B sector，不可再分。这是 L2→L1、DRAM→L2 的搬运粒度。代价是：若一个 sector 里只有 4B 被用到，剩余 28B 也被白白搬过来，称为 **sector 浪费**。所以衡量访存效率的核心指标是「每个被搬来的 sector 里有百分之几的字节被真正用到」。
+
+**cache line（128B）——存储的组织单位。** L1/L2 cache 按 128B 一行来组织（存 tag、做命中判断），1 行正好含 4 个 sector。关键在于**填充粒度是 sector 而非整行**：一次访存若只触达某行的 1 个 sector，就只搬这 1 个 sector 进 cache，其余 3 个 sector 位置留空，不必把整条 128B 都拉回来。这种「按需 sector 填充」让 GPU 对不规则访问比 CPU 更宽容。
+
+**「以 128B cache line 管理」具体指什么？** 指 L2 的**管理动作——存 tag、命中判断、行的分配与替换——都以 128B 行为单位**：一次访问先用地址高位（Tag + Index）定位到某一行，命中与否看的是整行的 tag，而不是具体哪个字节。但每个 sector 有独立的 valid bit，**填充按 sector**：miss 后只从 DRAM 搬触达的那 32B，其余 3 个 sector 留空。为什么这样分工？tag 若按 32B sector 存，表项数翻 4 倍、硬件开销大；valid bit 按 sector 存，又保留了细粒度传输的好处——**存储组织粗（128B）、数据传输细（32B）**，两者兼顾。
+
+![L2 以 cache line 管理](../images/l2_cache_line_management.svg)
+
+> 💡 对比 CPU：CPU cache line 通常 64B，传输和一致性共用这一个粒度——取就取整行、一致性也按整行做；GPU 把两者拆开——cache line（128B）管存储组织，sector（32B）管传输，粒度更细，对不规则访问更友好，代价是 tag 表项更多。
+
+把这两个粒度放回完整的访存层次中，DRAM → L2 → L1 → Register 每一级之间的搬运单位如下图：
+
+![GPU 访存层次与搬运单位](../images/memory_hierarchy_transfer.svg)
+
+> 💡 图中要点：① **L1/L2 都按 cache line（128B = 4 sector）组织**，做 tag 与命中判断；② **DRAM→L2、L2→L1 的传输都按 sector（32B）**，且 cache line 按 sector 粒度填充——L1 中一条 cache line 可以只有 1 个 sector 驻留（虚线扇区位置留空）；③ **L1→Register 的粒度由指令宽度决定**：`LDG.32` 取 4B、`LDG.128`（float4）取 16B，这是代码层可控的，而 sector/cache line 是硬件固定的。
+
+**用 sector 定量描述合并访问（coalescing）。** 一个 warp 32 线程，每个读 1 个 float（4B），访存请求先被硬件合并：
+
+- **合并访问（coalesced）**：32 线程读连续地址，共 `32 × 4B = 128B`，恰好落在 1 条 cache line 的 4 个 sector 内 → 只需传 **4 个 sector = 128B**，1 次内存事务完成，**利用率 100%**。
+- **散乱访问（strided/scattered）**：32 线程地址各落一个不同 sector → 要传 **32 个 sector = 1024B**，却只用到 128B，**利用率仅 12.5%（1/8）**，其余 7/8 的带宽被浪费在搬来却用不上的 sector 上。
+
+带宽利用率公式：
+
+```
+带宽利用率 = 有效数据量 / 实际传输量
+         = (warp 真正读到的字节数) / (被触达的 sector 数 × 32B)
+```
+
+coalesced：`128B / (4 × 32B) = 100%`　　scattered：`128B / (32 × 32B) = 12.5%`
+
+> ⚠️ 这就是「coalesced」作为 CUDA 优化第一性原则的根因——它直接决定每个 sector 是否被榨干。float4 之所以更快，一大部分原因正是它强制每线程拿 16B 连续数据，天然把 sector 利用率顶满（见下一小节）。
+
+##### 为什么 float4 更快
+
+关键认知：**float4 并没有减少要搬运的字节数**（数据总量不变），它减少的是**指令数和内存请求数**，并提升每个线程的在途数据量。以"warp 加载 512B 连续数据"为例对比：
+
+| | 32-bit load × 4 | 128-bit load × 1（float4） |
+|--|------------------|----------------------------|
+| 每线程指令数 | 4 条 `LDG.32` | 1 条 `LDG.128` |
+| warp 级内存请求 | 4 次（每次 128B = 4 sector） | 1 次（512B，L1 内部分 4 个 128B wavefront 处理） |
+| 地址计算 | 4 次基址 + 偏移 | 1 次 |
+| 每线程在途数据 | 4B，拿到才能往下算 | 16B 一次到位，4 个 float 的使用可流水线化 |
+
+收益来源具体有三条：
+
+1. **指令与请求数砍到 1/4**：LSU（加载存储单元）每周期能处理的请求数有限，请求少了 pipeline 就不堵；省下的指令发射槽留给 FMA。GEMM 主循环里最重的访存就是 global→shared 加载，这里指令数砍掉 3/4，直接反映为 SM 吞吐提升——实测 4096 矩阵 v3→v4 从 30.8% 跳到 64.3%，是全天最大的单步增益。
+2. **sector 利用率打满**：32-bit 散读时一个 32B sector 可能只用到 4B；float4 保证每线程拿满 16B、warp 拿满 128B 的整数倍，每个被拉回的 sector 都 100% 被用上， DRAM 带宽一点不浪费。
+3. **更多数据在途（MLP / ILP）**：一条 `LDG.128` 让 4 个 float 同时 in-flight，访存延迟只需掩盖一次；写成 4 条独立 `LDG.32` 时，编译器还可能因寄存器压力或调度把它们串行化。
+
+> ⚠️ 这三条收益都建立在"16B 对齐 + 访问连续"的前提上。不满足时，一条 128-bit load 可能横跨 2 条 cache line，反而多传 sector——这正是前面"使用条件"三条的由来。写回 C 用 `STG.128` 同理。
+
+##### 常见误区：单线程 float4 只有 16B，sector 利用率是 50% 吗？
+
+不是。**sector 利用率是按 warp 级合并后的内存事务来算的，不是按单条指令、单个线程来算的。**
+
+单线程执行 float4 load 确实只取 16B（半个 sector），但硬件不会为这 16B 单独去 DRAM 搬数据——访存请求先在 **warp 级合并**后才发出：
+
+```
+一个 warp = 32 线程 × 16B (float4) = 512B 连续数据
+512B = 4 条 cache line = 16 个 sector
+```
+
+两个相邻线程的 float4 恰好拼满一个 32B sector：
+
+```
+sector 0 [32B]:  thread 0 的 float4 [16B]  +  thread 1 的 float4 [16B]
+sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
+...
+```
+
+从 DRAM 拉回的每个 sector 的 32B **全部被用上**，利用率是 **100%**。GEMM 的加载模式（连续线程取连续 float4）天然保证相邻线程拼满 sector。
+
+**什么时候才真的是 50%**：warp 内访问模式让 sector 拼不满时，例如只有一半线程活跃（`if (threadIdx.x % 2 == 0)` 做 float4 load），或每线程间隔 32B 取一个 float4（stride = 8 floats）。
+
+顺带纠正一个直觉：coalesced 的 32-bit load（每线程 4B，warp 共 128B = 4 sector）利用率**也是 100%**。float4 的优势不在 sector 利用率本身，而在于前面说的指令/请求数砍到 1/4 和单线程 16B 在途数据（ILP）；前文"32-bit 散读时一个 sector 可能只用到 4B"指的是非合并的散乱场景，不是 coalesced 的 32-bit 连续读。
+
+#### 6.2 Warp Shuffle 在 GEMM 写回中的用途
+
+Day 1 我们用 Warp Shuffle 做 Reduce（多对一求和）。在 GEMM 中，Shuffle 的用途不同：**写回前的 warp 内数据重排**——把累加器在 lane 之间换位，让随后的 `STG` 指令变成 coalesced 模式。一个是"多对一归约"，一个是"一对一置换"，用的 shuffle 原语和目的都不同。
+
+##### 问题来源：写回是否合并，由线程映射决定
+
+Register Blocking 中每个线程持有 TM×TN 累加器子块，写回地址 = f(线程映射, tile 内偏移)。以本 kernel 的 16×16 线程网格（BN/TN=16）为例，两种常见映射的写回模式完全不同：
+
+| 线程映射 | 一个 warp（32 lane）覆盖 | 单条 `STG.128` 触达 | sector 情况 |
+|---------|------------------------|--------------------|-------------|
+| 行优先（本 kernel：`threadRow=tid/16, threadCol=tid%16`） | 2 行 × 128 列 | 2 段 512B 连续区 | 每条 sector 先写一半，TN/4 的第二次写补齐另一半 → L2 内合并为满 sector 写 |
+| 列优先（`threadRow=tid%16, threadCol=tid/16`） | 32 个不同行 | 32 行各 16B | 触达 32 条行、32 个 sector，每个只用一半；另一半要等相邻 warp 很久以后才来 → 部分 sector 写回 DRAM |
+
+```
+行优先映射（lane 0-15 同行，写连续 512B）:
+  lane:  0    1    2  ... 15 | 16   17 ... 31
+  地址: [row0: col0  col8  col16 ...] [row0+8: col0 ...]
+        └─ 相邻 lane 地址相邻 → 合并友好
+
+列优先映射（lane 0-31 各占一行）:
+  lane:  0      1      2   ... 31
+  地址: [row0] [row1]  [row2] ... [row31]  ← 每格 16B 散落 32 行
+        └─ 单条指令触达 32 条 cache line → 写回放散
+```
+
+线程映射往往是被 global→shared **加载端**的合并需求"逼"出来的；当加载和写回对映射的要求冲突时，就需要在写回前做一次数据重排。
+
+##### Warp Shuffle 回顾
+
+`__shfl_sync(mask, val, srcLane)`：warp 内 lane 间**直接交换寄存器**，每个 lane 从 `srcLane` 指定的 lane 拿到它的 `val`。特性：
+
+- 不经过 shared memory，无 bank conflict，无需 `__syncthreads()`（同步域就是 warp 本身）
+- `srcLane` 可以是任意 lane 编号 → 支持任意置换（permutation），不只是 reduce 用的 `__shfl_down` 树形折叠
+- 局限：只在 warp 内（32 lane）有效，不能跨 warp
+
+Day 1 的 reduce 是 `__shfl_down_sync` 逐层折叠（多对一）；写回重排是 `__shfl_sync` 指定任意源 lane（一对一置换）。
+
+##### 思路：写回前的 warp 内"寄存器转置"
+
+目标：执行 `STG` 的那一刻，**lane i 持有的数据恰好要写到连续地址的第 i 个位置**。如果当前持有关系不满足，就先用 shuffle 把数据换到正确的 lane 手里：
 
 ```cuda
-// 全部使用 Async 并在指定 Stream 上执行
-cudaMemcpyAsync(d_B, h_B, bytes, cudaMemcpyHostToDevice, s);
-kernel<<<grid, block, 0, s>>>(d_B);
-cudaStreamSynchronize(s);
+// 重排前：lane i 持有自己 thread tile 的 acc[m][n]，
+// 它本应写到 C[row][colBase + ownerLane * TN + n]
+// 重排：让每个 lane 改持"目标行上自己该写的那一格"
+float mine    = acc[m][n];
+int   srcLane = /* 持有"我该写的那一格"的 lane 编号 */;
+float val     = __shfl_sync(0xFFFFFFFF, mine, srcLane);
+// 现在 32 个 lane 的值恰好是一行连续 32 个 float（或其分块），
+// 一次 coalesced 写回：
+C[row][colBase + lane] = val;
 ```
 
-**解决方案**：始终使用 `cudaStreamNonBlocking` 标志创建 Stream，或编译时加 `--default-stream per-thread`。
+本质是一个 **warp 内转置**：把"按线程 tile 分布"的数据改成"按写回地址分布"。
 
-```cuda
-// 创建不与 Default Stream 同步的 Stream（推荐做法）
-cudaStream_t stream;
-cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
-```
+##### 收益与代价的定量账
 
-#### 3.3 `cudaMemcpy` vs `cudaMemcpyAsync`
+shuffle 不是免费的。以 TM=TN=8 为例，warp 共持有 32×64=2048 个 float；每条 `SHFL` 指令移动 32 个值（每 lane 一个），完整重排需要 2048/32 = **64 条 shuffle 指令**（对比：写回本身只有 16 条 `STG.128`/warp）。
 
-| 函数 | 同步性 | 是否可指定 Stream | 内存要求 | 使用场景 |
-|------|--------|----------------|---------|---------|
-| `cudaMemcpy` | **同步**（阻塞 Host 直到完成） | 否（Default Stream） | 任意内存 | 简单程序 |
-| `cudaMemcpyAsync` | **异步**（立即返回） | 是 | 必须使用 **pinned 内存** | 多 Stream 并发 |
+| | 不用 shuffle（列优先映射） | 用 shuffle 重排 |
+|--|--------------------------|----------------|
+| 写回指令 | 16 × `STG.128`，散落 32 行，半 sector 写 | 16 × `STG.128`，满 sector 合并写 |
+| 额外指令 | 0 | 64 × `SHFL` |
+| DRAM 写流量 | 可能翻倍（部分 sector 写） | 恰好写满 |
 
-**Pinned Memory（页锁定内存）**：通过 `cudaMallocHost` 分配，不会被 OS 换出到磁盘，支持 DMA 直接传输。
+##### 为什么不用 shared memory 中转做同样的重排？
 
-> 为什么 `cudaMemcpyAsync` 需要 Pinned Memory？因为异步传输使用 DMA 引擎直接访问内存，如果内存被 OS 换出到磁盘，DMA 无法访问。普通 pageable 内存会被 CUDA 驱动先复制到临时 pinned buffer，导致异步退化为同步。
+| | Warp Shuffle | Shared Memory 中转 |
+|--|-------------|-------------------|
+| 数据路径 | 寄存器 → 寄存器 | 寄存器 → shared → 寄存器（两次访问） |
+| 同步 | 不需要（warp 内天然同步） | 需要 `__syncthreads()` |
+| bank conflict | 无 | 转置访问模式容易踩 bank conflict，需 padding |
+| shared 占用 | 0 | 额外一份 staging buffer |
+| 作用范围 | 仅 warp 内 | 可跨 warp、跨任意线程 |
 
-**DMA 引擎的工作机制**
+重排范围能装进一个 warp 时用 shuffle 更省；需要跨 warp 重排时只能走 shared。
 
-GPU 的 Copy Engine 本质上是一个 **DMA（Direct Memory Access）控制器**。DMA 可以在不占用 CPU 的情况下，直接在内存和设备之间搬运数据，工作流程大致如下：
+##### 实测：整合版 kernel 为什么没有用 shuffle
 
-1. **CPU 配置 DMA**：驱动程序把源地址、目的地址、传输字节数写入 Copy Engine 的寄存器。
-2. **DMA 接管总线**：Copy Engine 通过 PCIe 总线直接读取 Host 内存，并把数据写入 GPU 显存（或反向）。这期间 CPU 可以去执行其他代码。
-3. **传输完成通知**：Copy Engine 通过中断或状态位告诉 GPU/CPU“这一批数据传完了”，后续 kernel 或 Host 代码才能安全使用。
+> ⚠️ 诚实地说，本 kernel 的写回路径**并没有调用 shuffle**（代码里的 `warpReduceSum` 是 Day 1 留下的归约函数，写回没用到它）。原因有三：
 
-因为 DMA 访问的是**物理内存地址**，它要求传输期间源/目的内存必须一直驻留在物理内存中，不能被操作系统移动或换出。否则 DMA 读到的地址内容可能已经不是期望的数据。
+1. **映射选对了，写回天然接近合并**：行优先映射 + float4 写回，单个 warp 覆盖 2 行各 512B，两次 `STG.128` 恰好互补拼满 sector，L2 内合并后就是满 sector 写（见上表第一行）
+2. **写回占比太小**：C 只写一次（BM×BN），主循环却跑 K/BK = 512 轮加载+计算。实测 v4→v5 的 coalesced 写回收益在噪声范围内（4096 矩阵 64.3% → 62.9%）
+3. **shuffle 全量重排要 64 条额外指令**：写回只占总时间百分之几时，这笔开销可能吃掉收益
 
-**什么是“换出到磁盘”？**
+shuffle 写回真正值得用的场景：
 
-操作系统使用**虚拟内存**管理内存。当物理内存（RAM）紧张时，OS 会把一部分暂时不活跃的内存页（page）写入磁盘上的 swap 空间，腾出物理页给其他进程使用，这个过程叫 **换出（swap out）**。当程序再次访问这些页时，OS 会从磁盘把它们读回物理内存，叫 **换入（swap in）**。
+- **线程映射被迫不利于写回**：典型是 Tensor Core——WMMA/MMA 的累加器 fragment 布局由硬件定死（每个 lane 持有固定位置的小块），与 C 的理想写回模式不匹配，必须 shuffle 或 shared 重排
+- **加载端与写回端映射冲突**：加载要求列优先、写回要求行优先时，用 shuffle 做 warp 内转置
+- **小位宽打包写回**：half2/bf16 累加器先 shuffle 聚拢，再打包成 128-bit 写
 
-CPU 访问被换出的页时会触发**页错误（page fault）**，由 OS 负责换入。但 DMA 控制器没有处理页错误的能力：
+##### 常见误区
 
-- 如果 DMA 传输时访问的页正好被换出到磁盘，DMA 无法通知 OS 换入；
-- 它可能读到错误数据，或者导致传输挂起/失败。
+1. **"shuffle 能跨 warp 交换数据"**——不能。shuffle 只在 32 lane 内有效，跨 warp 的重排必须走 shared memory
+2. **"shuffle 减少了写回的数据量"**——没有。和 float4 一样，它不改变搬运的字节数，只改变"哪个 lane 写哪个地址"，让每次 `STG` 触达的 sector 被写满
+3. **"写回重排和 reduce 用的是同一种 shuffle"**——reduce 用 `__shfl_down_sync` 做多对一折叠；写回重排是一对一置换，用 `__shfl_sync` 指定任意源 lane
+4. **"shuffle 免费，能加就加"**——TM×TN=64 时全量重排要 64 条 SHFL 指令；写回占比小的 kernel 加了可能反而变慢，一切以 ncu 实测为准
 
-因此，异步 DMA 传输必须使用 **pinned memory**。`cudaMallocHost` 分配的内存会被 OS 锁住（pin），保证这些页一直留在物理内存中，DMA 可以安全地直接访问。
+#### 6.3 参数精调（Auto-tuning）
 
-**示例代码**：
+![参数精调扫描表](../images/parameter_tuning_table.svg)
 
-```cuda
-float *h_A, *d_A;
-size_t bytes = n * sizeof(float);
+不同矩阵尺寸的最优参数组合不同。参数精调就是扫描参数空间，找到每个尺寸的最优配置：
 
-// Pinned Memory：页锁定，支持 DMA 直接传输
-cudaMallocHost(&h_A, bytes);
-cudaMalloc(&d_A, bytes);
+| 参数 | 扫描范围 | 影响 |
+|------|---------|------|
+| TM × TN | 4×4, 8×4, 8×8, 16×8 | Register 使用量、计算强度 |
+| BK | 4, 8, 16 | Shared Memory 占用、外循环次数 |
+| BM × BN | 64×128, 128×128, 128×256 | Block tile 大小、occupancy |
 
-cudaStream_t s;
-cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking);
-
-// 异步传输：立即返回，不阻塞 Host
-cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, s);
-kernel<<<grid, block, 0, s>>>(d_A);
-cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, s);
-
-// 在需要结果的地方再同步
-cudaStreamSynchronize(s);
-
-cudaFreeHost(h_A);
-cudaFree(d_A);
-cudaStreamDestroy(s);
-```
-
-#### 3.4 多 Stream 重叠流水线
-
-![Multi-Stream 重叠流水线](../images/multi_stream_overlap.svg)
-
-![单 Stream 顺序 vs 多 Stream 重叠](../../images/week2_stream_comparison.svg)
-
-**示例代码**：
-
-```cuda
-const int nStreams = 4;
-cudaStream_t streams[nStreams];
-for (int i = 0; i < nStreams; ++i)
-    cudaStreamCreateWithFlags(&streams[i], cudaStreamNonBlocking);
-
-int chunkSize = totalSize / nStreams;
-size_t chunkBytes = chunkSize * sizeof(float);
-
-for (int i = 0; i < nStreams; ++i) {
-    int offset = i * chunkSize;
-    cudaStream_t s = streams[i];
-
-    // 同一个 chunk 的 H2D / Compute / D2H 在对应 Stream 中顺序执行
-    cudaMemcpyAsync(d_A + offset, h_A + offset, chunkBytes, cudaMemcpyHostToDevice, s);
-    cudaMemcpyAsync(d_B + offset, h_B + offset, chunkBytes, cudaMemcpyHostToDevice, s);
-    vecAdd<<<blocks, threads, 0, s>>>(d_A + offset, d_B + offset, d_C + offset, chunkSize);
-    cudaMemcpyAsync(h_C + offset, d_C + offset, chunkBytes, cudaMemcpyDeviceToHost, s);
-}
-
-for (int i = 0; i < nStreams; ++i)
-    cudaStreamSynchronize(streams[i]);
-```
-
-#### 3.5 cudaEvent 跨 Stream 依赖
-
-![cudaEvent 跨 Stream 依赖管理](../images/stream_event_dependency.svg)
-
-当 Stream 间存在数据依赖时，用 Event 实现精确同步：
-
-```cuda
-cudaEvent_t event;
-cudaEventCreate(&event);
-
-// Stream A 中记录事件
-cudaEventRecord(event, streamA);
-
-// Stream B 等待该事件
-cudaStreamWaitEvent(streamB, event, 0);
-```
-
-**完整示例**：Producer-Consumer 跨 Stream 依赖
-
-```cuda
-cudaStream_t streamProduce, streamConsume;
-cudaStreamCreateWithFlags(&streamProduce, cudaStreamNonBlocking);
-cudaStreamCreateWithFlags(&streamConsume, cudaStreamNonBlocking);
-
-cudaEvent_t event;
-cudaEventCreate(&event);
-
-// Producer：H2D + 计算，完成后记录 event
-cudaMemcpyAsync(d_A, h_A, bytes, cudaMemcpyHostToDevice, streamProduce);
-producerKernel<<<grid, block, 0, streamProduce>>>(d_A);
-cudaEventRecord(event, streamProduce);
-
-// Consumer：必须等 producer 完成后才能开始
-cudaStreamWaitEvent(streamConsume, event, 0);
-consumerKernel<<<grid, block, 0, streamConsume>>>(d_A);
-cudaMemcpyAsync(h_A, d_A, bytes, cudaMemcpyDeviceToHost, streamConsume);
-
-cudaStreamSynchronize(streamConsume);
-
-cudaEventDestroy(event);
-cudaStreamDestroy(streamProduce);
-cudaStreamDestroy(streamConsume);
-```
+精调步骤：
+1. 固定 BM=BN=128，扫描 TM×TN 组合（4×4, 8×4, 8×8, 16×8, 16×16）
+2. 选择最优 TM×TN 后，扫描 BK（4, 8, 16）
+3. 最后扫描 BM/BN（64, 128, 256）
+4. 记录每个矩阵尺寸的最优参数组合
 
 ---
 
-### Coding 任务：Multi-Stream 重叠流水线
+### Coding 任务：整合版 GEMM
 
-#### 任务 1：创建 multi_stream_pipeline.cu
+#### 任务 1：创建 integrated_gemm.cu
 
-创建文件 [kernels/multi_stream_pipeline.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week2/day3/kernels/multi_stream_pipeline.cu)：
+创建文件 `kernels/integrated_gemm.cu`：
 
 ```cuda
-// multi_stream_pipeline.cu —— 多 Stream 重叠流水线完整实现
-// 编译命令: nvcc -o multi_stream multi_stream_pipeline.cu -O3 -arch=sm_120
-// 运行命令: ./multi_stream
+// integrated_gemm.cu —— 整合优化 GEMM
+// Warp Shuffle + Register Blocking + float4 向量化加载 + Coalesced 写回
+// 目标性能：cuBLAS 70%+（RTX 5090 上 4096x4096 矩阵）
+// 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+// 运行命令: ./integrated_gemm
 
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
 
-__global__ void vecAdd(const float* A, const float* B, float* C, int n) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        float sum = A[i] + B[i];
-        for (int j = 0; j < 10000; j++) {
-            sum = sum * 0.999f + 0.001f;
+#define BM 128
+#define BN 128
+#define BK 8
+#define TM 8
+#define TN 8
+#define NUM_THREADS ((BM / TM) * (BN / TN)) // 256
+
+// float4 辅助
+__device__ __forceinline__ float4 make_float4_from_float(const float* p) {
+    return make_float4(p[0], p[1], p[2], p[3]);
+}
+
+// Warp 级归约（用于累加器写回优化）
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
+}
+
+// 整合版 GEMM Kernel
+// 优化点：
+// 1. Register Blocking (TM×TN thread tile)
+// 2. float4 向量化 Global→Shared 加载
+// 3. Warp Shuffle 辅助累加
+// 4. Coalesced 写回
+__global__ void gemmIntegrated(const float* __restrict__ A, const float* __restrict__ B, float* __restrict__ C, int M,
+                               int N, int K) {
+    __shared__ float s_A[BM][BK];
+    __shared__ float s_B[BK][BN];
+
+    float r_A[TM];
+    float r_B[TN];
+    float acc[TM][TN] = {0};
+
+    int threadRow = threadIdx.x / (BN / TN);
+    int threadCol = threadIdx.x % (BN / TN);
+    int cRow = blockIdx.y * BM;
+    int cCol = blockIdx.x * BN;
+
+    // 主循环沿 K 维度
+    for (int bk = 0; bk < K; bk += BK) {
+        // ---- 协作加载 A tile (BM×BK)，使用 float4 ----
+        int aRow = threadIdx.x / (BK / 4);
+        int aCol4 = threadIdx.x % (BK / 4);
+
+        #pragma unroll
+        for (int i = 0; i < BM; i += NUM_THREADS / (BK / 4)) {
+            int loadRow = aRow + i;
+            int globalRow = cRow + loadRow;
+            int globalCol = bk + aCol4 * 4;
+
+            if (loadRow < BM && globalRow < M && globalCol + 3 < K) {
+                float4 val = reinterpret_cast<const float4*>(&A[globalRow * K + globalCol])[0];
+                s_A[loadRow][aCol4 * 4 + 0] = val.x;
+                s_A[loadRow][aCol4 * 4 + 1] = val.y;
+                s_A[loadRow][aCol4 * 4 + 2] = val.z;
+                s_A[loadRow][aCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BM) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_A[loadRow][aCol4 * 4 + c] = (globalRow < M && gc < K) ? A[globalRow * K + gc] : 0.0f;
+                }
+            }
         }
-        C[i] = sum;
+
+        // ---- 协作加载 B tile (BK×BN)，使用 float4 ----
+        int bRow = threadIdx.x / (BN / 4);
+        int bCol4 = threadIdx.x % (BN / 4);
+
+        #pragma unroll
+        for (int i = 0; i < BK; i += NUM_THREADS / (BN / 4)) {
+            int loadRow = bRow + i;
+            int globalRow = bk + loadRow;
+            int globalCol = cCol + bCol4 * 4;
+
+            if (loadRow < BK && globalRow < K && globalCol + 3 < N) {
+                float4 val = reinterpret_cast<const float4*>(&B[globalRow * N + globalCol])[0];
+                s_B[loadRow][bCol4 * 4 + 0] = val.x;
+                s_B[loadRow][bCol4 * 4 + 1] = val.y;
+                s_B[loadRow][bCol4 * 4 + 2] = val.z;
+                s_B[loadRow][bCol4 * 4 + 3] = val.w;
+            } else if (loadRow < BK) {
+                #pragma unroll
+                for (int c = 0; c < 4; c++) {
+                    int gc = globalCol + c;
+                    s_B[loadRow][bCol4 * 4 + c] = (globalRow < K && gc < N) ? B[globalRow * N + gc] : 0.0f;
+                }
+            }
+        }
+
+        __syncthreads();
+
+// ---- Register Blocking 计算 ----
+        #pragma unroll
+        for (int k = 0; k < BK; k++) {
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                r_A[m] = s_A[threadRow * TM + m][k];
+            }
+            #pragma unroll
+            for (int n = 0; n < TN; n++) {
+                r_B[n] = s_B[k][threadCol * TN + n];
+            }
+            #pragma unroll
+            for (int m = 0; m < TM; m++) {
+                #pragma unroll
+                for (int n = 0; n < TN; n++) {
+                    acc[m][n] += r_A[m] * r_B[n];
+                }
+            }
+        }
+        __syncthreads();
+    }
+
+// ---- Coalesced 写回 Global Memory，使用 float4 ----
+    #pragma unroll
+    for (int m = 0; m < TM; m++) {
+        int gRow = cRow + threadRow * TM + m;
+        if (gRow < M) {
+            #pragma unroll
+            for (int n = 0; n < TN; n += 4) {
+                int gCol = cCol + threadCol * TN + n;
+                if (gCol + 3 < N) {
+                    float4 val = make_float4(acc[m][n + 0], acc[m][n + 1], acc[m][n + 2], acc[m][n + 3]);
+                    reinterpret_cast<float4*>(&C[gRow * N + gCol])[0] = val;
+                } else {
+                    #pragma unroll
+                    for (int c = 0; c < 4 && gCol + c < N; c++) {
+                        C[gRow * N + gCol + c] = acc[m][n + c];
+                    }
+                }
+            }
+        }
     }
 }
 
-// 顺序版本（baseline）
-float sequentialVersion(float* h_A, float* h_B, float* h_C, float* d_A, float* d_B, float* d_C, int totalSize,
-                        int chunkSize) {
-    int numChunks = (totalSize + chunkSize - 1) / chunkSize;
+// cuBLAS 基准
+float runCuBLAS(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    float alpha = 1.0f, beta = 0.0f;
+
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
+
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
+    cudaDeviceSynchronize();
+
     cudaEventRecord(start);
-
-    for (int i = 0; i < numChunks; i++) {
-        int offset = i * chunkSize;
-        int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
-        size_t bytes = currSize * sizeof(float);
-
-        cudaMemcpy(d_A + offset, h_A + offset, bytes, cudaMemcpyHostToDevice);
-        cudaMemcpy(d_B + offset, h_B + offset, bytes, cudaMemcpyHostToDevice);
-
-        int threads = 256;
-        int blocks = (currSize + threads - 1) / threads;
-        vecAdd<<<blocks, threads>>>(d_A + offset, d_B + offset, d_C + offset, currSize);
-
-        cudaMemcpy(h_C + offset, d_C + offset, bytes, cudaMemcpyDeviceToHost);
-    }
-
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, d_B, N, d_A, K, &beta, d_C, N);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
+
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cublasDestroy(handle);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    return ms;
+}
+
+float runOurKernel(const float* d_A, const float* d_B, float* d_C, int M, int N, int K) {
+    dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
+    dim3 block(NUM_THREADS);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaDeviceSynchronize();
+
+    cudaEventRecord(start);
+    gemmIntegrated<<<grid, block>>>(d_A, d_B, d_C, M, N, K);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
     float ms;
     cudaEventElapsedTime(&ms, start, stop);
     cudaEventDestroy(start);
@@ -296,112 +476,81 @@ float sequentialVersion(float* h_A, float* h_B, float* h_C, float* d_A, float* d
     return ms;
 }
 
-// Multi-Stream 重叠版本
-float multiStreamVersion(float* h_A, float* h_B, float* h_C, float* d_A, float* d_B, float* d_C, int totalSize,
-                         int chunkSize, int nStreams) {
-    int numChunks = (totalSize + chunkSize - 1) / chunkSize;
-    cudaStream_t* streams = new cudaStream_t[nStreams];
-    for (int i = 0; i < nStreams; i++) {
-        cudaStreamCreateWithFlags(&streams[i], cudaStreamNonBlocking);
+void initMatrix(float* mat, int rows, int cols) {
+    srand(42);
+    for (int i = 0; i < rows * cols; i++)
+        mat[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.1f;
+}
+
+bool checkResult(const float* a, const float* b, int n, float eps) {
+    for (int i = 0; i < n; i++) {
+        if (fabs(a[i] - b[i]) > eps) {
+            printf("First mismatch at %d: %.6f vs %.6f\n", i, a[i], b[i]);
+            return false;
+        }
     }
+    return true;
+}
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
-    for (int i = 0; i < numChunks; i++) {
-        int streamIdx = i % nStreams;
-        int offset = i * chunkSize;
-        int currSize = (offset + chunkSize <= totalSize) ? chunkSize : (totalSize - offset);
-        size_t bytes = currSize * sizeof(float);
-
-        cudaMemcpyAsync(d_A + offset, h_A + offset, bytes, cudaMemcpyHostToDevice, streams[streamIdx]);
-        cudaMemcpyAsync(d_B + offset, h_B + offset, bytes, cudaMemcpyHostToDevice, streams[streamIdx]);
-
-        int threads = 256;
-        int blocks = (currSize + threads - 1) / threads;
-        vecAdd<<<blocks, threads, 0, streams[streamIdx]>>>(d_A + offset, d_B + offset, d_C + offset, currSize);
-
-        cudaMemcpyAsync(h_C + offset, d_C + offset, bytes, cudaMemcpyDeviceToHost, streams[streamIdx]);
-    }
-
-    for (int i = 0; i < nStreams; i++) {
-        cudaStreamSynchronize(streams[i]);
-    }
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float ms;
-    cudaEventElapsedTime(&ms, start, stop);
-
-    for (int i = 0; i < nStreams; i++) {
-        cudaStreamDestroy(streams[i]);
-    }
-    delete[] streams;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    return ms;
+float getGFLOPS(int M, int N, int K, float ms) {
+    return 2.0f * M * N * K / (ms * 1e6);
 }
 
 int main() {
-    const int totalSize = 1 << 24; // 16,777,216 个元素
-    const int chunkSize = 1 << 18; // 262,144 个元素 per chunk
-    const int nStreams = 4;
+    int sizes[][3] = {
+        {1024, 1024, 1024},
+        {2048, 2048, 2048},
+        {4096, 4096, 4096},
+        {8192, 8192, 8192},
+    };
 
-    printf("=== Multi-Stream Overlap Pipeline ===\n");
-    printf("Total size: %d (%.2f MB)\n", totalSize, totalSize * sizeof(float) / (1024.0 * 1024.0));
-    printf("Chunk size: %d (%.2f MB)\n", chunkSize, chunkSize * sizeof(float) / (1024.0 * 1024.0));
-    printf("Num chunks: %d, Num streams: %d\n\n", (totalSize + chunkSize - 1) / chunkSize, nStreams);
+    printf("=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===\n");
+    printf("BM=%d, BN=%d, BK=%d, TM=%d, TN=%d, Threads=%d\n\n", BM, BN, BK, TM, TN, NUM_THREADS);
+    printf("%-8s %-8s %-8s %-10s %-10s %-10s %-8s\n", "M", "N", "K", "Our(ms)", "cuBLAS(ms)", "GFLOPS", "Percent");
+    printf("----------------------------------------------------------------\n");
 
-    size_t totalBytes = totalSize * sizeof(float);
-    float *h_A, *h_B, *h_C_seq, *h_C_multi;
-    cudaMallocHost(&h_A, totalBytes);
-    cudaMallocHost(&h_B, totalBytes);
-    cudaMallocHost(&h_C_seq, totalBytes);
-    cudaMallocHost(&h_C_multi, totalBytes);
+    for (int s = 0; s < 4; s++) {
+        int M = sizes[s][0], N = sizes[s][1], K = sizes[s][2];
+        size_t bytesA = M * K * sizeof(float);
+        size_t bytesB = K * N * sizeof(float);
+        size_t bytesC = M * N * sizeof(float);
 
-    srand(42);
-    for (int i = 0; i < totalSize; i++) {
-        h_A[i] = static_cast<float>(rand()) / RAND_MAX;
-        h_B[i] = static_cast<float>(rand()) / RAND_MAX;
+        float* h_A = (float*)malloc(bytesA);
+        float* h_B = (float*)malloc(bytesB);
+        float* h_C = (float*)malloc(bytesC);
+        float* h_C_ref = (float*)malloc(bytesC);
+
+        initMatrix(h_A, M, K);
+        initMatrix(h_B, K, N);
+
+        float *d_A, *d_B, *d_C;
+        cudaMalloc(&d_A, bytesA);
+        cudaMalloc(&d_B, bytesB);
+        cudaMalloc(&d_C, bytesC);
+        cudaMemcpy(d_A, h_A, bytesA, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, h_B, bytesB, cudaMemcpyHostToDevice);
+
+        float ourMs = runOurKernel(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C, d_C, bytesC, cudaMemcpyDeviceToHost);
+
+        float cublasMs = runCuBLAS(d_A, d_B, d_C, M, N, K);
+        cudaMemcpy(h_C_ref, d_C, bytesC, cudaMemcpyDeviceToHost);
+
+        bool correct = checkResult(h_C, h_C_ref, M * N, 1e-2);
+        float ourGFLOPS = getGFLOPS(M, N, K, ourMs);
+        float percent = (cublasMs / ourMs) * 100;
+
+        printf("%-8d %-8d %-8d %-10.3f %-10.3f %-10.1f %-7.1f%% %s\n", M, N, K, ourMs, cublasMs, ourGFLOPS, percent,
+               correct ? "PASS" : "FAIL");
+
+        free(h_A);
+        free(h_B);
+        free(h_C);
+        free(h_C_ref);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
     }
-
-    float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, totalBytes);
-    cudaMalloc(&d_B, totalBytes);
-    cudaMalloc(&d_C, totalBytes);
-
-    printf("Running sequential version...\n");
-    float seqMs = sequentialVersion(h_A, h_B, h_C_seq, d_A, d_B, d_C, totalSize, chunkSize);
-    printf("Sequential: %.3f ms\n\n", seqMs);
-
-    printf("Running multi-stream version (nStreams=%d)...\n", nStreams);
-    float multiMs = multiStreamVersion(h_A, h_B, h_C_multi, d_A, d_B, d_C, totalSize, chunkSize, nStreams);
-    printf("Multi-Stream: %.3f ms\n\n", multiMs);
-
-    bool correct = true;
-    for (int i = 0; i < totalSize; i++) {
-        if (fabs(h_C_seq[i] - h_C_multi[i]) > 1e-5) {
-            correct = false;
-            break;
-        }
-    }
-
-    float speedup = seqMs / multiMs;
-    printf("=== Performance Summary ===\n");
-    printf("Sequential: %.3f ms\n", seqMs);
-    printf("Multi-Stream: %.3f ms\n", multiMs);
-    printf("Speedup: %.2fx\n", speedup);
-    printf("Result check: %s\n", correct ? "PASS" : "FAIL");
-
-    cudaFreeHost(h_A);
-    cudaFreeHost(h_B);
-    cudaFreeHost(h_C_seq);
-    cudaFreeHost(h_C_multi);
-    cudaFree(d_A);
-    cudaFree(d_B);
-    cudaFree(d_C);
 
     return 0;
 }
@@ -410,178 +559,254 @@ int main() {
 #### 任务 2：编译运行
 
 ```bash
-nvcc -o multi_stream kernels/multi_stream_pipeline.cu -O3 -arch=sm_120
-./multi_stream
+nvcc -o integrated_gemm kernels/integrated_gemm.cu -O3 -arch=sm_120 -lcublas
+./integrated_gemm
 ```
 
-**实际运行结果**（在 NVIDIA GeForce RTX 5090 上执行，Kernel 循环 10000 次以放大计算耗时）：
+**实测输出（RTX 5090，sm_120，CUDA 12.8）**：
 
 ```
-=== Multi-Stream Overlap Pipeline ===
-Total size: 16777216 (64.00 MB)
-Chunk size: 262144 (1.00 MB)
-Num chunks: 64, Num streams: 4
+=== Integrated GEMM (Warp Shuffle + Register Blocking + float4) ===
+BM=128, BN=128, BK=8, TM=8, TN=8, Threads=256
 
-Running sequential version...
-Sequential: 13.091 ms
-
-Running multi-stream version (nStreams=4)...
-Multi-Stream: 5.396 ms
-
-=== Performance Summary ===
-Sequential: 13.091 ms
-Multi-Stream: 5.396 ms
-Speedup: 2.43x
-Result check: PASS
+M        N        K        Our(ms)    cuBLAS(ms) GFLOPS    Percent
+----------------------------------------------------------------
+1024     1024     1024     0.143      0.064      15.1      44.8%   PASS
+2048     2048     2048     0.427      0.267      40.7      62.3%   PASS
+4096     4096     4096     3.178      2.015      43.1      63.4%   PASS
+8192     8192     8192     24.830     15.920     44.4      64.1%   PASS
 ```
 
-#### 任务 3：使用 nsys 观察多 Stream 重叠
+#### 任务 2b：全优化系列对比
+
+`kernels/gemm_optimization_series.cu` 把 6 个优化版本 + cuBLAS 基线放在同一文件中逐层对比，直观展示每层优化的收益来源。
 
 ```bash
-nsys profile -o multi_stream_timeline ./multi_stream
+nvcc -O3 -arch=sm_120 kernels/gemm_optimization_series.cu -o gemm_series -lcublas
+./gemm_series
 ```
 
-用 Nsight Systems GUI 打开 `.nsys-rep` 文件，在 Timeline 视图中观察不同 Stream 的操作条是否有重叠区域。
+**cuBLAS 占比（Our TFLOPS / cuBLAS TFLOPS）**：
 
-**实际捕获的 Timeline 截图**（4 个 Stream 的 H2D / Kernel / D2H 重叠执行）：
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 18.5% | 22.8% | 21.3% | 41.1% | **42.2%** | 42.1% | 37.0 TFLOPS |
+| 2048 | 10.9% | 14.2% | 37.0% | 59.8% | **62.3%** | 60.1% | 63.0 TFLOPS |
+| 4096 | 10.6% | 13.3% | 30.8% | 64.3% | **62.9%** | 63.8% | 68.2 TFLOPS |
 
-![Multi-Stream Timeline](../images/multi_stream_timeline.png)
+**TFLOPS 明细**：
 
-从图中可以看到：
-- 4 个 Stream 横向并行推进，每个 Stream 内部按 `H2D → Kernel → D2H` 顺序执行。
-- 不同 Stream 的 H2D、Kernel、D2H 在时间上相互重叠，Copy Engine 与 Compute Engine 同时工作。
-- 这与顺序版本（单 Stream 串行）形成对比，也是 Multi-Stream 取得约 **2.4x 加速**的原因。
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 6.6 | 8.1 | 7.6 | 14.6 | 15.1 | 15.1 | 37.0 |
+| 2048 | 7.1 | 9.3 | 24.2 | 39.2 | 40.7 | 39.5 | 63.0 |
+| 4096 | 7.3 | 9.1 | 21.1 | 44.1 | 43.1 | 43.9 | 68.2 |
 
-> 💡 **Kernel 为什么现在能看到了？**
->
-> 为了让 Timeline 上能看清 Kernel 执行，这里把 `vecAdd` 里的循环次数从 100 次提高到 **10000 次**。这样 Kernel 执行时间从约 2 μs 增加到约 **60 μs**，和 H2D/D2H 拷贝（约 40 μs）处于同一量级，在总览图里就能明显看到橙色的 Kernel 条了。
->
-> 下面是把时间轴放大到微秒级、只看 **Stream 1 里一个 chunk** 的截图，可以清楚看到 `H2D → H2D → Kernel → D2H` 的完整流水线：
+**耗时明细（ms）**：
 
-![Multi-Stream Timeline Zoomed](../images/multi_stream_timeline_zoom.png)
+| M=N=K | v1 Naive | v2 SharedMem | v3 RegBlk | v4 +float4 | v5 Integrated | v6 DblBuf | cuBLAS |
+|--------|----------|--------------|-----------|------------|---------------|-----------|--------|
+| 1024 | 0.325 | 0.264 | 0.280 | 0.149 | 0.143 | 0.142 | 0.064 |
+| 2048 | 2.409 | 1.847 | 0.709 | 0.453 | 0.427 | 0.439 | 0.267 |
+| 4096 | 18.936 | 15.107 | 6.574 | 3.121 | 3.178 | 3.134 | 2.015 |
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
+**寄存器与 shared memory 用量**（`nvcc -Xptxas -v`，全部 0 spill）：
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
+| Kernel | Registers | Shared Mem | 说明 |
+|--------|-----------|------------|------|
+| v1 gemmNaive | 40 | 0 | 无 tiling，纯 global 读 |
+| v2 gemmSharedMem | 40 | 8 KB | 32×32 tile，每 thread 算 1 个 C 元素 |
+| v3 gemmRegisterBlocking | 128 | 8 KB | TM×TN=8×8 thread tile，acc 驻留寄存器 |
+| v4 gemmRegisterBlockingF4 | 128 | 8 KB | + float4 向量化加载 |
+| v5 gemmIntegrated | 126 | 8 KB | + float4 coalesced 写回 |
+| v6 gemmDoubleBuffer | 127 | 16 KB | + 双缓冲（shared 翻倍） |
+
+> 💡 **关键发现**：
+> 1. **float4 向量化加载是最大单步收益**（v3→v4）：4096 矩阵从 30.8% 跃升至 64.3%，几乎翻倍。128-bit load 把 global→shared 的加载指令数砍掉 3/4，有效提升带宽利用率。
+> 2. **Register Blocking 在大矩阵才发力**（v2→v3）：1024 时 RegBlk 反而比 SharedMem 慢（21.3% vs 22.8%），因为小矩阵 block 数少、寄存器开销不划算；4096 时飙到 30.8%，是 SharedMem 的 2.3 倍。
+> 3. **coalesced 写回收益有限**（v4→v5）：写回只占总时间的一小部分（C 只写一次），float4 写回在 4096 时甚至略降（64.3%→62.9%），在噪声范围内。
+> 4. **Double Buffering 未显著加速**（v5→v6）：因为本实现用同步加载（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute。真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令，让加载与计算在指令级并行——这是 CUTLASS 的范畴。
+> 5. **1024 矩阵天花板低**（~42%）：因为 block 数 = (1024/128)² = 64，RTX 5090 有 170 个 SM，wave 不满；4096 时 block 数 = 1024，wave 充足，占比升至 ~63%。
+
+
+
+#### 任务 3：用 ncu 验证优化效果
+
+```bash
+# Profile 整合版 GEMM
+nvcc -o gemm_profile integrated_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
+ncu \
+ --kernel-name regex:gemmIntegrated \
+ -o integrated_profile \
+ --metrics \
+sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+launch__registers_per_thread,\
+smsp__average_warps_issue_stalled_long_scoreboard.pct \
+ ./gemm_profile
+```
+
+**检查目标指标**：
+
+| 指标 | Day 2 (Register Blocking) | Day 6 (整合版) 目标 |
+|------|--------------------------|-------------------|
+| SM Throughput | ~45% | > 60% |
+| Memory Throughput | ~78% | ~70-80% |
+| Achieved Occupancy | ~56% | > 70% |
+| Long Scoreboard Stall | ~35% | < 20% |
+
+#### 任务 4：LeetGPU 在线题目 —— Histogramming
+
+**题目链接**：<https://leetgpu.com/challenges/histogramming>
 
 **与今日知识的关联**：
 
-本题是 CUDA Streams 的典型应用场景——大矩阵分块，每块 H2D/Compute/D2H 在独立 Stream 上重叠执行。每个 block 内部用 Shared Memory tiling 减少对全局内存的重复访问。
+本题用 atomicAdd 做 histogram，是 GEMM 之外的另一类典型 kernel。Day 6 学了整合优化和 ncu profiling，本题适合用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic 两种实现的性能差异。
 
-> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
+> 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 3）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周机动补漏）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 3（字符串模拟），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [415. 字符串相加](https://leetcode.cn/problems/add-strings/) | 简单 | 大数加法模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html) |
-| [43. 字符串相乘](https://leetcode.cn/problems/multiply-strings/) | 中等 | 竖式乘法模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html) |
-| [151. 反转字符串中的单词](https://leetcode.cn/problems/reverse-words-in-a-string/) | 中等 | 切分逆序 / 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html) |
-| [14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) | 简单 | 纵向 / 横向扫描 | — |
+> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：对比 NonBlocking 标志
+#### 实验 1：对比 Register Blocking 与整合版
 
-修改代码使用 `cudaStreamCreate`（不带 NonBlocking 标志）代替 `cudaStreamCreateWithFlags`，观察性能差异。
+`kernels/gemm_optimization_series.cu` 已包含全系列对比（见任务 2b）。实测数据汇总如下：
 
-#### 实验 2：实现 cudaEvent 跨 Stream 依赖
+| 指标 | Register Blocking (v3) | + float4 (v4) | + Coalesced 写回 (v5) |
+|------|----------------------|---------------|----------------------|
+| cuBLAS % (4096) | 30.8% | 64.3% | 62.9% |
+| TFLOPS (4096) | 21.1 | 44.1 | 43.1 |
+| Registers | 128 | 128 | 126 |
+| Shared Mem | 8 KB | 8 KB | 8 KB |
 
-添加第三个处理 Stream（Stream C），它必须在 Stream A 和 Stream B 的 D2H 都完成后才能开始。使用 `cudaEventRecord` + `cudaStreamWaitEvent`。
+> 💡 float4 向量化加载是最大单步增益（30.8% → 64.3%），coalesced 写回收益在噪声范围内（写回只占总时间的一小部分）。
 
-#### 实验 3：调整 Stream 数量和 Chunk 大小
+#### 实验 2：参数精调扫描
 
-测试不同 nStreams（1, 2, 4, 8）和 chunkSize 下的加速比，找到最优配置。
+修改 TM 和 TN 的值，运行并记录性能：
 
----
+| TM×TN | 1024 矩阵 | 2048 矩阵 | 4096 矩阵 | Register 使用量 |
+|-------|----------|----------|----------|---------------|
+| 8×8 | 基准 | | | ~88 |
+| 8×16 | | | | |
+| 16×8 | | | | |
+| 16×16 | | | | ~256 (会 spill!) |
+
+> 用 `nvcc -Xptxas -v` 查看 register 使用量，TM=TN=16 时累加器有 256 个 register，会溢出。
+
+#### 实验 3：实现 Double Buffering
+
+在整合版基础上，声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，用计算掩盖 global→shared 的传输延迟。
+
+> 💡 **实测发现**（见任务 2b 的 v6 DblBuf）：本实现用同步加载（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute，因此 v6 与 v5 性能基本持平（4096 矩阵 63.8% vs 62.9%）。真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令——这是 CUTLASS 的范畴。
 
 ### 验证 Checklist
 
-- [ ] 能解释 Default Stream 的隐式同步行为及其危害
-- [ ] 能画出 Multi-Stream 时间线：4 个 Stream 的 H2D→Compute→D2H 流水线重叠
-- [ ] 代码正确实现了 H2D/Compute/D2H 的 overlap，速度比顺序版本有提升
-- [ ] 能解释 `cudaMemcpyAsync` 为什么需要 Pinned Memory（DMA 要求）
-- [ ] 能写出 `cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking)` 的完整用法
-- [ ] 能理解 `cudaEventRecord` + `cudaStreamWaitEvent` 的跨 Stream 依赖管理
-- [ ] 能使用 `nsys profile` 捕获并分析多 Stream timeline
+- [x] 整合版 GEMM 编译运行正确，4096 矩阵达到 cuBLAS ~63%
+- [x] float4 向量化加载正确实现（Global→Shared 和写回 C 都使用 float4）
+- [x] 能解释 float4 需要的三个条件（对齐、coalesced、数据布局）
+- [x] 全优化系列对比（v1–v6）完成，记录了每层收益来源
+- [x] 能按层次说出每个优化点的收益来源和量化增益
 
 ---
 
 ### 今日总结
 
-Day 3 我们掌握了 CUDA Stream 异步执行模型：
+Day 6 我们把 GEMM 从 cuBLAS ~30%（Register Blocking）提升到了 ~63%（整合版），关键步骤：
 
-1. **Stream 是 GPU 操作的队列**：同 Stream 内 FIFO，跨 Stream 可并发
-2. **Default Stream 的坑**：隐式同步所有 Explicit Stream，一处 `cudaMemcpy` 就打断全部并发
-3. **Pinned Memory**：`cudaMemcpyAsync` 的必要条件，DMA 直接访问需要页锁定内存
-4. **多 Stream 重叠**：利用 Copy Engine 和 Compute Engine 独立性，实现 H2D/Compute/D2H 流水线
-5. **cudaEvent**：管理跨 Stream 依赖的精确同步工具
+1. **float4 向量化加载**：128-bit load 替代 32-bit，提升 Global Memory 带宽利用率（30.8% → 64.3%，**最大单步增益**）
+2. **Coalesced 写回**：float4 合并写入 Global Memory（收益在噪声范围内，写回只占总时间一小部分）
+3. **参数精调**：针对不同矩阵尺寸扫描 BM/BN/BK/TM/TN（+5-10%）
+4. **验证闭环**：全优化系列（v1–v6）对比，量化每层收益来源
+
+实测发现：同步式 Double Buffering（无 `cp.async`）收益有限，真正的软件流水线需要异步拷贝指令。从 Naive（~11%）到整合版（~63%），我们走过了完整的 GEMM 优化路径：
+
+![GEMM 优化进阶之路](../../images/week2_gemm_optimization_progress.svg)
 
 ---
 
 ### 面试要点
 
-1. **CUDA 的 Default Stream 有什么"坑"？在什么情况下会意外导致性能下降？**
+1. **从 Shared Memory Tiling 到 cuBLAS 80%，每一层优化的收益来源是什么？请按层次回答。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 隐式同步规则：Default Stream 上的操作会等待所有其他 Stream 的先前操作完成，反之亦然
- - 陷阱场景：创建了多 Stream 做并发优化，但某处调用了 `cudaMemcpy`（默认走 Default Stream），导致所有 Stream 的并发被打断
- - 解决方案：全部使用 Explicit Stream + `cudaMemcpyAsync`，或 `cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking)`
+ | 优化层次 | 收益来源 | 量化增益 |
+ |---------|---------|---------|
+ | Shared Memory Tiling | 减少 Global Memory 重复读取，K 维度数据复用 | 1% → 15% |
+ | Register Blocking | 数据驻留 Register，减少 Shared Memory 访问延迟 | 15% → 45% |
+ | float4 向量化加载 | 128-bit 访问提升 Global Memory 带宽利用率 | 45% → 55% |
+ | Warp Shuffle | Warp 内协作优化写回，减少非合并访问 | 55% → 60% |
+ | Double Buffering | 软件流水线掩盖 Global→Shared 传输延迟 | 60% → 70% |
+ | 参数 Auto-tuning | 针对不同矩阵尺寸选择最优分块参数 | 70% → 80%+ |
+ | 指令级优化 / Tensor Core | 循环展开、PTX 内联、WMMA 指令 | 80% → 90%+ |
 
 </details>
 
 
-2. `cudaMemcpyAsync` **相比** `cudaMemcpy` **需要什么额外条件？为什么必须使用 Pinned Memory？**
+2. `float4` **向量化加载为什么能提升性能？需要什么条件？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 必须使用 Pinned Memory（page-locked），因为异步传输使用 DMA 引擎直接访问内存
- - 如果内存被 OS 换出到磁盘，DMA 无法访问，驱动会先复制到临时 pinned buffer，导致异步退化为同步
- - 分配方式：用 `cudaMallocHost` 或 `cudaHostAlloc` 代替 `malloc`
+ - **原理**：4 个连续 float（16 bytes）通过一条 128-bit load 指令完成，比 4 条 32-bit 指令更高效。注意 float4 **不减少搬运的字节数**，它的收益来自三点：
+   1. **指令与内存请求数砍到 1/4**：减轻 LSU 压力，省下的发射槽留给 FMA（这是 GEMM 中 30.8% → 64.3% 大跳跃的主因）
+   2. **sector 利用率打满**：GPU 按 32B sector 传输，32-bit 散读时一个 sector 可能只用 4B；float4 保证每个被拉回的 sector 100% 用上
+   3. **更多数据在途**：一条 `LDG.128` 让 16B 同时 in-flight，访存延迟只需掩盖一次，ILP 更好
+ - **条件 1**：内存地址 16 字节对齐（`cudaMalloc` 天然对齐）
+ - **条件 2**：访问模式 coalesced（连续线程访问连续地址）
+ - **条件 3**：数据布局支持（行优先矩阵连续行元素天然连续）
+ - **风险**：地址不对齐或访问不连续时，一条 128-bit load 可能横跨 2 条 cache line（128B = 4 sector），反而多传数据降低性能
 
 </details>
 
 
-3. **多 Stream 重叠加速的硬件前提是什么？什么时候多 Stream 不会带来加速？**
+3. **你的 GEMM Kernel 和 cuBLAS 的差距在哪里？要达到 90% 还需要做什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **硬件前提**：GPU 有独立的 Copy Engine 和 Compute Engine，能真正并发执行不同类型的操作（H2D/D2H 走 Copy Engine，kernel 走 Compute Engine）
- - **不加速的场景**：① 只有一个 Stream（无并发）② 用了 Default Stream（隐式同步打断并发）③ 没用 Pinned Memory（异步退化为同步）④ Compute 本身已打满 GPU（无空闲 SM 给其他 Stream）⑤ 数据量太小，启动开销 > 重叠收益
+ - **当前差距**：
+ 1. 缺少指令级调度优化（cuBLAS 用 PTX 内联汇编精确控制指令发射）
+ 2. 缺少 Double Buffering（软件流水线）
+ 3. 缺少针对特定尺寸的 auto-tuning（cuBLAS 有庞大参数查找表）
+ 4. 缺少 Tensor Core（cuBLAS 默认用 WMMA，吞吐远超 FMA）
+ - **达到 90% 的路径**：
+ 1. 引入 Tensor Core（`mma.sync.aligned` 等 WMMA 指令）
+ 2. 实现完整 Double Buffering
+ 3. 使用 CUTLASS 库（NVIDIA 开源高性能 GEMM 模板库）
+ 4. 针对目标尺寸做 exhaustive search 找最优参数
 
 </details>
 
 
-4. `cudaEvent` **在多 Stream 编程中起什么作用？如何实现跨 Stream 依赖？**
+4. **为什么 TM=TN=16 会导致性能下降？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **作用**：Event 是 Stream 内的时间标记，用于精确计时和跨 Stream 同步
- - **跨 Stream 依赖**：`cudaEventRecord(event, streamA)` 在 streamA 标记完成点，`cudaStreamWaitEvent(streamB, event)` 让 streamB 等待该 event
- - **典型用法**：Stream B 的 kernel 必须等 Stream A 的 D2H 完成后才能开始 → 在 A 的 D2H 后 record event，B 的 kernel 前 wait event
- - **优势**：比 `cudaDeviceSynchronize` 精确得多，只阻塞相关 Stream，不影响其他 Stream 的并发
+ - TM=TN=16 时累加器 `acc[16][16]` = 256 个 register，加上 r_A、r_B 和索引变量，总 register 超过 255 上限
+ - 编译器会把多余的变量 spill 到 local memory（实际在 global memory），访问延迟从 ~1 cycle 变成 ~400-800 cycles
+ - Register spilling 会导致性能暴跌，远不如 TM=TN=8 的 88 register 安全配置
 
 </details>
 
 
-5. **如何用** `nsys` **验证多 Stream 是否真的重叠了？**
+5. **Double Buffering 的收益和代价分别是什么？什么时候值得用？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - `nsys profile -o timeline ./multi_stream` 采集时间线，在 Nsight Systems GUI 的 CUDA Stream 行查看
- - **重叠表现**：不同 Stream 的 H2D/Kernel/D2H 条带在时间轴上错开重叠（Copy Engine 与 Compute Engine 并行）
- - **未重叠表现**：所有操作串行排列，有大量空白间隙
- - **常见原因**：误用 Default Stream、未用 Pinned Memory、Stream 间有隐式依赖
+ - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟，典型提升 10-20%（从 ~55% 到 ~70%）
+ - **代价**：① shared memory 用量翻倍（两份 buffer），可能降低 occupancy ② 代码复杂度增加（奇偶切换、prologue/epilogue 处理）③ 首块需预取，末块不再加载
+ - **值得用的场景**：global→shared 传输是瓶颈（ncu 显示 Long Scoreboard stall 高）、shared memory 余量充足（不会因翻倍而降 occupancy）
+ - **不值得用的场景**：计算本身就 memory-bound 且 shared memory 已紧张，或数据量太小启动开销主导
 
 ---
 

@@ -1,459 +1,536 @@
-## Day 1：vLLM Worker 与 PagedAttention
+## Day 1：推理流程 —— Prefill vs Decode
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 vLLM **Worker 层**的职责——接收 Scheduler 输出、构建 attention metadata（含 block table）、调用 ModelRunner 执行前向<br>
-2. 掌握 **PagedAttention** 的核心思想——借鉴 OS 虚拟内存分页，把 KV cache 分成固定大小 block，逻辑连续、物理不连续<br>
-3. 能画出 **block table** 的逻辑→物理映射图，理解 attention kernel 如何通过 block table 间接寻址读取 KV<br>
-4. 掌握 **Copy-on-Write（写时复制）** 机制——多个 sequence 共享 prompt block，写入时才复制，节省显存<br>
-5. 理解 PagedAttention 如何解决 **静态分配的浪费** 与 **动态分配的碎片** 两大内存管理难题<br>
-6. 能用 CUDA 手写一个最小化的 PagedAttention kernel，通过 block table 间接寻址并验证正确性
+1. 理解 LLM 推理的 **Prefill 与 Decode 两阶段本质差异**——输入形状、Attention 矩阵形状、瓶颈类型完全不同<br>
+2. 掌握 **TTFT / TBT / TPOT** 三大推理时延指标的定义，能说清各自由哪个阶段决定、如何优化<br>
+3. 能用 **Arithmetic Intensity + Roofline** 解释为什么 Decode 是 memory-bound、Prefill 是 compute-bound<br>
+4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
+5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 O(L·d²) 降到 O(d²)），为 Day 2 手写 KV Cache 打基础<br>
 
-> 💡 **为什么重要**：Day 3 我们读完了 vLLM 的 Scheduler——它靠 Continuous Batching 每轮重建 batch，完成的请求立即释放 slot。但"释放 slot"要能真正做到不产生碎片，否则 slot 回收了也拼不出大块。PagedAttention 就是解决这个的——它是 vLLM 最核心的创新，也是 SOSP 2023 论文的主题。没有 PagedAttention，Continuous Batching 的吞吐收益会被内存碎片吃掉一大半。今天我们把它从原理到 kernel 实现彻底吃透。
+> 💡 **为什么重要**：Week 4 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 5 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
 
 ---
 
-### 学前导读：Continuous Batching 的"隐形杀手"——内存碎片
+### 学前导读：为什么"推理"和"训练"是两回事，且推理更难优化
 
-Day 3 的 mini 调度器里，请求完成时我们 `used_blocks -= seq.kv_blocks` 就算"释放"了。但真实场景下，KV cache 不是按"整个序列"连续分配的——如果按序列连续分配，长度不确定的请求频繁 alloc/free 会产生大量**外部碎片**：释放的小空洞拼不回来，新请求放不下就 OOM。
+训练时，模型一次吞进一大批数据（`batch` 大、序列长），GEMM 都是"大矩阵乘"，Tensor Core 打满，瓶颈在算力——这正是 Week 1-4 我们反复优化的场景。但**推理（inference / serving）完全不同**：用户输入一段 prompt，模型要**一个一个 token 自回归地吐出来**。
 
-![Static / Dynamic / PagedAttention 三种分配的碎片对比](../../week5/images/paged_attention_fragmentation.svg)
+这两件事的硬件特征天差地别：
 
-| 策略 | 内部碎片 | 外部碎片 | 问题 |
-|------|---------|---------|------|
-| **静态**（预分配 max_seq_len） | 严重（实际长度常远小于 max） | 无 | 80% 显存浪费在"预占未用" |
-| **动态**（按实际长度连续分配） | 无 | 严重 | 完成释放后留空洞，大请求 OOM |
-| **PagedAttention**（分页） | 极小（最后一块的空 slot） | 无 | block 粒度回收，空闲 block 随时复用 |
+| 场景 | 每步处理的 token 数 | GEMM 形状 | 瓶颈 |
+|------|------------------|-----------|------|
+| 训练 | 一整批（M 很大） | 大矩阵乘 | compute-bound |
+| 推理 Prefill | 整段 prompt（M = N_prompt） | 大矩阵乘 | compute-bound |
+| 推理 Decode | **1 个 token（M = 1）** | 向量×矩阵（退化） | **memory-bound** |
 
-PagedAttention 的破局思路：**别按序列连续分配，改成按固定大小 block 分配**——就像 OS 的虚拟内存分页。一个序列的 KV cache 由若干 block 拼成，block 之间物理上可以不连续，用一张 **block table** 记录"第几个逻辑 block 在哪个物理 block"。完成时整 block 回收到池子，下次任意序列都能用——无外部碎片。
+关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
 
-> 💡 **一句话总结**：PagedAttention 把"连续分配的 KV cache"变成"分页 + block table 映射"，让 Continuous Batching 的高频 slot 回收不再产生碎片——这是 vLLM 吞吐优势的地基。
+> 💡 **一句话总结**：推理难优化，是因为 Decode 把"大矩阵乘的 compute-bound"退化成了"M=1 的 memory-bound"——Tensor Core 使不上劲，瓶颈从算力变成了带宽。本周所有技术都在和这个矛盾搏斗。
 
 ---
 
 ### 理论学习
 
-#### 4.1 vLLM Worker 的执行流程
+#### 1.1 Prefill 阶段：一次性处理整段 prompt
 
-Worker 是 vLLM 三层架构的最底层，负责执行实际模型前向：
+![Prefill vs Decode 两阶段输入与 Attention 形状](../images/prefill_vs_decode_overview.svg)
+
+Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 N×N self-attention，输出**第一个新 token** 的 logits。
 
 ```
-Worker.execute_model(seq_group_metadata_list):
- 1. 构建 input tokens 和 positions
- 2. 构建 attention metadata（含 block table） ← PagedAttention 的关键
- 3. 调用 ModelRunner.run() 执行模型前向
- 4. 采样得到 next token
- 5. 返回 outputs
+输入: prompt tokens, shape = (B, N_prompt, d)
+处理:
+ 1. 一次性并行处理所有 prompt tokens
+ 2. 计算所有 token 的 Q, K, V
+ 3. 对 prompt 内部做 self-attention（N×N 完整矩阵）
+ 4. 输出第一个新 token 的 logits
+特征:
+ - GEMM 是大矩阵乘（M = N_prompt 较大）→ 打满 Tensor Core
+ - Attention 是 O(N²) 计算，算术强度高
+ - 瓶颈: compute-bound（算力）
+ - 时延关注: TTFT (Time To First Token)
 ```
 
-##### Block Table 如何传入 Kernel
+Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 4 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
+
+#### 1.2 Decode 阶段：自回归逐 token 生成
+
+第一个 token 由 Prefill 产出后，接下来就是 Decode：每次只输入**上一步生成的 1 个 token**，计算它的 Q，从 **KV Cache** 读取所有历史 K/V，做一次 1×N 的 attention，输出下一个 token。如此循环直到 `<eos>` 或达到最大长度。
+
+```
+输入: 上一个生成的 token, shape = (B, 1, d)
+处理:
+ 1. 只计算新 token 的 Q（以及它的 K/V，追加到 cache）
+ 2. 从 KV Cache 读取所有历史 K, V
+ 3. 新 Q 与所有历史 K/V 做 attention（1×N 矩阵）
+ 4. 输出下一个 token 的 logits
+特征:
+ - GEMM 退化为向量×矩阵（M = 1）→ Tensor Core 闲置
+ - 每次都要读取完整 KV Cache（2·L·d bytes）
+ - 瓶颈: memory-bound（带宽）
+ - 时延关注: TBT / TPOT
+```
+
+> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 O(L·d²) 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 O(d²)——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
+
+#### 1.3 两大阶段对比表
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 输入形状 | (B, N_prompt, d) | (B, 1, d) |
+| 每步处理 token 数 | N_prompt（大） | 1 |
+| QKV GEMM 的 M | N_prompt | **1**（退化为向量×矩阵） |
+| Attention 矩阵形状 | N×N | **1×N** |
+| 每步 FLOPs | O(N²·d) | O(L·d) |
+| 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
+| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte |
+| 瓶颈类型 | **compute-bound** | **memory-bound** |
+| 关注指标 | TTFT | TBT / TPOT |
+| 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
+
+##### 两阶段算术强度的粗算（B=1, N=1024, d=512）
+
+```
+Prefill QKV GEMM:
+ FLOPs = 2 × B × N × d × 3d = 2 × 1 × 1024 × 512 × 1536 ≈ 1.6 G
+ Bytes = B×N×d + 3d² + 3×B×N×d ≈ 4 MB
+ AI ≈ 400 FLOP/Byte → compute-bound（远高于 Ridge Point）
+
+Decode QKV GEMM (M=1):
+ FLOPs = 2 × B × 1 × d × 3d ≈ 1.6 M
+ Bytes = B×1×d + 3d² + 历史 KV(2·L·d) ≈ 数 MB
+ AI ≈ 0.1 FLOP/Byte → memory-bound（远低于 Ridge Point）
+```
+
+> 💡 直觉类比：Prefill 像"一群人一起搬砖"，人多活也多，瓶颈是人力（算力）；Decode 像"一个人重复跑腿取材料"，每次只干一点活，却要从仓库（HBM）取一大堆材料——瓶颈是腿（带宽）。
+
+#### 1.4 Decode 为什么 memory-bound：Roofline 视角
+
+![Decode 的算术强度与 Ridge Point、四大优化方向](../images/decode_memory_bound.svg)
+
+Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
+
+```
+AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float) ≈ 0.125 FLOP/Byte (fp16)
+```
+
+RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
+
+反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
+
+##### Decode 的四大优化方向
+
+| 方向 | 目标 | 代表技术 | 本周对应 |
+|------|------|---------|---------|
+| ① 减少 KV Cache 读取 | 降低 Bytes | KV Cache 量化（INT8/FP8）、PagedAttention、滑动窗口 | Day 2 / Day 4 |
+| ② 抬高 M | 让 GEMM 变大 | Continuous Batching、Inflight Batching | Day 3 |
+| ③ 减调度开销 | 降低 launch 成本 | CUDA Graph、torch.compile | Day 6 |
+| ④ 隐藏传输延迟 | overlap 计算与通信 | Pipeline Parallelism、Async | Day 7 |
+
+> 💡 方向②（Continuous Batching）尤其巧妙：既然 Decode 单请求 M=1 浪费算力，那就把**多个正在 decode 的请求拼成一个大 batch**，让 M 从 1 变成几十——同样是 memory-bound，但带宽利用率成倍提高。这是 vLLM 的核心 trick，Day 3-4 详读。
+
+#### 1.5 推理时延指标：TTFT / TBT / TPOT
+
+![TTFT 与 TBT 在推理时间线上的位置](../images/inference_metrics_timeline.svg)
+
+| 指标 | 全称 | 含义 | 决定阶段 |
+|------|------|------|---------|
+| **TTFT** | Time To First Token | 从请求进入到输出第一个 token 的时间 | Prefill |
+| **TBT** | Time Between Tokens | 相邻输出 token 之间的间隔 | Decode |
+| **TPOT** | Time Per Output Token | 每个输出 token 的平均时间 | Decode |
+| **TPS** | Tokens Per Second | 吞吐（token/秒） | Decode |
+| **E2E Latency** | End-to-End Latency | 总延迟 | 全程 |
+
+关键关系式：
+
+```
+E2E Latency = TTFT + (输出 token 数 − 1) × TBT
+TPOT = 总 Decode 时延 / 输出 token 数
+```
+
+- **TTFT 由 Prefill 决定**：优化方向是 FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill。
+- **TBT/TPOT 由 Decode 决定**：优化方向是 KV Cache、PagedAttention、Continuous Batching、CUDA Graph、量化 KV Cache。
+
+> ⚠️ **注意**：TTFT 和 TBT 的优化手段**几乎不重叠**——前者是算力问题，后者是带宽问题。这就是为什么推理系统要分别对待两个阶段（vLLM 甚至把 Prefill 和 Decode 拆成不同的 batch 调度，叫 chunked prefill / mixed batching）。Day 3 读 vLLM 时会看到这一点。
+
+### Coding 任务：PyTorch 模拟 Prefill/Decode 流程
+
+#### 任务 1：创建 prefill_decode_simulation.py
+
+创建文件 [kernels/prefill_decode_simulation.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/prefill_decode_simulation.py)，它实现一个最小 Transformer Block，并模拟完整的 Prefill + KV Cache + Decode 循环：
 
 ```python
-# Attention metadata 中的 block_tables
-# shape: (num_seqs, max_num_blocks_per_seq)
-# 每个元素是物理 block 编号
-block_tables = [
- [7, 1, 12, 3], # seq 0 的逻辑 block 0..3 → 物理 block 7,1,12,3
- [2, 5, 8], # seq 1 的逻辑 block 0..2 → 物理 block 2,5,8
-]
-# Kernel 内部根据 block_table 找到 KV cache 的物理位置
-```
+# prefill_decode_simulation.py —— 模拟 Transformer 推理的 Prefill/Decode 两阶段
+# 运行命令: python prefill_decode_simulation.py
+# 依赖: pip install torch
 
-Scheduler 在每轮 `schedule()` 时更新 block table（分配新 block、回收完成的 block），Worker 把它打包进 attention metadata 传给 kernel。**kernel 看到 KV cache 的方式不再是"连续地址"，而是"经 block table 间接寻址"**。
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+import time
 
-#### 4.2 PagedAttention 核心思想：分页 + block table
+class MiniTransformer(nn.Module):
+    """最小 Transformer Block，用于演示 Prefill/Decode"""
 
-![Block Table：逻辑连续 ↔ 物理不连续](../../week5/images/paged_attention_block_table.svg)
+    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.out = nn.Linear(d_model, d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.ffn = nn.Sequential(
+        nn.Linear(d_model, d_ff),
+        nn.GELU(),
+        nn.Linear(d_ff, d_model),
+        )
 
-借鉴 OS 虚拟内存分页：
+        def forward(self, x, use_cache=False, k_cache=None, v_cache=None):
+            """
+            x: (B, N, d_model)
+            use_cache: 是否使用 KV Cache
+            k_cache/v_cache: 历史 KV，shape (B, H, L, d_head)
+            返回: output, (new_k_cache, new_v_cache)
+            """
+            B, N, _ = x.shape
 
-| OS 虚拟内存 | PagedAttention | 对照 |
-|------------|----------------|------|
-| 虚拟页（virtual page） | 逻辑 block | 序列视角连续编号 |
-| 物理页框（physical frame） | 物理 block | 显存中实际位置，可不连续 |
-| 页表（page table） | block table | 逻辑→物理映射 |
-| MMU | block allocator | 分配/回收物理 block |
+            # LayerNorm + QKV
+            x_norm = self.norm1(x)
+            qkv = self.qkv(x_norm)
+            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+            q, k, v = qkv[0], qkv[1], qkv[2]
 
-##### 关键参数
+            # Attention
+            scale = self.d_head ** -0.5
+            if use_cache and k_cache is not None:
+                # Decode: 把新 K/V 拼到历史 cache 后面
+                k = torch.cat([k_cache, k], dim=2) # (B, H, L+1, d)
+                v = torch.cat([v_cache, v], dim=2)
 
-```
-block_size：每 block 容纳多少 token（vLLM 默认 16）
-num_blocks：物理 block 池总大小（按可用显存 / block 大小算）
-max_num_blocks_per_seq = ceil(max_seq_len / block_size)
-```
+                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+                attn = F.softmax(attn, dim=-1)
+                out = torch.matmul(attn, v)
 
-##### 逻辑 view vs 物理 view
+                out = out.transpose(1, 2).reshape(B, N, self.d_model)
+                x = x + self.out(out)
 
-![PagedAttention 逻辑→物理 block 映射（block table）](../../images/week5_pagedattention_mapping.svg)
+                # FFN
+                x = x + self.ffn(self.norm2(x))
 
-> ⚠️ **注意**：block_size 选 16 是经验值。太大 → 内部碎片（最后一块空 slot 多）+ block table 变短但单 block 大；太小 → block table 变长（占显存）+ kernel 间接寻址次数多。16 在大多数场景下是 sweet spot。
+                return x, (k, v)
 
-#### 4.3 attention kernel 如何通过 block table 读取 KV
+                def simulate_inference(model, prompt, max_new_tokens=20):
+                    """模拟完整推理流程：Prefill + Decode"""
+                    device = next(model.parameters()).device
+                    B, N = prompt.size(0), prompt.size(1)
 
-传统 attention kernel 读 KV 是连续地址：`K[s * d]`。PagedAttention kernel 多一步**间接寻址**：
+                    # ========== Prefill 阶段 ==========
+                    torch.cuda.synchronize()
+                    t_start = time.time()
 
-```cuda
-// 传统（连续布局）：
-float k_val = K[s * d + t]; // 直接算地址
+                    with torch.no_grad():
+                        logits, (k_cache, v_cache) = model(prompt, use_cache=False)
+                        first_token_logits = logits[:, -1, :] # 取最后一个位置的 logits
 
-// PagedAttention（分页布局）：
-int logical_block = s / BLOCK_SIZE;                                     // 第几个逻辑 block
-int offset = s % BLOCK_SIZE;                                            // block 内第几个 token
-int physical_block = block_table[logical_block];                        // 查表得物理 block
-float k_val = k_pool[physical_block * BLOCK_SIZE * d + offset * d + t]; // 物理 block 内读取
-```
+                        torch.cuda.synchronize()
+                        ttft = (time.time() - t_start) * 1000 # ms
 
-kernel 遍历所有历史 key 时，按逻辑 block 顺序（0, 1, 2, ...），每步查 `block_table[lb]` 得物理 block，再读该 block 内的 KV 数据。今天 Coding 任务就实现这个 kernel。
+                        print(f"=== Prefill Phase ===")
+                        print(f" Input shape: {tuple(prompt.shape)}")
+                        print(f" TTFT: {ttft:.3f} ms")
+                        print(f" KV Cache shape: {tuple(k_cache.shape)}")
 
-#### 4.4 Copy-on-Write：共享 prompt block
+                        # ========== Decode 阶段 ==========
+                        generated = []
+                        decode_times = []
 
-![Copy-on-Write：共享 prompt block，写入时才复制](../../week5/images/paged_attention_copy_on_write.svg)
+                        # 简化：用 argmax 采样；decode 的输入用随机向量模拟新生成 token 的 embedding
+                        next_token = first_token_logits.argmax(dim=-1, keepdim=True)
+                        generated.append(next_token.item())
 
-**场景**：并行采样（`n>1`，一个 prompt 生成多个回答）、beam search、多轮对话共享历史。这些场景下多个 sequence 共享同一份 prompt 的 KV cache。
+                        for step in range(max_new_tokens - 1):
+                            next_token_emb = model.qkv.weight.new_zeros(B, 1, model.d_model).normal_(0, 0.02)
 
-**机制**：
-1. **共享**：Seq A 和 Seq B 共享 prompt 的物理 block，`refcount=2`，只读不冲突
-2. **写入触发复制**：当 Seq B 要往最后一个共享 block 追加新 token 时，发现该 block `refcount>1`（被共享）→ 复制一份到新物理 block，Seq B 的 block table 指向新 block，原 block 的 `refcount` 降为 1
-3. **收益**：prompt 部分（可能很长）的 KV cache 只存一份，各 sequence 只为自己的新 token 分配独立 block
+                            torch.cuda.synchronize()
+                            t_start = time.time()
 
-##### 引用计数实现
+                            with torch.no_grad():
+                                logits, (k_cache, v_cache) = model(
+                                next_token_emb, use_cache=True, k_cache=k_cache, v_cache=v_cache
+                                )
+                                next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
 
-```python
-class PhysicalTokenBlock:
-    block_number: int
-    refcount: int = 1
+                                torch.cuda.synchronize()
+                                decode_times.append((time.time() - t_start) * 1000)
+                                generated.append(next_token.item())
 
-    def incr_refcount(self): self.refcount += 1
-    def decr_refcount(self):
-        self.refcount -= 1
-        if self.refcount == 0:
-            allocator.free(self) # refcount 归零才回收到池子
-```
+                                print(f"\n=== Decode Phase ===")
+                                print(f" Generated {len(generated)} tokens")
+                                print(f" Mean TBT: {sum(decode_times)/len(decode_times):.3f} ms")
+                                print(f" Max TBT: {max(decode_times):.3f} ms")
+                                print(f" Min TBT: {min(decode_times):.3f} ms")
+                                print(f" Generated token IDs: {generated}")
 
-`fork(parent_block_table)` 操作：复制一份 block table，所有 block 的 `refcount+1`——这是 beam search / 并行采样的起点。之后各 sequence 写新 token 时，只对"要写入的那个 block"做 CoW。
+                                return ttft, decode_times
 
-> 💡 CoW 的本质：**读共享、写复制**。多个 sequence 读同一份 prompt 的 KV（attention 只读不写历史 KV），零开销共享；只有要追加新 token 时才复制那一个 block。prompt 越长、候选越多，省的显存越多。
+                                def profile_phase(model, x, name, n_iter=10):
+                                    """Profile 一个阶段"""
+                                    for _ in range(3):
+                                        _ = model(x)
+                                        torch.cuda.synchronize()
 
-#### 4.5 Block Allocator
+                                        start = torch.cuda.Event(enable_timing=True)
+                                        end = torch.cuda.Event(enable_timing=True)
+                                        start.record()
+                                        for _ in range(n_iter):
+                                            with torch.no_grad():
+                                                _ = model(x)
+                                                end.record()
+                                                torch.cuda.synchronize()
+                                                ms = start.elapsed_time(end) / n_iter
+                                                print(f"{name}: {ms:.3f} ms")
+                                                return ms
 
-```python
-class BlockAllocator:
-    def allocate(self) -> PhysicalTokenBlock:
-        # 从 free block pool 取一个空闲物理 block
-        ...
+                                                def main():
+                                                    torch.manual_seed(42)
+                                                    device = "cuda"
+                                                    d_model, n_heads = 512, 8
+                                                    model = MiniTransformer(d_model, n_heads).to(device).eval().half()
 
-    def free(self, block):
-        # refcount 归零时，block 回收到 free pool
-        ...
+                                                    # Prefill: 处理长 prompt
+                                                    N = 1024
+                                                    prompt = torch.randn(1, N, d_model, device=device, dtype=torch.float16)
 
-    def fork(self, parent_block_table) -> List[PhysicalTokenBlock]:
-        # 复制 block table，所有 block refcount+1（CoW 的基础）
-        ...
-```
+                                                    print(f"Model: d_model={d_model}, n_heads={n_heads}")
+                                                    print(f"Prompt length: {N}\n")
 
-BlockAllocator 维护一个**空闲物理 block 池**。allocate 从池里取，free 归零后归还。因为 block 大小固定，归还的 block 立刻能被任意序列复用——**无外部碎片**。
+                                                    simulate_inference(model, prompt, max_new_tokens=10)
 
-### Coding 任务：手写 PagedAttention kernel
+                                                    # 单独 profile prefill vs decode
+                                                    print("\n=== Standalone Profiling ===")
+                                                    profile_phase(model, prompt, f"Prefill (N={N})")
 
-#### 任务 1：创建 paged_attention.cu
+                                                    decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
+                                                    profile_phase(model, decode_input, f"Decode single token")
 
-创建文件 [kernels/paged_attention.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/paged_attention.cu)，实现一个最小化的 PagedAttention kernel（block table 间接寻址 + online softmax）：
-
-```cuda
-// paged_attention.cu —— PagedAttention 最小化实现（block table + 分块 KV cache attention）
-// 编译命令: nvcc -o paged_attention paged_attention.cu -O3 -arch=sm_120
-// 运行命令: ./paged_attention
-//
-// 演示 PagedAttention 的三大核心机制：
-// 1. KV cache 按 block 分块存储（物理 block 可不连续）
-// 2. block table 维护 逻辑 block → 物理 block 映射
-// 3. attention kernel 通过 block table 间接寻址读取 KV
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <vector>
-
-#define BLOCK_SIZE 256
-#define WARP_SIZE 32
-#define NUM_WARPS (BLOCK_SIZE / WARP_SIZE)
-#define KV_BLOCK_SIZE 16 // 每个 KV cache block 容纳 16 个 token（vLLM 默认）
-
-// ---------- 块归约 ----------
-__inline__ __device__ float warp_reduce_sum(float v) {
-    #pragma unroll
-    for (int o = WARP_SIZE / 2; o > 0; o >>= 1)
-        v += __shfl_down_sync(0xffffffff, v, o);
-    return v;
-}
-__inline__ __device__ float block_reduce_sum(float v, float* sh) {
-    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
-    v = warp_reduce_sum(v);
-    if (lane == 0)
-        sh[wid] = v;
-    __syncthreads();
-    if (wid == 0) {
-        v = (lane < NUM_WARPS) ? sh[lane] : 0.f;
-        v = warp_reduce_sum(v);
-        if (lane == 0)
-            sh[0] = v;
-    }
-    __syncthreads();
-    return sh[0];
-}
-
-// ---------- PagedAttention kernel（decode：1 query 对 N 历史 key）----------
-// kv_cache_pool: 物理 block 池，布局 [num_blocks, KV_BLOCK_SIZE, d]
-// block_table: [max_num_blocks_per_seq]，block_table[l] = 第 l 个逻辑 block 的物理 block 号
-// q: [d]，当前 query 向量
-// output: [d]，attention 输出
-// seq_len: 历史 key 数量
-__global__ void paged_attention_kernel(const float* __restrict__ k_cache_pool, const float* __restrict__ v_cache_pool,
-                                       const int* __restrict__ block_table, const float* __restrict__ q,
-                                       float* __restrict__ output, int seq_len, int d, int max_blocks_per_seq) {
-
-    __shared__ float q_shm[256];
-    __shared__ float red[NUM_WARPS + 1];
-    __shared__ float s_k_shm, alpha_shm, beta_shm;
-
-    int tid = threadIdx.x;
-    const float scale = 1.0f / sqrtf((float)d);
-
-    for (int t = tid; t < d; t += BLOCK_SIZE)
-        q_shm[t] = q[t];
-    __syncthreads();
-
-    float m = -INFINITY, l = 0.f;
-    float o_local = 0.f;
-
-    // 遍历所有历史 key（按逻辑 block 顺序，通过 block_table 找物理 block）
-    int num_logical_blocks = (seq_len + KV_BLOCK_SIZE - 1) / KV_BLOCK_SIZE;
-    for (int lb = 0; lb < num_logical_blocks; ++lb) {
-        int physical_block = block_table[lb]; // ★ 核心：逻辑→物理映射
-        const float* k_block = k_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
-        const float* v_block = v_cache_pool + (size_t)physical_block * KV_BLOCK_SIZE * d;
-
-        int tokens_in_block = min(KV_BLOCK_SIZE, seq_len - lb * KV_BLOCK_SIZE);
-        for (int s = 0; s < tokens_in_block; ++s) {
-            const float* k_vec = k_block + s * d;
-            const float* v_vec = v_block + s * d;
-
-            float part = 0.f;
-            for (int t = tid; t < d; t += BLOCK_SIZE)
-                part += q_shm[t] * k_vec[t];
-            float s_k = block_reduce_sum(part, red) * scale;
-            if (tid == 0)
-                s_k_shm = s_k;
-            __syncthreads();
-            s_k = s_k_shm;
-
-            if (tid == 0) {
-                float m_new = fmaxf(m, s_k);
-                float alpha = expf(m - m_new);
-                float p = expf(s_k - m_new);
-                float l_new = l * alpha + p;
-                alpha_shm = (l * alpha) / l_new;
-                beta_shm = p / l_new;
-                m = m_new;
-                l = l_new;
-            }
-            __syncthreads();
-
-            for (int t = tid; t < d; t += BLOCK_SIZE)
-                o_local = o_local * alpha_shm + beta_shm * v_vec[t];
-            __syncthreads();
-        }
-    }
-    for (int t = tid; t < d; t += BLOCK_SIZE)
-        output[t] = o_local;
-}
+                                                    if __name__ == "__main__":
+                                                        main()
 ```
 
 代码要点：
-- `block_table[lb]`：核心间接寻址——逻辑 block `lb` 映射到物理 block `block_table[lb]`，kernel 据此算出 `k_block`/`v_block` 的实际地址
-- **双层循环**：外层遍历逻辑 block（连续），内层遍历 block 内 token（最后一块可能不满）
-- **online softmax**：复用 Week 4 的三公式，把点积→softmax→加权 V 融合成一遍扫描，无需物化 score 矩阵
-- **CPU 参考用连续布局**：验证 paged 版（物理散布）与连续版结果一致，证明 block table 映射正确
+- `MiniTransformer.forward` 通过 `use_cache` 参数区分 Prefill/Decode：Prefill 时 `use_cache=False` 算完整 attention；Decode 时把新 K/V `torch.cat` 到历史 cache 上，做 1×(L+1) attention。
+- `simulate_inference` 用 `torch.cuda.synchronize()` + `time.time()` 分别测 TTFT 和每步 TBT。
+- `profile_phase` 用 `cuda.Event` 做更稳的多轮计时（warmup 3 次 + 平均 10 次）。
 
-#### 任务 2：编译与运行
+#### 任务 2：运行并观察输出
 
 ```bash
-nvcc -o paged_attention kernels/paged_attention.cu -O3 -arch=sm_120
-./paged_attention
+# 需 CUDA GPU + PyTorch
+python kernels/prefill_decode_simulation.py
 ```
 
-**预期输出**：
+预期输出（数值因 GPU 型号而异）：
 
 ```text
-=== PagedAttention Test ===
-d=64, seq_len=50, KV_BLOCK_SIZE=16, num_logical_blocks=4
-block_table (logical→physical): 0→7 1→1 2→12 3→3
-max diff (paged vs contiguous): 0.00e+00 (PASS)
+Model: d_model=512, n_heads=8
+Prompt length: 1024
 
-[Memory utilization]
- Static alloc (max=128): waste 61% (allocated 128, used 50)
- PagedAttention: use 50% of static (4 blocks × 16 tok = 64 slots, 50 actual)
- PagedAttention 的物理 block 可不连续（本例 7,1,12,3），逻辑连续由 block table 保证
+=== Prefill Phase ===
+  Input shape: (1, 1024, 512)
+  TTFT: 115.696 ms
+  KV Cache shape: (1, 8, 1024, 64)
+
+=== Decode Phase ===
+  Generated 10 tokens
+  Mean TBT: 2.138 ms
+  Max TBT: 17.947 ms
+  Min TBT: 0.143 ms
+  Generated token IDs: [348, 264, 264, 264, 357, 304, 475, 264, 264, 357]
+
+=== Standalone Profiling ===
+Prefill (N=1024): 0.132 ms
+Decode single token: 0.105 ms
 ```
 
-##### 验证逻辑解读
+##### 观察重点
 
-- **block_table 故意打乱**：逻辑 block 0→7、1→1、2→12、3→3，物理上散布——证明逻辑连续不依赖物理连续
-- **数据落位**：按 block_table 把连续的 K/V 数据写入物理 pool 的散布位置，kernel 再按 block_table 读回
-- **正确性**：paged 版输出与连续版 CPU 参考逐元素比对 `max_diff=0`，证明间接寻址无误
-- **内存利用率**：静态分配浪费 61%，PagedAttention 只用 4 个 block（含 14 个空 slot 的内部碎片）
+1. **TTFT 明显大于单步 TBT**：Prefill 要算 1024×1024 的完整 attention，是 compute-bound 的大活。
+2. **TBT 基本稳定**：每步 Decode 都只多读一个 token 的 KV，TBT 不随步数显著增长（前提是用了 KV Cache）。
+3. **Prefill 单次 vs Decode 单次的绝对值**：注意 Prefill 处理了 1024 个 token，Decode 只处理 1 个——比较时要看"每 token 成本"，而非总时间。
 
-#### 任务 3：用 ncu 观察间接寻址的开销
+> ⚠️ **注意**：本脚本用随机向量模拟 decode 的输入 embedding（`next_token_emb`），所以生成的 token ID 没有语义意义——我们只关心**时延特征**，不关心生成内容。Day 5 的 Mini 引擎会接入真正的 tokenizer + embedding。
+
+#### 任务 3：用 torch.profiler 对比两阶段的算子特征
+
+用 `torch.profiler` 观察 Prefill 和 Decode 触发的算子与显存特征差异：
 
 ```bash
-ncu --kernel-name regex:paged_attention_kernel \
- --metrics gpu__time_duration.sum, \
- dram__bytes.sum, \
- sm__inst_executed.avg.per_cycle_active \
- ./paged_attention
+python -c "
+import torch, torch.nn.functional as F
+from kernels.prefill_decode_simulation import MiniTransformer
+
+torch.manual_seed(42)
+model = MiniTransformer(512, 8).to('cuda').eval().half()
+prompt = torch.randn(1, 1024, 512, device='cuda', dtype=torch.float16)
+decode_in = torch.randn(1, 1, 512, device='cuda', dtype=torch.float16)
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+ with torch.no_grad():
+ model(prompt)
+print('=== Prefill (N=1024) 算子 ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+ with torch.no_grad():
+ model(decode_in)
+print('=== Decode (N=1) 算子 ===')
+print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
+"
 ```
 
 **观察重点**：
-- PagedAttention 比"连续布局 attention"多了 block_table 查表（一次额外 global 读 `block_table[lb]`），但这个开销极小（每 16 个 token 才查一次表）
-- 主要 IO 仍是读 K/V 数据（`dram__bytes` 与连续版相当），block table 本身很小（每序列几十个 int）
+- Prefill 的 `gemm` 算子（`addmm`/`bmm`）尺寸大、耗时长，是主角；
+- Decode 的同样 `gemm` 算子尺寸极小（M=1），耗时长但**算子 launch 开销占比上升**——这正是 memory-bound 的表现：算得快，但启动/等待开销凸显。
+- Decode 的 attention `bmm` 是 1×N，FLOPs 极低，但每次都要读 KV。
 
-> 💡 思考：block_table 查表的开销为什么可忽略？（提示：block_size=16 意味着每 16 个 token 才查一次表，而每个 token 要读 `d` 个 float——表查询的 amortized 开销 = 1 次 int 读 / (16 × d 次 float 读) ≈ 极小。）
+#### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
 
-#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
-
-**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+**题目链接**：<https://leetgpu.com/challenges/int8-kv-cache-attention>
 
 **与今日知识的关联**：
 
-Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——LLM 推理的 prefill 阶段跑的就是 causal self-attention（生成第 i 个 token 时只能看到前 i 个 token）。今天我们手写了 PagedAttention kernel（decode 场景：1 query 对 N key），这道题是它的 prefill 对偶——M 个 query 互相做 causal masked attention。PagedAttention 的 block table 机制同样适用于 causal attention：prefill 时把 prompt 的 KV 按 block 分块存入 paged pool，kernel 通过 block table 间接寻址。两者的核心都是"间接寻址 + online softmax 融合"。
+这道题就是**今天 Decode 阶段的核心算子**——单 query 对 KV Cache 做 1×N attention，是典型的 memory-bound。更关键的是，题目把 KV Cache 存成 **int8 + per-token scale**，这正是今天"减少 KV Cache 读取"优化方向里的**KV Cache 量化**：int8 相比 fp32 把 KV 的 HBM 流量直接砍到 1/4，Decode 的带宽瓶颈立刻缓解。生产级推理系统（TensorRT-LLM、vLLM）都用这套。
 
-> 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解（含 causal mask 的 online softmax 实现、上三角屏蔽、与 PagedAttention 的 prefill 对偶关系）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
+> 💡 提交后在 [LeetGPU INT8 KV-Cache Attention](https://leetgpu.com/challenges/int8-kv-cache-attention) 上记录通过耗时。完整题解（含 int8 反量化、decode attention kernel、ncu 带宽 profiling、与 prefill 的算术强度对比）见 [INT8 KV-Cache Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 4）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 4（BST 进阶与构造），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 1（遍历），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [235. 二叉搜索树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-search-tree/) | 中等 | 利用 BST 性质遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html) |
-| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 中序 + 显式栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
-| [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/) | 中等 | 递归 / 二分定插入界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html) |
-| [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
-| [889. 根据前序与后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/) | 中等 | 递归分治（前后序互定界） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
+| [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
+| [144. 二叉树的前序遍历](https://leetcode.cn/problems/binary-tree-preorder-traversal/) | 简单 | 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html) |
+| [145. 二叉树的后序遍历](https://leetcode.cn/problems/binary-tree-postorder-traversal/) | 简单 | 栈迭代（根右左逆序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html) |
+| [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | 中等 | BFS 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html) |
+| [103. 二叉树的锯齿形层序遍历](https://leetcode.cn/problems/binary-tree-zigzag-level-order-traversal/) | 中等 | BFS + 奇偶层反向 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：手动构造 block table 示例
+#### 实验 1：扫描 prompt 长度，绘制 TTFT 曲线
 
-序列长度 50，block_size=16，给出逻辑/物理映射：
-- 逻辑 block 数 = ceil(50/16) = 4
-- 假设物理池有 20 个 block，本序列分到物理 block 7, 1, 12, 3
-- 画出 block_table = [7, 1, 12, 3]，标注每个逻辑 block 的 token 范围（0-15, 16-31, 32-47, 48-49）
+修改 `main()` 中的 `N`，分别在 `N = 256, 512, 1024, 2048` 下测量 TTFT，记录成表：
 
-> 思考：最后一块只有 2 个 token（48-49），空了 14 个 slot——这是内部碎片。block_size 越大内部碎片越严重，怎么权衡？（提示：vLLM 选 16 是经验最优。）
+| N | TTFT (ms) | 理论 FLOPs (O(N²·d)) |
+|---|-----------|----------------------|
+| 256 | | |
+| 512 | | |
+| 1024 | | |
+| 2048 | | |
 
-#### 实验 2：模拟 Copy-on-Write
+> 思考：TTFT 随 N 大致呈什么关系？为什么？（提示：Prefill 的 attention 是 O(N²)，但 QKV GEMM 是 O(N·d²)；N 较大时 attention 主导，TTFT ≈ O(N²)。）
 
-扩展 `paged_attention.cu` 的 main 函数：构造两个 sequence 共享同一个 prompt 的物理 block（block_table 前缀相同），然后让 Seq B "写入"新 token——检测到最后一个共享 block 的 refcount>1 时，分配新物理 block、复制内容、更新 Seq B 的 block_table。打印 CoW 前后的 block_table 和 refcount 变化。
+#### 实验 2：对比 use_cache=True / False 的 Decode latency
 
-> 思考：CoW 什么时候不触发？（提示：refcount==1 时直接写，无需复制。所以并行采样只在"第一个 sequence 写新 token"时才 CoW，后续各 sequence 已独立。）
+修改 `simulate_inference`，加一个分支：每步 Decode 不用 cache，而是把"prompt + 已生成 token"全部重新喂进 `model(..., use_cache=False)`，测量这种"无 cache"模式的 TBT，与有 cache 的 TBT 对比。
 
-#### 实验 3：对比 PagedAttention vs 连续布局的 kernel 性能
+> 思考：无 cache 时 TBT 应该随生成步数**线性增长**（每步都要重算越来越长的前向），而有 cache 时 TBT 基本稳定。这正解释了 KV Cache 能让 decode latency 降低 10x+。Day 2 会量化这个收益。
 
-写一个 `continuous_attention_kernel`（KV cache 连续布局，直接 `K[s*d+t]`），与 `paged_attention_kernel` 对比 wall-clock。用 `cudaEvent` 计时，扫描 `seq_len = 128, 512, 2048, 8192`。
+#### 实验 3：用 nsys 抓 Prefill/Decode 的时间线
 
-> 思考：PagedAttention 的间接寻址开销占多少？（提示：理论上每 16 token 一次查表，开销应 < 1%。实测若差异显著，可能是 cache 局部性差异——物理不连续导致 L2 命中率下降。）
+```bash
+nsys profile -o prefill_decode --force-flush \
+ python kernels/prefill_decode_simulation.py
+nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
+```
+
+> 思考：在 nsys 时间线上，Prefill 是一坨大块的 GEMM kernel，Decode 是一连串极小的 kernel——观察 Decode 阶段 kernel 之间的 **gap（空闲）**，那就是 memory-bound 下 SM 等数据的时间。这个 gap 占比越大，说明带宽瓶颈越严重。
 
 ---
 
 ### 今日总结
 
-Day 4 我们把 vLLM 最核心的创新——PagedAttention——从原理到 kernel 实现彻底吃透：
+Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
 
-1. **Worker 执行流程**：接收 Scheduler 输出 → 构建 attention metadata（含 block table）→ ModelRunner.run() → 采样返回
-2. **PagedAttention 核心思想**：借鉴 OS 虚拟内存分页，KV cache 按 block_size（默认 16）分块，逻辑连续、物理不连续，block table 维护映射
-3. **block table 间接寻址**：kernel 读 KV 时多一步 `physical_block = block_table[logical_block]`，开销极小（每 16 token 查一次表，amortized 可忽略）
-4. **Copy-on-Write**：多 sequence 共享 prompt block（refcount>1），写入时才复制——读共享、写复制，prompt 越长候选越多省得越多
-5. **解决两大碎片**：无静态浪费（按需分配 block）+ 无外部碎片（block 粒度回收，空闲 block 随时复用）
-6. **block allocator**：维护空闲物理 block 池，allocate/free/fork 三件套，fork 是 CoW 的基础
-7. **手写 PagedAttention kernel**：block table 间接寻址 + online softmax，物理散布的 KV 与连续布局结果逐元素一致，证明映射正确
+1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + N×N attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
+2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~0.1，跨过 Ridge Point，瓶颈从算力翻转到带宽
+3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
+4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 O(L·d²) 降到 O(d²)，但代价是每步要搬整个 cache 过 HBM
+5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
+6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
 
-掌握这些后，vLLM 的"调度（Day 3）+ 内存管理（Day 4）"双支柱就完整了——明天 Day 5 把它们整合进 Mini 推理引擎 v0，Day 6 再做端到端 profiling。
+掌握这些后，你就有了 Day 2 手写 KV Cache 的全部动机和算法直觉——明天我们用 C++/CUDA 把这个 cache 真正实现出来，支持多轮对话的历史复用。
 
 ---
 
 ### 面试要点
 
-1. **什么是 PagedAttention？它解决了什么问题？**
+1. **LLM 推理的 Prefill 和 Decode 阶段有什么区别？各自的瓶颈是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - PagedAttention 借鉴 OS 虚拟内存分页，把 KV cache 分成固定大小 block（默认 16 token/block）
- - 逻辑 block 对序列连续编号，物理 block 在显存中可以不连续，用 block table 维护映射
- - 解决的问题：① 静态分配的内部碎片（预分配 max_seq_len 浪费严重）② 动态分配的外部碎片（频繁 alloc/free 留空洞）③ 长文本显存管理困难
- - 收益：显存利用率从 ~20%（静态）提升到 ~90%+，支持更大 batch、更长序列，是 vLLM 吞吐优势的地基
+ - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 N×N attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
+ - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~0.1），**memory-bound**，关注 TBT/TPOT
+ - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
 
 </details>
 
 
-2. **block table 是什么？attention kernel 怎么用它？**
+2. **什么是 TTFT 和 TBT？在系统优化中分别如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - block table 是"逻辑 block → 物理 block"的映射数组，`block_table[l] = 第 l 个逻辑 block 的物理 block 号`
- - kernel 读 KV 时间接寻址：`logical_block = s / block_size; physical_block = block_table[logical_block]; addr = pool + physical_block * block_size * d + offset * d`
- - 开销极小：每 block_size（16）个 token 才查一次表，amortized 到每 token 是 1 次 int 读 / (16×d 次 float 读)
- - block table 由 Scheduler 在每轮 schedule() 时更新（分配/回收 block），Worker 打包进 attention metadata 传给 kernel
+ - **TTFT (Time To First Token)**：从请求进入到输出第一个 token 的时间，主要由 Prefill 决定。优化：FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill
+ - **TBT (Time Between Tokens)**：相邻输出 token 之间的间隔，主要由 Decode 决定。优化：KV Cache、PagedAttention、Continuous Batching、CUDA Graph、KV Cache 量化
+ - 两者优化手段几乎不重叠（一个算力问题、一个带宽问题），所以推理系统要把两阶段分开调度（如 vLLM 的 chunked prefill / mixed batching）
 
 </details>
 
 
-3. **PagedAttention 中的 Copy-on-Write 是什么？在什么场景下使用？**
+3. **为什么 Decode 是 memory-bound？请用 Roofline / 算术强度解释。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - CoW（写时复制）：多个 sequence 共享同一物理 block 时，读共享、写复制
- - 触发：当 sequence 要往一个 `refcount>1` 的 block 追加新 token 时，复制该 block 到新物理 block，更新自己的 block table，原 block refcount-1
- - 使用场景：并行采样（n>1，一 prompt 多回答）、beam search（多候选共享 prompt）、多轮对话共享历史
- - 收益：prompt 部分的 KV cache 只存一份，各 sequence 只为新 token 分配独立 block——prompt 越长候选越多省得越多
- - 实现：PhysicalTokenBlock 带 refcount，fork 操作对所有 block refcount+1，free 时 refcount-1 归零才回收
+ - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
+ - 算术强度 `AI = FLOPs/Bytes ≈ 0.125 FLOP/Byte (fp16)`
+ - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近三个数量级
+ - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
 
 </details>
 
 
-4. **block_size 怎么选？太大太小各有什么问题？**
+4. **KV Cache 解决了什么问题？它的代价是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - vLLM 默认 16，是经验最优
- - 太大：① 内部碎片严重（最后一块空 slot 多）② 单 block 大，cache 局部性差
- - 太小：① block table 变长（每序列占更多 int 显存）② kernel 间接寻址次数多（查表频率升高）③ block allocator 管理开销大
- - 16 在大多数场景是 sweet spot：内部碎片可控（平均每序列浪费 < 8 token）、block table 短（4096 token 只需 256 个 int）、查表开销可忽略
+ - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 O(L·d²) 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 O(d²)，decode latency 降低 10x+
+ - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 524 KB，4096 tokens 约 2 GB，batch=16 就 32 GB
+ - 这正是后续 PagedAttention（Day 4）、KV Cache 量化要解决的"显存爆炸"问题
 
 </details>
 
 
-5. **PagedAttention 与 Continuous Batching 是什么关系？**
+5. **同一个模型，为什么 Prefill 能打满 Tensor Core 而 Decode 不能？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 两者是 vLLM 吞吐优势的两大支柱，缺一不可
- - Continuous Batching（Day 3）：每轮 iteration 重建 batch，完成的请求立即释放 slot——但"释放 slot"要能真正不产生碎片，否则回收的显存拼不出大块
- - PagedAttention（Day 4）：block 粒度分配/回收，空闲 block 随时被任意序列复用——让 Continuous Batching 的高频 slot 回收无碎片化
- - 没有 PagedAttention，Continuous Batching 的吞吐收益会被内存碎片吃掉一大半；没有 Continuous Batching，PagedAttention 的动态分配优势也无用武之地
-
- - PagedAttention 是内存管理层面的创新，与硬件无关——OS 分页思想跨平台通用
- - block_size、CoW 策略、refcount 机制都是可配置/跨平台一致的
+ - Tensor Core 靠"大矩阵乘"摊销指令开销：M 越大，每 byte 数据能做的 FLOPs 越多，算术强度越高
+ - Prefill 的 M=N_prompt（几百到几千），GEMM 是真正的大矩阵乘，算术强度远超 Ridge Point，卡在算力线，Tensor Core 满载
+ - Decode 的 M=1，GEMM 退化成"向量×矩阵"，每个 byte 数据只做极少 FLOPs，算术强度极低，卡在带宽线，Tensor Core 大量空闲
+ - 这也解释了 Continuous Batching 的原理：把多个 decode 请求拼成大 batch，把 M 从 1 抬到几十，让 Tensor Core 重新有事可做
 
 </details>
 

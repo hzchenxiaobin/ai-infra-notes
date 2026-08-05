@@ -1,528 +1,534 @@
-## Day 4：SGLang / 投机解码SGLang / LightLLM 高级特性
+## Day 4：CUDA Graph 实操 —— 消除 Launch OverheadCUDA Graph 实操 —— 消除 Kernel Launch Overhead
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token（近似上界，精确期望为 `(1-α^(k+1))/(1-α)`）<br>
-2. 掌握 **Chunked Prefill（分块预填充）**——将长 prompt 分成多个 chunk，与 decode 请求交错执行，平滑 decode 延迟<br>
-3. 理解 **Prefix Caching（前缀缓存）**——缓存公共前缀（如系统提示）的 KV Cache，命中时跳过 prefill，降低 TTFT<br>
-4. 能评估 **三大特性的收益与复杂度**——通过模拟脚本量化加速比、延迟降低、命中率<br>
-5. 掌握 **特性集成优先级**——Prefix Caching 和 Chunked Prefill 优先（收益高、复杂度中），Speculative Decoding 可选（复杂度高）<br>
+1. 理解 **launch overhead 本质**——每次 kernel launch 有 5-10μs 的 CPU 提交开销（驱动态切换、kernel descriptor 组装、stream 入队），与 kernel 自身耗时无关<br>
+2. 掌握 **CUDA Graph 原理**——capture（录制 kernel launch 序列为一张 DAG 图）/ replay（一次提交回放整图）两阶段模式，把 N 次 launch 压成 1 次<br>
+3. 学会 **PyTorch CUDA Graph API**——`torch.cuda.CUDAGraph`、`capture_begin/end`、`graph.replay()`、静态 buffer 模式（输入输出必须固定地址）<br>
+4. 能 **量化 launch overhead 占比**——Decode 阶段 M=1 时 kernel 极快（μs 级），launch 开销占比可达 **50%+**，是 CUDA Graph 收益最大的场景<br>
+5. 掌握 **动态 shape 处理**——shape bucketing（按 batch size 分桶预捕获）、`cudaGraphExecUpdate`（拓扑不变只改参数时原地更新可执行图）<br>
+6. 用 Python 手写 **CUDA Graph capture + shape bucketing** 两个脚本，实测 eager vs graph replay 的延迟差距与正确性一致性
 
-> 💡 **为什么重要**：Day 2 的 FullScheduler 解决了"怎么调度"的问题，但推理系统还有"怎么更快"的问题。生产级系统（vLLM、SGLang、TensorRT-LLM）通过三大高级特性进一步提升性能：Speculative Decoding 降低 TBT（token 间延迟），Chunked Prefill 平滑 decode 延迟，Prefix Caching 降低 TTFT（首 token 延迟）。这些特性是面试"高级推理优化"的加分项，也是 Mini 引擎从"能跑"到"跑得快"的关键。
+> 💡 **为什么重要**：Day 6 的全链路 Profiling 把"kernel launch overhead"列为五大系统级瓶颈之一，并给出优化优先级"CUDA Graph > 官方 kernel > C++ Scheduler"——但 Day 6 只停留在"识别瓶颈"，没有动手消除它。Decode 阶段每生成一个 token 就跑一遍 forward，而 M=1 时每个 kernel 只有几 μs，**纯 launch 开销却要 5-10μs/个**，几十个 kernel 叠加后 launch 占比常超 50%。CUDA Graph 是 vLLM / TensorRT-LLM 在 decode 路径的标配优化（vLLM 默认开启 `enforce_eager=False` 即用 graph）。今天把 Day 6 识别出的瓶颈真正消除，是 Mini 引擎从"知道慢在哪"走向"把它变快"的关键一步——这是面试高频题"CUDA Graph 怎么用、动态 shape 怎么办"。
 
 ---
 
-### 学前导读：Day 2 调度器的"不够快"
+### 学前导读：Launch Overhead 是 Decode 的瓶颈
 
-Day 2 的 FullScheduler 解决了调度公平性和资源管理，但仍有性能瓶颈：
+Day 6 的 profiling 报告里有这样一行：
 
 ```
-Day 2 调度器遗留的性能问题：
- 1. Decode 每步只出 1 token → 大模型 GPU 算力浪费（Speculative Decoding 解决）
- 2. 长 prompt prefill 阻塞 decode → decode 延迟尖峰（Chunked Prefill 解决）
- 3. 重复 prefix 每次重新 prefill → TTFT 高（Prefix Caching 解决）
+瓶颈 Top3:
+  #2: Kernel Launch — kernel 间隙 5-10μs，小 kernel 多
+  优化: CUDA Graph、算子融合
 ```
 
-| 瓶颈 | 表现 | 解决方案 | 收益 |
-|------|------|---------|------|
-| Decode 算力浪费 | 每步 1 token，GPU 利用率低 | Speculative Decoding | TBT 降低 2-3x |
-| Prefill 阻塞 decode | 长 prompt 导致 decode 延迟尖峰 | Chunked Prefill | 延迟降低 50-97% |
-| 重复 prefix 计算 | 多轮对话重复 prefill 系统提示 | Prefix Caching | TTFT 降低 3-5x |
+但"kernel 间隙 5-10μs"在 **Prefill** 和 **Decode** 两个阶段的影响完全不同：
 
-> 💡 **一句话总结**：Day 3 从"会调度"升级为"跑得快"——三大特性分别解决 decode 效率、延迟平滑、前缀复用三个维度。
+```
+Prefill 阶段（M = prompt_len，如 512）：
+  - 单个 GEMM kernel 耗时 ~1-5ms（大矩阵，算力受限）
+  - launch overhead 5-10μs 占比 < 1% → 几乎无感
+  - → CUDA Graph 收益小
+
+Decode 阶段（M = 1，逐 token 生成）：
+  - 单个 GEMM kernel 耗时 ~5-50μs（小矩阵，launch 受限）
+  - launch overhead 5-10μs 占比 30-60% → 严重浪费
+  - 一个 forward 有 30-100 个 kernel，纯 launch 就 0.3-1ms
+  - → CUDA Graph 收益极大（launch 降 80%+，端到端降 10-30%）
+```
+
+| 阶段 | M | 单 kernel 耗时 | launch overhead | launch 占比 | CUDA Graph 收益 |
+|------|---|---------------|----------------|------------|----------------|
+| **Prefill** | 大（~512） | 1-5 ms | 5-10 μs | < 1% | 小（~1-3%） |
+| **Decode** | 1 | 5-50 μs | 5-10 μs | **30-60%** | **大（10-30%）** |
+
+> 💡 **一句话总结**：CUDA Graph 不是"万能加速器"，它专治 **launch-bound** 场景——Decode M=1 是典型，Prefill M 大时收益甚微。这就是为什么 vLLM 只对 decode 路径开 CUDA Graph，prefill 仍走 eager。
 
 ---
 
 ### 理论学习
 
-#### 3.1 Speculative Decoding（投机采样）
+#### 1.1 Launch Overhead 分析
 
-![Speculative Decoding：小模型 Draft + 大模型 Verify](../../week7/images/speculative_decoding.svg)
+##### 每次 launch 到底慢在哪
 
-##### 基本原理
-
-```
-传统 Decode：
- 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
- 缺点：大模型每次只处理 1 个 token，GPU 算力浪费
-
-Speculative Decoding：
- 1. 小模型（draft model）连续生成 k 个候选 tokens
- 2. 大模型（target model）一次验证这 k+1 个 tokens（batch 验证，高效）
- 3. 接受匹配的 tokens，从第一个不匹配处重新采样
- 4. 保持输出分布不变（与原始大模型一致）
-```
-
-##### 加速原理
+一次 `cudaKernelLaunch`（或 PyTorch 里一次 op 调用）在 CPU 侧要完成：
 
 ```
-假设：
- t_d = draft model 生成 1 个 token 的时间（小，如 0.005s）
- T_fwd = target model 一次 forward 的时间（大，如 0.03s）
- α = 平均接受率（如 0.7）
-
-传统每 token 时间 ≈ T_fwd
-Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens（近似上界）
-Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
-
-当 t_d ≪ T_fwd 且 α 高时，加速明显。
-
-> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
+1. 解析 kernel 参数 → 组装 kernel descriptor（参数指针、grid/block dim、shared mem）
+2. 驱动态切换（user → driver）+ stream 入队
+3. GPU command processor 取出该 launch，配置 grid/block
+4. kernel 实际开始执行
 ```
 
-##### 关键属性
+其中 1-3 是 **CPU 侧串行开销**，与 kernel 计算量无关，典型 5-10μs。第 4 步才是 GPU 真正算的时间。如果 kernel 本身只要 5μs，那 launch 开销就和计算平起平坐了。
 
-| 属性 | 说明 |
-|------|------|
-| **输出一致性** | 通过特殊的接受/拒绝采样，保证输出分布与大模型自回归采样一致 |
-| **加速条件** | draft 快（t_d ≪ T_fwd）+ 接受率高（α > 0.5） |
-| **k 的选择** | k 太小加速不够，k 太大 draft 开销大；通常 k=4~8 |
-| **适用场景** | decode 延迟敏感、有合适 draft model |
-| **限制** | 需要额外内存放 draft model；α 低时可能变慢 |
+##### 量化：Decode 一步 forward 的 launch 占比
 
-> ⚠️ **保持分布不变的原理**：对每个 draft token，大模型计算其概率分布 p_target。若 draft 的采样值在 p_target 下有足够概率（≥ p_draft），则接受；否则以 (p_target - p_draft) 的残差概率重新采样。这保证最终分布 = p_target。
-
-##### 模拟结果（k=4, α=0.7, t_d=0.005, T_fwd=0.03）
-
-| k | α | 传统时间 | Spec 时间 | 加速比 |
-|---|---|---------|----------|--------|
-| 2 | 0.7 | 3.00s | 1.72s | 1.74x |
-| 4 | 0.7 | 3.00s | 1.55s | 1.94x |
-| 4 | 0.9 | 3.00s | 1.20s | 2.50x |
-| 8 | 0.9 | 3.00s | 1.12s | 2.68x |
-| 8 | 0.5 | 3.00s | 3.50s | **0.86x（变慢！）** |
-
-> 💡 **k=8, α=0.5 时变慢**——draft token 太多但接受率低，draft 开销超过了加速收益。这说明 k 和 α 必须匹配。
-
-#### 3.2 Chunked Prefill（分块预填充）
-
-![Chunked Prefill：长 Prompt 分块 + Decode 交错](../../week7/images/chunked_prefill.svg)
-
-##### 问题与方案
+假设一个 12 层 Transformer，每层 forward 约 8 个 kernel（QKV、attn、out、FFN1、FFN2、2×LN、sampling），共 ~96 个 kernel：
 
 ```
-问题：
- - 长 prompt（如 2048 tokens）的 prefill 一次性处理 → 占用全部 token budget
- - 同 batch 的 decode 请求被阻塞 → 延迟尖峰
- - 用户感知：decode token 突然卡顿
-
-Chunked Prefill：
- - 将长 prompt 分成多个 chunk（如每 chunk 512 tokens）
- - 每个 chunk 与 decode 请求一起执行（共享 token budget）
- - 逐步完成 prefill，同时不中断 decode
+Decode M=1 估算（单 kernel ~10μs 计算 + 7μs launch）：
+  计算总时间 = 96 × 10μs = 0.96 ms
+  launch 总时间 = 96 × 7μs  = 0.67 ms
+  端到端       = 1.63 ms
+  launch 占比  = 0.67 / 1.63 ≈ 41%
 ```
 
-##### 收益量化
+| 场景 | kernel 数 | 单 kernel 计算 | launch/个 | launch 占比 |
+|------|----------|---------------|-----------|------------|
+| Prefill M=512 | ~96 | 2 ms | 7 μs | 0.3% |
+| Decode M=1 | ~96 | 10 μs | 7 μs | **41%** |
+| Decode M=1（小模型） | ~48 | 5 μs | 7 μs | **58%** |
 
-| Prompt 长度 | Chunk 大小 | Chunks | 传统 max 延迟 | Chunked max 延迟 | 降低 |
-|------------|-----------|--------|-------------|-----------------|------|
-| 512 | 256 | 2 | 5.2s | 2.6s | -50% |
-| 2048 | 512 | 4 | 20.6s | 5.1s | -75% |
-| 8192 | 256 | 32 | 82.0s | 2.6s | -97% |
+> ⚠️ **nsys 上的表现**：timeline 上看到 kernel 之间有明显的"空白带"（GPU 空闲），CPU 段却在疯狂提交——这就是 launch-bound。空白带宽 ≈ launch overhead。Day 6 的 nsys 截图里 decode 段 kernel 稀疏、间隙大，正是此症状。
 
-> 💡 **关键洞察**：总 prefill 时间不变，但 decode 请求的**最大等待延迟**从"整个 prefill"降到"一个 chunk"。prompt 越长、chunk 越小 → 效果越显著。
+#### 1.2 CUDA Graph 原理
 
-##### Chunk 大小的权衡
+![CUDA Graph：Capture / Replay 消除 Launch 间隙](../../week7/images/cuda_graph_capture_replay.svg)
 
-| Chunk 大小 | 优点 | 缺点 |
-|-----------|------|------|
-| 太小（128） | 延迟极平滑 | prefill 效率低（小 batch GEMM） |
-| 太大（2048） | prefill 效率高 | 延迟平滑效果差 |
-| **推荐（512）** | **平衡** | **vLLM 默认值** |
+CUDA Graph 把"一系列 kernel launch"录制为一张 **DAG 图**（节点 = kernel，边 = 依赖），回放时由 GPU 端的 **graph executor** 一次性提交整图，CPU 只介入 1 次。
 
-#### 3.3 Prefix Caching（前缀缓存）
-
-![Prefix Caching：公共前缀 KV Cache 复用](../../week7/images/prefix_caching.svg)
-
-##### 问题与方案
+##### Capture / Replay 两阶段
 
 ```
-问题：
- - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
- - 每次都要重新计算 prefix 的 KV Cache → 重复计算
+阶段 1 — Capture（录制，只做一次）：
+  cudaStreamBeginCapture(stream, mode=THREAD_LOCAL)
+    → 在该 stream 上跑一遍要录制的 kernel 序列
+    → 驱动记录每个 launch 的参数与依赖，构建 cudaGraph_t
+  cudaStreamEndCapture(stream, &graph)
+  cudaGraphInstantiate(&graphExec, graph, ...)   // 编译为可执行实例
 
-Prefix Caching：
- - 缓存公共 prefix 的 KV Cache（key = prefix token 序列的 hash）
- - 新请求匹配到缓存 prefix 时，直接复用 KV Cache
- - 只 prefill prefix 之后的新增 tokens
-
-收益：
- - 降低 TTFT（首 token 延迟）
- - 减少重复计算
- - 特别适合多轮对话和模板化请求
+阶段 2 — Replay（每次执行）：
+  cudaGraphLaunch(graphExec, stream)   // 一次调用提交整张图
+  // CPU 立即返回，GPU 端 graph executor 背靠背执行所有 kernel
 ```
 
-##### 缓存 Key 设计
+##### 为什么能消除 launch overhead
+
+| 模式 | CPU 提交次数 | GPU 空闲 |
+|------|------------|---------|
+| Eager | N（每个 kernel 一次） | 每次 launch 间隙 5-10μs |
+| Graph Replay | **1**（整图一次） | 几乎为零（kernel 背靠背） |
+
+- Capture 时所有参数解析、descriptor 组装都已**固化**进 graph
+- Replay 时 graph executor 在 GPU 侧直接派发下一个 kernel，**无需 CPU 再介入**
+- N 个 kernel 的 N 次 CPU↔driver 切换 → 1 次
+
+##### 静态 shape 限制
+
+> ⚠️ **CUDA Graph 的硬约束**：capture 后 **shape、kernel 拓扑、指针地址** 都被固化。replay 时若 shape 变了或新增了 kernel，graph 不匹配会报错或静默错误。
+>
+> - **shape 静态**：tensor 的每个维度在 capture 时固定，replay 只能换"数值"不能换"形状"
+> - **指针静态**：输入输出 tensor 必须用**固定地址的静态 buffer**，replay 前 `copy_()` 写入新数据
+> - **控制流静态**：if/else 分支在 capture 时走哪条就固化哪条，运行时不能切
+>
+> 这正是 Decode 的福音（每步 shape 固定 M=1）和 Prefill 的噩梦（shape 随 prompt 长度变化）。
+
+#### 1.3 PyTorch CUDA Graph
+
+PyTorch 把 CUDA Graph 封装为 `torch.cuda.CUDAGraph`，典型用法是 **static buffer + capture context** 模式：
 
 ```python
-# Key = prefix token 序列的 hash
-key = hashlib.md5(str(prefix_tokens).encode()).hexdigest()
+import torch
 
-# 查找：O(1) hash 查找
-cached = cache.get(system_prompt_tokens)
-if cached:
- # 命中：跳过 prefix prefill，只 prefill 新增 tokens
- prefill(user_prompt_tokens)
-else:
- # 未命中：全量 prefill + 缓存
- prefill(full_prompt)
- cache.put(system_prompt_tokens, kv_cache)
+# 1) 静态 buffer（地址在 capture 后不可变）
+static_in = torch.zeros(B, D, device="cuda")
+
+# 2) warmup：capture 前必须跑几次，初始化 lazy cuBLAS / autotune / cache
+for _ in range(3):
+    out = model(static_in)
+torch.cuda.synchronize()
+
+# 3) capture：在专用 side stream 上录制
+g = torch.cuda.CUDAGraph()
+s = torch.cuda.Stream()
+s.wait_stream(torch.cuda.current_stream())
+with torch.cuda.stream(s):
+    g.capture_begin()
+    static_out = model(static_in)        # 录制 model 的所有 kernel
+    g.capture_end()
+torch.cuda.current_stream().wait_stream(s)
+
+# 4) replay：换输入数据 → replay → 取静态输出
+static_in.copy_(new_input)               # 写入新数据（地址不变）
+g.replay()                                # 一次提交整图
+result = static_out.clone()               # 拷走结果
 ```
 
-##### 模拟结果（3 请求，系统提示 50 tok，用户 20 tok）
+##### 关键 API
 
-| 指标 | 无缓存 | 有缓存 | 改善 |
-|------|--------|--------|------|
-| 总 prefill tokens | 210 | 110 | -48% |
-| 命中率 | — | 99% | — |
-| TTFT（首请求） | 70×t | 70×t | 不变 |
-| TTFT（后续请求） | 70×t | 20×t | -71% |
-| 加速比 | 1.0x | 3.4x | — |
+| API | 作用 |
+|-----|------|
+| `torch.cuda.CUDAGraph()` | 创建一个 graph 容器 |
+| `g.capture_begin()` | 进入录制模式（当前 stream 上的 op 被记录） |
+| `g.capture_end()` | 结束录制，graph 固化 |
+| `g.replay()` | 回放整张图（一次 launch） |
+| `torch.cuda.graph(g)` | 上下文管理器，等价于 capture_begin/end 配对 |
 
-> ⚠️ **LRU 淘汰**：缓存有大小上限（如 64 entries），满了按 LRU 淘汰最久未用的。vLLM 的 PagedAttention 天然支持 block 级别的 prefix caching。
+##### 三个必踩的坑
 
-##### 适用场景
+> ⚠️ **坑 1：忘记 warmup**。cuBLAS 首次调用会 lazy 初始化 + autotune（选 GEMM kernel），若在 capture 中触发，会录进图导致 replay 异常。**必须 capture 前跑 3-5 次 eager**。
+>
+> ⚠️ **坑 2：capture 中分配新显存**。capture 期间任何 `torch.zeros/randn`（新 tensor）都会进图，replay 时这些分配是"虚拟"的——可能地址冲突或泄漏。**capture 中只用静态 buffer，禁止新建 tensor**（PyTorch 的 `make_graphed_callables` 会自动处理 pool）。
+>
+> ⚠️ **坑 3：输入用了非静态地址**。`model(new_input)` 直接传新 tensor，replay 时 graph 仍读旧地址 → 结果错乱。**必须 `static_in.copy_(new_input)` 后 replay**。
 
-| 场景 | 前缀重复度 | 收益 |
-|------|-----------|------|
-| 多轮对话 | 高（历史消息累积） | ★★★★★ |
-| 模板化请求 | 高（系统提示固定） | ★★★★★ |
-| Few-shot learning | 中（示例固定） | ★★★★ |
-| 独立请求 | 低（无公共前缀） | ★ |
+> 💡 **快捷方式**：`torch.cuda.make_graphed_callables(model, sample_input)` 自动完成 warmup + 静态 buffer + capture，返回一个可像原 model 一样调用、内部走 replay 的 wrapper。适合简单模型；生产系统（vLLM）为精细控制仍手写 capture。
 
-#### 3.4 特性收益对比与集成优先级
+#### 1.4 动态 Shape 处理
 
-| 特性 | 收益 | 复杂度 | 依赖 | 集成优先级 |
-|------|------|--------|------|-----------|
-| **Prefix Caching** | TTFT 降低 3-5x | 中 | KV Cache 管理 | **Phase 1 优先** |
-| **Chunked Prefill** | 延迟降低 50-97% | 中 | 调度器改造 | **Phase 1** |
-| **CUDA Graph** | launch 开销降低 | 中 | 静态 shape | Phase 2 |
-| **Speculative Decoding** | TBT 降低 2-3x | 高 | Draft model | Phase 2 可选 |
+![Shape Bucketing：动态 batch 映射到预捕获 Graph](../../week7/images/shape_bucketing.svg)
 
-> 💡 **集成建议**：Prefix Caching 和 Chunked Prefill 收益高、复杂度中等，优先集成。Speculative Decoding 虽然收益可观，但需要 draft model 和分布对齐，实现复杂度高，适合作为 Phase 2 的可选优化。
+CUDA Graph 要求静态 shape，但推理时 **batch size 随请求数变化**（continuous batching 下每步 batch 都不同）。三种应对方案：
 
-### Coding 任务：高级特性模拟与评估
+##### 方案 1：Shape Bucketing（主流）
 
-#### 任务 1：创建 advanced_features.py
-
-创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
+为一批"典型 batch size"各预捕获一张 graph，运行时选**最近的 bucket（向上取整）**，把输入 pad 到 bucket 大小后 replay：
 
 ```python
-# advanced_features.py —— 高级特性模拟（Speculative Decoding + Chunked Prefill + Prefix Caching）
-# 运行命令: python advanced_features.py
-# 依赖: 仅标准库
+BUCKETS = [1, 2, 4, 8, 16]     # 按 GPU 显存与请求分布选
 
-# 1. Speculative Decoding 模拟
-def simulate_speculative_decoding(num_tokens=100, draft_k=4, accept_rate=0.7, ...):
- """模拟 draft+verify 过程，测量加速比"""
+def pick_bucket(b):
+    for bk in BUCKETS:
+        if bk >= b:
+            return bk
+    return BUCKETS[-1]          # 超过最大桶 → 回退 eager 或扩桶
 
-# 2. Chunked Prefill 模拟
-def simulate_chunked_prefill(prompt_len=2048, chunk_size=512, ...):
- """模拟分块 prefill 与 decode 交错，测量延迟降低"""
+# 预捕获：每个 bucket 一张 graph + 一套静态 buffer
+for b in BUCKETS:
+    static_in[b] = torch.zeros(b, max_seq, d, device="cuda")
+    # warmup + capture → graphs[b]
 
-# 3. Prefix Caching 模拟
-class PrefixCache:
- """LRU 前缀缓存，模拟 KV Cache 复用"""
-def simulate_prefix_caching(num_requests=100, ...):
- """模拟多轮对话场景，测量命中率和加速比"""
-
-# 4. 综合评估
-def evaluate_features():
- """运行三大特性模拟，输出收益评估报告"""
+# 运行时
+bk = pick_bucket(cur_batch)
+static_in[bk][:cur_batch] = x        # 写入有效部分，其余 padding
+graphs[bk].replay()
+out = static_out[bk][:cur_batch]     # 截取有效输出
 ```
 
-完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/advanced_features.py)。
+| bucket 数 | 显存占用 | 覆盖度 | 适用 |
+|-----------|---------|--------|------|
+| 少（3-5） | 低 | 有 padding 浪费 | 显存紧张 |
+| 多（8-16） | 高 | 浪费少 | 显存充裕、batch 分布广 |
+
+> 💡 **bucket 选取经验**：按请求 batch 的实际分布选，覆盖 P99 即可。vLLM 默认按 `max_num_seqs` 等距分桶，padding 浪费通常 < 10%。
+
+##### 方案 2：cudaGraphExecUpdate（拓扑不变时）
+
+如果 kernel 拓扑没变、只是某些**参数值**变了（如 kernel 的 grid dim 因 batch 变了），可用 `cudaGraphExecUpdate` 原地更新已实例化的可执行图，**无需重新 instantiate**：
+
+```
+cudaGraphExecUpdate(graphExec, newGraph, &updateResult)
+  → 若拓扑一致（节点数、边、kernel 类型不变），返回 success
+  → graphExec 的参数被更新为 newGraph 的值
+  → 比重新 instantiate 快 5-10x
+```
+
+适用场景：batch 变了但 kernel 序列没变（只是 grid/block dim 调整）。PyTorch 暂未直接暴露此 API，C++ 扩展或 CUDA 原生可用。
+
+##### 方案 3：回退 Eager
+
+当 batch 超过最大 bucket、或 shape 完全不可预测（如变长 prefill），直接回退 eager 模式。vLLM 的策略：**decode 用 graph（shape 固定），prefill 用 eager（shape 动态）**。
+
+##### 变长序列的处理
+
+除了 batch 维，**序列长度**也常变化。配合 bucketing 的做法：
+
+- **pad 到 max_seq_len**：静态 buffer 预留最大长度，短序列 padding，attention 用 mask 屏蔽
+- **按 seq_len 分桶**：序列长度也分桶（如 {128, 256, 512, 1024}），与 batch 桶组合
+- **KV Cache 复用**：padding 的部分不写 KV Cache，避免浪费显存
+
+> 💡 **一句话总结**：动态 shape = bucketing（预捕获多张图）+ padding（凑静态 shape）+ 回退（超桶走 eager）。生产系统三者结合，decode 路径 90%+ 的 step 能命中 graph。
+
+### Coding 任务：CUDA Graph capture + shape bucketing
+
+#### 任务 1：创建 cuda_graph_capture.py
+
+创建文件 [kernels/cuda_graph_capture.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/cuda_graph_capture.py)，用 `torch.cuda.CUDAGraph` 捕获 Mini Engine 的单步 decode（embedding + LayerNorm + QKV + attention + out_proj + sampling），对比 eager vs graph replay：
+
+```python
+# cuda_graph_capture.py —— PyTorch CUDA Graph 捕获 Demo（Mini Engine Decode 单步）
+# 运行命令: python cuda_graph_capture.py
+# 依赖: torch + CUDA（单 GPU 即可）
+
+class MiniDecodeStep(nn.Module):
+    """简化单步 decode：embedding → LN → QKV → attn → out_proj → lm_head → argmax"""
+    def forward(self, tok, past_kv):
+        x = self.embed(tok); x = self.ln(x)
+        qkv = self.qkv(x).reshape(B, 3, self.h, self.dh)
+        q, k, v = qkv.unbind(dim=1)
+        # ... attention（decode M=1，kernel 极快，launch 开销占比高）...
+        return self.lm_head(x).argmax(dim=-1), (k, v)
+
+# 1) warmup（capture 前必须跑，初始化 cuBLAS lazy / autotune）
+for _ in range(3): eager()
+torch.cuda.synchronize()
+
+# 2) capture（side stream + 静态 buffer）
+g = torch.cuda.CUDAGraph()
+s = torch.cuda.Stream(); s.wait_stream(torch.cuda.current_stream())
+with torch.cuda.stream(s):
+    g.capture_begin()
+    static_out, static_kv = step(static_tok, None)   # 录制所有 kernel
+    g.capture_end()
+torch.cuda.current_stream().wait_stream(s)
+
+# 3) replay + torch.cuda.Event 计时对比
+eager_ms  = measure(eager)    # 逐 kernel launch
+graph_ms  = measure(replay)   # 一次 replay 整图
+```
+
+完整代码见 [kernels/cuda_graph_capture.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/cuda_graph_capture.py)。
 
 代码要点：
-- `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
-- `simulate_chunked_prefill`：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
-- `PrefixCache`：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
-- `evaluate_features`：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
+- `MiniDecodeStep`：单 token decode 的简化模型（embedding → LN → QKV → attn → out → lm_head → argmax），kernel 小而多，launch 占比高
+- `measure`：用 `torch.cuda.Event(enable_timing=True)` 计时，warmup 5 次 + 平均 50 次，消除首次抖动
+- capture 严格遵循三步：**warmup → side stream capture_begin/end → replay**，静态 buffer `static_tok`/`static_out` 地址固定
+- 正确性校验：`torch.equal(y_eager, y_graph)` 确认 graph replay 结果与 eager 逐位一致
 
-#### 任务 2：运行并分析收益报告
+#### 任务 2：运行并对比 eager vs graph
 
 ```bash
-python kernels/advanced_features.py
+python kernels/cuda_graph_capture.py
+
+# 配合 nsys 看时间线
+nsys profile -o cuda_graph --trace=cuda python kernels/cuda_graph_capture.py
+nsys-ui cuda_graph.nsys-rep
+# timeline 中 graph replay 段 kernel 间隙几乎消失（背靠背执行）
 ```
 
-**预期输出**（节选）：
+**预期输出**（节选，具体数值随 GPU 而变）：
 
 ```text
-📊 1. Speculative Decoding
- k=4, α=0.7: traditional=3.00s, spec=1.55s, speedup=1.94x, accepted=69, rejected=55
- k=4, α=0.9: traditional=3.00s, spec=1.20s, speedup=2.50x, accepted=79, rejected=17
- k=8, α=0.5: traditional=3.00s, spec=3.50s, speedup=0.86x, accepted=50, rejected=350
+==============================================================
+  CUDA Graph Capture Demo（Mini Decode 单步）
+==============================================================
+  d_model=512, heads=8, vocab=32000
 
-📊 2. Chunked Prefill
- prompt=2048, chunk=512: chunks=4, max_latency: 20.58s → 5.14s (-75%)
- prompt=8192, chunk=256: chunks=32, max_latency: 82.02s → 2.56s (-97%)
+  eager (逐 kernel launch) : 0.183 ms / step
+  graph (一次 replay)      : 0.097 ms / step
+  launch overhead 降低     : 47.0%
+  加速比                   : 1.89x
 
-📊 3. Prefix Caching
- cache_size=64: hits=99, misses=1, hit_rate=99.0%, time: 70.00s → 20.50s, speedup=3.41x
+  正确性: eager==graph ? PASS
+    eager token : 28431, graph token : 28431
 
-📋 集成优先级建议
- 1. Prefix Caching — 收益高、复杂度中 → Phase 1 优先
- 2. Chunked Prefill — 平滑延迟、复杂度中 → Phase 1
- 3. CUDA Graph — 降 launch 开销、复杂度中 → Phase 2
- 4. Speculative Decoding — 降 TBT、复杂度高 → Phase 2 可选
+  nsys 可视化:
+    nsys profile -o cuda_graph --trace=cuda python cuda_graph_capture.py
+    # timeline 中 graph replay 段 kernel 间隙几乎消失
 ```
 
 ##### 观察重点
 
-1. **Speculative Decoding**：α=0.7 时加速 ~2x，但 α=0.5 + k=8 时**变慢**（draft 开销超过收益）
-2. **Chunked Prefill**：prompt 越长、chunk 越小，延迟降低越显著（8192 tok 从 82s → 2.6s）
-3. **Prefix Caching**：固定系统提示场景命中率接近 100%，加速比 3.4x
-4. **集成优先级**：Prefix Caching 和 Chunked Prefill 性价比最高
+1. **加速比 1.5-2.5x**：decode M=1 时 launch 占比高，graph 收益明显；具体数值随 kernel 数与 GPU 型号变化
+2. **正确性 PASS**：graph replay 与 eager 输出完全一致（确定性 op + 相同权重），证明 capture 无副作用
+3. **nsys timeline**：eager 段 kernel 间有明显空白（launch overhead），graph replay 段 kernel 背靠背几乎无间隙
+4. **首次 replay 不慢**：warmup 已把 cuBLAS autotune 跑完，capture 后 replay 无冷启动
 
-#### 任务 3：修改参数观察特性边界
+> 思考：为什么 capture 前必须 warmup？（提示：cuBLAS 首次 GEMM 会 lazy 选 kernel + autotune，若在 capture 中触发，选 kernel 的逻辑会被录进图，导致 replay 异常或性能退化。）
 
-尝试修改以下参数，观察特性失效的边界条件：
+#### 任务 3：创建并运行 shape_bucketing.py
+
+创建文件 [kernels/shape_bucketing.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/shape_bucketing.py)，为动态 batch 预捕获多个 graph：
 
 ```python
-# 实验 A：Speculative Decoding 失效条件
-# 设置 accept_rate=0.3, draft_k=8 → draft 开销大但接受少，应变慢
-result = simulate_speculative_decoding(num_tokens=100, draft_k=8, accept_rate=0.3, ...)
+# shape_bucketing.py —— 动态 batch 的 Shape Bucketing CUDA Graph
+# 运行命令: python shape_bucketing.py
 
-# 实验 B：Chunked Prefill chunk 太小
-# 设置 chunk_size=64 → prefill 效率极低（小 batch GEMM），总时间可能增加
-result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
+class BucketedGraphRunner:
+    """为每个 bucket 预捕获 graph，运行时按 batch 选最近 bucket 回放"""
+    def __init__(self, model, buckets, max_seq, d):
+        for b in buckets:
+            self._capture(b, max_seq, d)     # 每个 bucket 一张图 + 静态 buffer
 
-# 实验 C：Prefix Caching 无公共前缀
-# 修改为每个请求有不同的系统提示 → 命中率应接近 0
+    def _capture(self, b, max_seq, d):
+        sin = torch.zeros(b, max_seq, d, device="cuda")   # 静态输入
+        # warmup → capture_begin → model(sin, smask) → capture_end
+
+    def run(self, x, mask):
+        bk = self._pick(x.shape[0])          # 向上取整到最近 bucket
+        self.sin[bk][:x.shape[0]] = x        # 写入有效部分（其余 padding）
+        self.graphs[bk].replay()
+        return self.sout[bk][:x.shape[0]]    # 截取有效输出
 ```
 
-> 思考：什么场景下 Prefix Caching 不仅无收益反而有开销？（提示：每个请求前缀都不同时，hash 计算和缓存查找是纯开销。）
+完整代码见 [kernels/shape_bucketing.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day4/kernels/shape_bucketing.py)。
 
-#### 任务 4：LeetGPU 在线题目 —— Scalar Multiply
+运行：
 
-**题目链接**：<https://leetgpu.com/challenges/scalar-multiply>
+```bash
+python kernels/shape_bucketing.py
+```
 
-**与今日知识的关联**：Scalar Multiply 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Scalar Multiply 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
+**预期输出**（节选，数值随 GPU 而变）：
 
-> 💡 提交后在 [LeetGPU Scalar Multiply](https://leetgpu.com/challenges/scalar-multiply) 上记录通过耗时。完整题解见 [Scalar Multiply 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html)。
+```text
+==============================================================
+  Shape Bucketing CUDA Graph Demo
+==============================================================
+  buckets=[1, 2, 4, 8, 16], max_seq=128, d=512
+  batch= 1 → bucket= 1 | graph 0.041 ms/step | max_diff=0.00e+00
+  batch= 3 → bucket= 4 | graph 0.052 ms/step | max_diff=0.00e+00
+  batch= 7 → bucket= 8 | graph 0.063 ms/step | max_diff=0.00e+00
+  batch=12 → bucket=16 | graph 0.071 ms/step | max_diff=0.00e+00
+  batch=16 → bucket=16 | graph 0.072 ms/step | max_diff=0.00e+00
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 3）
+  动态 batch 无需重捕获：运行时选最近 bucket，copy 输入后 replay
+```
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 3（二分答案），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+##### 观察重点
+
+1. **bucket 映射**：b=3→bucket=4（pad 1 行）、b=7→bucket=8、b=12→bucket=16，向上取整正确
+2. **正确性**：`max_diff=0`（mask 屏蔽 padding，有效部分输出与 eager 一致）
+3. **无需重捕获**：任意 batch 都能立即 replay，无 capture 开销
+4. **显存代价**：5 个 bucket × 静态 buffer，比单 graph 多占显存（trade-off）
+
+> 思考：b=3 用 bucket=4 时，padding 那 1 行的计算是否浪费？（提示：是，padding 行仍参与 GEMM，但 attention 用 mask 屏蔽后不影响有效行输出。这就是 bucketing 的代价——用少量计算浪费换静态 shape。bucket 越密浪费越少但显存越多。）
+
+#### 任务 4：LeetGPU 在线题目 —— Vector Addition
+
+**题目链接**：<https://leetgpu.com/challenges/vector-addition>
+
+**与今日知识的关联**：Vector Addition 是最典型的 **launch-overhead-dominated** kernel——它是纯 element-wise 操作，计算量极低（每元素一次加法），kernel 自身耗时往往不到 1μs，而 launch overhead 却要 5-10μs。换言之，跑这个 kernel 时 **80%+ 的时间花在 launch 上、不到 20% 在算**。这正是 CUDA Graph 要解决的场景：把成百上千个这样的小 kernel 录进一张图，replay 时 launch 开销从 N 次降到 1 次。理解 Vector Addition 的"算得快但 launch 慢"特性，就抓住了 CUDA Graph 收益的本质——**它不优化 kernel 本身，而是消灭 kernel 之间的 CPU 空隙**。
+
+> 💡 提交后在 [LeetGPU Vector Addition](https://leetgpu.com/challenges/vector-addition) 上记录通过耗时。完整题解见 [Vector Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-addition-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+
+> 📅 今日为 CUDA Graph 专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 5 道二分查找高频题（Day 6 已刷背包 DP，今日补二分模板与变种），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [875. 爱吃香蕉的珂珂](https://leetcode.cn/problems/koko-eating-bananas/) | 中等 | 二分答案 + O(n) 验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html) |
-| [1011. 在 D 天内送达包裹的能力](https://leetcode.cn/problems/capacity-to-ship-packages-within-d-days/) | 中等 | 二分答案 + 贪心验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html) |
-| [378. 有序矩阵中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-sorted-matrix/) | 中等 | 二分值域 + 左下角计数 / 小顶堆 k 路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
+| [35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/) | 简单 | 二分模板（左闭右开，找第一个 ≥ target） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/35_搜索插入位置.html) |
+| [34. 在排序数组中查找元素的第一个和最后一个位置](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | 中等 | 两次二分找左/右边界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
+| [153. 寻找旋转排序数组中的最小值](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | 中等 | 旋转数组二分（比右端点） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html) |
+| [162. 寻找峰值](https://leetcode.cn/problems/find-peak-element/) | 中等 | 非有序二分（爬坡法，顺梯度走） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
+| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP + 二分（patience sorting） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+
+> 💡 刷题建议：35 是二分最基础模板，5 分钟默写确保 `left < right` 与 `right = mid` 不越界；34 是"找边界"变种（左边界用 `right = mid`、右边界用 `left = mid + 1`）；153 与 162 训练"非标准有序"下的二分判断条件（与右端点比 / 与邻居比）；300 是 DP+二分结合，`O(n log n)` 的 patience sorting 思路——维护一个递增的"牌堆尾"数组，每张牌二分插入。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现 Speculative Decoding 的接受/拒绝采样
+#### 实验 1：测量不同 batch 下的 graph 收益变化
 
-当前模拟用随机数模拟接受/拒绝。修改为真实分布对齐：draft 和 target 各自输出概率分布，按论文公式接受/拒绝，验证最终分布与 target 一致。
+修改 `cuda_graph_capture.py`，把 decode 的 batch 从 1 改为 {1, 4, 16, 64, 256}（同步增大 past_kv 长度保持计算量可比），记录 eager vs graph 的加速比。绘制"batch size vs 加速比"曲线。
 
-> 思考：为什么"接受/拒绝采样"能保证分布不变？（提示：对 draft 采样值 x，若 p_target(x) ≥ p_draft(x) 则接受；否则以 (p_target - p_draft) 残差概率拒绝并重新采样。）
+> 思考：batch 增大后 graph 加速比会怎样变化？（提示：batch 大 → 单 kernel 计算变长 → launch 占比下降 → graph 收益减小。这解释了为什么 prefill 不用 graph。预期曲线从 ~2x 单调降到 ~1.05x。）
 
-#### 实验 2：实现 Chunked Prefill 的动态 chunk 大小
+#### 实验 2：对比 bucketing 的 padding 浪费
 
-当前 chunk 大小固定。修改为动态：根据当前 decode 请求数量和 token budget 剩余动态调整 chunk 大小。decode 请求多时 chunk 小（多留预算给 decode），decode 少时 chunk 大（提高 prefill 效率）。
+修改 `shape_bucketing.py`，统计每个 bucket 的 padding 比例（`(bucket - actual) / bucket`），并测量"eager 恰好 batch"vs"graph + padding"的延迟。找出 graph 仍快过 eager 的 padding 阈值。
 
-> 思考：动态 chunk 大小的上限和下限应该怎么设？（提示：下限不能太小否则 GEMM 效率低，上限不能太大否则失去平滑效果。）
+> 思考：b=3 用 bucket=4（padding 25%）时 graph 还比 eager 快吗？b=5 用 bucket=8（padding 37.5%）呢？（提示：graph 节省的是 launch 开销，padding 增加的是计算。当 padding 带来的额外计算 > 节省的 launch，graph 反而更慢。阈值取决于 kernel 大小，通常 padding < 50% 时 graph 仍胜出。）
 
-#### 实验 3：Prefix Caching 的 block 级别匹配
+#### 实验 3：实现 cudaGraphExecUpdate 模拟
 
-当前匹配整个 prefix token 序列。修改为 block 级别匹配（如 vLLM PagedAttention）：把 token 序列分成 block（每 16 token 一 block），逐 block 匹配，部分命中也能复用。
+研究 `cudaGraphExecUpdate` 的语义（拓扑不变、参数可更新）。在 C++ 扩展或纯 CUDA demo 中：先 capture 一个 batch=4 的图，再构造 batch=6 的同拓扑图（grid dim 变了但 kernel 序列不变），用 `cudaGraphExecUpdate` 原地更新，对比"重新 instantiate"vs"update"的耗时。
 
-> 思考：block 级别匹配 vs 整体匹配的 trade-off？（提示：block 级别更灵活但 hash 查找次数多；整体匹配简单但一旦有一个 token 不同就全部 miss。）
+> 思考：update 比重新 instantiate 快多少？什么情况下 update 会失败？（提示：update 快 5-10x；失败于拓扑变化——节点数变了、kernel 类型变了、依赖关系变了。只允许参数值（grid/block dim、参数指针值）变化。）
 
 ---
 
 ### 今日总结
 
-Day 3 我们分析评估了三大高级推理特性：
+Day 6b 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead 瓶颈：
 
-1. **Speculative Decoding**：小模型 draft k 个 token + 大模型一次 verify，加速比 1.5-2.7x；关键条件是 draft 快 + 接受率高；k 和 α 必须匹配，否则可能变慢
-2. **Chunked Prefill**：长 prompt 分块与 decode 交错，decode 最大延迟降低 50-97%；总 prefill 时间不变，但平滑了延迟尖峰；chunk 大小 512 是推荐平衡点
-3. **Prefix Caching**：缓存公共前缀的 KV Cache，命中率接近 100%，加速比 3.4x；特别适合多轮对话和模板化请求
-4. **特性对比**：Prefix Caching 和 Chunked Prefill 收益高/复杂度中→优先集成；Speculative Decoding 收益高/复杂度高→可选
-5. **模拟验证**：通过 `advanced_features.py` 量化了不同参数下的加速比、延迟降低、命中率
-6. **集成优先级**：Phase 1（Prefix Caching + Chunked Prefill）→ Phase 2（CUDA Graph + Speculative Decoding）
+1. **Launch overhead 本质**：每次 kernel launch 有 5-10μs CPU 提交开销（参数解析、驱动切换、stream 入队），与 kernel 计算量无关；Decode M=1 时 kernel 极快，launch 占比可达 **30-60%**，是 launch-bound 的典型场景
+2. **CUDA Graph 原理**：capture（录制 kernel launch 序列为 DAG）/ replay（一次提交整图）两阶段，把 N 次 CPU launch 压成 1 次，kernel 间隙几乎消失；硬约束是 **shape/拓扑/指针地址静态**
+3. **PyTorch API**：`torch.cuda.CUDAGraph` + side stream capture + 静态 buffer；三步法 warmup → capture_begin/end → replay；三大坑是忘 warmup、capture 中新建 tensor、输入用非静态地址
+4. **动态 shape**：bucketing（按 batch 预捕获多张图，向上取整 + padding）+ cudaGraphExecUpdate（拓扑不变原地更新）+ 回退 eager（超桶或 prefill）；vLLM 策略是 decode 用 graph、prefill 用 eager
+5. **实测验证**：`cuda_graph_capture.py` 量化 eager vs graph 加速 1.5-2.5x、正确性逐位一致；`shape_bucketing.py` 验证 5 个 bucket 覆盖 batch 1-16、padding 不影响有效输出
 
-掌握这些后，你就有了推理系统的"加速武器库"——明天 Day 4 整合全部自定义 Kernel（GEMM、FlashAttention、Softmax、LayerNorm），替换 PyTorch 算子。
+掌握这些后，你就把 Day 6 的"识别瓶颈"升级为"消除瓶颈"——明天 Day 7 代码重构与文档，将 CUDA Graph 集成进 Mini 引擎的 decode 路径，完成 Week 7 系统整合收官。
 
 ---
 
 ### 面试要点
 
-1. **什么是 Speculative Decoding？它为什么能加速 LLM 推理？**（⭐⭐⭐⭐ 高频）
+1. **什么是 CUDA Graph？为什么能减少 launch overhead？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k+1 个 tokens
- - **加速原因**：
- - 小模型生成速度快（t_d ≪ T_fwd）
- - 大模型一次验证多个 tokens，提高 batch 利用率
- - 如果 draft 质量高（α 高），每步可接受多个 tokens
- - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`（近似上界，精确期望用 `(1-α^(k+1))/(1-α)` 替换 k×α+1），典型 1.5-2.7x
- - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
- - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
+- **原理**：把一系列 kernel launch 录制为一张 DAG 图（capture），回放时由 GPU 端 graph executor 一次性提交整图（replay），CPU 只介入 1 次
+- **减少 overhead**：每次 launch 有 5-10μs CPU 开销（参数解析、驱动切换、stream 入队），100 个 kernel = 0.5-1ms 纯 launch；Graph replay 把 N 次 CPU launch 压成 1 次，kernel 背靠背执行，间隙几乎为零
+- **API**：`cudaStreamBeginCapture` → 跑 kernel 序列 → `cudaStreamEndCapture` 得到 `cudaGraph_t` → `cudaGraphInstantiate` 编译为可执行实例 → `cudaGraphLaunch` 回放
+- **适合**：固定 shape + 重复执行的 kernel 序列（Decode 每步 forward 相同，M=1 launch 占比 30-60%，收益 10-30%）
+- **不适合**：动态 shape（Prefill）、条件分支、依赖运行时数据的调度
 
 </details>
 
 
-2. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
+2. **CUDA Graph 为什么要求静态 shape？动态 batch 怎么处理？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Chunked Prefill**：
- - 解决长 prompt prefill 阻塞 decode 的问题
- - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
- - 效果：decode 最大延迟从"整个 prefill"降到"一个 chunk"，降低 50-97%
- - **Prefix Caching**：
- - 解决重复 prefix 的 KV Cache 重复计算问题
- - 缓存公共前缀的 KV Cache，新请求匹配时复用
- - 效果：TTFT 降低 3-5x，特别适合多轮对话和模板化请求
+- **静态 shape 原因**：capture 时每个 kernel 的 grid/block dim、参数指针、依赖关系都被固化进图；replay 时 shape 变了会导致 grid 不匹配、指针错位、拓扑断裂
+- **指针也静态**：输入输出 tensor 必须用固定地址的静态 buffer，replay 前 `copy_()` 写新数据，不能换新 tensor
+- **动态 batch 处理**：
+  1. **Shape Bucketing**（主流）：为 {1,2,4,8,16} 等 bucket 各预捕获一张图，运行时向上取整选最近 bucket，pad 输入后 replay，截取有效输出
+  2. **cudaGraphExecUpdate**：拓扑不变只改参数（如 grid dim 随 batch 变）时，原地更新可执行图，比重新 instantiate 快 5-10x
+  3. **回退 eager**：batch 超过最大 bucket 或 shape 完全不可预测时回退（vLLM：decode 用 graph，prefill 用 eager）
+- **bucketing 代价**：每 bucket 一套静态 buffer（显存 ∝ bucket 数）+ padding 计算浪费（通常 < 10%）
 
 </details>
 
 
-3. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
+3. **PyTorch 里怎么用 CUDA Graph？有哪些坑？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 对每个 draft token，target 计算其概率分布 p_target
- - 若 draft 采样值 x 满足 p_target(x) ≥ p_draft(x) → 接受
- - 否则以 (p_target - p_draft) 的残差概率拒绝，从残差分布重新采样
- - 数学上可证明：最终输出分布 = p_target（与纯 target 自回归一致）
- - 这保证了 speculative decoding 不会牺牲输出质量
+- **用法**（静态 buffer + side stream capture）：
+  1. 创建静态 buffer `static_in = torch.zeros(...)`
+  2. **warmup** 3-5 次 eager（初始化 cuBLAS lazy/autotune）
+  3. 在 side stream 上 `g.capture_begin()` → 跑 model → `g.capture_end()`
+  4. replay：`static_in.copy_(new_input)` → `g.replay()` → 取 `static_out`
+- **三大坑**：
+  1. **忘 warmup**：cuBLAS 首次 GEMM lazy 选 kernel + autotune，若在 capture 中触发会录进图导致 replay 异常
+  2. **capture 中新建 tensor**：`torch.zeros/randn` 会进图，replay 时虚拟分配可能地址冲突；只能用静态 buffer
+  3. **输入非静态地址**：直接传新 tensor，graph 仍读旧地址 → 结果错乱；必须 `static_in.copy_()` 后 replay
+- **快捷方式**：`torch.cuda.make_graphed_callables(model, sample_input)` 自动完成 warmup + 静态 buffer + capture
 
 </details>
 
 
-4. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
+4. **CUDA Graph 在 Decode 和 Prefill 阶段的收益为什么不同？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Key**：prefix token 序列的 hash（如 MD5），O(1) 查找
- - **Value**：KV Cache 数据（K 矩阵和 V 矩阵的 block）
- - **淘汰策略**：LRU（最近最少使用），缓存满时淘汰最久未用的
- - **Block 级别匹配**（vLLM PagedAttention）：把 prefix 分成 block 逐 block 匹配，部分命中也能复用
- - **命中率因素**：前缀重复度越高、缓存越大 → 命中率越高
+- **核心差异**：launch overhead 占比与 kernel 自身耗时的比值
+- **Decode（M=1）**：单 kernel 计算 5-50μs，launch 5-10μs，**占比 30-60%**；Graph 消除 launch 后端到端降 10-30%，**收益大**
+- **Prefill（M=512）**：单 kernel 计算 1-5ms，launch 5-10μs，**占比 < 1%**；Graph 几乎无收益，且 shape 动态难捕获，**收益小**
+- **vLLM 策略**：decode 路径开 CUDA Graph（`enforce_eager=False`），prefill 路径走 eager
+- **判断方法**：nsys timeline 看 kernel 间隙——decode 段 kernel 稀疏间隙大（launch-bound，graph 有用），prefill 段 kernel 密集连成片（compute-bound，graph 无用）
+- **推广**：任何"小 kernel 多、shape固定"的场景都适合 graph（如推理 decode、固定 shape 的训练 step）
 
 </details>
 
 
-5. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
+5. **shape bucketing 的 bucket 怎么选？padding 浪费和显存怎么权衡？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Phase 1（优先）**：Prefix Caching + Chunked Prefill
- - 收益高（3-5x TTFT / 50-97% 延迟降低）、复杂度中等
- - 不需要额外模型，只需改造调度器和 KV Cache 管理
- - **Phase 2（可选）**：CUDA Graph + Speculative Decoding
- - CUDA Graph 降低 launch 开销，复杂度中等
- - Speculative Decoding 收益高但需要 draft model + 分布对齐，复杂度高
- - **排序逻辑**：按"收益/复杂度"性价比排序，优先做性价比高的
-
- - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）
-
-</details>
-
----
-
-### 投机解码深化：三条路线 + 接受率分析（C3 补充）
-
-#### 三条 draft 路线对比
-
-| 路线 | draft 来源 | 代表 | 特点 |
-|------|-----------|------|------|
-| **独立小模型** | 单独训练的小 LLM | 传统 speculative decoding | 需维护两个模型，draft 质量依赖小模型能力 |
-| **Medusa** | target 模型的多个额外 head | Medusa | 无需独立小模型，target 模型加几个 head 并行预测 k 个 token |
-| **EAGLE** | target 模型的特征层草稿 | EAGLE | 在 target 的 hidden states 上建草稿，质量更高 |
-| **MTP** | target 模型的 MTP head | DeepSeek-V3 | DeepSeek 的 Multi-Token Prediction，训练时联合优化 |
-
-##### Medusa vs EAGLE vs MTP 详细对比
-
-| 维度 | Medusa | EAGLE | MTP（DeepSeek） |
-|------|--------|-------|----------------|
-| draft 位置 | target 顶层加 head | target 隐藏层后接草稿网络 | target 的 MTP head（训练联合） |
-| 额外参数 | 几个 head（小） | 草稿网络（中等） | MTP head（与 target 同量级） |
-| draft 质量 | 中（token 级预测） | 高（特征级，更准） | 高（训练时联合优化） |
-| 接受率 α | ~0.5-0.6 | ~0.6-0.7 | ~0.7-0.8 |
-| 加速比 | 2-3x | 2.5-3.5x | 3-4x |
-| 训练成本 | 微调加 head | 需训练草稿网络 | 联合训练（成本高） |
-| 部署复杂度 | 低（加 head） | 中（加网络） | 高（改训练流程） |
-
-> 💡 **面试要点**：Medusa 是"最简单的投机解码"（加 head 即可），EAGLE 是"质量更高的 Medusa"（特征层草稿），MTP 是"DeepSeek 的训练时联合优化"（质量最高但改训练）。2024+ 趋势是 EAGLE/MTP，因为 draft 质量决定接受率上限。
-
-#### 接受率与加速比的关系
-
-**精确期望公式**（k 个 draft token，接受率 α）：
-
-```
-E[accepted] = (1 - α^(k+1)) / (1 - α)
-加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
-```
-
-##### 接受率扫描（k=1..8, α=0.5..0.9）
-
-| k \ α | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
-|-------|-----|-----|-----|-----|-----|
-| 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
-| 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
-| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
-| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
-
-**关键观察**：
-- α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
-- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
-- **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
-
-> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
-
-#### 新增面试题
-
-6. **为什么接受率 α 决定加速比上限？**（⭐⭐⭐⭐ 高频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - 加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
-  - E[accepted] = (1 - α^(k+1)) / (1 - α)，随 α 增大趋近 k+1（上界）
-  - α 低时 E[accepted] 小，k 大反而被 t_d 拖累（draft 开销 k×t_d 增长）
-  - α=0.5、k=8 时 E[accepted]=2.00，但 k×t_d=8×t_d，若 t_d 不够小则变慢
-  - **结论**：α 是上限，k 是杠杆——α 高才适合大 k
+- **bucket 选取原则**：
+  - 按请求 batch 的实际分布选，覆盖 P99 即可（不必覆盖极端值，超桶回退 eager）
+  - 等距分桶（如 vLLM 按 `max_num_seqs` 等距）或按分布密度分桶（请求密集的区间桶更密）
+  - 常见 {1,2,4,8,16} 或 {1,2,4,8,16,32}，bucket 数通常 5-8 个
+- **权衡**：
+  - **bucket 多**：显存占用大（每 bucket 一套静态 buffer + graph），但 padding 浪费小
+  - **bucket 少**：显存省，但 padding 浪费大（如只有 {1,16} 两个桶，b=2 要 pad 到 16，浪费 87.5%）
+- **padding 浪费估算**：平均 padding 比例 = Σ(实际 batch 落入某桶的频率 × (bucket - batch) / bucket)，通常控制在 < 10%
+- **padding 不影响正确性**：padding 行参与计算但 attention 用 mask 屏蔽，有效行输出与 eager 一致
+- **进阶**：变长序列也对 seq_len 分桶（{128,256,512,1024}），与 batch 桶组合；KV Cache 不为 padding 行分配，避免显存浪费
 
 </details>
-
-7. **draft 模型怎么选？独立小模型 vs Medusa vs EAGLE vs MTP？**（⭐⭐⭐⭐ 高频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - **独立小模型**：需维护两模型，draft 质量受小模型能力限制，部署复杂
-  - **Medusa**：target 加 head，无独立模型，但 token 级预测质量中等（α~0.5-0.6）
-  - **EAGLE**：特征层草稿，质量更高（α~0.6-0.7），但需训练草稿网络
-  - **MTP**：训练时联合优化，质量最高（α~0.7-0.8），但改训练流程，成本高
-  - **选择**：快速验证用 Medusa，质量要求用 EAGLE，训练可控用 MTP（DeepSeek 路线）
-
-</details>
-
-8. **verify 阶段的 kernel 实现要点？**（⭐⭐⭐ 中频）
-
-<details>
-<summary>点击查看答案</summary>
-
-  - verify 是"大模型一次 forward 验证 k+1 个 token"，本质是 batch=GEMM
-  - 关键：Q 是 k+1 个 token（draft + 1），K/V 是历史 + draft 的 K/V
-  - kernel 要点：causal mask 的块级跳过（draft token 间是 causal，与历史是 full attention）
-  - 优化：FlashAttention 的 causal 变体可省一半块计算（见 C2 任务）
-  - **接受/拒绝采样**：verify 后用 target 的 logits 做接受/拒绝，保持分布不变
-
-</details>
-

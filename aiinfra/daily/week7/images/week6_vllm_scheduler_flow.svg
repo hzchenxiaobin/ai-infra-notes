@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="400" viewBox="0 0 820 400" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="20" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="400" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">vLLM Scheduler · schedule() 五步</text>
+  <path d="M 270 44 Q 410 52 550 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="60" text-anchor="middle" font-size="11" fill="#888">每轮 iteration 的调度流程：释放 → 保留 running → 恢复 swapped → 接纳 waiting → 输出</text>
+
+  <!-- 5 step boxes -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="20" y="100" width="150" height="72" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="95" y="124" fill="#2b6e9e" font-weight="bold" font-size="14">①</text>
+    <text x="95" y="144" fill="#2b6e9e" font-weight="bold">free_finished</text>
+    <text x="95" y="162" fill="#2b6e9e" font-size="10">释放已完成请求</text>
+
+    <rect x="186" y="100" width="150" height="72" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="261" y="124" fill="#2e6e2e" font-weight="bold" font-size="14">②</text>
+    <text x="261" y="144" fill="#2e6e2e" font-weight="bold">schedule_running</text>
+    <text x="261" y="162" fill="#2e6e2e" font-size="10">保留 running decode</text>
+
+    <rect x="352" y="100" width="150" height="72" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="427" y="124" fill="#7a5415" font-weight="bold" font-size="14">③</text>
+    <text x="427" y="144" fill="#7a5415" font-weight="bold">schedule_swapped</text>
+    <text x="427" y="162" fill="#7a5415" font-size="10">恢复 swapped</text>
+
+    <rect x="518" y="100" width="150" height="72" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.6"/>
+    <text x="593" y="124" fill="#5d3a7e" font-weight="bold" font-size="14">④</text>
+    <text x="593" y="144" fill="#5d3a7e" font-weight="bold">schedule_waiting</text>
+    <text x="593" y="162" fill="#5d3a7e" font-size="10">接纳新请求 prefill</text>
+
+    <rect x="684" y="100" width="120" height="72" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="744" y="124" fill="#b85450" font-weight="bold" font-size="14">⑤</text>
+    <text x="744" y="144" fill="#b85450" font-weight="bold">构建 outputs</text>
+    <text x="744" y="162" fill="#b85450" font-size="10">返回批次</text>
+  </g>
+
+  <!-- arrows between steps -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 172 136 L 184 136" marker-end="url(#ar)"/>
+    <path d="M 338 136 L 350 136" marker-end="url(#ar)"/>
+    <path d="M 504 136 L 516 136" marker-end="url(#ar)"/>
+    <path d="M 670 136 L 682 136" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- anti-starvation note on step 4 -->
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 593 172 L 593 196"/>
+  </g>
+  <text x="593" y="210" text-anchor="middle" font-size="10" fill="#b85450" font-style="italic">if swapped: return（防饿死）</text>
+
+  <!-- SchedulingBudget box -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="240" width="350" height="110" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="215" y="264" fill="#2b6e9e" font-weight="bold" font-size="14">SchedulingBudget</text>
+    <text x="215" y="286" fill="#2b6e9e">token_budget（每轮 token 上限）</text>
+    <text x="215" y="306" fill="#2b6e9e">+ max_num_seqs（并发上限）</text>
+    <text x="215" y="332" fill="#2b6e9e" font-size="10" font-style="italic">每轮调度的两把"尺子"</text>
+  </g>
+
+  <!-- Preemption box -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="430" y="240" width="350" height="110" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
+    <text x="605" y="264" fill="#b85450" font-weight="bold" font-size="14">Preemption（显存不足抢占）</text>
+    <text x="605" y="288" fill="#b85450">RECOMPUTE（默认）丢弃 KV 重 prefill</text>
+    <text x="605" y="308" fill="#b85450">SWAP · KV 换出 CPU</text>
+    <text x="605" y="332" fill="#b85450" font-size="10" font-style="italic">RECOMPUTE 默认：通常比重算比 PCIe 快</text>
+  </g>
+
+  <text x="410" y="378" text-anchor="middle" font-size="10" fill="#5d3a7e">5 步顺序固定 · ③ 优先于 ④（swapped 不空不接纳新请求）· 预算 + 抢占是调度两大机制</text>
+</svg>

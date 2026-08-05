@@ -1,389 +1,387 @@
-## Day 6：Tensor Core 与 WMMA —— 从 FMA 到 Tensor CoreTensor Core 与 WMMA —— 从 FMA 到 Tensor Core 的跨越
+## Day 6：Nsight Compute 性能分析
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 Tensor Core 的硬件架构与 WMMA（Warp Matrix Multiply Accumulate）编程接口<br>
-2. 掌握 `nvcuda::wmma` fragment 的生命周期（load → mma_sync → store）<br>
-3. 理解 FP16 输入 / FP32 累加的混合精度策略及其精度-性能权衡<br>
-4. 实现手写 WMMA GEMM，实测 cuBLAS ~33%（教学版，诚实归因差距）<br>
-5. 能用 ncu 分析 Tensor Core 利用率，对比 FMA GEMM 与 WMMA GEMM 的瓶颈差异<br>
-6. 理解 CUTLASS 的三级 tiling 抽象与 WMMA 的关系<br>
+1. 掌握 Nsight Compute（`ncu`）的命令行用法和常用参数
+2. 理解关键性能指标的含义和正常范围
+3. 能用 Roofline 模型判断 kernel 是 compute-bound 还是 memory-bound
+4. 掌握 Warp Stall Reasons 的分类和对应的优化方法
+5. 能对 Register Blocking GEMM 进行完整的瓶颈分析
+6. 建立「Profile → 识别瓶颈 → 优化 → 重新 Profile 验证」的完整优化闭环
 
-> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 90%」是顶级算子工程师面试题，而 cuBLAS 默认使用 Tensor Core。不掌握 WMMA，手写 GEMM 永远卡在 FMA 上限（~64%）。今天是从 FMA 跨越到 Tensor Core 的第一步——教学版实测 ~33%，诚实归因差距，理解 85%+ 需要的工程深度（CUTLASS 级 smem tiling + double buffering）。
+> 💡 **为什么重要**：前面的理论学习告诉你「应该怎么做」，而 Profiling 告诉你「实际情况是什么」。没有 Profiling，优化就是盲人摸象。Nsight 是 AI Infra 工程师的「听诊器」，面试中「如何分析 Kernel 性能瓶颈」是标准高频题。
 
 ---
 
-### 学前导读：为什么 FMA GEMM 卡在 65%
+### 学前导读：为什么需要 Profiling
 
-![Tensor Core vs FMA 性能差距](../images/tensor_core_vs_fma.svg)
+写 CUDA 代码时，我们经常会有各种假设：
 
-Day 6 的整合版 GEMM（Register Blocking + float4 + coalesced writeback）在 RTX 5090 上达到 cuBLAS 的 64.3%。剩下的 35% 差距来自哪里？
+- 「这个 kernel 应该是 memory-bound」
+- 「加了 shared memory 应该会更快」
+- 「这个优化应该能提升 2 倍」
 
-| 优化层 | Day 6 已做 | Day 6b 新增 | 收益预期 |
-|--------|-----------|------------|---------|
-| Register Blocking | ✅ | — | — |
-| float4 向量化加载 | ✅ | — | — |
-| Coalesced 写回 | ✅ | — | — |
-| **Tensor Core (WMMA)** | ❌ | ✅ | **+20-25%** |
-| **Double Buffer (cp.async)** | ❌ | 概念 | +3-5% |
-| **Auto-tuning** | ❌ | 概念 | +2-3% |
+但真实 GPU 执行时，情况可能完全不同。Profiling 的作用就是：
 
-**核心洞察**：RTX 5090 的 FP32 FMA 峰值为 104.75 TFLOPS，而 FP16 Tensor Core 峰值约 209 TFLOPS（dense）。cuBLAS 的 `cublasSgemm` 在 sm_120 上默认使用 Tensor Core，因此 FMA GEMM 的理论上限就是 `104.75/209 ≈ 50%` 的 FP16 峰值——但我们对比的是 FP32 cuBLAS，所以实际卡在 65% 左右。
+- **验证假设**：实际瓶颈到底在哪里
+- **量化性能**：用数字说话，而不是感觉
+- **发现隐藏问题**：如 bank conflict、low occupancy、launch overhead 等
+- **指导优化方向**：避免在无效方向上浪费时间
 
-> 💡 **一句话总结**：Tensor Core 是 NVIDIA GPU 上矩阵乘法的硬件加速器，一条 WMMA 指令完成 16×16×16 的矩阵乘加，吞吐是 FMA 的 2-8 倍。不用 Tensor Core，就等于浪费了一半以上的算力。
+> **Profiling 的黄金法则**：不要猜测，要测量。
 
 ---
 
 ### 理论学习
 
-#### 1.1 Tensor Core 硬件架构
+#### 4.1 Nsight 工具家族
 
-![Tensor Core 架构](../images/tensor_core_architecture.svg)
+NVIDIA 提供了两个主要的 profiling 工具，各有分工：
 
-Tensor Core 是 NVIDIA GPU 中专门用于矩阵乘加（MMA）的硬件单元，自 Volta（sm_70, 2017）引入，每代迭代升级：
+##### Nsight Compute（`ncu`）
 
-| 架构 | Compute Capability | Tensor Core 代数 | 支持精度 | 关键改进 |
-|------|-------------------|-----------------|---------|---------|
-| Volta | sm_70 | 第一代 | FP16 | 首次引入 WMMA |
-| Turing | sm_75 | 第二代 | FP16, INT8 | 支持 INT8 推理 |
-| Ampere | sm_80 | 第三代 | FP16, BF16, TF32, INT8, INT4 | TF32 自动加速 FP32 |
-| Hopper | sm_90 | 第四代 | + FP8 | TMA, warp specialization |
-| **Blackwell** | **sm_120** | **第五代** | **+ FP8** | **RTX 5090 使用** |
+- **粒度**：单个 kernel
+- **用途**：分析 kernel 内部的详细硬件指标
+- **适用场景**：
+ - 判断 kernel 是 memory-bound 还是 compute-bound
+ - 查看 occupancy、register usage、shared memory
+ - 分析 memory throughput、compute throughput
+ - 查看 bank conflict、cache hit rate
+ - 生成 Roofline 图
 
-**Tensor Core 的工作方式**：
+##### Nsight Systems（`nsys`）
 
-每个 Tensor Core 每个时钟周期执行一个 `D = A × B + C` 操作，其中 A、B、C、D 是矩阵片段（fragment）。以最常用的 `m16n16k16` 为例：
+- **粒度**：整个应用
+- **用途**：分析时间线、CPU/GPU 交互、kernel launch overhead
+- **适用场景**：
+ - 找到最耗时的 kernel
+ - 分析 CPU 和 GPU 的并行情况
+ - 查看 kernel launch overhead
+ - 分析多个 stream 的并行执行
+ - 端到端 latency 分析
 
-```
-A: 16×16 (FP16)   B: 16×16 (FP16)   C: 16×16 (FP32)   D: 16×16 (FP32)
-```
-
-一个 warp（32 线程）协作完成一次 MMA 操作，每个线程持有 fragment 的一部分（分布在不同寄存器中）。
-
-##### 为什么 Tensor Core 比 FMA 快？
-
-| 维度 | FMA (CUDA Core) | Tensor Core (WMMA) |
-|------|----------------|-------------------|
-| 指令粒度 | 标量 `a*b+c` | 矩阵 `A×B+C` (16×16×16) |
-| 每周期 FLOPs/SM | 128 FP32 | ~256 FP16 (2x) |
-| 编程模型 | 显式线程级 | warp 级 fragment |
-| 数据布局要求 | 无 | 需满足 fragment 布局 |
-| 精度 | FP32 | FP16输入/FP32累加 |
-
-#### 1.2 WMMA 编程接口
-
-`nvcuda::wmma` 命名空间提供了 Tensor Core 的高层编程接口：
-
-```cuda
-#include <mma.h>
-using namespace nvcuda;
-
-// 1. 声明 fragment（编译时确定形状和精度）
-wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag;
-wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::col_major> b_frag;
-wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
-
-// 2. 初始化累加器
-wmma::fill_fragment(c_frag, 0.0f);
-
-// 3. 循环加载 + 计算
-for (int k = 0; k < K; k += 16) {
-    wmma::load_matrix_sync(a_frag, A + offset, ld);  // ld = leading dimension
-    wmma::load_matrix_sync(b_frag, B + offset, ld);
-    wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);   // D = A*B + C
-}
-
-// 4. 存储结果
-wmma::store_matrix_sync(C + offset, c_frag, ld, wmma::mem_row_major);
-```
-
-**Fragment 生命周期**：`声明 → fill → [load → mma_sync]* → store`
-
-##### Fragment 的三种类型
-
-| 类型 | 含义 | 数据分布 |
-|------|------|---------|
-| `matrix_a` | 输入矩阵 A | warp 内 32 线程分布持有 |
-| `matrix_b` | 输入矩阵 B | warp 内 32 线程分布持有 |
-| `accumulator` | 累加器 C/D | warp 内 32 线程分布持有 |
-
-> ⚠️ **注意**：Fragment 的内部布局是硬件相关的，程序员不应直接访问 `frag.x[i]`。所有操作通过 `load`/`store`/`mma_sync`/`fill` 完成。
-
-##### 支持的矩阵形状
-
-| 形状 | 精度组合 | 说明 |
-|------|---------|------|
-| m16n16k16 | FP16/FP32 | 最常用，本教程使用 |
-| m32n8k16 | FP16/FP32 | Ampere+ |
-| m16n16k8 | TF32/FP32 | Ampere+，自动加速 FP32 |
-
-#### 1.3 WMMA GEMM 实现
-
-![WMMA GEMM 分块策略](../images/wmma_gemm_tiling.svg)
-
-WMMA GEMM 的 tiling 策略与 Register Blocking 类似，但每个 warp 计算 16×16 的输出 tile（而非 8×8）：
+**使用流程**：
 
 ```
-Grid: (N/16, M/16)    每个 block 含 1 个 warp (32 threads)
-每个 warp 计算 C 的 16×16 子矩阵
-K 维循环：每次加载 16×16 的 A tile 和 16×16 的 B tile
+1. 先用 nsys 找到最耗时的 kernel
+2. 再用 ncu 深入分析该 kernel
+3. 根据分析结果优化
+4. 重复 profiling 验证效果
 ```
 
-**数据布局要求**：
-- A 矩阵：row-major（`wmma::row_major`）
-- B 矩阵：col-major（`wmma::col_major`）
-- C 矩阵：row-major（`wmma::mem_row_major`）
+#### 4.2 `ncu` 命令行基础
 
-> ⚠️ **常见坑**：WMMA 的 `load_matrix_sync` 要求 leading dimension 正确。A row-major 的 ld = K（每行跨度），B col-major 的 ld = K（每列跨度）。
+```bash
+# 基本用法：profile 一个 kernel
+ncu -o report.ncu-rep ./my_kernel
 
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/wmma_gemm.cu)。
+# 常用参数
+ncu \
+ --kernel-name regex:gemmRegisterBlocking \ # 只 profile 指定 kernel
+ -o report \ # 输出文件名
+ --metrics \ # 指定采集的指标（逗号分隔）
+ sm__throughput.avg.pct_of_peak_sustained_elapsed, # SM 计算利用率
+ dram__throughput.avg.pct_of_peak_sustained_elapsed, # 显存带宽利用率
+ l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum, # L1/纹理缓存加载扇区数
+ l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum # L1/纹理缓存存储扇区数
+ ./my_program
 
-#### 1.4 混合精度策略
-
-WMMA 的核心优势是混合精度计算：
-
+# 查看报告
+ncu-ui report.ncu-rep # GUI 方式
+ncu --page details -i report.ncu-rep # 命令行方式
 ```
-输入：FP16 (__half)     — 节省带宽和显存
-累加：FP32 (float)      — 保证数值精度
-输出：FP32 (float)      — 后续计算使用
+
+> 💡 **编译建议**：profiling 时建议加 `-g -lineinfo` 编译选项，保留调试信息，这样 ncu 的 Source View 能关联到源代码行。
+
+```bash
+nvcc -o gemm_profile register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 ```
 
-##### 为什么 FP16 输入 + FP32 累加？
+#### 4.3 关键性能指标
 
-| 方案 | 带宽 | 精度 | 适用场景 |
-|------|------|------|---------|
-| FP32 输入 + FP32 累加 | 1x | 最高 | 训练精度敏感场景 |
-| **FP16 输入 + FP32 累加** | **2x** | **高** | **推理/训练主流** |
-| FP16 输入 + FP16 累加 | 2x | 中 | 推理（精度要求不高） |
-| FP8 输入 + FP32 累加 | 4x | 中低 | Hopper/Blackwell 推理 |
+![ncu 关键性能指标分类](../images/ncu_metrics_overview.svg)
 
-FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，累加大量元素会丢失精度）。
+| 指标名称 | 正常范围 | 含义 | 优化方向 |
+|---------|---------|------|---------|
+| **SM Throughput** | > 60% 为良好 | SM 计算单元利用率 | 低 → 增加 occupancy 或指令级并行 |
+| **Memory Throughput** | > 60% 为良好 | 显存带宽利用率 | 低 → 检查 coalesced access |
+| **Achieved Occupancy** | 理论值的 70-100% | 实际 warp 占用率 | 低 → 减少 register/shared memory 使用 |
+| **Warp Stall Reasons** | 每项 < 20% | warp 阻塞原因分布 | 根据 stall 原因针对性优化 |
+| **L1/TEX Hit Rate** | > 80% 为良好 | L1 缓存命中率 | 低 → 优化内存访问模式 |
+| **IPC** | 架构相关 | 每周期执行指令数 | 低 → 检查依赖链和发射瓶颈 |
+| **Register Pressure** | < 80% 为良好 | 寄存器使用压力 | 高 → 减少寄存器变量 |
 
-#### 1.5 性能预期与瓶颈分析
+#### 4.4 Warp Stall Reasons 详解
 
-在 RTX 5090（sm_120）上：
+![Warp Stall Reasons 示例](../images/stall_reason_bar.svg)
 
-| 实现 | 预期 TFLOPS | 预期 cuBLAS 占比 | 瓶颈 |
-|------|------------|-----------------|------|
-| FMA Naive GEMM | ~7 | ~10% | Memory-bound（无 tiling） |
-| FMA Register Blocking + float4 | ~44 | ~64% | FMA 峰值限制 |
-| **WMMA GEMM (本教程)** | **~55-65** | **~33%**（教学版） | 无 smem tiling、每 block 1 warp、global load fragment |
-| cuBLAS (FP32 sgemm) | ~68 | 100% | Tensor Core + 深度优化 |
-| cuBLAS (FP16) | ~100+ | N/A | 接近 FP16 峰值 |
+Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。ncu 会报告各种 stall 原因的占比：
 
-##### 为什么 WMMA 还达不到 cuBLAS 100%？
+| Stall Reason | 含义 | 优化方法 |
+|-------------|------|---------|
+| **Long Scoreboard** | 全局内存加载延迟等待 | 增加 thread tile 大小，增加指令级并行 |
+| **Math Pipe Throttle** | 数学单元（FMA）过载 | 减少 FMA 依赖链，增加独立指令 |
+| **MIO Throttle** | 内存指令发射瓶颈 | 减少 shared memory 访问次数 |
+| **Wait** | 显式 `__syncthreads()` 等待 | 减少同步点，或使用 warp 级同步 |
+| **Barrier** | 同步屏障等待 | 优化线程负载均衡 |
+| **LG Throttle** | 加载/存储队列满 | 减少 global memory 访问频率 |
 
-1. **缺少 Double Buffer**：cp.async 异步加载可以重叠 load 和 compute
-2. **缺少 K 分割并行**：多 warp 协作同一输出 tile
-3. **缺少 Auto-tuning**：不同矩阵大小需要不同的 block/warp 配置
-4. **Fragment 开销**：WMMA 的 fragment 比 `mma.sync` PTX 指令有少量额外开销
+> 💡 **核心思路**：找到占比最高的 stall reason，针对性优化。Long Scoreboard 高 → 内存延迟问题；Math Pipe Throttle 高 → 计算依赖链问题。
 
-> 💡 **一句话总结**：WMMA 是 Tensor Core 的高层接口。本教程教学版实测 cuBLAS ~33%（诚实归因：无 smem tiling、单 warp/block）。要达到 85%+，需要 CUTLASS 级 smem tiling + double buffering + 多 warp；要 95%+，需手写 `mma.sync` PTX + cp.async。
+#### 4.5 Roofline 模型
+
+Roofline 模型是判断 kernel 瓶颈类型的核心工具：
+
+![Roofline 模型](../images/roofline_model_day4.svg)
+
+- **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
+- AI 低 → **memory-bound**（位于斜线区域，优化内存访问）
+- AI 高 → **compute-bound**（位于平顶区域，优化计算吞吐量）
+- 两线交点 = **平衡点**（RTX 5090 约 25 FLOP/byte）
+
+**如何用 Roofline 指导优化**：
+
+| Roofline 位置 | 瓶颈类型 | 优化方向 |
+|-------------|---------|---------|
+| 斜线下方（低 AI） | memory-bound | coalescing、shared memory、vectorized load |
+| 平顶下方（高 AI） | compute-bound | Tensor Core、指令优化、减少 stall |
+| 两线交点附近 | balanced | 两者都接近峰值，难以大幅优化 |
 
 ---
 
-### Coding 任务：手写 WMMA GEMM
+### Coding 任务：Profile Register Blocking GEMM
 
-#### 任务 1：创建 `wmma_gemm.cu`
-
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/wmma_gemm.cu)。
-
-代码包含三个 GEMM 实现并对比：
-- `fma_gemm_kernel`：FMA baseline（FP32, naive）
-- `wmma_gemm_kernel`：WMMA GEMM（FP16 输入, FP32 累加）
-- `cublasSgemm`：cuBLAS 参考
-
-#### 任务 2：编译与运行
+#### 任务 1：编译 GEMM 并生成 Profile 报告
 
 ```bash
-nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm.cu -o wmma_gemm
-./wmma_gemm
-```
+# 编译（保留调试信息以便 Source View 关联）
+nvcc -o gemm_profile kernels/register_blocking_gemm.cu \
+ -O3 -arch=sm_120 -lcublas -g -lineinfo
 
-预期输出（RTX 5090, sm_120, CUDA 12.8，FP16 输入 FP32 累加）：
-
-```text
-M=N=K    | FMA(ms)      WMMA(ms)     cuBLAS(ms)   | FMA%     WMMA%    WMMA/FMA
----------|------------------------------------------------|----------------------------
-512      | 0.051        0.012        0.025        | 5.3      21.7     10.6
-1024     | 0.310        0.080        0.044        | 6.9      26.8     48.9
-2048     | 2.317        0.565        0.242        | 7.4      30.4     71.1
-4096     | 18.604       4.098        1.963        | 7.4      33.5     70.0
-WMMA vs cuBLAS max_diff = 1.00e-02 (FP16 input precision loss expected)
-```
-
-> ⚠️ **诚实声明：WMMA% 仅 21.7%-33.5%，远低于 85%**。本 kernel 是教学版（每 block 1 warp、无 shared memory tiling、直接从 global memory load fragment），远未发挥 RTX 5090 FP16 Tensor Core 峰值（~209 TFLOPS）。
->
-> **差距归因**：
-> - **无 shared memory staging**：每 cycle 从 global memory 加载 fragment，HBM 带宽成瓶颈（5090 Ridge Point 58.45，FP16 GEMM 的 AI 不足以打满算力）
-> - **每 block 1 warp**：occupancy 低，无法隐藏 global memory latency
-> - **K 维无 tiling**：未复用 smem 中的 A/B tile，数据搬运远多于计算
->
-> **真实 85%+ 需要**：多 warp/block + smem tiling + double buffering + K 维分块（CUTLASS 级工程化，见 Day 4b）。本 kernel 的价值是**验证 WMMA fragment 的正确性与 FP16→FP32 累加链路**，不是性能基准。面试时声明"教学版实测 ~33%，生产 CUTLASS 可达 85%+"。
-
-#### 任务 3：Profiling
-
-```bash
-# ncu 分析 Tensor Core 利用率
-ncu --set full --kernel-name regex:wmma_gemm \
-    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
+# 运行 Nsight Compute profile
+ncu \
+ --kernel-name regex:gemmRegisterBlocking \
+ -o gemm_profile_report \
+ --metrics \
 sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\
-sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
-launch__registers_per_thread \
-    ./wmma_gemm
+l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,\
+l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum,\
+smsp__warps_eligible.sum.per_cycle,\
+smsp__average_warps_issue_stalled_long_scoreboard.pct \
+ ./gemm_profile 2>&1 | tee ncu_output.txt
 
-# 对比 FMA vs WMMA 的 Tensor Core 利用率
-ncu --kernel-name regex:"fma_gemm|wmma_gemm" \
-    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
-sm__throughput.avg.pct_of_peak_sustained_elapsed \
-    ./wmma_gemm
+# 导出为 CSV（便于命令行查看）
+ncu --csv --page details -i gemm_profile_report.ncu-rep > gemm_profile.csv
 ```
 
-**关注指标**：
+#### 任务 2：分析任务清单
 
-| 指标 | FMA GEMM 预期 | WMMA GEMM 预期 | 说明 |
-|------|-------------|---------------|------|
-| `sm__pipe_tensor_op_hmma` | 0% | 50-80% | Tensor Core 利用率 |
-| `sm__throughput` | 30-50% | 60-80% | SM 总吞吐 |
-| `dram__throughput` | 40-60% | 30-50% | 带宽利用率 |
-| `launch__registers_per_thread` | ~128 | ~64-96 | 寄存器用量 |
+拿到 ncu 报告后，按以下清单分析：
 
-#### 任务 4：LeetGPU 在线题目
+1. **读取 SM Throughput 和 Memory Throughput**，判断是 compute-bound 还是 memory-bound
+ - Memory Throughput >> SM Throughput → memory-bound
+ - SM Throughput >> Memory Throughput → compute-bound
+1. **读取 Achieved Occupancy**，判断 SM 利用率是否充分（目标 > 70%）
+2. **查看 Warp Stall Reasons**，找出主要 stall 原因
+3. **对比 L1/TEX Hit Rate**，判断缓存效率
+4. **打开 ncu-ui → Source 视图**，定位最耗时的代码行
 
-本题与 Tensor Core 强相关：[Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)
+#### 任务 3：案例分析
 
-Batched GEMM 是推理中 Multi-Head Attention 的核心操作。用 WMMA 实现 batched GEMM 可以充分利用 Tensor Core。
+假设 ncu 输出如下指标：
 
-#### 任务 5：LeetCode 面试题
+```
+SM Throughput: 45.2%
+Memory Throughput: 78.5%
+Achieved Occupancy: 56.3%
+L1/TEX Hit Rate: 82.1%
+Warp Stall Long Scoreboard: 35.2% ← 高！
+Warp Stall Math Pipe Throttle: 12.1%
+Register Pressure: 72%
+```
+
+**解读过程**：
+
+1. Memory Throughput(78.5%) > SM Throughput(45.2%) → **Memory Bound**
+2. Roofline 位置：在斜线下方，计算强度不够高
+3. Stall Reason：Long Scoreboard 35.2% → 全局内存加载延迟是主要瓶颈
+4. Achieved Occupancy 56.3% → 偏低，可能 register 太多导致 occupancy 下降
+
+**优化方向**：
+
+| Profile 发现 | 尝试优化 | 预期效果 |
+|------------|---------|---------|
+| Memory Throughput 高，SM Throughput 低 | 增大 TM×TN（如 8×8→16×8） | 提升计算强度 |
+| Long Scoreboard Stall 高 | 引入 Double Buffering | 掩盖内存延迟 |
+| Achieved Occupancy 低 | 减少 register 使用（减小 TM 或 TN） | 提升 warp occupancy |
+| L1 Hit Rate 低 | 检查 coalesced access 模式 | 提升缓存效率 |
+
+#### 任务 4：优化实验与对比验证
+
+![Profile → 优化 → 验证 完整闭环](../images/profile_optimize_loop.svg)
+
+基于 Profile 结果，选择一项优化进行实验，然后重新 profile 对比：
+
+```bash
+# 优化后重新 profile
+ncu --kernel-name regex:gemmRegisterBlocking -o gemm_profile_v2 \
+ --metrics sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed \
+ ./gemm_profile_v2
+
+# 对比两次结果，确认优化是否有效
+```
+
+#### 任务 5：LeetGPU 在线题目 —— Softmax
+
+**题目链接**：<https://leetgpu.com/challenges/softmax>
+
+**与今日知识的关联**：
+
+本题是典型的 memory-bound kernel，适合用 Day 4 学的 Nsight Compute 做完整 profiling。用 ncu 分析 memory throughput、occupancy、warp stall reasons，判断瓶颈在内存带宽还是计算，并据此优化。
+
+> 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html)。
+
+#### 任务 6：LeetCode 面试题（8 周计划 · 第 2 周 Day 4）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 4（字符串匹配），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [剑指 Offer 47](https://leetcode.cn/problems/li-wu-de-zui-da-jie-zhi-lcof/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/jianzhi-offer-47_li-wu-de-zui-da-jie-zhi-lcof.html) |
-| [64](https://leetcode.cn/problems/minimum-path-sum/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/64_minimum-path-sum.html) |
-| [1143](https://leetcode.cn/problems/longest-common-subsequence/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_longest-common-subsequence.html) |
-| [72](https://leetcode.cn/problems/edit-distance/) | Hard | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_edit-distance.html) |
+|------|------|----------|------|
+| [165. 比较版本号](https://leetcode.cn/problems/compare-version-numbers/) | 中等 | 字符串切分 + 逐段比较 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html) |
+| [8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/) | 中等 | 模拟 + 溢出边界处理 | — |
+| [28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/) | 简单 | KMP / 内置查找 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html) |
+| [468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) | 中等 | 分段 + 规则校验 | — |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：对比不同矩阵大小下 WMMA 的收益
+#### 实验 1：使用 nsys 分析 Timeline
 
-修改 `wmma_gemm.cu` 的 `sizes` 数组，加入 128, 256, 8192：
-- 观察 WMMA 在小矩阵（128, 256）下是否仍有优势
-- 思考：为什么小矩阵下 WMMA 可能更慢？（fragment 初始化开销 + SM 不足）
+```bash
+nsys profile -o timeline_report ./gemm_profile
+```
 
-#### 实验 2：用 `mma.sync` PTX 替代 WMMA
+用 Nsight Systems GUI 打开 `.nsys-rep`，观察：
+- H2D memcpy、Kernel、D2H memcpy 的时间占比
+- 多个 kernel 的执行顺序
+- CPU 和 GPU 的并行情况
 
-查阅 CUDA Programming Guide 中的 `mma.sync.aligned` PTX 指令：
-- 将 `wmma_gemm_kernel` 中的 `wmma::mma_sync` 替换为内联 PTX `mma.sync.aligned.m16n8k16`
-- 对比性能：WMMA 接口 vs 直接 PTX
-- 思考：为什么直接 PTX 可能更快？（消除 fragment 抽象开销）
+#### 实验 2：云 GPU 环境下的 Profiling 替代方案
 
-#### 实验 3：添加 Double Buffer
+| 场景 | 解决方案 |
+|------|---------|
+| 只有命令行 ncu | `ncu --csv --page details -i report.ncu-rep > report.csv` 导出 CSV 分析 |
+| 无 ncu 权限 | 使用 `nvprof`（旧版）或代码中嵌入 `cudaEvent` 手动计时 |
+| 纯云环境 | ncu 导出报告后下载到本地用 ncu-ui 打开 |
 
-在 WMMA GEMM 中加入 double buffer：
-- 使用 `cp.async`（Ampere+）或 `__pipeline_memcpy_async`
-- 预期收益：3-5%（重叠 load 和 compute）
-- 思考：为什么 double buffer 在 K 较小时收益不大？
+#### 实验 3：Profile Day 1 的 Warp Reduce Kernel
+
+对 Day 1 的 `warp_reduce.cu` 运行 ncu，对比它与 GEMM 的指标差异：
+- Warp Reduce 的 SM Throughput 和 Memory Throughput 分别是多少？
+- 哪个 stall reason 占比最高？
+- 为什么 Reduce kernel 的 occupancy 通常很高？
+
+### 验证 Checklist
+
+- [ ] 能独立运行 ncu 并导出报告（命令行 + GUI）
+- [ ] 能解读 SM Throughput 和 Memory Throughput 判断瓶颈类型
+- [ ] 能说出 3 个常见 Warp Stall Reason 及对应的优化方法
+- [ ] 能画出 Roofline 模型并解释自己的 kernel 在什么位置
+- [ ] 能在 ncu-ui 的 Source 视图中定位最耗时的代码行
+- [ ] 理解云 GPU 环境下 ncu 的替代使用方案
+- [ ] 完成一次「Profile → 识别瓶颈 → 优化 → 重新 Profile 验证」的完整循环
 
 ---
 
 ### 今日总结
 
-Day 6b 我们掌握了 Tensor Core 与 WMMA 编程：
+Day 4 我们掌握了 Nsight Compute 性能分析工具：
 
-1. **Tensor Core 架构**：每周期执行 16×16×16 矩阵乘加，吞吐是 FMA 的 2-8 倍
-2. **WMMA 接口**：`fragment` 生命周期（声明→fill→load→mma_sync→store），warp 级编程模型
-3. **混合精度策略**：FP16 输入节省带宽 + FP32 累加保证精度，是推理/训练的主流方案
-4. **WMMA GEMM**：手写实现达到 cuBLAS 85%+，瓶颈从 FMA 峰值转移到带宽和 fragment 开销
-5. **与 CUTLASS 的关系**：WMMA 是高层接口，CUTLASS 在此基础上添加 auto-tuning、double buffer、K 分割等深度优化
-6. **面试核心**：能解释从 65% 到 85% 的跨越来自 Tensor Core，从 85% 到 95% 需要 CUTLASS 级别的工程优化
+1. **ncu 命令行**：`--metrics` 指定指标、`--kernel-name` 过滤 kernel、`-o` 导出报告
+2. **关键指标**：SM Throughput、Memory Throughput、Achieved Occupancy、Warp Stall Reasons
+3. **Roofline 模型**：计算强度判断 memory-bound vs compute-bound，平衡点 = 峰值算力 / 峰值带宽
+4. **Warp Stall 分析**：Long Scoreboard 高 → 内存延迟；Math Pipe Throttle 高 → 计算依赖链
+5. **优化闭环**：Profile → 识别瓶颈 → 针对性优化 → 重新 Profile 验证
 
-掌握 Tensor Core 后，你就理解了"为什么 cuBLAS 比手写 FMA 快 2 倍"——不是算法更优，而是用了不同的硬件单元。下一步学习 CUTLASS，理解工业级 GEMM 库的工程深度。
+掌握这些后，你就拥有了「用数据说话」的优化能力，而不是靠猜测调参。
 
 ---
 
 ### 面试要点
 
-1. **WMMA fragment 的生命周期是什么？为什么不能直接访问 fragment 内部数据？**
+1. **「如何分析一个 CUDA Kernel 的性能瓶颈？」请给出完整的分析流程。**
 
-   <details>
-   <summary>点击查看答案</summary>
+<details>
+<summary>点击查看答案</summary>
 
-   - 生命周期：`声明(fragment类型+形状+精度) → fill_fragment(初始化) → [load_matrix_sync → mma_sync]* → store_matrix_sync`
-   - 不能直接访问内部数据的原因：
-     - Fragment 的内部布局是**硬件相关**的，不同架构（Volta/Ampere/Hopper）的线程-数据映射不同
-     - 编译器会根据目标架构重新排列 fragment 中的数据
-     - 直接访问 `frag.x[i]` 会导致代码不可移植，且可能违反对齐要求
-   - 正确做法：通过 `load_matrix_sync`（从 global/shared memory 加载）和 `store_matrix_sync`（写回）操作 fragment
+ 1. **工具选择**：ncu 做 kernel 级分析 + nsys 做系统级 Timeline 分析
+ 2. **第一步（Baseline）**：运行 ncu 获取 SM Throughput、Memory Throughput、Achieved Occupancy
+ 3. **第二步（Roofline 定位）**：根据两个 Throughput 判断 kernel 在 Roofline 上的位置
+ - Memory Throughput >> SM Throughput → Memory Bound → 优化内存访问
+ - SM Throughput >> Memory Throughput → Compute Bound → 优化计算吞吐量
+ 1. **第三步（Stall 分析）**：查看 Warp Stall Reasons，定位具体阻塞原因
+ - Long Scoreboard 高 → 全局内存延迟 → 增加 tiling、vectorized load、double buffering
+ - Math Pipe Throttle 高 → FMA 依赖链 → 增加指令级并行
+ - MIO Throttle 高 → Shared Memory 瓶颈 → 减少 shared memory 访问
+ 1. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
 
-   </details>
+</details>
 
-2. **为什么 FP16 输入 + FP32 累加比纯 FP16 累加精度高？在什么场景下必须用 FP32 累加？**
 
-   <details>
-   <summary>点击查看答案</summary>
+2. **Achieved Occupancy 低于理论值的可能原因有哪些？如何排查？**
 
-   - FP16 只有 10 位尾数（有效位），大量累加会导致**大数吃小数**（precision loss due to limited mantissa）
-   - FP32 有 23 位尾数，累加数千个 FP16 乘积仍能保持精度
-   - **必须用 FP32 累加的场景**：
-     - K 维度较大（K > 256）时，累加次数多，FP16 累加误差累积
-     - 训练场景（梯度计算对精度敏感）
-     - 需要与 FP32 reference 对齐的验证场景
-   - **可以用 FP16 累加的场景**：
-     - 推理（K 较小、容忍少量精度损失）
-     - INT8 量化推理（本身已有量化误差）
+<details>
+<summary>点击查看答案</summary>
 
-   </details>
+ - **Register 溢出**：每线程 register 过多 → ncu 查看 `launch__registers_per_thread`，与架构限制对比
+ - **Shared Memory 不足**：每 block smem 过多 → 计算 `s_A + s_B` 用量，与 SM 上限对比
+ - **Block Size 不合理**：非 32 倍数或不在甜蜜区 → 检查 `blockDim.x`
+ - **Grid Size 不足**：总 block 数 < SM 数 × 每 SM 最大 block 数 → 比较 gridDim 和 SM 数量
+ - **同步开销**：过多 `__syncthreads()` 导致 warp 空闲等待
 
-3. **手写 WMMA GEMM 达到 cuBLAS 85%，剩下的 15% 差距来自哪里？**
+</details>
 
-   <details>
-   <summary>点击查看答案</summary>
 
-   五个主要差距来源：
-   1. **Double Buffer（cp.async）**：cuBLAS 使用 `cp.async` 异步加载下一块数据到 shared memory，与当前块计算重叠。手写 WMMA 未实现。
-   2. **K 分割并行**：cuBLAS 将 K 维切分给多个 warp 协作，最后 warp reduce 合并。手写版本单个 warp 独立完成 K 循环。
-   3. **Auto-tuning**：cuBLAS 根据矩阵大小、精度、布局自动选择最优的 block/warp/stage 配置。手写版本使用固定配置。
-   4. **Shared Memory 优化**：cuBLAS 在 shared memory 中使用 padding 消除 bank conflict，手写版本未优化。
-   5. **Fragment 布局优化**：cuBLAS 直接使用 `mma.sync` PTX 指令，绕过 WMMA 的 fragment 抽象开销。
+3. **Roofline 模型怎么解读？平衡点是什么？**
 
-   </details>
+<details>
+<summary>点击查看答案</summary>
 
-4. **WMMA 的 `load_matrix_sync` 对数据布局有什么要求？如果布局不对会怎样？**
+ - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
+ - RTX 5090 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
+ - 优化方向：斜线区域优化内存访问，平顶区域优化计算
 
-   <details>
-   <summary>点击查看答案</summary>
+</details>
 
-   - `matrix_a` 可选 `row_major` 或 `col_major`，`leading dimension` = 每行（或每列）的元素数
-   - `matrix_b` 同理
-   - 如果布局与实际数据不匹配：
-     - **不会报错**（WMMA 不做布局检查），但会**静默产生错误结果**
-     - 因为 Tensor Core 会按声明的布局去解读内存中的数据，布局错误相当于做了转置或错位读取
-   - 常见坑：
-     - A row-major 的 ld 应为 K（每行 K 个元素），不是 M
-     - B col-major 的 ld 应为 K（每列 K 个元素），不是 N
-     - 如果 A 实际是 col-major 但声明为 row_major，需要转置或修改 ld
 
-   </details>
+4. `ncu` **的 Source View 有什么用？需要什么编译条件？**
 
-5. **RTX 5090 的 FP16 Tensor Core 峰值是多少？如何计算？**
+<details>
+<summary>点击查看答案</summary>
 
-   <details>
-   <summary>点击查看答案</summary>
+ - Source View 能将硬件指标关联到源代码行，精确定位最耗时的代码
+ - 需要编译时加 `-g -lineinfo` 保留调试信息
+ - 例如：能看到第 45 行的 `acc[m][n] += r_A[m] * r_B[n]` 占了 60% 的执行时间
 
-   - RTX 5090（Blackwell GB202, sm_120）的 FP16 Tensor Core dense 峰值约 **~209 TFLOPS**
-   - 计算方法：
-     ```
-     FP16 dense = FP32 FMA 峰值 × 2 = 104.75 × 2 ≈ 209 TFLOPS
-     ```
-   - 这是因为 Tensor Core 每个 cycle 执行的 FP16 FLOPs 是 FP32 FMA 的 2 倍
-   - 如果启用 2:4 structured sparsity，峰值再翻倍：~418 TFLOPS（sparse）
-   - FP8 峰值更高：~418 TFLOPS（dense）/ ~836 TFLOPS（sparse）
-   - **面试技巧**：用"FP32 × 2 = FP16 dense"推导，不需要死记硬背
+</details>
 
-   </details>
+
+5. **Memory-bound 和 Compute-bound 的优化方向有什么本质区别？如何用 ncu 数据支撑判断？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - **本质区别**：memory-bound 受限于数据搬运（喂不饱计算单元），优化方向是减少 HBM 读写（tiling、向量化、fusion）；compute-bound 受限于算力（算不过来），优化方向是提升计算吞吐（Tensor Core、ILP、指令调度）
+ - **ncu 判断**：看 `dram__throughput` 与 `sm__throughput` 的占比——DRAM ≫ SM → memory-bound；SM ≫ DRAM → compute-bound；两者都低 → latency-bound（可能是同步或依赖链）
+ - **Roofline 验证**：算 AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）比较，AI < Ridge → memory-bound
+ - **常见误区**：只看绝对耗时不算 AI，容易误判。例如 Softmax 耗时短但 AI≈0.375 仍是 memory-bound
+
+---
+
+</details>
+

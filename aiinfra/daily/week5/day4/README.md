@@ -1,460 +1,541 @@
-## Day 4：IO 优化方法论总结与收官IO 优化方法论总结与 Week 4 收官
+## Day 4：FlashAttention Backward 与 GEMM Backward
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 从 FlashAttention 中提炼出通用的 **IO 优化方法论**——Tiling、Online Algorithm、Kernel Fusion、Recomputation、Async Copy、Data Layout 六大策略<br>
-2. 建立 IO 优化的 **场景决策树**，拿到任意 memory-bound 算子能判断用哪种策略<br>
-3. 系统梳理 Week 4 的核心知识链：论文精读 → online softmax → 手写 Kernel → 官方源码 → FA2 改进 → Mini 引擎集成 → 性能对比<br>
-4. 整理本周所有产出（Kernel、引擎、benchmark 报告），形成可复用的工程资产<br>
-5. 回顾本周 15 道面试题，建立 FlashAttention 与 IO 优化的答题框架<br>
-6. 为 Week 5 的推理系统学习做好知识衔接，明确 KV Cache、vLLM、Continuous Batching 的前置基础
+1. 掌握 **GEMM 反向**的数据流——`C = A @ B` 时 `dA = dC @ B^T`、`dB = A^T @ dC`，理解"反向即两个转置 GEMM"的对称性<br>
+2. 理解为什么 FlashAttention **不能直接反传**——前向丢弃了中间 `S/P`，反向必须重算<br>
+3. 能独立推导 **logsumexp trick**——$L_i = m_i + \log(l_i)$，证明 $P_{ij} = \exp(S_{ij} - L_i)$，从而用 O(N) 标量恢复整个 softmax 权重<br>
+4. 掌握 **FA Backward 算法**（论文 Algorithm 2）：前向只存 `Q/K/V/O/L`，反向分块重算 `S/P` 的 Jacobian，IO 保持 O(Nd)<br>
+5. 实现并运行 `gemm_backward.cu`（naive CUDA）与 `flash_attention_backward.py`（PyTorch 自定义 autograd），通过 `torch.autograd.gradcheck` 数值验证<br>
+6. 能解释 `D_i = O_i \cdot dO_i` 这一关键化简，以及它如何让反向无需二次扫描 KV<br>
 
-> 💡 **为什么重要**：Day 1-6 我们分别学了 FlashAttention 的理论、实现、源码、改进、集成、benchmark。但"各个模块都懂"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张 IO 优化方法论的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何 memory-bound 算子，你能立刻判断它为什么慢、该用哪种策略优化。Week 5 的 KV Cache、PagedAttention 都建立在这张地图上。
-
----
-
-### Week 4 知识地图
-
-![FlashAttention Tiling 与线程映射](../../week4/images/flash_attention_tiling.svg)
-
-Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
-
-![Week 4 学习主线](../../images/week4_learning_pipeline.svg)
-
-| Day | 主题 | 核心产出 | 关键概念 |
-|-----|------|---------|---------|
-| Day 1 | FlashAttention 论文精读 | online softmax 三公式推导 | Tiling、Online Softmax、O(N²)→O(Nd) |
-| Day 2 | 手写完整 Forward Kernel | flash_attention_v2.cu | warp 分工、shared memory tile、边界处理 |
-| Day 3 | 官方 CUDA 源码分析 | 源码分析笔记 | cp_async、K/V 复用、Kernel_traits 模板 |
-| Day 4 | FlashAttention-2 论文 | FA1 vs FA2 差异 | 减少 non-matmul、seq 并行、warp group |
-| Day 5 | 算子接入 Mini 引擎 | mini_engine_fa.py | C++ Extension、load_inline、stream 传递 |
-| Day 6 | 性能对比分析 | benchmark 报告 | 3-way 对比、ncu 验证 O(Nd)、speedup 矩阵 |
-| **Day 7** | **IO 优化方法论总结** | **方法论 checklist** | **六大策略 + 决策树** |
-
-> 💡 **一句话总结**：Week 4 的本质是"理解 FlashAttention 为什么快，并建立可迁移的 IO 优化方法论"。Day 7 的方法论 checklist 就是这 7 天学习的最终答卷。
+> 💡 **为什么重要**：Day 1-2 只解决了 forward——但训练要的是梯度。FlashAttention 真正的工程难点不在 forward 而在 backward：如何在"不存 N×N 中间矩阵"的前提下正确回传梯度。这道题是 AI Infra 面试里区分"读过论文"和"能落地实现"的分水岭，也是 Day 5 集成到 Mini 引擎后能否支持训练的前提。
 
 ---
 
-### 核心概念串讲
+### 学前导读：为什么 Forward 不够
 
-#### 1. FlashAttention 的核心思想：减少 HBM 访问
-
-![标准 Attention vs FlashAttention IO 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
+Day 1-2 我们把 FlashAttention Forward 跑通了：$O = \mathrm{softmax}(QK^T/\sqrt{d}) @ V$，HBM IO 从 O(N²) 降到 O(Nd)。但训练时优化器要的是 dQ/dK/dV，它们来自上游 dO。问题来了——**标准 attention 的反向公式需要 P**：
 
 ```
-标准 Attention：
- S = Q × K^T (N×N) → 写 HBM
- P = softmax(S) (N×N) → 读 S、写 P
- O = P × V (N×d) → 读 P、写 O
- HBM IO: O(N²) ← 瓶颈
-
-FlashAttention：
- 分块 Tiling + Online Softmax
- S/P 不落 HBM，在 SRAM 中完成
- HBM IO: O(Nd) ← 消除 N² 项
+dV = P^T @ dO
+dP = dO @ V^T
+dS = P * (dP - rowsum(P * dP))      ← softmax Jacobian，需要 P
+dQ = dS @ K / √d
+dK = dS^T @ Q / √d
 ```
 
-**关键洞察**：FlashAttention 的"快"不在于减少 FLOPs（计算量相同），而在于**减少数据移动**——"You can hide compute, but you can't hide memory"。
+而 FA Forward 为了省内存**根本没存 P**（O(N²)），只存了 `O` 和每行一个标量 `L`（O(N)）。这就形成了一个两难：
 
-#### 2. Online Softmax 三公式
+| 方案 | 内存 | 问题 |
+|------|------|------|
+| 标准 backward（物化 P） | O(N²) | 丢掉 FA 的全部内存优势 |
+| FA backward（重算 P） | O(Nd) | 需要从 `Q/K/L` 重新构造 P |
 
-![Online Softmax 递推更新流程](../../week4/images/flash_attention_online_update.svg)
+FA 选择后者——**recomputation**：前向多存一个 O(N) 的 `L`，反向用 `L` 把 P 一块一块重算回来。代价是反向多做一次 `QK^T` 的 FLOPs，但 IO 仍是 O(Nd)，而 IO 才是瓶颈。今天的核心就是搞清楚：`L` 是什么？为什么 O(N) 就够？反向怎么用？
 
-```
-公式1: m_new = max(m, max(xj))
-公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
-公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
-```
-
-`exp(m - m_new)` 是统一参考点的缩放因子——当全局 max 从 m 更新到 m_new 时，把旧值从"以 m 为参考"缩放到"以 m_new 为参考"。
-
-#### 3. FA1 → FA2 的演进
-
-| 维度 | FA1 | FA2 | 改进 |
-|------|-----|-----|------|
-| Non-matmul FLOPs | 跨 warp 冗余 | warp group 自治 | ~2x 减少 |
-| Work partitioning | Batch×Head | +Seq 并行 | 长序列更高并行度 |
-| Occupancy | 1 block/SM | 2-3 blocks/SM | 更高 |
-| Warp 同步 | 较多 | 较少 | 减少同步点 |
-
-#### 4. 手写版 vs 官方版的差距
-
-| 维度 | 手写版 | 官方版 | 差距来源 |
-|------|-------|-------|---------|
-| 数据加载 | 同步 | cp_async + 双缓冲 | 隐藏加载延迟 |
-| 精度 | FP32 | FP16/BF16 + FP32 acc | 带宽翻倍 |
-| Shared Memory | K/V 分开 | K/V 分时复用 | smem 减半 |
-| 计算单元 | FMA | Tensor Core (WMMA) | 峰值 4-8x |
-| 整体性能 | ~1x | ~3-5x | 工程细节累积 |
+> 💡 **一句话总结**：Forward 用 online softmax 省掉 P 的存储，backward 用 logsumexp 把 P 重新"解压缩"出来——存的是 O(N) 的 `L`，恢复的是 O(N²) 的 P，这就是 FA 的内存魔法能延伸到训练阶段的根本原因。
 
 ---
 
-### IO 优化方法论：六大策略决策树
+### 理论学习
 
-![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
+#### 1.1 GEMM Backward：反向即两个转置 GEMM
 
-从 FlashAttention 中提炼的通用 IO 优化方法论——适用于任何 memory-bound 算子：
+先从最简单的 GEMM 反向入手——attention 的前向和反向本质上都是 GEMM，理解 GEMM backward 的数据流是理解 FA backward 的前提。
 
-#### 六大策略清单
+![FlashAttention Tiling 分块策略](../images/flash_attention_tiling.svg)
 
-| 策略 | 含义 | 适用场景 | FlashAttention 中的应用 |
-|------|------|---------|------------------------|
-| **Tiling** | 将大数据分块到 fast memory | 数据量 > SRAM 容量 | Q/K/V 分块加载到 shared memory |
-| **Online Algorithm** | 避免全局同步，边算边更新 | 需要全局 reduce 的分块场景 | online softmax 递推 m/l/o |
-| **Kernel Fusion** | 合并相邻算子，避免中间结果写回 HBM | memory-bound 算子相邻时 | QK^T + softmax + PV 融合为一个 kernel |
-| **Recomputation** | 用计算换内存访问 | 重算代价 < 读写代价时 | backward 重算 forward 中间值 |
-| **Data Layout 优化** | 调整数据排布提高访问局部性 | 不规则访问模式 | Q/K/V 按 (B,H,N,d) 连续存储 |
-| **Async Copy / 双缓冲** | 隐藏数据传输延迟 | 数据搬运与计算可重叠 | cp_async、double buffering |
+##### 链式法则推导
 
-#### 场景决策树
+前向 `C = A @ B`，其中 `A: M×K`，`B: K×N`，`C: M×N`。元素级：
 
-![IO 优化方法论决策树](../../images/week4_io_optimization_decision.svg)
+$$C_{ij} = \sum_{k=0}^{K-1} A_{ik} B_{kj}$$
 
-#### IO 优化与计算优化的关系
+给定上游梯度 `dC: M×N`（即 $\partial \text{loss} / \partial C$），由链式法则：
+
+$$\frac{\partial \text{loss}}{\partial A_{ik}} = \sum_j \frac{\partial \text{loss}}{\partial C_{ij}} \frac{\partial C_{ij}}{\partial A_{ik}} = \sum_j dC_{ij} \cdot B_{kj}$$
+
+$$\frac{\partial \text{loss}}{\partial B_{kj}} = \sum_i \frac{\partial \text{loss}}{\partial C_{ij}} \frac{\partial C_{ij}}{\partial B_{kj}} = \sum_i A_{ik} \cdot dC_{ij}$$
+
+写成矩阵形式：
 
 ```
-优化优先级（通常）：
- 1. 减少不必要的数据移动（IO 优化）
- 2. 融合 kernel 减少 launch overhead
- 3. 提升计算吞吐量（Tensor Core、指令级优化）
-
-原因：
- - 数据移动能耗和延迟通常远高于计算
- - "You can hide compute, but you can't hide memory"
- - 现代 GPU 算力增长快于内存带宽增长，memory wall 越来越严重
+dA = dC @ B^T      (M×N) @ (N×K) = M×K
+dB = A^T @ dC      (K×M) @ (M×N) = K×N
 ```
 
-> 💡 **不是绝对**：如果系统已经是 compute-bound，再优化 IO 收益很小，应该优化计算（Tensor Core、更好的 work partitioning）。**正确做法**：先用 profiling 判断瓶颈类型，再针对性优化。
+##### 与 forward 的对称性
 
----
+| 维度 | Forward `C=A@B` | Backward `dA` | Backward `dB` |
+|------|----------------|---------------|---------------|
+| 形状 | M×K @ K×N → M×N | dC(M×N) @ B^T(N×K) | A^T(K×M) @ dC(M×N) |
+| 访问 A | 读 | — | 读（转置） |
+| 访问 B | 读 | 读（转置） | — |
+| 访问 dC | — | 读 | 读 |
+| FLOPs | 2MNK | 2MNK | 2MNK |
 
-### 总结任务
+> 💡 **关键洞察**：GEMM 反向 = 两个 GEMM，每个的 FLOPs 与 forward 相同，只是把某个输入转置。所以 **forward 能加速的 GEMM，backward 也能**——这正是 FA backward 能保持 O(Nd) IO 的基础：它的两个 `QK^T`、`PV` 反向 GEMM 和 forward 用的是同一套 tiling 机制。
 
-#### 任务 1：完成 IO 优化方法论文档
+##### 数据流图
 
-将上文六大策略和决策树整理到 `notes/io_optimization_methodology.md`（自行创建），并补充至少一个 Transformer 外的应用例子：
-
-```markdown
-# 从 FlashAttention 提炼的 IO 优化方法论
-
-## 核心原则
-减少 HBM 访问，在 fast memory 中完成计算。
-
-## 六大策略
-1. Tiling — 卷积中的 im2col + 分块
-2. Online Algorithm — 流式计算中的 online mean/variance
-3. Kernel Fusion — CNN 中的 conv + bn + relu 融合
-4. Recomputation — activation checkpointing 反向传播
-5. Async Copy / 双缓冲 — 矩阵乘法的双缓冲 tiling
-6. 数据布局优化 — NHWC vs NCHW
-
-## 决策树
-[见 Day 7 教程]
-
-## Transformer 外的应用例子
-CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再读；
-融合后在 register 中直接传递，省去一次 HBM 读写。
+```
+        forward                    backward
+   A ──┐                         dC ──┐
+       ├──► C                      ├──► dA = dC @ B^T  (需要 B)
+   B ──┘                      B ──┘
+                              A ──┐
+                                  ├──► dB = A^T @ dC  (需要 A)
+                             dC ──┘
 ```
 
-#### 任务 2：整理本周产出
+注意：算 `dA` 需要 `B`，算 `dB` 需要 `A`——**前向的输入在反向时仍要可访问**。对 FA 而言，`Q/K/V` 在反向时必须重读，这正是反向 IO 比 forward 略高的原因。
 
-按下表清点本周所有代码和报告，补全缺失项：
+#### 1.2 FlashAttention Backward 概述：为什么不能直接反传
 
-| 产出物 | 文件 | 验收标准 | 状态 |
-|--------|------|---------|------|
-| Online Softmax 对比脚本 | `day1/kernels/compare_attention_io.py` | 标准 vs FA 误差 < 1e-5 | ☐ |
-| 完整 FlashAttention Kernel | `day2/kernels/flash_attention_v2.cu` | 与 CPU 误差 < 1e-3，支持 batch/head | ☐ |
-| 官方源码分析笔记 | `day3/notes/source_analysis.md` | 5 个差距点对比 | ☐ |
-| FA2 改进笔记 | `day4/notes/fa2_paper_notes.md` | FA1 vs FA2 三大差异 | ☐ |
-| Mini 引擎 FA 版 | `day5/kernels/mini_engine_fa.py` | 端到端误差 < 1e-3 | ☐ |
-| Benchmark 报告 | `day6/kernels/benchmark_results.json` | 含 N/B/H/d 扫描矩阵 | ☐ |
-| IO 优化方法论文档 | `day7/notes/io_optimization_methodology.md` | 六大策略 + 决策树 | ☐ |
+![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
-#### 任务 3：本周 LeetGPU / LeetCode 题目回顾
+##### 标准 backward 的内存灾难
 
-本周实战题目汇总（点击查看完整题解）：
+标准 attention 的 backward 需要物化 `S = QK^T` 和 `P = softmax(S)` 两个 N×N 矩阵——因为 PyTorch autograd 默认把前向的中间张量存进计算图，反向时直接读取。以 N=4096, d=64, FP32 为例：
 
-| Day | LeetGPU 题目 | LeetCode 题目 |
-|-----|--------------|---------------|
-| Day 1 | [Causal Self-Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) | [20. 有效的括号](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html)、[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)、[232. 用栈实现队列](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html)、[150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/)、[380. O(1) 时间插入、删除和获取随机元素](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html) |
-| Day 2 | [Multi-Head Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) | [394. 字符串解码](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html)、[224. 基本计算器](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html)、[227. 基本计算器 II](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html)、[402. 移掉 K 位数字](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html)、[316. 去除重复字母](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
-| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)、[496. 下一个更大元素 I](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html)、[503. 下一个更大元素 II](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html)、[901. 股票价格跨度](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html)、[84. 柱状图中最大的矩形](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
-| Day 4 | [Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) | [215. 数组中的第 K 个最大元素](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html)、[347. 前 K 个高频元素](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html)、[295. 数据流的中位数](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html)、[264. 丑数 II](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html) |
-| Day 5 | [Matrix Transpose](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) | [121. 买卖股票的最佳时机](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html)、[55. 跳跃游戏](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html)、[45. 跳跃游戏 II](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html)、[763. 划分字母区间](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html)、[621. 任务调度器](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
-| Day 6 | [Multi-Head Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html) | [253. 会议室 II](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html)、[435. 无重叠区间](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html)、[452. 用最少数量的箭引爆气球](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html)、[406. 根据身高重建队列](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html)、[1109. 航班预订统计](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
-| Day 7 | [GPT-2 Transformer Block](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html) | — |
+| 中间量 | 大小 | 是否必须 |
+|--------|------|---------|
+| S (N×N) | 64 MB | 标准 backward 需要 |
+| P (N×N) | 64 MB | softmax Jacobian 需要 |
+| Q/K/V/O (各 Nd) | 各 1 MB | 必须 |
+| **标准 backward 总存** | **~130 MB** | |
+| **FA backward 总存** | **~4 MB**（Q/K/V/O + L） | |
 
-> 💡 回顾重点：Causal Self-Attention / Multi-Head Attention 两道 LeetGPU 题对应本周 FlashAttention 主线；LeetCode 覆盖 DP/背包/回溯/树/双指针/链表六大标签。把没做完的题目今天补上。
+如果直接用标准 autograd，FA 的内存优势在训练时**全部归零**——前向省下的 64MB×2 在反向时又得物化回来。
 
-#### 任务 4：Week 5 预热 + 面试复盘
+##### Recomputation 策略
 
-**Week 5 预热**：本周我们掌握了 FlashAttention 和 IO 优化方法论。Week 5 将进入推理系统：
+FA 的解法：**前向多存一个 O(N) 的 `L`，反向重算 S/P**。
 
-1. **KV Cache**：Decode 阶段的核心优化，避免重算 K/V
-2. **vLLM 架构**：PagedAttention（减少 KV 显存碎片）、Continuous Batching（提高 GPU 利用率）
-3. **CUDA Graph**：减少 Decode 阶段的 launch overhead
-4. **推理系统端到端**：从 Prefill 到 Decode 的完整 pipeline
+```
+前向（存）:  Q, K, V, O, L          ← O(Nd) + O(N) = O(Nd)
+反向（重算）: for each (Q_tile, KV_tile):
+                S_ij = Qi @ Kj^T * scale      ← 重算，留 SRAM
+                P_ij = exp(S_ij - L_i)        ← 用 L 恢复，留 SRAM
+                累加 dQ/dK/dV                  ← 写回 HBM
+```
 
-**本周铺垫的关键概念**：
-- ✅ FlashAttention 的 tiling + online softmax（Day 1-2）→ Week 5 的 PagedAttention 分块思想
-- ✅ Kernel Fusion（Day 5 集成）→ Week 5 的算子融合策略
-- ✅ IO 优化方法论（Day 7）→ Week 5 的推理系统优化工具箱
-- ✅ ncu 验证 HBM IO（Day 6）→ Week 5 的推理性能分析
+代价：反向多做一次 `QK^T` 的 FLOPs（约 +50% 总 FLOPs）。收益：内存 O(Nd)，IO O(Nd)。由于 attention 的瓶颈是 IO 而非 FLOPs，这是划算的——**用算力换内存带宽**。
 
-**面试复盘**：回顾本周 15 道面试题，自问自答（答案见下方"面试要点"）：
+> ⚠️ **注意**：recomputation 不是"把前向再跑一遍"。前向只算 `O`，反向要算的是 `dQ/dK/dV` 三个梯度，重算的只是 `S/P` 这两个中间量，梯度公式本身与前向无关。
 
-1. FlashAttention 为什么快？HBM 角度分析
-2. 推导 online softmax 三公式
-3. 实际 wall-clock 加速为什么只有 2-8x？
-4. FlashAttention Kernel 线程如何分配？
-5. Kernel 中为什么不需要频繁 `__syncthreads`？
-6. 官方实现中 d 越大 Bc 越小？
-7. K/V 如何复用 shared memory？
-8. FA1 vs FA2 的关键差异？
-9. seq 并行 vs head 并行？
-10. 如何把自定义 FlashAttention 集成到 PyTorch？
-11. FlashAttention 什么时候比标准 Attention 慢？
-12. 如何设计 FlashAttention benchmark？
-13. 如何用 ncu 验证 HBM 访问 O(Nd)？
-14. IO 优化方法论有哪些？
-15. IO 优化和计算优化哪个更优先？
+#### 1.3 logsumexp Trick：用 O(N) 标量恢复整个 softmax
+
+这是 FA backward 的数学核心。我们要回答：**前向只存了 O(N) 的什么东西，能让反向恢复出 O(N²) 的 P？**
+
+##### 从 safe softmax 说起
+
+朴素 softmax `P_ij = exp(S_ij) / Σ_k exp(S_ik)` 有数值溢出风险（exp 大数 → inf）。safe softmax 先减行最大值：
+
+$$m_i = \max_j S_{ij}, \quad l_i = \sum_j \exp(S_{ij} - m_i), \quad P_{ij} = \frac{\exp(S_{ij} - m_i)}{l_i}$$
+
+Day 1 的 online softmax 就是在分块时维护 running 的 `(m_i, l_i)`，最终得到全局的 `m_i` 和 `l_i`。
+
+##### 定义 logsumexp
+
+令：
+
+$$L_i = \log \left( \sum_j \exp(S_{ij}) \right)$$
+
+由 safe softmax 的 `m_i`、`l_i` 展开：
+
+$$\sum_j \exp(S_{ij}) = \sum_j \exp(S_{ij} - m_i + m_i) = \exp(m_i) \cdot \sum_j \exp(S_{ij} - m_i) = \exp(m_i) \cdot l_i$$
+
+两边取 log：
+
+$$\boxed{L_i = m_i + \log(l_i)}$$
+
+这就是 **logsumexp**——它把"行最大值"和"行归一化常数"压缩进一个标量。
+
+##### 用 L 恢复 P
+
+由 `P_ij = exp(S_ij - m_i) / l_i` 和 `L_i = m_i + log(l_i)`：
+
+$$\exp(S_{ij} - L_i) = \exp\left(S_{ij} - m_i - \log(l_i)\right) = \frac{\exp(S_{ij} - m_i)}{l_i} = P_{ij}$$
+
+即：
+
+$$\boxed{P_{ij} = \exp(S_{ij} - L_i)}$$
+
+**结论**：只要存了每行的 `L_i`（一个标量），加上能重算的 `S_ij`（从 `Q_i, K_j` 即可），就能恢复任意 `P_ij`。存储从 O(N²) 降到 O(N)。
+
+##### Online softmax 天然产出 L
+
+Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就是全局 `m_i` 和 `l_i`，取 `L_i = m_i + log(l_i)` 即可。前向 kernel 每个 Q 行写回 `O_i` 的同时多写一个 `L_i`，代价仅 +4 bytes/行。
+
+##### 数值稳定性
+
+- `L_i = logsumexp(S_i)` 是数学上严格等于 `log(Σ exp(S))` 的，但计算时全程在 `exp(S - m)` 域里操作，`m` 是行 max，所以 `exp` 的参数 ≤ 0，不溢出。
+- 反向 `P_ij = exp(S_ij - L_i)`：`S_ij - L_i ≤ 0`（因为 `L_i ≥ S_ij`，logsumexp ≥ 任意一项），同样不溢出。
+- `l_i` 可能为 0（整行 -inf，如全 mask），需 `log(l_i)` 时加一个极小值 `ε` 保护，或在线 softmax 里保留 `l_i > 0` 的不变式。
+
+##### 如何实现 O(Nd) 的 backward IO
+
+| 反向需要的量 | 来源 | 大小 |
+|-------------|------|------|
+| `S_ij` | 重算 `Qi @ Kj^T * scale` | 不存（SRAM 内） |
+| `P_ij` | `exp(S_ij - L_i)` | 不存（SRAM 内） |
+| `L_i` | 前向保存 | O(N) |
+| `Q, K, V, O` | 前向保存 | O(Nd) |
+| `dO` | 上游 | O(Nd) |
+| `dQ, dK, dV` | 反向写出 | O(Nd) |
+
+**HBM 常驻量** = Q/K/V/O/dO/dQ/dK/dV (8·Nd) + L (N) = **O(Nd)**。重算的 S/P 只在 SRAM 里短暂存在，从不落 HBM。对比标准 backward 的 O(N²)，N=8192 时从 ~264MB 降到 ~8MB（32x）。
+
+> 💡 **一句话总结**：`L_i = m_i + log(l_i)` 是 softmax 的"无损压缩"——把 N 个归一化常数压成 1 个标量，反向用 `exp(S - L)` 解压。配合 `S` 的重算，FA backward 在不存任何 N×N 矩阵的前提下恢复了完整的 softmax Jacobian。
+
+#### 1.4 FA Backward 算法：Algorithm 2 详解
+
+![Online Softmax 递推更新流程](../images/flash_attention_online_update.svg)
+
+##### 反向梯度公式
+
+attention 的前向（per row）：`O_i = Σ_j P_ij V_j`，其中 `P = softmax(S)`，`S = QK^T * scale`。给定 `dO`，五个梯度（推导见 1.1 的链式法则 + softmax Jacobian）：
+
+```
+(1) dV_j = Σ_i P_ij dO_i              → dV = P^T @ dO
+(2) dP_ij = dO_i · V_j                → dP = dO @ V^T
+(3) D_i  = Σ_j P_ij dP_ij             ← softmax Jacobian 的对角项
+(4) dS_ij = P_ij (dP_ij - D_i)
+(5) dQ_i = Σ_j dS_ij K_j * scale      → dQ = dS @ K * scale
+    dK_j = Σ_i dS_ij Q_i * scale      → dK = dS^T @ Q * scale
+```
+
+##### 关键化简：D_i = O_i · dO_i
+
+公式 (3) 的 `D_i` 看起来需要对整行 P、dP 求和——反向又得扫一遍所有 KV。但有个漂亮的化简：
+
+$$D_i = \sum_j P_{ij} dP_{ij} = \sum_j P_{ij} (dO_i \cdot V_j) = dO_i \cdot \underbrace{\left(\sum_j P_{ij} V_j\right)}_{= O_i} = dO_i \cdot O_i$$
+
+即 **`D_i = rowsum(O_i * dO_i)`**，直接用前向保存的 `O` 和上游 `dO` 一次算出，**无需在 tile 循环里累加**。这是 FA backward 能单 pass 完成的关键。
+
+##### Algorithm 2：分块重算循环
+
+```
+前向存: Q, K, V, O, L          # O(Nd) + O(N)
+反向输入: dO                   # O(Nd)
+
+# 预计算 D_i = O_i · dO_i  (全局，一次)
+D = rowsum(O * dO)
+
+for q_tile i in 0..N step Br:
+    Qi, dOi, Li, Di = Q[i:i+Br], dO[i:i+Br], L[i:i+Br], D[i:i+Br]
+    dQi = 0
+    for kv_tile j in 0..N step Bc:
+        Kj, Vj = K[j:j+Bc], V[j:j+Bc]
+        # 重算 S/P（只用 Q/K/L，不落 HBM）
+        Sij = Qi @ Kj^T * scale
+        Pij = exp(Sij - Li)
+        # 累加三个梯度
+        dV[j:j+Bc] += Pij^T @ dOi
+        dPij = dOi @ Vj^T
+        dSij = Pij * (dPij - Di)
+        dQi += dSij @ Kj * scale
+        dK[j:j+Bc] += dSij^T @ Qi * scale
+    dQ[i:i+Br] = dQi
+```
+
+##### IO 复杂度
+
+每个 `Q tile` 在内层循环中被所有 `KV tile` 复用（常驻 SRAM），每个 `KV tile` 被 `N/Br` 个 Q tile 重读。总 HBM IO：
+
+$$\text{IO}_{\text{bwd}} = \Theta\left(\frac{N^2 d^2}{M}\right) \quad \text{（M = SRAM 大小）}$$
+
+当 `M = Θ(Nd)` 时简化为 **O(Nd)**，与 forward 同阶。常数比 forward 大（需重读 Q/K/V 算 S/P），但渐近类相同——这就是 FA 训练时也能省内存的原因。
+
+> ⚠️ **注意**：严格界是 `Θ(N²d²/M)`，与 forward 一样（见 [Day 1 注释](../day1/README.md)）。教程中统一说 O(Nd) 是取 `M=Θ(Nd)` 的简化形式。
 
 ---
 
-### 面试准备框架
+### Coding 任务：GEMM Backward 与 FlashAttention Backward
 
-面试中回答 FlashAttention / IO 优化问题，建议用这个结构：
+#### 任务 1：编写 gemm_backward.cu
 
-1. **先给结论**：FlashAttention 快在减少 HBM 访问，不在减少 FLOPs
-2. **给数据**：O(N²) → O(Nd)，N=4096 时 206MB → 4MB
-3. **讲算法**：Tiling（Q tile 驻留 SRAM）+ Online Softmax（递推 m/l/o）
-4. **讲工程**：cp_async、双缓冲、K/V 复用、Tensor Core（官方优化）
-5. **讲演进**：FA1 → FA2 的三大改进
-6. **迁移**：IO 优化方法论（六大策略）适用于任何 memory-bound 算子
+完整文件：[kernels/gemm_backward.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/gemm_backward.cu)
 
-**示例**：
+```cuda
+// gemm_backward.cu —— Naive GEMM Backward: dA = dC @ B^T, dB = A^T @ dC
+// 编译命令: nvcc -o gemm_backward gemm_backward.cu -O3 -arch=sm_120
+// 运行命令: ./gemm_backward
+// 前向: C = A @ B, A: M×K, B: K×N, C: M×N
+// 反向: dA = dC @ B^T (M×K), dB = A^T @ dC (K×N)
 
-> **Q：FlashAttention 为什么快？**
->
-> **A**：标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)。FlashAttention 用 Tiling 把 Q/K/V 分块加载到 SRAM，用 Online Softmax 在 SRAM 中完成 softmax+累加，不物化 S/P，IO 降到 O(Nd)。速度来源不是减少计算量，而是减少数据移动。长序列（N>2048）时收益最大，实际加速 2-8x。
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+// dA[i,k] = sum_j dC[i,j] * B[k,j]
+__global__ void gemm_backward_dA_kernel(const float* __restrict__ dC,
+                                        const float* __restrict__ B,
+                                        float* __restrict__ dA,
+                                        int M, int N, int K) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int k = blockIdx.y * blockDim.y + threadIdx.y;
+    if (i >= M || k >= K) return;
+    float sum = 0.0f;
+    for (int j = 0; j < N; j++) sum += dC[i * N + j] * B[k * N + j];
+    dA[i * K + k] = sum;
+}
+
+// dB[k,j] = sum_i A[i,k] * dC[i,j]
+__global__ void gemm_backward_dB_kernel(const float* __restrict__ A,
+                                        const float* __restrict__ dC,
+                                        float* __restrict__ dB,
+                                        int M, int N, int K) {
+    int k = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    if (k >= K || j >= N) return;
+    float sum = 0.0f;
+    for (int i = 0; i < M; i++) sum += A[i * K + k] * dC[i * N + j];
+    dB[k * N + j] = sum;
+}
+```
+
+naive 版每线程算一个输出元素，重点是把"`dA = dC @ B^T`、`dB = A^T @ dC`"两个转置 GEMM 落到具体的索引寻址——注意 `B[k*N+j]`（B 转置后第 k 行就是原 B 第 k 行）和 `A[i*K+k]`（A 转置后第 k 列就是原 A 第 k 列）。完整文件含 CPU 参考实现 + **有限差分验证**（取 `loss = sum(C)`，则 `dC = ones`，`dA[i,k] = sum_j B[k,j]`，用中心差分核对）。
+
+#### 任务 2：编译运行
+
+```bash
+nvcc -o gemm_backward kernels/gemm_backward.cu -O3 -arch=sm_120
+./gemm_backward
+```
+
+**预期输出**：
+
+```text
+=== Naive GEMM Backward ===
+A: 64x32, B: 32x64, C: 64x64
+
+[dA = dC @ B^T] GPU vs CPU ref:
+  maxDiff = 0.00e+00 (PASS)
+[dA] CPU ref vs finite-diff:
+  maxDiff = 0.00e+00 (PASS)
+[dB = A^T @ dC] GPU vs CPU ref:
+  maxDiff = 0.00e+00 (PASS)
+GPU Time (dA + dB kernels): 0.0xx ms
+```
+
+> 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。`dC = ones` 时 `dA`、`dB` 的解析值都退化成 `B`/`A` 的列和，正好用中心差分 `f(A+h·e) - f(A-h·e)` / `2h` 一一验证。
+
+#### 任务 3：编写 flash_attention_backward.py 并 gradcheck
+
+完整文件：[kernels/flash_attention_backward.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/flash_attention_backward.py)
+
+```python
+# flash_attention_backward.py —— Simplified FlashAttention Backward (PyTorch, teaching)
+# 运行命令: python3 flash_attention_backward.py
+import torch, math
+
+class FlashAttentionFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, Q, K, V, Br=64, Bc=64):
+        N, d = Q.shape[-2], Q.shape[-1]
+        scale = 1.0 / math.sqrt(d)
+        S = torch.matmul(Q, K.transpose(-2, -1)) * scale
+        L = torch.logsumexp(S, dim=-1)                 # (..., N) ← 只存这个 O(N)
+        P = torch.exp(S - L.unsqueeze(-1))             # softmax(S)，不保存
+        O = torch.matmul(P, V)
+        ctx.save_for_backward(Q, K, V, O, L)           # O(Nd) + O(N)
+        ctx.scale = scale; ctx.Br, ctx.Bc = Br, Bc
+        return O
+
+    @staticmethod
+    def backward(ctx, dO):
+        Q, K, V, O, L = ctx.saved_tensors
+        scale, Br, Bc = ctx.scale, ctx.Br, ctx.Bc
+        N = Q.shape[-2]
+        dQ = torch.zeros_like(Q); dK = torch.zeros_like(K); dV = torch.zeros_like(V)
+        # 关键化简: D_i = rowsum(P*dP) = O_i · dO_i
+        Di = (O * dO).sum(dim=-1, keepdim=True)        # (..., N, 1)
+        for q0 in range(0, N, Br):
+            q1 = min(q0 + Br, N)
+            Qi, Li, Di_q = Q[..., q0:q1, :], L[..., q0:q1], Di[..., q0:q1, :]
+            dOi = dO[..., q0:q1, :]; dQi = torch.zeros_like(Qi)
+            for kv0 in range(0, N, Bc):
+                kv1 = min(kv0 + Bc, N)
+                Kj, Vj = K[..., kv0:kv1, :], V[..., kv0:kv1, :]
+                # 重算 S/P（recomputation 核心）
+                Sij = torch.matmul(Qi, Kj.transpose(-2, -1)) * scale
+                Pij = torch.exp(Sij - Li.unsqueeze(-1))
+                # 反向五公式
+                dV[..., kv0:kv1, :] += torch.matmul(Pij.transpose(-2, -1), dOi)
+                dPij = torch.matmul(dOi, Vj.transpose(-2, -1))
+                dSij = Pij * (dPij - Di_q)
+                dQi += torch.matmul(dSij, Kj) * scale
+                dK[..., kv0:kv1, :] += torch.matmul(dSij.transpose(-2, -1), Qi) * scale
+            dQ[..., q0:q1, :] = dQi
+        return dQ, dK, dV, None, None
+```
+
+运行：
+
+```bash
+python3 kernels/flash_attention_backward.py
+```
+
+**预期输出**：
+
+```text
+=== torch.autograd.gradcheck ===
+gradcheck: PASS
+
+=== Correctness vs standard attention (fwd + bwd) ===
+  fwd maxDiff = 5.00e-16
+  dQ maxDiff = 9.99e-16
+  dK maxDiff = 7.77e-16
+  dV maxDiff = 5.55e-16
+
+=== Saved-tensor memory (forward) ===
+     N    d     FA(MB)    Std(MB)    ratio
+  1024   64      1.004      5.000      5.0x
+  4096   64      4.016     68.000     16.9x
+  8192   64      8.031    264.000     32.9x
+
+FA 仅存 Q/K/V/O + L = O(Nd)；标准 autograd 额外物化 P = O(N²)。
+```
+
+四个 `maxDiff` 全在 1e-15 量级（float64 机器精度），说明 `gradcheck` 认可我们的手写 backward 与 PyTorch 数值微分完全一致。内存表直观展示 N=8192 时 FA 的 saved tensor 比标准 autograd 少 32.9x——这就是不存 P 的收益。
+
+> ⚠️ **gradcheck 要求**：输入必须是 `dtype=torch.float64`（float32 精度不够），尺寸要小（本例 N=8, d=4），否则数值微分误差淹没真值。生产用 FP16/BF16 训练时，backward 内部用 FP32 累加（与 forward 一致）。
+
+#### 任务 4：LeetGPU 在线题目 —— Dot Product
+
+**题目链接**：<https://leetgpu.com/challenges/dot-product>
+
+**与今日知识的关联**：
+
+GEMM backward 的两个 kernel（`dA = dC @ B^T`、`dB = A^T @ dC`）以及 FA backward 里的 `S_ij = Qi @ Kj^T`、`dQ_i = dS_ij @ Kj`，本质上都是**点积的批量并行**——每个输出元素就是一组向量的点积。LeetGPU 的 Dot Product 题目是这一原子操作的最纯粹练习：把两个向量的点积拆给一个 block 的多线程，每线程算一段部分和，再用 warp/block reduce 汇总。掌握了它，就能把任意 GEMM（无论 forward 还是 backward）拆成"每线程若干点积 + 归约"的模板——今天 `gemm_backward.cu` 的最内层 `for (j) sum += dC[i*N+j]*B[k*N+j]` 正是一个单线程版点积，用 Dot Product 题解的 warp reduce 替换掉就能并行加速。
+
+> 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时。完整题解（含 `warpReduceSum` + `blockReduceSum` 两级归约、shared memory 中转、向量化加载）见 [Dot Product 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html)。本题与 Day 3 共享，但今日视角是"反向 GEMM 的原子内核"——把题解里的 reduce 原语套到 `gemm_backward_dA_kernel` 的内层循环上，就是从 naive 走向高性能的第一步。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 2b）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」的**栈模拟与设计进阶**子集，共 4 题。Day 2b 是补充教学日，LeetCode 题量精简，留时间给 backward 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [71. 简化路径](https://leetcode.cn/problems/simplify-path/) | 中等 | 栈模拟路径压缩 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/71_简化路径.html) |
+| [735. 行星碰撞](https://leetcode.cn/problems/asteroid-collision/) | 中等 | 栈模拟碰撞过程 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/735_行星碰撞.html) |
+| [946. 验证栈序列](https://leetcode.cn/problems/validate-stack-sequences/) | 中等 | 栈模拟出栈顺序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/946_验证栈序列.html) |
+| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 栈模拟中序迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
+
+> 💡 四题都围绕"用栈模拟一个过程"——和 FA backward 的"用 L 模拟/重算 P"是同一种思维：不存全部历史，只存一个紧凑状态，按需恢复。栈是算法层的 recomputation，logsumexp 是数值层的 recomputation。
 
 ---
 
-### 常见误区澄清
+### 扩展实验
 
-| 误区 | 正确理解 |
-|------|---------|
-| FlashAttention 减少了计算量 | 计算量相同（2N²d FLOPs），减少的是 HBM 数据移动 |
-| Online softmax 是近似算法 | 是精确算法，数学上与标准 softmax 完全等价 |
-| FA2 改了算法 | 算法不变（三公式不变），改进全在 work partitioning 和 occupancy |
-| 自定义 FA 一定能超过 PyTorch | 官方已高度优化，只有官方没覆盖的场景自定义才有优势 |
-| IO 优化总是优先于计算优化 | 需先 profiling 判断瓶颈类型；compute-bound 时优化 IO 无收益 |
-| Tiling 越大越好 | 受 SRAM 容量约束，太大导致 occupancy 下降 |
-| cp_async 总是有收益 | 需要计算与加载可重叠；数据量小时启动开销主导 |
+#### 实验 1：给 gemm_backward 加 shared memory tiling
 
----
+当前 `gemm_backward_dA_kernel` 的内层 `for (j)` 是单线程顺序累加，每个 `dC[i,j]` 和 `B[k,j]` 都从 HBM 直接读，且对同一行 `dC` 被多个 k 线程重复读。仿照 Week 2 Day 2 的 GEMM tiling，把 `dC` 的 Br×Bc 子块和 `B` 的 Bc×Bk 子块加载到 shared memory，让一个 block 协作算 `Br×Bk` 个 `dA` 输出。
 
-### Week 4 → Week 5 衔接
+> 提示：`dA = dC @ B^T` 等价于把 `B` 转置后做标准 GEMM。可以直接复用 Week 2 Day 2 的 `gemm` kernel 模板，把 `B` 的读取索引从 `B[k*N+j]` 改成转置加载即可。目标：M=N=K=512 时达到 cuBLAS `cublasSgemm`（转置 B 调用）的 50%+。
 
-Week 5 我们将学习 **推理系统**。为了做好准备，请确保你掌握了：
+#### 实验 2：对比 recomputation vs 物化 P 的内存与速度
 
-1. **FlashAttention 原理与实现**（Day 1-2）：推理引擎的 Attention 算子基础
-2. **IO 优化方法论**（Day 7）：推理系统的通用优化工具箱
-3. **Kernel 集成**（Day 5）：自定义算子接入框架的工程能力
-4. **ncu 性能分析**（Day 6）：推理性能瓶颈定位
-5. **Prefill vs Decode**（Week 3 Day 1）：推理两阶段的性能特征差异
+修改 `flash_attention_backward.py`，加一个 `standard_attention_double_backward` 函数：前向用 `torch.matmul` + `torch.softmax`（PyTorch autograd 自动物化 P），用 `torch.cuda.max_memory_allocated()` 对比两种实现峰值显存。再用 `torch.cuda.Event` 对比反向耗时。
 
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 5 会从 KV Cache 开始，逐步搭建推理系统的完整图景。
+> 提示：CPU 跑不出显存差异，需在 CUDA 上测。预期：N=4096 时 FA 版峰值显存比标准版低 ~16x（对应 P 的 64MB），但反向耗时可能略高（recomputation 多算一次 QK^T）。这正是"用算力换内存"的量化体现。
 
----
+#### 实验 3：logsumexp 在长序列下的数值稳定性
 
-### 弹性安排
+把 `flash_attention_backward.py` 的 `N` 调到 2048、4096、8192（`d=64`，float64→float32），观察 `dQ maxDiff` 随 N 增长的变化。再试一种"不用 logsumexp、直接存 m 和 l 两个标量"的变体，对比两者在 `S` 含大值（如 score ~ 50）时的稳定性。
 
-根据本周完成情况，选择以下一项或多项：
-
-- **补进度**：完成未做的 LeetGPU/LeetCode 题目和 benchmark 报告
-- **深入方向 1**：实现 Tensor Core 版 FlashAttention（WMMA 指令），对比 FMA 版性能
-- **深入方向 2**：用 CUTLASS 库实现 FlashAttention，对比手写版与官方模板
-- **深入方向 3**：阅读 vLLM 论文（PagedAttention），预习 Week 5
-- **面试准备**：和同学互相模拟面试，重点练白板推导 online softmax 三公式 + 口述 FA1 vs FA2 差异
+> 提示：`L = m + log(l)` 与 `(m, l)` 分存在数学上等价，但 `log(l)` 把 `l` 的动态范围压缩（`l ∈ (0, ∞)` → `log(l) ∈ (-∞, ∞)`），FP32 下大 N 累加更稳。预期：N=8192, float32 时 `(m,l)` 版的 `dQ maxDiff` 比 `L` 版高 1-2 个数量级。
 
 ---
 
 ### 今日总结
 
-Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
+Day 2b 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 
-1. **FlashAttention 核心思想**：Tiling + Online Softmax，把 HBM IO 从 O(N²) 降到 O(Nd)，速度来源是减少数据移动而非减少计算
-2. **Online Softmax 三公式**：`m_new`/`l_new`/`o_new` 递推更新，`exp(m-m_new)` 统一参考点缩放因子
-3. **FA1 → FA2 演进**：减少 non-matmul FLOPs（warp group 自治）、更好的 work partitioning（seq 并行）、更高的 occupancy
-4. **手写 vs 官方差距**：cp_async、双缓冲、K/V 复用、Tensor Core、混合精度——工程细节的累积差距
-5. **IO 优化六大策略**：Tiling、Online Algorithm、Kernel Fusion、Recomputation、Data Layout、Async Copy——适用于任何 memory-bound 算子
-6. **决策树**：拿到任意 memory-bound 算子，先判能否 tiling、再判能否 fusion、再判能否 recomputation
+1. **GEMM Backward 对称性**：`C=A@B` 的反向是两个转置 GEMM `dA=dC@B^T`、`dB=A^T@dC`，FLOPs 与 forward 相同，forward 的加速手段可直接迁移
+2. **Forward 不够**：标准 backward 需要物化 `S/P`（O(N²)），会让 FA 的内存优势在训练时归零
+3. **logsumexp trick**：`L_i = m_i + log(l_i)`，由此 `P_ij = exp(S_ij - L_i)`——O(N) 标量无损压缩 O(N²) 的 softmax 权重
+4. **D_i = O_i · dO_i**：softmax Jacobian 的对角项可由保存的 `O` 和上游 `dO` 一次算出，反向无需二次扫描 KV
+5. **Algorithm 2**：前向存 `Q/K/V/O/L`（O(Nd)），反向分块重算 `S/P` 累加 `dQ/dK/dV`，IO 保持 O(Nd)
+6. **代码验证**：`gemm_backward.cu` 用有限差分核对链式法则，`flash_attention_backward.py` 用 `gradcheck` 数值验证 backward，四项 maxDiff 全在 1e-15
 
-如果你能清晰回答"FlashAttention 为什么快，以及 IO 优化的六大策略是什么"，说明 Week 4 过关了。
+掌握这些后，你就具备了把 FA 接入训练循环的能力。Day 3 读官方源码时会发现，今天的手写 backward 与官方的差距和 forward 一样——主要在 async copy、双缓冲和 Tensor Core。
 
 ---
 
 ### 面试要点
 
-1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
+1. **FlashAttention 的反向传播为什么不能直接用标准 autograd？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
- - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
- - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
- - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
- - 长序列（N>2048）、小 head dim 时收益最大
+ - 标准 attention 的 backward 公式需要 `P = softmax(S)`（N×N），而 FA Forward 为了省内存**根本没存 P**——它用 online softmax 在 SRAM 里算完就丢弃了
+ - 如果反向时再物化 P（O(N²)），FA 前向省下的内存（N=4096 时 64MB×2）在反向时全部还回去，训练峰值显存和标准 attention 一样
+ - FA 的解法是 **recomputation**：前向多存一个 O(N) 的 `L`（logsumexp），反向用 `L` 把 P 一块一块重算回来，代价是多一次 `QK^T` 的 FLOPs，但 IO 仍是 O(Nd)
+ - 本质是"用算力换内存带宽"——attention 的瓶颈是 IO 不是 FLOPs，所以划算
 
 </details>
 
 
-2. **请完整推导 Online Softmax 的三个更新公式，并解释** `exp(m - m_new)` **的作用。**
+2. **请推导 logsumexp trick，并说明为什么它能让 backward 内存降到 O(Nd)。**
 
 <details>
 <summary>点击查看答案</summary>
 
- ```
- 公式1: m_new = max(m, max(xj))
- 公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
- 公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
- ```
- - `exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"
- - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
+ - safe softmax：`m_i = max_j S_ij`，`l_i = Σ_j exp(S_ij - m_i)`，`P_ij = exp(S_ij - m_i) / l_i`
+ - 定义 `L_i = log(Σ_j exp(S_ij))`，展开：`Σ_j exp(S_ij) = exp(m_i) · l_i`，取 log 得 `L_i = m_i + log(l_i)`
+ - 由此 `exp(S_ij - L_i) = exp(S_ij - m_i - log(l_i)) = exp(S_ij - m_i)/l_i = P_ij`
+ - **结论**：存一个标量 `L_i`，加上可重算的 `S_ij`（从 `Q_i, K_j`），就能恢复任意 `P_ij`
+ - 内存：`L` 是 O(N)（每行一个标量），替代 P 的 O(N²)；saved tensor 只剩 `Q/K/V/O/L` = O(Nd) + O(N) = O(Nd)
+ - N=8192, d=64 时，P 占 264MB，L 只占 32KB——8 个数量级的压缩
 
 </details>
 
 
-3. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
+3. **FA backward 里 `D_i = Σ_j P_ij dP_ij` 怎么算？为什么不用在 tile 循环里累加？**
 
 <details>
 <summary>点击查看答案</summary>
 
- 1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
- 2. **更好的 work partitioning**：新增 sequence 长度方向并行，长序列下并行度更高
- 3. **更高的 occupancy**：优化 register 和 shared memory 使用，每 SM 可驻留更多 block（1→2-3）
- 4. **更少的 warp 同步**：减少 block 级同步点
- 5. **反向传播更高效**
+ - 推导：`dP_ij = dO_i · V_j`（点积 over d），所以 `D_i = Σ_j P_ij (dO_i · V_j) = dO_i · (Σ_j P_ij V_j) = dO_i · O_i`
+ - 因为 `O_i = Σ_j P_ij V_j` 正是前向的输出，已被保存
+ - 所以 `D_i = rowsum(O_i * dO_i)`，用 saved `O` 和上游 `dO` 一次算出，**全局预算一次**，不依赖任何 tile
+ - 好处：① 反向只需单 pass 扫 KV（不用先扫一遍算 D 再扫一遍算梯度）；② `D_i` 的精度只依赖 `O/dO`（O(Nd)），不引入 N×N 的中间量
+ - 这是 FA backward 比"朴素重算"更高效的精髓
 
 </details>
 
 
-4. **从 FlashAttention 中提炼出通用的 IO 优化方法论，并举一个 Transformer 外的应用例子。**
+4. **GEMM 的反向传播公式是什么？与 forward 有什么对称性？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Tiling**：把大矩阵/张量分块到 SRAM，例如卷积中的 im2col + 分块
- - **Online Algorithm**：避免全局同步，例如流式计算中的 online mean/variance
- - **Kernel Fusion**：合并相邻算子，例如 CNN 中的 conv + bn + relu 融合
- - **Recomputation**：用计算换内存，例如 activation checkpointing 反向传播
- - **例子**：CNN 中的 conv + bn + relu 融合。未融合时要写卷积结果到 HBM，BN 再读；融合后在 register 中直接传递，省去一次 HBM 读写
+ - `C = A @ B`（A: M×K, B: K×N, C: M×N），给定 `dC`：
+   - `dA = dC @ B^T`（M×K）—— `dA_ik = Σ_j dC_ij B_kj`
+   - `dB = A^T @ dC`（K×N）—— `dB_kj = Σ_i A_ik dC_ij`
+ - 对称性：每个反向 GEMM 的 FLOPs（2MNK）与 forward 相同，只是把某个输入转置；算 `dA` 需要前向的 `B`，算 `dB` 需要前向的 `A`
+ - 工程意义：forward 的 GEMM 加速手段（tiling、Tensor Core、async copy）可直接套到 backward——FA 的 `QK^T`、`PV` 反向 GEMM 与 forward 用同一套 kernel 模板，只是累加方向不同
+ - 有限差分验证：取 `loss = sum(C)`，则 `dC = ones`，`dA_ik = Σ_j B_kj`（B 的行和），可用中心差分核对
 
 </details>
 
 
-5. **IO 优化和计算优化哪个更优先？为什么？**
+5. **FA backward 的 IO 复杂度是多少？为什么比 forward 高但仍是 O(Nd)？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **通常 IO 优化更优先**，原因：① 数据移动能耗和延迟远高于计算 ② 现代 GPU 算力增长快于内存带宽增长，memory wall 越来越严重 ③ 很多推理场景本来就是 memory-bound
- - **不是绝对**：如果系统已经是 compute-bound，再优化 IO 收益很小，应该优化计算（Tensor Core、更好的 work partitioning）
- - **正确做法**：先用 profiling 判断瓶颈类型，再针对性优化
+ - 严格界：`Θ(N²d²/M)`（M = SRAM 大小），与 forward 相同；取 `M = Θ(Nd)` 简化为 O(Nd)
+ - 比 forward 常数大的原因：反向要重算 `S/P`，需重读 `Q/K`（forward 每个 Q tile 只读一次，反向每个 KV tile 循环都要读对应的 Q/K 子块），读次数约 `N/Br` 或 `N/Bc` 倍
+ - 但渐近类仍是 O(Nd)——因为 saved tensor 总量 O(Nd)，每个元素被访问常数次（取决于 tiling），没有 O(N²) 的物化矩阵
+ - 实测：N=8192 时标准 backward ~264MB HBM IO，FA backward ~8-16MB，加速 16-32x（比 forward 的 32-100x 略低，因常数更大）
 
 </details>
-
-
-6. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - 使用 `ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum`
- - 测试 N=512, 1024, 2048, 4096，固定 d
- - 如果 HBM 访问量 ≈ N 的线性倍数（N 翻倍，IO 翻倍），则是 O(Nd)
- - 如果 HBM 访问量 ≈ N² 的倍数（N 翻倍，IO 4x），则是 O(N²)
- - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
-
----
-
-</details>
-
-## 📁 本周目录结构
-
-```
-week4/
-├── README.md # Week 4 概览
-├── day1/ # Day 1: FlashAttention 论文精读
-│ ├── README.md
-│ └── kernels/compare_attention_io.py
-├── day2/ # Day 2: 手写完整 Forward Kernel
-│ ├── README.md
-│ └── kernels/flash_attention_v2.cu
-├── day3/ # Day 3: 官方 CUDA 源码分析
-│ ├── README.md
-│ └── notes/source_analysis.md
-├── day4/ # Day 4: FlashAttention-2 论文
-│ ├── README.md
-│ └── notes/fa2_paper_notes.md
-├── day5/ # Day 5: 算子接入 Mini 引擎
-│ ├── README.md
-│ └── kernels/mini_engine_fa.py
-├── day6/ # Day 6: 性能对比分析
-│ ├── README.md
-│ └── kernels/benchmark_flash_attention.py
-├── day7/ # Day 7: IO 优化方法论总结
-│ ├── README.md
-│ └── notes/io_optimization_methodology.md
-└── website/ # 网站构建
- ├── build.py
- └── images/ # SVG 插图
-```
-
----
-
-## 🔗 推荐资源
-
-| 资源 | 说明 |
-|------|------|
-| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | FA1 核心论文，Section 2-3 必读 |
-| [FlashAttention-2 论文](https://arxiv.org/abs/2307.08691) | FA2 改进，Section 3 重点 |
-| [FlashAttention 官方仓库](https://github.com/Dao-AILab/flash-attention) | 官方 CUDA 源码 |
-| [CUTLASS](https://github.com/NVIDIA/cutlass) | NVIDIA 开源高性能 GEMM 模板库 |
-| [vLLM 论文](https://arxiv.org/abs/2309.06180) | Week 5 预习：PagedAttention |
-| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
-| [Princeton NLP FlashAttention 博客](https://princeton-nlp.github.io/flash-attention-blog/) | 图解 FlashAttention |
-
----
-
-#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
-
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
-
-**与今日知识的关联**：GPT-2 Transformer Block 是 Week 4 IO 优化主线的终极验收——融合了 FlashAttention（Week 4 核心）+ LayerNorm（Week 3）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
-
-> 💡 完整题解见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
-
----
-
-## ✅ Week 4 完成标准
-
-- [ ] 能白板推导 online softmax 三公式（m_new / l_new / o_new）
-- [ ] 手写 FlashAttention Kernel 在 N=256 时与 CPU 误差 < 1e-3
-- [ ] 能解释 FA1 vs FA2 的至少 3 个关键差异
-- [ ] Mini 引擎 FlashAttention 版端到端误差 < 1e-3
-- [ ] 长序列（N=2048+）下 FA 加速 1.5x+
-- [ ] 能用 ncu 验证 FA 的 HBM IO 随 N 线性增长（O(Nd)）
-- [ ] 能列出 IO 优化六大策略并解释每种含义
-- [ ] 能用决策树分析一个陌生算子是否适合 tiling/fusion/recomputation
-- [ ] 生成性能对比报告（含 top3 配置的 speedup）
-- [ ] 完成本周 LeetGPU（Causal Self-Attention/Multi-Head Attention/Reduction/Batched GEMM/Matrix Transpose/GPT-2 Transformer Block）与 LeetCode 题目
-- [ ] 理解 Week 5 推理系统的前置概念（KV Cache、PagedAttention、Continuous Batching）
-
----
-
-> 💡 **提示**：Week 4 是 8 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 5 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。

@@ -1,152 +1,205 @@
-## Day 2：算子接入 Mini 引擎（C++ Extension）算子接入 Mini 引擎
+## Day 2：手写 Softmax 与 LayerNorm Kernel
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **PyTorch C++ Extension** 的集成机制，掌握从 `.cu` kernel 到 Python 可调用函数的完整流水线
-2. 学会用 `torch.utils.cpp_extension.load_inline` 动态编译自定义 CUDA 算子，掌握 `at::Tensor` / `data_ptr` / `getCurrentCUDAStream` 三个关键 API
-3. 实现一个最小化 Transformer 推理引擎（Mini Engine），用 Day 2 的 Softmax/LayerNorm kernel 替换 PyTorch 官方算子
-4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-4），并对比 latency
-5. 能解释为什么自定义算子通常比 PyTorch 慢（0.8x ~ 0.95x），以及什么场景下自定义才有优势
+1. 理解 **朴素 Softmax 的数值溢出问题**，掌握 safe softmax（减 max）的数学等价性与数值稳定性
+2. 学会用 **三遍扫描**实现 row-wise Softmax，复用 Week 2 的 `warpReduceSum` / `warpReduceMax` 搭出 `blockReduceSum` / `blockReduceMax`
+3. 理解 **LayerNorm 的两次 reduce**（先 mean 后 variance），能解释为什么方差依赖均值而无法合并
+4. 实现并运行 Softmax + LayerNorm Kernel，与 CPU 参考结果误差 < 1e-5
+5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
 
-> 💡 **为什么重要**：Day 2-4 我们手写了 Softmax/LayerNorm/Attention 三个 kernel，但它们都是"独立可执行文件"。真实工程中，kernel 必须接入推理框架（PyTorch / vLLM / TensorRT）才能端到端跑通。今天就是把"散装 kernel"组装成"能跑的引擎"——这是从"会写 kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做端到端 profiling。
+> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
 
 ---
 
-### 学前导读：为什么 kernel 要接入框架
+### 学前导读：为什么 Softmax/LayerNorm 是 Transformer 里最该手写的算子
 
-Day 2 我们写的 `softmax_layernorm.cu` 是一个独立程序：`main()` 里手动 `cudaMalloc`、`cudaMemcpy`、调 kernel、`checkResult`。这在教学阶段没问题，但真实场景有三个问题：
+Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
 
-| 问题 | 独立程序 | 接入框架后 |
-|------|---------|-----------|
-| 张量管理 | 手动 `cudaMalloc`/`cudaFree` | 框架自动管理（autograd、内存池） |
-| GEMM | 要么手写（慢），要么调 cuBLAS（繁琐） | `torch.mm` 一行搞定（cuBLAS 封装） |
-| 端到端验证 | 只能验证单算子 | 能跑整个 Transformer Block 对比 |
+- 它们的核心是 **reduce（归约）**——正是 Week 2 Day 1 学的 Warp Shuffle 的直接应用场景
+- 它们是 **memory-bound**，AI ≈ 0.4 ~ 0.6 FLOP/Byte，优化空间不在算力而在访存
+- 它们的并行结构清晰（一行一个 block），代码量适中（~50 行 kernel），适合教学
+- 它们是 FlashAttention 的前置知识——FlashAttention 的 online softmax 就是把今天的三遍扫描压成两遍
 
-**今天的任务**：把 Day 2 的 Softmax/LayerNorm kernel 封装成 PyTorch 可调用的 C++ Extension，接入一个最小 Transformer Block，用自定义算子替换 `F.softmax` / `F.layer_norm`，GEMM 仍用 `torch.mm`（cuBLAS）。然后对比"全 PyTorch" vs "自定义算子"的正确性和 latency。
+| 算子 | reduce 次数 | AI (FLOP/Byte) | 瓶颈 | 今日实现 |
+|------|------------|----------------|------|---------|
+| Softmax | 2（max + sum） | ~0.375 | memory-bound | 三遍扫描 safe softmax |
+| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce + affine |
 
-> 💡 **一句话总结**：今天不优化 kernel 本身（那是 Day 3 做的），而是学"怎么把 kernel 塞进框架"——这是工程集成的标准流程。
+> 💡 **一句话总结**：Softmax/LayerNorm 不难，但它们是"reduce 工程化"的最小完整案例——掌握了今天这两段代码，你就拥有了写任何 row-wise reduce 算子的模板。
 
 ---
 
 ### 理论学习
 
-#### 5.1 Mini Transformer Engine 架构
+#### 2.1 Softmax 数值稳定性与 safe softmax
 
-![Mini Transformer Engine 架构](../../week3/images/mini_engine_architecture.svg)
+![Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出](../images/safe_softmax_three_pass.svg)
 
-Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标：
-
-1. 用 PyTorch 做张量管理（malloc/autograd 不需要）
-2. 用自定义 CUDA kernel 替换 Softmax/LayerNorm（Day 2 实现）
-3. GEMM 仍用 `torch.mm`（cuBLAS），本周不优化 GEMM
-4. 对比"全 PyTorch" vs "自定义算子"的 latency 和正确性
-
-**架构关键点**：一个 Transformer Block 包含 6 类算子，其中 4 个 GEMM 用 cuBLAS（compute-bound），2 个 LayerNorm + 1 个 Softmax 用自定义 kernel（memory-bound）。这种"混合调用"是真实推理引擎的常见模式——不是所有算子都要自己写，只替换需要特殊优化的。
-
-##### 为什么要替换 Softmax/LayerNorm 而不是 GEMM？
-
-| 算子 | 官方实现 | 自定义价值 | 本周是否替换 |
-|------|---------|-----------|------------|
-| GEMM（QKV/Out/FFN） | cuBLAS（极致优化） | 低（cuBLAS 已近峰值） | ❌ 用 torch.mm |
-| Softmax | PyTorch ATen | 中（学习目的） | ✅ 自定义 |
-| LayerNorm | PyTorch ATen | 中（学习目的） | ✅ 自定义 |
-| Attention | FlashAttention | 高（Week 4 主题） | ❌ 本周用 torch.matmul |
-
-**结论**：本周替换 Softmax/LayerNorm 是为了**学习集成流程**，不是追求性能。真正有性能优势的自定义场景是 FlashAttention（Week 4）——官方实现没覆盖分块 softmax，自定义才有意义。
-
-#### 5.2 PyTorch C++ Extension 集成流水线
-
-![PyTorch C++ Extension 集成流水线](../../week3/images/cpp_extension_pipeline.svg)
-
-从 `.cu` kernel 到 Python 可调用，经过 6 步：
+**朴素 Softmax 的问题**：
 
 ```
-① .cu Kernel → ② Launch Wrapper → ③ C++ Binding → ④ load_inline → ⑤ Python 调用 → ⑥ Mini Engine
+朴素 Softmax（会溢出）：
+ yi = exp(xi) / Σ exp(xj)
+ 问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
 ```
 
-**各步职责**：
+FP16 的最大值只有 ~65504，而 `exp(11) ≈ 60000` 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
 
-| 步骤 | 职责 | 关键 API |
-|------|------|---------|
-| ① Kernel | `__global__` 函数，纯 CUDA 计算 | `__global__`、`__shared__`、`__shfl_down_sync` |
-| ② Launch Wrapper | 封装 grid/block 配置 + stream 传递 | `kernel<<<grid,block,0,stream>>>` |
-| ③ C++ Binding | `at::Tensor` ↔ 裸指针转换 | `data_ptr<float>()`、`at::empty_like`、`getCurrentCUDAStream` |
-| ④ load_inline | 运行时 JIT 编译为 `.so` | `torch.utils.cpp_extension.load_inline` |
-| ⑤ Python 调用 | 像普通函数调用 | `my_ops.softmax_forward(x)` |
-| ⑥ Mini Engine | 替换框架默认算子 | `attn = my_ops.softmax_forward(attn)` |
+**Safe Softmax（减去 max）**：
 
-##### C++ Binding 的三个关键 API
+```
+m = max(xj)
+yi = exp(xi - m) / Σ exp(xj - m)
+原理：exp(xi - m) ≤ exp(0) = 1，不会溢出
+```
 
-```cpp
-at::Tensor softmax_forward(at::Tensor input) {
-    int M = input.size(0), D = input.size(1);
-    auto output = at::empty_like(input);    // ① 让 PyTorch 分配输出显存
-    launch_softmax(input.data_ptr<float>(), // ② 从 Tensor 提取裸指针
-                   output.data_ptr<float>(), M, D,
-                   at::cuda::getCurrentCUDAStream() // ③ 获取当前 stream（多 stream 正确性）
-    );
-    return output;
+**数学等价性证明**：
+
+```
+exp(xi - m) / Σ exp(xj - m)
+ = exp(xi)·exp(-m) / (Σ exp(xj))·exp(-m)
+ = exp(xi) / Σ exp(xj) ← 分子分母同时乘 exp(-m)，结果不变
+```
+
+减 max 不改变结果，但把所有 exp 的输入压到 `(-∞, 0]`，数值上彻底安全。
+
+##### 三遍扫描 vs 两遍扫描 vs FlashAttention
+
+| 方法 | 扫描次数 | 操作 | 适用场景 |
+|------|---------|------|---------|
+| 三遍扫描 | 3 | ① 求 max ② 求 sum(exp(x-m)) ③ 归一化 | 教学版，清晰易读 ← **今日实现** |
+| 两遍扫描（online） | 2 | ① 同时求 max 和 sum ② 归一化 | 生产版，减少一次全局读 |
+| FlashAttention 版 | 1.x | 分块 online，边算边更新 | 极致优化，Week 4 主题 |
+
+本日实现**三遍扫描版**（教学清晰），两遍 online 版留作扩展实验，分块版留到 Week 4 FlashAttention。
+
+#### 2.2 Row-wise 并行与两级 Block Reduce
+
+![Block 级 Reduce 两级结构](../images/block_reduce_two_level.svg)
+
+**并行映射策略**：
+
+```
+矩阵 shape: (M, D)，M 行，每行 D 个元素
+并行映射: 一个 block 处理一行
+ blockIdx.x = row index（0 ~ M-1）
+ blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
+
+每个 block 内：
+ Step 1: 所有线程协作求本行 max（block reduce max）
+ Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
+ Step 3: 所有线程协作做归一化写出
+```
+
+**为什么一个 block 处理一行？** 因为 softmax 的归一化分母 `Σ exp(xj - m)` 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
+
+##### 两级 Block Reduce 的结构（复用 Week 2 Day 1）
+
+一个 block 可能有 256 / 512 / 1024 个线程（8/16/32 个 warp），而单次 `__shfl_down_sync` 只能归约一个 warp（32 lane）。因此需要两级：
+
+```
+第一级（Warp 级）：每个 warp 用 __shfl_down_sync 折半累加/取 max，结果存在 lane 0
+中转（Shared Memory）：lane 0 把 32 个 warp 的部分和写入 smem[32]
+第二级（Warp 0）：warp 0 的 lane 0~31 读取 smem，再做一次 warpReduce
+```
+
+关键工程细节：
+
+- `smem[32]` 正好放下 32 个 warp 的部分和——这就是 block 最多 32 个 warp（1024 线程）设计的来源
+- 两处 `__syncthreads()`：① 写 smem 后保证可见 ② 广播归约结果前保证 warp0 读到完整结果
+- 返回值只有 lane0 正确，必须经 `__shared__` 变量 + `__syncthreads` 广播给全 block
+- `blockReduceMax` 与 `blockReduceSum` 同构，仅把 `+=` 换成 `fmaxf`、初值换 `-INFINITY`
+
+```cuda
+// 复用 Week 2 Day 1 的 warp 原语
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1)
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    return val;
+}
+
+__inline__ __device__ float blockReduceSum(float val, float* smem) {
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    val = warpReduceSum(val);
+    if (lane == 0)
+        smem[wid] = val; // 第一级结果写 smem
+    __syncthreads();
+    int numWarps = (blockDim.x + 31) / 32;
+    val = (lane < numWarps) ? smem[lane] : 0.0f;
+    if (wid == 0)
+        val = warpReduceSum(val); // 第二级 warp0 收尾
+    return val;
 }
 ```
 
-- `at::empty_like(input)`：让 PyTorch 管理显存（走 caching allocator），无需手动 `cudaMalloc`/`cudaFree`
-- `data_ptr<float>()`：从 `at::Tensor` 提取 `float*` 裸指针，传给 CUDA kernel
-- `at::cuda::getCurrentCUDAStream()`：获取 PyTorch 当前 stream，保证 kernel 在正确 stream 上执行（多 stream 场景关键）
+#### 2.3 LayerNorm 公式与两次 reduce
 
-> ⚠️ **注意**：忘记传 stream 是常见 bug——默认用 stream 0（default stream），会破坏多 stream 并行。务必用 `getCurrentCUDAStream()`。
+![LayerNorm 两次 Reduce 流程](../images/layernorm_two_reduce.svg)
 
-##### load_inline vs setup.py
+**LayerNorm 公式**：
 
-| 方式 | 适用场景 | 优势 | 劣势 |
-|------|---------|------|------|
-| `load_inline`（动态） | 原型开发、教学 | 无需预编译，改代码即生效 | 首次编译 ~30s |
-| `setup.py`（静态） | 生产部署 | 编译一次，import 即用 | 改代码需重装 |
+```
+输入: x ∈ R^D（一行 D 个元素）
+参数: γ (gamma), β (beta) ∈ R^D
 
-今天用 `load_inline`（教学灵活），生产环境用 `setup.py`。
+计算:
+ μ = (1/D) Σ xi （均值）
+ σ² = (1/D) Σ (xi - μ)² （方差）
+ yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
+```
 
-#### 5.3 正确性与 Latency 对比
+##### LayerNorm 的 reduce 需求
 
-![Latency 对比 PyTorch 官方 vs 自定义算子](../../week3/images/latency_comparison.svg)
+LayerNorm 需要**两次 reduce**：
 
-**预期结果**：
+1. 第一次：求 `μ = mean(x)` → reduce sum，然后除以 D
+2. 第二次：求 `σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
 
-| 版本 | 相对延迟 | 原因 |
-|------|---------|------|
-| PyTorch 官方 | 1.0x（baseline） | 向量化 + warp 级 + Welford + 混合精度 + kernel fusion |
-| 自定义（Day 2） | ~0.8x（更慢） | 逐元素加载 + 两次 reduce + 全程 FP32 |
-| 自定义 + float4（Day 3） | ~0.95x（接近） | 向量化弥补部分差距 |
+```
+Step 1: 所有线程协作求 sum(x) → μ = sum / N
+Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
+Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
+```
 
-> ⚠️ **预期结果**：自定义算子可能比 PyTorch **慢**（0.8x），这正常——PyTorch 的 softmax/layernorm 已经过高度优化（Day 3 读过源码）。本周的目标是**理解算子集成流程**，不是超越官方实现。只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有性能优势。
+> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
 
-##### 为什么自定义通常比 PyTorch 慢？
+##### LayerNorm vs BatchNorm
 
-回顾 Day 3 的源码分析，PyTorch 官方实现有 4 个我们没做的优化：
+| 特性 | LayerNorm | BatchNorm |
+|------|-----------|-----------|
+| 归一化维度 | 沿 feature 维（一行） | 沿 batch 维（一列） |
+| 依赖 batch | 否（每样本独立） | 是（需 batch 统计） |
+| 推理行为 | 训练/推理一致 | 推理用 running mean/var |
+| 适用场景 | Transformer、RNN | CNN |
 
-1. **向量化加载**（float4/half2）：我们逐元素加载，带宽利用仅 ~25%
-2. **Welford 一次 reduce**：LayerNorm 我们用两次 reduce，多读一次 HBM
-3. **warp 级特化路径**：D≤1024 时 PyTorch 用 warp 级（无 `__syncthreads`）
-4. **kernel fusion**：PyTorch 2.0 的 `torch.compile` 会融合相邻算子
+Transformer 用 LayerNorm 而非 BatchNorm：因为序列长度可变、batch 可能只有 1（推理），BatchNorm 的 batch 统计不稳定。
 
-**何时自定义才划算？**
-- 官方没覆盖的场景（如 FlashAttention 的分块 online softmax）
-- 需要融合特殊算子（如 LayerNorm + GEMM 融合）
-- 特殊硬件指令（如 Tensor Core WMMA）
+##### 为什么 LayerNorm 是 memory-bound？
+
+每个元素读 1 次（x）、写 1 次（y），γ/β 另读，但只做 ~5 次浮点运算（减、平方、rsqrt、乘、加）：
+
+```
+Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
+远低于 Ridge Point（~58.45）→ 纯 memory-bound
+```
 
 ---
 
-### Coding 任务：算子接入 Mini 引擎
+### Coding 任务：手写 Softmax + LayerNorm Kernel
 
-#### 任务 1：创建 `kernels/softmax_layernorm_ext.cu`
+#### 任务 1：创建 `kernels/softmax_layernorm.cu`
 
-下面是带 launch wrapper + C++ Extension 绑定的完整 kernel 文件。它在 Day 2 的基础上增加了：① `launch_softmax`/`launch_layernorm` 封装层 ② `#ifdef WITH_TORCH` 的 PyTorch 绑定 ③ 独立 `main()` 验证。完整文件见 [kernels/softmax_layernorm_ext.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/softmax_layernorm_ext.cu)。
+下面是完整可编译的 kernel 实现。代码分三部分：① 复用 Week 2 的 warp 原语 ② 搭出 blockReduceSum / blockReduceMax ③ Softmax kernel（三遍扫描）+ LayerNorm kernel（两次 reduce）。完整文件见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/softmax_layernorm.cu)。
 
 ```cuda
-// kernels/softmax_layernorm_ext.cu —— 自定义 Softmax/LayerNorm（含 launch wrapper + PyTorch C++ Extension 绑定）
-// 编译命令（独立）: nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
-// 集成编译（PyTorch load_inline）: 见 mini_engine.py
-// 运行命令: ./softmax_layernorm_ext
+// kernels/softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
+// 编译命令: nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
+// 运行命令: ./softmax_layernorm
 
 #include <cuda_runtime.h>
 #include <cstdio>
@@ -154,7 +207,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 #include <cmath>
 
 // ============================================================
-// 复用 Week 2 Day 1 / Day 2 的 Warp Shuffle 原语
+// 复用 Week 2 Day 1 的 Warp Shuffle 原语
 // ============================================================
 __inline__ __device__ float warpReduceSum(float val) {
     #pragma unroll
@@ -162,14 +215,20 @@ __inline__ __device__ float warpReduceSum(float val) {
         val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     return val;
 }
+
 __inline__ __device__ float warpReduceMax(float val) {
     #pragma unroll
     for (int offset = 16; offset > 0; offset >>= 1)
         val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
     return val;
 }
+
+// ============================================================
+// Block 级 reduce：warp 级 → shared memory → warp 0 最终 reduce
+// ============================================================
 __inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
     val = warpReduceSum(val);
     if (lane == 0)
         smem[wid] = val;
@@ -180,8 +239,10 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
         val = warpReduceSum(val);
     return val;
 }
+
 __inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32, wid = threadIdx.x / 32;
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
     val = warpReduceMax(val);
     if (lane == 0)
         smem[wid] = val;
@@ -194,7 +255,8 @@ __inline__ __device__ float blockReduceMax(float val, float* smem) {
 }
 
 // ============================================================
-// Softmax Kernel：一行一个 block，三遍扫描 safe softmax（Day 2 实现）
+// Softmax Kernel：一行一个 block，三遍扫描 safe softmax
+// 输入: input[M][D]，输出: output[M][D]
 // ============================================================
 __global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
     int row = blockIdx.x;
@@ -202,30 +264,43 @@ __global__ void softmax_kernel(const float* __restrict__ input, float* __restric
         return;
     const float* in_row = input + row * D;
     float* out_row = output + row * D;
-    __shared__ float smem[32];
-    __shared__ float row_max, row_sum;
+
+    __shared__ float smem[32]; // warp 间 reduce 缓冲区
+    __shared__ float row_max;
+    __shared__ float row_sum;
+
     int tid = threadIdx.x;
+
+    // Step 1: 求 max（数值稳定性）
     float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_max = fmaxf(local_max, in_row[i]);
+    }
     local_max = blockReduceMax(local_max, smem);
     if (tid == 0)
         row_max = local_max;
     __syncthreads();
+
+    // Step 2: 求 sum(exp(x - max))
     float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         local_sum += expf(in_row[i] - row_max);
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0)
         row_sum = local_sum;
     __syncthreads();
+
+    // Step 3: 归一化写出
     float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x)
+    for (int i = tid; i < D; i += blockDim.x) {
         out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+    }
 }
 
 // ============================================================
-// LayerNorm Kernel：一行一个 block，两次 reduce（Day 2 实现）
+// LayerNorm Kernel：一行一个 block，两次 reduce
+// 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
 // ============================================================
 __global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
                                  const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
@@ -234,16 +309,24 @@ __global__ void layernorm_kernel(const float* __restrict__ input, const float* _
         return;
     const float* in_row = input + row * N;
     float* out_row = output + row * N;
+
     __shared__ float smem[32];
-    __shared__ float row_mean, row_rstd;
+    __shared__ float row_mean;
+    __shared__ float row_rstd;
+
     int tid = threadIdx.x;
+
+    // Step 1: 求 mean = sum(x) / N
     float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x)
+    for (int i = tid; i < N; i += blockDim.x) {
         local_sum += in_row[i];
+    }
     local_sum = blockReduceSum(local_sum, smem);
     if (tid == 0)
         row_mean = local_sum / N;
     __syncthreads();
+
+    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
     float local_sq = 0.0f;
     for (int i = tid; i < N; i += blockDim.x) {
         float diff = in_row[i] - row_mean;
@@ -253,272 +336,250 @@ __global__ void layernorm_kernel(const float* __restrict__ input, const float* _
     if (tid == 0)
         row_rstd = rsqrtf(local_sq / N + eps);
     __syncthreads();
-    for (int i = tid; i < N; i += blockDim.x)
+
+    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
+    for (int i = tid; i < N; i += blockDim.x) {
         out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
-}
-
-// ============================================================
-// Launch Wrappers：供 C++ Extension 和独立 main 共用
-// 封装 grid/block 配置 + stream 传递
-// ============================================================
-void launch_softmax(const float* input, float* output, int M, int D, cudaStream_t stream) {
-    int threads = 256;
-    softmax_kernel<<<M, threads, 0, stream>>>(input, output, M, D);
-}
-
-void launch_layernorm(const float* input, const float* gamma, const float* beta, float* output, int M, int N, float eps,
-                      cudaStream_t stream) {
-    int threads = 256;
-    layernorm_kernel<<<M, threads, 0, stream>>>(input, gamma, beta, output, M, N, eps);
+    }
 }
 ```
 
-文件后半部分包含独立 `main()` 验证（不依赖 PyTorch，可直接 nvcc 编译）和 `#ifdef WITH_TORCH` 的 PyTorch 绑定：
+Host 端的验证逻辑（`cpuSoftmax` / `cpuLayerNorm` / `checkResult` / `main`）见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/softmax_layernorm.cu) 文件后半部分，核心是：随机初始化 `M=128, D=1024` 的矩阵，分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-5` 判定 PASS。
+
+#### 为什么 Softmax 要读三遍 HBM？
+
+这是三遍扫描的核心代价。看 Softmax kernel 的三个 `for` 循环：
 
 ```cuda
-// ============================================================
-// PyTorch C++ Extension 绑定（仅 load_inline 编译时启用）
-// ============================================================
-#ifdef WITH_TORCH
-#include <torch/extension.h>
-
-at::Tensor softmax_forward(at::Tensor input) {
-    int M = input.size(0), D = input.size(1);
-    auto output = at::empty_like(input);
-    launch_softmax(input.data_ptr<float>(), output.data_ptr<float>(), M, D, at::cuda::getCurrentCUDAStream());
-    return output;
-}
-
-at::Tensor layernorm_forward(at::Tensor input, at::Tensor gamma, at::Tensor beta, double eps) {
-    int M = input.size(0), N = input.size(1);
-    auto output = at::empty_like(input);
-    launch_layernorm(input.data_ptr<float>(), gamma.data_ptr<float>(), beta.data_ptr<float>(), output.data_ptr<float>(),
-                     M, N, (float)eps, at::cuda::getCurrentCUDAStream());
-    return output;
-}
-
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("softmax_forward", &softmax_forward, "Softmax forward (CUDA)");
-    m.def("layernorm_forward", &layernorm_forward, "LayerNorm forward (CUDA)");
-}
-#endif
+// Pass 1: 读 in_row[i] 求 max
+for (int i = tid; i < D; i += blockDim.x)
+    local_max = fmaxf(local_max, in_row[i]);
+// Pass 2: 再读 in_row[i] 求 sum
+for (int i = tid; i < D; i += blockDim.x)
+    local_sum += expf(in_row[i] - row_max);
+// Pass 3: 第三次读 in_row[i] 写出
+for (int i = tid; i < D; i += blockDim.x)
+    out_row[i] = expf(in_row[i] - row_max) * inv_sum;
 ```
 
-#### 为什么用 `#ifdef WITH_TORCH` 隔离绑定代码？
+每个元素从 HBM 读 3 次（如果 L2 cache 没命中）、写 1 次。这正是 memory-bound 的来源，也是 online softmax（两遍）和 FlashAttention（分块）要消除的冗余。今天先理解三遍的清晰性，优化留到扩展实验。
 
-同一个 `.cu` 文件要支持两种编译模式：
-
-| 模式 | 编译命令 | 启用部分 | 用途 |
-|------|---------|---------|------|
-| 独立 | `nvcc ... kernels/...cu` | kernel + launch + main | 不依赖 PyTorch，快速验证 kernel 正确性 |
-| 集成 | `load_inline(extra_cuda_cflags=["-DWITH_TORCH"])` | kernel + launch + binding | 接入 PyTorch，端到端运行 |
-
-`#ifdef WITH_TORCH` 让 `#include <torch/extension.h>` 只在集成模式编译，避免独立模式缺 PyTorch 头文件报错。
-
-#### 任务 2：编译运行（独立模式 + PyTorch 集成）
-
-**独立模式验证 kernel 正确性**：
+#### 任务 2：编译与运行
 
 ```bash
-# 独立编译（不依赖 PyTorch）
-nvcc -o softmax_layernorm_ext kernels/softmax_layernorm_ext.cu -O3 -arch=sm_120
+# 编译（根据 GPU 架构选择 arch 参数）
+# Blackwell (RTX 5090): sm_120
+nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
 
 # 运行
-./softmax_layernorm_ext
+./softmax_layernorm
 ```
 
-**预期输出**（独立模式）：
+**预期输出**：
 
 ```text
-=== Softmax + LayerNorm (ext version, launch wrappers) ===
-Config: M=128, D=1024
+=== Softmax + LayerNorm Kernel Test ===
+Config: M=128, D=1024, threads=256
 
 [Softmax]
- Softmax vs CPU: maxDiff = x.xx e-07 (PASS)
+  Softmax vs CPU: maxDiff = 4.19e-09 (PASS)
+  Time: 0.063 ms
 [LayerNorm]
- LayerNorm vs CPU: maxDiff = x.xx e-06 (PASS)
-
-这两个 launch wrapper 就是 PyTorch C++ Extension 要调用的入口。
-集成方式见 mini_engine.py 的 load_inline 调用。
+  LayerNorm vs CPU: maxDiff = 1.07e-06 (PASS)
+  Time: 0.015 ms
 ```
 
-**PyTorch 集成模式（Mini Engine）**：
+两个 `PASS` 且 `maxDiff < 1e-5` 即正确。Softmax 误差通常更小（~1e-7，因为只有 exp/add/div），LayerNorm 略大（~1e-6，因为多了平方和 rsqrt）。
+
+#### 任务 3：用 ncu 验证 memory-bound
 
 ```bash
-# 运行 Mini Engine（load_inline 会自动 JIT 编译 kernel）
-python mini_engine.py
-```
+# 编译带 lineinfo 的版本（ncu Source View 需要）
+nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_120 -lineinfo
 
-**预期输出**（集成模式）：
-
-```text
-Max diff (PyTorch vs Custom): 1.07e-06
-
-=== Latency Comparison (Prefill, N=1024) ===
-PyTorch (F.softmax + F.layer_norm): 0.063 ms / forward
-Custom (my_ops.softmax + my_ops.layernorm): 0.078 ms / forward
-Speedup: 0.8x ~ 1.2x
-```
-
-- `Max diff < 1e-4` 确认自定义版与 PyTorch 版数值一致
-- `Speedup` 通常在 0.8x ~ 0.95x（自定义版略慢，符合预期）
-
-#### 任务 3：用 nsys 对比 kernel 数量
-
-```bash
-# 采集 PyTorch 版时间线
-nsys profile -o mini_engine_pytorch python mini_engine.py
-
-# 查看自定义版多出了哪些 kernel
-nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
+# profile 两个 kernel 的 SM / DRAM Throughput
+ncu --metrics \
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ gpu__time_duration.sum \
+ --kernel-name regex:"softmax_kernel|layernorm_kernel" \
+ ./softmax_layernorm_nl
 ```
 
 **观察重点**：
-- 自定义版应多出 `softmax_kernel` 和 `layernorm_kernel`（来自 `my_ops`）
-- PyTorch 版对应的是 `aten::_softmax` 和 `aten::layer_norm`（可能融合了）
-- 自定义版的 kernel 数量可能更多（未做 fusion）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Multiplication
+| Kernel | 预期 DRAM Throughput | 预期 SM Throughput | 判定 |
+|--------|---------------------|-------------------|------|
+| `softmax_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
+| `layernorm_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 
-今天的主题是"把自定义算子封装为框架可调用接口"。本题用一个 compute-bound 的 tiling 乘加算子（Matrix Multiplication）练习这个集成模式——先写 kernel，再封装为 PyTorch 可调用函数，套用今天的 `load_inline` + `at::Tensor` + `data_ptr` 模板。
+如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 3 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
+#### 任务 4：LeetGPU 在线题目 —— Group Normalization
 
-**与今日知识的关联**：本题是"自定义算子集成"模式的典型 case。Matrix Multiplication 是 compute-bound 的 tiling 乘加算子——naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，AI 仅 1/8 FLOP/Byte；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。核心是 2D block/thread 映射 + shared memory 分块 + 边界补 0。用今天的 C++ Extension 流程把它封装为 `my_ops.matmul_forward`，就掌握了"任何自定义 kernel 接入 PyTorch"的通用模板——和今天把 Softmax/LayerNorm 封装成 `my_ops.softmax_forward` 是同一套流程。
+**题目链接**：<https://leetgpu.com/challenges/group-normalization>
 
-> 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时。完整题解（含 tiling 数据复用分析、naive → block tile → thread tile 优化链路）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matmul_forward`，在 Python 里调用验证。
+**与今日知识的关联**：
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
+本题是今天 normalization 主题的变体实战——Group Norm 与 LayerNorm 同构（都是"在一组元素上做 mean/var 两次 reduce + affine"），只是归约的维度从"一行"换成了"一个 group"。核心仍是两遍 scan + shared memory reduction：第一遍求 `mean`，第二遍求 `var`（依赖 `mean`，不能合并）。把今天的 `layernorm_kernel` 思路扩展到"一个 block 处理一个 group"即可。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [148. 排序链表](https://leetcode.cn/problems/sort-list/) | 中等 | 归并排序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html) |
-| [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/) | 困难 | 小顶堆 k 路归并 / 分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
-| [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/) | 中等 | 哈希 + 双向链表 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
+| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
+| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html) |
+| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
+| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
+| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：在自定义 LayerNorm 中加入 float4 向量化
+#### 实验 1：修改 D 观察 memory-bound 的性能尺度律
 
-参考 Day 3 的 float4 优化，修改 `launch_layernorm` 内部的 kernel，把逐元素加载改为 `float4` 批量加载，对比 latency 变化。
+把 `D` 分别改为 768、1024、4096，重新运行，记录时间并解释：
 
-**思考问题**：float4 优化后，自定义版能接近 PyTorch 性能吗？还差什么？
-> 提示：float4 能弥补"逐元素加载"的差距（~1.5-2x），但还缺 Welford 一次 reduce、warp 级特化、kernel fusion。要完全追平需要全部补齐。
-
-#### 实验 2：用 `torch.compile` 编译 Mini Engine
-
-```python
-compiled_model = torch.compile(model_custom, mode="reduce-overhead")
-benchmark(compiled_model, x, "Custom + torch.compile")
+```cuda
+const int D = 4096; // 从 1024 改成 4096
 ```
 
-对比编译前后的 latency 和 kernel 数量。
+**思考问题**：D 翻倍时，kernel 时间应该接近翻倍还是 4 倍？为什么？
+> 提示：D 决定了每行的 HBM 读写量（`2D × 4B`），三遍扫描使总读量约 `3D`。时间是线性的，因为 memory-bound kernel 的耗时≈ `Bytes / Bandwidth`，与 D 成正比。reduce 次数不变（仍是 warp shuffle 的固定 5 步）。
 
-**思考问题**：`torch.compile` 能融合自定义算子吗？为什么？
-> 提示：`torch.compile` 的 fusion 主要作用于 PyTorch 原生算子（ATen）。自定义 C++ Extension 算子对 torch.compile 是"黑盒"，无法被融合（除非注册为 custom op + 提供 fake tensor）。这是自定义算子的一个代价。
+#### 实验 2：实现 Online Softmax（两遍扫描）
 
-#### 实验 3：Decode 阶段（N=1）的 speedup 差异
+把三遍扫描压缩为两遍——第一遍同时求 max 和 sum，第二遍归一化。核心是 online 更新公式：
 
-把输入改为 `x = torch.randn(1, 1, d_model)`（Decode 形状），对比自定义版 vs PyTorch 版的 latency。
+```cuda
+// online softmax：一次遍历同时维护 running max 和 running sum
+float m_old = m_val;
+m_val = fmaxf(m_val, x);
+s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
+```
 
-**思考问题**：Decode 阶段自定义版的相对劣势更大还是更小？为什么？
-> 提示：Decode 下矩阵极小（M=1），launch overhead 占比上升。PyTorch 对小张量有特化路径（避免过度并行），自定义版没有这种特化，劣势可能更大。
+对比三遍扫描的 HBM 读次数（3D → 2D）和实测时间。
+
+**思考问题**：online 版本为什么能减少一次 HBM 读？它的代价是什么？
+> 提示：online 版本在遍历中实时"重整"已累积的 sum（乘 `exp(m_old - m_new)`），代价是每个元素多一次 exp 和乘法——用少量额外计算换一次全局访存，对 memory-bound 算子是划算的。这正是 FlashAttention 的基石。
+
+#### 实验 3：LayerNorm 用 Welford 合并成一次 reduce
+
+参考 Welford 在线均值/方差算法，把 mean 和 variance 在**一次遍历**内同时求出：
+
+```
+遍历每个元素 xi：
+ count++
+ delta = xi - mean
+ mean += delta / count
+ M2 += delta * (xi - mean) // M2 累积平方差
+最终：variance = M2 / count
+```
+
+对比两次 reduce 版本与 Welford 一次 reduce 版本的 HBM 读次数（2N → N）和数值精度差异。
+
+**思考问题**：Welford 并行化（多线程合并各自的 mean/M2/count）比串行复杂在哪？
+> 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 3 要读的 FasterTransformer `generalLayerNorm` 的核心优化点。
 
 ### 验证 Checklist
 
-- [ ] 能用 `load_inline` 把 Day 2 kernel 集成到 PyTorch（`my_ops.softmax_forward` / `layernorm_forward`）
-- [ ] 自定义算子版 Mini Engine 编译运行成功（`python mini_engine.py`）
-- [ ] 自定义版与 PyTorch 版输出误差 < 1e-4
-- [ ] 记录了 Prefill 阶段自定义版 vs PyTorch 版的 latency（预期 0.8x ~ 0.95x）
-- [ ] 能解释为什么自定义版通常比 PyTorch 慢（缺失向量化 / warp 级 / Welford / fusion）
-- [ ] 理解 C++ Extension 的三个关键 API（`at::Tensor` / `data_ptr` / `getCurrentCUDAStream`）
-- [ ] 能说出何时自定义算子才有性能优势（官方未覆盖的场景，如 FlashAttention）
+- [ ] 能解释 safe softmax 为什么要减 max（数值稳定性 + 数学等价性证明）
+- [ ] 能画出 Softmax 三遍扫描的流程（求 max → 求 sum → 归一化）及每遍的 HBM 读写量
+- [ ] 能复用 Week 2 的 `warpReduceSum`/`warpReduceMax` 实现 `blockReduceSum`/`blockReduceMax`，并说出两处 `__syncthreads` 的作用
+- [ ] Softmax Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
+- [ ] LayerNorm Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
+- [ ] 能解释 LayerNorm 为什么需要两次 reduce（方差依赖均值，不能合并）
+- [ ] 能用 ncu 验证 Softmax 是 memory-bound（DRAM Throughput >> SM Throughput）
 
 ---
 
 ### 今日总结
 
-Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
+Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transformer 算子：
 
-1. **集成流水线**：`.cu` kernel → launch wrapper → C++ binding（`at::Tensor`）→ `load_inline` JIT 编译 → Python 调用，6 步把裸 kernel 变成框架可调用算子
-2. **三个关键 API**：`at::empty_like`（让 PyTorch 管显存）、`data_ptr<float>()`（提取裸指针）、`getCurrentCUDAStream`（保证 stream 正确）
-3. **Mini Engine**：Transformer Block 中 GEMM 用 cuBLAS、Softmax/LayerNorm 用自定义，混合调用是真实引擎的常见模式
-4. **性能预期**：自定义版比 PyTorch 慢 0.8x ~ 0.95x——因为缺失向量化、Welford、warp 级、fusion 四项优化
-5. `#ifdef WITH_TORCH`：同一 `.cu` 支持独立编译（快速验证）和 PyTorch 集成（端到端）两种模式
+1. **Safe Softmax**：减 max 保证数值稳定，三遍扫描（max → sum → normalize），数学上与朴素 softmax 完全等价
+2. **两级 Block Reduce**：warp shuffle → shared memory → warp0 收尾，是 256/512/1024 线程协作 reduce 的标准模板
+3. **LayerNorm 两次 reduce**：先 mean 后 variance，第二次依赖第一次结果——这是无法合并的根本原因
+4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 58.45，优化重点在减少 HBM 读写
+5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
 
-掌握这套集成流程后，任何自定义 CUDA kernel 都能接入 PyTorch。Day 6 会对 Mini Engine 做端到端 profiling，定位瓶颈算子和 fusion 机会。
+掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
 
 ---
 
 ### 面试要点
 
-1. **如何把自定义 CUDA 算子集成到 PyTorch 中？有几种方式？**
+1. **Softmax 为什么要减去 max？不减会怎样？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **方式 1：C++ Extension（推荐）**：写 `.cpp`（接口）+ `.cu`（kernel），用 `torch.utils.cpp_extension.load_inline` 动态编译或 `setup.py` 静态编译
- - **方式 2：TorchScript/Custom Operator**：用 `torch.ops.register` 注册自定义 op
- - **方式 3：Triton**：用 Python 写 kernel，`torch.compile` 自动集成（无需 C++）
- - **集成要点**：① 用 `at::Tensor` 接收张量 ② 用 `data_ptr<float>()` 获取裸指针 ③ 用 `at::cuda::getCurrentCUDAStream()` 获取当前 stream ④ 用 `auto out = at::empty_like(input)` 分配输出
+ - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
+ - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
+ - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
+ - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 
 </details>
 
 
-2. **为什么自定义 Softmax/LayerNorm 通常比 PyTorch 官方实现慢？**
+2. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **PyTorch 已高度优化**：warp 级特化路径、float4/half2 向量化、Welford 一次 reduce、FP32 混合精度
- - **教学版缺失优化**：逐元素加载、两次 reduce、全程 FP32、无 kernel fusion
- - **JIT/编译优化**：PyTorch 2.0 的 `torch.compile` 会做 kernel fusion，进一步拉开差距
- - **超越场景**：只有当官方实现**没有覆盖**你的场景时（如 FlashAttention 的分块 softmax），自定义才有优势
+ - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
+ - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
+ - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
+ - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
 </details>
 
 
-3. `load_inline` **和** `setup.py` **有什么区别？分别什么场景用？**
+3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - `load_inline`**（动态）**：运行时 JIT 编译，改代码即生效，适合原型开发和教学。首次编译 ~30s，后续从缓存加载
- - `setup.py`**（静态）**：预先编译为 `.so`，`import` 即用，适合生产部署。改代码需重新 `pip install`
- - **选择原则**：开发期用 `load_inline`（迭代快），上线用 `setup.py`（无 JIT 开销）
- - **共同点**：两者都走 PyTorch 的 C++ Extension 机制，最终都是把 `.cu` 编译为 `.so` 并注册到 Python
+ - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~58.45）
+ - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
+ - **优化方向**：
+ 1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
+ 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
+ 3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
+ 4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 
 </details>
 
 
-4. **集成自定义算子时，为什么要传** `getCurrentCUDAStream()`**？不传会怎样？**
+4. `blockReduceSum` **的两级结构是怎样的？为什么需要两级？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **原因**：PyTorch 用多 stream 管理异步执行（如 `torch.cuda.stream()`）。自定义 kernel 必须在 PyTorch 当前 stream 上执行，否则会破坏异步依赖
- - **不传的后果**：kernel 默认走 stream 0（default stream），与 PyTorch 的 stream 隔离，可能导致：
- - 数据竞争（kernel 在 PyTorch tensor 未就绪时执行）
- - 死锁（stream 间等待）
- - 多 stream 并行失效（所有操作串行到 default stream）
- - **正确做法**：launch wrapper 接收 `cudaStream_t` 参数，从 `at::cuda::getCurrentCUDAStream()` 获取
+ - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
+ - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
+ - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
+ - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
+ - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
+ - `smem[32]` **的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
 
 </details>
 
 
-5. `torch.compile` **能融合自定义 C++ Extension 算子吗？为什么？**
+5. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **不能直接融合**：`torch.compile`（Inductor）的 fusion 作用于 PyTorch 原生 ATen 算子。自定义 C++ Extension 对 Inductor 是"黑盒"——它不知道算子内部逻辑，无法做 fusion
- - **解决方案**：① 注册为 custom op + 提供 fake tensor（让 Inductor 知道 shape/dtype）② 用 Triton 写 kernel（`torch.compile` 原生支持融合）
- - **代价**：自定义算子无法被 fusion 是性能劣势之一——PyTorch 原生算子经 `torch.compile` 后 kernel 数减少 30-50%，自定义版无法享受
- - **实践建议**：如果追求 fusion，优先用 Triton；如果追求极致单算子性能或复用 CUDA 代码，用 C++ Extension（接受无法 fusion 的代价）
+ - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
+ - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
+ - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
+ - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
 
 ---
 

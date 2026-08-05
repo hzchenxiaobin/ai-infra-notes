@@ -1,494 +1,452 @@
-## Day 6：实现 KV Cache（含 GQA/MQA/MLA 变体）实现 KV Cache
+## Day 6：FlashAttention-2 论文与源码差异
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 KV Cache 的核心思想——**把每步新生成的 K/V 存下来**，避免 Decode 阶段重复计算历史 K/V<br>
-2. 掌握 KV Cache 的 **5D 内存布局** `(num_layers, B, H, max_seq_len, d_head)`，能计算给定模型配置下的显存占用<br>
-3. 能区分 **静态分配 / 动态分配 / PagedAttention** 三种 cache 分配策略的优缺点，理解为什么 vLLM 要借鉴 OS 虚拟内存分页<br>
-4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
-5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
+1. 理解 FlashAttention-2 相对 FA1 的三大关键改进：**减少 non-matmul FLOPs**、**更好的 work partitioning**、**更高的 occupancy**<br>
+2. 掌握 FA2 的 **warp group 子块划分**策略，对比 Day 2 的"每 warp 若干 Q 行"划分<br>
+3. 理解 **seq 并行 vs head 并行**的 trade-off，知道什么时候该用 seq 并行<br>
+4. 能列出 FA1 vs FA2 的至少 5 个关键差异，解释每个改进的收益来源<br>
+5. 能基于 FA2 思想优化 Day 2 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
 
-> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
+> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们读了官方源码的结构，今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天把 FA 集成到 Mini 引擎时，会用今天学到的 work partitioning 思想评估集成效果。
 
 ---
 
-### 学前导读：Decode 每步都在重算历史，能不能存下来？
+### 学前导读：FA1 跑对了，但为什么还能更快
 
-Day 1 的 PyTorch 模拟里，`MiniTransformer.forward` 有这么一段：
+Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
 
-```python
-if use_cache and k_cache is not None:
- k = torch.cat([k_cache, k], dim=2) # 把新 K 拼到历史 cache 后面
- v = torch.cat([v_cache, v], dim=2)
-```
+| 维度 | FA1 的问题 | FA2 的改进 | 收益 |
+|------|-----------|-----------|------|
+| Non-matmul FLOPs | softmax/rescale 跨 warp 冗余 | warp group 内独立完成 | ~2x 减少 |
+| Work partitioning | 按 Q tile，warp 共享 | 按 Q tile 子块 + seq 并行 | 更高并行度 |
+| Warp 同步 | 较多 block 级同步 | warp group 内自治 | 更少同步点 |
+| Occupancy | register/smem 压力大 | 优化用量，更多 block 驻留 | 更高 occupancy |
 
-这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
-
-关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
-
-| 维度 | 无 KV Cache | 有 KV Cache |
-|------|------------|------------|
-| 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
-| 每步 FLOPs | O(L × d²) | **O(d²)** |
-| 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
-| 内存使用 | 低 | 高（2 × L × d × bytes） |
-| Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
-
-收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
-
-> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
+> 💡 **一句话总结**：FA2 不是算法变了（三公式不变），而是把"谁做什么"重新分配——让 warp group 自治，减少不必要的通信和重复计算。这跟管理学一样：减少跨团队同步，让小组自治，效率更高。
 
 ---
 
 ### 理论学习
 
-#### 2.1 KV Cache 核心思想：避免重复计算历史 K/V
+#### 4.1 FA1 的不足
 
-![KV Cache 生命周期：Prefill 填充 → Decode 追加](../images/kv_cache_append_decode.svg)
+![FlashAttention Online Softmax 递推](../../week4/images/flash_attention_online_update.svg)
 
-Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
-
-```
-KV Cache 工作流程：
- Prefill 阶段：
- 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
- cache 从空 → 填入 N_prompt 个 token 的 K/V
-
- Decode 阶段（每步）：
- 1. 只计算新 token 的 K_t, V_t
- 2. 把 K_t/V_t 追加（append）到 cache
- 3. 从 cache 读取所有历史 K/V 做 attention
- 4. 输出下一个 token
- 5. 重复直到 EOS
-```
-
-**收益量化**：
+FA1 存在三个效率问题：
 
 ```
-无 Cache 时每步：
- FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
- 每步都要重算前 L 个 token 的 QKV projection
-
-有 Cache 时每步：
- FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
- 只算 1 个新 token 的 QKV projection + 1×L 的 attention
-
- attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
- 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
+FA1 的问题：
+1. 不同 warp group 之间存在冗余的 softmax 统计量同步
+2. 非 matmul 计算（online softmax 的 reduce/rescale）没有充分并行
+3. Q tile 行 block 内部的 warp 分工不够细，导致部分 warp 空闲
 ```
 
-> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
+##### 问题 1：跨 warp 冗余同步
 
-#### 2.2 KV Cache 的内存布局与显存占用
+FA1 中，一个 Block 的所有 warp 共同处理 Q tile。每个 warp 计算部分 S=QK^T，然后需要跨 warp 汇总 max 和 sum——这引入了 `__syncthreads` 和 shared memory 中转。
 
-![KV Cache 5D 内存布局](../images/kv_cache_memory_layout.svg)
+##### 问题 2：Non-matmul FLOPs 占比高
 
-KV Cache 是一个 5 维张量，K 和 V 各一份：
+FA1 的 non-matmul FLOPs（softmax 的 exp/sum/rescale）与 matmul FLOPs 之比约为 1:10。在现代 GPU 上，matmul 有 Tensor Core 加速（吞吐远超 FMA），而 non-matmul 只能跑标量指令——non-matmul 成了瓶颈。
 
-```
-布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
- v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
+#### 4.2 FA2 改进一：减少 Non-Matmul FLOPs
 
-每 token KV Cache 大小：
- = 2 × num_layers × num_heads × d_head × bytes_per_elem
- （2 = K 和 V 各一份）
+![FlashAttention Tiling 与线程映射](../../week4/images/flash_attention_tiling.svg)
 
-总 KV Cache 大小：
- = batch_size × seq_len × per_token_size
- = B × L × 2 × n_layers × n_heads × d_head × bytes
-```
-
-##### 为什么 d_head 维放最内层？
-
-`d_head` 维连续排列，保证同一 token 同一 head 的 `d` 个元素内存连续——attention 做点积时一次 coalesced 读 `d` 个 float，带宽利用率最高。`seq_len` 维在外层，使得 append 新 token 时只需在尾部写入，不搬移已有数据。
-
-##### 真实模型的显存占用
-
-| 模型 | n_layers | n_heads | d_head | dtype | 每 token KV Cache | 4096 tokens | batch=16 |
-|------|----------|---------|--------|-------|-------------------|-------------|----------|
-| LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
-| LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
-| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
-
-> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
-
-##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
-
-上表的 `n_heads` 是 **KV head 数**（`n_kv_head`）。不同注意力变体通过缩减 `n_kv_head` 来压缩 KV Cache，这是 2023+ 模型降低推理显存的主流手段。
-
-| 变体 | n_kv_head | 每 token KV bytes（相对 MHA） | 代表模型 | 说明 |
-|------|-----------|------------------------------|---------|------|
-| **MHA**（标准） | = n_head | 1×（基准） | LLaMA-7B（32/32） | 每个 query head 独立一份 K/V |
-| **GQA**（Grouped） | n_head / g（g=分组数） | 1/g | LLaMA-3-8B（8/32，g=4→1/4） | g 个 query head 共享一组 K/V；g=n_head 退化为 MQA |
-| **MQA**（Multi-Query） | 1 | 1/n_head | PaLM、Falcon | 所有 query head 共享同一份 K/V，KV Cache 最小但精度损失 |
-| **MLA**（Multi-head Latent） | 压缩到 d_c（低秩） | ~d_c/(n_head·d_head) | DeepSeek-V2/V3 | K/V 不直接存，存低秩"潜在向量"（d_c 维），attention 时现场解压 |
-
-**口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
+FA2 的核心改进：**让一个 warp group 负责输出 tile 的一个子块（sub-tile），在 group 内部独立完成该子块的全部 online softmax 计算**。
 
 ```
-MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
-GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
-MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
-MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
+FA1: Block 内所有 warp 共享 Q tile → 跨 warp 同步 max/sum
+FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group 同步
+
+效果：
+ FA1: non-matmul : matmul ≈ 1:10
+ FA2: non-matmul : matmul ≈ 1:20 或更少
 ```
 
-> 💡 **面试要点**：
-> - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
-> - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
-> - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
->
-> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
+##### 为什么减少 non-matmul 很重要？
 
-#### 2.3 分配策略：静态 vs 动态 vs PagedAttention
+现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 上 FP16 Tensor Core matmul 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）。因此即使 non-matmul FLOPs 只占 10%，它的执行时间可能占 50%+——因为标量指令慢得多。FA2 把 non-matmul 减半，直接缩小了这个瓶颈。
 
-![三种 KV Cache 分配策略对比](../images/kv_cache_allocation_strategies.svg)
-
-| 策略 | 做法 | 优点 | 缺点 |
-|------|------|------|------|
-| **静态分配** | 为每个请求预分配 `max_seq_len` 空间 | 简单，无碎片 | 内存浪费严重（实际长度常远小于 max） |
-| **动态分配** | 按实际长度分配/扩展 | 内存利用率高 | 频繁 alloc/free 产生外部碎片，大请求可能 OOM |
-| **PagedAttention** | 分成固定大小 block + block table 映射 | 无碎片、利用率高、支持共享/CoW | 实现复杂，block table 有额外开销 |
-
-##### PagedAttention 核心思想（Day 4 详读）
-
-借鉴 OS 虚拟内存分页：
-- 把 KV cache 分成固定大小的 **block**（如 16 tokens/block）
-- **逻辑 block** 号对序列连续，**物理 block** 号在显存中可以不连续
-- 用 **block table** 维护逻辑→物理映射（类似页表）
-- 多个 sequence 共享同一 prompt 的物理 block，写入时 **Copy-on-Write**
-
-> 💡 PagedAttention 解决的是"动态分配的碎片"问题——不是消除碎片（分页本身也有内部碎片），而是让碎片**可回收**。这是 Day 4 的核心，今天先建直觉。
-
-#### 2.4 多轮对话中的 Cache 复用
+#### 4.3 FA2 改进二：更好的 Work Partitioning
 
 ```
-多轮对话：
- Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
+FA1 的 work partitioning：
+ - 一个 Block 处理一个 Q tile
+ - Block 内 warps 共同完成整个 Q tile
+ - 并行维度: Batch × Head × Q tile
 
-Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
-
-Cache 复用：
- - Round 1 已经计算过的 K/V 直接保留在 cache 里
- - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
- - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
+FA2 的 work partitioning：
+ - 一个 Block 仍处理一个 Q tile
+ - 但将 Q tile 在行方向划分给不同 warp groups
+ - 新增 seq 并行维度: 一个 head 的序列可分多个 block
 ```
 
-实现要点：
-1. 为每个对话 session 维护一个 KV Cache
-2. 每次用户输入时，先复用已有 cache（检查已缓存长度）
-3. 对新输入 tokens 做 prefill，将新 K/V 追加到 cache
-4. 生成 assistant 回复时，每步 decode 用 append 模式更新 cache
-5. 释放已完成/超时的 session cache（LRU 或显式释放）
+##### 三层并行维度
 
-> ⚠️ **注意**：多轮复用的前提是 **prompt 格式严格一致**——如果 Round 2 的 prompt 不是"Round1 全部 + 新输入"的拼接，而是重新构造，cache 就无法复用。生产系统（如 vLLM）通过 prefix caching 显式管理这一点。
+| 并行维度 | FA1 | FA2 | 说明 |
+|---------|-----|-----|------|
+| Batch × Head | ✅ `blockIdx.z/y` | ✅ | 首选，天然无依赖 |
+| Sequence length | ❌ | ✅ 新增 | 长 sequence 分多个 block |
+| Warp group 内部 | 简单共享 | ✅ 子块自治 | 减少跨 warp 同步 |
 
-### Coding 任务：手写 KV Cache
+##### Seq 并行 vs Head 并行
 
-#### 任务 1：创建 kv_cache.cu
+```
+Head 并行（Batch/Head 维度）：
+ - 不同 head 在不同 block 上并行
+ - 优点：自然，不需要同步
+ - 缺点：head 数少时（如 8 头），并行度不够
 
-创建文件 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/kv_cache.cu)，实现一个支持多轮对话的 KVCache 类：
-
-```cuda
-// kv_cache.cu —— 支持多轮对话的 KV Cache CUDA 实现
-// 编译命令: nvcc -o kv_cache kv_cache.cu -O3 -arch=sm_120
-// 运行命令: ./kv_cache
-
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cmath>
-#include <vector>
-
-// --------------------------------------------------
-// KVCache 类
-// 存储 layout: (num_layers, batch_size, num_heads, max_seq_len, d_head)
-// 为简化，append 用 cudaMemcpy 逐 head 拷贝；生产级会用一个 kernel 完成
-// --------------------------------------------------
-class KVCache {
-  public:
-    KVCache(int num_layers, int batch_size, int num_heads, int max_seq_len, int d_head)
-        : num_layers_(num_layers), batch_size_(batch_size), num_heads_(num_heads), max_seq_len_(max_seq_len),
-          d_head_(d_head) {
-
-        size_per_layer_ = (size_t)batch_size_ * num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
-        total_size_ = (size_t)num_layers_ * size_per_layer_;
-
-        cudaMalloc(&k_cache_, total_size_);
-        cudaMalloc(&v_cache_, total_size_);
-        cudaMemset(k_cache_, 0, total_size_);
-        cudaMemset(v_cache_, 0, total_size_);
-
-        // 每个 batch 当前已缓存的序列长度
-        seq_lens_ = std::vector<int>(batch_size_, 0);
-    }
-
-    ~KVCache() {
-        cudaFree(k_cache_);
-        cudaFree(v_cache_);
-    }
-
-    // 追加新的 K/V 到 cache
-    // k_new/v_new shape: (batch_size, num_heads, new_len, d_head)，在 device 上
-    void append(int layer_id, const float* k_new, const float* v_new, int new_len) {
-        for (int b = 0; b < batch_size_; b++) {
-            int start = seq_lens_[b];
-            int end = start + new_len;
-            if (end > max_seq_len_) {
-                printf("Error: seq len %d exceeds max_seq_len %d\n", end, max_seq_len_);
-                return;
-            }
-
-            // 拷贝 k_new[b, :, :, :] 到 k_cache_[layer_id, b, :, start:end, :]
-            for (int h = 0; h < num_heads_; h++) {
-                size_t src_offset = ((size_t)b * num_heads_ * new_len * d_head_ + h * new_len * d_head_);
-                size_t dst_offset =
-                    ((size_t)layer_id * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
-                     b * num_heads_ * max_seq_len_ * d_head_ + h * max_seq_len_ * d_head_ + start * d_head_);
-                size_t bytes = (size_t)new_len * d_head_ * sizeof(float);
-                cudaMemcpy(k_cache_ + dst_offset, k_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
-                cudaMemcpy(v_cache_ + dst_offset, v_new + src_offset, bytes, cudaMemcpyDeviceToDevice);
-            }
-            seq_lens_[b] = end;
-        }
-    }
-
-    // 获取某层 cache 指针和各 batch 序列长度
-    void get_cache(int layer_id, float** k_ptr, float** v_ptr, std::vector<int>* seq_lens) {
-        *k_ptr = k_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
-        *v_ptr = v_cache_ + (size_t)layer_id * size_per_layer_ / sizeof(float);
-        *seq_lens = seq_lens_;
-    }
-
-    int get_seq_len(int batch_id) const {
-        return seq_lens_[batch_id];
-    }
-
-    void reset() {
-        cudaMemset(k_cache_, 0, total_size_);
-        cudaMemset(v_cache_, 0, total_size_);
-        std::fill(seq_lens_.begin(), seq_lens_.end(), 0);
-    }
-
-    void reset_batch(int batch_id) {
-        size_t batch_bytes = (size_t)num_heads_ * max_seq_len_ * d_head_ * sizeof(float);
-        for (int l = 0; l < num_layers_; l++) {
-            size_t offset = ((size_t)l * batch_size_ * num_heads_ * max_seq_len_ * d_head_ +
-                             batch_id * num_heads_ * max_seq_len_ * d_head_);
-            cudaMemset(k_cache_ + offset, 0, batch_bytes);
-            cudaMemset(v_cache_ + offset, 0, batch_bytes);
-        }
-        seq_lens_[batch_id] = 0;
-    }
-
-  private:
-    int num_layers_, batch_size_, num_heads_, max_seq_len_, d_head_;
-    size_t size_per_layer_, total_size_;
-    float* k_cache_;
-    float* v_cache_;
-    std::vector<int> seq_lens_;
-};
+Seq 并行（Sequence 长度维度）：
+ - 同一个 head 的序列分成多个 block 并行
+ - 优点：增加并行度，尤其适合长序列
+ - 缺点：需要处理 Q tile 边界（但 FA 的 tiling 天然支持）
 ```
 
-代码要点：
-- **5D 布局**：`k_cache[num_layers, B, H, max_seq_len, d_head]`，`d_head` 最内层连续，保证 coalesced 读取。
-- `append`：把新 K/V 拷贝到 cache 的 `[start:end]` 位置（`start` = 当前已缓存长度），然后更新 `seq_lens_`。逐 head 用 `cudaMemcpy` 做_device-to-device_拷贝（教学版；生产级用一个 kernel 批量完成）。
-- `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
-- `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
+**选择策略**：先充分利用 Batch × Head 并行（gridDim.y × gridDim.z）。如果 B×H 不够大（如小 batch 推理），再开启 seq 并行。
 
-#### 任务 2：编译与运行
+#### 4.4 FA2 改进三：更高的 Occupancy
 
-```bash
-# 编译
-nvcc -o kv_cache kernels/kv_cache.cu -O3 -arch=sm_120
-
-# 运行
-./kv_cache
+```
+FA1: register 和 shared memory 使用较大，每 SM 可能只跑 1 个 block
+FA2: 优化用量，每 SM 可跑 2-3 个 block → occupancy 提升
 ```
 
-**预期输出**：
+FA2 通过以下方式减少资源占用：
+- warp group 自治减少了 shared memory 中转缓冲
+- 更紧凑的 register 复用（子块划分让 acc 更小）
+- 减少同步点 → 编译器有更多优化空间
+
+#### 4.5 FA1 vs FA2 关键差异总结
+
+| 维度 | FlashAttention-1 | FlashAttention-2 |
+|------|------------------|------------------|
+| Non-matmul 并行 | 不够充分（跨 warp 共享） | warp group 内独立完成 |
+| Work partitioning | 按 Q tile，warp 共享 | 按 Q tile 子块 + seq 并行 |
+| Warp 同步 | 较多 block 级 `__syncthreads` | 较少（group 内自治） |
+| Occupancy | 较低（1 block/SM） | 较高（2-3 blocks/SM） |
+| Non-matmul:matmul 比 | ~1:10 | ~1:20 |
+| 反向传播 | 支持 | 更高效 |
+| 长序列收益 | 好 | 更好 |
+| 整体加速（vs FA1） | 基准 | ~2x |
+
+#### 4.6 FlashAttention-3：Hopper 架构的终极优化
+
+FA2 的设计面向 Ampere（A100）的同步执行模型——warp 同步发射 GEMM、串行 softmax。但搬到 Hopper（H100）后，FA2 **只有 ~35% 的利用率**：H100 新增的异步 Tensor Core（WGMMA）、异步拷贝引擎（TMA）、FP8 单元全部闲置。FA3 的目标就是**让 attention kernel 原生于 Hopper 的异步执行模型**，把利用率和精度同时推到极限。
+
+> 📄 **深入阅读**：FA3 的 warp 特化、pingpong 调度、FP8 布局手术等完整分析见 [FA3 论文笔记](../../../../paper/flashattention3/README.md)。
+
+##### 改进一：Async Pipeline（异步数据加载）
+
+FA2 中，一个 warp group 既要搬数据又要算——搬数时 Tensor Core 空转，算时搬运单元空闲。FA3 利用 Hopper 的 **TMA（Tensor Memory Accelerator）**——一个独立的拷贝硬件，不占 SM 发射带宽：
+
+```
+FA2（Ampere）：
+  warp group: load K_j → wait → GEMM(QKᵀ) → softmax → GEMM(PV) → load K_{j+1} → ...
+  ↑ 搬数和计算串行，Tensor Core 在 softmax/搬数期间空转
+
+FA3（Hopper）：
+  producer warp group: TMA(K_j) → mbarrier.arrive → TMA(V_j) → mbarrier.arrive → ...
+  consumer warp group: wait mbarrier → GEMMA_async(QKᵀ) → softmax → GEMMA_async(PV) → ...
+  ↑ TMA 搬数与 Tensor Core 计算并行，搬运开销被完全隐藏
+```
+
+TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器）。producer/consumer 之间用 **mbarrier**（硬件级同步原语）做块级握手的多 stage 流水。
+
+##### 改进二：Warp Specialization（producer-consumer 模式）
+
+FA3 把 CTA 内的 warp group 分为两种角色：
+
+| 角色 | 数量 | 职责 | 硬件通路 |
+|------|------|------|---------|
+| **Producer** | 1 个 wg | 只发 TMA 搬 K/V tile 到 shared memory | TMA（拷贝硬件） |
+| **Consumer** | 2 个 wg | 只做 GEMMA + softmax | WGMMA（Tensor Core）+ CUDA core/SFU |
+
+两个 consumer 以 **pingpong 调度**交替：wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然——**一个 SM 的 Tensor Core 与 CUDA core 同时有活干**。
+
+```
+时间线（pingpong）：
+  wg0: GEMM(QK₀ᵀ) | softmax₀ | GEMM(PV₀) | GEMM(QK₂ᵀ) | softmax₂ | ...
+  wg1:    idle     | GEMM(QK₁ᵀ) | softmax₁ | GEMM(PV₁) |    idle  | ...
+                ↑ 两个 consumer 相位错开，Tensor Core 不空转
+```
+
+此外，warpgroup 内部还有 **2-stage GEMM-softmax 流水**：块 $j$ 的 softmax 在 CUDA core 上执行的同时，块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行——打破 FA2 "GEMM→softmax→GEMM" 的串行链。
+
+##### 改进三：FP8 支持（吞吐翻倍）
+
+H100 的 FP8 Tensor Core 吞吐是 FP16 的 **2×**（989 → ~1979 TFLOPs/s）。FA3 支持 FP8（E4M3/E5M2）输入：
+
+| 精度 | FA2 | FA3 | 吞吐（H100） |
+|------|-----|-----|-------------|
+| FP16 | ✅ | ✅ | ~989 TFLOPs/s |
+| FP8 | ❌ | ✅ | ~1979 TFLOPs/s（2×） |
+
+FP8 的难点不在算法而在**数据布局工程**——FP8 WGMMA 只接受 k-major 操作数，而 V 通常按 head dim 连续存储。FA3 在 kernel 内用 LDSM/STSM 指令做片上转置，全部安排在异步 WGMMA 的影子下执行。精度侧用**分块量化**（每 block 独立 scale factor）+ **incoherent processing**（Hadamard 旋转摊平 outlier），FP8 误差比 per-tensor 量化基线低 **2.6×**。
+
+> 💡 FA3 的 FP8 中间计算（softmax 的 exp/sum/rescale）保持 **FP32**——这与 FA1/FA2 "中间结果留高精度" 的原则一脉相承。
+
+##### 概念级伪代码：producer/consumer 模式
 
 ```text
-=== KV Cache Test ===
-Config: layers=2, batch=1, heads=8, max_len=1024, d_head=64
-After Round 1 (len=10): seq_len=10
-After Round 2 (len=5): seq_len=15
-After Round 3 (len=8): seq_len=23
-PASS: seq_len = 23 (expected 23)
-Data verification (Round 1 K in cache): max_diff = 0.00e+00 (PASS)
-KV Cache bytes per token: 8192
-Max memory usage: 8 MB
+# === Producer warp group ===（只搬数据，不计算）
+for j in 0..Tc:
+    TMA.load_async(K[j], smem_K[stage % S])     # 异步搬 K tile
+    TMA.load_async(V[j], smem_V[stage % S])     # 异步搬 V tile
+    mbarrier.arrive(smem_K[stage % S])           # 通知 consumer：数据就绪
+    mbarrier.arrive(smem_V[stage % S])
+    stage += 1
 
-[LLaMA-7B reference] bytes per token: 524288 (512.0 KB)
-[LLaMA-7B reference] 4096 tokens: 2048 MB
-[LLaMA-7B reference] batch=16, 4096 tokens: 32 GB
+# === Consumer warp group ===（只计算，不搬数据，pingpong 错相）
+for j in 0..Tc:
+    mbarrier.wait(smem_K[j % S])                 # 等 producer 搬完
+    WGMMA.async(S[j+1] = Q · K[j+1]ᵀ)          # ← 先发射下一个块的 QKᵀ（异步）
+    softmax_本地计算(j):                          # CUDA core/SFU 上跑
+        m_new = max(m, S[j])
+        alpha = exp(m - m_new); p = exp(S[j] - m_new)
+        l = l * alpha + sum(p); O = O * alpha
+    WGMMA.wait(S[j+1])                           # 等异步 GEMM 完成
+    WGMMA.async(O += P[j] · V[j])               # 发射 PV GEMM
+    m = m_new
+# 两个 consumer wg 的循环相位错开 → Tensor Core 与 CUDA core 互补
 ```
 
-##### 验证逻辑解读
+##### FA1 → FA2 → FA3 演进对比
 
-- **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
-- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
-- **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
+| 维度 | FlashAttention-1 | FlashAttention-2 | FlashAttention-3 |
+|------|------------------|------------------|------------------|
+| 目标硬件 | A100（Ampere） | A100（Ampere） | H100（Hopper） |
+| 核心优化 | IO 复杂度（tiling） | work partitioning | 异步流水 + 低精度 |
+| Non-matmul:matmul | ~1:10 | ~1:20 | softmax 完全隐藏 |
+| Warp 分工 | 共享 Q tile | warp group 子块自治 | producer/consumer 特化 |
+| 并行维度 | Batch×Head | + seq 并行 | + warp group pingpong |
+| 异步执行 | ❌ | ❌ | ✅ TMA + WGMMA async |
+| FP8 支持 | ❌ | ❌ | ✅ E4M3/E5M2 |
+| Occupancy（H100） | — | ~35% 峰值 | ~75% 峰值 |
+| FP16 forward 峰值 | 基准 | ~570 TFLOPs/s | **740 TFLOPs/s** |
+| vs 前代加速 | 基准 | ~2× vs FA1 | ~1.5–2× vs FA2 |
+| 同步原语 | `__syncthreads` | warp group 内自治 | mbarrier（硬件级） |
 
-#### 任务 3：用 ncu 观察 append 的内存拷贝模式
+> 💡 **一句话总结**：FA1 解决了 IO（tiling），FA2 解决了分工（warp group 自治），FA3 解决了异步（producer/consumer 流水）+ 低精度（FP8）。三代演进的核心线索是：**把越来越多的"非计算"工作藏进计算的影子**——先是减少 non-matmul FLOPs，再是把搬数和 softmax 完全异步化。
+
+##### FA3 面试速问
+
+1. **FA3 相比 FA2 的关键差异是什么？**
+2. **Warp specialization 的 producer-consumer 模式是怎么工作的？**
+3. **FP8 对精度有什么影响？FA3 如何应对？**
+
+<details>
+<summary>点击查看答案</summary>
+
+  1. **FA3 vs FA2 关键差异**：① **异步流水**——用 TMA 异步搬数 + WGMMA 异步 GEMM，producer 搬数与 consumer 计算重叠，消除 FA2 的串行等待；② **Warp 特化**——producer/consumer 分工 + pingpong 调度，两个 consumer warpgroup 交替执行 GEMM 和 softmax，Tensor Core 不空转；③ **FP8 支持**——FP8 Tensor Core 吞吐翻倍，配合分块量化和 Hadamard 旋转控制误差。FA3 在 H100 上从 FA2 的 35% 利用率提升到 75%，FP16 forward 达 740 TFLOPs/s。
+
+  2. **Warp specialization 原理**：CTA 内 warp group 分为 1 个 producer（用 TMA 搬 K/V tile 到 shared memory）和 2 个 consumer（做 WGMMA + softmax）。Producer 发 TMA 后立即返回（不占 SM 算力），consumer 通过 mbarrier 感知数据就绪后开始计算。两个 consumer 以 pingpong 交替——wg0 做 softmax（CUDA core）时 wg1 做 GEMM（Tensor Core），让 SM 上不同执行单元同时有活。`setmaxnreg` 把 producer 省下的寄存器划给 consumer。
+
+  3. **FP8 对精度的影响**：FP8（E4M3）只有 3 位尾数，精度脆弱——LLM 激活的 outlier 会导致大量量化误差。FA3 用两招应对：① **分块量化**——Q/K/V 按 block 各自一个 scale factor（而非 per-tensor 一个），FA3 的分块结构天然按块反缩放 S，零计算成本；② **Incoherent processing**——Q、K 先乘随机正交矩阵 $M$（$O(d\log d)$，融入 RoPE），因 $MM^\top=I$ 不改变 $QK^\top$ 输出，但 outlier 被摊平到所有维度。最终 FP8 误差比 per-tensor 量化基线低 2.6×，且 softmax 全程保持 FP32。
+
+</details>
+
+---
+
+### Coding 任务：基于 FA2 思想优化手写 Kernel
+
+#### 任务 1：阅读 FA2 论文 Section 3
+
+**论文**："FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning" (Dao, 2023)
+
+**地址**：https://arxiv.org/abs/2307.08691
+
+**阅读范围**：
+- Section 3.1：减少 non-matmul FLOPs（warp group 子块划分）
+- Section 3.2：更好的 work partitioning（seq 并行）
+
+**记录要点**：在 `notes/fa2_paper_notes.md`（自行创建）中记录 FA2 的三大改进和你的理解。
+
+#### 任务 2：修改 Day 2 Kernel 的 warp 分工
+
+将 Day 2 的 `flash_attention_v2.cu` 修改为 FA2 风格的 warp group 划分：
+
+```cuda
+// Day 2 原版：每 warp 负责 ROWS_PER_WARP 行
+// FA2 风格：把 warps 分成 groups，每 group 负责一个子块
+
+// 修改示例：ROWS_PER_WARP 从 8 改为 4，增加 warp 间并行度
+constexpr int WARPS_PER_BLOCK_FA2 = 16;                     // 16 warps = 512 threads
+constexpr int ROWS_PER_WARP_FA2 = Br / WARPS_PER_BLOCK_FA2; // 64/16 = 4
+// 每 warp 负责更少的行，但更多 warp 并行
+// acc 从 [8][64] 缩小到 [4][64]，register 压力降低
+```
+
+编译运行，对比修改前后的 latency 和 register 使用量：
 
 ```bash
-# profile append 阶段的 memcpy
-ncu --kernel-name regex:memcpy \
- --metrics gpu__time_duration.sum, \
- dram__bytes.sum \
- ./kv_cache
+# 编译原版
+nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -Xptxas -v
+
+# 编译 FA2 风格版
+nvcc -o flash_attention_fa2 kernels/flash_attention_fa2.cu -O3 -arch=sm_120 -Xptxas -v
+
+# 对比 register 使用量（-Xptxas -v 输出）
+# 预期：FA2 版 register/thread 更少，occupancy 更高
+```
+
+#### 任务 3：用 ncu 对比 occupancy 和同步开销
+
+```bash
+ncu --metrics \
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread \
+ --kernel-name regex:flashAttention \
+ ./flash_attention_v2 # 原版
+
+ncu --metrics \
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread \
+ --kernel-name regex:flashAttention \
+ ./flash_attention_fa2 # FA2 风格版
 ```
 
 **观察重点**：
-- 每次 `append` 会触发 `num_heads` 次 device-to-device `cudaMemcpy`（逐 head 拷贝）——这是教学版的低效点。
-- 生产级实现会用一个 CUDA kernel 一次性把整个 `(B, H, new_len, d_head)` 的块写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。
 
-> 💡 思考：这个教学版 `append` 用 host 端循环 + `cudaMemcpy`，每次拷贝有 launch 开销。如果 `num_heads=32`、每步 decode 追加 1 个 token，就是 32 次小拷贝。优化方向：写一个 `append_kernel`，让 GPU 端一次性完成所有 head 的拷贝。
+| 指标 | 原版 (Day 2) | FA2 风格版 | 预期变化 |
+|------|-------------|-----------|---------|
+| Registers/thread | ~88-120 | ~60-80 | ↓（acc 更小） |
+| Occupancy | ~50-75% | ~60-85% | ↑（register 减少后更多 block 驻留） |
+| SM Throughput | ~30-40% | ~35-45% | ↑（并行度更高） |
 
-#### 任务 4：LeetGPU 在线题目 —— Grouped Query Attention (GQA)
+#### 任务 4：LeetGPU 在线题目 —— Batched Matrix Multiplication
 
-**题目链接**：<https://leetgpu.com/challenges/grouped-query-attention>
+**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
 
 **与今日知识的关联**：
 
-GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-Head Attention）每个 query 头都有独立的 K/V 头，cache 大小正比于 `num_q_heads`；GQA 让多个 query 头**共享同一组 K/V 头**，把 KV cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`。LLaMA-3 8B 用 `32` 个 Q 头 + `8` 个 KV 头，KV cache 直接缩小到 1/4。今天我们手写了 KV Cache 的存储结构，GQA 回答的是"能不能少存一些头"——它是从模型结构层面削减 cache 大小，比 Day 1 的 int8 量化（从精度层面削减）更根本。
+FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**：把 batch 维和 head 维提升到 grid 的最高维度，让每个 thread block 处理更小的子任务，从而减少同步、提高 occupancy。本题 Batched Matrix Multiplication 正是练习这种"多维 grid + batch offset 寻址"的最简场景——用 `blockIdx.z` 区分 batch，`blockIdx.x/y` 处理 M/N tile，与 FA2 官方 kernel 的 launch 策略同构。
 
-> 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时，重点观察 batch size 增大时 latency 的增长曲线。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 4）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 4（堆），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
-| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
-| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
-| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | DFS 左右深度和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
-| [110. 平衡二叉树](https://leetcode.cn/problems/balanced-binary-tree/) | 简单 | 后序 DFS 返回高度 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
+| [215. 数组中的第 K 个最大元素](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | 中等 | 快速选择 / 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
+| [347. 前 K 个高频元素](https://leetcode.cn/problems/top-k-frequent-elements/) | 中等 | 桶排序 / 快选 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html) |
+| [295. 数据流的中位数](https://leetcode.cn/problems/find-median-from-data-stream/) | 困难 | 双堆（大顶 + 小顶） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html) |
+| [264. 丑数 II](https://leetcode.cn/problems/ugly-number-ii/) | 中等 | 三指针多路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：扩展支持多 batch 不同序列长度
+#### 实验 1：手动计算 non-matmul FLOPs
 
-修改 `KVCache`，让每个 batch 有独立的 `seq_lens_[b]`，`append` 时各 batch 独立追加不同长度。测试：`batch_size=2`，batch 0 追加 10+5，batch 1 追加 8+3，验证两者 `seq_len` 独立正确。
+对于 N=1024, d=64, Br=Bc=128，计算 FA1 和 FA2 的 non-matmul FLOPs 占比。
 
-> 思考：多 batch 独立长度时，attention kernel 如何知道每个 batch 该读多少 cache？（提示：把 `seq_lens[]` 传进 kernel，每 batch 用各自的长度。这正是 vLLM 的 `seq_group_metadata` 做的事。）
+> 提示：matmul FLOPs = 2×N²×d（QK^T + PV）。non-matmul = exp/add/rescale，约 3×N×(N/Bc) 次。FA2 通过 group 自治减半。
 
-#### 实验 2：实现 FP16 版本
+#### 实验 2：实现 seq 并行
 
-把 `KVCache` 的 `float*` 改成 `__half*`（`#include <cuda_fp16.h>`），`cudaMalloc`/`cudaMemcpy` 的字节数除以 2。对比 fp32 与 fp16 的显存占用，验证内存减半。
+修改 Day 2 Kernel，当 B×H 较小时（如 B=1, H=1），在 x 维度使用更多 block 处理同一个 head 的不同 Q tile 段。
 
-> 思考：fp16 cache 的数值精度是否足够？什么场景下必须用 fp32？（提示：长序列累积误差、量化感知训练时 fp16 可能不够；Day 1 的 int8 量化是更激进的压缩。）
+> 提示：FA 的 tiling 天然支持——每个 block 处理 Br 行 Q，不同 block 处理不同段，无需额外同步。
 
-#### 实验 3：把 append 换成单个 CUDA kernel
+#### 实验 3：对比 FA1 和 FA2 官方性能
 
-当前 `append` 在 host 端用 for 循环 + `cudaMemcpy` 逐 head 拷贝。写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、`block=(num_heads * new_len * d_head)` 一次性把新 K/V 写入 cache，消除多次 `cudaMemcpy` 的 launch 开销。用 `nvprof` 或 `ncu` 对比两种实现的 append 耗时。
+如果环境允许（`pip install flash-attn`），用官方 FA1 和 FA2 跑同一组 N/B/H/d，记录加速比。
 
-> 思考：kernel 版本的 append 应该比 memcpy 版快多少？瓶颈从"launch 开销"变成什么？（提示：变成实际的显存写入带宽，更接近理论极限。）
+> 提示：长序列（N=4096+）时 FA2 优势最明显，因为 seq 并行和 reduced non-matmul 的收益随 N 增长。
 
 ---
 
 ### 今日总结
 
-Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
+Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 
-1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
-2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
-3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
-4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
-5. **多轮对话复用**：Round 1 的 cache 保留，Round 2 只算新增 token 的 K/V，TTFT 大幅降低；前提是 prompt 格式严格一致
-6. **手写 KVCache 类**：`append`/`get_cache`/`reset` 三件套，多轮追加 + 数据落位验证通过，并打印 LLaMA-7B 真实显存参考值
-7. **GQA 优化**：从模型结构层面减少 KV 头数，把 cache 的 `num_heads` 维从 `num_q_heads` 降到 `num_kv_heads`（LLaMA-3 缩小 4×）
+1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
+2. **更好的 work partitioning**：新增 seq 并行维度，长序列下并行度更高；warp group 自治减少跨 group 同步
+3. **更高的 occupancy**：优化 register/smem 用量，每 SM 从 1 block 提升到 2-3 blocks
+4. **核心思想**：算法不变（三公式不变），改进全在"谁做什么"——减少跨团队同步，让小组自治
+5. **Seq 并行 vs Head 并行**：先用 Batch×Head 并行，不够时再开 seq 并行；长序列场景 seq 并行收益最大
+6. **实践验证**：修改 Day 2 Kernel 的 warp 分工（ROWS_PER_WARP 减小），用 ncu 验证 occupancy 提升
 
-掌握这些后，你就有了 Day 3-4 读 vLLM 源码的全部数据结构基础——明天的 PagedAttention 就建在今天的 KVCache 之上，只是把"连续分配"换成了"分页 + block table"。
+掌握这些后，你就理解了 FlashAttention 从 FA1 到 FA2 的演进逻辑。明天把 FA 集成到 Mini 引擎，做端到端性能对比。
 
 ---
 
 ### 面试要点
 
-1. **KV Cache 的核心思想是什么？为什么能显著降低 Decode latency？**
+1. **FlashAttention-2 相比 FlashAttention-1 有哪些关键改进？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
- - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
- - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
- - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
+ 1. **减少 non-matmul FLOPs**：通过 warp group 子块划分，让 softmax/rescale 计算在 warp group 内独立完成，减少冗余。non-matmul:matmul 从 1:10 降到 1:20
+ 2. **更好的 work partitioning**：除了 batch/head 并行，还引入 sequence 长度方向并行，提高长序列下的并行度
+ 3. **更高的 occupancy**：优化 register 和 shared memory 使用，每个 SM 可驻留更多 block（1→2-3）
+ 4. **更少的 warp 同步**：减少 block 级同步点，warp group 内自治
+ 5. **反向传播更高效**
 
 </details>
 
 
-2. **KV Cache 的内存占用如何计算？长文本场景下会带来什么问题？**
+2. **FlashAttention-2 中，seq 并行和 head 并行有什么区别？什么时候用 seq 并行？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 每 token = `2 × num_layers × num_heads × d_head × bytes_per_elem`（2 = K 和 V 各一份）
- - 总 KV Cache = `batch_size × seq_len × per_token_size`
- - LLaMA-7B（32 层、32 头、d_head=128、fp16）：每 token ≈ 524 KB，4096 tokens ≈ 2 GB，batch=16 ≈ 32 GB
- - 长文本问题：① 显存 OOM ② batch size 受限 ③ decode 的 attention 部分访存随 L 增长（读更多 KV）
- - 解决方案：PagedAttention（Day 4）、KV Cache 量化 INT8/FP8（Day 1）、GQA/MQA（减少 KV 头数）、滑动窗口 attention
+ - **Head 并行**：不同 attention head 在不同 block 上并行，天然无依赖，是首选
+ - **Seq 并行**：同一个 head 的序列分成多个 block 并行，增加并行度
+ - **使用时机**：当 batch×head 数量不足以填满 GPU 时使用 seq 并行，尤其长序列场景
+ - **注意**：seq 并行需要处理 Q tile 的边界，但 FlashAttention 的 tiling 天然适合这种划分
 
 </details>
 
 
-3. **静态分配、动态分配、PagedAttention 三种 KV Cache 分配策略有什么区别？**
+3. **为什么减少 non-matmul FLOPs 对性能影响这么大？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **静态**：预分配 `max_seq_len` 空间，简单无碎片，但浪费严重（实际长度常远小于 max）→ batch size 受限
- - **动态**：按实际长度分配，利用率高，但频繁 alloc/free 产生外部碎片，大请求可能 OOM
- - **PagedAttention**：分成固定大小 block + block table 映射（借鉴 OS 虚拟内存分页），逻辑连续、物理不连续，无碎片、支持共享/CoW/动态扩容
- - 演进逻辑：静态解决不了浪费 → 动态解决浪费但引入碎片 → PagedAttention 用分页解决碎片（vLLM 的核心创新，Day 4 详读）
+ - 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 FP16 Tensor Core 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）
+ - 即使 non-matmul FLOPs 只占总 FLOPs 的 10%，它的执行时间可能占 50%+——因为标量指令慢 16x
+ - FA2 把 non-matmul 减半，直接缩小了这个瓶颈
+ - FA2 论文目标：让 non-matmul 占比降到 ~1:20，使 matmul 主导
 
 </details>
 
 
-4. **多轮对话中如何复用 KV Cache？有什么前提条件？**
+4. **FA2 的 warp group 子块划分与 FA1 的 warp 共享有什么具体区别？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 为每个对话 session 维护一个 KV Cache，Round 1 算完的 K/V 保留在 cache 里
- - Round 2 的 prompt = [系统提示] + [Round 1 全部] + [新输入]，其中 Round 1 部分的 K/V 已在 cache，只需 prefill 新增 tokens 并追加
- - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
- - **前提**：Round 2 的 prompt 必须严格是"Round 1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 无法复用（prefix 对不上）。生产系统（vLLM）用 prefix caching 显式管理这一点
- - 实现要点：检查已缓存长度 → 只 prefill 新增部分 → append 到 cache → decode 时继续 append
+ - FA1：一个 Block 的所有 warp 共同处理 Q tile，跨 warp 需要同步 max/sum（`__syncthreads` + shared memory 中转）
+ - FA2：把 Q tile 在行方向划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax
+ - 区别：FA2 的 group 内自治，消除跨 group 同步；acc 更小（子块行数少），register 压力降低
+ - 收益：non-matmul FLOPs 减半 + occupancy 提升 + 同步点减少
+
+ - 核心一致：都是"减少跨组同步，让计算单元自治"
 
 </details>
 
 
-5. **你手写的 KVCache 类，append 操作为什么用 cudaMemcpy 逐 head 拷贝？生产级怎么优化？**
+5. **如果让你继续优化 FlashAttention（FA3 方向），你会怎么做？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 教学版用 host 端 for 循环 + `cudaMemcpy`（device-to-device）逐 head 拷贝，逻辑清晰易调试
- - 缺点：`num_heads=32` 时每次 append 要 32 次 `cudaMemcpy`，每次有 launch 开销（~5-10 μs），decode 每步都 append 时开销累积
- - 生产级优化：写一个 `append_kernel`，用 `grid=(num_layers, batch_size)`、block 覆盖 `(H × new_len × d_head)`，一次性把新 K/V 写入 cache 的正确位置，只有一次 kernel launch
- - 进一步：append 与 attention 融合成一个 kernel（如 FlashDecoding），连 append 的显存写入都省掉——直接在 register/shared 里用新 K/V
-
-</details>
-
-
-6. **GQA（Grouped Query Attention）如何减少 KV Cache 大小？和 int8 量化有什么区别？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - 标准 MHA：每个 query 头有独立 K/V 头，cache 的 `num_heads` 维 = `num_q_heads`（如 32）
- - GQA：每 `num_q_heads/num_kv_heads` 个 query 头**共享**同一组 K/V 头，cache 的 `num_heads` 维 = `num_kv_heads`（如 8）
- - LLaMA-3 8B（32 Q 头 + 8 KV 头）：KV cache 直接缩小到 1/4
- - 与 int8 量化的区别：GQA 是**模型结构层面**的优化（训练时就定好 KV 头数，无损精度）；int8 量化是**推理时精度层面**的优化（有精度损失，atol~1e-3）。两者正交，可叠加（GQA + int8 = 1/8 cache）
+ - **异步量化**：在 KV tile 加载时就做量化（FP16→INT8），减少 HBM 带宽
+ - **更细粒度的 seq 并行**：结合 KV block 级并行，类似 PagedAttention 的分块
+ - **Tensor Core 利用率**：确保 QK^T 和 PV 的 GEMM 形状适合 WMMA（M/N/K 对齐 16）
+ - **减少 register spilling**：用 `__launch_bounds__` 控制编译器寄存器分配
+ - **硬件感知调度**：根据 SM 数量、L2 cache 大小动态选择 Br/Bc
 
 </details>
 

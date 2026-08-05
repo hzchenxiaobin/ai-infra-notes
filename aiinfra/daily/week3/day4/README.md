@@ -1,587 +1,447 @@
-## Day 4：手写 Softmax 与 LayerNorm Kernel
+## Day 4：CUTLASS 源码分析 + CuTe 概念铺垫CUTLASS 源码分析 —— 工业级 GEMM 库的三级 Tiling
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **朴素 Softmax 的数值溢出问题**，掌握 safe softmax（减 max）的数学等价性与数值稳定性
-2. 学会用 **三遍扫描**实现 row-wise Softmax，复用 Week 2 的 `warpReduceSum` / `warpReduceMax` 搭出 `blockReduceSum` / `blockReduceMax`
-3. 理解 **LayerNorm 的两次 reduce**（先 mean 后 variance），能解释为什么方差依赖均值而无法合并
-4. 实现并运行 Softmax + LayerNorm Kernel，与 CPU 参考结果误差 < 1e-5
-5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
+1. 理解 CUTLASS 的设计哲学：可组合的 GEMM 模板库<br>
+2. 掌握 CUTLASS 的三级 tiling 抽象：Device → Kernel → Warp → Thread<br>
+3. 能阅读 `cutlass::gemm::device::Gemm` 的模板参数并实例化调用<br>
+4. 理解 `ThreadblockShape`/`WarpShape`/`InstructionShape` 的层级关系<br>
+5. 能用 CUTLASS 实例化一个 GEMM 调用并对比手写 WMMA 的性能<br>
+6. 理解 CUTLASS 与 cuBLAS 的关系：cuBLAS 底层使用 CUTLASS 级别的优化<br>
 
-> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
+> 💡 **为什么重要**：大厂算子岗 JD 明确要求"CUTLASS 熟悉"。面试中被问"手写 GEMM 到 cuBLAS 95% 怎么做"，标准答案是"用 CUTLASS"。理解 CUTLASS 的三级 tiling 是从"会写 kernel"到"能读工业级库"的关键跨越。
 
 ---
 
-### 学前导读：为什么 Softmax/LayerNorm 是 Transformer 里最该手写的算子
+### 学前导读：为什么手写 WMMA 教学版只有 ~33%，而 CUTLASS 能达 95%+
 
-Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
+Day 6b 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
 
-- 它们的核心是 **reduce（归约）**——正是 Week 2 Day 1 学的 Warp Shuffle 的直接应用场景
-- 它们是 **memory-bound**，AI ≈ 0.4 ~ 0.6 FLOP/Byte，优化空间不在算力而在访存
-- 它们的并行结构清晰（一行一个 block），代码量适中（~50 行 kernel），适合教学
-- 它们是 FlashAttention 的前置知识——FlashAttention 的 online softmax 就是把今天的三遍扫描压成两遍
+| 优化点 | 手写 WMMA | CUTLASS | cuBLAS |
+|--------|-----------|---------|--------|
+| Tensor Core (WMMA) | ✅ | ✅ | ✅ |
+| Shared Memory Tiling | ❌ | ✅ | ✅ |
+| Double Buffer (cp.async) | ❌ | ✅ | ✅ |
+| K 分割并行 | ❌ | ✅ | ✅ |
+| Auto-tuning | ❌ | ✅ | ✅ |
+| Epilogue Fusion | ❌ | ✅ | ✅ |
+| 预编译 kernel 库 | ❌ | ❌ | ✅ |
 
-| 算子 | reduce 次数 | AI (FLOP/Byte) | 瓶颈 | 今日实现 |
-|------|------------|----------------|------|---------|
-| Softmax | 2（max + sum） | ~0.375 | memory-bound | 三遍扫描 safe softmax |
-| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce + affine |
+CUTLASS 是 NVIDIA 开源的 GEMM/Conv 模板库，提供了上述所有优化。cuBLAS 底层使用的就是 CUTLASS 级别的优化代码。
 
-> 💡 **一句话总结**：Softmax/LayerNorm 不难，但它们是"reduce 工程化"的最小完整案例——掌握了今天这两段代码，你就拥有了写任何 row-wise reduce 算子的模板。
+> 💡 **一句话总结**：CUTLASS = 可组合的 GEMM 模板库。你不需要从零写所有优化，只需要选择合适的模板参数，CUTLASS 会生成接近 cuBLAS 性能的 kernel。
 
 ---
 
 ### 理论学习
 
-#### 2.1 Softmax 数值稳定性与 safe softmax
+#### 1.0 CuTe 最小铺垫（CUTLASS 3.x 的 layout 抽象）
 
-![Safe Softmax 三遍扫描 vs 朴素 Softmax 溢出](../images/safe_softmax_three_pass.svg)
+CUTLASS 3.x 引入了 **CuTe（CUTLASS Tensors and Layout）**——一个用 C++ 模板表达"张量形状 + 内存布局"的抽象层。读 CUTLASS 3.x 源码或 Hopper+ 的 FlashAttention 源码（如 `flash_fwd_kernel.h`）都依赖 CuTe 概念。
 
-**朴素 Softmax 的问题**：
+##### CuTe 的三个核心概念
 
-```
-朴素 Softmax（会溢出）：
- yi = exp(xi) / Σ exp(xj)
- 问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
-```
+| 概念 | 含义 | 示例 |
+|------|------|------|
+| **Shape** | 张量的形状（编译期已知） | `Shape<64, 128, 16>` = 一个 64×128×16 的 tile |
+| **Stride** | 每维的步长（决定 row-major/col-major 等） | `Stride<128, 1, 8192>` = row-major（行步长 128） |
+| **Layout** | Shape + Stride 的组合，描述"逻辑坐标 → 物理偏移" | `Layout<Shape<64,128>, Stride<128,1>>` |
 
-FP16 的最大值只有 ~65504，而 `exp(11) ≈ 60000` 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
+##### `make_tensor` 与 `local_tile`
 
-**Safe Softmax（减去 max）**：
+CuTe 用 `make_tensor` 把裸指针 + Layout 绑定成一个 `Tensor` 对象，用 `local_tile` 切出 block 负责的子块：
 
-```
-m = max(xj)
-yi = exp(xi - m) / Σ exp(xj - m)
-原理：exp(xi - m) ≤ exp(0) = 1，不会溢出
-```
+```cpp
+// CUTLASS 3.x CuTe 风格（概念示意）
+auto A_layout = make_layout(make_shape(M, K), make_stride(K, 1));  // row-major
+auto A_tensor = make_tensor(d_A, A_layout);                         // 指针 + Layout
 
-**数学等价性证明**：
-
-```
-exp(xi - m) / Σ exp(xj - m)
- = exp(xi)·exp(-m) / (Σ exp(xj))·exp(-m)
- = exp(xi) / Σ exp(xj) ← 分子分母同时乘 exp(-m)，结果不变
+// 切出当前 block 负责的 tile
+auto A_block = local_tile(A_tensor, make_shape(BM, BK), block_idx); // (BM, BK) tile
 ```
 
-减 max 不改变结果，但把所有 exp 的输入压到 `(-∞, 0]`，数值上彻底安全。
+##### 为什么读 CUTLASS 3.x / FA 源码需要 CuTe？
 
-##### 三遍扫描 vs 两遍扫描 vs FlashAttention
+- **layout 解耦**：同一个 kernel 源码支持 row-major/col-major/混合布局，靠 Layout 模板参数切换，不需写多份代码
+- **TMA 配合**：Hopper 的 TMA（Tensor Memory Accelerator）直接吃 CuTe Layout 描述符，硬件级异步搬运
+- **FlashAttention 源码**：`flash_fwd_kernel.h` 用 CuTe 描述 `kBlockM`/`kBlockN` 等 tile 参数，读源码必须理解 CuTe
 
-| 方法 | 扫描次数 | 操作 | 适用场景 |
-|------|---------|------|---------|
-| 三遍扫描 | 3 | ① 求 max ② 求 sum(exp(x-m)) ③ 归一化 | 教学版，清晰易读 ← **今日实现** |
-| 两遍扫描（online） | 2 | ① 同时求 max 和 sum ② 归一化 | 生产版，减少一次全局读 |
-| FlashAttention 版 | 1.x | 分块 online，边算边更新 | 极致优化，Week 4 主题 |
+> 💡 **面试要点**：CuTe 是 CUTLASS 3.x 的核心抽象，用"Shape + Stride = Layout"把张量形状与内存布局解耦。读 Hopper+ 的 CUTLASS/FA 源码需先过 CuTe 这一关。本教程基于 CUTLASS 2.x（无 CuTe），3.x 的 CuTe 留作进阶阅读。
 
-本日实现**三遍扫描版**（教学清晰），两遍 online 版留作扩展实验，分块版留到 Week 4 FlashAttention。
-
-#### 2.2 Row-wise 并行与两级 Block Reduce
-
-![Block 级 Reduce 两级结构](../images/block_reduce_two_level.svg)
-
-**并行映射策略**：
-
-```
-矩阵 shape: (M, D)，M 行，每行 D 个元素
-并行映射: 一个 block 处理一行
- blockIdx.x = row index（0 ~ M-1）
- blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
-
-每个 block 内：
- Step 1: 所有线程协作求本行 max（block reduce max）
- Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
- Step 3: 所有线程协作做归一化写出
-```
-
-**为什么一个 block 处理一行？** 因为 softmax 的归一化分母 `Σ exp(xj - m)` 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
-
-##### 两级 Block Reduce 的结构（复用 Week 2 Day 1）
-
-一个 block 可能有 256 / 512 / 1024 个线程（8/16/32 个 warp），而单次 `__shfl_down_sync` 只能归约一个 warp（32 lane）。因此需要两级：
-
-```
-第一级（Warp 级）：每个 warp 用 __shfl_down_sync 折半累加/取 max，结果存在 lane 0
-中转（Shared Memory）：lane 0 把 32 个 warp 的部分和写入 smem[32]
-第二级（Warp 0）：warp 0 的 lane 0~31 读取 smem，再做一次 warpReduce
-```
-
-关键工程细节：
-
-- `smem[32]` 正好放下 32 个 warp 的部分和——这就是 block 最多 32 个 warp（1024 线程）设计的来源
-- 两处 `__syncthreads()`：① 写 smem 后保证可见 ② 广播归约结果前保证 warp0 读到完整结果
-- 返回值只有 lane0 正确，必须经 `__shared__` 变量 + `__syncthreads` 广播给全 block
-- `blockReduceMax` 与 `blockReduceSum` 同构，仅把 `+=` 换成 `fmaxf`、初值换 `-INFINITY`
-
-```cuda
-// 复用 Week 2 Day 1 的 warp 原语
-__inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
-}
-
-__inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0)
-        smem[wid] = val; // 第一级结果写 smem
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0)
-        val = warpReduceSum(val); // 第二级 warp0 收尾
-    return val;
-}
-```
-
-#### 2.3 LayerNorm 公式与两次 reduce
-
-![LayerNorm 两次 Reduce 流程](../images/layernorm_two_reduce.svg)
-
-**LayerNorm 公式**：
-
-```
-输入: x ∈ R^D（一行 D 个元素）
-参数: γ (gamma), β (beta) ∈ R^D
-
-计算:
- μ = (1/D) Σ xi （均值）
- σ² = (1/D) Σ (xi - μ)² （方差）
- yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
-```
-
-##### LayerNorm 的 reduce 需求
-
-LayerNorm 需要**两次 reduce**：
-
-1. 第一次：求 `μ = mean(x)` → reduce sum，然后除以 D
-2. 第二次：求 `σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
-
-```
-Step 1: 所有线程协作求 sum(x) → μ = sum / N
-Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
-Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
-```
-
-> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
-
-##### LayerNorm vs BatchNorm
-
-| 特性 | LayerNorm | BatchNorm |
-|------|-----------|-----------|
-| 归一化维度 | 沿 feature 维（一行） | 沿 batch 维（一列） |
-| 依赖 batch | 否（每样本独立） | 是（需 batch 统计） |
-| 推理行为 | 训练/推理一致 | 推理用 running mean/var |
-| 适用场景 | Transformer、RNN | CNN |
-
-Transformer 用 LayerNorm 而非 BatchNorm：因为序列长度可变、batch 可能只有 1（推理），BatchNorm 的 batch 统计不稳定。
-
-##### 为什么 LayerNorm 是 memory-bound？
-
-每个元素读 1 次（x）、写 1 次（y），γ/β 另读，但只做 ~5 次浮点运算（减、平方、rsqrt、乘、加）：
-
-```
-Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte
-远低于 Ridge Point（~58.45）→ 纯 memory-bound
-```
+> 📖 延伸阅读：CUTLASS CuTe 官方教程、`flash_fwd_kernel.h` 源码导读（Week4/Day3）
 
 ---
 
-### Coding 任务：手写 Softmax + LayerNorm Kernel
+#### 1.1 CUTLASS 概述
 
-#### 任务 1：创建 `kernels/softmax_layernorm.cu`
+![CUTLASS 三级 Tiling 架构](../../week2/images/cutlass_tiling_hierarchy.svg)
 
-下面是完整可编译的 kernel 实现。代码分三部分：① 复用 Week 2 的 warp 原语 ② 搭出 blockReduceSum / blockReduceMax ③ Softmax kernel（三遍扫描）+ LayerNorm kernel（两次 reduce）。完整文件见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/softmax_layernorm.cu)。
+CUTLASS（CUDA Templates for Linear Algebra Subroutines）是 NVIDIA 开源的高性能线性代数模板库：
 
-```cuda
-// kernels/softmax_layernorm.cu —— Softmax + LayerNorm 完整实现
-// 编译命令: nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
-// 运行命令: ./softmax_layernorm
+| 特性 | 说明 |
+|------|------|
+| 开源 | https://github.com/NVIDIA/cutlass |
+| 模板化 | C++ template，编译时生成优化 kernel |
+| 可组合 | Threadblock → Warp → Instruction 三级可独立配置 |
+| 多精度 | FP64/FP32/FP16/BF16/INT8/FP8 |
+| 多架构 | Volta → Blackwell |
+| 底层用 WMMA/mma.sync | 但添加了大量工程优化 |
 
-#include <cuda_runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
+##### CUTLASS 2.x vs 3.x
 
-// ============================================================
-// 复用 Week 2 Day 1 的 Warp Shuffle 原语
-// ============================================================
-__inline__ __device__ float warpReduceSum(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
-    return val;
-}
+| 版本 | 架构支持 | 核心抽象 | 编程模型 |
+|------|---------|---------|---------|
+| CUTLASS 2.x | sm_70 ~ sm_89 | Threadblock/Warp/Thread | 显式 tiling |
+| CUTLASS 3.x | sm_90+ (Hopper) | CuTe (CUTLASS Tensors) | layout 抽象，TMA |
 
-__inline__ __device__ float warpReduceMax(float val) {
-    #pragma unroll
-    for (int offset = 16; offset > 0; offset >>= 1)
-        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
-    return val;
-}
+本教程基于 CUTLASS 2.x（兼容 sm_120），3.x 的 CuTe 抽象更高级但学习曲线陡峭。
 
-// ============================================================
-// Block 级 reduce：warp 级 → shared memory → warp 0 最终 reduce
-// ============================================================
-__inline__ __device__ float blockReduceSum(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceSum(val);
-    if (lane == 0)
-        smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : 0.0f;
-    if (wid == 0)
-        val = warpReduceSum(val);
-    return val;
-}
+#### 1.2 三级 Tiling 抽象
 
-__inline__ __device__ float blockReduceMax(float val, float* smem) {
-    int lane = threadIdx.x % 32;
-    int wid = threadIdx.x / 32;
-    val = warpReduceMax(val);
-    if (lane == 0)
-        smem[wid] = val;
-    __syncthreads();
-    int numWarps = (blockDim.x + 31) / 32;
-    val = (lane < numWarps) ? smem[lane] : -INFINITY;
-    if (wid == 0)
-        val = warpReduceMax(val);
-    return val;
-}
+CUTLASS 的核心设计是三级 tiling，从粗到细：
 
-// ============================================================
-// Softmax Kernel：一行一个 block，三遍扫描 safe softmax
-// 输入: input[M][D]，输出: output[M][D]
-// ============================================================
-__global__ void softmax_kernel(const float* __restrict__ input, float* __restrict__ output, int M, int D) {
-    int row = blockIdx.x;
-    if (row >= M)
-        return;
-    const float* in_row = input + row * D;
-    float* out_row = output + row * D;
+```
+GEMM: C[M, N] = A[M, K] × B[K, N]
 
-    __shared__ float smem[32]; // warp 间 reduce 缓冲区
-    __shared__ float row_max;
-    __shared__ float row_sum;
+Level 1: Device (Grid 级)
+  → 将 M×N 分成 Threadblock tiles，每个 block 处理一个 ThreadblockTile
 
-    int tid = threadIdx.x;
+Level 2: Kernel (Warp 级)  
+  → 将 ThreadblockTile 分成 Warp tiles，每个 warp 处理一个 WarpTile
 
-    // Step 1: 求 max（数值稳定性）
-    float local_max = -INFINITY;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_max = fmaxf(local_max, in_row[i]);
-    }
-    local_max = blockReduceMax(local_max, smem);
-    if (tid == 0)
-        row_max = local_max;
-    __syncthreads();
-
-    // Step 2: 求 sum(exp(x - max))
-    float local_sum = 0.0f;
-    for (int i = tid; i < D; i += blockDim.x) {
-        local_sum += expf(in_row[i] - row_max);
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0)
-        row_sum = local_sum;
-    __syncthreads();
-
-    // Step 3: 归一化写出
-    float inv_sum = 1.0f / row_sum;
-    for (int i = tid; i < D; i += blockDim.x) {
-        out_row[i] = expf(in_row[i] - row_max) * inv_sum;
-    }
-}
-
-// ============================================================
-// LayerNorm Kernel：一行一个 block，两次 reduce
-// 输入: input[M][N]，参数: gamma[N], beta[N]，输出: output[M][N]
-// ============================================================
-__global__ void layernorm_kernel(const float* __restrict__ input, const float* __restrict__ gamma,
-                                 const float* __restrict__ beta, float* __restrict__ output, int M, int N, float eps) {
-    int row = blockIdx.x;
-    if (row >= M)
-        return;
-    const float* in_row = input + row * N;
-    float* out_row = output + row * N;
-
-    __shared__ float smem[32];
-    __shared__ float row_mean;
-    __shared__ float row_rstd;
-
-    int tid = threadIdx.x;
-
-    // Step 1: 求 mean = sum(x) / N
-    float local_sum = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        local_sum += in_row[i];
-    }
-    local_sum = blockReduceSum(local_sum, smem);
-    if (tid == 0)
-        row_mean = local_sum / N;
-    __syncthreads();
-
-    // Step 2: 求 variance = sum((x - mean)^2) / N，rstd = 1/sqrt(var + eps)
-    float local_sq = 0.0f;
-    for (int i = tid; i < N; i += blockDim.x) {
-        float diff = in_row[i] - row_mean;
-        local_sq += diff * diff;
-    }
-    local_sq = blockReduceSum(local_sq, smem);
-    if (tid == 0)
-        row_rstd = rsqrtf(local_sq / N + eps);
-    __syncthreads();
-
-    // Step 3: 归一化 + affine: y = (x - mean) * rstd * gamma + beta
-    for (int i = tid; i < N; i += blockDim.x) {
-        out_row[i] = (in_row[i] - row_mean) * row_rstd * gamma[i] + beta[i];
-    }
-}
+Level 3: Warp (Instruction 级)
+  → 将 WarpTile 分成 MMA tiles，每个 MMA 指令处理一个 InstructionTile (16×16×16)
 ```
 
-Host 端的验证逻辑（`cpuSoftmax` / `cpuLayerNorm` / `checkResult` / `main`）见 [kernels/softmax_layernorm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/softmax_layernorm.cu) 文件后半部分，核心是：随机初始化 `M=128, D=1024` 的矩阵，分别跑 GPU kernel 和 CPU 参考，用 `maxDiff < 1e-5` 判定 PASS。
+##### 具体示例（GEMM 4096×4096×4096, FP16）
 
-#### 为什么 Softmax 要读三遍 HBM？
+| 层级 | 形状 | 含义 | 数量 |
+|------|------|------|------|
+| ThreadblockShape | 128×128×32 | 每个 block 计算 C 的 128×128 子矩阵 | (4096/128)² = 1024 blocks |
+| WarpShape | 64×64×32 | 每个 warp 计算 C 的 64×64 子矩阵 | 4 warps/block |
+| InstructionShape | 16×8×16 | 每条 mma.sync 指令 | (64/16)×(64/8) = 32 条/warp |
 
-这是三遍扫描的核心代价。看 Softmax kernel 的三个 `for` 循环：
+**层级关系**：`ThreadblockShape / WarpShape = warps_per_block`，`WarpShape / InstructionShape = mma_per_warp`
 
-```cuda
-// Pass 1: 读 in_row[i] 求 max
-for (int i = tid; i < D; i += blockDim.x)
-    local_max = fmaxf(local_max, in_row[i]);
-// Pass 2: 再读 in_row[i] 求 sum
-for (int i = tid; i < D; i += blockDim.x)
-    local_sum += expf(in_row[i] - row_max);
-// Pass 3: 第三次读 in_row[i] 写出
-for (int i = tid; i < D; i += blockDim.x)
-    out_row[i] = expf(in_row[i] - row_max) * inv_sum;
+#### 1.3 `cutlass::gemm::device::Gemm` 接口
+
+CUTLASS 的 device 级 GEMM 是最常用的入口：
+
+```cpp
+#include <cutlass/gemm/device/gemm.h>
+
+// 定义 GEMM 类型
+using Gemm = cutlass::gemm::device::Gemm<
+    cutlass::half_t,                          // InputType A
+    cutlass::layout::RowMajor,                // LayoutA
+    cutlass::half_t,                          // InputType B
+    cutlass::layout::ColumnMajor,             // LayoutB
+    float,                                    // OutputType C
+    cutlass::layout::RowMajor,                // LayoutC
+    float,                                    // AccumulatorType
+    cutlass::arch::OpClassTensorOp,           // OpClass (Tensor Core)
+    cutlass::arch::Sm80,                      // ArchTag
+    cutlass::gemm::GemmShape<128, 128, 32>,   // ThreadblockShape
+    cutlass::gemm::GemmShape<64, 64, 32>,     // WarpShape
+    cutlass::gemm::GemmShape<16, 8, 16>,      // InstructionShape
+    cutlass::epilogue::thread::LinearCombination<float, float>,  // Epilogue
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>, // Swizzle
+    2                                         // NumStages (double buffer)
+>;
+
+// 实例化并运行
+Gemm gemm;
+Gemm::Arguments args(
+    {M, N, K},
+    {d_A, K},    // A (row-major: ld=K)
+    {d_B, K},    // B (col-major: ld=K)
+    {d_C, N},    // C (row-major: ld=N)
+    {d_C, N},    // D (in-place)
+    {1.0f, 0.0f} // alpha, beta
+);
+gemm.initialize(args);
+gemm();
 ```
 
-每个元素从 HBM 读 3 次（如果 L2 cache 没命中）、写 1 次。这正是 memory-bound 的来源，也是 online softmax（两遍）和 FlashAttention（分块）要消除的冗余。今天先理解三遍的清晰性，优化留到扩展实验。
+##### 模板参数详解
+
+| 参数 | 含义 | 常见选择 |
+|------|------|---------|
+| `InputType A` | A 矩阵元素类型 | `half_t`, `float`, `bfloat16_t` |
+| `LayoutA` | A 矩阵布局 | `RowMajor`, `ColumnMajor` |
+| `InputType B` | B 矩阵元素类型 | 同上 |
+| `LayoutB` | B 矩阵布局 | 同上 |
+| `OutputType C` | 输出类型 | 通常 `float` |
+| `LayoutC` | C 矩阵布局 | 同上 |
+| `AccumulatorType` | 累加器类型 | `float`（FP32 累加） |
+| `OpClass` | 运算类型 | `OpClassTensorOp`（Tensor Core）, `OpClassSimt`（FMA） |
+| `ArchTag` | 目标架构 | `Sm70`, `Sm80`, `Sm89` |
+| `ThreadblockShape` | block 级 tile | `<128, 128, 32>` 或 `<256, 128, 32>` |
+| `WarpShape` | warp 级 tile | `<64, 64, 32>` |
+| `InstructionShape` | MMA 指令形状 | `<16, 8, 16>` (FP16), `<16, 8, 8>` (TF32) |
+| `Epilogue` | 输出处理 | `LinearCombination` (alpha*A*B + beta*C) |
+| `Swizzle` | block 调度策略 | `GemmIdentityThreadblockSwizzle` |
+| `NumStages` | pipeline 深度 | 2 (double buffer), 3 (triple buffer) |
+
+#### 1.4 CUTLASS 的工程优化
+
+##### Double Buffer (NumStages)
+
+```
+Stage 0: load A[0], B[0] → smem[0]
+Stage 1: load A[1], B[1] → smem[1]  ||  compute C[0] from smem[0]
+Stage 2: load A[2], B[2] → smem[0]  ||  compute C[1] from smem[1]
+...
+```
+
+`NumStages=2` 表示 double buffer，`NumStages=3` 表示 triple buffer。更多 stage 可以更好地隐藏 latency，但占用更多 shared memory。
+
+##### Epilogue Fusion
+
+CUTLASS 的 Epilogue 可以融合后续操作：
+- `LinearCombination`: `D = alpha * A*B + beta * C`（标准 GEMM）
+- `LinearCombinationRelu`: `D = relu(alpha * A*B + beta * C)`（融合 ReLU）
+- `LinearCombinationBiasRelu`: `D = relu(alpha * A*B + beta * C + bias)`（融合 bias+ReLU）
+
+Epilogue fusion 避免了额外的 kernel launch 和 HBM 读写。
+
+##### Swizzle
+
+Block 调度策略影响 L2 cache 命中率：
+- `GemmIdentityThreadblockSwizzle`: 顺序调度
+- `GemmHorizontalThreadblockSwizzle`: 水平调度（提高 L2 复用）
+- `GemmBatchedThreadblockSwizzle`: batched 场景
+
+#### 1.5 CUTLASS 与 cuBLAS 的关系
+
+| 维度 | CUTLASS | cuBLAS |
+|------|---------|--------|
+| 开源 | ✅ | ❌ |
+| 编译方式 | 源码模板，编译时生成 | 预编译 .so |
+| 灵活性 | 高（可自定义 epilogue/swizzle） | 低（固定接口） |
+| 性能 | 接近 cuBLAS (95%+) | 100% (基准) |
+| 适用场景 | 自定义算子、研究 | 生产环境 |
+| 底层实现 | mma.sync + cp.async + auto-tune | 同 CUTLASS 级别 |
+
+> 💡 **一句话总结**：cuBLAS 是预编译的 CUTLASS。理解 CUTLASS = 理解 cuBLAS 的内部实现。
+
+---
+
+### Coding 任务：实例化 CUTLASS GEMM
+
+#### 任务 1：创建 `cutlass_gemm_example.cu`
+
+完整代码见 [kernels/cutlass_gemm_example.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/cutlass_gemm_example.cu)。
+
+代码实例化 `cutlass::gemm::device::Gemm` 并对比 cuBLAS：
+
+```cuda
+// 关键模板实例化
+using Gemm = cutlass::gemm::device::Gemm<
+    cutlass::half_t, cutlass::layout::RowMajor,    // A
+    cutlass::half_t, cutlass::layout::ColumnMajor,  // B
+    float, cutlass::layout::RowMajor,                // C
+    float,                                           // Accumulator
+    cutlass::arch::OpClassTensorOp,                  // Tensor Core
+    cutlass::arch::Sm80,                             // ArchTag
+    cutlass::gemm::GemmShape<128, 128, 32>,          // ThreadblockShape
+    cutlass::gemm::GemmShape<64, 64, 32>,            // WarpShape
+    cutlass::gemm::GemmShape<16, 8, 16>,             // InstructionShape
+    cutlass::epilogue::thread::LinearCombination<float, float>,
+    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
+    2                                                // NumStages (double buffer)
+>;
+```
 
 #### 任务 2：编译与运行
 
 ```bash
-# 编译（根据 GPU 架构选择 arch 参数）
-# Blackwell (RTX 5090): sm_120
-nvcc -o softmax_layernorm kernels/softmax_layernorm.cu -O3 -arch=sm_120
+# 需要先 clone CUTLASS
+git clone https://github.com/NVIDIA/cutlass.git /path/to/cutlass
 
-# 运行
-./softmax_layernorm
+# 编译
+nvcc -O3 -arch=sm_120 \
+    -I/path/to/cutlass/include \
+    -lcublas \
+    kernels/cutlass_gemm_example.cu -o cutlass_gemm
+
+./cutlass_gemm
 ```
 
-**预期输出**：
+预期输出：
+
+> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 B2 任务）。待 CUTLASS 环境就绪后补真实数据。
 
 ```text
-=== Softmax + LayerNorm Kernel Test ===
-Config: M=128, D=1024, threads=256
-
-[Softmax]
-  Softmax vs CPU: maxDiff = 4.19e-09 (PASS)
-  Time: 0.063 ms
-[LayerNorm]
-  LayerNorm vs CPU: maxDiff = 1.07e-06 (PASS)
-  Time: 0.015 ms
+CUTLASS vs cuBLAS benchmark (FP16 input, FP32 accumulate)
+M=N=K    | CUTLASS(ms)  cuBLAS(ms)  Ratio    | CUTLASS TFLOPS
+512      | 0.0xx        0.0xx       xx.x%    | xx.x
+1024     | 0.0xx        0.0xx       xx.x%    | xx.x
+2048     | 0.0xx        0.0xx       xx.x%    | xx.x
+4096     | 0.0xx        0.0xx       xx.x%    | xx.x
+CUTLASS vs cuBLAS max_diff = x.xx e-xx
 ```
 
-两个 `PASS` 且 `maxDiff < 1e-5` 即正确。Softmax 误差通常更小（~1e-7，因为只有 exp/add/div），LayerNorm 略大（~1e-6，因为多了平方和 rsqrt）。
-
-#### 任务 3：用 ncu 验证 memory-bound
+#### 任务 3：Profiling
 
 ```bash
-# 编译带 lineinfo 的版本（ncu Source View 需要）
-nvcc -o softmax_layernorm_nl kernels/softmax_layernorm.cu -O3 -arch=sm_120 -lineinfo
+# 分析 CUTLASS kernel 的 Tensor Core 利用率
+ncu --set full --kernel-name regex:Gemm \
+    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
+sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+launch__registers_per_thread,\
+launch__shared_mem_per_block \
+    ./cutlass_gemm
 
-# profile 两个 kernel 的 SM / DRAM Throughput
-ncu --metrics \
- dram__throughput.avg.pct_of_peak_sustained_elapsed,\
- sm__throughput.avg.pct_of_peak_sustained_elapsed,\
- gpu__time_duration.sum \
- --kernel-name regex:"softmax_kernel|layernorm_kernel" \
- ./softmax_layernorm_nl
+# 对比 Day 6b 的手写 WMMA vs CUTLASS
+ncu --kernel-name regex:"wmma_gemm|Gemm" \
+    --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
+sm__throughput.avg.pct_of_peak_sustained_elapsed \
+    ./wmma_gemm && ./cutlass_gemm
 ```
 
-**观察重点**：
+#### 任务 4：LeetGPU 在线题目
 
-| Kernel | 预期 DRAM Throughput | 预期 SM Throughput | 判定 |
-|--------|---------------------|-------------------|------|
-| `softmax_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
-| `layernorm_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
+[Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)
 
-如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 3 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
+思考：CUTLASS 的 batched GEMM 接口 `cutlass::gemm::device::GemmBatched` 如何利用三级 tiling 处理 batch 维度？
 
-#### 任务 4：LeetGPU 在线题目 —— Group Normalization
-
-**题目链接**：<https://leetgpu.com/challenges/group-normalization>
-
-**与今日知识的关联**：
-
-本题是今天 normalization 主题的变体实战——Group Norm 与 LayerNorm 同构（都是"在一组元素上做 mean/var 两次 reduce + affine"），只是归约的维度从"一行"换成了"一个 group"。核心仍是两遍 scan + shared memory reduction：第一遍求 `mean`，第二遍求 `var`（依赖 `mean`，不能合并）。把今天的 `layernorm_kernel` 思路扩展到"一个 block 处理一个 group"即可。
-
-> 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
-
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
-| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html) |
-| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
-| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
-| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
+|------|------|---------|------|
+| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z 字搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_search-a-2d-matrix-ii.html) |
+| [283](https://leetcode.cn/problems/move-zeroes/) | Easy | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_move-zeroes.html) |
+| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_kth-largest-element-in-an-array.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：修改 D 观察 memory-bound 的性能尺度律
+#### 实验 1：修改 ThreadblockShape 和 WarpShape
 
-把 `D` 分别改为 768、1024、4096，重新运行，记录时间并解释：
+尝试不同的 tiling 配置，观察性能变化：
 
-```cuda
-const int D = 4096; // 从 1024 改成 4096
-```
+| 配置 | ThreadblockShape | WarpShape | 预期 |
+|------|-----------------|-----------|------|
+| A | 128×128×32 | 64×64×32 | 基准 |
+| B | 256×128×32 | 64×64×32 | 更大 tile，适合大矩阵 |
+| C | 64×64×32 | 32×32×32 | 更小 tile，适合小矩阵 |
 
-**思考问题**：D 翻倍时，kernel 时间应该接近翻倍还是 4 倍？为什么？
-> 提示：D 决定了每行的 HBM 读写量（`2D × 4B`），三遍扫描使总读量约 `3D`。时间是线性的，因为 memory-bound kernel 的耗时≈ `Bytes / Bandwidth`，与 D 成正比。reduce 次数不变（仍是 warp shuffle 的固定 5 步）。
+思考：为什么没有一种"万能"配置？
 
-#### 实验 2：实现 Online Softmax（两遍扫描）
+#### 实验 2：修改 NumStages
 
-把三遍扫描压缩为两遍——第一遍同时求 max 和 sum，第二遍归一化。核心是 online 更新公式：
+将 `NumStages` 从 2 改为 3（triple buffer），观察：
+- 性能是否提升？
+- Shared Memory 使用量是否增加？
+- Occupancy 是否下降？
 
-```cuda
-// online softmax：一次遍历同时维护 running max 和 running sum
-float m_old = m_val;
-m_val = fmaxf(m_val, x);
-s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
-```
+#### 实验 3：Epilogue Fusion
 
-对比三遍扫描的 HBM 读次数（3D → 2D）和实测时间。
-
-**思考问题**：online 版本为什么能减少一次 HBM 读？它的代价是什么？
-> 提示：online 版本在遍历中实时"重整"已累积的 sum（乘 `exp(m_old - m_new)`），代价是每个元素多一次 exp 和乘法——用少量额外计算换一次全局访存，对 memory-bound 算子是划算的。这正是 FlashAttention 的基石。
-
-#### 实验 3：LayerNorm 用 Welford 合并成一次 reduce
-
-参考 Welford 在线均值/方差算法，把 mean 和 variance 在**一次遍历**内同时求出：
-
-```
-遍历每个元素 xi：
- count++
- delta = xi - mean
- mean += delta / count
- M2 += delta * (xi - mean) // M2 累积平方差
-最终：variance = M2 / count
-```
-
-对比两次 reduce 版本与 Welford 一次 reduce 版本的 HBM 读次数（2N → N）和数值精度差异。
-
-**思考问题**：Welford 并行化（多线程合并各自的 mean/M2/count）比串行复杂在哪？
-> 提示：需要合并两个"统计块"的 (mean, M2, count)，合并公式涉及按 count 加权。这就是 Day 3 要读的 FasterTransformer `generalLayerNorm` 的核心优化点。
-
-### 验证 Checklist
-
-- [ ] 能解释 safe softmax 为什么要减 max（数值稳定性 + 数学等价性证明）
-- [ ] 能画出 Softmax 三遍扫描的流程（求 max → 求 sum → 归一化）及每遍的 HBM 读写量
-- [ ] 能复用 Week 2 的 `warpReduceSum`/`warpReduceMax` 实现 `blockReduceSum`/`blockReduceMax`，并说出两处 `__syncthreads` 的作用
-- [ ] Softmax Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
-- [ ] LayerNorm Kernel 编译运行正确，与 CPU 对比误差 < 1e-5
-- [ ] 能解释 LayerNorm 为什么需要两次 reduce（方差依赖均值，不能合并）
-- [ ] 能用 ncu 验证 Softmax 是 memory-bound（DRAM Throughput >> SM Throughput）
+将 `LinearCombination` 改为 `LinearCombinationRelu`，对比：
+- 融合 ReLU vs 先 GEMM 再单独 relu kernel
+- 性能差异（减少一次 HBM 读写 + kernel launch）
 
 ---
 
 ### 今日总结
 
-Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transformer 算子：
+Day 4b 我们深入分析了 CUTLASS 源码：
 
-1. **Safe Softmax**：减 max 保证数值稳定，三遍扫描（max → sum → normalize），数学上与朴素 softmax 完全等价
-2. **两级 Block Reduce**：warp shuffle → shared memory → warp0 收尾，是 256/512/1024 线程协作 reduce 的标准模板
-3. **LayerNorm 两次 reduce**：先 mean 后 variance，第二次依赖第一次结果——这是无法合并的根本原因
-4. **Memory-bound 判定**：Softmax AI≈0.375、LayerNorm AI≈0.6，远低于 Ridge Point 58.45，优化重点在减少 HBM 读写
-5. **工程细节**：`__shared__` 变量广播 + `__syncthreads` 是 block reduce 后把结果分发给全 block 的关键
-
-掌握这两段代码后，你就拥有了写任何 row-wise reduce 算子的模板。Day 3 会读 PyTorch / FasterTransformer 的官方实现，看工业版比今天的版本多了哪些优化（向量化、Welford、register 缓存）。
+1. **三级 Tiling**：Device(ThreadblockShape) → Kernel(WarpShape) → Warp(InstructionShape)，从粗到细的矩阵分块
+2. **模板参数**：精度、布局、架构、tiling 形状、epilogue、swizzle、stages 可独立配置
+3. **工程优化**：Double Buffer(cp.async)、Epilogue Fusion、Swizzle 调度、Auto-tuning
+4. **与 cuBLAS 关系**：cuBLAS = 预编译的 CUTLASS，理解 CUTLASS = 理解 cuBLAS 内部实现
+5. **性能对比**：CUTLASS 达到 cuBLAS 95%+，手写 WMMA 教学版 ~33%，差距来自工程深度（smem tiling / dblbuf / 多warp）
+6. **面试核心**：能解释三级 tiling 的层级关系，能说出 CUTLASS 比手写 WMMA 多了哪些优化
 
 ---
 
 ### 面试要点
 
-1. **Softmax 为什么要减去 max？不减会怎样？**
+1. **CUTLASS 的三级 tiling 是什么？为什么需要多级 tiling？**
 
-<details>
-<summary>点击查看答案</summary>
+   <details>
+   <summary>点击查看答案</summary>
 
- - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
- - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
- - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
- - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
+   - **三级 tiling**：
+     1. **ThreadblockShape**（如 128×128×32）：每个 block 计算的 C 子矩阵大小，决定 shared memory 用量
+     2. **WarpShape**（如 64×64×32）：每个 warp 计算的 C 子矩阵大小，决定寄存器用量和 warp 间并行度
+     3. **InstructionShape**（如 16×8×16）：单条 mma.sync 指令的矩阵大小，由硬件决定
+   - **为什么需要多级**：
+     - 单级 tiling 无法同时满足 shared memory 容量、寄存器数量、Tensor Core 形状约束
+     - Threadblock 级决定数据复用（shared memory 缓存多少 A/B tile）
+     - Warp 级决定并行度（多少 warp 协作同一 block）
+     - Instruction 级对接硬件（Tensor Core 的固定形状）
+   - **层级关系**：`ThreadblockShape / WarpShape = warps_per_block`，`WarpShape / InstructionShape = mma_instructions_per_warp`
 
-</details>
+   </details>
 
+2. **CUTLASS 的 `NumStages` 是什么？它如何影响性能？**
 
-2. **LayerNorm 需要几次 reduce？每次 reduce 什么？为什么不能合并？**
+   <details>
+   <summary>点击查看答案</summary>
 
-<details>
-<summary>点击查看答案</summary>
+   - `NumStages` = pipeline 深度（软件流水线的阶段数）
+   - `NumStages=2`：double buffer，加载下一块数据到 smem[1] 的同时计算 smem[0]
+   - `NumStages=3`：triple buffer，可以更好地隐藏 latency
+   - **性能影响**：
+     - 更多的 stage → 更好的 latency 隐藏 → 更高性能
+     - 但每个 stage 占用一份 shared memory → 可能降低 occupancy
+     - 需要在 latency 隐藏和 occupancy 之间权衡
+   - **底层实现**：CUTLASS 使用 `cp.async`（Ampere+）或 `__pipeline_memcpy_async` 实现异步加载
 
- - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
- - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
- - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
- - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
+   </details>
 
-</details>
+3. **CUTLASS 的 Epilogue Fusion 解决什么问题？有哪些常见的 Epilogue？**
 
+   <details>
+   <summary>点击查看答案</summary>
 
-3. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
+   - **解决的问题**：标准 GEMM 后通常跟 element-wise 操作（ReLU、bias、GELU 等），如果不融合，需要额外的 kernel launch 和 HBM 读写
+   - **常见 Epilogue**：
+     - `LinearCombination`: `D = alpha * A*B + beta * C`（标准 GEMM）
+     - `LinearCombinationRelu`: `D = relu(alpha * A*B + beta * C)`
+     - `LinearCombinationBiasRelu`: `D = relu(alpha * A*B + beta * C + bias)`
+     - `LinearCombinationGELU`: `D = GELU(alpha * A*B + beta * C)`
+   - **收益**：减少 1 次 HBM 读 + 1 次 HBM 写 + 1 次 kernel launch，典型收益 5-15%
 
-<details>
-<summary>点击查看答案</summary>
+   </details>
 
- - **Arithmetic intensity 低**：Softmax 每元素读 1 次写 1 次（8 bytes），做 ~3 次运算，AI ≈ 0.375 FLOP/Byte；LayerNorm AI ≈ 0.6，都远低于 Ridge Point（~58.45）
- - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
- - **优化方向**：
- 1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
- 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
- 3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
- 4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
+4. **为什么 CUTLASS 的 `InstructionShape` 不能随意设置？**
 
-</details>
+   <details>
+   <summary>点击查看答案</summary>
 
+   - `InstructionShape` 必须匹配硬件 Tensor Core 支持的形状
+   - 不同精度有不同的合法形状：
+     - FP16: `m16n8k16` 或 `m16n16k16`（WMMA 接口）
+     - TF32: `m16n8k8`
+     - INT8: `m16n8k32`
+     - FP8: `m16n8k32`（Hopper+）
+   - 如果设置不合法的形状，编译时会报错（template static_assert）
+   - **与 WMMA 的关系**：CUTLASS 底层调用 `mma.sync` PTX 指令（比 WMMA 更底层），`InstructionShape` 对应 PTX 指令的形状参数
 
-4. `blockReduceSum` **的两级结构是怎样的？为什么需要两级？**
+   </details>
 
-<details>
-<summary>点击查看答案</summary>
+5. **如何为不同矩阵大小选择最优的 ThreadblockShape？**
 
- - **为什么两级**：单次 `__shfl_down_sync` 只能归约一个 warp（32 lane），但一个 block 可达 1024 线程（32 个 warp），跨 warp 通信必须借助 shared memory
- - **第一级（Warp 级）**：每个 warp 用 5 步 `__shfl_down_sync`（offset=16→8→4→2→1）归约，结果存在各自 lane 0
- - **中转（Shared Memory）**：lane 0 把 32 个 warp 的部分和写入 `smem[32]`，`__syncthreads`
- - **第二级（Warp 0）**：warp 0 的 lane 0~31 读 smem，再做一次 warpReduce，lane 0 持有 block 级总和
- - **广播**：`if (tid==0) shared_var = val; __syncthreads();` 把结果分发给全 block
- - `smem[32]` **的由来**：正好放下最多 32 个 warp 的部分和，这也是 block 最多 32 warp 设计的来源
+   <details>
+   <summary>点击查看答案</summary>
 
-</details>
+   - **Auto-tuning 方法**：
+     1. 定义候选配置集：`{(128,128,32), (256,128,32), (128,64,32), (64,64,32)}`
+     2. 对每种配置编译并运行，记录 latency
+     3. 选择最快的配置
+   - **启发式规则**：
+     - 大矩阵（M,N > 2048）：用大 ThreadblockShape（256×128），充分利用 SM
+     - 小矩阵（M,N < 512）：用小 ThreadblockShape（64×64），确保足够的 block 数量
+     - K 很大：增加 NumStages（3 或 4），更好地隐藏 K 维 latency
+   - **cuBLAS 的做法**：预编译所有常见配置的 kernel，运行时根据矩阵大小查表选择最优配置
+   - **CUTLASS 3.x 的改进**：提供 `cutlass::gemm::collective::CollectiveBuilder`，自动根据架构和精度推荐配置
 
-
-5. **FP16 训练时 Softmax/LayerNorm 的 reduce 为什么要用 FP32？**
-
-<details>
-<summary>点击查看答案</summary>
-
- - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
- - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
- - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
- - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径
-
----
-
-</details>
-
+   </details>

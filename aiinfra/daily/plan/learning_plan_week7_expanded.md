@@ -47,8 +47,8 @@ Day 49: 代码重构与文档 → README、架构图、接口统一、稳定性�
 ```bash
 # 验证前六周代码路径
 ls week2/day13-integrated-gemm/integrated_gemm.cu 2>/dev/null || echo "integrated_gemm not found"
-ls week4/day23-handwritten-kernel/flash_attention_v2.cu 2>/dev/null || echo "flash_attention_v2 not found"
-ls week3/day16-kernels/softmax_layernorm.cu 2>/dev/null || echo "softmax_layernorm not found"
+ls week10/day23-handwritten-kernel/flash_attention_v2.cu 2>/dev/null || echo "flash_attention_v2 not found"
+ls week7/day16-kernels/softmax_layernorm.cu 2>/dev/null || echo "softmax_layernorm not found"
 
 # 验证 PyTorch + nsys
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda)"

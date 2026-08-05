@@ -1,436 +1,528 @@
-## Day 3：完整调度器（优先级/超时/抢占）完整调度器
+## Day 3：SGLang / 投机解码SGLang / LightLLM 高级特性
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **完整调度器的六大功能**——优先级调度、超时控制、资源预算、抢占、公平性、Continuous Batching<br>
-2. 掌握 **双预算机制**——token budget（计算预算，限制每轮处理的 token 总数）与 memory budget（显存预算，限制 KV Cache 分配），两道闸门协同工作<br>
-3. 能实现 **抢占机制**——显存不足时选择最低优先级 victim，支持 recompute（丢弃 KV Cache 重算）和 swap（换出到 CPU）两种策略<br>
-4. 理解 **公平性 aging 机制**——等待时间过长自动提升优先级，防止低优先级请求无限饥饿<br>
-5. 掌握 **Continuous Batching 的调度循环**——running 请求继续 decode（每轮消耗 1 token budget），新请求按优先级和预算加入<br>
-6. 用 Python 手写一个 **FullScheduler**，实测优先级排序、资源预算检查、抢占触发、aging 提升、超时取消
+1. 理解 **Speculative Decoding（投机采样）**——小模型 draft 生成 k 个候选 token，大模型一次验证，接受率 α 高时每步产出 k×α+1 个 token（近似上界，精确期望为 `(1-α^(k+1))/(1-α)`）<br>
+2. 掌握 **Chunked Prefill（分块预填充）**——将长 prompt 分成多个 chunk，与 decode 请求交错执行，平滑 decode 延迟<br>
+3. 理解 **Prefix Caching（前缀缓存）**——缓存公共前缀（如系统提示）的 KV Cache，命中时跳过 prefill，降低 TTFT<br>
+4. 能评估 **三大特性的收益与复杂度**——通过模拟脚本量化加速比、延迟降低、命中率<br>
+5. 掌握 **特性集成优先级**——Prefix Caching 和 Chunked Prefill 优先（收益高、复杂度中），Speculative Decoding 可选（复杂度高）<br>
 
-> 💡 **为什么重要**：Day 1 的 ConcurrentEngine 有了"并发骨架"（线程安全队列 + 三种返回 + 超时），但调度逻辑很简单——FIFO 或简单优先级。生产级推理系统（vLLM、SGLang）的调度器需要处理"显存不够时怎么办"、"高优先级请求来了能否抢占"、"低优先级会不会永远排不上"等复杂问题。Day 2 把调度器从"能调度"升级为"会调度"——这是推理系统从"demo"到"可用"的核心能力，也是面试必考题"设计一个完整 LLM 推理调度器"。
+> 💡 **为什么重要**：Day 2 的 FullScheduler 解决了"怎么调度"的问题，但推理系统还有"怎么更快"的问题。生产级系统（vLLM、SGLang、TensorRT-LLM）通过三大高级特性进一步提升性能：Speculative Decoding 降低 TBT（token 间延迟），Chunked Prefill 平滑 decode 延迟，Prefix Caching 降低 TTFT（首 token 延迟）。这些特性是面试"高级推理优化"的加分项，也是 Mini 引擎从"能跑"到"跑得快"的关键。
 
 ---
 
-### 学前导读：Day 1 调度的"不够聪明"
+### 学前导读：Day 2 调度器的"不够快"
 
-Day 1 的 ConcurrentEngine 已支持优先级插入和超时，但调度逻辑存在几个短板：
+Day 2 的 FullScheduler 解决了调度公平性和资源管理，但仍有性能瓶颈：
 
 ```
-Day 1 调度器的短板：
- 1. 无资源预算 → 请求过多时 batch 无限膨胀，GPU OOM 崩溃
- 2. 无抢占 → 高优先级请求到来时只能等低优先级跑完，延迟不可控
- 3. 无公平性 → 低优先级请求可能永远排不上（starvation）
- 4. 无显存管理 → KV Cache 随意分配，不检查是否够用
- 5. 无 Continuous Batching → 调度粒度粗，每轮只取 waiting 不维护 running
+Day 2 调度器遗留的性能问题：
+ 1. Decode 每步只出 1 token → 大模型 GPU 算力浪费（Speculative Decoding 解决）
+ 2. 长 prompt prefill 阻塞 decode → decode 延迟尖峰（Chunked Prefill 解决）
+ 3. 重复 prefix 每次重新 prefill → TTFT 高（Prefix Caching 解决）
 ```
 
-| 维度 | Day 1 ConcurrentEngine | Day 2 FullScheduler |
-|------|----------------------|---------------------|
-| 优先级 | 队列插入时排序 | **heapq + aging 动态提升** |
-| 资源预算 | 无 | **token_budget + memory_budget 双闸门** |
-| 抢占 | 无 | **recompute / swap 两种策略** |
-| 公平性 | 无 | **aging：等待久自动升优先级** |
-| Continuous Batching | 简单 batch | **running decode + 新请求 prefill 共享预算** |
-| 超时 | waiting 超时 | **waiting + execution 双超时** |
+| 瓶颈 | 表现 | 解决方案 | 收益 |
+|------|------|---------|------|
+| Decode 算力浪费 | 每步 1 token，GPU 利用率低 | Speculative Decoding | TBT 降低 2-3x |
+| Prefill 阻塞 decode | 长 prompt 导致 decode 延迟尖峰 | Chunked Prefill | 延迟降低 50-97% |
+| 重复 prefix 计算 | 多轮对话重复 prefill 系统提示 | Prefix Caching | TTFT 降低 3-5x |
 
-> 💡 **一句话总结**：Day 2 把调度器从"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"——从"能调度"到"会调度"。
+> 💡 **一句话总结**：Day 3 从"会调度"升级为"跑得快"——三大特性分别解决 decode 效率、延迟平滑、前缀复用三个维度。
 
 ---
 
 ### 理论学习
 
-#### 2.1 调度器六大功能概览
+#### 3.1 Speculative Decoding（投机采样）
 
-![完整调度器六大功能架构](../../week7/images/scheduler_architecture.svg)
+![Speculative Decoding：小模型 Draft + 大模型 Verify](../../week7/images/speculative_decoding.svg)
 
-一个生产级 LLM 推理调度器需要六大功能，缺一不可：
-
-| 功能 | 职责 | 实现方式 |
-|------|------|---------|
-| ① 优先级调度 | 高优先级请求先获得资源 | `heapq(-priority, submit_time)` |
-| ② 超时控制 | 丢弃超时请求，防积压 | waiting 超时 + execution 超时 |
-| ③ 资源预算 | 防止 OOM 和 batch 膨胀 | token_budget + memory_budget |
-| ④ 抢占 | 显存不足时释放低优先级 | select_victim + recompute/swap |
-| ⑤ 公平性 | 防止低优先级饥饿 | aging：等待久自动提升优先级 |
-| ⑥ Continuous Batching | running 继续 decode + 新请求加入 | 每轮 schedule() 返回 batch |
-
-##### 形象类比
-
-- **优先级调度** = 医院急诊分诊（危重病人先看）
-- **超时控制** = 挂号后等待超时自动退号
-- **资源预算** = 医院床位上限（不能无限收病人）
-- **抢占** = 危重病人来了，把轻症病人临时转出病房
-- **公平性** = 等待太久的普通病人自动升级别
-- **Continuous Batching** = 手术台持续运转，做完一个手术立刻接下一个
-
-#### 2.2 优先级调度：heapq + 动态排序
-
-```python
-# waiting 是一个最小堆，元组 (-priority, submit_time, req)
-# -priority 取负 → 高优先级在堆顶
-# submit_time → 同优先级 FIFO
-heapq.heappush(self.waiting, (-req.priority, req.submit_time, req))
-
-# 每轮从堆顶弹出最高优先级请求
-neg_priority, submit_time, req = heapq.heappop(self.waiting)
-```
-
-##### 高优先级特权
-
-高优先级请求可以突破 `reserved_blocks`（预留资源），保障 SLA：
-
-```python
-available_blocks = self.memory.free_blocks
-if req.priority > 0:
- available_blocks += self.reserved_blocks # 高优先级可用预留块
-```
-
-> ⚠️ **预留资源的权衡**：预留太多 → 普通请求可用资源少；预留太少 → 高优先级无法保障。通常预留总量的 10-15%。
-
-#### 2.3 资源预算：双闸门机制
-
-![资源预算：Token Budget + Memory Budget](../../week7/images/resource_budget.svg)
-
-每轮 `schedule()` 有两道预算闸门，新请求必须**同时满足**才能加入 batch：
-
-**闸门一：Token Budget（计算预算）**
+##### 基本原理
 
 ```
-每轮 iteration 的 token 预算 = token_budget（如 50）
- • running decode：每请求消耗 1 token
- • 新请求 prefill：消耗 prompt_len 个 token
- • remaining <= 0 → 停止加入新请求
+传统 Decode：
+ 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
+ 缺点：大模型每次只处理 1 个 token，GPU 算力浪费
+
+Speculative Decoding：
+ 1. 小模型（draft model）连续生成 k 个候选 tokens
+ 2. 大模型（target model）一次验证这 k+1 个 tokens（batch 验证，高效）
+ 3. 接受匹配的 tokens，从第一个不匹配处重新采样
+ 4. 保持输出分布不变（与原始大模型一致）
 ```
 
-类比 vLLM 的 `max_num_batched_tokens`：限制每轮处理的 token 总数，防止长 prompt 的 prefill 独占全部算力。
+##### 加速原理
 
-**闸门二：Memory Budget（显存预算）**
+```
+假设：
+ t_d = draft model 生成 1 个 token 的时间（小，如 0.005s）
+ T_fwd = target model 一次 forward 的时间（大，如 0.03s）
+ α = 平均接受率（如 0.7）
 
-```python
-class MemoryBudget:
-    def can_allocate(self, blocks: int) -> bool:
-        return self.used_blocks + blocks <= self.total_blocks
+传统每 token 时间 ≈ T_fwd
+Speculative 每步：k × t_d + T_fwd → 产出 k × α + 1 个 tokens（近似上界）
+Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
+
+当 t_d ≪ T_fwd 且 α 高时，加速明显。
+
+> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
 ```
 
-类比 vLLM PagedAttention 的 block allocator：显存被划分为固定大小的 block（如每 block 存 16 个 token 的 KV Cache），调度器在加入新请求时检查是否有足够空闲 block。
+##### 关键属性
 
-> 💡 **双预算协同**：token_budget 限制"算多少"（计算量），memory_budget 限制"存多少"（KV Cache）。长 prompt 消耗多 token budget，长序列生成消耗多 memory budget——两者正交。
-
-#### 2.4 抢占：显存不足时的资源回收
-
-![抢占策略：Recompute vs Swap](../../week7/images/preemption_strategy.svg)
-
-当高优先级请求到来但显存不足时，调度器会**抢占**低优先级 running 请求的资源：
-
-##### Victim 选择策略
-
-```python
-def _select_victim(self, new_req):
- # 选比新请求优先级低的 running 请求
- candidates = [r for r in self.running.values() if r.priority < new_req.priority]
- # 多因素打分：最低优先级 → 最少剩余 token → 最晚提交
- return min(candidates, key=lambda r: (r.priority, r.max_new_tokens - r.generated_tokens, -r.start_time))
-```
-
-| 因素 | 原因 |
+| 属性 | 说明 |
 |------|------|
-| 最低优先级 | 优先保障高优先级 |
-| 最少剩余 token | 换出成本低（浪费的计算少） |
-| 最晚提交 | LRU，避免频繁抢占同一请求 |
+| **输出一致性** | 通过特殊的接受/拒绝采样，保证输出分布与大模型自回归采样一致 |
+| **加速条件** | draft 快（t_d ≪ T_fwd）+ 接受率高（α > 0.5） |
+| **k 的选择** | k 太小加速不够，k 太大 draft 开销大；通常 k=4~8 |
+| **适用场景** | decode 延迟敏感、有合适 draft model |
+| **限制** | 需要额外内存放 draft model；α 低时可能变慢 |
 
-##### 两种抢占后处理
+> ⚠️ **保持分布不变的原理**：对每个 draft token，大模型计算其概率分布 p_target。若 draft 的采样值在 p_target 下有足够概率（≥ p_draft），则接受；否则以 (p_target - p_draft) 的残差概率重新采样。这保证最终分布 = p_target。
 
-| 策略 | 操作 | 优点 | 缺点 | 适合 |
-|------|------|------|------|------|
-| **Recompute** | 丢弃 KV Cache，放回 waiting 队列 | 简单，无 I/O | 浪费 prefill 计算 | 短 prompt |
-| **Swap** | KV Cache 拷贝到 CPU，放 swapped 列表 | 不浪费计算 | GPU↔CPU 拷贝延迟 | 长 prompt |
+##### 模拟结果（k=4, α=0.7, t_d=0.005, T_fwd=0.03）
 
-> 💡 vLLM 默认用 recompute（简单可靠），生产环境可根据 prompt 长度和 CPU 内存动态切换 swap。
+| k | α | 传统时间 | Spec 时间 | 加速比 |
+|---|---|---------|----------|--------|
+| 2 | 0.7 | 3.00s | 1.72s | 1.74x |
+| 4 | 0.7 | 3.00s | 1.55s | 1.94x |
+| 4 | 0.9 | 3.00s | 1.20s | 2.50x |
+| 8 | 0.9 | 3.00s | 1.12s | 2.68x |
+| 8 | 0.5 | 3.00s | 3.50s | **0.86x（变慢！）** |
 
-#### 2.5 公平性：Aging 机制
+> 💡 **k=8, α=0.5 时变慢**——draft token 太多但接受率低，draft 开销超过了加速收益。这说明 k 和 α 必须匹配。
 
-低优先级请求可能被不断到来的高优先级请求"饿死"——永远排不上。Aging 机制自动提升等待时间过长的请求的优先级：
+#### 3.2 Chunked Prefill（分块预填充）
+
+![Chunked Prefill：长 Prompt 分块 + Decode 交错](../../week7/images/chunked_prefill.svg)
+
+##### 问题与方案
+
+```
+问题：
+ - 长 prompt（如 2048 tokens）的 prefill 一次性处理 → 占用全部 token budget
+ - 同 batch 的 decode 请求被阻塞 → 延迟尖峰
+ - 用户感知：decode token 突然卡顿
+
+Chunked Prefill：
+ - 将长 prompt 分成多个 chunk（如每 chunk 512 tokens）
+ - 每个 chunk 与 decode 请求一起执行（共享 token budget）
+ - 逐步完成 prefill，同时不中断 decode
+```
+
+##### 收益量化
+
+| Prompt 长度 | Chunk 大小 | Chunks | 传统 max 延迟 | Chunked max 延迟 | 降低 |
+|------------|-----------|--------|-------------|-----------------|------|
+| 512 | 256 | 2 | 5.2s | 2.6s | -50% |
+| 2048 | 512 | 4 | 20.6s | 5.1s | -75% |
+| 8192 | 256 | 32 | 82.0s | 2.6s | -97% |
+
+> 💡 **关键洞察**：总 prefill 时间不变，但 decode 请求的**最大等待延迟**从"整个 prefill"降到"一个 chunk"。prompt 越长、chunk 越小 → 效果越显著。
+
+##### Chunk 大小的权衡
+
+| Chunk 大小 | 优点 | 缺点 |
+|-----------|------|------|
+| 太小（128） | 延迟极平滑 | prefill 效率低（小 batch GEMM） |
+| 太大（2048） | prefill 效率高 | 延迟平滑效果差 |
+| **推荐（512）** | **平衡** | **vLLM 默认值** |
+
+#### 3.3 Prefix Caching（前缀缓存）
+
+![Prefix Caching：公共前缀 KV Cache 复用](../../week7/images/prefix_caching.svg)
+
+##### 问题与方案
+
+```
+问题：
+ - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
+ - 每次都要重新计算 prefix 的 KV Cache → 重复计算
+
+Prefix Caching：
+ - 缓存公共 prefix 的 KV Cache（key = prefix token 序列的 hash）
+ - 新请求匹配到缓存 prefix 时，直接复用 KV Cache
+ - 只 prefill prefix 之后的新增 tokens
+
+收益：
+ - 降低 TTFT（首 token 延迟）
+ - 减少重复计算
+ - 特别适合多轮对话和模板化请求
+```
+
+##### 缓存 Key 设计
 
 ```python
-def _apply_aging(self):
-    for neg_priority, submit_time, req in self.waiting:
-        wait_time = self.time - submit_time
-        if wait_time > self.aging_threshold:
-            # 每超过一个 threshold 周期，优先级 +1
-            req.priority = req.original_priority + int(wait_time // self.aging_threshold)
+# Key = prefix token 序列的 hash
+key = hashlib.md5(str(prefix_tokens).encode()).hexdigest()
+
+# 查找：O(1) hash 查找
+cached = cache.get(system_prompt_tokens)
+if cached:
+ # 命中：跳过 prefix prefill，只 prefill 新增 tokens
+ prefill(user_prompt_tokens)
+else:
+ # 未命中：全量 prefill + 缓存
+ prefill(full_prompt)
+ cache.put(system_prompt_tokens, kv_cache)
 ```
 
-| 参数 | 典型值 | 效果 |
-|------|--------|------|
-| `aging_threshold` | 4.0s | 等待超过 4s 开始升优先级 |
-| 提升幅度 | +1/threshold | 5s→+1, 10s→+2, 15s→+3... |
-| 上限 | `original + 5` | 防止无限提升 |
+##### 模拟结果（3 请求，系统提示 50 tok，用户 20 tok）
 
-> ⚠️ **Aging 的权衡**：提升太快 → 优先级失去意义；提升太慢 → 低优先级仍可能饥饿。通常 threshold 设为平均请求延迟的 2-3 倍。
+| 指标 | 无缓存 | 有缓存 | 改善 |
+|------|--------|--------|------|
+| 总 prefill tokens | 210 | 110 | -48% |
+| 命中率 | — | 99% | — |
+| TTFT（首请求） | 70×t | 70×t | 不变 |
+| TTFT（后续请求） | 70×t | 20×t | -71% |
+| 加速比 | 1.0x | 3.4x | — |
 
-#### 2.6 Continuous Batching 的调度循环
+> ⚠️ **LRU 淘汰**：缓存有大小上限（如 64 entries），满了按 LRU 淘汰最久未用的。vLLM 的 PagedAttention 天然支持 block 级别的 prefix caching。
 
-```
-每轮 schedule() 的执行顺序：
- ① 恢复 swapped 请求（如有空间）
- ② 继续 running 请求的 decode（每请求消耗 1 token budget）
- ③ 从 waiting 按优先级加入新请求（prefill，消耗 prompt_len token budget）
- ④ 应用 aging（公平性）
- ⑤ 检查超时（waiting + execution）
-```
+##### 适用场景
 
-##### 为什么是这个顺序？
+| 场景 | 前缀重复度 | 收益 |
+|------|-----------|------|
+| 多轮对话 | 高（历史消息累积） | ★★★★★ |
+| 模板化请求 | 高（系统提示固定） | ★★★★★ |
+| Few-shot learning | 中（示例固定） | ★★★★ |
+| 独立请求 | 低（无公共前缀） | ★ |
 
-![Scheduler 调度顺序](../../images/week7_scheduler_priority.svg)
+#### 3.4 特性收益对比与集成优先级
 
-> 💡 **与 vLLM 的对应**：vLLM 的调度器每轮 iteration 也遵循类似顺序——先处理 running（decode），再从 waiting 加入新请求（prefill），token_budget 共享。
+| 特性 | 收益 | 复杂度 | 依赖 | 集成优先级 |
+|------|------|--------|------|-----------|
+| **Prefix Caching** | TTFT 降低 3-5x | 中 | KV Cache 管理 | **Phase 1 优先** |
+| **Chunked Prefill** | 延迟降低 50-97% | 中 | 调度器改造 | **Phase 1** |
+| **CUDA Graph** | launch 开销降低 | 中 | 静态 shape | Phase 2 |
+| **Speculative Decoding** | TBT 降低 2-3x | 高 | Draft model | Phase 2 可选 |
 
-### Coding 任务：实现 FullScheduler
+> 💡 **集成建议**：Prefix Caching 和 Chunked Prefill 收益高、复杂度中等，优先集成。Speculative Decoding 虽然收益可观，但需要 draft model 和分布对齐，实现复杂度高，适合作为 Phase 2 的可选优化。
 
-#### 任务 1：创建 full_scheduler.py
+### Coding 任务：高级特性模拟与评估
 
-创建文件 [kernels/full_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/full_scheduler.py)，实现支持六大功能的完整调度器：
+#### 任务 1：创建 advanced_features.py
+
+创建文件 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/advanced_features.py)，模拟三大高级特性并量化收益：
 
 ```python
-# full_scheduler.py —— 完整调度器（优先级 + 超时 + 资源预算 + 抢占）
-# 运行命令: python full_scheduler.py
+# advanced_features.py —— 高级特性模拟（Speculative Decoding + Chunked Prefill + Prefix Caching）
+# 运行命令: python advanced_features.py
 # 依赖: 仅标准库
 
-class FullScheduler:
-    """生产级调度器，支持六大功能。"""
-    def __init__(self, token_budget=100, max_num_seqs=8,
-                 max_waiting_time=10.0, max_execution_time=60.0,
-                 enable_preemption=True, preempt_strategy="recompute",
-                 reserved_blocks=8, aging_threshold=4.0,
-                 total_memory_blocks=32):
-        # ...
-        ...
+# 1. Speculative Decoding 模拟
+def simulate_speculative_decoding(num_tokens=100, draft_k=4, accept_rate=0.7, ...):
+ """模拟 draft+verify 过程，测量加速比"""
 
-    def schedule(self) -> List[ScheduledRequest]:
-        """每轮 iteration 调用一次，返回本轮要执行的 batch。"""
-        # ① 恢复 swapped
-        # ② 继续 running decode
-        # ③ 从 waiting 加入新请求
-        # ④ aging
-        # ⑤ 超时检查
-        ...
+# 2. Chunked Prefill 模拟
+def simulate_chunked_prefill(prompt_len=2048, chunk_size=512, ...):
+ """模拟分块 prefill 与 decode 交错，测量延迟降低"""
 
-    def _select_victim(self, new_req):
-        """选择被抢占的请求：最低优先级 → 最少剩余 token → 最晚提交"""
-        ...
+# 3. Prefix Caching 模拟
+class PrefixCache:
+ """LRU 前缀缓存，模拟 KV Cache 复用"""
+def simulate_prefix_caching(num_requests=100, ...):
+ """模拟多轮对话场景，测量命中率和加速比"""
 
-    def _preempt(self, victim):
-        """抢占：recompute（放回 waiting）或 swap（放 swapped 列表）"""
-        ...
-
-    def _apply_aging(self):
-        """等待超阈值的请求自动提升优先级"""
-        ...
+# 4. 综合评估
+def evaluate_features():
+ """运行三大特性模拟，输出收益评估报告"""
 ```
 
-完整代码见 [kernels/full_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/full_scheduler.py)。
+完整代码见 [kernels/advanced_features.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/advanced_features.py)。
 
 代码要点：
-- `MemoryBudget`：模拟 GPU 显存的 block 分配，`can_allocate` / `allocate` / `free` 三板斧，类比 PagedAttention 的 block allocator
-- `schedule()`：五步流水——restore swapped → continue running → admit new → aging → timeout，顺序不可交换
-- `_select_victim`：多因素打分（优先级 → 剩余 token → 提交时间），选"换出代价最低"的 victim
-- `_preempt`：recompute 策略放回 waiting（丢弃 KV Cache），swap 策略放 swapped 列表（保留 KV Cache 到 CPU）
-- `_apply_aging`：每超过 `aging_threshold` 秒，优先级 +1，有上限防止无限提升
+- `simulate_speculative_decoding`：模拟 draft 生成 k 个 token + target 验证，统计接受/拒绝数和加速比
+- `simulate_chunked_prefill`：对比传统 prefill 阻塞 vs chunked 交错，计算 max decode 延迟
+- `PrefixCache`：LRU 缓存，`_hash_prefix` 用 MD5 做 key，`get`/`put` 实现命中/写入
+- `evaluate_features`：遍历不同参数组合（k, α, chunk_size, cache_size），输出收益报告
 
-#### 任务 2：运行并观察调度行为
+#### 任务 2：运行并分析收益报告
 
 ```bash
-python kernels/full_scheduler.py
+python kernels/advanced_features.py
 ```
 
 **预期输出**（节选）：
 
 ```text
-Submitted R0 (p=0, prompt=8, kv_blocks=3)
-Submitted R1 (p=1, prompt=10, kv_blocks=4)
-...
-Submitted R7 (p=1, prompt=22, kv_blocks=6)
+📊 1. Speculative Decoding
+ k=4, α=0.7: traditional=3.00s, spec=1.55s, speedup=1.94x, accepted=69, rejected=55
+ k=4, α=0.9: traditional=3.00s, spec=1.20s, speedup=2.50x, accepted=79, rejected=17
+ k=8, α=0.5: traditional=3.00s, spec=3.50s, speedup=0.86x, accepted=50, rejected=350
 
---- Tick 0 | {'waiting': 4, 'running': 4, 'swapped': 0, 'memory': 'MemoryBudget(16/32)', 'tick': 1} ---
- Batch: [R2(p=2,gen=0/6), R5(p=2,gen=0/6), R1(p=1,gen=0/5), R0(p=0,gen=0/4)]
+📊 2. Chunked Prefill
+ prompt=2048, chunk=512: chunks=4, max_latency: 20.58s → 5.14s (-75%)
+ prompt=8192, chunk=256: chunks=32, max_latency: 82.02s → 2.56s (-97%)
 
---- Tick 3 | {'waiting': 3, 'running': 4, ...} ---
- Batch: [R2(p=2,gen=3/6), R5(p=2,gen=3/6), R1(p=1,gen=3/5), R4(p=1,gen=0/5)]
- [Aging] Request 7 priority boosted to 2
- [Aging] Request 3 priority boosted to 1
- [Aging] Request 6 priority boosted to 1
+📊 3. Prefix Caching
+ cache_size=64: hits=99, misses=1, hit_rate=99.0%, time: 70.00s → 20.50s, speedup=3.41x
 
---- Tick 5 | ... ---
- Batch: [R5(p=2,gen=5/6), R4(p=1,gen=2/5), R7(p=2,gen=0/5), R3(p=1,gen=0/4)]
+📋 集成优先级建议
+ 1. Prefix Caching — 收益高、复杂度中 → Phase 1 优先
+ 2. Chunked Prefill — 平滑延迟、复杂度中 → Phase 1
+ 3. CUDA Graph — 降 launch 开销、复杂度中 → Phase 2
+ 4. Speculative Decoding — 降 TBT、复杂度高 → Phase 2 可选
 ```
 
 ##### 观察重点
 
-1. **Tick 0 优先级**：R2(p=2) 和 R5(p=2) 优先级最高，先入 batch；R0(p=0) 最低但仍有空位所以加入
-2. **Tick 3 aging**：R7、R3、R6 等待超过 4s，优先级自动提升（R7: 1→2，R3: 0→1，R6: 0→1）
-3. **Tick 5 优先级生效**：R7 aging 后优先级=2，排到 batch 最前面
-4. **memory 预算**：MemoryBudget(16/32) 表示 16/32 块已用，新请求加入时检查 `can_allocate`
-5. **Continuous Batching**：running 请求每轮 `gen` +1，完成后释放显存，新请求加入
+1. **Speculative Decoding**：α=0.7 时加速 ~2x，但 α=0.5 + k=8 时**变慢**（draft 开销超过收益）
+2. **Chunked Prefill**：prompt 越长、chunk 越小，延迟降低越显著（8192 tok 从 82s → 2.6s）
+3. **Prefix Caching**：固定系统提示场景命中率接近 100%，加速比 3.4x
+4. **集成优先级**：Prefix Caching 和 Chunked Prefill 性价比最高
 
-#### 任务 3：修改参数观察调度变化
+#### 任务 3：修改参数观察特性边界
 
-尝试修改以下参数，观察调度行为变化：
+尝试修改以下参数，观察特性失效的边界条件：
 
 ```python
-# 实验 A：减小 token_budget → batch 更小，请求排队更久
-scheduler = FullScheduler(token_budget=20, ...)
+# 实验 A：Speculative Decoding 失效条件
+# 设置 accept_rate=0.3, draft_k=8 → draft 开销大但接受少，应变慢
+result = simulate_speculative_decoding(num_tokens=100, draft_k=8, accept_rate=0.3, ...)
 
-# 实验 B：减小 total_memory_blocks → 更早触发抢占
-scheduler = FullScheduler(total_memory_blocks=16, ...)
+# 实验 B：Chunked Prefill chunk 太小
+# 设置 chunk_size=64 → prefill 效率极低（小 batch GEMM），总时间可能增加
+result = simulate_chunked_prefill(prompt_len=2048, chunk_size=64, ...)
 
-# 实验 C：切换 swap 策略 → 被抢占的请求进入 swapped 列表而非 waiting
-scheduler = FullScheduler(preempt_strategy="swap", ...)
-
-# 实验 D：关闭 aging → 低优先级请求可能长时间无法加入
-scheduler = FullScheduler(aging_threshold=999.0, ...)
+# 实验 C：Prefix Caching 无公共前缀
+# 修改为每个请求有不同的系统提示 → 命中率应接近 0
 ```
 
-> 思考：token_budget=20 时，长 prompt（如 prompt_len=22）会发生什么？（提示：prompt_len > remaining_tokens，请求被放回 waiting，可能等待超时。）
+> 思考：什么场景下 Prefix Caching 不仅无收益反而有开销？（提示：每个请求前缀都不同时，hash 计算和缓存查找是纯开销。）
 
-#### 任务 4：LeetGPU 在线题目 —— Vector Reversal
+#### 任务 4：LeetGPU 在线题目 —— Scalar Multiply
 
-**题目链接**：<https://leetgpu.com/challenges/vector-reversal>
+**题目链接**：<https://leetgpu.com/challenges/scalar-multiply>
 
-**与今日知识的关联**：Vector Reversal 的核心是**索引映射**——`output[j][i] = input[i][j]`，每个线程处理一个元素的"调度"。这与调度器的**请求到资源的映射**同构：调度器把请求按优先级分配到 batch 槽位（`batch[i] = waiting[best_priority]`），Vector Reversal 把数据按反向索引映射到输出位置。两者都是**用索引规则做资源映射**：调度器用优先级+预算做"哪个请求进 batch"的映射，Reversal 用 `i → N-1-i` 做"哪个输入对应哪个输出"的映射；shared memory tile 中转则保证重排后读写仍 coalesced。
+**与今日知识的关联**：Scalar Multiply 是零计算强度、纯带宽的 memory-bound kernel——所有优化（shared memory tiling、padding 消 bank conflict）都围绕"如何喂饱显存带宽"展开。理解它的 memory-bound 特性是理解为什么 Speculative Decoding 能加速——大模型 decode 的计算密度极低（和 Scalar Multiply 一样受带宽限制而非算力限制），GPU 大量算力闲置，draft model 正好利用这些闲置算力。
 
-> 💡 提交后在 [LeetGPU Vector Reversal](https://leetgpu.com/challenges/vector-reversal) 上记录通过耗时。完整题解见 [Vector Reversal 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-reversal-solution.html)。
+> 💡 提交后在 [LeetGPU Scalar Multiply](https://leetgpu.com/challenges/scalar-multiply) 上记录通过耗时。完整题解见 [Scalar Multiply 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 2）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 3）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 2（旋转数组与峰值），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 3（二分答案），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [153. 寻找旋转排序数组中的最小值](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | 中等 | 二分缩区间（与右端点比较） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html) |
-| [33. 搜索旋转排序数组](https://leetcode.cn/problems/search-in-rotated-sorted-array/) | 中等 | 二分（先判哪半有序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html) |
-| [34. 在排序数组中查找元素的第一个和最后一个位置](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | 中等 | 二分找左右边界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
-| [162. 寻找峰值](https://leetcode.cn/problems/find-peak-element/) | 中等 | 二分往高处走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
-| [540. 有序数组中的单一元素](https://leetcode.cn/problems/single-element-in-a-sorted-array/) | 中等 | 二分（奇偶下标配对） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/540_有序数组中的单一元素.html) |
+| [875. 爱吃香蕉的珂珂](https://leetcode.cn/problems/koko-eating-bananas/) | 中等 | 二分答案 + O(n) 验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/875_爱吃香蕉的珂珂.html) |
+| [1011. 在 D 天内送达包裹的能力](https://leetcode.cn/problems/capacity-to-ship-packages-within-d-days/) | 中等 | 二分答案 + 贪心验证 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1011_在D天内送达包裹的能力.html) |
+| [378. 有序矩阵中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-sorted-matrix/) | 中等 | 二分值域 + 左下角计数 / 小顶堆 k 路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/378_有序矩阵中第K小的元素.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：实现 swap 策略的完整流程
+#### 实验 1：实现 Speculative Decoding 的接受/拒绝采样
 
-当前 swap 策略只把请求放入 `swapped` 列表。完善 `_restore_swapped`：当显存有空间时，从 `swapped` 列表恢复请求（模拟从 CPU 拷回 KV Cache），观察 swap 请求的恢复顺序。
+当前模拟用随机数模拟接受/拒绝。修改为真实分布对齐：draft 和 target 各自输出概率分布，按论文公式接受/拒绝，验证最终分布与 target 一致。
 
-> 思考：swap 恢复应该按什么顺序？（提示：优先级高的先恢复，或先被 swap 的先恢复 FIFO。）
+> 思考：为什么"接受/拒绝采样"能保证分布不变？（提示：对 draft 采样值 x，若 p_target(x) ≥ p_draft(x) 则接受；否则以 (p_target - p_draft) 残差概率拒绝并重新采样。）
 
-#### 实验 2：模拟 OOM 场景
+#### 实验 2：实现 Chunked Prefill 的动态 chunk 大小
 
-设置 `total_memory_blocks=8`（极小显存），提交 10 个 `required_kv_blocks=3` 的请求。观察：哪些请求能加入 batch？哪些被抢占？是否有请求超时？
+当前 chunk 大小固定。修改为动态：根据当前 decode 请求数量和 token budget 剩余动态调整 chunk 大小。decode 请求多时 chunk 小（多留预算给 decode），decode 少时 chunk 大（提高 prefill 效率）。
 
-> 思考：极端 OOM 时调度器应该怎么降级？（提示：拒绝新请求 / 排队等待 / 降级到更小 batch。）
+> 思考：动态 chunk 大小的上限和下限应该怎么设？（提示：下限不能太小否则 GEMM 效率低，上限不能太大否则失去平滑效果。）
 
-#### 实验 3：对比 recompute vs swap 的延迟
+#### 实验 3：Prefix Caching 的 block 级别匹配
 
-用相同输入运行 recompute 和 swap 两种策略，测量被抢占请求的端到端延迟（从 submit 到 finish）。swap 应该更快（只需拷回 KV Cache，不用重新 prefill）。
+当前匹配整个 prefix token 序列。修改为 block 级别匹配（如 vLLM PagedAttention）：把 token 序列分成 block（每 16 token 一 block），逐 block 匹配，部分命中也能复用。
 
-> 思考：什么条件下 swap 的拷贝延迟反而比 recompute 更慢？（提示：prompt 很短时，重算成本低于 GPU↔CPU 拷贝。）
+> 思考：block 级别匹配 vs 整体匹配的 trade-off？（提示：block 级别更灵活但 hash 查找次数多；整体匹配简单但一旦有一个 token 不同就全部 miss。）
 
 ---
 
 ### 今日总结
 
-Day 2 我们把调度器从 Day 1 的"FIFO + 超时"升级为"双预算 + 抢占 + 公平 + 持续批处理"：
+Day 3 我们分析评估了三大高级推理特性：
 
-1. **六大功能**：优先级调度（heapq）、超时控制（waiting+execution）、资源预算（token+memory）、抢占（recompute/swap）、公平性（aging）、Continuous Batching
-2. **双预算闸门**：token_budget 限制"算多少"（每轮 token 总数），memory_budget 限制"存多少"（KV Cache 块），新请求必须同时满足两道闸门
-3. **抢占机制**：显存不足时选最低优先级 victim，recompute 丢弃 KV Cache（简单但浪费），swap 换出到 CPU（不浪费但拷贝慢）
-4. **公平性 aging**：等待超过阈值自动提升优先级，防止低优先级饥饿，有上限防止无限提升
-5. **调度循环顺序**：恢复 swapped → 继续 running decode → 加入新请求 prefill → aging → 超时检查
-6. **高优先级特权**：可使用 reserved_blocks 预留资源，保障 SLA
-7. **实测验证**：优先级排序、memory 预算检查、aging 提升、Continuous Batching 持续运行
+1. **Speculative Decoding**：小模型 draft k 个 token + 大模型一次 verify，加速比 1.5-2.7x；关键条件是 draft 快 + 接受率高；k 和 α 必须匹配，否则可能变慢
+2. **Chunked Prefill**：长 prompt 分块与 decode 交错，decode 最大延迟降低 50-97%；总 prefill 时间不变，但平滑了延迟尖峰；chunk 大小 512 是推荐平衡点
+3. **Prefix Caching**：缓存公共前缀的 KV Cache，命中率接近 100%，加速比 3.4x；特别适合多轮对话和模板化请求
+4. **特性对比**：Prefix Caching 和 Chunked Prefill 收益高/复杂度中→优先集成；Speculative Decoding 收益高/复杂度高→可选
+5. **模拟验证**：通过 `advanced_features.py` 量化了不同参数下的加速比、延迟降低、命中率
+6. **集成优先级**：Phase 1（Prefix Caching + Chunked Prefill）→ Phase 2（CUDA Graph + Speculative Decoding）
 
-掌握这些后，你就有了推理引擎的"调度大脑"——明天 Day 3 分析 SGLang/LightLLM 的高级特性（Speculative Decoding、Chunked Prefill、Prefix Caching），评估哪些值得集成到 Mini 引擎。
+掌握这些后，你就有了推理系统的"加速武器库"——明天 Day 4 整合全部自定义 Kernel（GEMM、FlashAttention、Softmax、LayerNorm），替换 PyTorch 算子。
 
 ---
 
 ### 面试要点
 
-1. **设计一个完整的 LLM 推理调度器，需要考虑哪些因素？**（⭐⭐⭐⭐⭐ 必考）
+1. **什么是 Speculative Decoding？它为什么能加速 LLM 推理？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **六大功能**：
- 1. **Batching 策略**：Continuous Batching（running+新请求动态组批）
- 2. **优先级调度**：heapq 按优先级排序，高优先级可使用预留资源
- 3. **资源预算**：token_budget（计算预算）+ memory_budget（显存预算）双闸门
- 4. **超时控制**：waiting 超时（丢弃）+ execution 超时（强制取消）
- 5. **抢占**：显存不足时抢占低优先级，recompute 或 swap
- 6. **公平性**：aging 机制防止低优先级饥饿
- - **调度循环**：恢复 swapped → 继续 running → 加入新请求 → aging → 超时检查
- - **性能目标**：吞吐优先（大 batch）还是延迟优先（小 batch + 高优先级保障）
+ - **原理**：小模型（draft）快速生成 k 个候选 tokens，大模型（target）一次验证这 k+1 个 tokens
+ - **加速原因**：
+ - 小模型生成速度快（t_d ≪ T_fwd）
+ - 大模型一次验证多个 tokens，提高 batch 利用率
+ - 如果 draft 质量高（α 高），每步可接受多个 tokens
+ - **加速比**：`(k×α+1) × T_fwd / (k×t_d + T_fwd)`（近似上界，精确期望用 `(1-α^(k+1))/(1-α)` 替换 k×α+1），典型 1.5-2.7x
+ - **保持分布不变**：通过接受/拒绝采样，确保最终分布与 target 一致
+ - **失效条件**：α 低 + k 大 → draft 开销超过收益，可能变慢
 
 </details>
 
 
-2. **调度器中的抢占策略如何选择被抢占的请求？recompute 和 swap 有什么区别？**（⭐⭐⭐⭐ 高频）
+2. **Chunked Prefill 和 Prefix Caching 分别解决了什么问题？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Victim 选择**：最低优先级 → 最少剩余 token（换出成本低）→ 最晚提交（LRU）
- - **Recompute**：丢弃 KV Cache，放回 waiting 队列重新 prefill
- - 优点：简单，无 I/O
- - 缺点：浪费已算的 prefill，长 prompt 代价大
- - **Swap**：KV Cache 拷到 CPU，放 swapped 列表，显存够时拷回恢复
- - 优点：不浪费计算
- - 缺点：GPU↔CPU 拷贝延迟，需 CPU 内存
- - **选择依据**：短 prompt 用 recompute，长 prompt 用 swap；vLLM 默认 recompute
+ - **Chunked Prefill**：
+ - 解决长 prompt prefill 阻塞 decode 的问题
+ - 将长 prefill 拆分成多个 chunk，与 decode 交错执行
+ - 效果：decode 最大延迟从"整个 prefill"降到"一个 chunk"，降低 50-97%
+ - **Prefix Caching**：
+ - 解决重复 prefix 的 KV Cache 重复计算问题
+ - 缓存公共前缀的 KV Cache，新请求匹配时复用
+ - 效果：TTFT 降低 3-5x，特别适合多轮对话和模板化请求
 
 </details>
 
 
-3. **token_budget 和 memory_budget 分别限制什么？为什么需要两道预算？**（⭐⭐⭐⭐ 高频）
+3. **Speculative Decoding 如何保证输出分布不变？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **token_budget**：每轮 iteration 处理的 token 总数上限（类比 vLLM `max_num_batched_tokens`）
- - running decode 消耗 1/req，新请求 prefill 消耗 prompt_len
- - 防止长 prompt 独占算力
- - **memory_budget**：KV Cache 的 block 分配上限（类比 PagedAttention block allocator）
- - `can_allocate(kv_blocks)` 检查是否有足够空闲块
- - 防止 GPU OOM
- - **为什么两道**：token_budget 管"计算量"，memory_budget 管"存储量"，两者正交——短 prompt+长生成消耗少 token 但多 memory，长 prompt+短生成消耗多 token 但少 memory
+ - 对每个 draft token，target 计算其概率分布 p_target
+ - 若 draft 采样值 x 满足 p_target(x) ≥ p_draft(x) → 接受
+ - 否则以 (p_target - p_draft) 的残差概率拒绝，从残差分布重新采样
+ - 数学上可证明：最终输出分布 = p_target（与纯 target 自回归一致）
+ - 这保证了 speculative decoding 不会牺牲输出质量
 
 </details>
 
 
-4. **什么是 aging 机制？为什么需要它？**（⭐⭐⭐ 中频）
+4. **Prefix Caching 的 key 如何设计？缓存淘汰策略是什么？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **问题**：纯优先级调度下，低优先级请求可能被不断到来的高优先级请求"饿死"
- - **Aging**：等待时间超过阈值（如 5s）后，自动提升优先级（每周期 +1）
- - **上限**：提升有上限（如 original+5），防止无限提升导致优先级失去意义
- - **效果**：低优先级请求最终会被调度，保障公平性
+ - **Key**：prefix token 序列的 hash（如 MD5），O(1) 查找
+ - **Value**：KV Cache 数据（K 矩阵和 V 矩阵的 block）
+ - **淘汰策略**：LRU（最近最少使用），缓存满时淘汰最久未用的
+ - **Block 级别匹配**（vLLM PagedAttention）：把 prefix 分成 block 逐 block 匹配，部分命中也能复用
+ - **命中率因素**：前缀重复度越高、缓存越大 → 命中率越高
 
 </details>
 
 
-5. **Continuous Batching 的调度循环中，为什么先处理 running 再加入新请求？**（⭐⭐⭐⭐ 高频）
+5. **三大高级特性的集成优先级怎么排？为什么？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **先 running**：正在生成的请求优先续 decode（延迟保障），避免"断流"
- - **后新请求**：剩余的 token_budget 给新请求做 prefill（利用率最大化）
- - **共享预算**：running decode 和新请求 prefill 共用 token_budget，防止单一类型独占
- - **与 vLLM 对应**：vLLM 每轮 iteration 也先处理 running（decode），再从 waiting 加入新请求（prefill）
+ - **Phase 1（优先）**：Prefix Caching + Chunked Prefill
+ - 收益高（3-5x TTFT / 50-97% 延迟降低）、复杂度中等
+ - 不需要额外模型，只需改造调度器和 KV Cache 管理
+ - **Phase 2（可选）**：CUDA Graph + Speculative Decoding
+ - CUDA Graph 降低 launch 开销，复杂度中等
+ - Speculative Decoding 收益高但需要 draft model + 分布对齐，复杂度高
+ - **排序逻辑**：按"收益/复杂度"性价比排序，优先做性价比高的
+
+ - 投机采样的分布对齐逻辑跨平台一致（接受/拒绝采样）
+
+</details>
+
+---
+
+### 投机解码深化：三条路线 + 接受率分析（C3 补充）
+
+#### 三条 draft 路线对比
+
+| 路线 | draft 来源 | 代表 | 特点 |
+|------|-----------|------|------|
+| **独立小模型** | 单独训练的小 LLM | 传统 speculative decoding | 需维护两个模型，draft 质量依赖小模型能力 |
+| **Medusa** | target 模型的多个额外 head | Medusa | 无需独立小模型，target 模型加几个 head 并行预测 k 个 token |
+| **EAGLE** | target 模型的特征层草稿 | EAGLE | 在 target 的 hidden states 上建草稿，质量更高 |
+| **MTP** | target 模型的 MTP head | DeepSeek-V3 | DeepSeek 的 Multi-Token Prediction，训练时联合优化 |
+
+##### Medusa vs EAGLE vs MTP 详细对比
+
+| 维度 | Medusa | EAGLE | MTP（DeepSeek） |
+|------|--------|-------|----------------|
+| draft 位置 | target 顶层加 head | target 隐藏层后接草稿网络 | target 的 MTP head（训练联合） |
+| 额外参数 | 几个 head（小） | 草稿网络（中等） | MTP head（与 target 同量级） |
+| draft 质量 | 中（token 级预测） | 高（特征级，更准） | 高（训练时联合优化） |
+| 接受率 α | ~0.5-0.6 | ~0.6-0.7 | ~0.7-0.8 |
+| 加速比 | 2-3x | 2.5-3.5x | 3-4x |
+| 训练成本 | 微调加 head | 需训练草稿网络 | 联合训练（成本高） |
+| 部署复杂度 | 低（加 head） | 中（加网络） | 高（改训练流程） |
+
+> 💡 **面试要点**：Medusa 是"最简单的投机解码"（加 head 即可），EAGLE 是"质量更高的 Medusa"（特征层草稿），MTP 是"DeepSeek 的训练时联合优化"（质量最高但改训练）。2024+ 趋势是 EAGLE/MTP，因为 draft 质量决定接受率上限。
+
+#### 接受率与加速比的关系
+
+**精确期望公式**（k 个 draft token，接受率 α）：
+
+```
+E[accepted] = (1 - α^(k+1)) / (1 - α)
+加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+```
+
+##### 接受率扫描（k=1..8, α=0.5..0.9）
+
+| k \ α | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
+|-------|-----|-----|-----|-----|-----|
+| 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
+| 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
+| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
+| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
+
+**关键观察**：
+- α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
+- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
+- **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
+
+> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
+
+#### 新增面试题
+
+6. **为什么接受率 α 决定加速比上限？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - 加速比 ≈ E[accepted] × T_fwd / (k × t_d + T_fwd)
+  - E[accepted] = (1 - α^(k+1)) / (1 - α)，随 α 增大趋近 k+1（上界）
+  - α 低时 E[accepted] 小，k 大反而被 t_d 拖累（draft 开销 k×t_d 增长）
+  - α=0.5、k=8 时 E[accepted]=2.00，但 k×t_d=8×t_d，若 t_d 不够小则变慢
+  - **结论**：α 是上限，k 是杠杆——α 高才适合大 k
+
+</details>
+
+7. **draft 模型怎么选？独立小模型 vs Medusa vs EAGLE vs MTP？**（⭐⭐⭐⭐ 高频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - **独立小模型**：需维护两模型，draft 质量受小模型能力限制，部署复杂
+  - **Medusa**：target 加 head，无独立模型，但 token 级预测质量中等（α~0.5-0.6）
+  - **EAGLE**：特征层草稿，质量更高（α~0.6-0.7），但需训练草稿网络
+  - **MTP**：训练时联合优化，质量最高（α~0.7-0.8），但改训练流程，成本高
+  - **选择**：快速验证用 Medusa，质量要求用 EAGLE，训练可控用 MTP（DeepSeek 路线）
+
+</details>
+
+8. **verify 阶段的 kernel 实现要点？**（⭐⭐⭐ 中频）
+
+<details>
+<summary>点击查看答案</summary>
+
+  - verify 是"大模型一次 forward 验证 k+1 个 token"，本质是 batch=GEMM
+  - 关键：Q 是 k+1 个 token（draft + 1），K/V 是历史 + draft 的 K/V
+  - kernel 要点：causal mask 的块级跳过（draft token 间是 causal，与历史是 full attention）
+  - 优化：FlashAttention 的 causal 变体可省一半块计算（见 C2 任务）
+  - **接受/拒绝采样**：verify 后用 target 的 logits 做接受/拒绝，保持分布不变
 
 </details>
 

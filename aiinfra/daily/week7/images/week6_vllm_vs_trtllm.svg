@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="380" viewBox="0 0 780 380" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="380" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">vLLM vs TensorRT-LLM 调度链路</text>
+  <path d="M 240 44 Q 390 52 540 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">Python 解释执行 vs C++ 原生 · 灵活 vs 极速</text>
+
+  <!-- vLLM row -->
+  <text x="40" y="120" font-size="14" font-weight="bold" fill="#4a8edb">vLLM</text>
+  <text x="40" y="138" font-size="10" fill="#888">灵活出租车</text>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="120" y="96" width="170" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="205" y="120" fill="#2b6e9e" font-weight="bold">Python</text>
+    <text x="205" y="138" fill="#2b6e9e" font-size="10">schedule()</text>
+
+    <rect x="310" y="96" width="170" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="395" y="120" fill="#2b6e9e" font-weight="bold">PyTorch</text>
+    <text x="395" y="138" fill="#2b6e9e" font-size="10">forward</text>
+
+    <rect x="500" y="96" width="170" height="56" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+    <text x="585" y="120" fill="#2b6e9e" font-weight="bold">cuBLAS</text>
+    <text x="585" y="138" fill="#2b6e9e" font-size="10">kernel</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 292 124 L 308 124" marker-end="url(#ar)"/>
+    <path d="M 482 124 L 498 124" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- vLLM overhead annotation -->
+  <g filter="url(#sk)" stroke="#b85450" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 205 96 L 205 78 L 585 78 L 585 96" marker-end="url(#ar)"/>
+  </g>
+  <text x="395" y="74" text-anchor="middle" font-size="10" fill="#b85450">↑ Python 解释执行 · 每轮 GIL + 解释开销 ~0.1-1ms</text>
+
+  <!-- TensorRT-LLM row -->
+  <text x="40" y="250" font-size="14" font-weight="bold" fill="#4a8e4a">TensorRT-LLM</text>
+  <text x="40" y="268" font-size="10" fill="#888">高铁</text>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="120" y="226" width="170" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="205" y="250" fill="#2e6e2e" font-weight="bold">C++</text>
+    <text x="205" y="268" fill="#2e6e2e" font-size="10">Scheduler</text>
+
+    <rect x="310" y="226" width="170" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="395" y="250" fill="#2e6e2e" font-weight="bold">预编译</text>
+    <text x="395" y="268" fill="#2e6e2e" font-size="10">TensorRT plan</text>
+
+    <rect x="500" y="226" width="170" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="585" y="250" fill="#2e6e2e" font-weight="bold">fused</text>
+    <text x="585" y="268" fill="#2e6e2e" font-size="10">kernel</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.4" fill="none">
+    <path d="M 292 254 L 308 254" marker-end="url(#ar)"/>
+    <path d="M 482 254 L 498 254" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- TRT-LLM no overhead annotation -->
+  <g filter="url(#sk)" stroke="#4a8e4a" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 205 282 L 205 300 L 585 300 L 585 282" marker-end="url(#ar)"/>
+  </g>
+  <text x="395" y="316" text-anchor="middle" font-size="10" fill="#2e6e2e">↓ C++ 原生 · 无解释开销 · plan 已做 kernel 融合 + 显存预分配</text>
+
+  <!-- VS divider -->
+  <g filter="url(#sk)">
+    <circle cx="690" cy="190" r="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+    <text x="690" y="196" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">VS</text>
+  </g>
+
+  <text x="390" y="356" text-anchor="middle" font-size="10" fill="#5d3a7e">代价：TRT-LLM 换模型结构需重新构建 engine（trtexec，几分钟~几十分钟）· vLLM 改 Python 即可</text>
+</svg>

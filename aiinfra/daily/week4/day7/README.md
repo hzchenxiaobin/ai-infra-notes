@@ -1,374 +1,493 @@
-## Day 7：FlashAttention 官方 CUDA 源码分析
+## Day 7：Transformer 算子分类与总结
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 找到并阅读 FlashAttention 官方仓库的 `flash_fwd_kernel.h` 与 `kernel_traits.h`，理解模板化分块参数设计<br>
-2. 理解官方实现用 `Kernel_traits` **模板**组织 Br/Bc/d/Warps 参数，能说出 d=64/128/256 时为何 Bc 递减<br>
-3. 掌握官方实现的 `cp_async` **异步拷贝**与 **K/V shared memory 分时复用**两大工程优化<br>
-4. 能列出官方实现比 Day 2 手写版多的至少 4 个优化（async copy / 双缓冲 / FP16 混合精度 / Tensor Core / K-V 复用）<br>
-5. 理解官方的 **warp group work partitioning**，对比 Day 2 的"每 warp 若干 Q 行"划分<br>
+1. 把 Transformer 单层的全部算子按 **arithmetic intensity (AI)** 分类，产出一张 Prefill / Decode 两阶段的算子分类表
+2. 建立从"算子形状"到"compute-bound / memory-bound"的判断直觉，拿到任意算子能秒判 bound 类型
+3. 系统梳理 Week 3 的核心知识链：Prefill vs Decode → 手写 Softmax/LayerNorm → 源码优化 → Attention IO → 端到端 Profiling → Fusion
+4. 整理本周所有产出（kernel、引擎、profiling 报告），形成可复用的工程资产
+5. 回顾本周 10+ 道面试题，建立 Transformer 算子优化的答题框架
+6. 为 Week 4 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
 
-> 💡 **为什么重要**：Day 2 我们手写了"能跑对"的 FlashAttention，但和官方实现比慢了 2-5x。读源码不是为了背代码，而是建立"看到 memory-bound kernel 就条件反射想到 async copy + 双缓冲 + 混合精度"的工程直觉。Day 4 学 FA2 改进、Day 5 集成到 Mini 引擎，都需要今天的源码分析作为对比基准。
-
----
-
-### 学前导读：Day 2 的 Kernel 跑对了，但慢在哪
-
-昨天我们实现了 `flash_attention_v2.cu`，N=256 时与 CPU 误差 < 1e-3。但如果拿官方 `flash_attn` 包对比 latency，大概率慢 3-5x。差距来自四个工程细节：
-
-| 维度 | Day 2 手写版 | 差距来源 | 今日对应官方源码 |
-|------|-------------|---------|----------------|
-| 数据加载 | 普通 global → shared（`__syncthreads` 同步） | Load 期间 SM 空闲 | `cp_async` 异步拷贝 + 双缓冲 |
-| 精度支持 | FP32 全程 | 带宽利用率仅 FP16 的一半 | FP16/BF16 输入 + FP32 累加 |
-| Shared Memory | K/V 分开存储 | smem 用量大，Br/Bc 受限 | K/V 分时复用同一块 smem |
-| 计算单元 | FMA 标量指令 | 峰值远低于 Tensor Core | WMMA/mma 矩阵指令 |
-
-今天的任务是**读官方源码 + 整理差距分析笔记**，用 ncu 量化每个优化的潜在收益。这不是为了超越官方（那需要 CUTLASS 级工程量），而是建立"看到 memory-bound kernel 就知道优化在哪"的工程直觉。
-
-> 💡 **一句话总结**：官方 FlashAttention 的优势不在算法多巧妙（算法和我们 Day 1 推导的三公式一样），而在于把 async copy、双缓冲、混合精度、K-V 复用、Tensor Core 这些工程细节一个个抠到极致——今天逐个拆解。
+> 💡 **为什么重要**：Day 1-6 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
 
 ---
 
-### 理论学习
+### Week 3 知识地图
 
-#### 3.1 官方源码结构总览
+![Transformer 单层数据流](../../week3/images/transformer_dataflow.svg)
 
-![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
+Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
 
-**仓库**：https://github.com/Dao-AILab/flash-attention
+![Week 3 学习主线](../../images/week3_learning_pipeline.svg)
 
-**核心文件**：
+| Day | 主题 | 核心产出 | 关键概念 |
+|-----|------|---------|---------|
+| Day 1 | Trace Transformer 推理流程 | torch.profiler 时间线 | Prefill vs Decode、6 类算子 |
+| Day 2 | 手写 Softmax / LayerNorm Kernel | softmax_layernorm.cu | safe softmax 三遍扫描、两级 block reduce |
+| Day 3 | 源码分析 PyTorch / FasterTransformer | 优化对比表 | 向量化加载、warp vs block dispatch、Welford |
+| Day 4 | Attention IO 分析 | attention_naive.cu | O(N²) 物化、HBM 读写量化 |
+| Day 5 | 算子接入 Mini 引擎 | mini_engine.py | C++ Extension、load_inline |
+| Day 6 | 端到端 Profiling + Fusion | profiling 报告 | nsys + ncu 五步法、kernel fusion 候选 |
+| **Day 7** | **算子分类 + 总结** | **算子分类表** | **arithmetic intensity 判定** |
 
-| 文件 | 作用 |
-|------|------|
-| `csrc/flash_attn/src/flash_fwd_kernel.h` | Forward Kernel 主入口 |
-| `csrc/flash_attn/src/kernel_traits.h` | 模板参数定义（Br/Bc/d/Warps） |
-| `csrc/flash_attn/src/softmax.h` | online softmax 辅助函数 |
-| `csrc/flash_attn/src/utils.h` | 通用工具（cp_async 包装、类型转换） |
-
-**阅读重点**：
-1. Kernel launch 的 grid/block 维度如何确定
-2. `Kernel_traits` 模板如何根据 d 自动选择分块参数
-3. `cp_async` 如何隐藏 global → shared 的加载延迟
-4. K/V tile 如何分时复用 shared memory
-5. warp group 如何划分 Q tile 的子块
-
-#### 3.2 Kernel_traits 模板设计
-
-官方代码使用模板参数 `Kernel_traits` 来组织所有分块参数：
-
-```cpp
-template <typename Kernel_traits> __global__ void flash_fwd_kernel(...) {
-    constexpr int kBlockM = Kernel_traits::kBlockM;   // Br
-    constexpr int kBlockN = Kernel_traits::kBlockN;   // Bc
-    constexpr int kHeadDim = Kernel_traits::kHeadDim; // d
-    constexpr int kNWarps = Kernel_traits::kNWarps;   // warps per block
-}
-```
-
-**分块参数随 d 变化**：
-
-| 配置 | d=64 | d=128 | d=256 |
-|------|------|-------|-------|
-| Br (kBlockM) | 128 | 128 | 128 |
-| Bc (kBlockN) | 128 | 64/128 | 64 |
-| Warps/Block | 4 | 8 | 16 |
-
-##### 为什么 d 越大 Bc 越小？
-
-- 每个 KV tile 占用 shared memory = `Bc × d`。d 增大时，若 Bc 不变，smem 用量线性增长
-- 为保持总 smem 在限制内（RTX 5090 164 KB/SM），d 增大时必须减小 Bc
-- 同时增加 warps 数量以维持足够的计算并行度（d 大时每行计算量更大）
-
-> 💡 **关键洞察**：`Kernel_traits` 模板让编译器在编译期展开所有分块参数，循环边界、shared memory 大小都是常量——编译器能充分优化（unroll、寄存器分配）。Day 2 我们用 `constexpr` 实现了类似效果，但官方的模板更通用，支持多种 d 自动 dispatch。
-
-#### 3.3 cp_async 异步拷贝
-
-Day 2 我们用普通 global → shared 加载：
-
-```cuda
-// Day 2 手写版：同步加载
-s_K[r][c] = K[global_idx]; // global → shared
-__syncthreads();           // 等待所有线程加载完成
-// 计算 S = Q × K^T ...
-```
-
-问题：**加载期间 SM 空闲**——所有线程都在等 HBM 数据到达，计算单元空转。
-
-官方用 `cp_async`（Ampere+ CC 8.0）实现异步拷贝：
-
-```cuda
-// 官方实现：异步加载 + 双缓冲
-cp_async(s_K[buf], K[global_idx], 16); // 发起异步加载，不阻塞
-// 前一个 buffer 的计算可以同时进行
-cp_async_wait(); // 计算完成后等待加载完成
-__syncthreads();
-```
-
-![FlashAttention Naive vs Fused 对比](../images/flash_attention_naive_vs_fused.svg)
-
-##### 双缓冲（Double Buffering）
-
-![单缓冲 vs 双缓冲](../../images/week4_double_buffering.svg)
-
-**收益**：global → shared 的加载延迟被计算掩盖，理论提升 30-50%（取决于 compute/load 比例）。
-
-#### 3.4 K/V Shared Memory 分时复用
-
-Day 2 我们为 K 和 V 各分配一份 shared memory：
-
-```cuda
-// Day 2：K/V 分开
-__shared__ float s_K[Bc][D]; // 16 KB
-__shared__ float s_V[Bc][D]; // 16 KB
-// 总计 32 KB
-```
-
-官方实现利用一个关键观察：**K 和 V 在计算过程中是分时使用的**——计算 S=QK^T 时只需要 K，计算 O=PV 时只需要 V。因此可以用同一块 shared memory 先存 K，算完 S 后再加载 V 覆盖 K：
-
-```cuda
-// 官方：K/V 复用
-__shared__ float s_KV[Bc][D]; // 16 KB（只有一份）
-// 阶段 1：加载 K 到 s_KV，计算 S = Q × s_KV^T
-// 阶段 2：加载 V 覆盖 s_KV，计算 O = P × s_KV
-```
-
-**收益**：smem 用量减半，允许更大的 Br/Bc（更高的计算强度），或更高的 occupancy。
-
-> ⚠️ **注意**：K/V 复用需要精确的同步——确保 V 加载完成后再开始 PV 计算。官方用 `cp_async_commit` + `cp_async_wait` 管理。
-
-#### 3.5 Warp Group Work Partitioning
-
-Day 2 我们用"每 warp 负责 ROWS_PER_WARP 行 Q"的简单划分。官方实现更精细：
-
-```
-FlashAttention-2 的 warp group 划分：
-- 将 warps 分成若干 warp groups
-- 每个 warp group 负责输出 tile 的一个子块（sub-tile）
-- warp group 内部独立完成该子块的全部 online softmax 计算
-- 避免跨 warp group 的同步和重复计算
-```
-
-| 维度 | Day 2 手写版 | 官方 FA2 |
-|------|-------------|---------|
-| 划分粒度 | 每 warp 若干 Q 行 | warp group 负责 Q 子块 |
-| 跨 warp 通信 | 无（每 Q 行独立） | 无（每子块独立） |
-| 同步开销 | `__syncthreads` 仅 tile 加载 | 更少（warp group 内自治） |
-| 并行度 | 受 ROWS_PER_WARP 限制 | 更高（子块可更细） |
-
-#### 3.6 手写版 vs 官方版差距总结
-
-| 维度 | Day 2 手写版 | 官方实现 | 差距/收益 |
-|------|-------------|---------|----------|
-| 数据加载 | 同步 global → shared | `cp_async` 异步 + 双缓冲 | 隐藏加载延迟 +30-50% |
-| 精度 | FP32 全程 | FP16/BF16 + FP32 累加 | 带宽翻倍 +数据移动减半 |
-| Shared Memory | K/V 分开 | K/V 分时复用 | smem 减半，允许更大 tile |
-| 计算单元 | FMA 标量 | Tensor Core (WMMA/mma) | 峰值算力 4-8x |
-| 分块参数 | 固定 Br/Bc/d | 模板 auto-tune 多配置 | 适配更多场景 |
-| Warp 分工 | 每 warp 若干行 | warp group 子块 | 并行度更高 |
-| 整体性能 | ~1x（基准） | ~3-5x | 工程优化的累积效果 |
+> 💡 **一句话总结**：Week 3 的本质是"理解 Transformer 推理为什么慢，并定位慢在哪些算子"。Day 7 的算子分类表就是这 7 天学习的最终答卷。
 
 ---
 
-### Coding 任务：官方源码阅读与对比分析
+### 核心概念串讲
 
-#### 任务 1：克隆仓库并定位核心文件
+#### 1. Prefill vs Decode：同一套层，两种性能特征
 
-```bash
-git clone https://github.com/Dao-AILab/flash-attention.git
-cd flash-attention/csrc/flash_attn/src
+![Prefill vs Decode 执行特征对比](../../week3/images/prefill_vs_decode.svg)
 
-# 定位核心文件
-ls flash_fwd_kernel.h kernel_traits.h softmax.h utils.h
+Transformer 推理分两阶段，跑的是同一套层，但算子形状截然不同，导致 bound 类型天差地别：
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 输入形状 | `(B, N_prompt, d)`，N 可达数千 | `(B, 1, d)`，每次 1 个 token |
+| GEMM 的 M | 大（N） | 极小（1） |
+| 算子整体 bound | **Compute-bound**（GEMM 主导） | **Memory-bound**（KV Cache 读取主导） |
+| SM 利用率 | 60-85% | 10-30% |
+| 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
+
+**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，AI 骤降到 ~1 → memory-bound。
+
+#### 2. Softmax / LayerNorm：memory-bound 算子的典型代表
+
+| 算子 | reduce 次数 | AI (FLOP/Byte) | bound | 关键技巧 |
+|------|------------|----------------|-------|---------|
+| Softmax | 2（max + sum） | ~0.375 | memory-bound | safe softmax 减 max、三遍扫描 |
+| LayerNorm | 2（mean + variance） | ~0.6 | memory-bound | 两次 reduce、affine |
+
+两个算子的核心都是 **block reduce**：warp 级 `__shfl_down_sync` → shared memory 中转 → warp 0 最终归约。这是 Week 2 Day 1 Warp Shuffle 原语的直接工程化。
+
+> ⚠️ **注意**：LayerNorm 的两次 reduce 无法合并——第二次（variance）依赖第一次（mean）的结果。FasterTransformer 用 Welford 在线算法合并成一次遍历，是工程优化而非算法等价。
+
+#### 3. 标准 Attention：O(N²) IO 的根源
+
+![标准 Attention IO 拆解](../../week3/images/attention_io_breakdown.svg)
+
+标准 Attention 三阶段把两个 N×N 中间矩阵 S 和 P 物化到 HBM，这是 O(N²) IO 的根源：
+
+```
+Step 1: S = QK^T / √d → 写 S (N²)
+Step 2: P = softmax(S) → 读 S (N²) + 写 P (N²)
+Step 3: O = PV → 读 P (N²) + 写 O (Nd)
+总计: 3N² + 4Nd → O(N²) when N ≫ d
 ```
 
-**分析任务**：在 `flash_fwd_kernel.h` 中找到 `flash_fwd_kernel` 函数，记录其 grid/block 维度的设置代码。
+| N | S/P 显存 | 能否入 L2(~40MB) | 能否入 HBM(40GB) |
+|---|---------|------------------|------------------|
+| 1024 | 4 MB | ✅ | ✅ |
+| 4096 | 64 MB | ❌ | ✅ |
+| 16384 | 1 GB | ❌ | ✅（紧张） |
+| 65536 | 16 GB | ❌ | ❌（OOM） |
 
-```cpp
-// 伪代码（实际在 flash_fwd_kernel.h 中）
-dim3 grid((M + kBlockM - 1) / kBlockM, num_heads, batch);
-dim3 block(num_threads);
-flash_fwd_kernel<Kernel_traits><<<grid, block, smem_size>>>(...);
-```
+FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 softmax**，把 IO 从 O(N²) 降到 O(Nd)。
 
-#### 任务 2：对比 kernel_traits.h 中不同 d 的配置
+#### 4. 端到端 Profiling：五步诊断法
 
-在 `kernel_traits.h` 中找到 d=64 和 d=128 的 `Kernel_traits` 特化，对比 Br/Bc/Warps 差异。
+![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
 
-```bash
-# 搜索不同 head_dim 的特化
-grep -n "HeadDim\|kBlockM\|kBlockN\|kNWarps" kernel_traits.h | head -30
-```
+| 步骤 | 工具 | 回答的问题 |
+|------|------|-----------|
+| 1. 系统级时间线 | nsys | 哪个算子最慢？（top3） |
+| 2. kernel 级指标 | ncu | 这个算子为什么慢？（SM/DRAM 占用） |
+| 3. 瓶颈判定 | Roofline | memory-bound 还是 compute-bound？ |
+| 4. Stall 分析 | ncu Warp Stall Reasons | 具体阻塞原因（Long Scoreboard = 等内存） |
+| 5. Fusion 机会 | 时间线 + Roofline | 哪些相邻 memory-bound 算子可融合？ |
 
-**记录表**（填入你找到的实际值）：
+**判定法则**：`dram__throughput ≫ sm__throughput` → memory-bound；反之 compute-bound；两者都低 → latency-bound。
 
-| 配置 | kBlockM (Br) | kBlockN (Bc) | kNWarps | kNThreads |
-|------|-------------|-------------|---------|-----------|
-| d=64 | ? | ? | ? | ? |
-| d=128 | ? | ? | ? | ? |
-| d=256 | ? | ? | ? | ? |
+#### 5. Kernel Fusion：省 HBM 中间读写
 
-#### 任务 3：用 ncu 对比 Day 2 手写版与官方版的指标
+![Kernel Fusion 机会](../../week3/images/kernel_fusion_opportunities.svg)
 
-```bash
-# 编译 Day 2 手写版（带 lineinfo）
-nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
+| Fusion 候选 | 收益来源 | 难度 |
+|------------|---------|------|
+| LayerNorm + QKV GEMM | 省去 LN 输出 (B,N,d) 一次读写 | 高 |
+| Softmax + Dropout | 省去 P 一次读写 | 低 |
+| Residual Add + LayerNorm | 省去中间结果 | 中 |
+| GEMM + Bias + GELU | epilogue fusion | 中 |
 
-# profile 手写版
-ncu --metrics \
- sm__throughput.avg.pct_of_peak_sustained_elapsed,\
- dram__throughput.avg.pct_of_peak_sustained_elapsed,\
- sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
- smsp__average_warps_issue_stalled_long_scoreboard.pct \
- --kernel-name regex:flashAttentionForward \
- ./flash_attention_v2
-
-# 若已安装官方 flash_attn 包，对比 profile
-# pip install flash-attn
-# python -c "import flash_attn; ..." 后用 ncu profile
-```
-
-**观察重点**：
-
-| 指标 | 手写版 | 官方版 | 含义 |
-|------|-------|-------|------|
-| SM Throughput | ~30-40% | ~60-80% | 官方计算更密集 |
-| DRAM Throughput | ~40-60% | ~30-50% | 官方 HBM 读写更少 |
-| Long Scoreboard Stall | 高 | 低 | 官方 async copy 隐藏了内存延迟 |
-| Occupancy | ~50-75% | ~60-80% | 官方 smem 更省，occupancy 更高 |
-
-#### 任务 4：LeetGPU 在线题目 —— Reduction
-
-**题目链接**：<https://leetgpu.com/challenges/reduction>
-
-**与今日知识的关联**：
-
-本题核心是**两级归约**的通用骨架——"分块 → warp shuffle 块内归约 → 块间汇总"。FlashAttention 官方源码中，online softmax 的 running max `m` 和分母 `l` 都是归约，Q·K^T 每一行的求和也是归约。通过本题掌握归约的最纯粹形态，再读官方 `flash_fwd_kernel.h` 中 softmax 相关代码时，就能快速识别出相同的归约模式。
-
-> 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 确认 `dram__bytes_read` 接近 4N bytes（memory-bound 下界）。完整题解（含 double 精度累加、warp shuffle 归约、block 间汇总）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
-
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 3）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 3（单调栈），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/) | 中等 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html) |
-| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html) |
-| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html) |
-| [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/) | 中等 | 单调栈 + 跨度合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html) |
-| [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/) | 困难 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
+`torch.compile` 会自动做这些 fusion，kernel 数量减少 30-50%。
 
 ---
 
-### 扩展实验
+### 算子分类决策树：拿到任意算子如何判 bound
 
-#### 实验 1：找到 cp_async 的调用点
+![O(N²) vs O(Nd) IO 增长对比](../../week3/images/on2_vs_ond_scaling.svg)
 
-在官方 `utils.h` 或 `flash_fwd_kernel.h` 中搜索 `cp_async` 或 `memcpy_async`，记录它的调用方式。
+**判定流程**（从理论到验证）：
 
-> 提示：官方用 `cuda::memcpy_async` 或 PTX `cp.async` 指令。找到后对比 Day 2 的同步加载，理解"异步"如何让计算与加载重叠。
+```
+1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
+2. 与 Ridge Point 比较（RTX 5090 ≈ 58.45 FLOP/Byte）
+ - AI < 58.45 → memory-bound
+ - AI > 58.45 → compute-bound
+1. 用 ncu 验证：sm__throughput vs dram__throughput
+2. 经验法则：
+ - element-wise（relu/layernorm/softmax）→ 几乎总是 memory-bound
+ - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
+ - 小 GEMM（M=1 或某维极小）→ 通常 memory-bound
+ - reduction（sum/max）→ memory-bound
+```
 
-#### 实验 2：画出 warp group 划分图
+#### Prefill 阶段算子分类表（B=1, N=1024, d=512, FP32）
 
-在笔记中画出 d=64 配置下，一个 Block 内 4 个 warp 如何划分 128 行 Q tile 的子块。
+| 算子 | FLOPs | Bytes | AI | bound | 优化方向 |
+|------|-------|-------|-----|-------|---------|
+| QKV GEMM | 2·N·d·3d ≈ 1.6G | 8·N·d ≈ 4MB | ~384 | **Compute** | Tensor Core |
+| QK^T GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
+| Attention Softmax | 3·N² ≈ 3.1M | 2·N²·4 ≈ 8MB | ~0.4 | **Memory** | FlashAttention (SRAM) |
+| PV GEMM | 2·N²·d ≈ 1.1G | N²·4 ≈ 4MB | ~256 | **Compute** | FlashAttention |
+| Output GEMM | 2·N·d² ≈ 0.5G | 2·N·d ≈ 4MB | ~128 | **Compute** | Tensor Core |
+| LayerNorm | 5·N·d ≈ 2.6M | 2·N·d·4 ≈ 4MB | ~0.6 | **Memory** | Fusion |
+| FFN GEMM1/2 | 2·N·d·4d ≈ 2.1G | ~5MB | ~400 | **Compute** | Tensor Core |
+| GELU | 4·N·4d ≈ 8.4M | 2·N·4d·4 ≈ 16MB | ~0.5 | **Memory** | Epilogue fusion |
 
-> 提示：128 行 / 4 warps = 每 warp 32 行。但 FA2 可能进一步把 32 行分成子块，让 warp group 内 2 个 warp 协作。画出具体的行 → warp 映射。
+> 💡 **关键洞察**：Prefill 阶段 GEMM 是 compute-bound，softmax/layernorm/gelu 是 memory-bound。整体性能由 GEMM 主导（时间占比 60%+），所以 **Prefill 是 compute-bound**。
 
-#### 实验 3：对比 K/V 复用 vs 分开的 smem 用量
+#### Decode 阶段算子分类表（B=1, M=1, KV Cache 长度 L=1024, d=512）
 
-计算 Br=128, Bc=128, d=64 时：
-- K/V 分开（Day 2 方式）：smem = (Br×d + 2×Bc×d) × 4 = ? KB
-- K/V 复用（官方方式）：smem = (Br×d + Bc×d) × 4 = ? KB
+| 算子 | FLOPs | Bytes | AI | bound | 与 Prefill 差异 |
+|------|-------|-------|-----|-------|---------------|
+| QKV GEMM (M=1) | 2·d·3d ≈ 1.6M | 4·d ≈ 8KB | ~200* | **Memory** | GEMM 退化为向量×矩阵 |
+| QK^T (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 读 KV Cache 大 |
+| Attention Softmax | 3·L ≈ 3K | 2·L·4 ≈ 8KB | ~0.4 | **Memory** | 不变 |
+| PV GEMM (1×L) | 2·L·d ≈ 1M | L·d·4 ≈ 2MB | ~0.5 | **Memory** | 同上 |
+| LayerNorm | 5·d ≈ 2.6K | 2·d·4 ≈ 4KB | ~0.6 | **Memory** | 不变 |
 
-> 提示：分开 = (128×64 + 2×128×64)×4 = 96 KB；复用 = (128×64 + 128×64)×4 = 64 KB。省了 32 KB，可提升 occupancy。
+> *Decode 的 GEMM 虽然理论 AI 较高，但因矩阵极小（M=1），SM 无法充分利用，实际表现为 memory-bound。
+
+> 💡 **关键洞察**：Decode 阶段 **几乎所有算子都是 memory-bound**（M=1 导致 GEMM 的 AI 骤降）。这就是为什么 Decode 是 memory-bound，优化重点是减少 HBM 读写（KV Cache）和 launch overhead（CUDA Graph）。
+
+#### Prefill vs Decode 总览
+
+![延迟对比](../../week3/images/latency_comparison.svg)
+
+| 维度 | Prefill | Decode |
+|------|---------|--------|
+| 主导算子类型 | GEMM（compute-bound） | KV Cache 读取（memory-bound） |
+| 优化重点 | Tensor Core、FlashAttention | KV Cache、CUDA Graph、Continuous Batching |
+| SM 利用率 | 高（60-85%） | 低（10-30%） |
+| 单 token 延迟 | 低（并行处理 N 个 token） | 高（串行生成，每次 1 token） |
+| 吞吐量瓶颈 | 算力 | 显存带宽 |
+
+---
+
+### 总结任务
+
+#### 任务 1：完成 Transformer 算子分类表
+
+将上文两张分类表整理到 [notes/operator_classification.md](../notes/operator_classification.md)，并补充你自己 Mini Engine 的实测数据：
+
+```markdown
+# Week 3 Transformer 算子分类表
+
+## 测试环境
+- GPU: [你的型号]
+- CUDA: 12.x / PyTorch: 2.x
+
+## Prefill 阶段（N=1024, d=512）
+| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
+|------|---------|---------|-----------|-------|
+| QKV GEMM | 384 | xx | xx | Compute |
+| Softmax | 0.4 | xx | xx | Memory |
+| ... | | | | |
+
+## Decode 阶段（M=1, L=1024）
+| 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
+| ... | | | | |
+```
+
+> 💡 用 Day 6 的 ncu 命令采集实测 SM%/DRAM%，对比理论与实测，误差大时排查原因（cache、launch overhead）。
+
+#### 任务 2：整理本周产出
+
+按下表清点本周所有代码和报告，补全缺失项：
+
+| 产出物 | 文件 | 验收标准 | 状态 |
+|--------|------|---------|------|
+| Transformer profiler trace | `day1/trace_transformer.py` + trace_*.json | Prefill/Decode 算子时间表 | ☐ |
+| Softmax + LayerNorm Kernel | `day2/softmax_layernorm.cu` | 与 CPU 误差 < 1e-5 | ☐ |
+| 源码分析笔记 | `day3/notes/source_analysis.md` | 3 个优化点对比 | ☐ |
+| 标准 Attention Kernel | `day4/attention_naive.cu` | 与 CPU 误差 < 1e-3 | ☐ |
+| Mini 引擎 | `day5/mini_engine.py` | 自定义版端到端 PASS | ☐ |
+| Profiling 报告 | `day6/profiling_report.md` | 含 top3 瓶颈分析 | ☐ |
+| 算子分类表 | `day7/notes/operator_classification.md` | Prefill/Decode 分类完整 | ☐ |
+
+#### 任务 3：本周 LeetGPU / LeetCode 题目回顾
+
+本周实战题目汇总（点击查看完整题解）：
+
+| Day | LeetGPU 题目 | LeetCode 题目 |
+|-----|--------------|---------------|
+| Day 1 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [206. 反转链表](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html)、[21. 合并两个有序链表](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html)、[83. 删除排序链表中的重复元素](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html)、[876. 链表的中间结点](https://hzchenxiaobin.github.io/leetcode/problems/876_链表的中间结点.html) |
+| Day 2 | [Group Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html) | [141. 环形链表](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html)、[142. 环形链表 II](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html)、[160. 相交链表](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html)、[19. 删除链表的倒数第 N 个结点](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html)、[234. 回文链表](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
+| Day 3 | [Reduction](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) | [24. 两两交换链表中的节点](https://hzchenxiaobin.github.io/leetcode/problems/24_两两交换链表中的节点.html)、[25. K 个一组翻转链表](https://hzchenxiaobin.github.io/leetcode/problems/25_K个一组翻转链表.html)、[92. 反转链表 II](https://hzchenxiaobin.github.io/leetcode/problems/92_反转链表 II.html)、[143. 重排链表](https://hzchenxiaobin.github.io/leetcode/problems/143_重排链表.html)、[328. 奇偶链表](https://hzchenxiaobin.github.io/leetcode/problems/328_奇偶链表.html) |
+| Day 4 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | [2. 两数相加](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html)、[445. 两数相加 II](https://hzchenxiaobin.github.io/leetcode/problems/445_两数相加 II.html)、[138. 随机链表的复制](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html)、[430. 扁平化多级双向链表](https://hzchenxiaobin.github.io/leetcode/problems/430_扁平化多级双向链表.html) |
+| Day 5 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | [148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)、[23. 合并 K 个升序链表](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html)、[146. LRU 缓存](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
+| Day 6 | [RMS Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html) | [50. Pow(x, n)](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html)、[470. 用 Rand7() 实现 Rand10()](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html)、[289. 生命游戏](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
+| Day 7 | [Softmax Attention](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html) | — |
+
+> 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题对应 8 周刷题计划第 3 周「链表与数学技巧」。把没做完的题目今天补上。
+
+#### 任务 4：Week 4 预热 + 面试复盘
+
+**Week 4 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 4 将深入 FlashAttention：
+
+1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 5 已学简化版，Week 4 学完整版）
+2. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
+3. **手写完整 FlashAttention kernel**：支持 batch、multi-head、不同 seq_len
+4. **性能对比**：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
+
+**本周铺垫的关键概念**：
+- ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 4 用 FlashAttention 解决
+- ✅ Online Softmax 三公式（Week 2 Day 5）→ Week 4 完整实现
+- ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 4 在 SRAM 中做 softmax
+- ✅ Warp Shuffle reduce（Week 2 Day 1）→ Week 4 用于 online softmax 的分块 reduce
+
+**面试复盘**：回顾本周面试题，自问自答（答案见下方"面试要点"）：
+
+1. Prefill vs Decode 的区别？为什么 Decode 是 memory-bound？
+2. Transformer 单层算子分类（compute vs memory）？
+3. Softmax 为什么要减 max？
+4. LayerNorm 需要几次 reduce？
+5. 为什么 Softmax/LayerNorm 是 memory-bound？
+6. PyTorch Softmax 为什么 D 小时用 warp 级？
+7. FP16 reduce 为什么要用 FP32？
+8. 标准 Attention 的 IO 复杂度？O(N²) 来源？
+9. 如何做端到端 profiling 定位瓶颈？
+10. 什么是 kernel fusion？举例。
+
+---
+
+### 面试准备框架
+
+面试中回答 Transformer 算子优化问题，建议用这个结构：
+
+1. **先分类**：这个算子是 GEMM 还是 element-wise/reduction？
+2. **判 bound**：compute-bound 还是 memory-bound？给出 AI 估算
+3. **分阶段**：Prefill 和 Decode 表现是否不同？（GEMM 会随 M 变化）
+4. **给方案**：memory-bound → fusion / 向量化 / 减少读写；compute-bound → Tensor Core / ILP
+5. **联系工具**：用 nsys 找 top3，用 ncu 看 SM/DRAM 占用验证
+
+**示例**：
+
+> **Q：Attention 的 softmax 部分为什么慢？怎么优化？**
+>
+> **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~58.45），纯 memory-bound。
+>
+> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。
+>
+> 用 ncu 验证：标准 Attention 的 softmax 部分 DRAM Throughput ≫ SM Throughput，符合 memory-bound 判定。
+
+---
+
+### 常见误区澄清
+
+| 误区 | 正确理解 |
+|------|---------|
+| Decode 的 GEMM 也是 compute-bound | M=1 时 GEMM 退化为向量×矩阵，AI 骤降，实际是 memory-bound |
+| 自定义 kernel 一定能超过 PyTorch | 官方已高度优化（向量化、warp 级、Welford），只有官方没覆盖的场景（如 FlashAttention）自定义才有优势 |
+| LayerNorm 两次 reduce 能随便合并 | 第二次（variance）依赖第一次（mean），必须 Welford 在线算法才能合并成一次遍历 |
+| Softmax 减 max 只是防溢出 | 还保证数值等价性，是数学恒等变换，不影响结果 |
+| O(N²) 是计算复杂度问题 | O(N²) 是 **IO 复杂度**问题——物化两个 N×N 矩阵的 HBM 读写，计算本身（GEMM）是 compute-bound |
+| Fusion 总是有收益 | 融合 kernel 可能增加 register/shared memory 压力降低 occupancy；只有相邻且数据依赖的算子才能融合 |
+| Profiling 是优化最后一步 | Profiling 应该是优化循环的起点和终点——先定位再优化再验证 |
+
+---
+
+### Week 3 → Week 4 衔接
+
+Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
+
+1. **标准 Attention 的三阶段 IO**（Day 4）：不理解 O(N²) 物化，就无法理解 FlashAttention 的动机
+2. **Online Softmax 三公式**（Week 2 Day 5）：FlashAttention 的算法核心
+3. **Warp Shuffle reduce**（Week 2 Day 1）：FlashAttention 分块 reduce 的基础
+4. **Shared Memory tiling**（Week 1 Day 4）：FlashAttention 的 Q/K/V tile 驻留机制
+5. **Arithmetic intensity 判定**（Day 7）：理解为什么把 softmax 搬到 SRAM 能消除瓶颈
+
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 4 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。
+
+---
+
+### 弹性安排
+
+根据本周完成情况，选择以下一项或多项：
+
+- **补进度**：完成未做的 LeetGPU/LeetCode 题目和实验
+- **深入方向 1**：把 Day 2 的 Softmax 改为 online 两遍扫描版，对比三遍扫描性能
+- **深入方向 2**：用 ncu 详细分析 Mini Engine 中 cuBLAS GEMM 的所有指标，理解它为什么接近峰值
+- **深入方向 3**：阅读 FlashAttention 论文 Section 2-3，预习 tiling + online softmax
+- **面试准备**：和同学互相模拟面试，重点练 Day 7 的 10 道题
 
 ---
 
 ### 今日总结
 
-Day 3 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与官方版的差距：
+Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 
-1. **Kernel_traits 模板**：官方用模板参数组织 Br/Bc/d/Warps，d 越大 Bc 越小（smem 约束），warps 越多（并行度补偿）
-2. **cp_async 异步拷贝**：官方用 `cp_async` + 双缓冲让 global→shared 加载与计算重叠，隐藏内存延迟 +30-50%
-3. **K/V shared memory 分时复用**：K 和 V 分时使用同一块 smem，用量减半，允许更大 tile 或更高 occupancy
-4. **Warp group work partitioning**：官方把 Q tile 划分为子块给 warp group，比 Day 2 的"每 warp 若干行"更细粒度
-5. **混合精度 + Tensor Core**：官方用 FP16/BF16 输入 + FP32 累加 + WMMA 指令，带宽翻倍且峰值算力 4-8x
-6. **差距本质**：算法相同（三公式），差距全在工程细节——async copy、双缓冲、K-V 复用、Tensor Core 逐个抠到极致
+1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
+2. **算子分类表**：用 arithmetic intensity 把 Transformer 全部算子分到 compute/memory 两类，Prefill 的 GEMM 是 compute，softmax/layernorm/gelu 是 memory
+3. **memory-bound 算子三件套**：Softmax（safe softmax 三遍扫描）、LayerNorm（两次 reduce）、Attention softmax（O(N²) 物化）
+4. **源码优化差距**：向量化加载、warp vs block dispatch、Welford 一次 reduce、FP32 混合精度
+5. **端到端 Profiling 五步法**：nsys 找 top3 → ncu 判 bound → Roofline 定方向 → Stall 分析 → Fusion 出方案
+6. **Week 4 衔接**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心动机，本周已铺好全部前置概念
 
-掌握这些后，你就理解了"为什么官方 FlashAttention 比手写快 3-5x"。明天学 FA2 改进，会看到 work partitioning 的进一步优化。
+如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么"，说明 Week 3 过关了。
 
 ---
 
 ### 面试要点
 
-1. **FlashAttention 官方实现中，如何处理不同 head dimension（d=64, 128, 256）？为什么 d 越大 Bc 通常越小？**
+1. **Transformer 的 Prefill 和 Decode 阶段分别是什么 bound？为什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 官方使用模板 `Kernel_traits` 定义不同 d 对应的分块参数，编译期展开
- - d 越大，每个 KV tile 占用的 shared memory 越多（Bc × d）
- - 为保持总 shared memory 在限制内（RTX 5090 164 KB/SM），d 增大时需要减小 Bc
- - 同时增加 warps 数量以维持足够的计算并行度
- - 例如：d=64 时 Bc=128，d=128 时 Bc=64/128，d=256 时 Bc=64
+ - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 58.45，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
+ - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，AI 从 384 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
+ - **根本原因**：M=1 导致 GEMM 的计算量（与 M 成正比）远小于数据读取量（与 N·d 成正比），AI = FLOPs/Bytes 极低
+ - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
 
 </details>
 
 
-2. **FlashAttention 官方实现中，K 和 V tile 如何复用 shared memory？有什么好处？**
+2. **给一个未知算子，如何判断它是 compute-bound 还是 memory-bound？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - K 和 V 在计算过程中是分时使用的：计算 S=QK^T 时只需要 K，计算 O=PV 时只需要 V
- - 因此可以用同一块 shared memory 先存 K，计算完 S 后再加载 V 覆盖 K
- - 好处：节省 shared memory，允许使用更大的 Br/Bc，提高计算强度；或提升 occupancy
- - 实现上需要精确的同步，确保 V 加载完成后再开始 PV 计算（`cp_async_wait`）
+ - **理论计算**：算 FLOPs 和 Bytes，AI = FLOPs/Bytes，与 Ridge Point（RTX 5090 ≈ 58.45）比较
+ - **工具验证**：用 ncu 看 SM Throughput 和 DRAM Throughput，DRAM ≫ SM → memory-bound，反之 compute-bound
+ - **经验法则**：element-wise 和 reduction → 几乎总是 memory-bound；大 GEMM → 通常 compute-bound；小 GEMM（M=1）→ 通常 memory-bound
 
 </details>
 
 
-3. `cp_async` **异步拷贝相比普通 global → shared 加载有什么优势？双缓冲如何工作？**
+3. **标准 Attention 的 IO 复杂度是多少？O(N²) 来自哪里？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 普通加载是同步的：`s_K = K[...]` 发起加载，线程等待数据到达才能继续——SM 空闲
- - `cp_async` 是异步的：发起加载后线程不等待，可以继续做计算（用前一个 buffer 的数据）
- - 双缓冲：声明两份 shared memory buffer（buf0/buf1），"计算 buf0 ‖ 加载 buf1"并行，掩盖加载延迟
- - 收益：global → shared 的传输延迟被计算掩盖，典型提升 30-50%
-  - 限制：需要 Ampere+（CC 8.0），多消耗一倍 smem（可能降 occupancy）
+ - **复杂度**：O(N² + Nd)，当 N ≫ d 时简化为 O(N²)
+ - **O(N²) 来源**：物化两个 N×N 中间矩阵——S=QK^T 写入 + softmax 读出 = 2N²，P=softmax(S) 写入 + PV 读出 = 2N²，合计 4N²
+ - **FlashAttention 解决**：不物化 S/P，在 SRAM 中分块完成 online softmax，IO 降到 O(Nd)
 
 </details>
 
 
-4. **你的手写 FlashAttention 和官方实现的主要差距在哪？要达到官方性能还需要做什么？**
+4. **为什么 Softmax/LayerNorm 是 memory-bound？如何优化？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **差距**：① 同步加载（缺 cp_async + 双缓冲）② FP32 全程（缺混合精度）③ K/V 分开存储（缺复用）④ FMA 标量（缺 Tensor Core）⑤ 固定参数（缺模板 auto-tune）
- - **达到官方性能的路径**：① 引入 `cp_async` + 双缓冲 ② 支持 FP16/BF16 输入 + FP32 累加 ③ K/V 分时复用 smem ④ 用 WMMA/mma 指令做 QK^T 和 PV 的 GEMM ⑤ 模板化多配置
- - **现实建议**：生产环境直接用官方 `flash_attn` 包或 PyTorch 2.0 的 `scaled_dot_product_attention`，手写是为了理解原理
+ - **AI 低**：Softmax 每元素读 1 写 1（8 bytes）只做 ~3 次运算，AI ≈ 0.375；LayerNorm AI ≈ 0.6，都远低于 Ridge Point
+ - **优化方向**：① Kernel Fusion（与相邻算子融合省 HBM 中间读写）② 向量化加载（float4/half2）③ 减少 reduce 次数（online softmax / Welford）④ FP16 存储减带宽（reduce 用 FP32 保精度）
 
 </details>
 
 
-5. **官方 FlashAttention 的 warp group 划分与你的"每 warp 若干 Q 行"有什么区别？**
+5. **如何做端到端 profiling 定位 Transformer 推理瓶颈？完整流程是什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - Day 2 手写版：每个 warp 负责 ROWS_PER_WARP = Br/WARPS 行 Q，简单直接
- - 官方 FA2：把 warps 分成 warp groups，每个 group 负责输出 tile 的一个子块（sub-tile），group 内独立完成 online softmax
- - 区别：官方的子块划分更细，减少 warp 间同步；且 FA2 让 warp group 内自治，避免跨 group 的冗余计算
- - 收益：non-matmul FLOPs 占比从 FA1 的 ~1:10 降到 FA2 的 ~1:20（Day 4 会详讲）
-
- - CUDA 需要开发者显式写 `cp_async` 指令发起异步拷贝 + `cp_async_wait` 等待
- - 两者目标一致：隐藏数据传输延迟，让计算与搬运重叠
+ - **第一步（nsys 系统级）**：采集完整时间线，按 CUDA 时间排序找 top3 算子
+ - **第二步（ncu kernel 级）**：对 top3 分析 SM Throughput 和 DRAM Throughput
+ - **第三步（瓶颈判定）**：DRAM ≫ SM → memory-bound → fusion/向量化/减读写；SM ≫ DRAM → compute-bound → Tensor Core/ILP
+ - **第四步（Stall 分析）**：Long Scoreboard = 等内存，Math Pipe = 计算饱和
+ - **第五步（Fusion 机会）**：从时间线找相邻 memory-bound 算子评估融合收益
 
 </details>
 
+
+6. **Week 3 你最大的收获是什么？**
+
+<details>
+<summary>点击查看答案</summary>
+
+ - 建立"算子形状 → bound 类型 → 优化方向"的完整直觉：拿到任意 Transformer 算子，能从 M/N/K/d 形状秒判 compute-bound 还是 memory-bound，并给出对应优化路径。
+
+---
+
+</details>
+
+## 📁 本周目录结构
+
+```
+week3/
+├── README.md # Week 3 概览
+├── day1/ # Day 1: Trace Transformer 推理流程
+│ ├── README.md
+│ └── trace_transformer.py
+├── day2/ # Day 2: 手写 Softmax/LayerNorm Kernel
+│ ├── README.md
+│ └── kernels/softmax_layernorm.cu
+├── day3/ # Day 3: 源码分析 PyTorch/FasterTransformer
+│ ├── README.md
+│ └── notes/source_analysis.md
+├── day4/ # Day 4: Attention IO 分析
+│ ├── README.md
+│ └── kernels/attention_naive.cu
+├── day5/ # Day 5: 算子接入 Mini 引擎
+│ ├── README.md
+│ └── mini_engine.py
+├── day6/ # Day 6: 端到端 Profiling + Fusion
+│ ├── README.md
+│ └── profiling_report.md
+├── day7/ # Day 7: 算子分类 + 总结
+│ ├── README.md
+│ └── notes/operator_classification.md
+└── website/ # 网站构建
+ ├── build.py
+ └── images/ # SVG 插图
+```
+
+---
+
+## 🔗 推荐资源
+
+| 资源 | 说明 |
+|------|------|
+| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Week 4 核心论文，预习 Section 2-3 |
+| [PyTorch ATen Softmax 源码](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/SoftMax.cu) | Day 3 阅读的官方 softmax 实现 |
+| [FasterTransformer LayerNorm 源码](https://github.com/NVIDIA/FasterTransformer/blob/main/src/fastertransformer/kernels/layernorm_kernels.cu) | Welford 一次 reduce 参考 |
+| [vLLM 博客: How vLLM serves LLM](https://blog.vllm.ai/) | Prefill/Decode 与 PagedAttention |
+| [Nsight Compute 文档](https://docs.nvidia.com/nsight-compute/) | ncu 指标详解 |
+| [Nsight Systems 文档](https://docs.nvidia.com/nsight-systems/) | nsys 时间线采集 |
+
+---
+
+#### 任务 4：LeetGPU 在线题目 —— Softmax Attention
+
+**题目链接**：<https://leetgpu.com/challenges/softmax-attention>
+
+**与今日知识的关联**：Softmax Attention 是 Week 3 算子主线的综合验收——它融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：用 online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，无需物化 S/P。
+
+> 💡 完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
+
+---
+
+## ✅ Week 3 完成标准
+
+- [ ] 能列出 Prefill 阶段算子分类表（GEMM=compute，softmax/LN=memory）
+- [ ] 能列出 Decode 阶段算子分类表（几乎全是 memory-bound）
+- [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致 AI 骤降）
+- [ ] 能计算给定算子的 arithmetic intensity 并判定 bound 类型
+- [ ] Softmax/LayerNorm Kernel 与 CPU 误差 < 1e-5
+- [ ] 标准 Attention Kernel 与 CPU 误差 < 1e-3，ncu 实测 HBM IO 与理论值误差 < 30%
+- [ ] Mini Engine 自定义版端到端 PASS，与 PyTorch 误差 < 1e-4
+- [ ] 生成 profiling 报告（含 top3 瓶颈算子 + 优化方向）
+- [ ] 能口述本周 10 道面试题的答案要点
+- [ ] 理解 Week 4 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
+- [ ] 完成本周 LeetGPU（Group Normalization/Softmax Attention/RMS Normalization）与 LeetCode 题目
+
+---
+
+> 💡 **提示**：Week 3 是从"手写单算子"到"理解系统执行"的转折点。算子分类表是推理系统优化的"地图"——看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。Week 4 的 FlashAttention 是这张地图上最重要的优化案例，务必把本周的 O(N²) IO 和 online softmax 基础打牢。

@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="780" viewBox="0 0 860 780" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="22" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="780" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 6 调度策略总结</text>
+  <path d="M 270 44 Q 430 52 590 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="430" y="60" text-anchor="middle" font-size="11" fill="#888">7 种策略对比 · 选择决策树 · 6 条核心收获</text>
+
+  <!-- ============ Section A: 7-strategy comparison table ============ -->
+  <text x="40" y="92" font-size="14" font-weight="bold" fill="#2b6e9e">📋 调度策略对比表（7 种策略）</text>
+
+  <!-- table header -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="40" y="100" width="180" height="28" rx="4" fill="#4a8edb" stroke="#4a8edb"/>
+    <text x="130" y="119" fill="#fff" font-weight="bold">策略</text>
+    <rect x="220" y="100" width="360" height="28" rx="4" fill="#4a8edb" stroke="#4a8edb"/>
+    <text x="400" y="119" fill="#fff" font-weight="bold">原理</text>
+    <rect x="580" y="100" width="240" height="28" rx="4" fill="#4a8edb" stroke="#4a8edb"/>
+    <text x="700" y="119" fill="#fff" font-weight="bold">适用场景</text>
+  </g>
+
+  <!-- rows -->
+  <g filter="url(#sk)" font-size="10.5">
+    <rect x="40" y="128" width="180" height="30" fill="#e8f0fa" stroke="#bcd7ee"/>
+    <text x="50" y="148" fill="#2b6e9e" font-weight="bold">Static Batching</text>
+    <rect x="220" y="128" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="148" fill="#444">固定 batch，凑齐才开始</text>
+    <rect x="580" y="128" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="148" fill="#444">简单 demo / 请求等长</text>
+
+    <rect x="40" y="158" width="180" height="30" fill="#fce4ec" stroke="#eecdd6"/>
+    <text x="50" y="178" fill="#b85450" font-weight="bold">Dynamic Batching</text>
+    <rect x="220" y="158" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="178" fill="#444">请求级聚合 + 超时</text>
+    <rect x="580" y="158" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="178" fill="#444">吞吐优先、非 LLM</text>
+
+    <rect x="40" y="188" width="180" height="30" fill="#eaf6ee" stroke="#cde6d2"/>
+    <text x="50" y="208" fill="#2e6e2e" font-weight="bold">Continuous Batching</text>
+    <rect x="220" y="188" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="208" fill="#444">iteration-level 重建 batch</text>
+    <rect x="580" y="188" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="208" fill="#444">LLM 自回归推理 ✓</text>
+
+    <rect x="40" y="218" width="180" height="30" fill="#f3eaf7" stroke="#dccae6"/>
+    <text x="50" y="238" fill="#5d3a7e" font-weight="bold">Priority Scheduling</text>
+    <rect x="220" y="218" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="238" fill="#444">高优先级先调度</text>
+    <rect x="580" y="218" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="238" fill="#444">多租户、多 SLA</text>
+
+    <rect x="40" y="248" width="180" height="30" fill="#fce4ec" stroke="#eecdd6"/>
+    <text x="50" y="268" fill="#b85450" font-weight="bold">Preemption</text>
+    <rect x="220" y="248" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="268" fill="#444">显存不足抢占（Recompute/Swap）</text>
+    <rect x="580" y="248" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="268" fill="#444">显存压力</text>
+
+    <rect x="40" y="278" width="180" height="30" fill="#fef6e6" stroke="#ecdcc4"/>
+    <text x="50" y="298" fill="#7a5415" font-weight="bold">Chunked Prefill</text>
+    <rect x="220" y="278" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="298" fill="#444">长 prompt 拆块与 decode 交错</text>
+    <rect x="580" y="278" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="298" fill="#444">长短混合、TPOT 敏感</text>
+
+    <rect x="40" y="308" width="180" height="30" fill="#e8f0fa" stroke="#bcd7ee"/>
+    <text x="50" y="328" fill="#2b6e9e" font-weight="bold">Speculative Decoding</text>
+    <rect x="220" y="308" width="360" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="230" y="328" fill="#444">小模型预测 + 大模型验证</text>
+    <rect x="580" y="308" width="240" height="30" fill="#fdfcf7" stroke="#e5e0d5"/>
+    <text x="590" y="328" fill="#444">低延迟、有 draft model</text>
+  </g>
+
+  <!-- ============ Section B: decision tree (compact) ============ -->
+  <text x="40" y="372" font-size="14" font-weight="bold" fill="#7a5415">🌳 调度策略选择决策树</text>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="320" y="384" width="220" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="430" y="402" fill="#7a5415" font-weight="bold">Step 1：要求最低延迟？</text>
+    <text x="430" y="420" fill="#7a5415" font-size="9">（交互式）</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 320 406 L 200 406 L 200 448" marker-end="url(#ar)"/>
+    <path d="M 430 428 L 430 460" marker-end="url(#ar)"/>
+  </g>
+  <text x="250" y="400" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <text x="442" y="448" font-size="10" fill="#888" font-weight="bold">否</text>
+
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="80" y="448" width="240" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="200" y="473" fill="#2b6e9e">Static / 小 batch + Priority</text>
+  </g>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="320" y="464" width="220" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+    <text x="430" y="482" fill="#7a5415" font-weight="bold">Step 2：LLM 自回归？</text>
+    <text x="430" y="500" fill="#7a5415" font-size="9">（生成长度差异大）</text>
+  </g>
+
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 540 486 L 660 486 L 660 524" marker-end="url(#ar)"/>
+    <path d="M 430 508 L 430 540" marker-end="url(#ar)"/>
+  </g>
+  <text x="610" y="480" font-size="10" fill="#b85450" font-weight="bold">否</text>
+  <text x="442" y="528" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="540" y="524" width="240" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <text x="660" y="549" fill="#b85450">Dynamic Batching</text>
+  </g>
+
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="300" y="544" width="260" height="44" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+    <text x="430" y="572" fill="#2e6e2e" font-weight="bold">Continuous Batching ✓</text>
+  </g>
+  <text x="570" y="572" font-size="10" fill="#5d3a7e">+ 按需叠加 Priority / Chunked / Preemption / Speculative</text>
+
+  <!-- ============ Section C: 6 key takeaways ============ -->
+  <text x="40" y="618" font-size="14" font-weight="bold" fill="#2e6e2e">✅ Week 6 核心收获</text>
+
+  <g filter="url(#sk)" font-size="11">
+    <rect x="40" y="628" width="380" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <text x="52" y="651" fill="#2e6e2e" font-weight="bold">1.</text>
+    <text x="70" y="651" fill="#2e6e2e">Dynamic→Continuous：request → iteration 级调度</text>
+
+    <rect x="440" y="628" width="380" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+    <text x="452" y="651" fill="#2e6e2e" font-weight="bold">2.</text>
+    <text x="470" y="651" fill="#2e6e2e">vLLM Scheduler：5 步 + Budget + Preemption</text>
+
+    <rect x="40" y="670" width="380" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="52" y="693" fill="#2b6e9e" font-weight="bold">3.</text>
+    <text x="70" y="693" fill="#2b6e9e">vLLM(Python,灵活) vs TRT-LLM(C++,快)</text>
+
+    <rect x="440" y="670" width="380" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="452" y="693" fill="#7a5415" font-weight="bold">4.</text>
+    <text x="470" y="693" fill="#7a5415">Chunked Prefill：拆块交错，平滑 TPOT</text>
+
+    <rect x="40" y="712" width="380" height="36" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="52" y="735" fill="#5d3a7e" font-weight="bold">5.</text>
+    <text x="70" y="735" fill="#5d3a7e">Mini 引擎 v1：并发 + 优先级 + Future</text>
+
+    <rect x="440" y="712" width="380" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+    <text x="452" y="735" fill="#b85450" font-weight="bold">6.</text>
+    <text x="470" y="735" fill="#b85450">Benchmark：饱和点 + P99 尾延迟</text>
+  </g>
+
+  <text x="430" y="768" text-anchor="middle" font-size="10" fill="#5d3a7e">从凑批到并发服务 · 策略决策树是推理调度选型的通用工具箱</text>
+</svg>

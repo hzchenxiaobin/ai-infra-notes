@@ -1,566 +1,433 @@
-## Day 1：高频面试题基础篇
+## Day 1：整合全部自定义 Kernel
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 复习 **GPU 基础四大考点**——SM/Warp/Thread 层次结构、Occupancy 与影响因素、Memory Hierarchy 延迟层次、Bank Conflict 与 padding<br>
-2. 掌握 **Kernel 优化八层路径**——从 Naive(1%) 到 Tensor Core(80%+) 的 GEMM 优化阶梯，float4 向量化、Warp Shuffle、Double Buffering 原理<br>
-3. 理解 **CUDA 编程三个陷阱**——`__syncthreads()` vs Warp Shuffle 同步差异、Default Stream 隐式同步坑、`cudaMemcpyAsync` 与 pinned memory<br>
-4. 学会 **Roofline Model 分析法**——算术强度定位 memory-bound/compute-bound，RTX 5090 ridge point 计算<br>
-5. 能用 **ncu 三步法分析 kernel 瓶颈**——看 SM/Memory Throughput → Roofline 定位 → Warp Stall Reasons<br>
-6. 产出一份 **基础篇面试题自问自答笔记**，每道题限时 3 分钟口述，录音回放修正卡壳点
+1. 理解 **自定义 Kernel 集成的替换清单**——Softmax、LayerNorm、FlashAttention 替换 PyTorch 原生算子，大 GEMM 保留 cuBLAS<br>
+2. 掌握 **PyTorch C++ Extension 集成流程**——`.cu` kernel + `.cpp` wrapper → `load_inline` 动态编译 → Python 模块调用<br>
+3. 能实现 **C++ Wrapper 接口**——`at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出、`getCurrentCUDAStream()` 保持 stream 一致<br>
+4. 理解 **集成的六大注意事项**——stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理<br>
+5. 掌握 **分层验证策略**——单算子对比 PyTorch → 多算子组合 → 端到端输出 → 性能对比<br>
+6. 用 Python + `load_inline` 手写一个 **CustomKernelTransformerLayer**，实测自定义 kernel vs PyTorch eager 的精度和性能
 
-> 💡 **为什么重要**：Day 1-2 我们完善了项目文档和架构图，面试官接下来会深挖技术细节。"基础篇"是面试的敲门砖——SM/Warp/Thread、Occupancy、Memory Hierarchy、GEMM 优化路径、Roofline 这些问题几乎每场 AI Infra 面试都会出现。答不上来直接出局，答得流畅是进入下一轮的入场券。
+> 💡 **为什么重要**：Day 3 分析了高级特性的收益，但 Mini 引擎仍用 PyTorch 原生算子。自定义 Kernel 集成是 Infra 工程师的核心能力——把 Week 2-4 手写的 GEMM、FlashAttention、Softmax、LayerNorm 接入推理引擎，替换 PyTorch 对应算子。这要求理解 PyTorch C++ Extension 的编译流水线、tensor 内存布局、stream 一致性等工程细节，是面试必考题"如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎"。
 
 ---
 
-### 学前导读：为什么面试要考"基础"
+### 学前导读：为什么不能直接用 PyTorch 算子
 
-面试官问 GPU 基础不是为了背书，而是验证你**是否真正理解了底层原理**：
+PyTorch 原生算子功能正确，但在推理场景下有几个不足：
 
 ```
-"会写 kernel" ≠ "理解 GPU"
-  会写 kernel → 能完成任务（工程师水平）
-  理解 GPU → 能解释为什么快/慢、能做 trade-off（专家水平）
-
-面试官的逻辑：
-  问 Occupancy → 你是否知道寄存器/shared mem 对性能的影响
-  问 Bank Conflict → 你是否真正写过 shared memory kernel
-  问 Roofline → 你是否会用数据驱动的方式分析瓶颈
-  问 GEMM 优化路径 → 你是否理解从 1% 到 80% 每步优化的原理
+PyTorch 原生算子的问题：
+ 1. 融合度低 → Softmax + Scale + MatMul 分 3 个 kernel launch，开销大
+ 2. 显存占用高 → 中间结果（attention matrix）全量物化到 HBM
+ 3. 无法定制 → 推理特化（如 KV Cache、PagedAttention）需要自定义逻辑
+ 4. 缺乏控制 → 无法精细控制 tiling、shared memory、warp 调度
 ```
 
-| 层级 | 问题示例 | 考察点 |
-|------|---------|--------|
-| 记忆层 | "SM 是什么？" | 概念是否清晰 |
-| 理解层 | "Occupancy 低会怎样？" | 因果关系 |
-| 应用层 | "怎么把 GEMM 优化到 72%？" | 实战经验 |
-| 分析层 | "这个 kernel 的瓶颈在哪？" | Roofline + ncu |
+| 维度 | PyTorch 原生 | 自定义 Kernel |
+|------|-------------|--------------|
+| FlashAttention | QK^T 物化到 HBM | **分块 tiling，中间结果留在 SRAM** |
+| Softmax + Attention | 2 个 kernel | **1 个融合 kernel** |
+| LayerNorm | 3 趟（mean→var→norm） | **1 趟融合** |
+| KV Cache 支持 | 需手动拼接 | **直接写入 cache 位置** |
+| 大 GEMM | cuBLAS | **cuBLAS（教学 kernel 太慢，保留官方库）** |
 
-> 💡 **一句话总结**：基础篇面试题不是"背答案"，而是"证明你理解了 GPU 的工作原理"——每个答案都要能画出图、给出数字、解释因果。
+> 💡 **一句话总结**：自定义 kernel 的核心价值是**算子融合**（减少 launch 和 HBM 往返）和**推理特化**（KV Cache、PagedAttention）。大 GEMM 仍用 cuBLAS（教学版 register blocking 比 cuBLAS 慢 5-10x）。
 
 ---
 
 ### 理论学习
 
-#### 1.1 知识地图总览
+#### 4.1 替换清单与集成策略
 
-![面试基础篇知识地图：四大主题 × 核心考点](../../week8/images/interview_basics_knowledge_map.svg)
+![自定义 Kernel 集成：替换 PyTorch 算子](../../week7/images/kernel_integration_overview.svg)
 
-基础篇覆盖四大主题，每个主题 3-4 个核心考点：
+##### 替换清单
 
-| 主题 | 核心考点 | 面试高频度 |
-|------|---------|-----------|
-| **① GPU 基础** | SM/Warp/Thread、Occupancy、Memory Hierarchy、Bank Conflict | ⭐⭐⭐⭐ |
-| **② Kernel 优化** | GEMM 八层路径、float4、Warp Shuffle、Double Buffering | ⭐⭐⭐⭐⭐ |
-| **③ CUDA 编程** | `__syncthreads` vs Shuffle、Default Stream、`cudaMemcpyAsync` | ⭐⭐⭐ |
-| **④ Profiling** | ncu 三步法、Roofline Model、Warp Stall Reasons | ⭐⭐⭐⭐ |
+| PyTorch 算子 | 自定义 Kernel | 替换原因 | 保留/替换 |
+|-------------|--------------|---------|----------|
+| `F.softmax` | `softmax_kernel` | 可与 attention 融合 | **替换** |
+| `F.layer_norm` | `layernorm_kernel` | 3 趟→1 趟融合 | **替换** |
+| `torch.matmul` (Attention) | `flash_attention_kernel` | 分块 tiling，省 HBM | **替换** |
+| `torch.matmul` (QKV/FFN GEMM) | cuBLAS | 教学 kernel 太慢 | **保留 cuBLAS** |
 
-#### 1.2 GPU 基础
-
-##### SM / Warp / Thread 层次
-
-![Grid / Block / Warp / Thread 层次](../../images/week8_grid_block_hierarchy.svg)
-
-- **SM（Streaming Multiprocessor）**：GPU 的基本计算单元，含多个 CUDA 核心、寄存器文件、shared memory
-- **Warp**：32 个 thread 组成，是 GPU 调度的最小单位，warp 内所有 thread 执行相同指令（SIMT）
-- **关系**：一个 GPU 有多个 SM，一个 SM 可同时运行多个 warp，一个 warp 内 32 thread 同步执行
-
-##### Occupancy
+##### 为什么大 GEMM 保留 cuBLAS？
 
 ```
-Occupancy = active_warp / max_warp_per_SM
+教学版 register blocking GEMM：
+ - 手写 tiling + shared memory
+ - 无 Tensor Core 加速
+ - 性能约为 cuBLAS 的 10-20%
+
+cuBLAS：
+ - 高度优化的 SASS 指令
+ - Tensor Core 加速（WMMA/MMA）
+ - 自动选择最优 tiling
+ → 大 GEMM 必须用 cuBLAS
 ```
 
-| 降低 Occupancy 的原因 | 机制 |
-|---------------------|------|
-| 每 thread 寄存器过多 | SM 寄存器总量固定，寄存器多 → 每 SM 能装的 warp 少 |
-| 每 block shared mem 过多 | SM shared mem 总量固定 |
-| block size 非 32 倍数 | 不足 32 的尾部 thread 浪费一个 warp |
-| grid size 不足 | SM 数量多但 block 不够分 |
+> ⚠️ **生产环境**：FlashAttention 和 Softmax/LayerNorm 用官方实现（FlashAttention 库、Apex Normalization），教学版用于理解原理。
 
-> ⚠️ Occupancy 低 → SM 上的 active warp 少 → 无法通过 warp 切换隐藏延迟 → 性能下降。但**不是越高越好**——100% occupancy 但寄存器不足导致 spilling 反而更慢。
+#### 4.2 PyTorch C++ Extension 编译流水线
 
-##### Memory Hierarchy
+![PyTorch C++ Extension 编译流水线](../../week7/images/cpp_extension_pipeline.svg)
 
-| 层级 | 延迟 | 带宽 | 容量 |
-|------|------|------|------|
-| Register | ~0 cycle | 极高 | ~256KB/SM |
-| Shared Memory / L1 | ~20-30 cycles | ~128B/clock/SM | 100KB/SM (5090) |
-| L2 Cache | ~200 cycles | — | ~96MB |
-| Global Memory (GDDR7) | ~400-800 cycles | 1.792 TB/s (5090) | 32GB |
+##### 四步流水线
 
-优化原则：**让热点数据驻留在 register/shared memory，合并访问 global memory**。
+![PyTorch C++ Extension 编译流水线](../../images/week7_cpp_extension_pipeline.svg)
 
-##### Bank Conflict
-
-Shared Memory 分为 32 个 bank（对应 warp 内 32 thread）。同一 warp 的多个 thread 同时访问同一 bank → 串行化（bank conflict）。
-
-```
-无 conflict：thread i 访问 bank i（连续地址）→ 1 次完成
-2-way conflict：2 个 thread 访问同一 bank → 2 次完成
-32-way conflict：32 个 thread 访问同一 bank → 32 次完成（最差）
-```
-
-避免方法：① padding（`s_A[BM][BK+1]`，加一列打乱 bank 对齐）② 向量化访问 ③ 连续 thread 访问不同 bank。
-
-#### 1.3 Kernel 优化：GEMM 八层路径
-
-> 两套口径：**理论占比**是教学通用的经验阶梯（背这个应对"每层收益来源"）；**实测占比**是 week10/day1 在 RTX 5090、M=N=K=4096 上的真实数据（cuBLAS 基线 68.2 TFLOPS = 100%）。面试答"理论阶梯 + 自己实测峰值 ~64%"。
-
-| 层级 | 优化手段 | 理论占比 | 实测占比（week10/day1 · RTX 5090 · 4096³） | 关键原理 |
-|------|---------|---------|---------|---------|
-| 1 | Naive（1 thread 1 元素） | ~1% | 10.6%（7.3 TFLOPS） | 无复用，全走 global memory |
-| 2 | Shared Memory Tiling | ~15% | 13.3%（9.1 TFLOPS） | K 维 tile 加载到 SMem 复用 |
-| 3 | Register Blocking（TM×TN） | ~40% | 30.8%（21.1 TFLOPS） | 每 thread 算一个小块，复用 register |
-| 4 | float4 向量化加载 | ~55% | 64.3%（44.1 TFLOPS） | 一次读 16B，减少指令数（实测最大单步收益） |
-| 5 | Warp Shuffle / 合并写回 | ~60% | 62.9%（43.1 TFLOPS，v5 合并写回，收益在噪声内） | warp 内直接传寄存器，不经 SMem |
-| 6 | Double Buffering | ~70% | 63.8%（43.9 TFLOPS，同步实现未重叠，需 cp.async/TMA） | 前台算 + 后台加载，隐藏延迟 |
-| 7 | Tensor Core (WMMA/mma) | ~80%+ | 未实现（CUTLASS 范畴） | 矩阵乘加速单元 |
-| 8 | Auto-tuning | ~90%+ | 未实现（CUTLASS 范畴） | 参数搜索（tile 大小、block 维度） |
-
-##### float4 向量化
-
-GPU global memory 以 128-byte cache line 访问。4 个连续 float（16 bytes）可用一条 128-bit load 指令完成 → 减少指令数、提升带宽利用率。需地址对齐。
-
-##### Warp Shuffle
-
-| 维度 | Warp Shuffle | Shared Memory |
-|------|-------------|---------------|
-| 延迟 | ~1-2 cycles | ~20-30 cycles |
-| 同步 | warp 内隐式 | 需 `__syncthreads()` |
-| 范围 | warp 内（32 thread） | block 内 |
-
-#### 1.4 CUDA 编程三个陷阱
-
-##### `__syncthreads()` vs Warp Shuffle
-
-- `__syncthreads()`：block 级同步，所有 thread 必须到达，有性能开销
-- Warp Shuffle：warp 内隐式同步，硬件自动完成，开销极小
-- 局限：Shuffle 只限 warp 内（32 thread），block 级通信仍需 `__syncthreads()`
-
-##### Default Stream 的坑
-
-Default Stream（Stream 0）会**隐式同步**所有 explicit stream。如果在 explicit stream 中做并发，然后调用 `cudaMemcpy`（走 default stream），所有并发被打断。
+##### C++ Wrapper 关键模式
 
 ```cpp
-// 解决：创建 non-blocking stream
-cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
-// 或编译选项
-nvcc --default-stream per-thread
+at::Tensor softmax_forward(at::Tensor input) {
+    int M = input.size(0); // 从 Tensor 获取形状
+    int N = input.size(1);
+    auto output = at::empty_like(input); // 分配输出 Tensor（同 dtype/device/layout）
+
+    int threads = std::min(N, 256);
+    softmax_kernel<<<M, threads>>>( // launch kernel
+        input.data_ptr<float>(),    // Tensor → 裸指针
+        output.data_ptr<float>(), M, N);
+    return output; // 返回 Tensor 给 Python
+}
 ```
 
-##### `cudaMemcpyAsync` vs `cudaMemcpy`
+> 💡 **关键 API**：`at::empty_like()` 分配输出、`data_ptr<float>()` 取裸指针、`size()`/`dim()` 取形状。这些是 PyTorch C++ Extension 的"三板斧"。
 
-- `cudaMemcpy`：同步，阻塞 host
-- `cudaMemcpyAsync`：异步，需要 pinned memory（`cudaMallocHost`），可与其他 kernel overlap
+#### 4.3 集成的六大注意事项
 
-#### 1.5 Profiling：Roofline Model
+##### ① Stream 一致性
 
-![Roofline Model：判断 kernel 瓶颈](../../week8/images/roofline_model_interview.svg)
+```cpp
+// ❌ 错误：kernel 可能在错误 stream 上执行
+softmax_kernel<<<M, threads>>>(input.data_ptr<float>(), ...);
 
-##### Roofline 三步法
-
-1. **算 AI**：`Arithmetic Intensity = FLOP / Bytes`（每字节搬运做多少次运算）
-2. **定位**：AI < ridge point → memory-bound；AI > ridge point → compute-bound
-3. **优化方向**：memory-bound → 减少访存/提升带宽；compute-bound → 用 Tensor Core/减少计算
-
-##### RTX 5090 关键参数
-
-```
-FP32 峰值: 104.75 TFLOPS
-显存带宽: 1.792 TB/s (GDDR7)
-Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
+// ✓ 正确：使用 PyTorch 当前 stream
+cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+softmax_kernel<<<M, threads, 0, stream>>>(input.data_ptr<float>(), ...);
 ```
 
-##### Kernel 瓶颈分析三步
+> ⚠️ PyTorch 的 stream 可能与默认 stream 不同。如果不指定 stream，kernel 在默认 stream 执行，可能与其他 stream 的操作乱序。
 
-1. `ncu --set full` 看 **SM Throughput** 和 **Memory Throughput**
-   - Memory >> SM → memory-bound
-   - SM >> Memory → compute-bound
-2. 看 **Achieved Occupancy**：是否过低（< 50%）
-3. 看 **Warp Stall Reasons**：
-   - Long Scoreboard → global memory 延迟
-   - Math Pipe Throttle → FMA 饱和
+##### ② FP32 精度
 
----
+```cuda
+// reduce 用 atomicAdd 时，float 累积误差
+// 建议：用 double 做中间 reduce，或 Kahan summation
+__shared__ double s_sum; // 用 double 而非 float
+```
 
-### Coding 任务：基础篇面试题自问自答笔记
+##### ③ 内存布局
 
-#### 任务 1：创建 interview_basics.py
+```
+PyTorch Tensor 默认 row-major (contiguous)
+自定义 kernel 必须假设 row-major
+→ 调用前用 tensor.contiguous() 确保
+→ 跨 stride 访问需用 input.stride(0/1)
+```
 
-创建文件 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/interview_basics.py)，将 12 道基础篇高频题整理为可自测的 Q&A 系统：
+##### ④ 边界处理
+
+```
+N 不是 blockDim.x 的整数倍 → 用 if (i < N) 保护
+空输入 → 提前 return
+非对齐尺寸 → 不能用 float4 向量化
+```
+
+##### ⑤ 形状检查
+
+```cpp
+TORCH_CHECK(input.dim() == 2, "Expected 2D tensor");
+TORCH_CHECK(input.is_cuda(), "Expected CUDA tensor");
+TORCH_CHECK(input.is_contiguous(), "Expected contiguous tensor");
+```
+
+##### ⑥ 错误处理
+
+```cpp
+// kernel launch 后检查错误
+cudaError_t err = cudaGetLastError();
+TORCH_CHECK(err == cudaSuccess, "Kernel launch failed: ", cudaGetErrorString(err));
+```
+
+#### 4.4 分层验证策略
+
+```
+Step 1: 单算子验证
+ softmax_forward vs F.softmax → max_diff < 1e-5
+ layernorm_forward vs F.layer_norm → max_diff < 1e-4
+ flash_attention_forward vs manual QK^T·softmax·V → max_diff < 1e-3
+
+Step 2: 多算子组合
+ LayerNorm + QKV + Attention + Output → 逐层对比
+
+Step 3: 端到端
+ 完整 TransformerLayer forward → max_diff < 1e-2（FP32 累积误差容忍）
+
+Step 4: 性能对比
+ PyTorch eager vs Custom kernel → 测量 latency
+ （教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）
+```
+
+> 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 float24 尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
+
+### Coding 任务：实现 CustomKernelTransformerLayer
+
+#### 任务 1：创建 custom_ops_module.py
+
+创建文件 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/custom_ops_module.py)，实现自定义 Kernel 的 PyTorch C++ Extension 集成：
 
 ```python
-# interview_basics.py —— 基础篇面试题自测系统
-# 运行命令: python interview_basics.py
-# 依赖: 仅标准库
+# custom_ops_module.py —— 自定义 Kernel 封装模块
+# 运行命令: python custom_ops_module.py
+# 依赖: torch（有 CUDA 时编译真实 kernel；无 CUDA 时用 PyTorch fallback）
 
-import random
-import time
+# 1. CUDA 源码（内嵌字符串）
+CUDA_SOURCE = r"""
+__global__ void softmax_kernel(...) { ... }
+__global__ void layernorm_kernel(...) { ... }
+__global__ void flash_attention_kernel(...) { ... }
 
-QUESTIONS = [
-    {
-        "id": 1,
-        "topic": "GPU 基础",
-        "question": "什么是 SM、Warp、Thread？它们之间的关系是什么？",
-        "answer": (
-            "SM（Streaming Multiprocessor）：GPU 基本计算单元，含多核心+寄存器+shared memory\n"
-            "Warp：32 thread 组成，是 GPU 调度基本单位（SIMT）\n"
-            "Thread：最细粒度执行单元\n"
-            "关系：Grid > Block > Warp > Thread；一个 SM 可同时运行多个 warp"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 2,
-        "topic": "GPU 基础",
-        "question": "什么是 Occupancy？什么情况下会降低？",
-        "answer": (
-            "Occupancy = active_warp / max_warp_per_SM\n"
-            "降低原因：① 寄存器过多 ② shared mem 过多 ③ block 非对齐 ④ grid 不足\n"
-            "影响：低 occupancy → 无法隐藏延迟 → 性能下降"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 3,
-        "topic": "GPU 基础",
-        "question": "解释 GPU 的 memory hierarchy。",
-        "answer": (
-            "Register(~0c) < Shared Mem/L1(~20c) < L2(~200c) < HBM(~500c)\n"
-            "优化目标：热点数据驻留 register/shared mem，合并访问 global memory"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 4,
-        "topic": "GPU 基础",
-        "question": "什么是 bank conflict？如何避免？",
-        "answer": (
-            "Shared memory 分 32 bank；同 warp 多 thread 访问同一 bank → 串行化\n"
-            "避免：padding（s_A[BM][BK+1]）、向量化、连续 thread 访问不同 bank"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 5,
-        "topic": "Kernel 优化",
-        "question": "如何把 GEMM 优化到 cuBLAS 80%？",
-        "answer": (
-            "理论阶梯：Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)\n"
-            "→ Warp Shuffle(60%) → Double Buffer(70%) → Tensor Core(80%+)\n"
-            "→ Auto-tuning(90%+)\n"
-            "实测（week10/day1 · RTX 5090 · 4096³，cuBLAS=68.2 TFLOPS）：\n"
-            "Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%\n"
-            "→ 合并写回 62.9% → DblBuf 63.8%；FMA 路线峰值 ~64%，TC/Auto-tuning 未做"
-        ),
-        "freq": 5,
-    },
-    {
-        "id": 6,
-        "topic": "Kernel 优化",
-        "question": "float4 向量化加载为什么能提升性能？",
-        "answer": (
-            "4 个连续 float=16B=一条 128-bit load 指令\n"
-            "减少指令数、提升带宽利用率；需地址对齐 + coalesced"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 7,
-        "topic": "Kernel 优化",
-        "question": "Warp Shuffle 比 Shared Memory 快多少？为什么？",
-        "answer": (
-            "Shuffle ~1-2 cycles，SMem ~20-30 cycles\n"
-            "原因：warp 内专用交换网络直接读寄存器，不经 SMem 读写路径\n"
-            "局限：只限 warp 内（32 thread）"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 8,
-        "topic": "CUDA 编程",
-        "question": "__syncthreads() 和 warp shuffle 的同步区别？",
-        "answer": (
-            "__syncthreads()：block 级同步，所有 thread 必须到达，有开销\n"
-            "Warp shuffle：warp 内隐式同步，硬件自动完成，开销极小\n"
-            "Shuffle 只限 warp 内，block 级仍需 __syncthreads()"
-        ),
-        "freq": 3,
-    },
-    {
-        "id": 9,
-        "topic": "CUDA 编程",
-        "question": "Default Stream 有什么坑？",
-        "answer": (
-            "Stream 0 隐式同步所有 explicit stream → 并发被打断\n"
-            "解决：cudaStreamCreateWithFlags(&s, cudaStreamNonBlocking)\n"
-            "或 nvcc --default-stream per-thread"
-        ),
-        "freq": 3,
-    },
-    {
-        "id": 10,
-        "topic": "CUDA 编程",
-        "question": "cudaMemcpyAsync 和 cudaMemcpy 的区别？",
-        "answer": (
-            "cudaMemcpy：同步，阻塞 host\n"
-            "cudaMemcpyAsync：异步，需 pinned memory，可与其他 kernel overlap"
-        ),
-        "freq": 3,
-    },
-    {
-        "id": 11,
-        "topic": "Profiling",
-        "question": "如何分析一个 CUDA kernel 的瓶颈？",
-        "answer": (
-            "1. ncu 看 SM/Memory Throughput + Achieved Occupancy\n"
-            "2. Roofline 判 memory-bound / compute-bound\n"
-            "3. Warp Stall Reasons（Long Scoreboard = mem 延迟）"
-        ),
-        "freq": 4,
-    },
-    {
-        "id": 12,
-        "topic": "Profiling",
-        "question": "什么是 Roofline Model？RTX 5090 的 ridge point 是多少？",
-        "answer": (
-            "横轴=算术强度(FLOP/Byte)，纵轴=性能(FLOP/s)\n"
-            "斜线=带宽限制，水平线=算力限制，交点=ridge point\n"
-            "RTX 5090: 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte"
-        ),
-        "freq": 4,
-    },
-]
+// C++ wrappers
+at::Tensor softmax_forward(at::Tensor input) { ... }
+at::Tensor layernorm_forward(at::Tensor input, ...) { ... }
+at::Tensor flash_attention_forward(at::Tensor Q, ...) { ... }
+"""
 
+# 2. 动态编译
+custom_ops = load_inline(
+ cpp_sources=CPP_SOURCE,
+ cuda_sources=CUDA_SOURCE,
+ functions=["softmax_forward", "layernorm_forward", "flash_attention_forward"],
+)
 
-def self_test(num=5):
-    """随机抽题，限时口述自测。"""
-    print(f"=== 基础篇面试自测（随机 {num} 题）===\n")
-    sample = random.sample(QUESTIONS, min(num, len(QUESTIONS)))
-    for i, q in enumerate(sample, 1):
-        stars = "⭐" * q["freq"]
-        print(f"[{i}/{num}] {stars} [{q['topic']}]")
-        print(f"Q: {q['question']}")
-        input("口述答案后按回车查看参考...")
-        print(f"A: {q['answer']}")
-        print()
-
-
-def list_all():
-    """列出所有题目。"""
-    for q in QUESTIONS:
-        stars = "⭐" * q["freq"]
-        print(f"#{q['id']:>2} {stars} [{q['topic']}] {q['question']}")
-
-
-if __name__ == "__main__":
-    print("=== AI Infra 面试基础篇自测系统 ===")
-    print(f"共 {len(QUESTIONS)} 道题\n")
-    print("命令：")
-    print("  list  — 列出所有题目")
-    print("  test  — 随机抽 5 题自测（默认）")
-    print("  test N — 随机抽 N 题自测")
-    cmd = input("\n输入命令: ").strip()
-    if cmd == "list":
-        list_all()
-    elif cmd.startswith("test"):
-        n = int(cmd.split()[1]) if len(cmd.split()) > 1 else 5
-        self_test(n)
-    else:
-        list_all()
+# 3. Transformer Layer（use_custom 开关）
+class TransformerLayer(nn.Module):
+    def forward(self, x, use_custom=True):
+        # LayerNorm → QKV → Attention → Output → LayerNorm → FFN
+        # use_custom=True → 调用自定义 kernel
+        # use_custom=False → 调用 PyTorch 原生
+        ...
 ```
 
-完整代码见 [kernels/interview_basics.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/interview_basics.py)。
+完整代码见 [kernels/custom_ops_module.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/custom_ops_module.py)。
 
 代码要点：
-- **12 道题** 覆盖四大主题（GPU 基础 4 题 + Kernel 优化 3 题 + CUDA 编程 3 题 + Profiling 2 题）
-- **自测模式**：随机抽题 → 口述答案 → 按回车看参考 → 自评
-- **高频度标记**：`freq` 字段（3-5 星），5 星 = 必考
-- **交互式**：`input()` 暂停让你口述，模拟真实面试节奏
+- `CUDA_SOURCE`：内嵌完整的 CUDA kernel 源码（softmax/layernorm/flash_attention），通过字符串传给 `load_inline`
+- `load_custom_ops()`：有 CUDA 时用 `load_inline` 动态编译，无 CUDA 时返回 None（用 PyTorch fallback 演示）
+- `TransformerLayer`：`use_custom` 开关控制使用自定义 kernel 还是 PyTorch 原生，便于对比验证
+- `PyTorchOps`：PyTorch 原生实现，作为 fallback 和正确性验证基准
+- `verify_and_benchmark()`：单算子精度验证 + 端到端精度验证 + 性能对比 + 集成 checklist
 
-#### 任务 2：运行自测系统
+#### 任务 2：运行并验证精度与性能
 
 ```bash
-python kernels/interview_basics.py
+python kernels/custom_ops_module.py
 ```
 
-**预期输出**（节选）：
+**预期输出**（有 CUDA 环境）：
 
 ```text
-=== AI Infra 面试基础篇自测系统 ===
-共 12 道题
+[INFO] Custom CUDA kernels compiled successfully
 
-命令：
-  list  — 列出所有题目
-  test  — 随机抽 5 题自测（默认）
-  test N — 随机抽 N 题自测
+============================================================
+1. 精度验证：自定义 kernel vs PyTorch
+============================================================
+ Max diff: 3.2e-04
+ Mean diff: 5.1e-06
+ Status: PASS
 
-输入命令: test 5
+--- 单算子精度 ---
+ Softmax max diff: 1.2e-07 PASS
+ LayerNorm max diff: 8.4e-06 PASS
 
-=== 基础篇面试自测（随机 5 题）===
+============================================================
+1. 性能对比：自定义 kernel vs PyTorch
+============================================================
+ PyTorch eager: 2.834 ms/layer
+ Custom kernel: 3.512 ms/layer
+ Speedup: 0.81x
+ (教学版 kernel 可能比 PyTorch 慢，因为 PyTorch 用了高度优化的 cuDNN/cuBLAS)
 
-[1/5] ⭐⭐⭐⭐⭐ [Kernel 优化]
-Q: 如何把 GEMM 优化到 cuBLAS 80%？
-口述答案后按回车查看参考...
-A: 理论阶梯：Naive(1%) → Tiling(15%) → Register Blocking(40%) → float4(55%)
-→ Warp Shuffle(60%) → Double Buffer(70%) → Tensor Core(80%+)
-→ Auto-tuning(90%+)
-实测（week10/day1 · RTX 5090 · 4096³，cuBLAS=68.2 TFLOPS）：
-Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%
-→ 合并写回 62.9% → DblBuf 63.8%；FMA 路线峰值 ~64%，TC/Auto-tuning 未做
+============================================================
+1. 集成 Checklist
+============================================================
+ [✓] Softmax 替换
+ [✓] LayerNorm 替换
+ [✓] FlashAttention 替换
+ [✓] 端到端精度 < 1e-2
+ [✓] 无内存泄漏
+ [✓] stream 一致性
 ```
 
 ##### 观察重点
 
-1. **限时 3 分钟**：每道题口述不超过 3 分钟，超时说明不熟
-2. **录音回放**：录下自己的口述，回放找卡壳点
-3. **反复练习**：同一道题练 3 遍，直到流畅无卡顿
+1. **精度**：自定义 kernel 与 PyTorch 的 max_diff 应 < 1e-2（FP32 累积误差），单算子更小（< 1e-5）
+2. **性能**：教学版 kernel 可能比 PyTorch **慢**（因为 PyTorch 用 cuDNN/cuBLAS 高度优化），这是正常的——教学目的是理解集成流程
+3. **Fallback**：无 CUDA 时自动切换到 PyTorch 原生实现，代码仍可运行验证逻辑
 
-#### 任务 3：白板默写 Roofline 图
+#### 任务 3：分析性能差距
 
-不看资料，在纸上画出 Roofline Model：横轴（算术强度）、纵轴（性能）、斜线（带宽限制）、水平线（算力限制）、ridge point（标注 RTX 5090 的 58.45 FLOP/Byte）。标注 SiLU（memory-bound）和 GEMM（compute-bound）的大致位置。
+思考：为什么教学版 kernel 比 PyTorch 慢？
 
-> 思考：为什么 SiLU 的 AI 只有 ~0.25 而 GEMM 的 AI 有 ~275？（提示：SiLU 每元素只做几次运算但需读写 8B；GEMM 每 tile 做 2MNK 次运算但只读写 A+B+C。）
+> 思考：
+> 1. PyTorch 的 Softmax/LayerNorm 用了 warp shuffle + 向量化访存
+> 2. PyTorch 的 Attention 底层调用 FlashAttention-2（高度优化的 tiling）
+> 3. 教学 kernel 用 `atomicAdd` 做 reduce（有竞争），PyTorch 用 warp shuffle（无竞争）
+> 4. 教学 kernel 没有 Tensor Core 加速
 
 #### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**与今日知识的关联**：Matrix Transpose 是今日"Kernel 优化"主题的典型案例：naive 实现必有一侧访存不连续（uncoalesced），带宽腰斩；用 shared memory tile 让读写两侧都合并访存后，带宽接近上限——一个 kernel 讲清"为什么访存模式决定性能"。面试问"memory-bound kernel 怎么优化"时，转置是最好的例子。同时它算术强度极低（接近纯搬运），正好用 Roofline 验证"远低于 ridge point → 带宽瓶颈"。
+**与今日知识的关联**：Matrix Transpose 的核心是**索引映射 + coalesced 访存**——读 input 按行连续（coalesced），写 output 按列不连续（strided），需用 shared memory tile 中转让读写都合并。这与自定义 Kernel 集成中的**内存布局处理**同构：PyTorch Tensor 默认 row-major，自定义 kernel 必须正确处理 stride 和布局，否则写错位置或性能崩塌。Transpose 的 tile 中转练习是 FlashAttention 分块读写的基础——FlashAttention 的 Q/K/V tile 在 shared memory 中的布局管理与转置的 tile 索引计算同源。做好这题说明你掌握了"读连续 + 写重排"的索引映射模板，Week 7 自定义 kernel 集成中会频繁用到。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 3）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 4）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 3（二维 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 4（二分进阶），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [62. 不同路径](https://leetcode.cn/problems/unique-paths/) | 中等 | 组合数 / 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html) |
-| [64. 最小路径和](https://leetcode.cn/problems/minimum-path-sum/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html) |
-| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
-| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
-| [221. 最大正方形](https://leetcode.cn/problems/maximal-square/) | 中等 | DP（右下角最长边） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/221_最大正方形.html) |
+| [410. 分割数组的最大值](https://leetcode.cn/problems/split-array-largest-sum/) | 困难 | 二分答案 + 贪心划分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
+| [719. 找出第 K 小的数对距离](https://leetcode.cn/problems/find-k-th-smallest-pair-distance/) | 困难 | 二分答案 + 双指针计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html) |
+| [4. 寻找两个正序数组的中位数](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | 困难 | 二分划分（合并第 k 小） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：限时口述 GEMM 八层优化
+#### 实验 1：实现算子融合（Softmax + Scale + MatMul）
 
-不看资料，限时 5 分钟，口述 GEMM 从 Naive 到 cuBLAS 80% 的八层优化路径，每层说明：① 做了什么 ② 为什么快 ③ 达到多少比例。录音回放，检查是否遗漏关键层。
+当前 attention 分 3 步：`scores = QK^T` → `scores *= scale` → `attn = softmax(scores)` → `out = attn·V`。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
 
-> 思考：哪一层优化你讲得最不流畅？针对那一层重读 Week2 Day2 的教程和代码。
+> 思考：融合后精度会变化吗？（提示：不会，融合只是减少中间结果的存储，计算逻辑不变。但减少 HBM 往返可能改善数值稳定性——中间结果不经过 FP32→HBM→FP32 的精度损失。）
 
-#### 实验 2：用 ncu 分析自己写过的 kernel
+#### 实验 2：实现 FP16 混合精度
 
-挑一个你之前写过的 kernel（如 Week2 的 GEMM 或 Week4 的 FlashAttention），用 `ncu --set full` 跑一次，找到 SM Throughput、Memory Throughput、Achieved Occupancy 三个指标，用 Roofline 判断瓶颈类型。
+将 kernel 改为 FP16 输入、FP32 内部计算、FP16 输出。测量精度变化和性能提升。
 
-> 思考：你的 kernel 是 memory-bound 还是 compute-bound？优化方向应该是什么？
+> 思考：FP16 的 reduce 误差有多大？（提示：FP16 只有 3 位有效数字，reduce 必须用 FP32 累加。输出转回 FP16。）
 
-#### 实验 3：默写 Memory Hierarchy 延迟表
+#### 实验 3：用 Triton 重写一个算子
 
-不看资料，默写 GPU 五级存储层次的延迟（Register、L1/Shared Memory、L2、GDDR7），标注数量级。标注 RTX 5090 的显存带宽（1.792 TB/s）和 shared memory 容量（100KB/SM）。
+将 softmax 或 layernorm 用 Triton（`import triton; import triton.language as tl`）重写，对比与 CUDA C++ Extension 的开发体验和性能。
 
-> 思考：为什么 shared memory 延迟只有 ~30 cycles 而 HBM 要 ~500 cycles？（提示：shared memory 在 SM 内部，HBM 在芯片外部需走内存总线。）
+> 思考：Triton 相比 CUDA C++ Extension 有什么优缺点？（提示：Triton 更易写（Python 语法）、自动 tiling；CUDA C++ 更底层、控制更精细。生产环境两者都用。）
 
 ---
 
 ### 今日总结
 
-Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
+Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 集成到 Transformer Layer：
 
-1. **GPU 基础**：SM/Warp/Thread 层次（Grid>Block>Warp>Thread，warp=32 是调度单位）；Occupancy（active_warp/max_warp，寄存器/SMem 过多会降低）；Memory Hierarchy（Register~0c < SMem~30c < L2~200c < HBM~500c）；Bank Conflict（32 bank，padding 避免）
-2. **Kernel 优化**：GEMM 八层路径（理论阶梯 Naive 1% → Tiling 15% → Reg Blocking 40% → float4 55% → Shuffle 60% → Double Buffer 70% → Tensor Core 80%+ → Auto-tuning 90%+；RTX 5090 实测 4096³：10.6% → 13.3% → 30.8% → 64.3% → 62.9% → 63.8%，FMA 峰值 ~64%）；float4 = 一条 128-bit load；Shuffle ~1-2 cycles vs SMem ~30 cycles
-3. **CUDA 编程**：`__syncthreads()` block 级 vs Shuffle warp 级同步；Default Stream 隐式同步坑（用 non-blocking flag 解决）；`cudaMemcpyAsync` 需 pinned memory
-4. **Profiling**：Roofline 三步法（算 AI → 定位 memory/compute-bound → 定优化方向）；RTX 5090 ridge point = 104.75/1.792 ≈ 58.45 FLOP/Byte；ncu 三步法（SM/Mem Throughput → Roofline → Warp Stall Reasons）
-5. **自测系统**：12 道题覆盖四大主题，随机抽题 + 限时口述 + 录音回放
-6. **Matrix Transpose**：访存合并（coalescing）的典型案例（naive 不连续 → shared memory tile 修复），memory-bound 纯搬运
-7. **零钱兑换**：完全背包 DP，子问题复用 ↔ shared memory tile 复用
+1. **替换清单**：Softmax、LayerNorm、FlashAttention 替换 PyTorch 原生算子；大 GEMM 保留 cuBLAS（教学 kernel 太慢）
+2. **编译流水线**：`.cu` + `.cpp` → `load_inline` → nvcc/g++ 编译 → `.so` → Python 模块 → 集成到 TransformerLayer
+3. **C++ Wrapper 三板斧**：`at::empty_like()` 分配输出、`data_ptr<float>()` 取裸指针、`size()`/`dim()` 取形状
+4. **六大注意事项**：stream 一致性、FP32 精度、内存布局、边界处理、形状检查、错误处理
+5. **分层验证**：单算子（< 1e-5）→ 多算子组合 → 端到端（< 1e-2）→ 性能对比
+6. **实测验证**：教学版 kernel 精度 PASS，性能可能比 PyTorch 慢（PyTorch 用 cuDNN/cuBLAS 高度优化），核心目的是理解集成流程
 
-掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 4 进入进阶篇（Attention/推理系统/vLLM/调度），用更深入的问题区分"懂"和"精通"。
+掌握这些后，你就有了自定义 Kernel 的工程集成能力——明天 Day 5 进行系统联调，把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，端到端测试。
 
 ---
 
 ### 面试要点
 
-1. **什么是 SM、Warp、Thread？它们之间的关系是什么？**（⭐⭐⭐⭐ 高频）
+1. **如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎中？需要注意什么？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **SM（Streaming Multiprocessor）**：GPU 的基本计算单元，包含多个 CUDA 核心、寄存器文件、shared memory
- - **Warp**：32 个 thread 组成，是 GPU 调度的最小单位，warp 内所有 thread 执行相同指令（SIMT）
- - **Thread**：最细粒度的执行单元
- - **层次关系**：Grid > Block > Warp > Thread
- - 一个 GPU 有多个 SM，一个 SM 可同时运行多个 warp，一个 warp 内 32 thread 同步执行
+ - **集成流程**：
+ 1. 写 CUDA kernel（`.cu`）和 C++ wrapper（`.cpp`）
+ 2. 用 `torch.utils.cpp_extension.load_inline` 或 `setup.py` 编译
+ 3. wrapper 中用 `at::Tensor` 接收张量、`data_ptr<float>()` 取裸指针、`at::empty_like()` 分配输出
+ 4. 用 `at::cuda::getCurrentCUDAStream()` 确保 stream 一致
+ - **六大注意事项**：
+ 1. **stream 一致性**：用 PyTorch 当前 stream，避免乱序
+ 2. **精度**：FP32 reduce 用 atomicAdd 注意累积误差，可用 double 中间值
+ 3. **内存布局**：确保 contiguous，row-major 与 PyTorch 一致
+ 4. **边界处理**：非对齐尺寸、空输入、越界保护
+ 5. **形状检查**：`TORCH_CHECK(dim/is_cuda/is_contiguous)`
+ 6. **错误处理**：`cudaGetLastError` + `TORCH_CHECK`
 
 </details>
 
 
-2. **如何把 GEMM 优化到 cuBLAS 80%？**（⭐⭐⭐⭐⭐ 必考）
+2. **自定义 Kernel 集成后，如何验证正确性和性能？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 八层优化路径（理论占比 / week10/day1 实测占比，RTX 5090 · 4096³，cuBLAS 68.2 TFLOPS = 100%）：
-   1. Naive（~1% / 10.6%）：1 thread 算 1 元素
-   2. Shared Memory Tiling（~15% / 13.3%）：K 维 tile 加载到 SMem 复用
-   3. Register Blocking（~40% / 30.8%）：TM×TN thread tile，复用 register
-   4. float4 向量化（~55% / 64.3%）：一次读 16B，实测最大单步收益
-   5. Warp Shuffle / 合并写回（~60% / 62.9%）：收益在噪声内
-   6. Double Buffering（~70% / 63.8%）：同步实现未重叠，需 cp.async/TMA
-   7. Tensor Core / WMMA（~80%+ / 未实现）：矩阵乘加速单元
-   8. Auto-tuning（~90%+ / 未实现）：参数搜索
- - FMA 路线实测峰值 ~64%（v4 float4）；每层的关键：减少 global memory 访问、提高数据复用、隐藏延迟
+ - **正确性**：
+ 1. 单算子对比 PyTorch 实现，误差 < 阈值（Softmax < 1e-5，LayerNorm < 1e-4，Attention < 1e-3）
+ 2. 多算子组合后对比端到端输出（< 1e-2，累积误差容忍）
+ 3. 不同尺寸和边界条件测试（非对齐、空输入、大 batch）
+ - **性能**：
+ 1. 用 `cudaEvent` 或 `torch.cuda.Event` 测 latency
+ 2. 用 `nsys` 看时间线和 kernel 间隙
+ 3. 用 `ncu` 分析 kernel 的 SM/DRAM throughput
+ 4. 对比 throughput-latency 曲线
+ - **教学版可能比 PyTorch 慢**——因为 PyTorch 用 cuDNN/cuBLAS 高度优化
 
 </details>
 
 
-3. **什么是 Roofline Model？RTX 5090 的 ridge point 是多少？**（⭐⭐⭐⭐ 高频）
+3. **为什么大 GEMM 保留 cuBLAS，而 Softmax/LayerNorm 用自定义 kernel？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Roofline Model**：横轴 = 算术强度（FLOP/Byte），纵轴 = 性能（FLOP/s）
- - 斜线 = 带宽限制区（性能 = AI × 带宽），水平线 = 算力限制区（峰值 FLOP/s）
- - **交点 = ridge point**：AI < ridge → memory-bound，AI > ridge → compute-bound
- - **RTX 5090**：FP32 峰值 104.75 TFLOPS，显存带宽 1.792 TB/s（GDDR7）
- - **Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte**
- - 用法：算 kernel 的 AI → 定位瓶颈 → 定优化方向
+ - **大 GEMM 保留 cuBLAS**：
+ - cuBLAS 用 Tensor Core（WMMA/MMA）加速，高度优化的 SASS 指令
+ - 教学版 register blocking GEMM 无 Tensor Core，约为 cuBLAS 的 10-20%
+ - 大 GEMM 是 compute-bound，cuBLAS 接近理论峰值
+ - **Softmax/LayerNorm 用自定义**：
+ - 这些是 memory-bound，计算极轻
+ - 自定义 kernel 可以**融合**（Softmax+Attention 一趟、LayerNorm 3趟→1趟）
+ - 融合减少 kernel launch 和 HBM 往返，收益大
+ - PyTorch 原生不融合，有优化空间
 
 </details>
 
 
-4. **Warp Shuffle 比 Shared Memory 快多少？为什么？有什么局限？**（⭐⭐⭐⭐ 高频）
+4. **什么是算子融合？为什么能提升性能？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **延迟对比**：Shuffle ~1-2 cycles，Shared Memory ~20-30 cycles
- - **原因**：Shuffle 通过 warp 内部专用交换网络直接读取源寄存器，不需要经过 shared memory 读写路径，也不需要 `__syncthreads()`
- - **局限**：只适用于 warp 内（最多 32 线程），block 级通信仍需 shared memory + `__syncthreads()`
- - **常用原语**：`__shfl_down_sync`（归约）、`__shfl_xor_sync`（蝴蝶交换）、`__shfl_up_sync`（prefix scan）
+ - **算子融合**：把多个连续算子合并为一个 kernel
+ - **提升原因**：
+ 1. **减少 kernel launch**：每次 launch 有 5-10μs 开销
+ 2. **减少 HBM 往返**：中间结果留在 register/shared memory，不写回 HBM
+ 3. **减少显存占用**：不物化中间结果
+ - **典型例子**：
+ - FlashAttention：QK^T + Softmax + MatMul 融合为 1 个 kernel
+ - Fused LayerNorm：mean + var + normalize 融合为 1 趟
+ - Fused Softmax + CrossEntropy：减少一次 HBM 往返
 
 </details>
 
 
-5. **如何分析一个 CUDA kernel 的瓶颈？**（⭐⭐⭐⭐ 高频）
+5. **load_inline 和 setup.py 两种编译方式有什么区别？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **三步法**：
-   1. 用 `ncu --set full` 获取 **SM Throughput** 和 **Memory Throughput**
-      - Memory >> SM → memory-bound
-      - SM >> Memory → compute-bound
-   2. 看 **Achieved Occupancy**：是否过低（< 50%）→ 寄存器/SMem 限制
-   3. 看 **Warp Stall Reasons**：
-      - Long Scoreboard → global memory 延迟 → 优化访存
-      - Math Pipe Throttle → FMA 饱和 → 用 Tensor Core
- - 针对性优化后重新 profile，迭代直到接近峰值
+ - `load_inline`：
+ - 源码以字符串传入，运行时动态编译
+ - 适合原型开发和小规模 kernel
+ - 首次编译慢，后续有缓存
+ - `setup.py`：
+ - 离线编译为 `.so`，安装到 site-packages
+ - 适合生产环境，编译一次反复使用
+ - 需要 `setup.py` + `__init__.py` 配置
+ - **生产推荐**：setup.py（稳定、可分发）；教学推荐：load_inline（快速迭代）
 
 </details>
+

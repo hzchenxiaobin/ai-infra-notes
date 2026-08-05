@@ -1,440 +1,369 @@
-## Day 5：查漏补缺
+## Day 5：Mock 面试
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 能根据 Day 5 Mock 面试的**复盘记录**定位 3-5 个个人薄弱点<br>
-2. 掌握**六大高频薄弱点**（Online Softmax / GEMM 层次 / vLLM Scheduler / KV Cache 内存 / Roofline / Prefill-Decode）的复习方法<br>
-3. 整理一张**十大易混淆概念对比表**，面试时能一句话说清区别<br>
-4. 熟练背诵**关键公式**（online softmax 三公式、KV Cache 内存、Ridge Point）和 **RTX 5090 参数**<br>
-5. 能不看资料**默画** 8 个核心流程图（memory hierarchy、GEMM 层次、FA tiling、vLLM 架构等）<br>
-6. 用自测系统 `knowledge_selftest.py` 完成至少一轮知识自检，薄弱点清零
+1. 掌握 **Mock 面试的完整流程**——自我介绍、项目介绍、技术难点、优化思路、场景题、反问<br>
+2. 学会用 **STAR 法** 结构化讲述项目，突出技术决策和量化成果<br>
+3. 能针对 **2-3 个技术难点** 准备 5-10 分钟深度讲解，并预判 follow-up<br>
+4. 练习 **限时口述** 与时间控制，避免面试中说不完或说太多<br>
+5. 建立 **个人面试题库** 和 **复盘清单**，把每次练习转化为可改进的反馈<br>
+6. 完成 **至少 1 轮完整 Mock 面试** 并录音/文字复盘
 
-> 💡 **为什么重要**：Day 5 的 Mock 面试暴露了"懂但讲不清楚"的问题。查漏补缺是把"模糊印象"变成"肌肉记忆"的最后一步——面试官追问时，你要能在 3 秒内给出准确数字和公式，而不是"大概是……"。
+> 💡 **为什么重要**：Day 3-4 积累了大量知识点，但知识 ≠ 面试表现。很多人“懂”却“讲不清楚”，Mock 面试是把知识转化为表达的唯一途径。今天你要当自己的面试官，逼自己在限时内把项目和技术点讲明白。
 
 ---
 
-### 学前导读：从 Mock 到查漏补缺
+### 学前导读：为什么需要 Mock 面试
 
-Day 5 的 Mock 面试给你留了一张复盘表。现在的问题是：**那些卡壳的点，怎么从"记不住"变成"张口就来"？**
+面试不是开卷考试，而是**限时口述 + 临场互动**。你以为自己“会”的内容，一旦面对面试官的追问，很可能会：
 
 ```
-❌ "Ridge Point 大概是十几？"
-❌ "KV Cache 好像几百 KB？具体记不清了"
-❌ "online softmax 公式我知道，但写不出来"
-❌ "LayerNorm 和 BatchNorm 都是归一化，区别是……嗯……"
+❌ 开场 5 分钟还没讲清楚项目是做什么的
+❌ 技术点只停留在“是什么”，讲不出“为什么”
+❌ 被 follow-up 一问就卡壳，开始绕圈子
+❌ 时间分配失控，重点没讲完就被打断
+❌ 口头禅严重：然后、那个、就是
 ```
 
-| 学习阶段 | 目标 | 方法 |
-|----------|------|------|
-| Day 3-4 | 理解概念 | 看笔记、做面试题 |
-| Day 5 | 检验表达 | Mock 面试、录音 |
-| **Day 6** | **补齐漏洞** | **定位薄弱点 → 重学 → 默写 → 二次 Mock** |
-| Day 7 | 全局复盘 | 能力地图、后续规划 |
+| 学习方式 | 效果 |
+|----------|------|
+| 看书/看代码 | 理解 30% |
+| 写笔记 | 理解 50% |
+| 自己口述一遍 | 理解 70% |
+| **Mock 面试 + 录音复盘** | **理解 90%** |
 
-查漏补缺的核心是**闭环**：不是"再读一遍"，而是"测→学→默→测"，直到薄弱点消除。
-
-> 💡 **一句话总结**：面试准备的最后冲刺不是"学新东西"，而是"把模糊变精确"——每个数字、每个公式、每个对比，都要能秒答。
+> 💡 **一句话总结**：Mock 面试的目的不是“背答案”，而是训练你在压力下**清晰、有逻辑、有重点**地表达技术思考。
 
 ---
 
 ### 理论学习
 
-#### 6.1 六大高频薄弱点定位与复习
+#### 1.1 Mock 面试流程
 
-![六大高频薄弱点与复习方法](../../week8/images/weak_points_review.svg)
+![Mock 面试流程：7 个环节约 34 分钟](../../week8/images/mock_interview_framework.svg)
 
-从历次 Mock 面试和真实面经中，反复出现的薄弱点集中在以下六个。每个点给出"卡壳表现"和"复习方法"：
+完整 Mock 面试分为 7 个环节，总时长约 34 分钟：
 
-| 薄弱点 | 典型卡壳表现 | 复习方法 |
-|--------|-------------|---------|
-| **Online Softmax 推导** | "公式我知道，但写不全" | 手写 5 遍三公式，理解 `exp(m-m_new)` 缩放因子 |
-| **GEMM 优化层次** | "记得有 tiling，但记不住每层 %" | 画 8 层阶梯图，背理论阶梯（1%→15%→40%→55%→60%→70%→80%+→90%+）+ 实测阶梯（week10/day1：10.6%→13.3%→30.8%→64.3%→62.9%→63.8%） |
-| **vLLM Scheduler** | "知道有调度，但状态机讲不清" | 看源码 + 画 WAITING/RUNNING/FINISHED 流程图 |
-| **KV Cache 内存** | "公式记不住，算不出数字" | 用 3 个不同模型算 10 次，背 LLaMA-7B = 524KB |
-| **Roofline Model** | "会画图但 Ridge 算不出" | 记 Ridge = PeakFLOP/BW，RTX5090 = 104.75/1.792 ≈ 58.45 |
-| **Prefill/Decode 强度** | "知道不同但说不清为什么" | 推导 M=1 时 AI 极低 → memory-bound |
+| 环节 | 时长 | 核心目标 |
+|------|------|---------|
+| 自我介绍 | 1-2 min | 建立第一印象，点明背景和方向 |
+| 项目介绍 | 3-5 min | 用 STAR 法讲清项目价值 |
+| 技术难点 1 | 5-6 min | 深入讲一个你最强的技术点 |
+| 技术难点 2 | 5-6 min | 展示另一个维度的能力 |
+| 优化思路 | 5-6 min | 展示从问题到方案到验证的完整链路 |
+| 场景设计题 | 6-7 min | 展示系统设计和 trade-off 能力 |
+| 反问环节 | 1-2 min | 展示主动性和岗位匹配度 |
 
-##### 为什么这些点最容易卡壳？
-
-这六个点的共同特征是**需要精确的数字或公式**，而不是模糊的概念描述。面试官区分"背了"和"懂了"的方法，就是追问数字：
-
-- "Ridge Point 具体是多少？怎么算的？"
-- "LLaMA-7B 每 token KV Cache 占多少？4096 token 呢？"
-- "GEMM 到 cuBLAS 80%，每一层各占多少？"
-
-回答"大概是"直接扣分，回答"58.45 FLOP/Byte，因为 104.75 TFLOPS 除以 1.792 TB/s"才达标。
-
-#### 6.2 十大易混淆概念对比
-
-![十大易混淆概念对比](../../week8/images/confusable_concepts.svg)
-
-面试官最爱用**对比题**区分候选人的理解深度。下面十个对比是高频考点，每个都要能一句话说清区别：
-
-##### 为什么对比题这么重要？
-
-对比题考察的不是"知不知道 A 和 B"，而是"能不能说清 A 和 B 的边界"。回答对比题的**通用套路**：
-
-```
-1. 说"粒度/维度/阶段"的差异（最本质）
-2. 给一句量化或场景（佐证）
-3. （可选）说一个容易搞错的点
-```
-
-**示例**（Prefill vs Decode）：
-
-> "粒度差异：Prefill 输入 `(B, N, d)` 是 compute-bound，Decode 输入 `(B, 1, d)` 是 memory-bound。
-> 量化：Decode 时 M=1，arithmetic intensity 极低，远低于 Ridge Point。
-> 易错：Decode 不是'慢'，而是'带宽没吃满'，优化方向是 KV Cache 和 PagedAttention，不是加算力。"
-
-##### 五级深入：LayerNorm vs BatchNorm
-
-这两个是归一化家族里最容易混淆的。本质区别是 **reduce 的维度**：
-
-- **BatchNorm**：reduce 跨 `(N, H, W)`，按**通道**归一化。每个通道 `c` 算一个 mean/var。
-- **LayerNorm**：reduce 跨 `(C, H, W)`（或 feature 维），按**样本**归一化。每个样本算一个 mean/var。
-
-| 维度 | BatchNorm | LayerNorm |
-|------|-----------|-----------|
-| reduce 轴 | batch + spatial | feature |
-| mean/var 数量 | C 个（每通道一组） | N 个（每样本一组） |
-| 训练/推理差异 | 有（推理用 running stats） | 无 |
-| 适用场景 | CNN（图像） | Transformer / NLP |
-| CUDA 实现 | 一个 block 一个通道 | 一个 block 一个样本 |
-
-> ⚠️ BatchNorm 在推理时用**训练期累积的 running mean/var**，而不是实时计算——这是面试高频追问点。
-
-#### 6.3 关键公式与参数速查
-
-![关键公式与参数速查表](../../week8/images/key_formulas_cheatsheet.svg)
-
-面试前必须能**秒写、秒背、秒算**的五组公式和一组参数：
-
-##### 五组必背公式
+#### 1.2 自我介绍的 STAR-mini 模板
 
 ```text
-① Online Softmax
-   m_new = max(m, max(xj))
-   l_new = l · exp(m - m_new) + Σ exp(xj - m_new)
-   o_new = o · (l · exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) · vj
-
-② KV Cache 内存
-   bytes/token = 2 × L × H × d × bytes_per_elem
-   LLaMA-7B (32层/32头/d=128/fp16): 2×32×32×128×2 = 524288 B ≈ 524 KB
-
-③ FLOPs 与算术强度
-   FLOPs = 2 · M · N · K    （GEMM）
-   AI = FLOPs / Bytes       （Arithmetic Intensity）
-
-④ Roofline Ridge Point
-   Ridge = Peak FLOP/s / Peak Bandwidth
-   RTX 5090 = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/Byte
-   AI < Ridge → memory-bound；AI > Ridge → compute-bound
-
-⑤ FlashAttention HBM IO
-   Standard: O(N² + Nd)    FlashAttention: O(Nd)
+1. 我是谁：姓名 + 背景 + 当前方向
+2. 我做了什么：一句话概括项目（Mini AI Infra / 手写 CUDA kernel / Mini 推理引擎）
+3. 核心亮点：1-2 个量化成果（如 GEMM 达到 cuBLAS ~64%（RTX 5090 实测 4096³）、支持 Continuous Batching）
+4. 我想做什么：应聘岗位方向
 ```
 
-##### RTX 5090 关键参数
+示例：
 
 ```text
-FP32 Peak:            104.75 TFLOPS
-Tensor Core FP16:     ~209 TFLOPS (dense)
-Memory Bandwidth:     1.792 TB/s (GDDR7)
-Ridge Point:          ~58.45 FLOP/Byte
-Shared Memory / SM:   100 KB
-Max Threads / SM:     1536
-Warp Size:            32
-Max Registers/Thread: 255
-Compute Capability:   sm_120
+"我叫陈斌斌，最近 8 周集中学习 AI Infra。
+我手写了一套 CUDA kernel，包括 GEMM、FlashAttention、Softmax、LayerNorm，
+并构建了一个支持 KV Cache、Continuous Batching 和优先级调度的 Mini 推理引擎。
+希望应聘 AI Infra / 推理优化相关岗位。"
 ```
 
-##### 背诵技巧
+#### 1.3 项目介绍的 STAR 法
 
-不要硬背数字，而是**记量纲，再推数字**：
+| 部分 | 内容 | 示例 |
+|------|------|------|
+| **S**ituation | 项目背景 | LLM 推理部署对延迟和吞吐要求高，我想理解底层优化 |
+| **T**ask | 你的目标 | 手写高性能 kernel 并搭建一个可运行的 Mini 推理引擎 |
+| **A**ction | 你做了什么 | GEMM 优化到 cuBLAS ~64%（RTX 5090 实测 4096³）、实现 FlashAttention、Continuous Batching Scheduler |
+| **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms |
 
-- Ridge Point 的量纲是 `FLOP/Byte` → 用 `算力 ÷ 带宽` 自己推：`104.75 / 1.792 = 58.45`
-- KV Cache 的量纲是 `Byte/token` → 用 `2 × L × H × d × bytes` 推
-- GEMM FLOPs 的量纲是 `FLOP` → `2 × M × N × K`（2 是一次乘 + 一次加）
+> ⚠️ 避免只列技术栈，要突出：**你解决了什么问题、为什么难、你怎么权衡、结果如何**。
 
-> 💡 **一句话总结**：面试官追求数字时，能**当场推导**比"背对了"更有说服力——这说明你理解公式，不是死记。
+#### 1.4 技术难点讲解模板
+
+选一个你真正深入做过的点，按以下结构准备：
+
+```text
+1. 问题是什么：标准 Attention IO 是 O(N²)，长序列跑不动
+2. 现有方案局限：朴素 tiling 需要物化 N×N 矩阵
+3. 你的方案：FlashAttention = tiling + online softmax，IO 降到 O(Nd)
+4. 实现细节：block 切分、shared memory 分配、warp 同步
+5. 验证结果：相比 naive 快 X 倍、接近 cuBLAS/FAI
+6. 还可以怎么优化：FA2 的 warp group、double buffering、量化
+```
+
+每个点准备 **3 分钟精简版** 和 **6 分钟完整版**，根据面试官反应切换。
+
+#### 1.5 常见 Follow-up 与应对
+
+| Follow-up | 考察点 | 应对策略 |
+|-----------|--------|---------|
+| "为什么不用 vLLM 直接部署？" | 技术选型思考 | 承认 vLLM 成熟，但手写是为了理解底层、做定制优化 |
+| "你的 kernel 和官方实现差距多少？" | 量化意识 | 给出具体数字（GEMM 达 cuBLAS ~64%，RTX 5090 实测 4096³），并讲清差距来源 |
+| "如果 batch 从 8 加到 64，系统会怎样？" | 系统扩展性 | 分析显存、吞吐、latency 的变化 |
+| "如何再优化 TBT？" | 持续优化能力 | 列出 3 个方向：量化、CUDA Graph、调度策略 |
+| "如果显存不够怎么办？" | trade-off | KV Cache 量化、swap、recompute、稀疏 attention |
+
+#### 1.6 反问环节
+
+准备 2-3 个问题，避免只问薪资：
+
+1. 团队目前在推理优化的重点方向是什么？
+2. 这个岗位日常更多做 kernel 优化还是系统架构？
+3. 团队对新人的培养机制是怎样的？
+4. 目前推理服务最大的技术挑战是什么？
 
 ---
 
-### Coding 任务：知识自测与薄弱点攻坚
+### Coding 任务：Mock 面试练习
 
-#### 任务 1：创建 knowledge_selftest.py
+#### 任务 1：创建 mock_interview.py
 
-创建文件 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/knowledge_selftest.py)，把六大薄弱点 + 关键公式 + RTX 5090 参数做成一个自测系统：
+创建文件 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/mock_interview.py)，把 Mock 面试的 7 个环节做成一个带计时器的练习系统：
 
 ```python
-# knowledge_selftest.py —— AI Infra 知识点自测系统
-# 运行命令: python knowledge_selftest.py
+# mock_interview.py —— Mock 面试计时与提纲系统
+# 运行命令: python mock_interview.py
 # 依赖: 仅标准库
-#
-# 覆盖六大薄弱点：Online Softmax / GEMM 层次 / vLLM Scheduler /
-#                  KV Cache 内存 / Roofline / Prefill-Decode
-# 三种模式：
-#   quiz    —— 随机抽题，限时口述后看答案
-#   formula —— 关键公式默写（填空）
-#   param   —— RTX 5090 关键参数快问快答
 
-import random
 import time
 
-QUIZ_BANK = [
-    {
-        "topic": "Online Softmax",
-        "q": "写出 online softmax 的三个更新公式（m / l / o）。",
-        "a": (
-            "m_new = max(m, max(xj))\n"
-            "l_new = l * exp(m - m_new) + Σ exp(xj - m_new)\n"
-            "o_new = o * (l * exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) * vj\n"
-            "\n要点：exp(m - m_new) 是统一参考点的缩放因子；"
-            "避免物化 N×N 矩阵，IO 从 O(N²) 降到 O(Nd)。"
-        ),
-    },
-    # ... 共 8 道题，覆盖六大薄弱点 + FlashAttention + PagedAttention
+SECTIONS = [
+    {"name": "自我介绍", "duration": 120, "prompt": "..."},
+    {"name": "项目介绍", "duration": 300, "prompt": "..."},
+    # ... 共 7 个环节
 ]
 
-FORMULA_BLANKS = [
-    {"prompt": "Online Softmax 的 m_new = ", "answer": "max(m, max(xj))"},
-    {"prompt": "Online Softmax 的 l_new = l * ___ + Σ exp(xj - m_new)", "answer": "exp(m - m_new)"},
-    {"prompt": "KV Cache bytes/token = 2 × L × H × ___ × bytes_per_elem", "answer": "d"},
-    # ... 共 7 道填空
-]
-
-PARAM_QUIZ = [
-    {"q": "RTX 5090 FP32 Peak (TFLOPS)?", "a": "104.75"},
-    {"q": "RTX 5090 Memory Bandwidth (TB/s)?", "a": "1.792"},
-    {"q": "RTX 5090 Ridge Point (FLOP/Byte)?", "a": "58.45"},
-    # ... 共 10 道参数题
-]
-
-# 完整代码见 kernels/knowledge_selftest.py
+# 完整代码见 kernels/mock_interview.py
 ```
 
-完整代码见 [kernels/knowledge_selftest.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day5/kernels/knowledge_selftest.py)。
+完整代码见 [kernels/mock_interview.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/mock_interview.py)。
 
 代码要点：
-- **三种模式**：`quiz`（随机抽题口述）、`formula`（公式填空默写）、`param`（参数快问快答）
-- **quiz 模式**：每题限时口述，回车看参考答案，记录用时
-- **formula/param 模式**：自动判分，答错显示正确答案
-- **覆盖全面**：8 道口述题 + 7 道填空 + 10 道参数，对应六大薄弱点
+- **7 个环节** 覆盖完整面试流程，每个环节有明确的时间限制和提示
+- **倒计时显示**：实时显示剩余时间，可提前结束
+- **复盘清单**：结束后输出时间控制、口头禅、技术点清晰度等检查项
+- **两种模式**：`start` 完整模拟、`outline` 查看提纲
 
-#### 任务 2：运行自测系统
+#### 任务 2：运行一次完整 Mock 面试
 
 ```bash
-python kernels/knowledge_selftest.py
+python kernels/mock_interview.py
 ```
 
 **预期流程**（节选）：
 
 ```text
-============================================================
-       AI Infra 知识点自测系统（查漏补缺）
-============================================================
-覆盖六大薄弱点 + 关键公式 + RTX 5090 参数
+=== AI Infra Mock 面试 ===
+共 7 个环节，全程约 34 分钟
 
 命令：
-  quiz    —— 随机抽题，限时口述后看答案
-  formula —— 关键公式默写（填空）
-  param   —— RTX 5090 关键参数快问快答
-  all     —— 依次执行三种模式
-  q       —— 退出
+  start  — 开始完整 Mock 面试
+  outline — 查看面试提纲
 
-输入命令: quiz
-
-=== 模式：随机抽题口述 ===
-
-【第 1 题 / KV Cache 内存】
-LLaMA-7B（32 层 / 32 头 / d=128 / fp16）每 token KV Cache 占多少？4096 token 呢？
---------------------------------------------------
-回车看答案（q 退出）:
+输入命令: start
+============================================================
+【自我介绍】限时 120 秒
+------------------------------------------------------------
+1. 姓名、背景
+2. 目前方向
+3. 项目核心亮点（一句话）
+4. 希望应聘的岗位
+------------------------------------------------------------
+准备就绪后按回车开始...
 ```
 
 ##### 观察重点
 
-1. **quiz 模式**：每题能否在 3 分钟内口述完？超时说明还没形成肌肉记忆
-2. **formula 模式**：7 道填空正确率是否 > 80%？错的题回到理论学习重学
-3. **param 模式**：10 道参数是否全对？Ridge Point 必须能秒答 58.45
-4. **二次自测**：针对错误项重学后，再跑一遍，直到全对
+1. **是否超时**：每个环节超时说明内容没压缩好
+2. **是否卡壳**：记录卡壳点，回到 Day 3-4 重新复习
+3. **口头禅统计**：重点听“然后、那个、就是、嗯”
+4. **量化是否清晰**：项目介绍中是否给出了具体数字
 
-#### 任务 3：默写关键公式与流程图
+#### 任务 3：录制并复盘
 
-不看任何资料，完成以下默写（用纸笔或文本编辑器）：
+用手机或电脑录下自己的 Mock 面试过程，回放后填写复盘表：
 
-| 默写项 | 验收标准 | 用时目标 |
-|--------|---------|---------|
-| Online Softmax 三公式 | m_new / l_new / o_new 完整写出 | < 2 min |
-| KV Cache 内存公式 + LLaMA-7B 数字 | 公式 + 524KB + 4096→2GB | < 1 min |
-| GEMM 8 层优化 + 增益 % | 理论阶梯 1%→90%+ + 实测阶梯（week10/day1）10.6%→63.8% | < 3 min |
-| Roofline 图 + Ridge 计算 | 斜线/水平线 + 58.45 推导 | < 2 min |
-| vLLM 架构图 | Engine→Scheduler→Worker→KV | < 3 min |
-| Continuous Batching 时间线 | 3 个请求动态进出 | < 3 min |
-| FlashAttention tiling 示意 | Q/K/V block + online softmax | < 3 min |
-| GPU memory hierarchy | Register→Shared→L1/L2→HBM + 延迟 | < 2 min |
+| 环节 | 用时 | 流畅度 1-5 | 主要问题 | 改进动作 |
+|------|------|-----------|---------|---------|
+| 自我介绍 | | | | |
+| 项目介绍 | | | | |
+| 技术难点 1 | | | | |
+| 技术难点 2 | | | | |
+| 优化思路 | | | | |
+| 场景设计题 | | | | |
+| 反问 | | | | |
 
-> 验收：8 项全部达标。某项卡壳 → 回到理论学习对应小节重学 → 重新默写。
+> 思考：哪个环节得分最低？针对该环节重写逐字稿，再练 3 遍。
 
-#### 任务 4：LeetGPU 在线题目 —— Batch Normalization
+#### 任务 4：LeetGPU 在线题目 —— GEMM
 
-**题目链接**：<https://leetgpu.com/challenges/batch-normalization>
+**题目链接**：<https://leetgpu.com/challenges/general-matrix-multiplication-gemm>
 
-**与今日知识的关联**：
+**与今日知识的关联**：Mock 面试中"项目深度拷问"环节必问 GEMM——它是推理引擎中计算量最大的核心算子（Linear/FFN/投影层全是 GEMM）。能讲清其 CUDA 实现（shared memory tiling、register blocking、向量化加载）以及为什么它是 compute-bound、优化目标是对标 cuBLAS，能体现工程深度。
 
-BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它考察 **reduce 的维度**（BatchNorm 跨 batch/spatial、LayerNorm 跨 feature）和 **memory-bound kernel 的优化**（融合 reduce + normalize，IO 从 3 遍降到 1 遍）。面试中能讲清"两者 reduce 维度差异 + 融合实现 + 为什么 memory-bound"，归一化家族（RMSNorm / GroupNorm）就都是同构变体。
+> 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-> 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 5）
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 6）
-
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 6（最短路与 BFS），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 5（图论基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [743. 网络延迟时间](https://leetcode.cn/problems/network-delay-time/) | 中等 | 堆优化 Dijkstra 单源最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html) |
-| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
-| [752. 打开转盘锁](https://leetcode.cn/problems/open-the-lock/) | 中等 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html) |
-| [127. 单词接龙](https://leetcode.cn/problems/word-ladder/) | 困难 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html) |
-| [329. 矩阵中的最长递增路径](https://leetcode.cn/problems/longest-increasing-path-in-a-matrix/) | 困难 | 记忆化搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
+| [207. 课程表](https://leetcode.cn/problems/course-schedule/) | 中等 | 拓扑排序 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
+| [208. 实现 Trie（前缀树）](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 中等 | 字典树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
+| [547. 省份数量](https://leetcode.cn/problems/number-of-provinces/) | 中等 | 并查集模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html) |
+| [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
+| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+
+# 栈解法：存下标，栈底保留基准
+def longestValidParentheses(s):
+    stack = [-1]
+    max_len = 0
+    for i, c in enumerate(s):
+        if c == '(':
+            stack.append(i)
+        else:
+            stack.pop()
+            if not stack:
+                stack.append(i)  # 未匹配的 ) 作新基准
+            else:
+                max_len = max(max_len, i - stack[-1])
+    return max_len
+```
+
+> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html)。
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：薄弱点清零挑战
+#### 实验 1：准备 3 分钟项目 elevator pitch
 
-运行 `python kernels/knowledge_selftest.py`，执行 `all` 模式（quiz + formula + param）。记录得分：
+不看资料，限时 3 分钟，向别人介绍你的项目。要求：
 
-| 模式 | 第一次得分 | 重学后得分 | 是否清零 |
-|------|----------|----------|---------|
-| quiz（8 题） | /8 | /8 | |
-| formula（7 题） | /7 | /7 | |
-| param（10 题） | /10 | /10 | |
+- 第 1 句话说明项目是什么
+- 第 2-3 句话说明解决了什么问题
+- 第 4-5 句话说明最难的技术点
+- 最后一句给出量化成果
 
-> 思考：哪类题错最多？是"公式记不住"还是"概念混淆"？前者靠默写，后者靠对比表。
+> 思考：如果对方听完 3 分钟仍不知道你的项目价值，说明 pitch 需要再压缩。
 
-#### 实验 2：默画 8 张核心图
+#### 实验 2：模拟高压追问
 
-不看资料，用纸笔默画以下 8 张图，每张限时 3 分钟，画完对照资料打分：
+选一个技术难点（如 FlashAttention），让朋友或自己扮演面试官连续追问 5 个 why：
 
-1. GPU memory hierarchy（含延迟数字）
-2. GEMM 8 层优化阶梯（含 %）
-3. FlashAttention tiling 示意
-4. Online softmax 状态更新
-5. vLLM 架构图
-6. Continuous Batching 时间线（3 请求）
-7. Prefill/Decode 数据流对比
-8. Roofline Model（含 Ridge Point）
+1. 为什么 FlashAttention 能减少 IO？
+2. 为什么 online softmax 能避免物化 N×N 矩阵？
+3. 为什么 FA2 比 FA1 快？
+4. 为什么长序列收益更大？
+5. 如果 head dim 很大，FlashAttention 还值得用吗？
 
-> 思考：哪张图画不全？画不全的图对应的知识点，就是你的盲区——回到对应 Day 的教程重学。
+> 思考：每个 why 是否都能用一句话 + 一个数字回答？
 
-#### 实验 3：二次 Mock 面试
+#### 实验 3：写一份面试逐字稿
 
-针对 Day 5 暴露的薄弱点和今天重学的内容，再做一轮 Mock 面试（用 `week10/day4/kernels/mock_interview.py`）。重点观察：
+把“自我介绍 + 项目介绍 + 一个技术难点”写成逐字稿，控制在 800 字以内。朗读一遍，记录时间。然后删掉 30% 的冗余词，再朗读。目标：信息密度高、没有口头禅。
 
-1. 之前卡壳的题，现在能否 3 分钟内流畅回答？
-2. 被追问数字时，能否秒答（Ridge 58.45、KV 524KB、GEMM 实测峰值 ~64%）？
-3. 对比题能否一句话说清区别（Prefill/Decode、LayerNorm/BatchNorm）？
-
-> 思考：如果二次 Mock 仍有卡壳，说明薄弱点没真正消除——回到理论学习，用手写 5 遍的方式强制记忆。
+> 思考：哪些词可以删除？通常是修饰词和重复解释。
 
 ---
 
 ### 今日总结
 
-Day 6 我们针对 Mock 面试暴露的薄弱点做了最后冲刺：
+Day 5 我们把前四天的知识转化为面试表达能力：
 
-1. **六大薄弱点定位**：Online Softmax 推导、GEMM 层次、vLLM Scheduler、KV Cache 内存、Roofline、Prefill/Decode 强度
-2. **易混淆概念对比**：十大对比表（Prefill/Decode、LayerNorm/BatchNorm、float4/half2 等），用"粒度→量化→易错"三步法回答
-3. **关键公式背诵**：online softmax 三公式、KV Cache 内存、FLOPs/AI、Ridge Point、FA HBM IO
-4. **RTX 5090 参数**：104.75 TFLOPS、1.792 TB/s、Ridge 58.45、100KB shared mem 等，用"记量纲推数字"法
-5. **自测系统**：`knowledge_selftest.py` 提供 quiz/formula/param 三模式，闭环测→学→默→测
-6. **默画训练**：8 张核心流程图限时默画，画不全即盲区
-7. **二次 Mock**：针对薄弱点重测，确认卡壳点清零
+1. **Mock 面试流程**：7 个环节、约 34 分钟、每个环节有明确时间限制
+2. **STAR 法**：Situation → Task → Action → Result，用量化成果支撑每个技术决策
+3. **技术难点讲解**：问题 → 局限 → 方案 → 细节 → 验证 → 进一步优化，准备 3 分钟和 6 分钟两个版本
+4. **Follow-up 应对**：常见追问包括“为什么不用现成方案”“差距多少”“怎么再优化”“显存不够怎么办”
+5. **计时系统**：`mock_interview.py` 提供倒计时和复盘清单，把练习标准化
+6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
+7. **GEMM**：推理引擎的核心算子，Mock 面试中“项目深度拷问”的常见考点
+8. **最长有效括号**：栈 + DP 双解困难题，与推理系统状态追踪（请求状态机/KV Cache 生命周期）同构
 
-完成今天的查漏补缺后，你应该能对每个高频面试题在 3 秒内给出准确数字和公式。明天 Day 7 进入最终复盘，画 8 周能力地图、规划后续路线，完成整个学习闭环。
+完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。
 
 ---
 
 ### 面试要点
 
-1. **RTX 5090 的 Ridge Point 是多少？如何计算？含义是什么？**（⭐⭐⭐⭐ 高频）
+1. **用 STAR 法介绍你的项目。**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **数值**：约 58.45 FLOP/Byte
- - **计算**：Ridge Point = Peak FLOP/s / Peak Bandwidth = 104.75 TFLOPS / 1.792 TB/s ≈ 58.45
- - **含义**：算术强度 AI < 58.45 → memory-bound；AI > 58.45 → compute-bound
- - **推导**：不要硬背，用"算力 ÷ 带宽"当场推。Ridge 是 Roofline 图上斜线与水平线的交点。
+ - **S**ituation：项目背景，为什么要做
+ - **T**ask：你的目标是什么
+ - **A**ction：你做了什么（技术点 1、2、3）
+ - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
+ - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
 
 </details>
 
 
-2. **LLaMA-7B 每 token 的 KV Cache 占多少内存？4096 token 呢？**（⭐⭐⭐⭐ 高频）
+2. **讲清楚一个你最熟悉的技术难点。**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **公式**：`bytes/token = 2 × L × H × d × bytes_per_elem`
- - **LLaMA-7B**：32 层、32 头、d_head=128、fp16（2 bytes）
- - **计算**：2 × 32 × 32 × 128 × 2 = 524288 B ≈ 524 KB/token
- - **4096 token**：4096 × 524 KB ≈ 2 GB
- - **易错**：H 是 head 数，d 是 head_dim；多头时 H × d = hidden_dim
+ - 结构：问题 → 现有方案局限 → 你的方案 → 实现细节 → 验证结果 → 还能怎么优化
+ - 示例（FlashAttention）：
+   - 问题：标准 Attention 物化 N×N 矩阵，IO 是 O(N²)
+   - 局限：朴素 tiling 仍需写回中间结果
+   - 方案：FlashAttention = tiling + online softmax
+   - 细节：block 切分、shared memory、warp 同步
+   - 验证：相比 naive 快 X 倍
+   - 优化：FA2、double buffering、量化
 
 </details>
 
 
-3. **LayerNorm 和 BatchNorm 的区别？reduce 维度分别是什么？**（⭐⭐⭐⭐ 高频）
+3. **Dynamic Batching 和 Continuous Batching 有什么区别？为什么 LLM 更适合 Continuous？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **BatchNorm**：reduce 跨 `(N, H, W)`，按**通道**归一化，每通道一组 mean/var（共 C 组）
- - **LayerNorm**：reduce 跨 `(C, H, W)`，按**样本**归一化，每样本一组 mean/var（共 N 组）
- - **训练/推理**：BatchNorm 推理用 running stats（不实时算）；LayerNorm 训练推理一致
- - **场景**：BatchNorm 用于 CNN（图像）；LayerNorm 用于 Transformer（NLP）
- - **CUDA 实现**：BatchNorm 一个 block 一个通道；LayerNorm 一个 block 一个样本
+ - **Dynamic Batching**：request-level，一批请求一起开始一起结束
+ - **Continuous Batching**：iteration-level，每轮 forward 后重新组 batch
+ - LLM 生成长度差异大，Dynamic Batching 会导致先完成的请求等待 GPU 空转
+ - Continuous Batching 让请求动态加入/退出，最大化 GPU 利用率
+ - vLLM 的高吞吐主要来自 Continuous Batching + PagedAttention
 
 </details>
 
 
-4. **写出 online softmax 的三个更新公式。**`exp(m - m_new)` **的作用是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **PagedAttention 解决了什么问题？核心设计是什么？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- ```
- m_new = max(m, max(xj))
- l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
- o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
- ```
- - `exp(m - m_new)` **的作用**：统一参考点的缩放因子。当新 block 的 max 比旧的大时，旧的累加值 `l` 和 `o` 需要按 `exp(m - m_new)` 缩小（因为 m 变大了，旧的 exp 值相对变小）。
- - **为什么避免物化 N×N**：online softmax 在 SRAM 内增量更新 m/l/o，不需要把完整的 S=QK^T 和 P=softmax(S) 写到 HBM，IO 从 O(N²) 降到 O(Nd)。
+ - 解决问题：KV Cache 静态分配造成的显存碎片和浪费
+ - 核心设计：
+   - 把 KV Cache 分成固定大小 block
+   - block table：逻辑 block 连续，物理 block 可不连续
+   - copy-on-write 支持 prefix 共享
+ - 收益：提高显存利用率、支持动态长度、方便调度
 
 </details>
 
 
-5. **你的 GEMM 优化到 cuBLAS ~64%，每一层优化的收益来源是什么？要达到 90% 还需做什么？**（⭐⭐⭐⭐⭐ 必考）
+5. **面试中常见的 follow-up 有哪些？怎么准备？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- 实测数据（week10/day1 · RTX 5090 · M=N=K=4096，cuBLAS 基线 68.2 TFLOPS = 100%）：
-
- | 层次 | 实测增益 | 收益来源 |
- |------|---------|---------|
- | Naive → Shared Memory Tiling | 10.6%→13.3% | K 维数据复用，减少全局重复读 |
- | → Register Blocking | 13.3%→30.8% | 累加器驻留寄存器，减少 shared mem 访问 |
- | → float4 向量化 | 30.8%→64.3% | 128-bit load 提升带宽利用率（最大单步收益） |
- | → 合并写回（Integrated） | 64.3%→62.9% | 写回占比小，收益在噪声范围内 |
- | → Double Buffering | 62.9%→63.8% | 同步实现未真正重叠，需 cp.async/TMA |
- | Tensor Core | 未实现（理论 80%+） | WMMA/mma 硬件矩阵乘加 |
- | Auto-tuning | 未实现（理论 90%+） | 按尺寸选最优分块参数 |
-
- 达到 90% 还需：① Tensor Core（WMMA 指令）② 真异步 Double Buffering（cp.async/TMA）③ CUTLASS 模板库 ④ 针对目标尺寸 exhaustive search
+ - "为什么不用现成方案？" → 说明学习/定制/优化的目标
+ - "你的实现和官方差距多少？" → 给出具体数字和差距来源
+ - "如果 batch 增大 10 倍会怎样？" → 分析显存、吞吐、latency
+ - "如何再优化？" → 列出 3 个方向并讲优先级
+ - "显存不够怎么办？" → KV Cache 量化、swap、recompute、稀疏 attention
+ - 准备方法：为每个技术点准备 3 分钟精简版和 6 分钟完整版，提前写逐字稿并录音
 
 </details>

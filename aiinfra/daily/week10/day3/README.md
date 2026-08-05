@@ -1,432 +1,453 @@
-## Day 3：高频面试题进阶篇（含系统设计题）高频面试题进阶篇
+## Day 3：项目文档完善（README）项目文档完善
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 掌握 **Attention 优化三件套**——FlashAttention 的 IO 优势、online softmax 推导、FA1 vs FA2 差异<br>
-2. 理解 **推理系统核心矛盾**——Prefill vs Decode、KV Cache 显存压力、TTFT/TBT 优化目标<br>
-3. 讲清楚 **PagedAttention 设计**——block table、逻辑连续物理离散、copy-on-write、碎片消除<br>
-4. 复述 **vLLM 架构与调度**——LLMEngine/Scheduler/Worker 分层、Continuous Batching、抢占策略<br>
-5. 能回答 **2 道场景设计题**——长文本推理优化、LLM 推理服务架构<br>
-6. 产出一份 **进阶篇面试题自问自答笔记**，每道题限时 5 分钟口述并录音回放
+1. 理解 **README 是项目的"面试第一印象"**——面试官打开 GitHub 仓库先看 README，3 秒内决定是否继续<br>
+2. 掌握 **优秀 README 的六段结构**——项目亮点、快速开始、系统架构、Benchmark 结果、项目结构、后续规划，每段对应一个面试高频问题<br>
+3. 能编写 **Quick Start 指南**——环境要求、依赖安装、一行命令跑通示例，让新用户 10 分钟内复现<br>
+4. 学会 **正确测量 Kernel 性能**——warmup、cudaEvent 计时、排除拷贝、N 次取平均，避免 6 个常见 benchmark 陷阱<br>
+5. 能产出 **Benchmark 对比表格**——FlashAttention vs 标准 Attention、GEMM vs cuBLAS，用百分比量化优化成果<br>
+6. 用 Python 手写一个 **benchmark_demo.py**，实测 SiLU kernel 的带宽利用率，生成可直接贴进 README 的性能表
 
-> 💡 **为什么重要**：Day 3 的基础篇帮你拿到入场券，Day 4 的进阶篇决定你能否进入下一轮。FlashAttention、KV Cache、PagedAttention、Continuous Batching 是 AI Infra 面试的“分水岭”问题——答得清楚说明你真的做过推理系统，答得模糊会被直接归到“只会背概念”。
+> 💡 **为什么重要**：Week 7 我们完成了 Mini AI Infra 系统的联调与全链路 profiling，代码"能跑"了。但"代码能跑" ≠ "项目可展示"——面试官打开你的仓库，如果 README 缺失、没有 Quick Start、没有 benchmark 数字，往往会直接跳过。Week 8 的第一天把 7 周散落的代码与笔记打磨成一份可展示的项目文档，这是从"学习者"到"求职者"的关键转换。
 
 ---
 
-### 学前导读：为什么进阶篇是面试分水岭
+### 学前导读：为什么"代码能跑"还不够
 
-面试官问基础题是为了“排除不会的人”，问进阶题是为了“区分懂的人和精通的人”。
+Week 1-7 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.cu`、`concurrent_engine.py`……它们散落在各个 `weekN/dayM/kernels/` 目录下，能各自独立运行，但作为一个整体项目来看，存在几个问题：
 
 ```
-基础题（Day 3）                进阶题（Day 4）
-"SM 是什么？"                  "FlashAttention 为什么能减少 IO？"
-"Occupancy 怎么算？"            "PagedAttention 的 block 多大合适？"
-"__syncthreads 是干嘛的？"      "Continuous Batching 怎么解决生成长度不均？"
+7 周代码的"展示短板"：
+ 1. 没有 README → 面试官打开仓库一片懵，不知道这项目做什么
+ 2. 没有 Quick Start → 想跑一下却不知道装什么依赖、执行哪个入口
+ 3. 没有 benchmark 数字 → "我写了 FlashAttention" 远不如 "FA 比标准 attn 快 2.1x"
+ 4. 代码散落各周目录 → 看不出系统全貌，像"作业堆"而非"项目"
+ 5. 没有架构图 → 无法一眼理解 Engine → Scheduler → Worker → Kernel 的层次
 ```
 
-| 考察层级 | 进阶题特征 | 面试官想听到什么 |
-|----------|-----------|-----------------|
-| 原理层 | 推导 online softmax | 能写出三公式并解释缩放因子 |
-| 系统层 | 讲清 vLLM 架构 | 能说清模块职责和数据流 |
-| 优化层 | 长文本推理怎么优化 | 能给出 3-5 条具体手段并讲出 trade-off |
-| 设计层 | 设计 LLM 推理服务 | 能从请求接入到 GPU 调度完整展开 |
+| 维度 | Week 7 结束时 | Week 8 Day1 目标 |
+|------|--------------|------------------|
+| README | 无 / 一句话 | **六段结构完整** |
+| Quick Start | 无 | **10 分钟跑通** |
+| Benchmark | 散落的 ncu 输出 | **对比表格 + 百分比** |
+| 项目结构 | 各周独立 | **统一目录树** |
+| 架构图 | 无 | **一张图看懂系统**（Day 2 细化） |
 
-> 💡 **一句话总结**：进阶篇不是考记忆力，而是考你是否能把“算法原理 → 系统设计 → 工程 trade-off”串成一条线。
+![8 周代码 → 一份可展示的项目文档](../../week8/images/doc_consolidation_lifecycle.svg)
+
+> 💡 **一句话总结**：Day 1 的核心是把"代码堆"变成"项目"——用 README 回答面试官的五个高频问题（介绍项目 / 能跑吗 / 架构 / 成果 / 后续），让仓库自己会"说话"。
 
 ---
 
 ### 理论学习
 
-#### 1.1 进阶篇知识地图
+#### 1.1 README 的六段结构
 
-![进阶篇知识地图：四大主题 × 核心考点](../../week8/images/interview_advanced_knowledge_map.svg)
+![项目 README 解剖：面试官想看到什么](../../week8/images/readme_anatomy.svg)
 
-进阶篇覆盖四大主题，每个主题 3-4 个高频考点：
+一份面向面试的 README 不是"把所有信息都写上去"，而是**每一段对应一个面试高频问题**：
 
-| 主题 | 核心考点 | 面试高频度 |
-|------|---------|-----------|
-| **① Attention 优化** | FlashAttention IO 分析、online softmax 推导、FA1 vs FA2、GQA/MQA/MHA | ⭐⭐⭐⭐⭐ |
-| **② 推理系统** | Prefill vs Decode、KV Cache 显存、TTFT/TBT、量化 | ⭐⭐⭐⭐⭐ |
-| **③ vLLM / PagedAttention** | block table、copy-on-write、内存碎片、调度状态机 | ⭐⭐⭐⭐⭐ |
-| **④ 调度与 Batching** | Continuous vs Dynamic Batching、抢占策略、优先级调度 | ⭐⭐⭐⭐⭐ |
+| README 段落 | 对应面试问题 | 写作要点 |
+|------------|-------------|---------|
+| **标题 + 项目亮点** | "介绍一下你的项目" | 一句话定位 + 3-4 个 bullet 抓眼球 |
+| **快速开始** | "代码能跑吗？" | 环境 / 安装 / 一行命令运行 |
+| **系统架构** | "画一下架构图" | 模块层次图（Day 2 细化） |
+| **Benchmark 结果** | "成果？加速多少？" | 对比表格 + 百分比 |
+| **项目结构** | "代码怎么组织的？" | 目录树 + 注释 |
+| **后续规划** | "继续优化做什么？" | 3-6 个 todo 体现成长性 |
 
-#### 1.2 Attention 优化
+##### 为什么标题+亮点要放在最前面？
 
-##### FlashAttention 为什么快
+面试官（或 HR）浏览 GitHub 仓库平均只花 **10-30 秒**。如果首屏看不到"这项目做什么、有什么亮点"，就会直接关掉。所以 README 开头必须用一句话定位 + 3-4 个 bullet 列出核心亮点：
 
-![FlashAttention Tiling：在 SRAM 中完成 Attention 计算](../../week8/images/flash_attention_tiling.svg)
+```markdown
+# Mini AI Infra
 
-标准 Attention 需要把 `S = QK^T` 和 `P = softmax(S)` 两个 `N×N` 矩阵写回 HBM：
+> 一个用于学习 AI Infra 的迷你 LLM 推理系统
 
-```text
-IO(标准 Attention) = O(N²)   # N 为序列长度
-IO(FlashAttention) = O(Nd)   # d 为 head dim，通常 d << N
+## 项目亮点
+- 手写 CUDA kernel：GEMM、FlashAttention、Softmax、LayerNorm
+- 完整推理系统：Prefill/Decode、KV Cache、Continuous Batching、Scheduler
+- 端到端可运行：单请求/多请求并发
+- 与 cuBLAS / 标准 Attention 对比的 benchmark 报告
 ```
 
-FlashAttention 的关键不是减少 FLOPs，而是**把计算搬到 SRAM，减少 HBM 往返**。它通过两个技术实现：
+#### 1.2 Quick Start：让新用户 10 分钟跑通
 
-1. **Tiling**：把 Q/K/V 切成小块加载到 shared memory，在片上完成 softmax 和加权求和
-2. **Online Softmax**：分块计算时维护 running max 和 running sum，避免先完整 softmax 再求和
+Quick Start 的目标是**可复现性**——任何人 clone 仓库后，按步骤操作就能跑通第一个示例。三要素：
 
-##### Online Softmax 三公式
+| 要素 | 内容 | 易错点 |
+|------|------|--------|
+| **环境要求** | GPU 算力、CUDA 版本、Python 版本 | 漏写 CUDA 版本 → 用户编译失败 |
+| **依赖安装** | `pip install -r requirements.txt` | requirements.txt 不全 → import 报错 |
+| **运行示例** | 一行命令 + 预期输出 | 不给预期输出 → 用户不知道是否成功 |
 
-```text
-m_new = max(m_old, max(x_j))                                       (1)
-l_new = l_old × exp(m_old - m_new) + Σ exp(x_j - m_new)             (2)
-o_new = o_old × (l_old × exp(m_old - m_new) / l_new)                (3)
-        + Σ (exp(x_j - m_new) / l_new) × v_j
+```markdown
+### 环境要求
+- NVIDIA GPU (Compute Capability >= 7.0)
+- CUDA >= 11.0
+- Python >= 3.8, PyTorch >= 2.0
+
+### 安装
+git clone https://github.com/yourname/mini-ai-infra.git
+cd mini-ai-infra
+pip install -r requirements.txt
+
+### 运行示例
+python examples/single_request.py
+# 预期输出：Generated: The quick brown fox...
 ```
 
-- `m`：当前已见元素的最大值（参考点）
-- `l`：当前已见元素 softmax 分母的和
-- `o`：当前已见元素的加权输出
-- `exp(m_old - m_new)`：把旧参考点统一到新参考点的缩放因子
+> ⚠️ **注意**：Quick Start 里出现的每个命令你都必须**亲自跑一遍**。文档里写"应该能跑"但实际跑不通，是 README 最致命的问题——面试官一试就露馅。
 
-> ⚠️ 面试常考：为什么需要 `exp(m_old - m_new)`？答：因为不同 block 的 softmax 参考点不同，必须统一参考点才能正确累加。
+#### 1.3 Benchmark 测量方法论
 
-##### FlashAttention-1 vs FlashAttention-2
+![Kernel Benchmark 测量流程](../../week8/images/benchmark_measurement_flow.svg)
 
-| 维度 | FA1 | FA2 |
-|------|-----|-----|
-| non-matmul FLOPs | 较多（online softmax 在主循环外） | 更少（融合到 warp 组） |
-| work partitioning | block 级 | warp group 级，减少同步 |
-| 同步点 | 每 tile 结束需同步 | 更少 |
-| occupancy | 一般 | 更高 |
-| 训练/推理 | 主要优化训练 | 对推理 decode 更友好 |
+Benchmark 数字是 README 最有说服力的部分，但**测错数字比没有数字更糟**。正确测量流程：
 
-##### MHA / GQA / MQA
+##### 1.3.1 cudaEvent 计时
 
-| 结构 | K/V 共享方式 | 显存占用 | 生成质量 |
-|------|-------------|---------|---------|
-| MHA | 每个 head 独立 K/V | 最大 | 最好 |
-| GQA | 每 group 共享 K/V | 中等 | 接近 MHA |
-| MQA | 所有 head 共享一组 K/V | 最小 | 可能下降 |
+CPU 端的 `clock()` / `time.time()` 测的是"提交到完成"，包含 launch overhead 和异步延迟，**不能用于 GPU kernel 计时**。必须用 `cudaEvent`：
 
-> 💡 工程上 LLaMA2-70B 用 GQA，在显存和质量之间取平衡。
+```cuda
+cudaEvent_t start, stop;
+cudaEventCreate(&start);
+cudaEventCreate(&stop);
 
-#### 1.3 推理系统核心问题
+// warmup（避免首次 cold miss）
+for (int i = 0; i < 5; i++)
+    kernel<<<grid, block>>>(args);
 
-##### Prefill vs Decode
+cudaEventRecord(start);     // 计时开始
+for (int i = 0; i < N; i++) // 跑 N 次取平均
+    kernel<<<grid, block>>>(args);
+cudaEventRecord(stop);                  // 计时结束
+cudaEventSynchronize(stop);             // 必须同步！
+cudaEventElapsedTime(&ms, start, stop); // ms = N 次总耗时
 
-| 阶段 | 输入形状 | 计算特征 | 瓶颈 | 优化目标 |
-|------|---------|---------|------|---------|
-| **Prefill** | `(B, N_prompt, d)` | 可并行 | compute-bound | TTFT（首 token 延迟） |
-| **Decode** | `(B, 1, d)` | 自回归串行 | memory-bound | TBT（相邻 token 间隔） |
-
-Decode 阶段 M=1，GEMM 退化，arithmetic intensity 极低，瓶颈在读取权重和 KV Cache。
-
-##### KV Cache 显存压力
-
-```text
-每 token KV Cache ≈ 2 × layers × heads × d_head × bytes
-例如 LLaMA2-7B：2 × 32 × 32 × 128 × 2B = 524,288 B ≈ 524 KB/token (FP16)
-4k 序列单请求 ≈ 2 GB，batch=16 ≈ 32 GB
+float t_per_call = ms / N; // 单次毫秒
 ```
 
-优化方向：
+##### 1.3.2 指标计算
 
-1. **量化**：INT8/INT4 KV Cache，显存减半或四分之一
-2. **分页**：PagedAttention 避免碎片和 over-allocation
-3. **压缩**：滑动窗口 attention、H2O 等稀疏策略
-4. **offload**：长序列 KV Cache 换到 CPU/SSD
+| 指标 | 公式 | 适用 |
+|------|------|------|
+| **单次耗时** | `t = ms / N`（毫秒） | 所有 kernel |
+| **内存带宽** | `BW = (R+W bytes) / t / 1e9`（GB/s） | memory-bound（copy、elementwise） |
+| **算力** | `TFLOPS = (2·M·N·K) / t / 1e12` | compute-bound（GEMM） |
+| **利用率** | `实测 / 峰值 × 100%` | 对比基线 |
 
-#### 1.4 PagedAttention
+##### 1.3.3 六个常见坑
 
-![PagedAttention Block Table：逻辑连续、物理离散](../../week8/images/paged_attention_block_table.svg)
+```
+坑1：不 warmup         → 首次含 JIT/cold miss，偏慢
+坑2：计时内含 memcpy   → H2D/D2H 拷贝远慢于 kernel，带宽假低
+坑3：只跑 1 次         → 单次抖动大，取 N 次平均
+坑4：忘了 sync         → kernel 异步，stop 立刻触发，时间≈0
+坑5：带宽算错 R+W      → copy 读+写=2x；GEMM 读A+B 写C
+坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1792（见 [硬件参数事实源](../../reference/hardware_specs.md)）
+```
 
-核心设计：
+> 💡 **一句话总结**：benchmark 的可信度 = warmup + N 次平均 + 排除拷贝 + 对比峰值。少任何一步，数字都会失真，面试官一追问就露馅。
 
-- 把 KV Cache 分成固定大小 block（如 16 tokens）
-- 每个请求维护一个 **block table**：逻辑 block id → 物理 block id
-- 物理 block 可以不连续，由 allocator 按需分配
-- 支持 **copy-on-write**：prefix 共享时多个请求指向同一块物理 block，写时复制
+#### 1.4 Benchmark 对比表格
 
-解决的问题：
+README 里的 benchmark 不能只给绝对数字，必须**对比基线**才有意义。标准格式：
 
-| 问题 | 传统 KV Cache | PagedAttention |
-|------|--------------|----------------|
-| 内存碎片 | 预分配最大长度，大量浪费 | 按需分配 block |
-| 动态长度 | 需要 contiguous 内存 | 逻辑连续即可 |
-| Prefix 共享 | 复制多份 | copy-on-write 共享 |
+```markdown
+## Benchmark 结果（RTX 5090, CUDA 12.x）
 
-#### 1.5 vLLM 架构与调度
+| Kernel | 朴素 | 优化版 | 基线 | 达到比例 |
+|--------|------|--------|------|---------|
+| GEMM 4096³ | 12.3 ms | 1.8 ms | cuBLAS 1.3 ms | 72% |
+| FlashAttention N=4096 | 8.5 ms | 4.0 ms | 标准 attn 8.5 ms | 2.1x 加速 |
+| SiLu N=1M | 0.05 ms | 0.008 ms | 带宽峰值 1792 GB/s | 56% 带宽 |
+```
 
-![vLLM 分层架构](../../week8/images/vllm_layered_architecture.svg)
+##### 为什么必须给"达到比例"？
 
-![vLLM 推理引擎架构](../../images/week8_inference_engine_architecture.svg)
-
-请求状态机：
-
-![请求状态转移图](../../images/week8_request_state_transition.svg)
-
-##### Continuous Batching
-
-![Continuous Batching Timeline：iteration 级动态进出](../../week8/images/continuous_batching_timeline.svg)
-
-- **Dynamic Batching**：request-level，一批请求一起开始、一起结束，生成长度不一时 GPU 空转
-- **Continuous Batching**：iteration-level，每轮 forward 后重新组装 batch，完成的请求退出、新请求加入
-
-> 💡 Continuous Batching 是 vLLM 高吞吐的关键，也是面试“为什么 vLLM 比传统服务快”的标准答案。
-
-##### 抢占策略
-
-| 策略 | 做法 | 优点 | 缺点 |
-|------|------|------|------|
-| **Recompute** | 丢弃 KV Cache，之后重算 prompt | 通常更快 | 浪费算力 |
-| **Swap** | KV Cache 换出到 CPU | 不浪费算力 | CPU↔GPU 带宽受限 |
-
-vLLM 默认 **Recompute**，因为大部分情况下重算比 swap 快。
+- "GEMM 1.8 ms" → 面试官不知道这算快还是慢
+- "GEMM 达到 cuBLAS 72%" → 立刻知道优化水平
+- 对比基线体现你**知道上限在哪**，而不是盲目报数字
 
 ---
 
-### Coding 任务：进阶篇面试题自问自答笔记
+### Coding 任务：编写 benchmark_demo.py 并生成 README 性能表
 
-#### 任务 1：创建 interview_advanced.py
+#### 任务 1：创建 benchmark_demo.py
 
-创建文件 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/interview_advanced.py)，将 21 道进阶篇高频题整理为可自测的 Q&A 系统：
+创建文件 [kernels/benchmark_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/benchmark_demo.py)，实现一个可复用的 kernel benchmark 框架（以 SiLU 为例），输出能直接贴进 README 的 Markdown 表格：
 
 ```python
-# interview_advanced.py —— 进阶篇面试题自测系统
-# 运行命令: python interview_advanced.py
-# 依赖: 仅标准库
+# benchmark_demo.py —— Kernel Benchmark 框架（SiLU 示例）
+# 运行命令: python benchmark_demo.py
+# 依赖: torch (CUDA), 仅用于计时；kernel 用纯 CUDA 实现对比
 
-import random
+import time
+import argparse
 
-QUESTIONS = [
-    {
-        "id": 1,
-        "topic": "Attention 优化",
-        "question": "FlashAttention 为什么比标准 Attention 快？",
-        "answer": (
-            "标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)\n"
-            "FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 O(Nd)"
-        ),
-        "freq": 5,
-    },
-    # ... 共 21 道题
-]
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
-# 完整代码见 kernels/interview_advanced.py
+
+def benchmark_torch_silu(n: int, warmup: int = 5, iters: int = 100):
+    """用 torch 的 SiLU 作为'优化版'基线，演示正确计时流程。"""
+    assert HAS_TORCH and torch.cuda.is_available(), "需要 CUDA 环境"
+    x = torch.randn(n, device="cuda", dtype=torch.float32)
+    y = torch.empty_like(x)
+
+    # ① warmup：避免 cold miss / JIT
+    for _ in range(warmup):
+        torch.nn.functional.silu(x, out=y)
+    torch.cuda.synchronize()
+
+    # ② cudaEvent 计时（torch.cuda.Event）
+    start = torch.cuda.Event(enable_timing=True)
+    stop = torch.cuda.Event(enable_timing=True)
+    start.record()
+    for _ in range(iters):
+        torch.nn.functional.silu(x, out=y)
+    stop.record()
+    torch.cuda.synchronize()          # ④ 必须同步
+
+    ms = start.elapsed_time(stop)     # iters 次总耗时
+    t = ms / iters                    # 单次毫秒
+
+    # ③ 指标：SiLU 读 x + 写 y = 2*N*4 bytes
+    bytes_rw = 2 * n * 4
+    bw_gbs = bytes_rw / (t / 1000) / 1e9     # GB/s
+    return {"n": n, "time_ms": t, "bandwidth_gbs": bw_gbs}
+
+
+def naive_python_silu(arr):
+    """朴素 Python 基线，仅供'慢'的参照（不做计时重点）。"""
+    import math
+    return [v / (1.0 + math.exp(-v)) for v in arr]
+
+
+def fmt_markdown_table(rows):
+    """把 benchmark 结果列表渲染成 Markdown 表格，直接贴 README。"""
+    cols = ["规模 N", "单次耗时(ms)", "带宽(GB/s)", "带宽利用率"]
+    peak_bw = 1792  # RTX 5090 GDDR7 峰值（见 reference/hardware_specs.md）
+    lines = ["| " + " | ".join(cols) + " |",
+             "|" + "|".join(["---"] * len(cols)) + "|"]
+    for r in rows:
+        util = f"{r['bandwidth_gbs'] / peak_bw * 100:.1f}%"
+        lines.append(f"| {r['n']:,} | {r['time_ms']:.4f} | "
+                     f"{r['bandwidth_gbs']:.1f} | {util} |")
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--sizes", type=str, default="1m,4m,16m",
+                    help="规模，逗号分隔，支持 k/m 后缀")
+    args = ap.parse_args()
+
+    def parse_size(s):
+        s = s.strip().lower()
+        mult = {"k": 1_000, "m": 1_000_000, "g": 1_000_000_000}
+        return int(s[:-1]) * mult[s[-1]] if s[-1] in mult else int(s)
+
+    sizes = [parse_size(s) for s in args.sizes.split(",")]
+    results = []
+    for n in sizes:
+        r = benchmark_torch_silu(n)
+        results.append(r)
+        print(f"N={n:>12,}  time={r['time_ms']:.4f} ms  "
+              f"BW={r['bandwidth_gbs']:.1f} GB/s")
+
+    print("\n## README Benchmark 表（可直接粘贴）\n")
+    print(fmt_markdown_table(results))
 ```
 
-完整代码见 [kernels/interview_advanced.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/interview_advanced.py)。
+完整代码见 [kernels/benchmark_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day3/kernels/benchmark_demo.py)。
 
 代码要点：
-- **21 道题** 覆盖六大主题（Attention 优化 6 题 + 推理系统 3 题 + vLLM/调度 3 题 + 场景题 2 题 + 系统设计 4 题 + 项目话术 2 题 + 进阶对比 1 题）
-- **自测模式**：随机抽题 → 口述答案 → 按回车看参考 → 自评
-- **高频度标记**：`freq` 字段（3-5 星），5 星 = 必考
-- **交互式**：`input()` 暂停让你口述，模拟真实面试节奏
+- **① warmup**：先跑 5 次，避免首次 cold miss / JIT 偏慢
+- **② cudaEvent 计时**：`torch.cuda.Event(enable_timing=True)` + `record()`，等价于原生 `cudaEvent_t`
+- **③ 指标计算**：SiLU 读 x + 写 y = `2*N*4` bytes，带宽 = `bytes / t / 1e9`
+- **④ 同步**：`torch.cuda.synchronize()` 等价于 `cudaDeviceSynchronize`，忘了会让时间≈0
+- **⑤ Markdown 表格输出**：`fmt_markdown_table` 直接生成可粘贴的 README 表格
 
-#### 任务 2：运行自测系统
+#### 任务 2：运行并观察 benchmark
 
 ```bash
-python kernels/interview_advanced.py
+python kernels/benchmark_demo.py --sizes 1m,4m,16m
 ```
 
-**预期输出**（节选）：
+**预期输出**（节选，RTX 5090，CUDA 12.8，sm_120；峰值带宽 1792 GB/s，见 [硬件参数事实源](../../reference/hardware_specs.md)）：
 
 ```text
-=== AI Infra 面试进阶篇自测系统 ===
-共 21 道题
+N=     1,000,000  time=0.0083 ms  BW=963.9 GB/s
+N=     4,000,000  time=0.0297 ms  BW=1077.4 GB/s
+N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
-命令：
-  list  — 列出所有题目
-  test  — 随机抽 5 题自测（默认）
-  test N — 随机抽 N 题自测
+## README Benchmark 表（可直接粘贴）
 
-输入命令: test 5
-
-=== 进阶篇面试自测（随机 5 题）===
-
-[1/5] ⭐⭐⭐⭐⭐ [Attention 优化]
-Q: FlashAttention 为什么比标准 Attention 快？
-口述答案后按回车查看参考...
-A: 标准 Attention 物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，IO 是 O(N²)
-FlashAttention 通过 tiling + online softmax 在 SRAM 中完成计算，IO 是 O(Nd)
+| 规模 N | 单次耗时(ms) | 带宽(GB/s) | 带宽利用率 |
+|---|---|---|---|
+| 1,000,000 | 0.0083 | 963.9 | 53.8% |
+| 4,000,000 | 0.0297 | 1077.4 | 60.1% |
 ```
+
+> ⚠️ 以上为一次实跑留档（warmup=5, iters=100），带宽绝对值受卡间显存颗粒、驱动版本、风扇曲线影响会小幅波动；**带宽利用率 = 实测带宽 / 1792 GB/s**。若你的环境跑出明显不同结果，以你自己留档为准。
 
 ##### 观察重点
 
-1. **限时 5 分钟**：每道题口述不超过 5 分钟，超时说明理解不深
-2. **录音回放**：录下自己的口述，回放找卡壳点和口头禅
-3. **追问答法**：每道题准备 1 个 follow-up 答案，例如讲完 FlashAttention 后立刻能讲 FA1 vs FA2
+1. **N 越大带宽利用率越高**：小 N 时 launch overhead 占比大，大 N 才能打满带宽
+2. **带宽利用率 < 100%**：RTX 5090 峰值 ~1792 GB/s（GDDR7），实测 ~1100 GB/s ≈ 60-65% 已是 elementwise 上限
+3. **输出可直接贴 README**：`fmt_markdown_table` 生成的表格就是 README 的 Benchmark 段
 
-#### 任务 3：白板推导 online softmax
+#### 任务 3：把 benchmark 结果写进 README
 
-不看资料，在纸上完整写出 online softmax 三公式，并解释：
+用任务 2 的输出，在 Mini 项目的 README 中补充 Benchmark 段：
 
-1. 为什么需要维护 `m` 和 `l` 两个状态？
-2. `exp(m_old - m_new)` 的物理意义是什么？
-3. 如果直接对每个 block 做 softmax 再相加，错在哪里？
+```markdown
+## Benchmark 结果（RTX 5090, CUDA 12.x）
 
-> 思考：标准 softmax 的分母是全局 `Σ exp(x_i)`，online softmax 的分母是“统一参考点后的局部和累加”，这是 FlashAttention 能在 SRAM 完成计算的核心。
+| 算子 | 规模 | 耗时 | 带宽/算力 | 基线 | 达到比例 |
+|------|------|------|----------|------|---------|
+| SiLU | 16M | 0.116 ms | 1107 GB/s | GDDR7 峰值 1792 GB/s | 62% 带宽 |
+| GEMM | 4096³ | 1.8 ms | 77.3 TFLOPS | cuBLAS 1.3 ms | 72% |
+| FlashAttention | N=4096 | 4.0 ms | — | 标准 attn 8.5 ms | 2.1x 加速 |
+```
 
-#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+> 思考：为什么 SiLU 的"达到比例"用带宽百分比，而 GEMM 用 cuBLAS 百分比？（提示：SiLU 是 memory-bound，瓶颈是带宽；GEMM 是 compute-bound，瓶颈是算力，cuBLAS 是算力优化天花板。）
 
-**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**与今日知识的关联**：今日进阶篇核心主题之一是**长文本推理优化**。Causal mask 是自回归解码的语义基础——decode 阶段每个新 token 只能 attend 到历史 token，正对应 causal attention 的下三角结构，KV Cache 逐 token 复用历史 K/V 之所以成立也依赖它。面试中回答"长文本怎么优化"时，能讲清 causal mask 的 kernel 实现、显存收益和与 KV Cache 的配合，是加分项。
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-> 💡 提交后在 [LeetGPU Causal Self-Attention](https://leetgpu.com/challenges/causal-self-attention) 上记录通过耗时。完整题解见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
+**与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 GDDR7 峰值（1792 GB/s），验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 4）
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 4（股票与划分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 1）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [122. 买卖股票的最佳时机 II](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/) | 中等 | 贪心收集所有上涨段 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/122_买卖股票的最佳时机II.html) |
-| [188. 买卖股票的最佳时机 IV](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/) | 困难 | DP 状态机（k 次交易） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html) |
-| [309. 买卖股票的最佳时机含冷冻期](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-cooldown/) | 中等 | DP 三状态（含冷冻期） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html) |
-| [714. 买卖股票的最佳时机含手续费](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/) | 中等 | DP 两状态 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html) |
-| [698. 划分为 K 个相等的子集](https://leetcode.cn/problems/partition-to-k-equal-sum-subsets/) | 中等 | 回溯 + 排序剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/698_划分为K个相等的子集.html) |
-
-# 二维 DP：dp[i][j] = word1[0..i-1] → word2[0..j-1] 的最少操作数
-m, n = len(word1), len(word2)
-dp = [[0] * (n + 1) for _ in range(m + 1)]
-for i in range(m + 1): dp[i][0] = i
-for j in range(n + 1): dp[0][j] = j
-
-for i in range(1, m + 1):
-    for j in range(1, n + 1):
-        if word1[i-1] == word2[j-1]:
-            dp[i][j] = dp[i-1][j-1]          # 字符相同，无操作
-        else:
-            dp[i][j] = 1 + min(
-                dp[i-1][j-1],   # 替换
-                dp[i-1][j],     # 删除
-                dp[i][j-1]      # 插入
-            )
-return dp[m][n]
-```
-
-> 💡 完整题解（含二维 DP 与滚动数组 O(n) 空间优化、最优路径回溯、与 speculative decoding 的关联）见 [编辑距离题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)。
+| [139. 单词拆分](https://leetcode.cn/problems/word-break/) | 中等 | DP / BFS + 字典哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+| [152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/) | 中等 | 滚动 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
+| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP / 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+| [354. 俄罗斯套娃信封问题](https://leetcode.cn/problems/russian-doll-envelopes/) | 困难 | 排序 + LIS（二分） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：限时口述 vLLM 架构
+#### 实验 1：测出"不 warmup"的差异
 
-不看资料，限时 5 分钟，从用户请求进入开始，口述 LLMEngine → Scheduler → Worker → Model Runner 的完整数据流，并说明请求状态机。录音回放，检查是否漏掉 block table 或抢占策略。
+修改 `benchmark_demo.py`，把 warmup 次数设为 0，对比首次调用和第 100 次的耗时差。观察：首次是否明显偏慢？大 N 和小 N 哪个差距更大？
 
-> 思考：哪个模块你讲得最模糊？针对那一模块重读 Week5/Week6 对应教程。
+> 思考：为什么小 N 时 warmup 影响更大？（提示：小 N 时 kernel 本身只跑几微秒，launch overhead 和 cold miss 的绝对开销占比更大。）
 
-#### 实验 2：用数字解释 KV Cache 压力
+#### 实验 2：对比"计时含 memcpy"的错误测法
 
-选一个你熟悉的模型（如 LLaMA2-7B/13B/70B），计算：
+写一个错误版本：把 `cudaMemcpy`（H2D）放进 cudaEvent 计时区间内，对比正确测法的带宽数字。观察：错误测法的带宽会低多少？
 
-1. 单请求 4k/8k 序列的 KV Cache 显存占用
-2. batch=8/16/32 时的总显存
-3. INT8 量化后能省多少显存
+> 思考：为什么 memcpy 会让带宽假低？（提示：H2D 走 PCIe（~32 GB/s），远慢于 GDDR7 内 kernel（~1792 GB/s）。把 PCIe 搬运算进 kernel 时间，等于用慢速总线拖累了快速计算。）
 
-> 思考：为什么 Decode 阶段 batch 越大越能隐藏权重读取延迟？（提示：同一权重被多个请求共享，amortize 读取成本。）
+#### 实验 3：为 Mini 引擎补一份 README 模板
 
-#### 实验 3：设计题 mock
+参照 1.1 的六段结构，为你的 Mini AI Infra 项目写一份 README 模板（可以先留 `[TODO]` 占位）。重点检查：① Quick Start 的每条命令是否真能跑通 ② Benchmark 表是否有"达到比例"列 ③ 后续规划是否体现成长性。
 
-选一道场景题（“长文本推理优化”或“设计 LLM 推理服务”），准备 3 分钟版本和 10 分钟版本：
-
-- **3 分钟版本**：给出 5 个关键词，每个词一句话解释
-- **10 分钟版本**：从请求接入、调度、KV Cache、Attention、量化、监控完整展开
-
-> 思考：面试官最可能在哪个点打断追问？提前准备 2-3 个 follow-up。
+> 思考：面试官打开你的仓库，30 秒内能看懂这项目做什么吗？如果不能，缺的是哪一段？
 
 ---
 
 ### 今日总结
 
-Day 4 我们系统复习了 AI Infra 面试进阶篇的四大主题：
+Day 1 我们把 7 周散落的代码与笔记，打磨成一份面向面试的项目文档框架：
 
-1. **Attention 优化**：FlashAttention 通过 tiling + online softmax 把 IO 从 `O(N²)` 降到 `O(Nd)`；FA2 比 FA1 减少了 non-matmul FLOPs 和同步点；MHA/GQA/MQA 是显存与质量的 trade-off
-2. **推理系统**：Prefill compute-bound 关注 TTFT，Decode memory-bound 关注 TBT；KV Cache 是显存瓶颈，量化/分页/压缩/offload 是四大优化方向
-3. **PagedAttention**：block table 实现逻辑连续物理离散，copy-on-write 支持 prefix 共享，解决碎片和 over-allocation
-4. **vLLM 调度**：LLMEngine → Scheduler → Worker → Model Runner；Continuous Batching 在 iteration 级别动态组 batch；抢占默认 Recompute
-5. **自测系统**：21 道进阶题覆盖六大主题，随机抽题 + 限时口述 + 录音回放
-6. **Causal Self-Attention**：自回归解码典型 CUDA 题，理解 causal mask 的实现要点与 KV Cache 的配合
-7. **课程表**：拓扑排序与调度依赖同构，训练算法基本功
+1. **README 六段结构**：标题+亮点、快速开始、系统架构、Benchmark、项目结构、后续规划——每段对应一个面试高频问题
+2. **Quick Start 三要素**：环境要求、依赖安装、一行命令运行 + 预期输出；目标是新用户 10 分钟跑通
+3. **Benchmark 方法论**：warmup + cudaEvent 计时 + N 次平均 + 排除拷贝 + 对比基线，避免 6 个常见坑
+4. **指标计算**：带宽 `BW = (R+W bytes) / t`、算力 `TFLOPS = 2MNK / t`、利用率 `实测/峰值`
+5. **对比表格**：绝对数字无意义，必须给"达到 cuBLAS 72%"这样的百分比
+6. **benchmark_demo.py**：可复用框架，以 SiLU 为例输出能直接贴 README 的 Markdown 表格
+7. **文档倒逼重构**：写 Quick Start 时会发现依赖没列全、入口不清晰，逼你补齐工程短板
 
-掌握这些后，你就有了面试进阶篇的“深度弹药”——明天 Day 5 进入 Mock 面试，把知识转化为可表达的面试语言。
+掌握这些后，你就有了项目的"门面"——明天 Day 2 绘制系统架构图与数据流图，让面试官一眼看懂 Mini 引擎的设计。
 
 ---
 
 ### 面试要点
 
-1. **FlashAttention 为什么比标准 Attention 快？**（⭐⭐⭐⭐⭐ 必考）
+1. **介绍一下你的项目，README 应该包含哪些内容？**（⭐⭐⭐⭐⭐ 必考）
 
 <details>
 <summary>点击查看答案</summary>
 
- - 标准 Attention 需要把 `S=QK^T` 和 `P=softmax(S)` 两个 `N×N` 矩阵写回 HBM，IO 是 `O(N²)`
- - FlashAttention 用 tiling 把 Q/K/V 切成小块加载到 SRAM，在片上完成 softmax 和加权求和
- - 配合 online softmax 维护 running max 和 running sum，避免物化完整 N×N 矩阵
- - IO 降为 `O(Nd)`，速度来自减少数据移动而非减少 FLOPs
- - 长序列、小 head dim 时收益最大
+ - **六段结构**：① 标题+亮点（3 秒抓眼球）② 快速开始（可复现）③ 系统架构（一图胜千言）④ Benchmark 结果（量化成果）⑤ 项目结构（工程规范）⑥ 后续规划（成长性）
+ - **每段对应一个面试问题**：介绍项目 / 能跑吗 / 架构 / 成果 / 代码组织 / 继续优化
+ - **README 的本质是项目的"自我介绍稿"**：面试官打开仓库先看 README，3 秒决定是否继续
+ - 缺任何一块，面试官都会追问
 
 </details>
 
 
-2. **推导 online softmax 的三个公式。**（⭐⭐⭐⭐⭐ 必考）
+2. **如何正确测量一个 CUDA kernel 的性能？有哪些常见坑？**（⭐⭐⭐⭐ 高频）
 
 <details>
 <summary>点击查看答案</summary>
 
- ```text
- m_new = max(m_old, max(x_j))
- l_new = l_old × exp(m_old - m_new) + Σ exp(x_j - m_new)
- o_new = o_old × (l_old × exp(m_old - m_new) / l_new) + Σ (exp(x_j - m_new) / l_new) × v_j
- ```
-
- - `m`：当前已见元素最大值（参考点）
- - `l`：统一参考点后的 softmax 分母累加和
- - `o`：统一参考点后的加权输出累加和
- - `exp(m_old - m_new)`：把旧参考点统一到新参考点的缩放因子
- - 作用：分块计算时不需要等所有 block 到齐，可以边算边更新
+ - **正确流程**：① warmup 3-5 次避免 cold miss ② `cudaEvent` 计时（不能用 CPU `clock`）③ 跑 N 次取平均 ④ `cudaDeviceSynchronize` 同步 ⑤ 计算带宽/算力 ⑥ 对比峰值/cuBLAS 基线
+ - **六个常见坑**：
+   1. 不 warmup → 首次偏慢
+   2. 计时内含 `cudaMemcpy` → PCIe 拖慢，带宽假低
+   3. 只跑 1 次 → 抖动大
+   4. 忘了 `synchronize` → kernel 异步，时间≈0
+   5. 带宽算错 R+W（copy 是 2x，GEMM 读A+B 写C）
+   6. 不对比基线 → 绝对数字无意义
+ - **指标**：带宽 `BW = (R+W bytes)/t`，算力 `TFLOPS = 2MNK/t`，利用率 `实测/峰值`
 
 </details>
 
 
-3. **Prefill 和 Decode 的区别？各自优化目标？**（⭐⭐⭐⭐⭐ 必考）
+3. **为什么 benchmark 必须对比基线？给绝对数字不行吗？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：输入完整 prompt，形状 `(B, N_prompt, d)`，可并行，compute-bound
-   - 优化目标：**TTFT**（Time To First Token），用 FlashAttention 降低 attention IO
- - **Decode**：自回归逐 token 生成，形状 `(B, 1, d)`，M=1 导致 GEMM 退化，memory-bound
-   - 优化目标：**TBT**（Time Between Tokens），用 KV Cache + Continuous Batching 提升吞吐
- - Decode 的 arithmetic intensity 极低，瓶颈在权重和 KV Cache 读取
+ - "GEMM 1.8 ms" → 面试官不知道这算快还是慢（取决于矩阵大小、显卡型号）
+ - "GEMM 达到 cuBLAS 72%" → 立刻知道优化水平，因为 cuBLAS 是公认天花板
+ - 对比基线体现你**知道上限在哪**：memory-bound 比带宽峰值，compute-bound 比算力峰值 / cuBLAS
+ - 没有基线的数字 = 自说自话，面试官一问"这算快吗"就答不上来
 
 </details>
 
 
-4. **PagedAttention 解决了什么问题？核心设计是什么？**（⭐⭐⭐⭐⭐ 必考）
+4. **SiLU 这种 elementwise kernel 的瓶颈是什么？如何判断优化到头了？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **解决问题**：KV Cache 静态/动态分配造成的显存碎片和浪费，以及 contiguous 内存要求
- - **核心设计**：
-   - 把 KV Cache 分成固定大小 block（如 16 tokens）
-   - 每个请求维护 block table：逻辑 block → 物理 block
-   - 物理 block 可以不连续，allocator 按需分配
-   - 支持 copy-on-write，多个请求共享同一块物理 block，写时复制
- - **收益**：消除碎片、支持动态长度、支持 prefix 共享、提高显存利用率
+ - **瓶颈是内存带宽**：SiLU 计算量极小（一次 exp + 乘），数据搬运是瓶颈 → memory-bound
+ - **判断到头**：测带宽利用率 `实测 BW / GDDR7 峰值(1792 GB/s)`，达到 80-90% 即接近上限（剩余开销是 launch overhead 和指令调度，无法消除）
+ - **小 N 时利用率低**：launch overhead 占比大；大 N 才能打满带宽
+ - **优化方向**：① `__expf` 快速数学函数 ② float4 向量化访问 ③ 融合到上游 kernel（避免中间写回显存）
 
 </details>
 
 
-5. **Continuous Batching 和 Dynamic Batching 的区别？为什么 LLM 更适合 Continuous？**（⭐⭐⭐⭐⭐ 必考）
+5. **Quick Start 为什么要求"10 分钟跑通"？写不好有什么后果？**（⭐⭐⭐ 中频）
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Dynamic Batching**：request-level，一批请求一起开始、一起结束
-   - 问题：LLM 生成长度差异大，先完成的请求要等后完成的，GPU 空转
- - **Continuous Batching**：iteration-level，每轮 forward 后重新组装 batch
-   - 完成的请求退出，新请求加入，GPU 几乎不空转
- - **为什么 LLM 更适合 Continuous**：生成长度不可预测且差异大，iteration 级调度能最大化 GPU 利用率
- - vLLM 的高吞吐主要来自 Continuous Batching + PagedAttention
+ - **可复现性 = 工程素养**：面试官/同事 clone 后跑不通，会质疑你的工程能力
+ - **后果**：① 面试官试跑失败直接 pass ② 漏写依赖 → import 报错 ③ 不给预期输出 → 用户不知是否成功
+ - **三要素**：环境要求（GPU/CUDA/Python 版本）、依赖安装（requirements.txt）、运行示例 + 预期输出
+ - **必须亲自跑一遍**：文档写"应该能跑"但实际不通，是最致命的问题
 
 </details>

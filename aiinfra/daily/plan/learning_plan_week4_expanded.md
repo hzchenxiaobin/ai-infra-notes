@@ -50,7 +50,7 @@ python -c "import torch; print('torch', torch.__version__, 'cuda', torch.version
 # 预期输出：torch 2.x.x cuda 12.x available True
 
 # 验证 Week 3 代码路径存在
-ls week3/day18-attention-io/attention_naive.cu
+ls week7/day18-attention-io/attention_naive.cu
 # 预期：文件存在
 
 # 验证 ncu 可用

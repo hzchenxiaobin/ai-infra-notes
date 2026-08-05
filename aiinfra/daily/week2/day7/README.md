@@ -395,7 +395,7 @@ week2/
 
 #### 任务 6：性能对比报告
 
-在 `week9/day6/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
+在 `week10/day3/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
 
 ##### 报告模板
 

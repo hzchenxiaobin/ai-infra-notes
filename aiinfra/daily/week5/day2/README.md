@@ -1,438 +1,511 @@
-## Day 2：算子接入 Mini 引擎 —— FlashAttention 集成
+## Day 2：FlashAttention 论文精读与 Online Softmax 推导FlashAttention 论文精读与 Online Softmax 完整推导
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解 **PyTorch C++ Extension** 的集成机制，掌握从 `.cu` kernel 到 Python 可调用函数的完整流水线<br>
-2. 学会用 `torch.utils.cpp_extension.load_inline` 动态编译自定义 FlashAttention 算子，封装 Day 2 的 Kernel<br>
-3. 实现一个 Mini Transformer 引擎（Mini Engine v2），用自定义 FlashAttention 替换标准 Attention 路径<br>
-4. 验证自定义版与 PyTorch 版的端到端正确性（误差 < 1e-3），并对比不同序列长度下的 latency<br>
-5. 能解释 FlashAttention 在什么情况下比标准 Attention 慢（短序列 / 小 batch），以及什么时候自定义才有优势<br>
+1. 理解标准 Attention 的 **O(N²) HBM 访问瓶颈**——物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵<br>
+2. 掌握 FlashAttention 的两大核心创新：**Tiling 分块** + **Online Softmax 递推**<br>
+3. 能独立白板推导 **Online Softmax 三公式**（max/sum/output 更新），并解释 `exp(m - m_new)` 缩放因子的作用<br>
+4. 理解 FlashAttention 的 HBM 访问从 O(N²) 降到 O(Nd) 的理论推导，以及实际 wall-clock 加速只有 2-8x 的原因<br>
+5. 能计算给定 Br/Bc/d 下的 **SRAM 使用量**，判断分块参数是否超限<br>
 
-> 💡 **为什么重要**：Day 2-4 我们手写并优化了 FlashAttention Kernel，但它仍是"独立可执行文件"。真实工程中，Kernel 必须接入推理框架才能端到端跑通。今天把"散装 Kernel"组装成"能跑的引擎"——这是从"会写 Kernel"到"能做系统"的工程能力跃迁。Day 6 会对这个引擎做系统级性能对比。
+> 💡 **为什么重要**：FlashAttention 是推理系统面试的第一考点。Week 3 Day 4 我们分析了标准 Attention 的 O(N²) IO 问题，今天从论文出发完整推导 online softmax——这是 Week 4 全周的理论基石。明天手写完整 Forward Kernel、后天读官方源码、大后天学 FA2 改进，全部建立在今天的三公式之上。能白板推导这三行公式，是 AI Infra 岗位的硬门槛。
 
 ---
 
-### 学前导读：为什么 Kernel 要接入框架
+### 学前导读：标准 Attention 的 O(N²) 瓶颈，FlashAttention 怎么破
 
-Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里手动 `cudaMalloc`、`cudaMemcpy`、调 Kernel、`checkResult`。这在教学阶段没问题，但真实场景有三个问题：
+Week 3 Day 4 我们用 ncu 实测了标准 Attention 的 HBM 读写量：当 N=4096 时，S 和 P 两个 N×N 中间矩阵各占 64MB，总 HBM IO 高达 ~206MB。这就是 O(N²) 瓶颈的来源——**softmax 和第二个 GEMM 之间必须物化 P 矩阵到 HBM**，因为 cuBLAS 要求输入是连续内存矩阵，softmax 与 GEMM 之间没有原生融合接口。
 
-| 问题 | 独立程序 | 接入框架后 |
-|------|---------|-----------|
-| 张量管理 | 手动 `cudaMalloc`/`cudaFree` | 框架自动管理（内存池、autograd） |
-| GEMM | 要么手写（慢），要么调 cuBLAS（繁琐） | `torch.mm` 一行搞定（cuBLAS 封装） |
-| 端到端验证 | 只能验证单算子 | 能跑整个 Transformer Block 对比 |
+FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Shared Memory）中完成 softmax + 累加**。但这里有个数学障碍——标准 softmax 需要全局 max 做数值稳定（safe softmax），分块后每个 tile 只能看到局部数据，无法直接得到全局 max。
 
-今天的任务：把 Day 2 的 FlashAttention Kernel 封装成 PyTorch 可调用的 C++ Extension，接入 Week 3 的 Mini Transformer Block，用自定义 FA 替换 `QK^T → softmax → PV` 路径，对比正确性和 latency。
+| 策略 | 标准 Attention | FlashAttention |
+|------|---------------|----------------|
+| S/P 物化 | 写回 HBM（O(N²)） | 不物化，留在 SRAM |
+| softmax | 全局 max 一次算完 | 分块 online 递推更新 |
+| HBM IO | O(N² + Nd) ≈ O(N²) | O(Nd) |
+| 长序列 N=8192 | ~805 MB | ~4 MB |
 
-> 💡 **一句话总结**：今天不优化 Kernel 本身（那是 Day 3-4 做的），而是学"怎么把 Kernel 塞进框架"——这是工程集成的标准流程。Week 3 Day 5 我们已经做过 Softmax/LayerNorm 的集成，今天用同样模式集成 FlashAttention。
+> 💡 **一句话总结**：FlashAttention 的核心不是减少 FLOPs（计算量相同），而是用 online softmax 解决"分块后无法算全局 max"的数学障碍，从而把 softmax + GEMM 融合在 SRAM 里完成，消除 O(N²) 的 HBM 读写。
 
 ---
 
 ### 理论学习
 
-#### 5.1 Mini Transformer Engine v2 架构
+#### 1.1 标准 Attention 的 IO 痛点回顾
 
-![FlashAttention Naive vs Fused 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
-
-在 Week 3 Day 5 的 Mini Engine v1 基础上，v2 用自定义 FlashAttention 替换标准 Attention：
-
-![Mini Transformer Engine v2 数据流](../../images/week4_transformer_engine_flow.svg)
-
-##### 为什么要替换 Attention 而不是 GEMM？
-
-| 算子 | 官方实现 | 自定义价值 | 是否替换 |
-|------|---------|-----------|---------|
-| GEMM（QKV/Out/FFN） | cuBLAS（极致优化） | 低（cuBLAS 已近峰值） | ❌ 用 torch.mm |
-| Attention | PyTorch SDPA / 标准 | 高（FA 消除 O(N²) IO） | ✅ 自定义 FA |
-| Softmax/LayerNorm | PyTorch ATen | 中（Week 3 已替换） | 可选 |
-
-#### 5.2 PyTorch C++ Extension 集成流水线
-
-![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
-
-集成步骤：
+![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
 ```
-1. 写 CUDA Kernel（Day 2 的 flashAttentionForward）
-2. 写 launch 包装函数（接收裸指针 + stream）
-3. 写 C++ wrapper（接收 at::Tensor，提取指针/stream）
-4. 用 load_inline 动态编译
-5. 在 nn.Module 中调用
+标准 Attention：
+ Step 1: S = Q × K^T / √d (N×N) → 写入 HBM
+ Step 2: P = softmax(S) (N×N) → 读 S，写 P
+ Step 3: O = P × V (N×d) → 读 P，写 O
 ```
 
-##### 关键 API
+各阶段 HBM 读写量（N=4096, d=64, FP32）：
 
-```cpp
-// C++ wrapper 关键点
-at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
-    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
-    auto O = at::empty_like(Q);
-    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
-                                   B, H, N, d,
-                                   at::cuda::getCurrentCUDAStream() // ★ 关键：传递当前 stream
-    );
-    return O;
-}
+| 阶段 | 读 HBM | 写 HBM | 小计 |
+|------|--------|--------|------|
+| Step 1: S=QK^T | 2Nd | N² | 2Nd + N² |
+| Step 2: P=softmax(S) | N² | N² | 2N² |
+| Step 3: O=PV | N² + Nd | Nd | N² + 2Nd |
+| **总计** | **2Nd + 3N²** | **N² + N² + Nd** | **4N² + 4Nd ≈ O(N²)** |
+
+> ⚠️ **注意**：O(N²) 项来自物化两个 N×N 矩阵 S 和 P（写 S N² + 读 S N² + 写 P N² + 读 P N² = 4N²）。当 N ≫ d 时，4N² 主导。
+
+#### 1.2 FlashAttention 的两大核心创新
+
+![FlashAttention Tiling 分块策略](../images/flash_attention_tiling.svg)
+
+| 创新点 | 解决的问题 | 关键思想 |
+|--------|-----------|---------|
+| **Tiling** | SRAM 容量有限，放不下完整 Q/K/V | 将 Q/K/V 分成小 tile，逐块加载到 SRAM |
+| **Online Softmax** | 分块后无法得到全局 max | 维护 running max/sum/output，递推更新 |
+
+##### Tiling 分块策略
+
+FlashAttention 将 Q 按行分块（Br 行一块），K/V 按行分块（Bc 行一块）。外层循环遍历 Q tile，内层循环遍历 KV tile。Q tile 常驻 SRAM，KV tile 逐块"滑入"。
+
+```
+Q tile (Br×d) 常驻 SRAM
+ for each KV tile (Bc×d):
+ 加载 Kj, Vj 到 SRAM
+ Sij = Qi × Kj^T (Br×Bc，留在 register/SRAM)
+ online softmax 更新 m, l, o
+ 丢弃 Sij（不写回 HBM）
+ 写回 Oi = o / l 到 HBM
 ```
 
-> ⚠️ **注意**：必须用 `at::cuda::getCurrentCUDAStream()` 获取 PyTorch 当前 stream，保证自定义 Kernel 与 PyTorch 的 async 行为一致。不传 stream 会导致同步问题（Kernel 在错误 stream 执行）。
+##### SRAM 容量约束决定分块大小
 
-#### 5.3 正确性验证策略
+```
+每 Block 需要的 SRAM：
+ Q tile: Br × d
+ K tile: Bc × d
+ V tile: Bc × d
+ S tile: Br × Bc (register, 不占 smem)
+ 总计 smem: Br×d + 2×Bc×d ≤ SRAM_per_SM
 
-```python
-# 对比标准 Attention vs FlashAttention
-model_std = TransformerBlock(use_fa=False).cuda() # 标准 Attention
-model_fa = TransformerBlock(use_fa=True).cuda() # FlashAttention
-model_fa.load_state_dict(model_std.state_dict()) # 相同权重
-
-with torch.no_grad():
- out_std = model_std(x)
- out_fa = model_fa(x)
-max_diff = (out_std - out_fa).abs().max().item()
-# 预期: max_diff < 1e-3
+以 RTX 5090 为例，shared memory 上限 164 KB/SM：
+ d=64, Br=128, Bc=128:
+ 128×64 + 2×128×64 = 8192 + 16384 = 24576 floats = 96 KB ✓
 ```
 
-#### 5.4 什么时候 FlashAttention 比标准 Attention 慢
+#### 1.3 Online Softmax 三公式完整推导
 
-| 场景 | 原因 | 建议 |
-|------|------|------|
-| 短序列（N<512） | shared memory 设置 + online softmax 递推有固定开销 | 用标准 Attention |
-| 小 batch（B=1, H=1） | 并行度不足，SM 空闲 | 增加 seq 并行 |
-| head dim 很大（d=256+） | tile 变小，计算强度降低 | 减小 Bc |
-| 教学版缺优化 | 无 async copy / 双缓冲 / Tensor Core | 学习官方实现 |
+![Online Softmax 递推更新流程](../images/flash_attention_online_update.svg)
+
+##### 状态定义
+
+- `m`：已处理所有块的 running maximum
+- `l`：已处理所有块的 running sum（以 m 为参考点）
+- `o`：已处理所有块的 running output（部分加权和）
+
+初始状态：`m = -∞, l = 0, o = 0`
+
+##### 推导过程
+
+**处理新块前**：已有全局状态 `(m, l, o)`，旧参考点是 `m`。新块的 score 为 `xj`，value 为 `vj`。
+
+**公式 1（Max 更新）**：
+
+```
+m_new = max(m, max(xj))
+```
+
+含义：全局 max 可能是之前的 m，也可能是新块中的某个值。
+
+**公式 2（Sum 更新）**：
+
+旧 sum 以 `m` 为参考：`l = Σ exp(x_old - m)`。要转换到以 `m_new` 为参考：
+
+```
+exp(x_old - m_new) = exp(x_old - m) × exp(m - m_new)
+→ 新的旧部分和 = l × exp(m - m_new)
+```
+
+新块的和：`Σ exp(xj - m_new)`。合并：
+
+```
+l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+```
+
+**公式 3（Output 更新）**：
+
+旧 output 按旧概率分布加权：`o = Σ [exp(x_old - m) / l] × v_old`。新概率分布下，旧部分权重需缩放：
+
+```
+exp(x_old - m_new) / l_new = [exp(x_old - m) / l] × [l × exp(m - m_new) / l_new]
+```
+
+所以旧 output 乘以缩放因子 `o_scale = l × exp(m - m_new) / l_new`，新块贡献为 `Σ [exp(xj - m_new) / l_new] × vj`：
+
+```
+o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+```
+
+##### 三公式汇总
+
+```
+公式1: m_new = max(m, max(xj))
+公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+```
+
+##### 数值稳定性要点
+
+- `exp(m - m_new)` 中 `m_new ≥ m`，所以指数 ≤ 0，不会溢出
+- `m_new` 是全局 max，新块的 `exp(xj - m_new) ≤ 1`
+- 即使 `m_new = m`（新块没有更大的值），`exp(0) = 1`，公式退化为简单累加
+
+> 💡 **一句话总结**：`exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"。没有它，不同块计算的概率无法统一到同一个归一化基。
+
+#### 1.4 IO 复杂度对比
+
+![O(N²) vs O(Nd) IO 增长对比](../images/on2_vs_ond_scaling.svg)
+
+| 实现 | HBM 访问量 | N=4096, d=64, FP32 | N=8192, d=64 |
+|------|-----------|-------------------|--------------|
+| 标准 Attention | O(N² + Nd) | ~206 MB | ~805 MB |
+| FlashAttention | O(Nd) | ~4 MB | ~8 MB |
+| **IO 加速比** | | **~50x** | **~100x** |
+
+> 💡 **严格界**：FlashAttention 的 HBM IO 严格界为 **Θ(N²d²/M)**（M 为 SRAM 大小），当 M = Θ(Nd) 时简化为 O(Nd)。教程中统一使用 O(Nd) 这一简化形式，详见 [FlashAttention 论文 Theorem 2](../../../../paper/flashattention/README.md)。
+
+##### 为什么实际 wall-clock 加速只有 2-8x？
+
+```
+标准 Attention 时间 = max(T_gemm, T_memory)
+ - T_gemm: 由 Tensor Core 决定，与 FLOPs 成正比
+ - T_memory: 由 HBM 带宽决定
+
+FlashAttention 时间 ≈ T_gemm（IO 不再是瓶颈）
+
+如果原始 T_gemm ≈ T_memory，加速比 ≈ 2x
+如果原始 T_memory ≫ T_gemm，加速比 ≈ 8x+
+```
+
+FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少。所以长序列、小 head dim（d 较小，GEMM 计算强度低）时收益最大。
 
 ---
 
-### Coding 任务：Mini 引擎 FlashAttention 版
+### Coding 任务：标准 Attention vs FlashAttention IO 对比
 
-#### 任务 1：创建 flash_attention_ops.cpp
+#### 任务 1：创建 compare_attention_io.py
 
-创建文件 `kernels/flash_attention_ops.cpp`：
-
-```cpp
-// flash_attention_ops.cpp —— PyTorch C++ Extension 接口
-// 把 Day 2 的 kernel 封装为 torch 可调用函数
-#include <torch/extension.h>
-#include <cuda_runtime.h>
-
-void launch_flash_attention_forward(const float* Q, const float* K, const float* V, float* O, int B, int H, int N,
-                                    int d, cudaStream_t stream);
-
-at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
-    TORCH_CHECK(Q.dim() == 4, "Q must be 4D (B,H,N,d)");
-    TORCH_CHECK(K.sizes() == Q.sizes(), "K shape must match Q");
-    TORCH_CHECK(V.sizes() == Q.sizes(), "V shape must match Q");
-
-    int B = Q.size(0), H = Q.size(1), N = Q.size(2), d = Q.size(3);
-    auto O = at::empty_like(Q);
-
-    launch_flash_attention_forward(Q.data_ptr<float>(), K.data_ptr<float>(), V.data_ptr<float>(), O.data_ptr<float>(),
-                                   B, H, N, d, at::cuda::getCurrentCUDAStream());
-    return O;
-}
-
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("flash_attention_forward", &flash_attention_forward, "FlashAttention forward (CUDA)");
-}
-```
-
-#### 任务 2：创建 mini_engine_fa.py
-
-创建文件 `kernels/mini_engine_fa.py`：
+创建文件 `kernels/compare_attention_io.py`：
 
 ```python
-# mini_engine_fa.py —— Mini Transformer 引擎（FlashAttention 版）
-# 运行命令: python mini_engine_fa.py
-# 依赖: 需要 flash_attention_v2.cu 和 flash_attention_ops.cpp
+# compare_attention_io.py —— 标准 Attention vs FlashAttention IO 与速度对比
+# 运行命令: python compare_attention_io.py
+# 依赖: pip install torch
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import math
-from torch.utils.cpp_extension import load_inline
+import time
 
-cuda_src = open("flash_attention_v2.cu").read()
-cpp_src = """
-#include <torch/extension.h>
-at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V);
-"""
+def standard_attention(Q, K, V):
+    """标准 Attention，物化 S 和 P"""
+    d = Q.size(-1)
+    S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
+    P = F.softmax(S, dim=-1)
+    O = torch.matmul(P, V)
+    return O
 
-fa_ops = load_inline(
-name="fa_ops",
-cpp_sources=cpp_src,
-cuda_sources=cuda_src,
-functions=["flash_attention_forward"],
-verbose=True,
-extra_cuda_cflags=["-O3", "-arch=sm_120"],
-)
+    def flash_attention_pytorch(Q, K, V, Br=64, Bc=64):
+        """
+        纯 PyTorch 实现的 FlashAttention 算法（教学版，不追求速度）
+        用于验证 online softmax 正确性
+        """
+        N, d = Q.size(-2), Q.size(-1)
+        scale = 1.0 / math.sqrt(d)
+        O = torch.zeros_like(Q)
+        L = torch.zeros(Q.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
 
-class MiniAttentionFA(nn.Module):
-    """用自定义 FlashAttention 替换标准 Attention"""
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
+        for q_start in range(0, N, Br):
+            q_end = min(q_start + Br, N)
+            Qi = Q[..., q_start:q_end, :] * scale
 
-        def forward(self, x):
-            B, N, _ = x.shape
-            qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head)
-            qkv = qkv.permute(2, 0, 3, 1, 4) # (3, B, H, N, d)
-            q, k, v = qkv[0], qkv[1], qkv[2]
+            m = torch.full((Qi.size()[:-1] + (1,)), -1e30, device=Q.device, dtype=Q.dtype)
+            l = torch.zeros(Qi.size()[:-1] + (1,), device=Q.device, dtype=Q.dtype)
+            o = torch.zeros_like(Qi)
 
-            out = fa_ops.flash_attention_forward(q, k, v)
+            for kv_start in range(0, N, Bc):
+                kv_end = min(kv_start + Bc, N)
+                Kj = K[..., kv_start:kv_end, :]
+                Vj = V[..., kv_start:kv_end, :]
 
-            out = out.transpose(1, 2).reshape(B, N, self.d_model)
-            return self.out(out)
+                Sij = torch.matmul(Qi, Kj.transpose(-2, -1))
 
-            class MiniAttentionStd(nn.Module):
-                """标准 Attention（PyTorch 实现）"""
-                def __init__(self, d_model=512, n_heads=8):
-                    super().__init__()
-                    self.d_model = d_model
-                    self.n_heads = n_heads
-                    self.d_head = d_model // n_heads
-                    self.qkv = nn.Linear(d_model, 3 * d_model)
-                    self.out = nn.Linear(d_model, d_model)
+                # Online softmax update
+                mij = torch.max(Sij, dim=-1, keepdim=True).values
+                m_new = torch.max(m, mij)
 
-                    def forward(self, x):
-                        B, N, _ = x.shape
-                        qkv = self.qkv(x).reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-                        q, k, v = qkv[0], qkv[1], qkv[2]
-                        scale = self.d_head ** -0.5
-                        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-                        attn = F.softmax(attn, dim=-1)
-                        out = torch.matmul(attn, v)
-                        out = out.transpose(1, 2).reshape(B, N, self.d_model)
-                        return self.out(out)
+                # Scale old l and o
+                l_scale = torch.exp(m - m_new)
+                l_new = l * l_scale + torch.sum(torch.exp(Sij - m_new), dim=-1, keepdim=True)
 
-                        class TransformerBlock(nn.Module):
-                            def __init__(self, d_model=512, n_heads=8, d_ff=2048, use_fa=True):
-                                super().__init__()
-                                attn_cls = MiniAttentionFA if use_fa else MiniAttentionStd
-                                self.attn = attn_cls(d_model, n_heads)
-                                self.norm1 = nn.LayerNorm(d_model)
-                                self.norm2 = nn.LayerNorm(d_model)
-                                self.ffn = nn.Sequential(
-                                nn.Linear(d_model, d_ff),
-                                nn.GELU(),
-                                nn.Linear(d_ff, d_model),
-                                )
+                # Compute P weights for new block
+                Pij = torch.exp(Sij - m_new) / l_new
 
-                                def forward(self, x):
-                                    x = x + self.attn(self.norm1(x))
-                                    x = x + self.ffn(self.norm2(x))
-                                    return x
+                # Scale old o and add new contribution
+                o = o * (l * l_scale / l_new) + torch.matmul(Pij, Vj)
 
-                                    def benchmark(model, x, name, n_iter=20):
-                                        for _ in range(3):
-                                            _ = model(x)
-                                            torch.cuda.synchronize()
+                m = m_new
+                l = l_new
 
-                                            start = torch.cuda.Event(enable_timing=True)
-                                            end = torch.cuda.Event(enable_timing=True)
-                                            start.record()
-                                            for _ in range(n_iter):
-                                                _ = model(x)
-                                                end.record()
-                                                torch.cuda.synchronize()
-                                                ms = start.elapsed_time(end) / n_iter
-                                                print(f"{name}: {ms:.3f} ms / forward")
-                                                return ms
+                O[..., q_start:q_end, :] = o
 
-                                                def main():
-                                                    torch.manual_seed(42)
-                                                    d_model, n_heads = 512, 8
+                return O
 
-                                                    for N in [512, 1024, 2048]:
-                                                        print(f"\n===== N={N} =====")
-                                                        x = torch.randn(1, N, d_model, device="cuda", dtype=torch.float32)
+                def benchmark(func, Q, K, V, name, n_iter=10):
+                    # warmup
+                    for _ in range(3):
+                        _ = func(Q, K, V)
+                        torch.cuda.synchronize()
 
-                                                        model_std = TransformerBlock(d_model, n_heads, use_fa=False).cuda()
-                                                        model_fa = TransformerBlock(d_model, n_heads, use_fa=True).cuda()
-                                                        model_fa.load_state_dict(model_std.state_dict())
+                        start = torch.cuda.Event(enable_timing=True)
+                        end = torch.cuda.Event(enable_timing=True)
+                        start.record()
+                        for _ in range(n_iter):
+                            out = func(Q, K, V)
+                            end.record()
+                            torch.cuda.synchronize()
+                            ms = start.elapsed_time(end) / n_iter
+                            print(f"{name}: {ms:.3f} ms")
+                            return out
 
-                                                        with torch.no_grad():
-                                                            out_std = model_std(x)
-                                                            out_fa = model_fa(x)
-                                                            max_diff = (out_std - out_fa).abs().max().item()
-                                                            print(f"Max diff (Std vs FlashAttention): {max_diff:.2e}")
+                            def main():
+                                torch.manual_seed(42)
+                                device = "cuda"
+                                dtype = torch.float32
+                                d = 64
+                                seq_lens = [512, 1024, 2048, 4096]
 
-                                                            with torch.no_grad():
-                                                                ms_std = benchmark(model_std, x, f"Standard Attention (N={N})")
-                                                                ms_fa = benchmark(model_fa, x, f"FlashAttention (N={N})")
-                                                                print(f"Speedup: {ms_std / ms_fa:.2f}x")
+                                print("=== Attention IO & Speed Comparison ===")
+                                print(f"head dim d={d}, FP32\n")
 
-                                                                if __name__ == "__main__":
-                                                                    main()
+                                for N in seq_lens:
+                                    print(f"--- N={N} ---")
+                                    Q = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+                                    K = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+                                    V = torch.randn(1, 1, N, d, device=device, dtype=dtype)
+
+                                    # 正确性验证
+                                    O_std = standard_attention(Q, K, V)
+                                    O_fa = flash_attention_pytorch(Q, K, V)
+                                    max_diff = (O_std - O_fa).abs().max().item()
+                                    print(f"Max diff (standard vs flash): {max_diff:.2e}")
+
+                                    # 速度对比
+                                    benchmark(standard_attention, Q, K, V, "Standard Attention")
+                                    benchmark(flash_attention_pytorch, Q, K, V, "FlashAttention (PyTorch)")
+
+                                    # 理论 IO 对比
+                                    bytes_per_elem = 4
+                                    std_io = (3 * N * N + 4 * N * d) * bytes_per_elem / (1024 * 1024)
+                                    fa_io = (4 * N * d) * bytes_per_elem / (1024 * 1024)
+                                    print(f"Theoretical HBM IO: Standard={std_io:.2f} MB, FlashAttention={fa_io:.2f} MB, ratio={std_io/fa_io:.1f}x\n")
+
+                                    if __name__ == "__main__":
+                                        main()
 ```
 
-#### 任务 3：编译运行与正确性验证
+#### 任务 2：编译与运行
 
 ```bash
-# 确保 flash_attention_v2.cu 和本文件在同一目录
-python kernels/mini_engine_fa.py
+# 运行（需 CUDA GPU + PyTorch）
+python kernels/compare_attention_io.py
 ```
 
 **预期输出**：
 
 ```text
-Max diff (Std vs FlashAttention): 1.67e-02
+=== Attention IO & Speed Comparison ===
+head dim d=64, FP32
 
-===== N=512 =====
-Standard Attention (N=512): 0.235 ms / forward
-FlashAttention (N=512): 1.727 ms / forward
-Speedup: 0.14x
+--- N=512 ---
+Max diff (standard vs flash): 3.87e-07
+Standard Attention: 0.042 ms
+FlashAttention (PyTorch): 4.161 ms
+Theoretical HBM IO: Standard=3.67 MB, FlashAttention=0.52 MB, ratio=7.0x
 
-===== N=2048 =====
-Max diff (Std vs FlashAttention): 6.79e-03
-Standard Attention (N=2048): 0.976 ms / forward
-FlashAttention (N=2048): 10.355 ms / forward
-Speedup: 0.09x
+--- N=4096 ---
+Max diff (standard vs flash): 4.77e-07
+Standard Attention: 2.460 ms
+FlashAttention (PyTorch): 252.053 ms
+Theoretical HBM IO: Standard=205.52 MB, FlashAttention=4.19 MB, ratio=49.0x
 ```
 
-> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, load_inline 编译 Day 2 的 flash_attention_v2.cu）。**手写 FA 比 standard 还慢**（Speedup < 1）——Day 2 的 kernel 是教学版（单 block、无并行 tile、Br=Bc=64 固定），IO 节省被 launch/同步开销淹没。真实 FA 加速需 CUTLASS 级别的 kernel 工程化（见 Day 6b WMMA、Day 4b CUTLASS）。`Max diff ~1e-2` 偏大，因 FP32 累加顺序差异（非 bug，教学版未做数值稳定化）。
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, PyTorch SDPA 关闭）。**PyTorch 教学版 FA 比 standard 还慢**——因为 Python 双层 for 循环的 launch overhead 远超 IO 节省；真实 FA 加速来自 CUDA kernel 融合（见 Day 2）。IO 理论比值（49x）才是面试该背的数。
 
-> ⚠️ **预期结果**：N 较小时 FlashAttention 可能没有优势（甚至略慢），因为 kernel launch 和 shared memory 开销。N 越大优势越明显。
+#### 任务 3：手动推导验证 + ncu 观察中间矩阵
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+**手动推导练习**：已处理块的 `m=1.0, l=2.0`，新块 score=`[2.0, 0.5, 3.0]`，value=`[[1,2],[3,4],[5,6]]`，计算新的 `m_new, l_new, o_new`（假设 o 初始为 0）。
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+> 提示：m_new=3.0, l_scale=exp(1-3)=0.135, l_new=2×0.135 + exp(2-3)+exp(0.5-3)+exp(3-3) = 0.27+0.368+0.082+1.0=1.72
+
+**用 torch.profiler 观察中间矩阵分配**：
+
+```bash
+# 用 torch.profiler 对比两种实现的 cuda_memory_usage
+python -c "
+import torch, torch.nn.functional as F, math
+from compare_attention_io import standard_attention, flash_attention_pytorch
+
+Q = torch.randn(1,1,4096,64,device='cuda')
+K = torch.randn(1,1,4096,64,device='cuda')
+V = torch.randn(1,1,4096,64,device='cuda')
+
+with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
+ standard_attention(Q, K, V)
+print('=== Standard Attention ===')
+print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
+"
+```
+
+**观察重点**：标准 Attention 会分配 N×N 的 S/P 矩阵（4096²×4B = 64MB），FlashAttention 无 N×N 分配。
+
+#### 任务 4：LeetGPU 在线题目 —— Causal Self-Attention
+
+**题目链接**：<https://leetgpu.com/challenges/causal-self-attention>
 
 **与今日知识的关联**：
 
-本题是纯 memory-bound kernel（算术强度 ≈ 0），考察 coalesced access 和带宽利用率。它比纯拷贝更进一步：读 `input` 按行连续时写 `output` 必然按列 strided，读写无法同时合并，需要 shared memory tile 中转。今天集成 FlashAttention 到 Mini 引擎后，整个引擎的 Attention 部分从 O(N²) HBM 读写降到 O(Nd)。Matrix Transpose 让你直观测量"memory-bound kernel 能达到多少带宽"——这是评估 FlashAttention 是否跑满 HBM 带宽的基准线。如果 FA 的 HBM 读写吞吐接近 Transpose 的实测值，说明 IO 优化已到位。
+本题是 Day 1 主题的 attention mask 最基础练习——它完整保留了 softmax 归一化，与今天推导的 online softmax 三公式直接对应：第 `i` 行的输出只需前 `i+1` 个 KV 的 running `(m, l, o)`，是 online softmax 最自然的应用场景。mask 的实现要点是把 `j > i` 的 score 置 `-∞`（`e^{-∞}=0` 真正归零，置 0 则 softmax 后仍有权重），再用 FlashAttention 的 tiling 跳过上三角 tile。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时和带宽利用率。完整题解（含 shared memory tiling、bank conflict padding、带宽测量）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Causal Self-Attention 题目](https://leetgpu.com/challenges/causal-self-attention)上记录通过耗时。完整题解（含下三角 mask 实现、跳过上三角 tile、online softmax 融合）见 [Causal Self-Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 5）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 5（贪心），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 1（栈基础与设计），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 简单 | 一次遍历 / DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html) |
-| [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) | 中等 | 贪心维护最远可达 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html) |
-| [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/) | 中等 | 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html) |
-| [763. 划分字母区间](https://leetcode.cn/problems/partition-labels/) | 中等 | 最后出现位置 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html) |
-| [621. 任务调度器](https://leetcode.cn/problems/task-scheduler/) | 中等 | 贪心（最大频数公式） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
+| [20. 有效的括号](https://leetcode.cn/problems/valid-parentheses/) | 简单 | 栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html) |
+| [155. 最小栈](https://leetcode.cn/problems/min-stack/) | 中等 | 辅助栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html) |
+| [232. 用栈实现队列](https://leetcode.cn/problems/implement-queue-using-stacks/) | 简单 | 双栈倒换（摊还 O(1)） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html) |
+| [150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/) | 中等 | 操作数栈求值 | — |
+| [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/) | 中等 | 哈希 + 数组交换删除 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：FP16 支持
+#### 实验 1：手动推导 online softmax
 
-修改 `MiniAttentionFA` 使其支持 FP16 输入（Kernel 内部 cast 到 FP32 计算）。
+假设已处理块的 `m=2.0, l=3.0`，新块的值为 `[3.0, 1.0, 4.0]`，计算新的 `m_new, l_new`。
 
-> 提示：`at::Half` 输入，wrapper 中 `data_ptr<at::Half>()`，Kernel 内 `__half2float` 转换。
+> 提示：m_new=4.0, l_scale=exp(2-4)=0.135, l_new=3×0.135 + exp(3-4)+exp(1-4)+exp(4-4) = 0.406+0.368+0.050+1.0=1.824
 
-#### 实验 2：同时使用 FA + 自定义 LayerNorm
+#### 实验 2：未归一化 vs 每次归一化
 
-在 Mini 引擎中同时使用自定义 FlashAttention（Day 2）和自定义 LayerNorm（Week 3 Day 2），对比全 PyTorch 版速度。
+修改 `flash_attention_pytorch` 使用未归一化的 `o`（最后做 `O=o/l`），验证与归一化版本结果一致。
 
-> 提示：Week 3 Day 5 已做过 LayerNorm 集成，把两个自定义算子组合到同一个 TransformerBlock。
+> 提示：两种写法数学等价。工程上常见的是每次归一化，最后直接输出；未归一化版本每次不除 l_new，最后统一除 l。
 
-#### 实验 3：用 nsys 观察时间线
+#### 实验 3：增大序列长度对比 HBM 访问量
 
-```bash
-nsys profile -o mini_engine_fa_timeline python kernels/mini_engine_fa.py
-```
+修改测试尺寸到 N=8192，对比标准 Attention 和 FlashAttention 的理论 HBM 访问量：
 
-观察 FlashAttention 版的 kernel 数量是否比标准版少（FA 融合了 QK^T + softmax + PV 为一个 kernel）。
+| N | 标准 Attention HBM | FlashAttention HBM | 加速比 |
+|---|---|---|---|
+| 256 | O(N²+Nd) | O(Nd) | ~N/d |
+| 1024 | | | |
+| 4096 | | | |
+| 8192 | | | |
 
-> 提示：标准版有 3 个 kernel（mm + softmax + mm），FA 版只有 1 个（flashAttentionForward）。
+> 提示：标准 = O(N²+Nd)，FlashAttention = O(Nd)。N 翻倍时标准 IO 变 4x，FlashAttention IO 变 2x。
 
 ---
 
 ### 今日总结
 
-Day 5 我们把 FlashAttention Kernel 集成到了 Mini Transformer 引擎：
+Day 1 我们从论文出发，完整推导了 FlashAttention 的理论基石：
 
-1. **C++ Extension 集成**：`launch_flash_attention_forward` 包装 + `at::Tensor` wrapper + `load_inline` 动态编译
-2. **Mini Engine v2**：用自定义 FA 替换标准 `QK^T → softmax → PV` 路径，GEMM 仍用 cuBLAS
-3. **正确性验证**：自定义版与标准版端到端误差 < 1e-3
-4. **性能特征**：短序列（N<512）FA 可能略慢（固定开销）；长序列（N>2048）FA 加速 1.5-3x
-5. **关键 API**：`at::cuda::getCurrentCUDAStream()` 传递 stream，保证 async 行为一致
-6. **Kernel 融合效果**：标准版 3 个 kernel（mm+softmax+mm）→ FA 版 1 个 kernel，减少 launch overhead
+1. **标准 Attention 的 O(N²) 瓶颈**：物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，当 N=4096 时 IO 高达 ~206MB
+2. **FlashAttention 两大创新**：Tiling 分块（Q tile 常驻 SRAM，KV tile 逐块滑入）+ Online Softmax（递推更新 m/l/o）
+3. **Online Softmax 三公式**：`m_new=max(m,max(xj))`、`l_new=l×exp(m-m_new)+Σexp(xj-m_new)`、`o_new=o×(l×exp(m-m_new)/l_new)+Σ(exp(xj-m_new)/l_new)×vj`
+4. **缩放因子** `exp(m - m_new)`：统一参考点，保证分块递推的概率分布一致
+5. **IO 复杂度**：从 O(N²) 降到 O(Nd)，实际 wall-clock 加速 2-8x（GEMM FLOPs 未减）
+6. **SRAM 约束**：Br×d + 2×Bc×d ≤ SRAM 容量，决定分块大小上限
 
-掌握这些后，你就拥有了把自定义 Kernel 集成到推理框架的完整工程能力。明天做系统级性能对比。
+掌握这些后，你就拥有了明天手写完整 Forward Kernel 的全部理论基础。
 
 ---
 
 ### 面试要点
 
-1. **如何把自定义 FlashAttention kernel 集成到 PyTorch 推理引擎中？**
+1. **FlashAttention 为什么快？请从 HBM 访问量的角度完整分析。**
 
 <details>
 <summary>点击查看答案</summary>
 
- 1. 写 CUDA kernel（Day 2 的 `flashAttentionForward`）
- 2. 写 `launch_` 包装函数，接收裸指针 + stream
- 3. 写 C++ wrapper，接收 `at::Tensor`，提取 `data_ptr` 和 `getCurrentCUDAStream`
- 4. 用 `load_inline` 动态编译或 `setup.py` 静态编译
- 5. 在 `nn.Module` 中替换标准 Attention 路径
- 6. 注意：传递正确的 stream，保证与 PyTorch 的 async 行为一致
+ - 标准 Attention 需要物化 S=QK^T 和 P=softmax(S) 两个 N×N 矩阵到 HBM，HBM 访问量为 O(N²)
+ - FlashAttention 通过 tiling 将 Q/K/V 分成小 tile，利用 online softmax 在 SRAM 中完成 softmax 和输出累加
+ - HBM 访问量降为 O(Nd)（只读 Q/K/V，只写 O）
+ - 速度来源不是减少 FLOPs，而是减少数据移动；符合"减少数据移动比减少计算更重要"的优化原则
+ - 长序列（N>2048）、小 head dim 时收益最大，因为此时 HBM 带宽是瓶颈
 
 </details>
 
 
-2. **FlashAttention 在什么情况下可能比标准 Attention 慢？为什么？**
+2. **请完整推导 Online Softmax 的三个更新公式，并解释** `exp(m - m_new)` **的作用。**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **短序列（N 较小）**：FA 的 shared memory 设置、online softmax 递推有固定开销，可能比直接调用 cuBLAS + softmax 慢
- - **head dim 较大（d=256+）**：tile 变小，计算强度降低，优势减弱
- - **GPU 上 HBM 带宽不是瓶颈时**：例如 batch 很大但 head 多，标准 Attention 的 GEMM 可能已接近峰值
- - **实现不够优化**：教学版缺少 async copy、双缓冲、向量化等优化
- - 实际部署中需要 benchmark 决定是否启用
+ ```
+ 公式1: m_new = max(m, max(xj))
+ 公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
+ 公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
+ ```
+ - `exp(m - m_new)` 是统一参考点的缩放因子。softmax 的分母需要以同一个 max 为参考，当全局 max 从 m 更新到 m_new 时，之前所有 exp 值都需要从"以 m 为参考"缩放到"以 m_new 为参考"
+ - 这个缩放因子保证递推过程中的概率分布始终一致
+ - 数值稳定：m_new ≥ m，所以 exp(m - m_new) ≤ 1，不会溢出
 
 </details>
 
 
-3. **集成自定义算子时，为什么要传递** `at::cuda::getCurrentCUDAStream()`**？**
+3. **FlashAttention 的实际 wall-clock 加速为什么通常只有 2-8x，而不是 IO 复杂度的 100x？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - PyTorch 的 CUDA 操作是异步的，所有操作提交到当前 stream 的队列
- - 如果自定义 kernel 不传 stream，可能在不同 stream 执行，导致数据竞争或同步问题
- - 传递 `getCurrentCUDAStream()` 保证自定义 kernel 与 PyTorch 的其他操作在同一 stream 串行执行
- - 不传 stream 的后果：kernel 可能在输入数据还未准备好时执行，得到错误结果
+ - 标准 Attention 的时间 = max(T_gemm, T_memory)。当 N 不够大时，GEMM 计算本身也占相当时间
+ - FlashAttention 消除了 O(N²) 的 HBM 读写，但 GEMM 的 FLOPs 没有减少
+ - 如果原始 T_gemm ≈ T_memory，加速比 ≈ 2x；如果 T_memory ≫ T_gemm，加速比 ≈ 8x+
+ - 所以长序列、小 d（GEMM 计算强度低）时收益最大
 
 </details>
 
 
-4. **Mini 引擎中用自定义 FlashAttention 替换标准 Attention 后，kernel 数量有什么变化？**
+4. **FlashAttention 的分块大小 Br×Bc 如何确定？SRAM 容量如何约束？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 标准版：3 个 kernel（`mm` QK^T + `softmax` + `mm` PV），每次 forward 调用 3 次
- - FA 版：1 个 kernel（`flashAttentionForward`），融合了 QK^T + softmax + PV
- - 收益：减少 2 次 kernel launch overhead（每次 ~5-10 μs），在 Decode 阶段（kernel 小而多）提升明显
- - 用 nsys 时间线可以直观看到 kernel 数量减少
+ - 受限于 SRAM（Shared Memory）容量：`Br×d + 2×Bc×d ≤ SRAM 容量`（K/V 不复用）
+ - RTX 5090 shared memory 最多 164 KB/SM
+ - 典型值：d=64, Br=Bc=128 时 SRAM 使用约 96 KB
+ - 分块太小 → 循环次数多，递推开销大；分块太大 → SRAM 超限或 occupancy 下降
+ - K/V 分时复用可省一份 smem：`Br×d + Bc×d ≤ SRAM`
 
 </details>
 
 
-5. **你的 Mini 引擎 FlashAttention 版与生产级推理引擎（如 vLLM）有什么差距？**
+5. **Online Softmax 的数值稳定性是如何保证的？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Kernel 优化**：教学版缺 async copy、双缓冲、Tensor Core、FP16 混合精度（Day 3 学的官方优化都没加）
- - **框架集成**：vLLM 用 CUDA Graph 减少 launch overhead、PagedAttention 管理 KV Cache、Continuous Batching 提高 GPU 利用率
- - **精度支持**：生产环境用 FP16/BF16，教学版 FP32 带宽利用率减半
- - **多卡支持**：vLLM 支持张量并行，教学版单卡
- - **现实建议**：生产环境直接用 vLLM / TensorRT-LLM，手写是为了理解原理
-
- - 集成机制类似：都是把自定义 Kernel 封装为框架可调用接口，差异在底层 runtime
+ - `exp(m - m_new)` 中 `m_new ≥ m`（因为 m_new = max(m, ...)），所以指数 ≤ 0，结果 ≤ 1，不会溢出
+ - `m_new` 是全局 max，新块的 `exp(xj - m_new) ≤ exp(0) = 1`
+ - 即使 `m_new = m`（新块没有更大的值），`exp(0) = 1`，公式退化为简单累加，不会出错
+ - FP16 场景下更关键：FP16 max ≈ 65504，exp(11)≈60000 已接近溢出，减 max 后指数 ≤ 0 保证安全
 
 </details>
 

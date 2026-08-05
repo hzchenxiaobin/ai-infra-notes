@@ -1,285 +1,514 @@
-## Day 3：性能对比分析 —— 标准 vs 手写 vs 官方
+## Day 3：手写完整 FlashAttention Forward Kernel
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 构建 FlashAttention 的 **benchmark 框架**，系统对比标准 Attention、手写 FA、官方 FA 在不同 seq_len/batch/head 下的性能<br>
-2. 掌握 **ncu 验证 HBM 访问量**的方法，用手写 FA 验证 HBM IO 随 N 线性增长（O(Nd)）而非 N² 增长<br>
-3. 能设计覆盖 seq_len/batch/heads/head_dim 四个维度的扫描矩阵，记录 latency/throughput/speedup<br>
-4. 理解不同配置下 speedup 差异的原因（短序列慢、长序列快、小 batch 需 seq 并行）<br>
-5. 能用 ncu 的 `dram__bytes_read/write` 指标验证理论 IO 与实测一致（误差 < 30%）<br>
+1. 在 Day 1 理论基础上，设计支持 **batch + multi-head** 的完整 FlashAttention Forward Kernel 线程配置<br>
+2. 掌握 **每个 warp 负责若干 Q 行** 的 work partitioning 策略，理解跨 warp 无需通信的原因<br>
+3. 复用 Week 2 Day 1 的 `warpReduceSum` / `warpReduceMax` 原语，在 Kernel 内完成 online softmax 的分块归约<br>
+4. 实现并运行 `flash_attention_v2.cu`，与 CPU 标准 Attention 对比误差 < 1e-3，支持 `grid=(N/Br, H, B)` 配置<br>
+5. 能正确处理 **N 不是 Br 倍数** 的边界情况，理解 `__syncthreads()` 只需在 tile 加载后使用<br>
 
-> 💡 **为什么重要**：Day 5 我们把 FA 集成到 Mini 引擎并做了初步对比。但"能跑通"不等于"跑得快"——今天用系统级 benchmark 定量回答"FA 到底快多少、在什么场景下快"。这是 Week 4 验收的核心数据，也是面试中"如何证明你的优化有效"的标准答案。明天 Day 7 总结会用到今天的 benchmark 结果。
+> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 3 读官方源码、Day 4 学 FA2 改进、Day 5 集成到 Mini 引擎，全部建立在今天的 Kernel 之上。
 
 ---
 
-### 学前导读：从"能跑"到"跑得快"需要数据说话
+### 学前导读：从 PyTorch 教学版到 CUDA Kernel
 
-Day 5 的 Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（N=2048）加速 1.5-3x。但这只是初步结论——真实场景需要回答更多问题：
+Day 1 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online softmax 正确性。但那个版本用 Python for 循环遍历 Q tile 和 KV tile，速度比标准 Attention 还慢——它只验证了算法，没有发挥 GPU 并行。
 
-| 问题 | Day 5 的回答 | 今天要回答 |
-|------|-------------|-----------|
-| FA 在 N=512 时快还是慢？ | "可能略慢" | 给出精确 latency 和 speedup |
-| 手写 FA 与官方 FA 差多少？ | 未对比 | 3-way 对比：标准/手写/官方 |
-| HBM IO 真的是 O(Nd) 吗？ | 理论计算 | ncu 实测验证 |
-| 什么配置下 FA 收益最大？ | "长序列" | 给出 N/B/H/d 扫描矩阵 |
+今天的任务是把三公式"翻译"成真正的 CUDA Kernel。核心难点有三个：
 
-今天的方法论：**先建 benchmark 框架（覆盖多配置），再跑 ncu 验证 IO 复杂度，最后整理性能报告**。这套"benchmark + ncu + 报告"流程是所有 GPU 性能优化的标准工作流。
+| 难点 | PyTorch 教学版 | CUDA Kernel 版 |
+|------|---------------|----------------|
+| 并行维度 | 串行遍历 Q tile | 一个 Block 处理一个 Q tile，`blockIdx.z` 区分 batch |
+| 归约操作 | `torch.max` / `torch.sum` | `warpReduceMax` / `warpReduceSum`（复用 Week 2 Day 1） |
+| 状态维护 | 每个 Q 行独立的 (m, l, o) | 每个 warp 在 register 中维护 ROWS_PER_WARP 组 (m, l, acc) |
 
-> 💡 **一句话总结**：性能优化没有"我觉得快了"，只有"数据证明快了"。今天的 benchmark 框架就是你的"数据生产机"——跑一遍，所有配置的 speedup 一目了然。
+关键洞察：**每个 Q 行的 online softmax 是完全独立的**——不同 Q 行之间不共享数据，不需要跨 warp 通信。因此可以自然地把不同 Q 行分配给不同 warp 并行处理。
+
+> 💡 **一句话总结**：FlashAttention Kernel 的并行设计很优雅——Block 并行处理 Q tile（grid 维度），warp 并行处理 Q 行（block 内维度），warp 内 32 线程协作做归约。三层并行，层间无依赖，只需 `__syncthreads` 同步 tile 加载。
 
 ---
 
 ### 理论学习
 
-#### 6.1 Benchmark 框架设计
+#### 2.1 Kernel 线程配置设计
 
-![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
+![FlashAttention Tiling 与线程映射](../images/flash_attention_tiling.svg)
 
-##### 对比维度
-
-| 维度 | 取值范围 | 目的 |
-|------|---------|------|
-| seq_len N | 512, 1024, 2048, 4096, 8192 | 验证长序列加速更明显 |
-| batch B | 1, 4, 16 | 验证小 batch 下 FA 的并行度 |
-| num heads H | 8, 16 | 验证 head 并行度 |
-| head dim d | 64, 128 | 验证 d 对 tile 大小的影响 |
-| 实现 | Standard, Handwritten FA, Official FA | 3-way 对比 |
-
-##### 关键指标
-
-| 指标 | 含义 | 计算方式 |
-|------|------|---------|
-| Latency (ms) | 单次 forward 时间 | `cudaEvent` 计时 |
-| Throughput (tokens/s) | 吞吐量 | `B * N / latency` |
-| HBM IO (MB) | 理论 + ncu 实测 | 理论公式 + `dram__bytes_read/write` |
-| Speedup | 相对标准 Attention 加速比 | `ms_std / ms_fa` |
-| Max Diff | 与标准 Attention 数值误差 | `(out_std - out_fa).abs().max()` |
-
-#### 6.2 理论 HBM IO 计算
+一个 Block 处理一个 Q tile（Br 行 × d 列），grid 配置覆盖 batch × head × Q tile：
 
 ```
- 标准 Attention HBM IO:
-  读 Q,K,V: 3·N·d
-  读/写 S: 2·N²
-  读/写 P: 2·N²
-  写 O: N·d
-  总计: 4N² + 4Nd ≈ O(N²) when N >> d
-
-FlashAttention HBM IO:
- 读 Q,K,V: 3·N·d (每元素读一次，tile 复用)
- 写 O: N·d
- 总计: 4Nd = O(Nd)
+grid = (ceil(N / Br), H, B) // x: Q tile, y: head, z: batch
+block = (THREADS_PER_BLOCK,) // 推荐 256 = 8 warps × 32 threads
 ```
 
-| N | d | 标准 IO (MB) | FA IO (MB) | IO 加速比 |
-|---|---|-------------|-----------|----------|
-| 512 | 64 | 3.06 | 0.50 | 6.1x |
-| 1024 | 64 | 12.25 | 1.00 | 12.3x |
-| 2048 | 64 | 48.75 | 2.00 | 24.4x |
-| 4096 | 64 | 195.00 | 4.00 | 48.8x |
-| 8192 | 64 | 780.00 | 8.00 | 97.5x |
+Block 内部的 warp 分工：
 
-> 💡 **关键洞察**：IO 加速比随 N² 增长，但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
+| 参数 | 含义 | 典型值 |
+|------|------|--------|
+| Br | Q tile 行数（一个 Block 处理） | 64 |
+| Bc | KV tile 行数（一次内循环处理） | 64 |
+| d | Head dimension | 64 |
+| WARPS_PER_BLOCK | Block 内 warp 数 | 8 |
+| THREADS_PER_BLOCK | Block 内线程数 = WARPS × 32 | 256 |
+| ROWS_PER_WARP | 每个 warp 负责的 Q 行数 = Br / WARPS | 8 |
 
-#### 6.3 ncu 验证 HBM IO 的方法
+![FlashAttention Warp → Q 行映射](../../images/week4_warp_qrow_mapping.svg)
 
-```bash
-ncu --metrics \
- dram__bytes_read.sum,\
- dram__bytes_write.sum,\
- gpu__time_duration.sum \
- --kernel-name regex:flashAttention \
- ./flash_attention_v2
+##### 为什么每个 warp 负责多行 Q 而不是一行？
+
+- Br=64, WARPS=8 → 每个 warp 8 行。如果每 warp 只 1 行，需要 64 个 warp = 2048 线程，超过 block 上限 1024
+- 每个 warp 内 32 线程协作处理一行的 d=64 个元素（每线程 2 个），再用 `__shfl` 归约
+
+#### 2.2 Shared Memory 分配
+
+```cuda
+__shared__ float s_Q[Br][D]; // Q tile，常驻
+__shared__ float s_K[Bc][D]; // K tile，每轮 KV 循环更新
+__shared__ float s_V[Bc][D]; // V tile，每轮 KV 循环更新
 ```
 
-##### 验证逻辑
+SRAM 使用量 = `Br×d + 2×Bc×d` 个 float。以 Br=Bc=64, d=64 为例：
 
 ```
-N=512: 理论 FA IO = 4×512×64×4 = 512 KB
-N=1024: 理论 FA IO = 4×1024×64×4 = 1 MB (应为 N=512 的 2x)
-N=2048: 理论 FA IO = 4×2048×64×4 = 2 MB (应为 N=512 的 4x)
-N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB (应为 N=512 的 8x)
-
-如果实测 HBM IO 随 N 线性增长 → O(Nd) ✓
-如果随 N² 增长 → O(N²) ✗（有 bug）
+s_Q: 64×64 = 4096 floats = 16 KB
+s_K: 64×64 = 4096 floats = 16 KB
+s_V: 64×64 = 4096 floats = 16 KB
+总计: 48 KB ≤ 164 KB (RTX 5090 上限) ✓
 ```
 
-> ⚠️ **注意**：实测值通常比理论值大 20-30%（cache miss、padding、额外访问），误差范围内正常。
+> ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 S=QK^T 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
 
-#### 6.4 预期性能特征
+#### 2.3 Online Softmax 在 CUDA 中的实现
 
-| 配置 | 标准 Attention | 手写 FA | 官方 FA | 分析 |
-|------|---------------|---------|---------|------|
-| N=512, B=1 | 快 | 可能略慢 | 快 | FA 固定开销 > IO 节省 |
-| N=2048, B=1 | 慢 | 加速 1.5-3x | 加速 3-5x | IO 节省开始主导 |
-| N=4096, B=1 | 很慢 | 加速 2-4x | 加速 5-8x | 长序列收益最大 |
-| N=2048, B=16 | 中 | 加速 1-2x | 加速 3-5x | 大 batch GEMM 已接近峰值 |
-| N=2048, d=128 | 中 | 加速 1-2x | 加速 2-4x | d 大时 tile 变小，优势减弱 |
+![Warp Shuffle 归约原语](../images/reduction_warp_shuffle.svg)
+
+每个 Q 行独立维护 `(m, l, acc[d])` 三组状态。对于第 `qi` 个 Q 行，处理流程：
+
+```
+初始化: m = -inf, l = 0, acc[d] = 0
+
+对于每个 KV tile j:
+ Step 1: Sij[c] = Qi · Kj[c]^T (c = 0..Bc-1)
+ // 每个线程算 Bc/32 个点积，warp shuffle 汇总
+
+ Step 2: mij = max(Sij) // warpReduceMax
+ m_new = max(m, mij)
+
+ Step 3: 缩放旧状态
+ scale_old = exp(m - m_new)
+ l *= scale_old
+ acc[d] *= scale_old
+
+ Step 4: 处理新块
+ for c in 0..Bc-1:
+ p = exp(Sij[c] - m_new)
+ l += p
+ acc[d] += p * Vj[c][:] // warpReduceSum 汇总
+
+ Step 5: m = m_new
+
+归一化输出: O[qi][:] = acc / l
+```
+
+##### `__syncthreads()` 只需在 tile 加载后使用
+
+```cuda
+// 加载 KV tile 到 shared memory
+for (...)
+    s_K[r][c] = K[...];
+for (...)
+    s_V[r][c] = V[...];
+__syncthreads(); // ← 确保所有 warp 看到完整的 KV tile
+
+// 每个 warp 独立处理自己的 Q 行，无需 block 级同步
+// warp 内用 __shfl（硬件同步），不需要 __syncthreads
+
+__syncthreads(); // ← 切换到下一个 KV tile 前，确保计算完成
+```
+
+> 💡 **关键洞察**：online softmax 的计算完全在 warp 内完成（register + `__shfl`），不涉及跨 warp 数据共享。`__syncthreads()` 只在两处需要：① tile 加载后确保可见 ② 切换 tile 前确保计算完成。这是 FA2 减少同步点的关键思路。
+
+#### 2.4 边界处理
+
+当 N 不是 Br 的倍数时，最后一个 Q tile 的部分行无效：
+
+```cuda
+int globalRow = qTileRow + r;
+s_Q[r][c] = (globalRow < N) ? Q[bhOffset + globalRow * d + c] : 0.0f;
+// 无效行填 0，不影响累加结果
+```
+
+KV tile 同理：`kvStart + c < N` 判断，无效位置 score 设为 `-1e30f`（exp 后为 0）。
 
 ---
 
-### Coding 任务：FlashAttention 性能对比 Benchmark
+### Coding 任务：完整 FlashAttention Forward Kernel
 
-#### 任务 1：创建 benchmark_flash_attention.py
+#### 任务 1：创建 flash_attention_v2.cu
 
-创建文件 `kernels/benchmark_flash_attention.py`：
+创建文件 `kernels/flash_attention_v2.cu`：
 
-```python
-# benchmark_flash_attention.py —— FlashAttention 性能对比框架
-# 运行命令: python benchmark_flash_attention.py
+```cuda
+// flash_attention_v2.cu —— 完整 FlashAttention Forward Kernel（batch + multi-head）
+// 编译命令: nvcc -o flash_attention_v2 flash_attention_v2.cu -O3 -arch=sm_120
+// 运行命令: ./flash_attention_v2
 
-import torch
-import torch.nn.functional as F
-import math
-import json
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
 
-try:
-    from flash_attn import flash_attn_func
-    HAS_OFFICIAL = True
-except ImportError:
-    HAS_OFFICIAL = False
-    print("Warning: official flash_attn not installed, skipping official benchmark")
+constexpr int Br = 64;
+constexpr int Bc = 64;
+constexpr int D = 64;
 
-    def standard_attention(Q, K, V):
-        d = Q.size(-1)
-        S = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d)
-        P = F.softmax(S, dim=-1)
-        O = torch.matmul(P, V)
-        return O
+constexpr int WARPS_PER_BLOCK = 8;
+constexpr int THREADS_PER_BLOCK = WARPS_PER_BLOCK * 32;
+static_assert(Br % WARPS_PER_BLOCK == 0, "Br must be divisible by WARPS_PER_BLOCK");
+constexpr int ROWS_PER_WARP = Br / WARPS_PER_BLOCK;
 
-        def benchmark(func, Q, K, V, n_iter=10):
-            for _ in range(3):
-                _ = func(Q, K, V)
-                torch.cuda.synchronize()
+__inline__ __device__ float warpReduceMax(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val = fmaxf(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+    }
+    return val;
+}
 
-                start = torch.cuda.Event(enable_timing=True)
-                end = torch.cuda.Event(enable_timing=True)
-                start.record()
-                for _ in range(n_iter):
-                    out = func(Q, K, V)
-                    end.record()
-                    torch.cuda.synchronize()
-                    ms = start.elapsed_time(end) / n_iter
-                    return ms
+__inline__ __device__ float warpReduceSum(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+    }
+    return val;
+}
 
-                    def theoretical_io(N, d, dtype_size=4):
-                        std_io = (3 * N * N + 4 * N * d) * dtype_size / (1024 * 1024)
-                        fa_io = (4 * N * d) * dtype_size / (1024 * 1024)
-                        return std_io, fa_io
+__global__ void flashAttentionForward(const float* __restrict__ Q, const float* __restrict__ K,
+                                      const float* __restrict__ V, float* __restrict__ O, int B, int H, int N, int d) {
 
-                        def main():
-                            torch.manual_seed(42)
-                            device = "cuda"
-                            dtype = torch.float32
+    __shared__ float s_Q[Br][D];
+    __shared__ float s_K[Bc][D];
+    __shared__ float s_V[Bc][D];
 
-                            configs = [
-                            {"B": 1, "H": 8, "N": 512, "d": 64},
-                            {"B": 1, "H": 8, "N": 1024, "d": 64},
-                            {"B": 1, "H": 8, "N": 2048, "d": 64},
-                            {"B": 1, "H": 8, "N": 4096, "d": 64},
-                            {"B": 1, "H": 8, "N": 8192, "d": 64},
-                            {"B": 4, "H": 8, "N": 2048, "d": 64},
-                            {"B": 1, "H": 16, "N": 2048, "d": 128},
-                            ]
+    int batch = blockIdx.z;
+    int head = blockIdx.y;
+    int qTileRow = blockIdx.x * Br;
 
-                            results = []
+    int tid = threadIdx.x;
+    int lane = tid % 32;
+    int warpId = tid / 32;
+    int qRowStart = warpId * ROWS_PER_WARP;
 
-                            print("=== FlashAttention Performance Benchmark ===")
-                            print(f"{'B':>3} {'H':>3} {'N':>5} {'d':>4} | {'Std(ms)':>10} {'Hand(ms)':>10} {'Off(ms)':>10} | {'Hand-Spd':>10} {'Off-Spd':>10} | {'StdIO(MB)':>10} {'FAIO(MB)':>10}")
-                            print("-" * 110)
+    int bhOffset = ((batch * H + head) * N) * d;
 
-                            for cfg in configs:
-                                B, H, N, d = cfg["B"], cfg["H"], cfg["N"], cfg["d"]
+// 协作加载 Q tile
+    #pragma unroll
+    for (int idx = tid; idx < Br * d; idx += THREADS_PER_BLOCK) {
+        int r = idx / d;
+        int c = idx % d;
+        int globalRow = qTileRow + r;
+        s_Q[r][c] = (globalRow < N) ? Q[bhOffset + globalRow * d + c] : 0.0f;
+    }
+    __syncthreads();
 
-                                Q = torch.randn(B, H, N, d, device=device, dtype=dtype)
-                                K = torch.randn(B, H, N, d, device=device, dtype=dtype)
-                                V = torch.randn(B, H, N, d, device=device, dtype=dtype)
+    // 每个 warp 维护 ROWS_PER_WARP 个 Q 行的 running 状态
+    float m_arr[ROWS_PER_WARP];
+    float l_arr[ROWS_PER_WARP];
+    float acc[ROWS_PER_WARP][D];
 
-                                ms_std = benchmark(standard_attention, Q, K, V)
+    #pragma unroll
+    for (int i = 0; i < ROWS_PER_WARP; i++) {
+        m_arr[i] = -1e30f;
+        l_arr[i] = 0.0f;
+        #pragma unroll
+        for (int j = 0; j < d; j++) {
+            acc[i][j] = 0.0f;
+        }
+    }
 
-                                try:
-                                    from mini_engine_fa import fa_ops
-                                    ms_hand = benchmark(fa_ops.flash_attention_forward, Q, K, V)
-                                    hand_speedup = ms_std / ms_hand
-                                except Exception:
-                                    ms_hand = float('nan')
-                                    hand_speedup = float('nan')
+    float scale = 1.0f / sqrtf((float)d);
 
-                                    if HAS_OFFICIAL:
-                                        ms_off = benchmark(flash_attn_func, Q, K, V)
-                                        off_speedup = ms_std / ms_off
-                                    else:
-                                        ms_off = float('nan')
-                                        off_speedup = float('nan')
+    // 内层循环：遍历 KV tile
+    for (int kvStart = 0; kvStart < N; kvStart += Bc) {
+// 协作加载 K/V tile
+        #pragma unroll
+        for (int idx = tid; idx < Bc * d; idx += THREADS_PER_BLOCK) {
+            int r = idx / d;
+            int c = idx % d;
+            int globalRow = kvStart + r;
+            s_K[r][c] = (globalRow < N) ? K[bhOffset + globalRow * d + c] : 0.0f;
+            s_V[r][c] = (globalRow < N) ? V[bhOffset + globalRow * d + c] : 0.0f;
+        }
+        __syncthreads();
 
-                                        std_io, fa_io = theoretical_io(N, d)
+// 每个 warp 处理 ROWS_PER_WARP 个 Q 行
+        #pragma unroll
+        for (int localRow = 0; localRow < ROWS_PER_WARP; localRow++) {
+            int qi = qRowStart + localRow;
+            int globalQi = qTileRow + qi;
+            if (qi >= Br || globalQi >= N)
+                continue;
 
-                                        print(f"{B:>3} {H:>3} {N:>5} {d:>4} | {ms_std:>10.3f} {ms_hand:>10.3f} {ms_off:>10.3f} | {hand_speedup:>10.2f}x {off_speedup:>10.2f}x | {std_io:>10.2f} {fa_io:>10.2f}")
+            // Step 1: Sij[c] = Qi · Kj[c]^T (每线程算 Bc/32 个)
+            float Sij[Bc / 32];
+            #pragma unroll
+            for (int c = lane; c < Bc; c += 32) {
+                float dot = 0.0f;
+                #pragma unroll
+                for (int di = 0; di < d; di++) {
+                    dot += s_Q[qi][di] * s_K[c][di];
+                }
+                Sij[c / 32] = dot * scale;
+            }
 
-                                        results.append({
-                                        "B": B, "H": H, "N": N, "d": d,
-                                        "std_ms": ms_std, "hand_ms": ms_hand, "off_ms": ms_off,
-                                        "hand_speedup": hand_speedup, "off_speedup": off_speedup,
-                                        "std_io_mb": std_io, "fa_io_mb": fa_io,
-                                        })
+            // Step 2: 局部 max (warp reduce)
+            float localMax = -1e30f;
+            #pragma unroll
+            for (int i = 0; i < Bc / 32; i++) {
+                localMax = fmaxf(localMax, Sij[i]);
+            }
+            localMax = warpReduceMax(localMax);
 
-                                        with open("benchmark_results.json", "w") as f:
-                                            json.dump(results, f, indent=2)
-                                            print("\nResults saved to benchmark_results.json")
+            // Step 3: online softmax update
+            float m_prev = m_arr[localRow];
+            float m_new = fmaxf(m_prev, localMax);
+            float scale_old = expf(m_prev - m_new);
 
-                                            if __name__ == "__main__":
-                                                main()
+            m_arr[localRow] = m_new;
+            l_arr[localRow] *= scale_old;
+            #pragma unroll
+            for (int di = 0; di < d; di++) {
+                acc[localRow][di] *= scale_old;
+            }
+
+// Step 4: 处理新块
+            #pragma unroll
+            for (int i = 0; i < Bc / 32; i++) {
+                int c = lane + i * 32;
+                bool valid = c < Bc && (kvStart + c) < N;
+                float s_val = valid ? Sij[i] : -1e30f;
+                float p_val = valid ? expf(s_val - m_new) : 0.0f;
+
+                float p_sum = warpReduceSum(p_val);
+                if (lane == 0) {
+                    l_arr[localRow] += p_sum;
+                }
+
+                #pragma unroll
+                for (int di = 0; di < d; di++) {
+                    float contrib = valid ? p_val * s_V[c][di] : 0.0f;
+                    float sum_contrib = warpReduceSum(contrib);
+                    if (lane == 0) {
+                        acc[localRow][di] += sum_contrib;
+                    }
+                }
+            }
+
+            // 广播 l 和 acc 到 warp 内所有线程
+            l_arr[localRow] = __shfl_sync(0xFFFFFFFF, l_arr[localRow], 0);
+            #pragma unroll
+            for (int di = 0; di < d; di++) {
+                acc[localRow][di] = __shfl_sync(0xFFFFFFFF, acc[localRow][di], 0);
+            }
+        }
+
+        __syncthreads();
+    }
+
+// 写回 O
+    #pragma unroll
+    for (int localRow = 0; localRow < ROWS_PER_WARP; localRow++) {
+        int qi = qRowStart + localRow;
+        int globalRow = qTileRow + qi;
+        if (qi >= Br || globalRow >= N)
+            continue;
+
+        float inv_l = 1.0f / l_arr[localRow];
+        #pragma unroll
+        for (int di = lane; di < d; di += 32) {
+            O[bhOffset + globalRow * d + di] = acc[localRow][di] * inv_l;
+        }
+    }
+}
+
+void cpuAttention(const float* Q, const float* K, const float* V, float* O, int N, int d) {
+    float* S = (float*)malloc(N * N * sizeof(float));
+    float scale = 1.0f / sqrtf((float)d);
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float sum = 0.0f;
+            for (int k = 0; k < d; k++) {
+                sum += Q[i * d + k] * K[j * d + k];
+            }
+            S[i * N + j] = sum * scale;
+        }
+
+        float mx = S[i * N];
+        for (int j = 1; j < N; j++)
+            mx = fmaxf(mx, S[i * N + j]);
+        float sm = 0.0f;
+        for (int j = 0; j < N; j++) {
+            S[i * N + j] = expf(S[i * N + j] - mx);
+            sm += S[i * N + j];
+        }
+        for (int j = 0; j < N; j++)
+            S[i * N + j] /= sm;
+
+        for (int k = 0; k < d; k++) {
+            float sum = 0.0f;
+            for (int j = 0; j < N; j++) {
+                sum += S[i * N + j] * V[j * d + k];
+            }
+            O[i * d + k] = sum;
+        }
+    }
+    free(S);
+}
+
+void initData(float* data, int n) {
+    srand(42);
+    for (int i = 0; i < n; i++) {
+        data[i] = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.2f;
+    }
+}
+
+bool checkResult(const float* a, const float* b, int n, float eps) {
+    float maxDiff = 0.0f;
+    for (int i = 0; i < n; i++) {
+        maxDiff = fmaxf(maxDiff, fabsf(a[i] - b[i]));
+    }
+    bool ok = maxDiff < eps;
+    printf(" maxDiff = %.2e (%s)\n", maxDiff, ok ? "PASS" : "FAIL");
+    return ok;
+}
+
+int main() {
+    int B = 2, H = 4, N = 256, d = D;
+
+    printf("=== FlashAttention v2 Forward Kernel ===\n");
+    printf("Config: B=%d, H=%d, N=%d, d=%d\n", B, H, N, d);
+    printf("Tile: Br=%d, Bc=%d, Threads=%d\n\n", Br, Bc, THREADS_PER_BLOCK);
+
+    size_t totalElems = (size_t)B * H * N * d;
+    size_t bytes = totalElems * sizeof(float);
+
+    float* h_Q = (float*)malloc(bytes);
+    float* h_K = (float*)malloc(bytes);
+    float* h_V = (float*)malloc(bytes);
+    float* h_O = (float*)malloc(bytes);
+    float* h_O_CPU = (float*)malloc(bytes);
+
+    initData(h_Q, totalElems);
+    initData(h_K, totalElems);
+    initData(h_V, totalElems);
+
+    float *d_Q, *d_K, *d_V, *d_O;
+    cudaMalloc(&d_Q, bytes);
+    cudaMalloc(&d_K, bytes);
+    cudaMalloc(&d_V, bytes);
+    cudaMalloc(&d_O, bytes);
+    cudaMemcpy(d_Q, h_Q, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_K, h_K, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_V, h_V, bytes, cudaMemcpyHostToDevice);
+
+    dim3 grid((N + Br - 1) / Br, H, B);
+    dim3 block(THREADS_PER_BLOCK);
+
+    // warmup
+    flashAttentionForward<<<grid, block>>>(d_Q, d_K, d_V, d_O, B, H, N, d);
+    cudaDeviceSynchronize();
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
+    flashAttentionForward<<<grid, block>>>(d_Q, d_K, d_V, d_O, B, H, N, d);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float ms;
+    cudaEventElapsedTime(&ms, start, stop);
+    cudaMemcpy(h_O, d_O, bytes, cudaMemcpyDeviceToHost);
+
+    // CPU 验证（只验证第一个 head）
+    cpuAttention(h_Q, h_K, h_V, h_O_CPU, N, d);
+    printf("[B=0, H=0] First head check:\n");
+    checkResult(h_O, h_O_CPU, N * d, 1e-3f);
+    printf("GPU Time: %.3f ms\n", ms);
+
+    free(h_Q);
+    free(h_K);
+    free(h_V);
+    free(h_O);
+    free(h_O_CPU);
+    cudaFree(d_Q);
+    cudaFree(d_K);
+    cudaFree(d_V);
+    cudaFree(d_O);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    return 0;
+}
 ```
 
-#### 任务 2：运行 Benchmark
+#### 任务 2：编译运行
 
 ```bash
-python kernels/benchmark_flash_attention.py
+# 编译
+nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
+
+# 运行
+./flash_attention_v2
 ```
 
 **预期输出**：
 
 ```text
-=== FlashAttention Performance Benchmark ===
-  B   H     N    d |    Std(ms)   Hand(ms)    Off(ms) |   Hand-Spd    Off-Spd |  StdIO(MB)   FAIO(MB)
---------------------------------------------------------------------------------------------------------------
-  1   8   512   64 |      0.053        nan        nan |        nanx        nanx |       3.50       0.50
-  1   8  1024   64 |      0.099        nan        nan |        nanx        nanx |      13.00       1.00
-  1   8  2048   64 |      0.605        nan        nan |        nanx        nanx |      50.00       2.00
-  1   8  4096   64 |      2.458        nan        nan |        nanx        nanx |     196.00       4.00
-  1   8  8192   64 |      9.611        nan        nan |        nanx        nanx |     776.00       8.00
+=== FlashAttention v2 Forward Kernel ===
+Config: B=2, H=4, N=256, d=64
+Tile: Br=64, Bc=64, Threads=256
+
+[B=0, H=0] First head check:
+ maxDiff = 1.31e-04 (PASS)
+ GPU Time: 0.777 ms
 ```
 
-> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8）。`Hand`（手写 FA v2）与 `Off`（官方 flash_attn 包）列为 `nan`——前者需 `load_inline` 动态编译 Day 2 的 .cu（C++ Extension 环境敏感），后者需 `pip install flash-attn`。**Std（标准 Attention）列为真实数据**，IO 列为理论值。Hand/Off 列待 C++ Extension 环境就绪后补测。
+#### 任务 3：验证 SRAM 使用量与 ncu 分析
 
-#### 任务 3：用 ncu 验证 HBM IO 复杂度
+**检查 SRAM 使用量**：
 
 ```bash
-# 编译带 lineinfo
-nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
+# 编译时查看 shared memory 使用
+nvcc -Xptxas -v -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120
+# 观察 ptxas info: 'Used N registers, Z bytes spill stores, W bytes cmem'
+# shared memory 应为 48 KB (Br*d + 2*Bc*d = 3×4096×4 = 49152 bytes)
+```
 
-# Profile 不同 N 的 HBM 读写量
-for N in 512 1024 2048 4096; do
- echo "=== N=$N ==="
- ncu --metrics \
- dram__bytes_read.sum,dram__bytes_write.sum,gpu__time_duration.sum \
+**用 ncu 分析 kernel**：
+
+```bash
+nvcc -o flash_attention_v2 kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
+
+ncu --metrics \
+ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
+ dram__throughput.avg.pct_of_peak_sustained_elapsed,\
+ sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
+ launch__registers_per_thread \
  --kernel-name regex:flashAttentionForward \
- ./flash_attention_v2 $N
-done
+ ./flash_attention_v2
 ```
 
-**预期结果分析**：
-
-```text
-N=512: 理论 FA IO = 4×512×64×4 = 512 KB, 实测应接近
-N=1024: 理论 FA IO = 4×1024×64×4 = 1 MB, 实测应约为 N=512 的 2x
-N=2048: 理论 FA IO = 4×2048×64×4 = 2 MB, 实测应约为 N=512 的 4x
-N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
-```
-
-如果实测 HBM IO 随 N 线性增长 → O(Nd) ✓；如果随 N² 增长 → 有 bug。
+**观察重点**：
+- `launch__registers_per_thread`：每个线程约 88-120 个 register（acc[8][64] 是大头）
+- `sm__occupancy`：可能只有 50-75%（register 压力大），这是教学版的局限
+- `dram__throughput`：应远低于标准 Attention（因为消除了 O(N²) 读写）
 
 #### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
 
@@ -287,134 +516,125 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 **与今日知识的关联**：
 
-本题是 FlashAttention 的完整多 head 版本——正是今天 benchmark 的核心对象。Day 2 我们手写了单 head 版 FA，今天 benchmark 对比的就是它。本题要求支持 batch + multi-head，用 `gridDim=(N/Br, H, B)` 并行，内部复用 FA 的 tiling + online softmax。这是 Week 4 的收官 CUDA 题，融合了本周所有知识点。
+今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
 
-> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
+> 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 6）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 6（区间与差分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 2（表达式与计算器），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [253. 会议室 II](https://leetcode.cn/problems/meeting-rooms-ii/) | 中等 | 扫描线 / 小顶堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html) |
-| [435. 无重叠区间](https://leetcode.cn/problems/non-overlapping-intervals/) | 中等 | 贪心区间调度（按右端点） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html) |
-| [452. 用最少数量的箭引爆气球](https://leetcode.cn/problems/minimum-number-of-arrows-to-burst-balloons/) | 中等 | 按右端点排序贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html) |
-| [406. 根据身高重建队列](https://leetcode.cn/problems/queue-reconstruction-by-height/) | 中等 | 降序排序 + 按 k 插队 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html) |
-| [1109. 航班预订统计](https://leetcode.cn/problems/corporate-flight-bookings/) | 中等 | 差分数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
+| [394. 字符串解码](https://leetcode.cn/problems/decode-string/) | 中等 | 栈 / 递归解码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html) |
+| [224. 基本计算器](https://leetcode.cn/problems/basic-calculator/) | 困难 | 栈处理括号与一元符号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html) |
+| [227. 基本计算器 II](https://leetcode.cn/problems/basic-calculator-ii/) | 中等 | 栈处理乘除优先级 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html) |
+| [402. 移掉 K 位数字](https://leetcode.cn/problems/remove-k-digits/) | 中等 | 单调栈删大留小 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html) |
+| [316. 去除重复字母](https://leetcode.cn/problems/remove-duplicate-letters/) | 中等 | 单调栈 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：手动计算理论 HBM IO
+#### 实验 1：调整 Br 和 Bc
 
-手动计算 N=4096, d=64 时标准 Attention 和 FlashAttention 的理论 HBM IO。
+修改 Br=128, Bc=128，重新编译运行，观察 SRAM 使用量和性能变化。
 
-> 提示：标准 = (3N² + 4Nd)×4 bytes = (3×4096² + 4×4096×64)×4 = ~206 MB；FA = 4Nd×4 = 4×4096×64×4 = 4 MB。
+> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB，仍在 RTX 5090 上限内但 occupancy 可能下降。
 
-#### 实验 2：修改 benchmark 加入 memory bandwidth 和 FLOPS 估算
+#### 实验 2：实现向量化加载
 
-在 benchmark 脚本中加入每个配置的 memory bandwidth utilization 和 FLOPS 估算。
+用 `float4` 加载 Q/K/V tile（每线程一次加载 4 个 float），对比性能提升。
 
-> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
+> 提示：将加载循环 `idx += THREADS_PER_BLOCK` 改为 `idx += THREADS_PER_BLOCK * 4`，用 `reinterpret_cast<const float4*>` 加载。
 
-#### 实验 3：绘制 latency vs N 曲线
+#### 实验 3：增大序列长度测试
 
-用 matplotlib 绘制三种实现的 latency 随 N 变化的曲线，对比斜率。
+在 N=512, 1024, 2048, 4096 上测试，记录运行时间和最大误差。观察 N 增大时误差是否可控。
 
-> 提示：标准 Attention 的 latency 应近似随 N² 增长（O(N²) IO 主导），FlashAttention 应近似随 N 线性增长（O(Nd) IO）。
+> 提示：N 增大时 online softmax 的递推次数增加，浮点累加误差可能累积。如果误差 > 1e-3，考虑用 double 做累加。
 
 ---
 
 ### 今日总结
 
-Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention 到底快多少"：
+Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 
-1. **Benchmark 框架**：覆盖 N/B/H/d 四维度扫描，记录 latency/throughput/speedup/max_diff
-2. **3-way 对比**：标准 Attention / 手写 FA / 官方 FA，量化每种实现的性能差距
-3. **性能特征**：短序列（N<512）FA 可能略慢（固定开销）；长序列（N>2048）FA 加速 2-5x；官方比手写快 1.5-2x
-4. **ncu 验证 IO**：实测 HBM IO 随 N 线性增长 → O(Nd) ✓，对比标准 Attention 的 N² 增长
-5. **理论 vs 实测**：实测 HBM IO 比理论值大 20-30%（cache miss/padding），误差范围内正常
-6. **配置影响**：小 batch 需 seq 并行补偿；大 d 时 tile 变小优势减弱；大 batch 时 GEMM 已接近峰值
+1. **线程配置**：一个 Block 处理一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
+2. **Warp 分工**：每个 warp 负责 ROWS_PER_WARP 行 Q，warp 内 32 线程协作做归约，跨 warp 无需通信
+3. **Shared Memory**：Q tile 常驻，KV tile 逐块加载，SRAM 用量 = Br×d + 2×Bc×d
+4. **Online Softmax CUDA 实现**：warpReduceMax 求局部 max → 缩放旧状态 → 处理新块 → `__shfl_sync` 广播
+5. **同步策略**：`__syncthreads` 只需在 tile 加载后和切换 tile 前使用，warp 内用 `__shfl` 硬件同步
+6. **边界处理**：N 不是 Br 倍数时无效行填 0，不影响累加结果
 
-掌握这些后，你就拥有了用数据证明优化效果的能力。明天 Day 7 总结本周，整理性能报告和 IO 优化方法论。
+掌握这些后，你就拥有了手写 FlashAttention 的完整能力。明天读官方源码会发现，我们的教学版与官方的差距主要在 async copy、双缓冲和 Tensor Core。
 
 ---
 
 ### 面试要点
 
-1. **如何设计一个 FlashAttention 的 benchmark？需要对比哪些指标？**
+1. **手写 FlashAttention Forward Kernel 时，线程如何分配？每个 warp 负责什么？**
 
 <details>
 <summary>点击查看答案</summary>
 
- 1. **Latency**：单次 forward 时间（ms）
- 2. **Throughput**：tokens/s 或 queries/s
- 3. **HBM IO**：理论值 + ncu 实测值，验证 O(Nd) vs O(N²)
- 4. **Speedup**：相对标准 Attention 的加速比
- 5. **Correctness**：与标准 Attention 的数值误差
- 6. **扫描维度**：seq_len N、batch B、num_heads H、head_dim d
- 7. **对比对象**：标准 Attention、手写 FA、官方 FA、PyTorch SDPA
+ - 每个 Block 负责一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
+ - 每个 warp 负责 ROWS_PER_WARP = Br/WARPS 行 Q 的完整 online softmax 计算
+ - warp 内 32 线程协作：分别计算 Sij 向量的不同部分，用 `warpReduceMax` 求局部 max，用 `warpReduceSum` 求 p 的局部和与 p×V 的局部和
+ - 跨 warp 不需要通信，因为每个 Q 行的计算是独立的
+ - KV tile 通过 shared memory 共享给所有 warp
 
 </details>
 
 
-2. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+2. **FlashAttention Kernel 中为什么不需要** `__syncthreads()` **在 online softmax 内部？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 使用 `ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum`
- - 测试 N=512, 1024, 2048, 4096，固定 d
- - 如果 HBM 访问量 ≈ N 的线性倍数（N 翻倍，IO 翻倍），则是 O(Nd)
- - 如果 HBM 访问量 ≈ N² 的倍数（N 翻倍，IO 4x），则是 O(N²)
- - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
+ - 在 warp 内部，`__shfl` 是硬件同步的，不需要 `__syncthreads()`
+ - 每个 Q 行的 online softmax 完全在一个 warp 内完成，不涉及跨 warp 数据共享
+ - `__syncthreads()` 只在两个地方需要：① Q/K/V tile 加载到 shared memory 后，确保所有线程可见 ② 切换到下一个 KV tile 前，确保当前 tile 计算完成
+ - 这种设计避免了频繁的 block 级同步，是 FA2 减少同步点的关键思路之一
 
 </details>
 
 
-3. **FlashAttention 在什么配置下收益最大？什么配置下可能更慢？**
+3. **FlashAttention Kernel 的 register 使用量为什么很大？会导致什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **收益最大**：长序列（N>2048）、小 head dim（d=64）、单 batch（B=1）——此时 HBM 带宽是瓶颈，FA 消除 O(N²) IO 收益最大
- - **可能更慢**：短序列（N<512）——FA 的 shared memory 设置 + online softmax 递推有固定开销，可能超过 IO 节省
- - **收益减弱**：大 batch（B=16+）——标准 Attention 的 GEMM 已接近峰值，IO 不再是唯一瓶颈
- - **实际部署**：需要 benchmark 决定是否启用，通常 N>1024 时 FA 有正收益
+ - 每个 warp 维护 ROWS_PER_WARP 组 (m, l, acc[d]) 状态，其中 acc[d] 是大头：ROWS_PER_WARP × d 个 float
+ - 以 ROWS_PER_WARP=8, d=64 为例：acc 占 512 个 float，加上 m/l/索引，每线程约 88-120 个 register
+ - 问题：register 压力大 → occupancy 下降（RTX 5090 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
+ - 缓解：减小 ROWS_PER_WARP（增加 WARPS_PER_BLOCK）或减小 d；官方实现用 warp group 子块划分优化
 
 </details>
 
 
-4. **手写 FlashAttention 与官方实现的性能差距主要来自哪里？**
+4. **SRAM 使用量如何计算？Br/Bc 选太大或太小有什么问题？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **async copy + 双缓冲**：官方用 `cp_async` 隐藏加载延迟，手写版同步加载（SM 空闲等待）
- - **混合精度**：官方 FP16/BF16 输入 + FP32 累加，带宽翻倍；手写版 FP32 全程
- - **Tensor Core**：官方用 WMMA/mma 做 QK^T 和 PV 的 GEMM，峰值 4-8x；手写版用 FMA 标量
- - **K/V smem 复用**：官方分时复用省一半 smem；手写版 K/V 分开
- - **warp group 优化**：官方 FA2 的子块划分减少 non-matmul FLOPs
- - **整体差距**：官方通常比手写快 1.5-2x
+ - SRAM = (Br × d + 2 × Bc × d) × 4 bytes（K/V 不复用）
+ - 太大：超过 shared memory 上限（RTX 5090 164 KB/SM）→ 编译失败；或 occupancy 暴跌
+ - 太小：KV tile 循环次数多（N/Bc 轮），每轮的 tile 加载和 `__syncthreads` 开销占比增大
+ - 典型值：d=64, Br=Bc=64 时 SRAM = 48 KB，occupancy 与计算效率的平衡点
 
 </details>
 
 
-5. **标准 Attention 的 latency 随 N 增长的趋势是怎样的？FlashAttention 呢？**
+5. **如何处理 N 不是 Br 倍数的边界情况？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **标准 Attention**：latency 近似随 N² 增长——因为 HBM IO 是 O(N²)，N 翻倍时 IO 变 4x，latency 也近似 4x
- - **FlashAttention**：latency 近似随 N 线性增长——HBM IO 是 O(Nd)，N 翻倍时 IO 变 2x
- - **交叉点**：N 较小时标准 Attention 可能更快（FA 固定开销大）；N > ~512-1024 时 FA 开始领先
- - **绘制曲线**：用 matplotlib 画 latency vs N，标准是抛物线（N²），FA 是直线（N），交叉点在 N≈512
-
- - 两者都测量 kernel 的实际 HBM 读写量，用于验证 IO 复杂度
- - 验证逻辑一致：N 翻倍时 IO 翻倍 → O(N)；N 翻倍时 IO 4x → O(N²)
- - 两者分析思路一致：先理论计算预期 IO，再用工具实测验证
+ - Q tile 边界：`globalRow = qTileRow + r`，若 `globalRow >= N` 则填 0（不参与累加）
+ - KV tile 边界：`kvStart + c < N` 判断，无效位置的 score 设为 `-1e30f`（exp 后为 0，不贡献到 l 和 acc）
+ - 写回边界：`if (qi >= Br || globalRow >= N) continue` 跳过无效行
+ - 关键：无效位置的 0 不会影响 online softmax 的正确性，因为 exp(-inf)=0 且 0+v=v
 
 </details>
 

@@ -1,46 +1,46 @@
-# Week 5：FlashAttention（后半）+ 推理系统基础
+# Week 5：FlashAttention 全专题
 
-> 核心目标：FA-2 改进、性能对比、IO 方法论、Prefill/Decode、KV Cache（含 GQA/MLA）、vLLM 架构
+> 核心目标：从 FA 简化版到 FA-3 的完整专题：Online Softmax 推导、Forward/Backward kernel、官方源码、性能对比与 IO 方法论
 
 | 项目　　　 | 说明　　　　　　　　　　　　　　　　　　　　　　　　　　　　　|
 | ------------| ------------------------------------------------------------|
-| 前置要求　 | 已完成 Week 4，掌握 C++ Extension、FA Forward/Backward　　　　　　　　　　　　　　　　　　　　　　　|
+| 前置要求　 | 已完成 Week 4，掌握 Softmax/LayerNorm kernel、Triton、Transformer 算子分类　　　　　　　　　　　　　　　　　　　　　　　|
 | 建议时长　 | 工作日每天 2.5h，周末每天 6h，周计 24.5h　　　　　　　　　　|
-| 本周产出　 | FA 性能对比报告、IO 方法论总结、KV Cache kernel、vLLM 架构分析　　　　　　　　　　　　　　　　　　　　　　　　　|
-| 周日里程碑 | FA 端到端性能对比留档，KV Cache kernel PASS，理解 vLLM 三层架构　　　　　　　　　　　　　　　　　　　　　　　|
+| 本周产出　 | FA 简化版 kernel、FA Forward/Backward kernel、FA 接入 Mini 引擎、标准 vs 手写 vs 官方性能对比、IO 方法论总结　　　　　　　　　　　　　　　　　　　　　　　　　|
+| 周日里程碑 | 手写 FA Forward kernel 正确性 PASS，FA 端到端性能对比留档，理解 online softmax 三公式与 FA-2/3 演进　　　　　　　　　　　　　　　　　　　　　　　|
 
 ---
 
 ## 🧭 本周学习地图
 
 ```
-Day 1: FlashAttention-2 论文与源码差异
+Day 1: FA CUDA 实现（简化版）+ Attention IO 分析（4N²+4Nd 口径）
         ↓
-Day 2: 算子接入 Mini 引擎 —— FlashAttention 集成
+Day 2: FA 论文精读 + Online Softmax 三公式推导
         ↓
-Day 3: 性能对比分析 —— 标准 vs 手写 vs 官方
+Day 3: 手写完整 FA Forward Kernel（含 causal 变体）
         ↓
-Day 4: IO 优化方法论总结与收官
+Day 4: FA Backward + GEMM Backward（L_i = m_i + log ℓ_i 重计算）
         ↓
-Day 5: 推理流程 —— Prefill vs Decode
+Day 5: 项目推进 —— FA 接入 Mini 引擎（C++ Extension）+ 性能对比
         ↓
-Day 6: 实现 KV Cache（含 GQA/MQA/MLA 变体）
+Day 6: FA-2/FA-3 演进 + 官方 CUDA 源码导读 + IO 方法论总结
         ↓
-Day 7: vLLM 整体架构分析
+Day 7: 复盘 + 限时手撕（FA Forward 简化版 60min）+ 面试 Q&A 收敛
 ```
 
 ---
 
 ## 📚 每日学习材料
 
-每天的学习内容已拆分为独立目录 `dayN/`（含该天的 kernels、exercise、notes）：
-
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | FlashAttention-2 论文与源码差异 | [day1/](day1/README.md) |
-| Day 2 | 算子接入 Mini 引擎 —— FlashAttention 集成 | [day2/](day2/README.md) |
-| Day 3 | 性能对比分析 —— 标准 vs 手写 vs 官方 | [day3/](day3/README.md) |
-| Day 4 | IO 优化方法论总结与收官 | [day4/](day4/README.md) |
-| Day 5 | 推理流程 —— Prefill vs Decode | [day5/](day5/README.md) |
-| Day 6 | 实现 KV Cache（含 GQA/MQA/MLA 变体） | [day6/](day6/README.md) |
-| Day 7 | vLLM 整体架构分析 | [day7/](day7/README.md) |
+| Day 1 | FlashAttention CUDA 实现（简化版）+ Attention IO 分析 | [day1/](day1/README.md) |
+| Day 2 | FlashAttention 论文精读与 Online Softmax 推导 | [day2/](day2/README.md) |
+| Day 3 | 手写完整 FlashAttention Forward Kernel | [day3/](day3/README.md) |
+| Day 4 | FlashAttention Backward 与 GEMM Backward | [day4/](day4/README.md) |
+| Day 5 | 性能对比分析 —— 标准 vs 手写 vs 官方 + FA 集成 | [day5/](day5/README.md) |
+| Day 6 | FlashAttention-2 论文与源码差异 + 官方源码 + IO 方法论 | [day6/](day6/README.md) |
+| Day 7 | 复盘与手撕 —— FlashAttention 限时手写与面试 Q&A | [day7/](day7/README.md) |
+
+> 📁 补充材料：本周 `_supplementary/` 目录包含 FA 集成、C++ Extension、官方源码导读、IO 分析等延伸内容。

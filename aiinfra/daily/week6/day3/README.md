@@ -1,487 +1,700 @@
-## Day 3：项目推进 —— Mini 推理引擎 v0
+## Day 3：vLLM 整体架构分析
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解一个 LLM 推理引擎的 **5 大核心组件**——Tokenizer、模型后端、KV Cache、采样器、Prefill/Decode 循环——各自的职责与协作<br>
-2. 能用 PyTorch 从零搭建一个 **MiniLLM**（embedding + n_layers 层 transformer + lm_head），支持 `use_cache` 参数区分 Prefill/Decode<br>
-3. 掌握 `generate()` 的 **Prefill + Decode Loop** 两阶段实现——Prefill 一次性填入 prompt 的 K/V，Decode 每步追加 1 个 token 复用 cache<br>
-4. 能验证 **with cache 与 without cache 输出一致**，证明 KV Cache 不改变生成结果只加速<br>
-5. 理解多轮对话中 **KV Cache 复用** 的设计，以及引擎从"单请求"扩展到"多请求 + Continuous Batching"的演进方向<br>
+1. 理解 vLLM 的 **三层分层架构**——LLMEngine（对外接口）→ Scheduler（调度决策）→ Worker（执行前向）的职责划分<br>
+2. 掌握 `LLMEngine.step()` 的 **4 步执行流程**，能说清一个请求从 `add_request` 到 `finished` 的完整生命周期<br>
+3. 理解 **Sequence / SequenceGroup / SequenceStatus** 三个核心数据结构，以及 WAITING / RUNNING / SWAPPED / FINISHED 四种状态转换<br>
+4. 掌握 **Continuous Batching** 的实现原理——每轮 iteration 重建 batch，完成的请求立即让位、新请求随时插入<br>
+5. 理解 Scheduler 的 **SchedulingBudget**（token / num_seqs / 显存三重预算）与抢占（preemption）的两种策略<br>
+6. 能用 Python 手写一个最小化的 vLLM 调度器模拟，实测 Continuous Batching 的请求交错执行
 
-> 💡 **为什么重要**：Day 1-4 我们把推理系统的"零件"逐个造好了——Prefill/Decode（Day1）、KV Cache（Day2）、Scheduler（Day3）、PagedAttention（Day4）。但零件不等于引擎。今天我们把它们组装成第一辆能跑的车：Mini 推理引擎 v0。`generate("hello world", max_new_tokens=10)` 一行调用就能从 prompt 生成 10 个 token——这是从"理解原理"到"动手造系统"的关键一跃。"如何构建一个最简单的 LLM 推理引擎"是工程能力的直接体现，也是面试高频题。
+> 💡 **为什么重要**：Day 1-2 我们从"算子层面"理解了 Prefill/Decode 和 KV Cache——但真实推理系统不是"跑完一个请求再跑下一个"，而是**同时服务成百上千个并发请求**。怎么把这些请求高效地塞进 GPU？这就是 vLLM 的 Scheduler 回答的问题。vLLM 是推理系统面试的核心素材——"画出 vLLM 架构图并解释请求生命周期"几乎是 AI Infra 岗的必考题。今天我们把它的分层架构和调度逻辑吃透，Day 4 再深入它的 PagedAttention 内存管理。
 
 ---
 
-### 学前导读：从"零件"到"引擎"，还差什么？
+### 学前导读：为什么不能"一个请求一个请求地跑"？
 
-Day 4 结束时，我们有了 KV Cache 类、PagedAttention kernel、Scheduler 逻辑——但它们是散的。一个真实推理引擎要让用户只需 `generate(prompt)` 就拿到生成文本，背后需要一个**编排层**把它们串起来：
+Day 1 我们算过：Decode 阶段每个请求的 GEMM 退化成 M=1 的向量×矩阵，Tensor Core 大量空闲——单请求 decode 时 GPU 算力利用率可能只有 1-3%。如果系统串行地"跑完 A 再跑 B 再跑 C"，GPU 就一直半饿不饱。
 
-| Day | 造的"零件" | 今天怎么用 |
-|-----|-----------|-----------|
-| Day1 | Prefill/Decode 两阶段分析 | 引擎的 `generate` 主体就是这两阶段 |
-| Day2 | KVCache 类（append/get_cache/reset） | 引擎在 Prefill 填充、Decode 追加 |
-| Day3 | LLMEngine + Scheduler + Worker | Mini 引擎的架构蓝本（简化为单请求） |
-| Day4 | PagedAttention kernel | Week7 替换 PyTorch 后端时用（v0 用 PyTorch） |
+直觉解法是**把多个请求拼成一个大 batch 一起 decode**——这就是 Continuous Batching。但传统 Static Batching 有个致命问题：必须**凑齐一整批**才开始，且要**等最慢的请求跑完**才能释放 slot 接下一批。如果 batch 里 A 生成 5 个 token、B 生成 50 个 token，那 A 跑完后它的 GPU slot 就空等 B 跑完 45 个 token——白白浪费。
 
-Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching）、**PyTorch 后端**（Week7 换自定义 kernel）、**argmax 采样**（暂不做 temperature/top-k）。这是最小可运行版本——目标是跑通"encode → prefill → decode loop → decode"的完整闭环，验证 KV Cache 的正确性与收益。后续 Day6 做端到端 profiling，Week7+ 逐步替换后端、加多请求调度。
+| 策略 | 凑批方式 | 完成处理 | GPU 利用率 |
+|------|---------|---------|-----------|
+| Static Batching | 凑齐 N 个才开始 | 等最慢的，整批结束才接新 | 低（空等严重） |
+| Continuous Batching | 每轮 iteration 重建 batch | 完成即走，立即接新请求 | 高（满载） |
 
-> 💡 **一句话总结**：Mini 引擎 v0 = Tokenizer + 模型后端（PyTorch）+ KV Cache + 采样器 + Prefill/Decode 循环。它把 Day1-4 的零件组装成一辆能跑的车，用"单请求 + PyTorch"的最简组合验证推理引擎的核心闭环。
+vLLM 的 Scheduler 让"每轮 iteration 都重新决策 batch 成员"成为可能——完成的请求立即释放 KV cache，waiting 里的新请求立刻补位。但要做到这一点，KV cache 必须能**按小块动态分配/释放**（否则碎片爆炸）——这就是 Day 4 PagedAttention 要解决的。今天先聚焦 Scheduler 的调度逻辑。
+
+> 💡 **一句话总结**：Continuous Batching 是 vLLM 吞吐提升的核心——它把"串行服务"变成"每轮重建 batch 的流水线服务"，让 GPU 始终满载。代价是需要一个聪明的 Scheduler 和细粒度的 KV cache 管理。
 
 ---
 
 ### 理论学习
 
-#### 5.1 推理引擎的 5 大核心组件
+#### 3.1 vLLM 三层分层架构
 
-![Mini 推理引擎 v0 架构：5 大组件 + 数据流](../../week5/images/mini_engine_architecture.svg)
+![vLLM 分层架构：LLMEngine → Scheduler → Worker](../images/vllm_layered_architecture.svg)
 
-| 组件 | 职责 | Mini v0 实现 | 对应 vLLM |
-|------|------|-------------|----------|
-| **Tokenizer** | 文本 ↔ token id 转换 | `MiniTokenizer`（空格分词） | `transformers.AutoTokenizer` |
-| **模型后端** | 执行 transformer forward | `MiniLLM`（PyTorch） | Worker + ModelRunner |
-| **KV Cache** | 存历史 K/V，避免重算 | `model.forward(use_cache=True)` 返回的 list | BlockSpaceManager |
-| **采样器** | logits → next token id | `argmax`（greedy） | Sampler（支持 top-k/top-p） |
-| **Prefill/Decode 循环** | 编排两阶段生成 | `generate()` | LLMEngine.step() 循环 |
+vLLM 把推理系统分成三层，各司其职：
 
-##### 为什么是这 5 个？
+| 层 | 类 | 职责 | 对外 API |
+|----|----|------|---------|
+| **接口层** | `LLMEngine` | 管理整个推理生命周期，对用户暴露 `add_request` / `step` | `add_request()`, `step()` |
+| **调度层** | `Scheduler` | 决定每轮运行哪些 sequence，管理三个队列 + 预算 | `schedule()` |
+| **执行层** | `Worker` | 执行实际模型前向，管理 GPU / 模型权重 / KV cache | `execute_model()` |
 
-- **Tokenizer**：用户输入是文本，模型只认 token id——必须有个转换层
-- **模型后端**：执行实际的矩阵乘 + attention，是算力的消耗者
-- **KV Cache**：没有它，Decode 每步重算前缀，latency 爆炸（Day1-2 已证）
-- **采样器**：模型输出的是 logits（vocab 维概率分布），要采样成具体 token id
-- **循环编排**：自回归生成要"生成一个、喂回一个、再生成"的循环，且区分 Prefill（一次性）和 Decode（逐个）
+![vLLM 三层分层架构：LLMEngine → Scheduler → Worker](../../images/week5_vllm_architecture.svg)
 
-#### 5.2 MiniLLM 模型结构
+##### 为什么分三层？
 
-![Transformer 层栈与 KV Cache（Layer 0..n-1）](../../images/week5_kvcache_stack.svg)
+- **接口层**让用户无需关心调度细节，只管 `add_request` + 读 `step` 的输出
+- **执行层**封装硬件细节，Worker 可以是多卡（TP/PP）的协调者
 
-##### `use_cache` 参数区分 Prefill/Decode
+#### 3.2 核心数据结构：Sequence / SequenceGroup / SequenceStatus
 
-```python
-def forward(self, x, kv_cache=None, use_cache=False):
-    ...
-    if use_cache and kv_cache is not None:
-        # Decode: 把新 K/V 拼到历史 cache 后面
-        k = torch.cat([k_cache, k], dim=2)
-        v = torch.cat([v_cache, v], dim=2)
-        # Prefill 时 kv_cache=None，直接用本次的 k/v
-        ...
-        return x, (k, v) # 返回更新后的 cache
-```
+| 类名 | 作用 | 关键字段 |
+|------|------|---------|
+| `Sequence` | 单个序列（一条采样链） | `seq_id`, `prompt_token_ids`, `output_token_ids`, `status` |
+| `SequenceGroup` | 一个请求对应一个 group（含 prompt + 1~N 个采样序列） | `request_id`, `seqs: List[Sequence]` |
+| `SequenceStatus` | 序列状态枚举 | `WAITING` / `RUNNING` / `SWAPPED` / `FINISHED` |
+| `SchedulerOutputs` | scheduler 一轮的输出 | `scheduled_seq_groups`, `num_batched_tokens` |
+| `SamplerOutput` | 采样结果 | 每个 sequence 的下一个 token id |
 
-- **Prefill**：`use_cache=True, kv_cache=None` → 算完整 attention，返回 prompt 的 K/V 作为初始 cache
-- **Decode**：`use_cache=True, kv_cache=上一步的` → 新 K/V 拼到 cache，attention 是 1×(L+1)
+##### 为什么用 SequenceGroup 而不是直接用 Sequence？
 
-#### 5.3 Prefill + Decode 循环
+一个用户请求可能需要**多个候选序列**——比如 beam search（保留 top-K 条路径）或 `n>1` 采样（一次生成多个回答）。这些候选共享同一个 prompt，所以用一个 `SequenceGroup` 包起来。group 内的 sequences 共享 prompt 的 KV cache（Day 4 的 Copy-on-Write 就是为这个设计的）。
 
-![Prefill → Decode 执行流程与 KV Cache 状态](../../week5/images/mini_engine_prefill_decode_flow.svg)
+#### 3.3 请求生命周期
+
+![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../images/request_lifecycle.svg)
+
+![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../../images/week5_request_state_flow.svg)
+
+##### `LLMEngine.step()` 的 4 步流程
 
 ```python
-def generate(self, prompt, max_new_tokens=20):
-    input_ids = encode(prompt) # (B, N)
+def step(self):
+ # 1. Scheduler 决定本轮运行哪些 sequence
+ seq_group_metadata_list, scheduler_outputs = self.scheduler.schedule()
 
-    # ===== Prefill：一次性处理整段 prompt =====
-    logits, kv_cache = model(input_ids, use_cache=True)
-    next_token = argmax(logits[:, -1, :]) # first token
-    generated = [next_token]
+ # 2. Worker 执行模型前向
+ outputs = self.model_executor.execute_model(seq_group_metadata_list)
 
-    # ===== Decode Loop：每步 1 个 token，复用 cache =====
-    for _ in range(max_new_tokens - 1):
-        logits, kv_cache = model(next_token, kv_cache=kv_cache, use_cache=True)
-        next_token = argmax(logits[:, -1, :])
-        generated.append(next_token)
+ # 3. 处理输出（采样、更新 sequence 状态、回收完成请求的 cache）
+ request_outputs = self._process_model_outputs(outputs, scheduler_outputs)
 
-        return decode(generated)
+ # 4. 返回本轮结果
+ return request_outputs
 ```
 
-##### KV Cache 状态变化
+每调用一次 `step()`，系统就推进一个 iteration：所有 running 的 sequence 各生成 1 个 token。用户在循环里反复调 `step()` 直到所有请求 `FINISHED`。
 
-| 阶段 | 输入 | KV Cache 长度 | FLOPs |
-|------|------|--------------|-------|
-| Prefill | prompt (N tokens) | 0 → N | O(N·d²)（大 GEMM） |
-| Decode step 1 | token N+1 (1 token) | N → N+1 | O(d²)（向量×矩阵） |
-| Decode step k | token N+k | N+k-1 → N+k | O(d²)（与 k 无关） |
+#### 3.4 Continuous Batching：每轮重建 batch
 
-#### 5.4 With vs Without Cache：收益量化
+![Continuous Batching vs Static Batching](../images/continuous_vs_static_batching.svg)
 
-![With vs Without KV Cache：latency 与 FLOPs 对比](../../week5/images/mini_engine_cache_comparison.svg)
-
-| 维度 | Without Cache | With Cache |
-|------|--------------|------------|
-| 每步 FLOPs | O((N+k)·d²)，随步数增长 | **O(d²)**，与步数无关 |
-| 总 FLOPs（K 步） | O(K·N·d² + K²·d²/2) | O(N·d² + K·d²) |
-| TBT（逐 token 延迟） | 随生成长度线性增长 | **基本稳定** |
-| 生成结果 | 与 with cache **一致** | 基准 |
-| 内存 | 低 | 高（存 K/V cache） |
-
-> 💡 关键验证：**with cache 与 without cache 生成的 token 序列必须完全一致**——KV Cache 只影响速度不影响结果。今天的 Coding 任务会专门验证这一点。
-
-#### 5.5 多轮对话的 KV Cache 复用
-
-```
-Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- → KV Cache 保存了 [系统提示 + Round1 user + Round1 assistant] 的 K/V
-
-Round 2: User: "请介绍一下 FlashAttention"
- → prompt = [Round1 全部 + Round2 user]
- → 前 Round1 部分的 K/V 已在 cache，只需 prefill Round2 新增部分
- → 大幅降低 Round2 的 TTFT
-```
-
-实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week6 再加。
-
-### Coding 任务：构建 Mini 推理引擎 v0
-
-#### 任务 1：创建 mini_engine_v0.py
-
-创建文件 [kernels/mini_engine_v0.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day1/kernels/mini_engine_v0.py)，整合 5 大组件，实现端到端生成：
+Continuous Batching 的核心：**每个 iteration 都重新构建 batch**。
 
 ```python
-# mini_engine_v0.py —— Mini 推理引擎 v0（单请求 + KV Cache + Prefill/Decode 循环）
-# 运行命令: python mini_engine_v0.py
-# 依赖: pip install torch
+def schedule(self):
+    # 1. 保留所有 running 的 sequence（continuous batching 的基础）
+    # 2. 如果还有预算（num_seqs / 显存），从 waiting 队列补入新请求
+    # 3. 如果显存不足，抢占（preempt）低优先级的 running 请求
+    # 4. 返回本轮的 SchedulerOutputs
+    pass
+```
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-from typing import List, Optional, Tuple
+**关键**：新请求可以在**任意 iteration** 加入 batch——不需要等当前 batch 跑完。请求 A 在 iter 5 完成后，它的 slot 立刻被 waiting 里的请求 D 填上，GPU 不空等。
+
+##### 为什么能提升吞吐？
+
+![Static vs Continuous Batching：slot 利用率对比](../../images/week5_batching_comparison.svg)
+
+> 💡 请求长度方差越大，Continuous Batching 收益越大——因为 Static 下"短板请求"造成的空等越多。这也是为什么推理服务的请求长度往往差异巨大（有人问一句话，有人输入长文档），Continuous Batching 几乎是标配。
+
+#### 3.5 SchedulingBudget 与抢占
+
+Scheduler 每轮决策受三重预算约束：
+
+| 预算 | 含义 | 约束 |
+|------|------|------|
+| **token budget** | 本轮最多处理的 token 数 | 限制 prefill 的总 token（大 prompt 会占满） |
+| **num_seqs budget** | 本轮最多并行的 sequence 数 | 限制 batch 大小（防显存爆 / 调度开销） |
+| **显存预算** | KV cache 剩余 block 数 | block allocator 报告（Day 4 PagedAttention） |
+
+##### 抢占（Preemption）的两种策略
+
+当高优先级请求到来但显存不足时，Scheduler 抢占 running 队列里最后加入的请求：
+
+| 策略 | 做法 | 适用场景 |
+|------|------|---------|
+| **Recomputation**（默认） | 丢弃被抢占请求的 KV cache，之后重新 prefill | 短 prompt（重算便宜），通常更快 |
+| **Swapping** | 把被抢占请求的 KV cache 换出到 CPU 内存 | 长 prompt（重算太贵），显存恢复后换回 |
+
+> ⚠️ **注意**：Recomputation 看似浪费（白算了），但对短 prompt 通常比 Swapping 快——因为 CPU↔GPU 的 KV 搬运带宽远低于重算的小 GEMM。vLLM 默认用 Recomputation，长上下文场景才切 Swapping。
+
+### Coding 任务：手写 mini vLLM 调度器
+
+#### 任务 1：创建 mini_vllm_scheduler.py
+
+创建文件 [kernels/mini_vllm_scheduler.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day5/kernels/mini_vllm_scheduler.py)，用纯 Python 模拟 vLLM 的 LLMEngine + Scheduler + Worker，演示 Continuous Batching：
+
+```python
+# mini_vllm_scheduler.py —— vLLM 核心架构的最小化模拟（LLMEngine + Scheduler + Worker）
+# 运行命令: python mini_vllm_scheduler.py
+# 依赖: 仅标准库（无需 torch / vllm）
+#
+# 演示三大核心机制：
+#   1. 请求生命周期：WAITING → RUNNING → FINISHED（含 SWAPPED 抢占）
+#   2. Continuous Batching：每轮 iteration 重新构建 batch，新请求随时加入
+#   3. SchedulingBudget：token / num_seqs / 显存 三重预算约束
+
+import random
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, Optional
+
 
 # ============================================================
-# 模型定义（对应 vLLM 的 ModelRunner 执行的 transformer）
+# 数据模型（对应 vllm/sequence.py）
 # ============================================================
 
-class MiniTransformerLayer(nn.Module):
-    """单层 Transformer Block：Pre-LN + Self-Attention + FFN，支持 KV Cache"""
+class SequenceStatus(Enum):
+    WAITING = "WAITING"
+    RUNNING = "RUNNING"
+    SWAPPED = "SWAPPED"      # 被抢占，KV cache 换出到 CPU
+    FINISHED = "FINISHED"
 
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.out = nn.Linear(d_model, d_model)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.ffn = nn.Sequential(
-        nn.Linear(d_model, d_ff),
-        nn.GELU(),
-        nn.Linear(d_ff, d_model),
+
+@dataclass
+class Sequence:
+    """单个序列（对应 vllm.Sequence）"""
+    seq_id: int
+    prompt_len: int          # prefill 的 token 数
+    max_output_len: int      # 最多生成多少 token
+    output_len: int = 0      # 已生成的 token 数
+    status: SequenceStatus = SequenceStatus.WAITING
+    kv_blocks: int = 0       # 当前占用的 KV cache block 数
+
+    def total_len(self) -> int:
+        return self.prompt_len + self.output_len
+
+    def is_finished(self) -> bool:
+        return self.status == SequenceStatus.FINISHED
+
+
+@dataclass
+class SequenceGroup:
+    """一个请求对应一个 group（对应 vllm.SequenceGroup）
+    实际 vLLM 中一个 group 可含多个采样序列（beam search / n>1），
+    这里简化为单序列。"""
+    request_id: int
+    seq: Sequence
+    arrival_iter: int        # 在第几个 iteration 到达
+
+
+# ============================================================
+# Scheduler（对应 vllm/core/scheduler.py）
+# ============================================================
+
+@dataclass
+class SchedulingBudget:
+    """调度预算（对应 vllm.core.scheduling_budget.SchedulingBudget）"""
+    max_num_seqs: int        # 本轮最多并行多少 sequence
+    max_tokens: int          # 本轮最多处理多少 token（prefill+decode）
+    max_blocks: int          # KV cache 剩余 block 数
+
+    def can_add(self, seq: Sequence, block_size: int) -> bool:
+        # 新 sequence 进 running 需要的 block 数（向上取整）
+        need_blocks = (seq.total_len() + block_size - 1) // block_size
+        return (self.num_seqs < self.max_num_seqs
+                and self.tokens + seq.total_len() <= self.max_tokens
+                and self.blocks + need_blocks <= self.max_blocks)
+
+    def add(self, seq: Sequence, block_size: int):
+        need_blocks = (seq.total_len() + block_size - 1) // block_size
+        self.num_seqs += 1
+        self.tokens += seq.total_len()
+        self.blocks += need_blocks
+
+    # 三个当前已用计数
+    num_seqs: int = 0
+    tokens: int = 0
+    blocks: int = 0
+
+
+@dataclass
+class SchedulerOutputs:
+    """scheduler 一轮的输出：本轮要运行哪些 sequence"""
+    running_seqs: List[Sequence] = field(default_factory=list)
+    preempted_seqs: List[Sequence] = field(default_factory=list)
+    num_batched_tokens: int = 0
+
+
+class Scheduler:
+    """vLLM Scheduler 的核心逻辑（简化版）"""
+
+    def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
+                 max_blocks: int = 64):
+        self.block_size = block_size
+        self.max_num_seqs = max_num_seqs
+        self.max_blocks = max_blocks        # 总 KV cache block 池
+        self.used_blocks = 0                # 已分配 block 数
+
+        self.waiting: List[SequenceGroup] = []     # WAITING 队列
+        self.running: List[SequenceGroup] = []     # RUNNING 队列
+        self.swapped: List[SequenceGroup] = []     # SWAPPED 队列（换出到 CPU）
+
+    def add_request(self, sg: SequenceGroup):
+        sg.seq.status = SequenceStatus.WAITING
+        self.waiting.append(sg)
+
+    def _alloc_blocks(self, seq: Sequence) -> int:
+        """计算 seq 当前需要的 block 数"""
+        return (seq.total_len() + self.block_size - 1) // self.block_size
+
+    def _try_preempt(self) -> Optional[SequenceGroup]:
+        """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）。
+        返回被抢占的 victim（由调用方放回 waiting 队列），无可抢占时返回 None。"""
+        if not self.running:
+            return None
+        # LIFO 抢占：弹出最后加入的
+        victim = self.running.pop()
+        released_blocks = victim.seq.kv_blocks
+        victim.seq.status = SequenceStatus.WAITING
+        victim.seq.output_len = 0          # recomputation：丢弃 KV cache
+        self.used_blocks -= released_blocks
+        victim.seq.kv_blocks = 0
+        print(f"    ⚡ PREEMPT request {victim.request_id} "
+              f"(recomputation, 释放 {released_blocks} blocks)")
+        return victim
+
+    def schedule(self) -> SchedulerOutputs:
+        """一轮调度：决定本轮运行哪些 sequence（Continuous Batching 核心）"""
+        out = SchedulerOutputs()
+
+        # ---- Step 1: 保留所有 running（continuous batching 的基础）----
+        running_seqs = [sg.seq for sg in self.running]
+        out.running_seqs = list(running_seqs)
+
+        # ---- Step 2: 从 waiting 中尽可能加入新请求 ----
+        budget = SchedulingBudget(
+            max_num_seqs=self.max_num_seqs,
+            max_tokens=999999,                 # 简化：不限制 token 总数
+            max_blocks=self.max_blocks - self.used_blocks,
         )
+        for sg in running_seqs:
+            budget.add(sg, self.block_size)
 
-        def forward(self, x, kv_cache=None, use_cache=False):
-            B, N, _ = x.shape
-            x_norm = self.norm1(x)
-            qkv = self.qkv(x_norm)
-            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-            q, k, v = qkv[0], qkv[1], qkv[2]
+        still_waiting = []
+        # 注意：必须遍历快照（list(...)），不能直接在 self.waiting 上迭代——
+        # _try_preempt() 会向 self.waiting 头部 insert 被抢占的请求，
+        # 原地迭代会导致同一请求被反复检查，陷入无限循环（livelock）。
+        for sg in list(self.waiting):
+            if budget.can_add(sg.seq, self.block_size):
+                # 加入 running
+                sg.seq.status = SequenceStatus.RUNNING
+                need = self._alloc_blocks(sg.seq)
+                self.used_blocks += need
+                sg.seq.kv_blocks = need
+                self.running.append(sg)
+                out.running_seqs.append(sg.seq)
+                budget.add(sg.seq, self.block_size)
+                print(f"    + ADMIT  request {sg.request_id} "
+                      f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
+            else:
+                # 预算不足：尝试抢占
+                victim = self._try_preempt()
+                if victim is not None:
+                    # 被抢占的请求放回 waiting 队首（加入 still_waiting，
+                    # 循环结束后统一重建 self.waiting，避免迭代中被修改/覆盖丢失）
+                    still_waiting.insert(0, victim)
+                    # 抢占后重试
+                    if budget.can_add(sg.seq, self.block_size):
+                        sg.seq.status = SequenceStatus.RUNNING
+                        need = self._alloc_blocks(sg.seq)
+                        self.used_blocks += need
+                        sg.seq.kv_blocks = need
+                        self.running.append(sg)
+                        out.running_seqs.append(sg.seq)
+                        budget.add(sg.seq, self.block_size)
+                        print(f"    + ADMIT  request {sg.request_id} "
+                              f"(after preempt, alloc {need} blocks)")
+                    else:
+                        still_waiting.append(sg)
+                else:
+                    still_waiting.append(sg)
+        self.waiting = still_waiting
 
-            if use_cache and kv_cache is not None:
-                k_cache, v_cache = kv_cache
-                k = torch.cat([k_cache, k], dim=2) # 拼历史 cache
-                v = torch.cat([v_cache, v], dim=2)
+        out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
+        return out
 
-                scale = self.d_head ** -0.5
-                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-                attn = F.softmax(attn, dim=-1)
-                out = torch.matmul(attn, v)
 
-                out = out.transpose(1, 2).reshape(B, N, self.d_model)
-                x = x + self.out(out)
-                x = x + self.ffn(self.norm2(x))
-                return x, (k, v)
+# ============================================================
+# Worker（对应 vllm/worker/worker.py）
+# ============================================================
 
-                class MiniLLM(nn.Module):
-                    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
-                        super().__init__()
-                        self.embedding = nn.Embedding(vocab_size, d_model)
-                        self.layers = nn.ModuleList([
-                        MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
-                        ])
-                        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+class Worker:
+    """执行模型前向（这里只模拟，不跑真模型）"""
 
-                        def forward(self, input_ids, kv_cache=None, use_cache=False):
-                            x = self.embedding(input_ids)
-                            new_kv_cache = []
-                            for i, layer in enumerate(self.layers):
-                                layer_cache = kv_cache[i] if kv_cache is not None else None
-                                x, layer_new_cache = layer(x, layer_cache, use_cache)
-                                new_kv_cache.append(layer_new_cache)
-                                logits = self.lm_head(x)
-                                return logits, new_kv_cache
+    def execute_model(self, running_seqs: List[Sequence]) -> List[int]:
+        """对每个 running sequence 执行一步：生成 1 个 token（decode）
+        或完成 prefill。返回每个 seq 的新 token id。"""
+        new_tokens = []
+        for seq in running_seqs:
+            # prefill 后第一个 token 由 prompt 末尾产出
+            seq.output_len += 1
+            tok = random.randint(0, 999)     # 假 token id
+            new_tokens.append(tok)
+        return new_tokens
 
-                                class MiniTokenizer:
-                                    def __init__(self, vocab_size=1000):
-                                        self.vocab_size = vocab_size
-                                        self.word_to_id = {}
-                                        self.id_to_word = {}
-                                        self.next_id = 1
 
-                                        def encode(self, text: str) -> List[int]:
-                                            tokens = []
-                                            for word in text.lower().split():
-                                                if word not in self.word_to_id:
-                                                    if self.next_id >= self.vocab_size:
-                                                        break
-                                                        self.word_to_id[word] = self.next_id
-                                                        self.id_to_word[self.next_id] = word
-                                                        self.next_id += 1
-                                                        tokens.append(self.word_to_id[word])
-                                                        return tokens
+# ============================================================
+# LLMEngine（对应 vllm/engine/llm_engine.py）
+# ============================================================
 
-                                                        def decode(self, ids: List[int]) -> str:
-                                                            return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+class LLMEngine:
+    """vLLM 对外接口：管理整个推理生命周期"""
 
-                                                            class MiniEngineV0:
-                                                                """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+    def __init__(self, block_size: int = 16, max_num_seqs: int = 4,
+                 max_blocks: int = 64):
+        self.scheduler = Scheduler(block_size, max_num_seqs, max_blocks)
+        self.worker = Worker()
+        self.iteration = 0
+        self.finished: List[SequenceGroup] = []
 
-                                                                def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
-                                                                    self.model = model.to(device).eval()
-                                                                    self.tokenizer = tokenizer
-                                                                    self.device = device
+    def add_request(self, request_id: int, prompt_len: int,
+                    max_output_len: int):
+        sg = SequenceGroup(
+            request_id=request_id,
+            seq=Sequence(seq_id=request_id, prompt_len=prompt_len,
+                         max_output_len=max_output_len),
+            arrival_iter=self.iteration,
+        )
+        self.scheduler.add_request(sg)
+        print(f"[iter {self.iteration}] ➕ add_request {request_id} "
+              f"(prompt={prompt_len}, max_out={max_output_len})")
 
-                                                                    @torch.no_grad()
-                                                                    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
-                                                                        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+    def step(self) -> List[int]:
+        """一轮推理：schedule → execute → 更新状态（对应 LLMEngine.step）"""
+        self.iteration += 1
+        print(f"\n[iter {self.iteration}] === step ===")
 
-                                                                        # ========== Prefill ==========
-                                                                        logits, kv_cache = self.model(input_ids, use_cache=True)
-                                                                        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                        generated_ids = [next_token.item()]
+        # 1. Scheduler 决定本轮运行哪些 sequence
+        sched_out = self.scheduler.schedule()
+        if not sched_out.running_seqs:
+            print("    (no running seqs)")
+            return []
 
-                                                                        # ========== Decode Loop ==========
-                                                                        for _ in range(max_new_tokens - 1):
-                                                                            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
-                                                                            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                            generated_ids.append(next_token.item())
+        print(f"    batch: {len(sched_out.running_seqs)} seqs, "
+              f"{sched_out.num_batched_tokens} tokens, "
+              f"used_blocks={self.scheduler.used_blocks}/{self.scheduler.max_blocks}")
 
-                                                                            return self.tokenizer.decode(generated_ids)
+        # 2. Worker 执行模型前向（每 seq 生成 1 个 token）
+        new_tokens = self.worker.execute_model(sched_out.running_seqs)
 
-                                                                            @torch.no_grad()
-                                                                            def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
-                                                                                """对照版：不用 KV Cache，每步重算完整历史"""
-                                                                                input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
-                                                                                current_ids = input_ids.clone()
-                                                                                generated = []
-                                                                                for _ in range(max_new_tokens):
-                                                                                    logits, _ = self.model(current_ids, use_cache=False)
-                                                                                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                                    generated.append(next_token.item())
-                                                                                    current_ids = torch.cat([current_ids, next_token], dim=1)
-                                                                                    return generated
+        # 3. 更新 sequence 状态
+        finished_this_step = []
+        for sg in self.scheduler.running[:]:
+            seq = sg.seq
+            # 检查是否完成
+            if seq.output_len >= seq.max_output_len:
+                seq.status = SequenceStatus.FINISHED
+                self.scheduler.used_blocks -= seq.kv_blocks
+                seq.kv_blocks = 0
+                self.scheduler.running.remove(sg)
+                self.finished.append(sg)
+                finished_this_step.append(sg.request_id)
+                print(f"    ✔ FINISH request {sg.request_id} "
+                      f"(generated {seq.output_len} tokens, free {seq.total_len()//self.scheduler.block_size + 1} blocks)")
+        return finished_this_step
+
+    def has_unfinished(self) -> bool:
+        return bool(self.scheduler.waiting or self.scheduler.running)
+
+
+# ============================================================
+# 主流程：模拟 3 个请求交错到达，演示 Continuous Batching
+# ============================================================
+
+def main():
+    random.seed(42)
+    # block_size=16, 最多 4 并发, 总 64 blocks
+    # （减小 max_blocks 可触发抢占，见扩展实验）
+    engine = LLMEngine(block_size=16, max_num_seqs=4, max_blocks=64)
+
+    print("=" * 60)
+    print("Mini vLLM Scheduler Simulation")
+    print("=" * 60)
+
+    # iter 0: 请求 0 到达（长 prompt + 长输出）
+    engine.add_request(0, prompt_len=32, max_output_len=8)
+
+    # 跑几步
+    for _ in range(2):
+        engine.step()
+
+    # iter 2: 请求 1、2 到达（制造 interleaving）
+    engine.add_request(1, prompt_len=16, max_output_len=5)
+    engine.add_request(2, prompt_len=48, max_output_len=6)
+
+    # 继续跑到全部完成
+    while engine.has_unfinished():
+        engine.step()
+
+    print("\n" + "=" * 60)
+    print(f"All requests finished. Total iterations: {engine.iteration}")
+    print(f"Finished order: {[sg.request_id for sg in engine.finished]}")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+
+```
 ```
 
 代码要点：
-- `MiniTransformerLayer.forward` 通过 `use_cache + kv_cache` 区分 Prefill（`kv_cache=None`）与 Decode（拼历史 cache）
-- `MiniLLM.forward` 逐层执行 transformer，每层返回更新后的 `(k, v)`，组成 `new_kv_cache` 列表
-- `MiniEngineV0.generate` = Prefill（一次性）+ Decode Loop（逐 token 复用 cache）+ argmax 采样
-- `generate_no_cache` 对照版：每步重算完整历史，用于验证 with cache 输出一致
+- `Sequence` **/** `SequenceGroup` **/** `SequenceStatus`：对应 vLLM 的数据模型，`SequenceGroup` 包一个 `Sequence`（简化为单序列）。
+- `Scheduler.schedule()`：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`）。
+- `Worker.execute_model()`：每 seq 生成 1 个 token（随机模拟，不跑真模型）。
+- `LLMEngine.step()`：schedule → execute → 更新状态（完成则释放 cache），对应 vLLM 的 4 步流程。
 
-#### 任务 2：运行并观察输出
+#### 任务 2：运行并观察 Continuous Batching
 
 ```bash
-python kernels/mini_engine_v0.py
+python kernels/mini_vllm_scheduler.py
 ```
 
-**预期输出**（CPU/GPU 均可，token id 因随机种子而异）：
+**预期输出**（节选）：
 
 ```text
-Using device: cuda
-Prompt: hello world this is a test
-Generated (with cache): is <unk_497> <unk_592> ...
+[iter 1] === step ===
+ + ADMIT request 0 (prefill 32 tok, alloc 2 blocks)
+ batch: 1 seqs, 32 tokens, used_blocks=2/64
 
-=== KV Cache Correctness Check ===
- with cache:    'is <unk_497> <unk_592> <unk_534> <unk_130>'
- without cache: 'is <unk_497> <unk_592> <unk_534> <unk_130>'
- ✅ PASS: with/without KV Cache 逐 token 输出一致
+[iter 3] === step ===
+ + ADMIT request 1 (prefill 16 tok, alloc 1 blocks)
+ + ADMIT request 2 (prefill 48 tok, alloc 3 blocks)
+ batch: 3 seqs, 98 tokens, used_blocks=6/64
 
-=== Multi-turn Cache Reuse Demo ===
- Round 1: '<unk_177> <unk_493> ...'
- Round 2: '<unk_443> <unk_491> ...' (新 prompt，独立 cache)
+[iter 7] === step ===
+ batch: 3 seqs, 110 tokens, used_blocks=6/64
+ ✔ FINISH request 1 (generated 5 tokens)
 
-=== KV Cache Memory ===
- config: layers=4, heads=8, d_head=64, fp32
- bytes per token: 16384 (16.0 KB)
- seq_len=256: 4.0 MB
- seq_len=1024: 16.0 MB
- seq_len=4096: 64.0 MB
+[iter 8] === step ===
+ batch: 2 seqs, 92 tokens, used_blocks=5/64
+ ✔ FINISH request 0 (generated 8 tokens)
+ ✔ FINISH request 2 (generated 6 tokens)
+
+All requests finished. Total iterations: 8
+Finished order: [1, 0, 2]
 ```
 
-##### 验证逻辑解读
+##### 观察重点
 
-1. **with cache 与 without cache 逐 token 一致**：脚本用 `assert` 强制比较两条路径的完整输出序列（`decode` 是 id→word 的确定性映射，字符串相等即逐 token 相等），打印 `✅ PASS` 才通过——证明 KV Cache 只加速不改变结果
-2. **生成的 token 是"乱码"**：因为模型是随机初始化的（没训练），生成无语义——我们只验证**引擎流程正确**，不关心生成质量
-3. **KV Cache 内存占用**：4 层 × 8 头 × 64 d_head × fp32 → 每 token 16 KB，4096 token 64 MB
+1. **请求交错执行**：req0 先到先跑 2 轮，req1/req2 在 iter 3 加入，三者同 batch 并行 decode——这就是 Continuous Batching。
+2. **完成即走**：req1（max_out=5）在 iter 7 最先完成，req0/req2 继续跑到 iter 8——完成的不拖累未完成的。
+3. **完成顺序 ≠ 到达顺序**：req1 最晚到但最早完成（max_out 最短），说明 Continuous Batching 让短请求快速返回。
+4. **显存动态回收**：req1 完成后 `used_blocks` 从 6 降到 5，slot 立刻可用。
 
-> ⚠️ **注意**：本引擎用随机初始化模型，生成无语义。要生成有意义文本需接入预训练权重（如 HuggingFace 的 GPT-2）——Week7 替换后端时再做。v0 的目标是跑通流程 + 验证 KV Cache 正确性。
+#### 任务 3：阅读 vLLM 源码对照
 
-#### 任务 3：用 torch.profiler 对比 Prefill/Decode 算子
+在 vLLM 源码（`pip install vllm` 后或 GitHub）中找到以下三个方法，与我们的 mini 实现对照：
+
+| mini 实现 | vLLM 源码位置 | 对照点 |
+|-----------|--------------|--------|
+| `LLMEngine.step()` | `vllm/engine/llm_engine.py` | 4 步流程：schedule → execute → process_outputs → return |
+| `Scheduler.schedule()` | `vllm/core/scheduler.py` | `_schedule_running()` + `_schedule_waiting()`，Continuous Batching 实现 |
+| `Worker.execute_model()` | `vllm/worker/worker.py` | 构建 input metadata（含 block table）→ ModelRunner.run() |
 
 ```bash
-python -c "
-import torch
-from kernels.mini_engine_v0 import MiniLLM, MiniTokenizer
+# 找到 step() 的 4 个主要步骤
+python -c "import vllm.engine.llm_engine as m; import inspect; print(inspect.getsourcefile(m))"
 
-torch.manual_seed(42)
-model = MiniLLM(1000, 512, 8, n_layers=4).to('cuda').eval()
-prompt = torch.tensor([[1,2,3,4,5,6,7,8]], device='cuda')
-decode_in = torch.tensor([[9]], device='cuda')
-
-with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- model(prompt, use_cache=False)
-print('=== Prefill (N=8) ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
-
-with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as prof:
- model(decode_in, use_cache=False)
-print('=== Decode (N=1) ===')
-print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
-"
+# 在源码中搜索 schedule 的三个子方法
+grep -n "_schedule_running\|_schedule_waiting\|_schedule_swapped" $(python -c "import vllm.core.scheduler as m; print(m.__file__)")
 ```
 
-**观察重点**：Prefill 的 `addmm`/`bmm` 尺寸大、耗时长；Decode 的同算子尺寸极小（M=1），算子 launch 开销占比上升——印证 Day1 的"Decode memory-bound，SM 空闲等数据"。
+> 💡 重点对照：vLLM 的 `_schedule_running()` 先处理已 running 的请求（continuous batching 基础），`_schedule_waiting()` 再从 waiting 补入新请求——正是我们 mini 版 `schedule()` 的 Step 1 + Step 2。
 
-#### 任务 4：LeetGPU 在线题目 —— GPT-2 Transformer Block
+#### 任务 4：LeetGPU 在线题目 —— Top-P Sampling
 
-**题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
+**题目链接**：<https://leetgpu.com/challenges/top-p-sampling>
 
 **与今日知识的关联**：
 
-GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
+Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel**——Scheduler 拼好 batch、Worker 跑完 forward 得到 logits 后，最后一步就是在 GPU 上执行采样。这道题就是 Worker 跑的**采样 kernel**：把采样拆成 `softmax → sort → cumsum → searchsorted(p) → 重归一化 → multinomial`，本质是一条 sort + scan（prefix sum）+ CDF 查找的流水线。它直接体现了"Scheduler 决定跑谁、Worker 跑什么 kernel"的分工——采样 kernel 喂入的 batch 正是 Continuous Batching 拼出来的。
 
-> 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
+> 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 3）
 
-> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [111. 二叉树的最小深度](https://leetcode.cn/problems/minimum-depth-of-binary-tree/) | 简单 | BFS/DFS（注意单边子树） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html) |
+| [559. N 叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-n-ary-tree/) | 简单 | DFS/BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html) |
+| [108. 将有序数组转换为二叉搜索树](https://leetcode.cn/problems/convert-sorted-array-to-binary-search-tree/) | 简单 | 取中点递归构建 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html) |
+| [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/) | 中等 | 中序单调性 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html) |
+| [230. 二叉搜索树中第 K 小的元素](https://leetcode.cn/problems/kth-smallest-element-in-a-bst/) | 中等 | 中序第 k 个 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
 
 ---
 
 ### 扩展实验
 
-#### 实验 1：加温度采样和 top-k 采样
+#### 实验 1：减小 max_blocks 触发抢占
 
-修改 `generate` 的采样部分，把 `argmax` 换成 `temperature + top-k` 采样：
+把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=8`，观察抢占（PREEMPT）是否触发。注意 Recomputation 策略会重置 `output_len`，被抢占请求的进度全部作废。
 
-```python
-logits = logits[:, -1, :] / temperature
-top_k_logits, top_k_indices = torch.topk(logits, k)
-probs = F.softmax(top_k_logits, dim=-1)
-next_token = top_k_indices[torch.multinomial(probs, 1)]
+**实测结果**（RTX 5090 环境非必需，纯 Python 可直接复现）：抢占正常触发且调度收敛——req1 被反复抢占 **6 次**（每次 progress 清零重新 prefill），最终 14 个 iteration 全部完成，完成顺序 `[0, 1, 2]`：
+
+```text
+⚡ PREEMPT request 1 (recomputation, 释放 1 blocks)
+⚡ PREEMPT request 1 (recomputation, 释放 2 blocks)
+... （共 6 次 PREEMPT，全是 req1）
+✔ FINISH request 0 (generated 8 tokens, free 3 blocks)
+✔ FINISH request 1 (generated 5 tokens, free 2 blocks)
+✔ FINISH request 2 (generated 6 tokens, free 4 blocks)
+All requests finished. Total iterations: 14
+Finished order: [0, 1, 2]
 ```
 
-> 思考：temperature→0 时采样退化为 argmax（greedy）；temperature→∞ 时趋向均匀分布。top-k 控制候选范围，避免长尾噪声。vLLM 的采样器还支持 top-p（nucleus sampling）。
+可以看到 Recomputation 的代价：req1 最早被 admit 却反复被抢占（LIFO 抢最后加入的），8 轮活干了 14 轮才结束。若 max_blocks 小到连单个请求都放不下，则会真正 livelock（反复抢占谁也无法推进）。
 
-#### 实验 2：验证 with/without cache 在长序列下的 latency 差异
+> 思考：为什么 max_blocks 太小会 livelock？（提示：Recomputation 把 output_len 清零，被抢占的请求重新 prefill 又抢别人的显存。）如何改进？（提示：Swapping 策略不丢 progress；或限制抢占次数。）
 
-修改 `main()`，用 `cuda.Event` 分别计时 `generate`（with cache）和 `generate_no_cache`（without cache），扫描 `max_new_tokens = 10, 50, 100`。绘制 TBT 随步数变化曲线。
+#### 实验 2：支持 SWAPPED 队列与换出
 
-> 思考：without cache 的 TBT 应随步数线性增长（每步重算更长前缀），with cache 基本稳定——这就是 KV Cache 让 decode latency 降低 10x+ 的量化体现。Day6 会做完整 profiling。
+当前 mini 版的 `_try_preempt` 用 Recomputation（重置 output_len）。修改为 Swapping：被抢占的请求 `status=SWAPPED`，进入 `self.swapped` 队列，`output_len` 保留；显存恢复时 swap in 回 running。对比两种策略在长 prompt 下的行为差异。
 
-#### 实验 3：实现多轮对话 chat() API
+> 思考：Swapping 何时比 Recomputation 更优？（提示：prompt 很长时重算成本 > CPU↔GPU 搬运成本。）
 
-给 `MiniEngineV0` 加 `chat(messages: List[dict])` 方法，维护跨轮的 KV Cache：Round 2 只 prefill 新增 token，复用 Round 1 的 cache。
+#### 实验 3：添加请求优先级
 
-```python
-def chat(self, messages):
- # 把 messages 拼成 prompt，检查已有 cache 长度
- # 只对新增部分 prefill，追加到 cache
- # decode 生成回复
- ...
-```
+给 `SequenceGroup` 加 `priority` 字段，修改 `schedule()` 让高优先级请求优先被 admit、低优先级请求优先被 preempt。测试：低优先级长请求先到，高优先级短请求后到，观察抢占行为。
 
-> 思考：多轮复用的前提是 prompt 格式严格一致（Round2 prompt = Round1 全部 + 新输入）。如果用户改写历史，cache 失效要重新 prefill。vLLM 用 prefix caching 显式管理这一点。
+> 思考：优先级调度可能产生什么问题？（提示：低优先级请求 starvation 饿死。如何解决？老化 aging 策略。）
 
 ---
 
 ### 今日总结
 
-Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推理引擎 v0：
+Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
-1. **5 大核心组件**：Tokenizer（文本↔id）、模型后端（MiniLLM PyTorch）、KV Cache（use_cache 控制）、采样器（argmax）、Prefill/Decode 循环（generate 主体）
-2. **MiniLLM 结构**：embedding + n_layers 层 transformer（Pre-LN + self-attention + FFN）+ lm_head，每层返回 `(k,v)` 供 cache 复用
-3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（O(N·d²) 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（O(d²) 向量×矩阵）
-4. **with/without cache 验证**：两者生成 token 序列完全一致，证明 KV Cache 只加速不改结果；without cache 的 TBT 随步数增长，with cache 基本稳定
-5. **KV Cache 内存**：每 token = 2 × n_layers × n_heads × d_head × bytes，4 层 × 8 头 × 64 d_head fp32 = 16 KB/token，4096 token 64 MB
-6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week6 加 session 管理
-7. **工程演进路径**：v0（单请求+PyTorch）→ v1（多请求+Continuous Batching）→ v2（自定义 kernel 替换 PyTorch）——每个组件都能独立替换优化
+1. **三层分层架构**：LLMEngine（接口）→ Scheduler（调度）→ Worker（执行），职责清晰、解耦——Scheduler 只管"跑谁"，Worker 只管"怎么跑"
+2. **核心数据结构**：Sequence（单序列）、SequenceGroup（一请求多候选）、SequenceStatus（WAITING/RUNNING/SWAPPED/FINISHED 四态）
+3. **请求生命周期**：add_request → WAITING → schedule 选中 → RUNNING → 达到 max_tokens → FINISHED（或显存不足 → SWAPPED → 恢复回 RUNNING）
+4. **Continuous Batching**：每轮 iteration 重建 batch，完成即走、新请求随时插入——GPU 始终满载，吞吐提升 2-8×，请求长度方差越大收益越大
+5. **SchedulingBudget**：token / num_seqs / 显存三重预算约束调度决策；显存不足时抢占（Recomputation 默认 / Swapping 备选）
+6. **手写 mini 调度器**：Python 模拟 LLMEngine+Scheduler+Worker，实测 3 请求交错执行，验证 Continuous Batching 的完成即走、完成顺序≠到达顺序
+7. **step() 4 步流程**：schedule → execute_model → process_outputs → return，每步推进一个 iteration
 
-掌握这些后，你就有了第一个可运行的推理引擎——明天 Day6 对它做端到端 profiling，测量 TTFT/TBT、定位瓶颈，为后续优化提供数据依据。
+掌握这些后，你就有了 vLLM 的调度层全景——明天 Day 4 深入 Worker 内部的 PagedAttention，看它如何用分页 + block table 让 KV cache 的动态分配/释放不产生碎片，从而支撑 Continuous Batching 的高频 slot 回收。
 
 ---
 
 ### 面试要点
 
-1. **如何构建一个最简单的 LLM 推理引擎？需要哪些核心组件？**
+1. **vLLM 的整体架构是怎样的？一个请求从进入到输出经历哪些阶段？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 5 大核心组件：
- 1. **Tokenizer**：文本 ↔ token id 转换
- 2. **模型后端**：执行 transformer forward（PyTorch/TensorRT/vLLM）
- 3. **KV Cache**：存储历史 K/V，避免重复计算
- 4. **采样器**：argmax/greedy/temperature/top-k/top-p
- 5. **Prefill/Decode 循环**：prefill 处理 prompt，decode 自回归生成
- - 最小流程：encode prompt → prefill forward（填 cache）→ first token → decode loop（复用 cache）→ next tokens → decode token ids → text
- - 可选第 6 组件：调度器（多请求时决定 batch 组合，如 vLLM 的 Scheduler）
+ - 三层分层架构：LLMEngine（对外接口，编排 step 循环）→ Scheduler（调度决策，管理三个队列+预算）→ Worker（执行模型前向）
+ - 请求生命周期：
+ 1. 用户调 `LLMEngine.add_request()`，请求进入 WAITING 队列
+ 2. `Scheduler.schedule()` 依预算决定哪些请求进本轮 batch（从 waiting 补入 running）
+ 3. `Worker.execute_model()` 执行模型前向，每 seq 生成 1 个 token
+ 4. `_process_model_outputs` 采样、更新状态——达到 max_tokens 则 FINISHED（释放 cache），显存不足则 SWAPPED
+ 5. 反复 `step()` 直到所有请求 FINISHED
+ - Continuous Batching：每轮重建 batch，新请求可在任意 iteration 加入
 
 </details>
 
 
-2. **在推理引擎中，Prefill 和 Decode 阶段分别需要保存什么到 KV Cache？**
+2. **什么是 Continuous Batching？它比 Static Batching 好在哪里？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill 阶段**：保存 prompt 中每个 token 的 K 和 V。对第 i 层 transformer，保存 shape `(B, H, N_prompt, d_head)` 的 K 和 V
- - **Decode 阶段**：每步保存 1 个新生成 token 的 K 和 V，shape `(B, H, 1, d_head)`，追加到 cache
- - 最终 KV Cache 长度 = prompt_len + generated_len
- - 只有 K 和 V 需要保存，Q 是每步实时计算的（Q 只依赖当前 token）
+ - Continuous Batching：每个 iteration 都重新构建 batch，完成的请求立即释放 slot，waiting 里的新请求立刻补位
+ - Static Batching：凑齐 N 个才开始，等最慢的请求跑完才接下一批——完成的请求 slot 空等
+ - 收益：GPU 始终满载，吞吐提升 2-8×；请求长度方差越大收益越大（短板请求造成的空等越多）
+ - 前提：需要细粒度 KV cache 管理（PagedAttention 的 block 级分配/释放），否则完成请求的 cache 释放会碎片爆炸
 
 </details>
 
 
-3. **with cache 和 without cache 生成的 token 为什么一致？**
+3. **vLLM 的 Scheduler 依据什么做调度决策？什么是 SchedulingBudget？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 数学上等价：Decode 第 t 步的 attention = `softmax(Q_t · K_{1..t}^T / √d) · V_{1..t}`
- - with cache：`K_{1..t}` 从 cache 读取（之前算过的）+ 当前新算的 `K_t`
- - without cache：`K_{1..t}` 全部本次重新算
- - 两者算的是同一个 `K_{1..t}`（权重没变，输入 token 相同），所以 attention 结果逐元素一致，采样出的 token 一致
- - KV Cache 只是把"重算历史 K/V"换成"读缓存"，是纯加速，不改变数学结果
+ - Scheduler 依据三重预算：
+ - token budget：本轮最多处理的 token 数（限制 prefill 总量）
+ - num_seqs budget：本轮最多并行的 sequence 数（限制 batch 大小）
+ - 显存预算：block allocator 报告的剩余 block 数（Day 4 PagedAttention）
+ - `SchedulingBudget` 封装这些预算，scheduler 在 add 请求时检查是否超出
+ - 调度目标：最大化 throughput，同时控制 latency（通过 budget 限制 batch 大小）
+ - 决策顺序：先保留 running（continuous batching 基础）→ 从 waiting 补入 → 显存不足则抢占
 
 </details>
 
 
-4. **Mini 引擎 v0 的 generate 循环里，Prefill 和 Decode 的 forward 调用有什么区别？**
+4. **vLLM 中抢占（preemption）的两种策略是什么？各自适用什么场景？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：`model(input_ids, use_cache=True)`，input_ids 是整段 prompt `(B, N)`，`kv_cache=None`。attention 是 N×N 完整矩阵，返回 prompt 的 K/V 作为初始 cache
- - **Decode**：`model(next_token, kv_cache=上一步, use_cache=True)`，next_token 是 `(B, 1)`。层内把新 K/V `torch.cat` 到 cache，attention 是 1×(L+1)
- - 关键：同一个 `model.forward` 通过 `use_cache + kv_cache` 参数区分两种模式——Prefill 时 cache 为空，Decode 时 cache 非空
+ - **Recomputation**（默认）：丢弃被抢占请求的 KV cache，之后重新 prefill。适用于短 prompt——重算成本低于 CPU↔GPU 搬运
+ - **Swapping**：把被抢占请求的 KV cache 换出到 CPU 内存，显存恢复后换回。适用于长 prompt——重算太贵
+ - vLLM 默认 Recomputation，因为大多数请求 prompt 不长，重算比搬运快
+ - 抢占对象：通常抢占 running 队列里最后加入的请求（LIFO）
 
 </details>
 
 
-5. **KV Cache 在多轮对话中如何复用？有什么前提条件？**
+5. **SequenceGroup 是什么？为什么不直接用 Sequence？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 为每个对话 session 维护独立 KV Cache，Round1 算完的 K/V 保留
- - Round2 的 prompt = [Round1 全部 + 新输入]，其中 Round1 部分的 K/V 已在 cache，只需 prefill 新增 token 并追加
- - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
- - **前提**：Round2 prompt 必须严格是"Round1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 的前缀对不上无法复用。生产系统用 prefix caching 显式管理
- - v0 暂每轮独立 cache（不复用），Week6 加 session 级 cache 管理
+ - `SequenceGroup` 包含一个请求的 prompt + 1~N 个采样序列（`Sequence`）
+ - 一个用户请求可能需要多个候选序列：beam search（保留 top-K 路径）、`n>1` 采样（一次生成多个回答）
+ - 这些候选共享同一个 prompt，用 group 包起来统一管理；prompt 的 KV cache 在 group 内共享（Day 4 的 Copy-on-Write 机制）
+ - 单序列场景（n=1, no beam）group 内只有一个 Sequence，退化为直接用 Sequence
 
- - KV Cache 概念一致（存历史 K/V 避免重算），实现细节不同：v0 用 `torch.cat` 拼接张量，生产级用 PagedAttention 的 block 分页
+ - Continuous Batching、SchedulingBudget、抢占/换出等调度逻辑跨平台通用
 
 </details>
 
+
+---
+
+### 附录：vLLM V1 架构演进（2024-2025）
+
+> 上述内容描述的是 vLLM 的 SOSP 2023 原版架构。vLLM 在 2024-2025 年进行了 V1 重构，以下是关键变化：
+
+| 维度 | vLLM V0 (SOSP 2023) | vLLM V1 (2024-2025) |
+|------|---------------------|---------------------|
+| 异步 API | `LLMEngine`（同步） | `AsyncLLMEngine`（原生 async） |
+| Scheduler | 单线程 `Scheduler` | V1 Scheduler（支持 prefix caching 默认开启） |
+| Chunked Prefill | 需手动启用 | **默认启用** |
+| Prefix Caching | `--enable-prefix-caching`（可选） | **默认启用**（block hash 匹配） |
+| Speculative Decoding | 实验性 | 一等公民支持 |
+| CUDA Graph | 需手动配置 | 自动捕获 decode 迭代 |
+| 多模态 | 后期添加 | 原生设计支持 |
+| 架构 | Engine → Scheduler → Worker | AsyncLLMEngine → V1 Scheduler → WorkerPool |
+
+**V1 的核心改进**：
+1. **默认启用 chunked prefill + prefix caching**：不再需要手动配置，开箱即优
+2. **异步引擎**：`AsyncLLMEngine` 原生支持 async/await，减少 Python GIL 瓶颈
+3. **统一调度器**：V1 Scheduler 合并了 prefill/decode 的调度逻辑，简化代码路径
+4. **CUDA Graph 自动化**：decode 迭代自动捕获为 CUDA Graph，消除 launch overhead
+
+> 💡 **面试技巧**：被问"vLLM 架构"时，先描述 V0 核心创新（PagedAttention + Continuous Batching），再补充"V1 重构后默认启用 chunked prefill + prefix caching + CUDA Graph"。这显示你不仅读过论文，还跟踪了最新进展。
