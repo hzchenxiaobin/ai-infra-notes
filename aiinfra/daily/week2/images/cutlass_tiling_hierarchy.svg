@@ -23,7 +23,7 @@
     <g filter="url(#sk2)"><rect x="350" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="380" y="120" text-anchor="middle">TB</text></g>
     <g filter="url(#sk2)"><rect x="412" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="442" y="120" text-anchor="middle">TB</text></g>
     <g filter="url(#sk2)"><rect x="474" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="504" y="120" text-anchor="middle">TB</text></g>
-    <g filter="url(#sk2)"><rect x="536" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke="0.8"/><text x="566" y="120" text-anchor="middle">TB</text></g>
+    <g filter="url(#sk2)"><rect x="536" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="566" y="120" text-anchor="middle">TB</text></g>
     <g filter="url(#sk2)"><rect x="598" y="94" width="60" height="48" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/><text x="628" y="120" text-anchor="middle">TB</text></g>
     <text x="540" y="158" text-anchor="middle" font-size="9" fill="#888">... (4096/128)² = 1024 blocks</text>
     <text x="540" y="172" text-anchor="middle" font-size="9" fill="#888">每个 block 处理一个 ThreadblockTile</text>
