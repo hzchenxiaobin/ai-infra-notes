@@ -5,7 +5,7 @@ Generates:
   - public/ (deployment root)
     - Shared css/js (copied from static/)
     - Course overview + plan + week1 pages (built by build.weeks)
-    - week2~week8 pages (built by build.weeks)
+    - week2~week10 pages (built by build.weeks)
     - topic websites (built by build.topics)
     - paper reading website (built by build.paper)
 """
@@ -84,7 +84,7 @@ def main() -> None:
     print("Building Week 1 website...")
     build_week1(public_dir, plan_weeks)
 
-    for week_num in range(2, 9):
+    for week_num in range(2, 11):
         print(f"Building Week {week_num} website...")
         build_week(week_num, public_dir, plan_weeks)
         copy_images(

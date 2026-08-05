@@ -210,7 +210,7 @@ def _build_nav(topic_slug: str, topic_display_name: str,
     lines = []
     lines.append('<div class="nav-section-title">返回主站</div>')
     lines.append(f'<a class="nav-link" href="{href_prefix}../index.html">← AI Infra 主页</a>')
-    lines.append(f'<a class="nav-link" href="{href_prefix}../plan.html">📋 8 周计划</a>')
+    lines.append(f'<a class="nav-link" href="{href_prefix}../plan.html">📋 10 周计划</a>')
 
     lines.append(f'<div class="nav-section-title" style="margin-top:1rem;">{topic_display_name} 专题</div>')
 

@@ -1,4 +1,4 @@
-"""Unified builder for Week 1-8 websites."""
+"""Unified builder for Week 1-10 websites."""
 
 import re
 import shutil
@@ -32,6 +32,8 @@ WEEK_TITLES = {
     6: "Batching & 调度",
     7: "系统整合",
     8: "项目打磨 + 面试准备",
+    9: "分布式并行与多硬件",
+    10: "项目整合与面试冲刺",
 }
 
 WEEK_OVERVIEW_PAGE_TITLES = {
@@ -43,6 +45,8 @@ WEEK_OVERVIEW_PAGE_TITLES = {
     6: "Week 6 - Batching & 调度",
     7: "Week 7 - 系统整合",
     8: "Week 8 - 项目打磨 + 面试准备",
+    9: "Week 9 - 分布式并行与多硬件",
+    10: "Week 10 - 项目整合与面试冲刺",
 }
 
 WEEKS_WITH_CARDS_HEADING = {1, 2}
@@ -101,7 +105,7 @@ def build_week_nav(
     current_page: "week" for week pages, "overview" for course overview, "plan" for plan page.
     current_week: which week number is current (None for overview/plan pages).
     relative_current_week: when True, current week links use bare "index.html"/"dayN.html"
-        (weeks 2-8). When False, all week links use "{root_prefix}week{N}/..." (week 1).
+        (weeks 2-10). When False, all week links use "{root_prefix}week{N}/..." (week 1).
     """
     if weeks is None:
         weeks = []
@@ -114,14 +118,14 @@ def build_week_nav(
     overview_class = "nav-link active" if overview_active else "nav-link"
     lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">📌 课程概览</a>')
 
-    lines.append('<div class="nav-section-title">8 周学习路线</div>')
+    lines.append('<div class="nav-section-title">10 周学习路线</div>')
 
     week_titles = dict(WEEK_TITLES)
     for week in weeks:
         week_titles[week["num"]] = week["title"]
 
     week_data = []
-    for num in range(1, 9):
+    for num in range(1, 11):
         if current_week == num and relative_current_week:
             week_data.append({
                 "num": num,
@@ -138,7 +142,7 @@ def build_week_nav(
             })
 
     for week in weeks:
-        if week["num"] <= 8:
+        if week["num"] <= 10:
             continue
         week_data.append({
             "num": week["num"],
@@ -182,7 +186,7 @@ def build_week_nav(
 
 
 def build_week(week_num: int, public_dir: Path, plan_weeks: list) -> None:
-    """Build a single week's website (weeks 2-8). Week 1 is handled by build_week1."""
+    """Build a single week's website (weeks 2-10). Week 1 is handled by build_week1."""
     week_dir = _week_dir(week_num)
     output_dir = public_dir / f"week{week_num}"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,9 +246,9 @@ def build_week(week_num: int, public_dir: Path, plan_weeks: list) -> None:
 
 
 def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
-    """Build the full 8-week plan overview page."""
+    """Build the full 10-week plan overview page."""
     if not PLAN_SOURCE.exists():
-        print(f"Warning: 8-week plan source not found: {PLAN_SOURCE}")
+        print(f"Warning: 10-week plan source not found: {PLAN_SOURCE}")
         return
 
     markdown_text = PLAN_SOURCE.read_text(encoding="utf-8")
@@ -263,11 +267,11 @@ def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
     )
 
     html = page_template(
-        title="8 周学习计划",
+        title="10 周学习计划",
         nav_html=nav_html,
         markdown=markdown_text,
         is_overview=True,
-        page_title="AI Infra 8 周计划",
+        page_title="AI Infra 10 周计划",
         heading_renderer_js=HEADING_RENDERER_WEEKS,
     )
     (public_dir / "plan.html").write_text(html, encoding="utf-8")
@@ -377,7 +381,7 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
 
     course_overview_html = page_template(
         title="课程概览",
-        page_title="AI Infra 8 周学习计划",
+        page_title="AI Infra 10 周学习计划",
         nav_html=build_week_nav(current_week=None, current_page="overview", weeks=plan_weeks),
         markdown=course_overview,
         is_overview=True,

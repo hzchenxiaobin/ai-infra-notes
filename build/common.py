@@ -8,7 +8,7 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-PLAN_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "plan" / "AI_Infra_8_week_plan_detailed.md"
+PLAN_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "plan" / "learning_plan_10week.md"
 COURSE_OVERVIEW_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "README.md"
 DAILY_DIR = REPO_ROOT / "aiinfra" / "daily"
 STATIC_DIR = REPO_ROOT / "static"
@@ -26,7 +26,7 @@ def escape_for_template_string(text: str) -> str:
 
 
 def extract_plan_weeks(plan_path: Path = None) -> list:
-    """Extract week numbers and titles from the 8-week plan markdown."""
+    """Extract week numbers and titles from the 10-week plan markdown."""
     if plan_path is None:
         plan_path = PLAN_SOURCE
     if not plan_path.exists():
@@ -218,7 +218,7 @@ def page_template(
     page_title: Optional[str] = None,
     is_overview: bool = False,
     extra_scripts: str = "",
-    sidebar_title: str = "AI Infra 8 周计划",
+    sidebar_title: str = "AI Infra 10 周计划",
     sidebar_title_style: str = "",
     sidebar_href: Optional[str] = None,
     back_link_href: Optional[str] = None,
