@@ -161,17 +161,19 @@ WMMA 的核心优势是混合精度计算：
 
 FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，累加大量元素会丢失精度）。
 
-#### 1.5 性能预期与瓶颈分析
+#### 1.5 性能实测与瓶颈分析
 
-在 RTX 5090（sm_120）上：
+在 RTX 5090（sm_120）上，FP16 输入 / FP32 累加，4096×4096 矩阵：
 
-| 实现 | 预期 TFLOPS | 预期 cuBLAS 占比 | 瓶颈 |
-|------|------------|-----------------|------|
-| FMA Naive GEMM | ~7 | ~10% | Memory-bound（无 tiling） |
-| FMA Register Blocking + float4 | ~44 | ~64% | FMA 峰值限制 |
-| **WMMA GEMM (本教程)** | **~55-65** | **~33%**（教学版） | 无 smem tiling、每 block 1 warp、global load fragment |
-| cuBLAS (FP32 sgemm) | ~68 | 100% | Tensor Core + 深度优化 |
-| cuBLAS (FP16) | ~100+ | N/A | 接近 FP16 峰值 |
+| 实现 | 实测 TFLOPS | cuBLAS(TF32) 占比 | cuBLAS(FP16) 占比 | 瓶颈 |
+|------|------------|------------------|------------------|------|
+| FMA Naive GEMM | ~7 | ~7% | ~3% | Memory-bound（无 tiling） |
+| FMA Register Blocking + float4 | ~44 | ~42% | ~20% | FMA 峰值限制 |
+| **WMMA GEMM (本教程，实测)** | **32.0** | **30%** | **15%** | 无 smem tiling、每 block 1 warp、global load fragment |
+| cuBLAS (TF32 sgemm) | 105.3 | 100% | — | TF32 Tensor Core + 深度优化 |
+| cuBLAS (FP16) | 215.2 | — | 100% | FP16 Tensor Core 接近峰值 |
+
+> ⚠️ **基准口径说明**：cuBLAS 用 FP32 输入时启用 TF32 Tensor Core（105 TFLOPS），用 FP16 输入时达 215 TFLOPS。本教程 WMMA 的"30%"是以 TF32 cuBLAS 为基准；若以 FP16 cuBLAS 为基准（生产推理口径），仅 15%。面试时务必说明基准。
 
 ##### 为什么 WMMA 还达不到 cuBLAS 100%？
 
@@ -180,7 +182,7 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 3. **缺少 Auto-tuning**：不同矩阵大小需要不同的 block/warp 配置
 4. **Fragment 开销**：WMMA 的 fragment 比 `mma.sync` PTX 指令有少量额外开销
 
-> 💡 **一句话总结**：WMMA 是 Tensor Core 的高层接口。本教程教学版实测 cuBLAS ~33%（诚实归因：无 smem tiling、单 warp/block）。要达到 85%+，需要 CUTLASS 级 smem tiling + double buffering + 多 warp；要 95%+，需手写 `mma.sync` PTX + cp.async。
+> 💡 **一句话总结**：WMMA 是 Tensor Core 的高层接口。本教程教学版实测 TF32 cuBLAS 的 30% / FP16 cuBLAS 的 15%（诚实归因：无 smem tiling、单 warp/block）。要达到 85%+，需要 CUTLASS 级 smem tiling + double buffering + 多 warp；要 95%+，需手写 `mma.sync` PTX + cp.async。
 
 ---
 
@@ -202,26 +204,27 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm.cu -o wmma_gemm
 ./wmma_gemm
 ```
 
-预期输出（RTX 5090, sm_120, CUDA 12.8，FP16 输入 FP32 累加）：
+实测输出（RTX 5090, sm_120, CUDA 12.8，FP16 输入 FP32 累加，cuBLAS 为 TF32 模式）：
 
 ```text
-M=N=K    | FMA(ms)      WMMA(ms)     cuBLAS(ms)   | FMA%     WMMA%    WMMA/FMA
+M=N=K    | WMMA_ms     TF32cub_ms   FP16cub_ms   | WMMA%TF32  WMMA%FP16  max_diff
 ---------|------------------------------------------------|----------------------------
-512      | 0.051        0.012        0.025        | 5.3      21.7     10.6
-1024     | 0.310        0.080        0.044        | 6.9      26.8     48.9
-2048     | 2.317        0.565        0.242        | 7.4      30.4     71.1
-4096     | 18.604       4.098        1.963        | 7.4      33.5     70.0
-WMMA vs cuBLAS max_diff = 1.00e-02 (FP16 input precision loss expected)
+512      | 0.0125      0.0084       0.0063       | 66.7       15.8       0.00e+00
+1024     | 0.0833      0.0268       0.0165       | 32.1       7.9        0.00e+00
+2048     | 0.5917      0.1926       0.1004       | 32.5       9.4        0.00e+00
+4096     | 4.2889      1.3049       0.6386       | 30.4       14.9       0.00e+00
 ```
 
-> ⚠️ **诚实声明：WMMA% 仅 21.7%-33.5%，远低于 85%**。本 kernel 是教学版（每 block 1 warp、无 shared memory tiling、直接从 global memory load fragment），远未发挥 RTX 5090 FP16 Tensor Core 峰值（~209 TFLOPS）。
+> ⚠️ **诚实声明：WMMA 占 TF32 cuBLAS 的 30%（4096），占 FP16 cuBLAS 仅 15%**。本 kernel 是教学版（每 block 1 warp、无 shared memory tiling、直接从 global memory load fragment），远未发挥 RTX 5090 FP16 Tensor Core 峰值（~209 TFLOPS dense）。
 >
 > **差距归因**：
-> - **无 shared memory staging**：每 cycle 从 global memory 加载 fragment，HBM 带宽成瓶颈（5090 Ridge Point 58.45，FP16 GEMM 的 AI 不足以打满算力）
+> - **无 shared memory staging**：每 cycle 从 global memory 加载 fragment，HBM 带宽成瓶颈
 > - **每 block 1 warp**：occupancy 低，无法隐藏 global memory latency
 > - **K 维无 tiling**：未复用 smem 中的 A/B tile，数据搬运远多于计算
 >
-> **真实 85%+ 需要**：多 warp/block + smem tiling + double buffering + K 维分块（CUTLASS 级工程化，见 Day 4b）。本 kernel 的价值是**验证 WMMA fragment 的正确性与 FP16→FP32 累加链路**，不是性能基准。面试时声明"教学版实测 ~33%，生产 CUTLASS 可达 85%+"。
+> **注意**：小矩阵（512）WMMA 占 TF32 cuBLAS 66.7%，但这不说明性能好——cuBLAS 在小矩阵有启动开销，两者都远低于峰值。真正有意义的指标是 4096 的 30%（TF32）或 15%（FP16）。
+>
+> **真实 85%+ 需要**：多 warp/block + smem tiling + double buffering + K 维分块（CUTLASS 级工程化，见 Day 4）。本 kernel 的价值是**验证 WMMA fragment 的正确性与 FP16→FP32 累加链路**，不是性能基准。面试时声明"教学版实测 TF32 cuBLAS 的 30% / FP16 cuBLAS 的 15%，生产 CUTLASS 可达 95%+"。
 
 #### 任务 3：Profiling
 
