@@ -138,7 +138,84 @@ K 维循环：每次加载 16×16 的 A tile 和 16×16 的 B tile
 
 > ⚠️ **常见坑**：WMMA 的 `load_matrix_sync` 要求 leading dimension 正确。A row-major 的 ld = K（每行跨度），B col-major 的 ld = K（每列跨度）。
 
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
+##### Kernel 实现代码
+
+下面是完整的 `wmma_gemm.cu` kernel 实现（完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)）：
+
+```cuda
+// wmma_gemm.cu —— Tensor Core (WMMA) GEMM: FP16 输入, FP32 累加
+// 编译命令: nvcc -O3 -arch=sm_120 -lcublas wmma_gemm.cu -o wmma_gemm
+// 对比 FMA GEMM vs WMMA GEMM vs cuBLAS
+
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+#include <mma.h>
+#include <cublas_v2.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+
+using namespace nvcuda;
+
+// ---------- WMMA GEMM (Tensor Core) ----------
+// C = A @ B, A: [M, K] row-major (half), B: [K, N] col-major (half), C: [M, N] (float)
+// 使用 WMMA m16n16k16 fragment, 每个 warp 计算 WMMA_M x WMMA_N 的输出 tile
+#define WMMA_M 16
+#define WMMA_N 16
+#define WMMA_K 16
+
+__global__ void wmma_gemm_kernel(
+    const __half* __restrict__ A,
+    const __half* __restrict__ B,
+    float* __restrict__ C,
+    int M, int N, int K)
+{
+    int warpM = blockIdx.y;
+    int warpN = blockIdx.x;
+
+    if (warpM * WMMA_M >= M || warpN * WMMA_N >= N) return;
+
+    wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> a_frag;
+    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
+
+    wmma::fill_fragment(c_frag, 0.0f);
+
+    for (int k = 0; k < K; k += WMMA_K) {
+        const __half* tileA = A + warpM * WMMA_M * K + k;
+        const __half* tileB = B + k + warpN * WMMA_N * K;
+
+        wmma::load_matrix_sync(a_frag, tileA, K);
+        wmma::load_matrix_sync(b_frag, tileB, K);
+
+        wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+    }
+
+    float* tileC = C + warpM * WMMA_M * N + warpN * WMMA_N;
+    wmma::store_matrix_sync(tileC, c_frag, N, wmma::mem_row_major);
+}
+
+// ---------- FMA GEMM (naive baseline, FP32) ----------
+#define BLOCK_SIZE 16
+__global__ void fma_gemm_kernel(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
+    float* __restrict__ C,
+    int M, int N, int K)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= N) return;
+
+    float acc = 0.0f;
+    for (int k = 0; k < K; k++) {
+        acc += A[row * K + k] * B[k * N + col];
+    }
+    C[row * N + col] = acc;
+}
+```
+
+完整的 benchmark 逻辑（`main` 函数：初始化数据、warmup、计时、正确性验证、TFLOPS 计算）见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu) 文件后半部分。
 
 #### 1.4 混合精度策略
 
@@ -188,9 +265,9 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 
 ### Coding 任务：手写 WMMA GEMM
 
-#### 任务 1：创建 `wmma_gemm.cu`
+#### 任务 1：理解 WMMA GEMM Kernel
 
-完整代码见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
+上方 1.3 节已给出完整的 `wmma_gemm_kernel` 和 `fma_gemm_kernel` 实现。完整文件（含 benchmark `main` 函数）见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
 
 代码包含三个 GEMM 实现并对比：
 - `fma_gemm_kernel`：FMA baseline（FP32, naive）
