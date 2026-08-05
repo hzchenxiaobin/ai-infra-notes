@@ -79,7 +79,7 @@ template <typename Kernel_traits> __global__ void flash_fwd_kernel(...) {
 ##### 为什么 d 越大 Bc 越小？
 
 - 每个 KV tile 占用 shared memory = `Bc × d`。d 增大时，若 Bc 不变，smem 用量线性增长
-- 为保持总 smem 在限制内（RTX 5090 164 KB/SM），d 增大时必须减小 Bc
+- 为保持总 smem 在限制内（RTX 5090 100 KB/SM，见 [硬件参数事实源](../../../reference/hardware_specs.md)），d 增大时必须减小 Bc
 - 同时增加 warps 数量以维持足够的计算并行度（d 大时每行计算量更大）
 
 > 💡 **关键洞察**：`Kernel_traits` 模板让编译器在编译期展开所有分块参数，循环边界、shared memory 大小都是常量——编译器能充分优化（unroll、寄存器分配）。Day 2 我们用 `constexpr` 实现了类似效果，但官方的模板更通用，支持多种 d 自动 dispatch。
@@ -311,7 +311,7 @@ Day 3 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与�
 
  - 官方使用模板 `Kernel_traits` 定义不同 d 对应的分块参数，编译期展开
  - d 越大，每个 KV tile 占用的 shared memory 越多（Bc × d）
- - 为保持总 shared memory 在限制内（RTX 5090 164 KB/SM），d 增大时需要减小 Bc
+  - 为保持总 shared memory 在限制内（RTX 5090 100 KB/SM），d 增大时需要减小 Bc
  - 同时增加 warps 数量以维持足够的计算并行度
  - 例如：d=64 时 Bc=128，d=128 时 Bc=64/128，d=256 时 Bc=64
 

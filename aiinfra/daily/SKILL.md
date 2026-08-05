@@ -13,19 +13,20 @@ description: Use when writing or revising a per-day learning tutorial (dayN/READ
 
 | 层级 | 文件 | 作用 |
 |------|------|------|
-| 周级总览 | `plan/AI_Infra_8_week_plan.md` | 8 周极简路线 |
-| 周级详细 | `plan/AI_Infra_8_week_plan_detailed.md` | 每周目标 + 每日"理论学习/Coding/Checklist"三段种子 |
-| 单周深度展开 | `plan/learning_plan_weekN_expanded.md` | 逐日详写(含时间分配、考察度 ⭐、附录) |
+| 周级总览 | `plan/learning_plan_10week.md` | 10 周主线计划（唯一权威） |
+| 路线评审 | `plan/course_route_review.md` | Week 1–10 逐日评审 |
+| 整改方案 | `plan/rectification_plan.md` | 问题清单 + 执行计划 |
+| 单周深度展开 | 已并入 `learning_plan_10week.md` 与各 `weekN/README.md`（旧 8 周版归档至 `plan/archive/`） |
 | **执行教程** | `weekN/dayM/README.md` | 本 skill 产出的主体 |
 
 **前置阅读要求**:
-在动笔写每日教程之前,必须先完整阅读 `aiinfra/daily/plan/` 目录下的全部文档:
-- `plan/AI_Infra_8_week_plan.md`
-- `plan/AI_Infra_8_week_plan_detailed.md`
-- `plan/learning_plan_week2_expanded.md`
-- `plan/learning_plan_week3_expanded.md`
+在动笔写每日教程之前,必须先完整阅读 `aiinfra/daily/plan/` 目录下的主线文档:
+- `plan/learning_plan_10week.md`
+- `plan/course_route_review.md`
+- `plan/rectification_plan.md`
 
-这些文档提供了 8 周整体路线、每周目标与逐日种子内容,是教程写作的上下文基础。
+这些文档提供了 10 周整体路线、每周目标与逐日种子内容,是教程写作的上下文基础。旧 8 周计划（`plan/archive/`）仅供历史参考,不再作为写作依据。
+
 
 **写作流程**:
 1. 先确认 `plan/learning_plan_weekN_expanded.md` 是否存在对应 Day 的计划;若无,先写计划

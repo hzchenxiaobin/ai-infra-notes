@@ -239,9 +239,9 @@ print(f"Graph: {bench_graph(engine, input):.2f} ms")
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_kth-largest-element-in-an-array.html) |
-| [347](https://leetcode.cn/problems/top-k-frequent-elements/) | Medium | 堆/桶排 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/347_top-k-frequent-elements.html) |
-| [295](https://leetcode.cn/problems/find-median-from-data-stream/) | Hard | 双堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/295_find-median-from-data-stream.html) |
+| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
+| [347](https://leetcode.cn/problems/top-k-frequent-elements/) | Medium | 堆/桶排 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html) |
+| [295](https://leetcode.cn/problems/find-median-from-data-stream/) | Hard | 双堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html) |
 
 ---
 

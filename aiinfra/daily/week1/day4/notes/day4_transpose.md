@@ -7,7 +7,7 @@
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/transpose kernels/transpose.cu
+nvcc -o day4/kernels/transpose day4/kernels/transpose.cu
 ```
 
 ## Profiling 任务
@@ -22,7 +22,7 @@ ncu \
     l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
     l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
     sm__cycles_elapsed.avg \
-  ./kernels/transpose
+  ./day4/kernels/transpose
 ```
 
 > 注：当前 transpose.cu 包含两个 kernel，ncu 会分别采集。
@@ -30,7 +30,7 @@ ncu \
 ### 任务 2：使用 nsys 查看完整时间线
 
 ```bash
-nsys profile -o profiles/day4_transpose_timeline ./kernels/transpose
+nsys profile -o profiles/day4_transpose_timeline ./day4/kernels/transpose
 ```
 
 **观察重点**：

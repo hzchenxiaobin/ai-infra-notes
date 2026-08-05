@@ -9,6 +9,7 @@
 3. 理解 Butterfly 模式归约的 5 步通信过程
 4. 手写完整的 Warp Reduce + Block Reduce 两级归约 Kernel
 5. 理解为什么需要两级归约，以及第二级归约为什么也用 Warp Shuffle
+6. 掌握 grid-stride loop 模式，理解它与 coalesced access 的关系
 
 > 💡 **为什么重要**：Warp Shuffle 是手写 Reduce、Scan、GEMM 写回优化的标配技术，也是面试中「手写 Block Reduce」的核心考点。它比 Shared Memory 快一个数量级，是 GPU 内部最快的线程间通信方式。
 
@@ -329,6 +330,8 @@ int main() {
 
 #### 任务 2：编译与运行
 
+> 💡 **注**：上面代码中的 `warpReduceSumXor` 在主流程中未被调用，留作实验 1 对比用（验证 down/xor 两种模式归约后哪些 lane 持有结果）。
+
 ```bash
 # 编译（根据 GPU 架构选择 arch 参数）
 # Blackwell (RTX 5090): sm_120
@@ -470,7 +473,7 @@ float val = __shfl_down_sync(0xFFFF0000, val, offset); // lane 16-31 内部归�
 - [ ] 能解释 `0xFFFFFFFF` 的含义：32 位掩码，激活 Warp 内所有 32 个 lane
 - [ ] 能解释为什么两级归约需要 `__syncthreads()`（Warp 间同步点）
 - [ ] 能说出 `__shfl_down_sync` 和 `__shfl_xor_sync` 的区别（down=单向偏移，xor=蝴蝶交换）
-- [ ] 理解 Blackwell+ 架构必须使用 `_sync` 版本的原因（独立线程调度需要显式 mask）
+- [ ] 理解 Volta+ 架构必须使用 `_sync` 版本的原因（独立线程调度需要显式 mask）
 
 ---
 
@@ -500,7 +503,7 @@ Day 1 我们掌握了 Warp Shuffle 这一 GPU 内最快的线程间通信原语�
  - 参数 2 `val`：要传递的本线程变量值
  - 参数 3 `delta=16`：目标 lane 的偏移量，即读取 `(laneId + delta) % width` 线程的值
  - 参数 4（省略，默认 32）`width`：参与 shuffle 的宽度，默认 32（整个 Warp）
- - 注意：从 Blackwell 架构开始必须使用 `_sync` 后缀版本（显式 mask），旧版 `__shfl_down` 已被弃用
+ - 注意：从 Volta 架构（CC 7.0）开始必须使用 `_sync` 后缀版本（显式 mask），旧版 `__shfl_down` 已被弃用
 
 </details>
 

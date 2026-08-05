@@ -428,9 +428,9 @@ Size     | Day1_naive  Day2_tiled  Day3_mma   Day5_dbuf  | Best%   Best_impl
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [416](https://leetcode.cn/problems/partition-equal-subset-sum/) | Medium | DP（0-1 背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_partition-equal-subset-sum.html) |
-| [494](https://leetcode.cn/problems/target-sum/) | Medium | DP（0-1 背包变形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/494_target-sum.html) |
-| [474](https://leetcode.cn/problems/ones-and-zeroes/) | Medium | DP（二维背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/474_ones-and-zeroes.html) |
+| [416](https://leetcode.cn/problems/partition-equal-subset-sum/) | Medium | DP（0-1 背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
+| [494](https://leetcode.cn/problems/target-sum/) | Medium | DP（0-1 背包变形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
+| [474](https://leetcode.cn/problems/ones-and-zeroes/) | Medium | DP（二维背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/474_一和零.html) |
 
 ---
 

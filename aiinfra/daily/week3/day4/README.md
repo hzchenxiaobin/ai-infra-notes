@@ -313,9 +313,9 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z 字搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_search-a-2d-matrix-ii.html) |
-| [283](https://leetcode.cn/problems/move-zeroes/) | Easy | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_move-zeroes.html) |
-| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_kth-largest-element-in-an-array.html) |
+| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z 字搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
+| [283](https://leetcode.cn/problems/move-zeroes/) | Easy | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html) |
+| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
 
 ---
 

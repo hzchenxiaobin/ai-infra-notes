@@ -46,6 +46,8 @@ FA 选择后者——**recomputation**：前向多存一个 O(N) 的 `L`，反�
 
 先从最简单的 GEMM 反向入手——attention 的前向和反向本质上都是 GEMM，理解 GEMM backward 的数据流是理解 FA backward 的前提。
 
+> 💡 `dA = dC @ B^T`、`dB = A^T @ dC` 这两个公式已在 Week 4 Day 3 学过，这里快速过一遍数据流，重点放到 FA 特有的 recomputation 上。
+
 ![FlashAttention Tiling 分块策略](../images/flash_attention_tiling.svg)
 
 ##### 链式法则推导
@@ -321,7 +323,7 @@ A: 64x32, B: 32x64, C: 64x64
   maxDiff = 0.00e+00 (PASS)
 [dB = A^T @ dC] GPU vs CPU ref:
   maxDiff = 0.00e+00 (PASS)
-GPU Time (dA + dB kernels): 0.0xx ms
+GPU Time (dA + dB kernels): 0.0xx ms   ← 占位，待 GPU 实测回填
 ```
 
 > 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。`dC = ones` 时 `dA`、`dB` 的解析值都退化成 `B`/`A` 的列和，正好用中心差分 `f(A+h·e) - f(A-h·e)` / `2h` 一一验证。
@@ -438,7 +440,7 @@ GEMM backward 的两个 kernel（`dA = dC @ B^T`、`dB = A^T @ dC`）以及 FA b
 
 当前 `gemm_backward_dA_kernel` 的内层 `for (j)` 是单线程顺序累加，每个 `dC[i,j]` 和 `B[k,j]` 都从 HBM 直接读，且对同一行 `dC` 被多个 k 线程重复读。仿照 Week 2 Day 2 的 GEMM tiling，把 `dC` 的 Br×Bc 子块和 `B` 的 Bc×Bk 子块加载到 shared memory，让一个 block 协作算 `Br×Bk` 个 `dA` 输出。
 
-> 提示：`dA = dC @ B^T` 等价于把 `B` 转置后做标准 GEMM。可以直接复用 Week 2 Day 2 的 `gemm` kernel 模板，把 `B` 的读取索引从 `B[k*N+j]` 改成转置加载即可。目标：M=N=K=512 时达到 cuBLAS `cublasSgemm`（转置 B 调用）的 50%+。
+> 提示：`dA = dC @ B^T` 等价于把 `B` 转置后做标准 GEMM。可以直接复用 Week 2 Day 2 的 `gemm` kernel 模板，把 `B` 的读取索引从 `B[k*N+j]` 改成转置加载即可。目标：M=N=K=512 时达到 Week 2 Day 3 整合版的水平（~63% cuBLAS，FP32 口径）。
 
 #### 实验 2：对比 recomputation vs 物化 P 的内存与速度
 
@@ -465,7 +467,7 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 5. **Algorithm 2**：前向存 `Q/K/V/O/L`（O(Nd)），反向分块重算 `S/P` 累加 `dQ/dK/dV`，IO 保持 O(Nd)
 6. **代码验证**：`gemm_backward.cu` 用有限差分核对链式法则，`flash_attention_backward.py` 用 `gradcheck` 数值验证 backward，四项 maxDiff 全在 1e-15
 
-掌握这些后，你就具备了把 FA 接入训练循环的能力。Day 3 读官方源码时会发现，今天的手写 backward 与官方的差距和 forward 一样——主要在 async copy、双缓冲和 Tensor Core。
+掌握这些后，你就具备了把 FA 接入训练循环的能力。Day 6 读官方源码（另见 `_supplementary/from_w4d7` 的源码导读）时会发现，今天的手写 backward 与官方的差距和 forward 一样——主要在 async copy、双缓冲和 Tensor Core。
 
 ---
 

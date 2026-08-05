@@ -242,9 +242,9 @@ print(f"Total steps: {len(steps)} (expect {2*(N-1)})")
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [374](https://leetcode.cn/problems/guess-number-higher-or-lower/) | Easy | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/374_guess-number-higher-or-lower.html) |
-| [278](https://leetcode.cn/problems/first-bad-version/) | Easy | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/278_first-bad-version.html) |
-| [153](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_find-minimum-in-rotated-sorted-array.html) |
+| [374](https://leetcode.cn/problems/guess-number-higher-or-lower/) | Easy | 二分 | 暂无 |
+| [278](https://leetcode.cn/problems/first-bad-version/) | Easy | 二分 | 暂无 |
+| [153](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html) |
 
 ---
 

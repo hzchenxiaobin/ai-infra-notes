@@ -425,10 +425,10 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [62](https://leetcode.cn/problems/unique-paths/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_unique-paths.html) |
-| [5](https://leetcode.cn/problems/longest-palindromic-substring/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/5_longest-palindromic-substring.html) |
-| [300](https://leetcode.cn/problems/longest-increasing-subsequence/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_longest-increasing-subsequence.html) |
-| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_coin-change.html) |
+| [62](https://leetcode.cn/problems/unique-paths/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html) |
+| [5](https://leetcode.cn/problems/longest-palindromic-substring/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html) |
+| [300](https://leetcode.cn/problems/longest-increasing-subsequence/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
 
 ---
 

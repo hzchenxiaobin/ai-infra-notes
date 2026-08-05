@@ -220,9 +220,9 @@ sm__occupancy.avg.pct_of_peak_sustained_elapsed \
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [139](https://leetcode.cn/problems/word-break/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_word-break.html) |
-| [375](https://leetcode.cn/problems/guess-number-higher-or-lower-ii/) | Medium | DP（区间博弈） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/375_guess-number-higher-or-lower-ii.html) |
-| [514](https://leetcode.cn/problems/freedom-trail/) | Hard | DP（状态） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/514_freedom-trail.html) |
+| [139](https://leetcode.cn/problems/word-break/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+| [375](https://leetcode.cn/problems/guess-number-higher-or-lower-ii/) | Medium | DP（区间博弈） | 暂无 |
+| [514](https://leetcode.cn/problems/freedom-trail/) | Hard | DP（状态） | 暂无 |
 
 ---
 

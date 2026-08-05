@@ -1,7 +1,7 @@
 """mini_engine_v2.py —— Mini 推理引擎 v2：真正整合 custom CUDA kernel + batched forward + 真 timing
 
-相比 v1（week9/day2）的改进：
-  1. custom_ops 接入：LayerNorm/Softmax/FlashAttention 用自定义 CUDA kernel（来自 week9/day1）
+相比 v1（week7/day5）的改进：
+  1. custom_ops 接入：LayerNorm/Softmax/FlashAttention 用自定义 CUDA kernel（来自 week10/day1）
   2. batched forward：多请求 pad + merge 为单 batch tensor，一次 forward 处理（不再逐请求循环）
   3. 真 timing：用 torch.cuda.Event 替换 time.sleep 模拟
 
@@ -14,6 +14,7 @@ import sys
 import math
 import time
 import threading
+import warnings
 from collections import deque
 from concurrent.futures import Future
 from typing import Dict, List, Optional, Tuple
@@ -22,13 +23,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# 导入 custom_ops_module（同周 day4）
+# 导入 custom_ops_module（同周 day1/kernels，custom kernel 封装在此）
 _here = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(_here, "..", "..", "day4", "kernels"))
+sys.path.insert(0, os.path.join(_here, "..", "..", "day1", "kernels"))
 try:
     from custom_ops_module import load_custom_ops, PyTorchOps
     CUSTOM_OPS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    warnings.warn(
+        f"custom_ops_module 导入失败（路径 {os.path.join(_here, '..', '..', 'day1', 'kernels')}），"
+        f"回退到 PyTorch 原生算子。原因: {e}. "
+        "真整合需先完成 week10/day1 的 custom kernel 封装。",
+        RuntimeWarning,
+        stacklevel=2,
+    )
     CUSTOM_OPS_AVAILABLE = False
     def load_custom_ops(): return None
     class PyTorchOps:

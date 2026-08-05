@@ -9,6 +9,7 @@
 3. 能完整推导 Online Softmax 三个更新公式（m_new, l_new, o_new）
 4. 理解 `exp(m - m_new)` 缩放因子的作用
 5. 手写简化版 FlashAttention Forward Kernel
+6. 了解 FlashAttention-1/2/3 的演进脉络（面试高频追问，Day 6 展开）
 
 > 💡 **为什么重要**：FlashAttention 是推理优化的第一考点，大模型 Infra 面试标配。它不是靠减少 FLOPS 加速（计算量相同），而是靠**减少 HBM 数据移动**——这体现了 AI Infra 的核心原则：减少数据移动比减少计算更重要。
 
@@ -50,82 +51,19 @@ O = P × V (输出，O(N×d) 显存)
 
 ---
 
-### Attention 基础回顾
+### Attention 基础速查
 
-在深入 FlashAttention 之前，先把 Attention 本身的基础打牢——这些是面试的“开胃题”，答不好后面就不用聊了。
+Attention 基础的完整讲解见 [topics/transformer 专题](../../../topics/transformer/README.md)（Week 4 Day 1 也有同样处理）。这里只留面试速查口径：
 
-#### 0.1 为什么需要 Attention
-
-RNN/LSTM 按时间步串行处理序列，有两个致命问题：
-
-- **无法并行**：第 t 步依赖第 t-1 步的隐状态，GPU 的并行能力完全用不上
-- **长程依赖衰减**：远距离信息要逐格传递，梯度在长链上消失
-
-Attention 让序列中**任意两个位置直接交互**，一步建立连接，且所有位置的计算互相独立、可以完全并行——这正是它能吃满 GPU 的根本原因。
-
-#### 0.2 Scaled Dot-Product Attention 公式
-
-```
-Attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
-
-其中 Q = X·W_Q, K = X·W_K, V = X·W_V（self-attention 时三者同源，都来自输入 X）
-Q/K/V 形状均为 (N × d)：N 是序列长度，d 是 head 维度
-```
-
-**直觉类比（查字典）**：每个 token 拿着自己的 Query 去和所有 token 的 Key 比相似度（点积），相似度经 softmax 归一化成权重，再对 Value 加权求和——就像用查询词在字典里检索：Key 是索引，Value 是取回的内容。
-
-**三步拆解**：
-
-1. **算相似度**：`S = Q·Kᵀ / √d`，形状 (N×N)，`s_ij` 表示第 i 个 token 对第 j 个 token 的关注度
-2. **归一化**：softmax 按行做，每行变成一个和为 1 的概率分布
-3. **加权求和**：`O = P·V`，每个位置的输出是全体 Value 按关注度的加权和
-
-#### 0.3 为什么除以 √d
-
-- 假设 q、k 的各分量独立、均值为 0、方差为 1，则点积 `q·k = Σ q_i·k_i` 的**方差等于 d**
-- d 越大，score 的量级越大（约 √d 倍），softmax 的输入落在**饱和区**：输出逼近 one-hot，梯度趋近于 0，训练难以收敛
-- 除以 √d 把 score 的方差归一回 1，softmax 工作在梯度敏感区
-- **面试加分点**：这个系数不是拍的常数，是从方差推导出来的——BERT/GPT 的 d_head=64 时 `1/√d = 0.125`
-
-#### 0.4 Softmax 为什么减 max（数值稳定性）
-
-```
-softmax(x)_i = exp(x_i) / Σ exp(x_j)  ← 直接算，x_i 稍大 exp 就溢出（float32 exp(89) ≈ inf）
-softmax(x)_i = exp(x_i - c) / Σ exp(x_j - c)  ← 数学上严格相等（分子分母同乘 exp(-c)）
-取 c = max(x)，保证指数 ≤ 0，exp 结果落在 (0, 1]，不会溢出
-```
-
-**与今天的联系**：减 max 需要**全局**最大值，而分块计算时每块只能看到局部——这就是 Online Softmax 要递推维护 running max 的原因，5.2 节会展开。
-
-#### 0.5 Multi-Head Attention
-
-```
-MultiHead(X) = Concat(head_1, ..., head_h) · W_O
-head_i = Attention(X·W_Qⁱ, X·W_Kⁱ, X·W_Vⁱ)
-```
-
-- **单头只有一个表示子空间**；多头把 d_model 切成 h 份（`d_head = d_model / h`，如 d_model=512、h=8 → d_head=64），各自独立做 attention，最后拼接过 W_O
-- 不同头可以学不同类型的关系（语法、指代、位置、语义……），类似 CNN 里多个卷积核
-- 总计算量与“单头全维度”基本相当——多头不增加 FLOPs，增加的是表达能力
-- 代码层面：今天的 kernel 用 `blockIdx.y` 索引 head，**各 head 之间完全独立**，天然按 block 并行
-
-#### 0.6 Self / Cross Attention 与 Causal Mask
-
-| 类型 | Q 来自 | K/V 来自 | 典型场景 |
-|---|---|---|---|
-| Self-Attention | X 本身 | X 本身 | Encoder（BERT）、Decoder 单层内部 |
-| Cross-Attention | Decoder 当前状态 | Encoder 输出 | 机器翻译、T5/BART 的解码层 |
-
-**Causal Mask（因果掩码）**：Decoder 自回归生成时，位置 i 只能看到 ≤ i 的 token，即对 S 加一个下三角为 0、上三角为 `-inf` 的掩码（`-inf` 经 softmax 后权重为 0）。实验 4 会动手在本 kernel 上加 causal mask。
-
-#### 0.7 复杂度总览（引出今天的主线）
-
-| 项目 | 复杂度 | 说明 |
-|---|---|---|
-| 计算量 | O(N²d) | QKᵀ 和 P·V 各一次 (N×N)×(N×d) 的 GEMM |
-| 显存/访存 | O(N²) | S、P 两个 N×N 中间矩阵 |
-
-d 固定时，**长序列的瓶颈是 N² 的显存和 HBM 访问，而不是计算**——这正是 FlashAttention 要解决的问题，也是 5.1 节分块策略的动机。
+| 问题 | 一句话答案 |
+|---|---|
+| 为什么需要 Attention | RNN 串行无法并行、长程依赖衰减；Attention 任意两位置直接交互，天然吃满 GPU |
+| 公式 | `Attention(Q,K,V) = softmax(Q·Kᵀ/√d)·V`；三步：算相似度 → 按行 softmax 归一化 → 对 V 加权求和 |
+| 为什么除以 √d | q·k 各分量独立同分布时点积方差 = d；不除则 softmax 饱和、梯度消失。`1/√d` 是方差归一化推出来的（d=64 时为 0.125） |
+| Softmax 为什么减 max | `exp` 防爆（fp32 exp(89)≈inf）；减 max 需**全局**最大值——分块时只能靠 Online Softmax 递推维护 running max（5.2 节） |
+| Multi-Head | `d_head = d_model / h`，多头不增 FLOPs、增表达能力；head 间完全独立，kernel 里用 `blockIdx.y` 并行 |
+| Self/Cross + Causal Mask | Self：Q/K/V 同源；Cross：Q 与 K/V 不同源；Causal：上三角置 `-inf`，位置 i 只看 ≤ i（实验 4 动手加） |
+| 复杂度 | 计算 O(N²d)，显存/访存 O(N²)（S、P 两个 N×N 中间矩阵）——长序列瓶颈在访存不在计算 |
 
 ---
 
@@ -656,20 +594,21 @@ s_V[Bc][D] = 32×64×4 =  8 KB
 
 **与今日知识的关联**：
 
-本题直接对应 Day 5 的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。注意**题目要求带 1/√d scale**，提交时别忘了。
+本题直接对应今日（Day 1）的主题——FlashAttention。标准实现会把 S=QK^T 和 P=softmax(S) 写回 HBM（O(N²) 访存）；FlashAttention 用 Online Softmax 分块计算，S/P 不落 HBM（O(Nd) 访存）。注意**题目要求带 1/√d scale**，提交时别忘了。
 
 > 💡 提交后在 [LeetGPU Softmax Attention 题目](https://leetgpu.com/challenges/softmax-attention)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 5）
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 3）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 3（单调栈），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
-| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列作标记位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
-| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩按层模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
-| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
-| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 左下角阶梯搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
+| [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/) | 中等 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html) |
+| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html) |
+| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html) |
+| [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/) | 中等 | 单调栈 + 跨度合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html) |
+| [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/) | 困难 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
 
 ---
 
@@ -757,7 +696,7 @@ Decoder 推理要求位置 i 只能 attend 到 ≤ i 的 key（下三角 mask）
 
 ### 今日总结
 
-Day 5 我们掌握了 FlashAttention 的核心思想和实现：
+Day 1 我们掌握了 FlashAttention 的核心思想和实现：
 
 1. **标准 Attention 的瓶颈**：S 和 P 两个 N×N 中间矩阵导致 O(N²) HBM 访问
 2. **FlashAttention 的核心**：分块 Tiling + Online Softmax，S/P 只在 SRAM/寄存器中存活，不落 HBM

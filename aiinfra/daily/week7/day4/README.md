@@ -244,10 +244,10 @@ prefix caching 的 block hash 计算类似于 segmented prefix sum 中按段累�
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [146](https://leetcode.cn/problems/lru-cache/) | Medium | LRU Cache（直接对应 prefix cache 淘汰） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_lru-cache.html) |
+| [146](https://leetcode.cn/problems/lru-cache/) | Medium | LRU Cache（直接对应 prefix cache 淘汰） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
 | [460](https://leetcode.cn/problems/lfu-cache/) | Hard | LFU Cache（扩展：频率感知淘汰） | — |
-| [200](https://leetcode.cn/problems/number-of-islands/) | Medium | DFS/BFS（连通分量） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_number-of-islands.html) |
-| [130](https://leetcode.cn/problems/surrounded-regions/) | Medium | DFS（边界 flood fill） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_surrounded-regions.html) |
+| [200](https://leetcode.cn/problems/number-of-islands/) | Medium | DFS/BFS（连通分量） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
+| [130](https://leetcode.cn/problems/surrounded-regions/) | Medium | DFS（边界 flood fill） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
 
 ---
 

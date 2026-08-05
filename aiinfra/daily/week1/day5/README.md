@@ -193,11 +193,28 @@ int main() {
     dim3 block(TILE_DIM, BLOCK_ROWS);
     dim3 grid(1, 1);
 
+    // 校验 lambda：kernel 做的是 tile 内转置，out[y][x] 应等于 in[x][y]
+    auto check = [&](const char* name) {
+        cudaMemcpy(h_out, d_out, N * sizeof(float), cudaMemcpyDeviceToHost);
+        bool ok = true;
+        for (int y = 0; y < TILE_DIM && ok; ++y) {
+            for (int x = 0; x < TILE_DIM; ++x) {
+                if (h_out[y * TILE_DIM + x] != h_in[x * TILE_DIM + y]) {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        printf("%s correctness: %s\n", name, ok ? "PASS" : "FAIL");
+    };
+
     conflict_read<<<grid, block>>>(d_out, d_in);
     cudaDeviceSynchronize();
+    check("conflict_read");
 
     no_conflict_read<<<grid, block>>>(d_out, d_in);
     cudaDeviceSynchronize();
+    check("no_conflict_read");
 
     printf("Bank conflict kernels finished. Use ncu to compare metrics.\n");
 
@@ -240,6 +257,8 @@ ncu \
 
 本题是并行归约（parallel reduction）的经典题：grid-stride 线程级累加 + Warp Shuffle warp 内归约。核心难点是跨 warp 的归约需要 Shared Memory 中转——bank conflict 的高发区。用 Day 5 学的 padding 技巧消除 conflict，用 ncu 对比优化前后 bank conflict 计数。
 
+> 💡 **Warp Shuffle 最小铺垫**：`__shfl_down_sync(mask, val, offset)` 让 warp 内线程直接读取其他 lane 的寄存器值，不经过 shared memory。本题用它把 warp 内 32 个部分和在 log₂32 = 5 步内归约成 1 个；更系统的 warp 原语讲解见 Week 2 Day 1，今天照着题解用即可。
+
 > 💡 提交后在 [LeetGPU Reduction 题目](https://leetgpu.com/challenges/reduction)上记录通过耗时，用 ncu 对比不同 block size 的性能差异。完整题解见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 5）
@@ -262,16 +281,21 @@ ncu \
 测试以下访问模式，观察 bank conflict 程度：
 
 ```cuda
-// 访问模式 1：无 conflict
+// 访问模式 1：无 conflict（每线程一个 bank）
 float v = tile[threadIdx.x];
 
-// 访问模式 2：2-way conflict
+// 访问模式 2：无 conflict（多路广播，易误判）
 float v = tile[threadIdx.x % 2];
+// 16 个线程读 tile[0]、16 个线程读 tile[1]，都是同地址广播（见 5.2 模式 3）
 
-// 访问模式 3：4-way conflict
-float v = tile[threadIdx.x % 4];
+// 访问模式 3：2-way conflict（真正的）
+float v = tile[threadIdx.x * 2];
+// 线程 i 与 i+16 命中同一 bank 的不同地址
 
-// 访问模式 4：32-way conflict（最坏）
+// 访问模式 4：4-way conflict
+float v = tile[threadIdx.x * 4];
+
+// 访问模式 5：32-way conflict（最坏）
 float v = tile[threadIdx.x * 32];
 ```
 
@@ -313,7 +337,7 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 4];
 - [ ] 能识别 2-way、4-way、32-way bank conflict
 - [ ] 实现 conflict 和 no-conflict 两个版本的 kernel
 - [ ] Nsight Compute 中观察到 bank conflict 数值变化
-- [ ] 冲突版本比无冲突版本慢 2x 以上
+- [ ] 冲突版本的 bank conflict 计数远高于无冲突版本，耗时明显更长（grid(1,1) 小规模下实测约 1.4x，见 [profiles/week1_profile_summary.md](../../profiles/week1_profile_summary.md)；规模放大后差距更大）
 - [ ] 理解 padding 的原理和代价
 - [ ] 能把 padding 应用到矩阵转置中
 

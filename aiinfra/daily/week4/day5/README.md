@@ -270,9 +270,9 @@ N (d=64) | Triton(ms)  CUDA(ms)    官方(ms)    | Triton%官方
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [647](https://leetcode.cn/problems/palindromic-substrings/) | Medium | 中心扩展/DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/647_palindromic-substrings.html) |
-| [516](https://leetcode.cn/problems/longest-palindromic-subsequence/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/516_longest-palindromic-subsequence.html) |
-| [1312](https://leetcode.cn/problems/minimum-insertion-steps-to-make-a-string-palindrome/) | Hard | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1312_minimum-insertion-steps-to-make-a-string-palindrome.html) |
+| [647](https://leetcode.cn/problems/palindromic-substrings/) | Medium | 中心扩展/DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html) |
+| [516](https://leetcode.cn/problems/longest-palindromic-subsequence/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html) |
+| [1312](https://leetcode.cn/problems/minimum-insertion-steps-to-make-a-string-palindrome/) | Hard | DP（区间） | 暂无 |
 
 ---
 

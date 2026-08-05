@@ -11,7 +11,7 @@
 5. 了解 **FlashDecoding++** 的改进——提前估算 max（避免二次 rescale）、固定 chunk size<br>
 6. 能用 CUDA 手写一个简化版 FlashDecoding kernel，验证 KV 切分 + 跨 block 合并的正确性
 
-> 💡 **为什么重要**：Day 4 的 PagedAttention 解决了 KV cache 的**内存管理**问题（碎片、CoW），但没解决 decode 阶段的**并行度**问题——M=1 时整个 GPU 只有一个 block 在算 attention，80 个 SM 里 79 个闲着。FlashDecoding 就是补上这块拼图：把 KV sequence 切到多个 SM 上并行算，把 decode 阶段的"1 block 串行"变成"N blocks 并行"。这是长序列 decode 加速的关键技术，也是 vLLM/TGI 等推理框架的标配优化。
+> 💡 **为什么重要**：Day 4 的 PagedAttention 解决了 KV cache 的**内存管理**问题（碎片、CoW），但没解决 decode 阶段的**并行度**问题——M=1 时整个 GPU 只有一个 block 在算 attention，170 个 SM 里 169 个闲着。FlashDecoding 就是补上这块拼图：把 KV sequence 切到多个 SM 上并行算，把 decode 阶段的"1 block 串行"变成"N blocks 并行"。这是长序列 decode 加速的关键技术，也是 vLLM/TGI 等推理框架的标配优化。
 
 ---
 
@@ -38,7 +38,7 @@ Decode 阶段（M=1）：
 | 瓶颈类型 | compute-bound | memory-bound | 算力闲置 + 带宽不足 |
 | KV 序列越长 | 计算变多（正常） | **串行扫描变慢** | 越长越浪费 |
 
-**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 80 个 SM 里 79 个在干等**。
+**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 170 个 SM 里 169 个在干等**（SM 数见 [硬件参数事实源](../../reference/hardware_specs.md)）。
 
 > 💡 **一句话总结**：Decode 慢不仅因为 memory-bound（M=1 算术强度低），还因为**并行度不足**——FlashAttention 的 Q-tile 并行在 M=1 时失效，KV sequence 再长也只能串行。FlashDecoding 的破局思路：**Q 切不了，那就切 KV**。
 
@@ -80,7 +80,7 @@ FlashDecoding（N/Bc blocks 并行）：
 ```
 Standard decode:
   并行度 = 1 block（处理整个 KV sequence）
-  → GPU 有 80 个 SM，只用了 1 个，利用率 ~1.25%
+  → GPU 有 170 个 SM，只用了 1 个，利用率 ~0.6%
 
 FlashDecoding:
   并行度 = ceil(seq_len / tokens_per_block) blocks
@@ -327,7 +327,7 @@ INT8 KV-Cache Attention 正是 **FlashDecoding 服务的 decode 场景**——LL
 
 写一个 `standard_decode_kernel`（1 个 block 串行扫描整个 KV，用 online softmax），与 `flash_decoding_kernel` 对比 wall-clock。用 `cudaEvent` 计时，扫描 `seq_len = 256, 512, 1024, 2048, 4096, 8192`。
 
-> 思考：seq_len 多大时 FlashDecoding 开始明显领先？（提示：seq_len > SM 数 × tokens_per_block 时 standard decode 仍 1 block，FlashDecoding 已打满所有 SM。如 80 SM × 64 token = 5120，seq_len > 5120 时 FlashDecoding 的优势最大。）
+> 思考：seq_len 多大时 FlashDecoding 开始明显领先？（提示：seq_len > SM 数 × tokens_per_block 时 standard decode 仍 1 block，FlashDecoding 已打满所有 SM。如 170 SM × 64 token = 10880，seq_len > 10880 时 FlashDecoding 的优势最大。）
 
 #### 实验 3：实现 FlashDecoding++ 的提前估算 max
 

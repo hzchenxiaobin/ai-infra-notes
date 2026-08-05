@@ -64,7 +64,7 @@
   </g>
   <!-- FMA bar 64.3% -->
   <g filter="url(#sk2)"><rect x="80" y="416" width="416" height="32" fill="#b85450" opacity="0.55" stroke="#7a2828" stroke-width="0.8"/></g>
-  <text x="80" y="438" font-size="11" fill="#444" font-weight="bold">Day 6 FMA GEMM (Reg Blocking + float4)</text>
+  <text x="80" y="438" font-size="11" fill="#444" font-weight="bold">W2 FMA GEMM (Reg Blocking + float4)</text>
   <text x="505" y="438" font-size="13" fill="#7a2828" font-weight="bold">64.3%</text>
   <text x="560" y="438" font-size="10" fill="#888">← 卡在这里（FMA 理论上限）</text>
 
@@ -73,7 +73,7 @@
   </g>
   <!-- WMMA bar 85%+ -->
   <g filter="url(#sk2)"><rect x="80" y="480" width="550" height="32" fill="#4a7a3a" opacity="0.55" stroke="#2e5a1a" stroke-width="0.8"/></g>
-  <text x="80" y="502" font-size="11" fill="#444" font-weight="bold">Day 6b WMMA GEMM (Tensor Core)</text>
+  <text x="80" y="502" font-size="11" fill="#444" font-weight="bold">W3 目标 WMMA GEMM (Tensor Core)</text>
   <text x="639" y="502" font-size="13" fill="#2e5a1a" font-weight="bold">85%+</text>
   <text x="690" y="502" font-size="10" fill="#888">+20-25% 跨越</text>
   <!-- arrow between -->

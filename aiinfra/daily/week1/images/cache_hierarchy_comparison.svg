@@ -27,7 +27,7 @@
     <rect x="80" y="142" width="240" height="56" rx="6" fill="#e8a838" opacity="0.4" stroke="#c98a2b" stroke-width="1.4"/>
   </g>
   <text x="200" y="164" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">Shared Memory + L1 Cache</text>
-  <text x="200" y="180" text-anchor="middle" font-size="9" fill="#555">~30 cycles | 192KB SRAM（可配比）</text>
+  <text x="200" y="180" text-anchor="middle" font-size="9" fill="#555">~30 cycles | 100KB SRAM（可配比）</text>
   <text x="200" y="193" text-anchor="middle" font-size="9" fill="#7a5415">⚠ 同一块 SRAM，物理共享</text>
 
   <!-- L2 Cache -->
@@ -35,7 +35,7 @@
     <rect x="60" y="208" width="280" height="48" rx="6" fill="#8e5db8" opacity="0.35" stroke="#8e5db8" stroke-width="1.4"/>
   </g>
   <text x="200" y="228" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">L2 Cache</text>
-  <text x="200" y="245" text-anchor="middle" font-size="9" fill="#555">~200 cycles | 40MB（全局共享）</text>
+  <text x="200" y="245" text-anchor="middle" font-size="9" fill="#555">~200 cycles | 96MB（全局共享）</text>
 
   <!-- Global Memory (HBM) -->
   <g filter="url(#sk)">
@@ -109,7 +109,7 @@
   <text x="780" y="286" text-anchor="middle" font-size="8" fill="#888">(全局互联)</text>
 
   <!-- ===== Bottom: smem vs L1 carveout ===== -->
-  <text x="450" y="338" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Shared Memory 与 L1 Cache 共享同一块 SRAM（192KB/SM）</text>
+  <text x="450" y="338" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Shared Memory 与 L1 Cache 共享同一块 SRAM（100KB/SM）</text>
 
   <!-- Config 1: high smem -->
   <g filter="url(#sk)">

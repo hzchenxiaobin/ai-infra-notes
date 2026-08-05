@@ -217,7 +217,7 @@ Week 6 建立了调度系统的"全景地图"和第一个多请求并发引擎�
 | 调度策略对比 | 生产级调度策略选型 |
 | 单卡推理 | 多卡 TP/PP 扩展（进阶） |
 
-> 💡 Week 7 的核心问题：怎么把前六周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是 8 周学习的收官。
+> 💡 Week 7 的核心问题：怎么把前六周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是推理调度阶段的收官。
 
 ---
 
@@ -240,7 +240,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 5. **6 个误区澄清**：Continuous≠Dynamic、PagedAttention 非直接加速、RECOMPUTE 非因快、chunked 非越小越好、饱和点非仅 util=100%、P99 不可忽略
 6. **Week7 衔接**：从调度系统到完整 AI Infra 系统整合，把六周零件联调成端到端服务
 
-掌握这些后，你就有了推理调度的全局视角——Week 7 我们把所有组件联调成完整的 Mini AI Infra 系统，完成 8 周学习的收官。
+掌握这些后，你就有了推理调度的全局视角——Week 7 我们把所有组件联调成完整的 Mini AI Infra 系统，完成推理调度阶段的学习收官。
 
 ---
 

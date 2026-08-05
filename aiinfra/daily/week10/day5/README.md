@@ -222,24 +222,6 @@ python kernels/mock_interview.py
 | [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
 | [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
 
-# 栈解法：存下标，栈底保留基准
-def longestValidParentheses(s):
-    stack = [-1]
-    max_len = 0
-    for i, c in enumerate(s):
-        if c == '(':
-            stack.append(i)
-        else:
-            stack.pop()
-            if not stack:
-                stack.append(i)  # 未匹配的 ) 作新基准
-            else:
-                max_len = max(max_len, i - stack[-1])
-    return max_len
-```
-
-> 💡 完整题解（含栈/DP/双向扫描三种解法、复杂度对比、与推理系统状态管理的类比）见 [最长有效括号题解](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html)。
-
 ---
 
 ### 扩展实验
@@ -286,7 +268,6 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 5. **计时系统**：`mock_interview.py` 提供倒计时和复盘清单，把练习标准化
 6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
 7. **GEMM**：推理引擎的核心算子，Mock 面试中“项目深度拷问”的常见考点
-8. **最长有效括号**：栈 + DP 双解困难题，与推理系统状态追踪（请求状态机/KV Cache 生命周期）同构
 
 完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。
 

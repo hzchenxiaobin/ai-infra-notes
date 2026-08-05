@@ -7,10 +7,10 @@
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
-nvcc -o kernels/occupancy_test kernels/occupancy_test.cu
-nvcc -o kernels/transpose kernels/transpose.cu
-nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
+nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu
+nvcc -o day2/kernels/occupancy_test day2/kernels/occupancy_test.cu
+nvcc -o day4/kernels/transpose day4/kernels/transpose.cu
+nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu
 ```
 
 ## Profiling 任务
@@ -20,10 +20,10 @@ nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
 对每个 kernel 生成完整报告：
 
 ```bash
-ncu --set full -o profiles/day6_hello_gpu ./kernels/hello_gpu
-ncu --set full -o profiles/day6_occupancy_test ./kernels/occupancy_test
-ncu --set full -o profiles/day6_transpose ./kernels/transpose
-ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
+ncu --set full -o profiles/day6_hello_gpu ./day1/kernels/hello_gpu
+ncu --set full -o profiles/day6_occupancy_test ./day2/kernels/occupancy_test
+ncu --set full -o profiles/day6_transpose ./day4/kernels/transpose
+ncu --set full -o profiles/day6_bank_conflict ./day5/kernels/bank_conflict
 ```
 
 用 GUI 打开：
@@ -37,7 +37,7 @@ ncu-ui profiles/day6_transpose.ncu-rep
 ```bash
 nsys profile -o profiles/day6_full_timeline \
   --trace cuda,nvtx,osrt \
-  ./kernels/transpose
+  ./day4/kernels/transpose
 ```
 
 ### 任务 3：Roofline 分析

@@ -87,7 +87,7 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 
 > AI_element-wise / Ridge Point = 0.083 / 58.45 ≈ 0.14%
 
-**结论**：element-wise 操作的计算强度只有平衡点的 **0.66%**！这意味着计算单元 99.3% 的时间在等数据。这就是为什么我们说它是**纯 memory-bound**。
+**结论**：element-wise 操作的计算强度只有平衡点的 **0.14%**！这意味着计算单元 99.86% 的时间在等数据。这就是为什么我们说它是**纯 memory-bound**。
 
 ##### 对比 GEMM（矩阵乘法）的计算强度
 
@@ -108,7 +108,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](..
 |------|-------|-------|----------------|-------------|
 | 向量加法 `C=A+B` | 1 | 12 | 0.083 | **Memory** |
 | ReLU `C=max(A,0)` | 1 | 8 | 0.125 | **Memory** |
-| LayerNorm | ~5 | 12 | ~0.42 | **Memory** |
+| LayerNorm | ~5 | 8（读 4 + 写 4） | ~0.63 | **Memory** |
 | GEMM (4096³) | ~137G | ~192M | ~715 | **Compute** |
 
 > 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 RTX 5090 需要做 58+ 次运算才能不吃亏（Ridge Point 58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
@@ -135,14 +135,12 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](..
 
 ![GPU 内存层次结构](../images/gpu_memory_hierarchy.svg)
 
-![GPU 内存层次结构](../../images/week1_memory_hierarchy.svg)
-
 **各级内存特点**：
 
 | 内存类型 | 典型延迟 | 容量 | 是否可编程 | 生命周期 |
 |---------|---------|------|-----------|---------|
 | Register | ~1 cycle | ~256 KB/SM | 否（编译器管理） | thread |
-| Shared Memory | ~20-30 cycles | ~100-164 KB/SM | 是 | block |
+| Shared Memory | ~20-30 cycles | 100 KB/SM（RTX 5090，与 L1 共享） | 是 | block |
 | L1 Cache | ~20-30 cycles | 与 Shared Memory 共享 | 否（自动） | - |
 | L2 Cache | ~200 cycles | 数 MB ~ 数十 MB | 否（自动） | - |
 | Global Memory | ~400-800 cycles | 数 GB ~ 数十 GB | 是（显式分配） | 程序 |
@@ -315,13 +313,12 @@ __global__ void stride_read(const float* x, float* y) {
 
 #### 任务 1：Naive 版本
 
-创建 [kernels/transpose.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day4/kernels/transpose.cu)，实现 naive 转置：
+创建 [kernels/transpose.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day4/kernels/transpose.cu)，实现 naive 转置 kernel：
 
 ```cuda
-#include <cuda_runtime.h>
-#include <stdio.h>
-#include <stdlib.h>
+#define TILE_DIM 32
 
+// Naive: coalesced read, strided write
 __global__ void transpose_naive(const float* in, float* out, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -331,46 +328,6 @@ __global__ void transpose_naive(const float* in, float* out, int width, int heig
         out[x * height + y] = in[y * width + x];
     }
 }
-
-int main() {
-    int width = 1024;
-    int height = 1024;
-    int size = width * height;
-
-    float* h_in = (float*)malloc(size * sizeof(float));
-    float* h_out = (float*)malloc(size * sizeof(float));
-    for (int i = 0; i < size; ++i)
-        h_in[i] = (float)i;
-
-    float *d_in, *d_out;
-    cudaMalloc(&d_in, size * sizeof(float));
-    cudaMalloc(&d_out, size * sizeof(float));
-    cudaMemcpy(d_in, h_in, size * sizeof(float), cudaMemcpyHostToDevice);
-
-    dim3 block(32, 32);
-    dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
-
-    transpose_naive<<<grid, block>>>(d_in, d_out, width, height);
-    cudaMemcpy(h_out, d_out, size * sizeof(float), cudaMemcpyDeviceToHost);
-
-    // 简单验证
-    bool ok = true;
-    for (int y = 0; y < height && ok; ++y) {
-        for (int x = 0; x < width; ++x) {
-            if (h_out[x * height + y] != h_in[y * width + x]) {
-                ok = false;
-                break;
-            }
-        }
-    }
-    printf("Naive transpose: %s\n", ok ? "PASS" : "FAIL");
-
-    free(h_in);
-    free(h_out);
-    cudaFree(d_in);
-    cudaFree(d_out);
-    return 0;
-}
 ```
 
 **Naive 版本的问题**：
@@ -378,14 +335,15 @@ int main() {
 - 写是 stride access（按列写，地址间隔大）
 - 写操作成为瓶颈
 
+> 💡 仓库中的 `transpose.cu` 是完整版：main 函数用 `rand()` 填充输入矩阵，依次运行 naive 和任务 2 的 optimized 两个版本并分别校验正确性（D2H 拷回后逐元素对比）。
+
 #### 任务 2：Shared Memory 优化版本
 
-使用 shared memory tile 优化转置：
+使用 shared memory tile 优化转置（kernel 名与仓库文件一致，为 `transpose_optimized`）：
 
 ```cuda
-#define TILE_DIM 32
-
-__global__ void transpose_tiled(const float* in, float* out, int width, int height) {
+// Optimized: shared memory tile with padding to avoid bank conflict
+__global__ void transpose_optimized(const float* in, float* out, int width, int height) {
     __shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 避免 bank conflict
 
     int x = blockIdx.x * TILE_DIM + threadIdx.x;
@@ -413,7 +371,7 @@ __global__ void transpose_tiled(const float* in, float* out, int width, int heig
 2. 在 shared memory 中转置（无 global memory 访问）
 3. 按行从 shared memory 写入 global memory（此时对应原矩阵的列，实现 coalesced write）
 
-> 关于 `+1 padding` 的详细原理，请参考 Day 5 的 bank conflict 分析。
+> 💡 **`+1 padding` 一句话解释**：shared memory 按 32 个 bank 组织，若第二维正好 32 个 float，按列读 `tile[threadIdx.x][threadIdx.y]` 时同一 warp 的 32 个线程会全部命中同一个 bank，产生 32-way bank conflict；第二维 `+1` 让相邻行错开 1 个 bank，冲突即消除。bank 结构与冲突原理的完整讲解见 Day 5。
 
 #### 深入理解：为什么读和写都是 coalesced？
 
@@ -536,6 +494,8 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed ./transpose
 **与今日知识的关联**：
 
 本题直接对应 Day 4 的主题——矩阵转置。naive 版本有 stride write 导致带宽低，用 Shared Memory + padding 优化后可获得接近峰值带宽。用 ncu 对比两个版本的 memory throughput。
+
+> ⚠️ 这是 Matrix Transpose 本周**唯一一次正式布置**（Day 1–3 分别为 Vector Addition / ReLU / Matrix Addition），请把 tiling + padding 版本做透，Day 5 还会在它的基础上分析 bank conflict。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 

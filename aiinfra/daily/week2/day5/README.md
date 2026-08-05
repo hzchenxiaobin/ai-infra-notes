@@ -25,7 +25,7 @@ CPU 和 GPU 是独立的计算资源。如果所有操作都同步执行（CPU �
 
 ### 理论学习
 
-#### 3.1 Stream 的本质
+#### 5.1 Stream 的本质
 
 Stream 是 GPU 上操作（Kernel 执行、内存拷贝）的队列。同一个 Stream 内的操作按 FIFO 顺序执行，不同 Stream 之间的操作可以并发（只要资源允许）。
 
@@ -53,7 +53,7 @@ cudaStreamDestroy(s1);
 cudaStreamDestroy(s2);
 ```
 
-#### 3.2 Default Stream 的"坑"
+#### 5.2 Default Stream 的"坑"
 
 ![Default Stream 隐式同步陷阱](../images/default_stream_sync.svg)
 
@@ -100,7 +100,7 @@ cudaStream_t stream;
 cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
 ```
 
-#### 3.3 `cudaMemcpy` vs `cudaMemcpyAsync`
+#### 5.3 `cudaMemcpy` vs `cudaMemcpyAsync`
 
 | 函数 | 同步性 | 是否可指定 Stream | 内存要求 | 使用场景 |
 |------|--------|----------------|---------|---------|
@@ -158,7 +158,7 @@ cudaFree(d_A);
 cudaStreamDestroy(s);
 ```
 
-#### 3.4 多 Stream 重叠流水线
+#### 5.4 多 Stream 重叠流水线
 
 ![Multi-Stream 重叠流水线](../images/multi_stream_overlap.svg)
 
@@ -190,7 +190,7 @@ for (int i = 0; i < nStreams; ++i)
     cudaStreamSynchronize(streams[i]);
 ```
 
-#### 3.5 cudaEvent 跨 Stream 依赖
+#### 5.5 cudaEvent 跨 Stream 依赖
 
 ![cudaEvent 跨 Stream 依赖管理](../images/stream_event_dependency.svg)
 

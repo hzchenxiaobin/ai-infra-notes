@@ -9,25 +9,45 @@
 3. 理解三级数据复用层次：Global Memory → Shared Memory → Register
 4. 掌握 Register 使用量的计算方法
 5. 理解 Double Buffering（软件流水线）的原理
-6. 实现 Register Blocking GEMM，性能达到 cuBLAS 40%+
+6. 实现 Register Blocking GEMM，性能达到 cuBLAS 30%+（4096 实测 30.8%；本周终态为 Day 3 整合版的 ~63%）
 
-> 💡 **为什么重要**：Register Blocking 是「如何优化 GEMM 到 cuBLAS 80%」这一顶级面试题的关键转折点，它把性能从 ~15% 提升到 ~45%，是从入门到进阶的分水岭。
+> 💡 **为什么重要**：Register Blocking 是「如何优化 GEMM 到 cuBLAS 80%」这一顶级面试题的关键转折点，它把性能从 Shared Memory Tiling 的 ~13% 提升到 ~31%（4096 实测 30.8%），是从入门到进阶的分水岭。
 
 ---
 
 ### 学前导读：从 Shared Memory Tiling 到 Register Blocking
 
-在 Week 1 中我们学习了 Shared Memory Tiling GEMM。它的核心是：把 A/B 的子矩阵预取到 Shared Memory，实现 K 维度的数据复用。但这还不够快，因为每个线程仍然只计算 C 的一个元素，对 Shared Memory 的访问非常频繁。
+Week 1 我们只做过转置（transpose）的 Shared Memory Tiling，还没有正式写过 GEMM tiling，先用 5 行代码补齐这个前置：
+
+```cuda
+// Naive GEMM：每线程算 C 的 1 个元素，A/B 全部从 Global Memory 直读
+__global__ void gemmNaive(const float* A, const float* B, float* C, int M, int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row < M && col < N) {
+        float sum = 0.0f;
+        for (int k = 0; k < K; k++) sum += A[row * K + k] * B[k * N + col];
+        C[row * N + col] = sum;
+    }
+}
+```
+
+**Shared Memory Tiling** 在 Naive 基础上把 A/B 的子矩阵（tile）预取到 Shared Memory：同一 block 的线程复用 tile 数据，实现 K 维度的数据复用，Global Memory 访问次数降为原来的 1/BK。但这还不够快，因为每个线程仍然只计算 C 的一个元素，对 Shared Memory 的访问非常频繁。（Day 3 的 `gemm_optimization_series.cu` 中 v1=Naive、v2=SharedMem 就是这两个基线。）
 
 **Register Blocking 的核心思想**：让每个线程计算 C 的一个 **TM×TN 子块**，把累加器驻留在寄存器中，从而减少对 Shared Memory 的访问次数。
 
-| 优化层次 | 数据驻留位置 | 复用对象 | 性能目标 |
+各版本的实测性能（Day 3 全系列实测，4096³，RTX 5090，cuBLAS 占比）：
+
+| 版本 | 数据驻留位置 | 复用对象 | 实测 cuBLAS%（4096） |
 |---|---|---|---|
-| Naive GEMM | Global Memory | 无 | ~1-3% peak |
-| Shared Mem Tiling | Shared Memory | A/B tile | ~15-25% peak |
-| Register Blocking | Register | A子行/B子列+累加器 | ~40-60% peak |
-| Warp-level | Register+Shuffle | Warp内协作 | ~60-80% peak |
-| 软件流水线 | 全部 + 双缓冲 | 计算掩盖传输 | ~80-95% peak |
+| v1 Naive GEMM | Global Memory | 无 | 10.6% |
+| v2 Shared Mem Tiling | Shared Memory | A/B tile | 13.3% |
+| v3 Register Blocking（本日） | Register | A子行/B子列+累加器 | 30.8% |
+| v4 + float4 向量化（Day 3） | Register | + 128-bit 加载 | 64.3% |
+| v5 整合版（Day 3） | Register | + float4 合并写回 | 62.9% |
+| v6 + 双缓冲（Day 3，同步实现） | 全部 + 双缓冲 | 计算掩盖传输 | 63.8% |
+
+> 💡 本表为本周唯一性能口径（Day 3 实测）。面试中常见的「Naive 1% → Tiling 15% → RegBlk 45% → … → 90%」是经验预估 ladder，与本机实测口径不同，引用时注意区分。
 
 ---
 
@@ -402,7 +422,7 @@ nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_
 
 - [ ] 能解释 Register Blocking 相比纯 Shared Memory Tiling 多了一级数据复用（Global→Shared→Register）
 - [ ] 能计算 register usage：TM×TN 个累加器 + TM + TN 个加载寄存器 + 索引变量
-- [ ] 代码编译运行正确，性能达到 cuBLAS 40%+（4096 矩阵）
+- [ ] 代码编译运行正确，性能达到 cuBLAS 30%+（4096 矩阵，实测 30.8%）
 - [ ] 能画出数据流图：Global Memory → Shared Memory → Register → FMA 累加
 - [ ] 能计算每 Block 线程数 = (BM/TM) × (BN/TN)
 - [ ] 能解释 Double Buffering 的原理（用计算掩盖数据传输延迟）
@@ -417,7 +437,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 2. **Thread Tile**：每个线程计算 TM×TN 子块，累加器驻留寄存器，减少 Shared Memory 访问
 3. **Register 计算**：TM=TN=8 时约 88 个 register，在 255 上限内
 4. **协作加载**：所有线程协作把 A/B tile 从 Global 加载到 Shared Memory
-5. **Double Buffering**：双缓冲掩盖传输延迟，是从 45% 到 70% 的关键优化
+5. **Double Buffering**：双缓冲掩盖传输延迟；注意 Day 3 实测同步式双缓冲收益在噪声范围内（4096：62.9%→63.8%），真正的双缓冲需要 `cp.async`（Ampere+）
 
 ---
 
@@ -428,8 +448,9 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 <details>
 <summary>点击查看答案</summary>
 
- 按层次展开：
+ 按层次展开（经典经验预估 ladder）：
  - Naive（~1%）→ Shared Memory Tiling（~15%）→ Register Blocking（~40%）→ Warp-level（~60%）→ Vectorized Load（~70%）→ Double Buffering（~80%）→ Auto-tuning（~90%+）
+ - ⚠️ 口径说明：以上是面试通用预估；本机（RTX 5090, 4096³）实测口径以 Day 3 的 v1–v6 表为准：Naive 10.6% → SM Tiling 13.3% → RegBlk 30.8% → +float4 64.3% → 整合版 62.9% → +双缓冲 63.8%。回答时先报实测，再补预估 ladder。
 
 </details>
 
@@ -463,7 +484,7 @@ Day 2 我们掌握了 Register Blocking 这一 GEMM 优化的核心转折点：
 <summary>点击查看答案</summary>
 
  - **原理**：声明两份 shared memory buffer（`s_A[2][BM][BK]`），奇偶 tile 交替使用，让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟
- - **收益**：单缓冲时 Load 期间 SM 空闲，双缓冲后 Compute 与 Load 重叠，性能从 ~45% 提升到 ~70%，是跨越 cuBLAS 80% 的关键
+ - **收益（实测口径）**：Day 3 的同步实现（`__syncthreads` 后才计算下一 tile）实测收益在噪声范围内（4096：62.9%→63.8%）——编译器无法自动重叠 load 与 compute；真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令，是跨越 cuBLAS 80% 的关键
  - **注意**：① 需 `__syncthreads()` 保证 buffer 切换的数据可见性 ② 多消耗一倍 shared memory，可能降低 occupancy ③ 首块需预取（prologue），末块不再加载（epilogue）
 
 </details>

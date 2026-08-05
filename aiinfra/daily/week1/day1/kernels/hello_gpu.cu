@@ -7,9 +7,9 @@ __global__ void hello_gpu() {
 }
 
 int main() {
-    // 2D grid, 1D block
+    // 2D grid, 2D block（与 day1 README 正文一致）
     dim3 grid(2, 2, 1);
-    dim3 block(8, 1, 1);
+    dim3 block(4, 2, 1);
 
     printf("Launching kernel: grid=(%d,%d,%d), block=(%d,%d,%d), total_threads=%d\n", grid.x, grid.y, grid.z, block.x,
            block.y, block.z, grid.x * grid.y * grid.z * block.x * block.y * block.z);

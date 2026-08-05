@@ -188,9 +188,9 @@ for quant in ['fp16', 'w8a16', 'int8_kv']:
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [23](https://leetcode.cn/problems/merge-k-sorted-lists/) | Hard | 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_merge-k-sorted-lists.html) |
-| [253](https://leetcode.cn/problems/meeting-rooms-ii/) | Medium | 堆/扫描线 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_meeting-rooms-ii.html) |
-| [703](https://leetcode.cn/problems/kth-largest-element-in-a-stream/) | Easy | 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/703_kth-largest-element-in-a-stream.html) |
+| [23](https://leetcode.cn/problems/merge-k-sorted-lists/) | Hard | 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
+| [253](https://leetcode.cn/problems/meeting-rooms-ii/) | Medium | 堆/扫描线 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html) |
+| [703](https://leetcode.cn/problems/kth-largest-element-in-a-stream/) | Easy | 堆 | 暂无 |
 
 ---
 

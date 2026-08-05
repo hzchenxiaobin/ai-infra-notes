@@ -139,7 +139,7 @@ Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 - **Arithmetic Intensity (AI)** = FLOPs / bytes（每字节做多少次浮点运算）
 - AI 低 → **memory-bound**（位于斜线区域，优化内存访问）
 - AI 高 → **compute-bound**（位于平顶区域，优化计算吞吐量）
-- 两线交点 = **平衡点**（RTX 5090 约 25 FLOP/byte）
+- 两线交点 = **平衡点**（Ridge Point，RTX 5090 = 58.45 FLOP/byte，见 [硬件参数事实源](../../reference/hardware_specs.md)）
 
 **如何用 Roofline 指导优化**：
 
@@ -353,7 +353,7 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
 <summary>点击查看答案</summary>
 
  - 计算强度 = FLOPs / Bytes，平衡点 = Peak FLOP/s / Peak Bandwidth
- - RTX 5090 平衡点约 25 FLOP/byte：AI < 25 → memory-bound，AI > 25 → compute-bound
+ - RTX 5090 Ridge Point ≈ 58.45 FLOP/byte（见 [硬件参数事实源](../../reference/hardware_specs.md)）：AI < 58.45 → memory-bound，AI > 58.45 → compute-bound
  - 优化方向：斜线区域优化内存访问，平顶区域优化计算
 
 </details>

@@ -134,18 +134,18 @@ forward 顺序: device0 的 stage_0 → device1 的 stage_0 → ... → device0 
 ##### Bubble 公式
 
 ```
-interleaved bubble = (P - 1) / (V × M + P - 1) × V
+interleaved bubble = (P - 1) / (V × M + P - 1)
 ```
 
-V=1 退化为标准 1F1B。V 越大 bubble 越小，但通信次数增 V 倍。
+V=1 退化为标准 1F1B（`(P-1)/(M+P-1)`）。V 越大 bubble 越小，但通信次数增 V 倍。注意公式分母多了 V 倍——把 M 个 micro-batch 切成 V 组轮流喂给 P 个 virtual stage，等效"工作总量"变为 V·M，气泡占比自然下降。
 
-| V | P | M | bubble (标准) | bubble (interleaved) |
+| V | P | M | bubble (标准 1F1B) | bubble (interleaved) |
 |---|---|---|-------------|---------------------|
-| 1 | 8 | 16 | 7/23 = 30% | 30% (同) |
-| 2 | 8 | 16 | 30% | 7/39 × 2 = 18% |
-| 4 | 8 | 16 | 30% | 7/71 × 4 = 10% |
+| 1 | 8 | 16 | 7/23 ≈ 30% | 30%（退化为标准） |
+| 2 | 8 | 16 | 30% | 7/39 ≈ 18% |
+| 4 | 8 | 16 | 30% | 7/71 ≈ 10% |
 
-> ⚠️ **代价**：interleaved 增加通信次数 V 倍，且需要更复杂的调度。Megatron-LM 用 V=2~4。
+> ⚠️ **代价**：interleaved 增加通信次数 V 倍（每两个 virtual stage 之间一次 send/recv），且需要更复杂的调度。Megatron-LM 用 V=2~4。
 
 #### 2.5 Data Parallelism（DP）在推理中的定位
 
@@ -207,35 +207,123 @@ Request 4 → GPU 1
 
 ```python
 def simulate_gpipe(P, M):
-    """模拟 GPipe 调度, 返回时间线和 bubble ratio"""
+    """模拟 GPipe 调度, 返回时间线和 bubble ratio.
+
+    每个 stage 的 timeline 是 list of (phase, micro_batch, start, end).
+    时间单位: 1 个 micro-batch 在一个 stage 上的执行时间 = 1.
+    """
     timeline = [[] for _ in range(P)]
-    t = 0
     # Forward phase: M 个 micro-batch 依次穿过 P 个 stage
     for m in range(M):
         for s in range(P):
-            start = max(t, timeline[s][-1][1] if timeline[s] else 0)
+            # start = max(全局游标, 该 stage 上一个任务的结束时间)
+            prev_end = timeline[s][-1][3] if timeline[s] else 0
+            start = max(prev_end, timeline[s-1][-1][3] if s > 0 and timeline[s-1] else 0)
+            if m > 0 or s > 0:
+                # 依赖前一个 stage 的同 micro-batch forward 完成
+                if s > 0:
+                    start = max(start, timeline[s-1][-1][3])
             timeline[s].append(('F', m, start, start + 1))
-            t = start + 1
-    # Backward phase
+    # Backward phase: 反向, 从最后一个 stage 开始
     for m in reversed(range(M)):
         for s in reversed(range(P)):
-            start = max(t, timeline[s][-1][1] if timeline[s] else 0)
+            prev_end = timeline[s][-1][3] if timeline[s] else 0
+            start = prev_end
+            if s < P - 1:
+                start = max(start, timeline[s+1][-1][3])
             timeline[s].append(('B', m, start, start + 1))
-            t = start + 1
-    total = max(ts[-1][1] for ts in timeline if ts)
-    bubble = 2 * (P - 1) / (M + P - 1)
+    total = max(ts[-1][3] for ts in timeline if ts)
+    useful = 2 * M * P  # forward + backward, 每个 micro-batch 每个 stage 1 单位
+    bubble = (total * P - useful) / (total * P)
     return timeline, bubble, total
 
 def simulate_1f1b(P, M):
-    """模拟 1F1B 调度"""
-    # ... 交错 forward/backward ...
-    pass
+    """模拟 1F1B 调度 (steady-state interleaved forward/backward).
+
+    1F1B 的关键: warmup 阶段每个 stage i 先做 P-1-i 个 forward,
+    然后进入稳态 1F1B (forward + backward 交替),
+    最后 cooldown 把剩余的 backward 做完.
+    显存优势: 每个 stage 稳态只有 P 份未 backward 的 activation (GPipe 是 M 份).
+    """
+    timeline = [[] for _ in range(P)]
+    # 用一个事件队列模拟: (time, stage, phase, micro_batch)
+    # forward 依赖: stage 0 可立即开始; stage s 依赖 stage s-1 的同 micro forward
+    # backward 依赖: stage P-1 forward 完成后可开始; stage s 依赖 stage s+1 的同 micro backward
+    fwd_done = [[-1] * M for _ in range(P)]  # fwd_done[s][m] = end time, -1 = 未完成
+    bwd_done = [[-1] * M for _ in range(P)]
+    fwd_next = [0] * P   # 每个 stage 下一个要 forward 的 micro-batch
+    bwd_next = [0] * M    # 占位, 用 bwd_count 代替
+    bwd_count = [0] * P
+
+    # 简化: 用 step-by-step 调度模拟 (每个时间步每个 stage 做一件事)
+    t = 0
+    fwd_remaining = M
+    bwd_remaining = M
+    # warmup: stage s 先做 P-1-s 个 forward (填充流水线)
+    # 然后稳态: forward + backward 交替
+    # cooldown: 把所有 backward 做完
+    # 这里用贪心: 每个时间步, 每个 stage 优先做 1F1B (如果能 backward 就 backward, 否则 forward)
+    total_ops = 2 * M * P
+    done_ops = 0
+    while done_ops < total_ops:
+        scheduled_this_step = [False] * P
+        for s in range(P):
+            # 优先 backward (1F1B 稳态: forward 之后尽快 backward)
+            can_bwd = False
+            bwd_m = -1
+            for m in range(M):
+                if bwd_done[s][m] < 0:  # 未完成
+                    # backward 依赖: stage s 的 forward 已完成, 且 stage s+1 的 backward 已完成 (或 s==P-1)
+                    if fwd_done[s][m] >= 0 and t >= fwd_done[s][m]:
+                        if s == P - 1:
+                            can_bwd = True
+                            bwd_m = m
+                            break
+                        elif bwd_done[s+1][m] >= 0 and t >= bwd_done[s+1][m]:
+                            can_bwd = True
+                            bwd_m = m
+                            break
+            if can_bwd:
+                # 检查 stage 上一个任务的结束时间
+                prev_end = timeline[s][-1][3] if timeline[s] else 0
+                start = max(t, prev_end)
+                timeline[s].append(('B', bwd_m, start, start + 1))
+                bwd_done[s][bwd_m] = start + 1
+                scheduled_this_step[s] = True
+                done_ops += 1
+                continue
+            # 否则 forward
+            can_fwd = False
+            fwd_m = -1
+            for m in range(M):
+                if fwd_done[s][m] < 0:
+                    if s == 0:
+                        can_fwd = True
+                        fwd_m = m
+                        break
+                    elif fwd_done[s-1][m] >= 0 and t >= fwd_done[s-1][m]:
+                        can_fwd = True
+                        fwd_m = m
+                        break
+            if can_fwd:
+                prev_end = timeline[s][-1][3] if timeline[s] else 0
+                start = max(t, prev_end)
+                timeline[s].append(('F', fwd_m, start, start + 1))
+                fwd_done[s][fwd_m] = start + 1
+                scheduled_this_step[s] = True
+                done_ops += 1
+        t += 1
+    total = max(ts[-1][3] for ts in timeline if ts)
+    useful = 2 * M * P
+    bubble = (total * P - useful) / (total * P)
+    return timeline, bubble, total
 
 # 对比
 for P, M in [(4, 4), (4, 8), (8, 8), (8, 32)]:
     tl_g, bub_g, total_g = simulate_gpipe(P, M)
     tl_1, bub_1, total_1 = simulate_1f1b(P, M)
-    print(f"P={P} M={M}: GPipe bubble={bub_g:.2%}, 1F1B bubble={bub_1:.2%}")
+    print(f"P={P} M={M}: GPipe bubble={bub_g:.2%} (total={total_g}), "
+          f"1F1B bubble={bub_1:.2%} (total={total_1})")
 ```
 
 #### 任务 2：Bubble Ratio 计算器
@@ -245,7 +333,7 @@ def bubble_ratio(P, M, V=1):
     if V == 1:
         return (P - 1) / (M + P - 1)
     else:
-        return (P - 1) / (V * M + P - 1) * V
+        return (P - 1) / (V * M + P - 1)
 
 # 打印不同配置的 bubble
 print("P | M | V | bubble")
@@ -259,9 +347,9 @@ for P in [4, 8]:
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_coin-change.html) |
-| [279](https://leetcode.cn/problems/perfect-squares/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_perfect-squares.html) |
-| [343](https://leetcode.cn/problems/integer-break/) | Medium | DP（数学） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/343_integer-break.html) |
+| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+| [279](https://leetcode.cn/problems/perfect-squares/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html) |
+| [343](https://leetcode.cn/problems/integer-break/) | Medium | DP（数学） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/343_整数拆分.html) |
 
 ---
 
@@ -281,7 +369,7 @@ for P in [4, 8]:
 
 1. **1F1B vs GPipe**：气泡相同，但 1F1B 稳态显存从 O(M) 降到 O(P)
 2. **Bubble ratio**：`(P-1)/(M+P-1)`，M≥4P 时 < 20%
-3. **Interleaved 1F1B**：V 个 virtual stage，bubble 降为 `(P-1)/(VM+P-1)×V`，代价是通信增 V 倍
+3. **Interleaved 1F1B**：V 个 virtual stage，bubble 降为 `(P-1)/(VM+P-1)`，代价是通信增 V 倍
 4. **推理 DP**：无通信，每卡独立处理请求，适合"模型 ≤ 单卡 + 高吞吐"
 5. **三维并行**：TP（每层 all-reduce）+ PP（stage 边界 send/recv + bubble）+ DP（无通信）的组合
 
@@ -309,7 +397,7 @@ for P in [4, 8]:
    - 公式：`bubble = (P-1)/(M+P-1)`
    - 减少 bubble 的方法：
      1. 增大 M（micro-batch 数）——M≥4P 时 bubble < 20%
-     2. Interleaved 1F1B（V 个 virtual stage）——bubble 降为 `(P-1)/(VM+P-1)×V`
+      2. Interleaved 1F1B（V 个 virtual stage）——bubble 降为 `(P-1)/(VM+P-1)`
      3. 减小 P（但会增大单 stage 显存）
    - 代价：interleaved 增加通信次数 V 倍
 

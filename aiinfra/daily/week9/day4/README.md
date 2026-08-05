@@ -103,9 +103,11 @@ def tp_layer_overlap(x, w1, w2, comm_stream, compute_stream):
     with torch.cuda.stream(comm_stream):
         comm_stream.wait_stream(compute_stream)
         dist.all_reduce(y1)
-    # 后半: compute on compute_stream (与 y1 all-reduce 重叠)
+    # 后半: compute on compute_stream —— 与 y1 的 all-reduce 并行重叠
+    # 注意：y2 = x @ w2 不依赖 y1，因此 compute_stream 不应 wait_stream(comm_stream)。
+    # 若误加该 wait，y2 会被强制等 y1 的 all-reduce 完成，本日要演示的"通信计算重叠"
+    # 就退化为串行执行。这正是初学者常踩的坑：把"两段计算共享输入 x"误读成"有数据依赖"。
     with torch.cuda.stream(compute_stream):
-        compute_stream.wait_stream(comm_stream)  # 只等 y1? 不, y2 不依赖 y1
         y2 = x @ w2  # w2 = W[:, hidden/2:]
     # 后半: all-reduce on comm_stream
     with torch.cuda.stream(comm_stream):
@@ -235,9 +237,9 @@ end.record()
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [162](https://leetcode.cn/problems/find-peak-element/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_find-peak-element.html) |
-| [34](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_find-first-and-last-position-of-element-in-sorted-array.html) |
-| [4](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | Hard | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_median-of-two-sorted-arrays.html) |
+| [162](https://leetcode.cn/problems/find-peak-element/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
+| [34](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
+| [4](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | Hard | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
 
 ---
 

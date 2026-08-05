@@ -1,4 +1,4 @@
-## Day 3：项目文档完善（README）项目文档完善
+## Day 3：项目文档完善（README）
 
 ### 🎯 目标
 
@@ -11,13 +11,13 @@
 5. 能产出 **Benchmark 对比表格**——FlashAttention vs 标准 Attention、GEMM vs cuBLAS，用百分比量化优化成果<br>
 6. 用 Python 手写一个 **benchmark_demo.py**，实测 SiLU kernel 的带宽利用率，生成可直接贴进 README 的性能表
 
-> 💡 **为什么重要**：Week 7 我们完成了 Mini AI Infra 系统的联调与全链路 profiling，代码"能跑"了。但"代码能跑" ≠ "项目可展示"——面试官打开你的仓库，如果 README 缺失、没有 Quick Start、没有 benchmark 数字，往往会直接跳过。Week 8 的第一天把 7 周散落的代码与笔记打磨成一份可展示的项目文档，这是从"学习者"到"求职者"的关键转换。
+> 💡 **为什么重要**：Week 9 我们完成了分布式并行（TP/PP/DP）与通信计算重叠的学习，Week 10 Day 1–2 完成了 custom kernel 封装与引擎联调。但"代码能跑" ≠ "项目可展示"——面试官打开你的仓库，如果 README 缺失、没有 Quick Start、没有 benchmark 数字，往往会直接跳过。Day 3 把 9 周散落的代码与笔记打磨成一份可展示的项目文档，这是从"学习者"到"求职者"的关键转换。
 
 ---
 
 ### 学前导读：为什么"代码能跑"还不够
 
-Week 1-7 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.cu`、`concurrent_engine.py`……它们散落在各个 `weekN/dayM/kernels/` 目录下，能各自独立运行，但作为一个整体项目来看，存在几个问题：
+Week 1–9 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.cu`、`concurrent_engine.py`……它们散落在各个 `weekN/dayM/kernels/` 目录下，能各自独立运行，但作为一个整体项目来看，存在几个问题：
 
 ```
 7 周代码的"展示短板"：

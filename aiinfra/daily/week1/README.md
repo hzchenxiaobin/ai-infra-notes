@@ -14,11 +14,11 @@
 ## 🧭 本周学习地图
 
 ```
-Day 1: GPU 执行模型 → SM/Warp/SIMT + Grid/Block/Thread + 第一个 CUDA 程序 + Matrix Transpose
+Day 1: GPU 执行模型 → SM/Warp/SIMT + Grid/Block/Thread + 第一个 CUDA 程序 + Vector Addition
         ↓
-Day 2: Occupancy 与资源约束 → 寄存器/Shared Memory/Block 数上限 + Register Spilling + Matrix Transpose
+Day 2: Occupancy 与资源约束 → 寄存器/Shared Memory/Block 数上限 + Register Spilling + ReLU
         ↓
-Day 3: 认识你的 GPU → deviceQuery + 峰值算力/显存带宽计算 + Matrix Transpose
+Day 3: 认识你的 GPU → deviceQuery + 峰值算力/显存带宽计算 + Matrix Addition
         ↓
 Day 4: Memory Hierarchy 深入 → Coalesced Access + Shared Memory Tiling + Matrix Transpose
         ↓

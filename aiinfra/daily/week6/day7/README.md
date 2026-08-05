@@ -4,22 +4,22 @@
 
 通过今天的学习，你将：
 
-1. 系统梳理 Week 5 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
+1. 系统梳理 Week 6 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
 2. 掌握推理系统的**四大核心问题**——内存管理、Batch 策略、Latency 隐藏、调度开销——及其解决方案<br>
 3. 建立**优化速查表**，拿到任意推理性能现象能查表找到检查方法与解决方案<br>
 4. 复盘本周 **17 道面试题**，建立推理系统专题的答题框架<br>
 5. 整理本周所有产出（Mini 引擎、KV Cache、profiling 脚本），形成可复用的工程资产<br>
-6. 为 Week 6（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
+6. 为 Week 7（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
 
-> 💡 **为什么重要**：Day 1-6 我们分别学了推理系统的各个机制——两阶段、KV Cache、vLLM 调度、PagedAttention、Mini 引擎、profiling。但"各个机制都懂"不等于"系统全局掌握"——今天把碎片连成网络，用四大核心问题的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何性能现象，你能立刻判断它属于哪个核心问题、该查什么、怎么解决。Week 6 的 Continuous Batching 深入、CUDA Graph、Chunked Prefill 都建立在这张地图上。
+> 💡 **为什么重要**：Day 1-6 我们分别学了推理系统的各个机制——两阶段、KV Cache、vLLM 调度、PagedAttention、Mini 引擎、profiling。但"各个机制都懂"不等于"系统全局掌握"——今天把碎片连成网络，用四大核心问题的"地图"收束全周。这张地图是推理系统优化的通用工具箱：看到任何性能现象，你能立刻判断它属于哪个核心问题、该查什么、怎么解决。Week 7 的 Continuous Batching 深入、CUDA Graph、Chunked Prefill 都建立在这张地图上。
 
 ---
 
-### Week 5 知识地图
+### Week 6 知识地图
 
-![Week 5 知识地图：从两阶段到推理引擎](../images/week5_knowledge_map.svg)
+![Week 6 知识地图：从两阶段到推理引擎](../images/week5_knowledge_map.svg)
 
-Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
+Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
 
 ![Week 5 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../../images/week5_learning_pipeline.svg)
 
@@ -33,7 +33,7 @@ Week 5 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 | Day 6 | 端到端 Profiling | profile_engine_v0.py | 三层方法论、TTFT/TBT breakdown、决策树 |
 | **Day 7** | **核心问题总结** | **四大问题 + 速查表** | **内存管理/Batch/Latency 隐藏/调度开销** |
 
-> 💡 **一句话总结**：Week 5 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
+> 💡 **一句话总结**：Week 6 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
 
 ---
 
@@ -209,9 +209,9 @@ python kernels/week5_summary.py
 
 **题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
-**与 Week 5 知识的关联**：
+**与 Week 6 知识的关联**：
 
-Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 5 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
+Week 6 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、PagedAttention、Continuous Batching。这些优化最终都落在"transformer block 的前向怎么跑得更快"上——Prefill 阶段 GPU 执行的主体就是这条算子链的批量版本。本题 GPT-2 Transformer Block 是 Week 6 的综合压轴：它要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 串成完整推理管线。先用 PyTorch 参考实现对齐精度，再逐 kernel 替换为 CUDA 版，就是"框架算子 → 自定义 kernel"工程路径的微缩演练。
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
@@ -240,11 +240,11 @@ Week 5 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、Page
 
 ---
 
-### Week 5 → Week 6 衔接
+### Week 6 → Week 7 衔接
 
-Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 6 深入**Batching & 调度优化**：
+Week 6 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 7 深入**Batching & 调度优化**：
 
-| Week 5（理解 + 造引擎） | Week 6（深入优化） |
+| Week 6（理解 + 造引擎） | Week 7（深入优化） |
 |------------------------|-------------------|
 | Continuous Batching 概念 | 深入实现 + chunked prefill + mixed batching |
 | CUDA Graph 提及 | 手写 CUDA Graph 录制 decode 循环 |
@@ -252,7 +252,7 @@ Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 
 | profiling 方法论 | 用 profiling 数据驱动 v0→v1 优化 |
 | 调度开销概念 | torch.compile / 自定义 C++ scheduler |
 
-> 💡 Week 6 的核心问题：怎么把 Week 5 的单请求引擎变成高吞吐的多请求服务？Continuous Batching 怎么真正实现？CUDA Graph 怎么录制动态长度的 decode？这些都在 Week 6 展开。
+> 💡 Week 7 的核心问题：怎么把 Week 6 的单请求引擎变成高吞吐的多请求服务？Continuous Batching 怎么真正实现？CUDA Graph 怎么录制动态长度的 decode？这些都在 Week 7 展开。
 
 ---
 
@@ -260,22 +260,22 @@ Week 5 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 
 
 - **时间紧（≤4h）**：跑 `week5_summary.py` 自测 17 题 + 过一遍四大核心问题 + 速查表
 - **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成性能报告模板
-- **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week5 学习总结博客
+- **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week 6 学习总结博客
 
 ---
 
 ### 今日总结
 
-Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
+Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 
 1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 profiling 仪表盘 → Day7 核心问题地图
 2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
 3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
 4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
 5. **常见误区澄清**：Decode 慢≠算力不够、Continuous≠Dynamic、PagedAttention 非直接加速、profiling 非只测时间
-6. **Week6 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
+6. **Week 7 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
 
-掌握这些后，你就有了推理系统的全局视角——Week 6 我们深入 Batching 与调度优化，把 Week 5 的单请求引擎升级为高吞吐服务。
+掌握这些后，你就有了推理系统的全局视角——Week 7 我们深入 Batching 与调度优化，把 Week 6 的单请求引擎升级为高吞吐服务。
 
 ---
 
@@ -351,18 +351,16 @@ Day 7 我们把 Week 5 的碎片知识连成了推理系统的完整地图：
 ## 📁 本周目录结构
 
 ```
-aiinfra/daily/week5/
-├── README.md # 周概览
-├── day1/kernels/prefill_decode_simulation.py # Prefill/Decode 模拟
-├── day2/kernels/kv_cache.cu # KVCache 类
-├── day3/kernels/mini_vllm_scheduler.py # mini vLLM 调度器
-├── day4/kernels/paged_attention.cu # PagedAttention kernel
-├── （FlashDecoding 已移至 Week 6 Day 2）
+aiinfra/daily/week6/
+├── README.md                      # 周概览
+├── day1/kernels/prefill_decode_simulation.py  # Prefill/Decode 模拟
+├── day2/kernels/kv_cache.cu       # KVCache 类
+├── day3/kernels/mini_vllm_scheduler.py  # mini vLLM 调度器
+├── day4/kernels/paged_attention.cu  # PagedAttention kernel
 ├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
-├── day6/kernels/profile_engine_v0.py # 端到端 profiling
-├── （量化专题已移至 Week 6 Day 5）
-├── day7/kernels/week5_summary.py # 总结日自测脚本
-└── images/ # 本周 SVG 插图
+├── day6/                          # FlashDecoding
+├── day7/kernels/week5_summary.py  # 总结日自测脚本（文件名沿用历史，内容对齐 Week 6）
+└── images/                        # 本周 SVG 插图
 ```
 
 > 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
@@ -376,7 +374,7 @@ aiinfra/daily/week5/
 - **CUDA Graph 文档**：NVIDIA CUDA C++ Programming Guide → Graphs
 - **nsys/ncu 文档**：NVIDIA Nsight Systems / Nsight Compute
 
-## ✅ Week 5 完成标准
+## ✅ Week 6 完成标准
 
 - [ ] 能清晰区分 Prefill 和 Decode 的计算/内存特征，说清各自瓶颈
 - [ ] KV Cache 输出与无 cache 版本一致，理解 5D 布局与显存占用
@@ -387,5 +385,5 @@ aiinfra/daily/week5/
 - [ ] 能列出推理系统四大核心问题，每个给出 2-3 个解决方案
 - [ ] 能对比 Continuous Batching 和 Dynamic Batching
 - [ ] 完成本周 17 道面试题的自问自答
-- [ ] 整理 GitHub 仓库，生成 Week 5 性能报告
-- [ ] 规划 Week 6（Batching & 调度）的学习重点
+- [ ] 整理 GitHub 仓库，生成 Week 6 性能报告
+- [ ] 规划 Week 7（Batching & 调度）的学习重点

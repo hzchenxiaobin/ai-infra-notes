@@ -9,7 +9,7 @@
 3. 学会使用 `cudaFuncGetAttributes` 获取 kernel 资源使用情况
 4. 理解 register spilling 的危害和检测方法
 5. 学会使用 `__launch_bounds__` 控制寄存器使用
-6. 能用 CUDA Occupancy Calculator 计算理论 occupancy
+6. 能用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` API 查询理论 occupancy
 
 > 💡 **为什么重要**：Day 1 知道了 GPU 如何执行代码，Day 2 要知道 GPU **能同时执行多少**代码。Occupancy 决定了 GPU 隐藏延迟的能力，是 kernel 调优的核心指标之一。
 
@@ -262,7 +262,7 @@ __launch_bounds__(128, 8) __global__ void spill_kernel(const float* in, float* o
 编译验证：
 
 ```bash
-nvcc -Xptxas -v week1/day2/exercise/register_spill.cu
+nvcc -Xptxas -v day2/exercise/register_spill.cu
 ```
 
 输出：
@@ -504,15 +504,15 @@ ncu \
 - `sm__occupancy.avg.pct_of_peak_sustained_elapsed`：实际 occupancy 百分比
 - `launch__registers_per_thread`：每个线程的寄存器数
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— ReLU
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/relu>
 
 **与今日知识的关联**：
 
-转置是纯数据重排、零计算的 memory-bound kernel，代码极简，适合观察 block 形状（如 16×16 vs 32×8）与寄存器用量对 Occupancy 的影响。用 ncu 对比不同 blockDim 下的 achieved occupancy，直接验证 Day 2 的理论。
+ReLU 是纯 element-wise 的 memory-bound kernel，代码极简、寄存器占用极低，适合专注观察 block size 与寄存器用量对 Occupancy 的影响。用 ncu 对比不同 blockDim 下的 achieved occupancy，直接验证 Day 2 的理论。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU ReLU 题目](https://leetgpu.com/challenges/relu)上记录通过耗时，用 ncu 对比不同 block size 的性能差异。完整题解见 [ReLU 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-relu-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 2）
 
@@ -581,22 +581,24 @@ __launch_bounds__(256, 4) __global__ void version_c(const float* in, float* out,
 | B | | | | |
 | C | | | | |
 
-#### 实验 2：用 CUDA Occupancy Calculator 验证
+#### 实验 2：用 Occupancy API 验证理论 occupancy
 
-打开 CUDA Occupancy Calculator（Excel 文件，通常在 CUDA Samples 中），输入：
-- CUDA Capability
-- Block size
-- Registers per thread
-- Shared memory per block
+> ⚠️ 老教程常用的 CUDA Occupancy Calculator（Excel 工具）自 CUDA 12 起已停止维护，功能并入 Nsight Compute 的 Occupancy 页面。代码内查询理论 occupancy 请改用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` API：
 
-对比理论 occupancy 和 ncu 测得的实际 occupancy。
+```cuda
+int numBlocks;
+cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks, compute_intensive, 256, 0);
+// occupancy = numBlocks × (256 / 32) / 48  （RTX 5090 每 SM 最多 48 warp）
+```
+
+对任务 1 的 kernel 查询不同 block size 下的 active blocks，换算成理论 occupancy，再与 ncu 测得的实际 occupancy 对比。完整可编译示例见 Day 3 的 [occupancy_verify.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week1/day3/exercise/occupancy_verify.cu)。
 
 #### 实验 3：检测 Register Spilling
 
 用以下命令编译版本 B：
 
 ```bash
-nvcc -Xptxas -v -o occupancy_test_b day2/kernels/occupancy_test_b.cu
+nvcc -Xptxas -v -o occupancy_test_b day2/exercise/occupancy_test_b.cu
 ```
 
 观察输出中是否有 `lmem`（local memory）非零。
@@ -617,7 +619,7 @@ ptxas info : Function properties for version_b
 - [ ] 理解为什么寄存器过多会降低 occupancy
 - [ ] 能手动计算一个 kernel 的理论 occupancy
 - [ ] 记录不同配置下的 occupancy 变化表
-- [ ] 了解 CUDA Occupancy Calculator 的使用
+- [ ] 能用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 查询理论 occupancy（Excel 版计算器已弃用，见 Day 3 §3.4）
 - [ ] 能检测 register spilling
 - [ ] 理解 `__launch_bounds__` 的使用场景和代价
 
@@ -690,7 +692,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 <details>
 <summary>点击查看答案</summary>
 
- - 使用 CUDA Occupancy Calculator
+ - 使用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` API（Excel 版 Occupancy Calculator 自 CUDA 12 起已弃用）
  - 或手动：根据 SM 资源限制，计算最多能同时驻留多少个 warp
 
 ---

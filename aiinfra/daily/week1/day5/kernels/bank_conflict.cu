@@ -52,11 +52,28 @@ int main() {
     dim3 block(TILE_DIM, BLOCK_ROWS);
     dim3 grid(1, 1);
 
+    // 校验 lambda：kernel 做的是 tile 内转置，out[y][x] 应等于 in[x][y]
+    auto check = [&](const char* name) {
+        cudaMemcpy(h_out, d_out, N * sizeof(float), cudaMemcpyDeviceToHost);
+        bool ok = true;
+        for (int y = 0; y < TILE_DIM && ok; ++y) {
+            for (int x = 0; x < TILE_DIM; ++x) {
+                if (h_out[y * TILE_DIM + x] != h_in[x * TILE_DIM + y]) {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        printf("%s correctness: %s\n", name, ok ? "PASS" : "FAIL");
+    };
+
     conflict_read<<<grid, block>>>(d_out, d_in);
     cudaDeviceSynchronize();
+    check("conflict_read");
 
     no_conflict_read<<<grid, block>>>(d_out, d_in);
     cudaDeviceSynchronize();
+    check("no_conflict_read");
 
     printf("Bank conflict kernels finished. Use ncu to compare metrics.\n");
 

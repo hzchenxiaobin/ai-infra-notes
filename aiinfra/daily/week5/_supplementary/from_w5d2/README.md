@@ -295,7 +295,7 @@ FlashAttention (N=2048): 10.355 ms / forward
 Speedup: 0.09x
 ```
 
-> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, load_inline 编译 Day 2 的 flash_attention_v2.cu）。**手写 FA 比 standard 还慢**（Speedup < 1）——Day 2 的 kernel 是教学版（单 block、无并行 tile、Br=Bc=64 固定），IO 节省被 launch/同步开销淹没。真实 FA 加速需 CUTLASS 级别的 kernel 工程化（见 Day 6b WMMA、Day 4b CUTLASS）。`Max diff ~1e-2` 偏大，因 FP32 累加顺序差异（非 bug，教学版未做数值稳定化）。
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, load_inline 编译 Day 2 的 flash_attention_v2.cu）。**手写 FA 比 standard 还慢**（Speedup < 1）——Day 2 的 kernel 是教学版（单 block、无并行 tile、Br=Bc=64 固定），IO 节省被 launch/同步开销淹没。真实 FA 加速需 CUTLASS 级别的 kernel 工程化（见 Week 3 手写 WMMA GEMM、Day 4 CUTLASS 源码分析）。`Max diff ~1e-2` 偏大，因 FP32 累加顺序差异（非 bug，教学版未做数值稳定化）。
 
 > ⚠️ **预期结果**：N 较小时 FlashAttention 可能没有优势（甚至略慢），因为 kernel launch 和 shared memory 开销。N 越大优势越明显。
 

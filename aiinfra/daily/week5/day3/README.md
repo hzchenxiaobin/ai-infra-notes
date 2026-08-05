@@ -10,13 +10,13 @@
 4. 实现并运行 `flash_attention_v2.cu`，与 CPU 标准 Attention 对比误差 < 1e-3，支持 `grid=(N/Br, H, B)` 配置<br>
 5. 能正确处理 **N 不是 Br 倍数** 的边界情况，理解 `__syncthreads()` 只需在 tile 加载后使用<br>
 
-> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 3 读官方源码、Day 4 学 FA2 改进、Day 5 集成到 Mini 引擎，全部建立在今天的 Kernel 之上。
+> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 6 读官方源码、学 FA2 改进，FA 集成 Mini 引擎见 `_supplementary/from_w5d2`，全部建立在今天的 Kernel 之上。
 
 ---
 
 ### 学前导读：从 PyTorch 教学版到 CUDA Kernel
 
-Day 1 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online softmax 正确性。但那个版本用 Python for 循环遍历 Q tile 和 KV tile，速度比标准 Attention 还慢——它只验证了算法，没有发挥 GPU 并行。
+Day 2 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online softmax 正确性。但那个版本用 Python for 循环遍历 Q tile 和 KV tile，速度比标准 Attention 还慢——它只验证了算法，没有发挥 GPU 并行。
 
 今天的任务是把三公式"翻译"成真正的 CUDA Kernel。核心难点有三个：
 
@@ -77,7 +77,7 @@ SRAM 使用量 = `Br×d + 2×Bc×d` 个 float。以 Br=Bc=64, d=64 为例：
 s_Q: 64×64 = 4096 floats = 16 KB
 s_K: 64×64 = 4096 floats = 16 KB
 s_V: 64×64 = 4096 floats = 16 KB
-总计: 48 KB ≤ 164 KB (RTX 5090 上限) ✓
+总计: 48 KB ≤ 100 KB (RTX 5090 上限) ✓（且恰好等于静态 `__shared__` 48 KB/block 的统一硬上限）
 ```
 
 > ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 S=QK^T 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
@@ -480,6 +480,8 @@ Tile: Br=64, Bc=64, Threads=256
  GPU Time: 0.777 ms
 ```
 
+> ⚠️ **验证覆盖范围说明**：CPU 参考对比只覆盖第一个 head（B=0, H=0）。其余 batch/head 的正确性依赖结构对称性——所有 head 走的是同一份 kernel 代码、同一套 tiling 逻辑，仅 `bhOffset` 不同。如需全量验证，可在 main 里对每个 (b, h) 循环调用 `cpuAttention` + `checkResult`（留作练习）。
+
 #### 任务 3：验证 SRAM 使用量与 ncu 分析
 
 **检查 SRAM 使用量**：
@@ -540,7 +542,7 @@ ncu --metrics \
 
 修改 Br=128, Bc=128，重新编译运行，观察 SRAM 使用量和性能变化。
 
-> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB，仍在 RTX 5090 上限内但 occupancy 可能下降。
+> 提示：SRAM = (Br + 2×Bc) × d × 4 bytes。Br=Bc=128 时为 96 KB——这**超过了静态 `__shared__` 的 48 KB/block 硬上限**，必须改用动态 shared memory 并调用 `cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize, ...)` opt-in，否则编译即失败；且 RTX 5090 每 block 动态上限 99 KB、每 SM 100 KB，96 KB 意味着每 SM 只能驻留 1 个 block，occupancy 显著下降。
 
 #### 实验 2：实现向量化加载
 
@@ -558,7 +560,7 @@ ncu --metrics \
 
 ### 今日总结
 
-Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
+Day 3 我们把 Day 1-2 的理论推导变成了可编译的 CUDA Kernel：
 
 1. **线程配置**：一个 Block 处理一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
 2. **Warp 分工**：每个 warp 负责 ROWS_PER_WARP 行 Q，warp 内 32 线程协作做归约，跨 warp 无需通信
@@ -567,7 +569,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 5. **同步策略**：`__syncthreads` 只需在 tile 加载后和切换 tile 前使用，warp 内用 `__shfl` 硬件同步
 6. **边界处理**：N 不是 Br 倍数时无效行填 0，不影响累加结果
 
-掌握这些后，你就拥有了手写 FlashAttention 的完整能力。明天读官方源码会发现，我们的教学版与官方的差距主要在 async copy、双缓冲和 Tensor Core。
+掌握这些后，你就拥有了手写 FlashAttention 的完整能力。Day 6 读官方源码会发现，我们的教学版与官方的差距主要在 async copy、双缓冲和 Tensor Core。
 
 ---
 
@@ -608,6 +610,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
  - 每个 warp 维护 ROWS_PER_WARP 组 (m, l, acc[d]) 状态，其中 acc[d] 是大头：ROWS_PER_WARP × d 个 float
  - 以 ROWS_PER_WARP=8, d=64 为例：acc 占 512 个 float，加上 m/l/索引，每线程约 88-120 个 register
  - 问题：register 压力大 → occupancy 下降（RTX 5090 每 SM 最多 65536 个 register，120 reg/thread 时每 SM 只能跑 ~544 线程 ≈ 2 个 block）
+ - 这套"registers/thread → 每 SM 线程数 → 每 SM block 数 → occupancy"的推算法就是 Week 1 Day 2 的 occupancy 四步法，可以把今天的数字代进去完整走一遍
  - 缓解：减小 ROWS_PER_WARP（增加 WARPS_PER_BLOCK）或减小 d；官方实现用 warp group 子块划分优化
 
 </details>
@@ -619,7 +622,7 @@ Day 2 我们把 Day 1 的理论推导变成了可编译的 CUDA Kernel：
 <summary>点击查看答案</summary>
 
  - SRAM = (Br × d + 2 × Bc × d) × 4 bytes（K/V 不复用）
- - 太大：超过 shared memory 上限（RTX 5090 164 KB/SM）→ 编译失败；或 occupancy 暴跌
+ - 太大：超过 shared memory 上限（RTX 5090 100 KB/SM，静态 `__shared__` 另有 48 KB/block 硬上限）→ 编译失败；或 occupancy 暴跌
  - 太小：KV tile 循环次数多（N/Bc 轮），每轮的 tile 加载和 `__syncthreads` 开销占比增大
  - 典型值：d=64, Br=Bc=64 时 SRAM = 48 KB，occupancy 与计算效率的平衡点
 

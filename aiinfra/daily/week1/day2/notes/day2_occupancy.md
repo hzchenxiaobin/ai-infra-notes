@@ -7,7 +7,7 @@
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/occupancy_test kernels/occupancy_test.cu
+nvcc -o day2/kernels/occupancy_test day2/kernels/occupancy_test.cu
 ```
 
 ## Profiling 任务
@@ -22,7 +22,7 @@ ncu \
     launch__registers_per_thread,\
     launch__shared_mem_per_block_dynamic,\
     launch__shared_mem_per_block_static \
-  ./kernels/occupancy_test
+  ./day2/kernels/occupancy_test
 ```
 
 **观察重点**：
@@ -32,7 +32,7 @@ ncu \
 
 ### 任务 2：对比不同寄存器用量下的 occupancy
 
-修改 `kernels/occupancy_test.cu` 中 `#pragma unroll` 的参数或增加局部变量，重新编译并记录：
+修改 `day2/kernels/occupancy_test.cu` 中 `#pragma unroll` 的参数或增加局部变量，重新编译并记录：
 
 | 版本 | 寄存器/线程 | 理论 Occupancy | 实际 Occupancy |
 |------|------------|---------------|---------------|

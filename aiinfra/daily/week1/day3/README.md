@@ -7,7 +7,7 @@
 1. 学会查找和运行 CUDA 官方 Samples，理解 NVIDIA 推荐的编程模式
 2. 掌握 `deviceQuery` 输出中每个字段的含义，能在代码中用 `cudaGetDeviceProperties` 查询
 3. 能根据 GPU 参数计算**峰值算力**和**显存带宽**，建立「理论上限」直觉
-4. 掌握 CUDA Occupancy Calculator 的使用方法，理解四步手算流程
+4. 掌握 Occupancy 四步手算流程，理解每一步背后的资源约束
 5. 能手算 kernel 的**理论 Occupancy**，并用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 验证
 6. 理解寄存器、共享内存、block size 三种资源约束如何成为 occupancy 瓶颈
 
@@ -97,6 +97,8 @@ cudaGetDeviceProperties(&prop, dev);
 | `maxThreadsPerMultiProcessor` | 每个 SM 最大线程数 | RTX 5090 为 1536 |
 | `maxBlocksPerMultiProcessor` | 每个 SM 最大 block 数 | RTX 5090 为 24 |
 | `maxGridSize` | Grid 最大维度 | 决定能启动多少 block |
+
+> ⚠️ `maxBlocksPerMultiProcessor`（RTX 5090 为 24）**不在官方 deviceQuery 的输出里**，数值来源是 CUDA Occupancy 工具链与官方文档（见 [硬件参数事实源](../../reference/hardware_specs.md)）；代码中可通过 `cudaDeviceProp` 同名字段或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 验证（见 3.6）。
 
 ###### 内存相关
 
@@ -219,39 +221,16 @@ RTX 5090: 104.75 TFLOPS / 1.792 TB/s ≈ 58.45 FLOP/byte
 
 ---
 
-#### 3.4 CUDA Occupancy Calculator
+#### 3.4 Occupancy 工具变迁：Excel 计算器已弃用
 
-CUDA Occupancy Calculator 是一个 Excel 工具，可以计算理论 occupancy。它通常位于：
+老教程常提到的 CUDA Occupancy Calculator（Excel 工具，`CUDA_Occupancy_Calculator.xls`）**自 CUDA 12 起已停止维护**，其功能并入了两个更可靠的入口：
 
-```bash
-/usr/local/cuda/tools/CUDA_Occupancy_Calculator.xls
-```
-
-或者在 NVIDIA 官网下载最新版。
+1. **Nsight Compute 的 Occupancy 页面**：ncu 报告里直接给出 theoretical / achieved occupancy 及瓶颈资源；
+2. **代码内 API**：`cudaOccupancyMaxActiveBlocksPerMultiprocessor`（见 3.6），返回精确的 active blocks。
 
 ![CUDA Occupancy Calculator 使用流程](../images/occupancy_calculator_workflow.svg)
 
-**使用步骤**：
-1. 输入 GPU 的 Compute Capability
-2. 输入 Kernel 的参数：
- - Threads per block
- - Registers per thread
- - Shared memory per block
-3. 读取结果：
- - Active Warps per SM
- - Occupancy (%)
- - Active Blocks per SM
- - 哪个资源是瓶颈
-
-**示例**：
-- GPU：RTX 5090 (Compute Capability 12.0)
-- Block size：256 threads
-- Registers per thread：64
-- Shared memory per block：0
-
-计算结果会显示：
-- 理论 Occupancy：50%
-- 瓶颈资源：Registers per thread
+因此本课程不再使用 Excel 工具，推荐工作流是：**手算理解原理（3.5）→ API 精确验证（3.6）→ ncu 实测（Day 6）**。
 
 ---
 
@@ -310,7 +289,7 @@ active_warps = 4 × 8 = 32
 occupancy = 32 / 48 = 66.7%
 ```
 
-> 💡 上述计算基于 SM 资源上限做简化建模，用于**理解原理和快速估算**。要得到与硬件完全一致的精确值，建议使用官方 CUDA Occupancy Calculator 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`。注意 RTX 5090（消费级 GB202）的 SM 参数（1536 threads, 48 warps, 24 blocks, 100KB smem）与数据中心 Blackwell（B200: 2048 threads, 64 warps, 32 blocks, 228KB smem）不同，请勿混用。
+> 💡 上述计算基于 SM 资源上限做简化建模，用于**理解原理和快速估算**。要得到与硬件完全一致的精确值，建议用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`（3.6）或 Nsight Compute 的 Occupancy 页面。注意 RTX 5090（消费级 GB202）的 SM 参数（1536 threads, 48 warps, 24 blocks, 100KB smem）与数据中心 Blackwell（B200: 2048 threads, 64 warps, 32 blocks, 228KB smem）不同，请勿混用。
 
 ---
 
@@ -335,20 +314,7 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks,      // 输出：每 S
 
 #### 3.7 Occupancy 为什么重要
 
-Occupancy 衡量的是一个 SM 上同时活跃的 warp 数量占最大能力的比例。更高的 occupancy 意味着有更多的 warp 可以轮换执行，从而更好地**隐藏延迟**。
-
-| 操作 | 大致延迟 |
-|------|---------|
-| 寄存器访问 | ~1 cycle |
-| Shared Memory 访问 | ~20–30 cycles |
-| L2 Cache 访问 | ~100–200 cycles |
-| Global Memory 访问 | ~400–800 cycles |
-
-当一个 warp 等待 Global Memory 数据返回时，Warp Scheduler 可以切换到另一个准备好的 warp 执行。如果 SM 上驻留的 warp 太少，所有 warp 同时等待时计算单元就会空转。
-
-但注意：**100% occupancy 不等于 100% 性能**。当 occupancy 足够高时（如 50%–75%），再提升的收益会递减，因为瓶颈可能在内存带宽或计算吞吐量上。
-
-> 💡 **经验法则**：不必盲目追求 100% occupancy。通常 50%–75% 就已足够隐藏大部分延迟。如果提高 occupancy 需要牺牲寄存器（导致 spilling），反而会降低性能。
+Occupancy 的物理意义（延迟隐藏机制、各级内存延迟表、"50%–75% 经验法则"）已在 [Day 2](../day2/README.md) 完整讲过，这里不再重复。今天的重点是把数字对齐：**同一组 kernel 参数，手算（3.5）、API（3.6）、ncu 实测（Day 6）三条路得到的结果要能互相印证**。
 
 ---
 
@@ -397,7 +363,7 @@ nvcc -o mini_device_query mini_device_query.cu
 
 ```bash
 python3 tools/cuda_occupancy_calculator.py \
- --cc 8.0 --registers 64 --block-size 256
+ --cc 12.0 --registers 64 --block-size 256
 ```
 
 对比输出与手算结果是否一致。
@@ -420,13 +386,13 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 - 为什么有时调整 block size 对 occupancy 没有帮助
 - `__launch_bounds__` 如何影响编译器的寄存器分配决策
 
-#### 任务 6：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 6：LeetGPU 在线题目 —— Matrix Addition
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
 
-**与今日知识的关联**：Matrix Transpose 是纯数据重排的 memory-bound 算子（算术强度 ≈ 0），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block 形状（16×16 / 32×8 / 32×16）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block 越大越快，中等规模往往已经能占满带宽。
+**与今日知识的关联**：Matrix Addition 是 2D 的纯 memory-bound 算子（算术强度 ≈ 0.08），非常适合用今天的 Occupancy 知识做调参实验。用 `cuda_occupancy_calculator.py` 或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 预估不同 block 形状（16×16 / 32×8 / 32×16）下的 active blocks 数量，再用 ncu 实测 `gpu__time_duration.sum`，你会发现：memory-bound kernel 并非 block 越大越快，中等规模往往已经能占满带宽。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 shared memory tiling、bank conflict 分析）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 float4 向量化分析）见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
 #### 任务 7：LeetCode 面试题（8 周计划 · 第 1 周 Day 3）
 
@@ -491,7 +457,7 @@ Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming
 - [ ] 能计算算力带宽比（平衡点），判断 kernel 类型
 - [ ] 能根据 kernel 参数手动计算理论 occupancy（四步法）
 - [ ] 能解释寄存器、共享内存、block size 三种资源约束如何影响 occupancy
-- [ ] 用 Python 版 Occupancy Calculator 或 Excel 验证 Day 2 的 occupancy
+- [ ] 用 Python 版 Occupancy Calculator 验证 Day 2 的 occupancy（Excel 版已弃用，见 3.4）
 - [ ] 运行 `occupancy_verify.cu` 并对比手算与运行时结果
 - [ ] 画出自己 GPU 的 SM 架构简图
 
@@ -505,7 +471,7 @@ Day 3 我们学会了用官方工具了解自己的 GPU，并把概念变成具�
 2. `deviceQuery` 可以告诉我们 GPU 的所有硬件参数
 3. `cudaGetDeviceProperties` 是在代码中查询 GPU 属性的核心 API
 4. 我们学会了计算 GPU 的**峰值算力**和**显存带宽**，以及**算力带宽比**
-5. **CUDA Occupancy Calculator** 可以计算理论 occupancy（四步法）
+5. **Occupancy 四步手算法**可以从资源约束推出理论 occupancy
 6. 我们掌握了 Occupancy 的**手算方法**和**代码验证方法**（`cudaOccupancyMaxActiveBlocksPerMultiprocessor`）
 
 掌握这些后，你才能真正「了解你的武器」，知道它的极限在哪里。
@@ -520,9 +486,9 @@ Day 3 我们学会了用官方工具了解自己的 GPU，并把概念变成具�
 <summary>点击查看答案</summary>
 
  ```text
- bandwidth = memoryClockRate × memoryBusWidth / 8
+ bandwidth = memoryClockRate × 2 (DDR) × memoryBusWidth / 8
  ```
- 注意单位转换：deviceQuery 输出的 memoryClockRate 是 kHz，需转为 Hz；除以 8 将 bits 转为 bytes。
+ 注意单位转换：deviceQuery 输出的 memoryClockRate 是 kHz，需转为 Hz；GDDR 显存为双倍数据速率，需乘 2；除以 8 将 bits 转为 bytes。
 
 </details>
 
@@ -546,7 +512,7 @@ Day 3 我们学会了用官方工具了解自己的 GPU，并把概念变成具�
 <summary>点击查看答案</summary>
 
  - Balance Point = Peak FLOP/s / Peak Bandwidth（单位：FLOP/byte）
- - RTX 5090 约 25 FLOP/byte：每读 1 byte 做少于 25 次运算 → memory-bound；多于 25 次 → compute-bound
+ - RTX 5090 ≈ 58.45 FLOP/byte（104.75 TFLOPS ÷ 1.792 TB/s，见 [硬件参数事实源](../../reference/hardware_specs.md)）：每读 1 byte 做少于 58.45 次运算 → memory-bound；多于 58.45 次 → compute-bound
  - 这是 Roofline 模型的核心，能快速判断 kernel 瓶颈类型
 
 </details>

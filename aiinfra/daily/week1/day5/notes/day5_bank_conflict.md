@@ -7,7 +7,7 @@
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/bank_conflict kernels/bank_conflict.cu
+nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu
 ```
 
 ## Profiling 任务
@@ -21,7 +21,7 @@ ncu \
     l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
     sm__cycles_elapsed.avg,\
     sm__throughput.avg.pct_of_peak_sustained_elapsed \
-  ./kernels/bank_conflict
+  ./day5/kernels/bank_conflict
 ```
 
 **观察重点**：
@@ -35,12 +35,12 @@ ncu \
 # 仅运行 conflict 版本
 ncu --kernel-name regex:conflict_read \
   --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,sm__cycles_elapsed.avg \
-  ./kernels/bank_conflict
+  ./day5/kernels/bank_conflict
 
 # 仅运行无 conflict 版本
 ncu --kernel-name regex:no_conflict_read \
   --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,sm__cycles_elapsed.avg \
-  ./kernels/bank_conflict
+  ./day5/kernels/bank_conflict
 ```
 
 ## 数据记录

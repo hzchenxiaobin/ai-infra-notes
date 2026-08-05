@@ -23,7 +23,7 @@ Day 1 的 W8A16 是"权重 INT8 + 激活 FP16"——INT8 是整数，动态范�
 | INT8 | 8 | ±127 | 均匀 | — |
 | FP8 E4M3 | 8 | ±448 | 浮点 | 2x |
 | FP8 E5M2 | 8 | ±57344 | 浮点 | 2x |
-| FP4 E2M1 | 4 | ±4 | 浮点 | 4x |
+| FP4 E2M1 | 4 | ±6 | 浮点 | 4x |
 
 > 💡 **一句话总结**：FP8 = INT8 的带宽 + FP16 的动态范围。Hopper/Blackwell 原生 Tensor Core 支持，算力比 FP16 翻倍。
 
@@ -170,7 +170,7 @@ __global__ void fp8_gemm_kernel(
 Blackwell（sm_120）支持 FP4（E2M1）：
 - 4 位浮点：1 符号 + 2 指数 + 1 尾数
 - 算力：FP16 的 4x（RTX 5090 FP4 理论 ~836 TFLOPS）
-- 精度：极低（只有 ±4 范围），需要精细的 scaling factor
+- 精度：极低（动态范围 ±6，与 Day 1 §1.4 NVFP4 表一致），需要精细的 scaling factor
 
 ##### FP4 的挑战
 
@@ -246,9 +246,9 @@ for model_size in ['7B', '13B']:
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [74](https://leetcode.cn/problems/search-a-2d-matrix/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/74_search-a-2d-matrix.html) |
-| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z字形 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_search-a-2d-matrix-ii.html) |
-| [33](https://leetcode.cn/problems/search-in-rotated-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/33_search-in-rotated-sorted-array.html) |
+| [74](https://leetcode.cn/problems/search-a-2d-matrix/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/74_搜索二维矩阵.html) |
+| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z字形 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
+| [33](https://leetcode.cn/problems/search-in-rotated-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/33_搜索旋转排序数组.html) |
 
 ---
 

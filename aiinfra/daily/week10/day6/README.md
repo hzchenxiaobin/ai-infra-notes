@@ -167,7 +167,7 @@ def top_p_sampling(logits, p=0.9):
     return topk_idx[sample].item()
 ```
 
-**验收**：正确性 PASS（与 `torch.top_p` 对比），温度 scaling 可调。
+**验收**：正确性 PASS（与手写参考实现逐元素对比；行为对齐 vLLM `SamplingParams(top_p=0.9)`——即按概率降序累计截断并重采样），温度 scaling 可调。
 
 > 💡 **面试口述**：top-p 是"按概率排序取累计 ≥ p 的核"，比 top-k 更自适应（概率分布集中时核小，分散时核大）。kernel 实现难点是排序 + 累加 + 截断三步，CUDA 版需用 CUB 的 sort + scan。
 

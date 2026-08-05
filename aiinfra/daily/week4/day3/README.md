@@ -379,9 +379,9 @@ print(f"dB match: {torch.allclose(B.grad, dB_expected, atol=1e-5)}")
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [152](https://leetcode.cn/problems/maximum-product-subarray/) | Medium | DP（一维，正负交替） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_maximum-product-subarray.html) |
-| [918](https://leetcode.cn/problems/maximum-sum-circular-subarray/) | Medium | DP（环形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/918_maximum-sum-circular-subarray.html) |
-| [410](https://leetcode.cn/problems/split-array-largest-sum/) | Hard | DP/二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_split-array-largest-sum.html) |
+| [152](https://leetcode.cn/problems/maximum-product-subarray/) | Medium | DP（一维，正负交替） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
+| [918](https://leetcode.cn/problems/maximum-sum-circular-subarray/) | Medium | DP（环形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/918_最大环形子数组和.html) |
+| [410](https://leetcode.cn/problems/split-array-largest-sum/) | Hard | DP/二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
 
 ---
 

@@ -371,9 +371,9 @@ assert(addr % 16 == 0);  // 调试时验证
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [486](https://leetcode.cn/problems/predict-the-winner/) | Medium | DP（区间博弈） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/486_predict-the-winner.html) |
-| [10](https://leetcode.cn/problems/regular-expression-matching/) | Hard | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/10_regular-expression-matching.html) |
-| [188](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/) | Hard | DP（状态机） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/188_best-time-to-buy-and-sell-stock-iv.html) |
+| [486](https://leetcode.cn/problems/predict-the-winner/) | Medium | DP（区间博弈） | 暂无 |
+| [10](https://leetcode.cn/problems/regular-expression-matching/) | Hard | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/10_正则表达式匹配.html) |
+| [188](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/) | Hard | DP（状态机） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html) |
 
 ---
 

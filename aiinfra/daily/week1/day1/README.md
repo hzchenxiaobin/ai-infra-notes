@@ -1,4 +1,4 @@
-## Day 1：GPU 执行模型基础（SM/Warp/Thread）GPU 执行模型基础
+## Day 1：GPU 执行模型基础（SM/Warp/Thread）
 
 ### 🎯 目标
 
@@ -117,12 +117,12 @@ AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的�
 | 架构　　　　　　　　　| Blackwell (GB202)| Ampere　　　　　　 | Blackwell (GB100)　　|
 | 显存　　　　　　　　　| 32 GB GDDR7　　| 40 GB HBM2e　　　　| 192 GB HBM3e　　　　 |
 | 内存带宽　　　　　　　| ~1.79 TB/s　　 | ~1.55 TB/s　　　　 | ~8 TB/s　　　　　　　|
-| FP32 算力　　　　　　 | 104.75 TFLOPS　| 19.5 TFLOPS　　　　| ~90 TFLOPS　　　　　 |
-| FP16 Tensor Core 算力 | ~209 TFLOPS　　| 312 TFLOPS　　　　 | ~989 TFLOPS (sparse) |
-| SM 数量　　　　　　　 | 170　　　　　　| 108　　　　　　　　| 132　　　　　　　　　|
+| FP32 算力　　　　　　 | 104.75 TFLOPS　| 19.5 TFLOPS　　　　| ~80 TFLOPS（需核实） |
+| FP16 Tensor Core 算力 | ~209 TFLOPS　　| 312 TFLOPS　　　　 | ~2.25 PFLOPS（dense）|
+| SM 数量　　　　　　　 | 170　　　　　　| 108　　　　　　　　| 148（一说 208，需核实）|
 | 典型场景　　　　　　　| 本课程开发/学习 | 通用训练/推理　　　| 大模型推理、长上下文 |
 
-> ⚠️ **注意**：本课程所有代码均在 **RTX 5090（170 SM, 128 FP32 cores/SM, 1536 threads/SM, 48 warps/SM, 24 blocks/SM, 32 GB GDDR7, 1792 GB/s, 104.75 TFLOPS FP32, Ridge Point ≈ 58.45 FLOP/Byte）** 上测试。上表中 A100/B200 仅供对比参考，不是本课程的硬件基准。
+> ⚠️ **注意**：本课程所有代码均在 **RTX 5090（170 SM, 128 FP32 cores/SM, 1536 threads/SM, 48 warps/SM, 24 blocks/SM, 32 GB GDDR7, 1792 GB/s, 104.75 TFLOPS FP32, Ridge Point ≈ 58.45 FLOP/Byte）** 上测试（Ridge Point 的含义和推导详见 Day 3 / Day 6）。上表中 A100/B200 仅供对比参考，不是本课程的硬件基准。
 
 **RTX 5090 的 FP32 峰值算力是怎么算出来的？**
 
@@ -273,31 +273,11 @@ if (warp_id % 2 == 0) {
 
 > **一句话**：divergence 的代价是按 warp 支付的，不是按线程。只要一个 warp 内分支一致，就不会产生 divergence。
 
-##### 措施 2：使用 warp-level primitive（如 `__ballot_sync`）处理分支
+##### 措施 2：使用 warp-level primitive 处理分支
 
-**原理**：当分支不可避免时，可以用 warp-level primitive **显式控制 warp 内线程的协作**，避免编译器生成低效的隐式分支代码。核心思想是：把"某些线程做 A、某些线程做 B"的逻辑，转换为"warp 内所有线程共同参与的数据移动或规约操作"。
+**原理**：当分支不可避免时，可以用 warp-level primitive（如 `__ballot_sync`、`__shfl_sync`）把"部分线程走 A、部分线程走 B"的分支逻辑，转换成 warp 内所有线程共同参与的掩码运算或数据交换，绕开串行执行两条路径的代价。
 
-常用 warp primitive：
-
-| 函数 | 作用 |
-|------|------|
-| `__ballot_sync(mask, predicate)` | 返回 warp 内满足条件 predicate 的线程掩码 |
-| `__shfl_sync(mask, var, srcLane)` | 从指定 lane 获取数据 |
-| `__reduce_*_sync` | 对 warp 内数据进行规约（如 sum、max、and） |
-
-**典型场景**：需要找到 warp 内满足条件的线程数量，或需要让满足条件的线程把数据传给其他线程。
-
-```cuda
-// 例子：统计 warp 内值大于阈值的线程数
-unsigned mask = __ballot_sync(0xFFFFFFFF, val > threshold);
-int count = __popc(mask); // 统计活跃线程数
-```
-
-**为什么这能避免 divergence？**
-
-因为 `__ballot_sync` 让所有线程同时执行同一个"比较并生成掩码"的操作，不再走 if-else 分支。后续可以根据掩码做 warp-level 的数据重排或规约，而不是让 warp 串行执行两个分支路径。
-
-> **一句话**：warp primitive 把分支变成 warp 内的位运算和数据交换，绕过了串行执行不同分支的代价。
+> 💡 这类原语本周后面会用到（Day 5 的 LeetGPU Reduction 题用 warp shuffle 做归约），今天只需记住名字和用途，具体用法详见 Day 5。
 
 ##### 措施 3：数据布局设计时考虑 warp 访问模式
 
@@ -579,15 +559,15 @@ total_warps = warps_per_block × num_blocks
 
 > 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— Vector Addition
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/vector-addition>
 
 **与今日知识的关联**：
 
-本题要求用 2D grid/block 覆盖二维矩阵、正确计算行列下标、处理越界边界，直接练习 Day 1 学的线程层次与 ID 映射（从 1D 数组推广到 2D 矩阵）。
+本题要求用 1D grid/block 覆盖一维数组、正确计算 `global_tid`、处理越界边界，直接练习 Day 1 学的线程层次与 ID 映射，是"第一个真正的 CUDA kernel"。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose 题目](https://leetgpu.com/challenges/matrix-transpose)上记录通过耗时，用 ncu 对比不同 block size / tile size 的性能差异。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Vector Addition 题目](https://leetgpu.com/challenges/vector-addition)上记录通过耗时，用 ncu 对比不同 block size 的性能差异。完整题解见 [Vector Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-addition-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 1）
 

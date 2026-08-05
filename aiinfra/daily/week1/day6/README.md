@@ -1,4 +1,4 @@
-## Day 6：Nsight Profiling 实战（ncu + nsys）Nsight Profiling 实战
+## Day 6：Nsight Profiling 实战（ncu + nsys）
 
 ### 🎯 目标
 
@@ -8,7 +8,7 @@
 2. 掌握常用 `ncu` 命令和关键指标
 3. 掌握常用 `nsys` 命令和时间线分析
 4. 能用 Roofline 模型判断 kernel 瓶颈类型
-5. 能对本 week's kernel 进行系统性的 profiling
+5. 能对本周的 kernel 进行系统性的 profiling
 6. 能写出一份完整的 profiling 报告
 
 > 💡 **为什么重要**：前面的理论学习告诉你"应该怎么做"，而 profiling 告诉你"实际情况是什么"。没有 profiling，优化就是盲人摸象。Nsight 是 AI Infra 工程师的"听诊器"。
@@ -222,20 +222,21 @@ ncu --metrics \
  ./kernels/bank_conflict
 ```
 
-**Step 2：假设看到的数据**
+**Step 2：采集到的数据**
 
-| Kernel | cycles | bank conflicts (load) | sm__throughput | dram__throughput | occupancy |
-|--------|--------|----------------------|----------------|------------------|-----------|
-| `conflict_read` | 12,800 | 1,048,576 | 18% | 45% | 75% |
-| `no_conflict_read` | 3,200 | 0 | 55% | 48% | 75% |
+执行时间来自仓库留档的 nsys 实测（[profiles/week1_profile_summary.md](../../profiles/week1_profile_summary.md)，RTX 5090，2026-08-04）；bank conflict 计数因容器环境 Performance Counter 权限受限（ERR_NVGPUCTRPERM）未能实测，下表给出按 `grid(1,1) × block(32,8)` 估算的量级，有 GPU 权限时用上面的 ncu 命令实测回填：
+
+| Kernel | 执行时间（nsys 实测） | bank conflicts（load，估算） | 说明 |
+|--------|----------------------|------------------------------|------|
+| `conflict_read` | 1,184 ns | ~1,000 次（32 条 shared load warp 指令 × 31 次重放） | 32-way conflict |
+| `no_conflict_read` | 832 ns | 0 | `[32][33]` padding |
 
 **Step 3：分析过程**
 
-1. **cycle 数**：`conflict_read` 慢 4 倍，说明有明显性能问题。
-2. **occupancy**：两者都是 75%，排除并行度不足。
-3. **throughput**：`conflict_read` 的 `sm__throughput` 只有 18%，远低于 `no_conflict_read` 的 55%，说明 SM 计算单元大量空闲。
-4. **bank conflict**：`conflict_read` 有 1,048,576 次 load bank conflict，而 `no_conflict_read` 为 0。
-5. **DRAM throughput**：两者接近（~45-48%），说明 global memory 不是瓶颈。
+1. **执行时间**：`conflict_read` 慢 1.42 倍（1184 vs 832 ns），说明 bank conflict 带来了可观测的代价。注意这是 grid(1,1) 的单 tile 小 kernel，规模放大后差距会进一步拉大。
+2. **occupancy**：两者 launch 配置完全相同，occupancy 一致，排除并行度因素。
+3. **bank conflict**：`conflict_read` 的 load bank conflict 估算约 1,000 次（每次 32-way 冲突 = 31 次额外重放），而 `no_conflict_read` 为 0。
+4. **DRAM throughput**：两者接近，说明 global memory 不是瓶颈。
 
 **结论**：`conflict_read` 的瓶颈是 shared memory bank conflict，导致 shared memory 访问被串行化，SM 大量时间花在等待数据上。
 
@@ -255,6 +256,8 @@ ncu --metrics \
 
 ### Coding 任务：本周 kernel profiling
 
+> 📄 本日任务的命令清单与 Roofline 记录表已留档在 [notes/day6_nsight_profiling.md](notes/day6_nsight_profiling.md)，可对照填写。
+
 #### 任务 1：profiling hello_gpu
 
 ```bash
@@ -271,13 +274,16 @@ nsys profile -o profiles/day1_hello_gpu_timeline ./day1/kernels/hello_gpu
 #### 任务 2：profiling occupancy_test
 
 ```bash
+# 编译（在 aiinfra/daily/week1/ 目录下）
+nvcc -o day2/kernels/occupancy_test day2/kernels/occupancy_test.cu
+
 ncu \
  --metrics \
  sm__occupancy.avg.pct_of_peak_sustained_elapsed,\
  launch__registers_per_thread,\
  launch__shared_mem_per_block_static,\
  sm__throughput.avg.pct_of_peak_sustained_elapsed \
- ./kernels/occupancy_test
+ ./day2/kernels/occupancy_test
 ```
 
 **观察重点**：
@@ -288,13 +294,16 @@ ncu \
 #### 任务 3：profiling transpose
 
 ```bash
+# 编译（在 aiinfra/daily/week1/ 目录下）
+nvcc -o day4/kernels/transpose day4/kernels/transpose.cu
+
 ncu \
  --metrics \
  dram__throughput.avg.pct_of_peak_sustained_elapsed,\
  l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum,\
  l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum,\
  sm__cycles_elapsed.avg \
- ./kernels/transpose
+ ./day4/kernels/transpose
 ```
 
 **观察重点**：
@@ -304,13 +313,18 @@ ncu \
 
 #### 任务 4：profiling bank_conflict
 
+指标与 Day 5 任务 3 相同——这里不是重测一遍，而是把结果**放进跨 kernel 横向对比表**（见文末 Checklist 的 `profiles/week1_profile_summary.md`），结合 Roofline 定位它和其他 kernel 的瓶颈差异：
+
 ```bash
+# 编译（在 aiinfra/daily/week1/ 目录下；Day 5 已编译过可跳过）
+nvcc -o day5/kernels/bank_conflict day5/kernels/bank_conflict.cu
+
 ncu \
  --metrics \
  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,\
  l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,\
  sm__cycles_elapsed.avg \
- ./kernels/bank_conflict
+ ./day5/kernels/bank_conflict
 ```
 
 **观察重点**：
@@ -345,13 +359,13 @@ ncu \
 
 #### 实验 1：生成完整 ncu 报告
 
-对每个 kernel 生成完整报告：
+对每个 kernel 生成完整报告（先按任务 1–4 的命令编译好）：
 
 ```bash
-ncu --set full -o profiles/day6_hello_gpu ./kernels/hello_gpu
-ncu --set full -o profiles/day6_occupancy_test ./kernels/occupancy_test
-ncu --set full -o profiles/day6_transpose ./kernels/transpose
-ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
+ncu --set full -o profiles/day6_hello_gpu ./day1/kernels/hello_gpu
+ncu --set full -o profiles/day6_occupancy_test ./day2/kernels/occupancy_test
+ncu --set full -o profiles/day6_transpose ./day4/kernels/transpose
+ncu --set full -o profiles/day6_bank_conflict ./day5/kernels/bank_conflict
 ```
 
 用 ncu-ui 打开，阅读每个指标的详细说明。
@@ -370,7 +384,7 @@ ncu --set full -o profiles/day6_bank_conflict ./kernels/bank_conflict
 用 nsys 查看：
 - `cudaLaunchKernel` 到 kernel 开始执行的时间
 - 这个时间占整个应用时间的比例
-- 思考如何减少 launch overhead（如 CUDA Graph）
+- 思考如何减少 launch overhead（如 CUDA Graph，**Week 8 详讲**，今天只需知道有这个方向）
 
 ### 验证 Checklist
 

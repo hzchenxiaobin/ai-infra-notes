@@ -410,6 +410,8 @@ week2/
 
 ## 性能对比表（M=N=K=4096）
 
+> ⚠️ **口径说明**：下表是"经验分层估计"口径（面试口述框架用），**不是实测**。本周唯一实测锚点见 Day 3 §3.2 的 v1–v6 表（4096：v3=30.8%、v4=64.3%、v5=62.9%、v6=63.8%，FP32 cuBLAS 基准）。两套口径并存使用、不得混为一谈——面试时说"经验分层"就要声明是估计，说"实测"就引 Day 3 数字。
+
 | 版本 | 时间(ms) | GFLOPS | cuBLAS 百分比 | 关键优化点 |
 |------|---------|--------|--------------|-----------|
 | Naive | | | ~1-3% | 无优化 |
@@ -525,7 +527,7 @@ Day 7 是本周的收尾与验收。通过限时手撕，我们把本周五大�
 4. **GitHub 整理**：把零散产出组织成可展示的项目，体现工程能力
 5. **性能报告**：量化每一层优化的收益，形成完整的优化方法论闭环
 
-本周从 Day 1 的 Warp Shuffle 原语，到 Day 6 的整合 GEMM 达到 cuBLAS 70%，再到 Day 7 的限时手撕验收，构成了一条完整的「CUDA 进阶优化」学习闭环。掌握这些后，你已经具备了手写高性能 kernel 并系统分析其性能瓶颈的能力，这是 AI Infra 工程师的核心竞争力。
+本周从 Day 1 的 Warp Shuffle 原语，到 Day 6 的整合 GEMM 达到 cuBLAS ~63%（FP32 基准，Day 3 实测锚点），再到 Day 7 的限时手撕验收，构成了一条完整的「CUDA 进阶优化」学习闭环。掌握这些后，你已经具备了手写高性能 kernel 并系统分析其性能瓶颈的能力，这是 AI Infra 工程师的核心竞争力。
 
 ---
 
@@ -631,7 +633,7 @@ __global__ void blockReduce(const float* in, float* out, int n) {
 
 **示例**：
 
-> **Q：你的 GEMM 达到了 cuBLAS 70%，剩下的 30% 差在哪？**
+> **Q：你的 GEMM 达到了 cuBLAS ~63%（FP32 基准），剩下的差在哪？**
 >
 > **A**：主要四个差距。第一，没用 Tensor Core，cuBLAS 默认走 WMMA 指令，吞吐远超 FMA。第二，Double Buffering 不完整，global→shared 传输没被计算完全掩盖。第三，缺少 auto-tuning，cuBLAS 有针对每种尺寸的参数查找表。第四，缺少 PTX 内联汇编做指令级调度。达到 90% 的路径是引入 CUTLASS 模板 + Tensor Core + 完整双缓冲。
 
@@ -726,8 +728,8 @@ week2/
 ## ✅ Week 2 完成标准
 
 - [ ] Warp Reduce Kernel 编译运行正确，GPU 结果与 CPU 误差 < 1e-3
-- [ ] Register Blocking GEMM 达到 cuBLAS 40%+（4096 矩阵）
-- [ ] 整合版 GEMM 达到 cuBLAS 65%+（含 float4 + Warp Shuffle）
+- [ ] Register Blocking GEMM 达到 cuBLAS 30%+（4096 矩阵，实测 30.8%）
+- [ ] 整合版 GEMM 达到 cuBLAS ~63%（FP32 基准，含 float4 + Warp Shuffle，Day 3 实测锚点）
 - [ ] FlashAttention 简化版小尺寸测试通过（误差 < 1e-3）
 - [ ] 能用 ncu 判断 kernel 是 memory-bound 还是 compute-bound
 - [ ] 30 分钟内手写 Block Reduce Kernel（含 Warp Shuffle + 两级归约）
@@ -738,4 +740,4 @@ week2/
 
 ---
 
-> 💡 **提示**：Week 2 是从"会写 kernel"到"能优化到 cuBLAS 70%"的关键跃迁。限时手撕是面试的硬门槛，性能报告是项目深度的证明。如果 GEMM 还没到 65%，建议回到 Day 2/6 重新做 float4 + Double Buffering 实验。Week 3 会进入 Transformer 算子手写，GEMM 优化经验是理解 Attention 的基础。
+> 💡 **提示**：Week 2 是从"会写 kernel"到"能优化到 cuBLAS ~63%（FP32 基准）"的关键跃迁。限时手撕是面试的硬门槛，性能报告是项目深度的证明。如果 GEMM 还没到 60%，建议回到 Day 2/6 重新做 float4 + Double Buffering 实验。Week 3 会进入 Transformer 算子手写，GEMM 优化经验是理解 Attention 的基础。

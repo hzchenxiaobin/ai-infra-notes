@@ -10,7 +10,7 @@
 4. 发现本周学习中的薄弱环节，制定补漏计划
 5. 为 Week 2 的 GEMM 优化做好准备
 
-> 💡 **为什么重要**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。Day 7 不是休息，而是把碎片知识连成网络。
+> 💡 **为什么重要**：Week 1 是整个 10 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。Day 7 不是休息，而是把碎片知识连成网络。
 
 ---
 
@@ -93,17 +93,17 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 **关键关系：Shared Memory 与 L1 Cache 共享同一块 SRAM**
 
-RTX 5090 每 SM 有 192KB SRAM，可通过 `cudaFuncSetAttribute` 配置 smem/L1 比例：
+RTX 5090 每 SM 有 **100KB SRAM**（smem/L1 共享口径，见 [硬件参数事实源](../../reference/hardware_specs.md)），可通过 `cudaFuncSetAttribute` 配置 smem/L1 比例：
 ```cuda
-// 配置 100KB shared memory + 64KB L1 cache
+// carveout 是百分比：100 = 尽量把 100KB SRAM 全划给 shared memory
 cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100);
 ```
 
 | 配置 | Shared Memory | L1 Cache | 适用场景 |
 |------|--------------|----------|---------|
-| 高 smem | 100KB | 64KB | tiling 密集（GEMM、Attention） |
-| 平衡 | 64KB | 96KB | 通用 |
-| 高 L1 | 28KB | 152KB | cache 友好（不规则访问） |
+| 高 smem | ~100KB | 剩余少量 | tiling 密集（GEMM、Attention） |
+| 平衡 | ~64KB | ~36KB | 通用 |
+| 高 L1 | ~28KB | ~72KB | cache 友好（不规则访问） |
 
 **什么时候用 Shared Memory，什么时候依赖 L1 Cache？**
 
@@ -442,7 +442,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 <details>
 <summary>📖 显示答案</summary>
 
-在物理上，**Shared Memory 和 L1 Cache 共享同一块 SRAM**（RTX 5090 上每 SM 192KB，可配 100KB smem + 64KB L1 或其他比例，用 `cudaFuncSetAttribute` 配置）。
+在物理上，**Shared Memory 和 L1 Cache 共享同一块 SRAM**（RTX 5090 上每 SM 100KB，smem/L1 共享口径，用 `cudaFuncSetAttribute` 调配两者比例，见 [硬件参数事实源](../../reference/hardware_specs.md)）。
 
 | 维度 | Shared Memory | L1 Cache |
 |------|--------------|----------|
@@ -508,18 +508,20 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 
 ### LeetGPU 综合练习
 
-Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全部概念串起来检验。下表先回顾本周已做的 6 道题，再给出 Day 7 综合练习。
+Week 1 每天都做了一道 LeetGPU 题目，今天用两道**综合练习**把全部概念串起来检验。下表先回顾本周已做的 6 道题，再给出 Day 7 综合练习。
 
 #### 本周 LeetGPU 题目回顾
 
+本周 6 天共布置 6 道题（每天一道、互不重复），Matrix Transpose 的正式布置在 Day 4：
+
 | Day | 题目 | 核心考点 | 状态 |
 |-----|------|---------|------|
-| Day 1 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | 2D grid/block、行列下标映射 | ✅ 已做 |
-| Day 2 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | memory-bound、occupancy 调优 | ✅ 已做 |
-| Day 3 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | block 形状调参、occupancy 实测 | ✅ 已做 |
+| Day 1 | [Vector Addition](https://leetgpu.com/challenges/vector-addition) | 1D grid/block、global_tid 映射 | ✅ 已做 |
+| Day 2 | [ReLU](https://leetgpu.com/challenges/relu) | memory-bound、occupancy 调优 | ✅ 已做 |
+| Day 3 | [Matrix Addition](https://leetgpu.com/challenges/matrix-addition) | block 形状调参、occupancy 实测 | ✅ 已做 |
 | Day 4 | [Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | coalescing + shared memory tiling + bank conflict | ✅ 已做 |
 | Day 5 | [Reduction](https://leetgpu.com/challenges/reduction) | warp shuffle、两级归约、divergence | ✅ 已做 |
-| Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | shared memory tiling、compute-bound | ✅ 已做 |
+| Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | 2D 索引、ncu profiling、Roofline 定位 | ✅ 已做 |
 
 #### 综合练习 1：Matrix Transpose —— 检验 memory-bound 优化
 
@@ -535,28 +537,27 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用一道**综合题**把全
 
 > 💡 完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 综合练习 2：Matrix Multiplication —— 检验 shared memory tiling + bank conflict
+#### 综合练习 2：Matrix Multiplication —— naive GEMM + ncu 定位瓶颈
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
 **与 Week 1 知识的关联**：
 
-本题是 Week 1 的"毕业考试"，综合检验四个核心概念：
-1. **Shared Memory Tiling**（Day 5）：沿 K 维分块加载 A/B tile 到 shared memory，实现数据复用
-2. **Coalesced Access**（Day 4）：全局加载阶段必须 coalesced
-3. **Bank Conflict**（Day 4-5）：shared memory 布局要避免 bank conflict（padding）
-4. **Roofline 判定**（Day 6）：大矩阵 AI ≈ 85 >> Ridge Point → compute-bound，优化方向是减少 shared memory 访问
+本题本周只要求 **naive 版本**（每个线程计算一个输出元素），综合检验三个核心概念：
+1. **2D 线程映射**（Day 1）：用 `blockIdx/threadIdx` 算出输出矩阵的行列坐标
+2. **Coalesced Access 分析**（Day 4）：观察 naive 实现中 A、B 的访问模式，思考 B 的按列读取能否合并
+3. **Roofline 判定**（Day 6）：大矩阵理论 AI（按每矩阵只读一次的最小流量口径 ≈ N/6）远大于 Ridge Point 58.45，属于 compute-bound；但 naive 实现没有数据复用，实际有效 AI 低得多——用 ncu 测 `dram__throughput` 和 `sm__throughput`，看实际瓶颈落在哪一侧
 
-> 💡 完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
+> ⚠️ shared memory tiling、register blocking 等 GEMM 优化属于 **Week 2** 内容，本周不作要求；学有余力可作为 Week 2 预习。完整题解（含 Naive / Tiled / Tiled-nobc / Register Tiling 四个版本 + bank conflict 实测分析）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
 #### 练习提交记录
 
-提交后把通过截图和耗时记录到 `exercise/leetgpu_week1_review.md`（自行创建），按下表格式整理：
+提交后把通过截图和耗时记录到 [exercise/leetgpu_week1_review.md](exercise/leetgpu_week1_review.md)（仓库已提供模板），按下表格式整理：
 
 | 题目 | 耗时 | GFLOPS / 带宽利用率 | 瓶颈类型 | 优化尝试 |
 |------|------|---------------------|---------|---------|
 | Matrix Transpose | | | memory-bound | tiling / padding / block size |
-| Matrix Multiplication | | | compute-bound | tiling / padding / register tiling |
+| Matrix Multiplication | | | 理论 compute-bound，naive 实测为准 | naive + ncu 定位（tiling 属 Week 2 预习） |
 
 ---
 
@@ -701,17 +702,21 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
 ```
 week1/
-├── README.md # 本文件：Week 1 完整指南
-├── kernels/ # CUDA kernel 源码
-│ ├── hello_gpu.cu
-│ ├── occupancy_test.cu
-│ ├── transpose.cu
-│ └── bank_conflict.cu
-├── profiles/ # Profiling 报告
-│ └── week1_profile_summary.md
-└── notes/ # 学习笔记
- └── week1_notes.md
+├── README.md # Week 1 总览（学习地图 + 每日索引）
+├── day1/ # GPU 执行模型：kernels/hello_gpu.cu + notes/
+├── day2/ # Occupancy：kernels/occupancy_test.cu + exercise/（register_spill 等）+ notes/
+├── day3/ # 认识 GPU：exercise/（mini_device_query、occupancy_verify、my_gpu_info 留档）+ notes/
+├── day4/ # 内存层次：kernels/transpose.cu + notes/
+├── day5/ # Bank Conflict：kernels/bank_conflict.cu + notes/
+├── day6/ # Profiling：notes/day6_nsight_profiling.md（复用前 5 天 kernel）
+├── day7/ # 复盘：exercise/leetgpu_week1_review.md + notes/
+├── images/ # 本周 SVG 插图
+├── notes/week1_notes.md # 周学习笔记
+├── profiles/week1_profile_summary.md # Profiling 报告汇总（含实测数据）
+└── tools/cuda_occupancy_calculator.py # Occupancy 手算验证工具
 ```
+
+> 💡 每天的 CUDA 源码在**当天目录**的 `kernels/` 或 `exercise/` 下，编译时先 `cd` 到对应 day 目录（命令均以 `week1/` 为基准路径）。
 
 ---
 
@@ -738,4 +743,4 @@ week1/
 
 ---
 
-> 💡 **提示**：Week 1 是整个 8 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。
+> 💡 **提示**：Week 1 是整个 10 周计划的基石。如果 GPU 执行模型和内存层次理解不牢，后续 GEMM、Attention、推理系统都会吃力。建议反复做 Day 4/5/6 的实验，直到能直觉地判断代码是 memory-bound 还是 compute-bound。

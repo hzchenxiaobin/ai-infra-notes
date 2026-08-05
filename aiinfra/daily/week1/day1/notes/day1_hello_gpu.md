@@ -7,7 +7,7 @@
 
 ```bash
 # cd to your repo root first, e.g.: cd ~/ai-infra-notes/aiinfra/daily/week1
-nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
+nvcc -o day1/kernels/hello_gpu day1/kernels/hello_gpu.cu
 ```
 
 ## Profiling 任务
@@ -15,7 +15,7 @@ nvcc -o kernels/hello_gpu kernels/hello_gpu.cu
 ### 任务 1：使用 nsys 查看 kernel launch 时间线
 
 ```bash
-nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
+nsys profile -o profiles/day1_hello_gpu_timeline ./day1/kernels/hello_gpu
 ```
 
 **观察重点**：
@@ -28,7 +28,7 @@ nsys profile -o profiles/day1_hello_gpu_timeline ./kernels/hello_gpu
 ```bash
 ncu \
   --metrics sm__cycles_elapsed.avg,sm__warps_active.avg.pct_of_peak_sustained_elapsed \
-  ./kernels/hello_gpu
+  ./day1/kernels/hello_gpu
 ```
 
 **观察重点**：

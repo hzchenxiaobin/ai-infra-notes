@@ -1,40 +1,42 @@
-## Day 3：整合优化到 cuBLAS 70%+（GEMM 七层路径）整合优化到 cuBLAS 70%+
+## Day 3：float4 向量化与整合版 GEMM（v1–v6 全系列实测）
 
 ### 🎯 目标
 
 通过今天的学习，你将：
 
-1. 理解从 Register Blocking（~45%）到 cuBLAS 70%+ 还需要哪些优化
+1. 理解从 Register Blocking（4096 实测 30.8%）到整合版（实测 63.4%）还需要哪些优化
 2. 掌握 `float4` 向量化加载的原理和使用条件
 3. 理解 Warp Shuffle 在 GEMM 写回优化中的作用
 4. 实现整合版 GEMM：Register Blocking + float4 + Warp Shuffle + Coalesced Write
 5. 掌握参数精调（Auto-tuning）的方法论
 6. 能用 ncu 验证整合版 GEMM 的性能提升
 
-> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 80%」是顶级 AI Infra 面试题，今天是从 45% 跨越到 70% 的关键一步。每一层优化都有明确的收益来源，理解这些才能在面试中逐层展开。
+> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 80%」是顶级 AI Infra 面试题，今天是从 ~31% 跨越到 ~63%（本机实测）的关键一步。每一层优化都有明确的收益来源，理解这些才能在面试中逐层展开。
 
 ---
 
-### 学前导读：从 45% 到 70% 的优化路线
+### 学前导读：从 ~31% 到 ~63% 的优化路线
 
 ![GEMM 优化层次](../images/gemm_optimization_layers.svg)
 
-Day 2 的 Register Blocking 达到了 cuBLAS ~45%。要从 45% 提升到 70%+，需要叠加以下优化：
+Day 2 的 Register Blocking 实测达 cuBLAS ~31%（4096：32.3%；Day 3 系列中 v3 为 30.8%）。今天叠加以下优化，把 4096 实测推到 ~63%：
 
-| 优化点 | 增益 | 实现复杂度 | 原理 |
+| 优化点 | 增益（预估） | 实现复杂度 | 原理 |
 |--------|------|-----------|------|
 | **float4 向量化加载** | +10-15% | 中 | 128-bit 访问提升 Global Memory 带宽利用率 |
 | **Warp Shuffle 累加** | +5-10% | 中 | Warp 内协作优化写回模式，减少非合并访问 |
 | **Coalesced 写回** | +3-5% | 低 | 用 float4 做合并写入 |
 | **参数精调** | +5-10% | 低 | Auto-tune BM/BN/BK/TM/TN |
 
-这些优化不是孤立的——它们叠加在一起才能达到 70%+。
+> ⚠️ 表中增益为经验预估，与本机实测有出入（例如 float4 实测单步 +33.5%、shuffle/coalesced 写回实测在噪声范围内）。本日一切以任务 2b 的 v1–v6 实测表为准。
+
+这些优化不是孤立的——它们叠加在一起才能达到实测的 63%+。
 
 ---
 
 ### 理论学习
 
-#### 6.1 float4 向量化加载
+#### 3.1 float4 向量化加载
 
 ![float4 向量化加载对比](../images/float4_vectorized_load.svg)
 
@@ -151,7 +153,7 @@ sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
 
 顺带纠正一个直觉：coalesced 的 32-bit load（每线程 4B，warp 共 128B = 4 sector）利用率**也是 100%**。float4 的优势不在 sector 利用率本身，而在于前面说的指令/请求数砍到 1/4 和单线程 16B 在途数据（ILP）；前文"32-bit 散读时一个 sector 可能只用到 4B"指的是非合并的散乱场景，不是 coalesced 的 32-bit 连续读。
 
-#### 6.2 Warp Shuffle 在 GEMM 写回中的用途
+#### 3.2 Warp Shuffle 在 GEMM 写回中的用途
 
 Day 1 我们用 Warp Shuffle 做 Reduce（多对一求和）。在 GEMM 中，Shuffle 的用途不同：**写回前的 warp 内数据重排**——把累加器在 lane 之间换位，让随后的 `STG` 指令变成 coalesced 模式。一个是"多对一归约"，一个是"一对一置换"，用的 shuffle 原语和目的都不同。
 
@@ -249,7 +251,7 @@ shuffle 写回真正值得用的场景：
 3. **"写回重排和 reduce 用的是同一种 shuffle"**——reduce 用 `__shfl_down_sync` 做多对一折叠；写回重排是一对一置换，用 `__shfl_sync` 指定任意源 lane
 4. **"shuffle 免费，能加就加"**——TM×TN=64 时全量重排要 64 条 SHFL 指令；写回占比小的 kernel 加了可能反而变慢，一切以 ncu 实测为准
 
-#### 6.3 参数精调（Auto-tuning）
+#### 3.3 参数精调（Auto-tuning）
 
 ![参数精调扫描表](../images/parameter_tuning_table.svg)
 
@@ -278,7 +280,7 @@ shuffle 写回真正值得用的场景：
 ```cuda
 // integrated_gemm.cu —— 整合优化 GEMM
 // Warp Shuffle + Register Blocking + float4 向量化加载 + Coalesced 写回
-// 目标性能：cuBLAS 70%+（RTX 5090 上 4096x4096 矩阵）
+// 目标性能：cuBLAS 60%+（RTX 5090 上 4096x4096 矩阵，实测 63.4%）
 // 编译命令: nvcc -o integrated_gemm integrated_gemm.cu -O3 -arch=sm_120 -lcublas
 // 运行命令: ./integrated_gemm
 
@@ -648,7 +650,7 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 
 **检查目标指标**：
 
-| 指标 | Day 2 (Register Blocking) | Day 6 (整合版) 目标 |
+| 指标 | Day 2 (Register Blocking) | 本日整合版目标 |
 |------|--------------------------|-------------------|
 | SM Throughput | ~45% | > 60% |
 | Memory Throughput | ~78% | ~70-80% |
@@ -661,7 +663,7 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 
 **与今日知识的关联**：
 
-本题用 atomicAdd 做 histogram，是 GEMM 之外的另一类典型 kernel。Day 6 学了整合优化和 ncu profiling，本题适合用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic 两种实现的性能差异。
+本题用 atomicAdd 做 histogram，是 GEMM 之外的另一类典型 kernel。本日学了整合优化（ncu profiling 将在 Day 6 系统讲解），本题适合提前用 ncu 分析 atomic 冲突、shared memory bank conflict、occupancy，对比 global atomic vs shared memory atomic 两种实现的性能差异。
 
 > 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
@@ -717,7 +719,7 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 
 ### 今日总结
 
-Day 6 我们把 GEMM 从 cuBLAS ~30%（Register Blocking）提升到了 ~63%（整合版），关键步骤：
+Day 3 我们把 GEMM 从 cuBLAS ~31%（Register Blocking）提升到了 ~63%（整合版），关键步骤：
 
 1. **float4 向量化加载**：128-bit load 替代 32-bit，提升 Global Memory 带宽利用率（30.8% → 64.3%，**最大单步增益**）
 2. **Coalesced 写回**：float4 合并写入 Global Memory（收益在噪声范围内，写回只占总时间一小部分）
@@ -746,6 +748,8 @@ Day 6 我们把 GEMM 从 cuBLAS ~30%（Register Blocking）提升到了 ~63%（�
  | Double Buffering | 软件流水线掩盖 Global→Shared 传输延迟 | 60% → 70% |
  | 参数 Auto-tuning | 针对不同矩阵尺寸选择最优分块参数 | 70% → 80%+ |
  | 指令级优化 / Tensor Core | 循环展开、PTX 内联、WMMA 指令 | 80% → 90%+ |
+
+ ⚠️ 口径说明：上表为面试通用预估 ladder；本机实测（RTX 5090, 4096³）以任务 2b 为准：v1 Naive 10.6% → v2 SM Tiling 13.3% → v3 RegBlk 30.8% → v4 +float4 64.3% → v5 整合版 62.9% → v6 双缓冲 63.8%。回答时先报实测，再补预估。
 
 </details>
 
@@ -803,7 +807,7 @@ Day 6 我们把 GEMM 从 cuBLAS ~30%（Register Blocking）提升到了 ~63%（�
 <details>
 <summary>点击查看答案</summary>
 
- - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟，典型提升 10-20%（从 ~55% 到 ~70%）
+ - **收益**：让"下一块 global→shared 加载"与"当前块 shared→register 计算"并行，用计算掩盖传输延迟；注意本系列的同步实现实测收益在噪声范围内（4096：62.9%→63.8%），真正的双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝指令
  - **代价**：① shared memory 用量翻倍（两份 buffer），可能降低 occupancy ② 代码复杂度增加（奇偶切换、prologue/epilogue 处理）③ 首块需预取，末块不再加载
  - **值得用的场景**：global→shared 传输是瓶颈（ncu 显示 Long Scoreboard stall 高）、shared memory 余量充足（不会因翻倍而降 occupancy）
  - **不值得用的场景**：计算本身就 memory-bound 且 shared memory 已紧张，或数据量太小启动开销主导
