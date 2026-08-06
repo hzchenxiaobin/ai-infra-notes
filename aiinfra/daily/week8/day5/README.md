@@ -134,7 +134,13 @@ class BucketedGraphEngine:
 python kernels/mini_engine_v1_graph.py
 ```
 
-> ⚠️ **实测留档**：4 请求并发的 TBT（token-by-token decode）延迟改善需在 GPU 环境实跑后回填脚本末尾的留档模板。Graph 路径当前演示单步 decode forward 的 launch 消除；完整 KV-cache 追加需在 graph 捕获内包含 `cat` 操作（生产实现）。
+> ✅ **实测留档**（RTX 5090, CUDA 12.8, PyTorch 2.9.1+cu128, 2026-08-06）：
+> | 模式  | decode avg (ms/step) | 加速比 |
+> |-------|---------------------|--------|
+> | Eager | 0.894               | 1.00x  |
+> | Graph | 0.066               | 13.58x |
+>
+> Graph 路径当前演示单步 decode forward 的 launch 消除；完整 KV-cache 追加需在 graph 捕获内包含 `cat` 操作（生产实现）。
 
 #### 5.3 INT8 KV Cache 量化集成（备选）
 

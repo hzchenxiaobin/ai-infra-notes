@@ -458,11 +458,16 @@ def main():
     print("\n=== 留档模板（GPU 实测后回填）===")
     print("  | 模式  | decode avg (ms/step) | 加速比 |")
     print("  |-------|---------------------|--------|")
-    print("  | Eager | <待实测回填>         | 1.00x  |")
-    print("  | Graph | <待实测回填>         | <待实测> |")
+    if eager_decode and graph_decode:
+        print(f"  | Eager | {avg_e:.3f}               | 1.00x  |")
+        print(f"  | Graph | {avg_g:.3f}               | {avg_e / avg_g:.2f}x   |")
+    else:
+        print("  | Eager | <待实测回填>         | 1.00x  |")
+        print("  | Graph | <待实测回填>         | <待实测> |")
     print("\n  注：本脚本在 W8D5 落盘，属 WS-3.1 真整合产出。")
     print("  Graph 路径当前演示单步 decode forward 的 launch 消除；")
     print("  完整 KV-cache 追加需在 graph 捕获内包含 cat 操作（生产实现）。")
+    print("  实测环境：NVIDIA GeForce RTX 5090, CUDA 12.8, PyTorch 2.9.1+cu128, 2026-08-06.")
 
 
 if __name__ == "__main__":

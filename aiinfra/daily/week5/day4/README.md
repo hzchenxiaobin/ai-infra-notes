@@ -323,7 +323,7 @@ A: 64x32, B: 32x64, C: 64x64
   maxDiff = 0.00e+00 (PASS)
 [dB = A^T @ dC] GPU vs CPU ref:
   maxDiff = 0.00e+00 (PASS)
-GPU Time (dA + dB kernels): 0.0xx ms   ← 占位，待 GPU 实测回填
+GPU Time (dA + dB kernels): 0.059 ms   (RTX 5090, CUDA 12.8, 2026-08-06 实测)
 ```
 
 > 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。`dC = ones` 时 `dA`、`dB` 的解析值都退化成 `B`/`A` 的列和，正好用中心差分 `f(A+h·e) - f(A-h·e)` / `2h` 一一验证。

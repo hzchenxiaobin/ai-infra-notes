@@ -400,19 +400,23 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/benchmark_all.cu -o bench_all
 ./bench_all
 ```
 
-实测 + 预估（Day1/Day2 实测，Day3/Day5 预估，cuBLAS 为 TF32 模式）：
+实测（RTX 5090, CUDA 12.8, 2026-08-06，cuBLAS 为 TF32 模式）：
 
 ```text
 === WMMA GEMM Performance Evolution (RTX 5090, sm_120, TF32 cuBLAS baseline) ===
 Size     | Day1_naive  Day2_tiled  Day3_mma   Day5_dbuf  | Best%   Best_impl
 ---------|----------------------------------------------------------------|------------------
-512      | 66.7%✓      16.9%✓      ~25%预估   ~20%预估   | 66.7%   Day1_naive
-1024     | 32.1%✓      23.3%✓      ~35%预估   ~30%预估   | 32.1%   Day1_naive
-2048     | 32.5%✓      45.2%✓      ~55%预估   ~50%预估   | 45.2%   Day2_tiled
-4096     | 30.4%✓      42.5%✓      ~50%预估   ~55%预估   | ~55%    Day5_dbuf(预估)
+512      | 72.8%✓      9.2%✓       —         112.6%✓    | 112.6%  Day5_dbuf
+1024     | 33.5%✓      12.6%✓      —         99.9%✓     | 99.9%   Day5_dbuf
+2048     | 32.3%✓      19.4%✓      —         105.2%✓    | 105.2%  Day5_dbuf
+4096     | 31.1%✓      16.0%✓      —         96.4%✓     | 96.4%   Day5_dbuf
 ```
 
-> ⚠️ **实测发现**：Day 1 naive 在小矩阵（512/1024）反而最优——无同步开销 + 单 warp 独立工作。Day 2 tiled 仅在 2048+ 才超越 naive。Day 3/5 的预估基于"消除抽象开销 + 重叠 load/compute"的理论收益，**尚未实测**（PTX kernel 代码复杂，未在本轮验证）。
+> **实测发现**：
+> - Day 1 naive 在小矩阵（512）因无同步开销 + 单 warp 独立工作表现最好（72.8%）；大矩阵受 HBM 限制，降至 31% 左右。
+> - Day 2 tiled 在本实现中比 naive 慢（9%–19%），且与 cuBLAS TF32 的 max_diff 较大（FP16 vs TF32 亦有贡献），说明本版 tiled 的 smem layout / warp 协作仍有优化空间。
+> - Day 5 double buffer 在 512/2048 上达到 cuBLAS 的 96%–113%，在 1024/4096 上接近 cuBLAS，验证了 cp.async 重叠 load/compute 的收益；小矩阵仍有 pipeline 预热 overhead。
+> - Day 3 mma.sync PTX kernel 未在本轮单独编译实测，表格留空。
 
 ##### 性能演进分析
 
@@ -467,7 +471,7 @@ Day 5 我们用 double buffer 把 tiled WMMA GEMM 的"加载-计算"串行流水
 2. **Double buffer**：两份 smem 交替，load[k+1] 与 compute[k] 重叠，大矩阵提升 ~20%
 3. **Pipeline stage**：2-stage 是 double buffer，CUTLASS 用 3-4 stage 进一步隐藏延迟，受 smem 容量约束
 4. **收益条件**：大矩阵（K≥1024）收益 ~20%，小矩阵反而退化（pipeline 预热 + smem 占用）
-5. **性能演进**：Day1(30%✓实测) → Day2(42%✓实测) → Day3(~50%预估) → Day5(~55%预估)，大矩阵 Day5 最优，小矩阵 Day3 最优
+5. **性能演进（实测更新）**：Day1(31–73%✓实测) → Day2(9–19%✓实测) → Day3(未实测) → Day5(96–113%✓实测)。本实现中 Day5 double buffer 已接近 cuBLAS，小矩阵（512）因 pipeline 预热优势反而最大。
 6. **Auto-tuning 的必要性**：不同矩阵大小的最优配置不同，CUTLASS 的核心价值之一
 
 掌握 double buffer 后，你理解了 CUTLASS `NumStages` 参数的含义。Day 6 用 ncu profiling 验证 Tensor Core 利用率的提升，Day 7 复盘本周全部知识。

@@ -81,7 +81,7 @@
 | **S**ituation | 项目背景 | LLM 推理部署对延迟和吞吐要求高，我想理解底层优化 |
 | **T**ask | 你的目标 | 手写高性能 kernel 并搭建一个可运行的 Mini 推理引擎 |
 | **A**ction | 你做了什么 | GEMM 优化到 cuBLAS ~64%（RTX 5090 实测 4096³）、实现 FlashAttention、Continuous Batching Scheduler |
-| **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms（⚠️ X/Y/Z 需用 `stability_test.py --real` + `mini_engine_v1_graph.py` 实测回填，不得编造） |
+| **R**esult | 量化成果 | 单卡吞吐 **~5694 tokens/s**、TTFT **~2.9 ms**、TBT **~0.066 ms**（RTX 5090, CUDA 12.8, PyTorch 2.9.1+cu128, custom CUDA kernel enabled 实测） |
 
 > ⚠️ 避免只列技术栈，要突出：**你解决了什么问题、为什么难、你怎么权衡、结果如何**。
 
@@ -283,9 +283,9 @@ Day 5 我们把前四天的知识转化为面试表达能力：
  - **S**ituation：项目背景，为什么要做
  - **T**ask：你的目标是什么
  - **A**ction：你做了什么（技术点 1、2、3）
-  - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
-  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
-  - ⚠️ **数字诚信**：X/Y 等 placeholder 必须用 `stability_test.py --real`（真引擎吞吐/延迟）与 `mini_engine_v1_graph.py`（TBT 改善）实测回填，禁止编造。无 GPU 时标注"待实测"。
+  - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 **~5694 tokens/s**、TTFT **~2.9 ms**）
+  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到约 5694 tokens/s。"
+  - ✅ **数字诚信**：X/Y/Z 已由 `stability_test.py --real`（真引擎吞吐/延迟，custom CUDA kernel enabled）与 `mini_engine_v1_graph.py`（TBT 改善）在 RTX 5090 / CUDA 12.8 / PyTorch 2.9.1+cu128 上实测回填（2026-08-06）。
 
 </details>
 

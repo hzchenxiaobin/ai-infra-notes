@@ -323,18 +323,20 @@ nvcc -O3 -arch=sm_120 kernels/layernorm_welford.cu -o layernorm_welford
 ./layernorm_welford
 ```
 
-预期输出（RTX 5090, sm_120）：
+实测输出（RTX 5090, CUDA 12.8, 2026-08-06）：
 
 ```text
-=== LayerNorm: Three-pass vs Welford (RTX 5090, D=1024) ===
+=== LayerNorm: Three-pass vs Welford (NVIDIA GeForce RTX 5090, D=1024) ===
 M(rows)  | Three-pass(ms)  Welford(ms)  | Speedup  max_diff
 ---------|--------------------------------|----------------------
-1024     | 0.032           0.015         | 2.13x    1.2e-06
-4096     | 0.125           0.058         | 2.16x    1.1e-06
-16384    | 0.498           0.232         | 2.15x    1.3e-06
+1024     | 0.006           0.008         | 0.74x    4.77e-07
+4096     | 0.012           0.020         | 0.60x    4.77e-07
+16384    | 0.076           0.094         | 0.81x    5.96e-07
+
+[正确性] Welford vs CPU 参考: max_diff = 2.03e-06 (< 1e-4 PASS)
 ```
 
-> ⚠️ **预期说明**：Welford 版预期比三遍扫描快 ~2x（HBM 读写减半）。具体数字需实测，这里给出量级预估。`max_diff < 1e-5` 为正确性 PASS。
+> **实测说明**：本实现中 Welford 单 pass 并未比 three-pass 快，反而略慢（0.6x–0.8x）。原因可能是：① D=1024 时 three-pass 的 blockReduce 已被 warp shuffle 优化得很好；② Welford 的 shuffle 合并涉及 mean/m2/count 三个字段，寄存器/指令开销抵消了 HBM 减少收益；③ 小 M 时 launch / fixed overhead 占主导。正确性 PASS（max_diff < 1e-5）。生产级 Welford 需配合向量化、每个 warp 处理多行等进一步优化才能兑现 ~2x 理论收益。
 
 #### 任务 2：用 ncu 验证 HBM 访问减少
 

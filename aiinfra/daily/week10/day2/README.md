@@ -222,6 +222,35 @@ Step 6: 稳定性测试（500 请求）
  ✓ 失败率 < 5%
 ```
 
+**真引擎模式 `--real` 实测输出**（RTX 5090, CUDA 12.8, PyTorch 2.9.1+cu128, ninja 1.13.0, 2026-08-06）：
+
+```text
+[模式] 真引擎 mini_engine_v2（--real）
+[real] device=cuda, custom_ops=on
+
+Step 1: 单请求正确性（mini_engine_v2）  ✓ PASS
+Step 2: 多请求并发正确性（mini_engine_v2）  ✓ PASS
+Step 3: KV Cache 隔离性（mini_engine_v2）  ✓ PASS
+Step 4: Scheduler 优先级和资源预算（mini_engine_v2）  ✓ PASS
+Step 5: 自定义 Kernel 集成（mini_engine_v2）  ✓ PASS (Results identical, custom kernel enabled)
+
+Step 6: 稳定性测试（500 请求，mini_engine_v2）
+  Total requests:  500
+  Success:         500 (100.0%)
+  Fail:            0
+  Total time:      0.44s
+  Throughput:      1138.8 req/s
+  KV cache final:  0 running requests
+  Custom kernel:   enabled
+  Forward timing:  439 steps recorded
+    avg forward: 0.901 ms
+  [✓] 成功率 > 95%
+  [✓] 无内存泄漏（KV Cache 全释放）
+  [✓] 失败率 < 5%
+```
+
+> 注：安装 `ninja` 后 custom CUDA kernel 编译成功并真正接入。对比 fallback：吞吐从 968.0 req/s 提升到 **1138.8 req/s**（+17.6%），avg forward 从 1.084 ms 降到 **0.901 ms**。
+
 ##### 观察重点
 
 1. **Step 2 多请求**：5 个请求全部 FINISHED，结果互不干扰（`r1_tok0 ≠ r2_tok0`）

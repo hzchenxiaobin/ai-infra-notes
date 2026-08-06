@@ -278,7 +278,7 @@ int main(int argc, char** argv)
         cudaEventDestroy(stop);
 
         // --- 4. 正确性验证（tiled vs cuBLAS TF32，max_diff） ---
-        launch_tiled(d_A, d_B, d_C, M, N, K
+        launch_tiled(d_A, d_B, d_C, M, N, K);
         cudaDeviceSynchronize();
         float* h_C = (float*)malloc(M * N * sizeof(float));
         float* h_C_ref = (float*)malloc(M * N * sizeof(float));
