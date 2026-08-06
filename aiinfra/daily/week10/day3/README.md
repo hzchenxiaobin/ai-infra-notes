@@ -322,13 +322,13 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 > 思考：为什么 SiLU 的"达到比例"用带宽百分比，而 GEMM 用 cuBLAS 百分比？（提示：SiLU 是 memory-bound，瓶颈是带宽；GEMM 是 compute-bound，瓶颈是算力，cuBLAS 是算力优化天花板。）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— Matrix Addition
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/matrix-addition>
 
-**与今日知识的关联**：Matrix Transpose 是**典型的 memory-bound 索引映射 kernel**——计算量为零，瓶颈完全在数据搬运和访存合并（coalescing）。这正是今天 benchmark 方法论的最佳练手对象：用 cudaEvent 测它的带宽，对比 GDDR7 峰值（1792 GB/s），验证你的 benchmark 流程是否正确。naive 转置必有一侧访存不连续、带宽腰斩，用 shared memory tile 修复后带宽可接近 elementwise 上限——README 的 Benchmark 表里就该有这类 memory-bound 算子的带宽数据。
+**与今日知识的关联**：Matrix Addition 是**最简单的 element-wise kernel**，正好用 Day 3 的 benchmark 方法论实测它的带宽——naive 版本就能接近峰值带宽（**纯 memory-bound，算术强度极低**），是验证 cudaEvent 计时流程是否正确的最佳练手对象。README 的 Benchmark 表里该有这类基线算子的带宽数据。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、合并访存优化、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Addition](https://leetgpu.com/challenges/matrix-addition) 上记录通过耗时。完整题解（含 naive element-wise kernel、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 1）
 

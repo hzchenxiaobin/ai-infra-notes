@@ -119,42 +119,19 @@ X → ColumnParallel(QKV) → [各 rank 算自己 head 的 QKV，无通信]
 
 #### 3b.3 Pipeline Parallelism (PP)
 
-![NCCL Ring All-Reduce 拓扑](../images/nccl_ring_topology.svg)
-
 PP 的核心思想：**把模型的不同层切到不同卡（stage），数据像流水线一样流过各 stage**。
 
-##### GPipe vs 1F1B
+| 维度 | PP |
+|------|-----|
+| 切分对象 | 模型层（按 depth 切 P 段） |
+| 每卡存储 | 1/P 的层权重 + activation |
+| 通信 | stage 间 send/recv activation（点对点） |
+| 代价 | 流水线 bubble（空泡） |
+| 适用 | 超大模型（TP=8 仍放不下时叠加 PP） |
 
-```
-GPipe（朴素流水线）：
-  - 一次性把整个 mini-batch forward 完所有 stage，再 backward
-  - 空泡大：前 P-1 步只有部分 stage 在工作
-  - 显存大：要存所有 micro-batch 的 activation
+推理只有 forward，没有 backward，PP 的收益主要在**显存**（每卡只存部分层）。代价是 stage 间点对点通信和流水线空泡。bubble ratio = $(P-1)/(M+P-1)$，增大 micro-batch 数 $M$ 可降低空泡。
 
-1F1B（One Forward One Backward）：
-  - 交错执行 forward 和 backward：做完一个 micro-batch 的 forward 立刻 backward
-  - 空泡一样大，但显存省（activation 数量稳定在 P）
-  - 推理只需 forward，1F1B 的 backward 优势不体现，但 prefill 可借鉴 micro-batch 流水
-```
-
-##### Micro-batching 与 bubble ratio
-
-把一个 mini-batch 切成 $M$ 个 micro-batch，依次注入 $P$ 个 stage 的流水线：
-
-$$\text{bubble ratio} = \frac{P-1}{M+P-1}$$
-
-| P (stage) | M (micro-batch) | bubble | 说明 |
-|-----------|----------------|--------|------|
-| 4 | 1 | 75% | 空泡占主导，效率低 |
-| 4 | 4 | 43% | 仍较差 |
-| 4 | 16 | 16% | 较好 |
-| 8 | 64 | 10% | 大 M 下空泡可忽略 |
-
-> 💡 **关键洞察**：增大 $M$（micro-batch 数）是降低 bubble 的主要手段。推理场景下，prefill 长 prompt 可切成多个 chunk 走流水线（与 Day 3 的 Chunked Prefill 思路一致），相当于增大 $M$。
-
-##### 推理场景下的 PP
-
-推理只有 forward，没有 backward，PP 的收益主要在**显存**（每卡只存部分层）。代价是 stage 间点对点通信（send/recv activation）和流水线空泡。PP 适合**超大模型**（TP=8 仍放不下时叠加 PP）。
+> 📖 **详见 Day 2**：PP 的 GPipe vs 1F1B 调度、bubble ratio 完整推导、Interleaved 1F1B（virtual pipeline）、推理 PP 部署形态（vLLM `pipeline_parallel_size`）在 Day 2 深入展开。
 
 #### 3b.4 Data Parallelism (DP)
 
@@ -179,29 +156,7 @@ DP 的核心思想：**每张卡持有完整模型副本，各卡处理不同的
 
 #### 3b.5 NCCL collectives
 
-NCCL（NVIDIA Collective Communications Library）是 GPU 间集合通信的标准库，PyTorch 通过 `torch.distributed` 调用。
-
-##### all-reduce（TP/DP 最常用）
-
-所有 rank 的张量做逐元素规约（sum/max/avg），结果分发到所有 rank。
-
-**Ring all-reduce** 分两阶段，共 $2(N-1)$ 步：
-
-```
-阶段 1：reduce-scatter（N-1 步）
-  - 每步：每卡 send 一块给右邻 + recv 左邻的块，累加
-  - N-1 步后：每卡持有一个块的完整和
-  - 通信量 = V × (N-1)/N（V = 张量大小）
-
-阶段 2：all-gather（N-1 步）
-  - 每步：每卡把自己那块完整和 send 给右邻 + recv
-  - N-1 步后：每卡都有完整结果
-  - 通信量 = V × (N-1)/N
-
-总计：2 × V × (N-1)/N
-```
-
-##### all-gather / reduce-scatter
+NCCL（NVIDIA Collective Communications Library）是 GPU 间集合通信的标准库，PyTorch 通过 `torch.distributed` 调用。各 collective 的通信量速查：
 
 | collective | 作用 | 通信量 | 典型用途 |
 |-----------|------|--------|---------|
@@ -211,73 +166,22 @@ NCCL（NVIDIA Collective Communications Library）是 GPU 间集合通信的标�
 | **broadcast** | 单卡数据广播到所有 | $V$ | 初始化、参数同步 |
 | **send/recv** | 点对点传输 | $V$ | PP stage 间传 activation |
 
-> 💡 **为什么用 ring**：ring 拓扑每卡只与左右邻居通信，带宽利用率高、无拥塞点；通信量与 $N$ 无关（$2V(N-1)/N \approx 2V$），只步数随 $N$ 线性增长。NCCL 还支持 tree 拓扑（延迟更低，适合小数据）和 NVLink/InfiniBand 自适应。
-
-##### 通信量对比示例（V = 1GB, N=8）
-
-```
-all-reduce:    2 × 1GB × 7/8 ≈ 1.75 GB  （每卡发送+接收）
-all-gather:    1GB × 7/8    ≈ 0.875 GB
-reduce-scatter: 1GB × 7/8   ≈ 0.875 GB
-```
+> 📖 **详见 Day 3**：Ring all-reduce 的两阶段执行细节（reduce-scatter + all-gather）、Ring vs Tree 拓扑对比、各并行策略的通信量推导、NVLink/PCIe/IB 带宽常识与 α-β 通信模型在 Day 3 深入展开。Day 3 还提供 `dist_allreduce_demo.py`（torchrun 双进程实测）和 `ring_allreduce_sim.py`（调度模拟器）。
 
 #### 3b.6 通信计算重叠
 
 ![通信-计算重叠：双 CUDA Stream](../images/comm_compute_overlap.svg)
 
-分布式推理的通信开销如果不能被计算掩盖，TP/PP 的加速比会被严重吃掉。**通信-计算重叠**是核心优化手段。
-
-##### 双流（dual stream）方案
+分布式推理的通信开销如果不能被计算掩盖，TP/PP 的加速比会被严重吃掉。**通信-计算重叠**是核心优化手段：
 
 ```
-compute_stream: 执行 GEMM / Attention 等前向计算
-comm_stream:    执行 all-reduce / send-recv 等通信
-
-不重叠（串行）：
-  compute_stream: [==== GEMM ====]
-  comm_stream:                            [== all-reduce ==]
-  total = T_compute + T_comm
-
-重叠（双流并行）：
-  compute_stream: [==== GEMM ====]
-  comm_stream:        [== all-reduce ==]   ← 与 GEMM 并行
-  total ≈ max(T_compute, T_comm)
+不重叠（串行）：total = T_compute + T_comm
+重叠（双流）：  total ≈ max(T_compute, T_comm)
 ```
 
-`torch.cuda.Stream` 实现要点：
+核心思路：用**双 CUDA Stream**（compute_stream + comm_stream）让上一层的 all-reduce 与本层的 GEMM 并行执行——两者数据无依赖（all-reduce 的是上一层输出，GEMM 用的是本层权重），可安全重叠。decode 阶段 shape 固定时，还可用 CUDA Graph 捕获整个双流 launch 序列，消除 Python/CPU launch 开销。
 
-```python
-compute_stream = torch.cuda.Stream()
-comm_stream = torch.cuda.Stream()
-
-with torch.cuda.stream(compute_stream):
-    y = gemm(x)                      # compute on compute_stream
-with torch.cuda.stream(comm_stream):
-    torch.distributed.all_reduce(g)  # comm on comm_stream
-# 两流并发执行，GPU 硬件调度（需有空闲 SM）
-```
-
-##### 重叠的前提条件
-
-- **数据无依赖**：通信的数据与计算的数据不重叠（如本层 GEMM 与上一层的 all-reduce 可重叠）
-- **GPU 资源足够**：两路 kernel 需有足够空闲 SM 并发，否则仍串行
-- **流同步正确**：有依赖时用 `stream.wait_stream()` 建立顺序
-
-##### CUDA Graph + 通信重叠
-
-decode 阶段每步 shape 固定，可用 CUDA Graph 捕获整个 forward（含双流 launch 序列），消除 Python/CPU launch 开销：
-
-```python
-g = torch.cuda.CUDAGraph()
-with torch.cuda.graph(g):
-    with torch.cuda.stream(compute_stream):
-        compute(...)
-    with torch.cuda.stream(comm_stream):
-        all_reduce(...)
-# 每步 decode 只需 g.replay()，一次 launch 整个图
-```
-
-> ⚠️ **CUDA Graph 的限制**：要求 shape 静态（decode 每步 token 数固定，适合；prefill shape 变化，需多个 graph 或回退 eager）。vLLM/TensorRT-LLM 在 decode 路径广泛使用 CUDA Graph。
+> 📖 **详见 Day 4**：双 Stream 的代码实现（`torch.cuda.Stream` + `wait_stream`）、TP 层内通信计算重叠策略（前半/后半 GEMM 切分）、CUDA Graph 捕获双流序列、Overlap 的收益边界（何时重叠有效、何时无效）在 Day 4 深入展开。Day 4 还补了 Sequence Parallelism（Megatron 2205.05198）——工业界主流做法。
 
 ### Coding 任务：TP 推理 demo + 通信重叠
 
@@ -458,27 +362,27 @@ nsys-ui comm_overlap.nsys-rep
 
 > 思考：真实 2-GPU TP 的加速比为什么远不到 2x？（提示：all-reduce 通信开销 + kernel launch + 数据依赖。可通过 nsys 测量通信占比。）
 
-#### 实验 3：实现"上一层 all-reduce 与本层 GEMM 重叠"
+#### 实验 3：通信计算重叠（见 Day 4）
 
-当前 `comm_overlap_demo.py` 演示的是无依赖的 GEMM + 通信重叠。修改为更贴近真实 TP 的场景：上一层的 all-reduce（comm_stream）与本层的 QKV GEMM（compute_stream）重叠——两者数据无依赖（all-reduce 的是上一层输出，GEMM 用的是本层权重 + 上一层已就绪的输入）。用 nsys 验证两流 kernel 是否真的交错。
+"上一层 all-reduce 与本层 GEMM 重叠"的完整实现（双 Stream + `wait_stream` + nsys 验证）在 **Day 4** 展开，含 TP 层内前半/后半 GEMM 切分重叠策略和 CUDA Graph 捕获双流序列。
 
-> 思考：为什么"上一层通信"能与"本层计算"重叠，而"同一层的通信"不能？（提示：同层内 Output 投影的 all-reduce 依赖该投影的部分和，存在数据依赖；跨层则无。）
+> 思考：为什么"上一层通信"能与"本层计算"重叠，而"同一层的通信"不能？（提示：同层内 Output 投影的 all-reduce 依赖该投影的部分和，存在数据依赖；跨层则无。Day 4 会用代码验证这一点。）
 
 ---
 
 ### 今日总结
 
-Day 1 我们系统学习了分布式推理的三大并行策略与通信-计算重叠：
+Day 1 我们系统学习了分布式推理的动机与三大并行策略定位：
 
 1. **三大动机**：显存墙（模型放不下）、吞吐墙（tok/s 不够）、延迟墙（单层 GEMM 慢），分别对应 TP/PP、DP、TP
 2. **Tensor Parallelism**：column-parallel 切 QKV（按 head，零通信）+ row-parallel 切 Output（all-reduce 聚合），一个 Attention Block 仅 1 次通信
-3. **Pipeline Parallelism**：按层切 stage，micro-batching 流水，bubble ratio = $(P-1)/(M+P-1)$，增大 $M$ 降空泡；1F1B 省 activation 显存
+3. **Pipeline Parallelism**：按层切 stage，micro-batching 流水，bubble ratio = $(P-1)/(M+P-1)$；推理 PP 适合超大模型（详见 Day 2）
 4. **Data Parallelism**：推理中各卡独立处理请求，零 GPU 通信，吞吐线性扩展，是高 QPS 首选
-5. **NCCL collectives**：all-reduce = reduce-scatter + all-gather，ring 拓扑 $2V(N-1)/N$ 通信量；all-gather / reduce-scatter 各 $V(N-1)/N$
-6. **通信-计算重叠**：双 CUDA Stream（compute + comm）让 total 从 $T_c+T_a$ 降到 $\max(T_c, T_a)$；CUDA Graph 捕获双流序列消除 launch 开销
+5. **NCCL collectives 速查**：all-reduce = $2V(N-1)/N$，all-gather/reduce-scatter = $V(N-1)/N$（详见 Day 3）
+6. **通信-计算重叠**：双 CUDA Stream 让 total 从 $T_c+T_a$ 降到 $\max(T_c, T_a)$（详见 Day 4）
 7. **实测验证**：`tp_inference_demo.py` 验证 TP 切分正确性（max diff 2.5e-7）与通信 pattern；`comm_overlap_demo.py` 量化重叠加速比 1.5-1.7x
 
-掌握这些后，你就有了分布式推理的理论基础——后续可结合 vLLM 的多卡支持（TP 后端）和 TensorRT-LLM 的 TP+PP 组合实践真实多卡部署。
+掌握这些后，你就有了分布式推理的理论基础——Day 2–4 会分别深入 PP 调度、NCCL 通信量、通信计算重叠的工程细节。
 
 ---
 

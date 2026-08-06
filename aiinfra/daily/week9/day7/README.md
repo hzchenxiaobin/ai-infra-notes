@@ -92,11 +92,18 @@
 <details>
 <summary>答案</summary>
 
-- 70B FP16 ≈ 140GB，单卡 A100 80GB 放不下
-- 方案：TP=8（每卡 ~17.5GB 参数 + activation）
+- 70B FP16 权重 ≈ 140GB，单卡 A100 80GB 放不下
+- **权重显存**：TP=8（每卡 ~17.5GB 参数）
+- **KV Cache 显存**（易漏算！）：70B 级别 n_layer=80, n_kv_head=8(GQA), d_head=128, FP16
+  - bytes/token = 2 × 80 × 8 × 128 × 2B = 327,680 B ≈ 320 KB/token
+  - 4K context × batch 8 = 32K tokens → ~10GB KV Cache（TP=8 每卡 ~1.25GB）
+  - 32K context × batch 8 → ~80GB KV Cache（每卡 ~10GB，加上权重 17.5GB = 27.5GB，80GB 够用）
+- 方案：TP=8（每卡 ~17.5GB 参数 + activation + KV Cache）
 - 通信：每层 all-reduce activation（~28MB/层，NVLink 400GB/s）
 - 延迟：TP 通信开销 ~10-15%，可接受
 - 如果跨 node：TP=8 intra-node + PP=2 inter-node（TP 通信走 NVLink，PP 走 PCIe/IB）
+
+> ⚠️ **面试陷阱**：很多人只算权重显存（140GB），忘了 KV Cache。长上下文场景 KV Cache 可能比权重还大——这就是 PagedAttention/量化 KV Cache 存在的原因。
 
 </details>
 
@@ -231,6 +238,41 @@
 - [ ] 能说出 MoE EP vs TP 的选择依据
 - [ ] 能列出 CUDA vs Ascend 的架构映射
 - [ ] 能为给定模型大小选并行策略
+
+---
+
+### 场景化动手任务
+
+> 拿到以下场景约束，写出并行方案 + 通信量估算 + 显存预算。每个场景限时 10 分钟口述。
+
+#### 场景 1：LLaMA-3-70B，8×A100 80GB，32K context，batch=4
+
+约束：单卡 80GB，需放下权重 + KV Cache + activation
+
+- 权重：70B × FP16 ≈ 140GB → TP=8（每卡 17.5GB）
+- KV Cache：2 × 80 × 8 × 128 × 2B × 32K × 4 = ~40GB（每卡 5GB）
+- 通信：TP all-reduce 每层 2 × 4 × 32K × 8192 × 2B × 7/8 ≈ 183 MB/层（NVLink 4 ~0.4ms）
+- 写出：TP 度选择依据 + 通信占比估算 + 是否需要 PP
+
+#### 场景 2：Mixtral 8×7B（MoE），4×H100 80GB，decode batch=1
+
+约束：MoE 模型，decode 阶段 batch=1，追求低延迟
+
+- 权重：8 专家 × 7B × FP16 ≈ 56GB + 共享层 ~7GB = ~63GB
+- EP 选择：8 专家分到 4 卡（每卡 2 专家），每卡 ~16GB
+- 通信：EP all-to-all 每层 2 × 1 × 2 × 4096 × 2B × (1-1/4) ≈ 24KB（极小，延迟主导）
+- 写出：EP vs TP 选择依据 + decode 通信量为何小 + 是否需要 EP+TP 混合
+
+#### 场景 3：DeepSeek-V3 671B（MoE），16×H100 80GB 跨 2 节点
+
+约束：超大规模 MoE，跨节点（NVLink intra-node + IB inter-node）
+
+- 权重：671B × FP16 ≈ 1.3TB → 需要 EP + TP + PP 组合
+- 方案：EP=8（专家分布）+ TP=2（非 MoE 层）+ PP=2（跨节点）
+- 通信：EP all-to-all 跨节点走 IB（~100GB/s），MoE 层通信 ~2 × tokens × top_k × hidden × (1-1/EP)
+- 写出：三维并行组合策略 + 哪层走 NVLink / 哪层走 IB + bubble 估算
+
+> 💡 面试中这类"给约束写方案"的题越来越常见，核心考查：能否把通信量公式（§3.6-3.7）和显存口算（KV Cache）快速应用到具体场景。
 
 ---
 

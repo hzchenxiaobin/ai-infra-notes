@@ -425,13 +425,13 @@ Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%
 
 > 思考：为什么 SiLU 的 AI 只有 ~0.25 而 GEMM 的 AI 有 ~275？（提示：SiLU 每元素只做几次运算但需读写 8B；GEMM 每 tile 做 2MNK 次运算但只读写 A+B+C。）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— SiLU
 
-**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
+**题目链接**：<https://leetgpu.com/challenges/silu>
 
-**与今日知识的关联**：Matrix Transpose 是今日"Kernel 优化"主题的典型案例：naive 实现必有一侧访存不连续（uncoalesced），带宽腰斩；用 shared memory tile 让读写两侧都合并访存后，带宽接近上限——一个 kernel 讲清"为什么访存模式决定性能"。面试问"memory-bound kernel 怎么优化"时，转置是最好的例子。同时它算术强度极低（接近纯搬运），正好用 Roofline 验证"远低于 ridge point → 带宽瓶颈"。
+**与今日知识的关联**：SiLU（Sigmoid Linear Unit）是 LLaMA 等现代模型的激活函数，是 **element-wise + fused kernel** 的典型案例。面试问"算子融合"时，SiLU = x * sigmoid(x) 融合成一个 kernel 是经典例子——**减少一次 HBM 读写**。同时它算术强度极低（~1 FLOP/12 bytes），是 **memory-bound 的教科书案例**，用 Day 4 学的 Roofline + ncu 分析能秒判瓶颈。
 
-> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 合并访存、bank conflict 规避、与 Roofline 面试题的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
+> 💡 提交后在 [LeetGPU SiLU](https://leetgpu.com/challenges/silu) 上记录通过耗时。完整题解（含 fused SiLU kernel、算术强度分析、与 Roofline 面试题的对应）见 [SiLU 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-silu-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 3）
 

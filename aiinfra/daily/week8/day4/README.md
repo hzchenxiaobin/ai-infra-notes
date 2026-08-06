@@ -389,13 +389,13 @@ python kernels/shape_bucketing.py
 
 > 思考：b=3 用 bucket=4 时，padding 那 1 行的计算是否浪费？（提示：是，padding 行仍参与 GEMM，但 attention 用 mask 屏蔽后不影响有效行输出。这就是 bucketing 的代价——用少量计算浪费换静态 shape。bucket 越密浪费越少但显存越多。）
 
-#### 任务 4：LeetGPU 在线题目 —— Vector Addition
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
 
-**题目链接**：<https://leetgpu.com/challenges/vector-addition>
+**题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**与今日知识的关联**：Vector Addition 是最典型的 **launch-overhead-dominated** kernel——它是纯 element-wise 操作，计算量极低（每元素一次加法），kernel 自身耗时往往不到 1μs，而 launch overhead 却要 5-10μs。换言之，跑这个 kernel 时 **80%+ 的时间花在 launch 上、不到 20% 在算**。这正是 CUDA Graph 要解决的场景：把成百上千个这样的小 kernel 录进一张图，replay 时 launch 开销从 N 次降到 1 次。理解 Vector Addition 的"算得快但 launch 慢"特性，就抓住了 CUDA Graph 收益的本质——**它不优化 kernel 本身，而是消灭 kernel 之间的 CPU 空隙**。
+**与今日知识的关联**：Matrix Transpose 是 **CUDA Graph 录制的最佳练手对象**——它 shape 静态、kernel 简单，多次 launch 的累积 overhead（如 320 次 × ~7μs ≈ 2.2ms）用 CUDA Graph 捕获后降为一次 replay ~10μs。naive 转置有一侧 uncoalesced，用 shared memory tile 修复后带宽接近上限。Day 4 的 CUDA Graph 实操就该用这类 **shape 固定的 kernel** 做演示。
 
-> 💡 提交后在 [LeetGPU Vector Addition](https://leetgpu.com/challenges/vector-addition) 上记录通过耗时。完整题解见 [Vector Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-addition-solution.html)。
+> 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、CUDA Graph 捕获/replay、与今日 CUDA Graph 实操的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
 

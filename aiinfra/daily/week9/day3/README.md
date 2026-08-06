@@ -191,6 +191,65 @@ N=8, batch=1, seq=2048, hidden=4096, FP16:
 通信量/步 = 2(N-1)/N × model_size
 ```
 
+#### 3.7 GPU 互联带宽常识与 α-β 通信模型
+
+##### 互联带宽速查
+
+通信时间不仅取决于通信量，还取决于**物理互联带宽**。不同互联方式的带宽差异巨大：
+
+| 互联类型 | 单向带宽 | 典型延迟 | 适用场景 |
+|---------|---------|---------|---------|
+| **NVLink 4**（H100） | **~450 GB/s**（双向 ~900） | ~1-2 μs | 同节点 8 GPU 互联 |
+| **NVLink 3**（A100） | ~300 GB/s（双向 ~600） | ~1-2 μs | 同节点 8 GPU 互联 |
+| **PCIe 5.0 x16** | ~64 GB/s | ~5-10 μs | 同节点 GPU-CPU / GPU-GPU（无 NVLink） |
+| **PCIe 4.0 x16** | ~32 GB/s | ~5-10 μs | 同节点（老平台） |
+| **InfiniBand HDR**（CX-6） | ~50 GB/s（200 Gb/s） | ~1-2 μs | 跨节点 GPU 互联 |
+| **InfiniBand NDR**（CX-7） | ~100 GB/s（400 Gb/s） | ~1-2 μs | 跨节点（最新集群） |
+| **RoCE v2**（200G） | ~25 GB/s | ~2-5 μs | 跨节点（以太网替代 IB） |
+
+> 💡 **面试口述**：同节点 GPU 间走 NVLink（~450 GB/s），跨节点走 IB/RoCE（~50-100 GB/s）。NVLink 带宽是 IB 的 ~5-10 倍，所以分布式推理优先在同节点内做 TP（高带宽、低延迟），跨节点做 PP/DP（通信量小、容忍高延迟）。
+
+##### α-β 通信模型
+
+把通信时间拆成**启动延迟 α + 数据传输 size/BW**：
+
+$$T_{\text{comm}} = \alpha + \frac{\text{size}}{\text{BW}}$$
+
+| 参数 | 含义 | 典型值（NVLink 4） |
+|------|------|------------------|
+| $\alpha$ | 启动延迟（latency） | ~1-2 μs |
+| BW | 带宽（bandwidth） | ~450 GB/s |
+| size | 传输数据量（bytes） | 由 collective + tensor 大小决定 |
+
+**应用示例**：TP all-reduce 28.7 MB（§3.6 TP 示例）走 NVLink 4：
+
+```
+T_comm = 2 μs + 28.7 MB / 450 GB/s = 2 μs + 63.8 μs ≈ 65.8 μs
+```
+
+走 IB NDR（跨节点）：
+
+```
+T_comm = 2 μs + 28.7 MB / 100 GB/s = 2 μs + 287 μs ≈ 289 μs
+```
+
+> 💡 **关键洞察**：
+> - **大消息**（size >> α×BW）：$\alpha$ 可忽略，$T \approx \text{size}/\text{BW}$，带宽主导
+> - **小消息**（size << α×BW）：$T \approx \alpha$，延迟主导，此时用 tree all-reduce（步数 $\log N$）比 ring（步数 $2(N-1)$）快
+> - NVLink 4 的 α×BW ≈ 2μs × 450GB/s ≈ 900KB，所以 >1MB 的消息是带宽主导，<100KB 是延迟主导
+
+##### 从通信量到通信时间
+
+有了 §3.6 的通信量公式和本节的带宽/延迟，就能估算并行策略的通信开销：
+
+| 并行 | 通信量 | 走 NVLink 4 的时间 | 走 IB NDR 的时间 |
+|------|--------|-------------------|-----------------|
+| TP all-reduce（28.7 MB） | 2×7/8×28.7 | ~66 μs | ~289 μs |
+| PP send/recv（16.8 MB） | 16.8 | ~39 μs | ~170 μs |
+| DP（推理） | 0 | 0 | 0 |
+
+> ⚠️ **估算 vs 实测**：上表是理论估算，实际 wall-clock 还含 NCCL 内部优化（fusion、pipeline）、launch overhead、同步等待。用 `dist_allreduce_demo.py`（见 Coding 任务）实测对比。
+
 ---
 
 ### Coding 任务

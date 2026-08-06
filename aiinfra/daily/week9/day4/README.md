@@ -173,6 +173,57 @@ T_comm/层 ≈ 2ms (all-reduce 28.7MB, NVLink 400GB/s → 0.07ms? 实际有 late
 
 compute >> comm，重叠收益有限（comm 已被自然遮盖）。但在大 batch 或长 seq 下，comm 占比上升，重叠收益增大。
 
+#### 4.5 Sequence Parallelism（Megatron 2205.05198）
+
+##### 为什么需要 Sequence Parallelism？
+
+标准 TP 的 all-reduce 通信量 = $2 \times \text{tokens} \times \text{hidden}$，其中 $\text{tokens} = \text{batch} \times \text{seq\_len}$。当序列很长（如 32K/128K context）时，activation 的 all-reduce 通信量与 seq_len 成正比，成为瓶颈。
+
+Megatron-LM 的 Sequence Parallelism（SP）核心思路：**把 seq_len 维也切分到各卡**，每卡只持有 1/N 的 sequence，减少 activation 通信量。
+
+##### SP 与 TP 的协作
+
+SP 不替换 TP，而是**与 TP 配合**——在 TP 的非 Attention 部分（LayerNorm、Dropout、Residual）把 sequence 切分：
+
+```
+标准 TP（无 SP）：
+  LayerNorm:  activation [B, S, H] → 每卡全量 → all-reduce 聚合
+  Attention:  QKV column-parallel → 各 head 独立 → all-reduce 聚合
+  → 通信量/层 = 2 × B × S × H × sizeof(dtype)  (S = 全序列)
+
+SP + TP：
+  LayerNorm:  activation [B, S/N, H] → 每卡 1/N 序列 → 无 all-reduce
+  Attention:  all-gather 把 [B, S/N, H] → [B, S, H] → 正常 TP attention → reduce-scatter 回 [B, S/N, H]
+  → LayerNorm 部分通信量 = 0；Attention 部分用 all-gather + reduce-scatter 替代 all-reduce
+  → 总通信量不变（2 × B × S × H），但 LayerNorm 的 activation 显存降为 1/N
+```
+
+##### SP 的关键改进：all-reduce 拆成 reduce-scatter + all-gather
+
+标准 TP 用 all-reduce（2(N-1)/N × V），SP 把它拆开：
+
+| 阶段 | 标准 TP | SP |
+|------|---------|-----|
+| LayerNorm 后 | all-reduce [B,S,H] | reduce-scatter → [B, S/N, H] |
+| Attention 前 | — | all-gather → [B, S, H] |
+| Attention 后 | — | reduce-scatter → [B, S/N, H] |
+| Output 投影后 | all-reduce [B,S,H] | all-gather → [B, S, H] |
+
+**通信量相同**（all-reduce = reduce-scatter + all-gather），但拆开后可以**与计算重叠**——reduce-scatter/all-gather 各自只传一半数据，更容易被 GEMM 计算掩盖。这正是 §4.2 双流重叠策略的理想应用场景。
+
+##### SP 的收益
+
+| 维度 | 标准 TP | SP + TP |
+|------|---------|---------|
+| LayerNorm activation 显存 | O(B×S×H) | O(B×S/N×H)（降 1/N） |
+| 通信量 | 2V(N-1)/N | 相同（但拆成两半可重叠） |
+| 重叠效率 | all-reduce 难重叠（整块传） | reduce-scatter/all-gather 易重叠（半块） |
+| 适用场景 | 短序列 | 长序列（S > 4K 时收益显著） |
+
+> 💡 **面试要点**：SP 是 Megatron-LM 的工业界主流做法，核心不是减通信量（不变），而是：(1) 减 LayerNorm 的 activation 显存（长序列时 LN 的 activation 占比不可忽略）；(2) 把 all-reduce 拆成 reduce-scatter + all-gather，便于通信计算重叠。vLLM/TensorRT-LLM 在长上下文场景已开始采用 SP。
+
+> 📖 **延伸阅读**：Megatron-LM 论文 "Reducing Activation Recomputation in Large Transformer Models" (2205.05198)，Section 5 详细推导 SP 的通信量与显存。
+
 ---
 
 ### Coding 任务

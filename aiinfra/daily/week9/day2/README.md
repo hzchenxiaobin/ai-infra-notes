@@ -179,6 +179,30 @@ Request 4 → GPU 1
 
 > 💡 **面试要点**：推理中 DP 适合"模型能放进单卡 + 高吞吐"场景。模型放不下时用 TP/PP，再用 DP 做吞吐扩展。vLLM 的 `tensor_parallel_size` + `pipeline_parallel_size` + 数据并行就是这套。
 
+##### 推理 PP 部署形态：vLLM `pipeline_parallel_size`
+
+vLLM 通过 `pipeline_parallel_size`（简称 `pp_size`）配置 PP 度，与 `tensor_parallel_size`（`tp_size`）组合使用：
+
+```python
+from vllm import LLM
+# TP=4 + PP=2：模型分到 8 张卡，每 4 张一组做 TP，两组间做 PP
+llm = LLM(model="meta-llama/Llama-3-70B",
+          tensor_parallel_size=4,
+          pipeline_parallel_size=2)
+```
+
+PP 在推理框架中的实现要点：
+
+| 维度 | 训练 PP | 推理 PP（vLLM） |
+|------|---------|----------------|
+| 调度 | 1F1B / Interleaved | 简化版流水（只有 forward） |
+| bubble | $(P-1)/(M+P-1)$ | 通过 micro-batching prefill 降低 |
+| 通信 | stage 间 send/recv activation | NCCL send/recv（hidden states） |
+| 显存 | 每卡存 1/P 层权重 + activation | 同，但无 backward activation |
+| 触发条件 | 模型 > 单卡显存 | TP=8 仍放不下时才加 PP |
+
+> ⚠️ **PP vs TP 的取舍**：PP 有 bubble 开销且增加 latency（请求要串行穿过所有 stage），TP 无 bubble 但每层有 all-reduce。实践中优先 TP（到单卡显存上限），TP 不够再加 PP。vLLM 默认 `pp_size=1`，只有超大模型（如 70B+ on 8×A100）才设 `pp_size>1`。
+
 #### 2.6 三维并行的通信量对比
 
 | 并行 | 通信原语 | 通信量 | 频率 |

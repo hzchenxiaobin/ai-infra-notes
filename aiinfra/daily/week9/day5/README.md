@@ -263,3 +263,9 @@ DeepSeek 的负载均衡策略：
 6. **大 EP 部署**：DeepEP 通信库 + EPLB 负载均衡，支持 EP32/EP144
 
 > 📖 延伸阅读：DeepSeek-V3 技术报告、Mixtral 论文、DeepEP GitHub、GShard（MoE 并行开创性论文）
+
+##### Ring Attention 导读（长上下文分布式注意力）
+
+Ring Attention 是处理超长上下文（100K+ tokens）的分布式 Attention 方案——KV 跨 GPU 环形流式传输，每个 GPU 持有一部分 Q，KV 在 GPU 间传递，本地 attention 计算与通信重叠。它与 FlashAttention 的关系：Ring Attention = FlashAttention + 分布式 KV 传输，online softmax 天然支持跨 GPU 合并。
+
+> 📖 **Ring Attention 完整讲解**（含 NCCL send/recv 通信、双流重叠、load balancing、KV buffer 显存降至 1/N）见 [`_supplementary/from_w8d6/README.md`](_supplementary/from_w8d6/README.md)。该内容原属 Week 8 Day 6 补充，现已归入 Week 9 分布式专题。

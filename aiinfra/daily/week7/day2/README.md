@@ -864,15 +864,15 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 > 思考：什么场景下 SWAP 会比 RECOMPUTE 更优？（提示：prompt 极长且被抢占时间久时，重算代价超过 PCIe 换入延迟。）
 
-#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
+#### 任务 4：LeetGPU 在线题目 —— Stream Compaction
 
-**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
+**题目链接**：<https://leetgpu.com/challenges/stream-compaction>
 
 **与今日知识的关联**：
 
-这道题的**前缀和（scan）**是 vLLM Scheduler 每轮"过滤已完成序列"（stream compaction）的核心步骤——Scheduler 每轮 iteration 都要把 `FINISHED` 的序列从 running 队列移除、把仍活跃的紧凑保留，GPU 上做这件事就是"谓词标记 + 前缀和算新位置 + scatter"三段式，其中前缀和是唯一的并行难点。`_free_finished_seq_groups()` 的 GPU 化本质就是先做一次 scan 再按新下标重排。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 算前缀和，对应 Scheduler 用预算计数器累加决定每个序列的槽位。
+Stream Compaction（剔除无效元素）是 **Continuous Batching 的底层操作**——每轮调度后，完成的请求需要从 batch 中"剔除"，剩下的请求"压实"成新 batch。这正是 stream compaction 的工程应用：用 **prefix sum 算出目标位置**，再 scatter 写回。Day 2 的 vLLM Scheduler 分析能直接对应本题的算法。
 
-> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Scheduler 过滤/重排 running 队列的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
+> 💡 提交后在 [LeetGPU Stream Compaction](https://leetgpu.com/challenges/stream-compaction) 上记录通过耗时。完整题解（含谓词标记 + 前缀和 + scatter 三段式、与 Scheduler 过滤/重排 running 队列的类比）见 [Stream Compaction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-stream-compaction-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 3）
 

@@ -301,15 +301,15 @@ Iter | Batch | W/R | Batch 内容
 
 > 思考：v1 的并发收益在什么场景下最大？（提示：请求长度方差越大、batch 不超预算时，并发收益越大。与 Day 1 Dynamic Batching 的"凑批"不同，v1 每轮都跑。）
 
-#### 任务 4：LeetGPU 在线题目 —— INT8 Quantized MatMul
+#### 任务 4：LeetGPU 在线题目 —— Top K Selection
 
-**题目链接**：<https://leetgpu.com/challenges/int8-quantized-matmul>
+**题目链接**：<https://leetgpu.com/challenges/top-k-selection>
 
 **与今日知识的关联**：
 
-这道题的**INT8 量化 GEMM** 是 Mini Engine v1 的 forward 优化的关键方向——v1 每轮 iteration 把多个请求拼成 batch 一起送 model forward，其中 attention/FFN 的核心计算就是 GEMM。当 batch 增大让 GEMM 进入 compute-bound（饱和点）后，进一步降延迟的手段就是**低精度量化**（INT8/FP8）：用 INT8 替代 FP32 让 Tensor Core 吞吐提升 2-4x、显存带宽压力减半。这道题练习"反量化→INT32 乘加→重量化"的三段式量化 GEMM，正是 Week 6 Day 6 benchmark 识别出 compute-bound 瓶颈后的优化路径——量化是缩小与 vLLM 性能差距的核心手段之一。
+Top K Selection 是**推理引擎 v1 的 sampling 出口**——每个 token 生成后，需要从 vocab logits 里选 top-k 再采样。Day 5 的 Mini 引擎 v1 多请求并发，每个请求的 decode 循环最后一步就是 **top-k sampling**。理解 top-k 的 CUDA 实现（**bitonic sort / radix select**）是推理引擎全链路的收尾。
 
-> 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 INT8 反量化/重量化 kernel、scale/zero_point 处理、与 compute-bound 量化优化的类比）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
+> 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort / radix select 实现、与 Mini 引擎 v1 sampling 出口的类比）见 [Top K Selection 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 5）
 

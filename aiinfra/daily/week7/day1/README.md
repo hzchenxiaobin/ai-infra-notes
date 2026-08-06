@@ -286,15 +286,15 @@ Submitting 3 sequences with staggered arrival...
 
 > 思考：Continuous Batching 在什么场景下优势最大？（提示：请求长度方差越大，Dynamic 的空等越多，Continuous 的收益越大。）
 
-#### 任务 4：LeetGPU 在线题目 —— Prefix Sum
+#### 任务 4：LeetGPU 在线题目 —— Simple Inference
 
-**题目链接**：<https://leetgpu.com/challenges/prefix-sum>
+**题目链接**：<https://leetgpu.com/challenges/simple-inference>
 
 **与今日知识的关联**：
 
-这道题的**前缀和（scan）**是 Continuous Batching 窗口化累加的基础——任意窗口的和都可由前缀和差分 O(1) 得到（`sum(i..j) = prefix[j] - prefix[i-1]`），正如 Continuous Batcher 的 `_schedule()` 维护一个"活动窗口"（running 序列集合），每轮新请求滑入（prefill）累加其 token 数、完成请求滑出（FINISHED）释放预算，窗口大小（batch size）动态变化，本质是对 token budget 的累积记账。这道题的 GPU 实现用 warp scan `__shfl_up_sync` 做 Hillis-Steele 扫描，把串行 `O(N)` 的累加变成并行 `O(log N)` 步，对应推理系统里每轮对 token budget 的并行统计。
+Simple Inference 是一个**完整的简化推理 kernel**——把 embedding lookup + matmul + activation 串成一个 kernel，正好对应 Day 1 的 Continuous Batching 主题：理解**单个请求的推理流程**是理解多请求调度的前提。本题帮助你从"单算子优化"视角转向"**推理管线**"视角。
 
-> 💡 提交后在 [LeetGPU Prefix Sum](https://leetgpu.com/challenges/prefix-sum) 上记录通过耗时。完整题解（含 warp scan kernel、Hillis-Steele 扫描、与 Continuous Batching token 预算累加的类比）见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
+> 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时。完整题解（含 embedding/matmul/activation 串联 kernel、与 Continuous Batching 单请求推理流程的类比）见 [Simple Inference 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 2）
 
