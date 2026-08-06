@@ -184,6 +184,76 @@ Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
    - Long Scoreboard → global memory 延迟
    - Math Pipe Throttle → FMA 饱和
 
+#### 1.5 Week 8–9 进阶：量化 / CUDA Graph / 分布式
+
+> 以下 4 题覆盖 Week 8（量化 + CUDA Graph）与 Week 9（分布式并行）的高频面试点，是"基础篇"向"进阶篇"的过渡。
+
+##### Q13：FP8 量化有哪些格式？推理中怎么用？（⭐⭐⭐⭐）
+
+<details>
+<summary>答案</summary>
+
+- **两种 FP8 格式**：
+  - E4M3（4 指数 + 3 尾数）：范围 ±448，精度好，用于**前向**（权重/激活）
+  - E5M2（5 指数 + 2 尾数）：范围 ±57344，范围大，用于**反向**（梯度）
+- **推理用法**：权重 W8A16（权重 FP8/INT8 + 激活 FP16）或 W8A8（权重 + 激活均 FP8）
+- **scaling factor**：FP8 范围有限（±448），需 scale 把 FP16 数据映射到 FP8 范围
+  - per-tensor：一个 scale 给整个 tensor
+  - per-block（MXFP8）：每 32 元素共享一个 scale（microscaling）
+- **Blackwell 新增 NVFP4**：E2M1 + microscaling，算力 FP16 的 4×，精度更低需校准
+- **收益**：FP8 vs FP16 → 显存减半、算力翻倍（Tensor Core FP8 吞吐 2× FP16）
+
+</details>
+
+##### Q14：CUDA Graph 解决什么问题？有什么限制？（⭐⭐⭐⭐）
+
+<details>
+<summary>答案</summary>
+
+- **解决的问题**：decode 阶段每步 launch 多个 kernel（GEMM + Attention + ...），每个 launch ~5-10μs CPU overhead。80 层 × 4 launch/层 = 320 × 7μs ≈ 2.2ms 纯 launch 开销
+- **CUDA Graph**：把整个 launch 序列"录下来"，一次 `graph.replay()` 重放，launch 降至 ~10μs
+- **限制**：
+  - 要求 **shape 静态**（decode 每步 token 数固定 → 适合；prefill shape 变化 → 需多个 graph 或回退 eager）
+  - 捕获后修改 kernel 参数需重新捕获
+- **生产实践**：vLLM/TensorRT-LLM 在 decode 路径广泛使用 CUDA Graph，配合 shape bucketing 处理不同 batch size
+
+</details>
+
+##### Q15：TP/PP/DP 的通信量怎么比较？怎么选？（⭐⭐⭐⭐⭐）
+
+<details>
+<summary>答案</summary>
+
+| 并行 | 通信原语 | 通信量 | 频率 |
+|------|---------|--------|------|
+| TP | all-reduce | $2 \times \text{tokens} \times \text{hidden}$ | 每层 |
+| PP | send/recv | $\text{tokens} \times \text{hidden}$ | 每 stage 边界 |
+| DP（推理） | 无 | 0 | — |
+| EP | all-to-all | $2 \times \text{tokens} \times \text{top\_k} \times \text{hidden}$ | 每 MoE 层 |
+
+- **选择原则**：TP 优先 intra-node（NVLink 高带宽），PP 用于 inter-node（通信量小、容忍高延迟），DP 做吞吐扩展（零通信）
+- **TP 通信量最大**（每层 all-reduce），但延迟最低（无 bubble）
+- **PP 通信量小**（send/recv），但有 bubble 开销 $(P-1)/(M+P-1)$
+- **EP**：MoE 模型专用，decode 阶段通信量极小（batch=1 时 ~KB 级）
+
+</details>
+
+##### Q16：Ring all-reduce 的通信量怎么算？为什么用 ring？（⭐⭐⭐⭐）
+
+<details>
+<summary>答案</summary>
+
+- **通信量**：ring all-reduce = $2V(N-1)/N$（$V$ = 张量大小，$N$ = GPU 数）
+  - 每卡发送 + 接收 = $2V(N-1)/N$，$N$ 大时趋近 $2V$
+- **两阶段**：reduce-scatter（$N-1$ 步）+ all-gather（$N-1$ 步）= $2(N-1)$ 步
+- **为什么用 ring**：
+  - 每卡只与左右邻居通信，带宽利用率恒定（无拥塞点）
+  - 通信量与 $N$ 近似无关（只步数线性增长）
+  - 朴素 all-reduce（全发到 root 再广播）通信量 $O(VN)$ 且 root 拥塞
+- **α-β 模型**：$T = \alpha + \text{size}/\text{BW}$；大消息带宽主导（用 ring），小消息延迟主导（用 tree，步数 $\log N$）
+
+</details>
+
 ---
 
 ### Coding 任务：基础篇面试题自问自答笔记

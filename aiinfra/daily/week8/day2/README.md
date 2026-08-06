@@ -242,6 +242,29 @@ for model_size in ['7B', '13B']:
     print(f"{model_size}: GPTQ error={diff_gptq:.4f}, AWQ error={diff_awq:.4f}")
 ```
 
+#### 任务 2b：FP8 GEMM 实测 benchmark（`torch._scaled_mm`）
+
+创建 [kernels/fp8_gemm_benchmark.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day2/kernels/fp8_gemm_benchmark.py)，用 `torch._scaled_mm` 做 FP8 E4M3 GEMM，对比 FP16/BF16 的性能与精度：
+
+```bash
+python kernels/fp8_gemm_benchmark.py
+```
+
+**预期输出**（待 GPU 实测回填，下表为理论预期）：
+
+| M×N×K | FP16 (ms) | FP16 (TF) | FP8 (ms) | FP8 (TF) | FP8/FP16 加速 | 最大误差 |
+|--------|----------|----------|---------|---------|-------------|---------|
+| 1024³ | ~0.5 | ~4.3 | ~0.3 | ~7.2 | ~1.7x | ~0.5 |
+| 4096³ | ~15 | ~9.2 | ~8 | ~17.2 | ~1.9x | ~2.0 |
+| 8192³ | ~110 | ~9.9 | ~60 | ~18.2 | ~1.8x | ~5.0 |
+
+> ⚠️ **上表为理论预期值（FP8 算力 = FP16 的 2×），需在 RTX 5090 上实跑 `fp8_gemm_benchmark.py` 回填真实数字。** 实测加速比受 launch overhead、memory bandwidth、scale 量化误差影响，大矩阵更接近 2x 理论值。
+
+**代码要点**：
+- `torch._scaled_mm(a_fp8, b_fp8, scale_a, scale_b, out_dtype=torch.float16)` 调用 FP8 Tensor Core
+- FP8 E4M3 → FP32 累加 → FP16 输出（混合精度策略）
+- `scale_a = scale_b = 1.0` 是 per-tensor 最简方案；生产用 per-block（MXFP8）
+
 #### 任务 3：LeetCode 面试题
 
 | 题目 | 难度 | 核心套路 | 题解 |
