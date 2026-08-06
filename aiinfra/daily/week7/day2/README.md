@@ -910,7 +910,7 @@ Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
 
 ### 今日总结
 
-Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复刻了能真正触发抢占的教学模型：
+Day 2 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复刻了能真正触发抢占的教学模型：
 
 1. **Scheduler 结构**：三 FIFO 队列（waiting/running/swapped）+ BlockSpaceManager，调度优先级 running > swapped > waiting
 2. **schedule() 5 步**：处理完成 → 调度 running → 调度 swapped → 调度 waiting → 构建 outputs，顺序保证"已运行优先、被抢占先恢复、新请求最后"
@@ -920,7 +920,7 @@ Day 3 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 6. **BlockSpaceManager**：PagedAttention 的 block 粒度分配/回收，`allocate` 对 decode 增长是追加而非覆盖（避免 block 泄漏）
 7. **手写复刻**：实测 RECOMPUTE 下被抢占序列 g 归零重 prefill（7 iter），SWAP 下保留进度（6 iter），验证两种模式的差异
 
-掌握这些后，你就理解了 vLLM 推理调度的"心脏"——明天 Day 4 对比 TensorRT-LLM 的 Inflight Batching 和 Chunked Prefill，看不同推理框架如何实现同一套调度思想。
+掌握这些后，你就理解了 vLLM 推理调度的"心脏"——明天 Day 3 对比 TensorRT-LLM 的 Inflight Batching 和 Chunked Prefill，看不同推理框架如何实现同一套调度思想。
 
 ---
 

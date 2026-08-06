@@ -4,24 +4,24 @@
 
 通过今天的学习，你将：
 
-1. 系统梳理 Week 6 的知识链——从 Dynamic Batching 到 Continuous Batching 到 vLLM Scheduler 到框架对比到 Mini 引擎 v1 到 benchmark，把碎片知识连成**一张完整地图**<br>
+1. 系统梳理 Week 7 的知识链——从 Dynamic Batching 到 Continuous Batching 到 vLLM Scheduler 到框架对比到 Mini 引擎 v1 到 benchmark，把碎片知识连成**一张完整地图**<br>
 2. 掌握 **7 种调度策略**的原理、适用场景、优缺点，建立**策略选择决策树**，拿到任意推理服务需求能选对 batching 策略<br>
 3. 复盘本周 **15 道面试题**，建立调度专题的答题框架（定性→机制→量化→方案→跨平台）<br>
 4. 整理本周所有产出（Dynamic/Continuous Batcher、vLLM Scheduler 复刻、Chunked Prefill 模拟器、Mini 引擎 v1、benchmark 框架），形成可复用的工程资产<br>
 5. 澄清 **6 个常见误区**——Continuous≠Dynamic、PagedAttention 非直接加速、RECOMPUTE 默认非因快、chunked 非越小越好等<br>
-6. 为 Week 7（系统整合）做好知识衔接，明确把前六周所有组件联调成完整 Mini AI Infra 系统的前置基础
+6. 为 Week 8（量化与加速）做好知识衔接，明确把前六周所有组件联调成完整 Mini AI Infra 系统的前置基础
 
-> 💡 **为什么重要**：Day 1-6 我们分别学了调度的各个机制——Dynamic 凑批、Continuous 每轮重建、vLLM Scheduler 5 步、Chunked Prefill 分块、Mini 引擎 v1 并发、benchmark 量性能。但"各个机制都懂"不等于"系统全局掌握"——今天用策略对比表和决策树把碎片连成网络。这张决策树是调度优化的通用工具箱：看到任何推理服务需求，你能立刻判断该用哪种 batching、叠哪些策略。Week 7 的系统整合建立在这张地图上。
+> 💡 **为什么重要**：Day 1-6 我们分别学了调度的各个机制——Dynamic 凑批、Continuous 每轮重建、vLLM Scheduler 5 步、Chunked Prefill 分块、Mini 引擎 v1 并发、benchmark 量性能。但"各个机制都懂"不等于"系统全局掌握"——今天用策略对比表和决策树把碎片连成网络。这张决策树是调度优化的通用工具箱：看到任何推理服务需求，你能立刻判断该用哪种 batching、叠哪些策略。Week 8 的量化与加速建立在这张地图上。
 
 ---
 
-### Week 6 知识地图
+### Week 7 知识地图
 
-![Week 6 知识地图：从凑批到并发服务](../images/week6_knowledge_map.svg)
+![Week 7 知识地图：从凑批到并发服务](../images/week6_knowledge_map.svg)
 
-Week 6 围绕一条主线展开：**从单请求串行到多请求高吞吐服务**。
+Week 7 围绕一条主线展开：**从单请求串行到多请求高吞吐服务**。
 
-![Week 6 学习主线](../../images/week6_learning_pipeline.svg)
+![Week 7 学习主线](../../images/week6_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -33,7 +33,7 @@ Week 6 围绕一条主线展开：**从单请求串行到多请求高吞吐服�
 | Day 6 | Benchmark | benchmark_engine_v1.py | throughput-latency 曲线、饱和点、P99、瓶颈分析 |
 | **Day 7** | **策略总结** | **7 策略对比 + 决策树** | **决策树、面试复盘、误区澄清** |
 
-> 💡 **一句话总结**：Week 6 的本质是"从凑批到并发服务"。Day 7 的策略决策树就是这 7 天学习的最终答卷——它是推理调度选型的通用工具箱。
+> 💡 **一句话总结**：Week 7 的本质是"从凑批到并发服务"。Day 7 的策略决策树就是这 7 天学习的最终答卷——它是推理调度选型的通用工具箱。
 
 ---
 
@@ -118,13 +118,13 @@ python kernels/week6_summary.py
 
 **预期输出**（节选）：
 
-![Week 6 调度策略总结](../../images/week6_scheduling_strategy_comparison.svg)
+![Week 7 调度策略总结](../../images/week6_scheduling_strategy_comparison.svg)
 
 #### 任务 2：LeetGPU 综合题 —— Reduction
 
 **题目链接**：<https://leetgpu.com/challenges/reduction>
 
-**与本周总结的关联**：Reduction 是所有归约类 kernel（softmax 分母、LayerNorm 均值方差、dot product、attention 分数累加）的基础组件——block 内归约 + 跨 block 归约的两段式结构是通用模板。本周所有"累加/统计"操作（`percentile()`、token budget 累加、batch 聚合）的本质都是归约。这道题还藏着一个精度要点：大 `N` 下必须用 `double` 高精度累加、最后一步才转回 FP32，否则累加误差直接超容差——正是 Day 6 benchmark 结论"量化提吞吐、但累加必须升精度控误差"的同构练习。这道题练 warp shuffle 归约 + 两阶段汇总——Week 7 系统整合中所有统计/归约 kernel 都会用到。
+**与本周总结的关联**：Reduction 是所有归约类 kernel（softmax 分母、LayerNorm 均值方差、dot product、attention 分数累加）的基础组件——block 内归约 + 跨 block 归约的两段式结构是通用模板。本周所有"累加/统计"操作（`percentile()`、token budget 累加、batch 聚合）的本质都是归约。这道题还藏着一个精度要点：大 `N` 下必须用 `double` 高精度累加、最后一步才转回 FP32，否则累加误差直接超容差——正是 Day 6 benchmark 结论"量化提吞吐、但累加必须升精度控误差"的同构练习。这道题练 warp shuffle 归约 + 两阶段汇总——Week 8 量化与加速中所有统计/归约 kernel 都会用到。
 
 > 💡 完整题解（含 warp shuffle 归约、block 间两阶段汇总、double 高精度累加的精度处理）见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
@@ -205,11 +205,11 @@ python kernels/week6_summary.py
 
 ---
 
-### Week 6 → Week 7 衔接
+### Week 7 → Week 8 衔接
 
-Week 6 建立了调度系统的"全景地图"和第一个多请求并发引擎。Week 7 进入**系统整合**：
+Week 7 建立了调度系统的"全景地图"和第一个多请求并发引擎。Week 8 进入**量化与加速**：
 
-| Week 6（调度 + 并发） | Week 7（系统整合） |
+| Week 7（调度 + 并发） | Week 8（量化与加速） |
 |----------------------|-------------------|
 | Mini 引擎 v1（多请求） | 联调所有组件成完整系统 |
 | Continuous Batching | 端到端服务 + API |
@@ -217,30 +217,30 @@ Week 6 建立了调度系统的"全景地图"和第一个多请求并发引擎�
 | 调度策略对比 | 生产级调度策略选型 |
 | 单卡推理 | 多卡 TP/PP 扩展（进阶） |
 
-> 💡 Week 7 的核心问题：怎么把前六周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是推理调度阶段的收官。
+> 💡 Week 8 的核心问题：怎么把前六周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是推理调度阶段的收官。
 
 ---
 
 ### 弹性安排
 
 - **时间紧（≤4h）**：跑 `week6_summary.py` 自测 15 题 + 过一遍策略对比表 + 决策树
-- **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成 Week 6 性能报告
-- **充裕（8h+）**：+ 重做 Day3 的 vLLM Scheduler 抢占实验 + Day6 的 benchmark 调参 + 写 Week 6 学习总结博客
+- **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成 Week 7 性能报告
+- **充裕（8h+）**：+ 重做 Day3 的 vLLM Scheduler 抢占实验 + Day6 的 benchmark 调参 + 写 Week 7 学习总结博客
 
 ---
 
 ### 今日总结
 
-Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
+Day 7 我们把 Week 7 的碎片知识连成了调度系统的完整地图：
 
 1. **知识地图**：Day1 Dynamic 凑批 → Day2 Continuous 每轮重建 → Day3 vLLM Scheduler 5步 → Day4 框架对比/Chunked Prefill → Day5 Mini 引擎 v1 → Day6 benchmark → Day7 策略总结
 2. **7 种策略对比**：Static/Dynamic/Continuous/Priority/Preemption/Chunked Prefill/Speculative，各有适用场景
 3. **决策树**：最低延迟→小batch+优先级；LLM自回归→Continuous；再按需叠加 Priority/Chunked/Preemption/Speculative
 4. **15 道面试题复盘**：分 Dynamic/Continuous/Scheduler/框架/引擎/Benchmark/总结七组，建立答题框架
 5. **6 个误区澄清**：Continuous≠Dynamic、PagedAttention 非直接加速、RECOMPUTE 非因快、chunked 非越小越好、饱和点非仅 util=100%、P99 不可忽略
-6. **Week7 衔接**：从调度系统到完整 AI Infra 系统整合，把六周零件联调成端到端服务
+6. **Week 8 衔接**：从调度系统到完整 AI Infra 系统整合，把六周零件联调成端到端服务
 
-掌握这些后，你就有了推理调度的全局视角——Week 7 我们把所有组件联调成完整的 Mini AI Infra 系统，完成推理调度阶段的学习收官。
+掌握这些后，你就有了推理调度的全局视角——Week 8 我们把所有组件联调成完整的 Mini AI Infra 系统，完成推理调度阶段的学习收官。
 
 ---
 
@@ -319,7 +319,7 @@ Day 7 我们把 Week 6 的碎片知识连成了调度系统的完整地图：
 ## 📁 本周目录结构
 
 ```
-aiinfra/daily/week6/
+aiinfra/daily/week7/
 ├── README.md # 周概览
 ├── day1/kernels/dynamic_batcher.py # Dynamic Batching 实现
 ├── day2/kernels/continuous_batcher.py # Continuous Batching 实现
@@ -343,7 +343,7 @@ aiinfra/daily/week6/
 - **Orca 论文**：Iteration-level Scheduling (OSDI 2022)——Continuous Batching 理论基础
 - **LightLLM 仓库**：<https://github.com/ModelTC/lightllm>（Token Attention / Dynamic Split Fuse）
 
-## ✅ Week 6 完成标准
+## ✅ Week 7 完成标准
 
 - [ ] 能实现 Dynamic Batching，多个请求正确聚合（Day1）
 - [ ] 能实现 Continuous Batching，新请求可任意 iteration 加入（Day2）
@@ -353,5 +353,5 @@ aiinfra/daily/week6/
 - [ ] 能绘制 throughput-latency 曲线并识别饱和点（Day6）
 - [ ] 能用决策树选择合适的 batching 策略，给出场景选型建议（Day7）
 - [ ] 完成本周 15 道面试题的自问自答
-- [ ] 整理 GitHub 仓库，生成 Week 6 性能报告
-- [ ] 规划 Week 7（系统整合）的学习重点
+- [ ] 整理 GitHub 仓库，生成 Week 7 性能报告
+- [ ] 规划 Week 8（量化与加速）的学习重点

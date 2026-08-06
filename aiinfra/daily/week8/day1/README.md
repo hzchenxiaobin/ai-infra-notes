@@ -1,4 +1,4 @@
-## Day 1：量化推理专题 —— W8A16/INT8 KV/FP8量化推理专题 —— W8A16/INT8 KV Cache/FP8
+## Day 1：量化推理专题 —— W8A16/INT8 KV/FP8
 
 ### 🎯 目标
 

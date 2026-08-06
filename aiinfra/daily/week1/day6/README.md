@@ -224,7 +224,7 @@ ncu --metrics \
 
 **Step 2：采集到的数据**
 
-执行时间来自仓库留档的 nsys 实测（[profiles/week1_profile_summary.md](../../profiles/week1_profile_summary.md)，RTX 5090，2026-08-04）；bank conflict 计数因容器环境 Performance Counter 权限受限（ERR_NVGPUCTRPERM）未能实测，下表给出按 `grid(1,1) × block(32,8)` 估算的量级，有 GPU 权限时用上面的 ncu 命令实测回填：
+执行时间来自仓库留档的 nsys 实测（[profiles/week1_profile_summary.md](../profiles/week1_profile_summary.md)，RTX 5090，2026-08-04）；bank conflict 计数因容器环境 Performance Counter 权限受限（ERR_NVGPUCTRPERM）未能实测，下表给出按 `grid(1,1) × block(32,8)` 估算的量级，有 GPU 权限时用上面的 ncu 命令实测回填：
 
 | Kernel | 执行时间（nsys 实测） | bank conflicts（load，估算） | 说明 |
 |--------|----------------------|------------------------------|------|

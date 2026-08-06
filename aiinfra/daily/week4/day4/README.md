@@ -1,4 +1,4 @@
-## Day 4：Triton 语言专题 —— 用 Triton 重写 Softmax/GEMM/FATriton 语言专题 —— 用 Triton 重写 Softmax/GEMM/FlashAttention
+## Day 4：Triton 语言专题 —— 用 Triton 重写 Softmax/GEMM/FA
 
 ### 🎯 目标
 

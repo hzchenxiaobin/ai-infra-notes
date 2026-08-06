@@ -1,4 +1,4 @@
-## Day 2：算子接入 Mini 引擎（C++ Extension）算子接入 Mini 引擎
+## Day 2：算子接入 Mini 引擎（C++ Extension）
 
 ### 🎯 目标
 

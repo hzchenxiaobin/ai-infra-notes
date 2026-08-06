@@ -1,4 +1,4 @@
-## Day 1：Trace Transformer 推理流程（Prefill/Decode）Trace Transformer 推理流程
+## Day 1：Trace Transformer 推理流程（Prefill/Decode）
 
 ### 🎯 目标
 

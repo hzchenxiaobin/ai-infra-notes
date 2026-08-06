@@ -333,7 +333,7 @@ Submitting 3 sequences with staggered arrival...
 
 ### 今日总结
 
-Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Batching 的 iteration-level 调度：
+Day 1 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Batching 的 iteration-level 调度：
 
 1. **Dynamic 的缺陷**：request-level 聚合，长请求阻塞短请求，完成的必须等整批结束 → GPU slot 空等
 2. **Continuous 核心思想**：iteration-level 调度，每轮重建 batch，完成即走、新请求随时插入 → GPU 始终满载
@@ -343,7 +343,7 @@ Day 2 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
 6. **Chunked Prefill**：长 prompt 拆成小 chunk 与 decode 交错，平滑 latency（Day 4 详讲）
 7. **手写 ContinuousBatcher**：实测 S3（短请求）在 iter 6 完成，比 Dynamic 节省 3 个 iteration 等待
 
-掌握这些后，你就有了现代 LLM 推理服务的核心技术——明天 Day 3 深入 vLLM Scheduler 源码，看它的 `schedule()` 具体怎么实现 iteration-level 调度、preemption 和 swapping。
+掌握这些后，你就有了现代 LLM 推理服务的核心技术——明天 Day 2 深入 vLLM Scheduler 源码，看它的 `schedule()` 具体怎么实现 iteration-level 调度、preemption 和 swapping。
 
 ---
 

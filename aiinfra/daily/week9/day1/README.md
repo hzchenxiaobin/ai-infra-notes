@@ -1,4 +1,4 @@
-## Day 1：分布式推理 —— TP/PP/DP 与通信计算重叠分布式推理专题 —— TP/PP/DP 与通信计算重叠
+## Day 1：分布式推理 —— TP/PP/DP 与通信计算重叠
 
 ### 🎯 目标
 
@@ -429,9 +429,9 @@ nsys-ui comm_overlap.nsys-rep
 
 > 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解见 [Matrix Copy 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+#### 任务 5：LeetCode 面试题（LeetCode 8 周计划 · 第 7 周 精选）
 
-> 📅 今日为分布式推理专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 4 道高频题（二分模板 + 一维 DP + 背包 DP），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日 LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 4 道高频题（二分模板 + 一维 DP + 背包 DP），保持算法手感。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

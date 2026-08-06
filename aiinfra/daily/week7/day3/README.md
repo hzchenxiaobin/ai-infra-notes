@@ -604,7 +604,7 @@ for cs in [4, 8, 16, 24]:
 
 ### 今日总结
 
-Day 4 我们对比了三大推理框架的调度策略，并手写了 Chunked Prefill 模拟器：
+Day 3 我们对比了三大推理框架的调度策略，并手写了 Chunked Prefill 模拟器：
 
 1. **Inflight = Continuous**：TensorRT-LLM 的 Inflight Batching 本质就是 iteration-level 调度，请求动态加入退出，与 vLLM Continuous Batching 同一思想
 2. **TensorRT-LLM 特点**：C++ 调度器 + 预编译 plan + kernel 融合，性能更高但灵活性低（换模型要重编译）

@@ -6,22 +6,22 @@
 
 1. 把 Transformer 单层的全部算子按 **arithmetic intensity (AI)** 分类，产出一张 Prefill / Decode 两阶段的算子分类表
 2. 建立从"算子形状"到"compute-bound / memory-bound"的判断直觉，拿到任意算子能秒判 bound 类型
-3. 系统梳理 Week 3 的核心知识链：Prefill vs Decode → 手写 Softmax/LayerNorm → 源码优化 → Attention IO → 端到端 Profiling → Fusion
+3. 系统梳理 Week 4 的核心知识链：Prefill vs Decode → 手写 Softmax/LayerNorm → 源码优化 → Attention IO → 端到端 Profiling → Fusion
 4. 整理本周所有产出（kernel、引擎、profiling 报告），形成可复用的工程资产
 5. 回顾本周 10+ 道面试题，建立 Transformer 算子优化的答题框架
-6. 为 Week 4 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
+6. 为 Week 5 的 FlashAttention 深挖做好知识衔接，明确标准 Attention 的 O(N²) 问题如何被 online softmax + tiling 解决
 
-> 💡 **为什么重要**：Day 1-6 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 4 FlashAttention 的最后一块前置基石。
+> 💡 **为什么重要**：Day 1-6 我们分别手写了 Softmax/LayerNorm/Attention、接入 Mini Engine、做了端到端 Profiling。但"算子各自理解"不等于"系统全局掌握"——今天把碎片知识连成网络，用一张算子分类表收束全周。这张表是推理系统优化的"地图"：看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。这也是 Week 5 FlashAttention 的最后一块前置基石。
 
 ---
 
-### Week 3 知识地图
+### Week 4 知识地图
 
 ![Transformer 单层数据流](../images/transformer_dataflow.svg)
 
-Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
+Week 4 围绕一条主线展开：**从模型执行流程到手写算子再到系统级瓶颈定位**。
 
-![Week 3 学习主线](../../images/week3_learning_pipeline.svg)
+![Week 4 学习主线](../../images/week3_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -33,7 +33,7 @@ Week 3 围绕一条主线展开：**从模型执行流程到手写算子再到�
 | Day 6 | 端到端 Profiling + Fusion | profiling 报告 | nsys + ncu 五步法、kernel fusion 候选 |
 | **Day 7** | **算子分类 + 总结** | **算子分类表** | **arithmetic intensity 判定** |
 
-> 💡 **一句话总结**：Week 3 的本质是"理解 Transformer 推理为什么慢，并定位慢在哪些算子"。Day 7 的算子分类表就是这 7 天学习的最终答卷。
+> 💡 **一句话总结**：Week 4 的本质是"理解 Transformer 推理为什么慢，并定位慢在哪些算子"。Day 7 的算子分类表就是这 7 天学习的最终答卷。
 
 ---
 
@@ -183,10 +183,10 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 #### 任务 1：完成 Transformer 算子分类表
 
-将上文两张分类表整理到 [notes/operator_classification.md](../notes/operator_classification.md)，并补充你自己 Mini Engine 的实测数据：
+将上文两张分类表整理到你的项目笔记中（如 `notes/operator_classification.md`），并补充你自己 Mini Engine 的实测数据：
 
 ```markdown
-# Week 3 Transformer 算子分类表
+# Week 4 Transformer 算子分类表
 
 ## 测试环境
 - GPU: [你的型号]
@@ -236,20 +236,20 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 > 💡 回顾重点：Group Normalization / Softmax Attention / RMS Normalization 三道 LeetGPU 题对应本周 memory-bound 算子主线；LeetCode 题对应 8 周刷题计划第 3 周「链表与数学技巧」。把没做完的题目今天补上。
 
-#### 任务 4：Week 4 预热 + 面试复盘
+#### 任务 4：Week 5 预热 + 面试复盘
 
-**Week 4 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 4 将深入 FlashAttention：
+**Week 5 预热**：本周我们分析了标准 Attention 的 O(N²) IO 问题。Week 5 将深入 FlashAttention：
 
-1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 5 已学简化版，Week 4 学完整版）
+1. **FlashAttention 算法**：Tiling + Online Softmax（Week 2 Day 5 已学简化版，Week 5 学完整版）
 2. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
 3. **手写完整 FlashAttention kernel**：支持 batch、multi-head、不同 seq_len
 4. **性能对比**：标准 Attention vs 手写 FlashAttention vs 官方 FlashAttention
 
 **本周铺垫的关键概念**：
-- ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 4 用 FlashAttention 解决
-- ✅ Online Softmax 三公式（Week 2 Day 5）→ Week 4 完整实现
-- ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 4 在 SRAM 中做 softmax
-- ✅ Warp Shuffle reduce（Week 2 Day 1）→ Week 4 用于 online softmax 的分块 reduce
+- ✅ 标准 Attention 的 O(N²) IO（Day 4）→ Week 5 用 FlashAttention 解决
+- ✅ Online Softmax 三公式（Week 2 Day 5）→ Week 5 完整实现
+- ✅ Softmax 的 memory-bound 本质（Day 2）→ Week 5 在 SRAM 中做 softmax
+- ✅ Warp Shuffle reduce（Week 2 Day 1）→ Week 5 用于 online softmax 的分块 reduce
 
 **面试复盘**：回顾本周面试题，自问自答（答案见下方"面试要点"）：
 
@@ -302,9 +302,9 @@ FlashAttention 的核心思路：**不物化 S/P，在 SRAM 中分块完成 soft
 
 ---
 
-### Week 3 → Week 4 衔接
+### Week 4 → Week 5 衔接
 
-Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
+Week 5 我们将深入 **FlashAttention**。为了做好准备，请确保你掌握了：
 
 1. **标准 Attention 的三阶段 IO**（Day 4）：不理解 O(N²) 物化，就无法理解 FlashAttention 的动机
 2. **Online Softmax 三公式**（Week 2 Day 5）：FlashAttention 的算法核心
@@ -312,7 +312,7 @@ Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌
 4. **Shared Memory tiling**（Week 1 Day 4）：FlashAttention 的 Q/K/V tile 驻留机制
 5. **Arithmetic intensity 判定**（Day 7）：理解为什么把 softmax 搬到 SRAM 能消除瓶颈
 
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 4 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 5 会手写完整 FlashAttention kernel，是 8 周计划里难度最高也最核心的一周。
 
 ---
 
@@ -330,16 +330,16 @@ Week 4 我们将深入 **FlashAttention**。为了做好准备，请确保你掌
 
 ### 今日总结
 
-Day 7 我们完成了 Week 3 的系统复盘与算子分类：
+Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 
 1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
 2. **算子分类表**：用 arithmetic intensity 把 Transformer 全部算子分到 compute/memory 两类，Prefill 的 GEMM 是 compute，softmax/layernorm/gelu 是 memory
 3. **memory-bound 算子三件套**：Softmax（safe softmax 三遍扫描）、LayerNorm（两次 reduce）、Attention softmax（O(N²) 物化）
 4. **源码优化差距**：向量化加载、warp vs block dispatch、Welford 一次 reduce、FP32 混合精度
 5. **端到端 Profiling 五步法**：nsys 找 top3 → ncu 判 bound → Roofline 定方向 → Stall 分析 → Fusion 出方案
-6. **Week 4 衔接**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心动机，本周已铺好全部前置概念
+6. **Week 5 衔接**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心动机，本周已铺好全部前置概念
 
-如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么"，说明 Week 3 过关了。
+如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么"，说明 Week 4 过关了。
 
 ---
 
@@ -407,7 +407,7 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 </details>
 
 
-6. **Week 3 你最大的收获是什么？**
+6. **Week 4 你最大的收获是什么？**
 
 <details>
 <summary>点击查看答案</summary>
@@ -421,8 +421,8 @@ Day 7 我们完成了 Week 3 的系统复盘与算子分类：
 ## 📁 本周目录结构
 
 ```
-week3/
-├── README.md # Week 3 概览
+week4/
+├── README.md # Week 4 概览
 ├── day1/ # Day 1: Trace Transformer 推理流程
 │ ├── README.md
 │ └── trace_transformer.py
@@ -455,7 +455,7 @@ week3/
 
 | 资源 | 说明 |
 |------|------|
-| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Week 4 核心论文，预习 Section 2-3 |
+| [FlashAttention 论文](https://arxiv.org/abs/2205.14135) | Week 5 核心论文，预习 Section 2-3 |
 | [PyTorch ATen Softmax 源码](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/SoftMax.cu) | Day 3 阅读的官方 softmax 实现 |
 | [FasterTransformer LayerNorm 源码](https://github.com/NVIDIA/FasterTransformer/blob/main/src/fastertransformer/kernels/layernorm_kernels.cu) | Welford 一次 reduce 参考 |
 | [vLLM 博客: How vLLM serves LLM](https://blog.vllm.ai/) | Prefill/Decode 与 PagedAttention |
@@ -468,13 +468,13 @@ week3/
 
 **题目链接**：<https://leetgpu.com/challenges/softmax-attention>
 
-**与今日知识的关联**：Softmax Attention 是 Week 3 算子主线的综合验收——它融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：用 online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，无需物化 S/P。
+**与今日知识的关联**：Softmax Attention 是 Week 4 算子主线的综合验收——它融合了 Attention 的 O(N²) IO 分析（Day 4）+ Softmax 的 memory-bound 本质（Day 2）+ Profiling（Day 6）。作为总结日的 LeetGPU 练习，它帮助你把"算子各自理解"串成"系统全局掌握"：用 online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，无需物化 S/P。
 
 > 💡 完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
 ---
 
-## ✅ Week 3 完成标准
+## ✅ Week 4 完成标准
 
 - [ ] 能列出 Prefill 阶段算子分类表（GEMM=compute，softmax/LN=memory）
 - [ ] 能列出 Decode 阶段算子分类表（几乎全是 memory-bound）
@@ -485,9 +485,9 @@ week3/
 - [ ] Mini Engine 自定义版端到端 PASS，与 PyTorch 误差 < 1e-4
 - [ ] 生成 profiling 报告（含 top3 瓶颈算子 + 优化方向）
 - [ ] 能口述本周 10 道面试题的答案要点
-- [ ] 理解 Week 4 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
+- [ ] 理解 Week 5 FlashAttention 如何解决标准 Attention 的 O(N²) 问题
 - [ ] 完成本周 LeetGPU（Group Normalization/Softmax Attention/RMS Normalization）与 LeetCode 题目
 
 ---
 
-> 💡 **提示**：Week 3 是从"手写单算子"到"理解系统执行"的转折点。算子分类表是推理系统优化的"地图"——看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。Week 4 的 FlashAttention 是这张地图上最重要的优化案例，务必把本周的 O(N²) IO 和 online softmax 基础打牢。
+> 💡 **提示**：Week 4 是从"手写单算子"到"理解系统执行"的转折点。算子分类表是推理系统优化的"地图"——看到任何 Transformer 算子，你能立刻判断它为什么慢、该怎么优化。Week 5 的 FlashAttention 是这张地图上最重要的优化案例，务必把本周的 O(N²) IO 和 online softmax 基础打牢。

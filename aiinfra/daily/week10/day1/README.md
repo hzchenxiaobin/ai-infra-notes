@@ -323,7 +323,7 @@ python kernels/custom_ops_module.py
 
 ### 今日总结
 
-Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 集成到 Transformer Layer：
+Day 1 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 集成到 Transformer Layer：
 
 1. **替换清单**：Softmax、LayerNorm、FlashAttention 替换 PyTorch 原生算子；大 GEMM 保留 cuBLAS（教学 kernel 太慢）
 2. **编译流水线**：`.cu` + `.cpp` → `load_inline` → nvcc/g++ 编译 → `.so` → Python 模块 → 集成到 TransformerLayer
@@ -332,7 +332,7 @@ Day 4 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
 5. **分层验证**：单算子（< 1e-5）→ 多算子组合 → 端到端（< 1e-2）→ 性能对比
 6. **实测验证**：教学版 kernel 精度 PASS，性能可能比 PyTorch 慢（PyTorch 用 cuDNN/cuBLAS 高度优化），核心目的是理解集成流程
 
-掌握这些后，你就有了自定义 Kernel 的工程集成能力——明天 Day 5 进行系统联调，把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，端到端测试。
+掌握这些后，你就有了自定义 Kernel 的工程集成能力——明天 Day 2 进行系统联调，把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，端到端测试。
 
 ---
 

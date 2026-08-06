@@ -290,7 +290,7 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 ### 今日总结
 
-Day 5 我们把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，完成系统联调：
+Day 2 我们把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联，完成系统联调：
 
 1. **六步分层验证**：单请求→多请求→KV Cache→Scheduler→Kernel→稳定性，每步只叠加一个组件
 2. **KV Cache 隔离**：多请求的 KV Cache 互不干扰，完成后全释放（`used_kv_blocks = 0`）

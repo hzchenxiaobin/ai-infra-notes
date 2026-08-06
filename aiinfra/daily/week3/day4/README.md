@@ -1,4 +1,4 @@
-## Day 4：CUTLASS 源码分析 + CuTe 概念铺垫CUTLASS 源码分析 —— 工业级 GEMM 库的三级 Tiling
+## Day 4：CUTLASS 源码分析 + CuTe 概念铺垫
 
 ### 🎯 目标
 

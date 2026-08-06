@@ -471,7 +471,7 @@ Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%
 
 ### 今日总结
 
-Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
+Day 4 我们系统复习了 AI Infra 面试基础篇的四大主题：
 
 1. **GPU 基础**：SM/Warp/Thread 层次（Grid>Block>Warp>Thread，warp=32 是调度单位）；Occupancy（active_warp/max_warp，寄存器/SMem 过多会降低）；Memory Hierarchy（Register~0c < SMem~30c < L2~200c < HBM~500c）；Bank Conflict（32 bank，padding 避免）
 2. **Kernel 优化**：GEMM 八层路径（理论阶梯 Naive 1% → Tiling 15% → Reg Blocking 40% → float4 55% → Shuffle 60% → Double Buffer 70% → Tensor Core 80%+ → Auto-tuning 90%+；RTX 5090 实测 4096³：10.6% → 13.3% → 30.8% → 64.3% → 62.9% → 63.8%，FMA 峰值 ~64%）；float4 = 一条 128-bit load；Shuffle ~1-2 cycles vs SMem ~30 cycles
@@ -481,7 +481,7 @@ Day 3 我们系统复习了 AI Infra 面试基础篇的四大主题：
 6. **Matrix Transpose**：访存合并（coalescing）的典型案例（naive 不连续 → shared memory tile 修复），memory-bound 纯搬运
 7. **零钱兑换**：完全背包 DP，子问题复用 ↔ shared memory tile 复用
 
-掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 4 进入进阶篇（Attention/推理系统/vLLM/调度），用更深入的问题区分"懂"和"精通"。
+掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 5 进行 Mock 面试，在模拟问答中检验基础篇的掌握程度（进阶篇见 `_supplementary/from_w10d3/`）。
 
 ---
 

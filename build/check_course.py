@@ -103,18 +103,19 @@ BARE_KERNEL_RE = re.compile(r"\]\((kernels/[^)]+)\)")
 
 def find_dangling_links(path: Path):
     findings = []
-    text = path.read_text(encoding="utf-8")
-    for m in LINK_RE.finditer(text):
-        target = m.group(1).strip().split()[0] if m.group(1).strip() else ""
-        if not target or target.startswith(("http://", "https://", "#", "mailto:")):
-            continue
-        target = target.split("#")[0]
-        if not target:
-            continue
-        resolved = (path.parent / target).resolve()
-        if not resolved.exists():
-            line_no = text[: m.start()].count("\n") + 1
-            findings.append((line_no, target))
+    for i, line in iter_body_lines(path):
+        for m in LINK_RE.finditer(line):
+            target = m.group(1).strip().split()[0] if m.group(1).strip() else ""
+            if not target or target.startswith(("http://", "https://", "#", "mailto:", "(")):
+                continue
+            if target.startswith("...") and not target.startswith(".../"):
+                continue
+            target = target.split("#")[0]
+            if not target:
+                continue
+            resolved = (path.parent / target).resolve()
+            if not resolved.exists():
+                findings.append((i, target))
     return findings
 
 

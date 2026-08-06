@@ -1,4 +1,4 @@
-## Day 2：实现 KV Cache（含 GQA/MQA/MLA 变体）实现 KV Cache
+## Day 2：实现 KV Cache（含 GQA/MQA/MLA 变体）
 
 ### 🎯 目标
 

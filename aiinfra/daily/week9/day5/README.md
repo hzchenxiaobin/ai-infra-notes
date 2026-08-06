@@ -1,4 +1,4 @@
-## Day 5：MoE + EP 并行专题MoE + EP 并行专题（Mixture of Experts + Expert Parallelism）
+## Day 5：MoE + EP 并行专题
 
 ### 🎯 目标
 

@@ -1,4 +1,4 @@
-## Day 4：CUDA Graph 实操 —— 消除 Launch OverheadCUDA Graph 实操 —— 消除 Kernel Launch Overhead
+## Day 4：CUDA Graph 实操 —— 消除 Launch Overhead
 
 ### 🎯 目标
 
@@ -445,7 +445,7 @@ Day 4 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead �
 4. **动态 shape**：bucketing（按 batch 预捕获多张图，向上取整 + padding）+ cudaGraphExecUpdate（拓扑不变原地更新）+ 回退 eager（超桶或 prefill）；vLLM 策略是 decode 用 graph、prefill 用 eager
 5. **实测验证**：`cuda_graph_capture.py` 量化 eager vs graph 加速 1.5-2.5x、正确性逐位一致；`shape_bucketing.py` 验证 5 个 bucket 覆盖 batch 1-16、padding 不影响有效输出
 
-掌握这些后，你就把 Day 6 的"识别瓶颈"升级为"消除瓶颈"——明天 Day 7 代码重构与文档，将 CUDA Graph 集成进 Mini 引擎的 decode 路径，完成 Week 7 系统整合收官。
+掌握这些后，你就把 Day 6 的"识别瓶颈"升级为"消除瓶颈"——明天 Day 5 项目推进，将 CUDA Graph 集成进 Mini 引擎的 decode 路径，完成 Week 8 推理加速收官。
 
 ---
 

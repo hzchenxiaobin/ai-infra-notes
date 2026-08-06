@@ -1,4 +1,4 @@
-## Day 6：Attention IO 分析（4N²+4Nd 口径）Attention IO 分析
+## Day 6：Attention IO 分析（4N²+4Nd 口径）
 
 ### 🎯 目标
 
