@@ -236,9 +236,9 @@ python3 -m cProfile -s cumtime kernels/prefix_cache_engine.py | head -20
 
 #### 任务 4：LeetGPU 在线题目
 
-[Segmented Prefix Sum](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html)
+[Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)
 
-prefix caching 的 block hash 计算类似于 segmented prefix sum 中按段累积——每个 block 是一个"段"，hash 是段的标识。
+chunked prefill 把多个请求的 chunk 凑批执行，本质就是把多个小 GEMM 合并成 batched GEMM——每个 batch 对应一个请求的 chunk，用 `blockIdx.z` 区分请求、`blockIdx.x/y` 处理 M/N tile。
 
 #### 任务 5：LeetCode 面试题
 

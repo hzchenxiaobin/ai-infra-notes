@@ -68,7 +68,7 @@
 示例：
 
 ```text
-"我叫陈斌斌，最近 8 周集中学习 AI Infra。
+"我叫陈斌斌，最近 10 周集中学习 AI Infra。
 我手写了一套 CUDA kernel，包括 GEMM、FlashAttention、Softmax、LayerNorm，
 并构建了一个支持 KV Cache、Continuous Batching 和优先级调度的 Mini 推理引擎。
 希望应聘 AI Infra / 推理优化相关岗位。"
@@ -81,7 +81,7 @@
 | **S**ituation | 项目背景 | LLM 推理部署对延迟和吞吐要求高，我想理解底层优化 |
 | **T**ask | 你的目标 | 手写高性能 kernel 并搭建一个可运行的 Mini 推理引擎 |
 | **A**ction | 你做了什么 | GEMM 优化到 cuBLAS ~64%（RTX 5090 实测 4096³）、实现 FlashAttention、Continuous Batching Scheduler |
-| **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms |
+| **R**esult | 量化成果 | 单卡吞吐 X tokens/s、TTFT Y ms、TBT Z ms（⚠️ X/Y/Z 需用 `stability_test.py --real` + `mini_engine_v1_graph.py` 实测回填，不得编造） |
 
 > ⚠️ 避免只列技术栈，要突出：**你解决了什么问题、为什么难、你怎么权衡、结果如何**。
 
@@ -269,7 +269,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 6. **录音复盘**：通过回放发现口头禅、超时、卡壳点，针对性改进
 7. **GEMM**：推理引擎的核心算子，Mock 面试中“项目深度拷问”的常见考点
 
-完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入查漏补缺，针对今天暴露的薄弱点做最后冲刺。
+完成今天的 Mock 面试后，你应该能清晰、自信地介绍项目和核心技术点。明天 Day 6 进入诊断流程实战剧本 + 手撕限时清单，针对今天暴露的薄弱点做最后冲刺。
 
 ---
 
@@ -283,8 +283,9 @@ Day 5 我们把前四天的知识转化为面试表达能力：
  - **S**ituation：项目背景，为什么要做
  - **T**ask：你的目标是什么
  - **A**ction：你做了什么（技术点 1、2、3）
- - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
- - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
+  - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 X tokens/s、TTFT Y ms）
+  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到 X tokens/s。"
+  - ⚠️ **数字诚信**：X/Y 等 placeholder 必须用 `stability_test.py --real`（真引擎吞吐/延迟）与 `mini_engine_v1_graph.py`（TBT 改善）实测回填，禁止编造。无 GPU 时标注"待实测"。
 
 </details>
 

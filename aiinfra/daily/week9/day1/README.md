@@ -1,4 +1,4 @@
-## Day 1：分布式推理 —— TP/PP/DP 与通信计算重叠
+## Day 1：分布式推理 —— 为什么需要分布式 + TP + DP 定位
 
 ### 🎯 目标
 
@@ -6,10 +6,10 @@
 
 1. 理解**为什么单卡不够**——模型太大（70B FP16 ≈ 140GB，单卡 A100 80GB 放不下）、吞吐需求（单卡 tok/s 上限低）、延迟需求（单层 GEMM 算力受限）三大动机<br>
 2. 掌握 **Tensor Parallelism (TP)**——column-parallel linear（QKV 投影按 head 切）、row-parallel linear（Output 投影按 input 切 + all-reduce）、TP=2/4/8 的通信/算力权衡<br>
-3. 掌握 **Pipeline Parallelism (PP)**——GPipe vs 1F1B、micro-batching、bubble ratio 公式 $\text{bubble} = (P-1)/(M+P-1)$<br>
+3. 了解 **Pipeline Parallelism (PP)** 的定位——按层切 stage、micro-batching 流水、bubble 代价；GPipe vs 1F1B 与 bubble ratio 完整推导详见 Day 2<br>
 4. 理解 **Data Parallelism (DP)** 在推理中的定位——与 TP/PP 的区别，适合高吞吐多请求场景而非单大模型放置<br>
-5. 掌握 **NCCL collectives**——all-reduce（ring 拓扑，$2(N-1)$ 步通信）、all-gather、reduce-scatter 的通信量对比<br>
-6. 学会**通信计算重叠**——`torch.cuda.Stream` 双流（compute stream + comm stream）、CUDA Graph 捕获双流 launch 序列
+5. 了解 **NCCL collectives** 的通信量速查——all-reduce / all-gather / reduce-scatter 的定位与量级；ring 两阶段推导与带宽估算详见 Day 3<br>
+6. 了解**通信计算重叠**的核心思路——双 CUDA Stream 把"串行加法"变成"取最大值"；代码实现、CUDA Graph 与收益边界详见 Day 4
 
 > 💡 **为什么重要**：Day 3 分析了 SGLang/LightLLM 的高级特性（Speculative Decoding、Chunked Prefill、Prefix Caching），但它们都假设"模型能放进单卡"。当模型大到单卡放不下（如 70B+），或吞吐需求超过单卡上限时，就必须上**分布式推理**。TP/PP/DP 是分布式推理的三大基石，NCCL 通信与通信-计算重叠是把"分布式开销"压到最低的关键工程能力——这是面试"大模型分布式推理"的高频考点，也是 Mini 引擎从"单卡 demo"走向"多卡生产"的必经之路。
 
@@ -183,7 +183,7 @@ NCCL（NVIDIA Collective Communications Library）是 GPU 间集合通信的标�
 
 > 📖 **详见 Day 4**：双 Stream 的代码实现（`torch.cuda.Stream` + `wait_stream`）、TP 层内通信计算重叠策略（前半/后半 GEMM 切分）、CUDA Graph 捕获双流序列、Overlap 的收益边界（何时重叠有效、何时无效）在 Day 4 深入展开。Day 4 还补了 Sequence Parallelism（Megatron 2205.05198）——工业界主流做法。
 
-### Coding 任务：TP 推理 demo + 通信重叠
+### Coding 任务：TP 推理 demo
 
 #### 任务 1：创建 tp_inference_demo.py
 
@@ -256,74 +256,9 @@ python kernels/tp_inference_demo.py
 2. **通信 pattern**：一个 Attention Block 仅 1 次 all-reduce（Row(Output) 处），Column(QKV) 零通信
 3. **单卡模拟局限**：无法体现真实多卡加速（GEMM 算力 x2），仅验证切分正确性与通信结构
 
-#### 任务 3：创建并运行 comm_overlap_demo.py + nsys profiling
+#### 任务 3：通信重叠编码（见 Day 4）
 
-创建文件 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py)，演示双 CUDA Stream 通信-计算重叠：
-
-```python
-# comm_overlap_demo.py —— 通信-计算重叠 Demo（双 CUDA Stream）
-# 运行命令: python comm_overlap_demo.py
-# Profiling: nsys profile -o comm_overlap --trace=cuda python comm_overlap_demo.py
-
-compute_stream = torch.cuda.Stream()
-comm_stream = torch.cuda.Stream()
-
-def serial_step():
-    dummy_gemm(compute_stream, SIZE)       # compute 先做完
-    comm_stream.wait_stream(compute_stream) # 依赖：comm 等 compute
-    dummy_comm(comm_stream, SIZE)
-
-def overlap_step():
-    dummy_gemm(compute_stream, SIZE)       # 两流无依赖，并行 launch
-    dummy_comm(comm_stream, SIZE)
-
-# 用 torch.cuda.Event 计时
-serial_ms = measure(serial_step, ...)
-overlap_ms = measure(overlap_step, ...)
-```
-
-完整代码见 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py)。
-
-运行与 profiling：
-
-```bash
-# 运行（需 CUDA 环境）
-python kernels/comm_overlap_demo.py
-
-# nsys 采集时间线
-nsys profile -o comm_overlap --trace=cuda,nvtx python kernels/comm_overlap_demo.py
-
-# 查看报告
-nsys-ui comm_overlap.nsys-rep
-# 在 timeline 中应看到 compute_stream 与 comm_stream 的 kernel 交错或重叠
-```
-
-**预期输出**（节选，具体数值随 GPU 而变）：
-
-```text
-================================================================
-  通信-计算重叠 Demo（双 CUDA Stream）
-================================================================
-  iters=10, size=2048x2048 FP16
-
-  compute alone : 0.85 ms
-  comm alone    : 0.62 ms
-
-  [串行] total  : 1.47 ms  (compute + comm = 1.47)
-  [重叠] total  : 0.91 ms  (max = 0.85)
-
-  加速比        : 1.62x
-  理论上限      : 1.73x (完全重叠)
-```
-
-##### 观察重点
-
-1. **串行**：total ≈ compute + comm（两段串接）
-2. **重叠**：total ≈ max(compute, comm)（两流并发，受限于较长者）
-3. **加速比**：1.5-1.7x（取决于 GPU 空闲 SM 是否足够容纳两路 kernel）
-4. **nsys timeline**：compute_stream 和 comm_stream 的 kernel 在时间轴上交错或重叠
-
-> ⚠️ **单 GPU 重叠局限**：两路 kernel 能否真正并发取决于 GPU 是否有空闲 SM。大 GEMM 占满所有 SM 时，通信 kernel 会被迫排队。真实多卡场景下，通信走 NVLink/IB（独立硬件），与计算 SM 完全解耦，重叠效果更好。
+双 CUDA Stream 通信-计算重叠的完整编码任务（`torch.cuda.Stream` + `wait_stream` + nsys 验证、TP 层内前半/后半 GEMM 切分、CUDA Graph 捕获双流序列）已归入 [Day 4](../day4/README.md)，此处不再重复布置。本目录的 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py) 仍可独立运行（需 CUDA 环境），作为 Day 4 的先修 demo 参考。
 
 #### 任务 4：LeetGPU 在线题目 —— Matrix Copy
 
@@ -376,11 +311,11 @@ Day 1 我们系统学习了分布式推理的动机与三大并行策略定位�
 
 1. **三大动机**：显存墙（模型放不下）、吞吐墙（tok/s 不够）、延迟墙（单层 GEMM 慢），分别对应 TP/PP、DP、TP
 2. **Tensor Parallelism**：column-parallel 切 QKV（按 head，零通信）+ row-parallel 切 Output（all-reduce 聚合），一个 Attention Block 仅 1 次通信
-3. **Pipeline Parallelism**：按层切 stage，micro-batching 流水，bubble ratio = $(P-1)/(M+P-1)$；推理 PP 适合超大模型（详见 Day 2）
+3. **Pipeline Parallelism**：按层切 stage、micro-batching 流水，推理 PP 解决"放不下"，代价是 stage 间通信与流水线空泡（1F1B 调度与 bubble ratio 推导详见 Day 2）
 4. **Data Parallelism**：推理中各卡独立处理请求，零 GPU 通信，吞吐线性扩展，是高 QPS 首选
-5. **NCCL collectives 速查**：all-reduce = $2V(N-1)/N$，all-gather/reduce-scatter = $V(N-1)/N$（详见 Day 3）
-6. **通信-计算重叠**：双 CUDA Stream 让 total 从 $T_c+T_a$ 降到 $\max(T_c, T_a)$（详见 Day 4）
-7. **实测验证**：`tp_inference_demo.py` 验证 TP 切分正确性（max diff 2.5e-7）与通信 pattern；`comm_overlap_demo.py` 量化重叠加速比 1.5-1.7x
+5. **NCCL collectives 速查**：all-reduce / all-gather / reduce-scatter 的定位与通信量量级（ring 推导与带宽估算详见 Day 3）
+6. **通信-计算重叠**：双 CUDA Stream 让 total 从"串行加法"变成"取最大值"（实现与收益边界详见 Day 4）
+7. **实测验证**：`tp_inference_demo.py` 验证 TP 切分正确性（max diff 2.5e-7）与通信 pattern（一个 Attention Block 仅 1 次 all-reduce）
 
 掌握这些后，你就有了分布式推理的理论基础——Day 2–4 会分别深入 PP 调度、NCCL 通信量、通信计算重叠的工程细节。
 

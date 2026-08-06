@@ -16,7 +16,7 @@
 
 ### Week 7 知识地图
 
-![Week 7 知识地图：系统整合](../../week7/images/week7_knowledge_map.svg)
+![Week 7 知识地图：系统整合](../../../week7/images/week7_knowledge_map.svg)
 
 | Day | 主题 | 核心产出 |
 |-----|------|---------|
@@ -84,11 +84,11 @@
 
 ### Mini AI Infra 系统架构
 
-![Mini AI Infra 系统架构](../../week7/images/mini_ai_infra_architecture.svg)
+![Mini AI Infra 系统架构](../../../week7/images/mini_ai_infra_architecture.svg)
 
 #### 六层架构
 
-![Mini AI Infra 系统架构](../../images/week7_system_architecture.svg)
+![Mini AI Infra 系统架构](../../../images/week7_system_architecture.svg)
 
 #### 建议目录结构
 

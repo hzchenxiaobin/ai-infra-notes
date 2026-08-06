@@ -48,7 +48,7 @@
 | 1 | Warp Shuffle 原语与 Warp/Block Reduce | 理论+基础kernel | W2d1 |
 | 2 | Register Blocking 与 2D Tiling | 理论+基础kernel | W2d2 |
 | 3 | float4 向量化 + GEMM 七层路径（前四层） | 进阶实现 | W2d5（拆分） |
-| 4 | GEMM 七层路径（后三层）+ cuBLAS 对比 | 进阶实现 | W2d5（拆分）+ 待开发 |
+| 4 | GEMM 七层路径（后三层）+ cuBLAS 对比 | 进阶实现 | W2d5（拆分）+ 新增（已落地） |
 | 5 | CUDA Streams 与异步执行 | 项目推进 | W2d3 |
 | 6 | Nsight Compute 性能分析 | Profiling | W2d4 |
 | 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | 复盘+手撕 | W2d7 |
@@ -63,12 +63,12 @@
 | Day | 主题 | 类型 | 原编号 |
 |-----|------|------|--------|
 | 1 | Tensor Core 架构 + WMMA fragment 基础 | 理论+基础kernel | W2d6 |
-| 2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 | 进阶实现 | 待开发 |
-| 3 | mma.sync 指令与 ldmatrix —— Tensor Core 底层编程 | 进阶实现 | 待开发 |
+| 2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 | 进阶实现 | 新增（已落地） |
+| 3 | mma.sync 指令与 ldmatrix —— Tensor Core 底层编程 | 进阶实现 | 新增（已落地） |
 | 4 | CUTLASS 源码分析 + CuTe 概念铺垫 | 进阶实现/源码 | W3d2 |
-| 5 | 项目推进 —— WMMA GEMM 接入 Benchmark 与 Double Buffering | 项目推进 | 待开发 |
-| 6 | Profiling —— Tensor Core 利用率与 WMMA vs FMA 对比 | Profiling | 待开发 |
-| 7 | 复盘与手撕 —— Tensor Core/CUTLASS 面试要点 | 复盘+手撕 | 待开发 |
+| 5 | 项目推进 —— WMMA GEMM 接入 Benchmark 与 Double Buffering | 项目推进 | 新增（已落地） |
+| 6 | Profiling —— Tensor Core 利用率与 WMMA vs FMA 对比 | Profiling | 新增（已落地） |
+| 7 | 复盘与手撕 —— Tensor Core/CUTLASS 面试要点 | 复盘+手撕 | 新增（已落地） |
 
 ---
 
@@ -81,10 +81,10 @@
 |-----|------|------|--------|
 | 1 | Trace Transformer 推理流程（Prefill/Decode） | 理论+基础kernel | W3d3 |
 | 2 | 手写 Softmax 与 LayerNorm Kernel | 理论+基础kernel | W3d4 |
-| 3 | LayerNorm 优化与 GEMM Backward 数据流 | 进阶实现 | 待开发 |
+| 3 | LayerNorm 优化与 GEMM Backward 数据流 | 进阶实现 | 新增（已落地） |
 | 4 | Triton 语言专题 —— 用 Triton 重写 Softmax/GEMM/FA | 进阶实现 | W3d5 |
-| 5 | 项目推进 —— Triton 三方 Benchmark 与 Autotune | 项目推进 | 待开发 |
-| 6 | Profiling —— Triton vs CUDA vs PyTorch 性能对比 | Profiling | 待开发 |
+| 5 | 项目推进 —— Triton 三方 Benchmark 与 Autotune | 项目推进 | 新增（已落地） |
+| 6 | Profiling —— Triton vs CUDA vs PyTorch 性能对比 | Profiling | 新增（已落地） |
 | 7 | Transformer 算子分类与总结 | 复盘 | W3d7 |
 
 ---
@@ -102,7 +102,7 @@
 | 4 | FA Backward 与 GEMM Backward | 进阶实现 | W4d6 |
 | 5 | 性能对比 + FA 接入 Mini 引擎（C++ Extension） | 项目推进 | W5d3 + W4d2(supp) + W5d2(supp) |
 | 6 | FA-2 论文与源码差异 + 官方源码 + IO 方法论 | 进阶实现/源码 | W5d1 + W4d7(supp) + W5d4(supp) |
-| 7 | 复盘与手撕 —— FA 限时手写与面试 Q&A | 复盘+手撕 | 待开发 |
+| 7 | 复盘与手撕 —— FA 限时手写与面试 Q&A | 复盘+手撕 | 新增（已落地） |
 
 ---
 
@@ -148,12 +148,12 @@
 | Day | 主题 | 类型 | 原编号 |
 |-----|------|------|--------|
 | 1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | 理论+基础kernel | W6d5 |
-| 2 | FP8 量化深入 —— E4M3/E5M2 kernel 与 GPTQ vs AWQ 对比 | 进阶实现 | 待开发 |
+| 2 | FP8 量化深入 —— E4M3/E5M2 kernel 与 GPTQ vs AWQ 对比 | 进阶实现 | 新增（已落地） |
 | 3 | SGLang / 投机解码 | 进阶实现 | W8d4 |
 | 4 | CUDA Graph 实操 —— 消除 Launch Overhead | 进阶实现 | W9d4 |
-| 5 | 项目推进 —— 量化/投机解码/CUDA Graph 接入 Mini 引擎 | 项目推进 | 待开发 |
-| 6 | Profiling —— 量化前后精度性能对比与 CUDA Graph Launch Gap | Profiling | 待开发 |
-| 7 | 复盘与面试 Q&A —— 量化/投机解码/CUDA Graph/采样 | 复盘+手撕 | 待开发 |
+| 5 | 项目推进 —— 量化/投机解码/CUDA Graph 接入 Mini 引擎 | 项目推进 | 新增（已落地） |
+| 6 | Profiling —— 量化前后精度性能对比与 CUDA Graph Launch Gap | Profiling | 新增（已落地） |
+| 7 | 复盘与面试 Q&A —— 量化/投机解码/CUDA Graph/采样 | 复盘+手撕 | 新增（已落地） |
 
 ---
 
@@ -165,12 +165,12 @@
 | Day | 主题 | 类型 | 原编号 |
 |-----|------|------|--------|
 | 1 | 分布式推理 —— TP/PP/DP 与通信计算重叠 | 理论+基础kernel | W8d5 |
-| 2 | Pipeline Parallelism 与 DP —— 1F1B/bubble ratio/数据并行 | 进阶实现 | 待开发 |
-| 3 | NCCL Collectives —— all-reduce/all-gather/reduce-scatter 通信量 | 进阶实现 | 待开发 |
-| 4 | 通信计算重叠 —— 双 Stream + CUDA Graph Overlap | 进阶实现 | 待开发 |
+| 2 | Pipeline Parallelism 与 DP —— 1F1B/bubble ratio/数据并行 | 进阶实现 | 新增（已落地） |
+| 3 | NCCL Collectives —— all-reduce/all-gather/reduce-scatter 通信量 | 进阶实现 | 新增（已落地） |
+| 4 | 通信计算重叠 —— 双 Stream + CUDA Graph Overlap | 进阶实现 | 新增（已落地） |
 | 5 | MoE + EP 并行专题 | 项目推进 | W9d5 + W8d6(supp) |
 | 6 | 多硬件对比：NVIDIA CUDA vs Ascend CANN | Profiling | W10d2 |
-| 7 | 复盘与面试 Q&A —— 分布式/MoE/多硬件 | 复盘 | 待开发 |
+| 7 | 复盘与面试 Q&A —— 分布式/MoE/多硬件 | 复盘 | 新增（已落地） |
 
 ---
 
@@ -216,27 +216,6 @@
 | W9 (7天) | d1 → v2 W10d1；d2 → v2 W10d2；d3 → v2 W10 supp；d4 → v2 W8d4；d5 → v2 W9d5；d6 → v2 W10d3；d7 → v2 W10 supp | |
 | W10 (7天) | d1 → v2 W10d4；d2 → v2 W9d6；d3 → v2 W10 supp；d4 → v2 W10d5；d5 → v2 W10 supp；d6 → v2 W10d6；d7 → v2 W10d7 | |
 
-### 待开发内容
+### 新增内容落地状态
 
-以下天的内容为新增，需后续开发（已创建占位 README）：
-
-| 周 | 天 | 主题 |
-|----|-----|------|
-| W2 | d4 | GEMM 优化续篇 —— 后三层路径与 cuBLAS 对比 |
-| W3 | d2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 |
-| W3 | d3 | mma.sync 指令与 ldmatrix |
-| W3 | d5 | 项目推进 —— WMMA GEMM 接入 Benchmark |
-| W3 | d6 | Profiling —— Tensor Core 利用率 |
-| W3 | d7 | 复盘与手撕 —— Tensor Core/CUTLASS |
-| W4 | d3 | LayerNorm 优化与 GEMM Backward |
-| W4 | d5 | 项目推进 —— Triton 三方 Benchmark |
-| W4 | d6 | Profiling —— Triton vs CUDA vs PyTorch |
-| W5 | d7 | 复盘与手撕 —— FA 限时手写 |
-| W8 | d2 | FP8 量化深入 |
-| W8 | d5 | 项目推进 —— 加速技术接入 Mini 引擎 |
-| W8 | d6 | Profiling —— 量化/CUDA Graph |
-| W8 | d7 | 复盘与面试 Q&A |
-| W9 | d2 | Pipeline Parallelism 与 DP |
-| W9 | d3 | NCCL Collectives |
-| W9 | d4 | 通信计算重叠 |
-| W9 | d7 | 复盘与面试 Q&A |
+v2 重组新增的 18 天（W2d4；W3 d2,d3,d5,d6,d7；W4 d3,d5,d6；W5d7；W8 d2,d5,d6,d7；W9 d2,d3,d4,d7）已全部落地，各天均有完整教程内容，不再存在占位 README。各周表格"原编号"列中的"新增（已落地）"即对应这些天。

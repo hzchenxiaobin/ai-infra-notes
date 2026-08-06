@@ -71,7 +71,7 @@ FlashDecoding（N/Bc blocks 并行）：
 | 并行 block 数 | 1 | **N / Bc**（KV 序列越长，并行越多） |
 | 每 block 工作量 | 扫描整个 N | 只扫 Bc 个 token |
 | 额外开销 | 无 | Phase 2 合并（开销极小） |
-| SM 利用率 | ~1/80（1 个 SM 干活） | **~min(N/Bc, 80)/80** |
+| SM 利用率 | ~1/170（1 个 SM 干活） | **~min(N/Bc, 170)/170** |
 
 > 💡 **类比**：FlashAttention 是"把作业本撕成几份分给几个人写"（Q tile 切分），FlashDecoding 是"把参考书撕成几份分给几个人查"（KV 切分）。Prefill 时作业本厚（M 大）撕得开；Decode 时作业本只有 1 页（M=1）撕不了，但参考书（KV）很厚，撕参考书一样能并行。
 
@@ -85,8 +85,8 @@ Standard decode:
 FlashDecoding:
   并行度 = ceil(seq_len / tokens_per_block) blocks
   → seq_len=2048, tokens_per_block=64 → 32 blocks
-  → seq_len=8192, tokens_per_block=64 → 128 blocks（远超 SM 数，排队）
-  → 利用率随 seq_len 增长而提升，直到打满所有 SM
+  → seq_len=8192, tokens_per_block=64 → 128 blocks（利用率 ~128/170 ≈ 75%，未打满 SM）
+  → 利用率随 seq_len 增长而提升，blocks ≥ 170 时才打满所有 SM
 ```
 
 | seq_len | Standard (blocks) | FlashDecoding (blocks) | SM 利用率提升 |
@@ -94,7 +94,7 @@ FlashDecoding:
 | 256 | 1 | 4 | 4× |
 | 1024 | 1 | 16 | 16× |
 | 2048 | 1 | 32 | 32× |
-| 8192 | 1 | 128 | 80×（受 SM 数限制） |
+| 8192 | 1 | 128 | ~128×（利用率 ~128/170 ≈ 75%，未触及 SM 上限） |
 
 **关键结论**：KV 序列越长，FlashDecoding 的并行度收益越大。长文本生成（如 4K+ context）是 FlashDecoding 的最佳场景。
 

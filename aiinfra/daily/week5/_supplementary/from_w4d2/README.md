@@ -34,7 +34,7 @@ Day 2 我们写的 `softmax_layernorm.cu` 是一个独立程序：`main()` 里�
 
 #### 5.1 Mini Transformer Engine 架构
 
-![Mini Transformer Engine 架构](../../week3/images/mini_engine_architecture.svg)
+![Mini Transformer Engine 架构](../../../week3/images/mini_engine_architecture.svg)
 
 Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标：
 
@@ -58,7 +58,7 @@ Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标�
 
 #### 5.2 PyTorch C++ Extension 集成流水线
 
-![PyTorch C++ Extension 集成流水线](../../week3/images/cpp_extension_pipeline.svg)
+![PyTorch C++ Extension 集成流水线](../../../week3/images/cpp_extension_pipeline.svg)
 
 从 `.cu` kernel 到 Python 可调用，经过 6 步：
 
@@ -108,7 +108,7 @@ at::Tensor softmax_forward(at::Tensor input) {
 
 #### 5.3 正确性与 Latency 对比
 
-![Latency 对比 PyTorch 官方 vs 自定义算子](../../week3/images/latency_comparison.svg)
+![Latency 对比 PyTorch 官方 vs 自定义算子](../../../week3/images/latency_comparison.svg)
 
 **预期结果**：
 

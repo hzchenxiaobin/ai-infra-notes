@@ -36,7 +36,7 @@ Day 5 的 Mini Engine 跑通了：自定义 Softmax/LayerNorm + cuBLAS GEMM，�
 
 #### 20.1 两级 Profiling 工具体系：nsys + ncu
 
-![端到端 Profiling 五步法](../../week3/images/end_to_end_profiling_workflow.svg)
+![端到端 Profiling 五步法](../../../week3/images/end_to_end_profiling_workflow.svg)
 
 GPU 性能诊断有且只有两个核心工具（NVIDIA 体系），分工明确：
 
@@ -140,7 +140,7 @@ ncu 的 `smsp__average_warps_issue_stalled_*` 系列指标告诉你 warp 卡在�
 
 #### 20.3 Kernel Fusion 机会识别
 
-![Kernel Fusion：省的是 HBM 中间读写](../../week3/images/kernel_fusion_opportunities.svg)
+![Kernel Fusion：省的是 HBM 中间读写](../../../week3/images/kernel_fusion_opportunities.svg)
 
 找到 memory-bound 算子后，最重要的优化手段是 **Kernel Fusion**：把多个相邻算子合并成一个 kernel，避免中间结果写回 HBM。
 

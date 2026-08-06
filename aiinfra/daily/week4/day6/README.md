@@ -203,7 +203,7 @@ ncu --kernel-name regex:softmax \
     --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 l1tex__throughput.avg.pct_of_peak_sustained_elapsed,\
 sm__occupancy.avg.pct_of_peak_sustained_elapsed \
-    python3 kernels/benchmark_softmax.py
+    python3 kernels/benchmark_triton.py
 ```
 
 预期：

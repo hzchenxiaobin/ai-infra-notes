@@ -37,7 +37,7 @@ Day 1-5 我们反复说"Decode 是 memory-bound""Prefill 是 compute-bound"—�
 
 #### 6.1 三层 profiling 方法论
 
-![推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级](../../week5/images/profiling_three_layers.svg)
+![推理 Profiling 三层方法论：系统级 → 阶段级 → Kernel 级](../../../week5/images/profiling_three_layers.svg)
 
 | 层级 | 工具 | 粒度 | 回答的问题 |
 |------|------|------|-----------|
@@ -47,7 +47,7 @@ Day 1-5 我们反复说"Decode 是 memory-bound""Prefill 是 compute-bound"—�
 
 ##### 自顶向下的工作流
 
-![Profiling 三层方法论决策流：nsys → cuda.Event → ncu](../../images/week5_profiling_methodology.svg)
+![Profiling 三层方法论决策流：nsys → cuda.Event → ncu](../../../images/week5_profiling_methodology.svg)
 
 #### 6.2 阶段级指标：TTFT / TBT / breakdown
 
@@ -64,7 +64,7 @@ Decode 单步 breakdown:
  sync = cudaSynchronize 等待 GPU（含 launch overhead 间隙）
 ```
 
-![Decode 单步 Breakdown：forward / sampling / sync 占比](../../week5/images/decode_breakdown.svg)
+![Decode 单步 Breakdown：forward / sampling / sync 占比](../../../week5/images/decode_breakdown.svg)
 
 | 部分 | 典型占比（GPU） | 偏大时说明 | 优化方向 |
 |------|---------------|-----------|---------|
@@ -139,7 +139,7 @@ ncu --kernel-name regex:your_kernel \
 
 #### 6.5 瓶颈定位决策树
 
-![瓶颈定位决策树：从现象到优化方向](../../week5/images/bottleneck_decision_tree.svg)
+![瓶颈定位决策树：从现象到优化方向](../../../week5/images/bottleneck_decision_tree.svg)
 
 | 现象 | 判断 | 优化方向 |
 |------|------|---------|

@@ -1,4 +1,4 @@
-## Day 2：系统联调（六步分层验证）系统联调
+## Day 2：系统联调（六步分层验证）
 
 ### 🎯 目标
 
@@ -11,7 +11,7 @@
 5. 掌握 **异常输入测试**——空 prompt、超长 prompt、超时取消的容错处理<br>
 6. 用 Python 手写一个 **完整的系统联调测试套件**，实测六步验证 + 稳定性 + 异常处理
 
-> 💡 **为什么重要**：Day 4 集成了自定义 Kernel，但各组件（KV Cache、Batching、Scheduler、Kernel）尚未串联测试。系统联调是 Infra 工程师的分水岭——组件单独正确不代表组合正确，KV Cache 泄漏、Scheduler 死锁、请求结果串台等问题只有在端到端联调时才会暴露。Day 5 把所有组件串联，分层验证 + 稳定性压测，确保 Mini 系统能连续处理 500+ 请求不崩溃。
+> 💡 **为什么重要**：Day 1 集成了自定义 Kernel，但各组件（KV Cache、Batching、Scheduler、Kernel）尚未串联测试。系统联调是 Infra 工程师的分水岭——组件单独正确不代表组合正确，KV Cache 泄漏、Scheduler 死锁、请求结果串台等问题只有在端到端联调时才会暴露。今天把所有组件串联，分层验证 + 稳定性压测，确保 Mini 系统能连续处理 500+ 请求不崩溃。
 
 ---
 
@@ -180,7 +180,11 @@ def test_abnormal_inputs(): ...            # 异常输入
 #### 任务 2：运行并观察六步验证
 
 ```bash
+# 模拟引擎（默认，纯标准库，无 GPU 依赖）
 python kernels/stability_test.py
+
+# 真引擎模式（WS-3.2 真整合）：六步验证在 mini_engine_v2 上跑，需 torch + GPU
+python kernels/stability_test.py --real
 ```
 
 **预期输出**（节选）：
@@ -299,7 +303,7 @@ Day 2 我们把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联�
 5. **异常输入**：空 prompt、超长 prompt、超时取消，系统不崩溃
 6. **排查原则**：分层定位 + 逐步缩小范围 + 监控关键指标
 
-掌握这些后，你就有了系统联调的完整能力——明天 Day 6 进行全链路 Profiling，用 nsys/ncu 定位系统级瓶颈，与 vLLM 对比性能。
+掌握这些后，你就有了系统联调的完整能力——明天 Day 3 把散落各周的代码打磨成项目文档（README 六段结构 + Quick Start + Benchmark）。全链路 Profiling（nsys/ncu 定位系统级瓶颈、与 vLLM 对比）属于补充专题，见 [`_supplementary/from_w9d3/`](../_supplementary/from_w9d3/)。
 
 ---
 

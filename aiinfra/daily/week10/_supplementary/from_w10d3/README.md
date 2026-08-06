@@ -1,4 +1,4 @@
-## Day 3：高频面试题进阶篇（含系统设计题）高频面试题进阶篇
+## Day 3：高频面试题进阶篇（含系统设计题）
 
 ### 🎯 目标
 
@@ -41,7 +41,7 @@
 
 #### 1.1 进阶篇知识地图
 
-![进阶篇知识地图：四大主题 × 核心考点](../../week8/images/interview_advanced_knowledge_map.svg)
+![进阶篇知识地图：四大主题 × 核心考点](../../../week8/images/interview_advanced_knowledge_map.svg)
 
 进阶篇覆盖四大主题，每个主题 3-4 个高频考点：
 
@@ -56,7 +56,7 @@
 
 ##### FlashAttention 为什么快
 
-![FlashAttention Tiling：在 SRAM 中完成 Attention 计算](../../week8/images/flash_attention_tiling.svg)
+![FlashAttention Tiling：在 SRAM 中完成 Attention 计算](../../../week8/images/flash_attention_tiling.svg)
 
 标准 Attention 需要把 `S = QK^T` 和 `P = softmax(S)` 两个 `N×N` 矩阵写回 HBM：
 
@@ -134,7 +134,7 @@ Decode 阶段 M=1，GEMM 退化，arithmetic intensity 极低，瓶颈在读取�
 
 #### 1.4 PagedAttention
 
-![PagedAttention Block Table：逻辑连续、物理离散](../../week8/images/paged_attention_block_table.svg)
+![PagedAttention Block Table：逻辑连续、物理离散](../../../week8/images/paged_attention_block_table.svg)
 
 核心设计：
 
@@ -153,17 +153,17 @@ Decode 阶段 M=1，GEMM 退化，arithmetic intensity 极低，瓶颈在读取�
 
 #### 1.5 vLLM 架构与调度
 
-![vLLM 分层架构](../../week8/images/vllm_layered_architecture.svg)
+![vLLM 分层架构](../../../week8/images/vllm_layered_architecture.svg)
 
-![vLLM 推理引擎架构](../../images/week8_inference_engine_architecture.svg)
+![vLLM 推理引擎架构](../../../images/week8_inference_engine_architecture.svg)
 
 请求状态机：
 
-![请求状态转移图](../../images/week8_request_state_transition.svg)
+![请求状态转移图](../../../images/week8_request_state_transition.svg)
 
 ##### Continuous Batching
 
-![Continuous Batching Timeline：iteration 级动态进出](../../week8/images/continuous_batching_timeline.svg)
+![Continuous Batching Timeline：iteration 级动态进出](../../../week8/images/continuous_batching_timeline.svg)
 
 - **Dynamic Batching**：request-level，一批请求一起开始、一起结束，生成长度不一时 GPU 空转
 - **Continuous Batching**：iteration-level，每轮 forward 后重新组装 batch，完成的请求退出、新请求加入

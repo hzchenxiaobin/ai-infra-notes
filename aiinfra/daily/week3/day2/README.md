@@ -393,8 +393,8 @@ M=N=K    | naive_ms   tiled_ms   TF32cub_ms  FP16cub_ms  | naive%TF32  tiled%TF3
 修改 benchmark 同时运行 Day 1 教学版和 Day 2 tiled 版：
 
 ```bash
-# 修改代码加入 Day 1 的 wmma_gemm_kernel 作为对比
-nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm_compare.cu -o wmma_compare
+# kernels/wmma_gemm_tiled.cu 已在同一 main 里包含 Day 1 naive 版与 cuBLAS 三方对比
+nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm_tiled.cu -o wmma_compare
 ./wmma_compare
 ```
 
@@ -421,14 +421,17 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 > 💡 **面试要点**：Tiling 不是万能的。小矩阵下 tiling 开销 > 收益，需要 auto-tuning 选择最优配置——这正是 CUTLASS 的价值。
 
-#### 任务 5：LeetCode 面试题
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [62](https://leetcode.cn/problems/unique-paths/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html) |
-| [5](https://leetcode.cn/problems/longest-palindromic-substring/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html) |
-| [300](https://leetcode.cn/problems/longest-increasing-subsequence/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
-| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+|------|------|----------|------|
+| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
+| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表 II.html) |
+| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
+| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
+| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
 
 ---
 

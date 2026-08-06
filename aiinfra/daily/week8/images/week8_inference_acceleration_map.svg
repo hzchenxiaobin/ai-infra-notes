@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="600" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="450" y="42" text-anchor="middle" font-size="20" fill="#2b2b2b" font-weight="bold">Week 8 推理加速技术知识地图</text>
+  <path d="M 320 52 Q 450 60 580 52" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="450" y="74" text-anchor="middle" font-size="12" fill="#888">量化 / 投机解码 / CUDA Graph / 采样</text>
+
+  <!-- Box 1: Quantization -->
+  <g filter="url(#sk)">
+    <rect x="55" y="110" width="380" height="185" rx="12" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="245" y="140" text-anchor="middle" font-size="15" fill="#2b6e9e" font-weight="bold">量化（省显存 + 省带宽）</text>
+  <text x="75" y="168" font-size="11" fill="#444">• W8A16：权重 INT8，激活 FP16，dequant GEMM</text>
+  <text x="75" y="188" font-size="11" fill="#444">• W4A16：GPTQ / AWQ，模型显存 ↓ ~75%</text>
+  <text x="75" y="208" font-size="11" fill="#444">• INT8 KV Cache：per-token scale，decode 带宽 ↓ 50%</text>
+  <text x="75" y="228" font-size="11" fill="#444">• FP8 E4M3：前向权重/激活，算力 2× FP16</text>
+  <text x="75" y="248" font-size="11" fill="#444">• FP4：Blackwell，需 micro-scaling，精度挑战大</text>
+  <text x="75" y="275" font-size="10" fill="#666">关键词：SmoothQuant · GPTQ · AWQ · per-token scale</text>
+
+  <!-- Box 2: Speculative Decoding -->
+  <g filter="url(#sk)">
+    <rect x="465" y="110" width="380" height="185" rx="12" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="655" y="140" text-anchor="middle" font-size="15" fill="#7a5415" font-weight="bold">投机解码（提吞吐）</text>
+  <text x="485" y="168" font-size="11" fill="#444">• Draft model 生成 k 个候选 token</text>
+  <text x="485" y="188" font-size="11" fill="#444">• Target model 一次 forward 验证</text>
+  <text x="485" y="208" font-size="11" fill="#444">• 接受率 α：每步期望 (1-α^(k+1))/(1-α) tokens</text>
+  <text x="485" y="228" font-size="11" fill="#444">• 变体：Medusa / EAGLE / MTP(DeepSeek)</text>
+  <text x="485" y="248" font-size="11" fill="#444">• 收益：throughput +50~100%，但 draft 有额外开销</text>
+  <text x="485" y="275" font-size="10" fill="#666">关键词：acceptance rate · draft model · verification</text>
+
+  <!-- Box 3: CUDA Graph -->
+  <g filter="url(#sk)">
+    <rect x="55" y="320" width="380" height="185" rx="12" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="245" y="350" text-anchor="middle" font-size="15" fill="#2e6e2e" font-weight="bold">CUDA Graph（消 launch overhead）</text>
+  <text x="75" y="378" font-size="11" fill="#444">• Capture 录制 decode forward 的 kernel 序列</text>
+  <text x="75" y="398" font-size="11" fill="#444">• Replay 一次提交，30+ launch → 1 次</text>
+  <text x="75" y="418" font-size="11" fill="#444">• 静态 buffer：输入/输出地址固定</text>
+  <text x="75" y="438" font-size="11" fill="#444">• Shape Bucketing：按 seq_len / batch 分桶预捕获</text>
+  <text x="75" y="458" font-size="11" fill="#444">• Decode M=1 时 launch 占 50%+，Graph 后 latency ↓ 30~50%</text>
+  <text x="75" y="485" font-size="10" fill="#666">关键词：static buffer · bucket · replay · launch gap</text>
+
+  <!-- Box 4: Sampling -->
+  <g filter="url(#sk)">
+    <rect x="465" y="320" width="380" height="185" rx="12" fill="#fdecec" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="655" y="350" text-anchor="middle" font-size="15" fill="#7a2828" font-weight="bold">采样（生成控制）</text>
+  <text x="485" y="378" font-size="11" fill="#444">• top-k：保留概率最高的 k 个 token</text>
+  <text x="485" y="398" font-size="11" fill="#444">• top-p（nucleus）：按概率累加 ≤ p 动态截断</text>
+  <text x="485" y="418" font-size="11" fill="#444">• temperature：softmax(logits/T) 调节随机性</text>
+  <text x="485" y="438" font-size="11" fill="#444">• 实现：sort → cumsum → mask → softmax → sample</text>
+  <text x="485" y="458" font-size="11" fill="#444">• 完整 kernel 实现见 Week 10 Day 6</text>
+  <text x="485" y="485" font-size="10" fill="#666">关键词：top-k · top-p · temperature · nucleus sampling</text>
+
+  <!-- Connecting arrows -->
+  <path d="M 435 202 L 457 202" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 245 295 L 245 317" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 655 295 L 655 317" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Bottom ROI hint -->
+  <text x="450" y="540" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">ROI 排序：CUDA Graph &gt; INT8 KV &gt; W8A16 &gt; FP8 &gt; 投机解码</text>
+  <text x="450" y="565" text-anchor="middle" font-size="11" fill="#888">按"集成成本 / 收益比"选择：先做低成本高收益，再做高成本高收益</text>
+  <text x="450" y="585" text-anchor="middle" font-size="10" fill="#aaa">详细对比表与数字来源见 Week 8 Day 6 §6.4</text>
+</svg>

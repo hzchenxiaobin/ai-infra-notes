@@ -424,13 +424,15 @@ Size     | Day1_naive  Day2_tiled  Day3_mma   Day5_dbuf  | Best%   Best_impl
 
 > 💡 **面试要点**：不同优化在不同矩阵大小下收益不同。小矩阵优先选 mma.sync（低开销），大矩阵优先加 double buffer（重叠延迟）。CUTLASS 的 auto-tuning 就是根据 M/N/K 选最优组合。
 
-#### 任务 4：LeetCode 面试题
+#### 任务 4：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [416](https://leetcode.cn/problems/partition-equal-subset-sum/) | Medium | DP（0-1 背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
-| [494](https://leetcode.cn/problems/target-sum/) | Medium | DP（0-1 背包变形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
-| [474](https://leetcode.cn/problems/ones-and-zeroes/) | Medium | DP（二维背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/474_一和零.html) |
+|------|------|----------|------|
+| [148. 排序链表](https://leetcode.cn/problems/sort-list/) | 中等 | 归并排序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html) |
+| [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/) | 困难 | 小顶堆 k 路归并 / 分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
+| [146. LRU 缓存](https://leetcode.cn/problems/lru-cache/) | 中等 | 哈希 + 双向链表 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
 
 ---
 

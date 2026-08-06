@@ -1,4 +1,4 @@
-## Day 3：完整调度器（优先级/超时/抢占）完整调度器
+## Day 3：完整调度器（优先级/超时/抢占）
 
 ### 🎯 目标
 
@@ -45,7 +45,7 @@ Day 1 调度器的短板：
 
 #### 2.1 调度器六大功能概览
 
-![完整调度器六大功能架构](../../week7/images/scheduler_architecture.svg)
+![完整调度器六大功能架构](../../../week7/images/scheduler_architecture.svg)
 
 一个生产级 LLM 推理调度器需要六大功能，缺一不可：
 
@@ -93,7 +93,7 @@ if req.priority > 0:
 
 #### 2.3 资源预算：双闸门机制
 
-![资源预算：Token Budget + Memory Budget](../../week7/images/resource_budget.svg)
+![资源预算：Token Budget + Memory Budget](../../../week7/images/resource_budget.svg)
 
 每轮 `schedule()` 有两道预算闸门，新请求必须**同时满足**才能加入 batch：
 
@@ -122,7 +122,7 @@ class MemoryBudget:
 
 #### 2.4 抢占：显存不足时的资源回收
 
-![抢占策略：Recompute vs Swap](../../week7/images/preemption_strategy.svg)
+![抢占策略：Recompute vs Swap](../../../week7/images/preemption_strategy.svg)
 
 当高优先级请求到来但显存不足时，调度器会**抢占**低优先级 running 请求的资源：
 
@@ -185,7 +185,7 @@ def _apply_aging(self):
 
 ##### 为什么是这个顺序？
 
-![Scheduler 调度顺序](../../images/week7_scheduler_priority.svg)
+![Scheduler 调度顺序](../../../images/week7_scheduler_priority.svg)
 
 > 💡 **与 vLLM 的对应**：vLLM 的调度器每轮 iteration 也遵循类似顺序——先处理 running（decode），再从 waiting 加入新请求（prefill），token_budget 共享。
 

@@ -44,7 +44,7 @@ Day 1 的 README 已有"系统架构"一段文字，但纯文字描述系统有�
 
 #### 1.1 五层系统架构图
 
-![Mini AI Infra 系统架构图（分层视图）](../../week8/images/mini_engine_architecture.svg)
+![Mini AI Infra 系统架构图（分层视图）](../../../week8/images/mini_engine_architecture.svg)
 
 Mini AI Infra 的系统架构分为五层，从上到下依次为：
 
@@ -68,15 +68,15 @@ Mini AI Infra 的系统架构分为五层，从上到下依次为：
 
 #### 1.2 请求生命周期数据流图
 
-![请求生命周期数据流图](../../week8/images/request_lifecycle_dataflow.svg)
+![请求生命周期数据流图](../../../week8/images/request_lifecycle_dataflow.svg)
 
 一个请求从提交到返回，经过六个阶段：
 
-![请求生命周期数据流](../../images/week8_request_lifecycle_pipeline.svg)
+![请求生命周期数据流](../../../images/week8_request_lifecycle_pipeline.svg)
 
 ##### 状态机
 
-![请求状态机 · 三态终局](../../images/week8_request_state_tree.svg)
+![请求状态机 · 三态终局](../../../images/week8_request_state_tree.svg)
 
 ##### 每阶段的关键指标
 
@@ -89,7 +89,7 @@ Mini AI Infra 的系统架构分为五层，从上到下依次为：
 
 #### 1.3 Continuous Batching 时间线图
 
-![Continuous Batching 时间线](../../week8/images/continuous_batching_timeline.svg)
+![Continuous Batching 时间线](../../../week8/images/continuous_batching_timeline.svg)
 
 Continuous Batching 的核心是**每轮 iteration 重新凑批**——请求可以动态加入和退出。时间线图用横轴表示 iteration、纵轴表示请求：
 

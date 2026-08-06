@@ -258,7 +258,7 @@ python kernels/benchmark_flash_attention.py
 
 ```bash
 # 编译带 lineinfo
-nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
+nvcc -o flash_attention_v2 ../day3/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -g -lineinfo
 
 # Profile 不同 N 的 HBM 读写量
 for N in 512 1024 2048 4096; do

@@ -17,14 +17,19 @@
 
 #### 6.1 CUDA Graph Launch Gap 实测
 
+##### 两个层级的测量对象
+
+- **微观演示**：`kernels/bench_eager.py`（10 层 Linear+LayerNorm 合成模型，kernel 粒度看 launch gap）
+- **引擎级基准**：`kernels/bench_graph.py`（测量对象是 Day 5 真整合的 `MiniEngineV1Graph`，对比其 decode 路径 eager vs Graph 的 TBT 延迟）
+
 ##### nsys 时间线对比
 
 ```bash
-# Eager 模式
-nsys profile --trace cuda -o eager_profile python3 bench_eager.py
+# Eager 模式（微观演示模型）
+nsys profile --trace cuda -o eager_profile python3 kernels/bench_eager.py
 
-# Graph 模式
-nsys profile --trace cuda -o graph_profile python3 bench_graph.py
+# Graph 模式（引擎级：MiniEngineV1Graph decode 路径）
+nsys profile --trace cuda -o graph_profile python3 kernels/bench_graph.py
 ```
 
 ##### 预期时间线
@@ -42,7 +47,9 @@ nsys profile --trace cuda -o graph_profile python3 bench_graph.py
 [GPU: exec kernel 1 → 2 → 3 → ... → 30]  ← 无 gap
 ```
 
-##### 实测数据（RTX 5090, 10 层 Linear+LayerNorm, seq=32 decode-like）
+##### 实测数据（微观演示模型）
+
+> 📏 **测量对象**：RTX 5090, **10 层 Linear+LayerNorm 合成模型**（`bench_eager.py` 的 `DecodeLikeModel`, seq=32 decode-like），**非引擎实测**。
 
 ```text
 === CUDA Graph Launch Gap (decode-like, 10 layers, seq=32) ===
@@ -53,6 +60,21 @@ Speedup: 2.16x
 ```
 
 > ✅ **实测验证**：launch overhead 占 53.7%（超过一半！），CUDA Graph 后 speedup 2.16x。完全验证了"decode 路径 launch 占 50%+, Graph 后 -50%"的说法。
+
+##### 引擎级 TBT 对比（MiniEngineV1Graph，待实测回填）
+
+```bash
+python3 kernels/bench_graph.py   # 4 请求并发，对比引擎 decode 路径 eager vs graph
+```
+
+> ⚠️ **数字诚信**：引擎级 TBT 数字需在 GPU 环境运行 `bench_graph.py` 后回填，禁止把上面合成模型的 146.0us/67.7us/2.16x 直接当作引擎收益。
+
+```text
+=== 测量对象：MiniEngineV1Graph decode 路径（Day 5 真整合引擎）===
+  Eager decode: avg <待实测> ms/step
+  Graph decode: avg <待实测> ms/step
+  加速比: <待实测>x
+```
 
 ##### 量化 launch overhead
 
@@ -119,6 +141,8 @@ def compare_quantization(model_fp16, model_quant, test_prompts):
 
 ##### 预期精度损失
 
+> 📊 **数据来源 / 口径**：下表为**量级参考值**，综合 vLLM、TensorRT-LLM、GPTQ、AWQ、SmoothQuant 等公开 benchmark 与社区典型结论；**非本仓库 Mini 引擎实测**。实际精度损失与模型、校准数据、per-channel/per-token 策略强相关，需用本节脚本在目标模型上实测后回填。
+
 | 量化方案 | max_diff | perplexity 变化 | token_match |
 |---------|---------|----------------|------------|
 | W8A16 (INT8 权重) | ~0.1 | < 0.5% | > 99% |
@@ -126,9 +150,15 @@ def compare_quantization(model_fp16, model_quant, test_prompts):
 | INT8 KV Cache | ~0.01 | < 0.1% | > 99.5% |
 | FP8 E4M3 | ~0.05 | < 0.3% | > 99% |
 
+> ⚠️ **数字诚信**：上表数值为**估算量级 / 第三方公开资料参考**，非本仓库实测。Mini 引擎的量化精度对比需在 GPU 环境运行 `compare_quantization` 实测后回填。
+
 #### 6.3 量化性能对比
 
 ##### 性能指标
+
+> 📊 **数据来源 / 口径**：
+> - 显存两行（模型 / KV Cache）为**理论计算值**：FP16 权重 = 参数量 × 2 bytes，W8A16/FP8 ≈ 1 byte，INT8 KV Cache = FP16 KV 的 50%。
+> - latency / throughput 三行为**7B 模型在数据中心级 GPU（A100/H100 口径）上的量级参考值**，来源为 vLLM、TensorRT-LLM 等公开 benchmark 与社区典型结论；**非本仓库 Mini 引擎实测**。
 
 | 指标 | FP16 baseline | W8A16 | INT8 KV | FP8 |
 |------|-------------|-------|---------|-----|
@@ -137,6 +167,8 @@ def compare_quantization(model_fp16, model_quant, test_prompts):
 | Prefill latency | 100ms | 90ms | 100ms | 60ms |
 | Decode latency | 5ms | 4ms | 3.5ms | 3ms |
 | Throughput | 200 tok/s | 250 tok/s | 280 tok/s | 350 tok/s |
+
+> ⚠️ **数字诚信**：显存两行为**理论计算值**（参数量 × 字节数，见下方推导）；latency/throughput 三行为**第三方公开 benchmark 量级参考**，非本仓库实测。Mini 引擎的实际收益需在 GPU 环境用 `bench_graph.py` / 量化 benchmark 脚本实测后回填。
 
 ##### 显存节省计算
 
@@ -167,8 +199,8 @@ INT8 KV Cache = seq_len × hidden × 1 byte (vs FP16 2 byte) = 50%
 
 ```bash
 # nsys 对比 eager vs graph
-nsys profile --trace cuda -o eager python3 bench_eager.py
-nsys profile --trace cuda -o graph python3 bench_graph.py
+nsys profile --trace cuda -o eager python3 kernels/bench_eager.py
+nsys profile --trace cuda -o graph python3 kernels/bench_graph.py
 nsys stats eager.nsys-rep --report cuda_gpu_kern  # 看 kernel 间 gap
 nsys stats graph.nsys-rep --report cuda_gpu_kern
 ```

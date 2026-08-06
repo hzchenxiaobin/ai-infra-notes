@@ -14,39 +14,10 @@
 
 ### 本周知识地图
 
-```
-推理加速技术
+![Week 8 推理加速技术知识地图](../images/week8_inference_acceleration_map.svg)
 
-┌─────────────────────────────────────────────────────────┐
-│  量化（省显存 + 省带宽）                                 │
-│  W8A16: 权重 INT8, 激活 FP16, dequant GEMM              │
-│  W4A16: GPTQ(Hessian) / AWQ(activation-aware)           │
-│  INT8 KV Cache: per-token scale, decode 带宽 -50%      │
-│  FP8: E4M3(前向) / E5M2(反向), 算力 2x FP16            │
-│  FP4: Blackwell, 算力 4x FP16                           │
-└───────────────────────────┬─────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  投机解码（提吞吐）                                       │
-│  Draft model → k 候选 → Target 验证 → 接受匹配          │
-│  接受率 α: 每步产出 (1-α^(k+1))/(1-α) tokens           │
-│  Medusa(多head) / EAGLE(自回归) / MTP(DeepSeek)        │
-└───────────────────────────┬─────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  CUDA Graph（消除 launch overhead）                      │
-│  Capture(录制) → Replay(一次提交)                       │
-│  静态 buffer + shape bucketing                          │
-│  Decode M=1 时 launch 占 50%+, Graph 后 -30-50%        │
-└───────────────────────────┬─────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  采样 kernel                                              │
-│  top-k: 保留 k 个高概率 token                            │
-│  top-p (nucleus): 保留累积概率 ≤ p 的 token             │
-│  temperature: softmax(logits/T) 调节随机性              │
-└─────────────────────────────────────────────────────────┘
-```
+> 📊 图中 ROI 排序与量化/CUDA Graph 数字来源见 [Week 8 Day 6 §6.4](../day6/README.md)。
+> 采样 kernel 的完整实现见 [Week 10 Day 6](../../week10/day6/)。
 
 ### 加速技术 ROI 总表
 
@@ -146,6 +117,7 @@
 - top-p（nucleus）：按概率降序累加，累积概率 ≤ p 的保留（动态 k）
 - 区别：top-k 固定数量，top-p 固定概率覆盖（分布尖锐时 k 小，平坦时 k 大）
 - 实现：sort → cumsum → mask(cumsum > p) → softmax → sample
+- 采样 kernel 的完整实现见 [Week 10 Day 6](../../week10/day6/)
 
 </details>
 

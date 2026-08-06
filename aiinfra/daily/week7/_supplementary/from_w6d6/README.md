@@ -34,7 +34,7 @@ Day 1 of Week 5 我们算过：Decode 阶段每个请求的 GEMM 退化成 M=1 �
 
 #### 1.1 为什么需要 Batching
 
-![No Batching vs Static vs Dynamic Batching](../images/batching_strategies_comparison.svg)
+![No Batching vs Static vs Dynamic Batching](../../../week6/images/batching_strategies_comparison.svg)
 
 ```
 单个 decode 请求：
@@ -64,7 +64,7 @@ Batch=4 的 decode 请求：
 
 #### 1.2 Dynamic Batching 工作流程
 
-![Dynamic Batcher 工作流程](../images/dynamic_batcher_flow.svg)
+![Dynamic Batcher 工作流程](../../../week6/images/dynamic_batcher_flow.svg)
 
 ```
 请求队列: [R1, R2, R3, R4, R5, ...]
@@ -117,7 +117,7 @@ Naive padding（pad 到 max_len=5）:
 
 #### 1.4 Throughput-Latency 曲线与饱和点
 
-![Throughput vs Latency 曲线与饱和点](../images/throughput_latency_curve.svg)
+![Throughput vs Latency 曲线与饱和点](../../../week6/images/throughput_latency_curve.svg)
 
 ```
 曲线特征：

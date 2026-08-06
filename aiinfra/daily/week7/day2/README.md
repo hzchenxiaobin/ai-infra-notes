@@ -11,25 +11,25 @@
 5. 能追踪 `_schedule_running` **/** `_schedule_swapped` **/** `_schedule_waiting` 三个内部方法的核心逻辑，理解"swapped 非空时不接纳新请求"的防饿死策略<br>
 6. 用 Python 手写一个 **教学级** `Scheduler` **复刻**，实测 RECOMPUTE 与 SWAP 两种抢占模式下请求被抢占、恢复、完成的完整时间线
 
-> 💡 **为什么重要**：Day 2 我们手写了 Continuous Batcher，但那个实现只有 `token_budget` 约束、没有显存预算和抢占——一旦显存不够就直接拒绝新请求。真实 vLLM 的 Scheduler 远比这复杂：它要在显存压力下**抢占**正在运行的请求（而不是简单拒绝），并通过 RECOMPUTE/SWAP 两种策略恢复。`Scheduler.schedule()` 是 vLLM 推理调度的"心脏"，也是面试必考题（⭐⭐⭐⭐⭐）。今天我们逐行拆解它的源码逻辑，并复刻一个能真正触发抢占的教学模型。
+> 💡 **为什么重要**：Day 1 我们手写了 Continuous Batcher，但那个实现只有 `token_budget` 约束、没有显存预算和抢占——一旦显存不够就直接拒绝新请求。真实 vLLM 的 Scheduler 远比这复杂：它要在显存压力下**抢占**正在运行的请求（而不是简单拒绝），并通过 RECOMPUTE/SWAP 两种策略恢复。`Scheduler.schedule()` 是 vLLM 推理调度的"心脏"，也是面试必考题（⭐⭐⭐⭐⭐）。今天我们逐行拆解它的源码逻辑，并复刻一个能真正触发抢占的教学模型。
 
 ---
 
-### 学前导读：Day 2 的 Continuous Batcher 缺了什么
+### 学前导读：Day 1 的 Continuous Batcher 缺了什么
 
-Day 2 的 `_schedule()` 逻辑很朴素：每轮保留 running + 从 waiting 补入，唯一的约束是 `token_budget`。它有个致命假设——**显存永远够用**。但真实场景里 KV Cache 显存是有限的：
+Day 1 的 `_schedule()` 逻辑很朴素：每轮保留 running + 从 waiting 补入，唯一的约束是 `token_budget`。它有个致命假设——**显存永远够用**。但真实场景里 KV Cache 显存是有限的：
 
 ```
-Day 2 ContinuousBatcher 的盲区：
+Day 1 ContinuousBatcher 的盲区：
  - running 序列不断 decode → KV Cache 持续增长
  - 新请求 prefill → 突然需要一大块显存
- - 显存满了怎么办？Day 2 的实现：直接不加入（waiting 继续等）
+ - 显存满了怎么办？Day 1 的实现：直接不加入（waiting 继续等）
  - 但 running 也在增长 → 显存迟早爆 → OOM 崩溃
 ```
 
 vLLM 的 Scheduler 用 **Preemption（抢占）** 解决这个问题：显存不足时，**主动抢占**部分 running 请求，腾出显存给高优先级或已快完成的请求。被抢占的请求不会丢失——通过 RECOMPUTE（重算）或 SWAP（换出）在显存恢复后继续。
 
-| 维度 | Day 2 ContinuousBatcher | Day 3 vLLM Scheduler |
+| 维度 | Day 1 ContinuousBatcher | Day 2 vLLM Scheduler |
 |------|------------------------|----------------------|
 | 队列数 | 2（waiting/running） | **3**（waiting/running/**swapped**） |
 | 显存管理 | 无（假设无限） | **BlockSpaceManager**（block 粒度分配） |
@@ -37,7 +37,7 @@ vLLM 的 Scheduler 用 **Preemption（抢占）** 解决这个问题：显存不
 | 预算约束 | 仅 token_budget | **token_budget + max_num_seqs + 显存 block** |
 | 恢复机制 | 无 | **RECOMPUTE / SWAP** |
 
-> 💡 **一句话总结**：Day 2 的 Continuous Batcher 是"只管加不管抢"的简化版；vLLM Scheduler 多了 **显存预算 + 抢占机制**，在显存压力下主动腾挪，让系统在过载时优雅降级而非 OOM 崩溃。
+> 💡 **一句话总结**：Day 1 的 Continuous Batcher 是"只管加不管抢"的简化版；vLLM Scheduler 多了 **显存预算 + 抢占机制**，在显存压力下主动腾挪，让系统在过载时优雅降级而非 OOM 崩溃。
 
 ---
 
@@ -266,10 +266,10 @@ def _schedule_waiting(self, budget, outputs):
 #   2. SchedulingBudget（token_budget + max_num_seqs 双预算约束）
 #   3. Preemption 两种模式（RECOMPUTE 丢弃 KV Cache 重算 / SWAP 换出到 CPU）
 #
-# 与 Day2 ContinuousBatcher 的区别：
-#   - Day2 只实现 token_budget 约束，没有显存预算和抢占
+# 与 Day1 ContinuousBatcher 的区别：
+#   - Day1 只实现 token_budget 约束，没有显存预算和抢占
 #   - 本文件加入 BlockSpaceManager（显存 block 预算）+ 完整抢占逻辑
-#   - 三队列：waiting / running / swapped（Day2 只有 waiting / running）
+#   - 三队列：waiting / running / swapped（Day1 只有 waiting / running）
 
 from collections import deque
 from dataclasses import dataclass, field
@@ -787,7 +787,7 @@ if __name__ == "__main__":
 - `BlockSpaceManager`：`allocate()` 对 decode 增长是**追加**而非覆盖（否则会泄漏已分配的 block）；`swap_out/in` 配对使用
 - `_schedule_running`：检查 `_needs_new_block`（decode 跨过 block 边界时需要新 block），显存不足则 `_preempt`
 - `_schedule_waiting` 的 `if self.swapped: return`：防饿死关键，swapped 非空时不接纳新请求
-- **与 Day 2 ContinuousBatcher 的区别**：多了显存预算 + 完整抢占逻辑 + 第三个 swapped 队列
+- **与 Day 1 ContinuousBatcher 的区别**：多了显存预算 + 完整抢占逻辑 + 第三个 swapped 队列
 
 #### 任务 2：运行并观察抢占时间线
 

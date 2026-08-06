@@ -10,7 +10,7 @@
 4. 理解 **请求生命周期**——WAITING → RUNNING（prefill → decode 循环）→ FINISHED，Future 异步返回、KV Cache 独立维护<br>
 5. 能用 Python 手写一个 **完整可运行的 Mini 推理引擎 v1**，实测多请求并发、Continuous Batching 时间线、优先级调度效果<br>
 
-> 💡 **为什么重要**：Week 5 Day 5 的 Mini 引擎 v0 只能 `generate(prompt)` 单请求同步跑——一个请求生成完才能跑下一个，GPU 空闲、用户排队。Week 6 Day 1-4 我们学了 Dynamic Batching、Continuous Batching、vLLM Scheduler、Chunked Prefill。今天把这些概念**整合**成一个真正能并发处理多请求的 Mini 引擎 v1：`submit()` 异步返回 Future，后台线程每轮重建 batch。这是"从理论到工程"的关键一步，也是面试必考的"如何支持多请求并发"。
+> 💡 **为什么重要**：Week 5 Day 5 的 Mini 引擎 v0 只能 `generate(prompt)` 单请求同步跑——一个请求生成完才能跑下一个，GPU 空闲、用户排队。Week 7 Day 1-4 我们学了 Dynamic Batching、Continuous Batching、vLLM Scheduler、Chunked Prefill。今天把这些概念**整合**成一个真正能并发处理多请求的 Mini 引擎 v1：`submit()` 异步返回 Future，后台线程每轮重建 batch。这是"从理论到工程"的关键一步，也是面试必考的"如何支持多请求并发"。
 
 ---
 
@@ -25,7 +25,7 @@ output = engine.generate(prompt, max_new_tokens=10) # 阻塞，跑完才返回
 ```
 
 真实推理服务同时有几十上百个并发请求。v0 的"跑完一个再跑下一个"导致：
-- **GPU 空闲**：单请求 decode 是 M=1 的 memory-bound，算力利用率 1-3%（Week 6 Day 1 算过）
+- **GPU 空闲**：单请求 decode 是 M=1 的 memory-bound，算力利用率 1-3%（Week 7 Day 1 算过）
 - **用户排队**：用户 B 等 A 跑完才开始，延迟 = A 的延迟 + B 的延迟
 - **无法 batching**：没有"把多个请求拼成 batch 一起 forward"的机制
 
@@ -37,7 +37,7 @@ output = engine.generate(prompt, max_new_tokens=10) # 阻塞，跑完才返回
 | 调度 | 无 | **Scheduler**（token budget + 优先级） |
 | 结果返回 | 同步返回 | **Future.set_result()** 完成即返回 |
 
-> 💡 **一句话总结**：v1 = v0 的模型前向 + Day 2 的 Continuous Batching + Day 3 的 Scheduler + 异步 Future。把"单请求同步跑"升级为"多请求异步并发 + 每轮重建 batch"。
+> 💡 **一句话总结**：v1 = v0 的模型前向 + Day 1 的 Continuous Batching + Day 2 的 Scheduler + 异步 Future。把"单请求同步跑"升级为"多请求异步并发 + 每轮重建 batch"。
 
 ---
 
@@ -77,7 +77,7 @@ class MiniEngineV1:
 
 ![请求生命周期：WAITING → RUNNING → FINISHED](../images/request_lifecycle_v1.svg)
 
-每个请求经历三个状态，对应 Day 2-3 的 Scheduler 状态机：
+每个请求经历三个状态，对应 Day 2 的 Scheduler 状态机：
 
 ![请求生命周期](../../images/week6_request_lifecycle.svg)
 
@@ -115,16 +115,16 @@ class MiniScheduler:
         return batch, still_waiting
 ```
 
-##### 调度决策与 Day 2-3 的对应
+##### 调度决策与 Day 1-2 的对应
 
-| 决策 | Day 2-3 概念 | v1 实现 |
+| 决策 | Day 1-2 概念 | v1 实现 |
 |------|-------------|---------|
 | 保留 running decode | Continuous Batching 的"完成即走、保留运行" | 按优先级排序，token_budget -= 1 |
 | 从 waiting prefill | SchedulingBudget 的 `can_schedule` | `token_budget >= prompt_len` 才加入 |
-| 优先级排序 | Day 3 扩展实验的优先级抢占 | `sorted(key=-priority)` |
+| 优先级排序 | Day 2 扩展实验的优先级抢占 | `sorted(key=-priority)` |
 | 完成移除 | `_free_finished_seq_groups` | worker_loop 中移除 finished + set_result |
 
-> ⚠️ **注意**：v1 的 Scheduler 是 Day 2 ContinuousBatcher 的简化版——没有显存预算（BlockSpaceManager）和抢占（preemption）。真实 vLLM 的 Scheduler（Day 3）在显存压力下会 preempt，v1 假设显存够用，只做 token budget 约束。
+> ⚠️ **注意**：v1 的 Scheduler 是 Day 1 ContinuousBatcher 的简化版——没有显存预算（BlockSpaceManager）和抢占（preemption）。真实 vLLM 的 Scheduler（Day 2）在显存压力下会 preempt，v1 假设显存够用，只做 token budget 约束。
 
 #### 5.4 Worker Loop：每轮重建 batch
 
@@ -348,7 +348,7 @@ Top K Selection 是**推理引擎 v1 的 sampling 出口**——每个 token 生
 
 ### 今日总结
 
-Day 5 我们把 Week 6 Day 1-4 的调度概念整合成了真正能并发处理多请求的 Mini 推理引擎 v1：
+Day 5 我们把 Week 7 Day 1-4 的调度概念整合成了真正能并发处理多请求的 Mini 推理引擎 v1：
 
 1. **v0 → v1 升级**：单请求同步 `generate()` → 多请求异步 `submit()` 返回 Future，后台 worker 做 Continuous Batching
 2. **四组件架构**：Request Queue（线程安全 deque）+ Scheduler（token budget + 优先级）+ Worker（model forward）+ Future（异步返回）
@@ -358,7 +358,7 @@ Day 5 我们把 Week 6 Day 1-4 的调度概念整合成了真正能并发处理�
 6. **实测 Continuous Batching**：4 请求 8 轮完成，R2(短) iter4 退出不等 R1(长)，batch size 动态 4→3→2→1
 7. **并发收益**：v0 串行 23 次 forward，v1 并发 8 轮，收益约 2.9x
 
-掌握这些后，你就有了推理引擎的完整骨架——明天 Day 6 对 v1 做 Latency/Throughput benchmark，绘制 throughput-latency 曲线，识别饱和点。
+掌握这些后，你就有了推理引擎的完整骨架——明天 Day 6 进入 PD 分离（Prefill-Decode Disaggregation）专题，看如何在多机场景下进一步扩展推理吞吐。
 
 ---
 

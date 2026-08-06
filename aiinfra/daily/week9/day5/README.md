@@ -186,13 +186,13 @@ python kernels/moe_routing_simulator.py
 |------|--------------|--------------|
 | 切分对象 | 专家（不同 token 去不同专家） | 权重（同一 token 的 GEMM 切到多卡） |
 | 通信模式 | all-to-all（dispatch + combine） | all-reduce（每层 2 次） |
-| 通信量（decode, M=1） | `2 × k × hidden × (1-1/EP)`（小，~KB） | `2 × hidden × EP`（大，all-reduce 不随 batch 减小） |
-| 通信量（prefill, M=N） | `2 × N × k × hidden × (1-1/EP)`（大） | `2 × hidden × EP`（不变，摊薄） |
+| 通信量（decode, M=1） | `2 × k × hidden × (1-1/EP)`（小，~KB） | `2 × tokens × hidden`（每层；tokens=M 时消息虽小，但 all-reduce 每层都做、延迟固定，无法被 batch 摊薄） |
+| 通信量（prefill, M=N） | `2 × N × k × hidden × (1-1/EP)`（大） | `2 × tokens × hidden`（每层；tokens=N 时消息大，但可被大 batch 的计算摊薄） |
 | decode 适合度 | ✅ all-to-all 随 batch 小而小 | ❌ all-reduce 不随 batch 减小，M=1 时开销占比大 |
 | prefill 适合度 | ❌ all-to-all 大 | ✅ all-reduce 摊薄 |
 
 > 💡 **面试核心结论**：
-> - **decode 选 EP**：batch 小（M=1~8），EP 的 all-to-all 流量小，而 TP 的 all-reduce 不随 batch 减小
+> - **decode 选 EP**：batch 小（M=1~8），EP 的 all-to-all 流量小；TP 的 all-reduce 通信量虽为 `2 × tokens × hidden`（每层），但每层都做、延迟固定，batch 小时无法被摊薄，开销占比大
 > - **prefill 可能选 TP**：batch 大（M=N），TP 的 all-reduce 摊薄，且无 all-to-all
 > - **DeepSeek 的选择**：prefill 用 TP+EP 混合，decode 用纯 EP（EP32/EP144）
 
@@ -232,7 +232,7 @@ DeepSeek 的负载均衡策略：
    - 总量: `2 × num_tokens × top_k × hidden × dtype × (1 - 1/EP)`
 
 3. **EP vs TP 怎么选？为什么 decode 用 EP？**（⭐⭐⭐⭐⭐ 必考）
-   - decode batch 小（M=1~8）：EP all-to-all 流量小，TP all-reduce 不随 batch 减小
+   - decode batch 小（M=1~8）：EP all-to-all 流量小；TP all-reduce 每层都做、延迟固定，batch 小时无法被摊薄，开销占比大
    - prefill batch 大（M=N）：TP all-reduce 摊薄，EP all-to-all 大
    - DeepSeek：prefill TP+EP 混合，decode 纯 EP
 
@@ -268,4 +268,4 @@ DeepSeek 的负载均衡策略：
 
 Ring Attention 是处理超长上下文（100K+ tokens）的分布式 Attention 方案——KV 跨 GPU 环形流式传输，每个 GPU 持有一部分 Q，KV 在 GPU 间传递，本地 attention 计算与通信重叠。它与 FlashAttention 的关系：Ring Attention = FlashAttention + 分布式 KV 传输，online softmax 天然支持跨 GPU 合并。
 
-> 📖 **Ring Attention 完整讲解**（含 NCCL send/recv 通信、双流重叠、load balancing、KV buffer 显存降至 1/N）见 [`_supplementary/from_w8d6/README.md`](_supplementary/from_w8d6/README.md)。该内容原属 Week 8 Day 6 补充，现已归入 Week 9 分布式专题。
+> 📖 **Ring Attention 完整讲解**（含 NCCL send/recv 通信、双流重叠、load balancing、KV buffer 显存降至 1/N）见 [`_supplementary/from_w8d6/README.md`](../_supplementary/from_w8d6/README.md)。该内容原属 Week 8 Day 6 补充，现已归入 Week 9 分布式专题。

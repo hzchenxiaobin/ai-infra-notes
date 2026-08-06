@@ -16,6 +16,8 @@ on:
       - 'aiinfra/daily/week6/**'
       - 'aiinfra/daily/week7/**'
       - 'aiinfra/daily/week8/**'
+      - 'aiinfra/daily/week9/**'
+      - 'aiinfra/daily/week10/**'
       - 'aiinfra/paper/**'
       - 'aiinfra/topics/**'
       - 'public/**'

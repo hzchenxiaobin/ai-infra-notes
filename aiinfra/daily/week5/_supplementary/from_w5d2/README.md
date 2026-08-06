@@ -34,11 +34,11 @@ Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里�
 
 #### 5.1 Mini Transformer Engine v2 架构
 
-![FlashAttention Naive vs Fused 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
+![FlashAttention Naive vs Fused 对比](../../../week4/images/flash_attention_naive_vs_fused.svg)
 
 在 Week 3 Day 5 的 Mini Engine v1 基础上，v2 用自定义 FlashAttention 替换标准 Attention：
 
-![Mini Transformer Engine v2 数据流](../../images/week4_transformer_engine_flow.svg)
+![Mini Transformer Engine v2 数据流](../../../images/week4_transformer_engine_flow.svg)
 
 ##### 为什么要替换 Attention 而不是 GEMM？
 
@@ -50,7 +50,7 @@ Day 2 我们写的 `flash_attention_v2.cu` 是一个独立程序：`main()` 里�
 
 #### 5.2 PyTorch C++ Extension 集成流水线
 
-![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../../../week4/images/on2_vs_ond_scaling.svg)
 
 集成步骤：
 

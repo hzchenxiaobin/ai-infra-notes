@@ -121,6 +121,21 @@ class BucketedGraphEngine:
 - 太多：捕获 + 显存开销大
 - 实践：6-8 个 bucket 覆盖常见 seq_len
 
+##### 真整合产出：mini_engine_v1_graph.py
+
+把上面的 `BucketedGraphRunner` 套到 Week7 Day5 的 `mini_engine_v1.py` decode 路径，产出 [kernels/mini_engine_v1_graph.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week8/day5/kernels/mini_engine_v1_graph.py)：
+
+- prefill 走 eager（prompt 长度各异，不适合 Graph）
+- decode 走 `BucketedGraphRunner.replay()`（shape 固定 `[B,1]`，收益最大）
+- 按 batch 维分桶（`{1,2,4,8}`），运行时选最近桶 copy 输入后回放
+- 无 GPU 时回退 eager，保持可运行
+
+```bash
+python kernels/mini_engine_v1_graph.py
+```
+
+> ⚠️ **实测留档**：4 请求并发的 TBT（token-by-token decode）延迟改善需在 GPU 环境实跑后回填脚本末尾的留档模板。Graph 路径当前演示单步 decode forward 的 launch 消除；完整 KV-cache 追加需在 graph 捕获内包含 `cat` 操作（生产实现）。
+
 #### 5.3 INT8 KV Cache 量化集成（备选）
 
 ##### 集成步骤

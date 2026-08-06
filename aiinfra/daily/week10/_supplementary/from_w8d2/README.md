@@ -56,7 +56,7 @@ Week 6 v1 的并发短板：
 
 #### 1.2 三种并发模型
 
-![三种并发模型对比](../../week7/images/concurrency_models.svg)
+![三种并发模型对比](../../../week7/images/concurrency_models.svg)
 
 | 模型 | 结构 | 优点 | 缺点 | 适用 |
 |------|------|------|------|------|
@@ -120,7 +120,7 @@ class ThreadSafeRequestQueue:
 
 #### 1.4 Future / Callback / Streaming
 
-![Future / Callback / Streaming 三种结果返回](../../week7/images/future_callback_streaming.svg)
+![Future / Callback / Streaming 三种结果返回](../../../week7/images/future_callback_streaming.svg)
 
 | 方式 | 机制 | 优点 | 缺点 | 适合 |
 |------|------|------|------|------|
@@ -140,9 +140,9 @@ Streaming: submit → tok0 → tok1 → tok2 → ... → done（逐个返回）
 
 #### 1.5 请求生命周期
 
-![请求生命周期状态机](../../week7/images/request_lifecycle_states.svg)
+![请求生命周期状态机](../../../week7/images/request_lifecycle_states.svg)
 
-![请求生命周期状态分支](../../images/week7_request_lifecycle_states.svg)
+![请求生命周期状态分支](../../../images/week7_request_lifecycle_states.svg)
 
 ##### 三线程协作
 

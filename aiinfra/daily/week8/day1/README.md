@@ -621,7 +621,7 @@ Day 1 我们把量化推理的三层武器一次讲透，并手写了两个最�
 <details>
 <summary>点击查看答案</summary>
 
-  - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（3 指数 + 隐含尾数），配合 microscaling（每 32 元素一个 scale）
+  - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（E2M1：2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），配合 microscaling（每 32 元素一个 scale）
   - **算力**：Blackwell FP4 Tensor Core 算力 = FP8 的 2× = FP16 的 ~8×
   - **显存**：FP4 = FP8 的 1/2 = FP16 的 1/4
   - **精度**：介于 INT4 和 FP8 之间，需校准（比 FP8 损失大，比裸 INT4 好——microscaling 带来动态范围）

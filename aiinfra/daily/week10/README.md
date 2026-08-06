@@ -14,9 +14,9 @@
 ## 🧭 本周学习地图
 
 ```
-Day 1: 整合全部自定义 Kernel 到 Mini 引擎（真整合，替换 sleep 模拟）
+Day 1: 完成 custom kernel 封装（LayerNorm/Softmax/FlashAttention），接入 Mini 引擎
         ↓
-Day 2: 系统联调（六步分层验证）+ 全链路 Profiling
+Day 2: 接入引擎并联调（六步分层验证 + 全链路 Profiling，真引擎模式 `--real`）
         ↓
 Day 3: 项目文档（README）+ 架构图 + 数据流图
         ↓

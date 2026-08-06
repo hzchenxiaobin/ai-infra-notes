@@ -1,4 +1,4 @@
-## Day 3：TensorRT-LLM / LightLLM / SGLang 调度对比TensorRT-LLM / LightLLM 调度对比
+## Day 3：TensorRT-LLM / LightLLM / SGLang 调度对比
 
 ### 🎯 目标
 
@@ -10,13 +10,13 @@
 4. 了解 **LightLLM 的 Dynamic Split Fuse 与 Token Attention**——动态组合 prefill/decode、内存池式 KV Cache 管理的差异化思路<br>
 5. 用 Python 手写一个 **Chunked Prefill 模拟器**，实测 naive vs chunked 两种策略下 decode 延迟曲线，验证 TPOT（time-per-output-token）平滑效果
 
-> 💡 **为什么重要**：Day 3 我们拆解了 vLLM Scheduler 的 `schedule()` 5 步流程，但它有个隐患——`_schedule_waiting` 一次性 prefill 整个 prompt，长 prompt 会占满整轮 token budget，导致同 batch 的 decode 请求延迟突增。今天我们看 TensorRT-LLM 和 LightLLM 怎么解决这个"长 prefill 阻塞 decode"问题，核心答案就是 **Chunked Prefill**。这也是面试高频加分题："不同推理框架的 batching 策略对比"。
+> 💡 **为什么重要**：Day 2 我们拆解了 vLLM Scheduler 的 `schedule()` 5 步流程，但它有个隐患——`_schedule_waiting` 一次性 prefill 整个 prompt，长 prompt 会占满整轮 token budget，导致同 batch 的 decode 请求延迟突增。今天我们看 TensorRT-LLM 和 LightLLM 怎么解决这个"长 prefill 阻塞 decode"问题，核心答案就是 **Chunked Prefill**。这也是面试高频加分题："不同推理框架的 batching 策略对比"。
 
 ---
 
-### 学前导读：Day 3 Scheduler 的"长 prefill 阻塞"问题
+### 学前导读：Day 2 Scheduler 的"长 prefill 阻塞"问题
 
-Day 3 的 `_schedule_waiting` 有这么一行：
+Day 2 的 `_schedule_waiting` 有这么一行：
 
 ```python
 num_new = seq.prompt_len # prefill 一次性消耗 prompt_len 个 token budget
@@ -96,7 +96,7 @@ TensorRT-LLM 的调度器与 vLLM 有关键差异：
 Chunked Prefill 是今天最核心的概念，解决"长 prefill 阻塞 decode"问题：
 
 ```python
-# Naive Prefill（Day 3 的做法）：
+# Naive Prefill（Day 2 的做法）：
 # 一次性 prefill 整个 prompt
 def prefill_naive(seq, budget):
  budget.consume(seq.prompt_len) # 一次吃光
@@ -220,8 +220,8 @@ Token Attention（LightLLM）：
 #   - vLLM 默认把长 prompt 一次性 prefill（naive）
 #   - vLLM 0.5+ 与 TensorRT-LLM 原生支持 chunked prefill（长 prompt 分块与 decode 交错）
 #
-# 与 Day2 ContinuousBatcher / Day3 Scheduler 的关系：
-#   - Day2/Day3 的 _schedule_waiting 一次性 prefill 整个 prompt（消耗 prompt_len token budget）
+# 与 Day1 ContinuousBatcher / Day2 Scheduler 的关系：
+#   - Day1/Day2 的 _schedule_waiting 一次性 prefill 整个 prompt（消耗 prompt_len token budget）
 #   - 本文件把 prefill 改成"每轮只消耗 chunk_size token"，多轮完成一个长 prefill
 
 from collections import deque
@@ -508,7 +508,7 @@ if __name__ == "__main__":
 - `is_prefill_done`：`prefilled_tokens >= prompt_len` 时 prefill 完成，序列转入 decode
 - **naive vs chunked 的分支**：`_schedule_waiting` 中，naive 一次 `prefill_chunk(prompt_len)`，chunked 每轮 `prefill_chunk(chunk_size)`
 - **延迟模型**：`_prefill_cost_per_token` 模拟 prefill tokens 对 decode 延迟的挤压——prefill tokens 越多，本轮 decode 越慢
-- **与 Day 3 Scheduler 的区别**：Day 3 一次性 prefill（naive），本文件多了 chunked 分支和延迟追踪
+- **与 Day 2 Scheduler 的区别**：Day 2 一次性 prefill（naive），本文件多了 chunked 分支和延迟追踪
 
 #### 任务 2：运行并观察延迟曲线
 
@@ -613,7 +613,7 @@ Day 3 我们对比了三大推理框架的调度策略，并手写了 Chunked Pr
 5. **LightLLM 差异化**：Dynamic Split Fuse（自适应分块）+ Token Attention（token 粒度内存池），高并发长上下文场景优势
 6. **手写模拟器**：实测 naive 延迟尖峰 2.0ms、chunked 1.2ms，验证 chunked prefill 的 TPOT 平滑效果
 
-掌握这些后，你就有了推理框架的全局视野——明天 Day 5 把 Continuous Batching + Scheduler + Chunked Prefill 整合进 Mini 推理引擎 v1，构建支持多请求并发的完整引擎。
+掌握这些后，你就有了推理框架的全局视野——明天 Day 4 先讲 Chunked Prefill + Prefix Caching，Day 5 再把 Continuous Batching + Scheduler + Chunked Prefill 整合进 Mini 推理引擎 v1，构建支持多请求并发的完整引擎。
 
 ---
 

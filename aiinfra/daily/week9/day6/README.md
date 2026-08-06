@@ -1,4 +1,4 @@
-## Day 6：多硬件对比：NVIDIA CUDA vs Ascend CANNNVIDIA CUDA vs Ascend CANN
+## Day 6：多硬件对比：NVIDIA CUDA vs Ascend CANN
 
 > ⚠️ **定位声明**：本日为**概念对照-only**——无可执行验证练习（需昇腾环境）。内容是 NVIDIA/Ascend 的架构与编程模型对照，用于面试"多硬件适配"类问题。有昇腾环境时，可补充一个 Ascend CANN kernel 练习（见延伸阅读）。
 
@@ -172,139 +172,33 @@ CUDA 和 Ascend 的编程模型都有"层级 + 片上存储 + 同步"三件套�
 
 > ⚠️ **最大坑**：CUDA 的"warp shuffle 归约"在 Ascend 上没有对应物——Ascend 的归约走 **Vector Unit + UB**，需用 `ReduceSum` 等 Vector 接口重写，不能照搬 shuffle 模板。这是"概念可迁移但实现要重写"的典型。
 
-##### 综合对比速查表（14 维度）
+##### 核心映射速查（5 对）
 
-| # | 维度 | NVIDIA CUDA | Ascend CANN |
-|---|------|-------------|-------------|
-| 1 | 计算单元 | SM | AI Core（Cube+Vector+Scalar+MTE） |
-| 2 | 执行模型 | SIMT（warp=32） | 指令级并行（三单元流水） |
-| 3 | 调度粒度 | warp | tiling |
-| 4 | 矩阵加速 | Tensor Core | Cube Unit |
-| 5 | 标量/向量 | CUDA Core + warp | Scalar Unit + Vector Unit |
-| 6 | 数据搬运 | thread load/store | MTE 异步 DMA |
-| 7 | 片上共享存储 | shared memory | Unified Buffer (UB) |
-| 8 | 块内通信 | warp shuffle | UB 间 DataCopy |
-| 9 | 块内同步 | `__syncthreads()` | sync barrier |
-| 10 | 向量化加载 | float4 | DataCopy (burst) |
-| 11 | 延迟隐藏 | warp 切换 | 三单元流水 |
-| 12 | 编译器 | nvcc | Ascend 编译器 |
-| 13 | Profiler | Nsight Compute/Systems | msprof / Ascend Profiler |
-| 14 | 运行时库 | cuBLAS/cuDNN/NCCL | ACL BLAS/ACL NN/HCCL |
+| # | NVIDIA CUDA | Ascend CANN |
+|---|-------------|-------------|
+| 1 | shared memory | Unified Buffer (UB) |
+| 2 | warp shuffle（`__shfl_*`） | UB 间 DataCopy |
+| 3 | `__syncthreads()` | sync barrier |
+| 4 | Tensor Core（WMMA/mma） | Cube Unit（matmul） |
+| 5 | float4（128-bit load） | DataCopy（burst length） |
 
-完整可打印版见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)。
+> 💡 记住这五对核心映射，就能读懂 Ascend kernel 的骨架。完整 14 维综合对比 + 6 张分类表（架构/编程模型/存储/工具/优化/迁移）的可打印版见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)。
 
 ---
 
 ### Coding 任务：CUDA vs Ascend 对比速查脚本
 
-#### 任务 1：创建 cuda_vs_ascend_comparison.py
+#### 任务 1：阅读 cuda_vs_ascend_comparison.py 速查脚本
 
-创建文件 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)，把 6 张对比表（架构/编程模型/存储/工具/优化/迁移）整理为可打印的速查脚本：
-
-```python
-# cuda_vs_ascend_comparison.py —— CUDA vs Ascend CANN 对比速查表
-# 运行命令: python cuda_vs_ascend_comparison.py
-# 依赖: 仅标准库
-
-ARCHITECTURE = [
-    ("计算单元", "SM (Streaming Multiprocessor)", "AI Core (Cube+Vector+Scalar+MTE)"),
-    ("执行模型", "SIMT (warp=32 thread)", "指令级并行 (三单元流水)"),
-    ("调度粒度", "warp (32 thread)", "tiling (数据块)"),
-    ("矩阵加速", "Tensor Core (WMMA/mma)", "Cube Unit (matmul, 16x16x16)"),
-    ("数据搬运", "thread 自带 load/store", "MTE 异步 DMA"),
-    ("延迟隐藏", "warp 切换 (硬件调度)", "三单元流水 (软件 pipe)"),
-]
-
-PROGRAMMING_MODEL = [
-    ("线程层次", "grid > block > thread", "grid > block > tiling"),
-    ("片上共享存储", "shared memory (~100KB/SM)", "Unified Buffer (UB)"),
-    ("warp/块内通信", "warp shuffle (__shfl_*)", "UB 间 DataCopy (vector copy)"),
-    ("块内同步", "__syncthreads()", "sync barrier (pipe_barrier)"),
-    ("向量化加载", "float4 (128-bit load)", "DataCopy (burst length)"),
-    ("矩阵加速", "Tensor Core (WMMA)", "Cube Unit (matmul)"),
-    ("kernel 语言", "CUDA C++ (.cu)", "Ascend C++ (.cpp)"),
-]
-
-MEMORY_HIERARCHY = [
-    ("Register", "~0 cycle", "~0 cycle"),
-    ("片上共享", "shared memory ~20-30 cycles", "Unified Buffer ~数十 cycles"),
-    ("L1/L2 Cache", "L1 ~20c, L2 ~200c", "L1 ~数十c, L2 ~百c"),
-    ("Global Memory", "GDDR7/HBM ~400-800c", "HBM ~数百 cycles"),
-]
-
-TOOLCHAIN = [
-    ("编译器", "nvcc", "Ascend 编译器 (aoe/msauccomp)"),
-    ("Kernel Profiler", "Nsight Compute (ncu)", "msprof / Ascend Profiler"),
-    ("System Profiler", "Nsight Systems (nsys)", "msprof (system trace)"),
-    ("运行时 API", "CUDA Runtime (cudaXxx)", "ACL (Ascend Computing Language)"),
-    ("数学库", "cuBLAS / cuDNN", "ACL BLAS / ACL NN"),
-    ("集合通信", "NCCL", "HCCL"),
-    ("框架集成", "PyTorch CUDA", "torch_npu (PyTorch Ascend)"),
-]
-
-OPTIMIZATION = [
-    ("访存合并", "coalesced access", "contiguous access"),
-    ("bank 冲突", "shared memory 32 bank", "UB bank conflict"),
-    ("数据复用", "shared memory tiling", "UB tiling + L1 cache"),
-    ("矩阵加速单元", "Tensor Core (WMMA)", "Cube Unit (matmul)"),
-    ("向量化", "float4 (128-bit)", "DataCopy (burst)"),
-    ("双缓冲", "double buffering (ping-pong)", "DoubleBuffer (pipe TQue)"),
-    ("延迟隐藏", "warp 切换 (多 warp 并发)", "三单元流水 (MTE+Cube+Vector)"),
-    ("自动调优", "auto-tuning (参数搜索)", "tiling 参数自动搜索"),
-]
-
-MIGRATION = [
-    ("tiling 思想", "shared memory tile", "UB tile", "可迁移"),
-    ("访存合并", "coalesced", "contiguous", "可迁移"),
-    ("矩阵加速思路", "Tensor Core 用法", "Cube Unit 用法", "可迁移"),
-    ("双缓冲", "double buffer", "pipe DoubleBuffer", "可迁移"),
-    ("warp 级优化", "warp shuffle / 32 对齐", "无 warp 概念", "重新设计"),
-    ("thread 寄存器", "per-thread reg", "tiling 级无 thread", "重新设计"),
-    ("block size", "由 reg/SMem 决定", "由 UB+Cube 尺寸", "重新设计"),
-    ("同步原语", "__syncthreads", "sync barrier", "语义迁移"),
-]
-
-SECTIONS = [
-    ("1. 架构对比 (GPU vs NPU)", ARCHITECTURE, ("维度", "NVIDIA CUDA", "Ascend CANN")),
-    ("2. 编程模型对比", PROGRAMMING_MODEL, ("维度", "NVIDIA CUDA", "Ascend CANN")),
-    ("3. 存储层次对比", MEMORY_HIERARCHY, ("层级", "NVIDIA CUDA", "Ascend CANN")),
-    ("4. 工具链对比", TOOLCHAIN, ("工具", "NVIDIA", "Ascend")),
-    ("5. 优化技术对比", OPTIMIZATION, ("优化点", "CUDA", "Ascend")),
-    ("6. 迁移策略 (CUDA -> Ascend)", MIGRATION, ("概念", "CUDA", "Ascend", "迁移性")),
-]
-
-
-def print_table(title, rows, headers):
-    print(f"\n### {title}\n")
-    print("| " + " | ".join(headers) + " |")
-    print("|" + "|".join(["---"] * len(headers)) + "|")
-    for r in rows:
-        print("| " + " | ".join(r) + " |")
-
-
-def main():
-    print("=" * 72)
-    print("  CUDA vs Ascend CANN 多硬件对比速查表")
-    print("=" * 72)
-    for title, rows, headers in SECTIONS:
-        print_table(title, rows, headers)
-    print("\n" + "=" * 72)
-    print("  口诀：架构不同原理通——tiling/合并/矩阵加速/双缓冲可迁移，")
-    print("        warp/thread 级优化需重新设计，延迟隐藏范式根本不同。")
-    print("=" * 72)
-
-
-if __name__ == "__main__":
-    main()
-```
-
-完整代码见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)。
+完整脚本见 [kernels/cuda_vs_ascend_comparison.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day6/kernels/cuda_vs_ascend_comparison.py)，把 6 张对比表（架构/编程模型/存储/工具/优化/迁移）整理为可打印的速查脚本。
 
 代码要点：
 - **6 张对比表**：架构 / 编程模型 / 存储层次 / 工具链 / 优化技术 / 迁移策略，覆盖面试全部考点
 - **数据驱动**：每张表是 `list[tuple]`，新增维度只需加一行，易维护
 - **统一打印**：`print_table` 渲染 Markdown 表格，可直接贴进笔记
 - **迁移性标注**：第 6 张表显式标注"可迁移 / 重新设计 / 语义迁移"，迁移决策一目了然
+
+通读脚本，对照 §1.1-1.5 的理论内容自查：每张表的每一行能否用自己的话解释？
 
 #### 任务 2：运行并打印速查表
 
@@ -355,16 +249,16 @@ python kernels/cuda_vs_ascend_comparison.py
 
 > 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解（含 Tensor Core 路径、八层优化、与 Cube Unit 的对应）见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题（第 8 周精选 · 多硬件迁移视角）
+#### 任务 5：LeetCode 面试题（第 8 周精选）
 
-> 📅 今日题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」。本周不绑定单日，而是从本周挑 4 道**与"对比/迁移/映射"主题同构**的题——每道题的算法结构，恰好对应多硬件迁移的一个思维模型。
+> 📅 今日题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」。本周不绑定单日，从本周挑 4 道经典 DP/图论题保持手感。
 
-| 题目 | 难度 | 核心套路 | 与今日主题的类比 | 题解 |
-|------|------|----------|------------------|------|
-| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP（insert/delete/replace） | **迁移最小代价**：CUDA kernel=源串、Ascend kernel=目标串，每个 API/概念替换=一次编辑，求最小操作数=最优迁移路径 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
-| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP（LCS） | **可迁移概念=LCS**：grid/block、tiling、访存合并、矩阵加速……两边共有的概念构成公共子序列，LCS 越长可迁移部分越多 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
-| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | **概念等价传递闭包**：已知 CUDA shared mem≈Ascend UB、Ascend UB≈L1，则可传递推断 CUDA shared mem 与 Ascend L1 的关系——正是 a/b、b/c 求 a/c | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
-| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | **跨硬件逻辑复刻**：把 CUDA kernel 的数据流图"克隆"到 Ascend，拓扑结构不变、每个节点实现替换——克隆图要保持结构、重映射节点 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|----------|------|
+| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP（insert/delete/replace） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
+| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP（LCS） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
+| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
+| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
 
 ---
 

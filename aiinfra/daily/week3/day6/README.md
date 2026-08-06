@@ -266,14 +266,15 @@ ncu --set roofline --kernel-name regex:wmma_gemm_tiled ./wmma_tiled
 
 > 💡 **关键洞察**：cuBLAS 的 AI 与手写相同（都是 1365），但 Achieved TFLOPS 高 40%。差距全在"算力 bound 下的峰值利用率"——即 Tensor Core 喂饱程度。
 
-#### 任务 5：LeetCode 面试题
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [309](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-cooldown/) | Medium | DP（状态机+冷却） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html) |
-| [714](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/) | Medium | DP（状态机+手续费） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html) |
-| [198](https://leetcode.cn/problems/house-robber/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
-| [213](https://leetcode.cn/problems/house-robber-ii/) | Medium | DP（环形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html) |
+|------|------|----------|------|
+| [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
+| [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
+| [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
 
 ---
 

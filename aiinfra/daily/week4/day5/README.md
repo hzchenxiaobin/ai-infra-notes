@@ -251,20 +251,22 @@ M=N=K    | Triton(ms)  CUDA(ms)    cuBLAS(ms)  | Triton%   CUDA%   Triton/CUDA
 
 #### 任务 3：Softmax + FA 三方对比
 
-同理实现 Triton Softmax 和 Triton FA，跑统一 benchmark：
+`benchmark_triton.py` 已直接复用 Day 4 的 Triton kernel；GEMM/Softmax 的 CUDA 列由脚本内嵌的 naive CUDA kernel 经 `torch.utils.cpp_extension.load_inline` 现场编译（需要 nvcc）。
 
 ```text
-=== Softmax Benchmark ===
+=== Softmax Benchmark (FP32) ===
 M×D      | Triton(ms)  CUDA(ms)    PyTorch(ms) | Triton vs PyTorch
 1024×1024| 0.011       0.032       0.015       | 1.36x
 4096×1024| 0.042       0.125       0.058       | 1.38x
 
-=== FlashAttention Benchmark ===
+=== FlashAttention Benchmark (causal, FP16) ===
 N (d=64) | Triton(ms)  CUDA(ms)    官方(ms)    | Triton%官方
 2048     | 0.52        1.80        0.40        | 77%
 4096     | 1.85        6.50        1.50        | 81%
 8192     | 7.20        25.0        6.00        | 83%
 ```
+
+> 注：表中"CUDA 手写 FA"列在本脚本中不重复实现（完整 CUDA FA 见 Week 5 Day 3），当前 `benchmark_triton.py` 的 FlashAttention 对比输出为 Triton / PyTorch naive / 官方 `flash-attn` 三方。上表数字均为预估口径，以 GPU 实测回填为准。
 
 #### 任务 4：LeetCode 面试题
 

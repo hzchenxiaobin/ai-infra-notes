@@ -263,6 +263,28 @@ python kernels/custom_ops_module.py
  [✓] stream 一致性
 ```
 
+**预期输出**（无 CUDA 环境，CPU fallback）：
+
+```text
+[WARN] custom_ops_module 导入失败（...），回退到 PyTorch 原生算子。
+
+============================================================
+1. 精度验证：自定义 kernel vs PyTorch
+============================================================
+ (fallback 模式：custom_ops = PyTorch 原生，max_diff = 0)
+ Max diff: 0.0e+00
+ Status: PASS (fallback)
+
+============================================================
+1. 集成 Checklist
+============================================================
+ [✗] Custom CUDA kernel 接入（CUDA 不可用，fallback 到 PyTorch）
+ [✓] 端到端精度 < 1e-2（fallback 模式恒等）
+ [✓] 逻辑可运行（无 GPU 也能验证集成流程）
+```
+
+> 💡 **CPU fallback 的意义**：无 GPU 环境下仍可验证集成代码路径（`load_custom_ops` → `PyTorchOps` 回退 → 端到端 forward），只是不产生真实加速。真整合的加速证据需在 CUDA 环境获取。
+
 ##### 观察重点
 
 1. **精度**：自定义 kernel 与 PyTorch 的 max_diff 应 < 1e-2（FP32 累积误差），单算子更小（< 1e-5）
@@ -283,7 +305,9 @@ python kernels/custom_ops_module.py
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**与今日知识的关联**：Matrix Transpose 的核心是**索引映射 + coalesced 访存**——读 input 按行连续（coalesced），写 output 按列不连续（strided），需用 shared memory tile 中转让读写都合并。这与自定义 Kernel 集成中的**内存布局处理**同构：PyTorch Tensor 默认 row-major，自定义 kernel 必须正确处理 stride 和布局，否则写错位置或性能崩塌。Transpose 的 tile 中转练习是 FlashAttention 分块读写的基础——FlashAttention 的 Q/K/V tile 在 shared memory 中的布局管理与转置的 tile 索引计算同源。做好这题说明你掌握了"读连续 + 写重排"的索引映射模板，Week 7 自定义 kernel 集成中会频繁用到。
+**与今日知识的关联**：Matrix Transpose 的核心是**索引映射 + coalesced 访存**——读 input 按行连续（coalesced），写 output 按列不连续（strided），需用 shared memory tile 中转让读写都合并。这与自定义 Kernel 集成中的**内存布局处理**同构：PyTorch Tensor 默认 row-major，自定义 kernel 必须正确处理 stride 和布局，否则写错位置或性能崩塌。Transpose 的 tile 中转练习是 FlashAttention 分块读写的基础——FlashAttention 的 Q/K/V tile 在 shared memory 中的布局管理与转置的 tile 索引计算同源。做好这题说明你掌握了"读连续 + 写重排"的索引映射模板，今天（Week 10 Day 1）整合自定义 kernel 时会频繁用到。
+
+> 🔁 **复用**：本题首次布置于 Week 1 Day 4，此处重温以配合今天的 kernel 集成任务。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 

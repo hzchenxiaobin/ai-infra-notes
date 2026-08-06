@@ -69,7 +69,7 @@ FlashAttention 的隐性前提：
 
 #### 4b.2 Ring Attention 原理
 
-![Ring Attention：KV 环形流式传输 + 本地 online softmax](../../week7/images/ring_attention_overview.svg)
+![Ring Attention：KV 环形流式传输 + 本地 online softmax](../../../week7/images/ring_attention_overview.svg)
 
 Ring Attention 的核心思想：**把 Q 和 KV 沿 sequence 维切分到 N 张 GPU，KV 块在 GPU 间环形传递，每张 GPU 用本地 Q + 当前到达的 KV 块做局部 attention，online softmax 增量合并结果**。
 

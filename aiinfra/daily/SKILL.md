@@ -129,7 +129,7 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week1 Day1 | GPU 执行模型基础 | Vector Addition | [leetgpu-vector-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-addition-solution.html) |
 | Week1 Day2 | Occupancy 与资源约束 | ReLU | [leetgpu-relu-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-relu-solution.html) |
 | Week1 Day3 | 认识你的 GPU —— deviceQuery 与 Occupancy 计算 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
-| Week1 Day4 | Memory Hierarchy 深入 | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
+| Week1 Day4 | Memory Hierarchy 深入 | Matrix Transpose（首次布置） | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
 | Week1 Day5 | Bank Conflict 分析与实践 | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
 | Week1 Day6 | Nsight Profiling 实战 | Matrix Multiplication | [leetgpu-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) |
 | Week1 Day7 | 总结与复盘 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
@@ -173,12 +173,12 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week7 Day3 | TRT-LLM / LightLLM / SGLang 调度对比 | Segmented Prefix Sum | [leetgpu-segmented-prefix-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html) |
 | Week7 Day4 | Chunked Prefill 与 Prefix Caching | Batched Matrix Multiplication | [leetgpu-batched-matrix-multiplication-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html) |
 | Week7 Day5 | Mini 推理引擎 v1（多请求并发） | Top K Selection | [leetgpu-top-k-selection-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html) |
-| Week7 Day6 | PD 分离推理 | Dot Product | [leetgpu-dot-product-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html) |
-| Week7 Day7 | 调度优化策略总结 | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
+| Week7 Day6 | PD 分离推理 | — | — |
+| Week7 Day7 | 调度优化策略总结 | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
 | Week8 Day1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
 | Week8 Day2 | FP8 量化深入 | 待定 | — |
 | Week8 Day3 | SGLang / 投机解码 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html) |
-| Week8 Day4 | CUDA Graph 实操 | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
+| Week8 Day4 | CUDA Graph 实操 | Matrix Transpose（复用 W1D4） | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
 | Week8 Day5 | 项目推进 —— 加速技术接入 | 待定 | — |
 | Week8 Day6 | Profiling —— 量化/CUDA Graph | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
 | Week8 Day7 | 复盘与面试 Q&A | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
@@ -189,11 +189,11 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week9 Day5 | MoE + EP 并行专题 | 待定 | — |
 | Week9 Day6 | 多硬件对比：CUDA vs Ascend | 待定 | — |
 | Week9 Day7 | 复盘与面试 Q&A | Element Reversal | [leetgpu-element-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html) |
-| Week10 Day1 | 整合全部自定义 Kernel | Matrix Transpose | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
+| Week10 Day1 | 整合全部自定义 Kernel | Matrix Transpose（复用 W1D4） | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
 | Week10 Day2 | 系统联调（六步分层验证） | Element Reversal | [leetgpu-element-reversal-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html) |
 | Week10 Day3 | 项目文档完善（README） | Matrix Addition | [leetgpu-matrix-addition-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html) |
 | Week10 Day4 | 高频面试题基础篇 | SiLU | [leetgpu-silu-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-silu-solution.html) |
-| Week10 Day5 | Mock 面试 | LoRA Linear | [leetgpu-lora-linear-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-lora-linear-solution.html) |
+| Week10 Day5 | Mock 面试 | GEMM | [leetgpu-gemm-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html) |
 | Week10 Day6 | 诊断流程实战剧本 + 手撕清单 | Sliding Window Self-Attention | [leetgpu-sliding-window-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-sliding-window-self-attention-solution.html) |
 | Week10 Day7 | 最终复盘 —— 10 周能力地图 | 1D Convolution | [leetgpu-1d-convolution-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html) |
 
@@ -325,6 +325,7 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 - 引用本 Day 文件:相对路径 `(kernels/xxx.cu)`
 - 引用周级文件:`(../notes/week1_notes.md)`、`(../tools/cuda_occupancy_calculator.py)`
 - 引用其他 Day:少见,必要时用 `../dayM/`
+- **`_supplementary/from_*/` 内的文件多一层目录**:引用其他周资源用 `../../../weekN/...`（三级回退），引用 `daily/images/` 用 `../../../images/...`；写完务必跑 `python3 build/check_course.py` 验证无悬空链接
 
 ## 6. 构建集成
 
@@ -361,6 +362,15 @@ git push origin
 - [ ] 所有文件链接用相对路径且指向真实文件
 - [ ] SVG 引用格式 `![中文alt](../images/xxx.svg)`
 - [ ] 运行 `python3 build.py` 成功生成 `dayN.html`
+- [ ] **三查规约（内容维护必做，防回归）**——新增/迁移/修改内容时执行：
+  ```bash
+  # 三合一检查脚本：标题重复 / 旧口径残留 / 悬空链接
+  python3 build/check_course.py
+  # 期望输出：Checked N files, 0 findings
+  ```
+  - **一查：周号日号自称**——正文自称的 Week/Day 号必须与所在目录一致；禁止 "Week 8 的第一天""8 周能力地图" 等旧口径（`check_course.py` 的 stale-terms 检测会捕获）
+  - **二查：交叉引用路径**——所有 `kernels/`、`../images/`、`../dayM/` 相对链接必须指向真实存在的文件（`check_course.py` 的 dangling-links 检测会捕获）；`_supplementary/from_*/` 内的文件因多一层目录，引用其他周用 `../../../weekN/`
+  - **三查：标题重复粘贴**——禁止 `## Day N：XXX...XXX` 同一标题串出现两遍（`check_course.py` 的 dup-title 检测会捕获）
 - [ ] 硬件参数/必背数字引用唯一事实源，正文无新写硬件参数数字；grep 自检：
   ```bash
   # 新写/修改的 dayN 中出现的算力、带宽数字应与 reference/ 完全一致

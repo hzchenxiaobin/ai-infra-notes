@@ -421,14 +421,16 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 Batched GEMM 是推理中 Multi-Head Attention 的核心操作。用 WMMA 实现 batched GEMM 可以充分利用 Tensor Core。
 
-#### 任务 5：LeetCode 面试题
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 1）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 1（反转与合并），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [剑指 Offer 47](https://leetcode.cn/problems/li-wu-de-zui-da-jie-zhi-lcof/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/LCOF47_礼物的最大价值.html) |
-| [64](https://leetcode.cn/problems/minimum-path-sum/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html) |
-| [1143](https://leetcode.cn/problems/longest-common-subsequence/) | Medium | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
-| [72](https://leetcode.cn/problems/edit-distance/) | Hard | DP（二维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
+|------|------|----------|------|
+| [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/) | 简单 | 指针翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html) |
+| [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/) | 简单 | 哑节点 + 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html) |
+| [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/) | 简单 | 一次遍历去重 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html) |
+| [876. 链表的中间结点](https://leetcode.cn/problems/middle-of-the-linked-list/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/876_链表的中间结点.html) |
 
 ---
 

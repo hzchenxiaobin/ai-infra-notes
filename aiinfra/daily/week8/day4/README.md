@@ -11,13 +11,13 @@
 5. 掌握 **动态 shape 处理**——shape bucketing（按 batch size 分桶预捕获）、`cudaGraphExecUpdate`（拓扑不变只改参数时原地更新可执行图）<br>
 6. 用 Python 手写 **CUDA Graph capture + shape bucketing** 两个脚本，实测 eager vs graph replay 的延迟差距与正确性一致性
 
-> 💡 **为什么重要**：Day 6 的全链路 Profiling 把"kernel launch overhead"列为五大系统级瓶颈之一，并给出优化优先级"CUDA Graph > 官方 kernel > C++ Scheduler"——但 Day 6 只停留在"识别瓶颈"，没有动手消除它。Decode 阶段每生成一个 token 就跑一遍 forward，而 M=1 时每个 kernel 只有几 μs，**纯 launch 开销却要 5-10μs/个**，几十个 kernel 叠加后 launch 占比常超 50%。CUDA Graph 是 vLLM / TensorRT-LLM 在 decode 路径的标配优化（vLLM 默认开启 `enforce_eager=False` 即用 graph）。今天把 Day 6 识别出的瓶颈真正消除，是 Mini 引擎从"知道慢在哪"走向"把它变快"的关键一步——这是面试高频题"CUDA Graph 怎么用、动态 shape 怎么办"。
+> 💡 **为什么重要**：Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中的全链路 Profiling 把"kernel launch overhead"列为五大系统级瓶颈之一，并给出优化优先级"CUDA Graph > 官方 kernel > C++ Scheduler"——但那份材料只停留在"识别瓶颈"，没有动手消除它。Decode 阶段每生成一个 token 就跑一遍 forward，而 M=1 时每个 kernel 只有几 μs，**纯 launch 开销却要 5-10μs/个**，几十个 kernel 叠加后 launch 占比常超 50%。CUDA Graph 是 vLLM / TensorRT-LLM 在 decode 路径的标配优化（vLLM 默认开启 `enforce_eager=False` 即用 graph）。今天把 Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中识别出的瓶颈真正消除，是 Mini 引擎从"知道慢在哪"走向"把它变快"的关键一步——这是面试高频题"CUDA Graph 怎么用、动态 shape 怎么办"。
 
 ---
 
 ### 学前导读：Launch Overhead 是 Decode 的瓶颈
 
-Day 6 的 profiling 报告里有这样一行：
+Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中的全链路 Profiling 报告里有这样一行：
 
 ```
 瓶颈 Top3:
@@ -84,7 +84,7 @@ Decode M=1 估算（单 kernel ~10μs 计算 + 7μs launch）：
 | Decode M=1 | ~96 | 10 μs | 7 μs | **41%** |
 | Decode M=1（小模型） | ~48 | 5 μs | 7 μs | **58%** |
 
-> ⚠️ **nsys 上的表现**：timeline 上看到 kernel 之间有明显的"空白带"（GPU 空闲），CPU 段却在疯狂提交——这就是 launch-bound。空白带宽 ≈ launch overhead。Day 6 的 nsys 截图里 decode 段 kernel 稀疏、间隙大，正是此症状。
+> ⚠️ **nsys 上的表现**：timeline 上看到 kernel 之间有明显的"空白带"（GPU 空闲），CPU 段却在疯狂提交——这就是 launch-bound。空白带宽 ≈ launch overhead。Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中的 nsys 截图里 decode 段 kernel 稀疏、间隙大，正是此症状。
 
 #### 1.2 CUDA Graph 原理
 
@@ -389,11 +389,11 @@ python kernels/shape_bucketing.py
 
 > 思考：b=3 用 bucket=4 时，padding 那 1 行的计算是否浪费？（提示：是，padding 行仍参与 GEMM，但 attention 用 mask 屏蔽后不影响有效行输出。这就是 bucketing 的代价——用少量计算浪费换静态 shape。bucket 越密浪费越少但显存越多。）
 
-#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose
+#### 任务 4：LeetGPU 在线题目 —— Matrix Transpose（复用，首次布置于 week1/day4）
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>
 
-**与今日知识的关联**：Matrix Transpose 是 **CUDA Graph 录制的最佳练手对象**——它 shape 静态、kernel 简单，多次 launch 的累积 overhead（如 320 次 × ~7μs ≈ 2.2ms）用 CUDA Graph 捕获后降为一次 replay ~10μs。naive 转置有一侧 uncoalesced，用 shared memory tile 修复后带宽接近上限。Day 4 的 CUDA Graph 实操就该用这类 **shape 固定的 kernel** 做演示。
+**与今日知识的关联**：Matrix Transpose 是 **CUDA Graph 录制的最佳练手对象**——它 shape 静态、kernel 简单，多次 launch 的累积 overhead（如 320 次 × ~7μs ≈ 2.2ms）用 CUDA Graph 捕获后降为一次 replay ~10μs。naive 转置有一侧 uncoalesced，用 shared memory tile 修复后带宽接近上限。Day 4 的 CUDA Graph 实操就该用这类 **shape 固定的 kernel** 做演示。本题在 week1/day4 已首次布置，这里作为 shape 静态 kernel 的 CUDA Graph 练习复用。
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、CUDA Graph 捕获/replay、与今日 CUDA Graph 实操的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
@@ -437,7 +437,7 @@ python kernels/shape_bucketing.py
 
 ### 今日总结
 
-Day 4 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead 瓶颈：
+Day 4 我们动手用 CUDA Graph 消除了 Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中全链路 Profiling 识别出的 launch overhead 瓶颈：
 
 1. **Launch overhead 本质**：每次 kernel launch 有 5-10μs CPU 提交开销（参数解析、驱动切换、stream 入队），与 kernel 计算量无关；Decode M=1 时 kernel 极快，launch 占比可达 **30-60%**，是 launch-bound 的典型场景
 2. **CUDA Graph 原理**：capture（录制 kernel launch 序列为 DAG）/ replay（一次提交整图）两阶段，把 N 次 CPU launch 压成 1 次，kernel 间隙几乎消失；硬约束是 **shape/拓扑/指针地址静态**
@@ -445,7 +445,7 @@ Day 4 我们动手用 CUDA Graph 消除了 Day 6 识别出的 launch overhead �
 4. **动态 shape**：bucketing（按 batch 预捕获多张图，向上取整 + padding）+ cudaGraphExecUpdate（拓扑不变原地更新）+ 回退 eager（超桶或 prefill）；vLLM 策略是 decode 用 graph、prefill 用 eager
 5. **实测验证**：`cuda_graph_capture.py` 量化 eager vs graph 加速 1.5-2.5x、正确性逐位一致；`shape_bucketing.py` 验证 5 个 bucket 覆盖 batch 1-16、padding 不影响有效输出
 
-掌握这些后，你就把 Day 6 的"识别瓶颈"升级为"消除瓶颈"——明天 Day 5 项目推进，将 CUDA Graph 集成进 Mini 引擎的 decode 路径，完成 Week 8 推理加速收官。
+掌握这些后，你就把 Week 10 补充材料 `aiinfra/daily/week10/_supplementary/from_w9d3/` 中全链路 Profiling 的"识别瓶颈"升级为"消除瓶颈"——明天 Day 5 项目推进，将 CUDA Graph 集成进 Mini 引擎的 decode 路径，完成 Week 8 推理加速收官。
 
 ---
 

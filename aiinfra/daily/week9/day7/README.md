@@ -128,10 +128,8 @@
 <details>
 <summary>答案</summary>
 
-- 通信量 = 2(N-1)/N × 数据量
-- = reduce-scatter ((N-1)/N × D) + all-gather ((N-1)/N × D)
-- 步数 = 2(N-1)
-- 每步每节点发 1/N 数据
+- 通信量 = 2(N-1)/N × 数据量 = reduce-scatter（(N-1)/N × D）+ all-gather（(N-1)/N × D）两段，步数 2(N-1)
+- 完整两阶段推导、通信量计算与 ring 模拟器详见 [Day 3 §3.1](../day3/README.md)
 
 </details>
 
@@ -140,9 +138,8 @@
 <details>
 <summary>答案</summary>
 
-- bubble = (P-1)/(M+P-1)
-- 减少：增大 M（M≥4P 时 < 20%）、interleaved 1F1B（V 个 virtual stage）
-- 1F1B vs GPipe：bubble 相同，1F1B 显存从 O(M) 降到 O(P)
+- bubble = (P-1)/(M+P-1)；增大 M（M≥4P 时 < 20%）或用 interleaved 1F1B 降低；1F1B 把显存从 O(M) 降到 O(P)
+- 完整推导、1F1B 调度模拟与推理 PP 部署形态详见 [Day 2 §2.3](../day2/README.md)
 
 </details>
 
@@ -151,11 +148,8 @@
 <details>
 <summary>答案</summary>
 
-- 层切分：GEMM 按输出分两半 Y1/Y2
-- compute_stream 算 Y1 → comm_stream all-reduce Y1
-- compute_stream 同时算 Y2（与 Y1 all-reduce 重叠）
-- CUDA Graph 捕获双流序列消除 launch overhead
-- 收益 = min(T_comp, T_comm)
+- GEMM 按输出切两半 Y1/Y2，compute_stream 算后半与 comm_stream 对前半做 all-reduce 并发重叠；CUDA Graph 捕获双流序列消除 launch overhead；收益 = min(T_comp, T_comm)
+- 代码实现、收益边界与 Sequence Parallelism 详见 [Day 4 §4.2](../day4/README.md)
 
 </details>
 
@@ -164,10 +158,9 @@
 <details>
 <summary>答案</summary>
 
-- decode 阶段 batch 小（M=1），TP 的 all-reduce 通信量 = activation（固定），效率低
-- EP 的 all-to-all 通信量 = tokens × top_k × expert_dim，与 batch 成正比，decode 时更小
-- prefill 阶段 batch 大，TP 的 all-reduce 被 compute 遮盖，可用 TP
-- DeepSeek-V3：prefill 用 TP，decode 用 EP
+- decode batch 小（M=1~8）时 EP 的 all-to-all 流量小；TP all-reduce 每层都做、延迟固定，batch 小时无法被摊薄，开销占比大
+- prefill batch 大（M=N）时 TP all-reduce 被计算摊薄，且无 all-to-all
+- 通信量公式、EP vs TP 对比表与 DeepSeek 混合策略详见 [Day 5 §4](../day5/README.md)
 
 </details>
 
@@ -176,9 +169,8 @@
 <details>
 <summary>答案</summary>
 
-- Ring：步数多 2(N-1)，带宽利用率高（每步每节点都在发收），适合大消息 + 小 N
-- Tree：步数少 log N，根节点瓶颈，适合小消息 + 大 N
-- NCCL 混合：大消息 ring，小消息 tree，阈值 ~1-4KB
+- Ring：步数 2(N-1) 但带宽利用率高（每步每节点都在发收），适合大消息；Tree：步数 log N、延迟低但根节点瓶颈，适合小消息；NCCL 按消息大小自适应混合
+- 拓扑细节、选择阈值与 NCCL 自适应策略详见 [Day 3 §3.5](../day3/README.md)
 
 </details>
 

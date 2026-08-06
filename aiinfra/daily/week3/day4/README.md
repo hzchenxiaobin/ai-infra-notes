@@ -309,13 +309,16 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 思考：CUTLASS 的 batched GEMM 接口 `cutlass::gemm::device::GemmBatched` 如何利用三级 tiling 处理 batch 维度？
 
-#### 任务 5：LeetCode 面试题
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 4）
+
+> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 4（相加与复制），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [240](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | Medium | 二分/Z 字搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
-| [283](https://leetcode.cn/problems/move-zeroes/) | Easy | 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html) |
-| [215](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | Medium | 快速选择/堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
+|------|------|----------|------|
+| [2. 两数相加](https://leetcode.cn/problems/add-two-numbers/) | 中等 | 模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/2_两数相加.html) |
+| [445. 两数相加 II](https://leetcode.cn/problems/add-two-numbers-ii/) | 中等 | 栈逆序相加 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/445_两数相加 II.html) |
+| [138. 随机链表的复制](https://leetcode.cn/problems/copy-list-with-random-pointer/) | 中等 | 哈希 / 拼接拆分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/138_复制带随机指针的链表.html) |
+| [430. 扁平化多级双向链表](https://leetcode.cn/problems/flatten-a-multilevel-doubly-linked-list/) | 中等 | DFS 栈扁平化 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/430_扁平化多级双向链表.html) |
 
 ---
 

@@ -17,11 +17,11 @@
 
 ### Week 4 知识地图
 
-![FlashAttention Tiling 与线程映射](../../week4/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 与线程映射](../../../week4/images/flash_attention_tiling.svg)
 
 Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
 
-![Week 4 学习主线](../../images/week4_learning_pipeline.svg)
+![Week 4 学习主线](../../../images/week4_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -41,7 +41,7 @@ Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel �
 
 #### 1. FlashAttention 的核心思想：减少 HBM 访问
 
-![标准 Attention vs FlashAttention IO 对比](../../week4/images/flash_attention_naive_vs_fused.svg)
+![标准 Attention vs FlashAttention IO 对比](../../../week4/images/flash_attention_naive_vs_fused.svg)
 
 ```
 标准 Attention：
@@ -60,7 +60,7 @@ FlashAttention：
 
 #### 2. Online Softmax 三公式
 
-![Online Softmax 递推更新流程](../../week4/images/flash_attention_online_update.svg)
+![Online Softmax 递推更新流程](../../../week4/images/flash_attention_online_update.svg)
 
 ```
 公式1: m_new = max(m, max(xj))
@@ -93,7 +93,7 @@ FlashAttention：
 
 ### IO 优化方法论：六大策略决策树
 
-![O(N²) vs O(Nd) IO 增长对比](../../week4/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../../../week4/images/on2_vs_ond_scaling.svg)
 
 从 FlashAttention 中提炼的通用 IO 优化方法论——适用于任何 memory-bound 算子：
 
@@ -110,7 +110,7 @@ FlashAttention：
 
 #### 场景决策树
 
-![IO 优化方法论决策树](../../images/week4_io_optimization_decision.svg)
+![IO 优化方法论决策树](../../../images/week4_io_optimization_decision.svg)
 
 #### IO 优化与计算优化的关系
 
