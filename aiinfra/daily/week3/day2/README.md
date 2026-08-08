@@ -423,7 +423,7 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 #### 任务 4：LeetGPU 在线题目
 
-**题目链接**：<https://leetgpu.com/challenges/fp16-batched-matmul>
+**题目链接**：<https://leetgpu.com/challenges/fp16-batched-matrix-multiplication>
 
 本题与今日 WMMA GEMM 强相关：FP16 存储 + FP32 累加正是 WMMA `m16n16k16` 指令的精度策略。朴素版用 CUDA Core 逐元素乘加（`__half2float` → FMA → `__float2half`），思考如何用今天学的 shared memory tiling + WMMA 改造为 Tensor Core 版本。完整题解见 [FP16 Batched MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-fp16-batched-matmul-solution.html)。
 
