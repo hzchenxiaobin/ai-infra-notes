@@ -38,6 +38,16 @@ Day 1-2 我们用 `nvcuda::wmma` 接口编程，它把 Tensor Core 封装成"声
 
 #### 3.1 mma.sync PTX 指令
 
+##### 什么是 PTX？
+
+PTX（Parallel Thread Execution）是 NVIDIA GPU 的**虚拟指令集**（ISA），介于 CUDA C++ 和 GPU 机器码（SASS）之间：
+
+```
+CUDA C++  →  PTX（虚拟 ISA）  →  SASS（GPU 机器码）
+```
+
+CUDA 代码先编译成 PTX（与具体 GPU 型号无关），再由驱动将 PTX 编译为当前 GPU 的 SASS 机器码。用 `nvcc -ptx` 可以查看生成的 PTX 代码，也可以在 CUDA 代码里用 `asm volatile("...")` 直接内联编写 PTX。今天要学的 `mma.sync` 和 `ldmatrix` 是两条 Tensor Core 相关的 PTX 指令——CUTLASS / FlashAttention 的 CUDA 源码都用内联 PTX 直接调用它们，绕过 WMMA C++ 封装。
+
 ##### 指令语法
 
 `mma.sync` 是 PTX（Parallel Thread Execution）指令，在 warp 内同步执行矩阵乘加：
