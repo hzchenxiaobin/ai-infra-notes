@@ -141,7 +141,7 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week2 Day6 | Nsight Compute 性能分析 | Softmax | [leetgpu-softmax-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html) |
 | Week2 Day7 | 限时 Kernel 手撕 + GitHub 整理 | Max Subarray Sum | [leetgpu-max-subarray-sum-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-max-subarray-sum-solution.html) |
 | Week3 Day1 | Tensor Core 与 WMMA | Histogramming | [leetgpu-histogramming-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html) |
-| Week3 Day2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 | 待定 | — |
+| Week3 Day2 | 手写 WMMA GEMM 与 cuBLAS 性能对比 | FP16 Batched Matrix Multiplication | [leetgpu-fp16-batched-matmul-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-fp16-batched-matmul-solution.html) |
 | Week3 Day3 | mma.sync 指令与 ldmatrix | 待定 | — |
 | Week3 Day4 | CUTLASS 源码分析 + CuTe 概念铺垫 | 待定 | — |
 | Week3 Day5 | 项目推进 —— WMMA GEMM 接入 Benchmark | 待定 | — |

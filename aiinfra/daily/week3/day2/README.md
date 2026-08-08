@@ -388,7 +388,7 @@ M=N=K    | naive_ms   tiled_ms   TF32cub_ms  FP16cub_ms  | naive%TF32  tiled%TF3
 >
 > 剩余差距来自：无 double buffer、无 K 分割、WMMA 接口开销、固定 tiling。这些是 Day 3-5 的主题。
 
-#### 任务 4：对比 Day 1 教学版
+##### 对比 Day 1 教学版
 
 修改 benchmark 同时运行 Day 1 教学版和 Day 2 tiled 版：
 
@@ -420,6 +420,12 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 而 Day 1 naive 版每个 block 独立工作、无同步开销，在小矩阵下反而更快。**交叉点在 ~2048**——只有矩阵 ≥ 2048 时 tiled 的数据复用收益才超过同步开销。
 
 > 💡 **面试要点**：Tiling 不是万能的。小矩阵下 tiling 开销 > 收益，需要 auto-tuning 选择最优配置——这正是 CUTLASS 的价值。
+
+#### 任务 4：LeetGPU 在线题目
+
+**题目链接**：<https://leetgpu.com/challenges/fp16-batched-matmul>
+
+本题与今日 WMMA GEMM 强相关：FP16 存储 + FP32 累加正是 WMMA `m16n16k16` 指令的精度策略。朴素版用 CUDA Core 逐元素乘加（`__half2float` → FMA → `__float2half`），思考如何用今天学的 shared memory tiling + WMMA 改造为 Tensor Core 版本。完整题解见 [FP16 Batched MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-fp16-batched-matmul-solution.html)。
 
 #### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
 
