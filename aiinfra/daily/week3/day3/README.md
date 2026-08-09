@@ -393,7 +393,13 @@ uint32_t addr = __cvta_generic_to_shared(smemA);
 assert(addr % 16 == 0);  // 调试时验证
 ```
 
-#### 任务 4：LeetCode 面试题（8 周计划 · 第 3 周 Day 3）
+#### 任务 4：LeetGPU 在线题目
+
+**题目链接**：<https://leetgpu.com/challenges/fp16-dot-product>
+
+本题与今日内容强相关：FP16 存储 + FP32 累加正是 `mma.sync.aligned.m16n8k16.row.col.f16.f16.f32.f32` 的精度策略——输入 `half`、累加器 `float`，最后才转回 `half`。本题是 memory-bound 归约（N=10⁸），Tensor Core 帮不上忙，但"读 half → FP32 累加 → 写 half"的精度链路与今天学的完全一致，可以亲手体会 FP16 直接累加为什么不可接受（10 bit 尾数在大数组上迅速丢精度）。完整题解见 [FP16 Dot Product 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-fp16-dot-product-solution.html)。
+
+#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 3）
 
 > 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 3（链表变换），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
