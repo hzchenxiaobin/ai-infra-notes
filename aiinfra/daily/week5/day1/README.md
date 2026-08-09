@@ -605,8 +605,8 @@ s_V[Bc][D] = 32×64×4 =  8 KB
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/) | 中等 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html) |
-| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html) |
-| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html) |
+| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素%20I.html) |
+| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素%20II.html) |
 | [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/) | 中等 | 单调栈 + 跨度合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html) |
 | [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/) | 困难 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
 

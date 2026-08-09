@@ -513,7 +513,7 @@ Reduction 是**归约家族的基础形态**——"分块 → 块内归约 → �
 |------|------|----------|------|
 | [24. 两两交换链表中的节点](https://leetcode.cn/problems/swap-nodes-in-pairs/) | 中等 | 哑节点 + 三指针交换 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/24_两两交换链表中的节点.html) |
 | [25. K 个一组翻转链表](https://leetcode.cn/problems/reverse-nodes-in-k-group/) | 困难 | 分段翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/25_K个一组翻转链表.html) |
-| [92. 反转链表 II](https://leetcode.cn/problems/reverse-linked-list-ii/) | 中等 | 区间反转（头插法） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/92_反转链表 II.html) |
+| [92. 反转链表 II](https://leetcode.cn/problems/reverse-linked-list-ii/) | 中等 | 区间反转（头插法） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/92_反转链表%20II.html) |
 | [143. 重排链表](https://leetcode.cn/problems/reorder-list/) | 中等 | 中点 + 反转 + 交错合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/143_重排链表.html) |
 | [328. 奇偶链表](https://leetcode.cn/problems/odd-even-linked-list/) | 中等 | 奇偶指针重接 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/328_奇偶链表.html) |
 
