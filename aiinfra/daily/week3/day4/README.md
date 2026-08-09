@@ -206,6 +206,8 @@ gemm();
 | `Swizzle` | block 调度策略 | `GemmIdentityThreadblockSwizzle` |
 | `NumStages` | pipeline 深度 | 2 (double buffer), 3 (triple buffer) |
 
+> 💡 **ArchTag 是 `Sm80`，为什么编译用 `-arch=sm_120`？** 两者含义不同：`-arch=sm_120` 是 nvcc 编译目标，决定 ptxas 生成的 SASS，必须与 GPU 匹配；`ArchTag` 是 CUTLASS 2.x 内部的**实现选择标签**，决定选哪套 mma 指令序列和 pipeline 结构。CUTLASS 2.x 没有 `Sm120` tag（Blackwell 支持是 3.x 的事），`Sm80` 是向前兼容的最高可用 tag——其选用的 `mma.sync.m16n8k16` + `cp.async` 指令在 sm_120 上仍然有效，内部 `#if __CUDA_ARCH__ >= 800` 守卫也能通过。代价是只走 Ampere 风格指令路径，用不上 Blackwell 新特性（tcgen05、TMA 等），性能上限是 Ampere 水平，与 cuBLAS 对比会落后；要发挥 sm_120 需 CUTLASS 3.9+ 的 SM120 kernel。
+
 #### 1.4 CUTLASS 的工程优化
 
 ##### Double Buffer (NumStages)
