@@ -121,8 +121,8 @@ Day 5 的 benchmark 给了"谁快谁慢"，Day 6 用 ncu 打开看"为什么"（
 
 | 指标 | Triton GEMM | 手写 CUDA | 差距原因 |
 |------|------------|----------|---------|
-| `sm__pipe_tensor_op_hmma` | ~68% | ~25% | `tl.dot` 自动调 Tensor Core，手写版利用率低 |
-| `sm__occupancy` | ~58% | ~25% | autotune 自动选 num_warps，寄存器更少（72 vs 96） |
+| `sm__pipe_tensor_op_hmma_cycles_active` | ~68% | 0% | `tl.dot` 自动生成 `mma.sync`；手写版是 smem tiling + FMA，无 Tensor Core |
+| `sm__warps_active`（occupancy） | ~58% | ~45% | autotune 自动选 num_warps 与大 block（有差距，但非主因） |
 | `dram__throughput` | ~38% | ~70% | 自动 smem tiling + double buffer 减少 HBM 访问 |
 
 Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ 说明 HBM 是瓶颈，优化方向是 fusion 而非算力。`torch.profiler` 时间线上 GEMM 占 ~45%，Softmax/LayerNorm 各 ~9%——memory-bound 算子的 fusion 空间一目了然。

@@ -247,7 +247,7 @@ M=N=K    | Triton(ms)  CUDA(ms)    cuBLAS(ms)  | Triton%   CUDA%   Triton/CUDA
 4096     | 1.810       4.300       1.305       | 72%       30%     2.4x
 ```
 
-> ⚠️ **预期说明**：Triton 经 autotune 后达 cuBLAS 70-80%，比 Day 1 手写 CUDA（30%）快 2-3x。原因是 Triton 自动选了最优 tiling + 用 Tensor Core（`tl.dot` 自动调 WMMA）。
+> ⚠️ **预期说明**：Triton 经 autotune 后达 cuBLAS 70-80%，比 Day 1 手写 CUDA（30%）快 2-3x。原因是 Triton 自动选了最优 tiling + 用 Tensor Core（`tl.dot` 自动生成 `mma.sync` 指令）。
 
 #### 任务 3：Softmax + FA 三方对比
 

@@ -144,7 +144,7 @@ with torch.profiler.profile(
 # 按 CUDA 时间排序，输出 top 算子
 print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))
 
-# 导出 Chrome trace（可用 chrome://tracing 打开）
+# 导出 trace（用 https://ui.perfetto.dev 打开；chrome://tracing 已被 Chrome 移除）
 prof.export_chrome_trace("transformer_trace.json")
 ```
 
@@ -255,7 +255,7 @@ def main():
     print("1. Prefill 阶段：gemm 类算子 CUDA 时间占比最高（compute-bound）")
     print("2. Decode 阶段：总时间远小于 prefill，但单 token 时间占比不合理地高（memory-bound）")
     print("3. 对比 softmax/layernorm 在两阶段的绝对时间——decode 下它们可能占更大比例")
-    print("4. 打开 trace_prefill.json（chrome://tracing）观察 kernel 顺序与间隙")
+    print("4. 打开 trace_prefill.json（https://ui.perfetto.dev）观察 kernel 顺序与间隙")
 
 if __name__ == "__main__":
     main()
@@ -267,8 +267,8 @@ if __name__ == "__main__":
 # 运行（需 CUDA GPU）
 python trace_transformer.py
 
-# 打开 Chrome trace 可视化
-# 1. 浏览器访问 chrome://tracing
+# 打开 trace 可视化（chrome://tracing 已被 Chrome 移除，改用 Perfetto UI）
+# 1. 浏览器访问 https://ui.perfetto.dev
 # 2. Load trace_prefill.json 和 trace_decode.json
 # 3. 观察 GPU kernel 的时间线排列
 ```
@@ -373,4 +373,4 @@ aten::softmax xxx us 5
 - [ ] torch.profiler 代码运行成功，输出 Prefill/Decode 的算子时间表
 - [ ] 找出 Prefill 阶段 CUDA 时间 top3 算子
 - [ ] 能解释为什么 Decode 阶段 GEMM 变成 memory-bound（M=1 导致计算强度低）
-- [ ] 能用 chrome://tracing 打开 trace 文件并观察 kernel 间隙
+- [ ] 能用 Perfetto UI（ui.perfetto.dev）打开 trace 文件并观察 kernel 间隙
