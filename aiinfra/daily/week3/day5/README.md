@@ -400,23 +400,24 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/benchmark_all.cu -o bench_all
 ./bench_all
 ```
 
-实测（RTX 5090, CUDA 12.8, 2026-08-06，cuBLAS 为 TF32 模式）：
+实测（RTX 5090, CUDA 12.8, 2026-08-09 实跑，cuBLAS 为 TF32 模式）：
 
 ```text
 === WMMA GEMM Performance Evolution (RTX 5090, sm_120, TF32 cuBLAS baseline) ===
 Size     | Day1_naive  Day2_tiled  Day3_mma   Day5_dbuf  | Best%   Best_impl
 ---------|----------------------------------------------------------------|------------------
-512      | 72.8%✓      9.2%✓       —         112.6%✓    | 112.6%  Day5_dbuf
-1024     | 33.5%✓      12.6%✓      —         99.9%✓     | 99.9%   Day5_dbuf
-2048     | 32.3%✓      19.4%✓      —         105.2%✓    | 105.2%  Day5_dbuf
-4096     | 31.1%✓      16.0%✓      —         96.4%✓     | 96.4%   Day5_dbuf
+512      | 71.8%✓      9.6%✓       27.7%✓     110.4%✓    | 110.4%  Day5_dbuf
+1024     | 33.2%✓      12.4%✓      10.7%✓     100.0%✓    | 100.0%  Day5_dbuf
+2048     | 32.3%✓      19.4%✓      10.1%✓     104.9%✓    | 104.9%  Day5_dbuf
+4096     | 31.1%✓      16.0%✓      8.8%✓      96.2%✓     | 96.2%   Day5_dbuf
 ```
 
 > **实测发现**：
-> - Day 1 naive 在小矩阵（512）因无同步开销 + 单 warp 独立工作表现最好（72.8%）；大矩阵受 HBM 限制，降至 31% 左右。
+> - Day 1 naive 在小矩阵（512）因无同步开销 + 单 warp 独立工作表现最好（71.8%）；大矩阵受 HBM 限制，降至 31% 左右。
 > - Day 2 tiled 在本实现中比 naive 慢（9%–19%），且与 cuBLAS TF32 的 max_diff 较大（FP16 vs TF32 亦有贡献），说明本版 tiled 的 smem layout / warp 协作仍有优化空间。
+> - Day 3 mma.sync 实测 8.8%–27.7%，本版 kernel 每block 仅 1 warp + 16×8 tile，tiling 粒度太细、block 数过多，性能远低于预期。
 > - Day 5 double buffer 在 512/2048 上达到 cuBLAS 的 96%–113%，在 1024/4096 上接近 cuBLAS，验证了 cp.async 重叠 load/compute 的收益；小矩阵仍有 pipeline 预热 overhead。
-> - Day 3 mma.sync PTX kernel 未在本轮单独编译实测，表格留空。
+> - ⚠️ Day 5 dbuf 的 max_diff 偏大（108@4096），数值发散——本版 cp.async 加载的 A/B tile 布局与 WMMA fragment 的 row/col_major 约束可能存在不完全匹配，正确性仍需排查。**性能数据有效但数值正确性待修**。
 
 ##### 性能演进分析
 

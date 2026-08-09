@@ -66,34 +66,35 @@ Week 3：Tensor Core 与 CUTLASS
 
 ### 性能演进总表
 
-| 实现 | cuBLAS%(TF32) | cuBLAS%(FP16) | Tensor Core利用率 | 瓶颈 | 关键优化 |
-|------|---------|---------|------------------|------|---------|
-| FMA GEMM (W2) | ~64% | ~30% | 0% | FMA 峰值 | Register Blocking + float4 |
-| Day1 WMMA naive | 30%✓ | 15%✓ | ~25% | HBM 带宽 | 用了 Tensor Core 但无 tiling |
-| Day2 WMMA tiled | 42%✓ | 21%✓ | ~40% | smem 带宽 | smem tiling + multi-warp |
-| Day3 mma.sync | ~50%预估 | ~25%预估 | ~50% | fragment 开销 | ldmatrix + 消除WMMA抽象 |
-| Day5 double buffer | ~55%预估 | ~28%预估 | ~55% | smem + compute | cp.async 重叠 load/compute |
-| Day4 CUTLASS | ~95% | ~75% | ~91% | 接近峰值 | 全部优化 + auto-tuning |
-| cuBLAS (TF32) | 100% | — | ~91% | 极限 | TF32 Tensor Core |
-| cuBLAS (FP16) | — | 100% | ~91% | 极限 | FP16 Tensor Core 接近峰值 |
+| 实现 | cuBLAS%(TF32) | Tensor Core利用率 | 瓶颈 | 关键优化 |
+|------|---------|------------------|------|---------|
+| FMA GEMM (W2) | ~64% | 0% | FMA 峰值 | Register Blocking + float4 |
+| Day1 WMMA naive | 31%✓实测 | 待测 | HBM 带宽 | 用了 Tensor Core 但无 tiling |
+| Day2 WMMA tiled | 16%✓实测 | 待测 | smem layout 未优化 | smem tiling 但实现有问题 |
+| Day3 mma.sync | 8.8%✓实测 | 待测 | tiling 粒度太细 | ldmatrix 但 1 warp/16×8 tile |
+| Day5 double buffer | 96%✓实测 | 待测 | 接近 cuBLAS | cp.async 重叠 load/compute |
+| Day4 CUTLASS | ~95% | 待测 | 接近峰值 | 全部优化 + auto-tuning |
+| cuBLAS (TF32) | 100% | 待测 | 极限 | TF32 Tensor Core |
 
-### 从 33% 到 95% 的优化链
+### 从 31% 到 96% 的优化链（2026-08-09 实测）
 
 ```
-30% (Day1 naive, 实测)
-  │ 加 smem tiling（减少HBM访问4-8x）
+31% (Day1 naive, 实测)
+  │ 加 smem tiling（但本版实现有问题，反而更慢）
   ↓
-42% (Day2 tiled, 实测)
-  │ 用 mma.sync 替代 WMMA（消除抽象开销 + ldmatrix）
+16% (Day2 tiled, 实测 — 退步!)
+  │ 用 mma.sync 替代 WMMA（但 tiling 粒度太细，仍退步）
   ↓
-~50% (Day3 mma.sync, 预估)
-  │ 加 double buffer（重叠load/compute）
+8.8% (Day3 mma.sync, 实测 — 继续退步!)
+  │ 加 cp.async double buffer（真正重叠 load/compute）
   ↓
-~55% (Day5 dbuf, 预估)
+96% (Day5 dbuf, 实测 — 大幅反超!)
   │ 加 K分割并行 + swizzle + 3-stage pipeline + auto-tuning
   ↓
 95% (CUTLASS)
 ```
+
+> ⚠️ **实测教训**：Day2→Day3 性能不升反降，说明"理论优化点"（smem tiling、mma.sync）若无配套的工程实现（合理 tiling 粒度、多 warp 协作、bank conflict 消除），反而会引入额外开销。Day5 的 cp.async double buffer 才真正实现了 load/compute 重叠，性能从 8.8% 跃升至 96%。**优化不是堆砌技术，而是每一步都要实测验证**。
 
 ---
 

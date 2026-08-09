@@ -129,11 +129,11 @@ effective BW 远低于峰值。所以 Day 1 是 "低效带宽 bound"。
 ##### 关键洞察
 
 1. **FMA GEMM：Tensor Core 利用率 0%**——不用 Tensor Core，纯 FMA。`dram__throughput` 70%，带宽 bound
-2. **WMMA tiled（实测 42% TF32 cuBLAS）：Tensor Core ~35-45%**（推理值）——用了 Tensor Core 但未喂饱。`dram__throughput` 降到 ~40%（smem tiling 减少了 HBM 访问），`l1tex` ~65%（smem 成为新瓶颈）
-3. **WMMA dbuf（预估 ~55%）：Tensor Core ~45-55%**（推理值）——double buffer 重叠了 load/compute，Tensor Core 利用率提升。但 `l1tex` 仍 ~70%（smem 带宽瓶颈未消除）
-4. **cuBLAS：Tensor Core 85-95%**——Tensor Core 接近峰值。`registers_per_thread` 仅 ~80（精打细算），`occupancy` 60%（高 occupancy 隐藏延迟）
+2. **WMMA tiled（实测 16% TF32 cuBLAS，2026-08-09）：Tensor Core 指标待测**——用了 Tensor Core 但本版 smem layout 未优化，性能反而比 naive 差。计时数据实测：4096 时 8.12ms vs cuBLAS 1.30ms
+3. **WMMA dbuf（实测 96% TF32 cuBLAS）：Tensor Core 指标待测**——double buffer 重叠了 load/compute，计时数据实测：4096 时 1.35ms vs cuBLAS 1.30ms
+4. **cuBLAS：Tensor Core 指标待测**——计时数据实测：4096 时 1.31ms = 104.8 TFLOPS
 
-> ⚠️ **ncu 实测限制**：本教程的 ncu 指标值为**推理值**（基于 kernel 结构和性能推算），非实测。实测需要 GPU performance counter 权限（`ERR_NVGPUCTRPERM`），部分共享 GPU 实例不开放。有权限的环境下可用上述 `ncu` 命令复现。计时数据（cuBLAS% 等）均为实测。
+> ⚠️ **ncu 实测限制（2026-08-09 实跑确认）**：本教程的 ncu performance counter 指标（Tensor Core 利用率、occupancy、寄存器数等）为**推理值**，非实测。实跑环境（RTX 5090, CUDA 12.8, ncu 2025.1.1）返回 `ERR_NVGPUCTRPERM`——共享 GPU 实例不开放 GPU performance counter 权限。**计时数据（cuBLAS% 等）均为 2026-08-09 实测**，ncu 硬件指标需在有 perf counter 权限的环境下用上述 `ncu` 命令复现。
 
 ##### cuBLAS 的工程差距
 
@@ -165,18 +165,20 @@ l1tex__data_bank_conflicts_pipe_lsu_mem_shared.sum \
     ./wmma_tiled
 ```
 
-预期输出（RTX 5090, 4096×4096, FP16）：
+预期输出（⚠️ 推理值，实跑受 `ERR_NVGPUCTRPERM` 限制未取到）：
 
 ```text
 wmma_gemm_tiled_kernel, 4096 x 4096
-  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    48.2%
-  sm__throughput.avg.pct_of_peak_sustained_elapsed             61.5%
-  dram__throughput.avg.pct_of_peak_sustained_elapsed           38.7%
-  l1tex__throughput.avg.pct_of_peak_sustained_elapsed          66.3%
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed              45.0%
-  launch__registers_per_thread                                 96
-  l1tex__data_bank_conflicts_pipe_lsu_mem_shared.sum           12450
+  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    待测（推理 ~48%）
+  sm__throughput.avg.pct_of_peak_sustained_elapsed             待测（推理 ~61%）
+  dram__throughput.avg.pct_of_peak_sustained_elapsed           待测（推理 ~39%）
+  l1tex__throughput.avg.pct_of_peak_sustained_elapsed          待测（推理 ~66%）
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed              待测（推理 ~45%）
+  launch__registers_per_thread                                 待测（推理 ~96）
+  l1tex__data_bank_conflicts_pipe_lsu_mem_shared.sum           待测（推理 ~12450）
 ```
+
+> 📊 **计时实测（2026-08-09）**：wmma_gemm_tiled 4096 实测 8.12ms，cuBLAS TF32 1.30ms，占比 16.0%。ncu 硬件指标需 perf counter 权限。
 
 ##### 分析
 
@@ -198,16 +200,18 @@ sm__occupancy.avg.pct_of_peak_sustained_elapsed \
     ./wmma_dbuf
 ```
 
-预期输出：
+预期输出（⚠️ 推理值，实跑受 `ERR_NVGPUCTRPERM` 限制未取到）：
 
 ```text
 wmma_gemm_dbuf_kernel, 4096 x 4096
-  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    62.8%   (Day 2: 48.2% → +14.6%)
-  sm__throughput.avg.pct_of_peak_sustained_elapsed             67.0%   (Day 2: 61.5% → +5.5%)
-  dram__throughput.avg.pct_of_peak_sustained_elapsed           35.2%   (Day 2: 38.7% → -3.5%)
-  l1tex__throughput.avg.pct_of_peak_sustained_elapsed          72.1%   (Day 2: 66.3% → +5.8%)
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed              40.0%   (Day 2: 45.0% → -5.0%)
+  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    待测（推理 ~63%）
+  sm__throughput.avg.pct_of_peak_sustained_elapsed             待测（推理 ~67%）
+  dram__throughput.avg.pct_of_peak_sustained_elapsed           待测（推理 ~35%）
+  l1tex__throughput.avg.pct_of_peak_sustained_elapsed          待测（推理 ~72%）
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed              待测（推理 ~40%）
 ```
+
+> 📊 **计时实测（2026-08-09）**：wmma_gemm_dbuf 4096 实测 1.35ms，cuBLAS TF32 1.30ms，占比 96.2%。ncu 硬件指标需 perf counter 权限。
 
 ##### 分析
 
@@ -228,16 +232,18 @@ launch__registers_per_thread \
     ./cublas_bench
 ```
 
-预期输出：
+预期输出（⚠️ 推理值，实跑受 `ERR_NVGPUCTRPERM` 限制未取到）：
 
 ```text
-cuBLAS sgemm (FP16 input), 4096 x 4096
-  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    91.3%
-  sm__throughput.avg.pct_of_peak_sustained_elapsed             85.7%
-  dram__throughput.avg.pct_of_peak_sustained_elapsed           28.5%
-  sm__occupancy.avg.pct_of_peak_sustained_elapsed              62.0%
-  launch__registers_per_thread                                 78
+cuBLAS sgemm (TF32 mode), 4096 x 4096
+  sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed    待测（推理 ~91%）
+  sm__throughput.avg.pct_of_peak_sustained_elapsed             待测（推理 ~86%）
+  dram__throughput.avg.pct_of_peak_sustained_elapsed           待测（推理 ~28%）
+  sm__occupancy.avg.pct_of_peak_sustained_elapsed              待测（推理 ~62%）
+  launch__registers_per_thread                                 待测（推理 ~78）
 ```
+
+> 📊 **计时实测（2026-08-09）**：cuBLAS sgemm TF32 4096 实测 1.31ms = 104.8 TFLOPS。ncu 硬件指标需 perf counter 权限。
 
 ##### cuBLAS 的工程深度
 
@@ -293,6 +299,8 @@ ncu --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared.sum,sm__pipe_tensor
 ```
 
 预期：无 padding 版 bank conflict 增 10x，Tensor Core 利用率降 8-12%。
+
+> 📊 **计时实测（2026-08-09）**：wmma_tiled_nopad 4096 实测 4.76ms（有 padding 版 8.12ms），nopad 反而**更快** 1.7x。推测原因：Blackwell (sm_120) 的 L1 cache 行为与 Ampere 不同，padding 破坏了 16 字节对齐的批量访问模式，反而增加冲突。bank conflict 指标需 ncu perf counter 权限实测确认。
 
 #### 实验 2：Swizzle 替代 Padding
 

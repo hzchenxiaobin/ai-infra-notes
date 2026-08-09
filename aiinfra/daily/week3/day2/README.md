@@ -156,15 +156,14 @@ for (int k = 0; k < K; k += BK) {
 
 在 RTX 5090（sm_120）上，FP16 输入 / FP32 累加，对比 cuBLAS（FP32 输入 + TF32 Tensor Core，即 `cublasSgemm` 开启 `CUBLAS_TF32_TENSOR_OP_MATH`）：
 
-| 实现 | 实测 TFLOPS（4096） | cuBLAS(TF32) 占比 | cuBLAS(FP16) 占比 | 瓶颈 |
-|------|-------------------|------------------|------------------|------|
-| Day 1 WMMA 教学版 | 32.0 | 30% | 15% | HBM 带宽（global load fragment） |
-| **Day 2 tiled WMMA** | **44.7** | **42%** | **21%** | smem 带宽 + fragment 开销 |
-| Day 4 CUTLASS | ~160+ | ~95% | ~75% | 接近峰值，工程深度优化 |
-| cuBLAS (TF32) | 105.3 | 100% | — | TF32 Tensor Core + 深度优化 |
-| cuBLAS (FP16) | 215.2 | — | 100% | FP16 Tensor Core 接近峰值 |
+| 实现 | 实测 TFLOPS（4096） | cuBLAS(TF32) 占比 | 瓶颈 |
+|------|-------------------|------------------|------|
+| Day 1 WMMA 教学版 | 32.7 | 31% | HBM 带宽（global load fragment） |
+| **Day 2 tiled WMMA** | **16.9** | **16%** | smem layout 未优化 + 同步开销 |
+| Day 4 CUTLASS | ~160+ | ~95% | 接近峰值，工程深度优化 |
+| cuBLAS (TF32) | 104.8 | 100% | TF32 Tensor Core + 深度优化 |
 
-> ⚠️ **两种 cuBLAS 基准**：cuBLAS 用 FP32 输入时启用 TF32 Tensor Core（105 TFLOPS），用 FP16 输入时达 215 TFLOPS。生产推理普遍用 FP16，因此 **tiled WMMA 的真实差距是 ~21% FP16 cuBLAS**，而非 42%。面试时说明基准口径。
+> ⚠️ **实测修正（2026-08-09）**：原 README 称 tiled 达 42%，实跑仅 16%——本版 tiled 的 smem layout / warp 协作实现有严重问题，性能甚至比 naive 还差。Day 5 的 double buffer 版才真正实现性能反超（96%+）。面试时声明"教学版 tiled 实测仅 16%，Day 5 dbuf 版达 96%"。
 
 ---
 
@@ -368,25 +367,26 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm_tiled.cu -o wmma_tiled
 ./wmma_tiled
 ```
 
-实测输出（RTX 5090, sm_120，FP16 输入 FP32 累加，cuBLAS 为 TF32 模式）：
+实测输出（RTX 5090, sm_120，FP16 输入 FP32 累加，cuBLAS 为 TF32 模式，2026-08-09 实跑）：
 
 ```text
-M=N=K    | naive_ms   tiled_ms   TF32cub_ms  FP16cub_ms  | naive%TF32  tiled%TF32  tiled%FP16
----------|------------------------------------------------------------------|------------------------------
-512      | 0.0125     0.0494     0.0084      0.0063      | 66.7        16.9        12.7
-1024     | 0.0833     0.1148     0.0268      0.0165      | 32.1        23.3        14.3
-2048     | 0.5917     0.4259     0.1926      0.1004      | 32.5        45.2        23.6
-4096     | 4.2889     3.0738     1.3049      0.6386      | 30.4        42.5        20.8
+M=N=K    | naive_ms   tiled_ms   TF32cub_ms  | naive%TF32  tiled%TF32  max_diff
+---------|-----------------------------------------|-------------------------------
+512      | 0.0131     0.0985     0.0094     | 71.8       9.6        2.26e+01
+1024     | 0.0820     0.2188     0.0272     | 33.2       12.4       3.37e+01
+2048     | 0.5843     0.9743     0.1888     | 32.3       19.4       4.67e+01
+4096     | 4.1876     8.1204     1.3013     | 31.1       16.0       7.22e+01
 ```
 
-> ⚠️ **诚实声明**：tiled WMMA 在大矩阵（4096）达 TF32 cuBLAS 的 42%、FP16 cuBLAS 的 21%——相比 Day 1 教学版的 30%/15% 有提升，但远低于 CUTLASS 的 95%+。
+> ⚠️ **诚实声明**：tiled WMMA 实测仅达 TF32 cuBLAS 的 9-19%——**远低于预期**。原 README 声称的 42% 是虚高数据，实跑后 tiled 性能甚至比 naive 还差（4096: 8.12ms vs 4.19ms，tiled 比 naive 慢 1.94x）。
 >
 > **关键发现**（实测揭示，非预期）：
-> - **小矩阵 tiled 反而更慢**：512×512 时 tiled（0.049ms）比 naive（0.013ms）慢 4x！smem 加载 + `__syncthreads` 开销超过复用收益，且 block 数少（64）SM 利用率低
-> - **交叉点在 2048+**：只有矩阵 ≥ 2048 时 tiled 的数据复用收益才超过同步开销
-> - **生产基准是 FP16 cuBLAS**：tiled 仅达 FP16 cuBLAS 的 21%，真实差距更大
+> - **tiled 全档位比 naive 慢**：smem 加载 + `__syncthreads` 开销 + 本版 tiled 的 smem layout/warp 协作实现未优化，复用收益未能覆盖同步开销
+> - **小矩阵退化最严重**：512×512 时 tiled（0.099ms）比 naive（0.013ms）慢 7.5x
+> - **大矩阵也未改善**：4096 时 tiled（8.12ms）仍比 naive（4.19ms）慢 1.94x，说明本版 tiled 的 bank conflict 或 smem 访问模式有严重问题
+> - **max_diff 偏大**（4096 时 72.2）：FP16 输入 vs TF32 cuBLAS 的精度差异 + tiled 实现可能存在数值问题
 >
-> 剩余差距来自：无 double buffer、无 K 分割、WMMA 接口开销、固定 tiling。这些是 Day 3-5 的主题。
+> 剩余差距来自：无 double buffer、无 K 分割、WMMA 接口开销、固定 tiling、**smem layout 未充分优化**。这些是 Day 3-5 的主题。
 
 ##### 对比 Day 1 教学版
 
@@ -403,21 +403,22 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm_tiled.cu -o wmma_compare
 ```text
 M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/naive
 ---------|------------------------------------------------|------------------------------
-512      | 0.0125          0.0494          0.0084       | 66.7    16.9   0.25x (tiled 更慢 4x!)
-1024     | 0.0833          0.1148          0.0268       | 32.1    23.3   0.73x (tiled 仍更慢)
-2048     | 0.5917          0.4259          0.1926       | 32.5    45.2   1.39x (tiled 开始赢)
-4096     | 4.2889          3.0738          1.3049       | 30.4    42.5   1.40x
+512      | 0.0131          0.0985          0.0094       | 71.8    9.6    0.13x (tiled 更慢 7.5x!)
+1024     | 0.0820          0.2188          0.0272       | 33.2    12.4   0.37x (tiled 仍更慢)
+2048     | 0.5843          0.9743          0.1888       | 32.3    19.4   0.60x (tiled 仍更慢)
+4096     | 4.1876          8.1204          1.3013       | 31.1    16.0   0.52x (tiled 仍更慢)
 ```
 
 ##### 小矩阵为什么 tiled 反而更慢？
 
-实测数据揭示了比预期更严重的小矩阵退化：512×512 时 tiled 比 naive 慢 **4 倍**（0.049ms vs 0.013ms），而非"略慢"。原因：
+实测数据揭示了比预期更严重的问题：**tiled 在全档位都比 naive 慢**，512×512 时 tiled 比 naive 慢 **7.5 倍**（0.099ms vs 0.013ms），4096 时仍慢 1.94x（8.12ms vs 4.19ms）。原因：
 
 1. **block 数量少**：(512/64)² = 64 blocks，RTX 5090 有 170 SM，大量 SM 闲置
 2. **同步开销占比大**：K=512 只有 32 次迭代，每次 `__syncthreads` 的开销（~1μs）占总时间比例高
 3. **smem 加载未充分复用**：K 维迭代少，A/B tile 的复用次数不足以摊销加载成本
+4. **本版 tiled 实现的 smem layout / warp 协作未优化**：bank conflict、warp 间负载不均等问题，导致 smem 访问效率低下，复用收益未能覆盖同步与搬运开销
 
-而 Day 1 naive 版每个 block 独立工作、无同步开销，在小矩阵下反而更快。**交叉点在 ~2048**——只有矩阵 ≥ 2048 时 tiled 的数据复用收益才超过同步开销。
+而 Day 1 naive 版每个 block 独立工作、无同步开销，在全档位反而更快。**本版 tiled 实现的 smem layout / warp 协作仍有较大优化空间**——Day 5 的 double buffer 版（cp.async 重叠 load/compute）才真正实现了性能反超。
 
 > 💡 **面试要点**：Tiling 不是万能的。小矩阵下 tiling 开销 > 收益，需要 auto-tuning 选择最优配置——这正是 CUTLASS 的价值。
 
@@ -474,13 +475,13 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 ### 今日总结
 
-Day 2 我们把 Day 1 的教学版 WMMA GEMM 从 ~33% 提升到了 ~55-65%：
+Day 2 我们尝试用 shared memory tiling 提升 WMMA GEMM 性能，但**实测发现本版实现有严重问题**：
 
 1. **Shared Memory Tiling**：把 A/B tile 从 global memory 搬到 shared memory，让多 warp 共享复用，HBM 访问减少 4-8x
 2. **多 Warp 协作**：每 block 4 个 warp 分摊 smem 加载成本，各自计算 32×32 子 tile
 3. **Bank Conflict 消除**：用 padding 让 fragment load 的 32 线程访问不同 bank
-4. **性能拐点（实测）**：小矩阵 tiled 比 naive 慢 4x（512），交叉点在 2048+；大矩阵 tiled 达 TF32 cuBLAS 的 42%、FP16 cuBLAS 的 21%
-5. **剩余差距**：~58% 的 TF32 cuBLAS 差距来自无 double buffer、无 K 分割、WMMA 接口开销——这些是 Day 3-5 的主题
+4. **实测结果（2026-08-09）**：本版 tiled 全档位比 naive 慢（4096: 16% vs 31%），smem layout / warp 协作实现未优化，复用收益未覆盖同步开销。Day 5 的 cp.async double buffer 版才真正实现性能反超（96%+）
+5. **剩余差距**：本版 tiled 的 smem layout、bank conflict、warp 间负载均衡仍有较大优化空间——这些是 Day 3-5 的主题
 
 掌握 shared memory tiling 后，你理解了"Tensor Core GEMM 的第一层工程优化"。下一步 Day 3 学习 `mma.sync` PTX 指令，绕过 WMMA 接口开销，获得更精细的控制。
 

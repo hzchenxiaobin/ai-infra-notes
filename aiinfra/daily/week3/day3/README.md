@@ -301,27 +301,28 @@ ldmatrix.sync.aligned.x4.trans.m8n8.shared.b16 {r0,r1,r2,r3}, [addr];
 
 #### 3.6 性能对比
 
-| 实现 | 预期 cuBLAS% | 优势 | 劣势 |
-|------|-------------|------|------|
-| Day 1 WMMA 教学版 | ~33% | 代码简单 | global load, 1 warp |
-| Day 2 WMMA tiled | ~55% | smem tiling, multi-warp | WMMA 抽象开销 |
-| **Day 3 mma.sync + ldmatrix** | **~65-75%** | 无抽象开销, 精确布局控制 | 代码复杂, PTX 难写 |
+| 实现 | 实测 cuBLAS%（4096） | 优势 | 劣势 |
+|------|--------------------|------|------|
+| Day 1 WMMA 教学版 | 31% | 代码简单 | global load, 1 warp |
+| Day 2 WMMA tiled | 16% | smem tiling, multi-warp | 本版 smem layout 未优化，反而更慢 |
+| **Day 3 mma.sync + ldmatrix** | **8.8%** | 无抽象开销, 精确布局控制 | 本版仅 1 warp/16×8 tile，工作量不足 |
+| Day 5 dbuf (cp.async) | 96% | 真正重叠 load/compute | cp.async 对齐约束 |
 | Day 4 CUTLASS | ~95% | 全部优化 | 需读模板库 |
 
-##### mma.sync 比 WMMA 快多少？
+##### mma.sync 比 WMMA 快多少？（实测 2026-08-09）
 
-| 矩阵大小 | WMMA tiled | mma.sync | 提升 |
-|---------|-----------|---------|------|
-| 1024 | ~65% | ~70% | +5% |
-| 4096 | ~55% | ~68% | +13% |
-| 8192 | ~50% | ~65% | +15% |
+| 矩阵大小 | WMMA tiled | mma.sync | 实测对比 |
+|---------|-----------|---------|---------|
+| 512 | 9.6% | 27.7% | mma 比 tiled 快 2.9x |
+| 1024 | 12.4% | 10.7% | mma 反而更慢 |
+| 2048 | 19.4% | 10.1% | mma 比 tiled 慢 1.9x |
+| 4096 | 16.0% | 8.8% | mma 比 tiled 慢 1.8x |
 
-提升来源：
-1. **无 fragment 抽象开销**：WMMA 的 fragment 初始化有少量额外指令
-2. **ldmatrix 比 load_matrix_sync 更高效**：`ldmatrix` 是一条指令完成 32 线程的并行加载
-3. **更细的 tiling 粒度**：m16n8k16 比 m16n16k16 更灵活，能做更精细的 K 分割
-
-> 💡 但 mma.sync 的代码复杂度远高于 WMMA。实际工程中，CUTLASS 把 mma.sync 封装成模板，兼顾了性能和可读性。
+> ⚠️ **实测修正**：原预期 mma.sync 比 WMMA 快 10-15%，实跑**反而更慢**（4096: 8.8% vs 16%）。原因：本版 mma.sync kernel 每个block 只算 16×8 输出、仅 1 warp，tiling 粒度太细、block 数过多（4096 时 262144 个 block），launch 开销和 smem 复用效率远不如 Day 2 的 4-warp/64×64 tile。
+>
+> 仅在 512 小矩阵时 mma.sync 略胜（27.7% vs 9.6%），因为小矩阵下 Day 2 tiled 的同步开销占比过大。
+>
+> **核心教训**：仅用 PTX 替换 C++ 接口不会自动提升性能。mma.sync 的优势（ldmatrix 高效加载、精确布局控制）必须配合合理的 tiling 粒度、多 warp 协作、double buffer 才能发挥。CUTLASS 正是把 mma.sync 封装成可组合的模板，才同时获得性能和可读性。
 
 ---
 
@@ -369,17 +370,25 @@ nvcc -O3 -arch=sm_120 -lcublas kernels/mma_sync_gemm.cu -o mma_sync_gemm
 ./mma_sync_gemm
 ```
 
-预期输出（RTX 5090, sm_120）：
+实测输出（RTX 5090, sm_120, 2026-08-09 实跑）：
 
 ```text
-M=N=K    | WMMA_tiled(ms)  mma.sync(ms)  cuBLAS(ms)  | WMMA%   mma%   speedup
----------|------------------------------------------------|------------------------------
-1024     | 0.062           0.052          0.044       | 65.3    78.0   1.19x
-2048     | 0.385           0.320          0.242       | 58.7    70.6   1.20x
-4096     | 2.810           2.250          1.963       | 55.2    68.9   1.25x
+M=N=K    | mma.sync_ms  TF32cub_ms  | mma%TF32  max_diff
+---------|---------------------------|---------------------
+512      | 0.0338       0.0094       | 27.7     1.53e-04
+1024     | 0.2556       0.0272       | 10.7     4.88e-04
+2048     | 1.8761       0.1889       | 10.1     1.71e-03
+4096     | 14.7333      1.3022       | 8.8      5.92e-03
 ```
 
-> ⚠️ **诚实声明**：mma.sync 相比 WMMA tiled 提升约 10-15%，主要来自 ldmatrix 的加载效率和消除 fragment 抽象开销。但仍未达 95%——剩余差距来自无 double buffer、无 K 分割、无 auto-tuning（Day 4-5）。
+> ⚠️ **诚实声明（2026-08-09 实跑修正）**：原 README 预期 mma.sync 达 68.9%（4096），实跑仅 8.8%——**远低于预期**。本版 mma.sync kernel 的 tiling 粒度太细（每 block 只算 16×8 输出、1 warp），block 数过多、每 block 工作量不足，导致 launch 开销和 smem 复用效率低下。
+>
+> **关键发现**：
+> - mma.sync 比 Day 2 tiled 还慢（4096: 14.73ms vs 8.12ms）——本版实现只用了单 warp/block + 16×8 输出 tile，未做多 warp 协作和更大 tile
+> - max_diff 很小（5.92e-03）——正确性没问题，纯性能问题
+> - **预期与实测的巨大落差**说明：仅用 mma.sync PTX 替换 WMMA C++ 接口不会自动提升性能，必须配合多 warp 协作、合理 tiling 粒度、double buffer 等工程优化（Day 4-5 主题）
+>
+> 要达到 95%+ 需 CUTLASS 级深度优化：double buffer、K 分割、auto-tuning、合理 tile 形状。
 
 #### 任务 3：验证 ldmatrix 对齐
 
@@ -435,12 +444,12 @@ assert(addr % 16 == 0);  // 调试时验证
 
 Day 3 我们从 WMMA 高层接口下沉到 `mma.sync` PTX 指令：
 
-1. **mma.sync vs WMMA**：WMMA 是 `mma.sync` 的高层封装，编译后展开为 PTX。直接用 `mma.sync` 消除抽象开销，获得 ~10-15% 提升
+1. **mma.sync vs WMMA**：WMMA 是 `mma.sync` 的高层封装，编译后展开为 PTX。直接用 `mma.sync` 消除抽象开销，理论上获得 ~10-15% 提升
 2. **ldmatrix**：专为 Tensor Core 设计的 smem→register 加载指令，精确匹配 fragment 布局，一条指令完成 32 线程并行加载
 3. **Fragment 布局**：每个线程持有 fragment 的固定元素，`ldmatrix` 自动完成线程-数据映射
 4. **ldmatrix.trans**：加载时转置，避免在 smem 中做物理转置
 5. **对齐约束**：`ldmatrix` 要求 16 字节对齐，否则 undefined behavior
-6. **性能位置**：mma.sync + ldmatrix 达 ~65-75% cuBLAS，剩余差距来自 double buffer/K 分割（Day 5）
+6. **实测结果（2026-08-09）**：本版 mma.sync kernel 实测仅 8.8%（4096），远低于预期的 65-75%——**仅用 PTX 替换 C++ 接口不会自动提升性能**，必须配合合理的 tiling 粒度、多 warp 协作、double buffer（Day 4-5 主题）
 
 掌握 `mma.sync` + `ldmatrix` 后，你有了读 CUTLASS/FlashAttention CUDA 源码的底层基础。Day 4 学习 CUTLASS 如何把这些指令封装成可组合的模板。
 
