@@ -17,7 +17,7 @@
 
 ### 学前导读：为什么手写 WMMA 教学版只有 ~33%，而 CUTLASS 能达 95%+
 
-Day 4 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
+Day 1 的 WMMA GEMM 教学版实测 cuBLAS 仅 ~33%（无 smem tiling、每 block 1 warp）。这 62% 的差距不是算法问题，而是**工程深度**：
 
 | 优化点 | 手写 WMMA | CUTLASS | cuBLAS |
 |--------|-----------|---------|--------|
@@ -112,7 +112,7 @@ Level 2: Kernel (Warp 级)
   → 将 ThreadblockTile 分成 Warp tiles，每个 warp 处理一个 WarpTile
 
 Level 3: Warp (Instruction 级)
-  → 将 WarpTile 分成 MMA tiles，每个 MMA 指令处理一个 InstructionTile (16×16×16)
+  → 将 WarpTile 分成 MMA tiles，每个 MMA 指令处理一个 InstructionTile (16×8×16)
 ```
 
 ##### 具体示例（GEMM 4096×4096×4096, FP16）
@@ -121,7 +121,7 @@ Level 3: Warp (Instruction 级)
 |------|------|------|------|
 | ThreadblockShape | 128×128×32 | 每个 block 计算 C 的 128×128 子矩阵 | (4096/128)² = 1024 blocks |
 | WarpShape | 64×64×32 | 每个 warp 计算 C 的 64×64 子矩阵 | 4 warps/block |
-| InstructionShape | 16×8×16 | 每条 mma.sync 指令 | (64/16)×(64/8) = 32 条/warp |
+| InstructionShape | 16×8×16 | 每条 mma.sync 指令 | (64/16)×(64/8)×(32/16) = 64 条/warp |
 
 **层级关系**：`ThreadblockShape / WarpShape = warps_per_block`，`WarpShape / InstructionShape = mma_per_warp`
 
@@ -272,7 +272,7 @@ nvcc -O3 -arch=sm_120 \
 
 预期输出：
 
-> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 B2 任务）。待 CUTLASS 环境就绪后补真实数据。
+> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 1.1 节版本对比表）。待 CUTLASS 环境就绪后补真实数据。
 
 ```text
 CUTLASS vs cuBLAS benchmark (FP16 input, FP32 accumulate)
@@ -296,7 +296,7 @@ launch__registers_per_thread,\
 launch__shared_mem_per_block \
     ./cutlass_gemm
 
-# 对比 Day 4 的手写 WMMA vs CUTLASS
+# 对比 Day 1 的手写 WMMA vs CUTLASS
 ncu --kernel-name regex:"wmma_gemm|Gemm" \
     --metrics sm__pipe_tensor_op_hmma.avg.pct_of_peak_sustained_elapsed,\
 sm__throughput.avg.pct_of_peak_sustained_elapsed \
@@ -305,7 +305,9 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed \
 
 #### 任务 4：LeetGPU 在线题目
 
-[Batched Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)
+**题目链接**：<https://leetgpu.com/challenges/batched-matrix-multiplication>
+
+本题与今日内容强相关：batched GEMM 正是在单矩阵 GEMM 的三级 tiling 之上再加一维 batch 调度。完整题解见 [Batched Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)（与 Day 1 同题，今日视角是用 CUTLASS 的思路重新审视）。
 
 思考：CUTLASS 的 batched GEMM 接口 `cutlass::gemm::device::GemmBatched` 如何利用三级 tiling 处理 batch 维度？
 
