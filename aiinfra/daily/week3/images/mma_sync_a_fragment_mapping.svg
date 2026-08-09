@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="650" viewBox="0 0 960 650" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="960" height="650" fill="#fdfcf7"/>
+
+  <!-- ===== 标题 ===== -->
+  <text x="480" y="28" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">m16n8k16 A fragment 的线程映射</text>
+  <text x="480" y="48" text-anchor="middle" font-size="11" fill="#666">每线程 8 个 FP16 = 4 寄存器 × 2 FP16；32 线程 × 8 = 256 元素 = 16×16，无重复</text>
+  <path d="M 300 56 Q 480 62 660 56" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ================================================================ -->
+  <!-- 左：A[16×16] 行 → 线程组（每 4 lane 一组，负责相距 8 的两行）    -->
+  <!-- ================================================================ -->
+  <text x="210" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">A[16×16] 行 → 线程组（每 4 lane 一组）</text>
+  <text x="150" y="96" text-anchor="middle" font-size="9" fill="#888">K[0:8]</text>
+  <text x="290" y="96" text-anchor="middle" font-size="9" fill="#888">K[8:16]</text>
+  <text x="66" y="110" font-size="9" fill="#888">M↓</text>
+
+  <!-- 16 行色块，行高 18px，row i: y=100+i*18 -->
+  <!-- row 0 → lane 0-3 -->
+  <g filter="url(#sk)"><rect x="80" y="100" width="280" height="18" fill="#fdecec" stroke="#b03a3a" stroke-width="0.8"/></g>
+  <text x="74" y="113" text-anchor="end" font-size="9" fill="#444">0</text>
+  <text x="366" y="113" font-size="9" fill="#b03a3a" font-weight="bold">lane 0-3</text>
+  <!-- row 1 → lane 4-7 -->
+  <g filter="url(#sk)"><rect x="80" y="118" width="280" height="18" fill="#fdf3dc" stroke="#c87f2a" stroke-width="0.8"/></g>
+  <text x="74" y="131" text-anchor="end" font-size="9" fill="#444">1</text>
+  <text x="366" y="131" font-size="9" fill="#c87f2a" font-weight="bold">lane 4-7</text>
+  <!-- row 2 → lane 8-11 -->
+  <g filter="url(#sk)"><rect x="80" y="136" width="280" height="18" fill="#fff8d6" stroke="#b5a02a" stroke-width="0.8"/></g>
+  <text x="74" y="149" text-anchor="end" font-size="9" fill="#444">2</text>
+  <text x="366" y="149" font-size="9" fill="#b5a02a" font-weight="bold">lane 8-11</text>
+  <!-- row 3 → lane 12-15 -->
+  <g filter="url(#sk)"><rect x="80" y="154" width="280" height="18" fill="#e8f5e9" stroke="#2e7d4f" stroke-width="0.8"/></g>
+  <text x="74" y="167" text-anchor="end" font-size="9" fill="#444">3</text>
+  <text x="366" y="167" font-size="9" fill="#2e7d4f" font-weight="bold">lane 12-15</text>
+  <!-- row 4 → lane 16-19 -->
+  <g filter="url(#sk)"><rect x="80" y="172" width="280" height="18" fill="#e0f4f7" stroke="#1b7a8a" stroke-width="0.8"/></g>
+  <text x="74" y="185" text-anchor="end" font-size="9" fill="#444">4</text>
+  <text x="366" y="185" font-size="9" fill="#1b7a8a" font-weight="bold">lane 16-19</text>
+  <!-- row 5 → lane 20-23 -->
+  <g filter="url(#sk)"><rect x="80" y="190" width="280" height="18" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/></g>
+  <text x="74" y="203" text-anchor="end" font-size="9" fill="#444">5</text>
+  <text x="366" y="203" font-size="9" fill="#4a8edb" font-weight="bold">lane 20-23</text>
+  <!-- row 6 → lane 24-27 -->
+  <g filter="url(#sk)"><rect x="80" y="208" width="280" height="18" fill="#ede2f5" stroke="#6b3fa0" stroke-width="0.8"/></g>
+  <text x="74" y="221" text-anchor="end" font-size="9" fill="#444">6</text>
+  <text x="366" y="221" font-size="9" fill="#6b3fa0" font-weight="bold">lane 24-27</text>
+  <!-- row 7 → lane 28-31 -->
+  <g filter="url(#sk)"><rect x="80" y="226" width="280" height="18" fill="#fce4ec" stroke="#b04a7a" stroke-width="0.8"/></g>
+  <text x="74" y="239" text-anchor="end" font-size="9" fill="#444">7</text>
+  <text x="366" y="239" font-size="9" fill="#b04a7a" font-weight="bold">lane 28-31</text>
+  <!-- row 8 → lane 0-3 (重复色，强调"相距 8 的两行同组") -->
+  <g filter="url(#sk)"><rect x="80" y="244" width="280" height="18" fill="#fdecec" stroke="#b03a3a" stroke-width="0.8"/></g>
+  <text x="74" y="257" text-anchor="end" font-size="9" fill="#444">8</text>
+  <text x="366" y="257" font-size="9" fill="#b03a3a" font-weight="bold">lane 0-3</text>
+  <!-- row 9 → lane 4-7 -->
+  <g filter="url(#sk)"><rect x="80" y="262" width="280" height="18" fill="#fdf3dc" stroke="#c87f2a" stroke-width="0.8"/></g>
+  <text x="74" y="275" text-anchor="end" font-size="9" fill="#444">9</text>
+  <text x="366" y="275" font-size="9" fill="#c87f2a" font-weight="bold">lane 4-7</text>
+  <!-- row 10 → lane 8-11 -->
+  <g filter="url(#sk)"><rect x="80" y="280" width="280" height="18" fill="#fff8d6" stroke="#b5a02a" stroke-width="0.8"/></g>
+  <text x="74" y="293" text-anchor="end" font-size="9" fill="#444">10</text>
+  <text x="366" y="293" font-size="9" fill="#b5a02a" font-weight="bold">lane 8-11</text>
+  <!-- row 11 → lane 12-15 -->
+  <g filter="url(#sk)"><rect x="80" y="298" width="280" height="18" fill="#e8f5e9" stroke="#2e7d4f" stroke-width="0.8"/></g>
+  <text x="74" y="311" text-anchor="end" font-size="9" fill="#444">11</text>
+  <text x="366" y="311" font-size="9" fill="#2e7d4f" font-weight="bold">lane 12-15</text>
+  <!-- row 12 → lane 16-19 -->
+  <g filter="url(#sk)"><rect x="80" y="316" width="280" height="18" fill="#e0f4f7" stroke="#1b7a8a" stroke-width="0.8"/></g>
+  <text x="74" y="329" text-anchor="end" font-size="9" fill="#444">12</text>
+  <text x="366" y="329" font-size="9" fill="#1b7a8a" font-weight="bold">lane 16-19</text>
+  <!-- row 13 → lane 20-23 -->
+  <g filter="url(#sk)"><rect x="80" y="334" width="280" height="18" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/></g>
+  <text x="74" y="347" text-anchor="end" font-size="9" fill="#444">13</text>
+  <text x="366" y="347" font-size="9" fill="#4a8edb" font-weight="bold">lane 20-23</text>
+  <!-- row 14 → lane 24-27 -->
+  <g filter="url(#sk)"><rect x="80" y="352" width="280" height="18" fill="#ede2f5" stroke="#6b3fa0" stroke-width="0.8"/></g>
+  <text x="74" y="365" text-anchor="end" font-size="9" fill="#444">14</text>
+  <text x="366" y="365" font-size="9" fill="#6b3fa0" font-weight="bold">lane 24-27</text>
+  <!-- row 15 → lane 28-31 -->
+  <g filter="url(#sk)"><rect x="80" y="370" width="280" height="18" fill="#fce4ec" stroke="#b04a7a" stroke-width="0.8"/></g>
+  <text x="74" y="383" text-anchor="end" font-size="9" fill="#444">15</text>
+  <text x="366" y="383" font-size="9" fill="#b04a7a" font-weight="bold">lane 28-31</text>
+
+  <!-- K[0:8] / K[8:16] 分隔虚线 -->
+  <line x1="220" y1="100" x2="220" y2="388" stroke="#888" stroke-width="1" stroke-dasharray="3 2"/>
+  <!-- "行 i 与行 i+8 同组" 示意连接线 (row 0 ↔ row 8) -->
+  <path d="M 365 109 C 392 109, 392 253, 365 253" stroke="#b03a3a" stroke-width="1.2" fill="none" stroke-dasharray="4 2"/>
+  <text x="398" y="184" font-size="9" fill="#b03a3a" font-style="italic">相距 8</text>
+  <text x="398" y="196" font-size="9" fill="#b03a3a" font-style="italic">的两行</text>
+  <text x="398" y="208" font-size="9" fill="#b03a3a" font-style="italic">同组</text>
+
+  <!-- ================================================================ -->
+  <!-- 右上：放大 lane 0-3 组（行 0 + 行 8）                              -->
+  <!-- ================================================================ -->
+  <text x="660" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">放大：lane 0-3 组（行 0 + 行 8）</text>
+  <text x="660" y="96" text-anchor="middle" font-size="9" fill="#888">每格 1 个 FP16，颜色标注归属哪个 lane</text>
+
+  <!-- row 0 标签 -->
+  <text x="462" y="120" text-anchor="end" font-size="9" fill="#444" font-weight="bold">row 0</text>
+  <!-- row 0: 16 格，每格 24×24, x=470+col*24, y=104 -->
+  <!-- col 0,1 → t0 (红) -->
+  <g filter="url(#sk)"><rect x="470" y="104" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="482" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="494" y="104" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="506" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <!-- col 2,3 → t1 (橙) -->
+  <g filter="url(#sk)"><rect x="518" y="104" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="530" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="542" y="104" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="554" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <!-- col 4,5 → t2 (绿) -->
+  <g filter="url(#sk)"><rect x="566" y="104" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="578" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="590" y="104" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="602" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <!-- col 6,7 → t3 (蓝) -->
+  <g filter="url(#sk)"><rect x="614" y="104" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="626" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <g filter="url(#sk)"><rect x="638" y="104" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="650" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <!-- col 8,9 → t0 (红) -->
+  <g filter="url(#sk)"><rect x="662" y="104" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="674" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="686" y="104" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="698" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <!-- col 10,11 → t1 (橙) -->
+  <g filter="url(#sk)"><rect x="710" y="104" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="722" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="734" y="104" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="746" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <!-- col 12,13 → t2 (绿) -->
+  <g filter="url(#sk)"><rect x="758" y="104" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="770" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="782" y="104" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="794" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <!-- col 14,15 → t3 (蓝) -->
+  <g filter="url(#sk)"><rect x="806" y="104" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="818" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <g filter="url(#sk)"><rect x="830" y="104" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="842" y="120" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+
+  <!-- row 8 标签 -->
+  <text x="462" y="146" text-anchor="end" font-size="9" fill="#444" font-weight="bold">row 8</text>
+  <!-- row 8: y=130, 同样 16 格 -->
+  <g filter="url(#sk)"><rect x="470" y="130" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="482" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="494" y="130" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="506" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="518" y="130" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="530" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="542" y="130" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="554" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="566" y="130" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="578" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="590" y="130" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="602" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="614" y="130" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="626" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <g filter="url(#sk)"><rect x="638" y="130" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="650" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <g filter="url(#sk)"><rect x="662" y="130" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="674" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="686" y="130" width="24" height="24" fill="#b03a3a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="698" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t0</text>
+  <g filter="url(#sk)"><rect x="710" y="130" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="722" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="734" y="130" width="24" height="24" fill="#c87f2a" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="746" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t1</text>
+  <g filter="url(#sk)"><rect x="758" y="130" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="770" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="782" y="130" width="24" height="24" fill="#2e7d4f" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="794" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t2</text>
+  <g filter="url(#sk)"><rect x="806" y="130" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="818" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+  <g filter="url(#sk)"><rect x="830" y="130" width="24" height="24" fill="#4a8edb" stroke="#fff" stroke-width="0.6"/></g>
+  <text x="842" y="146" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">t3</text>
+
+  <!-- K 半区分隔虚线 (右图) -->
+  <line x1="662" y1="100" x2="662" y2="160" stroke="#888" stroke-width="1" stroke-dasharray="3 2"/>
+  <text x="566" y="100" text-anchor="middle" font-size="8" fill="#888">K[0:8]</text>
+  <text x="758" y="100" text-anchor="middle" font-size="8" fill="#888">K[8:16]</text>
+
+  <!-- ================================================================ -->
+  <!-- 右下：lane 0 寄存器明细表（a0=左上, a1=左下, a2=右上, a3=右下）   -->
+  <!-- ================================================================ -->
+  <text x="660" y="188" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">lane 0 的 4 个寄存器（对应 4 个 8×8 子矩阵）</text>
+
+  <!-- 表头：a0 / a1 / a2 / a3 -->
+  <g filter="url(#sk)"><rect x="480" y="200" width="90" height="22" fill="#e8e8e8" stroke="#3a3a3a" stroke-width="0.8"/></g>
+  <g filter="url(#sk)"><rect x="570" y="200" width="90" height="22" fill="#e8e8e8" stroke="#3a3a3a" stroke-width="0.8"/></g>
+  <g filter="url(#sk)"><rect x="660" y="200" width="90" height="22" fill="#e8e8e8" stroke="#3a3a3a" stroke-width="0.8"/></g>
+  <g filter="url(#sk)"><rect x="750" y="200" width="90" height="22" fill="#e8e8e8" stroke="#3a3a3a" stroke-width="0.8"/></g>
+  <text x="525" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">a0</text>
+  <text x="615" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">a1</text>
+  <text x="705" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">a2</text>
+  <text x="795" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">a3</text>
+
+  <!-- 数据行 1 -->
+  <g filter="url(#sk)"><rect x="480" y="222" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="570" y="222" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="660" y="222" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="750" y="222" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <text x="525" y="237" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[0,0]</text>
+  <text x="615" y="237" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[8,0]</text>
+  <text x="705" y="237" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[0,8]</text>
+  <text x="795" y="237" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[8,8]</text>
+
+  <!-- 数据行 2 -->
+  <g filter="url(#sk)"><rect x="480" y="244" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="570" y="244" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="660" y="244" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <g filter="url(#sk)"><rect x="750" y="244" width="90" height="22" fill="#fdecec" stroke="#3a3a3a" stroke-width="0.6"/></g>
+  <text x="525" y="259" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[0,1]</text>
+  <text x="615" y="259" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[8,1]</text>
+  <text x="705" y="259" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[0,9]</text>
+  <text x="795" y="259" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">A[8,9]</text>
+
+  <!-- 子矩阵位置标注 -->
+  <text x="525" y="278" text-anchor="middle" font-size="9" fill="#888">行0 K[0:2]</text>
+  <text x="615" y="278" text-anchor="middle" font-size="9" fill="#888">行8 K[0:2]</text>
+  <text x="705" y="278" text-anchor="middle" font-size="9" fill="#888">行0 K[8:10]</text>
+  <text x="795" y="278" text-anchor="middle" font-size="9" fill="#888">行8 K[8:10]</text>
+  <text x="525" y="292" text-anchor="middle" font-size="8" fill="#b03a3a" font-style="italic">左上 8×8</text>
+  <text x="615" y="292" text-anchor="middle" font-size="8" fill="#b03a3a" font-style="italic">左下 8×8</text>
+  <text x="705" y="292" text-anchor="middle" font-size="8" fill="#b03a3a" font-style="italic">右上 8×8</text>
+  <text x="795" y="292" text-anchor="middle" font-size="8" fill="#b03a3a" font-style="italic">右下 8×8</text>
+
+  <!-- ================================================================ -->
+  <!-- 底部：规律总结                                                    -->
+  <!-- ================================================================ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="410" width="880" height="220" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="436" font-size="13" font-weight="bold" fill="#2b2b2b">线程-数据映射规律</text>
+
+  <text x="60" y="462" font-size="11" fill="#444">① 32 线程分 8 组，每组 4 lane。lane N 属于第 g = N/4 组（g 决定行），c = N%4（c 决定列对）。</text>
+  <text x="60" y="484" font-size="11" fill="#444">② 每组负责"相距 8 的两行"：第 g 组（lane 4g~4g+3）持 A 的行 g 和行 g+8（左图行 i 与行 i+8 同色）。</text>
+  <text x="60" y="506" font-size="11" fill="#444">③ 每线程 8 元素 = 4 寄存器 × 2 FP16，分别落在 4 个 8×8 子矩阵中（a0~a3 ≠ 连续列对，而是 4 个角）。</text>
+  <text x="60" y="528" font-size="11" fill="#444">④ lane N（g=N/4, c=N%4）的 4 寄存器（与教程代码块一致）：</text>
+  <text x="84" y="548" font-size="10" fill="#444" font-family="monospace">a0 = { A[g][2c],     A[g][2c+1]   }   // 左上 8×8：行 g, K 左半</text>
+  <text x="84" y="566" font-size="10" fill="#444" font-family="monospace">a1 = { A[g+8][2c],   A[g+8][2c+1] }   // 左下 8×8：行 g+8, K 左半（行 +8）</text>
+  <text x="84" y="584" font-size="10" fill="#444" font-family="monospace">a2 = { A[g][2c+8],   A[g][2c+9]   }   // 右上 8×8：行 g, K 右半（列 +8）</text>
+  <text x="84" y="602" font-size="10" fill="#444" font-family="monospace">a3 = { A[g+8][2c+8], A[g+8][2c+9] }   // 右下 8×8：行 g+8, K 右半</text>
+  <text x="60" y="624" font-size="11" fill="#b03a3a">⚠ 此映射硬件固定。ldmatrix.x4 一次加载 4 个 8×8 = 256 元素，正是自动完成这张表的分发——程序员给 smem 地址即可。</text>
+</svg>

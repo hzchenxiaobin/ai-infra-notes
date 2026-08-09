@@ -94,6 +94,11 @@ WMMA 把 fragment 当黑箱，程序员只需 `load_matrix_sync` + `mma_sync`。
 
 ##### m16n8k16 A fragment 的线程映射
 
+![m16n8k16 A fragment 的线程映射](../images/mma_sync_a_fragment_mapping.svg)
+
+> **图：m16n8k16 A fragment 的线程映射。**  
+> 左侧 A[16×16] 按行着色，每 4 lane 一组负责"相距 8 的两行"（行 i 与行 i+8 同色）。右侧放大 lane 0-3 组（行 0 + 行 8），每格 1 个 FP16，颜色标注归属哪个 lane——4 lane 各持 8 元素，K 维左半 [0:8] 与右半 [8:16] 各 4 元素。下方表格给出 lane 0 的 4 个寄存器明细：a0~a3 分别对应左上/左下/右上/右下 4 个 8×8 子矩阵。
+
 A fragment 是 16×16 矩阵（256 个 FP16），由 32 线程持有，每个线程持有 8 个 FP16 元素（4 个 32 位寄存器，每寄存器 2 个 FP16），且 32 个线程持有的元素**互不重复**（32 × 8 = 256，正好铺满整个 fragment）。
 
 映射规则由硬件固定。令 `groupID = laneid / 4`（0–7，决定行），`c = laneid % 4`（0–3，决定列对），则：
