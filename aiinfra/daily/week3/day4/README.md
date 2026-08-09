@@ -49,6 +49,27 @@ CUTLASS 3.x 引入了 **CuTe（CUTLASS Tensors and Layout）**——一个用 C+
 | **Stride** | 每维的步长（决定 row-major/col-major 等） | `Stride<128, 1, 8192>` = row-major（行步长 128） |
 | **Layout** | Shape + Stride 的组合，描述"逻辑坐标 → 物理偏移" | `Layout<Shape<64,128>, Stride<128,1>>` |
 
+##### Stride 与 row-major / col-major
+
+**Stride** = 每一维走一步，物理地址要加多少个元素。它把逻辑坐标 `(i, j)` 映射到物理偏移：
+
+```
+物理偏移 = i * stride[0] + j * stride[1]
+```
+
+以 64×128 矩阵为例：
+
+| 布局 | Stride | 含义 | 内存里谁连续 |
+|------|--------|------|-------------|
+| **row-major** | `<128, 1>` | 行步长 128、列步长 1 | 同**行**元素连续（换列 +1） |
+| **col-major** | `<1, 64>` | 行步长 1、列步长 64 | 同**列**元素连续（换行 +1） |
+
+> 💡 **口诀**：谁的 stride 是 1，谁就是"连续维"。row-major 列 stride=1 → 同行连续；col-major 行 stride=1 → 同列连续。
+
+对应到本节代码里的 `make_stride(K, 1)`：M×K 矩阵，行步长 K（换行跳一整行）、列步长 1（同行相邻）→ row-major。若要 col-major，写成 `make_stride(1, M)` 即可。
+
+CUTLASS 1.3 节模板里的 `RowMajor` / `ColumnMajor` 和 `ld`（leading dimension）是 Stride 的另一种说法——"主导维的长度"：A row-major 时 `ld=K`（每行 K 个），B col-major 时 `ld=K`（每列 K 个）。GEMM 里 A row-major、B col-major 是常见约定：K 维在两个矩阵里都连续，MMA 按 K 维取数据时两个输入都是 stride-1 访问，最利于合并访存。
+
 ##### `make_tensor` 与 `local_tile`
 
 CuTe 用 `make_tensor` 把裸指针 + Layout 绑定成一个 `Tensor` 对象，用 `local_tile` 切出 block 负责的子块：
