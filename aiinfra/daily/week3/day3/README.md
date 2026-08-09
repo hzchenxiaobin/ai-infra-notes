@@ -256,7 +256,7 @@ __global__ void mma_sync_gemm_kernel(
 }
 ```
 
-> ⚠️ **代码说明**：上面是概念示意，实际 mma.sync kernel 的线程-数据映射更复杂（每个 warp 完成一个 16×16 或更大的输出 tile，需要多个 `mma.sync` 指令）。完整可运行代码见 `kernels/mma_sync_gemm.cu`。
+> ⚠️ **代码说明**：上面是概念示意，实际 mma.sync kernel 的线程-数据映射更复杂（每个 warp 完成一个 16×16 或更大的输出 tile，需要多个 `mma.sync` 指令）。完整可运行代码见 [kernels/mma_sync_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day3/kernels/mma_sync_gemm.cu)。
 
 ##### 内联 PTX 语法说明
 
@@ -356,7 +356,7 @@ uint32_t addr = __cvta_generic_to_shared(smemA) + row_offset;
 
 #### 任务 2：实现 mma.sync + ldmatrix GEMM
 
-创建 `kernels/mma_sync_gemm.cu`，实现一个完整的 `mma.sync` GEMM kernel：
+创建 [kernels/mma_sync_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day3/kernels/mma_sync_gemm.cu)，实现一个完整的 `mma.sync` GEMM kernel：
 
 1. Shared memory tiling（复用 Day 2 的 BM×BN×BK 策略）
 2. 用 `ldmatrix.x4` 加载 A fragment
