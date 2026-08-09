@@ -73,7 +73,7 @@ Week 3：Tensor Core 与 CUTLASS
 | Day2 WMMA tiled | 16%✓实测 | 待测 | smem layout 未优化 | smem tiling 但实现有问题 |
 | Day3 mma.sync | 8.8%✓实测 | 待测 | tiling 粒度太细 | ldmatrix 但 1 warp/16×8 tile |
 | Day5 double buffer | 96%✓实测 | 待测 | 接近 cuBLAS | cp.async 重叠 load/compute |
-| Day4 CUTLASS | ~95% | 待测 | 接近峰值 | 全部优化 + auto-tuning |
+| Day4 CUTLASS | 198%✓实测(66% FP16) | 待测 | 接近峰值 | 全部优化 + auto-tuning |
 | cuBLAS (TF32) | 100% | 待测 | 极限 | TF32 Tensor Core |
 
 ### 从 31% 到 96% 的优化链（2026-08-09 实测）

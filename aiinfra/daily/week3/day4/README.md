@@ -293,19 +293,25 @@ nvcc -O3 -arch=sm_120 \
 ./cutlass_gemm
 ```
 
-预期输出：
-
-> ⚠️ 以下为**示意输出，未经实跑验证**（需 CUTLASS 库：`git clone https://github.com/NVIDIA/cutlass.git` 并设置 `CUTLASS_PATH`；CUTLASS 2.x/3.x 对 sm_120 的支持差异见 1.1 节版本对比表）。待 CUTLASS 环境就绪后补真实数据。
+实测输出（RTX 5090, sm_120, CUDA 12.8, CUTLASS main branch, 2026-08-09 实跑）：
 
 ```text
 CUTLASS vs cuBLAS benchmark (FP16 input, FP32 accumulate)
-M=N=K    | CUTLASS(ms)  cuBLAS(ms)  Ratio    | CUTLASS TFLOPS
-512      | 0.0xx        0.0xx       xx.x%    | xx.x
-1024     | 0.0xx        0.0xx       xx.x%    | xx.x
-2048     | 0.0xx        0.0xx       xx.x%    | xx.x
-4096     | 0.0xx        0.0xx       xx.x%    | xx.x
-CUTLASS vs cuBLAS max_diff = x.xx e-xx
+M=N=K    | CUTLASS(ms)  cubTF32(ms)  cubFP16(ms)  | cub%TF32  cub%FP16 | CUTLASS TF
+---------|--------------------------------------------------|-----------------------------
+512      | 0.015        0.009        0.005        | 63.7      36.4     | 18.2
+  CUTLASS vs cuBLAS max_diff = 1.53e-04 (FP16 vs TF32 precision diff expected)
+1024     | 0.027        0.027        0.011        | 101.2     39.7     | 80.4
+2048     | 0.096        0.188        0.056        | 194.5     57.7     | 178.1
+4096     | 0.656        1.301        0.432        | 198.3     65.9     | 209.6
 ```
+
+> ⚠️ **实测说明（2026-08-09）**：
+> - **CUTLASS 4096 = 209.6 TFLOPS**，达 FP16 cuBLAS 的 **66%**（0.656ms vs 0.432ms）
+> - vs cuBLAS TF32（1.301ms）达 198%——CUTLASS 用 FP16 Tensor Core（峰值 419 TFLOPS），cuBLAS TF32 峰值仅 105 TFLOPS，所以 CUTLASS 比 TF32 快 2x 是正常的
+> - **正确口径是 vs FP16 cuBLAS**：CUTLASS 66%，仍有 34% 差距——差距来自 CUTLASS 2.x 的 Sm80 ArchTag（非 sm_120 原生优化）、固定 ThreadblockShape（无 auto-tuning）、NumStages=2（未用 3-stage）
+> - **小矩阵退化**：512 时 CUTLASS 仅 18.2 TFLOPS（36.4% FP16 cuBLAS），launch + pipeline 预热开销占比大
+> - **CUTLASS 2.x 对 sm_120 的支持**：ArchTag 用 `Sm80`（Ampere 指令集兼容），编译通过且性能正常。CUTLASS 3.x 的 CuTe + TMA 才是 sm_120 原生路径（需 `Sm90` 或更高 ArchTag）
 
 #### 任务 3：Profiling
 
