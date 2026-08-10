@@ -9,7 +9,7 @@
 3. 能列出 Transformer 单层的 **6 类算子**及其执行顺序，理解哪些是 compute-bound、哪些是 memory-bound
 4. 理解 Decode 阶段 M=1 的 GEMM 为什么退化为 memory-bound
 
-> 💡 **为什么重要**：Prefill vs Decode 是推理系统入门必考题。不理解两阶段差异，就无法理解 KV Cache、PagedAttention、Continuous Batching 等推理优化的动机。今天的内容是 Week 3 全周的地基——后续手写 Softmax/LayerNorm Kernel、Attention IO 分析、端到端 Profiling 都建立在这套认知之上。
+> 💡 **为什么重要**：Prefill vs Decode 是推理系统入门必考题。不理解两阶段差异，就无法理解 KV Cache、PagedAttention、Continuous Batching 等推理优化的动机。今天的内容是 Week 4 全周的地基——后续手写 Softmax/LayerNorm Kernel、Attention IO 分析、端到端 Profiling 都建立在这套认知之上。
 
 ---
 
@@ -68,7 +68,7 @@
 
 上图展示了一个标准 Transformer Block 的完整数据流。按执行顺序：
 
-![Transformer 单层前向数据流](../../images/week3_transformer_forward_flow.svg)
+![Transformer 单层前向数据流](../images/week3_transformer_forward_flow.svg)
 
 **关键观察**：Transformer 单层包含 **6 类主要算子**：
 
@@ -83,7 +83,7 @@
 
 **算子执行顺序与依赖**：
 
-![Transformer 单层算子执行流水线](../../images/week3_transformer_layer_pipeline.svg)
+![Transformer 单层算子执行流水线](../images/week3_transformer_layer_pipeline.svg)
 
 > 💡 **为什么重要**：理解算子顺序是后续 kernel fusion 的基础。例如 LayerNorm + QKV GEMM 可以融合成单个 kernel，省去中间结果写回 HBM。Day 6 会详细分析 fusion 机会。
 
@@ -96,14 +96,14 @@
 **Prefill 阶段 QKV GEMM**：
 - 矩阵形状：`(1024, 512) × (512, 1536)`
 - FLOPs = 2×1024×512×1536 ≈ 1.6G
-- Bytes ≈ 1.3M（读 x + W，写 QKV）
-- **AI ≈ 384 FLOP/Byte >> Ridge Point(58.45) → Compute-bound**
+- Bytes ≈ 5.5MB（读 x 1.0MB + 读 W 1.5MB + 写 QKV 3.0MB，FP16）
+- **AI ≈ 279 FLOP/Byte >> Ridge Point(58.45) → Compute-bound**
 
 **Decode 阶段 QKV GEMM**：
 - 矩阵形状：`(1, 512) × (512, 1536)` — M=1，退化为向量×矩阵
 - FLOPs = 2×1×512×1536 ≈ 1.6M（少了 1024 倍）
-- Bytes ≈ 0.8M（W 的大小没变，还是要读完整权重）
-- **AI ≈ 2 FLOP/Byte << Ridge Point(58.45) → Memory-bound**
+- Bytes ≈ 1.5MB（W 的大小没变，还是要读完整权重，FP16）
+- **AI ≈ 1 FLOP/Byte << Ridge Point(58.45) → Memory-bound**
 
 **根本原因**：M=1 时计算量与 M 成正比骤降，但权重矩阵 W 的大小不变，读取量几乎没减。AI = FLOPs/Bytes 极低，数据喂不饱计算单元。
 
@@ -160,7 +160,7 @@ prof.export_chrome_trace("transformer_trace.json")
 **分析流程**：
 1. 按 `Self CUDA` 排序找 top3 算子 → 定位耗时最重的计算
 2. 看 `Self CPU` vs `Self CUDA` 比值 → 若 CPU 远大于 CUDA，说明 launch overhead 高
-3. 在 Chrome trace 中观察 kernel 之间的空白（gap）→ gap = CPU 调度延迟
+3. 在 Perfetto trace 中观察 kernel 之间的空白（gap）→ gap = CPU 调度延迟
 4. 对比 Prefill 和 Decode 的算子分布差异
 
 ---
@@ -299,7 +299,7 @@ aten::softmax xxx us 5
 1. 找出 Prefill 阶段 CUDA 时间 top3 算子（预期是 mm/linear 类 GEMM）
 2. 找出 Decode 阶段 CUDA 时间 top3 算子（预期 GEMM 占比下降，layernorm/softmax 占比上升）
 3. 计算 Prefill 单 token 时间 vs Decode 单 token 时间（Prefill 快得多，因为并行度高）
-4. 在 Chrome trace 中观察 kernel 之间的间隙（gap = launch overhead）
+4. 在 Perfetto trace 中观察 kernel 之间的间隙（gap = launch overhead）
 
 **预期发现**：
 - **Prefill**：GEMM（`aten::mm`）占 CUDA 时间 60%+，是绝对主导 → compute-bound
@@ -309,7 +309,7 @@ aten::softmax xxx us 5
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-multiplication>
 
-**与今日知识的关联**：Matrix Multiplication 是 GEMM 的最纯粹形态——今天 profiling 揭示了 Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+（compute-bound），本题就是手写这个主角：naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，算术强度仅 1/8 FLOP/Byte（memory-bound）；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。它是"用 ncu 判定 bound 类型"的最佳练习对象——同一份代码加 tiling 前后 `DRAM%` 与 `SM%` 的对比，就是今天 Roofline 分析的实战。
+**与今日知识的关联**：Matrix Multiplication 是 GEMM 的最纯粹形态——今天 profiling 揭示了 Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+（compute-bound），本题就是手写这个主角：naive 版每 thread 独立算一个 `C` 元素，`A`/`B` 被重复读，算术强度仅 1/4 FLOP/Byte（memory-bound）；shared memory tiling 靠数据复用把 AI 拉高，转为 compute-bound。它是"用 ncu 判定 bound 类型"的最佳练习对象——同一份代码加 tiling 前后 `DRAM%` 与 `SM%` 的对比，就是今天 Roofline 分析的实战。
 
 > 💡 完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
@@ -346,7 +346,7 @@ aten::softmax xxx us 5
 **参考答案要点**：
 - **Prefill**：输入是 `(B, N_prompt, d)`，N_prompt 可达数千。所有 GEMM 是大矩阵乘，计算量大，GPU SM 充分利用 → **Compute-bound**
 - **Decode**：输入是 `(B, 1, d)`，每次只生成 1 个 token。GEMM 退化为向量×矩阵（M=1），计算量极小，但每次都要读取整个 KV Cache（N 个历史 token） → **Memory-bound**
-- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 2 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）
+- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 1 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）
 - **优化方向**：KV Cache（避免重算 K/V）、PagedAttention（减少 KV 显存碎片）、CUDA Graph（减少 launch overhead）、Continuous Batching（合并多个 decode 请求提高 M）
 
 **面试题2**：Transformer 单层包含哪些算子？哪些是 compute-bound，哪些是 memory-bound？（⭐⭐⭐ 高频）

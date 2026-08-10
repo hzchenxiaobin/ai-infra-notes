@@ -42,8 +42,8 @@
   <!-- Prefill metrics -->
   <line x1="50" y1="190" x2="390" y2="190" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
   <text x="50" y="210" font-size="10" fill="#444">FLOPs = 2×1024×512×1536 ≈ 1.6G</text>
-  <text x="50" y="232" font-size="10" fill="#444">Bytes ≈ 1.3M (读 x + W, 写 QKV)</text>
-  <text x="50" y="258" font-size="11" fill="#4a8edb" font-weight="bold">AI ≈ 384 FLOP/Byte</text>
+  <text x="50" y="232" font-size="10" fill="#444">Bytes ≈ 5.5MB (读 x + W, 写 QKV, FP16)</text>
+  <text x="50" y="258" font-size="11" fill="#4a8edb" font-weight="bold">AI ≈ 279 FLOP/Byte</text>
   <text x="50" y="278" font-size="10" fill="#4a8edb" font-weight="bold">> Ridge 58.45 → Compute-bound ✓</text>
 
   <!-- ====== Decode Box ====== -->
@@ -76,8 +76,8 @@
   <!-- Decode metrics -->
   <line x1="470" y1="190" x2="810" y2="190" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
   <text x="470" y="210" font-size="10" fill="#444">FLOPs = 2×1×512×1536 ≈ 1.6M (↓1024×)</text>
-  <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 0.8M (W 不变, 仍读完整权重)</text>
-  <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 2 FLOP/Byte</text>
+  <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 1.5MB (W 不变, 仍读完整权重)</text>
+  <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 1 FLOP/Byte</text>
   <text x="470" y="278" font-size="10" fill="#e57373" font-weight="bold">&lt;&lt; Ridge 58.45 → Memory-bound ✗</text>
 
   <!-- ====== Transition arrow between boxes ====== -->
@@ -108,9 +108,9 @@
     <line x1="740" y1="442" x2="740" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
   </g>
   <text x="90" y="464" text-anchor="middle" font-size="9" fill="#666">0.4</text>
-  <text x="242" y="464" text-anchor="middle" font-size="9" fill="#666">2</text>
+  <text x="242" y="464" text-anchor="middle" font-size="9" fill="#666">1</text>
   <text x="417" y="464" text-anchor="middle" font-size="9" fill="#666">58.45</text>
-  <text x="740" y="464" text-anchor="middle" font-size="9" fill="#666">384</text>
+  <text x="740" y="464" text-anchor="middle" font-size="9" fill="#666">279</text>
 
   <!-- Ridge point vertical line -->
   <g filter="url(#sk5)">
@@ -130,14 +130,14 @@
     <circle cx="242" cy="446" r="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1"/>
   </g>
   <text x="242" y="490" text-anchor="middle" font-size="10" fill="#e57373" font-weight="bold">Decode</text>
-  <text x="242" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈2</text>
+  <text x="242" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈1</text>
 
   <!-- Prefill marker -->
   <g filter="url(#sk5)">
     <circle cx="740" cy="446" r="8" fill="#4a9d5f" stroke="#3a3a3a" stroke-width="1"/>
   </g>
   <text x="740" y="490" text-anchor="middle" font-size="10" fill="#4a9d5f" font-weight="bold">Prefill</text>
-  <text x="740" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈384</text>
+  <text x="740" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈279</text>
 
   <!-- Zone labels -->
   <text x="220" y="530" text-anchor="middle" font-size="10" fill="#e57373" font-style="italic">← Memory-bound 区间</text>
