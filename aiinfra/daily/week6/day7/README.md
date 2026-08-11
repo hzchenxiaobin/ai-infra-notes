@@ -215,9 +215,9 @@ Week 6 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、Page
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时，重点对比 `seq_len=1`（Decode）与 `seq_len=1024`（Prefill）的耗时差异。完整题解（含多 kernel 流水线串联、GELU tanh 近似、权重 offset 拆分、与 Prefill/Decode 算术强度的关联）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 5 周）
+#### 任务 3：本周 LeetCode 题目回顾（10 周计划 · 第 6 周）
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
 |-----|------|---------------|
@@ -226,7 +226,7 @@ Week 6 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、Page
 | Day 3 | BST 基础 | [111. 二叉树的最小深度](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html)、[559. N 叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html)、[108. 将有序数组转换为二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html)、[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)、[230. 二叉搜索树中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |
 | Day 4 | BST 进阶与构造 | [235. 二叉搜索树的最近公共祖先](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html)、[173. 二叉搜索树迭代器](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html)、[1008. 前序遍历构造二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html)、[105. 从前序与中序遍历序列构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html)、[889. 根据前序与后序遍历构造二叉树](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 5 周「二叉树（上）——遍历、形态与 BST」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 6 周「二叉树（上）——遍历、形态与 BST」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

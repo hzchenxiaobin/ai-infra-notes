@@ -155,8 +155,8 @@ def find_duplicate_titles(path: Path):
 
 
 # ---------------------------------------------------------------- check 2
-# Curated stale patterns from the old 8-week course. NOTE: "8 周算法面试
-# 刷题计划" / "8-week-plan" is a legitimate external LeetCode plan name and
+# Curated stale patterns from the old 8-week course. NOTE: "10 周算法面试
+# 刷题计划" / "10-week-plan" is a legitimate external LeetCode plan name and
 # must NOT be flagged.
 STALE_PATTERNS = [
     (re.compile(r"8 周能力地图"), "8 周能力地图"),

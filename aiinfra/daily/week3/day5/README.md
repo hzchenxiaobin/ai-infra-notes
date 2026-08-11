@@ -429,9 +429,9 @@ Size     | Day1_naive  Day2_tiled  Day3_mma   Day5_dbuf  | Best%   Best_impl
 
 > 💡 **面试要点**：不同优化在不同矩阵大小下收益不同。小矩阵优先选 mma.sync（低开销），大矩阵优先加 double buffer（重叠延迟）。CUTLASS 的 auto-tuning 就是根据 M/N/K 选最优组合。
 
-#### 任务 4：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 3 周 Day 5）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

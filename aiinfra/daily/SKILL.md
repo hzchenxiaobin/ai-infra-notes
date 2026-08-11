@@ -201,29 +201,31 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 
 #### LeetCode 面试题(任务 5,必有)
 
-每天 Coding 任务包含一组来自 **https://leetcode.cn/** 的面试高频题,作为算法基本功的日常练习。题目安排与独立的 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 对齐——该计划把 Hot 100 / CodeTop / 面试经典 150 / 剑指 Offer 共 198 道高频题按类别编排为 8 周,与本教程 week1-week8 一一对应;完整题目清单另见 [高频算法面试题汇总](https://hzchenxiaobin.github.io/leetcode/problems/hot-interview.html)。
+每天 Coding 任务包含一组来自 **https://leetcode.cn/** 的面试高频题,作为算法基本功的日常练习。题目安排与独立的 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 对齐——该计划把 Hot 100 / CodeTop / 面试经典 150 / 剑指 Offer 共 198 道高频题按类别编排为 10 周,与本教程 week1-week10 一一对应;完整题目清单另见 [高频算法面试题汇总](https://hzchenxiaobin.github.io/leetcode/problems/hot-interview.html)。
 
 **安排规则**:
 
 - **Day 1-6**:每天 3-5 题(第 2、5 周题量较少,末尾 1-2 天为机动补漏日,不新增题目)。教程中给出「题目 | 难度 | 核心套路 | 题解」表格 + 1-2 句刷题建议
 - **Day 7**:本周 LeetCode 题目回顾(汇总表),重做本周错题、总结模板笔记
 
-**每周主题与题量**(与 8 周计划一致):
+**每周主题与题量**(与 10 周计划一致):
 
 | 周 | 主题 | 题量 |
 |----|------|------|
 | Week 1 | 数组、哈希与双指针(含手撕排序) | 26 |
 | Week 2 | 字符串、滑动窗口与矩阵 | 20 |
-| Week 3 | 链表与数学技巧 | 24 |
-| Week 4 | 栈、队列、堆、设计与贪心区间 | 29 |
-| Week 5 | 二叉树(上)——遍历、形态与 BST | 20 |
-| Week 6 | 二叉树(下)+ 回溯 + 网格搜索 | 25 |
-| Week 7 | 二分查找与动态规划基础 | 25 |
-| Week 8 | 动态规划进阶与图论 | 29 |
+| Week 3 | 链表与数学技巧 | 25 |
+| Week 4 | 栈、队列与单调栈 | 16 |
+| Week 5 | 堆、贪心与区间 | 16 |
+| Week 6 | 二叉树(上)——遍历、形态与 BST | 20 |
+| Week 7 | 二叉树(下)+ 回溯 + 网格搜索 | 25 |
+| Week 8 | 二分查找与动态规划基础 | 25 |
+| Week 9 | 动态规划进阶——子序列、区间与二维 DP | 15 |
+| Week 10 | 股票 DP、划分与图论 | 17 |
 
 完整题解(6 段结构、C++/Python 参考代码、手绘 SVG、复杂度分析)已归档到独立的 [LeetCode 题解仓库](https://hzchenxiaobin.github.io/leetcode/);教程只需给出题目链接 + 核心套路,并链接对应题解页面(`https://hzchenxiaobin.github.io/leetcode/problems/<题号>_<题名>.html`)。
 
-> 💡 修改某天的 LeetCode 题目时,以 [8 周刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 为准;题解缺失的题目按题解仓库 `solution/SKILL.md` 1.3「优先补全清单」先在题解仓库补写。
+> 💡 修改某天的 LeetCode 题目时,以 [10 周刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 为准;题解缺失的题目按题解仓库 `solution/SKILL.md` 1.3「优先补全清单」先在题解仓库补写。
 
 ### 3.6 `### 扩展实验`(教学日必有)
 - **3 个** `#### 实验 N:<描述>`,递进或对比

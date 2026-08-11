@@ -353,9 +353,9 @@ GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单�
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周机动补漏）
 
-> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 第 6 周计划共 20 题，已分配至 Day 1 - Day 4（见 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

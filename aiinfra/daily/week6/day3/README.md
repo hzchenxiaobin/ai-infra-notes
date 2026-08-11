@@ -531,9 +531,9 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 
 > 💡 提交后在 [LeetGPU Top-P Sampling](https://leetgpu.com/challenges/top-p-sampling) 上记录通过耗时。完整题解（含 safe softmax、降序排序、prefix sum 找截断点、重归一化采样、ncu profiling）见 [Top-P Sampling 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 3）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周 Day 3）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

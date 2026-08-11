@@ -667,9 +667,9 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 
 > 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周机动补漏）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周机动补漏）
 
-> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

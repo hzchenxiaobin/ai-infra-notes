@@ -510,9 +510,9 @@ ncu --metrics \
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时与所用语言。完整 CUDA 题解（含 `wmma` + double buffering + L2 优化）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 4）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 4）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」的**数学技巧**子集，共 4 题。Triton 主题偏工程，LeetCode 题量精简，留时间给 kernel 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」的**数学技巧**子集，共 4 题。Triton 主题偏工程，LeetCode 题量精简，留时间给 kernel 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

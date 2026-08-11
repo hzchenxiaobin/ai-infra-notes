@@ -394,9 +394,9 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 
 > 💡 提交后在 [LeetGPU Matrix Addition 题目](https://leetgpu.com/challenges/matrix-addition)上记录通过耗时，用 ncu 对比不同 block 形状的 `gpu__time_duration.sum`。完整题解（含 float4 向量化分析）见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
-#### 任务 7：LeetCode 面试题（8 周计划 · 第 1 周 Day 3）
+#### 任务 7：LeetCode 面试题（10 周计划 · 第 1 周 Day 3）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 3（数组 DP / 前缀和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 3（数组 DP / 前缀和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

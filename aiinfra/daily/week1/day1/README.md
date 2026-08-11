@@ -569,9 +569,9 @@ total_warps = warps_per_block × num_blocks
 
 > 💡 提交后在 [LeetGPU Vector Addition 题目](https://leetgpu.com/challenges/vector-addition)上记录通过耗时，用 ncu 对比不同 block size 的性能差异。完整题解见 [Vector Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-vector-addition-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 1 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 1 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 1（哈希），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 1（哈希），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

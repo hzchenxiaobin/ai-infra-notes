@@ -447,9 +447,9 @@ BF16:  [1|8|7]   指数 8 位 → 范围 ±3.4e38（同 FP32，不溢出）
 
 ---
 
-### 本周 LeetCode 题目回顾（8 周计划 · 第 3 周）
+### 本周 LeetCode 题目回顾（10 周计划 · 第 3 周）
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」（点击查看题解）：
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
 |-----|------|---------------|
@@ -460,7 +460,7 @@ BF16:  [1|8|7]   指数 8 位 → 范围 ±3.4e38（同 FP32，不溢出）
 | Day 5 | 排序与设计 | [148. 排序链表](https://hzchenxiaobin.github.io/leetcode/problems/148_排序链表.html)、[23. 合并 K 个升序链表](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html)、[146. LRU 缓存](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
 | Day 6 | 数学技巧 | [50. Pow(x, n)](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html)、[470. 用 Rand7() 实现 Rand10()](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html)、[289. 生命游戏](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 3 周「链表与数学技巧」。重做本周错题、总结模板笔记（哑节点、快慢指针、分段翻转三个模板必须能默写）；没做完的题目今天补上。
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 3 周「链表与数学技巧」。重做本周错题、总结模板笔记（哑节点、快慢指针、分段翻转三个模板必须能默写）；没做完的题目今天补上。
 
 ---
 

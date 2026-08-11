@@ -359,9 +359,9 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 
 > 💡 提交后在 [LeetGPU Grouped Query Attention](https://leetgpu.com/challenges/grouped-query-attention) 上记录通过耗时。完整题解（含 GQA 的 KV 头共享映射、attention kernel、与 MHA 的 cache 大小对比）见 [Grouped Query Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

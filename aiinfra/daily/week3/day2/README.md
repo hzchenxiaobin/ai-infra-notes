@@ -428,9 +428,9 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 本题与今日 WMMA GEMM 强相关：FP16 存储 + FP32 累加正是 WMMA `m16n16k16` 指令的精度策略。朴素版用 CUDA Core 逐元素乘加（`__half2float` → FMA → `__float2half`），思考如何用今天学的 shared memory tiling + WMMA 改造为 Tensor Core 版本。完整题解见 [FP16 Batched MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-fp16-batched-matmul-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

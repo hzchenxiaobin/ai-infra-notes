@@ -180,9 +180,9 @@ python kernels/week7_summary.py
 
 > 💡 完整题解见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
-#### 任务 3：本周 LeetCode 题目回顾（8 周计划 · 第 7 周）
+#### 任务 3：本周 LeetCode 题目回顾（10 周计划 · 第 8 周）
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」（点击查看题解）：
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
 |-----|------|---------------|
@@ -193,7 +193,7 @@ python kernels/week7_summary.py
 | Day 5 | 一维 DP | [70. 爬楼梯](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html)、[118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/)、[198. 打家劫舍](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html)、[213. 打家劫舍 II](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html)、[337. 打家劫舍 III](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
 | Day 6 | 背包 DP | [279. 完全平方数](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html)、[322. 零钱兑换](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html)、[518. 零钱兑换 II](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html)、[416. 分割等和子集](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html)、[494. 目标和](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 7 周「二分查找与动态规划基础」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 8 周「二分查找与动态规划基础」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

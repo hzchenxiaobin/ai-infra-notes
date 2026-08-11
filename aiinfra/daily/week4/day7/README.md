@@ -227,7 +227,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 | Day 6 | — | 139 / 375 / 514（DP） |
 | Day 7 | [Softmax Attention](https://leetgpu.com/challenges/softmax-attention)（[题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)） | — |
 
-> 💡 回顾重点：Matrix Multiplication（D1/D4）对应 GEMM 主线，Group Normalization（D2）对应 reduce 主线；Day 7 的 Softmax Attention 是本周综合验收——online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，正好串起 Day 2 的 reduce、Day 4 的 Triton、Day 5 的 FA benchmark。LeetCode 题对应外部 8 周算法面试刷题计划第 3 周「链表与数学技巧」，把没做完的今天补上。
+> 💡 回顾重点：Matrix Multiplication（D1/D4）对应 GEMM 主线，Group Normalization（D2）对应 reduce 主线；Day 7 的 Softmax Attention 是本周综合验收——online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，正好串起 Day 2 的 reduce、Day 4 的 Triton、Day 5 的 FA benchmark。LeetCode 题对应外部 10 周算法面试刷题计划第 3 周「链表与数学技巧」，把没做完的今天补上。
 
 #### 任务 5：Week 5 预热 + 面试复盘
 

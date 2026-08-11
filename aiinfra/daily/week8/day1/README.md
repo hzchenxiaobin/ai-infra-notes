@@ -474,9 +474,9 @@ Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 +
 
 > 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时，重点对比"fused 在线反量化"（今日 kernel）vs "unfused 显式反量化"（本题）的带宽差异。完整题解（含 per-channel scale 处理、向量化加载、ncu 带宽分析）见 [Weight Dequantization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周高频回顾）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周高频回顾）
 
-> 📅 今日为量化专题，LeetCode 题目选自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 5 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日为量化专题，LeetCode 题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

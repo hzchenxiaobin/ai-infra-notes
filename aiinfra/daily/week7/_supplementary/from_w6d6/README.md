@@ -308,9 +308,9 @@ batcher = DynamicBatcher(max_batch_size=8, max_wait_time=0.1)
 
 > 💡 提交后在 [LeetGPU MoE Top-K Gating](https://leetgpu.com/challenges/moe-topk-gating) 上记录通过耗时。完整题解（含 top-k 选择 + softmax 融合 kernel、与请求路由/分组的类比）见 [MoE Top-K Gating 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-moe-topk-gating-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 1（路径问题），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 1（路径问题），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

@@ -307,9 +307,9 @@ Throughput-Latency 曲线
 
 > 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort、堆归约、与 P99 分位数计算的类比）见 [Top K Selection 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 6）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 6）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 6（回溯进阶），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 6（回溯进阶），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
@@ -317,7 +317,8 @@ Throughput-Latency 曲线
 | [79. 单词搜索](https://leetcode.cn/problems/word-search/) | 中等 | DFS 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/79_单词搜索.html) |
 | [131. 分割回文串](https://leetcode.cn/problems/palindrome-partitioning/) | 中等 | 回溯 + 判断 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/131_分割回文串.html) |
 | [51. N 皇后](https://leetcode.cn/problems/n-queens/) | 困难 | 回溯 + 位运算 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/51_N皇后.html) |
-| [93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/) | 中等 | 回溯 + 分段合法性剪枝 | — |
+| [93. 复原 IP 地址](https://leetcode.cn/problems/restore-ip-addresses/) | 中等 | 回溯 + 分段合法性剪枝 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/93_复原IP地址.html) |
+| [89. 格雷编码](https://leetcode.cn/problems/gray-code/) | 中等 | 回溯 / 公式法（前缀补 1） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/89_格雷编码.html) |
 
 ---
 

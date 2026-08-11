@@ -288,13 +288,14 @@ BatchNorm 是今日"易混淆概念 LayerNorm vs BatchNorm"的实战检验。它
 
 > 💡 提交后在 [LeetGPU Batch Normalization](https://leetgpu.com/challenges/batch-normalization) 上记录通过耗时，用 ncu 对比三遍 vs 融合的 DRAM Throughput 差异。完整题解见 [Batch Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batch-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 6）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周 Day 3）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 6（最短路与 BFS），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」Day 3（最短路与 BFS），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [743. 网络延迟时间](https://leetcode.cn/problems/network-delay-time/) | 中等 | 堆优化 Dijkstra 单源最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html) |
+| [787. K 站中转内最便宜的航班](https://leetcode.cn/problems/cheapest-flights-within-k-stops/) | 中等 | Bellman-Ford / DP 状态机 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/787_K站中转内最便宜的航班.html) |
 | [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
 | [752. 打开转盘锁](https://leetcode.cn/problems/open-the-lock/) | 中等 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html) |
 | [127. 单词接龙](https://leetcode.cn/problems/word-ladder/) | 困难 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html) |

@@ -330,16 +330,18 @@ FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**�
 
 > 💡 提交后在 [LeetGPU Batched GEMM 题目](https://leetgpu.com/challenges/batched-matrix-multiplication)上记录通过耗时，重点观察 batch size 增大时 latency 的增长曲线。完整题解（含 batched kernel launch、batch offset 寻址、与单矩阵 GEMM 的对比）见 [Batched Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-batched-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 5）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 5 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 5（堆），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 5 周「堆、贪心与区间」Day 1（堆），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [215. 数组中的第 K 个最大元素](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | 中等 | 快速选择 / 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html) |
 | [347. 前 K 个高频元素](https://leetcode.cn/problems/top-k-frequent-elements/) | 中等 | 桶排序 / 快选 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html) |
+| [692. 前 K 个高频单词](https://leetcode.cn/problems/top-k-frequent-words/) | 中等 | 堆 + 自定义比较 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/692_前K个高频单词.html) |
 | [295. 数据流的中位数](https://leetcode.cn/problems/find-median-from-data-stream/) | 困难 | 双堆（大顶 + 小顶） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html) |
 | [264. 丑数 II](https://leetcode.cn/problems/ugly-number-ii/) | 中等 | 三指针多路归并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html) |
+| [767. 重构字符串](https://leetcode.cn/problems/reorganize-string/) | 中等 | 大顶堆交替放置 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/767_重构字符串.html) |
 
 ---
 

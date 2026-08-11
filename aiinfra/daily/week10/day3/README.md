@@ -330,9 +330,9 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 > 💡 提交后在 [LeetGPU Matrix Addition](https://leetgpu.com/challenges/matrix-addition) 上记录通过耗时。完整题解（含 naive element-wise kernel、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

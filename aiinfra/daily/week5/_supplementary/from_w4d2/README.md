@@ -388,9 +388,9 @@ nsys stats -t cuda_gpu_kern_sum mini_engine_pytorch.nsys-rep
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时。完整题解（含 tiling 数据复用分析、naive → block tile → thread tile 优化链路）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。尝试用今天的 `load_inline` 把它封装为 `my_ops.matmul_forward`，在 Python 里调用验证。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 5）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 5）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 5（排序与设计），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

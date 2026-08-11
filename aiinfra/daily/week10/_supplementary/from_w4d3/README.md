@@ -362,15 +362,17 @@ ncu 采集时会反复 replay kernel（每个指标 replay 一次），导致运
 
 > 💡 提交后在 [LeetGPU RMS Normalization 题目](https://leetgpu.com/challenges/rms-normalization)上记录通过耗时，用 ncu 验证 `DRAM% >> SM%`（memory-bound），并对比 RMSNorm（一次 reduce）vs Day 2 LayerNorm（两次 reduce）的 latency。完整题解（含 RMSNorm vs LayerNorm 对比、Roofline 分析、与 Llama 的关联）见 [RMS Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-rms-normalization-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 3 周 Day 6）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 6）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [50. Pow(x, n)](https://leetcode.cn/problems/powx-n/) | 中等 | 快速幂 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/50_Powx_n.html) |
 | [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/) | 中等 | 拒绝采样（Rand49 → 取模） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/470_用Rand7实现Rand10.html) |
 | [289. 生命游戏](https://leetcode.cn/problems/game-of-life/) | 中等 | 原地状态编码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/289_生命游戏.html) |
+| [166. 分数到小数](https://leetcode.cn/problems/fraction-to-recurring-decimal/) | 中等 | 长除法 + 哈希查循环 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/166_分数到小数.html) |
+| [168. Excel 表列名称](https://leetcode.cn/problems/excel-sheet-column-title/) | 简单 | 26 进制转换 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/168_Excel表列名称.html) |
 
 ---
 

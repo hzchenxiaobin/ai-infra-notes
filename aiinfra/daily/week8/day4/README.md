@@ -397,9 +397,9 @@ python kernels/shape_bucketing.py
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、CUDA Graph 捕获/replay、与今日 CUDA Graph 实操的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 补充）
 
-> 📅 今日为 CUDA Graph 专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 5 道二分查找高频题（Day 6 已刷背包 DP，今日补二分模板与变种），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日为 CUDA Graph 专题补充日，LeetCode 从 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」中精选 5 道二分查找高频题（Day 6 已刷背包 DP，今日补二分模板与变种），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

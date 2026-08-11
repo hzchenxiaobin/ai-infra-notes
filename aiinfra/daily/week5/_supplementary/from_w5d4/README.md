@@ -457,4 +457,4 @@ week4/
 
 ---
 
-> 💡 **提示**：Week 4 是 8 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 5 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。
+> 💡 **提示**：Week 4 是 10 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 5 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。

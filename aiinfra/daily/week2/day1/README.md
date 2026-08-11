@@ -403,15 +403,16 @@ grid-stride loop 的好处：
 
 > 💡 提交后在 [LeetGPU Prefix Sum 题目](https://leetgpu.com/challenges/prefix-sum)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-prefix-sum-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 2 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 1（滑动窗口基础），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 1（滑动窗口基础），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [3. 无重复字符的最长子串](https://leetcode.cn/problems/longest-substring-without-repeating-characters/) | 中等 | 滑动窗口 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html) |
 | [438. 找到字符串中所有字母异位词](https://leetcode.cn/problems/find-all-anagrams-in-a-string/) | 中等 | 定长滑窗计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/438_找到字符串中所有字母异位词.html) |
 | [560. 和为 K 的子数组](https://leetcode.cn/problems/subarray-sum-equals-k/) | 中等 | 前缀和 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/560_和为K的子数组.html) |
+| [974. 和可被 K 整除的子数组](https://leetcode.cn/problems/subarray-sums-divisible-by-k/) | 中等 | 前缀和 + 同余计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/974_和可被K整除的子数组.html) |
 
 ---
 

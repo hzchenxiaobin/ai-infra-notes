@@ -443,9 +443,9 @@ GFLOPS = 2.0 * M * N * K / (time_ms * 1e6)
 
 ---
 
-#### 任务 7：本周 LeetCode 题目回顾（8 周计划 · 第 2 周）
+#### 任务 7：本周 LeetCode 题目回顾（10 周计划 · 第 2 周）
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」（点击查看题解）：
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
 |-----|------|---------------|
@@ -455,7 +455,7 @@ GFLOPS = 2.0 * M * N * K / (time_ms * 1e6)
 | Day 4 | 字符串匹配 | [165. 比较版本号](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html)、[8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/)、[28. 找出字符串中第一个匹配项的下标](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html)、[468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) |
 | Day 5 | 矩阵 | [73. 矩阵置零](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html)、[54. 螺旋矩阵](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html)、[48. 旋转图像](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html)、[240. 搜索二维矩阵 II](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
 
-> 💡 回顾重点：本周 LeetCode 题对应 8 周刷题计划第 2 周「字符串、滑动窗口与矩阵」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 2 周「字符串、滑动窗口与矩阵」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 
@@ -646,7 +646,7 @@ Week 3 我们将学习 **Transformer 执行本质与算子手写**。为了做�
 4. **FlashAttention 简化版**（Day 5）：Week 3 学完整版 FlashAttention 的算法基础
 5. **Kernel Fusion 思想**（Day 6）：Week 3 算子接入与融合的工程基础
 
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 3 会从 GPU 视角拆解 Transformer 推理流程，手写 memory-bound 算子，是 8 周计划里承上启下的关键一周。
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 3 会从 GPU 视角拆解 Transformer 推理流程，手写 memory-bound 算子，是 10 周计划里承上启下的关键一周。
 
 ---
 

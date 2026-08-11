@@ -311,9 +311,9 @@ engine = ProfiledMiniEngine(use_custom_kernel=False, ...)
 
 > 💡 提交后在 [LeetGPU Reduction](https://leetgpu.com/challenges/reduction) 上记录通过耗时。完整题解见 [Reduction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 Day 6）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 Day 6）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」Day 6（背包 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」Day 6（背包 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

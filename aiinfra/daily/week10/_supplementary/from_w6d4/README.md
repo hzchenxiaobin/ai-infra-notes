@@ -345,9 +345,9 @@ INT8 Quantized MatMul 是**量化推理的核心 kernel**——推理系统里�
 
 > 💡 提交后在 [LeetGPU INT8 Quantized MatMul](https://leetgpu.com/challenges/int8-quantized-matmul) 上记录通过耗时。完整题解（含 tiled GEMM、反量化/requantize 的 scale 链、ncu profiling、Roofline 分析）见 [INT8 Quantized MatMul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-quantized-matmul-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 5 周机动补漏）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周机动补漏）
 
-> 📅 第 5 周计划共 20 题，已分配至 Day 1 - Day 4（见 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 第 6 周计划共 20 题，已分配至 Day 1 - Day 4（见 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

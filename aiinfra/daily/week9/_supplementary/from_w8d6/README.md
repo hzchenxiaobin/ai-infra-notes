@@ -307,9 +307,9 @@ python kernels/ring_attention_sim.py
 
 > 💡 提交后在 [LeetGPU Softmax Attention](https://leetgpu.com/challenges/softmax-attention) 上记录通过耗时。完整题解见 [Softmax Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 7 周 补充）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 补充）
 
-> 📅 今日为 Ring Attention 长上下文专题补充日，LeetCode 从 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 7 周「二分查找与动态规划基础」中精选 4 道高频题（二分变种 + 一维 DP + 字符串 DP），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日为 Ring Attention 长上下文专题补充日，LeetCode 从 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」中精选 4 道高频题（二分变种 + 一维 DP + 字符串 DP），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

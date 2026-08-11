@@ -296,9 +296,9 @@ Simple Inference 是一个**完整的简化推理 kernel**——把 embedding lo
 
 > 💡 提交后在 [LeetGPU Simple Inference](https://leetgpu.com/challenges/simple-inference) 上记录通过耗时。完整题解（含 embedding/matmul/activation 串联 kernel、与 Continuous Batching 单请求推理流程的类比）见 [Simple Inference 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-simple-inference-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

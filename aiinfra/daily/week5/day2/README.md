@@ -333,17 +333,18 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 
 > 💡 提交后在 [LeetGPU Attention 题目](https://leetgpu.com/challenges/attention)上记录通过耗时。完整题解见 [Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 4 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 4 周 Day 1）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 4 周「栈、队列、堆、设计与贪心区间」Day 1（栈基础与设计），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」Day 1（栈基础与设计），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [20. 有效的括号](https://leetcode.cn/problems/valid-parentheses/) | 简单 | 栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html) |
 | [155. 最小栈](https://leetcode.cn/problems/min-stack/) | 中等 | 辅助栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html) |
 | [232. 用栈实现队列](https://leetcode.cn/problems/implement-queue-using-stacks/) | 简单 | 双栈倒换（摊还 O(1)） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html) |
-| [150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/) | 中等 | 操作数栈求值 | — |
+| [150. 逆波兰表达式求值](https://leetcode.cn/problems/evaluate-reverse-polish-notation/) | 中等 | 操作数栈求值 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/150_逆波兰表达式求值.html) |
 | [380. O(1) 时间插入、删除和获取随机元素](https://leetcode.cn/problems/insert-delete-getrandom-o1/) | 中等 | 哈希 + 数组交换删除 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html) |
+| [946. 验证栈序列](https://leetcode.cn/problems/validate-stack-sequences/) | 中等 | 栈模拟 pushed→popped | [题解](https://hzchenxiaobin.github.io/leetcode/problems/946_验证栈序列.html) |
 
 ---
 

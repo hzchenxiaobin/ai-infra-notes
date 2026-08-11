@@ -213,9 +213,9 @@ python kernels/architecture_diagrams.py
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention](https://leetgpu.com/challenges/multi-head-attention) 上记录通过耗时。完整题解（含多头拆分详解、kernel 实现、与架构图中 Attention 数据流的对应）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 8 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周 Day 2）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 8 周「动态规划进阶与图论」Day 2（回文与区间 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 2（回文与区间 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|

@@ -237,7 +237,7 @@ python kernels/week10_summary.py
 
 #### 任务 3：本周 LeetCode 题目回顾
 
-本周 LeetCode 题目对应 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html)（8 周刷题计划是外部独立计划，与课程 10 周不同步，按题表完成即可）。
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)（10 周刷题计划是外部独立计划，与课程 10 周不同步，按题表完成即可）。
 
 > 💡 回顾重点：重做本周错题、总结模板笔记；没做完的题目今天补上。
 

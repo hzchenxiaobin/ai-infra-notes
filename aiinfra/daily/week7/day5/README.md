@@ -311,13 +311,14 @@ Top K Selection 是**推理引擎 v1 的 sampling 出口**——每个 token 生
 
 > 💡 提交后在 [LeetGPU Top K Selection](https://leetgpu.com/challenges/top-k-selection) 上记录通过耗时。完整题解（含 bitonic sort / radix select 实现、与 Mini 引擎 v1 sampling 出口的类比）见 [Top K Selection 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-k-selection-solution.html)。
 
-#### 任务 5：LeetCode 面试题（8 周计划 · 第 6 周 Day 5）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 5）
 
-> 📅 今日题目来自 [8 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/8-week-plan.html) 第 6 周「二叉树（下）+ 回溯 + 网格搜索」Day 5（回溯基础），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 5（回溯基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|----------|------|
 | [46. 全排列](https://leetcode.cn/problems/permutations/) | 中等 | 回溯模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/46_全排列.html) |
+| [77. 组合](https://leetcode.cn/problems/combinations/) | 中等 | 回溯（选/不选两种视角） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/77_组合.html) |
 | [78. 子集](https://leetcode.cn/problems/subsets/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/78_子集.html) |
 | [39. 组合总和](https://leetcode.cn/problems/combination-sum/) | 中等 | 回溯 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/39_组合总和.html) |
 | [17. 电话号码的字母组合](https://leetcode.cn/problems/letter-combinations-of-a-phone-number/) | 中等 | 回溯 / 队列 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/17_电话号码的字母组合.html) |
