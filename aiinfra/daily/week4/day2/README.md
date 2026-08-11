@@ -137,6 +137,51 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 }
 ```
 
+##### 为什么 Softmax 是 memory-bound？
+
+Safe softmax `y_i = exp(x_i - m) / Σ exp(x_j - m)` 对每个元素只做约 3 次浮点运算，但要读写完整的 4-byte 数据。以 FP32、单行 D 个元素为例：
+
+**理论口径（读 1 次写 1 次，算法下界）**：
+
+```
+每元素 FLOPs:
+  ① x_i - m      (减法)  → 1 FLOP
+  ② exp(...)     (指数)  → 1 FLOP
+  ③ / sum        (除法)  → 1 FLOP
+  合计: 3 FLOP/元素
+
+每元素 Bytes:
+  读 x_i 1 次: 4 bytes
+  写 y_i 1 次: 4 bytes
+  合计: 8 bytes/元素
+
+AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
+远低于 Ridge Point（~58.45）→ 纯 memory-bound
+```
+
+这就是表格中 `AI ≈ 0.375` 的来源——它代表 softmax **算法本身的理论下界**（假设无冗余读）。
+
+**三遍扫描实际口径（读 3 次写 1 次）**：
+
+本日实现的三遍扫描版每元素从 HBM 读 3 次（Pass 1 求 max、Pass 2 求 sum、Pass 3 归一化），实际 AI 更低：
+
+```
+每元素实际 Bytes:
+  读 x_i 3 次: 3 × 4 = 12 bytes
+  写 y_i 1 次: 4 bytes
+  合计: 16 bytes/元素
+
+每元素实际 FLOPs（含 reduce 中的运算）:
+  Pass 1: fmaxf 比较            → ~1 FLOP
+  Pass 2: exp + 累加            → ~2 FLOPs
+  Pass 3: exp + 乘法(inv_sum)  → ~2 FLOPs
+  合计: ~5 FLOPs（不含 warp shuffle 的固定 5 步 reduce）
+
+实际 AI ≈ 5 / 16 ≈ 0.31 FLOP/Byte
+```
+
+两个口径都远低于 Ridge Point 58.45，结论一致：**Softmax 是纯 memory-bound**。三遍扫描的冗余读（3× vs 1×）是 online softmax（两遍）和 FlashAttention（分块）要消除的浪费。
+
 #### 2.3 LayerNorm 公式与两次 reduce
 
 ![LayerNorm 两次 Reduce 流程](../images/layernorm_two_reduce.svg)
