@@ -33,7 +33,7 @@ Mini 引擎 FlashAttention 版（见 [`_supplementary/from_w5d2`](../_supplement
 
 ### 理论学习
 
-#### 6.1 Benchmark 框架设计
+#### 5.1 Benchmark 框架设计
 
 ![O(N²) vs O(Nd) IO 增长对比](../images/on2_vs_ond_scaling.svg)
 
@@ -57,7 +57,7 @@ Mini 引擎 FlashAttention 版（见 [`_supplementary/from_w5d2`](../_supplement
 | Speedup | 相对标准 Attention 加速比 | `ms_std / ms_fa` |
 | Max Diff | 与标准 Attention 数值误差 | `(out_std - out_fa).abs().max()` |
 
-#### 6.2 理论 HBM IO 计算
+#### 5.2 理论 HBM IO 计算
 
 ```
  标准 Attention HBM IO:
@@ -83,7 +83,7 @@ FlashAttention HBM IO:
 
 > 💡 **关键洞察**：IO 加速比随 N² 增长，但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
 
-#### 6.3 ncu 验证 HBM IO 的方法
+#### 5.3 ncu 验证 HBM IO 的方法
 
 ```bash
 ncu --metrics \
@@ -108,7 +108,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB (应为 N=512 的 8x)
 
 > ⚠️ **注意**：实测值通常比理论值大 20-30%（cache miss、padding、额外访问），误差范围内正常。
 
-#### 6.4 预期性能特征
+#### 5.4 预期性能特征
 
 | 配置 | 标准 Attention | 手写 FA | 官方 FA | 分析 |
 |------|---------------|---------|---------|------|
@@ -252,7 +252,7 @@ python kernels/benchmark_flash_attention.py
   1   8  8192   64 |      9.611        nan        nan |        nanx        nanx |     776.00       8.00
 ```
 
-> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8）。`Hand`（手写 FA v2）与 `Off`（官方 flash_attn 包）列为 `nan`——前者需 `load_inline` 动态编译 Day 2 的 .cu（C++ Extension 环境敏感），后者需 `pip install flash-attn`。**Std（标准 Attention）列为真实数据**，IO 列为理论值。Hand/Off 列待 C++ Extension 环境就绪后补测。
+> ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, PyTorch SDPA 关闭）。**只有 Std（标准 Attention）列为真实数据**；`Hand`（手写 FA v2）与 `Off`（官方 flash_attn 包）列为 `nan`——前者需 `load_inline` 动态编译 Day 3 的 .cu（C++ Extension 环境敏感），后者需 `pip install flash-attn`。IO 列为理论值。Hand/Off 列待 C++ Extension 环境就绪后补测。
 
 #### 任务 3：用 ncu 验证 HBM IO 复杂度
 
@@ -329,7 +329,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 ### 今日总结
 
-Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention 到底快多少"：
+Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention 到底快多少"：
 
 1. **Benchmark 框架**：覆盖 N/B/H/d 四维度扫描，记录 latency/throughput/speedup/max_diff
 2. **3-way 对比**：标准 Attention / 手写 FA / 官方 FA，量化每种实现的性能差距
@@ -338,7 +338,7 @@ Day 6 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 5. **理论 vs 实测**：实测 HBM IO 比理论值大 20-30%（cache miss/padding），误差范围内正常
 6. **配置影响**：小 batch 需 seq 并行补偿；大 d 时 tile 变小优势减弱；大 batch 时 GEMM 已接近峰值
 
-掌握这些后，你就拥有了用数据证明优化效果的能力。明天 Day 7 总结本周，整理性能报告和 IO 优化方法论。
+掌握这些后，你就拥有了用数据证明优化效果的能力。明天 Day 6 深入 FA-2/FA-3 演进与官方源码导读。
 
 ---
 

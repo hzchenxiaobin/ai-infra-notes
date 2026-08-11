@@ -10,13 +10,13 @@
 4. 能列出 FA1 vs FA2 的至少 5 个关键差异，解释每个改进的收益来源<br>
 5. 能基于 FA2 思想优化 Day 2 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
 
-> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们读了官方源码的结构，今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天把 FA 集成到 Mini 引擎时，会用今天学到的 work partitioning 思想评估集成效果。
+> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们手写了完整 FA Forward Kernel，官方源码导读见 `_supplementary/from_w4d7`。今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天 Day 7 做本周复盘与限时手撕。
 
 ---
 
 ### 学前导读：FA1 跑对了，但为什么还能更快
 
-Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
+Day 3 读官方源码时我们注意到（见 `_supplementary/from_w4d7`），FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
 
 | 维度 | FA1 的问题 | FA2 的改进 | 收益 |
 |------|-----------|-----------|------|
@@ -268,7 +268,7 @@ for j in 0..Tc:
 
 #### 任务 2：修改 Day 2 Kernel 的 warp 分工
 
-将 Day 2 的 `flash_attention_v2.cu` 修改为 FA2 风格的 warp group 划分：
+将 Day 3 的 `flash_attention_v2.cu` 修改为 FA2 风格的 warp group 划分：
 
 ```cuda
 // Day 2 原版：每 warp 负责 ROWS_PER_WARP 行
@@ -285,7 +285,7 @@ constexpr int ROWS_PER_WARP_FA2 = Br / WARPS_PER_BLOCK_FA2; // 64/16 = 4
 
 ```bash
 # 编译原版
-nvcc -o flash_attention_v2 day2/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -Xptxas -v
+nvcc -o flash_attention_v2 ../day3/kernels/flash_attention_v2.cu -O3 -arch=sm_120 -Xptxas -v
 
 # 编译 FA2 风格版
 nvcc -o flash_attention_fa2 kernels/flash_attention_fa2.cu -O3 -arch=sm_120 -Xptxas -v
@@ -314,7 +314,7 @@ ncu --metrics \
 
 **观察重点**：
 
-| 指标 | 原版 (Day 2) | FA2 风格版 | 预期变化 |
+| 指标 | 原版 (Day 3) | FA2 风格版 | 预期变化 |
 |------|-------------|-----------|---------|
 | Registers/thread | ~88-120 | ~60-80 | ↓（acc 更小） |
 | Occupancy | ~50-75% | ~60-85% | ↑（register 减少后更多 block 驻留） |
@@ -355,7 +355,7 @@ FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**�
 
 #### 实验 2：实现 seq 并行
 
-修改 Day 2 Kernel，当 B×H 较小时（如 B=1, H=1），在 x 维度使用更多 block 处理同一个 head 的不同 Q tile 段。
+修改 Day 3 Kernel，当 B×H 较小时（如 B=1, H=1），在 x 维度使用更多 block 处理同一个 head 的不同 Q tile 段。
 
 > 提示：FA 的 tiling 天然支持——每个 block 处理 Br 行 Q，不同 block 处理不同段，无需额外同步。
 
@@ -369,7 +369,7 @@ FlashAttention-2 相比 FA1 的一大改进是 **更好的 work partitioning**�
 
 ### 今日总结
 
-Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
+Day 6 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 
 1. **减少 non-matmul FLOPs**：warp group 子块划分，让 softmax/rescale 在 group 内独立完成，non-matmul:matmul 从 1:10 降到 1:20
 2. **更好的 work partitioning**：新增 seq 并行维度，长序列下并行度更高；warp group 自治减少跨 group 同步
@@ -378,7 +378,7 @@ Day 4 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 5. **Seq 并行 vs Head 并行**：先用 Batch×Head 并行，不够时再开 seq 并行；长序列场景 seq 并行收益最大
 6. **实践验证**：修改 Day 2 Kernel 的 warp 分工（ROWS_PER_WARP 减小），用 ncu 验证 occupancy 提升
 
-掌握这些后，你就理解了 FlashAttention 从 FA1 到 FA2 的演进逻辑。明天把 FA 集成到 Mini 引擎，做端到端性能对比。
+掌握这些后，你就理解了 FlashAttention 从 FA1 到 FA2 的演进逻辑。明天 Day 7 做本周复盘与限时手撕。
 
 ---
 

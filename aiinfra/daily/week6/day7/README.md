@@ -21,7 +21,7 @@
 
 Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
 
-![Week 5 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../../images/week5_learning_pipeline.svg)
+![Week 6 学习主线：Prefill/Decode → KV Cache → vLLM → PagedAttention](../../images/week5_learning_pipeline.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -30,7 +30,7 @@ Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 | Day 3 | vLLM 整体架构 | mini_vllm_scheduler.py | LLMEngine→Scheduler→Worker、Continuous Batching |
 | Day 4 | PagedAttention | paged_attention.cu | block table、CoW、解决碎片 |
 | Day 5 | Mini 引擎 v0 | mini_engine_v0.py | 5 大组件、generate 循环、with/without cache |
-| Day 6 | 端到端 Profiling | profile_engine_v0.py | 三层方法论、TTFT/TBT breakdown、决策树 |
+| Day 6 | FlashDecoding | flash_decoding.cu | Decode 并行度突破、KV 切分、跨 block 合并 |
 | **Day 7** | **核心问题总结** | **四大问题 + 速查表** | **内存管理/Batch/Latency 隐藏/调度开销** |
 
 > 💡 **一句话总结**：Week 6 的本质是"理解 LLM 推理为什么慢，并造出第一个能跑的引擎"。Day 7 的四大核心问题地图就是这 7 天学习的最终答卷——它是推理系统优化的通用工具箱。
@@ -268,7 +268,7 @@ Week 6 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 
 
 Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 
-1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 profiling 仪表盘 → Day7 核心问题地图
+1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 FlashDecoding 并行度突破 → Day7 核心问题地图
 2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
 3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
 4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
@@ -358,7 +358,7 @@ aiinfra/daily/week6/
 ├── day3/kernels/mini_vllm_scheduler.py  # mini vLLM 调度器
 ├── day4/kernels/paged_attention.cu  # PagedAttention kernel
 ├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
-├── day6/                          # FlashDecoding
+├── day6/kernels/flash_decoding.cu  # FlashDecoding kernel
 ├── day7/kernels/week5_summary.py  # 总结日自测脚本（文件名沿用历史，内容对齐 Week 6）
 └── images/                        # 本周 SVG 插图
 ```

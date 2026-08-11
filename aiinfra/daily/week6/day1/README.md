@@ -10,7 +10,7 @@
 4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
 5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 O(L·d²) 降到 O(d²)），为 Day 2 手写 KV Cache 打基础<br>
 
-> 💡 **为什么重要**：Week 4 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 5 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
+> 💡 **为什么重要**：Week 5 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 6 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
 
 ---
 
@@ -26,7 +26,7 @@
 | 推理 Prefill | 整段 prompt（M = N_prompt） | 大矩阵乘 | compute-bound |
 | 推理 Decode | **1 个 token（M = 1）** | 向量×矩阵（退化） | **memory-bound** |
 
-关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 3 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
+关键矛盾在于：Decode 每步只算 1 个新 token 的 Q，却要把**所有历史 K/V 从 HBM 搬过来看一遍**。计算量极小，数据搬运量巨大，SM 大量时间在"等数据"——这就是推理系统优化的全部出发点。Week 4 Day 1 我们第一次画过 Prefill/Decode 的草图，今天要把它的计算/访存特征**量化**出来。
 
 > 💡 **一句话总结**：推理难优化，是因为 Decode 把"大矩阵乘的 compute-bound"退化成了"M=1 的 memory-bound"——Tensor Core 使不上劲，瓶颈从算力变成了带宽。本周所有技术都在和这个矛盾搏斗。
 
@@ -54,7 +54,7 @@ Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token *
  - 时延关注: TTFT (Time To First Token)
 ```
 
-Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 4 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
+Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
 
 #### 1.2 Decode 阶段：自回归逐 token 生成
 
@@ -86,7 +86,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 4 的
 | Attention 矩阵形状 | N×N | **1×N** |
 | 每步 FLOPs | O(N²·d) | O(L·d) |
 | 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
-| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte |
+| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte（fp16 ~0.125） |
 | 瓶颈类型 | **compute-bound** | **memory-bound** |
 | 关注指标 | TTFT | TBT / TPOT |
 | 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
@@ -173,6 +173,7 @@ import torch.nn.functional as F
 import math
 import time
 
+
 class MiniTransformer(nn.Module):
     """最小 Transformer Block，用于演示 Prefill/Decode"""
 
@@ -186,141 +187,145 @@ class MiniTransformer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.ffn = nn.Sequential(
-        nn.Linear(d_model, d_ff),
-        nn.GELU(),
-        nn.Linear(d_ff, d_model),
+            nn.Linear(d_model, d_ff),
+            nn.GELU(),
+            nn.Linear(d_ff, d_model),
         )
 
-        def forward(self, x, use_cache=False, k_cache=None, v_cache=None):
-            """
-            x: (B, N, d_model)
-            use_cache: 是否使用 KV Cache
-            k_cache/v_cache: 历史 KV，shape (B, H, L, d_head)
-            返回: output, (new_k_cache, new_v_cache)
-            """
-            B, N, _ = x.shape
+    def forward(self, x, use_cache=False, k_cache=None, v_cache=None):
+        """
+        x: (B, N, d_model)
+        use_cache: 是否使用 KV Cache
+        k_cache/v_cache: 历史 KV，shape (B, H, L, d_head)
+        返回: output, (new_k_cache, new_v_cache)
+        """
+        B, N, _ = x.shape
 
-            # LayerNorm + QKV
-            x_norm = self.norm1(x)
-            qkv = self.qkv(x_norm)
-            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-            q, k, v = qkv[0], qkv[1], qkv[2]
+        # LayerNorm + QKV
+        x_norm = self.norm1(x)
+        qkv = self.qkv(x_norm)
+        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
 
-            # Attention
-            scale = self.d_head ** -0.5
-            if use_cache and k_cache is not None:
-                # Decode: 把新 K/V 拼到历史 cache 后面
-                k = torch.cat([k_cache, k], dim=2) # (B, H, L+1, d)
-                v = torch.cat([v_cache, v], dim=2)
+        # Attention
+        scale = self.d_head ** -0.5
+        if use_cache and k_cache is not None:
+            # Decode: 把新 K/V 拼到历史 cache 后面
+            k = torch.cat([k_cache, k], dim=2)  # (B, H, L+1, d)
+            v = torch.cat([v_cache, v], dim=2)
 
-                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-                attn = F.softmax(attn, dim=-1)
-                out = torch.matmul(attn, v)
+        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+        attn = F.softmax(attn, dim=-1)
+        out = torch.matmul(attn, v)
 
-                out = out.transpose(1, 2).reshape(B, N, self.d_model)
-                x = x + self.out(out)
+        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+        x = x + self.out(out)
 
-                # FFN
-                x = x + self.ffn(self.norm2(x))
+        # FFN
+        x = x + self.ffn(self.norm2(x))
 
-                return x, (k, v)
+        return x, (k, v)
 
-                def simulate_inference(model, prompt, max_new_tokens=20):
-                    """模拟完整推理流程：Prefill + Decode"""
-                    device = next(model.parameters()).device
-                    B, N = prompt.size(0), prompt.size(1)
 
-                    # ========== Prefill 阶段 ==========
-                    torch.cuda.synchronize()
-                    t_start = time.time()
+def simulate_inference(model, prompt, max_new_tokens=20):
+    """模拟完整推理流程：Prefill + Decode"""
+    device = next(model.parameters()).device
+    B, N = prompt.size(0), prompt.size(1)
 
-                    with torch.no_grad():
-                        logits, (k_cache, v_cache) = model(prompt, use_cache=False)
-                        first_token_logits = logits[:, -1, :] # 取最后一个位置的 logits
+    # ========== Prefill 阶段 ==========
+    torch.cuda.synchronize()
+    t_start = time.time()
 
-                        torch.cuda.synchronize()
-                        ttft = (time.time() - t_start) * 1000 # ms
+    with torch.no_grad():
+        logits, (k_cache, v_cache) = model(prompt, use_cache=False)
+        first_token_logits = logits[:, -1, :]  # 取最后一个位置的 logits
 
-                        print(f"=== Prefill Phase ===")
-                        print(f" Input shape: {tuple(prompt.shape)}")
-                        print(f" TTFT: {ttft:.3f} ms")
-                        print(f" KV Cache shape: {tuple(k_cache.shape)}")
+    torch.cuda.synchronize()
+    ttft = (time.time() - t_start) * 1000  # ms
 
-                        # ========== Decode 阶段 ==========
-                        generated = []
-                        decode_times = []
+    print(f"=== Prefill Phase ===")
+    print(f"  Input shape: {tuple(prompt.shape)}")
+    print(f"  TTFT: {ttft:.3f} ms")
+    print(f"  KV Cache shape: {tuple(k_cache.shape)}")
 
-                        # 简化：用 argmax 采样；decode 的输入用随机向量模拟新生成 token 的 embedding
-                        next_token = first_token_logits.argmax(dim=-1, keepdim=True)
-                        generated.append(next_token.item())
+    # ========== Decode 阶段 ==========
+    generated = []
+    decode_times = []
 
-                        for step in range(max_new_tokens - 1):
-                            next_token_emb = model.qkv.weight.new_zeros(B, 1, model.d_model).normal_(0, 0.02)
+    # 简化：用 argmax 采样；decode 的输入用随机向量模拟新生成 token 的 embedding
+    next_token = first_token_logits.argmax(dim=-1, keepdim=True)
+    generated.append(next_token.item())
 
-                            torch.cuda.synchronize()
-                            t_start = time.time()
+    for step in range(max_new_tokens - 1):
+        next_token_emb = model.qkv.weight.new_zeros(B, 1, model.d_model).normal_(0, 0.02)
 
-                            with torch.no_grad():
-                                logits, (k_cache, v_cache) = model(
-                                next_token_emb, use_cache=True, k_cache=k_cache, v_cache=v_cache
-                                )
-                                next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
+        torch.cuda.synchronize()
+        t_start = time.time()
 
-                                torch.cuda.synchronize()
-                                decode_times.append((time.time() - t_start) * 1000)
-                                generated.append(next_token.item())
+        with torch.no_grad():
+            logits, (k_cache, v_cache) = model(
+                next_token_emb, use_cache=True, k_cache=k_cache, v_cache=v_cache
+            )
+            next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
 
-                                print(f"\n=== Decode Phase ===")
-                                print(f" Generated {len(generated)} tokens")
-                                print(f" Mean TBT: {sum(decode_times)/len(decode_times):.3f} ms")
-                                print(f" Max TBT: {max(decode_times):.3f} ms")
-                                print(f" Min TBT: {min(decode_times):.3f} ms")
-                                print(f" Generated token IDs: {generated}")
+        torch.cuda.synchronize()
+        decode_times.append((time.time() - t_start) * 1000)
+        generated.append(next_token.item())
 
-                                return ttft, decode_times
+    print(f"\n=== Decode Phase ===")
+    print(f"  Generated {len(generated)} tokens")
+    print(f"  Mean TBT: {sum(decode_times)/len(decode_times):.3f} ms")
+    print(f"  Max TBT: {max(decode_times):.3f} ms")
+    print(f"  Min TBT: {min(decode_times):.3f} ms")
+    print(f"  Generated token IDs: {generated}")
 
-                                def profile_phase(model, x, name, n_iter=10):
-                                    """Profile 一个阶段"""
-                                    for _ in range(3):
-                                        _ = model(x)
-                                        torch.cuda.synchronize()
+    return ttft, decode_times
 
-                                        start = torch.cuda.Event(enable_timing=True)
-                                        end = torch.cuda.Event(enable_timing=True)
-                                        start.record()
-                                        for _ in range(n_iter):
-                                            with torch.no_grad():
-                                                _ = model(x)
-                                                end.record()
-                                                torch.cuda.synchronize()
-                                                ms = start.elapsed_time(end) / n_iter
-                                                print(f"{name}: {ms:.3f} ms")
-                                                return ms
 
-                                                def main():
-                                                    torch.manual_seed(42)
-                                                    device = "cuda"
-                                                    d_model, n_heads = 512, 8
-                                                    model = MiniTransformer(d_model, n_heads).to(device).eval().half()
+def profile_phase(model, x, name, n_iter=10):
+    """Profile 一个阶段"""
+    for _ in range(3):
+        _ = model(x)
+    torch.cuda.synchronize()
 
-                                                    # Prefill: 处理长 prompt
-                                                    N = 1024
-                                                    prompt = torch.randn(1, N, d_model, device=device, dtype=torch.float16)
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
+    start.record()
+    for _ in range(n_iter):
+        with torch.no_grad():
+            _ = model(x)
+    end.record()
+    torch.cuda.synchronize()
+    ms = start.elapsed_time(end) / n_iter
+    print(f"{name}: {ms:.3f} ms")
+    return ms
 
-                                                    print(f"Model: d_model={d_model}, n_heads={n_heads}")
-                                                    print(f"Prompt length: {N}\n")
 
-                                                    simulate_inference(model, prompt, max_new_tokens=10)
+def main():
+    torch.manual_seed(42)
+    device = "cuda"
+    d_model, n_heads = 512, 8
+    model = MiniTransformer(d_model, n_heads).to(device).eval().half()
 
-                                                    # 单独 profile prefill vs decode
-                                                    print("\n=== Standalone Profiling ===")
-                                                    profile_phase(model, prompt, f"Prefill (N={N})")
+    # Prefill: 处理长 prompt
+    N = 1024
+    prompt = torch.randn(1, N, d_model, device=device, dtype=torch.float16)
 
-                                                    decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
-                                                    profile_phase(model, decode_input, f"Decode single token")
+    print(f"Model: d_model={d_model}, n_heads={n_heads}")
+    print(f"Prompt length: {N}\n")
 
-                                                    if __name__ == "__main__":
-                                                        main()
+    simulate_inference(model, prompt, max_new_tokens=10)
+
+    # 单独 profile prefill vs decode
+    print("\n=== Standalone Profiling ===")
+    profile_phase(model, prompt, f"Prefill (N={N})")
+
+    decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
+    profile_phase(model, decode_input, f"Decode single token")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 代码要点：

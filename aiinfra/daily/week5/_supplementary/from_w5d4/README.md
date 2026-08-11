@@ -6,7 +6,7 @@
 
 1. 从 FlashAttention 中提炼出通用的 **IO 优化方法论**——Tiling、Online Algorithm、Kernel Fusion、Recomputation、Async Copy、Data Layout 六大策略<br>
 2. 建立 IO 优化的 **场景决策树**，拿到任意 memory-bound 算子能判断用哪种策略<br>
-3. 系统梳理 Week 4 的核心知识链：论文精读 → online softmax → 手写 Kernel → 官方源码 → FA2 改进 → Mini 引擎集成 → 性能对比<br>
+3. 系统梳理 Week 5 的核心知识链：论文精读 → online softmax → 手写 Kernel → 官方源码 → FA2 改进 → Mini 引擎集成 → 性能对比<br>
 4. 整理本周所有产出（Kernel、引擎、benchmark 报告），形成可复用的工程资产<br>
 5. 回顾本周 15 道面试题，建立 FlashAttention 与 IO 优化的答题框架<br>
 6. 为 Week 5 的推理系统学习做好知识衔接，明确 KV Cache、vLLM、Continuous Batching 的前置基础
@@ -15,13 +15,13 @@
 
 ---
 
-### Week 4 知识地图
+### Week 5 知识地图
 
-![FlashAttention Tiling 与线程映射](../../../week4/images/flash_attention_tiling.svg)
+![FlashAttention Tiling 与线程映射](../../images/flash_attention_tiling.svg)
 
-Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
+Week 5 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel 到系统集成，建立 IO 优化的系统方法论**。
 
-![Week 4 学习主线](../../../images/week4_learning_pipeline.svg)
+![Week 5 学习主线](../../images/week5_knowledge_map.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -33,7 +33,7 @@ Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel �
 | Day 6 | 性能对比分析 | benchmark 报告 | 3-way 对比、ncu 验证 O(Nd)、speedup 矩阵 |
 | **Day 7** | **IO 优化方法论总结** | **方法论 checklist** | **六大策略 + 决策树** |
 
-> 💡 **一句话总结**：Week 4 的本质是"理解 FlashAttention 为什么快，并建立可迁移的 IO 优化方法论"。Day 7 的方法论 checklist 就是这 7 天学习的最终答卷。
+> 💡 **一句话总结**：Week 5 的本质是"理解 FlashAttention 为什么快，并建立可迁移的 IO 优化方法论"。Day 7 的方法论 checklist 就是这 7 天学习的最终答卷。
 
 ---
 
@@ -41,7 +41,7 @@ Week 4 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel �
 
 #### 1. FlashAttention 的核心思想：减少 HBM 访问
 
-![标准 Attention vs FlashAttention IO 对比](../../../week4/images/flash_attention_naive_vs_fused.svg)
+![标准 Attention vs FlashAttention IO 对比](../../images/hbm_comparison.svg)
 
 ```
 标准 Attention：
@@ -60,7 +60,7 @@ FlashAttention：
 
 #### 2. Online Softmax 三公式
 
-![Online Softmax 递推更新流程](../../../week4/images/flash_attention_online_update.svg)
+![Online Softmax 递推更新流程](../../images/flash_attention_online_update.svg)
 
 ```
 公式1: m_new = max(m, max(xj))
@@ -93,7 +93,7 @@ FlashAttention：
 
 ### IO 优化方法论：六大策略决策树
 
-![O(N²) vs O(Nd) IO 增长对比](../../../week4/images/on2_vs_ond_scaling.svg)
+![O(N²) vs O(Nd) IO 增长对比](../../images/on2_vs_ond_scaling.svg)
 
 从 FlashAttention 中提炼的通用 IO 优化方法论——适用于任何 memory-bound 算子：
 
@@ -256,17 +256,17 @@ CNN 中的 conv + bn + relu 融合：未融合时写卷积结果到 HBM，BN 再
 
 ---
 
-### Week 4 → Week 5 衔接
+### Week 5 → Week 6 衔接
 
-Week 5 我们将学习 **推理系统**。为了做好准备，请确保你掌握了：
+Week 6 我们将学习 **推理系统**。为了做好准备，请确保你掌握了：
 
-1. **FlashAttention 原理与实现**（Day 1-2）：推理引擎的 Attention 算子基础
+1. **FlashAttention 原理与实现**（Day 1-3）：推理引擎的 Attention 算子基础
 2. **IO 优化方法论**（Day 7）：推理系统的通用优化工具箱
 3. **Kernel 集成**（Day 5）：自定义算子接入框架的工程能力
-4. **ncu 性能分析**（Day 6）：推理性能瓶颈定位
-5. **Prefill vs Decode**（Week 3 Day 1）：推理两阶段的性能特征差异
+4. **ncu 性能分析**（Day 5）：推理性能瓶颈定位
+5. **Prefill vs Decode**（Week 4 Day 1）：推理两阶段的性能特征差异
 
-如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 5 会从 KV Cache 开始，逐步搭建推理系统的完整图景。
+如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 6 会从 KV Cache 开始，逐步搭建推理系统的完整图景。
 
 ---
 
@@ -284,7 +284,7 @@ Week 5 我们将学习 **推理系统**。为了做好准备，请确保你掌�
 
 ### 今日总结
 
-Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
+Day 7 我们完成了 Week 5 的系统复盘与 IO 优化方法论提炼：
 
 1. **FlashAttention 核心思想**：Tiling + Online Softmax，把 HBM IO 从 O(N²) 降到 O(Nd)，速度来源是减少数据移动而非减少计算
 2. **Online Softmax 三公式**：`m_new`/`l_new`/`o_new` 递推更新，`exp(m-m_new)` 统一参考点缩放因子
@@ -293,7 +293,7 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 5. **IO 优化六大策略**：Tiling、Online Algorithm、Kernel Fusion、Recomputation、Data Layout、Async Copy——适用于任何 memory-bound 算子
 6. **决策树**：拿到任意 memory-bound 算子，先判能否 tiling、再判能否 fusion、再判能否 recomputation
 
-如果你能清晰回答"FlashAttention 为什么快，以及 IO 优化的六大策略是什么"，说明 Week 4 过关了。
+如果你能清晰回答"FlashAttention 为什么快，以及 IO 优化的六大策略是什么"，说明 Week 5 过关了。
 
 ---
 
@@ -387,32 +387,27 @@ Day 7 我们完成了 Week 4 的系统复盘与 IO 优化方法论提炼：
 ## 📁 本周目录结构
 
 ```
-week4/
-├── README.md # Week 4 概览
-├── day1/ # Day 1: FlashAttention 论文精读
-│ ├── README.md
-│ └── kernels/compare_attention_io.py
-├── day2/ # Day 2: 手写完整 Forward Kernel
-│ ├── README.md
-│ └── kernels/flash_attention_v2.cu
-├── day3/ # Day 3: 官方 CUDA 源码分析
-│ ├── README.md
-│ └── notes/source_analysis.md
-├── day4/ # Day 4: FlashAttention-2 论文
-│ ├── README.md
-│ └── notes/fa2_paper_notes.md
-├── day5/ # Day 5: 算子接入 Mini 引擎
-│ ├── README.md
-│ └── kernels/mini_engine_fa.py
-├── day6/ # Day 6: 性能对比分析
-│ ├── README.md
-│ └── kernels/benchmark_flash_attention.py
-├── day7/ # Day 7: IO 优化方法论总结
-│ ├── README.md
-│ └── notes/io_optimization_methodology.md
-└── website/ # 网站构建
- ├── build.py
- └── images/ # SVG 插图
+week5/
+├── README.md                      # Week 5 概览
+├── day1/                          # Day 1: FlashAttention 简化版 + IO 分析
+│   ├── README.md
+│   └── kernels/flash_attention.cu
+├── day2/                          # Day 2: 论文精读 + Online Softmax 推导
+│   └── README.md
+├── day3/                          # Day 3: 手写完整 Forward Kernel
+│   ├── README.md
+│   └── kernels/flash_attention_v2.cu
+├── day4/                          # Day 4: FA Backward + GEMM Backward
+│   ├── README.md
+│   └── kernels/
+├── day5/                          # Day 5: 性能对比 benchmark
+│   ├── README.md
+│   └── kernels/benchmark_flash_attention.py
+├── day6/                          # Day 6: FA-2/FA-3 演进
+│   └── README.md
+├── day7/                          # Day 7: 复盘 + 限时手撕
+│   └── README.md
+└── images/                        # SVG 插图
 ```
 
 ---
@@ -435,13 +430,13 @@ week4/
 
 **题目链接**：<https://leetgpu.com/challenges/gpt-2-transformer-block>
 
-**与今日知识的关联**：GPT-2 Transformer Block 是 Week 4 IO 优化主线的终极验收——融合了 FlashAttention（Week 4 核心）+ LayerNorm（Week 3）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
+**与今日知识的关联**：GPT-2 Transformer Block 是 Week 5 IO 优化主线的终极验收——融合了 FlashAttention（Week 5 核心）+ LayerNorm（Week 4）+ GEMM（Week 2）+ Causal Mask。每个子算子的 HBM 访问模式都对应今天总结的 IO 优化方法论。
 
 > 💡 完整题解见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
 ---
 
-## ✅ Week 4 完成标准
+## ✅ Week 5 完成标准
 
 - [ ] 能白板推导 online softmax 三公式（m_new / l_new / o_new）
 - [ ] 手写 FlashAttention Kernel 在 N=256 时与 CPU 误差 < 1e-3
@@ -457,4 +452,4 @@ week4/
 
 ---
 
-> 💡 **提示**：Week 4 是 10 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 5 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。
+> 💡 **提示**：Week 5 是 10 周计划里难度最高也最核心的一周。FlashAttention 是推理系统面试的第一考点，IO 优化方法论是系统优化的通用工具箱。如果 online softmax 三公式还不熟练，建议回到 Day 1 重新推导。Week 6 将进入推理系统，把本周的 FlashAttention 和 IO 优化知识应用到 KV Cache、vLLM 等实际推理场景。

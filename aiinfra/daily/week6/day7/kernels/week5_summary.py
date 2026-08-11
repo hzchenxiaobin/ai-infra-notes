@@ -1,4 +1,4 @@
-# week5_summary.py —— Week 5 推理系统核心问题与面试题自测（总结日脚本）
+# week5_summary.py —— Week 6 推理系统核心问题与面试题自测（总结日脚本）
 # 运行命令: python week5_summary.py
 # 依赖: 仅标准库
 #
@@ -81,8 +81,9 @@ INTERVIEW_QUESTIONS = [
     ("Copy-on-Write 应用场景？", "Day4", "beam/并行采样共享prompt block，写入时复制"),
     ("如何构建最简单的推理引擎？", "Day5", "Tokenizer+模型后端+KVCache+采样器+循环 5组件"),
     ("Prefill/Decode 各存什么到KV Cache？", "Day5", "Prefill存N个token的K/V，Decode每步追加1个"),
-    ("如何做端到端 profiling？", "Day6", "nsys→cuda.Event→ncu 三层方法论"),
-    ("TBT 为什么随序列长度增长？", "Day6", "读KV Cache随L增长→memory-bound；优化:量化/GQA/滑窗"),
+    ("如何做端到端 profiling？", "Day1/6", "nsys→cuda.Event→ncu 三层方法论"),
+    ("TBT 为什么随序列长度增长？", "Day1/6", "读KV Cache随L增长→memory-bound；优化:量化/GQA/滑窗"),
+    ("FlashDecoding 解决什么问题？", "Day6", "M=1时切KV序列到多SM并行，跨block online softmax合并"),
     ("推理系统四大核心问题？", "Day7", "内存管理/Batch策略/Latency隐藏/调度开销"),
     ("Continuous vs Dynamic Batching？", "Day7", "Dynamic请求级聚合,Continuous每轮重建batch"),
 ]
@@ -146,13 +147,13 @@ def print_cheatsheet():
 
 
 def main():
-    print("Week 5 Day 7 —— 推理系统核心问题总结与面试复盘")
+    print("Week 6 Day 7 —— 推理系统核心问题总结与面试复盘")
     print()
     print_core_problems()
     print_cheatsheet()
     print_all_questions()
     self_test(num=5)
-    print("\n✅ Week 5 总结完成。进入 Week 6：Batching & 调度优化。")
+    print("\n✅ Week 6 总结完成。进入 Week 7：Batching & 调度优化。")
 
 
 if __name__ == "__main__":

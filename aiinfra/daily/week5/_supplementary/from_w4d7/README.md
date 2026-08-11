@@ -289,7 +289,7 @@ ncu --metrics \
 
 ### 今日总结
 
-Day 3 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与官方版的差距：
+Day 7 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与官方版的差距：
 
 1. **Kernel_traits 模板**：官方用模板参数组织 Br/Bc/d/Warps，d 越大 Bc 越小（smem 约束），warps 越多（并行度补偿）
 2. **cp_async 异步拷贝**：官方用 `cp_async` + 双缓冲让 global→shared 加载与计算重叠，隐藏内存延迟 +30-50%
@@ -298,7 +298,7 @@ Day 3 我们阅读了 FlashAttention 官方 CUDA 源码，找到了手写版与�
 5. **混合精度 + Tensor Core**：官方用 FP16/BF16 输入 + FP32 累加 + WMMA 指令，带宽翻倍且峰值算力 4-8x
 6. **差距本质**：算法相同（三公式），差距全在工程细节——async copy、双缓冲、K-V 复用、Tensor Core 逐个抠到极致
 
-掌握这些后，你就理解了"为什么官方 FlashAttention 比手写快 3-5x"。明天学 FA2 改进，会看到 work partitioning 的进一步优化。
+掌握这些后，你就理解了"为什么官方 FlashAttention 比手写快 3-5x"。FA2 的 work partitioning 改进见 Day 6。
 
 ---
 

@@ -314,7 +314,7 @@ at::Tensor flash_attention_forward(at::Tensor Q, at::Tensor K, at::Tensor V) {
     TORCH_CHECK(V.is_contiguous(), "V must be contiguous");
     int B = Q.size(0), H = Q.size(1), N = Q.size(2), D = Q.size(3);
     auto O = at::empty_like(Q);
-    dim3 grid(N / 64, B * H);
+    dim3 grid((N + 63) / 64, H, B);
     dim3 block(256);
     auto stream = at::cuda::getCurrentCUDAStream();
     flashAttentionForward<<<grid, block, 0, stream>>>(

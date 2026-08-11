@@ -23,9 +23,9 @@ Day 4 结束时，我们有了 KV Cache 类、PagedAttention kernel、Scheduler 
 | Day1 | Prefill/Decode 两阶段分析 | 引擎的 `generate` 主体就是这两阶段 |
 | Day2 | KVCache 类（append/get_cache/reset） | 引擎在 Prefill 填充、Decode 追加 |
 | Day3 | LLMEngine + Scheduler + Worker | Mini 引擎的架构蓝本（简化为单请求） |
-| Day4 | PagedAttention kernel | Week7 替换 PyTorch 后端时用（v0 用 PyTorch） |
+| Day4 | PagedAttention kernel | Week 7 替换 PyTorch 后端时用（v0 用 PyTorch） |
 
-Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching）、**PyTorch 后端**（Week7 换自定义 kernel）、**argmax 采样**（暂不做 temperature/top-k）。这是最小可运行版本——目标是跑通"encode → prefill → decode loop → decode"的完整闭环，验证 KV Cache 的正确性与收益。后续 Day6 做端到端 profiling，Week7+ 逐步替换后端、加多请求调度。
+Mini 引擎 v0 的设计取舍：**单请求**（暂不做 Continuous Batching）、**PyTorch 后端**（Week 7 换自定义 kernel）、**argmax 采样**（暂不做 temperature/top-k）。这是最小可运行版本——目标是跑通"encode → prefill → decode loop → decode"的完整闭环，验证 KV Cache 的正确性与收益。后续 Day 6 做端到端 profiling，Week 7+ 逐步替换后端、加多请求调度。
 
 > 💡 **一句话总结**：Mini 引擎 v0 = Tokenizer + 模型后端（PyTorch）+ KV Cache + 采样器 + Prefill/Decode 循环。它把 Day1-4 的零件组装成一辆能跑的车，用"单请求 + PyTorch"的最简组合验证推理引擎的核心闭环。
 
@@ -130,7 +130,7 @@ Round 2: User: "请介绍一下 FlashAttention"
  → 大幅降低 Round2 的 TTFT
 ```
 
-实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week6 再加。
+实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week 7 再加。
 
 ### Coding 任务：构建 Mini 推理引擎 v0
 
@@ -166,111 +166,147 @@ class MiniTransformerLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.ffn = nn.Sequential(
-        nn.Linear(d_model, d_ff),
-        nn.GELU(),
-        nn.Linear(d_ff, d_model),
+            nn.Linear(d_model, d_ff),
+            nn.GELU(),
+            nn.Linear(d_ff, d_model),
         )
 
-        def forward(self, x, kv_cache=None, use_cache=False):
-            B, N, _ = x.shape
-            x_norm = self.norm1(x)
-            qkv = self.qkv(x_norm)
-            qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
-            q, k, v = qkv[0], qkv[1], qkv[2]
+    def forward(self, x, kv_cache=None, use_cache=False):
+        """
+        x: (B, N, d_model)
+        kv_cache: (k_cache, v_cache) 各 shape (B, H, L, d_head)，或 None
+        返回: x, (new_k, new_v)
+        """
+        B, N, _ = x.shape
 
-            if use_cache and kv_cache is not None:
-                k_cache, v_cache = kv_cache
-                k = torch.cat([k_cache, k], dim=2) # 拼历史 cache
-                v = torch.cat([v_cache, v], dim=2)
+        x_norm = self.norm1(x)
+        qkv = self.qkv(x_norm)
+        qkv = qkv.reshape(B, N, 3, self.n_heads, self.d_head).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]   # (B, H, N, d_head)
 
-                scale = self.d_head ** -0.5
-                attn = torch.matmul(q, k.transpose(-2, -1)) * scale
-                attn = F.softmax(attn, dim=-1)
-                out = torch.matmul(attn, v)
+        if use_cache and kv_cache is not None:
+            # Decode: 把新 K/V 拼到历史 cache 后面
+            k_cache, v_cache = kv_cache
+            k = torch.cat([k_cache, k], dim=2)   # (B, H, L+N, d_head)
+            v = torch.cat([v_cache, v], dim=2)
 
-                out = out.transpose(1, 2).reshape(B, N, self.d_model)
-                x = x + self.out(out)
-                x = x + self.ffn(self.norm2(x))
-                return x, (k, v)
+        scale = self.d_head ** -0.5
+        attn = torch.matmul(q, k.transpose(-2, -1)) * scale   # (B, H, N, L+N)
+        attn = F.softmax(attn, dim=-1)
+        out = torch.matmul(attn, v)   # (B, H, N, d_head)
 
-                class MiniLLM(nn.Module):
-                    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
-                        super().__init__()
-                        self.embedding = nn.Embedding(vocab_size, d_model)
-                        self.layers = nn.ModuleList([
-                        MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
-                        ])
-                        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+        out = out.transpose(1, 2).reshape(B, N, self.d_model)
+        x = x + self.out(out)
+        x = x + self.ffn(self.norm2(x))
 
-                        def forward(self, input_ids, kv_cache=None, use_cache=False):
-                            x = self.embedding(input_ids)
-                            new_kv_cache = []
-                            for i, layer in enumerate(self.layers):
-                                layer_cache = kv_cache[i] if kv_cache is not None else None
-                                x, layer_new_cache = layer(x, layer_cache, use_cache)
-                                new_kv_cache.append(layer_new_cache)
-                                logits = self.lm_head(x)
-                                return logits, new_kv_cache
+        return x, (k, v)
 
-                                class MiniTokenizer:
-                                    def __init__(self, vocab_size=1000):
-                                        self.vocab_size = vocab_size
-                                        self.word_to_id = {}
-                                        self.id_to_word = {}
-                                        self.next_id = 1
 
-                                        def encode(self, text: str) -> List[int]:
-                                            tokens = []
-                                            for word in text.lower().split():
-                                                if word not in self.word_to_id:
-                                                    if self.next_id >= self.vocab_size:
-                                                        break
-                                                        self.word_to_id[word] = self.next_id
-                                                        self.id_to_word[self.next_id] = word
-                                                        self.next_id += 1
-                                                        tokens.append(self.word_to_id[word])
-                                                        return tokens
+class MiniLLM(nn.Module):
+    """最小 LLM：embedding + n_layers 层 transformer + lm_head"""
 
-                                                        def decode(self, ids: List[int]) -> str:
-                                                            return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+    def __init__(self, vocab_size=1000, d_model=512, n_heads=8, d_ff=2048, n_layers=4):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.n_layers = n_layers
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.layers = nn.ModuleList([
+            MiniTransformerLayer(d_model, n_heads, d_ff) for _ in range(n_layers)
+        ])
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
 
-                                                            class MiniEngineV0:
-                                                                """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+    def forward(self, input_ids, kv_cache=None, use_cache=False):
+        """
+        input_ids: (B, N)
+        kv_cache: list of (k,v) per layer, 或 None
+        返回: logits (B, N, vocab), new_kv_cache
+        """
+        x = self.embedding(input_ids)   # (B, N, d)
 
-                                                                def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
-                                                                    self.model = model.to(device).eval()
-                                                                    self.tokenizer = tokenizer
-                                                                    self.device = device
+        new_kv_cache = []
+        for i, layer in enumerate(self.layers):
+            layer_cache = kv_cache[i] if kv_cache is not None else None
+            x, layer_new_cache = layer(x, layer_cache, use_cache)
+            new_kv_cache.append(layer_new_cache)
 
-                                                                    @torch.no_grad()
-                                                                    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
-                                                                        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+        logits = self.lm_head(x)   # (B, N, vocab)
+        return logits, new_kv_cache
 
-                                                                        # ========== Prefill ==========
-                                                                        logits, kv_cache = self.model(input_ids, use_cache=True)
-                                                                        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                        generated_ids = [next_token.item()]
 
-                                                                        # ========== Decode Loop ==========
-                                                                        for _ in range(max_new_tokens - 1):
-                                                                            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
-                                                                            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                            generated_ids.append(next_token.item())
+# ============================================================
+# Tokenizer（最简：空格分词 + 动态 vocab）
+# ============================================================
 
-                                                                            return self.tokenizer.decode(generated_ids)
+class MiniTokenizer:
+    """最简 tokenizer：按空格切词，动态分配 token id"""
 
-                                                                            @torch.no_grad()
-                                                                            def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
-                                                                                """对照版：不用 KV Cache，每步重算完整历史"""
-                                                                                input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
-                                                                                current_ids = input_ids.clone()
-                                                                                generated = []
-                                                                                for _ in range(max_new_tokens):
-                                                                                    logits, _ = self.model(current_ids, use_cache=False)
-                                                                                    next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
-                                                                                    generated.append(next_token.item())
-                                                                                    current_ids = torch.cat([current_ids, next_token], dim=1)
-                                                                                    return generated
+    def __init__(self, vocab_size=1000):
+        self.vocab_size = vocab_size
+        self.word_to_id = {}
+        self.id_to_word = {}
+        self.next_id = 1   # 0 留给 <unk>
+
+    def encode(self, text: str) -> List[int]:
+        tokens = []
+        for word in text.lower().split():
+            if word not in self.word_to_id:
+                if self.next_id >= self.vocab_size:
+                    break
+                self.word_to_id[word] = self.next_id
+                self.id_to_word[self.next_id] = word
+                self.next_id += 1
+            tokens.append(self.word_to_id[word])
+        return tokens
+
+    def decode(self, ids: List[int]) -> str:
+        return " ".join(self.id_to_word.get(i, f"<unk_{i}>") for i in ids)
+
+
+# ============================================================
+# Mini 推理引擎 v0（整合 Prefill/Decode + KV Cache）
+# ============================================================
+
+class MiniEngineV0:
+    """Mini 推理引擎 v0：单请求 + KV Cache + Prefill/Decode 循环"""
+
+    def __init__(self, model: MiniLLM, tokenizer: MiniTokenizer, device="cuda"):
+        self.model = model.to(device).eval()
+        self.tokenizer = tokenizer
+        self.device = device
+
+    @torch.no_grad()
+    def generate(self, prompt: str, max_new_tokens: int = 20) -> str:
+        """端到端生成：encode → prefill → decode loop → decode"""
+        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+
+        # ========== Prefill：一次性处理整段 prompt ==========
+        # use_cache=True 让每层把 prompt 的 K/V 存入 kv_cache
+        logits, kv_cache = self.model(input_ids, use_cache=True)
+        next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)  # (B,1)
+        generated_ids = [next_token.item()]
+
+        # ========== Decode Loop：每步只输入 1 个 token，复用 KV Cache ==========
+        for _ in range(max_new_tokens - 1):
+            logits, kv_cache = self.model(next_token, kv_cache=kv_cache, use_cache=True)
+            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+            generated_ids.append(next_token.item())
+
+        return self.tokenizer.decode(generated_ids)
+
+    @torch.no_grad()
+    def generate_no_cache(self, prompt: str, max_new_tokens: int = 20) -> List[int]:
+        """对照版：不用 KV Cache，每步重算完整历史"""
+        input_ids = torch.tensor([self.tokenizer.encode(prompt)], device=self.device)
+        current_ids = input_ids.clone()
+        generated = []
+        for _ in range(max_new_tokens):
+            logits, _ = self.model(current_ids, use_cache=False)
+            next_token = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)
+            generated.append(next_token.item())
+            current_ids = torch.cat([current_ids, next_token], dim=1)  # 重新拼历史
+        return generated
 ```
 
 代码要点：
@@ -315,7 +351,7 @@ Generated (with cache): is <unk_497> <unk_592> ...
 2. **生成的 token 是"乱码"**：因为模型是随机初始化的（没训练），生成无语义——我们只验证**引擎流程正确**，不关心生成质量
 3. **KV Cache 内存占用**：4 层 × 8 头 × 64 d_head × fp32 → 每 token 16 KB，4096 token 64 MB
 
-> ⚠️ **注意**：本引擎用随机初始化模型，生成无语义。要生成有意义文本需接入预训练权重（如 HuggingFace 的 GPT-2）——Week7 替换后端时再做。v0 的目标是跑通流程 + 验证 KV Cache 正确性。
+> ⚠️ **注意**：本引擎用随机初始化模型，生成无语义。要生成有意义文本需接入预训练权重（如 HuggingFace 的 GPT-2）——Week 7 替换后端时再做。v0 的目标是跑通流程 + 验证 KV Cache 正确性。
 
 #### 任务 3：用 torch.profiler 对比 Prefill/Decode 算子
 
@@ -349,7 +385,7 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=6))
 
 **与今日知识的关联**：
 
-GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
+GPT-2 Transformer Block 正是 MiniLLM 中 `n_layers` 层 transformer 的**单层手写 CUDA 版**——今天用 PyTorch 搭的 Pre-LN + self-attention + FFN 结构，这道题要求把 LN、GEMM、softmax attention、GELU、残差连接五类 kernel 正确串成一条推理管线。Week 7 替换 PyTorch 后端时，引擎的 transformer 层就要换成这样的手写 kernel 链。它体现了"引擎的每个组件都能从框架调用换成自定义 kernel"的工程演进路径。
 
 > 💡 提交后在 [LeetGPU GPT-2 Transformer Block](https://leetgpu.com/challenges/gpt-2-transformer-block) 上记录通过耗时。完整题解（含 LN/Attention/FFN 多 kernel 流水线、GELU tanh 近似、权重 offset 拆分、ncu profiling）见 [GPT-2 Transformer Block 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html)。
 
@@ -405,7 +441,7 @@ Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推�
 3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（O(N·d²) 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（O(d²) 向量×矩阵）
 4. **with/without cache 验证**：两者生成 token 序列完全一致，证明 KV Cache 只加速不改结果；without cache 的 TBT 随步数增长，with cache 基本稳定
 5. **KV Cache 内存**：每 token = 2 × n_layers × n_heads × d_head × bytes，4 层 × 8 头 × 64 d_head fp32 = 16 KB/token，4096 token 64 MB
-6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week6 加 session 管理
+6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week 7 加 session 管理
 7. **工程演进路径**：v0（单请求+PyTorch）→ v1（多请求+Continuous Batching）→ v2（自定义 kernel 替换 PyTorch）——每个组件都能独立替换优化
 
 掌握这些后，你就有了第一个可运行的推理引擎——明天 Day6 对它做端到端 profiling，测量 TTFT/TBT、定位瓶颈，为后续优化提供数据依据。
@@ -479,7 +515,7 @@ Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推�
  - Round2 的 prompt = [Round1 全部 + 新输入]，其中 Round1 部分的 K/V 已在 cache，只需 prefill 新增 token 并追加
  - 大幅降低多轮对话的 TTFT（不用把整个新 prompt 重新 prefill）
  - **前提**：Round2 prompt 必须严格是"Round1 全部 + 新输入"的拼接，格式/顺序不能变，否则 cache 的前缀对不上无法复用。生产系统用 prefix caching 显式管理
- - v0 暂每轮独立 cache（不复用），Week6 加 session 级 cache 管理
+  - v0 暂每轮独立 cache（不复用），Week 7 加 session 级 cache 管理
 
  - KV Cache 概念一致（存历史 K/V 避免重算），实现细节不同：v0 用 `torch.cat` 拼接张量，生产级用 PagedAttention 的 block 分页
 

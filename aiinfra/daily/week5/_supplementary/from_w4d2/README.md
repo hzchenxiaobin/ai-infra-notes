@@ -442,7 +442,7 @@ benchmark(compiled_model, x, "Custom + torch.compile")
 
 ### 今日总结
 
-Day 5 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
+Day 2 我们把 Day 2 的 Softmax/LayerNorm kernel 封装为 PyTorch C++ Extension，接入了 Mini Transformer Engine：
 
 1. **集成流水线**：`.cu` kernel → launch wrapper → C++ binding（`at::Tensor`）→ `load_inline` JIT 编译 → Python 调用，6 步把裸 kernel 变成框架可调用算子
 2. **三个关键 API**：`at::empty_like`（让 PyTorch 管显存）、`data_ptr<float>()`（提取裸指针）、`getCurrentCUDAStream`（保证 stream 正确）

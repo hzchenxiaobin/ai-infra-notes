@@ -10,7 +10,7 @@
 4. 能用 ncu 的 `dram__bytes_read/write` 验证实测 HBM 读写量与理论值一致（误差 < 30%）
 5. 能计算 softmax 部分的 arithmetic intensity（AI≈0.375）并判定为 memory-bound，解释 FlashAttention 的优化动机
 
-> 💡 **为什么重要**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心前置知识。不理解"物化 S/P 导致 O(N²)"，就无法理解 FlashAttention 的 online softmax + tiling 为什么能把 IO 降到 O(Nd)。今天是 Week 4 FlashAttention 深挖的最后一块基石。
+> 💡 **为什么重要**：标准 Attention 的 O(N²) IO 是 FlashAttention 的核心前置知识。不理解"物化 S/P 导致 O(N²)"，就无法理解 FlashAttention 的 online softmax + tiling 为什么能把 IO 降到 O(Nd)。今天是 Week 5 FlashAttention 深挖的最后一块基石。
 
 ---
 
@@ -415,7 +415,7 @@ done
 
 ### 今日总结
 
-Day 4 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
+Day 6 我们实现了标准 Attention Forward 并量化了它的 O(N²) IO 问题：
 
 1. **三阶段流程**：S=QK^T（写 S）→ softmax（读 S 写 P）→ PV（读 P 写 O），中间矩阵 S/P 各 N×N
 2. **O(N²) 来源**：物化两个 N×N 矩阵（S 和 P），各读写一次共 4N²，当 N >> d 时主导 IO

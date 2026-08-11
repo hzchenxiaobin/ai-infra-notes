@@ -6,7 +6,7 @@
 
 1. 能画出 **FlashAttention 知识地图**——从标准 Attention 的 O(N²) 瓶颈到 FA-3 的异步流水线完整认知链<br>
 2. 能在 60 分钟内手撕 **FA Forward 简化版 kernel 骨架**——tiling、online softmax 三公式、shared memory 布局<br>
-3. 掌握 **IO 复杂度从 O(N²d) 到 O(Nd) 的完整推导链**，能用一张图解释 FA 为什么快<br>
+3. 掌握 **IO 复杂度从 O(N²) 到 O(Nd) 的完整推导链**，能用一张图解释 FA 为什么快<br>
 4. 能回答"FA-1/2/3 各改了什么"的完整追问链<br>
 5. 能用一句话定位 FA 的核心价值——"FA 不是减少 FLOPs，是减少 HBM 访问"<br>
 
@@ -40,7 +40,7 @@ FlashAttention 全专题
 │  问题层：标准 Attention 的 O(N²) 瓶颈                           │
 │  S = QK^T (N×N) → softmax → P (N×N) → O = PV (N×d)             │
 │  HBM IO: 读 Q/K/V (3Nd) + 写 S (N²) + 读 S (N²) + 写 P (N²)     │
-│         + 读 P (N²) + 读 V (Nd) + 写 O (Nd) ≈ O(N²d)            │
+│         + 读 P (N²) + 读 V (Nd) + 写 O (Nd) ≈ O(N²)              │
 │  瓶颈: N² 的中间矩阵 S/P 在 HBM↔SRAM 间反复搬运                │
 └───────────────────────────┬─────────────────────────────────────┘
                             ↓
@@ -51,13 +51,13 @@ FlashAttention 全专题
 │     - m_new = max(m, rowmax(S_block))                           │
 │     - l_new = l * exp(m - m_new) + rowsum(exp(S_block - m_new)) │
 │     - O_new = O * exp(m - m_new) / l_new + exp(S_block - m_new) @ V │
-│  3. IO 复杂度: O(Nd²) (d 为 head dim，M=SRAM 大小时 O(Nd²/M))  │
+│  3. IO 复杂度: O(Nd) (d 为 head dim，M=SRAM 大小时严格界 Θ(N²d²/M))  │
 └───────────────────────────┬─────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │  实现演进                                                        │
 │  FA-1 (2022): 分块 + online softmax, warp 共享 Q tile            │
-│    → IO O(Nd²), 但 non-matmul FLOPs 多, 跨 warp 同步            │
+│    → IO O(Nd), 但 non-matmul FLOPs 多, 跨 warp 同步            │
 │  FA-2 (2023): warp group 子块划分, Q 行方向切分                  │
 │    → non-matmul FLOPs 减半, 消除跨 warp 同步, occupancy 提升     │
 │  FA-3 (2024): Hopper 专属, 异步流水 + FP8                       │
@@ -69,15 +69,15 @@ FlashAttention 全专题
 
 | 实现 | HBM IO | 中间矩阵 | FLOPs | 关键改变 |
 |------|--------|---------|-------|---------|
-| 标准 Attention | O(N²d) | S/P 物化到 HBM | 2N²d | — |
-| FA-1 Forward | O(Nd²) | 不物化 | 2N²d | 分块 + online softmax |
-| FA-1 Backward | O(Nd²) | 重算 S/P | 2N²d | 重算代替存储 |
-| FA-2 | O(Nd²) | 不物化 | 2N²d | 减少 non-matmul FLOPs |
-| FA-3 (Hopper) | O(Nd²) | 不物化 | 2N²d | TMA 异步 + FP8 |
+| 标准 Attention | O(N²+Nd) | S/P 物化到 HBM | 2N²d | — |
+| FA-1 Forward | O(Nd) | 不物化 | 2N²d | 分块 + online softmax |
+| FA-1 Backward | O(Nd) | 重算 S/P | 2N²d | 重算代替存储 |
+| FA-2 | O(Nd) | 不物化 | 2N²d | 减少 non-matmul FLOPs |
+| FA-3 (Hopper) | O(Nd) | 不物化 | 2N²d | TMA 异步 + FP8 |
 
 > 💡 **关键洞察**：FA 的 FLOPs 与标准 Attention **相同**（2N²d），加速完全来自减少 HBM IO。面试时务必强调"FA 不是减少计算量，是减少内存访问量"。
 
-### 性能对比总表（Day 5 实测口径）
+### 性能对比总表（预估口径，待实测回填）
 
 | 实现 | N=2048 latency | N=8192 latency | HBM IO (N=8192) | cuBLAS/官方占比 |
 |------|---------------|---------------|----------------|---------------|
@@ -241,7 +241,7 @@ Backward 输入: dO
     dQ += dS @ K                   # 累加 dQ
     dK += dS^T @ Q                 # 累加 dK
 
-关键: 每个元素只被访问常数次, IO 仍 O(Nd²)
+关键: 每个元素只被访问常数次, IO 仍 O(Nd)
 代价: 重算增加 FLOPs, 但 FLOPs 便宜(算力 >> 带宽)
 ```
 
@@ -255,7 +255,7 @@ Backward 输入: dO
 <summary>答案</summary>
 
 - **核心思想**：分块计算 Attention，不物化 N×N 的中间矩阵 S/P 到 HBM
-- **加速原因**：标准 Attention 的 HBM IO 是 O(N²d)（S/P 矩阵反复读写），FA 降到 O(Nd²)
+- **加速原因**：标准 Attention 的 HBM IO 是 O(N²)（S/P 矩阵反复读写），FA 降到 O(Nd)
 - **关键**：FA 的 FLOPs 与标准 Attention **相同**（2N²d），加速完全来自减少 HBM 访问
 - **一句话**：FA 不是减少计算量，是减少内存访问量——把 N² 的中间矩阵留在 SRAM 里
 
@@ -278,8 +278,8 @@ Backward 输入: dO
 <summary>答案</summary>
 
 - **严格界**：`Θ(N²d²/M)`，M = SRAM 大小
-- **简化**：取 `M = Θ(d²)`（SRAM 能放下 `Br=Bc=d` 的 tile），则 IO = `Θ(Nd²)`
-- **对比**：标准 Attention 是 `Θ(N²d)`，FA 是 `Θ(Nd²)`，当 d << N 时（d=64, N=4096）FA 快 `N/d = 64x`
+- **简化**：取 `M = Θ(Nd)`（SRAM 能放下 Q/K/V tile），则 IO = `Θ(Nd)`
+- **对比**：标准 Attention 是 `Θ(N² + Nd)` ≈ `Θ(N²)`，FA 是 `Θ(Nd)`，当 d << N 时（d=64, N=4096）FA 快 `N/d = 64x`
 - **推导**：Q 只读一次（Nd），K/V 读 `N/Br` 次（每次 Bc 行 = `N/Br × Bc×d = Nd`），总 IO = `Nd + Nd + Nd = O(Nd)`
 
 </details>
@@ -291,7 +291,7 @@ Backward 输入: dO
 
 - **不存的原因**：S/P 是 N×N 矩阵，存到 HBM 就是 O(N²) IO，等于把 FA 的 IO 优势全部抵消
 - **重算的代价**：FLOPs 增加（重算 `QK^T` 和 `softmax`），但 FLOPs 便宜（算力 >> 带宽）
-- **重算的 IO**：每个 Q/K/V 元素被访问常数次（取决于 tiling），总 IO 仍 O(Nd²)
+- **重算的 IO**：每个 Q/K/V 元素被访问常数次（取决于 tiling），总 IO 仍 O(Nd)
 - **Forward 保存什么**：Q, K, V, O, m, l（共 O(Nd)），backward 时用 m/l 重算 P
 
 </details>
@@ -397,9 +397,9 @@ Backward 输入: dO
 
 ### 本周复盘 Checklist
 
-- [ ] 能解释标准 Attention 的 O(N²d) IO 瓶颈（S/P 矩阵物化）
+- [ ] 能解释标准 Attention 的 O(N²) IO 瓶颈（S/P 矩阵物化）
 - [ ] 能推导 online softmax 三公式（m_new / l_new / O_new）
-- [ ] 能解释 FA 为什么 FLOPs 不变但 IO 降到 O(Nd²)
+- [ ] 能解释 FA 为什么 FLOPs 不变但 IO 降到 O(Nd)
 - [ ] 能写出 FA Forward kernel 的 tiling + smem 布局
 - [ ] 能解释 FA backward 为什么要重算 S/P（存的话 IO 变 O(N²)）
 - [ ] 能说出 FA-1 → FA-2 → FA-3 各改了什么
