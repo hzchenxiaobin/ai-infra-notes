@@ -211,7 +211,9 @@ Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
 Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 ```
 
-> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这是 LayerNorm 比 Softmax 多一次 HBM 全局读的根本原因——除非用 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
+> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这使得 LayerNorm 无法像 Softmax 那样用简单的 online 公式把两遍 reduce 压成一遍——Softmax 的 running max/sum 重整只需一次 `exp(m_old - m_new)` 修正，而 LayerNorm 的 mean/variance 合并需要更复杂的 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
+>
+> 💡 **关于读次数的澄清**：本文档的默认实现里，Softmax（三遍扫描）和 LayerNorm（两次 reduce + 输出）都是从 HBM 读 3 次，二者相等。"多一次"只在拿 online Softmax（2 次读）去比 naive LayerNorm（3 次读）时才成立，那是**不同优化层级之间的错位比较**。各自做合并优化后——Softmax 用 online、LayerNorm 用 Welford——都降到 2 次读，依然对齐。数据依赖影响的是**合并的难度与算法选择**，而非**读次数的下界**。
 
 ##### LayerNorm vs BatchNorm
 
@@ -460,15 +462,15 @@ ncu --metrics \
 
 如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Week 2 学过的 float4 向量化加载的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
 
-#### 任务 4：LeetGPU 在线题目 —— Group Normalization
+#### 任务 4：LeetGPU 在线题目 —— Layer Normalization
 
-**题目链接**：<https://leetgpu.com/challenges/group-normalization>
+**题目链接**：<https://leetgpu.com/challenges/layernorm>
 
 **与今日知识的关联**：
 
-本题是今天 normalization 主题的变体实战——Group Norm 与 LayerNorm 同构（都是"在一组元素上做 mean/var 两次 reduce + affine"），只是归约的维度从"一行"换成了"一个 group"。核心仍是两遍 scan + shared memory reduction：第一遍求 `mean`，第二遍求 `var`（依赖 `mean`，不能合并）。把今天的 `layernorm_kernel` 思路扩展到"一个 block 处理一个 group"即可。
+本题就是今天 `layernorm_kernel` 的直接实战——在 WebGPU 上实现 LayerNorm：一遍求 `mean`，一遍求 `var`（依赖 `mean`，不能合并），最后做归一化 + affine。核心结构与今天 CUDA 版的两遍 scan + shared memory reduction 完全同构，只是把 `blockReduceSum` / `__shfl_down_sync` 换成 WebGPU 的 workgroup reduce（`workgroupUniformLoad` + 循环折半，或手写 shared buffer + `barrier`）。把今天的两遍 scan 思路平移过去即可。
 
-> 💡 提交后在 [LeetGPU Group Normalization 题目](https://leetgpu.com/challenges/group-normalization)上记录通过耗时，用 ncu 对比不同 `C/G` / `threads` 的性能差异。完整题解（含 Welford 单遍 scan 优化、Roofline 分析）见 [Group Normalization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html)。
+> 💡 提交后在 [LeetGPU Layer Normalization 题目](https://leetgpu.com/challenges/layernorm)上记录通过耗时，用浏览器开发者工具对比不同 `workgroup_size` / `tile` 的性能差异。进阶可尝试 Welford 单遍 scan 优化（把 mean/var 合并成一次遍历），思路同今日扩展实验 3。
 
 #### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 2）
 
