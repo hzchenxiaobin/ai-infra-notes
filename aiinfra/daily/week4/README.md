@@ -16,7 +16,7 @@
 ```
 Day 1: Transformer 推理流程（Prefill/Decode 视角）+ 算子分类
         ↓
-Day 2: 手写 Softmax kernel（naive → online → Welford）
+Day 2: 手写 Softmax + LayerNorm Kernel（safe softmax 三遍扫描 + 两级 block reduce）
         ↓
 Day 3: LayerNorm 优化与 GEMM Backward 数据流
         ↓

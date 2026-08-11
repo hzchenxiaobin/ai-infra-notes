@@ -26,7 +26,7 @@ Day 5 的 benchmark 只看了 wall time（ms）。今天用 ncu 看**内部指�
 | `sm__warps_active`（achieved occupancy） | Occupancy 是否足够？ |
 | `launch__registers_per_thread` | 寄存器用量是否限制 occupancy？ |
 
-> 💡 **一句话总结**：Day 5 实测 Triton GEMM 大矩阵达 cuBLAS 97.5%，今天用 ncu 解释"Triton 用了 Tensor Core + autotune 选最优 tiling，而手写 CUDA 是 FMA 实现（没用 Tensor Core）+ 固定 16×16 tiling"。
+> 💡 **一句话总结**：Day 5 预估 Triton GEMM 大矩阵达 cuBLAS 97.5%，今天用 ncu 解释"Triton 用了 Tensor Core + autotune 选最优 tiling，而手写 CUDA 是 FMA 实现（没用 Tensor Core）+ 固定 16×16 tiling"。
 
 ---
 
@@ -34,11 +34,11 @@ Day 5 的 benchmark 只看了 wall time（ms）。今天用 ncu 看**内部指�
 
 #### 6.1 三方 Profiling 对比
 
-##### GEMM 三方实测对比（RTX 5090, 4096×4096, FP16）
+##### GEMM 三方预估对比（RTX 5090, 4096×4096, FP16）
 
-手写 CUDA 基线即 Day 5 benchmark 里的 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core，见 `day5/kernels/benchmark_triton.py`）。除标注"实测"外，其余为推理值，需以本机 ncu 实测为准：
+手写 CUDA 基线即 Day 5 benchmark 里的 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core，见 `day5/kernels/benchmark_triton.py`）。以下指标均为推理值，待 GPU 环境 ncu 实测回填：
 
-| Metric | Triton GEMM（实测 97.5% cuBLAS） | CUDA 手写（Week 2，~30% cuBLAS） | cuBLAS |
+| Metric | Triton GEMM（预估 97.5% cuBLAS） | CUDA 手写（Week 2，~30% cuBLAS） | cuBLAS |
 |--------|------------------------------|----------------|--------|
 | Tensor Core 利用率（`sm__pipe_tensor_op_hmma_cycles_active`） | 60-75%（推理值） | **0%**（FMA 实现） | 85-95% |
 | `sm__throughput` | 65-80% | 45% | 85% |
@@ -106,7 +106,7 @@ Triton 编译后的 kernel 名为 `xxx_kernel_<hash>`（如 `gemm_kernel_<hash>`
 ```bash
 ncu --kernel-name regex:gemm_kernel \
     --metrics sm__pipe_tensor_op_hmma_cycles_active.avg.pct_of_peak_sustained_elapsed,... \
-    python3 kernels/benchmark_triton.py
+    python3 ../day5/kernels/benchmark_triton.py
 ```
 
 > ⚠️ ncu 指标名随架构变化：Blackwell（RTX 5090, sm_120）上 tensor pipe 指标树有调整，若上述指标不存在，先跑 `ncu --query-metrics | grep pipe_tensor` 找到本机可用的名字（如 `sm__pipe_tensor_cycles_active` 或 `sm__pipe_tensor_subpipe_hmma_cycles_active`）。
@@ -138,10 +138,10 @@ sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 sm__warps_active.avg.pct_of_peak_sustained_active,\
 launch__registers_per_thread \
-    python3 kernels/benchmark_triton.py
+    python3 ../day5/kernels/benchmark_triton.py
 ```
 
-> 注：benchmark 脚本在 `day5/kernels/benchmark_triton.py`（它 import 的 Triton kernel 源文件在 `day4/kernels/`）。
+> 注：benchmark 脚本在 `day5/kernels/benchmark_triton.py`（它 import 的 Triton kernel 源文件在 `day4/kernels/`）。上例假设当前目录为 `day6/`。
 
 预期输出（RTX 5090, 4096×4096）：
 
@@ -161,7 +161,7 @@ Week 2 手写版是 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core）�
 ```bash
 ncu --set full --kernel-name regex:gemm_cuda_kernel \
     --metrics sm__pipe_tensor_op_hmma_cycles_active.avg.pct_of_peak_sustained_elapsed,... \
-    python3 kernels/benchmark_triton.py
+    python3 ../day5/kernels/benchmark_triton.py
 ```
 
 ```text
@@ -211,7 +211,7 @@ ncu --kernel-name regex:softmax \
     --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,\
 l1tex__throughput.avg.pct_of_peak_sustained_elapsed,\
 sm__warps_active.avg.pct_of_peak_sustained_active \
-    python3 kernels/benchmark_triton.py
+    python3 ../day5/kernels/benchmark_triton.py
 ```
 
 预期：

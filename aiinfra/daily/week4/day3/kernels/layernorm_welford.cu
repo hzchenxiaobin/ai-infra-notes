@@ -43,7 +43,7 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 }
 
 // ============================================================
-// Welford 在线算法原语（与 from_w4d1/kernels/softmax_layernorm_opt.cu 同一套写法）
+// Welford 在线算法原语（与 week10/_supplementary/from_w4d1/kernels/softmax_layernorm_opt.cu 同一套写法）
 // 一次遍历同时维护 (count, mean, M2)，最终 var = M2 / count
 // ============================================================
 struct WelfordData {

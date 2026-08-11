@@ -6,7 +6,7 @@
 
 1. 理解 Day 2 基础 LayerNorm kernel 的瓶颈——两次 reduce 意味着三次 HBM 读写（读 x 求 μ、读 x 求 σ²、读 x 做 normalize）<br>
 2. 掌握 **Welford 在线算法**——用递推公式在一次 pass 中同时计算 mean 和 variance，把 HBM 读写从 3 次降到 1 次<br>
-3. 能实现 **Welford LayerNorm kernel**，实测对比 Day 2 三遍扫描版的性能提升（预期 2-3x）<br>
+3. 能实现 **Welford LayerNorm kernel**，实测对比 Day 2 三遍扫描版（理论预期 HBM 读写减半 → ~2x 加速，但小 D / 寄存器开销下可能不达预期）<br>
 4. 理解 **GEMM Backward 的数据流**——`dA = dC @ B^T`、`dB = A^T @ dC`，与 forward 共享 tiling 策略<br>
 5. 能解释 LayerNorm backward 的梯度公式与 Welford 在反向中的应用<br>
 6. 理解 **kernel fusion** 的动机——把 LayerNorm + GELU 合并成一个 kernel，消除中间张量写回 HBM<br>
@@ -323,7 +323,7 @@ nvcc -O3 -arch=sm_120 kernels/layernorm_welford.cu -o layernorm_welford
 ./layernorm_welford
 ```
 
-实测输出（RTX 5090, CUDA 12.8, 2026-08-06）：
+预期输出（RTX 5090, CUDA 12.8 预估，待 GPU 环境回填）：
 
 ```text
 === LayerNorm: Three-pass vs Welford (NVIDIA GeForce RTX 5090, D=1024) ===
@@ -336,7 +336,7 @@ M(rows)  | Three-pass(ms)  Welford(ms)  | Speedup  max_diff
 [正确性] Welford vs CPU 参考: max_diff = 2.03e-06 (< 1e-4 PASS)
 ```
 
-> **实测说明**：本实现中 Welford 单 pass 并未比 three-pass 快，反而略慢（0.6x–0.8x）。原因可能是：① D=1024 时 three-pass 的 blockReduce 已被 warp shuffle 优化得很好；② Welford 的 shuffle 合并涉及 mean/m2/count 三个字段，寄存器/指令开销抵消了 HBM 减少收益；③ 小 M 时 launch / fixed overhead 占主导。正确性 PASS（max_diff < 1e-5）。生产级 Welford 需配合向量化、每个 warp 处理多行等进一步优化才能兑现 ~2x 理论收益。
+> **预估说明**：本实现中 Welford 单 pass 并未比 three-pass 快，反而略慢（0.6x–0.8x）。原因可能是：① D=1024 时 three-pass 的 blockReduce 已被 warp shuffle 优化得很好；② Welford 的 shuffle 合并涉及 mean/m2/count 三个字段，寄存器/指令开销抵消了 HBM 减少收益；③ 小 M 时 launch / fixed overhead 占主导。正确性 PASS（max_diff < 1e-4，与源码阈值一致）。生产级 Welford 需配合向量化、每个 warp 处理多行等进一步优化才能兑现 ~2x 理论收益。以上数据为预估口径，待 GPU 环境实测回填。
 
 #### 任务 2：用 ncu 验证 HBM 访问减少
 
@@ -445,7 +445,7 @@ Day 3 我们把 Day 2 的 LayerNorm 从三遍扫描优化到 Welford 单 pass，
    - **Welford 解决方案**：用递推公式在一次遍历中同时更新 mean 和 M2（未归一化方差）：
      - `delta = x - mean; mean += delta/count; M2 += delta * (x - mean)`
    - **并行化**：每线程/分块做局部 Welford，用合并公式 `M2 = M2_a + M2_b + delta² * count_a * count_b / count` 合并
-   - **收益**：HBM 读写从 3 读 + 1 写 降到 1 读 + 1 写，性能提升 ~2x
+    - **收益**：HBM 读写从 3 读 + 1 写 降到 1 读 + 1 写，理论加速 ~2x（实测待回填）
 
    </details>
 

@@ -80,6 +80,9 @@ def flash_attn_kernel(
 def triton_flash_attention(q, k, v, scale=None):
     B, H, N, D = q.shape
     assert k.shape == (B, H, N, D) and v.shape == (B, H, N, D)
+    q = q.contiguous()
+    k = k.contiguous()
+    v = v.contiguous()
     if scale is None:
         scale = 1.0 / (D ** 0.5)
     o = torch.empty_like(q)

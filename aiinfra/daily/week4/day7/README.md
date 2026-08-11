@@ -29,7 +29,7 @@ Week 4 围绕一条主线展开：**从理解模型执行，到手写算子，�
 | Day 2 | 手写 Softmax / LayerNorm Kernel | `day2/kernels/softmax_layernorm.cu` | safe softmax 三遍扫描、两级 block reduce |
 | Day 3 | LayerNorm 优化与 GEMM Backward 数据流 | Welford LayerNorm 实现 + 有限差分验证 | Welford 在线算法、`dA=dC@B^T`、kernel fusion |
 | Day 4 | Triton 语言专题 | `day4/kernels/triton_{softmax,gemm,flash_attention}.py` | program 模型、`tl.load/store/reduce/dot`、`@triton.autotune` |
-| Day 5 | 项目推进 —— Triton 三方 Benchmark | Triton vs CUDA vs PyTorch 性能表 + 选型决策表 | autotune 配置搜索、GEMM 达 cuBLAS 97.5%（大矩阵实测） |
+| Day 5 | 项目推进 —— Triton 三方 Benchmark | Triton vs CUDA vs PyTorch 性能表 + 选型决策表 | autotune 配置搜索、GEMM 达 cuBLAS 97.5%（大矩阵预估） |
 | Day 6 | Profiling —— 三方性能对比 | ncu 指标对比分析（Tensor Core / occupancy / DRAM） | `sm__pipe_tensor_op_hmma`、torch.profiler 时间线 |
 | **Day 7** | **算子分类 + 复盘 + 限时手撕** | **算子分类表（本日）** | **arithmetic intensity 判定、Triton/CUDA 选型** |
 
@@ -55,7 +55,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 
 **根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≈ 279 ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 骤降到 ~1 → memory-bound。
 
-Day 1 用 `torch.profiler` 实测验证了这一点：Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+，Decode 阶段 GEMM 占比下降、softmax/layernorm 相对占比上升、kernel 间隙（launch overhead）更明显。
+Day 1 用 `torch.profiler` 验证了这一点（待 GPU 实测回填）：Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+，Decode 阶段 GEMM 占比下降、softmax/layernorm 相对占比上升、kernel 间隙（launch overhead）更明显。
 
 #### 2. 手写 Softmax / LayerNorm：memory-bound 算子的典型代表（Day 2）
 
@@ -70,7 +70,7 @@ Day 1 用 `torch.profiler` 实测验证了这一点：Prefill 阶段 `aten::mm` 
 
 #### 3. Welford 优化与 GEMM Backward（Day 3）
 
-**Welford 在线算法**：用递推公式 `mean += delta/count; M2 += delta*(x-mean)` 在一次遍历中同时算 mean 和 variance，把 LayerNorm 的 HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，实测加速 ~2x。并行化时每个线程/分块做局部 Welford，再用合并公式 `M2 = M2_a + M2_b + delta²·count_a·count_b/count` 归并。相比朴素单遍 `Σx²/N-(Σx/N)²`，Welford 无大数相减，数值更稳定。
+**Welford 在线算法**：用递推公式 `mean += delta/count; M2 += delta*(x-mean)` 在一次遍历中同时算 mean 和 variance，把 LayerNorm 的 HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）。并行化时每个线程/分块做局部 Welford，再用合并公式 `M2 = M2_a + M2_b + delta²·count_a·count_b/count` 归并。相比朴素单遍 `Σx²/N-(Σx/N)²`，Welford 无大数相减，数值更稳定。
 
 **GEMM Backward**：`dA = dC @ B^T`、`dB = A^T @ dC`，FLOPs 与 forward 相同，只是某个输入转置——forward 的 tiling / Tensor Core / async copy 全部可以直接套用。这是 Week 5 FlashAttention Backward 的直接前置。
 
@@ -94,7 +94,7 @@ Triton 的核心抽象是 **program ≈ CUDA block**——你只写"一个 block
 
 #### 5. 三方 Benchmark：用数据回答 Triton vs CUDA（Day 5）
 
-统一 benchmark 框架（正确性校验 + `torch.cuda.Event` 计时）下的实测结论（RTX 5090）：
+统一 benchmark 框架（正确性校验 + `torch.cuda.Event` 计时）下的预估结论（RTX 5090，待实测回填）：
 
 | 算子 | 结论 |
 |------|------|
@@ -209,7 +209,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 |-----|--------|------|---------|------|
 | Day 1 | Prefill/Decode trace 分析 | `day1/README.md` 内嵌 `trace_transformer.py` 代码；运行产物 `trace_prefill.json` / `trace_decode.json` 本地生成 | Prefill/Decode 算子时间 top3 已定位 | ☐ |
 | Day 2 | Softmax + LayerNorm Kernel | `day2/kernels/softmax_layernorm.cu` | 与 CPU 误差 < 1e-5 | ✅ |
-| Day 3 | Welford LayerNorm + GEMM Backward 验证 | `day3/README.md`（`kernels/layernorm_welford.cu`、`gemm_backward_test.py` 为任务自建） | Welford vs 三遍扫描 ~2x 加速；`dA/dB` 有限差分 PASS | ☐ |
+| Day 3 | Welford LayerNorm + GEMM Backward 验证 | `day3/kernels/layernorm_welford.cu`（✅）；`gemm_backward_test.py` 为任务自建（☐） | Welford vs 三遍扫描理论 ~2x 加速；`dA/dB` 有限差分 PASS | ✅（Welford kernel）/ ☐（backward 验证） |
 | Day 4 | Triton 三大 kernel | `day4/kernels/triton_softmax.py`、`triton_gemm.py`、`triton_flash_attention.py` | 误差达标（softmax 1e-5 / GEMM 1e-2 / FA 1e-2） | ✅ |
 | Day 5 | 三方 Benchmark 表 + 选型决策表 | `day5/README.md` | 能口述"Triton 甜区"结论 | ✅ |
 | Day 6 | ncu 三方指标对比分析 | `day6/README.md` | 能用 Tensor Core/occupancy/DRAM 数据解释性能差 | ✅ |
@@ -270,7 +270,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 >
 > **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~58.45），纯 memory-bound。
 >
-> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。Week 4 Day 4 的 Triton FA 实测对 naive attention 加速 2.79x（N=512）→ 8.05x（N=2048），N 越大 O(N²) IO 惩罚越重，FA 优势越明显。
+> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。Week 4 Day 4 的 Triton FA 预估对 naive attention 加速 2.79x（N=512）→ 8.05x（N=2048），N 越大 O(N²) IO 惩罚越重，FA 优势越明显。
 >
 > 用 ncu 验证：softmax kernel `dram__throughput` 85%+ ≫ SM 占用，符合 memory-bound 判定。
 
@@ -325,7 +325,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
 2. **算子分类表**：GEMM 的 bound 随 M 切换，Softmax/LayerNorm/GELU 永远是 memory-bound——这是 Week 4 的"地图"
 3. **手写算子三件套**：safe softmax 三遍扫描（Day 2）、Welford 单 pass LayerNorm（Day 3）、kernel fusion 省中间张量（Day 3）
-4. **Triton 主线**：program 模型 + 四大原语 + autotune（Day 4）→ 三方 benchmark 实测 GEMM 达 cuBLAS 97.5%、FA 达官方 80-90%（Day 5）→ ncu 解释 Triton 快在哪（Tensor Core 68% vs 0%、occupancy 58% vs ~45%）（Day 6）
+4. **Triton 主线**：program 模型 + 四大原语 + autotune（Day 4）→ 三方 benchmark 预估 GEMM 达 cuBLAS 97.5%、FA 达官方 80-90%（Day 5）→ ncu 解释 Triton 快在哪（Tensor Core 68% vs 0%、occupancy 58% vs ~45%）（Day 6）
 5. **选型决策表**：Triton 是"80% 性能 + 20% 代码量"的甜区，极致性能 / 新硬件指令 / grid 级同步才用 CUDA
 6. **Week 5 衔接**：online softmax + O(N²) IO 动机 + GEMM Backward 已全部铺好，FlashAttention 专题只欠完整实现
 
@@ -367,7 +367,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
  - **不能合并的原因**：第二次 reduce（方差）依赖第一次的结果（均值），`σ² = mean((x-μ)²)` 必须先知道 μ
  - **Welford 解决方案**：递推公式 `delta = x - mean; mean += delta/count; M2 += delta*(x-mean)` 一次遍历同时更新 mean 和 M2
  - **并行化**：每线程/分块做局部 Welford，用合并公式 `M2 = M2_a + M2_b + delta²·count_a·count_b/count` 归并
- - **收益**：HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，实测加速 ~2x；且无大数相减，数值比朴素单遍更稳定
+  - **收益**：HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）；且无大数相减，数值比朴素单遍更稳定
 
 </details>
 
@@ -379,7 +379,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 
  - **用 Triton**：Softmax/LayerNorm/FlashAttention 等标准算子、定制形状 GEMM、epilogue fusion、快速原型、跨硬件可移植
  - **必须 CUDA**：① 极致性能（95%+ cuBLAS，CUTLASS 的 swizzle/K 分割/epilogue fusion）② 新硬件指令（TMA/FP8/warp specialization，Triton 滞后 1-2 架构周期）③ Grid 级同步 ④ 动态 shape 高频变化（`tl.constexpr` + cache 会爆炸）
- - **实测锚点**：Triton GEMM 4096² 达 FP16 cuBLAS 97.5%，Triton FA 达官方 80-90% 且代码量 1/7
+  - **预估锚点**：Triton GEMM 4096² 达 FP16 cuBLAS 97.5%，Triton FA 达官方 80-90% 且代码量 1/7
  - **核心判断**：Triton 是"80% 性能 + 20% 代码量"的甜区，超出甜区才用 CUDA
 
 </details>
@@ -421,7 +421,9 @@ aiinfra/daily/week4/
 │   └── kernels/
 │       └── softmax_layernorm.cu   # safe softmax 三遍扫描 + LayerNorm 两次 reduce
 ├── day3/
-│   └── README.md                  # Welford LayerNorm 优化 + GEMM Backward 数据流 + kernel fusion
+│   ├── README.md                  # Welford LayerNorm 优化 + GEMM Backward 数据流 + kernel fusion
+│   └── kernels/
+│       └── layernorm_welford.cu   # Welford 单 pass LayerNorm + 三遍扫描基线对比
 ├── day4/
 │   ├── README.md                  # Triton 语言专题
 │   └── kernels/
@@ -429,7 +431,9 @@ aiinfra/daily/week4/
 │       ├── triton_gemm.py         # Triton GEMM + @triton.autotune + benchmark
 │       └── triton_flash_attention.py  # Triton FA（online softmax + causal）+ benchmark
 ├── day5/
-│   └── README.md                  # 项目推进 —— Triton 三方 Benchmark 与决策表
+│   ├── README.md                  # 项目推进 —— Triton 三方 Benchmark 与决策表
+│   └── kernels/
+│       └── benchmark_triton.py    # Triton vs CUDA vs PyTorch 三方 benchmark 脚本
 ├── day6/
 │   └── README.md                  # Profiling —— ncu / torch.profiler 三方指标对比
 ├── day7/
