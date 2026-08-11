@@ -10,7 +10,7 @@
 4. 实现并运行 Softmax + LayerNorm Kernel，与 CPU 参考结果误差 < 1e-5
 5. 能用 arithmetic intensity 判定这两个算子是 **memory-bound**，并说出至少 3 个优化方向
 
-> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Attention IO 分析、Week 4 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
+> 💡 **为什么重要**：Softmax 和 LayerNorm 是 Transformer 里最典型的 memory-bound 算子，也是面试"手撕 reduce"的标配。今天把 Week 2 学的 Warp Shuffle 原语组装成完整的 block 级 kernel，是从"懂原语"到"会写算子"的关键一跃。Day 4 的 Triton 重写、Week 5 的 FlashAttention 都建立在今天的三遍扫描 + 两级 reduce 之上。
 
 ---
 
@@ -72,9 +72,9 @@ exp(xi - m) / Σ exp(xj - m)
 |------|---------|------|---------|
 | 三遍扫描 | 3 | ① 求 max ② 求 sum(exp(x-m)) ③ 归一化 | 教学版，清晰易读 ← **今日实现** |
 | 两遍扫描（online） | 2 | ① 同时求 max 和 sum ② 归一化 | 生产版，减少一次全局读 |
-| FlashAttention 版 | 1.x | 分块 online，边算边更新 | 极致优化，Week 4 主题 |
+| FlashAttention 版 | 1.x | 分块 online，边算边更新 | 极致优化，Week 5 主题 |
 
-本日实现**三遍扫描版**（教学清晰），两遍 online 版留作扩展实验，分块版留到 Week 4 FlashAttention。
+本日实现**三遍扫描版**（教学清晰），两遍 online 版留作扩展实验，分块版留到 Week 5 FlashAttention。
 
 #### 2.2 Row-wise 并行与两级 Block Reduce
 
@@ -413,7 +413,7 @@ ncu --metrics \
 | `softmax_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 | `layernorm_kernel` | 50-70% | 15-25% | **Memory-bound**（DRAM >> SM） |
 
-如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Day 3 要讲的向量化加载（float4）的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
+如果 DRAM Throughput 未达 80%+，说明带宽还没喂饱——这正是 Week 2 学过的 float4 向量化加载的提升空间。也可以加 `smsp__average_warps_issue_stalled_long_scoreboard.pct` 看 stall 原因，预期 Long Scoreboard（等内存）占比最高。
 
 #### 任务 4：LeetGPU 在线题目 —— Group Normalization
 
@@ -549,7 +549,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
  - **三遍扫描放大了读量**：Softmax 每元素从 HBM 读 3 次（三遍扫描），这是 memory-bound 的直接来源
  - **优化方向**：
  1. **Kernel Fusion**：把 Softmax/LayerNorm 与相邻算子融合，避免中间结果写回 HBM（最重要）
- 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Day 3）
+ 2. **向量化加载**：用 `float4` 做 128-bit 加载，减少 4x 加载指令（Week 2）
  3. **减少 reduce 次数**：online softmax 三遍→两遍；Welford 把 LayerNorm 两次→一次
  4. **FP16/BF16 存储**：减少 HBM 读写量（但 reduce 用 FP32 保精度）
 

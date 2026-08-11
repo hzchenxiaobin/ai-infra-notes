@@ -11,13 +11,13 @@
 5. 实现并运行 Triton 版 Softmax / GEMM / FlashAttention，与 `torch.softmax` / `cuBLAS` / naive attention 误差达到验收标准，且 GEMM 达到 cuBLAS 70%+
 6. 能对比 **Triton vs CUDA vs torch.compile** 三条路线的生产力与性能权衡，说出各自的适用场景与局限
 
-> 💡 **为什么重要**：Week 3 Day 1-3 我们手写了 CUDA softmax / layernorm / attention，发现 50 行算法逻辑外面裹着 300 行工程脚手架（warp shuffle、shared memory、向量化、同步屏障）。Triton 的核心价值就是把这 300 行交给编译器——你只写"一个 block 做什么"，tile 大小、向量化、shared memory 布局、warp 同步全部自动生成。今天用 Triton 重写三大算子，建立"Python 写 kernel"的肌肉记忆，为后续阅读 vLLM / Megatron-LM / TensorRT-LLM 源码打基础（这些项目大量使用 Triton）。
+> 💡 **为什么重要**：Week 4 Day 2 我们手写了 CUDA softmax / layernorm，发现 50 行算法逻辑外面裹着 300 行工程脚手架（warp shuffle、shared memory、向量化、同步屏障）。Triton 的核心价值就是把这 300 行交给编译器——你只写"一个 block 做什么"，tile 大小、向量化、shared memory 布局、warp 同步全部自动生成。今天用 Triton 重写三大算子，建立"Python 写 kernel"的肌肉记忆，为后续阅读 vLLM / Megatron-LM / TensorRT-LLM 源码打基础（这些项目大量使用 Triton）。
 
 ---
 
 ### 学前导读：为什么需要 Triton
 
-Day 2 我们手写了 CUDA Softmax kernel，核心算法只有三遍扫描（max → sum → normalize），但配套代码包括：`warpReduceSum`、`warpReduceMax`、`blockReduceSum`、`blockReduceMax`、shared memory 缓冲、两处 `__syncthreads`、`__shfl_sync` 广播……最终 60 行 kernel + 80 行 host 脚手架。Day 3 又加了 `float4` 向量化、Welford 在线算法——优化项越加越多，可读性越压越薄。
+Day 2 我们手写了 CUDA Softmax kernel，核心算法只有三遍扫描（max → sum → normalize），但配套代码包括：`warpReduceSum`、`warpReduceMax`、`blockReduceSum`、`blockReduceMax`、shared memory 缓冲、两处 `__syncthreads`、`__shfl_sync` 广播……最终 60 行 kernel + 80 行 host 脚手架。Day 3 又加了 Welford 在线算法——优化项越加越多，可读性越压越薄。
 
 Triton 的出发点很简单：**让算法工程师用 Python 写高性能 GPU kernel，把工程细节交给编译器**。同样一个 row-wise softmax，Triton 版核心只需 ~10 行：
 
@@ -190,7 +190,7 @@ def triton_softmax(x):
 
 ![Triton autotune：配置搜索流程](../images/triton_autotune_flow.svg)
 
-Day 3 我们手动试 warp 级 vs block 级、float4 vs scalar，靠 ncu 对比选最优。Triton 把这个流程自动化：
+Week 2 我们手动试 warp 级 vs block 级、float4 vs scalar，靠 ncu 对比选最优。Triton 把这个流程自动化：
 
 ```python
 configs = [
@@ -290,7 +290,7 @@ def f(x):
 
 #### 任务 1：编写三大 Triton kernel
 
-今日三个 kernel 文件位于 [kernels/](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week10/day7/kernels/) 目录，递进结构：Softmax（reduce 入门）→ GEMM（autotune + Tensor Core）→ FlashAttention（online softmax + 跨 block 循环）。
+今日三个 kernel 文件位于 [kernels/](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week4/day4/kernels/) 目录，递进结构：Softmax（reduce 入门）→ GEMM（autotune + Tensor Core）→ FlashAttention（online softmax + 跨 block 循环）。
 
 ##### 1a. triton_softmax.py —— Triton softmax kernel
 
@@ -378,7 +378,7 @@ def flash_attn_kernel(q_ptr, k_ptr, v_ptr, o_ptr, N_ctx, scale,
     tl.store(o_ptr + ..., acc)
 ```
 
-这是 Week 2 Day 5 手写 CUDA FlashAttention 的 Triton 等价版——online softmax 的 `m_new / alpha / l_new` 三件套与 CUDA 版完全一致，但 `tl.dot` 把两个 GEMM（QK^T 和 PV）自动交给 Tensor Core，`tl.max` / `tl.sum` 把 block 级 reduce 自动生成 warp shuffle。完整文件含 causal mask、naive attention 对比基准、`torch.cuda.Event` 计时。
+这是 Week 5 Day 1 手写 CUDA FlashAttention 的 Triton 等价版——online softmax 的 `m_new / alpha / l_new` 三件套与 CUDA 版完全一致，但 `tl.dot` 把两个 GEMM（QK^T 和 PV）自动交给 Tensor Core，`tl.max` / `tl.sum` 把 block 级 reduce 自动生成 warp shuffle。完整文件含 causal mask、naive attention 对比基准、`torch.cuda.Event` 计时。
 
 #### 任务 2：运行与正确性验证
 
@@ -506,7 +506,7 @@ ncu --metrics \
 
 **与今日知识的关联**：
 
-本题是今天 GEMM 主题的最纯粹实战——`tl.dot` 调用 Tensor Core、`@triton.autotune` 搜索最优 tile，正是 Triton GEMM 的核心。LeetGPU 这道题既接受 CUDA C++ 提交也接受 Triton 提交，正好对比同一算法两种写法的生产力差异：CUDA 版要手写 `wmma` PTX + shared memory tiling（参考 Week 1 Day 6 题解），Triton 版用 `tl.dot` 一行搞定。建议先用 Triton 写一版提交，再用 CUDA 写一版对比代码量与性能。
+本题是今天 GEMM 主题的最纯粹实战——`tl.dot` 调用 Tensor Core、`@triton.autotune` 搜索最优 tile，正是 Triton GEMM 的核心。LeetGPU 这道题既接受 CUDA C++ 提交也接受 Triton 提交，正好对比同一算法两种写法的生产力差异：CUDA 版要手写 `wmma` PTX + shared memory tiling（参考 Week 4 Day 1 题解），Triton 版用 `tl.dot` 一行搞定。建议先用 Triton 写一版提交，再用 CUDA 写一版对比代码量与性能。
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时与所用语言。完整 CUDA 题解（含 `wmma` + double buffering + L2 优化）见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
@@ -590,7 +590,7 @@ python3 kernels/triton_gemm.py  # 看 M=N=K=4096 那一行
 
 ### 今日总结
 
-Day 4 我们用 Triton 重写了 Week 3 的三大算子，建立了"Python 写 GPU kernel"的肌肉记忆：
+Day 4 我们用 Triton 重写了 Week 4 的三大算子，建立了"Python 写 GPU kernel"的肌肉记忆：
 
 1. **block-level programming**：Triton 的 program = CUDA block，但程序员只写"一个 block 做什么"，thread / warp / smem 全部交给编译器
 2. **三大原语**：`tl.load`（带 mask 块加载）/ `tl.store`（带 mask 块写出）/ `tl.reduce`（`tl.max` / `tl.sum` 内建 block 级归约）——覆盖 90% 的 kernel 逻辑
@@ -599,7 +599,7 @@ Day 4 我们用 Triton 重写了 Week 3 的三大算子，建立了"Python 写 G
 5. **`tl.dot`**：一行调用 Tensor Core，让 Triton GEMM 达到 cuBLAS 70-85%，代码量只有手写 CUDA 的 1/2.5
 6. **FlashAttention Triton 版**：online softmax 的 `m / l / acc` 三件套与 CUDA 版完全一致，但 `tl.dot` 把两个 GEMM 自动交给 Tensor Core，核心逻辑 ~40 行 vs CUDA 版 ~300 行
 
-掌握这些后，你就具备了阅读 vLLM / Megatron-LM / TensorRT-LLM 中 Triton 算子的能力。Day 4 会回到 Attention IO 分析，用今天建立的"reduce 即原语"视角重新审视标准 Attention 的 O(N²) 瓶颈。
+掌握这些后，你就具备了阅读 vLLM / Megatron-LM / TensorRT-LLM 中 Triton 算子的能力。Week 5 会回到 Attention IO 分析，用今天建立的"reduce 即原语"视角重新审视标准 Attention 的 O(N²) 瓶颈。
 
 ---
 

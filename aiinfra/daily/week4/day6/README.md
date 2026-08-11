@@ -38,7 +38,7 @@ Day 5 的 benchmark 只看了 wall time（ms）。今天用 ncu 看**内部指�
 
 手写 CUDA 基线即 Day 5 benchmark 里的 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core，见 `day5/kernels/benchmark_triton.py`）。除标注"实测"外，其余为推理值，需以本机 ncu 实测为准：
 
-| Metric | Triton GEMM（实测 97.5% cuBLAS） | CUDA 手写（Day 1，~30% cuBLAS） | cuBLAS |
+| Metric | Triton GEMM（实测 97.5% cuBLAS） | CUDA 手写（Week 2，~30% cuBLAS） | cuBLAS |
 |--------|------------------------------|----------------|--------|
 | Tensor Core 利用率（`sm__pipe_tensor_op_hmma_cycles_active`） | 60-75%（推理值） | **0%**（FMA 实现） | 85-95% |
 | `sm__throughput` | 65-80% | 45% | 85% |
@@ -48,7 +48,7 @@ Day 5 的 benchmark 只看了 wall time（ms）。今天用 ncu 看**内部指�
 
 ##### 关键洞察
 
-1. **Triton 用了 Tensor Core（60-75%）**：`tl.dot` 自动生成 `mma.sync` 指令（Hopper 上为 `wgmma`），而 Day 1 手写 CUDA 是 FMA 实现（0%）
+1. **Triton 用了 Tensor Core（60-75%）**：`tl.dot` 自动生成 `mma.sync` 指令（Hopper 上为 `wgmma`），而 Week 2 手写 CUDA 是 FMA 实现（0%）
 2. **手写版的瓶颈不是寄存器**：FMA kernel 寄存器用量反而更少（~32-48 vs ~64-80），但少了 Tensor Core 和大 block tiling，算力路径完全不同
 3. **Triton 的 dram 利用率更低**：自动 smem tiling + double buffer（`num_stages`）减少了 HBM 访问
 4. **cuBLAS 仍领先**：Tensor Core 85-95%（vs Triton 60-75%），因 swizzle / K 分割 / epilogue fusion
@@ -154,9 +154,9 @@ gemm_kernel_<hash>, 4096 x 4096
   launch__registers_per_thread 72
 ```
 
-##### 对比 Day 1 手写 CUDA
+##### 对比 Week 2 手写 CUDA
 
-Day 1 手写版是 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core），由同一个 benchmark 脚本触发：
+Week 2 手写版是 `gemm_cuda_kernel`（smem tiling + FMA，无 Tensor Core），由同一个 benchmark 脚本触发：
 
 ```bash
 ncu --set full --kernel-name regex:gemm_cuda_kernel \
@@ -224,7 +224,9 @@ sm__warps_active.avg.pct_of_peak_sustained_active \
 
 > Softmax 是 memory-bound，`dram__throughput` 高（85%+）说明 HBM 是瓶颈。Triton 的优势是更高的 occupancy（自动 warp 配置）。
 
-#### 任务 4：LeetCode 面试题
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 9 周 Day 1 补充）
+
+> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 1（子数组与子序列）的子集，共 3 题。Profiling 主题偏工程，LeetCode 题量精简，留时间给 ncu 分析。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
@@ -282,7 +284,7 @@ Day 6 我们用 ncu 和 `torch.profiler` 深入分析了三方 kernel 的内部�
    <details>
    <summary>点击查看答案</summary>
 
-   - **Tensor Core 利用率**：Triton ~68% vs 手写 CUDA **0%**（Day 1 手写版是 smem tiling + FMA）。`tl.dot` 自动生成 `mma.sync` 指令
+   - **Tensor Core 利用率**：Triton ~68% vs 手写 CUDA **0%**（Week 2 手写版是 smem tiling + FMA）。`tl.dot` 自动生成 `mma.sync` 指令
    - **HBM 带宽**：Triton 38% vs 手写 70%。Triton 自动 smem tiling + double buffer 减少 HBM 访问
    - **Occupancy**：Triton 58% vs 手写 ~45%——有差距，但不是主因
    - **根本原因**：Triton 编译器自动做了 Day 2-5 手写的全部优化（smem tiling / Tensor Core / double buffer），且 autotune 自动选最优配置

@@ -4,7 +4,7 @@
 
 通过今天的学习，你将：
 
-1. 能用 Triton 实现 **Softmax / GEMM / FlashAttention** 三个算子，与 Day 4 的 CUDA 版和 PyTorch 版做三方对比<br>
+1. 能用 Triton 实现 **Softmax / GEMM / FlashAttention** 三个算子，与 Day 2-3 的 CUDA 版和 PyTorch 版做三方对比<br>
 2. 掌握 `@triton.autotune` 的配置搜索机制，能为不同矩阵大小自动选最优 `(BLOCK_SIZE, num_warps, num_stages)`<br>
 3. 能搭建统一的 **benchmark 框架**，一键对比 Triton vs CUDA vs PyTorch 的性能与精度<br>
 4. 理解 Triton 在不同算子类型上的表现差异——GEMM 达 cuBLAS 70%+，Softmax/FA 接近 CUDA 版<br>
@@ -18,7 +18,7 @@
 
 Day 4 我们学了 Triton 语言基础（`tl.load/store/reduce/dot` + `@triton.jit`），写了 Softmax/GEMM/FA 的单算子实现。今天是**项目推进日**——把三个算子统一到一个 benchmark 框架里，做系统性的三方对比：
 
-| 维度 | Triton | CUDA (Day 1-3) | PyTorch |
+| 维度 | Triton | CUDA (Day 2-3) | PyTorch |
 |------|--------|----------------|---------|
 | 代码量 | ~40 行/算子 | ~300 行/算子 | 1 行 (`torch.softmax`) |
 | 性能 | cuBLAS 70-90% | cuBLAS 60-80% (手写) | cuBLAS 90%+ (调用 cuBLAS) |
@@ -247,7 +247,7 @@ M=N=K    | Triton(ms)  CUDA(ms)    cuBLAS(ms)  | Triton%   CUDA%   Triton/CUDA
 4096     | 1.810       4.300       1.305       | 72%       30%     2.4x
 ```
 
-> ⚠️ **预期说明**：Triton 经 autotune 后达 cuBLAS 70-80%，比 Day 1 手写 CUDA（30%）快 2-3x。原因是 Triton 自动选了最优 tiling + 用 Tensor Core（`tl.dot` 自动生成 `mma.sync` 指令）。
+> ⚠️ **预期说明**：Triton 经 autotune 后达 cuBLAS 70-80%，比 Week 2 手写 CUDA（30%）快 2-3x。原因是 Triton 自动选了最优 tiling + 用 Tensor Core（`tl.dot` 自动生成 `mma.sync` 指令）。
 
 #### 任务 3：Softmax + FA 三方对比
 
@@ -268,7 +268,9 @@ N (d=64) | Triton(ms)  CUDA(ms)    官方(ms)    | Triton%官方
 
 > 注：表中"CUDA 手写 FA"列在本脚本中不重复实现（完整 CUDA FA 见 Week 5 Day 3），当前 `benchmark_triton.py` 的 FlashAttention 对比输出为 Triton / PyTorch naive / 官方 `flash-attn` 三方。上表数字均为预估口径，以 GPU 实测回填为准。
 
-#### 任务 4：LeetCode 面试题
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 9 周 Day 2 补充）
+
+> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 2（回文与区间 DP）的子集，共 3 题。项目推进日 LeetCode 题量精简，留时间给 benchmark 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|

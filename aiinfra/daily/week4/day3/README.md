@@ -11,7 +11,7 @@
 5. 能解释 LayerNorm backward 的梯度公式与 Welford 在反向中的应用<br>
 6. 理解 **kernel fusion** 的动机——把 LayerNorm + GELU 合并成一个 kernel，消除中间张量写回 HBM<br>
 
-> 💡 **为什么重要**：Day 2 的 LayerNorm 虽然正确但慢——3 次 HBM 读写是纯浪费。Welford 算法是"用数学换带宽"的经典案例，面试常问"LayerNorm 怎么优化"。GEMM Backward 是 Transformer 训练/微调的反向核心，与 Week 3 的 GEMM Forward 共享 tiling 思想。这两块是 Week 5 FlashAttention Backward 的直接前置。
+> 💡 **为什么重要**：Day 2 的 LayerNorm 虽然正确但慢——3 次 HBM 读写是纯浪费。Welford 算法是"用数学换带宽"的经典案例，面试常问"LayerNorm 怎么优化"。GEMM Backward 是 Transformer 训练/微调的反向核心，与 Week 2 的 GEMM Forward 共享 tiling 思想。这两块是 Week 5 FlashAttention Backward 的直接前置。
 
 ---
 
@@ -236,7 +236,7 @@ loss.backward()
 # dC = ones(M, N)
 # dA 应该等于 B 的行和: dA[i][k] = Σ_j B[k][j]
 # dB 应该等于 A 的列和: dB[k][j] = Σ_i A[i][k]
-print(torch.allclose(dA.grad, B.sum(dim=1, keepdim=True).expand_as(dA)))  # True
+print(torch.allclose(A.grad, B.sum(dim=1, keepdim=True).T.expand_as(A.grad)))  # True
 ```
 
 #### 3.4 LayerNorm Backward
@@ -369,15 +369,17 @@ loss.backward()
 
 # dC = ones(M, N)
 # dA = dC @ B^T = B 的行和（按 N 维求和后 expand）
-dA_expected = B.sum(dim=1, keepdim=True).expand(M, K)
+dA_expected = B.sum(dim=1, keepdim=True).T.expand(M, K)
 # dB = A^T @ dC = A 的列和（按 M 维求和后 expand）
-dB_expected = A.sum(dim=0, keepdim=True).expand(K, N)
+dB_expected = A.sum(dim=0, keepdim=True).T.expand(K, N)
 
 print(f"dA match: {torch.allclose(A.grad, dA_expected, atol=1e-5)}")
 print(f"dB match: {torch.allclose(B.grad, dB_expected, atol=1e-5)}")
 ```
 
-#### 任务 4：LeetCode 面试题
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 3 周 Day 6 补充）
+
+> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧）的 DP 子集，共 3 题。Welford/Backward 主题偏数学，选 DP 类题目保持算法手感。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|

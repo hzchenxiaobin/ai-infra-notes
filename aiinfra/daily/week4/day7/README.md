@@ -53,7 +53,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 | SM 利用率 | 60-85% | 10-30% |
 | 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
 
-**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≈ 384 ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 骤降到 ~2 → memory-bound。
+**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≈ 279 ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 骤降到 ~1 → memory-bound。
 
 Day 1 用 `torch.profiler` 实测验证了这一点：Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+，Decode 阶段 GEMM 占比下降、softmax/layernorm 相对占比上升、kernel 间隙（launch overhead）更明显。
 
@@ -183,7 +183,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 ## Prefill 阶段（N=1024, d=512）
 | 算子 | 理论 AI | 实测 SM% | 实测 DRAM% | bound |
 |------|---------|---------|-----------|-------|
-| QKV GEMM | ~384 | xx | xx | Compute |
+| QKV GEMM | ~279 | xx | xx | Compute |
 | Softmax | ~0.4 | xx | xx | Memory |
 | ... | | | | |
 
@@ -325,7 +325,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 1. **Prefill vs Decode**：同一套层两种 bound——Prefill 是 compute-bound（GEMM 主导），Decode 是 memory-bound（M=1 导致 AI 骤降）
 2. **算子分类表**：GEMM 的 bound 随 M 切换，Softmax/LayerNorm/GELU 永远是 memory-bound——这是 Week 4 的"地图"
 3. **手写算子三件套**：safe softmax 三遍扫描（Day 2）、Welford 单 pass LayerNorm（Day 3）、kernel fusion 省中间张量（Day 3）
-4. **Triton 主线**：program 模型 + 四大原语 + autotune（Day 4）→ 三方 benchmark 实测 GEMM 达 cuBLAS 97.5%、FA 达官方 80-90%（Day 5）→ ncu 解释 Triton 快在哪（Tensor Core 68% vs 25%、occupancy 58% vs 25%）（Day 6）
+4. **Triton 主线**：program 模型 + 四大原语 + autotune（Day 4）→ 三方 benchmark 实测 GEMM 达 cuBLAS 97.5%、FA 达官方 80-90%（Day 5）→ ncu 解释 Triton 快在哪（Tensor Core 68% vs 0%、occupancy 58% vs ~45%）（Day 6）
 5. **选型决策表**：Triton 是"80% 性能 + 20% 代码量"的甜区，极致性能 / 新硬件指令 / grid 级同步才用 CUDA
 6. **Week 5 衔接**：online softmax + O(N²) IO 动机 + GEMM Backward 已全部铺好，FlashAttention 专题只欠完整实现
 
@@ -340,8 +340,8 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 384 ≫ Ridge Point 58.45，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
- - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 从 384 降到 ~2，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
+ - **Prefill 是 compute-bound**：输入 N 个 token，所有 GEMM 是大矩阵乘，AI ≈ 279 ≫ Ridge Point 58.45，SM 利用率 60-85%，优化重点是 Tensor Core 和 FlashAttention
+ - **Decode 是 memory-bound**：每次只生成 1 个 token（M=1），GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 从 279 降到 ~1，SM 利用率 10-30%，大部分时间在等 HBM 读写 KV Cache
  - **优化方向**：Prefill 优化算力（Tensor Core），Decode 优化访存（KV Cache、PagedAttention）和 launch overhead（CUDA Graph、Continuous Batching）
 
 </details>
@@ -390,8 +390,8 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **Tensor Core 利用率**：Triton ~68% vs 手写 ~25%——`tl.dot` 自动调 WMMA/mma.sync
- - **Occupancy**：Triton ~58% vs 手写 ~25%——autotune 自动选 num_warps，寄存器更少（72 vs 96）
+ - **Tensor Core 利用率**：Triton ~68% vs 手写 **0%**——`tl.dot` 自动调 WMMA/mma.sync；手写版是 smem tiling + FMA，无 Tensor Core
+ - **Occupancy**：Triton ~58% vs 手写 ~45%——autotune 自动选 num_warps，寄存器 72 vs ~40
  - **HBM 带宽**：Triton ~38% vs 手写 ~70%——自动 smem tiling + double buffer（num_stages）减少 HBM 访问
  - **根本原因**：Triton 编译器自动做了手写版要几百行才能做完的全部优化（tiling / Tensor Core / double buffer / 向量化），且 autotune 自动选最优配置
 
