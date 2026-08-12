@@ -65,11 +65,11 @@ Welford 算法（1962 年）用**递推公式**在一次遍历中同时更新 me
 
 $$
 \begin{aligned}
-\text{count} &+= 1 \\
+\text{count} &\mathrel{+}= 1 \\
 \delta &= x - \text{mean} \\
-\text{mean} &+= \delta / \text{count} \quad \text{(更新 mean)} \\
+\text{mean} &\mathrel{+}= \delta / \text{count} \quad \text{(更新 mean)} \\
 \delta_2 &= x - \text{mean} \\
-M2 &+= \delta \cdot \delta_2 \quad \text{(更新 M2, 未归一化的方差)}
+M2 &\mathrel{+}= \delta \cdot \delta_2 \quad \text{(更新 M2, 未归一化的方差)}
 \end{aligned}
 $$
 
