@@ -72,17 +72,27 @@ Welford 算法（1962 年）用**递推公式**在一次遍历中同时更新 me
 
 数学等价性证明（归纳法）：
 
-```
-处理第 n 个元素后:
-  mean_n = (1/n) * Σ_{i=1..n} x_i                    // 标准 mean
-  M2_n = Σ_{i=1..n} (x_i - mean_n)²                  // 未归一化方差 × n
+处理第 $n$ 个元素后：
 
-递推:
-  mean_n = mean_{n-1} + (x_n - mean_{n-1}) / n
-  M2_n = M2_{n-1} + (x_n - mean_{n-1}) * (x_n - mean_n)
-```
+$$
+\text{mean}_n = \frac{1}{n} \sum_{i=1}^{n} x_i \quad \text{(标准 mean)}
+$$
 
-关键：`M2` 的递推用 `(x_n - mean_{n-1}) * (x_n - mean_n)`，这两个 delta 巧妙地消除了对 `mean_n` 的前向依赖。
+$$
+M2_n = \sum_{i=1}^{n} (x_i - \text{mean}_n)^2 \quad \text{(未归一化方差} \times n \text{)}
+$$
+
+递推：
+
+$$
+\text{mean}_n = \text{mean}_{n-1} + \frac{x_n - \text{mean}_{n-1}}{n}
+$$
+
+$$
+M2_n = M2_{n-1} + (x_n - \text{mean}_{n-1})(x_n - \text{mean}_n)
+$$
+
+关键：$M2$ 的递推用 $(x_n - \text{mean}_{n-1})(x_n - \text{mean}_n)$，这两个 delta 巧妙地消除了对 $\text{mean}_n$ 的前向依赖。
 
 ##### 数值稳定性
 
