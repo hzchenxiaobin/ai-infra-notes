@@ -11,7 +11,7 @@
 5. 实现并运行 Triton 版 Softmax / GEMM / FlashAttention，与 `torch.softmax` / `cuBLAS` / naive attention 误差达到验收标准，且 GEMM 达到 cuBLAS 70%+
 6. 能对比 **Triton vs CUDA vs torch.compile** 三条路线的生产力与性能权衡，说出各自的适用场景与局限
 
-> 💡 **为什么重要**：Week 4 Day 2 我们手写了 CUDA softmax / layernorm，发现 50 行算法逻辑外面裹着 300 行工程脚手架（warp shuffle、shared memory、向量化、同步屏障）。Triton 的核心价值就是把这 300 行交给编译器——你只写"一个 block 做什么"，tile 大小、向量化、shared memory 布局、warp 同步全部自动生成。今天用 Triton 重写三大算子，建立"Python 写 kernel"的肌肉记忆，为后续阅读 vLLM / Megatron-LM / TensorRT-LLM 源码打基础（这些项目大量使用 Triton）。
+> 💡 **为什么重要**：Week 4 Day 2 我们手写了 CUDA softmax / layernorm，发现 ~50 行算法逻辑外面裹着近百行工程脚手架（warp shuffle、shared memory、向量化、同步屏障，合计 ~140 行代码）。Triton 的核心价值就是把这近百行交给编译器——你只写"一个 block 做什么"，tile 大小、向量化、shared memory 布局、warp 同步全部自动生成。今天用 Triton 重写三大算子，建立"Python 写 kernel"的肌肉记忆，为后续阅读 vLLM / Megatron-LM / TensorRT-LLM 源码打基础（这些项目大量使用 Triton）。
 
 ---
 
@@ -237,7 +237,7 @@ triton.Config({...}, num_warps=4, num_stages=3)
 | `num_warps` | 每 program 的 warp 数 | 4 / 8 / 16 |
 | `num_stages` | 软件流水线深度 | 2 / 3 / 4（越大越耗寄存器） |
 
-> 💡 **一句话总结**：`@triton.autotune` 把"试不同 BLOCK_SIZE / num_warps / num_stages 用 ncu 选最优"这件 Day 3 手动做的事自动化了。代价是首次调用慢（要试所有 config），收益是之后零调优成本。
+> 💡 **一句话总结**：`@triton.autotune` 把"试不同 BLOCK_SIZE / num_warps / num_stages 用 ncu 选最优"这件 Week 2 手动做的事自动化了。代价是首次调用慢（要试所有 config），收益是之后零调优成本。
 
 #### 1.5 Triton vs CUDA vs torch.compile 三方对比
 
@@ -249,7 +249,7 @@ triton.Config({...}, num_warps=4, num_stages=3)
 |------|--------------|--------|---------------|
 | **抽象层级** | thread / warp / block | program (block) | graph (whole model) |
 | **代码量**（softmax） | ~140 行 | ~25 行 | 0 行（自动编译） |
-| **性能** | 最高（手工极致） | 高（~cuBLAS 70-90%） | 中（fused 但 tile 通用） |
+| **性能** | 最高（手工极致） | 高（~cuBLAS 70-85%） | 中（fused 但 tile 通用） |
 | **灵活性** | 完全自由 | 中（受限 block 内） | 低（编译器决定） |
 | **学习曲线** | 陡（PTX / wmma / smem） | 平缓（Python + 原语） | 几乎零（装饰器） |
 | **调试** | cuda-gdb / ncu | ncu（生成 PTX 可读） | 较难（编译后图） |
@@ -329,7 +329,9 @@ def softmax_kernel(x_ptr, y_ptr, x_stride, y_stride, n_rows, n_cols, BLOCK_SIZE:
 # triton_gemm.py —— Triton GEMM (autotune) + benchmark vs torch.matmul (cuBLAS)
 configs = [
     triton.Config({"BLOCK_SIZE_M": 64,  "BLOCK_SIZE_N": 64,  "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_warps=4, num_stages=3),
+    triton.Config({"BLOCK_SIZE_M": 64,  "BLOCK_SIZE_N": 64,  "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_warps=4, num_stages=4),
     triton.Config({"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64,  "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_warps=4, num_stages=3),
+    triton.Config({"BLOCK_SIZE_M": 64,  "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_warps=4, num_stages=3),
     triton.Config({"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_warps=8, num_stages=3),
     triton.Config({"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64,  "BLOCK_SIZE_K": 64, "GROUP_SIZE_M": 8}, num_warps=4, num_stages=4),
 ]
@@ -346,7 +348,7 @@ def gemm_kernel(a_ptr, b_ptr, c_ptr, M, N, K,
     # ...（完整实现见文件）
 ```
 
-关键点：`@triton.autotune` 会在首次调用时对 4 个 config 各跑一次，选出最快的并按 `(M, N, K)` 缓存。`tl.dot(a, b, acc)` 自动调用 Tensor Core（只要 BLOCK 是 16 的倍数）。`GROUP_SIZE_M` 控制 tile 遍历顺序（group-based，提升 L2 复用），这是 CUTLASS 也用的经典手法。完整 tiled 循环（含 K 维 mask 处理、accumulator 累加、FP16 写出）见完整文件。
+关键点：`@triton.autotune` 会在首次调用时对 6 个 config 各跑一次，选出最快的并按 `(M, N, K)` 缓存。`tl.dot(a, b, acc)` 自动调用 Tensor Core（只要 BLOCK 是 16 的倍数）。`GROUP_SIZE_M` 控制 tile 遍历顺序（group-based，提升 L2 复用），这是 CUTLASS 也用的经典手法。完整 tiled 循环（含 K 维 mask 处理、accumulator 累加、FP16 写出）见完整文件。
 
 ##### 1c. triton_flash_attention.py —— Simplified FlashAttention forward
 
@@ -404,7 +406,7 @@ shape             torch(ms)     triton(ms)    max_diff      speedup   check
 (4096, 4096)      0.0757        0.0724        1.86e-09      1.05      PASS  
 ```
 
-> ⚠️ 小 shape 下 Triton 比 torch 慢（0.27x-0.38x）——launch overhead + autotune 占比大；大 shape（4096²）才追平（1.05x）。这是 Triton 的典型特征：**小 kernel 的 launch 开销不划算，大 kernel 才发挥 tiling 优势**。
+> ⚠️ 小 shape 下 Triton 比 torch 慢（0.27x-0.38x）——Triton Python wrapper 的 launch 开销占比大（每次调用都要经过 JIT 缓存查找）；大 shape（4096²）才追平（1.05x）。这是 Triton 的典型特征：**小 kernel 的 launch 开销不划算，大 kernel 才发挥 tiling 优势**。
 
 **预期输出（gemm，RTX 5090, Triton 3.5）**：
 
@@ -483,8 +485,8 @@ ncu --metrics \
 
 # profile FlashAttention 的 stall 原因
 ncu --metrics \
-  smsp__average_warps_issue_stalled_long_scoreboard.pct,\
-  smsp__average_warps_issue_stalled_mio_throttle.pct,\
+  smsp__warp_issue_stalled_long_scoreboard_per_warp_active.pct,\
+  smsp__warp_issue_stalled_mio_throttle_per_warp_active.pct,\
   gpu__time_duration.sum \
   --kernel-name regex:"flash_attn_kernel" \
   python3 kernels/triton_flash_attention.py
