@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="115" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="440" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Harness 内 vs 无 Harness 对比实验</text>
+  <path d="M 240 40 Q 390 48 540 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="390" y="68" text-anchor="middle" font-size="11" fill="#888">同一任务 · 同一AI助手 · 同一项目代码 · 唯一变量：harness 组件</text>
+
+  <!-- Left: No Harness -->
+  <g filter="url(#sk)">
+    <rect x="30" y="82" width="340" height="330" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="200" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">实验A：无 Harness</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="134" fill="#b85450">❌ 无 AGENTS.md</text>
+    <text x="50" y="150" fill="#b85450">❌ 无 docs/ (golden-rules 等)</text>
+    <text x="50" y="166" fill="#b85450">❌ 无 scripts/ (check.sh 等)</text>
+    <text x="50" y="182" fill="#b85450">❌ 无 test_structure.py</text>
+    <text x="50" y="198" fill="#b85450">❌ 无 pyproject.toml (ruff)</text>
+    <text x="50" y="214" fill="#b85450">❌ 无 Makefile</text>
+  </g>
+
+  <line x1="50" y1="228" x2="350" y2="228" stroke="#b85450" stroke-width="0.5" opacity="0.3"/>
+
+  <text x="200" y="248" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">预期结果</text>
+  <g font-size="9" fill="#b85450">
+    <text x="50" y="268">⚠️ AI 猜测测试框架</text>
+    <text x="50" y="282">⚠️ AI 猜测目录结构</text>
+    <text x="50" y="296">⚠️ 可能缺类型注解</text>
+    <text x="50" y="310">⚠️ 可能缺 docstring</text>
+    <text x="50" y="324">⚠️ 函数可能超 50 行</text>
+    <text x="50" y="338">⚠️ 可能有 bare print()</text>
+    <text x="50" y="352">⚠️ 测试可能无法运行</text>
+    <text x="50" y="366">⚠️ 需要多次人类纠正</text>
+  </g>
+  <text x="200" y="392" text-anchor="middle" font-size="10" fill="#888">输出多样性高 → 不可预测</text>
+
+  <!-- Right: With Harness -->
+  <g filter="url(#sk)">
+    <rect x="410" y="82" width="340" height="330" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="580" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">实验B：有 Harness</text>
+
+  <g font-size="10" fill="#444">
+    <text x="430" y="134" fill="#2e6e2e">✅ AGENTS.md (≤60行)</text>
+    <text x="430" y="150" fill="#2e6e2e">✅ docs/golden-rules.md</text>
+    <text x="430" y="166" fill="#2e6e2e">✅ scripts/check.sh</text>
+    <text x="430" y="182" fill="#2e6e2e">✅ tests/test_structure.py</text>
+    <text x="430" y="198" fill="#2e6e2e">✅ pyproject.toml (ruff)</text>
+    <text x="430" y="214" fill="#2e6e2e">✅ Makefile</text>
+  </g>
+
+  <line x1="430" y1="228" x2="730" y2="228" stroke="#2e6e2e" stroke-width="0.5" opacity="0.3"/>
+
+  <text x="580" y="248" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">预期结果</text>
+  <g font-size="9" fill="#2e6e2e">
+    <text x="430" y="268">✅ AI 知道用 pytest</text>
+    <text x="430" y="282">✅ AI 知道测试目录</text>
+    <text x="430" y="296">✅ 有类型注解</text>
+    <text x="430" y="310">✅ 有 docstring</text>
+    <text x="430" y="324">✅ 函数 ≤ 50 行</text>
+    <text x="430" y="338">✅ 无 bare print()</text>
+    <text x="430" y="352">✅ 测试可运行</text>
+    <text x="430" y="366">✅ 自我纠正闭环</text>
+  </g>
+  <text x="580" y="392" text-anchor="middle" font-size="10" fill="#888">约束削减多样性 → 可预测</text>
+
+  <!-- Center: Ashby -->
+  <text x="390" y="424" text-anchor="middle" font-size="9" fill="#7a5415">Ashby 定律：约束削减输出多样性 → 调节器能覆盖 → "约束越严，自主性越强"</text>
+</svg>

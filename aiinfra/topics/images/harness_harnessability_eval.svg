@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="127" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="760" height="440" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Harnessability 评估</text>
+  <path d="M 240 40 Q 380 48 520 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="380" y="62" text-anchor="middle" font-size="11" fill="#888">代码库的可驾驭性——环境本身引导智能体做什么</text>
+
+  <!-- 7 dimensions as rows -->
+  <!-- Row 1: 强类型 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="78" width="680" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="103" font-size="11" font-weight="bold" fill="#2b6e9e">1. 强类型</text>
+  <text x="200" y="103" font-size="10" fill="#555">类型检查是天然传感器</text>
+  <text x="450" y="103" font-size="10" fill="#888">mypy src/ 通过？</text>
+  <text x="680" y="103" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 2: 模块边界 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="124" width="680" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="149" font-size="11" font-weight="bold" fill="#2b6e9e">2. 清晰模块边界</text>
+  <text x="200" y="149" font-size="10" fill="#555">支持架构约束规则</text>
+  <text x="450" y="149" font-size="10" fill="#888">结构测试通过？</text>
+  <text x="680" y="149" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 3: 成熟框架 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="170" width="680" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="195" font-size="11" font-weight="bold" fill="#7a5415">3. 成熟框架</text>
+  <text x="200" y="195" font-size="10" fill="#555">智能体见过无数次</text>
+  <text x="450" y="195" font-size="10" fill="#888">技术选型审计？</text>
+  <text x="680" y="195" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 4: 测试覆盖 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="216" width="680" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="241" font-size="11" font-weight="bold" fill="#2e6e2e">4. 测试覆盖</text>
+  <text x="200" y="241" font-size="10" fill="#555">背压门控的基础</text>
+  <text x="450" y="241" font-size="10" fill="#888">pytest --cov ≥ 80%？</text>
+  <text x="680" y="241" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 5: 文档完备 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="262" width="680" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="287" font-size="11" font-weight="bold" fill="#2b6e9e">5. 文档完备</text>
+  <text x="200" y="287" font-size="10" fill="#555">仓库即记录系统</text>
+  <text x="450" y="287" font-size="10" fill="#888">知识审计通过？</text>
+  <text x="680" y="287" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 6: 可一键启动 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="308" width="680" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="333" font-size="11" font-weight="bold" fill="#7a5415">6. 可一键启动</text>
+  <text x="200" y="333" font-size="10" fill="#555">智能体可独立验证</text>
+  <text x="450" y="333" font-size="10" fill="#888">make run 可用？</text>
+  <text x="680" y="333" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Row 7: 可观测性 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="354" width="680" height="40" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="379" font-size="11" font-weight="bold" fill="#5a3a7a">7. 可观测性</text>
+  <text x="200" y="379" font-size="10" fill="#555">智能体可查运行时状态</text>
+  <text x="450" y="379" font-size="10" fill="#888">logging 配置？</text>
+  <text x="680" y="379" font-size="14" fill="#2e6e2e">✅</text>
+
+  <!-- Score box -->
+  <g filter="url(#sk)">
+    <rect x="200" y="406" width="360" height="28" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="380" y="424" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">评分 7/7 — 🟢 高可驾驭性</text>
+</svg>

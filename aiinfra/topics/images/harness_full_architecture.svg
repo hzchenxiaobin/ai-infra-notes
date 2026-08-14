@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.016" numOctaves="2" seed="103" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="800" height="540" fill="#fdfcf7"/>
+
+  <text x="400" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">完整 Harness 架构全景</text>
+  <path d="M 260 40 Q 400 48 540 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Layer 1: 知识传递 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="740" height="90" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="50" y="84" font-size="13" font-weight="bold" fill="#2b6e9e">知识传递层（前馈）</text>
+  <text x="50" y="100" font-size="9" fill="#888">Day 2 · 推理性前馈 · 告诉智能体该怎么做</text>
+  <g font-size="9" fill="#444">
+    <text x="50" y="120" font-weight="bold" fill="#4a8edb">AGENTS.md</text>
+    <text x="140" y="120" fill="#888">≤60行入口</text>
+    <text x="230" y="120" font-weight="bold" fill="#4a8edb">ARCHITECTURE.md</text>
+    <text x="360" y="120" fill="#888">分层规则</text>
+    <text x="430" y="120" font-weight="bold" fill="#4a8edb">golden-rules.md</text>
+    <text x="540" y="120" fill="#888">GR-1~6</text>
+    <text x="600" y="120" font-weight="bold" fill="#4a8edb">coding-standards.md</text>
+    <text x="50" y="138" fill="#888">导航链接指向子文档 · 渐进式披露</text>
+  </g>
+
+  <path d="M 400 152 L 400 168" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 2: 机械化执行 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="170" width="740" height="90" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="50" y="194" font-size="13" font-weight="bold" fill="#7a5415">机械化执行层（反馈）</text>
+  <text x="50" y="210" font-size="9" fill="#888">Day 3 · 计算性反馈 · 不通过的代码不能合并</text>
+  <g font-size="9" fill="#444">
+    <text x="50" y="230" font-weight="bold" fill="#c98a2b">pyproject.toml</text>
+    <text x="160" y="230" fill="#888">ruff 通用 lint</text>
+    <text x="250" y="230" font-weight="bold" fill="#c98a2b">custom_checks.py</text>
+    <text x="380" y="230" fill="#888">项目特有约束</text>
+    <text x="490" y="230" font-weight="bold" fill="#c98a2b">test_structure.py</text>
+    <text x="620" y="230" fill="#888">架构规则测试</text>
+    <text x="50" y="248" fill="#888">三层互补：通用规则 → 项目规则 → 架构不变量 · 错误信息内嵌 Fix</text>
+  </g>
+
+  <path d="M 400 262 L 400 278" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 3: 反馈回路 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="280" width="740" height="90" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="50" y="304" font-size="13" font-weight="bold" fill="#2e6e2e">反馈回路层（背压门控）</text>
+  <text x="50" y="320" font-size="9" fill="#888">Day 4 · 计算性反馈 · 智能体完成任务后自动验证</text>
+  <g font-size="9" fill="#444">
+    <text x="50" y="340" font-weight="bold" fill="#2e6e2e">check.sh</text>
+    <text x="120" y="340" fill="#888">5层检查: lint→类型→结构→单元→自定义</text>
+    <text x="420" y="340" font-weight="bold" fill="#2e6e2e">Makefile</text>
+    <text x="490" y="340" fill="#888">make run/test/check</text>
+    <text x="50" y="358" fill="#888">快速失败(从快到慢) · Fix指令→自我纠正闭环 · AGENTS.md 编码背压指令</text>
+  </g>
+
+  <path d="M 400 372 L 400 388" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Layer 4: 熵管理 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="390" width="740" height="70" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="50" y="414" font-size="13" font-weight="bold" fill="#5a3a7a">熵管理层（漂移扫描）</text>
+  <text x="50" y="430" font-size="9" fill="#888">Day 5 · 报告性反馈 · 定期审计代码库健康度</text>
+  <g font-size="9" fill="#444">
+    <text x="50" y="448" font-weight="bold" fill="#8e5db8">scan_drift.py</text>
+    <text x="150" y="448" fill="#888">扫描GR-1~6偏差 · JSON输出 · 智能体按Fix自动修复 · 非阻断</text>
+  </g>
+
+  <!-- Flow arrow -->
+  <path d="M 400 462 L 400 478" stroke="#2e6e2e" stroke-width="1.5" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- Bottom: 智能体工作流 -->
+  <g filter="url(#sk)">
+    <rect x="80" y="482" width="640" height="48" rx="8" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="400" y="504" text-anchor="middle" font-size="10" fill="#444">智能体工作流：读AGENTS.md → 写代码 → check.sh → 全绿？完成 : 读Fix→纠正→重跑</text>
+  <text x="400" y="520" text-anchor="middle" font-size="9" fill="#888">定期 scan_drift → 修复历史偏差 → 代码库保持健康</text>
+</svg>
