@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="780" height="480" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">熵管理 = 垃圾回收</text>
+  <path d="M 250 40 Q 390 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Problem - entropy growth -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="280" height="180" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="170" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">问题：智能体复现坏模式</text>
+  <text x="170" y="104" text-anchor="middle" font-size="9" fill="#888">坏模式像病毒一样传播</text>
+
+  <g font-size="10" fill="#b85450">
+    <text x="50" y="128">📌 仓库中有烂代码</text>
+    <text x="60" y="144" fill="#888" font-size="9">函数太长、无类型注解</text>
+    <path d="M 170 150 L 170 166" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+    <text x="50" y="180">🤖 智能体参考烂代码</text>
+    <text x="60" y="196" fill="#888" font-size="9">以烂代码为"范例"</text>
+    <path d="M 170 202 L 170 218" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+    <text x="50" y="232">📌 生成更多烂代码</text>
+  </g>
+
+  <!-- Arrow to solution -->
+  <path d="M 170 242 L 170 258" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="220" y="254" font-size="10" fill="#5a5a5a">对抗腐烂</text>
+
+  <!-- Right: Solution - three layers -->
+  <g filter="url(#sk)">
+    <rect x="340" y="60" width="410" height="400" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="545" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">解决方案：编码 + 自动化</text>
+
+  <!-- Layer 1 -->
+  <g filter="url(#sk)">
+    <rect x="360" y="106" width="370" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="128" font-size="11" font-weight="bold" fill="#2b6e9e">第 1 层：黄金规则编码</text>
+  <text x="380" y="144" font-size="9" fill="#555">把"应该怎么做"写进仓库</text>
+  <text x="380" y="158" font-size="9" fill="#888">docs/golden-rules.md + 每条规则有机械化检查</text>
+
+  <path d="M 545 172 L 545 188" stroke="#2e6e2e" stroke-width="1.2" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- Layer 2 -->
+  <g filter="url(#sk)">
+    <rect x="360" y="190" width="370" height="64" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="212" font-size="11" font-weight="bold" fill="#7a5415">第 2 层：定期扫描偏差</text>
+  <text x="380" y="228" font-size="9" fill="#555">后台任务运行 scan_drift.py</text>
+  <text x="380" y="242" font-size="9" fill="#888">输出偏差报告（JSON，含 file/line/rule/fix）</text>
+
+  <path d="M 545 256 L 545 272" stroke="#2e6e2e" stroke-width="1.2" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <!-- Layer 3 -->
+  <g filter="url(#sk)">
+    <rect x="360" y="274" width="370" height="64" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="296" font-size="11" font-weight="bold" fill="#5a3a7a">第 3 层：修复漂移</text>
+  <text x="380" y="312" font-size="9" fill="#555">智能体读 JSON → 按 Fix 修改 → 提 PR</text>
+  <text x="380" y="326" font-size="9" fill="#888">大多数 1 分钟内审查 + 自动合并</text>
+
+  <!-- Bottom: tech debt analogy -->
+  <g filter="url(#sk)">
+    <rect x="360" y="360" width="370" height="86" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="545" y="382" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">技术债 = 高息贷款</text>
+  <g font-size="9" fill="#444">
+    <text x="380" y="402" fill="#2e6e2e">✅ 每天小额偿还（持续垃圾回收）</text>
+    <text x="380" y="416" fill="#888">  每天修几个偏差 → 代码库保持健康</text>
+    <text x="380" y="434" fill="#b85450">❌ 累积后大重构（一次性清偿）</text>
+    <text x="380" y="444" fill="#888" font-size="8">  重写成本巨大，期间无法产出新功能</text>
+  </g>
+
+  <!-- Left bottom:品味传播 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="280" width="280" height="180" rx="10" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="4 2"/>
+  </g>
+  <text x="170" y="304" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">品味传播路径</text>
+  <g font-size="9" fill="#444">
+    <text x="50" y="328">人类审查评论</text>
+    <path d="M 130 324 L 155 324" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="165" y="328">文档更新</text>
+    <path d="M 50 344 L 130 344" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0"/>
+    <text x="50" y="352">→ docs/golden-rules.md</text>
+    <path d="M 170 348 L 170 364" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="50" y="378">→ lint 规则 / scan_drift</text>
+    <path d="M 170 374 L 170 390" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="50" y="404">→ 自动应用于所有代码</text>
+  </g>
+  <text x="170" y="430" text-anchor="middle" font-size="9" fill="#888">品味一旦被捕捉（编码为规则）</text>
+  <text x="170" y="446" text-anchor="middle" font-size="9" fill="#888">就会持续应用于每一行代码</text>
+</svg>

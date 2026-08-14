@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="91" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="420" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">吞吐量改变合并理念</text>
+  <path d="M 250 40 Q 390 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Traditional -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="330" height="320" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="195" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">传统理念</text>
+  <text x="195" y="104" text-anchor="middle" font-size="10" fill="#888">人力贵 + 吞吐量低</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="132" fill="#4a8edb">PR 审查</text>
+    <text x="60" y="148" fill="#555">仔细审查，慢慢合并</text>
+    <text x="60" y="162" fill="#888" font-size="9">PR 生命周期：数天~数周</text>
+
+    <line x1="50" y1="176" x2="340" y2="176" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="196" fill="#4a8edb">测试失败</text>
+    <text x="60" y="212" fill="#555">必须全绿才合并</text>
+    <text x="60" y="226" fill="#888" font-size="9">一个偶发失败阻塞所有 PR</text>
+
+    <line x1="50" y1="240" x2="340" y2="240" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="260" fill="#4a8edb">质量门</text>
+    <text x="60" y="276" fill="#555">人类 Review</text>
+    <text x="60" y="290" fill="#888" font-size="9">人类是瓶颈</text>
+
+    <line x1="50" y1="304" x2="340" y2="304" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="324" fill="#4a8edb">策略</text>
+    <text x="60" y="340" fill="#555">精心审查，一次做对</text>
+    <text x="60" y="354" fill="#888" font-size="9">纠错成本高 → 减少犯错</text>
+  </g>
+
+  <!-- Arrow -->
+  <text x="390" y="200" text-anchor="middle" font-size="11" fill="#5a5a5a">纠错成本低</text>
+  <text x="390" y="216" text-anchor="middle" font-size="11" fill="#5a5a5a">等待成本高</text>
+  <path d="M 365 226 L 415 226" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Right: Harness -->
+  <g filter="url(#sk)">
+    <rect x="420" y="60" width="330" height="320" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="585" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Harness 理念</text>
+  <text x="585" y="104" text-anchor="middle" font-size="10" fill="#888">智能体便宜 + 吞吐量高</text>
+
+  <g font-size="10" fill="#444">
+    <text x="440" y="132" fill="#2e6e2e">PR 审查</text>
+    <text x="450" y="148" fill="#555">快速合并，快速纠错</text>
+    <text x="450" y="162" fill="#888" font-size="9">PR 生命周期：数分钟~数小时</text>
+
+    <line x1="440" y1="176" x2="730" y2="176" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="440" y="196" fill="#2e6e2e">测试失败</text>
+    <text x="450" y="212" fill="#555">偶发失败通过重跑解决</text>
+    <text x="450" y="226" fill="#888" font-size="9">不无限期阻塞</text>
+
+    <line x1="440" y1="240" x2="730" y2="240" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="440" y="260" fill="#2e6e2e">质量门</text>
+    <text x="450" y="276" fill="#555">机械化检查（CI / lint / 结构测试）</text>
+    <text x="450" y="290" fill="#888" font-size="9">智能体审查智能体</text>
+
+    <line x1="440" y1="304" x2="730" y2="304" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="440" y="324" fill="#2e6e2e">策略</text>
+    <text x="450" y="340" fill="#555">快速迭代，快速修复</text>
+    <text x="450" y="354" fill="#888" font-size="9">纠错成本低 → 容忍犯错</text>
+  </g>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="120" y="392" width="540" height="20" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-dasharray="4 2"/>
+  </g>
+  <text x="390" y="406" text-anchor="middle" font-size="10" fill="#7a5415">前提：必须有背压机制（测试、lint、结构检查）　|　没有背压的快速合并 = 快速腐烂</text>
+</svg>

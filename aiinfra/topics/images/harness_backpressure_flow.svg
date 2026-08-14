@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="760" height="460" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">背压门控流程：智能体自我纠正闭环</text>
+  <path d="M 200 40 Q 380 48 560 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Step 1: Read AGENTS.md -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="140" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="110" y="86" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">1. 读 AGENTS.md</text>
+  <text x="110" y="102" text-anchor="middle" font-size="9" fill="#888">前馈：知道该怎么做</text>
+  <text x="110" y="116" text-anchor="middle" font-size="9" fill="#888">Day 2</text>
+
+  <path d="M 185 92 L 215 92" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: Write code -->
+  <g filter="url(#sk)">
+    <rect x="220" y="62" width="140" height="60" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="290" y="86" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">2. 写代码</text>
+  <text x="290" y="102" text-anchor="middle" font-size="9" fill="#888">在约束内自主实现</text>
+  <text x="290" y="116" text-anchor="middle" font-size="9" fill="#888">智能体执行</text>
+
+  <path d="M 365 92 L 395 92" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: Run check.sh -->
+  <g filter="url(#sk)">
+    <rect x="400" y="62" width="140" height="60" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="470" y="86" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">3. 运行 check.sh</text>
+  <text x="470" y="102" text-anchor="middle" font-size="9" fill="#888">反馈：自动验证</text>
+  <text x="470" y="116" text-anchor="middle" font-size="9" fill="#888">Day 4</text>
+
+  <!-- Decision diamond -->
+  <g filter="url(#sk)">
+    <polygon points="580,92 640,62 700,92 640,122" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="640" y="90" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">全绿？</text>
+
+  <!-- Yes arrow: down to done -->
+  <path d="M 700 92 Q 730 92 730 170 Q 730 200 700 200" stroke="#2e6e2e" stroke-width="1.5" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <text x="735" y="140" font-size="10" fill="#2e6e2e">✅ 是</text>
+
+  <!-- Done box -->
+  <g filter="url(#sk)">
+    <rect x="560" y="180" width="140" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2.5"/>
+  </g>
+  <text x="630" y="202" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">✅ 任务完成</text>
+  <text x="630" y="218" text-anchor="middle" font-size="9" fill="#888">智能体自主完成</text>
+
+  <!-- No arrow: down to fix -->
+  <path d="M 640 122 L 640 250" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="655" y="180" font-size="10" fill="#b85450">❌ 否</text>
+
+  <!-- Fix box -->
+  <g filter="url(#sk)">
+    <rect x="400" y="250" width="320" height="80" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="560" y="276" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">4. 读 Fix 指令，自我纠正</text>
+  <text x="560" y="294" text-anchor="middle" font-size="9" fill="#888">每条检查的报错含 Fix: 修复指令</text>
+  <text x="560" y="308" text-anchor="middle" font-size="9" fill="#888">智能体按 Fix 修改代码</text>
+  <text x="560" y="322" text-anchor="middle" font-size="9" fill="#888">不需要人类介入</text>
+
+  <!-- Loop back arrow: from fix to check.sh -->
+  <path d="M 400 290 Q 350 290 350 200 Q 350 92 400 92" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arR)" filter="url(#sk)" stroke-dasharray="5 3"/>
+  <text x="300" y="200" text-anchor="middle" font-size="9" fill="#b85450">重跑 check.sh</text>
+  <text x="300" y="214" text-anchor="middle" font-size="9" fill="#888">循环直到全绿</text>
+
+  <!-- 5 layers of check.sh -->
+  <g filter="url(#sk)">
+    <rect x="400" y="360" width="320" height="90" rx="8" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="4 2"/>
+  </g>
+  <text x="560" y="380" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b2b2b">check.sh 五层检查（从快到慢）</text>
+  <g font-size="9" fill="#444">
+    <text x="420" y="398">① lint (ruff) &lt; 1s</text>
+    <text x="560" y="398">② 类型检查 (mypy) &lt; 3s</text>
+    <text x="420" y="414">③ 结构测试 &lt; 2s</text>
+    <text x="560" y="414">④ 单元测试 &lt; 5s</text>
+    <text x="420" y="430">⑤ 自定义检查 &lt; 2s</text>
+    <text x="560" y="430" fill="#888">快速失败原则</text>
+  </g>
+
+  <!-- Bottom note -->
+  <text x="190" y="380" text-anchor="middle" font-size="10" fill="#7a5415">Backpressure Over Prescription</text>
+  <text x="190" y="396" text-anchor="middle" font-size="9" fill="#888">不规定怎么做（给自主权）</text>
+  <text x="190" y="410" text-anchor="middle" font-size="9" fill="#888">但门控拒绝坏结果（给约束）</text>
+</svg>

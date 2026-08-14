@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="52" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">智能体可读性：人类可读 vs 智能体可推理</text>
+  <path d="M 200 40 Q 380 48 560 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: 人类可读 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="330" height="310" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="195" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">人类可读性</text>
+  <text x="195" y="104" text-anchor="middle" font-size="10" fill="#888">优化目标：人能看懂</text>
+
+  <g font-size="10" fill="#444">
+    <text x="50" y="132" font-weight="bold" fill="#4a8edb">API 选择</text>
+    <text x="60" y="148" fill="#555">新潮框架也行，人可以学</text>
+    <text x="60" y="162" fill="#888">例：最新 JS 框架、自研库</text>
+
+    <line x1="50" y1="176" x2="340" y2="176" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="196" font-weight="bold" fill="#4a8edb">文档形式</text>
+    <text x="60" y="212" fill="#555">详细教程，循序渐进</text>
+    <text x="60" y="226" fill="#888">人可以读 10 页教程</text>
+
+    <line x1="50" y1="240" x2="340" y2="240" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="260" font-weight="bold" fill="#4a8edb">错误信息</text>
+    <text x="60" y="276" fill="#555">人能看懂就行</text>
+    <text x="60" y="290" fill="#888">"Error: something went wrong"</text>
+
+    <line x1="50" y1="304" x2="340" y2="304" stroke="#4a8edb" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="50" y="324" font-weight="bold" fill="#4a8edb">模糊性</text>
+    <text x="60" y="340" fill="#555">可以容忍歧义</text>
+    <text x="60" y="354" fill="#888">人能从上下文推断</text>
+  </g>
+
+  <!-- Right: 智能体可读 -->
+  <g filter="url(#sk)">
+    <rect x="400" y="60" width="330" height="310" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="565" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">智能体可读性</text>
+  <text x="565" y="104" text-anchor="middle" font-size="10" fill="#888">优化目标：智能体能推理</text>
+
+  <g font-size="10" fill="#444">
+    <text x="420" y="132" font-weight="bold" fill="#2e6e2e">API 选择</text>
+    <text x="430" y="148" fill="#555">选"无聊"技术（稳定 + 训练集覆盖好）</text>
+    <text x="430" y="162" fill="#888">例：Python 3.10+ / FastAPI / SQLite</text>
+
+    <line x1="420" y1="176" x2="710" y2="176" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="420" y="196" font-weight="bold" fill="#2e6e2e">文档形式</text>
+    <text x="430" y="212" fill="#555">结构化、可机器解析</text>
+    <text x="430" y="226" fill="#888">AGENTS.md ≤ 60 行 + 导航</text>
+
+    <line x1="420" y1="240" x2="710" y2="240" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="420" y="260" font-weight="bold" fill="#2e6e2e">错误信息</text>
+    <text x="430" y="276" fill="#555">内嵌修复指令</text>
+    <text x="430" y="290" fill="#888">"Error: X. Fix: do Y. Why: Z."</text>
+
+    <line x1="420" y1="304" x2="710" y2="304" stroke="#2e6e2e" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="420" y="324" font-weight="bold" fill="#2e6e2e">模糊性</text>
+    <text x="430" y="340" fill="#555">必须消除（歧义 = 错误）</text>
+    <text x="430" y="354" fill="#888">一条规范只有一种解读</text>
+  </g>
+
+  <!-- Arrow between -->
+  <text x="380" y="200" text-anchor="middle" font-size="11" fill="#5a5a5a">转变</text>
+  <path d="M 365 210 L 395 210" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+</svg>
