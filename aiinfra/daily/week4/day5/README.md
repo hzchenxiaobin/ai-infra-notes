@@ -127,26 +127,28 @@ def measure(fn, *args, iters=100, warmup=10):
 
 | M=N=K | Triton (ms) | cuBLAS FP16 (ms) | cuBLAS FP16→FP32 (ms) | Triton %FP16 | Triton %FP32out |
 |-------|------------|------------------|----------------------|-------------|-----------------|
-| 512   | 0.015      | 0.006            | 0.010                | 42.6%       | 70.0%           |
-| 1024  | 0.031      | 0.014            | 0.019                | 46.6%       | 59.6%           |
-| 2048  | 0.105      | 0.098            | 0.109                | 93.8%       | 103.6%          |
-| 4096  | 0.661      | 0.644            | 0.695                | 97.5%       | 105.2%          |
+| 512   | 0.015      | 0.006            | 0.010                | 40.0%       | 66.7%           |
+| 1024  | 0.031      | 0.014            | 0.019                | 45.2%       | 61.3%           |
+| 2048  | 0.105      | 0.098            | 0.109                | 93.3%       | 103.8%          |
+| 4096  | 0.661      | 0.644            | 0.695                | 97.4%       | 105.1%          |
 
 > ⚠️ **预估发现（待实测回填）**：
-> - **大矩阵（4096）Triton 达 FP16 cuBLAS 的 97.5%**——`tl.dot` 自动调 Tensor Core + autotune 选最优 tiling
-> - **小矩阵（512）仅 42.6%**——autotune 的 config 搜索空间不够 + block 数少 SM 利用率低
-> - **对比 FP16→FP32 输出口径时 Triton 甚至超过 cuBLAS**（105.2%）——因 `torch.matmul(a.half,b.half).float()` 多了一次类型转换
+> - **大矩阵（4096）Triton 达 FP16 cuBLAS 的 97.4%**——`tl.dot` 自动调 Tensor Core + autotune 选最优 tiling
+> - **小矩阵（512）仅 40.0%**——autotune 的 config 搜索空间不够 + block 数少 SM 利用率低
+> - **对比 FP16→FP32 输出口径时 Triton 甚至超过 cuBLAS**（105.1%）——因 `torch.matmul(a.half,b.half).float()` 多了一次类型转换
 > - **max_diff ~0.03-0.13**（FP16 精度损失，正常）
 
 ##### Softmax（预估，FP32）
 
-| M×D | Triton (ms) | PyTorch (ms) | Triton / PyTorch |
+| M×D | Triton (ms) | PyTorch (ms) | PyTorch / Triton |
 |-----|------------|------------|-------------------|
-| 1024×1024 | 0.008 | 0.004 | 0.52x |
-| 4096×1024 | 0.008 | 0.008 | 0.99x |
+| 1024×1024 | 0.008 | 0.004 | 0.50x |
+| 4096×1024 | 0.008 | 0.008 | 1.00x |
 | 4096×4096 | 0.072 | 0.073 | 1.01x |
 
-> ⚠️ **预估发现**：Triton Softmax 与 PyTorch `torch.softmax` 大矩阵基本持平（1.01x），小矩阵更慢（0.52x）。原因：PyTorch 的 softmax kernel 已高度优化，Triton 在 memory-bound 算子上无明显优势。max_diff ~1e-9（精度一致）。
+> ⚠️ **预估发现**：Triton Softmax 与 PyTorch `torch.softmax` 大矩阵基本持平（1.01x），小矩阵更慢（0.50x）。原因：PyTorch 的 softmax kernel 已高度优化，Triton 在 memory-bound 算子上无明显优势。max_diff ~1e-9（精度一致）。
+>
+> 注：`PyTorch / Triton` = PyTorch 时间 / Triton 时间。<1 表示 Triton 更慢，>1 表示 Triton 更快。
 
 ##### FlashAttention（预估，causal, FP16）
 
@@ -211,8 +213,8 @@ def gemm_kernel(a_ptr, b_ptr, c_ptr, M, N, K,
     b_ptrs = b_ptr + offs_k[:, None] * stride_bk + offs_n[None, :] * stride_bn
     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
     for k in range(0, K, BLOCK_K):
-        a = tl.load(a_ptrs, mask=offs_m[:, None] < M, other=0.0)
-        b = tl.load(b_ptrs, mask=offs_n[None, :] < N, other=0.0)
+        a = tl.load(a_ptrs, mask=(offs_m[:, None] < M) & (offs_k[None, :] < K - k), other=0.0)
+        b = tl.load(b_ptrs, mask=(offs_k[:, None] < K - k) & (offs_n[None, :] < N), other=0.0)
         acc += tl.dot(a, b)
         a_ptrs += BLOCK_K * stride_ak
         b_ptrs += BLOCK_K * stride_bk
