@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Harness 组件全景图（三方综合）</text>
+  <path d="M 280 40 Q 430 48 580 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- LangChain column -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="250" height="250" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="155" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">LangChain 六组件</text>
+  <line x1="50" y1="96" x2="260" y2="96" stroke="#4a8edb" stroke-width="1" opacity="0.4"/>
+  <g font-size="10" fill="#444">
+    <text x="50" y="118" font-weight="bold" fill="#2b6e9e">System Prompts</text>
+    <text x="60" y="132" fill="#888">AGENTS.md, CLAUDE.md</text>
+    <text x="50" y="152" font-weight="bold" fill="#2e6e2e">Tools &amp; MCP</text>
+    <text x="60" y="166" fill="#888">文件读写, Shell, API</text>
+    <text x="50" y="186" font-weight="bold" fill="#c98a2b">Skills</text>
+    <text x="60" y="200" fill="#888">渐进式加载知识包</text>
+    <text x="50" y="220" font-weight="bold" fill="#b85450">沙箱基础设施</text>
+    <text x="60" y="234" fill="#888">文件系统, Docker</text>
+    <text x="50" y="254" font-weight="bold" fill="#8e5db8">编排逻辑</text>
+    <text x="60" y="268" fill="#888">子智能体, handoff</text>
+    <text x="50" y="288" font-weight="bold" fill="#4a8e4a">Hooks / 中间件</text>
+    <text x="60" y="302" fill="#888">compaction, lint 检查</text>
+  </g>
+
+  <!-- HumanLayer column -->
+  <g filter="url(#sk)">
+    <rect x="305" y="60" width="250" height="250" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="430" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">HumanLayer 六杠杆</text>
+  <line x1="325" y1="96" x2="535" y2="96" stroke="#c98a2b" stroke-width="1" opacity="0.4"/>
+  <g font-size="10" fill="#444">
+    <text x="325" y="118" font-weight="bold" fill="#2b6e9e">① AGENTS.md</text>
+    <text x="335" y="132" fill="#888">≤ 60 行, 禁止自动生成</text>
+    <text x="325" y="152" font-weight="bold" fill="#2e6e2e">② MCP Servers</text>
+    <text x="335" y="166" fill="#888">信任边界 + 工具控制</text>
+    <text x="325" y="186" font-weight="bold" fill="#c98a2b">③ Skills</text>
+    <text x="335" y="200" fill="#888">渐进式披露, 按需加载</text>
+    <text x="325" y="220" font-weight="bold" fill="#b85450">④ Sub-Agents</text>
+    <text x="335" y="234" fill="#888">上下文防火墙</text>
+    <text x="325" y="254" font-weight="bold" fill="#8e5db8">⑤ Hooks</text>
+    <text x="335" y="268" fill="#888">成功静默/失败报错</text>
+    <text x="325" y="288" font-weight="bold" fill="#4a8e4a">⑥ Back-Pressure</text>
+    <text x="335" y="302" fill="#888">测试/构建 = 自我验证</text>
+  </g>
+
+  <!-- Fowler column -->
+  <g filter="url(#sk)">
+    <rect x="580" y="60" width="250" height="250" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="705" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">Fowler 三层框架</text>
+  <line x1="600" y1="96" x2="810" y2="96" stroke="#4a8e4a" stroke-width="1" opacity="0.4"/>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="108" width="210" height="56" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="705" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#5a3a7a">Context Engineering</text>
+  <text x="705" y="148" text-anchor="middle" font-size="9" fill="#888">知识库 + 动态上下文</text>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="178" width="210" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="705" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Architectural Constraints</text>
+  <text x="705" y="218" text-anchor="middle" font-size="9" fill="#888">LLM 审查 + linter + 结构测试</text>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="248" width="210" height="56" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="705" y="270" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">Garbage Collection</text>
+  <text x="705" y="288" text-anchor="middle" font-size="9" fill="#888">定期扫描 + 修复漂移</text>
+
+  <!-- Convergence area -->
+  <path d="M 155 312 L 380 360" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+  <path d="M 430 312 L 430 360" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+  <path d="M 705 312 L 480 360" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="360" width="300" height="56" rx="10" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="2" stroke-dasharray="6 3"/>
+  </g>
+  <text x="430" y="384" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">完整 Harness</text>
+  <text x="430" y="402" text-anchor="middle" font-size="10" fill="#888">三方互补 · 非互斥 · 共同构成约束系统</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="440" width="800" height="60" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="462" font-size="11" font-weight="bold" fill="#7a5415">分工：</text>
+  <text x="110" y="462" font-size="10" fill="#2b6e9e">LangChain = 组件分类</text>
+  <text x="290" y="462" font-size="10" fill="#7a5415">HumanLayer = 可操作杠杆</text>
+  <text x="480" y="462" font-size="10" fill="#2e6e2e">Fowler = 架构分层</text>
+  <text x="50" y="482" font-size="10" fill="#888">不要被组件数量吓到——Day 1 只需理解"有哪些零件"，Day 2-6 会逐一动手搭建</text>
+</svg>

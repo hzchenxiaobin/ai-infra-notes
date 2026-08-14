@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="460" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">地图而非手册（渐进式披露）</text>
+  <path d="M 250 40 Q 390 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Top: AGENTS.md (the map) -->
+  <g filter="url(#sk)">
+    <rect x="240" y="60" width="300" height="140" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2.5"/>
+  </g>
+  <text x="390" y="86" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b6e9e">AGENTS.md</text>
+  <text x="390" y="104" text-anchor="middle" font-size="10" fill="#888">≤ 60 行 · 目录页 · 不是百科全书</text>
+  <g font-size="10" fill="#444">
+    <text x="270" y="128">📋 仓库结构表</text>
+    <text x="270" y="148">📝 开发约定（精简版）</text>
+    <text x="270" y="168">🔗 导航链接 → 指向子文档</text>
+    <text x="270" y="188">✅ 机械化检查说明</text>
+  </g>
+
+  <!-- Arrows down to sub-docs -->
+  <path d="M 300 202 Q 200 230 120 260" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 340 202 Q 300 230 260 260" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 390 202 L 390 260" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 440 202 Q 480 230 520 260" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 480 202 Q 580 230 660 260" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+
+  <!-- Sub-documents -->
+  <g filter="url(#sk)">
+    <rect x="40" y="262" width="160" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="120" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">coding-standards.md</text>
+  <text x="120" y="302" text-anchor="middle" font-size="9" fill="#888">编码规范细节</text>
+  <text x="120" y="318" text-anchor="middle" font-size="9" fill="#888">命名/格式/行数</text>
+
+  <g filter="url(#sk)">
+    <rect x="220" y="262" width="160" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="300" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">ARCHITECTURE.md</text>
+  <text x="300" y="302" text-anchor="middle" font-size="9" fill="#888">分层规则</text>
+  <text x="300" y="318" text-anchor="middle" font-size="9" fill="#888">依赖方向</text>
+
+  <g filter="url(#sk)">
+    <rect x="400" y="262" width="160" height="70" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="480" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">golden-rules.md</text>
+  <text x="480" y="302" text-anchor="middle" font-size="9" fill="#888">黄金规则</text>
+  <text x="480" y="318" text-anchor="middle" font-size="9" fill="#888">不变量</text>
+
+  <g filter="url(#sk)">
+    <rect x="580" y="262" width="160" height="70" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="660" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">exec-plans/</text>
+  <text x="660" y="302" text-anchor="middle" font-size="9" fill="#888">执行计划</text>
+  <text x="660" y="318" text-anchor="middle" font-size="9" fill="#888">进度+决策日志</text>
+
+  <!-- Work flow -->
+  <text x="390" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">智能体按需深入，不一次性加载全部</text>
+
+  <g filter="url(#sk)">
+    <rect x="80" y="378" width="620" height="62" rx="8" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <g font-size="10" fill="#444">
+    <text x="100" y="400" font-weight="bold" fill="#4a8edb">Step 1</text>
+    <text x="160" y="400" fill="#555">读 AGENTS.md（~40 行）→ 知道结构和基本约定</text>
+    <text x="100" y="418" font-weight="bold" fill="#2e6e2e">Step 2</text>
+    <text x="160" y="418" fill="#555">任务涉及数据库？→ 读 ARCHITECTURE.md → 知道分层规则</text>
+    <text x="100" y="436" font-weight="bold" fill="#b85450">Step 3</text>
+    <text x="160" y="436" fill="#555">写完代码 → 运行 scripts/check.sh → 背压门控自动验证</text>
+  </g>
+</svg>

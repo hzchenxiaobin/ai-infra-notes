@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="720" height="440" fill="#fdfcf7"/>
+
+  <text x="360" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">仓库即记录系统</text>
+  <path d="M 240 40 Q 360 48 480 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: 仓库外（不可见） -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="200" height="300" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="130" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">仓库外</text>
+  <text x="130" y="104" text-anchor="middle" font-size="10" fill="#888">对智能体不可见</text>
+
+  <g font-size="11" fill="#b85450">
+    <text x="50" y="130">📱 Slack 讨论</text>
+    <text x="50" y="152">📄 Google Docs</text>
+    <text x="50" y="174">🧠 团队成员脑中</text>
+    <text x="50" y="196">📝 Confluence / Notion</text>
+    <text x="50" y="218">💬 口头约定</text>
+  </g>
+  <line x1="50" y1="234" x2="210" y2="234" stroke="#b85450" stroke-width="0.8" opacity="0.3"/>
+  <text x="130" y="256" text-anchor="middle" font-size="10" fill="#b85450">↓ 智能体看不到 ↓</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="270" width="140" height="70" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="130" y="294" text-anchor="middle" font-size="10" fill="#b85450">重复劳动</text>
+  <text x="130" y="310" text-anchor="middle" font-size="10" fill="#b85450">方向错误</text>
+  <text x="130" y="326" text-anchor="middle" font-size="10" fill="#b85450">踩重复的坑</text>
+  <text x="130" y="348" text-anchor="middle" font-size="9" fill="#888">基于不完整信息做判断</text>
+
+  <!-- Arrow -->
+  <text x="290" y="200" text-anchor="middle" font-size="12" fill="#5a5a5a">版本化提交</text>
+  <path d="M 235 210 L 320 210" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Right: 仓库内（可见） -->
+  <g filter="url(#sk)">
+    <rect x="330" y="60" width="360" height="360" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="510" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">仓库内</text>
+  <text x="510" y="104" text-anchor="middle" font-size="10" fill="#888">对智能体可见 ✅</text>
+
+  <g font-size="11" fill="#444">
+    <text x="350" y="132" font-weight="bold" fill="#2b6e9e">AGENTS.md</text>
+    <text x="470" y="132" fill="#888">← 智能体入口文件</text>
+
+    <text x="350" y="156" font-weight="bold" fill="#2e6e2e">ARCHITECTURE.md</text>
+    <text x="470" y="156" fill="#888">← 架构规则</text>
+
+    <text x="350" y="180" font-weight="bold" fill="#c98a2b">docs/design-docs/</text>
+    <text x="470" y="180" fill="#888">← 设计决策</text>
+
+    <text x="350" y="204" font-weight="bold" fill="#b85450">docs/exec-plans/</text>
+    <text x="470" y="204" fill="#888">← 执行计划+进度</text>
+
+    <text x="350" y="228" font-weight="bold" fill="#8e5db8">docs/QUALITY_SCORE.md</text>
+    <text x="470" y="228" fill="#888">← 质量评分</text>
+
+    <text x="350" y="252" font-weight="bold" fill="#4a8e4a">scripts/</text>
+    <text x="470" y="252" fill="#888">← 检查脚本</text>
+
+    <text x="350" y="276" font-weight="bold" fill="#2b6e9e">代码 + 注释</text>
+    <text x="470" y="276" fill="#888">← 源码</text>
+
+    <text x="350" y="300" font-weight="bold" fill="#2e6e2e">Lint 规则</text>
+    <text x="470" y="300" fill="#888">← 不仅可见，还强制执行</text>
+  </g>
+
+  <line x1="350" y1="316" x2="670" y2="316" stroke="#4a8edb" stroke-width="0.8" opacity="0.3"/>
+  <text x="510" y="338" text-anchor="middle" font-size="10" fill="#2b6e9e">↓ 智能体可以看到 ↓</text>
+  <g filter="url(#sk)">
+    <rect x="370" y="350" width="280" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="510" y="372" text-anchor="middle" font-size="10" fill="#2b6e9e">✅ 完整的知识和上下文</text>
+  <text x="510" y="388" text-anchor="middle" font-size="10" fill="#2b6e9e">✅ 正确的决策和方向</text>
+  <text x="510" y="404" text-anchor="middle" font-size="10" fill="#2b6e9e">✅ 自我验证和纠错</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="400" width="280" height="32" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-dasharray="5 3"/>
+  </g>
+  <text x="170" y="420" text-anchor="middle" font-size="10" fill="#7a5415">仓库是智能体唯一的"现实"</text>
+</svg>

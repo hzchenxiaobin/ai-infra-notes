@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="480" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">六大核心概念关系图</text>
+  <path d="M 250 40 Q 390 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Top: 总纲 -->
+  <g filter="url(#sk)">
+    <rect x="250" y="60" width="280" height="50" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2.5"/>
+  </g>
+  <text x="390" y="84" text-anchor="middle" font-size="15" font-weight="bold" fill="#2e6e2e">人类掌舵，智能体执行</text>
+  <text x="390" y="102" text-anchor="middle" font-size="10" fill="#888">总纲</text>
+
+  <!-- Three groups label -->
+  <text x="130" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">知识传递</text>
+  <text x="390" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#c98a2b">质量保障</text>
+  <text x="650" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">可持续性</text>
+
+  <!-- Arrows from 总纲 to groups -->
+  <path d="M 390 112 Q 200 125 130 150" stroke="#4a8edb" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 390 112 L 390 150" stroke="#c98a2b" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+  <path d="M 390 112 Q 580 125 650 150" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.6"/>
+
+  <!-- Group 1: 知识传递 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="155" width="200" height="110" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="130" y="178" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">1. 仓库即记录系统</text>
+  <text x="130" y="196" text-anchor="middle" font-size="9" fill="#888">不在仓库里的东西</text>
+  <text x="130" y="208" text-anchor="middle" font-size="9" fill="#888">对智能体不存在</text>
+  <line x1="50" y1="218" x2="210" y2="218" stroke="#4a8edb" stroke-width="0.8" opacity="0.3"/>
+  <text x="130" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">2. 地图而非手册</text>
+  <text x="130" y="250" text-anchor="middle" font-size="9" fill="#888">AGENTS.md 是目录页</text>
+  <text x="130" y="262" text-anchor="middle" font-size="9" fill="#888">不是百科全书</text>
+
+  <!-- Group 2: 质量保障 -->
+  <g filter="url(#sk)">
+    <rect x="290" y="155" width="200" height="110" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="390" y="178" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">3. 机械化执行</text>
+  <text x="390" y="196" text-anchor="middle" font-size="9" fill="#888">文档会腐烂</text>
+  <text x="390" y="208" text-anchor="middle" font-size="9" fill="#888">lint 规则不会</text>
+  <line x1="310" y1="218" x2="470" y2="218" stroke="#c98a2b" stroke-width="0.8" opacity="0.3"/>
+  <text x="390" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#c98a2b">4. 智能体可读性</text>
+  <text x="390" y="250" text-anchor="middle" font-size="9" fill="#888">优先为智能体</text>
+  <text x="390" y="262" text-anchor="middle" font-size="9" fill="#888">的推理能力优化</text>
+
+  <!-- Group 3: 可持续性 -->
+  <g filter="url(#sk)">
+    <rect x="550" y="155" width="200" height="110" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" stroke-dasharray="5 3"/>
+  </g>
+  <text x="650" y="178" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">5. 吞吐量改变合并</text>
+  <text x="650" y="196" text-anchor="middle" font-size="9" fill="#888">纠错成本低</text>
+  <text x="650" y="208" text-anchor="middle" font-size="9" fill="#888">等待成本高</text>
+  <line x1="570" y1="218" x2="730" y2="218" stroke="#b85450" stroke-width="0.8" opacity="0.3"/>
+  <text x="650" y="234" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">6. 熵管理 = GC</text>
+  <text x="650" y="250" text-anchor="middle" font-size="9" fill="#888">技术债</text>
+  <text x="650" y="262" text-anchor="middle" font-size="9" fill="#888">是高息贷款</text>
+
+  <!-- Arrows to bottom layer -->
+  <path d="M 130 267 L 130 300" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+  <path d="M 390 267 L 390 300" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+  <path d="M 650 267 L 650 300" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)" opacity="0.5"/>
+
+  <!-- Bottom: 工程师角色 -->
+  <g filter="url(#sk)">
+    <rect x="100" y="305" width="580" height="90" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="390" y="330" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">工程师的新角色</text>
+  <g font-size="11" fill="#444">
+    <text x="140" y="354">设计环境</text>
+    <path d="M 220 350 L 260 350" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="270" y="354">拆解任务</text>
+    <path d="M 340 350 L 380 350" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="390" y="354">提示智能体</text>
+    <path d="M 470 350 L 510 350" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="520" y="354">验证结果</text>
+  </g>
+  <text x="390" y="380" text-anchor="middle" font-size="10" fill="#888">人类时间是最稀缺的资源 → 答案不是"更努力"，而是"缺什么上下文/工具/约束"</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="100" y="415" width="580" height="48" rx="8" fill="#fdfcf7" stroke="#5a5a5a" stroke-dasharray="4 2"/>
+  </g>
+  <text x="390" y="436" text-anchor="middle" font-size="10" fill="#555">概念 1-2 = 智能体能看到什么　|　概念 3-4 = 智能体被什么约束　|　概念 5-6 = 长期怎么不腐烂</text>
+  <text x="390" y="454" text-anchor="middle" font-size="9" fill="#888">六大概念共同服务于总纲：让人类只做掌舵，把执行交给智能体</text>
+</svg>
