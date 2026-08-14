@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="27" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="740" height="380" fill="#fdfcf7"/>
+
+  <text x="370" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">错误信息内嵌修复指令</text>
+  <path d="M 240 40 Q 370 48 500 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: bad error message -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="310" height="220" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="185" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">❌ 普通错误信息</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="104" width="270" height="60" rx="4" fill="#fff" stroke="#b85450" stroke-width="1" font-family="monospace"/>
+  </g>
+  <text x="60" y="124" font-size="11" fill="#b85450" font-family="monospace">Error: File exceeds 500 lines.</text>
+  <text x="60" y="142" font-size="9" fill="#888" font-family="monospace">(没有修复指令)</text>
+
+  <text x="185" y="190" text-anchor="middle" font-size="10" fill="#b85450">人类：去查文档怎么修</text>
+  <text x="185" y="208" text-anchor="middle" font-size="10" fill="#b85450">智能体：不知道怎么修</text>
+  <text x="185" y="226" text-anchor="middle" font-size="10" fill="#b85450">→ 需要人类介入</text>
+
+  <text x="185" y="260" text-anchor="middle" font-size="9" fill="#888">无自我纠正闭环</text>
+
+  <!-- Right: harness error message -->
+  <g filter="url(#sk)">
+    <rect x="400" y="60" width="310" height="220" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="555" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">✅ Harness 错误信息</text>
+
+  <g filter="url(#sk)">
+    <rect x="420" y="100" width="270" height="92" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="430" y="118" font-size="10" fill="#b85450" font-family="monospace">Error: File exceeds 500 lines.</text>
+  <text x="430" y="134" font-size="10" fill="#2b6e9e" font-family="monospace">Fix: Split into modules per</text>
+  <text x="430" y="148" font-size="10" fill="#2b6e9e" font-family="monospace">  docs/ARCHITECTURE.md#split</text>
+  <text x="430" y="164" font-size="10" fill="#888" font-family="monospace">Why: long files are hard for</text>
+  <text x="430" y="178" font-size="10" fill="#888" font-family="monospace">  agents to modify correctly</text>
+
+  <text x="555" y="214" text-anchor="middle" font-size="10" fill="#2e6e2e">人类：按 Fix 提示修</text>
+  <text x="555" y="232" text-anchor="middle" font-size="10" fill="#2e6e2e">智能体：按 Fix 提示修</text>
+  <text x="555" y="250" text-anchor="middle" font-size="10" fill="#2e6e2e">→ 自动闭环 ✅</text>
+
+  <text x="555" y="270" text-anchor="middle" font-size="9" fill="#888">自我纠正闭环</text>
+
+  <!-- Bottom: self-correction loop -->
+  <g filter="url(#sk)">
+    <rect x="100" y="300" width="540" height="62" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="370" y="324" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">智能体自我纠正闭环</text>
+  <g font-size="10" fill="#444">
+    <text x="120" y="346">lint 报错</text>
+    <path d="M 180 342 L 215 342" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="225" y="346">读 Fix 指令</text>
+    <path d="M 295 342 L 330 342" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="340" y="346">按指令修改</text>
+    <path d="M 410 342 L 445 342" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="455" y="346">重跑 lint</text>
+    <path d="M 520 342 L 555 342" stroke="#5a5a5a" stroke-width="1" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <text x="565" y="346">✅ 通过</text>
+  </g>
+</svg>

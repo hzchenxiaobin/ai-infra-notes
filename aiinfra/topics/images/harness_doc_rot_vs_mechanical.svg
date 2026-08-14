@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">文档腐烂 vs 机械化执行</text>
+  <path d="M 250 40 Q 380 48 510 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left path: 文档腐烂 -->
+  <g filter="url(#sk)">
+    <rect x="30" y="62" width="320" height="330" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="190" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">文档路径（会腐烂）</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="108" width="280" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+  </g>
+  <text x="190" y="126" text-anchor="middle" font-size="10" fill="#b85450">第 1 周：文档与代码一致 ✅</text>
+  <text x="190" y="140" text-anchor="middle" font-size="9" fill="#888">coding-standards.md: "函数 ≤ 50 行"</text>
+
+  <path d="M 190 150 L 190 166" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="170" width="280" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="190" y="188" text-anchor="middle" font-size="10" fill="#7a5415">第 4 周：改了代码忘改文档 ⚠️</text>
+  <text x="190" y="202" text-anchor="middle" font-size="9" fill="#888">函数变成 60 行，文档还写 50</text>
+
+  <path d="M 190 212 L 190 228" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="232" width="280" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="190" y="250" text-anchor="middle" font-size="10" fill="#7a5415">第 12 周：严重脱节 😱</text>
+  <text x="190" y="264" text-anchor="middle" font-size="9" fill="#888">没人信任文档了</text>
+
+  <path d="M 190 274 L 190 290" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="294" width="280" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+  </g>
+  <text x="190" y="312" text-anchor="middle" font-size="10" fill="#b85450">第 24 周：文档 = 建议 ❌</text>
+  <text x="190" y="326" text-anchor="middle" font-size="9" fill="#888">软约束，可忽略</text>
+
+  <text x="190" y="368" text-anchor="middle" font-size="10" fill="#b85450">靠人读 → 人会忘记、会偷懒</text>
+  <text x="190" y="384" text-anchor="middle" font-size="9" fill="#888">腐烂不可避免</text>
+
+  <!-- Right path: 机械化执行 -->
+  <g filter="url(#sk)">
+    <rect x="410" y="62" width="320" height="330" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="570" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">机械化路径（不腐烂）</text>
+
+  <g filter="url(#sk)">
+    <rect x="430" y="108" width="280" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="570" y="126" text-anchor="middle" font-size="10" fill="#2e6e2e">规则写入 lint / 结构测试 ✅</text>
+  <text x="570" y="140" text-anchor="middle" font-size="9" fill="#888">test_gr1: 函数 ≤ 50 行</text>
+
+  <path d="M 570 150 L 570 166" stroke="#4a8e4a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="430" y="170" width="280" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="570" y="188" text-anchor="middle" font-size="10" fill="#2e6e2e">第 4 周：代码改了 ✅</text>
+  <text x="570" y="202" text-anchor="middle" font-size="9" fill="#888">规则自动检查，不需要人改文档</text>
+
+  <path d="M 570 212 L 570 228" stroke="#4a8e4a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="430" y="232" width="280" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="570" y="250" text-anchor="middle" font-size="10" fill="#2e6e2e">第 12 周：仍然一致 ✅</text>
+  <text x="570" y="264" text-anchor="middle" font-size="9" fill="#888">每次提交自动执行</text>
+
+  <path d="M 570 274 L 570 290" stroke="#4a8e4a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="430" y="294" width="280" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="570" y="312" text-anchor="middle" font-size="10" fill="#2e6e2e">第 24 周：硬约束 ✅</text>
+  <text x="570" y="326" text-anchor="middle" font-size="9" fill="#888">不可违反，阻断提交</text>
+
+  <text x="570" y="368" text-anchor="middle" font-size="10" fill="#2e6e2e">靠机器执行 → 不会忘记</text>
+  <text x="570" y="384" text-anchor="middle" font-size="9" fill="#888">代码即文档，始终同步</text>
+</svg>
