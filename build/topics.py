@@ -20,6 +20,7 @@ TOPIC_DISPLAY_NAMES = {
     "moe": "🧩 MoE",
     "interview": "💼 Interview",
     "transformer": "🤖 Transformer",
+    "misc": "📒 杂七杂八",
 }
 
 
