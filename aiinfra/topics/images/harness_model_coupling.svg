@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="142" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">模型与 Harness 的耦合</text>
+  <path d="M 240 40 Q 380 48 520 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Top: Model + Harness coupled -->
+  <g filter="url(#sk)">
+    <rect x="120" y="60" width="200" height="60" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="220" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">Model</text>
+  <text x="220" y="104" text-anchor="middle" font-size="9" fill="#888">post-training 阶段</text>
+
+  <text x="340" y="95" text-anchor="middle" font-size="20" font-weight="bold" fill="#5a5a5a">+</text>
+
+  <g filter="url(#sk)">
+    <rect x="370" y="60" width="200" height="60" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="470" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Harness</text>
+  <text x="470" y="104" text-anchor="middle" font-size="9" fill="#888">共同训练</text>
+
+  <!-- Coupling arrow (bidirectional) -->
+  <path d="M 320 90 L 370 90" stroke="#8e5db8" stroke-width="2" fill="none" filter="url(#sk)"/>
+  <path d="M 370 92 L 320 92" stroke="#8e5db8" stroke-width="2" fill="none" filter="url(#sk)"/>
+  <text x="345" y="80" text-anchor="middle" font-size="8" fill="#8e5db8">耦合</text>
+
+  <path d="M 380 122 L 380 142" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Three findings -->
+  <g filter="url(#sk)">
+    <rect x="40" y="146" width="220" height="90" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="150" y="170" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">发现 1: overfit</text>
+  <text x="150" y="188" text-anchor="middle" font-size="9" fill="#555">模型 overfit 到特定 harness</text>
+  <text x="150" y="202" text-anchor="middle" font-size="9" fill="#888">换 harness 后表现暴跌</text>
+  <line x1="60" y1="210" x2="240" y2="210" stroke="#b85450" stroke-width="0.5" opacity="0.3"/>
+  <text x="150" y="226" text-anchor="middle" font-size="9" fill="#b85450">→ 换模型时验证 harness</text>
+
+  <g filter="url(#sk)">
+    <rect x="280" y="146" width="220" height="90" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="390" y="170" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">发现 2: 纯 harness 优化</text>
+  <text x="390" y="188" text-anchor="middle" font-size="9" fill="#555">Terminal Bench 2.0</text>
+  <text x="390" y="202" text-anchor="middle" font-size="9" fill="#888">Top 30 → Top 5</text>
+  <line x1="300" y1="210" x2="480" y2="210" stroke="#4a8e4a" stroke-width="0.5" opacity="0.3"/>
+  <text x="390" y="226" text-anchor="middle" font-size="9" fill="#2e6e2e">→ ROI: harness > 换模型</text>
+
+  <g filter="url(#sk)">
+    <rect x="520" y="146" width="200" height="90" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="620" y="170" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">发现 3: 因任务而异</text>
+  <text x="620" y="188" text-anchor="middle" font-size="9" fill="#555">最优 harness 不等于</text>
+  <text x="620" y="202" text-anchor="middle" font-size="9" fill="#888">post-training 时用的</text>
+  <line x1="540" y1="210" x2="700" y2="210" stroke="#c98a2b" stroke-width="0.5" opacity="0.3"/>
+  <text x="620" y="226" text-anchor="middle" font-size="9" fill="#7a5415">→ 不盲目复制别人</text>
+
+  <!-- Three implications -->
+  <g filter="url(#sk)">
+    <rect x="40" y="260" width="680" height="140" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="284" text-anchor="middle" font-size="13" font-weight="bold" fill="#5a3a7a">对实践的三个影响</text>
+
+  <g font-size="10" fill="#444">
+    <text x="60" y="310" font-weight="bold" fill="#b85450">① 换模型时验证 harness</text>
+    <text x="70" y="326" fill="#555">❌ 直接换模型，假设 harness 不变</text>
+    <text x="70" y="340" fill="#2e6e2e">✅ 跑对比实验验证新模型在 harness 下表现</text>
+
+    <line x1="60" y1="350" x2="700" y2="350" stroke="#8e5db8" stroke-width="0.5" opacity="0.2"/>
+
+    <text x="60" y="368" font-weight="bold" fill="#2e6e2e">② harness 优化 ROI > 换模型</text>
+    <text x="70" y="384" fill="#555">❌ 表现不够好 → 换更贵的模型</text>
+    <text x="320" y="384" fill="#2e6e2e">✅ 先检查 harness 是否到位（Top 30→Top 5）</text>
+  </g>
+</svg>

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.016" numOctaves="2" seed="131" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="780" height="520" fill="#fdfcf7"/>
+
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Ralph Wiggum 循环</text>
+  <path d="M 250 40 Q 390 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="390" y="62" text-anchor="middle" font-size="11" fill="#888">让智能体在循环中自主工作直到任务完成</text>
+
+  <!-- PRD check -->
+  <g filter="url(#sk)">
+    <polygon points="330,80 450,80 470,105 450,130 330,130 310,105" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="390" y="102" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">PRD 满足？</text>
+
+  <!-- No: done -->
+  <path d="M 470 105 Q 540 105 540 200 Q 540 260 500 260" stroke="#2e6e2e" stroke-width="1.5" fill="none" marker-end="url(#arG)" filter="url(#sk)"/>
+  <text x="545" y="140" font-size="10" fill="#2e6e2e">✅ 是</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="240" width="120" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2.5"/>
+  </g>
+  <text x="560" y="262" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">任务完成</text>
+  <text x="560" y="278" text-anchor="middle" font-size="9" fill="#888">commit + 更新PRD</text>
+
+  <!-- Yes: enter loop -->
+  <path d="M 310 105 Q 180 105 180 170" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="220" y="120" font-size="10" fill="#5a5a5a">❌ 否</text>
+
+  <!-- Loop steps -->
+  <!-- Step 1: Fresh Context -->
+  <g filter="url(#sk)">
+    <rect x="60" y="180" width="240" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/>
+  </g>
+  <text x="80" y="204" font-size="11" font-weight="bold" fill="#2b6e9e">① Fresh Context</text>
+  <text x="80" y="220" font-size="9" fill="#555">每次迭代清空上下文</text>
+  <text x="80" y="232" font-size="9" fill="#888">重新读 AGENTS.md + PRD + 仓库</text>
+
+  <path d="M 180 238 L 180 258" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: Write code -->
+  <g filter="url(#sk)">
+    <rect x="60" y="260" width="240" height="56" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="2"/>
+  </g>
+  <text x="80" y="284" font-size="11" font-weight="bold" fill="#5a3a7a">② 智能体写代码</text>
+  <text x="80" y="300" font-size="9" fill="#555">在约束内自主实现</text>
+  <text x="80" y="312" font-size="9" fill="#888">Steer With Signals, Not Scripts</text>
+
+  <path d="M 180 318 L 180 338" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: Backpressure -->
+  <g filter="url(#sk)">
+    <rect x="60" y="340" width="240" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="80" y="364" font-size="11" font-weight="bold" fill="#7a5415">③ 运行 check.sh</text>
+  <text x="80" y="380" font-size="9" fill="#555">背压门控验证</text>
+  <text x="80" y="392" font-size="9" fill="#888">Backpressure Over Prescription</text>
+
+  <path d="M 180 398 L 180 418" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Decision: pass? -->
+  <g filter="url(#sk)">
+    <polygon points="140,420 220,420 240,445 220,470 140,470 120,445" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="180" y="442" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">全绿？</text>
+
+  <!-- Pass: commit -->
+  <path d="M 240 445 Q 300 445 330 80" stroke="#2e6e2e" stroke-width="1.5" fill="none" marker-end="url(#arG)" filter="url(#sk)" stroke-dasharray="5 3"/>
+  <text x="280" y="430" font-size="9" fill="#2e6e2e">✅ commit</text>
+  <text x="280" y="444" font-size="9" fill="#888">→ 回到PRD检查</text>
+
+  <!-- Fail: self-correct -->
+  <path d="M 120 445 Q 60 445 60 380 Q 60 340 60 280" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arR)" filter="url(#sk)" stroke-dasharray="5 3"/>
+  <text x="30" y="360" font-size="9" fill="#b85450">❌ 自我纠正</text>
+  <text x="30" y="374" font-size="9" fill="#888">读Fix→修改</text>
+
+  <!-- Six tenets on right -->
+  <g filter="url(#sk)">
+    <rect x="400" y="180" width="340" height="300" rx="10" fill="#fdfcf7" stroke="#5a5a5a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="570" y="204" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">Ralph 六条信条</text>
+  <line x1="420" y1="212" x2="720" y2="212" stroke="#5a5a5a" stroke-width="0.5" opacity="0.2"/>
+  <g font-size="9" fill="#444">
+    <text x="420" y="232" font-weight="bold" fill="#4a8edb">Fresh Context Is Reliability</text>
+    <text x="430" y="246" fill="#888">每次迭代清空上下文 → 智能体可读性</text>
+    <text x="420" y="266" font-weight="bold" fill="#c98a2b">Backpressure Over Prescription</text>
+    <text x="430" y="280" fill="#888">门控拒绝坏结果 → 机械化执行</text>
+    <text x="420" y="300" font-weight="bold" fill="#8e5db8">The Plan Is Disposable</text>
+    <text x="430" y="314" fill="#888">计划可重新生成 → 熵管理</text>
+    <text x="420" y="334" font-weight="bold" fill="#2e6e2e">Disk Is State, Git Is Memory</text>
+    <text x="430" y="348" fill="#888">文件是交接机制 → 仓库即记录系统</text>
+    <text x="420" y="368" font-weight="bold" fill="#b85450">Steer With Signals, Not Scripts</text>
+    <text x="430" y="382" fill="#888">加路标不加脚本 → 人类掌舵</text>
+    <text x="420" y="402" font-weight="bold" fill="#2b6e9e">Let Ralph Ralph</text>
+    <text x="430" y="416" fill="#888">坐在循环上不在循环里 → 智能体执行</text>
+  </g>
+  <text x="570" y="448" text-anchor="middle" font-size="9" fill="#7a5415">记忆在仓库里（git），不在上下文里</text>
+  <text x="570" y="464" text-anchor="middle" font-size="9" fill="#888">每次迭代 Fresh Context → 防止 Context Rot</text>
+</svg>

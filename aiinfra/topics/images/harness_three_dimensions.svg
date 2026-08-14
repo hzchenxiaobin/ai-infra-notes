@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="153" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">三个规制维度的成熟度</text>
+  <path d="M 240 40 Q 380 48 520 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Dimension 1: Maintainability -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="680" height="86" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="60" y="86" font-size="13" font-weight="bold" fill="#2e6e2e">可维护性 Harness</text>
+  <text x="260" y="86" font-size="11" fill="#2e6e2e">✅ 最成熟</text>
+  <g font-size="9" fill="#555">
+    <text x="60" y="106">验证：代码质量（行数、命名、风格、类型）</text>
+    <text x="60" y="122">工具：ruff / eslint / mypy / 格式化 / 覆盖率</text>
+    <text x="60" y="138" fill="#888">规则明确 → lint 100% 确定 → 工具丰富</text>
+  </g>
+
+  <!-- Dimension 2: Architecture -->
+  <g filter="url(#sk)">
+    <rect x="40" y="160" width="680" height="86" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/>
+  </g>
+  <text x="60" y="184" font-size="13" font-weight="bold" fill="#7a5415">架构适应度 Harness</text>
+  <text x="280" y="184" font-size="11" fill="#c98a2b">🟡 中等</text>
+  <g font-size="9" fill="#555">
+    <text x="60" y="204">验证：结构合规（分层、依赖方向、模块边界）</text>
+    <text x="60" y="220">工具：结构测试 / ArchUnit / 依赖分析 / Fitness Functions</text>
+    <text x="60" y="236" fill="#888">规则可定义但需实现 → 覆盖部分场景</text>
+  </g>
+
+  <!-- Dimension 3: Behavior -->
+  <g filter="url(#sk)">
+    <rect x="40" y="258" width="680" height="86" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/>
+  </g>
+  <text x="60" y="282" font-size="13" font-weight="bold" fill="#b85450">行为 Harness</text>
+  <text x="220" y="282" font-size="11" fill="#b85450">⚠️ 最弱 — 房间里的大象</text>
+  <g font-size="9" fill="#555">
+    <text x="60" y="302">验证：功能正确性（所有输入组合、边界条件、并发场景）</text>
+    <text x="60" y="318">工具：单元测试 / 集成测试 / E2E 测试 / LLM-as-judge（探索中）</text>
+    <text x="60" y="334" fill="#b85450">行为空间巨大 → 测试覆盖率 ≠ 行为正确性 → 当前最大挑战</text>
+  </g>
+
+  <!-- Difficulty arrow -->
+  <path d="M 740 100 L 740 290" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="730" y="150" text-anchor="end" font-size="9" fill="#888" transform="rotate(-90 730 150)">验证难度递增</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk)">
+    <rect x="80" y="360" width="600" height="30" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-dasharray="4 2"/>
+  </g>
+  <text x="380" y="380" text-anchor="middle" font-size="10" fill="#5a3a7a">check.sh 全绿 = 结构正确 ✅　但 ≠ 行为正确 ⚠️　测试覆盖率是最后防线</text>
+</svg>
