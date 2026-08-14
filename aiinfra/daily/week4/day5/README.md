@@ -281,7 +281,7 @@ N (d=64) | Triton(ms)  naive(ms)    官方(ms)    | Triton%官方
 |------|------|---------|------|
 | [647](https://leetcode.cn/problems/palindromic-substrings/) | Medium | 中心扩展/DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html) |
 | [516](https://leetcode.cn/problems/longest-palindromic-subsequence/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html) |
-| [1312](https://leetcode.cn/problems/minimum-insertion-steps-to-make-a-string-palindrome/) | Hard | DP（区间） | 暂无 |
+| [1312](https://leetcode.cn/problems/minimum-insertion-steps-to-make-a-string-palindrome/) | Hard | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1312_让字符串成为回文串的最少插入次数.html) |
 
 ---
 
