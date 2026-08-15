@@ -367,13 +367,17 @@ for P in [4, 8]:
             print(f"{P} | {M} | {V} | {bubble_ratio(P, M, V):.2%}")
 ```
 
-#### 任务 3：LeetCode 面试题
+#### 任务 3：LeetCode 面试题（10 周计划 · 第 9 周 Day 2）
+
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 2（回文与区间 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [322](https://leetcode.cn/problems/coin-change/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
-| [279](https://leetcode.cn/problems/perfect-squares/) | Medium | DP（完全背包） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html) |
-| [343](https://leetcode.cn/problems/integer-break/) | Medium | DP（数学） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/343_整数拆分.html) |
+| [647. 回文子串](https://leetcode.cn/problems/palindromic-substrings/) | 中等 | 中心扩展计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html) |
+| [516. 最长回文子序列](https://leetcode.cn/problems/longest-palindromic-subsequence/) | 中等 | 区间 DP / 反转 LCS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html) |
+| [5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/) | 中等 | 中心扩展 / Manacher | [题解](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html) |
+| [312. 戳气球](https://leetcode.cn/problems/burst-balloons/) | 困难 | 区间 DP（最后戳谁） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/312_戳气球.html) |
+| [32. 最长有效括号](https://leetcode.cn/problems/longest-valid-parentheses/) | 困难 | DP / 栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html) |
 
 ---
 

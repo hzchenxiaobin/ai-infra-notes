@@ -419,18 +419,9 @@ GEMM backward 的两个 kernel（`dA = dC @ B^T`、`dB = A^T @ dC`）以及 FA b
 
 > 💡 提交后在 [LeetGPU Dot Product 题目](https://leetgpu.com/challenges/dot-product)上记录通过耗时。完整题解（含 `warpReduceSum` + `blockReduceSum` 两级归约、shared memory 中转、向量化加载）见 [Dot Product 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-dot-product-solution.html)。本题与 Day 3 共享，但今日视角是"反向 GEMM 的原子内核"——把题解里的 reduce 原语套到 `gemm_backward_dA_kernel` 的内层循环上，就是从 naive 走向高性能的第一步。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 4 周 补充）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 5 周 Day 4 复盘）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」的**栈模拟与设计进阶**子集，共 4 题。LeetCode 题量精简，留时间给 backward 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [71. 简化路径](https://leetcode.cn/problems/simplify-path/) | 中等 | 栈模拟路径压缩 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/71_简化路径.html) |
-| [735. 行星碰撞](https://leetcode.cn/problems/asteroid-collision/) | 中等 | 栈模拟碰撞过程 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/735_行星碰撞.html) |
-| [946. 验证栈序列](https://leetcode.cn/problems/validate-stack-sequences/) | 中等 | 栈模拟出栈顺序 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/946_验证栈序列.html) |
-| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 栈模拟中序迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
-
-> 💡 四题都围绕"用栈模拟一个过程"——和 FA backward 的"用 L 模拟/重算 P"是同一种思维：不存全部历史，只存一个紧凑状态，按需恢复。栈是算法层的 recomputation，logsumexp 是数值层的 recomputation。
+> 📅 今日为 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 5 周「堆、贪心与区间」复盘日。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

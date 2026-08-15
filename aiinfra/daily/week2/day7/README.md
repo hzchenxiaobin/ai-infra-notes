@@ -448,11 +448,11 @@ GFLOPS = 2.0 * M * N * K / (time_ms * 1e6)
 本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
-| Day 1 | 滑动窗口基础 | [3. 无重复字符的最长子串](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)、[438. 找到字符串中所有字母异位词](https://hzchenxiaobin.github.io/leetcode/problems/438_找到字符串中所有字母异位词.html)、[560. 和为 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/560_和为K的子数组.html) |
+|---|---|---|
+| Day 1 | 滑动窗口基础 | [3. 无重复字符的最长子串](https://hzchenxiaobin.github.io/leetcode/problems/3_无重复字符的最长子串.html)、[438. 找到字符串中所有字母异位词](https://hzchenxiaobin.github.io/leetcode/problems/438_找到字符串中所有字母异位词.html)、[560. 和为 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/560_和为K的子数组.html)、[974. 和可被 K 整除的子数组](https://hzchenxiaobin.github.io/leetcode/problems/974_和可被K整除的子数组.html) |
 | Day 2 | 滑动窗口进阶 | [239. 滑动窗口最大值](https://hzchenxiaobin.github.io/leetcode/problems/239_滑动窗口最大值.html)、[76. 最小覆盖子串](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html)、[209. 长度最小的子数组](https://hzchenxiaobin.github.io/leetcode/problems/209_长度最小的子数组.html)、[424. 替换后的最长重复字符](https://hzchenxiaobin.github.io/leetcode/problems/424_替换后的最长重复字符.html)、[713. 乘积小于 K 的子数组](https://hzchenxiaobin.github.io/leetcode/problems/713_乘积小于K的子数组.html) |
-| Day 3 | 字符串模拟 | [415. 字符串相加](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html)、[43. 字符串相乘](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html)、[151. 反转字符串中的单词](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html)、[14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) |
-| Day 4 | 字符串匹配 | [165. 比较版本号](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html)、[8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/)、[28. 找出字符串中第一个匹配项的下标](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html)、[468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) |
+| Day 3 | 字符串模拟 | [415. 字符串相加](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html)、[43. 字符串相乘](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html)、[151. 反转字符串中的单词](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html)、[14. 最长公共前缀](https://hzchenxiaobin.github.io/leetcode/problems/14_最长公共前缀.html) |
+| Day 4 | 字符串匹配 | [165. 比较版本号](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html)、[8. 字符串转换整数（atoi）](https://hzchenxiaobin.github.io/leetcode/problems/8_字符串转换整数atoi.html)、[28. 找出字符串中第一个匹配项的下标](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html)、[468. 验证 IP 地址](https://hzchenxiaobin.github.io/leetcode/problems/468_验证IP地址.html) |
 | Day 5 | 矩阵 | [73. 矩阵置零](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html)、[54. 螺旋矩阵](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html)、[48. 旋转图像](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html)、[240. 搜索二维矩阵 II](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
 
 > 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 2 周「字符串、滑动窗口与矩阵」。重做本周错题、总结模板笔记；没做完的题目今天补上。

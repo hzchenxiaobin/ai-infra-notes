@@ -268,16 +268,16 @@ Day 2 已做过本题的 Register Blocking 版本；今天复用同题做进阶�
 
 > 💡 完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 5）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 4）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 4（字符串匹配），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列原地标记 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
-| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
-| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
-| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 右上起点单调性排除 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
+| [165. 比较版本号](https://leetcode.cn/problems/compare-version-numbers/) | 中等 | 字符串切分 + 逐段比较 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html) |
+| [8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/) | 中等 | 模拟 + 溢出边界处理 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/8_字符串转换整数atoi.html) |
+| [28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/) | 简单 | KMP / 内置查找 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html) |
+| [468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) | 中等 | 分段 + 规则校验 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/468_验证IP地址.html) |
 
 ---
 

@@ -245,16 +245,9 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed \
 
 > 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html)。
 
-#### 任务 6：LeetCode 面试题（10 周计划 · 第 2 周 Day 4）
+#### 任务 6：LeetCode 面试题（10 周计划 · 第 2 周 Day 6 复盘）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 4（字符串匹配），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [165. 比较版本号](https://leetcode.cn/problems/compare-version-numbers/) | 中等 | 字符串切分 + 逐段比较 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/165_比较版本号.html) |
-| [8. 字符串转换整数（atoi）](https://leetcode.cn/problems/string-to-integer-atoi/) | 中等 | 模拟 + 溢出边界处理 | — |
-| [28. 找出字符串中第一个匹配项的下标](https://leetcode.cn/problems/find-the-index-of-the-first-occurrence-in-a-string/) | 简单 | KMP / 内置查找 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/28_找出字符串中第一个匹配项的下标.html) |
-| [468. 验证 IP 地址](https://leetcode.cn/problems/validate-ip-address/) | 中等 | 分段 + 规则校验 | — |
+> 📅 今日为 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」复盘日。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

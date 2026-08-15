@@ -419,7 +419,7 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 1（遍历），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 简单 | 递归 / 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html) |
 | [144. 二叉树的前序遍历](https://leetcode.cn/problems/binary-tree-preorder-traversal/) | 简单 | 栈迭代 / Morris | [题解](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html) |
 | [145. 二叉树的后序遍历](https://leetcode.cn/problems/binary-tree-postorder-traversal/) | 简单 | 栈迭代（根右左逆序） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html) |

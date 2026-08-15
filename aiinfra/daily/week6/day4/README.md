@@ -337,9 +337,9 @@ Causal Self-Attention 正是 **PagedAttention 服务的 attention 变体**——
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 4（BST 进阶与构造），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [235. 二叉搜索树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-search-tree/) | 中等 | 利用 BST 性质遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/235_二叉搜索树的最近公共祖先.html) |
-| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 中序 + 显式栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
+| [173. 二叉搜索树迭代器](https://leetcode.cn/problems/binary-search-tree-iterator/) | 中等 | 栈模拟中序迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/173_二叉搜索树迭代器.html) |
 | [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/) | 中等 | 递归 / 二分定插入界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1008_前序遍历构造二叉搜索树.html) |
 | [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | 中等 | 递归分治 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/105_从前序与中序遍历序列构造二叉树.html) |
 | [889. 根据前序与后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/) | 中等 | 递归分治（前后序互定界） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/889_根据前序与后序遍历构造二叉树.html) |

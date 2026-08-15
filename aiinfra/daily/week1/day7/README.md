@@ -523,6 +523,21 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用两道**综合练习**把
 | Day 5 | [Reduction](https://leetgpu.com/challenges/reduction) | warp shuffle、两级归约、divergence | ✅ 已做 |
 | Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | 2D 索引、ncu profiling、Roofline 定位 | ✅ 已做 |
 
+#### 任务 3：本周 LeetCode 题目回顾（10 周计划 · 第 1 周）
+
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」（点击查看题解）：
+
+| Day | 主题 | LeetCode 题目 |
+|---|---|---|
+| Day 1 | 哈希 | [1. 两数之和](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html)、[49. 字母异位词分组](https://hzchenxiaobin.github.io/leetcode/problems/49_字母异位词分组.html)、[128. 最长连续序列](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html)、[136. 只出现一次的数字](https://hzchenxiaobin.github.io/leetcode/problems/136_只出现一次的数字.html)、[169. 多数元素](https://hzchenxiaobin.github.io/leetcode/problems/169_多数元素.html) |
+| Day 2 | 双指针 | [283. 移动零](https://hzchenxiaobin.github.io/leetcode/problems/283_移动零.html)、[11. 盛最多水的容器](https://hzchenxiaobin.github.io/leetcode/problems/11_盛最多水的容器.html)、[15. 三数之和](https://hzchenxiaobin.github.io/leetcode/problems/15_三数之和.html)、[42. 接雨水](https://hzchenxiaobin.github.io/leetcode/problems/42_接雨水.html) |
+| Day 3 | 数组 DP / 前缀和 | [53. 最大子数组和](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html)、[56. 合并区间](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html)、[238. 除自身以外数组的乘积](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html)、[41. 缺失的第一个正数](https://hzchenxiaobin.github.io/leetcode/problems/41_缺失的第一个正数.html) |
+| Day 4 | 手撕排序 | [912. 排序数组](https://hzchenxiaobin.github.io/leetcode/problems/912_排序数组.html)、[88. 合并两个有序数组](https://hzchenxiaobin.github.io/leetcode/problems/88_合并两个有序数组.html)、[179. 最大数](https://hzchenxiaobin.github.io/leetcode/problems/179_最大数.html)、[274. H 指数](https://hzchenxiaobin.github.io/leetcode/problems/274_H指数.html) |
+| Day 5 | 数组技巧 | [75. 颜色分类](https://hzchenxiaobin.github.io/leetcode/problems/75_颜色分类.html)、[31. 下一个排列](https://hzchenxiaobin.github.io/leetcode/problems/31_下一个排列.html)、[287. 寻找重复数](https://hzchenxiaobin.github.io/leetcode/problems/287_寻找重复数.html)、[189. 轮转数组](https://hzchenxiaobin.github.io/leetcode/problems/189_轮转数组.html) |
+| Day 6 | 位运算与其他 | [137. 只出现一次的数字 II](https://hzchenxiaobin.github.io/leetcode/problems/137_只出现一次的数字II.html)、[260. 只出现一次的数字 III](https://hzchenxiaobin.github.io/leetcode/problems/260_只出现一次的数字III.html)、[338. 比特位计数](https://hzchenxiaobin.github.io/leetcode/problems/338_比特位计数.html)、[349. 两个数组的交集](https://hzchenxiaobin.github.io/leetcode/problems/349_两个数组的交集.html)、[581. 最短无序连续子数组](https://hzchenxiaobin.github.io/leetcode/problems/581_最短无序连续子数组.html) |
+
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 1 周「数组、哈希与双指针（含手撕排序）」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+
 #### 综合练习 1：Matrix Transpose —— 检验 memory-bound 优化
 
 **题目链接**：<https://leetgpu.com/challenges/matrix-transpose>

@@ -395,6 +395,19 @@ Backward 输入: dO
 
 ---
 
+#### 任务 2：本周 LeetCode 题目回顾（10 周计划 · 第 5 周）
+
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 5 周「堆、贪心与区间」（点击查看题解）：
+
+| Day | 主题 | LeetCode 题目 |
+|---|---|---|
+| Day 1 | 堆 | [215. 数组中的第 K 个最大元素](https://hzchenxiaobin.github.io/leetcode/problems/215_数组中的第K个最大元素.html)、[347. 前 K 个高频元素](https://hzchenxiaobin.github.io/leetcode/problems/347_前K个高频元素.html)、[692. 前 K 个高频单词](https://hzchenxiaobin.github.io/leetcode/problems/692_前K个高频单词.html)、[295. 数据流的中位数](https://hzchenxiaobin.github.io/leetcode/problems/295_数据流的中位数.html)、[264. 丑数 II](https://hzchenxiaobin.github.io/leetcode/problems/264_丑数II.html)、[767. 重构字符串](https://hzchenxiaobin.github.io/leetcode/problems/767_重构字符串.html) |
+| Day 2 | 贪心 | [121. 买卖股票的最佳时机](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html)、[55. 跳跃游戏](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html)、[45. 跳跃游戏 II](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html)、[763. 划分字母区间](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html)、[621. 任务调度器](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
+| Day 3 | 区间与差分 | [253. 会议室 II](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html)、[435. 无重叠区间](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html)、[452. 用最少数量的箭引爆气球](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html)、[406. 根据身高重建队列](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html)、[1109. 航班预订统计](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
+
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 5 周「堆、贪心与区间」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+
+---
 ### 本周复盘 Checklist
 
 - [ ] 能解释标准 Attention 的 O(N²) IO 瓶颈（S/P 矩阵物化）

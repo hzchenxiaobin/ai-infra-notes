@@ -220,7 +220,7 @@ Week 6 核心主题是**推理系统**：Prefill/Decode、KV Cache、vLLM、Page
 本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」（点击查看题解）：
 
 | Day | 主题 | LeetCode 题目 |
-|-----|------|---------------|
+|---|---|---|
 | Day 1 | 遍历 | [94. 二叉树的中序遍历](https://hzchenxiaobin.github.io/leetcode/problems/94_二叉树的中序遍历.html)、[144. 二叉树的前序遍历](https://hzchenxiaobin.github.io/leetcode/problems/144_二叉树的前序遍历.html)、[145. 二叉树的后序遍历](https://hzchenxiaobin.github.io/leetcode/problems/145_二叉树的后序遍历.html)、[102. 二叉树的层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html)、[103. 二叉树的锯齿形层序遍历](https://hzchenxiaobin.github.io/leetcode/problems/103_二叉树的锯齿形层序遍历.html) |
 | Day 2 | 形态与深度 | [104. 二叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html)、[226. 翻转二叉树](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html)、[101. 对称二叉树](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html)、[543. 二叉树的直径](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html)、[110. 平衡二叉树](https://hzchenxiaobin.github.io/leetcode/problems/110_平衡二叉树.html) |
 | Day 3 | BST 基础 | [111. 二叉树的最小深度](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html)、[559. N 叉树的最大深度](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html)、[108. 将有序数组转换为二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html)、[98. 验证二叉搜索树](https://hzchenxiaobin.github.io/leetcode/problems/98_验证二叉搜索树.html)、[230. 二叉搜索树中第 K 小的元素](https://hzchenxiaobin.github.io/leetcode/problems/230_二叉搜索树中第K小的元素.html) |

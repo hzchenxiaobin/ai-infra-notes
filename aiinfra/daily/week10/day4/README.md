@@ -503,18 +503,9 @@ Naive 10.6% → Tiling 13.3% → RegBlk 30.8% → float4 64.3%
 
 > 💡 提交后在 [LeetGPU SiLU](https://leetgpu.com/challenges/silu) 上记录通过耗时。完整题解（含 fused SiLU kernel、算术强度分析、与 Roofline 面试题的对应）见 [SiLU 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-silu-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周 Day 3）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周 Day 4 复盘）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 3（二维 DP），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [62. 不同路径](https://leetcode.cn/problems/unique-paths/) | 中等 | 组合数 / 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html) |
-| [64. 最小路径和](https://leetcode.cn/problems/minimum-path-sum/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html) |
-| [120. 三角形最小路径和](https://leetcode.cn/problems/triangle/) | 中等 | 二维 DP（自底向上） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/120_三角形最小路径和.html) |
-| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
-| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
-| [221. 最大正方形](https://leetcode.cn/problems/maximal-square/) | 中等 | DP（右下角最长边） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/221_最大正方形.html) |
+> 📅 今日为 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」复盘日。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

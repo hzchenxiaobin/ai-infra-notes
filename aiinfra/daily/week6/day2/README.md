@@ -364,7 +364,7 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 2（形态与深度），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [104. 二叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-binary-tree/) | 简单 | DFS / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/104_二叉树的最大深度.html) |
 | [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 递归 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
 | [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 递归 / 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |

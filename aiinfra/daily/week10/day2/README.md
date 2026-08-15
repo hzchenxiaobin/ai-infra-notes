@@ -285,17 +285,17 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 > 💡 提交后在 [LeetGPU Element Reversal](https://leetgpu.com/challenges/element-reversal) 上记录通过耗时。完整题解见 [Element Reversal 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 Day 5）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周 Day 2）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」Day 5（一维 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」Day 2（图论基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/) | 简单 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/70_爬楼梯.html) |
-| [118. 杨辉三角](https://leetcode.cn/problems/pascals-triangle/) | 简单 | 递推模拟 | — |
-| [198. 打家劫舍](https://leetcode.cn/problems/house-robber/) | 中等 | 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
-| [213. 打家劫舍 II](https://leetcode.cn/problems/house-robber-ii/) | 中等 | 拆环为线 + 一维 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/213_打家劫舍II.html) |
-| [337. 打家劫舍 III](https://leetcode.cn/problems/house-robber-iii/) | 中等 | 树形 DP（选/不选） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/337_打家劫舍III.html) |
+|------|------|---------|------|
+| [207. 课程表](https://leetcode.cn/problems/course-schedule/) | 中等 | 拓扑排序 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
+| [208. 实现 Trie（前缀树）](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 中等 | 字典树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
+| [547. 省份数量](https://leetcode.cn/problems/number-of-provinces/) | 中等 | 并查集模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html) |
+| [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
+| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
 
 ---
 

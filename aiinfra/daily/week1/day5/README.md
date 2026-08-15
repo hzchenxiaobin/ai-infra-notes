@@ -266,7 +266,7 @@ ncu \
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 5（数组技巧），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [75. 颜色分类](https://leetcode.cn/problems/sort-colors/) | 中等 | 三指针 Dutch Flag | [题解](https://hzchenxiaobin.github.io/leetcode/problems/75_颜色分类.html) |
 | [31. 下一个排列](https://leetcode.cn/problems/next-permutation/) | 中等 | 从右找降序 + 交换反转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/31_下一个排列.html) |
 | [287. 寻找重复数](https://leetcode.cn/problems/find-the-duplicate-number/) | 中等 | Floyd 判圈 / 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/287_寻找重复数.html) |

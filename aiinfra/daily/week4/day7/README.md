@@ -215,19 +215,17 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 | Day 6 | ncu 三方指标对比分析 | `day6/README.md` | 能用 Tensor Core/occupancy/DRAM 数据解释性能差 | ✅ |
 | Day 7 | 算子分类表 | 本文 + 任务 1 的笔记 | Prefill/Decode 分类完整 | ☐ |
 
-#### 任务 4：本周 LeetGPU / LeetCode 题目回顾
+#### 任务 4：本周 LeetCode 题目回顾（10 周计划 · 第 4 周）
 
-| Day | LeetGPU 题目 | LeetCode 题目 |
-|-----|--------------|---------------|
-| Day 1 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) | 206 / 21 / 83 / 876（链表反转与合并） |
-| Day 2 | [Group Normalization](https://hzchenxiaobin.github.io/leetgpu/leetgpu-group-normalization-solution.html) | 141 / 142 / 160 / 19 / 234（快慢指针） |
-| Day 3 | — | 152 / 918 / 410（一维 DP） |
-| Day 4 | [Matrix Multiplication](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)（Triton 与 CUDA 双提交对比） | 7 / 9 / 50 / 172（数学技巧） |
-| Day 5 | — | 647 / 516 / 1312（回文 DP） |
-| Day 6 | — | 139 / 375 / 514（DP） |
-| Day 7 | [Softmax Attention](https://leetgpu.com/challenges/softmax-attention)（[题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-attention-solution.html)） | — |
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」（点击查看题解）：
 
-> 💡 回顾重点：Matrix Multiplication（D1/D4）对应 GEMM 主线，Group Normalization（D2）对应 reduce 主线；Day 7 的 Softmax Attention 是本周综合验收——online softmax 分块递推 `(m, s)`，scores 只在 SRAM/寄存器中存在，正好串起 Day 2 的 reduce、Day 4 的 Triton、Day 5 的 FA benchmark。LeetCode 题对应外部 10 周算法面试刷题计划第 3 周「链表与数学技巧」，把没做完的今天补上。
+| Day | 主题 | LeetCode 题目 |
+|---|---|---|
+| Day 1 | 栈基础与设计 | [20. 有效的括号](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html)、[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)、[232. 用栈实现队列](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html)、[150. 逆波兰表达式求值](https://hzchenxiaobin.github.io/leetcode/problems/150_逆波兰表达式求值.html)、[380. O(1) 时间插入、删除和获取随机元素](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html)、[946. 验证栈序列](https://hzchenxiaobin.github.io/leetcode/problems/946_验证栈序列.html) |
+| Day 2 | 表达式与计算器 | [394. 字符串解码](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html)、[224. 基本计算器](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html)、[227. 基本计算器 II](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html)、[402. 移掉 K 位数字](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html)、[316. 去除重复字母](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
+| Day 3 | 单调栈 | [739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)、[496. 下一个更大元素 I](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html)、[503. 下一个更大元素 II](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html)、[901. 股票价格跨度](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html)、[84. 柱状图中最大的矩形](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
+
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 4 周「栈、队列与单调栈」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 #### 任务 5：Week 5 预热 + 面试复盘
 

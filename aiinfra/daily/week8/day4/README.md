@@ -397,19 +397,15 @@ python kernels/shape_bucketing.py
 
 > 💡 提交后在 [LeetGPU Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) 上记录通过耗时。完整题解（含 shared memory tile 转置、CUDA Graph 捕获/replay、与今日 CUDA Graph 实操的对应）见 [Matrix Transpose 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 补充）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 Day 4）
 
-> 📅 今日为 CUDA Graph 专题补充日，LeetCode 从 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」中精选 5 道二分查找高频题（Day 6 已刷背包 DP，今日补二分模板与变种），巩固本周算法基础。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」Day 4（二分进阶），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/) | 简单 | 二分模板（左闭右开，找第一个 ≥ target） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/35_搜索插入位置.html) |
-| [34. 在排序数组中查找元素的第一个和最后一个位置](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | 中等 | 两次二分找左/右边界 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
-| [153. 寻找旋转排序数组中的最小值](https://leetcode.cn/problems/find-minimum-in-rotated-sorted-array/) | 中等 | 旋转数组二分（比右端点） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/153_寻找旋转排序数组中的最小值.html) |
-| [162. 寻找峰值](https://leetcode.cn/problems/find-peak-element/) | 中等 | 非有序二分（爬坡法，顺梯度走） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
-| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP + 二分（patience sorting） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
-
-> 💡 刷题建议：35 是二分最基础模板，5 分钟默写确保 `left < right` 与 `right = mid` 不越界；34 是"找边界"变种（左边界用 `right = mid`、右边界用 `left = mid + 1`）；153 与 162 训练"非标准有序"下的二分判断条件（与右端点比 / 与邻居比）；300 是 DP+二分结合，`O(n log n)` 的 patience sorting 思路——维护一个递增的"牌堆尾"数组，每张牌二分插入。
+|------|------|---------|------|
+| [410. 分割数组的最大值](https://leetcode.cn/problems/split-array-largest-sum/) | 困难 | 二分答案 + 贪心划分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
+| [719. 找出第 K 小的数对距离](https://leetcode.cn/problems/find-k-th-smallest-pair-distance/) | 困难 | 二分答案 + 双指针计数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/719_找出第K小的数对距离.html) |
+| [4. 寻找两个正序数组的中位数](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | 困难 | 二分划分（合并第 k 小） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
 
 ---
 

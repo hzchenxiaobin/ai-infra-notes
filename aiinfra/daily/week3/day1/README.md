@@ -426,7 +426,7 @@ Batched GEMM 是推理中 Multi-Head Attention 的核心操作。用 WMMA 实现
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 1（反转与合并），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [206. 反转链表](https://leetcode.cn/problems/reverse-linked-list/) | 简单 | 指针翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/206_反转链表.html) |
 | [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/) | 简单 | 哑节点 + 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/21_合并两个有序链表.html) |
 | [83. 删除排序链表中的重复元素](https://leetcode.cn/problems/remove-duplicates-from-sorted-list/) | 简单 | 一次遍历去重 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/83_删除排序链表中的重复元素.html) |

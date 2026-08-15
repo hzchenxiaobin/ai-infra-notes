@@ -504,7 +504,7 @@ ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed ./transpose
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 4（手撕排序），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [912. 排序数组](https://leetcode.cn/problems/sort-an-array/) | 中等 | 手撕快排 / 归并 / 堆排 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/912_排序数组.html) |
 | [88. 合并两个有序数组](https://leetcode.cn/problems/merge-sorted-array/) | 简单 | 三指针从后往前 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/88_合并两个有序数组.html) |
 | [179. 最大数](https://leetcode.cn/problems/largest-number/) | 中等 | 自定义排序（拼接比较） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/179_最大数.html) |

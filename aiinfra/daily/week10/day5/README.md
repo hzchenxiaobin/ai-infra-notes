@@ -210,17 +210,9 @@ python kernels/mock_interview.py
 
 > 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周机动补漏）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」Day 2（图论基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [207. 课程表](https://leetcode.cn/problems/course-schedule/) | 中等 | 拓扑排序 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html) |
-| [208. 实现 Trie（前缀树）](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 中等 | 字典树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html) |
-| [547. 省份数量](https://leetcode.cn/problems/number-of-provinces/) | 中等 | 并查集模板 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html) |
-| [785. 判断二分图](https://leetcode.cn/problems/is-graph-bipartite/) | 中等 | 二着色 BFS/DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html) |
-| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+> 📅 第 10 周计划共 17 题，已分配至 Day 1 - Day 3。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

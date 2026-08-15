@@ -472,17 +472,17 @@ ncu --metrics \
 
 > 💡 提交后在 [LeetGPU Layer Normalization 题目](https://leetgpu.com/challenges/layernorm)上记录通过耗时，用浏览器开发者工具对比不同 `workgroup_size` / `tile` 的性能差异。进阶可尝试 Welford 单遍 scan 优化（把 mean/var 合并成一次遍历），思路同今日扩展实验 3。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 4 周 Day 2）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 2（快慢指针），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」Day 2（表达式与计算器），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/) | 简单 | 快慢指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/141_环形链表.html) |
-| [142. 环形链表 II](https://leetcode.cn/problems/linked-list-cycle-ii/) | 中等 | 快慢指针找入口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/142_环形链表%20II.html) |
-| [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/) | 简单 | 双指针交叉走 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/160_相交链表.html) |
-| [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/) | 中等 | 快慢双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/19_删除链表的倒数第N个节点.html) |
-| [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/) | 简单 | 快慢指针 + 反转半链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/234_回文链表.html) |
+|------|------|---------|------|
+| [394. 字符串解码](https://leetcode.cn/problems/decode-string/) | 中等 | 栈 / 递归解码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html) |
+| [224. 基本计算器](https://leetcode.cn/problems/basic-calculator/) | 困难 | 栈处理括号与一元符号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html) |
+| [227. 基本计算器 II](https://leetcode.cn/problems/basic-calculator-ii/) | 中等 | 栈处理乘除优先级 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html) |
+| [402. 移掉 K 位数字](https://leetcode.cn/problems/remove-k-digits/) | 中等 | 单调栈删大留小 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html) |
+| [316. 去除重复字母](https://leetcode.cn/problems/remove-duplicate-letters/) | 中等 | 单调栈 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
 
 ---
 

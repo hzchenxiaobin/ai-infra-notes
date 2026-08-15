@@ -216,13 +216,17 @@ for quant in ['fp16', 'w8a16', 'int8_kv']:
     print(f"{quant}: max_diff={diff:.4f}")
 ```
 
-#### 任务 3：LeetCode 面试题
+#### 任务 3：LeetCode 面试题（10 周计划 · 第 8 周 Day 6）
+
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」Day 6（背包 DP），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [23](https://leetcode.cn/problems/merge-k-sorted-lists/) | Hard | 堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/23_合并K个升序链表.html) |
-| [253](https://leetcode.cn/problems/meeting-rooms-ii/) | Medium | 堆/扫描线 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html) |
-| [703](https://leetcode.cn/problems/kth-largest-element-in-a-stream/) | Easy | 堆 | 暂无 |
+| [279. 完全平方数](https://leetcode.cn/problems/perfect-squares/) | 中等 | 完全背包 / BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/279_完全平方数.html) |
+| [322. 零钱兑换](https://leetcode.cn/problems/coin-change/) | 中等 | 完全背包 DP（求最少硬币） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
+| [518. 零钱兑换 II](https://leetcode.cn/problems/coin-change-ii/) | 中等 | 完全背包求方案数 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/518_零钱兑换II.html) |
+| [416. 分割等和子集](https://leetcode.cn/problems/partition-equal-subset-sum/) | 中等 | 0-1 背包 DP（求能否装满） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
+| [494. 目标和](https://leetcode.cn/problems/target-sum/) | 中等 | 01 背包（正负分组） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/494_目标和.html) |
 
 ---
 

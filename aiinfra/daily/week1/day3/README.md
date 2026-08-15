@@ -399,7 +399,7 @@ nvcc -std=c++11 -o occupancy_verify occupancy_verify.cu
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 3（数组 DP / 前缀和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [53. 最大子数组和](https://leetcode.cn/problems/maximum-subarray/) | 中等 | Kadane DP / 前缀和 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/53_最大子数组和.html) |
 | [56. 合并区间](https://leetcode.cn/problems/merge-intervals/) | 中等 | 排序 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/56_合并区间.html) |
 | [238. 除自身以外数组的乘积](https://leetcode.cn/problems/product-of-array-except-self/) | 中等 | 前后缀积 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/238_除自身以外数组的乘积.html) |

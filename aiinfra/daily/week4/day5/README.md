@@ -273,15 +273,9 @@ N (d=64) | Triton(ms)  naive(ms)    官方(ms)    | Triton%官方
 
 > 注：FlashAttention 列中 "naive" 为标准注意力（物化 S/P 矩阵），非 CUDA 手写 FA；CUDA 手写 FA 的对比见 Week 5 Day 3。上表数字均为预估口径，以 GPU 实测回填为准。Softmax 的 "Triton vs PyTorch" = PyTorch 时间 / Triton 时间，<1 表示 Triton 更慢。
 
-#### 任务 4：LeetCode 面试题（10 周计划 · 第 9 周 Day 2 补充）
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 4 周机动补漏）
 
-> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 2（回文与区间 DP）的子集，共 3 题。项目推进日 LeetCode 题量精简，留时间给 benchmark 调试。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [647](https://leetcode.cn/problems/palindromic-substrings/) | Medium | 中心扩展/DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html) |
-| [516](https://leetcode.cn/problems/longest-palindromic-subsequence/) | Medium | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html) |
-| [1312](https://leetcode.cn/problems/minimum-insertion-steps-to-make-a-string-palindrome/) | Hard | DP（区间） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1312_让字符串成为回文串的最少插入次数.html) |
+> 📅 第 4 周计划共 16 题，已分配至 Day 1 - Day 3。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

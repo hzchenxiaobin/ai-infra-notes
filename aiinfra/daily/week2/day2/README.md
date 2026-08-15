@@ -393,7 +393,7 @@ nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 2（滑动窗口进阶），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [239. 滑动窗口最大值](https://leetcode.cn/problems/sliding-window-maximum/) | 困难 | 单调队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/239_滑动窗口最大值.html) |
 | [76. 最小覆盖子串](https://leetcode.cn/problems/minimum-window-substring/) | 困难 | 滑动窗口 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/76_最小覆盖子串.html) |
 | [209. 长度最小的子数组](https://leetcode.cn/problems/minimum-size-subarray-sum/) | 中等 | 滑动窗口（正数单调） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/209_长度最小的子数组.html) |

@@ -284,13 +284,9 @@ for _ in range(100):
 end.record()
 ```
 
-#### 任务 3：LeetCode 面试题
+#### 任务 3：LeetCode 面试题（10 周计划 · 第 9 周 Day 4 复盘）
 
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [162](https://leetcode.cn/problems/find-peak-element/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/162_寻找峰值.html) |
-| [34](https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/) | Medium | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/34_在排序数组中查找元素的第一个和最后一个位置.html) |
-| [4](https://leetcode.cn/problems/median-of-two-sorted-arrays/) | Hard | 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/4_寻找两个正序数组的中位数.html) |
+> 📅 今日为 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」复盘日。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

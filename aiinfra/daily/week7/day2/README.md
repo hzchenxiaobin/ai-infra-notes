@@ -874,15 +874,16 @@ Stream Compaction（剔除无效元素）是 **Continuous Batching 的底层操�
 
 > 💡 提交后在 [LeetGPU Stream Compaction](https://leetgpu.com/challenges/stream-compaction) 上记录通过耗时。完整题解（含谓词标记 + 前缀和 + scatter 三段式、与 Scheduler 过滤/重排 running 队列的类比）见 [Stream Compaction 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-stream-compaction-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 3）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 2）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 3（序列化与宽度），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 2（LCA 与路径和），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [297. 二叉树的序列化与反序列化](https://leetcode.cn/problems/serialize-and-deserialize-binary-tree/) | 困难 | 前序 + 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html) |
-| [662. 二叉树最大宽度](https://leetcode.cn/problems/maximum-width-of-binary-tree/) | 中等 | BFS/DFS + 节点编号 | — |
-| [958. 二叉树的完全性检验](https://leetcode.cn/problems/check-completeness-of-a-binary-tree/) | 中等 | 层序遍历判空节点 | — |
+|------|------|---------|------|
+| [236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/) | 中等 | 后序 DFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/236_二叉树的最近公共祖先.html) |
+| [124. 二叉树中的最大路径和](https://leetcode.cn/problems/binary-tree-maximum-path-sum/) | 困难 | 后序 DFS（单边贡献） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/124_二叉树中的最大路径和.html) |
+| [199. 二叉树的右视图](https://leetcode.cn/problems/binary-tree-right-side-view/) | 中等 | BFS/DFS 取每层最右 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/199_二叉树的右视图.html) |
+| [114. 二叉树展开为链表](https://leetcode.cn/problems/flatten-binary-tree-to-linked-list/) | 中等 | 后序 / 迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/114_二叉树展开为链表.html) |
 
 ---
 

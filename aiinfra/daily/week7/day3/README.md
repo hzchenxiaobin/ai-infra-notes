@@ -567,16 +567,15 @@ for cs in [4, 8, 16, 24]:
 
 > 💡 提交后在 [LeetGPU Segmented Prefix Sum](https://leetgpu.com/challenges/segmented-prefix-sum) 上记录通过耗时。完整题解（含分段 scan kernel、段边界 carry、与 Chunked Prefill 分块累积的类比）见 [Segmented Prefix Sum 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-segmented-prefix-sum-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 4）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 3）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 4（网格 DFS/BFS），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 3（序列化与宽度），共 3 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/) | 中等 | DFS / BFS / 并查集 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
-| [994. 腐烂的橘子](https://leetcode.cn/problems/rotting-oranges/) | 中等 | 多源 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html) |
-| [695. 岛屿的最大面积](https://leetcode.cn/problems/max-area-of-island/) | 中等 | DFS/BFS 连通块面积 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/695_岛屿的最大面积.html) |
-| [130. 被围绕的区域](https://leetcode.cn/problems/surrounded-regions/) | 中等 | 从边界 DFS/BFS 标记 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
+|------|------|---------|------|
+| [297. 二叉树的序列化与反序列化](https://leetcode.cn/problems/serialize-and-deserialize-binary-tree/) | 困难 | 前序 + 队列 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/297_二叉树的序列化与反序列化.html) |
+| [662. 二叉树最大宽度](https://leetcode.cn/problems/maximum-width-of-binary-tree/) | 中等 | BFS/DFS + 节点编号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/662_二叉树最大宽度.html) |
+| [958. 二叉树的完全性检验](https://leetcode.cn/problems/check-completeness-of-a-binary-tree/) | 中等 | 层序遍历判空节点 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/958_二叉树的完全性检验.html) |
 
 ---
 

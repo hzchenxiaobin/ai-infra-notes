@@ -474,16 +474,16 @@ Weight Dequantization 正是 **W8A16 的核心子算子**——把 INT8 权重 +
 
 > 💡 提交后在 [LeetGPU Weight Dequantization](https://leetgpu.com/challenges/weight-dequantization) 上记录通过耗时，重点对比"fused 在线反量化"（今日 kernel）vs "unfused 显式反量化"（本题）的带宽差异。完整题解（含 per-channel scale 处理、向量化加载、ncu 带宽分析）见 [Weight Dequantization 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 6 周高频回顾）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 Day 1）
 
-> 📅 今日为量化专题，LeetCode 题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」的高频题回顾。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」Day 1（二分模板），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | 中等 | BFS + 队列按层展开 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/102_二叉树的层序遍历.html) |
-| [226. 翻转二叉树](https://leetcode.cn/problems/invert-binary-tree/) | 简单 | 后序递归交换子树 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/226_翻转二叉树.html) |
-| [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/) | 简单 | 后序 DFS + 维护全局最长链 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/543_二叉树的直径.html) |
-| [101. 对称二叉树](https://leetcode.cn/problems/symmetric-tree/) | 简单 | 双指针递归 / 队列迭代 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/101_对称二叉树.html) |
+|------|------|---------|------|
+| [704. 二分查找](https://leetcode.cn/problems/binary-search/) | 简单 | 二分模板（闭区间 / 左闭右开） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html) |
+| [35. 搜索插入位置](https://leetcode.cn/problems/search-insert-position/) | 简单 | 二分模板（左闭右开，找第一个 ≥ target） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/35_搜索插入位置.html) |
+| [69. x 的平方根](https://leetcode.cn/problems/sqrtx/) | 简单 | 二分答案 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/69_x的平方根.html) |
+| [74. 搜索二维矩阵](https://leetcode.cn/problems/search-a-2d-matrix/) | 中等 | 二分（二维展平为一维，$O(\log mn)$） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/74_搜索二维矩阵.html) |
 
 ---
 

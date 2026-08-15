@@ -534,7 +534,7 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 6 周「二叉树（上）——遍历、形态与 BST」Day 3（BST 基础），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [111. 二叉树的最小深度](https://leetcode.cn/problems/minimum-depth-of-binary-tree/) | 简单 | BFS/DFS（注意单边子树） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/111_二叉树的最小深度.html) |
 | [559. N 叉树的最大深度](https://leetcode.cn/problems/maximum-depth-of-n-ary-tree/) | 简单 | DFS/BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/559_N叉树的最大深度.html) |
 | [108. 将有序数组转换为二叉搜索树](https://leetcode.cn/problems/convert-sorted-array-to-binary-search-tree/) | 简单 | 取中点递归构建 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/108_将有序数组转换为二叉搜索树.html) |

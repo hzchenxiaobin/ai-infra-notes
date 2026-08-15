@@ -249,16 +249,9 @@ python kernels/cuda_vs_ascend_comparison.py
 
 > 💡 提交后在 [LeetGPU GEMM](https://leetgpu.com/challenges/general-matrix-multiplication-gemm) 上记录通过耗时。完整题解（含 Tensor Core 路径、八层优化、与 Cube Unit 的对应）见 [GEMM 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gemm-solution.html)。
 
-#### 任务 5：LeetCode 面试题（第 9-10 周精选）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周机动补漏）
 
-> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9-10 周「动态规划进阶与图论」（新计划拆为 W9 DP 进阶 + W10 股票/图论）。本周不绑定单日，从本周挑 4 道经典 DP/图论题保持手感。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [72. 编辑距离](https://leetcode.cn/problems/edit-distance/) | 困难 | 二维 DP（insert/delete/replace） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html) |
-| [1143. 最长公共子序列](https://leetcode.cn/problems/longest-common-subsequence/) | 中等 | 二维 DP（LCS） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html) |
-| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
-| [133. 克隆图](https://leetcode.cn/problems/clone-graph/) | 中等 | DFS/BFS + 哈希克隆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+> 📅 第 9 周计划共 15 题，已分配至 Day 1 - Day 3。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

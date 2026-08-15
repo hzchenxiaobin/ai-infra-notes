@@ -268,18 +268,16 @@ python kernels/tp_inference_demo.py
 
 > 💡 提交后在 [LeetGPU Matrix Copy](https://leetgpu.com/challenges/matrix-copy) 上记录通过耗时。完整题解见 [Matrix Copy 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-copy-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 8 周 精选）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周 Day 1）
 
-> 📅 今日 LeetCode 从 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」中精选 4 道高频题（二分模板 + 一维 DP + 背包 DP），保持算法手感。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [704. 二分查找](https://leetcode.cn/problems/binary-search/) | 简单 | 二分模板（闭区间 / 左闭右开） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/704_二分查找.html) |
-| [198. 打家劫舍](https://leetcode.cn/problems/house-robber/) | 中等 | 一维 DP（选/不选状态转移） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/198_打家劫舍.html) |
-| [322. 零钱兑换](https://leetcode.cn/problems/coin-change/) | 中等 | 完全背包 DP（求最少硬币） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/322_零钱兑换.html) |
-| [416. 分割等和子集](https://leetcode.cn/problems/partition-equal-subset-sum/) | 中等 | 0-1 背包 DP（求能否装满） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/416_分割等和子集.html) |
-
-> 💡 刷题建议：704 是二分模板，5 分钟默写一遍确保边界无错；198 是 DP 入门，理解"选/不选"状态转移；322 和 416 分别是完全背包与 0-1 背包，对比记忆"内外层循环顺序"的差异（完全背包正向、0-1 背包逆向）。
+|------|------|---------|------|
+| [139. 单词拆分](https://leetcode.cn/problems/word-break/) | 中等 | DP / BFS + 字典哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
+| [152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/) | 中等 | 滚动 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
+| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP + 二分（patience sorting） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
+| [354. 俄罗斯套娃信封问题](https://leetcode.cn/problems/russian-doll-envelopes/) | 困难 | 排序 + LIS（二分） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
 
 ---
 

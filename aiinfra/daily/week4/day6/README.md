@@ -224,15 +224,9 @@ sm__warps_active.avg.pct_of_peak_sustained_active \
 
 > Softmax 是 memory-bound，`dram__throughput` 高（85%+）说明 HBM 是瓶颈。Triton 的优势是更高的 occupancy（自动 warp 配置）。
 
-#### 任务 4：LeetCode 面试题（10 周计划 · 第 9 周 Day 1 补充）
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 4 周机动补漏）
 
-> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 1（子数组与子序列）的子集，共 3 题。Profiling 主题偏工程，LeetCode 题量精简，留时间给 ncu 分析。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
-
-| 题目 | 难度 | 核心套路 | 题解 |
-|------|------|---------|------|
-| [139](https://leetcode.cn/problems/word-break/) | Medium | DP（一维） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
-| [375](https://leetcode.cn/problems/guess-number-higher-or-lower-ii/) | Medium | DP（区间博弈） | 暂无 |
-| [514](https://leetcode.cn/problems/freedom-trail/) | Hard | DP（状态） | 暂无 |
+> 📅 第 4 周计划共 16 题，已分配至 Day 1 - Day 3。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
 
 ---
 

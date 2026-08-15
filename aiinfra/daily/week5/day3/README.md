@@ -522,17 +522,17 @@ ncu --metrics \
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 4 周 Day 2）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 5 周 Day 3）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」Day 2（表达式与计算器），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 5 周「堆、贪心与区间」Day 3（区间与差分），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [394. 字符串解码](https://leetcode.cn/problems/decode-string/) | 中等 | 栈 / 递归解码 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html) |
-| [224. 基本计算器](https://leetcode.cn/problems/basic-calculator/) | 困难 | 栈处理括号与一元符号 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html) |
-| [227. 基本计算器 II](https://leetcode.cn/problems/basic-calculator-ii/) | 中等 | 栈处理乘除优先级 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html) |
-| [402. 移掉 K 位数字](https://leetcode.cn/problems/remove-k-digits/) | 中等 | 单调栈删大留小 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html) |
-| [316. 去除重复字母](https://leetcode.cn/problems/remove-duplicate-letters/) | 中等 | 单调栈 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
+|------|------|---------|------|
+| [253. 会议室 II](https://leetcode.cn/problems/meeting-rooms-ii/) | 中等 | 扫描线 / 小顶堆 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/253_会议室II.html) |
+| [435. 无重叠区间](https://leetcode.cn/problems/non-overlapping-intervals/) | 中等 | 贪心区间调度（按右端点） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/435_无重叠区间.html) |
+| [452. 用最少数量的箭引爆气球](https://leetcode.cn/problems/minimum-number-of-arrows-to-burst-balloons/) | 中等 | 按右端点排序贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/452_用最少数量的箭引爆气球.html) |
+| [406. 根据身高重建队列](https://leetcode.cn/problems/queue-reconstruction-by-height/) | 中等 | 降序排序 + 按 k 插队 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/406_根据身高重建队列.html) |
+| [1109. 航班预订统计](https://leetcode.cn/problems/corporate-flight-bookings/) | 中等 | 差分数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1109_航班预订统计.html) |
 
 ---
 

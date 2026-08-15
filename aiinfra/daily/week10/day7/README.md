@@ -235,11 +235,17 @@ python kernels/week10_summary.py
 
 > 💡 完整题解见 [1D Convolution 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-1d-convolution-solution.html)。
 
-#### 任务 3：本周 LeetCode 题目回顾
+#### 任务 3：本周 LeetCode 题目回顾（10 周计划 · 第 10 周）
 
-本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)（10 周刷题计划是外部独立计划，与课程 10 周不同步，按题表完成即可）。
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」（点击查看题解）：
 
-> 💡 回顾重点：重做本周错题、总结模板笔记；没做完的题目今天补上。
+| Day | 主题 | LeetCode 题目 |
+|---|---|---|
+| Day 1 | 股票与划分 | [122. 买卖股票的最佳时机 II](https://hzchenxiaobin.github.io/leetcode/problems/122_买卖股票的最佳时机II.html)、[123. 买卖股票的最佳时机 III](https://hzchenxiaobin.github.io/leetcode/problems/123_买卖股票的最佳时机III.html)、[188. 买卖股票的最佳时机 IV](https://hzchenxiaobin.github.io/leetcode/problems/188_买卖股票的最佳时机IV.html)、[309. 买卖股票的最佳时机含冷冻期](https://hzchenxiaobin.github.io/leetcode/problems/309_买卖股票的最佳时机含冷冻期.html)、[714. 买卖股票的最佳时机含手续费](https://hzchenxiaobin.github.io/leetcode/problems/714_买卖股票的最佳时机含手续费.html)、[698. 划分为 K 个相等的子集](https://hzchenxiaobin.github.io/leetcode/problems/698_划分为K个相等的子集.html) |
+| Day 2 | 图论基础 | [207. 课程表](https://hzchenxiaobin.github.io/leetcode/problems/207_课程表.html)、[208. 实现 Trie（前缀树）](https://hzchenxiaobin.github.io/leetcode/problems/208_实现Trie.html)、[547. 省份数量](https://hzchenxiaobin.github.io/leetcode/problems/547_省份数量.html)、[785. 判断二分图](https://hzchenxiaobin.github.io/leetcode/problems/785_判断二分图.html)、[133. 克隆图](https://hzchenxiaobin.github.io/leetcode/problems/133_克隆图.html) |
+| Day 3 | 最短路与 BFS | [743. 网络延迟时间](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html)、[787. K 站中转内最便宜的航班](https://hzchenxiaobin.github.io/leetcode/problems/787_K站中转内最便宜的航班.html)、[399. 除法求值](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html)、[752. 打开转盘锁](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html)、[127. 单词接龙](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html)、[329. 矩阵中的最长递增路径](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
+
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 10 周「股票 DP、划分与图论」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
 ---
 

@@ -574,7 +574,7 @@ total_warps = warps_per_block × num_blocks
 > 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」Day 1（哈希），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
+|------|------|---------|------|
 | [1. 两数之和](https://leetcode.cn/problems/two-sum/) | 简单 | 哈希表一次遍历 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/1_两数之和.html) |
 | [49. 字母异位词分组](https://leetcode.cn/problems/group-anagrams/) | 中等 | 排序/计数作键分组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/49_字母异位词分组.html) |
 | [128. 最长连续序列](https://leetcode.cn/problems/longest-consecutive-sequence/) | 中等 | 哈希集合 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/128_最长连续序列.html) |

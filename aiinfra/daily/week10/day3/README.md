@@ -330,16 +330,18 @@ N=    16,000,000  time=0.1156 ms  BW=1107.3 GB/s
 
 > 💡 提交后在 [LeetGPU Matrix Addition](https://leetgpu.com/challenges/matrix-addition) 上记录通过耗时。完整题解（含 naive element-wise kernel、带宽测量、与今日 benchmark 方法论的对应）见 [Matrix Addition 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-addition-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 9 周 Day 1）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 10 周 Day 3）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」Day 1（子数组与子序列），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 10 周「股票 DP、划分与图论」Day 3（最短路与 BFS），共 6 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [139. 单词拆分](https://leetcode.cn/problems/word-break/) | 中等 | DP / BFS + 字典哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html) |
-| [152. 乘积最大子数组](https://leetcode.cn/problems/maximum-product-subarray/) | 中等 | 滚动 DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
-| [300. 最长递增子序列](https://leetcode.cn/problems/longest-increasing-subsequence/) | 中等 | DP / 二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html) |
-| [354. 俄罗斯套娃信封问题](https://leetcode.cn/problems/russian-doll-envelopes/) | 困难 | 排序 + LIS（二分） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
+|------|------|---------|------|
+| [743. 网络延迟时间](https://leetcode.cn/problems/network-delay-time/) | 中等 | 堆优化 Dijkstra 单源最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/743_网络延迟时间.html) |
+| [787. K 站中转内最便宜的航班](https://leetcode.cn/problems/cheapest-flights-within-k-stops/) | 中等 | Bellman-Ford / DP 状态机 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/787_K站中转内最便宜的航班.html) |
+| [399. 除法求值](https://leetcode.cn/problems/evaluate-division/) | 中等 | 带权并查集 / 图搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/399_除法求值.html) |
+| [752. 打开转盘锁](https://leetcode.cn/problems/open-the-lock/) | 中等 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/752_打开转盘锁.html) |
+| [127. 单词接龙](https://leetcode.cn/problems/word-ladder/) | 困难 | BFS 最短路 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/127_单词接龙.html) |
+| [329. 矩阵中的最长递增路径](https://leetcode.cn/problems/longest-increasing-path-in-a-matrix/) | 困难 | 记忆化搜索 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/329_矩阵中的最长递增路径.html) |
 
 ---
 

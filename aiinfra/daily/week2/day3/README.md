@@ -667,9 +667,16 @@ smsp__average_warps_issue_stalled_long_scoreboard.pct \
 
 > 💡 提交后在 [LeetGPU Histogramming 题目](https://leetgpu.com/challenges/histogramming)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Histogramming 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-histogramming-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周机动补漏）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 3）
 
-> 📅 第 2 周计划共 20 题，已分配至 Day 1 - Day 5（见 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html)）。今日不新增题目：补齐本周未完成的题目、重做本周错题，Day 7 统一复盘。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 3（字符串模拟），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+
+| 题目 | 难度 | 核心套路 | 题解 |
+|------|------|---------|------|
+| [415. 字符串相加](https://leetcode.cn/problems/add-strings/) | 简单 | 大数加法模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html) |
+| [43. 字符串相乘](https://leetcode.cn/problems/multiply-strings/) | 中等 | 竖式乘法模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html) |
+| [151. 反转字符串中的单词](https://leetcode.cn/problems/reverse-words-in-a-string/) | 中等 | 切分逆序 / 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html) |
+| [14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) | 简单 | 纵向 / 横向扫描 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/14_最长公共前缀.html) |
 
 ---
 

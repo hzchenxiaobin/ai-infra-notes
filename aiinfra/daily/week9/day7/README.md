@@ -219,6 +219,19 @@
 
 ---
 
+#### 任务 2：本周 LeetCode 题目回顾（10 周计划 · 第 9 周）
+
+本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 9 周「动态规划进阶——子序列、区间与二维 DP」（点击查看题解）：
+
+| Day | 主题 | LeetCode 题目 |
+|---|---|---|
+| Day 1 | 子数组与子序列 | [139. 单词拆分](https://hzchenxiaobin.github.io/leetcode/problems/139_单词拆分.html)、[152. 乘积最大子数组](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html)、[300. 最长递增子序列](https://hzchenxiaobin.github.io/leetcode/problems/300_最长递增子序列.html)、[354. 俄罗斯套娃信封问题](https://hzchenxiaobin.github.io/leetcode/problems/354_俄罗斯套娃信封问题.html) |
+| Day 2 | 回文与区间 DP | [647. 回文子串](https://hzchenxiaobin.github.io/leetcode/problems/647_回文子串.html)、[516. 最长回文子序列](https://hzchenxiaobin.github.io/leetcode/problems/516_最长回文子序列.html)、[5. 最长回文子串](https://hzchenxiaobin.github.io/leetcode/problems/5_最长回文子串.html)、[312. 戳气球](https://hzchenxiaobin.github.io/leetcode/problems/312_戳气球.html)、[32. 最长有效括号](https://hzchenxiaobin.github.io/leetcode/problems/32_最长有效括号.html) |
+| Day 3 | 二维 DP | [62. 不同路径](https://hzchenxiaobin.github.io/leetcode/problems/62_不同路径.html)、[64. 最小路径和](https://hzchenxiaobin.github.io/leetcode/problems/64_最小路径和.html)、[120. 三角形最小路径和](https://hzchenxiaobin.github.io/leetcode/problems/120_三角形最小路径和.html)、[1143. 最长公共子序列](https://hzchenxiaobin.github.io/leetcode/problems/1143_最长公共子序列.html)、[72. 编辑距离](https://hzchenxiaobin.github.io/leetcode/problems/72_编辑距离.html)、[221. 最大正方形](https://hzchenxiaobin.github.io/leetcode/problems/221_最大正方形.html) |
+
+> 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 9 周「动态规划进阶——子序列、区间与二维 DP」。重做本周错题、总结模板笔记；没做完的题目今天补上。
+
+---
 ### 本周复盘 Checklist
 
 - [ ] 能解释 TP/PP/DP/EP 四维并行的通信模式

@@ -470,16 +470,16 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 > 💡 提交后在 [LeetGPU Matrix Multiplication 题目](https://leetgpu.com/challenges/matrix-multiplication)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Matrix Multiplication 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html)。
 
-#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 3）
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 2 周 Day 5）
 
-> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 3（字符串模拟），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 2 周「字符串、滑动窗口与矩阵」Day 5（矩阵），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
-|------|------|----------|------|
-| [415. 字符串相加](https://leetcode.cn/problems/add-strings/) | 简单 | 大数加法模拟进位 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/415_字符串相加.html) |
-| [43. 字符串相乘](https://leetcode.cn/problems/multiply-strings/) | 中等 | 竖式乘法模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/43_字符串相乘.html) |
-| [151. 反转字符串中的单词](https://leetcode.cn/problems/reverse-words-in-a-string/) | 中等 | 切分逆序 / 双指针 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/151_反转字符串中的单词.html) |
-| [14. 最长公共前缀](https://leetcode.cn/problems/longest-common-prefix/) | 简单 | 纵向 / 横向扫描 | — |
+|------|------|---------|------|
+| [73. 矩阵置零](https://leetcode.cn/problems/set-matrix-zeroes/) | 中等 | 首行首列原地标记 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/73_矩阵置零.html) |
+| [54. 螺旋矩阵](https://leetcode.cn/problems/spiral-matrix/) | 中等 | 边界收缩模拟 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/54_螺旋矩阵.html) |
+| [48. 旋转图像](https://leetcode.cn/problems/rotate-image/) | 中等 | 转置 + 翻转 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/48_旋转图像.html) |
+| [240. 搜索二维矩阵 II](https://leetcode.cn/problems/search-a-2d-matrix-ii/) | 中等 | 右上起点单调性排除 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/240_搜索二维矩阵II.html) |
 
 ---
 

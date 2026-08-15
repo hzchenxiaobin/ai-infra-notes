@@ -407,15 +407,17 @@ print(f"dA match: {torch.allclose(A.grad, dA_expected, atol=1e-5)}")
 print(f"dB match: {torch.allclose(B.grad, dB_expected, atol=1e-5)}")
 ```
 
-#### 任务 4：LeetCode 面试题（10 周计划 · 第 3 周 Day 6 补充）
+#### 任务 4：LeetCode 面试题（10 周计划 · 第 4 周 Day 3）
 
-> 📅 今日题目选自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 3 周「链表与数学技巧」Day 6（数学技巧）的 DP 子集，共 3 题。Welford/Backward 主题偏数学，选 DP 类题目保持算法手感。简单题快速过、中等题精做；卡壳 20 分钟就看题解，看懂后自己默写一遍。
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 4 周「栈、队列与单调栈」Day 3（单调栈），共 5 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [152](https://leetcode.cn/problems/maximum-product-subarray/) | Medium | DP（一维，正负交替） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/152_乘积最大子数组.html) |
-| [918](https://leetcode.cn/problems/maximum-sum-circular-subarray/) | Medium | DP（环形） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/918_最大环形子数组和.html) |
-| [410](https://leetcode.cn/problems/split-array-largest-sum/) | Hard | DP/二分 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/410_分割数组的最大值.html) |
+| [739. 每日温度](https://leetcode.cn/problems/daily-temperatures/) | 中等 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html) |
+| [496. 下一个更大元素 I](https://leetcode.cn/problems/next-greater-element-i/) | 简单 | 单调栈 + 哈希 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html) |
+| [503. 下一个更大元素 II](https://leetcode.cn/problems/next-greater-element-ii/) | 中等 | 单调栈 + 循环数组 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html) |
+| [901. 股票价格跨度](https://leetcode.cn/problems/online-stock-span/) | 中等 | 单调栈 + 跨度合并 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html) |
+| [84. 柱状图中最大的矩形](https://leetcode.cn/problems/largest-rectangle-in-histogram/) | 困难 | 单调栈 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
 
 ---
 

@@ -240,14 +240,16 @@ python3 -m cProfile -s cumtime kernels/prefix_cache_engine.py | head -20
 
 chunked prefill 把多个请求的 chunk 凑批执行，本质就是把多个小 GEMM 合并成 batched GEMM——每个 batch 对应一个请求的 chunk，用 `blockIdx.z` 区分请求、`blockIdx.x/y` 处理 M/N tile。
 
-#### 任务 5：LeetCode 面试题
+#### 任务 5：LeetCode 面试题（10 周计划 · 第 7 周 Day 4）
+
+> 📅 今日题目来自 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 7 周「二叉树（下）+ 回溯 + 网格搜索」Day 4（网格 DFS/BFS），共 4 题。简单题快速过、中等题精做、困难题吃透；卡壳 20 分钟就看题解，看懂后自己默写一遍。
 
 | 题目 | 难度 | 核心套路 | 题解 |
 |------|------|---------|------|
-| [146](https://leetcode.cn/problems/lru-cache/) | Medium | LRU Cache（直接对应 prefix cache 淘汰） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/146_LRU缓存.html) |
-| [460](https://leetcode.cn/problems/lfu-cache/) | Hard | LFU Cache（扩展：频率感知淘汰） | — |
-| [200](https://leetcode.cn/problems/number-of-islands/) | Medium | DFS/BFS（连通分量） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
-| [130](https://leetcode.cn/problems/surrounded-regions/) | Medium | DFS（边界 flood fill） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
+| [200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/) | 中等 | DFS / BFS / 并查集 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/200_岛屿数量.html) |
+| [994. 腐烂的橘子](https://leetcode.cn/problems/rotting-oranges/) | 中等 | 多源 BFS | [题解](https://hzchenxiaobin.github.io/leetcode/problems/994_腐烂的橘子.html) |
+| [695. 岛屿的最大面积](https://leetcode.cn/problems/max-area-of-island/) | 中等 | DFS/BFS 连通块面积 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/695_岛屿的最大面积.html) |
+| [130. 被围绕的区域](https://leetcode.cn/problems/surrounded-regions/) | 中等 | 从边界 DFS/BFS 标记 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/130_被围绕的区域.html) |
 
 ---
 
