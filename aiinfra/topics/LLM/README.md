@@ -172,6 +172,8 @@
 - [ ] 为什么 V3.2 要用"可扩展 RL 框架"继续 scaling post-training，而不是只卷预训练？
 - [ ] K3 的 KDA 和 AttnRes 分别属于架构的哪一层创新？
 
+📖 详细笔记：[day7.md](day7.md)
+
 ---
 
 ## 学习建议
