@@ -307,7 +307,7 @@ N (d=64) | Triton(ms)  naive(ms)    官方(ms)    | Triton%官方
 Day 5 我们搭建了 Triton 三方 benchmark 框架，产出了性能对比表和决策表：
 
 1. **Triton GEMM**：大矩阵经 autotune 达 cuBLAS 93-97%，比手写 CUDA（无 Tensor Core）快 1.3-3.3x（自动 tiling + Tensor Core）
-2. **Triton Softmax**：与 PyTorch 大矩阵持平（~1.0x）、小矩阵更慢（~0.5x）；比手写 CUDA 略快——memory-bound 算子上 Triton 无明显优势
+2. **Triton Softmax**：与 PyTorch 大矩阵持平（约 1.0x）、小矩阵更慢（约 0.5x）；比手写 CUDA 略快——memory-bound 算子上 Triton 无明显优势
 3. **Triton FA**：达官方 CUDA 版 80-90%，代码量 1/7
 4. **Autotune**：首次调用搜索所有 config，缓存最优，后续零成本
 5. **决策表**：Triton 是"80% 性能 + 20% 代码量"的甜区；需要 90%+ 或新硬件指令时用 CUDA
