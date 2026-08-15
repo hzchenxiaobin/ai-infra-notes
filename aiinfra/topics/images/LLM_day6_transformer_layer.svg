@@ -21,7 +21,7 @@
   <path d="M 90 55 L 90 35" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
   <path d="M 90 35 L 290 35" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
   <path d="M 290 35 L 290 45" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ard)" filter="url(#sk)"/>
-  <text x="190" y="30" text-anchor="middle" font-size="8" fill="#b85450">残差 (identity)</text>
+  <text x="190" y="42" text-anchor="middle" font-size="8" fill="#b85450">残差 (identity)</text>
   <g filter="url(#sk)"><rect x="120" y="110" width="160" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
   <text x="200" y="130" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">FFN(h₁)</text>
   <text x="200" y="147" text-anchor="middle" font-size="9" fill="#333">h₂ = LN(h₁ + FFN(h₁))</text>

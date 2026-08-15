@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
@@ -11,7 +11,7 @@
       <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
     </marker>
   </defs>
-  <rect width="900" height="200" fill="#fdfcf7"/>
+  <rect width="900" height="220" fill="#fdfcf7"/>
   <text x="450" y="28" text-anchor="middle" font-size="15" fill="#2b2b2b" font-weight="bold">DualPipe（P=4, M=8, 双向）— 气泡趋近零</text>
   <text x="50" y="68.0" text-anchor="end" font-size="9" fill="#666">Stage 0</text>
   <g filter="url(#sk)"><rect x="60.0" y="50" width="57" height="28" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
@@ -81,7 +81,7 @@
   <text x="520.5" y="170.0" text-anchor="middle" font-size="8" fill="#333">B7</text>
   <g filter="url(#sk)"><rect x="552.0" y="152" width="57" height="28" rx="3" fill="#fdfcf7" stroke="#ccc" stroke-width="1.0"/></g>
   <text x="580.5" y="170.0" text-anchor="middle" font-size="8" fill="#333">...</text>
-  <text x="200" y="185" text-anchor="middle" font-size="9" fill="#4a8edb">→ 前半 batch 从左进</text>
-  <text x="650" y="185" text-anchor="middle" font-size="9" fill="#4a8e4a">← 后半 batch 从右进</text>
-  <text x="450" y="175" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">EP 通信与另一方向计算重叠 → 气泡趋近零</text>
+  <text x="200" y="195" text-anchor="middle" font-size="9" fill="#4a8edb">→ 前半 batch 从左进</text>
+  <text x="650" y="195" text-anchor="middle" font-size="9" fill="#4a8e4a">← 后半 batch 从右进</text>
+  <text x="450" y="210" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">EP 通信与另一方向计算重叠 → 气泡趋近零</text>
 </svg>

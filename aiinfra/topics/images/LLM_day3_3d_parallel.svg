@@ -16,22 +16,24 @@
   <text x="350" y="48" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">8 × 64 × 4 = 2048 H800 GPUs</text>
   <g filter="url(#sk)"><rect x="250" y="60" width="200" height="30" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="2"/></g>
   <text x="350" y="80" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">2048 H800 GPUs</text>
+  <path d="M 350 90 L 350 100" stroke="#5a5a5a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 145 100 L 625 100" stroke="#5a5a5a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
   <g filter="url(#sk)"><rect x="80" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
   <text x="145" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 0</text>
   <text x="145" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
-  <path d="M 350 90 L 145 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 145 100 L 145 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
   <g filter="url(#sk)"><rect x="240" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
   <text x="305" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 1</text>
   <text x="305" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
-  <path d="M 350 90 L 305 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 305 100 L 305 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
   <g filter="url(#sk)"><rect x="400" y="110" width="130" height="36" rx="6" fill="#fdfcf7" stroke="#ccc" stroke-width="1.4"/></g>
   <text x="465" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">...</text>
-  <path d="M 350 90 L 465 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 465 100 L 465 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
   <g filter="url(#sk)"><rect x="560" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
   <text x="625" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 7</text>
   <text x="625" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
-  <path d="M 350 90 L 625 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <text x="145" y="165" text-anchor="middle" font-size="10" fill="#666">每 Stage 内部:</text>
+  <path d="M 625 100 L 625 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="350" y="165" text-anchor="middle" font-size="10" fill="#666">每 Stage 内部（以 Stage 0 为例）:</text>
   <g filter="url(#sk)"><rect x="50" y="175" width="90" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
   <text x="95" y="189" text-anchor="middle" font-size="8" fill="#333" font-weight="bold">DP Replica 0</text>
   <text x="95" y="201" text-anchor="middle" font-size="8" fill="#666">(64 GPU)</text>

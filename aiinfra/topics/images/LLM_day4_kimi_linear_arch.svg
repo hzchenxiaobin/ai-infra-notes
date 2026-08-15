@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
@@ -11,36 +11,36 @@
       <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
     </marker>
   </defs>
-  <rect width="400" height="320" fill="#fdfcf7"/>
+  <rect width="400" height="340" fill="#fdfcf7"/>
   <text x="200" y="28" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Kimi Linear 混合架构</text>
   <g filter="url(#sk)"><rect x="50" y="45" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
   <text x="65" y="62" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 0</text>
   <text x="150" y="62" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="73" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
-  <text x="65" y="90" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 1</text>
-  <text x="150" y="90" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="101" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
-  <text x="65" y="118" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 2</text>
-  <text x="150" y="118" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="129" width="300" height="26" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
-  <text x="65" y="146" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 3</text>
-  <text x="150" y="146" text-anchor="start" font-size="9" fill="#4a8edb">Full Attention</text>
+  <g filter="url(#sk)"><rect x="50" y="75" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="92" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 1</text>
+  <text x="150" y="92" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
+  <g filter="url(#sk)"><rect x="50" y="105" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="122" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 2</text>
+  <text x="150" y="122" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
+  <g filter="url(#sk)"><rect x="50" y="135" width="300" height="26" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="65" y="152" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 3</text>
+  <text x="150" y="152" text-anchor="start" font-size="9" fill="#4a8edb">Full Attention</text>
   <text x="340" y="146" text-anchor="end" font-size="8" fill="#4a8edb">← 周期性插入</text>
-  <g filter="url(#sk)"><rect x="50" y="157" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
-  <text x="65" y="174" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 4</text>
-  <text x="150" y="174" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="185" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
-  <text x="65" y="202" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 5</text>
-  <text x="150" y="202" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="213" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
-  <text x="65" y="230" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 6</text>
-  <text x="150" y="230" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
-  <g filter="url(#sk)"><rect x="50" y="241" width="300" height="26" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
-  <text x="65" y="258" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 7</text>
-  <text x="150" y="258" text-anchor="start" font-size="9" fill="#4a8edb">Full Attention</text>
+  <g filter="url(#sk)"><rect x="50" y="165" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="182" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 4</text>
+  <text x="150" y="182" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
+  <g filter="url(#sk)"><rect x="50" y="195" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="212" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 5</text>
+  <text x="150" y="212" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
+  <g filter="url(#sk)"><rect x="50" y="225" width="300" height="26" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="242" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 6</text>
+  <text x="150" y="242" text-anchor="start" font-size="9" fill="#4a8e4a">Linear + Sliding Window</text>
+  <g filter="url(#sk)"><rect x="50" y="255" width="300" height="26" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="65" y="272" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 7</text>
+  <text x="150" y="272" text-anchor="start" font-size="9" fill="#4a8edb">Full Attention</text>
   <text x="340" y="258" text-anchor="end" font-size="8" fill="#4a8edb">← 周期性插入</text>
-  <g filter="url(#sk)"><rect x="50" y="269" width="300" height="26" rx="4" fill="#fdfcf7" stroke="#ccc" stroke-width="1.2"/></g>
-  <text x="65" y="286" text-anchor="start" font-size="9" fill="#333" font-weight="bold">...</text>
-  <text x="150" y="286" text-anchor="start" font-size="9" fill="#ccc">...</text>
-  <text x="200" y="305" text-anchor="middle" font-size="9" fill="#666">线性层（80%）+ Full Attention 层（20%）+ 滑动窗口</text>
+  <g filter="url(#sk)"><rect x="50" y="285" width="300" height="26" rx="4" fill="#fdfcf7" stroke="#ccc" stroke-width="1.2"/></g>
+  <text x="65" y="302" text-anchor="start" font-size="9" fill="#333" font-weight="bold">...</text>
+  <text x="150" y="302" text-anchor="start" font-size="9" fill="#ccc">...</text>
+  <text x="200" y="315" text-anchor="middle" font-size="9" fill="#666">线性层（80%）+ Full Attention 层（20%）+ 滑动窗口</text>
 </svg>
