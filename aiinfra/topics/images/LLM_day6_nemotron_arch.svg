@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="400" height="300" fill="#fdfcf7"/>
+  <text x="200" y="28" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Nemotron 3 Super 混合架构</text>
+  <g filter="url(#sk)"><rect x="50" y="45" width="300" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="63" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 0</text>
+  <text x="150" y="63" text-anchor="start" font-size="9" fill="#4a8e4a">Mamba SSM</text>
+  <text x="340" y="63" text-anchor="end" font-size="8" fill="#4a8e4a">← 长程信息压缩</text>
+  <g filter="url(#sk)"><rect x="50" y="75" width="300" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="93" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 1</text>
+  <text x="150" y="93" text-anchor="start" font-size="9" fill="#4a8e4a">Mamba SSM</text>
+  <g filter="url(#sk)"><rect x="50" y="105" width="300" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="65" y="123" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 2</text>
+  <text x="150" y="123" text-anchor="start" font-size="9" fill="#4a8edb">Transformer Attn</text>
+  <text x="340" y="123" text-anchor="end" font-size="8" fill="#4a8edb">← 精确检索</text>
+  <g filter="url(#sk)"><rect x="50" y="135" width="300" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="153" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 3</text>
+  <text x="150" y="153" text-anchor="start" font-size="9" fill="#4a8e4a">Mamba SSM</text>
+  <g filter="url(#sk)"><rect x="50" y="165" width="300" height="28" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="65" y="183" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 4</text>
+  <text x="150" y="183" text-anchor="start" font-size="9" fill="#4a8e4a">Mamba SSM</text>
+  <g filter="url(#sk)"><rect x="50" y="195" width="300" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="65" y="213" text-anchor="start" font-size="9" fill="#333" font-weight="bold">Layer 5</text>
+  <text x="150" y="213" text-anchor="start" font-size="9" fill="#4a8edb">Transformer Attn</text>
+  <text x="340" y="213" text-anchor="end" font-size="8" fill="#4a8edb">← 周期性插入</text>
+  <g filter="url(#sk)"><rect x="50" y="225" width="300" height="28" rx="4" fill="#fdfcf7" stroke="#ccc" stroke-width="1.2"/></g>
+  <text x="65" y="243" text-anchor="start" font-size="9" fill="#333" font-weight="bold">...</text>
+  <text x="150" y="243" text-anchor="start" font-size="9" fill="#ccc">...</text>
+  <text x="200" y="275" text-anchor="middle" font-size="9" fill="#666">Mamba 做 O(n) 长程压缩 + 周期性 Transformer 精确检索</text>
+  <text x="200" y="290" text-anchor="middle" font-size="9" fill="#666">+ MoE FFN（所有层共用）</text>
+</svg>

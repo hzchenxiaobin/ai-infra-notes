@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="520" height="200" fill="#fdfcf7"/>
+  <text x="260" y="28" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">标准 Transformer 层（残差连接 + LayerNorm）</text>
+  <g filter="url(#sk)"><rect x="30" y="55" width="60" height="30" rx="6" fill="#f5f5f5" stroke="#999" stroke-width="1.2"/></g>
+  <text x="60" y="75" text-anchor="middle" font-size="10" fill="#666">h (输入)</text>
+  <g filter="url(#sk)"><rect x="120" y="45" width="160" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="200" y="65" text-anchor="middle" font-size="10" fill="#4a8edb" font-weight="bold">Attention(h)</text>
+  <text x="200" y="82" text-anchor="middle" font-size="9" fill="#333">h₁ = LN(h + Attn(h))</text>
+  <path d="M 90 55 L 90 35" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
+  <path d="M 90 35 L 290 35" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
+  <path d="M 290 35 L 290 45" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ard)" filter="url(#sk)"/>
+  <text x="190" y="30" text-anchor="middle" font-size="8" fill="#b85450">残差 (identity)</text>
+  <g filter="url(#sk)"><rect x="120" y="110" width="160" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="200" y="130" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">FFN(h₁)</text>
+  <text x="200" y="147" text-anchor="middle" font-size="9" fill="#333">h₂ = LN(h₁ + FFN(h₁))</text>
+  <path d="M 90 110 L 90 100" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
+  <path d="M 90 100 L 290 100" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="3,2"/>
+  <path d="M 290 100 L 290 110" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ard)" filter="url(#sk)"/>
+  <path d="M 200 95 L 200 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="310" y="125" width="60" height="30" rx="6" fill="#f5f5f5" stroke="#999" stroke-width="1.2"/></g>
+  <text x="340" y="145" text-anchor="middle" font-size="10" fill="#666">h₂ (输出)</text>
+  <path d="M 280 135 L 310 135" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="260" y="180" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">AttnRes: 把恒等 1 换成注意力门控 α(h), β(h)</text>
+</svg>

@@ -81,15 +81,7 @@ PPO 用 $V_\phi(s)$ 估计"从当前状态出发的期望奖励"，作为 baseli
 
 #### GRPO 的完整流程
 
-```
-输入: prompt q, 旧策略 π_θ_old, 采样数 G
-1. 从 π_θ_old 采样 G 个回复: {o_1, ..., o_G} ~ π_θ_old(·|q)
-2. 对每个回复计算奖励: r_i = R(q, o_i)    （规则/模型打分）
-3. 计算群组相对优势:
-   A_i = (r_i - mean(r_1,...,r_G)) / std(r_1,...,r_G)
-4. 用 clipped objective 更新 θ（和 PPO 一样，但 A_i 替代了 Â_t）
-5. 加 KL 惩罚（防偏离参考策略）
-```
+![GRPO 训练流程：采样 G 个回复 → 计算奖励 → 群组相对优势 → clipped 更新 → KL 惩罚](../images/LLM_day2_grpo_flow.svg)
 
 #### 优势函数的数学
 
@@ -236,12 +228,7 @@ R1-Zero 的 pass@1 从 ~15% 涨到 ~52%——纯 RL 带来近 4 倍提升，且�
 
 #### 四阶段全景
 
-```
-Stage 1: 冷启动 SFT          → 给推理风格一个"好起点"
-Stage 2: 推理导向 RL          → 深化推理能力 + 修复语言混杂
-Stage 3: 拒绝采样 + 全量 SFT  → 把推理能力蒸馏回 base model + 加非推理能力
-Stage 4: 全场景 RL            → 同时优化推理 + 非推理任务
-```
+![R1 完整四阶段管线：冷启动 SFT → 推理 RL → 拒绝采样 SFT → 全场景 RL](../images/LLM_day2_r1_pipeline.svg)
 
 #### Stage 1：冷启动 SFT（Cold-Start SFT）
 
@@ -362,14 +349,7 @@ Moonshot 的 K1.5（2025 年 1 月）和 R1 几乎同期发布，路线相似但
 
 标准 RL 每步要对每个 prompt 生成完整回复（rollout）——这是最贵的部分（671B 模型生成数千 token）。K1.5 的 partial rollout：
 
-```
-标准 rollout:  从头生成完整回复（如 5000 token）
-partial rollout:
-  1. 保留之前某次 rollout 的完整回复
-  2. 在中间随机位置截断（如截到第 2000 token）
-  3. 从截断点重新生成后续 3000 token
-  4. 拼接成完整回复，计算奖励
-```
+![标准 Rollout vs Partial Rollout：截断复用前缀，省约 50%+ rollout 计算](../images/LLM_day2_partial_rollout.svg)
 
 | 优势 | 说明 |
 |------|------|

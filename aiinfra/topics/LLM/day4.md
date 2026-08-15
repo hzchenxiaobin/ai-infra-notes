@@ -91,17 +91,7 @@ Full Attention 中每个 query 对所有 key 计算注意力分数——但实�
 
 #### 位置稀疏 vs 内容稀疏
 
-```
-位置稀疏（固定模式）:              内容稀疏（动态选择）:
-Query:  Q₁  Q₂  Q₃  Q₄  Q₅        Query:  Q₁  Q₂  Q₃  Q₄  Q₅
-Key:    K₁  K₂  K₃  K₄  K₅        Key:    K₁  K₂  K₃  K₄  K₅
-Q₁:     [✓] [✓] [ ]  [ ]  [✓]     Q₁:     [✓] [ ]  [✓] [ ]  [ ]   ← Q₁ 觉得 K₁,K₃ 重要
-Q₂:     [✓] [✓] [✓] [ ]  [ ]     Q₂:     [ ]  [✓] [ ]  [✓] [ ]   ← Q₂ 觉得 K₂,K₄ 重要
-Q₃:     [ ]  [✓] [✓] [✓] [ ]     Q₃:     [✓] [ ]  [ ]  [ ]  [✓]   ← Q₃ 觉得 K₁,K₅ 重要
-Q₄:     [ ]  [ ]  [✓] [✓] [✓]     Q₄:     [ ]  [✓] [✓] [ ]  [ ]   ← Q₄ 觉得 K₂,K₃ 重要
-Q₅:     [✓] [ ]  [ ]  [✓] [✓]     Q₅:     [ ]  [ ]  [✓] [✓] [ ]   ← Q₅ 觉得 K₃,K₄ 重要
-     ↑ 固定模式（窗口+stride）         ↑ 每个 query 选不同的 key（内容相关）
-```
+![位置稀疏（固定模式）vs 内容稀疏（动态选择）：左为窗口+stride，右为每个 query 选不同的 key](../images/LLM_day4_sparse_patterns.svg)
 
 - **位置稀疏**：所有 query 看相同模式的 key（如最近 $w$ 个 + 等间隔采样）——简单但不灵活
 - **内容稀疏**：每个 query 根据内容动态选择不同的 key——灵活但需要先算一遍"哪些重要"
@@ -118,13 +108,7 @@ Q₅:     [✓] [ ]  [ ]  [✓] [✓]     Q₅:     [ ]  [ ]  [✓] [✓] [ ]   
 
 DSA 不是独立的新注意力，而是**在 MLA 基础上加一层稀疏化**：
 
-```
-Full Attention (MHA):    softmax(QK^T)V         → O(n²d) 计算, 32768 维/token KV cache
-↓ MLA 压缩 KV 表示
-MLA:                     softmax(Qc·Kc^T)Vc      → O(n²d) 计算, 576 维/token KV cache
-↓ DSA 稀疏化计算
-DSA:                     softmax(Qc·Kc_selected^T)Vc_selected → O(n·k·d) 计算, 576 维/token KV cache
-```
+![注意力架构演进：MHA → MLA（压缩 KV 表示）→ DSA（稀疏化计算），两者正交可叠加](../images/LLM_day4_mla_dsa_flow.svg)
 
 - MLA 压缩的是**缓存**（576 维潜向量，不变）
 - DSA 稀疏化的是**计算**（只对选中的 $k$ 个 token 算注意力，$k \ll n$）
@@ -132,24 +116,14 @@ DSA:                     softmax(Qc·Kc_selected^T)Vc_selected → O(n·k·d) �
 
 #### DSA 的三阶段流程
 
-```
-输入: query q_t, 完整 KV cache {c^KV_1, ..., c^KV_n}（MLA 潜向量，576 维/token）
+![DSA 三阶段：Compress（块级摘要）→ Select（Top-N 选块）→ Fine Attention（选中块做 MLA）](../images/LLM_day4_dsa_three_stage.svg)
 
-Stage 1 - Compress（压缩）:
-  将 n 个 KV 潜向量分成 n/c 个块（块大小 c，如 c=64）
-  对每块做 pooling 得到 1 个压缩表示: c^KV_compressed[j] = Pool(c^KV_{j·c:(j+1)·c})
-  → 产出 n/c 个压缩 KV 向量
+**三阶段详细步骤**：
 
-Stage 2 - Select（选择）:
-  计算 q_t 与所有压缩 KV 的粗粒度注意力分数: score_j = q_t · c^KV_compressed[j]
-  选 Top-N 个得分最高的块: selected_blocks = TopN(scores)
-  → 选出 N 个块（N << n/c）
-
-Stage 3 - Fine attention（精细注意力）:
-  从完整 KV cache 中取出选中 N 块的原始（未压缩）KV: {c^KV_{selected}}
-  对这些 token 做标准 MLA 注意力: softmax(q_t · c^KV_selected^T) · V_selected
-  → 输出最终结果
-```
+1. **输入**：query $q_t$，完整 KV cache $\{c^{KV}_1, \dots, c^{KV}_n\}$（MLA 潜向量，576 维/token）
+2. **Compress**：将 $n$ 个 KV 潜向量分成 $n/c$ 个块（块大小 $c$，如 $c{=}64$），对每块做 pooling 得到 1 个压缩表示 $c^{KV}_{\text{compressed}}[j] = \text{Pool}(c^{KV}_{j \cdot c:(j+1) \cdot c})$，产出 $n/c$ 个压缩 KV 向量
+3. **Select**：计算 $q_t$ 与所有压缩 KV 的粗粒度注意力分数 $\text{score}_j = q_t \cdot c^{KV}_{\text{compressed}}[j]$，选 Top-N 个得分最高的块（$N \ll n/c$）
+4. **Fine attention**：从完整 KV cache 中取出选中 $N$ 块的原始 KV，对这些 token 做标准 MLA 注意力 $\text{softmax}(q_t \cdot c^{KV}_{\text{selected}}{}^T) \cdot V_{\text{selected}}$
 
 #### 为什么三阶段能省计算
 
@@ -279,18 +253,7 @@ Kimi Linear 不走极端——它用**混合架构**同时拿到线性注意力�
 | **Full Attention 层** | 处理需要精确检索的任务（如找某个具体事实） | 少数层（如 20%），周期性插入 |
 | **滑动窗口注意力** | 处理局部上下文（最近 $w$ 个 token 的精确信息） | 每层都有一段窗口 |
 
-```
-Kimi Linear 混合架构（示意）:
-Layer 0:  [Linear + Sliding Window]
-Layer 1:  [Linear + Sliding Window]
-Layer 2:  [Linear + Sliding Window]
-Layer 3:  [Full Attention]          ← 周期性插入，精确检索
-Layer 4:  [Linear + Sliding Window]
-Layer 5:  [Linear + Sliding Window]
-Layer 6:  [Linear + Sliding Window]
-Layer 7:  [Full Attention]          ← 每 4 层 1 次
-...
-```
+![Kimi Linear 混合架构：大部分层用线性注意力+滑动窗口，周期性插入 Full Attention 层做精确检索](../images/LLM_day4_kimi_linear_arch.svg)
 
 > 💡 **为什么混合有效**：① 线性注意力层负责"压缩历史信息到固定状态"，让模型不需要 $O(n)$ 的 KV cache；② Full Attention 层周期性"刷新"精确信息，弥补线性注意力的检索精度不足；③ 滑动窗口保证局部上下文（最近 token）的精确处理——三者的组合让 Kimi Linear 号称在**各种上下文长度**下超越 Full Attention。
 
@@ -324,15 +287,7 @@ Day 1 学过 MoE：每个 token 激活 Top-K 个 FFN 专家。MoBA 把同样的�
 
 #### MoBA 的流程
 
-```
-输入: query q_t, KV cache 分成 M 个块 {B₁, ..., B_M}（每块 B 个 token）
-
-1. 块摘要: 对每块计算代表性向量 r_j = mean(KV in B_j)
-2. 门控打分: g_j = sigmoid(q_t · r_j)        ← query 与块摘要的相似度
-3. Top-K 选择: 选 K 个得分最高的块
-4. 精细注意力: 对选中的 K 个块做标准注意力
-   output = Σ attention(q_t, KV in selected_blocks)
-```
+![MoBA 流程：块摘要 → 门控打分（sigmoid）→ Top-K 选择 → 精细注意力](../images/LLM_day4_moba_flow.svg)
 
 #### MoBA vs DSA 对比
 

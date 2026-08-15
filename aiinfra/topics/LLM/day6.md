@@ -44,12 +44,7 @@ $$h' = h + F(h)$$
 
 Transformer 的每个子层（attention + FFN）都用残差连接 + LayerNorm：
 
-```
-标准 Transformer 层:
-  h₁ = LayerNorm(h + Attention(h))       ← 残差连接 + LN
-  h₂ = LayerNorm(h₁ + FFN(h₁))           ← 残差连接 + LN
-  输出 = h₂
-```
+![标准 Transformer 层：h₁ = LN(h + Attention(h))，h₂ = LN(h₁ + FFN(h₁))，残差连接为恒等映射](../images/LLM_day6_transformer_layer.svg)
 
 从 2017 到 2026，几乎所有大模型（GPT、Llama、Qwen、DeepSeek V2/V3、Kimi K1.5/K2）都原封不动地继承这个设计——**残差连接是 9 年来从未被挑战的"标配"**。
 
@@ -283,16 +278,7 @@ README 特别强调：
 
 #### 技术演进树（截至 2026 年 8 月）
 
-```
-DeepSeek 线:
-  V2 (2024)  → V3 (2024.12)  → R1 (2025.1)  → V3.2 (2025)  → V4 (2026.4)
-  [MLA+MoE]    [FP8+DualPipe]   [GRPO+RLVR]     [DSA+可扩展RL]   [1M上下文]
-  注: R2 至今未发布 ← 网上"R2 参数"都是谣言
-
-Kimi 线:
-  K1.5 (2025.1) → K2 (2025.7)    → K2.5 (?)    → K3 (2026)
-  [RL+long2short] [MuonClip+Agent] [?]           [KDA+AttnRes+2.8T]
-```
+![技术演进树：DeepSeek 线 V2→V3→R1→V3.2→V4（R2 未发布），Kimi 线 K1.5→K2→K3](../images/LLM_day6_evolution_tree.svg)
 
 > 💡 **你的任务**：在笔记本上画出这张技术演进树，标注每个节点的核心创新和发布时间。Day 7 的"画一张大图"任务就是这个的放大版。
 
@@ -323,17 +309,7 @@ $$h_t = \bar{A} h_{t-1} + \bar{B} x_t, \quad y_t = C h_t$$
 
 Nemotron 3 Super 的策略：**不是全部用 Mamba，也不是全部用 Transformer，而是混着用**：
 
-```
-Nemotron 混合架构（示意）:
-Layer 0:  [Mamba SSM]          ← 长程信息压缩
-Layer 1:  [Mamba SSM]
-Layer 2:  [Transformer Attn]   ← 精确检索
-Layer 3:  [Mamba SSM]
-Layer 4:  [Mamba SSM]
-Layer 5:  [Transformer Attn]   ← 周期性插入
-...
-+ MoE FFN（所有层共用）
-```
+![Nemotron 3 Super 混合架构：Mamba SSM 做长程压缩 + 周期性 Transformer Attn 做精确检索 + MoE FFN](../images/LLM_day6_nemotron_arch.svg)
 
 这和 Day 4 的 Kimi Linear 混合架构（线性层 + 周期性 Full Attention + 滑动窗口）思路相似——用 SSM/Mamba 做长程廉价信息压缩，周期性插入 Transformer 做精确检索。
 

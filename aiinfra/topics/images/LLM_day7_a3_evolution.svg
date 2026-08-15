@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="980" height="460" fill="#fdfcf7"/>
+  <text x="490" y="28" text-anchor="middle" font-size="16" fill="#2b2b2b" font-weight="bold">2025-2026 大模型技术演进树</text>
+  <text x="490" y="48" text-anchor="middle" font-size="10" fill="#666">时间轴: 2024.12 → 2025.1 → 2025.7 → 2025 → 2026.4 → 2026</text>
+  <text x="50" y="75" text-anchor="start" font-size="11" fill="#4a8edb" font-weight="bold">DeepSeek:</text>
+  <g filter="url(#sk)"><rect x="140" y="65" width="160" height="70" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="220.0" y="83" text-anchor="middle" font-size="12" fill="#4a8edb" font-weight="bold">V3</text>
+  <text x="220.0" y="97" text-anchor="middle" font-size="9" fill="#666">2024.12</text>
+  <text x="220.0" y="112" text-anchor="middle" font-size="8" fill="#666">MLA+MoE</text>
+  <text x="220.0" y="124" text-anchor="middle" font-size="8" fill="#666">FP8+DualPipe</text>
+  <path d="M 300 100 L 330 100" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="330" y="65" width="160" height="70" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="410.0" y="83" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">R1</text>
+  <text x="410.0" y="97" text-anchor="middle" font-size="9" fill="#666">2025.1</text>
+  <text x="410.0" y="112" text-anchor="middle" font-size="8" fill="#666">GRPO+RLVR</text>
+  <text x="410.0" y="124" text-anchor="middle" font-size="8" fill="#666">蒸馏</text>
+  <path d="M 490 100 L 520 100" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="520" y="65" width="160" height="70" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="600.0" y="83" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">V3.2</text>
+  <text x="600.0" y="97" text-anchor="middle" font-size="9" fill="#666">2025</text>
+  <text x="600.0" y="112" text-anchor="middle" font-size="8" fill="#666">DSA</text>
+  <text x="600.0" y="124" text-anchor="middle" font-size="8" fill="#666">可扩展RL</text>
+  <text x="600.0" y="136" text-anchor="middle" font-size="8" fill="#666">IMO金牌</text>
+  <path d="M 680 100 L 710 100" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="710" y="65" width="160" height="70" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="2"/></g>
+  <text x="790.0" y="83" text-anchor="middle" font-size="12" fill="#8a4adb" font-weight="bold">V4</text>
+  <text x="790.0" y="97" text-anchor="middle" font-size="9" fill="#666">2026.4</text>
+  <text x="790.0" y="112" text-anchor="middle" font-size="8" fill="#666">1M上下文</text>
+  <text x="790.0" y="124" text-anchor="middle" font-size="8" fill="#666">MLA+DSA+FP8</text>
+  <text x="860" y="75" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">❌ R2 未发布</text>
+  <text x="860" y="90" text-anchor="middle" font-size="8" fill="#b85450">网上参数是谣言</text>
+  <text x="50" y="180" text-anchor="start" font-size="11" fill="#4a8e4a" font-weight="bold">Kimi:</text>
+  <g filter="url(#sk)"><rect x="140" y="170" width="180" height="70" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="230.0" y="188" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">K1.5</text>
+  <text x="230.0" y="202" text-anchor="middle" font-size="9" fill="#666">2025.1</text>
+  <text x="230.0" y="217" text-anchor="middle" font-size="8" fill="#666">long2short</text>
+  <text x="230.0" y="229" text-anchor="middle" font-size="8" fill="#666">partial rollout</text>
+  <path d="M 320 205 L 350 205" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="350" y="170" width="180" height="70" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="440.0" y="188" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">K2</text>
+  <text x="440.0" y="202" text-anchor="middle" font-size="9" fill="#666">2025.7</text>
+  <text x="440.0" y="217" text-anchor="middle" font-size="8" fill="#666">MuonClip</text>
+  <text x="440.0" y="229" text-anchor="middle" font-size="8" fill="#666">Agentic RL</text>
+  <text x="440.0" y="241" text-anchor="middle" font-size="8" fill="#666">SWE 65.8</text>
+  <path d="M 530 205 L 560 205" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="560" y="170" width="180" height="70" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="650.0" y="188" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">K3</text>
+  <text x="650.0" y="202" text-anchor="middle" font-size="9" fill="#666">2026</text>
+  <text x="650.0" y="217" text-anchor="middle" font-size="8" fill="#666">KDA+AttnRes</text>
+  <text x="650.0" y="229" text-anchor="middle" font-size="8" fill="#666">2.8T</text>
+  <text x="650.0" y="241" text-anchor="middle" font-size="8" fill="#666">1M上下文</text>
+  <text x="50" y="285" text-anchor="start" font-size="11" fill="#c98a2b" font-weight="bold">其他:</text>
+  <g filter="url(#sk)"><rect x="140" y="275" width="250" height="35" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="265" y="293" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">GLM-5</text>
+  <text x="265" y="305" text-anchor="middle" font-size="8" fill="#666">vibe → agentic engineering</text>
+  <g filter="url(#sk)"><rect x="440" y="275" width="280" height="35" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="580" y="293" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">Nemotron 3 Super</text>
+  <text x="580" y="305" text-anchor="middle" font-size="8" fill="#666">Mamba-Transformer 混合 + MoE</text>
+  <path d="M 50 340 L 930 340" stroke="#999" stroke-width="1.0" fill="none" filter="url(#sk)" stroke-dasharray="3,3"/>
+  <text x="490" y="358" text-anchor="middle" font-size="12" fill="#666" font-weight="bold">四条主线</text>
+  <text x="70" y="370" text-anchor="start" font-size="10" fill="#4a8edb" font-weight="bold">① 架构</text>
+  <text x="140" y="370" text-anchor="start" font-size="9" fill="#666">MoE(671B/37B) → MLA(57×) → DSA(98%省) → KDA+AttnRes</text>
+  <text x="70" y="392" text-anchor="start" font-size="10" fill="#4a8e4a" font-weight="bold">② 推理</text>
+  <text x="140" y="392" text-anchor="start" font-size="9" fill="#666">R1-Zero(Aha) → R1(四阶段) → V3.2-Speciale(IMO金牌)</text>
+  <text x="70" y="414" text-anchor="start" font-size="10" fill="#c98a2b" font-weight="bold">③ 训练</text>
+  <text x="140" y="414" text-anchor="start" font-size="9" fill="#666">FP8 → DualPipe → MuonClip(零spike)</text>
+  <text x="70" y="436" text-anchor="start" font-size="10" fill="#8a4adb" font-weight="bold">④ Agent</text>
+  <text x="140" y="436" text-anchor="start" font-size="9" fill="#666">K2(SWE-Bench) → V3.2(agentic管线) → GLM-5(范式转变)</text>
+</svg>

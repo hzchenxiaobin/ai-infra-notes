@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="760" height="200" fill="#fdfcf7"/>
+  <text x="380" y="28" text-anchor="middle" font-size="16" fill="#2b2b2b" font-weight="bold">GRPO 训练流程</text>
+  <g filter="url(#sk)"><rect x="15.0" y="60" width="130" height="70" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="80.0" y="95.0" text-anchor="middle" font-size="10" fill="#333">采样 G 个回复</text>
+  <path d="M 145.0 95.0 L 165.0 95.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="165.0" y="60" width="130" height="70" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/></g>
+  <text x="230.0" y="95.0" text-anchor="middle" font-size="10" fill="#333">计算奖励 r_i</text>
+  <path d="M 295.0 95.0 L 315.0 95.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="315.0" y="60" width="130" height="70" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="380.0" y="87.0" text-anchor="middle" font-size="10" fill="#333">群组相对优势</text>
+  <text x="380.0" y="103.0" text-anchor="middle" font-size="10" fill="#333">A_i=(r_i-mean)/std</text>
+  <path d="M 445.0 95.0 L 465.0 95.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="465.0" y="60" width="130" height="70" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="1.4"/></g>
+  <text x="530.0" y="95.0" text-anchor="middle" font-size="10" fill="#333">clipped 更新 θ</text>
+  <path d="M 595.0 95.0 L 615.0 95.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="615.0" y="60" width="130" height="70" rx="6" fill="#fae8e8" stroke="#b85450" stroke-width="1.4"/></g>
+  <text x="680.0" y="95.0" text-anchor="middle" font-size="10" fill="#333">KL 惩罚</text>
+  <text x="380" y="175" text-anchor="middle" font-size="10" fill="#666">对同一 prompt 采样 G 个回复，用组内均值/标准差做基线</text>
+</svg>

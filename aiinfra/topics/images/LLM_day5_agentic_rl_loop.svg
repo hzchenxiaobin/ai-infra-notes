@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="680" height="280" fill="#fdfcf7"/>
+  <text x="340" y="28" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Agentic RL 训练循环（基于 GRPO）</text>
+  <g filter="url(#sk)"><rect x="29.0" y="55" width="110" height="65" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="84.0" y="73" text-anchor="middle" font-size="10" fill="#4a8edb" font-weight="bold">采样任务</text>
+  <text x="84.0" y="91" text-anchor="middle" font-size="8" fill="#666">从任务池取</text>
+  <text x="84.0" y="105" text-anchor="middle" font-size="8" fill="#666">{q₁,...,q_B}</text>
+  <path d="M 139.0 87.5 L 157.0 87.5" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="157.0" y="55" width="110" height="65" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="212.0" y="73" text-anchor="middle" font-size="10" fill="#4a8e4a" font-weight="bold">环境初始化</text>
+  <text x="212.0" y="91" text-anchor="middle" font-size="8" fill="#666">为每任务创建</text>
+  <text x="212.0" y="105" text-anchor="middle" font-size="8" fill="#666">沙箱环境</text>
+  <path d="M 267.0 87.5 L 285.0 87.5" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="285.0" y="55" width="110" height="65" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="340.0" y="73" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">轨迹采样</text>
+  <text x="340.0" y="91" text-anchor="middle" font-size="8" fill="#666">G 条轨迹</text>
+  <text x="340.0" y="105" text-anchor="middle" font-size="8" fill="#666">每条含环境交互</text>
+  <path d="M 395.0 87.5 L 413.0 87.5" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="413.0" y="55" width="110" height="65" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="2"/></g>
+  <text x="468.0" y="73" text-anchor="middle" font-size="10" fill="#8a4adb" font-weight="bold">奖励计算</text>
+  <text x="468.0" y="91" text-anchor="middle" font-size="8" fill="#666">环境验证</text>
+  <text x="468.0" y="105" text-anchor="middle" font-size="8" fill="#666">任务是否完成</text>
+  <path d="M 523.0 87.5 L 541.0 87.5" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="541.0" y="55" width="110" height="65" rx="6" fill="#fae8e8" stroke="#b85450" stroke-width="2"/></g>
+  <text x="596.0" y="73" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">GRPO 更新</text>
+  <text x="596.0" y="91" text-anchor="middle" font-size="8" fill="#666">A_g=(r-mean)/std</text>
+  <text x="596.0" y="105" text-anchor="middle" font-size="8" fill="#666">clipped 更新 θ</text>
+  <path d="M 84.0 120 L 84.0 170" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="4,3"/>
+  <path d="M 84.0 170 L 596.0 170" stroke="#b85450" stroke-width="1.2" fill="none" filter="url(#sk)" stroke-dasharray="4,3"/>
+  <path d="M 596.0 170 L 596.0 120" stroke="#b85450" stroke-width="1.2" fill="none" marker-end="url(#ard)" filter="url(#sk)"/>
+  <text x="340" y="195" text-anchor="middle" font-size="10" fill="#b85450">循环：采样 → 交互 → 验证 → 更新</text>
+  <text x="340" y="220" text-anchor="middle" font-size="9" fill="#666">比 R1 的 RL 贵得多：每条轨迹含数百步环境交互</text>
+  <text x="340" y="240" text-anchor="middle" font-size="9" fill="#666">GRPO 的 G 个回复 → G 条轨迹（含模型推理 + 环境执行）</text>
+</svg>

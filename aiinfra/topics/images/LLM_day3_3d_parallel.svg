@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="700" height="380" fill="#fdfcf7"/>
+  <text x="350" y="28" text-anchor="middle" font-size="15" fill="#2b2b2b" font-weight="bold">V3 的 3D 并行拓扑（PP=8, EP=64, DP=4）</text>
+  <text x="350" y="48" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">8 × 64 × 4 = 2048 H800 GPUs</text>
+  <g filter="url(#sk)"><rect x="250" y="60" width="200" height="30" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="2"/></g>
+  <text x="350" y="80" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">2048 H800 GPUs</text>
+  <g filter="url(#sk)"><rect x="80" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="145" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 0</text>
+  <text x="145" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
+  <path d="M 350 90 L 145 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="240" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="305" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 1</text>
+  <text x="305" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
+  <path d="M 350 90 L 305 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="400" y="110" width="130" height="36" rx="6" fill="#fdfcf7" stroke="#ccc" stroke-width="1.4"/></g>
+  <text x="465" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">...</text>
+  <path d="M 350 90 L 465 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="560" y="110" width="130" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="625" y="125" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">PP Stage 7</text>
+  <text x="625" y="138" text-anchor="middle" font-size="8" fill="#666">(256 GPU)</text>
+  <path d="M 350 90 L 625 110" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="145" y="165" text-anchor="middle" font-size="10" fill="#666">每 Stage 内部:</text>
+  <g filter="url(#sk)"><rect x="50" y="175" width="90" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="95" y="189" text-anchor="middle" font-size="8" fill="#333" font-weight="bold">DP Replica 0</text>
+  <text x="95" y="201" text-anchor="middle" font-size="8" fill="#666">(64 GPU)</text>
+  <g filter="url(#sk)"><rect x="155" y="175" width="90" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="200" y="189" text-anchor="middle" font-size="8" fill="#333" font-weight="bold">DP Replica 1</text>
+  <text x="200" y="201" text-anchor="middle" font-size="8" fill="#666">(64 GPU)</text>
+  <g filter="url(#sk)"><rect x="260" y="175" width="90" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="305" y="189" text-anchor="middle" font-size="8" fill="#333" font-weight="bold">DP Replica 2</text>
+  <text x="305" y="201" text-anchor="middle" font-size="8" fill="#666">(64 GPU)</text>
+  <g filter="url(#sk)"><rect x="365" y="175" width="90" height="34" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="410" y="189" text-anchor="middle" font-size="8" fill="#333" font-weight="bold">DP Replica 3</text>
+  <text x="410" y="201" text-anchor="middle" font-size="8" fill="#666">(64 GPU)</text>
+  <text x="95" y="225" text-anchor="middle" font-size="10" fill="#666">每 DP Replica 内:</text>
+  <g filter="url(#sk)"><rect x="50" y="235" width="85" height="42" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="92" y="249" text-anchor="middle" font-size="8" fill="#333">Node 0</text>
+  <text x="92" y="260" text-anchor="middle" font-size="8" fill="#333">8 GPU</text>
+  <text x="92" y="271" text-anchor="middle" font-size="8" fill="#333">4 专家</text>
+  <g filter="url(#sk)"><rect x="150" y="235" width="85" height="42" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="192" y="249" text-anchor="middle" font-size="8" fill="#333">Node 1</text>
+  <text x="192" y="260" text-anchor="middle" font-size="8" fill="#333">8 GPU</text>
+  <text x="192" y="271" text-anchor="middle" font-size="8" fill="#333">4 专家</text>
+  <g filter="url(#sk)"><rect x="250" y="235" width="85" height="42" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="292" y="249" text-anchor="middle" font-size="8" fill="#333">...</text>
+  <g filter="url(#sk)"><rect x="350" y="235" width="85" height="42" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="392" y="249" text-anchor="middle" font-size="8" fill="#333">Node 7</text>
+  <text x="392" y="260" text-anchor="middle" font-size="8" fill="#333">8 GPU</text>
+  <text x="392" y="271" text-anchor="middle" font-size="8" fill="#333">4 专家</text>
+  <text x="95" y="295" text-anchor="middle" font-size="9" fill="#c98a2b">EP 组: 256 专家跨 8 节点（每节点 8 GPU × 4 专家）</text>
+  <text x="95" y="312" text-anchor="middle" font-size="9" fill="#b85450">TP = 1（不用）→ MLA 跨头耦合不适合 TP 切分</text>
+  <text x="350" y="345" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">DP × PP × EP = 4 × 8 × 64 = 2048 ✓</text>
+</svg>

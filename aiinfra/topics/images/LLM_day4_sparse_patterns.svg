@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="800" height="280" fill="#fdfcf7"/>
+  <text x="400" y="28" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">位置稀疏（固定模式）vs 内容稀疏（动态选择）</text>
+  <text x="190" y="55" text-anchor="middle" font-size="11" fill="#4a8edb" font-weight="bold">位置稀疏（固定模式）</text>
+  <text x="120" y="78" text-anchor="end" font-size="9" fill="#666">Query</text>
+  <text x="140" y="78" text-anchor="middle" font-size="9" fill="#666">Q₁</text>
+  <text x="178" y="78" text-anchor="middle" font-size="9" fill="#666">Q₂</text>
+  <text x="216" y="78" text-anchor="middle" font-size="9" fill="#666">Q₃</text>
+  <text x="254" y="78" text-anchor="middle" font-size="9" fill="#666">Q₄</text>
+  <text x="292" y="78" text-anchor="middle" font-size="9" fill="#666">Q₅</text>
+  <text x="120" y="95" text-anchor="end" font-size="9" fill="#666">Q₁</text>
+  <g filter="url(#sk)"><rect x="130" y="85" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="146" y="98" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="168" y="85" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="184" y="98" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="206" y="85" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="222" y="98" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="244" y="85" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="260" y="98" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="282" y="85" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="298" y="98" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <text x="120" y="117" text-anchor="end" font-size="9" fill="#666">Q₂</text>
+  <g filter="url(#sk)"><rect x="130" y="107" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="146" y="120" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="168" y="107" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="184" y="120" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="206" y="107" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="222" y="120" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="244" y="107" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="260" y="120" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="282" y="107" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="298" y="120" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="120" y="139" text-anchor="end" font-size="9" fill="#666">Q₃</text>
+  <g filter="url(#sk)"><rect x="130" y="129" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="146" y="142" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="168" y="129" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="184" y="142" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="206" y="129" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="222" y="142" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="244" y="129" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="260" y="142" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="282" y="129" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="298" y="142" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="120" y="161" text-anchor="end" font-size="9" fill="#666">Q₄</text>
+  <g filter="url(#sk)"><rect x="130" y="151" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="146" y="164" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="168" y="151" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="184" y="164" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="206" y="151" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="222" y="164" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="244" y="151" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="260" y="164" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="282" y="151" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="298" y="164" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <text x="120" y="183" text-anchor="end" font-size="9" fill="#666">Q₅</text>
+  <g filter="url(#sk)"><rect x="130" y="173" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="146" y="186" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="168" y="173" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="184" y="186" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="206" y="173" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="222" y="186" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="244" y="173" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="260" y="186" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="282" y="173" width="32" height="18" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.0"/></g>
+  <text x="298" y="186" text-anchor="middle" font-size="9" fill="#4a8edb" font-weight="bold">✓</text>
+  <text x="590" y="55" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">内容稀疏（动态选择）</text>
+  <text x="520" y="78" text-anchor="end" font-size="9" fill="#666">Query</text>
+  <text x="540" y="78" text-anchor="middle" font-size="9" fill="#666">Q₁</text>
+  <text x="578" y="78" text-anchor="middle" font-size="9" fill="#666">Q₂</text>
+  <text x="616" y="78" text-anchor="middle" font-size="9" fill="#666">Q₃</text>
+  <text x="654" y="78" text-anchor="middle" font-size="9" fill="#666">Q₄</text>
+  <text x="692" y="78" text-anchor="middle" font-size="9" fill="#666">Q₅</text>
+  <text x="520" y="95" text-anchor="end" font-size="9" fill="#666">Q₁</text>
+  <g filter="url(#sk)"><rect x="530" y="85" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="546" y="98" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="568" y="85" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="584" y="98" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="606" y="85" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="622" y="98" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="644" y="85" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="660" y="98" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="682" y="85" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="698" y="98" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="520" y="117" text-anchor="end" font-size="9" fill="#666">Q₂</text>
+  <g filter="url(#sk)"><rect x="530" y="107" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="546" y="120" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="568" y="107" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="584" y="120" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="606" y="107" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="622" y="120" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="644" y="107" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="660" y="120" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="682" y="107" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="698" y="120" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="520" y="139" text-anchor="end" font-size="9" fill="#666">Q₃</text>
+  <g filter="url(#sk)"><rect x="530" y="129" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="546" y="142" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="568" y="129" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="584" y="142" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="606" y="129" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="622" y="142" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="644" y="129" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="660" y="142" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="682" y="129" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="698" y="142" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <text x="520" y="161" text-anchor="end" font-size="9" fill="#666">Q₄</text>
+  <g filter="url(#sk)"><rect x="530" y="151" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="546" y="164" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="568" y="151" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="584" y="164" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="606" y="151" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="622" y="164" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="644" y="151" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="660" y="164" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="682" y="151" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="698" y="164" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="520" y="183" text-anchor="end" font-size="9" fill="#666">Q₅</text>
+  <g filter="url(#sk)"><rect x="530" y="173" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="546" y="186" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="568" y="173" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="584" y="186" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <g filter="url(#sk)"><rect x="606" y="173" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="622" y="186" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="644" y="173" width="32" height="18" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.0"/></g>
+  <text x="660" y="186" text-anchor="middle" font-size="9" fill="#4a8e4a" font-weight="bold">✓</text>
+  <g filter="url(#sk)"><rect x="682" y="173" width="32" height="18" rx="3" fill="#f5f5f5" stroke="#ddd" stroke-width="0.8"/></g>
+  <text x="698" y="186" text-anchor="middle" font-size="9" fill="#ccc">·</text>
+  <text x="400" y="260" text-anchor="middle" font-size="9" fill="#666">左：所有 query 看相同模式的 key（窗口+stride）  右：每个 query 选不同的 key（内容相关）</text>
+</svg>

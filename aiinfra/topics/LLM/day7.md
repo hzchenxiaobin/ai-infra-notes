@@ -305,16 +305,7 @@
 
 #### Slide 2：全景图——两条技术线 × 四条主线
 
-```
-DeepSeek 线: V3 → R1 → V3.2 → V4
-Kimi 线:     K1.5 → K2 → K3
-
-四条主线:
-  ① 架构效率（MoE + MLA + DSA）
-  ② 推理能力（GRPO + RLVR）
-  ③ 训练工程（FP8 + DualPipe + MuonClip）
-  ④ Agentic 智能（环境交互 RL）
-```
+![两条技术线 × 四条主线：DeepSeek V3→R1→V3.2→V4，Kimi K1.5→K2→K3，架构/推理/训练/Agent 四主线](../images/LLM_day7_two_lines_overview.svg)
 
 ---
 
@@ -418,16 +409,7 @@ AttnRes（残差层）: 用注意力门控替代恒等映射
 
 #### Slide 9：技术演进树
 
-```
-DeepSeek: V2 → V3 → R1 → V3.2 → V4（R2 未发布！）
-          [MLA]  [FP8]  [GRPO] [DSA]  [1M]
-
-Kimi:     K1.5 → K2 → K3
-          [RL]   [MuonClip] [KDA+AttnRes]
-
-Nemotron: Mamba-Transformer 混合 + MoE
-          （革命路线 vs K3 的演化路线）
-```
+![技术演进树（紧凑版）：DeepSeek V2→V3→R1→V3.2→V4（R2 未发布），Kimi K1.5→K2→K3，Nemotron 混合路线](../images/LLM_day7_evolution_compact.svg)
 
 ---
 
@@ -455,38 +437,7 @@ Nemotron: Mamba-Transformer 混合 + MoE
 
 #### 布局方案（A3 横版）
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  2025-2026 大模型技术演进树                        │
-│                                                                   │
-│  时间轴 →  2024.12  2025.1   2025.7   2025   2026.4   2026       │
-│                                                                   │
-│  DeepSeek:  V3 ──→ R1 ──→ ──→ V3.2 ──→ V4                       │
-│             │      │              │        │                      │
-│          MLA+MoE  GRPO          DSA+    1M上下文                  │
-│          FP8     RLVR          可扩展RL  (MLA+DSA+FP8)            │
-│          DualPipe 蒸馏         IMO金牌                           │
-│                                                                   │
-│  Kimi:       K1.5 ──→ K2 ──────→ ──→ K3                         │
-│             │        │                  │                         │
-│          long2short MuonClip          KDA+AttnRes                │
-│          partial    Agentic RL        2.8T                       │
-│          rollout    SWE-Bench 65.8    1M上下文                    │
-│                                                                   │
-│  其他:               GLM-5 ─────────→     Nemotron 3 Super       │
-│                     vibe→agentic          Mamba-Transformer      │
-│                                          混合 + MoE              │
-│                                                                   │
-│  ─────────────────────────────────────────────────────────────   │
-│  四条主线标注:                                                    │
-│  ① 架构: MoE(671B/37B) → MLA(57×) → DSA(98%省) → KDA+AttnRes    │
-│  ② 推理: R1-Zero(Aha) → R1(四阶段) → V3.2-Speciale(IMO金牌)     │
-│  ③ 训练: FP8 → DualPipe → MuonClip(零spike)                     │
-│  ④ Agent: K2(SWE-Bench) → V3.2(agentic管线) → GLM-5(范式转变)   │
-│                                                                   │
-│  注意: R2 至今未发布！网上"R2参数"都是谣言。                      │
-└─────────────────────────────────────────────────────────────────┘
-```
+![2025-2026 大模型技术演进树（A3 版）：两条技术线 + 四条主线 + R2 谣言警示](../images/LLM_day7_a3_evolution.svg)
 
 #### 画图要点
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 160" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="820" height="160" fill="#fdfcf7"/>
+  <text x="410" y="28" text-anchor="middle" font-size="16" fill="#2b2b2b" font-weight="bold">R1 完整四阶段管线</text>
+  <g filter="url(#sk)"><rect x="32.5" y="50" width="170" height="80" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="117.5" y="70" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">Stage 1</text>
+  <text x="117.5" y="86" text-anchor="middle" font-size="10" fill="#4a8edb">冷启动 SFT</text>
+  <text x="117.5" y="106" text-anchor="middle" font-size="9" fill="#666">给推理风格</text>
+  <text x="117.5" y="118" text-anchor="middle" font-size="9" fill="#666">一个好起点</text>
+  <path d="M 202.5 90.0 L 227.5 90.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="227.5" y="50" width="170" height="80" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="312.5" y="70" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">Stage 2</text>
+  <text x="312.5" y="86" text-anchor="middle" font-size="10" fill="#4a8e4a">推理导向 RL</text>
+  <text x="312.5" y="106" text-anchor="middle" font-size="9" fill="#666">深化推理能力</text>
+  <text x="312.5" y="118" text-anchor="middle" font-size="9" fill="#666">修复语言混杂</text>
+  <path d="M 397.5 90.0 L 422.5 90.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="422.5" y="50" width="170" height="80" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="507.5" y="70" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">Stage 3</text>
+  <text x="507.5" y="86" text-anchor="middle" font-size="10" fill="#c98a2b">拒绝采样+SFT</text>
+  <text x="507.5" y="106" text-anchor="middle" font-size="9" fill="#666">蒸馏回 base</text>
+  <text x="507.5" y="118" text-anchor="middle" font-size="9" fill="#666">加非推理能力</text>
+  <path d="M 592.5 90.0 L 617.5 90.0" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="617.5" y="50" width="170" height="80" rx="6" fill="#f0e8fa" stroke="#8a4adb" stroke-width="2"/></g>
+  <text x="702.5" y="70" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">Stage 4</text>
+  <text x="702.5" y="86" text-anchor="middle" font-size="10" fill="#8a4adb">全场景 RL</text>
+  <text x="702.5" y="106" text-anchor="middle" font-size="9" fill="#666">推理+非推理</text>
+  <text x="702.5" y="118" text-anchor="middle" font-size="9" fill="#666">全能模型</text>
+</svg>

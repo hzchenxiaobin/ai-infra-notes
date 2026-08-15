@@ -89,16 +89,7 @@ V3 的优化：
 
 PP 把模型按层切成 $P$ 段（V3 的 $P{=}8$），每段在不同 GPU 上。一个 batch 被分成 $M$ 个 micro-batch 依次流入流水线：
 
-```
-标准流水线（P=4, M=4）:
-
-Stage 0: [F1][F2][F3][F4][==等待==][B4][B3][B2][B1]
-Stage 1:      [F1][F2][F3][F4][==等待==][B4][B3][B2][B1]
-Stage 2:           [F1][F2][F3][F4][==等待==][B4][B3][B2][B1]
-Stage 3:                [F1][F2][F3][F4][==等待==][B4][B3][B2][B1]
-
-F = forward, B = backward, [==等待==] = bubble（气泡）
-```
+![标准流水线（P=4, M=4）：F=forward, B=backward, 等待=bubble（气泡约 30%）](../images/LLM_day3_pipeline_bubble.svg)
 
 **气泡**：前几个 micro-batch 的 forward 还没流到后面的 stage，后面的 stage 在空等；最后的 micro-batch 的 backward 还没流回前面的 stage，前面的 stage 也在空等。
 
@@ -120,17 +111,7 @@ DualPipe 的两个关键设计：
 
 micro-batch 从流水线**两端同时进入**——前半从 Stage 0 → Stage $P{-}1$，后半从 Stage $P{-}1$ → Stage 0：
 
-```
-DualPipe（P=4, M=8, 双向）:
-
-Stage 0: [F1][F2]....[==EP comm==][....][B8][B7]....    ← 前向从左进，反向从右出
-Stage 1:      [F1][F2]....[==EP comm==][....][B8][B7]..
-Stage 2:           [F1][F2]....[==EP comm==][....][B8][B7]....
-Stage 3:                [F1][F2]....[==EP comm==][....][B8][B7]...
-                                        ↑
-                                   前半 batch 从左→右
-                                   后半 batch 从右→左
-```
+![DualPipe（P=4, M=8, 双向）：前半 batch 从左进，后半从右进，EP 通信与计算重叠](../images/LLM_day3_dualpipe.svg)
 
 每个 stage 在等一个方向的 micro-batch 时，可以处理另一个方向的——**双向交叉填充把单方向的等待气泡填掉**。
 
@@ -414,31 +395,9 @@ K2 把 Muon 优化器和 QK-clip 组合，命名为 **MuonClip**：
 | DP 副本数 | 4 | 2048 / (8 × 64) = 4 |
 | TP | **1（不用）** | MLA 不适合 TP |
 
-**3D 并行拓扑图**（文字版）：
+**3D 并行拓扑图**：
 
-```
-2048 H800 GPUs
-│
-├── PP Stage 0 (256 GPU)          ──── 第 0-7 层（3 稠密 + 5 MoE）
-│   ├── DP Replica 0 (64 GPU)
-│   │   ├── Node 0 (8 GPU, 4 专家)
-│   │   ├── Node 1 (8 GPU, 4 专家)
-│   │   ├── ...
-│   │   └── Node 7 (8 GPU, 4 专家)   → EP 组: 256 专家跨 8 节点
-│   ├── DP Replica 1 (64 GPU)        → 同上，独立 EP 组
-│   ├── DP Replica 2 (64 GPU)
-│   └── DP Replica 3 (64 GPU)
-│
-├── PP Stage 1 (256 GPU)          ──── 第 8-15 层（全 MoE）
-│   └── ... (同 Stage 0 结构)
-│
-...
-│
-└── PP Stage 7 (256 GPU)          ──── 第 56-60 层（全 MoE）
-    └── ... (同 Stage 0 结构)
-
-验证: 8 (PP) × 64 (EP) × 4 (DP) = 2048 ✓
-```
+![V3 的 3D 并行拓扑：PP=8, EP=64, DP=4，8×64×4=2048 H800 GPUs](../images/LLM_day3_3d_parallel.svg)
 
 #### 训练成本计算
 

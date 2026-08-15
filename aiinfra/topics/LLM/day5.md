@@ -36,20 +36,7 @@
 | **输出空间** | 纯文本（自然语言） | 文本 + **结构化动作**（API 调用、代码执行、文件操作） |
 | **环境交互** | 无（模型不知道外部世界） | 有（模型调用工具后获得真实环境反馈） |
 
-```
-聊天模型:
-  User: "帮我写一个排序函数"
-  Model: "def sort(arr): ..."                    ← 只输出代码文本
-
-智能体:
-  User: "帮我写一个排序函数"
-  Model: [思考] 用户要排序函数，我先写一个          ← 思考
-         [action] create_file('sort.py', ...)     ← 动作：创建文件
-  [环境反馈] 文件已创建
-  Model: [action] run('python sort.py')           ← 动作：执行测试
-  [环境反馈] 测试通过 ✓
-  Model: "排序函数已写好并测试通过"                  ← 最终回复
-```
+![聊天模型 vs 智能体：左为单轮文本输出无环境交互，右为多步循环含结构化动作和环境反馈](../images/LLM_day5_chat_vs_agent.svg)
 
 #### 为什么 Agent 需要 RL，不能只靠 SFT
 
@@ -94,31 +81,7 @@ K2 的解法：**用模型自己生成轨迹 + 用环境验证质量**——和 
 
 #### 五阶段数据合成管线
 
-```
-Stage 1: 任务采集（Task Collection）
-  ├── 真实任务: GitHub issues、PR 记录、Stack Overflow 问题
-  └── 合成任务: 用 LLM 基于真实任务生成变体（改场景/加约束/换语言）
-
-Stage 2: 环境构建（Environment Construction）
-  ├── 代码任务: Docker 容器 + 代码仓库 + 测试套件（可执行验证）
-  ├── 工具调用任务: 模拟 API 端点 + 状态追踪
-  └── 多轮对话任务: 模拟用户 + 评判器
-
-Stage 3: 轨迹生成（Trajectory Generation）
-  ├── 让当前模型在环境中尝试完成任务
-  ├── 记录完整轨迹: [观察₁, 思考₁, 行动₁, 观察₂, 思考₂, 行动₂, ...]
-  └── 每个任务生成多条轨迹（不同采样温度/策略）
-
-Stage 4: 拒绝采样筛选（Rejection Sampling）
-  ├── 代码任务: 跑测试套件，只保留通过的轨迹
-  ├── 工具调用任务: 检查最终环境状态是否达到目标
-  ├── 多轮对话任务: 评判器打分，只保留高分轨迹
-  └── 产出: 高质量成功轨迹数据集
-
-Stage 5: SFT + RL
-  ├── SFT: 用筛选后的轨迹微调基座模型
-  └── RL: 在环境中做 GRPO，奖励 = 任务是否完成
-```
+![K2 Agentic 数据合成管线五阶段：任务采集 → 环境构建 → 轨迹生成 → 拒绝采样 → SFT+RL](../images/LLM_day5_data_pipeline.svg)
 
 #### 环境构建的工程挑战
 
@@ -171,25 +134,7 @@ Agentic RL 把这个边界推到**"工具调用结果可验证"**：
 
 #### Agentic RL 的训练流程
 
-```
-Agentic RL 训练循环（基于 GRPO）:
-
-1. 采样任务: 从任务池取一批任务 {q₁, ..., q_B}
-2. 环境初始化: 为每个任务创建沙箱环境
-3. 轨迹采样（GRPO 的 G 个回复 → G 条轨迹）:
-   for g in 1..G:
-     轨迹 o_g = []
-     while not done:
-       action = model(q, environment_state, history)  ← 模型决策
-       observation = environment.execute(action)        ← 环境执行
-       轨迹 o_g.append((action, observation))
-       if 超过最大步数 or 模型输出 "done": break
-4. 奖励计算: r_g = environment.verify(轨迹 o_g)         ← 验证任务是否完成
-5. GRPO 更新:
-   A_g = (r_g - mean(r_1,...,r_G)) / std(r_1,...,r_G)
-   用 clipped objective 更新 θ
-6. 清理环境: 销毁沙箱，回收资源
-```
+![Agentic RL 训练循环（基于 GRPO）：采样任务 → 环境初始化 → 轨迹采样 → 奖励计算 → GRPO 更新](../images/LLM_day5_agentic_rl_loop.svg)
 
 #### 和 Day 2 GRPO 的关键差异
 
