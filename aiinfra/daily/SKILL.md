@@ -327,7 +327,6 @@ Day N 我们<掌握了/深入理解了/完成了> <主题>：
 - 引用本 Day 文件:相对路径 `(kernels/xxx.cu)`
 - 引用周级文件:`(../notes/week1_notes.md)`、`(../tools/cuda_occupancy_calculator.py)`
 - 引用其他 Day:少见,必要时用 `../dayM/`
-- **`_supplementary/from_*/` 内的文件多一层目录**:引用其他周资源用 `../../../weekN/...`（三级回退），引用 `daily/images/` 用 `../../../images/...`；写完务必跑 `python3 build/check_course.py` 验证无悬空链接
 
 ## 6. 构建集成
 
@@ -371,7 +370,7 @@ git push origin
   # 期望输出：Checked N files, 0 findings
   ```
   - **一查：周号日号自称**——正文自称的 Week/Day 号必须与所在目录一致；禁止 "Week 8 的第一天""8 周能力地图" 等旧口径（`check_course.py` 的 stale-terms 检测会捕获）
-  - **二查：交叉引用路径**——所有 `kernels/`、`../images/`、`../dayM/` 相对链接必须指向真实存在的文件（`check_course.py` 的 dangling-links 检测会捕获）；`_supplementary/from_*/` 内的文件因多一层目录，引用其他周用 `../../../weekN/`
+  - **二查：交叉引用路径**——所有 `kernels/`、`../images/`、`../dayM/` 相对链接必须指向真实存在的文件（`check_course.py` 的 dangling-links 检测会捕获）
   - **三查：标题重复粘贴**——禁止 `## Day N：XXX...XXX` 同一标题串出现两遍（`check_course.py` 的 dup-title 检测会捕获）
 - [ ] 硬件参数/必背数字引用唯一事实源，正文无新写硬件参数数字；grep 自检：
   ```bash

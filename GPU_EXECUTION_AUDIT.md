@@ -141,8 +141,6 @@
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| `profiling_targets.cu` | `daily/week10/_supplementary/from_w4d3/kernels/` | Profiling 目标 kernel 集合 |
-
 #### CUTLASS 专题（8 个）
 
 | 文件 | 路径 | 说明 |
@@ -182,8 +180,6 @@
 |------|------|---------|------|
 | `flash_attention_backward.py` | `daily/week5/day4/kernels/` | PyTorch（GPU 可选但教程预期 GPU） | FA 反向传播教学实现 |
 | `benchmark_flash_attention.py` | `daily/week5/day5/kernels/` | `device = "cuda"`（硬编码） | FlashAttention 性能基准 |
-| `mini_engine.py` | `daily/week5/_supplementary/from_w4d2/` | `device="cuda"` | Mini 引擎（含 FA） |
-| `mini_engine_fa.py` | `daily/week5/_supplementary/from_w5d2/kernels/` | `device="cuda"` | Mini 引擎 FA 版 |
 
 #### Week 8（1 个）
 
@@ -207,8 +203,6 @@
 
 | 文件 | 路径 | GPU 依赖 | 说明 |
 |------|------|---------|------|
-| `profile_mini_engine.py` | `daily/week10/_supplementary/from_w4d3/kernels/` | `device="cuda"` + `torch.cuda.Event` | Mini 引擎 profiling |
-
 #### Triton 专题（7 个）
 
 | 文件 | 路径 | GPU 依赖 | 说明 |
@@ -340,8 +334,6 @@
 | `advanced_features.py` | `daily/week8/day3/kernels/` | 高级特性模拟（标注"仅标准库"） |
 | `ring_allreduce_sim.py` | `daily/week9/day3/kernels/` | Ring AllReduce 模拟 |
 | `moe_routing_simulator.py` | `daily/week9/day5/kernels/` | MoE 路由模拟（标注"仅标准库+numpy"） |
-| `benchmark_engine_v1.py` | `daily/week10/_supplementary/from_w8d1/kernels/` | 引擎基准（标注"无GPU/torch"） |
-| `concurrent_engine.py` | `daily/week10/_supplementary/from_w8d2/kernels/` | 并发引擎模拟 |
 | `mock_interview.py` | `daily/week10/day5/kernels/` | 模拟面试 |
 | `week10_summary.py` | `daily/week10/day7/kernels/` | 周总结 |
 

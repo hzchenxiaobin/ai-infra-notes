@@ -482,18 +482,6 @@ aiinfra/daily/week10/
 │   ├── README.md                  # 最终复盘（本文件）
 │   └── kernels/
 │       └── week10_summary.py      # 10 周总复盘自测
-├── _supplementary/                # 补充专题（跨周迁移/延伸内容）
-│   ├── from_w10d3/                # 高频面试题进阶篇（含系统设计题）
-│   ├── from_w10d5/                # 查漏补缺
-│   ├── from_w9d3/                 # 全链路 Profiling
-│   ├── from_w9d7/                 # 架构图与数据流图
-│   ├── from_w8d7/                 # 代码重构与文档
-│   ├── from_w8d3/                 # 完整调度器（优先级/超时/抢占）
-│   ├── from_w8d2/                 # 多请求并发支持
-│   ├── from_w8d1/                 # Latency / Throughput 测试
-│   ├── from_w6d4/                 # 端到端 Profiling
-│   ├── from_w4d3/                 # 端到端 Profiling 与 Kernel Fusion
-│   └── from_w4d1/                 # 源码分析 —— PyTorch / FasterTransformer
 └── images/                        # Week 10 + 10 周总览 SVG
     ├── week10_knowledge_map.svg
     ├── ten_week_roadmap.svg

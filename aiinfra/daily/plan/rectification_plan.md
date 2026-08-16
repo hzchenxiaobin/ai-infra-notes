@@ -68,7 +68,7 @@
 
 | 位置 | 问题 |
 |------|------|
-| `week10` 全周（最严重） | D3"Week 8 的第一天""Week 1-7"、D1 总结自称"Day 4"、D2 自称"Day 5"、D4 自称"Day 3"且预告"明天 Day 4 进入进阶篇"（进阶篇已在 `_supplementary/from_w10d3/`）、D7 全篇 8 周口径 |
+| `week10` 全周（最严重） | D3"Week 8 的第一天""Week 1-7"、D1 总结自称"Day 4"、D2 自称"Day 5"、D4 自称"Day 3"且预告"明天 Day 4 进入进阶篇"、D7 全篇 8 周口径 |
 | `week6/day7` | 自称"Week 5" |
 | `week7` 全周 | 学前导读/总结的自指日号 +1 错位 |
 | `week8/day4` | "Day 6 的全链路 Profiling""明天 Day 7…Week 7 系统整合收官"引用错误 |
@@ -149,7 +149,7 @@
 
 ### 4.4 D5/D6/D7 收尾（0.5 天）
 
-- D5：补 Ring Attention 导读 + 链接 `_supplementary/from_w8d6/`；TP 通信量写法统一为 `2 × tokens × hidden`；
+- D5：补 Ring Attention 导读；TP 通信量写法统一为 `2 × tokens × hidden`；
 - D6：README 与脚本表格去重（README 留 5 对核心映射 + 链接）；删 LeetCode 牵强类比列；可选补只读 Ascend C GEMM 骨架片段；
 - D7：Q&A 与前六天去重（单点题改链接）；Q1 补 KV Cache 显存；加 2–3 个场景化动手任务（给模型/GPU/延迟约束，写并行方案 + 通信量估算）。
 
