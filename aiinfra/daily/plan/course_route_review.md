@@ -552,7 +552,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 2. **是否必要**：**必要**，是"读过论文"和"能落地"的分水岭日。
 3. **难度等级**：困难（本周数学最高峰，但推导链条完整，坡度可接受）。
 4. **建议修改**：
-   - 修正引用：今日总结"Day 3 读官方源码"在当前周不存在（源码导读在 `_supplementary/` 与 D6)，改为正确指针。
+   - 修正引用：今日总结"Day 3 读官方源码"在当前周不存在（源码导读在 D6)，改为正确指针。
    - 任务 2 预期输出里 `GPU Time: 0.0xx ms` 仍是占位，补实测。
    - 实验 1 的"复用 Week 2 Day 2 GEMM 模板达 cuBLAS 50%+"与 W2 实测（RegBlock 32-39%）口径冲突，改为"达 W2D3 整合版水平（~63% FP32 口径）"或放宽为方向性目标。
    - 与 W4D3 的 GEMM backward 有~15%重复（dA/dB 公式），可加一句"已在 W4D3 学过，这里快速过"并聚焦 FA 特有部分。
@@ -565,9 +565,9 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 3. **难度等级**：中等。
 4. **建议修改**：
    - **修复内嵌 Python 缩进损坏**（同 D2，整段不可运行）。
-   - **补上缺失的两列**：`mini_engine_fa`（在 `_supplementary/from_w5d2`）接入或直接用 D3 的 v2 kernel 包一个 PyTorch wrapper 补 Hand 列；`flash-attn` 装不上就明确写"环境未就绪"并给替代（PyTorch SDPA 的 FA 后端）——别让验收表停在 nan。
+   - **补上缺失的两列**：`mini_engine_fa` 接入或直接用 D3 的 v2 kernel 包一个 PyTorch wrapper 补 Hand 列；`flash-attn` 装不上就明确写"环境未就绪"并给替代（PyTorch SDPA 的 FA 后端）——别让验收表停在 nan。
    - 修复路径：任务 3 引用的 `day2/kernels/flash_attention_v2.cu` 应为 `day3/kernels/`。
-   - 标题与内容不符：week README/目标提到"接入 Mini 引擎"，集成内容已在 `_supplementary`，要么链接过去要么改 week README。
+   - 标题与内容不符：week README/目标提到"接入 Mini 引擎"，集成内容缺失，要么补上要么改 week README。
    - 今日总结自称"Day 6"；面试要点 5 末尾有三行无关的孤儿 bullet；LeetGPU MHA 与 D3 重复（映射表本日是 Matrix Copy)。
 5. **推荐补充资料**：flash-attn 官方 benchmark 脚本（`benchmarks/flash_attention.py`);Nsight Compute 的 `dram__bytes` 指标文档。
 
@@ -577,7 +577,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 2. **是否必要**：**必要**(FA1/2/3 演进是面试必考），但动手任务落空。
 3. **难度等级**：中等。
 4. **建议修改**：
-   - "今日总结"自称"Day 4"；学前导读"Day 3 我们读了官方源码"为悬空引用——源码导读实际在 `_supplementary/from_w4d7`，要么链接要么改述。
+   - "今日总结"自称"Day 4"；学前导读"Day 3 我们读了官方源码"为悬空引用——改述。
    - 任务 2/3 依赖的 `flash_attention_fa2.cu` 未落盘，且引用路径 `day2/kernels/flash_attention_v2.cu` 错误（应为 day3)——把 FA2 风格改造（ROWS_PER_WARP 8→4）做成真实可跑的对比实验并留档，否则本日零产出。
    - "明天把 FA 集成到 Mini 引擎"——明天是 Day 7 复盘，改为正确预告。
    - LeetCode 标注"第 4 周 Day 4"与 D4 重复（同一天计划被布置两次），顺延到 Day 5。
@@ -724,16 +724,16 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 > 评审范围：week7/day1–day7 README 全文精读，结合仓库文件存在性核对（落盘：day1 `continuous_batcher.py`、day2 `vllm_scheduler_analyzer.py`、day3 `chunked_prefill_simulator.py`、day4 `prefix_cache_engine.py`、day5 `mini_engine_v1.py`、day6 `pd_disaggregated_simulator.py`、day7 `week6_summary.py`)。
 > 评审日期：2026-08-05
 
-**整体判断**：本周的知识链（Continuous Batching → vLLM Scheduler 深潜 → 框架对比 → Chunked/Prefix 实操 → Mini 引擎 v1 → PD 分离）是推理系统部分的合理进阶，D2 的 Scheduler 复刻（含 RECOMPUTE/SWAP 双 demo 实测时间线）是本周高光。主要问题：① **旧编号残留为全课程之最**——几乎每天的学前导读/总结都自称错位的日号（D1 正文引用"Day 1 的 Dynamic Batcher"，而 Dynamic Batching 已被移到 `_supplementary`，对比基线悬空）;② **D7 再次整篇是旧周复盘**（自称 Week 6，回顾的 Day1 Dynamic、Day6 benchmark 在当前周不存在，当前 D6 的 PD 分离反而只字未提）;③ **LeetGPU 周内成对重复**(D1/D2 同为 Prefix Sum,D3/D4 同为 Segmented Prefix Sum);④ **全周零 GPU 代码**（纯 Python 模拟器），加上 W9，学员连续三周不碰 nvcc;⑤ D3 说 vLLM 默认 chunk_size=2048、D4 面试答案说 512，同周互相矛盾。
+**整体判断**：本周的知识链（Continuous Batching → vLLM Scheduler 深潜 → 框架对比 → Chunked/Prefix 实操 → Mini 引擎 v1 → PD 分离）是推理系统部分的合理进阶，D2 的 Scheduler 复刻（含 RECOMPUTE/SWAP 双 demo 实测时间线）是本周高光。主要问题：① **旧编号残留为全课程之最**——几乎每天的学前导读/总结都自称错位的日号（D1 正文引用"Day 1 的 Dynamic Batcher"，而 Dynamic Batching 基线悬空）;② **D7 再次整篇是旧周复盘**（自称 Week 6，回顾的 Day1 Dynamic、Day6 benchmark 在当前周不存在，当前 D6 的 PD 分离反而只字未提）;③ **LeetGPU 周内成对重复**(D1/D2 同为 Prefix Sum,D3/D4 同为 Segmented Prefix Sum);④ **全周零 GPU 代码**（纯 Python 模拟器），加上 W9，学员连续三周不碰 nvcc;⑤ D3 说 vLLM 默认 chunk_size=2048、D4 面试答案说 512，同周互相矛盾。
 
 ## Day 1：Continuous Batching（419 行）
 
 1. **当前价值**：Dynamic vs Continuous 的对比表、iteration 时间线、混合调度挑战引入自然；ContinuousBatcher 带线程 + token budget，可跑。
-2. **是否必要**：**必要**，但开篇基线悬空——它对比的"Day 1 的 Dynamic Batcher"不在本周（在 `_supplementary/from_w6d6`)，读者没有上下文。
+2. **是否必要**：**必要**，但开篇基线悬空——它对比的"Day 1 的 Dynamic Batcher"不在本周，读者没有上下文。
 3. **难度等级**：中等。
 4. **建议修改**：
    - 修复内嵌 Python 缩进损坏（类定义层层嵌套）；落盘文件正常，保持同步。
-   - 把 Dynamic Batching 的 10 行最小实现/对比表从 `_supplementary` 提回本日学前导读（否则"长请求阻塞"的对比无的放矢）。
+   - 把 Dynamic Batching 的 10 行最小实现/对比表补回本日学前导读（否则"长请求阻塞"的对比无的放矢）。
    - 修正全部旧编号："Week 5 Day 3 我们读过"应为 Week 6 Day 3；"明天 Day 3 深入 vLLM Scheduler"应为 Day 2；今日总结自称"Day 2"。
    - LeetGPU Prefix Sum 与 D2 重复，本日换 Simple Inference（映射表 W7D1）或明确 D1/D2 二选一。
 5. **推荐补充资料**：Orca 论文（OSDI 2022,iteration-level scheduling 原始出处）;AnyScale 的 Continuous Batching 博客。
@@ -782,7 +782,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 4. **建议修改**：
    - 修复标题重复；修正跨周引用（"Week 5 Day 5 的 Mini 引擎 v0"应为 Week 6 Day 5;"Week 6 Day 1-4"应为 Week 7 Day 1-4)。
    - **"并发收益 2.9x"要加口径说明**：当前 `_run_iteration` 仍是逐请求单独 forward（实验 1 才做真 batch 合并），所以 2.9x 只是调度层（23 轮→8 轮）的模拟收益，不是 GPU 吞吐收益——建议在数字旁注明，并把实验 1（真 batch 合并 forward）升级为任务 3.5，这是本日离"真实收益"最近的一步。
-   - "明天 Day 6 做 throughput-latency benchmark"——实际 D6 是 PD 分离，该 benchmark 内容在 `week10/_supplementary`，修正预告或补回。
+   - "明天 Day 6 做 throughput-latency benchmark"——实际 D6 是 PD 分离，该 benchmark 内容缺失，修正预告或补回。
    - LeetGPU INT8 MatMul 与"多请求调度"主题关联牵强（且量化是 Week8 主题），换 Top K Selection（映射表）。
 5. **推荐补充资料**：vLLM 的 `AsyncLLMEngine`（异步接口原型）;Python `concurrent.futures.Future` 文档。
 
@@ -802,7 +802,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 ## Day 7：调度优化策略总结（357 行）
 
 1. **当前价值**:7 策略对比表 + 决策树 + 6 个误区澄清（"RECOMPUTE 默认非因快""饱和点非仅 util=100%"）都是高质量的面试资产；自测脚本落盘。
-2. **是否必要**：**必要，但需按当前周重写**——整篇是旧 Week6 复盘：知识地图 Day1=Dynamic Batching、Day6=Benchmark（两者都不在当前周，产出物 `dynamic_batcher.py`/`benchmark_engine_v1.py` 分别在两个 `_supplementary` 目录）；本周实际的 D4 prefix caching、D6 PD 分离在复盘中完全缺席；目录树写 `week6/`、衔接写"Week 6→Week 7"、结尾还在说"8 周学习的收官"。
+2. **是否必要**：**必要，但需按当前周重写**——整篇是旧 Week6 复盘：知识地图 Day1=Dynamic Batching、Day6=Benchmark（两者都不在当前周）；本周实际的 D4 prefix caching、D6 PD 分离在复盘中完全缺席；目录树写 `week6/`、衔接写"Week 6→Week 7"、结尾还在说"8 周学习的收官"。
 3. **难度等级**：简单。
 4. **建议修改**：
    - 知识地图按当前周重写：D1 Continuous → D2 vLLM Scheduler → D3 框架对比 → D4 Chunked+Prefix → D5 引擎 v1 → D6 PD 分离；策略对比表加 Prefix Caching 和 PD 分离两行；误区澄清加一条"PD 分离不是更快，是 SLO 解耦"。
@@ -815,7 +815,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 
 | Day | 主题 | 必要性 | 难度 | 核心问题 |
 |---|---|---|---|---|
-| 1 | Continuous Batching | 必要 | 中 | Dynamic 基线悬空（在 _supplementary)；旧编号 |
+| 1 | Continuous Batching | 必要 | 中 | Dynamic 基线悬空；旧编号 |
 | 2 | vLLM Scheduler | 必要 | 难 | **本周最佳**;1016 行过载；旧编号 |
 | 3 | 框架对比 | 必要 | 中 | 与 D4 撞车（chunked/RadixAttention);chunk 默认值矛盾 |
 | 4 | Chunked+Prefix | 必要 | 中 | LeetGPU 与 D3 重复；自指错位 |
@@ -876,7 +876,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 2. **是否必要**：**必要**。
 3. **难度等级**：中等（概念直观，API 模式固定）。
 4. **建议修改**：
-   - 修复标题重复；修正引用（"Day 6 的全链路 Profiling"悬空——该日在 `_supplementary`；"明天 Day 7 代码重构...Week 7 系统整合收官"应为 Week 8 的 Day5 项目日）。
+   - 修复标题重复；修正引用（"Day 6 的全链路 Profiling"悬空；"明天 Day 7 代码重构...Week 7 系统整合收官"应为 Week 8 的 Day5 项目日）。
    - 与 W2D5(Streams）加一句衔接（graph 是 stream 语义的延伸），并把"实验 3 的 cudaGraphExecUpdate"标注为进阶（PyTorch 未暴露）。
    - LeetGPU Vector Addition 与主题关联靠"launch-bound"类比，可用；但映射表 W8D4 = Matrix Transpose，二选一同步。
    - LeetCode"第 7 周补充"的标注方式与全周不统一（D3 用第 7 周 Day 3)，统一编排口径。
@@ -936,10 +936,10 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 
 # Week 9 逐日评审（分布式并行与多硬件）
 
-> 评审范围：week9/README + day1–day7 README 全文精读，结合仓库文件存在性核对（落盘：day1 `tp_inference_demo.py` + `comm_overlap_demo.py`、day5 `moe_routing_simulator.py`、day6 `cuda_vs_ascend_comparison.py`、`_supplementary/from_w8d6/ring_attention_sim.py`；day2/3/4 无 kernel 落盘）。
+> 评审范围：week9/README + day1–day7 README 全文精读，结合仓库文件存在性核对（落盘：day1 `tp_inference_demo.py` + `comm_overlap_demo.py`、day5 `moe_routing_simulator.py`、day6 `cuda_vs_ascend_comparison.py`；day2/3/4 无 kernel 落盘）。
 > 评审日期：2026-08-05
 
-**整体判断**：本周知识选题全部命中面试高频点（TP/PP/DP/EP 四维并行、NCCL 通信量、bubble ratio、通信计算重叠、MoE/EP、CUDA vs Ascend），D5（MoE+EP）是质量最高的一天。但结构病明显：① **D1 一天讲完了 D2/D3/D4 的全部主题**（TP+PP+DP+NCCL+overlap 五大块塞进 2.5h 工作日），导致后三天 60%+ 内容是对 D1 的重复深化；② **D2 的 interleaved 1F1B 公式/表格自相矛盾**（知识性错误）；③ **D4 双流苏 overlap 示例的 `wait_stream` 写反**，恰恰破坏了它要演示的重叠；④ day2/3/4 的模拟器代码只有骨架（含 `pass`/`...`），未落盘；⑤ day1/day5/day6 标题重复粘贴（`CANNNVIDIA...`）；⑥ 周学习地图承诺 Day 5 含 Ring Attention，正文只字未提（材料在 `_supplementary` 但无链接）。此外 D6 整周不碰 Mini 引擎的判断在整体评审中已坐实，本周（W9）同样完全脱离项目主线。
+**整体判断**：本周知识选题全部命中面试高频点（TP/PP/DP/EP 四维并行、NCCL 通信量、bubble ratio、通信计算重叠、MoE/EP、CUDA vs Ascend），D5（MoE+EP）是质量最高的一天。但结构病明显：① **D1 一天讲完了 D2/D3/D4 的全部主题**（TP+PP+DP+NCCL+overlap 五大块塞进 2.5h 工作日），导致后三天 60%+ 内容是对 D1 的重复深化；② **D2 的 interleaved 1F1B 公式/表格自相矛盾**（知识性错误）；③ **D4 双流苏 overlap 示例的 `wait_stream` 写反**，恰恰破坏了它要演示的重叠；④ day2/3/4 的模拟器代码只有骨架（含 `pass`/`...`），未落盘；⑤ day1/day5/day6 标题重复粘贴（`CANNNVIDIA...`）；⑥ 周学习地图承诺 Day 5 含 Ring Attention，正文只字未提。此外 D6 整周不碰 Mini 引擎的判断在整体评审中已坐实，本周（W9）同样完全脱离项目主线。
 
 ## Day 1：分布式推理 —— TP/PP/DP 与通信计算重叠（573 行）
 
@@ -994,7 +994,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 3. **难度等级**：中等。
 4. **建议修改**：
    - 修正标题重复（`MoE + EP 并行专题MoE + EP 并行专题（...）`）。
-   - **把 Ring Attention 真正纳入**：周地图承诺了 Day 5 含 Ring Attention，正文只字未提；加导读 + 链接 `_supplementary/from_w8d6/`，或并入正文。
+   - **把 Ring Attention 真正纳入**：周地图承诺了 Day 5 含 Ring Attention，正文只字未提；加导读或并入正文。
    - 缺 LeetCode/LeetGPU 任务（其他天都有），若有意减负应在 README 说明，保持格式一致。
    - 第 4 节 TP 通信量写成 `2 × hidden × EP` 易误导（维度不含 tokens/batch），统一写成 `2 × tokens × hidden` 便于与 EP 对比。
 5. **推荐补充资料**：DeepSeek-V3 技术报告（2412.19437，MoE 架构 + EP 部署细节）；deepseek-ai/DeepEP、deepseek-ai/EPLB；Switch Transformer（2101.03961）/GShard（2006.16668）。
@@ -1040,10 +1040,10 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 
 # Week 10 逐日评审（项目整合与面试冲刺）
 
-> 评审范围：week10/README + day1–day7 README 全文精读 + `_supplementary/` 十个补充目录归属核对，结合仓库文件存在性核对（落盘：day1 `custom_ops_module.py`、day2 `mini_engine_v2.py` + `stability_test.py`、day3 `benchmark_demo.py`、day4 `interview_basics.py`、day5 `mock_interview.py`、day7 `week8_summary.py`；day6 无落盘）。另抽查 `mini_engine_v2.py` 实际代码。
+> 评审范围：week10/README + day1–day7 README 全文精读，结合仓库文件存在性核对（落盘：day1 `custom_ops_module.py`、day2 `mini_engine_v2.py` + `stability_test.py`、day3 `benchmark_demo.py`、day4 `interview_basics.py`、day5 `mock_interview.py`、day7 `week8_summary.py`；day6 无落盘）。另抽查 `mini_engine_v2.py` 实际代码。
 > 评审日期：2026-08-05
 
-**整体判断**：本周是旧"8 周版 Week 8"的整体迁移，但**迁移只做了一半**——D3/4/5/7 正文仍自称"Week 8 的第一天""8 周能力地图""8 周完成标准"，D7 目录结构写 `aiinfra/week8/`、脚本名 `week8_summary.py`，周编号体系全面过时；迁移造成的 Day 编号漂移未同步（D1 总结自称"Day 4 我们……"、D2 自称"Day 5"、D4 自称"Day 3"且预告"明天 Day 4 进入进阶篇"——进阶篇实际已移入 `_supplementary/from_w10d3/`）；day2/3/6 标题重复粘贴。内容本身：D1（kernel 集成）、D2（六步联调）、D6（诊断剧本三案例）是全课程最有工程味的三天；D3 的实测留档（RTX 5090 SiLU 60% 带宽）是数字诚信标杆；D4 的 GEMM 八层"理论+实测"双口径表有独特面试价值。但：① **`mini_engine_v2.py:27` 从 `day4/kernels` 导入 `custom_ops_module`（实际在 `day1/kernels`），ImportError 被静默 catch → 引擎静默回退 PyTorch 原生算子，"真整合"名存实亡**；② D7 能力地图没有 Week 8/9 内容（量化、分布式列为"待提升"，而这正是刚教完的）；③ 周地图承诺的架构图/进阶篇/查漏补缺都在 `_supplementary` 而正文无链接；④ D6 三份 ncu/py-spy"证据留档"是编造输出，与 D3 的实测诚信标准冲突。
+**整体判断**：本周是旧"8 周版 Week 8"的整体迁移，但**迁移只做了一半**——D3/4/5/7 正文仍自称"Week 8 的第一天""8 周能力地图""8 周完成标准"，D7 目录结构写 `aiinfra/week8/`、脚本名 `week8_summary.py`，周编号体系全面过时；迁移造成的 Day 编号漂移未同步（D1 总结自称"Day 4 我们……"、D2 自称"Day 5"、D4 自称"Day 3"且预告"明天 Day 4 进入进阶篇"——进阶篇实际已移出正文）；day2/3/6 标题重复粘贴。内容本身：D1（kernel 集成）、D2（六步联调）、D6（诊断剧本三案例）是全课程最有工程味的三天；D3 的实测留档（RTX 5090 SiLU 60% 带宽）是数字诚信标杆；D4 的 GEMM 八层"理论+实测"双口径表有独特面试价值。但：① **`mini_engine_v2.py:27` 从 `day4/kernels` 导入 `custom_ops_module`（实际在 `day1/kernels`），ImportError 被静默 catch → 引擎静默回退 PyTorch 原生算子，"真整合"名存实亡**；② D7 能力地图没有 Week 8/9 内容（量化、分布式列为"待提升"，而这正是刚教完的）；③ 周地图承诺的架构图/进阶篇/查漏补缺正文无链接；④ D6 三份 ncu/py-spy"证据留档"是编造输出，与 D3 的实测诚信标准冲突。
 
 ## Day 1：整合全部自定义 Kernel（433 行）
 
@@ -1075,7 +1075,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 3. **难度等级**：简单。
 4. **建议修改**：
    - 全文"Week 8 的第一天""Week 1-7 我们积累了""Week 7 结束时"等旧周号改成 10 周口径；修正标题重复。
-   - 地图承诺的"架构图 + 数据流图"不在正文（在 `_supplementary/from_w9d7/`），链接或并回。
+   - 地图承诺的"架构图 + 数据流图"不在正文，补回。
    - 任务 3 表格里 GEMM/FlashAttention 两行数字（1.8ms/72%、4.0ms/2.1x）无留档来源，与 SiLU 行的实测标准不一致——标"示意"或回填真实测量。
 5. **推荐补充资料**：vLLM/SGLang 的 README 作对标样本；`torch.utils.benchmark`（比手写 Event 循环更稳）。
 
@@ -1085,7 +1085,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 2. **是否必要**：**必要**——与 Week 1–2 是复习关系，定位清晰。
 3. **难度等级**：简单（纯复习）。
 4. **建议修改**：
-   - 今日总结自称"Day 3 我们……"、预告"明天 Day 4 进入进阶篇"——进阶篇实际在 `_supplementary/from_w10d3/`，改链接；"零钱兑换"一句是旧文残留碎片（本日 LeetCode 是二维 DP），删。
+   - 今日总结自称"Day 3 我们……"、预告"明天 Day 4 进入进阶篇"——进阶篇已不在正文，改述；"零钱兑换"一句是旧文残留碎片（本日 LeetCode 是二维 DP），删。
    - 12 题覆盖面偏窄：Week 8（量化/投机解码/CUDA Graph）和 Week 9（TP/EP/通信量）一道题都没有——补 3–4 题，否则冲刺周反而丢了最近学的内容。
    - LeetGPU 又是 Matrix Transpose（D1/D3 已连续用过两次），换一道或标注复用。
 5. **推荐补充资料**：本日自带实测数据已够；可加 GPU MODE 的 CUDA MODE 系列讲座（基础题口述素材）。
@@ -1119,7 +1119,7 @@ LeetGPU 映射表有 10+ 天"待定"无题解，且同一题跨多天重复（�
 2. **是否必要**：**必要，但当前是错位的复盘**——盘的是旧 8 周，不是现在的 10 周。
 3. **难度等级**：简单。
 4. **建议修改**（本日是全周问题最集中的）：
-   - **全面改写为 10 周口径**：标题/正文/目标全换；"Week 8 知识地图"的 7 天表与当前 week10 完全对不上（表里的"Day 2 架构图""Day 6 查漏补缺"已在 `_supplementary`）。
+   - **全面改写为 10 周口径**：标题/正文/目标全换；"Week 8 知识地图"的 7 天表与当前 week10 完全对不上（表里的"Day 2 架构图""Day 6 查漏补缺"已不在正文）。
    - **能力地图补 Week 8/9 内容**：量化（Week 8 教过却列"待提升"）、分布式 TP/PP/EP（Week 9 教过却列"待提升 [ ]"）、MoE、Ascend 对比——至少移到"已掌握概念/待深入实战"档；强项 18/24 的分母重算。
    - 目录结构 `aiinfra/week8/`、`week8_summary.py` 文件名、"Week 8 完成标准"清单——全部改名/改路径。
    - 后续路线 Month 3"分布式与生产"与 Week 9 已学内容重叠，升级为"多卡实操（torchrun + NCCL 实测）"这类增量目标。
