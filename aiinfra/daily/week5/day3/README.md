@@ -80,7 +80,7 @@ s_V: 64×64 = 4096 floats = 16 KB
 总计: 48 KB ≤ 100 KB (RTX 5090 上限) ✓（且恰好等于静态 `__shared__` 48 KB/block 的统一硬上限）
 ```
 
-> ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 S=QK^T 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
+> ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 $S=QK^\top$ 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
 
 #### 2.3 Online Softmax 在 CUDA 中的实现
 
@@ -510,7 +510,7 @@ ncu --metrics \
 **观察重点**：
 - `launch__registers_per_thread`：每个线程约 88-120 个 register（acc[8][64] 是大头）
 - `sm__occupancy`：可能只有 50-75%（register 压力大），这是教学版的局限
-- `dram__throughput`：应远低于标准 Attention（因为消除了 O(N²) 读写）
+- `dram__throughput`：应远低于标准 Attention（因为消除了 $O(N^2)$ 读写）
 
 #### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
 
@@ -518,7 +518,7 @@ ncu --metrics \
 
 **与今日知识的关联**：
 
-今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 QK^T + softmax + PV 融合成一个 kernel 消除 O(N²) IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
+今天我们手写的是**单 head 的 fused FlashAttention kernel**——把 $QK^\top$ + softmax + PV 融合成一个 kernel 消除 $O(N^2)$ IO。本题是这个 kernel 的最小扩展：把单 head fused attention 复制到 `h` 个 head 上并行（`grid = h`，一个 block 一个 head），head 间完全独立、零同步。核心考点是 head 切分寻址（列偏移乘 `d_k`，写反成 strided `i::h` 会全错）和 scale 用 `√d_k` 而非 `√d_model`。
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 head 切分寻址、一个 block 一个 head 的 fused attention、online softmax 三公式）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 

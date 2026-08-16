@@ -433,7 +433,7 @@ M=N=K     cuBLAS(ms)    triton(ms)    max_diff      speedup   check
 (1, 8, 2048, 64)      0.4977        0.0618        1.95e-03      8.05      PASS  
 ```
 
-> 💡 Triton FA 加速比随 N 增长（2.79x → 8.05x）——N 越大，naive 的 O(N²) IO 越多，FA 的 O(Nd) 优势越明显。这与 Day 1 的 IO 理论一致。
+> 💡 Triton FA 加速比随 N 增长（2.79x → 8.05x）——N 越大，naive 的 $O(N^2)$ IO 越多，FA 的 $O(Nd)$ 优势越明显。这与 Day 1 的 IO 理论一致。
 
 ##### Triton vs CUDA vs PyTorch 三方 trade-off 决策表
 
@@ -594,7 +594,7 @@ Day 4 我们用 Triton 重写了 Week 4 的三大算子，建立了"Python 写 G
 5. **`tl.dot`**：一行调用 Tensor Core，让 Triton GEMM 达到 cuBLAS 70-85%，代码量只有手写 CUDA 的 1/2.5
 6. **FlashAttention Triton 版**：online softmax 的 `m / l / acc` 三件套与 CUDA 版完全一致，但 `tl.dot` 把两个 GEMM 自动交给 Tensor Core，核心逻辑 ~40 行 vs CUDA 版 ~300 行
 
-掌握这些后，你就具备了阅读 vLLM / Megatron-LM / TensorRT-LLM 中 Triton 算子的能力。Week 5 会回到 Attention IO 分析，用今天建立的"reduce 即原语"视角重新审视标准 Attention 的 O(N²) 瓶颈。
+掌握这些后，你就具备了阅读 vLLM / Megatron-LM / TensorRT-LLM 中 Triton 算子的能力。Week 5 会回到 Attention IO 分析，用今天建立的"reduce 即原语"视角重新审视标准 Attention 的 $O(N^2)$ 瓶颈。
 
 ---
 

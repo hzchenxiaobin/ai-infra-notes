@@ -472,7 +472,7 @@ Day 4 我们动手用 CUDA Graph 消除了全链路 Profiling 识别出的 launc
   1. **Shape Bucketing**（主流）：为 {1,2,4,8,16} 等 bucket 各预捕获一张图，运行时向上取整选最近 bucket，pad 输入后 replay，截取有效输出
   2. **cudaGraphExecUpdate**：拓扑不变只改参数（如 grid dim 随 batch 变）时，原地更新可执行图，比重新 instantiate 快 5-10x
   3. **回退 eager**：batch 超过最大 bucket 或 shape 完全不可预测时回退（vLLM：decode 用 graph，prefill 用 eager）
-- **bucketing 代价**：每 bucket 一套静态 buffer（显存 ∝ bucket 数）+ padding 计算浪费（通常 < 10%）
+- **bucketing 代价**：每 bucket 一套静态 buffer（显存 $\propto$ bucket 数）+ padding 计算浪费（通常 < 10%）
 
 </details>
 
@@ -523,7 +523,7 @@ Day 4 我们动手用 CUDA Graph 消除了全链路 Profiling 识别出的 launc
 - **权衡**：
   - **bucket 多**：显存占用大（每 bucket 一套静态 buffer + graph），但 padding 浪费小
   - **bucket 少**：显存省，但 padding 浪费大（如只有 {1,16} 两个桶，b=2 要 pad 到 16，浪费 87.5%）
-- **padding 浪费估算**：平均 padding 比例 = Σ(实际 batch 落入某桶的频率 × (bucket - batch) / bucket)，通常控制在 < 10%
+- **padding 浪费估算**：平均 padding 比例 = $\sum(\text{实际 batch 落入某桶的频率} \times (\text{bucket} - \text{batch}) / \text{bucket})$，通常控制在 < 10%
 - **padding 不影响正确性**：padding 行参与计算但 attention 用 mask 屏蔽，有效行输出与 eager 一致
 - **进阶**：变长序列也对 seq_len 分桶（{128,256,512,1024}），与 batch 桶组合；KV Cache 不为 padding 行分配，避免显存浪费
 

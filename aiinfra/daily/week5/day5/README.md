@@ -5,7 +5,7 @@
 通过今天的学习，你将：
 
 1. 构建 FlashAttention 的 **benchmark 框架**，系统对比标准 Attention、手写 FA、官方 FA 在不同 seq_len/batch/head 下的性能<br>
-2. 掌握 **ncu 验证 HBM 访问量**的方法，用手写 FA 验证 HBM IO 随 N 线性增长（O(Nd)）而非 N² 增长<br>
+2. 掌握 **ncu 验证 HBM 访问量**的方法，用手写 FA 验证 HBM IO 随 N 线性增长（$O(Nd)$）而非 $N^2$ 增长<br>
 3. 能设计覆盖 seq_len/batch/heads/head_dim 四个维度的扫描矩阵，记录 latency/throughput/speedup<br>
 4. 理解不同配置下 speedup 差异的原因（短序列慢、长序列快、小 batch 需 seq 并行）<br>
 5. 能用 ncu 的 `dram__bytes_read/write` 指标验证理论 IO 与实测一致（误差 < 30%）<br>
@@ -22,7 +22,7 @@ Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（N=2048）�
 |------|-------------|-----------|
 | FA 在 N=512 时快还是慢？ | "可能略慢" | 给出精确 latency 和 speedup |
 | 手写 FA 与官方 FA 差多少？ | 未对比 | 3-way 对比：标准/手写/官方 |
-| HBM IO 真的是 O(Nd) 吗？ | 理论计算 | ncu 实测验证 |
+| HBM IO 真的是 $O(Nd)$ 吗？ | 理论计算 | ncu 实测验证 |
 | 什么配置下 FA 收益最大？ | "长序列" | 给出 N/B/H/d 扫描矩阵 |
 
 今天的方法论：**先建 benchmark 框架（覆盖多配置），再跑 ncu 验证 IO 复杂度，最后整理性能报告**。这套"benchmark + ncu + 报告"流程是所有 GPU 性能优化的标准工作流。
@@ -81,7 +81,7 @@ FlashAttention HBM IO:
 | 4096 | 64 | 195.00 | 4.00 | 48.8x |
 | 8192 | 64 | 780.00 | 8.00 | 97.5x |
 
-> 💡 **关键洞察**：IO 加速比随 N² 增长，但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
+> 💡 **关键洞察**：IO 加速比随 $N^2$ 增长，但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
 
 #### 5.3 ncu 验证 HBM IO 的方法
 
@@ -279,7 +279,7 @@ N=2048: 理论 FA IO = 4×2048×64×4 = 2 MB, 实测应约为 N=512 的 4x
 N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 ```
 
-如果实测 HBM IO 随 N 线性增长 → O(Nd) ✓；如果随 N² 增长 → 有 bug。
+如果实测 HBM IO 随 N 线性增长 → $O(Nd)$ ✓；如果随 $N^2$ 增长 → 有 bug。
 
 #### 任务 4：LeetGPU 在线题目 —— Multi-Head Attention
 
@@ -315,7 +315,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 用 matplotlib 绘制三种实现的 latency 随 N 变化的曲线，对比斜率。
 
-> 提示：标准 Attention 的 latency 应近似随 N² 增长（O(N²) IO 主导），FlashAttention 应近似随 N 线性增长（O(Nd) IO）。
+> 提示：标准 Attention 的 latency 应近似随 $N^2$ 增长（$O(N^2)$ IO 主导），FlashAttention 应近似随 N 线性增长（$O(Nd)$ IO）。
 
 ---
 
@@ -326,7 +326,7 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 1. **Benchmark 框架**：覆盖 N/B/H/d 四维度扫描，记录 latency/throughput/speedup/max_diff
 2. **3-way 对比**：标准 Attention / 手写 FA / 官方 FA，量化每种实现的性能差距
 3. **性能特征**：短序列（N<512）FA 可能略慢（固定开销）；长序列（N>2048）FA 加速 2-5x；官方比手写快 1.5-2x
-4. **ncu 验证 IO**：实测 HBM IO 随 N 线性增长 → O(Nd) ✓，对比标准 Attention 的 N² 增长
+4. **ncu 验证 IO**：实测 HBM IO 随 N 线性增长 → $O(Nd)$ ✓，对比标准 Attention 的 $N^2$ 增长
 5. **理论 vs 实测**：实测 HBM IO 比理论值大 20-30%（cache miss/padding），误差范围内正常
 6. **配置影响**：小 batch 需 seq 并行补偿；大 d 时 tile 变小优势减弱；大 batch 时 GEMM 已接近峰值
 
@@ -343,7 +343,7 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 
  1. **Latency**：单次 forward 时间（ms）
  2. **Throughput**：tokens/s 或 queries/s
- 3. **HBM IO**：理论值 + ncu 实测值，验证 O(Nd) vs O(N²)
+ 3. **HBM IO**：理论值 + ncu 实测值，验证 $O(Nd)$ vs $O(N^2)$
  4. **Speedup**：相对标准 Attention 的加速比
  5. **Correctness**：与标准 Attention 的数值误差
  6. **扫描维度**：seq_len N、batch B、num_heads H、head_dim d
@@ -352,15 +352,15 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 </details>
 
 
-2. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 O(Nd) 而不是 O(N²)？**
+2. **如何用 ncu 验证 FlashAttention 的 HBM 访问确实是 $O(Nd)$ 而不是 $O(N^2)$？**
 
 <details>
 <summary>点击查看答案</summary>
 
  - 使用 `ncu --metrics dram__bytes_read.sum,dram__bytes_write.sum`
  - 测试 N=512, 1024, 2048, 4096，固定 d
- - 如果 HBM 访问量 ≈ N 的线性倍数（N 翻倍，IO 翻倍），则是 O(Nd)
- - 如果 HBM 访问量 ≈ N² 的倍数（N 翻倍，IO 4x），则是 O(N²)
+ - 如果 HBM 访问量 ≈ N 的线性倍数（N 翻倍，IO 翻倍），则是 $O(Nd)$
+ - 如果 HBM 访问量 ≈ $N^2$ 的倍数（N 翻倍，IO 4x），则是 $O(N^2)$
  - 注意实测值会有 cache、padding 等额外开销，误差 20-30% 内正常
 
 </details>
@@ -371,7 +371,7 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 <details>
 <summary>点击查看答案</summary>
 
- - **收益最大**：长序列（N>2048）、小 head dim（d=64）、单 batch（B=1）——此时 HBM 带宽是瓶颈，FA 消除 O(N²) IO 收益最大
+ - **收益最大**：长序列（N>2048）、小 head dim（d=64）、单 batch（B=1）——此时 HBM 带宽是瓶颈，FA 消除 $O(N^2)$ IO 收益最大
  - **可能更慢**：短序列（N<512）——FA 的 shared memory 设置 + online softmax 递推有固定开销，可能超过 IO 节省
  - **收益减弱**：大 batch（B=16+）——标准 Attention 的 GEMM 已接近峰值，IO 不再是唯一瓶颈
  - **实际部署**：需要 benchmark 决定是否启用，通常 N>1024 时 FA 有正收益
@@ -386,7 +386,7 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 
  - **async copy + 双缓冲**：官方用 `cp_async` 隐藏加载延迟，手写版同步加载（SM 空闲等待）
  - **混合精度**：官方 FP16/BF16 输入 + FP32 累加，带宽翻倍；手写版 FP32 全程
- - **Tensor Core**：官方用 WMMA/mma 做 QK^T 和 PV 的 GEMM，峰值 4-8x；手写版用 FMA 标量
+ - **Tensor Core**：官方用 WMMA/mma 做 $QK^\top$ 和 PV 的 GEMM，峰值 4-8x；手写版用 FMA 标量
  - **K/V smem 复用**：官方分时复用省一半 smem；手写版 K/V 分开
  - **warp group 优化**：官方 FA2 的子块划分减少 non-matmul FLOPs
  - **整体差距**：官方通常比手写快 1.5-2x
@@ -399,13 +399,13 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
 <details>
 <summary>点击查看答案</summary>
 
- - **标准 Attention**：latency 近似随 N² 增长——因为 HBM IO 是 O(N²)，N 翻倍时 IO 变 4x，latency 也近似 4x
- - **FlashAttention**：latency 近似随 N 线性增长——HBM IO 是 O(Nd)，N 翻倍时 IO 变 2x
+ - **标准 Attention**：latency 近似随 $N^2$ 增长——因为 HBM IO 是 $O(N^2)$，N 翻倍时 IO 变 4x，latency 也近似 4x
+ - **FlashAttention**：latency 近似随 N 线性增长——HBM IO 是 $O(Nd)$，N 翻倍时 IO 变 2x
  - **交叉点**：N 较小时标准 Attention 可能更快（FA 固定开销大）；N > ~512-1024 时 FA 开始领先
- - **绘制曲线**：用 matplotlib 画 latency vs N，标准是抛物线（N²），FA 是直线（N），交叉点在 N≈512
+ - **绘制曲线**：用 matplotlib 画 latency vs N，标准是抛物线（$N^2$），FA 是直线（N），交叉点在 N≈512
 
  - 两者都测量 kernel 的实际 HBM 读写量，用于验证 IO 复杂度
- - 验证逻辑一致：N 翻倍时 IO 翻倍 → O(N)；N 翻倍时 IO 4x → O(N²)
+ - 验证逻辑一致：N 翻倍时 IO 翻倍 → $O(N)$；N 翻倍时 IO 4x → $O(N^2)$
  - 两者分析思路一致：先理论计算预期 IO，再用工具实测验证
 
 </details>

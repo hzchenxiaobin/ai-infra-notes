@@ -111,7 +111,7 @@
 ### 5. 量化
 
 - GPTQ、SmoothQuant 原理（字节某组全程问量化 + 数学推导，见[面经](https://www.zhihu.com/question/29906268)）
-- SmoothQuant 中 smooth scale 如何求、α 取值
+- SmoothQuant 中 smooth scale 如何求、$\alpha$ 取值
 - 数学：Cholesky 分解、凸函数、泰勒展开
 
 牛客网补充高频题（[智谱一面](https://www.nowcoder.com/feed/main/detail/846a09e34fea4fe9a7e14da2a88e3f72)、[美团一面](https://www.nowcoder.com/feed/main/detail/48166f26d9c2472eaa217bb94f7e88fa)）：

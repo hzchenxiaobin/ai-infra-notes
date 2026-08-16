@@ -332,10 +332,10 @@ __global__ void gemmRegisterBlocking(const float* A, const float* B, float* C, i
 - **条件**：不看任何资料，对着空气或录音口述
 - **时间**：5 分钟口述 + 5 分钟自问自答
 - **口述内容要求**：
- 1. FlashAttention 解决的问题（标准 Attention 的 O(N²) HBM 访问）
+ 1. FlashAttention 解决的问题（标准 Attention 的 $O(N^2)$ HBM 访问）
  2. 分块策略（Q tile 驻留 SRAM，K/V tile 逐块滑入）
  3. Online Softmax 三公式推导（`m_new`、`l_new`、`o_new`）
- 4. 复杂度分析（HBM 从 O(N²) 降到 O(Nd)）
+ 4. 复杂度分析（HBM 从 $O(N^2)$ 降到 $O(Nd)$）
 
 ##### Online Softmax 三公式默写
 
@@ -352,10 +352,10 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 | 问题 | 参考答案 |
 |------|---------|
 | 为什么不用全局 softmax，非要 online 递推？ | 每个 KV tile 看不到全局 max，必须增量更新 |
-| `exp(m - m_new)` 的作用？ | 统一参考点的缩放因子，把历史累加值对齐到新 max |
+| $\exp(m - m_{\text{new}})$ 的作用？ | 统一参考点的缩放因子，把历史累加值对齐到新 max |
 | FlashAttention 的加速上限是多少？ | 受限于 HBM 带宽和 SRAM 容量，无法突破 memory bound |
-| 标准 Attention 的 HBM 访问次数？ | O(N²d)，S 和 P 矩阵各读写一次 |
-| FlashAttention 的 HBM 访问次数？ | O(Nd)，Q/K/V 只读写一次，S/P 不落 HBM |
+| 标准 Attention 的 HBM 访问次数？ | $O(N^2 d)$，S 和 P 矩阵各读写一次 |
+| FlashAttention 的 HBM 访问次数？ | $O(Nd)$，Q/K/V 只读写一次，S/P 不落 HBM |
 
 > 💡 **复盘标准**：能不看资料、5 分钟内完整讲清上述 5 点 + 三公式，即为通过。
 
@@ -578,10 +578,10 @@ __global__ void blockReduce(const float* in, float* out, int n) {
 <details>
 <summary>点击查看答案</summary>
 
- - **核心**：标准 Attention 把 S=QK^T 和 P=softmax(S) 写回 HBM，HBM 访问 O(N²d)；FlashAttention 用分块 + Online Softmax，S/P 不落 HBM，HBM 访问降到 O(Nd)
+ - **核心**：标准 Attention 把 S=QK^T 和 P=softmax(S) 写回 HBM，HBM 访问 $O(N^2 d)$；FlashAttention 用分块 + Online Softmax，S/P 不落 HBM，HBM 访问降到 $O(Nd)$
  - **分块**：Q tile 驻留 SRAM，K/V tile 逐块滑入，每次只算一个 block 的局部 softmax
  - **Online Softmax**：增量更新 `m`/`l`/`o`，无需等到看到全局数据再做 softmax
- - **复杂度**：HBM 从 O(N²d) → O(Nd)，长序列下加速比显著
+ - **复杂度**：HBM 从 $O(N^2 d)$ → $O(Nd)$，长序列下加速比显著
 
 </details>
 
@@ -630,7 +630,7 @@ __global__ void blockReduce(const float* in, float* out, int n) {
 | Register Blocking 一定比 Shared Memory Tiling 快 | 只有当 TM×TN 不溢出 register（≤255）时才快；TM=TN=16 会 spill 反而暴跌 |
 | Double Buffering 总是有收益 | shared memory 翻倍可能降 occupancy；数据量小时启动开销主导 |
 | Occupancy 越高 GEMM 越快 | GEMM 是 compute-bound，寄存器压力大时低 occupancy 高 ILP 可能更快 |
-| FlashAttention 减少了计算量 | 计算量相同，减少的是 HBM 数据移动（O(N²)→O(Nd)） |
+| FlashAttention 减少了计算量 | 计算量相同，减少的是 HBM 数据移动（$O(N^2)$→$O(Nd)$） |
 | 多 Stream 一定能加速 | 需 Copy/Compute Engine 独立 + Pinned Memory + 非 Default Stream，缺一不可 |
 | ncu 报告的带宽就是峰值 | 需对比 `dram__throughput.pct_of_peak`，实测通常 70-85% 已优秀 |
 

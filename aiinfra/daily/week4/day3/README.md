@@ -4,7 +4,7 @@
 
 通过今天的学习，你将：
 
-1. 理解 Day 2 基础 LayerNorm kernel 的瓶颈——两次 reduce 意味着三次 HBM 读 x（读 x 求 μ、读 x 求 σ²、读 x 做 normalize）<br>
+1. 理解 Day 2 基础 LayerNorm kernel 的瓶颈——两次 reduce 意味着三次 HBM 读 x（读 x 求 $\mu$、读 x 求 $\sigma^2$、读 x 做 normalize）<br>
 2. 掌握 **Welford 在线算法**——用递推公式在一次 pass 中同时计算 mean 和 variance，把 x 的 HBM 读从 3 次降到 2 次（Welford pass + normalize pass）；配合 smem 缓存 x 可进一步降到 1 次<br>
 3. 能实现 **Welford LayerNorm kernel**，实测对比 Day 2 三遍扫描版（理论预期 HBM 读写减半 → ~2x 加速，但小 D / 寄存器开销下可能不达预期）<br>
 4. 理解 **GEMM Backward 的数据流**——$dA = dC \cdot B^T$、$dB = A^T \cdot dC$，与 forward 共享 tiling 策略<br>
@@ -27,7 +27,7 @@ Pass 3: 读 x → 做 normalize → 写 y
 
 其中 normalize 公式为：$y = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} \cdot \gamma + \beta$
 
-每 pass 读一遍 x（2D bytes），三次共 **3×2D bytes HBM 读**。而 x 本身只需读 1 次——多出来的 2 次是"先求 μ 再求 σ²"的串行依赖导致的。
+每 pass 读一遍 x（2D bytes），三次共 **3×2D bytes HBM 读**。而 x 本身只需读 1 次——多出来的 2 次是"先求 $\mu$ 再求 $\sigma^2$"的串行依赖导致的。
 
 | 策略 | HBM 读 x | HBM 写 y | 总 IO | HBM 层加速比 |
 |------|---------|---------|-------|------------|
@@ -53,7 +53,7 @@ Day 2 的 LayerNorm 需要两次 reduce：
 1. $\mu = \text{mean}(x)$ → reduce sum
 2. $\sigma^2 = \text{var}(x) = \text{mean}\left((x - \mu)^2\right)$ → reduce sum of squares
 
-第二次 reduce 依赖第一次的结果（μ），所以必须先算完 μ 才能算 σ²——这导致 x 被读两遍。
+第二次 reduce 依赖第一次的结果（$\mu$），所以必须先算完 $\mu$ 才能算 $\sigma^2$——这导致 x 被读两遍。
 
 ##### Welford 的洞察
 
@@ -105,7 +105,7 @@ $$
 
 Welford 比"两遍扫描"数值更稳定：
 
-| 方法 | σ² 计算 | 精度问题 |
+| 方法 | $\sigma^2$ 计算 | 精度问题 |
 |------|--------|---------|
 | 两遍扫描 | $\frac{\sum(x-\mu)^2}{N}$ | μ 已知，直接算 |
 | 朴素单遍 | $\frac{\sum x^2}{N} - \left(\frac{\sum x}{N}\right)^2$ | **大数吃小数**：$\sum x^2$ 和 $(\sum x)^2$ 都很大，相减丢失有效位 |
@@ -205,8 +205,8 @@ __global__ void layernorm_welford_kernel(
 
 | 步骤 | Day 2 三遍扫描 | Day 3 Welford（不缓存 x） |
 |------|-------------|--------------|
-| 求 μ | 读 x (1×) | — (Welford 合并 mean/var) |
-| 求 σ² | 读 x (1×) | — |
+| 求 $\mu$ | 读 x (1×) | — (Welford 合并 mean/var) |
+| 求 $\sigma^2$ | 读 x (1×) | — |
 | Welford pass | — | 读 x (1×) |
 | Normalize | 读 x (1×) + 写 y (1×) | 读 x (1×) + 写 y (1×) |
 | **总 HBM** | **3 读 + 1 写 = 4×2D** | **2 读 + 1 写 = 3×2D** |
@@ -541,7 +541,7 @@ Day 3 我们把 Day 2 的 LayerNorm 从三遍扫描优化到 Welford 单 pass，
    - **RMSNorm**：$y = \frac{x}{\sqrt{\text{mean}(x^2) + \epsilon}} \cdot \gamma$——只需 sum of squares，一次 reduce，无 β
    - **大模型选 RMSNorm 的原因**：
      1. 省一次 reduce（mean），kernel 快 ~1.5x
-     2. 省去 β 参数，参数量减半
+      2. 省去 $\beta$ 参数，参数量减半
      3. 实验表明精度与 LayerNorm 几乎一致（大模型对归一化的 mean shift 不敏感）
    - **代表模型**：LLaMA、Qwen、DeepSeek 等均用 RMSNorm
 

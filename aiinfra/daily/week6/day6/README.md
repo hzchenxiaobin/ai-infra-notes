@@ -17,7 +17,7 @@
 
 ### 学前导读：Decode 阶段的并行度瓶颈
 
-Day 1 我们分析过 Prefill vs Decode 的算术强度差异：Prefill 阶段 M 很大（prompt 有 N 个 token），attention 是 O(N²d) 的 compute-bound 操作，FlashAttention 通过 tiling 让多个 block 并行处理 Q tile，GPU 利用率高。但 Decode 阶段 M=1（每次只生成 1 个 token），情况完全不同：
+Day 1 我们分析过 Prefill vs Decode 的算术强度差异：Prefill 阶段 M 很大（prompt 有 N 个 token），attention 是 $O(N^2 d)$ 的 compute-bound 操作，FlashAttention 通过 tiling 让多个 block 并行处理 Q tile，GPU 利用率高。但 Decode 阶段 M=1（每次只生成 1 个 token），情况完全不同：
 
 ![Decode 阶段 Memory-bound 示意](../images/decode_memory_bound.svg)
 

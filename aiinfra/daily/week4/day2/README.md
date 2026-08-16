@@ -228,7 +228,7 @@ Transformer 用 LayerNorm 而非 BatchNorm：因为序列长度可变、batch �
 
 ##### 为什么 LayerNorm 是 memory-bound？
 
-每个元素读 1 次（x）、写 1 次（y），γ/β 另读，但只做 ~5 次浮点运算（减、平方、rsqrt、乘、加）：
+每个元素读 1 次（x）、写 1 次（y），$\gamma/\beta$ 另读，但只做 ~5 次浮点运算（减、平方、rsqrt、乘、加）：
 
 ```
 Arithmetic Intensity ≈ 5 / 8 ≈ 0.6 FLOP/Byte

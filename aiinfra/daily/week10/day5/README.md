@@ -276,7 +276,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
  - **T**ask：你的目标是什么
  - **A**ction：你做了什么（技术点 1、2、3）
   - **R**esult：量化成果（GEMM 达 cuBLAS ~64%（RTX 5090 实测 4096³）、吞吐 **~5694 tokens/s**、TTFT **~2.9 ms**）
-  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 O(N²) 降到 O(Nd)，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到约 5694 tokens/s。"
+  - 示例："我构建了一个 Mini LLM 推理引擎，目标是理解 vLLM 的调度与 Attention 优化。我手写 FlashAttention 把长序列 attention IO 从 $O(N^2)$ 降到 $O(Nd)$，实现 Continuous Batching 提升吞吐，最终单卡吞吐达到约 5694 tokens/s。"
   - ✅ **数字诚信**：X/Y/Z 已由 `stability_test.py --real`（真引擎吞吐/延迟，custom CUDA kernel enabled）与 `mini_engine_v1_graph.py`（TBT 改善）在 RTX 5090 / CUDA 12.8 / PyTorch 2.9.1+cu128 上实测回填（2026-08-06）。
 
 </details>
@@ -289,7 +289,7 @@ Day 5 我们把前四天的知识转化为面试表达能力：
 
  - 结构：问题 → 现有方案局限 → 你的方案 → 实现细节 → 验证结果 → 还能怎么优化
  - 示例（FlashAttention）：
-   - 问题：标准 Attention 物化 N×N 矩阵，IO 是 O(N²)
+   - 问题：标准 Attention 物化 $N \times N$ 矩阵，IO 是 $O(N^2)$
    - 局限：朴素 tiling 仍需写回中间结果
    - 方案：FlashAttention = tiling + online softmax
    - 细节：block 切分、shared memory、warp 同步

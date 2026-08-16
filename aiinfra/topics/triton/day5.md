@@ -4,9 +4,9 @@
 
 通过今天的学习，你将：
 
-1. 理解标准 Attention 的内存瓶颈——O(N²) 中间矩阵 S、P 落盘 Global Memory
+1. 理解标准 Attention 的内存瓶颈——$O(N^2)$ 中间矩阵 S、P 落盘 Global Memory
 2. 掌握 FlashAttention 的核心思想——online softmax + tiling 消除中间矩阵
-3. 理解 FlashAttention 的 IO 复杂度从 O(N²) 降到 O(N²d/M) 的数学原理
+3. 理解 FlashAttention 的 IO 复杂度从 $O(N^2)$ 降到 $O(N^2 d/M)$ 的数学原理
 4. 用 Triton 实现 FlashAttention 简化版 forward——结合 Day 3 的 online softmax + Day 4 的 `tl.dot`
 5. 对比 FlashAttention 与标准 Attention 的性能差异和数值一致性
 6. 理解为什么 FlashAttention 是 Triton 最著名的应用案例
@@ -20,7 +20,7 @@
 
 ### 标准 Attention 的内存瓶颈
 
-标准 Attention 计算 `O = softmax(Q × K^T) × V`，中间矩阵 S = Q×K^T 和 P = softmax(S) 都是 N×N（N 是序列长度）：
+标准 Attention 计算 `O = softmax(Q × K^T) × V`，中间矩阵 S = Q×K^T 和 P = softmax(S) 都是 $N \times N$（N 是序列长度）：
 
 ![标准 Attention vs FlashAttention：内存访问对比](../images/triton_flash_vs_standard.svg)
 
@@ -28,9 +28,9 @@
 
 | 步骤 | 标准 Attention | FlashAttention |
 |------|---------------|----------------|
-| ① S = Q × K^T | 写 N×N 到 Global | 不物化 S |
-| ② P = softmax(S) | 读 N×N + 写 N×N | 不物化 P |
-| ③ O = P × V | 读 N×N | 直接累加 O |
+| ① S = Q × K^T | 写 $N \times N$ 到 Global | 不物化 S |
+| ② P = softmax(S) | 读 $N \times N$ + 写 $N \times N$ | 不物化 P |
+| ③ O = P × V | 读 $N \times N$ | 直接累加 O |
 | **Global 读写** | **~4 × N²** | **~2 × N × d** |
 
 > 💡 **一句话总结**：FlashAttention 把 Q×K → softmax → ×V 三步融合为单 kernel，中间矩阵 S、P 永远在 Register/Shared Memory 中，不落盘 Global Memory。
@@ -39,8 +39,8 @@
 
 | 方案 | IO 复杂度 | N=8192, d=64, M=100KB |
 |------|----------|----------------------|
-| 标准 Attention | O(N²d + N²) | ~537 MB |
-| **FlashAttention** | **O(N²d²/M)** | **~87 MB** |
+| 标准 Attention | $O(N^2 d + N^2)$ | ~537 MB |
+| **FlashAttention** | **$O(N^2 d^2/M)$** | **~87 MB** |
 
 M 是 SRAM 大小（on-chip memory）。FlashAttention 的 IO 减少了 ~M/d² 倍——这就是它快的根本原因。
 
@@ -280,7 +280,7 @@ Passed: True
   N=4096: Flash=2.300ms  Standard=8.200ms  Speedup=3.57x
 ```
 
-> 💡 **观察**：序列越长，FlashAttention 加速越明显——因为标准 Attention 的 O(N²) 中间矩阵随 N 增长，而 FlashAttention 的 IO 复杂度是 O(N²d²/M)。N=4096 时加速 3.5x+。
+> 💡 **观察**：序列越长，FlashAttention 加速越明显——因为标准 Attention 的 $O(N^2)$ 中间矩阵随 N 增长，而 FlashAttention 的 IO 复杂度是 $O(N^2 d^2/M)$。N=4096 时加速 3.5x+。
 
 ### 任务 2：理解数值精度差异
 
@@ -323,14 +323,14 @@ o = torch.matmul(p, v)                              # kernel 5: 读 N×N
 # 共 ~4 次 N×N Global 读写
 ```
 
-| N | N×N 矩阵大小 | 4×N×N 读写总量 | FlashAttention 读写 |
+| N | $N \times N$ 矩阵大小 | 4×N×N 读写总量 | FlashAttention 读写 |
 |---|-------------|---------------|-------------------|
 | 512 | 1 MB | 4 MB | ~0.5 MB |
 | 2048 | 16 MB | 64 MB | ~2 MB |
 | 4096 | 64 MB | 256 MB | ~4 MB |
 | 8192 | 256 MB | 1024 MB | ~8 MB |
 
-> 💡 **结论**：N 越大，标准 Attention 的 N×N 中间矩阵越大，FlashAttention 的优势越明显——从 O(N²) 降到 O(N²d²/M)。
+> 💡 **结论**：N 越大，标准 Attention 的 $N \times N$ 中间矩阵越大，FlashAttention 的优势越明显——从 $O(N^2)$ 降到 $O(N^2 d^2/M)$。
 
 ### Causal Mask（简化版未实现）
 
@@ -350,14 +350,14 @@ s = tl.where(mask, s, float('-inf'))
 
 ### 不同序列长度的性能
 
-| N | 标准 Attention | FlashAttention | 加速比 | N×N 矩阵大小 |
+| N | 标准 Attention | FlashAttention | 加速比 | $N \times N$ 矩阵大小 |
 |---|---------------|----------------|--------|-------------|
 | 512 | 0.145 ms | 0.082 ms | 1.77x | 1 MB |
 | 1024 | 0.521 ms | 0.180 ms | 2.89x | 4 MB |
 | 2048 | 2.100 ms | 0.620 ms | 3.39x | 16 MB |
 | 4096 | 8.200 ms | 2.300 ms | 3.57x | 64 MB |
 
-> 💡 **趋势**：序列越长，加速比越大——因为 O(N²) 与 O(N²d²/M) 的差距随 N 增大而扩大。
+> 💡 **趋势**：序列越长，加速比越大——因为 $O(N^2)$ 与 $O(N^2 d^2/M)$ 的差距随 N 增大而扩大。
 
 ### 与 PyTorch `F.scaled_dot_product_attention` 对比
 
@@ -432,10 +432,10 @@ BLOCK_D = D  # 64
 <details>
 <summary>点击查看答案</summary>
 
-- 标准 Attention 的中间矩阵 S=Q×K^T 和 P=softmax(S) 都是 N×N，全部在 Global Memory 中读写
+- 标准 Attention 的中间矩阵 S=Q×K^T 和 P=softmax(S) 都是 $N \times N$，全部在 Global Memory 中读写
 - N=8192 时每个矩阵 256MB，读写 4 次 = 1GB → memory-bound
 - FlashAttention 通过 online softmax + tiling 把 S、P 保留在 Register/Shared Memory 中，不落盘 Global
-- IO 复杂度从 O(N²d + N²) 降到 O(N²d²/M)，M 是 SRAM 大小
+- IO 复杂度从 $O(N^2 d + N^2)$ 降到 $O(N^2 d^2/M)$，M 是 SRAM 大小
 
 </details>
 
@@ -468,9 +468,9 @@ BLOCK_D = D  # 64
 <details>
 <summary>点击查看答案</summary>
 
-- 标准：O(N²d + N²) —— 读 Q/K/V 是 N²d，读写 S/P 是 N²
-- Flash：O(N²d²/M) —— M 是 SRAM 大小
-- 降低的原因：FlashAttention 把 N×N 的 S/P 矩阵分块为 (Br × Bc) 的小块，每块在 SRAM 中处理
+- 标准：$O(N^2 d + N^2)$ —— 读 Q/K/V 是 N²d，读写 S/P 是 N²
+- Flash：$O(N^2 d^2/M)$ —— M 是 SRAM 大小
+- 降低的原因：FlashAttention 把 $N \times N$ 的 S/P 矩阵分块为 (Br × Bc) 的小块，每块在 SRAM 中处理
 - 总 IO = (N/Br) × (N/Bc) × (Br×d + Bc×d + Br×Bc) ≈ N²d²/M（当 Br×Bc ≈ M 时）
 
 </details>
@@ -511,10 +511,10 @@ BLOCK_D = D  # 64
 
 Day 5 我们用 Triton 实现了 FlashAttention 简化版——Triton 最著名的应用：
 
-1. **标准 Attention 瓶颈**：O(N²) 中间矩阵 S、P 落盘 Global Memory，N=8192 时 256MB/矩阵
+1. **标准 Attention 瓶颈**：$O(N^2)$ 中间矩阵 S、P 落盘 Global Memory，N=8192 时 256MB/矩阵
 2. **FlashAttention 核心**：online softmax + tiling，S、P 永远在 Register 中，不落盘 Global
 3. **Rescale**：max 更新时，l_i 和 acc 都要乘 `exp(m_old - m_new)` 调整基准
-4. **IO 复杂度**：从 O(N²d + N²) 降到 O(N²d²/M)，N 越大加速越明显（3.5x+）
+4. **IO 复杂度**：从 $O(N^2 d + N^2)$ 降到 $O(N^2 d^2/M)$，N 越大加速越明显（3.5x+）
 5. **Triton 实现**：`tl.dot` 做 Q×K 和 P×V，`tl.max/exp/sum` 做 online softmax，~50 行 Python
 6. **性能**：N=4096 时比标准 Attention 快 3.5x，且数值差异在 FP16 精度范围内
 

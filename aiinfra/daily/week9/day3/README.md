@@ -211,7 +211,7 @@ N=8, batch=1, seq=2048, hidden=4096, FP16:
 
 ##### α-β 通信模型
 
-把通信时间拆成**启动延迟 α + 数据传输 size/BW**：
+把通信时间拆成**启动延迟 $\alpha$ + 数据传输 size/BW**：
 
 $$T_{\text{comm}} = \alpha + \frac{\text{size}}{\text{BW}}$$
 

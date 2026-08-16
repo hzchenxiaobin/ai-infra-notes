@@ -591,7 +591,7 @@ Day 4 我们用 Triton 实现了完整的 GEMM：
 5. `num_stages`：编译器自动实现 multi-stage buffering，无需手写 double buffer
 6. **性能**：30 行 Python 达到 cuBLAS 85-90%——开发效率与性能的最佳平衡
 
-> 💡 **明日预告**：Day 5 将用 Day 3 的 online softmax + Day 4 的 `tl.dot` 实现 FlashAttention 简化版——把 Q×K、softmax、×V 融合为单 kernel，消除 O(N²) 中间矩阵。
+> 💡 **明日预告**：Day 5 将用 Day 3 的 online softmax + Day 4 的 `tl.dot` 实现 FlashAttention 简化版——把 Q×K、softmax、×V 融合为单 kernel，消除 $O(N^2)$ 中间矩阵。
 
 ---
 

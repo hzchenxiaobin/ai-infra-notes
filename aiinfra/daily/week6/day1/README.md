@@ -8,7 +8,7 @@
 2. 掌握 **TTFT / TBT / TPOT** 三大推理时延指标的定义，能说清各自由哪个阶段决定、如何优化<br>
 3. 能用 **Arithmetic Intensity + Roofline** 解释为什么 Decode 是 memory-bound、Prefill 是 compute-bound<br>
 4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
-5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 O(L·d²) 降到 O(d²)），为 Day 2 手写 KV Cache 打基础<br>
+5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2)$），为 Day 2 手写 KV Cache 打基础<br>
 
 > 💡 **为什么重要**：Week 5 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 6 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
 
@@ -38,7 +38,7 @@
 
 ![Prefill vs Decode 两阶段输入与 Attention 形状](../images/prefill_vs_decode_overview.svg)
 
-Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 N×N self-attention，输出**第一个新 token** 的 logits。
+Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 $N \times N$ self-attention，输出**第一个新 token** 的 logits。
 
 ```
 输入: prompt tokens, shape = (B, N_prompt, d)
@@ -54,7 +54,7 @@ Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token *
  - 时延关注: TTFT (Time To First Token)
 ```
 
-Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 O(N²) 的 HBM 读写、必要时并行 prefill 多个请求。
+Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 $O(N^2)$ 的 HBM 读写、必要时并行 prefill 多个请求。
 
 #### 1.2 Decode 阶段：自回归逐 token 生成
 
@@ -74,7 +74,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
  - 时延关注: TBT / TPOT
 ```
 
-> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 O(L·d²) 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 O(d²)——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
+> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 $O(d^2)$——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
 
 #### 1.3 两大阶段对比表
 
@@ -83,8 +83,8 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 | 输入形状 | (B, N_prompt, d) | (B, 1, d) |
 | 每步处理 token 数 | N_prompt（大） | 1 |
 | QKV GEMM 的 M | N_prompt | **1**（退化为向量×矩阵） |
-| Attention 矩阵形状 | N×N | **1×N** |
-| 每步 FLOPs | O(N²·d) | O(L·d) |
+| Attention 矩阵形状 | $N \times N$ | **1×N** |
+| 每步 FLOPs | $O(N^2 \cdot d)$ | $O(L \cdot d)$ |
 | 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
 | 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte（fp16 ~0.125） |
 | 瓶颈类型 | **compute-bound** | **memory-bound** |
@@ -434,14 +434,14 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 修改 `main()` 中的 `N`，分别在 `N = 256, 512, 1024, 2048` 下测量 TTFT，记录成表：
 
-| N | TTFT (ms) | 理论 FLOPs (O(N²·d)) |
+| N | TTFT (ms) | 理论 FLOPs ($O(N^2 \cdot d)$) |
 |---|-----------|----------------------|
 | 256 | | |
 | 512 | | |
 | 1024 | | |
 | 2048 | | |
 
-> 思考：TTFT 随 N 大致呈什么关系？为什么？（提示：Prefill 的 attention 是 O(N²)，但 QKV GEMM 是 O(N·d²)；N 较大时 attention 主导，TTFT ≈ O(N²)。）
+> 思考：TTFT 随 N 大致呈什么关系？为什么？（提示：Prefill 的 attention 是 $O(N^2)$，但 QKV GEMM 是 $O(N \cdot d^2)$；N 较大时 attention 主导，TTFT ≈ $O(N^2)$。）
 
 #### 实验 2：对比 use_cache=True / False 的 Decode latency
 
@@ -465,10 +465,10 @@ nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
 
 Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
 
-1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + N×N attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
+1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + $N \times N$ attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
 2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~0.1，跨过 Ridge Point，瓶颈从算力翻转到带宽
 3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
-4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 O(L·d²) 降到 O(d²)，但代价是每步要搬整个 cache 过 HBM
+4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2)$，但代价是每步要搬整个 cache 过 HBM
 5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
 6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
 
@@ -483,7 +483,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 N×N attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
+ - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 $N \times N$ attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
  - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~0.1），**memory-bound**，关注 TBT/TPOT
  - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
 
@@ -520,7 +520,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <details>
 <summary>点击查看答案</summary>
 
- - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 O(L·d²) 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 O(d²)，decode latency 降低 10x+
+ - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 $O(d^2)$，decode latency 降低 10x+
  - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 524 KB，4096 tokens 约 2 GB，batch=16 就 32 GB
  - 这正是后续 PagedAttention（Day 4）、KV Cache 量化要解决的"显存爆炸"问题
 

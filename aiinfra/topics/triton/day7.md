@@ -221,7 +221,7 @@ y = MyOp.apply(x)  # 像普通 PyTorch 操作一样使用
 <summary>点击查看答案</summary>
 
 - 核心：online softmax + tiling，把 Q×K → softmax → ×V 融合为单 kernel，S/P 不落盘 Global Memory
-- IO 复杂度从 O(N²) 降到 O(N²d²/M)
+- IO 复杂度从 $O(N^2)$ 降到 $O(N^2 d^2/M)$
 - Triton 最合适的原因：
   - Fused kernel（`@triton.jit` 天然支持）
   - `tl.dot` 自动 Tensor Core（Q×K 和 P×V）

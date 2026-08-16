@@ -270,8 +270,8 @@ $$3 \times d \times d_{ff} = 3 \times 7168 \times 2048 \approx 44.0\ \text{M}$$
 
 每 token 前向 FLOPs ≈ $2 \times$ 激活参数量 ≈ $2 \times 37\text{B} = 74\ \text{GFLOPs}$。如果是同等能力的稠密 671B 模型，则是 $2 \times 671\text{B} = 1.34\ \text{TFLOPs}$——**差了 18 倍**。MoE 的本质：
 
-- **容量**（能记住多少知识）∝ 总参数 671B
-- **成本**（每 token 算多少）∝ 激活参数 37B
+- **容量**（能记住多少知识）$\propto$ 总参数 671B
+- **成本**（每 token 算多少）$\propto$ 激活参数 37B
 - 两者解耦 = "用 37B 的价钱，买 671B 的脑子"
 
 代价是显存：671B 参数（BF16 ≈ 1.3 TB）必须全部驻留，所以 MoE 推理/训练必须多卡专家并行——这笔账 Day 3 接着算。

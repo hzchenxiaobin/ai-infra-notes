@@ -490,7 +490,7 @@ Day 5 我们用 double buffer 把 tiled WMMA GEMM 的"加载-计算"串行流水
    - **能提升性能的原因**：
      - Day 2 串行模式中，Tensor Core 在 smem 加载期间闲置
      - Double buffer 让 Tensor Core 在加载 tile[k+1] 时持续计算 tile[k]
-     - 把总时间从 `Σ(load + compute)` 变为 `load_0 + Σ(max(load, compute))`
+     - 把总时间从 $\sum(\text{load} + \text{compute})$ 变为 $\text{load}_0 + \sum(\max(\text{load}, \text{compute}))$
    - **前提条件**：load 和 compute 的时间不能差太多（否则短的会被长的完全遮盖，无重叠收益）
 
    </details>

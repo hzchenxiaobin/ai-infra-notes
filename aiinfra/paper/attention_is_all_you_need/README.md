@@ -230,7 +230,7 @@ while last(tokens) != EOS:
 | Batch | 按句长近似分桶，每批 ~25000 源 token + ~25000 目标 token |
 | 硬件 | 单机 8 × NVIDIA P100 |
 | 时长 | base：0.4 s/step × 100K 步 = **12 小时**；big：1.0 s/step × 300K 步 = **3.5 天** |
-| 推理 | beam size 4，length penalty α = 0.6；base 平均最后 5 个 checkpoint，big 平均最后 20 个 |
+| 推理 | beam size 4，length penalty $\alpha = 0.6$；base 平均最后 5 个 checkpoint，big 平均最后 20 个 |
 
 ### 9.2 主结果（Table 2）
 

@@ -202,7 +202,7 @@ VLLM_LOGGING_LEVEL=DEBUG python3 quickstart.py 2>&1 | tee vllm_debug.log
 > 三点：① **进程模型**——API 服务与 EngineCore 拆成两个进程，ZMQ 通信，CPU 的 tokenize/detokenize 与引擎循环并行；② **调度器简化**——chunked prefill 成为标配，prefill/decode 统一进 token 预算调度；③ **KV 管理统一**——kv_cache_manager 用统一抽象支持 full attention / sliding window / 混合架构，并内置前缀缓存。概念主线（分页 + 连续调度）不变，变的是工程组织。
 
 **Q：detokenize 在哪里做？为什么不是每步都做完整的？**
-> 在输出处理侧（V1 是 output processor / 独立线程），而且是**增量**的：每个 step 只 detokenize 新产生的那一个 token，拼到已有文本上。完整 detokenize 整个序列每步做一次是 O(n²) 的浪费；增量处理把每步开销降到 O(1) 级别（个别 token 跨边界时需少量回溯）。
+> 在输出处理侧（V1 是 output processor / 独立线程），而且是**增量**的：每个 step 只 detokenize 新产生的那一个 token，拼到已有文本上。完整 detokenize 整个序列每步做一次是 $O(n^2)$ 的浪费；增量处理把每步开销降到 $O(1)$ 级别（个别 token 跨边界时需少量回溯）。
 
 ---
 

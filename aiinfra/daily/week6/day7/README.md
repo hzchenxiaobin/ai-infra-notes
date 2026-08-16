@@ -312,7 +312,7 @@ Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 <details>
 <summary>点击查看答案</summary>
 
- - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + N×N attention）。优化：FlashAttention（IO 从 O(N²) 降到 O(Nd)）、Tensor Core、并行 prefill、reduce prompt 长度
+ - **TTFT 高（Prefill 慢）**：Prefill 是 compute-bound（大 GEMM + $N \times N$ attention）。优化：FlashAttention（IO 从 $O(N^2)$ 降到 $O(Nd)$）、Tensor Core、并行 prefill、reduce prompt 长度
  - **TBT 高（Decode 慢）**：Decode 是 memory-bound（M=1，读 KV Cache）。优化：KV Cache 量化（INT8/FP8）、GQA/MQA（减 KV 头）、PagedAttention、Continuous Batching（抬 M）
  - 若 TBT 随 L 增长 → 读 KV 随 L 增大 → 滑动窗口/稀疏 attention
  - 若 TBT 稳定但绝对值高 → launch overhead → CUDA Graph、torch.compile

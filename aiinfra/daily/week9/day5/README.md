@@ -149,7 +149,7 @@ python kernels/moe_routing_simulator.py
 
 1. **Top-K 路由**：gate softmax 后选 top-2，每 token 激活 2 个专家（稀疏激活）
 2. **负载均衡**：随机 gate 下偏差 ~7%（1024 token 样本小）；真实训练需 aux-loss 或 bias 调整
-3. **EP 通信量**：∝ num_tokens × top_k × hidden × (1 - 1/EP)，EP4 时 75% 流量跨节点
+3. **EP 通信量**：$\propto \text{num\_tokens} \times \text{top\_k} \times \text{hidden} \times (1 - 1/\text{EP})$，EP4 时 75% 流量跨节点
 4. **EP vs TP**：decode 选 EP（all-to-all 小），prefill 可能选 TP（all-reduce 摊薄）
 
 #### 任务 2：扫描 EP 规模，观察远程比例变化

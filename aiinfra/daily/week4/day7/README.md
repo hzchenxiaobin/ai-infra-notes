@@ -242,7 +242,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 2. Transformer 单层算子分类（compute vs memory）？（Day 1）
 3. Softmax 为什么要减 max？（Day 2）
 4. LayerNorm 需要几次 reduce？Welford 怎么合并成一次？（Day 2/3）
-5. Welford 为什么比"Σx²/N-(Σx/N)²"数值稳定？（Day 3）
+5. Welford 为什么比"$\sum x^2/N - (\sum x/N)^2$"数值稳定？（Day 3）
 6. GEMM Backward 的公式与 forward 的对称性？（Day 3）
 7. Triton vs CUDA 的优势劣势？什么场景必须 CUDA？（Day 4/5）
 8. `tl.reduce` 底层是怎么实现的？（Day 4）

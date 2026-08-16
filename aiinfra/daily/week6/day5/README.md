@@ -100,9 +100,9 @@ def generate(self, prompt, max_new_tokens=20):
 
 | 阶段 | 输入 | KV Cache 长度 | FLOPs |
 |------|------|--------------|-------|
-| Prefill | prompt (N tokens) | 0 → N | O(N·d²)（大 GEMM） |
-| Decode step 1 | token N+1 (1 token) | N → N+1 | O(d²)（向量×矩阵） |
-| Decode step k | token N+k | N+k-1 → N+k | O(d²)（与 k 无关） |
+| Prefill | prompt (N tokens) | 0 → N | $O(N \cdot d^2)$（大 GEMM） |
+| Decode step 1 | token N+1 (1 token) | N → N+1 | $O(d^2)$（向量×矩阵） |
+| Decode step k | token N+k | N+k-1 → N+k | $O(d^2)$（与 k 无关） |
 
 #### 5.4 With vs Without Cache：收益量化
 
@@ -110,8 +110,8 @@ def generate(self, prompt, max_new_tokens=20):
 
 | 维度 | Without Cache | With Cache |
 |------|--------------|------------|
-| 每步 FLOPs | O((N+k)·d²)，随步数增长 | **O(d²)**，与步数无关 |
-| 总 FLOPs（K 步） | O(K·N·d² + K²·d²/2) | O(N·d² + K·d²) |
+| 每步 FLOPs | $O((N+k) \cdot d^2)$，随步数增长 | **$O(d^2)$**，与步数无关 |
+| 总 FLOPs（K 步） | $O(K \cdot N \cdot d^2 + K^2 \cdot d^2/2)$ | $O(N \cdot d^2 + K \cdot d^2)$ |
 | TBT（逐 token 延迟） | 随生成长度线性增长 | **基本稳定** |
 | 生成结果 | 与 with cache **一致** | 基准 |
 | 内存 | 低 | 高（存 K/V cache） |
@@ -438,7 +438,7 @@ Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推�
 
 1. **5 大核心组件**：Tokenizer（文本↔id）、模型后端（MiniLLM PyTorch）、KV Cache（use_cache 控制）、采样器（argmax）、Prefill/Decode 循环（generate 主体）
 2. **MiniLLM 结构**：embedding + n_layers 层 transformer（Pre-LN + self-attention + FFN）+ lm_head，每层返回 `(k,v)` 供 cache 复用
-3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（O(N·d²) 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（O(d²) 向量×矩阵）
+3. **generate 两阶段**：Prefill 一次性填入 prompt 的 K/V（$O(N \cdot d^2)$ 大 GEMM）→ Decode Loop 每步 1 token 复用 cache（$O(d^2)$ 向量×矩阵）
 4. **with/without cache 验证**：两者生成 token 序列完全一致，证明 KV Cache 只加速不改结果；without cache 的 TBT 随步数增长，with cache 基本稳定
 5. **KV Cache 内存**：每 token = 2 × n_layers × n_heads × d_head × bytes，4 层 × 8 头 × 64 d_head fp32 = 16 KB/token，4096 token 64 MB
 6. **多轮对话复用**：Round1 的 cache 保留，Round2 只 prefill 新增部分，TTFT 大幅降低；v0 暂每轮独立 cache，Week 7 加 session 管理
@@ -499,7 +499,7 @@ Day 5 我们把 Day1-4 的零件组装成了第一辆能跑的车——Mini 推�
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：`model(input_ids, use_cache=True)`，input_ids 是整段 prompt `(B, N)`，`kv_cache=None`。attention 是 N×N 完整矩阵，返回 prompt 的 K/V 作为初始 cache
+ - **Prefill**：`model(input_ids, use_cache=True)`，input_ids 是整段 prompt `(B, N)`，`kv_cache=None`。attention 是 $N \times N$ 完整矩阵，返回 prompt 的 K/V 作为初始 cache
  - **Decode**：`model(next_token, kv_cache=上一步, use_cache=True)`，next_token 是 `(B, 1)`。层内把新 K/V `torch.cat` 到 cache，attention 是 1×(L+1)
  - 关键：同一个 `model.forward` 通过 `use_cache + kv_cache` 参数区分两种模式——Prefill 时 cache 为空，Decode 时 cache 非空
 

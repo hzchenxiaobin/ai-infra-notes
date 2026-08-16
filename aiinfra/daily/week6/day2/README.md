@@ -10,7 +10,7 @@
 4. 学会用 C++/CUDA 手写一个支持 **append / get_cache / reset** 的 KVCache 类，并通过多轮对话验证其正确性<br>
 5. 理解多轮对话中 **历史 cache 复用** 的流程——Round 2 只需计算新增 token 的 K/V，大幅降低 TTFT<br>
 
-> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 O(L·d²) 降到 O(d²)"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
+> 💡 **为什么重要**：Day 1 我们算清楚了 Decode 是 memory-bound，并提到"KV Cache 把每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2)$"——但那个 cache 到底长什么样、怎么存、怎么追加？今天我们亲手把它实现出来。KV Cache 是推理系统优化的基础：Day 3-4 读 vLLM 的 PagedAttention、Day 5 搭 Mini 引擎、Day 6 做 profiling，全都建立在今天的 KVCache 类之上。它也是面试必考点——"手写一个 KV Cache"是工程能力的直接体现。
 
 ---
 
@@ -26,19 +26,19 @@ if use_cache and k_cache is not None:
 
 这是 KV Cache 的"消费端"——Decode 每步只算 1 个新 token 的 K/V，然后从 cache 读历史 K/V 拼起来做 attention。但那个 cache 是**谁、在哪里、用什么数据结构存下来的**？Day 1 没回答。今天我们就来填这个坑。
 
-关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 `O(L·d²)` 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
+关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
 
 | 维度 | 无 KV Cache | 有 KV Cache |
 |------|------------|------------|
 | 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
-| 每步 FLOPs | O(L × d²) | **O(d²)** |
+| 每步 FLOPs | $O(L \times d^2)$ | **$O(d^2)$** |
 | 每步 HBM 读取 | 重新读取所有历史 tokens | 从 cache 读取历史 K/V |
 | 内存使用 | 低 | 高（2 × L × d × bytes） |
 | Decode latency | 高（与 L 成正比增长） | **低（基本稳定）** |
 
 收益巨大（latency 通常降低 10x+），代价是显存。今天我们要把这个"存"和"读"用 CUDA 真正实现出来。
 
-> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 O(L·d²) 的重算换成 O(d²) 的新算 + 一次 cache 读取。
+> 💡 **一句话总结**：KV Cache 本质是一个**只追加（append-only）的 5D 张量**，Prefill 一次性填入 N 个 token 的 K/V，Decode 每步追加 1 个——用"空间换时间"，把每步 $O(L \cdot d^2)$ 的重算换成 $O(d^2)$ 的新算 + 一次 cache 读取。
 
 ---
 
@@ -79,7 +79,7 @@ KV Cache 工作流程：
  但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
 ```
 
-> ⚠️ **注意**：有 cache 后 attention 的 `Q×K^T` 仍是 `O(L·d)`（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（`O(L·d²)→O(d²)`），attention 本身的访存量没有减少。
+> ⚠️ **注意**：有 cache 后 attention 的 $Q \times K^\top$ 仍是 $O(L \cdot d)$（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（$O(L \cdot d^2) \to O(d^2)$），attention 本身的访存量没有减少。
 
 #### 2.2 KV Cache 的内存布局与显存占用
 
@@ -399,7 +399,7 @@ GQA 是 **KV Cache 内存优化的核心手段之一**——标准 MHA（Multi-H
 
 Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 
-1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 O(L·d²)"变成"只算新 token O(d²) + 读 cache"，latency 降低 10x+
+1. **KV Cache 核心思想**：把每步新生成的 K/V 存下来，Decode 从"重算历史 $O(L \cdot d^2)$"变成"只算新 token $O(d^2)$ + 读 cache"，latency 降低 10x+
 2. **5D 内存布局**：`(num_layers, B, H, max_seq_len, d_head)`，`d_head` 最内层连续保证 coalesced，`seq_len` 维支持 append 不搬移
 3. **显存占用**：每 token = `2 × n_layers × n_heads × d_head × bytes`；LLaMA-7B 每 token 524 KB，4096 tokens 2 GB，batch=16 就 32 GB——长文本/大 batch 的主要瓶颈
 4. **三种分配策略**：静态（浪费）、动态（碎片）、PagedAttention（分页+映射表，Day 4 详读）——演进逻辑是"解决浪费→引入碎片→解决碎片"
@@ -419,9 +419,9 @@ Day 2 我们把 Day 1 提到的"KV Cache"从概念变成了可运行的代码：
 <summary>点击查看答案</summary>
 
  - Decode 是自回归的，第 `t` 步和 `t+1` 步都需要历史 `K₁..K_t`/`V₁..V_t`，这些值不变
- - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 `O(L·d²)` 且随长度线性增长
- - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → `O(d²)`
- - projection 从 `O(L·d²)` 降到 `O(d²)`，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
+ - 没有 KV Cache 时，每步都要重算所有历史 tokens 的 K/V projection，FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长
+ - KV Cache 把每步新生成的 K/V 存下来，后续步骤直接读取，每步只需算 1 个新 token 的 K/V → $O(d^2)$
+ - projection 从 $O(L \cdot d^2)$ 降到 $O(d^2)$，latency 通常降低 10x+；代价是显存占用 `2 × n_layers × n_heads × L × d_head × bytes`
 
 </details>
 

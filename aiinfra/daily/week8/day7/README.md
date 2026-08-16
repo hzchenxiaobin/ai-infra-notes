@@ -88,10 +88,10 @@
 <details>
 <summary>答案</summary>
 
-- 接受率 α：draft token 被 target 接受的概率
-- 每步期望产出：`(1-α^(k+1))/(1-α)`（k 个候选 + 1 个验证 token）
-- α=0.8, k=4 时：期望 4.0 tokens/步（vs 1 token/步，4x）
-- 收益大条件：α 高（draft 质量好）+ k 大 + decode 是瓶颈
+- 接受率 $\alpha$：draft token 被 target 接受的概率
+- 每步期望产出：$(1-\alpha^{k+1})/(1-\alpha)$（k 个候选 + 1 个验证 token）
+- $\alpha=0.8$, k=4 时：期望 4.0 tokens/步（vs 1 token/步，4x）
+- 收益大条件：$\alpha$ 高（draft 质量好）+ k 大 + decode 是瓶颈
 - 代价：draft model 额外显存 + 验证 forward 的算力
 
 </details>

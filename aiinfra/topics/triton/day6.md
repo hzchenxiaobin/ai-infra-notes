@@ -435,7 +435,7 @@ Triton 的 TFLOPS 是结果，NCU 是原因。如果 Triton GEMM 只有 50 TFLOP
 - DRAM Throughput 极低（~15%）——S/P 不落盘 Global Memory
 - Tensor Core 利用率中等（~52%）——Q×K 和 P×V 两次 `tl.dot`
 - SM Throughput 中等（~68%）——online softmax 的 reduce 操作不是 Tensor Core
-- 对比标准 Attention：标准 DRAM 高（O(N²) 中间矩阵），Flash DRAM 低（O(N×d)）
+- 对比标准 Attention：标准 DRAM 高（$O(N^2)$ 中间矩阵），Flash DRAM 低（$O(N \times d)$）
 
 </details>
 

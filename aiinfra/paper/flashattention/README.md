@@ -28,7 +28,7 @@
 这篇论文提出 **FlashAttention**：一种**精确**（非近似）的注意力算法，通过让算法感知 GPU 内存层级（IO-aware），在不改变注意力数学定义的前提下，同时获得墙钟加速和线性显存。
 
 - **Problem**：标准注意力的时间/显存随序列长度平方增长；已有的近似注意力（稀疏、低秩）虽然降低了 FLOPs，却因为忽视内存访问开销，**多数拿不到墙钟加速**。
-- **Method**：用 **tiling** 把 Q/K/V 分块载入 SRAM，用 **online softmax** 增量归一化，把整个注意力融合成**单个 CUDA kernel**，N×N 的 S/P 中间矩阵完全不写回 HBM；backward 用 **recomputation**（只存输出 O 和 softmax 统计量 (ℓ, m)，片上重算 S/P）进一步省显存。
+- **Method**：用 **tiling** 把 Q/K/V 分块载入 SRAM，用 **online softmax** 增量归一化，把整个注意力融合成**单个 CUDA kernel**，$N \times N$ 的 S/P 中间矩阵完全不写回 HBM；backward 用 **recomputation**（只存输出 O 和 softmax 统计量 (ℓ, m)，片上重算 S/P）进一步省显存。
 - **Result**：Attention kernel 在 GPT-2 上最高 **7.6×** 加速；BERT-large 训练比 MLPerf 1.1 纪录快 **15%**；GPT-2 端到端 **3×**（vs HuggingFace）；显存最多 **20×** 节省、随序列线性增长。
 - **Contribution**：提出并证明了精确注意力的 IO 复杂度下界，FlashAttention 达到 $\Theta(N^2 d^2 / M)$（M 为 SRAM 大小），对一段 SRAM 范围是**最优**的；更长上下文直接转化为更好的模型质量（GPT-2 ppl −0.7、Path-X 首次超过随机水平）。
 
@@ -267,7 +267,7 @@ return O
 | Rabe & Staats (2021) | online softmax 分块训练 | 本文将其用于 fused kernel + IO 分析 | 显存线性 | 未做 kernel 融合，无墙钟收益 |
 | Milakov & Gimelshein (2018) | online normalizer（softmax 分块） | 数学工具来源 | 增量归一化 | 未应用于注意力加速 |
 | Hong & Kung (1981) | IO 复杂度（red-blue pebble） | 本文理论框架来源 | 可证明下界 | 经典理论，不针对深度学习 |
-| MLPerf 融合 kernel（Nvidia） | 工程性算子融合 | 本文给出系统算法+理论 | 高度优化 | 未解决 O(N²) 物化 |
+| MLPerf 融合 kernel（Nvidia） | 工程性算子融合 | 本文给出系统算法+理论 | 高度优化 | 未解决 $O(N^2)$ 物化 |
 | FlashAttention-2 / 3（后续） | 循环对调、warp 特化、FP8 | 本文的直系后继 | 更高峰值利用率 | 同一 IO-aware 主线 |
 
 ---

@@ -249,7 +249,7 @@ W4A16 时代是 AWQ vs GPTQ 两强，W8A8/FP8 时代多了 SmoothQuant。三方�
 | **适用场景** | W4A16 部署 | W4A16 精度敏感 | W8A8/FP8 激活量化 |
 | **典型落地** | vLLM、LMDeploy | AutoGPTQ、bitsandbytes | TensorRT-LLM、SGLang |
 
-> 💡 **SmoothQuant 的关键洞察**：激活的 outlier 比 权重大，直接 INT8 量化激活会崩。SmoothQuant 把激活的 outlier "迁移"到权重（`x' = x/s, W' = s·W`），让两者都变平滑，再统一 INT8/FP8 量化。这是 W8A8 激活量化的标配前置步骤。
+> 💡 **SmoothQuant 的关键洞察**：激活的 outlier 比 权重大，直接 INT8 量化激活会崩。SmoothQuant 把激活的 outlier "迁移"到权重（$x' = x/s, W' = s \cdot W$），让两者都变平滑，再统一 INT8/FP8 量化。这是 W8A8 激活量化的标配前置步骤。
 
 ##### KV Cache 量化的误差累积风险
 
@@ -607,9 +607,9 @@ Day 1 我们把量化推理的三层武器一次讲透，并手写了两个最�
 <summary>点击查看答案</summary>
 
   - **问题**：激活的 outlier 比 权重大得多，直接 INT8/FP8 量化激活会崩（outlier 拉大 scale，其余值精度骤降）
-  - **SmoothQuant 核心**：把激活的 outlier "迁移"到权重——`x' = x/s, W' = s·W`，让激活变平滑、权重略变陡（权重本来好量化）
-  - **数学**：`Y = x · W = (x/s) · (s·W) = x' · W'`，等价但 x' 的 outlier 被 s 吸收
-  - **s 的选择**：`s = max(|x|)^α / max(|W|)^(1-α)`，α 通常 0.5（激活与权重各分担一半 outlier）
+  - **SmoothQuant 核心**：把激活的 outlier "迁移"到权重——$x' = x/s, W' = s \cdot W$，让激活变平滑、权重略变陡（权重本来好量化）
+  - **数学**：$Y = x \cdot W = (x/s) \cdot (s \cdot W) = x' \cdot W'$，等价但 x' 的 outlier 被 s 吸收
+  - **s 的选择**：$s = \max(|x|)^\alpha / \max(|W|)^{1-\alpha}$，α 通常 0.5（激活与权重各分担一半 outlier）
   - **与 AWQ/GPTQ 区别**：AWQ/GPTQ 只量化权重（W4A16），SmoothQuant 量化权重+激活（W8A8），是 FP8/INT8 激活量化的标配前置
   - **落地**：TensorRT-LLM、SGLang 的 W8A8 流程都含 SmoothQuant 步骤
 

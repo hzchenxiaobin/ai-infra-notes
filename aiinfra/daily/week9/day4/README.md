@@ -215,7 +215,7 @@ SP + TP：
 
 | 维度 | 标准 TP | SP + TP |
 |------|---------|---------|
-| LayerNorm activation 显存 | O(B×S×H) | O(B×S/N×H)（降 1/N） |
+| LayerNorm activation 显存 | $O(B \times S \times H)$ | $O(B \times S/N \times H)$（降 1/N） |
 | 通信量 | 2V(N-1)/N | 相同（但拆成两半可重叠） |
 | 重叠效率 | all-reduce 难重叠（整块传） | reduce-scatter/all-gather 易重叠（半块） |
 | 适用场景 | 短序列 | 长序列（S > 4K 时收益显著） |
