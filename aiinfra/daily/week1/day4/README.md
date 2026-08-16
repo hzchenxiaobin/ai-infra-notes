@@ -47,7 +47,7 @@ GPU 的峰值算力增长非常快，但显存带宽增长相对缓慢。这导�
 | 向量加法 | `C[i] = A[i] + B[i]` | `c_i = a_i + b_i` |
 | 标量乘法 | `C[i] = alpha * A[i]` | `c_i = α · a_i` |
 | 激活函数 | `C[i] = relu(A[i])` | `c_i = max(0, a_i)` |
-| LayerNorm | `C[i] = (A[i] - mean) / sqrt(var)` | 逐元素归一化 |
+| LayerNorm | $C_i = (A_i - \mu) / \sqrt{\text{var}}$ | 逐元素归一化 |
 | Softmax（分母除外） | `C[i] = exp(A[i]) / sum` | 逐元素 exp 后归一化 |
 
 **核心特征**：每个输出元素 `c_i` 只依赖于对应的输入元素 `a_i`（或少量统计量），不依赖邻居 `a_{i-1}`、`a_{i+1}` 等。

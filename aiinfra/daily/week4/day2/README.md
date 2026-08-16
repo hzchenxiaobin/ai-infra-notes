@@ -567,7 +567,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 <summary>点击查看答案</summary>
 
  - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
- - **数学等价性**：`exp(xi - m) / Σexp(xj - m) = exp(xi)·exp(-m) / (Σexp(xj))·exp(-m) = exp(xi)/Σexp(xj)`，结果完全一致
+ - **数学等价性**：$\exp(x_i - m) / \sum \exp(x_j - m) = \exp(x_i) \cdot \exp(-m) / (\sum \exp(x_j)) \cdot \exp(-m) = \exp(x_i) / \sum \exp(x_j)$，结果完全一致
  - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
  - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 

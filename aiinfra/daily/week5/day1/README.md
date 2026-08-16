@@ -45,7 +45,7 @@ Attention 基础的完整讲解见 [topics/transformer 专题](https://hzchenxia
 |---|---|
 | 为什么需要 Attention | RNN 串行无法并行、长程依赖衰减；Attention 任意两位置直接交互，天然吃满 GPU |
 | 公式 | $\text{Attention}(Q,K,V) = \text{softmax}(QK^\top/\sqrt{d}) \cdot V$；三步：算相似度 → 按行 softmax 归一化 → 对 V 加权求和 |
-| 为什么除以 $\sqrt{d}$ | q·k 各分量独立同分布时点积方差 = d；不除则 softmax 饱和、梯度消失。$1/\sqrt{d}$ 是方差归一化推出来的（d=64 时为 0.125） |
+| 为什么除以 $\sqrt{d}$ | $q \cdot k$ 各分量独立同分布时点积方差 $= d$；不除则 softmax 饱和、梯度消失。$1/\sqrt{d}$ 是方差归一化推出来的（d=64 时为 0.125） |
 | Softmax 为什么减 max | `exp` 防爆（fp32 exp(89)≈inf）；减 max 需**全局**最大值——分块时只能靠 Online Softmax 递推维护 running max（5.2 节） |
 | Multi-Head | $d_{\text{head}} = d_{\text{model}} / h$，多头不增 FLOPs、增表达能力；head 间完全独立，kernel 里用 `blockIdx.y` 并行 |
 | Self/Cross + Causal Mask | Self：Q/K/V 同源；Cross：Q 与 K/V 不同源；Causal：上三角置 `-inf`，位置 i 只看 $\leq i$（实验 4 动手加） |
@@ -289,7 +289,7 @@ return O
 |---|---|
 | `m_new = max(m_i, m̃)` | 公式 1：$m_{new} = \max(m, \max(x_j))$ |
 | `l_new = ...` | 公式 2：$l_{new} = l \cdot e^{m - m_{new}} + \sum e^{x_j - m_{new}}$ |
-| `O_i ← diag(l_new)⁻¹·(...)` | 公式 3 的论文归一化变体：先把旧的累加输出缩放到新的全局参考点，再加新块并按新 sum 归一化 |
+| $O_i \leftarrow \text{diag}(l_{\text{new}})^{-1} \cdot (\ldots)$ | 公式 3 的论文归一化变体：先把旧的累加输出缩放到新的全局参考点，再加新块并按新 sum 归一化 |
 | `e^(m_i - m_new)` / `e^(m̃ - m_new)` | 关键缩放因子：旧参考点 / 新参考点切换到当前全局 max |
 
 > 💡 **内存访问视角**：循环里唯一从 HBM 来回搬的"大件"是 Q/K/V 块与 running 状态；$S̃$、$P̃$ 两个 $B_r \times B_c$ 小矩阵只活在 SRAM/寄存器里，**从不写 HBM**——这就是 FlashAttention 从 $O(N^2)$ 降到 $O(N^2 d^2 / M)$ HBM 访问的原因。

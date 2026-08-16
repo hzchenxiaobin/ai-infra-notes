@@ -17,7 +17,7 @@
 
 ### 学前导读：为什么 Forward 不够
 
-Day 1-2 我们把 FlashAttention Forward 跑通了：$O = \mathrm{softmax}(QK^T/\sqrt{d}) @ V$，HBM IO 从 O(N²) 降到 O(Nd)。但训练时优化器要的是 dQ/dK/dV，它们来自上游 dO。问题来了——**标准 attention 的反向公式需要 P**：
+Day 1-2 我们把 FlashAttention Forward 跑通了：$O = \mathrm{softmax}(QK^T/\sqrt{d}) @ V$，HBM IO 从 $O(N^2)$ 降到 O(Nd)。但训练时优化器要的是 dQ/dK/dV，它们来自上游 dO。问题来了——**标准 attention 的反向公式需要 P**：
 
 ```
 dV = P^T @ dO
@@ -31,7 +31,7 @@ dK = dS^T @ Q / √d
 
 | 方案 | 内存 | 问题 |
 |------|------|------|
-| 标准 backward（物化 P） | O(N²) | 丢掉 FA 的全部内存优势 |
+| 标准 backward（物化 P） | $O(N^2)$ | 丢掉 FA 的全部内存优势 |
 | FA backward（重算 P） | O(Nd) | 需要从 `Q/K/L` 重新构造 P |
 
 FA 选择后者——**recomputation**：前向多存一个 O(N) 的 `L`，反向用 `L` 把 P 一块一块重算回来。代价是反向多做一次 `QK^T` 的 FLOPs，但 IO 仍是 O(Nd)，而 IO 才是瓶颈。今天的核心就是搞清楚：`L` 是什么？为什么 O(N) 就够？反向怎么用？
@@ -123,11 +123,11 @@ FA 的解法：**前向多存一个 O(N) 的 `L`，反向重算 S/P**。
 
 #### 1.3 logsumexp Trick：用 O(N) 标量恢复整个 softmax
 
-这是 FA backward 的数学核心。我们要回答：**前向只存了 O(N) 的什么东西，能让反向恢复出 O(N²) 的 P？**
+这是 FA backward 的数学核心。我们要回答：**前向只存了 O(N) 的什么东西，能让反向恢复出 $O(N^2)$ 的 P？**
 
 ##### 从 safe softmax 说起
 
-朴素 softmax `P_ij = exp(S_ij) / Σ_k exp(S_ik)` 有数值溢出风险（exp 大数 → inf）。safe softmax 先减行最大值：
+朴素 softmax $P_{ij} = \exp(S_{ij}) / \sum_k \exp(S_{ik})$ 有数值溢出风险（exp 大数 → inf）。safe softmax 先减行最大值：
 
 $$m_i = \max_j S_{ij}, \quad l_i = \sum_j \exp(S_{ij} - m_i), \quad P_{ij} = \frac{\exp(S_{ij} - m_i)}{l_i}$$
 
@@ -159,7 +159,7 @@ $$\exp(S_{ij} - L_i) = \exp\left(S_{ij} - m_i - \log(l_i)\right) = \frac{\exp(S_
 
 $$\boxed{P_{ij} = \exp(S_{ij} - L_i)}$$
 
-**结论**：只要存了每行的 `L_i`（一个标量），加上能重算的 `S_ij`（从 `Q_i, K_j` 即可），就能恢复任意 `P_ij`。存储从 O(N²) 降到 O(N)。
+**结论**：只要存了每行的 `L_i`（一个标量），加上能重算的 `S_ij`（从 `Q_i, K_j` 即可），就能恢复任意 `P_ij`。存储从 $O(N^2)$ 降到 O(N)。
 
 ##### Online softmax 天然产出 L
 
@@ -167,9 +167,9 @@ Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就�
 
 ##### 数值稳定性
 
-- `L_i = logsumexp(S_i)` 是数学上严格等于 `log(Σ exp(S))` 的，但计算时全程在 `exp(S - m)` 域里操作，`m` 是行 max，所以 `exp` 的参数 ≤ 0，不溢出。
-- 反向 `P_ij = exp(S_ij - L_i)`：`S_ij - L_i ≤ 0`（因为 `L_i ≥ S_ij`，logsumexp ≥ 任意一项），同样不溢出。
-- `l_i` 可能为 0（整行 -inf，如全 mask），需 `log(l_i)` 时加一个极小值 `ε` 保护，或在线 softmax 里保留 `l_i > 0` 的不变式。
+- `L_i = logsumexp(S_i)` 是数学上严格等于 $\log(\sum \exp(S))$ 的，但计算时全程在 $\exp(S - m)$ 域里操作，`m` 是行 max，所以 `exp` 的参数 ≤ 0，不溢出。
+- 反向 $P_{ij} = \exp(S_{ij} - L_i)$：$S_{ij} - L_i \le 0$（因为 $L_i \ge S_{ij}$，logsumexp ≥ 任意一项），同样不溢出。
+- `l_i` 可能为 0（整行 -inf，如全 mask），需 $\log(l_i)$ 时加一个极小值 $\epsilon$ 保护，或在线 softmax 里保留 $l_i > 0$ 的不变式。
 
 ##### 如何实现 O(Nd) 的 backward IO
 
@@ -182,7 +182,7 @@ Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就�
 | `dO` | 上游 | O(Nd) |
 | `dQ, dK, dV` | 反向写出 | O(Nd) |
 
-**HBM 常驻量** = Q/K/V/O/dO/dQ/dK/dV (8·Nd) + L (N) = **O(Nd)**。重算的 S/P 只在 SRAM 里短暂存在，从不落 HBM。对比标准 backward 的 O(N²)，N=8192 时从 ~264MB 降到 ~8MB（32x）。
+**HBM 常驻量** = Q/K/V/O/dO/dQ/dK/dV ($8 \cdot Nd$) + L (N) = **O(Nd)**。重算的 S/P 只在 SRAM 里短暂存在，从不落 HBM。对比标准 backward 的 $O(N^2)$，N=8192 时从 ~264MB 降到 ~8MB（32x）。
 
 > 💡 **一句话总结**：`L_i = m_i + log(l_i)` 是 softmax 的"无损压缩"——把 N 个归一化常数压成 1 个标量，反向用 `exp(S - L)` 解压。配合 `S` 的重算，FA backward 在不存任何 N×N 矩阵的前提下恢复了完整的 softmax Jacobian。
 
@@ -192,7 +192,7 @@ Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就�
 
 ##### 反向梯度公式
 
-attention 的前向（per row）：`O_i = Σ_j P_ij V_j`，其中 `P = softmax(S)`，`S = QK^T * scale`。给定 `dO`，五个梯度（推导见 1.1 的链式法则 + softmax Jacobian）：
+attention 的前向（per row）：$O_i = \sum_j P_{ij} V_j$，其中 `P = softmax(S)`，`S = QK^T * scale`。给定 `dO`，五个梯度（推导见 1.1 的链式法则 + softmax Jacobian）：
 
 ```
 (1) dV_j = Σ_i P_ij dO_i              → dV = P^T @ dO
@@ -243,9 +243,9 @@ for q_tile i in 0..N step Br:
 
 $$\text{IO}_{\text{bwd}} = \Theta\left(\frac{N^2 d^2}{M}\right) \quad \text{（M = SRAM 大小）}$$
 
-当 `M = Θ(Nd)` 时简化为 **O(Nd)**，与 forward 同阶。常数比 forward 大（需重读 Q/K/V 算 S/P），但渐近类相同——这就是 FA 训练时也能省内存的原因。
+当 $M = \Theta(Nd)$ 时简化为 **O(Nd)**，与 forward 同阶。常数比 forward 大（需重读 Q/K/V 算 S/P），但渐近类相同——这就是 FA 训练时也能省内存的原因。
 
-> ⚠️ **注意**：严格界是 `Θ(N²d²/M)`，与 forward 一样（见 [Day 1 注释](../day1/README.md)）。教程中统一说 O(Nd) 是取 `M=Θ(Nd)` 的简化形式。
+> ⚠️ **注意**：严格界是 $\Theta(N^2 d^2 / M)$，与 forward 一样（见 [Day 1 注释](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day1.html)）。教程中统一说 O(Nd) 是取 $M = \Theta(Nd)$ 的简化形式。
 
 ---
 
@@ -444,9 +444,9 @@ GEMM backward 的两个 kernel（`dA = dC @ B^T`、`dB = A^T @ dC`）以及 FA b
 Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 
 1. **GEMM Backward 对称性**：`C=A@B` 的反向是两个转置 GEMM `dA=dC@B^T`、`dB=A^T@dC`，FLOPs 与 forward 相同，forward 的加速手段可直接迁移
-2. **Forward 不够**：标准 backward 需要物化 `S/P`（O(N²)），会让 FA 的内存优势在训练时归零
-3. **logsumexp trick**：`L_i = m_i + log(l_i)`，由此 `P_ij = exp(S_ij - L_i)`——O(N) 标量无损压缩 O(N²) 的 softmax 权重
-4. **D_i = O_i · dO_i**：softmax Jacobian 的对角项可由保存的 `O` 和上游 `dO` 一次算出，反向无需二次扫描 KV
+2. **Forward 不够**：标准 backward 需要物化 `S/P`（$O(N^2)$），会让 FA 的内存优势在训练时归零
+3. **logsumexp trick**：$L_i = m_i + \log(l_i)$，由此 $P_{ij} = \exp(S_{ij} - L_i)$——O(N) 标量无损压缩 $O(N^2)$ 的 softmax 权重
+4. **$D_i = O_i \cdot dO_i$**：softmax Jacobian 的对角项可由保存的 `O` 和上游 `dO` 一次算出，反向无需二次扫描 KV
 5. **Algorithm 2**：前向存 `Q/K/V/O/L`（O(Nd)），反向分块重算 `S/P` 累加 `dQ/dK/dV`，IO 保持 O(Nd)
 6. **代码验证**：`gemm_backward.cu` 用有限差分核对链式法则，`flash_attention_backward.py` 用 `gradcheck` 数值验证 backward，四项 maxDiff 全在 1e-15
 
@@ -478,7 +478,7 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
  - 定义 `L_i = log(Σ_j exp(S_ij))`，展开：`Σ_j exp(S_ij) = exp(m_i) · l_i`，取 log 得 `L_i = m_i + log(l_i)`
  - 由此 `exp(S_ij - L_i) = exp(S_ij - m_i - log(l_i)) = exp(S_ij - m_i)/l_i = P_ij`
  - **结论**：存一个标量 `L_i`，加上可重算的 `S_ij`（从 `Q_i, K_j`），就能恢复任意 `P_ij`
- - 内存：`L` 是 O(N)（每行一个标量），替代 P 的 O(N²)；saved tensor 只剩 `Q/K/V/O/L` = O(Nd) + O(N) = O(Nd)
+ - 内存：`L` 是 O(N)（每行一个标量），替代 P 的 $O(N^2)$；saved tensor 只剩 `Q/K/V/O/L` = O(Nd) + O(N) = O(Nd)
  - N=8192, d=64 时，P 占 264MB，L 只占 32KB——8 个数量级的压缩
 
 </details>

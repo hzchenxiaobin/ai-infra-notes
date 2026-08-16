@@ -70,7 +70,7 @@ Day 1 用 `torch.profiler` 验证了这一点（待 GPU 实测回填）：Prefil
 
 #### 3. Welford 优化与 GEMM Backward（Day 3）
 
-**Welford 在线算法**：用递推公式 `mean += delta/count; M2 += delta*(x-mean)` 在一次遍历中同时算 mean 和 variance，把 LayerNorm 的 HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）。并行化时每个线程/分块做局部 Welford，再用合并公式 `M2 = M2_a + M2_b + delta²·count_a·count_b/count` 归并。相比朴素单遍 `Σx²/N-(Σx/N)²`，Welford 无大数相减，数值更稳定。
+**Welford 在线算法**：用递推公式 `mean += delta/count; M2 += delta*(x-mean)` 在一次遍历中同时算 mean 和 variance，把 LayerNorm 的 HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）。并行化时每个线程/分块做局部 Welford，再用合并公式 $M2 = M2_a + M2_b + \delta^2 \cdot \text{count}_a \cdot \text{count}_b / \text{count}$ 归并。相比朴素单遍 $\sum x^2 / N - (\sum x / N)^2$，Welford 无大数相减，数值更稳定。
 
 **GEMM Backward**：`dA = dC @ B^T`、`dB = A^T @ dC`，FLOPs 与 forward 相同，只是某个输入转置——forward 的 tiling / Tensor Core / async copy 全部可以直接套用。这是 Week 5 FlashAttention Backward 的直接前置。
 
@@ -293,7 +293,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 
 Week 5 我们将深入 **FlashAttention 专题**。为了做好准备，请确保你掌握了：
 
-1. **Online Softmax 三公式**（Day 2 扩展实验 + Day 4 Triton FA）：`m_new = max(m_old, m_ij)`、`alpha = exp(m_old - m_new)`、`l_new = alpha·l_old + sum(p)`——FlashAttention 的算法核心
+1. **Online Softmax 三公式**（Day 2 扩展实验 + Day 4 Triton FA）：$m_{\text{new}} = \max(m_{\text{old}}, m_{ij})$、$\alpha = \exp(m_{\text{old}} - m_{\text{new}})$、$l_{\text{new}} = \alpha \cdot l_{\text{old}} + \sum p$——FlashAttention 的算法核心
 2. **标准 Attention 的 O(N²) IO 动机**（Day 4/5 benchmark）：naive attention 物化 S/P 两个 N×N 矩阵，N 越大越慢——不理解这个动机就无法理解 FA 的设计
 3. **Warp Shuffle / 两级 block reduce**（Day 2）：FA 分块 reduce 的基础
 4. **Triton `tl.dot` + online softmax**（Day 4）：Week 5 会同时给 CUDA 和 Triton 两个实现
@@ -364,7 +364,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 
  - **不能合并的原因**：第二次 reduce（方差）依赖第一次的结果（均值），`σ² = mean((x-μ)²)` 必须先知道 μ
  - **Welford 解决方案**：递推公式 `delta = x - mean; mean += delta/count; M2 += delta*(x-mean)` 一次遍历同时更新 mean 和 M2
- - **并行化**：每线程/分块做局部 Welford，用合并公式 `M2 = M2_a + M2_b + delta²·count_a·count_b/count` 归并
+ - **并行化**：每线程/分块做局部 Welford，用合并公式 $M2 = M2_a + M2_b + \delta^2 \cdot \text{count}_a \cdot \text{count}_b / \text{count}$ 归并
   - **收益**：HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）；且无大数相减，数值比朴素单遍更稳定
 
 </details>

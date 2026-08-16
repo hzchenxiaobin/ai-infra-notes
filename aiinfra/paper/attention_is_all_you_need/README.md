@@ -212,7 +212,7 @@ while last(tokens) != EOS:
 
 ### Figure 2（Scaled Dot-Product Attention 与 Multi-Head Attention）
 
-左图：Q·Kᵀ → Scale → Mask(opt) → Softmax → ·V 的算子流；右图：h 组并行 Linear → Attention → Concat → Linear。**关键观察**：右图里所有 Linear 与 Attention 都是矩阵运算，h 个头可以打包成单个 batch 维的 GEMM——这张结构图直接预示了它对加速器友好的特性。
+左图：$Q \cdot K^\top$ → Scale → Mask(opt) → Softmax → $\cdot V$ 的算子流；右图：h 组并行 Linear → Attention → Concat → Linear。**关键观察**：右图里所有 Linear 与 Attention 都是矩阵运算，h 个头可以打包成单个 batch 维的 GEMM——这张结构图直接预示了它对加速器友好的特性。
 
 ### Figure 3（注意力可视化，En-De 例句）
 

@@ -94,7 +94,7 @@ Q tile (Br×d) 常驻 SRAM
 
 ![Online Softmax 递推更新流程](../images/flash_attention_online_update.svg)
 
-三公式的完整逐步推导（含"每步归一化 vs 末尾归一化"两种变体的等价性证明）已在 [Day 1 §5.2](../day1/README.md) 展开，这里只回顾结论。状态定义：$m$ = 已处理块的 running max，$l$ = 以 $m$ 为参考点的 running sum，$o$ = running output；初始 $m = -\infty,\, l = 0,\, o = 0$。
+三公式的完整逐步推导（含"每步归一化 vs 末尾归一化"两种变体的等价性证明）已在 [Day 1 §5.2](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day1.html) 展开，这里只回顾结论。状态定义：$m$ = 已处理块的 running max，$l$ = 以 $m$ 为参考点的 running sum，$o$ = running output；初始 $m = -\infty,\, l = 0,\, o = 0$。
 
 ##### 三公式汇总
 

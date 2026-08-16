@@ -188,7 +188,7 @@ q = \mathrm{clamp}\left(\left\lfloor \frac{w}{s} \right\rceil + z,\ 0,\ 2^b - 1\
 $$
 
 - $s$（scale）、$z$（zero-point）按 min-max 格点逐行（或逐 group）确定；$b$ = bit 数。
-- 推理 kernel 中 $\hat{w}$ 在片上即时重建（W4A16）；grouping 时每 $g$ 个权重一组 $(s, z)$，额外开销约 $16/g$ bit——g128 ≈ +0.125 bit 换 0.2~0.3 PPL，是极划算的交换。
+- 推理 kernel 中 $\hat{w}$ 在片上即时重建（W4A16）；grouping 时每 $g$ 个权重一组 $(s, z)$，额外开销约 $16/g$ bit——g128 $\approx +0.125$ bit 换 0.2~0.3 PPL，是极划算的交换。
 
 ---
 
@@ -271,7 +271,7 @@ for i in range(0, d_col, B):
 
 ### 9.4 极限量化与实用加速
 
-- **2bit（Table 7）**：g128（≈2.2bit）PPL 退化 <1.5；g32（≈2.6bit）仅退化 0.6~0.7，已接近 vanilla 3bit。
+- **2bit（Table 7）**：g128（$\approx 2.2$bit）PPL 退化 <1.5；g32（$\approx 2.6$bit）仅退化 0.6~0.7，已接近 vanilla 3bit。
 - **三值（{-1,0,+1}，g8）**：OPT-175B PPL 9.20，退化 <1——为 FPGA 等定制硬件指明可能。
 - **实用加速（Table 6）**：3bit OPT-175B = 63GB（embedding/输出层保持 FP16）+ 9GB KV → **单卡 A100**（FP16 需 5 卡，LLM.int8() 需 3 卡）；生成延迟 230ms→71ms（3.24×，A100）、589ms→130ms（4.53×，2×A6000 vs 8×FP16）。
 - **为什么这组实验重要**：证明量化收益可以**端到端兑现**——不是省显存的账面数字，而是 GPU 数量 5→1/8→2 与每 token 延迟的真实下降；且 LLM.int8() 省显存但不省时，GPTQ 两者兼得。
@@ -328,7 +328,7 @@ for i in range(0, d_col, B):
 |---|---|
 | Code | ✅ 官方开源 [IST-DASLab/gptq](https://github.com/IST-DASLab/gptq)，附 Reproducibility Statement（压缩、评测、3bit CUDA kernel、benchmark、README 命令全覆盖） |
 | Dataset | ✅ C4 校准（128×2048）+ WikiText2/PTB/C4/LAMBADA/ARC/PIQA 评测，全部公开；评测口径（2048 非重叠分段、EleutherAI harness）写清 |
-| Hyperparameter | ✅ B=128、dampening λ=对角线均值 1%、min-max per-row 格点、group size 各档全给出 |
+| Hyperparameter | ✅ B=128、dampening $\lambda=$对角线均值 1%、min-max per-row 格点、group size 各档全给出 |
 | Training Details | N/A（无训练）；量化流程（逐 6 层 block、半成品前向）描述完整 |
 | Hardware | ✅ 单卡 A100-80GB 量化 + A100/A6000 计时，设置（HuggingFace accelerate 式层切分、通信 <5%）明确 |
 
@@ -345,7 +345,7 @@ for i in range(0, d_col, B):
 5. Lazy batch-update（B=128）不减计算量，只把 rank-1 更新攒成 GEMM——**系统优化的经典套路救了数值算法**。
 6. 大规模下反复逆更新会让 $H^{-1}$ 变不定、算法发散；Cholesky 一次分解既稳定又更快——数值稳定性在百亿规模是功能性问题而非小问题。
 7. 模型越大越好量化（冗余度）；OPT-66B 因早期层 dead units 成为反例——冗余度假设可被训练缺陷破坏。
-8. Grouping（g128 ≈ +0.125bit）用极小 bit 成本换回 0.2~0.3 PPL——量化粒度与舍入算法是两个正交旋钮。
+8. Grouping（g128 $\approx +0.125$bit）用极小 bit 成本换回 0.2~0.3 PPL——量化粒度与舍入算法是两个正交旋钮。
 9. W4A16 的推理加速全部来自少搬字节：memory-bound GEMV 下片上反量化的 ALU 开销免费；卡越低端收益越大。
 10. 量化所需显存可小于推理显存：逐 block 加载 + 半成品模型前向，让 175B 的量化也能在单卡 80GB 内完成。
 
