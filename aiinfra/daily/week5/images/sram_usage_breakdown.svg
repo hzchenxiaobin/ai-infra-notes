@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="420" viewBox="0 0 860 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="420" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention Kernel SRAM 占用（Br=64, Bc=32, D=64, float32）</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- s_Q -->
+  <g filter="url(#sk)">
+    <rect x="40" y="80" width="240" height="130" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="160" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">s_Q[Br][D]</text>
+  <text x="160" y="134" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">64 × 64 × 4B</text>
+  <text x="160" y="158" text-anchor="middle" font-size="11" fill="#444">Q tile 驻留 SRAM</text>
+  <text x="160" y="188" text-anchor="middle" font-size="20" fill="#2b6e9e" font-weight="bold">16 KB</text>
+
+  <!-- s_K -->
+  <g filter="url(#sk)">
+    <rect x="310" y="80" width="240" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="430" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">s_K[Bc][D]</text>
+  <text x="430" y="134" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">32 × 64 × 4B</text>
+  <text x="430" y="158" text-anchor="middle" font-size="11" fill="#444">K tile 逐块滑入</text>
+  <text x="430" y="188" text-anchor="middle" font-size="20" fill="#2e6e2e" font-weight="bold">8 KB</text>
+
+  <!-- s_V -->
+  <g filter="url(#sk)">
+    <rect x="580" y="80" width="240" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="700" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">s_V[Bc][D]</text>
+  <text x="700" y="134" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">32 × 64 × 4B</text>
+  <text x="700" y="158" text-anchor="middle" font-size="11" fill="#444">V tile 逐块滑入</text>
+  <text x="700" y="188" text-anchor="middle" font-size="20" fill="#2e6e2e" font-weight="bold">8 KB</text>
+
+  <!-- 总计 -->
+  <g filter="url(#sk)">
+    <rect x="180" y="240" width="500" height="56" rx="8" fill="#b03a3a" opacity="0.12" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="430" y="266" text-anchor="middle" font-size="14" fill="#444">SRAM 合计 = 16 + 8 + 8</text>
+  <text x="430" y="288" text-anchor="middle" font-size="22" fill="#b03a3a" font-weight="bold">32 KB</text>
+
+  <!-- 备注：S/P 在寄存器 -->
+  <g filter="url(#sk)">
+    <rect x="120" y="316" width="620" height="40" rx="8" fill="#fffdf3" stroke="#4a8e4a" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="430" y="341" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">S/P 中间结果在寄存器 / local 中，不占 shared memory、不落 HBM</text>
+
+  <!-- 48KB 上限标注 -->
+  <g filter="url(#sk)">
+    <rect x="120" y="372" width="620" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="430" y="395" text-anchor="middle" font-size="12" fill="#2b6e9e">静态 __shared__ 上限 48 KB/block → 32 KB 在限内，每 SM 可驻留 ⌊100/32⌋ = 3 个 block</text>
+</svg>

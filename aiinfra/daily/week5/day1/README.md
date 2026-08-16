@@ -21,27 +21,13 @@
 
 #### 标准 Attention 计算
 
-```
-S = Q × K^T (N×N 矩阵，O(N²) 显存)
-P = softmax(S) (N×N 矩阵，O(N²) 显存)
-O = P × V (输出，O(N×d) 显存)
-```
+![标准 Attention 三步计算与显存复杂度](../images/standard_attention_formula.svg)
 
 #### HBM 访问瓶颈
 
 以 N=4096, d=64 为例，标准 Attention 的 HBM 读写量：
 
-```
-读 Q: N×d = 262K
-读 K: N×d = 262K
-写 S: N×N = 16M ← O(N²) 瓶颈
-读 S: N×N = 16M
-写 P: N×N = 16M ← O(N²) 瓶颈
-读 P: N×N = 16M
-读 V: N×d = 262K
-写 O: N×d = 262K
-总计 HBM 读写: ~48M elements ≈ 192MB
-```
+![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
 **核心问题**：S 和 P 两个 N×N 中间矩阵必须写入 HBM 再读回，导致 O(N²) 的 HBM 访问。
 
@@ -575,12 +561,7 @@ Result check: PASS
 
 代码中打印了 SRAM 使用量。验证计算（Br=64, Bc=32, D=64, float32）：
 
-```
-s_Q[Br][D] = 64×64×4 = 16 KB
-s_K[Bc][D] = 32×64×4 =  8 KB
-s_V[Bc][D] = 32×64×4 =  8 KB
-总计 = 32 KB（S/P 在寄存器中，不占 shared memory）
-```
+![FlashAttention Kernel SRAM 占用](../images/sram_usage_breakdown.svg)
 
 几个容易记混的数字（面试常作为追问）：
 

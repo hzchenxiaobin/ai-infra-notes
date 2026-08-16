@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="300" viewBox="0 0 860 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="300" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">标准 Attention 三步计算与显存复杂度</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Step 1: S = Q × K^T -->
+  <g filter="url(#sk)">
+    <rect x="40" y="80" width="220" height="120" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="150" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">Step 1</text>
+  <text x="150" y="136" text-anchor="middle" font-size="16" fill="#2b2b2b" font-family="monospace">S = Q × Kᵀ</text>
+  <text x="150" y="160" text-anchor="middle" font-size="11" fill="#444">维度：N × N</text>
+  <text x="150" y="182" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">显存 O(N²)</text>
+
+  <!-- arrow 1 -->
+  <path d="M 266 140 L 300 140" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2: P = softmax(S) -->
+  <g filter="url(#sk)">
+    <rect x="320" y="80" width="220" height="120" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="430" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">Step 2</text>
+  <text x="430" y="136" text-anchor="middle" font-size="16" fill="#2b2b2b" font-family="monospace">P = softmax(S)</text>
+  <text x="430" y="160" text-anchor="middle" font-size="11" fill="#444">维度：N × N</text>
+  <text x="430" y="182" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">显存 O(N²)</text>
+
+  <!-- arrow 2 -->
+  <path d="M 546 140 L 580 140" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3: O = P × V -->
+  <g filter="url(#sk)">
+    <rect x="600" y="80" width="220" height="120" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="710" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Step 3</text>
+  <text x="710" y="136" text-anchor="middle" font-size="16" fill="#2b2b2b" font-family="monospace">O = P × V</text>
+  <text x="710" y="160" text-anchor="middle" font-size="11" fill="#444">维度：N × d</text>
+  <text x="710" y="182" text-anchor="middle" font-size="13" fill="#2b6e9e" font-weight="bold">显存 O(Nd)</text>
+
+  <!-- note -->
+  <g filter="url(#sk)">
+    <rect x="120" y="226" width="620" height="50" rx="8" fill="#fffdf3" stroke="#b03a3a" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="430" y="250" text-anchor="middle" font-size="13" fill="#7a2828" font-weight="bold">瓶颈：S、P 两个 N×N 中间矩阵必须写入 HBM 再读回</text>
+  <text x="430" y="268" text-anchor="middle" font-size="11" fill="#888">→ 导致 O(N²) 的 HBM 访问（长序列主要瓶颈在访存不在计算）</text>
+</svg>
