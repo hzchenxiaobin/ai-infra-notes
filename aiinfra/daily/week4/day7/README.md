@@ -223,7 +223,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 |---|---|---|
 | Day 1 | 栈基础与设计 | [20. 有效的括号](https://hzchenxiaobin.github.io/leetcode/problems/20_有效括号.html)、[155. 最小栈](https://hzchenxiaobin.github.io/leetcode/problems/155_最小栈.html)、[232. 用栈实现队列](https://hzchenxiaobin.github.io/leetcode/problems/232_用栈实现队列.html)、[150. 逆波兰表达式求值](https://hzchenxiaobin.github.io/leetcode/problems/150_逆波兰表达式求值.html)、[380. O(1) 时间插入、删除和获取随机元素](https://hzchenxiaobin.github.io/leetcode/problems/380_O1时间插入删除和获取随机元素.html)、[946. 验证栈序列](https://hzchenxiaobin.github.io/leetcode/problems/946_验证栈序列.html) |
 | Day 2 | 表达式与计算器 | [394. 字符串解码](https://hzchenxiaobin.github.io/leetcode/problems/394_字符串解码.html)、[224. 基本计算器](https://hzchenxiaobin.github.io/leetcode/problems/224_基本计算器.html)、[227. 基本计算器 II](https://hzchenxiaobin.github.io/leetcode/problems/227_基本计算器II.html)、[402. 移掉 K 位数字](https://hzchenxiaobin.github.io/leetcode/problems/402_移掉K位数字.html)、[316. 去除重复字母](https://hzchenxiaobin.github.io/leetcode/problems/316_去除重复字母.html) |
-| Day 3 | 单调栈 | [739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)、[496. 下一个更大元素 I](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素 I.html)、[503. 下一个更大元素 II](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素 II.html)、[901. 股票价格跨度](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html)、[84. 柱状图中最大的矩形](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
+| Day 3 | 单调栈 | [739. 每日温度](https://hzchenxiaobin.github.io/leetcode/problems/739_每日温度.html)、[496. 下一个更大元素 I](https://hzchenxiaobin.github.io/leetcode/problems/496_下一个更大元素%20I.html)、[503. 下一个更大元素 II](https://hzchenxiaobin.github.io/leetcode/problems/503_下一个更大元素%20II.html)、[901. 股票价格跨度](https://hzchenxiaobin.github.io/leetcode/problems/901_股票价格跨度.html)、[84. 柱状图中最大的矩形](https://hzchenxiaobin.github.io/leetcode/problems/84_柱状图中最大的矩形.html) |
 
 > 💡 回顾重点：本周 LeetCode 题对应 10 周刷题计划第 4 周「栈、队列与单调栈」。重做本周错题、总结模板笔记；没做完的题目今天补上。
 
@@ -231,7 +231,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 
 **Week 5 预热**：本周 Day 4/5 的 Triton FlashAttention 已经让你见到了 online softmax + tiling 的威力（对 naive attention 加速 8x）。Week 5 将深入 FlashAttention 专题：
 
-1. **FlashAttention 算法**：Tiling + Online Softmax 完整推导（标准 Attention 物化 S/P 两个 N×N 矩阵带来 O(N²) IO，FA 不物化、在 SRAM 分块完成 softmax，IO 降到 O(Nd)）
+1. **FlashAttention 算法**：Tiling + Online Softmax 完整推导（标准 Attention 物化 S/P 两个 N×N 矩阵带来 $O(N^2)$ IO，FA 不物化、在 SRAM 分块完成 softmax，IO 降到 O(Nd)）
 2. **手写完整 FlashAttention CUDA kernel**：支持 batch、multi-head、不同 seq_len
 3. **FlashAttention-2 改进**：减少非 matmul FLOPs、更好的 work partitioning
 4. **性能对比**：标准 Attention vs 手写 FA vs 官方 FA
@@ -268,7 +268,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 >
 > **A**：softmax 是 element-wise + reduction，每元素读 1 次写 1 次（8 bytes）只做 ~3 次运算，AI ≈ 0.375，远低于 Ridge Point（~58.45），纯 memory-bound。
 >
-> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 O(N²) 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 O(N²) 降到 O(Nd)。Week 4 Day 4 的 Triton FA 预估对 naive attention 加速 2.79x（N=512）→ 8.05x（N=2048），N 越大 O(N²) IO 惩罚越重，FA 优势越明显。
+> 标准 Attention 里 softmax 还要物化 N×N 的 P 矩阵到 HBM，带来 $O(N^2)$ 读写。优化方向是 FlashAttention——不物化 S/P，在 SRAM 中分块完成 online softmax，把 IO 从 $O(N^2)$ 降到 O(Nd)。Week 4 Day 4 的 Triton FA 预估对 naive attention 加速 2.79x（N=512）→ 8.05x（N=2048），N 越大 $O(N^2)$ IO 惩罚越重，FA 优势越明显。
 >
 > 用 ncu 验证：softmax kernel `dram__throughput` 85%+ ≫ SM 占用，符合 memory-bound 判定。
 
@@ -294,7 +294,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 Week 5 我们将深入 **FlashAttention 专题**。为了做好准备，请确保你掌握了：
 
 1. **Online Softmax 三公式**（Day 2 扩展实验 + Day 4 Triton FA）：$m_{\text{new}} = \max(m_{\text{old}}, m_{ij})$、$\alpha = \exp(m_{\text{old}} - m_{\text{new}})$、$l_{\text{new}} = \alpha \cdot l_{\text{old}} + \sum p$——FlashAttention 的算法核心
-2. **标准 Attention 的 O(N²) IO 动机**（Day 4/5 benchmark）：naive attention 物化 S/P 两个 N×N 矩阵，N 越大越慢——不理解这个动机就无法理解 FA 的设计
+2. **标准 Attention 的 $O(N^2)$ IO 动机**（Day 4/5 benchmark）：naive attention 物化 S/P 两个 N×N 矩阵，N 越大越慢——不理解这个动机就无法理解 FA 的设计
 3. **Warp Shuffle / 两级 block reduce**（Day 2）：FA 分块 reduce 的基础
 4. **Triton `tl.dot` + online softmax**（Day 4）：Week 5 会同时给 CUDA 和 Triton 两个实现
 5. **GEMM Backward 数据流**（Day 3）：`dA=dC@B^T`、`dB=A^T@dC`，FA Backward 的直接前置
@@ -325,7 +325,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 3. **手写算子三件套**：safe softmax 三遍扫描（Day 2）、Welford 单 pass LayerNorm（Day 3）、kernel fusion 省中间张量（Day 3）
 4. **Triton 主线**：program 模型 + 四大原语 + autotune（Day 4）→ 三方 benchmark 预估 GEMM 达 cuBLAS 97.5%、FA 达官方 80-90%（Day 5）→ ncu 解释 Triton 快在哪（Tensor Core 68% vs 0%、occupancy 58% vs ~45%）（Day 6）
 5. **选型决策表**：Triton 是"80% 性能 + 20% 代码量"的甜区，极致性能 / 新硬件指令 / grid 级同步才用 CUDA
-6. **Week 5 衔接**：online softmax + O(N²) IO 动机 + GEMM Backward 已全部铺好，FlashAttention 专题只欠完整实现
+6. **Week 5 衔接**：online softmax + $O(N^2)$ IO 动机 + GEMM Backward 已全部铺好，FlashAttention 专题只欠完整实现
 
 如果你能清晰回答"Transformer 各算子是 compute-bound 还是 memory-bound，为什么，该用 Triton 还是 CUDA 优化"，说明 Week 4 过关了。
 
@@ -362,7 +362,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 <details>
 <summary>点击查看答案</summary>
 
- - **不能合并的原因**：第二次 reduce（方差）依赖第一次的结果（均值），`σ² = mean((x-μ)²)` 必须先知道 μ
+ - **不能合并的原因**：第二次 reduce（方差）依赖第一次的结果（均值），$\sigma^2 = \text{mean}((x-\mu)^2)$ 必须先知道 μ
  - **Welford 解决方案**：递推公式 `delta = x - mean; mean += delta/count; M2 += delta*(x-mean)` 一次遍历同时更新 mean 和 M2
  - **并行化**：每线程/分块做局部 Welford，用合并公式 $M2 = M2_a + M2_b + \delta^2 \cdot \text{count}_a \cdot \text{count}_b / \text{count}$ 归并
   - **收益**：HBM 读写从 3 读 + 1 写降到 1 读 + 1 写，理论加速 ~2x（实测待回填）；且无大数相减，数值比朴素单遍更稳定
@@ -482,7 +482,7 @@ aiinfra/daily/week4/
 - [ ] Day 6 能用 ncu 数据（Tensor Core 利用率 / occupancy / DRAM）解释 Triton 与手写 CUDA 的性能差
 - [ ] 限时手撕通过：Softmax 20min、LayerNorm 30min，误差 < 1e-5
 - [ ] 能口述本周 10 道面试题的答案要点
-- [ ] 理解 Week 5 FlashAttention 如何用 online softmax + tiling 消除标准 Attention 的 O(N²) IO
+- [ ] 理解 Week 5 FlashAttention 如何用 online softmax + tiling 消除标准 Attention 的 $O(N^2)$ IO
 
 ---
 

@@ -332,7 +332,7 @@ print(prof.key_averages().table(sort_by='cuda_memory_usage', row_limit=5))
 |------|------|---------|------|
 | [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 简单 | 一次遍历 / DP | [题解](https://hzchenxiaobin.github.io/leetcode/problems/121_买卖股票的最佳时机.html) |
 | [55. 跳跃游戏](https://leetcode.cn/problems/jump-game/) | 中等 | 贪心维护最远可达 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/55_跳跃游戏.html) |
-| [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/) | 中等 | 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏 II.html) |
+| [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/) | 中等 | 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/45_跳跃游戏%20II.html) |
 | [763. 划分字母区间](https://leetcode.cn/problems/partition-labels/) | 中等 | 最后出现位置 + 贪心 | [题解](https://hzchenxiaobin.github.io/leetcode/problems/763_划分字母区间.html) |
 | [621. 任务调度器](https://leetcode.cn/problems/task-scheduler/) | 中等 | 贪心（最大频数公式） | [题解](https://hzchenxiaobin.github.io/leetcode/problems/621_任务调度器.html) |
 
