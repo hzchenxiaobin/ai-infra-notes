@@ -21,11 +21,11 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | 分布式推理 —— 为什么需要分布式 + TP + DP 定位 | [day1/](day1/README.md) |
-| Day 2 | Pipeline Parallelism 与 DP —— 1F1B/bubble ratio/数据并行 | [day2/](day2/README.md) |
-| Day 3 | NCCL Collectives —— all-reduce/all-gather/reduce-scatter 通信量 | [day3/](day3/README.md) |
-| Day 4 | 通信计算重叠 —— 双 Stream + CUDA Graph Overlap | [day4/](day4/README.md) |
-| Day 5 | Ring Attention + MoE + EP 并行专题 | [day5/](day5/README.md) |
-| Day 6 | 多硬件对比：NVIDIA CUDA vs Ascend CANN | [day6/](day6/README.md) |
-| Day 7 | 复盘与面试 Q&A —— 分布式/MoE/多硬件 | [day7/](day7/README.md) |
+| Day 1 | 分布式推理 —— 为什么需要分布式 + TP + DP 定位 | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day1.html) |
+| Day 2 | Pipeline Parallelism 与 DP —— 1F1B/bubble ratio/数据并行 | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day2.html) |
+| Day 3 | NCCL Collectives —— all-reduce/all-gather/reduce-scatter 通信量 | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day3.html) |
+| Day 4 | 通信计算重叠 —— 双 Stream + CUDA Graph Overlap | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day4.html) |
+| Day 5 | Ring Attention + MoE + EP 并行专题 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day5.html) |
+| Day 6 | 多硬件对比：NVIDIA CUDA vs Ascend CANN | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day6.html) |
+| Day 7 | 复盘与面试 Q&A —— 分布式/MoE/多硬件 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day7.html) |
 

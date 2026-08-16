@@ -29,7 +29,7 @@ PyTorch 原生算子的问题：
 
 | 维度 | PyTorch 原生 | 自定义 Kernel |
 |------|-------------|--------------|
-| FlashAttention | QK^T 物化到 HBM | **分块 tiling，中间结果留在 SRAM** |
+| FlashAttention | $QK^\top$ 物化到 HBM | **分块 tiling，中间结果留在 SRAM** |
 | Softmax + Attention | 2 个 kernel | **1 个融合 kernel** |
 | LayerNorm | 3 趟（mean→var→norm） | **1 趟融合** |
 | KV Cache 支持 | 需手动拼接 | **直接写入 cache 位置** |
@@ -330,7 +330,7 @@ python kernels/custom_ops_module.py
 
 #### 实验 1：实现算子融合（Softmax + Scale + MatMul）
 
-当前 attention 分 3 步：`scores = QK^T` → `scores *= scale` → `attn = softmax(scores)` → `out = attn·V`。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
+当前 attention 分 3 步：`scores = QK^T` → `scores *= scale` → `attn = softmax(scores)` → $\text{out} = \text{attn} \cdot V$。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
 
 > 思考：融合后精度会变化吗？（提示：不会，融合只是减少中间结果的存储，计算逻辑不变。但减少 HBM 往返可能改善数值稳定性——中间结果不经过 FP32→HBM→FP32 的精度损失。）
 
@@ -434,7 +434,7 @@ Day 1 我们把 Week 2-4 手写的自定义 Kernel 通过 PyTorch C++ Extension 
  2. **减少 HBM 往返**：中间结果留在 register/shared memory，不写回 HBM
  3. **减少显存占用**：不物化中间结果
  - **典型例子**：
- - FlashAttention：QK^T + Softmax + MatMul 融合为 1 个 kernel
+  - FlashAttention：$QK^\top$ + Softmax + MatMul 融合为 1 个 kernel
  - Fused LayerNorm：mean + var + normalize 融合为 1 趟
  - Fused Softmax + CrossEntropy：减少一次 HBM 往返
 

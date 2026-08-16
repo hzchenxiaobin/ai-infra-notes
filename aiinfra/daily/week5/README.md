@@ -21,11 +21,11 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | FlashAttention CUDA 实现（简化版）+ Attention IO 分析 | [day1/](day1/README.md) |
-| Day 2 | FlashAttention 论文精读与 Online Softmax 推导 | [day2/](day2/README.md) |
-| Day 3 | 手写完整 FlashAttention Forward Kernel | [day3/](day3/README.md) |
-| Day 4 | FlashAttention Backward 与 GEMM Backward | [day4/](day4/README.md) |
-| Day 5 | 性能对比分析 —— 标准 vs 手写 vs 官方 + FA 集成 | [day5/](day5/README.md) |
-| Day 6 | FlashAttention-2 论文与源码差异 + 官方源码 + IO 方法论 | [day6/](day6/README.md) |
-| Day 7 | 复盘与手撕 —— FlashAttention 限时手写与面试 Q&A | [day7/](day7/README.md) |
+| Day 1 | FlashAttention CUDA 实现（简化版）+ Attention IO 分析 | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day1.html) |
+| Day 2 | FlashAttention 论文精读与 Online Softmax 推导 | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day2.html) |
+| Day 3 | 手写完整 FlashAttention Forward Kernel | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day3.html) |
+| Day 4 | FlashAttention Backward 与 GEMM Backward | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day4.html) |
+| Day 5 | 性能对比分析 —— 标准 vs 手写 vs 官方 + FA 集成 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day5.html) |
+| Day 6 | FlashAttention-2 论文与源码差异 + 官方源码 + IO 方法论 | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day6.html) |
+| Day 7 | 复盘与手撕 —— FlashAttention 限时手写与面试 Q&A | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week5/day7.html) |
 

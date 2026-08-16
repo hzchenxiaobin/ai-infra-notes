@@ -144,7 +144,7 @@ Peak FP32 (FLOPS) = CUDA Cores × Clock × 2
 21,760 × 2.407 × 2 ≈ 104,752.64 GFLOPS ≈ 104.75 TFLOPS
 ```
 
-> 与 RTX 5090 官方标称 ~104.8 TFLOPS 一致。详细推导见 [Day 3 实测数据](../day3/exercise/my_gpu_info.md)。
+> 与 RTX 5090 官方标称 ~104.8 TFLOPS 一致。详细推导见 [Day 3 实测数据](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)。
 
 需要注意：
 

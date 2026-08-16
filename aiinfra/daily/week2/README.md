@@ -21,10 +21,10 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | Warp Shuffle 原语与 Warp/Block Reduce | [day1/](day1/README.md) |
-| Day 2 | Register Blocking 与 2D Tiling | [day2/](day2/README.md) |
-| Day 3 | float4 向量化 + GEMM 七层路径（前四层） | [day3/](day3/README.md) |
-| Day 4 | GEMM 七层路径（后三层）+ cuBLAS 对比 | [day4/](day4/README.md) |
-| Day 5 | CUDA Streams 与异步执行 | [day5/](day5/README.md) |
-| Day 6 | Nsight Compute 性能分析 | [day6/](day6/README.md) |
-| Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [day7/](day7/README.md) |
+| Day 1 | Warp Shuffle 原语与 Warp/Block Reduce | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day1.html) |
+| Day 2 | Register Blocking 与 2D Tiling | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day2.html) |
+| Day 3 | float4 向量化 + GEMM 七层路径（前四层） | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day3.html) |
+| Day 4 | GEMM 七层路径（后三层）+ cuBLAS 对比 | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day4.html) |
+| Day 5 | CUDA Streams 与异步执行 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day5.html) |
+| Day 6 | Nsight Compute 性能分析 | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day6.html) |
+| Day 7 | 限时 Kernel 手撕 + GitHub 整理 + 性能对比报告 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week2/day7.html) |

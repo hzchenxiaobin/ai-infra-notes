@@ -46,7 +46,7 @@ Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4
  问题：当 xi = 1000 时，exp(1000) = Inf，结果全 NaN
 ```
 
-FP16 的最大值只有 ~65504，而 `exp(11) ≈ 60000` 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
+FP16 的最大值只有 ~65504，而 $\exp(11) \approx 60000$ 已经接近溢出边界。在混合精度训练中，logits 一旦未归一化，朴素 softmax 立刻爆 NaN。
 
 **Safe Softmax（减去 max）**：
 
@@ -94,7 +94,7 @@ exp(xi - m) / Σ exp(xj - m)
  Step 3: 所有线程协作做归一化写出
 ```
 
-**为什么一个 block 处理一行？** 因为 softmax 的归一化分母 `Σ exp(xj - m)` 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
+**为什么一个 block 处理一行？** 因为 softmax 的归一化分母 $\sum \exp(x_j - m)$ 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
 
 ##### 两级 Block Reduce 的结构（复用 Week 2 Day 1）
 
@@ -139,7 +139,7 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 
 ##### 为什么 Softmax 是 memory-bound？
 
-Safe softmax `y_i = exp(x_i - m) / Σ exp(x_j - m)` 对每个元素只做约 3 次浮点运算，但要读写完整的 4-byte 数据。以 FP32、单行 D 个元素为例：
+Safe softmax $y_i = \exp(x_i - m) / \sum \exp(x_j - m)$ 对每个元素只做约 3 次浮点运算，但要读写完整的 4-byte 数据。以 FP32、单行 D 个元素为例：
 
 **理论口径（读 1 次写 1 次，算法下界）**：
 
@@ -159,7 +159,7 @@ AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
 远低于 Ridge Point（~58.45）→ 纯 memory-bound
 ```
 
-这就是表格中 `AI ≈ 0.375` 的来源——它代表 softmax **算法本身的理论下界**（假设无冗余读）。
+这就是表格中 $\text{AI} \approx 0.375$ 的来源——它代表 softmax **算法本身的理论下界**（假设无冗余读）。
 
 **三遍扫描实际口径（读 3 次写 1 次）**：
 
@@ -202,8 +202,8 @@ AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
 
 LayerNorm 需要**两次 reduce**：
 
-1. 第一次：求 `μ = mean(x)` → reduce sum，然后除以 D
-2. 第二次：求 `σ² = mean((x - μ)²)` → reduce sum of squares，然后除以 D
+1. 第一次：求 $\mu = \text{mean}(x)$ → reduce sum，然后除以 D
+2. 第二次：求 $\sigma^2 = \text{mean}((x - \mu)^2)$ → reduce sum of squares，然后除以 D
 
 ```
 Step 1: 所有线程协作求 sum(x) → μ = sum / N
@@ -211,7 +211,7 @@ Step 2: 所有线程协作求 sum((x - μ)²) → σ² = sumSq / N
 Step 3: 所有线程协作做归一化: y = (x - μ) / sqrt(σ² + ε) * γ + β
 ```
 
-> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这使得 LayerNorm 无法像 Softmax 那样用简单的 online 公式把两遍 reduce 压成一遍——Softmax 的 running max/sum 重整只需一次 `exp(m_old - m_new)` 修正，而 LayerNorm 的 mean/variance 合并需要更复杂的 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
+> ⚠️ **注意：两次 reduce 不能合并**。第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算方差。这使得 LayerNorm 无法像 Softmax 那样用简单的 online 公式把两遍 reduce 压成一遍——Softmax 的 running max/sum 重整只需一次 $\exp(m_{\text{old}} - m_{\text{new}})$ 修正，而 LayerNorm 的 mean/variance 合并需要更复杂的 Welford 在线算法（Day 3 源码分析会讲 FasterTransformer 怎么压成一次）。
 >
 > 💡 **关于读次数的澄清**：本文档的默认实现里，Softmax（三遍扫描）和 LayerNorm（两次 reduce + 输出）都是从 HBM 读 3 次，二者相等。"多一次"只在拿 online Softmax（2 次读）去比 naive LayerNorm（3 次读）时才成立，那是**不同优化层级之间的错位比较**。各自做合并优化后——Softmax 用 online、LayerNorm 用 Welford——都降到 2 次读，依然对齐。数据依赖影响的是**合并的难度与算法选择**，而非**读次数的下界**。
 
@@ -497,7 +497,7 @@ const int D = 4096; // 从 1024 改成 4096
 ```
 
 **思考问题**：D 翻倍时，kernel 时间应该接近翻倍还是 4 倍？为什么？
-> 提示：D 决定了每行的 HBM 读写量（`2D × 4B`），三遍扫描使总读量约 `3D`。时间是线性的，因为 memory-bound kernel 的耗时≈ `Bytes / Bandwidth`，与 D 成正比。reduce 次数不变（仍是 warp shuffle 的固定 5 步）。
+> 提示：D 决定了每行的 HBM 读写量（$2D \times 4B$），三遍扫描使总读量约 `3D`。时间是线性的，因为 memory-bound kernel 的耗时≈ `Bytes / Bandwidth`，与 D 成正比。reduce 次数不变（仍是 warp shuffle 的固定 5 步）。
 
 #### 实验 2：实现 Online Softmax（两遍扫描）
 
@@ -513,7 +513,7 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 对比三遍扫描的 HBM 读次数（3D → 2D）和实测时间。
 
 **思考问题**：online 版本为什么能减少一次 HBM 读？它的代价是什么？
-> 提示：online 版本在遍历中实时"重整"已累积的 sum（乘 `exp(m_old - m_new)`），代价是每个元素多一次 exp 和乘法——用少量额外计算换一次全局访存，对 memory-bound 算子是划算的。这正是 FlashAttention 的基石。
+> 提示：online 版本在遍历中实时"重整"已累积的 sum（乘 $\exp(m_{\text{old}} - m_{\text{new}})$），代价是每个元素多一次 exp 和乘法——用少量额外计算换一次全局访存，对 memory-bound 算子是划算的。这正是 FlashAttention 的基石。
 
 #### 实验 3：LayerNorm 用 Welford 合并成一次 reduce
 
@@ -566,10 +566,10 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 <details>
 <summary>点击查看答案</summary>
 
- - **数值稳定性**：`exp(1000) = Inf`，直接算 `exp(xi)/Σexp(xj)` 会溢出。减去 max 后 `exp(xi - m) ≤ 1`，不会溢出
+ - **数值稳定性**：$\exp(1000) = \text{Inf}$，直接算 $\exp(x_i)/\sum\exp(x_j)$ 会溢出。减去 max 后 $\exp(x_i - m) \le 1$，不会溢出
  - **数学等价性**：$\exp(x_i - m) / \sum \exp(x_j - m) = \exp(x_i) \cdot \exp(-m) / (\sum \exp(x_j)) \cdot \exp(-m) = \exp(x_i) / \sum \exp(x_j)$，结果完全一致
  - **不减的后果**：当输入有较大值（如未归一化的 logits），exp 立即溢出为 Inf/NaN
- - **实际场景**：FP16 下更易溢出（max ≈ 65504，`exp(11) ≈ 60000`），所以混合精度训练中 softmax 必须用 FP32 做 reduce
+ - **实际场景**：FP16 下更易溢出（max ≈ 65504，$\exp(11) \approx 60000$），所以混合精度训练中 softmax 必须用 FP32 做 reduce
 
 </details>
 
@@ -579,8 +579,8 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 <details>
 <summary>点击查看答案</summary>
 
- - **两次 reduce**：① `μ = mean(x)` → reduce sum 后除 D ② `σ² = mean((x - μ)²)` → reduce sum of squares 后除 D
- - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 `(x - μ)²`，存在强数据依赖
+ - **两次 reduce**：① $\mu = \text{mean}(x)$ → reduce sum 后除 D ② $\sigma^2 = \text{mean}((x - \mu)^2)$ → reduce sum of squares 后除 D
+ - **不能合并的原因**：第二次 reduce 依赖第一次的结果（μ），必须先算完均值才能算 $(x - \mu)^2$，存在强数据依赖
  - **并行策略**：一行一个 block，block 内用 warp shuffle + shared memory 做两级 reduce
  - **Welford 例外**：用在线算法可把两次合并成一次遍历（Day 3 的 FasterTransformer 做法），但合并多个线程的 Welford 统计量较复杂
 
@@ -623,7 +623,7 @@ Day 2 我们把 Week 2 的 Warp Shuffle 原语组装成了两个完整的 Transf
 <details>
 <summary>点击查看答案</summary>
 
- - **FP16 溢出风险**：FP16 max ≈ 65504，`exp(x)` 在 x > 11 时就接近溢出（`exp(11) ≈ 60000`）
+ - **FP16 溢出风险**：FP16 max ≈ 65504，$\exp(x)$ 在 x > 11 时就接近溢出（$\exp(11) \approx 60000$）
  - **累加精度**：FP16 尾数只有 10 位（约 3 位有效十进制），多次累加 exp 值会丢失精度
  - **标准做法**：输入 FP16 → cast 到 FP32 做 reduce（max/sum/mean/variance）→ cast 回 FP16 输出
  - **本日代码**：全程 FP32（教学清晰），Day 3 会看到 PyTorch/FT 的 FP16→FP32→FP16 混合精度路径

@@ -258,7 +258,7 @@ python kernels/tp_inference_demo.py
 
 #### 任务 3：通信重叠编码（见 Day 4）
 
-双 CUDA Stream 通信-计算重叠的完整编码任务（`torch.cuda.Stream` + `wait_stream` + nsys 验证、TP 层内前半/后半 GEMM 切分、CUDA Graph 捕获双流序列）已归入 [Day 4](../day4/README.md)，此处不再重复布置。本目录的 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py) 仍可独立运行（需 CUDA 环境），作为 Day 4 的先修 demo 参考。
+双 CUDA Stream 通信-计算重叠的完整编码任务（`torch.cuda.Stream` + `wait_stream` + nsys 验证、TP 层内前半/后半 GEMM 切分、CUDA Graph 捕获双流序列）已归入 [Day 4](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day4.html)，此处不再重复布置。本目录的 [kernels/comm_overlap_demo.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week9/day1/kernels/comm_overlap_demo.py) 仍可独立运行（需 CUDA 环境），作为 Day 4 的先修 demo 参考。
 
 #### 任务 4：LeetGPU 在线题目 —— Matrix Copy
 

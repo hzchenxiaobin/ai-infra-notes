@@ -6,13 +6,13 @@
 
 | 天数 | 主题 | 对应文件 | 核心代码 |
 |------|------|---------|---------|
-| Day 1 | GPU 执行模型与 kernel launch | [day1/notes/day1_hello_gpu.md](../day1/notes/day1_hello_gpu.md) | `kernels/hello_gpu.cu` |
-| Day 2 | Occupancy 与寄存器约束 | [day2/notes/day2_occupancy.md](../day2/notes/day2_occupancy.md) | `kernels/occupancy_test.cu` |
-| Day 3 | 设备属性与 Occupancy Calculator | [day3/notes/day3_device_query.md](../day3/notes/day3_device_query.md) | `deviceQuery` / `occupancyCalculator` |
-| Day 4 | Memory Hierarchy 与矩阵转置 | [day4/notes/day4_transpose.md](../day4/notes/day4_transpose.md) | `kernels/transpose.cu` |
-| Day 5 | Bank Conflict 分析 | [day5/notes/day5_bank_conflict.md](../day5/notes/day5_bank_conflict.md) | `kernels/bank_conflict.cu` |
-| Day 6 | Nsight 综合 Profiling 实战 | [day6/notes/day6_nsight_profiling.md](../day6/notes/day6_nsight_profiling.md) | 全部 kernel |
-| Day 7 | 总结与复盘 | [day7/notes/day7_summary.md](../day7/notes/day7_summary.md) | - |
+| Day 1 | GPU 执行模型与 kernel launch | [day1/notes/day1_hello_gpu.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day1_hello_gpu.md) | `kernels/hello_gpu.cu` |
+| Day 2 | Occupancy 与寄存器约束 | [day2/notes/day2_occupancy.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day2_occupancy.md) | `kernels/occupancy_test.cu` |
+| Day 3 | 设备属性与 Occupancy Calculator | [day3/notes/day3_device_query.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day3_device_query.md) | `deviceQuery` / `occupancyCalculator` |
+| Day 4 | Memory Hierarchy 与矩阵转置 | [day4/notes/day4_transpose.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day4_transpose.md) | `kernels/transpose.cu` |
+| Day 5 | Bank Conflict 分析 | [day5/notes/day5_bank_conflict.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day5_bank_conflict.md) | `kernels/bank_conflict.cu` |
+| Day 6 | Nsight 综合 Profiling 实战 | [day6/notes/day6_nsight_profiling.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day6_nsight_profiling.md) | 全部 kernel |
+| Day 7 | 总结与复盘 | [day7/notes/day7_summary.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day7_summary.md) | - |
 
 ---
 
@@ -37,7 +37,7 @@
 | Nsight Compute 版本 | ncu 2024.x |
 | Nsight Systems 版本 | nsys 2024.x |
 
-> 详见 [day3/exercise/my_gpu_info.md](../day3/exercise/my_gpu_info.md) 的 deviceQuery 实测输出。
+> 详见 [day3/exercise/my_gpu_info.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md) 的 deviceQuery 实测输出。
 
 ---
 
@@ -60,19 +60,19 @@
 
 ### 1. hello_gpu
 
-- **对应命令**：见 [`day1/notes/day1_hello_gpu.md`](../day1/notes/day1_hello_gpu.md)
+- **对应命令**：见 [`day1/notes/day1_hello_gpu.md`](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day1_hello_gpu.md)
 - **关键指标**：
 - **分析**：
 
 ### 2. occupancy_test
 
-- **对应命令**：见 [`day2/notes/day2_occupancy.md`](../day2/notes/day2_occupancy.md)
+- **对应命令**：见 [`day2/notes/day2_occupancy.md`](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day2_occupancy.md)
 - **关键指标**：
 - **分析**：
 
 ### 3. transpose_naive vs transpose_optimized
 
-- **对应命令**：见 [`day4/notes/day4_transpose.md`](../day4/notes/day4_transpose.md)
+- **对应命令**：见 [`day4/notes/day4_transpose.md`](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day4_transpose.md)
 - **实测数据**（nsys, RTX 5090, 2026-08-04）：
 
 | 版本 | 执行时间 (ns) | 加速比 | 备注 |
@@ -84,7 +84,7 @@
 
 ### 4. conflict_read vs no_conflict_read
 
-- **对应命令**：见 [`day5/notes/day5_bank_conflict.md`](../day5/notes/day5_bank_conflict.md)
+- **对应命令**：见 [`day5/notes/day5_bank_conflict.md`](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day5_bank_conflict.md)
 - **实测数据**（nsys, RTX 5090, 2026-08-04）：
 
 | 版本 | 执行时间 (ns) | 加速比 | 备注 |

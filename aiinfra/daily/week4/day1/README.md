@@ -348,7 +348,7 @@ aten::softmax xxx us 5
 **参考答案要点**：
 - **Prefill**：输入是 `(B, N_prompt, d)`，N_prompt 可达数千。所有 GEMM 是大矩阵乘，计算量大，GPU SM 充分利用 → **Compute-bound**
 - **Decode**：输入是 `(B, 1, d)`，每次只生成 1 个 token。GEMM 退化为向量×矩阵（M=1），计算量极小，但每次都要读取整个 KV Cache（N 个历史 token） → **Memory-bound**
-- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 1 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）
+- **根本原因**：Decode 阶段计算强度（FLOP/Byte）极低。M=1 的 GEMM 每读 1 行 K/V 只做 d 次乘加，arithmetic intensity ≈ 1 FLOP/Byte，远低于 Ridge Point（~58.45，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）
 - **优化方向**：KV Cache（避免重算 K/V）、PagedAttention（减少 KV 显存碎片）、CUDA Graph（减少 launch overhead）、Continuous Batching（合并多个 decode 请求提高 M）
 
 **面试题2**：Transformer 单层包含哪些算子？哪些是 compute-bound，哪些是 memory-bound？（⭐⭐⭐ 高频）

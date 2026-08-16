@@ -139,7 +139,7 @@ MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而�
 > - **MQA 太激进**——显存最小但 perplexity 上升明显，现在只在 PaLM/Falcon 等早期模型见到。
 > - **MLA 是 DeepSeek 的创新**——不存完整 K/V，存一个低秩"潜在向量"（d_c ≪ n_head·d_head），attention 时用上投影矩阵现场解压。DeepSeek-V3 的 d_c=512+，KV Cache 比 MHA 小 ~10x 且精度持平，代价是 attention kernel 要做额外解压 GEMM。这是 2024-2026 推理优化面试的热门追问。
 >
-> **一般公式**（见 [key_numbers.md](../../reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
+> **一般公式**（见 [key_numbers.md](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/key_numbers.md)）：把 `n_kv_head` 换成变体实际值即可——GQA 用 `n_kv_head`，MQA 用 1，MLA 用 `d_c`（注意 MLA 存的是潜在向量，公式形态不同）。
 
 #### 2.3 分配策略：静态 vs 动态 vs PagedAttention
 

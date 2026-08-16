@@ -667,7 +667,7 @@ copy(gA_tile, sA);  // 64×64 → 64×64，OK
 <details>
 <summary>点击查看答案</summary>
 
-- Layout 是一个从逻辑坐标到物理偏移的纯函数：`offset = Σ coord[i] × stride[i]`
+- Layout 是一个从逻辑坐标到物理偏移的纯函数：$\text{offset} = \sum \text{coord}[i] \times \text{stride}[i]$
 - **Shape**：每个维度的元素个数（"有多少"）
 - **Stride**：沿该维度走一步的偏移量（"怎么跳"）
 - 两者解耦：同一个 Shape 可以搭配不同 Stride 形成不同布局（RowMajor vs ColMajor）

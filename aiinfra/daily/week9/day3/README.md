@@ -234,9 +234,9 @@ T_comm = 2 μs + 28.7 MB / 100 GB/s = 2 μs + 287 μs ≈ 289 μs
 ```
 
 > 💡 **关键洞察**：
-> - **大消息**（size >> α×BW）：$\alpha$ 可忽略，$T \approx \text{size}/\text{BW}$，带宽主导
-> - **小消息**（size << α×BW）：$T \approx \alpha$，延迟主导，此时用 tree all-reduce（步数 $\log N$）比 ring（步数 $2(N-1)$）快
-> - NVLink 4 的 α×BW ≈ 2μs × 450GB/s ≈ 900KB，所以 >1MB 的消息是带宽主导，<100KB 是延迟主导
+> - **大消息**（$\text{size} \gg \alpha \times \text{BW}$）：$\alpha$ 可忽略，$T \approx \text{size}/\text{BW}$，带宽主导
+> - **小消息**（$\text{size} \ll \alpha \times \text{BW}$）：$T \approx \alpha$，延迟主导，此时用 tree all-reduce（步数 $\log N$）比 ring（步数 $2(N-1)$）快
+> - NVLink 4 的 $\alpha \times \text{BW} \approx 2\,\mu\text{s} \times 450\,\text{GB/s} \approx 900\,\text{KB}$，所以 >1MB 的消息是带宽主导，<100KB 是延迟主导
 
 ##### 从通信量到通信时间
 

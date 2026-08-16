@@ -185,7 +185,7 @@ Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
 Ridge Point = Peak FLOP/s / Peak Bandwidth
 ```
 
-以 RTX 5090 为例（实测值，详见 [Day 3](../day3/exercise/my_gpu_info.md)）：
+以 RTX 5090 为例（实测值，详见 [Day 3](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)）：
 
 ```text
 Peak FP32 算力 ≈ 104.75 TFLOP/s
@@ -224,7 +224,7 @@ ncu --metrics \
 
 **Step 2：采集到的数据**
 
-执行时间来自仓库留档的 nsys 实测（[profiles/week1_profile_summary.md](../profiles/week1_profile_summary.md)，RTX 5090，2026-08-04）；bank conflict 计数因容器环境 Performance Counter 权限受限（ERR_NVGPUCTRPERM）未能实测，下表给出按 `grid(1,1) × block(32,8)` 估算的量级，有 GPU 权限时用上面的 ncu 命令实测回填：
+执行时间来自仓库留档的 nsys 实测（[profiles/week1_profile_summary.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/profiles/week1_profile_summary.html)，RTX 5090，2026-08-04）；bank conflict 计数因容器环境 Performance Counter 权限受限（ERR_NVGPUCTRPERM）未能实测，下表给出按 `grid(1,1) × block(32,8)` 估算的量级，有 GPU 权限时用上面的 ncu 命令实测回填：
 
 | Kernel | 执行时间（nsys 实测） | bank conflicts（load，估算） | 说明 |
 |--------|----------------------|------------------------------|------|
@@ -256,7 +256,7 @@ ncu --metrics \
 
 ### Coding 任务：本周 kernel profiling
 
-> 📄 本日任务的命令清单与 Roofline 记录表已留档在 [notes/day6_nsight_profiling.md](notes/day6_nsight_profiling.md)，可对照填写。
+> 📄 本日任务的命令清单与 Roofline 记录表已留档在 [notes/day6_nsight_profiling.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/day6_nsight_profiling.md)，可对照填写。
 
 #### 任务 1：profiling hello_gpu
 
@@ -393,7 +393,7 @@ ncu --set full -o profiles/day6_bank_conflict ./day5/kernels/bank_conflict
 - [ ] 能读取 Roofline 图并定位瓶颈类型
 - [ ] 能判断 kernel 是 memory-bound / compute-bound / latency-bound
 - [ ] 记录各 kernel 的 throughput 和 occupancy
-- [ ] 整理 profiling 结果到 [profiles/week1_profile_summary.md](../profiles/week1_profile_summary.md)
+- [ ] 整理 profiling 结果到 [profiles/week1_profile_summary.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/profiles/week1_profile_summary.html)
 
 ---
 

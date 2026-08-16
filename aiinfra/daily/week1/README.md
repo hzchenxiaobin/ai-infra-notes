@@ -21,10 +21,10 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | GPU 执行模型基础 | [day1/](day1/README.md) |
-| Day 2 | Occupancy 与资源约束 | [day2/](day2/README.md) |
-| Day 3 | 认识你的 GPU —— deviceQuery 与 Occupancy 计算 | [day3/](day3/README.md) |
-| Day 4 | Memory Hierarchy 深入 | [day4/](day4/README.md) |
-| Day 5 | Bank Conflict 分析与实践 | [day5/](day5/README.md) |
-| Day 6 | Nsight Profiling 实战 | [day6/](day6/README.md) |
-| Day 7 | 总结与复盘 | [day7/](day7/README.md) |
+| Day 1 | GPU 执行模型基础 | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day1.html) |
+| Day 2 | Occupancy 与资源约束 | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html) |
+| Day 3 | 认识你的 GPU —— deviceQuery 与 Occupancy 计算 | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day3.html) |
+| Day 4 | Memory Hierarchy 深入 | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day4.html) |
+| Day 5 | Bank Conflict 分析与实践 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day5.html) |
+| Day 6 | Nsight Profiling 实战 | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day6.html) |
+| Day 7 | 总结与复盘 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day7.html) |

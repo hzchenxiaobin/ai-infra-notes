@@ -93,7 +93,7 @@ Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
 
 **关键关系：Shared Memory 与 L1 Cache 共享同一块 SRAM**
 
-RTX 5090 每 SM 有 **100KB SRAM**（smem/L1 共享口径，见 [硬件参数事实源](../../reference/hardware_specs.md)），可通过 `cudaFuncSetAttribute` 配置 smem/L1 比例：
+RTX 5090 每 SM 有 **100KB SRAM**（smem/L1 共享口径，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)），可通过 `cudaFuncSetAttribute` 配置 smem/L1 比例：
 ```cuda
 // carveout 是百分比：100 = 尽量把 100KB SRAM 全划给 shared memory
 cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100);
@@ -168,7 +168,7 @@ cudaFuncSetAttribute(kernel, cudaFuncAttributePreferredSharedMemoryCarveout, 100
 
 #### 任务 1：完成 Week 1 学习笔记
 
-更新 [notes/week1_notes.md](../notes/week1_notes.md)，建议包含以下内容：
+更新 [notes/week1_notes.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/week1_notes.html)，建议包含以下内容：
 
 ~~~~markdown
 # Week 1 学习笔记
@@ -238,7 +238,7 @@ nsys profile -o ...
 - 与 SIMD 的区别：SIMT 允许 warp 内分支（warp divergence），但有分支的线程会被串行化；SIMD 通常不支持分支
 - **性能启示**：避免 warp divergence（if 条件让 warp 内线程走不同路径），block 大小取 32 的倍数
 
-参见 [Day 1](../day1/README.md)、[Day 2](../day2/README.md)。
+参见 [Day 1](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day1.html)、[Day 2](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html)。
 
 </details>
 
@@ -262,7 +262,7 @@ else { B分支 } // lane 16-31 走 B
 3. 把会发散的计算拆成多个 kernel，每个处理一个分支
 4. 实在无法避免时，让两条分支工作量尽量均衡
 
-参见 [Day 1](../day1/README.md)。
+参见 [Day 1](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day1.html)。
 
 </details>
 
@@ -284,7 +284,7 @@ else { B分支 } // lane 16-31 走 B
 - **盲目追求 100% 可能反而降性能**：为提 occupancy 而减少每线程寄存器，可能触发 register spilling（寄存器溢出到 local memory，延迟激增）
 - 经验法则：先保证不 spilling，再考虑 occupancy
 
-参见 [Day 2](../day2/README.md)。
+参见 [Day 2](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html)。
 
 </details>
 
@@ -312,7 +312,7 @@ A[threadIdx.x * N] // lane 0→A[0], lane 1→A[N], ...
 
 **矩阵存储顺序的影响**：行优先矩阵按行访问 coalesced，按列访问 stride → 这就是矩阵转置要先用 shared memory 的原因。
 
-参见 [Day 4](../day4/README.md)。
+参见 [Day 4](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day4.html)。
 
 </details>
 
@@ -344,7 +344,7 @@ __shared__ float tile[32][33]; // 列维度 +1 padding
 
 **注意**：padding 会浪费一点 shared memory，需评估是否影响 occupancy。对 16×16 方形 tile + block(16,16) 配置，warp 跨相邻两行且 broadcast，实际不触发 conflict（详见 [matmul 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-multiplication-solution.html) 的 bank conflict 分析）。
 
-参见 [Day 4](../day4/README.md)、[Day 5](../day5/README.md)。
+参见 [Day 4](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day4.html)、[Day 5](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day5.html)。
 
 </details>
 
@@ -379,7 +379,7 @@ Ridge Point = Peak FLOP/s / Peak Bandwidth （RTX 5090 ≈ 58.45 FLOP/Byte）
 2. 用 `ncu --metrics dram__throughput,sm__throughput` 看两个利用率
 3. 哪个高就是哪个 bound；都低则是 latency-bound
 
-参见 [Day 6](../day6/README.md)。
+参见 [Day 6](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day6.html)。
 
 </details>
 
@@ -405,7 +405,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 
 **误区**：不要一上来就 ncu——它的开销大，且如果选错了 kernel（不是瓶颈），分析再细也没用。先 nsys 定位，再 ncu 深挖。
 
-参见 [Day 6](../day6/README.md)。
+参见 [Day 6](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day6.html)。
 
 </details>
 
@@ -433,7 +433,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 
 **局限**：不考虑 cache 命中、latency-bound（两者都未达屋顶），是"上界估计"非精确预测。
 
-参见 [Day 6](../day6/README.md)。
+参见 [Day 6](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day6.html)。
 
 </details>
 
@@ -442,7 +442,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 <details>
 <summary>📖 显示答案</summary>
 
-在物理上，**Shared Memory 和 L1 Cache 共享同一块 SRAM**（RTX 5090 上每 SM 100KB，smem/L1 共享口径，用 `cudaFuncSetAttribute` 调配两者比例，见 [硬件参数事实源](../../reference/hardware_specs.md)）。
+在物理上，**Shared Memory 和 L1 Cache 共享同一块 SRAM**（RTX 5090 上每 SM 100KB，smem/L1 共享口径，用 `cudaFuncSetAttribute` 调配两者比例，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）。
 
 | 维度 | Shared Memory | L1 Cache |
 |------|--------------|----------|
@@ -457,7 +457,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 - 偶发的复用依赖 L1 cache（无需编程，但不保证命中）
 - 两者物理共享，配比要权衡（smem 多了 L1 小，反之亦然）
 
-参见 [Day 2](../day2/README.md)、[Day 5](../day5/README.md)。
+参见 [Day 2](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html)、[Day 5](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day5.html)。
 
 </details>
 
@@ -477,7 +477,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 
 **何时需要跨 block 同步**：用 cooperative groups（`cudaLaunchCooperativeKernel`）或拆成多个 kernel（用 global memory 传中间结果）。
 
-参见 [Day 1](../day1/README.md)、[Day 2](../day2/README.md)。
+参见 [Day 1](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day1.html)、[Day 2](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html)。
 
 </details>
 
@@ -488,7 +488,7 @@ nsys profile → 找 top3 耗时 kernel → ncu 分析这几个 kernel → 优�
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
+- [ ] 完成 [notes/week1_notes.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/week1_notes.html) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 
@@ -567,7 +567,7 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用两道**综合练习**把
 
 #### 练习提交记录
 
-提交后把通过截图和耗时记录到 [exercise/leetgpu_week1_review.md](exercise/leetgpu_week1_review.md)（仓库已提供模板），按下表格式整理：
+提交后把通过截图和耗时记录到 [exercise/leetgpu_week1_review.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/leetgpu_week1_review.md)（仓库已提供模板），按下表格式整理：
 
 | 题目 | 耗时 | GFLOPS / 带宽利用率 | 瓶颈类型 | 优化尝试 |
 |------|------|---------------------|---------|---------|
@@ -646,7 +646,7 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
 1. **知识地图**：把 SM、Warp、Occupancy、Coalescing、Bank Conflict、Profiling 连成网络
 2. **优化决策树**：建立了从 profiling 到优化的完整思路
-3. **学习笔记模板**：提供了 [week1_notes.md](../notes/week1_notes.md) 的结构
+3. **学习笔记模板**：提供了 [week1_notes.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/week1_notes.html) 的结构
 4. **面试准备框架**：概念 + 代码 + 表达三位一体
 5. **Week 2 衔接**：明确了还需要巩固的基础
 
@@ -752,7 +752,7 @@ week1/
 - [ ] 完成 4 个基础 CUDA kernel 编写与运行
 - [ ] 完成 1 个 bank conflict 对比实验
 - [ ] 生成 3+ Nsight Compute 报告
-- [ ] 完成 [notes/week1_notes.md](../notes/week1_notes.md) 学习笔记
+- [ ] 完成 [notes/week1_notes.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/week1_notes.html) 学习笔记
 - [ ] 能用自己的话解释：SM、Warp、Occupancy、Coalescing、Bank Conflict
 - [ ] 能使用 Nsight 定位 kernel 瓶颈类型
 

@@ -16,7 +16,7 @@
 
 ![Week 8 推理加速技术知识地图](../images/week8_inference_acceleration_map.svg)
 
-> 📊 图中 ROI 排序与量化/CUDA Graph 数字来源见 [Week 8 Day 6 §6.4](../day6/README.md)。
+> 📊 图中 ROI 排序与量化/CUDA Graph 数字来源见 [Week 8 Day 6 §6.4](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day6.html)。
 > 采样 kernel 的完整实现见 [Week 10 Day 6](../../week10/day6/)。
 
 ### 加速技术 ROI 总表

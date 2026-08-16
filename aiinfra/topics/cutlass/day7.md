@@ -259,7 +259,7 @@ CUTLASS 不是唯一的高性能 GPU 编程方案。Triton（OpenAI 开源的 Py
 <details>
 <summary>点击查看答案</summary>
 
-- Layout 是 `Coord → offset` 的纯函数：`offset = Σ coord[i] × stride[i]`
+- Layout 是 `Coord → offset` 的纯函数：$\text{offset} = \sum \text{coord}[i] \times \text{stride}[i]$
 - **Shape**：每维元素个数（"有多少"）
 - **Stride**：沿该维走一步的偏移量（"怎么跳"）
 - 两者解耦：同一 Shape + 不同 Stride = 不同布局（RowMajor vs ColMajor）

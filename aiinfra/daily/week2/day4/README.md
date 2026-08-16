@@ -170,7 +170,7 @@ __global__ void integrated_gemm_kernel(
 
 ##### 为什么 FMA 路线到 ~63% 后必须上 Tensor Core？
 
-手写整合版实测 43.1 TFLOPS，是 FP32 cuBLAS（68.2 TFLOPS）的 63.4%；FP32 理论峰值见 [硬件参数事实源](../../reference/hardware_specs.md)（104.75 TFLOPS），无论手写还是 cuBLAS，FMA 路线都被这条算力线封死。而 TF32 / FP16 Tensor Core 的 cuBLAS 实测达 89.1 / 209.8 TFLOPS——FMA 路线继续抠工程细节（swizzle、auto-tune）最多逼近 FP32 cuBLAS，数量级突破必须换 Tensor Core（Week 3）。
+手写整合版实测 43.1 TFLOPS，是 FP32 cuBLAS（68.2 TFLOPS）的 63.4%；FP32 理论峰值见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)（104.75 TFLOPS），无论手写还是 cuBLAS，FMA 路线都被这条算力线封死。而 TF32 / FP16 Tensor Core 的 cuBLAS 实测达 89.1 / 209.8 TFLOPS——FMA 路线继续抠工程细节（swizzle、auto-tune）最多逼近 FP32 cuBLAS，数量级突破必须换 Tensor Core（Week 3）。
 
 > 💡 **面试要点**：FMA GEMM 的本周实测天花板是 FP32 cuBLAS 的 ~63%（TF32 基准 ~49%）。突破靠 Tensor Core（Week 3 的 WMMA/mma.sync）。
 
@@ -354,7 +354,7 @@ ncu --set full --kernel-name regex:integrated_gemm \
    <summary>答案</summary>
 
    - 实测：手写 FMA 整合版达 FP32 cuBLAS 的 63.4%、TF32 cuBLAS 的 48.6%（4096³，RTX 5090）
-   - cuBLAS 三基准实测：FP32 68.2 / TF32 89.1 / FP16 209.8 TFLOPS；FP32 理论峰值 104.75 TFLOPS（见 [硬件参数事实源](../../reference/hardware_specs.md)）
+   - cuBLAS 三基准实测：FP32 68.2 / TF32 89.1 / FP16 209.8 TFLOPS；FP32 理论峰值 104.75 TFLOPS（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）
    - FMA 路线被 FP32 算力线封死：手写 43.1 TFLOPS，继续抠工程细节（swizzle、auto-tune）最多逼近 FP32 cuBLAS 的 68.2 TFLOPS
    - 突破的两条路：① CUTLASS 级 FMA 工程（`cp.async` + swizzle + auto-tune）→ 逼近 FP32 cuBLAS ② 用 Tensor Core（Week 3 WMMA/mma.sync）→ 90%+
 

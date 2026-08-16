@@ -73,7 +73,7 @@ $$\text{每卡发送量} = T \cdot K \cdot d \cdot \frac{D-1}{D} \approx T \cdot
 2. **Dispatch（all-to-all send）**：按 `topk_idx` 把 token 散到目标卡；发送 `[T, K, d]` 按 expert 所在卡分组，接收 `[T_recv, d]`（`T_recv ≈ T*K`，但每卡收的不均）
 3. **本地 Grouped GEMM（Day 3）**：对本卡的 `N/D` 个专家做 Grouped GEMM，得到 `y_local: [T_recv, N]`
 4. **Combine（all-to-all send 反向）**：把 `y_local` 散回原 token 所在的卡，接收 `[T, K, N]`（每 token 收到 K 个专家的输出）
-5. **加权 combine**：`y = Σ_k topk_scores[:, k] * y_recv[:, k, :]` → `[T, N]`
+5. **加权 combine**：$y = \sum_k \text{topk\_scores}[:, k] \cdot \text{y\_recv}[:, k, :]$ → `[T, N]`
 
 #### Dispatch 阶段的详细时序
 
@@ -557,7 +557,7 @@ for token in local_tokens:
 ### 面试题积累（本周目标 10-12 道，今日 3 道）
 
 **Q10：Expert Parallelism 的 all-to-all 通信时序是什么？为什么是 MoE 训练的主要通信开销？**
-> 答：时序：① 本地 Gating+Top-K 得到 `topk_idx`；② Dispatch——按 `topk_idx` 把 token 散到目标专家所在的卡（all-to-all send）；③ 本地 Grouped GEMM 计算本卡专家；④ Combine——把专家输出散回原卡（all-to-all 反向）；⑤ 加权 combine `y = Σ g_k * y_k`。通信量 = $2 \cdot T \cdot K \cdot (d+N) \cdot (D-1)/D$（dispatch + combine 双向）。是主要开销因为：① all-to-all 比 AllReduce 更复杂（每对卡都要通信）；② 细粒度专家（K=6）让每 token 通信目标多；③ 小 batch 时通信占比高（T=512 时通信占 75%）。DeepSeek-V2 用设受限路由（M=3）把通信目标从 O(K) 降到 O(M)，节省 50%。
+> 答：时序：① 本地 Gating+Top-K 得到 `topk_idx`；② Dispatch——按 `topk_idx` 把 token 散到目标专家所在的卡（all-to-all send）；③ 本地 Grouped GEMM 计算本卡专家；④ Combine——把专家输出散回原卡（all-to-all 反向）；⑤ 加权 combine $y = \sum g_k \cdot y_k$。通信量 = $2 \cdot T \cdot K \cdot (d+N) \cdot (D-1)/D$（dispatch + combine 双向）。是主要开销因为：① all-to-all 比 AllReduce 更复杂（每对卡都要通信）；② 细粒度专家（K=6）让每 token 通信目标多；③ 小 batch 时通信占比高（T=512 时通信占 75%）。DeepSeek-V2 用设受限路由（M=3）把通信目标从 O(K) 降到 O(M)，节省 50%。
 
 **Q11：设备受限路由（Device-Limited Routing）是什么？为什么 M=3 时性能几乎无损？**
 > 答：设受限路由：先选亲和力最高的 M 台设备（按设备上所有专家的 score 之和），再在其中做 Top-K。把每 token 通信目标从 O(K) 台降到 O(M) 台（DeepSeek-V2 M=3, K=6, D=8）。M=3 性能几乎无损的原因：① 细粒度专家（160 个）分散在 8 台设备上，每台 20 个专家——Top-6 选中的 6 个专家大概率集中在 2-3 台设备上（因为同设备的专家相关性高）；② M=3 基本覆盖了"自然选中的设备"，强制限制只多丢弃极少数边缘情况；③ M<3 时才开始限制有效专家选择空间，掉性能。论文实验 M≥3 时与无限制 Top-K 持平。

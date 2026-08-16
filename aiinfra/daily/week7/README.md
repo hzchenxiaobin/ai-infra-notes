@@ -21,11 +21,11 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | Continuous Batching（含 Dynamic Batching） | [day1/](day1/README.md) |
-| Day 2 | vLLM Scheduler 源码分析 | [day2/](day2/README.md) |
-| Day 3 | TensorRT-LLM / LightLLM / SGLang 调度对比 | [day3/](day3/README.md) |
-| Day 4 | Chunked Prefill 与 Prefix Caching 实操 | [day4/](day4/README.md) |
-| Day 5 | Mini 推理引擎 v1（多请求并发） | [day5/](day5/README.md) |
-| Day 6 | Prefill/Decode 分离推理（PD Disaggregated） | [day6/](day6/README.md) |
-| Day 7 | 调度优化策略总结 | [day7/](day7/README.md) |
+| Day 1 | Continuous Batching（含 Dynamic Batching） | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day1.html) |
+| Day 2 | vLLM Scheduler 源码分析 | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day2.html) |
+| Day 3 | TensorRT-LLM / LightLLM / SGLang 调度对比 | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day3.html) |
+| Day 4 | Chunked Prefill 与 Prefix Caching 实操 | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day4.html) |
+| Day 5 | Mini 推理引擎 v1（多请求并发） | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day5.html) |
+| Day 6 | Prefill/Decode 分离推理（PD Disaggregated） | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day6.html) |
+| Day 7 | 调度优化策略总结 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week7/day7.html) |
 

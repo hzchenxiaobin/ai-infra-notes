@@ -45,7 +45,7 @@ GPU 的峰值算力增长非常快，但显存带宽增长相对缓慢。这导�
 | 操作类型 | 例子 | 数学表达 |
 |---------|------|---------|
 | 向量加法 | `C[i] = A[i] + B[i]` | `c_i = a_i + b_i` |
-| 标量乘法 | `C[i] = alpha * A[i]` | `c_i = α · a_i` |
+| 标量乘法 | `C[i] = alpha * A[i]` | $c_i = \alpha \cdot a_i$ |
 | 激活函数 | `C[i] = relu(A[i])` | `c_i = max(0, a_i)` |
 | LayerNorm | $C_i = (A_i - \mu) / \sqrt{\text{var}}$ | 逐元素归一化 |
 | Softmax（分母除外） | `C[i] = exp(A[i]) / sum` | 逐元素 exp 后归一化 |
@@ -65,7 +65,7 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 - 当 `AI < Ridge Point` 时 → **Memory-Bound**（算力富余，数据喂不饱）
 - 当 `AI > Ridge Point` 时 → **Compute-Bound**（数据充足，算力是瓶颈）
 
-以 RTX 5090 为例（实测值，详见 [Day 3](../day3/exercise/my_gpu_info.md)）：
+以 RTX 5090 为例（实测值，详见 [Day 3](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)）：
 - Peak FP32 算力：104.75 TFLOP/s
 - Peak 显存带宽：1.792 TB/s（GDDR7）
 - **Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte**
@@ -100,7 +100,7 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 计算强度 AI = 137 GFLOP / 192 MB ≈ 715 FLOP/Byte
 ```
 
-GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](../../reference/hardware_specs.md)），所以 GEMM 是 **compute-bound**。
+GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)），所以 GEMM 是 **compute-bound**。
 
 ##### 直观对比表
 
@@ -111,7 +111,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](..
 | LayerNorm | ~5 | 8（读 4 + 写 4） | ~0.63 | **Memory** |
 | GEMM (4096³) | ~137G | ~192M | ~715 | **Compute** |
 
-> 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 RTX 5090 需要做 58+ 次运算才能不吃亏（Ridge Point 58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
+> 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 RTX 5090 需要做 58+ 次运算才能不吃亏（Ridge Point 58.45，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
 
 ![Element-wise 操作为什么是纯 Memory-Bound](../images/element_wise_memory_bound.svg)
 

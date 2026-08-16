@@ -38,7 +38,7 @@ Decode 阶段（M=1）：
 | 瓶颈类型 | compute-bound | memory-bound | 算力闲置 + 带宽不足 |
 | KV 序列越长 | 计算变多（正常） | **串行扫描变慢** | 越长越浪费 |
 
-**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 170 个 SM 里 169 个在干等**（SM 数见 [硬件参数事实源](../../reference/hardware_specs.md)）。
+**核心矛盾**：FlashAttention 的并行维度是 **Q tile（行方向）**——Prefill 时 Q 有 N 行可以切；Decode 时 Q 只有 1 行，切不了。KV sequence 再长，也只有一个 block 串行扫描——**GPU 的 170 个 SM 里 169 个在干等**（SM 数见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）。
 
 > 💡 **一句话总结**：Decode 慢不仅因为 memory-bound（M=1 算术强度低），还因为**并行度不足**——FlashAttention 的 Q-tile 并行在 M=1 时失效，KV sequence 再长也只能串行。FlashDecoding 的破局思路：**Q 切不了，那就切 KV**。
 

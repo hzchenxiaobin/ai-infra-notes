@@ -138,7 +138,7 @@ float t_per_call = ms / N; // 单次毫秒
 |------|------|------|
 | **单次耗时** | `t = ms / N`（毫秒） | 所有 kernel |
 | **内存带宽** | `BW = (R+W bytes) / t / 1e9`（GB/s） | memory-bound（copy、elementwise） |
-| **算力** | `TFLOPS = (2·M·N·K) / t / 1e12` | compute-bound（GEMM） |
+| **算力** | $\text{TFLOPS} = (2 \cdot M \cdot N \cdot K) / t / 10^{12}$ | compute-bound（GEMM） |
 | **利用率** | `实测 / 峰值 × 100%` | 对比基线 |
 
 ##### 1.3.3 六个常见坑
@@ -149,7 +149,7 @@ float t_per_call = ms / N; // 单次毫秒
 坑3：只跑 1 次         → 单次抖动大，取 N 次平均
 坑4：忘了 sync         → kernel 异步，stop 立刻触发，时间≈0
 坑5：带宽算错 R+W      → copy 读+写=2x；GEMM 读A+B 写C
-坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1792（见 [硬件参数事实源](../../reference/hardware_specs.md)）
+坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1792（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）
 ```
 
 > 💡 **一句话总结**：benchmark 的可信度 = warmup + N 次平均 + 排除拷贝 + 对比峰值。少任何一步，数字都会失真，面试官一追问就露馅。
@@ -283,7 +283,7 @@ if __name__ == "__main__":
 python kernels/benchmark_demo.py --sizes 1m,4m,16m
 ```
 
-**预期输出**（节选，RTX 5090，CUDA 12.8，sm_120；峰值带宽 1792 GB/s，见 [硬件参数事实源](../../reference/hardware_specs.md)）：
+**预期输出**（节选，RTX 5090，CUDA 12.8，sm_120；峰值带宽 1792 GB/s，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）：
 
 ```text
 N=     1,000,000  time=0.0083 ms  BW=963.9 GB/s

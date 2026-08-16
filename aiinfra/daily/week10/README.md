@@ -21,11 +21,11 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | 整合全部自定义 Kernel | [day1/](day1/README.md) |
-| Day 2 | 系统联调（六步分层验证） | [day2/](day2/README.md) |
-| Day 3 | 项目文档完善（README） | [day3/](day3/README.md) |
-| Day 4 | 高频面试题基础篇 | [day4/](day4/README.md) |
-| Day 5 | Mock 面试 | [day5/](day5/README.md) |
-| Day 6 | 诊断流程实战剧本 + 手撕限时清单 | [day6/](day6/README.md) |
-| Day 7 | 最终复盘 —— 10 周能力地图 | [day7/](day7/README.md) |
+| Day 1 | 整合全部自定义 Kernel | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day1.html) |
+| Day 2 | 系统联调（六步分层验证） | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day2.html) |
+| Day 3 | 项目文档完善（README） | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day3.html) |
+| Day 4 | 高频面试题基础篇 | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day4.html) |
+| Day 5 | Mock 面试 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day5.html) |
+| Day 6 | 诊断流程实战剧本 + 手撕限时清单 | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day6.html) |
+| Day 7 | 最终复盘 —— 10 周能力地图 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week10/day7.html) |
 

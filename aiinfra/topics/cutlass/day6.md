@@ -421,8 +421,8 @@ TFLOPS 是结果，NCU 是原因。只看 TFLOPS 调参是"猜测"，看 NCU 调
 <summary>点击查看答案</summary>
 
 - GEMM 的算术强度 = `2*M*N*K / (M*K + K*N + M*N) * sizeof(Element)`
-- 4096×4096 FP16 的算术强度 ≈ 1365 FLOP/Byte
-- H100 的平衡点 ≈ 50 FLOP/Byte（989 TFLOPS / 3350 GB/s）
+- 4096×4096 FP16 的算术强度 $\approx 1365$ FLOP/Byte
+- H100 的平衡点 $\approx 50$ FLOP/Byte（989 TFLOPS / 3350 GB/s）
 - 1365 >> 50，所以 GEMM 远在 Roofline 的"计算天花板"段——compute-bound
 - 性能上限 = 峰值算力（989 TFLOPS），不受带宽限制
 

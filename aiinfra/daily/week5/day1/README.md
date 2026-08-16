@@ -7,7 +7,7 @@
 1. 理解标准 Attention 的 $O(N^2)$ HBM 访问瓶颈
 2. 掌握 FlashAttention 的核心创新：分块（Tiling）+ Online Softmax
 3. 能完整推导 Online Softmax 三个更新公式（m_new, l_new, o_new）
-4. 理解 `exp(m - m_new)` 缩放因子的作用
+4. 理解 $\exp(m - m_{\text{new}})$ 缩放因子的作用
 5. 手写简化版 FlashAttention Forward Kernel
 6. 了解 FlashAttention-1/2/3 的演进脉络（面试高频追问，Day 6 展开）
 
@@ -663,7 +663,7 @@ Decoder 推理要求位置 i 只能 attend 到 $\leq i$ 的 key（下三角 mask
 ### 验证 Checklist
 
 - [ ] 能推导出 Online Softmax 的三个更新公式（m_new, l_new, o_new）
-- [ ] 能理解每个公式中 `exp(m - m_new)` 缩放因子的作用（统一参考点）
+- [ ] 能理解每个公式中 $\exp(m - m_{\text{new}})$ 缩放因子的作用（统一参考点）
 - [ ] 能讲清 online softmax 两种变体的等价性（每步归一化 vs 末尾 `o/l`）
 - [ ] FlashAttention Kernel 编译运行正确，小尺寸测试通过（与 CPU 对比误差 < 1e-3）
 - [ ] 能解释 FlashAttention 的 HBM 访问复杂度为什么是 $O(Nd)$ 而非 $O(N^2)$

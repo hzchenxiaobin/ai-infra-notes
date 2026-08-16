@@ -98,7 +98,7 @@ cudaGetDeviceProperties(&prop, dev);
 | `maxBlocksPerMultiProcessor` | 每个 SM 最大 block 数 | RTX 5090 为 24 |
 | `maxGridSize` | Grid 最大维度 | 决定能启动多少 block |
 
-> ⚠️ `maxBlocksPerMultiProcessor`（RTX 5090 为 24）**不在官方 deviceQuery 的输出里**，数值来源是 CUDA Occupancy 工具链与官方文档（见 [硬件参数事实源](../../reference/hardware_specs.md)）；代码中可通过 `cudaDeviceProp` 同名字段或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 验证（见 3.6）。
+> ⚠️ `maxBlocksPerMultiProcessor`（RTX 5090 为 24）**不在官方 deviceQuery 的输出里**，数值来源是 CUDA Occupancy 工具链与官方文档（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）；代码中可通过 `cudaDeviceProp` 同名字段或 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 验证（见 3.6）。
 
 ###### 内存相关
 
@@ -181,7 +181,7 @@ Peak FLOP/s = SM数量 × 每个SM的FP32 CUDA Cores × GPU频率 × 2
 
 乘以 2 是因为一条 FMA（Fused Multiply-Add）指令包含乘法与加法两次浮点运算。
 
-以 RTX 5090 为例（实测值，来源：deviceQuery，详见 [`day3/exercise/my_gpu_info.md`](exercise/my_gpu_info.md)）：
+以 RTX 5090 为例（实测值，来源：deviceQuery，详见 [`day3/exercise/my_gpu_info.md`](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)）：
 - SM 数量：170
 - 每个 SM FP32 CUDA Cores：128（总计 21,760）
 - GPU 频率：2.407 GHz
@@ -314,7 +314,7 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks,      // 输出：每 S
 
 #### 3.7 Occupancy 为什么重要
 
-Occupancy 的物理意义（延迟隐藏机制、各级内存延迟表、"50%–75% 经验法则"）已在 [Day 2](../day2/README.md) 完整讲过，这里不再重复。今天的重点是把数字对齐：**同一组 kernel 参数，手算（3.5）、API（3.6）、ncu 实测（Day 6）三条路得到的结果要能互相印证**。
+Occupancy 的物理意义（延迟隐藏机制、各级内存延迟表、"50%–75% 经验法则"）已在 [Day 2](https://hzchenxiaobin.github.io/ai-infra-notes/week1/day2.html) 完整讲过，这里不再重复。今天的重点是把数字对齐：**同一组 kernel 参数，手算（3.5）、API（3.6）、ncu 实测（Day 6）三条路得到的结果要能互相印证**。
 
 ---
 
@@ -370,7 +370,7 @@ python3 tools/cuda_occupancy_calculator.py \
 
 #### 任务 5：手算 Occupancy 并用程序验证
 
-完成 [day3/exercise/occupancy_problems.md](exercise/occupancy_problems.md) 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
+完成 [day3/exercise/occupancy_problems.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/occupancy_problems.html) 中的手算练习题，覆盖寄存器、共享内存、block size 等典型约束场景。
 
 然后编译运行验证程序：
 
@@ -445,7 +445,7 @@ int main() {
 
 #### 实验 3：阅读 CUDA Programming Guide 性能优化章节
 
-Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming Guide》中与性能相关的内容已整理到 [notes/cuda_programming_guide_performance.md](notes/cuda_programming_guide_performance.md)，供延伸阅读。后续 Day 4–Day 6 会针对内存访问、共享内存、Occupancy、指令瓶颈做专项练习。
+Day 3 只需要建立性能优化的**整体框架**。新版《CUDA Programming Guide》中与性能相关的内容已整理到 [notes/cuda_programming_guide_performance.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/notes/cuda_programming_guide_performance.html)，供延伸阅读。后续 Day 4–Day 6 会针对内存访问、共享内存、Occupancy、指令瓶颈做专项练习。
 
 ### 验证 Checklist
 
@@ -512,7 +512,7 @@ Day 3 我们学会了用官方工具了解自己的 GPU，并把概念变成具�
 <summary>点击查看答案</summary>
 
  - Balance Point = Peak FLOP/s / Peak Bandwidth（单位：FLOP/byte）
- - RTX 5090 ≈ 58.45 FLOP/byte（104.75 TFLOPS ÷ 1.792 TB/s，见 [硬件参数事实源](../../reference/hardware_specs.md)）：每读 1 byte 做少于 58.45 次运算 → memory-bound；多于 58.45 次 → compute-bound
+ - RTX 5090 ≈ 58.45 FLOP/byte（104.75 TFLOPS ÷ 1.792 TB/s，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）：每读 1 byte 做少于 58.45 次运算 → memory-bound；多于 58.45 次 → compute-bound
  - 这是 Roofline 模型的核心，能快速判断 kernel 瓶颈类型
 
 </details>

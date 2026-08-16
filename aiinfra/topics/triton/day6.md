@@ -459,7 +459,7 @@ Triton 的 TFLOPS 是结果，NCU 是原因。如果 Triton GEMM 只有 50 TFLOP
 
 - GEMM：compute-bound（DRAM 21%，Tensor 65%）——算术强度高，Tensor Core 充分利用
 - Softmax：memory-bound（DRAM 72%，Tensor 0%）——算术强度低，计算量小但数据搬运量大
-- 原因：GEMM 的 FLOP/Byte ≈ 1365（远超平衡点），Softmax 的 FLOP/Byte ≈ 0.6（远低于平衡点）
+- 原因：GEMM 的 $\text{FLOP/Byte} \approx 1365$（远超平衡点），Softmax 的 $\text{FLOP/Byte} \approx 0.6$（远低于平衡点）
 - 优化方向不同：GEMM 优化计算效率，Softmax 优化数据搬运（fused kernel）
 
 </details>

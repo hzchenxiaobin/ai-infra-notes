@@ -337,7 +337,7 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 4];
 - [ ] 能识别 2-way、4-way、32-way bank conflict
 - [ ] 实现 conflict 和 no-conflict 两个版本的 kernel
 - [ ] Nsight Compute 中观察到 bank conflict 数值变化
-- [ ] 冲突版本的 bank conflict 计数远高于无冲突版本，耗时明显更长（grid(1,1) 小规模下实测约 1.4x，见 [profiles/week1_profile_summary.md](../profiles/week1_profile_summary.md)；规模放大后差距更大）
+- [ ] 冲突版本的 bank conflict 计数远高于无冲突版本，耗时明显更长（grid(1,1) 小规模下实测约 1.4x，见 [profiles/week1_profile_summary.md](https://hzchenxiaobin.github.io/ai-infra-notes/week1/profiles/week1_profile_summary.html)；规模放大后差距更大）
 - [ ] 理解 padding 的原理和代价
 - [ ] 能把 padding 应用到矩阵转置中
 

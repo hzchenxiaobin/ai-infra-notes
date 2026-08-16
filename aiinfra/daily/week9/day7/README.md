@@ -83,7 +83,7 @@
 <summary>答案</summary>
 
 - 通信量 = 2(N-1)/N × 数据量 = reduce-scatter（(N-1)/N × D）+ all-gather（(N-1)/N × D）两段，步数 2(N-1)
-- 完整两阶段推导、通信量计算与 ring 模拟器详见 [Day 3 §3.1](../day3/README.md)
+- 完整两阶段推导、通信量计算与 ring 模拟器详见 [Day 3 §3.1](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day3.html)
 
 </details>
 
@@ -93,7 +93,7 @@
 <summary>答案</summary>
 
 - bubble = (P-1)/(M+P-1)；增大 M（M≥4P 时 < 20%）或用 interleaved 1F1B 降低；1F1B 把显存从 O(M) 降到 O(P)
-- 完整推导、1F1B 调度模拟与推理 PP 部署形态详见 [Day 2 §2.3](../day2/README.md)
+- 完整推导、1F1B 调度模拟与推理 PP 部署形态详见 [Day 2 §2.3](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day2.html)
 
 </details>
 
@@ -103,7 +103,7 @@
 <summary>答案</summary>
 
 - GEMM 按输出切两半 Y1/Y2，compute_stream 算后半与 comm_stream 对前半做 all-reduce 并发重叠；CUDA Graph 捕获双流序列消除 launch overhead；收益 = min(T_comp, T_comm)
-- 代码实现、收益边界与 Sequence Parallelism 详见 [Day 4 §4.2](../day4/README.md)
+- 代码实现、收益边界与 Sequence Parallelism 详见 [Day 4 §4.2](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day4.html)
 
 </details>
 
@@ -114,7 +114,7 @@
 
 - decode batch 小（M=1~8）时 EP 的 all-to-all 流量小；TP all-reduce 每层都做、延迟固定，batch 小时无法被摊薄，开销占比大
 - prefill batch 大（M=N）时 TP all-reduce 被计算摊薄，且无 all-to-all
-- 通信量公式、EP vs TP 对比表与 DeepSeek 混合策略详见 [Day 5 §4](../day5/README.md)
+- 通信量公式、EP vs TP 对比表与 DeepSeek 混合策略详见 [Day 5 §4](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day5.html)
 
 </details>
 
@@ -124,7 +124,7 @@
 <summary>答案</summary>
 
 - Ring：步数 2(N-1) 但带宽利用率高（每步每节点都在发收），适合大消息；Tree：步数 log N、延迟低但根节点瓶颈，适合小消息；NCCL 按消息大小自适应混合
-- 拓扑细节、选择阈值与 NCCL 自适应策略详见 [Day 3 §3.5](../day3/README.md)
+- 拓扑细节、选择阈值与 NCCL 自适应策略详见 [Day 3 §3.5](https://hzchenxiaobin.github.io/ai-infra-notes/week9/day3.html)
 
 </details>
 

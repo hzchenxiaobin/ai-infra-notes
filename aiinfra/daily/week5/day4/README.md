@@ -27,7 +27,7 @@ dQ = dS @ K / √d
 dK = dS^T @ Q / √d
 ```
 
-而 FA Forward 为了省内存**根本没存 P**（O(N²)），只存了 `O` 和每行一个标量 `L`（O(N)）。这就形成了一个两难：
+而 FA Forward 为了省内存**根本没存 P**（$O(N^2)$），只存了 `O` 和每行一个标量 `L`（O(N)）。这就形成了一个两难：
 
 | 方案 | 内存 | 问题 |
 |------|------|------|
@@ -36,7 +36,7 @@ dK = dS^T @ Q / √d
 
 FA 选择后者——**recomputation**：前向多存一个 O(N) 的 `L`，反向用 `L` 把 P 一块一块重算回来。代价是反向多做一次 `QK^T` 的 FLOPs，但 IO 仍是 O(Nd)，而 IO 才是瓶颈。今天的核心就是搞清楚：`L` 是什么？为什么 O(N) 就够？反向怎么用？
 
-> 💡 **一句话总结**：Forward 用 online softmax 省掉 P 的存储，backward 用 logsumexp 把 P 重新"解压缩"出来——存的是 O(N) 的 `L`，恢复的是 O(N²) 的 P，这就是 FA 的内存魔法能延伸到训练阶段的根本原因。
+> 💡 **一句话总结**：Forward 用 online softmax 省掉 P 的存储，backward 用 logsumexp 把 P 重新"解压缩"出来——存的是 O(N) 的 `L`，恢复的是 $O(N^2)$ 的 P，这就是 FA 的内存魔法能延伸到训练阶段的根本原因。
 
 ---
 
@@ -151,7 +151,7 @@ $$\boxed{L_i = m_i + \log(l_i)}$$
 
 ##### 用 L 恢复 P
 
-由 `P_ij = exp(S_ij - m_i) / l_i` 和 `L_i = m_i + log(l_i)`：
+由 $P_{ij} = \exp(S_{ij} - m_i) / l_i$ 和 $L_i = m_i + \log(l_i)$：
 
 $$\exp(S_{ij} - L_i) = \exp\left(S_{ij} - m_i - \log(l_i)\right) = \frac{\exp(S_{ij} - m_i)}{l_i} = P_{ij}$$
 
@@ -163,7 +163,7 @@ $$\boxed{P_{ij} = \exp(S_{ij} - L_i)}$$
 
 ##### Online softmax 天然产出 L
 
-Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就是全局 `m_i` 和 `l_i`，取 `L_i = m_i + log(l_i)` 即可。前向 kernel 每个 Q 行写回 `O_i` 的同时多写一个 `L_i`，代价仅 +4 bytes/行。
+Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就是全局 `m_i` 和 `l_i`，取 $L_i = m_i + \log(l_i)$ 即可。前向 kernel 每个 Q 行写回 `O_i` 的同时多写一个 `L_i`，代价仅 +4 bytes/行。
 
 ##### 数值稳定性
 
@@ -176,7 +176,7 @@ Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就�
 | 反向需要的量 | 来源 | 大小 |
 |-------------|------|------|
 | `S_ij` | 重算 `Qi @ Kj^T * scale` | 不存（SRAM 内） |
-| `P_ij` | `exp(S_ij - L_i)` | 不存（SRAM 内） |
+| `P_ij` | $\exp(S_{ij} - L_i)$ | 不存（SRAM 内） |
 | `L_i` | 前向保存 | O(N) |
 | `Q, K, V, O` | 前向保存 | O(Nd) |
 | `dO` | 上游 | O(Nd) |
@@ -184,7 +184,7 @@ Day 1 的 online softmax 三公式在处理完所有 KV tile 后，得到的就�
 
 **HBM 常驻量** = Q/K/V/O/dO/dQ/dK/dV ($8 \cdot Nd$) + L (N) = **O(Nd)**。重算的 S/P 只在 SRAM 里短暂存在，从不落 HBM。对比标准 backward 的 $O(N^2)$，N=8192 时从 ~264MB 降到 ~8MB（32x）。
 
-> 💡 **一句话总结**：`L_i = m_i + log(l_i)` 是 softmax 的"无损压缩"——把 N 个归一化常数压成 1 个标量，反向用 `exp(S - L)` 解压。配合 `S` 的重算，FA backward 在不存任何 N×N 矩阵的前提下恢复了完整的 softmax Jacobian。
+> 💡 **一句话总结**：$L_i = m_i + \log(l_i)$ 是 softmax 的"无损压缩"——把 N 个归一化常数压成 1 个标量，反向用 $\exp(S - L)$ 解压。配合 `S` 的重算，FA backward 在不存任何 N×N 矩阵的前提下恢复了完整的 softmax Jacobian。
 
 #### 1.4 FA Backward 算法：Algorithm 2 详解
 
@@ -318,7 +318,7 @@ A: 64x32, B: 32x64, C: 64x64
 GPU Time (dA + dB kernels): 0.059 ms   (RTX 5090, CUDA 12.8, 2026-08-06 实测)
 ```
 
-> 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。`dC = ones` 时 `dA`、`dB` 的解析值都退化成 `B`/`A` 的列和，正好用中心差分 `f(A+h·e) - f(A-h·e)` / `2h` 一一验证。
+> 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。`dC = ones` 时 `dA`、`dB` 的解析值都退化成 `B`/`A` 的列和，正好用中心差分 $f(A+h\cdot e) - f(A-h\cdot e)$ / $2h$ 一一验证。
 
 #### 任务 3：编写 flash_attention_backward.py 并 gradcheck
 
@@ -435,7 +435,7 @@ GEMM backward 的两个 kernel（`dA = dC @ B^T`、`dB = A^T @ dC`）以及 FA b
 
 把 `flash_attention_backward.py` 的 `N` 调到 2048、4096、8192（`d=64`，float64→float32），观察 `dQ maxDiff` 随 N 增长的变化。再试一种"不用 logsumexp、直接存 m 和 l 两个标量"的变体，对比两者在 `S` 含大值（如 score ~ 50）时的稳定性。
 
-> 提示：`L = m + log(l)` 与 `(m, l)` 分存在数学上等价，但 `log(l)` 把 `l` 的动态范围压缩（`l ∈ (0, ∞)` → `log(l) ∈ (-∞, ∞)`），FP32 下大 N 累加更稳。预期：N=8192, float32 时 `(m,l)` 版的 `dQ maxDiff` 比 `L` 版高 1-2 个数量级。
+> 提示：$L = m + \log(l)$ 与 `(m, l)` 分存在数学上等价，但 $\log(l)$ 把 `l` 的动态范围压缩（$l \in (0, \infty)$ → $\log(l) \in (-\infty, \infty)$），FP32 下大 N 累加更稳。预期：N=8192, float32 时 `(m,l)` 版的 `dQ maxDiff` 比 `L` 版高 1-2 个数量级。
 
 ---
 
@@ -462,7 +462,7 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 <summary>点击查看答案</summary>
 
  - 标准 attention 的 backward 公式需要 `P = softmax(S)`（N×N），而 FA Forward 为了省内存**根本没存 P**——它用 online softmax 在 SRAM 里算完就丢弃了
- - 如果反向时再物化 P（O(N²)），FA 前向省下的内存（N=4096 时 64MB×2）在反向时全部还回去，训练峰值显存和标准 attention 一样
+ - 如果反向时再物化 P（$O(N^2)$），FA 前向省下的内存（N=4096 时 64MB×2）在反向时全部还回去，训练峰值显存和标准 attention 一样
  - FA 的解法是 **recomputation**：前向多存一个 O(N) 的 `L`（logsumexp），反向用 `L` 把 P 一块一块重算回来，代价是多一次 `QK^T` 的 FLOPs，但 IO 仍是 O(Nd)
  - 本质是"用算力换内存带宽"——attention 的瓶颈是 IO 不是 FLOPs，所以划算
 
@@ -474,9 +474,9 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 <details>
 <summary>点击查看答案</summary>
 
- - safe softmax：`m_i = max_j S_ij`，`l_i = Σ_j exp(S_ij - m_i)`，`P_ij = exp(S_ij - m_i) / l_i`
- - 定义 `L_i = log(Σ_j exp(S_ij))`，展开：`Σ_j exp(S_ij) = exp(m_i) · l_i`，取 log 得 `L_i = m_i + log(l_i)`
- - 由此 `exp(S_ij - L_i) = exp(S_ij - m_i - log(l_i)) = exp(S_ij - m_i)/l_i = P_ij`
+ - safe softmax：$m_i = \max_j S_{ij}$，$l_i = \sum_j \exp(S_{ij} - m_i)$，$P_{ij} = \exp(S_{ij} - m_i) / l_i$
+ - 定义 $L_i = \log(\sum_j \exp(S_{ij}))$，展开：$\sum_j \exp(S_{ij}) = \exp(m_i) \cdot l_i$，取 log 得 $L_i = m_i + \log(l_i)$
+ - 由此 $\exp(S_{ij} - L_i) = \exp(S_{ij} - m_i - \log(l_i)) = \exp(S_{ij} - m_i)/l_i = P_{ij}$
  - **结论**：存一个标量 `L_i`，加上可重算的 `S_ij`（从 `Q_i, K_j`），就能恢复任意 `P_ij`
  - 内存：`L` 是 O(N)（每行一个标量），替代 P 的 $O(N^2)$；saved tensor 只剩 `Q/K/V/O/L` = O(Nd) + O(N) = O(Nd)
  - N=8192, d=64 时，P 占 264MB，L 只占 32KB——8 个数量级的压缩
@@ -484,13 +484,13 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 </details>
 
 
-3. **FA backward 里 `D_i = Σ_j P_ij dP_ij` 怎么算？为什么不用在 tile 循环里累加？**
+3. **FA backward 里 $D_i = \sum_j P_{ij} dP_{ij}$ 怎么算？为什么不用在 tile 循环里累加？**
 
 <details>
 <summary>点击查看答案</summary>
 
- - 推导：`dP_ij = dO_i · V_j`（点积 over d），所以 `D_i = Σ_j P_ij (dO_i · V_j) = dO_i · (Σ_j P_ij V_j) = dO_i · O_i`
- - 因为 `O_i = Σ_j P_ij V_j` 正是前向的输出，已被保存
+ - 推导：$dP_{ij} = dO_i \cdot V_j$（点积 over d），所以 $D_i = \sum_j P_{ij} (dO_i \cdot V_j) = dO_i \cdot (\sum_j P_{ij} V_j) = dO_i \cdot O_i$
+ - 因为 $O_i = \sum_j P_{ij} V_j$ 正是前向的输出，已被保存
  - 所以 `D_i = rowsum(O_i * dO_i)`，用 saved `O` 和上游 `dO` 一次算出，**全局预算一次**，不依赖任何 tile
  - 好处：① 反向只需单 pass 扫 KV（不用先扫一遍算 D 再扫一遍算梯度）；② `D_i` 的精度只依赖 `O/dO`（O(Nd)），不引入 N×N 的中间量
  - 这是 FA backward 比"朴素重算"更高效的精髓
@@ -504,11 +504,11 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 <summary>点击查看答案</summary>
 
  - `C = A @ B`（A: M×K, B: K×N, C: M×N），给定 `dC`：
-   - `dA = dC @ B^T`（M×K）—— `dA_ik = Σ_j dC_ij B_kj`
-   - `dB = A^T @ dC`（K×N）—— `dB_kj = Σ_i A_ik dC_ij`
+   - `dA = dC @ B^T`（M×K）—— $dA_{ik} = \sum_j dC_{ij} B_{kj}$
+   - `dB = A^T @ dC`（K×N）—— $dB_{kj} = \sum_i A_{ik} dC_{ij}$
  - 对称性：每个反向 GEMM 的 FLOPs（2MNK）与 forward 相同，只是把某个输入转置；算 `dA` 需要前向的 `B`，算 `dB` 需要前向的 `A`
  - 工程意义：forward 的 GEMM 加速手段（tiling、Tensor Core、async copy）可直接套到 backward——FA 的 `QK^T`、`PV` 反向 GEMM 与 forward 用同一套 kernel 模板，只是累加方向不同
- - 有限差分验证：取 `loss = sum(C)`，则 `dC = ones`，`dA_ik = Σ_j B_kj`（B 的行和），可用中心差分核对
+ - 有限差分验证：取 `loss = sum(C)`，则 `dC = ones`，$dA_{ik} = \sum_j B_{kj}$（B 的行和），可用中心差分核对
 
 </details>
 
@@ -518,9 +518,9 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 <details>
 <summary>点击查看答案</summary>
 
- - 严格界：`Θ(N²d²/M)`（M = SRAM 大小），与 forward 相同；取 `M = Θ(Nd)` 简化为 O(Nd)
+  - 严格界：$\Theta(N^2 d^2 / M)$（M = SRAM 大小），与 forward 相同；取 $M = \Theta(Nd)$ 简化为 O(Nd)
  - 比 forward 常数大的原因：反向要重算 `S/P`，需重读 `Q/K`（forward 每个 Q tile 只读一次，反向每个 KV tile 循环都要读对应的 Q/K 子块），读次数约 `N/Br` 或 `N/Bc` 倍
- - 但渐近类仍是 O(Nd)——因为 saved tensor 总量 O(Nd)，每个元素被访问常数次（取决于 tiling），没有 O(N²) 的物化矩阵
+ - 但渐近类仍是 O(Nd)——因为 saved tensor 总量 O(Nd)，每个元素被访问常数次（取决于 tiling），没有 $O(N^2)$ 的物化矩阵
  - 实测：N=8192 时标准 backward ~264MB HBM IO，FA backward ~8-16MB，加速 16-32x（比 forward 的 32-100x 略低，因常数更大）
 
 </details>

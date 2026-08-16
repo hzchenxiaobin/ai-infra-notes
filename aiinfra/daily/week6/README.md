@@ -21,10 +21,10 @@
 
 | Day | 主题 | 目录 |
 |-----|------|------|
-| Day 1 | 推理流程 —— Prefill vs Decode | [day1/](day1/README.md) |
-| Day 2 | 实现 KV Cache（含 GQA/MQA/MLA 变体） | [day2/](day2/README.md) |
-| Day 3 | vLLM 整体架构分析 | [day3/](day3/README.md) |
-| Day 4 | vLLM Worker 与 PagedAttention | [day4/](day4/README.md) |
-| Day 5 | 项目推进 —— Mini 推理引擎 v0 | [day5/](day5/README.md) |
-| Day 6 | FlashDecoding —— Decode 阶段并行度突破 | [day6/](day6/README.md) |
-| Day 7 | 推理系统核心问题总结 | [day7/](day7/README.md) |
+| Day 1 | 推理流程 —— Prefill vs Decode | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day1.html) |
+| Day 2 | 实现 KV Cache（含 GQA/MQA/MLA 变体） | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day2.html) |
+| Day 3 | vLLM 整体架构分析 | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day3.html) |
+| Day 4 | vLLM Worker 与 PagedAttention | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day4.html) |
+| Day 5 | 项目推进 —— Mini 推理引擎 v0 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day5.html) |
+| Day 6 | FlashDecoding —— Decode 阶段并行度突破 | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day6.html) |
+| Day 7 | 推理系统核心问题总结 | [day7/](https://hzchenxiaobin.github.io/ai-infra-notes/week6/day7.html) |

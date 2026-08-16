@@ -53,7 +53,7 @@ Transformer 推理分两阶段，跑的是同一套层，但算子形状截然�
 | SM 利用率 | 60-85% | 10-30% |
 | 优化重点 | Tensor Core、FlashAttention | KV Cache、PagedAttention、CUDA Graph |
 
-**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≈ 279 ≫ Ridge Point（~58.45，见 [硬件参数事实源](../../reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 骤降到 ~1 → memory-bound。
+**根本原因**：GEMM 的 arithmetic intensity 与 M 成正比。Prefill 时 M=N（大），AI ≈ 279 ≫ Ridge Point（~58.45，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）→ compute-bound；Decode 时 M=1，GEMM 退化为向量×矩阵，计算量与 M 成正比骤降而权重读取量不变，AI 骤降到 ~1 → memory-bound。
 
 Day 1 用 `torch.profiler` 验证了这一点（待 GPU 实测回填）：Prefill 阶段 `aten::mm` 占 CUDA 时间 60%+，Decode 阶段 GEMM 占比下降、softmax/layernorm 相对占比上升、kernel 间隙（launch overhead）更明显。
 

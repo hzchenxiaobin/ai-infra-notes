@@ -300,7 +300,7 @@ Backward 输入: dO
 <summary>答案</summary>
 
 - **SRAM 约束**：`Br×d + 2×Bc×d ≤ SRAM 容量`（K/V 不复用时 2×，复用时 1×）
-- **RTX 5090**：100 KB/SM shared memory（见 [硬件参数事实源](../../reference/hardware_specs.md)）
+- **RTX 5090**：100 KB/SM shared memory（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）
 - **典型值**：d=64, Br=Bc=64 时 SRAM ≈ 48KB，occupancy 与效率的平衡点
 - **太大**：超 SRAM 上限或 occupancy 暴跌
 - **太小**：循环次数多，递推开销 + `__syncthreads` 占比大
