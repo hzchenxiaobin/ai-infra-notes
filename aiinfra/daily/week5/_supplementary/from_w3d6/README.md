@@ -46,13 +46,7 @@ Attention(Q, K, V) = softmax(Q·K^T / √d) · V
 
 **计算流程**：
 
-```
-输入: Q ∈ R^{N×d}, K ∈ R^{N×d}, V ∈ R^{N×d}
-
-Step 1: S = Q × K^T / sqrt(d) → S ∈ R^{N×N} （写 HBM）
-Step 2: P = softmax(S, dim=-1) → P ∈ R^{N×N} （读 S，写 P）
-Step 3: O = P × V → O ∈ R^{N×d} （读 P，写 O）
-```
+![标准 Attention 三步计算与显存复杂度](../../images/standard_attention_formula.svg)
 
 **各阶段 HBM 读写量**（以 N=4096, d=64, FP32 为例）：
 

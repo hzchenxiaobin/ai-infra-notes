@@ -37,12 +37,7 @@ FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Share
 
 ![标准 Attention 三阶段 HBM 读写量拆解](../images/attention_io_breakdown.svg)
 
-```
-标准 Attention：
- Step 1: S = Q × K^T / √d (N×N) → 写入 HBM
- Step 2: P = softmax(S) (N×N) → 读 S，写 P
- Step 3: O = P × V (N×d) → 读 P，写 O
-```
+![标准 Attention 三步计算与显存复杂度](../images/standard_attention_formula.svg)
 
 各阶段 HBM 读写量（N=4096, d=64, FP32）：
 

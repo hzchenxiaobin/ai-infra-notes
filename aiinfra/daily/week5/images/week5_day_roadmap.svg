@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="760" viewBox="0 0 680 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="680" height="760" fill="#fdfcf7"/>
+  <text x="340" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 5 学习路线图</text>
+  <path d="M 180 42 Q 340 50 500 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Day 1 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="64" width="560" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="90" font-size="14" font-weight="bold" fill="#2b6e9e">Day 1</text>
+  <text x="90" y="112" font-size="12" fill="#444">FA CUDA 实现（简化版）+ Attention IO 分析（4N²+4Nd 口径）</text>
+  <path d="M 340 132 L 340 144" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 2 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="148" width="560" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="174" font-size="14" font-weight="bold" fill="#2b6e9e">Day 2</text>
+  <text x="90" y="196" font-size="12" fill="#444">FA 论文精读 + Online Softmax 三公式推导</text>
+  <path d="M 340 216 L 340 228" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 3 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="232" width="560" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="258" font-size="14" font-weight="bold" fill="#2b6e9e">Day 3</text>
+  <text x="90" y="280" font-size="12" fill="#444">手写完整 FA Forward Kernel（含 causal 变体）</text>
+  <path d="M 340 300 L 340 312" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 4 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="316" width="560" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="342" font-size="14" font-weight="bold" fill="#2b6e9e">Day 4</text>
+  <text x="90" y="364" font-size="12" fill="#444">FA Backward + GEMM Backward（L_i = m_i + log ℓ_i 重计算）</text>
+  <path d="M 340 384 L 340 396" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 5 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="400" width="560" height="64" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="426" font-size="14" font-weight="bold" fill="#2e6e2e">Day 5</text>
+  <text x="90" y="448" font-size="12" fill="#444">项目推进 —— FA 接入 Mini 引擎（C++ Extension）+ 性能对比</text>
+  <path d="M 340 468 L 340 480" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 6 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="484" width="560" height="64" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="510" font-size="14" font-weight="bold" fill="#2b6e9e">Day 6</text>
+  <text x="90" y="532" font-size="12" fill="#444">FA-2/FA-3 演进 + 官方 CUDA 源码导读 + IO 方法论总结</text>
+  <path d="M 340 552 L 340 564" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Day 7 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="568" width="560" height="64" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="90" y="594" font-size="14" font-weight="bold" fill="#7a5415">Day 7</text>
+  <text x="90" y="616" font-size="12" fill="#444">复盘 + 限时手撕（FA Forward 简化版 60min）+ 面试 Q&amp;A 收敛</text>
+
+  <!-- legend -->
+  <g filter="url(#sk)">
+    <rect x="60" y="664" width="560" height="76" rx="8" fill="#fffdf3" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="90" y="690" font-size="11" fill="#888">蓝色 = 理论与 kernel 实现 ｜ 绿色 = 工程集成 ｜ 橙色 = 复盘与面试</text>
+  <text x="90" y="712" font-size="11" fill="#888">前置要求：已完成 Week 4，掌握 Softmax/LayerNorm kernel、Triton、Transformer 算子分类</text>
+  <text x="90" y="730" font-size="11" fill="#888">建议时长：工作日每天 2.5h，周末每天 6h，周计 24.5h</text>
+</svg>

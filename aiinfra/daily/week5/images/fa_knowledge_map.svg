@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="620" viewBox="0 0 880 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="28" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="620" fill="#fdfcf7"/>
+  <text x="440" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FlashAttention 全专题知识地图</text>
+  <path d="M 270 42 Q 440 50 610 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Box 1: Problem ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="800" height="120" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="1.8"/>
+  </g>
+  <text x="60" y="96" font-size="14" font-weight="bold" fill="#b03a3a">问题层：标准 Attention 的 O(N²) 瓶颈</text>
+  <text x="60" y="120" font-size="12" fill="#444" font-family="monospace">S = QKᵀ (N×N) → softmax → P (N×N) → O = PV (N×d)</text>
+  <text x="60" y="142" font-size="11" fill="#666" font-family="monospace">HBM IO: 读 Q/K/V (3Nd) + 写 S (N²) + 读 S (N²) + 写 P (N²) + 读 P (N²) + 读 V (Nd) + 写 O (Nd) ≈ O(N²)</text>
+  <text x="60" y="166" font-size="12" fill="#b03a3a" font-weight="bold">瓶颈：N² 的中间矩阵 S/P 在 HBM↔SRAM 间反复搬运</text>
+
+  <!-- arrow 1 -->
+  <path d="M 440 192 L 440 208" stroke="#3a3a3a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Box 2: Core idea ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="214" width="800" height="140" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+  </g>
+  <text x="60" y="242" font-size="14" font-weight="bold" fill="#2e6e2e">核心思想：分块 + Online Softmax（不物化 N² 矩阵）</text>
+  <text x="60" y="266" font-size="12" fill="#444">1. 分块：Q/Br×d, K/Bc×d, V/Bc×d 轮流加载到 SRAM</text>
+  <text x="60" y="288" font-size="12" fill="#444">2. Online Softmax：增量式更新 max(m) 和 sum(l)</text>
+  <text x="80" y="308" font-size="11" fill="#666" font-family="monospace">- m_new = max(m, rowmax(S_block))</text>
+  <text x="80" y="326" font-size="11" fill="#666" font-family="monospace">- l_new = l * exp(m - m_new) + rowsum(exp(S_block - m_new))</text>
+  <text x="80" y="344" font-size="11" fill="#666" font-family="monospace">- O_new = O * exp(m - m_new) / l_new + exp(S_block - m_new) @ V</text>
+
+  <!-- arrow 2 -->
+  <path d="M 440 358 L 440 374" stroke="#3a3a3a" stroke-width="2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Box 3: Evolution ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="380" width="800" height="180" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/>
+  </g>
+  <text x="60" y="408" font-size="14" font-weight="bold" fill="#2b6e9e">实现演进</text>
+
+  <!-- FA-1 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="422" width="230" height="56" rx="6" fill="#fffdf3" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="75" y="444" font-size="12" font-weight="bold" fill="#2b6e9e">FA-1 (2022)</text>
+  <text x="75" y="462" font-size="10" fill="#666">分块 + online softmax</text>
+  <text x="75" y="474" font-size="10" fill="#666">→ IO O(Nd)，跨 warp 同步</text>
+
+  <!-- arrow -->
+  <path d="M 292 450 L 312 450" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- FA-2 -->
+  <g filter="url(#sk)">
+    <rect x="320" y="422" width="230" height="56" rx="6" fill="#fffdf3" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="335" y="444" font-size="12" font-weight="bold" fill="#2e6e2e">FA-2 (2023)</text>
+  <text x="335" y="462" font-size="10" fill="#666">warp group 子块划分</text>
+  <text x="335" y="474" font-size="10" fill="#666">→ non-matmul FLOPs 减半</text>
+
+  <!-- arrow -->
+  <path d="M 552 450 L 572 450" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- FA-3 -->
+  <g filter="url(#sk)">
+    <rect x="580" y="422" width="230" height="56" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="595" y="444" font-size="12" font-weight="bold" fill="#7a5415">FA-3 (2024)</text>
+  <text x="595" y="462" font-size="10" fill="#666">Hopper 专属，异步流水 + FP8</text>
+  <text x="595" y="474" font-size="10" fill="#666">→ TMA + warp specialization</text>
+
+  <!-- IO complexity note -->
+  <g filter="url(#sk)">
+    <rect x="60" y="498" width="760" height="44" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="440" y="518" text-anchor="middle" font-size="12" fill="#444">3. IO 复杂度：O(Nd)（d 为 head dim，M=SRAM 大小时严格界 Θ(N²d²/M)）</text>
+  <text x="440" y="534" text-anchor="middle" font-size="11" fill="#888">共同主线：让 GPU 的时间尽量花在 Tensor Core 的 GEMM 上，softmax 的 exp/除法能省则省、能藏则藏</text>
+
+  <!-- bottom legend -->
+  <text x="440" y="582" text-anchor="middle" font-size="11" fill="#888">红色 = 问题 ｜ 绿色 = 核心思想 ｜ 蓝色 = 实现演进</text>
+  <text x="440" y="600" text-anchor="middle" font-size="11" fill="#888">FA-1 → IO 感知 ｜ FA-2 → 工程优化（减少 non-matmul FLOPs） ｜ FA-3 → 硬件特性（异步流水 + FP8）</text>
+</svg>

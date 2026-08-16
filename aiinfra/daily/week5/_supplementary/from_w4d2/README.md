@@ -62,10 +62,6 @@ Mini Engine 是一个最小化的 Transformer 单层推理引擎，设计目标�
 
 从 `.cu` kernel 到 Python 可调用，经过 6 步：
 
-```
-① .cu Kernel → ② Launch Wrapper → ③ C++ Binding → ④ load_inline → ⑤ Python 调用 → ⑥ Mini Engine
-```
-
 **各步职责**：
 
 | 步骤 | 职责 | 关键 API |

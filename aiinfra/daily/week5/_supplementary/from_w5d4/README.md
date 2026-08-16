@@ -43,30 +43,13 @@ Week 5 围绕一条主线展开：**从 FlashAttention 论文到手写 Kernel �
 
 ![标准 Attention vs FlashAttention IO 对比](../../images/hbm_comparison.svg)
 
-```
-标准 Attention：
- S = Q × K^T (N×N) → 写 HBM
- P = softmax(S) (N×N) → 读 S、写 P
- O = P × V (N×d) → 读 P、写 O
- HBM IO: O(N²) ← 瓶颈
-
-FlashAttention：
- 分块 Tiling + Online Softmax
- S/P 不落 HBM，在 SRAM 中完成
- HBM IO: O(Nd) ← 消除 N² 项
-```
-
 **关键洞察**：FlashAttention 的"快"不在于减少 FLOPs（计算量相同），而在于**减少数据移动**——"You can hide compute, but you can't hide memory"。
 
 #### 2. Online Softmax 三公式
 
 ![Online Softmax 递推更新流程](../../images/flash_attention_online_update.svg)
 
-```
-公式1: m_new = max(m, max(xj))
-公式2: l_new = l × exp(m - m_new) + Σ exp(xj - m_new)
-公式3: o_new = o × (l × exp(m - m_new) / l_new) + Σ (exp(xj - m_new) / l_new) × vj
-```
+![Online Softmax 三个更新公式](../../images/online_softmax_formula.svg)
 
 `exp(m - m_new)` 是统一参考点的缩放因子——当全局 max 从 m 更新到 m_new 时，把旧值从"以 m 为参考"缩放到"以 m_new 为参考"。
 
@@ -386,29 +369,7 @@ Day 7 我们完成了 Week 5 的系统复盘与 IO 优化方法论提炼：
 
 ## 📁 本周目录结构
 
-```
-week5/
-├── README.md                      # Week 5 概览
-├── day1/                          # Day 1: FlashAttention 简化版 + IO 分析
-│   ├── README.md
-│   └── kernels/flash_attention.cu
-├── day2/                          # Day 2: 论文精读 + Online Softmax 推导
-│   └── README.md
-├── day3/                          # Day 3: 手写完整 Forward Kernel
-│   ├── README.md
-│   └── kernels/flash_attention_v2.cu
-├── day4/                          # Day 4: FA Backward + GEMM Backward
-│   ├── README.md
-│   └── kernels/
-├── day5/                          # Day 5: 性能对比 benchmark
-│   ├── README.md
-│   └── kernels/benchmark_flash_attention.py
-├── day6/                          # Day 6: FA-2/FA-3 演进
-│   └── README.md
-├── day7/                          # Day 7: 复盘 + 限时手撕
-│   └── README.md
-└── images/                        # SVG 插图
-```
+![Week 5 目录结构](../../images/week5_directory_tree.svg)
 
 ---
 

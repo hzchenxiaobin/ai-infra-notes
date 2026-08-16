@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="540" viewBox="0 0 760 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="760" height="540" fill="#fdfcf7"/>
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 5 目录结构</text>
+  <path d="M 220 42 Q 380 50 540 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <g font-size="13" fill="#2b2b2b" font-family="monospace">
+    <!-- week5/ root -->
+    <g filter="url(#sk)">
+      <rect x="40" y="68" width="680" height="440" rx="8" fill="#fffdf3" stroke="#d4d4d4" stroke-width="1.2"/>
+    </g>
+
+    <text x="60" y="96" font-weight="bold" fill="#2b6e9e">week5/</text>
+
+    <text x="60" y="124">├── README.md</text>
+    <text x="240" y="124" fill="#888"># Week 5 概览</text>
+
+    <text x="60" y="148">├── day1/</text>
+    <text x="240" y="148" fill="#888"># Day 1: FlashAttention 简化版 + IO 分析</text>
+    <text x="80" y="168">├── README.md</text>
+    <text x="80" y="188">└── kernels/flash_attention.cu</text>
+
+    <text x="60" y="212">├── day2/</text>
+    <text x="240" y="212" fill="#888"># Day 2: 论文精读 + Online Softmax 推导</text>
+    <text x="80" y="232">└── README.md</text>
+
+    <text x="60" y="256">├── day3/</text>
+    <text x="240" y="256" fill="#888"># Day 3: 手写完整 Forward Kernel</text>
+    <text x="80" y="276">├── README.md</text>
+    <text x="80" y="296">└── kernels/flash_attention_v2.cu</text>
+
+    <text x="60" y="320">├── day4/</text>
+    <text x="240" y="320" fill="#888"># Day 4: FA Backward + GEMM Backward</text>
+    <text x="80" y="340">├── README.md</text>
+    <text x="80" y="360">└── kernels/</text>
+
+    <text x="60" y="384">├── day5/</text>
+    <text x="240" y="384" fill="#888"># Day 5: 性能对比 benchmark</text>
+    <text x="80" y="404">├── README.md</text>
+    <text x="80" y="424">└── kernels/benchmark_flash_attention.py</text>
+
+    <text x="60" y="448">├── day6/</text>
+    <text x="240" y="448" fill="#888"># Day 6: FA-2/FA-3 演进</text>
+    <text x="80" y="468">└── README.md</text>
+
+    <text x="60" y="492">├── day7/</text>
+    <text x="240" y="492" fill="#888"># Day 7: 复盘 + 限时手撕</text>
+    <text x="80" y="512">└── README.md</text>
+  </g>
+
+  <!-- images/ folder highlighted -->
+  <g filter="url(#sk)">
+    <rect x="56" y="520" width="120" height="24" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="60" y="536" font-size="13" fill="#2e6e2e" font-family="monospace" font-weight="bold">└── images/</text>
+  <text x="180" y="536" font-size="11" fill="#888"># SVG 插图</text>
+</svg>

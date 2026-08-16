@@ -83,15 +83,7 @@ dB = A^T @ dC      (K×M) @ (M×N) = K×N
 
 ##### 数据流图
 
-```
-        forward                    backward
-   A ──┐                         dC ──┐
-       ├──► C                      ├──► dA = dC @ B^T  (需要 B)
-   B ──┘                      B ──┘
-                              A ──┐
-                                  ├──► dB = A^T @ dC  (需要 A)
-                             dC ──┘
-```
+![GEMM 前向与反向数据流](../images/gemm_backward_dataflow.svg)
 
 注意：算 `dA` 需要 `B`，算 `dB` 需要 `A`——**前向的输入在反向时仍要可访问**。对 FA 而言，`Q/K/V` 在反向时必须重读，这正是反向 IO 比 forward 略高的原因。
 

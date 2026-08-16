@@ -33,37 +33,7 @@ Day 7 是纯粹的复盘日。本周 Day 1-6 的知识量是全课程之最：
 
 ### 本周知识地图
 
-```
-FlashAttention 全专题
-
-┌─────────────────────────────────────────────────────────────────┐
-│  问题层：标准 Attention 的 O(N²) 瓶颈                           │
-│  S = QK^T (N×N) → softmax → P (N×N) → O = PV (N×d)             │
-│  HBM IO: 读 Q/K/V (3Nd) + 写 S (N²) + 读 S (N²) + 写 P (N²)     │
-│         + 读 P (N²) + 读 V (Nd) + 写 O (Nd) ≈ O(N²)              │
-│  瓶颈: N² 的中间矩阵 S/P 在 HBM↔SRAM 间反复搬运                │
-└───────────────────────────┬─────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  核心思想：分块 + Online Softmax（不物化 N² 矩阵）              │
-│  1. 分块: Q/Br×d, K/Bc×d, V/Bc×d 轮流加载到 SRAM               │
-│  2. Online Softmax: 增量式更新 max(m) 和 sum(l)                 │
-│     - m_new = max(m, rowmax(S_block))                           │
-│     - l_new = l * exp(m - m_new) + rowsum(exp(S_block - m_new)) │
-│     - O_new = O * exp(m - m_new) / l_new + exp(S_block - m_new) @ V │
-│  3. IO 复杂度: O(Nd) (d 为 head dim，M=SRAM 大小时严格界 Θ(N²d²/M))  │
-└───────────────────────────┬─────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  实现演进                                                        │
-│  FA-1 (2022): 分块 + online softmax, warp 共享 Q tile            │
-│    → IO O(Nd), 但 non-matmul FLOPs 多, 跨 warp 同步            │
-│  FA-2 (2023): warp group 子块划分, Q 行方向切分                  │
-│    → non-matmul FLOPs 减半, 消除跨 warp 同步, occupancy 提升     │
-│  FA-3 (2024): Hopper 专属, 异步流水 + FP8                       │
-│    → TMA + warp specialization, 2x over FA-2, 接近峰值           │
-└─────────────────────────────────────────────────────────────────┘
-```
+![FlashAttention 全专题知识地图](../images/fa_knowledge_map.svg)
 
 ### IO 复杂度演进
 

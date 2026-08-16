@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: FA CUDA 实现（简化版）+ Attention IO 分析（4N²+4Nd 口径）
-        ↓
-Day 2: FA 论文精读 + Online Softmax 三公式推导
-        ↓
-Day 3: 手写完整 FA Forward Kernel（含 causal 变体）
-        ↓
-Day 4: FA Backward + GEMM Backward（L_i = m_i + log ℓ_i 重计算）
-        ↓
-Day 5: 项目推进 —— FA 接入 Mini 引擎（C++ Extension）+ 性能对比
-        ↓
-Day 6: FA-2/FA-3 演进 + 官方 CUDA 源码导读 + IO 方法论总结
-        ↓
-Day 7: 复盘 + 限时手撕（FA Forward 简化版 60min）+ 面试 Q&A 收敛
-```
+![Week 5 学习路线图](images/week5_day_roadmap.svg)
 
 ---
 
