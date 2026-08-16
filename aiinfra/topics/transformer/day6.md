@@ -70,15 +70,7 @@ Full mask (Encoder/BERT):       Causal mask (Decoder/GPT):    Cross mask (Enc-De
 
 原始 Transformer 由**两个栈**组成：
 
-```
-源序列 src ──→ [Embedding + PE] ──→ Encoder栈 (×N)
-                                      │
-                                      ↓ encoder 输出 memory: (B, n_src, d)
-                                      │
-目标序列 tgt ──→ [Embedding + PE] ──→ Decoder栈 (×N) ──→ Linear + Softmax ──→ 输出概率
-                                      ↑
-                                      └── Cross-Attention 的 K/V 来自 memory
-```
+![Transformer Encoder-Decoder 架构](../images/encoder_decoder_architecture.svg)
 
 每个 **Encoder Block**（Day 5 的 Block 配双向 mask，两个残差子层）：
 

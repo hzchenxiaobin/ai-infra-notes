@@ -289,25 +289,7 @@ void demo_cpp23() {
 
 ### 学习任务 3：7 天知识点关联图（30 分钟）
 
-```
-Day 1: 内存模型与基础语义
-  │
-  ├─ 栈/堆 → Day 2: RAII（栈对象确定性析构管理堆资源）
-  │
-  ├─ 值类别(lvalue/rvalue) → Day 3: 移动语义（右值引用 + std::move）
-  │                            │
-  │                            └─ 引用折叠 → Day 4: 完美转发 + 变参模板
-  │                                              │
-  │                                              └─ 模板 → CUTLASS/DeepGEMM 源码
-  │
-  ├─ 对象生命周期 → Day 5: 虚函数表 + Rule of 5
-  │                    │
-  │                    └─ 析构 → Day 2: 智能指针(虚析构保证正确释放)
-  │
-  └─ 存储期(thread_local) → Day 6: 并发(thread/atomic/memory order)
-                               │
-                               └─ shared_ptr 线程安全 → Day 6: atomic 引用计数
-```
+![C++ 7 天知识点关联图](../images/cpp_knowledge_map.svg)
 
 > 💡 **知识串联**：Day 1 的内存模型是所有后续内容的基础——Day 2 的 RAII 用栈管理堆，Day 3 的移动语义优化堆对象的传递，Day 4 的模板生成类型安全的代码，Day 5 的虚函数表是对象内存布局的延伸，Day 6 的并发原子操作是内存模型的进阶。
 

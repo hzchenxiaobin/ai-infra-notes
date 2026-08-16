@@ -35,8 +35,6 @@ Week 7 围绕一条主线展开：**从单请求串行到多请求高吞吐服�
 
 > 💡 **一句话总结**：Week 7 的本质是"从凑批到并发服务，再到跨机架构"。Day 7 的策略决策树就是这 7 天学习的最终答卷——它是推理调度选型的通用工具箱。
 
-> 📎 **Dynamic Batching 去哪了**：Dynamic Batching 是 Day 1 导读中的对比基线（request-level 聚合），其实现 `dynamic_batcher.py` 归档在 `_supplementary/from_w6d6/`（Week 6 Day 6 迁移而来），本周正篇从 Continuous Batching 起步。
-
 ---
 
 ### 核心概念串讲
@@ -364,9 +362,7 @@ aiinfra/daily/week7/
 ├── day5/kernels/mini_engine_v1.py # Mini 推理引擎 v1（多请求并发）
 ├── day6/kernels/pd_disaggregated_simulator.py # PD 分离模拟器（colocated vs disaggregated）
 ├── day7/kernels/week7_summary.py # 总结日自测脚本
-├── _supplementary/from_w6d6/ # Dynamic Batching 归档（Day 1 导读对比基线）
-│   └── kernels/dynamic_batcher.py
-└── images/ # 本周 SVG 插图
+├── images/ # 本周 SVG 插图
 ```
 
 > 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>

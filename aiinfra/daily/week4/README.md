@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: Transformer 推理流程（Prefill/Decode 视角）+ 算子分类
-        ↓
-Day 2: 手写 Softmax + LayerNorm Kernel（safe softmax 三遍扫描 + 两级 block reduce）
-        ↓
-Day 3: LayerNorm 优化与 GEMM Backward 数据流
-        ↓
-Day 4: Triton 语言（program 模型 + tl.load/store/reduce + autotune）
-        ↓
-Day 5: 项目推进 —— Triton 重写 Softmax/GEMM/FA 三方 benchmark
-        ↓
-Day 6: Profiling —— Triton vs CUDA vs PyTorch 性能对比
-        ↓
-Day 7: 复盘 + 限时手撕（Softmax 20min / LayerNorm 30min）+ 算子分类总结
-```
+![Week 4 学习路线图](images/week4_day_roadmap.svg)
 
 ---
 

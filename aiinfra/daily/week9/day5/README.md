@@ -19,27 +19,7 @@
 
 MoE（Mixture of Experts）用"稀疏激活"替代稠密 FFN：每个 token 只激活 top-k 个专家，总参数量大但单次 forward 只用一小部分。
 
-```
-token x
-   │
-   ▼
-gate(x) = softmax(x @ W_gate)   ← 路由网络（小 GEMM）
-   │
-   ▼
-top-k(gate)                      ← 选 k 个专家（如 k=2）
-   │
-   ▼
-dispatch: x 发给 k 个专家         ← all-to-all（EP 时跨节点）
-   │
-   ▼
-expert_i(x) = FFN_i(x)           ← k 个专家并行计算
-   │
-   ▼
-combine: 加权求和 Σ w_i · expert_i(x)  ← all-to-all 回收
-   │
-   ▼
-output
-```
+![MoE 前向数据流](../images/moe_forward_flow.svg)
 
 | 概念 | 说明 | 典型值 |
 |------|------|--------|
@@ -273,4 +253,3 @@ DeepSeek 的负载均衡策略：
 
 Ring Attention 是处理超长上下文（100K+ tokens）的分布式 Attention 方案——KV 跨 GPU 环形流式传输，每个 GPU 持有一部分 Q，KV 在 GPU 间传递，本地 attention 计算与通信重叠。它与 FlashAttention 的关系：Ring Attention = FlashAttention + 分布式 KV 传输，online softmax 天然支持跨 GPU 合并。
 
-> 📖 **Ring Attention 完整讲解**（含 NCCL send/recv 通信、双流重叠、load balancing、KV buffer 显存降至 1/N）见 [`_supplementary/from_w8d6/README.md`](../_supplementary/from_w8d6/README.md)。该内容原属 Week 8 Day 6 补充，现已归入 Week 9 分布式专题。

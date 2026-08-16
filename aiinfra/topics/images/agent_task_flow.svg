@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="580" viewBox="0 0 740 580" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="45" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="740" height="580" fill="#fdfcf7"/>
+  <text x="370" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">智能体任务处理流程</text>
+  <path d="M 250 40 Q 370 48 490 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="240" y="56" width="260" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="370" y="80" font-size="13" fill="#2b6e9e" font-weight="bold">智能体收到任务</text>  <path d="M 370 94 L 370 110" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="120" y="112" width="500" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>  <text x="140" y="136" font-size="12" fill="#2e6e2e" font-weight="bold">读 AGENTS.md（前馈：项目结构和约定）</text>  <text x="160" y="156" font-size="10" fill="#666" font-weight="normal">→ docs/golden-rules.md（不变量）</text>  <text x="160" y="172" font-size="10" fill="#666" font-weight="normal">→ docs/coding-standards.md（编码规范）</text>  <text x="160" y="186" font-size="10" fill="#666" font-weight="normal">→ ARCHITECTURE.md（分层规则）</text>  <path d="M 370 194 L 370 210" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="240" y="212" width="260" height="36" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>  <text x="370" y="236" font-size="12" fill="#444" font-weight="normal">写代码（约束内自主实现）</text>  <path d="M 370 250 L 370 266" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="80" y="268" width="580" height="120" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>  <text x="100" y="292" font-size="12" fill="#7a5415" font-weight="bold">运行 bash scripts/check.sh（反馈：背压门控）</text>  <text x="120" y="312" font-size="10" fill="#666" font-weight="normal" font-family="monospace">1. ruff check (&lt; 1s)</text>  <text x="120" y="328" font-size="10" fill="#666" font-weight="normal" font-family="monospace">2. mypy (&lt; 3s)</text>  <text x="120" y="344" font-size="10" fill="#666" font-weight="normal" font-family="monospace">3. pytest test_structure.py (&lt; 2s)</text>  <text x="120" y="360" font-size="10" fill="#666" font-weight="normal" font-family="monospace">4. pytest + coverage (&lt; 5s)</text>  <text x="120" y="376" font-size="10" fill="#666" font-weight="normal" font-family="monospace">5. custom_checks.py (&lt; 2s)</text>  <text x="120" y="392" font-size="10" fill="#666" font-weight="normal" font-family="monospace">Drift Scan（报告性，不阻断）</text>  <path d="M 370 390 L 370 406" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="140" y="408" width="460" height="56" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>  <text x="370" y="432" font-size="12" fill="#b03a3a" font-weight="bold">全绿？→ 是 → 任务完成 ✅</text>  <text x="370" y="452" font-size="11" fill="#666" font-weight="normal">→ 否 → 读 Fix 指令 → 修改 → 重跑 → 循环</text>  <path d="M 370 466 L 370 482" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="200" y="484" width="340" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="370" y="508" font-size="11" fill="#2b6e9e" font-weight="normal">定期：scan_drift.py 扫描偏差 → 自动修复</text></svg>

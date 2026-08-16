@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="51" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="420" fill="#fdfcf7"/>
+  <text x="410" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">FlashDecoding 并行对比</text>
+  <path d="M 290 40 Q 410 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="60" width="740" height="100" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.3"/>
+  </g>  <text x="60" y="84" font-size="12" fill="#b03a3a" font-weight="bold">Standard Decode Attention（1 SM 串行）</text>  <text x="60" y="108" font-size="10" fill="#444" font-weight="normal" font-family="monospace">Block 0: Q · [K_0, K_1, ..., K_{N-1}] → softmax → · [V_0, ..., V_{N-1}]</text>  <text x="60" y="128" font-size="10" fill="#b03a3a" font-weight="normal" font-family="monospace">└──────── 1 个 SM 串行扫描整个 KV ────────┘</text>  <text x="60" y="146" font-size="10" fill="#666" font-weight="normal">→ 慢：整个 KV 序列由 1 个 SM 串行处理</text>  <path d="M 410 162 L 410 178" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="180" width="740" height="160" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>  <text x="60" y="204" font-size="12" fill="#2e6e2e" font-weight="bold">FlashDecoding（N/Bc blocks 并行）</text>  <text x="60" y="228" font-size="9" fill="#444" font-weight="normal" font-family="monospace">Block 0: Q · [K_0, ..., K_{Bc-1}] → partial softmax → · [V_0, ..., V_{Bc-1}] → partial_0</text>  <text x="60" y="246" font-size="9" fill="#444" font-weight="normal" font-family="monospace">Block 1: Q · [K_Bc, ..., K_{2Bc-1}] → partial softmax → · [V_Bc, ..., V_{2Bc-1}] → partial_1</text>  <text x="60" y="264" font-size="9" fill="#444" font-weight="normal" font-family="monospace">...</text>  <text x="60" y="282" font-size="9" fill="#444" font-weight="normal" font-family="monospace">Block T: Q · [K_{(T-1)Bc}, ..., K_{N-1}] → partial softmax → · [V_{(T-1)Bc}, ..., V_{N-1}] → partial_T</text>  <text x="60" y="310" font-size="10" fill="#2e6e2e" font-weight="normal" font-family="monospace">└── T 个 SM 并行，每 block 只扫 Bc 个 KV ──┘</text>  <path d="M 410 342 L 410 358" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="200" y="360" width="420" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="410" y="384" font-size="11" fill="#2b6e9e" font-weight="bold">Merge: online softmax 合并 partial_0..T → 最终 output</text></svg>

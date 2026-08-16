@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: 推理流程深入 —— Prefill compute-bound vs Decode memory-bound + Roofline
-        ↓
-Day 2: 实现 KV Cache（含 GQA/MQA/MLA 变体 + 显存口算）
-        ↓
-Day 3: vLLM 整体架构分析 + V1 演进
-        ↓
-Day 4: vLLM Worker 与 PagedAttention
-        ↓
-Day 5: 项目推进 —— Mini 推理引擎 v0
-        ↓
-Day 6: FlashDecoding —— Decode 阶段并行度突破 + Profiling
-        ↓
-Day 7: 复盘 + 推理系统核心问题总结 + 面试 Q&A
-```
+![Week 6 学习路线图](images/week6_day_roadmap.svg)
 
 ---
 

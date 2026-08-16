@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="43" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="600" height="360" fill="#fdfcf7"/>
+  <text x="300" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Fowler 三层 Harness 框架</text>
+  <path d="M 180 40 Q 300 48 420 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="60" width="480" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="80" y="88" font-size="14" fill="#4a8edb" font-weight="bold">Context Engineering</text>  <text x="80" y="112" font-size="12" fill="#444" font-weight="normal">知识库 + 动态上下文</text>  <path d="M 300 130 L 300 150" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="4 3" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="150" width="480" height="70" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>  <text x="80" y="178" font-size="14" fill="#c98a2b" font-weight="bold">Architectural Constraints</text>  <text x="80" y="202" font-size="12" fill="#444" font-weight="normal">LLM 审查 + linter + 结构测试</text>  <path d="M 300 220 L 300 240" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="4 3" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="240" width="480" height="70" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>  <text x="80" y="268" font-size="14" fill="#4a8e4a" font-weight="bold">Garbage Collection Agents</text>  <text x="80" y="292" font-size="12" fill="#444" font-weight="normal">定期扫描 + 修复漂移</text></svg>

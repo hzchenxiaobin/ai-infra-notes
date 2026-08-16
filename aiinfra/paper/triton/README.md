@@ -56,21 +56,7 @@
 
 ## 4. Core Idea
 
-```
-Problem     新算子无 vendor 库；手写 CUDA 不可移植；已有 DSL 慢且表达力受限
-   ↓
-Observation 性能关键在 tile 级优化（coalescing / shared memory / 同步），
-            而这些在传统 IR 里没有一等公民的表达
-   ↓
-Insight     如果在 IR 里把 tile 做成一等公民（tile 类型 + tile 指令），
-            编译器就能自动做 tile 级优化，不必交给程序员或 polyhedral
-   ↓
-Method      Triton-C（CUDA-like 单线程）→ Triton-IR（LLVM + tile 扩展）
-            → Triton-JIT（机器无关/相关 pass + auto-tuner）→ GPU 机器码
-   ↓
-Benefit     GEMM 追平 cuBLAS、卷积追平 cuDNN；DSL 快 2-3×；
-            shift-conv 融合 kernel 隐藏 shift 开销；编程负担显著降低
-```
+![Triton 核心推理链](../images/triton_core_idea.svg)
 
 一句话：**把"tile"从程序员脑里的概念，下沉成 IR 里的一等类型——让编译器在 tile 粒度上自动做 CUDA 程序员手干的那些脏活（coalescing、shared memory、barrier）。**
 

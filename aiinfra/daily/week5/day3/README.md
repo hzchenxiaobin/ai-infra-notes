@@ -10,7 +10,7 @@
 4. 实现并运行 `flash_attention_v2.cu`，与 CPU 标准 Attention 对比误差 < 1e-3，支持 `grid=(N/Br, H, B)` 配置<br>
 5. 能正确处理 **N 不是 Br 倍数** 的边界情况，理解 `__syncthreads()` 只需在 tile 加载后使用<br>
 
-> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 6 读官方源码、学 FA2 改进，FA 集成 Mini 引擎见 `_supplementary/from_w5d2`，全部建立在今天的 Kernel 之上。
+> 💡 **为什么重要**：能手写 FlashAttention 是 AI Infra 面试的高区分度技能。Day 1 推导了 online softmax 三公式，今天把它们"翻译"成可编译的 CUDA Kernel——这是从"懂算法"到"会实现"的关键一跃。后续 Day 6 读官方源码、学 FA2 改进，全部建立在今天的 Kernel 之上。
 
 ---
 

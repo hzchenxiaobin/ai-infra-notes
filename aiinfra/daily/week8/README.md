@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: 量化基础 + W8A16 dequant kernel + INT8 KV Cache 量化
-        ↓
-Day 2: FP8 量化深入 —— E4M3/E5M2 kernel + GPTQ vs AWQ vs SmoothQuant + FP4
-        ↓
-Day 3: 投机解码 —— 接受率精确期望 + Medusa/EAGLE/MTP 三路线
-        ↓
-Day 4: CUDA Graph —— 静态捕获 + 动态 shape bucketing + 采样 kernel（top-p/top-k）
-        ↓
-Day 5: 项目推进 —— 量化/投机解码/CUDA Graph 选一接入 Mini 引擎
-        ↓
-Day 6: Profiling —— 量化前后精度性能对比 + CUDA Graph launch gap 实测
-        ↓
-Day 7: 复盘 + 面试 Q&A（量化/投机解码/CUDA Graph/采样）
-```
+![Week 8 学习路线图](images/week8_day_roadmap.svg)
 
 ---
 

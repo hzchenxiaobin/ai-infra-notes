@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: Tensor Core 架构 + WMMA fragment 基础
-        ↓
-Day 2: 手写 WMMA GEMM（m16n16k16）+ cuBLAS 对比
-        ↓
-Day 3: mma.sync 指令与 ldmatrix —— Tensor Core 底层编程
-        ↓
-Day 4: CUTLASS 源码分析 + CuTe（Layout/Tensor/local_tile）
-        ↓
-Day 5: 项目推进 —— WMMA GEMM 接入 Benchmark + Double Buffering
-        ↓
-Day 6: Profiling —— Tensor Core 利用率 + WMMA vs FMA vs cuBLAS 三方对比
-        ↓
-Day 7: 复盘 + 手撕（WMMA fragment 生命周期）+ 混合精度/FP8 入门面试题
-```
+![Week 3 学习路线图](images/week3_day_roadmap.svg)
 
 ---
 

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="588" viewBox="0 0 720 588" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+  </defs>
+  <rect width="720" height="588" fill="#fdfcf7"/>
+  <text x="360" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 2 学习路线图</text>
+  <path d="M 212 42 Q 360 50 508 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="640" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="92" font-size="14" font-weight="bold" fill="#2b6e9e">Day 1</text>
+  <text x="60" y="112" font-size="11" fill="#444">Warp Shuffle 原语与 Warp/Block Reduce</text>
+  <path d="M 360 124 L 360 142" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="142" width="640" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="166" font-size="14" font-weight="bold" fill="#2b6e9e">Day 2</text>
+  <text x="60" y="186" font-size="11" fill="#444">Register Blocking 与 2D Tiling</text>
+  <path d="M 360 198 L 360 216" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="216" width="640" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="240" font-size="14" font-weight="bold" fill="#2b6e9e">Day 3</text>
+  <text x="60" y="260" font-size="11" fill="#444">float4 向量化 + GEMM 七层路径（前四层：Naive→Tiling→RegBlock→f…</text>
+  <path d="M 360 272 L 360 290" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="290" width="640" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="314" font-size="14" font-weight="bold" fill="#2b6e9e">Day 4</text>
+  <text x="60" y="334" font-size="11" fill="#444">GEMM 七层路径（后三层：Shuffle→DblBuf→整合）+ cuBLAS 对比</text>
+  <path d="M 360 346 L 360 364" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="364" width="640" height="56" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="388" font-size="14" font-weight="bold" fill="#2e6e2e">Day 5</text>
+  <text x="60" y="408" font-size="11" fill="#444">CUDA Streams 与异步执行</text>
+  <path d="M 360 420 L 360 438" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="438" width="640" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="462" font-size="14" font-weight="bold" fill="#2b6e9e">Day 6</text>
+  <text x="60" y="482" font-size="11" fill="#444">Nsight Compute 性能分析</text>
+  <path d="M 360 494 L 360 512" stroke="#4a8edb" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="512" width="640" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="536" font-size="14" font-weight="bold" fill="#7a5415">Day 7</text>
+  <text x="60" y="556" font-size="11" fill="#444">复盘 + 限时手撕（Reduce 30min / GEMM tiling 60min）+ GitHu…</text>
+</svg>

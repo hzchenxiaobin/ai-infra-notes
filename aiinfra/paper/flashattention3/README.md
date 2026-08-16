@@ -56,24 +56,7 @@ FP8（e4m3：4 位指数 + 3 位尾数）精度脆弱，且 LLM 激活存在 **o
 
 ## 4. Core Idea
 
-```
-Problem     FA2 在 H100 只有 35% 利用率：同步模型用不上 WGMMA/TMA 的异步性，FP8 也不敢碰
-   ↓
-Observation H100 的搬数（TMA）、矩阵乘（WGMMA）、普通计算（CUDA core/SFU）
-            是三条可以并行推进的硬件通路；它们之间的依赖是"块级"的，可以流水化
-   ↓
-Insight     ① 把搬数和计算分给不同的 warp（producer/consumer），异步天然重叠
-            ② softmax 慢（SFU 3.9 vs GEMM 989 TFLOPs/s），但可以让它和一个块的
-               WGMMA 同时跑——只要重排顺序解除 softmax→GEMM 的串行依赖
-            ③ FP8 的 2× 算力值得为它做布局手术和量化补偿
-   ↓
-Method      warp 特化 + pingpong 调度（级间重叠）
-            2-stage WGMMA-softmax 流水（级内重叠）
-            FP8：LDSM/STSM 片上转置 + byte permute 布局转换 + 块量化 + Hadamard 旋转
-   ↓
-Benefit     FP16 达 740 TFLOPs/s（75% 峰值），FP8 近 1.2 PFLOPs/s，
-            且 FP8 误差反比朴素量化低 2.6×——速度与精度双赢
-```
+![FlashAttention-3 核心推理链](../images/flashattention3_core_idea.svg)
 
 ---
 

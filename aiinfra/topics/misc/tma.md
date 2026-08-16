@@ -120,22 +120,7 @@ CUresult res = cuTensorMapEncodeTiled(
 
 #### Descriptor 内部结构
 
-```
-128 字节 descriptor:
-┌─────────────────────────────────────────────────┐
-│ base GMEM address (8 bytes)                     │
-│ global dimensions [2×8 bytes for 2D]            │ ← 张量总形状
-│ global strides [(rank-1)×8 bytes]               │ ← 各维度步长
-│ box dimensions [2×4 bytes for 2D]               │ ← tile 大小
-│ element strides [2×4 bytes]                     │
-│ data type (2 bytes)                             │ ← half/float/bf16/...
-│ swizzle mode (2 bytes)                          │ ← 128B/64B/32B/NONE
-│ interleave mode (2 bytes)                       │
-│ L2 promotion mode (2 bytes)                     │
-│ OOB fill mode (2 bytes)                         │ ← 越界行为
-│ ... (padding)                                   │
-└─────────────────────────────────────────────────┘
-```
+![TMA Descriptor 内部结构](../images/tma_descriptor_structure.svg)
 
 > ⚠️ **维度顺序**：descriptor 中维度是**反序**的——最快变维度（列）在前，最慢变维度（行）在后。即 `globalDim = {K, M}` 对应一个 `M×K` 的矩阵。这是 TMA 编程中最容易搞错的点。
 
@@ -335,18 +320,7 @@ nvcc -arch=sm_90a -std=c++17 -rdc=true \
 
 TMA 不是经过常规的 L1 cache，而是一条专用数据通路：
 
-```
-GMEM (HBM)
-    │
-    ▼
-L2 Cache ──── TMA Unit (SM 内专用硬件单元)
-    │              │
-    │              ▼
-    │          SMEM (Shared Memory)
-    │
-    ▼
-常规 load/store (L1 → 寄存器)
-```
+![TMA 硬件数据通路](../images/tma_hardware_data_path.svg)
 
 面试常问的"TMA 是否经过 L1"——**不经过 L1**。TMA 数据通路是 `GMEM → L2 → TMA Unit → SMEM`，旁路了 L1 cache。这带来两个好处：
 1. 不污染 L1 cache（TMA 搬的 tile 数据不挤占 L1 空间）

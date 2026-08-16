@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: Warp Shuffle 原语与 Warp/Block Reduce
-        ↓
-Day 2: Register Blocking 与 2D Tiling
-        ↓
-Day 3: float4 向量化 + GEMM 七层路径（前四层：Naive→Tiling→RegBlock→float4）
-        ↓
-Day 4: GEMM 七层路径（后三层：Shuffle→DblBuf→整合）+ cuBLAS 对比
-        ↓
-Day 5: CUDA Streams 与异步执行
-        ↓
-Day 6: Nsight Compute 性能分析
-        ↓
-Day 7: 复盘 + 限时手撕（Reduce 30min / GEMM tiling 60min）+ GitHub 整理
-```
+![Week 2 学习路线图](images/week2_day_roadmap.svg)
 
 ---
 

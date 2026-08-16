@@ -39,7 +39,7 @@
 
 ### Attention 基础速查
 
-Attention 基础的完整讲解见 [topics/transformer 专题](../../../topics/transformer/README.md)（Week 4 Day 1 也有同样处理）。这里只留面试速查口径：
+Attention 基础的完整讲解见 [topics/transformer 专题](https://hzchenxiaobin.github.io/ai-infra-notes/transformer/index.html)（Week 4 Day 1 也有同样处理）。这里只留面试速查口径：
 
 | 问题 | 一句话答案 |
 |---|---|

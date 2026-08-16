@@ -450,7 +450,7 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
 5. **Algorithm 2**：前向存 `Q/K/V/O/L`（O(Nd)），反向分块重算 `S/P` 累加 `dQ/dK/dV`，IO 保持 O(Nd)
 6. **代码验证**：`gemm_backward.cu` 用有限差分核对链式法则，`flash_attention_backward.py` 用 `gradcheck` 数值验证 backward，四项 maxDiff 全在 1e-15
 
-掌握这些后，你就具备了把 FA 接入训练循环的能力。Day 6 读官方源码（另见 `_supplementary/from_w4d7` 的源码导读）时会发现，今天的手写 backward 与官方的差距和 forward 一样——主要在 async copy、双缓冲和 Tensor Core。
+掌握这些后，你就具备了把 FA 接入训练循环的能力。Day 6 读官方源码时会发现，今天的手写 backward 与官方的差距和 forward 一样——主要在 async copy、双缓冲和 Tensor Core。
 
 ---
 

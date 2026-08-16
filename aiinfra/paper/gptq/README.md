@@ -53,23 +53,7 @@ GPTQ 是一种基于**近似二阶信息**的一次性权重量化方法：不�
 
 ## 4. Core Idea
 
-```text
-Problem     OBQ 精度高但 O(d_row·d_col³) 无法 scale；RTN 能 scale 但 3-4bit 崩盘
-   ↓
-Observation ① OBQ 的贪心选序相对"任意固定顺序"精度收益很小（大层上尤其如此）
-            ② 每行的量化相互独立，而 Hessian H = 2XXᵀ 只依赖层输入 X、
-              不依赖权重 —— 所以所有行可以共用同一顺序、同一份 H⁻¹ 更新
-   ↓
-Insight     按固定列序量化所有行 ⇒ H⁻¹ 的更新从"每个权重一次"降为"每列一次"；
-            再把列分块做 lazy 批量更新消除访存瓶颈；用 Cholesky 分解
-            一次性算好全部所需行，绕开反复逆更新的数值病态
-   ↓
-Method      GPTQ：固定列序 + B=128 分块 lazy update + Cholesky 重构 +
-            dampening（λ = 对角线均值 1%）+ 逐 Transformer block 顺序量化
-   ↓
-Benefit     复杂度 O(d_row·d_col³) → O(max{d_row·d_col², d_col³})，提速 3+ 个数量级；
-            175B 量化 4 小时；4bit 精度几乎无损；单卡 A100 跑 175B，推理快 3.25×~4.5×
-```
+![GPTQ 核心推理链](../images/gptq_core_idea.svg)
 
 一句话：**GPTQ 不是发明了新的量化数学，而是发现 OBQ 的二阶补偿可以在"固定顺序"下几乎不损失精度——这一观察把串行逐权重过程变成可分块并行的大规模矩阵运算。**
 

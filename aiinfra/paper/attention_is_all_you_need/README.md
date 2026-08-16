@@ -55,21 +55,7 @@
 
 ## 4. Core Idea
 
-```
-Problem     RNN 的顺序计算阻止并行化；长程依赖路径长、难学
-   ↓
-Observation 注意力机制本就能在任意两位置间一步建立连接（对齐），
-            只是一直被当作 RNN 的辅助件
-   ↓
-Insight     如果让 token 之间两两直接"互相看"（self-attention），
-            序列内部的路由可以全部并行完成，根本不需要时间步
-   ↓
-Method      纯注意力 Encoder-Decoder：Multi-Head Self-Attention
-            + 位置敏感的 FFN + sin/cos 位置编码补齐顺序信息
-   ↓
-Benefit     每层顺序操作 O(n)→O(1)，最大路径长度 O(n)→O(1)；
-            训练时间数量级下降，长程依赖可学，质量反而 SOTA
-```
+![Transformer 核心推理链](../images/attention_is_all_you_need_core_idea.svg)
 
 一句话：**把"序列建模"从"按时间递推"改写成"两两关系的一次大规模矩阵运算"**——这也解释了为什么 Transformer 与 GPU/TPU 是天作之合：它的全部计算几乎都落在 GEMM 上。
 

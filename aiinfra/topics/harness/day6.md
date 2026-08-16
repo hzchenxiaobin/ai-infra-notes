@@ -53,29 +53,7 @@ Day 1-5 我们逐一学习了六大核心概念并动手实现了各个组件。
 
 #### 组件间的协同关系
 
-```
-智能体收到任务
-  │
-  ├── 读 AGENTS.md（前馈：知道项目结构和约定）
-  │     ├── 导航 → docs/golden-rules.md（前馈：知道不变量）
-  │     ├── 导航 → docs/coding-standards.md（前馈：知道编码规范）
-  │     └── 导航 → ARCHITECTURE.md（前馈：知道分层规则）
-  │
-  ├── 写代码（在约束内自主实现）
-  │
-  ├── 运行 bash scripts/check.sh（反馈：背压门控）
-  │     ├── 1. ruff check（计算性反馈：< 1s）
-  │     ├── 2. mypy（计算性反馈：< 3s）
-  │     ├── 3. pytest test_structure.py（计算性反馈：< 2s）
-  │     ├── 4. pytest + coverage（计算性反馈：< 5s）
-  │     ├── 5. custom_checks.py（计算性反馈：< 2s）
-  │     └── Drift Scan（报告性，不阻断）
-  │
-  ├── 全绿？→ 是 → 任务完成 ✅
-  │         → 否 → 读 Fix 指令 → 修改 → 重跑 → 循环
-  │
-  └── 定期：scan_drift.py 扫描历史偏差 → 智能体自动修复
-```
+![智能体任务处理流程](../images/agent_task_flow.svg)
 
 ### 1.2 对比实验设计
 

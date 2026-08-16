@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: 完成 custom kernel 封装（LayerNorm/Softmax/FlashAttention），接入 Mini 引擎
-        ↓
-Day 2: 接入引擎并联调（六步分层验证 + 全链路 Profiling，真引擎模式 `--real`）
-        ↓
-Day 3: 项目文档（README）+ 架构图 + 数据流图
-        ↓
-Day 4: 高频面试题基础篇 + 进阶篇（含系统设计题）
-        ↓
-Day 5: Mock 面试 + STAR 项目话术
-        ↓
-Day 6: 诊断流程实战剧本（低 MFU/OOM/hang 三案例）+ 限时手撕清单（10 项）
-        ↓
-Day 7: 最终复盘 —— 10 周能力地图 + 查漏补缺
-```
+![Week 10 学习路线图](images/week10_day_roadmap.svg)
 
 ---
 
@@ -43,4 +29,3 @@ Day 7: 最终复盘 —— 10 周能力地图 + 查漏补缺
 | Day 6 | 诊断流程实战剧本 + 手撕限时清单 | [day6/](day6/README.md) |
 | Day 7 | 最终复盘 —— 10 周能力地图 | [day7/](day7/README.md) |
 
-> 📁 补充材料：`_supplementary/` 目录包含面试题进阶篇、查漏补缺、多请求并发、完整调度器、Latency/Throughput 测试、端到端 Profiling、源码分析、架构图等延伸内容。

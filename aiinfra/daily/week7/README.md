@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: Dynamic Batching + Continuous Batching
-        ↓
-Day 2: vLLM Scheduler 源码分析
-        ↓
-Day 3: 框架对比（vLLM / TRT-LLM / SGLang / LightLLM）
-        ↓
-Day 4: Chunked Prefill + Prefix Caching + RadixAttention
-        ↓
-Day 5: 项目推进 —— Mini 推理引擎 v1（多请求并发）
-        ↓
-Day 6: Prefill/Decode 分离推理（PD Disaggregated）
-        ↓
-Day 7: 复盘 + 调度优化策略总结 + 面试 Q&A
-```
+![Week 7 学习路线图](images/week7_day_roadmap.svg)
 
 ---
 
@@ -43,4 +29,3 @@ Day 7: 复盘 + 调度优化策略总结 + 面试 Q&A
 | Day 6 | Prefill/Decode 分离推理（PD Disaggregated） | [day6/](day6/README.md) |
 | Day 7 | 调度优化策略总结 | [day7/](day7/README.md) |
 
-> 📁 补充材料：`_supplementary/from_w6d6/` 包含 Dynamic Batching 独立内容。

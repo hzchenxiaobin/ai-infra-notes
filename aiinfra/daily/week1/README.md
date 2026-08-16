@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: GPU 执行模型 → SM/Warp/SIMT + Grid/Block/Thread + 第一个 CUDA 程序 + Vector Addition
-        ↓
-Day 2: Occupancy 与资源约束 → 寄存器/Shared Memory/Block 数上限 + Register Spilling + ReLU
-        ↓
-Day 3: 认识你的 GPU → deviceQuery + 峰值算力/显存带宽计算 + Matrix Addition
-        ↓
-Day 4: Memory Hierarchy 深入 → Coalesced Access + Shared Memory Tiling + Matrix Transpose
-        ↓
-Day 5: Bank Conflict 分析 → 32 bank 结构 + Padding 优化 + Reduction
-        ↓
-Day 6: Nsight Profiling 实战 → nsys/ncu + Roofline 模型 + Matrix Multiplication
-        ↓
-Day 7: 总结与复盘 → 知识地图 + 优化决策树 + 面试速查表 + 综合练习
-```
+![Week 1 学习路线图](images/week1_day_roadmap.svg)
 
 ---
 

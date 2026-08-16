@@ -332,7 +332,7 @@ Day 2 我们把 KV Cache、Batching、Scheduler、自定义 Kernel 全部串联�
 5. **异常输入**：空 prompt、超长 prompt、超时取消，系统不崩溃
 6. **排查原则**：分层定位 + 逐步缩小范围 + 监控关键指标
 
-掌握这些后，你就有了系统联调的完整能力——明天 Day 3 把散落各周的代码打磨成项目文档（README 六段结构 + Quick Start + Benchmark）。全链路 Profiling（nsys/ncu 定位系统级瓶颈、与 vLLM 对比）属于补充专题，见 [`_supplementary/from_w9d3/`](../_supplementary/from_w9d3/)。
+掌握这些后，你就有了系统联调的完整能力——明天 Day 3 把散落各周的代码打磨成项目文档（README 六段结构 + Quick Start + Benchmark）。全链路 Profiling（nsys/ncu 定位系统级瓶颈、与 vLLM 对比）属于补充专题。
 
 ---
 

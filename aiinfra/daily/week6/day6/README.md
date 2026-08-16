@@ -50,20 +50,7 @@ Decode 阶段（M=1）：
 
 FlashAttention 的并行维度是 Q tile（行方向），Decode 时 M=1 切不了。FlashDecoding 的洞察：**既然 Q 只有 1 行不能切，那就把 KV sequence 按列方向切分到不同 block**——每个 block 独立处理一段 KV，最后合并结果。
 
-```
-Standard Decode Attention（1 block 串行）：
-  Block 0: Q · [K_0, K_1, K_2, ..., K_{N-1}] → softmax → · [V_0, ..., V_{N-1}]
-           └─────────── 1 个 SM 串行扫描整个 KV ───────────┘
-
-FlashDecoding（N/Bc blocks 并行）：
-  Block 0: Q · [K_0, ..., K_{Bc-1}]       → partial softmax → · [V_0, ..., V_{Bc-1}]       → partial_0
-  Block 1: Q · [K_Bc, ..., K_{2Bc-1}]     → partial softmax → · [V_Bc, ..., V_{2Bc-1}]     → partial_1
-  ...
-  Block T: Q · [K_{(T-1)Bc}, ..., K_{N-1}]] → partial softmax → · [V_{(T-1)Bc}, ..., V_{N-1}] → partial_T
-           └── T 个 SM 并行，每 block 只扫 Bc 个 KV ──┘
-  
-  Merge: 用 online softmax 合并 partial_0, partial_1, ..., partial_T → 最终 output
-```
+![FlashDecoding 并行对比](../images/flashdecoding_parallelism.svg)
 
 | 维度 | Standard Decode | FlashDecoding |
 |------|----------------|---------------|

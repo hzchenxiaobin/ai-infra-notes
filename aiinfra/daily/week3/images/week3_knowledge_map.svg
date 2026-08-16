@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="620" viewBox="0 0 820 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="50" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="620" fill="#fdfcf7"/>
+  <text x="410" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Week 3 知识地图：Tensor Core 与 CUTLASS</text>
+  <path d="M 290 40 Q 410 48 530 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="56" width="740" height="80" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>  <text x="60" y="80" font-size="14" fill="#b03a3a" font-weight="bold">硬件层</text>  <text x="60" y="104" font-size="10" fill="#444" font-weight="normal">Tensor Core：每周期 16×16×16 MMA，FP16→FP32 混合精度</text>  <text x="60" y="122" font-size="10" fill="#444" font-weight="normal">架构演进：Volta→Ampere→Hopper→Blackwell</text>  <path d="M 410 136 L 410 166" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="186" width="740" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>  <text x="60" y="210" font-size="14" fill="#c98a2b" font-weight="bold">指令层</text>  <text x="60" y="234" font-size="10" fill="#444" font-weight="normal">WMMA (高层C++): fragment → load → mma_sync → store</text>  <text x="60" y="252" font-size="10" fill="#444" font-weight="normal">mma.sync (PTX): m16n8k16, ldmatrix.x4/x2</text>  <path d="M 410 266 L 410 296" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="316" width="740" height="100" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="60" y="340" font-size="14" fill="#4a8edb" font-weight="bold">优化层</text>  <text x="60" y="364" font-size="10" fill="#444" font-weight="normal">Day1 naive(30%) → Day2 smem tiling(42%) → Day3 mma.sync(~50%)</text>  <text x="60" y="382" font-size="10" fill="#444" font-weight="normal">→ Day5 double buffer(~55%) → Day4 CUTLASS(95%+)</text>  <text x="60" y="400" font-size="10" fill="#444" font-weight="normal">关键：smem tiling | multi-warp | bank conflict | ldmatrix | cp.async</text>  <path d="M 410 416 L 410 446" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="40" y="446" width="740" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>  <text x="60" y="470" font-size="14" fill="#4a8e4a" font-weight="bold">工程层</text>  <text x="60" y="494" font-size="10" fill="#444" font-weight="normal">CUTLASS：三级 tiling(Device→Warp→Instruction) + CuTe layout</text>  <text x="60" y="512" font-size="10" fill="#444" font-weight="normal">cuBLAS：CUTLASS级优化 + 预编译kernel库 + auto-tuning</text></svg>

@@ -543,7 +543,7 @@ Day 4 我们系统复习了 AI Infra 面试基础篇的四大主题：
 6. **Matrix Transpose**：访存合并（coalescing）的典型案例（naive 不连续 → shared memory tile 修复），memory-bound 纯搬运
 7. **零钱兑换**：完全背包 DP，子问题复用 ↔ shared memory tile 复用
 
-掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 5 进行 Mock 面试，在模拟问答中检验基础篇的掌握程度（进阶篇见 `_supplementary/from_w10d3/`）。
+掌握这些后，你就有了面试基础篇的"弹药库"——明天 Day 5 进行 Mock 面试，在模拟问答中检验基础篇的掌握程度。
 
 ---
 

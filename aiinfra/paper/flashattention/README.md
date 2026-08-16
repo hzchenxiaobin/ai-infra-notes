@@ -74,21 +74,7 @@ GPU 算子分两类：
 
 ## 4. Core Idea
 
-```
-Problem     标准注意力慢在 HBM 读写（O(N²) 的 S/P 物化），而不是 FLOPs
-   ↓
-Observation SRAM 比 HBM 快一个数量级；softmax 可以分块增量计算（online softmax，
-            Rabe & Staats 2021 / Milakov & Gimelshein 2018 已提出，但未用于加速训练）
-   ↓
-Insight     只要分块足够小，S/P 中间块可以一辈子活在 SRAM/寄存器里——
-            不物化 N×N 矩阵，HBM 流量就从 Θ(N²) 降到 Θ(N²d²/M)
-   ↓
-Method      Tiling 分块 + online softmax 增量归一化 + 全算子融合为单个 CUDA kernel；
-            backward 用 (O, ℓ, m) 重算 S/P（recomputation），不存中间矩阵
-   ↓
-Benefit     精确结果不变：kernel 最高 7.6× 加速、显存线性 O(N)、
-            IO 复杂度可证明最优；省下的显存/时间换成更长上下文 → 更高模型质量
-```
+![FlashAttention 核心推理链](../images/flashattention_core_idea.svg)
 
 一句话：**不是发明新的注意力数学，而是发明注意力的"正确打开方式"——按内存层级组织已有计算**。
 

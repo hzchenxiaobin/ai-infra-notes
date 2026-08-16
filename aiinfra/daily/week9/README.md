@@ -13,21 +13,7 @@
 
 ## 🧭 本周学习地图
 
-```
-Day 1: Tensor Parallelism —— column/row-parallel QKV + all-reduce
-        ↓
-Day 2: Pipeline Parallelism + DP —— 1F1B/bubble ratio/数据并行
-        ↓
-Day 3: NCCL Collectives —— all-reduce/all-gather/reduce-scatter 通信量 + ring/tree 拓扑
-        ↓
-Day 4: 通信计算重叠 —— 双 Stream + CUDA Graph Overlap
-        ↓
-Day 5: Ring Attention + MoE + EP —— Top-K 路由 + all-to-all + DeepEP/EPLB
-        ↓
-Day 6: 项目推进 —— TP demo + MoE 路由模拟器 + Ascend CANN 对比
-        ↓
-Day 7: 复盘 + 面试 Q&A（分布式/MoE/多硬件）
-```
+![Week 9 学习路线图](images/week9_day_roadmap.svg)
 
 ---
 
@@ -43,4 +29,3 @@ Day 7: 复盘 + 面试 Q&A（分布式/MoE/多硬件）
 | Day 6 | 多硬件对比：NVIDIA CUDA vs Ascend CANN | [day6/](day6/README.md) |
 | Day 7 | 复盘与面试 Q&A —— 分布式/MoE/多硬件 | [day7/](day7/README.md) |
 
-> 📁 补充材料：`_supplementary/from_w8d6/` 包含 Ring Attention 独立内容。

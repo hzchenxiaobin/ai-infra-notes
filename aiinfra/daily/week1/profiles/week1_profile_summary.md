@@ -104,25 +104,7 @@
 
 在 Roofline 图上标出各 kernel 大致位置：
 
-```
-  FLOP/s
-    │
-Peak├───────────────┐  104.75 TFLOPS
-    │               │
-    │               │     ○ GEMM (tiled, AI≈K/8)
-    │               │
-    │     ○ occupancy_test (AI≈1)
-    │               │
-    │        ○ transpose_naive (AI≈0.33)
-    │   ○ hello_gpu (AI≈0.083)
-    │   ○ softmax (AI≈0.083)
-    │               │
-    └───────────────┴─────────────── Arithmetic Intensity
-    0    10    20    30    40    50    58.45   100
-                                    ↑
-                               Ridge Point
-                    Memory-bound → Compute-bound
-```
+![Week 1 Roofline 图](../images/week1_roofline_chart.svg)
 
 > **分析**：Week 1 的所有 kernel（hello_gpu、occupancy_test、transpose、bank_conflict、softmax）的算术强度都远低于 Ridge Point（58.45），因此全部为 **memory-bound**。只有经过 tiling 优化的 GEMM（Week 2）才可能接近或超过 Ridge Point。
 

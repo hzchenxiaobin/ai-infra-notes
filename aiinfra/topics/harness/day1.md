@@ -127,15 +127,7 @@ HumanLayer 把 harness 浓缩为六个可操作的"杠杆"：
 
 Fowler 把 harness 从架构角度分为三层：
 
-```
-┌─────────────────────────────────────────┐
-│        Context Engineering              │  知识库 + 动态上下文
-├─────────────────────────────────────────┤
-│     Architectural Constraints           │  LLM 审查 + linter + 结构测试
-├─────────────────────────────────────────┤
-│     Garbage Collection Agents           │  定期扫描 + 修复漂移
-└─────────────────────────────────────────┘
-```
+![Fowler 三层 Harness 框架](../images/harness_three_layer_framework.svg)
 
 | 层级 | 职责 | 对应概念 |
 |------|------|----------|

@@ -49,26 +49,7 @@ DeepSeek-V2 是一个 236B 总参数、21B 激活参数的 MoE 模型，靠两�
 
 ## 4. Core Idea
 
-```text
-Problem     MHA 的 KV Cache 卡死推理吞吐；GQA/MQA 省 KV 但掉能力；
-            稠密模型训练成本与参数线性挂钩
-   ↓
-Observation ① GQA/MQA 掉能力的根源是「减少 K/V 头数」= 粗暴砍掉表示容量；
-            K/V 矩阵本身很可能是低秩的 —— 压缩表示比砍头更优
-            ② MoE 专家粗粒度导致知识冗余；细粒度切分 + 共享专家
-            可以让专家更专精
-   ↓
-Insight     把 K、V「联合」压缩进一个低秩隐向量 c_t^KV 并只缓存它；
-            位置信息交给独立的解耦 RoPE 键，使上投影矩阵可在推理时
-            被吸收（不真的展开 K/V）——缓存小、计算不增、能力不降
-   ↓
-Method      MLA（低秩 KV 联合压缩 + 解耦 RoPE + Q 低秩压缩）
-            + DeepSeekMoE（细粒度专家 + 共享专家 + 设备受限路由
-            + 三级均衡损失 + token 丢弃）
-   ↓
-Benefit     KV Cache = MHA 的 ~1/57（消融 MoE 上 4%），性能反超 MHA；
-            训练成本 −42.5%，生成吞吐 ×5.76，21B 激活达开源第一梯队
-```
+![DeepSeek-V2 核心推理链](../images/deepseek_v2_core_idea.svg)
 
 一句话：**DeepSeek-V2 的答案是把"省"从"砍容量"改为"压秩"——KV 联合低秩压缩解决推理，细粒度稀疏专家解决训练，两者都不以能力为代价。**
 

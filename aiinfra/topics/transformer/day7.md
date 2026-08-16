@@ -33,24 +33,7 @@
 
 mini-GPT 是一个 **Decoder-only** 架构（Day 6 讲过：因果 mask 的 Block 栈）。完整数据流：
 
-```
-token 序列 idx: (B, T)                           ← 整数索引，每个 token 是词表中的 ID
-    │
-    ↓ Token Embedding
-x: (B, T, d)                                      ← 查表，ID → d 维向量
-    │
-    ↓ Block_1(causal + RoPE) → Block_2 → ... → Block_N
-x: (B, T, d)                                      ← N 层 Block，shape 不变（Day 5）
-    │
-    ↓ Final LayerNorm
-x: (B, T, d)
-    │
-    ↓ LM Head (Linear: d → vocab_size)
-logits: (B, T, V)                                 ← 每个 token 位置输出 vocab_size 个 logit
-    │
-    ↓ (训练) Cross-Entropy with shifted targets   ← 预测下一个 token
-    ↓ (推理) softmax → 采样 → 拼接到序列末尾        ← 自回归生成
-```
+![mini-GPT 数据流](../images/mini_gpt_dataflow.svg)
 
 #### 与 Day 5/Day 6 的关系
 

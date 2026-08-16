@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="580" viewBox="0 0 680 580" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="47" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="680" height="580" fill="#fdfcf7"/>
+  <text x="340" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">mini-GPT 数据流（Decoder-only）</text>
+  <path d="M 220 40 Q 340 48 460 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="56" width="560" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="80" y="80" font-size="12" fill="#4a8edb" font-weight="bold">token 序列 idx: (B, T)</text>  <text x="80" y="100" font-size="10" fill="#666" font-weight="normal">整数索引，每个 token 是词表中的 ID</text>  <path d="M 340 112 L 340 136" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="136" width="560" height="56" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>  <text x="80" y="160" font-size="12" fill="#4a8e4a" font-weight="bold">Token Embedding</text>  <text x="80" y="180" font-size="10" fill="#666" font-weight="normal">查表，ID → d 维向量</text>  <path d="M 340 192 L 340 216" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="216" width="560" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>  <text x="80" y="240" font-size="12" fill="#c98a2b" font-weight="bold">Block 栈: Block_1(causal+RoPE) → ... → Block_N</text>  <text x="80" y="260" font-size="10" fill="#666" font-weight="normal">N 层 Block，shape 不变</text>  <path d="M 340 272 L 340 296" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="296" width="560" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>  <text x="80" y="320" font-size="12" fill="#9e9e9e" font-weight="bold">Final LayerNorm</text>  <path d="M 340 352 L 340 376" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="376" width="560" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>  <text x="80" y="400" font-size="12" fill="#4a8edb" font-weight="bold">LM Head (Linear: d → vocab_size)</text>  <text x="80" y="420" font-size="10" fill="#666" font-weight="normal">每个 token 位置输出 vocab_size 个 logit</text>  <path d="M 340 432 L 340 456" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+    <rect x="60" y="456" width="560" height="56" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>  <text x="80" y="480" font-size="12" fill="#b03a3a" font-weight="bold">训练: Cross-Entropy with shifted targets</text>  <text x="80" y="500" font-size="10" fill="#666" font-weight="normal">推理: softmax → 采样 → 拼接到序列末尾</text></svg>

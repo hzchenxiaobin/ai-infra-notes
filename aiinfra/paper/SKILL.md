@@ -64,17 +64,7 @@ aiinfra/paper/
 
 不要描述流程，要描述创新点。统一用代码块画 Problem → Observation → Insight → Method → Benefit 的推理链：
 
-```text
-Problem     已有方法的根本瓶颈
-   ↓
-Observation 被忽视的关键事实
-   ↓
-Insight     由此产生的新想法
-   ↓
-Method      把想法落成方法
-   ↓
-Benefit     量化了什么收益
-```
+![Core Idea 推理链模板](../images/core_idea_template.svg)
 
 ### 3.2 Method 模块模板
 

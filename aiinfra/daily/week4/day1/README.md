@@ -26,7 +26,7 @@
 
 ### 背景知识：Transformer 结构基础
 
-> 📖 Transformer 的结构基础——RNN/LSTM 演化、Self-Attention 与 QKV 数学推导、Multi-Head Attention、位置编码、残差/LayerNorm/FFN、Block 组装——在 **Transformer 专题** 里有完整的 7 天教程（每天配手写实现）：[Transformer 专题](../../../../aiinfra/topics/transformer/README.md)。已熟悉这些内容或学完专题的同学直接往下读，本文不再重复，只保留后续章节要用的符号约定。
+> 📖 Transformer 的结构基础——RNN/LSTM 演化、Self-Attention 与 QKV 数学推导、Multi-Head Attention、位置编码、残差/LayerNorm/FFN、Block 组装——在 **Transformer 专题** 里有完整的 7 天教程（每天配手写实现）：[Transformer 专题](https://hzchenxiaobin.github.io/ai-infra-notes/transformer/index.html)。已熟悉这些内容或学完专题的同学直接往下读，本文不再重复，只保留后续章节要用的符号约定。
 
 #### 关键符号速查
 

@@ -10,13 +10,13 @@
 4. 能列出 FA1 vs FA2 的至少 5 个关键差异，解释每个改进的收益来源<br>
 5. 能基于 FA2 思想优化 Day 2 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
 
-> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们手写了完整 FA Forward Kernel，官方源码导读见 `_supplementary/from_w4d7`。今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天 Day 7 做本周复盘与限时手撕。
+> 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们手写了完整 FA Forward Kernel。今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天 Day 7 做本周复盘与限时手撕。
 
 ---
 
 ### 学前导读：FA1 跑对了，但为什么还能更快
 
-Day 3 读官方源码时我们注意到（见 `_supplementary/from_w4d7`），FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
+Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
 
 | 维度 | FA1 的问题 | FA2 的改进 | 收益 |
 |------|-----------|-----------|------|

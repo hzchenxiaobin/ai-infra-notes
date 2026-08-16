@@ -56,23 +56,7 @@
 
 ## 4. Core Idea
 
-```text
-Problem     KV Cache 动态增长且长度未知，连续预分配导致碎片（有效利用率
-            仅 20%~38%）且无法共享 → batch 被显存锁死 → 吞吐上不去
-   ↓
-Observation KV Cache 的特性（动态增长、按序追加、前缀可共享、all-or-nothing
-            访问）与进程地址空间几乎同构；OS 早用「虚拟内存 + 分页 +
-            Copy-on-Write + swapping」解决了同样的问题
-   ↓
-Insight     把 KV Cache 切成固定大小的块（页），用 block table（页表）解耦
-            逻辑/物理地址：按需分配消灭碎片，引用计数 + CoW 实现共享
-   ↓
-Method      PagedAttention（可直接寻址非连续 KV 块的注意力算法）
-            + vLLM（块级 KV 管理器、FCFS 调度与抢占、TP 分布式）
-   ↓
-Benefit     KV 显存浪费压到每请求 < 1 个块（near-zero waste），
-            同延迟下吞吐 2-4×；beam search 额外省 37.6%~66.3% 显存
-```
+![vLLM 核心推理链](../images/vllm_core_idea.svg)
 
 一句话：**LLM serving 的吞吐瓶颈不是算力而是"显存管理的烂账"，vLLM 把这笔账交给操作系统 60 年前就写好的答案——分页。**
 

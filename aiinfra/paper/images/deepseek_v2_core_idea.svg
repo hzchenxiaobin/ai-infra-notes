@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="528" viewBox="0 0 860 528" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="528" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">DeepSeek-V2 核心推理链</text>
+  <path d="M 280 42 Q 430 50 580 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="780" height="72" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="56" y="92" font-size="13" font-weight="bold" fill="#b03a3a">Problem</text>
+  <text x="56" y="116" font-size="11" fill="#444">MHA 的 KV Cache 卡死推理吞吐；GQA/MQA 省 KV 但掉能力；稠密模型训练成本与参数线性挂钩</text>
+  <path d="M 430 140 L 430 160" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="160" width="780" height="72" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="56" y="184" font-size="13" font-weight="bold" fill="#c98a2b">Observation</text>
+  <text x="56" y="208" font-size="11" fill="#444">① GQA/MQA 掉能力根源是粗暴砍表示容量；K/V 矩阵本身可能低秩，压缩比砍头更优 ② MoE 专家粗粒度导致知识冗余</text>
+  <path d="M 430 232 L 430 252" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="252" width="780" height="72" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>
+  <text x="56" y="276" font-size="13" font-weight="bold" fill="#9e9e9e">Insight</text>
+  <text x="56" y="300" font-size="11" fill="#444">把 K、V 联合压缩进低秩隐向量 c_t^KV 并只缓存它；位置信息交给独立解耦 RoPE 键，上投影矩阵可在推理时被吸收</text>
+  <path d="M 430 324 L 430 344" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="344" width="780" height="72" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="56" y="368" font-size="13" font-weight="bold" fill="#4a8edb">Method</text>
+  <text x="56" y="392" font-size="11" fill="#444">MLA（低秩 KV 联合压缩 + 解耦 RoPE + Q 低秩压缩）+ DeepSeekMoE（细粒度专家 + 共享专家 + 设备受限路由 + 三级均衡损失）</text>
+  <path d="M 430 416 L 430 436" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="40" y="436" width="780" height="72" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="56" y="460" font-size="13" font-weight="bold" fill="#4a8e4a">Benefit</text>
+  <text x="56" y="484" font-size="11" fill="#444">KV Cache = MHA 的 ~1/57，性能反超 MHA；训练成本 −42.5%，生成吞吐 ×5.76，21B 激活达开源第一梯队</text>
+</svg>

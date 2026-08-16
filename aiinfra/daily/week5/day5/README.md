@@ -10,13 +10,13 @@
 4. 理解不同配置下 speedup 差异的原因（短序列慢、长序列快、小 batch 需 seq 并行）<br>
 5. 能用 ncu 的 `dram__bytes_read/write` 指标验证理论 IO 与实测一致（误差 < 30%）<br>
 
-> 💡 **为什么重要**：FA 集成 Mini 引擎的内容已迁移至 [`_supplementary/from_w5d2`](../_supplementary/from_w5d2/README.md)（C++ Extension 接入 + 初步对比）。但"能跑通"不等于"跑得快"——今天用系统级 benchmark 定量回答"FA 到底快多少、在什么场景下快"。这是 Week 5 验收的核心数据，也是面试中"如何证明你的优化有效"的标准答案。明天 Day 7 总结会用到今天的 benchmark 结果。
+> 💡 **为什么重要**：Mini 引擎的 FA 集成已跑通，但"能跑通"不等于"跑得快"——今天用系统级 benchmark 定量回答"FA 到底快多少、在什么场景下快"。这是 Week 5 验收的核心数据，也是面试中"如何证明你的优化有效"的标准答案。明天 Day 7 总结会用到今天的 benchmark 结果。
 
 ---
 
 ### 学前导读：从"能跑"到"跑得快"需要数据说话
 
-Mini 引擎 FlashAttention 版（见 [`_supplementary/from_w5d2`](../_supplementary/from_w5d2/README.md)）跑通了：误差 < 1e-3，长序列（N=2048）加速 1.5-3x。但这只是初步结论——真实场景需要回答更多问题：
+Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（N=2048）加速 1.5-3x。但这只是初步结论——真实场景需要回答更多问题：
 
 | 问题 | 集成版的回答 | 今天要回答 |
 |------|-------------|-----------|

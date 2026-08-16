@@ -29,4 +29,3 @@
 | Day 6 | FlashAttention-2 论文与源码差异 + 官方源码 + IO 方法论 | [day6/](day6/README.md) |
 | Day 7 | 复盘与手撕 —— FlashAttention 限时手写与面试 Q&A | [day7/](day7/README.md) |
 
-> 📁 补充材料：本周 `_supplementary/` 目录包含 FA 集成、C++ Extension、官方源码导读、IO 分析等延伸内容。

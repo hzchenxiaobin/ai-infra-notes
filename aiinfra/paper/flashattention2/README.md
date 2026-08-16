@@ -52,23 +52,7 @@ FA1 把 HBM 访问压到接近下界，但 profiling 发现：
 
 ## 4. Core Idea
 
-```
-Problem     FA1 的 IO 已近最优，但峰值利用率只有 25-40%，远低于 GEMM 的 80-90%
-   ↓
-Observation 瓶颈转移到了三处：① non-matmul FLOPs（softmax 的 exp/除法吞吐低 16×）
-            ② 并行度不足（FA1 只按 batch×heads 分 block，长序列时 SM 闲置）
-            ③ warp 划分按 K/V 切（split-K），需要 shared memory 归约
-   ↓
-Insight     这三处都是"实现层"问题，不需要动算法：归一化可以推迟、
-            Q 块维是天然可并行的、归约维（KV）不该跨 warp 切
-   ↓
-Method      ① 循环内只维护未归一化累加器，最后除一次 ℓ；统计量合并为 logsumexp
-            ② 对调循环顺序（外 Q 内 KV），thread block 按 Q 块×batch×heads 分配
-            ③ warp 按 Q 行切片，各算各的输出，warp 间零通信
-   ↓
-Benefit     再快 ~2×，forward 达 73% 峰值（接近 GEMM），
-            端到端 GPT 训练 72% MFU——IO 最优之后再达执行最优
-```
+![FlashAttention-2 核心推理链](../images/flashattention2_core_idea.svg)
 
 ---
 

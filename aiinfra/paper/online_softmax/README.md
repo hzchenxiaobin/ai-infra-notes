@@ -37,17 +37,7 @@ Softmax 计算本身 FLOPs 很低，瓶颈在内存带宽。能不能在**不损
 
 ## 4. Core Idea
 
-```text
-Problem     Safe Softmax 需要三次扫描：max → sum → normalize，内存访问 4 次/元素
-   ↓
-Observation max 和 sum 其实可以边读边维护，只要知道如何"修正"之前的 sum
-   ↓
-Insight     当新 max 出现时，旧 sum 只需乘一个缩放因子 e^{旧max-新max}，无需重扫
-   ↓
-Method      Online Softmax：一次循环同时更新 m_j 和 d_j，再一遍输出 y_i
-   ↓
-Benefit     Softmax 访问次数 4→3，实测 1.15×-1.3×；融合 TopK 后最高 5×
-```
+![Online Softmax 核心推理链](../images/online_softmax_core_idea.svg)
 
 **一句话总结**：把 softmax 的 max 和归一化项合并成单遍在线更新，用数学归纳法保证与 Safe Softmax 完全等价，同时减少内存访问。
 
