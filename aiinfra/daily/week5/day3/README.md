@@ -88,31 +88,7 @@ s_V: 64×64 = 4096 floats = 16 KB
 
 每个 Q 行独立维护 `(m, l, acc[d])` 三组状态。对于第 `qi` 个 Q 行，处理流程：
 
-```
-初始化: m = -inf, l = 0, acc[d] = 0
-
-对于每个 KV tile j:
- Step 1: Sij[c] = Qi · Kj[c]^T (c = 0..Bc-1)
- // 每个线程算 Bc/32 个点积，warp shuffle 汇总
-
- Step 2: mij = max(Sij) // warpReduceMax
- m_new = max(m, mij)
-
- Step 3: 缩放旧状态
- scale_old = exp(m - m_new)
- l *= scale_old
- acc[d] *= scale_old
-
- Step 4: 处理新块
- for c in 0..Bc-1:
- p = exp(Sij[c] - m_new)
- l += p
- acc[d] += p * Vj[c][:] // warpReduceSum 汇总
-
- Step 5: m = m_new
-
-归一化输出: O[qi][:] = acc / l
-```
+![FlashAttention Forward Kernel：Online Softmax 执行流程](../images/flash_attention_forward_flow.svg)
 
 ##### `__syncthreads()` 只需在 tile 加载后使用
 

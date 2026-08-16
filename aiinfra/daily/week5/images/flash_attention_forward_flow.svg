@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="880" viewBox="0 0 860 880" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#555"/>
+    </marker>
+    <marker id="arLoop" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#c98a2b"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="880" fill="#fdfcf7"/>
+
+  <!-- ===== Title ===== -->
+  <text x="430" y="36" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FlashAttention Forward Kernel：Online Softmax 执行流程</text>
+  <path d="M 220 46 Q 430 54 640 46" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Init box ===== -->
+  <g filter="url(#sk)">
+    <rect x="240" y="66" width="380" height="50" rx="8" fill="#f6f6f6" stroke="#9e9e9e" stroke-width="1.5"/>
+  </g>
+  <text x="290" y="90" font-size="11" fill="#888" font-weight="bold">初始化</text>
+  <text x="430" y="96" text-anchor="middle" font-size="14" fill="#2b2b2b" font-family="monospace">m = -∞,  l = 0,  acc[d] = 0</text>
+
+  <!-- arrow down -->
+  <path d="M 430 118 L 430 142" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Loop container ===== -->
+  <g filter="url(#sk)">
+    <rect x="70" y="146" width="720" height="588" rx="10" fill="none" stroke="#c98a2b" stroke-width="2" stroke-dasharray="7 4"/>
+  </g>
+  <rect x="300" y="138" width="260" height="22" fill="#fdfcf7"/>
+  <text x="430" y="153" text-anchor="middle" font-size="13" fill="#c98a2b" font-weight="bold">🔄 对于每个 KV tile j</text>
+
+  <!-- ===== Step 1: Compute S ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="176" width="640" height="82" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="130" y="198" font-size="13" fill="#2b6e9e" font-weight="bold">Step 1 — 计算 S 片段</text>
+  <text x="430" y="222" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">S_ij[c] = Q_i · K_j[c]^T    (c = 0..Bc-1)</text>
+  <text x="430" y="244" text-anchor="middle" font-size="11" fill="#888">每个线程算 Bc/32 个点积 → warp shuffle 汇总</text>
+
+  <!-- arrow -->
+  <path d="M 430 260 L 430 278" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 2: Max ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="282" width="640" height="72" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="130" y="304" font-size="13" fill="#7a5415" font-weight="bold">Step 2 — 求 max 并更新 m</text>
+  <text x="430" y="328" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">m_ij = max(S_ij)   // warpReduceMax</text>
+  <text x="430" y="346" text-anchor="middle" font-size="13" fill="#b85450" font-family="monospace" font-weight="bold">m_new = max(m, m_ij)</text>
+
+  <!-- arrow -->
+  <path d="M 430 356 L 430 374" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 3: Rescale old state ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="378" width="640" height="92" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.5"/>
+  </g>
+  <text x="130" y="400" font-size="13" fill="#5a3a7a" font-weight="bold">Step 3 — 缩放旧状态（对齐到新 max）</text>
+  <text x="430" y="424" text-anchor="middle" font-size="13" fill="#8e5db8" font-family="monospace" font-weight="bold">scale_old = exp(m - m_new)</text>
+  <text x="300" y="448" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">l *= scale_old</text>
+  <text x="560" y="448" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace">acc[d] *= scale_old</text>
+
+  <!-- arrow -->
+  <path d="M 430 472 L 430 490" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 4: Process new block ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="494" width="640" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="130" y="516" font-size="13" fill="#2e6e2e" font-weight="bold">Step 4 — 处理新块（累加 P·V）</text>
+  <text x="160" y="540" font-size="12" fill="#2b2b2b" font-family="monospace">for c in 0..Bc-1:</text>
+  <text x="200" y="560" font-size="13" fill="#4a8e4a" font-family="monospace">p = exp(S_ij[c] - m_new)</text>
+  <text x="200" y="580" font-size="13" fill="#2b2b2b" font-family="monospace">l += p</text>
+  <text x="200" y="600" font-size="13" fill="#2b2b2b" font-family="monospace">acc[d] += p * V_j[c][:]   // warpReduceSum</text>
+  <text x="130" y="618" font-size="10" fill="#888">→ softmax 权重与 V 的加权和在 warp 内融合，中间结果不落 HBM</text>
+
+  <!-- arrow -->
+  <path d="M 430 626 L 430 644" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Step 5: Update m ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="648" width="640" height="50" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="130" y="670" font-size="13" fill="#7a5415" font-weight="bold">Step 5 — 更新 running max</text>
+  <text x="430" y="688" text-anchor="middle" font-size="14" fill="#2b2b2b" font-family="monospace">m = m_new</text>
+
+  <!-- ===== Loop back arrow ===== -->
+  <path d="M 760 420 Q 810 420 810 300 Q 810 176 670 176" stroke="#c98a2b" stroke-width="1.8" fill="none" stroke-dasharray="5 3" marker-end="url(#arLoop)" filter="url(#sk)"/>
+  <text x="826" y="300" text-anchor="middle" font-size="11" fill="#c98a2b" font-weight="bold" transform="rotate(90 826 300)">下一个 KV tile</text>
+
+  <!-- arrow down to output -->
+  <path d="M 430 700 L 430 738" stroke="#555" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Output box ===== -->
+  <g filter="url(#sk)">
+    <rect x="180" y="742" width="500" height="58" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/>
+  </g>
+  <text x="240" y="766" font-size="12" fill="#888" font-weight="bold">归一化输出</text>
+  <text x="430" y="780" text-anchor="middle" font-size="16" fill="#2e6e2e" font-family="monospace" font-weight="bold">O[qi][:] = acc / l</text>
+
+  <!-- ===== Bottom insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="110" y="822" width="640" height="40" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="430" y="847" text-anchor="middle" font-size="12" fill="#5a3a7a" font-weight="bold">S/P 不落 HBM：softmax 与 P·V 在 SRAM/register 中融合完成 → HBM IO 从 O(N²) 降到 O(Nd)</text>
+</svg>
