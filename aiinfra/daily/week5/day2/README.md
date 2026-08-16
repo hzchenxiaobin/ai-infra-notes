@@ -122,7 +122,7 @@ $$o_{\text{new}} = o \times \frac{l \times \exp(m - m_{\text{new}})}{l_{\text{ne
 | FlashAttention | $O(Nd)$ | ~4 MB | ~8 MB |
 | **IO 加速比** | | **~50x** | **~100x** |
 
-> 💡 **严格界**：FlashAttention 的 HBM IO 严格界为 **$\Theta(N^2 d^2 / M)$**（M 为 SRAM 大小），当 $M = \Theta(Nd)$ 时简化为 $O(Nd)$。教程中统一使用 $O(Nd)$ 这一简化形式，详见 [FlashAttention 论文 Theorem 2](../../../paper/flashattention/README.md)。
+> 💡 **严格界**：FlashAttention 的 HBM IO 严格界为 **$\Theta(N^2 d^2 / M)$**（M 为 SRAM 大小），当 $M = \Theta(Nd)$ 时简化为 $O(Nd)$。教程中统一使用 $O(Nd)$ 这一简化形式，详见 [FlashAttention 论文 Theorem 2](https://hzchenxiaobin.github.io/ai-infra-notes/paper/flashattention/index.html)。
 
 ##### 为什么实际 wall-clock 加速只有 2-8x？
 
