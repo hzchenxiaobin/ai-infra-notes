@@ -25,7 +25,7 @@ Day 7 是纯粹的复盘日。本周 Day 1-6 的知识量是全课程之最：
 | Day 3 | 完整 FA Forward Kernel | "FA kernel 的 tiling 和 smem 怎么设计？" |
 | Day 4 | FA Backward + GEMM Backward | "FA backward 为什么要重算 S/P？" |
 | Day 5 | 标准 vs 手写 vs 官方性能对比 | "手写 FA 和官方差在哪？" |
-| Day 6 | FA-2/FA-3 演进 + 官方源码 + IO 方法论 | "FA2 和 FA1 的区别？FA3 用了什么？" |
+| Day 6 | FA-2/FA-3 演进 + 论文对比 | "FA2 和 FA1 的区别？FA3 用了什么？" |
 
 今天的目标是把这些知识**结构化**——画成知识地图、整理成手撕模板、收敛成面试 Q&A。
 
@@ -51,7 +51,7 @@ Day 7 是纯粹的复盘日。本周 Day 1-6 的知识量是全课程之最：
 
 | 实现 | N=2048 latency | N=8192 latency | HBM IO (N=8192) | cuBLAS/官方占比 |
 |------|---------------|---------------|----------------|---------------|
-| 标准 Attention (PyTorch) | ~2.5ms | ~40ms | ~268MB | — |
+| 标准 Attention (PyTorch) | ~2.5ms | ~40ms | ~1032MB | — |
 | 手写 FA (FP32, FMA) | ~1.8ms | ~12ms | ~8MB | ~30-40% 官方 |
 | 官方 FA-2 (FP16, Tensor Core) | ~0.4ms | ~2.5ms | ~8MB | 100% (基准) |
 | 官方 FA-3 (FP8, Hopper) | — | ~1.2ms | ~4MB | ~2x FA-2 |
@@ -249,7 +249,7 @@ Backward 输入: dO
 
 - **严格界**：`Θ(N²d²/M)`，M = SRAM 大小
 - **简化**：取 `M = Θ(Nd)`（SRAM 能放下 Q/K/V tile），则 IO = `Θ(Nd)`
-- **对比**：标准 Attention 是 `Θ(N² + Nd)` ≈ `Θ(N²)`，FA 是 `Θ(Nd)`，当 d << N 时（d=64, N=4096）FA 快 `N/d = 64x`
+- **对比**：标准 Attention 是 `Θ(N² + Nd)` ≈ `Θ(N²)`，FA 是 `Θ(Nd)`，当 d << N 时（d=64, N=4096）FA 快 `N/d + 1 ≈ 65x`
 - **推导**：Q 只读一次（Nd），K/V 读 `N/Br` 次（每次 Bc 行 = `N/Br × Bc×d = Nd`），总 IO = `Nd + Nd + Nd = O(Nd)`
 
 </details>
@@ -275,7 +275,7 @@ Backward 输入: dO
 |------|------|------|
 | Q tile 分配 | 所有 warp 共享同一个 Q tile | Q tile 行方向切分给不同 warp group |
 | 跨 warp 同步 | 需要 `__syncthreads` + smem 中转 max/sum | group 内自治，消除跨 group 同步 |
-| non-matmul FLOPs | 多（rescale 用除法） | 减半（调整循环顺序，rescale 只在最后做） |
+| non-matmul FLOPs | 多（沿 K/V 列切，需跨 warp 合并 max/l/O） | 减半（沿 Q 行切，group 内自治，消除合并开销） |
 | occupancy | 较低（acc 大，寄存器多） | 较高（子块行数少，acc 更小） |
 | 核心改进 | — | "减少 non-matmul FLOPs + 消除跨 warp 同步" |
 
@@ -350,6 +350,8 @@ Backward 输入: dO
 ---
 
 ### 限时手撕挑战
+
+#### 任务 1：手撕 FA Forward Kernel 骨架
 
 | 题目 | 时间限制 | 验收标准 |
 |------|---------|---------|
