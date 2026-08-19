@@ -10,7 +10,7 @@
 4. 理解不同配置下 speedup 差异的原因（短序列慢、长序列快、小 batch 需 seq 并行）<br>
 5. 能用 ncu 的 `dram__bytes_read/write` 指标验证理论 IO 与实测一致（误差 < 30%）<br>
 
-> 💡 **为什么重要**：Mini 引擎的 FA 集成已跑通，但"能跑通"不等于"跑得快"——今天用系统级 benchmark 定量回答"FA 到底快多少、在什么场景下快"。这是 Week 5 验收的核心数据，也是面试中"如何证明你的优化有效"的标准答案。明天 Day 7 总结会用到今天的 benchmark 结果。
+> 💡 **为什么重要**：Mini 引擎的 FA 集成已跑通，但"能跑通"不等于"跑得快"——今天用系统级 benchmark 定量回答"FA 到底快多少、在什么场景下快"。这是 Week 5 验收的核心数据，也是面试中"如何证明你的优化有效"的标准答案。Day 7 总结会用到今天的 benchmark 结果。
 
 ---
 
@@ -75,13 +75,13 @@ FlashAttention HBM IO:
 
 | N | d | 标准 IO (MB) | FA IO (MB) | IO 加速比 |
 |---|---|-------------|-----------|----------|
-| 512 | 64 | 3.06 | 0.50 | 6.1x |
-| 1024 | 64 | 12.25 | 1.00 | 12.3x |
-| 2048 | 64 | 48.75 | 2.00 | 24.4x |
-| 4096 | 64 | 195.00 | 4.00 | 48.8x |
-| 8192 | 64 | 780.00 | 8.00 | 97.5x |
+| 512 | 64 | 4.50 | 0.50 | 9.0x |
+| 1024 | 64 | 17.00 | 1.00 | 17.0x |
+| 2048 | 64 | 66.00 | 2.00 | 33.0x |
+| 4096 | 64 | 260.00 | 4.00 | 65.0x |
+| 8192 | 64 | 1032.00 | 8.00 | 129.0x |
 
-> 💡 **关键洞察**：IO 加速比随 $N^2$ 增长，但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
+> 💡 **关键洞察**：IO 加速比随 $N$ 线性增长（$\frac{4N^2+4Nd}{4Nd} \approx N/d$），但实际 wall-clock 加速只有 2-8x（因为 GEMM 的 FLOPs 没减少）。IO 加速比是"理论上限"，wall-clock 是"实际收益"。
 
 #### 5.3 ncu 验证 HBM IO 的方法
 
@@ -162,10 +162,10 @@ def benchmark(func, Q, K, V, n_iter=10):
     end.record()
     torch.cuda.synchronize()
     ms = start.elapsed_time(end) / n_iter
-    return ms
+    return ms, out
 
 def theoretical_io(N, d, dtype_size=4):
-    std_io = (3 * N * N + 4 * N * d) * dtype_size / (1024 * 1024)
+    std_io = (4 * N * N + 4 * N * d) * dtype_size / (1024 * 1024)
     fa_io = (4 * N * d) * dtype_size / (1024 * 1024)
     return std_io, fa_io
 
@@ -187,8 +187,8 @@ def main():
     results = []
 
     print("=== FlashAttention Performance Benchmark ===")
-    print(f"{'B':>3} {'H':>3} {'N':>5} {'d':>4} | {'Std(ms)':>10} {'Hand(ms)':>10} {'Off(ms)':>10} | {'Hand-Spd':>10} {'Off-Spd':>10} | {'StdIO(MB)':>10} {'FAIO(MB)':>10}")
-    print("-" * 110)
+    print(f"{'B':>3} {'H':>3} {'N':>5} {'d':>4} | {'Std(ms)':>10} {'Hand(ms)':>10} {'Off(ms)':>10} | {'Hand-Spd':>10} {'Off-Spd':>10} | {'MaxDiff':>10} | {'StdIO(MB)':>10} {'FAIO(MB)':>10}")
+    print("-" * 120)
 
     for cfg in configs:
         B, H, N, d = cfg["B"], cfg["H"], cfg["N"], cfg["d"]
@@ -197,18 +197,20 @@ def main():
         K = torch.randn(B, H, N, d, device=device, dtype=dtype)
         V = torch.randn(B, H, N, d, device=device, dtype=dtype)
 
-        ms_std = benchmark(standard_attention, Q, K, V)
+        ms_std, out_std = benchmark(standard_attention, Q, K, V)
 
         try:
             from mini_engine_fa import fa_ops
-            ms_hand = benchmark(fa_ops.flash_attention_forward, Q, K, V)
+            ms_hand, out_hand = benchmark(fa_ops.flash_attention_forward, Q, K, V)
             hand_speedup = ms_std / ms_hand
+            max_diff = (out_std - out_hand).abs().max().item()
         except Exception:
             ms_hand = float('nan')
             hand_speedup = float('nan')
+            max_diff = float('nan')
 
         if HAS_OFFICIAL:
-            ms_off = benchmark(flash_attn_func, Q, K, V)
+            ms_off, _ = benchmark(flash_attn_func, Q, K, V)
             off_speedup = ms_std / ms_off
         else:
             ms_off = float('nan')
@@ -216,12 +218,13 @@ def main():
 
         std_io, fa_io = theoretical_io(N, d)
 
-        print(f"{B:>3} {H:>3} {N:>5} {d:>4} | {ms_std:>10.3f} {ms_hand:>10.3f} {ms_off:>10.3f} | {hand_speedup:>10.2f}x {off_speedup:>10.2f}x | {std_io:>10.2f} {fa_io:>10.2f}")
+        print(f"{B:>3} {H:>3} {N:>5} {d:>4} | {ms_std:>10.3f} {ms_hand:>10.3f} {ms_off:>10.3f} | {hand_speedup:>10.2f}x {off_speedup:>10.2f}x | {max_diff:>10.2e} | {std_io:>10.2f} {fa_io:>10.2f}")
 
         results.append({
             "B": B, "H": H, "N": N, "d": d,
             "std_ms": ms_std, "hand_ms": ms_hand, "off_ms": ms_off,
             "hand_speedup": hand_speedup, "off_speedup": off_speedup,
+            "max_diff": max_diff,
             "std_io_mb": std_io, "fa_io_mb": fa_io,
         })
 
@@ -243,13 +246,13 @@ python kernels/benchmark_flash_attention.py
 
 ```text
 === FlashAttention Performance Benchmark ===
-  B   H     N    d |    Std(ms)   Hand(ms)    Off(ms) |   Hand-Spd    Off-Spd |  StdIO(MB)   FAIO(MB)
---------------------------------------------------------------------------------------------------------------
-  1   8   512   64 |      0.053        nan        nan |        nanx        nanx |       3.50       0.50
-  1   8  1024   64 |      0.099        nan        nan |        nanx        nanx |      13.00       1.00
-  1   8  2048   64 |      0.605        nan        nan |        nanx        nanx |      50.00       2.00
-  1   8  4096   64 |      2.458        nan        nan |        nanx        nanx |     196.00       4.00
-  1   8  8192   64 |      9.611        nan        nan |        nanx        nanx |     776.00       8.00
+  B   H     N    d |    Std(ms)   Hand(ms)    Off(ms) |   Hand-Spd    Off-Spd |   MaxDiff |  StdIO(MB)   FAIO(MB)
+------------------------------------------------------------------------------------------------------------------------
+  1   8   512   64 |      0.053        nan        nan |        nanx        nanx |        nan |       4.50       0.50
+  1   8  1024   64 |      0.099        nan        nan |        nanx        nanx |        nan |      17.00       1.00
+  1   8  2048   64 |      0.605        nan        nan |        nanx        nanx |        nan |      66.00       2.00
+  1   8  4096   64 |      2.458        nan        nan |        nanx        nanx |        nan |     260.00       4.00
+  1   8  8192   64 |      9.611        nan        nan |        nanx        nanx |        nan |    1032.00       8.00
 ```
 
 > ⚠️ 上表为一次实跑留档（RTX 5090, CUDA 12.8, PyTorch SDPA 关闭）。**只有 Std（标准 Attention）列为真实数据**；`Hand`（手写 FA v2）与 `Off`（官方 flash_attn 包）列为 `nan`——前者需 `load_inline` 动态编译 Day 3 的 .cu（C++ Extension 环境敏感），后者需 `pip install flash-attn`。IO 列为理论值。Hand/Off 列待 C++ Extension 环境就绪后补测。
@@ -287,7 +290,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 **与今日知识的关联**：
 
-本题是 FlashAttention 的完整多 head 版本——正是今天 benchmark 的核心对象。Day 2 我们手写了单 head 版 FA，今天 benchmark 对比的就是它。本题要求支持 batch + multi-head，用 `gridDim=(N/Br, H, B)` 并行，内部复用 FA 的 tiling + online softmax。这是 Week 4 的收官 CUDA 题，融合了本周所有知识点。
+本题是 FlashAttention 的完整多 head 版本——正是今天 benchmark 的核心对象。Day 3 我们手写了单 head 版 FA，今天 benchmark 对比的就是它。本题要求支持 batch + multi-head，用 `gridDim=(N/Br, H, B)` 并行，内部复用 FA 的 tiling + online softmax。这是 Week 5 的收官 CUDA 题，融合了本周所有知识点。
 
 > 💡 提交后在 [LeetGPU Multi-Head Attention 题目](https://leetgpu.com/challenges/multi-head-attention)上记录通过耗时。完整题解（含 batched kernel launch、online softmax 三公式、与标准 MHA 的 HBM IO 对比）见 [Multi-Head Attention 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-multi-head-attention-solution.html)。
 
@@ -303,13 +306,13 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 手动计算 N=4096, d=64 时标准 Attention 和 FlashAttention 的理论 HBM IO。
 
-> 提示：标准 = (3N² + 4Nd)×4 bytes = (3×4096² + 4×4096×64)×4 = ~206 MB；FA = 4Nd×4 = 4×4096×64×4 = 4 MB。
+> 提示：标准 = (4N² + 4Nd)×4 bytes = (4×4096² + 4×4096×64)×4 = ~260 MB；FA = 4Nd×4 = 4×4096×64×4 = 4 MB。
 
 #### 实验 2：修改 benchmark 加入 memory bandwidth 和 FLOPS 估算
 
 在 benchmark 脚本中加入每个配置的 memory bandwidth utilization 和 FLOPS 估算。
 
-> 提示：bandwidth = HBM_IO / latency；FLOPS = 2·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
+> 提示：bandwidth = HBM_IO / latency；FLOPS = 4·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
 
 #### 实验 3：绘制 latency vs N 曲线
 
@@ -402,11 +405,7 @@ Day 5 我们构建了系统级 benchmark 框架，定量回答了"FlashAttention
  - **标准 Attention**：latency 近似随 $N^2$ 增长——因为 HBM IO 是 $O(N^2)$，N 翻倍时 IO 变 4x，latency 也近似 4x
  - **FlashAttention**：latency 近似随 N 线性增长——HBM IO 是 $O(Nd)$，N 翻倍时 IO 变 2x
  - **交叉点**：N 较小时标准 Attention 可能更快（FA 固定开销大）；N > ~512-1024 时 FA 开始领先
- - **绘制曲线**：用 matplotlib 画 latency vs N，标准是抛物线（$N^2$），FA 是直线（N），交叉点在 N≈512
-
- - 两者都测量 kernel 的实际 HBM 读写量，用于验证 IO 复杂度
- - 验证逻辑一致：N 翻倍时 IO 翻倍 → $O(N)$；N 翻倍时 IO 4x → $O(N^2)$
- - 两者分析思路一致：先理论计算预期 IO，再用工具实测验证
+  - **绘制曲线**：用 matplotlib 画 latency vs N，标准是抛物线（$N^2$），FA 是直线（N），交叉点在 N≈512
 
 </details>
 
