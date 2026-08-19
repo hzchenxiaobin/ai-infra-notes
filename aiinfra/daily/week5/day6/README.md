@@ -5,10 +5,10 @@
 通过今天的学习，你将：
 
 1. 理解 FlashAttention-2 相对 FA1 的三大关键改进：**减少 non-matmul FLOPs**、**更好的 work partitioning**、**更高的 occupancy**<br>
-2. 掌握 FA2 的 **warp group 子块划分**策略，对比 Day 2 的"每 warp 若干 Q 行"划分<br>
+2. 掌握 FA2 的 **warp group 子块划分**策略，对比 Day 3 的"每 warp 若干 Q 行"划分<br>
 3. 理解 **seq 并行 vs head 并行**的 trade-off，知道什么时候该用 seq 并行<br>
 4. 能列出 FA1 vs FA2 的至少 5 个关键差异，解释每个改进的收益来源<br>
-5. 能基于 FA2 思想优化 Day 2 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
+5. 能基于 FA2 思想优化 Day 3 手写 Kernel 的至少一项（warp group 分工或减少同步）<br>
 
 > 💡 **为什么重要**：FA2 是当前 FlashAttention 的主流版本，面试中"FA1 vs FA2 区别"是高频追问。Day 3 我们手写了完整 FA Forward Kernel。今天聚焦 FA2 的算法改进——理解"为什么 FA2 比 FA1 快约 2x"，是从"读过源码"到"理解演进"的关键一步。明天 Day 7 做本周复盘与限时手撕。
 
@@ -16,7 +16,7 @@
 
 ### 学前导读：FA1 跑对了，但为什么还能更快
 
-Day 3 读官方源码时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
+Day 3 手写 Kernel 时我们注意到，FA1 的 warp 分工是"所有 warp 共同完成一个 Q tile"，这导致跨 warp 之间存在冗余的 softmax 统计量同步。FA2 的核心洞察是：**如果把 Q tile 在行方向进一步划分给不同 warp groups，每个 group 独立完成自己子块的全部 online softmax，就能消除跨 group 同步**。
 
 | 维度 | FA1 的问题 | FA2 的改进 | 收益 |
 |------|-----------|-----------|------|
@@ -266,12 +266,12 @@ for j in 0..Tc:
 
 **记录要点**：在 `notes/fa2_paper_notes.md`（自行创建）中记录 FA2 的三大改进和你的理解。
 
-#### 任务 2：修改 Day 2 Kernel 的 warp 分工
+#### 任务 2：修改 Day 3 Kernel 的 warp 分工
 
 将 Day 3 的 `flash_attention_v2.cu` 修改为 FA2 风格的 warp group 划分：
 
 ```cuda
-// Day 2 原版：每 warp 负责 ROWS_PER_WARP 行
+// Day 3 原版：每 warp 负责 ROWS_PER_WARP 行
 // FA2 风格：把 warps 分成 groups，每 group 负责一个子块
 
 // 修改示例：ROWS_PER_WARP 从 8 改为 4，增加 warp 间并行度
@@ -367,7 +367,7 @@ Day 6 我们深入理解了 FlashAttention-2 相对 FA1 的三大改进：
 3. **更高的 occupancy**：优化 register/smem 用量，每 SM 从 1 block 提升到 2-3 blocks
 4. **核心思想**：算法不变（三公式不变），改进全在"谁做什么"——减少跨团队同步，让小组自治
 5. **Seq 并行 vs Head 并行**：先用 Batch×Head 并行，不够时再开 seq 并行；长序列场景 seq 并行收益最大
-6. **实践验证**：修改 Day 2 Kernel 的 warp 分工（ROWS_PER_WARP 减小），用 ncu 验证 occupancy 提升
+6. **实践验证**：修改 Day 3 Kernel 的 warp 分工（ROWS_PER_WARP 减小），用 ncu 验证 occupancy 提升
 
 掌握这些后，你就理解了 FlashAttention 从 FA1 到 FA2 的演进逻辑。明天 Day 7 做本周复盘与限时手撕。
 
