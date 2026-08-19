@@ -193,7 +193,7 @@ HEADING_RENDERER_TOPICS = """renderer.heading = function(text, level, raw) {
                 .replace(/-+/g, '-')
                 .replace(/^-|-$/g, '');
 
-            const dayMatch = raw.match(/^Day (\\d+)(?:[（(][^)）]*[）)])*[:：]\\s*(.+)$/);
+            const dayMatch = raw.match(/^Day (\\d+)(?:[（(][^)）]*[）)])*[:：｜]\\s*(.+)$/);
             if (dayMatch) {
                 anchor = 'day-' + dayMatch[1];
             }

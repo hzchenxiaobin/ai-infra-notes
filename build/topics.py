@@ -79,7 +79,7 @@ def _rewrite_local_paths(markdown_text: str) -> str:
 
 def _extract_day_headings_from_readme(readme_text: str) -> list:
     """Parse ## Day N headings from README to generate overview cards/anchors."""
-    heading_pattern = re.compile(r"^## Day (\d+)[（(][^)）]*[）)]*[：:]\s*(.+)$", re.MULTILINE)
+    heading_pattern = re.compile(r"^## Day (\d+)[（(][^)）]*[）)]*[：:｜]\s*(.+)$", re.MULTILINE)
     days = []
     for match in heading_pattern.finditer(readme_text):
         days.append({
@@ -92,7 +92,7 @@ def _extract_day_headings_from_readme(readme_text: str) -> list:
 
 def _extract_day_files(topic_dir: Path) -> list:
     """Extract day info from <topic>/dayN.md files if they exist."""
-    day_title_pattern = re.compile(r"^# Day (\d+)(?:[（(][^)）]*[）)])*[：:]\s*(.+)$")
+    day_title_pattern = re.compile(r"^# Day (\d+)(?:[（(][^)）]*[）)])*[：:｜]\s*(.+)$")
     days = []
     for md_path in sorted(topic_dir.glob("day*.md")):
         text = md_path.read_text(encoding="utf-8")
