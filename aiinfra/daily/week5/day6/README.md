@@ -67,6 +67,49 @@ FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group �
  FA2: non-matmul : matmul ≈ 1:20 或更少
 ```
 
+##### 为什么沿 Q 行切能减少 non-matmul FLOPs？
+
+上面的"group 内自治"听起来只是"换种分工"，为什么 FLOPs 会减少？关键不在"独立做"本身，而在于 **FA1 的分工方式强制引入了额外的非矩阵乘 FLOPs**，FA2 换一种切法就把这部分消掉了。
+
+**FA1：沿 K/V 列方向切**——Block 内 4 个 warp 共同处理 $B_r$ 行 Q，但每个 warp 只负责 K/V 的一部分列：
+
+```
+warp0: S[:, 0:Bc/4]     →  部分 m₀, l₀, 部分 O₀
+warp1: S[:, Bc/4:Bc/2]  →  部分 m₁, l₁, 部分 O₁
+warp2: S[:, Bc/2:3Bc/4] →  部分 m₂, l₂, 部分 O₂
+warp3: S[:, 3Bc/4:Bc]   →  部分 m₃, l₃, 部分 O₃
+```
+
+每个 warp 只看到 K 的一部分，**算不出完整的 softmax 归一化常数**。每处理完一个 K/V tile，必须做跨 warp 合并：
+
+1. **reduce max**：$m_{\text{global}} = \max(m_0, m_1, m_2, m_3)$（跨 warp 通信）
+2. **rescale 每个 $l$**：$l_{\text{warp}} \mathrel{*}= \exp(m_{\text{warp}} - m_{\text{global}})$（每个 warp 都要做）
+3. **sum $l$**：$l_{\text{global}} = l_0' + l_1' + l_2' + l_3'$（跨 warp 归约）
+4. **rescale 每个 $O$**：$O_{\text{warp}} \mathrel{*}= l_{\text{warp}}' / l_{\text{global}}$（每个 warp 都要做，$B_r \times d$ 个元素）
+5. **sum $O$**：$O = O_0' + O_1' + O_2' + O_3'$（跨 warp 归约 $B_r \times d$ 个元素）
+
+步骤 2、4、5 都是**非矩阵乘 FLOPs**，且是 FA1 分工**人为制造**的——不切 K/V 就不需要合并。
+
+**FA2：沿 Q 行方向切**——每个 warp group 负责若干行 Q，遍历全部 K/V 列：
+
+```
+group0: Q[0:Br/2, :]  遍历所有 K/V →  完整 m₀, l₀, O₀
+group1: Q[Br/2:Br, :] 遍历所有 K/V →  完整 m₁, l₁, O₁
+```
+
+每个 group 看到完整 K/V，**自己就能算出完整的 softmax 统计量**，不存在"部分 max/l/O 需要合并"。只剩 online softmax 本身固有的 rescale（每来一个新 K/V tile 更新 $m$、rescale $l$ 和 $O$）——这是算法内在的，消不掉。
+
+| 非矩阵乘 FLOPs | FA1 | FA2 |
+|---------------|-----|-----|
+| online softmax 固有 rescale（更新 $m$/$l$/$O$） | 有 | 有（算法固有，消不掉） |
+| 跨 warp 合并 max/$l$ | 有 | **无** |
+| 合并触发的 $O$ rescale | 有 | **无** |
+| 跨 warp 归约 $O$（$B_r \times d$ 元素求和） | 有 | **无** |
+
+FA2 消掉的是后半部分——这些是 FA1 沿 K/V 列切**额外引入**的非矩阵乘工作。所以 non-matmul:matmul 从 1:10 降到 1:20，大致减半。
+
+> 💡 **本质**：不是"自治"减少了 FLOPs，而是**沿 Q 行切而非沿 K/V 列切**，消除了"每个 warp 只看到部分 K → 必须合并统计量 + 合并 $O$"这一整条非矩阵乘开销链。
+
 ##### 为什么减少 non-matmul 很重要？
 
 现代 GPU 的 Tensor Core matmul 吞吐远超标量 FMA（RTX 5090 上 FP16 Tensor Core matmul 远高于 FP32 FMA 104.75 TFLOPS，存在数量级差距）。因此即使 non-matmul FLOPs 只占 10%，它的执行时间可能占 50%+——因为标量指令慢得多。FA2 把 non-matmul 减半，直接缩小了这个瓶颈。
