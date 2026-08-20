@@ -40,19 +40,7 @@
 
 Prefill 是推理的第一步：把用户输入的 `N_prompt` 个 prompt token **一次性并行**喂进模型，计算每个 token 的 Q/K/V，做完整的 $N \times N$ self-attention，输出**第一个新 token** 的 logits。
 
-```
-输入: prompt tokens, shape = (B, N_prompt, d)
-处理:
- 1. 一次性并行处理所有 prompt tokens
- 2. 计算所有 token 的 Q, K, V
- 3. 对 prompt 内部做 self-attention（N×N 完整矩阵）
- 4. 输出第一个新 token 的 logits
-特征:
- - GEMM 是大矩阵乘（M = N_prompt 较大）→ 打满 Tensor Core
- - Attention 是 O(N²) 计算，算术强度高
- - 瓶颈: compute-bound（算力）
- - 时延关注: TTFT (Time To First Token)
-```
+![Prefill 阶段处理流程](../images/prefill_phase_flow.svg)
 
 Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的 FlashAttention 在这里直接适用。所以 Prefill 的优化我们相对熟悉：用 Tensor Core、用 FlashAttention 减少 $O(N^2)$ 的 HBM 读写、必要时并行 prefill 多个请求。
 
@@ -60,19 +48,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 
 第一个 token 由 Prefill 产出后，接下来就是 Decode：每次只输入**上一步生成的 1 个 token**，计算它的 Q，从 **KV Cache** 读取所有历史 K/V，做一次 1×N 的 attention，输出下一个 token。如此循环直到 `<eos>` 或达到最大长度。
 
-```
-输入: 上一个生成的 token, shape = (B, 1, d)
-处理:
- 1. 只计算新 token 的 Q（以及它的 K/V，追加到 cache）
- 2. 从 KV Cache 读取所有历史 K, V
- 3. 新 Q 与所有历史 K/V 做 attention（1×N 矩阵）
- 4. 输出下一个 token 的 logits
-特征:
- - GEMM 退化为向量×矩阵（M = 1）→ Tensor Core 闲置
- - 每次都要读取完整 KV Cache（2·L·d bytes）
- - 瓶颈: memory-bound（带宽）
- - 时延关注: TBT / TPOT
-```
+![Decode 阶段处理流程](../images/decode_phase_flow.svg)
 
 > ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 $O(d^2)$——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
 
@@ -93,17 +69,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 
 ##### 两阶段算术强度的粗算（B=1, N=1024, d=512）
 
-```
-Prefill QKV GEMM:
- FLOPs = 2 × B × N × d × 3d = 2 × 1 × 1024 × 512 × 1536 ≈ 1.6 G
- Bytes = B×N×d + 3d² + 3×B×N×d ≈ 4 MB
- AI ≈ 400 FLOP/Byte → compute-bound（远高于 Ridge Point）
-
-Decode QKV GEMM (M=1):
- FLOPs = 2 × B × 1 × d × 3d ≈ 1.6 M
- Bytes = B×1×d + 3d² + 历史 KV(2·L·d) ≈ 数 MB
- AI ≈ 0.1 FLOP/Byte → memory-bound（远低于 Ridge Point）
-```
+![两阶段算术强度粗算](../images/prefill_decode_ai_calc.svg)
 
 > 💡 直觉类比：Prefill 像"一群人一起搬砖"，人多活也多，瓶颈是人力（算力）；Decode 像"一个人重复跑腿取材料"，每次只干一点活，却要从仓库（HBM）取一大堆材料——瓶颈是腿（带宽）。
 
@@ -113,9 +79,7 @@ Decode QKV GEMM (M=1):
 
 Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
 
-```
-AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float) ≈ 0.125 FLOP/Byte (fp16)
-```
+![Decode 算术强度公式](../images/decode_ai_formula.svg)
 
 RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
 
@@ -146,10 +110,7 @@ RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/
 
 关键关系式：
 
-```
-E2E Latency = TTFT + (输出 token 数 − 1) × TBT
-TPOT = 总 Decode 时延 / 输出 token 数
-```
+![推理时延关键关系式](../images/e2e_latency_formula.svg)
 
 - **TTFT 由 Prefill 决定**：优化方向是 FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill。
 - **TBT/TPOT 由 Decode 决定**：优化方向是 KV Cache、PagedAttention、Continuous Batching、CUDA Graph、量化 KV Cache。

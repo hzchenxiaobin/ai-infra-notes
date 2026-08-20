@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="63" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">两阶段算术强度粗算</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="430" y="56" text-anchor="middle" font-size="11" fill="#888">B=1, N=1024, d=512 · Ridge Point ≈ 58.45 FLOP/Byte (RTX 5090)</text>
+
+  <!-- ===== Left: Prefill ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="72" width="380" height="280" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="230" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">Prefill QKV GEMM</text>
+
+  <!-- FLOPs -->
+  <g filter="url(#sk)">
+    <rect x="60" y="110" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="75" y="128" font-size="11" fill="#4a8edb" font-weight="bold">FLOPs</text>
+  <text x="75" y="148" font-size="11" fill="#2b2b2b" font-family="monospace">2 × B × N × d × 3d = 2×1×1024×512×1536</text>
+  <text x="75" y="156" font-size="11" fill="#2b2b2b" font-family="monospace">  </text>
+
+  <!-- Bytes -->
+  <g filter="url(#sk)">
+    <rect x="60" y="168" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="75" y="186" font-size="11" fill="#c98a2b" font-weight="bold">Bytes</text>
+  <text x="75" y="206" font-size="11" fill="#2b2b2b" font-family="monospace">B×N×d + 3d² + 3×B×N×d ≈ 4 MB</text>
+
+  <!-- AI result -->
+  <g filter="url(#sk)">
+    <rect x="60" y="226" width="340" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="75" y="244" font-size="11" fill="#4a8e4a" font-weight="bold">AI</text>
+  <text x="75" y="264" font-size="14" fill="#2e6e2e" font-family="monospace" font-weight="bold">≈ 400 FLOP/Byte</text>
+
+  <!-- conclusion -->
+  <g filter="url(#sk)">
+    <rect x="60" y="284" width="340" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="230" y="304" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">≫ Ridge Point 58.45</text>
+  <text x="230" y="320" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">→ compute-bound ✓</text>
+
+  <!-- ===== Right: Decode ===== -->
+  <g filter="url(#sk)">
+    <rect x="440" y="72" width="380" height="280" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="630" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">Decode QKV GEMM (M=1)</text>
+
+  <!-- FLOPs -->
+  <g filter="url(#sk)">
+    <rect x="460" y="110" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="475" y="128" font-size="11" fill="#4a8edb" font-weight="bold">FLOPs</text>
+  <text x="475" y="148" font-size="11" fill="#2b2b2b" font-family="monospace">2 × B × 1 × d × 3d ≈ 1.6 M  (↓1024×)</text>
+
+  <!-- Bytes -->
+  <g filter="url(#sk)">
+    <rect x="460" y="168" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="475" y="186" font-size="11" fill="#c98a2b" font-weight="bold">Bytes</text>
+  <text x="475" y="206" font-size="11" fill="#2b2b2b" font-family="monospace">B×1×d + 3d² + 历史 KV(2·L·d) ≈ 数 MB</text>
+
+  <!-- AI result -->
+  <g filter="url(#sk)">
+    <rect x="460" y="226" width="340" height="50" rx="6" fill="#fdecec" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="475" y="244" font-size="11" fill="#b85450" font-weight="bold">AI</text>
+  <text x="475" y="264" font-size="14" fill="#b85450" font-family="monospace" font-weight="bold">≈ 0.1 FLOP/Byte</text>
+
+  <!-- conclusion -->
+  <g filter="url(#sk)">
+    <rect x="460" y="284" width="340" height="44" rx="6" fill="#fdecec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="630" y="304" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">≪ Ridge Point 58.45</text>
+  <text x="630" y="320" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">→ memory-bound ✗</text>
+
+  <!-- arrow between -->
+  <path d="M 420 212 L 440 212" stroke="#5a5a5a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="430" y="204" text-anchor="middle" font-size="9" fill="#888">M: 1024→1</text>
+
+  <!-- Bottom insight -->
+  <g filter="url(#sk)">
+    <rect x="80" y="370" width="700" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="430" y="390" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Prefill AI ≈ 400 → compute-bound · Decode AI ≈ 0.1 → memory-bound</text>
+  <text x="430" y="406" text-anchor="middle" font-size="10" fill="#888">同一个模型、同一份权重，M 从 N_prompt 降到 1 → 瓶颈从算力翻转到带宽</text>
+
+  <text x="430" y="432" text-anchor="middle" font-size="10" fill="#888">直觉：Prefill 像"一群人搬砖"（瓶颈是人力）；Decode 像"一个人跑腿取材料"（瓶颈是腿/带宽）</text>
+</svg>

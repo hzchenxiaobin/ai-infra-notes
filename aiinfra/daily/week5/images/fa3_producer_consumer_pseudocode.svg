@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="760" viewBox="0 0 980 760" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="93" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arP" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#8e5db8"/>
+    </marker>
+  </defs>
+  <rect width="980" height="760" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="490" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">FA3 概念级伪代码：Producer / Consumer 模式</text>
+  <path d="M 300 40 Q 490 48 680 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="490" y="56" text-anchor="middle" font-size="11" fill="#888">CTA 内 1 个 Producer wg（TMA 搬数）+ 2 个 Consumer wg（WGMMA + softmax）· mbarrier 硬件握手</text>
+
+  <!-- ===== Role allocation bar ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="900" height="56" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.3"/>
+  </g>
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="60" y="78" width="200" height="36" rx="6" fill="#c98a2b" opacity="0.2" stroke="#c98a2b" stroke-width="1.3"/>
+    <text x="160" y="93" fill="#7a5415" font-weight="bold">Producer wg ×1</text>
+    <text x="160" y="107" fill="#888" font-size="9">只搬数据 · 几乎不占寄存器</text>
+
+    <rect x="280" y="78" width="220" height="36" rx="6" fill="#4a8edb" opacity="0.2" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="390" y="93" fill="#2b6e9e" font-weight="bold">Consumer wg ×2</text>
+    <text x="390" y="107" fill="#888" font-size="9">只计算 · WGMMA + softmax</text>
+
+    <rect x="520" y="78" width="400" height="36" rx="6" fill="#f3eaf7" opacity="0.3" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="720" y="93" fill="#5d3a7e" font-weight="bold">setmaxnreg：Producer 省下的寄存器划给 Consumer</text>
+    <text x="720" y="107" fill="#888" font-size="9">MMA 需要大量累加器 → 寄存器重分配</text>
+  </g>
+
+  <!-- ===== Producer column (left) ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="136" width="410" height="380" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6" fill-opacity="0.3"/>
+  </g>
+  <text x="60" y="158" font-size="13" font-weight="bold" fill="#7a5415">Producer warp group</text>
+  <text x="60" y="172" font-size="10" fill="#888">只搬数据，不计算</text>
+
+  <!-- loop header -->
+  <g filter="url(#sk)">
+    <rect x="60" y="184" width="370" height="26" rx="4" fill="#c98a2b" opacity="0.15" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="70" y="201" font-size="11" fill="#7a5415" font-family="monospace" font-weight="bold">for j in 0..Tc:</text>
+
+  <!-- Step P1: TMA.load_async K -->
+  <g filter="url(#sk)">
+    <rect x="80" y="218" width="330" height="34" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="90" y="238" font-size="11" fill="#2b2b2b" font-family="monospace">TMA.load_async(K[j], smem_K[stage % S])</text>
+  <text x="420" y="238" font-size="9" fill="#c98a2b" text-anchor="end">① 异步搬 K</text>
+
+  <!-- Step P2: TMA.load_async V -->
+  <g filter="url(#sk)">
+    <rect x="80" y="256" width="330" height="34" rx="5" fill="#c98a2b" opacity="0.25" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="90" y="276" font-size="11" fill="#2b2b2b" font-family="monospace">TMA.load_async(V[j], smem_V[stage % S])</text>
+  <text x="420" y="276" font-size="9" fill="#c98a2b" text-anchor="end">② 异步搬 V</text>
+
+  <!-- Step P3: mbarrier.arrive K -->
+  <g filter="url(#sk)">
+    <rect x="80" y="294" width="330" height="34" rx="5" fill="#8e5db8" opacity="0.2" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="90" y="314" font-size="11" fill="#2b2b2b" font-family="monospace">mbarrier.arrive(smem_K[stage % S])</text>
+  <text x="420" y="314" font-size="9" fill="#8e5db8" text-anchor="end">③ 通知 K 就绪</text>
+
+  <!-- Step P4: mbarrier.arrive V -->
+  <g filter="url(#sk)">
+    <rect x="80" y="332" width="330" height="34" rx="5" fill="#8e5db8" opacity="0.2" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="90" y="352" font-size="11" fill="#2b2b2b" font-family="monospace">mbarrier.arrive(smem_V[stage % S])</text>
+  <text x="420" y="352" font-size="9" fill="#8e5db8" text-anchor="end">④ 通知 V 就绪</text>
+
+  <!-- Step P5: stage++ -->
+  <g filter="url(#sk)">
+    <rect x="80" y="370" width="330" height="28" rx="5" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/>
+  </g>
+  <text x="90" y="388" font-size="11" fill="#888" font-family="monospace">stage += 1</text>
+
+  <!-- loop back arrow -->
+  <path d="M 245 398 L 245 410 L 160 410 L 160 184" stroke="#c98a2b" stroke-width="1.1" fill="none" marker-end="url(#ar)" stroke-dasharray="4 3" filter="url(#sk)"/>
+
+  <!-- Producer notes -->
+  <g filter="url(#sk)">
+    <rect x="60" y="422" width="370" height="76" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2" fill-opacity="0.4"/>
+  </g>
+  <text x="75" y="442" font-size="10" fill="#2b6e9e" font-weight="bold">关键特征</text>
+  <text x="75" y="458" font-size="10" fill="#444">• TMA 是独立拷贝硬件，不占 SM 发射带宽</text>
+  <text x="75" y="472" font-size="10" fill="#444">• 只需 1 个线程驱动，producer 几乎不用寄存器</text>
+  <text x="75" y="488" font-size="10" fill="#444">• mbarrier.arrive 后立即返回，不阻塞</text>
+
+  <!-- ===== Consumer column (right) ===== -->
+  <g filter="url(#sk)">
+    <rect x="530" y="136" width="410" height="380" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6" fill-opacity="0.3"/>
+  </g>
+  <text x="550" y="158" font-size="13" font-weight="bold" fill="#2b6e9e">Consumer warp group</text>
+  <text x="550" y="172" font-size="10" fill="#888">只计算，不搬数据 · pingpong 错相</text>
+
+  <!-- loop header -->
+  <g filter="url(#sk)">
+    <rect x="550" y="184" width="370" height="26" rx="4" fill="#4a8edb" opacity="0.15" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="560" y="201" font-size="11" fill="#2b6e9e" font-family="monospace" font-weight="bold">for j in 0..Tc:</text>
+
+  <!-- Step C1: mbarrier.wait -->
+  <g filter="url(#sk)">
+    <rect x="570" y="218" width="330" height="30" rx="5" fill="#8e5db8" opacity="0.2" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="580" y="237" font-size="11" fill="#2b2b2b" font-family="monospace">mbarrier.wait(smem_K[j % S])</text>
+  <text x="910" y="237" font-size="9" fill="#8e5db8" text-anchor="end">① 等 K 就绪</text>
+
+  <!-- Step C2: WGMMA.async (NEXT block) - highlighted -->
+  <g filter="url(#sk)">
+    <rect x="570" y="252" width="330" height="38" rx="5" fill="#4a8e4a" opacity="0.3" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="580" y="270" font-size="11" fill="#2b2b2b" font-family="monospace">WGMMA.async(S[j+1] = Q · K[j+1]ᵀ)</text>
+  <text x="580" y="284" font-size="9" fill="#4a8e4a" font-weight="bold">★ 先发射下一个块的 QKᵀ（异步）</text>
+
+  <!-- Step C3: softmax (overlapping with C2's async GEMM) -->
+  <g filter="url(#sk)">
+    <rect x="570" y="296" width="330" height="80" rx="5" fill="#8e5db8" opacity="0.15" stroke="#8e5db8" stroke-width="1.2" stroke-dasharray="4 2"/>
+  </g>
+  <text x="580" y="314" font-size="11" fill="#5d3a7e" font-family="monospace" font-weight="bold">softmax_本地计算(j):</text>
+  <text x="590" y="330" font-size="10" fill="#2b2b2b" font-family="monospace">m_new = max(m, S[j])</text>
+  <text x="590" y="344" font-size="10" fill="#2b2b2b" font-family="monospace">alpha = exp(m - m_new); p = exp(S[j]-m_new)</text>
+  <text x="590" y="358" font-size="10" fill="#2b2b2b" font-family="monospace">l = l*alpha + sum(p); O = O*alpha</text>
+  <text x="590" y="372" font-size="9" fill="#888">CUDA core / SFU 上跑</text>
+
+  <!-- overlap indicator -->
+  <g filter="url(#sk)">
+    <path d="M 570 252 L 555 252 L 555 376 L 570 376" stroke="#4a8e4a" stroke-width="1.6" fill="none"/>
+    <rect x="510" y="296" width="42" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="531" y="312" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">异步</text>
+  <text x="531" y="322" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">重叠</text>
+  <text x="531" y="332" text-anchor="middle" font-size="7" fill="#888">TC‖SFU</text>
+
+  <!-- Step C4: WGMMA.wait -->
+  <g filter="url(#sk)">
+    <rect x="570" y="382" width="330" height="30" rx="5" fill="#4a8e4a" opacity="0.2" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="580" y="401" font-size="11" fill="#2b2b2b" font-family="monospace">WGMMA.wait(S[j+1])</text>
+  <text x="910" y="401" font-size="9" fill="#4a8e4a" text-anchor="end">② 等异步 GEMM 完成</text>
+
+  <!-- Step C5: WGMMA.async PV -->
+  <g filter="url(#sk)">
+    <rect x="570" y="418" width="330" height="34" rx="5" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="580" y="438" font-size="11" fill="#2b2b2b" font-family="monospace">WGMMA.async(O += P[j] · V[j])</text>
+  <text x="910" y="438" font-size="9" fill="#4a8edb" text-anchor="end">③ 发射 PV GEMM</text>
+
+  <!-- Step C6: m = m_new -->
+  <g filter="url(#sk)">
+    <rect x="570" y="458" width="330" height="24" rx="5" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3 2"/>
+  </g>
+  <text x="580" y="474" font-size="11" fill="#888" font-family="monospace">m = m_new</text>
+
+  <!-- loop back arrow -->
+  <path d="M 735 482 L 735 492 L 650 492 L 650 184" stroke="#4a8edb" stroke-width="1.1" fill="none" marker-end="url(#ar)" stroke-dasharray="4 3" filter="url(#sk)"/>
+
+  <!-- ===== mbarrier handshake arrows (middle) ===== -->
+  <g filter="url(#sk)" stroke="#8e5db8" stroke-width="1.4" fill="none" stroke-dasharray="5 3">
+    <path d="M 410 311 L 570 233" marker-end="url(#arP)"/>
+    <path d="M 410 349 L 570 233" marker-end="url(#arP)"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="440" y="200" width="100" height="26" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="490" y="217" text-anchor="middle" font-size="10" fill="#5d3a7e" font-weight="bold">mbarrier 握手</text>
+
+  <!-- ===== Bottom: pingpong + summary ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="528" width="900" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" fill-opacity="0.3"/>
+  </g>
+  <text x="60" y="550" font-size="12" fill="#2e6e2e" font-weight="bold">两个 Consumer wg 循环相位错开 → Tensor Core 与 CUDA core 互补</text>
+
+  <!-- pingpong mini timeline -->
+  <text x="60" y="572" font-size="10" fill="#888" font-weight="bold">wg0</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="100" y="562" width="80" height="22" rx="4" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.1"/>
+    <text x="140" y="576" fill="#2b6e9e" font-weight="bold">GEMM</text>
+    <rect x="182" y="562" width="60" height="22" rx="4" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.1"/>
+    <text x="212" y="576" fill="#5d3a7e" font-weight="bold">softmax</text>
+    <rect x="244" y="562" width="70" height="22" rx="4" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.1"/>
+    <text x="279" y="576" fill="#2b6e9e" font-weight="bold">GEMM</text>
+    <text x="325" y="576" font-size="11" fill="#888">...</text>
+  </g>
+
+  <text x="60" y="604" font-size="10" fill="#888" font-weight="bold">wg1</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="100" y="594" width="40" height="22" rx="4" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="120" y="608" fill="#aaa">idle</text>
+    <rect x="182" y="594" width="80" height="22" rx="4" fill="#4a8edb" opacity="0.35" stroke="#4a8edb" stroke-width="1.1"/>
+    <text x="222" y="608" fill="#2b6e9e" font-weight="bold">GEMM</text>
+    <rect x="264" y="594" width="60" height="22" rx="4" fill="#8e5db8" opacity="0.35" stroke="#8e5db8" stroke-width="1.1"/>
+    <text x="294" y="608" fill="#5d3a7e" font-weight="bold">softmax</text>
+    <text x="325" y="608" font-size="11" fill="#888">...</text>
+  </g>
+
+  <!-- TC bar -->
+  <text x="370" y="572" font-size="10" fill="#888" font-weight="bold">TC</text>
+  <g filter="url(#sk)">
+    <rect x="400" y="562" width="220" height="22" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="400" y="562" width="220" height="22" rx="4" fill="#4a8edb" opacity="0.6"/>
+  </g>
+  <text x="510" y="576" text-anchor="middle" font-size="9" fill="#2e6e2e" font-weight="bold">Tensor Core 几乎不空转</text>
+
+  <text x="370" y="604" font-size="10" fill="#888" font-weight="bold">SFU</text>
+  <g filter="url(#sk)">
+    <rect x="400" y="594" width="220" height="22" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="400" y="594" width="220" height="22" rx="4" fill="#8e5db8" opacity="0.5"/>
+  </g>
+  <text x="510" y="608" text-anchor="middle" font-size="9" fill="#5d3a7e" font-weight="bold">CUDA core 也不空转</text>
+
+  <!-- summary -->
+  <g filter="url(#sk)">
+    <rect x="640" y="556" width="290" height="56" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="655" y="574" font-size="10" fill="#2b2b2b" font-weight="bold">★ 核心优化</text>
+  <text x="655" y="588" font-size="9" fill="#444">先发射 j+1 的 QKᵀ WGMMA（异步）</text>
+  <text x="655" y="600" font-size="9" fill="#444">再跑 j 的 softmax → 二者重叠</text>
+  <text x="655" y="612" font-size="9" fill="#444">打破 FA2 "GEMM→softmax→GEMM" 串行链</text>
+
+  <!-- footer -->
+  <text x="490" y="660" text-anchor="middle" font-size="10" fill="#888">Producer 发 TMA 后立即返回 · Consumer 通过 mbarrier 感知数据就绪 · 两个 Consumer 相位错开让不同执行单元同时有活</text>
+  <text x="490" y="678" text-anchor="middle" font-size="10" fill="#888">multi-stage 流水：stage % S 轮转 smem 缓冲 · TMA 搬数完全隐藏在 WGMMA 计算的影子下</text>
+
+  <!-- data flow legend -->
+  <g filter="url(#sk)" font-size="9">
+    <rect x="140" y="700" width="14" height="14" rx="3" fill="#c98a2b" opacity="0.4" stroke="#c98a2b"/>
+    <text x="162" y="711" fill="#7a5415">TMA 搬数</text>
+    <rect x="240" y="700" width="14" height="14" rx="3" fill="#8e5db8" opacity="0.3" stroke="#8e5db8"/>
+    <text x="262" y="711" fill="#5d3a7e">mbarrier 同步</text>
+    <rect x="360" y="700" width="14" height="14" rx="3" fill="#4a8e4a" opacity="0.4" stroke="#4a8e4a"/>
+    <text x="382" y="711" fill="#2e6e2e">异步 WGMMA（Tensor Core）</text>
+    <rect x="560" y="700" width="14" height="14" rx="3" fill="#8e5db8" opacity="0.15" stroke="#8e5db8" stroke-dasharray="3 2"/>
+    <text x="582" y="711" fill="#5d3a7e">softmax（CUDA core/SFU）</text>
+    <rect x="730" y="700" width="14" height="14" rx="3" fill="#4a8edb" opacity="0.3" stroke="#4a8edb"/>
+    <text x="752" y="711" fill="#2b6e9e">PV GEMM</text>
+  </g>
+
+  <text x="490" y="740" text-anchor="middle" font-size="9" fill="#aaa">Hopper（H100）异步执行模型 · TMA + WGMMA async + mbarrier（硬件级同步原语）</text>
+</svg>

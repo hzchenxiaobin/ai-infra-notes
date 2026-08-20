@@ -183,6 +183,8 @@ FP8 的难点不在算法而在**数据布局工程**——FP8 WGMMA 只接受 k
 
 ##### 概念级伪代码：producer/consumer 模式
 
+![FA3 Producer/Consumer 伪代码图解](../images/fa3_producer_consumer_pseudocode.svg)
+
 ```text
 # === Producer warp group ===（只搬数据，不计算）
 for j in 0..Tc:
