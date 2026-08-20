@@ -175,45 +175,13 @@ __global__ void flash_attention_forward_kernel(
 
 面试官说："推导 online softmax 的三个公式。"
 
-```
-标准 softmax: softmax(x) = exp(x - max(x)) / sum(exp(x - max(x)))
-
-分块场景: 已有前几块的 (m, l, O)，新来一块 S_block
-
-公式 1 (更新 max):
-  m_new = max(m, rowmax(S_block))
-
-公式 2 (更新 sum):
-  l_new = l * exp(m - m_new) + rowsum(exp(S_block - m_new))
-
-公式 3 (更新 output):
-  O_new = O * exp(m - m_new) * (l / l_new) + (exp(S_block - m_new) @ V) / l_new
-  简化: O_new = (O * exp(m - m_new) + exp(S_block - m_new) @ V) / l_new
-
-数值稳定性: exp(m - m_new) ≤ 1 (因为 m_new ≥ m), 不会溢出
-```
+![Online Softmax 三公式速记卡](../images/online_softmax_formulas_card.svg)
 
 #### 手撕 3：FA Backward 重算逻辑（15 分钟）
 
 面试官说："FA backward 为什么不存 S/P？重算怎么做？"
 
-```
-Forward 保存: Q, K, V, O, m, l  (共 O(Nd), 不存 N² 的 S/P)
-Backward 输入: dO
-
-重算 S/P:
-  for each KV tile:
-    S = Q @ K^T / sqrt(d)          # 重算 S
-    P = exp(S - m) / l             # 重算 P (用 saved m, l)
-    # 计算 dS, dP
-    dS = (dP - sum(dP * P)) * P    # softmax backward
-    dV += P^T @ dO                 # 累加 dV
-    dQ += dS @ K                   # 累加 dQ
-    dK += dS^T @ Q                 # 累加 dK
-
-关键: 每个元素只被访问常数次, IO 仍 O(Nd)
-代价: 重算增加 FLOPs, 但 FLOPs 便宜(算力 >> 带宽)
-```
+![FA Backward 重算逻辑](../images/fa_backward_recompute.svg)
 
 ---
 
