@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA1 vs FA2：Non-matmul FLOPs 对比</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: FA1 ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="380" height="260" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.4"/>
+  </g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">FA1：所有 warp 共享 Q tile</text>
+
+  <!-- Q tile shared by 4 warps -->
+  <g filter="url(#sk)">
+    <rect x="80" y="100" width="300" height="50" rx="6" fill="#4a8edb" opacity="0.2" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="230" y="130" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">Q tile（所有 warp 共享）</text>
+
+  <!-- 4 warps with sync arrows -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="80" y="165" width="60" height="30" rx="5" fill="#b85450" opacity="0.3" stroke="#b85450" stroke-width="1.2"/>
+    <text x="110" y="184" fill="#b85450" font-weight="bold">w0</text>
+    <rect x="150" y="165" width="60" height="30" rx="5" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="180" y="184" fill="#c98a2b" font-weight="bold">w1</text>
+    <rect x="220" y="165" width="60" height="30" rx="5" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="250" y="184" fill="#8e5db8" font-weight="bold">w2</text>
+    <rect x="290" y="165" width="60" height="30" rx="5" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="320" y="184" fill="#4a8edb" font-weight="bold">w3</text>
+  </g>
+
+  <!-- sync arrows between warps -->
+  <g filter="url(#sk)" stroke="#b03a3a" stroke-width="1.3" fill="none" stroke-dasharray="4 3">
+    <path d="M 140 180 L 150 180" marker-end="url(#ar)"/>
+    <path d="M 210 180 L 220 180" marker-end="url(#ar)"/>
+    <path d="M 280 180 L 290 180" marker-end="url(#ar)"/>
+  </g>
+  <text x="230" y="214" text-anchor="middle" font-size="10" fill="#b03a3a">跨 warp 同步 max / sum（__syncthreads + smem 中转）</text>
+
+  <!-- FA1 ratio bar -->
+  <text x="230" y="244" text-anchor="middle" font-size="11" fill="#888">non-matmul : matmul</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="252" width="240" height="24" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="100" y="252" width="24" height="24" rx="4" fill="#b85450" opacity="0.7"/>
+    <rect x="124" y="252" width="216" height="24" rx="4" fill="#4a8edb" opacity="0.5"/>
+  </g>
+  <text x="112" y="268" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold">1</text>
+  <text x="232" y="268" text-anchor="middle" font-size="10" fill="#2b2b2b" font-weight="bold">10</text>
+  <text x="230" y="296" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">≈ 1 : 10</text>
+
+  <!-- ===== Right: FA2 ===== -->
+  <g filter="url(#sk)">
+    <rect x="440" y="60" width="380" height="260" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.4"/>
+  </g>
+  <text x="630" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8e4a">FA2：warp groups 各管子块</text>
+
+  <!-- Q tile split into 2 groups -->
+  <g filter="url(#sk)">
+    <rect x="480" y="100" width="300" height="50" rx="6" fill="none" stroke="#4a8edb" stroke-width="1.6"/>
+    <rect x="482" y="102" width="147" height="46" rx="4" fill="#4a8e4a" opacity="0.3" stroke="#4a8e4a" stroke-width="1.2"/>
+    <rect x="631" y="102" width="147" height="46" rx="4" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="555" y="130" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">group0</text>
+  <text x="705" y="130" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">group1</text>
+
+  <!-- independent groups -->
+  <g filter="url(#sk)" font-size="11" text-anchor="middle">
+    <rect x="480" y="165" width="140" height="30" rx="5" fill="#4a8e4a" opacity="0.3" stroke="#4a8e4a" stroke-width="1.2"/>
+    <text x="550" y="184" fill="#2e6e2e" font-weight="bold">group0 自治</text>
+    <rect x="640" y="165" width="140" height="30" rx="5" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="710" y="184" fill="#2b6e9e" font-weight="bold">group1 自治</text>
+  </g>
+  <!-- no sync arrow, just a barrier icon -->
+  <text x="630" y="214" text-anchor="middle" font-size="10" fill="#4a8e4a">group 内独立完成 · 无需跨 group 同步</text>
+
+  <!-- FA2 ratio bar -->
+  <text x="630" y="244" text-anchor="middle" font-size="11" fill="#888">non-matmul : matmul</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="252" width="260" height="24" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="500" y="252" width="13" height="24" rx="4" fill="#4a8e4a" opacity="0.7"/>
+    <rect x="513" y="252" width="247" height="24" rx="4" fill="#4a8edb" opacity="0.5"/>
+  </g>
+  <text x="506" y="268" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">1</text>
+  <text x="636" y="268" text-anchor="middle" font-size="10" fill="#2b2b2b" font-weight="bold">20</text>
+  <text x="630" y="296" text-anchor="middle" font-size="13" fill="#4a8e4a" font-weight="bold">≈ 1 : 20（或更少）</text>
+
+  <!-- ===== Bottom summary ===== -->
+  <g filter="url(#sk)">
+    <rect x="120" y="340" width="620" height="44" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="430" y="360" text-anchor="middle" font-size="13" fill="#2b6e9e" font-weight="bold">沿 Q 行切而非沿 K/V 列切 → 消除合并统计量 + 合并 O 的非矩阵乘开销链</text>
+  <text x="430" y="376" text-anchor="middle" font-size="10" fill="#888">non-matmul:matmul 从 1:10 降到 1:20，大致减半</text>
+
+  <text x="430" y="416" text-anchor="middle" font-size="10" fill="#888">Tensor Core matmul 吞吐远超标量 FMA → non-matmul 虽只占 10% FLOPs，执行时间可能占 50%+</text>
+</svg>

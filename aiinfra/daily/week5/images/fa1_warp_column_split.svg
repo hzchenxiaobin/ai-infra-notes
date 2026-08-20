@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="420" fill="#fdfcf7"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA1：沿 K/V 列方向切</text>
+  <path d="M 250 40 Q 380 48 510 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="380" y="56" text-anchor="middle" font-size="11" fill="#888">4 warp 各管 S 的 1/4 列 · 每个 warp 只看到部分 K → 算不出完整 softmax 统计量</text>
+
+  <!-- S matrix with 4 column blocks -->
+  <text x="380" y="80" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">S = QKᵀ（Br × Bc）</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="88" width="600" height="80" fill="none" stroke="#4a8edb" stroke-width="2" rx="6"/>
+    <rect x="82" y="90" width="147" height="76" rx="4" fill="#b85450" opacity="0.3" stroke="#b85450" stroke-width="1.4"/>
+    <rect x="231" y="90" width="147" height="76" rx="4" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="1.4"/>
+    <rect x="380" y="90" width="147" height="76" rx="4" fill="#8e5db8" opacity="0.3" stroke="#8e5db8" stroke-width="1.4"/>
+    <rect x="529" y="90" width="147" height="76" rx="4" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <g font-size="12" text-anchor="middle" font-weight="bold">
+    <text x="155" y="126" fill="#b85450">warp0</text>
+    <text x="304" y="126" fill="#c98a2b">warp1</text>
+    <text x="453" y="126" fill="#8e5db8">warp2</text>
+    <text x="602" y="126" fill="#4a8edb">warp3</text>
+  </g>
+  <g font-size="9" text-anchor="middle" fill="#888" font-family="monospace">
+    <text x="155" y="142">S[:, 0:Bc/4]</text>
+    <text x="304" y="142">S[:, Bc/4:Bc/2]</text>
+    <text x="453" y="142">S[:, Bc/2:3Bc/4]</text>
+    <text x="602" y="142">S[:, 3Bc/4:Bc]</text>
+  </g>
+
+  <!-- Arrows down to partial results -->
+  <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.2" fill="none">
+    <path d="M 155 168 L 155 205" marker-end="url(#ar)"/>
+    <path d="M 304 168 L 304 205" marker-end="url(#ar)"/>
+    <path d="M 453 168 L 453 205" marker-end="url(#ar)"/>
+    <path d="M 602 168 L 602 205" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Partial result boxes -->
+  <g filter="url(#sk)">
+    <rect x="85" y="210" width="140" height="44" rx="6" fill="#fdecec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="234" y="210" width="140" height="44" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+    <rect x="383" y="210" width="140" height="44" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+    <rect x="532" y="210" width="140" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <g font-size="11" text-anchor="middle" fill="#2b2b2b" font-family="monospace">
+    <text x="155" y="230">部分 m₀, l₀</text>
+    <text x="155" y="244">部分 O₀</text>
+    <text x="304" y="230">部分 m₁, l₁</text>
+    <text x="304" y="244">部分 O₁</text>
+    <text x="453" y="230">部分 m₂, l₂</text>
+    <text x="453" y="244">部分 O₂</text>
+    <text x="602" y="230">部分 m₃, l₃</text>
+    <text x="602" y="244">部分 O₃</text>
+  </g>
+
+  <!-- Converging arrows to merge box -->
+  <g filter="url(#sk)" stroke="#b03a3a" stroke-width="1.3" fill="none">
+    <path d="M 155 254 L 155 285 L 380 300" stroke-dasharray="4 3"/>
+    <path d="M 304 254 L 304 285 L 380 300" stroke-dasharray="4 3"/>
+    <path d="M 453 254 L 453 285 L 380 300" stroke-dasharray="4 3"/>
+    <path d="M 602 254 L 602 285 L 380 300" stroke-dasharray="4 3"/>
+  </g>
+
+  <!-- Merge warning box -->
+  <g filter="url(#sk)">
+    <rect x="180" y="296" width="400" height="50" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.6"/>
+  </g>
+  <text x="380" y="318" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">⚠ 需跨 warp 合并：reduce max → rescale l → sum l → rescale O → sum O</text>
+  <text x="380" y="336" text-anchor="middle" font-size="10" fill="#888">步骤 2/4/5 均为非矩阵乘 FLOPs，是 FA1 分工人为制造的</text>
+
+  <text x="380" y="384" text-anchor="middle" font-size="10" fill="#888">沿 K/V 列切 → 每个 warp 只看到部分 K → 必须合并统计量 + 合并 O</text>
+</svg>

@@ -58,14 +58,7 @@ FA1 的 non-matmul FLOPs（softmax 的 exp/sum/rescale）与 matmul FLOPs 之比
 
 FA2 的核心改进：**让一个 warp group 负责输出 tile 的一个子块（sub-tile），在 group 内部独立完成该子块的全部 online softmax 计算**。
 
-```
-FA1: Block 内所有 warp 共享 Q tile → 跨 warp 同步 max/sum
-FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group 同步
-
-效果：
- FA1: non-matmul : matmul ≈ 1:10
- FA2: non-matmul : matmul ≈ 1:20 或更少
-```
+![FA1 vs FA2 Non-matmul FLOPs 对比](../images/fa1_fa2_nonmatmul_compare.svg)
 
 ##### 为什么沿 Q 行切能减少 non-matmul FLOPs？
 
@@ -73,12 +66,7 @@ FA2: Block 内 warp groups 各管子块 → group 内自治，无需跨 group �
 
 **FA1：沿 K/V 列方向切**——Block 内 4 个 warp 共同处理 $B_r$ 行 Q，但每个 warp 只负责 K/V 的一部分列：
 
-```
-warp0: S[:, 0:Bc/4]     →  部分 m₀, l₀, 部分 O₀
-warp1: S[:, Bc/4:Bc/2]  →  部分 m₁, l₁, 部分 O₁
-warp2: S[:, Bc/2:3Bc/4] →  部分 m₂, l₂, 部分 O₂
-warp3: S[:, 3Bc/4:Bc]   →  部分 m₃, l₃, 部分 O₃
-```
+![FA1 沿 K/V 列方向切](../images/fa1_warp_column_split.svg)
 
 每个 warp 只看到 K 的一部分，**算不出完整的 softmax 归一化常数**。每处理完一个 K/V tile，必须做跨 warp 合并：
 
@@ -92,10 +80,7 @@ warp3: S[:, 3Bc/4:Bc]   →  部分 m₃, l₃, 部分 O₃
 
 **FA2：沿 Q 行方向切**——每个 warp group 负责若干行 Q，遍历全部 K/V 列：
 
-```
-group0: Q[0:Br/2, :]  遍历所有 K/V →  完整 m₀, l₀, O₀
-group1: Q[Br/2:Br, :] 遍历所有 K/V →  完整 m₁, l₁, O₁
-```
+![FA2 沿 Q 行方向切](../images/fa2_group_row_split.svg)
 
 每个 group 看到完整 K/V，**自己就能算出完整的 softmax 统计量**，不存在"部分 max/l/O 需要合并"。只剩 online softmax 本身固有的 rescale（每来一个新 K/V tile 更新 $m$、rescale $l$ 和 $O$）——这是算法内在的，消不掉。
 
@@ -116,17 +101,7 @@ FA2 消掉的是后半部分——这些是 FA1 沿 K/V 列切**额外引入**�
 
 #### 4.3 FA2 改进二：更好的 Work Partitioning
 
-```
-FA1 的 work partitioning：
- - 一个 Block 处理一个 Q tile
- - Block 内 warps 共同完成整个 Q tile
- - 并行维度: Batch × Head × Q tile
-
-FA2 的 work partitioning：
- - 一个 Block 仍处理一个 Q tile
- - 但将 Q tile 在行方向划分给不同 warp groups
- - 新增 seq 并行维度: 一个 head 的序列可分多个 block
-```
+![FA1 vs FA2 Work Partitioning](../images/fa1_fa2_work_partitioning.svg)
 
 ##### 三层并行维度
 
@@ -138,26 +113,13 @@ FA2 的 work partitioning：
 
 ##### Seq 并行 vs Head 并行
 
-```
-Head 并行（Batch/Head 维度）：
- - 不同 head 在不同 block 上并行
- - 优点：自然，不需要同步
- - 缺点：head 数少时（如 8 头），并行度不够
-
-Seq 并行（Sequence 长度维度）：
- - 同一个 head 的序列分成多个 block 并行
- - 优点：增加并行度，尤其适合长序列
- - 缺点：需要处理 Q tile 边界（但 FA 的 tiling 天然支持）
-```
+![Head 并行 vs Seq 并行](../images/head_vs_seq_parallel.svg)
 
 **选择策略**：先充分利用 Batch × Head 并行（gridDim.y × gridDim.z）。如果 B×H 不够大（如小 batch 推理），再开启 seq 并行。
 
 #### 4.4 FA2 改进三：更高的 Occupancy
 
-```
-FA1: register 和 shared memory 使用较大，每 SM 可能只跑 1 个 block
-FA2: 优化用量，每 SM 可跑 2-3 个 block → occupancy 提升
-```
+![FA1 vs FA2 Occupancy](../images/fa1_fa2_occupancy.svg)
 
 FA2 通过以下方式减少资源占用：
 - warp group 自治减少了 shared memory 中转缓冲
@@ -187,16 +149,7 @@ FA2 的设计面向 Ampere（A100）的同步执行模型——warp 同步发射
 
 FA2 中，一个 warp group 既要搬数据又要算——搬数时 Tensor Core 空转，算时搬运单元空闲。FA3 利用 Hopper 的 **TMA（Tensor Memory Accelerator）**——一个独立的拷贝硬件，不占 SM 发射带宽：
 
-```
-FA2（Ampere）：
-  warp group: load K_j → wait → GEMM(QKᵀ) → softmax → GEMM(PV) → load K_{j+1} → ...
-  ↑ 搬数和计算串行，Tensor Core 在 softmax/搬数期间空转
-
-FA3（Hopper）：
-  producer warp group: TMA(K_j) → mbarrier.arrive → TMA(V_j) → mbarrier.arrive → ...
-  consumer warp group: wait mbarrier → GEMMA_async(QKᵀ) → softmax → GEMMA_async(PV) → ...
-  ↑ TMA 搬数与 Tensor Core 计算并行，搬运开销被完全隐藏
-```
+![FA2 串行流水 vs FA3 异步流水](../images/fa2_fa3_async_pipeline.svg)
 
 TMA 只需 1 个线程驱动，producer 几乎不用寄存器；`setmaxnreg` 把省下的寄存器划给 consumer（MMA 需要大量累加器）。producer/consumer 之间用 **mbarrier**（硬件级同步原语）做块级握手的多 stage 流水。
 
@@ -211,12 +164,7 @@ FA3 把 CTA 内的 warp group 分为两种角色：
 
 两个 consumer 以 **pingpong 调度**交替：wg0 做 softmax（CUDA core/SFU）时 wg1 做 GEMM（Tensor Core），反之亦然——**一个 SM 的 Tensor Core 与 CUDA core 同时有活干**。
 
-```
-时间线（pingpong）：
-  wg0: GEMM(QK₀ᵀ) | softmax₀ | GEMM(PV₀) | GEMM(QK₂ᵀ) | softmax₂ | ...
-  wg1:    idle     | GEMM(QK₁ᵀ) | softmax₁ | GEMM(PV₁) |    idle  | ...
-                ↑ 两个 consumer 相位错开，Tensor Core 不空转
-```
+![FA3 Pingpong 调度时间线](../images/fa3_pingpong_timeline.svg)
 
 此外，warpgroup 内部还有 **2-stage GEMM-softmax 流水**：块 $j$ 的 softmax 在 CUDA core 上执行的同时，块 $j+1$ 的 QKᵀ WGMMA 在 Tensor Core 上异步执行——打破 FA2 "GEMM→softmax→GEMM" 的串行链。
 

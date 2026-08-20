@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="380" viewBox="0 0 820 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="66" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="380" fill="#fdfcf7"/>
+
+  <text x="410" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA1 vs FA2：Occupancy</text>
+  <path d="M 270 40 Q 410 48 550 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: FA1 — 1 block/SM ===== -->
+  <text x="205" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">FA1</text>
+  <!-- SM container -->
+  <g filter="url(#sk)">
+    <rect x="60" y="82" width="290" height="240" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.8" fill-opacity="0.3"/>
+  </g>
+  <text x="205" y="100" text-anchor="middle" font-size="11" fill="#b85450" font-weight="bold">SM（Streaming Multiprocessor）</text>
+
+  <!-- 1 large block -->
+  <g filter="url(#sk)">
+    <rect x="90" y="112" width="230" height="130" rx="8" fill="#b85450" opacity="0.25" stroke="#b85450" stroke-width="1.6"/>
+  </g>
+  <text x="205" y="140" text-anchor="middle" font-size="13" fill="#b85450" font-weight="bold">Block 0</text>
+  <text x="205" y="160" text-anchor="middle" font-size="10" fill="#888">register + smem 占用大</text>
+  <!-- resource bars -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="110" y="176" width="190" height="14" rx="3" fill="#e8e8e8" stroke="#ccc" stroke-width="0.8"/>
+    <rect x="110" y="176" width="170" height="14" rx="3" fill="#b85450" opacity="0.5"/>
+    <text x="205" y="186" fill="#b85450">register 使用率高</text>
+    <rect x="110" y="196" width="190" height="14" rx="3" fill="#e8e8e8" stroke="#ccc" stroke-width="0.8"/>
+    <rect x="110" y="196" width="160" height="14" rx="3" fill="#c98a2b" opacity="0.5"/>
+    <text x="205" y="206" fill="#7a5415">smem 使用率高</text>
+    <rect x="110" y="216" width="190" height="14" rx="3" fill="#e8e8e8" stroke="#ccc" stroke-width="0.8"/>
+    <rect x="110" y="216" width="95" height="14" rx="3" fill="#888" opacity="0.4"/>
+    <text x="205" y="226" fill="#888">occupancy 50%</text>
+  </g>
+
+  <!-- idle space -->
+  <g filter="url(#sk)">
+    <rect x="90" y="252" width="230" height="50" rx="8" fill="none" stroke="#ccc" stroke-width="1.2" stroke-dasharray="6 4"/>
+  </g>
+  <text x="205" y="280" text-anchor="middle" font-size="11" fill="#aaa">空闲（无法驻留更多 block）</text>
+
+  <text x="205" y="340" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">每 SM 只跑 1 个 block</text>
+
+  <!-- ===== Right: FA2 — 2-3 blocks/SM ===== -->
+  <text x="615" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8e4a">FA2</text>
+  <g filter="url(#sk)">
+    <rect x="470" y="82" width="290" height="240" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8" fill-opacity="0.3"/>
+  </g>
+  <text x="615" y="100" text-anchor="middle" font-size="11" fill="#4a8e4a" font-weight="bold">SM（Streaming Multiprocessor）</text>
+
+  <!-- 3 smaller blocks -->
+  <g filter="url(#sk)">
+    <rect x="500" y="112" width="230" height="56" rx="6" fill="#4a8e4a" opacity="0.25" stroke="#4a8e4a" stroke-width="1.4"/>
+    <rect x="500" y="176" width="230" height="56" rx="6" fill="#4a8edb" opacity="0.25" stroke="#4a8edb" stroke-width="1.4"/>
+    <rect x="500" y="240" width="230" height="56" rx="6" fill="#8e5db8" opacity="0.25" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <g font-size="12" text-anchor="middle" font-weight="bold">
+    <text x="615" y="138" fill="#2e6e2e">Block 0</text>
+    <text x="615" y="154" fill="#888" font-size="9" font-weight="normal">acc 更小 → register ↓</text>
+    <text x="615" y="202" fill="#2b6e9e">Block 1</text>
+    <text x="615" y="218" fill="#888" font-size="9" font-weight="normal">smem 中转缓冲 ↓</text>
+    <text x="615" y="266" fill="#5d3a7e">Block 2</text>
+    <text x="615" y="282" fill="#888" font-size="9" font-weight="normal">同步点 ↓</text>
+  </g>
+
+  <text x="615" y="340" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">每 SM 跑 2-3 个 block → occupancy ↑</text>
+
+  <!-- arrow between -->
+  <path d="M 350 200 L 470 200" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="410" y="192" text-anchor="middle" font-size="10" fill="#888">优化</text>
+
+  <text x="410" y="368" text-anchor="middle" font-size="10" fill="#888">warp group 自治减少 smem 中转 · 更紧凑 register 复用 · 减少同步点 → 编译器更多优化空间</text>
+</svg>

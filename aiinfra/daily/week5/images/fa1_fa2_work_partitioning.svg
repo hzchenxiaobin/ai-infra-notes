@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#fdfcf7"/>
+
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA1 vs FA2：Work Partitioning</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: FA1 ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="380" height="300" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">FA1</text>
+
+  <!-- parallel dimensions -->
+  <text x="230" y="110" text-anchor="middle" font-size="11" fill="#888">并行维度</text>
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="80" y="120" width="300" height="32" rx="6" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="230" y="140" fill="#2b6e9e" font-weight="bold">Batch × Head</text>
+    <rect x="80" y="160" width="300" height="32" rx="6" fill="#b85450" opacity="0.25" stroke="#b85450" stroke-width="1.3"/>
+    <text x="230" y="180" fill="#b85450" font-weight="bold">Q tile（每 block 一个）</text>
+  </g>
+
+  <!-- block internal: warps shared -->
+  <text x="230" y="212" text-anchor="middle" font-size="11" fill="#888">Block 内部</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="220" width="300" height="60" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="230" y="242" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">所有 warps 共同完成整个 Q tile</text>
+  <text x="230" y="260" text-anchor="middle" font-size="10" fill="#888">跨 warp 同步 max / sum</text>
+
+  <!-- seq dimension: missing -->
+  <g filter="url(#sk)">
+    <rect x="80" y="296" width="300" height="36" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.3" stroke-dasharray="4 3"/>
+  </g>
+  <text x="230" y="318" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">✗ 无 seq 并行维度</text>
+  <text x="230" y="334" text-anchor="middle" font-size="10" fill="#888">长序列并行度受限</text>
+
+  <!-- ===== Right: FA2 ===== -->
+  <g filter="url(#sk)">
+    <rect x="440" y="60" width="380" height="300" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="630" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#4a8e4a">FA2</text>
+
+  <text x="630" y="110" text-anchor="middle" font-size="11" fill="#888">并行维度</text>
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="480" y="120" width="300" height="32" rx="6" fill="#4a8edb" opacity="0.3" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="630" y="140" fill="#2b6e9e" font-weight="bold">Batch × Head</text>
+    <rect x="480" y="160" width="300" height="32" rx="6" fill="#4a8e4a" opacity="0.25" stroke="#4a8e4a" stroke-width="1.3"/>
+    <text x="630" y="180" fill="#2e6e2e" font-weight="bold">Q tile + ✦ seq 并行（新增）</text>
+  </g>
+
+  <!-- block internal: warp groups -->
+  <text x="630" y="212" text-anchor="middle" font-size="11" fill="#888">Block 内部</text>
+  <g filter="url(#sk)">
+    <rect x="480" y="220" width="145" height="60" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+    <rect x="635" y="220" width="145" height="60" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="552" y="242" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">warp group0</text>
+  <text x="552" y="260" text-anchor="middle" font-size="10" fill="#888">子块自治</text>
+  <text x="707" y="242" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">warp group1</text>
+  <text x="707" y="260" text-anchor="middle" font-size="10" fill="#888">子块自治</text>
+
+  <!-- seq dimension: present -->
+  <g filter="url(#sk)">
+    <rect x="480" y="296" width="300" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="630" y="318" text-anchor="middle" font-size="12" fill="#4a8e4a" font-weight="bold">✓ seq 并行：一个 head 的序列可分多个 block</text>
+  <text x="630" y="334" text-anchor="middle" font-size="10" fill="#888">长序列并行度大幅提升</text>
+
+  <!-- arrow between -->
+  <path d="M 420 210 L 440 210" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="430" y="400" text-anchor="middle" font-size="10" fill="#888">FA1: Batch × Head × Q tile → FA2: + seq 并行维度 + warp group 子块自治</text>
+  <text x="430" y="418" text-anchor="middle" font-size="10" fill="#888">先用 Batch×Head 填满 GPU，不够时再开 seq 并行</text>
+</svg>

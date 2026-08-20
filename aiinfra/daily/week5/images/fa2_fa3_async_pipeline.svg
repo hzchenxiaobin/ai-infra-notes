@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="77" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="500" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA2 串行流水 vs FA3 异步流水</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: FA2 serial ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="58" width="820" height="170" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.3"/>
+  </g>
+  <text x="80" y="80" font-size="13" font-weight="bold" fill="#b85450">FA2（Ampere）— 串行</text>
+  <text x="80" y="96" font-size="10" fill="#888">warp group 既要搬数又要算 · 搬数时 Tensor Core 空转</text>
+
+  <!-- timeline label -->
+  <text x="60" y="120" font-size="10" fill="#888" font-weight="bold">wg</text>
+
+  <!-- serial timeline blocks -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="80" y="108" width="70" height="28" rx="4" fill="#c98a2b" opacity="0.5" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="115" y="126" fill="#7a5415" font-weight="bold">load K_j</text>
+    <rect x="152" y="108" width="40" height="28" rx="4" fill="#eee" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="172" y="126" fill="#aaa">wait</text>
+    <rect x="194" y="108" width="80" height="28" rx="4" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="234" y="126" fill="#2b6e9e" font-weight="bold">GEMM(QKᵀ)</text>
+    <rect x="276" y="108" width="60" height="28" rx="4" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="306" y="126" fill="#5d3a7e" font-weight="bold">softmax</text>
+    <rect x="338" y="108" width="70" height="28" rx="4" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="373" y="126" fill="#2b6e9e" font-weight="bold">GEMM(PV)</text>
+    <rect x="410" y="108" width="70" height="28" rx="4" fill="#c98a2b" opacity="0.5" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="445" y="126" fill="#7a5415" font-weight="bold">load K_{j+1}</text>
+    <text x="500" y="126" font-size="12" fill="#888">...</text>
+  </g>
+
+  <!-- idle annotations -->
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="152" y="146" width="40" height="14" rx="3" fill="#fdecec" stroke="#b03a3a" stroke-width="0.8"/>
+    <text x="172" y="156" fill="#b03a3a">TC 空转</text>
+    <rect x="276" y="146" width="60" height="14" rx="3" fill="#fdecec" stroke="#b03a3a" stroke-width="0.8"/>
+    <text x="306" y="156" fill="#b03a3a">TC 空转</text>
+    <rect x="410" y="146" width="70" height="14" rx="3" fill="#fdecec" stroke="#b03a3a" stroke-width="0.8"/>
+    <text x="445" y="156" fill="#b03a3a">TC 空转</text>
+  </g>
+
+  <!-- TC utilization bar -->
+  <text x="60" y="186" font-size="10" fill="#888">TC</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="176" width="410" height="20" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="80" y="176" width="114" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+    <rect x="194" y="176" width="80" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+    <rect x="338" y="176" width="70" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+  </g>
+  <text x="285" y="190" text-anchor="middle" font-size="10" fill="#b03a3a" font-weight="bold">Tensor Core 利用率低（softmax/搬数期间空转）</text>
+  <text x="520" y="190" font-size="10" fill="#888">~35% 峰值</text>
+
+  <!-- ===== Bottom: FA3 async ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="248" width="820" height="210" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.3"/>
+  </g>
+  <text x="80" y="270" font-size="13" font-weight="bold" fill="#4a8e4a">FA3（Hopper）— 异步</text>
+  <text x="80" y="286" font-size="10" fill="#888">TMA 搬数与 Tensor Core 计算并行 · 搬运开销被完全隐藏</text>
+
+  <!-- producer row -->
+  <text x="50" y="312" font-size="10" fill="#888" font-weight="bold">prod</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="80" y="300" width="80" height="24" rx="4" fill="#c98a2b" opacity="0.5" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="120" y="316" fill="#7a5415" font-weight="bold">TMA(K_j)</text>
+    <rect x="162" y="300" width="50" height="24" rx="4" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="1"/>
+    <text x="187" y="316" fill="#7a5415">mbar</text>
+    <rect x="214" y="300" width="80" height="24" rx="4" fill="#c98a2b" opacity="0.5" stroke="#c98a2b" stroke-width="1.2"/>
+    <text x="254" y="316" fill="#7a5415" font-weight="bold">TMA(V_j)</text>
+    <rect x="296" y="300" width="50" height="24" rx="4" fill="#c98a2b" opacity="0.3" stroke="#c98a2b" stroke-width="1"/>
+    <text x="321" y="316" fill="#7a5415">mbar</text>
+    <rect x="348" y="300" width="80" height="24" rx="4" fill="#c98a2b" opacity="0.4" stroke="#c98a2b" stroke-width="1.1" stroke-dasharray="3 2"/>
+    <text x="388" y="316" fill="#7a5415">TMA(K_{j+1})</text>
+    <text x="445" y="316" font-size="12" fill="#888">...</text>
+  </g>
+  <text x="560" y="316" font-size="9" fill="#c98a2b">producer wg 只发 TMA，不占 SM 算力</text>
+
+  <!-- consumer row -->
+  <text x="50" y="352" font-size="10" fill="#888" font-weight="bold">cons</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="80" y="340" width="40" height="24" rx="4" fill="#eee" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="100" y="356" fill="#aaa">wait</text>
+    <rect x="122" y="340" width="90" height="24" rx="4" fill="#4a8edb" opacity="0.5" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="167" y="356" fill="#2b6e9e" font-weight="bold">GEMMA(QKᵀ)</text>
+    <rect x="214" y="340" width="60" height="24" rx="4" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="244" y="356" fill="#5d3a7e" font-weight="bold">softmax</text>
+    <rect x="276" y="340" width="80" height="24" rx="4" fill="#4a8edb" opacity="0.5" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="316" y="356" fill="#2b6e9e" font-weight="bold">GEMMA(PV)</text>
+    <rect x="358" y="340" width="40" height="24" rx="4" fill="#eee" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="378" y="356" fill="#aaa">wait</text>
+    <rect x="400" y="340" width="90" height="24" rx="4" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.1" stroke-dasharray="3 2"/>
+    <text x="445" y="356" fill="#2b6e9e">GEMMA(QKᵀ_{j+1})</text>
+    <text x="510" y="356" font-size="12" fill="#888">...</text>
+  </g>
+
+  <!-- TC utilization bar (high) -->
+  <text x="50" y="392" font-size="10" fill="#888">TC</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="382" width="430" height="20" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="80" y="382" width="430" height="20" rx="4" fill="#4a8edb" opacity="0.7"/>
+  </g>
+  <text x="295" y="396" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">Tensor Core 几乎不空转（搬数完全隐藏在计算影子下）</text>
+  <text x="540" y="396" font-size="10" fill="#888">~75% 峰值</text>
+
+  <!-- mbarrier handshake arrows -->
+  <g filter="url(#sk)" stroke="#4a8e4a" stroke-width="1" fill="none" stroke-dasharray="3 2">
+    <path d="M 187 324 L 100 340" marker-end="url(#ar)"/>
+    <path d="M 321 324 L 378 340" marker-end="url(#ar)"/>
+  </g>
+
+  <text x="450" y="440" text-anchor="middle" font-size="10" fill="#888">producer 发 TMA 后立即返回 · consumer 通过 mbarrier 感知数据就绪 · setmaxnreg 把 producer 省下的寄存器划给 consumer</text>
+  <text x="450" y="458" text-anchor="middle" font-size="10" fill="#888">FA2: ~35% 利用率 → FA3: ~75% 利用率 · FP16 forward 达 740 TFLOPs/s</text>
+</svg>

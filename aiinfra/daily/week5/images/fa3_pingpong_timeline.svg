@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="340" viewBox="0 0 900 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="88" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="900" height="340" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FA3 Pingpong 调度：两个 Consumer 相位错开</text>
+  <path d="M 280 40 Q 450 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="450" y="56" text-anchor="middle" font-size="11" fill="#888">wg0 做 softmax（CUDA core）时 wg1 做 GEMM（Tensor Core）→ SM 上不同执行单元同时有活</text>
+
+  <!-- time axis -->
+  <text x="50" y="90" font-size="10" fill="#888" font-weight="bold">时间 →</text>
+  <g filter="url(#sk)" stroke="#d4d4d4" stroke-width="1">
+    <line x1="80" y1="86" x2="850" y2="86" stroke-dasharray="4 3"/>
+  </g>
+
+  <!-- ===== wg0 row ===== -->
+  <text x="50" y="122" font-size="11" fill="#4a8edb" font-weight="bold">wg0</text>
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="80" y="104" width="100" height="32" rx="5" fill="#4a8edb" opacity="0.5" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="130" y="124" fill="#2b6e9e" font-weight="bold">GEMM(QK₀ᵀ)</text>
+    <rect x="182" y="104" width="70" height="32" rx="5" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.3"/>
+    <text x="217" y="124" fill="#5d3a7e" font-weight="bold">softmax₀</text>
+    <rect x="254" y="104" width="80" height="32" rx="5" fill="#4a8edb" opacity="0.5" stroke="#4a8edb" stroke-width="1.3"/>
+    <text x="294" y="124" fill="#2b6e9e" font-weight="bold">GEMM(PV₀)</text>
+    <rect x="336" y="104" width="100" height="32" rx="5" fill="#4a8edb" opacity="0.45" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="386" y="124" fill="#2b6e9e" font-weight="bold">GEMM(QK₂ᵀ)</text>
+    <rect x="438" y="104" width="70" height="32" rx="5" fill="#8e5db8" opacity="0.4" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="473" y="124" fill="#5d3a7e" font-weight="bold">softmax₂</text>
+    <text x="520" y="124" font-size="14" fill="#888">...</text>
+  </g>
+
+  <!-- ===== wg1 row ===== -->
+  <text x="50" y="172" font-size="11" fill="#c98a2b" font-weight="bold">wg1</text>
+  <g filter="url(#sk)" font-size="10" text-anchor="middle">
+    <rect x="80" y="154" width="100" height="32" rx="5" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="130" y="174" fill="#aaa">idle</text>
+    <rect x="182" y="154" width="100" height="32" rx="5" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="232" y="174" fill="#2b6e9e" font-weight="bold">GEMM(QK₁ᵀ)</text>
+    <rect x="284" y="154" width="70" height="32" rx="5" fill="#8e5db8" opacity="0.35" stroke="#8e5db8" stroke-width="1.2"/>
+    <text x="319" y="174" fill="#5d3a7e" font-weight="bold">softmax₁</text>
+    <rect x="356" y="154" width="80" height="32" rx="5" fill="#4a8edb" opacity="0.4" stroke="#4a8edb" stroke-width="1.2"/>
+    <text x="396" y="174" fill="#2b6e9e" font-weight="bold">GEMM(PV₁)</text>
+    <rect x="438" y="154" width="70" height="32" rx="5" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="473" y="174" fill="#aaa">idle</text>
+    <text x="520" y="174" font-size="14" fill="#888">...</text>
+  </g>
+
+  <!-- phase offset annotation -->
+  <g filter="url(#sk)" stroke="#4a8e4a" stroke-width="1.2" fill="none" stroke-dasharray="3 2">
+    <path d="M 217 136 L 217 154"/>
+    <path d="M 232 136 L 232 154"/>
+  </g>
+  <text x="570" y="168" font-size="10" fill="#4a8e4a" font-weight="bold">↑ 相位错开</text>
+
+  <!-- ===== Combined utilization bars ===== -->
+  <text x="50" y="216" font-size="10" fill="#888" font-weight="bold">TC</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="206" width="440" height="20" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="80" y="206" width="100" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+    <rect x="182" y="206" width="100" height="20" rx="4" fill="#4a8edb" opacity="0.5"/>
+    <rect x="284" y="206" width="70" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+    <rect x="356" y="206" width="80" height="20" rx="4" fill="#4a8edb" opacity="0.5"/>
+    <rect x="438" y="206" width="70" height="20" rx="4" fill="#4a8edb" opacity="0.6"/>
+  </g>
+  <text x="300" y="220" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">Tensor Core 几乎不空转</text>
+
+  <text x="50" y="250" font-size="10" fill="#888" font-weight="bold">SFU</text>
+  <g filter="url(#sk)">
+    <rect x="80" y="240" width="440" height="20" rx="4" fill="#e8e8e8" stroke="#ccc" stroke-width="1"/>
+    <rect x="182" y="240" width="70" height="20" rx="4" fill="#8e5db8" opacity="0.5"/>
+    <rect x="284" y="240" width="70" height="20" rx="4" fill="#8e5db8" opacity="0.5"/>
+    <rect x="438" y="240" width="70" height="20" rx="4" fill="#8e5db8" opacity="0.5"/>
+  </g>
+  <text x="300" y="254" text-anchor="middle" font-size="10" fill="#5d3a7e" font-weight="bold">CUDA core / SFU 也不空转</text>
+
+  <!-- bottom note -->
+  <g filter="url(#sk)">
+    <rect x="140" y="280" width="620" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="450" y="300" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">两个 consumer 相位错开 → Tensor Core 与 CUDA core 互补，SM 上同时有活</text>
+  <text x="450" y="314" text-anchor="middle" font-size="10" fill="#888">warpgroup 内部还有 2-stage GEMM-softmax 流水：块 j 的 softmax 与块 j+1 的 QKᵀ WGMMA 并行</text>
+</svg>
