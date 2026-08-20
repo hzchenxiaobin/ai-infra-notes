@@ -110,7 +110,7 @@ CUresult res = cuTensorMapEncodeTiled(
     boxDim,
     elementStride,
     CU_TENSOR_MAP_INTERLEAVE_NONE,        // 无交错
-    CU_TENSOR_MAP_SWIZZLE_128B,           // 128B swizzle（消除 bank conflict）
+    CU_TENSOR_MAP_SWIZZLE_32B,            // 32B swizzle（匹配 16×sizeof(half)=32B 内层维度）
     CU_TENSOR_MAP_L2_PROMOTION_NONE,      // 无 L2 提升
     CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE     // 越界填 0
 );
@@ -123,6 +123,8 @@ CUresult res = cuTensorMapEncodeTiled(
 ![TMA Descriptor 内部结构](../images/tma_descriptor_structure.svg)
 
 > ⚠️ **维度顺序**：descriptor 中维度是**反序**的——最快变维度（列）在前，最慢变维度（行）在后。即 `globalDim = {K, M}` 对应一个 `M×K` 的矩阵。这是 TMA 编程中最容易搞错的点。
+
+> ⚠️ **Swizzle 与 tile 内层维度匹配**：`boxDim[0] × elemSize` 必须与 swizzle 粒度匹配——`SWIZZLE_128B` 要求是 128 的倍数，`SWIZZLE_32B` 要求是 32 的倍数。本例 `boxDim[0]=16`、`elemSize=2`（FP16）→ 32 字节，故用 `SWIZZLE_32B`；若 tile 内层维度为 64 个 FP16（128B），才用 `SWIZZLE_128B`。
 
 ### 2. TMA Load / Store 指令
 
@@ -146,18 +148,18 @@ cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes \
 
 ```cuda
 // PTX：2D TMA store，从 SMEM 写回 GMEM
-cp.async.bulk.tensor.2d.shared::cluster.global \
-    [gmem_dst],                // 目标 GMEM 地址（通过 descriptor 计算）
-    [desc, coord_dim0, coord_dim1],
-    [smem_src];                // 源 SMEM 地址
+cp.async.bulk.tensor.2d.global.shared::cluster \
+    [smem_src],                // 源 SMEM 地址
+    [desc, coord_dim0, coord_dim1];
+// 目标 GMEM 地址由 descriptor + 坐标自动计算
 ```
 
 #### Reduce（SMEM → GMEM，带原子操作）
 
 ```cuda
 // PTX：2D TMA reduce（atomic add），适用于 scatter-add 等场景
-cp.async.bulk.tensor.2d.shared::cluster.global.add \
-    [gmem_dst], [desc, c0, c1], [smem_src];
+cp.reduce.async.bulk.tensor.2d.global.shared::cluster.add \
+    [smem_src], [desc, c0, c1];
 ```
 
 ### 3. mbarrier 的 `expect_tx` 机制
@@ -219,6 +221,7 @@ Swizzle 的原理是 XOR 重排 SMEM 地址的高位和低位，让相邻 thread
 namespace cg = cooperative_groups;
 
 #define BLOCK_M 128
+#define BLOCK_N 256
 #define BLOCK_K 16
 #define NUM_STAGES 3
 
@@ -232,7 +235,7 @@ void create_tma_descriptors(CUtensorMap& desc_a, CUtensorMap& desc_b,
     cuTensorMapEncodeTiled(&desc_a, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, 2,
         A, globalDimA, globalStrideA, boxDimA, {1, 1},
         CU_TENSOR_MAP_INTERLEAVE_NONE,
-        CU_TENSOR_MAP_SWIZZLE_128B,
+        CU_TENSOR_MAP_SWIZZLE_32B,
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
 
@@ -268,8 +271,8 @@ __global__ void tma_gemm_kernel(
 
         // 3. TMA load A tile：一条指令搬 128×16 的 half tile
         if (threadIdx.x == 0) {
-            // 设置预期字节数 + arrive
-            cuda::device::barrier_arrive_tx(bar[slot], 1,
+            // arrive + expect_tx 告知预期字节数，获取 wait token
+            auto token = bar[slot].arrive_and_expect_tx(
                 BLOCK_M * BLOCK_K * sizeof(half) +  // A tile 字节数
                 BLOCK_K * BLOCK_N * sizeof(half));   // B tile 字节数
 
@@ -282,15 +285,18 @@ __global__ void tma_gemm_kernel(
             // cp.async.bulk.tensor.2d.shared::cluster.global
             //     .mbarrier::complete_tx::bytes
             //     [smem_b + slot*...], [desc_b, block_n, k_iter*BLOCK_K], [bar[slot]];
+
+            // 等 TMA 搬完（arrive 已在 arrive_and_expect_tx 中完成，此处只 wait）
+            bar[slot].wait(token);
+        } else {
+            // 其他 thread arrive + wait（不发起 TMA，只等数据就绪）
+            bar[slot].arrive_and_wait();
         }
 
-        // 4. 所有 thread 等 mbarrier（TMA 搬完后自动解锁）
-        bar[slot].arrive_and_wait();
-
-        // 5. 此时 smem_a[slot] / smem_b[slot] 数据就绪，可以做 WGMMA 或 mma
+        // 4. 此时 smem_a[slot] / smem_b[slot] 数据就绪，可以做 WGMMA 或 mma
         // ... compute ...
 
-        // 6. 下一轮迭代重用 slot（mbarrier 自动 phase 翻转）
+        // 5. 下一轮迭代重用 slot（mbarrier 自动 phase 翻转）
     }
 }
 
@@ -342,7 +348,7 @@ $$
 
 | 特性 | 说明 |
 |------|------|
-| 最大 tile 大小 | 单次最多搬 16384 字节（128KB / 8 stages） |
+| 最大 tile 大小 | 受 boxDim 约束：innermost 维度 × elemSize ≤ 128B，其余维度 ≤ 256 |
 | 维度支持 | 1D / 2D / 3D / 4D / 5D |
 | 数据类型 | FP16, BF16, FP32, FP64, INT8, INT16, INT32, INT64, FP8 |
 | 带宽 | 接近 GMEM 峰值带宽（H100 上 ~3 TB/s） |
@@ -415,11 +421,11 @@ CUTLASS 3.x 的 `CollectiveBuilder` 自动选择 TMA：
 ```cuda
 // CUTLASS 3.x：CollectiveBuilder 自动用 TMA + WGMMA
 using CollectiveMainloop = typename cutlass::gemm::collective::CollectiveBuilder<
-    cutlass::arch::Sm90,                    // Hopper
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::OpClassTensorOp,
-    half, half, float,                      // A, B, C dtype
-    cutlass::arch::OpClassTensorOp,
+    cutlass::arch::Sm90,                    // Hopper 架构
+    cutlass::arch::OpClassTensorOp,         // Tensor Core 操作类型
+    half, cutlass::layout::RowMajor,        // A: dtype + 布局
+    half, cutlass::layout::RowMajor,        // B: dtype + 布局
+    float,                                  // 累加器类型
     Shape<128, 256, 16>,                    // tile shape
     Shape<1, 1, 1>,                         // cluster shape
     cutlass::gemm::collective::StageCountAuto,
@@ -462,9 +468,9 @@ cp.async.bulk.tensor.2d ... [smem], [desc, ...], [bar];  // mbarrier 收不到�
 bar[slot].wait();  // 死锁
 
 // ✅ 正确：arrive + expect_tx 告知预期字节数
-cuda::device::barrier_arrive_tx(bar[slot], 1, tile_bytes);
+auto token = bar[slot].arrive_and_expect_tx(tile_bytes);
 cp.async.bulk.tensor.2d ... [smem], [desc, ...], [bar];  // 搬完字节数后自动解锁
-bar[slot].wait();  // 正确解锁
+bar[slot].wait(token);  // 正确解锁
 ```
 
 ### 陷阱 3：SMEM 地址未对齐
@@ -487,7 +493,7 @@ __shared__ __align__(128) half smem_a[NUM_STAGES * BLOCK_M * BLOCK_K];
 // A tile: 128×16×2 = 4096 bytes
 // B tile: 16×256×2 = 8192 bytes
 // 合计: 12288 bytes
-cuda::device::barrier_arrive_tx(bar[slot], 1,
+auto token = bar[slot].arrive_and_expect_tx(
     BLOCK_M * BLOCK_K * sizeof(half) +   // A
     BLOCK_K * BLOCK_N * sizeof(half));    // B
 // 然后 A 和 B 两条 TMA 指令都指向同一个 mbarrier
@@ -537,7 +543,7 @@ TMA load 指令关联一个 mbarrier，搬运完成后硬件自动通知该 mbar
 
 **Q7：TMA 支持哪些维度和数据类型？**
 
-维度：1D / 2D / 3D / 4D / 5D（对应 PTX 指令 `cp.async.bulk.tensor.{1d,2d,3d,4d,5d}`）。数据类型：FP16, BF16, FP32, FP64, INT8, INT16, INT32, INT64, FP8（E4M3/E5M2）。单次最大搬运 16384 字节（128KB / 8 stages）。Swizzle 模式：NONE / 32B / 64B / 128B 四种粒度。
+维度：1D / 2D / 3D / 4D / 5D（对应 PTX 指令 `cp.async.bulk.tensor.{1d,2d,3d,4d,5d}`）。数据类型：FP16, BF16, FP32, FP64, INT8, INT16, INT32, INT64, FP8（E4M3/E5M2）。boxDim 约束：innermost 维度 × elemSize ∈ {16, 32, 64, 128}B（由 swizzle 模式决定），其余维度 ≤ 256。Swizzle 模式：NONE / 32B / 64B / 128B 四种粒度。
 
 **Q8：Triton 在 Hopper 上用 TMA 了吗？**
 

@@ -72,7 +72,7 @@ Warp Specialization 不是单一指令，而是三个 Hopper 特性协同：
 |------|------|-------------|
 | **TMA** | 异步搬多维 tile 从 GMEM→SMEM | `cp.async.bulk.tensor` (PTX) / `cute::SM90_TMA_LOAD` |
 | **mbarrier** | 异步 barrier，producer↔consumer 通知 | `mbarrier.arrive` / `mbarrier.wait` (PTX) / `cuda::barrier` |
-| **WGMMA** | warp-group 级异步 MMA（4 warps=128 threads） | `wgmma.mma_async` (PTX) / `cute::SM90_64x256x16_F16F16F32` |
+| **WGMMA** | warp-group 级异步 MMA（4 warps=128 threads） | `wgmma.mma_async` (PTX) / `cute::SM90_64x256x16_F16F16F32_SS` |
 
 #### TMA：异步搬运
 
@@ -108,9 +108,10 @@ mbarrier.wait(mbar, phase);  // 等数据就绪
 Hopper 的 WGMMA 一次调用让 **4 个 warp（128 threads）** 协作完成矩阵乘，且**异步**——发起后立即返回，结果稍后在寄存器中就绪：
 
 ```cuda
-// PTX 伪码：C[128×256] += A[128×16] × B[16×256]（F16×F16→F32）
-wgmma.mma_async.sync.aligned.m64n256k16.f32.f16.f16 \
-    {acc_regs}, smem_a, desc_b;
+// PTX 伪码：C[64×256] += A[64×16] × B[16×256]（F16×F16→F32）
+// WGMMA 的 M 维度固定为 64，算 C[128×256] 需 2 条 WGMMA（上下各 64 行）
+wgmma.mma_async.aligned.m64n256k16.f32.f16.f16 \
+    {acc_regs}, desc_a, desc_b;
 // 发起后立即返回，acc 稍后更新
 ```
 
@@ -182,8 +183,11 @@ if (is_producer) {
     // ===== Producer warp group =====
     for (int k_iter = 0; k_iter < K / BLOCK_K; ++k_iter) {
         int slot = k_iter % NUM_STAGES;
-        // 1. 等 consumer 通知"slot 空了"（初始时所有 slot 可用）
-        bar_compute[slot].wait(/*phase=*/k_iter / NUM_STAGES);
+        // 1. prologue（前 NUM_STAGES 轮）不等 compute signal——slot 都是空的
+        //    稳态阶段起才等 consumer 通知"slot 空了"
+        if (k_iter >= NUM_STAGES) {
+            bar_compute[slot].wait(/*phase=*/k_iter / NUM_STAGES);
+        }
         // 2. TMA 异步加载 A/B 到 smem[slot]
         cute::SM90_TMA_LOAD::copy(tma_a, smem_a[slot], {offset_m, k_iter * BLOCK_K});
         cute::SM90_TMA_LOAD::copy(tma_b, smem_b[slot], {k_iter * BLOCK_K, offset_n});
@@ -250,7 +254,8 @@ k=3: P: wait C0, load slot0 ──signal L0'──→ C: wait L0', compute slot0
 mbarrier 用 **phase counter** 避免虚假唤醒：
 
 - 每次 arrive 翻转 phase（0→1→0→...）
-- `wait(bar, expected_phase)` 只有当 bar 的 phase != expected_phase 时才阻塞
+- `wait(bar, phase)` 只有当 bar 的 phase **==** phase 参数时才阻塞（挂起等待 arrive 翻转 phase）
+- 翻转后 phase 变为不同值，wait 解除阻塞
 - 这天然支持"第 N 轮重用 slot"的场景——每轮 phase 翻转一次
 
 ### WGMMA 的异步性与 `wgmma.fence` / `wgmma.commit_group`
