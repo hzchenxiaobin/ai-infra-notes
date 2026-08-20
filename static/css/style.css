@@ -1507,3 +1507,146 @@ body.landing {
         font-size: 1.3rem;
     }
 }
+
+/* ===================== Week pages (sidebar-less, landing style) ===================== */
+
+.week-hero {
+    position: relative;
+    padding: 130px 24px 44px;
+    text-align: center;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 55% 60% at 50% 0%, rgba(88, 166, 255, 0.1), transparent 70%),
+        var(--bg-color);
+}
+
+.week-hero-inner {
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.week-hero-title {
+    font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0;
+    color: var(--text-color);
+    letter-spacing: -0.3px;
+}
+
+.week-hero-sub {
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    margin: 12px auto 0;
+    max-width: 640px;
+}
+
+/* Sticky day-pill strip below the top nav */
+.day-pills {
+    position: sticky;
+    top: 60px;
+    z-index: 150;
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.day-pills-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 10px 24px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.day-pills-inner::-webkit-scrollbar {
+    display: none;
+}
+
+.day-pill {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.day-pill:hover {
+    color: var(--text-color);
+    border-color: var(--accent-color);
+}
+
+.day-pill.day-pill-active {
+    color: var(--accent-color);
+    border-color: rgba(88, 166, 255, 0.5);
+    background: rgba(88, 166, 255, 0.1);
+    font-weight: 600;
+}
+
+/* Centered content column */
+.week-main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 70px;
+    min-height: 40vh;
+}
+
+/* Prev / next navigation */
+.prev-next-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 56px;
+}
+
+.pn-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 48%;
+    padding: 12px 18px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.pn-link span:not(.pn-arrow) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pn-link:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-color);
+}
+
+.pn-next {
+    margin-left: auto;
+}
+
+.pn-arrow {
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .week-hero {
+        padding: 110px 20px 36px;
+    }
+
+    .week-main {
+        padding: 28px 18px 50px;
+    }
+}

@@ -165,9 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enhance interview Q&A section into styled cards
     enhanceInterviewQA();
 
-    // Open all links in new tab, except sidebar links
+    // Open all links in new tab, except sidebar / site-chrome navigation links
     document.querySelectorAll('a').forEach(link => {
-        if (link.closest('.sidebar')) {
+        if (link.closest('.sidebar, .landing-nav, .day-pills, .prev-next-nav, .day-cards')) {
+            return;
+        }
+        const href = link.getAttribute('href') || '';
+        if (href.startsWith('#')) {
             return;
         }
         link.setAttribute('target', '_blank');

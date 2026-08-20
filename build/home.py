@@ -4,9 +4,7 @@ import html
 import re
 from pathlib import Path
 
-from .common import COURSE_OVERVIEW_SOURCE
-
-GITHUB_REPO_URL = "https://github.com/hzchenxiaobin/ai-infra-notes"
+from .common import COURSE_OVERVIEW_SOURCE, GITHUB_REPO_URL
 LEETCODE_URL = "https://hzchenxiaobin.github.io/leetcode/"
 LEETGPU_URL = "https://github.com/hzchenxiaobin/leetgpu"
 

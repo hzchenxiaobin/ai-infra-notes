@@ -8,6 +8,8 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+GITHUB_REPO_URL = "https://github.com/hzchenxiaobin/ai-infra-notes"
+
 PLAN_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "plan" / "learning_plan_10week.md"
 COURSE_OVERVIEW_SOURCE = REPO_ROOT / "aiinfra" / "daily" / "README.md"
 DAILY_DIR = REPO_ROOT / "aiinfra" / "daily"
@@ -294,6 +296,160 @@ def page_template(
             {bottom_nav}
         </main>
     </div>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+
+    <script>
+        const markdown = `{escaped_markdown}`;
+
+        const renderer = new marked.Renderer();
+{renderer_block}        marked.setOptions({{
+            renderer: renderer,
+            headerIds: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false
+        }});
+
+        try {{
+            if (typeof marked === 'undefined') {{
+                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
+            }}
+            document.getElementById('content').innerHTML = marked.parse(markdown);
+
+            if (window.Prism) {{
+                Prism.highlightAll();
+            }}
+        }} catch (err) {{
+            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
+                '<h2>⚠️ 页面渲染失败</h2>' +
+                '<p>' + err.message + '</p>' +
+                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
+                '</div>';
+            console.error('Markdown render error:', err);
+        }}
+    </script>
+    {extra_scripts}
+    <script src="{root_prefix}js/main.js?v=7"></script>
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------------------------
+# Week page template (sidebar-less: top nav + hero + day pills, like the landing page)
+# ---------------------------------------------------------------------------
+
+def week_page_template(
+    title: str,
+    markdown: str,
+    *,
+    eyebrow: str = "",
+    subtitle: str = "",
+    root_prefix: str = "",
+    page_title: Optional[str] = None,
+    day_pills: Optional[list] = None,
+    prev_link: Optional[tuple] = None,
+    next_link: Optional[tuple] = None,
+    extra_scripts: str = "",
+    heading_renderer_js: str = "",
+) -> str:
+    """Generate a week page (overview / day / extra) in the landing-page style:
+    fixed top nav, compact hero, sticky day-pill strip, centered content."""
+    escaped_markdown = escape_for_template_string(markdown)
+    if page_title is None:
+        page_title = title
+
+    eyebrow_html = f'<div class="hero-eyebrow">{eyebrow}</div>' if eyebrow else ""
+    subtitle_html = f'<p class="week-hero-sub">{subtitle}</p>' if subtitle else ""
+
+    pills_html = ""
+    if day_pills:
+        items = []
+        for pill in day_pills:
+            active_cls = " day-pill-active" if pill.get("active") else ""
+            items.append(
+                f'<a class="day-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
+            )
+        pills_html = (
+            '<nav class="day-pills"><div class="day-pills-inner">'
+            + "".join(items)
+            + "</div></nav>"
+        )
+
+    def _pn_link(link, cls, arrow_before, arrow_after):
+        if not link:
+            return "<span></span>"
+        href, label = link
+        return (
+            f'<a class="pn-link {cls}" href="{href}">'
+            f"{arrow_before}<span>{label}</span>{arrow_after}</a>"
+        )
+
+    prev_next_html = ""
+    if prev_link or next_link:
+        prev_next_html = (
+            '<div class="prev-next-nav">'
+            + _pn_link(prev_link, "pn-prev", '<span class="pn-arrow">←</span>', "")
+            + _pn_link(next_link, "pn-next", "", '<span class="pn-arrow">→</span>')
+            + "</div>"
+        )
+
+    if heading_renderer_js:
+        renderer_block = f"        {heading_renderer_js}\n\n"
+    else:
+        renderer_block = ""
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{page_title}</title>
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=7">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="{root_prefix}js/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="{root_prefix}js/markdown-math.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <link href="{root_prefix}css/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="{root_prefix}js/prism.min.js"></script>
+    <script src="{root_prefix}js/prism-c.min.js"></script>
+    <script src="{root_prefix}js/prism-cpp.min.js"></script>
+    <script>Prism.languages.cuda=Prism.languages.extend("c",{{builtin:/\\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\\b/}});</script>
+    <script src="{root_prefix}js/prism-bash.min.js"></script>
+    <script src="{root_prefix}js/prism-python.min.js"></script>
+</head>
+<body class="landing week-page">
+    <header class="landing-nav">
+        <a class="landing-nav-brand" href="{root_prefix}index.html">AI Infra <span>Notes</span></a>
+        <nav class="landing-nav-links">
+            <a href="{root_prefix}plan.html">10 周计划</a>
+            <a href="{root_prefix}index.html#topics">专题笔记</a>
+            <a href="{root_prefix}paper/index.html">论文精读</a>
+            <a class="landing-nav-github" href="{GITHUB_REPO_URL}">GitHub ↗</a>
+        </nav>
+    </header>
+
+    <section class="week-hero">
+        <div class="week-hero-inner">
+            {eyebrow_html}
+            <h1 class="week-hero-title">{title}</h1>
+            {subtitle_html}
+        </div>
+    </section>
+
+    {pills_html}
+
+    <main class="week-main">
+        <article class="content" id="content"></article>
+        {prev_next_html}
+    </main>
+
+    <footer class="landing-footer">
+        <span>AI Infra Notes · 由 <a href="{GITHUB_REPO_URL}">GitHub</a> 驱动 · Deployed on GitHub Pages</span>
+    </footer>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
 
