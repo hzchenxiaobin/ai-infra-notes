@@ -3,9 +3,8 @@
 import re
 import shutil
 from pathlib import Path
-from typing import Optional
 
-from .common import HEADING_RENDERER_TOPICS, REPO_ROOT, page_template
+from .common import HEADING_RENDERER_TOPICS, REPO_ROOT, week_page_template
 
 TOPICS_DIR = REPO_ROOT / "aiinfra" / "topics"
 IMAGES_SRC = TOPICS_DIR / "images"
@@ -198,57 +197,47 @@ def _extract_solution_files(topic_dir: Path) -> list:
     return solutions
 
 
-def _build_nav(topic_slug: str, topic_display_name: str,
-               current_day: Optional[int] = None, nav_days: list = None,
-               day_files: list = None, nav_solutions: list = None,
-               current_slug: Optional[str] = None, href_prefix: str = "") -> str:
-    """Build sidebar navigation for a topic site.
+def _split_topic_h1(overview: str, fallback: str) -> tuple:
+    """Split the leading '# Title' H1 into (title, body) for the hero header."""
+    match = re.match(r"\s*#\s+(.+)", overview)
+    if match:
+        title = match.group(1).strip()
+        body = overview[match.end():].lstrip("\n")
+        return title, body
+    return fallback, overview
 
-    `href_prefix` is prepended to all hrefs so pages in subdirectories
-    (e.g. high/reduction/) can still reach topic-root and main-site pages.
-    """
-    if nav_days is None:
-        nav_days = []
-    if day_files is None:
-        day_files = []
-    if nav_solutions is None:
-        nav_solutions = []
-    has_day_files = bool(day_files)
 
-    lines = []
-    lines.append('<div class="nav-section-title">返回主站</div>')
-    lines.append(f'<a class="nav-link" href="{href_prefix}../index.html">← AI Infra 主页</a>')
-    lines.append(f'<a class="nav-link" href="{href_prefix}../plan.html">📋 10 周计划</a>')
-
-    lines.append(f'<div class="nav-section-title" style="margin-top:1rem;">{topic_display_name} 专题</div>')
-
-    overview_active = " active" if current_day is None and current_slug is None else ""
-    lines.append(f'<a class="nav-link{overview_active}" href="{href_prefix}index.html">📌 专题概览</a>')
-
+def _topic_day_pills(nav_days: list, current_day=None, overview_active: bool = False,
+                     has_day_files: bool = False, prefix: str = "") -> list:
+    """Pill strip items for topic pages: 概览 + one pill per day (if any)."""
+    pills = [{"label": "📌 概览", "href": f"{prefix}index.html", "active": overview_active}]
     for day in nav_days:
-        day_active = " active" if current_day == day["num"] else ""
         if has_day_files:
-            href = f'{href_prefix}day{day["num"]}.html'
+            href = f'{prefix}day{day["num"]}.html'
         else:
-            href = f'{href_prefix}index.html#day-{day["num"]}'
-        lines.append(
-            f'<a class="nav-link day-link{day_active}" href="{href}">'
-            f'Day {day["num"]}：{day["title"]}'
-            f'</a>'
-        )
+            href = f'{prefix}index.html#day-{day["num"]}'
+        pills.append({
+            "label": f"Day {day['num']}",
+            "href": href,
+            "active": current_day == day["num"],
+        })
+    return pills
 
-    if nav_solutions:
-        lines.append('<div class="nav-section-title" style="margin-top:1rem;">📝 LeetGPU 题解</div>')
-        for sol in nav_solutions:
-            sol_active = " active" if current_slug == sol["slug"] else ""
-            label = solution_label(sol)
-            lines.append(
-                f'<a class="nav-link day-link{sol_active}" href="{href_prefix}{sol["slug"]}.html">'
-                f'{label}{sol["title"]}'
-                f'</a>'
-            )
 
-    return "\n".join(lines)
+def _day_prev_next(days: list, index: int) -> tuple:
+    """(prev_link, next_link) for a topic day page; each is (href, label) or None."""
+    if index > 0:
+        prev_day = days[index - 1]
+        prev_link = (f"day{prev_day['num']}.html", f"Day {prev_day['num']}：{prev_day['title']}")
+    else:
+        prev_link = ("index.html", "专题概览")
+
+    if index + 1 < len(days):
+        next_day = days[index + 1]
+        next_link = (f"day{next_day['num']}.html", f"Day {next_day['num']}：{next_day['title']}")
+    else:
+        next_link = None
+    return prev_link, next_link
 
 
 def solution_label(sol: dict) -> str:
@@ -340,49 +329,61 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
 
     nav_days = day_files if day_files else readme_days
     root_prefix = "../"
-    overview_html = page_template(
-        title=f"{display} 专题",
-        nav_html=_build_nav(slug, display, current_day=None, nav_days=nav_days,
-                            day_files=day_files, nav_solutions=solution_files),
-        markdown=overview_with_cards,
-        is_overview=True,
+    topic_title, overview_body = _split_topic_h1(overview_with_cards, f"{display} 专题")
+    overview_html = week_page_template(
+        title=topic_title,
+        eyebrow="✨ 专题笔记",
+        markdown=overview_body,
         root_prefix=root_prefix,
         page_title=f"{display} 专题 - AI Infra 学习笔记",
+        day_pills=_topic_day_pills(nav_days, overview_active=True,
+                                   has_day_files=bool(day_files)) if nav_days else None,
         heading_renderer_js=HEADING_RENDERER_TOPICS,
-        back_link_href="index.html",
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
-    for day in day_files:
-        html = page_template(
-            title=f"Day {day['num']}：{day['title']}",
-            nav_html=_build_nav(slug, display, current_day=day["num"], nav_days=nav_days,
-                                day_files=day_files, nav_solutions=solution_files),
+    for index, day in enumerate(day_files):
+        prev_link, next_link = _day_prev_next(day_files, index)
+        html = week_page_template(
+            title=day["title"],
+            eyebrow=f"{display} 专题 · Day {day['num']}",
             markdown=day["markdown"],
-            is_overview=False,
             root_prefix=root_prefix,
             page_title=f"{display} Day {day['num']} - {day['title']}",
+            day_pills=_topic_day_pills(nav_days, current_day=day["num"],
+                                       has_day_files=True),
+            prev_link=prev_link,
+            next_link=next_link,
             heading_renderer_js=HEADING_RENDERER_TOPICS,
-            back_link_href="index.html",
         )
         filename = f"day{day['num']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {output_dir / filename}")
 
-    for sol in solution_files:
+    for index, sol in enumerate(solution_files):
         href_prefix = "../" * sol["depth"]
-        html = page_template(
-            title=f"LeetGPU {sol['title']} 题解",
-            nav_html=_build_nav(slug, display, nav_days=nav_days, day_files=day_files,
-                                nav_solutions=solution_files, current_slug=sol["slug"],
-                                href_prefix=href_prefix),
+        if index > 0:
+            prev_sol = solution_files[index - 1]
+            prev_link = (f"{prev_sol['slug']}.html", prev_sol["title"])
+        else:
+            prev_link = ("index.html", "专题概览")
+        if index + 1 < len(solution_files):
+            next_sol = solution_files[index + 1]
+            next_link = (f"{next_sol['slug']}.html", next_sol["title"])
+        else:
+            next_link = None
+        html = week_page_template(
+            title=sol["title"],
+            eyebrow=f"{display} 专题",
             markdown=sol["markdown"],
-            is_overview=False,
             root_prefix="../" * (sol["depth"] + 1),
             page_title=f"{display} 题解 - {sol['title']}",
+            day_pills=_topic_day_pills(nav_days, has_day_files=bool(day_files),
+                                       prefix=href_prefix),
+            prev_link=prev_link,
+            next_link=next_link,
             heading_renderer_js=HEADING_RENDERER_TOPICS,
-            back_link_href=href_prefix + "index.html",
         )
         out_path = output_dir / f"{sol['slug']}.html"
         out_path.parent.mkdir(parents=True, exist_ok=True)
