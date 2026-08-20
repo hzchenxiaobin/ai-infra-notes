@@ -116,7 +116,7 @@ def build_week_nav(
 
     overview_active = current_page == "overview"
     overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">📌 课程概览</a>')
+    lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">🏠 首页</a>')
 
     lines.append('<div class="nav-section-title">10 周学习路线</div>')
 
@@ -253,6 +253,18 @@ def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
 
     markdown_text = PLAN_SOURCE.read_text(encoding="utf-8")
 
+    # Prepend the course overview (aiinfra/daily/README.md): its content moved
+    # here when public/index.html became a designed landing page.
+    if COURSE_OVERVIEW_SOURCE.exists():
+        overview_text = COURSE_OVERVIEW_SOURCE.read_text(encoding="utf-8")
+        overview_text = rewrite_md_links_to_html_weeks(overview_text, root_prefix="")
+        overview_text = re.sub(r"\]\((?:\.\./)*images/", "](images/", overview_text)
+        overview_lines = overview_text.strip().splitlines()
+        if overview_lines and overview_lines[0].startswith("# "):
+            overview_lines = overview_lines[1:]
+        overview_text = "\n".join(overview_lines).strip()
+        markdown_text = overview_text + "\n\n---\n\n" + markdown_text
+
     def add_week_anchor(match: re.Match) -> str:
         return f'<a id="week-{match.group(2)}"></a>\n{match.group(0)}'
 
@@ -360,7 +372,7 @@ def _build_extra_pages(week1_dir: Path, output_dir: Path, public_dir: Path, plan
 
 
 def build_week1(public_dir: Path, plan_weeks: list) -> None:
-    """Build Week 1 website: course overview, plan page, week1 pages, and extras."""
+    """Build Week 1 website: plan page, week1 pages, and extras."""
     week1_dir = _week_dir(1)
     week1_output_dir = public_dir / "week1"
     week1_output_dir.mkdir(parents=True, exist_ok=True)
@@ -372,25 +384,8 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
 
     week1_root_prefix = "../"
 
-    # --- 1. Course overview landing page (public/index.html) ---
-    if not COURSE_OVERVIEW_SOURCE.exists():
-        raise FileNotFoundError(f"Course overview source not found: {COURSE_OVERVIEW_SOURCE}")
-    course_overview = COURSE_OVERVIEW_SOURCE.read_text(encoding="utf-8")
-    course_overview = rewrite_md_links_to_html_weeks(course_overview, root_prefix="")
-    course_overview = re.sub(r"\]\((?:\.\./)*images/", "](images/", course_overview)
-
-    course_overview_html = page_template(
-        title="课程概览",
-        page_title="AI Infra 10 周学习计划",
-        nav_html=build_week_nav(current_week=None, current_page="overview", weeks=plan_weeks),
-        markdown=course_overview,
-        is_overview=True,
-        heading_renderer_js=HEADING_RENDERER_WEEKS,
-    )
-    (public_dir / "index.html").write_text(course_overview_html, encoding="utf-8")
-    print(f"Generated: {public_dir / 'index.html'}")
-
-    # --- 2. Week 1 overview page (public/week1/index.html) ---
+    # --- 1. Week 1 overview page (public/week1/index.html) ---
+    # (The site landing page public/index.html is built separately by build.home.)
     week1_overview_html_src = rewrite_md_links_to_html_weeks(overview, root_prefix=week1_root_prefix)
     week1_overview_html_src = rewrite_week1_resource_links(week1_overview_html_src, root_prefix=week1_root_prefix)
     week1_overview_with_cards = (
@@ -418,7 +413,7 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
     (week1_output_dir / "index.html").write_text(week1_overview_html, encoding="utf-8")
     print(f"Generated: {week1_output_dir / 'index.html'}")
 
-    # --- 3. Week 1 day pages (public/week1/dayN.html) ---
+    # --- 2. Week 1 day pages (public/week1/dayN.html) ---
     for day in days:
         day["markdown"] = rewrite_md_links_to_html_weeks(day["markdown"], root_prefix=week1_root_prefix)
         day["markdown"] = rewrite_week1_resource_links(day["markdown"], root_prefix=week1_root_prefix)
@@ -449,9 +444,9 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
         (week1_output_dir / filename).write_text(html, encoding="utf-8")
         print(f"Generated: {week1_output_dir / filename}")
 
-    # --- 4. Plan page (public/plan.html) ---
+    # --- 3. Plan page (public/plan.html) ---
     build_plan_page(public_dir, plan_weeks)
 
-    # --- 5. Extra markdown pages + source directories ---
+    # --- 4. Extra markdown pages + source directories ---
     _copy_extra_directories(week1_dir, week1_output_dir)
     _build_extra_pages(week1_dir, week1_output_dir, public_dir, plan_weeks)

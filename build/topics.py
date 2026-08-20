@@ -11,10 +11,17 @@ TOPICS_DIR = REPO_ROOT / "aiinfra" / "topics"
 IMAGES_SRC = TOPICS_DIR / "images"
 
 TOPIC_DISPLAY_NAMES = {
+    "LLM": "🧠 LLM",
     "cpp": "🖥️ C++",
     "cuda": "🟢 CUDA",
+    "cudaGraph": "📊 CUDA Graph",
     "cutlass": "⚡ CUTLASS",
+    "deeplearning": "📚 Deep Learning",
+    "harness": "🛠 Harness",
+    "pytorch": "🔥 PyTorch",
+    "shengteng": "🌄 昇腾",
     "triton": "🐍 Triton",
+    "vllm": "🚀 vLLM",
     "cute": "🔷 CuTe",
     "deepgemm": "🔶 DeepGEMM",
     "moe": "🧩 MoE",

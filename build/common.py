@@ -253,7 +253,7 @@ def page_template(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{page_title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=6">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=7">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -328,7 +328,7 @@ def page_template(
         }}
     </script>
     {extra_scripts}
-    <script src="{root_prefix}js/main.js?v=6"></script>
+    <script src="{root_prefix}js/main.js?v=7"></script>
 </body>
 </html>
 """
@@ -362,7 +362,7 @@ def paper_page_template(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=6">
+    <link rel="stylesheet" href="{root_prefix}css/style.css?v=7">
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -428,7 +428,7 @@ def paper_page_template(
             </script>
         </main>
     </div>
-    <script src="{root_prefix}js/main.js?v=6"></script>
+    <script src="{root_prefix}js/main.js?v=7"></script>
 </body>
 </html>
 '''

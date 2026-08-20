@@ -4,7 +4,8 @@ Build the combined website for GitHub Pages.
 Generates:
   - public/ (deployment root)
     - Shared css/js (copied from static/)
-    - Course overview + plan + week1 pages (built by build.weeks)
+    - Landing page index.html (built by build.home)
+    - Plan + week1 pages (built by build.weeks)
     - week2~week10 pages (built by build.weeks)
     - topic websites (built by build.topics)
     - paper reading website (built by build.paper)
@@ -17,7 +18,8 @@ import sys
 from pathlib import Path
 
 from build.common import copy_static_assets, extract_plan_weeks
-from build.weeks import build_week, build_week1
+from build.home import build_home
+from build.weeks import WEEK_TITLES, build_week, build_week1
 from build.topics import build as build_topics, discover_topics, topic_display
 from build.paper import build as build_paper
 
@@ -91,10 +93,25 @@ def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path, topics: 
         '<a class="nav-link" href="https://hzchenxiaobin.github.io/leetcode/">🧩 LeetCode 题解</a>',
         '<a class="nav-link" href="https://github.com/hzchenxiaobin/leetgpu">🎮 LeetGPU 题解</a>',
     ]
-    for slug in sorted(topics):
-        rel = compute_relative_path(html_file.relative_to(public_dir), f"{slug}/index.html")
-        display = topic_display(slug)
-        lines.append(f'<a class="nav-link" href="{rel}">{display} 专题</a>')
+    if topics:
+        topic_links = []
+        for slug in sorted(topics):
+            rel = compute_relative_path(html_file.relative_to(public_dir), f"{slug}/index.html")
+            display = topic_display(slug)
+            topic_links.append(
+                f'      <a class="nav-link day-link" href="{rel}">{display} 专题</a>'
+            )
+        lines.append('<div class="nav-accordion-item">')
+        lines.append('  <div class="nav-accordion-header">')
+        lines.append('    <span class="nav-link week-link">✨ 专题笔记</span>')
+        lines.append('    <button class="nav-accordion-toggle" aria-label="收起/展开专题笔记" aria-expanded="false">▶</button>')
+        lines.append('  </div>')
+        lines.append('  <div class="nav-accordion-content">')
+        lines.append('    <div class="nav-section">')
+        lines.extend(topic_links)
+        lines.append('    </div>')
+        lines.append('  </div>')
+        lines.append('</div>')
     extra_section = "\n".join(lines) + "\n"
     return html_text.replace(
         "            </nav>\n        </aside>",
@@ -135,6 +152,10 @@ def main() -> None:
         copy_images(images_src, public_images)
 
     plan_weeks = extract_plan_weeks()
+    topics = discover_topics()
+
+    print("Building landing page (index.html)...")
+    build_home(public_dir, WEEK_TITLES, topics, topic_display)
 
     print("Building Week 1 website...")
     build_week1(public_dir, plan_weeks)
@@ -154,7 +175,6 @@ def main() -> None:
     build_paper(public_dir)
 
     print("Inserting extra navigation links...")
-    topics = discover_topics()
     excluded_parts = set(topics)
     course_pages = [
         p for p in public_dir.rglob("*.html")
