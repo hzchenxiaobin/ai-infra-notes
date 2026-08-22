@@ -242,11 +242,7 @@ def week_page_template(
             items.append(
                 f'<a class="day-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
             )
-        pills_html = (
-            '<nav class="day-pills"><div class="day-pills-inner">'
-            + "".join(items)
-            + "</div></nav>"
-        )
+        pills_html = '<nav class="landing-nav-pills">' + "".join(items) + "</nav>"
 
     def _pn_link(link, cls, arrow_before, arrow_after):
         if not link:
@@ -295,6 +291,7 @@ def week_page_template(
 <body class="landing week-page">
     <header class="landing-nav">
         <a class="landing-nav-brand" href="{root_prefix}index.html">AI Infra <span>Notes</span></a>
+        {pills_html}
         <nav class="landing-nav-links">
             <a href="{root_prefix}plan.html">10 周计划</a>
             <a href="{root_prefix}index.html#topics">专题笔记</a>
@@ -310,8 +307,6 @@ def week_page_template(
             {subtitle_html}
         </div>
     </section>
-
-    {pills_html}
 
     <main class="week-main">
         <article class="content" id="content"></article>

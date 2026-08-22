@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Scroll the active day pill into view inside the top nav (mobile)
+    const activePill = document.querySelector('.landing-nav-pills .day-pill-active');
+    if (activePill) {
+        activePill.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+
     // Mobile menu toggle
     const menuToggle = document.querySelector('.menu-toggle');
     const sidebar = document.querySelector('.sidebar');
@@ -167,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Open all links in new tab, except sidebar / site-chrome navigation links
     document.querySelectorAll('a').forEach(link => {
-        if (link.closest('.sidebar, .landing-nav, .day-pills, .prev-next-nav, .day-cards')) {
+        if (link.closest('.sidebar, .landing-nav, .landing-nav-pills, .day-pills, .prev-next-nav, .day-cards')) {
             return;
         }
         const href = link.getAttribute('href') || '';

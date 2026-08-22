@@ -1541,29 +1541,25 @@ body.landing {
     max-width: 640px;
 }
 
-/* Sticky day-pill strip below the top nav */
-.day-pills {
-    position: sticky;
-    top: 60px;
-    z-index: 150;
-    background: rgba(13, 17, 23, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.day-pills-inner {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 10px 24px;
+/* Day pills embedded in the fixed top nav */
+.landing-nav-pills {
+    flex: 1;
+    min-width: 0;
     display: flex;
+    justify-content: center;
     gap: 8px;
+    margin: 0 16px;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-.day-pills-inner::-webkit-scrollbar {
+.landing-nav-pills::-webkit-scrollbar {
     display: none;
+}
+
+.landing-nav-pills .day-pill {
+    padding: 4px 12px;
+    font-size: 0.78rem;
 }
 
 .day-pill {
