@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="18" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="360" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">注意力变体 KV Cache 口算（LLaMA-7B 级别）</text>
+  <path d="M 270 40 Q 430 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="430" y="58" text-anchor="middle" font-size="11" fill="#888">n_layer=32, n_head=32, d_head=128, fp16 → MHA 基准 524 KB/token</text>
+
+  <!-- MHA -->
+  <g filter="url(#sk)">
+    <rect x="40" y="72" width="780" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="94" font-size="13" fill="#2b6e9e" font-weight="bold">MHA</text>
+  <text x="120" y="94" font-size="11" fill="#666">n_kv_head = 32（= n_head）</text>
+  <text x="60" y="116" font-size="12" fill="#2b2b2b" font-family="monospace">2 × 32 × 32 × 128 × 2B = 524 KB/token</text>
+  <text x="780" y="106" text-anchor="end" font-size="13" fill="#2b6e9e" font-weight="bold">基准 1×</text>
+
+  <!-- GQA -->
+  <g filter="url(#sk)">
+    <rect x="40" y="136" width="780" height="56" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="158" font-size="13" fill="#2e6e2e" font-weight="bold">GQA-8</text>
+  <text x="120" y="158" font-size="11" fill="#666">n_kv_head = 8（LLaMA-3 风格）</text>
+  <text x="60" y="180" font-size="12" fill="#2b2b2b" font-family="monospace">524 / 4 = 131 KB/token</text>
+  <text x="780" y="170" text-anchor="end" font-size="13" fill="#2e6e2e" font-weight="bold">1/4  ✓ 折中</text>
+
+  <!-- MQA -->
+  <g filter="url(#sk)">
+    <rect x="40" y="200" width="780" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="222" font-size="13" fill="#7a5415" font-weight="bold">MQA</text>
+  <text x="120" y="222" font-size="11" fill="#666">n_kv_head = 1</text>
+  <text x="60" y="244" font-size="12" fill="#2b2b2b" font-family="monospace">524 / 32 = 16.4 KB/token</text>
+  <text x="780" y="234" text-anchor="end" font-size="13" fill="#7a5415" font-weight="bold">1/32  ⚠ 精度损</text>
+
+  <!-- MLA -->
+  <g filter="url(#sk)">
+    <rect x="40" y="264" width="780" height="56" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="286" font-size="13" fill="#5d3a7e" font-weight="bold">MLA</text>
+  <text x="120" y="286" font-size="11" fill="#666">d_c = 512（存潜在向量，DeepSeek-V2/V3）</text>
+  <text x="60" y="308" font-size="12" fill="#2b2b2b" font-family="monospace">2 × 32 × 512 × 2B = 65 KB/token</text>
+  <text x="780" y="298" text-anchor="end" font-size="13" fill="#5d3a7e" font-weight="bold">~1/8  精度持平</text>
+
+  <!-- 底部总结 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="330" width="780" height="22" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" fill-opacity="0.4"/>
+  </g>
+  <text x="430" y="346" text-anchor="middle" font-size="11" fill="#444">GQA 是精度与显存最佳折中（LLaMA-3/Qwen-2 用 GQA-8） · MLA 存低秩潜在向量，attention 时现场解压</text>
+</svg>

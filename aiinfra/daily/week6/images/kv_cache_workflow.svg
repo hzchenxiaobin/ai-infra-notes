@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="420" viewBox="0 0 860 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="420" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">KV Cache 工作流程</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Prefill 阶段 ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="780" height="110" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6" fill-opacity="0.4"/>
+  </g>
+  <text x="60" y="88" font-size="14" font-weight="bold" fill="#2b6e9e">Prefill 阶段</text>
+  <g filter="url(#sk)" font-size="12" fill="#2b2b2b">
+    <rect x="60" y="100" width="30" height="24" rx="4" fill="#bcd6f0" stroke="#4a8edb"/>
+    <text x="75" y="117" text-anchor="middle" font-size="10" fill="#234">1</text>
+    <text x="100" y="117" font-size="11" fill="#444">一次性计算所有 prompt tokens 的 K/V</text>
+
+    <rect x="60" y="130" width="30" height="24" rx="4" fill="#bcd6f0" stroke="#4a8edb"/>
+    <text x="75" y="147" text-anchor="middle" font-size="10" fill="#234">2</text>
+    <text x="100" y="147" font-size="11" fill="#444">全部存入 cache（从空 → 填入 N_prompt 个 token 的 K/V）</text>
+  </g>
+  <!-- cache 状态条 -->
+  <g filter="url(#sk)">
+    <rect x="540" y="100" width="260" height="24" rx="4" fill="#fff8e1" stroke="#d6a040"/>
+  </g>
+  <g fill="#bfe0bf" stroke="#4a8e4a" stroke-width="0.8">
+    <rect x="544" y="104" width="22" height="16" rx="2"/>
+    <rect x="568" y="104" width="22" height="16" rx="2"/>
+    <rect x="592" y="104" width="22" height="16" rx="2"/>
+    <rect x="616" y="104" width="22" height="16" rx="2"/>
+    <rect x="640" y="104" width="22" height="16" rx="2"/>
+  </g>
+  <text x="700" y="117" font-size="10" fill="#2e6e2e" font-weight="bold">cache: 0 → N</text>
+
+  <!-- 箭头连接 -->
+  <path d="M 430 176 L 430 196" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Decode 阶段 ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="200" width="780" height="180" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6" fill-opacity="0.4"/>
+  </g>
+  <text x="60" y="224" font-size="14" font-weight="bold" fill="#7a5415">Decode 阶段（每步循环）</text>
+
+  <g filter="url(#sk)" font-size="12" fill="#2b2b2b">
+    <rect x="60" y="238" width="30" height="24" rx="4" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="75" y="255" text-anchor="middle" font-size="10" fill="#5a3a0a">1</text>
+    <text x="100" y="255" font-size="11" fill="#444">只计算新 token 的 K_t, V_t</text>
+
+    <rect x="60" y="268" width="30" height="24" rx="4" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="75" y="285" text-anchor="middle" font-size="10" fill="#5a3a0a">2</text>
+    <text x="100" y="285" font-size="11" fill="#444">把 K_t/V_t 追加（append）到 cache</text>
+
+    <rect x="60" y="298" width="30" height="24" rx="4" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="75" y="315" text-anchor="middle" font-size="10" fill="#5a3a0a">3</text>
+    <text x="100" y="315" font-size="11" fill="#444">从 cache 读取所有历史 K/V 做 attention</text>
+
+    <rect x="60" y="328" width="30" height="24" rx="4" fill="#f0d9a8" stroke="#c98a2b"/>
+    <text x="75" y="345" text-anchor="middle" font-size="10" fill="#5a3a0a">4</text>
+    <text x="100" y="345" font-size="11" fill="#444">输出下一个 token</text>
+  </g>
+
+  <!-- 循环箭头 -->
+  <path d="M 200 358 L 200 372 L 60 372 L 60 354" stroke="#7a5415" stroke-width="1.3" fill="none" marker-end="url(#ar)" stroke-dasharray="5 3" filter="url(#sk)"/>
+  <text x="130" y="390" text-anchor="middle" font-size="10" fill="#7a5415">重复直到 EOS</text>
+
+  <!-- 右侧：cache 增长示意 -->
+  <g filter="url(#sk)">
+    <rect x="540" y="240" width="260" height="120" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2"/>
+  </g>
+  <text x="670" y="262" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Cache seq 维增长</text>
+  <g filter="url(#sk)" font-size="10">
+    <text x="554" y="284" fill="#444">step t:   K₁..K_t</text>
+    <text x="554" y="304" fill="#444">step t+1: K₁..K_t, K_{t+1}</text>
+    <text x="554" y="324" fill="#444">step t+2: K₁..K_{t+1}, K_{t+2}</text>
+    <text x="554" y="344" fill="#2e6e2e" font-weight="bold">→ 每步只追加 1 个，不重算</text>
+  </g>
+
+  <!-- 底部总结 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="392" width="780" height="22" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2" fill-opacity="0.4"/>
+  </g>
+  <text x="430" y="408" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Prefill 一次性填满 → Decode 每步 append 1 个 → 历史部分直接读，不重算</text>
+</svg>

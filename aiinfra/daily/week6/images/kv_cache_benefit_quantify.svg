@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="380" viewBox="0 0 860 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="380" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">KV Cache 收益量化：无 Cache vs 有 Cache</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== 左：无 Cache ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="380" height="270" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="230" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">无 Cache 时每步</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="104" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="75" y="122" font-size="11" fill="#b03a3a" font-weight="bold">FLOPs</text>
+  <text x="75" y="142" font-size="12" fill="#2b2b2b" font-family="monospace">2 × L × d × 3d = O(L·d²)</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="164" width="340" height="60" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="75" y="182" font-size="11" fill="#7a5415" font-weight="bold">问题</text>
+  <text x="75" y="200" font-size="11" fill="#444">L 随生成增长 → FLOPs 线性增长</text>
+  <text x="75" y="216" font-size="11" fill="#444">每步都要重算前 L 个 token 的 QKV projection</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="236" width="340" height="80" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="230" y="260" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">latency ∝ L（越长越慢）</text>
+  <text x="230" y="280" text-anchor="middle" font-size="10" fill="#888">step 1: L=1 → step t: L=t → 越生成越卡</text>
+  <text x="230" y="300" text-anchor="middle" font-size="10" fill="#888">每次都从头算 K₁..K_t</text>
+
+  <!-- ===== 右：有 Cache ===== -->
+  <g filter="url(#sk)">
+    <rect x="440" y="64" width="380" height="270" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="630" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">有 Cache 时每步</text>
+
+  <g filter="url(#sk)">
+    <rect x="460" y="104" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="475" y="122" font-size="11" fill="#2e6e2e" font-weight="bold">FLOPs</text>
+  <text x="475" y="142" font-size="12" fill="#2b2b2b" font-family="monospace">2 × 1 × d × 3d = O(d²)  （与 L 无关！）</text>
+
+  <g filter="url(#sk)">
+    <rect x="460" y="164" width="340" height="60" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
+  </g>
+  <text x="475" y="182" font-size="11" fill="#7a5415" font-weight="bold">结构</text>
+  <text x="475" y="200" font-size="11" fill="#444">只算 1 个新 token 的 QKV projection</text>
+  <text x="475" y="216" font-size="11" fill="#444">+ 1×L 的 attention（读 cache）</text>
+
+  <g filter="url(#sk)">
+    <rect x="460" y="236" width="340" height="80" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="630" y="260" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">latency 基本稳定</text>
+  <text x="630" y="280" text-anchor="middle" font-size="10" fill="#888">projection 从 O(L·d²) → O(d²)</text>
+  <text x="630" y="300" text-anchor="middle" font-size="10" fill="#888">是主要省算的地方（10x+ 提升）</text>
+
+  <!-- 中间箭头 -->
+  <path d="M 420 200 L 440 200" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="430" y="192" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">存 cache</text>
+
+  <!-- 底部 note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="344" width="780" height="28" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2" fill-opacity="0.4"/>
+  </g>
+  <text x="430" y="362" text-anchor="middle" font-size="11" fill="#7a5415">⚠ attention 部分 O(L·d) 仍随 L 增长（memory-bound，读 cache）；KV Cache 消除的是 projection 的重复计算 O(L·d²) → O(d²)</text>
+</svg>

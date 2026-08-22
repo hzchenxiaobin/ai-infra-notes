@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="300" viewBox="0 0 860 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="300" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">跨 block 合并公式</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="430" y="58" text-anchor="middle" font-size="11" fill="#888">合并 Block 0..T-1 的 partial 结果</text>
+
+  <!-- Step 1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="72" width="780" height="50" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="94" font-size="12" fill="#2b6e9e" font-weight="bold">Step 1: 找全局 max</text>
+  <text x="60" y="114" font-size="12" fill="#2b2b2b" font-family="monospace">global_max = max(partial_m_0, partial_m_1, ..., partial_m_{T-1})</text>
+
+  <!-- Step 2 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="130" width="780" height="64" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="152" font-size="12" fill="#7a5415" font-weight="bold">Step 2: 每 block 的 rescale factor</text>
+  <text x="60" y="172" font-size="12" fill="#2b2b2b" font-family="monospace">w_j = exp(partial_m_j - global_max) · partial_l_j</text>
+  <text x="60" y="188" font-size="11" fill="#666">↑ 把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"</text>
+
+  <!-- Step 3 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="202" width="780" height="80" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="224" font-size="12" fill="#2e6e2e" font-weight="bold">Step 3: 加权合并</text>
+  <text x="60" y="244" font-size="12" fill="#2b2b2b" font-family="monospace">global_sum = Σ_j w_j</text>
+  <text x="60" y="264" font-size="12" fill="#2b2b2b" font-family="monospace">output = Σ_j (w_j · partial_o_j) / global_sum</text>
+  <text x="500" y="264" font-size="11" fill="#666">归一化输出</text>
+</svg>

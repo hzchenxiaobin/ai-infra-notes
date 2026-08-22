@@ -50,34 +50,11 @@ if use_cache and k_cache is not None:
 
 Decode 阶段，第 `t` 步要计算 `attention(Q_t, K₁..K_t, V₁..V_t)`，第 `t+1` 步要计算 `attention(Q_{t+1}, K₁..K_{t+1}, V₁..V_{t+1})`。观察：`K₁..K_t` 和 `V₁..V_t` 在两步里完全相同——第 `t+1` 步只是多了 `K_{t+1}/V_{t+1}`。
 
-```
-KV Cache 工作流程：
- Prefill 阶段：
- 一次性计算所有 prompt tokens 的 K/V → 全部存入 cache
- cache 从空 → 填入 N_prompt 个 token 的 K/V
-
- Decode 阶段（每步）：
- 1. 只计算新 token 的 K_t, V_t
- 2. 把 K_t/V_t 追加（append）到 cache
- 3. 从 cache 读取所有历史 K/V 做 attention
- 4. 输出下一个 token
- 5. 重复直到 EOS
-```
+![KV Cache 工作流程](../images/kv_cache_workflow.svg)
 
 **收益量化**：
 
-```
-无 Cache 时每步：
- FLOPs = 2 × L × d × 3d = O(L·d²) （L 随生成增长）
- 每步都要重算前 L 个 token 的 QKV projection
-
-有 Cache 时每步：
- FLOPs = 2 × 1 × d × 3d = O(d²) （与 L 无关！）
- 只算 1 个新 token 的 QKV projection + 1×L 的 attention
-
- attention 部分：O(L·d) 的点积 + softmax，仍随 L 增长
- 但 projection 从 O(L·d²) 降到 O(d²)，是主要省算的地方
-```
+![KV Cache 收益量化](../images/kv_cache_benefit_quantify.svg)
 
 > ⚠️ **注意**：有 cache 后 attention 的 $Q \times K^\top$ 仍是 $O(L \cdot d)$（1×L 的点积），随 L 增长——这部分是 Day 1 说的 memory-bound（读 KV cache）。KV Cache 消除的是 **projection 的重复计算**（$O(L \cdot d^2) \to O(d^2)$），attention 本身的访存量没有减少。
 
@@ -87,18 +64,7 @@ KV Cache 工作流程：
 
 KV Cache 是一个 5 维张量，K 和 V 各一份：
 
-```
-布局：k_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
- v_cache[num_layers, batch_size, num_heads, max_seq_len, d_head]
-
-每 token KV Cache 大小：
- = 2 × num_layers × num_heads × d_head × bytes_per_elem
- （2 = K 和 V 各一份）
-
-总 KV Cache 大小：
- = batch_size × seq_len × per_token_size
- = B × L × 2 × n_layers × n_heads × d_head × bytes
-```
+![KV Cache 5D 内存布局与显存公式](../images/kv_cache_layout_formula.svg)
 
 ##### 为什么 d_head 维放最内层？
 
@@ -127,12 +93,7 @@ KV Cache 是一个 5 维张量，K 和 V 各一份：
 
 **口算示例（LLaMA-7B 级别，n_layer=32, n_head=32, d_head=128, fp16）**：
 
-```
-MHA:  2 × 32 × 32  × 128 × 2B = 524 KB/token  （基准）
-GQA-8 (n_kv_head=8):  524 / 4 = 131 KB/token   （LLaMA-3-8B 风格）
-MQA   (n_kv_head=1):  524 / 32 = 16.4 KB/token
-MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而非完整 K/V）
-```
+![MHA/GQA/MQA/MLA KV Cache 口算](../images/kv_cache_variants_calc.svg)
 
 > 💡 **面试要点**：
 > - **GQA 是精度与显存的最佳折中**——LLaMA-3、Qwen-2 都用 GQA-8（n_kv_head=8），KV Cache 降到 1/4 而精度几乎不掉。
@@ -163,18 +124,7 @@ MLA   (d_c=512):      2 × 32 × 512 × 2B = 65 KB/token  （存潜在向量而�
 
 #### 2.4 多轮对话中的 Cache 复用
 
-```
-多轮对话：
- Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- Round 2: User: "请介绍一下 FlashAttention" → Model: "FlashAttention 是..."
-
-Round 2 的 prompt = [系统提示] + [Round 1 全部] + [Round 2 User]
-
-Cache 复用：
- - Round 1 已经计算过的 K/V 直接保留在 cache 里
- - Round 2 只需计算"新增 tokens"的 K/V，追加到 cache
- - 不用把整个 Round 2 prompt 重新 prefill → TTFT 大幅降低
-```
+![多轮对话 KV Cache 复用](../images/kv_cache_multi_turn.svg)
 
 实现要点：
 1. 为每个对话 session 维护一个 KV Cache

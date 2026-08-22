@@ -41,10 +41,7 @@ Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 
 #### 1. Prefill/Decode 两阶段：一切优化的起点
 
-```
-Prefill：一次性处理 N 个 prompt token，大 GEMM + N×N attention → compute-bound
-Decode：逐 token 生成，M=1 的退化 GEMM + 1×N attention → memory-bound
-```
+![Prefill vs Decode 两阶段](../images/prefill_vs_decode_overview.svg)
 
 | 阶段 | 瓶颈 | 关注指标 | 优化方向 |
 |------|------|---------|---------|
@@ -55,35 +52,21 @@ Decode：逐 token 生成，M=1 的退化 GEMM + 1×N attention → memory-bound
 
 #### 2. KV Cache：用空间换时间
 
-```
-无 Cache：每步重算历史 K/V，FLOPs O(L·d²)，TBT 随 L 增长
-有 Cache：存历史 K/V，每步只算 1 个新 token，FLOPs O(d²)，TBT 稳定
-代价：显存 = 2 × n_layers × n_heads × L × d_head × bytes
-```
+![KV Cache 收益量化](../images/kv_cache_benefit_quantify.svg)
 
 #### 3. vLLM 架构：调度 + 内存管理双支柱
 
-```
-LLMEngine（接口）→ Scheduler（调度）→ Worker（执行）
- Scheduler: Continuous Batching + SchedulingBudget + 抢占
- Worker: PagedAttention（block table + CoW）
-```
+![vLLM 三层分层架构](../images/vllm_layered_architecture.svg)
 
 > Continuous Batching（Day3）解决"吞吐"，PagedAttention（Day4）解决"碎片让吞吐可持续"——两者缺一不可。
 
 #### 4. Mini 引擎：5 大组件组装
 
-```
-Tokenizer → 模型后端（MiniLLM）→ KV Cache → 采样器 → Prefill/Decode 循环
-generate() = Prefill(填cache) + Decode Loop(复用cache) + argmax 采样
-```
+![Mini 推理引擎 v0 架构](../images/mini_engine_architecture.svg)
 
 #### 5. Profiling 三层方法论
 
-```
-nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT）→ ncu（kernel 级，看带宽/算力）
-判据：dram__throughput 高 + sm__throughput 低 = memory-bound
-```
+![Profiling 三层方法论](../images/profiling_methodology.svg)
 
 ---
 
@@ -184,12 +167,7 @@ nsys（系统级，看时间线/gap）→ cuda.Event（阶段级，测 TTFT/TBT�
 
 #### 答题框架
 
-```
-1. 先定性：这属于哪个核心问题（内存/Batch/Latency/调度）？
-2. 给机制：底层原理是什么（compute vs memory-bound、碎片、launch overhead）？
-3. 量化：数据/公式支撑（AI≈0.1、cache=2×L×...、gap>20%）
-4. 给方案：3 个以上优化方向，分"治标"和"治本"
-```
+![推理系统面试答题框架](../images/interview_answer_framework.svg)
 
 ---
 
@@ -350,18 +328,7 @@ Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 
 ## 📁 本周目录结构
 
-```
-aiinfra/daily/week6/
-├── README.md                      # 周概览
-├── day1/kernels/prefill_decode_simulation.py  # Prefill/Decode 模拟
-├── day2/kernels/kv_cache.cu       # KVCache 类
-├── day3/kernels/mini_vllm_scheduler.py  # mini vLLM 调度器
-├── day4/kernels/paged_attention.cu  # PagedAttention kernel
-├── day5/kernels/mini_engine_v0.py # Mini 推理引擎 v0
-├── day6/kernels/flash_decoding.cu  # FlashDecoding kernel
-├── day7/kernels/week5_summary.py  # 总结日自测脚本（文件名沿用历史，内容对齐 Week 6）
-└── images/                        # 本周 SVG 插图
-```
+![Week 6 目录结构](../images/week6_directory_structure.svg)
 
 > 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
 

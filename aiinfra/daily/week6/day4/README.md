@@ -39,14 +39,7 @@ PagedAttention 的破局思路：**别按序列连续分配，改成按固定大
 
 Worker 是 vLLM 三层架构的最底层，负责执行实际模型前向：
 
-```
-Worker.execute_model(seq_group_metadata_list):
- 1. 构建 input tokens 和 positions
- 2. 构建 attention metadata（含 block table） ← PagedAttention 的关键
- 3. 调用 ModelRunner.run() 执行模型前向
- 4. 采样得到 next token
- 5. 返回 outputs
-```
+![Worker.execute_model 执行流程](../images/worker_execute_flow.svg)
 
 ##### Block Table 如何传入 Kernel
 
@@ -78,15 +71,9 @@ Scheduler 在每轮 `schedule()` 时更新 block table（分配新 block、回�
 
 ##### 关键参数
 
-```
-block_size：每 block 容纳多少 token（vLLM 默认 16）
-num_blocks：物理 block 池总大小（按可用显存 / block 大小算）
-max_num_blocks_per_seq = ceil(max_seq_len / block_size)
-```
+![PagedAttention 关键参数](../images/paged_attention_key_params.svg)
 
 ##### 逻辑 view vs 物理 view
-
-![PagedAttention 逻辑→物理 block 映射（block table）](../../images/week5_pagedattention_mapping.svg)
 
 > ⚠️ **注意**：block_size 选 16 是经验值。太大 → 内部碎片（最后一块空 slot 多）+ block table 变短但单 block 大；太小 → block table 变长（占显存）+ kernel 间接寻址次数多。16 在大多数场景下是 sweet spot。
 

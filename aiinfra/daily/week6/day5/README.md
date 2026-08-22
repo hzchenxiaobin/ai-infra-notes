@@ -120,15 +120,7 @@ def generate(self, prompt, max_new_tokens=20):
 
 #### 5.5 多轮对话的 KV Cache 复用
 
-```
-Round 1: User: "你好" → Model: "你好！有什么可以帮你？"
- → KV Cache 保存了 [系统提示 + Round1 user + Round1 assistant] 的 K/V
-
-Round 2: User: "请介绍一下 FlashAttention"
- → prompt = [Round1 全部 + Round2 user]
- → 前 Round1 部分的 K/V 已在 cache，只需 prefill Round2 新增部分
- → 大幅降低 Round2 的 TTFT
-```
+![多轮对话 KV Cache 复用](../images/kv_cache_multi_turn.svg)
 
 实现要点：为每个 session 维护独立 KV Cache，新输入先复用已有 cache，只 prefill 新增 token。v0 暂不实现多 session 管理（每轮 generate 用独立 cache），Week 7 再加。
 

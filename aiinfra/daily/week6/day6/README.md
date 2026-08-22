@@ -21,15 +21,7 @@ Day 1 我们分析过 Prefill vs Decode 的算术强度差异：Prefill 阶段 M
 
 ![Decode 阶段 Memory-bound 示意](../images/decode_memory_bound.svg)
 
-```
-Prefill 阶段（M=N）：
-  Q 有 N 行 → 按 Br 切成 N/Br 个 Q tile → N/Br 个 block 并行
-  并行度 = N/Br × Batch × Head（数百~数千 block，打满 GPU）
-
-Decode 阶段（M=1）：
-  Q 只有 1 行 → 无法按 Q tile 切分 → 只有 1 个 block 处理整个 KV
-  并行度 = 1 × Batch × Head（可能 < SM 数，大量 SM 空闲）
-```
+![Prefill vs Decode 并行度对比](../images/flashdecoding_parallelism_compare.svg)
 
 | 维度 | Prefill (M=N) | Decode (M=1) | 问题 |
 |------|---------------|--------------|------|
@@ -64,17 +56,7 @@ FlashAttention 的并行维度是 Q tile（行方向），Decode 时 M=1 切不�
 
 #### 1.2 并行度分析
 
-```
-Standard decode:
-  并行度 = 1 block（处理整个 KV sequence）
-  → GPU 有 170 个 SM，只用了 1 个，利用率 ~0.6%
-
-FlashDecoding:
-  并行度 = ceil(seq_len / tokens_per_block) blocks
-  → seq_len=2048, tokens_per_block=64 → 32 blocks
-  → seq_len=8192, tokens_per_block=64 → 128 blocks（利用率 ~128/170 ≈ 75%，未打满 SM）
-  → 利用率随 seq_len 增长而提升，blocks ≥ 170 时才打满所有 SM
-```
+![FlashDecoding 并行度与 SM 利用率](../images/flashdecoding_sm_utilization.svg)
 
 | seq_len | Standard (blocks) | FlashDecoding (blocks) | SM 利用率提升 |
 |---------|-------------------|----------------------|-------------|
@@ -93,50 +75,15 @@ FlashDecoding 的核心难点：每个 block 只看到一段 KV，算出的 soft
 
 ##### 每个 block 输出的 partial 结果
 
-```
-Block j 处理 KV 段 [j*Bc, (j+1)*Bc)，输出：
-  partial_m_j = max(score in block j)        # 本段 score 最大值
-  partial_l_j = Σ exp(score - partial_m_j)   # 本段 exp 之和（已 rescale 到本段 max）
-  partial_o_j = Σ p_i * V_i                  # 本段加权 V 输出（已 rescale）
-```
+![每个 block 输出的 partial 结果](../images/flashdecoding_partial_output.svg)
 
 ##### 跨 block 合并公式
 
-```
-合并 Block 0..T-1 的 partial 结果：
-
-Step 1: 找全局 max
-  global_max = max(partial_m_0, partial_m_1, ..., partial_m_{T-1})
-
-Step 2: 每 block 的 rescale factor
-  w_j = exp(partial_m_j - global_max) * partial_l_j
-  ↑ 把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
-
-Step 3: 加权合并
-  global_sum = Σ_j w_j                          # 全局 exp 之和
-  output = Σ_j (w_j * partial_o_j) / global_sum # 归一化输出
-```
+![跨 block 合并公式](../images/flashdecoding_merge_formula.svg)
 
 ##### 数学正确性证明
 
-```
-标准 softmax: O = Σ_i exp(s_i - m) * V_i / Σ_i exp(s_i - m)
-  其中 m = max(all s_i)
-
-Block j 的 partial: 
-  partial_l_j = Σ_{i∈block_j} exp(s_i - partial_m_j)
-  partial_o_j = Σ_{i∈block_j} exp(s_i - partial_m_j) * V_i
-
-合并时 rescale:
-  w_j = exp(partial_m_j - global_max) * partial_l_j
-      = exp(partial_m_j - global_max) * Σ_{i∈block_j} exp(s_i - partial_m_j)
-      = Σ_{i∈block_j} exp(s_i - global_max)        ← 回到全局 max 基准！
-
-  Σ_j w_j = Σ_j Σ_{i∈block_j} exp(s_i - global_max) = Σ_all exp(s_i - global_max) = global_sum ✓
-  Σ_j w_j * partial_o_j / global_sum 
-    = Σ_j exp(partial_m_j - global_max) * Σ_{i∈j} exp(s_i - partial_m_j) * V_i / global_sum
-    = Σ_all exp(s_i - global_max) * V_i / global_sum = O ✓
-```
+![数学正确性证明](../images/flashdecoding_math_proof.svg)
 
 > 💡 这跟 FlashAttention 的 online softmax 三公式是**同一个数学结构**——只是 FlashAttention 在 block 内跨 KV tile 做 rescale，FlashDecoding 在 block 间跨 KV segment 做同样的 rescale。核心都是"先算 partial，再用 max 差做 rescale 合并"。
 
@@ -148,19 +95,11 @@ FlashDecoding 有两个效率问题，FlashDecoding++（2023）针对它们做�
 
 FlashDecoding 的 Phase 2 合并需要先找 `global_max`，再用 `exp(partial_m_j - global_max)` rescale 每个 block 的 partial。这意味着 **每个 partial 要被 rescale 两次**（Phase 1 内部一次，Phase 2 合并一次），引入额外计算。
 
-```
-FlashDecoding:
-  Phase 1: partial_l_j = Σ exp(s_i - partial_m_j)          ← 第一次 rescale
-  Phase 2: w_j = exp(partial_m_j - global_max) * partial_l_j ← 第二次 rescale
-```
+![FlashDecoding 二次 rescale 问题](../images/flashdecoding_double_rescale.svg)
 
 **FlashDecoding++ 改进**：提前估算 `global_max`（用各 block 的 partial_m 的近似值或历史值），让 Phase 1 直接用估算的 global_max 做 rescale，省掉 Phase 2 的第二次 rescale。
 
-```
-FlashDecoding++:
-  Phase 1: partial_l_j = Σ exp(s_i - estimated_global_max)  ← 只 rescale 一次
-  Phase 2: output = Σ_j partial_l_j * partial_o_j / Σ_j partial_l_j  ← 无需再 rescale
-```
+![FlashDecoding++ 只 rescale 一次](../images/flashdecoding_plus_plus.svg)
 
 > ⚠️ 估算的 global_max 不精确时，partial_l_j 可能数值不稳定（exp(s_i - overestimated_max) → 很小）。实际实现中用"宽松上界"保证安全。
 

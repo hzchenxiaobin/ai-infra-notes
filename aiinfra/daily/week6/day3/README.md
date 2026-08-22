@@ -46,8 +46,6 @@ vLLM 把推理系统分成三层，各司其职：
 | **调度层** | `Scheduler` | 决定每轮运行哪些 sequence，管理三个队列 + 预算 | `schedule()` |
 | **执行层** | `Worker` | 执行实际模型前向，管理 GPU / 模型权重 / KV cache | `execute_model()` |
 
-![vLLM 三层分层架构：LLMEngine → Scheduler → Worker](../../images/week5_vllm_architecture.svg)
-
 ##### 为什么分三层？
 
 - **接口层**让用户无需关心调度细节，只管 `add_request` + 读 `step` 的输出
@@ -70,8 +68,6 @@ vLLM 把推理系统分成三层，各司其职：
 #### 3.3 请求生命周期
 
 ![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../images/request_lifecycle.svg)
-
-![请求生命周期：WAITING → RUNNING → FINISHED / SWAPPED](../../images/week5_request_state_flow.svg)
 
 ##### `LLMEngine.step()` 的 4 步流程
 
@@ -110,8 +106,6 @@ def schedule(self):
 **关键**：新请求可以在**任意 iteration** 加入 batch——不需要等当前 batch 跑完。请求 A 在 iter 5 完成后，它的 slot 立刻被 waiting 里的请求 D 填上，GPU 不空等。
 
 ##### 为什么能提升吞吐？
-
-![Static vs Continuous Batching：slot 利用率对比](../../images/week5_batching_comparison.svg)
 
 > 💡 请求长度方差越大，Continuous Batching 收益越大——因为 Static 下"短板请求"造成的空等越多。这也是为什么推理服务的请求长度往往差异巨大（有人问一句话，有人输入长文档），Continuous Batching 几乎是标配。
 

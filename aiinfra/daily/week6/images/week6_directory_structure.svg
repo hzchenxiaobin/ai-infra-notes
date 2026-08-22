@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="60" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="360" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Week 6 目录结构</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 目录树背景 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="780" height="280" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+
+  <g font-family="monospace" font-size="12" fill="#2b2b2b">
+    <text x="60" y="88" fill="#2b6e9e" font-weight="bold">aiinfra/daily/week6/</text>
+    <text x="60" y="112">├── README.md</text>
+    <text x="300" y="112" fill="#888"># 周概览</text>
+
+    <text x="60" y="136">├── day1/kernels/prefill_decode_simulation.py</text>
+    <text x="450" y="136" fill="#888"># Prefill/Decode 模拟</text>
+
+    <text x="60" y="160">├── day2/kernels/kv_cache.cu</text>
+    <text x="300" y="160" fill="#888"># KVCache 类</text>
+
+    <text x="60" y="184">├── day3/kernels/mini_vllm_scheduler.py</text>
+    <text x="380" y="184" fill="#888"># mini vLLM 调度器</text>
+
+    <text x="60" y="208">├── day4/kernels/paged_attention.cu</text>
+    <text x="350" y="208" fill="#888"># PagedAttention kernel</text>
+
+    <text x="60" y="232">├── day5/kernels/mini_engine_v0.py</text>
+    <text x="350" y="232" fill="#888"># Mini 推理引擎 v0</text>
+
+    <text x="60" y="256">├── day6/kernels/flash_decoding.cu</text>
+    <text x="350" y="256" fill="#888"># FlashDecoding kernel</text>
+
+    <text x="60" y="280">├── day7/kernels/week5_summary.py</text>
+    <text x="350" y="280" fill="#888"># 总结日自测脚本</text>
+
+    <text x="60" y="304">└── images/</text>
+    <text x="200" y="304" fill="#888"># 本周 SVG 插图</text>
+  </g>
+
+  <text x="430" y="330" text-anchor="middle" font-size="10" fill="#888">day7/kernels/week5_summary.py 文件名沿用历史，内容对齐 Week 6</text>
+</svg>
