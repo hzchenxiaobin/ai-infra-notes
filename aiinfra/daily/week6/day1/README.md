@@ -60,7 +60,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 | 每步处理 token 数 | N_prompt（大） | 1 |
 | QKV GEMM 的 M | N_prompt | **1**（退化为向量×矩阵） |
 | Attention 矩阵形状 | $N \times N$ | **1×N** |
-| 每步 FLOPs | $O(N^2 \cdot d)$ | $O(L \cdot d)$ |
+| 每步 FLOPs | $O(N^2 \cdot d)$ | $O(d^2 + L \cdot d)$ |
 | 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
 | 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 1.0 FLOP/Byte（fp16） |
 | 瓶颈类型 | **compute-bound** | **memory-bound** |
@@ -115,7 +115,7 @@ RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/
 - **TTFT 由 Prefill 决定**：优化方向是 FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill。
 - **TBT/TPOT 由 Decode 决定**：优化方向是 KV Cache、PagedAttention、Continuous Batching、CUDA Graph、量化 KV Cache。
 
-> ⚠️ **注意**：TTFT 和 TBT 的优化手段**几乎不重叠**——前者是算力问题，后者是带宽问题。这就是为什么推理系统要分别对待两个阶段（vLLM 甚至把 Prefill 和 Decode 拆成不同的 batch 调度，叫 chunked prefill / mixed batching）。Day 3 读 vLLM 时会看到这一点。
+> ⚠️ **注意**：TTFT 和 TBT 的优化手段**几乎不重叠**——前者是算力问题，后者是带宽问题。这就是为什么推理系统要分别对待两个阶段。vLLM 的 **chunked prefill** 是另一个角度的解法：把长 Prefill 切成小块，和 Decode **混在同一个 batch** 里调度（mixed batching），避免长 Prefill 阻塞正在生成的请求。Day 3 读 vLLM 时会看到这一点。
 
 ### Coding 任务：PyTorch 模拟 Prefill/Decode 流程
 
@@ -422,7 +422,7 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 #### 实验 3：用 nsys 抓 Prefill/Decode 的时间线
 
 ```bash
-nsys profile -o prefill_decode --force-flush \
+nsys profile -o prefill_decode --force-overwrite=true \
  python kernels/prefill_decode_simulation.py
 nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
 ```
@@ -467,7 +467,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 
  - **TTFT (Time To First Token)**：从请求进入到输出第一个 token 的时间，主要由 Prefill 决定。优化：FlashAttention、Tensor Core、减少 prompt 长度、并行 prefill
  - **TBT (Time Between Tokens)**：相邻输出 token 之间的间隔，主要由 Decode 决定。优化：KV Cache、PagedAttention、Continuous Batching、CUDA Graph、KV Cache 量化
- - 两者优化手段几乎不重叠（一个算力问题、一个带宽问题），所以推理系统要把两阶段分开调度（如 vLLM 的 chunked prefill / mixed batching）
+ - 两者优化手段几乎不重叠（一个算力问题、一个带宽问题），所以推理系统要分别对待两个阶段；vLLM 的 chunked prefill 则是把长 Prefill 切块后与 Decode 混在同一 batch 调度（mixed batching），避免长 Prefill 阻塞 Decode
 
 </details>
 
