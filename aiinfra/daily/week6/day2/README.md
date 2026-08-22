@@ -78,9 +78,9 @@ KV Cache 是一个 5 维张量，K 和 V 各一份：
 |------|----------|---------|--------|-------|-------------------|-------------|----------|
 | LLaMA-7B | 32 | 32 | 128 | fp16 | 524 KB | 2 GB | 32 GB |
 | LLaMA-13B | 40 | 40 | 128 | fp16 | 800 KB | 3.2 GB | 51 GB |
-| LLaMA-70B | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
+| LLaMA-65B (v1) | 80 | 64 | 128 | fp16 | 2.6 MB | 10.5 GB | 168 GB |
 
-> 💡 看 LLaMA-70B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~140GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。
+> 💡 看 LLaMA-65B：batch=16、4096 tokens 的 KV Cache 就要 **168 GB**——比模型权重本身（~130 GB fp16）还大！这就是为什么 KV Cache 是长文本、大 batch 推理的主要内存瓶颈，也是本周后续所有优化（PagedAttention、量化、GQA）的出发点。注意 LLaMA-2-70B 起改用 GQA（8 个 KV head），KV Cache 直接降到同口径 MHA 的 1/8——见下面的注意力变体表。
 
 ##### 注意力变体对 KV Cache 的影响（MHA → GQA → MQA → MLA）
 
@@ -154,6 +154,7 @@ KV Cache 是一个 5 维张量，K 和 V 各一份：
 #include <cstring>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 // --------------------------------------------------
 // KVCache 类
@@ -251,6 +252,8 @@ class KVCache {
 - `get_cache`：返回某层的 K/V 指针和各 batch 的已缓存长度，供 attention kernel 读取。
 - `reset` **/** `reset_batch`：清空整个 cache 或某个 batch（多轮对话切换时用）。
 
+> 📝 上面的代码块只展示了核心的 `KVCache` 类；完整可运行文件（含 `main()` 的多轮追加测试与逐 head 数据验证）见仓库 [kernels/kv_cache.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day2/kernels/kv_cache.cu)，任务 2 直接编译它即可。
+
 #### 任务 2：编译与运行
 
 ```bash
@@ -282,7 +285,7 @@ Max memory usage: 8 MB
 ##### 验证逻辑解读
 
 - **多轮追加正确性**：Round 1 (+10) → Round 2 (+5) → Round 3 (+8)，总 `seq_len=23`，验证 append 的偏移计算正确。
-- **数据落位正确性**：读回 cache 中 `[0:10]` 的 K，与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
+- **数据落位正确性**：逐 head 读回 cache 中每个 head 的 `[0:10]` 的 K（cache 的 head 步长是 `max_seq_len×d_head`，源数据的 head 步长是 `round1_len×d_head`，两者不同，不能连续拷贝），与 Round 1 写入的原始数据逐元素比对 `max_diff`——验证数据写到了正确的内存位置（而非越界或错位）。
 - **显存估算**：打印 LLaMA-7B 的真实参考值（每 token 524 KB、4096 tokens 2 GB、batch=16 32 GB），建立数量直觉。
 
 #### 任务 3：用 ncu 观察 append 的内存拷贝模式

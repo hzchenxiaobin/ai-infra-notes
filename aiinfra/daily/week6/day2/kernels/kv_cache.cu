@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 // --------------------------------------------------
 // KVCache 类
@@ -176,15 +177,19 @@ int main() {
         printf("FAIL: seq_len = %d (expected %d)\n", cache.get_seq_len(0), expected);
     }
 
-    // 验证数据正确性：读回 layer 0 的 K cache，检查 round1 数据落在 [0:10]
+    // 验证数据正确性：读回 layer 0 的 K cache，逐 head 检查 round1 数据落在各 head 的 [0:10]
     float *k_ptr, *v_ptr;
     std::vector<int> seq_lens;
     cache.get_cache(0, &k_ptr, &v_ptr, &seq_lens);
 
-    size_t check_bytes = (size_t)num_heads * round1_len * d_head * sizeof(float);
-    float* h_check = (float*)malloc(check_bytes);
-    // layer 0, batch 0, head 0 起始位置
-    cudaMemcpy(h_check, k_ptr, check_bytes, cudaMemcpyDeviceToHost);
+    // 注意：cache 布局是 (H, max_seq_len, d_head)，head 步长为 max_seq_len*d_head；
+    // 而 h_k1 布局是 (H, round1_len, d_head)，步长不同，必须逐 head 拷贝比对
+    size_t head_check_bytes = (size_t)round1_len * d_head * sizeof(float);
+    float* h_check = (float*)malloc((size_t)num_heads * head_check_bytes);
+    for (int h = 0; h < num_heads; h++) {
+        cudaMemcpy(h_check + (size_t)h * round1_len * d_head, k_ptr + (size_t)h * max_seq_len * d_head,
+                   head_check_bytes, cudaMemcpyDeviceToHost);
+    }
 
     float max_diff = 0.f;
     for (int i = 0; i < num_heads * round1_len * d_head; i++) {
