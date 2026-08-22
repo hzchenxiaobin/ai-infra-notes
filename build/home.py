@@ -162,7 +162,7 @@ def build_home(public_dir: Path, fallback_week_titles: dict, topics: list, topic
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Infra 10 周学习计划</title>
     <meta name="description" content="AI Infra 工程实战学习路线：CUDA Kernel 优化、推理系统、分布式并行，10 周从会写 kernel 进阶到能做系统优化。">
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body class="landing">
     <header class="landing-nav">
