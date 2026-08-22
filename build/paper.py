@@ -3,12 +3,24 @@
 import re
 import shutil
 from pathlib import Path
-from typing import Optional
 
-from .common import REPO_ROOT, paper_page_template
+from .common import REPO_ROOT, week_page_template
+from .topics import _split_topic_h1
 
 PAPER_DIR = REPO_ROOT / "aiinfra" / "paper"
 IMAGES_DIR = PAPER_DIR / "images"
+
+HEADING_RENDERER_PAPER = """renderer.heading = function(text, level, raw) {
+            let anchor = raw.toLowerCase()
+                .replace(/[^\\w\\s-]/g, '')
+                .replace(/\\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            if (anchor && level >= 2) {
+                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
+            }
+            return '<h' + level + '>' + text + '</h' + level + '>';
+        };"""
 
 
 def _rewrite_readme_paths(markdown_text: str) -> str:
@@ -58,25 +70,6 @@ def _find_papers() -> list:
     return papers
 
 
-def _build_nav(papers: list, current_slug: Optional[str], root_prefix: str) -> str:
-    """Build sidebar navigation for the paper site."""
-    home_active = ' active' if current_slug is None else ''
-    lines = [
-        f'<a class="nav-link{home_active}" href="{root_prefix}paper/index.html">📌 论文列表</a>',
-        '<div class="nav-section-title">论文笔记</div>',
-    ]
-    for paper in papers:
-        active = ' active' if current_slug == paper["slug"] else ''
-        if paper["readme"]:
-            href = f"{root_prefix}paper/{paper['slug']}/index.html"
-        elif paper["pdfs"]:
-            href = f"{root_prefix}paper/{paper['slug']}/{paper['pdfs'][0].name}"
-        else:
-            continue
-        lines.append(f'<a class="nav-link{active}" href="{href}">{paper["short_title"]}</a>')
-    return "\n".join(lines)
-
-
 def _build_index_content(papers: list, root_prefix: str) -> str:
     """Generate the markdown/HTML content for the paper list page."""
     lines = [
@@ -115,36 +108,56 @@ def build(public_dir: Path) -> None:
         print(f"Copied images to {website_images}")
 
     root_prefix = "../"
-    overview_nav = _build_nav(papers, current_slug=None, root_prefix=root_prefix)
     overview_md = _build_index_content(papers, root_prefix=root_prefix)
-    overview_html = paper_page_template(
+    overview_html = week_page_template(
         title="论文精读",
-        page_title="论文精读",
-        root_prefix=root_prefix,
-        nav=overview_nav,
+        eyebrow="📄 Paper Reading",
         markdown=overview_md,
+        root_prefix=root_prefix,
+        page_title="论文精读 - AI Infra 学习笔记",
+        heading_renderer_js=HEADING_RENDERER_PAPER,
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
-    for paper in papers:
+    note_papers = [p for p in papers if p["readme"]]
+    for index, paper in enumerate(note_papers):
         paper_web_dir = output_dir / paper["slug"]
         paper_web_dir.mkdir(parents=True, exist_ok=True)
 
         for pdf in paper["pdfs"]:
             shutil.copy2(pdf, paper_web_dir / pdf.name)
 
-        if paper["readme"]:
-            root_prefix = "../../"
-            paper_nav = _build_nav(papers, current_slug=paper["slug"], root_prefix=root_prefix)
-            paper_html = paper_page_template(
-                title=f"{paper['title']} - 论文精读",
-                page_title=paper["title"],
-                root_prefix=root_prefix,
-                nav=paper_nav,
-                markdown=paper["markdown"],
-            )
-            (paper_web_dir / "index.html").write_text(paper_html, encoding="utf-8")
-            print(f"Generated: {paper_web_dir / 'index.html'}")
+        if index > 0:
+            prev_paper = note_papers[index - 1]
+            prev_link = (f"../{prev_paper['slug']}/index.html", prev_paper["short_title"])
         else:
+            prev_link = ("../index.html", "论文列表")
+        if index + 1 < len(note_papers):
+            next_paper = note_papers[index + 1]
+            next_link = (f"../{next_paper['slug']}/index.html", next_paper["short_title"])
+        else:
+            next_link = None
+
+        _, paper_body = _split_topic_h1(paper["markdown"], paper["title"])
+        paper_html = week_page_template(
+            title=paper["title"],
+            eyebrow="📄 论文精读",
+            markdown=paper_body,
+            root_prefix="../../",
+            page_title=f"{paper['title']} - 论文精读",
+            day_pills=[{"label": "📌 论文列表", "href": "../index.html"}],
+            prev_link=prev_link,
+            next_link=next_link,
+            heading_renderer_js=HEADING_RENDERER_PAPER,
+        )
+        (paper_web_dir / "index.html").write_text(paper_html, encoding="utf-8")
+        print(f"Generated: {paper_web_dir / 'index.html'}")
+
+    for paper in papers:
+        if not paper["readme"] and paper["pdfs"]:
+            paper_web_dir = output_dir / paper["slug"]
+            paper_web_dir.mkdir(parents=True, exist_ok=True)
+            for pdf in paper["pdfs"]:
+                shutil.copy2(pdf, paper_web_dir / pdf.name)
             print(f"Skipped note page for {paper['slug']} (no README.md)")

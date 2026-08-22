@@ -73,52 +73,6 @@ def run_checks(repo_root: Path) -> None:
         sys.exit(1)
 
 
-def compute_relative_path(from_file: Path, to_path: str) -> str:
-    """Compute a relative path from from_file to to_path (relative to site root)."""
-    from_dir = from_file.parent
-    depth = len(from_dir.parts)
-    if depth == 0:
-        return to_path
-    return "../" * depth + to_path
-
-
-def insert_extra_nav(html_text: str, html_file: Path, public_dir: Path, topics: list) -> str:
-    """Insert extra cross-site links into the sidebar navigation."""
-    rel_paper = compute_relative_path(
-        html_file.relative_to(public_dir), "paper/index.html"
-    )
-    lines = [
-        '<div class="nav-section-title">更多</div>',
-        f'<a class="nav-link" href="{rel_paper}">📄 论文精读</a>',
-        '<a class="nav-link" href="https://hzchenxiaobin.github.io/leetcode/">🧩 LeetCode 题解</a>',
-        '<a class="nav-link" href="https://github.com/hzchenxiaobin/leetgpu">🎮 LeetGPU 题解</a>',
-    ]
-    if topics:
-        topic_links = []
-        for slug in sorted(topics):
-            rel = compute_relative_path(html_file.relative_to(public_dir), f"{slug}/index.html")
-            display = topic_display(slug)
-            topic_links.append(
-                f'      <a class="nav-link day-link" href="{rel}">{display} 专题</a>'
-            )
-        lines.append('<div class="nav-accordion-item">')
-        lines.append('  <div class="nav-accordion-header">')
-        lines.append('    <span class="nav-link week-link">✨ 专题笔记</span>')
-        lines.append('    <button class="nav-accordion-toggle" aria-label="收起/展开专题笔记" aria-expanded="false">▶</button>')
-        lines.append('  </div>')
-        lines.append('  <div class="nav-accordion-content">')
-        lines.append('    <div class="nav-section">')
-        lines.extend(topic_links)
-        lines.append('    </div>')
-        lines.append('  </div>')
-        lines.append('</div>')
-    extra_section = "\n".join(lines) + "\n"
-    return html_text.replace(
-        "            </nav>\n        </aside>",
-        "            </nav>\n" + extra_section + "        </aside>",
-    )
-
-
 def copy_images(src: Path, dst: Path) -> None:
     """Copy all image files (svg, png) from src to dst."""
     if not src.exists():
@@ -173,19 +127,6 @@ def main() -> None:
 
     print("Building Paper Reading website...")
     build_paper(public_dir)
-
-    print("Inserting extra navigation links...")
-    excluded_parts = set(topics)
-    course_pages = [
-        p for p in public_dir.rglob("*.html")
-        if not any(part in excluded_parts for part in p.relative_to(public_dir).parts)
-    ]
-    for html_file in course_pages:
-        if html_file.is_file():
-            html_text = html_file.read_text(encoding="utf-8")
-            html_text = insert_extra_nav(html_text, html_file, public_dir, topics)
-            html_file.write_text(html_text, encoding="utf-8")
-            print(f"Updated nav: {html_file}")
 
     print("Combined website built successfully in public/")
 

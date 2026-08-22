@@ -13,11 +13,8 @@ from .common import (
     PLAN_SOURCE,
     build_day_cards_html,
     compute_root_prefix,
-    escape_for_template_string,
-    extract_plan_weeks,
     get_day_info,
     load_overview_and_days,
-    page_template,
     rewrite_md_links_to_html_weeks,
     week_page_template,
 )
@@ -144,101 +141,6 @@ def rewrite_week1_resource_links(markdown_text: str, root_prefix: str = "") -> s
     return text
 
 
-def build_week_nav(
-    current_week: Optional[int],
-    current_day: Optional[str] = None,
-    current_page: str = "week",
-    current_is_overview: bool = False,
-    root_prefix: str = "",
-    weeks: Optional[list] = None,
-    current_week_days: Optional[list] = None,
-    relative_current_week: bool = True,
-) -> str:
-    """Build sidebar navigation for any week page (or course overview / plan page).
-
-    current_page: "week" for week pages, "overview" for course overview, "plan" for plan page.
-    current_week: which week number is current (None for overview/plan pages).
-    relative_current_week: when True, current week links use bare "index.html"/"dayN.html"
-        (weeks 2-10). When False, all week links use "{root_prefix}week{N}/..." (week 1).
-    """
-    if weeks is None:
-        weeks = []
-    if current_week_days is None:
-        current_week_days = []
-
-    lines = []
-
-    overview_active = current_page == "overview"
-    overview_class = "nav-link active" if overview_active else "nav-link"
-    lines.append(f'<a class="{overview_class}" href="{root_prefix}index.html">🏠 首页</a>')
-
-    lines.append('<div class="nav-section-title">10 周学习路线</div>')
-
-    week_titles = dict(WEEK_TITLES)
-    for week in weeks:
-        week_titles[week["num"]] = week["title"]
-
-    week_data = []
-    for num in range(1, 11):
-        if current_week == num and relative_current_week:
-            week_data.append({
-                "num": num,
-                "href": "index.html",
-                "day_prefix": "",
-                "days": current_week_days,
-            })
-        else:
-            week_data.append({
-                "num": num,
-                "href": f"{root_prefix}week{num}/index.html",
-                "day_prefix": f"{root_prefix}week{num}/",
-                "days": get_day_info(_week_dir(num)) if current_week != num else current_week_days,
-            })
-
-    for week in weeks:
-        if week["num"] <= 10:
-            continue
-        week_data.append({
-            "num": week["num"],
-            "href": f"{root_prefix}plan.html#week-{week['num']}",
-            "day_prefix": "",
-            "days": [],
-        })
-
-    for info in week_data:
-        is_current = current_page == "week" and info["num"] == current_week
-        expanded_cls = " is-expanded" if is_current else ""
-        week_active_cls = " active" if (is_current and not current_is_overview) else ""
-        overview_active_cls = " active" if (is_current and current_is_overview) else ""
-        aria_expanded = "true" if is_current else "false"
-        toggle_icon = "▼" if is_current else "▶"
-
-        lines.append(f'<div class="nav-accordion-item{expanded_cls}">')
-        lines.append('  <div class="nav-accordion-header">')
-        lines.append(
-            f'    <a class="nav-link week-link{week_active_cls}" href="{info["href"]}">'
-            f'Week {info["num"]}：{week_titles.get(info["num"], "")}'
-            f'</a>'
-            f'<button class="nav-accordion-toggle" aria-label="收起/展开 Week {info["num"]}" aria-expanded="{aria_expanded}">{toggle_icon}</button>'
-        )
-        lines.append('  </div>')
-        lines.append('  <div class="nav-accordion-content">')
-        lines.append('    <div class="nav-section">')
-        lines.append(f'<a class="nav-link overview-link{overview_active_cls}" href="{info["href"]}">📌 Week {info["num"]} 概览</a>')
-        for day in info["days"]:
-            day_num = day["num"]
-            day_active = " active" if (is_current and current_day == day_num) else ""
-            day_title = day["title"]
-            lines.append(
-                f'<a class="nav-link day-link{day_active}" href="{info["day_prefix"]}day{day_num}.html">Day {day_num}：{day_title}</a>'
-            )
-        lines.append('    </div>')
-        lines.append('  </div>')
-        lines.append('</div>')
-
-    return "\n".join(lines)
-
-
 def build_week(week_num: int, public_dir: Path, plan_weeks: list) -> None:
     """Build a single week's website (weeks 2-10). Week 1 is handled by build_week1."""
     week_dir = _week_dir(week_num)
@@ -297,6 +199,8 @@ def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
         return
 
     markdown_text = PLAN_SOURCE.read_text(encoding="utf-8")
+    # Strip the plan's own H1 — the hero header shows the title instead.
+    markdown_text = re.sub(r"^\s*#\s+.+\n", "", markdown_text, count=1)
 
     # Prepend the course overview (aiinfra/daily/README.md): its content moved
     # here when public/index.html became a designed landing page.
@@ -316,19 +220,18 @@ def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
     week_heading_pattern = re.compile(r"^(##\s*[^\s]*\s*Week\s*(\d+)[:：].*)$", re.MULTILINE)
     markdown_text = week_heading_pattern.sub(add_week_anchor, markdown_text)
 
-    nav_html = build_week_nav(
-        current_week=None,
-        current_page="plan",
-        root_prefix="",
-        weeks=plan_weeks,
-    )
+    week_pills = [
+        {"label": f"W{num}", "href": f"week{num}/index.html"}
+        for num in range(1, 11)
+        if _week_dir(num).exists()
+    ]
 
-    html = page_template(
-        title="10 周学习计划",
-        nav_html=nav_html,
+    html = week_page_template(
+        title="AI Infra 10 周学习计划",
+        eyebrow="📋 完整学习计划",
         markdown=markdown_text,
-        is_overview=True,
         page_title="AI Infra 10 周计划",
+        day_pills=week_pills,
         heading_renderer_js=HEADING_RENDERER_WEEKS,
     )
     (public_dir / "plan.html").write_text(html, encoding="utf-8")
