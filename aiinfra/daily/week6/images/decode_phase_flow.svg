@@ -87,5 +87,5 @@
   <text x="430" y="324" text-anchor="middle" font-size="10" fill="#888">优化：KV Cache / PagedAttention / Continuous Batching / 量化</text>
 
   <text x="430" y="372" text-anchor="middle" font-size="10" fill="#888">无 KV Cache 时每步 FLOPs = O(L·d²) 且随长度线性增长</text>
-  <text x="430" y="390" text-anchor="middle" font-size="10" fill="#888">有 KV Cache 时每步计算量降到 O(d²)，但每步要搬整个 cache 过 HBM</text>
+  <text x="430" y="390" text-anchor="middle" font-size="10" fill="#888">有 KV Cache 时每步计算量降到 O(d² + L·d)，但每步要搬整个 cache 过 HBM</text>
 </svg>

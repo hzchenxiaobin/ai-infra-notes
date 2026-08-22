@@ -68,6 +68,6 @@
     <line x1="360" y1="342" x2="360" y2="358" stroke="#2e6e2e" stroke-width="1.4"/>
     <line x1="880" y1="342" x2="880" y2="358" stroke="#2e6e2e" stroke-width="1.4"/>
   </g>
-  <text x="620" y="372" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">TPOT = 总 decode 时延 / 输出 token 数</text>
+  <text x="620" y="372" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">TPOT = 总 decode 时延 / (输出 token 数 − 1)</text>
   <text x="470" y="398" text-anchor="middle" font-size="12" fill="#666">E2E Latency = TTFT + (输出 token 数 − 1) × TBT</text>
 </svg>

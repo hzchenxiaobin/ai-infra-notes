@@ -76,8 +76,8 @@
   <!-- Decode metrics -->
   <line x1="470" y1="190" x2="810" y2="190" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3" filter="url(#sk5)"/>
   <text x="470" y="210" font-size="10" fill="#444">FLOPs = 2×1×512×1536 ≈ 1.6M (↓1024×)</text>
-  <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 0.8M (W 不变, 仍读完整权重)</text>
-  <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 2 FLOP/Byte</text>
+  <text x="470" y="232" font-size="10" fill="#444">Bytes ≈ 1.6 MB (W=3d², fp16, 仍读完整权重)</text>
+  <text x="470" y="258" font-size="11" fill="#e57373" font-weight="bold">AI ≈ 1.0 FLOP/Byte</text>
   <text x="470" y="278" font-size="10" fill="#e57373" font-weight="bold">&lt;&lt; Ridge 58.45 → Memory-bound ✗</text>
 
   <!-- ====== Transition arrow between boxes ====== -->
@@ -127,10 +127,10 @@
 
   <!-- Decode marker -->
   <g filter="url(#sk5)">
-    <circle cx="242" cy="446" r="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1"/>
+    <circle cx="177" cy="446" r="8" fill="#e57373" stroke="#3a3a3a" stroke-width="1"/>
   </g>
-  <text x="242" y="490" text-anchor="middle" font-size="10" fill="#e57373" font-weight="bold">Decode</text>
-  <text x="242" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈2</text>
+  <text x="177" y="490" text-anchor="middle" font-size="10" fill="#e57373" font-weight="bold">Decode</text>
+  <text x="177" y="504" text-anchor="middle" font-size="8" fill="#666">AI≈1</text>
 
   <!-- Prefill marker -->
   <g filter="url(#sk5)">

@@ -46,7 +46,7 @@ class MiniTransformer(nn.Module):
         scale = self.d_head ** -0.5
         if use_cache and k_cache is not None:
             # Decode: 把新 K/V 拼到历史 cache 后面
-            k = torch.cat([k_cache, k], dim=2)  # (B, H, L+1, d)
+            k = torch.cat([k_cache, k], dim=2)  # (B, H, L+1, d_head)
             v = torch.cat([v_cache, v], dim=2)
 
         attn = torch.matmul(q, k.transpose(-2, -1)) * scale
@@ -66,6 +66,11 @@ def simulate_inference(model, prompt, max_new_tokens=20):
     """模拟完整推理流程：Prefill + Decode"""
     device = next(model.parameters()).device
     B, N = prompt.size(0), prompt.size(1)
+
+    # warmup：排除 CUDA 初始化 / cudnn autotuning 的一次性开销
+    with torch.no_grad():
+        _ = model(prompt, use_cache=False)
+    torch.cuda.synchronize()
 
     # ========== Prefill 阶段 ==========
     torch.cuda.synchronize()
@@ -117,10 +122,10 @@ def simulate_inference(model, prompt, max_new_tokens=20):
     return ttft, decode_times
 
 
-def profile_phase(model, x, name, n_iter=10):
+def profile_phase(model, x, name, n_iter=10, use_cache=False, k_cache=None, v_cache=None):
     """Profile 一个阶段"""
     for _ in range(3):
-        _ = model(x)
+        _ = model(x, use_cache=use_cache, k_cache=k_cache, v_cache=v_cache)
     torch.cuda.synchronize()
 
     start = torch.cuda.Event(enable_timing=True)
@@ -128,7 +133,7 @@ def profile_phase(model, x, name, n_iter=10):
     start.record()
     for _ in range(n_iter):
         with torch.no_grad():
-            _ = model(x)
+            _ = model(x, use_cache=use_cache, k_cache=k_cache, v_cache=v_cache)
     end.record()
     torch.cuda.synchronize()
     ms = start.elapsed_time(end) / n_iter
@@ -155,8 +160,12 @@ def main():
     print("\n=== Standalone Profiling ===")
     profile_phase(model, prompt, f"Prefill (N={N})")
 
+    # Decode profile：先跑一次 prefill 得到长度为 N 的 KV Cache，再测真实 decode 步
+    with torch.no_grad():
+        _, (k_cache, v_cache) = model(prompt, use_cache=False)
     decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
-    profile_phase(model, decode_input, f"Decode single token")
+    profile_phase(model, decode_input, f"Decode single token (L={N})",
+                  use_cache=True, k_cache=k_cache, v_cache=v_cache)
 
 
 if __name__ == "__main__":

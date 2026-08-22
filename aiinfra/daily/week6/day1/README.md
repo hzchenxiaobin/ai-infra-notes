@@ -8,7 +8,7 @@
 2. 掌握 **TTFT / TBT / TPOT** 三大推理时延指标的定义，能说清各自由哪个阶段决定、如何优化<br>
 3. 能用 **Arithmetic Intensity + Roofline** 解释为什么 Decode 是 memory-bound、Prefill 是 compute-bound<br>
 4. 学会用 PyTorch 手写一个最小 Transformer Block，模拟 **Prefill + KV Cache + Decode 循环**，实测两阶段 latency<br>
-5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2)$），为 Day 2 手写 KV Cache 打基础<br>
+5. 理解 KV Cache 的收益直觉（每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2 + L \cdot d)$），为 Day 2 手写 KV Cache 打基础<br>
 
 > 💡 **为什么重要**：Week 5 我们把 FlashAttention 这个算子彻底吃透，但那只是推理系统里的"一颗螺丝"。从 Week 6 开始进入 AI Infra 的核心战场——**推理系统**。"Prefill vs Decode"是推理系统入门第一考点：所有后续优化（KV Cache、PagedAttention、Continuous Batching、量化）都在回答一个问题——"如何让 memory-bound 的 Decode 跑得更快"。今天把两阶段算清楚，后面整周才有支点。
 
@@ -50,7 +50,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 
 ![Decode 阶段处理流程](../images/decode_phase_flow.svg)
 
-> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 $O(d^2)$——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
+> ⚠️ **注意**：如果没有 KV Cache，Decode 每步都要把"prompt + 已生成部分"重新跑一遍前向来算历史 K/V，FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 把历史 K/V 存下来直接读，让每步计算量降到 $O(d^2 + L \cdot d)$（projection 部分 $O(d^2)$，attention 部分 $O(L \cdot d)$）——但代价是每步要从 HBM 把整个 cache 搬一遍。Day 2 我们会亲手实现这个 cache。
 
 #### 1.3 两大阶段对比表
 
@@ -62,7 +62,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 | Attention 矩阵形状 | $N \times N$ | **1×N** |
 | 每步 FLOPs | $O(N^2 \cdot d)$ | $O(L \cdot d)$ |
 | 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
-| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 0.1 FLOP/Byte（fp16 ~0.125） |
+| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 1.0 FLOP/Byte（fp16） |
 | 瓶颈类型 | **compute-bound** | **memory-bound** |
 | 关注指标 | TTFT | TBT / TPOT |
 | 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
@@ -77,11 +77,11 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 
 ![Decode 的算术强度与 Ridge Point、四大优化方向](../images/decode_memory_bound.svg)
 
-Decode 每步处理 1 个新 token，需要读取：历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈ 2·d²·bytes`），而计算量只有 `O(L·d + d²)`。算术强度：
+Decode 每步处理 1 个新 token：QKV GEMM 退化为 M=1（FLOPs `6d²`、读权重 `3d²·bytes`），attention 要读完整 KV Cache（`2·L·d·bytes`、FLOPs `4·L·d`）。两者算术强度都在 ~1 FLOP/Byte 量级：
 
 ![Decode 算术强度公式](../images/decode_ai_formula.svg)
 
-RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 0.1，**比 Ridge Point 低近三个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
+RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 1.0，**比 Ridge Point 低近两个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
 
 反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
 
@@ -172,7 +172,7 @@ class MiniTransformer(nn.Module):
         scale = self.d_head ** -0.5
         if use_cache and k_cache is not None:
             # Decode: 把新 K/V 拼到历史 cache 后面
-            k = torch.cat([k_cache, k], dim=2)  # (B, H, L+1, d)
+            k = torch.cat([k_cache, k], dim=2)  # (B, H, L+1, d_head)
             v = torch.cat([v_cache, v], dim=2)
 
         attn = torch.matmul(q, k.transpose(-2, -1)) * scale
@@ -192,6 +192,11 @@ def simulate_inference(model, prompt, max_new_tokens=20):
     """模拟完整推理流程：Prefill + Decode"""
     device = next(model.parameters()).device
     B, N = prompt.size(0), prompt.size(1)
+
+    # warmup：排除 CUDA 初始化 / cudnn autotuning 的一次性开销
+    with torch.no_grad():
+        _ = model(prompt, use_cache=False)
+    torch.cuda.synchronize()
 
     # ========== Prefill 阶段 ==========
     torch.cuda.synchronize()
@@ -243,10 +248,10 @@ def simulate_inference(model, prompt, max_new_tokens=20):
     return ttft, decode_times
 
 
-def profile_phase(model, x, name, n_iter=10):
+def profile_phase(model, x, name, n_iter=10, use_cache=False, k_cache=None, v_cache=None):
     """Profile 一个阶段"""
     for _ in range(3):
-        _ = model(x)
+        _ = model(x, use_cache=use_cache, k_cache=k_cache, v_cache=v_cache)
     torch.cuda.synchronize()
 
     start = torch.cuda.Event(enable_timing=True)
@@ -254,7 +259,7 @@ def profile_phase(model, x, name, n_iter=10):
     start.record()
     for _ in range(n_iter):
         with torch.no_grad():
-            _ = model(x)
+            _ = model(x, use_cache=use_cache, k_cache=k_cache, v_cache=v_cache)
     end.record()
     torch.cuda.synchronize()
     ms = start.elapsed_time(end) / n_iter
@@ -281,8 +286,12 @@ def main():
     print("\n=== Standalone Profiling ===")
     profile_phase(model, prompt, f"Prefill (N={N})")
 
+    # Decode profile：先跑一次 prefill 得到长度为 N 的 KV Cache，再测真实 decode 步
+    with torch.no_grad():
+        _, (k_cache, v_cache) = model(prompt, use_cache=False)
     decode_input = torch.randn(1, 1, d_model, device=device, dtype=torch.float16)
-    profile_phase(model, decode_input, f"Decode single token")
+    profile_phase(model, decode_input, f"Decode single token (L={N})",
+                  use_cache=True, k_cache=k_cache, v_cache=v_cache)
 
 
 if __name__ == "__main__":
@@ -309,26 +318,26 @@ Prompt length: 1024
 
 === Prefill Phase ===
   Input shape: (1, 1024, 512)
-  TTFT: 115.696 ms
+  TTFT: 0.152 ms
   KV Cache shape: (1, 8, 1024, 64)
 
 === Decode Phase ===
   Generated 10 tokens
-  Mean TBT: 2.138 ms
-  Max TBT: 17.947 ms
-  Min TBT: 0.143 ms
+  Mean TBT: 0.187 ms
+  Max TBT: 0.213 ms
+  Min TBT: 0.165 ms
   Generated token IDs: [348, 264, 264, 264, 357, 304, 475, 264, 264, 357]
 
 === Standalone Profiling ===
 Prefill (N=1024): 0.132 ms
-Decode single token: 0.105 ms
+Decode single token (L=1024): 0.178 ms
 ```
 
 ##### 观察重点
 
-1. **TTFT 明显大于单步 TBT**：Prefill 要算 1024×1024 的完整 attention，是 compute-bound 的大活。
+1. **Prefill 处理 1024 个 token 仅 ~0.13ms，而 Decode 处理 1 个 token 就要 ~0.18ms**：每 token 成本 Decode 是 Prefill 的上千倍，正是 memory-bound 的体现（算得少但数据搬运慢）。注意 TTFT 与单步 TBT 绝对值接近，但 Prefill 摊到了 1024 个 token 上。
 2. **TBT 基本稳定**：每步 Decode 都只多读一个 token 的 KV，TBT 不随步数显著增长（前提是用了 KV Cache）。
-3. **Prefill 单次 vs Decode 单次的绝对值**：注意 Prefill 处理了 1024 个 token，Decode 只处理 1 个——比较时要看"每 token 成本"，而非总时间。
+3. **Standalone Profiling 中 Decode (L=1024) > Prefill (N=1024)**：Decode 虽只算 1 个 token，却要读完整 KV Cache，带宽瓶颈使其单步耗时反超处理 1024 个 token 的 Prefill。
 
 > ⚠️ **注意**：本脚本用随机向量模拟 decode 的输入 embedding（`next_token_emb`），所以生成的 token ID 没有语义意义——我们只关心**时延特征**，不关心生成内容。Day 5 的 Mini 引擎会接入真正的 tokenizer + embedding。
 
@@ -362,7 +371,7 @@ print(prof.key_averages().table(sort_by='cuda_time', row_limit=8))
 
 **观察重点**：
 - Prefill 的 `gemm` 算子（`addmm`/`bmm`）尺寸大、耗时长，是主角；
-- Decode 的同样 `gemm` 算子尺寸极小（M=1），耗时长但**算子 launch 开销占比上升**——这正是 memory-bound 的表现：算得快，但启动/等待开销凸显。
+- Decode 的同样 `gemm` 算子尺寸极小（M=1），FLOPs 极低，单算子耗时短但**算子 launch 开销占比上升**——大量时间花在启动/等数据上，体现 memory-bound。
 - Decode 的 attention `bmm` 是 1×N，FLOPs 极低，但每次都要读 KV。
 
 #### 任务 4：LeetGPU 在线题目 —— INT8 KV-Cache Attention
@@ -427,9 +436,9 @@ nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
 Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
 
 1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + $N \times N$ attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
-2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~0.1，跨过 Ridge Point，瓶颈从算力翻转到带宽
+2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~1.0，跨过 Ridge Point，瓶颈从算力翻转到带宽
 3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
-4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2)$，但代价是每步要搬整个 cache 过 HBM
+4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2 + L \cdot d)$，但代价是每步要搬整个 cache 过 HBM
 5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
 6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
 
@@ -445,7 +454,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <summary>点击查看答案</summary>
 
  - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 $N \times N$ attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
- - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~0.1），**memory-bound**，关注 TBT/TPOT
+  - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~1.0），**memory-bound**，关注 TBT/TPOT
  - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
 
 </details>
@@ -469,8 +478,8 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <summary>点击查看答案</summary>
 
  - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
- - 算术强度 `AI = FLOPs/Bytes ≈ 0.125 FLOP/Byte (fp16)`
- - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近三个数量级
+  - 算术强度 `AI = FLOPs/Bytes ≈ 1.0 FLOP/Byte (fp16)`
+  - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近两个数量级
  - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound
 
 </details>
@@ -481,8 +490,8 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <details>
 <summary>点击查看答案</summary>
 
- - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 $O(d^2)$，decode latency 降低 10x+
- - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 524 KB，4096 tokens 约 2 GB，batch=16 就 32 GB
+  - **解决的问题**：没有 KV Cache 时，Decode 第 t 步要重算前 t−1 步的 K/V，每步 FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长；KV Cache 把历史 K/V 存下来直接读，每步计算量降到 $O(d^2 + L \cdot d)$，decode latency 降低 10x+
+  - **代价是显存**：每 token KV Cache = `2 × num_layers × num_heads × d_head × bytes`。如 LLaMA-7B（32 层、32 头、d_head=128、fp16）每 token 约 0.5 MB，4096 tokens 约 2 GB，batch=16 就 32 GB
  - 这正是后续 PagedAttention（Day 4）、KV Cache 量化要解决的"显存爆炸"问题
 
 </details>

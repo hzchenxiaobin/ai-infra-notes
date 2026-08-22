@@ -14,10 +14,10 @@
   <g filter="url(#sk)">
     <rect x="80" y="58" width="700" height="60" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.5" fill-opacity="0.35"/>
   </g>
-  <text x="430" y="84" text-anchor="middle" font-size="15" fill="#2b2b2b" font-family="monospace">AI = FLOPs / Bytes ≈ d / (2·d·bytes_per_float)</text>
-  <text x="430" y="106" text-anchor="middle" font-size="16" fill="#b85450" font-family="monospace" font-weight="bold">≈ 0.125 FLOP/Byte (fp16)</text>
+  <text x="430" y="84" text-anchor="middle" font-size="15" fill="#2b2b2b" font-family="monospace">AI = FLOPs / Bytes = 6d² / (3d²·bytes_per_float) = 2 / bytes_per_float</text>
+  <text x="430" y="106" text-anchor="middle" font-size="16" fill="#b85450" font-family="monospace" font-weight="bold">≈ 1.0 FLOP/Byte (fp16)</text>
 
   <!-- annotation -->
-  <text x="430" y="138" text-anchor="middle" font-size="10" fill="#888">比 Ridge Point (58.45) 低近三个数量级 → 完全卡在显存带宽线上，SM 大量空闲等数据</text>
+  <text x="430" y="138" text-anchor="middle" font-size="10" fill="#888">比 Ridge Point (58.45) 低近两个数量级 → 完全卡在显存带宽线上，SM 大量空闲等数据</text>
   <text x="430" y="154" text-anchor="middle" font-size="10" fill="#888">不是算得慢，是数据搬不过来</text>
 </svg>
