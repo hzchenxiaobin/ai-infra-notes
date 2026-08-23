@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="440" viewBox="0 0 920 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="440" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">自动 tiling：BLOCK_SIZE 决定向量化宽度与 smem 策略</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Left panel: BLOCK_SIZE=1024 -->
+  <text x="230" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e7d4f">BLOCK_SIZE = 1024</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="86" width="380" height="270" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="108" font-size="10" fill="#444">tile：1024 个元素</text>
+  <g filter="url(#sk2)">
+    <rect x="60" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="104" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="148" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="192" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="236" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="280" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <rect x="324" y="116" width="40" height="18" rx="2" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/>
+    <text x="372" y="129" font-size="10" fill="#888">···</text>
+  </g>
+  <g font-size="8" fill="#2e7d4f" text-anchor="middle">
+    <text x="80" y="148">t0</text>
+    <text x="124" y="148">t1</text>
+    <text x="168" y="148">t2</text>
+    <text x="212" y="148">t3</text>
+    <text x="256" y="148">t4</text>
+    <text x="300" y="148">t5</text>
+    <text x="344" y="148">t6</text>
+  </g>
+  <text x="60" y="166" font-size="9" fill="#1b5e3a">每组 4 元素 = float4（128-bit 向量化）</text>
+  <g filter="url(#sk2)">
+    <rect x="70" y="186" width="70" height="24" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/>
+    <rect x="280" y="186" width="70" height="24" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/>
+  </g>
+  <text x="105" y="202" text-anchor="middle" font-size="10" fill="#444">Global Mem</text>
+  <text x="315" y="202" text-anchor="middle" font-size="10" fill="#444">寄存器</text>
+  <path d="M 140 198 L 272 198" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="206" y="190" text-anchor="middle" font-size="9" fill="#2e7d4f">float4 直接加载</text>
+  <text x="60" y="230" font-size="10" fill="#888">✗ 无需 shared memory</text>
+  <g filter="url(#sk2)">
+    <rect x="60" y="248" width="340" height="44" rx="6" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="80" y="266" font-size="10" fill="#444">每 thread：4 元素 · 向量化 float4</text>
+  <text x="80" y="282" font-size="10" fill="#444">smem：不使用 · 寄存器直接承载</text>
+  <text x="230" y="336" text-anchor="middle" font-size="10" fill="#888" font-style="italic">小 tile → 寄存器够用，直加载</text>
+
+  <!-- Right panel: BLOCK_SIZE=16384 -->
+  <text x="690" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">BLOCK_SIZE = 16384</text>
+  <g filter="url(#sk2)">
+    <rect x="500" y="86" width="380" height="270" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="108" font-size="10" fill="#444">tile：16384 个元素</text>
+  <g filter="url(#sk2)">
+    <rect x="520" y="116" width="96" height="18" rx="2" fill="#f5d5d5" stroke="#b03a3a" stroke-width="0.8"/>
+    <rect x="620" y="116" width="96" height="18" rx="2" fill="#f5d5d5" stroke="#b03a3a" stroke-width="0.8"/>
+    <rect x="720" y="116" width="96" height="18" rx="2" fill="#f5d5d5" stroke="#b03a3a" stroke-width="0.8"/>
+    <text x="824" y="129" font-size="10" fill="#888">···</text>
+  </g>
+  <g font-size="8" fill="#b03a3a" text-anchor="middle">
+    <text x="568" y="148">t0 (16 elems)</text>
+    <text x="668" y="148">t1 (16 elems)</text>
+    <text x="768" y="148">t2 (16 elems)</text>
+  </g>
+  <text x="520" y="166" font-size="9" fill="#8b2b2b">每组 16 元素（寄存器装不下 → smem 中转）</text>
+  <g filter="url(#sk2)">
+    <rect x="520" y="186" width="56" height="24" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/>
+    <rect x="662" y="186" width="56" height="24" rx="4" fill="#fff3cf" stroke="#e8a838" stroke-width="0.8"/>
+    <rect x="804" y="186" width="56" height="24" rx="4" fill="#f0ede4" stroke="#888" stroke-width="0.8"/>
+  </g>
+  <text x="548" y="202" text-anchor="middle" font-size="10" fill="#444">Global</text>
+  <text x="690" y="202" text-anchor="middle" font-size="10" fill="#444">smem</text>
+  <text x="832" y="202" text-anchor="middle" font-size="10" fill="#444">寄存器</text>
+  <path d="M 576 198 L 654 198" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M 718 198 L 796 198" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="615" y="190" text-anchor="middle" font-size="9" fill="#b03a3a">加载暂存</text>
+  <text x="757" y="190" text-anchor="middle" font-size="9" fill="#b03a3a">取用计算</text>
+  <text x="520" y="226" font-size="10" fill="#888">✓ shared memory 暂存 tile</text>
+  <text x="520" y="242" font-size="10" fill="#888">✓ 软流水（num_stages 重叠加载/计算）</text>
+  <g filter="url(#sk2)">
+    <rect x="520" y="258" width="340" height="44" rx="6" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="540" y="276" font-size="10" fill="#444">每 thread：16 元素 · float4 × 4 次</text>
+  <text x="540" y="292" font-size="10" fill="#444">smem：暂存 + 软流水中转</text>
+  <text x="690" y="336" text-anchor="middle" font-size="10" fill="#888" font-style="italic">大 tile → smem 中转 + 流水线</text>
+
+  <!-- Bottom takeaway -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="370" width="840" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="392" font-size="11" font-weight="bold" fill="#1b5e8c">编译器自动决策（程序员只写 tl.arange，不碰向量化 / smem / 同步）</text>
+  <text x="60" y="410" font-size="10" fill="#444">小 BLOCK_SIZE → float4 直接加载，无 smem     大 BLOCK_SIZE → smem 暂存 + 软流水重叠加载与计算</text>
+  <text x="60" y="422" font-size="10" fill="#b03a3a">不同 BLOCK_SIZE 生成不同 cubin（tiling / 向量化 / smem 布局全不同）—— constexpr 参与编译期决策</text>
+</svg>

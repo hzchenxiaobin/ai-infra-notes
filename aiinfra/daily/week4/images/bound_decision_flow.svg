@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="700" viewBox="0 0 880 700" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="880" height="700" fill="#fdfcf7"/>
+  <text x="440" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">算子 Bound 判定流程</text>
+  <path d="M 240 42 Q 440 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Step 1: Calculate AI -->
+  <g filter="url(#sk2)">
+    <rect x="270" y="62" width="340" height="56" rx="10" fill="#e8f0fe" stroke="#4a8edb" stroke-width="1.8"/>
+  </g>
+  <text x="440" y="86" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b5e8c">① 计算 Arithmetic Intensity</text>
+  <text x="440" y="106" text-anchor="middle" font-size="12" fill="#444">AI = FLOPs / Bytes</text>
+
+  <!-- Arrow down -->
+  <path d="M 440 120 L 440 138" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)"/>
+
+  <!-- Step 2: Decision diamond -->
+  <g filter="url(#sk2)">
+    <path d="M 440 142 L 560 185 L 440 228 L 320 185 Z" fill="#fff3cf" stroke="#e8a838" stroke-width="1.8"/>
+  </g>
+  <text x="440" y="180" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">② 与 Ridge Point 比较</text>
+  <text x="440" y="198" text-anchor="middle" font-size="11" fill="#444">RTX 5090 ≈ 58.45 FLOP/Byte</text>
+  <text x="440" y="214" text-anchor="middle" font-size="10" fill="#888" font-style="italic">AI ≷ 58.45 ?</text>
+
+  <!-- Left branch: memory-bound -->
+  <path d="M 320 185 L 170 185 L 170 250" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar2)"/>
+  <text x="245" y="176" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">AI &lt; 58.45</text>
+  <g filter="url(#sk2)">
+    <rect x="50" y="255" width="240" height="50" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.6"/>
+  </g>
+  <text x="170" y="278" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">Memory-bound</text>
+  <text x="170" y="296" text-anchor="middle" font-size="10" fill="#666">访存是瓶颈</text>
+
+  <!-- Right branch: compute-bound -->
+  <path d="M 560 185 L 710 185 L 710 250" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar2)"/>
+  <text x="635" y="176" text-anchor="middle" font-size="11" fill="#1b5e8c" font-weight="bold">AI &gt; 58.45</text>
+  <g filter="url(#sk2)">
+    <rect x="590" y="255" width="240" height="50" rx="8" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.6"/>
+  </g>
+  <text x="710" y="278" text-anchor="middle" font-size="13" font-weight="bold" fill="#1b5e8c">Compute-bound</text>
+  <text x="710" y="296" text-anchor="middle" font-size="10" fill="#666">算力是瓶颈</text>
+
+  <!-- Merge arrows to step 3 -->
+  <path d="M 170 307 L 170 340 L 360 340" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+  <path d="M 710 307 L 710 340 L 520 340" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)"/>
+
+  <!-- Step 3: ncu verification -->
+  <g filter="url(#sk2)">
+    <rect x="270" y="355" width="340" height="66" rx="10" fill="#e8f5e9" stroke="#2e7d4f" stroke-width="1.8"/>
+  </g>
+  <text x="440" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e7d4f">③ 用 ncu 验证</text>
+  <text x="440" y="398" text-anchor="middle" font-size="11" fill="#444">sm__throughput  vs  dram__throughput</text>
+  <text x="440" y="414" text-anchor="middle" font-size="10" fill="#888" font-style="italic">DRAM ≫ SM → memory-bound；反之 compute-bound</text>
+
+  <!-- Arrow down -->
+  <path d="M 440 423 L 440 448" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)"/>
+
+  <!-- Step 4: Experience rules -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="452" width="760" height="220" rx="10" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.4" stroke-dasharray="6 4"/>
+  </g>
+  <text x="440" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">④ 经验法则（快速判断）</text>
+  <line x1="80" y1="488" x2="800" y2="488" stroke="#3a3a3a" stroke-width="0.6" stroke-dasharray="3 3"/>
+
+  <!-- Rule 1 -->
+  <g filter="url(#sk2)">
+    <rect x="90" y="500" width="220" height="72" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="200" y="522" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">element-wise / reduction</text>
+  <text x="200" y="540" text-anchor="middle" font-size="10" fill="#444">gelu / softmax / layernorm</text>
+  <text x="200" y="560" text-anchor="middle" font-size="10" fill="#b03a3a" font-style="italic">→ 几乎总是 memory-bound</text>
+
+  <!-- Rule 2 -->
+  <g filter="url(#sk2)">
+    <rect x="330" y="500" width="220" height="72" rx="8" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="522" text-anchor="middle" font-size="11" font-weight="bold" fill="#1b5e8c">大 GEMM（M,N,K 都大）</text>
+  <text x="440" y="540" text-anchor="middle" font-size="10" fill="#444">Prefill 阶段典型场景</text>
+  <text x="440" y="560" text-anchor="middle" font-size="10" fill="#1b5e8c" font-style="italic">→ 通常 compute-bound</text>
+
+  <!-- Rule 3 -->
+  <g filter="url(#sk2)">
+    <rect x="570" y="500" width="220" height="72" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="680" y="522" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">小 GEMM（M=1 或极小）</text>
+  <text x="680" y="540" text-anchor="middle" font-size="10" fill="#444">Decode 阶段典型场景</text>
+  <text x="680" y="560" text-anchor="middle" font-size="10" fill="#b03a3a" font-style="italic">→ 通常 memory-bound</text>
+
+  <!-- Summary note -->
+  <g filter="url(#sk2)">
+    <rect x="90" y="588" width="700" height="66" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="110" y="610" font-size="11" font-weight="bold" fill="#1b5e8c">关键洞察</text>
+  <text x="110" y="628" font-size="10" fill="#444">GEMM 的 bound 类型随 M 切换：Prefill（M 大）→ compute-bound，Decode（M=1）→ memory-bound</text>
+  <text x="110" y="644" font-size="10" fill="#444">其余算子（softmax / layernorm / gelu）永远是 memory-bound，与 M 无关</text>
+</svg>

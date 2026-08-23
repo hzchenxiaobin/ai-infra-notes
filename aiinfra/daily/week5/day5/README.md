@@ -52,26 +52,14 @@ Mini 引擎 FlashAttention 版跑通了：误差 < 1e-3，长序列（N=2048）�
 | 指标 | 含义 | 计算方式 |
 |------|------|---------|
 | Latency (ms) | 单次 forward 时间 | `cudaEvent` 计时 |
-| Throughput (tokens/s) | 吞吐量 | `B * N / latency` |
+| Throughput (tokens/s) | 吞吐量 | `B * N * 1000 / latency` |
 | HBM IO (MB) | 理论 + ncu 实测 | 理论公式 + `dram__bytes_read/write` |
 | Speedup | 相对标准 Attention 加速比 | `ms_std / ms_fa` |
 | Max Diff | 与标准 Attention 数值误差 | `(out_std - out_fa).abs().max()` |
 
 #### 5.2 理论 HBM IO 计算
 
-```
- 标准 Attention HBM IO:
-  读 Q,K,V: 3·N·d
-  读/写 S: 2·N²
-  读/写 P: 2·N²
-  写 O: N·d
-  总计: 4N² + 4Nd ≈ O(N²) when N >> d
-
-FlashAttention HBM IO:
- 读 Q,K,V: 3·N·d (每元素读一次，tile 复用)
- 写 O: N·d
- 总计: 4Nd = O(Nd)
-```
+![标准 Attention vs FlashAttention HBM IO 对比](../images/hbm_comparison.svg)
 
 | N | d | 标准 IO (MB) | FA IO (MB) | IO 加速比 |
 |---|---|-------------|-----------|----------|
@@ -96,15 +84,7 @@ ncu --metrics \
 
 ##### 验证逻辑
 
-```
-N=512: 理论 FA IO = 4×512×64×4 = 512 KB
-N=1024: 理论 FA IO = 4×1024×64×4 = 1 MB (应为 N=512 的 2x)
-N=2048: 理论 FA IO = 4×2048×64×4 = 2 MB (应为 N=512 的 4x)
-N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB (应为 N=512 的 8x)
-
-如果实测 HBM IO 随 N 线性增长 → O(Nd) ✓
-如果随 N² 增长 → O(N²) ✗（有 bug）
-```
+![ncu 验证 FA IO 随 N 线性增长](../images/ncu_io_verification.svg)
 
 > ⚠️ **注意**：实测值通常比理论值大 20-30%（cache miss、padding、额外访问），误差范围内正常。
 
@@ -312,7 +292,7 @@ N=4096: 理论 FA IO = 4×4096×64×4 = 4 MB, 实测应约为 N=512 的 8x
 
 在 benchmark 脚本中加入每个配置的 memory bandwidth utilization 和 FLOPS 估算。
 
-> 提示：bandwidth = HBM_IO / latency；FLOPS = 4·B·H·N²·d / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
+> 提示：bandwidth = HBM_IO / latency；FLOPS = 4·B·H·N²·d * 1000 / latency。对比是否接近 RTX 5090 峰值（1.792 TB/s 带宽，104.75 TFLOPS FP32）。
 
 #### 实验 3：绘制 latency vs N 曲线
 

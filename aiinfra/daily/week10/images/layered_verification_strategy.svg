@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="440" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">分层验证策略</text>
+  <path d="M 300 40 Q 440 48 580 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="440" y="56" text-anchor="middle" font-size="11" fill="#888">从单算子到端到端，逐步叠加，每步验证精度阈值</text>
+
+  <!-- Step 1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="72" width="500" height="92" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="94" font-size="13" fill="#2b6e9e" font-weight="bold">Step 1: 单算子验证</text>
+  <text x="60" y="114" font-size="10" fill="#444">softmax_forward vs F.softmax</text>
+  <text x="350" y="114" font-size="10" fill="#c04050">→ max_diff &lt; 1e-5</text>
+  <text x="60" y="130" font-size="10" fill="#444">layernorm_forward vs F.layer_norm</text>
+  <text x="350" y="130" font-size="10" fill="#c04050">→ max_diff &lt; 1e-4</text>
+  <text x="60" y="146" font-size="10" fill="#444">flash_attention_forward vs manual QK^T·softmax·V</text>
+  <text x="350" y="146" font-size="10" fill="#c04050">→ max_diff &lt; 1e-3</text>
+  <path d="M 290 164 L 290 178" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 2 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="180" width="500" height="56" rx="8" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="202" font-size="13" fill="#2e6e2e" font-weight="bold">Step 2: 多算子组合</text>
+  <text x="60" y="222" font-size="10" fill="#444">LayerNorm + QKV + Attention + Output</text>
+  <text x="350" y="222" font-size="10" fill="#c04050">→ 逐层对比</text>
+  <path d="M 290 236 L 290 250" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 3 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="252" width="500" height="56" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="274" font-size="13" fill="#7a5415" font-weight="bold">Step 3: 端到端</text>
+  <text x="60" y="294" font-size="10" fill="#444">完整 TransformerLayer forward</text>
+  <text x="350" y="294" font-size="10" fill="#c04050">→ max_diff &lt; 1e-2（累积误差容忍）</text>
+  <path d="M 290 308 L 290 322" stroke="#5a5a5a" stroke-width="1.3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Step 4 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="324" width="500" height="72" rx="8" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="60" y="346" font-size="13" fill="#a03040" font-weight="bold">Step 4: 性能对比</text>
+  <text x="60" y="366" font-size="10" fill="#444">PyTorch eager vs Custom kernel</text>
+  <text x="350" y="366" font-size="10" fill="#c04050">→ 测量 latency</text>
+  <text x="60" y="382" font-size="9" fill="#888">（教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）</text>
+
+  <!-- Right: threshold summary -->
+  <g filter="url(#sk)">
+    <rect x="580" y="72" width="260" height="324" rx="8" fill="#f6f6f6" stroke="#ccc" stroke-width="1"/>
+  </g>
+  <text x="710" y="96" text-anchor="middle" font-size="12" fill="#2b2b2b" font-weight="bold">精度阈值速查</text>
+  <path d="M 620 104 Q 710 110 800 104" stroke="#ccc" stroke-width="1" fill="none" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="120" width="100" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="650" y="138" text-anchor="middle" font-size="10" fill="#2b6e9e">单算子</text>
+  <text x="710" y="138" font-size="11" fill="#c04050" font-weight="bold">&lt; 1e-5</text>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="160" width="100" height="28" rx="4" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="650" y="178" text-anchor="middle" font-size="10" fill="#2e6e2e">多算子</text>
+  <text x="710" y="178" font-size="11" fill="#c04050" font-weight="bold">逐层对比</text>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="200" width="100" height="28" rx="4" fill="#fff8e1" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="650" y="218" text-anchor="middle" font-size="10" fill="#7a5415">端到端</text>
+  <text x="710" y="218" font-size="11" fill="#c04050" font-weight="bold">&lt; 1e-2</text>
+
+  <g filter="url(#sk)">
+    <rect x="600" y="240" width="100" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="650" y="258" text-anchor="middle" font-size="10" fill="#a03040">性能</text>
+  <text x="710" y="258" font-size="11" fill="#444" font-weight="bold">latency</text>
+
+  <text x="600" y="296" font-size="9" fill="#888">FP32 尾数 ~7 位有效数字</text>
+  <text x="600" y="312" font-size="9" fill="#888">多次 reduce 后误差放大</text>
+  <text x="600" y="332" font-size="10" fill="#7a5415" font-weight="bold">教学版可能比 PyTorch 慢</text>
+  <text x="600" y="348" font-size="9" fill="#888">PyTorch 用 cuDNN/cuBLAS 高度优化</text>
+  <text x="600" y="368" font-size="9" fill="#888">教学目的是理解集成流程</text>
+</svg>

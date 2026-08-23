@@ -67,7 +67,7 @@ KV 传输 bytes = seq_len × kv_bytes_per_token
 传输时间 = KV bytes / RDMA 带宽
 ```
 
-**LLaMA-7B 示例**（MHA, 524 KB/token, RDMA 100 GB/s）：
+**LLaMA-7B 示例**（MHA, 512 KB/token, RDMA 100 GB/s）：
 
 | 序列长度 | KV 传输量 | 传输时间（100 GB/s RDMA） |
 |---------|----------|------------------------|

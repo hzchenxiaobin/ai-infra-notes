@@ -17,7 +17,7 @@
 
 ### 学前导读：为什么要限时手撕
 
-本周 Day 1–Day 6 覆盖了五大主题：Warp Shuffle、Register Blocking、CUDA Streams、Nsight Profiling、FlashAttention。但「读懂代码」和「白板写出代码」之间有一道巨大的鸿沟。
+本周 Day 1–Day 6 覆盖了五大主题：Warp Shuffle、Register Blocking、GEMM 优化路径、CUDA Streams、Nsight Profiling。但「读懂代码」和「白板写出代码」之间有一道巨大的鸿沟。
 
 **读懂 ≠ 会写**：
 
@@ -56,7 +56,7 @@
 |------|------|------|
 | Warp Reduce | `for (offset=16; offset>0; offset>>=1) val += __shfl_down_sync(0xFFFFFFFF, val, offset);` | Day 1 |
 | Register 累加器 | `float acc[TM][TN] = {0}; float r_A[TM], r_B[TN];` | Day 2 |
-| Online Softmax | `m_new=max(m,mj); l_new=l*exp(m-m_new)+Σexp(xj-m_new);` | Day 5 |
+| Online Softmax | `m_new=max(m,mj); l_new=l*exp(m-m_new)+Σexp(xj-m_new);` | Day 7 |
 
 #### 3. 本周面试高频题自测
 
@@ -371,18 +371,7 @@ o_new = o * (l * exp(m - m_new) / l_new) + (exp(xj - m_new) / l_new) * vj
 
 把本周 Day 1–Day 6 的产出整理成可展示的仓库结构。当前实际结构如下（按天分目录，kernel 在各天的 `kernels/` 下）：
 
-```
-week2/
-├── README.md # 本周教程
-├── day1/kernels/warp_reduce.cu # Day 1 产出
-├── day2/kernels/register_blocking_gemm.cu # Day 2 产出
-├── day3/kernels/multi_stream_pipeline.cu # Day 3 产出
-├── （CUTLASS 已移至 Week 2 Day 7）
-├── day5/kernels/flash_attention.cu # Day 5 产出
-├── day6/kernels/ # Day 6 产出（gemm_optimization_series / integrated_gemm / integrated_gemm_leetgpu）
-├── （WMMA 已移至 Week 2 Day 6）
-└── day7/ # Day 7 手撕与总结（本目录）
-```
+![Week 2 仓库实际结构](../images/day7_repo_structure.svg)
 
 ##### 整理 Checklist
 
@@ -395,7 +384,7 @@ week2/
 
 #### 任务 6：性能对比报告
 
-在 `week10/day3/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
+在 `day7/notes/` 下创建 `performance_report.md`，记录从 Naive 到 cuBLAS 的完整性能曲线。
 
 ##### 报告模板
 
@@ -511,7 +500,7 @@ Day 7 是本周的收尾与验收。通过限时手撕，我们把本周五大�
 4. **GitHub 整理**：把零散产出组织成可展示的项目，体现工程能力
 5. **性能报告**：量化每一层优化的收益，形成完整的优化方法论闭环
 
-本周从 Day 1 的 Warp Shuffle 原语，到 Day 6 的整合 GEMM 达到 cuBLAS ~63%（FP32 基准，Day 3 实测锚点），再到 Day 7 的限时手撕验收，构成了一条完整的「CUDA 进阶优化」学习闭环。掌握这些后，你已经具备了手写高性能 kernel 并系统分析其性能瓶颈的能力，这是 AI Infra 工程师的核心竞争力。
+本周从 Day 1 的 Warp Shuffle 原语，到 Day 3 的整合 GEMM 达到 cuBLAS ~63%（FP32 基准，Day 3 实测锚点），再到 Day 7 的限时手撕验收，构成了一条完整的「CUDA 进阶优化」学习闭环。掌握这些后，你已经具备了手写高性能 kernel 并系统分析其性能瓶颈的能力，这是 AI Infra 工程师的核心竞争力。
 
 ---
 
@@ -641,10 +630,10 @@ __global__ void blockReduce(const float* in, float* out, int n) {
 Week 3 我们将学习 **Transformer 执行本质与算子手写**。为了做好准备，请确保你掌握了：
 
 1. **Warp Shuffle 原语**（Day 1）：Week 3 手写 Softmax/LayerNorm 的 reduce 基础
-2. **Register Blocking + Shared Memory Tiling**（Day 2/6）：Week 3 理解 Attention 的 QK^T/PV GEMM 基础
-3. **Nsight Profiling**（Day 4）：Week 3 端到端 Profiling Transformer 的工具基础
-4. **FlashAttention 简化版**（Day 5）：Week 3 学完整版 FlashAttention 的算法基础
-5. **Kernel Fusion 思想**（Day 6）：Week 3 算子接入与融合的工程基础
+2. **Register Blocking + Shared Memory Tiling**（Day 2/3）：Week 3 理解 Attention 的 QK^T/PV GEMM 基础
+3. **Nsight Profiling**（Day 6）：Week 3 端到端 Profiling Transformer 的工具基础
+4. **FlashAttention 简化版**（Day 7）：Week 3 学完整版 FlashAttention 的算法基础
+5. **Kernel Fusion 思想**（Day 4）：Week 3 算子接入与融合的工程基础
 
 如果你对这些概念还有模糊，建议回到对应 Day 重新做实验。Week 3 会从 GPU 视角拆解 Transformer 推理流程，手写 memory-bound 算子，是 10 周计划里承上启下的关键一周。
 
@@ -664,36 +653,7 @@ Week 3 我们将学习 **Transformer 执行本质与算子手写**。为了做�
 
 ## 📁 本周目录结构
 
-```
-week2/
-├── README.md # Week 2 概览
-├── day1/ # Day 1: Warp Shuffle + Warp/Block Reduce
-│ ├── README.md
-│ └── kernels/warp_reduce.cu
-├── day2/ # Day 2: Register Blocking + 2D Tiling
-│ ├── README.md
-│ └── kernels/register_blocking_gemm.cu
-├── day3/ # Day 3: Multi-Stream + 异步流水线
-│ ├── README.md
-│ └── kernels/multi_stream_pipeline.cu
-├── day4/ # Day 4: Nsight Compute Profiling
-│ └── README.md
-（CUTLASS 已移至 Week 2 Day 7）
-│ ├── README.md
-│ └── kernels/cutlass_gemm_example.cu
-├── day5/ # Day 5: FlashAttention 简化版
-│ ├── README.md
-│ └── kernels/flash_attention.cu
-├── day6/ # Day 6: 整合优化 GEMM
-│ ├── README.md
-│ └── kernels/ # gemm_optimization_series.cu / integrated_gemm.cu / integrated_gemm_leetgpu.cu
-（WMMA 已移至 Week 2 Day 6）
-│ ├── README.md
-│ └── kernels/wmma_gemm.cu
-├── day7/ # Day 7: 限时手撕 + 验收
-│ └── README.md
-└── images/ # 本周 SVG 插图
-```
+![Week 2 完整目录结构](../images/day7_directory_structure.svg)
 
 ---
 
@@ -714,14 +674,13 @@ week2/
 - [ ] Warp Reduce Kernel 编译运行正确，GPU 结果与 CPU 误差 < 1e-3
 - [ ] Register Blocking GEMM 达到 cuBLAS 30%+（4096 矩阵，实测 30.8%）
 - [ ] 整合版 GEMM 达到 cuBLAS ~63%（FP32 基准，含 float4 + Warp Shuffle，Day 3 实测锚点）
-- [ ] FlashAttention 简化版小尺寸测试通过（误差 < 1e-3）
 - [ ] 能用 ncu 判断 kernel 是 memory-bound 还是 compute-bound
 - [ ] 30 分钟内手写 Block Reduce Kernel（含 Warp Shuffle + 两级归约）
 - [ ] 60 分钟内手写 Register Blocking GEMM Kernel
 - [ ] 不看资料口述 FlashAttention 算法流程 + Online Softmax 三公式
 - [ ] 生成性能对比报告（Naive → cuBLAS 各层 GFLOPS + 占比）
-- [ ] 完成本周 LeetGPU（Prefix Sum/GEMM/Convolution/Softmax/Attention/Histogram）与 LeetCode 题目
+- [ ] 完成本周 LeetGPU（Prefix Sum/GEMM/Histogramming/Matrix Multiplication/Softmax/Reduction）与 LeetCode 题目
 
 ---
 
-> 💡 **提示**：Week 2 是从"会写 kernel"到"能优化到 cuBLAS ~63%（FP32 基准）"的关键跃迁。限时手撕是面试的硬门槛，性能报告是项目深度的证明。如果 GEMM 还没到 60%，建议回到 Day 2/6 重新做 float4 + Double Buffering 实验。Week 3 会进入 Transformer 算子手写，GEMM 优化经验是理解 Attention 的基础。
+> 💡 **提示**：Week 2 是从"会写 kernel"到"能优化到 cuBLAS ~63%（FP32 基准）"的关键跃迁。限时手撕是面试的硬门槛，性能报告是项目深度的证明。如果 GEMM 还没到 60%，建议回到 Day 3/4 重新做 float4 + Double Buffering 实验。Week 3 会进入 Transformer 算子手写，GEMM 优化经验是理解 Attention 的基础。

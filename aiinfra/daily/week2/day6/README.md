@@ -36,7 +36,7 @@
 
 ### 理论学习
 
-#### 4.1 Nsight 工具家族
+#### 6.1 Nsight 工具家族
 
 NVIDIA 提供了两个主要的 profiling 工具，各有分工：
 
@@ -64,14 +64,9 @@ NVIDIA 提供了两个主要的 profiling 工具，各有分工：
 
 **使用流程**：
 
-```
-1. 先用 nsys 找到最耗时的 kernel
-2. 再用 ncu 深入分析该 kernel
-3. 根据分析结果优化
-4. 重复 profiling 验证效果
-```
+![Nsight 工具使用流程](../images/day6_profiling_workflow.svg)
 
-#### 4.2 `ncu` 命令行基础
+#### 6.2 `ncu` 命令行基础
 
 ```bash
 # 基本用法：profile 一个 kernel
@@ -99,7 +94,7 @@ ncu --page details -i report.ncu-rep # 命令行方式
 nvcc -o gemm_profile ../day2/kernels/register_blocking_gemm.cu -O3 -arch=sm_120 -lcublas -g -lineinfo
 ```
 
-#### 4.3 关键性能指标
+#### 6.3 关键性能指标
 
 ![ncu 关键性能指标分类](../images/ncu_metrics_overview.svg)
 
@@ -113,7 +108,7 @@ nvcc -o gemm_profile ../day2/kernels/register_blocking_gemm.cu -O3 -arch=sm_120 
 | **IPC** | 架构相关 | 每周期执行指令数 | 低 → 检查依赖链和发射瓶颈 |
 | **Register Pressure** | < 80% 为良好 | 寄存器使用压力 | 高 → 减少寄存器变量 |
 
-#### 4.4 Warp Stall Reasons 详解
+#### 6.4 Warp Stall Reasons 详解
 
 ![Warp Stall Reasons 示例](../images/stall_reason_bar.svg)
 
@@ -130,7 +125,7 @@ Warp Stall 是指 warp 因为等待某种资源而无法执行下一条指令。
 
 > 💡 **核心思路**：找到占比最高的 stall reason，针对性优化。Long Scoreboard 高 → 内存延迟问题；Math Pipe Throttle 高 → 计算依赖链问题。
 
-#### 4.5 Roofline 模型
+#### 6.5 Roofline 模型
 
 Roofline 模型是判断 kernel 瓶颈类型的核心工具：
 
@@ -184,24 +179,16 @@ ncu --csv --page details -i gemm_profile_report.ncu-rep > gemm_profile.csv
 1. **读取 SM Throughput 和 Memory Throughput**，判断是 compute-bound 还是 memory-bound
  - Memory Throughput >> SM Throughput → memory-bound
  - SM Throughput >> Memory Throughput → compute-bound
-1. **读取 Achieved Occupancy**，判断 SM 利用率是否充分（目标 > 70%）
-2. **查看 Warp Stall Reasons**，找出主要 stall 原因
-3. **对比 L1/TEX Hit Rate**，判断缓存效率
-4. **打开 ncu-ui → Source 视图**，定位最耗时的代码行
+2. **读取 Achieved Occupancy**，判断 SM 利用率是否充分（目标 > 70%）
+3. **查看 Warp Stall Reasons**，找出主要 stall 原因
+4. **对比 L1/TEX Hit Rate**，判断缓存效率
+5. **打开 ncu-ui → Source 视图**，定位最耗时的代码行
 
 #### 任务 3：案例分析
 
 假设 ncu 输出如下指标：
 
-```
-SM Throughput: 45.2%
-Memory Throughput: 78.5%
-Achieved Occupancy: 56.3%
-L1/TEX Hit Rate: 82.1%
-Warp Stall Long Scoreboard: 35.2% ← 高！
-Warp Stall Math Pipe Throttle: 12.1%
-Register Pressure: 72%
-```
+![ncu 指标示例（案例分析）](../images/day6_ncu_metrics_example.svg)
 
 **解读过程**：
 
@@ -241,7 +228,7 @@ dram__throughput.avg.pct_of_peak_sustained_elapsed \
 
 **与今日知识的关联**：
 
-本题是典型的 memory-bound kernel，适合用 Day 4 学的 Nsight Compute 做完整 profiling。用 ncu 分析 memory throughput、occupancy、warp stall reasons，判断瓶颈在内存带宽还是计算，并据此优化。
+本题是典型的 memory-bound kernel，适合用今日学的 Nsight Compute 做完整 profiling。用 ncu 分析 memory throughput、occupancy、warp stall reasons，判断瓶颈在内存带宽还是计算，并据此优化。
 
 > 💡 提交后在 [LeetGPU Softmax 题目](https://leetgpu.com/challenges/softmax)上记录通过耗时，用 ncu 对比不同参数的性能差异。完整题解见 [Softmax 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-softmax-solution.html)。
 
@@ -293,7 +280,7 @@ nsys profile -o timeline_report ./gemm_profile
 
 ### 今日总结
 
-Day 4 我们掌握了 Nsight Compute 性能分析工具：
+Day 6 我们掌握了 Nsight Compute 性能分析工具：
 
 1. **ncu 命令行**：`--metrics` 指定指标、`--kernel-name` 过滤 kernel、`-o` 导出报告
 2. **关键指标**：SM Throughput、Memory Throughput、Achieved Occupancy、Warp Stall Reasons
@@ -317,11 +304,11 @@ Day 4 我们掌握了 Nsight Compute 性能分析工具：
  3. **第二步（Roofline 定位）**：根据两个 Throughput 判断 kernel 在 Roofline 上的位置
  - Memory Throughput >> SM Throughput → Memory Bound → 优化内存访问
  - SM Throughput >> Memory Throughput → Compute Bound → 优化计算吞吐量
- 1. **第三步（Stall 分析）**：查看 Warp Stall Reasons，定位具体阻塞原因
+ 4. **第三步（Stall 分析）**：查看 Warp Stall Reasons，定位具体阻塞原因
  - Long Scoreboard 高 → 全局内存延迟 → 增加 tiling、vectorized load、double buffering
  - Math Pipe Throttle 高 → FMA 依赖链 → 增加指令级并行
  - MIO Throttle 高 → Shared Memory 瓶颈 → 减少 shared memory 访问
- 1. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
+ 5. **第四步（验证）**：优化后重新 profile，对比指标变化确认效果
 
 </details>
 

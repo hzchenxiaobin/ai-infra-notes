@@ -62,7 +62,7 @@ Prefill 本质上和训练的一次前向很像——都是大 GEMM，Week 5 的
 | Attention 矩阵形状 | $N \times N$ | **1×N** |
 | 每步 FLOPs | $O(N^2 \cdot d)$ | $O(d^2 + L \cdot d)$ |
 | 每步 HBM 读取 | 一次性读 Q/K/V | **每步读完整 KV Cache** |
-| 算术强度 AI | ≈ 400 FLOP/Byte | ≈ 1.0 FLOP/Byte（fp16） |
+| 算术强度 AI | ≈ 279 FLOP/Byte | ≈ 1.0 FLOP/Byte（fp16） |
 | 瓶颈类型 | **compute-bound** | **memory-bound** |
 | 关注指标 | TTFT | TBT / TPOT |
 | 代表优化 | FlashAttention、Tensor Core | KV Cache、PagedAttention、Continuous Batching、量化 |
@@ -83,7 +83,7 @@ Decode 每步处理 1 个新 token：QKV GEMM 退化为 M=1（FLOPs `6d²`、读
 
 RTX 5090 的 Ridge Point 约在 **58.45 FLOP/Byte**（104.75 TFLOPS ÷ 1.792 TB/s）。Decode 的 AI ≈ 1.0，**比 Ridge Point 低近两个数量级**，完全卡在显存带宽线上，SM 大量空闲等数据。这就是为什么 Decode 是 memory-bound——不是算得慢，是数据搬不过来。
 
-反观 Prefill，AI ≈ 400 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
+反观 Prefill，AI ≈ 279 远高于 Ridge Point，卡在算力线上，Tensor Core 满载。同一个模型、同一份权重，仅仅因为 M 从 N_prompt 降到 1，瓶颈就从算力翻转到带宽——这是推理系统优化最核心的认知。
 
 ##### Decode 的四大优化方向
 
@@ -436,11 +436,11 @@ nsys stats prefill_decode.nsys-rep --report cuda_gpu_kern_sum
 Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——彻底拆解清楚了：
 
 1. **Prefill vs Decode 的本质差异**：Prefill 输入 (B, N, d) 一次并行处理，大 GEMM + $N \times N$ attention，compute-bound；Decode 输入 (B, 1, d) 逐 token 生成，GEMM 退化为向量×矩阵，memory-bound
-2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~400 降到 ~1.0，跨过 Ridge Point，瓶颈从算力翻转到带宽
+2. **瓶颈翻转的根因**：Decode 的 M=1 让算术强度从 ~279 降到 ~1.0，跨过 Ridge Point，瓶颈从算力翻转到带宽
 3. **三大时延指标**：TTFT（由 Prefill 决定）、TBT/TPOT（由 Decode 决定），优化手段几乎不重叠，所以推理系统要分阶段调度
 4. **KV Cache 的收益直觉**：把历史 K/V 存下来直接读，每步 FLOPs 从 $O(L \cdot d^2)$ 降到 $O(d^2 + L \cdot d)$，但代价是每步要搬整个 cache 过 HBM
 5. **Decode 四大优化方向**：减少读取（量化/PagedAttention）、抬高 M（Continuous Batching）、减调度开销（CUDA Graph）、隐藏延迟（overlap）
-6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 明显大于单步 TBT、TBT 基本稳定
+6. **PyTorch 实测**：手写 MiniTransformer 模拟 Prefill+Decode 循环，实测 TTFT 与单步 TBT 绝对值接近（Decode 因 memory-bound 单步耗时反超）、TBT 基本稳定（Prefill 摊到 1024 个 token 上）
 
 掌握这些后，你就有了 Day 2 手写 KV Cache 的全部动机和算法直觉——明天我们用 C++/CUDA 把这个 cache 真正实现出来，支持多轮对话的历史复用。
 
@@ -453,7 +453,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <details>
 <summary>点击查看答案</summary>
 
- - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 $N \times N$ attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~400），**compute-bound**，关注 TTFT
+ - **Prefill**：输入 `(B, N_prompt, d)`，一次性并行处理所有 prompt tokens，计算完整 $N \times N$ attention，输出第一个 token。GEMM 的 M=N_prompt 较大，打满 Tensor Core，算术强度高（~279），**compute-bound**，关注 TTFT
   - **Decode**：输入 `(B, 1, d)`，自回归逐个生成 token，用 KV Cache 避免重算历史 K/V。GEMM 退化为向量×矩阵（M=1），算术强度极低（~1.0），**memory-bound**，关注 TBT/TPOT
  - **根本原因**：Decode 阶段 M=1，计算量小但每步都要从 HBM 读完整 KV Cache，算术强度远低于 Ridge Point，SM 大量空闲等数据
 
@@ -477,7 +477,7 @@ Day 1 我们把推理系统的"地基"——Prefill 与 Decode 两阶段——�
 <details>
 <summary>点击查看答案</summary>
 
- - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`≈2·d²·bytes`），计算量只有 `O(L·d + d²)`
+  - Decode 每步处理 1 个新 token：需读历史 KV Cache（`2·L·d·bytes`）+ 模型权重（`3·d²·bytes`），计算量只有 `O(L·d + d²)`
   - 算术强度 `AI = FLOPs/Bytes ≈ 1.0 FLOP/Byte (fp16)`
   - RTX 5090 的 Ridge Point ≈ 58.45 FLOP/Byte（104.75 TFLOPS ÷ 1.792 TB/s），Decode 的 AI 比它低近两个数量级
  - 因此 Decode 完全卡在显存带宽线上，SM 空闲等数据——是 bandwidth-bound，而非 compute-bound

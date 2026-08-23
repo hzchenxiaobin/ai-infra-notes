@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 310" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#b03a3a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="310" fill="#fdfcf7"/>
+
+  <text x="410" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Eager：nsys 时间线 — kernel 间 launch gap</text>
+  <path d="M 220 40 Q 410 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="410" y="62" text-anchor="middle" font-size="12" fill="#444">CPU 逐个 launch 30 个 kernel，GPU 执行时间线出现 5-10μs 间隙</text>
+
+  <text x="92" y="107" text-anchor="end" font-size="13" font-weight="bold" fill="#5a5a5a">CPU</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="88" width="540" height="32" rx="4" fill="#f4f1ea" stroke="#bbb" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="108" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="164" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="220" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="276" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="332" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="388" y="92" width="50" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="486" y="92" width="60" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.1"/>
+  </g>
+  <text x="133" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 1</text>
+  <text x="189" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 2</text>
+  <text x="245" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 3</text>
+  <text x="301" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 4</text>
+  <text x="357" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 5</text>
+  <text x="413" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 6</text>
+  <text x="452" y="108" font-size="14" fill="#888">⋯</text>
+  <text x="516" y="108" text-anchor="middle" font-size="9" fill="#b03a3a">launch 30</text>
+  <text x="560" y="108" font-size="9" fill="#888">← 30 次 launch</text>
+
+  <text x="92" y="193" text-anchor="end" font-size="13" font-weight="bold" fill="#5a5a5a">GPU</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="174" width="640" height="32" rx="4" fill="#f4f1ea" stroke="#bbb" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="108" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="132" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="182" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="206" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="256" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="280" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="330" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="354" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="404" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="428" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+  </g>
+  <text x="156" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K1</text>
+  <text x="230" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K2</text>
+  <text x="304" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K3</text>
+  <text x="378" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K4</text>
+  <text x="452" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K5</text>
+  <text x="484" y="194" font-size="14" fill="#888">⋯</text>
+  <g filter="url(#sk)">
+    <rect x="516" y="178" width="22" height="24" rx="2" fill="#fce4ec" stroke="#c04050" stroke-width="1" stroke-dasharray="3 2"/>
+    <rect x="540" y="178" width="48" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+  </g>
+  <text x="564" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K30</text>
+  <text x="600" y="194" font-size="9" fill="#b03a3a">GAP × 29</text>
+
+  <path d="M 193 210 L 193 228" stroke="#b03a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="202" y="232" font-size="12" font-weight="bold" fill="#b03a3a">↑ 5-10μs gap per kernel（30 kernel → 150-300μs launch overhead）</text>
+
+  <g filter="url(#sk)">
+    <rect x="100" y="252" width="640" height="40" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <text x="420" y="277" text-anchor="middle" font-size="12" fill="#7a2828" font-weight="bold">实测：Eager 146.0μs → Graph 67.7μs，launch overhead 占 53.7%，speedup 2.16×</text>
+</svg>

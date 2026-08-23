@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="780" height="360" fill="#fdfcf7"/>
+
+  <text x="390" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Warp 级 float4 合并：相邻线程拼满 sector</text>
+  <text x="390" y="48" text-anchor="middle" font-size="12" fill="#888">32 线程 × 16B (float4) = 512B 连续数据 = 4 cache line = 16 sector</text>
+
+  <text x="40" y="76" font-size="12" fill="#4a7a3a" font-weight="bold">① 32 个线程，各取 float4 (16B)</text>
+  <text x="680" y="76" font-size="10" fill="#888" font-style="italic">512B 连续</text>
+
+  <g filter="url(#sk)">
+    <rect x="162" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+    <rect x="232" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+    <rect x="302" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+    <rect x="372" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+    <rect x="482" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+    <rect x="552" y="84" width="65" height="32" rx="4" fill="#cde9d4" stroke="#4a7a3a" stroke-width="1.2"/>
+  </g>
+  <text x="194" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T0</text>
+  <text x="194" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+  <text x="264" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T1</text>
+  <text x="264" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+  <text x="334" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T2</text>
+  <text x="334" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+  <text x="404" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T3</text>
+  <text x="404" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+  <text x="459" y="104" text-anchor="middle" font-size="14" fill="#888">...</text>
+  <text x="514" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T30</text>
+  <text x="514" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+  <text x="584" y="100" text-anchor="middle" font-size="10" fill="#4a7a3a" font-weight="bold">T31</text>
+  <text x="584" y="113" text-anchor="middle" font-size="9" fill="#4a7a3a">16B</text>
+
+  <g stroke="#4a7a3a" stroke-width="1" fill="none" opacity="0.5">
+    <path d="M 194 116 V 124 H 265 M 229 124 V 148"/>
+    <path d="M 334 116 V 124 H 405 M 369 124 V 148"/>
+    <path d="M 514 116 V 124 H 585 M 549 124 V 148"/>
+  </g>
+
+  <text x="40" y="144" font-size="12" fill="#446688" font-weight="bold">② 16 个 sector，每个 32B（相邻两线程拼满）</text>
+
+  <g filter="url(#sk)">
+    <rect x="162" y="148" width="135" height="40" rx="4" fill="#d4e6f7" stroke="#446688" stroke-width="1.2"/>
+    <rect x="302" y="148" width="135" height="40" rx="4" fill="#d4e6f7" stroke="#446688" stroke-width="1.2"/>
+    <rect x="482" y="148" width="135" height="40" rx="4" fill="#d4e6f7" stroke="#446688" stroke-width="1.2"/>
+  </g>
+  <text x="229" y="166" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">Sector 0 [32B]</text>
+  <text x="229" y="180" text-anchor="middle" font-size="9" fill="#446688">T0[16B] + T1[16B]</text>
+  <text x="369" y="166" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">Sector 1 [32B]</text>
+  <text x="369" y="180" text-anchor="middle" font-size="9" fill="#446688">T2[16B] + T3[16B]</text>
+  <text x="459" y="172" text-anchor="middle" font-size="14" fill="#888">...</text>
+  <text x="549" y="166" text-anchor="middle" font-size="10" fill="#446688" font-weight="bold">Sector 15 [32B]</text>
+  <text x="549" y="180" text-anchor="middle" font-size="9" fill="#446688">T30[16B] + T31[16B]</text>
+
+  <path d="M 390 192 V 210" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="40" y="222" font-size="12" fill="#c98a2b" font-weight="bold">③ 4 条 cache line，每条 128B（含 4 个 sector）</text>
+
+  <g filter="url(#sk)">
+    <rect x="55" y="230" width="160" height="40" rx="4" fill="#fce8d4" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="225" y="230" width="160" height="40" rx="4" fill="#fce8d4" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="395" y="230" width="160" height="40" rx="4" fill="#fce8d4" stroke="#c98a2b" stroke-width="1.2"/>
+    <rect x="565" y="230" width="160" height="40" rx="4" fill="#fce8d4" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="135" y="248" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">Cache Line 0</text>
+  <text x="135" y="262" text-anchor="middle" font-size="9" fill="#c98a2b">S0 S1 S2 S3 [128B]</text>
+  <text x="305" y="248" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">Cache Line 1</text>
+  <text x="305" y="262" text-anchor="middle" font-size="9" fill="#c98a2b">S4 S5 S6 S7 [128B]</text>
+  <text x="475" y="248" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">Cache Line 2</text>
+  <text x="475" y="262" text-anchor="middle" font-size="9" fill="#c98a2b">S8 S9 S10 S11</text>
+  <text x="645" y="248" text-anchor="middle" font-size="10" fill="#c98a2b" font-weight="bold">Cache Line 3</text>
+  <text x="645" y="262" text-anchor="middle" font-size="9" fill="#c98a2b">S12 S13 S14 S15</text>
+
+  <g filter="url(#sk)">
+    <rect x="130" y="290" width="520" height="42" rx="8" fill="#eaf6ee" stroke="#4a7a3a" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="390" y="310" text-anchor="middle" font-size="12" fill="#4a7a3a" font-weight="bold">每个 sector 的 32B 全部被用上 → 利用率 100%</text>
+  <text x="390" y="326" text-anchor="middle" font-size="10" fill="#888">GEMM 连续线程取连续 float4，天然保证相邻线程拼满 sector</text>
+</svg>

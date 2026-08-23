@@ -192,13 +192,13 @@ def _schedule_running(self, budget, outputs):
             if not self.block_manager.can_allocate(...):
                 self._preempt(seq_group, outputs) # 显存不足 → 抢占
                 continue
-                self.block_manager.allocate(...)
-                # 2. 检查 token/seq 预算
-                if not budget.can_schedule(num_new_tokens, 0):
-                    self._preempt(seq_group, outputs) # 预算不足 → 抢占
-                    continue
-                    budget.consume(num_new_tokens, 0)
-                    outputs.scheduled_seq_groups.append(seq_group)
+            self.block_manager.allocate(...)
+        # 2. 检查 token/seq 预算
+        if not budget.can_schedule(num_new_tokens, 0):
+            self._preempt(seq_group, outputs) # 预算不足 → 抢占
+            continue
+        budget.consume(num_new_tokens, 0)
+        outputs.scheduled_seq_groups.append(seq_group)
 ```
 
 ##### `_schedule_swapped`：恢复被换出的请求
@@ -785,31 +785,7 @@ python kernels/vllm_scheduler_analyzer.py
 
 **预期输出**（Demo 1 RECOMPUTE，节选）：
 
-```text
-Demo 1: RECOMPUTE Preemption（默认模式）
-
-提交 3 个请求：S1/S2 长(prompt=8,gen=3)，S3 短(prompt=4,gen=1)
-GPU 只有 4 个 block(4 token/blk)=16 token 显存，2 个长请求 prefill 即占满
-→ 预期：decode 增长时触发 RECOMPUTE 抢占，短请求先完成释放显存后恢复
-
- ⚡ iter 2: 触发 RECOMPUTE 抢占！被抢占序列丢弃 KV Cache，回到 waiting 队首重新 prefill
-
-Iter | Batch | FreeBlk | W/R/S | Output
-----------------------------------------------------------------------
- 1 | 2 | 0 | 1/2/0 | batched_tokens=16, seqs=2, preempted=0 ...
- | batch = S1(p=8,g=0,running), S2(p=8,g=0,running)
- 2 | 2 | 0 | 1/2/0 | batched_tokens=5, seqs=2, preempted=1 ...
- | batch = S2(p=8,g=1,running), S3(p=4,g=0,running)
- 3 | 1 | 1 | 1/1/0 | batched_tokens=1, seqs=1, preempted=0 ...
- | batch = S2(p=8,g=2,running)
- 4 | 1 | 2 | 0/1/0 | batched_tokens=8, seqs=1, preempted=0 ...
- | batch = S1(p=8,g=0,running) ← S1 重新 prefill（g 归零）
- ...
- 7 | 0 | 4 | 0/0/0 | batched_tokens=0 ... ← 全部完成
-
- 总 iterations: 7
- RECOMPUTE 模式：被抢占序列丢弃 KV Cache，重新 prefill（无 CPU 换出）
-```
+![RECOMPUTE 抢占时间线](../images/recompute_preemption_timeline.svg)
 
 ##### 观察重点
 
@@ -820,23 +796,13 @@ Iter | Batch | FreeBlk | W/R/S | Output
 
 **Demo 2 SWAP** 对比输出（节选）：
 
-```text
-Demo 2: SWAP Preemption（KV Cache 换出到 CPU）
-
- 🔄 iter 2: SWAP OUT！1 个序列的 KV Cache 换出到 CPU
- 🔁 iter 4: SWAP IN！1 个序列从 CPU 换回 GPU
-
- 3 | 1 | 1 | 1/1/1 | ... preempted=1, swap_out=1 ...
- 5 | 2 | 0 | 0/2/0 | ... swap_in=1 ...
- | batch = S1(p=8,g=1,running), S3(p=4,g=0,running) ← S1 保留进度(g=1)
- 总 iterations: 6
-```
+![SWAP 抢占时间线](../images/swap_preemption_timeline.svg)
 
 ##### RECOMPUTE vs SWAP 关键差异
 
 | 现象 | RECOMPUTE | SWAP |
 |------|-----------|------|
-| 被抢占后 g 值 | **归零**（iter 4 的 S1 `g=0`） | **保留**（iter 5 的 S1 `g=1`） |
+| 被抢占后 g 值 | **归零**（iter 4 的 S1 `g=0`） | **保留**（iter 4 的 S1 `g=1`） |
 | 恢复方式 | 重新 prefill | swap in 换回 |
 | 总 iterations | 7 | 6（少一次重 prefill） |
 | 队列流转 | waiting → running | swapped → running |
@@ -990,7 +956,7 @@ Day 2 我们逐行拆解了 vLLM `Scheduler.schedule()` 的源码逻辑，并复
 
 ### 附录：vLLM V1 Scheduler 演进
 
-> Day 3 分析的 `Scheduler.schedule()` 5 步流程是 vLLM V0 的实现。V1 重构后有以下变化：
+> 本文分析的 `Scheduler.schedule()` 5 步流程是 vLLM V0 的实现。V1 重构后有以下变化：
 
 | V0 Scheduler | V1 Scheduler |
 |-------------|-------------|

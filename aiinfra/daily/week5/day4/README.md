@@ -126,7 +126,7 @@ $$
 
 然后累加 $dQ/dK/dV$，写回 HBM。
 
-代价：反向多做一次 $QK^T$ 的 FLOPs（约 +50% 总 FLOPs）。收益：内存 $O(Nd)$，IO $O(Nd)$。由于 attention 的瓶颈是 IO 而非 FLOPs，这是划算的——**用算力换内存带宽**。
+代价：反向多做一次 $QK^T$ 的 FLOPs（约 +50% 前向 FLOPs）。收益：内存 $O(Nd)$，IO $O(Nd)$。由于 attention 的瓶颈是 IO 而非 FLOPs，这是划算的——**用算力换内存带宽**。
 
 > ⚠️ **注意**：recomputation 不是"把前向再跑一遍"。前向只算 $O$，反向要算的是 $dQ/dK/dV$ 三个梯度，重算的只是 $S/P$ 这两个中间量，梯度公式本身与前向无关。
 
@@ -302,7 +302,7 @@ __global__ void gemm_backward_dB_kernel(const float* __restrict__ A,
 }
 ```
 
-naive 版每线程算一个输出元素，重点是把"$dA = dC\, B^T$、$dB = A^T dC$"两个转置 GEMM 落到具体的索引寻址——注意 `B[k*N+j]`（$B$ 转置后第 $k$ 行就是原 $B$ 第 $k$ 行）和 `A[i*K+k]`（$A$ 转置后第 $k$ 列就是原 $A$ 第 $k$ 列）。完整文件含 CPU 参考实现 + **有限差分验证**（取 $\mathrm{loss} = \sum C$，则 $dC = \mathbf{1}$，$dA_{i,k} = \sum_j B_{k,j}$，用中心差分核对）。
+naive 版每线程算一个输出元素，重点是把"$dA = dC\, B^T$、$dB = A^T dC$"两个转置 GEMM 落到具体的索引寻址——注意 `B[k*N+j]`（$B$ 转置后第 $k$ 列就是原 $B$ 第 $k$ 行）和 `A[i*K+k]`（$A$ 转置后第 $k$ 行就是原 $A$ 第 $k$ 列）。完整文件含 CPU 参考实现 + **有限差分验证**（取 $\mathrm{loss} = \sum C$，则 $dC = \mathbf{1}$，$dA_{i,k} = \sum_j B_{k,j}$，用中心差分核对）。
 
 #### 任务 2：编译运行
 
@@ -326,7 +326,7 @@ A: 64x32, B: 32x64, C: 64x64
 GPU Time (dA + dB kernels): 0.059 ms   (RTX 5090, CUDA 12.8, 2026-08-06 实测)
 ```
 
-> 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。$dC = \mathbf{1}$ 时 $dA$、$dB$ 的解析值都退化成 $B$/$A$ 的列和，正好用中心差分 $\frac{f(A + h e) - f(A - h e)}{2h}$ 一一验证。
+> 💡 三个 PASS 全过即说明：① GPU kernel 与 CPU 解析解一致；② 解析解与有限差分一致（链式法则正确）。$dC = \mathbf{1}$ 时 $dA$、$dB$ 的解析值分别退化成 $B$ 的行和与 $A$ 的列和，正好用中心差分 $\frac{f(A + h e) - f(A - h e)}{2h}$ 一一验证。
 
 #### 任务 3：编写 flash_attention_backward.py 并 gradcheck
 
@@ -487,7 +487,7 @@ Day 4 我们补上了 FlashAttention 的训练侧拼图——backward pass：
  - 由此 $\exp(S_{ij} - L_i) = \exp(S_{ij} - m_i - \log(l_i)) = \exp(S_{ij} - m_i)/l_i = P_{ij}$
  - **结论**：存一个标量 $L_i$，加上可重算的 $S_{ij}$（从 $Q_i, K_j$），就能恢复任意 $P_{ij}$
  - 内存：$L$ 是 $O(N)$（每行一个标量），替代 $P$ 的 $O(N^2)$；saved tensor 只剩 $Q/K/V/O/L$ = $O(Nd)$ + $O(N)$ = $O(Nd)$
- - N=8192, d=64 时，$P$ 占 264MB，$L$ 只占 32KB——8 个数量级的压缩
+ - N=8192, d=64 时，$P$ 占 256MB，$L$ 只占 32KB——约 4 个数量级的压缩
 
 </details>
 

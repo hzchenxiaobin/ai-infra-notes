@@ -37,12 +37,12 @@
     <text x="60" y="256">├── day6/kernels/flash_decoding.cu</text>
     <text x="350" y="256" fill="#888"># FlashDecoding kernel</text>
 
-    <text x="60" y="280">├── day7/kernels/week5_summary.py</text>
+    <text x="60" y="280">├── day7/kernels/week6_summary.py</text>
     <text x="350" y="280" fill="#888"># 总结日自测脚本</text>
 
     <text x="60" y="304">└── images/</text>
     <text x="200" y="304" fill="#888"># 本周 SVG 插图</text>
   </g>
 
-  <text x="430" y="330" text-anchor="middle" font-size="10" fill="#888">day7/kernels/week5_summary.py 文件名沿用历史，内容对齐 Week 6</text>
+  <text x="430" y="330" text-anchor="middle" font-size="10" fill="#888">day7/kernels/week6_summary.py —— Week 6 推理系统核心问题与面试题自测</text>
 </svg>

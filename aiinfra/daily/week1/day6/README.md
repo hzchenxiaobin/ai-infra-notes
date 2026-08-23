@@ -161,9 +161,7 @@ nsys profile --stats=true ./your_app
 
 Roofline 图帮助判断 kernel 是 compute-bound 还是 memory-bound：
 
-```
-Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
-```
+![Roofline 核心公式](../images/roofline_formula.svg)
 
 ##### 坐标轴含义
 
@@ -181,17 +179,11 @@ Attainable FLOP/s = min(Peak FLOP/s, AI * Peak Bandwidth)
 
 两条线的交点叫 **Ridge Point**：
 
-```text
-Ridge Point = Peak FLOP/s / Peak Bandwidth
-```
+![Ridge Point 公式](../images/ridge_point_formula.svg)
 
 以 RTX 5090 为例（实测值，详见 [Day 3](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)）：
 
-```text
-Peak FP32 算力 ≈ 104.75 TFLOP/s
-Peak 显存带宽 ≈ 1.792 TB/s（GDDR7）
-Ridge Point ≈ 104.75 / 1.792 ≈ 58.45 FLOP/Byte
-```
+![RTX 5090 Ridge Point 计算](../images/ridge_point_calc.svg)
 
 - **AI < Ridge Point** → **memory-bound**（位于斜线区域，算力喂不饱，瓶颈在带宽）
 - **AI > Ridge Point** → **compute-bound**（位于平顶区域，数据充足，瓶颈在算力）
@@ -472,8 +464,6 @@ Day 6 我们学会了用专业工具分析 GPU 性能：
  - CPU 和 GPU 的执行时间线
  - CUDA API 调用顺序
  - 多个 stream 的并行情况
-
----
 
 </details>
 

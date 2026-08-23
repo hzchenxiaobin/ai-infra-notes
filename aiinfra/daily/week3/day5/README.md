@@ -29,20 +29,11 @@ for k in range(0, K, BK):
 
 时间线：
 
-```
-时间 →
-load_0 | compute_0 | load_1 | compute_1 | load_2 | compute_2 | ...
-       ↑闲置      ↑闲置      ↑闲置      ↑闲置
-```
+![串行执行：Load 与 Compute 无重叠](../images/week3_day5_serial_timeline.svg)
 
 Double buffer 用两份 smem 交替，让 load 和 compute **重叠**：
 
-```
-时间 →
-load_0 | load_1  | load_2  | ...        ← 持续加载
-       | compute_0 | compute_1 | ...   ← 持续计算
-         ↑重叠      ↑重叠
-```
+![Double Buffer：Load 与 Compute 重叠](../images/week3_day5_doublebuffer_timeline.svg)
 
 | 策略 | K=4096, BK=16 的迭代次数 | 串行总时间 | double buffer 总时间 |
 |------|------------------------|-----------|---------------------|
@@ -149,17 +140,10 @@ compute_mma_from_smem(smemA[buf_idx], smemB[buf_idx], c_frag);
 ##### 时间线对比
 
 **串行（Day 2）**：
-```
-load_0 → sync → compute_0 → sync → load_1 → sync → compute_1 → sync → ...
-```
+![串行 sync 流水](../images/week3_day5_serial_sync_flow.svg)
 
 **Double buffer（Day 5）**：
-```
-load_0 → sync
-         load_1 → compute_0 → sync   (load_1 与 compute_0 重叠)
-                  load_2 → compute_1 → sync   (重叠)
-                           load_3 → compute_2 → sync
-```
+![Double Buffer 流水线结构](../images/week3_day5_doublebuffer_staggered.svg)
 
 #### 5.3 Pipeline Stage 概念
 

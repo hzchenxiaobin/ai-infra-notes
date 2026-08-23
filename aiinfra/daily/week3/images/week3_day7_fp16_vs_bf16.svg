@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="43" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="720" height="240" fill="#fdfcf7"/>
+  <text x="360" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#2b2b2b">FP16 vs BF16 位布局对比</text>
+  <path d="M 240 36 Q 360 44 480 36" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- FP16 row -->
+  <text x="50" y="84" font-size="14" font-weight="bold" fill="#1b5e8c">FP16</text>
+  <!-- sign bit -->
+  <g filter="url(#sk)">
+    <rect x="110" y="64" width="12" height="36" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="116" y="88" text-anchor="middle" font-size="9" fill="#7a2828">1</text>
+  <!-- exponent -->
+  <g filter="url(#sk)">
+    <rect x="122" y="64" width="60" height="36" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="152" y="88" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">5</text>
+  <!-- mantissa -->
+  <g filter="url(#sk)">
+    <rect x="182" y="64" width="120" height="36" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="242" y="88" text-anchor="middle" font-size="11" fill="#1b5e8c" font-weight="bold">10</text>
+  <!-- description -->
+  <text x="320" y="80" font-size="11" fill="#444">指数 5 位 → 范围 ±65504</text>
+  <text x="320" y="96" font-size="10" fill="#b03a3a">（易溢出）</text>
+
+  <!-- BF16 row -->
+  <text x="50" y="164" font-size="14" font-weight="bold" fill="#2e5a1a">BF16</text>
+  <!-- sign bit -->
+  <g filter="url(#sk)">
+    <rect x="110" y="144" width="12" height="36" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/>
+  </g>
+  <text x="116" y="168" text-anchor="middle" font-size="9" fill="#7a2828">1</text>
+  <!-- exponent -->
+  <g filter="url(#sk)">
+    <rect x="122" y="144" width="96" height="36" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="170" y="168" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">8</text>
+  <!-- mantissa -->
+  <g filter="url(#sk)">
+    <rect x="218" y="144" width="84" height="36" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="260" y="168" text-anchor="middle" font-size="11" fill="#1b5e8c" font-weight="bold">7</text>
+  <!-- description -->
+  <text x="320" y="160" font-size="11" fill="#444">指数 8 位 → 范围 ±3.4e38</text>
+  <text x="320" y="176" font-size="10" fill="#4a8e4a">（同 FP32，不溢出）</text>
+
+  <!-- bit width scale marks FP16 -->
+  <line x1="110" y1="104" x2="302" y2="104" stroke="#aaa" stroke-width="0.8" stroke-dasharray="2 2"/>
+  <text x="206" y="116" text-anchor="middle" font-size="9" fill="#888">16 位</text>
+  <!-- bit width scale marks BF16 -->
+  <line x1="110" y1="184" x2="302" y2="184" stroke="#aaa" stroke-width="0.8" stroke-dasharray="2 2"/>
+  <text x="206" y="196" text-anchor="middle" font-size="9" fill="#888">16 位</text>
+
+  <!-- Legend -->
+  <g filter="url(#sk)">
+    <rect x="430" y="150" width="14" height="14" fill="#fdecec" stroke="#b03a3a" stroke-width="1"/>
+  </g>
+  <text x="450" y="162" font-size="10" fill="#444">符号位</text>
+  <g filter="url(#sk)">
+    <rect x="510" y="150" width="14" height="14" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  </g>
+  <text x="530" y="162" font-size="10" fill="#444">指数位</text>
+  <g filter="url(#sk)">
+    <rect x="590" y="150" width="14" height="14" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="610" y="162" font-size="10" fill="#444">尾数位</text>
+
+  <!-- footer note -->
+  <text x="430" y="186" font-size="10" fill="#444">FP16 尾数多（精度高但易溢出）</text>
+  <text x="430" y="202" font-size="10" fill="#444">BF16 指数多（范围同 FP32 不溢出）</text>
+</svg>

@@ -17,17 +17,12 @@
 ### 学前导读：串行 vs 重叠
 
 TP 每层 forward：
-```
-串行:  compute (GEMM) → all-reduce → compute (next GEMM) → all-reduce → ...
-         ↑ SM 忙, NCCL 闲      ↑ SM 闲, NCCL 忙      ↑ SM 忙
-```
+
+![串行执行：compute 与 all-reduce 串行](images/serial_execution_timeline.svg)
 
 双 Stream 重叠：
-```
-compute_stream:  compute_1a | compute_1b | compute_2a | ...
-comm_stream:          | all_reduce_1a |       | all_reduce_2a | ...
-                              ↑ 与 compute_1b 重叠
-```
+
+![双 Stream 重叠：compute 与 comm 并行](images/dual_stream_overlap_timeline.svg)
 
 | 策略 | 每层时间 | SM 利用率 |
 |------|---------|----------|
@@ -74,23 +69,11 @@ with torch.cuda.stream(comm_stream):
 
 把一层的 GEMM 按输出维度切两半：
 
-```
-Full layer: Y = X @ W  (W: hidden × hidden)
-
-Split: Y1 = X @ W[:, :hidden/2]    (前半输出)
-       Y2 = X @ W[:, hidden/2:]    (后半输出)
-
-TP all-reduce Y1 → 重叠 Y2 计算
-TP all-reduce Y2 → 重叠下一层前半计算
-```
+![TP 层切分：GEMM 按输出维度分两半](images/layer_splitting_concept.svg)
 
 ##### 调度时间线
 
-```
-compute: |Y1 calc| Y2 calc | next_Y1 calc | next_Y2 calc |
-comm:    |       | AR(Y1)  |              | AR(Y2)       |
-                  ↑ Y2 计算与 Y1 all-reduce 重叠
-```
+![调度时间线：通信计算重叠](images/overlap_schedule_timeline.svg)
 
 ##### 代码结构
 
@@ -185,18 +168,7 @@ Megatron-LM 的 Sequence Parallelism（SP）核心思路：**把 seq_len 维也�
 
 SP 不替换 TP，而是**与 TP 配合**——在 TP 的非 Attention 部分（LayerNorm、Dropout、Residual）把 sequence 切分：
 
-```
-标准 TP（无 SP）：
-  LayerNorm:  activation [B, S, H] → 每卡全量 → all-reduce 聚合
-  Attention:  QKV column-parallel → 各 head 独立 → all-reduce 聚合
-  → 通信量/层 = 2 × B × S × H × sizeof(dtype)  (S = 全序列)
-
-SP + TP：
-  LayerNorm:  activation [B, S/N, H] → 每卡 1/N 序列 → 无 all-reduce
-  Attention:  all-gather 把 [B, S/N, H] → [B, S, H] → 正常 TP attention → reduce-scatter 回 [B, S/N, H]
-  → LayerNorm 部分通信量 = 0；Attention 部分用 all-gather + reduce-scatter 替代 all-reduce
-  → 总通信量不变（2 × B × S × H），但 LayerNorm 的 activation 显存降为 1/N
-```
+![标准 TP vs SP + TP：通信与显存对比](images/tp_vs_sp_comparison.svg)
 
 ##### SP 的关键改进：all-reduce 拆成 reduce-scatter + all-gather
 

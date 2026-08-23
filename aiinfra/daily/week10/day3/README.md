@@ -19,14 +19,7 @@
 
 Week 1–9 我们积累了大量代码：`hello_gpu.cu`、`gemm.cu`、`flash_attn.cu`、`concurrent_engine.py`……它们散落在各个 `weekN/dayM/kernels/` 目录下，能各自独立运行，但作为一个整体项目来看，存在几个问题：
 
-```
- 9 周代码的"展示短板"：
- 1. 没有 README → 面试官打开仓库一片懵，不知道这项目做什么
- 2. 没有 Quick Start → 想跑一下却不知道装什么依赖、执行哪个入口
- 3. 没有 benchmark 数字 → "我写了 FlashAttention" 远不如 "FA 比标准 attn 快 2.1x"
- 4. 代码散落各周目录 → 看不出系统全貌，像"作业堆"而非"项目"
- 5. 没有架构图 → 无法一眼理解 Engine → Scheduler → Worker → Kernel 的层次
-```
+![9 周代码的"展示短板"](../images/code_showcase_shortcomings.svg)
 
 | 维度 | Week 9 结束时 | Week 10 Day 3 目标 |
 |------|--------------|------------------|
@@ -143,14 +136,7 @@ float t_per_call = ms / N; // 单次毫秒
 
 ##### 1.3.3 六个常见坑
 
-```
-坑1：不 warmup         → 首次含 JIT/cold miss，偏慢
-坑2：计时内含 memcpy   → H2D/D2H 拷贝远慢于 kernel，带宽假低
-坑3：只跑 1 次         → 单次抖动大，取 N 次平均
-坑4：忘了 sync         → kernel 异步，stop 立刻触发，时间≈0
-坑5：带宽算错 R+W      → copy 读+写=2x；GEMM 读A+B 写C
-坑6：不对比基线        → "1100 GB/s" 无意义，须除以峰值 ~1792（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）
-```
+![Benchmark 测量的六个常见坑](../images/benchmark_six_pitfalls.svg)
 
 > 💡 **一句话总结**：benchmark 的可信度 = warmup + N 次平均 + 排除拷贝 + 对比峰值。少任何一步，数字都会失真，面试官一追问就露馅。
 

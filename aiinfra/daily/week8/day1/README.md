@@ -21,15 +21,7 @@ Day 1 我们用 Arithmetic Intensity + Roofline 论证过：**Decode 阶段 M=1�
 
 ![Decode 阶段 Memory-bound 示意](../images/decode_memory_bound.svg)
 
-```
-Decode 单步要读的数据：
-  权重 W：model_size 字节（每步都读一遍，M=1 无法 amortize）
-  KV Cache：2 × seq_len × n_heads × d_head × layers × 2 字节（FP16，随 L 线性增长）
-
-例：7B 模型，FP16 → 权重 14 GB；seq=4096, n_heads=32, d_head=128, layers=32 → KV ≈ 2 GB（与 Day 2 口径一致）
-  → 每步读 14 GB 权重（HBM 带宽 ~1 TB/s → ~14 ms 下限）
-  → 权重带宽是 Decode 延迟的硬地板
-```
+![Decode 单步要读的数据：权重 + KV Cache](../images/decode_data_read.svg)
 
 量化的核心动机就一句话：**把数据字节数砍半/砍到 1/4，memory-bound 的带宽压力直接减半/减到 1/4**。
 
@@ -255,12 +247,7 @@ W4A16 时代是 AWQ vs GPTQ 两强，W8A8/FP8 时代多了 SmoothQuant。三方�
 
 KV Cache 量化（INT8/FP8）对长序列 attention 有特殊风险——**误差累积**：
 
-```
-attention: O = softmax(Q · K^T) · V
-  K/V 来自 KV Cache，每步追加
-  量化误差在 K^T 和 V 上都会被 softmax 放大
-  长序列（N 大）时，softmax 的指数运算让小误差被放大
-```
+![KV Cache 量化误差累积：softmax 放大量化噪声](../images/kv_cache_error_accumulation.svg)
 
 | 序列长度 | KV INT8 误差对 attention 的影响 | 缓解 |
 |---------|------------------------------|------|
@@ -296,18 +283,7 @@ Blackwell（B100/RTX 5090）引入 **FP4** Tensor Core：
 
 ##### 显存节省计算
 
-```
-7B 模型示例（FP16 基线，单请求）：
-  权重:    7B × 2B       = 14 GB
-  KV(seq=4096, n_heads=32, d_head=128, L=32): 2 × 4096 × 32 × 128 × 32 × 2B ≈ 2 GB
-  （单请求 ≈ 2 GB；并发 batch=16 时 KV ≈ 32 GB，见 Day 2 显存表）
-
-量化后（单请求）：
-  W4A16:   7B × 0.5B     = 3.5 GB  (权重 1/4)
-  W8A16:   7B × 1B       = 7 GB    (权重 1/2)
-  INT8 KV: KV × 0.5      ≈ 1 GB    (KV 1/2)
-  W4A16 + INT8 KV: 3.5 GB + 1 GB ≈ 4.5 GB  (总 16→4.5 GB, 3.6×)
-```
+![7B 模型量化显存节省：16 GB → 4.5 GB（3.6×）](../images/quant_memory_savings.svg)
 
 显存节省直接转化为 **更大并发 batch**（同样显存能塞更多请求）→ **吞吐提升**。
 
@@ -622,7 +598,7 @@ Day 1 我们把量化推理的三层武器一次讲透，并手写了两个最�
 <summary>点击查看答案</summary>
 
   - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（E2M1：2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），配合 microscaling（每 32 元素一个 scale）
-  - **算力**：Blackwell FP4 Tensor Core 算力 = FP8 的 2× = FP16 的 ~8×
+  - **算力**：Blackwell FP4 Tensor Core 算力 = FP8 的 2× = FP16 的 ~4×
   - **显存**：FP4 = FP8 的 1/2 = FP16 的 1/4
   - **精度**：介于 INT4 和 FP8 之间，需校准（比 FP8 损失大，比裸 INT4 好——microscaling 带来动态范围）
   - **取舍**：

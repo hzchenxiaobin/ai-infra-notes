@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 240" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="240" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">双 Stream 重叠：compute 与 comm 并行</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <path d="M 40 58 L 900 58" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="40" y="54" font-size="9" fill="#888">时间</text>
+
+  <text x="40" y="92" font-size="11" fill="#3a5a8a" font-weight="bold">compute_stream</text>
+
+  <g filter="url(#sk)">
+    <rect x="180" y="74" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="240" y="93" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">compute_1a</text>
+
+  <g filter="url(#sk)">
+    <rect x="300" y="74" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="360" y="93" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">compute_1b</text>
+
+  <g filter="url(#sk)">
+    <rect x="420" y="74" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="480" y="93" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">compute_2a</text>
+
+  <g filter="url(#sk)">
+    <rect x="540" y="74" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="600" y="93" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">compute_2b</text>
+
+  <text x="680" y="93" font-size="14" fill="#888">...</text>
+
+  <text x="40" y="148" font-size="11" fill="#a03040" font-weight="bold">comm_stream</text>
+
+  <g filter="url(#sk)">
+    <rect x="300" y="130" width="120" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="360" y="149" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">all_reduce_1a</text>
+
+  <g filter="url(#sk)">
+    <rect x="540" y="130" width="120" height="28" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="600" y="149" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">all_reduce_2a</text>
+
+  <path d="M 300 74 L 300 102 L 420 102 L 420 74 Z" fill="#fff7c0" opacity="0.45" filter="url(#sk)"/>
+  <path d="M 300 130 L 300 158 L 420 158 L 420 130 Z" fill="#fff7c0" opacity="0.45" filter="url(#sk)"/>
+
+  <path d="M 360 106 L 360 128" stroke="#8a7a06" stroke-width="1.4" fill="none" stroke-dasharray="3 2" filter="url(#sk)"/>
+  <text x="360" y="180" text-anchor="middle" font-size="10" fill="#8a7a06" font-weight="bold">↑ all_reduce_1a 与 compute_1b 重叠</text>
+
+  <path d="M 180 200 L 660 200" stroke="#2e8b57" stroke-width="1.2" filter="url(#sk)"/>
+  <path d="M 180 196 L 180 204 M 660 196 L 660 204" stroke="#2e8b57" stroke-width="1.2"/>
+  <text x="420" y="218" text-anchor="middle" font-size="11" fill="#2e8b57">total ≈ max(T_compute, T_comm)</text>
+</svg>

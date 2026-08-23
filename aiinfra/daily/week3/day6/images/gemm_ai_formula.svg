@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 170" font-family="Consolas, 'Courier New', monospace">
+  <rect width="620" height="170" fill="#f8f9fa" rx="8" stroke="#e0e0e0" stroke-width="1"/>
+
+  <text x="30" y="38" font-size="15" fill="#1a1a2e">
+    FLOPs = 2 × M × N × K
+  </text>
+
+  <text x="30" y="72" font-size="15" fill="#1a1a2e">
+    Bytes = (M×K + K×N + M×N) × sizeof(element)
+  </text>
+
+  <line x1="30" y1="90" x2="590" y2="90" stroke="#d0d0d0" stroke-width="1"/>
+
+  <text x="30" y="120" font-size="15" fill="#1a1a2e">
+    AI = <tspan fill="#0f3460" font-weight="bold">2×M×N×K</tspan> / <tspan fill="#e94560" font-weight="bold">((M×K + K×N + M×N) × sizeof)</tspan>
+  </text>
+
+  <text x="30" y="152" font-size="12" fill="#888" font-style="italic">
+    Arithmetic Intensity = FLOPs / Bytes
+  </text>
+</svg>

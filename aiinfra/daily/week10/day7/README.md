@@ -454,41 +454,7 @@ Day 7 我们完成了 10 周学习的最终复盘：
 
 ## 📁 本周目录结构
 
-```
-aiinfra/daily/week10/
-├── README.md                      # 周总览
-├── day1/
-│   ├── README.md                  # 整合全部自定义 Kernel
-│   └── kernels/
-│       └── custom_ops_module.py   # C++ Extension 封装
-├── day2/
-│   ├── README.md                  # 系统联调（六步分层验证）
-│   └── kernels/
-│       ├── mini_engine_v2.py      # Mini 引擎 v2（真整合）
-│       └── stability_test.py      # 稳定性测试
-├── day3/
-│   ├── README.md                  # 项目文档完善
-│   └── kernels/
-├── day4/
-│   ├── README.md                  # 高频面试题基础篇
-│   └── kernels/
-├── day5/
-│   ├── README.md                  # Mock 面试
-│   └── kernels/
-├── day6/
-│   ├── README.md                  # 诊断流程实战剧本 + 手撕限时清单
-│   └── kernels/
-├── day7/
-│   ├── README.md                  # 最终复盘（本文件）
-│   └── kernels/
-│       └── week10_summary.py      # 10 周总复盘自测
-└── images/                        # Week 10 + 10 周总览 SVG
-    ├── week10_knowledge_map.svg
-    ├── ten_week_roadmap.svg
-    ├── ten_week_capability_map.svg
-    ├── future_roadmap.svg
-    └── ... (Day1–6 架构图等)
-```
+![Week 10 目录结构](../images/week10_directory_structure.svg)
 
 ---
 

@@ -19,11 +19,50 @@
 
 Day 2 的 LayerNorm kernel 做了三次 HBM 读写：
 
-```
-Pass 1: 读 x → 求 μ (sum) → 写 μ 到 smem/register
-Pass 2: 读 x → 求 σ² (sum of squares) → 写 σ²
-Pass 3: 读 x → 做 normalize → 写 y
-```
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" width="720" height="360" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="m1g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="m1r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d32f2f"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="52" width="100" height="270" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="8"/>
+  <text x="74" y="42" text-anchor="middle" font-size="15" font-weight="bold" fill="#1976d2">HBM</text>
+  <text x="74" y="132" text-anchor="middle" font-size="20" fill="#1565c0" font-weight="bold">x</text>
+  <text x="74" y="272" text-anchor="middle" font-size="20" fill="#1565c0" font-weight="bold">y</text>
+
+  <text x="170" y="70" font-size="14" font-weight="bold" fill="#333">Pass 1：求 μ (sum)</text>
+  <line x1="124" y1="112" x2="232" y2="112" stroke="#d32f2f" stroke-width="2.5" marker-end="url(#m1r)"/>
+  <text x="178" y="104" text-anchor="middle" font-size="11" fill="#d32f2f">读 x</text>
+  <rect x="242" y="94" width="118" height="36" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="301" y="117" text-anchor="middle" font-size="13">reduce sum</text>
+  <line x1="360" y1="112" x2="430" y2="112" stroke="#555" stroke-width="2" marker-end="url(#m1g)"/>
+  <rect x="440" y="94" width="170" height="36" fill="#fff9c4" stroke="#f9a825" rx="5"/>
+  <text x="525" y="117" text-anchor="middle" font-size="13">μ → smem/register</text>
+
+  <text x="170" y="170" font-size="14" font-weight="bold" fill="#333">Pass 2：求 σ² (sum of squares)</text>
+  <line x1="124" y1="212" x2="232" y2="212" stroke="#d32f2f" stroke-width="2.5" marker-end="url(#m1r)"/>
+  <text x="178" y="204" text-anchor="middle" font-size="11" fill="#d32f2f">读 x</text>
+  <rect x="242" y="194" width="118" height="36" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="301" y="217" text-anchor="middle" font-size="13">reduce Σx²</text>
+  <line x1="360" y1="212" x2="430" y2="212" stroke="#555" stroke-width="2" marker-end="url(#m1g)"/>
+  <rect x="440" y="194" width="170" height="36" fill="#fff9c4" stroke="#f9a825" rx="5"/>
+  <text x="525" y="217" text-anchor="middle" font-size="13">σ² → smem/register</text>
+
+  <text x="170" y="270" font-size="14" font-weight="bold" fill="#333">Pass 3：normalize</text>
+  <line x1="124" y1="312" x2="232" y2="312" stroke="#d32f2f" stroke-width="2.5" marker-end="url(#m1r)"/>
+  <text x="178" y="304" text-anchor="middle" font-size="11" fill="#d32f2f">读 x</text>
+  <rect x="242" y="294" width="118" height="36" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="301" y="317" text-anchor="middle" font-size="13">normalize</text>
+  <line x1="360" y1="312" x2="430" y2="312" stroke="#555" stroke-width="2" marker-end="url(#m1g)"/>
+  <rect x="440" y="294" width="170" height="36" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="525" y="317" text-anchor="middle" font-size="13">y → HBM</text>
+
+  <text x="360" y="350" text-anchor="middle" font-size="12" fill="#d32f2f" font-weight="bold">共 3 次 HBM 读 x + 1 次写 y = 4×2D bytes</text>
+</svg>
 
 其中 normalize 公式为：$y = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} \cdot \gamma + \beta$
 
@@ -278,7 +317,7 @@ $$
 \begin{aligned}
 d\gamma &= \sum_i dy_i \cdot \hat{y}_i \quad \text{(沿 batch 维 reduce)} \\
 d\beta &= \sum_i dy_i \quad \text{(沿 batch 维 reduce)} \\
-dx_i &= \frac{1}{\sqrt{\sigma^2 + \epsilon}} \left( dy_i \cdot \gamma_i - \frac{1}{D} \left( \sum_j dy_j \gamma_j - \hat{y}_i \sum_j dy_j \gamma_j \hat{y}_j \right) \right)
+dx_i &= \frac{1}{\sqrt{\sigma^2 + \epsilon}} \left( dy_i \cdot \gamma_i - \frac{1}{D} \left( \sum_j dy_j \gamma_j + \hat{y}_i \sum_j dy_j \gamma_j \hat{y}_j \right) \right)
 \end{aligned}
 $$
 
@@ -299,20 +338,104 @@ $$
 
 Transformer 单层有 `GEMM → LayerNorm → GELU → GEMM` 的算子链。如果不 fusion：
 
-```
-GEMM: 写 C 到 HBM
-LayerNorm: 读 C, 写 LN_out 到 HBM
-GELU: 读 LN_out, 写 GELU_out 到 HBM
-下一个 GEMM: 读 GELU_out
-```
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 150" width="840" height="150" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="m2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1976d2"/>
+    </marker>
+    <marker id="m2r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d32f2f"/>
+    </marker>
+  </defs>
+
+  <text x="420" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">不 Fusion：中间张量落 HBM</text>
+
+  <rect x="15" y="52" width="80" height="48" fill="#c8e6c9" stroke="#388e3c" rx="6"/>
+  <text x="55" y="82" text-anchor="middle" font-size="14" font-weight="bold">GEMM</text>
+
+  <line x1="95" y1="76" x2="135" y2="76" stroke="#1976d2" stroke-width="2" marker-end="url(#m2w)"/>
+  <text x="115" y="68" text-anchor="middle" font-size="10" fill="#1976d2">写</text>
+
+  <rect x="135" y="48" width="70" height="56" fill="#e3f2fd" stroke="#1976d2" rx="6"/>
+  <text x="170" y="68" text-anchor="middle" font-size="9" fill="#1976d2">HBM</text>
+  <text x="170" y="88" text-anchor="middle" font-size="14" font-weight="bold">C</text>
+
+  <line x1="205" y1="76" x2="245" y2="76" stroke="#d32f2f" stroke-width="2" marker-end="url(#m2r)"/>
+  <text x="225" y="68" text-anchor="middle" font-size="10" fill="#d32f2f">读</text>
+
+  <rect x="245" y="52" width="90" height="48" fill="#c8e6c9" stroke="#388e3c" rx="6"/>
+  <text x="290" y="82" text-anchor="middle" font-size="13" font-weight="bold">LayerNorm</text>
+
+  <line x1="335" y1="76" x2="375" y2="76" stroke="#1976d2" stroke-width="2" marker-end="url(#m2w)"/>
+  <text x="355" y="68" text-anchor="middle" font-size="10" fill="#1976d2">写</text>
+
+  <rect x="375" y="48" width="70" height="56" fill="#e3f2fd" stroke="#1976d2" rx="6"/>
+  <text x="410" y="68" text-anchor="middle" font-size="9" fill="#1976d2">HBM</text>
+  <text x="410" y="88" text-anchor="middle" font-size="13" font-weight="bold">LN_out</text>
+
+  <line x1="445" y1="76" x2="485" y2="76" stroke="#d32f2f" stroke-width="2" marker-end="url(#m2r)"/>
+  <text x="465" y="68" text-anchor="middle" font-size="10" fill="#d32f2f">读</text>
+
+  <rect x="485" y="52" width="70" height="48" fill="#c8e6c9" stroke="#388e3c" rx="6"/>
+  <text x="520" y="82" text-anchor="middle" font-size="14" font-weight="bold">GELU</text>
+
+  <line x1="555" y1="76" x2="595" y2="76" stroke="#1976d2" stroke-width="2" marker-end="url(#m2w)"/>
+  <text x="575" y="68" text-anchor="middle" font-size="10" fill="#1976d2">写</text>
+
+  <rect x="595" y="48" width="80" height="56" fill="#e3f2fd" stroke="#1976d2" rx="6"/>
+  <text x="635" y="68" text-anchor="middle" font-size="9" fill="#1976d2">HBM</text>
+  <text x="635" y="88" text-anchor="middle" font-size="13" font-weight="bold">GELU_out</text>
+
+  <line x1="675" y1="76" x2="715" y2="76" stroke="#d32f2f" stroke-width="2" marker-end="url(#m2r)"/>
+  <text x="695" y="68" text-anchor="middle" font-size="10" fill="#d32f2f">读</text>
+
+  <rect x="715" y="52" width="105" height="48" fill="#c8e6c9" stroke="#388e3c" rx="6"/>
+  <text x="767" y="82" text-anchor="middle" font-size="13" font-weight="bold">下一个 GEMM</text>
+
+  <text x="420" y="128" text-anchor="middle" font-size="11" fill="#666">中间张量 C / LN_out / GELU_out 各被读写一次 HBM</text>
+</svg>
 
 中间张量 `C`、`LN_out` 各被读写一次，纯浪费。
 
 ##### Fusion 策略
 
-```
-Fused: GEMM → (直接在 register/smem 做 LayerNorm) → (直接做 GELU) → 写最终结果
-```
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 160" width="620" height="160" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="m3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="m3w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1976d2"/>
+    </marker>
+  </defs>
+
+  <text x="310" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Fusion：中间张量留在 register / smem</text>
+
+  <rect x="15" y="50" width="400" height="80" fill="#e8f5e9" stroke="#388e3c" stroke-width="2" stroke-dasharray="6 4" rx="8"/>
+  <text x="215" y="46" text-anchor="middle" font-size="12" fill="#388e3c" font-weight="bold">Fused Kernel（register / smem）</text>
+
+  <rect x="40" y="72" width="90" height="40" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="bold">GEMM</text>
+
+  <line x1="130" y1="92" x2="170" y2="92" stroke="#555" stroke-width="2" marker-end="url(#m3g)"/>
+
+  <rect x="170" y="72" width="120" height="40" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="230" y="97" text-anchor="middle" font-size="13" font-weight="bold">LayerNorm</text>
+
+  <line x1="290" y1="92" x2="330" y2="92" stroke="#555" stroke-width="2" marker-end="url(#m3g)"/>
+
+  <rect x="330" y="72" width="80" height="40" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="370" y="97" text-anchor="middle" font-size="13" font-weight="bold">GELU</text>
+
+  <line x1="415" y1="92" x2="465" y2="92" stroke="#1976d2" stroke-width="2" marker-end="url(#m3w)"/>
+  <text x="440" y="84" text-anchor="middle" font-size="10" fill="#1976d2">写</text>
+
+  <rect x="465" y="72" width="120" height="40" fill="#e3f2fd" stroke="#1976d2" rx="6"/>
+  <text x="525" y="92" text-anchor="middle" font-size="9" fill="#1976d2">HBM</text>
+  <text x="525" y="106" text-anchor="middle" font-size="12" font-weight="bold">最终结果</text>
+
+  <text x="310" y="148" text-anchor="middle" font-size="11" fill="#666">仅首尾各一次 HBM 读写，中间张量不落 HBM</text>
+</svg>
 
 | 策略 | HBM 读写 | 中间张量 |
 |------|---------|---------|
@@ -321,16 +444,69 @@ Fused: GEMM → (直接在 register/smem 做 LayerNorm) → (直接做 GELU) →
 
 ##### LayerNorm + GELU Fusion 的收益
 
-```
-不 fusion:
-  LayerNorm: 读 x (2D) + 写 y (2D) = 4D bytes
-  GELU:      读 y (2D) + 写 z (2D) = 4D bytes
-  总计: 8D bytes
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 250" width="700" height="250" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="m4w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1976d2"/>
+    </marker>
+    <marker id="m4r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d32f2f"/>
+    </marker>
+  </defs>
 
-Fusion:
-  读 x (2D) + 写 z (2D) = 4D bytes
-  总计: 4D bytes (省 50%)
-```
+  <text x="30" y="40" font-size="14" font-weight="bold" fill="#333">不 Fusion</text>
+
+  <rect x="30" y="56" width="56" height="40" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="58" y="81" text-anchor="middle" font-size="14" font-weight="bold">x</text>
+
+  <line x1="86" y1="76" x2="126" y2="76" stroke="#d32f2f" stroke-width="2" marker-end="url(#m4r)"/>
+  <text x="106" y="68" text-anchor="middle" font-size="10" fill="#d32f2f">读 2D</text>
+
+  <rect x="126" y="56" width="90" height="40" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="171" y="81" text-anchor="middle" font-size="13" font-weight="bold">LayerNorm</text>
+
+  <line x1="216" y1="76" x2="256" y2="76" stroke="#1976d2" stroke-width="2" marker-end="url(#m4w)"/>
+  <text x="236" y="68" text-anchor="middle" font-size="10" fill="#1976d2">写 2D</text>
+
+  <rect x="256" y="56" width="56" height="40" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="284" y="81" text-anchor="middle" font-size="14" font-weight="bold">y</text>
+
+  <line x1="312" y1="76" x2="352" y2="76" stroke="#d32f2f" stroke-width="2" marker-end="url(#m4r)"/>
+  <text x="332" y="68" text-anchor="middle" font-size="10" fill="#d32f2f">读 2D</text>
+
+  <rect x="352" y="56" width="70" height="40" fill="#c8e6c9" stroke="#388e3c" rx="5"/>
+  <text x="387" y="81" text-anchor="middle" font-size="14" font-weight="bold">GELU</text>
+
+  <line x1="422" y1="76" x2="462" y2="76" stroke="#1976d2" stroke-width="2" marker-end="url(#m4w)"/>
+  <text x="442" y="68" text-anchor="middle" font-size="10" fill="#1976d2">写 2D</text>
+
+  <rect x="462" y="56" width="56" height="40" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="490" y="81" text-anchor="middle" font-size="14" font-weight="bold">z</text>
+
+  <text x="540" y="81" font-size="13" fill="#d32f2f" font-weight="bold">总计 8D bytes</text>
+
+  <line x1="30" y1="120" x2="670" y2="120" stroke="#ddd" stroke-width="1"/>
+
+  <text x="30" y="148" font-size="14" font-weight="bold" fill="#333">Fusion</text>
+
+  <rect x="30" y="164" width="56" height="40" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="58" y="189" text-anchor="middle" font-size="14" font-weight="bold">x</text>
+
+  <line x1="86" y1="184" x2="126" y2="184" stroke="#d32f2f" stroke-width="2" marker-end="url(#m4r)"/>
+  <text x="106" y="176" text-anchor="middle" font-size="10" fill="#d32f2f">读 2D</text>
+
+  <rect x="126" y="164" width="220" height="40" fill="#e8f5e9" stroke="#388e3c" stroke-width="2" stroke-dasharray="6 4" rx="6"/>
+  <text x="236" y="189" text-anchor="middle" font-size="14" font-weight="bold">LayerNorm + GELU (fused)</text>
+
+  <line x1="346" y1="184" x2="386" y2="184" stroke="#1976d2" stroke-width="2" marker-end="url(#m4w)"/>
+  <text x="366" y="176" text-anchor="middle" font-size="10" fill="#1976d2">写 2D</text>
+
+  <rect x="386" y="164" width="56" height="40" fill="#e3f2fd" stroke="#1976d2" rx="5"/>
+  <text x="414" y="189" text-anchor="middle" font-size="14" font-weight="bold">z</text>
+
+  <text x="470" y="189" font-size="13" fill="#388e3c" font-weight="bold">总计 4D bytes</text>
+  <text x="470" y="208" font-size="12" fill="#388e3c" font-weight="bold">省 50%</text>
+</svg>
 
 > 💡 **面试要点**：Fusion 是推理引擎（vLLM/TensorRT-LLM）的核心优化。`torch.compile` 的 `max-autotune` 模式也会自动 fuse LayerNorm + Activation。手写 CUDA 的 fusion 需要在 epilogue 阶段插入归一化逻辑。
 

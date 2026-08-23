@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">技术难点讲解六步法</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <g font-size="11">
+    <!-- Step 1: 问题 -->
+    <g filter="url(#sk)"><rect x="60" y="74" width="260" height="56" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="102" r="14" fill="#b85450"/></g>
+    <text x="90" y="106" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">1</text>
+    <text x="116" y="98" font-size="12" font-weight="bold" fill="#b03a3a">问题是什么</text>
+    <text x="116" y="116" font-size="9" fill="#888">定义清楚要解决的痛点</text>
+    <path d="M 328 102 L 372 102" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="74" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="98" font-size="11" fill="#444">标准 Attention IO 是 O(N²)</text>
+    <text x="400" y="116" font-size="9" fill="#888">长序列跑不动，显存爆炸</text>
+
+    <!-- Step 2: 局限 -->
+    <g filter="url(#sk)"><rect x="60" y="142" width="260" height="56" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="170" r="14" fill="#c98a2b"/></g>
+    <text x="90" y="174" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">2</text>
+    <text x="116" y="166" font-size="12" font-weight="bold" fill="#7a5415">现有方案局限</text>
+    <text x="116" y="184" font-size="9" fill="#888">为什么已有方案不够</text>
+    <path d="M 328 170 L 372 170" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="142" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="166" font-size="11" fill="#444">朴素 tiling 需要物化 N×N 矩阵</text>
+    <text x="400" y="184" font-size="9" fill="#888">中间结果写回 HBM，IO 开销大</text>
+
+    <!-- Step 3: 方案 -->
+    <g filter="url(#sk)"><rect x="60" y="210" width="260" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="238" r="14" fill="#4a8e4a"/></g>
+    <text x="90" y="242" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">3</text>
+    <text x="116" y="234" font-size="12" font-weight="bold" fill="#2e6e2e">你的方案</text>
+    <text x="116" y="252" font-size="9" fill="#888">核心思路与创新点</text>
+    <path d="M 328 238 L 372 238" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="210" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="234" font-size="11" fill="#444">FlashAttention = tiling + online softmax</text>
+    <text x="400" y="252" font-size="9" fill="#888">IO 降到 O(Nd)，不物化完整 N×N</text>
+
+    <!-- Step 4: 细节 -->
+    <g filter="url(#sk)"><rect x="60" y="278" width="260" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="306" r="14" fill="#4a8edb"/></g>
+    <text x="90" y="310" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">4</text>
+    <text x="116" y="302" font-size="12" font-weight="bold" fill="#2b6e9e">实现细节</text>
+    <text x="116" y="320" font-size="9" fill="#888">展示工程深度</text>
+    <path d="M 328 306 L 372 306" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="278" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="302" font-size="11" fill="#444">block 切分、shared memory 分配</text>
+    <text x="400" y="320" font-size="9" fill="#888">warp 同步、online softmax 数值稳定</text>
+
+    <!-- Step 5: 验证 -->
+    <g filter="url(#sk)"><rect x="60" y="346" width="260" height="56" rx="6" fill="#e0f2f1" stroke="#00796b" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="374" r="14" fill="#00796b"/></g>
+    <text x="90" y="378" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">5</text>
+    <text x="116" y="370" font-size="12" font-weight="bold" fill="#004d40">验证结果</text>
+    <text x="116" y="388" font-size="9" fill="#888">用数字证明效果</text>
+    <path d="M 328 374 L 372 374" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="346" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="370" font-size="11" fill="#444">相比 naive 快 X 倍</text>
+    <text x="400" y="388" font-size="9" fill="#888">接近 cuBLAS / FlashAttention 官方实现</text>
+
+    <!-- Step 6: 进一步优化 -->
+    <g filter="url(#sk)"><rect x="60" y="414" width="260" height="56" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <g filter="url(#sk)"><circle cx="90" cy="442" r="14" fill="#8e5db8"/></g>
+    <text x="90" y="446" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">6</text>
+    <text x="116" y="438" font-size="12" font-weight="bold" fill="#5a3a7a">还可以怎么优化</text>
+    <text x="116" y="456" font-size="9" fill="#888">展示持续优化能力</text>
+    <path d="M 328 442 L 372 442" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="414" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="438" font-size="11" fill="#444">FA2 的 warp group、double buffering</text>
+    <text x="400" y="456" font-size="9" fill="#888">量化（FP8/INT8）、cp.async / TMA</text>
+  </g>
+
+  <text x="450" y="524" text-anchor="middle" font-size="10" fill="#888" font-style="italic">问题 → 局限 → 方案 → 细节 → 验证 → 进一步优化 —— 准备 3 分钟精简版和 6 分钟完整版</text>
+</svg>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" viewBox="0 0 860 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">"会写 kernel" ≠ "理解 GPU"</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top section: two levels ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="780" height="120" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <g font-size="12" fill="#444">
+    <text x="70" y="96" font-weight="bold" fill="#2b6e9e">会写 kernel</text>
+    <text x="200" y="96" font-size="20" fill="#888">→</text>
+    <text x="230" y="96">能完成任务</text>
+    <text x="370" y="96" fill="#888" font-style="italic">（工程师水平）</text>
+
+    <text x="70" y="128" font-weight="bold" fill="#b03a3a">理解 GPU</text>
+    <text x="200" y="128" font-size="20" fill="#888">→</text>
+    <text x="230" y="128">能解释为什么快/慢、能做 trade-off</text>
+    <text x="560" y="128" fill="#888" font-style="italic">（专家水平）</text>
+
+    <text x="70" y="164" fill="#888" font-size="11">面试考基础 = 验证你是否真正理解了底层原理，而非只会调 API</text>
+  </g>
+
+  <!-- ===== Bottom section: interviewer's logic ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="208" width="780" height="288" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="430" y="234" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">面试官的逻辑</text>
+  <line x1="60" y1="244" x2="800" y2="244" stroke="#ddd" filter="url(#sk)"/>
+
+  <!-- Row 1: Occupancy -->
+  <g font-size="12" fill="#444">
+    <text x="70" y="274" font-weight="bold" fill="#7a5415">问 Occupancy</text>
+    <text x="220" y="274" font-size="16" fill="#888">→</text>
+    <text x="250" y="274">你是否知道寄存器/shared mem 对性能的影响</text>
+  </g>
+  <line x1="60" y1="288" x2="800" y2="288" stroke="#eee" filter="url(#sk)"/>
+
+  <!-- Row 2: Bank Conflict -->
+  <g font-size="12" fill="#444">
+    <text x="70" y="316" font-weight="bold" fill="#7a5415">问 Bank Conflict</text>
+    <text x="220" y="316" font-size="16" fill="#888">→</text>
+    <text x="250" y="316">你是否真正写过 shared memory kernel</text>
+  </g>
+  <line x1="60" y1="330" x2="800" y2="330" stroke="#eee" filter="url(#sk)"/>
+
+  <!-- Row 3: Roofline -->
+  <g font-size="12" fill="#444">
+    <text x="70" y="358" font-weight="bold" fill="#7a5415">问 Roofline</text>
+    <text x="220" y="358" font-size="16" fill="#888">→</text>
+    <text x="250" y="358">你是否会用数据驱动的方式分析瓶颈</text>
+  </g>
+  <line x1="60" y1="372" x2="800" y2="372" stroke="#eee" filter="url(#sk)"/>
+
+  <!-- Row 4: GEMM -->
+  <g font-size="12" fill="#444">
+    <text x="70" y="400" font-weight="bold" fill="#7a5415">问 GEMM 优化路径</text>
+    <text x="220" y="400" font-size="16" fill="#888">→</text>
+    <text x="250" y="400">你是否理解从 1% 到 80% 每步优化的原理</text>
+  </g>
+
+  <!-- Summary -->
+  <g filter="url(#sk)">
+    <rect x="60" y="430" width="740" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="430" y="452" text-anchor="middle" font-size="11" fill="#888" font-style="italic">每个答案都要能画出图、给出数字、解释因果 —— 不是"背答案"，而是"证明你理解了"</text>
+  <text x="430" y="470" text-anchor="middle" font-size="10" fill="#aaa">记忆层 → 理解层 → 应用层 → 分析层</text>
+</svg>

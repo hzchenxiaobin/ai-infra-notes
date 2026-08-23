@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="480" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">9 周代码的"展示短板"</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <g font-size="11">
+    <!-- Row 1: 没有 README -->
+    <g filter="url(#sk)"><rect x="60" y="80" width="250" height="56" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="80" y="104" font-size="12" font-weight="bold" fill="#b03a3a">① 没有 README</text>
+    <text x="80" y="122" font-size="9" fill="#888">仓库首页一片空白</text>
+    <path d="M 318 108 L 362 108" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="370" y="80" width="470" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="390" y="104" font-size="11" fill="#444">面试官打开仓库一片懵</text>
+    <text x="390" y="122" font-size="9" fill="#888">不知道这项目做什么 → 直接关掉</text>
+
+    <!-- Row 2: 没有 Quick Start -->
+    <g filter="url(#sk)"><rect x="60" y="148" width="250" height="56" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <text x="80" y="172" font-size="12" font-weight="bold" fill="#7a5415">② 没有 Quick Start</text>
+    <text x="80" y="190" font-size="9" fill="#888">不知道怎么跑</text>
+    <path d="M 318 176 L 362 176" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="370" y="148" width="470" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="390" y="172" font-size="11" fill="#444">想跑一下却不知道装什么依赖</text>
+    <text x="390" y="190" font-size="9" fill="#888">不知道执行哪个入口 → 放弃</text>
+
+    <!-- Row 3: 没有 benchmark -->
+    <g filter="url(#sk)"><rect x="60" y="216" width="250" height="56" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <text x="80" y="240" font-size="12" font-weight="bold" fill="#5a3a7a">③ 没有 benchmark</text>
+    <text x="80" y="258" font-size="9" fill="#888">只有代码没有数字</text>
+    <path d="M 318 244 L 362 244" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="370" y="216" width="470" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="390" y="240" font-size="11" fill="#444">"我写了 FlashAttention" 远不如</text>
+    <text x="390" y="258" font-size="9" fill="#888">"FA 比标准 attn 快 2.1x" 有说服力</text>
+
+    <!-- Row 4: 代码散落 -->
+    <g filter="url(#sk)"><rect x="60" y="284" width="250" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <text x="80" y="308" font-size="12" font-weight="bold" fill="#2b6e9e">④ 代码散落各周</text>
+    <text x="80" y="326" font-size="9" fill="#888" font-family="monospace">weekN/dayM/kernels/</text>
+    <path d="M 318 312 L 362 312" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="370" y="284" width="470" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="390" y="308" font-size="11" fill="#444">看不出系统全貌</text>
+    <text x="390" y="326" font-size="9" fill="#888">像"作业堆"而非"项目"</text>
+
+    <!-- Row 5: 没有架构图 -->
+    <g filter="url(#sk)"><rect x="60" y="352" width="250" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="80" y="376" font-size="12" font-weight="bold" fill="#2e6e2e">⑤ 没有架构图</text>
+    <text x="80" y="394" font-size="9" fill="#888">缺一张系统层次图</text>
+    <path d="M 318 380 L 362 380" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="370" y="352" width="470" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="390" y="376" font-size="11" fill="#444">无法一眼理解系统层次</text>
+    <text x="390" y="394" font-size="9" fill="#888" font-family="monospace">Engine → Scheduler → Worker → Kernel</text>
+  </g>
+
+  <text x="450" y="448" text-anchor="middle" font-size="10" fill="#888" font-style="italic">代码能跑 ≠ 项目可展示 —— Day 3 把"代码堆"变成"项目"</text>
+</svg>

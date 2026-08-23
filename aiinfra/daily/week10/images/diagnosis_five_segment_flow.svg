@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="540" viewBox="0 0 920 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="540" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">五段式诊断流程：现象 → 假设 → 工具 → 证据 → 结论</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Top: 5-segment pipeline header ===== -->
+  <g font-size="11" font-weight="bold">
+    <g filter="url(#sk)"><rect x="30" y="62" width="160" height="42" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <text x="110" y="88" text-anchor="middle" fill="#2b6e9e">① 现象 Symptom</text>
+
+    <path d="M 192 83 L 212 83" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="218" y="62" width="160" height="42" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="298" y="88" text-anchor="middle" fill="#2e6e2e">② 假设 Hypothesis</text>
+
+    <path d="M 380 83 L 400 83" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="406" y="62" width="130" height="42" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <text x="471" y="88" text-anchor="middle" fill="#7a5415">③ 工具 Tool</text>
+
+    <path d="M 538 83 L 558 83" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="564" y="62" width="160" height="42" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="644" y="88" text-anchor="middle" fill="#b03a3a">④ 证据 Evidence</text>
+
+    <path d="M 726 83 L 746 83" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+    <g filter="url(#sk)"><rect x="752" y="62" width="138" height="42" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <text x="821" y="88" text-anchor="middle" fill="#5a3a7a">⑤ 结论 Conclusion</text>
+  </g>
+
+  <!-- ===== Row 1: Case 1 Low MFU ===== -->
+  <g font-size="10">
+    <text x="30" y="130" font-size="11" font-weight="bold" fill="#2b6e9e">案例1：低 MFU</text>
+    <g filter="url(#sk)"><rect x="30" y="138" width="160" height="100" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="40" y="156" fill="#444">GEMM kernel</text>
+    <text x="40" y="172" fill="#444">只有 cuBLAS 10%</text>
+    <text x="40" y="192" fill="#888">MFU 远低于预期</text>
+    <text x="40" y="212" fill="#b03a3a">→ 为什么这么慢？</text>
+
+    <g filter="url(#sk)"><rect x="218" y="138" width="160" height="100" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="228" y="156" fill="#444">memory-bound?</text>
+    <text x="228" y="172" fill="#444">occupancy 低?</text>
+    <text x="228" y="188" fill="#444">coalescing 差?</text>
+    <text x="228" y="208" fill="#888">→ 逐个排除</text>
+
+    <g filter="url(#sk)"><rect x="406" y="138" width="130" height="100" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="416" y="158" fill="#444">nsys 看 gap</text>
+    <text x="416" y="178" fill="#444">ncu 看 SM%</text>
+    <text x="416" y="194" fill="#444">stall / DRAM%</text>
+    <text x="416" y="214" fill="#888">→ 两个工具配合</text>
+
+    <g filter="url(#sk)"><rect x="564" y="138" width="160" height="100" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="574" y="156" fill="#444">SM 12% (低)</text>
+    <text x="574" y="172" fill="#444">DRAM 85% (高)</text>
+    <text x="574" y="188" fill="#444">stall 45% 等 mem</text>
+    <text x="574" y="208" fill="#b03a3a">→ memory-bound 实锤</text>
+
+    <g filter="url(#sk)"><rect x="752" y="138" width="138" height="100" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="762" y="156" fill="#444">naive 无 tiling</text>
+    <text x="762" y="172" fill="#444">AI 实际 ~1</text>
+    <text x="762" y="190" fill="#444">加 smem tiling</text>
+    <text x="762" y="210" fill="#2e6e2e">→ v2 提升 N 倍</text>
+  </g>
+
+  <!-- ===== Row 2: Case 2 OOM ===== -->
+  <g font-size="10">
+    <text x="30" y="260" font-size="11" font-weight="bold" fill="#2b6e9e">案例2：OOM</text>
+    <g filter="url(#sk)"><rect x="30" y="268" width="160" height="100" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="40" y="286" fill="#444">500 请求后 OOM</text>
+    <text x="40" y="302" fill="#444">单请求显存够</text>
+    <text x="40" y="322" fill="#888">→ 谁在吃显存？</text>
+    <text x="40" y="342" fill="#b03a3a">→ 逐步增长?</text>
+
+    <g filter="url(#sk)"><rect x="218" y="268" width="160" height="100" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="228" y="286" fill="#444">KV Cache 泄漏?</text>
+    <text x="228" y="302" fill="#444">显存碎片?</text>
+    <text x="228" y="318" fill="#444">batch 累积?</text>
+    <text x="228" y="338" fill="#888">→ 逐个排查</text>
+
+    <g filter="url(#sk)"><rect x="406" y="268" width="130" height="100" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="416" y="288" fill="#444">memory_snapshot</text>
+    <text x="416" y="308" fill="#444">nvidia-smi</text>
+    <text x="416" y="328" fill="#444">时序监控</text>
+    <text x="416" y="348" fill="#888">→ 看分配详情</text>
+
+    <g filter="url(#sk)"><rect x="564" y="268" width="160" height="100" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="574" y="286" fill="#444">显存 2→18GB↑</text>
+    <text x="574" y="302" fill="#444">finished seq</text>
+    <text x="574" y="318" fill="#444">KV 未释放</text>
+    <text x="574" y="338" fill="#b03a3a">→ 泄漏实锤</text>
+
+    <g filter="url(#sk)"><rect x="752" y="268" width="138" height="100" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="762" y="286" fill="#444">free 逻辑遗漏</text>
+    <text x="762" y="304" fill="#444">补 block_manager</text>
+    <text x="762" y="322" fill="#444">.free(seq_id)</text>
+    <text x="762" y="342" fill="#2e6e2e">→ 修复完成</text>
+  </g>
+
+  <!-- ===== Row 3: Case 3 Hang ===== -->
+  <g font-size="10">
+    <text x="30" y="390" font-size="11" font-weight="bold" fill="#2b6e9e">案例3：Hang</text>
+    <g filter="url(#sk)"><rect x="30" y="398" width="160" height="100" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="40" y="416" fill="#444">100 请求后 hang</text>
+    <text x="40" y="432" fill="#444">CPU 100% 无输出</text>
+    <text x="40" y="452" fill="#888">→ 卡在哪里？</text>
+    <text x="40" y="472" fill="#b03a3a">→ 死循环?</text>
+
+    <g filter="url(#sk)"><rect x="218" y="398" width="160" height="100" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="228" y="416" fill="#444">死锁?</text>
+    <text x="228" y="432" fill="#444">livelock?</text>
+    <text x="228" y="448" fill="#444">worker 退出?</text>
+    <text x="228" y="468" fill="#888">→ 查调用栈</text>
+
+    <g filter="url(#sk)"><rect x="406" y="398" width="130" height="100" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="416" y="418" fill="#444">py-spy dump</text>
+    <text x="416" y="438" fill="#444">NCCL_DEBUG</text>
+    <text x="416" y="458" fill="#444">gdb</text>
+    <text x="416" y="478" fill="#888">→ 看 Python 栈</text>
+
+    <g filter="url(#sk)"><rect x="564" y="398" width="160" height="100" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="574" y="416" fill="#444">卡在 _try_preempt</text>
+    <text x="574" y="432" fill="#444">迭代时 insert</text>
+    <text x="574" y="448" fill="#444">preempt→waiting</text>
+    <text x="574" y="468" fill="#b03a3a">→ livelock 实锤</text>
+
+    <g filter="url(#sk)"><rect x="752" y="398" width="138" height="100" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1" stroke-dasharray="4 2"/></g>
+    <text x="762" y="416" fill="#444">迭代时修改集合</text>
+    <text x="762" y="434" fill="#444">改 list(waiting)</text>
+    <text x="762" y="452" fill="#444">遍历快照</text>
+    <text x="762" y="472" fill="#2e6e2e">→ 修复完成</text>
+  </g>
+
+  <!-- ===== Bottom note ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="510" width="860" height="22" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="460" y="526" text-anchor="middle" font-size="10" fill="#7a5415">💡 面试口述模板：按 ①→②→③→④→⑤ 顺序讲，每段 30 秒，总 2.5 分钟覆盖一个完整诊断故事</text>
+</svg>

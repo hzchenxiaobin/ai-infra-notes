@@ -117,7 +117,7 @@ class ContinuousBatcher:
             if seq.status == SeqStatus.RUNNING:
                 seq.append_token()
                 if seq.status == SeqStatus.FINISHED:
-                    seq.finish_iter = self.iteration + 1
+                    seq.finish_iter = self.iteration
 
     def _worker_loop(self):
         while not self.stop_event.is_set():

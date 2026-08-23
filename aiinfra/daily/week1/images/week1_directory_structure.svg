@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="640" viewBox="0 0 860 640" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="860" height="640" fill="#fdfcf7"/>
+  <text x="430" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Week 1 目录结构</text>
+
+  <!-- Root node -->
+  <rect x="60" y="60" width="160" height="36" rx="6" fill="#4a8edb" opacity="0.15" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="78" y="83" font-size="15" fill="#2b2b2b" font-family="monospace" font-weight="bold">📁 week1/</text>
+
+  <!-- Tree vertical line -->
+  <path d="M 140 96 L 140 548" stroke="#999999" stroke-width="1.5" fill="none"/>
+
+  <!-- README.md -->
+  <path d="M 140 120 L 180 120" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="106" width="200" height="28" rx="4" fill="#4a8edb" opacity="0.12" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="192" y="125" font-size="13" fill="#2b2b2b" font-family="monospace">README.md</text>
+  <text x="400" y="125" font-size="11" fill="#666666">Week 1 总览（学习地图 + 每日索引）</text>
+
+  <!-- day1/ -->
+  <path d="M 140 158 L 180 158" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="144" width="200" height="28" rx="4" fill="#5cb86c" opacity="0.12" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="192" y="163" font-size="13" fill="#2b2b2b" font-family="monospace">day1/</text>
+  <text x="400" y="163" font-size="11" fill="#666666">GPU 执行模型：hello_gpu.cu + notes</text>
+
+  <!-- day2/ -->
+  <path d="M 140 196 L 180 196" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="182" width="200" height="28" rx="4" fill="#5cb86c" opacity="0.12" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="192" y="201" font-size="13" fill="#2b2b2b" font-family="monospace">day2/</text>
+  <text x="400" y="201" font-size="11" fill="#666666">Occupancy：occupancy_test.cu + exercise + notes</text>
+
+  <!-- day3/ -->
+  <path d="M 140 234 L 180 234" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="220" width="200" height="28" rx="4" fill="#e8a838" opacity="0.12" stroke="#e8a838" stroke-width="1.5"/>
+  <text x="192" y="239" font-size="13" fill="#2b2b2b" font-family="monospace">day3/</text>
+  <text x="400" y="239" font-size="11" fill="#666666">认识 GPU：exercise + notes</text>
+
+  <!-- day4/ -->
+  <path d="M 140 272 L 180 272" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="258" width="200" height="28" rx="4" fill="#b689e8" opacity="0.12" stroke="#b689e8" stroke-width="1.5"/>
+  <text x="192" y="277" font-size="13" fill="#2b2b2b" font-family="monospace">day4/</text>
+  <text x="400" y="277" font-size="11" fill="#666666">内存层次：transpose.cu + notes</text>
+
+  <!-- day5/ -->
+  <path d="M 140 310 L 180 310" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="296" width="200" height="28" rx="4" fill="#b689e8" opacity="0.12" stroke="#b689e8" stroke-width="1.5"/>
+  <text x="192" y="315" font-size="13" fill="#2b2b2b" font-family="monospace">day5/</text>
+  <text x="400" y="315" font-size="11" fill="#666666">Bank Conflict：bank_conflict.cu + notes</text>
+
+  <!-- day6/ -->
+  <path d="M 140 348 L 180 348" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="334" width="200" height="28" rx="4" fill="#e57373" opacity="0.12" stroke="#e57373" stroke-width="1.5"/>
+  <text x="192" y="353" font-size="13" fill="#2b2b2b" font-family="monospace">day6/</text>
+  <text x="400" y="353" font-size="11" fill="#666666">Profiling：notes（复用前 5 天 kernel）</text>
+
+  <!-- day7/ -->
+  <path d="M 140 386 L 180 386" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="372" width="200" height="28" rx="4" fill="#4a8edb" opacity="0.12" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="192" y="391" font-size="13" fill="#2b2b2b" font-family="monospace">day7/</text>
+  <text x="400" y="391" font-size="11" fill="#666666">复盘：exercise + notes</text>
+
+  <!-- images/ -->
+  <path d="M 140 424 L 180 424" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="410" width="200" height="28" rx="4" fill="#4ec8b0" opacity="0.12" stroke="#4ec8b0" stroke-width="1.5"/>
+  <text x="192" y="429" font-size="13" fill="#2b2b2b" font-family="monospace">images/</text>
+  <text x="400" y="429" font-size="11" fill="#666666">本周 SVG 插图</text>
+
+  <!-- notes/ -->
+  <path d="M 140 462 L 180 462" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="448" width="240" height="28" rx="4" fill="#4a8edb" opacity="0.12" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="192" y="467" font-size="13" fill="#2b2b2b" font-family="monospace">notes/week1_notes.md</text>
+  <text x="440" y="467" font-size="11" fill="#666666">周学习笔记</text>
+
+  <!-- profiles/ -->
+  <path d="M 140 500 L 180 500" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="486" width="300" height="28" rx="4" fill="#e57373" opacity="0.12" stroke="#e57373" stroke-width="1.5"/>
+  <text x="192" y="505" font-size="13" fill="#2b2b2b" font-family="monospace">profiles/week1_profile_summary.md</text>
+  <text x="500" y="505" font-size="11" fill="#666666">Profiling 报告汇总（含实测数据）</text>
+
+  <!-- tools/ (last branch) -->
+  <path d="M 140 538 L 140 538 M 140 538 L 180 538" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="524" width="300" height="28" rx="4" fill="#e8a838" opacity="0.12" stroke="#e8a838" stroke-width="1.5"/>
+  <text x="192" y="543" font-size="13" fill="#2b2b2b" font-family="monospace">tools/cuda_occupancy_calculator.py</text>
+  <text x="500" y="543" font-size="11" fill="#666666">Occupancy 手算验证工具</text>
+
+  <!-- Highlight note -->
+  <rect x="180" y="572" width="540" height="48" rx="8" fill="#fffdf5" stroke="#6ab0ff" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="450" y="594" text-anchor="middle" font-size="13" fill="#6ab0ff" font-weight="bold">💡 每天的 CUDA 源码在当天目录的 kernels/ 或 exercise/ 下</text>
+  <text x="450" y="612" text-anchor="middle" font-size="12" fill="#666666">编译时先 cd 到对应 day 目录（命令均以 week1/ 为基准路径）</text>
+
+  </g>
+</svg>

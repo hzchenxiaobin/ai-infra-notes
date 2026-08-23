@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240" viewBox="0 0 640 240" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <g filter="url(#sketch)">
+  <rect width="640" height="240" fill="#fdfcf7"/>
+  <text x="320" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Cache 最小访问粒度</text>
+
+  <!-- L2 sector -->
+  <text x="60" y="80" font-size="14" font-weight="bold" fill="#6ab0ff">L2 Cache</text>
+  <text x="60" y="98" font-size="12" fill="#666666">最小访问粒度</text>
+
+  <rect x="60" y="110" width="120" height="50" rx="4" fill="#6ab0ff" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="120" y="135" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">32 字节</text>
+  <text x="120" y="152" text-anchor="middle" font-size="11" fill="#666666">= 1 个 sector</text>
+
+  <!-- L1 cache line -->
+  <text x="310" y="80" font-size="14" font-weight="bold" fill="#5cb86c">L1 Cache line</text>
+  <text x="310" y="98" font-size="12" fill="#666666">= 4 个 sector</text>
+
+  <rect x="310" y="110" width="60" height="50" rx="2" fill="#5cb86c" opacity="0.15" stroke="#5cb86c" stroke-width="2"/>
+  <text x="340" y="140" text-anchor="middle" font-size="10" fill="#666666">sector 0</text>
+  <rect x="370" y="110" width="60" height="50" rx="2" fill="#5cb86c" opacity="0.15" stroke="#5cb86c" stroke-width="2"/>
+  <text x="400" y="140" text-anchor="middle" font-size="10" fill="#666666">sector 1</text>
+  <rect x="430" y="110" width="60" height="50" rx="2" fill="#5cb86c" opacity="0.15" stroke="#5cb86c" stroke-width="2"/>
+  <text x="460" y="140" text-anchor="middle" font-size="10" fill="#666666">sector 2</text>
+  <rect x="490" y="110" width="60" height="50" rx="2" fill="#5cb86c" opacity="0.15" stroke="#5cb86c" stroke-width="2"/>
+  <text x="520" y="140" text-anchor="middle" font-size="10" fill="#666666">sector 3</text>
+
+  <rect x="310" y="105" width="240" height="60" rx="4" fill="none" stroke="#5cb86c" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <text x="430" y="180" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">128 字节</text>
+
+  <!-- Equation -->
+  <line x1="60" y1="200" x2="580" y2="200" stroke="#666666" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="180" y="225" text-anchor="middle" font-size="13" fill="#666666">32B × 4 = 128B</text>
+  <text x="400" y="225" text-anchor="middle" font-size="13" fill="#666666">硬件固定，程序员无法改变</text>
+
+  </g>
+</svg>

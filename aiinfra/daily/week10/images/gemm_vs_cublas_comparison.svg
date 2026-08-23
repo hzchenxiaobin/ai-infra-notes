@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="360" fill="#fdfcf7"/>
+
+  <text x="440" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">为什么大 GEMM 保留 cuBLAS？</text>
+  <path d="M 280 40 Q 440 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: 教学版 GEMM -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="380" height="210" rx="10" fill="#fce4ec" stroke="#c04050" stroke-width="1.5"/>
+  </g>
+  <text x="230" y="88" text-anchor="middle" font-size="13" fill="#a03040" font-weight="bold">教学版 register blocking GEMM</text>
+  <text x="60" y="116" font-size="11" fill="#444">• 手写 tiling + shared memory</text>
+  <text x="60" y="140" font-size="11" fill="#444">• 无 Tensor Core 加速</text>
+  <text x="60" y="164" font-size="11" fill="#444">• 性能约为 cuBLAS 的 10-20%</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="184" width="340" height="36" rx="5" fill="#fff" stroke="#c04050" stroke-width="1" stroke-dasharray="3,2"/>
+  </g>
+  <text x="230" y="207" text-anchor="middle" font-size="10" fill="#a03040">compute-bound，教学目的理解原理</text>
+  <text x="60" y="250" font-size="20" fill="#c04050">🐌</text>
+  <text x="90" y="255" font-size="11" fill="#888">太慢，不适合生产</text>
+
+  <!-- Right: cuBLAS -->
+  <g filter="url(#sk)">
+    <rect x="460" y="64" width="380" height="210" rx="10" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="650" y="88" text-anchor="middle" font-size="13" fill="#2e6e2e" font-weight="bold">cuBLAS（官方库）</text>
+  <text x="480" y="116" font-size="11" fill="#444">• 高度优化的 SASS 指令</text>
+  <text x="480" y="140" font-size="11" fill="#444">• Tensor Core 加速（WMMA/MMA）</text>
+  <text x="480" y="164" font-size="11" fill="#444">• 自动选择最优 tiling</text>
+  <g filter="url(#sk)">
+    <rect x="480" y="184" width="340" height="36" rx="5" fill="#fff" stroke="#2e8b57" stroke-width="1" stroke-dasharray="3,2"/>
+  </g>
+  <text x="650" y="207" text-anchor="middle" font-size="10" fill="#2e6e2e">接近理论峰值，高度优化</text>
+  <text x="480" y="250" font-size="20" fill="#2e8b57">🚀</text>
+  <text x="510" y="255" font-size="11" fill="#888">大 GEMM 必须用 cuBLAS</text>
+
+  <!-- VS divider -->
+  <text x="440" y="172" text-anchor="middle" font-size="16" fill="#888" font-weight="bold">VS</text>
+
+  <!-- Bottom conclusion -->
+  <g filter="url(#sk)">
+    <rect x="200" y="296" width="480" height="44" rx="8" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.3"/>
+  </g>
+  <text x="440" y="316" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">结论</text>
+  <text x="440" y="332" text-anchor="middle" font-size="11" fill="#444">大 GEMM 保留 cuBLAS；Softmax / LayerNorm / Attention 用自定义 kernel 融合</text>
+</svg>

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="320" viewBox="0 0 840 320" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="320" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="420" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">WMMA GEMM Tiling 层级设计</text>
+  <path d="M 280 44 Q 420 52 560 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="60" text-anchor="middle" font-size="11" fill="#888">Block → Warp → MMA 三级分块 · K 维循环驱动 tile 加载</text>
+
+  <!-- ====== Block level (root, purple) ====== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="140" width="180" height="56" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="130" y="163" text-anchor="middle" font-size="13" font-weight="bold" fill="#5d3a7e">Block 级 (BM×BN)</text>
+  <text x="130" y="182" text-anchor="middle" font-size="10" fill="#666">64×64 子矩阵 · 4 warp 协作</text>
+
+  <!-- ====== Warp level (blue) ====== -->
+  <g filter="url(#sk)">
+    <rect x="300" y="70" width="200" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="400" y="93" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Warp 级 (WM×WN)</text>
+  <text x="400" y="112" text-anchor="middle" font-size="10" fill="#666">32×32 子矩阵 · 每 warp 负责</text>
+
+  <!-- ====== K-loop level (orange) ====== -->
+  <g filter="url(#sk)">
+    <rect x="300" y="210" width="220" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="410" y="233" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">K 维循环</text>
+  <text x="410" y="252" text-anchor="middle" font-size="10" fill="#666">加载 64×16 A tile + 16×64 B tile</text>
+
+  <!-- ====== MMA level 1 (green) ====== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="40" width="220" height="48" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="690" y="61" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">MMA 级 (16×16×16)</text>
+  <text x="690" y="78" text-anchor="middle" font-size="10" fill="#666">每条 WMMA 指令</text>
+
+  <!-- ====== MMA level 2 (green) ====== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="108" width="220" height="48" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="690" y="129" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">MMA 级 (16×16×16)</text>
+  <text x="690" y="146" text-anchor="middle" font-size="10" fill="#666">每 warp 执行 2×2 = 4 条 WMMA</text>
+
+  <!-- ====== Tree connectors ====== -->
+  <g filter="url(#sk)" fill="none" stroke="#5a5a5a" stroke-width="1.4">
+    <!-- Block → Warp: elbow from (220,168) right to (260,98) down to (300,98) -->
+    <path d="M 220 168 L 260 168 L 260 98 L 300 98" marker-end="url(#ar)"/>
+    <!-- Block → K-loop: elbow from (220,168) right to (260,238) down to (300,238) -->
+    <path d="M 220 168 L 260 168 L 260 238 L 300 238" marker-end="url(#ar)"/>
+    <!-- Warp → MMA1: elbow from (500,98) right to (540,64) up to (580,64) -->
+    <path d="M 500 98 L 540 98 L 540 64 L 580 64" marker-end="url(#ar)"/>
+    <!-- Warp → MMA2: elbow from (500,98) right to (540,132) down to (580,132) -->
+    <path d="M 500 98 L 540 98 L 540 132 L 580 132" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- branch labels -->
+  <text x="240" y="160" font-size="9" fill="#888">├</text>
+  <text x="240" y="200" font-size="9" fill="#888">└</text>
+
+  <!-- bottom note -->
+  <text x="420" y="295" text-anchor="middle" font-size="10" fill="#888">BK=16 使每次 smem→fragment 加载正好对应一条 MMA 指令 · 无需额外拆分</text>
+  <text x="420" y="312" text-anchor="middle" font-size="9" fill="#aaa">颜色：紫=Block · 蓝=Warp · 绿=MMA · 橙=K-loop</text>
+</svg>

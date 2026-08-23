@@ -350,9 +350,9 @@ def main():
     print(f"\n总 iterations: {engine.iteration}")
     print(f"完成请求数: {len(futures)}")
 
-    # 验证：高优先级 R0 应先完成
+    # 验证：高优先级 R0 先被调度 prefill
     print("\n=== 优先级验证 ===")
-    print("  R0(priority=1) 因高优先级先被调度 prefill，应最早完成")
+    print("  R0(priority=1) 因高优先级先被调度 prefill，但 gen=8 最长，最后完成")
     print("  Continuous Batching: R2(短) 完成后立即退出，不等 R1(长)")
 
     engine.shutdown()

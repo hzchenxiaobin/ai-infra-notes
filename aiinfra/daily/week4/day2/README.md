@@ -16,7 +16,7 @@
 
 ### 学前导读：为什么 Softmax/LayerNorm 是 Transformer 里最该手写的算子
 
-Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：4 个 GEMM（compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
+Day 1 我们用 `torch.profiler` 看到 Transformer 单层里有 6 类算子：3 类 GEMM（4 个 Linear + QKᵀ + PV，compute-bound）+ Softmax + LayerNorm + GELU（memory-bound）。其中 GEMM 由 cuBLAS/CUTLASS 包办，普通开发者几乎不会去手写；而 **Softmax 和 LayerNorm 才是手写 kernel 的"练手圣地"**：
 
 - 它们的核心是 **reduce（归约）**——正是 Week 2 Day 1 学的 Warp Shuffle 的直接应用场景
 - 它们是 **memory-bound**，AI ≈ 0.4 ~ 0.6 FLOP/Byte，优化空间不在算力而在访存
@@ -82,17 +82,7 @@ exp(xi - m) / Σ exp(xj - m)
 
 **并行映射策略**：
 
-```
-矩阵 shape: (M, D)，M 行，每行 D 个元素
-并行映射: 一个 block 处理一行
- blockIdx.x = row index（0 ~ M-1）
- blockDim.x = 线程数（通常 256 或 512，需 ≥ D 的处理能力）
-
-每个 block 内：
- Step 1: 所有线程协作求本行 max（block reduce max）
- Step 2: 所有线程协作求本行 sum(exp(x - max))（block reduce sum）
- Step 3: 所有线程协作做归一化写出
-```
+![Row-wise 并行映射：一个 Block 处理一行](../images/softmax_row_parallel_mapping.svg)
 
 **为什么一个 block 处理一行？** 因为 softmax 的归一化分母 $\sum \exp(x_j - m)$ 需要**本行所有元素**参与 reduce，跨行无依赖。把一行放在一个 block 内，可以用 shared memory + `__syncthreads` 高效协作，无需跨 block 通信。
 
@@ -141,46 +131,9 @@ __inline__ __device__ float blockReduceSum(float val, float* smem) {
 
 Safe softmax $y_i = \exp(x_i - m) / \sum \exp(x_j - m)$ 对每个元素只做约 3 次浮点运算，但要读写完整的 4-byte 数据。以 FP32、单行 D 个元素为例：
 
-**理论口径（读 1 次写 1 次，算法下界）**：
+![Softmax Arithmetic Intensity：理论 vs 三遍扫描实际](../images/softmax_ai_analysis.svg)
 
-```
-每元素 FLOPs:
-  ① x_i - m      (减法)  → 1 FLOP
-  ② exp(...)     (指数)  → 1 FLOP
-  ③ / sum        (除法)  → 1 FLOP
-  合计: 3 FLOP/元素
-
-每元素 Bytes:
-  读 x_i 1 次: 4 bytes
-  写 y_i 1 次: 4 bytes
-  合计: 8 bytes/元素
-
-AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
-远低于 Ridge Point（~58.45）→ 纯 memory-bound
-```
-
-这就是表格中 $\text{AI} \approx 0.375$ 的来源——它代表 softmax **算法本身的理论下界**（假设无冗余读）。
-
-**三遍扫描实际口径（读 3 次写 1 次）**：
-
-本日实现的三遍扫描版每元素从 HBM 读 3 次（Pass 1 求 max、Pass 2 求 sum、Pass 3 归一化），实际 AI 更低：
-
-```
-每元素实际 Bytes:
-  读 x_i 3 次: 3 × 4 = 12 bytes
-  写 y_i 1 次: 4 bytes
-  合计: 16 bytes/元素
-
-每元素实际 FLOPs（含 reduce 中的运算）:
-  Pass 1: fmaxf 比较            → ~1 FLOP
-  Pass 2: exp + 累加            → ~2 FLOPs
-  Pass 3: exp + 乘法(inv_sum)  → ~2 FLOPs
-  合计: ~5 FLOPs（不含 warp shuffle 的固定 5 步 reduce）
-
-实际 AI ≈ 5 / 16 ≈ 0.31 FLOP/Byte
-```
-
-两个口径都远低于 Ridge Point 58.45，结论一致：**Softmax 是纯 memory-bound**。三遍扫描的冗余读（3× vs 1×）是 online softmax（两遍）和 FlashAttention（分块）要消除的浪费。
+这就是表格中 $\text{AI} \approx 0.375$ 的来源——它代表 softmax **算法本身的理论下界**（假设无冗余读）。而三遍扫描版每元素从 HBM 读 3 次（Pass 1 求 max、Pass 2 求 sum、Pass 3 归一化），实际 AI ≈ 0.31 更低。两个口径都远低于 Ridge Point 58.45，结论一致：**Softmax 是纯 memory-bound**。三遍扫描的冗余读（3× vs 1×）是 online softmax（两遍）和 FlashAttention（分块）要消除的浪费。
 
 #### 2.3 LayerNorm 公式与两次 reduce
 
@@ -189,12 +142,12 @@ AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
 **LayerNorm 公式**：
 
 ```
-输入: x ∈ R^D（一行 D 个元素）
-参数: γ (gamma), β (beta) ∈ R^D
+输入: x ∈ R^N（一行 N 个元素）
+参数: γ (gamma), β (beta) ∈ R^N
 
 计算:
- μ = (1/D) Σ xi （均值）
- σ² = (1/D) Σ (xi - μ)² （方差）
+ μ = (1/N) Σ xi （均值）
+ σ² = (1/N) Σ (xi - μ)² （方差）
  yi = γi · (xi - μ) / sqrt(σ² + ε) + βi （归一化 + affine）
 ```
 
@@ -202,8 +155,8 @@ AI = FLOPs / Bytes = 3 / 8 = 0.375 FLOP/Byte
 
 LayerNorm 需要**两次 reduce**：
 
-1. 第一次：求 $\mu = \text{mean}(x)$ → reduce sum，然后除以 D
-2. 第二次：求 $\sigma^2 = \text{mean}((x - \mu)^2)$ → reduce sum of squares，然后除以 D
+1. 第一次：求 $\mu = \text{mean}(x)$ → reduce sum，然后除以 N
+2. 第二次：求 $\sigma^2 = \text{mean}((x - \mu)^2)$ → reduce sum of squares，然后除以 N
 
 ```
 Step 1: 所有线程协作求 sum(x) → μ = sum / N
@@ -519,14 +472,7 @@ s_val = s_val * expf(m_old - m_val) + expf(x - m_val);
 
 参考 Welford 在线均值/方差算法，把 mean 和 variance 在**一次遍历**内同时求出：
 
-```
-遍历每个元素 xi：
- count++
- delta = xi - mean
- mean += delta / count
- M2 += delta * (xi - mean) // M2 累积平方差
-最终：variance = M2 / count
-```
+![Welford 在线均值/方差算法](../images/welford_online_variance.svg)
 
 对比两次 reduce 版本与 Welford 一次 reduce 版本的 HBM 读次数（2N → N）和数值精度差异。
 

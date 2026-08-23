@@ -5,7 +5,7 @@
 通过今天的学习，你将：
 
 1. 理解 Triton 的 **block-level programming** 模型，能解释它如何把 CUDA 的"thread / warp / block"三层抽象压成"一个 program 操作一个 block"的一层抽象
-2. 掌握 `tl.load` / `tl.store` / `tl.reduce` / `tl.dot` 四大原语，能用它们组装出 row-wise reduce、tiled GEMM、online softmax 三类典型 kernel
+2. 掌握 `tl.load` / `tl.store` / `tl.reduce` 三大原语与 `tl.dot`，能用它们组装出 row-wise reduce、tiled GEMM、online softmax 三类典型 kernel
 3. 学会用 `@triton.jit` 装饰器把 Python 函数编译成 GPU kernel，理解 **自动 tiling 与自动向量化** 如何替代手写 `__shfl` / `float4` / `__syncthreads`
 4. 理解 `@triton.autotune` 的**配置搜索机制**，能为一组 GEMM 写出多套 `(BLOCK_SIZE, num_warps, num_stages)` 配置并让 Triton 自动选最优
 5. 实现并运行 Triton 版 Softmax / GEMM / FlashAttention，与 `torch.softmax` / `cuBLAS` / naive attention 误差达到验收标准，且 GEMM 达到 cuBLAS 70%+
@@ -56,18 +56,6 @@ def softmax_kernel(x_ptr, y_ptr, x_stride, y_stride, n_cols, BLOCK_SIZE: tl.cons
 ![Triton 编程模型：program = block](../images/triton_program_model.svg)
 
 Triton 的核心抽象是 **program**（程序实例），对应 CUDA 的一个 **block**。关键区别在于：CUDA 程序员写"一个 thread 做什么"，Triton 程序员写"一个 block 做什么"。
-
-```text
-CUDA 视角（thread-level）：
-  grid → block → warp → thread
-  你写：threadIdx.x 的代码，for 循环跨元素
-  同步：__syncthreads（block 级）、__shfl（warp 级）
-
-Triton 视角（block-level）：
-  grid → program
-  你写：一个 program 处理一个 [BLOCK_SIZE] 维 tile
-  同步：隐式（program 内操作天然同步）
-```
 
 ##### 一个 program 内部发生了什么？
 
@@ -169,10 +157,7 @@ CUDA 程序员写 `for (int i = tid; i < N; i += blockDim.x)` 手动分 tile；T
 - 是否用 shared memory 缓存
 - 是否展开循环（`#pragma unroll` 的自动版）
 
-```text
-BLOCK_SIZE=1024  → 编译器可能让每 thread 处理 4 个元素（float4）
-BLOCK_SIZE=16384 → 可能每 thread 16 个元素 + 用 shared memory 中转
-```
+![自动 tiling：BLOCK_SIZE 决定向量化与 smem 策略](../images/triton_auto_tiling.svg)
 
 ##### constexpr 的作用
 
@@ -433,7 +418,7 @@ M=N=K     cuBLAS(ms)    triton(ms)    max_diff      speedup   check
 (1, 8, 2048, 64)      0.4977        0.0618        1.95e-03      8.05      PASS  
 ```
 
-> 💡 Triton FA 加速比随 N 增长（2.79x → 8.05x）——N 越大，naive 的 $O(N^2)$ IO 越多，FA 的 $O(Nd)$ 优势越明显。这与 Day 1 的 IO 理论一致。
+> 💡 Triton FA 加速比随 N 增长（2.79x → 8.05x）——N 越大，naive 的 $O(N^2)$ IO 越多，FA 的 $O(Nd)$ 优势越明显。这与 Week 5 Day 1 的 IO 理论一致。
 
 ##### Triton vs CUDA vs PyTorch 三方 trade-off 决策表
 
@@ -590,7 +575,7 @@ Day 4 我们用 Triton 重写了 Week 4 的三大算子，建立了"Python 写 G
 1. **block-level programming**：Triton 的 program = CUDA block，但程序员只写"一个 block 做什么"，thread / warp / smem 全部交给编译器
 2. **三大原语**：`tl.load`（带 mask 块加载）/ `tl.store`（带 mask 块写出）/ `tl.reduce`（`tl.max` / `tl.sum` 内建 block 级归约）——覆盖 90% 的 kernel 逻辑
 3. **`@triton.jit`**：Python AST → MLIR → PTX → cubin 的 JIT 编译，`tl.constexpr` 参数参与编译期 tiling 决策，不同值生成不同 cubin
-4. **`@triton.autotune`**：自动搜索 `(BLOCK_SIZE, num_warps, num_stages)` 最优组合，按 `key` 缓存——把 Day 3 手动 ncu 调优自动化
+4. **`@triton.autotune`**：自动搜索 `(BLOCK_SIZE, num_warps, num_stages)` 最优组合，按 `key` 缓存——把 Week 2 手动 ncu 调优自动化
 5. **`tl.dot`**：一行调用 Tensor Core，让 Triton GEMM 达到 cuBLAS 70-85%，代码量只有手写 CUDA 的 1/2.5
 6. **FlashAttention Triton 版**：online softmax 的 `m / l / acc` 三件套与 CUDA 版完全一致，但 `tl.dot` 把两个 GEMM 自动交给 Tensor Core，核心逻辑 ~40 行 vs CUDA 版 ~300 行
 

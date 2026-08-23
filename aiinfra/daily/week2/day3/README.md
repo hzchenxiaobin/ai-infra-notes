@@ -134,18 +134,7 @@ coalesced：`128B / (4 × 32B) = 100%`　　scattered：`128B / (32 × 32B) = 12
 
 单线程执行 float4 load 确实只取 16B（半个 sector），但硬件不会为这 16B 单独去 DRAM 搬数据——访存请求先在 **warp 级合并**后才发出：
 
-```
-一个 warp = 32 线程 × 16B (float4) = 512B 连续数据
-512B = 4 条 cache line = 16 个 sector
-```
-
-两个相邻线程的 float4 恰好拼满一个 32B sector：
-
-```
-sector 0 [32B]:  thread 0 的 float4 [16B]  +  thread 1 的 float4 [16B]
-sector 1 [32B]:  thread 2 的 float4 [16B]  +  thread 3 的 float4 [16B]
-...
-```
+![Warp 级 float4 合并：相邻线程拼满 sector](../images/warp_float4_sector_packing.svg)
 
 从 DRAM 拉回的每个 sector 的 32B **全部被用上**，利用率是 **100%**。GEMM 的加载模式（连续线程取连续 float4）天然保证相邻线程拼满 sector。
 
@@ -166,17 +155,7 @@ Register Blocking 中每个线程持有 TM×TN 累加器子块，写回地址 = 
 | 行优先（本 kernel：`threadRow=tid/16, threadCol=tid%16`） | 2 行 × 128 列 | 2 段 512B 连续区 | 每条 sector 先写一半，TN/4 的第二次写补齐另一半 → L2 内合并为满 sector 写 |
 | 列优先（`threadRow=tid%16, threadCol=tid/16`） | 32 个不同行 | 32 行各 16B | 触达 32 条行、32 个 sector，每个只用一半；另一半要等相邻 warp 很久以后才来 → 部分 sector 写回 DRAM |
 
-```
-行优先映射（lane 0-15 同行，写连续 512B）:
-  lane:  0    1    2  ... 15 | 16   17 ... 31
-  地址: [row0: col0  col8  col16 ...] [row0+8: col0 ...]
-        └─ 相邻 lane 地址相邻 → 合并友好
-
-列优先映射（lane 0-31 各占一行）:
-  lane:  0      1      2   ... 31
-  地址: [row0] [row1]  [row2] ... [row31]  ← 每格 16B 散落 32 行
-        └─ 单条指令触达 32 条 cache line → 写回放散
-```
+![写回线程映射对比：行优先 vs 列优先](../images/thread_mapping_writeback.svg)
 
 线程映射往往是被 global→shared **加载端**的合并需求"逼"出来的；当加载和写回对映射的要求冲突时，就需要在写回前做一次数据重排。
 

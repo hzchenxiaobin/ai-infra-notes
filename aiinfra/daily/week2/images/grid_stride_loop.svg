@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" font-family="'Comic Sans MS', 'Segoe UI', 'Kaiti SC', 楷体, cursive">
+  <defs>
+    <filter id="rough2">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.5"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="400" fill="#fafafa"/>
+
+  <text x="430" y="26" text-anchor="middle" font-size="16" fill="#444" font-weight="bold">grid-stride loop 访问模式</text>
+  <text x="430" y="44" text-anchor="middle" font-size="11" fill="#888">每个线程以 stride = blockDim.x × gridDim.x 为步长遍历数组</text>
+
+  <!-- ===== Parameters ===== -->
+  <rect x="40" y="56" width="780" height="36" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="60" y="78" font-family="monospace" font-size="11" fill="#333">n = 4,194,304  |  threadsPerBlock = 256, blocks = 1024  |  总线程数 = 262,144  |  每线程处理 ≈ 16 元素</text>
+
+  <!-- ===== Column headers ===== -->
+  <g font-size="10" fill="#888" font-weight="bold">
+    <text x="50" y="112">线程</text>
+    <text x="130" y="112" text-anchor="middle">iter 0</text>
+    <text x="200" y="112" text-anchor="middle">stride</text>
+    <text x="270" y="112" text-anchor="middle">iter 1</text>
+    <text x="340" y="112" text-anchor="middle">stride</text>
+    <text x="410" y="112" text-anchor="middle">iter 2</text>
+    <text x="480" y="112">→ ...</text>
+  </g>
+
+  <!-- ===== Thread 0 (blue) ===== -->
+  <text x="50" y="138" font-size="11" fill="#446688" font-weight="bold">T0</text>
+  <rect x="90" y="124" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="130" y="139" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[0]</text>
+  <path d="M 170 135 L 230 135" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="230" y="124" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="270" y="139" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[S]</text>
+  <path d="M 310 135 L 370 135" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="370" y="124" width="80" height="22" fill="#e8f0fe" stroke="#446688" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="410" y="139" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[2S]</text>
+  <path d="M 450 135 L 510 135" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+
+  <!-- ===== Thread 1 (green) ===== -->
+  <text x="50" y="166" font-size="11" fill="#4a7a3a" font-weight="bold">T1</text>
+  <rect x="90" y="152" width="80" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="130" y="167" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[1]</text>
+  <path d="M 170 163 L 230 163" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="230" y="152" width="80" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="270" y="167" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[S+1]</text>
+  <path d="M 310 163 L 370 163" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="370" y="152" width="80" height="22" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="410" y="167" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[2S+1]</text>
+  <path d="M 450 163 L 510 163" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+
+  <!-- ===== Thread 2 (orange) ===== -->
+  <text x="50" y="194" font-size="11" fill="#d6a040" font-weight="bold">T2</text>
+  <rect x="90" y="180" width="80" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="130" y="195" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[2]</text>
+  <path d="M 170 191 L 230 191" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="230" y="180" width="80" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="270" y="195" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[S+2]</text>
+  <path d="M 310 191 L 370 191" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="370" y="180" width="80" height="22" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="410" y="195" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[2S+2]</text>
+  <path d="M 450 191 L 510 191" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+
+  <!-- ===== Thread 3 (red) ===== -->
+  <text x="50" y="222" font-size="11" fill="#b85450" font-weight="bold">T3</text>
+  <rect x="90" y="208" width="80" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="130" y="223" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[3]</text>
+  <path d="M 170 219 L 230 219" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="230" y="208" width="80" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="270" y="223" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[S+3]</text>
+  <path d="M 310 219 L 370 219" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+  <rect x="370" y="208" width="80" height="22" fill="#fce4ec" stroke="#b85450" stroke-width="1.2" rx="3" filter="url(#rough2)"/>
+  <text x="410" y="223" text-anchor="middle" font-family="monospace" font-size="10" fill="#333">input[2S+3]</text>
+  <path d="M 450 219 L 510 219" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#arr)" stroke-dasharray="4,3" filter="url(#rough2)"/>
+
+  <!-- ===== Coalesced brackets ===== -->
+  <g stroke="#4a7a3a" stroke-width="1.2" fill="none" filter="url(#rough2)">
+    <path d="M 88 238 L 88 244 L 172 244 L 172 238"/>
+    <path d="M 228 238 L 228 244 L 312 244 L 312 238"/>
+    <path d="M 368 238 L 368 244 L 452 244 L 452 238"/>
+  </g>
+  <g font-size="9" fill="#4a7a3a" font-weight="bold">
+    <text x="130" y="258" text-anchor="middle">coalesced</text>
+    <text x="270" y="258" text-anchor="middle">coalesced</text>
+    <text x="410" y="258" text-anchor="middle">coalesced</text>
+  </g>
+
+  <!-- ===== S = stride label ===== -->
+  <text x="540" y="180" font-size="10" fill="#888">S = stride = 262,144</text>
+  <text x="540" y="196" font-size="10" fill="#888">= blockDim.x × gridDim.x</text>
+
+  <!-- ===== Key insight ===== -->
+  <line x1="20" y1="276" x2="840" y2="276" stroke="#eee" stroke-width="1" filter="url(#rough2)"/>
+  <rect x="40" y="290" width="780" height="80" fill="#fff8e1" stroke="#d6a040" stroke-width="1.2" rx="6" filter="url(#rough2)"/>
+  <text x="60" y="312" font-size="11" fill="#444" font-weight="bold">grid-stride loop 三大优势：</text>
+  <text x="60" y="332" font-size="10" fill="#555">① 不限制数组大小：无论 n 多大，每个线程处理 n / stride 个元素，循环自动覆盖全部</text>
+  <text x="60" y="350" font-size="10" fill="#555">② coalesced access：相邻线程访问相邻地址（同一 iter 内 T0→[0], T1→[1], T2→[2]...），GPU 一次合并访存</text>
+  <text x="60" y="368" font-size="10" fill="#555">③ 自动负载均衡：每个线程处理的元素数相近，无空闲线程</text>
+</svg>

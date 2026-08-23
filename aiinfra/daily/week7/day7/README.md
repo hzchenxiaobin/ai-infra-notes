@@ -9,7 +9,7 @@
 3. 复盘本周 **15 道面试题**，建立调度专题的答题框架（定性→机制→量化→方案→跨平台）<br>
 4. 整理本周所有产出（Continuous Batcher、vLLM Scheduler 复刻、Chunked Prefill 模拟器、Prefix Cache 引擎、Mini 引擎 v1、PD 分离模拟器），形成可复用的工程资产<br>
 5. 澄清 **6 个常见误区**——Continuous≠Dynamic、PagedAttention 非直接加速、RECOMPUTE 默认非因快、chunked 非越小越好、Prefix Caching 非总有益、PD 分离非总更快<br>
-6. 为 Week 8（量化与加速）做好知识衔接，明确把前六周所有组件联调成完整 Mini AI Infra 系统的前置基础
+6. 为 Week 8（量化与加速）做好知识衔接，明确把前七周所有组件联调成完整 Mini AI Infra 系统的前置基础
 
 > 💡 **为什么重要**：Day 1-6 我们分别学了调度的各个机制——Continuous 每轮重建、vLLM Scheduler 5 步、框架横评、Chunked Prefill 分块 + Prefix Caching 复用、Mini 引擎 v1 并发、PD 分离解耦 TTFT/TPOT。但"各个机制都懂"不等于"系统全局掌握"——今天用策略对比表和决策树把碎片连成网络。这张决策树是调度优化的通用工具箱：看到任何推理服务需求，你能立刻判断该用哪种 batching、叠哪些策略。Week 8 的量化与加速建立在这张地图上。
 
@@ -64,44 +64,21 @@ Week 7 围绕一条主线展开：**从单请求串行到多请求高吞吐服�
 
 ![四框架调度对比](../images/framework_comparison.svg)
 
-```
-Inflight Batching = Continuous Batching（术语不同，本质同一）
-vLLM: Python 调度，灵活   TensorRT-LLM: C++ 调度，快但需重编译
-LightLLM: Token Attention（token 粒度内存池）+ Dynamic Split Fuse
-SGLang: RadixAttention（前缀树管理共享前缀）
-Chunked Prefill: 长 prompt 拆 chunk 与 decode 交错 → TPOT 平滑（实测尖峰 2.0ms → 1.2ms，降 40%）
-```
+![四框架调度策略 + Chunked Prefill 要点](../images/week7_day7_framework_summary.svg)
 
 #### 4. Prefix Caching：共享前缀的 KV 复用（Day4）
 
 ![Prefix Caching：block hash 匹配](../images/prefix_caching.svg)
 
-```
-每个 KV block 用 token sequence 的 hash 作唯一标识 → O(1) 查表命中
-ref_count=0 的 block 按 LRU 淘汰（引用中的不淘汰）
-命中场景：多轮对话 80-95%、共享 system prompt 90-99%
-实测：多轮对话 4x 加速、共享 system prompt 1.3x 加速
-与 Chunked Prefill 协同：先 prefix 匹配跳过已知前缀，剩余再分块交错——正交互补
-```
+![Prefix Caching 要点速览](../images/week7_day7_prefix_caching_summary.svg)
 
 #### 5. Mini 引擎 v1：多请求并发（Day5）
 
-```
-submit() → Future（异步）→ 后台 worker 做 Continuous Batching
-四组件：Request Queue + Scheduler + Worker + Future
-锁内只做队列操作（快），锁外做 forward（慢但不阻塞 submit）
-实测：4 请求 8 轮完成（v0 串行需 23 次 forward），并发收益 2.9x
-```
+![Mini 引擎 v1 要点速览](../images/week7_day7_mini_engine_summary.svg)
 
 #### 6. PD 分离：跨机解耦 TTFT/TPOT（Day6）
 
-```
-动机：prefill compute-bound vs decode memory-bound 资源错配 + TTFT/TPOT SLO 矛盾
-架构：Router + Prefill Pool（算力型）+ Decode Pool（显存型）+ KV 传输层（RDMA）
-KV 传输 = seq_len × kv_bytes_per_token / RDMA 带宽（LLaMA-7B 32K prompt：16GB → 160ms）
-收益：模拟器 TTFT/TPOT 改善 75%/62%，p99 更显著；代价：传输开销 + 双池复杂度
-不划算：短 prompt、低 QPS、单机够用；与 Chunked Prefill 互补（单机调度 vs 跨机架构）
-```
+![PD 分离要点速览](../images/week7_day7_pd_separation_summary.svg)
 
 ---
 
@@ -126,17 +103,6 @@ KV 传输 = seq_len × kv_bytes_per_token / RDMA 带宽（LLaMA-7B 32K prompt：
 ![调度策略选择决策树](../images/scheduling_strategy_decision_tree.svg)
 
 ![Batching 策略选择决策树](../../images/week6_batching_strategy_decision.svg)
-
-```
-最低延迟？     → 小 batch + Priority
-LLM 自回归？   → Continuous Batching（否则 Dynamic）
-多租户/SLA？   → + Priority
-长 prompt？    → + Chunked Prefill
-共享前缀？     → + Prefix Caching
-显存紧？       → + Preemption
-长 prompt + 高 QPS + 多机？ → PD 分离
-标配：Continuous + PagedAttention + Chunked Prefill + Prefix Caching
-```
 
 ---
 
@@ -216,12 +182,7 @@ python kernels/week7_summary.py
 
 #### 答题框架
 
-```
-1. 先定性：这属于哪类策略（Continuous/Priority/Chunked/Prefix Cache/PD 分离）？
-2. 给机制：底层原理（request vs iteration 级、token budget、block hash、双池 + RDMA）
-3. 量化：数据支撑（吞吐 2-8x、延迟尖峰降 40%、命中率 80-95%、TTFT/TPOT 改善 75%/62%）
-4. 给方案：3 个以上方向，分"标配"和"按需叠加"
-```
+![调度题答题框架（四步法）](../images/week7_day7_answer_framework.svg)
 
 ---
 
@@ -254,7 +215,7 @@ Week 7 建立了调度系统的"全景地图"和第一个多请求并发引擎�
 | 调度策略对比 + 决策树 | 生产级调度策略选型 |
 | 单卡推理 | 多卡 TP/PP 扩展（进阶） |
 
-> 💡 Week 8 的核心问题：怎么把前六周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是推理调度阶段的收官。
+> 💡 Week 8 的核心问题：怎么把前七周的零件（GEMM、FlashAttention、Softmax/LayerNorm、KV Cache、PagedAttention、Continuous Batching、Scheduler）联调成一个完整的 Mini AI Infra 系统？这是推理调度阶段的收官。
 
 ---
 
@@ -352,18 +313,7 @@ Day 7 我们把 Week 7 的碎片知识连成了调度系统的完整地图：
 
 ## 📁 本周目录结构
 
-```
-aiinfra/daily/week7/
-├── README.md # 周概览
-├── day1/kernels/continuous_batcher.py # Continuous Batching 实现
-├── day2/kernels/vllm_scheduler_analyzer.py # vLLM Scheduler 教学复刻
-├── day3/kernels/chunked_prefill_simulator.py # Chunked Prefill vs Naive 延迟模拟
-├── day4/kernels/prefix_cache_engine.py # Prefix Caching 推理引擎
-├── day5/kernels/mini_engine_v1.py # Mini 推理引擎 v1（多请求并发）
-├── day6/kernels/pd_disaggregated_simulator.py # PD 分离模拟器（colocated vs disaggregated）
-├── day7/kernels/week7_summary.py # 总结日自测脚本
-├── images/ # 本周 SVG 插图
-```
+![Week 7 目录结构](../images/week7_day7_directory_structure.svg)
 
 > 📎 LeetGPU / LeetCode 题解已迁移至独立站点：<https://hzchenxiaobin.github.io/leetgpu/> 、<https://hzchenxiaobin.github.io/leetcode/>
 

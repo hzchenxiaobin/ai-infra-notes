@@ -46,13 +46,7 @@ if budget.can_schedule(num_new, 1): # ← 长 prompt 可能直接吃满整轮
 
 TensorRT-LLM 用 **"Inflight Batching"** 这个术语，但本质和 Day 2 的 Continuous Batching 完全一致：
 
-```
-Inflight Batching（TensorRT-LLM）：
- - 请求可以在 engine 运行过程中加入（in-flight）
- - 请求完成后立即退出
- - 每轮 iteration 重新构建 batch
- = Continuous Batching（vLLM）的同一思想
-```
+![Inflight Batching = Continuous Batching](../images/inflight_batching_equals_continuous.svg)
 
 ##### 术语对照
 
@@ -128,17 +122,7 @@ def prefill_chunked(seq, budget, chunk_size):
 
 ##### chunk_size 的选择
 
-```
-chunk_size 太小（如 64）：
- → 长 prompt 要很多轮才 prefill 完，首 token 延迟（TTFT）增加
- → 但 decode 延迟最平滑
-
-chunk_size 太大（如 8192）：
- → 退化为 naive prefill，decode 延迟又突增
-
-经验值：chunk_size = 512 ~ 2048（vLLM 默认 2048）
- → 在 TTFT 和 TPOT 间取平衡
-```
+![chunk_size 的选择：TTFT vs TPOT 权衡](../images/chunk_size_selection.svg)
 
 #### 4.4 LightLLM：Dynamic Split Fuse 与 Token Attention
 
@@ -152,17 +136,7 @@ LightLLM 走了另一条差异化路线：
 
 ##### Token Attention vs PagedAttention
 
-```
-PagedAttention（vLLM/TRT-LLM）：
- - KV Cache 切成固定大小 block（如 16 token/block）
- - block 是分配/回收的最小单位
- - 优点：管理简单；缺点：block 内可能有空洞
-
-Token Attention（LightLLM）：
- - 以 token 为粒度动态管理 KV Cache
- - 类似内存池：按需分配 token 级空间
- - 优点：无 block 空洞，利用率更高；缺点：管理开销略大
-```
+![Token Attention vs PagedAttention](../images/token_vs_paged_attention.svg)
 
 #### 4.5 四框架横向对比
 
@@ -173,8 +147,8 @@ Token Attention（LightLLM）：
 | Batching | Continuous | Inflight | Continuous | Dynamic Split Fuse | 动态批处理 |
 | KV Cache | PagedAttention | PagedAttention | PagedAttention | Token Attention | 分页 KV Cache |
 | Chunked Prefill | 0.5+ | 原生 | 原生 | Split Fuse | 分块 prefill |
-| Prefix Caching | block-hash | RadixAttention | RadixAttention | block-hash | 前缀复用 |
-| 灵活性 | 高 | 中 | 高 | 中 | 中 |
+| Prefix Caching | block-hash | KV cache reuse | RadixAttention | block-hash | 前缀复用 |
+| 灵活性 | 高 | 中 | 高 | 中 | 灵活程度 |
 | 语言 | Python | C++ | Python | Python | — |
 
 ##### SGLang 与 RadixAttention
@@ -603,7 +577,7 @@ for cs in [4, 8, 16, 24]:
 
 ### 今日总结
 
-Day 3 我们对比了三大推理框架的调度策略，并手写了 Chunked Prefill 模拟器：
+Day 3 我们对比了四大推理框架的调度策略，并手写了 Chunked Prefill 模拟器：
 
 1. **Inflight = Continuous**：TensorRT-LLM 的 Inflight Batching 本质就是 iteration-level 调度，请求动态加入退出，与 vLLM Continuous Batching 同一思想
 2. **TensorRT-LLM 特点**：C++ 调度器 + 预编译 plan + kernel 融合，性能更高但灵活性低（换模型要重编译）

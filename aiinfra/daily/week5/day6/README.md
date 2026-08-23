@@ -37,12 +37,7 @@ Day 3 手写 Kernel 时我们注意到，FA1 的 warp 分工是"所有 warp 共�
 
 FA1 存在三个效率问题：
 
-```
-FA1 的问题：
-1. 不同 warp group 之间存在冗余的 softmax 统计量同步
-2. 非 matmul 计算（online softmax 的 reduce/rescale）没有充分并行
-3. Q tile 行 block 内部的 warp 分工不够细，导致部分 warp 空闲
-```
+![FA1 的三大效率问题](../images/fa1_problems.svg)
 
 ##### 问题 1：跨 warp 冗余同步
 

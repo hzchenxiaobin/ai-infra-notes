@@ -9,10 +9,10 @@
     </marker>
   </defs>
   <rect width="940" height="560" fill="#fdfcf7"/>
-  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 5 知识地图：从两阶段到推理引擎</text>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 6 知识地图：从两阶段到推理引擎</text>
   <path d="M 300 42 Q 470 50 640 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">主线：Prefill/Decode 分析 → KV Cache 实现 → vLLM 架构 → PagedAttention → Mini 引擎 → Profiling → 核心问题总结</text>
+  <text x="470" y="72" text-anchor="middle" font-size="12" fill="#666">主线：Prefill/Decode 分析 → KV Cache 实现 → vLLM 架构 → PagedAttention → Mini 引擎 → FlashDecoding → 核心问题总结</text>
 
   <!-- Day1 -->
   <g filter="url(#sk)">
@@ -73,10 +73,10 @@
   <g filter="url(#sk)">
     <rect x="40" y="216" width="200" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
   </g>
-  <text x="140" y="238" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Day 6：端到端 Profiling</text>
-  <text x="140" y="258" text-anchor="middle" font-size="10" fill="#444">三层方法论 nsys/Event/ncu</text>
-  <text x="140" y="274" text-anchor="middle" font-size="10" fill="#444">TTFT/TBT breakdown</text>
-  <text x="140" y="290" text-anchor="middle" font-size="9" fill="#888">瓶颈定位决策树</text>
+  <text x="140" y="238" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">Day 6：FlashDecoding</text>
+  <text x="140" y="258" text-anchor="middle" font-size="10" fill="#444">KV 切分·跨 block 合并</text>
+  <text x="140" y="274" text-anchor="middle" font-size="10" fill="#444">Decode 并行度突破</text>
+  <text x="140" y="290" text-anchor="middle" font-size="9" fill="#888">Online softmax 合并</text>
 
   <path d="M 140 296 L 140 336" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
 
@@ -86,8 +86,8 @@
   </g>
   <text x="380" y="364" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a2828">Day 7：推理系统核心问题总结</text>
   <text x="380" y="384" text-anchor="middle" font-size="11" fill="#444">四大核心问题：内存管理 / Batch 策略 / Latency 隐藏 / 调度开销</text>
-  <text x="380" y="402" text-anchor="middle" font-size="11" fill="#444">优化速查表 + 17 道面试题复盘</text>
-  <text x="380" y="418" text-anchor="middle" font-size="10" fill="#7a2828">→ Week 6：Batching &amp; 调度优化</text>
+  <text x="380" y="402" text-anchor="middle" font-size="11" fill="#444">优化速查表 + 18 道面试题复盘</text>
+  <text x="380" y="418" text-anchor="middle" font-size="10" fill="#7a2828">→ Week 7：Batching &amp; 调度优化</text>
 
   <!-- 主线说明 -->
   <g filter="url(#sk)">
@@ -95,6 +95,6 @@
   </g>
   <text x="60" y="464" font-size="12" font-weight="bold" fill="#2b2b2b">主线逻辑</text>
   <text x="60" y="486" font-size="11" fill="#444">Day1 算清两阶段瓶颈 → Day2 造 KV Cache 零件 → Day3 读 vLLM 调度层 → Day4 深入 PagedAttention 内存管理</text>
-  <text x="60" y="506" font-size="11" fill="#444">→ Day5 组装成 Mini 引擎（零件→整车）→ Day6 装仪表盘 profiling → Day7 总结四大核心问题</text>
+  <text x="60" y="506" font-size="11" fill="#444">→ Day5 组装成 Mini 引擎（零件→整车）→ Day6 FlashDecoding 并行度突破 → Day7 总结四大核心问题</text>
   <text x="60" y="528" font-size="11" fill="#2e6e2e" font-weight="bold">本质：从"理解单个机制"到"组装系统"到"测量优化"到"提炼方法论"</text>
 </svg>

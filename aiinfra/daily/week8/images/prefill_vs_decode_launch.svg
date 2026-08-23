@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="380" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Prefill vs Decode：Launch Overhead 占比差异</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 左：Prefill ============ -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="430" height="300" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="86" font-size="14" font-weight="bold" fill="#2b6e9e">Prefill 阶段（M = 512）</text>
+  <text x="50" y="108" font-size="11" fill="#444">单个 GEMM kernel 耗时 ~1-5ms（大矩阵，算力受限）</text>
+
+  <!-- timeline -->
+  <path d="M 50 140 L 440 140" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="60" y="148" width="110" height="24" rx="3" fill="#d0e0f5" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="180" y="148" width="110" height="24" rx="3" fill="#d0e0f5" stroke="#4a6fa5" stroke-width="1.1"/>
+    <rect x="300" y="148" width="110" height="24" rx="3" fill="#d0e0f5" stroke="#4a6fa5" stroke-width="1.1"/>
+  </g>
+  <text x="115" y="164" text-anchor="middle" font-size="9" fill="#2b6e9e">kernel ~2ms</text>
+  <text x="235" y="164" text-anchor="middle" font-size="9" fill="#2b6e9e">kernel ~2ms</text>
+  <text x="355" y="164" text-anchor="middle" font-size="9" fill="#2b6e9e">kernel ~2ms</text>
+  <!-- tiny launch gaps -->
+  <path d="M 170 190 L 180 190 M 290 190 L 300 190" stroke="#c04050" stroke-width="1.2" filter="url(#sk)"/>
+  <text x="245" y="202" text-anchor="middle" font-size="9" fill="#a03040">launch 5-10μs（几乎看不到）</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="220" width="390" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="62" y="242" font-size="12" font-weight="bold" fill="#2e6e2e">launch overhead 占比 &lt; 1%</text>
+  <text x="62" y="262" font-size="11" fill="#444">→ 几乎无感，CUDA Graph 收益小（~1-3%）</text>
+
+  <text x="245" y="312" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">kernel 大 → 计算主导 → compute-bound</text>
+  <text x="245" y="336" text-anchor="middle" font-size="10" fill="#888">vLLM：prefill 走 eager，不用 graph</text>
+
+  <!-- ============ 右：Decode ============ -->
+  <g filter="url(#sk)">
+    <rect x="480" y="60" width="430" height="300" rx="10" fill="#fce4ec" stroke="#c04050" stroke-width="1.5"/>
+  </g>
+  <text x="500" y="86" font-size="14" font-weight="bold" fill="#a03040">Decode 阶段（M = 1）</text>
+  <text x="500" y="108" font-size="11" fill="#444">单个 GEMM kernel 耗时 ~5-50μs（小矩阵，launch 受限）</text>
+
+  <!-- timeline -->
+  <path d="M 500 140 L 890 140" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="510" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="560" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="610" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="660" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="710" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+    <rect x="760" y="148" width="22" height="24" rx="3" fill="#f5d0d8" stroke="#c04050" stroke-width="1.1"/>
+  </g>
+  <text x="521" y="164" text-anchor="middle" font-size="8" fill="#a03040">~10μs</text>
+  <!-- large launch gaps -->
+  <path d="M 532 190 L 560 190 M 582 190 L 610 190 M 632 190 L 660 190 M 682 190 L 710 190 M 732 190 L 760 190" stroke="#c04050" stroke-width="2" filter="url(#sk)"/>
+  <text x="695" y="202" text-anchor="middle" font-size="9" fill="#a03040">↑ launch 5-10μs（间隙比 kernel 还大）</text>
+
+  <g filter="url(#sk)">
+    <rect x="500" y="220" width="390" height="56" rx="6" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="512" y="242" font-size="12" font-weight="bold" fill="#7a2828">launch overhead 占比 30-60%</text>
+  <text x="512" y="262" font-size="11" fill="#444">→ 严重浪费，CUDA Graph 收益极大（10-30%）</text>
+
+  <text x="695" y="312" text-anchor="middle" font-size="11" fill="#a03040" font-weight="bold">kernel 小 → launch 主导 → launch-bound</text>
+  <text x="695" y="336" text-anchor="middle" font-size="10" fill="#888">30-100 个 kernel × 7μs = 0.3-1ms 纯 launch</text>
+</svg>

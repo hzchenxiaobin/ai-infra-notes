@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="300" viewBox="0 0 940 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="300" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">RTX 5090 FP16 Tensor Core 峰值计算</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Formula as connected boxes -->
+  <!-- Box 1: FP32 FMA peak -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="80" width="200" height="70" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <text x="140" y="104" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">FP32 FMA 峰值</text>
+  <text x="140" y="128" text-anchor="middle" font-size="18" fill="#b03a3a" font-weight="bold" font-family="monospace">104.75</text>
+  <text x="140" y="144" text-anchor="middle" font-size="10" fill="#888">TFLOPS</text>
+
+  <!-- × 2 -->
+  <text x="270" y="122" text-anchor="middle" font-size="20" font-weight="bold" fill="#3a3a3a">×</text>
+  <g filter="url(#sk2)">
+    <rect x="290" y="80" width="80" height="70" rx="8" fill="#fff3cf" stroke="#e8a838" stroke-width="1.4"/>
+  </g>
+  <text x="330" y="104" text-anchor="middle" font-size="11" fill="#8a6d18" font-weight="bold">TC 倍率</text>
+  <text x="330" y="128" text-anchor="middle" font-size="18" fill="#e8a838" font-weight="bold" font-family="monospace">2</text>
+  <text x="330" y="144" text-anchor="middle" font-size="9" fill="#888">FP16/FP32</text>
+
+  <!-- = -->
+  <text x="400" y="122" text-anchor="middle" font-size="20" font-weight="bold" fill="#3a3a3a">=</text>
+
+  <!-- Box 3: FP16 dense result -->
+  <g filter="url(#sk2)">
+    <rect x="430" y="80" width="220" height="70" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <text x="540" y="104" text-anchor="middle" font-size="11" fill="#2e5a1a" font-weight="bold">FP16 Tensor Core (dense)</text>
+  <text x="540" y="128" text-anchor="middle" font-size="18" fill="#2e7d4f" font-weight="bold" font-family="monospace">~209</text>
+  <text x="540" y="144" text-anchor="middle" font-size="10" fill="#888">TFLOPS</text>
+
+  <!-- arrow to sparse -->
+  <path d="M 650 115 L 690 115" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="670" y="108" text-anchor="middle" font-size="9" fill="#888">2:4 sparse</text>
+  <text x="670" y="130" text-anchor="middle" font-size="9" fill="#888">再 ×2</text>
+
+  <!-- Box 4: sparse result -->
+  <g filter="url(#sk2)">
+    <rect x="690" y="80" width="210" height="70" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4"/>
+  </g>
+  <text x="795" y="104" text-anchor="middle" font-size="11" fill="#5a3a7a" font-weight="bold">FP16 TC (sparse)</text>
+  <text x="795" y="128" text-anchor="middle" font-size="18" fill="#8e5db8" font-weight="bold" font-family="monospace">~418</text>
+  <text x="795" y="144" text-anchor="middle" font-size="10" fill="#888">TFLOPS</text>
+
+  <!-- Explanation -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="172" width="860" height="112" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="194" font-size="12" font-weight="bold" fill="#2b2b2b">推导逻辑</text>
+  <text x="60" y="216" font-size="11" fill="#444">① Tensor Core 每个 cycle 执行的 FP16 FLOPs 是 FP32 FMA 的 2 倍 → FP16 dense = FP32 × 2</text>
+  <text x="60" y="236" font-size="11" fill="#444">② 启用 2:4 structured sparsity 后峰值再翻倍 → sparse = dense × 2</text>
+  <text x="60" y="256" font-size="11" fill="#444">③ FP8 峰值更高：~418 TFLOPS (dense) / ~836 TFLOPS (sparse)</text>
+  <text x="60" y="276" font-size="11" fill="#2e7d4f" font-weight="bold">面试技巧：用"FP32 × 2 = FP16 dense"推导，不需要死记硬背</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="820" height="300" fill="#fdfcf7"/>
+
+  <text x="410" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Decode Forward（Eager）：Launch 占 70%</text>
+  <path d="M 220 40 Q 410 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="410" y="62" text-anchor="middle" font-size="12" fill="#444">Decode M=1，30 个 kernel，每个 launch 7μs + 计算 3μs</text>
+
+  <!-- ============ 堆叠条形：launch 210μs + 计算 90μs = 300μs ============ -->
+  <g filter="url(#sk)">
+    <rect x="100" y="90" width="420" height="46" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="310" y="116" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">launch 210μs</text>
+  <text x="310" y="131" text-anchor="middle" font-size="10" fill="#b03a3a">30 × 7μs</text>
+
+  <g filter="url(#sk)">
+    <rect x="520" y="90" width="180" height="46" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="610" y="116" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">计算 90μs</text>
+  <text x="610" y="131" text-anchor="middle" font-size="10" fill="#2e6e2e">30 × 3μs</text>
+
+  <path d="M 100 84 L 90 84 L 90 142 L 100 142" stroke="#888" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="78" y="117" text-anchor="middle" font-size="11" fill="#666" transform="rotate(-90 78 117)">300μs</text>
+
+  <!-- ============ 公式拆解 ============ -->
+  <text x="100" y="170" font-size="12" fill="#444">30 个 kernel × 7μs launch</text>
+  <text x="350" y="170" font-size="12" font-weight="bold" fill="#b03a3a">= 210μs 纯 launch</text>
+
+  <text x="100" y="192" font-size="12" fill="#444">30 个 kernel × 3μs 执行</text>
+  <text x="350" y="192" font-size="12" font-weight="bold" fill="#2e6e2e">= 90μs 实际计算</text>
+
+  <line x1="100" y1="206" x2="540" y2="206" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2" filter="url(#sk)"/>
+
+  <text x="100" y="228" font-size="12" fill="#444">总 latency</text>
+  <text x="350" y="228" font-size="14" font-weight="bold" fill="#2b2b2b">= 300μs</text>
+  <text x="470" y="228" font-size="12" fill="#444">launch 占比</text>
+  <text x="560" y="228" font-size="14" font-weight="bold" fill="#b03a3a">70%</text>
+
+  <!-- ============ 结论 ============ -->
+  <g filter="url(#sk)">
+    <rect x="100" y="250" width="600" height="36" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <text x="400" y="272" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">launch 占 70% —— Decode M=1 的核心痛点</text>
+</svg>

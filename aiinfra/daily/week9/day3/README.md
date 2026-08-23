@@ -125,9 +125,7 @@ all-reduce = reduce-scatter + all-gather
 
 ##### Ring 拓扑
 
-```
-节点 0 → 节点 1 → 节点 2 → 节点 3 → 节点 0
-```
+![Ring 拓扑（N=4）](images/ring_topology.svg)
 
 - 优点：带宽利用率高（每步每节点都在发/收）
 - 缺点：步数多（2(N-1)），大 N 时延迟累积
@@ -135,13 +133,7 @@ all-reduce = reduce-scatter + all-gather
 
 ##### Tree 拓扑
 
-```
-      节点 0
-     /      \
-  节点 1   节点 2
-   /  \     /  \
-  3    4   5    6
-```
+![Tree 拓扑（N=7）](images/tree_topology.svg)
 
 - 优点：步数少（`log N`）
 - 缺点：根节点带宽瓶颈

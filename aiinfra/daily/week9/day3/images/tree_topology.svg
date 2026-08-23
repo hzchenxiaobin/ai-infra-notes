@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="57" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="520" height="340" fill="#fdfcf7"/>
+
+  <text x="260" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Tree 拓扑（N=7）</text>
+  <path d="M 140 40 Q 260 48 380 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- tree edges -->
+  <g filter="url(#sk)" stroke="#8a6a2a" stroke-width="1.5" fill="none">
+    <line x1="260" y1="92" x2="170" y2="150"/>
+    <line x1="260" y1="92" x2="350" y2="150"/>
+    <line x1="170" y1="170" x2="120" y2="248"/>
+    <line x1="170" y1="170" x2="220" y2="248"/>
+    <line x1="350" y1="170" x2="300" y2="248"/>
+    <line x1="350" y1="170" x2="400" y2="248"/>
+  </g>
+
+  <!-- root node -->
+  <g filter="url(#sk)">
+    <circle cx="260" cy="80" r="26" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
+  </g>
+  <text x="260" y="84" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">节点 0</text>
+
+  <!-- level 1 nodes -->
+  <g filter="url(#sk)">
+    <circle cx="170" cy="160" r="26" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.5"/>
+    <circle cx="350" cy="160" r="26" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.5"/>
+  </g>
+  <g font-size="11" fill="#3a5a8a" text-anchor="middle" font-weight="bold">
+    <text x="170" y="164">节点 1</text>
+    <text x="350" y="164">节点 2</text>
+  </g>
+
+  <!-- leaf nodes -->
+  <g filter="url(#sk)">
+    <circle cx="120" cy="266" r="22" fill="#eaf6ea" stroke="#2e8b57" stroke-width="1.4"/>
+    <circle cx="220" cy="266" r="22" fill="#eaf6ea" stroke="#2e8b57" stroke-width="1.4"/>
+    <circle cx="300" cy="266" r="22" fill="#eaf6ea" stroke="#2e8b57" stroke-width="1.4"/>
+    <circle cx="400" cy="266" r="22" fill="#eaf6ea" stroke="#2e8b57" stroke-width="1.4"/>
+  </g>
+  <g font-size="11" fill="#2e6e2e" text-anchor="middle" font-weight="bold">
+    <text x="120" y="270">3</text>
+    <text x="220" y="270">4</text>
+    <text x="300" y="270">5</text>
+    <text x="400" y="270">6</text>
+  </g>
+
+  <!-- level labels -->
+  <text x="475" y="84" font-size="10" fill="#aaa">root</text>
+  <text x="475" y="164" font-size="10" fill="#aaa">L1</text>
+  <text x="475" y="270" font-size="10" fill="#aaa">leaf</text>
+</svg>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="300" viewBox="0 0 840 300" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="840" height="300" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="420" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Day 1 vs Day 2 数据通路对比</text>
+  <path d="M 280 44 Q 420 52 560 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="420" y="60" text-anchor="middle" font-size="11" fill="#888">从 global 直接加载 → smem 中转后加载 · 瓶颈从 HBM 转移到 smem</text>
+
+  <!-- ====== Day 1 row (red: HBM bottleneck) ====== -->
+  <text x="50" y="118" font-size="13" font-weight="bold" fill="#7a2828">Day 1</text>
+  <text x="50" y="134" font-size="10" fill="#b85450">教学版</text>
+
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="100" y="100" width="100" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="150" y="123" fill="#7a2828">HBM</text>
+    <rect x="320" y="100" width="100" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="370" y="123" fill="#7a2828">fragment</text>
+    <rect x="520" y="100" width="70" height="36" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
+    <text x="555" y="123" fill="#7a2828">C</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 202 118 L 318 118" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 422 118 L 518 118" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="260" y="94" text-anchor="middle" font-size="10" fill="#7a2828" font-style="italic">load_matrix_sync</text>
+  <text x="470" y="94" text-anchor="middle" font-size="10" fill="#7a2828" font-style="italic">mma</text>
+  <text x="620" y="123" font-size="11" fill="#b85450" font-weight="bold">⚠ HBM 带宽瓶颈</text>
+
+  <!-- divider -->
+  <path d="M 50 160 L 790 160" stroke="#888" stroke-width="1.2" stroke-dasharray="5 4" fill="none" filter="url(#sk)"/>
+
+  <!-- ====== Day 2 row (green: smem sufficient) ====== -->
+  <text x="50" y="208" font-size="13" font-weight="bold" fill="#2e6e2e">Day 2</text>
+  <text x="50" y="224" font-size="10" fill="#4a8e4a">tiled 版</text>
+
+  <g filter="url(#sk)" font-size="12" text-anchor="middle">
+    <rect x="100" y="190" width="100" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <text x="150" y="213" fill="#7a5415">HBM</text>
+    <rect x="250" y="190" width="90" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="295" y="213" fill="#2e6e2e">smem</text>
+    <rect x="420" y="190" width="100" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <text x="470" y="213" fill="#2b6e9e">fragment</text>
+    <rect x="600" y="190" width="70" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+    <text x="635" y="213" fill="#2e6e2e">C</text>
+  </g>
+  <g filter="url(#sk)">
+    <path d="M 202 208 L 248 208" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 342 208 L 418 208" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+    <path d="M 522 208 L 598 208" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+  </g>
+  <text x="225" y="184" text-anchor="middle" font-size="10" fill="#7a5415" font-style="italic">memcpy</text>
+  <text x="380" y="184" text-anchor="middle" font-size="10" fill="#2b6e9e" font-style="italic">load_matrix_sync</text>
+  <text x="560" y="184" text-anchor="middle" font-size="10" fill="#2e6e2e" font-style="italic">mma</text>
+  <text x="700" y="213" font-size="11" fill="#2e6e2e" font-weight="bold">✓ smem 带宽充足</text>
+
+  <!-- bottom note -->
+  <text x="420" y="270" text-anchor="middle" font-size="10" fill="#888">smem 带宽 ≈ HBM 的 10× · tile 搬到 smem 后 Tensor Core 才能持续被喂满</text>
+  <text x="420" y="288" text-anchor="middle" font-size="9" fill="#aaa">颜色：橙=HBM · 绿=smem/C · 蓝=fragment(register)</text>
+</svg>

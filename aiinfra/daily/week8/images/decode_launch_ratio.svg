@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="320" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Decode M=1：Launch 占比量化估算</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="470" y="64" text-anchor="middle" font-size="12" fill="#444">12 层 Transformer × 8 kernel/层 ≈ 96 个 kernel（单 kernel ~10μs 计算 + 7μs launch）</text>
+
+  <!-- ============ 左：计算公式 ============ -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="410" height="220" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="106" font-size="13" font-weight="bold" fill="#7a5415">计算拆解</text>
+
+  <text x="50" y="134" font-size="12" fill="#444">计算总时间 = 96 × 10μs</text>
+  <text x="320" y="134" font-size="12" font-weight="bold" fill="#2e6e2e">= 0.96 ms</text>
+
+  <text x="50" y="162" font-size="12" fill="#444">launch 总时间 = 96 × 7μs</text>
+  <text x="320" y="162" font-size="12" font-weight="bold" fill="#b03a3a">= 0.67 ms</text>
+
+  <line x1="50" y1="178" x2="400" y2="178" stroke="#c98a2b" stroke-width="1" stroke-dasharray="4 2" filter="url(#sk)"/>
+
+  <text x="50" y="200" font-size="12" fill="#444">端到端 = 0.96 + 0.67</text>
+  <text x="320" y="200" font-size="12" font-weight="bold" fill="#2b2b2b">= 1.63 ms</text>
+
+  <text x="50" y="228" font-size="12" fill="#444">launch 占比 = 0.67 / 1.63</text>
+  <text x="320" y="228" font-size="14" font-weight="bold" fill="#b03a3a">≈ 41%</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="248" width="370" height="36" rx="6" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="235" y="270" text-anchor="middle" font-size="11" fill="#7a2828" font-weight="bold">近一半时间花在 launch，而非计算</text>
+
+  <!-- ============ 右：堆叠条形图 ============ -->
+  <g filter="url(#sk)">
+    <rect x="470" y="80" width="440" height="220" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="690" y="106" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">端到端延迟堆叠（1.63 ms）</text>
+
+  <!-- stacked bar -->
+  <g filter="url(#sk)">
+    <rect x="530" y="130" width="200" height="50" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="630" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">计算 0.96 ms</text>
+  <text x="630" y="174" text-anchor="middle" font-size="9" fill="#2e6e2e">59%</text>
+
+  <g filter="url(#sk)">
+    <rect x="530" y="180" width="139" height="50" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="600" y="210" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">launch 0.67 ms</text>
+  <text x="600" y="224" text-anchor="middle" font-size="9" fill="#b03a3a">41%</text>
+
+  <!-- brace + label -->
+  <path d="M 530 130 L 515 130 L 515 230 L 530 230" stroke="#888" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="490" y="180" text-anchor="middle" font-size="10" fill="#666" transform="rotate(-90 490 180)">1.63 ms</text>
+
+  <!-- arrow to conclusion -->
+  <path d="M 740 155 L 770 155" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="770" y="130" width="120" height="50" rx="6" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="830" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a5415">CUDA Graph</text>
+  <text x="830" y="168" text-anchor="middle" font-size="10" fill="#7a5415">消除 launch</text>
+
+  <text x="690" y="278" text-anchor="middle" font-size="10" fill="#888">graph replay 后：0.96 ms（仅计算），加速比 ≈ 1.7x</text>
+</svg>

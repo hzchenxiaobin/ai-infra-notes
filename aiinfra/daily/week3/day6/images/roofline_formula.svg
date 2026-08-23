@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 140" font-family="Consolas, 'Courier New', monospace">
+  <rect width="720" height="140" fill="#f8f9fa" rx="8" stroke="#e0e0e0" stroke-width="1"/>
+
+  <text x="20" y="42" font-size="16" fill="#1a1a2e">
+    Achieved_FLOPS = min(Peak_FLOPS, Peak_BW × <tspan fill="#e94560" font-weight="bold">Arithmetic_Intensity</tspan>)
+  </text>
+
+  <defs>
+    <marker id="arrowUp" markerWidth="10" markerHeight="10" refX="5" refY="2" orient="auto">
+      <path d="M1,8 L5,1 L9,8" fill="none" stroke="#e94560" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <line x1="525" y1="100" x2="525" y2="52" stroke="#e94560" stroke-width="2" marker-end="url(#arrowUp)"/>
+
+  <text x="430" y="120" font-size="14" fill="#0f3460" font-style="italic">
+    AI = FLOPs / Bytes
+  </text>
+</svg>

@@ -21,17 +21,7 @@
 
 8 周以来我们写的所有 kernel（GEMM、FlashAttention、Softmax、RMSNorm……）都跑在 NVIDIA GPU 上。但现实是：
 
-```
-国内 AI Infra 的多硬件现状：
-  - 互联网大厂：NVIDIA A100/H100 为主，但战略上引入国产算力降风险
-  - 华为云/昇腾生态：Ascend 910/910B 是主力，CANN 是软件栈
-  - 推理框架（vLLM/TensorRT-LLM）也在做"多后端"适配
-
-只懂 CUDA 的瓶颈：
-  - 面试官："你这 kernel 迁到 Ascend 要改什么？" → 答不上来
-  - 业务方："我们要支持昇腾卡" → 你说"我只懂 CUDA"
-  - 本质：只懂一种硬件 = 只会一种"表达计算"的方式
-```
+![国内 AI Infra 多硬件现状 vs 只懂 CUDA 的瓶颈](../images/multi_hardware_landscape.svg)
 
 | 视角 | 只懂 CUDA | 懂多硬件对比 |
 |------|-----------|-------------|

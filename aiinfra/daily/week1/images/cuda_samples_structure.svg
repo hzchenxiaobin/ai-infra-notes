@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="420" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">CUDA Samples 目录结构</text>
+
+  <!-- Root node -->
+  <rect x="60" y="60" width="180" height="36" rx="6" fill="#4a8edb" opacity="0.15" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="78" y="83" font-size="15" fill="#2b2b2b" font-family="monospace" font-weight="bold">📁 cuda/samples/</text>
+
+  <!-- Tree vertical line -->
+  <path d="M 150 96 L 150 360" stroke="#999999" stroke-width="1.5" fill="none"/>
+
+  <!-- 0_Introduction -->
+  <path d="M 150 120 L 180 120" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="106" width="200" height="28" rx="4" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="192" y="125" font-size="13" fill="#2b2b2b" font-family="monospace">0_Introduction/</text>
+  <text x="400" y="125" font-size="13" fill="#666666">入门示例</text>
+
+  <!-- 1_Utilities (highlighted) -->
+  <path d="M 150 158 L 180 158" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="144" width="200" height="28" rx="4" fill="#5cb86c" opacity="0.15" stroke="#5cb86c" stroke-width="2"/>
+  <text x="192" y="163" font-size="13" fill="#2b2b2b" font-family="monospace" font-weight="bold">1_Utilities/</text>
+  <text x="400" y="163" font-size="13" fill="#666666">工具类（deviceQuery, bandwidthTest 等）</text>
+
+  <!-- 2_Concepts_and_Techniques -->
+  <path d="M 150 196 L 180 196" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="182" width="240" height="28" rx="4" fill="#e8a838" opacity="0.12" stroke="#e8a838" stroke-width="1.5"/>
+  <text x="192" y="201" font-size="13" fill="#2b2b2b" font-family="monospace">2_Concepts_and_Techniques/</text>
+  <text x="440" y="201" font-size="13" fill="#666666">技术概念</text>
+
+  <!-- 3_CUDA_Features -->
+  <path d="M 150 234 L 180 234" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="220" width="200" height="28" rx="4" fill="#b689e8" opacity="0.12" stroke="#b689e8" stroke-width="1.5"/>
+  <text x="192" y="239" font-size="13" fill="#2b2b2b" font-family="monospace">3_CUDA_Features/</text>
+  <text x="400" y="239" font-size="13" fill="#666666">CUDA 特性</text>
+
+  <!-- 4_CUDA_Libraries -->
+  <path d="M 150 272 L 180 272" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="258" width="200" height="28" rx="4" fill="#4ec8b0" opacity="0.12" stroke="#4ec8b0" stroke-width="1.5"/>
+  <text x="192" y="277" font-size="13" fill="#2b2b2b" font-family="monospace">4_CUDA_Libraries/</text>
+  <text x="400" y="277" font-size="13" fill="#666666">CUDA 库</text>
+
+  <!-- 5_Simulations (last branch) -->
+  <path d="M 150 310 L 150 310 M 150 310 L 180 310" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <rect x="180" y="296" width="200" height="28" rx="4" fill="#e57373" opacity="0.12" stroke="#e57373" stroke-width="1.5"/>
+  <text x="192" y="315" font-size="13" fill="#2b2b2b" font-family="monospace">5_Simulations/</text>
+  <text x="400" y="315" font-size="13" fill="#666666">物理模拟</text>
+
+  <!-- Highlight note -->
+  <rect x="180" y="350" width="420" height="50" rx="8" fill="#fffdf5" stroke="#5cb86c" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="390" y="372" text-anchor="middle" font-size="13" fill="#5cb86c" font-weight="bold">💡 deviceQuery 位于 1_Utilities/ 目录</text>
+  <text x="390" y="390" text-anchor="middle" font-size="12" fill="#666666">是查询 GPU 硬件参数的核心工具</text>
+
+  </g>
+</svg>

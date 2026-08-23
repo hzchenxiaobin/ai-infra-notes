@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="380" viewBox="0 0 940 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="380" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">KV Cache 量化误差累积：softmax 放大量化噪声</text>
+  <path d="M 280 42 Q 470 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 顶部：attention 公式 ============ -->
+  <g filter="url(#sk)">
+    <rect x="250" y="66" width="440" height="50" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="470" y="96" text-anchor="middle" font-size="16" font-weight="bold" fill="#7a5415">O = softmax(Q · K^T) · V</text>
+
+  <!-- ============ 三个误差来源 ============ -->
+  <!-- 1. K/V 来自 KV Cache -->
+  <g filter="url(#sk)">
+    <rect x="40" y="140" width="270" height="100" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="166" font-size="13" font-weight="bold" fill="#2b6e9e">① K/V 来自 KV Cache</text>
+  <text x="60" y="190" font-size="11" fill="#444">每步追加新 token 的 K/V</text>
+  <text x="60" y="208" font-size="11" fill="#444">量化误差写入后一直存在</text>
+  <text x="60" y="226" font-size="11" fill="#444">早期 token 误差累积影响后续</text>
+
+  <!-- 2. softmax 放大 K^T 误差 -->
+  <g filter="url(#sk)">
+    <rect x="335" y="140" width="270" height="100" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="355" y="166" font-size="13" font-weight="bold" fill="#7a2828">② softmax 放大 K^T 误差</text>
+  <text x="355" y="190" font-size="11" fill="#444">量化误差在 K^T 上被指数运算放大</text>
+  <text x="355" y="208" font-size="11" fill="#444">小误差 → softmax 权重偏移</text>
+  <text x="355" y="226" font-size="11" fill="#444">影响 attention 分布</text>
+
+  <!-- 3. V 误差直接影响输出 -->
+  <g filter="url(#sk)">
+    <rect x="630" y="140" width="270" height="100" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="650" y="166" font-size="13" font-weight="bold" fill="#2e6e2e">③ V 误差直传输出</text>
+  <text x="650" y="190" font-size="11" fill="#444">O = softmax · V</text>
+  <text x="650" y="208" font-size="11" fill="#444">V 的量化误差直接进入输出</text>
+  <text x="650" y="226" font-size="11" fill="#444">与 softmax 权重叠加</text>
+
+  <!-- ============ 箭头汇合到结论 ============ -->
+  <path d="M 175 250 Q 175 275 360 285" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 470 250 Q 470 270 470 282" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 765 250 Q 765 275 580 285" stroke="#3a3a3a" stroke-width="1.3" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- ============ 底部结论 ============ -->
+  <g filter="url(#sk)">
+    <rect x="180" y="288" width="580" height="68" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="470" y="314" text-anchor="middle" font-size="13" font-weight="bold" fill="#b03a3a">长序列（N 大）时，softmax 指数运算让小误差被放大</text>
+  <text x="470" y="338" text-anchor="middle" font-size="11" fill="#666">→ 长上下文需 FP8 或混合策略（前缀 FP16 + 尾部 INT8）</text>
+</svg>

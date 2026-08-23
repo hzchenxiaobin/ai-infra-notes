@@ -122,7 +122,7 @@ __shared__ float tile[TILE_DIM][TILE_DIM + 1]; // +1 padding
 ```
 
 **原理**：
-- 原来 `tile[i][j]` 的地址是 `i * TILE_DIM + j`，同一列 `j` 固定时，地址间隔 `TILE_DIM * 4 = 128 bytes`，都是 bank 0
+- 原来 `tile[i][j]` 的地址是 `i * TILE_DIM + j`，同一列 `j` 固定时，地址间隔 `TILE_DIM * 4 = 128 bytes`，`128 / 4 = 32`，`32 % 32 = 0`，所以相邻行同一列都在同一个 bank
 - 加 padding 后，地址是 `i * (TILE_DIM + 1) + j`，同一列相邻元素的地址差是 `33 * 4 = 132 bytes`
 - `132 / 4 = 33`，`33 % 32 = 1`，所以相邻行同一列会错开 1 个 bank
 - 这样 32 个线程访问同一列时，分别访问 32 个不同 bank

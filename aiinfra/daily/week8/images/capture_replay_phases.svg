@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+  </defs>
+  <rect width="940" height="420" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">CUDA Graph 两阶段：Capture → Replay API 流程</text>
+  <path d="M 230 40 Q 470 48 710 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 阶段 1：Capture ============ -->
+  <g filter="url(#sk)">
+    <rect x="30" y="60" width="880" height="170" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="86" font-size="14" font-weight="bold" fill="#7a5415">阶段 1 — Capture（录制，只做一次）</text>
+
+  <!-- API call boxes -->
+  <g filter="url(#sk)">
+    <rect x="50" y="100" width="240" height="34" rx="5" fill="#fff7c0" stroke="#b8a040" stroke-width="1.2"/>
+  </g>
+  <text x="170" y="122" text-anchor="middle" font-size="10" font-family="monospace" fill="#7a5415">cudaStreamBeginCapture(stream)</text>
+
+  <path d="M 170 136 L 170 156" stroke="#5a5a5a" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="160" width="240" height="50" rx="5" fill="#fdefd0" stroke="#b8a040" stroke-width="1.2" stroke-dasharray="4 2"/>
+  </g>
+  <text x="170" y="178" text-anchor="middle" font-size="10" fill="#7a5415">在该 stream 上跑一遍 kernel 序列</text>
+  <text x="170" y="194" text-anchor="middle" font-size="9" fill="#8a7a06">驱动记录每个 launch 参数与依赖</text>
+  <text x="170" y="206" text-anchor="middle" font-size="9" fill="#8a7a06">→ 构建 cudaGraph_t（DAG）</text>
+
+  <!-- arrow to EndCapture -->
+  <path d="M 290 184 L 350 184" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="350" y="168" width="220" height="34" rx="5" fill="#fff7c0" stroke="#b8a040" stroke-width="1.2"/>
+  </g>
+  <text x="460" y="190" text-anchor="middle" font-size="10" font-family="monospace" fill="#7a5415">cudaStreamEndCapture(&amp;graph)</text>
+
+  <!-- arrow to Instantiate -->
+  <path d="M 570 185 L 610 185" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="610" y="168" width="280" height="34" rx="5" fill="#fff7c0" stroke="#b8a040" stroke-width="1.2"/>
+  </g>
+  <text x="750" y="190" text-anchor="middle" font-size="10" font-family="monospace" fill="#7a5415">cudaGraphInstantiate(&amp;graphExec, graph)</text>
+
+  <text x="750" y="214" text-anchor="middle" font-size="9" fill="#8a7a06">编译为可执行实例（一次性开销）</text>
+
+  <!-- ============ 阶段 2：Replay ============ -->
+  <g filter="url(#sk)">
+    <rect x="30" y="250" width="880" height="150" rx="10" fill="#eaf6ee" stroke="#2e8b57" stroke-width="1.5"/>
+  </g>
+  <text x="50" y="276" font-size="14" font-weight="bold" fill="#2e6e2e">阶段 2 — Replay（每次执行，重复调用）</text>
+
+  <!-- API call -->
+  <g filter="url(#sk)">
+    <rect x="50" y="290" width="260" height="34" rx="5" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="180" y="312" text-anchor="middle" font-size="10" font-family="monospace" fill="#2e6e2e">cudaGraphLaunch(graphExec, stream)</text>
+
+  <path d="M 310 307 L 360 307" stroke="#2e8b57" stroke-width="1.4" marker-end="url(#arG)" filter="url(#sk)"/>
+
+  <text x="380" y="300" font-size="10" font-weight="bold" fill="#2e6e2e">CPU 立即返回</text>
+  <text x="380" y="316" font-size="9" fill="#2e6e2e">（只 1 次提交）</text>
+
+  <!-- GPU back-to-back kernels -->
+  <path d="M 380 330 L 890 330" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="380" y="326" font-size="9" fill="#888">GPU 端 graph executor</text>
+  <g filter="url(#sk)">
+    <rect x="390" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="429" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="468" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="507" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="546" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="585" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="624" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="663" y="338" width="36" height="22" rx="3" fill="#d0e8d8" stroke="#2e8b57" stroke-width="1.1"/>
+  </g>
+  <text x="545" y="376" text-anchor="middle" font-size="10" fill="#2e6e2e">kernel 背靠背执行，CPU 无需再介入</text>
+  <text x="545" y="392" text-anchor="middle" font-size="9" fill="#888">N 次 CPU↔driver 切换 → 1 次</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="200" viewBox="0 0 780 200" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="200" fill="#fdfcf7"/>
+  <text x="390" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUDA 编译流水线：C++ → PTX → SASS</text>
+  <path d="M 220 42 Q 390 50 560 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- CUDA C++ box -->
+  <g filter="url(#sk)">
+    <rect x="40" y="70" width="200" height="90" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="140" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">CUDA C++</text>
+  <text x="140" y="116" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">kernel&lt;&lt;&lt;grid,block&gt;&gt;&gt;</text>
+  <text x="140" y="134" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">asm volatile("mma.sync...")</text>
+  <text x="140" y="150" text-anchor="middle" font-size="9" fill="#888">源代码（与 GPU 型号无关）</text>
+
+  <!-- arrow 1 -->
+  <path d="M 240 115 L 280 115" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <text x="260" y="106" text-anchor="middle" font-size="9" fill="#666">nvcc -ptx</text>
+
+  <!-- PTX box -->
+  <g filter="url(#sk)">
+    <rect x="280" y="70" width="200" height="90" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">PTX</text>
+  <text x="380" y="116" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">mma.sync.aligned</text>
+  <text x="380" y="134" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">ldmatrix.sync.aligned</text>
+  <text x="380" y="150" text-anchor="middle" font-size="9" fill="#888">虚拟 ISA（跨架构可移植）</text>
+
+  <!-- arrow 2 -->
+  <path d="M 480 115 L 520 115" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <text x="500" y="106" text-anchor="middle" font-size="9" fill="#666">驱动 JIT</text>
+
+  <!-- SASS box -->
+  <g filter="url(#sk)">
+    <rect x="520" y="70" width="200" height="90" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.5"/>
+  </g>
+  <text x="620" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a2828">SASS</text>
+  <text x="620" y="116" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">HMMA.1688.F32</text>
+  <text x="620" y="134" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">LDSM.32.M8N8</text>
+  <text x="620" y="150" text-anchor="middle" font-size="9" fill="#888">GPU 机器码（架构相关）</text>
+
+  <!-- bottom note -->
+  <g filter="url(#sk)">
+    <rect x="40" y="172" width="680" height="20" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="4 2"/>
+  </g>
+  <text x="380" y="186" text-anchor="middle" font-size="10" fill="#888">用 asm volatile("...") 可在 CUDA C++ 中直接内联 PTX，绕过编译器高层抽象</text>
+</svg>

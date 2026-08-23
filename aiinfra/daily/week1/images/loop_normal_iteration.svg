@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="340" viewBox="0 0 720 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sketch)">
+
+  <rect width="720" height="340" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">普通循环：每次迭代处理 1 个元素</text>
+
+  <text x="90" y="95" text-anchor="end" font-size="15" font-weight="bold" fill="#2b2b2b">迭代 0</text>
+  <rect x="110" y="75" width="220" height="40" rx="6" fill="#4a9d5f" opacity="0.85" stroke="#5cb86c" stroke-width="2"/>
+  <text x="220" y="100" text-anchor="middle" font-size="14" fill="#fdfcf7" font-weight="bold">加载 v，计算 acc += v*v+1</text>
+
+  <text x="90" y="150" text-anchor="end" font-size="15" font-weight="bold" fill="#2b2b2b">迭代 1</text>
+  <rect x="110" y="130" width="220" height="40" rx="6" fill="#4a9d5f" opacity="0.85" stroke="#5cb86c" stroke-width="2"/>
+  <text x="220" y="155" text-anchor="middle" font-size="14" fill="#fdfcf7" font-weight="bold">加载 v，计算 acc += v*v+1</text>
+
+  <text x="90" y="205" text-anchor="end" font-size="15" font-weight="bold" fill="#2b2b2b">迭代 2</text>
+  <rect x="110" y="185" width="220" height="40" rx="6" fill="#4a9d5f" opacity="0.85" stroke="#5cb86c" stroke-width="2"/>
+  <text x="220" y="210" text-anchor="middle" font-size="14" fill="#fdfcf7" font-weight="bold">加载 v，计算 acc += v*v+1</text>
+
+  <text x="220" y="260" text-anchor="middle" font-size="20" fill="#666666" font-weight="bold">…</text>
+
+  <rect x="380" y="95" width="300" height="150" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="530" y="130" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">特点</text>
+  <text x="530" y="160" text-anchor="middle" font-size="13" fill="#666666">每次只有 1 个 v 活跃</text>
+  <text x="530" y="185" text-anchor="middle" font-size="13" fill="#666666">可复用同一寄存器</text>
+  <text x="530" y="215" text-anchor="middle" font-size="13" fill="#e57373" font-weight="bold">寄存器用量少</text>
+
+  </g>
+</svg>

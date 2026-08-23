@@ -17,14 +17,14 @@
 
 ### 学前导读：profiling 驱动的优化闭环
 
-Day 1-5 的性能演进（30% → 42% → ~50% → ~55%，其中 Day1/Day2 实测、Day3/Day5 预估）是"实现-测时间-猜瓶颈"的循环。今天用 ncu 把"猜"变成"看"：
+Day 1-5 的性能演进（30% → 16% → ~50% → 96%，其中 Day1/Day2/Day5 实测、Day3 预估）是"实现-测时间-猜瓶颈"的循环。今天用 ncu 把"猜"变成"看"：
 
 | 优化阶段 | 实现 | cuBLAS%(TF32) | 猜测的瓶颈 | 今天用 ncu 验证 |
 |---------|------|---------|-----------|----------------|
 | Day 1 | WMMA naive | 30%✓ | "HBM 带宽" | `dram__throughput` 应该很高 |
-| Day 2 | WMMA tiled | 42%✓ | "smem 带宽" | `dram__throughput` 下降, `l1tex` 上升 |
+| Day 2 | WMMA tiled | 16%✓ | "smem 带宽" | `dram__throughput` 下降, `l1tex` 上升 |
 | Day 3 | mma.sync | ~50%预估 | "fragment 开销" | `sm__pipe_tensor_op` 应该上升 |
-| Day 5 | double buffer | ~55%预估 | "load/compute 串行" | `sm__pipe_tensor_op` 进一步上升 |
+| Day 5 | double buffer | 96%✓ | "load/compute 串行" | `sm__pipe_tensor_op` 进一步上升 |
 
 > 💡 **一句话总结**：Profiling 是优化的眼睛。今天用 ncu 把 Day 1-5 的性能数字"打开"看内部指标，理解每个优化到底改变了什么。
 
@@ -63,11 +63,7 @@ Day 1-5 的性能演进（30% → 42% → ~50% → ~55%，其中 Day1/Day2 实�
 
 ##### Roofline 基本公式
 
-```
-Achieved_FLOPS = min(Peak_FLOPS, Peak_BW × Arithmetic_Intensity)
-                                        ↑
-                              AI = FLOPs / Bytes
-```
+![Roofline 基本公式](images/roofline_formula.svg)
 
 - **Arithmetic Intensity (AI)**：每字节搬运的数据能做多少 FLOP
 - **Peak point**：AI 与 Roofline 交点，左侧带宽 bound，右侧算力 bound
@@ -76,24 +72,15 @@ Achieved_FLOPS = min(Peak_FLOPS, Peak_BW × Arithmetic_Intensity)
 
 GEMM `C[M,N] = A[M,K] × B[K,N]` 的 AI：
 
-```
-FLOPs = 2 × M × N × K
-Bytes = (M×K + K×N + M×N) × sizeof(element)
-
-AI = 2×M×N×K / (M×K + K×N + M×N) × sizeof
-```
+![GEMM 的 Arithmetic Intensity](images/gemm_ai_formula.svg)
 
 对于方阵 M=N=K=4096, FP16：
 
-```
-AI = 2 × 4096³ / (3 × 4096²) × 2 = 2 × 4096 / 3 / 2 ≈ 1365 FLOP/Byte
-```
+![方阵 AI 计算](images/ai_calculation.svg)
 
 RTX 5090 的 Peak FP16 = 209 TFLOPS, Peak HBM BW = 1792 GB/s：
 
-```
-Ridge point AI = 209e12 / 1792e9 ≈ 117 FLOP/Byte
-```
+![Ridge Point 计算](images/ridge_point.svg)
 
 GEMM 的 AI (1365) >> Ridge point (117)，所以 **GEMM 是算力 bound**。
 
@@ -101,14 +88,7 @@ GEMM 的 AI (1365) >> Ridge point (117)，所以 **GEMM 是算力 bound**。
 
 Day 1 教学版直接从 global memory load fragment，没有 smem tiling。每个 warp 独立加载 A/B tile，大量重复搬运：
 
-```
-实际 AI = 2×M×N×K / (重复加载后的实际 Bytes)
-Day 1 实际 Bytes ≈ 4× 理论 Bytes（每 warp 独立加载）
-实际 AI ≈ 1365 / 4 ≈ 341 FLOP/Byte  → 仍算力 bound？
-
-不对——Day 1 的 fragment load 不经过 L2 cache 优化，实际 HBM 访问模式极差，
-effective BW 远低于峰值。所以 Day 1 是 "低效带宽 bound"。
-```
+![Day 1 带宽 bound 分析](images/day1_ai_analysis.svg)
 
 > 💡 **关键洞察**：GEMM 理论上是算力 bound，但"低效数据搬运"会把它变成带宽 bound。Day 2 的 smem tiling 通过数据复用恢复了 AI，把瓶颈从带宽转移到算力。
 
@@ -124,7 +104,7 @@ effective BW 远低于峰值。所以 Day 1 是 "低效带宽 bound"。
 | `l1tex__throughput` | 20% | 65% | 70% | 75% |
 | `sm__occupancy` | 50% | 45% | 40% | 60% |
 | `registers_per_thread` | 128 | 96 | 112 | ~80 |
-| cuBLAS% | ~64% | ~55% | ~70% | 100% |
+| cuBLAS% | ~64% | 16% | 96% | 100% |
 
 ##### 关键洞察
 
@@ -265,12 +245,12 @@ ncu --set roofline --kernel-name regex:wmma_gemm_tiled ./wmma_tiled
 
 | 实现 | AI (FLOP/Byte) | Achieved TFLOPS | Peak@AI | 利用率 |
 |------|---------------|----------------|---------|--------|
-| FMA GEMM | ~340 (低效搬运) | 44 | 105 (FMA peak) | 42% |
-| WMMA tiled | ~1365 (理论) | 110 | 180 (smem BW × AI) | 61% |
-| WMMA dbuf | ~1365 | 125 | 180 | 69% |
-| cuBLAS | ~1365 | 170 | 209 (FP16 peak) | 81% |
+| FMA GEMM | ~340 (低效搬运) | 44 | 105 (FP32 FMA peak) | 42% |
+| WMMA tiled (FP16) | ~1365 (理论) | 17 | 209 (FP16 TC peak) | 8% |
+| WMMA dbuf (FP16) | ~1365 | 102 | 209 (FP16 TC peak) | 49% |
+| cuBLAS (TF32) | ~1365 | 105 | 105 (TF32 TC peak) | ~100% |
 
-> 💡 **关键洞察**：cuBLAS 的 AI 与手写相同（都是 1365），但 Achieved TFLOPS 高 40%。差距全在"算力 bound 下的峰值利用率"——即 Tensor Core 喂饱程度。
+> 💡 **关键洞察**：cuBLAS 的 AI 与手写相同（都是 1365），绝对 TFLOPS 接近（105 vs 102），但 cuBLAS（TF32）达其峰值 ~100%，WMMA dbuf（FP16）仅达 FP16 峰值 49%——差距全在"算力 bound 下的峰值利用率"，即 Tensor Core 喂饱程度。若 WMMA dbuf 能达 FP16 峰值（209 TFLOPS），将是 cuBLAS TF32 的 2×。
 
 #### 任务 5：LeetCode 面试题（10 周计划 · 第 3 周 Day 6）
 
@@ -400,7 +380,7 @@ Day 6 我们用 ncu profiling 把 Day 1-5 的性能数字"打开"看内部指标
    <details>
    <summary>点击查看答案</summary>
 
-   - **理论 AI 高**：GEMM 的 AI = 2MNK / (MK+KN+MN) ≈ K/1.5，K=4096 时 AI≈1365 FLOP/Byte，远超 ridge point
+   - **理论 AI 高**：GEMM 的 AI = 2MNK / ((MK+KN+MN) × sizeof) ≈ K/3 (FP16, sizeof=2)，K=4096 时 AI≈1365 FLOP/Byte，远超 ridge point
    - **但 Day 1 实际 AI 低**：每 warp 独立从 global memory 加载 fragment，A tile 被 M/16 个 warp 各加载一次。实际 Bytes ≈ 理论 × (M/16)，AI 降为理论 / (M/16)
    - **更糟的是 HBM 访问模式差**：fragment load 的访问模式非 coalesced，effective BW 远低于峰值
    - **结果**：Day 1 实际 AI << ridge point，带宽 bound。Day 2 的 smem tiling 通过数据复用恢复了 AI，转移到算力 bound
@@ -412,7 +392,7 @@ Day 6 我们用 ncu profiling 把 Day 1-5 的性能数字"打开"看内部指标
    <details>
    <summary>点击查看答案</summary>
 
-   - **计算 GEMM 的 AI**：`AI = 2MNK / (MK+KN+MN) × sizeof`，方阵时 `AI ≈ K/1.5`
+   - **计算 GEMM 的 AI**：`AI = 2MNK / ((MK+KN+MN) × sizeof)`，方阵时 `AI ≈ K/3`（FP16, sizeof=2）
    - **计算 GPU 的 ridge point**：`ridge_AI = Peak_FLOPS / Peak_BW`。RTX 5090：`209e12 / 1792e9 ≈ 117 FLOP/Byte`
    - **判定 bound**：
      - AI > ridge_AI：算力 bound → 优化方向是提升 Tensor Core 利用率（double buffer, K 分割）

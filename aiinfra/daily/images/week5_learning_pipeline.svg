@@ -12,9 +12,9 @@
   <rect width="760" height="280" fill="#fdfcf7"/>
 
   <!-- Title -->
-  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 5 学习主线</text>
+  <text x="380" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 6 学习主线</text>
   <path d="M 240 44 Q 380 52 520 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
-  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">从理解两阶段 → 造零件 → 读系统 → 组装引擎 → 测量优化 → 提炼方法论</text>
+  <text x="380" y="60" text-anchor="middle" font-size="11" fill="#888">从理解两阶段 → 造零件 → 读系统 → 组装引擎 → 并行度突破 → 提炼方法论</text>
 
   <!-- Row 1: Day1 → Day2 → Day3 → Day4 -->
   <g filter="url(#sk)" font-size="11" text-anchor="middle">
@@ -60,8 +60,8 @@
 
     <rect x="290" y="216" width="150" height="60" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
     <text x="365" y="238" fill="#2b6e9e" font-weight="bold" font-size="13">Day 6</text>
-    <text x="365" y="258" fill="#2b6e9e">端到端 Profiling</text>
-    <text x="365" y="272" fill="#2b6e9e" font-size="10">测量</text>
+    <text x="365" y="258" fill="#2b6e9e">FlashDecoding</text>
+    <text x="365" y="272" fill="#2b6e9e" font-size="10">并行度</text>
 
     <rect x="540" y="216" width="150" height="60" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
     <text x="615" y="238" fill="#2e6e2e" font-weight="bold" font-size="13">Day 7</text>

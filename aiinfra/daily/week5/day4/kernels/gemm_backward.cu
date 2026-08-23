@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <cmath>
 
-// dA[i,k] = sum_j dC[i,j] * B[k,j]   (B^T 的第 k 行 = B 的第 k 行，B row-major K×N)
+// dA[i,k] = sum_j dC[i,j] * B[k,j]   (B^T 的第 k 列 = B 的第 k 行，B row-major K×N)
 __global__ void gemm_backward_dA_kernel(const float* __restrict__ dC,
                                         const float* __restrict__ B,
                                         float* __restrict__ dA,

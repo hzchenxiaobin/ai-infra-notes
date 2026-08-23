@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="460" viewBox="0 0 860 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="37" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="460" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">ncu 指标：手写 CUDA GEMM（4096×4096, FP16）</text>
+  <text x="430" y="50" text-anchor="middle" font-size="11" fill="#666">gemm_cuda_kernel · smem tiling + FMA（无 Tensor Core）· 预估值待实测回填</text>
+  <path d="M 280 56 Q 430 64 580 56" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Y-axis (0-100%) ===== -->
+  <path d="M 120 380 L 120 90" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="55" y="235" font-size="11" fill="#444" transform="rotate(-90 55 235)">占峰值百分比 (%) →</text>
+  <!-- grid lines -->
+  <path d="M 120 380 L 720 380" stroke="#3a3a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 120 90 L 720 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="94" text-anchor="end" font-size="9" fill="#999">100</text>
+  <path d="M 120 167 L 720 167" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="171" text-anchor="end" font-size="9" fill="#999">75</text>
+  <path d="M 120 244 L 720 244" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="248" text-anchor="end" font-size="9" fill="#999">50</text>
+  <path d="M 120 321 L 720 321" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="325" text-anchor="end" font-size="9" fill="#999">25</text>
+  <text x="112" y="384" text-anchor="end" font-size="9" fill="#999">0</text>
+
+  <!-- X-axis label -->
+  <text x="420" y="420" text-anchor="middle" font-size="11" fill="#444">ncu Metric</text>
+
+  <!-- ===== Bars ===== -->
+  <!-- scale: 290px = 100%, bar width=80, gap=40, start x=170 -->
+
+  <!-- 1. Tensor Core 0% -->
+  <g filter="url(#sk)"><rect x="170" y="374" width="80" height="6" rx="3" fill="#b03a3a" opacity="0.65" stroke="#8a2a2a" stroke-width="1.3"/></g>
+  <text x="210" y="368" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">0.0%</text>
+  <text x="210" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">Tensor Core</text>
+  <text x="210" y="412" text-anchor="middle" font-size="7" fill="#999">pipe_tensor</text>
+  <text x="210" y="422" text-anchor="middle" font-size="7" fill="#999">_hmma</text>
+  <!-- annotation -->
+  <path d="M 255 374 Q 280 350 305 335" stroke="#b03a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="310" y="332" font-size="9" fill="#b03a3a" font-weight="bold">← FMA 实现，</text>
+  <text x="310" y="344" font-size="9" fill="#b03a3a" font-weight="bold">没用 Tensor Core</text>
+
+  <!-- 2. sm__throughput 45% -->
+  <g filter="url(#sk)"><rect x="290" y="249" width="80" height="131" rx="3" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="330" y="241" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">45.0%</text>
+  <text x="330" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">SM</text>
+  <text x="330" y="412" text-anchor="middle" font-size="7" fill="#999">throughput</text>
+
+  <!-- 3. dram__throughput 70% -->
+  <g filter="url(#sk)"><rect x="410" y="177" width="80" height="203" rx="3" fill="#b03a3a" opacity="0.65" stroke="#8a2a2a" stroke-width="1.3"/></g>
+  <text x="450" y="169" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">70.0%</text>
+  <text x="450" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">DRAM</text>
+  <text x="450" y="412" text-anchor="middle" font-size="7" fill="#999">throughput</text>
+  <!-- annotation -->
+  <path d="M 495 177 Q 520 155 545 140" stroke="#b03a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="550" y="137" font-size="9" fill="#b03a3a" font-weight="bold">← 带宽 bound</text>
+
+  <!-- 4. sm__warps_active 45% -->
+  <g filter="url(#sk)"><rect x="530" y="249" width="80" height="131" rx="3" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="570" y="241" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">45.0%</text>
+  <text x="570" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">Warps</text>
+  <text x="570" y="412" text-anchor="middle" font-size="7" fill="#999">active</text>
+  <text x="570" y="422" text-anchor="middle" font-size="7" fill="#999">(occupancy)</text>
+
+  <!-- ===== Registers annotation (not a % metric) ===== -->
+  <g filter="url(#sk)">
+    <rect x="640" y="90" width="180" height="70" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="730" y="110" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">launch__registers</text>
+  <text x="730" y="124" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">_per_thread</text>
+  <text x="730" y="142" text-anchor="middle" font-size="16" fill="#e8a838" font-weight="bold">~40</text>
+  <text x="730" y="156" text-anchor="middle" font-size="8" fill="#999">regs/thread</text>
+
+  <!-- ===== Key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="430" width="700" height="24" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.0" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="446" font-size="10" fill="#b03a3a" font-weight="bold">FMA 标量乘加 → Tensor Core 0% · DRAM 70% 带宽 bound · 寄存器反而更少(~40)——瓶颈不在寄存器，缺的是 TC + 流水线</text>
+</svg>

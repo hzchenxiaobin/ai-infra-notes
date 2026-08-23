@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="420" viewBox="0 0 860 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk7" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="44" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <rect width="860" height="420" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="430" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">torch.profiler 算子时间表（Prefill vs Decode）</text>
+  <path d="M 200 38 Q 430 46 660 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk7)"/>
+
+  <!-- ====== Prefill Table ====== -->
+  <g filter="url(#sk7)">
+    <rect x="25" y="55" width="390" height="320" rx="10" fill="#e8f5e9" stroke="#3a3a3a" stroke-width="1.6"/>
+  </g>
+  <text x="220" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Prefill Phase</text>
+  <text x="220" y="94" text-anchor="middle" font-size="10" fill="#666" font-family="monospace">shape=(1, 1024, 512)</text>
+  <!-- Header -->
+  <line x1="35" y1="105" x2="405" y2="105" stroke="#3a3a3a" stroke-width="0.8" filter="url(#sk7)"/>
+  <text x="45" y="120" font-size="9" fill="#888" font-family="monospace">Name</text>
+  <text x="260" y="120" font-size="9" fill="#888" font-family="monospace">Self CUDA</text>
+  <text x="350" y="120" font-size="9" fill="#888" font-family="monospace">Calls</text>
+  <line x1="35" y1="127" x2="405" y2="127" stroke="#3a3a3a" stroke-width="0.4" stroke-dasharray="3 3" filter="url(#sk7)"/>
+
+  <!-- Prefill rows -->
+  <text x="45" y="146" font-size="10" fill="#4a8edb" font-family="monospace">aten::mm</text>
+  <text x="260" y="146" font-size="10" fill="#4a8edb" font-family="monospace">450 us</text>
+  <text x="350" y="146" font-size="10" fill="#444" font-family="monospace">20</text>
+  <text x="45" y="160" font-size="8" fill="#4a8edb">← QKV/Out/FFN GEMM (主导)</text>
+
+  <text x="45" y="182" font-size="10" fill="#e8a838" font-family="monospace">aten::layernorm</text>
+  <text x="260" y="182" font-size="10" fill="#e8a838" font-family="monospace">120 us</text>
+  <text x="350" y="182" font-size="10" fill="#444" font-family="monospace">10</text>
+
+  <text x="45" y="204" font-size="10" fill="#e57373" font-family="monospace">aten::softmax</text>
+  <text x="260" y="204" font-size="10" fill="#e57373" font-family="monospace">80 us</text>
+  <text x="350" y="204" font-size="10" fill="#444" font-family="monospace">5</text>
+
+  <text x="45" y="226" font-size="10" fill="#8b949e" font-family="monospace">aten::gelu</text>
+  <text x="260" y="226" font-size="10" fill="#8b949e" font-family="monospace">60 us</text>
+  <text x="350" y="226" font-size="10" fill="#444" font-family="monospace">5</text>
+
+  <!-- Prefill summary -->
+  <line x1="35" y1="245" x2="405" y2="245" stroke="#3a3a3a" stroke-width="0.4" stroke-dasharray="3 3" filter="url(#sk7)"/>
+  <text x="220" y="268" text-anchor="middle" font-size="10" fill="#4a9d5f" font-weight="bold">GEMM 占 CUDA 时间 60%+</text>
+  <text x="220" y="285" text-anchor="middle" font-size="9" fill="#666">→ Compute-bound ✓</text>
+
+  <!-- Prefill bar chart -->
+  <text x="45" y="310" font-size="8" fill="#888">时间分布:</text>
+  <rect x="110" y="302" width="120" height="10" rx="2" fill="#4a8edb" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="235" y="311" font-size="8" fill="#4a8edb">GEMM</text>
+  <rect x="110" y="318" width="32" height="10" rx="2" fill="#e8a838" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="148" y="327" font-size="8" fill="#e8a838">LN</text>
+  <rect x="175" y="318" width="21" height="10" rx="2" fill="#e57373" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="201" y="327" font-size="8" fill="#e57373">SM</text>
+  <rect x="220" y="318" width="16" height="10" rx="2" fill="#8b949e" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="241" y="327" font-size="8" fill="#8b949e">GELU</text>
+
+  <!-- GPU utilization -->
+  <text x="220" y="355" text-anchor="middle" font-size="9" fill="#4a9d5f">GPU 利用率: 60-85% (SM 充分利用)</text>
+
+  <!-- ====== Decode Table ====== -->
+  <g filter="url(#sk7)">
+    <rect x="445" y="55" width="390" height="320" rx="10" fill="#fce4ec" stroke="#3a3a3a" stroke-width="1.6"/>
+  </g>
+  <text x="640" y="78" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Decode Phase</text>
+  <text x="640" y="94" text-anchor="middle" font-size="10" fill="#666" font-family="monospace">shape=(1, 1, 512)</text>
+  <!-- Header -->
+  <line x1="455" y1="105" x2="825" y2="105" stroke="#3a3a3a" stroke-width="0.8" filter="url(#sk7)"/>
+  <text x="465" y="120" font-size="9" fill="#888" font-family="monospace">Name</text>
+  <text x="680" y="120" font-size="9" fill="#888" font-family="monospace">Self CUDA</text>
+  <text x="770" y="120" font-size="9" fill="#888" font-family="monospace">Calls</text>
+  <line x1="455" y1="127" x2="825" y2="127" stroke="#3a3a3a" stroke-width="0.4" stroke-dasharray="3 3" filter="url(#sk7)"/>
+
+  <!-- Decode rows -->
+  <text x="465" y="146" font-size="10" fill="#4a8edb" font-family="monospace">aten::mm</text>
+  <text x="680" y="146" font-size="10" fill="#4a8edb" font-family="monospace">15 us</text>
+  <text x="770" y="146" font-size="10" fill="#444" font-family="monospace">20</text>
+  <text x="465" y="160" font-size="8" fill="#e57373">← GEMM 但 M=1, 矩阵极小</text>
+
+  <text x="465" y="182" font-size="10" fill="#e8a838" font-family="monospace">aten::layernorm</text>
+  <text x="680" y="182" font-size="10" fill="#e8a838" font-family="monospace">12 us</text>
+  <text x="770" y="182" font-size="10" fill="#444" font-family="monospace">10</text>
+
+  <text x="465" y="204" font-size="10" fill="#e57373" font-family="monospace">aten::softmax</text>
+  <text x="680" y="204" font-size="10" fill="#e57373" font-family="monospace">8 us</text>
+  <text x="770" y="204" font-size="10" fill="#444" font-family="monospace">5</text>
+
+  <text x="465" y="226" font-size="10" fill="#8b949e" font-family="monospace">aten::gelu</text>
+  <text x="680" y="226" font-size="10" fill="#8b949e" font-family="monospace">6 us</text>
+  <text x="770" y="226" font-size="10" fill="#444" font-family="monospace">5</text>
+
+  <!-- Decode summary -->
+  <line x1="455" y1="245" x2="825" y2="245" stroke="#3a3a3a" stroke-width="0.4" stroke-dasharray="3 3" filter="url(#sk7)"/>
+  <text x="640" y="268" text-anchor="middle" font-size="10" fill="#e57373" font-weight="bold">GEMM 占比下降, LN/SM 占比上升</text>
+  <text x="640" y="285" text-anchor="middle" font-size="9" fill="#666">→ Memory-bound ✗</text>
+
+  <!-- Decode bar chart -->
+  <text x="465" y="310" font-size="8" fill="#888">时间分布:</text>
+  <rect x="530" y="302" width="30" height="10" rx="2" fill="#4a8edb" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="565" y="311" font-size="8" fill="#4a8edb">GEMM</text>
+  <rect x="530" y="318" width="24" height="10" rx="2" fill="#e8a838" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="559" y="327" font-size="8" fill="#e8a838">LN</text>
+  <rect x="590" y="318" width="16" height="10" rx="2" fill="#e57373" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="611" y="327" font-size="8" fill="#e57373">SM</text>
+  <rect x="620" y="318" width="12" height="10" rx="2" fill="#8b949e" opacity="0.7" stroke="#3a3a3a" stroke-width="0.5" filter="url(#sk7)"/>
+  <text x="637" y="327" font-size="8" fill="#8b949e">GELU</text>
+  <text x="665" y="311" font-size="7" fill="#aaa">← gap 占比增大</text>
+
+  <!-- GPU utilization -->
+  <text x="640" y="355" text-anchor="middle" font-size="9" fill="#e57373">GPU 利用率: 10-30% (大量 SM 空闲, 等显存)</text>
+
+  <!-- VS divider -->
+  <text x="430" y="200" text-anchor="middle" font-size="14" font-weight="bold" fill="#888">vs</text>
+</svg>

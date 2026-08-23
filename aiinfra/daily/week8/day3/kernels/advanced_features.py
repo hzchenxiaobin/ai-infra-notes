@@ -2,7 +2,7 @@
 # 运行命令: python advanced_features.py
 # 依赖: 仅标准库
 #
-# 本文件是 Week7 Day3 的核心产出：模拟三大高级推理特性，评估收益。
+# 本文件是 Week8 Day3 的核心产出：模拟三大高级推理特性，评估收益。
 #   1. Speculative Decoding：小模型 draft + 大模型 verify，测量加速比
 #   2. Chunked Prefill：长 prompt 分块，与 decode 交错，平滑延迟
 #   3. Prefix Caching：缓存公共前缀的 KV Cache，降低 TTFT

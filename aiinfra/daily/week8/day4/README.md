@@ -4,7 +4,7 @@
 
 通过今天的学习，你将：
 
-1. 理解 **launch overhead 本质**——每次 kernel launch 有 5-10μs 的 CPU 提交开销（驱动态切换、kernel descriptor 组装、stream 入队），与 kernel 自身耗时无关<br>
+1. 理解 **launch overhead 本质**——每次 kernel launch 有 5-10μs 的 CPU 提交开销（驱动状态切换、kernel descriptor 组装、stream 入队），与 kernel 自身耗时无关<br>
 2. 掌握 **CUDA Graph 原理**——capture（录制 kernel launch 序列为一张 DAG 图）/ replay（一次提交回放整图）两阶段模式，把 N 次 launch 压成 1 次<br>
 3. 学会 **PyTorch CUDA Graph API**——`torch.cuda.CUDAGraph`、`capture_begin/end`、`graph.replay()`、静态 buffer 模式（输入输出必须固定地址）<br>
 4. 能 **量化 launch overhead 占比**——Decode 阶段 M=1 时 kernel 极快（μs 级），launch 开销占比可达 **50%+**，是 CUDA Graph 收益最大的场景<br>
@@ -27,18 +27,7 @@
 
 但"kernel 间隙 5-10μs"在 **Prefill** 和 **Decode** 两个阶段的影响完全不同：
 
-```
-Prefill 阶段（M = prompt_len，如 512）：
-  - 单个 GEMM kernel 耗时 ~1-5ms（大矩阵，算力受限）
-  - launch overhead 5-10μs 占比 < 1% → 几乎无感
-  - → CUDA Graph 收益小
-
-Decode 阶段（M = 1，逐 token 生成）：
-  - 单个 GEMM kernel 耗时 ~5-50μs（小矩阵，launch 受限）
-  - launch overhead 5-10μs 占比 30-60% → 严重浪费
-  - 一个 forward 有 30-100 个 kernel，纯 launch 就 0.3-1ms
-  - → CUDA Graph 收益极大（launch 降 80%+，端到端降 10-30%）
-```
+![Prefill vs Decode：Launch Overhead 占比差异](../images/prefill_vs_decode_launch.svg)
 
 | 阶段 | M | 单 kernel 耗时 | launch overhead | launch 占比 | CUDA Graph 收益 |
 |------|---|---------------|----------------|------------|----------------|
@@ -57,26 +46,15 @@ Decode 阶段（M = 1，逐 token 生成）：
 
 一次 `cudaKernelLaunch`（或 PyTorch 里一次 op 调用）在 CPU 侧要完成：
 
-```
-1. 解析 kernel 参数 → 组装 kernel descriptor（参数指针、grid/block dim、shared mem）
-2. 驱动态切换（user → driver）+ stream 入队
-3. GPU command processor 取出该 launch，配置 grid/block
-4. kernel 实际开始执行
-```
+![每次 Kernel Launch 慢在哪：4 步拆解](../images/kernel_launch_overhead.svg)
 
 其中 1-3 是 **CPU 侧串行开销**，与 kernel 计算量无关，典型 5-10μs。第 4 步才是 GPU 真正算的时间。如果 kernel 本身只要 5μs，那 launch 开销就和计算平起平坐了。
 
 ##### 量化：Decode 一步 forward 的 launch 占比
 
-假设一个 12 层 Transformer，每层 forward 约 8 个 kernel（QKV、attn、out、FFN1、FFN2、2×LN、sampling），共 ~96 个 kernel：
+假设一个 12 层 Transformer，每层 forward 约 8 个 kernel（QKV、attn、out、FFN1、FFN2、2×LN、RoPE），共 ~96 个 kernel：
 
-```
-Decode M=1 估算（单 kernel ~10μs 计算 + 7μs launch）：
-  计算总时间 = 96 × 10μs = 0.96 ms
-  launch 总时间 = 96 × 7μs  = 0.67 ms
-  端到端       = 1.63 ms
-  launch 占比  = 0.67 / 1.63 ≈ 41%
-```
+![Decode M=1：Launch 占比量化估算](../images/decode_launch_ratio.svg)
 
 | 场景 | kernel 数 | 单 kernel 计算 | launch/个 | launch 占比 |
 |------|----------|---------------|-----------|------------|
@@ -94,18 +72,7 @@ CUDA Graph 把"一系列 kernel launch"录制为一张 **DAG 图**（节点 = ke
 
 ##### Capture / Replay 两阶段
 
-```
-阶段 1 — Capture（录制，只做一次）：
-  cudaStreamBeginCapture(stream, mode=THREAD_LOCAL)
-    → 在该 stream 上跑一遍要录制的 kernel 序列
-    → 驱动记录每个 launch 的参数与依赖，构建 cudaGraph_t
-  cudaStreamEndCapture(stream, &graph)
-  cudaGraphInstantiate(&graphExec, graph, ...)   // 编译为可执行实例
-
-阶段 2 — Replay（每次执行）：
-  cudaGraphLaunch(graphExec, stream)   // 一次调用提交整张图
-  // CPU 立即返回，GPU 端 graph executor 背靠背执行所有 kernel
-```
+![CUDA Graph 两阶段：Capture → Replay API 流程](../images/capture_replay_phases.svg)
 
 ##### 为什么能消除 launch overhead
 
@@ -221,12 +188,7 @@ out = static_out[bk][:cur_batch]     # 截取有效输出
 
 如果 kernel 拓扑没变、只是某些**参数值**变了（如 kernel 的 grid dim 因 batch 变了），可用 `cudaGraphExecUpdate` 原地更新已实例化的可执行图，**无需重新 instantiate**：
 
-```
-cudaGraphExecUpdate(graphExec, newGraph, &updateResult)
-  → 若拓扑一致（节点数、边、kernel 类型不变），返回 success
-  → graphExec 的参数被更新为 newGraph 的值
-  → 比重新 instantiate 快 5-10x
-```
+![cudaGraphExecUpdate：拓扑不变时原地更新参数](../images/graph_exec_update.svg)
 
 适用场景：batch 变了但 kernel 序列没变（只是 grid/block dim 调整）。PyTorch 暂未直接暴露此 API，C++ 扩展或 CUDA 原生可用。
 

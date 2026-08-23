@@ -1,8 +1,8 @@
-# week5_summary.py —— Week 6 推理系统核心问题与面试题自测（总结日脚本）
-# 运行命令: python week5_summary.py
+# week6_summary.py —— Week 6 推理系统核心问题与面试题自测（总结日脚本）
+# 运行命令: python week6_summary.py
 # 依赖: 仅标准库
 #
-# 工具：打印推理系统四大核心问题清单 + 本周 17 道面试题自测卡片，
+# 工具：打印推理系统四大核心问题清单 + 本周 18 道面试题自测卡片，
 #       供 Day 7 总结日复盘使用。
 
 import random

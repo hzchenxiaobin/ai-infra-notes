@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="300" viewBox="0 0 860 300" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="48" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="300" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Warp 计算示例：grid=(2,2,1), block=(4,2,1)</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Grid 配置 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="380" height="72" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="84" font-size="12" fill="#2b6e9e" font-weight="bold">Grid 配置</text>
+  <text x="60" y="106" font-size="13" fill="#2b2b2b" font-family="monospace">grid = (2, 2, 1) → 4 blocks</text>
+  <text x="60" y="126" font-size="13" fill="#2b2b2b" font-family="monospace">block = (4, 2, 1) → 8 threads/block</text>
+
+  <!-- 总线程 -->
+  <g filter="url(#sk)">
+    <rect x="440" y="62" width="380" height="72" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="460" y="84" font-size="12" fill="#2e6e2e" font-weight="bold">总线程</text>
+  <text x="460" y="108" font-size="13" fill="#2b2b2b" font-family="monospace">total = 4 × 8 = 32 threads</text>
+  <text x="460" y="126" font-size="11" fill="#666">gridDim.x×y×z × blockDim.x×y×z</text>
+
+  <!-- Warp 计算 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="148" width="780" height="80" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="170" font-size="12" fill="#7a5415" font-weight="bold">Warp 计算</text>
+  <text x="60" y="192" font-size="13" fill="#2b2b2b" font-family="monospace">warps_per_block = ceil(8 / 32) = 1</text>
+  <text x="60" y="212" font-size="13" fill="#c98a2b" font-weight="bold" font-family="monospace">total_warps = 1 × 4 = 4 warps</text>
+  <text x="430" y="212" font-size="11" fill="#888">每个 block 各成 1 个 warp，不跨 block 合并</text>
+
+  <!-- 关键结论 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="242" width="780" height="44" rx="8" fill="#fdecec" stroke="#b85450" stroke-width="1.3" fill-opacity="0.3"/>
+  </g>
+  <text x="430" y="268" text-anchor="middle" font-size="12" fill="#b03a3a" font-weight="bold">32 个线程 ≠ 1 个 warp：warp 按 block 切分，4 个 block 各 8 线程 → 4 个 warp</text>
+</svg>

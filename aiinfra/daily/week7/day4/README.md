@@ -11,13 +11,13 @@
 5. 能用实测数据量化 prefix caching 对共享 system prompt 场景的加速<br>
 6. 能在面试中清晰阐述 chunked prefill 和 prefix caching 的适用场景与 trade-off<br>
 
-> 💡 **为什么重要**：Day 4 学习了 TRT-LLM 的 chunked prefill 和 vLLM 的 prefix caching 概念，但只是模拟器。今天把它们真实实现到一个简化引擎中，是从"知道概念"到"能讲实现细节"的关键一步。面试中"如何优化多轮对话的推理延迟"是高频场景题。
+> 💡 **为什么重要**：Day 3 学习了 TRT-LLM 的 chunked prefill 和 vLLM 的 prefix caching 概念，但只是模拟器。今天把它们真实实现到一个简化引擎中，是从"知道概念"到"能讲实现细节"的关键一步。面试中"如何优化多轮对话的推理延迟"是高频场景题。
 
 ---
 
 ### 学前导读：长 Prompt 与共享 System Prompt 的两个痛点
 
-Day 4 的 chunked prefill simulator 和 Day 2 的 continuous batcher 解决了调度层面的问题，但有两个实际场景的痛点尚未覆盖：
+Day 3 的 chunked prefill simulator 和 Day 2 的 continuous batcher 解决了调度层面的问题，但有两个实际场景的痛点尚未覆盖：
 
 **痛点 1：长 Prompt 阻塞 Decode**
 
@@ -41,7 +41,7 @@ Day 4 的 chunked prefill simulator 和 Day 2 的 continuous batcher 解决了�
 
 #### 1.1 Chunked Prefill 深入
 
-Day 4 已介绍了 chunked prefill 的基本概念，今天深入实现细节。
+Day 3 已介绍了 chunked prefill 的基本概念，今天深入实现细节。
 
 ##### chunk_size 选择
 
@@ -130,17 +130,7 @@ class PrefixCache:
 
 **数据结构对比**：
 
-```
-block-hash（vLLM）:
-  每 16 token 算一个 hash，命中需严格对齐到 block 边界
-  请求: [sys_prompt(100 token) | user_input]
-         ← 6 个完整 block 命中(96 token) → 4 token 丢弃
-
-RadixAttention（SGLang）:
-  前缀树存任意长度的前缀，命中无对齐要求
-  请求: [sys_prompt(100 token) | user_input]
-         ← 100 token 全部命中（前缀树精确匹配）→
-```
+![block-hash vs RadixAttention 对齐损失对比](../images/block_hash_vs_radixattention.svg)
 
 | 维度 | block-hash（vLLM） | RadixAttention（SGLang） |
 |------|-------------------|------------------------|
@@ -159,9 +149,7 @@ RadixAttention（SGLang）:
 
 chunked prefill 和 prefix caching 是正交的：
 
-```
-请求到达 → prefix caching 匹配 → 剩余未命中部分 → chunked prefill 切分
-```
+![Chunked Prefill + Prefix Caching 协同流程](../images/chunked_prefill_prefix_caching_flow.svg)
 
 例如：system prompt 1024 tokens + user input 3072 tokens
 - prefix caching 命中 1024 tokens（跳过 prefill）
@@ -199,28 +187,29 @@ python3 kernels/prefix_cache_engine.py
 
 ```text
 === Prefix Caching Engine Demo ===
-System prompt: 64 tokens, User input: 128 tokens
+System prompt: 64 tokens, User input: 128 tokens, BLOCK_SIZE=16
 
 --- Scenario 1: No prefix caching ---
-Request 1: prefill 192 tokens, latency = 19.2 ms
-Request 2: prefill 192 tokens, latency = 19.2 ms
-Request 3: prefill 192 tokens, latency = 19.2 ms
-Total: 57.6 ms
+  Request 1: prefill 192 tokens, latency = 19.2 ms
+  Request 2: prefill 192 tokens, latency = 19.2 ms
+  Request 3: prefill 192 tokens, latency = 19.2 ms
+  Total: 57.6 ms
 
 --- Scenario 2: With prefix caching ---
-Request 1: prefill 192 tokens (cache miss), latency = 19.2 ms
-Request 2: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
-Request 3: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
-Total: 44.8 ms
-Speedup: 1.29x
+  Request 1: prefill 192 tokens (cache miss), latency = 19.2 ms
+  Request 2: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
+  Request 3: prefill 128 tokens (64 prefix hit), latency = 12.8 ms
+  Total: 44.8 ms
+
+  Speedup (scenario 2 vs 1): 1.29x
 
 --- Scenario 3: Multi-turn dialogue ---
-Turn 1: prefill 32 tokens, latency = 3.2 ms
-Turn 2: prefill 8 tokens (56 prefix hit), latency = 0.8 ms
-Turn 3: prefill 8 tokens (64 prefix hit), latency = 0.8 ms
-Total: 4.8 ms
-Without cache: 19.2 ms
-Speedup: 4.00x
+  Turn 1: prefill 40 tokens (cache miss), latency = 4.0 ms
+  Turn 2: prefill 16 tokens (32 prefix hit), latency = 1.6 ms
+  Turn 3: prefill 8 tokens (48 prefix hit), latency = 0.8 ms
+  Total with cache: 6.4 ms
+  Total without cache: 14.4 ms
+  Speedup: 2.25x
 ```
 
 #### 任务 3：Profiling
@@ -283,7 +272,7 @@ Day 4 我们将 chunked prefill 和 prefix caching 从概念推进到了真实�
 1. **Chunked Prefill**：长 prompt 分块与 decode 混合调度，chunk_size 选择影响 TTFT/TBT 权衡
 2. **Prefix Caching**：block hash 匹配 + LRU 淘汰，共享 system prompt 场景命中率达 90%+
 3. **两者协同**：正交互补，prefix caching 先跳过已知 prefix，chunked prefill 再切分剩余部分
-4. **实测验证**：多轮对话场景 4x 加速，共享 system prompt 场景 1.3x 加速
+4. **实测验证**：多轮对话场景 2.25x 加速，共享 system prompt 场景 1.3x 加速
 5. **工程要点**：block hash 计算、LRU 淘汰、ref_count/COW、token budget 管理
 6. **面试核心**：能讲清 prefix caching 的 block hash 机制和 LRU 淘汰策略，能量化命中场景的加速比
 

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="300" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">模型显存估算（FP16，2 bytes/param）</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- axis label -->
+  <text x="60" y="82" font-size="11" fill="#666" font-weight="bold">模型</text>
+  <text x="200" y="82" font-size="11" fill="#666" font-weight="bold">显存（GB）</text>
+
+  <!-- 7B bar -->
+  <text x="100" y="110" text-anchor="end" font-size="12" fill="#444" font-weight="bold">7B</text>
+  <g filter="url(#sk)">
+    <rect x="210" y="98" width="21" height="20" rx="3" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="240" y="112" font-size="11" fill="#2e6e2e">14 GB — 单卡 A100 80GB 轻松</text>
+
+  <!-- 13B bar -->
+  <text x="100" y="146" text-anchor="end" font-size="12" fill="#444" font-weight="bold">13B</text>
+  <g filter="url(#sk)">
+    <rect x="210" y="134" width="39" height="20" rx="3" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="258" y="148" font-size="11" fill="#2e6e2e">26 GB — 单卡够，KV Cache 空间紧张</text>
+
+  <!-- 70B bar -->
+  <text x="100" y="182" text-anchor="end" font-size="12" fill="#444" font-weight="bold">70B</text>
+  <g filter="url(#sk)">
+    <rect x="210" y="170" width="210" height="20" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="430" y="184" font-size="11" fill="#a03040">140 GB — 单卡放不下，必须切</text>
+
+  <!-- 175B bar -->
+  <text x="100" y="218" text-anchor="end" font-size="12" fill="#444" font-weight="bold">175B</text>
+  <g filter="url(#sk)">
+    <rect x="210" y="206" width="525" height="20" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="745" y="220" font-size="11" fill="#a03040">350 GB — 需 4-8 卡 TP/PP</text>
+
+  <!-- 80GB limit line -->
+  <path d="M 330 92 L 330 238" stroke="#c04050" stroke-width="1.5" stroke-dasharray="5,3" filter="url(#sk)"/>
+  <text x="330" y="252" text-anchor="middle" font-size="11" fill="#c04050" font-weight="bold">80GB 单卡上限</text>
+
+  <!-- bottom note -->
+  <text x="470" y="282" text-anchor="middle" font-size="11" fill="#888">额外显存：KV Cache（随 batch 和序列长度增长）+ activation</text>
+</svg>

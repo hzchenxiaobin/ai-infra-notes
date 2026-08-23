@@ -18,12 +18,7 @@
 
 Day 2 的 FullScheduler 解决了调度公平性和资源管理，但仍有性能瓶颈：
 
-```
-Day 2 调度器遗留的性能问题：
- 1. Decode 每步只出 1 token → 大模型 GPU 算力浪费（Speculative Decoding 解决）
- 2. 长 prompt prefill 阻塞 decode → decode 延迟尖峰（Chunked Prefill 解决）
- 3. 重复 prefix 每次重新 prefill → TTFT 高（Prefix Caching 解决）
-```
+![Day 2 调度器遗留的性能问题](../images/day2_performance_gaps.svg)
 
 | 瓶颈 | 表现 | 解决方案 | 收益 |
 |------|------|---------|------|
@@ -43,17 +38,7 @@ Day 2 调度器遗留的性能问题：
 
 ##### 基本原理
 
-```
-传统 Decode：
- 每步：输入 1 个 token → 大模型 forward → 输出 1 个 token
- 缺点：大模型每次只处理 1 个 token，GPU 算力浪费
-
-Speculative Decoding：
- 1. 小模型（draft model）连续生成 k 个候选 tokens
- 2. 大模型（target model）一次验证这 k+1 个 tokens（batch 验证，高效）
- 3. 接受匹配的 tokens，从第一个不匹配处重新采样
- 4. 保持输出分布不变（与原始大模型一致）
-```
+![基本原理：传统 Decode vs Speculative Decoding](../images/decode_vs_speculative_flow.svg)
 
 ##### 加速原理
 
@@ -69,7 +54,7 @@ Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
 
 当 t_d ≪ T_fwd 且 α 高时，加速明显。
 
-> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77。模拟结果（1.94x）介于两者之间，受随机种子影响。
+> ⚠️ **k×α+1 是近似上界**：它假设 k 个 draft token 各自独立以概率 α 被接受，忽略了验证时的顺序停止规则（第一个拒绝即停止）。精确期望为 `(1-α^(k+1))/(1-α)`（等比级数求和），该值 ≤ k×α+1。例如 k=4, α=0.7 时，近似值 kα+1=3.8，精确期望 ≈ 2.77，对应加速比分别为 ~2.28x 和 ~1.66x。模拟结果（1.94x）介于两个加速比之间，受随机种子影响。
 ```
 
 ##### 关键属性
@@ -102,17 +87,7 @@ Speculative 每 token 时间 ≈ (k × t_d + T_fwd) / (k × α + 1)
 
 ##### 问题与方案
 
-```
-问题：
- - 长 prompt（如 2048 tokens）的 prefill 一次性处理 → 占用全部 token budget
- - 同 batch 的 decode 请求被阻塞 → 延迟尖峰
- - 用户感知：decode token 突然卡顿
-
-Chunked Prefill：
- - 将长 prompt 分成多个 chunk（如每 chunk 512 tokens）
- - 每个 chunk 与 decode 请求一起执行（共享 token budget）
- - 逐步完成 prefill，同时不中断 decode
-```
+![Chunked Prefill：问题与方案](../images/chunked_prefill_problem.svg)
 
 ##### 收益量化
 
@@ -138,21 +113,7 @@ Chunked Prefill：
 
 ##### 问题与方案
 
-```
-问题：
- - 多个请求共享相同 prefix（如系统提示、多轮对话历史）
- - 每次都要重新计算 prefix 的 KV Cache → 重复计算
-
-Prefix Caching：
- - 缓存公共 prefix 的 KV Cache（key = prefix token 序列的 hash）
- - 新请求匹配到缓存 prefix 时，直接复用 KV Cache
- - 只 prefill prefix 之后的新增 tokens
-
-收益：
- - 降低 TTFT（首 token 延迟）
- - 减少重复计算
- - 特别适合多轮对话和模板化请求
-```
+![Prefix Caching：问题与方案](../images/prefix_caching_problem.svg)
 
 ##### 缓存 Key 设计
 
@@ -171,11 +132,11 @@ else:
  cache.put(system_prompt_tokens, kv_cache)
 ```
 
-##### 模拟结果（3 请求，系统提示 50 tok，用户 20 tok）
+##### 模拟结果（100 请求，系统提示 50 tok，用户 20 tok）
 
 | 指标 | 无缓存 | 有缓存 | 改善 |
 |------|--------|--------|------|
-| 总 prefill tokens | 210 | 110 | -48% |
+| 总 prefill tokens | 7000 | 2050 | -71% |
 | 命中率 | — | 99% | — |
 | TTFT（首请求） | 70×t | 70×t | 不变 |
 | TTFT（后续请求） | 70×t | 20×t | -71% |
@@ -475,15 +436,15 @@ E[accepted] = (1 - α^(k+1)) / (1 - α)
 |-------|-----|-----|-----|-----|-----|
 | 1 | 1.50 | 1.60 | 1.70 | 1.80 | 1.90 |
 | 2 | 1.75 | 1.96 | 2.19 | 2.44 | 2.71 |
-| 4 | 1.94 | 2.42 | 2.77 | 3.08 | 3.46 |
-| 8 | 2.00 | 2.50 | 3.08 | 3.75 | 4.50 |
+| 4 | 1.94 | 2.31 | 2.77 | 3.36 | 4.10 |
+| 8 | 2.00 | 2.47 | 3.20 | 4.33 | 6.13 |
 
 **关键观察**：
 - α=0.5 时 k 从 4 到 8 收益递减（1.94 → 2.00），draft 开销超过收益
-- α=0.9 时 k=8 仍有收益（3.46 → 4.50），高接受率下大 k 划算
+- α=0.9 时 k=8 仍有收益（4.10 → 6.13），高接受率下大 k 划算
 - **结论**：k 和 α 必须匹配——低 α 用小 k（2-4），高 α 用大 k（4-8）
 
-> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时加速比 ~2.77x（精确期望），近似公式 kα+1=3.8 是上界。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
+> 💡 **面试口述**：接受率决定加速比上限。α=0.7、k=4 时 E[accepted] ~2.77（精确期望），近似上界 kα+1=3.8；对应加速比分别为 ~1.66x 和 ~2.28x。draft 质量是决定性因素——Medusa α~0.5，EAGLE/MTP α~0.7+。
 
 #### 新增面试题
 

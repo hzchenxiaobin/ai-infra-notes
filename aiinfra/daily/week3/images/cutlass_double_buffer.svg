@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="420" viewBox="0 0 880 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="420" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="440" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Double Buffer（NumStages=2）软件流水线</text>
+  <path d="M 260 38 Q 440 44 620 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Track labels -->
+  <text x="50" y="110" font-size="13" font-weight="bold" fill="#4a8edb">Load</text>
+  <text x="50" y="112" font-size="9" fill="#888">(cp.async)</text>
+  <text x="50" y="240" font-size="13" font-weight="bold" fill="#2e7d4f">Compute</text>
+  <text x="50" y="242" font-size="9" fill="#888">(mma.sync)</text>
+
+  <!-- Stage column headers -->
+  <g font-size="11" fill="#666" font-weight="bold">
+    <text x="170" y="70" text-anchor="middle">Stage 0</text>
+    <text x="310" y="70" text-anchor="middle">Stage 1</text>
+    <text x="450" y="70" text-anchor="middle">Stage 2</text>
+    <text x="590" y="70" text-anchor="middle">Stage 3</text>
+    <text x="710" y="70" text-anchor="middle" font-size="14">⋯</text>
+  </g>
+
+  <!-- vertical dashed separators -->
+  <g stroke="#ddd" stroke-width="0.8" stroke-dasharray="3 3">
+    <line x1="240" y1="80" x2="240" y2="300"/>
+    <line x1="380" y1="80" x2="380" y2="300"/>
+    <line x1="520" y1="80" x2="520" y2="300"/>
+    <line x1="660" y1="80" x2="660" y2="300"/>
+  </g>
+
+  <!-- ===== Load track (y=85~135) ===== -->
+  <!-- Stage 0: load A0,B0 → smem[0] -->
+  <g filter="url(#sk)">
+    <rect x="110" y="85" width="120" height="50" rx="5" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="170" y="105" text-anchor="middle" font-size="10" fill="#1b5e8c" font-weight="bold">load A[0], B[0]</text>
+  <text x="170" y="122" text-anchor="middle" font-size="9" fill="#1b5e8c">→ smem[0]</text>
+
+  <!-- Stage 1: load A1,B1 → smem[1] -->
+  <g filter="url(#sk)">
+    <rect x="250" y="85" width="120" height="50" rx="5" fill="#cde8d8" stroke="#2e7d4f" stroke-width="1.2"/>
+  </g>
+  <text x="310" y="105" text-anchor="middle" font-size="10" fill="#1b5e3a" font-weight="bold">load A[1], B[1]</text>
+  <text x="310" y="122" text-anchor="middle" font-size="9" fill="#1b5e3a">→ smem[1]</text>
+
+  <!-- Stage 2: load A2,B2 → smem[0] -->
+  <g filter="url(#sk)">
+    <rect x="390" y="85" width="120" height="50" rx="5" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="450" y="105" text-anchor="middle" font-size="10" fill="#1b5e8c" font-weight="bold">load A[2], B[2]</text>
+  <text x="450" y="122" text-anchor="middle" font-size="9" fill="#1b5e8c">→ smem[0]</text>
+
+  <!-- Stage 3: load A3,B3 → smem[1] -->
+  <g filter="url(#sk)">
+    <rect x="530" y="85" width="120" height="50" rx="5" fill="#cde8d8" stroke="#2e7d4f" stroke-width="1.2"/>
+  </g>
+  <text x="590" y="105" text-anchor="middle" font-size="10" fill="#1b5e3a" font-weight="bold">load A[3], B[3]</text>
+  <text x="590" y="122" text-anchor="middle" font-size="9" fill="#1b5e3a">→ smem[1]</text>
+
+  <!-- ===== Compute track (y=215~265) ===== -->
+  <!-- Stage 0: empty (pipeline fill) -->
+  <g filter="url(#sk)">
+    <rect x="110" y="215" width="120" height="50" rx="5" fill="#f0ede4" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3"/>
+  </g>
+  <text x="170" y="245" text-anchor="middle" font-size="10" fill="#aaa" font-style="italic">（填充中）</text>
+
+  <!-- Stage 1: compute C[0] from smem[0] -->
+  <g filter="url(#sk)">
+    <rect x="250" y="215" width="120" height="50" rx="5" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="310" y="235" text-anchor="middle" font-size="10" fill="#1b5e8c" font-weight="bold">compute C[0]</text>
+  <text x="310" y="252" text-anchor="middle" font-size="9" fill="#1b5e8c">from smem[0]</text>
+
+  <!-- Stage 2: compute C[1] from smem[1] -->
+  <g filter="url(#sk)">
+    <rect x="390" y="215" width="120" height="50" rx="5" fill="#cde8d8" stroke="#2e7d4f" stroke-width="1.2"/>
+  </g>
+  <text x="450" y="235" text-anchor="middle" font-size="10" fill="#1b5e3a" font-weight="bold">compute C[1]</text>
+  <text x="450" y="252" text-anchor="middle" font-size="9" fill="#1b5e3a">from smem[1]</text>
+
+  <!-- Stage 3: compute C[2] from smem[0] -->
+  <g filter="url(#sk)">
+    <rect x="530" y="215" width="120" height="50" rx="5" fill="#dbeaf6" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="590" y="235" text-anchor="middle" font-size="10" fill="#1b5e8c" font-weight="bold">compute C[2]</text>
+  <text x="590" y="252" text-anchor="middle" font-size="9" fill="#1b5e8c">from smem[0]</text>
+
+  <!-- "||" parallel indicator: vertical double-line between load and compute in same stage -->
+  <g stroke="#b03a3a" stroke-width="1.2">
+    <line x1="305" y1="140" x2="305" y2="210"/>
+    <line x1="315" y1="140" x2="315" y2="210"/>
+  </g>
+  <g stroke="#b03a3a" stroke-width="1.2">
+    <line x1="445" y1="140" x2="445" y2="210"/>
+    <line x1="455" y1="140" x2="455" y2="210"/>
+  </g>
+  <g stroke="#b03a3a" stroke-width="1.2">
+    <line x1="585" y1="140" x2="585" y2="210"/>
+    <line x1="595" y1="140" x2="595" y2="210"/>
+  </g>
+  <text x="440" y="180" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">||</text>
+  <text x="440" y="196" text-anchor="middle" font-size="8" fill="#b03a3a">load 与 compute 并行</text>
+
+  <!-- smem alternation legend -->
+  <g filter="url(#sk)">
+    <rect x="50" y="320" width="780" height="88" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="70" y="344" font-size="12" font-weight="bold" fill="#2b2b2b">交替使用两份 shared memory</text>
+  <g filter="url(#sk)"><rect x="70" y="356" width="12" height="12" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.8"/></g>
+  <text x="90" y="366" font-size="11" fill="#444">smem[0]（蓝）：Stage 0 加载 → Stage 1 计算 → Stage 2 回收再加载⋯</text>
+  <g filter="url(#sk)"><rect x="70" y="376" width="12" height="12" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.8"/></g>
+  <text x="90" y="386" font-size="11" fill="#444">smem[1]（绿）：Stage 1 加载 → Stage 2 计算 → Stage 3 回收再加载⋯</text>
+  <text x="70" y="402" font-size="10" fill="#888" font-style="italic">NumStages=2 = double buffer；NumStages=3 = triple buffer（更好隐藏 latency，但 smem 占用更多）</text>
+</svg>

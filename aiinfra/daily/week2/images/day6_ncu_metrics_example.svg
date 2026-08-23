@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+  <rect width="760" height="440" fill="#0d1117"/>
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">ncu 指标示例（案例分析）</text>
+
+  <!-- SM Throughput: 45.2% (low, target > 60%) -->
+  <g transform="translate(40, 60)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">SM Throughput</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#d29922">45.2%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="307" height="16" rx="4" fill="#d29922" opacity="0.7"/>
+    <line x1="408" y1="20" x2="408" y2="42" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="408" y="52" text-anchor="middle" font-size="9" fill="#3fb950">60%</text>
+  </g>
+
+  <!-- Memory Throughput: 78.5% (good, > 60%) -->
+  <g transform="translate(40, 120)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">Memory Throughput</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#3fb950">78.5%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="534" height="16" rx="4" fill="#3fb950" opacity="0.7"/>
+    <line x1="408" y1="20" x2="408" y2="42" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="408" y="52" text-anchor="middle" font-size="9" fill="#3fb950">60%</text>
+  </g>
+
+  <!-- Achieved Occupancy: 56.3% (low, target > 70%) -->
+  <g transform="translate(40, 180)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">Achieved Occupancy</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#d29922">56.3%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="383" height="16" rx="4" fill="#d29922" opacity="0.7"/>
+    <line x1="476" y1="20" x2="476" y2="42" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="476" y="52" text-anchor="middle" font-size="9" fill="#3fb950">70%</text>
+  </g>
+
+  <!-- L1/TEX Hit Rate: 82.1% (good, > 80%) -->
+  <g transform="translate(40, 240)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">L1/TEX Hit Rate</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#3fb950">82.1%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="558" height="16" rx="4" fill="#3fb950" opacity="0.7"/>
+    <line x1="544" y1="20" x2="544" y2="42" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="544" y="52" text-anchor="middle" font-size="9" fill="#3fb950">80%</text>
+  </g>
+
+  <!-- Warp Stall Long Scoreboard: 35.2% (HIGH! > 20%) -->
+  <g transform="translate(40, 300)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">Warp Stall: Long Scoreboard</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#f85149" font-weight="bold">35.2% ← 高！</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="240" height="16" rx="4" fill="#f85149" opacity="0.7"/>
+    <line x1="136" y1="20" x2="136" y2="42" stroke="#f85149" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="136" y="52" text-anchor="middle" font-size="9" fill="#f85149">20%</text>
+  </g>
+
+  <!-- Warp Stall Math Pipe Throttle: 12.1% (ok, < 20%) -->
+  <g transform="translate(40, 360)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">Warp Stall: Math Pipe Throttle</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#3fb950">12.1%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="82" height="16" rx="4" fill="#3fb950" opacity="0.7"/>
+    <line x1="136" y1="20" x2="136" y2="42" stroke="#f85149" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="136" y="52" text-anchor="middle" font-size="9" fill="#f85149">20%</text>
+  </g>
+
+  <!-- Register Pressure: 72% (ok, < 80%) -->
+  <g transform="translate(40, 400)">
+    <text x="0" y="14" font-size="12" fill="#c9d1d9" font-weight="bold">Register Pressure</text>
+    <text x="680" y="14" text-anchor="end" font-size="12" fill="#3fb950">72%</text>
+    <rect x="0" y="22" width="680" height="16" rx="4" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <rect x="0" y="22" width="490" height="16" rx="4" fill="#3fb950" opacity="0.7"/>
+    <line x1="544" y1="20" x2="544" y2="42" stroke="#d29922" stroke-width="1.5" stroke-dasharray="2"/>
+    <text x="544" y="52" text-anchor="middle" font-size="9" fill="#d29922">80%</text>
+  </g>
+</svg>

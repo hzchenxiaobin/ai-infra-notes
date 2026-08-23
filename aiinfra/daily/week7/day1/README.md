@@ -111,90 +111,90 @@ class SeqStatus(Enum):
     RUNNING = "running"
     FINISHED = "finished"
 
-    class Sequence:
-        """一个推理序列（对应 vLLM 的 Sequence）"""
-        def __init__(self, seq_id: int, prompt_len: int, max_new_tokens: int = 10):
-            self.seq_id = seq_id
-            self.prompt_len = prompt_len
-            self.max_new_tokens = max_new_tokens
-            self.generated_count = 0
-            self.status = SeqStatus.WAITING
-            self.start_iter = -1
-            self.finish_iter = -1
-            self.done_event = threading.Event()
+class Sequence:
+    """一个推理序列（对应 vLLM 的 Sequence）"""
+    def __init__(self, seq_id: int, prompt_len: int, max_new_tokens: int = 10):
+        self.seq_id = seq_id
+        self.prompt_len = prompt_len
+        self.max_new_tokens = max_new_tokens
+        self.generated_count = 0
+        self.status = SeqStatus.WAITING
+        self.start_iter = -1
+        self.finish_iter = -1
+        self.done_event = threading.Event()
 
-            def append_token(self):
-                self.generated_count += 1
-                if self.generated_count >= self.max_new_tokens:
-                    self.status = SeqStatus.FINISHED
-                    self.done_event.set()
+    def append_token(self):
+        self.generated_count += 1
+        if self.generated_count >= self.max_new_tokens:
+            self.status = SeqStatus.FINISHED
+            self.done_event.set()
 
-                    class ContinuousBatcher:
-                        """Continuous Batcher：每轮 iteration 重新构建 batch"""
+class ContinuousBatcher:
+    """Continuous Batcher：每轮 iteration 重新构建 batch"""
 
-                        def __init__(self, max_token_budget: int = 50, max_num_seqs: int = 8):
-                            self.max_token_budget = max_token_budget
-                            self.max_num_seqs = max_num_seqs
-                            self.waiting_queue: deque[Sequence] = deque()
-                            self.running: Dict[int, Sequence] = {}
-                            self.lock = threading.Lock()
-                            self.stop_event = threading.Event()
-                            self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
-                            self.worker_thread.start()
-                            self.iteration = 0
+    def __init__(self, max_token_budget: int = 50, max_num_seqs: int = 8):
+        self.max_token_budget = max_token_budget
+        self.max_num_seqs = max_num_seqs
+        self.waiting_queue: deque[Sequence] = deque()
+        self.running: Dict[int, Sequence] = {}
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+        self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+        self.worker_thread.start()
+        self.iteration = 0
 
-                            def submit(self, seq: Sequence):
-                                with self.lock:
-                                    self.waiting_queue.append(seq)
+    def submit(self, seq: Sequence):
+        with self.lock:
+            self.waiting_queue.append(seq)
 
-                                    def _schedule(self) -> List[Sequence]:
-                                        """每轮调度：保留 running + 从 waiting 补入（token budget 约束）"""
-                                        batch = []
-                                        token_budget = self.max_token_budget
-                                        with self.lock:
-                                            # 1. 移除已完成的 running 序列
-                                            finished_ids = [sid for sid, s in self.running.items()
-                                            if s.status == SeqStatus.FINISHED]
-                                            for sid in finished_ids:
-                                                self.running.pop(sid)
-                                                # 2. 保留正在运行的序列（decode 每步消耗 1 token budget）
-                                                for seq in self.running.values():
-                                                    if token_budget >= 1 and len(batch) < self.max_num_seqs:
-                                                        batch.append(seq)
-                                                        token_budget -= 1
-                                                        # 3. 从 waiting 补入新请求（prefill 消耗 prompt_len token budget）
-                                                        still_waiting = deque()
-                                                        for seq in self.waiting_queue:
-                                                            cost = seq.prompt_len
-                                                            if token_budget >= cost and len(batch) < self.max_num_seqs:
-                                                                seq.status = SeqStatus.RUNNING
-                                                                seq.start_iter = self.iteration + 1
-                                                                self.running[seq.seq_id] = seq
-                                                                batch.append(seq)
-                                                                token_budget -= cost
-                                                            else:
-                                                                still_waiting.append(seq)
-                                                                self.waiting_queue = still_waiting
-                                                                return batch
+    def _schedule(self) -> List[Sequence]:
+        """每轮调度：保留 running + 从 waiting 补入（token budget 约束）"""
+        batch = []
+        token_budget = self.max_token_budget
+        with self.lock:
+            # 1. 移除已完成的 running 序列
+            finished_ids = [sid for sid, s in self.running.items()
+                            if s.status == SeqStatus.FINISHED]
+            for sid in finished_ids:
+                self.running.pop(sid)
+            # 2. 保留正在运行的序列（decode 每步消耗 1 token budget）
+            for seq in self.running.values():
+                if token_budget >= 1 and len(batch) < self.max_num_seqs:
+                    batch.append(seq)
+                    token_budget -= 1
+            # 3. 从 waiting 补入新请求（prefill 消耗 prompt_len token budget）
+            still_waiting = deque()
+            for seq in self.waiting_queue:
+                cost = seq.prompt_len
+                if token_budget >= cost and len(batch) < self.max_num_seqs:
+                    seq.status = SeqStatus.RUNNING
+                    seq.start_iter = self.iteration + 1
+                    self.running[seq.seq_id] = seq
+                    batch.append(seq)
+                    token_budget -= cost
+                else:
+                    still_waiting.append(seq)
+            self.waiting_queue = still_waiting
+        return batch
 
-                                                                def _run_iteration(self, batch: List[Sequence]):
-                                                                    """运行一个 iteration：每个序列生成 1 个 token"""
-                                                                    forward_time = 0.002 + 0.0005 * len(batch)
-                                                                    time.sleep(forward_time)
-                                                                    for seq in batch:
-                                                                        if seq.status == SeqStatus.RUNNING:
-                                                                            seq.append_token()
-                                                                            if seq.status == SeqStatus.FINISHED:
-                                                                                seq.finish_iter = self.iteration + 1
+    def _run_iteration(self, batch: List[Sequence]):
+        """运行一个 iteration：每个序列生成 1 个 token"""
+        forward_time = 0.002 + 0.0005 * len(batch)
+        time.sleep(forward_time)
+        for seq in batch:
+            if seq.status == SeqStatus.RUNNING:
+                seq.append_token()
+                if seq.status == SeqStatus.FINISHED:
+                    seq.finish_iter = self.iteration
 
-                                                                                def _worker_loop(self):
-                                                                                    while not self.stop_event.is_set():
-                                                                                        batch = self._schedule()
-                                                                                        if batch:
-                                                                                            self.iteration += 1
-                                                                                            self._run_iteration(batch)
-                                                                                        else:
-                                                                                            time.sleep(0.001)
+    def _worker_loop(self):
+        while not self.stop_event.is_set():
+            batch = self._schedule()
+            if batch:
+                self.iteration += 1
+                self._run_iteration(batch)
+            else:
+                time.sleep(0.001)
 ```
 
 代码要点：
@@ -229,8 +229,8 @@ Submitting 3 sequences with staggered arrival...
  8 1 S2(done) 1
 
 === Continuous vs Dynamic Batching Comparison ===
- Continuous: S3 (短请求) 在 iter 6 完成，立即退出，不等待 S2
- Dynamic: S1,S2,S3 同 batch 开始，S3 完成后要等 S2（到 iter 9）
+ Continuous: S3 (短请求) 在 iter 5 完成，立即退出，不等待 S2
+ Dynamic: S1,S2,S3 同 batch 开始，S3 完成后要等 S2（到 iter 8）
  S3 等待节省: 3 iterations
 ```
 
@@ -238,9 +238,9 @@ Submitting 3 sequences with staggered arrival...
 
 1. **S3 在 iter 3 加入**：S1/S2 正在 decode 时 S3 到达，立刻被调度加入（不需等"下一批"）
 2. **S1 在 iter 4 完成**：立即退出，iter 5 的 batch size 从 3 降到 2
-3. **S3 在 iter 6 完成**：短请求（gen=3）先于 S2（gen=8）完成，**不等 S2**
+3. **S3 在 iter 5 完成**：短请求（gen=3）先于 S2（gen=8）完成，**不等 S2**
 4. **batch size 动态变化**：2→2→3→3→2→1→1→1（完成退出、新请求加入）
-5. **对比 Dynamic**：S3 节省 3 个 iteration 的等待（Dynamic 下 S3 要等 S2 到 iter 9）
+5. **对比 Dynamic**：S3 节省 3 个 iteration 的等待（Dynamic 下 S3 要等 S2 到 iter 8）
 
 #### 任务 3：对比 Dynamic Batcher
 
@@ -304,7 +304,7 @@ Day 1 我们把 Dynamic Batching 的 request-level 聚合升级为 Continuous Ba
 4. **Scheduler 状态机**：WAITING → RUNNING → FINISHED/SWAPPED，每轮决策 4 步（保留 running / 补入 waiting / 抢占 / 释放 finished）
 5. **Prefill + Decode 混合**：一个 iteration 同时处理新请求 prefill 和 running 的 decode，挑战是 token budget 分配和 latency 抖动
 6. **Chunked Prefill**：长 prompt 拆成小 chunk 与 decode 交错，平滑 latency（Day 4 详讲）
-7. **手写 ContinuousBatcher**：实测 S3（短请求）在 iter 6 完成，比 Dynamic 节省 3 个 iteration 等待
+7. **手写 ContinuousBatcher**：实测 S3（短请求）在 iter 5 完成，比 Dynamic 节省 3 个 iteration 等待
 
 掌握这些后，你就有了现代 LLM 推理服务的核心技术——明天 Day 2 深入 vLLM Scheduler 源码，看它的 `schedule()` 具体怎么实现 iteration-level 调度、preemption 和 swapping。
 

@@ -19,15 +19,7 @@
 
 Day 1-3 的 Mini 引擎都跑在单卡上。但当模型规模和业务需求增长时，单卡会从三个维度撞墙：
 
-```
-单卡撞墙的三个维度：
-  1. 显存墙：70B FP16 权重 ≈ 140GB，A100 80GB / H100 80GB 单卡放不下
-     → 需要 TP/PP 把权重切到多卡
-  2. 吞吐墙：单卡 decode tok/s 有上限（如 ~2000 tok/s），高 QPS 场景不够
-     → 需要 DP 多副本并行处理请求
-  3. 延迟墙：单层大 GEMM 受单卡算力限制，prefill 长 prompt 时延迟高
-     → 需要 TP 把单层 GEMM 拆到多卡，降低单步延迟
-```
+![单卡撞墙的三个维度](../images/single_gpu_walls.svg)
 
 | 维度 | 单卡瓶颈 | 分布式方案 | 代价 |
 |------|---------|-----------|------|
@@ -47,14 +39,7 @@ Day 1-3 的 Mini 引擎都跑在单卡上。但当模型规模和业务需求增
 
 ##### 动机 1：模型太大，单卡显存放不下
 
-```
-模型显存估算（FP16，2 bytes/param）：
-  7B  → 14 GB   （单卡 A100 80GB 轻松）
-  13B → 26 GB   （单卡够，但 KV Cache 空间紧张）
-  70B → 140 GB  （单卡放不下，必须切）
-  175B→ 350 GB  （需 4-8 卡 TP/PP）
-额外显存：KV Cache（随 batch 和序列长度增长）+ activation
-```
+![模型显存估算（FP16）](../images/model_memory_estimation.svg)
 
 > ⚠️ **KV Cache 容易被忽略**：70B 模型即便权重切到 2 卡（每卡 70GB），KV Cache 在大 batch 长序列下可能再吃几十 GB，导致单卡仍 OOM。这就是为什么 TP=2 不一定够，常需 TP=4/8。
 
@@ -76,12 +61,7 @@ TP 的核心思想：**把每一层的权重矩阵切到多卡，各卡并行计
 
 权重 $W \in \mathbb{R}^{out \times in}$ 按 **output 维**切分，每个 rank 持有 $W_i \in \mathbb{R}^{out/N \times in}$：
 
-```
-输入 X[B, in]  → 各 rank 相同（broadcast 或各 rank 自有）
-各 rank 计算 Y_i = X @ W_i^T  →  Y_i[B, out/N]
-输出：各 rank 持有 [B, out/N]，按 head 天然并行
-通信量：0（无需 all-reduce，下游 attention 按 head 消费）
-```
+![Column-Parallel Linear（QKV 投影）](../images/column_parallel_linear.svg)
 
 > 💡 **为什么 QKV 用 column-parallel**：Attention 天然按 head 分组，column 切分正好让每个 rank 持有若干 head 的 Q/K/V，后续 attention 计算完全本地化，无需跨 rank 通信。
 
@@ -89,23 +69,13 @@ TP 的核心思想：**把每一层的权重矩阵切到多卡，各卡并行计
 
 权重 $W \in \mathbb{R}^{out \times in}$ 按 **input 维**切分，每个 rank 持有 $W_i \in \mathbb{R}^{out \times in/N}$：
 
-```
-输入 X_i[B, in/N]  → 各 rank 不同（来自上一层 column 切分）
-各 rank 计算 Y_i = X_i @ W_i^T  →  Y_i[B, out]（部分和）
-输出：all-reduce(sum) 聚合各 rank 部分和 → Y[B, out]
-通信量：all-reduce [B, out] 元素
-```
+![Row-Parallel Linear（Output 投影）](../images/row_parallel_linear.svg)
 
 ##### TP 的经典 pattern：Column + Row 配对
 
 一个 Attention Block = ColumnParallel(QKV) + Attention + RowParallel(Output)，**全程只需 1 次 all-reduce**（在 Output 投影处）：
 
-```
-X → ColumnParallel(QKV) → [各 rank 算自己 head 的 QKV，无通信]
-  → Attention（各 head 独立，无通信）
-  → RowParallel(Output) → [各 rank 算部分和，1 次 all-reduce 聚合]
-  → Y
-```
+![TP 经典 pattern：Column + Row 配对](../images/tp_attention_pattern.svg)
 
 ##### TP=2/4/8 权衡
 

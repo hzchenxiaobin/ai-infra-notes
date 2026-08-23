@@ -33,14 +33,14 @@
     <rect x="60" y="168" width="340" height="50" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.1"/>
   </g>
   <text x="75" y="186" font-size="11" fill="#c98a2b" font-weight="bold">Bytes</text>
-  <text x="75" y="206" font-size="11" fill="#2b2b2b" font-family="monospace">B×N×d + 3d² + 3×B×N×d ≈ 4 MB</text>
+  <text x="75" y="206" font-size="11" fill="#2b2b2b" font-family="monospace">B×N×d + 3d² + 3×B×N×d ≈ 5.5 MB</text>
 
   <!-- AI result -->
   <g filter="url(#sk)">
     <rect x="60" y="226" width="340" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
   </g>
   <text x="75" y="244" font-size="11" fill="#4a8e4a" font-weight="bold">AI</text>
-  <text x="75" y="264" font-size="14" fill="#2e6e2e" font-family="monospace" font-weight="bold">≈ 400 FLOP/Byte</text>
+  <text x="75" y="264" font-size="14" fill="#2e6e2e" font-family="monospace" font-weight="bold">≈ 279 FLOP/Byte</text>
 
   <!-- conclusion -->
   <g filter="url(#sk)">
@@ -91,7 +91,7 @@
   <g filter="url(#sk)">
     <rect x="80" y="370" width="700" height="44" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
   </g>
-  <text x="430" y="390" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Prefill AI ≈ 400 → compute-bound · Decode AI ≈ 1.0 → memory-bound</text>
+  <text x="430" y="390" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Prefill AI ≈ 279 → compute-bound · Decode AI ≈ 1.0 → memory-bound</text>
   <text x="430" y="406" text-anchor="middle" font-size="10" fill="#888">同一个模型、同一份权重，M 从 N_prompt 降到 1 → 瓶颈从算力翻转到带宽</text>
 
   <text x="430" y="432" text-anchor="middle" font-size="10" fill="#888">直觉：Prefill 像"一群人搬砖"（瓶颈是人力）；Decode 像"一个人跑腿取材料"（瓶颈是腿/带宽）</text>

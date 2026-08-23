@@ -7,11 +7,11 @@
 1. 理解 Tensor Core 的硬件架构与 WMMA（Warp Matrix Multiply Accumulate）编程接口<br>
 2. 掌握 `nvcuda::wmma` fragment 的生命周期（load → mma_sync → store）<br>
 3. 理解 FP16 输入 / FP32 累加的混合精度策略及其精度-性能权衡<br>
-4. 实现手写 WMMA GEMM，实测 cuBLAS ~33%（教学版，诚实归因差距）<br>
+4. 实现手写 WMMA GEMM，实测 cuBLAS ~30%（教学版，诚实归因差距）<br>
 5. 能用 ncu 分析 Tensor Core 利用率，对比 FMA GEMM 与 WMMA GEMM 的瓶颈差异<br>
 6. 理解 CUTLASS 的三级 tiling 抽象与 WMMA 的关系<br>
 
-> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 90%」是顶级算子工程师面试题，而 cuBLAS 默认使用 Tensor Core。不掌握 WMMA，手写 GEMM 永远卡在 FMA 上限（~64%）。今天是从 FMA 跨越到 Tensor Core 的第一步——教学版实测 ~33%，诚实归因差距，理解 85%+ 需要的工程深度（CUTLASS 级 smem tiling + double buffering）。
+> 💡 **为什么重要**：「手写 GEMM 到 cuBLAS 90%」是顶级算子工程师面试题，而 cuBLAS 默认使用 Tensor Core。不掌握 WMMA，手写 GEMM 永远卡在 FMA 上限（~64%）。今天是从 FMA 跨越到 Tensor Core 的第一步——教学版实测 ~30%，诚实归因差距，理解 85%+ 需要的工程深度（CUTLASS 级 smem tiling + double buffering）。
 
 ---
 
@@ -50,15 +50,13 @@ Tensor Core 是 NVIDIA GPU 中专门用于矩阵乘加（MMA）的硬件单元�
 | Turing | sm_75 | 第二代 | FP16, INT8 | 支持 INT8 推理 |
 | Ampere | sm_80 | 第三代 | FP16, BF16, TF32, INT8, INT4 | TF32 自动加速 FP32 |
 | Hopper | sm_90 | 第四代 | + FP8 | TMA, warp specialization |
-| **Blackwell** | **sm_120** | **第五代** | **+ FP8** | **RTX 5090 使用** |
+| **Blackwell** | **sm_120** | **第五代** | **+ FP4** | **FP4, 2nd gen Transformer Engine** |
 
 **Tensor Core 的工作方式**：
 
 每个 Tensor Core 每个时钟周期执行一个 `D = A × B + C` 操作，其中 A、B、C、D 是矩阵片段（fragment）。以最常用的 `m16n16k16` 为例：
 
-```
-A: 16×16 (FP16)   B: 16×16 (FP16)   C: 16×16 (FP32)   D: 16×16 (FP32)
-```
+![WMMA Fragment 形状（m16n16k16）](../images/wmma_fragment_shapes.svg)
 
 一个 warp（32 线程）协作完成一次 MMA 操作，每个线程持有 fragment 的一部分（分布在不同寄存器中）。
 
@@ -67,7 +65,7 @@ A: 16×16 (FP16)   B: 16×16 (FP16)   C: 16×16 (FP32)   D: 16×16 (FP32)
 | 维度 | FMA (CUDA Core) | Tensor Core (WMMA) |
 |------|----------------|-------------------|
 | 指令粒度 | 标量 `a*b+c` | 矩阵 `A×B+C` (16×16×16) |
-| 每周期 FLOPs/SM | 128 FP32 | ~256 FP16 (2x) |
+| 每周期 FLOPs/SM | 256 FP32 | ~512 FP16 (2x) |
 | 编程模型 | 显式线程级 | warp 级 fragment |
 | 数据布局要求 | 无 | 需满足 fragment 布局 |
 | 精度 | FP32 | FP16输入/FP32累加 |
@@ -125,11 +123,7 @@ wmma::store_matrix_sync(C + offset, c_frag, ld, wmma::mem_row_major);
 
 WMMA GEMM 的 tiling 策略与 Register Blocking 类似，但每个 warp 计算 16×16 的输出 tile（而非 8×8）：
 
-```
-Grid: (N/16, M/16)    每个 block 含 1 个 warp (32 threads)
-每个 warp 计算 C 的 16×16 子矩阵
-K 维循环：每次加载 16×16 的 A tile 和 16×16 的 B tile
-```
+![WMMA Grid 映射](../images/wmma_grid_mapping.svg)
 
 **数据布局要求**：
 - A 矩阵：row-major（`wmma::row_major`）
@@ -261,56 +255,13 @@ int main(int argc, char** argv)
 
 ##### 调用流程总结
 
-```
-Host 端:
-  1. 准备 FP16 数据（A row-major, B col-major）
-  2. cudaMalloc + cudaMemcpy 到 Device
-  3. 配置 Grid = (N/16, M/16), Block = (32, 1)  ← 每 block 1 个 warp
-  4. wmma_gemm_kernel<<<grid, block>>>(d_A, d_B, d_C, M, N, K)
-  5. cudaDeviceSynchronize + 计时
-
-Device 端 (每个 warp):
-  1. blockIdx 确定输出 tile 位置 (warpM, warpN)
-  2. 声明 fragment (a_frag, b_frag, c_frag)
-  3. fill_fragment(c_frag, 0)  ← 初始化累加器
-  4. for k in range(0, K, 16):
-       load_matrix_sync(a_frag, A + ...)  ← 从 global memory 加载
-       load_matrix_sync(b_frag, B + ...)
-       mma_sync(c_frag, a_frag, b_frag, c_frag)  ← Tensor Core 执行
-  5. store_matrix_sync(C + ..., c_frag, N, mem_row_major)  ← 写回结果
-```
-
-##### 调用流程总结
-
-```
-Host 端:
-  1. 准备 FP16 数据（A row-major, B col-major）
-  2. cudaMalloc + cudaMemcpy 到 Device
-  3. 配置 Grid = (N/16, M/16), Block = (32, 1)  ← 每 block 1 个 warp
-  4. wmma_gemm_kernel<<<grid, block>>>(d_A, d_B, d_C, M, N, K)
-  5. cuBLAS sgemm 作为参考
-  6. cudaMemcpy 回 Host，对比 max_diff
-
-Device 端 (每个 warp):
-  1. blockIdx 确定输出 tile 位置 (warpM, warpN)
-  2. 声明 fragment (a_frag, b_frag, c_frag)
-  3. fill_fragment(c_frag, 0)  ← 初始化累加器
-  4. for k in range(0, K, 16):
-       load_matrix_sync(a_frag, A + ...)  ← 从 global memory 加载
-       load_matrix_sync(b_frag, B + ...)
-       mma_sync(c_frag, a_frag, b_frag, c_frag)  ← Tensor Core 执行
-  5. store_matrix_sync(C + ..., c_frag, N, mem_row_major)  ← 写回结果
-```
+![WMMA 调用流程（Host + Device）](../images/wmma_host_device_flow.svg)
 
 #### 1.4 混合精度策略
 
 WMMA 的核心优势是混合精度计算：
 
-```
-输入：FP16 (__half)     — 节省带宽和显存
-累加：FP32 (float)      — 保证数值精度
-输出：FP32 (float)      — 后续计算使用
-```
+![混合精度策略：FP16 输入 / FP32 累加](../images/mixed_precision_pipeline.svg)
 
 ##### 为什么 FP16 输入 + FP32 累加？
 
@@ -352,16 +303,16 @@ FP32 累加避免了 FP16 的大数吃小数问题（FP16 只有 10 位尾数，
 
 #### 任务 1：理解 WMMA GEMM 完整调用流程
 
-上方 1.3 节已给出完整的 `wmma_gemm.cu`——包含 kernel 定义和 host 端调用流程（数据准备 → kernel launch → cuBLAS 对比 → 正确性验证）。完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
+上方 1.3 节已给出完整的 `wmma_gemm.cu`——包含 kernel 定义和 host 端调用流程（数据准备 → kernel launch → 计时）。完整文件见 [kernels/wmma_gemm.cu](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week3/day1/kernels/wmma_gemm.cu)。
 
 代码包含：
 - `wmma_gemm_kernel`：WMMA GEMM kernel（FP16 输入, FP32 累加, Tensor Core 执行）
-- `main`：host 端调用流程——数据准备、kernel launch、cuBLAS sgemm 对比、正确性验证
+- `main`：host 端调用流程——数据准备、kernel launch、计时
 
 #### 任务 2：编译与运行
 
 ```bash
-nvcc -O3 -arch=sm_120 -lcublas kernels/wmma_gemm.cu -o wmma_gemm
+nvcc -O3 -arch=sm_120 kernels/wmma_gemm.cu -o wmma_gemm
 ./wmma_gemm
 ```
 
@@ -465,9 +416,9 @@ Day 1 我们掌握了 Tensor Core 与 WMMA 编程：
 1. **Tensor Core 架构**：每周期执行 16×16×16 矩阵乘加，吞吐是 FMA 的 2-8 倍
 2. **WMMA 接口**：`fragment` 生命周期（声明→fill→load→mma_sync→store），warp 级编程模型
 3. **混合精度策略**：FP16 输入节省带宽 + FP32 累加保证精度，是推理/训练的主流方案
-4. **WMMA GEMM**：手写实现达到 cuBLAS 85%+，瓶颈从 FMA 峰值转移到带宽和 fragment 开销
+4. **WMMA GEMM**：教学版实测 TF32 cuBLAS 的 ~30%（FP16 ~15%），瓶颈在无 smem tiling、单 warp/block、global load fragment
 5. **与 CUTLASS 的关系**：WMMA 是高层接口，CUTLASS 在此基础上添加 auto-tuning、double buffer、K 分割等深度优化
-6. **面试核心**：能解释从 65% 到 85% 的跨越来自 Tensor Core，从 85% 到 95% 需要 CUTLASS 级别的工程优化
+6. **面试核心**：能解释教学版 WMMA 为何仅 ~30%（无 smem tiling、单 warp/block），以及 85%+ 需要的 CUTLASS 级工程深度（smem tiling + double buffering + 多 warp）
 
 掌握 Tensor Core 后，你就理解了"为什么 cuBLAS 比手写 FMA 快 2 倍"——不是算法更优，而是用了不同的硬件单元。下一步学习 CUTLASS，理解工业级 GEMM 库的工程深度。
 
@@ -544,9 +495,7 @@ Day 1 我们掌握了 Tensor Core 与 WMMA 编程：
 
    - RTX 5090（Blackwell GB202, sm_120）的 FP16 Tensor Core dense 峰值约 **~209 TFLOPS**
    - 计算方法：
-     ```
-     FP16 dense = FP32 FMA 峰值 × 2 = 104.75 × 2 ≈ 209 TFLOPS
-     ```
+      ![FP16 峰值计算](../images/fp16_peak_calc.svg)
    - 这是因为 Tensor Core 每个 cycle 执行的 FP16 FLOPs 是 FP32 FMA 的 2 倍
    - 如果启用 2:4 structured sparsity，峰值再翻倍：~418 TFLOPS（sparse）
    - FP8 峰值更高：~418 TFLOPS（dense）/ ~836 TFLOPS（sparse）

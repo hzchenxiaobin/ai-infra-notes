@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Benchmark 测量的六个常见坑</text>
+  <path d="M 270 42 Q 450 50 630 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <g font-size="11">
+    <!-- 坑1 -->
+    <g filter="url(#sk)"><rect x="60" y="74" width="260" height="56" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/></g>
+    <text x="80" y="98" font-size="12" font-weight="bold" fill="#b03a3a">坑1：不 warmup</text>
+    <text x="80" y="116" font-size="9" fill="#888">首次 cold miss 未排除</text>
+    <path d="M 328 102 L 372 102" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="74" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="102" font-size="11" fill="#444">首次含 JIT / cold miss，偏慢</text>
+    <text x="400" y="120" font-size="9" fill="#888">→ 数字虚高，不能反映真实性能</text>
+
+    <!-- 坑2 -->
+    <g filter="url(#sk)"><rect x="60" y="142" width="260" height="56" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3"/></g>
+    <text x="80" y="166" font-size="12" font-weight="bold" fill="#7a5415">坑2：计时含 memcpy</text>
+    <text x="80" y="184" font-size="9" fill="#888">H2D/D2H 算进去了</text>
+    <path d="M 328 170 L 372 170" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="142" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="170" font-size="11" fill="#444">H2D/D2H 拷贝远慢于 kernel</text>
+    <text x="400" y="188" font-size="9" fill="#888">→ 带宽假低（PCIe ~32 vs GDDR7 ~1792 GB/s）</text>
+
+    <!-- 坑3 -->
+    <g filter="url(#sk)"><rect x="60" y="210" width="260" height="56" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/></g>
+    <text x="80" y="234" font-size="12" font-weight="bold" fill="#5a3a7a">坑3：只跑 1 次</text>
+    <text x="80" y="252" font-size="9" fill="#888">没有取平均</text>
+    <path d="M 328 238 L 372 238" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="210" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="238" font-size="11" fill="#444">单次抖动大</text>
+    <text x="400" y="256" font-size="9" fill="#888">→ 须取 N 次平均（通常 50-100 次）</text>
+
+    <!-- 坑4 -->
+    <g filter="url(#sk)"><rect x="60" y="278" width="260" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/></g>
+    <text x="80" y="302" font-size="12" font-weight="bold" fill="#2b6e9e">坑4：忘了 sync</text>
+    <text x="80" y="320" font-size="9" fill="#888">没有 synchronize</text>
+    <path d="M 328 306 L 372 306" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="278" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="306" font-size="11" fill="#444">kernel 异步，stop 立刻触发</text>
+    <text x="400" y="324" font-size="9" fill="#888">→ 时间 ≈ 0，完全测不到</text>
+
+    <!-- 坑5 -->
+    <g filter="url(#sk)"><rect x="60" y="346" width="260" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/></g>
+    <text x="80" y="370" font-size="12" font-weight="bold" fill="#2e6e2e">坑5：带宽算错 R+W</text>
+    <text x="80" y="388" font-size="9" fill="#888">只算读或只算写</text>
+    <path d="M 328 374 L 372 374" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="346" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="374" font-size="11" fill="#444">copy 读+写 = 2x；GEMM 读 A+B 写 C</text>
+    <text x="400" y="392" font-size="9" fill="#888">→ 少算一半，带宽虚高</text>
+
+    <!-- 坑6 -->
+    <g filter="url(#sk)"><rect x="60" y="414" width="260" height="56" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.3"/></g>
+    <text x="80" y="438" font-size="12" font-weight="bold" fill="#7a5415">坑6：不对比基线</text>
+    <text x="80" y="456" font-size="9" fill="#888">只给绝对数字</text>
+    <path d="M 328 442 L 372 442" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+    <g filter="url(#sk)"><rect x="380" y="414" width="460" height="56" rx="6" fill="#fff" stroke="#bbb" stroke-width="1.1"/></g>
+    <text x="400" y="442" font-size="11" fill="#444">"1100 GB/s" 无意义</text>
+    <text x="400" y="460" font-size="9" fill="#888">→ 须除以峰值 ~1792，给"达到比例"</text>
+  </g>
+
+  <text x="450" y="520" text-anchor="middle" font-size="10" fill="#888" font-style="italic">benchmark 可信度 = warmup + N 次平均 + 排除拷贝 + 对比峰值</text>
+</svg>

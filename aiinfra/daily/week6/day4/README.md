@@ -86,10 +86,10 @@ Scheduler 在每轮 `schedule()` 时更新 block table（分配新 block、回�
 float k_val = K[s * d + t]; // 直接算地址
 
 // PagedAttention（分页布局）：
-int logical_block = s / BLOCK_SIZE;                                     // 第几个逻辑 block
-int offset = s % BLOCK_SIZE;                                            // block 内第几个 token
-int physical_block = block_table[logical_block];                        // 查表得物理 block
-float k_val = k_pool[physical_block * BLOCK_SIZE * d + offset * d + t]; // 物理 block 内读取
+int logical_block = s / KV_BLOCK_SIZE;                                     // 第几个逻辑 block
+int offset = s % KV_BLOCK_SIZE;                                            // block 内第几个 token
+int physical_block = block_table[logical_block];                           // 查表得物理 block
+float k_val = k_pool[physical_block * KV_BLOCK_SIZE * d + offset * d + t]; // 物理 block 内读取
 ```
 
 kernel 遍历所有历史 key 时，按逻辑 block 顺序（0, 1, 2, ...），每步查 `block_table[lb]` 得物理 block，再读该 block 内的 KV 数据。今天 Coding 任务就实现这个 kernel。
@@ -193,7 +193,7 @@ __inline__ __device__ float block_reduce_sum(float v, float* sh) {
 }
 
 // ---------- PagedAttention kernel（decode：1 query 对 N 历史 key）----------
-// kv_cache_pool: 物理 block 池，布局 [num_blocks, KV_BLOCK_SIZE, d]
+// k_cache_pool: 物理 block 池，布局 [num_blocks, KV_BLOCK_SIZE, d]
 // block_table: [max_num_blocks_per_seq]，block_table[l] = 第 l 个逻辑 block 的物理 block 号
 // q: [d]，当前 query 向量
 // output: [d]，attention 输出

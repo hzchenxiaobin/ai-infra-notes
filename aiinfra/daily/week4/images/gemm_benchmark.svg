@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="580" viewBox="0 0 920 580" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="29" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="580" fill="#fdfcf7"/>
+  <text x="460" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Triton vs CUDA vs cuBLAS GEMM Benchmark</text>
+  <text x="460" y="52" text-anchor="middle" font-size="12" fill="#666">RTX 5090 sm_120 · FP16 输入 → FP32 输出 · 预估口径（待实测回填）</text>
+  <path d="M 280 58 Q 460 66 640 58" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Y-axis (log scale) ===== -->
+  <path d="M 120 400 L 120 90" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="62" y="245" font-size="11" fill="#444" transform="rotate(-90 62 245)">延迟 (ms, 对数轴)</text>
+  <!-- grid lines + labels -->
+  <path d="M 120 348 L 700 348" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="352" text-anchor="end" font-size="9" fill="#999">0.01</text>
+  <path d="M 120 248 L 700 248" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="252" text-anchor="end" font-size="9" fill="#999">0.1</text>
+  <path d="M 120 148 L 700 148" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="152" text-anchor="end" font-size="9" fill="#999">1.0</text>
+
+  <!-- X-axis -->
+  <path d="M 120 400 L 720 400" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="420" y="470" text-anchor="middle" font-size="11" fill="#444">M = N = K</text>
+
+  <!-- ===== Group 1: 512 ===== -->
+  <text x="190" y="418" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">512</text>
+  <!-- Triton 0.015ms → h=70 -->
+  <g filter="url(#sk)"><rect x="140" y="330" width="30" height="70" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="155" y="324" text-anchor="middle" font-size="8" fill="#1b5e8c">0.015</text>
+  <!-- CUDA 0.020ms → h=82 -->
+  <g filter="url(#sk)"><rect x="175" y="318" width="30" height="82" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="190" y="312" text-anchor="middle" font-size="8" fill="#c98a2b">0.020</text>
+  <!-- cuBLAS 0.006ms → h=30 -->
+  <g filter="url(#sk)"><rect x="210" y="370" width="30" height="30" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.3"/></g>
+  <text x="225" y="364" text-anchor="middle" font-size="8" fill="#2e6e2e">0.006</text>
+  <!-- annotation -->
+  <text x="190" y="436" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">40% · 1.3x</text>
+
+  <!-- ===== Group 2: 1024 ===== -->
+  <text x="330" y="418" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">1024</text>
+  <!-- Triton 0.031ms → h=101 -->
+  <g filter="url(#sk)"><rect x="280" y="299" width="30" height="101" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="295" y="293" text-anchor="middle" font-size="8" fill="#1b5e8c">0.031</text>
+  <!-- CUDA 0.045ms → h=117 -->
+  <g filter="url(#sk)"><rect x="315" y="283" width="30" height="117" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="330" y="277" text-anchor="middle" font-size="8" fill="#c98a2b">0.045</text>
+  <!-- cuBLAS 0.014ms → h=67 -->
+  <g filter="url(#sk)"><rect x="350" y="333" width="30" height="67" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.3"/></g>
+  <text x="365" y="327" text-anchor="middle" font-size="8" fill="#2e6e2e">0.014</text>
+  <text x="330" y="436" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">45% · 1.5x</text>
+
+  <!-- ===== Group 3: 2048 ===== -->
+  <text x="470" y="418" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">2048</text>
+  <!-- Triton 0.105ms → h=154 -->
+  <g filter="url(#sk)"><rect x="420" y="246" width="30" height="154" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="435" y="240" text-anchor="middle" font-size="8" fill="#1b5e8c">0.105</text>
+  <!-- CUDA 0.330ms → h=204 -->
+  <g filter="url(#sk)"><rect x="455" y="196" width="30" height="204" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="470" y="190" text-anchor="middle" font-size="8" fill="#c98a2b">0.330</text>
+  <!-- cuBLAS 0.098ms → h=151 -->
+  <g filter="url(#sk)"><rect x="490" y="249" width="30" height="151" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.3"/></g>
+  <text x="505" y="243" text-anchor="middle" font-size="8" fill="#2e6e2e">0.098</text>
+  <text x="470" y="436" text-anchor="middle" font-size="9" fill="#2e7d4f" font-weight="bold">93% · 3.1x</text>
+
+  <!-- ===== Group 4: 4096 ===== -->
+  <text x="610" y="418" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">4096</text>
+  <!-- Triton 0.661ms → h=234 -->
+  <g filter="url(#sk)"><rect x="560" y="166" width="30" height="234" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="575" y="160" text-anchor="middle" font-size="8" fill="#1b5e8c">0.661</text>
+  <!-- CUDA 2.150ms → h=285 -->
+  <g filter="url(#sk)"><rect x="595" y="115" width="30" height="285" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="610" y="109" text-anchor="middle" font-size="8" fill="#c98a2b">2.150</text>
+  <!-- cuBLAS 0.644ms → h=233 -->
+  <g filter="url(#sk)"><rect x="630" y="167" width="30" height="233" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.3"/></g>
+  <text x="645" y="161" text-anchor="middle" font-size="8" fill="#2e6e2e">0.644</text>
+  <text x="610" y="436" text-anchor="middle" font-size="9" fill="#2e7d4f" font-weight="bold">97% · 3.3x</text>
+
+  <!-- ===== Legend ===== -->
+  <g filter="url(#sk)"><rect x="730" y="100" width="14" height="14" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.2"/></g>
+  <text x="750" y="112" font-size="10" fill="#2b2b2b">Triton</text>
+  <g filter="url(#sk)"><rect x="730" y="122" width="14" height="14" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="750" y="134" font-size="10" fill="#2b2b2b">手写 CUDA</text>
+  <text x="750" y="146" font-size="8" fill="#999">(无 Tensor Core)</text>
+  <g filter="url(#sk)"><rect x="730" y="156" width="14" height="14" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.2"/></g>
+  <text x="750" y="168" font-size="10" fill="#2b2b2b">cuBLAS FP16</text>
+  <path d="M 730 186 L 800 186" stroke="#d4d4d4" stroke-width="0.8" filter="url(#sk)"/>
+  <text x="730" y="202" font-size="9" fill="#444">标注格式：</text>
+  <text x="730" y="216" font-size="9" fill="#666">Triton%cuBLAS</text>
+  <text x="730" y="230" font-size="9" fill="#666">· Triton/CUDA</text>
+
+  <!-- ===== Key findings ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="490" width="800" height="76" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="512" font-size="11" font-weight="bold" fill="#2b2b2b">关键发现</text>
+  <text x="80" y="530" font-size="10" fill="#2e7d4f">✓ 大矩阵（4096）Triton 达 cuBLAS 97%——tl.dot 自动调 Tensor Core + autotune 选最优 tiling</text>
+  <text x="80" y="546" font-size="10" fill="#b03a3a">✗ 小矩阵（512）仅 40%——autotune 搜索空间不够 + block 数少 SM 利用率低</text>
+  <text x="80" y="562" font-size="10" fill="#1b5e8c">→ Triton 比手写 CUDA 快 1.3–3.3x（自动 tiling + Tensor Core vs 手写 FMA 无 TC）</text>
+</svg>

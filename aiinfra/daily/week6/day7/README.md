@@ -7,7 +7,7 @@
 1. 系统梳理 Week 6 的知识链——从 Prefill/Decode 分析到 KV Cache 实现到 vLLM 架构到 PagedAttention 到 Mini 引擎到 Profiling，把碎片知识连成**一张完整地图**<br>
 2. 掌握推理系统的**四大核心问题**——内存管理、Batch 策略、Latency 隐藏、调度开销——及其解决方案<br>
 3. 建立**优化速查表**，拿到任意推理性能现象能查表找到检查方法与解决方案<br>
-4. 复盘本周 **17 道面试题**，建立推理系统专题的答题框架<br>
+4. 复盘本周 **18 道面试题**，建立推理系统专题的答题框架<br>
 5. 整理本周所有产出（Mini 引擎、KV Cache、profiling 脚本），形成可复用的工程资产<br>
 6. 为 Week 7（Batching & 调度优化）做好知识衔接，明确 Continuous Batching 深入、CUDA Graph、Chunked Prefill 的前置基础
 
@@ -17,7 +17,7 @@
 
 ### Week 6 知识地图
 
-![Week 6 知识地图：从两阶段到推理引擎](../images/week5_knowledge_map.svg)
+![Week 6 知识地图：从两阶段到推理引擎](../images/week6_knowledge_map.svg)
 
 Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，到读系统，到组装引擎，到测量优化，到提炼方法论**。
 
@@ -130,13 +130,13 @@ Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 | 显存碎片 | block allocator 看 free block | PagedAttention |
 | Throughput 低 | nsys SM util | 增大 batch、continuous batching |
 
-> 使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day6 决策树验证。
+> 使用流程：观察现象 → 用对应工具检查 → 查表选解决方案 → Day1 profiling 验证。
 
 ---
 
 ### 面试准备框架
 
-#### 本周 17 道核心面试题（按主题分组）
+#### 本周 18 道核心面试题（按主题分组）
 
 **Prefill/Decode（Day1/Day6）**
 1. Prefill vs Decode 的区别和瓶颈？
@@ -161,6 +161,9 @@ Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 1. PagedAttention 解决什么问题？
 2. Copy-on-Write 应用场景？
 
+**FlashDecoding（Day6）**
+1. FlashDecoding 解决什么问题？
+
 **核心问题（Day7）**
 1. 推理系统四大核心问题？
 2. Continuous vs Dynamic Batching？
@@ -175,13 +178,13 @@ Week 6 围绕一条主线展开：**从理解推理两阶段，到造零件，�
 
 #### 任务 1：运行总结自测脚本
 
-运行 [kernels/week5_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day7/kernels/week5_summary.py)，复盘四大核心问题 + 17 道面试题自测 + 优化速查表：
+运行 [kernels/week6_summary.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week6/day7/kernels/week6_summary.py)，复盘四大核心问题 + 18 道面试题自测 + 优化速查表：
 
 ```bash
-python kernels/week5_summary.py
+python kernels/week6_summary.py
 ```
 
-脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 17 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
+脚本会依次打印：推理系统四大核心问题清单（问题/解决方案/对应 Day）、优化速查表（现象→检查→解决）、全部 18 道面试题清单，然后随机抽 5 题做自测（先看问题，按回车看提示）。
 
 #### 任务 2：LeetGPU 综合压轴题 —— GPT-2 Transformer Block
 
@@ -236,7 +239,7 @@ Week 6 建立了推理系统的"全景地图"和第一个能跑的引擎。Week 
 
 ### 弹性安排
 
-- **时间紧（≤4h）**：跑 `week5_summary.py` 自测 17 题 + 过一遍四大核心问题 + 速查表
+- **时间紧（≤4h）**：跑 `week6_summary.py` 自测 18 题 + 过一遍四大核心问题 + 速查表
 - **标准（6h）**：+ 整理 GitHub 仓库（按 day1-7 归档）+ 生成性能报告模板
 - **充裕（8h+）**：+ 重做 Day2 的 KVCache append kernel 化 + Day6 的 nsys 实测 + 写 Week 6 学习总结博客
 
@@ -249,7 +252,7 @@ Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 1. **知识地图**：Day1 两阶段分析 → Day2 KV Cache 零件 → Day3 vLLM 调度 → Day4 PagedAttention 内存管理 → Day5 Mini 引擎组装 → Day6 FlashDecoding 并行度突破 → Day7 核心问题地图
 2. **四大核心问题**：内存管理（KV Cache 碎片/量化/GQA）、Batch 策略（Continuous Batching）、Latency 隐藏（CUDA Graph/Speculative Decoding）、调度开销（C++/预分配/异步）
 3. **优化速查表**：9 类现象（TTFT 高/TBT 高/OOM/gap 大...）→ 检查方法 → 解决方案，拿到任意性能问题能查表定位
-4. **17 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、核心问题五组，建立答题框架（定性→机制→量化→方案→跨平台）
+4. **18 道面试题复盘**：分 Prefill/Decode、KV Cache、vLLM、PagedAttention、FlashDecoding、核心问题六组，建立答题框架（定性→机制→量化→方案→跨平台）
 5. **常见误区澄清**：Decode 慢≠算力不够、Continuous≠Dynamic、PagedAttention 非直接加速、profiling 非只测时间
 6. **Week 7 衔接**：从单请求引擎到多请求服务、Continuous Batching 深入实现、CUDA Graph 录制、chunked prefill
 
@@ -336,7 +339,7 @@ Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 
 - **vLLM 论文**：Efficient Memory Management for Large Language Model Serving with PagedAttention (SOSP 2023)
 - **vLLM 源码**：<https://github.com/vllm-project/vllm>
-- **FlashAttention 论文**：Dao et al., NeurIPS 2022（Week4 已读，推理 prefill 直接适用）
+- **FlashAttention 论文**：Dao et al., NeurIPS 2022（Week5 已读，推理 prefill 直接适用）
 - **Continuous Batching 博客**：AnyScale "Continuous Batching" / vLLM blog
 - **CUDA Graph 文档**：NVIDIA CUDA C++ Programming Guide → Graphs
 - **nsys/ncu 文档**：NVIDIA Nsight Systems / Nsight Compute
@@ -351,6 +354,6 @@ Day 7 我们把 Week 6 的碎片知识连成了推理系统的完整地图：
 - [ ] 能用 profiling 脚本测量 TTFT 和 per-token decode latency
 - [ ] 能列出推理系统四大核心问题，每个给出 2-3 个解决方案
 - [ ] 能对比 Continuous Batching 和 Dynamic Batching
-- [ ] 完成本周 17 道面试题的自问自答
+- [ ] 完成本周 18 道面试题的自问自答
 - [ ] 整理 GitHub 仓库，生成 Week 6 性能报告
 - [ ] 规划 Week 7（Batching & 调度）的学习重点

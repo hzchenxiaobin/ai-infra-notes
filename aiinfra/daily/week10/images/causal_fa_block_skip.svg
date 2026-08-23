@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="520" viewBox="0 0 880 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="27" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="520" fill="#fdfcf7"/>
+  <text x="440" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Causal FA：块级跳过优化</text>
+  <path d="M 260 40 Q 440 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="440" y="64" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">causal 下三角 → Q block i 只需遍历 K block j ≤ i，j &gt; i 直接 break → 省一半块计算</text>
+
+  <!-- ===== Block grid: 6x6 ===== -->
+  <!-- Q axis label -->
+  <text x="30" y="100" font-size="11" font-weight="bold" fill="#2e6e2e">Q block i</text>
+  <!-- K axis label -->
+  <text x="300" y="92" font-size="11" font-weight="bold" fill="#2b6e9e">K block j →</text>
+
+  <!-- Grid: 6 rows (Q) x 6 cols (K), each cell 70x40, starting at x=120, y=100 -->
+  <!-- Row labels -->
+  <g font-size="9" fill="#2e6e2e" font-weight="bold">
+    <text x="110" y="124" text-anchor="end">i=0</text>
+    <text x="110" y="164" text-anchor="end">i=1</text>
+    <text x="110" y="204" text-anchor="end">i=2</text>
+    <text x="110" y="244" text-anchor="end">i=3</text>
+    <text x="110" y="284" text-anchor="end">i=4</text>
+    <text x="110" y="324" text-anchor="end">i=5</text>
+  </g>
+  <!-- Column labels -->
+  <g font-size="9" fill="#2b6e9e" font-weight="bold" text-anchor="middle">
+    <text x="155" y="96">j=0</text>
+    <text x="225" y="96">j=1</text>
+    <text x="295" y="96">j=2</text>
+    <text x="365" y="96">j=3</text>
+    <text x="435" y="96">j=4</text>
+    <text x="505" y="96">j=5</text>
+  </g>
+
+  <!-- Cells: computed (green) if j <= i, skipped (red/gray) if j > i -->
+  <!-- Row i=0: only j=0 computed -->
+  <g filter="url(#sk)"><rect x="120" y="108" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="128" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="108" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="225" y="128" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="260" y="108" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="295" y="128" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="330" y="108" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="365" y="128" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="400" y="108" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="435" y="128" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="470" y="108" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="505" y="128" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+
+  <!-- Row i=1: j=0,1 computed -->
+  <g filter="url(#sk)"><rect x="120" y="148" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="168" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="148" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="225" y="168" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="260" y="148" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="295" y="168" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="330" y="148" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="365" y="168" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="400" y="148" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="435" y="168" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="470" y="148" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="505" y="168" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+
+  <!-- Row i=2: j=0,1,2 computed -->
+  <g filter="url(#sk)"><rect x="120" y="188" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="188" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="225" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="260" y="188" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="295" y="208" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="330" y="188" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="365" y="208" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="400" y="188" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="435" y="208" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="470" y="188" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="505" y="208" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+
+  <!-- Row i=3: j=0,1,2,3 computed -->
+  <g filter="url(#sk)"><rect x="120" y="228" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="248" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="228" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="225" y="248" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="260" y="228" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="295" y="248" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="330" y="228" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="365" y="248" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="400" y="228" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="435" y="248" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+  <g filter="url(#sk)"><rect x="470" y="228" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="505" y="248" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+
+  <!-- Row i=4: j=0..4 computed -->
+  <g filter="url(#sk)"><rect x="120" y="268" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="288" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="268" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="225" y="288" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="260" y="268" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="295" y="288" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="330" y="268" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="365" y="288" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="400" y="268" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="435" y="288" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="470" y="268" width="70" height="32" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/></g>
+  <text x="505" y="288" text-anchor="middle" font-size="9" fill="#b03a3a">skip</text>
+
+  <!-- Row i=5: j=0..5 computed -->
+  <g filter="url(#sk)"><rect x="120" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="155" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="190" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="225" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="260" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="295" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="330" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="365" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="400" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="435" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+  <g filter="url(#sk)"><rect x="470" y="308" width="70" height="32" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="505" y="328" text-anchor="middle" font-size="9" fill="#2e6e2e">✓ 计算</text>
+
+  <!-- diagonal line -->
+  <path d="M 190 108 L 540 348" stroke="#2e6e2e" stroke-width="2" stroke-dasharray="6 3" fill="none" opacity="0.5" filter="url(#sk)"/>
+
+  <!-- ===== Right side: stats ===== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="108" width="270" height="140" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3"/>
+  </g>
+  <text x="715" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">块计算统计（N=6 blocks）</text>
+  <g font-size="10" fill="#444">
+    <text x="600" y="152">non-causal: 6 × 6 = 36 块</text>
+    <text x="600" y="172" fill="#2e6e2e">causal: 1+2+3+4+5+6 = 21 块</text>
+    <text x="600" y="192" fill="#b03a3a">跳过: 36 - 21 = 15 块</text>
+    <text x="600" y="216" font-weight="bold" fill="#7a5415">节省 ≈ 42%（接近一半）</text>
+    <text x="600" y="236" fill="#888">N 越大越接近 50%</text>
+  </g>
+
+  <!-- ===== Bottom: pseudocode ===== -->
+  <g filter="url(#sk)">
+    <rect x="580" y="262" width="270" height="100" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="596" y="282" font-size="10" font-weight="bold" fill="#8ec5fc">// causal FA 块级跳过</text>
+  <g font-size="9" font-family="monospace">
+    <text x="596" y="300" fill="#cdd6f4">for (j = 0; j &lt; N; j += Bc) {</text>
+    <text x="608" y="316" fill="#f38ba8">  if (j &gt; q_row_end) break;</text>
+    <text x="608" y="332" fill="#a6e3a1">  // 加载 K_j, 计算 S_ij</text>
+    <text x="608" y="348" fill="#a6e3a1">  // causal mask + softmax</text>
+    <text x="596" y="358" fill="#cdd6f4">}</text>
+  </g>
+
+  <!-- ===== Bottom note ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="360" width="520" height="44" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="290" y="378" text-anchor="middle" font-size="10" fill="#7a5415">验收：正确性 PASS（对比 F.scaled_dot_product_attention causal 版）</text>
+  <text x="290" y="394" text-anchor="middle" font-size="10" fill="#7a5415">N=2048 时比 non-causal 快 1.5x+（省一半块计算）</text>
+
+  <!-- legend -->
+  <g font-size="9">
+    <rect x="30" y="420" width="14" height="14" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="52" y="431" fill="#444">✓ 需计算（j ≤ i，causal 允许）</text>
+    <rect x="230" y="420" width="14" height="14" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="252" y="431" fill="#444">skip 跳过（j &gt; i，全 mask → break）</text>
+  </g>
+
+  <!-- break arrow on row i=0, j=1 -->
+  <path d="M 260 96 L 260 84 L 540 84 L 540 108" stroke="#b03a3a" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arR)" filter="url(#sk)"/>
+  <text x="400" y="80" text-anchor="middle" font-size="9" fill="#b03a3a" font-weight="bold">j &gt; i → break（跳过后续所有 j）</text>
+</svg>

@@ -19,13 +19,7 @@
 
 PyTorch 原生算子功能正确，但在推理场景下有几个不足：
 
-```
-PyTorch 原生算子的问题：
- 1. 融合度低 → Softmax + Scale + MatMul 分 3 个 kernel launch，开销大
- 2. 显存占用高 → 中间结果（attention matrix）全量物化到 HBM
- 3. 无法定制 → 推理特化（如 KV Cache、PagedAttention）需要自定义逻辑
- 4. 缺乏控制 → 无法精细控制 tiling、shared memory、warp 调度
-```
+![PyTorch 原生算子的问题](../images/pytorch_native_problems.svg)
 
 | 维度 | PyTorch 原生 | 自定义 Kernel |
 |------|-------------|--------------|
@@ -56,18 +50,7 @@ PyTorch 原生算子的问题：
 
 ##### 为什么大 GEMM 保留 cuBLAS？
 
-```
-教学版 register blocking GEMM：
- - 手写 tiling + shared memory
- - 无 Tensor Core 加速
- - 性能约为 cuBLAS 的 10-20%
-
-cuBLAS：
- - 高度优化的 SASS 指令
- - Tensor Core 加速（WMMA/MMA）
- - 自动选择最优 tiling
- → 大 GEMM 必须用 cuBLAS
-```
+![教学版 GEMM vs cuBLAS 对比](../images/gemm_vs_cublas_comparison.svg)
 
 > ⚠️ **生产环境**：FlashAttention 和 Softmax/LayerNorm 用官方实现（FlashAttention 库、Apex Normalization），教学版用于理解原理。
 
@@ -122,20 +105,11 @@ __shared__ double s_sum; // 用 double 而非 float
 
 ##### ③ 内存布局
 
-```
-PyTorch Tensor 默认 row-major (contiguous)
-自定义 kernel 必须假设 row-major
-→ 调用前用 tensor.contiguous() 确保
-→ 跨 stride 访问需用 input.stride(0/1)
-```
+![内存布局注意事项](../images/memory_layout_notes.svg)
 
 ##### ④ 边界处理
 
-```
-N 不是 blockDim.x 的整数倍 → 用 if (i < N) 保护
-空输入 → 提前 return
-非对齐尺寸 → 不能用 float4 向量化
-```
+![边界处理](../images/boundary_handling.svg)
 
 ##### ⑤ 形状检查
 
@@ -155,22 +129,7 @@ TORCH_CHECK(err == cudaSuccess, "Kernel launch failed: ", cudaGetErrorString(err
 
 #### 4.4 分层验证策略
 
-```
-Step 1: 单算子验证
- softmax_forward vs F.softmax → max_diff < 1e-5
- layernorm_forward vs F.layer_norm → max_diff < 1e-4
- flash_attention_forward vs manual QK^T·softmax·V → max_diff < 1e-3
-
-Step 2: 多算子组合
- LayerNorm + QKV + Attention + Output → 逐层对比
-
-Step 3: 端到端
- 完整 TransformerLayer forward → max_diff < 1e-2（FP32 累积误差容忍）
-
-Step 4: 性能对比
- PyTorch eager vs Custom kernel → 测量 latency
- （教学版可能比 PyTorch 慢，因为 PyTorch 用 cuDNN/cuBLAS 优化）
-```
+![分层验证策略](../images/layered_verification_strategy.svg)
 
 > 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 float24 尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
 

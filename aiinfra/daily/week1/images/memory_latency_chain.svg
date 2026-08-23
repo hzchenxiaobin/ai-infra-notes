@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="200" viewBox="0 0 860 200" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arrGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#999999"/>
+    </marker>
+    <marker id="arrRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e57373"/>
+    </marker>
+  </defs>
+  <g filter="url(#sk)">
+  <rect width="860" height="200" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">GPU 内存层次（从快到慢）</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none"/>
+
+  <!-- Register -->
+  <rect x="30" y="70" width="140" height="50" rx="6" fill="#5cb86c" opacity="0.18" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="100" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Register</text>
+  <text x="100" y="110" text-anchor="middle" font-size="11" fill="#666666">~1 cycle</text>
+
+  <line x1="172" y1="95" x2="193" y2="95" stroke="#999999" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- Shared Memory -->
+  <rect x="195" y="70" width="140" height="50" rx="6" fill="#6ab0ff" opacity="0.18" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="265" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">Shared Memory</text>
+  <text x="265" y="110" text-anchor="middle" font-size="11" fill="#666666">~30 cycles</text>
+
+  <line x1="337" y1="95" x2="358" y2="95" stroke="#999999" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- L1 Cache -->
+  <rect x="360" y="70" width="140" height="50" rx="6" fill="#7cafff" opacity="0.12" stroke="#6ab0ff" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="430" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">L1 Cache</text>
+  <text x="430" y="110" text-anchor="middle" font-size="11" fill="#666666">~30 cycles</text>
+
+  <line x1="502" y1="95" x2="523" y2="95" stroke="#999999" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- L2 Cache -->
+  <rect x="525" y="70" width="140" height="50" rx="6" fill="#b689e8" opacity="0.18" stroke="#b689e8" stroke-width="1.5"/>
+  <text x="595" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b4a9e">L2 Cache</text>
+  <text x="595" y="110" text-anchor="middle" font-size="11" fill="#666666">~200 cycles</text>
+
+  <line x1="667" y1="95" x2="688" y2="95" stroke="#999999" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- Global Memory -->
+  <rect x="690" y="70" width="140" height="50" rx="6" fill="#e8a838" opacity="0.18" stroke="#e8a838" stroke-width="1.5"/>
+  <text x="760" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">Global Memory</text>
+  <text x="760" y="110" text-anchor="middle" font-size="11" fill="#666666">~400-800 cycles</text>
+
+  <!-- Latency direction indicator -->
+  <line x1="30" y1="145" x2="830" y2="145" stroke="#e57373" stroke-width="2" marker-end="url(#arrRed)"/>
+  <text x="40" y="140" font-size="11" fill="#5cb86c" font-weight="bold">快</text>
+  <text x="820" y="140" text-anchor="end" font-size="11" fill="#e57373" font-weight="bold">慢</text>
+  <text x="430" y="172" text-anchor="middle" font-size="12" fill="#e57373" font-weight="bold">延迟递增 →</text>
+  </g>
+</svg>

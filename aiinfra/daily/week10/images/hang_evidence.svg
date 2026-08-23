@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="15" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+    <marker id="arCyc" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">案例 3：Hang 诊断证据（模拟留档）</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: py-spy dump ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="56" width="480" height="220" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="46" y="76" font-size="10" font-weight="bold" fill="#8ec5fc"># py-spy dump 显示 worker 卡在 _try_preempt</text>
+  <g font-size="9" font-family="monospace">
+    <text x="46" y="98" fill="#cdd6f4">Thread 1 (worker):</text>
+    <text x="46" y="118" fill="#cdd6f4">  File "mini_vllm_scheduler.py", line 165, in _try_preempt</text>
+    <text x="62" y="134" fill="#f9e2af">    victim = self._try_preempt()</text>
+    <text x="320" y="134" fill="#f38ba8">← 循环调用自身</text>
+    <text x="46" y="154" fill="#cdd6f4">  File "mini_vllm_scheduler.py", line 149, in _schedule_waiting</text>
+    <text x="62" y="170" fill="#f9e2af">    for sg in self.waiting:</text>
+    <text x="320" y="170" fill="#f38ba8">← 遍历时 insert → 无限循环</text>
+    <text x="46" y="194" fill="#888">  # 调用栈停在 _try_preempt，没有继续往下执行</text>
+    <text x="46" y="214" fill="#888">  # CPU 100% = 死循环（livelock），不是 I/O 等待</text>
+    <text x="46" y="240" fill="#cdd6f4">$ NCCL_DEBUG=INFO python ...</text>
+    <text x="46" y="258" fill="#a6e3a1">  # NCCL 无异常 → 排除分布式通信死锁</text>
+  </g>
+
+  <!-- ===== Right: livelock cycle ===== -->
+  <g filter="url(#sk)">
+    <rect x="540" y="56" width="330" height="220" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="705" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">Livelock 循环（max_blocks=8）</text>
+  <g font-size="10">
+    <!-- Node 1: schedule_waiting -->
+    <g filter="url(#sk)"><rect x="580" y="96" width="140" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+    <text x="650" y="118" text-anchor="middle" fill="#2b6e9e">遍历 self.waiting</text>
+
+    <!-- Node 2: preempt A -->
+    <g filter="url(#sk)"><rect x="720" y="156" width="120" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/></g>
+    <text x="780" y="178" text-anchor="middle" fill="#7a5415">preempt A</text>
+
+    <!-- Node 3: A 回 waiting -->
+    <g filter="url(#sk)"><rect x="560" y="216" width="130" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+    <text x="625" y="238" text-anchor="middle" fill="#2e6e2e">A 插回 waiting</text>
+
+    <!-- Node 4: 迭代到 A -->
+    <g filter="url(#sk)"><rect x="430" y="156" width="120" height="36" rx="6" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/></g>
+    <text x="490" y="178" text-anchor="middle" fill="#5a3a7a">又迭代到 A</text>
+
+    <!-- Cycle arrows -->
+    <path d="M 720 132 Q 760 140 780 156" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arCyc)" filter="url(#sk)"/>
+    <path d="M 720 174 Q 680 200 690 216" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arCyc)" filter="url(#sk)"/>
+    <path d="M 560 234 Q 510 210 490 192" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arCyc)" filter="url(#sk)"/>
+    <path d="M 550 174 Q 560 150 580 132" stroke="#b85450" stroke-width="1.5" fill="none" marker-end="url(#arCyc)" filter="url(#sk)"/>
+
+    <text x="705" y="268" text-anchor="middle" font-size="9" fill="#b03a3a">→ 无限循环，CPU 100%，无输出</text>
+  </g>
+
+  <!-- ===== Bottom: root cause + fix ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="296" width="840" height="100" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="450" y="318" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">根因：迭代时修改集合 → 修复</text>
+  <g font-size="10" fill="#444">
+    <text x="50" y="340" font-weight="bold" fill="#b03a3a">Bug:</text>
+    <text x="100" y="340" font-family="monospace">for sg in self.waiting:  # 迭代时 _try_preempt 往 self.waiting insert 新元素</text>
+    <text x="50" y="362" font-weight="bold" fill="#2e6e2e">Fix:</text>
+    <text x="100" y="362" font-family="monospace">for sg in list(self.waiting):  # 遍历快照，原集合可安全修改</text>
+    <text x="50" y="384" fill="#888">→ A3.2 已修：遍历 list(self.waiting) 快照后，preempt 插入不再影响迭代</text>
+  </g>
+
+  <!-- warning note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="410" width="840" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="450" y="428" text-anchor="middle" font-size="10" fill="#7a5415">⚠️ 示意输出，未实测——调用栈与 livelock 流程基于代码逻辑推导</text>
+  <text x="450" y="444" text-anchor="middle" font-size="10" fill="#7a5415">真实展示请用 py-spy dump / NCCL_DEBUG=INFO 实跑后回填真实数据</text>
+</svg>

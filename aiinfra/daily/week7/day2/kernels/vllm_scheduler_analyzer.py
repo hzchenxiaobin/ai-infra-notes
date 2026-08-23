@@ -7,10 +7,10 @@
 #   2. SchedulingBudget（token_budget + max_num_seqs 双预算约束）
 #   3. Preemption 两种模式（RECOMPUTE 丢弃 KV Cache 重算 / SWAP 换出到 CPU）
 #
-# 与 Day2 ContinuousBatcher 的区别：
-#   - Day2 只实现 token_budget 约束，没有显存预算和抢占
+# 与 Day1 ContinuousBatcher 的区别：
+#   - Day1 只实现 token_budget 约束，没有显存预算和抢占
 #   - 本文件加入 BlockSpaceManager（显存 block 预算）+ 完整抢占逻辑
-#   - 三队列：waiting / running / swapped（Day2 只有 waiting / running）
+#   - 三队列：waiting / running / swapped（Day1 只有 waiting / running）
 
 from collections import deque
 from dataclasses import dataclass, field

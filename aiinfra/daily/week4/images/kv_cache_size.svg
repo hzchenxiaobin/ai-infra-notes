@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="300" viewBox="0 0 820 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk6" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar6" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="300" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="410" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">KV Cache 显存占用</text>
+  <path d="M 220 40 Q 410 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk6)"/>
+
+  <!-- Formula box -->
+  <g filter="url(#sk6)">
+    <rect x="30" y="60" width="760" height="70" rx="12" fill="#e8f0fe" stroke="#3a3a3a" stroke-width="1.8"/>
+  </g>
+  <text x="410" y="90" text-anchor="middle" font-size="14" fill="#2b2b2b" font-family="monospace">KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size</text>
+  <!-- Factor labels -->
+  <text x="120" y="118" text-anchor="middle" font-size="9" fill="#4a8edb">K+V</text>
+  <text x="240" y="118" text-anchor="middle" font-size="9" fill="#e8a838">层数</text>
+  <text x="370" y="118" text-anchor="middle" font-size="9" fill="#4a9d5f">历史token</text>
+  <text x="500" y="118" text-anchor="middle" font-size="9" fill="#e57373">隐藏维度</text>
+  <text x="640" y="118" text-anchor="middle" font-size="9" fill="#8b6db5">字节/元素</text>
+
+  <!-- Substitution arrow -->
+  <path d="M 410 138 L 410 158" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar6)" filter="url(#sk6)"/>
+  <text x="430" y="152" font-size="9" fill="#888">代入典型值</text>
+
+  <!-- Calculation box -->
+  <g filter="url(#sk6)">
+    <rect x="30" y="165" width="760" height="55" rx="12" fill="#fef3d3" stroke="#3a3a3a" stroke-width="1.8"/>
+  </g>
+  <text x="410" y="190" text-anchor="middle" font-size="12" fill="#444" font-family="monospace">N_past=4096, d=512, 32层, FP16</text>
+  <text x="410" y="210" text-anchor="middle" font-size="13" fill="#2b2b2b" font-family="monospace" font-weight="bold">→ 2 × 32 × 4096 × 512 × 2 = 256 MB</text>
+
+  <!-- Conclusion -->
+  <g filter="url(#sk6)">
+    <rect x="30" y="235" width="760" height="48" rx="12" fill="#fce4ec" stroke="#e57373" stroke-width="1.8"/>
+  </g>
+  <text x="410" y="265" text-anchor="middle" font-size="12" fill="#e57373" font-weight="bold">每生成 1 个 token 都要读 256 MB → 纯访存瓶颈</text>
+</svg>

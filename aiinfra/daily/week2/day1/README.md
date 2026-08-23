@@ -54,9 +54,9 @@ CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 | 原语名称 | 函数签名 | 作用描述 | 使用场景 |
 |---------|---------|---------|---------|
 | `__shfl_sync` | `T __shfl_sync(unsigned mask, T var, int srcLane, int width=warpSize)` | 从 `srcLane` 线程读取 `var` 值 | 广播：线程 0 的结果广播给 Warp 内所有线程 |
-| `__shfl_up_sync` | `T __shfl_up_sync(unsigned mask, T var, unsigned int delta, int width=warpSize)` | 从 `threadIdx-delta` 线程读取 | 前缀和：每个线程获取左侧 delta 距离线程的值 |
-| `__shfl_down_sync` | `T __shfl_down_sync(unsigned mask, T var, unsigned int delta, int width=warpSize)` | 从 `threadIdx+delta` 线程读取 | 归约：Warp 内折半累加 |
-| `__shfl_xor_sync` | `T __shfl_xor_sync(unsigned mask, T var, int laneMask, int width=warpSize)` | 从 `threadIdx ^ laneMask` 线程读取 | Butterfly 交换：归约、位反转排序 |
+| `__shfl_up_sync` | `T __shfl_up_sync(unsigned mask, T var, unsigned int delta, int width=warpSize)` | 从 `laneId-delta` 线程读取 | 前缀和：每个线程获取左侧 delta 距离线程的值 |
+| `__shfl_down_sync` | `T __shfl_down_sync(unsigned mask, T var, unsigned int delta, int width=warpSize)` | 从 `laneId+delta` 线程读取 | 归约：Warp 内折半累加 |
+| `__shfl_xor_sync` | `T __shfl_xor_sync(unsigned mask, T var, int laneMask, int width=warpSize)` | 从 `laneId ^ laneMask` 线程读取 | Butterfly 交换：归约、位反转排序 |
 
 ##### 四个原语的数据流向图
 
@@ -70,8 +70,6 @@ CUDA 提供了四个 Warp Shuffle 原语，分别对应不同的通信模式：
 
 ```cpp
 float val = __shfl_down_sync(0xFFFFFFFF, myVal, 16, 32);
-// ↑ ↑ ↑ ↑ ↑
-// 返回值 mask var delta width
 ```
 
 ##### mask 参数详解
@@ -102,14 +100,7 @@ val = __shfl_down_sync(0xFFFFFFFF, val, 1, 16); // lane 0 读 lane 1，lane 16 �
 
 Warp Reduce（求和）使用 `__shfl_down_sync` 实现折半累加，整个过程像蝴蝶展翅，因此称为 **Butterfly 模式**：
 
-```
-Step 1 (offset=16): lane0 <- lane0+lane16, lane1 <- lane1+lane17, ... lane15 <- lane15+lane31
-Step 2 (offset=8): lane0 <- lane0+lane8, lane1 <- lane1+lane9, ... lane7 <- lane7+lane15
-Step 3 (offset=4): lane0 <- lane0+lane4, lane1 <- lane1+lane5, ... lane3 <- lane3+lane7
-Step 4 (offset=2): lane0 <- lane0+lane2, lane1 <- lane1+lane3
-Step 5 (offset=1): lane0 <- lane0+lane1
-Result: lane 0 持有 Warp 内 32 个线程的累加和
-```
+![Warp Reduce 5 步通信过程（32 lane）](../images/butterfly_steps.svg)
 
 5 步操作（`log₂32 = 5`）即可完成 32 个线程的归约，每步只需 1 条 shuffle 指令。
 
@@ -379,14 +370,7 @@ for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
 
 这叫 **grid-stride loop**（网格步长循环）。当数组大小 `n` 远大于总线程数（`blockDim.x * gridDim.x`）时，每个线程需要处理多个元素。
 
-```
-假设 n = 4194304, threadsPerBlock = 256, blocks = 1024
-总线程数 = 256 × 1024 = 262144
-每个线程处理 n / 262144 ≈ 16 个元素
-
-线程 0 处理: input[0], input[262144], input[524288], ...
-线程 1 处理: input[1], input[262145], input[524289], ...
-```
+![grid-stride loop 访问模式](../images/grid_stride_loop.svg)
 
 grid-stride loop 的好处：
 1. **不限制数组大小**：无论 `n` 多大都能处理
@@ -460,8 +444,8 @@ __inline__ __device__ float warpReduceMax(float val) {
 ```cuda
 // mask=0x0000FFFF 表示只激活 lane 0-15
 // mask=0xFFFF0000 表示只激活 lane 16-31
-float val = __shfl_down_sync(0x0000FFFF, val, offset); // lane 0-15 内部归约
-float val = __shfl_down_sync(0xFFFF0000, val, offset); // lane 16-31 内部归约
+val += __shfl_down_sync(0x0000FFFF, val, offset); // lane 0-15 内部归约
+val += __shfl_down_sync(0xFFFF0000, val, offset); // lane 16-31 内部归约
 ```
 
 思考：mask 参数的作用是什么？在什么场景下需要部分 Warp 参与？
@@ -502,7 +486,7 @@ Day 1 我们掌握了 Warp Shuffle 这一 GPU 内最快的线程间通信原语�
 
  - 参数 1 `mask=0xFFFFFFFF`：32 位线程掩码，每一位对应一个 lane。`0xFFFFFFFF` 表示全部 32 个 lane 参与。可以换成其他值实现部分 Warp 操作（如 segmented reduce）
  - 参数 2 `val`：要传递的本线程变量值
- - 参数 3 `delta=16`：目标 lane 的偏移量，即读取 `(laneId + delta) % width` 线程的值
+  - 参数 3 `delta=16`：目标 lane 的偏移量，即读取 `laneId + delta` 线程的值；若 `laneId + delta` 超出 width 范围，则读取自身值（不回绕）
  - 参数 4（省略，默认 32）`width`：参与 shuffle 的宽度，默认 32（整个 Warp）
  - 注意：从 Volta 架构（CC 7.0）开始必须使用 `_sync` 后缀版本（显式 mask），旧版 `__shfl_down` 已被弃用
 

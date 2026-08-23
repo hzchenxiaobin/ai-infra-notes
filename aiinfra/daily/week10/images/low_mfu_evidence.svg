@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="460" viewBox="0 0 880 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="880" height="460" fill="#fdfcf7"/>
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">案例 1：低 MFU 诊断证据（模拟留档）</text>
+  <path d="M 250 40 Q 440 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== nsys block ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="56" width="400" height="120" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="46" y="76" font-size="10" font-weight="bold" fill="#8ec5fc"># nsys 看 kernel 间隙大（CPU 调度延迟）</text>
+  <g font-size="10" font-family="monospace">
+    <text x="46" y="96" fill="#cdd6f4">$ nsys stats -t cuda_gpu_kern_sum trace.nsys-rep</text>
+    <text x="46" y="116" fill="#a6e3a1">  GEMM kernel: 5.97ms</text>
+    <text x="46" y="134" fill="#888">  (4096³, naive)</text>
+    <text x="46" y="156" fill="#f38ba8">  ← gap 大 = CPU 调度延迟</text>
+  </g>
+
+  <!-- arrow from nsys to conclusion -->
+  <path d="M 230 178 L 230 200" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== ncu block ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="206" width="540" height="180" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="46" y="226" font-size="10" font-weight="bold" fill="#8ec5fc"># ncu 看 SM 利用率低 + stall 在 memory</text>
+  <g font-size="10" font-family="monospace">
+    <text x="46" y="246" fill="#cdd6f4">$ ncu --set full --kernel-name gemm ./gemm</text>
+    <text x="46" y="270" fill="#f9e2af">  sm__throughput:                12%</text>
+    <text x="46" y="288" fill="#f38ba8">    ← 低（compute-bound 期望 &gt;60%）</text>
+    <text x="46" y="312" fill="#f9e2af">  dram__throughput:              85%</text>
+    <text x="46" y="330" fill="#a6e3a1">    ← 高（memory-bound 信号）</text>
+    <text x="46" y="354" fill="#f9e2af">  smsp__average_warps_issue_stalled_long_scoreboard: 45%</text>
+    <text x="46" y="372" fill="#f38ba8">    ← 等 memory（Long Scoreboard Stall）</text>
+  </g>
+
+  <!-- ===== right side: conclusion ===== -->
+  <g filter="url(#sk)">
+    <rect x="460" y="56" width="390" height="160" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" stroke-dasharray="5 3"/>
+  </g>
+  <text x="655" y="78" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a3a">证据解读：memory-bound 实锤</text>
+  <g font-size="10" fill="#444">
+    <text x="478" y="100" font-weight="bold" fill="#b03a3a">SM 12% + DRAM 85%</text>
+    <text x="478" y="116">→ 算力没吃满，带宽快打满</text>
+    <text x="478" y="132">→ 典型 memory-bound 特征</text>
+    <text x="478" y="156" font-weight="bold" fill="#b03a3a">stall 45% long_scoreboard</text>
+    <text x="478" y="172">→ warp 在等 global memory</text>
+    <text x="478" y="188">→ 不是 occupancy 问题</text>
+    <text x="478" y="208" fill="#2e6e2e">registers 42 → 正常，非寄存器瓶颈</text>
+  </g>
+
+  <!-- ===== bottom: root cause ===== -->
+  <g filter="url(#sk)">
+    <rect x="460" y="232" width="390" height="154" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="655" y="254" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">根因：无 tiling，数据无复用</text>
+  <g font-size="10" fill="#444">
+    <text x="478" y="276">理论 AI ≈ 715 &gt; Ridge 58.45</text>
+    <text x="478" y="292">→ 应该 compute-bound</text>
+    <text x="478" y="316" fill="#b03a3a">但 naive kernel 每 thread 只算 1 输出</text>
+    <text x="478" y="332" fill="#b03a3a">读 A/B 各 1 次，实际 AI ≈ 1</text>
+    <text x="478" y="356" fill="#2e6e2e">修复：加 shared memory tiling (v2)</text>
+    <text x="478" y="372" fill="#2e6e2e">→ block 内 threads 共享 A/B tile，AI ↑N 倍</text>
+  </g>
+
+  <!-- warning note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="400" width="820" height="48" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="440" y="420" text-anchor="middle" font-size="10" fill="#7a5415">⚠️ 示意输出，未实测——数字基于课程典型值编写，用于演示诊断流程结构</text>
+  <text x="440" y="436" text-anchor="middle" font-size="10" fill="#7a5415">真实展示请用 ncu / py-spy / torch.cuda.memory_snapshot() 实跑后回填</text>
+</svg>

@@ -57,7 +57,7 @@ class PrefixCache:
 
     @staticmethod
     def _hash(tokens: List[int]) -> str:
-        return hashlib.md5(bytes(tokens)).hexdigest()
+        return hashlib.md5(str(tokens).encode()).hexdigest()
 
     def get(self, tokens: List[int]) -> Optional[int]:
         h = self._hash(tokens)
@@ -170,14 +170,13 @@ def run_scenario_2_with_cache():
     print("\n--- Scenario 2: With prefix caching ---")
     engine = PrefixCacheEngine(max_blocks=256, max_cached=128)
     system_prompt = list(range(64))
-    user_input = list(range(64, 192))
-    full_tokens = system_prompt + user_input
     total = 0.0
     for i in range(3):
+        user_input = list(range(64 + i * 128, 64 + (i + 1) * 128))
+        full_tokens = system_prompt + user_input
         req = engine.submit(full_tokens)
         prefill_before = req.prefill_done
         latency = engine.prefill(req)
-        remaining = req.remaining_prefill + (req.total_tokens - prefill_before - req.remaining_prefill)
         status = f"{req.total_tokens - prefill_before} tokens ({prefill_before} prefix hit)" if prefill_before > 0 else f"{req.total_tokens} tokens (cache miss)"
         print(f"  Request {i+1}: prefill {status}, latency = {latency:.1f} ms")
         total += latency

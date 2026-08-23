@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+  </defs>
+  <rect width="820" height="300" fill="#fdfcf7"/>
+
+  <text x="410" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Graph：nsys 时间线 — 1 次 replay，kernel 间无 gap</text>
+  <path d="M 220 40 Q 410 48 600 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="410" y="62" text-anchor="middle" font-size="12" fill="#444">CPU 只发 1 次 graph replay，GPU 连续执行 30 个 kernel</text>
+
+  <text x="92" y="107" text-anchor="end" font-size="13" font-weight="bold" fill="#5a5a5a">CPU</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="88" width="540" height="32" rx="4" fill="#f4f1ea" stroke="#bbb" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="110" y="92" width="96" height="24" rx="3" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="158" y="108" text-anchor="middle" font-size="10" font-weight="bold" fill="#b03a3a">graph replay</text>
+  <text x="216" y="108" font-size="10" fill="#888">← 一次 launch（~10μs）</text>
+
+  <text x="92" y="193" text-anchor="end" font-size="13" font-weight="bold" fill="#5a5a5a">GPU</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="174" width="540" height="32" rx="4" fill="#f4f1ea" stroke="#bbb" stroke-width="1"/>
+  </g>
+  <g filter="url(#sk)">
+    <rect x="108" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="168" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="228" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="288" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="348" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="408" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+    <rect x="498" y="178" width="56" height="24" rx="3" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.1"/>
+  </g>
+  <text x="136" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K1</text>
+  <text x="196" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K2</text>
+  <text x="256" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K3</text>
+  <text x="316" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K4</text>
+  <text x="376" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K5</text>
+  <text x="436" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K6</text>
+  <text x="476" y="194" font-size="14" fill="#888">⋯</text>
+  <text x="526" y="194" text-anchor="middle" font-size="9" fill="#2e6e2e">K30</text>
+  <text x="568" y="194" font-size="10" fill="#2e8b57" font-weight="bold">← 无 gap</text>
+
+  <path d="M 196 210 L 196 228" stroke="#2e8b57" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="206" y="232" font-size="12" font-weight="bold" fill="#2e8b57">↑ kernel 1 → 2 → 3 → ⋯ → 30 连续执行，GPU 全速</text>
+
+  <g filter="url(#sk)">
+    <rect x="100" y="252" width="540" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="370" y="275" text-anchor="middle" font-size="12" fill="#2b6e9e" font-weight="bold">30 次 launch → 1 次 replay，launch overhead -53.7%</text>
+</svg>

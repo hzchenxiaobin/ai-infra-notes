@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+    <marker id="arB" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#4a6fa5"/>
+    </marker>
+  </defs>
+  <rect width="920" height="340" fill="#fdfcf7"/>
+
+  <text x="460" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">TP 层切分：GEMM 按输出维度分两半</text>
+  <path d="M 240 40 Q 460 48 680 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="40" y="76" font-size="13" font-weight="bold" fill="#4a6fa5">Full layer</text>
+  <g filter="url(#sk)">
+    <rect x="70" y="84" width="50" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="95" y="103" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">X</text>
+  <path d="M 120 98 L 175 98" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="148" y="92" text-anchor="middle" font-size="9" fill="#888">@</text>
+  <g filter="url(#sk)">
+    <rect x="180" y="84" width="120" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="240" y="103" text-anchor="middle" font-size="11" fill="#3a5a8a" font-weight="bold">W (hidden × hidden)</text>
+  <path d="M 300 98 L 355 98" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="360" y="84" width="50" height="28" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="385" y="103" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Y</text>
+  <text x="430" y="103" font-size="10" fill="#666">Y = X @ W</text>
+
+  <path d="M 40 126 L 880 126" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <text x="40" y="152" font-size="13" font-weight="bold" fill="#c04050">Split</text>
+
+  <g filter="url(#sk)">
+    <rect x="70" y="160" width="50" height="28" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="95" y="179" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">X</text>
+  <path d="M 95 188 L 95 210" stroke="#888" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 95 195 L 175 195" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 95 210 L 95 232 L 175 232" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="180" y="180" width="130" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="245" y="199" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">W1 = W[:, :H/2]</text>
+  <path d="M 310 194 L 365 194" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="370" y="180" width="60" height="28" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="400" y="199" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Y1</text>
+  <text x="450" y="199" font-size="10" fill="#666">前半输出</text>
+
+  <g filter="url(#sk)">
+    <rect x="180" y="232" width="130" height="28" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="245" y="251" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">W2 = W[:, H/2:]</text>
+  <path d="M 310 246 L 365 246" stroke="#888" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="370" y="232" width="60" height="28" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="400" y="251" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Y2</text>
+  <text x="450" y="251" font-size="10" fill="#666">后半输出</text>
+
+  <path d="M 40 278 L 880 278" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="290" width="800" height="36" rx="8" fill="#eaf6ee" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="460" y="313" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">TP all-reduce Y1 → 重叠 Y2 计算  ·  TP all-reduce Y2 → 重叠下一层前半计算</text>
+</svg>

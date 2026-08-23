@@ -63,15 +63,7 @@ FlashAttention 的破局思路很直接：**不物化 S 和 P，在 SRAM（Share
 
 FlashAttention 将 Q 按行分块（$B_r$ 行一块），K/V 按行分块（$B_c$ 行一块）。外层循环遍历 Q tile，内层循环遍历 KV tile。Q tile 常驻 SRAM，KV tile 逐块"滑入"。
 
-```
-Q tile (Br×d) 常驻 SRAM
- for each KV tile (Bc×d):
- 加载 Kj, Vj 到 SRAM
- Sij = Qi × Kj^T (Br×Bc，留在 register/SRAM)
- online softmax 更新 m, l, o
- 丢弃 Sij（不写回 HBM）
- 写回 Oi = o / l 到 HBM
-```
+![FlashAttention Tiling 伪代码流程](../images/flash_attention_tiling_pseudocode.svg)
 
 ##### SRAM 容量约束决定分块大小
 

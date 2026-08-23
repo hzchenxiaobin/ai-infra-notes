@@ -42,9 +42,7 @@ Day 1-2 我们用 `nvcuda::wmma` 接口编程，它把 Tensor Core 封装成"声
 
 PTX（Parallel Thread Execution）是 NVIDIA GPU 的**虚拟指令集**（ISA），介于 CUDA C++ 和 GPU 机器码（SASS）之间：
 
-```
-CUDA C++  →  PTX（虚拟 ISA）  →  SASS（GPU 机器码）
-```
+![CUDA 编译流水线：C++ → PTX → SASS](../images/ptx_compilation_flow.svg)
 
 CUDA 代码先编译成 PTX（与具体 GPU 型号无关），再由驱动将 PTX 编译为当前 GPU 的 SASS 机器码。用 `nvcc -ptx` 可以查看生成的 PTX 代码，也可以在 CUDA 代码里用 `asm volatile("...")` 直接内联编写 PTX。今天要学的 `mma.sync` 和 `ldmatrix` 是两条 Tensor Core 相关的 PTX 指令——CUTLASS / FlashAttention 的 CUDA 源码都用内联 PTX 直接调用它们，绕过 WMMA C++ 封装。
 
@@ -74,11 +72,7 @@ mma.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16
 
 ##### m16n8k16 的含义
 
-```
-A: 16×16 (FP16)   B: 16×8 (FP16)   C/D: 16×8 (FP32 或 FP16)
-
-D[16×8] = A[16×16] × B[16×8] + C[16×8]
-```
+![mma.sync m16n8k16 矩阵形状](../images/mma_sync_shapes.svg)
 
 - M=16：输出行数
 - N=8：输出列数
@@ -126,7 +120,7 @@ a3 = { A[groupID+8][2c+8], A[groupID+8][2c+9] }   // 右下 8×8
 | ... | | | | | |
 | t31 | 7 / 3 | A[7,6],A[7,7] | A[15,6],A[15,7] | A[7,14],A[7,15] | A[15,14],A[15,15] |
 
-> ⚠️ **这个映射是硬件固定的**。`ldmatrix` 指令的存在就是为了自动完成这个映射——你给它 shared memory 地址，它按这个布局把数据加载到正确的寄存器。注意区分：`ldmatrix` 时 t16–t31 提供的 smem 地址与 t0–t15 重复（见 3.3 节），但 `mma.sync` 的 fragment 本身在 32 线程间没有任何重复。
+> ⚠️ **这个映射是硬件固定的**。`ldmatrix` 指令的存在就是为了自动完成这个映射——你给它 shared memory 地址，它按这个布局把数据加载到正确的寄存器。注意：`ldmatrix.x4` 时 32 线程分为 4 组（t0–t7 / t8–t15 / t16–t23 / t24–t31），各组提供**不同** 8×8 子矩阵的行地址（见 3.3 节），加载后数据按 fragment 布局分发到所有 32 线程的寄存器。`mma.sync` 的 fragment 本身在 32 线程间没有任何重复。
 
 #### 3.3 ldmatrix 指令
 
@@ -158,12 +152,14 @@ ldmatrix.sync.aligned.x4.m8n8.shared.b16
 ldmatrix 根据这些地址，把数据按 fragment 布局分发到各线程的寄存器
 ```
 
-| 线程 | 提供的地址 | 收到的数据 |
+| 线程 | 提供的地址 | 加载的 8×8 子矩阵 |
 |------|----------|-----------|
-| t0-t7 | tile 的第 0-7 行地址 | A[0:8, 0:8] + A[0:8, 8:16] 的元素 |
-| t8-t15 | tile 的第 8-15 行地址 | A[8:16, 0:8] + A[8:16, 8:16] 的元素 |
-| t16-t23 | 同 t0-t7（重复） | 同 t0-t7 |
-| t24-t31 | 同 t8-t15（重复） | 同 t8-t15 |
+| t0-t7 | tile 第 0-7 行地址（列 0 起） | 左上 A[0:8, 0:8] |
+| t8-t15 | tile 第 8-15 行地址（列 0 起） | 左下 A[8:16, 0:8] |
+| t16-t23 | tile 第 0-7 行地址（列 8 起） | 右上 A[0:8, 8:16] |
+| t24-t31 | tile 第 8-15 行地址（列 8 起） | 右下 A[8:16, 8:16] |
+
+> 💡 **关键**：4 组线程各提供**不同** 8×8 子矩阵的行地址，加载完成后，4 个子矩阵的数据按 fragment 布局分发到**所有 32 线程**的寄存器（每线程 4 个寄存器，分别来自 4 个子矩阵）。t16-t31 **不是**重复 t0-t15 的地址。
 
 ##### ldmatrix 的对齐约束
 
@@ -219,14 +215,19 @@ __global__ void mma_sync_gemm_kernel(
         __syncthreads();
 
         // 2. ldmatrix 加载 A fragment (4 个寄存器)
-        uint32_t smem_a_addr = __cvta_generic_to_shared(&smemA[0][0]);
+        // 32 线程分 4 组，各提供 8 行地址加载 4 个 8×8 子矩阵
+        int a_row = tid % 16;
+        int a_col = (tid / 16) * 8;  // t0-t15: col 0, t16-t31: col 8
+        uint32_t smem_a_addr = __cvta_generic_to_shared(&smemA[a_row][a_col]);
         asm volatile(
             "ldmatrix.sync.aligned.x4.m8n8.shared.b16 {%0,%1,%2,%3}, [%4];\n"
             : "=r"(a_reg[0]), "=r"(a_reg[1]), "=r"(a_reg[2]), "=r"(a_reg[3])
             : "r"(smem_a_addr));
 
         // 3. ldmatrix 加载 B fragment (2 个寄存器)
-        uint32_t smem_b_addr = __cvta_generic_to_shared(&smemB[0][0]);
+        // t0-t7: rows 0-7, t8-t15: rows 8-15, t16-t31: 地址被忽略但需有效
+        int b_row = tid % 16;
+        uint32_t smem_b_addr = __cvta_generic_to_shared(&smemB[b_row][0]);
         asm volatile(
             "ldmatrix.sync.aligned.x2.m8n8.shared.b16 {%0,%1}, [%2];\n"
             : "=r"(b_reg[0]), "=r"(b_reg[1])
@@ -334,24 +335,26 @@ ldmatrix.sync.aligned.x4.trans.m8n8.shared.b16 {r0,r1,r2,r3}, [addr];
 
 ```cuda
 // A tile 16×16, row-major in shared memory
-// 每 8 线程一组提供 8 行的地址
+// 32 线程分 4 组，各提供 8 行地址加载 4 个 8×8 子矩阵
 int row_offset = (tid % 16) * (BK + PAD) * sizeof(__half);
-uint32_t addr = __cvta_generic_to_shared(smemA) + row_offset;
-// t0-t7 → row 0-7, t8-t15 → row 8-15, t16-t31 → 重复
+int col_offset = (tid / 16) * 8 * sizeof(__half);  // t0-t15: col 0, t16-t31: col 8
+uint32_t addr = __cvta_generic_to_shared(smemA) + row_offset + col_offset;
+// t0-t7 → 左上 8×8, t8-t15 → 左下 8×8, t16-t23 → 右上 8×8, t24-t31 → 右下 8×8
 ```
 
-问题：为什么 t16-t31 重复 t0-t15 的地址？
+问题：t16-t31 提供的地址与 t0-t15 有何不同？为什么？
 
 <details>
 <summary>参考答案</summary>
 
-`ldmatrix.x4` 加载 4 个 8×8 矩阵 = 256 个 FP16 元素。32 线程 × 8 元素/线程 = 256。但 8×8 矩阵只有 8 行，需要 8 线程提供地址，剩下 24 线程的地址被忽略（但仍需提供有效地址）。所以 t0-t7 提供 row 0-7，t8-t15 提供 row 8-15，t16-t31 重复。
+`ldmatrix.x4` 加载 4 个 8×8 矩阵 = 256 个 FP16 元素。32 线程分为 4 组，每组 8 线程分别提供一个 8×8 子矩阵的 8 行地址。加载完成后，4 个子矩阵的数据按 fragment 布局分发到所有 32 线程的寄存器（每线程 4 个寄存器，各来自一个 8×8 子矩阵）。
 
-实际上 `ldmatrix.x4` 加载的是 4 个独立的 8×8 子矩阵，线程分组如下：
-- t0-t7: 第 1 个 8×8 矩阵的 8 行地址
-- t8-t15: 第 2 个 8×8 矩阵的 8 行地址
-- t16-t23: 第 3 个 8×8 矩阵
-- t24-t31: 第 4 个 8×8 矩阵
+t16-t31 提供的地址与 t0-t15 **不同**——它们指向列 8 偏移的行地址，加载右半部分的两个 8×8 子矩阵：
+
+- t0-t7: 第 1 个 8×8 矩阵的 8 行地址（左上 A[0:8, 0:8]）
+- t8-t15: 第 2 个 8×8 矩阵的 8 行地址（左下 A[8:16, 0:8]）
+- t16-t23: 第 3 个 8×8 矩阵的 8 行地址（右上 A[0:8, 8:16]）
+- t24-t31: 第 4 个 8×8 矩阵的 8 行地址（右下 A[8:16, 8:16]）
 
 </details>
 
@@ -363,7 +366,7 @@ uint32_t addr = __cvta_generic_to_shared(smemA) + row_offset;
 2. 用 `ldmatrix.x4` 加载 A fragment
 3. 用 `ldmatrix.x2.trans` 加载 B fragment（转置加载）
 4. 用 `mma.sync.aligned.m16n8k16` 执行 MMA
-5. 每个 warp 计算 16×16 输出（2×2 个 m16n8k16 = 4 条 mma.sync）
+5. 每个 warp 计算 16×16 输出（1×2 个 m16n8k16 = 2 条 mma.sync，N 方向拆分为 2×8）
 
 ```bash
 nvcc -O3 -arch=sm_120 -lcublas kernels/mma_sync_gemm.cu -o mma_sync_gemm
@@ -431,7 +434,7 @@ assert(addr % 16 == 0);  // 调试时验证
 #### 实验 2：TF32 精度的 mma.sync
 
 将 `mma.sync.aligned.m16n8k16.row.col.f16.f16.f32.f32` 改为 `mma.sync.aligned.m16n8k8.row.col.f32.tf32.f32.f32`（TF32 输入，K=8）：
-- TF32 是 Ampere+ 的 FP32 加速模式，牺牲少量精度（尾数 10→13 位）换 2x 性能
+- TF32 是 Ampere+ 的 FP32 加速模式，牺牲少量精度（尾数从 23 位减至 10 位）换 2x 性能
 - 对比 TF32 vs FP16 的精度和性能
 
 #### 实验 3：用 ldmatrix.trans 消除 B 的物理转置

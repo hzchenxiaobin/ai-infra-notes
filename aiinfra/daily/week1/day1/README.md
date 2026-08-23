@@ -77,7 +77,7 @@ AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的�
 
 1. **共享同一块 Shared Memory**
 2. **通过** `__syncthreads()` **直接同步**
-3. **被同一个 Warp Scheduler 调度**
+3. **由同一个 SM 上的 Warp Scheduler 调度**（一个 SM 有多个 Warp Scheduler，block 的 warp 可以分布在不同 scheduler 上，但都在同一个 SM 内）
 
 这三件事都只能在 **同一个 SM 内部** 完成，所以 block 不能被拆到不同 SM 上执行。
 
@@ -85,11 +85,11 @@ AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的�
 |-----------|------------------------|
 | **Shared Memory** | Shared Memory 是 SM 的私有片上内存，不同 SM 之间无法直接访问彼此的 Shared Memory。 |
 | `__syncthreads()` | 这是 block 内所有线程的同步原语，依赖 SM 内部的硬件 barrier。跨 SM 同步没有这么轻量级的原语。 |
-| **Warp Scheduler** | 一个 SM 内部有一个或多个 Warp Scheduler，负责调度该 SM 上的 warp。block 的 warp 必须归同一个 scheduler 管。 |
+| **Warp Scheduler** | 一个 SM 内部有多个 Warp Scheduler（如 4 个），负责调度该 SM 上的 warp。block 的 warp 可以分配到同一 SM 的不同 scheduler 上，但不能跨 SM 调度。 |
 | **寄存器分配** | 每个 block 需要的寄存器总量需要在启动时从一个 SM 的寄存器文件里分配。 |
 | **硬件调度粒度** | GPU 调度器以整个 block 为单位分配给 SM，这样设计最简单高效。 |
 
-**形象类比**：把 **SM** 想象成一间教室，一个 **block** 就像一个班级。班级里的学生（threads）需要在**同一间教室**里上课，共用**同一块黑板**（Shared Memory），听**同一个老师**（Warp Scheduler）指挥。你不能让班级一半学生去 A 教室、另一半去 B 教室，否则他们没法共用黑板，也没法一起听讲。
+**形象类比**：把 **SM** 想象成一间教室，一个 **block** 就像一个班级。班级里的学生（threads）需要在**同一间教室**里上课，共用**同一块黑板**（Shared Memory），听**同一间教室里的老师**（Warp Scheduler）指挥。你不能让班级一半学生去 A 教室、另一半去 B 教室，否则他们没法共用黑板，也没法一起听讲。
 
 **注意区分两个概念**：
 
@@ -126,9 +126,7 @@ AI 训练和推理中的矩阵运算、卷积、Attention 都是高度并行的�
 
 **RTX 5090 的 FP32 峰值算力是怎么算出来的？**
 
-```
-Peak FP32 (FLOPS) = CUDA Cores × Clock × 2
-```
+![RTX 5090 Peak FP32 算力推导](../images/peak_flops_calc.svg)
 
 其中 `×2` 是因为 FMA（乘加）算 2 个 FLOP。代入 RTX 5090 实测值（来源：deviceQuery）：
 
@@ -139,10 +137,6 @@ Peak FP32 (FLOPS) = CUDA Cores × Clock × 2
 | 总 FP32 CUDA Cores | 170 × 128 = 21,760 |
 | Boost Clock | ~2.407 GHz |
 | FMA 折算操作数 | × 2 |
-
-```
-21,760 × 2.407 × 2 ≈ 104,752.64 GFLOPS ≈ 104.75 TFLOPS
-```
 
 > 与 RTX 5090 官方标称 ~104.8 TFLOPS 一致。详细推导见 [Day 3 实测数据](https://hzchenxiaobin.github.io/ai-infra-notes/week1/exercise/my_gpu_info.md)。
 
@@ -373,14 +367,6 @@ GPU 把海量线程组织成 block，主要目的是：
 
 > **一句话总结**：Block 是 GPU 上"能共享资源、能相互同步、一起被调度到一个 SM"的线程集合，是连接软件并行逻辑与硬件执行资源的关键层次。
 
-CUDA 使用三级层次组织并行：
-
-```
-Grid -> 多个 Block
-Block -> 多个 Thread
-Thread -> 实际执行的线程
-```
-
 **关键内置变量**：
 
 | 变量 | 含义 | 维度 |
@@ -405,18 +391,9 @@ int row = blockIdx.y * blockDim.y + threadIdx.y;
 int col = blockIdx.x * blockDim.x + threadIdx.x;
 int global_tid = row * (gridDim.x * blockDim.x) + col;
 ```
+**总线程数 &amp; Warp 数计算**：
 
-**总线程数计算**：
-```
-total = gridDim.x * gridDim.y * gridDim.z *
- blockDim.x * blockDim.y * blockDim.z
-```
-
-**Warp 数计算**：
-```
-warps_per_block = ceil(blockDim.x * blockDim.y * blockDim.z / 32)
-total_warps = warps_per_block * gridDim.x * gridDim.y * gridDim.z
-```
+![总线程数与 Warp 数公式](../images/thread_warp_formula.svg)
 
 #### 1.6 常用 CUDA Runtime API
 
@@ -495,12 +472,8 @@ block=(0,0,0), thread=(1,0,0), global_tid=1
 #### 任务 3：验证线程总数
 
 手动计算：
-```
-grid = (2, 2, 1) → 4 blocks
-block = (4, 2, 1) → 8 threads/block
-total = 4 × 8 = 32 threads
-warps = ceil(8 / 32) × 4 = 1 × 4 = 4 warps
-```
+
+![Warp 计算示例](../images/warp_calc_example.svg)
 
 检查程序输出是否与你计算的一致。
 
@@ -526,7 +499,7 @@ CUDA 不会把**不同 block 的线程**合并到同一个 warp 里。每个 blo
 因为 **block 是 GPU 资源共享和线程同步的基本单位**，同一个 block 内的线程需要：
 
 1. **共享同一块 Shared Memory**
-2. **共享同一个 Warp Scheduler 调度上下文**（SIMT）
+2. **由同一个 SM 上的 Warp Scheduler 调度**（SIMT，block 的 warp 可分布在不同 scheduler 上，但都在同一 SM 内）
 3. **跑在同一个 SM 上**
 4. **可以通过** `__syncthreads()` **同步**
 
@@ -539,11 +512,7 @@ dim3 grid(1, 1, 1);   // 1 block
 dim3 block(32, 1, 1); // 32 threads/block
 ```
 
-这时总 warp 数才是：
-
-```text
-1 block × ceil(32/32) = 1 warp
-```
+这时总 warp 数才是 **1**（1 block × ceil(32/32) = 1 warp）。
 
 | 配置 | 总线程 | warp 数 | 原因 |
 |------|--------|---------|------|
@@ -552,10 +521,7 @@ dim3 block(32, 1, 1); // 32 threads/block
 
 **总结公式**：
 
-```text
-warps_per_block = ceil(threads_per_block / 32)
-total_warps = warps_per_block × num_blocks
-```
+![总线程数与 Warp 数公式](../images/thread_warp_formula.svg)
 
 > 💡 **核心记忆点**：永远先按 block 算 warp，再乘以 block 数。不要把整个 grid 的线程加在一起去除以 32。
 

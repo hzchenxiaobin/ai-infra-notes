@@ -20,9 +20,7 @@
 
 Week 1 的核心主线：
 
-```
-GPU 性能 = Memory + 并行度
-```
+![Week 1 核心公式](../images/week1_perf_formula.svg)
 
 围绕这个公式，我们学习了三大模块：
 
@@ -65,10 +63,8 @@ GPU 性能 = Memory + 并行度
 #### 3. 内存层次
 
 **从快到慢**：
-```
-Register < Shared Memory < L1 Cache < L2 Cache < Global Memory
-~1 cycle < ~30 cycles < ~30 cycles < ~200 cycles < ~400-800 cycles
-```
+
+![GPU 内存层次（从快到慢）](../images/memory_latency_chain.svg)
 
 **性能启示**：
 - 多用 register 和 shared memory
@@ -523,7 +519,7 @@ Week 1 每天都做了一道 LeetGPU 题目，今天用两道**综合练习**把
 | Day 5 | [Reduction](https://leetgpu.com/challenges/reduction) | warp shuffle、两级归约、divergence | ✅ 已做 |
 | Day 6 | [Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | 2D 索引、ncu profiling、Roofline 定位 | ✅ 已做 |
 
-#### 任务 3：本周 LeetCode 题目回顾（10 周计划 · 第 1 周）
+#### 任务 5：本周 LeetCode 题目回顾（10 周计划 · 第 1 周）
 
 本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 1 周「数组、哈希与双指针（含手撕排序）」（点击查看题解）：
 
@@ -709,27 +705,13 @@ Day 7 我们完成了 Week 1 的系统复盘：
 
  - 建议选矩阵转置或 bank conflict，因为这两个实验同时涉及多个概念。
 
----
-
 </details>
+
+---
 
 ## 📁 本周目录结构
 
-```
-week1/
-├── README.md # Week 1 总览（学习地图 + 每日索引）
-├── day1/ # GPU 执行模型：kernels/hello_gpu.cu + notes/
-├── day2/ # Occupancy：kernels/occupancy_test.cu + exercise/（register_spill 等）+ notes/
-├── day3/ # 认识 GPU：exercise/（mini_device_query、occupancy_verify、my_gpu_info 留档）+ notes/
-├── day4/ # 内存层次：kernels/transpose.cu + notes/
-├── day5/ # Bank Conflict：kernels/bank_conflict.cu + notes/
-├── day6/ # Profiling：notes/day6_nsight_profiling.md（复用前 5 天 kernel）
-├── day7/ # 复盘：exercise/leetgpu_week1_review.md + notes/
-├── images/ # 本周 SVG 插图
-├── notes/week1_notes.md # 周学习笔记
-├── profiles/week1_profile_summary.md # Profiling 报告汇总（含实测数据）
-└── tools/cuda_occupancy_calculator.py # Occupancy 手算验证工具
-```
+![Week 1 目录结构](../images/week1_directory_structure.svg)
 
 > 💡 每天的 CUDA 源码在**当天目录**的 `kernels/` 或 `exercise/` 下，编译时先 `cd` 到对应 day 目录（命令均以 `week1/` 为基准路径）。
 

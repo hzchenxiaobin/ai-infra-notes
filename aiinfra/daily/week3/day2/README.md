@@ -8,14 +8,14 @@
 2. 掌握 **shared memory tiling** 策略——将 A/B 矩阵分块加载到 shared memory，让多个 warp 协作复用同一 tile<br>
 3. 能实现 **多 warp/block** 的 WMMA GEMM kernel，每个 block 含 4 个 warp 协作计算 64×64 输出 tile<br>
 4. 理解 shared memory 中矩阵 tile 的 **bank conflict 消除**策略（padding 与 swizzle）<br>
-5. 实测 tiled WMMA GEMM 达 cuBLAS ~50-65%，对比 Day 1 教学版的 ~33% 有显著提升<br>
+5. 实测 tiled WMMA GEMM 达 cuBLAS ~16%（本版实现未优化，反而比 Day 1 的 ~31% 更慢），理解 tiling 收益未兑现的根因<br>
 6. 能用 Roofline 模型分析 tiled WMMA 的瓶颈转移——从 memory-bound 到 compute-bound<br>
 
 > 💡 **为什么重要**：Day 1 的教学版 WMMA 证明了"fragment 生命周期的正确性"，但 ~33% 的性能无法用于生产。今天的 shared memory tiling 是从"能跑"到"能用"的第一步——它让 Tensor Core 真正开始吃带宽而不是等 HBM。这个 tiling 策略也是 CUTLASS 三级 tiling 的最底层（Threadblock 级），理解它是 Day 4 读 CUTLASS 源码的前提。
 
 ---
 
-### 学前导读：从 ~33% 到 ~60%，差在哪里？
+### 学前导读：从 ~31% 到 ~16%，为什么 tiling 反而更慢？
 
 Day 1 的教学版 WMMA GEMM 有三个硬伤：
 
@@ -27,12 +27,9 @@ Day 1 的教学版 WMMA GEMM 有三个硬伤：
 
 **核心洞察**：Tensor Core 的算力远高于 HBM 带宽。如果每次 MMA 都从 global memory 取数据，Tensor Core 大部分时间在等数据。Shared memory 的带宽是 HBM 的 ~10 倍，把 tile 搬到 smem 后，Tensor Core 才能持续被喂满。
 
-```
-Day 1:  HBM ──load_matrix_sync──→ fragment ──mma──→ C    (HBM 带宽瓶颈)
-Day 2:  HBM ──memcpy──→ smem ──load_matrix_sync──→ fragment ──mma──→ C    (smem 带宽充足)
-```
+![Day 1 vs Day 2 数据通路对比](../images/week3_day2_data_flow.svg)
 
-> 💡 **一句话总结**：Shared memory tiling 把数据从"慢速 HBM"搬到"快速 smem"，让多 warp 协作复用同一 tile，是 Tensor Core GEMM 从 33% 提升到 60% 的关键一步。
+> 💡 **一句话总结**：Shared memory tiling 把数据从"慢速 HBM"搬到"快速 smem"，让多 warp 协作复用同一 tile——理论上是提升 Tensor Core GEMM 性能的关键一步，但本版实现实测仅 16%（比 Day 1 的 31% 更慢），根因是 smem layout / warp 协作未优化。
 
 ---
 
@@ -58,13 +55,7 @@ GEMM `C[M,N] = A[M,K] × B[K,N]` 的核心特性是 **数据复用**：
 
 ##### Tiling 层级设计
 
-```
-Block 级 (BM×BN):  每个 block 计算 C 的 64×64 子矩阵
-  ├── Warp 级 (WM×WN):  每个 warp 计算 32×32 子矩阵（4 warp/block）
-  │     ├── MMA 级 (16×16×16):  每条 WMMA 指令
-  │     └── MMA 级 (16×16×16):  每个 warp 执行 (32/16)×(32/16) = 4 条 WMMA
-  └── K 维循环:  每次加载 64×16 的 A tile + 16×64 的 B tile 到 smem
-```
+![WMMA GEMM Tiling 层级设计](../images/week3_day2_tiling_hierarchy.svg)
 
 | 层级 | 形状 | 含义 |
 |------|------|------|
@@ -119,14 +110,7 @@ smemA[row][col_swizzled] = ...;
 
 ##### Block 内 4 Warp 分工
 
-```
-Block 64×64 输出 tile:
-  Warp 0: C[0:32, 0:32]     Warp 1: C[0:32, 32:64]
-  Warp 2: C[32:64, 0:32]    Warp 3: C[32:64, 32:64]
-
-每个 warp 独立计算自己的 32×32 子 tile
-所有 warp 共享同一个 smem 中的 A/B tile
-```
+![Block 内 4 Warp 分工](../images/week3_day2_warp_division.svg)
 
 ##### K 维循环协作
 
@@ -164,6 +148,12 @@ for (int k = 0; k < K; k += BK) {
 | cuBLAS (TF32) | 104.8 | 100% | TF32 Tensor Core + 深度优化 |
 
 > ⚠️ **实测修正（2026-08-09）**：原 README 称 tiled 达 42%，实跑仅 16%——本版 tiled 的 smem layout / warp 协作实现有严重问题，性能甚至比 naive 还差。Day 5 的 double buffer 版才真正实现性能反超（96%+）。面试时声明"教学版 tiled 实测仅 16%，Day 5 dbuf 版达 96%"。
+>
+> ⚠️ **代码修复（2026-08-23）**：经代码审查发现并修复以下 3 个 bug（README 内嵌代码与 `kernels/wmma_gemm_tiled.cu` 均已修复）：
+> - **加载线程索引 bug**：`threadIdx.x` → `threadIdx.x % WARP_SIZE`。原代码中仅 warp 0 的线程参与 smem 加载（warp 1-3 的 `threadIdx.x` ≥ 32 > BK=16，循环不执行），导致 A/B tile 仅 1/4 数据被加载，其余为未初始化垃圾值
+> - **Fragment 偏移 bug**：`warp_y * 16` → `warp_y * WM`（32），`warp_x * 16` → `warp_x * WN`（32）。原代码中 warp_y=1/warp_x=1 的 warp 从错误位置加载 fragment，计算的是错误行的数据
+> - **max_diff 根因**：上述两个 bug 导致 4096 时 max_diff 高达 72.2——**非精度差异，而是代码 bug 导致的错误计算**。修复后 max_diff 应降至 < 1.0（仅 FP16 vs TF32 精度差异）
+> - **注意**：上述性能数据（16%、8.12ms 等）为修复前代码的实测值。修复后性能可能变化（加载效率提升），待 GPU 环境回填
 
 ---
 
@@ -211,7 +201,7 @@ using namespace nvcuda;
 
 __global__ void wmma_gemm_tiled_kernel(
     const __half* __restrict__ A,    // M×K, row-major
-    const __half* __restrict__ B,    // K×N, col-major
+    const __half* __restrict__ B,    // K×N, row-major
     float* __restrict__ C,           // M×N, row-major
     int M, int N, int K)
 {
@@ -230,8 +220,8 @@ __global__ void wmma_gemm_tiled_kernel(
 
     // 声明 WMMA fragment
     // 每个 warp 计算 32×32 = 2×2 个 16×16 MMA
-    // 注意：A 在 smem 中 row-major，B 在 smem 中也 row-major（从 col-major global 转置加载）
-    //   所以 b_frag 声明为 row_major，与 smem 布局一致
+    // 注意：A 在 smem 中 row-major；B 从 row-major global 加载，smem 中按 B[k][n] 存放
+    //   （k 行 n 列，即 row-major），故 b_frag 声明为 row_major，与 smem 布局一致
     wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag[2];
     wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::row_major> b_frag[2];
     wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag[2][2];
@@ -252,7 +242,7 @@ __global__ void wmma_gemm_tiled_kernel(
         // A tile: BM×BK = 64×16, 4 warp 各加载 16×16
         int load_row = warp_id * 16;
         for (int i = 0; i < 16; i++) {
-            for (int j = threadIdx.x; j < BK; j += WARP_SIZE) {
+            for (int j = threadIdx.x % WARP_SIZE; j < BK; j += WARP_SIZE) {
                 int global_row = block_row + load_row + i;
                 if (global_row < M && (k + j) < K) {
                     smemA[load_row + i][j] = A[global_row * K + k + j];
@@ -261,7 +251,7 @@ __global__ void wmma_gemm_tiled_kernel(
         }
         // B tile: BK×BN = 16×64, 4 warp 各加载 16×16
         int load_col = warp_id * 16;
-        for (int i = threadIdx.x; i < BK; i += WARP_SIZE) {
+        for (int i = threadIdx.x % WARP_SIZE; i < BK; i += WARP_SIZE) {
             for (int j = 0; j < 16; j++) {
                 int global_col = block_col + load_col + j;
                 if ((k + i) < K && global_col < N) {
@@ -276,12 +266,12 @@ __global__ void wmma_gemm_tiled_kernel(
         #pragma unroll
         for (int i = 0; i < 2; i++) {
             wmma::load_matrix_sync(a_frag[i],
-                &smemA[warp_y * 16 + i * 16][0], BK + SMEM_PAD);
+                &smemA[warp_y * WM + i * 16][0], BK + SMEM_PAD);
         }
         #pragma unroll
         for (int j = 0; j < 2; j++) {
             wmma::load_matrix_sync(b_frag[j],
-                &smemB[0][warp_x * 16 + j * 16], BN + SMEM_PAD);
+                &smemB[0][warp_x * WN + j * 16], BN + SMEM_PAD);
         }
         #pragma unroll
         for (int i = 0; i < 2; i++) {
@@ -298,8 +288,8 @@ __global__ void wmma_gemm_tiled_kernel(
     for (int i = 0; i < 2; i++) {
         #pragma unroll
         for (int j = 0; j < 2; j++) {
-            int row = block_row + warp_y * 16 + i * 16;
-            int col = block_col + warp_x * 16 + j * 16;
+            int row = block_row + warp_y * WM + i * 16;
+            int col = block_col + warp_x * WN + j * 16;
             if (row < M && col < N) {
                 wmma::store_matrix_sync(C + row * N + col,
                     c_frag[i][j], N, wmma::mem_row_major);
@@ -334,17 +324,21 @@ void benchmark_wmma_tiled(int M, int N, int K) {
     float wmma_ms;
     cudaEventElapsedTime(&wmma_ms, start, stop);
 
-    // cuBLAS 参考
+    // cuBLAS 参考（TF32 模式：FP32 输入 + TF32 Tensor Core）
     cublasHandle_t handle;
     cublasCreate(&handle);
+    cublasSetMathMode(handle, CUBLAS_TF32_TENSOR_OP_MATH);
+    // cuBLAS 用 FP32 输入，需将 FP16 转 FP32
+    float *d_Af, *d_Bf;
+    cudaMalloc(&d_Af, M * K * sizeof(float));
+    cudaMalloc(&d_Bf, K * N * sizeof(float));
+    // ... 将 d_A/d_B 从 FP16 转 FP32 到 d_Af/d_Bf ...
     float alpha = 1.0f, beta = 0.0f;
     cudaEventRecord(start);
-    // 注意：cuBLAS 列主序，需转置参数
-    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+    // 注意：cuBLAS 列主序，C_row = A_row @ B_row 等价于 C_col = B^T @ A^T
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
         N, M, K, &alpha,
-        d_B, CUDA_R_16F, N,
-        d_A, CUDA_R_16F, K,
-        &beta, d_C_ref, CUDA_R_32F, N);
+        d_Bf, N, d_Af, K, &beta, d_C_ref, N);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     float cublas_ms;
@@ -384,7 +378,7 @@ M=N=K    | naive_ms   tiled_ms   TF32cub_ms  | naive%TF32  tiled%TF32  max_diff
 > - **tiled 全档位比 naive 慢**：smem 加载 + `__syncthreads` 开销 + 本版 tiled 的 smem layout/warp 协作实现未优化，复用收益未能覆盖同步开销
 > - **小矩阵退化最严重**：512×512 时 tiled（0.099ms）比 naive（0.013ms）慢 7.5x
 > - **大矩阵也未改善**：4096 时 tiled（8.12ms）仍比 naive（4.19ms）慢 1.94x，说明本版 tiled 的 bank conflict 或 smem 访问模式有严重问题
-> - **max_diff 偏大**（4096 时 72.2）：FP16 输入 vs TF32 cuBLAS 的精度差异 + tiled 实现可能存在数值问题
+> - **max_diff 偏大**（4096 时 72.2）：**经代码审查确认，max_diff 偏大的根因是代码 bug（加载线程索引错误 + fragment 偏移错误），非精度差异**。仅 warp 0 加载数据 + warp_y=1/warp_x=1 从错误位置读取，导致 3/4 输出 tile 计算错误。修复后 max_diff 应降至 < 1.0
 >
 > 剩余差距来自：无 double buffer、无 K 分割、WMMA 接口开销、固定 tiling、**smem layout 未充分优化**。这些是 Day 3-5 的主题。
 
@@ -416,7 +410,7 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 1. **block 数量少**：(512/64)² = 64 blocks，RTX 5090 有 170 SM，大量 SM 闲置
 2. **同步开销占比大**：K=512 只有 32 次迭代，每次 `__syncthreads` 的开销（~1μs）占总时间比例高
 3. **smem 加载未充分复用**：K 维迭代少，A/B tile 的复用次数不足以摊销加载成本
-4. **本版 tiled 实现的 smem layout / warp 协作未优化**：bank conflict、warp 间负载不均等问题，导致 smem 访问效率低下，复用收益未能覆盖同步与搬运开销
+4. **本版 tiled 实现存在代码 bug（已修复）**：加载线程索引错误（仅 warp 0 加载数据）、fragment 偏移错误（warp 2-3 计算错误位置数据），导致 max_diff 高达 72.2。修复后正确性应恢复，性能数据待回填
 
 而 Day 1 naive 版每个 block 独立工作、无同步开销，在全档位反而更快。**本版 tiled 实现的 smem layout / warp 协作仍有较大优化空间**——Day 5 的 double buffer 版（cp.async 重叠 load/compute）才真正实现了性能反超。
 
@@ -448,11 +442,11 @@ M=N=K    | Day1_naive(ms)  Day2_tiled(ms)  TF32cub(ms)  | Day1%   Day2%   tiled/
 
 尝试不同 tiling 配置，记录性能：
 
-| 配置 | BM×BN×BK | warps/block | 预期 cuBLAS% | 实测 |
+| 配置 | BM×BN×BK | warps/block | 实测 cuBLAS% | 备注 |
 |------|----------|-------------|-------------|------|
-| 基准 | 64×64×16 | 4 | ~55% | ? |
-| 大 tile | 128×128×16 | 8 | ~60% | ? |
-| 深 K | 64×64×32 | 4 | ~58% | ? |
+| 基准 | 64×64×16 | 4 | ~16% | 本版实现，smem layout 未优化 |
+| 大 tile | 128×128×16 | 8 | ? | smem 复用更多，待测 |
+| 深 K | 64×64×32 | 4 | ? | smem 容量限制，待测 |
 
 思考：
 - 为什么 128×128 在大矩阵下更好？（smem 复用更多）
@@ -480,8 +474,8 @@ Day 2 我们尝试用 shared memory tiling 提升 WMMA GEMM 性能，但**实测
 1. **Shared Memory Tiling**：把 A/B tile 从 global memory 搬到 shared memory，让多 warp 共享复用，HBM 访问减少 4-8x
 2. **多 Warp 协作**：每 block 4 个 warp 分摊 smem 加载成本，各自计算 32×32 子 tile
 3. **Bank Conflict 消除**：用 padding 让 fragment load 的 32 线程访问不同 bank
-4. **实测结果（2026-08-09）**：本版 tiled 全档位比 naive 慢（4096: 16% vs 31%），smem layout / warp 协作实现未优化，复用收益未覆盖同步开销。Day 5 的 cp.async double buffer 版才真正实现性能反超（96%+）
-5. **剩余差距**：本版 tiled 的 smem layout、bank conflict、warp 间负载均衡仍有较大优化空间——这些是 Day 3-5 的主题
+4. **实测结果（2026-08-09）**：本版 tiled 全档位比 naive 慢（4096: 16% vs 31%）。代码审查发现 3 个 bug（加载线程索引、fragment 偏移、b_frag 布局），已修复——原 max_diff 72.2 由 bug 导致非精度差异。性能数据为修复前实测，待 GPU 环境回填修复后数据
+5. **剩余差距**：无 double buffer、无 K 分割、WMMA 接口开销、smem layout / bank conflict 优化——这些是 Day 3-5 的主题
 
 掌握 shared memory tiling 后，你理解了"Tensor Core GEMM 的第一层工程优化"。下一步 Day 3 学习 `mma.sync` PTX 指令，绕过 WMMA 接口开销，获得更精细的控制。
 
@@ -520,14 +514,14 @@ Day 2 我们尝试用 shared memory tiling 提升 WMMA GEMM 性能，但**实测
    <details>
    <summary>点击查看答案</summary>
 
-   - 实测 512×512：tiled 0.049ms vs naive 0.013ms，**tiled 慢 4 倍**
-   - 原因：
-     - **block 数量少**：(512/64)² = 64 blocks，RTX 5090 有 170 SM，大量 SM 闲置
-     - **同步开销占比大**：K=512 只有 32 次迭代，每次 `__syncthreads`（~1μs）占比高
-     - **smem 复用不足**：K 维迭代少，A/B tile 复用次数不足以摊销加载成本
-   - **交叉点在 ~2048**：矩阵 ≥ 2048 时 tiled 的复用收益才超过同步开销
-   - **面试要点**：Tiling 不是万能的，小矩阵反而退化。生产级 GEMM 库按 M/N/K auto-tune 选 kernel
-   - **生产基准**：tiled 达 FP16 cuBLAS 的 21%（4096），真实差距更大
+    - 实测 512×512：tiled 0.0985ms vs naive 0.0131ms，**tiled 慢 7.5 倍**
+    - 原因：
+      - **block 数量少**：(512/64)² = 64 blocks，RTX 5090 有 170 SM，大量 SM 闲置
+      - **同步开销占比大**：K=512 只有 32 次迭代，每次 `__syncthreads`（~1μs）占比高
+      - **smem 复用不足**：K 维迭代少，A/B tile 复用次数不足以摊销加载成本
+    - **全档位 tiled 均比 naive 慢**：512×512 慢 7.5x，4096×4096 仍慢 1.94x——本版 tiled 的 smem layout / warp 协作实现未优化，复用收益始终未超过同步开销
+    - **面试要点**：Tiling 不是万能的，小矩阵反而退化。生产级 GEMM 库按 M/N/K auto-tune 选 kernel
+    - **生产基准**：tiled 达 TF32 cuBLAS 的 16%（4096），若以 FP16 cuBLAS 为基准则更低
 
    </details>
 
@@ -544,17 +538,18 @@ Day 2 我们尝试用 shared memory tiling 提升 WMMA GEMM 性能，但**实测
 
    </details>
 
-5. **从 ~30% 到 ~42% 提升了哪些？从 ~42% 到 ~95% 还差什么？（实测口径）**
+5. **从 ~31% 到 ~16% 为什么反而下降了？从 ~16% 到 ~95% 还差什么？（实测口径）**
 
    <details>
    <summary>点击查看答案</summary>
 
-   - **30% → 42%**（Day 2 实测，TF32 cuBLAS 基准）：
-     - Shared memory tiling（减少 HBM 访问）
-     - 多 warp/block 协作（提升 occupancy + 分摊加载）
-     - Bank conflict padding（提升 smem 带宽利用率）
-   - **注意**：若以 FP16 cuBLAS 为基准（生产口径），tiled 仅 21%
-   - **42% → 95%**（Day 3-5 待做）：
+   - **31% → 16%**（Day 2 实测，TF32 cuBLAS 基准，4096）：
+     - Shared memory tiling 理论上应减少 HBM 访问，但本版实现存在以下问题：
+     - **smem layout / warp 协作未优化**：bank conflict、warp 间负载不均
+     - **同步开销**：每次 K 迭代两次 `__syncthreads`，在小矩阵下占比高
+     - **复用收益未覆盖搬运开销**：tiled 全档位比 naive 慢
+   - **注意**：原 README 声称 42%，实跑仅 16%——42% 为虚高数据
+   - **16% → 95%**（Day 3-5 待做）：
      - `mma.sync` PTX 替代 WMMA（减少接口开销，Day 3）
      - `ldmatrix` 替代 `load_matrix_sync`（精确控制数据布局，Day 3）
      - Double buffer + `cp.async`（重叠 smem 加载与 MMA，Day 5）

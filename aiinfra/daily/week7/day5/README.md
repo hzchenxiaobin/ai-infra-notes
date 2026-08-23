@@ -108,10 +108,13 @@ class MiniScheduler:
 
         # 2. 从 waiting 加入新请求做 prefill（按优先级降序）
         waiting_sorted = sorted(waiting, key=lambda r: -r.priority)
+        still_waiting = deque()
         for req in waiting_sorted:
             if token_budget >= len(req.input_ids):
                 batch.append(req)
                 token_budget -= len(req.input_ids)
+            else:
+                still_waiting.append(req)
         return batch, still_waiting
 ```
 
@@ -281,7 +284,7 @@ Iter | Batch | W/R | Batch 内容
  5 | 3 | 0/3 | R0(p1,decode), R1(p0,decode), R3(p0,done)
  6 | 2 | 0/2 | R0(p1,decode), R1(p0,done)
  7 | 1 | 0/1 | R0(p1,decode)
- 8 | 1 | 0/0 | R0(p1,done)
+ 8 | 1 | 0/1 | R0(p1,done)
 
 总 iterations: 8
 完成请求数: 4

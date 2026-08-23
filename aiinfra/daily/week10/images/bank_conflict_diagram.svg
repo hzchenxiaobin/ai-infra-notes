@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="520" viewBox="0 0 860 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Bank Conflict：Shared Memory 访问冲突</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Scenario 1: No conflict ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="780" height="130" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="88" font-size="13" font-weight="bold" fill="#2e6e2e">无 conflict：thread i 访问 bank i（连续地址）→ 1 次完成</text>
+
+  <!-- Banks -->
+  <g font-size="9" fill="#444">
+    <rect x="80" y="104" width="22" height="28" fill="#c8e6c9" stroke="#4a8e4a" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="91" y="122" text-anchor="middle">B0</text>
+    <rect x="104" y="104" width="22" height="28" fill="#c8e6c9" stroke="#4a8e4a" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="115" y="122" text-anchor="middle">B1</text>
+    <rect x="128" y="104" width="22" height="28" fill="#c8e6c9" stroke="#4a8e4a" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="139" y="122" text-anchor="middle">B2</text>
+    <rect x="152" y="104" width="22" height="28" fill="#c8e6c9" stroke="#4a8e4a" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="163" y="122" text-anchor="middle">B3</text>
+    <text x="180" y="122" fill="#888">... 共 32 个 bank</text>
+  </g>
+
+  <!-- Threads -->
+  <g font-size="9" fill="#444">
+    <circle cx="91" cy="160" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="91" y="163" text-anchor="middle">T0</text>
+    <circle cx="115" cy="160" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="115" y="163" text-anchor="middle">T1</text>
+    <circle cx="139" cy="160" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="139" y="163" text-anchor="middle">T2</text>
+    <circle cx="163" cy="160" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="163" y="163" text-anchor="middle">T3</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke="#4a8e4a" stroke-width="1" marker-end="url(#ar)" filter="url(#sk)">
+    <line x1="91" y1="151" x2="91" y2="136"/>
+    <line x1="115" y1="151" x2="115" y2="136"/>
+    <line x1="139" y1="151" x2="139" y2="136"/>
+    <line x1="163" y1="151" x2="163" y2="136"/>
+  </g>
+
+  <!-- ===== Scenario 2: 2-way conflict ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="210" width="780" height="130" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="234" font-size="13" font-weight="bold" fill="#7a5415">2-way conflict：2 个 thread 访问同一 bank → 2 次完成</text>
+
+  <!-- Banks -->
+  <g font-size="9" fill="#444">
+    <rect x="80" y="250" width="22" height="28" fill="#ffe0b2" stroke="#c98a2b" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="91" y="268" text-anchor="middle">B0</text>
+    <rect x="104" y="250" width="22" height="28" fill="#fff3e0" stroke="#ccc" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="115" y="268" text-anchor="middle">B1</text>
+    <rect x="128" y="250" width="22" height="28" fill="#fff3e0" stroke="#ccc" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="139" y="268" text-anchor="middle">B2</text>
+    <rect x="152" y="250" width="22" height="28" fill="#fff3e0" stroke="#ccc" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="163" y="268" text-anchor="middle">B3</text>
+  </g>
+
+  <!-- Threads - T0 and T1 both access B0 -->
+  <g font-size="9" fill="#444">
+    <circle cx="80" cy="306" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="80" y="309" text-anchor="middle">T0</text>
+    <circle cx="105" cy="306" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="105" y="309" text-anchor="middle">T1</text>
+    <circle cx="139" cy="306" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="139" y="309" text-anchor="middle">T2</text>
+    <circle cx="163" cy="306" r="9" fill="#bbdefb" stroke="#4a8edb" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="163" y="309" text-anchor="middle">T3</text>
+  </g>
+
+  <!-- Arrows - T0 and T1 to B0 -->
+  <g stroke="#c98a2b" stroke-width="1" marker-end="url(#ar)" filter="url(#sk)">
+    <line x1="84" y1="297" x2="88" y2="282"/>
+    <line x1="100" y1="297" x2="94" y2="282"/>
+    <line x1="139" y1="297" x2="139" y2="282"/>
+    <line x1="163" y1="297" x2="163" y2="282"/>
+  </g>
+  <text x="250" y="272" font-size="10" fill="#c98a2b" font-weight="bold">↑ T0、T1 同时访问 B0 → 串行化</text>
+
+  <!-- ===== Scenario 3: 32-way conflict ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="356" width="780" height="110" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="380" font-size="13" font-weight="bold" fill="#b03a3a">32-way conflict：32 个 thread 访问同一 bank → 32 次完成（最差）</text>
+
+  <!-- Visual: all threads to one bank -->
+  <g font-size="9" fill="#444">
+    <rect x="200" y="396" width="30" height="28" fill="#ffcdd2" stroke="#b85450" stroke-width="0.8" filter="url(#sk)"/>
+    <text x="215" y="414" text-anchor="middle">B0</text>
+  </g>
+  <g font-size="8" fill="#888">
+    <text x="250" y="404">T0  T1  T2  T3  T4  ...  T31</text>
+    <text x="250" y="420">全部访问 B0 → 32 次串行执行</text>
+  </g>
+  <g stroke="#b85450" stroke-width="0.8" marker-end="url(#ar)" filter="url(#sk)">
+    <line x1="255" y1="400" x2="232" y2="406"/>
+    <line x1="270" y1="400" x2="232" y2="410"/>
+    <line x1="285" y1="400" x2="232" y2="414"/>
+  </g>
+
+  <!-- ===== Avoidance methods ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="478" width="780" height="32" rx="6" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="430" y="498" text-anchor="middle" font-size="11" fill="#444">避免方法：① padding（s_A[BM][BK+1]）  ② 向量化访问  ③ 连续 thread 访问不同 bank</text>
+</svg>

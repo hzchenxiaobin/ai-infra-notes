@@ -49,11 +49,11 @@
   <!-- GEMM point -->
   <circle cx="600" cy="150" r="8" fill="#5cb86c"/>
   <text x="580" y="170" text-anchor="middle" font-size="11" fill="#5cb86c" font-weight="bold">GEMM</text>
-  <text x="580" y="185" text-anchor="middle" font-size="10" fill="#666666">AI ≈ 715</text>
+  <text x="580" y="185" text-anchor="middle" font-size="10" fill="#666666">AI ≈ 683</text>
 
   <!-- Gap annotation -->
   <line x1="95" y1="250" x2="95" y2="380" stroke="#e57373" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <text x="45" y="320" font-size="10" fill="#e57373">99.3% 时间</text>
+  <text x="45" y="320" font-size="10" fill="#e57373">99.86% 时间</text>
   <text x="45" y="335" font-size="10" fill="#e57373">在等数据</text>
 
   <!-- Comparison table -->
@@ -70,8 +70,8 @@
   <text x="500" y="488" font-size="11" fill="#e57373">Memory</text>
   <text x="70" y="505" font-size="11" fill="#5cb86c">GEMM 4096³</text>
   <text x="200" y="505" font-size="11" fill="#666666">137G</text>
-  <text x="300" y="505" font-size="11" fill="#666666">192M</text>
-  <text x="400" y="505" font-size="11" fill="#5cb86c">715</text>
+  <text x="300" y="505" font-size="11" fill="#666666">201M</text>
+  <text x="400" y="505" font-size="11" fill="#5cb86c">683</text>
   <text x="500" y="505" font-size="11" fill="#5cb86c">Compute</text>
   </g>
 </svg>

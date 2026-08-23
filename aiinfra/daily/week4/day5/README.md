@@ -241,15 +241,7 @@ python3 kernels/benchmark_triton.py
 
 预期输出：
 
-```text
-=== Triton vs CUDA vs PyTorch GEMM Benchmark (RTX 5090, FP16->FP32) ===
-M=N=K    | Triton(ms)  CUDA(ms)    cuBLAS(ms)  | Triton%   CUDA%   Triton/CUDA
----------|------------------------------------------------|------------------------------
-512      | 0.015       0.020       0.006       | 40%       30%     1.3x
-1024     | 0.031       0.045       0.014       | 45%       31%     1.5x
-2048     | 0.105       0.330       0.098       | 93%       30%     3.1x
-4096     | 0.661       2.150       0.644       | 97%       30%     3.3x
-```
+![Triton vs CUDA vs cuBLAS GEMM Benchmark](../images/gemm_benchmark.svg)
 
 > ⚠️ **预期说明**：Triton 大矩阵经 autotune 达 cuBLAS 93-97%，小矩阵仅 40-45%（launch overhead + SM 利用率低）。手写 CUDA（smem tiling + FMA，无 Tensor Core）约 cuBLAS 30%，Triton 比手写 CUDA 快 1.3-3.3x。原因是 Triton 自动选了最优 tiling + 用 Tensor Core（`tl.dot` 自动生成 `mma.sync` 指令）。以上为预估口径，待 GPU 实测回填。
 
@@ -257,21 +249,9 @@ M=N=K    | Triton(ms)  CUDA(ms)    cuBLAS(ms)  | Triton%   CUDA%   Triton/CUDA
 
 `benchmark_triton.py` 已直接复用 Day 4 的 Triton kernel；GEMM/Softmax 的 CUDA 列由脚本内嵌的 naive CUDA kernel 经 `torch.utils.cpp_extension.load_inline` 现场编译（需要 nvcc）。
 
-```text
-=== Softmax Benchmark (FP32) ===
-M×D      | Triton(ms)  CUDA(ms)    PyTorch(ms) | Triton vs PyTorch
-1024×1024| 0.008       0.012       0.004       | 0.50x
-4096×1024| 0.008       0.020       0.008       | 1.00x
-4096×4096| 0.072       0.080       0.073       | 1.01x
+![Softmax + FlashAttention 三方 Benchmark](../images/softmax_fa_benchmark.svg)
 
-=== FlashAttention Benchmark (causal, FP16) ===
-N (d=64) | Triton(ms)  naive(ms)    官方(ms)    | Triton%官方
-2048     | 0.50        1.80        0.40        | 80%
-4096     | 1.80        6.50        1.50        | 83%
-8192     | 7.00        25.0        6.00        | 86%
-```
-
-> 注：FlashAttention 列中 "naive" 为标准注意力（物化 S/P 矩阵），非 CUDA 手写 FA；CUDA 手写 FA 的对比见 Week 5 Day 3。上表数字均为预估口径，以 GPU 实测回填为准。Softmax 的 "Triton vs PyTorch" = PyTorch 时间 / Triton 时间，<1 表示 Triton 更慢。
+> 注：FlashAttention 列中 "naive" 为标准注意力（物化 S/P 矩阵），非 CUDA 手写 FA；CUDA 手写 FA 的对比见 Week 5 Day 3。上表数字均为预估口径，以 GPU 实测回填为准。Softmax 的 "PyTorch / Triton" = PyTorch 时间 / Triton 时间，<1 表示 Triton 更慢。
 
 #### 任务 4：LeetCode 面试题（10 周计划 · 第 4 周机动补漏）
 
@@ -339,7 +319,7 @@ Day 5 我们搭建了 Triton 三方 benchmark 框架，产出了性能对比表�
    - `tl.dot` 自动调用 Tensor Core（WMMA/mma.sync），不需要手写 PTX
    - Autotune 自动搜索最优 `(BLOCK_M, BLOCK_N, BLOCK_K, num_warps, num_stages)`
    - 自动生成 shared memory tiling + double buffer（`num_stages=2` 时）
-   - 自动向量化（`tl.load/store` 生成 `float4` / `cp.async`）
+    - 自动向量化（`tl.load/store` 生成 `float4` / `cp.async`）
     - **与手写 CUDA 的差距**：Triton 的自动 tiling 不如 CUTLASS 极致（少 swizzle / K 分割 / epilogue fusion），所以大矩阵 93-97%、小矩阵 40-45%，而非 95%+
 
    </details>

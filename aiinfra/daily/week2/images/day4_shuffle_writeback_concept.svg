@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="380" viewBox="0 0 820 380" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="820" height="380" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Warp Shuffle 写回重排：非合并 → 合并</text>
+  <path d="M 250 44 Q 410 52 570 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="60" text-anchor="middle" font-size="11" fill="#888">__shfl_sync 让 warp 内线程交换累加器数据，使每线程持有连续列</text>
+
+  <!-- ====== Left panel: 原始写回（非合并）====== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="80" width="300" height="250" rx="8" fill="#fdf4f4" stroke="#b85450" stroke-width="1.4"/>
+  </g>
+  <text x="180" y="102" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">原始写回（非合并）</text>
+  <text x="180" y="118" text-anchor="middle" font-size="10" fill="#888">每线程写 TM×TN 分散块</text>
+
+  <!-- Row 0: T0 -->
+  <text x="45" y="145" font-size="10" fill="#b85450" font-weight="bold">row 0</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="90" y="130" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="106" y="145" fill="#7a2828" font-weight="bold">T0</text>
+    <rect x="124" y="130" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="140" y="145" fill="#7a2828" font-weight="bold">T0</text>
+    <rect x="158" y="130" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="174" y="145" fill="#7a2828" font-weight="bold">T0</text>
+    <rect x="192" y="130" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="208" y="145" fill="#7a2828" font-weight="bold">T0</text>
+  </g>
+  <text x="240" y="145" font-size="9" fill="#b85450">← cache line 0</text>
+
+  <!-- Row 1: T1 -->
+  <text x="45" y="175" font-size="10" fill="#2b6e9e" font-weight="bold">row 1</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="90" y="160" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="106" y="175" fill="#2b6e9e" font-weight="bold">T1</text>
+    <rect x="124" y="160" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="140" y="175" fill="#2b6e9e" font-weight="bold">T1</text>
+    <rect x="158" y="160" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="174" y="175" fill="#2b6e9e" font-weight="bold">T1</text>
+    <rect x="192" y="160" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="208" y="175" fill="#2b6e9e" font-weight="bold">T1</text>
+  </g>
+  <text x="240" y="175" font-size="9" fill="#b85450">← cache line 1</text>
+
+  <!-- Row 2: T2 -->
+  <text x="45" y="205" font-size="10" fill="#2e6e2e" font-weight="bold">row 2</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="90" y="190" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="106" y="205" fill="#2e6e2e" font-weight="bold">T2</text>
+    <rect x="124" y="190" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="140" y="205" fill="#2e6e2e" font-weight="bold">T2</text>
+    <rect x="158" y="190" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="174" y="205" fill="#2e6e2e" font-weight="bold">T2</text>
+    <rect x="192" y="190" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="208" y="205" fill="#2e6e2e" font-weight="bold">T2</text>
+  </g>
+  <text x="240" y="205" font-size="9" fill="#b85450">← cache line 2</text>
+
+  <!-- Row 3: T3 -->
+  <text x="45" y="235" font-size="10" fill="#7a5415" font-weight="bold">row 3</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="90" y="220" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="106" y="235" fill="#7a5415" font-weight="bold">T3</text>
+    <rect x="124" y="220" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="140" y="235" fill="#7a5415" font-weight="bold">T3</text>
+    <rect x="158" y="220" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="174" y="235" fill="#7a5415" font-weight="bold">T3</text>
+    <rect x="192" y="220" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="208" y="235" fill="#7a5415" font-weight="bold">T3</text>
+  </g>
+  <text x="240" y="235" font-size="9" fill="#b85450">← cache line 3</text>
+
+  <!-- Left annotation -->
+  <text x="180" y="275" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">4 条 cache line 触达</text>
+  <text x="180" y="293" text-anchor="middle" font-size="10" fill="#b85450">每个只用 16B / 128B</text>
+  <text x="180" y="315" text-anchor="middle" font-size="12" fill="#b85450" font-weight="bold">✗ 非合并!</text>
+
+  <!-- ====== Middle: Shuffle box ====== -->
+  <g filter="url(#sk)">
+    <rect x="352" y="155" width="76" height="70" rx="10" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="390" y="180" text-anchor="middle" font-size="12" font-weight="bold" fill="#5d3a7e">__shfl</text>
+  <text x="390" y="196" text-anchor="middle" font-size="12" font-weight="bold" fill="#5d3a7e">_sync</text>
+  <text x="390" y="215" text-anchor="middle" font-size="9" fill="#8e5db8">warp 内转置</text>
+
+  <!-- Arrows -->
+  <g filter="url(#sk)" fill="none" stroke="#8e5db8" stroke-width="1.4">
+    <path d="M 332 145 Q 348 145 352 162" marker-end="url(#ar)"/>
+    <path d="M 332 235 Q 348 235 352 218" marker-end="url(#ar)"/>
+    <path d="M 428 162 Q 445 145 462 145" marker-end="url(#ar)"/>
+    <path d="M 428 218 Q 445 235 462 235" marker-end="url(#ar)"/>
+  </g>
+
+  <text x="390" y="138" text-anchor="middle" font-size="9" fill="#5d3a7e" font-weight="bold">Step 1: 重分布</text>
+  <text x="390" y="248" text-anchor="middle" font-size="9" fill="#5d3a7e" font-weight="bold">Step 2: float4</text>
+
+  <!-- ====== Right panel: Shuffle 后写回（合并）====== -->
+  <g filter="url(#sk)">
+    <rect x="470" y="80" width="320" height="250" rx="8" fill="#f4fbf4" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="630" y="102" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Shuffle 后写回（合并）</text>
+  <text x="630" y="118" text-anchor="middle" font-size="10" fill="#888">每线程写连续 float4</text>
+
+  <!-- Row 0: T0 T1 T2 T3 contiguous -->
+  <text x="485" y="155" font-size="10" fill="#2e6e2e" font-weight="bold">row 0</text>
+  <g filter="url(#sk)" font-size="9" text-anchor="middle">
+    <rect x="530" y="140" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="546" y="155" fill="#7a2828" font-weight="bold">T0</text>
+    <rect x="564" y="140" width="32" height="22" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+    <text x="580" y="155" fill="#7a2828" font-weight="bold">T0</text>
+    <rect x="598" y="140" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="614" y="155" fill="#2b6e9e" font-weight="bold">T1</text>
+    <rect x="632" y="140" width="32" height="22" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="648" y="155" fill="#2b6e9e" font-weight="bold">T1</text>
+    <rect x="666" y="140" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="682" y="155" fill="#2e6e2e" font-weight="bold">T2</text>
+    <rect x="700" y="140" width="32" height="22" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="716" y="155" fill="#2e6e2e" font-weight="bold">T2</text>
+    <rect x="734" y="140" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="750" y="155" fill="#7a5415" font-weight="bold">T3</text>
+    <rect x="768" y="140" width="32" height="22" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="784" y="155" fill="#7a5415" font-weight="bold">T3</text>
+  </g>
+
+  <!-- Cache line bracket -->
+  <path d="M 530 170 L 530 176 L 800 176 L 800 170" stroke="#2e6e2e" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="665" y="192" text-anchor="middle" font-size="10" fill="#2e6e2e">← 1 条 cache line · 128B 连续</text>
+
+  <!-- float4 brackets -->
+  <g filter="url(#sk)" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="3 2">
+    <path d="M 528 134 L 528 129 L 598 129 L 598 134"/>
+    <path d="M 596 134 L 596 129 L 666 129 L 666 134"/>
+    <path d="M 664 134 L 664 129 L 734 129 L 734 134"/>
+    <path d="M 732 134 L 732 129 L 802 129 L 802 134"/>
+  </g>
+  <text x="563" y="126" text-anchor="middle" font-size="8" fill="#999">float4</text>
+  <text x="631" y="126" text-anchor="middle" font-size="8" fill="#999">float4</text>
+  <text x="699" y="126" text-anchor="middle" font-size="8" fill="#999">float4</text>
+  <text x="767" y="126" text-anchor="middle" font-size="8" fill="#999">float4</text>
+
+  <!-- Right annotation -->
+  <text x="630" y="230" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">1 条 cache line · sector 100% 利用</text>
+  <text x="630" y="250" text-anchor="middle" font-size="10" fill="#2e6e2e">32 线程 × 4B = 128B 连续写</text>
+  <text x="630" y="280" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">✓ 合并写回!</text>
+  <text x="630" y="305" text-anchor="middle" font-size="9" fill="#888">每线程 1 条 STG.128 · warp 合并为满 sector</text>
+
+  <!-- Bottom note -->
+  <text x="410" y="355" text-anchor="middle" font-size="10" fill="#888">shuffle 让 lane i 持有"目标行上自己该写的那一格" · 本质是 warp 内寄存器转置</text>
+  <text x="410" y="370" text-anchor="middle" font-size="9" fill="#aaa">Day 3 实测：行优先映射 + float4 写回已接近合并，shuffle 写回收益在噪声范围内</text>
+</svg>

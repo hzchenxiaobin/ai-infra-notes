@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="480" viewBox="0 0 880 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="880" height="480" fill="#fdfcf7"/>
+  <text x="440" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">案例 2：OOM 诊断证据（模拟留档）</text>
+  <path d="M 250 40 Q 440 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: memory_allocated time series ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="56" width="420" height="240" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="46" y="76" font-size="10" font-weight="bold" fill="#8ec5fc"># torch.cuda.memory_allocated 时序</text>
+  <g font-size="10" font-family="monospace">
+    <text x="46" y="98" fill="#cdd6f4">$ python monitor.py</text>
+    <text x="46" y="120" fill="#a6e3a1">  iter   0:    2.1 GB</text>
+    <text x="46" y="142" fill="#f9e2af">  iter 100:    8.5 GB</text>
+    <text x="46" y="164" fill="#f9e2af">  iter 300:   18.2 GB</text>
+    <text x="46" y="186" fill="#f38ba8">  iter 500:   CUDA out of memory (32 GB)</text>
+  </g>
+  <!-- mini bar chart -->
+  <g font-size="9">
+    <text x="46" y="214" fill="#888">  显存增长趋势：</text>
+    <rect x="60" y="222" width="20" height="8" fill="#a6e3a1"/>
+    <text x="92" y="230" fill="#a6e3a1">2.1G</text>
+    <rect x="60" y="238" width="55" height="8" fill="#f9e2af"/>
+    <text x="127" y="246" fill="#f9e2af">8.5G</text>
+    <rect x="60" y="254" width="110" height="8" fill="#f9e2af"/>
+    <text x="182" y="262" fill="#f9e2af">18.2G</text>
+    <rect x="60" y="270" width="170" height="8" fill="#f38ba8"/>
+    <text x="242" y="278" fill="#f38ba8">OOM 32G</text>
+    <text x="46" y="292" fill="#f38ba8">  ← 单调增长 = 泄漏信号</text>
+  </g>
+
+  <!-- arrow to conclusion -->
+  <path d="M 450 176 L 478 176" stroke="#888" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Right: memory_snapshot ===== -->
+  <g filter="url(#sk)">
+    <rect x="470" y="56" width="380" height="240" rx="8" fill="#1e1e2e" stroke="#555" stroke-width="1.2"/>
+  </g>
+  <text x="486" y="76" font-size="10" font-weight="bold" fill="#8ec5fc"># memory_snapshot 显示 finished 请求 KV Cache 未释放</text>
+  <g font-size="9" font-family="monospace">
+    <text x="486" y="98" fill="#cdd6f4">block          size     seq_id   status</text>
+    <text x="486" y="118" fill="#a6e3a1">0x7f...a0    512 MB   seq_id=5  FINISHED</text>
+    <text x="486" y="134" fill="#f38ba8">  ← 应释放未释放</text>
+    <text x="486" y="158" fill="#a6e3a1">0x7f...b8    256 MB   seq_id=12 FINISHED</text>
+    <text x="486" y="174" fill="#f38ba8">  ← 应释放未释放</text>
+    <text x="486" y="198" fill="#cdd6f4">0x7f...c4    128 MB   seq_id=18 RUNNING</text>
+    <text x="486" y="214" fill="#888">  ← 正常占用</text>
+    <text x="486" y="238" fill="#cdd6f4">0x7f...d0     64 MB   seq_id=20 RUNNING</text>
+    <text x="486" y="254" fill="#888">  ← 正常占用</text>
+    <text x="486" y="282" fill="#f9e2af">FINISHED 未释放: 768 MB</text>
+  </g>
+
+  <!-- ===== Bottom: root cause + fix ===== -->
+  <g filter="url(#sk)">
+    <rect x="30" y="316" width="820" height="100" rx="8" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.3"/>
+  </g>
+  <text x="440" y="338" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a3a7a">根因：KV Cache 释放逻辑遗漏 → 修复</text>
+  <g font-size="10" fill="#444">
+    <text x="50" y="360" font-weight="bold" fill="#b03a3a">Bug:</text>
+    <text x="100" y="360" font-family="monospace">_free_finished_seq_groups 只从 running 队列移除，未调用 block_manager.free(seq_id)</text>
+    <text x="50" y="382" font-weight="bold" fill="#2e6e2e">Fix:</text>
+    <text x="100" y="382" font-family="monospace">补 self.block_manager.free(sg.seq.seq_id) 在 _free_finished_seq_groups 中</text>
+    <text x="50" y="404" fill="#888">→ finished 请求的 KV Cache block 立即归还 pool，显存不再单调增长</text>
+  </g>
+
+  <!-- warning note -->
+  <g filter="url(#sk)">
+    <rect x="30" y="430" width="820" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="440" y="448" text-anchor="middle" font-size="10" fill="#7a5415">⚠️ 示意输出，未实测——数字基于课程典型值编写，用于演示 OOM 诊断流程结构</text>
+  <text x="440" y="464" text-anchor="middle" font-size="10" fill="#7a5415">真实展示请用 torch.cuda.memory_snapshot() 实跑后回填真实数据</text>
+</svg>

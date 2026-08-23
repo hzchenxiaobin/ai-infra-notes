@@ -159,13 +159,13 @@ __global__ void flash_decoding_merge_kernel(
 {
     // Step 1: global_max = max(partial_m[0..num_blocks-1])
     // Step 2: global_sum = Σ exp(partial_m[j] - global_max) * partial_l[j]
-    // Step 3: output = Σ (w_j * partial_o_j) / global_sum
+    // Step 3: output = Σ (exp(partial_m[j] - global_max) * partial_o[j]) / global_sum
 }
 ```
 
 代码要点：
 - **Phase 1（`flash_decoding_kernel`）**：每个 block 处理 `tokens_per_block` 个 KV token，内部用 online softmax 累积 partial max/sum/output。每个 thread 负责一个 d 维度的累加器（`o_local`），block 内通过 `block_reduce_sum` 汇总 score
-- **Phase 2（`flash_decoding_merge_kernel`）**：1 个 block 合并所有 partial 结果——先找 `global_max`，再用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor 加权合并
+- **Phase 2（`flash_decoding_merge_kernel`）**：1 个 block 合并所有 partial 结果——先找 `global_max`，再用 `exp(partial_m_j - global_max)` 作为 rescale factor 对 partial_l/partial_o 做 rescale 后加权合并（`partial_o` 未归一化，所以 rescale factor 不含 `partial_l`）
 - **CPU 参考实现**：标准 attention（先算全部 score → softmax → 加权 V），用于验证 FlashDecoding 的两阶段结果正确
 - **并行度对比**：打印 standard decode（1 block）vs FlashDecoding（N/Bc blocks）的并行度倍数
 
@@ -263,7 +263,7 @@ Day 6 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破
 1. **Decode 并行度瓶颈**：M=1 时 FlashAttention 的 Q-tile 切分失效，只有 1 个 block 串行扫描整个 KV，GPU 大量 SM 空闲
 2. **FlashDecoding 核心思想**：把 KV sequence 按列方向切分到不同 block/SM，每个 block 独立处理一段 KV，最后合并——Q 切不了就切 KV
 3. **并行度分析**：standard decode = 1 block；FlashDecoding = N/Bc blocks，seq_len 越长并行度收益越大
-4. **Online softmax 跨 block 合并**：每个 block 输出 partial max/sum/output，合并时用 `exp(partial_m_j - global_max) * partial_l_j` 作为 rescale factor——与 FlashAttention 的三公式同构
+4. **Online softmax 跨 block 合并**：每个 block 输出 partial max/sum/output，合并时用 `exp(partial_m_j - global_max)` 作为 rescale factor 对 partial_l/partial_o 做 rescale——与 FlashAttention 的三公式同构
 5. **FlashDecoding++ 改进**：提前估算 max 省掉二次 rescale；固定 chunk size 让各 block 工作量均匀
 6. **手写 FlashDecoding kernel**：两阶段实现（Phase 1 切分并行 + Phase 2 合并），与 CPU 标准 attention 结果一致，验证 KV 切分 + 跨 block 合并的数学正确性
 7. **与 PagedAttention 的关系**：PagedAttention 解决 KV cache 的内存管理（碎片/CoW），FlashDecoding 解决 decode 的并行度——两者正交，可组合使用
@@ -279,7 +279,7 @@ Day 6 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破
 <details>
 <summary>点击查看答案</summary>
 
-  - **问题**：Decode 阶段 M=1，FlashAttention 的 Q-tile 并行失效——只有 1 个 block 串行扫描整个 KV sequence，GPU 大量 SM 空闲（~1.25% 利用率）
+  - **问题**：Decode 阶段 M=1，FlashAttention 的 Q-tile 并行失效——只有 1 个 block 串行扫描整个 KV sequence，GPU 大量 SM 空闲（~0.59% 利用率，即 1/170）
   - **核心思想**：既然 Q 只有 1 行切不了，那就把 KV sequence 按列方向切分到不同 block/SM——每个 block 独立处理一段 KV，算 partial attention，最后合并
   - **效果**：并行度从 1 block 提升到 N/Bc blocks，seq_len 越长收益越大
   - **关键**：FlashAttention 切 Q（行方向），FlashDecoding 切 KV（列方向）——两者正交
@@ -294,9 +294,9 @@ Day 6 我们理解了 decode 阶段的并行度瓶颈和 FlashDecoding 的突破
 
   - **不能直接加权平均**：每个 block 只看到一段 KV，算出的 softmax 是 partial 的——partial_l_j 是以 partial_m_j 为基准的 exp 之和，不同 block 的基准不同，直接加会数值错误
   - **合并步骤**：
-    1. 找全局 `global_max = max(partial_m_0, ..., partial_m_{T-1})`
-    2. 每 block 的 rescale factor：`w_j = exp(partial_m_j - global_max) * partial_l_j`——把 partial_l_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
-    3. 加权合并：`output = Σ_j (w_j * partial_o_j) / Σ_j w_j`
+     1. 找全局 `global_max = max(partial_m_0, ..., partial_m_{T-1})`
+     2. 每 block 的 rescale factor：`α_j = exp(partial_m_j - global_max)`——把 partial_l_j 和 partial_o_j 从"以 partial_m_j 为基准"rescale 到"以 global_max 为基准"
+     3. 加权合并：`output = Σ_j (α_j * partial_o_j) / Σ_j (α_j * partial_l_j)`（`partial_o` 未归一化，所以分子用 `α_j` 而非 `α_j * partial_l_j`）
   - **数学本质**：与 FlashAttention 的 online softmax 三公式同构——都是"先算 partial，用 max 差做 rescale 合并"
 
 </details>

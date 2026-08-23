@@ -40,10 +40,7 @@ Day 2 我们用纯 PyTorch 实现了 `flash_attention_pytorch` 验证 online sof
 
 一个 Block 处理一个 Q tile（Br 行 × d 列），grid 配置覆盖 batch × head × Q tile：
 
-```
-grid = (ceil(N / Br), H, B) // x: Q tile, y: head, z: batch
-block = (THREADS_PER_BLOCK,) // 推荐 256 = 8 warps × 32 threads
-```
+![FlashAttention Kernel Grid / Block 配置](../images/grid_block_config.svg)
 
 Block 内部的 warp 分工：
 
@@ -73,12 +70,7 @@ __shared__ float s_V[Bc][D]; // V tile，每轮 KV 循环更新
 
 SRAM 使用量 = `Br×d + 2×Bc×d` 个 float。以 Br=Bc=64, d=64 为例：
 
-```
-s_Q: 64×64 = 4096 floats = 16 KB
-s_K: 64×64 = 4096 floats = 16 KB
-s_V: 64×64 = 4096 floats = 16 KB
-总计: 48 KB ≤ 100 KB (RTX 5090 上限) ✓（且恰好等于静态 `__shared__` 48 KB/block 的统一硬上限）
-```
+![FlashAttention SRAM 占用（Br=64, Bc=64, D=64）](../images/sram_usage_48kb.svg)
 
 > ⚠️ **注意**：官方实现中 K 和 V 可以分时复用同一块 shared memory（算 $S=QK^\top$ 时只需 K，算 O=PV 时只需 V），我们教学版分开存储以简化代码。
 
@@ -249,6 +241,7 @@ __global__ void flashAttentionForward(const float* __restrict__ Q, const float* 
                 localMax = fmaxf(localMax, Sij[i]);
             }
             localMax = warpReduceMax(localMax);
+            localMax = __shfl_sync(0xFFFFFFFF, localMax, 0); // 广播 max 到 warp 内所有线程
 
             // Step 3: online softmax update
             float m_prev = m_arr[localRow];
@@ -541,7 +534,7 @@ Day 3 我们把 Day 1-2 的理论推导变成了可编译的 CUDA Kernel：
 1. **线程配置**：一个 Block 处理一个 Q tile（Br 行），grid=(N/Br, H, B) 覆盖 batch×head×Q tile
 2. **Warp 分工**：每个 warp 负责 ROWS_PER_WARP 行 Q，warp 内 32 线程协作做归约，跨 warp 无需通信
 3. **Shared Memory**：Q tile 常驻，KV tile 逐块加载，SRAM 用量 = Br×d + 2×Bc×d
-4. **Online Softmax CUDA 实现**：warpReduceMax 求局部 max → 缩放旧状态 → 处理新块 → `__shfl_sync` 广播
+4. **Online Softmax CUDA 实现**：warpReduceMax 求局部 max → `__shfl_sync` 广播 max → 缩放旧状态 → 处理新块 → `__shfl_sync` 广播 l/acc
 5. **同步策略**：`__syncthreads` 只需在 tile 加载后和切换 tile 前使用，warp 内用 `__shfl` 硬件同步
 6. **边界处理**：N 不是 Br 倍数时无效行填 0，不影响累加结果
 

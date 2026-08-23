@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="460" viewBox="0 0 860 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="460" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">ncu 指标：Triton GEMM（4096×4096, FP16）</text>
+  <text x="430" y="50" text-anchor="middle" font-size="11" fill="#666">gemm_kernel_&lt;hash&gt; · RTX 5090 sm_120 · 预估值待实测回填</text>
+  <path d="M 280 56 Q 430 64 580 56" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Y-axis (0-100%) ===== -->
+  <path d="M 120 380 L 120 90" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="55" y="235" font-size="11" fill="#444" transform="rotate(-90 55 235)">占峰值百分比 (%) →</text>
+  <!-- grid lines -->
+  <path d="M 120 380 L 720 380" stroke="#3a3a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 120 90 L 720 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="94" text-anchor="end" font-size="9" fill="#999">100</text>
+  <path d="M 120 167 L 720 167" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="171" text-anchor="end" font-size="9" fill="#999">75</text>
+  <path d="M 120 244 L 720 244" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="248" text-anchor="end" font-size="9" fill="#999">50</text>
+  <path d="M 120 321 L 720 321" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="112" y="325" text-anchor="end" font-size="9" fill="#999">25</text>
+  <text x="112" y="384" text-anchor="end" font-size="9" fill="#999">0</text>
+
+  <!-- X-axis label -->
+  <text x="420" y="420" text-anchor="middle" font-size="11" fill="#444">ncu Metric</text>
+
+  <!-- ===== Bars ===== -->
+  <!-- scale: 290px = 100%, bar width=80, gap=40, start x=170 -->
+
+  <!-- 1. Tensor Core 68.5% -->
+  <g filter="url(#sk)"><rect x="170" y="181" width="80" height="199" rx="3" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="210" y="173" text-anchor="middle" font-size="12" fill="#1b5e8c" font-weight="bold">68.5%</text>
+  <text x="210" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">Tensor Core</text>
+  <text x="210" y="412" text-anchor="middle" font-size="7" fill="#999">pipe_tensor</text>
+  <text x="210" y="422" text-anchor="middle" font-size="7" fill="#999">_hmma</text>
+  <!-- annotation -->
+  <path d="M 255 181 Q 280 160 305 145" stroke="#2e7d4f" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="310" y="142" font-size="9" fill="#2e7d4f" font-weight="bold">← Triton 用了</text>
+  <text x="310" y="154" font-size="9" fill="#2e7d4f" font-weight="bold">Tensor Core!</text>
+
+  <!-- 2. sm__throughput 72% -->
+  <g filter="url(#sk)"><rect x="290" y="171" width="80" height="209" rx="3" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="330" y="163" text-anchor="middle" font-size="12" fill="#1b5e8c" font-weight="bold">72.0%</text>
+  <text x="330" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">SM</text>
+  <text x="330" y="412" text-anchor="middle" font-size="7" fill="#999">throughput</text>
+
+  <!-- 3. dram__throughput 38.2% -->
+  <g filter="url(#sk)"><rect x="410" y="269" width="80" height="111" rx="3" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="450" y="261" text-anchor="middle" font-size="12" fill="#c98a2b" font-weight="bold">38.2%</text>
+  <text x="450" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">DRAM</text>
+  <text x="450" y="412" text-anchor="middle" font-size="7" fill="#999">throughput</text>
+  <!-- annotation -->
+  <text x="450" y="300" text-anchor="middle" font-size="8" fill="#2e7d4f">HBM 非瓶颈</text>
+
+  <!-- 4. sm__warps_active 58% -->
+  <g filter="url(#sk)"><rect x="530" y="212" width="80" height="168" rx="3" fill="#4a8e4a" opacity="0.65" stroke="#2e6e2e" stroke-width="1.3"/></g>
+  <text x="570" y="204" text-anchor="middle" font-size="12" fill="#2e6e2e" font-weight="bold">58.0%</text>
+  <text x="570" y="400" text-anchor="middle" font-size="9" fill="#2b2b2b">Warps</text>
+  <text x="570" y="412" text-anchor="middle" font-size="7" fill="#999">active</text>
+  <text x="570" y="422" text-anchor="middle" font-size="7" fill="#999">(occupancy)</text>
+
+  <!-- ===== Registers annotation (not a % metric) ===== -->
+  <g filter="url(#sk)">
+    <rect x="640" y="90" width="180" height="70" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="730" y="110" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">launch__registers</text>
+  <text x="730" y="124" text-anchor="middle" font-size="10" fill="#888" font-weight="bold">_per_thread</text>
+  <text x="730" y="142" text-anchor="middle" font-size="16" fill="#4a8edb" font-weight="bold">72</text>
+  <text x="730" y="156" text-anchor="middle" font-size="8" fill="#999">regs/thread</text>
+
+  <!-- ===== Key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="430" width="640" height="24" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.0" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="446" font-size="10" fill="#1b5e8c" font-weight="bold">tl.dot 自动生成 mma.sync → Tensor Core 68.5% · 自动 smem tiling + double buffer → DRAM 仅 38.2%</text>
+</svg>

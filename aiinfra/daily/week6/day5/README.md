@@ -93,7 +93,7 @@ def generate(self, prompt, max_new_tokens=20):
         next_token = argmax(logits[:, -1, :])
         generated.append(next_token)
 
-        return decode(generated)
+    return decode(generated)
 ```
 
 ##### KV Cache 状态变化

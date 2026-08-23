@@ -5,7 +5,7 @@
 通过今天的学习，你将：
 
 1. 理解 CUTLASS 的设计哲学：可组合的 GEMM 模板库<br>
-2. 掌握 CUTLASS 的三级 tiling 抽象：Device → Kernel → Warp → Thread<br>
+2. 掌握 CUTLASS 的三级 tiling 抽象：Device → Kernel → Warp<br>
 3. 能阅读 `cutlass::gemm::device::Gemm` 的模板参数并实例化调用<br>
 4. 理解 `ThreadblockShape`/`WarpShape`/`InstructionShape` 的层级关系<br>
 5. 能用 CUTLASS 实例化一个 GEMM 调用并对比手写 WMMA 的性能<br>
@@ -53,9 +53,7 @@ CUTLASS 3.x 引入了 **CuTe（CUTLASS Tensors and Layout）**——一个用 C+
 
 **Stride** = 每一维走一步，物理地址要加多少个元素。它把逻辑坐标 `(i, j)` 映射到物理偏移：
 
-```
-物理偏移 = i * stride[0] + j * stride[1]
-```
+![Stride 映射：逻辑坐标 → 物理偏移](../images/cute_stride_formula.svg)
 
 以 64×128 矩阵为例：
 
@@ -123,18 +121,7 @@ CUTLASS（CUDA Templates for Linear Algebra Subroutines）是 NVIDIA 开源的�
 
 CUTLASS 的核心设计是三级 tiling，从粗到细：
 
-```
-GEMM: C[M, N] = A[M, K] × B[K, N]
-
-Level 1: Device (Grid 级)
-  → 将 M×N 分成 Threadblock tiles，每个 block 处理一个 ThreadblockTile
-
-Level 2: Kernel (Warp 级)  
-  → 将 ThreadblockTile 分成 Warp tiles，每个 warp 处理一个 WarpTile
-
-Level 3: Warp (Instruction 级)
-  → 将 WarpTile 分成 MMA tiles，每个 MMA 指令处理一个 InstructionTile (16×8×16)
-```
+![CUTLASS 三级 Tiling（从粗到细）](../images/cutlass_three_level_tiling.svg)
 
 ##### 具体示例（GEMM 4096×4096×4096, FP16）
 
@@ -212,12 +199,7 @@ gemm();
 
 ##### Double Buffer (NumStages)
 
-```
-Stage 0: load A[0], B[0] → smem[0]
-Stage 1: load A[1], B[1] → smem[1]  ||  compute C[0] from smem[0]
-Stage 2: load A[2], B[2] → smem[0]  ||  compute C[1] from smem[1]
-...
-```
+![Double Buffer（NumStages=2）软件流水线](../images/cutlass_double_buffer.svg)
 
 `NumStages=2` 表示 double buffer，`NumStages=3` 表示 triple buffer。更多 stage 可以更好地隐藏 latency，但占用更多 shared memory。
 

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="420" viewBox="0 0 940 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="420" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Decode 单步要读的数据：权重 + KV Cache</text>
+  <path d="M 280 42 Q 470 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ 左：权重 W ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="68" width="410" height="170" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="60" y="94" font-size="14" font-weight="bold" fill="#7a5415">权重 W</text>
+  <text x="60" y="120" font-size="12" fill="#444">model_size 字节（每步都读一遍）</text>
+  <text x="60" y="142" font-size="12" fill="#444">M=1 无法 amortize —— 每步重读全部权重</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="158" width="370" height="56" rx="6" fill="#fce4ec" stroke="#b85450"/>
+  </g>
+  <text x="72" y="180" font-size="12" font-weight="bold" fill="#7a2828">7B FP16 → 权重 14 GB</text>
+  <text x="72" y="200" font-size="11" fill="#7a2828">HBM 带宽 ~1 TB/s → ~14 ms 下限</text>
+
+  <!-- ============ 右：KV Cache ============ -->
+  <g filter="url(#sk)">
+    <rect x="480" y="68" width="420" height="170" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="500" y="94" font-size="14" font-weight="bold" fill="#2b6e9e">KV Cache（FP16）</text>
+  <text x="500" y="120" font-size="12" fill="#444">2 × seq_len × n_heads × d_head × layers × 2B</text>
+  <text x="500" y="142" font-size="12" fill="#444">随序列长度 L 线性增长</text>
+  <g filter="url(#sk)">
+    <rect x="500" y="158" width="380" height="56" rx="6" fill="#eaf6ee" stroke="#4a8e4a"/>
+  </g>
+  <text x="512" y="180" font-size="12" font-weight="bold" fill="#2e6e2e">seq=4096, 32层×32头×128维 → KV ≈ 2 GB</text>
+  <text x="512" y="200" font-size="11" fill="#2e6e2e">（与 Day 2 口径一致）</text>
+
+  <!-- ============ 箭头汇合 ============ -->
+  <path d="M 245 248 Q 245 270 380 282" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 690 248 Q 690 270 560 282" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- ============ 底部：结论 ============ -->
+  <g filter="url(#sk)">
+    <rect x="180" y="288" width="580" height="100" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+  </g>
+  <text x="470" y="314" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">每步读 14 GB 权重 + 2 GB KV ≈ 16 GB</text>
+  <text x="470" y="338" text-anchor="middle" font-size="13" fill="#b03a3a" font-weight="bold">→ 权重带宽是 Decode 延迟的硬地板</text>
+  <text x="470" y="362" text-anchor="middle" font-size="11" fill="#666">量化核心动机：把数据字节数砍半/砍到 1/4，带宽压力直接减半/减到 1/4</text>
+</svg>

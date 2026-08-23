@@ -19,14 +19,7 @@
 
 Day 1-4 分别实现了并发引擎、调度器、高级特性、自定义 Kernel，每个组件单独测试都 PASS。但组合后会出现新的问题：
 
-```
-组件单独正确，组合后出错的典型场景：
- 1. KV Cache 串台 → 请求 A 的 decode 读到请求 B 的 KV Cache（结果错误）
- 2. 资源泄漏 → finished 请求的 KV Cache 未释放 → 累积 OOM
- 3. Scheduler 死锁 → 请求被 still_waiting 丢弃 → future 永远不完成
- 4. 超时传播 → waiting 超时但 running 不检查 → 请求卡在 running
- 5. 竞态条件 → submit 和 schedule 并发操作 running map → 数据竞争
-```
+![组件单独正确，组合后出错的典型场景](../images/component_integration_errors.svg)
 
 | 问题 | 单组件测试 | 联调才暴露 |
 |------|-----------|-----------|
@@ -125,14 +118,7 @@ def stability_test(num_requests=500):
 
 #### 5.4 异常输入测试
 
-```
-异常输入场景：
- 1. 空 prompt → 应正常处理（生成 max_new_tokens 个 token）
- 2. 超长 prompt（200+ words）→ 可能触发 KV Cache 不足，应排队等待或超时
- 3. 超时取消 → future.result(timeout=0.1) 应抛 TimeoutError
- 4. 请求突然大量涌入 → 应受 max_num_seqs 限制，排队不崩溃
- 5. OOM 模拟 → total_kv_blocks 极小时，应拒绝或排队
-```
+![异常输入场景](../images/abnormal_input_scenarios.svg)
 
 > ⚠️ **异常处理原则**：系统不应因异常输入崩溃，应优雅降级（排队、超时、拒绝）并返回有意义的错误。
 

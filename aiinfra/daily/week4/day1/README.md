@@ -109,11 +109,7 @@
 
 **Decode 阶段的 Attention 更严重**——每次生成 1 个 token，都要读取**整个 KV Cache**（所有历史 token 的 K 和 V）：
 
-```
-KV Cache 大小 = 2 × N_layers × N_past × d × dtype_size
- N_past=4096, d=512, 32层, FP16 → 2×32×4096×512×2 = 256 MB
- 每生成 1 个 token 要读 256 MB → 纯访存瓶颈
-```
+![KV Cache 显存占用](../images/kv_cache_size.svg)
 
 **优化方向**：
 - **KV Cache**：避免重算历史 K/V（空间换时间）
@@ -275,24 +271,7 @@ python trace_transformer.py
 
 #### 任务 3：分析两阶段的算子差异
 
-```
-===== Prefill Phase (shape=(1, 1024, 512)) =====
---------------------------------- ... ---------------------------------
-Name Self CUDA Calls ...
-aten::_scaled_dot_product... xxx us 5
-aten::mm xxx us 20 ← QKV/Out/FFN GEMM
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
-...
-
-===== Decode Phase (shape=(1, 1, 512)) =====
---------------------------------- ... ---------------------------------
-Name Self CUDA Calls ...
-aten::mm xxx us 20 ← GEMM 但矩阵极小
-aten::layer_norm xxx us 10
-aten::softmax xxx us 5
-...
-```
+![torch.profiler 算子时间表对比（Prefill vs Decode）](../images/profiler_output_comparison.svg)
 
 **分析任务清单**：
 

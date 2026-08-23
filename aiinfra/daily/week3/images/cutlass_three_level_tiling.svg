@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="560" viewBox="0 0 720 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="720" height="560" fill="#fdfcf7"/>
+
+  <!-- Title -->
+  <text x="360" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">CUTLASS 三级 Tiling（从粗到细）</text>
+  <path d="M 210 38 Q 360 44 510 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- GEMM formula box -->
+  <g filter="url(#sk)">
+    <rect x="170" y="52" width="380" height="42" rx="6" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.2"/>
+  </g>
+  <text x="360" y="79" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b" font-family="monospace">GEMM: C[M,N] = A[M,K] × B[K,N]</text>
+
+  <!-- arrow down to Level 1 -->
+  <path d="M 360 98 L 360 118" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Level 1: Device (Grid) ===== -->
+  <text x="360" y="134" text-anchor="middle" font-size="10" fill="#888">Level 1</text>
+  <g filter="url(#sk)">
+    <rect x="50" y="142" width="620" height="108" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="166" font-size="14" font-weight="bold" fill="#1b5e8c">Device（Grid 级）</text>
+  <text x="70" y="190" font-size="12" fill="#444">→ 将 M×N 分成 Threadblock tiles</text>
+  <text x="70" y="210" font-size="11" fill="#888">每个 block 处理一个 ThreadblockTile</text>
+  <text x="70" y="232" font-size="10" fill="#888" font-style="italic">例: ThreadblockShape 128×128×32</text>
+  <!-- mini grid icon -->
+  <g filter="url(#sk)" font-size="7" fill="#4a8edb">
+    <rect x="540" y="158" width="26" height="26" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.6"/>
+    <rect x="568" y="158" width="26" height="26" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.6"/>
+    <rect x="540" y="186" width="26" height="26" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.6"/>
+    <rect x="568" y="186" width="26" height="26" fill="#dbeaf6" stroke="#4a8edb" stroke-width="0.6"/>
+    <text x="600" y="180" font-size="8" fill="#888">⋯</text>
+    <text x="600" y="208" font-size="8" fill="#888">⋮</text>
+  </g>
+
+  <!-- arrow down to Level 2 -->
+  <path d="M 360 254 L 360 274" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Level 2: Kernel (Warp) ===== -->
+  <text x="360" y="290" text-anchor="middle" font-size="10" fill="#888">Level 2</text>
+  <g filter="url(#sk)">
+    <rect x="50" y="298" width="620" height="108" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="322" font-size="14" font-weight="bold" fill="#1b5e3a">Kernel（Warp 级）</text>
+  <text x="70" y="346" font-size="12" fill="#444">→ 将 ThreadblockTile 分成 Warp tiles</text>
+  <text x="70" y="366" font-size="11" fill="#888">每个 warp 处理一个 WarpTile</text>
+  <text x="70" y="388" font-size="10" fill="#888" font-style="italic">例: WarpShape 64×64×32, 4 warps/block</text>
+  <!-- mini warp icon: TB split into 4 -->
+  <g filter="url(#sk)" font-size="7" fill="#2e7d4f">
+    <rect x="540" y="314" width="54" height="26" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.6"/>
+    <text x="567" y="331" text-anchor="middle" font-size="8">W0</text>
+    <rect x="596" y="314" width="54" height="26" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.6"/>
+    <text x="623" y="331" text-anchor="middle" font-size="8">W1</text>
+    <rect x="540" y="342" width="54" height="26" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.6"/>
+    <text x="567" y="359" text-anchor="middle" font-size="8">W2</text>
+    <rect x="596" y="342" width="54" height="26" fill="#cde8d8" stroke="#2e7d4f" stroke-width="0.6"/>
+    <text x="623" y="359" text-anchor="middle" font-size="8">W3</text>
+  </g>
+
+  <!-- arrow down to Level 3 -->
+  <path d="M 360 410 L 360 430" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+  <!-- ===== Level 3: Warp (Instruction) ===== -->
+  <text x="360" y="446" text-anchor="middle" font-size="10" fill="#888">Level 3</text>
+  <g filter="url(#sk)">
+    <rect x="50" y="454" width="620" height="92" rx="8" fill="#fff8e1" stroke="#e8a838" stroke-width="1.4"/>
+  </g>
+  <text x="70" y="478" font-size="14" font-weight="bold" fill="#8a6d18">Warp（Instruction 级）</text>
+  <text x="70" y="502" font-size="12" fill="#444">→ 将 WarpTile 分成 MMA tiles</text>
+  <text x="70" y="522" font-size="11" fill="#888">每个 MMA 指令处理一个 InstructionTile（16×8×16）</text>
+  <text x="70" y="540" font-size="10" fill="#888" font-style="italic">例: mma.sync m16n8k16, 32 条/warp</text>
+  <!-- mini MMA icon -->
+  <g filter="url(#sk)">
+    <rect x="560" y="470" width="80" height="40" rx="4" fill="#fff3cf" stroke="#e8a838" stroke-width="1"/>
+  </g>
+  <text x="600" y="486" text-anchor="middle" font-size="9" font-weight="bold" fill="#8a6d18">16×8</text>
+  <text x="600" y="500" text-anchor="middle" font-size="7" fill="#888">mma.sync</text>
+</svg>

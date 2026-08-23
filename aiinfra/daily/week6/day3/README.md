@@ -264,9 +264,7 @@ class Scheduler:
         budget.tokens -= victim.seq.total_len()
         budget.blocks -= released_blocks
         victim.seq.status = SequenceStatus.WAITING
-        victim.seq.output_len = 0          # recomputation：丢弃 KV cache
         self.used_blocks -= released_blocks
-        victim.seq.kv_blocks = 0
         print(f"    ⚡ PREEMPT request {victim.request_id} "
               f"(recomputation, 释放 {released_blocks} blocks)")
         return victim
@@ -472,22 +470,22 @@ python kernels/mini_vllm_scheduler.py
 
 ```text
 [iter 1] === step ===
- + ADMIT request 0 (prefill 32 tok, alloc 2 blocks)
- batch: 1 seqs, 32 tokens, used_blocks=2/64
+    + ADMIT  request 0 (prefill 32 tok, alloc 2 blocks)
+    batch: 1 seqs, 32 tokens, used_blocks=2/64
 
 [iter 3] === step ===
- + ADMIT request 1 (prefill 16 tok, alloc 1 blocks)
- + ADMIT request 2 (prefill 48 tok, alloc 3 blocks)
- batch: 3 seqs, 98 tokens, used_blocks=6/64
+    + ADMIT  request 1 (prefill 16 tok, alloc 1 blocks)
+    + ADMIT  request 2 (prefill 48 tok, alloc 3 blocks)
+    batch: 3 seqs, 98 tokens, used_blocks=6/64
 
 [iter 7] === step ===
- batch: 3 seqs, 110 tokens, used_blocks=6/64
- ✔ FINISH request 1 (generated 5 tokens)
+    batch: 3 seqs, 110 tokens, used_blocks=6/64
+    ✔ FINISH request 1 (generated 5 tokens, free 1 blocks)
 
 [iter 8] === step ===
- batch: 2 seqs, 92 tokens, used_blocks=5/64
- ✔ FINISH request 0 (generated 8 tokens)
- ✔ FINISH request 2 (generated 6 tokens)
+    batch: 2 seqs, 92 tokens, used_blocks=5/64
+    ✔ FINISH request 0 (generated 8 tokens, free 2 blocks)
+    ✔ FINISH request 2 (generated 6 tokens, free 3 blocks)
 
 All requests finished. Total iterations: 8
 Finished order: [1, 0, 2]

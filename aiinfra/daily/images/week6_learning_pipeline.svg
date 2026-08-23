@@ -12,31 +12,31 @@
   <rect width="780" height="290" fill="#fdfcf7"/>
 
   <!-- Title -->
-  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 6 学习主线</text>
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Week 7 学习主线</text>
   <path d="M 250 44 Q 390 52 530 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
-  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">从凑批 → 每轮重建 → Scheduler → 框架对比 → Mini 引擎 → benchmark → 策略总结</text>
+  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">从 Continuous → Scheduler → 框架对比 → Chunked/Prefix → Mini 引擎 → PD 分离 → 策略总结</text>
 
   <!-- Row 1: Day1 → Day2 → Day3 → Day4 -->
   <g filter="url(#sk)" font-size="11" text-anchor="middle">
     <rect x="40"  y="90" width="160" height="62" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
     <text x="120" y="112" fill="#2b6e9e" font-weight="bold" font-size="13">Day 1</text>
-    <text x="120" y="132" fill="#2b6e9e">Dynamic Batching</text>
-    <text x="120" y="146" fill="#2b6e9e" font-size="10">请求聚合凑批</text>
+    <text x="120" y="132" fill="#2b6e9e">Continuous Batching</text>
+    <text x="120" y="146" fill="#2b6e9e" font-size="10">含 Dynamic Batching</text>
 
     <rect x="220" y="90" width="160" height="62" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
     <text x="300" y="112" fill="#2e6e2e" font-weight="bold" font-size="13">Day 2</text>
-    <text x="300" y="132" fill="#2e6e2e">Continuous Batching</text>
-    <text x="300" y="146" fill="#2e6e2e" font-size="10">iteration-level</text>
+    <text x="300" y="132" fill="#2e6e2e">vLLM Scheduler</text>
+    <text x="300" y="146" fill="#2e6e2e" font-size="10">schedule() 5 步</text>
 
     <rect x="400" y="90" width="160" height="62" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.6"/>
     <text x="480" y="112" fill="#7a5415" font-weight="bold" font-size="13">Day 3</text>
-    <text x="480" y="132" fill="#7a5415">vLLM Scheduler</text>
-    <text x="480" y="146" fill="#7a5415" font-size="10">schedule() 5 步</text>
+    <text x="480" y="132" fill="#7a5415">框架对比</text>
+    <text x="480" y="146" fill="#7a5415" font-size="10">TRT-LLM/LightLLM</text>
 
     <rect x="580" y="90" width="160" height="62" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/>
     <text x="660" y="112" fill="#b85450" font-weight="bold" font-size="13">Day 4</text>
-    <text x="660" y="132" fill="#b85450">框架对比</text>
-    <text x="660" y="146" fill="#b85450" font-size="10">Chunked Prefill</text>
+    <text x="660" y="132" fill="#b85450">Chunked Prefill</text>
+    <text x="660" y="146" fill="#b85450" font-size="10">Prefix Caching</text>
   </g>
 
   <g filter="url(#sk)" stroke="#5a5a5a" stroke-width="1.3" fill="none">
@@ -59,8 +59,8 @@
 
     <rect x="280" y="222" width="220" height="62" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/>
     <text x="390" y="244" fill="#2b6e9e" font-weight="bold" font-size="13">Day 6</text>
-    <text x="390" y="264" fill="#2b6e9e">Benchmark</text>
-    <text x="390" y="278" fill="#2b6e9e" font-size="10">饱和点 + P99</text>
+    <text x="390" y="264" fill="#2b6e9e">PD 分离</text>
+    <text x="390" y="278" fill="#2b6e9e" font-size="10">双池 + RDMA</text>
 
     <rect x="520" y="222" width="220" height="62" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
     <text x="630" y="244" fill="#2e6e2e" font-weight="bold" font-size="13">Day 7</text>

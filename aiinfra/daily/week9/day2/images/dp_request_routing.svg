@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="360" viewBox="0 0 780 360" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="31" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="780" height="360" fill="#fdfcf7"/>
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">推理 Data Parallelism 请求路由</text>
+  <path d="M 230 44 Q 390 52 550 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="390" y="60" text-anchor="middle" font-size="11" fill="#888">每卡完整模型副本 · 各处理不同请求 · 无通信 · 前端轮询负载均衡</text>
+  <rect x="90" y="110" width="130" height="34" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="155.0" y="132" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Request 1</text>
+  <rect x="90" y="156" width="130" height="34" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="155.0" y="178" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Request 2</text>
+  <rect x="90" y="202" width="130" height="34" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="155.0" y="224" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Request 3</text>
+  <rect x="90" y="248" width="130" height="34" rx="5" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" filter="url(#sk)"/>
+  <text x="155.0" y="270" text-anchor="middle" font-size="12" fill="#7a5415" font-weight="bold">Request 4</text>
+  <rect x="540" y="110" width="190" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" filter="url(#sk)"/>
+  <text x="635.0" y="134" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">GPU 0</text>
+  <text x="635.0" y="156" text-anchor="middle" font-size="11" fill="#3a7a3a">完整模型副本</text>
+  <text x="635.0" y="174" text-anchor="middle" font-size="10" fill="#5a8a5a">（独立处理请求）</text>
+  <rect x="540" y="220" width="190" height="90" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" filter="url(#sk)"/>
+  <text x="635.0" y="244" text-anchor="middle" font-size="14" fill="#2e6e2e" font-weight="bold">GPU 1</text>
+  <text x="635.0" y="266" text-anchor="middle" font-size="11" fill="#3a7a3a">完整模型副本</text>
+  <text x="635.0" y="284" text-anchor="middle" font-size="10" fill="#5a8a5a">（独立处理请求）</text>
+  <path d="M 222 127.0 Q 380.0 141.0 538 155.0" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" fill="none" filter="url(#sk)"/>
+  <path d="M 222 173.0 Q 380.0 219.0 538 265.0" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" fill="none" filter="url(#sk)"/>
+  <path d="M 222 219.0 Q 380.0 187.0 538 155.0" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" fill="none" filter="url(#sk)"/>
+  <path d="M 222 265.0 Q 380.0 265.0 538 265.0" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" fill="none" filter="url(#sk)"/>
+  <text x="390" y="330" text-anchor="middle" font-size="11" fill="#888">训练 DP：每步 all-reduce 梯度 ｜ 推理 DP：无通信，模型 ≤ 单卡显存 + 高吞吐场景适用</text>
+</svg>

@@ -513,7 +513,7 @@ nsys profile -o multi_stream_timeline ./multi_stream
 
 ### 今日总结
 
-Day 3 我们掌握了 CUDA Stream 异步执行模型：
+Day 5 我们掌握了 CUDA Stream 异步执行模型：
 
 1. **Stream 是 GPU 操作的队列**：同 Stream 内 FIFO，跨 Stream 可并发
 2. **Default Stream 的坑**：隐式同步所有 Explicit Stream，一处 `cudaMemcpy` 就打断全部并发

@@ -32,17 +32,12 @@
 ##### 为什么 Decode 路径收益最大？
 
 Decode 阶段 M=1，每个 kernel 只几 μs，但 launch overhead 5-10μs/kernel：
-```
-Decode forward: 30 个 kernel × 7μs launch = 210μs 纯 launch
-               30 个 kernel × 3μs 执行 = 90μs 实际计算
-总 latency: 300μs, launch 占 70%!
-```
+
+![Decode Forward（Eager）：Launch 占 70%](../images/decode_eager_launch_breakdown.svg)
 
 CUDA Graph 把 30 次 launch 压成 1 次：
-```
-Graph replay: 10μs launch + 90μs 计算 = 100μs
-收益: 300μs → 100μs, -67%
-```
+
+![Graph Replay：30 次 launch 压成 1 次](../images/graph_replay_speedup.svg)
 
 ##### 集成步骤
 
@@ -98,7 +93,7 @@ Decode 的 seq_len 每步 +1（KV Cache 增长），shape 变化导致 Graph 无
 按 seq_len 分桶，每桶预捕获一个 Graph：
 
 ```python
-class BucketedGraphEngine:
+class BucketedGraphRunner:
     def __init__(self, model, bucket_sizes=None):
         if bucket_sizes is None:
             bucket_sizes = [128, 256, 512, 1024, 2048, 4096]
@@ -252,8 +247,8 @@ def bench_graph(engine, input_ids, iters=100):
     # ... graph replay 版 ...
     pass
 
-print(f"Eager: {bench_eager(model, input):.2f} ms")
-print(f"Graph: {bench_graph(engine, input):.2f} ms")
+print(f"Eager: {bench_eager(model, input_ids):.2f} ms")
+print(f"Graph: {bench_graph(engine, input_ids):.2f} ms")
 ```
 
 #### 任务 3：LeetCode 面试题（10 周计划 · 第 8 周 Day 5）

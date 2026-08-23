@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="640" viewBox="0 0 940 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="940" height="640" fill="#fdfcf7"/>
+  <text x="470" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">WMMA GEMM 调用流程（Host + Device）</text>
+  <path d="M 270 42 Q 470 50 670 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Column headers -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="64" width="400" height="32" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="240" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#1b5e8c">Host 端</text>
+
+  <g filter="url(#sk2)">
+    <rect x="500" y="64" width="400" height="32" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.2"/>
+  </g>
+  <text x="700" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e5a1a">Device 端（每个 warp）</text>
+
+  <!-- Host steps -->
+  <g filter="url(#sk2)"><rect x="50" y="110" width="380" height="40" rx="6" fill="#fffdf3" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="60" y="128" font-size="10" font-weight="bold" fill="#1b5e8c">①</text>
+  <text x="80" y="128" font-size="11" fill="#444">准备 FP16 数据（A row-major, B col-major）</text>
+  <text x="80" y="142" font-size="9" fill="#888">malloc + 初始化 h_A, h_B</text>
+  <path d="M 240 152 L 240 162" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="50" y="166" width="380" height="40" rx="6" fill="#fffdf3" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="60" y="184" font-size="10" font-weight="bold" fill="#1b5e8c">②</text>
+  <text x="80" y="184" font-size="11" fill="#444">cudaMalloc + cudaMemcpy 到 Device</text>
+  <text x="80" y="198" font-size="9" fill="#888">分配 d_A, d_B, d_C 并拷贝数据</text>
+  <path d="M 240 208 L 240 218" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="50" y="222" width="380" height="40" rx="6" fill="#fffdf3" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="60" y="240" font-size="10" font-weight="bold" fill="#1b5e8c">③</text>
+  <text x="80" y="240" font-size="11" fill="#444">配置 Grid = (N/16, M/16), Block = (32, 1)</text>
+  <text x="80" y="254" font-size="9" fill="#888">每 block 1 个 warp（32 threads）</text>
+  <path d="M 240 264 L 240 274" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="50" y="278" width="380" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="60" y="298" font-size="10" font-weight="bold" fill="#1b5e8c">④</text>
+  <text x="80" y="298" font-size="11" font-weight="bold" fill="#1b5e8c">wmma_gemm_kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(...)</text>
+  <text x="80" y="314" font-size="9" fill="#888">launch kernel → Device 端开始执行</text>
+
+  <!-- Arrow from Host step 4 to Device column -->
+  <path d="M 430 300 L 500 180" stroke="#b03a3a" stroke-width="1.6" fill="none" marker-end="url(#ar3)" stroke-dasharray="4 3"/>
+  <text x="480" y="240" font-size="9" fill="#b03a3a" font-weight="bold">launch</text>
+
+  <!-- Device steps -->
+  <g filter="url(#sk2)"><rect x="510" y="110" width="380" height="40" rx="6" fill="#fffdf3" stroke="#2e7d4f" stroke-width="1"/></g>
+  <text x="520" y="128" font-size="10" font-weight="bold" fill="#2e5a1a">①</text>
+  <text x="540" y="128" font-size="11" fill="#444">blockIdx 确定输出 tile 位置 (warpM, warpN)</text>
+  <text x="540" y="142" font-size="9" fill="#888">warpM = blockIdx.y, warpN = blockIdx.x</text>
+  <path d="M 700 152 L 700 162" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="510" y="166" width="380" height="40" rx="6" fill="#fffdf3" stroke="#2e7d4f" stroke-width="1"/></g>
+  <text x="520" y="184" font-size="10" font-weight="bold" fill="#2e5a1a">②</text>
+  <text x="540" y="184" font-size="11" fill="#444">声明 fragment (a_frag, b_frag, c_frag)</text>
+  <text x="540" y="198" font-size="9" fill="#888">编译时确定形状和精度</text>
+  <path d="M 700 208 L 700 218" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="510" y="222" width="380" height="40" rx="6" fill="#fffdf3" stroke="#2e7d4f" stroke-width="1"/></g>
+  <text x="520" y="240" font-size="10" font-weight="bold" fill="#2e5a1a">③</text>
+  <text x="540" y="240" font-size="11" fill="#444">fill_fragment(c_frag, 0) ← 初始化累加器</text>
+  <text x="540" y="254" font-size="9" fill="#888">累加器清零</text>
+  <path d="M 700 264 L 700 274" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <!-- K loop box (larger) -->
+  <g filter="url(#sk2)"><rect x="510" y="278" width="380" height="80" rx="6" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/></g>
+  <text x="520" y="298" font-size="10" font-weight="bold" fill="#2e5a1a">④</text>
+  <text x="540" y="298" font-size="11" font-weight="bold" fill="#2e5a1a">for k in range(0, K, 16):</text>
+  <text x="555" y="316" font-size="10" fill="#444" font-family="monospace">load_matrix_sync(a_frag, A + ...)</text>
+  <text x="555" y="330" font-size="10" fill="#444" font-family="monospace">load_matrix_sync(b_frag, B + ...)</text>
+  <text x="555" y="344" font-size="10" fill="#444" font-family="monospace">mma_sync(c_frag, a, b, c) ← Tensor Core</text>
+  <!-- loop back arrow -->
+  <path d="M 510 318 Q 490 318 490 300 Q 490 288 510 288" stroke="#2e7d4f" stroke-width="1" fill="none" marker-end="url(#ar3)" stroke-dasharray="3 2"/>
+  <text x="482" y="306" font-size="8" fill="#2e7d4f" font-style="italic">loop</text>
+
+  <path d="M 700 360 L 700 370" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="510" y="374" width="380" height="44" rx="6" fill="#fdecec" stroke="#b03a3a" stroke-width="1.2"/></g>
+  <text x="520" y="394" font-size="10" font-weight="bold" fill="#7a2828">⑤</text>
+  <text x="540" y="394" font-size="11" fill="#444">store_matrix_sync(C + ..., c_frag, N, mem_row_major)</text>
+  <text x="540" y="410" font-size="9" fill="#888">写回 16×16 结果到 Global Memory</text>
+
+  <!-- Arrow back to Host for verification -->
+  <path d="M 700 418 Q 700 440 500 440 Q 240 440 240 420" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)" stroke-dasharray="4 3"/>
+  <text x="470" y="434" text-anchor="middle" font-size="9" fill="#3a3a3a">cudaDeviceSynchronize</text>
+
+  <!-- Host continuation -->
+  <g filter="url(#sk2)"><rect x="50" y="446" width="380" height="40" rx="6" fill="#fffdf3" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="60" y="464" font-size="10" font-weight="bold" fill="#1b5e8c">⑤</text>
+  <text x="80" y="464" font-size="11" fill="#444">cuBLAS sgemm 作为参考基准</text>
+  <text x="80" y="478" font-size="9" fill="#888">cublasSgemm → 参考结果</text>
+  <path d="M 240 488 L 240 498" stroke="#3a3a3a" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
+
+  <g filter="url(#sk2)"><rect x="50" y="502" width="380" height="44" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="60" y="522" font-size="10" font-weight="bold" fill="#1b5e8c">⑥</text>
+  <text x="80" y="522" font-size="11" font-weight="bold" fill="#1b5e8c">cudaMemcpy 回 Host，对比 max_diff</text>
+  <text x="80" y="538" font-size="9" fill="#888">验证 WMMA 结果正确性 + 计时</text>
+
+  <!-- Bottom note -->
+  <g filter="url(#sk2)">
+    <rect x="40" y="566" width="860" height="60" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="588" font-size="11" font-weight="bold" fill="#2b2b2b">Fragment 生命周期</text>
+  <text x="60" y="606" font-size="10" fill="#444">声明(fragment类型+形状+精度) → fill_fragment(初始化) → [load_matrix_sync → mma_sync]* → store_matrix_sync</text>
+  <text x="60" y="620" font-size="10" fill="#888">K 维循环中反复 load + mma_sync，最后一次性 store 写回结果</text>
+</svg>

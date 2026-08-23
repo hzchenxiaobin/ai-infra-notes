@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="620" viewBox="0 0 920 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk2" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="620" fill="#fdfcf7"/>
+  <text x="460" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Softmax Arithmetic Intensity：理论 vs 三遍扫描实际</text>
+  <path d="M 260 42 Q 460 50 660 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk2)"/>
+
+  <!-- Left: Theoretical AI (read 1, write 1) -->
+  <text x="230" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e7d4f">理论口径（读 1 次写 1 次，算法下界）</text>
+  <g filter="url(#sk2)">
+    <rect x="40" y="92" width="380" height="220" rx="8" fill="#eaf6ee" stroke="#2e7d4f" stroke-width="1.4"/>
+  </g>
+
+  <!-- FLOPs breakdown -->
+  <text x="60" y="114" font-size="11" font-weight="bold" fill="#2b2b2b">每元素 FLOPs:</text>
+  <g font-size="11" fill="#444">
+    <text x="70" y="134">① x_i - m  (减法)  → 1 FLOP</text>
+    <text x="70" y="152">② exp(...) (指数)  → 1 FLOP</text>
+    <text x="70" y="170">③ / sum    (除法)  → 1 FLOP</text>
+    <text x="70" y="190" font-weight="bold" fill="#2b2b2b">合计: 3 FLOP/元素</text>
+  </g>
+
+  <!-- Bytes breakdown -->
+  <text x="60" y="214" font-size="11" font-weight="bold" fill="#2b2b2b">每元素 Bytes:</text>
+  <g font-size="11" fill="#444">
+    <text x="70" y="234">读 x_i 1 次: 4 bytes</text>
+    <text x="70" y="252">写 y_i 1 次: 4 bytes</text>
+    <text x="70" y="272" font-weight="bold" fill="#2b2b2b">合计: 8 bytes/元素</text>
+  </g>
+
+  <!-- AI result -->
+  <g filter="url(#sk2)">
+    <rect x="60" y="284" width="340" height="22" rx="4" fill="#2e7d4f" opacity="0.15" stroke="#2e7d4f" stroke-width="1"/>
+    <text x="230" y="300" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e7d4f">AI = 3 / 8 = 0.375 FLOP/Byte</text>
+  </g>
+
+  <!-- Right: Three-pass actual AI (read 3, write 1) -->
+  <text x="690" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">三遍扫描实际口径（读 3 次写 1 次）</text>
+  <g filter="url(#sk2)">
+    <rect x="500" y="92" width="380" height="220" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+
+  <!-- Bytes breakdown -->
+  <text x="520" y="114" font-size="11" font-weight="bold" fill="#2b2b2b">每元素实际 Bytes:</text>
+  <g font-size="11" fill="#444">
+    <text x="530" y="134">读 x_i 3 次: 3 × 4 = 12 bytes</text>
+    <text x="530" y="152">写 y_i 1 次: 4 bytes</text>
+    <text x="530" y="170" font-weight="bold" fill="#2b2b2b">合计: 16 bytes/元素</text>
+  </g>
+
+  <!-- FLOPs breakdown -->
+  <text x="520" y="194" font-size="11" font-weight="bold" fill="#2b2b2b">每元素实际 FLOPs:</text>
+  <g font-size="11" fill="#444">
+    <text x="530" y="214">Pass 1: fmaxf 比较       → ~1 FLOP</text>
+    <text x="530" y="232">Pass 2: exp + 累加       → ~2 FLOPs</text>
+    <text x="530" y="250">Pass 3: exp + 乘(inv_sum) → ~2 FLOPs</text>
+    <text x="530" y="270" font-weight="bold" fill="#2b2b2b">合计: ~5 FLOPs</text>
+    <text x="530" y="288" font-size="9" fill="#888" font-style="italic">不含 warp shuffle 固定 5 步 reduce</text>
+  </g>
+
+  <!-- AI result -->
+  <g filter="url(#sk2)">
+    <rect x="520" y="294" width="340" height="22" rx="4" fill="#b03a3a" opacity="0.15" stroke="#b03a3a" stroke-width="1"/>
+    <text x="690" y="310" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">实际 AI ≈ 5 / 16 ≈ 0.31 FLOP/Byte</text>
+  </g>
+
+  <!-- VS divider -->
+  <text x="460" y="200" text-anchor="middle" font-size="16" font-weight="bold" fill="#888">vs</text>
+
+  <!-- Ridge Point comparison -->
+  <g filter="url(#sk2)">
+    <rect x="120" y="340" width="680" height="56" rx="8" fill="#fff3cf" stroke="#e8a838" stroke-width="1.4"/>
+    <text x="460" y="362" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">两个口径都远低于 Ridge Point ≈ 58.45</text>
+    <text x="460" y="382" text-anchor="middle" font-size="11" fill="#444">结论一致：Softmax 是纯 memory-bound —— 优化重点在减少 HBM 读写，而非增加算力</text>
+  </g>
+
+  <!-- Roofline visualization -->
+  <text x="460" y="420" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">Roofline 位置示意</text>
+  <g filter="url(#sk2)">
+    <rect x="80" y="436" width="760" height="140" rx="8" fill="#f4f0e6" stroke="#3a3a3a" stroke-width="1.2"/>
+  </g>
+  <!-- axes -->
+  <path d="M 120 560 L 120 452" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M 120 560 L 800 560" stroke="#3a3a3a" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="100" y="500" text-anchor="middle" font-size="10" fill="#666" transform="rotate(-90 100 500)">Achieved FLOP/s</text>
+  <text x="460" y="578" text-anchor="middle" font-size="10" fill="#666">Arithmetic Intensity (FLOP/Byte, log scale)</text>
+
+  <!-- memory bandwidth line (left part of roofline) -->
+  <path d="M 120 560 L 280 452" stroke="#4a8edb" stroke-width="2" fill="none"/>
+  <text x="175" y="500" font-size="9" fill="#4a8edb" font-style="italic" transform="rotate(-35 175 500)">Memory Bandwidth</text>
+
+  <!-- compute peak line (right part of roofline, horizontal) -->
+  <path d="M 280 452 L 800 452" stroke="#b03a3a" stroke-width="2" fill="none"/>
+  <text x="540" y="445" font-size="9" fill="#b03a3a" font-style="italic">Compute Peak</text>
+
+  <!-- Ridge point -->
+  <circle cx="280" cy="452" r="4" fill="#e8a838" stroke="#3a3a3a" stroke-width="1"/>
+  <text x="290" y="448" font-size="9" fill="#e8a838" font-weight="bold">Ridge Point ≈ 58.45</text>
+
+  <!-- Softmax points -->
+  <circle cx="140" cy="548" r="5" fill="#2e7d4f" stroke="#3a3a3a" stroke-width="1"/>
+  <text x="150" y="552" font-size="10" fill="#2e7d4f" font-weight="bold">理论 AI=0.375</text>
+
+  <circle cx="134" cy="554" r="5" fill="#b03a3a" stroke="#3a3a3a" stroke-width="1"/>
+  <text x="144" y="540" font-size="10" fill="#b03a3a" font-weight="bold">实际 AI≈0.31</text>
+
+  <text x="200" y="540" font-size="9" fill="#888" font-style="italic">← 远在左侧内存带宽区</text>
+</svg>

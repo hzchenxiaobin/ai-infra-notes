@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200">
+  <defs>
+    <marker id="arrW" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#3fb950"/>
+    </marker>
+    <marker id="arrB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#58a6ff"/>
+    </marker>
+    <marker id="arrY" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#d29922"/>
+    </marker>
+    <marker id="arrP" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#a371f7"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="200" fill="#0d1117"/>
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">Nsight 工具使用流程</text>
+
+  <!-- Step 1: nsys -->
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="150" height="70" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+    <text x="75" y="25" text-anchor="middle" font-size="13" fill="#58a6ff" font-weight="bold">1. nsys</text>
+    <text x="75" y="45" text-anchor="middle" font-size="11" fill="#c9d1d9">找到最耗时</text>
+    <text x="75" y="60" text-anchor="middle" font-size="11" fill="#c9d1d9">的 kernel</text>
+  </g>
+
+  <line x1="175" y1="95" x2="205" y2="95" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <!-- Step 2: ncu -->
+  <g transform="translate(210, 60)">
+    <rect x="0" y="0" width="150" height="70" rx="8" fill="#d29922" opacity="0.2" stroke="#d29922" stroke-width="2"/>
+    <text x="75" y="25" text-anchor="middle" font-size="13" fill="#d29922" font-weight="bold">2. ncu</text>
+    <text x="75" y="45" text-anchor="middle" font-size="11" fill="#c9d1d9">深入分析</text>
+    <text x="75" y="60" text-anchor="middle" font-size="11" fill="#c9d1d9">该 kernel</text>
+  </g>
+
+  <line x1="365" y1="95" x2="395" y2="95" stroke="#d29922" stroke-width="2" marker-end="url(#arrY)"/>
+
+  <!-- Step 3: Optimize -->
+  <g transform="translate(400, 60)">
+    <rect x="0" y="0" width="150" height="70" rx="8" fill="#a371f7" opacity="0.2" stroke="#a371f7" stroke-width="2"/>
+    <text x="75" y="25" text-anchor="middle" font-size="13" fill="#a371f7" font-weight="bold">3. 优化</text>
+    <text x="75" y="45" text-anchor="middle" font-size="11" fill="#c9d1d9">根据分析</text>
+    <text x="75" y="60" text-anchor="middle" font-size="11" fill="#c9d1d9">结果优化</text>
+  </g>
+
+  <line x1="555" y1="95" x2="585" y2="95" stroke="#a371f7" stroke-width="2" marker-end="url(#arrP)"/>
+
+  <!-- Step 4: Re-profile -->
+  <g transform="translate(590, 60)">
+    <rect x="0" y="0" width="150" height="70" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
+    <text x="75" y="25" text-anchor="middle" font-size="13" fill="#3fb950" font-weight="bold">4. 重新 Profile</text>
+    <text x="75" y="45" text-anchor="middle" font-size="11" fill="#c9d1d9">重复 profiling</text>
+    <text x="75" y="60" text-anchor="middle" font-size="11" fill="#c9d1d9">验证效果</text>
+  </g>
+
+  <!-- Loop arrow back to step 1 -->
+  <path d="M 665 130 Q 665 170 380 170 Q 95 170 95 130" fill="none" stroke="#3fb950" stroke-width="2" stroke-dasharray="5" marker-end="url(#arrW)"/>
+  <text x="380" y="188" text-anchor="middle" font-size="11" fill="#3fb950">循环迭代</text>
+</svg>

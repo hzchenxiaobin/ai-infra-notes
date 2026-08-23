@@ -10,8 +10,8 @@
 #   - vLLM 默认把长 prompt 一次性 prefill（naive）
 #   - vLLM 0.5+ 与 TensorRT-LLM 原生支持 chunked prefill（长 prompt 分块与 decode 交错）
 #
-# 与 Day2 ContinuousBatcher / Day3 Scheduler 的关系：
-#   - Day2/Day3 的 _schedule_waiting 一次性 prefill 整个 prompt（消耗 prompt_len token budget）
+# 与 Day1 ContinuousBatcher / Day2 Scheduler 的关系：
+#   - Day1/Day2 的 _schedule_waiting 一次性 prefill 整个 prompt（消耗 prompt_len token budget）
 #   - 本文件把 prefill 改成"每轮只消耗 chunk_size token"，多轮完成一个长 prefill
 
 from collections import deque

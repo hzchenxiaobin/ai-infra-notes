@@ -19,9 +19,7 @@
 
 GPU 的峰值算力增长非常快，但显存带宽增长相对缓慢。这导致了一个普遍现象：
 
-```
-峰值算力 >> 显存带宽能支撑的有效算力
-```
+![峰值算力 vs 有效算力](../images/peak_vs_bandwidth.svg)
 
 也就是说，如果数据供应不上，GPU 的计算单元会大量空闲。这种现象称为 **memory-bound**。
 
@@ -76,12 +74,7 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 
 以向量加法 `C[i] = A[i] + B[i]`（float32）为例：
 
-```
-内存读写：读 A[i] (4 bytes) + 读 B[i] (4 bytes) + 写 C[i] (4 bytes) = 12 bytes
-浮点运算：1 次加法 = 1 FLOP
-
-计算强度 AI = 1 FLOP / 12 Bytes ≈ 0.083 FLOP/Byte
-```
+![向量加法计算强度分析](../images/element_wise_ai_calc.svg)
 
 对比 RTX 5090 的 Ridge Point（58.45 FLOP/Byte）：
 
@@ -93,14 +86,9 @@ GPU 有一个**平衡点（Ridge Point）**，由峰值算力和峰值带宽决�
 
 以 `C = A × B`（`M=N=K=4096`，float32）为例：
 
-```
-内存读写：读 A (4096×4096×4 = 64MB) + 读 B (64MB) + 写 C (64MB) = 192MB
-浮点运算：2 × 4096³ ≈ 137 GFLOP
+![GEMM 计算强度分析](../images/gemm_ai_calc.svg)
 
-计算强度 AI = 137 GFLOP / 192 MB ≈ 715 FLOP/Byte
-```
-
-GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)），所以 GEMM 是 **compute-bound**。
+GEMM 的 AI = 683，远大于 Ridge Point 58.45（见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)），所以 GEMM 是 **compute-bound**。
 
 ##### 直观对比表
 
@@ -109,7 +97,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](ht
 | 向量加法 `C=A+B` | 1 | 12 | 0.083 | **Memory** |
 | ReLU `C=max(A,0)` | 1 | 8 | 0.125 | **Memory** |
 | LayerNorm | ~5 | 8（读 4 + 写 4） | ~0.63 | **Memory** |
-| GEMM (4096³) | ~137G | ~192M | ~715 | **Compute** |
+| GEMM (4096³) | ~137G | ~201M | ~683 | **Compute** |
 
 > 💡 "**一句话记忆**：element-wise 操作每读 1 字节数据只做不到 0.1 次运算，而 RTX 5090 需要做 58+ 次运算才能不吃亏（Ridge Point 58.45，见 [硬件参数事实源](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/reference/hardware_specs.md)）。因此 element-wise 永远是 memory-bound，优化重点在于**减少内存访问**而非增加计算。
 
@@ -121,9 +109,9 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](ht
 
 1. **融合（Fusion）**：把多个 element-wise 操作合并成一个 kernel，避免中间结果写回 HBM
  - 例如：`C = relu(A + B)` 融合后只需读 A、B，写 C（12 bytes），做 2 FLOP，AI 从 0.083 提升到 0.167
-1. **Coalesced Access**：确保 warp 内连续线程访问连续地址，最大化带宽利用率
-2. **减少读写**：如 in-place 操作 `A[i] = relu(A[i])` 省去写回新数组
-3. **向量化的内存访问**：使用 `float4` 等，一条指令加载 4 个 float，减少指令开销
+2. **Coalesced Access**：确保 warp 内连续线程访问连续地址，最大化带宽利用率
+3. **减少读写**：如 in-place 操作 `A[i] = relu(A[i])` 省去写回新数组
+4. **向量化的内存访问**：使用 `float4` 等，一条指令加载 4 个 float，减少指令开销
 
 > ⚠️ **常见误区**：不要试图用 Shared Memory 优化 element-wise 操作。因为每个元素只被访问一次，没有数据复用，Shared Memory 不会带来收益。
 
@@ -157,7 +145,7 @@ GEMM 的 AI = 715，远大于 Ridge Point 58.45（见 [硬件参数事实源](ht
 
 **Coalesced Access（合并访问）**：
 - 当一个 warp 的 32 个线程同时访问 global memory 时，如果访问的地址是连续的，硬件会把这些访问合并成少量的 memory transaction。
-- 理想情况下，32 个线程访问 128 字节连续地址（每个 float 4 字节），只需要 1 次 128 字节的事务。
+- 理想情况下，32 个线程访问 128 字节连续地址（每个 float 4 字节），只需要 4 次 32 字节的 sector 事务（共 128 字节）。
 
 **为什么能合并？**
 
@@ -175,10 +163,7 @@ Transaction 的大小由两层因素共同决定：**硬件固定的 sector size
 
 现代 NVIDIA GPU（自 Kepler 架构起）的 L2 cache 以 **32 字节为一个 sector（扇区）**——这是芯片设计时固定的硬件常量，程序员无法改变：
 
-```
-L2 Cache 的最小访问粒度 = 32 字节（1 个 sector）
-L1 Cache line = 128 字节（= 4 个 sector）
-```
+![Cache 最小访问粒度](../images/sector_size.svg)
 
 > 💡 可以把 sector 想象成"运货卡车的固定载重"：不管你寄多少货，卡车一次至少拉 32 字节。
 
@@ -203,7 +188,7 @@ sector 固定 32 字节，但不同类型每个元素占的字节数不同：
 | `float` (FP32) | 4 字节 | 8 个 |
 | `double` (FP64) | 8 字节 | 4 个 |
 
-所以 32 个线程读 32 个连续 float（4 字节）= 128 字节 = 4 个 sector = 1 次 128 字节的 coalesced 事务。
+所以 32 个线程读 32 个连续 float（4 字节）= 128 字节 = 4 个 sector = 4 次 32 字节的事务，带宽利用率 100%。
 
 ##### 具体例子
 
@@ -434,7 +419,7 @@ if (x < height && y < width) {
 
 关键在于：**交换了** `blockIdx.x` **和** `blockIdx.y`**，但** `threadIdx.x` **仍然对应输出地址的连续维度**。
 
-输出矩阵 `out` 同样是行优先存储，形状为 `height × width`。在一个 warp 内：
+输出矩阵 `out` 同样是行优先存储，形状为 `width × height`。在一个 warp 内：
 
 - `y = blockIdx.x * TILE_DIM + threadIdx.y` 固定；
 - `x = blockIdx.y * TILE_DIM + threadIdx.x` 随 `threadIdx.x` 连续递增；
@@ -467,10 +452,7 @@ shared memory 的随机访问延迟很低，因此这里的非连续访问不是
 
 于是得到：
 
-```
-out[(bx*TILE_DIM + b) * height + (by*TILE_DIM + a)]
- = in[(by*TILE_DIM + a) * width + (bx*TILE_DIM + b)]
-```
+![转置地址正确性验证](../images/transpose_equation.svg)
 
 这正是转置的定义 `output[j][i] = input[i][j]`。
 

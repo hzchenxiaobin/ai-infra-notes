@@ -21,7 +21,7 @@
 
 Week 4 围绕一条主线展开：**从理解模型执行，到手写算子，再到用 Triton 与 CUDA 正面对比**。
 
-![Week 4 学习主线](../images/week3_learning_pipeline.svg)
+![Week 4 学习主线](../images/week4_day_roadmap.svg)
 
 | Day | 主题 | 核心产出 | 关键概念 |
 |-----|------|---------|---------|
@@ -98,8 +98,8 @@ Triton 的核心抽象是 **program ≈ CUDA block**——你只写"一个 block
 
 | 算子 | 结论 |
 |------|------|
-| GEMM | 大矩阵（4096）Triton 达 FP16 cuBLAS **97.5%**，2048 达 93.8%；小矩阵（512）仅 42.6%（launch overhead + SM 利用率低） |
-| Softmax | Triton 与 `torch.softmax` 大矩阵基本持平（1.01x），小矩阵更慢（0.52x）——memory-bound 算子上 Triton 无明显优势 |
+| GEMM | 大矩阵（4096）Triton 达 FP16 cuBLAS **97.5%**，2048 达 93.3%；小矩阵（512）仅 40.0%（launch overhead + SM 利用率低） |
+| Softmax | Triton 与 `torch.softmax` 大矩阵基本持平（1.01x），小矩阵更慢（0.50x）——memory-bound 算子上 Triton 无明显优势 |
 | FlashAttention | Triton FA 达官方 CUDA 版 80-90%，代码量 1/7；随 N 增长对 naive attention 加速 2.79x → 8.05x |
 
 **"何时用 Triton 何时必须 CUDA"决策表**（Day 5 核心产出）：
@@ -135,17 +135,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 
 **判定流程**（从理论到验证）：
 
-```
-1. 算 FLOPs 和 Bytes → AI = FLOPs / Bytes
-2. 与 Ridge Point 比较（RTX 5090 ≈ 58.45 FLOP/Byte）
-   - AI < 58.45 → memory-bound
-   - AI > 58.45 → compute-bound
-3. 用 ncu 验证：sm__throughput vs dram__throughput
-4. 经验法则：
-   - element-wise（gelu）/ reduction（softmax/layernorm）→ 几乎总是 memory-bound
-   - 大 GEMM（M,N,K 都大）→ 通常 compute-bound
-   - 小 GEMM（M=1 或某维极小）→ 通常 memory-bound
-```
+![算子 Bound 判定流程](../images/bound_decision_flow.svg)
 
 #### Prefill 阶段算子分类表（B=1, N=1024, d=512）
 
@@ -155,7 +145,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 | QK^T / PV GEMM | ~256 | **Compute** | FlashAttention |
 | Attention Softmax | ~0.4 | **Memory** | FlashAttention（不物化 S/P） |
 | LayerNorm | ~0.6 | **Memory** | Welford + Fusion |
-| GELU | ~0.5 | **Memory** | Epilogue fusion |
+| GELU | ~2 | **Memory** | Epilogue fusion |
 
 #### Decode 阶段算子分类表（B=1, M=1, KV Cache 长度 L=1024）
 
@@ -283,7 +273,7 @@ Softmax 三方对比则验证了 memory-bound 判定：`dram__throughput` 85%+ �
 | LayerNorm 两次 reduce 能随便合并 | 第二次（variance）依赖第一次（mean），必须用 Welford 在线算法才能合并成一次遍历 |
 | Softmax 减 max 只是防溢出 | 还保证数值等价性，是数学恒等变换，不影响结果 |
 | Triton 会取代手写 CUDA | Triton 是"80% 性能 + 20% 代码量"的甜区；TMA/FP8/warp specialization 等新指令、grid 级同步、极致性能仍需 CUDA |
-| Triton 在所有 shape 上都快 | 小 shape 下 launch overhead + autotune 占比大，Triton GEMM 512² 只有 cuBLAS 42.6%，大矩阵才发挥 tiling 优势 |
+| Triton 在所有 shape 上都快 | 小 shape 下 launch overhead + autotune 占比大，Triton GEMM 512² 只有 cuBLAS 40.0%，大矩阵才发挥 tiling 优势 |
 | Fusion 总是有收益 | 融合 kernel 可能增加 register/shared memory 压力降低 occupancy；只有相邻且数据依赖的算子才能融合 |
 | Profiling 是优化最后一步 | Profiling 应该是优化循环的起点和终点——先定位再优化再验证 |
 
@@ -409,48 +399,7 @@ Day 7 我们完成了 Week 4 的系统复盘与算子分类：
 
 ## 📁 本周目录结构
 
-```
-aiinfra/daily/week4/
-├── README.md                      # Week 4 概览
-├── day1/
-│   └── README.md                  # Trace Transformer 推理流程（Prefill/Decode），内嵌 trace_transformer.py 代码
-├── day2/
-│   ├── README.md                  # 手写 Softmax/LayerNorm Kernel
-│   └── kernels/
-│       └── softmax_layernorm.cu   # safe softmax 三遍扫描 + LayerNorm 两次 reduce
-├── day3/
-│   ├── README.md                  # Welford LayerNorm 优化 + GEMM Backward 数据流 + kernel fusion
-│   └── kernels/
-│       └── layernorm_welford.cu   # Welford 单 pass LayerNorm + 三遍扫描基线对比
-├── day4/
-│   ├── README.md                  # Triton 语言专题
-│   └── kernels/
-│       ├── triton_softmax.py      # Triton softmax（~10 行核心）+ benchmark
-│       ├── triton_gemm.py         # Triton GEMM + @triton.autotune + benchmark
-│       └── triton_flash_attention.py  # Triton FA（online softmax + causal）+ benchmark
-├── day5/
-│   ├── README.md                  # 项目推进 —— Triton 三方 Benchmark 与决策表
-│   └── kernels/
-│       └── benchmark_triton.py    # Triton vs CUDA vs PyTorch 三方 benchmark 脚本
-├── day6/
-│   └── README.md                  # Profiling —— ncu / torch.profiler 三方指标对比
-├── day7/
-│   └── README.md                  # 算子分类 + 复盘（本文件）
-└── images/                        # 本周 SVG 插图
-    ├── prefill_vs_decode.svg
-    ├── transformer_dataflow.svg
-    ├── decode_memory_bound.svg
-    ├── safe_softmax_three_pass.svg
-    ├── block_reduce_two_level.svg
-    ├── layernorm_two_reduce.svg
-    ├── triton_program_model.svg
-    ├── triton_load_store_reduce.svg
-    ├── triton_autotune_flow.svg
-    ├── triton_vs_cuda_vs_compile.svg
-    ├── torch_profiler_workflow.svg
-    ├── latency_comparison.svg
-    └── ... （共 24 张）
-```
+![Week 4 目录结构](../images/week4_directory_structure.svg)
 
 ---
 

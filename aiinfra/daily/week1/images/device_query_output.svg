@@ -21,13 +21,13 @@
   <!-- Output lines -->
   <text x="80" y="120" font-family="monospace" font-size="13" fill="#6ab0ff">Detected 1 CUDA Capable device(s)</text>
   <text x="80" y="150" font-family="monospace" font-size="13" fill="#2b2b2b">Device 0: "NVIDIA GeForce RTX 5090"</text>
-  <text x="80" y="180" font-family="monospace" font-size="13" fill="#666666">  CUDA Capability Major/Minor version number:    8.0</text>
-  <text x="80" y="205" font-family="monospace" font-size="13" fill="#666666">  Total amount of global memory:                 40536 MBytes</text>
-  <text x="80" y="230" font-family="monospace" font-size="13" fill="#666666">  (108) Multiprocessors, (64) CUDA Cores/MP:     6912 CUDA Cores</text>
-  <text x="80" y="255" font-family="monospace" font-size="13" fill="#666666">  GPU Max Clock rate:                            1410 MHz</text>
-  <text x="80" y="280" font-family="monospace" font-size="13" fill="#666666">  Memory Clock rate:                             1215 Mhz</text>
-  <text x="80" y="305" font-family="monospace" font-size="13" fill="#666666">  Memory Bus Width:                              5120-bit</text>
-  <text x="80" y="330" font-family="monospace" font-size="13" fill="#666666">  Maximum number of threads per multiprocessor:  2048</text>
+  <text x="80" y="180" font-family="monospace" font-size="13" fill="#666666">  CUDA Capability Major/Minor version number:    12.0</text>
+  <text x="80" y="205" font-family="monospace" font-size="13" fill="#666666">  Total amount of global memory:                 32109 MBytes</text>
+  <text x="80" y="230" font-family="monospace" font-size="13" fill="#666666">  (170) Multiprocessors, (128) CUDA Cores/MP:     21760 CUDA Cores</text>
+  <text x="80" y="255" font-family="monospace" font-size="13" fill="#666666">  GPU Max Clock rate:                            2407 MHz</text>
+  <text x="80" y="280" font-family="monospace" font-size="13" fill="#666666">  Memory Clock rate:                             14001 Mhz</text>
+  <text x="80" y="305" font-family="monospace" font-size="13" fill="#666666">  Memory Bus Width:                              512-bit</text>
+  <text x="80" y="330" font-family="monospace" font-size="13" fill="#666666">  Maximum number of threads per multiprocessor:  1536</text>
   <text x="80" y="355" font-family="monospace" font-size="13" fill="#666666">  Maximum number of threads per block:           1024</text>
   <text x="80" y="380" font-family="monospace" font-size="13" fill="#5cb86c">Result = PASS</text>
   </g>

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="440" viewBox="0 0 880 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="71" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="880" height="440" fill="#fdfcf7"/>
+  <text x="440" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">四框架调度策略 + Chunked Prefill 要点</text>
+  <path d="M 260 42 Q 440 50 620 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Inflight = Continuous -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="800" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5" fill-opacity="0.4"/>
+  </g>
+  <text x="60" y="92" font-size="13" fill="#2b6e9e" font-weight="bold">Inflight Batching = Continuous Batching</text>
+  <text x="400" y="92" font-size="11" fill="#888">（术语不同，本质同一）</text>
+
+  <!-- vLLM -->
+  <g filter="url(#sk)">
+    <rect x="40" y="124" width="390" height="56" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="148" font-size="13" fill="#2e6e2e" font-weight="bold">vLLM</text>
+  <text x="60" y="168" font-size="11" fill="#444">Python 调度，灵活</text>
+
+  <!-- TRT-LLM -->
+  <g filter="url(#sk)">
+    <rect x="450" y="124" width="390" height="56" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="470" y="148" font-size="13" fill="#7a5415" font-weight="bold">TensorRT-LLM</text>
+  <text x="470" y="168" font-size="11" fill="#444">C++ 调度，快但需重编译</text>
+
+  <!-- LightLLM -->
+  <g filter="url(#sk)">
+    <rect x="40" y="192" width="390" height="56" rx="8" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="216" font-size="13" fill="#5a2e7e" font-weight="bold">LightLLM</text>
+  <text x="60" y="236" font-size="11" fill="#444">Token Attention（token 粒度内存池）+ Dynamic Split Fuse</text>
+
+  <!-- SGLang -->
+  <g filter="url(#sk)">
+    <rect x="450" y="192" width="390" height="56" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="470" y="216" font-size="13" fill="#7a2828" font-weight="bold">SGLang</text>
+  <text x="470" y="236" font-size="11" fill="#444">RadixAttention（前缀树管理共享前缀）</text>
+
+  <!-- Chunked Prefill -->
+  <g filter="url(#sk)">
+    <rect x="40" y="264" width="800" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="288" font-size="13" fill="#2b6e9e" font-weight="bold">Chunked Prefill</text>
+  <text x="60" y="310" font-size="11" fill="#444">长 prompt 拆 chunk 与 decode 交错 → TPOT 平滑</text>
+  <text x="60" y="330" font-size="11" fill="#2e6e2e" font-weight="bold">实测：尖峰 2.0ms → 1.2ms，降 40%</text>
+
+  <!-- 底部总结 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="360" width="800" height="56" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
+  </g>
+  <text x="440" y="384" text-anchor="middle" font-size="12" fill="#444" font-weight="bold">差异在实现语言（Python vs C++）与 KV Cache 管理（Paged vs Token Attention）</text>
+  <text x="440" y="404" text-anchor="middle" font-size="11" fill="#888">Chunked Prefill 是跨框架的通用优化，与 Prefix Caching 正交互补</text>
+</svg>

@@ -61,10 +61,7 @@ aux_loss = α × num_experts × Σ (f_i × P_i)
 
 Expert Parallelism：把 `num_experts` 个专家分布到 `ep_size` 个节点上，每节点 `num_experts / ep_size` 个专家。
 
-```
-Node 0: Expert 0, 1        Node 1: Expert 2, 3
-Node 2: Expert 4, 5        Node 3: Expert 6, 7
-```
+![EP 专家分布](../images/ep_expert_distribution.svg)
 
 每个 token 选 top_k 个专家，这些专家可能跨节点 → 需要 **all-to-all** 通信。
 

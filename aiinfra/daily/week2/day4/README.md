@@ -24,7 +24,7 @@ Day 3 已经把 GEMM 从 Naive 一路实测到整合版 + 双缓冲（4096³，R
 | v2 SM Tiling | 13.3% | K 维数据复用 |
 | v3 RegBlk（Day 2） | 30.8% | 累加器驻留寄存器 |
 | v4 +float4 | 64.3% | 向量化加载（最大单步增益） |
-| v5 整合版 | 62.9% | + float4 合并写回 |
+| v5 整合版 | 63.4% | + float4 合并写回 |
 | v6 +同步双缓冲 | 63.8% | 收益在噪声范围内 |
 
 > 💡 **一句话总结**：实测口径下，shuffle 写回与同步双缓冲的收益都在噪声内——"后三层"的真正增量不在这两个机制本身，而在 ① 理解它们何时才有效（shuffle 的主场是 Week 3 Tensor Core fragment 重排；真双缓冲需要 `cp.async`）② 建立 cuBLAS 三基准口径，面试报数字不含糊。
@@ -48,62 +48,28 @@ Day 2 的 Register Blocking 中，每个线程持有 `acc[TM][TN]` 的累加器�
 
 用 `__shfl_sync` 让 warp 内线程交换累加器数据，使得每个线程最终持有连续的输出行，实现合并写回：
 
-```cuda
-// 原始写回：每线程写 TM×TN 的分散块
-for (int i = 0; i < TM; i++)
-    for (int j = 0; j < TN; j++)
-        C[row + i][col + j] = acc[i][j];  // 非合并!
-
-// Shuffle 后写回：warp 协作，每线程写连续的 float4
-// Step 1: 用 shuffle 把 acc 重新分布，使每线程持有连续列
-// Step 2: 用 float4 合并写回
-```
+![Warp Shuffle 写回重排](../images/day4_shuffle_writeback_concept.svg)
 
 ##### 收益
 
 - 写回从非合并 → 合并访问，带宽利用率提升
 - 预估收益 ~5-10%（写回占 GEMM 总 IO 的比例较小）
 
-> ⚠️ **实测口径（Day 3）**：本系列整合版最终**没有用 shuffle**——行优先映射 + float4 写回已接近合并，v4→v5（coalesced 写回）收益在噪声范围内（4096：64.3%→62.9%），全量 shuffle 重排还要额外 64 条 `SHFL` 指令。shuffle 写回真正值得用的场景（Tensor Core fragment 重排、加载/写回映射冲突、小位宽打包）见 Day 3 §3.2。本节的机制理解仍然必要——它是 Week 3 WMMA 写回重排的前置。
+> ⚠️ **实测口径（Day 3）**：本系列整合版最终**没有用 shuffle**——行优先映射 + float4 写回已接近合并，v4→v5（coalesced 写回）收益在噪声范围内（4096：64.3%→63.4%），全量 shuffle 重排还要额外 64 条 `SHFL` 指令。shuffle 写回真正值得用的场景（Tensor Core fragment 重排、加载/写回映射冲突、小位宽打包）见 Day 3 §3.2。本节的机制理解仍然必要——它是 Week 3 WMMA 写回重排的前置。
 
 #### 4.2 Layer 6：Double Buffering
 
 ##### 问题：load/compute 串行
 
 Day 3 的 K 维循环：
-```
-for (k = 0; k < K; k += BK) {
-    load A/B tile to smem;   ← compute 闲置
-    __syncthreads();
-    compute from smem;        ← load 闲置
-    __syncthreads();
-}
-```
+
+![Load/Compute 串行执行](../images/day4_serial_load_compute.svg)
 
 ##### Double Buffer 方案
 
 两份 shared memory buffer 交替，用 `cp.async` 异步加载：
 
-```cuda
-__shared__ float smemA[2][BM][BK];
-__shared__ float smemB[2][BK][BN];
-
-// 预加载 buffer 0
-load_async(smemA[0], smemB[0], k=0);
-wait(); sync();
-
-for (k = BK; k < K; k += BK) {
-    int next = (cur + 1) % 2;
-    // 异步加载下一块到 buffer[next]
-    load_async(smemA[next], smemB[next], k);
-    // 从 buffer[cur] 计算（与加载并行）
-    compute(smemA[cur], smemB[cur]);
-    wait(); sync();
-    cur = next;
-}
-// 计算最后一块
-compute(smemA[cur], smemB[cur]);
-```
+![Double Buffering：Prologue / 主循环 / Epilogue](../images/day4_double_buffer_prologue.svg)
 
 ##### Prologue/Epilogue 处理
 
@@ -119,31 +85,13 @@ compute(smemA[cur], smemB[cur]);
 | 复杂度 | — | prologue/epilogue + 奇偶切换 |
 | 适用 | global→smem 传输是瓶颈 | smem 已紧张时不值得 |
 
-> ⚠️ **实测口径（Day 3 v6）**：`gemm_optimization_series.cu` 的 v6 是**同步**双缓冲（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute，实测与 v5 持平（4096：63.8% vs 62.9%，噪声范围内）。真双缓冲必须用 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝——这是 Week 3 CUTLASS 的核心机制。
+> ⚠️ **实测口径（Day 3 v6）**：`gemm_optimization_series.cu` 的 v6 是**同步**双缓冲（`__syncthreads` 后才计算下一 tile），编译器无法自动重叠 load 与 compute，实测与 v5 持平（4096：63.8% vs 63.4%，噪声范围内）。真双缓冲必须用 `cp.async`（Ampere+）或 TMA（Hopper+）异步拷贝——这是 Week 3 CUTLASS 的核心机制。
 
 #### 4.3 Layer 7：整合版
 
 ##### 全部优化合并
 
-```cuda
-__global__ void integrated_gemm_kernel(
-    const float* A, const float* B, float* C, int M, int N, int K)
-{
-    // Layer 1: Tiling (BM×BN block, BK K-dim)
-    // Layer 2: Register Blocking (TM×TN per thread)
-    // Layer 3: float4 向量化加载
-    // Layer 4: Coalesced writeback
-    // Layer 5: Warp Shuffle 累加优化写回
-    // Layer 6: Double Buffering (cp.async + 2 buffer)
-
-    __shared__ float smemA[2][BM][BK];  // double buffer
-    __shared__ float smemB[2][BK][BN];
-
-    float acc[TM][TN] = {0};  // register blocking
-    // ... K 维循环: load_async + compute + shuffle ...
-    // ... 写回: shuffle + float4 ...
-}
-```
+![整合版 GEMM Kernel：六层优化合一](../images/day4_integrated_kernel_layers.svg)
 
 ##### 性能实测（统一口径：Day 3 实测系列）
 
@@ -306,7 +254,7 @@ ncu --set full --kernel-name regex:integrated_gemm \
 ### 今日总结
 
 1. **Shuffle 写回**：warp 内寄存器转置让写回合并；Day 3 实测整合版未采用（映射选对 + 写回占比小），真正的主场是 Tensor Core fragment 重排（Week 3）
-2. **Double Buffer**：同步实现实测收益在噪声范围内（4096：62.9%→63.8%）；真双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）
+2. **Double Buffer**：同步实现实测收益在噪声范围内（4096：63.4%→63.8%）；真双缓冲需要 `cp.async`（Ampere+）或 TMA（Hopper+）
 3. **三基准口径**：整合版 4096 = FP32 cuBLAS 63.4% / TF32 48.6% / FP16 20.6%——报数字先说基准
 4. **FMA 天花板**：手写 FMA 整合版 43.1 TFLOPS，本周实测到 FP32 cuBLAS 的 ~63%；再往上靠 Tensor Core（Week 3）
 5. **Prologue/Epilogue**：DblBuf 的边界处理——预加载 + 末块计算
@@ -328,7 +276,7 @@ ncu --set full --kernel-name regex:integrated_gemm \
    | L2 Tiling | smem 分块 | +2.7% | 13.3% |
    | L3 RegBlock | 寄存器累加 | +17.5% | 30.8% |
    | L4 float4 | 向量化加载 | +33.5%（最大单步） | 64.3% |
-   | L5 合并写回 | float4 coalesced 写回 | 噪声内 | 62.9% |
+   | L5 合并写回 | float4 coalesced 写回 | 噪声内 | 63.4% |
    | L6 DblBuf | 同步双缓冲 | 噪声内 | 63.8% |
    | L7 整合版 | 全部合并（单文件实测） | — | 63.4% |
 
@@ -368,7 +316,7 @@ ncu --set full --kernel-name regex:integrated_gemm \
    - 问题：Register Blocking 的写回是非合并的（每线程写分散位置）
    - Shuffle 让 warp 内线程交换累加器数据，使每线程最终持有连续列
    - 连续列可用 float4 合并写回，带宽利用率提升
-   - 预估收益 ~5-10%（写回占 GEMM IO 比例较小）；Day 3 实测本系列未采用——行优先映射 + float4 写回已接近合并（v4→v5 在噪声内：64.3%→62.9%），shuffle 的主场是 Tensor Core fragment 重排（Week 3）
+   - 预估收益 ~5-10%（写回占 GEMM IO 比例较小）；Day 3 实测本系列未采用——行优先映射 + float4 写回已接近合并（v4→v5 在噪声内：64.3%→63.4%），shuffle 的主场是 Tensor Core fragment 重排（Week 3）
 
    </details>
 

@@ -9,9 +9,9 @@
 3. 理解三级数据复用层次：Global Memory → Shared Memory → Register
 4. 掌握 Register 使用量的计算方法
 5. 理解 Double Buffering（软件流水线）的原理
-6. 实现 Register Blocking GEMM，性能达到 cuBLAS 30%+（4096 实测 30.8%；本周终态为 Day 3 整合版的 ~63%）
+6. 实现 Register Blocking GEMM，性能达到 cuBLAS 30%+（4096 实测 32.3%；本周终态为 Day 3 整合版的 ~63%）
 
-> 💡 **为什么重要**：Register Blocking 是「如何优化 GEMM 到 cuBLAS 80%」这一顶级面试题的关键转折点，它把性能从 Shared Memory Tiling 的 ~13% 提升到 ~31%（4096 实测 30.8%），是从入门到进阶的分水岭。
+> 💡 **为什么重要**：Register Blocking 是「如何优化 GEMM 到 cuBLAS 80%」这一顶级面试题的关键转折点，它把性能从 Shared Memory Tiling 的 ~13% 提升到 ~31%（4096 实测 32.3%），是从入门到进阶的分水岭。
 
 ---
 
@@ -89,20 +89,6 @@ __global__ void gemmNaive(const float* A, const float* B, float* C, int M, int N
 #### 2.4 线程到输出 tile 的二维映射
 
 ![Thread Tile 二维映射](../images/thread_tile_mapping.svg)
-
-```
-输出 tile (BM×BN = 128×128) 被划分为 (BM/TM)×(BN/TN) = 16×16 = 256 个 thread tile
-每个 thread tile = TM×TN = 8×8
-
-threadIdx.x 的范围: 0 ~ 255
-threadRow = threadIdx.x / (BN / TN) = threadIdx.x / 16 → 范围 0~15
-threadCol = threadIdx.x % (BN / TN) = threadIdx.x % 16 → 范围 0~15
-
-线程(threadRow, threadCol) 负责输出的行范围:
- [blockIdx.y * BM + threadRow * TM, blockIdx.y * BM + (threadRow+1) * TM)
-负责输出的列范围:
- [blockIdx.x * BN + threadCol * TN, blockIdx.x * BN + (threadCol+1) * TN)
-```
 
 #### 2.5 Double Buffering（软件流水线）
 
@@ -422,7 +408,7 @@ nvcc -Xptxas -v -o register_gemm kernels/register_blocking_gemm.cu -O3 -arch=sm_
 
 - [ ] 能解释 Register Blocking 相比纯 Shared Memory Tiling 多了一级数据复用（Global→Shared→Register）
 - [ ] 能计算 register usage：TM×TN 个累加器 + TM + TN 个加载寄存器 + 索引变量
-- [ ] 代码编译运行正确，性能达到 cuBLAS 30%+（4096 矩阵，实测 30.8%）
+- [ ] 代码编译运行正确，性能达到 cuBLAS 30%+（4096 矩阵，实测 32.3%）
 - [ ] 能画出数据流图：Global Memory → Shared Memory → Register → FMA 累加
 - [ ] 能计算每 Block 线程数 = (BM/TM) × (BN/TN)
 - [ ] 能解释 Double Buffering 的原理（用计算掩盖数据传输延迟）

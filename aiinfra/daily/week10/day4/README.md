@@ -19,17 +19,7 @@
 
 面试官问 GPU 基础不是为了背书，而是验证你**是否真正理解了底层原理**：
 
-```
-"会写 kernel" ≠ "理解 GPU"
-  会写 kernel → 能完成任务（工程师水平）
-  理解 GPU → 能解释为什么快/慢、能做 trade-off（专家水平）
-
-面试官的逻辑：
-  问 Occupancy → 你是否知道寄存器/shared mem 对性能的影响
-  问 Bank Conflict → 你是否真正写过 shared memory kernel
-  问 Roofline → 你是否会用数据驱动的方式分析瓶颈
-  问 GEMM 优化路径 → 你是否理解从 1% 到 80% 每步优化的原理
-```
+![面试为什么考基础：会写 kernel ≠ 理解 GPU](../images/interview_understanding_gpu.svg)
 
 | 层级 | 问题示例 | 考察点 |
 |------|---------|--------|
@@ -69,9 +59,7 @@
 
 ##### Occupancy
 
-```
-Occupancy = active_warp / max_warp_per_SM
-```
+![Occupancy 公式与影响因素](../images/occupancy_formula.svg)
 
 | 降低 Occupancy 的原因 | 机制 |
 |---------------------|------|
@@ -97,11 +85,7 @@ Occupancy = active_warp / max_warp_per_SM
 
 Shared Memory 分为 32 个 bank（对应 warp 内 32 thread）。同一 warp 的多个 thread 同时访问同一 bank → 串行化（bank conflict）。
 
-```
-无 conflict：thread i 访问 bank i（连续地址）→ 1 次完成
-2-way conflict：2 个 thread 访问同一 bank → 2 次完成
-32-way conflict：32 个 thread 访问同一 bank → 32 次完成（最差）
-```
+![Bank Conflict：无冲突 / 2-way / 32-way](../images/bank_conflict_diagram.svg)
 
 避免方法：① padding（`s_A[BM][BK+1]`，加一列打乱 bank 对齐）② 向量化访问 ③ 连续 thread 访问不同 bank。
 
@@ -168,11 +152,7 @@ nvcc --default-stream per-thread
 
 ##### RTX 5090 关键参数
 
-```
-FP32 峰值: 104.75 TFLOPS
-显存带宽: 1.792 TB/s (GDDR7)
-Ridge Point = 104.75 / 1.792 ≈ 58.45 FLOP/Byte
-```
+![RTX 5090 Ridge Point 计算](../images/rtx5090_ridge_point.svg)
 
 ##### Kernel 瓶颈分析三步
 

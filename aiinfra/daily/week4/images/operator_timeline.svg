@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="31" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#fdfcf7"/>
+  <text x="430" y="32" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Transformer 单层算子时间线（CUDA Time）</text>
+  <text x="430" y="50" text-anchor="middle" font-size="11" fill="#666">Total 268 μs · 预估口径（待 GPU 环境实测回填）</text>
+  <path d="M 280 56 Q 430 64 580 56" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== X-axis ===== -->
+  <path d="M 220 380 L 780 380" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="500" y="410" text-anchor="middle" font-size="11" fill="#444">CUDA Time (μs) →</text>
+  <!-- grid lines -->
+  <path d="M 220 380 L 220 90" stroke="#3a3a3a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 305 380 L 305 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="305" y="396" text-anchor="middle" font-size="9" fill="#999">20</text>
+  <path d="M 390 380 L 390 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="390" y="396" text-anchor="middle" font-size="9" fill="#999">40</text>
+  <path d="M 475 380 L 475 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="475" y="396" text-anchor="middle" font-size="9" fill="#999">60</text>
+  <path d="M 560 380 L 560 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="560" y="396" text-anchor="middle" font-size="9" fill="#999">80</text>
+  <path d="M 645 380 L 645 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="645" y="396" text-anchor="middle" font-size="9" fill="#999">100</text>
+  <path d="M 730 380 L 730 90" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="3 3" filter="url(#sk)"/>
+  <text x="730" y="396" text-anchor="middle" font-size="9" fill="#999">120</text>
+
+  <!-- ===== Bars (sorted by time desc) ===== -->
+  <!-- scale: 4.25 px per μs, bar height=28, gap=12 -->
+
+  <!-- 1. gemm (QKV projection) 120μs 45% -->
+  <g filter="url(#sk)"><rect x="220" y="100" width="510" height="28" rx="3" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="210" y="119" text-anchor="end" font-size="11" fill="#2b2b2b">gemm (QKV proj)</text>
+  <text x="738" y="119" font-size="10" fill="#1b5e8c" font-weight="bold">120 μs · 45%</text>
+
+  <!-- 2. gemm (QK^T) 40μs 15% -->
+  <g filter="url(#sk)"><rect x="220" y="140" width="170" height="28" rx="3" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="210" y="159" text-anchor="end" font-size="11" fill="#2b2b2b">gemm (QK^T)</text>
+  <text x="398" y="159" font-size="10" fill="#1b5e8c" font-weight="bold">40 μs · 15%</text>
+
+  <!-- 3. gemm (PV) 35μs 13% -->
+  <g filter="url(#sk)"><rect x="220" y="180" width="149" height="28" rx="3" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.3"/></g>
+  <text x="210" y="199" text-anchor="end" font-size="11" fill="#2b2b2b">gemm (PV)</text>
+  <text x="377" y="199" font-size="10" fill="#1b5e8c" font-weight="bold">35 μs · 13%</text>
+
+  <!-- 4. layernorm 25μs 9% -->
+  <g filter="url(#sk)"><rect x="220" y="220" width="106" height="28" rx="3" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="210" y="239" text-anchor="end" font-size="11" fill="#2b2b2b">layernorm</text>
+  <text x="334" y="239" font-size="10" fill="#c98a2b" font-weight="bold">25 μs · 9%</text>
+
+  <!-- 5. layernorm 25μs 9% -->
+  <g filter="url(#sk)"><rect x="220" y="260" width="106" height="28" rx="3" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.3"/></g>
+  <text x="210" y="279" text-anchor="end" font-size="11" fill="#2b2b2b">layernorm</text>
+  <text x="334" y="279" font-size="10" fill="#c98a2b" font-weight="bold">25 μs · 9%</text>
+
+  <!-- 6. softmax 15μs 6% -->
+  <g filter="url(#sk)"><rect x="220" y="300" width="64" height="28" rx="3" fill="#e57373" opacity="0.65" stroke="#c64545" stroke-width="1.3"/></g>
+  <text x="210" y="319" text-anchor="end" font-size="11" fill="#2b2b2b">softmax</text>
+  <text x="292" y="319" font-size="10" fill="#c64545" font-weight="bold">15 μs · 6%</text>
+
+  <!-- 7. gelu 8μs 3% -->
+  <g filter="url(#sk)"><rect x="220" y="340" width="34" height="28" rx="3" fill="#8b949e" opacity="0.65" stroke="#6a737d" stroke-width="1.3"/></g>
+  <text x="210" y="359" text-anchor="end" font-size="11" fill="#2b2b2b">gelu</text>
+  <text x="262" y="359" font-size="10" fill="#6a737d" font-weight="bold">8 μs · 3%</text>
+
+  <!-- ===== Legend ===== -->
+  <g filter="url(#sk)"><rect x="780" y="100" width="14" height="14" fill="#4a8edb" opacity="0.65" stroke="#2b6e9e" stroke-width="1.2"/></g>
+  <text x="800" y="112" font-size="10" fill="#2b2b2b">GEMM</text>
+  <text x="800" y="124" font-size="8" fill="#999">Compute-bound</text>
+  <g filter="url(#sk)"><rect x="780" y="136" width="14" height="14" fill="#e8a838" opacity="0.65" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="800" y="148" font-size="10" fill="#2b2b2b">LayerNorm</text>
+  <text x="800" y="160" font-size="8" fill="#999">Memory-bound</text>
+  <g filter="url(#sk)"><rect x="780" y="172" width="14" height="14" fill="#e57373" opacity="0.65" stroke="#c64545" stroke-width="1.2"/></g>
+  <text x="800" y="184" font-size="10" fill="#2b2b2b">Softmax</text>
+  <g filter="url(#sk)"><rect x="780" y="196" width="14" height="14" fill="#8b949e" opacity="0.65" stroke="#6a737d" stroke-width="1.2"/></g>
+  <text x="800" y="208" font-size="10" fill="#2b2b2b">GELU</text>
+
+  <!-- ===== Key insight ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="392" width="640" height="40" rx="8" fill="#fffdf3" stroke="#3a3a3a" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="80" y="412" font-size="10" fill="#1b5e8c" font-weight="bold">GEMM 合计 73%（195 μs）→ Compute-bound，优化靠 Tensor Core + tiling</text>
+  <text x="80" y="426" font-size="10" fill="#c98a2b">Softmax/LayerNorm/GELU 合计 27%（73 μs）→ Memory-bound，优化靠 fusion</text>
+</svg>

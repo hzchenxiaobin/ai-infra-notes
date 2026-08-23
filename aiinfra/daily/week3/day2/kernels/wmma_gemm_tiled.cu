@@ -5,8 +5,9 @@
 //
 // ⚠️ 本文件由 README 内嵌代码补全而来（host 端初始化/验证/计时为补齐部分），
 //    本机无 GPU，未编译实测——实测数据待 GPU 环境回填。
-//    README 中的性能表（4096: tiled 3.0738ms / TF32 cuBLAS 42.5%）为此前
-//    RTX 5090 实测留档。
+//    README 中的性能表（4096: tiled 8.12ms / TF32 cuBLAS 16%）为此前
+//    RTX 5090 实测留档（注意：该数据为修复前代码的实测，存在 warp 偏移
+//    和线程索引 bug，修复后性能与精度均会变化）。
 
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
@@ -37,7 +38,7 @@ using namespace nvcuda;
 
 __global__ void wmma_gemm_naive_kernel(
     const __half* __restrict__ A,    // M×K, row-major
-    const __half* __restrict__ B,    // K×N, row-major（本文件统一用 row-major + 转置读 smem）
+    const __half* __restrict__ B,    // K×N, row-major（本文件统一用 row-major）
     float* __restrict__ C,           // M×N, row-major
     int M, int N, int K)
 {
@@ -46,15 +47,15 @@ __global__ void wmma_gemm_naive_kernel(
     if (warpM * WMMA_M >= M || warpN * WMMA_N >= N) return;
 
     wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> a_frag;
-    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::col_major> b_frag;
+    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, __half, wmma::row_major> b_frag;
     wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> c_frag;
     wmma::fill_fragment(c_frag, 0.0f);
 
     for (int k = 0; k < K; k += WMMA_K) {
         const __half* tileA = A + warpM * WMMA_M * K + k;
-        const __half* tileB = B + k + warpN * WMMA_N * K;   // B col-major 视角: ld = K
+        const __half* tileB = B + k * N + warpN * WMMA_N;   // B row-major: ld = N
         wmma::load_matrix_sync(a_frag, tileA, K);
-        wmma::load_matrix_sync(b_frag, tileB, K);
+        wmma::load_matrix_sync(b_frag, tileB, N);
         wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
     }
 
@@ -84,11 +85,11 @@ __global__ void wmma_gemm_tiled_kernel(
 
     // 声明 WMMA fragment
     // 每个 warp 计算 32×32 = 2×2 个 16×16 MMA
-    // 注意：A 在 smem 中 row-major；B 从 row-major 的 global 加载，
-    //   在 smem 中按 B[k][n] 存放（k 行 n 列），对 matrix_b 而言是
-    //   col-major 布局（ld = BN + SMEM_PAD），故 b_frag 声明为 col_major
+    // 注意：A 在 smem 中 row-major；B 从 row-major global 加载，
+    //   在 smem 中按 B[k][n] 存放（k 行 n 列，即 row-major），
+    //   故 b_frag 声明为 row_major，与 smem 布局一致
     wmma::fragment<wmma::matrix_a, 16, 16, 16, __half, wmma::row_major> a_frag[2];
-    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::col_major> b_frag[2];
+    wmma::fragment<wmma::matrix_b, 16, 16, 16, __half, wmma::row_major> b_frag[2];
     wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag[2][2];
 
     // 初始化累加器
@@ -115,7 +116,7 @@ __global__ void wmma_gemm_tiled_kernel(
             }
         }
         // B tile: BK×BN = 16×64, 4 warp 各加载 16 列
-        // 按 B[k][n] 存放（k 行 n 列），即 matrix_b 的 col-major 布局
+        // 按 B[k][n] 存放（k 行 n 列，即 row-major），b_frag 声明为 row_major
         int load_col = warp_id * 16;
         for (int i = threadIdx.x % WARP_SIZE; i < BK; i += WARP_SIZE) {
             for (int j = 0; j < 16; j++) {
@@ -132,12 +133,12 @@ __global__ void wmma_gemm_tiled_kernel(
         #pragma unroll
         for (int i = 0; i < 2; i++) {
             wmma::load_matrix_sync(a_frag[i],
-                &smemA[warp_y * 16 + i * 16][0], BK + SMEM_PAD);
+                &smemA[warp_y * WM + i * 16][0], BK + SMEM_PAD);
         }
         #pragma unroll
         for (int j = 0; j < 2; j++) {
             wmma::load_matrix_sync(b_frag[j],
-                &smemB[0][warp_x * 16 + j * 16], BN + SMEM_PAD);
+                &smemB[0][warp_x * WN + j * 16], BN + SMEM_PAD);
         }
         #pragma unroll
         for (int i = 0; i < 2; i++) {
@@ -154,8 +155,8 @@ __global__ void wmma_gemm_tiled_kernel(
     for (int i = 0; i < 2; i++) {
         #pragma unroll
         for (int j = 0; j < 2; j++) {
-            int row = block_row + warp_y * 16 + i * 16;
-            int col = block_col + warp_x * 16 + j * 16;
+            int row = block_row + warp_y * WM + i * 16;
+            int col = block_col + warp_x * WN + j * 16;
             if (row < M && col < N) {
                 wmma::store_matrix_sync(C + row * N + col,
                     c_frag[i][j], N, wmma::mem_row_major);

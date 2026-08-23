@@ -27,7 +27,7 @@ class PDConfig:
     prefill_tput: float = 300.0    # tokens/s per GPU（prefill, compute-bound）
     decode_tput: float = 400.0     # tokens/s per GPU（decode, memory-bound）
     colocated_decode_penalty: float = 2.5  # colocated 下 decode 被 prefill 干扰的 TPOT 退化系数
-    kv_bytes_per_token: int = 524_288  # LLaMA-7B MHA, 524 KB/token
+    kv_bytes_per_token: int = 524_288  # LLaMA-7B MHA, 512 KB/token
     rdma_bw_gbs: float = 100.0     # RDMA 跨节点带宽（GB/s）
     avg_prompt_len: int = 512
     avg_decode_len: int = 64

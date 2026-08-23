@@ -125,9 +125,7 @@ class Scheduler:
         budget.tokens -= victim.seq.total_len()
         budget.blocks -= released_blocks
         victim.seq.status = SequenceStatus.WAITING
-        victim.seq.output_len = 0          # recomputation：丢弃 KV cache
         self.used_blocks -= released_blocks
-        victim.seq.kv_blocks = 0
         print(f"    ⚡ PREEMPT request {victim.request_id} "
               f"(recomputation, 释放 {released_blocks} blocks)")
         return victim

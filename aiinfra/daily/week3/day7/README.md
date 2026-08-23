@@ -49,21 +49,7 @@ Day 7 是纯粹的复盘日，不引入新概念。本周 Day 1-6 的知识量�
 
 ### 从 31% 到 96% 的优化链（2026-08-09 实测）
 
-```
-31% (Day1 naive, 实测)
-  │ 加 smem tiling（但本版实现有问题，反而更慢）
-  ↓
-16% (Day2 tiled, 实测 — 退步!)
-  │ 用 mma.sync 替代 WMMA（但 tiling 粒度太细，仍退步）
-  ↓
-8.8% (Day3 mma.sync, 实测 — 继续退步!)
-  │ 加 cp.async double buffer（真正重叠 load/compute）
-  ↓
-96% (Day5 dbuf, 实测 — 大幅反超!)
-  │ 加 K分割并行 + swizzle + 3-stage pipeline + auto-tuning
-  ↓
-95% (CUTLASS)
-```
+![从 31% 到 96% 的优化链](../images/week3_day7_perf_evolution.svg)
 
 > ⚠️ **实测教训**：Day2→Day3 性能不升反降，说明"理论优化点"（smem tiling、mma.sync）若无配套的工程实现（合理 tiling 粒度、多 warp 协作、bank conflict 消除），反而会引入额外开销。Day5 的 cp.async double buffer 才真正实现了 load/compute 重叠，性能从 8.8% 跃升至 96%。**优化不是堆砌技术，而是每一步都要实测验证**。
 
@@ -148,15 +134,7 @@ __global__ void wmma_gemm_kernel(
 
 面试官说："画/写 WMMA fragment 的生命周期，解释每一步。"
 
-```
-声明 → fill_fragment → [load_matrix_sync → mma_sync]* → store_matrix_sync
-  │         │                    │                  │              │
-  │         │                    │                  │              └─ 写回 memory
-  │         │                    │                  └─ D = A×B + C
-  │         │                    └─ 从 smem/gmem 加载到 fragment
-  │         └─ 初始化累加器为 0
-  └─ 编译时确定形状/精度/布局
-```
+![WMMA Fragment 生命周期](../images/week3_day7_fragment_lifecycle.svg)
 
 关键点：
 1. **声明**是编译时的——`wmma::fragment<matrix_a, 16, 16, 16, __half, row_major>`
@@ -220,10 +198,7 @@ compute_mma(smem[cur]);
 
 ##### FP16 vs BF16 的核心区别
 
-```
-FP16:  [1|5|10]  指数 5 位 → 范围 ±65504（易溢出）
-BF16:  [1|8|7]   指数 8 位 → 范围 ±3.4e38（同 FP32，不溢出）
-```
+![FP16 vs BF16 位布局](../images/week3_day7_fp16_vs_bf16.svg)
 
 - **FP16 尾数多（10 vs 7）**：精度更高，但范围小，大模型训练易溢出
 - **BF16 指数多（8 vs 5）**：范围同 FP32，不溢出，但精度低
@@ -289,13 +264,7 @@ BF16:  [1|8|7]   指数 8 位 → 范围 ±3.4e38（同 FP32，不溢出）
 <details>
 <summary>答案</summary>
 
-```
-30% → 42%：shared memory tiling（减少HBM访问）[实测]
-42% → ~50%：mma.sync + ldmatrix（消除WMMA开销）[预估]
-~50% → ~55%：double buffer + cp.async（重叠load/compute）[预估]
-~55% → 85%：K分割并行 + swizzle + 3-stage pipeline
-85% → 95%：auto-tuning + epilogue fusion + 寄存器精算
-```
+![手写 GEMM 优化链](../images/week3_day7_optimization_steps.svg)
 
 每一步的 profiling 验证（Tensor Core 利用率为推理值）：
 - Tensor Core 利用率：~25% → ~40% → ~50% → ~55% → 80% → 91%

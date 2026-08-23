@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="510" viewBox="0 0 760 510" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="510" fill="#fdfcf7"/>
+  <text x="380" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">FP8 GEMM 混合精度策略：FP8 输入 → FP32 累加 → FP16 输出</text>
+  <path d="M 190 42 Q 380 50 570 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <text x="380" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">① 输入（FP8 E4M3）</text>
+  <g filter="url(#sk)">
+    <rect x="110" y="90" width="230" height="72" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="225" y="120" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">A (FP8 E4M3)</text>
+  <text x="225" y="142" text-anchor="middle" font-size="11" fill="#444">= A_fp16 / scale_A</text>
+
+  <g filter="url(#sk)">
+    <rect x="420" y="90" width="230" height="72" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="535" y="120" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">B (FP8 E4M3)</text>
+  <text x="535" y="142" text-anchor="middle" font-size="11" fill="#444">= B_fp16 / scale_B</text>
+
+  <path d="M 225 162 L 225 196" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 535 162 L 535 196" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <text x="380" y="216" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">② Tensor Core 累加（FP32，硬件原生）</text>
+  <g filter="url(#sk)">
+    <rect x="150" y="226" width="460" height="68" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="254" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">acc_fp32 += A_fp8 @ B_fp8</text>
+  <text x="380" y="278" text-anchor="middle" font-size="11" fill="#666">mma.sync：FP8 自动转 FP32 乘加，无需手动反量化</text>
+
+  <path d="M 380 294 L 380 348" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <text x="470" y="318" font-size="11" fill="#7a5415" font-weight="bold">epilogue</text>
+  <text x="470" y="334" font-size="11" fill="#7a5415" font-weight="bold">× scale_A × scale_B</text>
+
+  <text x="380" y="366" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">③ 输出</text>
+  <g filter="url(#sk)">
+    <rect x="210" y="376" width="340" height="68" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  </g>
+  <text x="380" y="404" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">D (FP16 或 FP32)</text>
+  <text x="380" y="428" text-anchor="middle" font-size="11" fill="#666">D_fp16 = acc_fp32 × scale_A × scale_B</text>
+
+  <g filter="url(#sk)">
+    <rect x="80" y="458" width="600" height="40" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="5 3"/>
+  </g>
+  <text x="380" y="476" text-anchor="middle" font-size="11" fill="#b03a3a" font-weight="bold">Scale 不进 Tensor Core，只在 epilogue 乘 → 不影响 FP8 mma 算力</text>
+  <text x="380" y="491" text-anchor="middle" font-size="10" fill="#888">Hopper+ 原生 FP8 mma.sync，算力 2× FP16</text>
+</svg>

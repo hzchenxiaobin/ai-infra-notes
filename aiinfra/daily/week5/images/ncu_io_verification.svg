@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="400" viewBox="0 0 820 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arg" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
+  </defs>
+  <rect width="820" height="400" fill="#fdfcf7"/>
+  <text x="410" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">ncu 验证：理论 FA IO 随 N 线性增长</text>
+  <path d="M 250 42 Q 410 50 570 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Theory table -->
+  <g filter="url(#sk)">
+    <rect x="40" y="60" width="740" height="190" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="84" font-size="13" font-weight="bold" fill="#2b6e9e">理论 FA IO = 4 × N × d × 4B（d=64, FP32）</text>
+
+  <g font-size="12" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="112">N=512:</text>
+    <text x="140" y="112">4×512×64×4 = 512 KB</text>
+    <text x="340" y="112" fill="#4a8e4a" font-weight="bold">1x</text>
+  </g>
+  <rect x="400" y="102" width="40" height="14" rx="3" fill="#4a8edb" opacity="0.5" filter="url(#sk)"/>
+
+  <g font-size="12" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="138">N=1024:</text>
+    <text x="140" y="138">4×1024×64×4 = 1 MB</text>
+    <text x="340" y="138" fill="#4a8e4a" font-weight="bold">2x</text>
+  </g>
+  <rect x="400" y="128" width="80" height="14" rx="3" fill="#4a8edb" opacity="0.5" filter="url(#sk)"/>
+
+  <g font-size="12" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="164">N=2048:</text>
+    <text x="140" y="164">4×2048×64×4 = 2 MB</text>
+    <text x="340" y="164" fill="#4a8e4a" font-weight="bold">4x</text>
+  </g>
+  <rect x="400" y="154" width="160" height="14" rx="3" fill="#4a8edb" opacity="0.5" filter="url(#sk)"/>
+
+  <g font-size="12" fill="#2b2b2b" font-family="monospace">
+    <text x="60" y="190">N=4096:</text>
+    <text x="140" y="190">4×4096×64×4 = 4 MB</text>
+    <text x="340" y="190" fill="#4a8e4a" font-weight="bold">8x</text>
+  </g>
+  <rect x="400" y="180" width="320" height="14" rx="3" fill="#4a8edb" opacity="0.5" filter="url(#sk)"/>
+
+  <text x="60" y="226" font-size="11" fill="#666">N 翻倍 → IO 翻倍（线性增长，非 N² 的 4 倍）</text>
+
+  <!-- Verification: pass -->
+  <g filter="url(#sk)">
+    <rect x="40" y="270" width="360" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="296" font-size="12" fill="#2e6e2e" font-weight="bold">实测 HBM IO 随 N 线性增长</text>
+  <text x="60" y="316" font-size="11" fill="#666">N 翻倍 → IO 翻倍（2x）</text>
+  <path d="M 280 308 L 300 308" stroke="#4a8e4a" stroke-width="1.6" fill="none" marker-end="url(#arg)" filter="url(#sk)"/>
+  <text x="310" y="312" font-size="15" fill="#2e6e2e" font-weight="bold">O(Nd) ✓</text>
+
+  <!-- Verification: fail -->
+  <g filter="url(#sk)">
+    <rect x="420" y="270" width="360" height="80" rx="8" fill="#fdecec" stroke="#b03a3a" stroke-width="1.4"/>
+  </g>
+  <text x="440" y="296" font-size="12" fill="#b03a3a" font-weight="bold">实测 HBM IO 随 N² 增长</text>
+  <text x="440" y="316" font-size="11" fill="#666">N 翻倍 → IO 4x</text>
+  <path d="M 660 308 L 680 308" stroke="#b03a3a" stroke-width="1.6" fill="none" marker-end="url(#arr)" filter="url(#sk)"/>
+  <text x="690" y="312" font-size="15" fill="#b03a3a" font-weight="bold">O(N²) ✗</text>
+  <text x="440" y="338" font-size="10" fill="#888">有 bug</text>
+</svg>

@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 830" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+
+  <rect width="820" height="830" fill="#fdfcf7"/>
+
+  <text x="410" y="34" text-anchor="middle" font-size="18" fill="#2b2b2b" font-weight="bold">Week 10 目录结构</text>
+  <path d="M 270 44 Q 410 52 550 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="410" y="58" text-anchor="middle" font-size="11" fill="#888">README · 7 天目录 · kernels · images（SVG 架构图）</text>
+
+  <!-- Tree lines -->
+  <g stroke="#c8c4b8" stroke-width="1.3" fill="none">
+    <!-- Level 1 main vertical (root → images/) -->
+    <line x1="52" y1="95" x2="52" y2="679" filter="url(#sk)"/>
+
+    <!-- Level 1 horizontals -->
+    <line x1="52" y1="107" x2="68" y2="107"/>
+    <line x1="52" y1="129" x2="68" y2="129"/>
+    <line x1="52" y1="217" x2="68" y2="217"/>
+    <line x1="52" y1="327" x2="68" y2="327"/>
+    <line x1="52" y1="393" x2="68" y2="393"/>
+    <line x1="52" y1="459" x2="68" y2="459"/>
+    <line x1="52" y1="525" x2="68" y2="525"/>
+    <line x1="52" y1="591" x2="68" y2="591"/>
+    <line x1="52" y1="679" x2="68" y2="679"/>
+
+    <!-- Level 2 verticals (day folders + images) -->
+    <line x1="84" y1="139" x2="84" y2="173"/>
+    <line x1="84" y1="227" x2="84" y2="261"/>
+    <line x1="84" y1="337" x2="84" y2="371"/>
+    <line x1="84" y1="403" x2="84" y2="437"/>
+    <line x1="84" y1="469" x2="84" y2="503"/>
+    <line x1="84" y1="535" x2="84" y2="569"/>
+    <line x1="84" y1="601" x2="84" y2="635"/>
+    <line x1="84" y1="689" x2="84" y2="789"/>
+
+    <!-- Level 2 horizontals -->
+    <line x1="84" y1="151" x2="100" y2="151"/>
+    <line x1="84" y1="173" x2="100" y2="173"/>
+    <line x1="84" y1="239" x2="100" y2="239"/>
+    <line x1="84" y1="261" x2="100" y2="261"/>
+    <line x1="84" y1="349" x2="100" y2="349"/>
+    <line x1="84" y1="371" x2="100" y2="371"/>
+    <line x1="84" y1="415" x2="100" y2="415"/>
+    <line x1="84" y1="437" x2="100" y2="437"/>
+    <line x1="84" y1="481" x2="100" y2="481"/>
+    <line x1="84" y1="503" x2="100" y2="503"/>
+    <line x1="84" y1="547" x2="100" y2="547"/>
+    <line x1="84" y1="569" x2="100" y2="569"/>
+    <line x1="84" y1="613" x2="100" y2="613"/>
+    <line x1="84" y1="635" x2="100" y2="635"/>
+    <line x1="84" y1="701" x2="100" y2="701"/>
+    <line x1="84" y1="723" x2="100" y2="723"/>
+    <line x1="84" y1="745" x2="100" y2="745"/>
+    <line x1="84" y1="767" x2="100" y2="767"/>
+    <line x1="84" y1="789" x2="100" y2="789"/>
+
+    <!-- Level 3 verticals (kernels/ with children) -->
+    <line x1="116" y1="183" x2="116" y2="195"/>
+    <line x1="116" y1="271" x2="116" y2="305"/>
+    <line x1="116" y1="645" x2="116" y2="657"/>
+
+    <!-- Level 3 horizontals -->
+    <line x1="116" y1="195" x2="132" y2="195"/>
+    <line x1="116" y1="283" x2="132" y2="283"/>
+    <line x1="116" y1="305" x2="132" y2="305"/>
+    <line x1="116" y1="657" x2="132" y2="657"/>
+  </g>
+
+  <!-- Tree text -->
+  <g font-size="12">
+    <!-- Root -->
+    <text x="40" y="89" fill="#c98a2b" font-weight="bold">aiinfra/daily/week10/</text>
+
+    <!-- Level 1: README.md -->
+    <text x="76" y="111" fill="#2b2b2b">README.md</text>
+    <text x="260" y="111" fill="#999" font-size="10">周总览</text>
+
+    <!-- day1/ -->
+    <text x="76" y="133" fill="#4a8edb" font-weight="bold">day1/</text>
+    <text x="260" y="133" fill="#999" font-size="10">整合全部自定义 Kernel</text>
+    <text x="108" y="155" fill="#2b2b2b">README.md</text>
+    <text x="290" y="155" fill="#999" font-size="10">整合全部自定义 Kernel</text>
+    <text x="108" y="177" fill="#4a8edb">kernels/</text>
+    <text x="140" y="199" fill="#2b2b2b">custom_ops_module.py</text>
+    <text x="340" y="199" fill="#999" font-size="10">C++ Extension 封装</text>
+
+    <!-- day2/ -->
+    <text x="76" y="221" fill="#4a8edb" font-weight="bold">day2/</text>
+    <text x="260" y="221" fill="#999" font-size="10">系统联调（六步分层验证）</text>
+    <text x="108" y="243" fill="#2b2b2b">README.md</text>
+    <text x="290" y="243" fill="#999" font-size="10">系统联调（六步分层验证）</text>
+    <text x="108" y="265" fill="#4a8edb">kernels/</text>
+    <text x="140" y="287" fill="#2b2b2b">mini_engine_v2.py</text>
+    <text x="340" y="287" fill="#999" font-size="10">Mini 引擎 v2（真整合）</text>
+    <text x="140" y="309" fill="#2b2b2b">stability_test.py</text>
+    <text x="340" y="309" fill="#999" font-size="10">稳定性测试</text>
+
+    <!-- day3/ -->
+    <text x="76" y="331" fill="#4a8edb" font-weight="bold">day3/</text>
+    <text x="260" y="331" fill="#999" font-size="10">项目文档完善</text>
+    <text x="108" y="353" fill="#2b2b2b">README.md</text>
+    <text x="290" y="353" fill="#999" font-size="10">项目文档完善</text>
+    <text x="108" y="375" fill="#4a8edb">kernels/</text>
+
+    <!-- day4/ -->
+    <text x="76" y="397" fill="#4a8edb" font-weight="bold">day4/</text>
+    <text x="260" y="397" fill="#999" font-size="10">高频面试题基础篇</text>
+    <text x="108" y="419" fill="#2b2b2b">README.md</text>
+    <text x="290" y="419" fill="#999" font-size="10">高频面试题基础篇</text>
+    <text x="108" y="441" fill="#4a8edb">kernels/</text>
+
+    <!-- day5/ -->
+    <text x="76" y="463" fill="#4a8edb" font-weight="bold">day5/</text>
+    <text x="260" y="463" fill="#999" font-size="10">Mock 面试</text>
+    <text x="108" y="485" fill="#2b2b2b">README.md</text>
+    <text x="290" y="485" fill="#999" font-size="10">Mock 面试</text>
+    <text x="108" y="507" fill="#4a8edb">kernels/</text>
+
+    <!-- day6/ -->
+    <text x="76" y="529" fill="#4a8edb" font-weight="bold">day6/</text>
+    <text x="260" y="529" fill="#999" font-size="10">诊断流程实战剧本 + 手撕限时清单</text>
+    <text x="108" y="551" fill="#2b2b2b">README.md</text>
+    <text x="290" y="551" fill="#999" font-size="10">诊断流程实战剧本 + 手撕限时清单</text>
+    <text x="108" y="573" fill="#4a8edb">kernels/</text>
+
+    <!-- day7/ -->
+    <text x="76" y="595" fill="#4a8edb" font-weight="bold">day7/</text>
+    <text x="260" y="595" fill="#999" font-size="10">最终复盘（本文件）</text>
+    <text x="108" y="617" fill="#2b2b2b">README.md</text>
+    <text x="290" y="617" fill="#999" font-size="10">最终复盘（本文件）</text>
+    <text x="108" y="639" fill="#4a8edb">kernels/</text>
+    <text x="140" y="661" fill="#2b2b2b">week10_summary.py</text>
+    <text x="340" y="661" fill="#999" font-size="10">10 周总复盘自测</text>
+
+    <!-- images/ -->
+    <text x="76" y="683" fill="#8e5db8" font-weight="bold">images/</text>
+    <text x="260" y="683" fill="#999" font-size="10">Week 10 + 10 周总览 SVG</text>
+    <text x="108" y="705" fill="#8e5db8">week10_knowledge_map.svg</text>
+    <text x="108" y="727" fill="#8e5db8">ten_week_roadmap.svg</text>
+    <text x="108" y="749" fill="#8e5db8">ten_week_capability_map.svg</text>
+    <text x="108" y="771" fill="#8e5db8">future_roadmap.svg</text>
+    <text x="108" y="793" fill="#aaa" font-style="italic">... (Day1–6 架构图等)</text>
+  </g>
+</svg>

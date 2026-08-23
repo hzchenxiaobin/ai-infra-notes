@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" viewBox="0 0 720 300" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="720" height="300" fill="#fdfcf7"/>
+  <text x="360" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Occupancy（占用率）</text>
+  <path d="M 220 42 Q 360 50 500 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Formula box ===== -->
+  <g filter="url(#sk)">
+    <rect x="120" y="68" width="480" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+  </g>
+  <text x="360" y="106" text-anchor="middle" font-size="16" font-family="monospace" fill="#2b6e9e" font-weight="bold">Occupancy = active_warp / max_warp_per_SM</text>
+
+  <!-- ===== Two sides ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="150" width="290" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/>
+  </g>
+  <text x="205" y="174" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">分子：active_warp</text>
+  <text x="80" y="196" font-size="11" fill="#444">当前 SM 上实际运行的 warp 数</text>
+  <text x="80" y="214" font-size="11" fill="#888">受寄存器/shared mem/block size 限制</text>
+
+  <g filter="url(#sk)">
+    <rect x="370" y="150" width="290" height="80" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+  <text x="515" y="174" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">分母：max_warp_per_SM</text>
+  <text x="390" y="196" font-size="11" fill="#444">SM 硬件支持的最大 warp 数</text>
+  <text x="390" y="214" font-size="11" fill="#888">由 GPU 架构决定（如 5090: 48 warp/SM）</text>
+
+  <!-- ===== Warning ===== -->
+  <g filter="url(#sk)">
+    <rect x="60" y="248" width="600" height="40" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1" stroke-dasharray="5 3"/>
+  </g>
+  <text x="360" y="272" text-anchor="middle" font-size="11" fill="#7a5415">⚠️ 不是越高越好 —— 100% occupancy 但寄存器 spilling 反而更慢</text>
+</svg>

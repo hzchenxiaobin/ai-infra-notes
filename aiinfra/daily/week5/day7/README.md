@@ -89,7 +89,7 @@ __global__ void flash_attention_forward_kernel(
     float m_i[Br];     // running max
     float l_i[Br];     // running sum
     float acc[Br][d];  // running output accumulator
-    for (int i = 0; i < Br; i++) { m_i[i] = -INFINITY; l_i[i] = 0.0f; }
+    for (int i = 0; i < Br; i++) { m_i[i] = -INFINITY; l_i[i] = 0.0f; for (int k = 0; k < d; k++) acc[i][k] = 0.0f; }
 
     // 3. 加载 Q tile 到 smem (只加载一次, K/V 循环复用)
     for (int i = tid; i < Br; i += blockDim.x) {
@@ -138,8 +138,8 @@ __global__ void flash_attention_forward_kernel(
             l_new[i] = l_i[i] * expf(m_i[i] - m_new[i]) + rowsum;
         }
 
-        // 4d. 公式 3: O = (O * exp(m - m_new) * l_i + P @ V) / l_new
-        //      先更新已有 acc, 再加 P @ V
+        // 4d. 公式 3: acc = acc * exp(m - m_new) + P @ V (末尾归一化: 最终 O = acc / l)
+        //      先 rescale 已有 acc, 再加 P @ V
         for (int i = 0; i < Br; i++) {
             float scale = expf(m_i[i] - m_new[i]);
             for (int k = 0; k < d; k++) {
@@ -215,10 +215,10 @@ __global__ void flash_attention_forward_kernel(
 <details>
 <summary>答案</summary>
 
-- **严格界**：`Θ(N²d²/M)`，M = SRAM 大小
+- **严格界**：`Θ(N²d²/M + Nd)`，M = SRAM 大小
 - **简化**：取 `M = Θ(Nd)`（SRAM 能放下 Q/K/V tile），则 IO = `Θ(Nd)`
 - **对比**：标准 Attention 是 `Θ(N² + Nd)` ≈ `Θ(N²)`，FA 是 `Θ(Nd)`，当 d << N 时（d=64, N=4096）FA 快 `N/d + 1 ≈ 65x`
-- **推导**：Q 只读一次（Nd），K/V 读 `N/Br` 次（每次 Bc 行 = `N/Br × Bc×d = Nd`），总 IO = `Nd + Nd + Nd = O(Nd)`
+- **推导**：Q 读一次（Nd）；K/V 每 Q-block 遍历全部 N/Bc 个 tile，共 N/Br 个 Q-block → K/V 各 `N²d/Br`；写 O 一次（Nd）。总 IO = `2Nd + 2N²d/Br`，取 `Br ≈ M/(3d)`（SRAM 约束）得 `Θ(N²d²/M + Nd)`，M=Θ(Nd) 时为 `Θ(Nd)`
 
 </details>
 
@@ -307,7 +307,7 @@ __global__ void flash_attention_forward_kernel(
 <details>
 <summary>答案</summary>
 
-- **整块跳过**：KV tile 完全在 Q 行上三角（`kv_start > qo_row + Br`）时，直接 `continue` 跳过整个 tile
+- **整块跳过**：KV tile 完全在 Q 行上三角（`kv_start >= qo_offset + Br`）时，直接 `continue` 跳过整个 tile
 - **对角线 tile**：逐元素判断 `if (kv_col > q_row) S[i][j] = -1e30f`（exp 后为 0）
 - **完全在下三角**：无需 mask，全速计算
 - **收益**：causal mask 后计算量减半（上三角跳过），但 tiling 访存结构不变

@@ -36,14 +36,7 @@ Day 1 介绍了 PP 的基本概念：模型按层切分到 P 个 stage，micro-b
 
 GPipe（2019）是最简单的 PP 调度：先做全部 forward，再做全部 backward。
 
-```
-Stage 1: F1 F2 F3 F4 · · · · · · · · B4 B3 B2 B1
-Stage 2: · F1 F2 F3 F4 · · · · · · B4 B3 B2 B1 ·
-Stage 3: · · F1 F2 F3 F4 · · · · B4 B3 B2 B1 · ·
-Stage 4: · · · F1 F2 F3 F4 · · B4 B3 B2 B1 · · ·
-         ↑   ↑               ↑   ↑
-         填充气泡            排空气泡  反向气泡
-```
+![GPipe 调度时间线](images/gpipe_schedule_timeline.svg)
 
 - M=4 个 micro-batch，P=4 个 stage
 - **填充气泡**（fill bubble）：前 P-1 步，后面的 stage 在等前面的 forward 到来
@@ -66,12 +59,7 @@ M=4, 每份 activation 1GB → 4GB。大模型下显存压力大。
 
 1F1B（One Forward One Backward）在 forward 第 i 个 micro-batch 后，尽快做 backward 第 i-(P-1) 个 micro-batch：
 
-```
-Stage 1: F1 F2 F3 F4 B1 · B2 · B3 · B4 ·
-Stage 2: · F1 F2 F3 B1 F4 B2 · B3 · B4 ·
-Stage 3: · · F1 F2 B1 F3 B2 F4 B3 · B4 ·
-Stage 4: · · · F1 B1 F2 B2 F3 B3 F4 B4 ·
-```
+![1F1B 调度时间线](images/1f1b_schedule_timeline.svg)
 
 ##### 显存优势
 
@@ -126,10 +114,7 @@ bubble = (P - 1) / (M + P - 1)
 
 把每个 stage 的层再分成 V 个 **virtual stage**（sub-stage），让通信更频繁、bubble 更小：
 
-```
-V=2 时, 每个 device 负责两段层 (stage_0 和 stage_P)
-forward 顺序: device0 的 stage_0 → device1 的 stage_0 → ... → device0 的 stage_P → ...
-```
+![Interleaved 1F1B 虚拟流水线](images/interleaved_virtual_pipeline.svg)
 
 ##### Bubble 公式
 
@@ -162,12 +147,7 @@ V=1 退化为标准 1F1B（`(P-1)/(M+P-1)`）。V 越大 bubble 越小，但通�
 
 推理 DP **几乎无通信**——每个 worker 独立处理不同请求，只在前端做负载均衡：
 
-```
-Request 1 → GPU 0 (完整模型)
-Request 2 → GPU 1 (完整模型)
-Request 3 → GPU 0
-Request 4 → GPU 1
-```
+![推理 DP 请求路由](images/dp_request_routing.svg)
 
 ##### DP + TP/PP 组合
 

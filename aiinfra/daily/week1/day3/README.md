@@ -57,15 +57,7 @@ find / -name "deviceQuery" 2>/dev/null | head -5
 
 常见 Samples 分类：
 
-```
-cuda/samples/
-├── 0_Introduction/ # 入门示例
-├── 1_Utilities/ # 工具类（deviceQuery, bandwidthTest 等）
-├── 2_Concepts_and_Techniques/ # 技术概念
-├── 3_CUDA_Features/ # CUDA 特性
-├── 4_CUDA_Libraries/ # CUDA 库
-└── 5_Simulations/ # 物理模拟
-```
+![CUDA Samples 目录结构](../images/cuda_samples_structure.svg)
 
 `deviceQuery` 的核心代码只有两行：
 

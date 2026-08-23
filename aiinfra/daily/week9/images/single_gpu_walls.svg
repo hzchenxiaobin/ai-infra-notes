@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 340" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="340" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">单卡撞墙的三个维度</text>
+  <path d="M 250 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ============ Wall 1: 显存墙 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="370" height="72" rx="6" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="56" y="86" font-size="13" font-weight="bold" fill="#c04050">① 显存墙</text>
+  <text x="56" y="106" font-size="11" fill="#444">70B FP16 权重 ≈ 140GB</text>
+  <text x="56" y="124" font-size="11" fill="#444">A100 80GB / H100 80GB 单卡放不下</text>
+  <path d="M 420 100 L 478 100" stroke="#888" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="488" y="72" width="250" height="56" rx="6" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.3"/>
+  </g>
+  <text x="613" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#3a5a8a">TP / PP</text>
+  <text x="613" y="116" text-anchor="middle" font-size="11" fill="#3a5a8a">把权重切到多卡</text>
+
+  <!-- ============ Wall 2: 吞吐墙 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="148" width="370" height="72" rx="6" fill="#fef3e2" stroke="#d97706" stroke-width="1.3"/>
+  </g>
+  <text x="56" y="170" font-size="13" font-weight="bold" fill="#d97706">② 吞吐墙</text>
+  <text x="56" y="190" font-size="11" fill="#444">单卡 decode ~2000 tok/s 有上限</text>
+  <text x="56" y="208" font-size="11" fill="#444">高 QPS 场景不够</text>
+  <path d="M 420 184 L 478 184" stroke="#888" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="488" y="156" width="250" height="56" rx="6" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="613" y="180" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">DP</text>
+  <text x="613" y="200" text-anchor="middle" font-size="11" fill="#2e6e2e">多副本并行处理请求</text>
+
+  <!-- ============ Wall 3: 延迟墙 ============ -->
+  <g filter="url(#sk)">
+    <rect x="40" y="232" width="370" height="72" rx="6" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="56" y="254" font-size="13" font-weight="bold" fill="#c04050">③ 延迟墙</text>
+  <text x="56" y="274" font-size="11" fill="#444">单层大 GEMM 受单卡算力限制</text>
+  <text x="56" y="292" font-size="11" fill="#444">prefill 长 prompt 时延迟高</text>
+  <path d="M 420 268 L 478 268" stroke="#888" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="488" y="240" width="250" height="56" rx="6" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.3"/>
+  </g>
+  <text x="613" y="264" text-anchor="middle" font-size="13" font-weight="bold" fill="#3a5a8a">TP</text>
+  <text x="613" y="284" text-anchor="middle" font-size="11" fill="#3a5a8a">拆 GEMM 到多卡，降单步延迟</text>
+
+  <text x="830" y="180" font-size="10" fill="#888" text-anchor="middle">TP 解决"放不下 + 单层慢"</text>
+  <text x="830" y="196" font-size="10" fill="#888" text-anchor="middle">DP 解决"吞吐不够"</text>
+</svg>

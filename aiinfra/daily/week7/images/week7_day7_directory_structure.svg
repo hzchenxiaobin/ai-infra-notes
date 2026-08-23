@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="76" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="900" height="460" fill="#fdfcf7"/>
+  <text x="450" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Week 7 目录结构</text>
+  <path d="M 280 42 Q 450 50 620 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- root -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="820" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="56" y="88" font-size="12" font-weight="bold" fill="#2b6e9e" font-family="monospace">aiinfra/daily/week7/</text>
+
+  <!-- day1 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="110" width="820" height="36" rx="6" fill="#fffdf3" stroke="#d0d0d0" stroke-width="1"/>
+  </g>
+  <text x="56" y="134" font-size="11" fill="#444" font-family="monospace">├── README.md</text>
+  <text x="220" y="134" font-size="10" fill="#888"># 周概览</text>
+
+  <!-- day1 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="152" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="176" font-size="11" fill="#444" font-family="monospace">├── day1/kernels/continuous_batcher.py</text>
+  <text x="440" y="176" font-size="10" fill="#2e6e2e"># Continuous Batching 实现</text>
+
+  <!-- day2 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="194" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="218" font-size="11" fill="#444" font-family="monospace">├── day2/kernels/vllm_scheduler_analyzer.py</text>
+  <text x="460" y="218" font-size="10" fill="#2e6e2e"># vLLM Scheduler 教学复刻</text>
+
+  <!-- day3 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="236" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="260" font-size="11" fill="#444" font-family="monospace">├── day3/kernels/chunked_prefill_simulator.py</text>
+  <text x="480" y="260" font-size="10" fill="#2e6e2e"># Chunked Prefill 延迟模拟</text>
+
+  <!-- day4 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="278" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="302" font-size="11" fill="#444" font-family="monospace">├── day4/kernels/prefix_cache_engine.py</text>
+  <text x="440" y="302" font-size="10" fill="#2e6e2e"># Prefix Caching 推理引擎</text>
+
+  <!-- day5 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="320" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="344" font-size="11" fill="#444" font-family="monospace">├── day5/kernels/mini_engine_v1.py</text>
+  <text x="400" y="344" font-size="10" fill="#2e6e2e"># Mini 推理引擎 v1（多请求并发）</text>
+
+  <!-- day6 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="362" width="820" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="386" font-size="11" fill="#444" font-family="monospace">├── day6/kernels/pd_disaggregated_simulator.py</text>
+  <text x="500" y="386" font-size="10" fill="#2e6e2e"># PD 分离模拟器</text>
+
+  <!-- day7 file -->
+  <g filter="url(#sk)">
+    <rect x="40" y="404" width="820" height="36" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1" fill-opacity="0.3"/>
+  </g>
+  <text x="56" y="428" font-size="11" fill="#444" font-family="monospace">├── day7/kernels/week7_summary.py  +  images/</text>
+  <text x="460" y="428" font-size="10" fill="#7a5415"># 总结自测 + SVG 插图</text>
+</svg>

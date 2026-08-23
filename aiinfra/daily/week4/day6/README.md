@@ -10,7 +10,7 @@
 4. 掌握 `torch.profiler` 的算子时间线分析，能看到单次 forward 的算子级耗时分布<br>
 5. 能根据 profiling 数据选择最优实现——"这个算子是 memory-bound，用 Triton 自动 tiling 够了"<br>
 
-> 💡 **为什么重要**：Day 5 的 benchmark 给了"谁快谁慢"，今天用 ncu 打开看"为什么快为什么慢"。面试中被问"Triton 为什么比你的手写 CUDA 快 2x"，不能回答"可能是因为..."，必须用 ncu 数据说话。
+> 💡 **为什么重要**：Day 5 的 benchmark 给了"谁快谁慢"，今天用 ncu 打开看"为什么快为什么慢"。面试中被问"Triton 为什么比你的手写 CUDA 快 3x"，不能回答"可能是因为..."，必须用 ncu 数据说话。
 
 ---
 
@@ -76,17 +76,7 @@ prof.export_chrome_trace("trace.json")
 
 ##### 预期时间线（Transformer 单层）
 
-```text
-Operator                           CUDA Time (μs)  占比
-gemm (QKV projection)              120             45%
-layernorm                          25              9%
-gemm (QK^T)                        40              15%
-softmax                            15              6%
-gemm (PV)                          35              13%
-layernorm                          25              9%
-gelu                               8               3%
-Total                              268             100%
-```
+![Transformer 单层算子时间线（CUDA Time）](../images/operator_timeline.svg)
 
 ##### 算子分类（Day 1 的回顾）
 
@@ -145,14 +135,7 @@ launch__registers_per_thread \
 
 预期输出（RTX 5090, 4096×4096）：
 
-```text
-gemm_kernel_<hash>, 4096 x 4096
-  sm__pipe_tensor_op_hmma_cycles_active    68.5%    ← Triton 用了 Tensor Core!
-  sm__throughput             72.0%
-  dram__throughput           38.2%
-  sm__warps_active           58.0%
-  launch__registers_per_thread 72
-```
+![ncu 指标：Triton GEMM（4096×4096, FP16）](../images/ncu_triton_gemm_metrics.svg)
 
 ##### 对比 Week 2 手写 CUDA
 
@@ -164,14 +147,7 @@ ncu --set full --kernel-name regex:gemm_cuda_kernel \
     python3 ../day5/kernels/benchmark_triton.py
 ```
 
-```text
-gemm_cuda_kernel, 4096 x 4096
-  sm__pipe_tensor_op_hmma_cycles_active    0.0%     ← FMA 实现，没用 Tensor Core
-  sm__throughput             45.0%
-  dram__throughput           70.0%    ← 带宽 bound
-  sm__warps_active           45.0%
-  launch__registers_per_thread ~40    ← FMA kernel 寄存器少，瓶颈不在寄存器
-```
+![ncu 指标：手写 CUDA GEMM（4096×4096, FP16）](../images/ncu_cuda_gemm_metrics.svg)
 
 ##### 分析
 
@@ -261,7 +237,7 @@ TRITON_KERNEL_DUMP=1 TRITON_DUMP_DIR=./triton_dump python3 kernels/triton_gemm.p
 
 Day 6 我们用 ncu 和 `torch.profiler` 深入分析了三方 kernel 的内部指标：
 
-1. **Triton 为什么比手写 CUDA 快 2x**：自动用 Tensor Core（68% vs 0%，手写版是 FMA）+ 更高 occupancy（58% vs ~45%）+ 自动 smem tiling
+1. **Triton 为什么比手写 CUDA 快 3x**：自动用 Tensor Core（68% vs 0%，手写版是 FMA）+ 更高 occupancy（58% vs ~45%）+ 自动 smem tiling
 2. **Softmax/LayerNorm 的 profiling**：memory-bound，`dram__throughput` 85%+，优化方向是 fusion
 3. **torch.profiler 时间线**：GEMM 占 ~45%，Softmax/LayerNorm 各 ~9%，fusion 可省 memory-bound 算子的 HBM 访问
 4. **Triton 的自动优化**：autotune 选最优 tiling + `tl.dot` 自动生成 `mma.sync` + 自动 double buffer
@@ -273,7 +249,7 @@ Day 6 我们用 ncu 和 `torch.profiler` 深入分析了三方 kernel 的内部�
 
 ### 面试要点
 
-1. **Triton GEMM 为什么比手写 CUDA 快 2x？用 ncu 数据解释**
+1. **Triton GEMM 为什么比手写 CUDA 快 3x？用 ncu 数据解释**
 
    <details>
    <summary>点击查看答案</summary>

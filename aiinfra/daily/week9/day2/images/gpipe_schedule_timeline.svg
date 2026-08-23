@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="360" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">GPipe 调度时间线</text>
+  <path d="M 270 44 Q 430 52 590 44" stroke="#2b2b2b" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="430" y="60" text-anchor="middle" font-size="11" fill="#888">M=4 micro-batch, P=4 stage · 先全 forward 再全 backward · bubble = (P−1)/(M+P−1) = 3/7 ≈ 43%</text>
+  <g font-size="9.5" fill="#aaa" text-anchor="middle">
+    <text x="121.0" y="98">t1</text>
+    <text x="163.0" y="98">t2</text>
+    <text x="205.0" y="98">t3</text>
+    <text x="247.0" y="98">t4</text>
+    <text x="289.0" y="98">t5</text>
+    <text x="331.0" y="98">t6</text>
+    <text x="373.0" y="98">t7</text>
+    <text x="415.0" y="98">t8</text>
+    <text x="457.0" y="98">t9</text>
+    <text x="499.0" y="98">t10</text>
+    <text x="541.0" y="98">t11</text>
+    <text x="583.0" y="98">t12</text>
+    <text x="625.0" y="98">t13</text>
+    <text x="667.0" y="98">t14</text>
+    <text x="709.0" y="98">t15</text>
+    <text x="751.0" y="98">t16</text>
+  </g>
+  <text x="90" y="132.0" text-anchor="end" font-size="12" font-weight="bold" fill="#444">Stage 1</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="110" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="121.0" y="132.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F1</text>
+    <rect x="142" y="110" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="163.0" y="132.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F2</text>
+    <rect x="184" y="110" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="205.0" y="132.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F3</text>
+    <rect x="226" y="110" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="247.0" y="132.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F4</text>
+    <rect x="268" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="289.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="310" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="331.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="352" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="373.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="394" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="415.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="436" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="457.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="478" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="499.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="520" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="541.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="562" y="110" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="583.0" y="132.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="604" y="110" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="625.0" y="132.0" text-anchor="middle" font-size="11" fill="#b85450">B4</text>
+    <rect x="646" y="110" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="667.0" y="132.0" text-anchor="middle" font-size="11" fill="#b85450">B3</text>
+    <rect x="688" y="110" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="709.0" y="132.0" text-anchor="middle" font-size="11" fill="#b85450">B2</text>
+    <rect x="730" y="110" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="751.0" y="132.0" text-anchor="middle" font-size="11" fill="#b85450">B1</text>
+  </g>
+  <text x="90" y="172.0" text-anchor="end" font-size="12" font-weight="bold" fill="#444">Stage 2</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="121.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="142" y="150" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="163.0" y="172.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F1</text>
+    <rect x="184" y="150" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="205.0" y="172.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F2</text>
+    <rect x="226" y="150" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="247.0" y="172.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F3</text>
+    <rect x="268" y="150" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="289.0" y="172.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F4</text>
+    <rect x="310" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="331.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="352" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="373.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="394" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="415.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="436" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="457.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="478" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="499.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="520" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="541.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="562" y="150" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="583.0" y="172.0" text-anchor="middle" font-size="11" fill="#b85450">B4</text>
+    <rect x="604" y="150" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="625.0" y="172.0" text-anchor="middle" font-size="11" fill="#b85450">B3</text>
+    <rect x="646" y="150" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="667.0" y="172.0" text-anchor="middle" font-size="11" fill="#b85450">B2</text>
+    <rect x="688" y="150" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="709.0" y="172.0" text-anchor="middle" font-size="11" fill="#b85450">B1</text>
+    <rect x="730" y="150" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="751.0" y="172.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+  </g>
+  <text x="90" y="212.0" text-anchor="end" font-size="12" font-weight="bold" fill="#444">Stage 3</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="121.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="142" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="163.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="184" y="190" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="205.0" y="212.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F1</text>
+    <rect x="226" y="190" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="247.0" y="212.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F2</text>
+    <rect x="268" y="190" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="289.0" y="212.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F3</text>
+    <rect x="310" y="190" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="331.0" y="212.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F4</text>
+    <rect x="352" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="373.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="394" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="415.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="436" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="457.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="478" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="499.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="520" y="190" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="541.0" y="212.0" text-anchor="middle" font-size="11" fill="#b85450">B4</text>
+    <rect x="562" y="190" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="583.0" y="212.0" text-anchor="middle" font-size="11" fill="#b85450">B3</text>
+    <rect x="604" y="190" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="625.0" y="212.0" text-anchor="middle" font-size="11" fill="#b85450">B2</text>
+    <rect x="646" y="190" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="667.0" y="212.0" text-anchor="middle" font-size="11" fill="#b85450">B1</text>
+    <rect x="688" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="709.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="730" y="190" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="751.0" y="212.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+  </g>
+  <text x="90" y="252.0" text-anchor="end" font-size="12" font-weight="bold" fill="#444">Stage 4</text>
+  <g filter="url(#sk)">
+    <rect x="100" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="121.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="142" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="163.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="184" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="205.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="226" y="230" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="247.0" y="252.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F1</text>
+    <rect x="268" y="230" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="289.0" y="252.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F2</text>
+    <rect x="310" y="230" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="331.0" y="252.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F3</text>
+    <rect x="352" y="230" width="42" height="36" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="373.0" y="252.0" text-anchor="middle" font-size="11" fill="#2b6e9e">F4</text>
+    <rect x="394" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="415.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="436" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="457.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="478" y="230" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="499.0" y="252.0" text-anchor="middle" font-size="11" fill="#b85450">B4</text>
+    <rect x="520" y="230" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="541.0" y="252.0" text-anchor="middle" font-size="11" fill="#b85450">B3</text>
+    <rect x="562" y="230" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="583.0" y="252.0" text-anchor="middle" font-size="11" fill="#b85450">B2</text>
+    <rect x="604" y="230" width="42" height="36" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3" filter="url(#sk)"/>
+    <text x="625.0" y="252.0" text-anchor="middle" font-size="11" fill="#b85450">B1</text>
+    <rect x="646" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="667.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="688" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="709.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+    <rect x="730" y="230" width="42" height="36" rx="4" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 2" filter="url(#sk)"/>
+    <text x="751.0" y="252.0" text-anchor="middle" font-size="11" fill="#b8b0a0">·</text>
+  </g>
+  <path d="M 100 278 L 100 283 L 268 283 L 268 278" stroke="#5a5a5a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="184.0" y="298" text-anchor="middle" font-size="11" fill="#5a5a5a">填充气泡 fill (P−1)</text>
+  <path d="M 604 278 L 604 283 L 772 283 L 772 278" stroke="#5a5a5a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <text x="688.0" y="298" text-anchor="middle" font-size="11" fill="#5a5a5a">排空/反向 drain (P−1)</text>
+  <rect x="280" y="318" width="22" height="14" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1" filter="url(#sk)"/>
+  <text x="308" y="329" font-size="11" fill="#2b6e9e">F = forward</text>
+  <rect x="380" y="318" width="22" height="14" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1" filter="url(#sk)"/>
+  <text x="408" y="329" font-size="11" fill="#b85450">B = backward</text>
+  <rect x="480" y="318" width="22" height="14" rx="3" fill="#f4f1ea" stroke="#d8d4c8" stroke-width="1" filter="url(#sk)"/>
+  <text x="508" y="329" font-size="11" fill="#b8b0a0">· = 气泡 idle</text>
+  <text x="430" y="348" text-anchor="middle" font-size="11" fill="#888">稳态显存：每 stage 驻留 M 份 activation（GPipe 显存 = O(M)）</text>
+</svg>

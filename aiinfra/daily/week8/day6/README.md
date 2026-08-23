@@ -35,17 +35,12 @@ nsys profile --trace cuda -o graph_profile python3 kernels/bench_graph.py
 ##### 预期时间线
 
 **Eager**：
-```
-[CPU: launch kernel 1] [CPU: launch kernel 2] ... [CPU: launch kernel 30]
-[GAP] [GPU: exec kernel 1] [GAP] [GPU: exec kernel 2] ... 
-       ↑ 5-10μs gap per kernel
-```
+
+![Eager：nsys 时间线 — kernel 间 launch gap](../images/eager_launch_gap_timeline.svg)
 
 **Graph**：
-```
-[CPU: graph replay]  ← 一次 launch
-[GPU: exec kernel 1 → 2 → 3 → ... → 30]  ← 无 gap
-```
+
+![Graph：nsys 时间线 — 1 次 replay，无 gap](../images/graph_replay_timeline.svg)
 
 ##### 实测数据（微观演示模型）
 
@@ -61,19 +56,21 @@ Speedup: 2.16x
 
 > ✅ **实测验证**：launch overhead 占 53.7%（超过一半！），CUDA Graph 后 speedup 2.16x。完全验证了"decode 路径 launch 占 50%+, Graph 后 -50%"的说法。
 
-##### 引擎级 TBT 对比（MiniEngineV1Graph，待实测回填）
+##### 引擎级 TBT 对比（MiniEngineV1Graph）
 
 ```bash
 python3 kernels/bench_graph.py   # 4 请求并发，对比引擎 decode 路径 eager vs graph
 ```
 
-> ⚠️ **数字诚信**：引擎级 TBT 数字需在 GPU 环境运行 `bench_graph.py` 后回填，禁止把上面合成模型的 146.0us/67.7us/2.16x 直接当作引擎收益。
+> 📎 **数据来源**：Day 5 的 `mini_engine_v1_graph.py` 已在 RTX 5090（CUDA 12.8, PyTorch 2.9.1+cu128, 2026-08-06）上对同一 `MiniEngineV1Graph` 引擎做了 TBT 实测留档（见 [Day 5 §5.2](../day5/README.md)）。本节 `bench_graph.py` 为更严格的并发基准（3 轮 × 4 请求），可在 GPU 环境复跑确认量级。
+
+> ⚠️ **数字诚信**：禁止把上面合成模型的 146.0us/67.7us/2.16x 直接当作引擎收益——引擎级数据以 Day 5 实测留档为准。
 
 ```text
 === 测量对象：MiniEngineV1Graph decode 路径（Day 5 真整合引擎）===
-  Eager decode: avg <待实测> ms/step
-  Graph decode: avg <待实测> ms/step
-  加速比: <待实测>x
+  Eager decode: avg 0.894 ms/step
+  Graph decode: avg 0.066 ms/step
+  加速比: 13.58x
 ```
 
 ##### 量化 launch overhead
@@ -209,6 +206,7 @@ nsys stats graph.nsys-rep --report cuda_gpu_kern
 
 ```python
 # 对比 FP16 vs W8A16 vs INT8 KV 的 logits
+logits_fp16 = load_model('fp16')(test_prompt)
 for quant in ['fp16', 'w8a16', 'int8_kv']:
     model = load_model(quant)
     logits = model(test_prompt)

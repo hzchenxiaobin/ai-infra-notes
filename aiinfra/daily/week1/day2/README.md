@@ -69,14 +69,7 @@ Occupancy = Active Warp 数量 / SM 支持的最大 Warp 数量
 
 一个 SM 同时驻留很多 warp，但同一时刻只有少部分在执行。当一个 warp 因为等内存而卡住时，Warp Scheduler 会把它换下去，换一个准备好的 warp 上来：
 
-```text
-cycle 0: warp 0 执行 load（发起 Global Memory 请求）
-cycle 1: warp 0 进入等待状态
-cycle 2: warp scheduler 切换到 warp 1 执行
-...
-cycle 400: 数据还没回来，继续换 warp 2、warp 3 ... 执行
-cycle 800: warp 0 的数据回来了，再切换回 warp 0 继续
-```
+![Warp Scheduler 延迟隐藏](../images/warp_scheduler_cycle.svg)
 
 只要总有其他 warp 可以切换，SM 的计算单元就不会空闲，仿佛"延迟被藏起来了"。
 
@@ -84,12 +77,7 @@ cycle 800: warp 0 的数据回来了，再切换回 warp 0 继续
 
 如果 occupancy 太低，比如一个 SM 上只驻留了 4 个 warp：
 
-```text
-warp 0: 等内存中...
-warp 1: 等内存中...
-warp 2: 等内存中...
-warp 3: 也等内存中...
-```
+![低 Occupancy 导致空转](../images/low_occupancy_stall.svg)
 
 所有 warp 都在等内存，没有可切换的 warp，计算单元只能空转。
 
@@ -150,7 +138,7 @@ warp 3: 也等内存中...
 nvcc -Xptxas -v day2/kernels/your_kernel.cu
 ```
 
-输出中的 `lmem` 就是 local memory 使用量。如果 `lmem > 0`，说明发生了 spilling。
+输出中的 `spill stores` 和 `spill loads` 表示溢出到 local memory 的写入和读取量。如果 `spill stores/loads > 0`，说明发生了 spilling。
 
 #### 2.4 Occupancy 与性能的关系
 
@@ -385,23 +373,11 @@ for (int i = 0; i < n; ++i) {
 
 普通循环每次迭代执行一次循环体：
 
-```text
-迭代 0: 加载 v, 计算 acc += v*v + 1
-迭代 1: 加载 v, 计算 acc += v*v + 1
-迭代 2: 加载 v, 计算 acc += v*v + 1
-...
-```
+![普通循环迭代](../images/loop_normal_iteration.svg)
 
 `#pragma unroll 16` 会让编译器把循环体复制 16 份，每次迭代处理 16 个元素：
 
-```text
-一次大迭代:
- 加载 v0, v1, v2, ..., v15
- acc += v0*v0 + 1
- acc += v1*v1 + 1
- ...
- acc += v15*v15 + 1
-```
+![展开后循环迭代](../images/loop_unrolled_iteration.svg)
 
 这样可以减少循环控制开销（i 的递增、边界判断、跳转），增加指令级并行（ILP）。
 
@@ -601,14 +577,14 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocks, compute_intensive, 256
 nvcc -Xptxas -v -o occupancy_test_b day2/exercise/occupancy_test_b.cu
 ```
 
-观察输出中是否有 `lmem`（local memory）非零。
+观察输出中是否有 `spill stores/loads` 非零。
 
 如果看到类似：
 ```
-ptxas info : 0 bytes gmem
-ptxas info : Compiling entry function 'version_b' for 'sm_120'
-ptxas info : Function properties for version_b
+ptxas info : Compiling entry function '_Z17compute_intensivePKfPfi' for 'sm_120'
+ptxas info : Function properties for _Z17compute_intensivePKfPfi
  0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info : Used 32 registers, 340 bytes cmem[0]
 ```
 
 `spill stores/loads` 为 0 表示没有 spilling。
@@ -659,7 +635,7 @@ Day 2 我们深入理解了 GPU 的并行度：
 <summary>点击查看答案</summary>
 
  - 当编译器无法为所有变量分配寄存器时，会把部分变量放到 local memory（实际在 global memory）。
- - 检测方法：`nvcc -Xptxas -v` 查看 `lmem` 或 `spill stores/loads`。
+ - 检测方法：`nvcc -Xptxas -v` 查看 `spill stores/loads`。
 
 </details>
 

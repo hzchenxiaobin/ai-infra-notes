@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="45" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="arG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#2e8b57"/>
+    </marker>
+  </defs>
+  <rect width="940" height="380" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">Prefix Caching：问题与方案</text>
+  <path d="M 280 40 Q 470 48 660 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Problem (left) ===== -->
+  <g filter="url(#sk)">
+    <rect x="40" y="62" width="400" height="110" rx="10" fill="#fce4ec" stroke="#c04050" stroke-width="1.4"/>
+  </g>
+  <text x="60" y="86" font-size="13" font-weight="bold" fill="#a03040">⚠ 问题</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="98" width="360" height="28" rx="4" fill="#fff" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="72" y="116" font-size="10" fill="#a03040" font-weight="bold">多个请求共享相同 prefix（系统提示、对话历史）</text>
+
+  <g filter="url(#sk)">
+    <rect x="60" y="132" width="360" height="28" rx="4" fill="#fff" stroke="#c04050" stroke-width="1"/>
+  </g>
+  <text x="72" y="150" font-size="10" fill="#a03040" font-weight="bold">每次都要重新计算 prefix 的 KV Cache → 重复计算</text>
+
+  <!-- Arrow from problem to solution -->
+  <path d="M 450 117 L 490 117" stroke="#5a5a5a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- ===== Solution (right) ===== -->
+  <g filter="url(#sk)">
+    <rect x="500" y="62" width="400" height="110" rx="10" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.4"/>
+  </g>
+  <text x="520" y="86" font-size="13" font-weight="bold" fill="#2e6e2e">✓ Prefix Caching</text>
+
+  <g filter="url(#sk)">
+    <rect x="520" y="98" width="360" height="28" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="532" y="116" font-size="10" fill="#2e6e2e" font-weight="bold">缓存公共 prefix 的 KV Cache（key = hash）</text>
+
+  <g filter="url(#sk)">
+    <rect x="520" y="132" width="360" height="28" rx="4" fill="#fff" stroke="#2e8b57" stroke-width="1"/>
+  </g>
+  <text x="532" y="150" font-size="10" fill="#2e6e2e" font-weight="bold">命中时复用 KV Cache，只 prefill 新增 tokens</text>
+
+  <!-- ===== Benefits (bottom) ===== -->
+  <line x1="40" y1="186" x2="900" y2="186" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <text x="40" y="210" font-size="12" font-weight="bold" fill="#2b2b2b">收益</text>
+
+  <!-- Benefit 1 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="220" width="260" height="56" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/>
+  </g>
+  <text x="190" y="242" text-anchor="middle" font-size="11" fill="#2b6e9e" font-weight="bold">降低 TTFT</text>
+  <text x="190" y="260" text-anchor="middle" font-size="10" fill="#2b6e9e">首 token 延迟降低 3-5x</text>
+
+  <!-- Benefit 2 -->
+  <g filter="url(#sk)">
+    <rect x="340" y="220" width="260" height="56" rx="6" fill="#e6f4ea" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="470" y="242" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">减少重复计算</text>
+  <text x="470" y="260" text-anchor="middle" font-size="10" fill="#2e6e2e">跳过 prefix prefill</text>
+
+  <!-- Benefit 3 -->
+  <g filter="url(#sk)">
+    <rect x="620" y="220" width="260" height="56" rx="6" fill="#fff8e1" stroke="#c98a2b" stroke-width="1.2"/>
+  </g>
+  <text x="750" y="242" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">适合多轮对话</text>
+  <text x="750" y="260" text-anchor="middle" font-size="10" fill="#7a5415">和模板化请求</text>
+
+  <!-- ===== Cache mechanism ===== -->
+  <line x1="40" y1="292" x2="900" y2="292" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+
+  <g filter="url(#sk)">
+    <rect x="120" y="304" width="700" height="60" rx="8" fill="#f6f6f6" stroke="#ccc" stroke-width="1.2" stroke-dasharray="5,3"/>
+  </g>
+  <text x="470" y="326" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">缓存机制：key = MD5(prefix token 序列)　|　value = {K[], V[]} blocks</text>
+  <text x="470" y="346" text-anchor="middle" font-size="10" fill="#666">淘汰策略：LRU（缓存满时淘汰最久未用的）　|　vLLM PagedAttention 支持 block 级别匹配</text>
+</svg>

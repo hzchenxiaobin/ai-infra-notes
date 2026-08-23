@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="140" viewBox="0 0 720 140" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="33" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+
+  <rect width="720" height="140" fill="#fdfcf7"/>
+
+  <text x="360" y="26" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b2b2b">串行（Day 2）：load → sync → compute → sync · …</text>
+  <path d="M 220 33 Q 360 40 500 33" stroke="#2b2b2b" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+
+  <!-- load_0 -->
+  <g filter="url(#sk)">
+    <rect x="50" y="58" width="100" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="100" y="80" text-anchor="middle" font-size="12" fill="#7a5415">load_0</text>
+
+  <!-- arrow + sync -->
+  <path d="M 152 75 L 188 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 192 64 L 192 86" stroke="#888" stroke-width="1.1" stroke-dasharray="3 2" fill="none" filter="url(#sk)"/>
+  <text x="192" y="56" text-anchor="middle" font-size="9" fill="#888">sync</text>
+  <path d="M 196 75 L 232 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- compute_0 -->
+  <g filter="url(#sk)">
+    <rect x="234" y="58" width="100" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="284" y="80" text-anchor="middle" font-size="12" fill="#2b6e9e">compute_0</text>
+
+  <!-- arrow + sync -->
+  <path d="M 336 75 L 372 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 376 64 L 376 86" stroke="#888" stroke-width="1.1" stroke-dasharray="3 2" fill="none" filter="url(#sk)"/>
+  <text x="376" y="56" text-anchor="middle" font-size="9" fill="#888">sync</text>
+  <path d="M 380 75 L 416 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- load_1 -->
+  <g filter="url(#sk)">
+    <rect x="418" y="58" width="100" height="34" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="468" y="80" text-anchor="middle" font-size="12" fill="#7a5415">load_1</text>
+
+  <!-- arrow + sync -->
+  <path d="M 520 75 L 556 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 560 64 L 560 86" stroke="#888" stroke-width="1.1" stroke-dasharray="3 2" fill="none" filter="url(#sk)"/>
+  <text x="560" y="56" text-anchor="middle" font-size="9" fill="#888">sync</text>
+  <path d="M 564 75 L 600 75" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- compute_1 -->
+  <g filter="url(#sk)">
+    <rect x="602" y="58" width="92" height="34" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+  </g>
+  <text x="648" y="80" text-anchor="middle" font-size="12" fill="#2b6e9e">compute_1</text>
+
+  <!-- ... -->
+  <text x="640" y="108" font-size="13" fill="#888">→ sync → …</text>
+
+  <!-- time arrow -->
+  <path d="M 50 120 L 690 120" stroke="#5a5a5a" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="698" y="124" font-size="10" fill="#888">时间</text>
+</svg>

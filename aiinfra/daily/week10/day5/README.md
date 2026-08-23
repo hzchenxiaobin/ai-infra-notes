@@ -19,13 +19,7 @@
 
 面试不是开卷考试，而是**限时口述 + 临场互动**。你以为自己“会”的内容，一旦面对面试官的追问，很可能会：
 
-```
-❌ 开场 5 分钟还没讲清楚项目是做什么的
-❌ 技术点只停留在“是什么”，讲不出“为什么”
-❌ 被 follow-up 一问就卡壳，开始绕圈子
-❌ 时间分配失控，重点没讲完就被打断
-❌ 口头禅严重：然后、那个、就是
-```
+![Mock 面试常见翻车现场](../images/mock_interview_failure_modes.svg)
 
 | 学习方式 | 效果 |
 |----------|------|
@@ -58,12 +52,7 @@
 
 #### 1.2 自我介绍的 STAR-mini 模板
 
-```text
-1. 我是谁：姓名 + 背景 + 当前方向
-2. 我做了什么：一句话概括项目（Mini AI Infra / 手写 CUDA kernel / Mini 推理引擎）
-3. 核心亮点：1-2 个量化成果（如 GEMM 达到 cuBLAS ~64%（RTX 5090 实测 4096³）、支持 Continuous Batching）
-4. 我想做什么：应聘岗位方向
-```
+![自我介绍 STAR-mini 模板](../images/star_mini_template.svg)
 
 示例：
 
@@ -89,14 +78,7 @@
 
 选一个你真正深入做过的点，按以下结构准备：
 
-```text
-1. 问题是什么：标准 Attention IO 是 O(N²)，长序列跑不动
-2. 现有方案局限：朴素 tiling 需要物化 N×N 矩阵
-3. 你的方案：FlashAttention = tiling + online softmax，IO 降到 O(Nd)
-4. 实现细节：block 切分、shared memory 分配、warp 同步
-5. 验证结果：相比 naive 快 X 倍、接近 cuBLAS/FAI
-6. 还可以怎么优化：FA2 的 warp group、double buffering、量化
-```
+![技术难点讲解六步法](../images/tech_difficulty_template.svg)
 
 每个点准备 **3 分钟精简版** 和 **6 分钟完整版**，根据面试官反应切换。
 

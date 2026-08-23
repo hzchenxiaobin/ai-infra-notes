@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="440" viewBox="0 0 860 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="55" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#fdfcf7"/>
+
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Demo 2: SWAP 抢占时间线</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="430" y="60" text-anchor="middle" font-size="11" fill="#888">同样 3 个请求，但用 SWAP 模式：KV Cache 换出到 CPU</text>
+
+  <!-- swap out event -->
+  <g filter="url(#sk)">
+    <rect x="40" y="76" width="780" height="32" rx="8" fill="#fdecec" stroke="#b85450" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="96" font-size="12" fill="#b03a3a" font-weight="bold">🔄 iter 2: SWAP OUT！1 个序列的 KV Cache 换出到 CPU</text>
+
+  <!-- swap in event -->
+  <g filter="url(#sk)">
+    <rect x="40" y="116" width="780" height="32" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="136" font-size="12" fill="#2b6e9e" font-weight="bold">🔁 iter 4: SWAP IN！1 个序列从 CPU 换回 GPU</text>
+
+  <!-- column headers -->
+  <text x="70" y="174" font-size="11" font-weight="bold" fill="#888">Iter</text>
+  <text x="140" y="174" font-size="11" font-weight="bold" fill="#888">Batch 内容</text>
+  <text x="560" y="174" font-size="11" font-weight="bold" fill="#888">FreeBlk</text>
+  <text x="640" y="174" font-size="11" font-weight="bold" fill="#888">W/R/S</text>
+  <text x="730" y="174" font-size="11" font-weight="bold" fill="#888">事件</text>
+  <line x1="50" y1="180" x2="810" y2="180" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <!-- iter 3 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="186" width="780" height="48" rx="8" fill="#fdecec" stroke="#b85450" stroke-width="1.2" fill-opacity="0.3"/>
+  </g>
+  <text x="70" y="214" font-size="13" font-weight="bold" fill="#b03a3a">3</text>
+  <g filter="url(#sk)">
+    <rect x="130" y="198" width="135" height="24" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="197" y="214" text-anchor="middle" font-size="11" fill="#2e6e2e">S2 decode g=2</text>
+  <text x="565" y="214" font-size="12" fill="#444" font-family="monospace">1</text>
+  <text x="645" y="214" font-size="12" fill="#444" font-family="monospace">1/1/1</text>
+  <text x="730" y="214" font-size="11" fill="#b03a3a" font-weight="bold">S1 → CPU</text>
+
+  <!-- swap annotation -->
+  <text x="197" y="248" text-anchor="middle" font-size="10" fill="#b03a3a">S1 KV Cache 换出到 CPU（进度保留）</text>
+
+  <!-- iter 5 - SWAP IN result -->
+  <g filter="url(#sk)">
+    <rect x="40" y="258" width="780" height="48" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.3"/>
+  </g>
+  <text x="70" y="286" font-size="13" font-weight="bold" fill="#2e6e2e">5</text>
+  <g filter="url(#sk)">
+    <rect x="130" y="270" width="140" height="24" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  </g>
+  <text x="200" y="286" text-anchor="middle" font-size="11" fill="#2e6e2e">S1 decode g=1</text>
+  <g filter="url(#sk)">
+    <rect x="280" y="270" width="135" height="24" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  </g>
+  <text x="347" y="286" text-anchor="middle" font-size="11" fill="#2b6e9e">S3 prefill g=0</text>
+  <text x="565" y="286" font-size="12" fill="#444" font-family="monospace">0</text>
+  <text x="645" y="286" font-size="12" fill="#444" font-family="monospace">0/2/0</text>
+  <text x="730" y="286" font-size="11" fill="#2e6e2e" font-weight="bold">← g 保留</text>
+
+  <!-- g=1 highlight annotation -->
+  <path d="M 200 294 Q 200 308 200 308" stroke="#4a8e4a" stroke-width="1.2" fill="none" marker-end="url(#ar)" stroke-dasharray="4 2" filter="url(#sk)"/>
+  <text x="200" y="320" text-anchor="middle" font-size="10" fill="#2e6e2e">S1 保留进度（g=1，无需重 prefill）</text>
+
+  <!-- ... -->
+  <text x="430" y="346" text-anchor="middle" font-size="14" fill="#aaa">...</text>
+
+  <!-- iter 6 - DONE -->
+  <g filter="url(#sk)">
+    <rect x="40" y="356" width="780" height="32" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.3"/>
+  </g>
+  <text x="70" y="376" font-size="12" font-weight="bold" fill="#2e6e2e">6</text>
+  <text x="197" y="376" text-anchor="middle" font-size="11" fill="#888">(全部完成 — FreeBlk=4, W/R/S=0/0/0)</text>
+
+  <!-- summary -->
+  <g filter="url(#sk)">
+    <rect x="40" y="396" width="780" height="32" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="60" y="416" font-size="12" font-weight="bold" fill="#444">总 iterations: 6</text>
+  <text x="300" y="416" font-size="11" fill="#666">SWAP 模式：保留进度（不重 prefill），但需 PCIe 传输</text>
+</svg>

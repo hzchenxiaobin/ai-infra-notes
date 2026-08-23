@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="380" viewBox="0 0 860 380" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="72" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="860" height="380" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Prefix Caching 要点速览</text>
+  <path d="M 260 42 Q 430 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- block hash -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="780" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="92" font-size="12" fill="#444">每个 KV block 用 token sequence 的 hash 作唯一标识</text>
+  <text x="560" y="92" font-size="12" fill="#2b6e9e" font-weight="bold">→ O(1) 查表命中</text>
+
+  <!-- LRU -->
+  <g filter="url(#sk)">
+    <rect x="40" y="124" width="780" height="48" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="152" font-size="12" fill="#444">ref_count=0 的 block 按 LRU 淘汰</text>
+  <text x="380" y="152" font-size="11" fill="#888">（引用中的不淘汰）</text>
+
+  <!-- 命中场景 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="184" width="780" height="48" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="212" font-size="12" fill="#444">命中场景：多轮对话</text>
+  <text x="220" y="212" font-size="12" fill="#2e6e2e" font-weight="bold">80-95%</text>
+  <text x="290" y="212" font-size="12" fill="#444">、共享 system prompt</text>
+  <text x="470" y="212" font-size="12" fill="#2e6e2e" font-weight="bold">90-99%</text>
+
+  <!-- 实测加速 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="244" width="780" height="48" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="272" font-size="12" fill="#444">实测：多轮对话</text>
+  <text x="180" y="272" font-size="12" fill="#b03a3a" font-weight="bold">4x 加速</text>
+  <text x="270" y="272" font-size="12" fill="#444">、共享 system prompt</text>
+  <text x="430" y="272" font-size="12" fill="#b03a3a" font-weight="bold">1.3x 加速</text>
+
+  <!-- 协同 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="304" width="780" height="56" rx="8" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.5" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="328" font-size="12" fill="#5a2e7e" font-weight="bold">与 Chunked Prefill 协同</text>
+  <text x="60" y="348" font-size="11" fill="#444">先 prefix 匹配跳过已知前缀，剩余再分块交错——正交互补</text>
+</svg>

@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 460" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="940" height="460" fill="#fdfcf7"/>
+
+  <text x="470" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">标准 TP vs SP + TP：通信与显存对比</text>
+  <path d="M 240 40 Q 470 48 690 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <line x1="470" y1="60" x2="470" y2="380" stroke="#d4d4d4" stroke-width="1" stroke-dasharray="6 4" filter="url(#sk)"/>
+
+  <!-- ===== Left: 标准 TP ===== -->
+  <text x="235" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#c04050">标准 TP（无 SP）</text>
+
+  <text x="60" y="108" font-size="10" fill="#444" font-weight="bold">LayerNorm</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="114" width="130" height="26" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="125" y="131" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">activation [B, S, H]</text>
+  <path d="M 125 140 L 125 156" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="60" y="160" width="130" height="24" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="125" y="176" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">all-reduce 聚合</text>
+  <text x="200" y="176" font-size="9" fill="#a03040">每卡全量</text>
+
+  <path d="M 125 184 L 125 200" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="60" y="216" font-size="10" fill="#444" font-weight="bold">Attention</text>
+  <g filter="url(#sk)">
+    <rect x="60" y="222" width="130" height="26" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="125" y="239" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">QKV column-parallel</text>
+  <path d="M 125 248 L 125 264" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="60" y="268" width="130" height="24" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="125" y="284" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">all-reduce 聚合</text>
+  <text x="200" y="284" font-size="9" fill="#a03040">各 head 独立</text>
+
+  <g filter="url(#sk)">
+    <rect x="50" y="306" width="310" height="56" rx="6" fill="#fce4ec" stroke="#c04050" stroke-width="1.3"/>
+  </g>
+  <text x="205" y="328" text-anchor="middle" font-size="10" fill="#a03040" font-weight="bold">通信量/层 = 2 × B × S × H × sizeof(dtype)</text>
+  <text x="205" y="346" text-anchor="middle" font-size="9" fill="#a03040">S = 全序列</text>
+
+  <!-- ===== Right: SP + TP ===== -->
+  <text x="705" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e8b57">SP + TP</text>
+
+  <text x="530" y="108" font-size="10" fill="#444" font-weight="bold">LayerNorm</text>
+  <g filter="url(#sk)">
+    <rect x="530" y="114" width="150" height="26" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="605" y="131" text-anchor="middle" font-size="10" fill="#3a5a8a" font-weight="bold">activation [B, S/N, H]</text>
+  <path d="M 605 140 L 605 156" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="530" y="160" width="150" height="24" rx="4" fill="#e3f4e8" stroke="#2e8b57" stroke-width="1.2"/>
+  </g>
+  <text x="605" y="176" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">无 all-reduce</text>
+  <text x="690" y="176" font-size="9" fill="#2e6e2e">每卡 1/N 序列</text>
+
+  <path d="M 605 184 L 605 200" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="530" y="216" font-size="10" fill="#444" font-weight="bold">Attention</text>
+  <g filter="url(#sk)">
+    <rect x="530" y="222" width="70" height="24" rx="4" fill="#fce4ec" stroke="#c04050" stroke-width="1.2"/>
+  </g>
+  <text x="565" y="238" text-anchor="middle" font-size="9" fill="#a03040" font-weight="bold">all-gather</text>
+  <path d="M 600 234 L 615 234" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="620" y="222" width="100" height="24" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="670" y="238" text-anchor="middle" font-size="9" fill="#3a5a8a" font-weight="bold">[B,S,H] TP attn</text>
+  <path d="M 720 234 L 735 234" stroke="#888" stroke-width="1.2" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="740" y="222" width="80" height="24" rx="4" fill="#f3eaf7" stroke="#8e5db8" stroke-width="1.2"/>
+  </g>
+  <text x="780" y="238" text-anchor="middle" font-size="9" fill="#8e5db8" font-weight="bold">reduce-scatter</text>
+
+  <g filter="url(#sk)">
+    <rect x="740" y="252" width="80" height="22" rx="4" fill="#e8f0fa" stroke="#4a6fa5" stroke-width="1.2"/>
+  </g>
+  <text x="780" y="267" text-anchor="middle" font-size="9" fill="#3a5a8a" font-weight="bold">[B, S/N, H]</text>
+
+  <g filter="url(#sk)">
+    <rect x="520" y="306" width="340" height="56" rx="6" fill="#eaf6ee" stroke="#2e8b57" stroke-width="1.3"/>
+  </g>
+  <text x="690" y="326" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">LayerNorm 通信量 = 0</text>
+  <text x="690" y="342" text-anchor="middle" font-size="9" fill="#2e6e2e">总通信量不变（2 × B × S × H），但 LayerNorm 显存降 1/N</text>
+  <text x="690" y="356" text-anchor="middle" font-size="9" fill="#2e6e2e">all-reduce 拆成 reduce-scatter + all-gather → 易重叠</text>
+
+  <!-- ===== Bottom summary ===== -->
+  <line x1="40" y1="384" x2="900" y2="384" stroke="#eee" stroke-width="1" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="120" y="398" width="700" height="44" rx="8" fill="#fff7c0" stroke="#b8a040" stroke-width="1.3"/>
+  </g>
+  <text x="470" y="418" text-anchor="middle" font-size="11" fill="#8a7a06" font-weight="bold">通信量相同，但 SP 把 all-reduce 拆成 reduce-scatter + all-gather，各自只传一半 → 更易与计算重叠</text>
+  <text x="470" y="434" text-anchor="middle" font-size="10" fill="#8a7a06">LayerNorm activation 显存：O(B×S×H) → O(B×S/N×H)，长序列收益显著</text>
+</svg>

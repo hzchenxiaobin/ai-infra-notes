@@ -90,7 +90,7 @@
 
 - 接受率 $\alpha$：draft token 被 target 接受的概率
 - 每步期望产出：$(1-\alpha^{k+1})/(1-\alpha)$（k 个候选 + 1 个验证 token）
-- $\alpha=0.8$, k=4 时：期望 4.0 tokens/步（vs 1 token/步，4x）
+- $\alpha=0.8$, k=4 时：期望 3.36 tokens/步（vs 1 token/步，3.4x）
 - 收益大条件：$\alpha$ 高（draft 质量好）+ k 大 + decode 是瓶颈
 - 代价：draft model 额外显存 + 验证 forward 的算力
 
@@ -161,7 +161,7 @@
 
 ---
 
-#### 任务 2：本周 LeetCode 题目回顾（10 周计划 · 第 8 周）
+#### 任务 1：本周 LeetCode 题目回顾（10 周计划 · 第 8 周）
 
 本周 LeetCode 题目对应 [10 周算法面试刷题计划](https://hzchenxiaobin.github.io/leetcode/problems/10-week-plan.html) 第 8 周「二分查找与动态规划基础」（点击查看题解）：
 
@@ -192,4 +192,4 @@
 
 ### 下周预告
 
-Week 10 是项目整合与面试冲刺——把 Week 1-9 的全部知识整合到 Mini 引擎，做全链路 Profiling、面试题库、Mock 面试、最终复盘。
+Week 9 是分布式并行与多硬件——掌握 TP/PP/DP 分布式并行、NCCL 通信、通信计算重叠、Ring Attention、MoE+EP 与 Ascend 多硬件对比，把单卡推理扩展到多卡多硬件场景。

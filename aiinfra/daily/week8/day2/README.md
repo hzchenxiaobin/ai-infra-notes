@@ -37,8 +37,8 @@ Day 1 的 W8A16 是"权重 INT8 + 激活 FP16"——INT8 是整数，动态范�
 
 | 格式 | 符号 | 指数 | 尾数 | 偏置 | 最大值 | 最小正数 | 精度 |
 |------|------|------|------|------|--------|---------|------|
-| E4M3 | 1 | 4 | 3 | 7 | 448 | 2^-6 | ~1.5% |
-| E5M2 | 1 | 5 | 2 | 15 | 57344 | 2^-14 | ~6% |
+| E4M3 | 1 | 4 | 3 | 7 | 448 | 2^-6 | ~6% |
+| E5M2 | 1 | 5 | 2 | 15 | 57344 | 2^-14 | ~12.5% |
 
 ##### 为什么有两种格式？
 
@@ -62,20 +62,13 @@ Day 1 的 W8A16 是"权重 INT8 + 激活 FP16"——INT8 是整数，动态范�
 
 ##### 混合精度策略
 
-```
-输入: A (FP8 E4M3), B (FP8 E4M3)
-累加: FP32 (Tensor Core 原生 FP32 累加)
-输出: D (FP16 或 FP32)
-```
+![FP8 GEMM 混合精度策略：FP8 输入 → FP32 累加 → FP16 输出](../images/fp8_gemm_precision_strategy.svg)
 
 ##### Scaling Factor 的作用
 
 FP8 的动态范围有限（E4M3 ±448），需要 scaling factor 把 FP16 数据映射到 FP8 范围：
 
-```
-A_fp8 = A_fp16 / scale_A    (量化)
-A_fp16 = A_fp8 * scale_A    (反量化)
-```
+![FP8 Scaling Factor：FP16 ↔ FP8 的映射](../images/fp8_scaling_factor.svg)
 
 - per-tensor scale：整个张量一个 scale，简单但精度低
 - per-channel scale：每行/列一个 scale，精度好（GEMM 中 scale 可提到点积外）
@@ -115,11 +108,7 @@ __global__ void fp8_gemm_kernel(
 
 原理：利用 Hessian 矩阵的逆，逐列量化权重，最小化量化误差对输出的影响。
 
-```
-1. 计算 H = X^T X (校准数据的二阶信息)
-2. 逐列量化: w_q = round(w / s), 误差用 Hessian 逆补偿到剩余列
-3. 输出: 量化后的 INT4 权重 + scale
-```
+![GPTQ：Hessian-based 逐列量化](../images/gptq_algorithm.svg)
 
 - 优点：精度高（二阶信息捕获误差传播）
 - 缺点：校准慢（Hessian 计算）、逐列求解串行
@@ -128,11 +117,7 @@ __global__ void fp8_gemm_kernel(
 
 原理：不是所有权重都重要——激活大的通道对应的权重量化误差影响更大，应该保护。
 
-```
-1. 找到激活大的通道（"salient" channels）
-2. 对这些通道的权重做 per-channel scale（放大后量化精度更高）
-3. 对应激活做反向 scale（保持数学等价）
-```
+![AWQ：Activation-Aware 权重保护](../images/awq_algorithm.svg)
 
 - 优点：校准快、部署友好（不改模型结构）
 - 缺点：精度略低于 GPTQ
@@ -141,12 +126,7 @@ __global__ void fp8_gemm_kernel(
 
 原理：激活有 outlier（大值），权重没有。把激活的 outlier "迁移"到权重，让两者都平滑。
 
-```
-1. 找到激活的 outlier 通道
-2. 对这些通道: w' = w * s, x' = x / s  (s > 1)
-3. 现在激活平滑了，权重稍大但仍可量化
-4. 两者都用 INT8 量化
-```
+![SmoothQuant：激活 outlier 迁移到权重](../images/smoothquant_algorithm.svg)
 
 - 优点：W8A8（权重和激活都 INT8）、部署极友好
 - 缺点：只做到 INT8，不如 W4A16 省显存
@@ -218,7 +198,7 @@ def simulate_gptq(weight, calibration_data):
         w_q[:, col] = quantize_int4(weight[:, col])
         # 用 Hessian 逆补偿误差到剩余列
         error = weight[:, col] - dequantize(w_q[:, col])
-        weight[:, col+1:] -= error.unsqueeze(1) * H_inv[col, col+1:]
+        weight[:, col+1:] -= error.unsqueeze(1) * H_inv[col, col+1:] / H_inv[col, col]
     return w_q
 
 def simulate_awq(weight, activation):
@@ -227,9 +207,9 @@ def simulate_awq(weight, activation):
     act_scale = activation.abs().mean(dim=0)
     salient = act_scale > act_scale.median()
     # 对 salient 通道放大后量化
-    scale = torch.ones(weight.shape[0])
+    scale = torch.ones(weight.shape[1])
     scale[salient] = 2.0  # 放大
-    w_scaled = weight * scale.unsqueeze(1)
+    w_scaled = weight * scale
     w_q = quantize_int4(w_scaled)
     return w_q, scale
 
@@ -238,7 +218,7 @@ for model_size in ['7B', '13B']:
     w_gptq = simulate_gptq(weight, calib)
     w_awq, scale_awq = simulate_awq(weight, act)
     diff_gptq = (dequantize(w_gptq) - weight).abs().mean()
-    diff_awq = (dequantize(w_awq) * scale_awq.unsqueeze(1) - weight).abs().mean()
+    diff_awq = (dequantize(w_awq) / scale_awq - weight).abs().mean()
     print(f"{model_size}: GPTQ error={diff_gptq:.4f}, AWQ error={diff_awq:.4f}")
 ```
 

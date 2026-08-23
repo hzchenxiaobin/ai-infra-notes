@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280" viewBox="0 0 600 280" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arrowR" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#666666"/>
+    </marker>
+  </defs>
+  <g filter="url(#sketch)">
+  <rect width="600" height="280" fill="#fdfcf7"/>
+  <text x="300" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">峰值算力 vs 显存带宽能支撑的有效算力</text>
+
+  <!-- Peak compute bar -->
+  <text x="120" y="75" text-anchor="middle" font-size="14" fill="#5cb86c" font-weight="bold">峰值算力</text>
+  <rect x="80" y="85" width="80" height="140" rx="4" fill="#5cb86c" opacity="0.7" stroke="#4a9d5f" stroke-width="2"/>
+  <text x="120" y="240" text-anchor="middle" font-size="12" fill="#666666">FLOP/s 充足</text>
+
+  <!-- >> sign -->
+  <text x="270" y="165" text-anchor="middle" font-size="32" font-weight="bold" fill="#e57373">&gt;&gt;</text>
+
+  <!-- Bandwidth-limited bar -->
+  <text x="430" y="75" text-anchor="middle" font-size="14" fill="#e57373" font-weight="bold">有效算力</text>
+  <rect x="390" y="190" width="80" height="35" rx="4" fill="#e57373" opacity="0.7" stroke="#d06060" stroke-width="2"/>
+  <text x="430" y="240" text-anchor="middle" font-size="12" fill="#666666">受限于带宽</text>
+
+  <!-- Idle annotation -->
+  <line x1="200" y1="130" x2="380" y2="130" stroke="#e8a838" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="290" y="120" text-anchor="middle" font-size="12" fill="#e8a838" font-weight="bold">计算单元大量空闲</text>
+
+  </g>
+</svg>
