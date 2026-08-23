@@ -111,14 +111,19 @@ class Scheduler:
         """计算 seq 当前需要的 block 数"""
         return (seq.total_len() + self.block_size - 1) // self.block_size
 
-    def _try_preempt(self) -> Optional[SequenceGroup]:
+    def _try_preempt(self, budget: SchedulingBudget) -> Optional[SequenceGroup]:
         """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）。
+        会从 budget 中回退 victim 已计入的占用（必须在重置 output_len 之前读 total_len）。
         返回被抢占的 victim（由调用方放回 waiting 队列），无可抢占时返回 None。"""
         if not self.running:
             return None
         # LIFO 抢占：弹出最后加入的
         victim = self.running.pop()
         released_blocks = victim.seq.kv_blocks
+        # 回退 budget 中 victim 的占用，否则抢占后的重试永远失败
+        budget.num_seqs -= 1
+        budget.tokens -= victim.seq.total_len()
+        budget.blocks -= released_blocks
         victim.seq.status = SequenceStatus.WAITING
         victim.seq.output_len = 0          # recomputation：丢弃 KV cache
         self.used_blocks -= released_blocks
@@ -127,61 +132,62 @@ class Scheduler:
               f"(recomputation, 释放 {released_blocks} blocks)")
         return victim
 
+    def _admit(self, sg: SequenceGroup, budget: SchedulingBudget,
+               out: SchedulerOutputs, note: str = ""):
+        """把一个 waiting 请求正式调入 running：分配 block、计入 budget、加入本轮输出"""
+        sg.seq.status = SequenceStatus.RUNNING
+        need = self._alloc_blocks(sg.seq)
+        self.used_blocks += need
+        sg.seq.kv_blocks = need
+        self.running.append(sg)
+        out.running_seqs.append(sg.seq)
+        budget.add(sg.seq, self.block_size)
+        print(f"    + ADMIT  request {sg.request_id} "
+              f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks){note}")
+
     def schedule(self) -> SchedulerOutputs:
         """一轮调度：决定本轮运行哪些 sequence（Continuous Batching 核心）"""
         out = SchedulerOutputs()
 
         # ---- Step 1: 保留所有 running（continuous batching 的基础）----
-        running_seqs = [sg.seq for sg in self.running]
-        out.running_seqs = list(running_seqs)
+        out.running_seqs = [sg.seq for sg in self.running]
 
         # ---- Step 2: 从 waiting 中尽可能加入新请求 ----
+        # budget 对总 block 池记账：running 按实际占用（kv_blocks）计入，
+        # waiting 候选按 can_add/add 预估
         budget = SchedulingBudget(
             max_num_seqs=self.max_num_seqs,
             max_tokens=999999,                 # 简化：不限制 token 总数
-            max_blocks=self.max_blocks - self.used_blocks,
+            max_blocks=self.max_blocks,
         )
-        for sg in running_seqs:
-            budget.add(sg, self.block_size)
+        for sg in self.running:
+            budget.num_seqs += 1
+            budget.tokens += sg.seq.total_len()
+            budget.blocks += sg.seq.kv_blocks
 
         still_waiting = []
-        # 注意：必须遍历快照（list(...)），不能直接在 self.waiting 上迭代——
-        # _try_preempt() 会向 self.waiting 头部 insert 被抢占的请求，
-        # 原地迭代会导致同一请求被反复检查，陷入无限循环（livelock）。
+        # 遍历快照（list(...)）：被抢占的 victim 和未 admit 的请求都先收进
+        # still_waiting，循环结束后统一重建 self.waiting，避免迭代中修改队列
         for sg in list(self.waiting):
             if budget.can_add(sg.seq, self.block_size):
-                # 加入 running
-                sg.seq.status = SequenceStatus.RUNNING
-                need = self._alloc_blocks(sg.seq)
-                self.used_blocks += need
-                sg.seq.kv_blocks = need
-                self.running.append(sg)
-                out.running_seqs.append(sg.seq)
-                budget.add(sg.seq, self.block_size)
-                print(f"    + ADMIT  request {sg.request_id} "
-                      f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
+                self._admit(sg, budget, out)
+                continue
+            # 预算不足：尝试抢占
+            victim = self._try_preempt(budget)
+            if victim is None:
+                still_waiting.append(sg)
+                continue
+            # 被抢占的请求放回 waiting 队首
+            still_waiting.insert(0, victim)
+            # victim 可能已在本轮输出里（Step 1 保留的 running），必须移除，
+            # 否则被抢占的 seq 当轮还会被执行一步
+            if victim.seq in out.running_seqs:
+                out.running_seqs.remove(victim.seq)
+            # 抢占后重试（budget 已回退 victim 的占用，这次可能成功）
+            if budget.can_add(sg.seq, self.block_size):
+                self._admit(sg, budget, out, note="（after preempt）")
             else:
-                # 预算不足：尝试抢占
-                victim = self._try_preempt()
-                if victim is not None:
-                    # 被抢占的请求放回 waiting 队首（加入 still_waiting，
-                    # 循环结束后统一重建 self.waiting，避免迭代中被修改/覆盖丢失）
-                    still_waiting.insert(0, victim)
-                    # 抢占后重试
-                    if budget.can_add(sg.seq, self.block_size):
-                        sg.seq.status = SequenceStatus.RUNNING
-                        need = self._alloc_blocks(sg.seq)
-                        self.used_blocks += need
-                        sg.seq.kv_blocks = need
-                        self.running.append(sg)
-                        out.running_seqs.append(sg.seq)
-                        budget.add(sg.seq, self.block_size)
-                        print(f"    + ADMIT  request {sg.request_id} "
-                              f"(after preempt, alloc {need} blocks)")
-                    else:
-                        still_waiting.append(sg)
-                else:
-                    still_waiting.append(sg)
+                still_waiting.append(sg)
         self.waiting = still_waiting
 
         out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
@@ -258,13 +264,14 @@ class LLMEngine:
             # 检查是否完成
             if seq.output_len >= seq.max_output_len:
                 seq.status = SequenceStatus.FINISHED
-                self.scheduler.used_blocks -= seq.kv_blocks
+                freed = seq.kv_blocks     # 实际释放 = admit 时分配的 block 数
+                self.scheduler.used_blocks -= freed
                 seq.kv_blocks = 0
                 self.scheduler.running.remove(sg)
                 self.finished.append(sg)
                 finished_this_step.append(sg.request_id)
                 print(f"    ✔ FINISH request {sg.request_id} "
-                      f"(generated {seq.output_len} tokens, free {seq.total_len()//self.scheduler.block_size + 1} blocks)")
+                      f"(generated {seq.output_len} tokens, free {freed} blocks)")
         return finished_this_step
 
     def has_unfinished(self) -> bool:

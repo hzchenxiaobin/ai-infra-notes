@@ -250,14 +250,19 @@ class Scheduler:
         """计算 seq 当前需要的 block 数"""
         return (seq.total_len() + self.block_size - 1) // self.block_size
 
-    def _try_preempt(self) -> Optional[SequenceGroup]:
+    def _try_preempt(self, budget: SchedulingBudget) -> Optional[SequenceGroup]:
         """显存不足时，抢占最后加入的 running sequence（Recomputation 策略）。
+        会从 budget 中回退 victim 已计入的占用（必须在重置 output_len 之前读 total_len）。
         返回被抢占的 victim（由调用方放回 waiting 队列），无可抢占时返回 None。"""
         if not self.running:
             return None
         # LIFO 抢占：弹出最后加入的
         victim = self.running.pop()
         released_blocks = victim.seq.kv_blocks
+        # 回退 budget 中 victim 的占用，否则抢占后的重试永远失败
+        budget.num_seqs -= 1
+        budget.tokens -= victim.seq.total_len()
+        budget.blocks -= released_blocks
         victim.seq.status = SequenceStatus.WAITING
         victim.seq.output_len = 0          # recomputation：丢弃 KV cache
         self.used_blocks -= released_blocks
@@ -266,61 +271,62 @@ class Scheduler:
               f"(recomputation, 释放 {released_blocks} blocks)")
         return victim
 
+    def _admit(self, sg: SequenceGroup, budget: SchedulingBudget,
+               out: SchedulerOutputs, note: str = ""):
+        """把一个 waiting 请求正式调入 running：分配 block、计入 budget、加入本轮输出"""
+        sg.seq.status = SequenceStatus.RUNNING
+        need = self._alloc_blocks(sg.seq)
+        self.used_blocks += need
+        sg.seq.kv_blocks = need
+        self.running.append(sg)
+        out.running_seqs.append(sg.seq)
+        budget.add(sg.seq, self.block_size)
+        print(f"    + ADMIT  request {sg.request_id} "
+              f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks){note}")
+
     def schedule(self) -> SchedulerOutputs:
         """一轮调度：决定本轮运行哪些 sequence（Continuous Batching 核心）"""
         out = SchedulerOutputs()
 
         # ---- Step 1: 保留所有 running（continuous batching 的基础）----
-        running_seqs = [sg.seq for sg in self.running]
-        out.running_seqs = list(running_seqs)
+        out.running_seqs = [sg.seq for sg in self.running]
 
         # ---- Step 2: 从 waiting 中尽可能加入新请求 ----
+        # budget 对总 block 池记账：running 按实际占用（kv_blocks）计入，
+        # waiting 候选按 can_add/add 预估
         budget = SchedulingBudget(
             max_num_seqs=self.max_num_seqs,
             max_tokens=999999,                 # 简化：不限制 token 总数
-            max_blocks=self.max_blocks - self.used_blocks,
+            max_blocks=self.max_blocks,
         )
-        for sg in running_seqs:
-            budget.add(sg, self.block_size)
+        for sg in self.running:
+            budget.num_seqs += 1
+            budget.tokens += sg.seq.total_len()
+            budget.blocks += sg.seq.kv_blocks
 
         still_waiting = []
-        # 注意：必须遍历快照（list(...)），不能直接在 self.waiting 上迭代——
-        # _try_preempt() 会向 self.waiting 头部 insert 被抢占的请求，
-        # 原地迭代会导致同一请求被反复检查，陷入无限循环（livelock）。
+        # 遍历快照（list(...)）：被抢占的 victim 和未 admit 的请求都先收进
+        # still_waiting，循环结束后统一重建 self.waiting，避免迭代中修改队列
         for sg in list(self.waiting):
             if budget.can_add(sg.seq, self.block_size):
-                # 加入 running
-                sg.seq.status = SequenceStatus.RUNNING
-                need = self._alloc_blocks(sg.seq)
-                self.used_blocks += need
-                sg.seq.kv_blocks = need
-                self.running.append(sg)
-                out.running_seqs.append(sg.seq)
-                budget.add(sg.seq, self.block_size)
-                print(f"    + ADMIT  request {sg.request_id} "
-                      f"(prefill {sg.seq.prompt_len} tok, alloc {need} blocks)")
+                self._admit(sg, budget, out)
+                continue
+            # 预算不足：尝试抢占
+            victim = self._try_preempt(budget)
+            if victim is None:
+                still_waiting.append(sg)
+                continue
+            # 被抢占的请求放回 waiting 队首
+            still_waiting.insert(0, victim)
+            # victim 可能已在本轮输出里（Step 1 保留的 running），必须移除，
+            # 否则被抢占的 seq 当轮还会被执行一步
+            if victim.seq in out.running_seqs:
+                out.running_seqs.remove(victim.seq)
+            # 抢占后重试（budget 已回退 victim 的占用，这次可能成功）
+            if budget.can_add(sg.seq, self.block_size):
+                self._admit(sg, budget, out, note="（after preempt）")
             else:
-                # 预算不足：尝试抢占
-                victim = self._try_preempt()
-                if victim is not None:
-                    # 被抢占的请求放回 waiting 队首（加入 still_waiting，
-                    # 循环结束后统一重建 self.waiting，避免迭代中被修改/覆盖丢失）
-                    still_waiting.insert(0, victim)
-                    # 抢占后重试
-                    if budget.can_add(sg.seq, self.block_size):
-                        sg.seq.status = SequenceStatus.RUNNING
-                        need = self._alloc_blocks(sg.seq)
-                        self.used_blocks += need
-                        sg.seq.kv_blocks = need
-                        self.running.append(sg)
-                        out.running_seqs.append(sg.seq)
-                        budget.add(sg.seq, self.block_size)
-                        print(f"    + ADMIT  request {sg.request_id} "
-                              f"(after preempt, alloc {need} blocks)")
-                    else:
-                        still_waiting.append(sg)
-                else:
-                    still_waiting.append(sg)
+                still_waiting.append(sg)
         self.waiting = still_waiting
 
         out.num_batched_tokens = sum(s.total_len() for s in out.running_seqs)
@@ -397,13 +403,14 @@ class LLMEngine:
             # 检查是否完成
             if seq.output_len >= seq.max_output_len:
                 seq.status = SequenceStatus.FINISHED
-                self.scheduler.used_blocks -= seq.kv_blocks
+                freed = seq.kv_blocks     # 实际释放 = admit 时分配的 block 数
+                self.scheduler.used_blocks -= freed
                 seq.kv_blocks = 0
                 self.scheduler.running.remove(sg)
                 self.finished.append(sg)
                 finished_this_step.append(sg.request_id)
                 print(f"    ✔ FINISH request {sg.request_id} "
-                      f"(generated {seq.output_len} tokens, free {seq.total_len()//self.scheduler.block_size + 1} blocks)")
+                      f"(generated {seq.output_len} tokens, free {freed} blocks)")
         return finished_this_step
 
     def has_unfinished(self) -> bool:
@@ -451,7 +458,7 @@ if __name__ == "__main__":
 
 代码要点：
 - `Sequence` **/** `SequenceGroup` **/** `SequenceStatus`：对应 vLLM 的数据模型，`SequenceGroup` 包一个 `Sequence`（简化为单序列）。
-- `Scheduler.schedule()`：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`）。
+- `Scheduler.schedule()`：先保留所有 running（Continuous Batching 基础），再从 waiting 按 budget 补入；显存不足时 `_try_preempt` 抢占（Recomputation 策略，重置 `output_len`、回退 budget 中 victim 的占用），然后重试 admit。注意两个易错点：① 抢占后必须回退 budget，否则"抢占后重试"永远失败；② victim 若已在本轮输出列表里必须移除，否则被抢占的 seq 当轮还会被执行。
 - `Worker.execute_model()`：每 seq 生成 1 个 token（随机模拟，不跑真模型）。
 - `LLMEngine.step()`：schedule → execute → 更新状态（完成则释放 cache），对应 vLLM 的 4 步流程。
 
@@ -541,22 +548,25 @@ Top-P Sampling 是 vLLM 这类推理系统每个 decode step 的**收尾 kernel*
 
 #### 实验 1：减小 max_blocks 触发抢占
 
-把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=8`，观察抢占（PREEMPT）是否触发。注意 Recomputation 策略会重置 `output_len`，被抢占请求的进度全部作废。
+把 `main()` 里的 `max_blocks=64` 改成 `max_blocks=5`（三个请求同时 running 需要 2+1+3=6 个 block，5 个刚好放不下），观察抢占（PREEMPT）行为。注意 Recomputation 策略会重置 `output_len`，被抢占请求的进度全部作废。
 
-**实测结果**（RTX 5090 环境非必需，纯 Python 可直接复现）：抢占正常触发且调度收敛——req1 被反复抢占 **6 次**（每次 progress 清零重新 prefill），最终 14 个 iteration 全部完成，完成顺序 `[0, 1, 2]`：
+**实测结果**（纯 Python 可直接复现）：抢占正常触发且调度收敛——req1 和 req2 **互相"乒乓"抢占**（LIFO：waiting 里的请求挤掉最后 admit 的 running，下一轮对方又挤回来），共 **6 次 PREEMPT**，req0 始终不受影响；req0 在 iter 8 完成释放 2 个 block 后显存够用，req1/req2 才稳定并行到结束。最终 14 个 iteration 全部完成，完成顺序 `[0, 1, 2]`：
 
 ```text
-⚡ PREEMPT request 1 (recomputation, 释放 1 blocks)
-⚡ PREEMPT request 1 (recomputation, 释放 2 blocks)
-... （共 6 次 PREEMPT，全是 req1）
-✔ FINISH request 0 (generated 8 tokens, free 3 blocks)
-✔ FINISH request 1 (generated 5 tokens, free 2 blocks)
-✔ FINISH request 2 (generated 6 tokens, free 4 blocks)
+[iter 3] + ADMIT  request 1 (prefill 16 tok, alloc 1 blocks)
+         ⚡ PREEMPT request 1 (recomputation, 释放 1 blocks)
+         + ADMIT  request 2 (prefill 48 tok, alloc 3 blocks)（after preempt）
+[iter 4] ⚡ PREEMPT request 2 (recomputation, 释放 3 blocks)
+         + ADMIT  request 1 (prefill 16 tok, alloc 1 blocks)（after preempt）
+... （req1/req2 交替乒乓，共 6 次 PREEMPT）
+[iter 8] ✔ FINISH request 0 (generated 8 tokens, free 2 blocks)
+✔ FINISH request 1 (generated 5 tokens, free 1 blocks)
+✔ FINISH request 2 (generated 6 tokens, free 3 blocks)
 All requests finished. Total iterations: 14
 Finished order: [0, 1, 2]
 ```
 
-可以看到 Recomputation 的代价：req1 最早被 admit 却反复被抢占（LIFO 抢最后加入的），8 轮活干了 14 轮才结束。若 max_blocks 小到连单个请求都放不下，则会真正 livelock（反复抢占谁也无法推进）。
+可以看到 Recomputation 的代价：req1/req2 的进度被反复清零重算，8 轮的活干了 14 轮才结束。另外注意 `(after preempt)` 的 ADMIT——抢占后 budget 回退了 victim 的占用，请求才能在同一轮立刻补位。若 max_blocks 小到连单个请求都放不下（如 `max_blocks=2`，连 req2 的 3 个 block 都不够），则会真正 livelock（反复抢占谁也无法推进）。
 
 > 思考：为什么 max_blocks 太小会 livelock？（提示：Recomputation 把 output_len 清零，被抢占的请求重新 prefill 又抢别人的显存。）如何改进？（提示：Swapping 策略不丢 progress；或限制抢占次数。）
 
@@ -674,18 +684,18 @@ Day 3 我们把 vLLM 的"系统骨架"拆解清楚了：
 
 | 维度 | vLLM V0 (SOSP 2023) | vLLM V1 (2024-2025) |
 |------|---------------------|---------------------|
-| 异步 API | `LLMEngine`（同步） | `AsyncLLMEngine`（原生 async） |
+| 异步 API | `LLMEngine`（同步）+ `AsyncLLMEngine`（async wrapper） | `AsyncLLM`（原生 async，取代两者） |
 | Scheduler | 单线程 `Scheduler` | V1 Scheduler（支持 prefix caching 默认开启） |
 | Chunked Prefill | 需手动启用 | **默认启用** |
 | Prefix Caching | `--enable-prefix-caching`（可选） | **默认启用**（block hash 匹配） |
 | Speculative Decoding | 实验性 | 一等公民支持 |
 | CUDA Graph | 需手动配置 | 自动捕获 decode 迭代 |
 | 多模态 | 后期添加 | 原生设计支持 |
-| 架构 | Engine → Scheduler → Worker | AsyncLLMEngine → V1 Scheduler → WorkerPool |
+| 架构 | Engine → Scheduler → Worker | AsyncLLM → V1 Scheduler → Executor/Worker |
 
 **V1 的核心改进**：
 1. **默认启用 chunked prefill + prefix caching**：不再需要手动配置，开箱即优
-2. **异步引擎**：`AsyncLLMEngine` 原生支持 async/await，减少 Python GIL 瓶颈
+2. **异步引擎**：V1 的 `AsyncLLM` 原生支持 async/await（取代 V0 的 `LLMEngine` + `AsyncLLMEngine` wrapper），减少 Python GIL 瓶颈
 3. **统一调度器**：V1 Scheduler 合并了 prefill/decode 的调度逻辑，简化代码路径
 4. **CUDA Graph 自动化**：decode 迭代自动捕获为 CUDA Graph，消除 launch overhead
 
