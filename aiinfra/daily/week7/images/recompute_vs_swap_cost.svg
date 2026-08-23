@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="260" viewBox="0 0 860 260" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="75" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="260" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">为什么默认 RECOMPUTE？</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="430" y="58" text-anchor="middle" font-size="11" fill="#888">假设：prompt=512 tokens，被抢占后立即恢复</text>
+
+  <!-- RECOMPUTE -->
+  <g filter="url(#sk)">
+    <rect x="40" y="74" width="380" height="100" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="230" y="98" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">RECOMPUTE</text>
+  <text x="60" y="122" font-size="12" fill="#444" font-family="monospace">重 prefill 512 tokens</text>
+  <text x="60" y="142" font-size="12" fill="#2e6e2e" font-weight="bold" font-family="monospace">≈ 几 ms</text>
+  <text x="60" y="162" font-size="11" fill="#666">GPU 算力快</text>
+
+  <!-- SWAP -->
+  <g filter="url(#sk)">
+    <rect x="440" y="74" width="380" height="100" rx="10" fill="#fdecec" stroke="#b85450" stroke-width="1.6" fill-opacity="0.35"/>
+  </g>
+  <text x="630" y="98" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a3a">SWAP</text>
+  <text x="460" y="122" font-size="12" fill="#444" font-family="monospace">换出 + 换入 2 × PCIe 传输</text>
+  <text x="460" y="142" font-size="12" fill="#b03a3a" font-weight="bold" font-family="monospace">≈ 几十 ms</text>
+  <text x="460" y="162" font-size="11" fill="#666">PCIe 带宽 ~30GB/s</text>
+
+  <!-- 结论 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="190" width="780" height="50" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="430" y="214" text-anchor="middle" font-size="13" fill="#2e6e2e" font-weight="bold">→ 重算反而更快，且不占 CPU 内存</text>
+  <text x="430" y="232" text-anchor="middle" font-size="11" fill="#666">prompt 极长（如 32K）且被抢占时间久时，SWAP 才更划算</text>
+</svg>

@@ -19,13 +19,7 @@
 
 Day 1 的 `_schedule()` 逻辑很朴素：每轮保留 running + 从 waiting 补入，唯一的约束是 `token_budget`。它有个致命假设——**显存永远够用**。但真实场景里 KV Cache 显存是有限的：
 
-```
-Day 1 ContinuousBatcher 的盲区：
- - running 序列不断 decode → KV Cache 持续增长
- - 新请求 prefill → 突然需要一大块显存
- - 显存满了怎么办？Day 1 的实现：直接不加入（waiting 继续等）
- - 但 running 也在增长 → 显存迟早爆 → OOM 崩溃
-```
+![Day 1 ContinuousBatcher 的盲区](../images/continuous_batcher_blindspot.svg)
 
 vLLM 的 Scheduler 用 **Preemption（抢占）** 解决这个问题：显存不足时，**主动抢占**部分 running 请求，腾出显存给高优先级或已快完成的请求。被抢占的请求不会丢失——通过 RECOMPUTE（重算）或 SWAP（换出）在显存恢复后继续。
 
@@ -180,13 +174,7 @@ class PreemptionMode:
 
 vLLM 默认用 RECOMPUTE，核心原因：**重算开销通常小于 PCIe 换入延迟**。
 
-```
-假设：prompt=512 tokens，被抢占后立即恢复
- RECOMPUTE：重 prefill 512 tokens ≈ 几 ms（GPU 算力快）
- SWAP： 换出 + 换入 2 × PCIe 传输 ≈ 几十 ms（PCIe 带宽 ~30GB/s）
-
-→ 重算反而更快，且不占 CPU 内存
-```
+![为什么默认 RECOMPUTE](../images/recompute_vs_swap_cost.svg)
 
 但如果 prompt 极长（如 32K tokens）且被抢占时间久，重算代价超过 PCIe 换入，此时 SWAP 更划算。
 

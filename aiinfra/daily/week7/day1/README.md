@@ -19,12 +19,7 @@
 
 Day 1 的 Dynamic Batcher 把请求凑成一批一起 forward。但 LLM 是自回归生成——每个请求的生成长度不同且事先不确定。当 batch 里有一个长请求（gen=100）和多个短请求（gen=5）时：
 
-```
-Batch = [R1(gen=5), R2(gen=100)]
- iter 1-5: R1 和 R2 都在 decode
- iter 6: R1 完成了！但 R2 还在跑...
- iter 6-100: R1 的 GPU slot 空等 R2 → 95 iterations 的浪费
-```
+![Dynamic Batching 长请求阻塞问题](../images/dynamic_batching_blocking.svg)
 
 | 维度 | Dynamic Batching | Continuous Batching |
 |------|-----------------|---------------------|
@@ -44,18 +39,7 @@ Batch = [R1(gen=5), R2(gen=100)]
 
 ![Dynamic vs Continuous Batching 对比](../images/dynamic_vs_continuous_batching.svg)
 
-```
-Iteration-level scheduling：
- - 每个 iteration 都重新构建 batch
- - 新请求可以在任意 iteration 加入
- - 完成的请求可以在任意 iteration 退出
- - 不再存在"一个 batch 一起结束"的概念
-
-效果：
- - GPU 始终满负荷运行
- - 短请求不会被长请求阻塞
- - Throughput 和 latency 都更好
-```
+![Continuous Batching 核心思想](../images/continuous_batching_core_idea.svg)
 
 ##### 核心区别：request-level vs iteration-level
 
@@ -70,8 +54,6 @@ Iteration-level scheduling：
 
 ![Continuous Batching Iteration 时间线](../images/continuous_batching_timeline.svg)
 
-![Continuous Batching 迭代时间线](../../images/week6_continuous_batching_timeline.svg)
-
 ##### 关键观察
 
 1. **S1 在 iter 4 完成，立即退出** → S4 在 iter 5 填入 S1 的 slot（GPU 不空等）
@@ -82,10 +64,6 @@ Iteration-level scheduling：
 #### 2.3 Scheduler 状态机
 
 ![Scheduler 状态机与每轮决策](../images/scheduler_state_machine.svg)
-
-##### Sequence 状态转换
-
-![Scheduler 请求状态机](../../images/week6_request_state_machine.svg)
 
 ##### 每轮调度决策
 
@@ -103,23 +81,7 @@ Scheduler 每轮需要决定 4 件事：
 
 #### 2.4 Prefill + Decode 混合调度
 
-```
-Continuous Batching 可以混合 prefill 和 decode：
- - 一个 iteration 中同时处理：
- - 新请求的 prefill（一次性处理多个 prompt tokens）
- - 正在生成的请求的 decode（每次 1 个 token）
- - 这是 vLLM 和许多现代推理系统的标准做法
-
-挑战：
- - Prefill 和 decode 的计算特征不同（prefill compute-bound, decode memory-bound）
- - Prefill 会"打断" decode 的 smooth latency
- - 需要 token budget 控制每轮的计算量
-
-解决方案：Chunked Prefill
- - 将长 prompt 的 prefill 拆成多个小 chunk
- - 每个 chunk 与 decode 请求一起执行
- - 平滑 latency，避免长 prompt 阻塞
-```
+![Prefill + Decode 混合调度](../images/prefill_decode_mixed_scheduling.svg)
 
 | 挑战 | 原因 | 解决方案 |
 |------|------|---------|

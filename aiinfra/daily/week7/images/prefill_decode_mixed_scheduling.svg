@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="420" viewBox="0 0 860 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="69" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
+  <rect width="860" height="420" fill="#fdfcf7"/>
+  <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">Prefill + Decode 混合调度</text>
+  <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 混合方式 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="64" width="780" height="80" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="86" font-size="12" fill="#2b6e9e" font-weight="bold">混合方式</text>
+  <text x="60" y="106" font-size="11" fill="#444">一个 iteration 中同时处理新请求的 prefill（多个 prompt tokens）+ 正在生成的 decode（每次 1 token）</text>
+  <text x="60" y="126" font-size="11" fill="#666">这是 vLLM 和许多现代推理系统的标准做法</text>
+
+  <!-- 挑战 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="154" width="780" height="100" rx="8" fill="#fdecec" stroke="#b85450" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="176" font-size="12" fill="#b03a3a" font-weight="bold">挑战</text>
+  <text x="60" y="196" font-size="11" fill="#444">Prefill 和 decode 的计算特征不同（prefill compute-bound, decode memory-bound）</text>
+  <text x="60" y="214" font-size="11" fill="#444">Prefill 会"打断" decode 的 smooth latency</text>
+  <text x="60" y="232" font-size="11" fill="#444">需要 token budget 控制每轮的计算量</text>
+
+  <!-- 解决方案 -->
+  <g filter="url(#sk)">
+    <rect x="40" y="264" width="780" height="140" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.4" fill-opacity="0.35"/>
+  </g>
+  <text x="60" y="286" font-size="12" fill="#2e6e2e" font-weight="bold">解决方案：Chunked Prefill</text>
+  <text x="60" y="308" font-size="11" fill="#444">将长 prompt 的 prefill 拆成多个小 chunk</text>
+  <text x="60" y="326" font-size="11" fill="#444">每个 chunk 与 decode 请求一起执行</text>
+  <text x="60" y="344" font-size="11" fill="#444">平滑 latency，避免长 prompt 阻塞</text>
+  <text x="60" y="376" font-size="11" fill="#2e6e2e" font-weight="bold">→ 限制每轮 prefill token 数 + chunked prefill 平滑延迟</text>
+</svg>
