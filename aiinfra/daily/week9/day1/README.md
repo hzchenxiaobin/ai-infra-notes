@@ -24,7 +24,7 @@ Day 1-3 的 Mini 引擎都跑在单卡上。但当模型规模和业务需求增
 | 维度 | 单卡瓶颈 | 分布式方案 | 代价 |
 |------|---------|-----------|------|
 | 显存 | 模型放不下 | TP（切权重）/ PP（切层） | 通信开销 |
-| 吞吐 | tok/s 上限 | DP（切数据，多副本） | 显存翻倍 + grad all-reduce |
+| 吞吐 | tok/s 上限 | DP（切数据，多副本） | 显存翻倍（每卡完整副本） |
 | 延迟 | 单层 GEMM 慢 | TP（单层算力 x N） | 每层 all-reduce |
 
 > 💡 **一句话总结**：TP 解决"放不下 + 单层慢"，PP 解决"放不下"，DP 解决"吞吐不够"。实际系统常组合 DP+TP 或 DP+PP——外层 DP 切请求扩吞吐，内层 TP/PP 切模型放显存。
@@ -261,7 +261,7 @@ python kernels/tp_inference_demo.py
 
 #### 实验 2：用 torch.distributed 真实多卡跑 TP
 
-若有 2+ GPU，把 `ColumnParallelLinear` / `RowParallelLinear` 中的 `torch.cat` / `torch.stack().sum()` 替换为真实的 `torch.distributed.all_reduce(y, op=ReduceOp.SUM)`。用 `torchrun --nproc_per_node=2 tp_inference_demo.py` 启动。对比真实多卡下的加速比与单卡模拟的差异。
+若有 2+ GPU，把 `RowParallelLinear` 中的 `torch.stack().sum()` 替换为真实的 `torch.distributed.all_reduce(y, op=ReduceOp.SUM)`，并去掉 `ColumnParallelLinear` 中的 `torch.cat`（各 rank 直接返回本地 shard，下游按 head 消费，无需通信）。用 `torchrun --nproc_per_node=2 tp_inference_demo.py` 启动。对比真实多卡下的加速比与单卡模拟的差异。
 
 > 思考：真实 2-GPU TP 的加速比为什么远不到 2x？（提示：all-reduce 通信开销 + kernel launch + 数据依赖。可通过 nsys 测量通信占比。）
 
