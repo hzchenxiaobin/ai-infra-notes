@@ -28,6 +28,8 @@ if use_cache and k_cache is not None:
 
 关键观察：Decode 是自回归的，第 `t` 步和第 `t+1` 步都需要历史 `K₁..K_t`、`V₁..V_t`。如果没有 cache，每步都要把"prompt + 已生成部分"重新跑一遍前向算 K/V——FLOPs 是 $O(L \cdot d^2)$ 且随长度线性增长。KV Cache 的想法很朴素：**第 t 步算完 K_t/V_t 后存起来，第 t+1 步直接读，只算 K_{t+1}/V_{t+1}**。
 
+> 💡 **FLOPs 怎么来的**：K/V projection 本质是矩阵乘 $K = X W_K$，其中 $X \in \mathbb{R}^{L \times d}$（$L$ 个 token 的 hidden state）、$W_K \in \mathbb{R}^{d \times d}$（$d = d_{model}$）。$(L, d) \times (d, d)$ 的 FLOPs = $L \cdot d^2$，K 和 V 各一次共 $2L \cdot d^2 = O(L \cdot d^2)$。有 cache 后每步只算 1 个新 token：$(1, d) \times (d, d) \to O(d^2)$，与 $L$ 无关。
+
 | 维度 | 无 KV Cache | 有 KV Cache |
 |------|------------|------------|
 | 每步计算 K/V | 重新计算所有历史 K/V | 只计算新 token 的 K/V |
