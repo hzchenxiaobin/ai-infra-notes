@@ -92,7 +92,7 @@ CUDA 和 Ascend 的编程模型都有"层级 + 片上存储 + 同步"三件套�
 
 | 工具类别 | NVIDIA | Ascend | 用途 |
 |---------|--------|--------|------|
-| **编译器** | `nvcc` | Ascend 编译器（`aoe`/`msauccomp`） | 编译 kernel |
+| **编译器** | `nvcc` | Ascend 编译器（`aoe`） | 编译 kernel |
 | **Kernel Profiler** | **Nsight Compute**（`ncu`） | **msprof** / Ascend Profiler | 单 kernel 性能分析 |
 | **System Profiler** | **Nsight Systems**（`nsys`） | **msprof**（system trace） | 全链路时序 |
 | **运行时 API** | CUDA Runtime（`cudaXxx`） | **ACL**（Ascend Computing Language） | 显存/流/launch |

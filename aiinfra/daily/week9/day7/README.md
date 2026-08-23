@@ -35,7 +35,7 @@
 | PP | send/recv | activation | 1（+bubble） |
 | DP(训练) | all-reduce | 2(N-1)/N × 参数量 | 2(N-1) |
 | DP(推理) | 无 | 0 | — |
-| EP | all-to-all | 2 × tokens × top_k × expert_dim | 1-2 |
+| EP | all-to-all | 2 × tokens × top_k × hidden | 1-2 |
 
 ---
 
@@ -210,15 +210,15 @@
 
 - 权重：70B × FP16 ≈ 140GB → TP=8（每卡 17.5GB）
 - KV Cache：2 × 80 × 8 × 128 × 2B × 32K × 4 = ~40GB（每卡 5GB）
-- 通信：TP all-reduce 每层 2 × 4 × 32K × 8192 × 2B × 7/8 ≈ 183 MB/层（NVLink 4 ~0.4ms）
+- 通信：TP all-reduce 每层 2 × 4 × 32K × 8192 × 2B × 7/8 ≈ 3.5 GB/层（NVLink 400GB/s ~9ms）
 - 写出：TP 度选择依据 + 通信占比估算 + 是否需要 PP
 
 #### 场景 2：Mixtral 8×7B（MoE），4×H100 80GB，decode batch=1
 
 约束：MoE 模型，decode 阶段 batch=1，追求低延迟
 
-- 权重：8 专家 × 7B × FP16 ≈ 56GB + 共享层 ~7GB = ~63GB
-- EP 选择：8 专家分到 4 卡（每卡 2 专家），每卡 ~16GB
+- 权重：Mixtral 8×7B 总参数 ~47B × FP16 ≈ 93GB（8 专家 MLP ~45B + 共享层 ~2B）
+- EP 选择：8 专家分到 4 卡（每卡 2 专家 ~23GB + 共享 ~3GB ≈ 26GB）
 - 通信：EP all-to-all 每层 2 × 1 × 2 × 4096 × 2B × (1-1/4) ≈ 24KB（极小，延迟主导）
 - 写出：EP vs TP 选择依据 + decode 通信量为何小 + 是否需要 EP+TP 混合
 

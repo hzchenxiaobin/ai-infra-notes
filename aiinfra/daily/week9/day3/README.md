@@ -158,7 +158,7 @@ activation_size = batch × seq_len × hidden_dim × sizeof(dtype)
 
 N=8, batch=1, seq=2048, hidden=4096, FP16:
 ```
-= 2×7/8 × 1×2048×4096×2 = 28.7 MB/层
+= 2×7/8 × 1×2048×4096×2 = 29.36 MB/层
 ```
 
 ##### Pipeline Parallelism (PP)
@@ -213,16 +213,16 @@ $$T_{\text{comm}} = \alpha + \frac{\text{size}}{\text{BW}}$$
 | BW | 带宽（bandwidth） | ~450 GB/s |
 | size | 传输数据量（bytes） | 由 collective + tensor 大小决定 |
 
-**应用示例**：TP all-reduce 28.7 MB（§3.6 TP 示例）走 NVLink 4：
+**应用示例**：TP all-reduce 29.36 MB（§3.6 TP 示例）走 NVLink 4：
 
 ```
-T_comm = 2 μs + 28.7 MB / 450 GB/s = 2 μs + 63.8 μs ≈ 65.8 μs
+T_comm = 2 μs + 29.36 MB / 450 GB/s = 2 μs + 65.2 μs ≈ 67.2 μs
 ```
 
 走 IB NDR（跨节点）：
 
 ```
-T_comm = 2 μs + 28.7 MB / 100 GB/s = 2 μs + 287 μs ≈ 289 μs
+T_comm = 2 μs + 29.36 MB / 100 GB/s = 2 μs + 293.6 μs ≈ 295.6 μs
 ```
 
 > 💡 **关键洞察**：
@@ -236,7 +236,7 @@ T_comm = 2 μs + 28.7 MB / 100 GB/s = 2 μs + 287 μs ≈ 289 μs
 
 | 并行 | 通信量 | 走 NVLink 4 的时间 | 走 IB NDR 的时间 |
 |------|--------|-------------------|-----------------|
-| TP all-reduce（28.7 MB） | 2×7/8×28.7 | ~66 μs | ~289 μs |
+| TP all-reduce（29.36 MB） | 2×7/8×16.8 | ~67 μs | ~296 μs |
 | PP send/recv（16.8 MB） | 16.8 | ~39 μs | ~170 μs |
 | DP（推理） | 0 | 0 | 0 |
 

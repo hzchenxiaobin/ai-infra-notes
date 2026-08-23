@@ -2,7 +2,7 @@
 # 运行命令: python custom_ops_module.py
 # 依赖: torch（有 CUDA 时用 load_inline 编译真实 kernel；无 CUDA 时用 PyTorch fallback 演示）
 #
-# 本文件是 Week7 Day4 的核心产出：将 Week2-4 手写的 GEMM、FlashAttention、
+# 本文件是 Week 10 Day 1 的核心产出：将 Week2-4 手写的 GEMM、FlashAttention、
 # Softmax、LayerNorm 通过 PyTorch C++ Extension 集成到 Transformer Layer 中。
 #
 # 集成流程：

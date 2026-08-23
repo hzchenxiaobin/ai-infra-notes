@@ -11,7 +11,7 @@
 5. 掌握 **分层验证策略**——单算子对比 PyTorch → 多算子组合 → 端到端输出 → 性能对比<br>
 6. 用 Python + `load_inline` 手写一个 **CustomKernelTransformerLayer**，实测自定义 kernel vs PyTorch eager 的精度和性能
 
-> 💡 **为什么重要**：Day 3 分析了高级特性的收益，但 Mini 引擎仍用 PyTorch 原生算子。自定义 Kernel 集成是 Infra 工程师的核心能力——把 Week 2-4 手写的 GEMM、FlashAttention、Softmax、LayerNorm 接入推理引擎，替换 PyTorch 对应算子。这要求理解 PyTorch C++ Extension 的编译流水线、tensor 内存布局、stream 一致性等工程细节，是面试必考题"如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎"。
+> 💡 **为什么重要**：Week 8 Day 3 分析了高级特性的收益，但 Mini 引擎仍用 PyTorch 原生算子。自定义 Kernel 集成是 Infra 工程师的核心能力——把 Week 2-4 手写的 GEMM、FlashAttention、Softmax、LayerNorm 接入推理引擎，替换 PyTorch 对应算子。这要求理解 PyTorch C++ Extension 的编译流水线、tensor 内存布局、stream 一致性等工程细节，是面试必考题"如何将自定义 CUDA kernel 集成到 PyTorch 推理引擎"。
 
 ---
 
@@ -131,7 +131,7 @@ TORCH_CHECK(err == cudaSuccess, "Kernel launch failed: ", cudaGetErrorString(err
 
 ![分层验证策略](../images/layered_verification_strategy.svg)
 
-> 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 float24 尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
+> 💡 **精度阈值**：单算子 < 1e-5，端到端 < 1e-2（多算子累积误差）。FP32 的 24 位尾数只有 ~7 位有效数字，多次 reduce 后误差会放大。
 
 ### Coding 任务：实现 CustomKernelTransformerLayer
 
@@ -204,16 +204,16 @@ python kernels/custom_ops_module.py
  LayerNorm max diff: 8.4e-06 PASS
 
 ============================================================
-1. 性能对比：自定义 kernel vs PyTorch
-============================================================
+ 2. 性能对比：自定义 kernel vs PyTorch
+===========================================================
  PyTorch eager: 2.834 ms/layer
  Custom kernel: 3.512 ms/layer
  Speedup: 0.81x
  (教学版 kernel 可能比 PyTorch 慢，因为 PyTorch 用了高度优化的 cuDNN/cuBLAS)
 
 ============================================================
-1. 集成 Checklist
-============================================================
+ 3. 集成 Checklist
+===========================================================
  [✓] Softmax 替换
  [✓] LayerNorm 替换
  [✓] FlashAttention 替换
@@ -235,8 +235,8 @@ python kernels/custom_ops_module.py
  Status: PASS (fallback)
 
 ============================================================
-1. 集成 Checklist
-============================================================
+ 2. 集成 Checklist
+===========================================================
  [✗] Custom CUDA kernel 接入（CUDA 不可用，fallback 到 PyTorch）
  [✓] 端到端精度 < 1e-2（fallback 模式恒等）
  [✓] 逻辑可运行（无 GPU 也能验证集成流程）
@@ -289,7 +289,7 @@ python kernels/custom_ops_module.py
 
 #### 实验 1：实现算子融合（Softmax + Scale + MatMul）
 
-当前 attention 分 3 步：`scores = QK^T` → `scores *= scale` → `attn = softmax(scores)` → $\text{out} = \text{attn} \cdot V$。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
+当前 attention 分 3 步：`scores = QK^T * scale` → `attn = softmax(scores)` → $\text{out} = \text{attn} \cdot V$。修改为一个融合 kernel，在 FlashAttention 内部直接完成 scale + softmax + matmul，减少 2 次 kernel launch 和 HBM 往返。
 
 > 思考：融合后精度会变化吗？（提示：不会，融合只是减少中间结果的存储，计算逻辑不变。但减少 HBM 往返可能改善数值稳定性——中间结果不经过 FP32→HBM→FP32 的精度损失。）
 

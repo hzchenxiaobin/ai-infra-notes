@@ -29,7 +29,7 @@ MEMORY_HIERARCHY = [
 ]
 
 TOOLCHAIN = [
-    ("编译器", "nvcc", "Ascend 编译器 (aoe/msauccomp)"),
+    ("编译器", "nvcc", "Ascend 编译器 (aoe)"),
     ("Kernel Profiler", "Nsight Compute (ncu)", "msprof / Ascend Profiler"),
     ("System Profiler", "Nsight Systems (nsys)", "msprof (system trace)"),
     ("运行时 API", "CUDA Runtime (cudaXxx)", "ACL (Ascend Computing Language)"),

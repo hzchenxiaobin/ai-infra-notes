@@ -41,7 +41,7 @@ GPipe（2019）是最简单的 PP 调度：先做全部 forward，再做全部 b
 - M=4 个 micro-batch，P=4 个 stage
 - **填充气泡**（fill bubble）：前 P-1 步，后面的 stage 在等前面的 forward 到来
 - **排空气泡**（drain bubble）：后 P-1 步，前面的 stage 在等 backward 回来
-- 气泡总数 = 2(P-1)，有用工作 = M×P，bubble ratio = 2(P-1) / (M×P + 2(P-1)) ≈ (P-1)/(M+P-1)
+- 气泡总数 = 2(P-1)（fill + drain 各 P-1 步），总时间 = 2(M+P-1)，bubble ratio = 2(P-1) / 2(M+P-1) = (P-1)/(M+P-1)
 
 ##### GPipe 的显存问题
 
@@ -88,8 +88,8 @@ bubble = (P - 1) / (M + P - 1)
 
 - P = pipeline stage 数
 - M = micro-batch 数
-- 分子 P-1 = 填充 + 排空气泡（各 P-1 步，但 1F1B 下部分重叠）
-- 分母 M+P-1 = 总步数
+- 分子 P-1 = 简化后的气泡步数（原始 fill + drain 共 2(P-1) 步，分子分母同除 2 得 P-1）
+- 分母 M+P-1 = 简化后的总步数（原始总时间 2(M+P-1)，同除 2 得 M+P-1）
 
 ##### 典型值
 

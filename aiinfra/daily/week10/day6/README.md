@@ -33,7 +33,7 @@
 
 ![案例 1：低 MFU 诊断证据（nsys + ncu 输出）](../images/low_mfu_evidence.svg)
 
-**结论**：$\text{AI} \approx 715 > \text{Ridge Point } 58.45$，理论 compute-bound，但 naive kernel 每个 thread 只算 1 个输出，读 A/B 各 1 次，实际 $\text{AI} \approx 1$（每 byte 数据只做 1 次 FMA）→ memory-bound。**根因：无 tiling，数据无复用**。
+**结论**：$\text{AI} \approx 683 > \text{Ridge Point } 58.45$，理论 compute-bound，但 naive kernel 每个 thread 只算 1 个输出，读 A/B 各 1 次，实际 $\text{AI} \approx 1$（每 byte 数据只做 1 次 FMA）→ memory-bound。**根因：无 tiling，数据无复用**。
 
 **修复**：加 shared memory tiling（v2 SharedMem），让一个 block 内的 threads 共享 A/B tile，AI 提升 N 倍。
 

@@ -23,8 +23,8 @@ MoE（Mixture of Experts）用"稀疏激活"替代稠密 FFN：每个 token 只�
 
 | 概念 | 说明 | 典型值 |
 |------|------|--------|
-| num_experts | 总专家数 | 8（Mixtral）/ 64（DeepSeek-V3）/ 128 |
-| top_k | 每 token 激活专家数 | 2（Mixtral）/ 6（DeepSeek-V3） |
+| num_experts | 总专家数 | 8（Mixtral）/ 256（DeepSeek-V3）/ 128 |
+| top_k | 每 token 激活专家数 | 2（Mixtral）/ 8（DeepSeek-V3） |
 | 稀疏比 | top_k / num_experts | 1/4 ~ 1/10 |
 | gate network | 路由网络（小线性层） | hidden → num_experts |
 
@@ -88,7 +88,7 @@ Expert Parallelism：把 `num_experts` 个专家分布到 `ep_size` 个节点上
 跨节点总量 = (dispatch + combine) × (1 - 1/ep_size)
 ```
 
-**LLaMA-MoE 示例**（Mixtral 8×7B：8 专家, top_k=2, hidden=4096, EP=4, fp16）：
+**Mixtral 示例**（Mixtral 8×7B：8 专家, top_k=2, hidden=4096, EP=4, fp16）：
 
 | 阶段 | 每 token | 1024 tokens 总量 | 跨节点(EP4, 比例 0.75) |
 |------|---------|-----------------|----------------------|
@@ -121,7 +121,7 @@ python kernels/moe_routing_simulator.py
 
 ===== 2. 负载均衡分析 =====
   专家负载（期望/token: 256.0）:
-    Expert 0:  248  ...
+    Expert 0:  246  ...
     Expert 7:  274  ██████████████████████████████
   最大偏差: 7.0%  (均衡)
 
@@ -224,7 +224,7 @@ DeepSeek 的负载均衡策略：
    - 推理时无 loss 开销，且均衡效果不依赖训练数据
 
 5. **DeepSeek-V3 的 MoE 结构参数？**（⭐⭐⭐ 中频）
-   - 256 专家（ routed），top_k=6，共享专家 1 个
+   - 256 专家（routed），top_k=8，共享专家 1 个
    - hidden=7168，expert_hidden=2048（细粒度专家，单专家小）
    - EP32~EP144 部署，用 DeepEP 通信库
 

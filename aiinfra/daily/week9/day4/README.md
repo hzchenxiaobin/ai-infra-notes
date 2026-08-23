@@ -151,7 +151,7 @@ graph.replay()
 N=8 TP, 70B 模型, batch=1, seq=2048, FP16:
 ```
 T_compute/层 ≈ 5ms (GEMM)
-T_comm/层 ≈ 2ms (all-reduce 28.7MB, NVLink 400GB/s → 0.07ms? 实际有 latency)
+T_comm/层 ≈ 0.1ms (all-reduce ~33MB, NVLink 400GB/s → 0.08ms + latency)
 ```
 
 compute >> comm，重叠收益有限（comm 已被自然遮盖）。但在大 batch 或长 seq 下，comm 占比上升，重叠收益增大。
@@ -162,7 +162,7 @@ compute >> comm，重叠收益有限（comm 已被自然遮盖）。但在大 ba
 
 标准 TP 的 all-reduce 通信量 = $2 \times \text{tokens} \times \text{hidden}$，其中 $\text{tokens} = \text{batch} \times \text{seq\_len}$。当序列很长（如 32K/128K context）时，activation 的 all-reduce 通信量与 seq_len 成正比，成为瓶颈。
 
-Megatron-LM 的 Sequence Parallelism（SP）核心思路：**把 seq_len 维也切分到各卡**，每卡只持有 1/N 的 sequence，减少 activation 通信量。
+Megatron-LM 的 Sequence Parallelism（SP）核心思路：**把 seq_len 维也切分到各卡**，每卡只持有 1/N 的 sequence，减少 LayerNorm 区的 activation 显存。
 
 ##### SP 与 TP 的协作
 
@@ -176,10 +176,10 @@ SP 不替换 TP，而是**与 TP 配合**——在 TP 的非 Attention 部分（
 
 | 阶段 | 标准 TP | SP |
 |------|---------|-----|
-| LayerNorm 后 | all-reduce [B,S,H] | reduce-scatter → [B, S/N, H] |
-| Attention 前 | — | all-gather → [B, S, H] |
-| Attention 后 | — | reduce-scatter → [B, S/N, H] |
-| Output 投影后 | all-reduce [B,S,H] | all-gather → [B, S, H] |
+| Attention QKV 前（进 TP 区）| — | all-gather [B,S/N,H] → [B,S,H] |
+| Attention 输出投影后（出 TP 区）| all-reduce [B,S,H] | reduce-scatter [B,S,H] → [B,S/N,H] |
+| MLP up-proj 前（进 TP 区）| — | all-gather [B,S/N,H] → [B,S,H] |
+| MLP down-proj 后（出 TP 区）| all-reduce [B,S,H] | reduce-scatter [B,S,H] → [B,S/N,H] |
 
 **通信量相同**（all-reduce = reduce-scatter + all-gather），但拆开后可以**与计算重叠**——reduce-scatter/all-gather 各自只传一半数据，更容易被 GEMM 计算掩盖。这正是 §4.2 双流重叠策略的理想应用场景。
 

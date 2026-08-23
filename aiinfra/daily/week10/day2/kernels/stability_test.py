@@ -65,7 +65,7 @@ class MiniEngine:
     模拟以下组件：
     - 线程安全请求队列（Day1）
     - 优先级调度 + 超时 + 资源预算（Day2）
-    - KV Cache 管理（Week5）
+    - KV Cache 管理（Week6）
     - 自定义 Kernel 模拟（Day4）
     """
 

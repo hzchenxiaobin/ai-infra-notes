@@ -45,7 +45,7 @@ Day 1-4 分别实现了并发引擎、调度器、高级特性、自定义 Kerne
 |------|---------|---------|---------|
 | Step 1 | 单请求正确性 | MiniLLM | token 数 = max_new_tokens |
 | Step 2 | 多请求并发 | + Queue（Day1） | 全部 FINISHED，结果隔离 |
-| Step 3 | KV Cache 一致性 | + KV Cache（Week5） | 完成后 KV blocks = 0 |
+| Step 3 | KV Cache 一致性 | + KV Cache（Week6） | 完成后 KV blocks = 0 |
 | Step 4 | Scheduler 正确性 | + Scheduler（Day2） | 优先级、超时、预算正确 |
 | Step 5 | 自定义 Kernel | + Custom Kernel（Day4） | 结果一致，性能可解释 |
 | Step 6 | 稳定性 | 全部组件 | 500+ 请求，成功率 > 95% |
@@ -104,16 +104,18 @@ def stability_test(num_requests=500):
     engine = MiniEngine(...)
     engine.start()
 
+    success_count = 0
     for i in range(num_requests):
         req = engine.submit(prompts[i % len(prompts)], ...)
         result = req.future.result(timeout=20)
+        success_count += 1
         # 每 100 请求打印一次状态
-        if i % 100 == 0:
-            print(f" [{i}] kv={engine.stats()['kv_used']}")
+        if i % 100 == 0 and i > 0:
+            print(f" [{i}/{num_requests}] success={success_count}, kv={engine.stats()['kv_used']}")
 
-            # 最终检查
-            assert engine.used_kv_blocks == 0, "Memory leak!"
-            assert success_rate > 0.95, "Success rate too low"
+    # 最终检查
+    assert engine.used_kv_blocks == 0, "Memory leak!"
+    assert success_count / num_requests > 0.95, "Success rate too low"
 ```
 
 #### 5.4 异常输入测试
@@ -267,7 +269,7 @@ engine = MiniEngine(forward_time=0.1, ...)
 
 **题目链接**：<https://leetgpu.com/challenges/element-reversal>
 
-**与今日知识的关联**：Element Reversal 是纯数据重排的索引映射 kernel（`output[j][i] = input[i][j]`），与系统联调中的**结果一致性验证**同构——联调时需要对比自定义 kernel 与 PyTorch 的输出，逐元素比较是否一致。Element Reversal 的验证正是联调验证的基础操作：`assert (custom_output - pytorch_output).abs().max() < threshold`；而其 shared memory tiling 优化版与朴素版的输出一致性对比，也正是"优化不改变语义"的验证范式。理解这种逐元素对比是联调精度验证的核心方法。
+**与今日知识的关联**：Element Reversal 是最简单的 element-wise 符号反转 kernel（`output[i] = -input[i]`），与系统联调中的**结果一致性验证**同构——联调时需要对比自定义 kernel 与 PyTorch 的输出，逐元素比较是否一致。Element Reversal 的验证正是联调验证的基础操作：`assert (custom_output - pytorch_output).abs().max() < threshold`；而其 float4 向量化优化版与朴素版的输出一致性对比，也正是"优化不改变语义"的验证范式。理解这种逐元素对比是联调精度验证的核心方法。
 
 > 💡 提交后在 [LeetGPU Element Reversal](https://leetgpu.com/challenges/element-reversal) 上记录通过耗时。完整题解见 [Element Reversal 题解](https://hzchenxiaobin.github.io/leetgpu/leetgpu-element-reversal-solution.html)。
 
