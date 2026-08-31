@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="430" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">Chunked Prefill：长 prompt 切块，别卡住 decode</text>
+
+  <!-- 上：无 chunked prefill -->
+  <g filter="url(#sk)"><rect x="30" y="52" width="700" height="150" rx="10" fill="#f2f2f2" stroke="#8a8a8a" stroke-width="2"/></g>
+  <text x="380" y="76" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#555">不切块：一个 32K prompt 的 prefill 独占 GPU 数百 ms</text>
+
+  <path d="M 60 92 L 690 92" stroke="#8a8a8a" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="700" y="89" font-size="9" fill="#8a8a8a">时间</text>
+
+  <g filter="url(#sk)"><rect x="60" y="102" width="330" height="30" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="225" y="121" text-anchor="middle" font-size="9.5" fill="#2b6e9e">长 prefill（32K，一大块）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="140" width="330" height="30" rx="4" fill="#f7f7f7" stroke="#aaaaaa" stroke-width="1" stroke-dasharray="4,4"/></g>
+  <text x="225" y="159" text-anchor="middle" font-size="9.5" fill="#999">decode 卡住：所有在线用户集体"卡顿"</text>
+
+  <g filter="url(#sk)">
+    <rect x="396" y="140" width="30" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="428" y="140" width="30" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="460" y="140" width="30" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="492" y="140" width="30" height="30" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="540" y="159" font-size="9.5" fill="#8a5a56">decode 恢复，但下一个长 prefill 又要来</text>
+
+  <text x="380" y="192" text-anchor="middle" font-size="10" fill="#8d3f3b">TPOT 时间线：匀速…匀速…【卡几百 ms】…匀速…【又卡】——周期性尖刺</text>
+
+  <!-- 下：chunked prefill -->
+  <g filter="url(#sk)"><rect x="30" y="222" width="700" height="150" rx="10" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/></g>
+  <text x="380" y="246" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#356130">切块 + 混合编批：每步既推进 decode，又消化一块 prefill</text>
+
+  <path d="M 60 262 L 690 262" stroke="#4a7a3a" stroke-width="1.2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="700" y="259" font-size="9" fill="#4a7a3a">时间</text>
+
+  <!-- 交替块 -->
+  <g filter="url(#sk)">
+    <rect x="60" y="272" width="70" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="160" y="272" width="70" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="260" y="272" width="70" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+    <rect x="360" y="272" width="70" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.3"/>
+  </g>
+  <text x="95" y="290" text-anchor="middle" font-size="8.5" fill="#2b6e9e">chunk 1</text>
+  <text x="195" y="290" text-anchor="middle" font-size="8.5" fill="#2b6e9e">chunk 2</text>
+  <text x="295" y="290" text-anchor="middle" font-size="8.5" fill="#2b6e9e">chunk 3</text>
+  <text x="395" y="290" text-anchor="middle" font-size="8.5" fill="#2b6e9e">chunk 4</text>
+  <text x="450" y="290" font-size="10" fill="#4a6a8a">…（32K 切成 N 块）</text>
+
+  <g filter="url(#sk)">
+    <rect x="134" y="272" width="20" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+    <rect x="234" y="272" width="20" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+    <rect x="334" y="272" width="20" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+    <rect x="434" y="272" width="20" height="28" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/>
+  </g>
+
+  <text x="380" y="322" text-anchor="middle" font-size="10" fill="#356130">每个 step：一小块 prefill + 一批 decode 混在同一个 batch 里过 GPU</text>
+
+  <g filter="url(#sk)"><rect x="120" y="336" width="520" height="26" rx="5" fill="#ffffff" stroke="#4a7a3a" stroke-width="1.3"/></g>
+  <text x="380" y="353" text-anchor="middle" font-size="9.5" fill="#356130">TPOT 时间线：匀速…匀速…匀速…——尖刺消失，延迟曲线平滑</text>
+
+  <!-- 底部 -->
+  <path d="M 60 388 L 700 388" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="410" text-anchor="middle" font-size="11" fill="#7a5415">代价：那个长请求自己的 TTFT 略增（prefill 被拉长）；换来所有在线用户的 TPOT 平滑</text>
+</svg>

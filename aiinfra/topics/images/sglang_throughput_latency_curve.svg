@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="430" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">并发升高时：吞吐先涨后饱和，延迟持续恶化</text>
+
+  <!-- 坐标系 -->
+  <path d="M 90 80 L 90 350" stroke="#5a5a5a" stroke-width="1.8" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 90 350 L 700 350" stroke="#5a5a5a" stroke-width="1.8" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="52" y="90" font-size="10.5" fill="#5a5a5a">指标</text>
+
+  <!-- 吞吐曲线（绿色，先升后饱和） -->
+  <path d="M 90 340 C 200 330, 280 220, 400 170 C 500 130, 580 125, 680 135" stroke="#4a7a3a" stroke-width="3" fill="none" filter="url(#sk)"/>
+  <text x="150" y="318" font-size="10.5" font-weight="bold" fill="#356130">吞吐</text>
+
+  <!-- TTFT 曲线（蓝，缓慢上升后陡升） -->
+  <path d="M 90 320 C 220 315, 330 300, 430 250 C 520 205, 590 130, 680 95" stroke="#4a8edb" stroke-width="2.5" fill="none" stroke-dasharray="7,4" filter="url(#sk)"/>
+  <text x="150" y="298" font-size="10.5" font-weight="bold" fill="#2b6e9e">TTFT</text>
+
+  <!-- TPOT 曲线（红，低位缓慢上升后陡升） -->
+  <path d="M 90 335 C 250 333, 360 325, 470 290 C 560 260, 620 180, 680 130" stroke="#b85450" stroke-width="2.5" fill="none" stroke-dasharray="3,3" filter="url(#sk)"/>
+  <text x="185" y="332" font-size="10.5" font-weight="bold" fill="#8d3f3b">TPOT</text>
+
+  <!-- 拐点标注 -->
+  <g filter="url(#sk)"><circle cx="430" cy="217" r="26" fill="none" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="430" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">拐点（knee）</text>
+  <path d="M 430 158 L 430 190" stroke="#d6a040" stroke-width="1.4" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="430" y="255" text-anchor="middle" font-size="9.5" fill="#8a6a30">吞吐增益开始递减</text>
+  <text x="430" y="270" text-anchor="middle" font-size="9.5" fill="#8a6a30">延迟开始加速恶化</text>
+
+  <!-- 三区标注 -->
+  <text x="185" y="108" text-anchor="middle" font-size="10" fill="#4a7a3a">欠载区：batch 小，</text>
+  <text x="185" y="122" text-anchor="middle" font-size="10" fill="#4a7a3a">GPU 没喂饱，吞吐浪费</text>
+
+  <text x="470" y="108" text-anchor="middle" font-size="10" fill="#7a5415">甜点区：吞吐接近峰值，</text>
+  <text x="470" y="122" text-anchor="middle" font-size="10" fill="#7a5415">延迟尚可接受（SLO 内）</text>
+
+  <text x="632" y="108" text-anchor="middle" font-size="10" fill="#8d3f3b">过载区：排队+KV 池满，</text>
+  <text x="632" y="122" text-anchor="middle" font-size="10" fill="#8d3f3b">延迟爆炸、可能抢占重算</text>
+
+  <!-- 分区虚线 -->
+  <path d="M 300 80 L 300 350" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="4,4" filter="url(#sk)"/>
+  <path d="M 560 80 L 560 350" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="4,4" filter="url(#sk)"/>
+
+  <!-- 底部结论 -->
+  <path d="M 60 398 L 700 398" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="420" text-anchor="middle" font-size="11" fill="#7a5415">服务调优 = 在这条曲线上按 SLO（如 P99 TTFT &lt; 500ms）找最大吞吐的工作点——今天任务 B 实测它</text>
+</svg>

@@ -21,6 +21,7 @@ TOPIC_DISPLAY_NAMES = {
     "shengteng": "🌄 昇腾",
     "triton": "🐍 Triton",
     "vllm": "🚀 vLLM",
+    "sglang": "🛰️ SGLang",
     "cute": "🔷 CuTe",
     "deepgemm": "🔶 DeepGEMM",
     "moe": "🧩 MoE",

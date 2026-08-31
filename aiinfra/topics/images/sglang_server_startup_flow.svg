@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 450" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="450" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">launch_server 启动时间线：六个阶段</text>
+  <text x="380" y="48" text-anchor="middle" font-size="10.5" fill="#8a8a8a">python -m sglang.launch_server --model-path Qwen/Qwen3-0.6B --host 0.0.0.0 --port 30000</text>
+
+  <!-- 竖向时间线 -->
+  <path d="M 72 78 L 72 388" stroke="#b0b0b0" stroke-width="2" filter="url(#sk)"/>
+
+  <!-- 阶段 1 -->
+  <circle cx="72" cy="78" r="13" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2" filter="url(#sk)"/>
+  <text x="72" y="83" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">1</text>
+  <text x="100" y="83" font-size="12.5" font-weight="bold" fill="#2b2b2b">解析启动参数</text>
+  <g filter="url(#sk)"><rect x="240" y="61" width="490" height="34" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.2"/></g>
+  <text x="250" y="76" font-size="10" fill="#444">server_args=ServerArgs(model_path='Qwen/Qwen3-0.6B', port=30000, ...)</text>
+  <text x="250" y="89" font-size="9.5" fill="#8a8a8a">所有可调项的回显——查默认值看这里</text>
+
+  <!-- 阶段 2 -->
+  <circle cx="72" cy="140" r="13" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2" filter="url(#sk)"/>
+  <text x="72" y="145" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">2</text>
+  <text x="100" y="145" font-size="12.5" font-weight="bold" fill="#2b2b2b">加载模型权重</text>
+  <g filter="url(#sk)"><rect x="240" y="123" width="490" height="34" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.2"/></g>
+  <text x="250" y="138" font-size="10" fill="#444">Load weight end. dtype=torch.bfloat16, avail mem=21.9 GB</text>
+  <text x="250" y="151" font-size="9.5" fill="#8a8a8a">avail mem = 权重进显存后的剩余——KV 池就从这里切</text>
+
+  <!-- 阶段 3：重点高亮 -->
+  <circle cx="72" cy="202" r="13" fill="#fff8e1" stroke="#d6a040" stroke-width="2.5" filter="url(#sk)"/>
+  <text x="72" y="207" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">3</text>
+  <text x="100" y="207" font-size="12.5" font-weight="bold" fill="#7a5415">预分配 KV Cache 池</text>
+  <g filter="url(#sk)"><rect x="240" y="185" width="490" height="34" rx="6" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="250" y="200" font-size="10" font-weight="bold" fill="#7a5415">KV Cache is allocated. #tokens: 170432</text>
+  <text x="250" y="213" font-size="9.5" fill="#8a6a30">★ 全天最重要一行：KV 池能容纳多少 token 的 KV——抄进笔记，Day 4 用</text>
+
+  <!-- 阶段 4 -->
+  <circle cx="72" cy="264" r="13" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2" filter="url(#sk)"/>
+  <text x="72" y="269" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">4</text>
+  <text x="100" y="269" font-size="12.5" font-weight="bold" fill="#2b2b2b">捕获 CUDA Graph</text>
+  <g filter="url(#sk)"><rect x="240" y="247" width="490" height="34" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.2"/></g>
+  <text x="250" y="262" font-size="10" fill="#444">Capture cuda graph begin ... end（一次性开销，数十秒）</text>
+  <text x="250" y="275" font-size="9.5" fill="#8a8a8a">录制整层前向的 kernel 序列，消除逐层 launch 开销——不是卡死</text>
+
+  <!-- 阶段 5 -->
+  <circle cx="72" cy="326" r="13" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2" filter="url(#sk)"/>
+  <text x="72" y="331" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">5</text>
+  <text x="100" y="331" font-size="12.5" font-weight="bold" fill="#2b2b2b">启动 HTTP 服务</text>
+  <g filter="url(#sk)"><rect x="240" y="309" width="490" height="34" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.2"/></g>
+  <text x="250" y="324" font-size="10" fill="#444">Uvicorn running on http://0.0.0.0:30000</text>
+  <text x="250" y="337" font-size="9.5" fill="#8a8a8a">端口开始监听——此刻起 curl 才能连通</text>
+
+  <!-- 阶段 6：就绪高亮 -->
+  <circle cx="72" cy="388" r="13" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2.5" filter="url(#sk)"/>
+  <text x="72" y="393" text-anchor="middle" font-size="11" font-weight="bold" fill="#356130">6</text>
+  <text x="100" y="393" font-size="12.5" font-weight="bold" fill="#356130">服务就绪</text>
+  <g filter="url(#sk)"><rect x="240" y="371" width="490" height="34" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.5"/></g>
+  <text x="250" y="386" font-size="10" font-weight="bold" fill="#356130">The server is fired up and ready to roll!</text>
+  <text x="250" y="399" font-size="9.5" fill="#4a7a3a">SGLang 的招牌就绪日志——看到它才算"服务跑起来"</text>
+
+  <!-- 底部注释 -->
+  <path d="M 60 425 L 540 425" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="443" text-anchor="middle" font-size="11" fill="#7a5415">第一次启动 = 下载模型 + 加载权重 + 捕获 graph，全程数十秒到几分钟；第二次起明显更快</text>
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">--mem-fraction-static：一块显存怎么分</text>
+  <text x="380" y="48" text-anchor="middle" font-size="10.5" fill="#8a8a8a">示例：24GB 显存跑 Qwen3-0.6B（BF16 权重约 1.2GB，数字因卡而异）</text>
+
+  <!-- 条 1：0.9 -->
+  <text x="60" y="82" font-size="12.5" font-weight="bold" fill="#2b2b2b">mem-fraction-static = 0.9（默认）</text>
+  <text x="240" y="82" font-size="9.5" fill="#8a8a8a">静态区 = 权重 + KV Cache 池，启动时一次分完</text>
+
+  <g filter="url(#sk)"><rect x="60" y="92" width="32" height="54" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="92" y="92" width="544" height="54" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="636" y="92" width="64" height="54" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+
+  <text x="76" y="122" text-anchor="middle" font-size="9.5" fill="#2b6e9e" transform="rotate(-90 76 119)"> </text>
+  <text x="364" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#8d3f3b">KV Cache 池 ≈ 20.4GB</text>
+  <text x="364" y="133" text-anchor="middle" font-size="10" fill="#8d3f3b">#tokens 多 → 并发容量大</text>
+  <text x="668" y="116" text-anchor="middle" font-size="9" fill="#7a5415">动态区</text>
+  <text x="668" y="129" text-anchor="middle" font-size="9" fill="#7a5415">+余量</text>
+  <text x="668" y="142" text-anchor="middle" font-size="9" fill="#7a5415">≈2.4GB</text>
+
+  <path d="M 60 158 L 636 158" stroke="#8d3f3b" stroke-width="1.2" filter="url(#sk)"/>
+  <text x="348" y="172" text-anchor="middle" font-size="10" fill="#8d3f3b">0.9 × 24GB ≈ 21.6GB 静态区（权重 1.2GB + KV 池）</text>
+  <text x="60" y="76" font-size="9.5" fill="#2b6e9e">权重</text>
+
+  <!-- 条 2：0.7 -->
+  <text x="60" y="216" font-size="12.5" font-weight="bold" fill="#2b2b2b">mem-fraction-static = 0.7（调低后）</text>
+  <text x="240" y="216" font-size="9.5" fill="#8a8a8a">多卡共享 GPU / 峰值 OOM 时下调</text>
+
+  <g filter="url(#sk)"><rect x="60" y="226" width="32" height="54" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="92" y="226" width="416" height="54" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <g filter="url(#sk)"><rect x="508" y="226" width="192" height="54" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+
+  <text x="300" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#8d3f3b">KV Cache 池 ≈ 15.6GB</text>
+  <text x="300" y="267" text-anchor="middle" font-size="10" fill="#8d3f3b">#tokens 少 → 并发容量小</text>
+  <text x="604" y="250" text-anchor="middle" font-size="9.5" fill="#7a5415">动态区 + 余量 ≈ 7.2GB</text>
+  <text x="604" y="267" text-anchor="middle" font-size="9.5" fill="#7a5415">激活 / CUDA Graph 峰值更稳</text>
+
+  <path d="M 60 292 L 508 292" stroke="#8d3f3b" stroke-width="1.2" filter="url(#sk)"/>
+  <text x="284" y="306" text-anchor="middle" font-size="10" fill="#8d3f3b">0.7 × 24GB ≈ 16.8GB 静态区</text>
+  <text x="60" y="210" font-size="9.5" fill="#2b6e9e">权重</text>
+
+  <!-- 底部结论 -->
+  <path d="M 60 330 L 700 330" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="354" text-anchor="middle" font-size="11.5" fill="#7a5415">调低 mem-fraction = 牺牲并发容量（KV 池变小），换来峰值稳定性（余量变大）</text>
+  <text x="380" y="376" text-anchor="middle" font-size="11" fill="#5a5a5a">#tokens ≈ KV 池字节 ÷ 每 token KV 字节（完整公式 Day 4 推导）——启动日志会直接打印这个数</text>
+</svg>

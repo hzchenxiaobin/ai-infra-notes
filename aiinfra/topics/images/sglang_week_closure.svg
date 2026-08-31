@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="430" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">七天闭环：从"为什么"到"造出来"</text>
+
+  <!-- 7 个节点 -->
+  <!-- D1 -->
+  <g filter="url(#sk)"><rect x="38" y="70" width="88" height="78" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="82" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b6e9e">D1 认知</text>
+  <text x="82" y="110" text-anchor="middle" font-size="8.5" fill="#4a6a8a">为什么需要</text>
+  <text x="82" y="123" text-anchor="middle" font-size="8.5" fill="#4a6a8a">推理引擎</text>
+  <text x="82" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">+ 裸推理基线</text>
+
+  <path d="M 126 109 L 146 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D2 -->
+  <g filter="url(#sk)"><rect x="150" y="70" width="88" height="78" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="194" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b6e9e">D2 环境</text>
+  <text x="194" y="110" text-anchor="middle" font-size="8.5" fill="#4a6a8a">安装 + 启动</text>
+  <text x="194" y="123" text-anchor="middle" font-size="8.5" fill="#4a6a8a">读懂日志</text>
+  <text x="194" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">#tokens 伏笔</text>
+
+  <path d="M 238 109 L 258 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D3 -->
+  <g filter="url(#sk)"><rect x="262" y="70" width="88" height="78" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="306" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b6e9e">D3 使用</text>
+  <text x="306" y="110" text-anchor="middle" font-size="8.5" fill="#4a6a8a">curl / SDK</text>
+  <text x="306" y="123" text-anchor="middle" font-size="8.5" fill="#4a6a8a">流式 / Engine</text>
+  <text x="306" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">TTFT 体感</text>
+
+  <path d="M 350 109 L 370 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D4 -->
+  <g filter="url(#sk)"><rect x="374" y="70" width="88" height="78" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+  <text x="418" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#8d3f3b">D4 原理</text>
+  <text x="418" y="110" text-anchor="middle" font-size="8.5" fill="#8a5a56">两阶段 + KV</text>
+  <text x="418" y="123" text-anchor="middle" font-size="8.5" fill="#8a5a56">+ Cont. Batch</text>
+  <text x="418" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">请求旅程图</text>
+
+  <path d="M 462 109 L 482 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D5 -->
+  <g filter="url(#sk)"><rect x="486" y="70" width="88" height="78" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.6"/></g>
+  <text x="530" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#8d3f3b">D5 机制</text>
+  <text x="530" y="110" text-anchor="middle" font-size="8.5" fill="#8a5a56">RadixAttention</text>
+  <text x="530" y="123" text-anchor="middle" font-size="8.5" fill="#8a5a56">零开销调度</text>
+  <text x="530" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">对照实验</text>
+
+  <path d="M 574 109 L 594 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D6 -->
+  <g filter="url(#sk)"><rect x="598" y="70" width="88" height="78" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6"/></g>
+  <text x="642" y="92" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#7a5415">D6 度量</text>
+  <text x="642" y="110" text-anchor="middle" font-size="8.5" fill="#8a6a30">三指标 +</text>
+  <text x="642" y="123" text-anchor="middle" font-size="8.5" fill="#8a6a30">方法学纪律</text>
+  <text x="642" y="140" text-anchor="middle" font-size="8" fill="#8a8a8a">甜点区实测</text>
+
+  <path d="M 686 109 L 706 109" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- D7（放大高亮） -->
+  <g filter="url(#sk)"><rect x="700" y="62" width="52" height="94" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2.2"/></g>
+  <text x="726" y="86" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#356130">D7</text>
+  <text x="726" y="103" text-anchor="middle" font-size="9" font-weight="bold" fill="#356130">项目</text>
+  <text x="726" y="119" text-anchor="middle" font-size="7.5" fill="#4a7a3a">全部</text>
+  <text x="726" y="130" text-anchor="middle" font-size="7.5" fill="#4a7a3a">串联</text>
+  <text x="726" y="141" text-anchor="middle" font-size="7.5" fill="#4a7a3a">产出</text>
+
+  <!-- 阶段括线 -->
+  <path d="M 38 165 L 38 176 L 350 176 L 350 165" stroke="#4a8edb" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+  <text x="194" y="192" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b6e9e">会用</text>
+
+  <path d="M 374 165 L 374 176 L 574 176 L 574 165" stroke="#b85450" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+  <text x="474" y="192" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#8d3f3b">懂原理</text>
+
+  <path d="M 598 165 L 598 176 L 686 176 L 686 165" stroke="#d6a040" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+  <text x="642" y="192" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#7a5415">能量化</text>
+
+  <path d="M 700 165 L 700 176 L 752 176 L 752 165" stroke="#4a7a3a" stroke-width="1.3" fill="none" filter="url(#sk)"/>
+  <text x="726" y="192" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#356130">造出来</text>
+
+  <!-- 底部产出条 -->
+  <g filter="url(#sk)"><rect x="60" y="215" width="640" height="56" rx="10" fill="#ffffff" stroke="#8a8a8a" stroke-width="1.5"/></g>
+  <text x="380" y="238" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2b2b2b">最终产出：可复现的服务 + 性能报告（RESULTS.md）+ 面试弹药库</text>
+  <text x="380" y="258" text-anchor="middle" font-size="10" fill="#5a5a5a">能回答："这台机器上这个模型，多少并发时性价比最高？"</text>
+
+  <!-- 下一步 -->
+  <path d="M 380 271 L 380 292" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="296" width="640" height="70" rx="10" fill="#f7f9fc" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="380" y="318" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2b6e9e">下一步：4 周进阶（见学习计划第四节）</text>
+  <text x="380" y="338" text-anchor="middle" font-size="10" fill="#4a6a8a">通用原理深化（对照 vLLM）→ SGLang 源码走读 → 硬件与算子层（TP/CUDA）→ 优化专题 + 产出</text>
+  <text x="380" y="354" text-anchor="middle" font-size="10" fill="#4a6a8a">4 周后：能读引擎核心源码、能量化分析任何部署的瓶颈</text>
+
+  <!-- 底注 -->
+  <path d="M 60 386 L 700 386" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="410" text-anchor="middle" font-size="10.5" fill="#7a5415">检验闭环的土办法：把 Day 4 的"请求旅程图"默画一遍，每一环能挂上一个今天项目里的文件或参数</text>
+</svg>

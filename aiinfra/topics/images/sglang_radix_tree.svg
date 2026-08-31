@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="500" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">RadixAttention：一棵基数树管住所有请求的前缀</text>
+
+  <!-- 树 -->
+  <g filter="url(#sk)"><circle cx="380" cy="70" r="17" fill="#f2f2f2" stroke="#8a8a8a" stroke-width="2"/></g>
+  <text x="380" y="75" text-anchor="middle" font-size="10" fill="#555">root</text>
+
+  <!-- L1: system prompt -->
+  <path d="M 380 87 L 380 112" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="290" y="116" width="180" height="40" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="380" y="133" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#7a5415">system prompt</text>
+  <text x="380" y="148" text-anchor="middle" font-size="9" fill="#8a6a30">（2000 tok，只算过 1 次）</text>
+
+  <!-- L2: 分叉：会话A / 会话B -->
+  <path d="M 320 156 L 200 182" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 440 156 L 560 182" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="90" y="186" width="220" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="200" y="208" text-anchor="middle" font-size="10" fill="#2b6e9e">会话A：Q1 + A1</text>
+
+  <g filter="url(#sk)"><rect x="460" y="186" width="220" height="36" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.6"/></g>
+  <text x="570" y="208" text-anchor="middle" font-size="10" fill="#2b6e9e">会话B：Q1′ + A1′</text>
+
+  <!-- L3: 会话A 延长 -->
+  <path d="M 200 222 L 200 248" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="90" y="252" width="220" height="36" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.6"/></g>
+  <text x="200" y="274" text-anchor="middle" font-size="10" fill="#356130">会话A 第2轮：Q2 + A2</text>
+
+  <!-- L4: 新叶子（未缓存） -->
+  <path d="M 200 288 L 200 314" stroke="#5a5a5a" stroke-width="1.5" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)"><rect x="90" y="318" width="220" height="36" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2" stroke-dasharray="6,3"/></g>
+  <text x="200" y="340" text-anchor="middle" font-size="10" fill="#8d3f3b">第3轮新问题 Q3（刚到，未入树）</text>
+
+  <!-- 右侧说明：一次匹配发生什么 -->
+  <g filter="url(#sk)"><rect x="460" y="252" width="272" height="130" rx="10" fill="#ffffff" stroke="#8a8a8a" stroke-width="1.5"/></g>
+  <text x="596" y="274" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">第 3 轮请求到来时</text>
+  <text x="474" y="296" font-size="9.8" fill="#444">① 从 root 走最长前缀匹配：</text>
+  <text x="486" y="312" font-size="9.8" fill="#444">system → A的Q1A1 → A的Q2A2 全命中</text>
+  <text x="474" y="334" font-size="9.8" fill="#444">② 只 prefill 尾部新增的 Q3</text>
+  <text x="474" y="356" font-size="9.8" fill="#444">③ 生成完，把新 KV 插回树成为新节点</text>
+  <text x="474" y="376" font-size="9.8" fill="#8a6a30">LRU：池满时从最冷的叶子往上层剪</text>
+
+  <!-- 底部：三收益 -->
+  <path d="M 60 404 L 700 404" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="428" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#7a5415">三个关键性质</text>
+  <text x="120" y="450" text-anchor="middle" font-size="10" fill="#444">token 级粒度（差 1 个 token 也只差 1 个）</text>
+  <text x="390" y="450" text-anchor="middle" font-size="10" fill="#444">多轮对话 = 老路径延长，天然全命中</text>
+  <text x="630" y="450" text-anchor="middle" font-size="10" fill="#444">默认开启、零配置、跨请求共享</text>
+  <text x="380" y="478" text-anchor="middle" font-size="10.5" fill="#5a5a5a">512 token 的 system prompt，1000 个并发请求只算 1 次——省的全是 prefill</text>
+</svg>

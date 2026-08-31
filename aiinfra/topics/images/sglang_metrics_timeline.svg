@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="400" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">三大性能指标：都在一次请求的时间线上</text>
+
+  <!-- 时间轴 -->
+  <path d="M 60 200 L 700 200" stroke="#5a5a5a" stroke-width="2" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="710" y="204" font-size="10" fill="#5a5a5a">时间</text>
+
+  <!-- 排队段 -->
+  <g filter="url(#sk)"><rect x="60" y="186" width="90" height="28" rx="4" fill="#f2f2f2" stroke="#8a8a8a" stroke-width="1.3"/></g>
+  <text x="105" y="204" text-anchor="middle" font-size="9.5" fill="#666">排队</text>
+
+  <!-- prefill 段 -->
+  <g filter="url(#sk)"><rect x="150" y="186" width="130" height="28" rx="4" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="215" y="204" text-anchor="middle" font-size="9.5" fill="#2b6e9e">prefill</text>
+
+  <!-- decode token 序列 -->
+  <g filter="url(#sk)">
+    <rect x="290" y="186" width="34" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="328" y="186" width="34" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="366" y="186" width="34" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="404" y="186" width="34" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+    <rect x="442" y="186" width="34" height="28" rx="4" fill="#fce4ec" stroke="#b85450" stroke-width="1.3"/>
+  </g>
+  <text x="486" y="204" font-size="11" fill="#8d3f3b">…</text>
+
+  <!-- TTFT 括弧 -->
+  <path d="M 60 240 L 60 252 L 324 252 L 324 240" stroke="#4a7a3a" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <text x="192" y="270" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#356130">TTFT（首 token 延迟）</text>
+  <text x="192" y="288" text-anchor="middle" font-size="9.5" fill="#4a7a3a">= 排队 + prefill → 决定"等多久开始有反应"</text>
+  <text x="192" y="304" text-anchor="middle" font-size="9.5" fill="#4a7a3a">优化：前缀缓存（Day 5）、更大算力</text>
+
+  <!-- TPOT 括弧 -->
+  <path d="M 324 240 L 324 252 L 476 252 L 476 240" stroke="#b85450" stroke-width="1.6" fill="none" filter="url(#sk)"/>
+  <text x="400" y="332" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#8d3f3b">TPOT / ITL</text>
+  <text x="400" y="350" text-anchor="middle" font-size="9.5" fill="#8a5a56">= 相邻输出 token 的平均间隔 → 决定"打字机流不流畅"</text>
+
+  <!-- E2E 括弧（最外层，放上面） -->
+  <path d="M 60 158 L 60 148 L 500 148 L 500 158" stroke="#8a8a8a" stroke-width="1.4" fill="none" filter="url(#sk)"/>
+  <text x="280" y="140" text-anchor="middle" font-size="10.5" fill="#666">端到端延迟 e2e latency ≈ TTFT + TPOT × (n-1)</text>
+
+  <!-- 吞吐注释 -->
+  <g filter="url(#sk)"><rect x="530" y="60" width="200" height="108" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="1.6"/></g>
+  <text x="630" y="84" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#7a5415">Throughput（吞吐）</text>
+  <text x="630" y="104" text-anchor="middle" font-size="9.5" fill="#8a6a30">单位时间全服务产出的 token 数</text>
+  <text x="630" y="120" text-anchor="middle" font-size="9.5" fill="#8a6a30">（tok/s，output 或 total）</text>
+  <text x="630" y="140" text-anchor="middle" font-size="9.5" fill="#8a6a30">视角是"整台服务"，不是单个请求</text>
+  <text x="630" y="158" text-anchor="middle" font-size="9.5" fill="#8a6a30">GPU 固定成本 → 吞吐 = 每 token 成本</text>
+
+  <!-- 底部：指标与用户感受 -->
+  <path d="M 60 366 L 700 366" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="388" text-anchor="middle" font-size="11" fill="#7a5415">TTFT 差 → "半天不出字"；TPOT 差 → "出字但卡顿"；吞吐差 → "贵"（同样 GPU 扛不住量）</text>
+</svg>

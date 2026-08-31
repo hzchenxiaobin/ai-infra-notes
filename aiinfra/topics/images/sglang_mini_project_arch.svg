@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="620" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">mini-llm-service：组件全景与知识点溯源</text>
+
+  <!-- 项目容器 -->
+  <g filter="url(#sk)"><rect x="30" y="55" width="440" height="470" rx="12" fill="#f7f9fc" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="250" y="80" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#2b6e9e">mini-llm-service/</text>
+
+  <!-- README -->
+  <g filter="url(#sk)"><rect x="50" y="95" width="400" height="32" rx="6" fill="#ffffff" stroke="#8a8a8a" stroke-width="1.2"/></g>
+  <text x="250" y="115" text-anchor="middle" font-size="10" fill="#555">README.md + requirements.txt（5 分钟复现入口）</text>
+
+  <!-- start_server.sh -->
+  <g filter="url(#sk)"><rect x="50" y="138" width="400" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="62" y="162" font-size="10.5" fill="#2b6e9e">scripts/start_server.sh —— 启动命令 + 参数注释</text>
+  <g filter="url(#sk)"><circle cx="432" cy="158" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="432" y="162" text-anchor="middle" font-size="9" font-weight="bold" fill="#7a5415">D2</text>
+
+  <!-- llm_client -->
+  <g filter="url(#sk)"><rect x="50" y="188" width="400" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+  <text x="62" y="212" font-size="10.5" fill="#8d3f3b">client/llm_client.py —— 单轮 / 多轮 / 流式封装</text>
+  <g filter="url(#sk)"><circle cx="432" cy="208" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="432" y="212" text-anchor="middle" font-size="9" font-weight="bold" fill="#7a5415">D3</text>
+
+  <!-- test_basic -->
+  <g filter="url(#sk)"><rect x="50" y="238" width="400" height="40" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/></g>
+  <text x="62" y="262" font-size="10.5" fill="#8d3f3b">tests/test_basic.py —— 冒烟：非空 + usage 完整 + 流式</text>
+  <g filter="url(#sk)"><circle cx="432" cy="258" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="432" y="262" text-anchor="middle" font-size="9" font-weight="bold" fill="#7a5415">D3</text>
+
+  <!-- test_concurrent -->
+  <g filter="url(#sk)"><rect x="50" y="288" width="400" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="62" y="312" font-size="10.5" fill="#2b6e9e">tests/test_concurrent.py —— 20 并发全部成功</text>
+  <g filter="url(#sk)"><circle cx="432" cy="308" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="432" y="312" text-anchor="middle" font-size="9" font-weight="bold" fill="#7a5415">D4</text>
+
+  <!-- benchmark -->
+  <g filter="url(#sk)"><rect x="50" y="338" width="400" height="40" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/></g>
+  <text x="62" y="362" font-size="10.5" fill="#2b6e9e">tests/benchmark.py —— TTFT/TPOT/吞吐（自写）</text>
+  <g filter="url(#sk)"><circle cx="420" cy="358" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="420" y="362" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#7a5415">D5·6</text>
+
+  <!-- RESULTS -->
+  <g filter="url(#sk)"><rect x="50" y="388" width="400" height="48" rx="6" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.6"/></g>
+  <text x="62" y="407" font-size="10.5" font-weight="bold" fill="#356130">report/RESULTS.md —— 数据 + 对比 + 三条结论</text>
+  <text x="62" y="424" font-size="9.5" fill="#4a7a3a">含 Day 1 裸推理基线的最终对账</text>
+  <g filter="url(#sk)"><circle cx="420" cy="412" r="12" fill="#fff8e1" stroke="#d6a040" stroke-width="1.5"/></g>
+  <text x="420" y="416" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#7a5415">D1·6</text>
+
+  <!-- 容器内底部说明 -->
+  <text x="250" y="462" text-anchor="middle" font-size="9.5" fill="#8a8a8a">每个组件右上角的徽章 = 它锻炼的是哪天的知识</text>
+  <text x="250" y="478" text-anchor="middle" font-size="9.5" fill="#8a8a8a">（验收标准：不看笔记说出每个徽章的对应关系）</text>
+
+  <!-- 右侧：SGLang 服务 -->
+  <g filter="url(#sk)"><rect x="530" y="130" width="200" height="100" rx="10" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="630" y="158" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">SGLang 服务</text>
+  <text x="630" y="178" text-anchor="middle" font-size="9.5" fill="#8a6a30">launch_server 常驻进程</text>
+  <text x="630" y="194" text-anchor="middle" font-size="9.5" fill="#8a6a30">--enable-metrics</text>
+  <text x="630" y="210" text-anchor="middle" font-size="9.5" fill="#8a6a30">调度器 + RadixAttention + KV 池</text>
+
+  <!-- GPU -->
+  <g filter="url(#sk)"><rect x="530" y="290" width="200" height="72" rx="10" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/></g>
+  <text x="630" y="318" text-anchor="middle" font-size="12" font-weight="bold" fill="#356130">GPU</text>
+  <text x="630" y="338" text-anchor="middle" font-size="9.5" fill="#4a7a3a">模型权重（只读）</text>
+  <text x="630" y="352" text-anchor="middle" font-size="9.5" fill="#4a7a3a">+ 预分配的 KV Cache 池</text>
+
+  <!-- 箭头：项目 → 服务 -->
+  <path d="M 470 240 L 524 180" stroke="#5a5a5a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="516" y="120" text-anchor="middle" font-size="9.5" fill="#5a5a5a">HTTP（OpenAI API）</text>
+
+  <!-- 箭头：start_server → 服务 -->
+  <path d="M 450 158 L 524 155" stroke="#5a5a5a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="490" y="147" text-anchor="middle" font-size="9" fill="#5a5a5a">启动</text>
+
+  <!-- 箭头：服务 → GPU -->
+  <path d="M 630 230 L 630 286" stroke="#5a5a5a" stroke-width="1.6" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="644" y="262" font-size="9.5" fill="#5a5a5a">加载权重 +</text>
+  <text x="644" y="275" font-size="9.5" fill="#5a5a5a">预分配显存</text>
+
+  <!-- 箭头：benchmark → RESULTS -->
+  <path d="M 250 378 L 250 384" stroke="none"/>
+  <path d="M 300 378 L 300 386" stroke="#5a5a5a" stroke-width="1.4" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 底部注释 -->
+  <path d="M 60 548 L 700 548" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="572" text-anchor="middle" font-size="11" fill="#7a5415">自写 benchmark 与官方 bench_serving 交叉验证：量级一致（差 2 倍内）即口径正确</text>
+  <text x="380" y="596" text-anchor="middle" font-size="10.5" fill="#5a5a5a">git clone → 装依赖 → 跑脚本：任何人 5 分钟复现你的全部结果</text>
+</svg>

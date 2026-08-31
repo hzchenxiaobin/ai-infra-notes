@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 545" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="545" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">一次请求在 SGLang 内的旅程：两种入口，同一条主干</text>
+
+  <!-- 客户端 -->
+  <g filter="url(#sk)"><rect x="230" y="50" width="300" height="46" rx="8" fill="#f2f2f2" stroke="#8a8a8a" stroke-width="2"/></g>
+  <text x="380" y="78" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#555">客户端：curl / OpenAI SDK / requests / aiohttp</text>
+
+  <!-- 分岔箭头 -->
+  <path d="M 330 96 L 210 122" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 430 96 L 550 122" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 左：原生端点 -->
+  <g filter="url(#sk)"><rect x="30" y="126" width="345" height="90" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="202" y="150" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">POST /generate（原生端点）</text>
+  <text x="202" y="171" text-anchor="middle" font-size="10.5" fill="#444">{"text": "...", "sampling_params": {...}}</text>
+  <text x="202" y="189" text-anchor="middle" font-size="10" fill="#4a6a8a">纯文本续写 · 不套模板 · 引擎参数最全</text>
+  <text x="202" y="206" text-anchor="middle" font-size="10" fill="#4a6a8a">调试与贴近引擎的入口</text>
+
+  <!-- 右：OpenAI 兼容端点 -->
+  <g filter="url(#sk)"><rect x="385" y="126" width="345" height="90" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="557" y="150" text-anchor="middle" font-size="13" font-weight="bold" fill="#8d3f3b">POST /v1/chat/completions（OpenAI 兼容）</text>
+  <text x="557" y="171" text-anchor="middle" font-size="10.5" fill="#444">{"model": "...", "messages": [{"role": ...}, ...]}</text>
+  <text x="557" y="189" text-anchor="middle" font-size="10" fill="#8a5a56">自动套 HF tokenizer 的 chat template</text>
+  <text x="557" y="206" text-anchor="middle" font-size="10" fill="#8a5a56">多轮对话 / 应用集成的标准入口</text>
+
+  <!-- 汇合箭头 -->
+  <path d="M 202 216 L 330 240" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 557 216 L 430 240" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- Tokenizer -->
+  <g filter="url(#sk)"><rect x="230" y="244" width="300" height="42" rx="8" fill="#ffffff" stroke="#8a8a8a" stroke-width="1.5"/></g>
+  <text x="380" y="269" text-anchor="middle" font-size="12" font-weight="bold" fill="#444">Tokenizer：文本 → token ids</text>
+
+  <path d="M 380 286 L 380 306" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 调度器 -->
+  <g filter="url(#sk)"><rect x="155" y="310" width="450" height="48" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="1.8"/></g>
+  <text x="380" y="329" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#7a5415">调度器：排队 · 前缀缓存匹配 · Continuous Batching 组批</text>
+  <text x="380" y="348" text-anchor="middle" font-size="10" fill="#8a6a30">每步 decode 后重组 batch——完成的离开、等待的插入</text>
+
+  <path d="M 380 358 L 380 378" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 前向 -->
+  <g filter="url(#sk)"><rect x="155" y="382" width="450" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.8"/></g>
+  <text x="380" y="401" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2b6e9e">GPU 前向 + 采样</text>
+  <text x="380" y="420" text-anchor="middle" font-size="10" fill="#4a6a8a">prefill 一次算完 prompt → decode 逐 token 自回归</text>
+
+  <path d="M 380 430 L 380 450" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <!-- 返回 -->
+  <g filter="url(#sk)"><rect x="155" y="454" width="450" height="44" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="1.8"/></g>
+  <text x="380" y="473" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#356130">返回：非流式 = 一次 JSON ｜ 流式 = SSE（data: {...} … data: [DONE]）</text>
+  <text x="380" y="490" text-anchor="middle" font-size="10" fill="#4a7a3a">流式让你"提前看到" decode 的逐 token 过程</text>
+
+  <!-- 底部注释 -->
+  <path d="M 60 510 L 700 510" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="532" text-anchor="middle" font-size="11" fill="#7a5415">meta_info（原生）/ usage（OpenAI）里的 prompt_tokens 与 completion_tokens——Day 6 性能指标的原始来源</text>
+</svg>

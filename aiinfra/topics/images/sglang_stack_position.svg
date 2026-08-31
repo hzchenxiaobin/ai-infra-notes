@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 465" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="42" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="465" fill="#fdfcf7"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">SGLang 在 LLM 推理系统中的位置</text>
+
+  <!-- 应用层 -->
+  <g filter="url(#sk)"><rect x="30" y="48" width="540" height="50" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="300" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">应用层：LangChain / Agent / RAG / 业务代码</text>
+  <text x="300" y="87" text-anchor="middle" font-size="10.5" fill="#4a6a8a">关心 prompt 与业务逻辑</text>
+
+  <!-- 箭头：HTTP -->
+  <path d="M 300 98 L 300 122" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="312" y="115" font-size="10.5" fill="#5a5a5a">HTTP（OpenAI Compatible API）</text>
+
+  <!-- SGLang 引擎层 -->
+  <g filter="url(#sk)"><rect x="30" y="126" width="540" height="128" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="300" y="150" text-anchor="middle" font-size="14" font-weight="bold" fill="#8d3f3b">SGLang 推理引擎（本周主角）</text>
+
+  <g filter="url(#sk)"><rect x="50" y="162" width="245" height="38" rx="6" fill="#ffffff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="172" y="185" text-anchor="middle" font-size="11" fill="#444">OpenAI 兼容 Server</text>
+
+  <g filter="url(#sk)"><rect x="305" y="162" width="245" height="38" rx="6" fill="#ffffff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="427" y="185" text-anchor="middle" font-size="11" fill="#444">调度器：Continuous Batching</text>
+
+  <g filter="url(#sk)"><rect x="50" y="208" width="245" height="38" rx="6" fill="#ffffff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="172" y="231" text-anchor="middle" font-size="11" fill="#444">RadixAttention 前缀缓存</text>
+
+  <g filter="url(#sk)"><rect x="305" y="208" width="245" height="38" rx="6" fill="#ffffff" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="427" y="231" text-anchor="middle" font-size="11" fill="#444">KV Cache 分页显存池</text>
+
+  <!-- 箭头：加载权重 -->
+  <path d="M 300 254 L 300 278" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="312" y="271" font-size="10.5" fill="#5a5a5a">加载权重（只读，不修改）</text>
+
+  <!-- 模型层 -->
+  <g filter="url(#sk)"><rect x="30" y="282" width="540" height="50" rx="8" fill="#fff8e1" stroke="#d6a040" stroke-width="2"/></g>
+  <text x="300" y="302" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">模型权重：Qwen / Llama / DeepSeek（HF 格式）</text>
+  <text x="300" y="321" text-anchor="middle" font-size="10.5" fill="#8a6a30">训练 / 微调的产物——SGLang 与这一层正交</text>
+
+  <!-- 箭头：驻留 -->
+  <path d="M 300 332 L 300 356" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="312" y="349" font-size="10.5" fill="#5a5a5a">权重与 KV Cache 驻留显存</text>
+
+  <!-- GPU 层 -->
+  <g filter="url(#sk)"><rect x="30" y="360" width="540" height="44" rx="8" fill="#e6f4ea" stroke="#4a7a3a" stroke-width="2"/></g>
+  <text x="300" y="387" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#356130">GPU 硬件：H100 / A100 / B200（算力 · 显存 · 带宽）</text>
+
+  <!-- 右侧注释 -->
+  <text x="596" y="70" font-size="10" fill="#5a5a5a">应用只发 HTTP 请求</text>
+  <text x="596" y="85" font-size="10" fill="#5a5a5a">不 import torch、不碰 GPU</text>
+  <text x="596" y="182" font-size="10" fill="#5a5a5a">吞吐 / 延迟 / 显存</text>
+  <text x="596" y="197" font-size="10" fill="#5a5a5a">三大问题都在这层解决</text>
+  <text x="596" y="300" font-size="10" fill="#5a5a5a">微调改的是这层</text>
+  <text x="596" y="315" font-size="10" fill="#5a5a5a">SGLang 不改一个字节</text>
+
+  <!-- 底部类比 -->
+  <path d="M 60 424 L 540 424" stroke="#d6a040" stroke-width="1" stroke-dasharray="5,5" filter="url(#sk)"/>
+  <text x="380" y="448" text-anchor="middle" font-size="11.5" fill="#7a5415">类比：模型是发动机，SGLang 是变速箱 + 底盘——发动机再强，没有底盘也上不了路</text>
+</svg>
