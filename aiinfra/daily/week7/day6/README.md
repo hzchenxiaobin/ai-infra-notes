@@ -91,6 +91,8 @@ KV 传输 bytes = seq_len × kv_bytes_per_token
 
 #### 任务 1：运行模拟器对比 colocated vs disaggregated
 
+运行 [kernels/pd_disaggregated_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day6/kernels/pd_disaggregated_simulator.py)（仅标准库、无需 GPU），对比 colocated 与 disaggregated 两种部署的 TTFT / TPOT：
+
 ```bash
 python kernels/pd_disaggregated_simulator.py
 ```
@@ -127,7 +129,7 @@ python kernels/pd_disaggregated_simulator.py
 
 #### 任务 2：扫描 prompt 长度，找 PD 分离的"不划算"临界点
 
-修改 `PDConfig.avg_prompt_len`，扫描 128/512/4K/32K，观察 KV 传输时间增长何时抵消 TTFT 改善。
+修改 [kernels/pd_disaggregated_simulator.py](https://github.com/hzchenxiaobin/ai-infra-notes/blob/main/aiinfra/daily/week7/day6/kernels/pd_disaggregated_simulator.py) 中的 `PDConfig.avg_prompt_len`，扫描 128/512/4K/32K，观察 KV 传输时间增长何时抵消 TTFT 改善。
 
 > 思考：什么流量特征下 PD 分离不划算？（提示：短 prompt + 低 QPS 时，KV 传输开销占比大而 TTFT 改善小；长 prompt + 高 QPS 时反之。）
 
