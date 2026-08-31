@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="52" result="n"/>
@@ -7,15 +7,88 @@
     <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
     </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b03a3a"/>
+    </marker>
   </defs>
+
   <rect width="720" height="440" fill="#fdfcf7"/>
-  <text x="360" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">PD 分离架构：双池 + KV 传输层</text>
-  <path d="M 240 40 Q 360 48 480 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>  <g filter="url(#sk)">
+
+  <!-- Title -->
+  <text x="360" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">PD 分离架构：双池 + KV 传输层</text>
+  <path d="M 240 40 Q 360 48 480 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 请求输入 -->
+  <g filter="url(#sk)" stroke="#3a3a3a" stroke-width="1.5" fill="none">
+    <path d="M 118 88 L 194 88" marker-end="url(#ar)"/>
+  </g>
+  <text x="152" y="79" font-size="10" fill="#666" text-anchor="middle">请求</text>
+
+  <!-- Router -->
+  <g filter="url(#sk)">
     <rect x="200" y="60" width="320" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
-  </g>  <text x="360" y="84" font-size="13" fill="#2b6e9e" font-weight="bold">Router / Scheduler</text>  <text x="360" y="104" font-size="10" fill="#666" font-weight="normal">（按阶段分发）</text>  <path d="M 360 116 L 200 150" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <path d="M 360 116 L 520 150" stroke="#3a3a3a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <g filter="url(#sk)">
+  </g>
+  <text x="360" y="84" font-size="13" fill="#2b6e9e" font-weight="bold" text-anchor="middle">Router / Scheduler</text>
+  <text x="360" y="104" font-size="10" fill="#666" text-anchor="middle">（按阶段分发）</text>
+
+  <!-- Router → 双池 fork -->
+  <g filter="url(#sk)" stroke="#3a3a3a" stroke-width="1.5" fill="none">
+    <path d="M 360 116 L 360 130"/>
+    <path d="M 190 130 L 530 130"/>
+    <path d="M 190 130 L 190 146" marker-end="url(#ar)"/>
+    <path d="M 530 130 L 530 146" marker-end="url(#ar)"/>
+  </g>
+  <text x="176" y="123" font-size="9" fill="#666" text-anchor="end">新请求</text>
+  <text x="544" y="123" font-size="9" fill="#666" text-anchor="start">prefill 完成后</text>
+
+  <!-- Prefill Pool -->
+  <g filter="url(#sk)">
     <rect x="40" y="152" width="280" height="100" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
-  </g>  <text x="180" y="180" font-size="13" fill="#2e6e2e" font-weight="bold">Prefill Pool</text>  <text x="180" y="200" font-size="10" fill="#666" font-weight="normal">(compute)</text>  <text x="180" y="226" font-size="10" fill="#444" font-weight="normal">专用处理 prefill</text>  <text x="180" y="242" font-size="10" fill="#888" font-weight="normal">compute-bound</text>  <g filter="url(#sk)">
+  </g>
+  <g text-anchor="middle">
+    <text x="180" y="178" font-size="13" fill="#2e6e2e" font-weight="bold">Prefill Pool</text>
+    <text x="180" y="198" font-size="10" fill="#666">compute-bound · 算力型</text>
+    <text x="180" y="222" font-size="10" fill="#444">长 prompt 一次性算完</text>
+    <text x="180" y="240" font-size="10" fill="#444">少量高算力 GPU（如 H100）</text>
+  </g>
+
+  <!-- Decode Pool -->
+  <g filter="url(#sk)">
     <rect x="400" y="152" width="280" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
-  </g>  <text x="540" y="180" font-size="13" fill="#7a5415" font-weight="bold">Decode Pool</text>  <text x="540" y="200" font-size="10" fill="#666" font-weight="normal">(memory)</text>  <text x="540" y="226" font-size="10" fill="#444" font-weight="normal">专用处理 decode</text>  <text x="540" y="242" font-size="10" fill="#888" font-weight="normal">memory-bound</text>  <path d="M 320 200 L 400 200" stroke="#b03a3a" stroke-width="2" stroke-dasharray="6 3" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>  <text x="360" y="194" font-size="10" fill="#b03a3a" font-weight="bold">KV</text>  <text x="330" y="216" font-size="9" fill="#b03a3a" font-weight="normal">传输层</text>  <text x="180" y="280" font-size="10" fill="#666" font-weight="normal">prefill 完成后</text>  <text x="180" y="294" font-size="10" fill="#666" font-weight="normal">发送 KV Cache</text>  <text x="540" y="280" font-size="10" fill="#666" font-weight="normal">接收 KV Cache</text>  <text x="540" y="294" font-size="10" fill="#666" font-weight="normal">继续 decode</text>  <g filter="url(#sk)">
-    <rect x="40" y="320" width="640" height="50" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.0"/>
-  </g>  <text x="360" y="344" font-size="10" fill="#666" font-weight="bold">KV Transfer Layer: RDMA(RoCE) / NVLink(单机) / TCP(回退)</text>  <text x="360" y="362" font-size="10" fill="#888" font-weight="normal">代表实现: Mooncake / DistServe / vLLM V1</text></svg>
+  </g>
+  <g text-anchor="middle">
+    <text x="540" y="178" font-size="13" fill="#7a5415" font-weight="bold">Decode Pool</text>
+    <text x="540" y="198" font-size="10" fill="#666">memory-bound · 带宽型</text>
+    <text x="540" y="222" font-size="10" fill="#444">每轮每请求 1 token</text>
+    <text x="540" y="240" font-size="10" fill="#444">多量大显存 GPU（KV Cache 占大头）</text>
+  </g>
+
+  <!-- 输出 token 流 -->
+  <g filter="url(#sk)" stroke="#3a3a3a" stroke-width="1.5" fill="none">
+    <path d="M 680 202 L 706 202" marker-end="url(#ar)"/>
+  </g>
+  <text x="693" y="193" font-size="9" fill="#666" text-anchor="middle">token 流</text>
+
+  <!-- KV 下行：Prefill → 传输层 -->
+  <g filter="url(#sk)" stroke="#b03a3a" stroke-width="2" stroke-dasharray="6 3" fill="none">
+    <path d="M 180 256 L 180 312" marker-end="url(#arR)"/>
+  </g>
+  <text x="192" y="288" font-size="9" fill="#b03a3a">发送 KV Cache</text>
+
+  <!-- KV 上行：传输层 → Decode -->
+  <g filter="url(#sk)" stroke="#b03a3a" stroke-width="2" stroke-dasharray="6 3" fill="none">
+    <path d="M 540 312 L 540 256" marker-end="url(#arR)"/>
+  </g>
+  <text x="528" y="288" font-size="9" fill="#b03a3a" text-anchor="end">接收 KV Cache · 继续 decode</text>
+
+  <!-- KV Transfer Layer -->
+  <g filter="url(#sk)">
+    <rect x="40" y="316" width="640" height="52" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.0"/>
+  </g>
+  <text x="360" y="340" font-size="10" fill="#666" font-weight="bold" text-anchor="middle">KV Transfer Layer：RDMA(RoCE) / NVLink(单机) / TCP(回退)</text>
+  <text x="360" y="356" font-size="10" fill="#888" text-anchor="middle">代表实现：Mooncake / DistServe / vLLM V1</text>
+
+  <!-- Takeaway -->
+  <text x="360" y="398" font-size="10" fill="#888" text-anchor="middle">核心收益：prefill 与 decode 各自满载、独立扩缩容，TTFT/TPOT SLO 解耦</text>
+  <text x="360" y="416" font-size="9" fill="#aaa" text-anchor="middle">代价：KV Cache 需跨池传输（长 prompt 时不可忽略），链路与运维复杂度 ↑</text>
+</svg>
