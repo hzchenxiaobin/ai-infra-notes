@@ -225,6 +225,53 @@ FP8 虽然浮点动态范围大，但单 per-tensor scale 在大模型上仍有�
 
 > 💡 **DeepSeek 的 128×128 细粒度**：DeepSeek-V3 用 per-128×128 block scale 的 FP8，精度接近 FP16 但算力/带宽享 FP8 红利。这是 2024-2026 FP8 工程化的前沿，面试追问"DeepSeek 怎么用 FP8 不掉精度"的标准答案。
 
+##### MXFP8（Microscaling FP8）详解：块缩放标准如何工作
+
+上表的 MXFP8 值得展开——它是 OCP（Open Compute Project）2023 年发布的 **MX（Microscaling）标准**的核心格式（源于微软/NVIDIA/AMD/Intel/Arm/Meta 联合研究 *Microscaling Data Formats for Deep Learning*），Blackwell Tensor Core 原生支持。核心设计一句话：**每 32 个连续元素组成一个 block，块内共享一个 scale，scale 与数据一起存储**。
+
+**① 块 scale 用 E8M0——只允许 2 的幂**：
+
+$$s_{\mathrm{block}}=2^{e},\qquad e\in[-127,127]$$
+
+scale 占 1 字节（8 位纯指数、无尾数）。限定 2 的幂有两个硬件动机：
+- **缩放零误差**：浮点数乘 $2^e$ 只改指数位、尾数原样保留——scale 环节不引入任何舍入误差
+- **缩放近乎免费**：乘 $2^e$ 等价于指数加 $e$，Tensor Core 用加法器即可实现块缩放，无需乘法器
+
+代价是 scale 无法精确贴合块内分布：块内最大值最多只能用到量程的一半（等效浪费 ≤1 bit 指数范围），这是"MXFP8 精度介于 per-tensor 与更细 scale 方案之间"的原因。
+
+**② 量化流程**（权重离线一次；激活 W8A8 在线做，每层 GEMM 前）：
+
+1. 块内取最大绝对值 $x_{\max}$
+2. 块 scale：$s=2^{\lceil\log_2(x_{\max}/448)\rceil}$（448 = E4M3 量程上限；向上取整到 2 的幂保证不溢出）
+3. 量化：$x_q=\mathrm{round}_{\mathrm{FP8}}(x/s)$，反量化 $\hat{x}=x_q\cdot s$
+4. 存储：1 B 的 E8M0 scale + 32×1 B FP8 数据 = 33 B/块
+
+**③ 开销与粒度**（块大小 32 是 OCP 在精度/开销间的折中，也恰好对齐 MMA 指令的 K 维 tile）：
+
+| 方案 | scale 粒度 | scale 开销 |
+|------|-----------|-----------|
+| per-tensor | 整张量 1 个 | ≈0 |
+| per-channel | 每行 1 个（如 4096 元素） | ~0.1% |
+| **MXFP8** | **每 32 元素 1 个（2 的幂）** | **~3%（1/33）** |
+| per-token-channel | 每元素 1 个 | scale 存储 ≈4× 数据存储（不可用） |
+
+用 ~3% 存储开销换 32 元素细粒度——outlier 的影响被隔离在单个块内。
+
+**④ GEMM 里的样子**：块沿 K 维（归约维）切分。`mma` 计算时，每完成一个 32 元素块的点积，硬件自动乘上该块的 UE8M0 scale 再累加——**没有逐元素反量化 pass，scale 作为 mma 指令的操作数被直接消费**。Blackwell（`tcgen05` MMA）实际是**两级缩放**：块级 UE8M0（管块内相对分布）× 张量级 FP32（管整矩阵全局幅值），精度与数值范围解耦。NVFP4 用的是同款两级设计（见下文 FP4 节）。
+
+**⑤ MX 家族与硬件落地**：
+
+| 格式 | 数据格式 | 块大小 | 块 scale |
+|------|---------|--------|---------|
+| MXINT8 | INT8 | 32 | UE8M0 |
+| MXFP8 | E4M3 / E5M2 | 32 | UE8M0 |
+| MXFP6 | E3M2 / E2M3 | 32 | UE8M0 |
+| MXFP4 | E2M1 | 32 | UE8M0 |
+
+Blackwell Tensor Core 原生支持以上全部，AMD MI350 系列亦宣布支持 MX 格式。软件侧：NVIDIA TensorRT Model Optimizer 可量化导出 MXFP8 权重（含 DeepSeek 系列），vLLM/SGLang 已支持在 Blackwell 上加载运行。Hopper（sm_90）没有块缩放 MMA——**MXFP8 是 Blackwell 起步的格式**，Hopper 上 FP8 仍走 per-tensor/per-channel 路线。
+
+> 💡 **一句话总结**：MXFP8 = "FP8 + 每 32 元素一个 2 的幂 scale"。把 scale 限制为 2 的幂（E8M0），换来 Tensor Core 内零误差、近乎免费的块缩放；用 ~3% 存储开销把 outlier 隔离到 32 元素块内。与 DeepSeek 128×128 的分工：MXFP8 是"硬件优先"的 OCP 标准（scale 限 2 的幂、原生 mma），DeepSeek 是"精度优先"的自定义训练方案（任意值 scale + 每 128 步提升累加精度、需定制 kernel）——分别代表 FP8 工程化的标准路线与前沿路线。
+
 ##### GPTQ vs AWQ vs SmoothQuant 三方对比
 
 W4A16 时代是 AWQ vs GPTQ 两强，W8A8/FP8 时代多了 SmoothQuant。三方对比：
@@ -266,14 +313,14 @@ Blackwell（B100/RTX 5090）引入 **FP4** Tensor Core：
 | FP8 E4M3 | 8 | 4 | 3 | ±448 | 前向主力 |
 | **NVFP4** | 4 | 2 | 1 | ±6（E2M1） | 超低精度推理/训练 |
 
-**NVFP4 的关键**：格式为 **E2M1**（2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），不是裸 4-bit——而是 **microscaling**——每 32 元素共享一个 scale（类似 MXFP8 但更细）。精度介于 INT4 和 FP8 之间，但算力是 FP8 的 2×（Blackwell FP4 Tensor Core）。
+**NVFP4 的关键**：格式为 **E2M1**（2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），不是裸 4-bit——而是 **microscaling**——每 16 元素共享一个 **E4M3** scale（可取任意值，粒度比 MXFP8 的 32 元素/2 的幂 scale 更细），再叠加张量级 FP32 scale 组成两级缩放。精度介于 INT4 和 FP8 之间，但算力是 FP8 的 2×（Blackwell FP4 Tensor Core）。
 
 **FP4 vs FP8 取舍**：
 - FP4：算力最高（2× FP8），显存最省（1/2 FP8），精度损失更大（需校准）
 - FP8：精度好，算力够用，生态成熟
 - 2026 趋势：FP4 用于"能接受精度损失"的场景（如投机解码的 draft 模型），FP8 仍是主力
 
-> 📖 延伸阅读：NVIDIA Blackwell 架构白皮书、OCP MXFP4/NVFP4 规范、DeepSeek-V3 FP8 训练报告
+> 📖 延伸阅读：NVIDIA Blackwell 架构白皮书、OCP MX（Microscaling）规范（含 MXFP8/MXFP6/MXFP4/NVFP4）、DeepSeek-V3 FP8 训练报告
 
 ---
 
@@ -597,7 +644,7 @@ Day 1 我们把量化推理的三层武器一次讲透，并手写了两个最�
 <details>
 <summary>点击查看答案</summary>
 
-  - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（E2M1：2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），配合 microscaling（每 32 元素一个 scale）
+  - **NVFP4**：Blackwell 引入的 4-bit 浮点格式（E2M1：2 位指数 + 1 位尾数 + 隐含 1，动态范围 ±6），配合 microscaling——每 16 元素一个 E4M3 scale + 张量级 FP32 scale 两级缩放（粒度比 MXFP8 的 32 元素/2 的幂 scale 更细）
   - **算力**：Blackwell FP4 Tensor Core 算力 = FP8 的 2× = FP16 的 ~4×
   - **显存**：FP4 = FP8 的 1/2 = FP16 的 1/4
   - **精度**：介于 INT4 和 FP8 之间，需校准（比 FP8 损失大，比裸 INT4 好——microscaling 带来动态范围）
