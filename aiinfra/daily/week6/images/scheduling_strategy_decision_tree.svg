@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 640" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="55" result="n"/>
@@ -8,93 +8,127 @@
       <path d="M0,0 L9,4.5 L0,9 z" fill="#5a5a5a"/>
     </marker>
   </defs>
-  <rect width="920" height="560" fill="#fdfcf7"/>
+  <rect width="920" height="640" fill="#fdfcf7"/>
 
-  <text x="460" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">调度策略选择决策树</text>
-  <path d="M 300 40 Q 460 48 620 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">调度策略选择决策树</text>
+  <path d="M 300 38 Q 460 46 620 38" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+  <text x="460" y="56" text-anchor="middle" font-size="10.5" fill="#8a8a8a">先定型基础 batching，再按负载特征叠加机制——Week 7 九项策略全景（徽章 = 对应学习日）</text>
 
-  <!-- root -->
+  <!-- Q1 root -->
   <g filter="url(#sk)">
-    <rect x="340" y="60" width="240" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
+    <rect x="330" y="70" width="260" height="48" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
   </g>
-  <text x="460" y="85" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">是否要求最低延迟（交互式）？</text>
+  <text x="460" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">Q1：LLM 自回归生成？</text>
+  <text x="460" y="107" text-anchor="middle" font-size="9.5" fill="#4a6a8a">（生成长度不定且事先未知）</text>
 
-  <!-- yes branch -->
-  <path d="M 460 100 L 460 120 L 160 120 L 160 138" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <text x="300" y="116" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
+  <!-- Q1 no → Dynamic Batching (right) -->
+  <path d="M 590 94 L 655 94" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="620" y="86" text-anchor="middle" font-size="10" fill="#b85450" font-weight="bold">否</text>
   <g filter="url(#sk)">
-    <rect x="40" y="140" width="240" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+    <rect x="660" y="70" width="240" height="48" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
   </g>
-  <text x="160" y="165" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Static / 小 batch + Priority</text>
+  <text x="780" y="90" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">Dynamic Batching</text>
+  <text x="780" y="107" text-anchor="middle" font-size="9.5" fill="#8a6a30">request 级凑批（非 LLM 任务）</text>
 
-  <!-- no branch -->
-  <path d="M 460 100 L 460 120 L 640 120 L 640 138" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <text x="560" y="116" font-size="10" fill="#b85450" font-weight="bold">否</text>
-
-  <!-- Q2 -->
-  <g filter="url(#sk)">
-    <rect x="520" y="140" width="240" height="40" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/>
-  </g>
-  <text x="640" y="165" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">是否 LLM 自回归生成？</text>
-
-  <!-- Q2 no -->
-  <path d="M 640 180 L 640 200 L 520 200 L 520 218" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <text x="570" y="196" font-size="10" fill="#b85450" font-weight="bold">否</text>
-  <g filter="url(#sk)">
-    <rect x="400" y="220" width="240" height="40" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
-  </g>
-  <text x="520" y="245" text-anchor="middle" font-size="11" fill="#7a5415" font-weight="bold">Dynamic Batching</text>
-
-  <!-- Q2 yes -->
-  <path d="M 640 180 L 640 218" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <text x="650" y="200" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
-  <g filter="url(#sk)">
-    <rect x="520" y="220" width="240" height="40" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
-  </g>
-  <text x="640" y="245" text-anchor="middle" font-size="11" fill="#2e6e2e" font-weight="bold">Continuous Batching ✓</text>
-
-  <!-- additive features -->
-  <path d="M 640 260 L 640 282" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
-  <g filter="url(#sk)">
-    <rect x="340" y="284" width="600" height="40" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2"/>
-  </g>
-  <text x="640" y="309" text-anchor="middle" font-size="11" fill="#444" font-weight="bold">在 Continuous 基础上叠加（按需）：</text>
-
-  <!-- 4 additive cards -->
-  <g filter="url(#sk)">
-    <rect x="60" y="340" width="200" height="60" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
-  </g>
-  <text x="160" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a2828">多租户/多 SLA？</text>
-  <text x="160" y="380" text-anchor="middle" font-size="10" fill="#555">→ + Priority Scheduling</text>
-  <text x="160" y="394" text-anchor="middle" font-size="9" fill="#888">高优先级先保 decode</text>
+  <!-- Q1 yes → Continuous -->
+  <path d="M 460 118 L 460 142" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="472" y="134" font-size="10" fill="#2e6e2e" font-weight="bold">是</text>
 
   <g filter="url(#sk)">
-    <rect x="280" y="340" width="200" height="60" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+    <rect x="330" y="146" width="260" height="52" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
   </g>
-  <text x="380" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a5415">有长 prompt？</text>
-  <text x="380" y="380" text-anchor="middle" font-size="10" fill="#555">→ + Chunked Prefill</text>
-  <text x="380" y="394" text-anchor="middle" font-size="9" fill="#888">TPOT 平滑</text>
+  <text x="460" y="168" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">Continuous Batching ✓</text>
+  <text x="460" y="188" text-anchor="middle" font-size="9.5" fill="#4a7a3a">iteration 级重建 batch——LLM 服务的起点</text>
+
+  <!-- 左旁路：延迟极度敏感 -->
+  <path d="M 330 172 L 290 172" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" stroke-dasharray="4,3" filter="url(#sk)"/>
+  <text x="310" y="163" text-anchor="middle" font-size="9.5" fill="#888">延迟极敏感</text>
+  <g filter="url(#sk)">
+    <rect x="30" y="146" width="258" height="52" rx="8" fill="#f2f2f2" stroke="#8a8a8a" stroke-width="1.4"/>
+  </g>
+  <text x="159" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#555">限制并发上限 + Priority</text>
+  <text x="159" y="186" text-anchor="middle" font-size="9.5" fill="#777">batch=1 实时对话：小 batch 换低 TPOT</text>
+
+  <!-- Continuous → 叠加总线 -->
+  <path d="M 460 198 L 460 226" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <text x="472" y="218" font-size="10" fill="#666">按需叠加（互不冲突）</text>
+
+  <!-- 总线 -->
+  <path d="M 170 252 L 750 252" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="4,3" filter="url(#sk)"/>
+  <path d="M 170 226 L 170 246" stroke="#8a8a8a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 460 226 L 460 246" stroke="#8a8a8a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 750 226 L 750 246" stroke="#8a8a8a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+
+  <!-- 叠加卡：行 1（3 张） -->
+  <g filter="url(#sk)">
+    <rect x="30" y="266" width="280" height="88" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/>
+  </g>
+  <text x="46" y="288" font-size="11" font-weight="bold" fill="#7a5415">有长 prompt（&gt;4K）？</text>
+  <text x="46" y="308" font-size="11.5" fill="#444" font-weight="bold">→ + Chunked Prefill</text>
+  <text x="46" y="326" font-size="9.5" fill="#8a6a30">长 prefill 切块与 decode 混编，TPOT 平滑</text>
+  <g filter="url(#sk)"><rect x="248" y="276" width="50" height="20" rx="10" fill="#ffffff" stroke="#c98a2b" stroke-width="1"/></g>
+  <text x="273" y="290" text-anchor="middle" font-size="9.5" fill="#7a5415" font-weight="bold">Day 3</text>
 
   <g filter="url(#sk)">
-    <rect x="500" y="340" width="200" height="60" rx="8" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.4"/>
+    <rect x="330" y="266" width="280" height="88" rx="8" fill="#f3e8fa" stroke="#7a4a9e" stroke-width="1.4"/>
   </g>
-  <text x="600" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#5a2e7e">显存紧张？</text>
-  <text x="600" y="380" text-anchor="middle" font-size="10" fill="#555">→ + Preemption</text>
-  <text x="600" y="394" text-anchor="middle" font-size="9" fill="#888">Recompute / Swap</text>
+  <text x="346" y="288" font-size="11" font-weight="bold" fill="#5a2e7e">有共享前缀？（多轮 / 固定 sys prompt）</text>
+  <text x="346" y="308" font-size="11.5" fill="#444" font-weight="bold">→ + Prefix Caching</text>
+  <text x="346" y="326" font-size="9.5" fill="#6a4a8e">命中免重算 prefill，降 TTFT</text>
+  <g filter="url(#sk)"><rect x="548" y="276" width="50" height="20" rx="10" fill="#ffffff" stroke="#7a4a9e" stroke-width="1"/></g>
+  <text x="573" y="290" text-anchor="middle" font-size="9.5" fill="#5a2e7e" font-weight="bold">Day 4</text>
 
   <g filter="url(#sk)">
-    <rect x="720" y="340" width="180" height="60" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
+    <rect x="630" y="266" width="280" height="88" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4"/>
   </g>
-  <text x="810" y="362" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">有 draft model？</text>
-  <text x="810" y="380" text-anchor="middle" font-size="10" fill="#555">→ + Speculative Dec</text>
-  <text x="810" y="394" text-anchor="middle" font-size="9" fill="#888">降 TBT</text>
+  <text x="646" y="288" font-size="11" font-weight="bold" fill="#2b6e9e">显存紧张？（KV 池吃紧）</text>
+  <text x="646" y="308" font-size="11.5" fill="#444" font-weight="bold">→ + Preemption</text>
+  <text x="646" y="326" font-size="9.5" fill="#4a6a8a">Recompute / Swap 过载优雅降级</text>
+  <g filter="url(#sk)"><rect x="848" y="276" width="50" height="20" rx="10" fill="#ffffff" stroke="#4a8edb" stroke-width="1"/></g>
+  <text x="873" y="290" text-anchor="middle" font-size="9.5" fill="#2b6e9e" font-weight="bold">Day 2</text>
 
-  <!-- bottom standard config -->
+  <!-- 行间总线 -->
+  <path d="M 460 354 L 460 366" stroke="#8a8a8a" stroke-width="1.2" fill="none" filter="url(#sk)"/>
+  <path d="M 170 366 L 750 366" stroke="#8a8a8a" stroke-width="1.2" stroke-dasharray="4,3" filter="url(#sk)"/>
+
+  <!-- 叠加卡：行 2（3 张） -->
   <g filter="url(#sk)">
-    <rect x="60" y="430" width="840" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+    <rect x="30" y="378" width="280" height="88" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.4"/>
   </g>
-  <text x="480" y="454" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">LLM 推理服务标配组合</text>
-  <text x="480" y="474" text-anchor="middle" font-size="11" fill="#444">Continuous Batching + PagedAttention + Chunked Prefill</text>
+  <text x="46" y="400" font-size="11" font-weight="bold" fill="#7a2828">多租户 / 多 SLA？</text>
+  <text x="46" y="420" font-size="11.5" fill="#444" font-weight="bold">→ + Priority Scheduling</text>
+  <text x="46" y="438" font-size="9.5" fill="#8a5a56">高优先级先保 decode（防饥饿用 aging）</text>
+  <g filter="url(#sk)"><rect x="248" y="388" width="50" height="20" rx="10" fill="#ffffff" stroke="#b85450" stroke-width="1"/></g>
+  <text x="273" y="402" text-anchor="middle" font-size="9.5" fill="#7a2828" font-weight="bold">Day 5</text>
 
-  <text x="480" y="528" text-anchor="middle" font-size="10" fill="#888">差异在实现语言（Python vs C++）与 KV Cache 管理（Paged vs Token Attention）</text>
+  <g filter="url(#sk)">
+    <rect x="330" y="378" width="280" height="88" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.6"/>
+  </g>
+  <text x="346" y="400" font-size="11" font-weight="bold" fill="#2e6e2e">高 QPS + 多机集群？</text>
+  <text x="346" y="420" font-size="11.5" fill="#444" font-weight="bold">→ + PD 分离</text>
+  <text x="346" y="438" font-size="9.5" fill="#4a7a3a">双池 + RDMA 传 KV，TTFT/TPOT 解耦</text>
+  <g filter="url(#sk)"><rect x="548" y="388" width="50" height="20" rx="10" fill="#ffffff" stroke="#4a8e4a" stroke-width="1"/></g>
+  <text x="573" y="402" text-anchor="middle" font-size="9.5" fill="#2e6e2e" font-weight="bold">Day 6</text>
+
+  <g filter="url(#sk)">
+    <rect x="630" y="378" width="280" height="88" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4"/>
+  </g>
+  <text x="646" y="400" font-size="11" font-weight="bold" fill="#666">低延迟 + 有 draft model？</text>
+  <text x="646" y="420" font-size="11.5" fill="#444" font-weight="bold">→ + Speculative Decoding</text>
+  <text x="646" y="438" font-size="9.5" fill="#888">小模型起草大模型验证，降 TPOT</text>
+  <g filter="url(#sk)"><rect x="848" y="388" width="50" height="20" rx="10" fill="#ffffff" stroke="#9e9e9e" stroke-width="1"/></g>
+  <text x="873" y="402" text-anchor="middle" font-size="9.5" fill="#666" font-weight="bold">进阶</text>
+
+  <!-- 标配组合 -->
+  <path d="M 460 466 L 460 484" stroke="#5a5a5a" stroke-width="1.4" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <g filter="url(#sk)">
+    <rect x="60" y="488" width="840" height="56" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.8"/>
+  </g>
+  <text x="480" y="511" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">现代引擎标配组合</text>
+  <text x="480" y="532" text-anchor="middle" font-size="11" fill="#444">Continuous Batching + PagedAttention + Chunked Prefill + Prefix Caching</text>
+
+  <!-- 底部方法论 -->
+  <text x="480" y="576" text-anchor="middle" font-size="10.5" fill="#5a5a5a" font-style="italic">没有绝对最优，只有 SLA 权衡——先定型基础策略，再按负载特征逐项叠加</text>
+  <text x="480" y="598" text-anchor="middle" font-size="9.5" fill="#999">答题框架：定性（哪类策略）→ 机制 → 量化 → 方案（标配 + 按需叠加）</text>
+  <text x="480" y="620" text-anchor="middle" font-size="9.5" fill="#999">短 prompt 低 QPS 的单机场景：Continuous 裸奔即可，叠加是负债不是资产</text>
 </svg>
