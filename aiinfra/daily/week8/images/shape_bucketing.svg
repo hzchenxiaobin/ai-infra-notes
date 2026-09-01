@@ -28,7 +28,7 @@
 
   <!-- ============ 映射箭头（选最近 bucket） ============ -->
   <path d="M 100 146 Q 100 180 100 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
-  <path d="M 230 146 Q 250 180 270 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 230 146 Q 320 180 440 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
   <path d="M 382 146 Q 400 180 440 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
   <path d="M 548 146 Q 580 180 610 214" stroke="#888" stroke-width="1.2" marker-end="url(#ar2)" filter="url(#sk)"/>
   <text x="780" y="180" font-size="10" fill="#8a7a06">↑ 向上取整到最近 bucket</text>
