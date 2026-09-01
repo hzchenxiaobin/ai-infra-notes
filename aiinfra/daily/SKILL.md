@@ -163,7 +163,7 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week5 Day7 | 复盘与手撕 —— FA 限时手写 | GPT-2 Transformer Block | [leetgpu-gpt-2-transformer-block-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-gpt-2-transformer-block-solution.html) |
 | Week6 Day1 | 推理流程 —— Prefill vs Decode | INT8 KV-Cache Attention | [leetgpu-int8-kv-cache-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-int8-kv-cache-attention-solution.html) |
 | Week6 Day2 | 实现 KV Cache（含 GQA/MQA/MLA） | Grouped Query Attention (GQA) | [leetgpu-grouped-query-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-grouped-query-attention-solution.html) |
-| Week6 Day3 | vLLM 整体架构分析 | Speculative Decoding Verification | [leetgpu-speculative-decoding-verification-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-speculative-decoding-verification-solution.html) |
+| Week6 Day3 | vLLM 整体架构分析 | Top-P Sampling | [leetgpu-top-p-sampling-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-top-p-sampling-solution.html) |
 | Week6 Day4 | vLLM Worker 与 PagedAttention | Causal Self-Attention | [leetgpu-causal-self-attention-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-causal-self-attention-solution.html) |
 | Week6 Day5 | 项目推进 —— Mini 推理引擎 v0 | Token Embedding Layer | [leetgpu-token-embedding-layer-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-token-embedding-layer-solution.html) |
 | Week6 Day6 | FlashDecoding | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
@@ -177,7 +177,7 @@ weekN/images/*.svg  # SVG 图(语义化小写命名,如 warp_shuffle_primitives.
 | Week7 Day7 | 调度优化策略总结 | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |
 | Week8 Day1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | Weight Dequantization | [leetgpu-weight-dequantization-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-weight-dequantization-solution.html) |
 | Week8 Day2 | FP8 量化深入 | 待定 | — |
-| Week8 Day3 | SGLang / 投机解码 | Scalar Multiply | [leetgpu-scalar-multiply-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-scalar-multiply-solution.html) |
+| Week8 Day3 | 投机解码专题 —— Medusa/EAGLE/MTP | Speculative Decoding Verification | [leetgpu-speculative-decoding-verification-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-speculative-decoding-verification-solution.html) |
 | Week8 Day4 | CUDA Graph 实操 | Matrix Transpose（复用 W1D4） | [leetgpu-matrix-transpose-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-matrix-transpose-solution.html) |
 | Week8 Day5 | 项目推进 —— 加速技术接入 | 待定 | — |
 | Week8 Day6 | Profiling —— 量化/CUDA Graph | Reduction | [leetgpu-reduction-solution.md](https://hzchenxiaobin.github.io/leetgpu/leetgpu-reduction-solution.html) |

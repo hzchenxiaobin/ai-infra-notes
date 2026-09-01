@@ -23,7 +23,7 @@
 |-----|------|------|
 | Day 1 | 量化推理专题 —— W8A16/INT8 KV/FP8 | [day1/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day1.html) |
 | Day 2 | FP8 量化深入 —— E4M3/E5M2 kernel 与 GPTQ vs AWQ 对比 | [day2/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day2.html) |
-| Day 3 | SGLang / 投机解码 | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day3.html) |
+| Day 3 | 投机解码专题 —— 原理与三路线（Medusa/EAGLE/MTP） | [day3/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day3.html) |
 | Day 4 | CUDA Graph 实操 —— 消除 Launch Overhead | [day4/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day4.html) |
 | Day 5 | 项目推进 —— 量化/投机解码/CUDA Graph 接入 Mini 引擎 | [day5/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day5.html) |
 | Day 6 | Profiling —— 量化前后精度性能对比与 CUDA Graph Launch Gap | [day6/](https://hzchenxiaobin.github.io/ai-infra-notes/week8/day6.html) |
