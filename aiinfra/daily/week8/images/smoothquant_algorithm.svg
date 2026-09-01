@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="820" height="430" viewBox="0 0 820 430" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="500" viewBox="0 0 820 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="30" result="n"/>
@@ -8,17 +8,17 @@
       <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
     </marker>
   </defs>
-  <rect width="820" height="430" fill="#fdfcf7"/>
+  <rect width="820" height="500" fill="#fdfcf7"/>
   <text x="410" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">SmoothQuant：激活 outlier 迁移到权重</text>
   <path d="M 220 42 Q 410 50 600 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
-  <text x="220" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">迁移前</text>
-  <text x="600" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">迁移前</text>
+  <text x="410" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">① 迁移前</text>
 
   <g filter="url(#sk)">
     <rect x="60" y="70" width="320" height="92" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
   </g>
   <text x="76" y="90" font-size="12" font-weight="bold" fill="#7a2828">激活 x</text>
+  <text x="364" y="90" text-anchor="end" font-size="11" font-weight="bold" fill="#b03a3a">难量化</text>
   <text x="76" y="106" font-size="10" fill="#666">有 outlier（大值）</text>
   <g filter="url(#sk)">
     <line x1="80" y1="156" x2="360" y2="156" stroke="#bbb" stroke-width="1"/>
@@ -37,6 +37,7 @@
     <rect x="440" y="70" width="320" height="92" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
   </g>
   <text x="456" y="90" font-size="12" font-weight="bold" fill="#2e6e2e">权重 w</text>
+  <text x="744" y="90" text-anchor="end" font-size="11" font-weight="bold" fill="#2e6e2e">易量化</text>
   <text x="456" y="106" font-size="10" fill="#666">平滑（无 outlier）</text>
   <g filter="url(#sk)">
     <line x1="460" y1="156" x2="740" y2="156" stroke="#bbb" stroke-width="1"/>
@@ -50,52 +51,60 @@
     <rect x="696" y="134" width="22" height="22" fill="#d4edda" stroke="#4a8e4a"/>
   </g>
 
-  <path d="M 410 162 L 410 232" stroke="#3a3a3a" stroke-width="1.8" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
-  <text x="430" y="186" font-size="12" font-weight="bold" fill="#7a5415">w' = w × s</text>
-  <text x="430" y="204" font-size="12" font-weight="bold" fill="#7a5415">x' = x ÷ s</text>
-  <text x="430" y="222" font-size="11" fill="#7a5415">(s &gt; 1，对 outlier 通道)</text>
-
-  <text x="220" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a3a">迁移后</text>
-  <text x="600" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">迁移后</text>
+  <path d="M 410 165 L 410 187" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
 
   <g filter="url(#sk)">
-    <rect x="60" y="260" width="320" height="92" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+    <rect x="40" y="190" width="740" height="88" rx="10" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
   </g>
-  <text x="76" y="280" font-size="12" font-weight="bold" fill="#7a2828">激活 x'</text>
-  <text x="76" y="296" font-size="10" fill="#666">平滑了（outlier 被除掉）</text>
+  <text x="60" y="216" font-size="13" font-weight="bold" fill="#7a5415">② 迁移：把激活的 outlier 搬到权重</text>
+  <text x="756" y="216" text-anchor="end" font-size="11" font-weight="bold" fill="#7a5415">数学等价</text>
+  <text x="60" y="242" font-size="12.5" fill="#444">s<tspan font-size="9" dy="3">j</tspan><tspan dy="-3"> = max|X</tspan><tspan font-size="9" dy="3">j</tspan><tspan dy="-3">|</tspan><tspan font-size="9" dy="-5">α</tspan><tspan dy="5"> ÷ max|W</tspan><tspan font-size="9" dy="3">j</tspan><tspan dy="-3">|</tspan><tspan font-size="9" dy="-5">(1−α)</tspan><tspan dy="5">　（α 越大迁移越多，常取 0.5）</tspan></text>
+  <text x="60" y="264" font-size="12" fill="#444">w' = w × s　x' = x ÷ s（outlier 通道 s &gt; 1）→　(x÷s)(w×s) = x·w（输出不变）</text>
+
+  <path d="M 410 282 L 410 300" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <text x="410" y="315" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">③ 迁移后</text>
+
   <g filter="url(#sk)">
-    <line x1="80" y1="346" x2="360" y2="346" stroke="#bbb" stroke-width="1"/>
-    <rect x="92" y="326" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="124" y="324" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="156" y="328" width="22" height="18" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="188" y="326" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="220" y="324" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="252" y="328" width="22" height="18" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="284" y="326" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
-    <rect x="316" y="324" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="60" y="323" width="320" height="92" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  </g>
+  <text x="76" y="343" font-size="12" font-weight="bold" fill="#7a2828">激活 x'</text>
+  <text x="76" y="359" font-size="10" fill="#666">平滑了（outlier 被除掉）</text>
+  <g filter="url(#sk)">
+    <line x1="80" y1="409" x2="360" y2="409" stroke="#bbb" stroke-width="1"/>
+    <rect x="92" y="389" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="124" y="387" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="156" y="391" width="22" height="18" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="188" y="389" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="220" y="387" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="252" y="391" width="22" height="18" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="284" y="389" width="22" height="20" fill="#f9d5dc" stroke="#b85450"/>
+    <rect x="316" y="387" width="22" height="22" fill="#f9d5dc" stroke="#b85450"/>
   </g>
 
   <g filter="url(#sk)">
-    <rect x="440" y="260" width="320" height="92" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+    <rect x="440" y="323" width="320" height="92" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
   </g>
-  <text x="456" y="280" font-size="12" font-weight="bold" fill="#2e6e2e">权重 w'</text>
-  <text x="456" y="296" font-size="10" fill="#666">稍大但仍可量化</text>
+  <text x="456" y="343" font-size="12" font-weight="bold" fill="#2e6e2e">权重 w'</text>
+  <text x="456" y="359" font-size="10" fill="#666">稍大但仍可量化</text>
   <g filter="url(#sk)">
-    <line x1="460" y1="346" x2="740" y2="346" stroke="#bbb" stroke-width="1"/>
-    <rect x="472" y="318" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="504" y="316" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="536" y="320" width="22" height="26" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="568" y="318" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="600" y="316" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="632" y="320" width="22" height="26" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="664" y="318" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
-    <rect x="696" y="316" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
+    <line x1="460" y1="409" x2="740" y2="409" stroke="#bbb" stroke-width="1"/>
+    <rect x="472" y="381" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="504" y="379" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="536" y="383" width="22" height="26" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="568" y="381" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="600" y="379" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="632" y="383" width="22" height="26" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="664" y="381" width="22" height="28" fill="#d4edda" stroke="#4a8e4a"/>
+    <rect x="696" y="379" width="22" height="30" fill="#d4edda" stroke="#4a8e4a"/>
   </g>
 
-  <path d="M 410 354 L 410 370" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+  <path d="M 410 419 L 410 437" stroke="#3a3a3a" stroke-width="1.6" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
   <g filter="url(#sk)">
-    <rect x="120" y="372" width="580" height="48" rx="10" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <rect x="40" y="440" width="740" height="52" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" stroke-dasharray="5 3"/>
   </g>
-  <text x="410" y="394" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">④ 两者都用 INT8 量化 → W8A8</text>
-  <text x="410" y="412" text-anchor="middle" font-size="11" fill="#666">Tensor Core 原生 W8A8，部署极友好</text>
+  <text x="410" y="464" text-anchor="middle" font-size="13" font-weight="bold" fill="#2e6e2e">④ 两者都用 INT8 量化 → W8A8（Tensor Core 原生）</text>
+  <text x="60" y="484" font-size="11" font-weight="bold" fill="#2e6e2e">优点：W8A8 部署极友好</text>
+  <text x="430" y="484" font-size="11" font-weight="bold" fill="#b03a3a">缺点：只到 INT8，不如 W4A16 省显存</text>
 </svg>
