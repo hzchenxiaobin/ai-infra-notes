@@ -18,11 +18,11 @@
 
 TP 每层 forward：
 
-![串行执行：compute 与 all-reduce 串行](images/serial_execution_timeline.svg)
+![串行执行：compute 与 all-reduce 串行](../images/serial_execution_timeline.svg)
 
 双 Stream 重叠：
 
-![双 Stream 重叠：compute 与 comm 并行](images/dual_stream_overlap_timeline.svg)
+![双 Stream 重叠：compute 与 comm 并行](../images/dual_stream_overlap_timeline.svg)
 
 | 策略 | 每层时间 | SM 利用率 |
 |------|---------|----------|
@@ -69,11 +69,11 @@ with torch.cuda.stream(comm_stream):
 
 把一层的 GEMM 按输出维度切两半：
 
-![TP 层切分：GEMM 按输出维度分两半](images/layer_splitting_concept.svg)
+![TP 层切分：GEMM 按输出维度分两半](../images/layer_splitting_concept.svg)
 
 ##### 调度时间线
 
-![调度时间线：通信计算重叠](images/overlap_schedule_timeline.svg)
+![调度时间线：通信计算重叠](../images/overlap_schedule_timeline.svg)
 
 ##### 代码结构
 
@@ -168,7 +168,7 @@ Megatron-LM 的 Sequence Parallelism（SP）核心思路：**把 seq_len 维也�
 
 SP 不替换 TP，而是**与 TP 配合**——在 TP 的非 Attention 部分（LayerNorm、Dropout、Residual）把 sequence 切分：
 
-![标准 TP vs SP + TP：通信与显存对比](images/tp_vs_sp_comparison.svg)
+![标准 TP vs SP + TP：通信与显存对比](../images/tp_vs_sp_comparison.svg)
 
 ##### SP 的关键改进：all-reduce 拆成 reduce-scatter + all-gather
 

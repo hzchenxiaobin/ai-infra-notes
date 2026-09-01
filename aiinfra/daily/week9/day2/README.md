@@ -36,7 +36,7 @@ Day 1 介绍了 PP 的基本概念：模型按层切分到 P 个 stage，micro-b
 
 GPipe（2019）是最简单的 PP 调度：先做全部 forward，再做全部 backward。
 
-![GPipe 调度时间线](images/gpipe_schedule_timeline.svg)
+![GPipe 调度时间线](../images/gpipe_schedule_timeline.svg)
 
 - M=4 个 micro-batch，P=4 个 stage
 - **填充气泡**（fill bubble）：前 P-1 步，后面的 stage 在等前面的 forward 到来
@@ -59,7 +59,7 @@ M=4, 每份 activation 1GB → 4GB。大模型下显存压力大。
 
 1F1B（One Forward One Backward）在 forward 第 i 个 micro-batch 后，尽快做 backward 第 i-(P-1) 个 micro-batch：
 
-![1F1B 调度时间线](images/1f1b_schedule_timeline.svg)
+![1F1B 调度时间线](../images/1f1b_schedule_timeline.svg)
 
 ##### 显存优势
 
@@ -114,7 +114,7 @@ bubble = (P - 1) / (M + P - 1)
 
 把每个 stage 的层再分成 V 个 **virtual stage**（sub-stage），让通信更频繁、bubble 更小：
 
-![Interleaved 1F1B 虚拟流水线](images/interleaved_virtual_pipeline.svg)
+![Interleaved 1F1B 虚拟流水线](../images/interleaved_virtual_pipeline.svg)
 
 ##### Bubble 公式
 
@@ -147,7 +147,7 @@ V=1 退化为标准 1F1B（`(P-1)/(M+P-1)`）。V 越大 bubble 越小，但通�
 
 推理 DP **几乎无通信**——每个 worker 独立处理不同请求，只在前端做负载均衡：
 
-![推理 DP 请求路由](images/dp_request_routing.svg)
+![推理 DP 请求路由](../images/dp_request_routing.svg)
 
 ##### DP + TP/PP 组合
 

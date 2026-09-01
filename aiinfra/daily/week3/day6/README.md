@@ -63,7 +63,7 @@ Day 1-5 的性能演进（30% → 16% → ~50% → 96%，其中 Day1/Day2/Day5 �
 
 ##### Roofline 基本公式
 
-![Roofline 基本公式](images/roofline_formula.svg)
+![Roofline 基本公式](../images/roofline_formula.svg)
 
 - **Arithmetic Intensity (AI)**：每字节搬运的数据能做多少 FLOP
 - **Peak point**：AI 与 Roofline 交点，左侧带宽 bound，右侧算力 bound
@@ -72,15 +72,15 @@ Day 1-5 的性能演进（30% → 16% → ~50% → 96%，其中 Day1/Day2/Day5 �
 
 GEMM `C[M,N] = A[M,K] × B[K,N]` 的 AI：
 
-![GEMM 的 Arithmetic Intensity](images/gemm_ai_formula.svg)
+![GEMM 的 Arithmetic Intensity](../images/gemm_ai_formula.svg)
 
 对于方阵 M=N=K=4096, FP16：
 
-![方阵 AI 计算](images/ai_calculation.svg)
+![方阵 AI 计算](../images/ai_calculation.svg)
 
 RTX 5090 的 Peak FP16 = 209 TFLOPS, Peak HBM BW = 1792 GB/s：
 
-![Ridge Point 计算](images/ridge_point.svg)
+![Ridge Point 计算](../images/ridge_point.svg)
 
 GEMM 的 AI (1365) >> Ridge point (117)，所以 **GEMM 是算力 bound**。
 
@@ -88,7 +88,7 @@ GEMM 的 AI (1365) >> Ridge point (117)，所以 **GEMM 是算力 bound**。
 
 Day 1 教学版直接从 global memory load fragment，没有 smem tiling。每个 warp 独立加载 A/B tile，大量重复搬运：
 
-![Day 1 带宽 bound 分析](images/day1_ai_analysis.svg)
+![Day 1 带宽 bound 分析](../images/day1_ai_analysis.svg)
 
 > 💡 **关键洞察**：GEMM 理论上是算力 bound，但"低效数据搬运"会把它变成带宽 bound。Day 2 的 smem tiling 通过数据复用恢复了 AI，把瓶颈从带宽转移到算力。
 
