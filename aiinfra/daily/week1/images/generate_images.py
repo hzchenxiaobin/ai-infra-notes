@@ -428,37 +428,41 @@ def simt_vs_simd() -> str:
 
 
 def occupancy_concept() -> str:
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+    active_x = [106 + i * 32 for i in range(16)]
+    active_row = "\n".join(
+        f'    <rect x="{x}" y="96" width="28" height="36"/>' for x in active_x
+    )
+    empty_row = "\n".join(
+        f'    <rect x="{x}" y="140" width="28" height="36"/>' for x in active_x
+    )
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
   <rect width="720" height="360" fill="#0d1117"/>
   <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Occupancy 概念</text>
 
   <!-- SM slot -->
-  <rect x="80" y="80" width="560" height="120" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="360" y="110" text-anchor="middle" font-size="16" font-weight="bold" fill="#c9d1d9">一个 SM 的 Warp 槽位（例如最大 32 个 warp）</text>
+  <rect x="80" y="56" width="560" height="140" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <text x="360" y="80" text-anchor="middle" font-size="15" font-weight="bold" fill="#c9d1d9">一个 SM 的 Warp 槽位（例如最大 32 个 warp）</text>
 
-  <!-- Active warps -->
-  <rect x="100" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="140" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="180" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="220" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="260" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="300" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="340" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-  <rect x="380" y="130" width="30" height="50" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <!-- Active warps: 16 -->
+  <g fill="#238636" stroke="#3fb950" stroke-width="2">
+{active_row}
+  </g>
 
-  <!-- Empty slots -->
-  <rect x="420" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
-  <rect x="460" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
-  <rect x="500" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
-  <rect x="540" y="130" width="30" height="50" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+  <!-- Empty slots: 16 -->
+  <g fill="#30363d" stroke="#484f58" stroke-width="2">
+{empty_row}
+  </g>
 
-  <text x="240" y="205" text-anchor="middle" font-size="13" fill="#3fb950" font-weight="bold">Active Warps = 8</text>
-  <text x="500" y="205" text-anchor="middle" font-size="13" fill="#8b949e">Empty Slots = 4</text>
+  <!-- Legend -->
+  <rect x="168" y="208" width="14" height="14" fill="#238636" stroke="#3fb950" stroke-width="2"/>
+  <text x="190" y="220" font-size="13" font-weight="bold" fill="#3fb950">Active Warps = 16</text>
+  <rect x="420" y="208" width="14" height="14" fill="#30363d" stroke="#484f58" stroke-width="2"/>
+  <text x="442" y="220" font-size="13" fill="#8b949e">Empty Slots = 16</text>
 
   <!-- Formula -->
-  <rect x="80" y="240" width="560" height="80" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="360" y="275" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">Occupancy = 8 / 12 = 67%</text>
-  <text x="360" y="305" text-anchor="middle" font-size="14" fill="#8b949e">实际中分母是 SM 支持的最大 warp 数</text>
+  <rect x="80" y="244" width="560" height="84" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
+  <text x="360" y="278" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9d1d9">Occupancy = 16 / 32 = 50%</text>
+  <text x="360" y="306" text-anchor="middle" font-size="13" fill="#8b949e">分子：驻留的 Active Warp 数　分母：SM 支持的最大 Warp 数</text>
 </svg>'''
 
 
