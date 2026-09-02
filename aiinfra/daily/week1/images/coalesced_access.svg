@@ -1,48 +1,104 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="430" viewBox="0 0 760 430" font-family="'Comic Sans MS','Marker Felt','Kaiti SC','KaiTi','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
   </defs>
-
   <g filter="url(#sketch)">
+  <rect width="760" height="430" fill="#fdfcf7"/>
+  <text x="380" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Coalesced Access：一个 warp 读 32 个连续 float</text>
 
-  <rect width="720" height="320" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Coalesced Global Memory Access</text>
+  <!-- warp threads -->
+  <text x="60" y="66" font-size="12" fill="#666666">warp = 32 个线程，同时执行同一条 load 指令</text>
 
-  <!-- Threads -->
-  <text x="80" y="80" text-anchor="middle" font-size="14" fill="#666666">Warp Threads</text>
-  <circle cx="80" cy="110" r="14" fill="#6ab0ff"/>
-  <text x="80" y="115" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T0</text>
-  <circle cx="80" cy="150" r="14" fill="#6ab0ff"/>
-  <text x="80" y="155" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T1</text>
-  <circle cx="80" cy="190" r="14" fill="#6ab0ff"/>
-  <text x="80" y="195" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T2</text>
-  <circle cx="80" cy="230" r="14" fill="#6ab0ff"/>
-  <text x="80" y="235" text-anchor="middle" font-size="10" fill="#fdfcf7" font-weight="bold">T3</text>
+  <circle cx="70" cy="100" r="13" fill="#6ab0ff"/><text x="70" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T0</text>
+  <circle cx="110" cy="100" r="13" fill="#6ab0ff"/><text x="110" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T1</text>
+  <circle cx="150" cy="100" r="13" fill="#6ab0ff"/><text x="150" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T2</text>
+  <circle cx="190" cy="100" r="13" fill="#6ab0ff"/><text x="190" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T3</text>
+  <circle cx="230" cy="100" r="13" fill="#6ab0ff"/><text x="230" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T4</text>
+  <circle cx="270" cy="100" r="13" fill="#6ab0ff"/><text x="270" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T5</text>
+  <circle cx="310" cy="100" r="13" fill="#6ab0ff"/><text x="310" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T6</text>
+  <circle cx="350" cy="100" r="13" fill="#6ab0ff"/><text x="350" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T7</text>
+  <text x="385" y="105" text-anchor="middle" font-size="14" fill="#666666">&#8230;</text>
+  <circle cx="415" cy="100" r="13" fill="#6ab0ff"/><text x="415" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T30</text>
+  <circle cx="455" cy="100" r="13" fill="#6ab0ff"/><text x="455" y="104" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T31</text>
 
-  <!-- Arrows -->
-  <line x1="94" y1="110" x2="250" y2="110" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="94" y1="150" x2="250" y2="150" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="94" y1="190" x2="250" y2="190" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="94" y1="230" x2="250" y2="230" stroke="#6ab0ff" stroke-width="2"/>
+  <!-- code chip -->
+  <rect x="510" y="78" width="230" height="48" rx="7" fill="#f0ede4" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="525" y="99" font-family="monospace" font-size="13" fill="#2b2b2b">&#9989; y[idx] = x[idx]</text>
+  <text x="525" y="117" font-size="11" fill="#666666">线程 i 访问 x[i] &#8594; 地址连续</text>
 
-  <!-- Memory blocks -->
-  <rect x="250" y="90" width="60" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
-  <text x="280" y="115" text-anchor="middle" font-size="12" fill="#2b2b2b">addr+0</text>
-  <rect x="310" y="90" width="60" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
-  <text x="340" y="115" text-anchor="middle" font-size="12" fill="#2b2b2b">addr+4</text>
-  <rect x="370" y="90" width="60" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
-  <text x="400" y="115" text-anchor="middle" font-size="12" fill="#2b2b2b">addr+8</text>
-  <rect x="430" y="90" width="60" height="40" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
-  <text x="460" y="115" text-anchor="middle" font-size="12" fill="#2b2b2b">addr+12</text>
+  <!-- arrows threads -> memory -->
+  <line x1="70" y1="115" x2="65" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="110" y1="115" x2="83" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="150" y1="115" x2="101" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="190" y1="115" x2="119" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="230" y1="115" x2="137" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="270" y1="115" x2="155" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="310" y1="115" x2="173" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
+  <line x1="350" y1="115" x2="191" y2="172" stroke="#6ab0ff" stroke-width="1.5"/>
 
-  <text x="250" y="75" font-size="13" fill="#666666">Global Memory（连续地址）</text>
+  <!-- memory label -->
+  <text x="380" y="158" text-anchor="middle" font-size="12" fill="#666666">Global Memory：x[0..31] 共 128 字节连续区域</text>
 
-  <!-- Result -->
-  <rect x="560" y="150" width="120" height="50" rx="8" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="620" y="172" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">合并为</text>
-  <text x="620" y="190" text-anchor="middle" font-size="13" fill="#2b2b2b" font-weight="bold">1 次事务</text>
+  <!-- sector 0 -->
+  <rect x="52" y="172" width="152" height="56" rx="4" fill="#4a9d5f" opacity="0.55" stroke="#5cb86c" stroke-width="2"/>
+  <rect x="56" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="65" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">0</text>
+  <rect x="74" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="83" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">1</text>
+  <rect x="92" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="101" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">2</text>
+  <rect x="110" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="119" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">3</text>
+  <rect x="128" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="137" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">4</text>
+  <rect x="146" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="155" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">5</text>
+  <rect x="164" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="173" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">6</text>
+  <rect x="182" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="191" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">7</text>
+
+  <!-- sector 1 -->
+  <rect x="220" y="172" width="152" height="56" rx="4" fill="#4a9d5f" opacity="0.55" stroke="#5cb86c" stroke-width="2"/>
+  <rect x="224" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="233" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">8</text>
+  <rect x="242" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="251" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">9</text>
+  <rect x="260" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="269" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">10</text>
+  <rect x="278" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="287" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">11</text>
+  <rect x="296" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="305" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">12</text>
+  <rect x="314" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="323" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">13</text>
+  <rect x="332" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="341" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">14</text>
+  <rect x="350" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="359" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">15</text>
+
+  <!-- sector 2 -->
+  <rect x="388" y="172" width="152" height="56" rx="4" fill="#4a9d5f" opacity="0.55" stroke="#5cb86c" stroke-width="2"/>
+  <rect x="392" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="401" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">16</text>
+  <rect x="410" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="419" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">17</text>
+  <rect x="428" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="437" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">18</text>
+  <rect x="446" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="455" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">19</text>
+  <rect x="464" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="473" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">20</text>
+  <rect x="482" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="491" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">21</text>
+  <rect x="500" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="509" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">22</text>
+  <rect x="518" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="527" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">23</text>
+
+  <!-- sector 3 -->
+  <rect x="556" y="172" width="152" height="56" rx="4" fill="#4a9d5f" opacity="0.55" stroke="#5cb86c" stroke-width="2"/>
+  <rect x="560" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="569" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">24</text>
+  <rect x="578" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="587" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">25</text>
+  <rect x="596" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="605" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">26</text>
+  <rect x="614" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="623" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">27</text>
+  <rect x="632" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="641" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">28</text>
+  <rect x="650" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="659" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">29</text>
+  <rect x="668" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="677" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">30</text>
+  <rect x="686" y="180" width="18" height="40" fill="#fdfcf7" opacity="0.35" stroke="#5cb86c" stroke-width="1"/><text x="695" y="204" text-anchor="middle" font-size="9" fill="#2b2b2b">31</text>
+
+  <!-- sector labels -->
+  <text x="128" y="246" text-anchor="middle" font-size="10" fill="#666666">sector 0 &#183; bytes 0&#8211;31</text>
+  <text x="296" y="246" text-anchor="middle" font-size="10" fill="#666666">sector 1 &#183; bytes 32&#8211;63</text>
+  <text x="464" y="246" text-anchor="middle" font-size="10" fill="#666666">sector 2 &#183; bytes 64&#8211;95</text>
+  <text x="632" y="246" text-anchor="middle" font-size="10" fill="#666666">sector 3 &#183; bytes 96&#8211;127</text>
+
+  <!-- summary -->
+  <rect x="52" y="272" width="656" height="72" rx="9" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="380" y="298" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">32 个地址全部落在 4 个 sector &#8594; 只需 4 次 32B 事务</text>
+  <text x="380" y="324" text-anchor="middle" font-size="13" font-weight="bold" fill="#5cb86c">传输 128 B，全是有效数据 &#8594; 带宽利用率 100% &#9989;</text>
+
+  <!-- notes -->
+  <text x="380" y="372" text-anchor="middle" font-size="11" fill="#666666">合并条件：warp 内 32 个地址连续（本例 0&#8211;127B 且 32B 对齐）</text>
+  <text x="380" y="392" text-anchor="middle" font-size="11" fill="#666666">若未对齐或跨 128B 边界，可能落到 5 个 sector——但连续访问几乎总是接近最优</text>
   </g>
 </svg>

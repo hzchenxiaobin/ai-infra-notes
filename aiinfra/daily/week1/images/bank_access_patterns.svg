@@ -1,36 +1,142 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="710" viewBox="0 0 720 710" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4a9d5f"/></marker>
+    <marker id="arrB" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/></marker>
+    <marker id="arrY" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e8a838"/></marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e57373"/></marker>
   </defs>
 
   <g filter="url(#sketch)">
 
-  <rect width="720" height="480" fill="#fdfcf7"/>
+  <rect width="720" height="710" fill="#fdfcf7"/>
   <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory 访问模式总结</text>
 
-  <!-- Pattern 1: No conflict -->
-  <rect x="60" y="70" width="600" height="100" rx="8" fill="#4a9d5f" opacity="0.2" stroke="#5cb86c" stroke-width="2"/>
-  <text x="80" y="100" font-size="15" font-weight="bold" fill="#5cb86c">✅ 模式 1：每个线程访问不同 bank</text>
-  <text x="80" y="125" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x]  // 线程 i 访问 bank i</text>
-  <text x="80" y="150" font-size="12" fill="#666666">结果：1 个 cycle 完成，最快</text>
+  <!-- 模式 1：无 conflict -->
+  <rect x="46" y="52" width="628" height="150" rx="10" fill="#e8f5e9" stroke="#5cb86c" stroke-width="2"/>
+  <text x="66" y="82" font-size="14" font-weight="bold" fill="#3d8b4f">✅ 模式 1：无 Conflict（每个线程访问不同 bank）</text>
+  <text x="66" y="108" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x];</text>
+  <text x="66" y="128" font-family="monospace" font-size="11" fill="#666666">// 线程 i 访问 bank i</text>
+  <text x="66" y="162" font-size="12.5" fill="#2b2b2b">32 个线程 → 32 个不同 bank</text>
+  <text x="66" y="184" font-size="12.5" fill="#666666">1 个 cycle 完成，速度最快</text>
 
-  <!-- Pattern 2: Broadcast -->
-  <rect x="60" y="190" width="600" height="100" rx="8" fill="#4a8edb" opacity="0.2" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="80" y="220" font-size="15" font-weight="bold" fill="#6ab0ff">✅ 模式 2：所有线程访问同一地址（Broadcast）</text>
-  <text x="80" y="245" font-family="monospace" font-size="12" fill="#2b2b2b">tile[0]  // 所有线程读同一个地址</text>
-  <text x="80" y="270" font-size="12" fill="#666666">结果：1 个 cycle 完成，有专门广播机制</text>
+  <circle cx="462" cy="90" r="11" fill="#4a9d5f"/><text x="462" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="90" r="11" fill="#4a9d5f"/><text x="507" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="90" r="11" fill="#4a9d5f"/><text x="552" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="90" r="11" fill="#4a9d5f"/><text x="597" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="90" r="11" fill="#4a9d5f"/><text x="642" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
 
-  <!-- Pattern 3: 2-way conflict -->
-  <rect x="60" y="310" width="600" height="70" rx="8" fill="#e8a838" opacity="0.2" stroke="#f0c050" stroke-width="2"/>
-  <text x="80" y="340" font-size="15" font-weight="bold" fill="#f0c050">⚠️ 模式 3：2-way bank conflict</text>
-  <text x="80" y="365" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x % 2]  // 线程分成两组访问两个 bank</text>
+  <line x1="462" y1="101" x2="462" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="507" y1="101" x2="507" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="552" y1="101" x2="552" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="597" y1="101" x2="597" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="642" y1="101" x2="642" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
 
-  <!-- Pattern 4: 32-way conflict -->
-  <rect x="60" y="400" width="600" height="60" rx="8" fill="#e57373" opacity="0.2" stroke="#e57373" stroke-width="2"/>
-  <text x="80" y="425" font-size="15" font-weight="bold" fill="#e57373">❌ 模式 4：32-way bank conflict（最坏情况）</text>
-  <text x="80" y="450" font-family="monospace" font-size="12" fill="#2b2b2b">tile[threadIdx.x * 32]  // 所有线程访问同一个 bank</text>
+  <rect x="447" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="462" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B0</text>
+  <rect x="492" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="507" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="537" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <rect x="582" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="597" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B3</text>
+  <rect x="627" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="642" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B4</text>
+
+  <!-- 模式 2：Broadcast -->
+  <rect x="46" y="215" width="628" height="150" rx="10" fill="#e3f2fd" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="66" y="245" font-size="14" font-weight="bold" fill="#4a8edb">✅ 模式 2：Broadcast（所有线程读同一地址）</text>
+  <text x="66" y="271" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[0];</text>
+  <text x="66" y="291" font-family="monospace" font-size="11" fill="#666666">// 32 个线程读的都是字节地址 0</text>
+  <text x="66" y="325" font-size="12.5" fill="#2b2b2b">都在 Bank 0，但读的是同一个地址</text>
+  <text x="66" y="347" font-size="12.5" fill="#666666">硬件一次广播给所有线程 → 1 cycle，无 conflict</text>
+
+  <circle cx="462" cy="253" r="11" fill="#4a8edb"/><text x="462" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="253" r="11" fill="#4a8edb"/><text x="507" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="253" r="11" fill="#4a8edb"/><text x="552" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="253" r="11" fill="#4a8edb"/><text x="597" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="253" r="11" fill="#4a8edb"/><text x="642" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="264" x2="535" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="507" y1="264" x2="543" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="552" y1="264" x2="552" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="597" y1="264" x2="561" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="642" y1="264" x2="569" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <rect x="520" y="295" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="310" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B0 (addr 0)</text>
+  <text x="552" y="340" text-anchor="middle" font-size="10.5" fill="#4a8edb">一次广播</text>
+
+  <!-- 模式 3：多路广播（无 conflict，易误判） -->
+  <rect x="46" y="378" width="628" height="150" rx="10" fill="#fff8e1" stroke="#f0c050" stroke-width="2"/>
+  <text x="66" y="408" font-size="14" font-weight="bold" fill="#c8961e">⚠️ 模式 3：多路广播 Multicast（无 Conflict，易误判）</text>
+  <text x="66" y="434" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x % 2];</text>
+  <text x="66" y="454" font-family="monospace" font-size="11" fill="#666666">// 偶数线程读地址 0，奇数线程读地址 1</text>
+  <text x="66" y="488" font-size="12.5" fill="#2b2b2b">16 线程读 tile[0]（Bank 0），16 线程读 tile[1]（Bank 1）</text>
+  <text x="66" y="510" font-size="12.5" fill="#666666">两组各自同地址 → 两次广播，1 cycle，不是 2-way conflict</text>
+
+  <circle cx="462" cy="416" r="11" fill="#e8a838"/><text x="462" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="416" r="11" fill="#e8a838"/><text x="507" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="416" r="11" fill="#e8a838"/><text x="552" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="416" r="11" fill="#e8a838"/><text x="597" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="416" r="11" fill="#e8a838"/><text x="642" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="427" x2="476" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="552" y1="427" x2="500" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="642" y1="427" x2="518" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="507" y1="427" x2="598" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="597" y1="427" x2="626" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+
+  <rect x="458" y="458" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="490" y="473" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B0 (addr 0)</text>
+  <rect x="582" y="458" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="614" y="473" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B1 (addr 1)</text>
+  <text x="490" y="497" text-anchor="middle" font-size="9.5" fill="#666666">×16 线程</text>
+  <text x="614" y="497" text-anchor="middle" font-size="9.5" fill="#666666">×16 线程</text>
+
+  <!-- 模式 4：32-way conflict -->
+  <rect x="46" y="541" width="628" height="150" rx="10" fill="#ffebee" stroke="#e57373" stroke-width="2"/>
+  <text x="66" y="571" font-size="14" font-weight="bold" fill="#d9534f">❌ 模式 4：32-way Conflict（最坏情况）</text>
+  <text x="66" y="597" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x * 32];</text>
+  <text x="66" y="617" font-family="monospace" font-size="11" fill="#666666">// 线程 i 访问 tile[i×32] → 全部落入 Bank 0 的不同地址</text>
+  <text x="66" y="651" font-size="12.5" fill="#2b2b2b">32 个线程挤在 Bank 0 的 32 个不同地址上</text>
+  <text x="66" y="673" font-size="12.5" fill="#666666">串行 32 次 → 32 cycles，最慢</text>
+
+  <circle cx="462" cy="579" r="11" fill="#e57373"/><text x="462" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="579" r="11" fill="#e57373"/><text x="507" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="579" r="11" fill="#e57373"/><text x="552" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="579" r="11" fill="#e57373"/><text x="597" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="579" r="11" fill="#e57373"/><text x="642" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="590" x2="462" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="507" y1="590" x2="507" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="552" y1="590" x2="552" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="597" y1="590" x2="597" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="642" y1="590" x2="642" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <text x="440" y="623" text-anchor="end" font-size="9" fill="#999999">tile[]</text>
+  <rect x="447" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="462" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">0</text>
+  <rect x="492" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="507" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">32</text>
+  <rect x="537" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">64</text>
+  <rect x="582" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="597" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">96</text>
+  <rect x="627" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="642" y="623" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#2b2b2b">128</text>
+
+  <line x1="462" y1="629" x2="530" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="507" y1="629" x2="540" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="552" y1="629" x2="552" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="597" y1="629" x2="564" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="642" y1="629" x2="576" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <rect x="520" y="649" width="64" height="22" fill="#e57373"/>
+  <text x="552" y="664" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#fff">Bank 0</text>
+  <text x="612" y="664" font-size="10" font-weight="bold" fill="#e57373">串行！</text>
   </g>
 </svg>

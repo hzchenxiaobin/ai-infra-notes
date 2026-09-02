@@ -1056,135 +1056,378 @@ def transpose_tiled_process() -> str:
 
 
 def shared_memory_bank_structure() -> str:
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
-  <rect width="720" height="400" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory Bank 结构</text>
+    strips = []
+    for strip_top, base_addr in ((104, 0), (180, 128)):
+        cells = []
+        for i in range(32):
+            x = 56 + i * 19
+            if i == 0:
+                fill, stroke, text_color, stroke_w = "#ffcdd2", "#e57373", "#c62828", "2"
+            elif i == 1:
+                fill, stroke, text_color, stroke_w = "#c8e6c9", "#4a9d5f", "#2e7d32", "2"
+            else:
+                fill = "#E3F2FD" if i % 2 == 0 else "#BBDEFB"
+                stroke, text_color, stroke_w = "#64b5f6", "#2b2b2b", "1"
+            cells.append(
+                f'    <rect x="{x}" y="{strip_top}" width="17" height="36" fill="{fill}"'
+                f' stroke="{stroke}" stroke-width="{stroke_w}"/>\n'
+                f'    <text x="{x + 8.5}" y="{strip_top + 14}" text-anchor="middle"'
+                f' font-family="monospace" font-size="8" fill="#666666">{base_addr + i * 4}</text>\n'
+                f'    <text x="{x + 8.5}" y="{strip_top + 29}" text-anchor="middle"'
+                f' font-size="9.5" font-weight="bold" fill="{text_color}">{i}</text>'
+            )
+        strips.append("\n".join(cells))
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="545" viewBox="0 0 720 545" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
 
-  <text x="360" y="65" text-anchor="middle" font-size="14" fill="#8b949e">32 个 bank，每个 bank 4 bytes（对于 float 类型，每行对应一个 warp 的访问）</text>
+  <g filter="url(#sketch)">
 
-  <!-- Bank headers -->
-  <g transform="translate(60, 90)">
-    <rect x="0" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="25" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 0</text>
-    <rect x="50" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="75" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 1</text>
-    <rect x="100" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="125" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 2</text>
-    <rect x="150" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="175" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">...</text>
-    <rect x="200" y="0" width="50" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="225" y="20" text-anchor="middle" font-size="11" fill="#c9d1d9">Bank 31</text>
+  <rect width="720" height="545" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory Bank 结构</text>
+  <text x="360" y="64" text-anchor="middle" font-size="13" fill="#666666">32 个 bank × 4 bytes：一个 warp 的 32 个线程可以同时各访问一个 bank</text>
+
+  <text x="359" y="94" text-anchor="middle" font-size="12" fill="#666666">第 0 ~ 31 个 float（字节地址 0 ~ 124）｜格内下排数字 = bank 编号</text>
+{strips[0]}
+  <text x="64.5" y="152" text-anchor="middle" font-size="9" fill="#666666">Bank 0</text>
+  <text x="653.5" y="152" text-anchor="middle" font-size="9" fill="#666666">Bank 31</text>
+
+  <text x="359" y="170" text-anchor="middle" font-size="12" fill="#666666">第 32 ~ 63 个 float（字节地址 128 ~ 252）</text>
+{strips[1]}
+  <text x="64.5" y="228" text-anchor="middle" font-size="9" fill="#666666">Bank 0</text>
+  <text x="653.5" y="228" text-anchor="middle" font-size="9" fill="#666666">Bank 31</text>
+
+  <text x="360" y="242" text-anchor="middle" font-size="12" fill="#666666">地址每增加 128 bytes（32 个 float），bank 编号就循环一轮</text>
+
+  <rect x="170" y="256" width="380" height="40" rx="10" fill="#FFF9E6" stroke="#e8a838" stroke-width="2"/>
+  <text x="360" y="282" text-anchor="middle" font-family="monospace" font-size="17" font-weight="bold" fill="#2b2b2b">bank = (address / 4) % 32</text>
+
+  <rect x="50" y="312" width="620" height="96" rx="10" fill="#F0FFF0" stroke="#5cb86c" stroke-width="2"/>
+  <text x="66" y="334" font-size="13" font-weight="bold" fill="#2b2b2b">举例：</text>
+  <text x="66" y="356" font-size="12" fill="#2b2b2b">字节地址 0、128、256 → <tspan fill="#e57373" font-weight="bold">Bank 0</tspan>（(0/4)%32=0，(128/4)%32=0）</text>
+  <text x="66" y="376" font-size="12" fill="#2b2b2b">字节地址 4、132、260 → <tspan fill="#4a9d5f" font-weight="bold">Bank 1</tspan>（(4/4)%32=1，(132/4)%32=1）</text>
+  <text x="66" y="396" font-size="12" fill="#2b2b2b">tile[i][j] 固定 j、变化 i：相邻行地址差 32×4 = 128 bytes → 全部落入同一个 bank</text>
+
+  <rect x="50" y="428" width="194" height="88" rx="10" fill="#e8f5e9" stroke="#5cb86c" stroke-width="2"/>
+  <text x="147" y="456" text-anchor="middle" font-size="13" font-weight="bold" fill="#3d8b4f">✅ 访问不同 bank</text>
+  <text x="147" y="479" text-anchor="middle" font-size="11.5" fill="#2b2b2b">32 线程 → 32 个 bank</text>
+  <text x="147" y="500" text-anchor="middle" font-size="11.5" fill="#666666">1 cycle 并行完成</text>
+
+  <rect x="263" y="428" width="194" height="88" rx="10" fill="#e3f2fd" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="360" y="456" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a8edb">✅ 访问同一地址</text>
+  <text x="360" y="479" text-anchor="middle" font-size="11.5" fill="#2b2b2b">硬件 Broadcast 广播</text>
+  <text x="360" y="500" text-anchor="middle" font-size="11.5" fill="#666666">1 cycle，无 conflict</text>
+
+  <rect x="476" y="428" width="194" height="88" rx="10" fill="#ffebee" stroke="#e57373" stroke-width="2"/>
+  <text x="573" y="456" text-anchor="middle" font-size="13" font-weight="bold" fill="#d9534f">❌ 同 bank 不同地址</text>
+  <text x="573" y="479" text-anchor="middle" font-size="11.5" fill="#2b2b2b">Bank Conflict 串行处理</text>
+  <text x="573" y="500" text-anchor="middle" font-size="11.5" fill="#666666">最多拖慢 32 倍</text>
+
   </g>
-
-  <!-- Address mapping -->
-  <text x="60" y="155" font-size="13" fill="#c9d1d9">地址到 bank 的映射：</text>
-  <text x="60" y="180" font-family="monospace" font-size="13" fill="#58a6ff">bank = (address / 4) % 32</text>
-
-  <!-- Examples -->
-  <rect x="60" y="210" width="600" height="70" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
-  <text x="70" y="235" font-size="12" fill="#c9d1d9">地址 0, 128, 256 ... → Bank 0</text>
-  <text x="70" y="255" font-size="12" fill="#c9d1d9">地址 4, 132, 260 ... → Bank 1</text>
-  <text x="70" y="275" font-size="12" fill="#c9d1d9">地址 i * 4 且 i % 32 == k → Bank k</text>
-
-  <!-- Note -->
-  <text x="360" y="320" text-anchor="middle" font-size="13" fill="#f85149" font-weight="bold">一个 warp 内多个线程访问同一 bank 的不同地址 → Bank Conflict</text>
-  <text x="360" y="345" text-anchor="middle" font-size="13" fill="#3fb950">一个 warp 内多个线程访问同一地址 → Broadcast，无 Conflict</text>
-  <text x="360" y="370" text-anchor="middle" font-size="13" fill="#8b949e">一个 warp 内线程访问不同 bank → 无 Conflict</text>
 </svg>'''
 
 
 def padding_solution() -> str:
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
-  <rect width="720" height="420" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Padding 解决 Bank Conflict</text>
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="500" viewBox="0 0 720 500" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+  </defs>
 
-  <!-- Without padding -->
-  <text x="180" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#f85149">❌ 无 Padding</text>
-  <text x="180" y="95" text-anchor="middle" font-size="12" fill="#8b949e">float tile[32][32]</text>
+  <g filter="url(#sketch)">
 
-  <g transform="translate(60, 110)">
-    <rect x="0" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="15" y="20" text-anchor="middle" font-size="9" fill="#fff">B0</text>
-    <rect x="30" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="45" y="20" text-anchor="middle" font-size="9" fill="#fff">B1</text>
-    <rect x="60" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="75" y="20" text-anchor="middle" font-size="9" fill="#fff">B2</text>
-    <rect x="90" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="105" y="20" text-anchor="middle" font-size="9" fill="#fff">...</text>
-    <rect x="120" y="0" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="135" y="20" text-anchor="middle" font-size="9" fill="#fff">B31</text>
+  <rect width="720" height="500" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Padding 消除 Bank Conflict</text>
+  <text x="360" y="62" text-anchor="middle" font-size="13" fill="#666666">矩阵转置按列读 tile 时，每行 +1 个 padding 元素，让同一列的数据错开 bank</text>
 
-    <rect x="0" y="30" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="15" y="50" text-anchor="middle" font-size="9" fill="#fff">B0</text>
-    <rect x="30" y="30" width="30" height="30" fill="#f85149" stroke="#ff7b72" stroke-width="2"/>
-    <text x="45" y="50" text-anchor="middle" font-size="9" fill="#fff">B1</text>
+  <!-- ============ 左：无 Padding ============ -->
+  <text x="195" y="92" text-anchor="middle" font-size="15" font-weight="bold" fill="#e57373">❌ 无 Padding</text>
+  <text x="195" y="113" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#666666">__shared__ float tile[32][32];</text>
+  <text x="82" y="128" text-anchor="middle" font-size="10" font-weight="bold" fill="#e57373">按列读 ↓</text>
+  <rect x="66" y="132" width="32" height="122" fill="#e57373" opacity="0.12"/>
 
-    <text x="75" y="90" text-anchor="middle" font-size="11" fill="#f85149">同一列的数据都在同一个 bank</text>
-    <text x="75" y="110" text-anchor="middle" font-size="11" fill="#f85149">按列读 → 32-way conflict</text>
+  <!-- row 0 -->
+  <rect x="70" y="132" width="24" height="22" fill="#e57373" stroke="#ef8b84" stroke-width="2"/>
+  <text x="82" y="147" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B0</text>
+  <rect x="96" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="108" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="122" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="134" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <text x="155" y="147" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="164" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="176" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B31</text>
+  <text x="196" y="147" font-size="9.5" fill="#999999">row 0</text>
+
+  <!-- row 1 -->
+  <rect x="70" y="160" width="24" height="22" fill="#e57373" stroke="#ef8b84" stroke-width="2"/>
+  <text x="82" y="175" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B0</text>
+  <rect x="96" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="108" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="122" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="134" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <text x="155" y="175" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="164" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="176" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B31</text>
+  <text x="196" y="175" font-size="9.5" fill="#999999">row 1</text>
+
+  <!-- row 2 -->
+  <rect x="70" y="188" width="24" height="22" fill="#e57373" stroke="#ef8b84" stroke-width="2"/>
+  <text x="82" y="203" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B0</text>
+  <rect x="96" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="108" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="122" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="134" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <text x="155" y="203" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="164" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="176" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B31</text>
+  <text x="196" y="203" font-size="9.5" fill="#999999">row 2</text>
+
+  <text x="82" y="226" text-anchor="middle" font-size="12" fill="#666666">⋮</text>
+
+  <!-- row 31 -->
+  <rect x="70" y="230" width="24" height="22" fill="#e57373" stroke="#ef8b84" stroke-width="2"/>
+  <text x="82" y="245" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B0</text>
+  <rect x="96" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="108" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="122" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="134" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <text x="155" y="245" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="164" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="176" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B31</text>
+  <text x="196" y="245" font-size="9.5" fill="#999999">row 31</text>
+
+  <text x="195" y="276" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#2b2b2b">bank = (i×32 + j) % 32 = j</text>
+  <text x="195" y="296" text-anchor="middle" font-size="11" fill="#666666">同一列的 bank 与行号 i 无关 → 全在同一个 bank</text>
+  <text x="195" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#e57373">按列读 col 0 → 32-way conflict</text>
+
+  <!-- ============ 右：有 Padding ============ -->
+  <text x="525" y="92" text-anchor="middle" font-size="15" font-weight="bold" fill="#4a9d5f">✅ 有 Padding</text>
+  <text x="525" y="113" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#666666">__shared__ float tile[32][32 + 1];</text>
+  <text x="412" y="128" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a9d5f">按列读 ↓</text>
+  <rect x="396" y="132" width="32" height="122" fill="#4a9d5f" opacity="0.12"/>
+
+  <!-- row 0 -->
+  <rect x="400" y="132" width="24" height="22" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+  <text x="412" y="147" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B0</text>
+  <rect x="426" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="438" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="452" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="464" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <text x="485" y="147" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="494" y="132" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="506" y="147" text-anchor="middle" font-size="10" fill="#2b2b2b">B31</text>
+  <rect x="522" y="132" width="22" height="22" fill="#3a3a3a" stroke="#555555" stroke-width="1.5"/>
+  <text x="533" y="146" text-anchor="middle" font-size="6.5" fill="#fdfcf7">pad</text>
+  <text x="552" y="147" font-size="9.5" fill="#999999">row 0</text>
+
+  <!-- row 1 -->
+  <rect x="400" y="160" width="24" height="22" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+  <text x="412" y="175" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B1</text>
+  <rect x="426" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="438" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <rect x="452" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="464" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B3</text>
+  <text x="485" y="175" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="494" y="160" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="506" y="175" text-anchor="middle" font-size="10" fill="#2b2b2b">B0</text>
+  <rect x="522" y="160" width="22" height="22" fill="#3a3a3a" stroke="#555555" stroke-width="1.5"/>
+  <text x="533" y="174" text-anchor="middle" font-size="6.5" fill="#fdfcf7">pad</text>
+  <text x="552" y="175" font-size="9.5" fill="#999999">row 1</text>
+
+  <!-- row 2 -->
+  <rect x="400" y="188" width="24" height="22" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+  <text x="412" y="203" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">B2</text>
+  <rect x="426" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="438" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B3</text>
+  <rect x="452" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="464" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B4</text>
+  <text x="485" y="203" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="494" y="188" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="506" y="203" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="522" y="188" width="22" height="22" fill="#3a3a3a" stroke="#555555" stroke-width="1.5"/>
+  <text x="533" y="202" text-anchor="middle" font-size="6.5" fill="#fdfcf7">pad</text>
+  <text x="552" y="203" font-size="9.5" fill="#999999">row 2</text>
+
+  <text x="412" y="226" text-anchor="middle" font-size="12" fill="#666666">⋮</text>
+
+  <!-- row 31 -->
+  <rect x="400" y="230" width="24" height="22" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
+  <text x="412" y="245" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">B31</text>
+  <rect x="426" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="438" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B0</text>
+  <rect x="452" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="464" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <text x="485" y="245" text-anchor="middle" font-size="12" fill="#666666">…</text>
+  <rect x="494" y="230" width="24" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="506" y="245" text-anchor="middle" font-size="10" fill="#2b2b2b">B30</text>
+  <rect x="522" y="230" width="22" height="22" fill="#3a3a3a" stroke="#555555" stroke-width="1.5"/>
+  <text x="533" y="244" text-anchor="middle" font-size="6.5" fill="#fdfcf7">pad</text>
+  <text x="552" y="245" font-size="9.5" fill="#999999">row 31</text>
+
+  <text x="525" y="276" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#2b2b2b">bank = (i×33 + j) % 32 = (i+j) % 32</text>
+  <text x="525" y="296" text-anchor="middle" font-size="11" fill="#666666">相邻行同列地址差 132 B → 每行错开 1 个 bank</text>
+  <text x="525" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a9d5f">按列读 col 0 → B0,B1,B2,… 无 conflict</text>
+
+  <!-- 代码对比 -->
+  <rect x="50" y="348" width="620" height="98" rx="8" fill="#f0ede4" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="70" y="374" font-family="monospace" font-size="12" fill="#2b2b2b">// ❌ 按列读 → 32-way conflict</text>
+  <text x="70" y="394" font-family="monospace" font-size="12" fill="#2b2b2b">__shared__ float tile[TILE_DIM][TILE_DIM];</text>
+  <text x="70" y="414" font-family="monospace" font-size="12" fill="#2b2b2b">// ✅ +1 padding，同一列错开 bank</text>
+  <text x="70" y="434" font-family="monospace" font-size="12" fill="#2b2b2b">__shared__ float tile[TILE_DIM][TILE_DIM + 1];</text>
+
+  <text x="360" y="474" text-anchor="middle" font-size="12" fill="#666666">💡 代价：每行浪费 1 个 float（4 bytes），32 行共 128 bytes，换来无 conflict 的列访问</text>
   </g>
-
-  <!-- With padding -->
-  <text x="540" y="70" text-anchor="middle" font-size="16" font-weight="bold" fill="#3fb950">✅ 有 Padding</text>
-  <text x="540" y="95" text-anchor="middle" font-size="12" fill="#8b949e">float tile[32][33]</text>
-
-  <g transform="translate(420, 110)">
-    <rect x="0" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
-    <text x="15" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B0</text>
-    <rect x="30" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
-    <text x="45" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B1</text>
-    <rect x="60" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
-    <text x="75" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B2</text>
-    <rect x="90" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
-    <text x="105" y="20" text-anchor="middle" font-size="9" fill="#0d1117">...</text>
-    <rect x="120" y="0" width="30" height="30" fill="#3fb950" stroke="#56d364" stroke-width="2"/>
-    <text x="135" y="20" text-anchor="middle" font-size="9" fill="#0d1117">B31</text>
-    <rect x="150" y="0" width="20" height="30" fill="#30363d" stroke="#484f58"/>
-    <text x="160" y="20" text-anchor="middle" font-size="8" fill="#8b949e">pad</text>
-
-    <rect x="0" y="30" width="30" height="30" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-    <text x="15" y="50" text-anchor="middle" font-size="9" fill="#fff">B1</text>
-    <rect x="30" y="30" width="30" height="30" fill="#238636" stroke="#3fb950" stroke-width="2"/>
-    <text x="45" y="50" text-anchor="middle" font-size="9" fill="#fff">B2</text>
-
-    <text x="85" y="90" text-anchor="middle" font-size="11" fill="#3fb950">每行多一个 padding 单元</text>
-    <text x="85" y="110" text-anchor="middle" font-size="11" fill="#3fb950">同一列的数据错开 bank</text>
-  </g>
-
-  <!-- Code -->
-  <rect x="60" y="260" width="600" height="120" rx="8" fill="#1f2937" stroke="#30363d" stroke-width="2"/>
-  <text x="70" y="290" font-family="monospace" font-size="13" fill="#c9d1d9">// 有 conflict</text>
-  <text x="70" y="310" font-family="monospace" font-size="13" fill="#c9d1d9">__shared__ float tile[TILE_DIM][TILE_DIM];</text>
-  <text x="70" y="340" font-family="monospace" font-size="13" fill="#c9d1d9">// 无 conflict</text>
-  <text x="70" y="360" font-family="monospace" font-size="13" fill="#c9d1d9">__shared__ float tile[TILE_DIM][TILE_DIM + 1];</text>
 </svg>'''
 
 
 def bank_access_patterns() -> str:
-    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
-  <rect width="720" height="480" fill="#0d1117"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#c9d1d9">Shared Memory 访问模式总结</text>
+    return '''<svg xmlns="http://www.w3.org/2000/svg" width="720" height="710" viewBox="0 0 720 710" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+  <defs>
+    <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
+    </filter>
+    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4a9d5f"/></marker>
+    <marker id="arrB" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/></marker>
+    <marker id="arrY" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e8a838"/></marker>
+    <marker id="arrR" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e57373"/></marker>
+  </defs>
 
-  <!-- Pattern 1: No conflict -->
-  <rect x="60" y="70" width="600" height="100" rx="8" fill="#238636" opacity="0.2" stroke="#3fb950" stroke-width="2"/>
-  <text x="80" y="100" font-size="15" font-weight="bold" fill="#3fb950">✅ 模式 1：每个线程访问不同 bank</text>
-  <text x="80" y="125" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x]  // 线程 i 访问 bank i</text>
-  <text x="80" y="150" font-size="12" fill="#8b949e">结果：1 个 cycle 完成，最快</text>
+  <g filter="url(#sketch)">
 
-  <!-- Pattern 2: Broadcast -->
-  <rect x="60" y="190" width="600" height="100" rx="8" fill="#1f6feb" opacity="0.2" stroke="#58a6ff" stroke-width="2"/>
-  <text x="80" y="220" font-size="15" font-weight="bold" fill="#58a6ff">✅ 模式 2：所有线程访问同一地址（Broadcast）</text>
-  <text x="80" y="245" font-family="monospace" font-size="12" fill="#c9d1d9">tile[0]  // 所有线程读同一个地址</text>
-  <text x="80" y="270" font-size="12" fill="#8b949e">结果：1 个 cycle 完成，有专门广播机制</text>
+  <rect width="720" height="710" fill="#fdfcf7"/>
+  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory 访问模式总结</text>
 
-  <!-- Pattern 3: 2-way conflict -->
-  <rect x="60" y="310" width="600" height="70" rx="8" fill="#d29922" opacity="0.2" stroke="#e3b341" stroke-width="2"/>
-  <text x="80" y="340" font-size="15" font-weight="bold" fill="#e3b341">⚠️ 模式 3：2-way bank conflict</text>
-  <text x="80" y="365" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x % 2]  // 线程分成两组访问两个 bank</text>
+  <!-- 模式 1：无 conflict -->
+  <rect x="46" y="52" width="628" height="150" rx="10" fill="#e8f5e9" stroke="#5cb86c" stroke-width="2"/>
+  <text x="66" y="82" font-size="14" font-weight="bold" fill="#3d8b4f">✅ 模式 1：无 Conflict（每个线程访问不同 bank）</text>
+  <text x="66" y="108" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x];</text>
+  <text x="66" y="128" font-family="monospace" font-size="11" fill="#666666">// 线程 i 访问 bank i</text>
+  <text x="66" y="162" font-size="12.5" fill="#2b2b2b">32 个线程 → 32 个不同 bank</text>
+  <text x="66" y="184" font-size="12.5" fill="#666666">1 个 cycle 完成，速度最快</text>
 
-  <!-- Pattern 4: 32-way conflict -->
-  <rect x="60" y="400" width="600" height="60" rx="8" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
-  <text x="80" y="425" font-size="15" font-weight="bold" fill="#f85149">❌ 模式 4：32-way bank conflict（最坏情况）</text>
-  <text x="80" y="450" font-family="monospace" font-size="12" fill="#c9d1d9">tile[threadIdx.x * 32]  // 所有线程访问同一个 bank</text>
+  <circle cx="462" cy="90" r="11" fill="#4a9d5f"/><text x="462" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="90" r="11" fill="#4a9d5f"/><text x="507" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="90" r="11" fill="#4a9d5f"/><text x="552" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="90" r="11" fill="#4a9d5f"/><text x="597" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="90" r="11" fill="#4a9d5f"/><text x="642" y="94" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="101" x2="462" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="507" y1="101" x2="507" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="552" y1="101" x2="552" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="597" y1="101" x2="597" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+  <line x1="642" y1="101" x2="642" y2="127" stroke="#4a9d5f" stroke-width="2" marker-end="url(#arrG)"/>
+
+  <rect x="447" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="462" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B0</text>
+  <rect x="492" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="507" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B1</text>
+  <rect x="537" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B2</text>
+  <rect x="582" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="597" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B3</text>
+  <rect x="627" y="130" width="30" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="642" y="145" text-anchor="middle" font-size="10" fill="#2b2b2b">B4</text>
+
+  <!-- 模式 2：Broadcast -->
+  <rect x="46" y="215" width="628" height="150" rx="10" fill="#e3f2fd" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="66" y="245" font-size="14" font-weight="bold" fill="#4a8edb">✅ 模式 2：Broadcast（所有线程读同一地址）</text>
+  <text x="66" y="271" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[0];</text>
+  <text x="66" y="291" font-family="monospace" font-size="11" fill="#666666">// 32 个线程读的都是字节地址 0</text>
+  <text x="66" y="325" font-size="12.5" fill="#2b2b2b">都在 Bank 0，但读的是同一个地址</text>
+  <text x="66" y="347" font-size="12.5" fill="#666666">硬件一次广播给所有线程 → 1 cycle，无 conflict</text>
+
+  <circle cx="462" cy="253" r="11" fill="#4a8edb"/><text x="462" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="253" r="11" fill="#4a8edb"/><text x="507" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="253" r="11" fill="#4a8edb"/><text x="552" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="253" r="11" fill="#4a8edb"/><text x="597" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="253" r="11" fill="#4a8edb"/><text x="642" y="257" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="264" x2="535" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="507" y1="264" x2="543" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="552" y1="264" x2="552" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="597" y1="264" x2="561" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="642" y1="264" x2="569" y2="292" stroke="#4a8edb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <rect x="520" y="295" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="310" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B0 (addr 0)</text>
+  <text x="552" y="340" text-anchor="middle" font-size="10.5" fill="#4a8edb">一次广播</text>
+
+  <!-- 模式 3：多路广播（无 conflict，易误判） -->
+  <rect x="46" y="378" width="628" height="150" rx="10" fill="#fff8e1" stroke="#f0c050" stroke-width="2"/>
+  <text x="66" y="408" font-size="14" font-weight="bold" fill="#c8961e">⚠️ 模式 3：多路广播 Multicast（无 Conflict，易误判）</text>
+  <text x="66" y="434" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x % 2];</text>
+  <text x="66" y="454" font-family="monospace" font-size="11" fill="#666666">// 偶数线程读地址 0，奇数线程读地址 1</text>
+  <text x="66" y="488" font-size="12.5" fill="#2b2b2b">16 线程读 tile[0]（Bank 0），16 线程读 tile[1]（Bank 1）</text>
+  <text x="66" y="510" font-size="12.5" fill="#666666">两组各自同地址 → 两次广播，1 cycle，不是 2-way conflict</text>
+
+  <circle cx="462" cy="416" r="11" fill="#e8a838"/><text x="462" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="416" r="11" fill="#e8a838"/><text x="507" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="416" r="11" fill="#e8a838"/><text x="552" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="416" r="11" fill="#e8a838"/><text x="597" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="416" r="11" fill="#e8a838"/><text x="642" y="420" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="427" x2="476" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="552" y1="427" x2="500" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="642" y1="427" x2="518" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="507" y1="427" x2="598" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+  <line x1="597" y1="427" x2="626" y2="456" stroke="#e8a838" stroke-width="2" marker-end="url(#arrY)"/>
+
+  <rect x="458" y="458" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="490" y="473" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B0 (addr 0)</text>
+  <rect x="582" y="458" width="64" height="22" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="614" y="473" text-anchor="middle" font-size="8.5" fill="#2b2b2b">B1 (addr 1)</text>
+  <text x="490" y="497" text-anchor="middle" font-size="9.5" fill="#666666">×16 线程</text>
+  <text x="614" y="497" text-anchor="middle" font-size="9.5" fill="#666666">×16 线程</text>
+
+  <!-- 模式 4：32-way conflict -->
+  <rect x="46" y="541" width="628" height="150" rx="10" fill="#ffebee" stroke="#e57373" stroke-width="2"/>
+  <text x="66" y="571" font-size="14" font-weight="bold" fill="#d9534f">❌ 模式 4：32-way Conflict（最坏情况）</text>
+  <text x="66" y="597" font-family="monospace" font-size="12" fill="#2b2b2b">float v = tile[threadIdx.x * 32];</text>
+  <text x="66" y="617" font-family="monospace" font-size="11" fill="#666666">// 线程 i 访问 tile[i×32] → 全部落入 Bank 0 的不同地址</text>
+  <text x="66" y="651" font-size="12.5" fill="#2b2b2b">32 个线程挤在 Bank 0 的 32 个不同地址上</text>
+  <text x="66" y="673" font-size="12.5" fill="#666666">串行 32 次 → 32 cycles，最慢</text>
+
+  <circle cx="462" cy="579" r="11" fill="#e57373"/><text x="462" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T0</text>
+  <circle cx="507" cy="579" r="11" fill="#e57373"/><text x="507" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T1</text>
+  <circle cx="552" cy="579" r="11" fill="#e57373"/><text x="552" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T2</text>
+  <circle cx="597" cy="579" r="11" fill="#e57373"/><text x="597" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T3</text>
+  <circle cx="642" cy="579" r="11" fill="#e57373"/><text x="642" y="583" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">T4</text>
+
+  <line x1="462" y1="590" x2="462" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="507" y1="590" x2="507" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="552" y1="590" x2="552" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="597" y1="590" x2="597" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="642" y1="590" x2="642" y2="607" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <text x="440" y="623" text-anchor="end" font-size="9" fill="#999999">tile[]</text>
+  <rect x="447" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="462" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">0</text>
+  <rect x="492" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="507" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">32</text>
+  <rect x="537" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="552" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">64</text>
+  <rect x="582" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="597" y="623" text-anchor="middle" font-family="monospace" font-size="9" fill="#2b2b2b">96</text>
+  <rect x="627" y="609" width="30" height="20" fill="#BBDEFB" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="642" y="623" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#2b2b2b">128</text>
+
+  <line x1="462" y1="629" x2="530" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="507" y1="629" x2="540" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="552" y1="629" x2="552" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="597" y1="629" x2="564" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+  <line x1="642" y1="629" x2="576" y2="647" stroke="#e57373" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <rect x="520" y="649" width="64" height="22" fill="#e57373"/>
+  <text x="552" y="664" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#fff">Bank 0</text>
+  <text x="612" y="664" font-size="10" font-weight="bold" fill="#e57373">串行！</text>
+  </g>
 </svg>'''
 
 

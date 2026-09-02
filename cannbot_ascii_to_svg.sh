@@ -15,7 +15,7 @@ for week in $(seq 1 10); do
             continue
         fi
 
-        MESSAGE="阅读${README} 将 ascii图全换成 svg 图片"
+        MESSAGE="阅读${README}，使用/mnt/workspace/aiinfra/ai-infra-notes/aiinfra/daily/leetgpu_selection.md，为教程重新挑选合适的LeetGPU 在线题目 "
         echo
         echo "======== week${week}/day${day} ========"
         echo ">>> 发送: $MESSAGE"

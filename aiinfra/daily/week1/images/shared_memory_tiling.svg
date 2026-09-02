@@ -1,44 +1,93 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="470" viewBox="0 0 760 470" font-family="'Comic Sans MS','Marker Felt','Kaiti SC','KaiTi','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a8edb"/>
+    </marker>
   </defs>
-
   <g filter="url(#sketch)">
+  <rect width="760" height="470" fill="#fdfcf7"/>
+  <text x="380" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Shared Memory Tiling：一次搬运，块内复用</text>
 
-  <rect width="720" height="420" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Shared Memory Tiling 原理</text>
+  <!-- global memory big matrix -->
+  <text x="180" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#6ab0ff">Global Memory（大矩阵）</text>
+  <rect x="60" y="95" width="240" height="240" fill="#fdfcf7" stroke="#6ab0ff" stroke-width="2"/>
+  <line x1="120" y1="95" x2="120" y2="335" stroke="#6ab0ff" stroke-width="1"/>
+  <line x1="180" y1="95" x2="180" y2="335" stroke="#6ab0ff" stroke-width="1"/>
+  <line x1="240" y1="95" x2="240" y2="335" stroke="#6ab0ff" stroke-width="1"/>
+  <line x1="60" y1="155" x2="300" y2="155" stroke="#6ab0ff" stroke-width="1"/>
+  <line x1="60" y1="215" x2="300" y2="215" stroke="#6ab0ff" stroke-width="1"/>
+  <line x1="60" y1="275" x2="300" y2="275" stroke="#6ab0ff" stroke-width="1"/>
+  <rect x="120" y="95" width="60" height="60" fill="#4a8edb" opacity="0.4" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="150" y="130" text-anchor="middle" font-size="11" fill="#2b2b2b" font-weight="bold">tile</text>
+  <text x="180" y="354" text-anchor="middle" font-size="11" fill="#666666">慢 &#183; ~400-800 cycles &#183; 数十 GB</text>
 
-  <!-- Global memory matrix -->
-  <rect x="60" y="80" width="240" height="240" fill="none" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="180" y="70" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Global Memory（大矩阵）</text>
+  <!-- load arrow -->
+  <line x1="184" y1="125" x2="416" y2="168" stroke="#4a8edb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="300" y="118" text-anchor="middle" font-size="12" font-weight="bold" fill="#4a8edb">&#9312; 协作加载（coalesced read）</text>
 
-  <!-- Tiles in global -->
-  <rect x="60" y="80" width="80" height="80" fill="#4a8edb" opacity="0.3" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="100" y="125" text-anchor="middle" font-size="11" fill="#2b2b2b">Tile 0</text>
-  <rect x="140" y="80" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="220" y="80" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="60" y="160" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="140" y="160" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="220" y="160" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="60" y="240" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="140" y="240" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
-  <rect x="220" y="240" width="80" height="80" fill="#4a8edb" opacity="0.1" stroke="#6ab0ff" stroke-width="1"/>
+  <!-- SM box -->
+  <rect x="400" y="85" width="180" height="285" rx="12" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
+  <text x="490" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">SM</text>
 
-  <!-- Shared memory tile -->
-  <rect x="420" y="120" width="120" height="120" rx="4" fill="#4a9d5f" opacity="0.3" stroke="#5cb86c" stroke-width="2"/>
-  <text x="480" y="115" text-anchor="middle" font-size="14" fill="#2b2b2b" font-weight="bold">Shared Memory（Tile）</text>
+  <!-- shared memory tile grid -->
+  <rect x="424" y="124" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="458" y="124" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="492" y="124" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="526" y="124" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="424" y="158" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="458" y="158" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="492" y="158" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="526" y="158" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="424" y="192" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="458" y="192" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="492" y="192" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="526" y="192" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="424" y="226" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="458" y="226" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="492" y="226" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
+  <rect x="526" y="226" width="34" height="34" fill="#4a9d5f" opacity="0.25" stroke="#5cb86c" stroke-width="1.5"/>
 
-  <line x1="320" y1="160" x2="420" y2="180" stroke="#666666" stroke-width="2" marker-end="url(#arrowRight)"/>
-  <text x="370" y="160" text-anchor="middle" font-size="12" fill="#666666">加载</text>
+  <text x="492" y="282" text-anchor="middle" font-size="12" font-weight="bold" fill="#5cb86c">Shared Memory tile</text>
+  <text x="492" y="300" text-anchor="middle" font-size="11" fill="#666666">快 &#183; ~20-30 cycles</text>
 
-  <line x1="480" y1="240" x2="480" y2="300" stroke="#666666" stroke-width="2" marker-end="url(#arrowDown)"/>
-  <text x="520" y="280" text-anchor="start" font-size="12" fill="#666666">在 SM 内快速复用</text>
+  <!-- reuse arrows: threads read the tile -->
+  <line x1="434" y1="316" x2="434" y2="268" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arrowBlue)"/>
+  <line x1="476" y1="316" x2="476" y2="268" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arrowBlue)"/>
+  <line x1="518" y1="316" x2="518" y2="268" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arrowBlue)"/>
+  <line x1="560" y1="316" x2="560" y2="268" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arrowBlue)"/>
 
-  <!-- Steps -->
-  <rect x="60" y="350" width="600" height="50" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="2"/>
-  <text x="360" y="380" text-anchor="middle" font-size="13" fill="#2b2b2b">1. 将大矩阵分块  →  2. 加载一个 tile 到 Shared Memory  →  3. 在线程间复用数据</text>
+  <circle cx="434" cy="328" r="11" fill="#6ab0ff"/><text x="434" y="332" text-anchor="middle" font-size="8.5" fill="#fdfcf7" font-weight="bold">T0</text>
+  <circle cx="476" cy="328" r="11" fill="#6ab0ff"/><text x="476" y="332" text-anchor="middle" font-size="8.5" fill="#fdfcf7" font-weight="bold">T1</text>
+  <circle cx="518" cy="328" r="11" fill="#6ab0ff"/><text x="518" y="332" text-anchor="middle" font-size="8.5" fill="#fdfcf7" font-weight="bold">T2</text>
+  <circle cx="560" cy="328" r="11" fill="#6ab0ff"/><text x="560" y="332" text-anchor="middle" font-size="8.5" fill="#fdfcf7" font-weight="bold">T3</text>
+  <text x="395" y="296" text-anchor="end" font-size="11" fill="#4a8edb" font-weight="bold">&#9314; 复用</text>
+  <text x="490" y="360" text-anchor="middle" font-size="10.5" fill="#666666">block 内的线程（示意 4 个）</text>
+
+  <!-- right benefit chips -->
+  <rect x="600" y="95" width="140" height="66" rx="8" fill="#fffdf5" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="670" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#5cb86c">搬 1 次</text>
+  <text x="670" y="140" text-anchor="middle" font-size="10.5" fill="#666666">从 Global 装入 tile</text>
+
+  <rect x="600" y="171" width="140" height="66" rx="8" fill="#fffdf5" stroke="#6ab0ff" stroke-width="1.5"/>
+  <text x="670" y="196" text-anchor="middle" font-size="13" font-weight="bold" fill="#6ab0ff">复用很多次</text>
+  <text x="670" y="216" text-anchor="middle" font-size="10.5" fill="#666666">block 内所有线程共享</text>
+
+  <rect x="600" y="247" width="140" height="123" rx="8" fill="#fffdf5" stroke="#e57373" stroke-width="1.5"/>
+  <text x="670" y="270" text-anchor="middle" font-size="12" font-weight="bold" fill="#e57373">收益</text>
+  <text x="670" y="292" text-anchor="middle" font-size="10.5" fill="#2b2b2b">Global 访问 &#8595;</text>
+  <text x="670" y="310" text-anchor="middle" font-size="10.5" fill="#2b2b2b">延迟 400-800</text>
+  <text x="670" y="328" text-anchor="middle" font-size="10.5" fill="#2b2b2b">&#8594; 20-30 cycles</text>
+  <text x="670" y="350" text-anchor="middle" font-size="10.5" fill="#2b2b2b">不规则访问也能</text>
+  <text x="670" y="364" text-anchor="middle" font-size="10.5" fill="#2b2b2b">先整理成连续的</text>
+
+  <!-- bottom steps -->
+  <rect x="60" y="392" width="680" height="52" rx="9" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="400" y="423" text-anchor="middle" font-size="12.5" fill="#2b2b2b">&#9312; 大问题分块（tile） &#8594; &#9313; block 协作加载自己的 tile &#8594; &#9314; __syncthreads() 等齐 &#8594; &#9315; 在 SM 内高速复用</text>
+
+  <text x="400" y="462" text-anchor="middle" font-size="10.5" fill="#666666">转置场景：写入 tile[y][x]、读出 tile[x][y]&#8212;&#8212;转置就在 Shared Memory 里完成</text>
   </g>
 </svg>

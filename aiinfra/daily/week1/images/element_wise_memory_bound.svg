@@ -1,77 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="'Comic Sans MS','Marker Felt','Kaiti SC','KaiTi','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
-  
-
     <marker id="arrowR" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
       <path d="M0,0 L0,6 L9,3 z" fill="#666666"/>
     </marker>
+    <marker id="arrowU" markerWidth="10" markerHeight="10" refX="3" refY="9" orient="auto">
+      <path d="M0,0 L6,0 L3,9 z" fill="#666666"/>
+    </marker>
   </defs>
   <g filter="url(#sketch)">
-  <rect width="720" height="520" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Element-wise 操作为什么是纯 Memory-Bound</text>
+  <rect width="760" height="560" fill="#fdfcf7"/>
+  <text x="380" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Element-wise 为什么是纯 Memory-Bound（RTX 5090 Roofline）</text>
+  <text x="380" y="56" text-anchor="middle" font-size="12" fill="#666666">可达吞吐 = min(AI &#215; 1792 GB/s, 104.75 TFLOP/s)，两轴均为对数</text>
 
-  <!-- Roofline Chart -->
-  <text x="80" y="70" font-size="14" font-weight="bold" fill="#6ab0ff">Roofline 模型对比</text>
+  <!-- axes -->
+  <line x1="110" y1="390" x2="700" y2="390" stroke="#666666" stroke-width="2" marker-end="url(#arrowR)"/>
+  <line x1="110" y1="390" x2="110" y2="75" stroke="#666666" stroke-width="2" marker-end="url(#arrowU)"/>
 
-  <!-- Axes -->
-  <line x1="80" y1="400" x2="680" y2="400" stroke="#666666" stroke-width="2" marker-end="url(#arrowR)"/>
-  <line x1="80" y1="400" x2="80" y2="80" stroke="#666666" stroke-width="2"/>
+  <!-- x ticks -->
+  <line x1="110" y1="390" x2="110" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="110" y="410" text-anchor="middle" font-size="10" fill="#666666">0.01</text>
+  <line x1="222" y1="390" x2="222" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="222" y="410" text-anchor="middle" font-size="10" fill="#666666">0.1</text>
+  <line x1="334" y1="390" x2="334" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="334" y="410" text-anchor="middle" font-size="10" fill="#666666">1</text>
+  <line x1="446" y1="390" x2="446" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="446" y="410" text-anchor="middle" font-size="10" fill="#666666">10</text>
+  <line x1="558" y1="390" x2="558" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="558" y="410" text-anchor="middle" font-size="10" fill="#666666">100</text>
+  <line x1="670" y1="390" x2="670" y2="395" stroke="#666666" stroke-width="1.5"/>
+  <text x="670" y="410" text-anchor="middle" font-size="10" fill="#666666">1000</text>
 
-  <text x="380" y="425" text-anchor="middle" font-size="12" fill="#2b2b2b">计算强度 (FLOP / Byte) →</text>
-  <text x="55" y="240" text-anchor="middle" font-size="12" fill="#2b2b2b" transform="rotate(-90, 55, 240)">吞吐 →</text>
+  <!-- y ticks -->
+  <text x="100" y="394" text-anchor="end" font-size="10" fill="#666666">0.01</text>
+  <text x="100" y="319" text-anchor="end" font-size="10" fill="#666666">0.1</text>
+  <text x="100" y="244" text-anchor="end" font-size="10" fill="#666666">1</text>
+  <text x="100" y="169" text-anchor="end" font-size="10" fill="#666666">10</text>
+  <text x="100" y="94" text-anchor="end" font-size="10" fill="#666666">100</text>
 
-  <!-- Ridge point line -->
-  <line x1="300" y1="400" x2="300" y2="150" stroke="#e8a838" stroke-width="2" stroke-dasharray="5,5"/>
-  <text x="305" y="145" font-size="11" fill="#e8a838">Ridge Point ≈ 58.45</text>
-  <text x="305" y="160" font-size="10" fill="#666666">(RTX 5090: 104.75T / 1.792T)</text>
+  <!-- axis labels -->
+  <text x="405" y="432" text-anchor="middle" font-size="12" fill="#2b2b2b">计算强度 AI（FLOP/Byte）&#8594;</text>
+  <text x="42" y="235" text-anchor="middle" font-size="12" fill="#2b2b2b" transform="rotate(-90, 42, 235)">可达吞吐（TFLOP/s）&#8594;</text>
 
-  <!-- Memory slope -->
-  <line x1="80" y1="400" x2="300" y2="150" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="130" y="330" font-size="12" fill="#6ab0ff" font-weight="bold">带宽限制</text>
+  <!-- bandwidth slope -->
+  <line x1="110" y1="371" x2="532" y2="89" stroke="#6ab0ff" stroke-width="3"/>
+  <text x="262" y="252" font-size="12" font-weight="bold" fill="#6ab0ff" text-anchor="middle" transform="rotate(-33.7, 262, 252)">带宽限制：吞吐 = AI &#215; 1.792 TB/s</text>
 
-  <!-- Compute ceiling -->
-  <line x1="300" y1="150" x2="680" y2="150" stroke="#5cb86c" stroke-width="2"/>
-  <text x="580" y="140" font-size="12" fill="#5cb86c" font-weight="bold">算力峰值</text>
+  <!-- compute ceiling -->
+  <line x1="532" y1="89" x2="690" y2="89" stroke="#5cb86c" stroke-width="3"/>
+  <text x="612" y="80" text-anchor="middle" font-size="12" font-weight="bold" fill="#5cb86c">算力峰值 104.75 TFLOP/s</text>
 
-  <!-- Element-wise point -->
-  <circle cx="95" cy="390" r="8" fill="#e57373"/>
-  <text x="115" y="385" font-size="11" fill="#e57373" font-weight="bold">Element-wise</text>
-  <text x="115" y="400" font-size="10" fill="#666666">AI ≈ 0.08</text>
+  <!-- ridge point -->
+  <line x1="532" y1="89" x2="532" y2="390" stroke="#e8a838" stroke-width="2" stroke-dasharray="6,5"/>
+  <circle cx="532" cy="89" r="6" fill="#e8a838"/>
+  <text x="540" y="122" font-size="12" font-weight="bold" fill="#e8a838">Ridge Point = 58.45</text>
+  <text x="540" y="138" font-size="10" fill="#666666">（104.75 &#247; 1.792）</text>
 
-  <!-- LayerNorm point -->
-  <circle cx="100" cy="380" r="6" fill="#e57373"/>
-  <text x="115" y="370" font-size="10" fill="#e57373">LayerNorm AI≈0.4</text>
+  <!-- region labels -->
+  <text x="185" y="370" text-anchor="middle" font-size="13" font-weight="bold" fill="#e57373">Memory-Bound 区</text>
+  <text x="600" y="255" text-anchor="middle" font-size="13" font-weight="bold" fill="#5cb86c">Compute-Bound 区</text>
 
-  <!-- GEMM point -->
-  <circle cx="600" cy="150" r="8" fill="#5cb86c"/>
-  <text x="580" y="170" text-anchor="middle" font-size="11" fill="#5cb86c" font-weight="bold">GEMM</text>
-  <text x="580" y="185" text-anchor="middle" font-size="10" fill="#666666">AI ≈ 683</text>
+  <!-- element-wise dot + utilization gap -->
+  <line x1="213" y1="302" x2="213" y2="89" stroke="#e57373" stroke-width="1.5" stroke-dasharray="3,4"/>
+  <circle cx="213" cy="302" r="7" fill="#e57373"/>
+  <text x="203" y="290" text-anchor="end" font-size="11" font-weight="bold" fill="#e57373">向量加法</text>
+  <text x="203" y="304" text-anchor="end" font-size="10" fill="#666666">AI = 0.083</text>
+  <text x="220" y="185" font-size="11" fill="#e57373" font-weight="bold">算力只用到 0.14%</text>
+  <text x="220" y="201" font-size="11" fill="#e57373" font-weight="bold">99.86% 时间在等数据</text>
 
-  <!-- Gap annotation -->
-  <line x1="95" y1="250" x2="95" y2="380" stroke="#e57373" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <text x="45" y="320" font-size="10" fill="#e57373">99.86% 时间</text>
-  <text x="45" y="335" font-size="10" fill="#e57373">在等数据</text>
+  <!-- ReLU dot -->
+  <circle cx="233" cy="289" r="5" fill="#e8a838"/>
+  <text x="243" y="299" font-size="10" fill="#e8a838" font-weight="bold">ReLU 0.125</text>
 
-  <!-- Comparison table -->
-  <rect x="60" y="445" width="600" height="60" rx="6" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
-  <text x="70" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">操作</text>
-  <text x="200" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">FLOPs</text>
-  <text x="300" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">Bytes</text>
-  <text x="400" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">AI</text>
-  <text x="500" y="465" font-size="12" fill="#2b2b2b" font-weight="bold">瓶颈</text>
-  <text x="70" y="488" font-size="11" fill="#e57373">C=A+B</text>
-  <text x="200" y="488" font-size="11" fill="#666666">1</text>
-  <text x="300" y="488" font-size="11" fill="#666666">12</text>
-  <text x="400" y="488" font-size="11" fill="#e57373">0.08</text>
-  <text x="500" y="488" font-size="11" fill="#e57373">Memory</text>
-  <text x="70" y="505" font-size="11" fill="#5cb86c">GEMM 4096³</text>
-  <text x="200" y="505" font-size="11" fill="#666666">137G</text>
-  <text x="300" y="505" font-size="11" fill="#666666">201M</text>
-  <text x="400" y="505" font-size="11" fill="#5cb86c">683</text>
-  <text x="500" y="505" font-size="11" fill="#5cb86c">Compute</text>
+  <!-- LayerNorm dot -->
+  <circle cx="312" cy="236" r="5" fill="#b689e8"/>
+  <text x="322" y="252" font-size="10" fill="#b689e8" font-weight="bold">LayerNorm ~0.63</text>
+
+  <!-- GEMM dot -->
+  <circle cx="652" cy="89" r="8" fill="#5cb86c"/>
+  <text x="652" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#5cb86c">GEMM 4096&#179;</text>
+  <text x="652" y="135" text-anchor="middle" font-size="10" fill="#666666">AI = 683</text>
+
+  <!-- summary chips -->
+  <rect x="88" y="478" width="140" height="62" rx="7" fill="#fffdf5" stroke="#e57373" stroke-width="1.5"/>
+  <text x="158" y="498" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">向量加法 C=A+B</text>
+  <text x="158" y="516" text-anchor="middle" font-size="11" fill="#666666">AI = 0.083</text>
+  <text x="158" y="533" text-anchor="middle" font-size="12" font-weight="bold" fill="#e57373">Memory</text>
+
+  <rect x="236" y="478" width="140" height="62" rx="7" fill="#fffdf5" stroke="#e57373" stroke-width="1.5"/>
+  <text x="306" y="498" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">ReLU</text>
+  <text x="306" y="516" text-anchor="middle" font-size="11" fill="#666666">AI = 0.125</text>
+  <text x="306" y="533" text-anchor="middle" font-size="12" font-weight="bold" fill="#e57373">Memory</text>
+
+  <rect x="384" y="478" width="140" height="62" rx="7" fill="#fffdf5" stroke="#e57373" stroke-width="1.5"/>
+  <text x="454" y="498" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">LayerNorm</text>
+  <text x="454" y="516" text-anchor="middle" font-size="11" fill="#666666">AI &#8776; 0.63</text>
+  <text x="454" y="533" text-anchor="middle" font-size="12" font-weight="bold" fill="#e57373">Memory</text>
+
+  <rect x="532" y="478" width="140" height="62" rx="7" fill="#fffdf5" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="602" y="498" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">GEMM 4096&#179;</text>
+  <text x="602" y="516" text-anchor="middle" font-size="11" fill="#666666">AI &#8776; 683</text>
+  <text x="602" y="533" text-anchor="middle" font-size="12" font-weight="bold" fill="#5cb86c">Compute</text>
   </g>
 </svg>

@@ -1,0 +1,41 @@
+{
+  "name": "mock-interview-panel",
+  "displayName": "Mock Interview Panel",
+  "description": "在 CodeArts IDE 中内嵌打开模拟面试页面（经 cloudflared 隧道转发）",
+  "version": "0.3.0",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": ">=1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mockInterview.open",
+    "onCommand:mockInterview.openExternal"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mockInterview.open",
+        "title": "打开模拟面试 (Mock Interview)"
+      },
+      {
+        "command": "mockInterview.openExternal",
+        "title": "在浏览器中打开模拟面试"
+      }
+    ],
+    "configuration": {
+      "title": "Mock Interview",
+      "properties": {
+        "mockInterview.url": {
+          "type": "string",
+          "default": "https://builds-possibilities-automobiles-marijuana.trycloudflare.com/",
+          "description": "模拟面试页面地址（浏览器可达的隧道地址；隧道重启后需更新）"
+        }
+      }
+    }
+  }
+}

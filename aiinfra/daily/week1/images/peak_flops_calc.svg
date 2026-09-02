@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="860" height="300" viewBox="0 0 860 300" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="310" viewBox="0 0 860 310" font-family="'Comic Sans MS','Marker Felt','Kaiti SC',楷体,'Segoe UI',cursive">
   <defs>
     <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="21" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
   </defs>
-  <rect width="860" height="300" fill="#fdfcf7"/>
+  <rect width="860" height="310" fill="#fdfcf7"/>
   <text x="430" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#2b2b2b">RTX 5090 Peak FP32 算力推导</text>
   <path d="M 270 42 Q 430 50 590 42" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
 
@@ -13,33 +13,36 @@
   <g filter="url(#sk)">
     <rect x="40" y="60" width="780" height="56" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.4" fill-opacity="0.35"/>
   </g>
-  <text x="60" y="84" font-size="12" fill="#2b6e9e" font-weight="bold">公式</text>
-  <text x="60" y="106" font-size="14" fill="#2b2b2b" font-family="monospace">Peak FP32 (FLOPS) = CUDA Cores × Clock × 2</text>
-  <text x="560" y="106" font-size="11" fill="#888">×2：FMA（乘加）算 2 个 FLOP</text>
+  <text x="60" y="85" font-size="12" fill="#2b6e9e" font-weight="bold">公式</text>
+  <text x="105" y="85" font-size="14" fill="#2b2b2b" font-family="monospace">Peak FP32 (FLOPS) = CUDA Cores × Clock × 2</text>
+  <text x="60" y="106" font-size="11" fill="#888">×2：FMA（乘加）一条指令算 2 个 FLOP</text>
 
   <!-- 参数 -->
   <g filter="url(#sk)">
-    <rect x="40" y="128" width="380" height="72" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.35"/>
+    <rect x="40" y="128" width="380" height="96" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.3" fill-opacity="0.35"/>
   </g>
-  <text x="60" y="150" font-size="12" fill="#2e6e2e" font-weight="bold">代入参数（deviceQuery 实测）</text>
-  <text x="60" y="170" font-size="12" fill="#2b2b2b" font-family="monospace">SM = 170, FP32 Cores/SM = 128</text>
-  <text x="60" y="188" font-size="12" fill="#2b2b2b" font-family="monospace">总 Cores = 170 × 128 = 21,760</text>
-  <text x="60" y="204" font-size="11" fill="#666" font-family="monospace">Boost Clock ≈ 2.407 GHz</text>
+  <text x="60" y="151" font-size="12" fill="#2e6e2e" font-weight="bold">代入参数（deviceQuery 实测）</text>
+  <text x="60" y="175" font-size="12" fill="#2b2b2b" font-family="monospace">SM = 170, FP32 Cores/SM = 128</text>
+  <text x="60" y="194" font-size="12" fill="#2b2b2b" font-family="monospace">总 Cores = 170 × 128 = 21,760</text>
+  <text x="60" y="212" font-size="11" fill="#666" font-family="monospace">Boost Clock ≈ 2.407 GHz</text>
 
-  <!-- 计算结果 -->
+  <text x="430" y="182" text-anchor="middle" font-size="16" fill="#c98a2b" font-weight="bold">→</text>
+
+  <!-- 计算 -->
   <g filter="url(#sk)">
-    <rect x="440" y="128" width="380" height="72" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" fill-opacity="0.35"/>
+    <rect x="440" y="128" width="380" height="96" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.3" fill-opacity="0.35"/>
   </g>
-  <text x="460" y="150" font-size="12" fill="#7a5415" font-weight="bold">计算</text>
-  <text x="460" y="172" font-size="13" fill="#2b2b2b" font-family="monospace">21,760 × 2.407 × 2</text>
-  <text x="460" y="192" font-size="13" fill="#c98a2b" font-weight="bold" font-family="monospace">≈ 104,752.64 GFLOPS</text>
-  <text x="460" y="208" font-size="13" fill="#c98a2b" font-weight="bold" font-family="monospace">≈ 104.75 TFLOPS</text>
+  <text x="460" y="151" font-size="12" fill="#7a5415" font-weight="bold">代入计算</text>
+  <text x="460" y="175" font-size="13" fill="#2b2b2b" font-family="monospace">21,760 Cores × 2.407 GHz × 2</text>
+  <text x="460" y="194" font-size="12" fill="#666" font-family="monospace">≈ 104,752.64 GFLOPS</text>
+  <rect x="458" y="199" width="160" height="23" rx="11" fill="#c98a2b" fill-opacity="0.18"/>
+  <text x="538" y="215" text-anchor="middle" font-size="14" fill="#c98a2b" font-weight="bold" font-family="monospace">≈ 104.75 TFLOPS</text>
 
   <!-- 底部备注 -->
   <g filter="url(#sk)">
-    <rect x="40" y="214" width="780" height="70" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" fill-opacity="0.4"/>
+    <rect x="40" y="238" width="780" height="64" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1.2" fill-opacity="0.4"/>
   </g>
-  <text x="60" y="238" font-size="11" fill="#444">与 RTX 5090 官方标称 ~104.8 TFLOPS 一致 ✓</text>
-  <text x="60" y="258" font-size="11" fill="#444">理论峰值：实际 kernel 达 50%–80% 已属优秀（受内存带宽、算子融合、warp divergence 等限制）</text>
-  <text x="60" y="276" font-size="11" fill="#444">FP16 Tensor Core ~209 TFLOPS（dense），FP8 更高——深度学习算力的主要来源</text>
+  <text x="60" y="261" font-size="11" fill="#444">与 RTX 5090 官方标称 ~104.8 TFLOPS 一致 ✓</text>
+  <text x="60" y="278" font-size="11" fill="#444">理论峰值：实际 kernel 达 50%–80% 已属优秀（受内存带宽、算子融合、warp divergence 等限制）</text>
+  <text x="60" y="294" font-size="11" fill="#444">FP16 Tensor Core ~209 TFLOPS（dense），FP8 更高——深度学习算力的主要来源</text>
 </svg>

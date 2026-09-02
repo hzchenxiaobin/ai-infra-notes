@@ -1,35 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="200" viewBox="0 0 680 200" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" font-family="'Comic Sans MS','Marker Felt','Kaiti SC','KaiTi','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
-    <marker id="arrowEq" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
       <path d="M0,0 L0,6 L9,3 z" fill="#666666"/>
     </marker>
   </defs>
   <g filter="url(#sketch)">
-  <rect width="680" height="200" fill="#fdfcf7"/>
-  <text x="340" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">转置地址正确性验证</text>
+  <rect width="760" height="330" fill="#fdfcf7"/>
+  <text x="380" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">转置地址正确性验证：跟踪线程 (threadIdx.x=a, threadIdx.y=b)</text>
+  <text x="380" y="56" text-anchor="middle" font-size="11.5" fill="#666666">设所在 block 为 (blockIdx.x=bx, blockIdx.y=by)，T = TILE_DIM，W = width，H = height</text>
 
-  <!-- Output box -->
-  <rect x="40" y="70" width="270" height="60" rx="6" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
-  <text x="60" y="95" font-family="monospace" font-size="13" fill="#2b2b2b">out[(bx*TILE_DIM + b) * height</text>
-  <text x="60" y="115" font-family="monospace" font-size="13" fill="#2b2b2b">    + (by*TILE_DIM + a)]</text>
+  <!-- step 1 -->
+  <rect x="40" y="78" width="210" height="114" rx="8" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="145" y="100" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#4a8edb">&#9312; 写入 tile</text>
+  <text x="145" y="126" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">tile[b][a] =</text>
+  <text x="145" y="144" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">in[(by&#183;T+b)&#183;W + (bx&#183;T+a)]</text>
+  <text x="145" y="172" text-anchor="middle" font-size="10" fill="#666666">线程 (a,b) 存下自己读到的元素</text>
 
-  <!-- = sign -->
-  <text x="335" y="105" text-anchor="middle" font-size="20" fill="#666666" font-weight="bold">=</text>
+  <line x1="256" y1="135" x2="280" y2="135" stroke="#666666" stroke-width="2" marker-end="url(#arrowGray)"/>
 
-  <!-- Input box -->
-  <rect x="360" y="70" width="290" height="60" rx="6" fill="#5cb86c" opacity="0.12" stroke="#5cb86c" stroke-width="2"/>
-  <text x="380" y="95" font-family="monospace" font-size="13" fill="#2b2b2b">in[(by*TILE_DIM + a) * width</text>
-  <text x="380" y="115" font-family="monospace" font-size="13" fill="#2b2b2b">    + (bx*TILE_DIM + b)]</text>
+  <!-- step 2 -->
+  <rect x="285" y="78" width="210" height="114" rx="8" fill="#e8a838" opacity="0.14" stroke="#e8a838" stroke-width="2"/>
+  <text x="390" y="100" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#e8a838">&#9314; 交换索引读出</text>
+  <text x="390" y="126" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">tile[a][b] =</text>
+  <text x="390" y="144" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">in[(by&#183;T+a)&#183;W + (bx&#183;T+b)]</text>
+  <text x="390" y="172" text-anchor="middle" font-size="10" fill="#666666">tile[a][b] 由线程 (b,a) 写入 &#8594; 完成交换</text>
 
-  <!-- Annotation -->
-  <text x="175" y="155" text-anchor="middle" font-size="12" fill="#6ab0ff" font-weight="bold">输出位置 [j][i]</text>
-  <text x="505" y="155" text-anchor="middle" font-size="12" fill="#5cb86c" font-weight="bold">输入位置 [i][j]</text>
+  <line x1="501" y1="135" x2="525" y2="135" stroke="#666666" stroke-width="2" marker-end="url(#arrowGray)"/>
 
-  <text x="340" y="180" text-anchor="middle" font-size="13" fill="#666666">即 output[j][i] = input[i][j] —— 正是转置的定义</text>
+  <!-- step 3 -->
+  <rect x="530" y="78" width="210" height="114" rx="8" fill="#5cb86c" opacity="0.12" stroke="#5cb86c" stroke-width="2"/>
+  <text x="635" y="100" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#4a9d5f">&#9317; 写到输出</text>
+  <text x="635" y="126" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">out[(bx&#183;T+b)&#183;H</text>
+  <text x="635" y="144" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#2b2b2b">    + (by&#183;T+a)] = tile[a][b]</text>
+  <text x="635" y="172" text-anchor="middle" font-size="10" fill="#666666">行 = bx&#183;T+b，列 = by&#183;T+a</text>
 
+  <!-- conclusion -->
+  <rect x="40" y="214" width="700" height="100" rx="9" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="390" y="240" text-anchor="middle" font-size="12" fill="#2b2b2b">令 i = by&#183;T + a（输入的行），j = bx&#183;T + b（输入的列），代入上式：</text>
+  <text x="390" y="270" text-anchor="middle" font-family="monospace" font-size="15" font-weight="bold" fill="#2b2b2b">out[j&#183;H + i] = in[i&#183;W + j]&#12288;&#8660;&#12288;O[j][i] = A[i][j]</text>
+  <text x="390" y="298" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#4a9d5f">&#10003; 正是转置的定义 output[j][i] = input[i][j]</text>
   </g>
 </svg>

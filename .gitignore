@@ -31,3 +31,7 @@ ncu/**/profiles/
 # Large generic NCU report files generated during profiling
 profiling/**/report.ncu-rep
 fix_bold_code_markdown.py
+
+# vscode-mock-interview: cloudflared binary + runtime logs
+vscode-mock-interview/tools/
+vscode-mock-interview/*.log

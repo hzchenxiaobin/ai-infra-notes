@@ -1,66 +1,89 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="'Comic Sans MS','Marker Felt','Segoe UI',cursive">
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="470" viewBox="0 0 780 470" font-family="'Comic Sans MS','Marker Felt','Kaiti SC','KaiTi','Segoe UI',cursive">
   <defs>
     <filter id="sketch" x="-3%" y="-3%" width="106%" height="106%">
       <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4" result="n"/>
       <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/>
     </filter>
+    <pattern id="wasteHatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="#8b949e" opacity="0.12"/>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#8b949e" stroke-width="1.2" opacity="0.5"/>
+    </pattern>
   </defs>
-
   <g filter="url(#sketch)">
+  <rect width="780" height="470" fill="#fdfcf7"/>
+  <text x="390" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#2b2b2b">Coalesced vs Stride：同样读 32 个 float，流量差 8 倍</text>
 
-  <rect width="720" height="360" fill="#fdfcf7"/>
-  <text x="360" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#2b2b2b">Coalesced vs Stride Access</text>
+  <!-- ============ left panel: coalesced ============ -->
+  <rect x="40" y="56" width="340" height="334" rx="10" fill="#fffdf5" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="210" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#5cb86c">&#9989; Coalesced：y[idx] = x[idx]</text>
+  <text x="210" y="106" text-anchor="middle" font-size="11" fill="#666666">32 个线程读连续地址（0, 4, 8, &#8230;, 124 B）</text>
 
-  <!-- Coalesced -->
-  <text x="180" y="80" text-anchor="middle" font-size="16" font-weight="bold" fill="#5cb86c">✅ Coalesced</text>
+  <!-- 4 full sectors -->
+  <rect x="53" y="124" width="74" height="52" rx="3" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
+  <rect x="54" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="63" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="72" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="81" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="90" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="99" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="108" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="117" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/>
 
-  <circle cx="80" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="80" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T0</text>
-  <circle cx="120" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="120" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T1</text>
-  <circle cx="160" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="160" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T2</text>
-  <circle cx="200" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="200" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T3</text>
+  <rect x="133" y="124" width="74" height="52" rx="3" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
+  <rect x="134" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="143" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="152" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="161" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="170" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="179" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="188" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="197" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/>
 
-  <line x1="80" y1="134" x2="80" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="120" y1="134" x2="120" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="160" y1="134" x2="160" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="200" y1="134" x2="200" y2="170" stroke="#6ab0ff" stroke-width="2"/>
+  <rect x="213" y="124" width="74" height="52" rx="3" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
+  <rect x="214" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="223" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="232" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="241" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="250" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="259" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="268" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="277" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/>
 
-  <rect x="70" y="170" width="150" height="40" rx="4" fill="#4a9d5f" stroke="#5cb86c" stroke-width="2"/>
-  <text x="145" y="195" text-anchor="middle" font-size="12" fill="#fdfcf7" font-weight="bold">1 次内存事务</text>
+  <rect x="293" y="124" width="74" height="52" rx="3" fill="#6ab0ff" opacity="0.12" stroke="#6ab0ff" stroke-width="2"/>
+  <rect x="294" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="303" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="312" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="321" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="330" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="339" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="348" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/><rect x="357" y="132" width="9" height="36" fill="#4a8edb" opacity="0.65"/>
 
-  <!-- Stride -->
-  <text x="540" y="80" text-anchor="middle" font-size="16" font-weight="bold" fill="#e57373">❌ Stride</text>
+  <text x="90" y="192" text-anchor="middle" font-size="10" fill="#666666">S0&#183;32B</text>
+  <text x="170" y="192" text-anchor="middle" font-size="10" fill="#666666">S1&#183;32B</text>
+  <text x="250" y="192" text-anchor="middle" font-size="10" fill="#666666">S2&#183;32B</text>
+  <text x="330" y="192" text-anchor="middle" font-size="10" fill="#666666">S3&#183;32B</text>
 
-  <circle cx="440" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="440" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T0</text>
-  <circle cx="480" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="480" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T1</text>
-  <circle cx="520" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="520" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T2</text>
-  <circle cx="560" cy="120" r="14" fill="#6ab0ff"/>
-  <text x="560" y="125" text-anchor="middle" font-size="9" fill="#fdfcf7" font-weight="bold">T3</text>
+  <text x="210" y="232" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b2b2b">4 次事务 &#215; 32B = 128 B 传输</text>
 
-  <line x1="440" y1="134" x2="440" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="480" y1="134" x2="520" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="520" y1="134" x2="600" y2="170" stroke="#6ab0ff" stroke-width="2"/>
-  <line x1="560" y1="134" x2="680" y2="170" stroke="#6ab0ff" stroke-width="2"/>
+  <text x="70" y="291" font-size="11" fill="#666666">带宽利用率</text>
+  <rect x="170" y="280" width="160" height="16" rx="3" fill="#8b949e" opacity="0.15" stroke="#8b949e" stroke-width="1"/>
+  <rect x="170" y="280" width="160" height="16" rx="3" fill="#4a9d5f" opacity="0.7" stroke="#5cb86c" stroke-width="1.5"/>
+  <text x="338" y="292" font-size="11.5" font-weight="bold" fill="#5cb86c">100%</text>
 
-  <rect x="430" y="170" width="60" height="40" rx="4" fill="#e8a838" stroke="#f0c050" stroke-width="2"/>
-  <rect x="500" y="170" width="60" height="40" rx="4" fill="#e8a838" stroke="#f0c050" stroke-width="2"/>
-  <rect x="570" y="170" width="60" height="40" rx="4" fill="#e8a838" stroke="#f0c050" stroke-width="2"/>
-  <rect x="640" y="170" width="60" height="40" rx="4" fill="#e8a838" stroke="#f0c050" stroke-width="2"/>
-  <text x="565" y="235" text-anchor="middle" font-size="12" fill="#e57373" font-weight="bold">4 次内存事务</text>
+  <text x="210" y="330" text-anchor="middle" font-size="11" fill="#5cb86c">传输的每一个字节都用上了</text>
+  <text x="210" y="362" text-anchor="middle" font-size="10.5" fill="#666666">实测可达峰值带宽的 80&#8211;90%</text>
 
-  <!-- Code examples -->
-  <rect x="60" y="270" width="280" height="70" rx="8" fill="#f0ede4" stroke="#3a3a3a"/>
-  <text x="70" y="295" font-family="monospace" font-size="12" fill="#2b2b2b">// Coalesced</text>
-  <text x="70" y="315" font-family="monospace" font-size="12" fill="#2b2b2b">x[idx]</text>
+  <!-- ============ right panel: stride ============ -->
+  <rect x="400" y="56" width="340" height="334" rx="10" fill="#fffdf5" stroke="#e57373" stroke-width="1.5"/>
+  <text x="570" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#e57373">&#10060; Stride：y[idx] = x[idx * 32]</text>
+  <text x="570" y="106" text-anchor="middle" font-size="11" fill="#666666">32 个线程地址间隔 128B（0, 128, 256, &#8230; B）</text>
 
-  <rect x="380" y="270" width="320" height="70" rx="8" fill="#f0ede4" stroke="#3a3a3a"/>
-  <text x="390" y="295" font-family="monospace" font-size="12" fill="#2b2b2b">// Stride</text>
-  <text x="390" y="315" font-family="monospace" font-size="12" fill="#2b2b2b">x[idx * 32]</text>
+  <!-- sparse sectors: 5 drawn + ellipsis -->
+  <rect x="427" y="124" width="54" height="52" rx="3" fill="#e57373" opacity="0.08" stroke="#e57373" stroke-width="2"/>
+  <rect x="428" y="132" width="6.5" height="36" fill="#e57373" opacity="0.8"/><rect x="434.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="441" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="447.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="454" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="460.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="467" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="473.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/>
+
+  <rect x="485" y="124" width="54" height="52" rx="3" fill="#e57373" opacity="0.08" stroke="#e57373" stroke-width="2"/>
+  <rect x="486" y="132" width="6.5" height="36" fill="#e57373" opacity="0.8"/><rect x="492.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="499" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="505.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="512" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="518.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="525" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="531.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/>
+
+  <rect x="543" y="124" width="54" height="52" rx="3" fill="#e57373" opacity="0.08" stroke="#e57373" stroke-width="2"/>
+  <rect x="544" y="132" width="6.5" height="36" fill="#e57373" opacity="0.8"/><rect x="550.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="557" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="563.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="570" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="576.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="583" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="589.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/>
+
+  <rect x="601" y="124" width="54" height="52" rx="3" fill="#e57373" opacity="0.08" stroke="#e57373" stroke-width="2"/>
+  <rect x="602" y="132" width="6.5" height="36" fill="#e57373" opacity="0.8"/><rect x="608.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="615" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="621.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="628" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="634.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="641" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="647.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/>
+
+  <rect x="659" y="124" width="54" height="52" rx="3" fill="#e57373" opacity="0.08" stroke="#e57373" stroke-width="2"/>
+  <rect x="660" y="132" width="6.5" height="36" fill="#e57373" opacity="0.8"/><rect x="666.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="673" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="679.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="686" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="692.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="699" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/><rect x="705.5" y="132" width="6.5" height="36" fill="url(#wasteHatch)" stroke="#8b949e" stroke-width="0.6"/>
+
+  <text x="728" y="156" text-anchor="middle" font-size="13" fill="#666666">&#8230;</text>
+
+  <text x="570" y="196" text-anchor="middle" font-size="10.5" fill="#e57373">每个 sector 只有 1 个 float 有效（共 32 个 sector）</text>
+
+  <text x="570" y="232" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b2b2b">32 次事务 &#215; 32B = 1024 B 传输</text>
+
+  <text x="430" y="291" font-size="11" fill="#666666">带宽利用率</text>
+  <rect x="530" y="280" width="160" height="16" rx="3" fill="#8b949e" opacity="0.15" stroke="#8b949e" stroke-width="1"/>
+  <rect x="530" y="280" width="20" height="16" rx="2" fill="#e57373" opacity="0.8" stroke="#d06060" stroke-width="1"/>
+  <text x="698" y="292" font-size="11.5" font-weight="bold" fill="#e57373">12.5%</text>
+
+  <text x="570" y="330" text-anchor="middle" font-size="11" fill="#e57373">真正需要的只有 128B，其余 896B 白搬</text>
+  <text x="570" y="362" text-anchor="middle" font-size="10.5" fill="#666666">实测通常只有峰值带宽的 10&#8211;20%</text>
+
+  <!-- bottom note -->
+  <rect x="40" y="410" width="700" height="42" rx="8" fill="#fffdf5" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="390" y="429" text-anchor="middle" font-size="11.5" fill="#2b2b2b">事务数 = warp 的 32 个地址落在几个 32B sector：地址连续 &#8594; 4 个；间隔 128B &#8594; 32 个</text>
+  <text x="390" y="446" text-anchor="middle" font-size="10.5" fill="#666666">每个 sector 只装到 1 个有效 float，其余 28B 全是浪费</text>
   </g>
 </svg>
