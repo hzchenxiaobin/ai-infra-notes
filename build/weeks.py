@@ -176,9 +176,7 @@ def build_week(week_num: int, public_dir: Path, plan_weeks: list) -> None:
         prev_link, next_link = _day_prev_next(week_num, days, index, week_titles)
         html = solution_page_template(
             title=day["title"],
-            eyebrow=f"Week {week_num} · Day {day['num']}",
             markdown=day["markdown"],
-            back_link=("index.html", f"返回 Week {week_num} 概览"),
             root_prefix=root_prefix,
             page_title=f"Week {week_num} - Day {day['num']}：{day['title']}",
             day_pills=_day_pills(days, current_day=day["num"]),
@@ -357,10 +355,8 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
         prev_link, next_link = _day_prev_next(1, days, index, week_titles)
         html = solution_page_template(
             title=day["title"],
-            eyebrow=f"Week 1 · Day {day['num']}",
             page_title=f"Week 1 - Day {day['num']}：{day['title']}",
             markdown=day["markdown"],
-            back_link=("index.html", "返回 Week 1 概览"),
             root_prefix=week1_root_prefix,
             day_pills=_day_pills(days, current_day=day["num"]),
             prev_link=prev_link,
