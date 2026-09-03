@@ -4,7 +4,12 @@ import re
 import shutil
 from pathlib import Path
 
-from .common import HEADING_RENDERER_TOPICS, REPO_ROOT, week_page_template
+from .common import (
+    HEADING_RENDERER_TOPICS,
+    REPO_ROOT,
+    solution_page_template,
+    week_page_template,
+)
 
 TOPICS_DIR = REPO_ROOT / "aiinfra" / "topics"
 IMAGES_SRC = TOPICS_DIR / "images"
@@ -368,23 +373,20 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
             prev_sol = solution_files[index - 1]
             prev_link = (f"{prev_sol['slug']}.html", prev_sol["title"])
         else:
-            prev_link = ("index.html", "专题概览")
+            prev_link = (f"{href_prefix}index.html", "专题概览")
         if index + 1 < len(solution_files):
             next_sol = solution_files[index + 1]
             next_link = (f"{next_sol['slug']}.html", next_sol["title"])
         else:
             next_link = None
-        html = week_page_template(
+        html = solution_page_template(
             title=sol["title"],
-            eyebrow=f"{display} 专题",
             markdown=sol["markdown"],
+            back_link=(f"{href_prefix}index.html", f"返回 {display} 列表"),
             root_prefix="../" * (sol["depth"] + 1),
-            page_title=f"{display} 题解 - {sol['title']}",
-            day_pills=_topic_day_pills(nav_days, has_day_files=bool(day_files),
-                                       prefix=href_prefix),
+            page_title=f"{sol['title']} - AI Infra 学习笔记",
             prev_link=prev_link,
             next_link=next_link,
-            heading_renderer_js=HEADING_RENDERER_TOPICS,
         )
         out_path = output_dir / f"{sol['slug']}.html"
         out_path.parent.mkdir(parents=True, exist_ok=True)

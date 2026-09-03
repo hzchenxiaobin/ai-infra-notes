@@ -24,7 +24,7 @@ for week in $(seq 1 10); do
         fi
 
         FILENAME="$(basename "$SVG")"
-        MESSAGE="优化${SVG}"
+        MESSAGE="优化${SVG},使得图片能够很好的表达，并且更加美观，"
         echo
         echo "======== ${FILENAME} ========"
         echo ">>> 发送: $MESSAGE"
