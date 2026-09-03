@@ -256,7 +256,7 @@ def solution_page_template(
         }} catch (e) {{}}
     }})();
     </script>
-    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=3">
+    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=4">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -333,7 +333,7 @@ def solution_page_template(
 
     <button class="vp-back-to-top" aria-label="回到顶部">↑</button>
 
-    <script src="{root_prefix}js/vp-solution.js?v=2"></script>
+    <script src="{root_prefix}js/vp-solution.js?v=3"></script>
     <script>
         const pageMarkdown = `{escaped_markdown}`;
 
