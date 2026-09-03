@@ -4,23 +4,11 @@ import re
 import shutil
 from pathlib import Path
 
-from .common import REPO_ROOT, week_page_template
+from .common import REPO_ROOT, solution_page_template
 from .topics import _split_topic_h1
 
 PAPER_DIR = REPO_ROOT / "aiinfra" / "paper"
 IMAGES_DIR = PAPER_DIR / "images"
-
-HEADING_RENDERER_PAPER = """renderer.heading = function(text, level, raw) {
-            let anchor = raw.toLowerCase()
-                .replace(/[^\\w\\s-]/g, '')
-                .replace(/\\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-            if (anchor && level >= 2) {
-                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
-            }
-            return '<h' + level + '>' + text + '</h' + level + '>';
-        };"""
 
 
 def _rewrite_readme_paths(markdown_text: str) -> str:
@@ -109,13 +97,13 @@ def build(public_dir: Path) -> None:
 
     root_prefix = "../"
     overview_md = _build_index_content(papers, root_prefix=root_prefix)
-    overview_html = week_page_template(
+    overview_html = solution_page_template(
         title="论文精读",
         eyebrow="📄 Paper Reading",
         markdown=overview_md,
+        back_link=(f"{root_prefix}index.html", "返回首页"),
         root_prefix=root_prefix,
         page_title="论文精读 - AI Infra 学习笔记",
-        heading_renderer_js=HEADING_RENDERER_PAPER,
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
@@ -140,16 +128,15 @@ def build(public_dir: Path) -> None:
             next_link = None
 
         _, paper_body = _split_topic_h1(paper["markdown"], paper["title"])
-        paper_html = week_page_template(
+        paper_html = solution_page_template(
             title=paper["title"],
             eyebrow="📄 论文精读",
             markdown=paper_body,
+            back_link=("../index.html", "返回论文列表"),
             root_prefix="../../",
             page_title=f"{paper['title']} - 论文精读",
-            day_pills=[{"label": "📌 论文列表", "href": "../index.html"}],
             prev_link=prev_link,
             next_link=next_link,
-            heading_renderer_js=HEADING_RENDERER_PAPER,
         )
         (paper_web_dir / "index.html").write_text(paper_html, encoding="utf-8")
         print(f"Generated: {paper_web_dir / 'index.html'}")

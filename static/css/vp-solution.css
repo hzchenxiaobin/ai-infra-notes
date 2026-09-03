@@ -959,6 +959,280 @@ html.dark .vp-switch .moon {
 }
 
 /* --------------------------------------------------------------------------
+   Sticky day-pill bar (intra-section navigation, below the navbar)
+   -------------------------------------------------------------------------- */
+.vp-pill-bar {
+    position: sticky;
+    top: var(--vp-nav-height);
+    z-index: 20;
+    background-color: var(--vp-c-bg);
+    border-bottom: 1px solid var(--vp-c-gutter);
+    transition: background-color 0.5s, border-color 0.5s;
+}
+
+.vp-pill-bar-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 8px 32px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.vp-pill-bar-inner::-webkit-scrollbar {
+    display: none;
+}
+
+.vp-pill {
+    flex-shrink: 0;
+    padding: 3px 12px;
+    border: 1px solid var(--vp-c-border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vp-c-text-2);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.25s, border-color 0.25s, background-color 0.25s;
+}
+
+.vp-pill:hover {
+    color: var(--vp-c-brand-1);
+    border-color: var(--vp-c-brand-1);
+}
+
+.vp-pill.active {
+    color: var(--vp-c-brand-1);
+    border-color: var(--vp-c-brand-1);
+    background-color: var(--vp-c-brand-soft);
+}
+
+/* Extra scroll offset for anchor jumps on pages with the pill bar */
+body.has-pill-bar .vp-doc h2,
+body.has-pill-bar .vp-doc h3 {
+    scroll-margin-top: 136px;
+}
+
+/* --------------------------------------------------------------------------
+   Eyebrow badge + subtitle (above / below the H1)
+   -------------------------------------------------------------------------- */
+.vp-eyebrow {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--vp-c-brand-1);
+    background-color: var(--vp-c-brand-soft);
+    border-radius: 999px;
+    padding: 2px 10px;
+}
+
+.vp-doc-subtitle {
+    margin: 0 0 16px;
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--vp-c-text-2);
+}
+
+/* --------------------------------------------------------------------------
+   Day / solution cards (overview pages)
+   -------------------------------------------------------------------------- */
+.day-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+}
+
+.day-card {
+    display: block;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: var(--vp-c-text-1);
+    transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.day-card:hover {
+    border-color: var(--vp-c-brand-1);
+    box-shadow: var(--vp-shadow-1);
+}
+
+.day-card-number {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vp-c-brand-1);
+    margin-bottom: 4px;
+}
+
+.day-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Details / summary (Q&A collapsible answers)
+   -------------------------------------------------------------------------- */
+.vp-doc details {
+    margin: 12px 0;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    padding: 10px 16px;
+    background-color: var(--vp-c-bg-soft);
+    transition: border-color 0.25s;
+}
+
+.vp-doc details[open] {
+    border-color: var(--vp-c-border);
+}
+
+.vp-doc details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--vp-c-text-2);
+    transition: color 0.25s;
+}
+
+.vp-doc details summary:hover {
+    color: var(--vp-c-brand-1);
+}
+
+.vp-doc details summary::marker {
+    color: var(--vp-c-text-3);
+}
+
+.vp-doc details > *:not(summary):first-child {
+    margin-top: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Occupancy calculator widget (week1 day3 placeholder, when present)
+   -------------------------------------------------------------------------- */
+.occupancy-calculator {
+    background-color: var(--vp-c-bg-soft);
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.calc-title {
+    margin: 0 0 8px;
+    color: var(--vp-c-brand-1);
+    font-size: 1.1rem;
+}
+
+.calc-desc {
+    margin: 0 0 16px;
+    color: var(--vp-c-text-2);
+    font-size: 0.9rem;
+}
+
+.calc-form {
+    display: grid;
+    gap: 12px;
+}
+
+.calc-row {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+.calc-row label {
+    color: var(--vp-c-text-1);
+    font-size: 0.9rem;
+}
+
+.calc-row input,
+.calc-row select {
+    padding: 8px 10px;
+    background-color: var(--vp-c-bg);
+    border: 1px solid var(--vp-c-border);
+    border-radius: 6px;
+    color: var(--vp-c-text-1);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.calc-row input:focus,
+.calc-row select:focus {
+    outline: none;
+    border-color: var(--vp-c-brand-1);
+}
+
+.calc-button {
+    justify-self: start;
+    padding: 10px 20px;
+    background-color: var(--vp-c-brand-3);
+    color: var(--vp-c-white);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    margin-top: 8px;
+    transition: background-color 0.25s;
+}
+
+.calc-button:hover {
+    background-color: var(--vp-c-brand-2);
+}
+
+.calc-result {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.calc-metric {
+    background-color: var(--vp-c-bg);
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calc-metric span {
+    font-size: 0.8rem;
+    color: var(--vp-c-text-2);
+}
+
+.calc-metric strong {
+    font-size: 1.2rem;
+    color: var(--vp-c-text-1);
+}
+
+.calc-detail {
+    grid-column: 1 / -1;
+    color: var(--vp-c-text-2);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.calc-detail p {
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .calc-row {
+        grid-template-columns: 1fr;
+    }
+
+    .calc-button {
+        width: 100%;
+        justify-self: stretch;
+    }
+}
+
+/* --------------------------------------------------------------------------
    Footer / back-to-top / lightbox
    -------------------------------------------------------------------------- */
 .vp-footer {

@@ -8,15 +8,13 @@ from typing import Optional
 from .common import (
     COURSE_OVERVIEW_SOURCE,
     DAILY_DIR,
-    DAY_TITLE_PATTERN,
-    HEADING_RENDERER_WEEKS,
     PLAN_SOURCE,
     build_day_cards_html,
     compute_root_prefix,
     get_day_info,
     load_overview_and_days,
     rewrite_md_links_to_html_weeks,
-    week_page_template,
+    solution_page_template,
 )
 
 OCCUPANCY_CALCULATOR_MARKER = '<div id="occ-calc-placeholder"></div>'
@@ -90,7 +88,7 @@ def _merged_week_titles(weeks: Optional[list]) -> dict:
 def _split_week_h1(overview: str, week_num: int, week_titles: dict) -> tuple:
     """Split the leading '# Week N：Title' H1 into (eyebrow, title, body).
 
-    The hero in week_page_template renders eyebrow/title, so the H1 is removed
+    The page template renders eyebrow/title, so the H1 is removed
     from the markdown body to avoid a duplicate heading."""
     match = re.match(r"\s*#\s*(Week\s*\d+)[：:]\s*(.+)", overview)
     if match:
@@ -162,30 +160,30 @@ def build_week(week_num: int, public_dir: Path, plan_weeks: list) -> None:
     else:
         overview_with_cards = overview_body + '\n\n' + cards
 
-    overview_html = week_page_template(
+    overview_html = solution_page_template(
         title=week_title,
         eyebrow=eyebrow,
         markdown=overview_with_cards,
+        back_link=(f"{root_prefix}index.html", "返回首页"),
         root_prefix=root_prefix,
         page_title=WEEK_OVERVIEW_PAGE_TITLES.get(week_num, f"Week {week_num} 概览"),
         day_pills=_day_pills(days, overview_active=True),
-        heading_renderer_js=HEADING_RENDERER_WEEKS,
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
     for index, day in enumerate(days):
         prev_link, next_link = _day_prev_next(week_num, days, index, week_titles)
-        html = week_page_template(
+        html = solution_page_template(
             title=day["title"],
             eyebrow=f"Week {week_num} · Day {day['num']}",
             markdown=day["markdown"],
+            back_link=("index.html", f"返回 Week {week_num} 概览"),
             root_prefix=root_prefix,
             page_title=f"Week {week_num} - Day {day['num']}：{day['title']}",
             day_pills=_day_pills(days, current_day=day["num"]),
             prev_link=prev_link,
             next_link=next_link,
-            heading_renderer_js=HEADING_RENDERER_WEEKS,
         )
         filename = f"day{day['num']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
@@ -226,13 +224,13 @@ def build_plan_page(public_dir: Path, plan_weeks: list) -> None:
         if _week_dir(num).exists()
     ]
 
-    html = week_page_template(
+    html = solution_page_template(
         title="AI Infra 10 周学习计划",
         eyebrow="📋 完整学习计划",
         markdown=markdown_text,
+        back_link=("index.html", "返回首页"),
         page_title="AI Infra 10 周计划",
         day_pills=week_pills,
-        heading_renderer_js=HEADING_RENDERER_WEEKS,
     )
     (public_dir / "plan.html").write_text(html, encoding="utf-8")
     print(f"Generated: {public_dir / 'plan.html'}")
@@ -297,14 +295,14 @@ def _build_extra_pages(week1_dir: Path, output_dir: Path, public_dir: Path, plan
         markdown_text = rewrite_md_links_to_html_weeks(markdown_text, root_prefix=root_prefix)
         markdown_text = rewrite_week1_resource_links(markdown_text, root_prefix=root_prefix)
 
-        html = week_page_template(
+        html = solution_page_template(
             title=page["title"],
             eyebrow="Week 1",
             page_title=f"Week 1 - {page['title']}",
             markdown=markdown_text,
+            back_link=("../index.html", "返回 Week 1 概览"),
             root_prefix=root_prefix,
             day_pills=_day_pills(get_day_info(week1_dir), prefix="../"),
-            heading_renderer_js=HEADING_RENDERER_WEEKS,
         )
         output_path.write_text(html, encoding="utf-8")
         print(f"Generated: {output_path}")
@@ -334,14 +332,14 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
         build_day_cards_html(days, root_prefix="")
     )
 
-    week1_overview_html = week_page_template(
+    week1_overview_html = solution_page_template(
         title=week_title,
         eyebrow=eyebrow,
         page_title="Week 1 - Week 1 概览",
         markdown=week1_overview_with_cards,
+        back_link=(f"{week1_root_prefix}index.html", "返回首页"),
         root_prefix=week1_root_prefix,
         day_pills=_day_pills(days, overview_active=True),
-        heading_renderer_js=HEADING_RENDERER_WEEKS,
     )
     (week1_output_dir / "index.html").write_text(week1_overview_html, encoding="utf-8")
     print(f"Generated: {week1_output_dir / 'index.html'}")
@@ -357,17 +355,17 @@ def build_week1(public_dir: Path, plan_weeks: list) -> None:
             if has_calc else ""
         )
         prev_link, next_link = _day_prev_next(1, days, index, week_titles)
-        html = week_page_template(
+        html = solution_page_template(
             title=day["title"],
             eyebrow=f"Week 1 · Day {day['num']}",
             page_title=f"Week 1 - Day {day['num']}：{day['title']}",
             markdown=day["markdown"],
+            back_link=("index.html", "返回 Week 1 概览"),
             root_prefix=week1_root_prefix,
             day_pills=_day_pills(days, current_day=day["num"]),
             prev_link=prev_link,
             next_link=next_link,
             extra_scripts=extra_scripts,
-            heading_renderer_js=HEADING_RENDERER_WEEKS,
         )
         filename = f"day{day['num']}.html"
         (week1_output_dir / filename).write_text(html, encoding="utf-8")

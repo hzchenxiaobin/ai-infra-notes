@@ -41,6 +41,9 @@ window.VPPage = (function () {
     function makeSlugger() {
         var used = Object.create(null);
         return function (raw) {
+            /* "Day N（...）：title" 概览标题映射为 day-N 锚点（跨页面 #day-N 链接） */
+            var dayMatch = String(raw).match(/^Day\s+(\d+)/);
+            if (dayMatch) return 'day-' + dayMatch[1];
             var slug = String(raw)
                 .toLowerCase()
                 .replace(/<[^>]+>/g, '')
@@ -180,9 +183,11 @@ window.VPPage = (function () {
 
         var root = document.getElementById('outline-root');
         var html = '';
+        var seenH2 = false;
         headings.forEach(function (h) {
             if (!h.id) return;
-            var nested = h.tagName === 'H3' ? ' nested' : '';
+            var nested = h.tagName === 'H3' && seenH2 ? ' nested' : '';
+            if (h.tagName === 'H2') seenH2 = true;
             html +=
                 '<li><a class="outline-link' + nested + '" href="#' + h.id + '">' +
                 escapeHtml(h.textContent) + '</a></li>';
@@ -325,23 +330,39 @@ window.VPPage = (function () {
     }
 
     /* ------------------------------------------------------------------
+     * 胶囊导航：当前项滚动到可视区（移动端/长条）
+     * ------------------------------------------------------------------ */
+    function initPillBar() {
+        var active = document.querySelector('.vp-pill-bar .vp-pill.active');
+        if (active && typeof active.scrollIntoView === 'function') {
+            active.scrollIntoView({ inline: 'center', block: 'nearest' });
+        }
+    }
+
+    /* ------------------------------------------------------------------
      * 入口
      * ------------------------------------------------------------------ */
     function render(markdownText) {
         renderMarkdown(markdownText);
-        enhanceCodeBlocks();
-        if (window.Prism) {
+        /* 各增强步骤相互隔离：单个组件异常不影响页面其余部分 */
+        [
+            enhanceCodeBlocks,
+            function () {
+                if (window.Prism) Prism.highlightAll();
+            },
+            initOutline,
+            initThemeToggle,
+            initImageZoom,
+            initExternalLinks,
+            initBackToTop,
+            initPillBar,
+        ].forEach(function (step) {
             try {
-                Prism.highlightAll();
+                step();
             } catch (e) {
-                console.error('Prism highlight error:', e);
+                console.error('VPPage step failed:', e);
             }
-        }
-        initOutline();
-        initThemeToggle();
-        initImageZoom();
-        initExternalLinks();
-        initBackToTop();
+        });
     }
 
     return { render: render };

@@ -168,220 +168,63 @@ def build_day_cards_html(days: list, root_prefix: str = "") -> str:
 
 
 # ---------------------------------------------------------------------------
-# Heading renderer JS snippets (inserted into the page <script> block)
-# ---------------------------------------------------------------------------
-
-HEADING_RENDERER_WEEKS = """renderer.heading = function(text, level, raw) {
-            let anchor = raw.toLowerCase()
-                .replace(/[^\\w\\s-]/g, '')
-                .replace(/\\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-
-            const dayMatch = raw.match(/^Day (\\d+)[:：]\\s*(.+)$/);
-            if (dayMatch) {
-                anchor = 'day-' + dayMatch[1];
-            }
-
-            if (level === 2 && anchor) {
-                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
-            }
-            return '<h' + level + '>' + text + '</h' + level + '>';
-        };"""
-
-HEADING_RENDERER_TOPICS = """renderer.heading = function(text, level, raw) {
-            let anchor = raw.toLowerCase()
-                .replace(/[^\\w\\s-]/g, '')
-                .replace(/\\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-
-            const dayMatch = raw.match(/^Day (\\d+)(?:[（(][^)）]*[）)])*[:：｜]\\s*(.+)$/);
-            if (dayMatch) {
-                anchor = 'day-' + dayMatch[1];
-            }
-
-            if (level === 2 && anchor) {
-                return '<h' + level + ' id="' + anchor + '">' + text + '</h' + level + '>';
-            }
-            return '<h' + level + '>' + text + '</h' + level + '>';
-        };"""
-
-
-# ---------------------------------------------------------------------------
-# Week page template (sidebar-less: top nav + hero + day pills, like the landing page)
-# ---------------------------------------------------------------------------
-
-def week_page_template(
-    title: str,
-    markdown: str,
-    *,
-    eyebrow: str = "",
-    subtitle: str = "",
-    root_prefix: str = "",
-    page_title: Optional[str] = None,
-    day_pills: Optional[list] = None,
-    prev_link: Optional[tuple] = None,
-    next_link: Optional[tuple] = None,
-    extra_scripts: str = "",
-    heading_renderer_js: str = "",
-) -> str:
-    """Generate a week page (overview / day / extra) in the landing-page style:
-    fixed top nav, compact hero, sticky day-pill strip, centered content."""
-    escaped_markdown = escape_for_template_string(markdown)
-    if page_title is None:
-        page_title = title
-
-    eyebrow_html = f'<div class="hero-eyebrow">{eyebrow}</div>' if eyebrow else ""
-    subtitle_html = f'<p class="week-hero-sub">{subtitle}</p>' if subtitle else ""
-
-    pills_html = ""
-    if day_pills:
-        items = []
-        for pill in day_pills:
-            active_cls = " day-pill-active" if pill.get("active") else ""
-            items.append(
-                f'<a class="day-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
-            )
-        pills_html = '<nav class="landing-nav-pills">' + "".join(items) + "</nav>"
-
-    def _pn_link(link, cls, arrow_before, arrow_after):
-        if not link:
-            return "<span></span>"
-        href, label = link
-        return (
-            f'<a class="pn-link {cls}" href="{href}">'
-            f"{arrow_before}<span>{label}</span>{arrow_after}</a>"
-        )
-
-    prev_next_html = ""
-    if prev_link or next_link:
-        prev_next_html = (
-            '<div class="prev-next-nav">'
-            + _pn_link(prev_link, "pn-prev", '<span class="pn-arrow">←</span>', "")
-            + _pn_link(next_link, "pn-next", "", '<span class="pn-arrow">→</span>')
-            + "</div>"
-        )
-
-    if heading_renderer_js:
-        renderer_block = f"        {heading_renderer_js}\n\n"
-    else:
-        renderer_block = ""
-
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{page_title}</title>
-    <link rel="stylesheet" href="{root_prefix}css/style.css?v=8">
-    <!-- Marked.js for Markdown rendering -->
-    <script src="{root_prefix}js/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="{root_prefix}js/markdown-math.js"></script>
-    <!-- Prism.js for syntax highlighting -->
-    <link href="{root_prefix}css/prism-tomorrow.min.css" rel="stylesheet">
-    <script src="{root_prefix}js/prism.min.js"></script>
-    <script src="{root_prefix}js/prism-c.min.js"></script>
-    <script src="{root_prefix}js/prism-cpp.min.js"></script>
-    <script>Prism.languages.cuda=Prism.languages.extend("c",{{builtin:/\\b(?:__global__|__device__|__host__|__shared__|__constant__|__managed__|__restrict__|__syncthreads|__threadfence|__threadfence_block|blockIdx|threadIdx|blockDim|gridDim|warpSize)\\b/}});</script>
-    <script src="{root_prefix}js/prism-bash.min.js"></script>
-    <script src="{root_prefix}js/prism-python.min.js"></script>
-</head>
-<body class="landing week-page">
-    <header class="landing-nav">
-        <a class="landing-nav-brand" href="{root_prefix}index.html">AI Infra <span>Notes</span></a>
-        {pills_html}
-        <nav class="landing-nav-links">
-            <a href="{root_prefix}plan.html">10 周计划</a>
-            <a href="{root_prefix}index.html#topics">专题笔记</a>
-            <a href="{root_prefix}paper/index.html">论文精读</a>
-            <a class="landing-nav-github" href="{GITHUB_REPO_URL}">GitHub ↗</a>
-        </nav>
-    </header>
-
-    <section class="week-hero">
-        <div class="week-hero-inner">
-            {eyebrow_html}
-            <h1 class="week-hero-title">{title}</h1>
-            {subtitle_html}
-        </div>
-    </section>
-
-    <main class="week-main">
-        <article class="content" id="content"></article>
-        {prev_next_html}
-    </main>
-
-    <footer class="landing-footer">
-        <span>AI Infra Notes · 由 <a href="{GITHUB_REPO_URL}">GitHub</a> 驱动 · Deployed on GitHub Pages</span>
-    </footer>
-
-    <button class="back-to-top" aria-label="Back to top">↑</button>
-
-    <script>
-        const markdown = `{escaped_markdown}`;
-
-        const renderer = new marked.Renderer();
-{renderer_block}        marked.setOptions({{
-            renderer: renderer,
-            headerIds: false,
-            gfm: true,
-            breaks: false,
-            sanitize: false
-        }});
-
-        try {{
-            if (typeof marked === 'undefined') {{
-                throw new Error('marked.js failed to load. Please check js/marked.min.js exists.');
-            }}
-            document.getElementById('content').innerHTML = marked.parse(markdown);
-
-            if (window.Prism) {{
-                Prism.highlightAll();
-            }}
-        }} catch (err) {{
-            document.getElementById('content').innerHTML = '<div style="padding: 20px; color: #ff7b72; background: #2d1515; border-radius: 8px;">' +
-                '<h2>⚠️ 页面渲染失败</h2>' +
-                '<p>' + err.message + '</p>' +
-                '<p>请打开浏览器控制台（Cmd + Option + J）查看详细错误。</p>' +
-                '</div>';
-            console.error('Markdown render error:', err);
-        }}
-    </script>
-    {extra_scripts}
-    <script src="{root_prefix}js/main.js?v=8"></script>
-</body>
-</html>
-"""
-
-
-# ---------------------------------------------------------------------------
-# Solution page template (VitePress look: light theme, navbar, back-nav,
-# right-side outline, code line numbers, prev/next pager)
+# Shared page template (VitePress look: light theme, navbar, back-nav,
+# optional pill bar / eyebrow, right-side outline, prev/next pager).
+# Used for every generated content page: weeks, topics, papers, plan,
+# standalone solution/article pages.
 # ---------------------------------------------------------------------------
 
 def solution_page_template(
     title: str,
     markdown: str,
     *,
-    back_link: tuple,
+    back_link: Optional[tuple] = None,
     root_prefix: str = "",
     page_title: Optional[str] = None,
+    eyebrow: str = "",
+    subtitle: str = "",
+    day_pills: Optional[list] = None,
     prev_link: Optional[tuple] = None,
     next_link: Optional[tuple] = None,
+    extra_scripts: str = "",
 ) -> str:
-    """Generate a standalone solution/article page in the VitePress style,
-    mirroring the leetgpu GitHub Pages solution layout: top navbar with
-    appearance switch, back-nav above the H1, right-side outline (本页目录),
-    code blocks with line numbers, and a prev/next pager."""
+    """Generate a content page in the VitePress style, mirroring the leetgpu
+    GitHub Pages layout: top navbar with appearance switch, optional sticky
+    day-pill bar, back-nav above the H1, right-side outline (本页目录), code
+    blocks with line numbers, and a prev/next pager."""
     escaped_markdown = escape_for_template_string(markdown)
     escaped_title = html.escape(title, quote=True)
     if page_title is None:
         page_title = title
 
-    back_href, back_label = back_link
+    back_nav_html = ""
+    if back_link:
+        back_href, back_label = back_link
+        back_nav_html = (
+            f'<nav class="back-nav"><a href="{back_href}">'
+            f'← {html.escape(back_label, quote=True)}</a></nav>'
+        )
+
+    eyebrow_html = f'<div class="vp-eyebrow">{html.escape(eyebrow)}</div>' if eyebrow else ""
+    subtitle_html = (
+        f'<p class="vp-doc-subtitle">{html.escape(subtitle)}</p>' if subtitle else ""
+    )
+
+    body_class = "vp-page"
+    pills_html = ""
+    if day_pills:
+        body_class += " has-pill-bar"
+        items = []
+        for pill in day_pills:
+            active_cls = " active" if pill.get("active") else ""
+            items.append(
+                f'<a class="vp-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
+            )
+        pills_html = (
+            '<div class="vp-pill-bar"><div class="vp-pill-bar-inner">'
+            + "".join(items)
+            + "</div></div>"
+        )
 
     def _pager(link, cls, label):
         if not link:
@@ -393,12 +236,14 @@ def solution_page_template(
             f'<span class="title">{html.escape(text, quote=True)}</span></a>'
         )
 
-    prev_next_html = (
-        '<div class="prev-next">'
-        + _pager(prev_link, "prev", "上一篇")
-        + _pager(next_link, "next", "下一篇")
-        + "</div>"
-    )
+    prev_next_html = ""
+    if prev_link or next_link:
+        prev_next_html = (
+            '<div class="prev-next">'
+            + _pager(prev_link, "prev", "上一篇")
+            + _pager(next_link, "next", "下一篇")
+            + "</div>"
+        )
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -416,7 +261,7 @@ def solution_page_template(
         }} catch (e) {{}}
     }})();
     </script>
-    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=1">
+    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=2">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -430,7 +275,7 @@ def solution_page_template(
     <script src="{root_prefix}js/prism-bash.min.js"></script>
     <script src="{root_prefix}js/prism-python.min.js"></script>
 </head>
-<body class="vp-page">
+<body class="{body_class}">
     <header class="vp-navbar">
         <div class="vp-navbar-inner">
             <a class="vp-brand" href="{root_prefix}index.html">AI Infra <span>Notes</span></a>
@@ -453,14 +298,17 @@ def solution_page_template(
     </header>
 
     <div class="vp-main">
+        {pills_html}
         <div class="vp-doc-wrap">
             <div class="vp-container">
                 <div class="vp-content">
                     <div class="vp-content-container">
-                        <nav class="back-nav"><a href="{back_href}">← {html.escape(back_label, quote=True)}</a></nav>
+                        {back_nav_html}
                         <main class="main">
                             <article class="vp-doc">
+                                {eyebrow_html}
                                 <h1>{escaped_title}</h1>
+                                {subtitle_html}
                                 <div id="doc-content"></div>
                             </article>
                         </main>
@@ -490,7 +338,7 @@ def solution_page_template(
 
     <button class="vp-back-to-top" aria-label="回到顶部">↑</button>
 
-    <script src="{root_prefix}js/vp-solution.js?v=1"></script>
+    <script src="{root_prefix}js/vp-solution.js?v=2"></script>
     <script>
         const pageMarkdown = `{escaped_markdown}`;
 
@@ -508,6 +356,7 @@ def solution_page_template(
             console.error('Markdown render error:', err);
         }}
     </script>
+    {extra_scripts}
 </body>
 </html>
 """

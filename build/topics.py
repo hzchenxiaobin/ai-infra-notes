@@ -4,12 +4,7 @@ import re
 import shutil
 from pathlib import Path
 
-from .common import (
-    HEADING_RENDERER_TOPICS,
-    REPO_ROOT,
-    solution_page_template,
-    week_page_template,
-)
+from .common import REPO_ROOT, solution_page_template
 
 TOPICS_DIR = REPO_ROOT / "aiinfra" / "topics"
 IMAGES_SRC = TOPICS_DIR / "images"
@@ -336,32 +331,32 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
     nav_days = day_files if day_files else readme_days
     root_prefix = "../"
     topic_title, overview_body = _split_topic_h1(overview_with_cards, f"{display} 专题")
-    overview_html = week_page_template(
+    overview_html = solution_page_template(
         title=topic_title,
         eyebrow="✨ 专题笔记",
         markdown=overview_body,
+        back_link=(f"{root_prefix}index.html", "返回首页"),
         root_prefix=root_prefix,
         page_title=f"{display} 专题 - AI Infra 学习笔记",
         day_pills=_topic_day_pills(nav_days, overview_active=True,
                                    has_day_files=bool(day_files)) if nav_days else None,
-        heading_renderer_js=HEADING_RENDERER_TOPICS,
     )
     (output_dir / "index.html").write_text(overview_html, encoding="utf-8")
     print(f"Generated: {output_dir / 'index.html'}")
 
     for index, day in enumerate(day_files):
         prev_link, next_link = _day_prev_next(day_files, index)
-        html = week_page_template(
+        html = solution_page_template(
             title=day["title"],
             eyebrow=f"{display} 专题 · Day {day['num']}",
             markdown=day["markdown"],
+            back_link=("index.html", f"返回 {display} 概览"),
             root_prefix=root_prefix,
             page_title=f"{display} Day {day['num']} - {day['title']}",
             day_pills=_topic_day_pills(nav_days, current_day=day["num"],
                                        has_day_files=True),
             prev_link=prev_link,
             next_link=next_link,
-            heading_renderer_js=HEADING_RENDERER_TOPICS,
         )
         filename = f"day{day['num']}.html"
         (output_dir / filename).write_text(html, encoding="utf-8")
