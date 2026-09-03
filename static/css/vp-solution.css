@@ -959,28 +959,19 @@ html.dark .vp-switch .moon {
 }
 
 /* --------------------------------------------------------------------------
-   Sticky day-pill bar (intra-section navigation, below the navbar)
+   Day pills inside the top navbar (intra-section navigation)
    -------------------------------------------------------------------------- */
-.vp-pill-bar {
-    position: sticky;
-    top: var(--vp-nav-height);
-    z-index: 20;
-    background-color: var(--vp-c-bg);
-    border-bottom: 1px solid var(--vp-c-gutter);
-    transition: background-color 0.5s, border-color 0.5s;
-}
-
-.vp-pill-bar-inner {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 8px 32px;
+.vp-nav-pills {
     display: flex;
+    align-items: center;
     gap: 8px;
+    margin-left: 24px;
+    min-width: 0;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-.vp-pill-bar-inner::-webkit-scrollbar {
+.vp-nav-pills::-webkit-scrollbar {
     display: none;
 }
 
@@ -1006,12 +997,6 @@ html.dark .vp-switch .moon {
     color: var(--vp-c-brand-1);
     border-color: var(--vp-c-brand-1);
     background-color: var(--vp-c-brand-soft);
-}
-
-/* Extra scroll offset for anchor jumps on pages with the pill bar */
-body.has-pill-bar .vp-doc h2,
-body.has-pill-bar .vp-doc h3 {
-    scroll-margin-top: 136px;
 }
 
 /* --------------------------------------------------------------------------

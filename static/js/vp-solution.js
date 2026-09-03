@@ -333,7 +333,7 @@ window.VPPage = (function () {
      * 胶囊导航：当前项滚动到可视区（移动端/长条）
      * ------------------------------------------------------------------ */
     function initPillBar() {
-        var active = document.querySelector('.vp-pill-bar .vp-pill.active');
+        var active = document.querySelector('.vp-nav-pills .vp-pill.active');
         if (active && typeof active.scrollIntoView === 'function') {
             active.scrollIntoView({ inline: 'center', block: 'nearest' });
         }

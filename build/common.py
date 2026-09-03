@@ -213,18 +213,13 @@ def solution_page_template(
     body_class = "vp-page"
     pills_html = ""
     if day_pills:
-        body_class += " has-pill-bar"
         items = []
         for pill in day_pills:
             active_cls = " active" if pill.get("active") else ""
             items.append(
                 f'<a class="vp-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
             )
-        pills_html = (
-            '<div class="vp-pill-bar"><div class="vp-pill-bar-inner">'
-            + "".join(items)
-            + "</div></div>"
-        )
+        pills_html = '<nav class="vp-nav-pills">' + "".join(items) + "</nav>"
 
     def _pager(link, cls, label):
         if not link:
@@ -261,7 +256,7 @@ def solution_page_template(
         }} catch (e) {{}}
     }})();
     </script>
-    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=2">
+    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=3">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -279,6 +274,7 @@ def solution_page_template(
     <header class="vp-navbar">
         <div class="vp-navbar-inner">
             <a class="vp-brand" href="{root_prefix}index.html">AI Infra <span>Notes</span></a>
+            {pills_html}
             <div class="vp-navbar-spacer"></div>
             <nav class="vp-menu">
                 <a href="{root_prefix}plan.html">10 周计划</a>
@@ -298,7 +294,6 @@ def solution_page_template(
     </header>
 
     <div class="vp-main">
-        {pills_html}
         <div class="vp-doc-wrap">
             <div class="vp-container">
                 <div class="vp-content">
