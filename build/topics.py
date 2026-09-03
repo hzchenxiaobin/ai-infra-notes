@@ -252,19 +252,25 @@ def solution_label(sol: dict) -> str:
     return ""
 
 
-def _copy_topic_images(topic_slug: str, output_dir: Path) -> int:
-    """Copy topic-related SVG images from aiinfra/topics/images/ to output/images/."""
+def _copy_topic_images(topic_dir: Path, output_dir: Path) -> int:
+    """Copy images referenced by a topic's markdown files from
+    aiinfra/topics/images/ to output/images/."""
+    referenced = set()
+    link_pattern = re.compile(r'\]\(([^)]+?\.(?:svg|png))\)', re.IGNORECASE)
+    for md_path in topic_dir.rglob("*.md"):
+        for m in link_pattern.finditer(md_path.read_text(encoding="utf-8")):
+            target = m.group(1).split("#")[0].split("?")[0].strip()
+            if not target:
+                continue
+            resolved = (md_path.parent / target).resolve()
+            if resolved.is_relative_to(IMAGES_SRC.resolve()) and resolved.is_file():
+                referenced.add(resolved)
     dst = output_dir / "images"
     dst.mkdir(parents=True, exist_ok=True)
-    copied = 0
-    prefix = f"{topic_slug}_"
-    if IMAGES_SRC.exists():
-        for item in IMAGES_SRC.iterdir():
-            if item.is_file() and item.suffix.lower() == ".svg" and item.name.startswith(prefix):
-                shutil.copy2(item, dst / item.name)
-                copied += 1
-    print(f"Copied {copied} {topic_slug} SVG images")
-    return copied
+    for src in sorted(referenced):
+        shutil.copy2(src, dst / src.name)
+    print(f"Copied {len(referenced)} {topic_dir.name} referenced images")
+    return len(referenced)
 
 
 def _copy_local_dirs(topic_dir: Path, output_dir: Path) -> None:
@@ -275,6 +281,16 @@ def _copy_local_dirs(topic_dir: Path, output_dir: Path) -> None:
             dst = output_dir / name
             shutil.copytree(src, dst, dirs_exist_ok=True)
             print(f"Copied: {src} -> {dst}")
+
+
+def _copy_loose_images(topic_dir: Path, output_dir: Path) -> None:
+    """Copy image files that sit next to markdown pages (outside the copied
+    asset dirs) so same-directory references keep working."""
+    for img in topic_dir.rglob("*"):
+        rel = img.relative_to(topic_dir)
+        if (img.is_file() and img.suffix.lower() in (".svg", ".png")
+                and not any(part in SOLUTION_SKIP_DIRS for part in rel.parts[:-1])):
+            shutil.copy2(img, output_dir / rel)
 
 
 def _build_topic(topic_dir: Path, output_dir: Path) -> None:
@@ -388,8 +404,9 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
         out_path.write_text(html, encoding="utf-8")
         print(f"Generated: {out_path}")
 
-    _copy_topic_images(slug, output_dir)
+    _copy_topic_images(topic_dir, output_dir)
     _copy_local_dirs(topic_dir, output_dir)
+    _copy_loose_images(topic_dir, output_dir)
 
 
 def build(public_dir: Path) -> None:
