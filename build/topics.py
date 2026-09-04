@@ -144,7 +144,9 @@ SOLUTION_SKIP_DIRS = {"challenges", "kernels", "notes", "benchmark", "images", "
 def _rewrite_solution_paths(markdown_text: str, depth: int) -> str:
     """Rewrite asset/cross-links in a solution file located `depth` dirs below
     the topic dir so they work on the generated page (which mirrors the source
-    tree). Images live in <output>/images/; relative .md links become .html."""
+    tree). Images live in <output>/images/; relative .md links become .html,
+    except links into skipped dirs (e.g. notes/), which are copied verbatim
+    and must keep their .md extension."""
     markdown_text = re.sub(
         r"\]\((?:\.\./)+images/",
         "](" + "../" * depth + "images/",
@@ -153,6 +155,11 @@ def _rewrite_solution_paths(markdown_text: str, depth: int) -> str:
 
     def repl(match):
         url = match.group(1)
+        parts = url.split("/")
+        while parts and parts[0] in (".", ".."):
+            parts.pop(0)
+        if parts and parts[0] in SOLUTION_SKIP_DIRS:
+            return match.group(0)
         if url.endswith("README.md"):
             url = url[: -len("README.md")] + "index.html"
         else:
