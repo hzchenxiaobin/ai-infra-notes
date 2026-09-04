@@ -17,6 +17,7 @@
 ### mock_interview/ 模拟面试精讲
 
 - [ldmatrix 读行主序 A 的 shared memory bank conflict](mock_interview/ldmatrix_bank_conflict.md)：Tensor Core GEMM 高频面试题精讲——bank conflict 判定方法、XOR swizzle 消除手段（CUTLASS / CuTe / TMA）
+- [Swizzle 机制详解：从 bank conflict 到 XOR 置换](mock_interview/swizzle_mechanism.md)：swizzle 的形式化定义（CuTe `Swizzle<B, M, S>`）、完整数字演算、手写 CUDA / CuTe / CUTLASS 2.x / TMA 四层代码实例
 
 ## 目录结构
 
@@ -29,5 +30,6 @@ interview/
 │   ├── social_interview_qa.md      # 社招面试实录 QA（面试官视角）
 │   └── 面经 1.md                   # 社招面经实录（算子开发岗）
 └── mock_interview/                 # 模拟面试 / 题目精讲
-    └── ldmatrix_bank_conflict.md   # ldmatrix bank conflict 精讲
+    ├── ldmatrix_bank_conflict.md   # ldmatrix bank conflict 精讲
+    └── swizzle_mechanism.md        # swizzle 机制详解（定义 / 演算 / 代码实例）
 ```
