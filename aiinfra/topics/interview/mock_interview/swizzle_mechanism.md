@@ -137,6 +137,10 @@ $$128i + 16j \;\xrightarrow{\;\text{swizzle}\;}\; 128i + 16\,(j \oplus (i \bmod 
 - **写（固定 $i$，cp.async 连续写整行 8 个块）**：第 $i$ 行的物理槽位是 $0..7$ 的置换 → 铺满 32 bank，无冲突
 - **读（固定 $j$，ldmatrix 取 8 行）**：上表任意一列（如加粗的 $j=0$ 列 = 0,1,2,3,4,5,6,7）也是 $0..7$ 的置换 → 铺满 32 bank，**8-way → 0 conflict**
 
+置换前后的槽位表并排对比（表项 = 物理槽位号，颜色 = 逻辑块号 $j$；虚线框标出 ldmatrix 列读与 cp.async 行写两条访问轨迹，底部是读逻辑块 0 时的 bank 占用）：
+
+![置换前后对比：物理槽位 = j vs j ⊕ (i mod 8)](../../images/swizzle_permutation_before_after.svg)
+
 直观效果如下图所示（逻辑块号即颜色，左图同列全同色撞 bank，右图错位铺满）：
 
 ![CuTe swizzle 消除 bank conflict 图解](../../images/cute_swizzle_bank_conflict.svg)
