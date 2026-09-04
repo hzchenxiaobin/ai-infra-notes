@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+<defs><filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+<feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="63" result="n"/>
+<feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/></filter></defs>
+<rect x="0" y="0" width="1000" height="620" fill="#fdfcf7" stroke="none" stroke-width="0"/>
+<text x="500" y="28" font-size="17" fill="#2b2b2b" text-anchor="middle" font-weight="bold">ldmatrix 是怎么读 Shared Memory 的（m8n8.x4 · FP16）</text>
+<path d="M 270 37 Q 500 45 730 37" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+<line x1="500" y1="54" x2="500" y2="450" stroke="#eee" stroke-width="1"/>
+<text x="260" y="68" font-size="13" fill="#2b6e9e" text-anchor="middle" font-weight="bold">① 地址侧：warp 32 线程，每人出一个行首地址</text>
+<text x="24" y="86" font-size="9" fill="#888" font-family="monospace">ldmatrix.sync.aligned.m8n8.x4.shared.b16 {r0, r1, r2, r3}, [addr]</text>
+<text x="24" y="99" font-size="9" fill="#888">每个 addr = 某 8×8 矩阵某一行的行首；一行 = 8 个 FP16 = 16B（自然对齐）</text>
+<text x="152" y="120" font-size="8" fill="#b85450" font-weight="bold">矩阵0（8×8 FP16 = 128B）</text>
+<g filter="url(#sk)"><rect x="24" y="126" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="62" y="126" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="24" y="144" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="62" y="144" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="24" y="162" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="62" y="162" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="24" y="180" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="62" y="180" width="34" height="14" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+<text x="41" y="136.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T0</text>
+<text x="79" y="136.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T1</text>
+<text x="41" y="154.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T2</text>
+<text x="79" y="154.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T3</text>
+<text x="41" y="172.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T4</text>
+<text x="79" y="172.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T5</text>
+<text x="41" y="190.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T6</text>
+<text x="79" y="190.5" font-size="7.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T7</text>
+<line x1="98" y1="159" x2="138" y2="159" stroke="#b85450" stroke-width="1.2"/>
+<path d="M 138 155 L 145 159 L 138 163 Z" fill="#b85450"/>
+<text x="121" y="154" font-size="7" fill="#888" text-anchor="middle">8 个行首</text>
+<g filter="url(#sk)"><rect x="152" y="126.0" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="134.5" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="143.0" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="151.5" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="160.0" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="168.5" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="177.0" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="152" y="185.5" width="118" height="7" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+<text x="148" y="131.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行0</text>
+<text x="148" y="140.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行1</text>
+<text x="148" y="148.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行2</text>
+<text x="148" y="157.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行3</text>
+<text x="148" y="165.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行4</text>
+<text x="148" y="174.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行5</text>
+<text x="148" y="182.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行6</text>
+<text x="148" y="191.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行7</text>
+<text x="156" y="131.5" font-size="6.5" fill="#b85450" font-weight="bold" font-family="monospace">8 个 FP16 = 16B</text>
+<text x="282" y="134" font-size="8.5" fill="#b85450" font-weight="bold">⇒ 装入 r0</text>
+<text x="282" y="150" font-size="7.5" fill="#666">地址只给行首，硬件整行取走 16B；</text>
+<text x="282" y="162" font-size="7.5" fill="#666">行与行在 smem 里可以不连续存放</text>
+<text x="282" y="174" font-size="7.5" fill="#666">（swizzle 的自由度即在于此）</text>
+<text x="152" y="204" font-size="8" fill="#2b6e9e" font-weight="bold">矩阵1</text>
+<g filter="url(#sk)"><rect x="24" y="210" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="62" y="210" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="24" y="228" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="62" y="228" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="24" y="246" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="62" y="246" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="24" y="264" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="62" y="264" width="34" height="14" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+<text x="41" y="220.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T8</text>
+<text x="79" y="220.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T9</text>
+<text x="41" y="238.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T10</text>
+<text x="79" y="238.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T11</text>
+<text x="41" y="256.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T12</text>
+<text x="79" y="256.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T13</text>
+<text x="41" y="274.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T14</text>
+<text x="79" y="274.5" font-size="7.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T15</text>
+<line x1="98" y1="243" x2="138" y2="243" stroke="#4a8edb" stroke-width="1.2"/>
+<path d="M 138 239 L 145 243 L 138 247 Z" fill="#4a8edb"/>
+<g filter="url(#sk)"><rect x="152" y="210.0" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="218.5" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="227.0" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="235.5" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="244.0" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="252.5" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="261.0" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="152" y="269.5" width="118" height="7" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/></g>
+<text x="148" y="215.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行0</text>
+<text x="148" y="224.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行1</text>
+<text x="148" y="232.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行2</text>
+<text x="148" y="241.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行3</text>
+<text x="148" y="249.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行4</text>
+<text x="148" y="258.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行5</text>
+<text x="148" y="266.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行6</text>
+<text x="148" y="275.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行7</text>
+<text x="282" y="218" font-size="8.5" fill="#2b6e9e" font-weight="bold">⇒ 装入 r1</text>
+<text x="152" y="288" font-size="8" fill="#7a5415" font-weight="bold">矩阵2</text>
+<g filter="url(#sk)"><rect x="24" y="294" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="62" y="294" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="24" y="312" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="62" y="312" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="24" y="330" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="62" y="330" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="24" y="348" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="62" y="348" width="34" height="14" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+<text x="41" y="304.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T16</text>
+<text x="79" y="304.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T17</text>
+<text x="41" y="322.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T18</text>
+<text x="79" y="322.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T19</text>
+<text x="41" y="340.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T20</text>
+<text x="79" y="340.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T21</text>
+<text x="41" y="358.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T22</text>
+<text x="79" y="358.5" font-size="7.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T23</text>
+<line x1="98" y1="327" x2="138" y2="327" stroke="#c98a2b" stroke-width="1.2"/>
+<path d="M 138 323 L 145 327 L 138 331 Z" fill="#c98a2b"/>
+<g filter="url(#sk)"><rect x="152" y="294.0" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="302.5" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="311.0" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="319.5" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="328.0" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="336.5" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="345.0" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="152" y="353.5" width="118" height="7" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/></g>
+<text x="148" y="299.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行0</text>
+<text x="148" y="308.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行1</text>
+<text x="148" y="316.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行2</text>
+<text x="148" y="325.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行3</text>
+<text x="148" y="333.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行4</text>
+<text x="148" y="342.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行5</text>
+<text x="148" y="350.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行6</text>
+<text x="148" y="359.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行7</text>
+<text x="282" y="302" font-size="8.5" fill="#7a5415" font-weight="bold">⇒ 装入 r2</text>
+<text x="152" y="372" font-size="8" fill="#6a3f9e" font-weight="bold">矩阵3</text>
+<g filter="url(#sk)"><rect x="24" y="378" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="62" y="378" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="24" y="396" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="62" y="396" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="24" y="414" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="62" y="414" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="24" y="432" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="62" y="432" width="34" height="14" rx="2" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/></g>
+<text x="41" y="388.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T24</text>
+<text x="79" y="388.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T25</text>
+<text x="41" y="406.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T26</text>
+<text x="79" y="406.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T27</text>
+<text x="41" y="424.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T28</text>
+<text x="79" y="424.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T29</text>
+<text x="41" y="442.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T30</text>
+<text x="79" y="442.5" font-size="7.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T31</text>
+<line x1="98" y1="411" x2="138" y2="411" stroke="#8a5ab5" stroke-width="1.2"/>
+<path d="M 138 407 L 145 411 L 138 415 Z" fill="#8a5ab5"/>
+<g filter="url(#sk)"><rect x="152" y="378.0" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="386.5" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="395.0" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="403.5" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="412.0" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="420.5" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="429.0" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="152" y="437.5" width="118" height="7" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/></g>
+<text x="148" y="383.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行0</text>
+<text x="148" y="392.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行1</text>
+<text x="148" y="400.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行2</text>
+<text x="148" y="409.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行3</text>
+<text x="148" y="417.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行4</text>
+<text x="148" y="426.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行5</text>
+<text x="148" y="434.8" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行6</text>
+<text x="148" y="443.3" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">行7</text>
+<text x="282" y="386" font-size="8.5" fill="#6a3f9e" font-weight="bold">⇒ 装入 r3</text>
+<line x1="466" y1="112" x2="466" y2="446" stroke="#999" stroke-width="1"/>
+<line x1="462" y1="112" x2="470" y2="112" stroke="#999" stroke-width="1"/>
+<line x1="462" y1="446" x2="470" y2="446" stroke="#999" stroke-width="1"/>
+<text x="482" y="279" transform="rotate(90 482 279)" text-anchor="middle" font-size="8.5" fill="#999">4 矩阵 × 128B = 512B</text>
+<text x="24" y="456" font-size="8.5" fill="#888">.x1 / .x2 / .x4 的有效地址来自前 8 / 16 / 32 个线程，规则相同；.x4 总量 = 32 × 16B = 512B</text>
+<text x="740" y="68" font-size="13" fill="#2e6e2e" text-anchor="middle" font-weight="bold">② 结果侧：数据按 MMA fragment 布局分发</text>
+<text x="520" y="86" font-size="9" fill="#888">线程 t 的 r[m] ← 矩阵 m 第 ⌊t/4⌋ 行的第 (t mod 4) 个 32-bit word（= 2 个连续 FP16）</text>
+<text x="520" y="99" font-size="9" fill="#888">4 个连续线程拼满一整行 16B；32 线程 × 4 个寄存器 = 512B 全部到齐</text>
+<text x="540" y="112" font-size="8" fill="#999">矩阵0 → r0 的分发（其余矩阵同构 → r1 / r2 / r3）</text>
+<text x="563" y="121" font-size="7" fill="#888" text-anchor="middle" font-family="monospace">word0</text>
+<text x="611" y="121" font-size="7" fill="#888" text-anchor="middle" font-family="monospace">word1</text>
+<text x="659" y="121" font-size="7" fill="#888" text-anchor="middle" font-family="monospace">word2</text>
+<text x="707" y="121" font-size="7" fill="#888" text-anchor="middle" font-family="monospace">word3</text>
+<g filter="url(#sk)"><rect x="540" y="126" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="126" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="126" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="126" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="144" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="144" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="144" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="144" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="162" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="162" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="162" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="162" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="180" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="180" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="180" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="180" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="198" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="198" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="198" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="198" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="216" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="216" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="216" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="216" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="234" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="234" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="234" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="234" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="540" y="252" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="588" y="252" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="636" y="252" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="684" y="252" width="46" height="16" rx="2" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+<text x="534" y="137.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行0</text>
+<text x="563" y="137.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T0</text>
+<text x="611" y="137.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T1</text>
+<text x="659" y="137.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T2</text>
+<text x="707" y="137.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T3</text>
+<text x="534" y="155.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行1</text>
+<text x="563" y="155.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T4</text>
+<text x="611" y="155.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T5</text>
+<text x="659" y="155.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T6</text>
+<text x="707" y="155.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T7</text>
+<text x="534" y="173.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行2</text>
+<text x="563" y="173.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T8</text>
+<text x="611" y="173.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T9</text>
+<text x="659" y="173.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T10</text>
+<text x="707" y="173.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T11</text>
+<text x="534" y="191.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行3</text>
+<text x="563" y="191.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T12</text>
+<text x="611" y="191.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T13</text>
+<text x="659" y="191.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T14</text>
+<text x="707" y="191.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T15</text>
+<text x="534" y="209.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行4</text>
+<text x="563" y="209.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T16</text>
+<text x="611" y="209.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T17</text>
+<text x="659" y="209.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T18</text>
+<text x="707" y="209.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T19</text>
+<text x="534" y="227.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行5</text>
+<text x="563" y="227.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T20</text>
+<text x="611" y="227.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T21</text>
+<text x="659" y="227.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T22</text>
+<text x="707" y="227.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T23</text>
+<text x="534" y="245.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行6</text>
+<text x="563" y="245.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T24</text>
+<text x="611" y="245.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T25</text>
+<text x="659" y="245.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T26</text>
+<text x="707" y="245.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T27</text>
+<text x="534" y="263.5" font-size="7" fill="#999" text-anchor="end" font-family="monospace">行7</text>
+<text x="563" y="263.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T28</text>
+<text x="611" y="263.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T29</text>
+<text x="659" y="263.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T30</text>
+<text x="707" y="263.5" font-size="8" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T31</text>
+<g filter="url(#sk)"><rect x="748" y="126" width="228" height="78" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="5 3"/></g>
+<text x="760" y="144" font-size="9.5" fill="#7a5415" font-weight="bold">注意：出地址的线程 ≠ 收数据的线程</text>
+<text x="760" y="160" font-size="7.8" fill="#444">线程 t 出的是矩阵 ⌊t/8⌋ 的第 (t mod 8) 行地址；</text>
+<text x="760" y="172" font-size="7.8" fill="#444">拿到的却是 4 个矩阵各一个 word（r0..r3）——</text>
+<text x="760" y="184" font-size="7.8" fill="#444">地址与数据落点解耦，硬件统一分发</text>
+<text x="748" y="224" font-size="8.5" fill="#2e6e2e" font-weight="bold">mma.m16n8k16 期望的 A fragment：</text>
+<text x="748" y="240" font-size="8" fill="#444" font-family="monospace">r0 = A[0:8, 0:8]     r1 = A[8:16, 0:8]</text>
+<text x="748" y="254" font-size="8" fill="#444" font-family="monospace">r2 = A[0:8, 8:16]    r3 = A[8:16, 8:16]</text>
+<text x="748" y="268" font-size="8" fill="#2e6e2e">恰好 = 4 个 8×8 矩阵，零 shuffle 直通 mma</text>
+<text x="630" y="288" font-size="8.5" fill="#444" text-anchor="middle" font-weight="bold">A tile（16×16 FP16，行主序 K 连续）= 4 个 8×8 矩阵</text>
+<text x="556" y="302" font-size="7.5" fill="#888" text-anchor="end" font-family="monospace">M↓</text>
+<text x="566" y="292" font-size="7.5" fill="#888" font-family="monospace">K→</text>
+<g filter="url(#sk)"><rect x="560" y="296" width="70" height="64" fill="#fce4ec" stroke="#b85450" stroke-width="1"/><rect x="560" y="360" width="70" height="64" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/><rect x="630" y="296" width="70" height="64" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/><rect x="630" y="360" width="70" height="64" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="1"/></g>
+<text x="595" y="324" font-size="9.5" fill="#b85450" text-anchor="middle" font-weight="bold">矩阵0</text>
+<text x="595" y="340" font-size="7" fill="#b85450" text-anchor="middle" font-family="monospace">T0-7 → r0</text>
+<text x="595" y="388" font-size="9.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold">矩阵1</text>
+<text x="595" y="404" font-size="7" fill="#2b6e9e" text-anchor="middle" font-family="monospace">T8-15 → r1</text>
+<text x="665" y="324" font-size="9.5" fill="#7a5415" text-anchor="middle" font-weight="bold">矩阵2</text>
+<text x="665" y="340" font-size="7" fill="#7a5415" text-anchor="middle" font-family="monospace">T16-23 → r2</text>
+<text x="665" y="388" font-size="9.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold">矩阵3</text>
+<text x="665" y="404" font-size="7" fill="#6a3f9e" text-anchor="middle" font-family="monospace">T24-31 → r3</text>
+<text x="630" y="437" font-size="8" fill="#2e6e2e" text-anchor="middle" font-weight="bold">一条 ldmatrix.x4 的 512B = 一个 mma.m16n8k16 的 A 操作数</text>
+<text x="630" y="449" font-size="7.5" fill="#888" text-anchor="middle">（.trans 变体：按列主序取，分发适配 B fragment）</text>
+<text x="748" y="310" font-size="7.8" fill="#b85450">• T0-7   → A 第 0-7 行 · K 前 8 列</text>
+<text x="748" y="326" font-size="7.8" fill="#2b6e9e">• T8-15  → A 第 8-15 行 · K 前 8 列</text>
+<text x="748" y="342" font-size="7.8" fill="#7a5415">• T16-23 → A 第 0-7 行 · K 后 8 列</text>
+<text x="748" y="358" font-size="7.8" fill="#6a3f9e">• T24-31 → A 第 8-15 行 · K 后 8 列</text>
+<text x="748" y="382" font-size="7.5" fill="#888">地址须 16B 自然对齐；sm_75 上全体线程</text>
+<text x="748" y="394" font-size="7.5" fill="#888">都须持有有效地址（sm_80+ 仅前 8 / 16 / 32 个）</text>
+<text x="748" y="420" font-size="8" fill="#2e6e2e">地址怎么给、数据怎么落，都由 fragment</text>
+<text x="748" y="433" font-size="8" fill="#2e6e2e">布局一次性约定（groupID 定行，t%4 定 word）</text>
+<g filter="url(#sk)"><rect x="20" y="470" width="960" height="134" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="5 3"/></g>
+<text x="40" y="492" font-size="11.5" fill="#b85450" font-weight="bold">③ 硬件视角：没有专用数据通道 —— 本质 = 8 / 16 / 32 个线程各做一次 16B（128-bit）shared memory 向量读</text>
+<text x="40" y="514" font-size="8.5" fill="#444">一个 16B 行 = 4 个 4B word → 恰占 4 个连续 bank（bank = ⌊字节偏移 / 4⌋ mod 32）</text>
+<text x="55" y="533" font-size="7.5" fill="#444" text-anchor="end" font-family="monospace">16B</text>
+<g filter="url(#sk)"><rect x="60" y="524" width="32" height="13" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="92" y="524" width="32" height="13" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="124" y="524" width="32" height="13" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="156" y="524" width="32" height="13" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/></g>
+<text x="76" y="533.5" font-size="6.5" fill="#b85450" text-anchor="middle" font-family="monospace">4B</text>
+<text x="108" y="533.5" font-size="6.5" fill="#b85450" text-anchor="middle" font-family="monospace">4B</text>
+<text x="140" y="533.5" font-size="6.5" fill="#b85450" text-anchor="middle" font-family="monospace">4B</text>
+<text x="172" y="533.5" font-size="6.5" fill="#b85450" text-anchor="middle" font-family="monospace">4B</text>
+<line x1="124" y1="540" x2="124" y2="550" stroke="#b85450" stroke-width="1"/>
+<path d="M 120.5 549 L 124 555 L 127.5 549 Z" fill="#b85450"/>
+<g filter="url(#sk)"><rect x="60.0" y="556" width="8.5" height="15" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="68.5" y="556" width="8.5" height="15" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="77.0" y="556" width="8.5" height="15" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="85.5" y="556" width="8.5" height="15" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="94.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="102.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="111.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="119.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="128.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="136.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="145.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="153.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="162.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="170.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="179.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="187.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="196.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="204.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="213.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="221.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="230.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="238.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="247.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="255.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="264.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="272.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="281.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="289.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="298.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="306.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="315.0" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/><rect x="323.5" y="556" width="8.5" height="15" fill="#fff" stroke="#ddd" stroke-width="0.7"/></g>
+<text x="60" y="582" font-size="7" fill="#888" font-family="monospace">B0</text>
+<text x="332" y="582" font-size="7" fill="#888" text-anchor="end" font-family="monospace">B31</text>
+<text x="40" y="598" font-size="8" fill="#888">16B 自然对齐 ⇒ 一次读 = 4 个连续 bank 各出 4B，不会斜跨</text>
+<text x="440" y="514" font-size="8.5" fill="#444">ldmatrix.x1：8 行 × 16B = 128B = 32 bank × 4B —— 恰好一个 wavefront 的量</text>
+<g filter="url(#sk)"><rect x="460" y="522" width="38" height="11" fill="#fce4ec" stroke="#b85450" stroke-width="0.8"/><rect x="502" y="522" width="38" height="11" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.8"/><rect x="544" y="522" width="38" height="11" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.8"/><rect x="586" y="522" width="38" height="11" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.8"/><rect x="460" y="537" width="38" height="11" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.8"/><rect x="502" y="537" width="38" height="11" fill="#e8f6f8" stroke="#3a8e9e" stroke-width="0.8"/><rect x="544" y="537" width="38" height="11" fill="#f8f0e8" stroke="#9e6e3a" stroke-width="0.8"/><rect x="586" y="537" width="38" height="11" fill="#eee8fa" stroke="#6a5acd" stroke-width="0.8"/></g>
+<text x="479" y="530.5" font-size="7" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T0</text>
+<text x="521" y="530.5" font-size="7" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T1</text>
+<text x="563" y="530.5" font-size="7" fill="#2e6e2e" text-anchor="middle" font-weight="bold" font-family="monospace">T2</text>
+<text x="605" y="530.5" font-size="7" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T3</text>
+<text x="479" y="545.5" font-size="7" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T4</text>
+<text x="521" y="545.5" font-size="7" fill="#236672" text-anchor="middle" font-weight="bold" font-family="monospace">T5</text>
+<text x="563" y="545.5" font-size="7" fill="#6e4a20" text-anchor="middle" font-weight="bold" font-family="monospace">T6</text>
+<text x="605" y="545.5" font-size="7" fill="#4c3aa0" text-anchor="middle" font-weight="bold" font-family="monospace">T7</text>
+<line x1="630" y1="534" x2="655" y2="534" stroke="#888" stroke-width="1"/>
+<path d="M 652 530.5 L 658 534 L 652 537.5 Z" fill="#888"/>
+<text x="664" y="524" font-size="7" fill="#888" font-family="monospace">32 banks</text>
+<g filter="url(#sk)"><rect x="664.0" y="528" width="8.5" height="16" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="672.5" y="528" width="8.5" height="16" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="681.0" y="528" width="8.5" height="16" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="689.5" y="528" width="8.5" height="16" fill="#fce4ec" stroke="#b85450" stroke-width="0.7"/><rect x="698.0" y="528" width="8.5" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.7"/><rect x="706.5" y="528" width="8.5" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.7"/><rect x="715.0" y="528" width="8.5" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.7"/><rect x="723.5" y="528" width="8.5" height="16" fill="#e8f0fa" stroke="#4a8edb" stroke-width="0.7"/><rect x="732.0" y="528" width="8.5" height="16" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.7"/><rect x="740.5" y="528" width="8.5" height="16" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.7"/><rect x="749.0" y="528" width="8.5" height="16" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.7"/><rect x="757.5" y="528" width="8.5" height="16" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="0.7"/><rect x="766.0" y="528" width="8.5" height="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.7"/><rect x="774.5" y="528" width="8.5" height="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.7"/><rect x="783.0" y="528" width="8.5" height="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.7"/><rect x="791.5" y="528" width="8.5" height="16" fill="#fef6e6" stroke="#c98a2b" stroke-width="0.7"/><rect x="800.0" y="528" width="8.5" height="16" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.7"/><rect x="808.5" y="528" width="8.5" height="16" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.7"/><rect x="817.0" y="528" width="8.5" height="16" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.7"/><rect x="825.5" y="528" width="8.5" height="16" fill="#f0e8fa" stroke="#8a5ab5" stroke-width="0.7"/><rect x="834.0" y="528" width="8.5" height="16" fill="#e8f6f8" stroke="#3a8e9e" stroke-width="0.7"/><rect x="842.5" y="528" width="8.5" height="16" fill="#e8f6f8" stroke="#3a8e9e" stroke-width="0.7"/><rect x="851.0" y="528" width="8.5" height="16" fill="#e8f6f8" stroke="#3a8e9e" stroke-width="0.7"/><rect x="859.5" y="528" width="8.5" height="16" fill="#e8f6f8" stroke="#3a8e9e" stroke-width="0.7"/><rect x="868.0" y="528" width="8.5" height="16" fill="#f8f0e8" stroke="#9e6e3a" stroke-width="0.7"/><rect x="876.5" y="528" width="8.5" height="16" fill="#f8f0e8" stroke="#9e6e3a" stroke-width="0.7"/><rect x="885.0" y="528" width="8.5" height="16" fill="#f8f0e8" stroke="#9e6e3a" stroke-width="0.7"/><rect x="893.5" y="528" width="8.5" height="16" fill="#f8f0e8" stroke="#9e6e3a" stroke-width="0.7"/><rect x="902.0" y="528" width="8.5" height="16" fill="#eee8fa" stroke="#6a5acd" stroke-width="0.7"/><rect x="910.5" y="528" width="8.5" height="16" fill="#eee8fa" stroke="#6a5acd" stroke-width="0.7"/><rect x="919.0" y="528" width="8.5" height="16" fill="#eee8fa" stroke="#6a5acd" stroke-width="0.7"/><rect x="927.5" y="528" width="8.5" height="16" fill="#eee8fa" stroke="#6a5acd" stroke-width="0.7"/></g>
+<text x="681" y="556" font-size="6.5" fill="#b85450" text-anchor="middle" font-weight="bold" font-family="monospace">T0</text>
+<text x="715" y="556" font-size="6.5" fill="#2b6e9e" text-anchor="middle" font-weight="bold" font-family="monospace">T1</text>
+<text x="749" y="556" font-size="6.5" fill="#2e6e2e" text-anchor="middle" font-weight="bold" font-family="monospace">T2</text>
+<text x="783" y="556" font-size="6.5" fill="#7a5415" text-anchor="middle" font-weight="bold" font-family="monospace">T3</text>
+<text x="817" y="556" font-size="6.5" fill="#6a3f9e" text-anchor="middle" font-weight="bold" font-family="monospace">T4</text>
+<text x="851" y="556" font-size="6.5" fill="#236672" text-anchor="middle" font-weight="bold" font-family="monospace">T5</text>
+<text x="885" y="556" font-size="6.5" fill="#6e4a20" text-anchor="middle" font-weight="bold" font-family="monospace">T6</text>
+<text x="919" y="556" font-size="6.5" fill="#4c3aa0" text-anchor="middle" font-weight="bold" font-family="monospace">T7</text>
+<text x="440" y="598" font-size="8" fill="#888">8 个块两两不共 bank（铺满 32 个）⇒ 1 个 wavefront 完成；挤在少数 bank = n-way conflict → 下图</text>
+</svg>

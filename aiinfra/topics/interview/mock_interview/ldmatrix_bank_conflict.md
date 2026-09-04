@@ -38,6 +38,14 @@ ldmatrix.sync.aligned.m8n8.x4.shared.b16 {r0, r1, r2, r3}, [addr];
 
 从 bank conflict 的角度看，ldmatrix **没有任何特殊硬件通道**，本质就是 8/16/32 个线程各做一次 16B（128-bit）的 shared memory 向量读取。对 `.x1`：8 × 16B = 128B，恰好等于一个 wavefront 的宽度（32 bank × 4B）。
 
+![ldmatrix 读取 smem 的机制：地址侧、结果侧 fragment 分发与硬件视角](../../images/ldmatrix_smem_read_mechanism.svg)
+
+上图的三个要点（面试时能画出来就赢了一半）：
+
+- **地址侧**：线程 $t$ 提供矩阵 $\lfloor t/8 \rfloor$ 第 $(t \bmod 8)$ 行的行首地址；地址只给行首，硬件整行取走 16B，行与行在 smem 里**可以不连续**——swizzle 的自由度正在于此
+- **结果侧**：线程 $t$ 的 $r[m]$ 收到矩阵 $m$ 第 $\lfloor t/4 \rfloor$ 行第 $(t \bmod 4)$ 个 32-bit word——出地址的线程 ≠ 收数据的线程，地址与数据落点解耦，硬件统一分发；一条 `.x4` 的 512B 恰好拼成 `mma.m16n8k16` 的 A fragment（$r_0 = A[0{:}8,0{:}8]$、$r_1 = A[8{:}16,0{:}8]$、$r_2 = A[0{:}8,8{:}16]$、$r_3 = A[8{:}16,8{:}16]$），零 shuffle 直通 mma
+- **硬件视角**：每个 16B 行 = 4 个连续 4B word，恰占 4 个连续 bank；`.x1` 的 8 行若两两不共 bank（铺满 32 个）则 1 个 wavefront 完成，挤在少数 bank 就是 n-way conflict——这正是下一节的分析对象
+
 ### 1.2 shared memory bank 模型
 
 - 32 个 bank，每个宽 4B；字节偏移 $o$ 落在 bank $\lfloor o/4 \rfloor \bmod 32$
