@@ -89,6 +89,10 @@ $$128i + 16j \;\xrightarrow{\;\text{swizzle}\;}\; 128i + 16\,(j \oplus (i \bmod 
 
 与 2.1 节的置换完全一致。这就是 **TMA `SWIZZLE_128B` / GMMA `Layout_K_SW128_Atom` 的底层公式**。
 
+位分组与 XOR 的对应关系如下图（以第 3 行、块 5 为例，绿底是异或后的新块号；B/M/S 三个参数各管什么也标在图上）：
+
+![Swizzle<3,4,3> 的位级定义：偏移里哪些 bit 参与 XOR](../../images/swizzle_bms_bit_definition.svg)
+
 ---
 
 ## 三、完整数字演示
@@ -154,9 +158,17 @@ swizzle：bit[7:10) = 101 (=5)，右移 3 位 XOR 进 bit[4:7)：
 
 即逻辑块 (5, 6) 实际存在第 5 行的槽位 3（$6 \oplus 5 = 3$，与上表一致）。读的时候同样用这套公式算地址，硬件/编译器做的事完全一样——**swizzle 是布局约定，不是数据变换，逆运算就是再用同一公式算一遍地址**。
 
+整个演算过程（位分组 → XOR → 落位 → 读侧逆运算）如下图：
+
+![swizzle 单地址演算：逻辑 (5,6) → 物理槽位 3](../../images/swizzle_worked_example.svg)
+
 ---
 
 ## 四、代码实例
+
+四个层次做的是同一件事，差别只在"XOR 写在哪一层"：
+
+![swizzle 的四层封装：手写 CUDA / CuTe / CUTLASS 2.x / TMA](../../images/swizzle_four_layers.svg)
 
 ### 4.1 手写 CUDA kernel
 
@@ -253,6 +265,10 @@ global → smem 的搬运由 TMA 硬件按 swizzle 后的地址直接落位；WG
 ### 5.3 原子大小与 tile 的关系
 
 swizzle 原子固定为 **8 行 × 128B**（`SWIZZLE_128B`）。当 tile 的 K 方向超过 64 列 FP16（128B）时，逻辑上按 64 列分块、原子沿 M 和 K 平铺（`tile_to_shape`）；K 不足 64 时降级用 `SWIZZLE_64B/32B` 或不用 swizzle。这就是为什么 CuTe 里布局写成"原子 + tile_to_shape"两层。
+
+原子与 tile 的关系如下图（左侧是一个原子的置换模式，右侧是 `tile_to_shape` 铺出的 128×64 tile）：
+
+![swizzle 原子与 tile_to_shape 平铺](../../images/swizzle_atom_tiling.svg)
 
 ### 5.4 GEMM 之外的 swizzle
 
