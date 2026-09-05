@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="arD" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="arG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2e6e2e"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="512" fill="#fdfcf7"/>
+  <text x="500" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">标准 Attention：S、P 物化到 HBM 来回搬运 → Θ(N² + Nd)</text>
+  <path d="M 250 39 Q 500 47 750 39" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- SRAM strip -->
+  <g filter="url(#sk)"><rect x="310" y="56" width="380" height="44" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="500" y="74" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a5415">SRAM：M ≈ 0.1MB（51,200 元素）</text>
+  <text x="500" y="91" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#b85450">装不下 N×N = 16.8M 元素 = 33.6 MB（N=4096, fp16）</text>
+
+  <!-- round-trip arcs -->
+  <path d="M 240 146 Q 335 100 428 146" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)"/>
+  <text x="335" y="112" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#b85450">S 经 HBM 往返</text>
+  <path d="M 570 146 Q 665 100 758 146" stroke="#b85450" stroke-width="1.6" fill="none" stroke-dasharray="5 3" marker-end="url(#arR)"/>
+  <text x="665" y="112" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#b85450">P 经 HBM 往返</text>
+
+  <!-- operators -->
+  <g filter="url(#sk)"><rect x="90" y="150" width="160" height="65" rx="6" fill="#ffffff" stroke="#555555" stroke-width="1.6"/></g>
+  <text x="170" y="178" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b2b2b">S = QKᵀ</text>
+  <text x="170" y="199" text-anchor="middle" font-size="8" fill="#888888">N×d · d×N → N×N</text>
+  <g filter="url(#sk)"><rect x="420" y="150" width="160" height="65" rx="6" fill="#ffffff" stroke="#555555" stroke-width="1.6"/></g>
+  <text x="500" y="178" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2b2b2b">P = softmax(S)</text>
+  <text x="500" y="199" text-anchor="middle" font-size="8" fill="#888888">逐行归一化（要看到整行）</text>
+  <g filter="url(#sk)"><rect x="750" y="150" width="160" height="65" rx="6" fill="#ffffff" stroke="#555555" stroke-width="1.6"/></g>
+  <text x="830" y="178" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2b2b2b">O = P·V</text>
+  <text x="830" y="199" text-anchor="middle" font-size="8" fill="#888888">N×N · N×d → N×d</text>
+
+  <!-- boundary -->
+  <line x1="40" y1="285" x2="960" y2="285" stroke="#b85450" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="46" y="278" font-size="9" font-weight="bold" fill="#b85450">HBM ↔ SRAM 边界：每次跨界都计费</text>
+
+  <!-- HBM band -->
+  <g filter="url(#sk)"><rect x="40" y="295" width="920" height="105" rx="8" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="58" y="313" font-size="11" font-weight="bold" fill="#555555">HBM</text>
+  <g filter="url(#sk)"><rect x="90" y="325" width="75" height="58" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="127" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">Q</text>
+  <text x="127" y="366" text-anchor="middle" font-size="8" fill="#666666">N×d</text>
+  <g filter="url(#sk)"><rect x="175" y="325" width="75" height="58" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="212" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">K</text>
+  <text x="212" y="366" text-anchor="middle" font-size="8" fill="#666666">N×d</text>
+  <g filter="url(#sk)"><rect x="290" y="325" width="215" height="58" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+  <text x="397" y="348" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b85450">S = QKᵀ（物化）</text>
+  <text x="397" y="364" text-anchor="middle" font-size="8" fill="#8a4a48">N² = 16.8M 元素 = 33.6MB</text>
+  <text x="397" y="377" text-anchor="middle" font-size="8" font-weight="bold" fill="#b85450">≫ M，留不住！</text>
+  <g filter="url(#sk)"><rect x="520" y="325" width="215" height="58" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.8"/></g>
+  <text x="627" y="348" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b85450">P = softmax(S)</text>
+  <text x="627" y="364" text-anchor="middle" font-size="8" fill="#8a4a48">N² = 16.8M 元素</text>
+  <text x="627" y="377" text-anchor="middle" font-size="8" font-weight="bold" fill="#b85450">同样留不住！</text>
+  <g filter="url(#sk)"><rect x="748" y="325" width="62" height="58" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.2"/></g>
+  <text x="779" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">V</text>
+  <text x="779" y="366" text-anchor="middle" font-size="8" fill="#666666">N×d</text>
+  <g filter="url(#sk)"><rect x="820" y="325" width="62" height="58" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="851" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">O</text>
+  <text x="851" y="366" text-anchor="middle" font-size="8" fill="#666666">N×d</text>
+
+  <!-- arrows -->
+  <line x1="115" y1="323" x2="135" y2="219" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arB)"/>
+  <text x="118" y="272" text-anchor="end" font-size="8.5" font-family="monospace" fill="#2b6e9e">读 Q: Nd</text>
+  <line x1="200" y1="323" x2="200" y2="219" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arB)"/>
+  <text x="208" y="272" font-size="8.5" font-family="monospace" fill="#2b6e9e">读 K: Nd</text>
+  <line x1="240" y1="219" x2="320" y2="323" stroke="#b85450" stroke-width="1.8" marker-end="url(#arR)"/>
+  <text x="258" y="258" font-size="8.5" font-weight="bold" font-family="monospace" fill="#b85450">写 S: N²</text>
+  <line x1="470" y1="323" x2="470" y2="219" stroke="#b85450" stroke-width="1.8" marker-end="url(#arR)"/>
+  <text x="478" y="272" font-size="8.5" font-weight="bold" font-family="monospace" fill="#b85450">读 S: N²</text>
+  <line x1="540" y1="219" x2="585" y2="323" stroke="#b85450" stroke-width="1.8" marker-end="url(#arR)"/>
+  <text x="548" y="256" font-size="8.5" font-weight="bold" font-family="monospace" fill="#b85450">写 P: N²</text>
+  <line x1="700" y1="323" x2="788" y2="219" stroke="#b85450" stroke-width="1.8" marker-end="url(#arR)"/>
+  <text x="695" y="265" text-anchor="end" font-size="8.5" font-weight="bold" font-family="monospace" fill="#b85450">读 P: N²</text>
+  <line x1="779" y1="323" x2="806" y2="219" stroke="#4a8edb" stroke-width="1.8" marker-end="url(#arB)"/>
+  <text x="812" y="268" font-size="8.5" font-family="monospace" fill="#2b6e9e">读 V: Nd</text>
+  <line x1="858" y1="219" x2="851" y2="323" stroke="#2e6e2e" stroke-width="1.8" marker-end="url(#arG)"/>
+  <text x="866" y="268" font-size="8.5" font-family="monospace" fill="#2e6e2e">写 O: Nd</text>
+
+  <g filter="url(#sk)">
+    <rect x="30" y="412" width="940" height="88" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="434" font-size="11" font-weight="bold" fill="#7a5415">IO 总账（按元素数，论文 Theorem 2 前半）</text>
+  <text x="50" y="454" font-size="9.5" font-family="monospace" fill="#444444">S=QKᵀ: N²+2Nd　＋　softmax(S): 2N²　＋　PV: N²+2Nd　⇒　合计 4N² + 4Nd = Θ(N² + Nd)</text>
+  <text x="50" y="471" font-size="9.5" fill="#444444">N² 项全部来自中间矩阵的物化：放不下 → 写回 → 下一步再读回；训练态加 attention mask + dropout，S/P 各再多两遍 → ~8N²</text>
+  <text x="50" y="488" font-size="9.5" fill="#444444">N=4096：4N²+4Nd ≈ 68M 元素 ≈ 136 MB —— 根因是「S、P 远大于 M，中间结果留不住」，与 FLOPs 无关</text>
+</svg>

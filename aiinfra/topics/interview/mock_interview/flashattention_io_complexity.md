@@ -19,6 +19,10 @@ IO 复杂度分析（I/O complexity, Aggarwal & Vitter 1988）把 GPU 抽象成�
 - **HBM**：容量大（几十 GB）、带宽相对低（A100 ~2TB/s），是所有数据的"家"
 - **SRAM**：每个 SM 的共享内存，容量 M 很小、带宽极高（~19TB/s 量级），所有计算只能在 SRAM 里的数据上进行
 
+两级存储与"搬运计费、计算免费"的抽象如下图（A100 的典型数字）：
+
+![IO 计算模型：两级存储，只数 HBM 与 SRAM 之间的搬运量](../../images/flashattention_io_two_level_model.svg)
+
 **只统计 HBM ↔ SRAM 之间搬运的数据量（元素个数或字节数），计算本身免费**。这是合理的：A100 上 FP16 算力 ~312 TFLOPS，而 HBM 带宽换算成 FP16 元素只有 ~1 万亿个/秒——attention 这种每元素只做 O(1)~O(d) 次运算的算子是**带宽瓶颈（memory-bound）**，搬运量直接决定墙钟时间。
 
 ### 1.2 符号与任务
@@ -50,6 +54,10 @@ IO 复杂度分析（I/O complexity, Aggarwal & Vitter 1988）把 GPU 抽象成�
 
 根因很清楚：**N×N 的中间矩阵远大于 M**（N=4096 时 S 是 16.8M 个元素 ≈ 33.6MB fp16，而 SRAM 只有 ~0.1MB），根本放不进 SRAM，每算一步都得把中间结果写回 HBM、下一步再读回来。训练时若还带 attention mask 和 dropout，S/P 还要再多过两遍，变成 ~8N²。
 
+三个算子逐个执行、S/P 每次跨界都计费的完整往返如下图：
+
+![标准 Attention 的 HBM 往返：S、P 物化导致 Θ(N²+Nd)](../../images/flashattention_io_standard_roundtrip.svg)
+
 IO 复杂度 Θ(Nd + N²)（论文 Theorem 2 前半）就是这么来的——**N² 项完全由中间矩阵的物化贡献**。
 
 ---
@@ -80,6 +88,10 @@ $$B_c = \left\lceil \frac{M}{4d} \right\rceil \quad (K,V \text{ 的列块行数}
 最后一轮结束后对 O 做一次统一归一化（diag(l)^{-1}）
 ```
 
+分块的循环结构、SRAM 里同时驻留的 4 个块与完整伪代码如下图：
+
+![FlashAttention 分块与循环结构：S_ij 全程留在 SRAM](../../images/flashattention_io_tiling_loop.svg)
+
 online softmax（Milakov & Gimelshein 2018 的 safe softmax 增量版）保证：**每行只需要 O(1) 个额外统计量（m, l）在 HBM 和 SRAM 之间往返，而不需要 N 长的分数行**。正确性与三遍 softmax 逐 bit 等价（数值稳定版），所以它是 exact attention，不是近似。
 
 ---
@@ -104,6 +116,10 @@ $$\boxed{\;\text{HBM 访问量} = \Theta\!\left(\frac{Nd}{M} \cdot Nd\right) = \
 加上任何算法都免不了的"读 QKV、写 O"这个 Θ(Nd) 基底，完整形式是 **Θ(N²d²/M + Nd)**（题目中的写法）；当 M ≤ Nd 时第一项占主导，通常简写为 Θ(N²d²/M)。
 
 **直觉记忆法**：FlashAttention 相当于对 attention 做了一层"K/V 维度的循环分块（loop tiling）"。K、V 流一遍就够，但 Q 和 O 要**为每个 K/V 列块重新从 HBM 流一遍**；SRAM 每 M/d 行 K/V 切出一个列块，共 Nd/M 个列块，每遍代价 Nd，乘起来就是 N²d²/M。**M 翻倍 → 列块数减半 → IO 减半**，这就是 IO 与 SRAM 成反比的原因。
+
+逐项计数与代入 T_c 的完整推导如下图：
+
+![IO 账本：2Nd + 3Nd·T_c，代入 T_c = Θ(Nd/M)](../../images/flashattention_io_accounting.svg)
 
 与标准实现对比（Θ 层面）：
 
@@ -136,6 +152,10 @@ $$\frac{\Theta(N^2)}{\Theta(N^2d^2/M)} = \frac{M}{d^2}$$
 $$2Nd \le M \;\Rightarrow\; T_c = 1 \;\Rightarrow\; \text{IO} = \underbrace{3Nd}_{\text{读一遍 } Q,K,V} + \underbrace{Nd}_{\text{写一遍 } O} = \Theta(Nd)$$
 
 此时 Q 按行块流式过一遍（每块读入一次、写出 O_i 一次），K、V 全程驻留片上，**每个元素恰好进出 HBM 一次——这是任何算法的绝对下界，IO 与序列长度成线性**。
+
+IO 随 M 变化的完整相图与两个区域的衔接如下图：
+
+![IO–M 相图：分块区 Θ(N²d²/M) 与线性区 Θ(Nd)](../../images/flashattention_io_regimes.svg)
 
 与公式衔接：把 M = Nd 代入 N²d²/M 恰好得 Nd——两个区域在边界连续过渡，不是突变。
 
@@ -172,6 +192,10 @@ $$\frac{\text{标准}}{\text{FA}} = \frac{N^2 + Nd}{N^2d^2/M + Nd} \approx \frac
 - **标准侧（含 mask + dropout，训练常见配置）**：S/P 再多 4 遍 ≈ 8N² ≈ 268 MB → **比值 ≈ 8~9×**
 
 这与论文 Figure 2 实测的 "up to **9×** fewer HBM accesses" 正好对上——论文的 baseline 是带 mask/dropout 的训练态标准实现。
+
+数值对比与推导过程一览：
+
+![数值估算：HBM 流量对比与推导（d=64, N=4096, M=100KB）](../../images/flashattention_io_estimate.svg)
 
 ### 7.3 结论与注意点
 

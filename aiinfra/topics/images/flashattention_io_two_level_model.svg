@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="arB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="512" fill="#fdfcf7"/>
+  <text x="500" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">IO 计算模型：两级存储，只数 HBM ↔ SRAM 的搬运量</text>
+  <path d="M 250 39 Q 500 47 750 39" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- GPU chip -->
+  <g filter="url(#sk)"><rect x="55" y="68" width="410" height="300" rx="10" fill="#ffffff" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="260" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">GPU 芯片（A100：108 个 SM）</text>
+
+  <!-- SM #1 (75,105) -->
+  <g filter="url(#sk)"><rect x="75" y="105" width="180" height="100" rx="5" fill="#f5f8fc" stroke="#9ab3cf" stroke-width="1.2"/></g>
+  <text x="165" y="122" text-anchor="middle" font-size="9" font-weight="bold" fill="#667788">SM</text>
+  <g filter="url(#sk)"><rect x="89" y="131" width="75" height="62" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="126" y="153" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7a5415">SRAM</text>
+  <text x="126" y="168" text-anchor="middle" font-size="7.5" fill="#7a5415">M≈100KB</text>
+  <text x="126" y="183" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#b85450">~19 TB/s</text>
+  <g filter="url(#sk)"><rect x="172" y="131" width="68" height="62" rx="3" fill="#eef1f4" stroke="#b8bfc7" stroke-width="1.2"/></g>
+  <text x="206" y="153" text-anchor="middle" font-size="9" font-weight="bold" fill="#556677">算力</text>
+  <text x="206" y="170" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a4a4a">312</text>
+  <text x="206" y="184" text-anchor="middle" font-size="7" fill="#888888">TFLOPS</text>
+
+  <!-- SM #2 (270,105) -->
+  <g filter="url(#sk)"><rect x="270" y="105" width="180" height="100" rx="5" fill="#f5f8fc" stroke="#9ab3cf" stroke-width="1.2"/></g>
+  <text x="360" y="122" text-anchor="middle" font-size="9" font-weight="bold" fill="#667788">SM</text>
+  <g filter="url(#sk)"><rect x="284" y="131" width="75" height="62" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="321" y="153" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7a5415">SRAM</text>
+  <text x="321" y="168" text-anchor="middle" font-size="7.5" fill="#7a5415">M≈100KB</text>
+  <text x="321" y="183" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#b85450">~19 TB/s</text>
+  <g filter="url(#sk)"><rect x="367" y="131" width="68" height="62" rx="3" fill="#eef1f4" stroke="#b8bfc7" stroke-width="1.2"/></g>
+  <text x="401" y="153" text-anchor="middle" font-size="9" font-weight="bold" fill="#556677">算力</text>
+  <text x="401" y="170" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a4a4a">312</text>
+  <text x="401" y="184" text-anchor="middle" font-size="7" fill="#888888">TFLOPS</text>
+
+  <!-- SM #3 (75,220) -->
+  <g filter="url(#sk)"><rect x="75" y="220" width="180" height="100" rx="5" fill="#f5f8fc" stroke="#9ab3cf" stroke-width="1.2"/></g>
+  <text x="165" y="237" text-anchor="middle" font-size="9" font-weight="bold" fill="#667788">SM</text>
+  <g filter="url(#sk)"><rect x="89" y="246" width="75" height="62" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="126" y="268" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7a5415">SRAM</text>
+  <text x="126" y="283" text-anchor="middle" font-size="7.5" fill="#7a5415">M≈100KB</text>
+  <text x="126" y="298" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#b85450">~19 TB/s</text>
+  <g filter="url(#sk)"><rect x="172" y="246" width="68" height="62" rx="3" fill="#eef1f4" stroke="#b8bfc7" stroke-width="1.2"/></g>
+  <text x="206" y="268" text-anchor="middle" font-size="9" font-weight="bold" fill="#556677">算力</text>
+  <text x="206" y="285" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a4a4a">312</text>
+  <text x="206" y="299" text-anchor="middle" font-size="7" fill="#888888">TFLOPS</text>
+
+  <!-- SM #4 (270,220) -->
+  <g filter="url(#sk)"><rect x="270" y="220" width="180" height="100" rx="5" fill="#f5f8fc" stroke="#9ab3cf" stroke-width="1.2"/></g>
+  <text x="360" y="237" text-anchor="middle" font-size="9" font-weight="bold" fill="#667788">SM</text>
+  <g filter="url(#sk)"><rect x="284" y="246" width="75" height="62" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.4"/></g>
+  <text x="321" y="268" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7a5415">SRAM</text>
+  <text x="321" y="283" text-anchor="middle" font-size="7.5" fill="#7a5415">M≈100KB</text>
+  <text x="321" y="298" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#b85450">~19 TB/s</text>
+  <g filter="url(#sk)"><rect x="367" y="246" width="68" height="62" rx="3" fill="#eef1f4" stroke="#b8bfc7" stroke-width="1.2"/></g>
+  <text x="401" y="268" text-anchor="middle" font-size="9" font-weight="bold" fill="#556677">算力</text>
+  <text x="401" y="285" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a4a4a">312</text>
+  <text x="401" y="299" text-anchor="middle" font-size="7" fill="#888888">TFLOPS</text>
+
+  <text x="260" y="349" text-anchor="middle" font-size="9.5" fill="#888888">所有计算只发生在 SRAM 驻留的数据上（计算免费）</text>
+
+  <!-- HBM -->
+  <g filter="url(#sk)"><rect x="565" y="68" width="360" height="300" rx="10" fill="#e6e1d3" stroke="#8a8471" stroke-width="1.6"/></g>
+  <text x="745" y="92" text-anchor="middle" font-size="13" font-weight="bold" fill="#555555">HBM 显存（A100 40–80 GB）</text>
+  <text x="745" y="110" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a5415">1.5–2.0 TB/s（慢通道）</text>
+  <g filter="url(#sk)"><rect x="595" y="124" width="330" height="50" rx="4" fill="#d8d2c0" stroke="#a39c88" stroke-width="1.2"/></g>
+  <text x="760" y="153" text-anchor="middle" font-size="8.5" fill="#857e6c">DRAM</text>
+  <g filter="url(#sk)"><rect x="595" y="184" width="330" height="50" rx="4" fill="#d8d2c0" stroke="#a39c88" stroke-width="1.2"/></g>
+  <text x="760" y="213" text-anchor="middle" font-size="8.5" fill="#857e6c">DRAM</text>
+  <g filter="url(#sk)"><rect x="595" y="244" width="330" height="50" rx="4" fill="#d8d2c0" stroke="#a39c88" stroke-width="1.2"/></g>
+  <text x="760" y="273" text-anchor="middle" font-size="8.5" fill="#857e6c">DRAM</text>
+  <text x="745" y="320" text-anchor="middle" font-size="9.5" fill="#555555">Q、K、V、O 以及物化的中间矩阵 S、P 都住这里</text>
+  <text x="745" y="340" text-anchor="middle" font-size="8.5" fill="#888888">容量 ~SRAM 的 400 倍，带宽却慢 ~10 倍</text>
+
+  <!-- gap arrows -->
+  <line x1="563" y1="150" x2="469" y2="150" stroke="#4a8edb" stroke-width="2.2" marker-end="url(#arB)"/>
+  <text x="515" y="139" text-anchor="middle" font-size="9" font-weight="bold" fill="#2b6e9e">读入</text>
+  <line x1="467" y1="215" x2="561" y2="215" stroke="#b85450" stroke-width="2.2" marker-end="url(#arR)"/>
+  <text x="515" y="232" text-anchor="middle" font-size="9" font-weight="bold" fill="#b85450">写出</text>
+  <text x="515" y="187" text-anchor="middle" font-size="8" fill="#888888">≈2 TB/s</text>
+  <text x="515" y="268" text-anchor="middle" font-size="8" font-weight="bold" fill="#b85450">只统计</text>
+  <text x="515" y="281" text-anchor="middle" font-size="8" font-weight="bold" fill="#b85450">这条链路!</text>
+
+  <text x="500" y="388" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b2b2b">计费规则：只数 HBM ↔ SRAM 之间搬运的元素个数；计算本身免费</text>
+
+  <g filter="url(#sk)">
+    <rect x="30" y="404" width="940" height="94" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="50" y="426" font-size="11" font-weight="bold" fill="#7a5415">为什么 IO 复杂度 ≈ 墙钟时间（memory-bound 论证）</text>
+  <text x="50" y="446" font-size="9.5" fill="#444444">HBM 2 TB/s 换算成 fp16 元素 ≈ 10¹² 个/s；312 TFLOPS ÷ 10¹² = 每个元素可以配 ~312 次乘加</text>
+  <text x="50" y="463" font-size="9.5" fill="#444444">attention 每个元素只做 O(1)~O(d) 次运算（d=64 → ~128 次）＜ 312 → 带宽先饱和，搬运量直接决定速度</text>
+  <text x="50" y="480" font-size="9.5" fill="#444444">roofline 视角：算术强度 ~32 FLOP/B ＜ A100 ridge 点 156 FLOP/B → 纯带宽瓶颈（Aggarwal &amp; Vitter 1988 两级模型）</text>
+</svg>

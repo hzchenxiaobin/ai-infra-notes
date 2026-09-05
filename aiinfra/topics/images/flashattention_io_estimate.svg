@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="67" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="1000" height="512" fill="#fdfcf7"/>
+  <text x="500" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">数值估算：d=64、N=4096、M=100KB（A100，fp16）</text>
+  <path d="M 250 39 Q 500 47 750 39" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: traffic bars ===== -->
+  <text x="370" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">HBM 流量对比（条宽 ∝ √流量，仅示意）</text>
+
+  <text x="200" y="105" text-anchor="end" font-size="9.5" fill="#444444">标准·训练态 8N²</text>
+  <g filter="url(#sk)"><rect x="210" y="84" width="330" height="34" rx="3" fill="#c0504d" opacity="0.55" stroke="#c0504d" stroke-width="1.2"/></g>
+  <text x="548" y="105" font-size="9.5" font-weight="bold" font-family="monospace" fill="#c0504d">≈268 MB</text>
+
+  <text x="200" y="155" text-anchor="end" font-size="9.5" fill="#444444">标准·前向 4N²+4Nd</text>
+  <g filter="url(#sk)"><rect x="210" y="134" width="233" height="34" rx="3" fill="#c0504d" opacity="0.32" stroke="#c0504d" stroke-width="1.2"/></g>
+  <text x="451" y="155" font-size="9.5" font-weight="bold" font-family="monospace" fill="#c0504d">≈136 MB</text>
+
+  <text x="200" y="205" text-anchor="end" font-size="9.5" fill="#444444">FA·数常数 3·21·Nd+2Nd</text>
+  <g filter="url(#sk)"><rect x="210" y="184" width="117" height="34" rx="3" fill="#4a8e4a" opacity="0.55" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="335" y="205" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2e6e2e">≈34 MB</text>
+
+  <text x="200" y="255" text-anchor="end" font-size="9.5" fill="#444444">FA·Θ 理论 N²d²/M</text>
+  <g filter="url(#sk)"><rect x="210" y="234" width="33" height="34" rx="3" fill="#4a8e4a" opacity="0.3" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="251" y="255" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2e6e2e">≈2.7 MB</text>
+
+  <text x="375" y="298" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2b2b2b">比值：Θ 级 M/d² ≈ 12.5×　｜　常数级 4×（vs 前向）～ 9×（vs 训练态）</text>
+  <text x="375" y="316" text-anchor="middle" font-size="9" fill="#888888">元素数：134M（8N²）｜68M（4N²+4Nd）｜17M（FA 数常数）｜1.34M（Θ 级）</text>
+  <text x="375" y="334" text-anchor="middle" font-size="9" fill="#888888">论文 Figure 2 实测 up to 9× fewer HBM accesses（baseline 含 mask/dropout）</text>
+
+  <!-- ===== Right: derivation ===== -->
+  <text x="772" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">账是怎么算出来的</text>
+  <text x="600" y="90" font-size="9.5" font-family="monospace" fill="#444444">M = 100KB / 2B = 51,200 元素</text>
+  <text x="600" y="111" font-size="9.5" font-family="monospace" fill="#444444">B_c = M/(4d) = 51200/256 = 200 行</text>
+  <text x="600" y="132" font-size="9.5" font-family="monospace" fill="#444444">T_c = ⌈4096/200⌉ = 21 个列块</text>
+  <text x="600" y="153" font-size="9.5" font-family="monospace" fill="#2e6e2e">FA ≈ 3·21·Nd + 2Nd = 65·Nd</text>
+  <text x="600" y="174" font-size="9.5" font-family="monospace" fill="#2e6e2e">　 ≈ 17M 元素 ≈ 34 MB</text>
+  <text x="600" y="195" font-size="9.5" font-family="monospace" fill="#b85450">标准（前向）= 4N²+4Nd ≈ 68M ≈ 136 MB</text>
+  <text x="600" y="216" font-size="9.5" font-family="monospace" fill="#b85450">标准（训练态）= 8N² ≈ 134M ≈ 268 MB</text>
+
+  <g filter="url(#sk)"><rect x="585" y="232" width="375" height="70" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.2"/></g>
+  <text x="772" y="254" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">注意：IO ↓10× ≠ 墙钟 ↓10×</text>
+  <text x="772" y="271" text-anchor="middle" font-size="8.8" fill="#444444">kernel 重计算 / rescale 开销，带宽利用率 &lt;100%</text>
+  <text x="772" y="288" text-anchor="middle" font-size="8.8" fill="#444444">实测墙钟加速 ~2~4×（推回接近算力瓶颈）</text>
+
+  <g filter="url(#sk)"><rect x="585" y="314" width="375" height="76" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="772" y="336" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">附带红利：显存占用 Θ(N²) → Θ(N)</text>
+  <text x="772" y="354" text-anchor="middle" font-size="8.8" fill="#444444">N=4096：S/P 不再物化，省 67MB × 层数 × 头数</text>
+  <text x="772" y="371" text-anchor="middle" font-size="8.8" fill="#888888">—— 长序列训练能开起来的真正关键</text>
+
+  <g filter="url(#sk)">
+    <rect x="20" y="404" width="940" height="96" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="40" y="426" font-size="11" font-weight="bold" fill="#7a5415">面试口径</text>
+  <text x="40" y="446" font-size="9.5" fill="#444444">「量级上省一个数量级的 HBM 流量：Θ 框架下 12.5×，仔细数常数 4~9×（取决于 baseline 是否含 mask/dropout）」</text>
+  <text x="40" y="463" font-size="9.5" fill="#444444">先说清假设：M=100KB、fp16、d=64、N=4096；M 按 164KB / 228KB 算则 Θ 比值 20× / 28× —— 敏感性也是加分点</text>
+  <text x="40" y="480" font-size="9.5" fill="#444444">一句收尾：两种实现的 FLOPs 完全相同（~2N²d），加速全部来自 HBM 访问量的降低</text>
+</svg>

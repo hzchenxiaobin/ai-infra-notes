@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="53" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+    <marker id="arD" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3a3a3a"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="512" fill="#fdfcf7"/>
+  <text x="500" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">IO–M 相图：分块区 Θ(N²d²/M)，M ≥ 2Nd 时退化为 Θ(Nd)</text>
+  <path d="M 250 39 Q 500 47 750 39" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- region shading -->
+  <rect x="80" y="80" width="336" height="300" fill="#fce4ec" opacity="0.35"/>
+  <rect x="416" y="80" width="204" height="300" fill="#eaf6ee" opacity="0.45"/>
+
+  <!-- axes -->
+  <line x1="80" y1="380" x2="640" y2="380" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#arD)"/>
+  <line x1="80" y1="385" x2="80" y2="72" stroke="#3a3a3a" stroke-width="1.5" marker-end="url(#arD)"/>
+  <text x="52" y="230" text-anchor="middle" font-size="9.5" fill="#555555" transform="rotate(-90 52 230)">HBM 访问量（log）</text>
+  <text x="350" y="414" text-anchor="middle" font-size="9.5" fill="#555555">SRAM 容量 M（元素数，log 刻度）</text>
+  <line x1="80" y1="380" x2="80" y2="386" stroke="#888888" stroke-width="1"/>
+  <text x="80" y="398" text-anchor="middle" font-size="8" font-family="monospace" fill="#888888">4K=d²</text>
+  <line x1="224" y1="380" x2="224" y2="386" stroke="#888888" stroke-width="1"/>
+  <text x="224" y="398" text-anchor="middle" font-size="8" font-family="monospace" fill="#888888">32K</text>
+  <line x1="416" y1="380" x2="416" y2="386" stroke="#888888" stroke-width="1"/>
+  <text x="416" y="398" text-anchor="middle" font-size="8" font-family="monospace" fill="#888888">512K=2Nd</text>
+  <line x1="560" y1="380" x2="560" y2="386" stroke="#888888" stroke-width="1"/>
+  <text x="560" y="398" text-anchor="middle" font-size="8" font-family="monospace" fill="#888888">4M</text>
+
+  <!-- regime divider -->
+  <line x1="416" y1="80" x2="416" y2="380" stroke="#2e6e2e" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="424" y="94" font-size="9" font-weight="bold" fill="#2e6e2e">M = 2Nd：K、V 恰好整个装下</text>
+
+  <!-- curve -->
+  <g filter="url(#sk)"><path d="M 80 110 L 416 330 L 620 330" fill="none" stroke="#4a8edb" stroke-width="2.5"/></g>
+
+  <!-- region labels -->
+  <text x="248" y="102" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b85450">分块区：T_c = Nd/M ＞ 1</text>
+  <text x="248" y="118" text-anchor="middle" font-size="8.5" fill="#b85450">IO = Θ(N²d²/M)，M 翻倍 → IO 减半</text>
+  <text x="518" y="296" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2e6e2e">线性区：T_c = 1</text>
+  <text x="518" y="312" text-anchor="middle" font-size="9" font-family="monospace" fill="#2e6e2e">IO = Θ(Nd)</text>
+  <text x="518" y="328" text-anchor="middle" font-size="8.5" fill="#2e6e2e">每元素进出 HBM 各一次</text>
+  <text x="416" y="352" text-anchor="middle" font-size="8.5" fill="#555555">M=Nd 代入 N²d²/M = Nd：两区连续过渡</text>
+  <text x="110" y="278" font-size="8.5" fill="#b85450">N=4096、d=64、fp16：A100 深处此区（T_c≈21）</text>
+
+  <!-- hardware points -->
+  <circle cx="255" cy="225" r="5" fill="#c0504d" stroke="#8a3a38" stroke-width="1"/>
+  <text x="243" y="214" text-anchor="end" font-size="8.5" font-weight="bold" fill="#c0504d">A100 100KB</text>
+  <circle cx="287" cy="245" r="4" fill="#c0504d" stroke="#8a3a38" stroke-width="1"/>
+  <text x="295" y="238" font-size="8" fill="#c0504d">164KB</text>
+  <circle cx="310" cy="261" r="4" fill="#c0504d" stroke="#8a3a38" stroke-width="1"/>
+  <text x="318" y="256" font-size="8" fill="#c0504d">H100 228KB</text>
+
+  <!-- ===== Right panel ===== -->
+  <text x="810" y="60" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">退化条件与门槛</text>
+  <g filter="url(#sk)"><rect x="660" y="74" width="300" height="92" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.2"/></g>
+  <text x="810" y="96" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2e6e2e">线性区（M ≥ 2Nd）</text>
+  <text x="810" y="116" text-anchor="middle" font-size="9" font-family="monospace" fill="#444444">T_c = 1 → 读 Q,K,V（3Nd）+ 写 O（Nd）</text>
+  <text x="810" y="133" text-anchor="middle" font-size="8.8" fill="#444444">每个元素恰好进出 HBM 一次</text>
+  <text x="810" y="150" text-anchor="middle" font-size="8.8" fill="#888888">IO 随 N 线性 —— 任何算法的绝对下界</text>
+  <g filter="url(#sk)"><rect x="660" y="178" width="300" height="104" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.2"/></g>
+  <text x="810" y="200" text-anchor="middle" font-size="10" font-weight="bold" fill="#7a5415">现实检查（fp16、M=100KB、d=64）</text>
+  <text x="810" y="219" text-anchor="middle" font-size="9" font-family="monospace" fill="#444444">线性区门槛：N ≤ M/(2d) = 400</text>
+  <text x="810" y="237" text-anchor="middle" font-size="9" fill="#b85450">N = 4096 → T_c ≈ 21：深处仍在分块区</text>
+  <text x="810" y="255" text-anchor="middle" font-size="8.8" fill="#b85450">序列越长，标准实现 N² 物化越惨，</text>
+  <text x="810" y="271" text-anchor="middle" font-size="8.8" fill="#b85450">FA 的相对收益越大</text>
+  <g filter="url(#sk)"><rect x="660" y="294" width="300" height="104" rx="6" fill="#ffffff" stroke="#999999" stroke-width="1.2"/></g>
+  <text x="810" y="316" text-anchor="middle" font-size="10" font-weight="bold" fill="#555555">两个工程推论</text>
+  <text x="810" y="335" text-anchor="middle" font-size="8.8" fill="#444444">短序列：M ≥ 2Nd 天然成立（或 T_c≈1~2），</text>
+  <text x="810" y="351" text-anchor="middle" font-size="8.8" fill="#444444">标准实现与 FA 的 IO 都是 Θ(Nd)，没得省</text>
+  <text x="810" y="369" text-anchor="middle" font-size="8.8" fill="#444444">滑窗 attention（窗口 w）：有效 N 变 w，</text>
+  <text x="810" y="385" text-anchor="middle" font-size="8.8" fill="#444444">IO 同样回到 Θ(N·w) 级线性</text>
+
+  <g filter="url(#sk)">
+    <rect x="20" y="412" width="960" height="88" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="40" y="434" font-size="11" font-weight="bold" fill="#7a5415">最优性（论文 Theorem 3 与后续收紧）</text>
+  <text x="40" y="454" font-size="9.5" fill="#444444">d ≤ M ≤ Nd 全区间：任何精确 attention 都需要 Ω(N²d²/M) —— 每流一遍 K/V 至多推进 Θ(M/d) 行输出，推进 N 行需要 Nd/M 轮 × 每轮 Ω(Nd)</text>
+  <text x="40" y="471" font-size="9.5" fill="#444444">端点反证：若 M=Θ(Nd) 时只要 o(N²d²/M)=o(Nd)，连输入 QKV（Nd 个元素）都读不完，矛盾</text>
+  <text x="40" y="488" font-size="9.5" fill="#444444">Saha &amp; Ye 2024 收紧为 Θ(min(N²d/√M, N²d²/M))：交叉点 M=d²（≈8KB）；实际 M≈100KB ≫ d² → FA 在「大 cache 区间」最优</text>
+</svg>

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 512" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+    </filter>
+  </defs>
+  <rect width="1000" height="512" fill="#fdfcf7"/>
+  <text x="500" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#2b2b2b">IO 账本：2Nd + 3Nd·T_c，代入 T_c = Θ(Nd/M) ⇒ Θ(N²d²/M)</text>
+  <path d="M 250 39 Q 500 47 750 39" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- ===== Left: per-term counting ===== -->
+  <text x="285" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">逐项计数（示意 T_c = 4 列）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="90" width="64" height="270" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="92" y="150" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">K+V</text>
+  <text x="92" y="172" text-anchor="middle" font-size="10" font-weight="bold" font-family="monospace" fill="#2e6e2e">2Nd</text>
+  <text x="92" y="196" text-anchor="middle" font-size="8" fill="#888888">一次性</text>
+  <text x="92" y="212" text-anchor="middle" font-size="8" fill="#888888">各读一遍</text>
+
+  <text x="188" y="82" text-anchor="middle" font-size="9" font-weight="bold" fill="#555555">j=1</text>
+  <text x="278" y="82" text-anchor="middle" font-size="9" font-weight="bold" fill="#555555">j=2</text>
+  <text x="368" y="82" text-anchor="middle" font-size="9" font-weight="bold" fill="#555555">j=3</text>
+  <text x="458" y="82" text-anchor="middle" font-size="9" font-weight="bold" fill="#555555">j=4</text>
+
+  <g filter="url(#sk)">
+    <rect x="150" y="90" width="76" height="82" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <rect x="150" y="184" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="150" y="278" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="240" y="90" width="76" height="82" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <rect x="240" y="184" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="240" y="278" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="330" y="90" width="76" height="82" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <rect x="330" y="184" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="330" y="278" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="420" y="90" width="76" height="82" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <rect x="420" y="184" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+    <rect x="420" y="278" width="76" height="82" rx="3" fill="#eef6fb" stroke="#7ab0dd" stroke-width="1"/>
+  </g>
+  <text x="188" y="124" text-anchor="middle" font-size="8.5" fill="#2b6e9e">Q 全体</text>
+  <text x="188" y="142" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="188" y="218" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 读</text>
+  <text x="188" y="236" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="188" y="312" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 写</text>
+  <text x="188" y="330" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="278" y="124" text-anchor="middle" font-size="8.5" fill="#2b6e9e">Q 全体</text>
+  <text x="278" y="142" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="278" y="218" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 读</text>
+  <text x="278" y="236" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="278" y="312" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 写</text>
+  <text x="278" y="330" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="368" y="124" text-anchor="middle" font-size="8.5" fill="#2b6e9e">Q 全体</text>
+  <text x="368" y="142" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="368" y="218" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 读</text>
+  <text x="368" y="236" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="368" y="312" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 写</text>
+  <text x="368" y="330" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="458" y="124" text-anchor="middle" font-size="8.5" fill="#2b6e9e">Q 全体</text>
+  <text x="458" y="142" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="458" y="218" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 读</text>
+  <text x="458" y="236" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+  <text x="458" y="312" text-anchor="middle" font-size="8.5" fill="#2b6e9e">O 写</text>
+  <text x="458" y="330" text-anchor="middle" font-size="9.5" font-weight="bold" font-family="monospace" fill="#2b6e9e">Nd</text>
+
+  <text x="518" y="228" text-anchor="middle" font-size="18" font-weight="bold" fill="#555555">…</text>
+  <text x="518" y="250" text-anchor="middle" font-size="9" font-weight="bold" fill="#555555">共 T_c 列</text>
+
+  <text x="285" y="385" text-anchor="middle" font-size="10.5" fill="#444444">每列 = 3Nd（读 Q 全体 + O 一读一写）；统计量 l、m 每行 O(1)，可忽略</text>
+  <text x="285" y="403" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b2b2b">合计 = 2Nd + 3Nd·T_c = Θ(T_c·Nd)</text>
+
+  <!-- ===== Right: substitution ===== -->
+  <text x="765" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b2b2b">代入列块数</text>
+  <text x="590" y="96" font-size="11" font-family="monospace" fill="#444444">B_c = ⌈M/4d⌉，每块 K/V 占 M/4</text>
+  <text x="590" y="124" font-size="11" font-family="monospace" fill="#444444">T_c = ⌈N/B_c⌉ = Θ(N / (M/d))</text>
+  <text x="590" y="152" font-size="11" font-weight="bold" font-family="monospace" fill="#2b2b2b">　　　 = Θ(Nd/M)</text>
+  <text x="590" y="180" font-size="11" font-family="monospace" fill="#444444">IO = 2Nd + 3Nd·Θ(Nd/M)</text>
+  <g filter="url(#sk)"><rect x="630" y="196" width="270" height="42" rx="6" fill="#fffdf3" stroke="#c98a2b" stroke-width="1.6"/></g>
+  <text x="765" y="223" text-anchor="middle" font-size="13.5" font-weight="bold" font-family="monospace" fill="#7a5415">Θ(N²d²/M + Nd)</text>
+  <text x="590" y="258" font-size="9" fill="#888888">M ≤ Nd 时第一项主导，通常简写为 Θ(N²d²/M)</text>
+  <line x1="580" y1="272" x2="950" y2="272" stroke="#dddddd" stroke-width="1"/>
+  <text x="590" y="294" font-size="10.5" font-weight="bold" fill="#2b2b2b">与标准实现对比（Θ 层面）</text>
+  <text x="590" y="318" font-size="11" font-weight="bold" font-family="monospace" fill="#b85450">Θ(N²) ÷ Θ(N²d²/M) = M/d²</text>
+  <text x="590" y="340" font-size="9.5" fill="#444444">渐近倍数 = M/d²：片上能装下几个完整 d 维向量的平方</text>
+  <text x="590" y="364" font-size="10.5" font-weight="bold" fill="#2e6e2e">M 翻倍 → 列块数 T_c 减半 → IO 减半（与 SRAM 成反比）</text>
+  <text x="590" y="388" font-size="9" fill="#888888">Θ(Nd) 基底（读 QKV、写 O）任何算法都免不了</text>
+
+  <g filter="url(#sk)">
+    <rect x="20" y="412" width="960" height="88" rx="8" fill="#fffdf3" stroke="#9e9e9e" stroke-dasharray="5 3"/>
+  </g>
+  <text x="40" y="434" font-size="11" font-weight="bold" fill="#7a5415">直觉记忆法</text>
+  <text x="40" y="454" font-size="9.5" fill="#444444">「Q/O 流的遍数 = SRAM 装不下的 K/V 列块数 T_c = Nd/M」—— FlashAttention 相当于对 attention 做了一层 K/V 维度的 loop tiling</text>
+  <text x="40" y="471" font-size="9.5" fill="#444444">K、V 流一遍就够；Q 和 O 要为每个 K/V 列块重新从 HBM 流一遍；每遍代价 Θ(Nd)，遍数 Θ(Nd/M)，相乘即得</text>
+  <text x="40" y="488" font-size="9.5" fill="#444444">论文 Theorem 2 后半：FlashAttention 的 HBM 访问量为 Θ(N²d²/M + Nd)，第一项就是 Q/O 重复流的代价</text>
+</svg>
