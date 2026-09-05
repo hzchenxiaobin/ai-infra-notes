@@ -35,3 +35,7 @@ fix_bold_code_markdown.py
 # vscode-mock-interview: cloudflared binary + runtime logs
 vscode-mock-interview/tools/
 vscode-mock-interview/*.log
+
+# Local environment secrets (plaintext tokens) — never commit
+env.md
+setup_env.sh
