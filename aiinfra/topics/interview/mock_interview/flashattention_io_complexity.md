@@ -72,7 +72,7 @@ SRAM 里需要同时驻留 4 个块（K_j、V_j、Q_i、O_i），所以块高取
 
 $$B_c = \left\lceil \frac{M}{4d} \right\rceil \quad (K,V \text{ 的列块行数}), \qquad B_r = \min\left(\left\lceil \frac{M}{4d} \right\rceil,\; d\right) \quad (Q,O \text{ 的行块行数})$$
 
-为什么是 4：片上同时放 K_j、V_j（各 B_c×d）、Q_i、O_i（各 B_r×d）共 4 块 → 每块预算 M/4。附带一个漂亮的性质：分块分数矩阵 S_ij 的大小 B_r×B_c ≤ (M/4d)·d = M/4，**也放得下**——所有中间量都在片上。
+为什么是 4：片上同时放 K_j、V_j（各 B_c×d）、Q_i、O_i（各 B_r×d）共 4 块 → 每块预算 M/4。另外分块分数矩阵的尺寸 B_r×B_c ≤ d·(M/4d) = M/4（这正是 B_r 要取 min(·, d) 的原因）。注意 S_ij 不是第 5 块常驻 SRAM 的量——否则 5×M/4 > M：真实 kernel 里 S_ij 由 MMA 算进寄存器 fragment，在寄存器里做完 online softmax 转成 P̃ 后立刻与 V_j 做第二次 MMA 累加进 O_i，全程不占 SRAM 预算；即便坚持让它驻留 SRAM，也只需把每块预算从 M/4 改成 M/5，T_c 和 Θ(N²d²/M) 只变常数——所有中间量都不落 HBM。
 
 ### 3.2 循环结构
 

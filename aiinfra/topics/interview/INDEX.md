@@ -18,6 +18,9 @@
 
 - [ldmatrix 读行主序 A 的 shared memory bank conflict](mock_interview/ldmatrix_bank_conflict.md)：Tensor Core GEMM 高频面试题精讲——bank conflict 判定方法、XOR swizzle 消除手段（CUTLASS / CuTe / TMA）
 - [Swizzle 机制详解：从 bank conflict 到 XOR 置换](mock_interview/swizzle_mechanism.md)：swizzle 的形式化定义（CuTe `Swizzle<B, M, S>`）、完整数字演算、手写 CUDA / CuTe / CUTLASS 2.x / TMA 四层代码实例
+- [FlashAttention IO 复杂度推导](mock_interview/flashattention_io_complexity.md)：从 IO 模型与分块计算推导 Θ(N²d²/M) IO 界、退化条件与数值估算（对应 FlashAttention 论文 Theorem 2/3）
+- [从 enable_if 到 C++20 Concepts](mock_interview/enable_if_to_concepts.md)：模板重载约束的现代化改造——SFINAE 背景、concept 定义与应用、subsumption 重载排序、报错信息对比
+- [SFINAE 与 if constexpr](mock_interview/sfinae_vs_if_constexpr.md)：编译期条件选择机制精讲——SFINAE 替换流水线（enable_if 整型/浮点双重载逐步拆解）、if constexpr 被丢弃语句语义、作用层面与编译行为对比
 
 ## 目录结构
 
@@ -31,5 +34,8 @@ interview/
 │   └── 面经 1.md                   # 社招面经实录（算子开发岗）
 └── mock_interview/                 # 模拟面试 / 题目精讲
     ├── ldmatrix_bank_conflict.md   # ldmatrix bank conflict 精讲
-    └── swizzle_mechanism.md        # swizzle 机制详解（定义 / 演算 / 代码实例）
+    ├── swizzle_mechanism.md        # swizzle 机制详解（定义 / 演算 / 代码实例）
+    ├── flashattention_io_complexity.md # FlashAttention IO 复杂度推导
+    ├── enable_if_to_concepts.md    # enable_if → C++20 Concepts 改造
+    └── sfinae_vs_if_constexpr.md   # SFINAE 与 if constexpr 机制对比
 ```

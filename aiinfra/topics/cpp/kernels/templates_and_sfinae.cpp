@@ -3,6 +3,7 @@
 // 编译: g++ -std=c++20 -o templates templates_and_sfinae.cpp && ./templates
 
 #include <iostream>
+#include <concepts>
 #include <type_traits>
 #include <string>
 #include <vector>
@@ -129,11 +130,37 @@ public:
     static constexpr bool value = decltype(test<T>(0))::value;
 };
 
+// C++17 detection idiom：void_t 版 has_size（四行）
+template <typename, typename = void>
+struct detect_size : std::false_type {};
+
+template <typename T>
+struct detect_size<T, std::void_t<decltype(std::declval<T>().size())>>
+    : std::true_type {};
+
+// enable_if 重载选择：条件放进额外非类型模板参数的类型里
+// （typename = enable_if_t<cond> 形态的两个重载会因默认模板实参不参与签名而重定义冲突）
+template <typename T,
+          std::enable_if_t<std::is_integral_v<T>, int> = 0>
+std::string classify(T val) {
+    return "整型: " + std::to_string(val);
+}
+
+template <typename T,
+          std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+std::string classify(T val) {
+    return "浮点型";
+}
+
 void demo_sfinae() {
     std::cout << "\n=== SFINAE ===" << std::endl;
-    std::cout << "  int 有 size(): " << has_size<int>::value << std::endl;
-    std::cout << "  vector 有 size(): " << has_size<std::vector<int>>::value << std::endl;
-    std::cout << "  string 有 size(): " << has_size<std::string>::value << std::endl;
+    std::cout << "  int 有 size(): " << has_size<int>::value << std::endl;        // 0
+    std::cout << "  vector 有 size(): " << has_size<std::vector<int>>::value << std::endl; // 1
+    std::cout << "  string 有 size(): " << has_size<std::string>::value << std::endl;     // 1
+    std::cout << "  detect_size<int>: " << detect_size<int>::value << std::endl;           // 0（void_t 版）
+    std::cout << "  detect_size<vector<int>>: " << detect_size<std::vector<int>>::value << std::endl; // 1
+    std::cout << "  classify(42): " << classify(42) << std::endl;   // → 整型重载
+    std::cout << "  classify(3.14): " << classify(3.14) << std::endl; // → 浮点重载
 }
 
 template <typename T>
@@ -164,12 +191,22 @@ concept HasSize = requires(T t) {
     { t.size() } -> std::convertible_to<size_t>;
 };
 
+// subsumption：SizedNumeric 蕴涵 HasSize → 更特化的重载优先入选
+template <typename T>
+concept SizedNumeric = HasSize<T> && std::integral<typename T::value_type>;
+
 template <Numeric T>
 T add(T a, T b) { return a + b; }
 
 template <typename T>
     requires HasSize<T>
 size_t get_size(const T& val) { return val.size(); }
+
+template <HasSize T>
+void dump(const T& v) { std::cout << "  一般容器" << std::endl; }
+
+template <SizedNumeric T>
+void dump(const T& v) { std::cout << "  整型元素容器（subsumption 优先）" << std::endl; }
 
 void demo_concepts() {
     std::cout << "\n=== C++20 Concepts ===" << std::endl;
@@ -178,6 +215,9 @@ void demo_concepts() {
 
     std::vector<int> v = {1, 2, 3};
     std::cout << "  get_size(vector) = " << get_size(v) << std::endl;
+
+    dump(std::vector<std::string>{"a"});  // → 一般容器
+    dump(v);                              // → 整型元素容器（SizedNumeric 更特化）
 }
 
 int main() {
