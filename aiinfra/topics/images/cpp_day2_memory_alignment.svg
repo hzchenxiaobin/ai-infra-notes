@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="603" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">内存对齐：为什么需要 &amp; 如何计算</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Section 1: Why alignment -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="200" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6e9e">为什么要内存对齐？</text>
+
+  <text x="50" y="110" font-size="10" fill="#444" font-weight="bold">1. 硬件原因</text>
+  <text x="50" y="128" font-size="9" fill="#888">CPU 按"字"访问内存（4/8 字节对齐）</text>
+  <text x="50" y="144" font-size="9" fill="#888">未对齐 → 需要两次内存访问 → 性能下降</text>
+  <text x="50" y="160" font-size="9" fill="#888">某些架构（ARM）未对齐访问直接崩溃</text>
+
+  <text x="50" y="184" font-size="10" fill="#444" font-weight="bold">2. 对齐规则</text>
+  <text x="50" y="202" font-size="9" fill="#888">成员起始地址 = alignof(类型) 的整数倍</text>
+  <text x="50" y="218" font-size="9" fill="#888">结构体总大小 = 最大对齐值的整数倍</text>
+  <text x="50" y="234" font-size="9" fill="#888">编译器自动插入填充字节（padding）</text>
+
+  <text x="50" y="252" font-size="9" fill="#2b6e9e" font-weight="bold">对齐值 = min(成员大小, 编译器默认对齐(通常8))</text>
+
+  <!-- Section 2: Example - bad layout -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="200" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#b85450">❌ 未优化布局（浪费空间）</text>
+
+  <text x="490" y="106" font-size="10" fill="#444" font-family="monospace">struct Bad {</text>
+  <text x="490" y="122" font-size="10" fill="#444" font-family="monospace">    char  a;  // 1 byte</text>
+  <text x="490" y="138" font-size="10" fill="#444" font-family="monospace">    double b; // 8 bytes</text>
+  <text x="490" y="154" font-size="10" fill="#444" font-family="monospace">    char  c;  // 1 byte</text>
+  <text x="490" y="170" font-size="10" fill="#444" font-family="monospace">};</text>
+  <text x="490" y="194" font-size="11" fill="#b85450" font-weight="bold">sizeof = 24 字节！</text>
+  <text x="490" y="212" font-size="9" fill="#888">1 + 7(pad) + 8 + 1 + 7(pad) = 24</text>
+  <text x="490" y="230" font-size="9" fill="#888">16 字节是填充浪费</text>
+  <text x="490" y="248" font-size="9" fill="#b85450">有效数据仅 10 字节，利用率 42%</text>
+
+  <!-- Section 3: Memory layout visualization -->
+  <text x="450" y="290" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b2b2b">内存布局可视化</text>
+
+  <!-- Bad layout -->
+  <text x="50" y="316" font-size="11" font-weight="bold" fill="#b85450">Bad 布局（24 字节）</text>
+
+  <g font-size="8" fill="#444">
+    <rect x="50" y="324" width="30" height="28" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="65" y="342" text-anchor="middle" fill="#2b6e9e">a</text>
+    <text x="65" y="364" text-anchor="middle" fill="#888">1</text>
+
+    <rect x="80" y="324" width="210" height="28" rx="2" fill="#f0f0f0" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="185" y="342" text-anchor="middle" fill="#aaa">padding (7 bytes)</text>
+    <text x="185" y="364" text-anchor="middle" fill="#888">7</text>
+
+    <rect x="290" y="324" width="240" height="28" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="410" y="342" text-anchor="middle" fill="#7a5415">b (double)</text>
+    <text x="410" y="364" text-anchor="middle" fill="#888">8</text>
+
+    <rect x="530" y="324" width="30" height="28" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="545" y="342" text-anchor="middle" fill="#2e6e2e">c</text>
+    <text x="545" y="364" text-anchor="middle" fill="#888">1</text>
+
+    <rect x="560" y="324" width="210" height="28" rx="2" fill="#f0f0f0" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="665" y="342" text-anchor="middle" fill="#aaa">padding (7 bytes)</text>
+    <text x="665" y="364" text-anchor="middle" fill="#888">7</text>
+  </g>
+
+  <!-- Good layout -->
+  <text x="50" y="400" font-size="11" font-weight="bold" fill="#2e6e2e">Good 布局（16 字节）</text>
+
+  <g font-size="8" fill="#444">
+    <rect x="50" y="408" width="240" height="28" rx="2" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+    <text x="170" y="426" text-anchor="middle" fill="#7a5415">b (double, 8 bytes)</text>
+    <text x="170" y="448" text-anchor="middle" fill="#888">8</text>
+
+    <rect x="290" y="408" width="30" height="28" rx="2" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+    <text x="305" y="426" text-anchor="middle" fill="#2b6e9e">a</text>
+    <text x="305" y="448" text-anchor="middle" fill="#888">1</text>
+
+    <rect x="320" y="408" width="30" height="28" rx="2" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+    <text x="335" y="426" text-anchor="middle" fill="#2e6e2e">c</text>
+    <text x="335" y="448" text-anchor="middle" fill="#888">1</text>
+
+    <rect x="350" y="408" width="120" height="28" rx="2" fill="#f0f0f0" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="410" y="426" text-anchor="middle" fill="#aaa">pad (6)</text>
+    <text x="410" y="448" text-anchor="middle" fill="#888">6</text>
+  </g>
+
+  <!-- Good struct code -->
+  <g filter="url(#sk)"><rect x="500" y="390" width="370" height="80" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="510" y="410" font-size="9" fill="#444" font-family="monospace">struct Good {</text>
+  <text x="510" y="426" font-size="9" fill="#444" font-family="monospace">    double b; // 8 先放大的</text>
+  <text x="510" y="442" font-size="9" fill="#444" font-family="monospace">    char  a;  // 1</text>
+  <text x="510" y="458" font-size="9" fill="#444" font-family="monospace">    char  c;  // 1</text>
+  <text x="720" y="410" font-size="9" fill="#444" font-family="monospace">};</text>
+  <text x="720" y="430" font-size="10" fill="#2e6e2e" font-weight="bold">sizeof = 16</text>
+  <text x="720" y="448" font-size="9" fill="#2e6e2e">利用率 62.5%</text>
+
+  <!-- Bottom: formula -->
+  <g filter="url(#sk)"><rect x="30" y="490" width="840" height="55" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="450" y="512" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">sizeof 计算规则</text>
+  <text x="450" y="532" text-anchor="middle" font-size="10" fill="#444">① 每个成员偏移 = alignof(成员) 的整数倍  ② 总大小 = max_align 的整数倍  ③ 大成员排前面减少 padding</text>
+</svg>

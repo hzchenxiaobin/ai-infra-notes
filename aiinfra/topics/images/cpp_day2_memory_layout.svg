@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="401" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="620" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">C++ 进程内存分区布局</text>
+  <path d="M 290 40 Q 450 48 610 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Address labels on left -->
+  <text x="28" y="72" font-size="9" fill="#888" font-family="monospace">高地址 0xFFFFFFFFFFFFFFFF</text>
+
+  <!-- 1. 代码区 (Text/Code) -->
+  <g filter="url(#sk)"><rect x="120" y="60" width="660" height="70" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="450" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">代码区（Text Segment）</text>
+  <text x="450" y="104" text-anchor="middle" font-size="10" fill="#888">存放编译后的机器指令（.text 段）| 只读、可执行</text>
+  <text x="450" y="120" text-anchor="middle" font-size="9" fill="#4a8edb">函数体、方法代码 | 由编译器生成</text>
+
+  <!-- 2. 只读数据区 / 常量区 -->
+  <g filter="url(#sk)"><rect x="120" y="140" width="660" height="70" rx="8" fill="#f3e8fa" stroke="#8e4aeb" stroke-width="2"/></g>
+  <text x="450" y="164" text-anchor="middle" font-size="14" font-weight="bold" fill="#6e2b9e">只读数据区 / 常量区（.rodata）</text>
+  <text x="450" y="184" text-anchor="middle" font-size="10" fill="#888">字符串字面量、const 全局常量</text>
+  <text x="450" y="200" text-anchor="middle" font-size="9" fill="#6e2b9e">const char* s = "hello";  ← "hello" 在此区，不可修改</text>
+
+  <!-- 3. 全局/静态区 -->
+  <g filter="url(#sk)"><rect x="120" y="220" width="660" height="80" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="450" y="244" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">全局/静态数据区（Data + BSS）</text>
+  <text x="450" y="264" text-anchor="middle" font-size="10" fill="#888">全局变量、static 变量、static 成员变量</text>
+  <text x="450" y="282" text-anchor="middle" font-size="9" fill="#2e6e2e">已初始化 → .data 段 | 未初始化 → .bss 段（自动清零）</text>
+  <text x="450" y="296" text-anchor="middle" font-size="9" fill="#888">生命周期：程序运行期间 | 程序结束时自动释放</text>
+
+  <!-- 4. 堆区 (Heap) -->
+  <g filter="url(#sk)"><rect x="120" y="310" width="660" height="120" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2.5"/></g>
+  <text x="450" y="334" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5415">堆区（Heap）⬆ 向高地址增长</text>
+  <text x="450" y="354" text-anchor="middle" font-size="10" fill="#888">new/malloc 动态分配 | 程序员手动管理（delete/free 释放）</text>
+
+  <rect x="180" y="370" width="80" height="30" rx="3" fill="#fff8e0" stroke="#c98a2b" stroke-width="1"/>
+  <text x="220" y="389" text-anchor="middle" font-size="8" fill="#7a5415">已分配</text>
+  <rect x="270" y="370" width="50" height="30" rx="3" fill="#f0f0f0" stroke="#aaa" stroke-width="1"/>
+  <text x="295" y="389" text-anchor="middle" font-size="8" fill="#888">空闲</text>
+  <rect x="330" y="370" width="120" height="30" rx="3" fill="#fff8e0" stroke="#c98a2b" stroke-width="1"/>
+  <text x="390" y="389" text-anchor="middle" font-size="8" fill="#7a5415">已分配（对象）</text>
+  <rect x="460" y="370" width="40" height="30" rx="3" fill="#f0f0f0" stroke="#aaa" stroke-width="1"/>
+  <text x="480" y="389" text-anchor="middle" font-size="8" fill="#888">空闲</text>
+  <rect x="510" y="370" width="90" height="30" rx="3" fill="#fff8e0" stroke="#c98a2b" stroke-width="1"/>
+  <text x="555" y="389" text-anchor="middle" font-size="8" fill="#7a5415">已分配</text>
+  <rect x="610" y="370" width="60" height="30" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/>
+  <text x="640" y="389" text-anchor="middle" font-size="8" fill="#b85450">泄漏!</text>
+
+  <text x="450" y="420" text-anchor="middle" font-size="9" fill="#b85450">⚠️ 忘记 delete → 内存泄漏 | new[] 必须配 delete[]</text>
+
+  <!-- Divider: 栈和堆之间 -->
+  <text x="450" y="448" text-anchor="middle" font-size="10" fill="#888">↕ 栈向下增长，堆向上增长，相向而行</text>
+
+  <!-- 5. 栈区 (Stack) -->
+  <g filter="url(#sk)"><rect x="120" y="460" width="660" height="110" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2.5"/></g>
+  <text x="450" y="484" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">栈区（Stack）⬇ 向低地址增长</text>
+  <text x="450" y="504" text-anchor="middle" font-size="10" fill="#888">局部变量、函数参数、返回地址、帧指针 | 编译器自动管理</text>
+
+  <g font-size="9" fill="#444">
+    <rect x="200" y="516" width="140" height="24" rx="3" fill="#fff0f0" stroke="#b85450" stroke-width="1"/>
+    <text x="270" y="532" text-anchor="middle" fill="#b85450">当前函数栈帧</text>
+    <rect x="350" y="516" width="100" height="24" rx="3" fill="#fff0f0" stroke="#b85450" stroke-width="1" opacity="0.6"/>
+    <text x="400" y="532" text-anchor="middle" fill="#b85450">调用者栈帧</text>
+    <rect x="460" y="516" width="80" height="24" rx="3" fill="#fff0f0" stroke="#b85450" stroke-width="1" opacity="0.3"/>
+    <text x="500" y="532" text-anchor="middle" fill="#b85450">...</text>
+  </g>
+
+  <text x="450" y="560" text-anchor="middle" font-size="9" fill="#b85450">⚠️ 栈溢出：递归太深 / 局部变量太大 | 典型大小：Linux 8MB</text>
+
+  <!-- Bottom address -->
+  <text x="28" y="590" font-size="9" fill="#888" font-family="monospace">低地址 0x0000000000000000</text>
+
+  <!-- Right side summary -->
+  <g filter="url(#sk)"><rect x="800" y="60" width="80" height="510" rx="6" fill="#f8f8f0" stroke="#888" stroke-width="1"/></g>
+  <text x="840" y="90" text-anchor="middle" font-size="8" fill="#4a8edb" font-weight="bold">代码区</text>
+  <text x="840" y="104" text-anchor="middle" font-size="7" fill="#888">只读</text>
+  <text x="840" y="174" text-anchor="middle" font-size="8" fill="#6e2b9e" font-weight="bold">常量区</text>
+  <text x="840" y="188" text-anchor="middle" font-size="7" fill="#888">只读</text>
+  <text x="840" y="258" text-anchor="middle" font-size="8" fill="#2e6e2e" font-weight="bold">全局区</text>
+  <text x="840" y="272" text-anchor="middle" font-size="7" fill="#888">自动释放</text>
+  <text x="840" y="375" text-anchor="middle" font-size="8" fill="#7a5415" font-weight="bold">堆</text>
+  <text x="840" y="389" text-anchor="middle" font-size="7" fill="#b85450">手动管理!</text>
+  <text x="840" y="515" text-anchor="middle" font-size="8" fill="#b85450" font-weight="bold">栈</text>
+  <text x="840" y="529" text-anchor="middle" font-size="7" fill="#888">自动释放</text>
+</svg>

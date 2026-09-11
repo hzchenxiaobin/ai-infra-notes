@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="202" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">const 关键字全场景速查</text>
+  <path d="M 290 40 Q 450 48 610 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Row 1: const 变量 -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="90" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="50" y="82" font-size="12" font-weight="bold" fill="#2b6e9e">1. const 变量</text>
+  <text x="50" y="100" font-size="10" fill="#444" font-family="monospace">const int MAX = 100;</text>
+  <text x="50" y="118" font-size="9" fill="#888">定义后不可修改，编译期常量（替代 #define）</text>
+  <text x="50" y="136" font-size="9" fill="#b85450">有类型检查 + 作用域，优于宏</text>
+
+  <!-- Row 1 right: const 指针 -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="90" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="490" y="82" font-size="12" font-weight="bold" fill="#7a5415">2. 常量指针（指针指向 const）</text>
+  <text x="490" y="100" font-size="10" fill="#444" font-family="monospace">const int* p = &amp;x;</text>
+  <text x="490" y="118" font-size="9" fill="#888">*p 不可改，p 本身可以改</text>
+  <text x="490" y="136" font-size="9" fill="#b85450">"指向常量的指针" — 内容只读</text>
+
+  <!-- Row 2: 指针常量 -->
+  <g filter="url(#sk)"><rect x="30" y="170" width="400" height="90" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="50" y="192" font-size="12" font-weight="bold" fill="#2e6e2e">3. 指针常量（指针本身是 const）</text>
+  <text x="50" y="210" font-size="10" fill="#444" font-family="monospace">int* const p = &amp;x;</text>
+  <text x="50" y="228" font-size="9" fill="#888">p 不可改（不能指向别的），*p 可以改</text>
+  <text x="50" y="246" font-size="9" fill="#b85450">"常量指针" — 指向固定</text>
+
+  <!-- Row 2 right: const 指针常量 -->
+  <g filter="url(#sk)"><rect x="470" y="170" width="400" height="90" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="490" y="192" font-size="12" font-weight="bold" fill="#b85450">4. const 指针常量（都不可改）</text>
+  <text x="490" y="210" font-size="10" fill="#444" font-family="monospace">const int* const p = &amp;x;</text>
+  <text x="490" y="228" font-size="9" fill="#888">*p 不可改，p 也不可改</text>
+  <text x="490" y="246" font-size="9" fill="#b85450">内容和指向都锁定</text>
+
+  <!-- Row 3: const 成员函数 -->
+  <g filter="url(#sk)"><rect x="30" y="280" width="400" height="100" rx="8" fill="#f3e8fa" stroke="#8e4aeb" stroke-width="1.5"/></g>
+  <text x="50" y="302" font-size="12" font-weight="bold" fill="#6e2b9e">5. const 成员函数</text>
+  <text x="50" y="320" font-size="10" fill="#444" font-family="monospace">int getSize() const { return size; }</text>
+  <text x="50" y="338" font-size="9" fill="#888">this 指针变为 const T* const</text>
+  <text x="50" y="356" font-size="9" fill="#b85450">不能修改成员变量（除 mutable）</text>
+  <text x="50" y="372" font-size="9" fill="#888">const 对象只能调用 const 成员函数</text>
+
+  <!-- Row 3 right: const 返回值 -->
+  <g filter="url(#sk)"><rect x="470" y="280" width="400" height="100" rx="8" fill="#e8f6f6" stroke="#4a8e8e" stroke-width="1.5"/></g>
+  <text x="490" y="302" font-size="12" font-weight="bold" fill="#2e6e6e">6. const 返回值</text>
+  <text x="490" y="320" font-size="10" fill="#444" font-family="monospace">const string&amp; getName() const;</text>
+  <text x="490" y="338" font-size="9" fill="#888">返回 const 引用，防止外部修改内部数据</text>
+  <text x="490" y="356" font-size="9" fill="#b85450">返回 const 值（如 const int）通常无意义</text>
+  <text x="490" y="372" font-size="9" fill="#888">返回 const 引用可避免拷贝 + 保护数据</text>
+
+  <!-- Bottom: 记忆口诀 -->
+  <g filter="url(#sk)"><rect x="30" y="400" width="840" height="100" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="450" y="424" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5415">记忆口诀：const 修饰它左边的东西；如果 const 在最左边，则修饰它右边的东西</text>
+  <text x="450" y="448" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">const int* p    →  const 修饰 int    → 指向的内容是 const</text>
+  <text x="450" y="466" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">int* const p    →  const 修饰 int*   → 指针本身是 const</text>
+  <text x="450" y="484" text-anchor="middle" font-size="10" fill="#444" font-family="monospace">const int* const p → 两个都锁定</text>
+</svg>

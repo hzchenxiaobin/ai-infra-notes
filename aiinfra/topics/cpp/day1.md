@@ -1,348 +1,387 @@
-# Day 1（周一）：内存模型与基础语义
+# Day 1（周一）：语言基础 + 关键字
 
-> **本周定位**：本专题是 C++ 面试的系统化准备，覆盖语言核心高频考点。本周目标是每天吃透一个主题，配可编译代码与面试问答，最终能应对大厂 C++ 一二面。
-> **前置要求**：有 C/C++ 基础语法知识，能独立编写简单 C++ 程序
-> **今日目标**：理解 C++ 内存区域划分（栈/堆/全局/常量/代码段）、对象生命周期与存储期、指针 vs 引用的本质区别、`const`/`constexpr` 语义、值类别（lvalue/rvalue/xvalue/prvalue），能回答"栈和堆的区别""指针和引用的区别"等高频题
-> **时间投入**：2.5h（早间 1.5h 精读内存模型 + 晚间 1h 跑代码与值类别实验）
-> **考察度**：⭐⭐⭐⭐ 高频考点，几乎每场 C++ 面试都会涉及
+> **今日目标**：把最常被"随口一问"的 C++ 基础题答扎实——指针/引用、const、static、类型转换
+> **面试考察度**：⭐⭐⭐⭐⭐ 几乎每场必问
+> **建议节奏**：上午学理论（2~3h）→ 下午刷题自测（2h）→ 晚上手写代码 + 复述（1~2h）
 
 ---
 
-## 本日在本周知识图谱中的位置
+## 学习任务 1：指针 vs 引用（45 分钟）
 
-| 本日产出 | 对应本周验收标准 |
-|----------|-----------------|
-| C++ 五大内存区域划分表 | ① 能画出 C++ 对象内存布局（基础） |
-| 指针 vs 引用对比表 | ① 同上 |
-| 值类别（lvalue/rvalue/xvalue）判断练习 | ③ 为 Day 3 移动语义打基础 |
-| `const`/`constexpr` 语义对比 | ④ 为 Day 4 模板非类型参数打基础 |
+### 核心区别
 
----
-
-### 学习任务 1：C++ 内存区域划分（45 分钟）
-
-#### 五大内存区域
-
-C++ 程序运行时的内存分为五个区域，每个区域的生命周期和管理方式不同：
-
-| 内存区域 | 存储内容 | 分配方式 | 生命周期 | 访问速度 |
-|----------|----------|----------|----------|----------|
-| **栈（Stack）** | 局部变量、函数参数、返回地址 | 编译器自动分配/释放 | 函数返回即销毁 | 最快（移动栈指针） |
-| **堆（Heap）** | `new`/`malloc` 分配的对象 | 手动分配/释放（或智能指针） | 手动释放或 RAII | 较慢（需要搜索空闲块） |
-| **全局/静态区** | 全局变量、静态变量 | 程序启动分配 | 程序结束销毁 | 中等 |
-| **常量区** | 字符串字面量、`const` 全局变量 | 程序启动分配 | 程序结束销毁 | 中等 |
-| **代码区** | 编译后的机器指令 | 程序加载时 | 程序结束 | 只读 |
-
-> 💡 **一句话总结**：栈是编译器管理的"自动挡"，堆是程序员管理的"手动挡"——智能指针（Day 2）就是给堆装上"自动挡"。
-
-#### 栈 vs 堆的深度对比
-
-| 维度 | 栈 | 堆 |
-|------|------|------|
-| 分配/释放 | 编译器自动，函数返回即释放 | 手动 `new`/`delete`，或智能指针 |
-| 空间大小 | 有限（Linux 默认 8MB，`ulimit -s`） | 大（受物理内存限制） |
-| 碎片 | 无（连续分配/释放） | 有（外部碎片） |
-| 速度 | O(1)，只需移动栈指针 | 较慢，需搜索空闲块 + 可能触发系统调用 |
-| 线程安全 | 是（每线程独立栈） | 否（需同步，或用线程局部存储） |
-| 生长方向 | 向下（高地址 → 低地址） | 向上（低地址 → 高地址） |
-
-#### 代码验证（`kernels/memory_model_basics.cpp`）
-
-```cpp
-// memory_model_basics.cpp —— C++ 内存区域与生命周期演示
-// 编译: g++ -std=c++20 -o memory_model_basics memory_model_basics.cpp && ./memory_model_basics
-
-#include <iostream>
-#include <string>
-
-int g_global = 42;              // 全局/静态区
-static int s_static = 100;      // 全局/静态区
-const char* g_str = "hello";    // "hello" 在常量区，g_str 指针在全局区
-
-void demo_memory_regions() {
-    int stack_var = 1;          // 栈
-    static int func_static = 2; // 全局/静态区（只初始化一次）
-    int* heap_ptr = new int(3); // 堆
-
-    std::cout << "=== 内存区域地址 ===" << std::endl;
-    std::cout << "栈变量 stack_var:       " << &stack_var << std::endl;
-    std::cout << "堆指针 heap_ptr 指向:   " << heap_ptr << std::endl;
-    std::cout << "堆指针 heap_ptr 本身:   " << &heap_ptr << " (在栈上)" << std::endl;
-    std::cout << "全局变量 g_global:      " << &g_global << std::endl;
-    std::cout << "静态变量 s_static:      " << &s_static << std::endl;
-    std::cout << "函数静态 func_static:   " << &func_static << std::endl;
-    std::cout << "字符串字面量 g_str 指向:" << (const void*)g_str << std::endl;
-
-    // 栈地址 vs 堆地址 vs 全局地址：观察地址范围差异
-    // 栈地址通常最大（高地址），全局区居中，堆在中间
-
-    delete heap_ptr;  // 手动释放堆内存
-}
-
-int main() {
-    demo_memory_regions();
-    return 0;
-}
-```
-
-```bash
-g++ -std=c++20 -o memory_model_basics memory_model_basics.cpp && ./memory_model_basics
-```
-
-```text
-=== 内存区域地址 ===
-栈变量 stack_var:       0x7ffd3a2b1c3c
-堆指针 heap_ptr 指向:   0x55a1e8c2a2e0
-堆指针 heap_ptr 本身:   0x7ffd3a2b1c30 (在栈上)
-全局变量 g_global:      0x55a1e8b9d010
-静态变量 s_static:      0x55a1e8b9d014
-函数静态 func_static:   0x55a1e8b9d018
-字符串字面量 g_str 指向:0x55a1e8b98214
-```
-
-> ⚠️ **注意**：`heap_ptr` 本身是一个指针变量，它在**栈**上（8 字节），它指向的 `new int(3)` 才在**堆**上。面试中常被问"指针本身存在哪里"——答案是指针变量本身在栈上（如果它是局部变量），它指向的对象在堆上。
-
-#### 存储期（Storage Duration）
-
-C++ 定义了四种存储期，对应对象的生存时间：
-
-| 存储期 | 关键字/特征 | 生命周期 |
-|--------|------------|----------|
-| **自动存储期** | 局部变量（无 `static`） | 所在代码块结束 |
-| **静态存储期** | 全局变量、`static` 变量 | 程序结束 |
-| **动态存储期** | `new` 分配的对象 | `delete` 时 |
-| **线程存储期** | `thread_local` 变量 | 线程结束 |
-
-```cpp
-void demo_storage_duration() {
-    int auto_var = 1;               // 自动存储期：函数返回销毁
-    static int static_var = 0;      // 静态存储期：程序结束销毁，只初始化一次
-    thread_local int tl_var = 0;    // 线程存储期：线程结束销毁
-    int* dyn_var = new int(1);      // 动态存储期：delete 时销毁
-    // ...
-    delete dyn_var;
-}
-```
-
-### 学习任务 2：指针 vs 引用（45 分钟）
-
-这是 C++ 面试**最经典的对比题**，必须能脱口而出 5 个以上区别。
-
-#### 核心区别对比
+![指针 vs 引用：底层内存模型对比](../images/cpp_day1_pointer_vs_reference.svg)
 
 | 维度 | 指针（Pointer） | 引用（Reference） |
-|------|-----------------|-------------------|
-| **本质** | 存储地址的变量（有自己的内存） | 已有对象的别名（不占独立内存） |
-| **初始化** | 可以不初始化（野指针风险） | **必须**在声明时初始化 |
-| **重新绑定** | 可以指向不同对象 | 绑定后不可改变 |
-| **空值** | 可以是 `nullptr` | 不能为空（无"空引用"） |
-| **算术** | 支持指针算术（`ptr++`, `ptr+1`） | 不支持 |
-| **多级** | 有多级指针（`int**`） | 无多级引用 |
-| **自增含义** | `ptr++` 移动到下一个元素 | `ref++` 是对引用对象的 `++` |
-| **sizeof** | 指针大小（64 位系统 8 字节） | 被引用对象的大小 |
-| **访问成员** | `ptr->member` | `ref.member` |
+|------|----------------|------------------|
+| 本质 | 独立的变量，存储目标地址 | 别名，不占独立内存 |
+| 初始化 | 可以先声明后赋值 | **必须在定义时初始化** |
+| 可否重新绑定 | 可以指向不同对象 | 初始化后**不能更改绑定** |
+| nullptr | 可以为 nullptr | 不能为 nullptr |
+| 多级 | 有 `int**`、`int***` | 没有多级引用 |
+| sizeof | 8（64位系统，指针本身大小） | 等于原对象的 sizeof |
+| 解引用 | 需要 `*p` 访问目标 | 直接使用，无需解引用 |
 
-> 💡 **面试标准答案**：引用是对象的别名，必须初始化且不可重新绑定，不能为空，不占独立存储；指针是存储地址的独立变量，可以为空、可以重新赋值、支持算术运算。引用更安全（不会空悬），指针更灵活。
-
-#### 什么时候用指针，什么时候用引用？
-
-| 场景 | 推荐 | 原因 |
-|------|------|------|
-| 函数参数（只读） | `const T&` | 避免拷贝，语法简洁 |
-| 函数参数（需修改实参） | `T&` | 比指针更直观 |
-| 函数参数（可选参数） | `T*`（可为 `nullptr`） | 表达"可能不存在" |
-| 函数参数（所有权转移） | `T*` 或 `std::unique_ptr<T>` | 明确所有权语义 |
-| 类成员（生命周期独立） | `T*` / 智能指针 | 需要动态管理 |
-| 类成员（生命周期依赖外部） | `T&` 或 `T*` | 不持有所有权 |
-| 返回值（可能无效） | `T*`（返回 `nullptr`） | 引用不能返回空 |
-
-> ⚠️ **注意**：引用底层实现通常也是指针，但语义上不允许为空和重新绑定。编译器优化时可能完全消除引用（直接用原对象地址）。
-
-#### 常见陷阱
+### 代码示例
 
 ```cpp
-// 陷阱 1：返回局部变量的引用（悬空引用）
-int& dangerous() {
-    int x = 42;
-    return x;  // UB！x 在函数返回后销毁
-}
+int x = 10;
+int y = 20;
 
-// 陷阱 2：引用绑定到临时对象（延长生命周期，但有限制）
-const std::string& s = std::string("temp");  // 合法：const 引用延长临时对象生命周期
-// std::string& s2 = std::string("temp");   // 非法：非 const 引用不能绑定临时对象
+int* p = &x;    // 指针：p 存储 x 的地址
+int& r = x;     // 引用：r 就是 x 的别名
 
-// 陷阱 3：引用与指针混合使用
-int a = 1, b = 2;
-int& ref = a;   // ref 绑定 a
-ref = b;        // 这是赋值！a 变成 2，不是重新绑定 ref 到 b
+p = &y;         // OK：指针可以重新指向
+// r = y;       // 这是赋值！r 仍然绑定 x，相当于 x = y
+*p = 30;        // y 变成 30
+r = 40;         // x 变成 40
 ```
 
-### 学习任务 3：const 与 constexpr 语义（30 分钟）
+### 使用场景
 
-#### const 的多层语义
+- **用指针**：需要表示"无指向"（nullptr）、需要重新绑定、C 风格 API 兼容
+- **用引用**：函数参数传递（避免拷贝）、运算符重载、保证非空
 
-`const` 在不同位置含义不同，是面试常考的"读代码"题：
+### 面试追问
+
+> **Q：引用底层是怎么实现的？**
+> A：大多数编译器用指针实现引用（即引用底层有地址），但 C++ 标准将引用定义为"别名"。编译器优化后引用通常不占额外内存。
+
+> **Q：函数返回引用有什么风险？**
+> A：不能返回局部变量的引用——函数结束后局部变量被销毁，引用变成悬空引用。
+
+---
+
+## 学习任务 2：const 的各种用法（45 分钟）
+
+![const 关键字全场景速查](../images/cpp_day1_const_summary.svg)
+
+### 常量指针 vs 指针常量（最容易混淆）
 
 ```cpp
-// 指针与 const 的四种组合
-const int* p1;        // 指向 const int 的指针：不能通过 p1 修改数据
-int const* p2;        // 同上（等价写法）
-int* const p3 = &a;   // const 指针指向 int：指针本身不可变，数据可改
-const int* const p4 = &a;  // 都不可变
-
-// 记忆口诀：const 在 * 左边修饰数据，在 * 右边修饰指针
+const int* p1;      // 指向 const int 的指针 → *p1 不可改，p1 可改
+int* const p2;      // const 指针指向 int → p2 不可改，*p2 可改
+const int* const p3; // 都不可改
 ```
 
-| 声明 | 数据可变 | 指针可变 |
-|------|----------|----------|
-| `int* p` | ✅ | ✅ |
-| `const int* p` | ❌ | ✅ |
-| `int* const p` | ✅ | ❌ |
-| `const int* const p` | ❌ | ❌ |
+**记忆技巧**：从右往左读——`const` 修饰它紧左边的东西。如果 `const` 在最左边，则修饰它右边的东西。
 
-#### const 成员函数
+### const 成员函数
 
 ```cpp
-class Vector {
-    int* data_;
-    size_t size_;
+class Widget {
+    int size_ = 0;
+    mutable int cache_ = 0;  // mutable 突破 const 限制
 public:
-    // const 成员函数：保证不修改对象状态
-    size_t size() const { return size_; }
+    int getSize() const {     // const 成员函数
+        // size_ = 10;        // 错误：不能修改成员变量
+        cache_ = 10;          // OK：mutable 变量可以修改
+        return size_;
+    }
+};
 
-    // 非 const 版本：可以修改对象
-    int& operator[](size_t i) { return data_[i]; }
+const Widget w;
+w.getSize();                  // OK：const 对象只能调用 const 成员函数
+```
 
-    // const 版本：返回 const 引用，不能修改
-    const int& operator[](size_t i) const { return data_[i]; }
+### const 与 #define 对比
 
-    // mutable：即使 const 函数也可修改
-    mutable size_t access_count_ = 0;
-    int at(size_t i) const {
-        ++access_count_;  // 合法：mutable 成员
-        return data_[i];
+```cpp
+#define MAX 100               // 宏：文本替换，无类型检查
+const int MAX = 100;          // 有类型、有作用域、可调试
+
+// 宏的坑：
+#define SQUARE(x) x * x
+int a = SQUARE(1 + 2);       // 展开为 1 + 2 * 1 + 2 = 5，不是 9！
+```
+
+---
+
+## 学习任务 3：static 关键字（30 分钟）
+
+### 四种用法
+
+| 场景 | 作用 | 生命周期 |
+|------|------|---------|
+| 静态局部变量 | 函数内只初始化一次，跨调用保持值 | 程序运行期 |
+| 静态成员变量 | 属于类而非对象，所有对象共享 | 程序运行期 |
+| 静态成员函数 | 属于类，不能访问非静态成员 | — |
+| 全局 static（文件作用域） | 限制变量/函数只在本文件可见 | 程序运行期 |
+
+### 代码示例
+
+```cpp
+// 1. 静态局部变量
+void counter() {
+    static int count = 0;   // 只初始化一次
+    count++;
+    std::cout << count << std::endl;
+}
+counter();  // 输出 1
+counter();  // 输出 2
+counter();  // 输出 3
+
+// 2. 静态成员
+class Singleton {
+    static Singleton* instance_;
+    static int objCount_;
+};
+int Singleton::objCount_ = 0;  // 类外定义
+
+// 3. 文件作用域 static
+static int helper_count = 0;   // 只在本 .cpp 文件可见
+static void internalHelper() {} // 只在本 .cpp 文件可见
+```
+
+---
+
+## 学习任务 4：其他关键字（30 分钟）
+
+### inline
+
+```cpp
+inline int square(int x) { return x * x; }
+// 建议编译器内联展开，消除函数调用开销
+// 只是建议，编译器可能忽略
+// 类内定义的成员函数隐式 inline
+```
+
+### extern
+
+```cpp
+// 声明（不分配内存）
+extern int globalVar;
+
+// extern "C" 让 C++ 编译器使用 C 的链接方式
+extern "C" void cFunction(int x);
+```
+
+### volatile
+
+```cpp
+volatile int flag = 0;
+// 告诉编译器不要优化对该变量的访问
+// 用于：硬件寄存器、信号处理、多线程标志
+
+// ⚠️ volatile 不能保证线程安全！
+// 它只防止编译器优化，不提供原子性和内存序保证
+// 多线程应使用 std::atomic
+```
+
+### mutable
+
+```cpp
+class Cache {
+    mutable std::map<int, int> cache_;  // 可在 const 函数中修改
+public:
+    int lookup(int key) const {
+        auto it = cache_.find(key);
+        if (it == cache_.end()) {
+            cache_[key] = compute(key);  // OK：mutable
+        }
+        return cache_[key];
     }
 };
 ```
 
-> ⚠️ **注意**：`mutable` 允许在 const 成员函数中修改成员变量，常用于缓存、计数器等"逻辑 const"场景。但不要滥用——它打破了 const 保证。
-
-#### const vs constexpr
-
-| 维度 | `const` | `constexpr` |
-|------|---------|-------------|
-| 含义 | 只读（运行时也可初始化） | 编译期常量表达式 |
-| 初始化 | 运行时值 | **必须**编译期可求值 |
-| 用于函数 | 只是 const 成员函数 | 编译期可求值的函数 |
-| 用于变量 | 运行期只读 | 编译期常量 |
-| 数组大小 | 不行（除非也是编译期常量） | 可以 |
+### explicit
 
 ```cpp
-const int x = get_runtime_value();  // 合法：运行时初始化，之后只读
-// constexpr int y = get_runtime_value();  // 编译错误：必须编译期可求值
-constexpr int z = 42;               // 合法：编译期常量
+class String {
+    int size_;
+public:
+    explicit String(int size) : size_(size) {}  // 禁止隐式转换
+};
 
-constexpr int factorial(int n) {    // constexpr 函数
-    return n <= 1 ? 1 : n * factorial(n - 1);
-}
-constexpr int f5 = factorial(5);    // 编译期求值：120
-int runtime_f = factorial(10);      // 也可以运行时调用
+String s1 = 10;       // 错误：explicit 禁止隐式转换
+String s2(10);        // OK：直接初始化
+String s3 = String(10); // OK：explicit 不禁止显式转换
 ```
-
-### 学习任务 4：值类别（lvalue/rvalue/xvalue）（30 分钟）
-
-值类别是 Day 3 移动语义的前置知识，面试中"什么是左值什么是右值"也是高频题。
-
-#### C++11 值类别体系
-
-C++11 将表达式分为三大类：
-
-| 类别 | 全称 | 含义 | 示例 |
-|------|------|------|------|
-| **lvalue** | left value | 有身份、不可移动 | `int a; a` —— 变量名 |
-| **xvalue** | expiring value | 有身份、可移动 | `std::move(a)` —— 即将销毁 |
-| **prvalue** | pure rvalue | 无身份、可移动 | `42`, `a + b`, `std::string("tmp")` |
-| **glvalue** | generalized lvalue | 有身份（lvalue + xvalue） | `a`, `std::move(a)` |
-| **rvalue** | right value | 可移动（xvalue + prvalue） | `42`, `std::move(a)` |
-
-> 💡 **简化记忆**：能取地址的是 lvalue，不能取地址的是 rvalue。`std::move(x)` 把 lvalue 转成 xvalue（一种 rvalue）。
-
-#### 代码验证
-
-```cpp
-// memory_model_basics.cpp（续）—— 值类别演示
-
-void demo_value_categories() {
-    int a = 10;          // a 是 lvalue
-    int b = 20;          // b 是 lvalue
-    int c = a + b;       // a + b 是 prvalue，c 是 lvalue
-
-    // a 的地址可取 → lvalue
-    std::cout << "&a = " << &a << std::endl;
-
-    // a + b 的地址不可取 → prvalue
-    // &(a + b);  // 编译错误
-
-    int& lref = a;       // lvalue 引用绑定 lvalue
-    // int& lref2 = 42;  // 编译错误：lvalue 引用不能绑定 prvalue
-    const int& cref = 42; // 合法：const lvalue 引用可绑定 prvalue（延长生命周期）
-
-    int&& rref = std::move(a);  // rvalue 引用绑定 xvalue
-    int&& rref2 = 42;    // 合法：rvalue 引用可绑定 prvalue
-
-    std::cout << "a = " << a << ", rref = " << rref << std::endl;
-}
-```
-
-#### 面试高频辨析
-
-| 表达式 | 类别 | 能否取地址 |
-|--------|------|-----------|
-| `int a; a` | lvalue | ✅ |
-| `42` | prvalue | ❌ |
-| `a + 1` | prvalue | ❌ |
-| `std::move(a)` | xvalue | ❌ |
-| `a[0]` | lvalue | ✅ |
-| `*ptr` | lvalue | ✅ |
-| `std::string("hi")` | prvalue | ❌ |
-| `func()` （返回非引用） | prvalue | ❌ |
-| `func()` （返回 `T&`） | lvalue | ✅ |
-| `func()` （返回 `T&&`） | xvalue | ❌ |
-
-### 面试题积累（今日 6 道）
-
-**Q1：栈和堆有什么区别？什么时候用栈，什么时候用堆？**
-> 答：栈由编译器自动分配释放，速度快、无碎片、空间有限（~8MB），适合局部变量；堆由程序员手动管理（`new`/`delete`），空间大但分配慢、有碎片，适合动态大小的对象或生命周期超出函数作用域的对象。实际开发中优先用栈，必须用堆时用智能指针管理。
-
-**Q2：指针和引用有什么区别？**
-> 答：① 引用必须初始化且不可重新绑定，指针可以不初始化、可以重新赋值；② 引用不能为空，指针可以是 `nullptr`；③ 引用不支持算术运算，指针支持；④ `sizeof` 引用得到的是被引用对象大小，指针得到的是指针大小（8 字节）；⑤ 引用是别名不占独立存储，指针是独立变量占 8 字节。引用更安全，指针更灵活。
-
-**Q3：`const int* p`、`int* const p`、`const int* const p` 有什么区别？**
-> 答：`const int* p`：指向 const int 的指针，不能通过 p 修改数据，但指针本身可变；`int* const p`：const 指针指向 int，指针本身不可变但数据可改；`const int* const p`：两者都不可变。口诀：const 在 `*` 左边修饰数据，在右边修饰指针。
-
-**Q4：`const` 和 `constexpr` 有什么区别？**
-> 答：`const` 表示只读，可在运行时初始化；`constexpr` 表示编译期常量表达式，必须在编译期可求值。`constexpr` 变量隐式是 `const`，但 `const` 变量不一定是 `constexpr`。`constexpr` 还可用于函数，表示该函数在输入为编译期常量时可编译期求值。
-
-**Q5：什么是左值和右值？`std::move` 做了什么？**
-> 答：左值是有身份、能取地址的表达式（如变量名）；右值是不能取地址的表达式（如字面量 `42`、临时对象）。C++11 进一步细分为 lvalue/xvalue/prvalue。`std::move` 本质是一个 `static_cast` 到右值引用，它不做任何移动操作，只是把表达式标记为"可移动"——真正的移动发生在移动构造函数/赋值运算符中。
-
-**Q6：返回局部变量的引用会发生什么？**
-> 答：返回局部变量的引用是未定义行为（UB），因为局部变量在函数返回后销毁，引用变成悬空引用（dangling reference）。如果编译器优化，可能"看似"正常但随时可能崩溃。解决方案：返回值（依赖 RVO）、返回 `std::unique_ptr`、或返回静态/堆上的对象。
-
-### 今日检查清单
-
-- [ ] 能列出 C++ 五大内存区域及其特点
-- [ ] 能说出栈和堆的 5 个以上区别
-- [ ] 理解四种存储期（自动/静态/动态/线程）
-- [ ] 能说出指针和引用的 5 个以上区别
-- [ ] 能区分 `const int*`、`int* const`、`const int* const`
-- [ ] 能解释 `const` 成员函数与 `mutable` 的关系
-- [ ] 能说出 `const` 与 `constexpr` 的区别
-- [ ] 能判断常见表达式是 lvalue 还是 rvalue
-- [ ] `memory_model_basics.cpp` 编译运行通过
-
-#### 明日预告
-
-Day 2 将深入 **RAII 与智能指针**——C++ 面试的核心考点。会讲 `unique_ptr`/`shared_ptr`/`weak_ptr` 的实现原理、控制块结构、循环引用问题与解决方案。今天理解了内存区域和对象生命周期，明天就要学习如何用 RAII 自动管理堆上的对象。建议今晚先扫一眼 `<memory>` 头文件的智能指针接口。
 
 ---
+
+## 学习任务 5：宏 vs const vs inline vs enum（20 分钟）
+
+| 维度 | `#define` | `const` | `inline` | `enum` |
+|------|-----------|---------|----------|--------|
+| 类型检查 | 无 | 有 | 有 | 有（scoped enum 更强） |
+| 作用域 | 无（全局文本替换） | 有 | 有 | 有 |
+| 调试 | 不可见 | 可见 | 可见 | 可见 |
+| 适用场景 | 条件编译、头文件保护 | 常量 | 小函数 | 枚举值 |
+
+```cpp
+// #define 的坑
+#define PI 3.14159          // 无类型、无作用域
+#define MAX(a,b) ((a)>(b)?(a):(b))  // 参数多次求值
+
+// 现代 C++ 替代方案
+constexpr double PI = 3.14159;
+template<typename T>
+T max_val(T a, T b) { return a > b ? a : b; }
+
+// enum class（C++11）
+enum class Color { Red, Green, Blue };
+Color c = Color::Red;       // 强类型，不会隐式转 int
+```
+
+---
+
+## 学习任务 6：类型转换（30 分钟）
+
+![C++ 四种类型转换对比](../images/cpp_day1_cast_summary.svg)
+
+### static_cast
+
+```cpp
+// 数值类型转换
+double d = 3.14;
+int i = static_cast<int>(d);   // 3
+
+// 向上转型（安全）
+Derived* dp = new Derived;
+Base* bp = static_cast<Base*>(dp);
+
+// 向下转型（不安全，不做运行时检查）
+Base* bp = new Derived;
+Derived* dp = static_cast<Derived*>(bp);  // 可能不安全
+```
+
+### dynamic_cast
+
+```cpp
+Base* bp = getShape();
+Derived* dp = dynamic_cast<Derived*>(bp);
+if (dp) {
+    // 转换成功，bp 确实指向 Derived 对象
+} else {
+    // 转换失败，bp 不是 Derived 类型
+}
+// 要求 Base 有虚函数
+```
+
+### const_cast
+
+```cpp
+void print(const string& s) {
+    // string& ns = const_cast<string&>(s);
+    // ns[0] = 'X';  // 未定义行为！原对象是 const
+}
+
+// 合理使用场景：重载消除
+class Text {
+    string data_;
+public:
+    const char& get(int i) const { return data_[i]; }
+    char& get(int i) {
+        return const_cast<char&>(
+            static_cast<const Text*>(this)->get(i)
+        );
+    }
+};
+```
+
+### reinterpret_cast
+
+```cpp
+int x = 65;
+char* p = reinterpret_cast<char*>(&x);
+// 把 int 的内存按 char 解读
+
+uintptr_t addr = reinterpret_cast<uintptr_t>(p);
+// 指针转整数（调试用）
+```
+
+---
+
+## 高频面试题自测
+
+### Q1：const 指针和指向 const 的指针怎么区分？
+
+<details>
+<summary>点击查看答案</summary>
+
+- `const int* p`（或 `int const* p`）：指向 const int 的指针，`*p` 不可改，`p` 可改
+- `int* const p`：const 指针指向 int，`p` 不可改，`*p` 可改
+- 记忆：`const` 修饰它左边的东西；若 `const` 在最左边，修饰右边的
+
+</details>
+
+### Q2：为什么析构函数要声明成 virtual？（预热 Day 3）
+
+<details>
+<summary>点击查看答案</summary>
+
+通过基类指针删除派生类对象时，如果析构函数不是 virtual，只会调用基类析构函数，派生类部分不会被清理——内存泄漏。
+
+```cpp
+Base* p = new Derived;
+delete p;  // 如果 ~Base() 不是 virtual，~Derived() 不会被调用
+```
+
+</details>
+
+### Q3：volatile 能保证线程安全吗？
+
+<details>
+<summary>点击查看答案</summary>
+
+**不能。** `volatile` 只防止编译器优化对该变量的读写（如缓存到寄存器），但不提供：
+- 原子性（读-改-写不是原子的）
+- 内存序保证（不阻止 CPU 重排序）
+
+多线程应使用 `std::atomic` 或 `std::mutex`。（详见 Day 6）
+
+</details>
+
+---
+
+## 动手练习
+
+### 练习 1：用引用实现 swap
+
+```cpp
+void swap(int& a, int& b) {
+    int tmp = a;
+    a = b;
+    b = tmp;
+}
+
+// C++ 标准库版本
+#include <utility>
+std::swap(a, b);
+```
+
+### 练习 2：写一个禁止拷贝的类
+
+```cpp
+// 方法 1：C++11 delete
+class NonCopyable {
+public:
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+    NonCopyable& operator=(const NonCopyable&) = delete;
+};
+
+// 方法 2：C++98（private + 不实现）
+class NonCopyable {
+    NonCopyable(const NonCopyable&);
+    NonCopyable& operator=(const NonCopyable&);
+protected:
+    NonCopyable() = default;
+    ~NonCopyable() = default;
+};
+```
+
+---
+
+## 今日小结
+
+| 主题 | 核心要点 | 面试频率 |
+|------|---------|---------|
+| 指针 vs 引用 | 指针有独立内存、可为 null、可重绑定；引用是别名 | ⭐⭐⭐⭐⭐ |
+| const | 修饰左边；const 成员函数不修改成员 | ⭐⭐⭐⭐⭐ |
+| static | 四种用法，注意作用域和生命周期 | ⭐⭐⭐⭐ |
+| 类型转换 | 四种 cast 各有用途，替代 C 风格转换 | ⭐⭐⭐⭐ |
+| volatile | 不保证线程安全！ | ⭐⭐⭐ |
+
+> **明日预告**：Day 2 内存管理 ⭐——重中之重，必考。new/delete 原理、内存分区、内存泄漏排查。

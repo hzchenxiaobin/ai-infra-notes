@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="303" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">C++ 四种类型转换对比</text>
+  <path d="M 290 40 Q 450 48 610 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- static_cast -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="110" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="50" y="82" font-size="13" font-weight="bold" fill="#2b6e9e">static_cast</text>
+  <text x="50" y="100" font-size="10" fill="#888">编译期检查，替代 C 风格强制转换</text>
+  <text x="50" y="118" font-size="9" fill="#444" font-family="monospace">int x = static_cast&lt;int&gt;(3.14);</text>
+  <text x="50" y="136" font-size="9" fill="#444" font-family="monospace">Base* b = static_cast&lt;Base*&gt;(derived);</text>
+  <text x="50" y="154" font-size="9" fill="#2b6e9e">适用：数值转换、向上转型（安全）</text>
+  <text x="50" y="166" font-size="9" fill="#b85450">不做运行时检查，向下转型不安全</text>
+
+  <!-- dynamic_cast -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="110" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="490" y="82" font-size="13" font-weight="bold" fill="#2e6e2e">dynamic_cast</text>
+  <text x="490" y="100" font-size="10" fill="#888">运行时检查，安全的向下转型</text>
+  <text x="490" y="118" font-size="9" fill="#444" font-family="monospace">Derived* d = dynamic_cast&lt;Derived*&gt;(b);</text>
+  <text x="490" y="136" font-size="9" fill="#444" font-family="monospace">if (d) { ... }  // 失败返回 nullptr</text>
+  <text x="490" y="154" font-size="9" fill="#2e6e2e">适用：多态类型的向下转型</text>
+  <text x="490" y="166" font-size="9" fill="#b85450">要求基类有虚函数；有运行时开销</text>
+
+  <!-- const_cast -->
+  <g filter="url(#sk)"><rect x="30" y="190" width="400" height="110" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="50" y="212" font-size="13" font-weight="bold" fill="#7a5415">const_cast</text>
+  <text x="50" y="230" font-size="10" fill="#888">唯一能去除 const/volatile 的转换</text>
+  <text x="50" y="248" font-size="9" fill="#444" font-family="monospace">const int* p = &amp;x;</text>
+  <text x="50" y="266" font-size="9" fill="#444" font-family="monospace">int* q = const_cast&lt;int*&gt;(p);</text>
+  <text x="50" y="284" font-size="9" fill="#7a5415">适用：与 const 接口的兼容</text>
+  <text x="50" y="296" font-size="9" fill="#b85450">修改原 const 对象 → 未定义行为</text>
+
+  <!-- reinterpret_cast -->
+  <g filter="url(#sk)"><rect x="470" y="190" width="400" height="110" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="490" y="212" font-size="13" font-weight="bold" fill="#b85450">reinterpret_cast</text>
+  <text x="490" y="230" font-size="10" fill="#888">低级别的位模式重新解释</text>
+  <text x="490" y="248" font-size="9" fill="#444" font-family="monospace">int* p = new int(65);</text>
+  <text x="490" y="266" font-size="9" fill="#444" font-family="monospace">char* c = reinterpret_cast&lt;char*&gt;(p);</text>
+  <text x="490" y="284" font-size="9" fill="#b85450">适用：指针↔整数、不相关类型间转换</text>
+  <text x="490" y="296" font-size="9" fill="#b85450">极度危险，移植性差，尽量避免</text>
+
+  <!-- Summary table -->
+  <g filter="url(#sk)"><rect x="30" y="320" width="840" height="185" rx="8" fill="#f8f8f0" stroke="#888" stroke-width="1.5"/></g>
+  <text x="450" y="344" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b2b2b">速查对比</text>
+
+  <text x="50" y="370" font-size="10" font-weight="bold" fill="#2b6e9e">static_cast</text>
+  <text x="200" y="370" font-size="9" fill="#444">编译期检查 | 数值转换、向上转型 | 安全但不做运行时校验</text>
+
+  <line x1="50" y1="380" x2="850" y2="380" stroke="#ddd" stroke-width="0.8"/>
+
+  <text x="50" y="398" font-size="10" font-weight="bold" fill="#2e6e2e">dynamic_cast</text>
+  <text x="200" y="398" font-size="9" fill="#444">运行时检查 | 多态向下转型 | 失败返回 nullptr，有性能开销</text>
+
+  <line x1="50" y1="408" x2="850" y2="408" stroke="#ddd" stroke-width="0.8"/>
+
+  <text x="50" y="426" font-size="10" font-weight="bold" fill="#7a5415">const_cast</text>
+  <text x="200" y="426" font-size="9" fill="#444">去除 const/volatile | 唯一能做此事的 cast | 修改原 const 对象是 UB</text>
+
+  <line x1="50" y1="436" x2="850" y2="436" stroke="#ddd" stroke-width="0.8"/>
+
+  <text x="50" y="454" font-size="10" font-weight="bold" fill="#b85450">reinterpret_cast</text>
+  <text x="200" y="454" font-size="9" fill="#444">位模式重解释 | 指针↔整数 | 极度危险，尽量避免</text>
+
+  <line x1="50" y1="464" x2="850" y2="464" stroke="#ddd" stroke-width="0.8"/>
+
+  <text x="50" y="484" font-size="10" font-weight="bold" fill="#888">C 风格 (int)x</text>
+  <text x="200" y="484" font-size="9" fill="#444">编译器尽力尝试所有可能 | 不安全、不直观 | C++ 中应全部替换为上述四种</text>
+</svg>

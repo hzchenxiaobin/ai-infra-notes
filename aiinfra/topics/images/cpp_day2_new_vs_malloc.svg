@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="502" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8e4a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">new/delete vs malloc/free 全流程对比</text>
+  <path d="M 250 40 Q 450 48 650 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: new/delete flow -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="480" rx="10" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">new / delete（C++ 方式）</text>
+
+  <!-- Step 1: operator new -->
+  <g filter="url(#sk)"><rect x="60" y="100" width="340" height="50" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="230" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">① operator new(size)</text>
+  <text x="230" y="138" text-anchor="middle" font-size="9" fill="#888">分配原始内存（类似 malloc）| 失败抛 bad_alloc</text>
+
+  <path d="M 230 150 L 230 170" stroke="#4a8edb" stroke-width="1.5" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- Step 2: constructor -->
+  <g filter="url(#sk)"><rect x="60" y="175" width="340" height="50" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="230" y="195" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">② 调用构造函数</text>
+  <text x="230" y="213" text-anchor="middle" font-size="9" fill="#888">在原始内存上构造对象（初始化成员变量）</text>
+
+  <path d="M 230 225 L 230 245" stroke="#4a8edb" stroke-width="1.5" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- Result -->
+  <g filter="url(#sk)"><rect x="60" y="250" width="340" height="36" rx="6" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="230" y="273" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">✅ 返回类型安全的指针 T*</text>
+
+  <!-- Separator -->
+  <line x1="60" y1="300" x2="400" y2="300" stroke="#4a8edb" stroke-width="0.8" opacity="0.3" stroke-dasharray="4 2"/>
+  <text x="230" y="318" text-anchor="middle" font-size="10" fill="#2b6e9e" font-weight="bold">delete 过程（逆序）</text>
+
+  <!-- delete step 1 -->
+  <g filter="url(#sk)"><rect x="60" y="330" width="340" height="50" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="230" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">① 调用析构函数</text>
+  <text x="230" y="368" text-anchor="middle" font-size="9" fill="#888">清理对象资源（释放成员持有的内存等）</text>
+
+  <path d="M 230 380 L 230 400" stroke="#4a8edb" stroke-width="1.5" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <!-- delete step 2 -->
+  <g filter="url(#sk)"><rect x="60" y="405" width="340" height="50" rx="6" fill="#fff" stroke="#4a8edb" stroke-width="1.5"/></g>
+  <text x="230" y="425" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6e9e">② operator delete(ptr)</text>
+  <text x="230" y="443" text-anchor="middle" font-size="9" fill="#888">释放内存（类似 free）</text>
+
+  <!-- Code example -->
+  <text x="60" y="480" font-size="9" fill="#444" font-family="monospace">Widget* w = new Widget(42);</text>
+  <text x="60" y="496" font-size="9" fill="#444" font-family="monospace">delete w;  // 析构 + 释放</text>
+  <text x="60" y="520" font-size="9" fill="#2b6e9e" font-weight="bold">new[] / delete[] 用于数组</text>
+
+  <!-- Right: malloc/free flow -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="480" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">malloc / free（C 方式）</text>
+
+  <!-- Step 1: malloc -->
+  <g filter="url(#sk)"><rect x="500" y="100" width="340" height="50" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="120" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">① malloc(size)</text>
+  <text x="670" y="138" text-anchor="middle" font-size="9" fill="#888">分配原始内存 | 失败返回 NULL</text>
+
+  <path d="M 670 150 L 670 170" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <!-- Step 2: no constructor -->
+  <g filter="url(#sk)"><rect x="500" y="175" width="340" height="50" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5" stroke-dasharray="4 2"/></g>
+  <text x="670" y="195" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">② 无构造函数调用</text>
+  <text x="670" y="213" text-anchor="middle" font-size="9" fill="#888">内存未初始化！（值不确定）</text>
+
+  <path d="M 670 225 L 670 245" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <!-- Result -->
+  <g filter="url(#sk)"><rect x="500" y="250" width="340" height="36" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="273" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">✅ 返回 void*（需强制转换）</text>
+
+  <!-- Separator -->
+  <line x1="500" y1="300" x2="840" y2="300" stroke="#4a8e4a" stroke-width="0.8" opacity="0.3" stroke-dasharray="4 2"/>
+  <text x="670" y="318" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">free 过程</text>
+
+  <!-- free step -->
+  <g filter="url(#sk)"><rect x="500" y="330" width="340" height="50" rx="6" fill="#fff" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="350" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">① free(ptr) 直接释放</text>
+  <text x="670" y="368" text-anchor="middle" font-size="9" fill="#888">不调用析构函数！资源泄漏风险</text>
+
+  <path d="M 670 380 L 670 400" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <!-- Done -->
+  <g filter="url(#sk)"><rect x="500" y="405" width="340" height="50" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="430" text-anchor="middle" font-size="11" fill="#888">内存归还系统</text>
+
+  <!-- Code example -->
+  <text x="500" y="480" font-size="9" fill="#444" font-family="monospace">Widget* w = (Widget*)malloc(sizeof(Widget));</text>
+  <text x="500" y="496" font-size="9" fill="#444" font-family="monospace">free(w);  // 只释放，不析构</text>
+  <text x="500" y="520" font-size="9" fill="#b85450" font-weight="bold">⚠️ 不能混用！new 配 delete，malloc 配 free</text>
+</svg>

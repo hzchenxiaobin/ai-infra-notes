@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="704" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">常见内存错误全景图</text>
+  <path d="M 290 40 Q 450 48 610 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- 1. 野指针 -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="130" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="50" y="82" font-size="13" font-weight="bold" fill="#b85450">① 野指针（Wild Pointer）</text>
+  <text x="50" y="102" font-size="10" fill="#444" font-family="monospace">int* p;          // 未初始化</text>
+  <text x="50" y="118" font-size="10" fill="#444" font-family="monospace">*p = 42;         // 指向随机地址!</text>
+  <text x="50" y="140" font-size="9" fill="#888">指针未初始化，指向随机内存地址</text>
+  <text x="50" y="156" font-size="9" fill="#888">解引用 → 段错误 / 数据损坏</text>
+  <text x="50" y="178" font-size="9" fill="#b85450" font-weight="bold">✅ 防御：声明时初始化为 nullptr</text>
+
+  <!-- 2. 悬空指针 -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="130" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="490" y="82" font-size="13" font-weight="bold" fill="#7a5415">② 悬空指针（Dangling Pointer）</text>
+  <text x="490" y="102" font-size="10" fill="#444" font-family="monospace">int* p = new int(42);</text>
+  <text x="490" y="118" font-size="10" fill="#444" font-family="monospace">delete p;          // 内存已释放</text>
+  <text x="490" y="134" font-size="10" fill="#444" font-family="monospace">*p = 10;           // p 指向已释放内存!</text>
+  <text x="490" y="156" font-size="9" fill="#888">指针指向的内存已被释放，但指针值未变</text>
+  <text x="490" y="178" font-size="9" fill="#7a5415" font-weight="bold">✅ 防御：delete 后立即置 nullptr</text>
+
+  <!-- 3. double free -->
+  <g filter="url(#sk)"><rect x="30" y="210" width="400" height="130" rx="8" fill="#f3e8fa" stroke="#8e4aeb" stroke-width="2"/></g>
+  <text x="50" y="232" font-size="13" font-weight="bold" fill="#6e2b9e">③ Double Free</text>
+  <text x="50" y="252" font-size="10" fill="#444" font-family="monospace">int* p = new int(42);</text>
+  <text x="50" y="268" font-size="10" fill="#444" font-family="monospace">delete p;          // 第一次释放</text>
+  <text x="50" y="284" font-size="10" fill="#444" font-family="monospace">delete p;          // 第二次释放 → 崩溃!</text>
+  <text x="50" y="306" font-size="9" fill="#888">同一块内存释放两次 → 堆管理器损坏</text>
+  <text x="50" y="322" font-size="9" fill="#888">→ glibc detected double free → abort</text>
+  <text x="50" y="332" font-size="9" fill="#6e2b9e" font-weight="bold">✅ 防御：delete 后置 nullptr（nullptr delete 安全）</text>
+
+  <!-- 4. 内存泄漏 -->
+  <g filter="url(#sk)"><rect x="470" y="210" width="400" height="130" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="490" y="232" font-size="13" font-weight="bold" fill="#2b6e9e">④ 内存泄漏（Memory Leak）</text>
+  <text x="490" y="252" font-size="10" fill="#444" font-family="monospace">void foo() {</text>
+  <text x="490" y="268" font-size="10" fill="#444" font-family="monospace">    int* p = new int[1000];</text>
+  <text x="490" y="284" font-size="10" fill="#444" font-family="monospace">    // 忘记 delete[] → 泄漏!</text>
+  <text x="490" y="300" font-size="10" fill="#444" font-family="monospace">}</text>
+  <text x="490" y="318" font-size="9" fill="#888">分配的内存永远无法被回收</text>
+  <text x="490" y="332" font-size="9" fill="#2b6e9e" font-weight="bold">✅ 防御：RAII + 智能指针（Day 5 详解）</text>
+
+  <!-- 5. 堆溢出 -->
+  <g filter="url(#sk)"><rect x="30" y="360" width="400" height="130" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="50" y="382" font-size="13" font-weight="bold" fill="#2e6e2e">⑤ 堆溢出（Heap Buffer Overflow）</text>
+  <text x="50" y="402" font-size="10" fill="#444" font-family="monospace">int* p = new int[10];</text>
+  <text x="50" y="418" font-size="10" fill="#444" font-family="monospace">p[10] = 42;     // 越界写入!</text>
+  <text x="50" y="438" font-size="9" fill="#888">写入超出分配边界 → 覆盖相邻内存</text>
+  <text x="50" y="454" font-size="9" fill="#888">可能破坏堆元数据 → 后续 free 时崩溃</text>
+  <text x="50" y="478" font-size="9" fill="#2e6e2e" font-weight="bold">✅ 防御：用 std::vector / std::array 替代裸数组</text>
+
+  <!-- 6. 栈溢出 -->
+  <g filter="url(#sk)"><rect x="470" y="360" width="400" height="130" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="490" y="382" font-size="13" font-weight="bold" fill="#7a5415">⑥ 栈溢出（Stack Overflow）</text>
+  <text x="490" y="402" font-size="10" fill="#444" font-family="monospace">void recurse() {</text>
+  <text x="490" y="418" font-size="10" fill="#444" font-family="monospace">    recurse();  // 无限递归</text>
+  <text x="490" y="434" font-size="10" fill="#444" font-family="monospace">}</text>
+  <text x="490" y="454" font-size="9" fill="#888">递归过深 / 局部变量太大 → 超出栈空间</text>
+  <text x="490" y="470" font-size="9" fill="#888">Linux 默认栈 8MB → Segmentation fault</text>
+  <text x="490" y="484" font-size="9" fill="#7a5415" font-weight="bold">✅ 防御：确保递归有终止条件；大数组用堆分配</text>
+</svg>
