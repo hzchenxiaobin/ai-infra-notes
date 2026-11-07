@@ -39,6 +39,9 @@ for week in $(seq 1 8); do
         fi
 
         mkdir -p "$OUTPUT_DIR"
+        if [[ "${FORCE:-0}" == "1" ]]; then
+            rm -f "$TUTORIAL"
+        fi
 
         MESSAGE="请为 DeepGEMM-Ascend 学习计划编写第 ${week} 周第 ${day} 天的中文教程。
 
@@ -54,11 +57,24 @@ for week in $(seq 1 8); do
 
         echo
         echo "======== week${week}/day${day}（学习计划第 ${plan_day} 天） ========"
-        echo ">>> 生成: $TUTORIAL"
-        cannbot run "$MESSAGE"
+        generated=0
+        for attempt in 1 2 3; do
+            echo ">>> 生成（第 ${attempt}/3 次）: $TUTORIAL"
+            if ! cannbot run "$MESSAGE"; then
+                echo ">>> cannbot 调用失败，检查是否已生成文件" >&2
+            fi
+            if [[ -s "$TUTORIAL" ]]; then
+                generated=1
+                break
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+                echo ">>> 未生成非空教程，15 秒后重试" >&2
+                sleep 15
+            fi
+        done
 
-        if [[ ! -s "$TUTORIAL" ]]; then
-            echo "错误：cannbot 未生成非空教程：$TUTORIAL" >&2
+        if [[ "$generated" -ne 1 ]]; then
+            echo "错误：连续 3 次未生成非空教程：$TUTORIAL" >&2
             exit 1
         fi
     done
