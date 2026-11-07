@@ -24,6 +24,7 @@ TOPIC_DISPLAY_NAMES = {
     "sglang": "🛰️ SGLang",
     "cute": "🔷 CuTe",
     "deepgemm": "🔶 DeepGEMM",
+    "gemmascend": "DeepGEMM Ascend",
     "moe": "🧩 MoE",
     "interview": "💼 Interview",
     "transformer": "🤖 Transformer",
@@ -112,6 +113,30 @@ def _extract_day_files(topic_dir: Path) -> list:
         days.append({
             "num": int(match.group(1)),
             "title": match.group(2).strip(),
+            "markdown": "\n".join(text.strip().splitlines()[1:]),
+        })
+    days.sort(key=lambda d: d["num"])
+    return days
+
+
+def _extract_nested_daily_files(topic_dir: Path) -> list:
+    """Extract daily tutorials stored as daily/weekN/dayM/README.md."""
+    days = []
+    for md_path in sorted(topic_dir.glob("daily/week*/day*/README.md")):
+        rel = md_path.relative_to(topic_dir)
+        path_match = re.fullmatch(r"daily/week(\d+)/day(\d+)/README\.md", rel.as_posix())
+        if not path_match:
+            continue
+        week_num, day_num = (int(value) for value in path_match.groups())
+        text = _rewrite_local_paths(md_path.read_text(encoding="utf-8"))
+        text = re.sub(r"\]\((?:\.\./){3}README\.md\)", "](index.html)", text)
+        first_line = text.lstrip().splitlines()[0] if text.strip() else ""
+        if not first_line.startswith("#"):
+            print(f"Warning: skipping {md_path}, cannot parse tutorial title")
+            continue
+        days.append({
+            "num": (week_num - 1) * 7 + day_num,
+            "title": first_line.lstrip("# ").strip(),
             "markdown": "\n".join(text.strip().splitlines()[1:]),
         })
     days.sort(key=lambda d: d["num"])
@@ -309,7 +334,7 @@ def _build_topic(topic_dir: Path, output_dir: Path) -> None:
     readme_path = topic_dir / "README.md"
     overview = _rewrite_local_paths(readme_path.read_text(encoding="utf-8"))
     readme_days = _extract_day_headings_from_readme(overview)
-    day_files = _extract_day_files(topic_dir)
+    day_files = _extract_day_files(topic_dir) or _extract_nested_daily_files(topic_dir)
     solution_files = _extract_solution_files(topic_dir)
 
     if day_files:
