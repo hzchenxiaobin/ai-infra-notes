@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="902" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="540" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">深拷贝 vs 浅拷贝</text>
+  <path d="M 310 40 Q 450 48 590 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Shallow Copy -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="400" height="460" rx="10" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="230" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">浅拷贝（Shallow Copy）❌</text>
+
+  <text x="50" y="110" font-size="10" fill="#444" font-weight="bold">默认拷贝构造 / 赋值运算符的行为</text>
+  <text x="50" y="130" font-size="10" fill="#444" font-family="monospace">class BadString {</text>
+  <text x="50" y="146" font-size="10" fill="#444" font-family="monospace">    char* data_;</text>
+  <text x="50" y="162" font-size="10" fill="#444" font-family="monospace">};</text>
+
+  <text x="50" y="188" font-size="10" fill="#444" font-weight="bold">内存状态：拷贝后</text>
+
+  <rect x="60" y="200" width="140" height="40" rx="4" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+  <text x="130" y="216" text-anchor="middle" font-size="9" fill="#444">obj1.data_</text>
+  <text x="130" y="232" text-anchor="middle" font-size="9" fill="#b85450">0x1000</text>
+
+  <rect x="60" y="260" width="140" height="40" rx="4" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+  <text x="130" y="276" text-anchor="middle" font-size="9" fill="#444">obj2.data_</text>
+  <text x="130" y="292" text-anchor="middle" font-size="9" fill="#b85450">0x1000</text>
+
+  <rect x="240" y="215" width="160" height="70" rx="4" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/>
+  <text x="320" y="240" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">堆内存 0x1000</text>
+  <text x="320" y="258" text-anchor="middle" font-size="9" fill="#444">"hello"</text>
+  <text x="320" y="274" text-anchor="middle" font-size="8" fill="#888">同一块内存！</text>
+
+  <path d="M 200 220 Q 220 230 240 240" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 200 280 Q 220 270 240 255" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="50" y="330" font-size="10" fill="#b85450" font-weight="bold">问题：</text>
+  <text x="50" y="350" font-size="9" fill="#888">1. 两个对象共享同一块堆内存</text>
+  <text x="50" y="368" font-size="9" fill="#888">2. 修改 obj1 → obj2 也被修改</text>
+  <text x="50" y="386" font-size="9" fill="#888">3. 析构时 double free → 崩溃！</text>
+  <text x="50" y="404" font-size="9" fill="#888">4. 悬空指针：obj1 先析构后</text>
+  <text x="50" y="420" font-size="9" fill="#888">   obj2.data_ 变成悬空指针</text>
+
+  <g filter="url(#sk)"><rect x="50" y="440" width="360" height="65" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="60" y="460" font-size="9" fill="#b85450" font-weight="bold">~obj2() → delete data_  (第二次释放!)</text>
+  <text x="60" y="478" font-size="9" fill="#b85450" font-weight="bold">~obj1() → delete data_  (已经释放过了!)</text>
+  <text x="60" y="496" font-size="9" fill="#b85450">→ glibc detected double free → ABORT</text>
+
+  <!-- Right: Deep Copy -->
+  <g filter="url(#sk)"><rect x="470" y="60" width="400" height="460" rx="10" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="84" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">深拷贝（Deep Copy）✅</text>
+
+  <text x="490" y="110" font-size="10" fill="#444" font-weight="bold">自定义拷贝构造：分配新内存 + 复制内容</text>
+  <text x="490" y="130" font-size="10" fill="#444" font-family="monospace">GoodString(const GoodString&amp; o)</text>
+  <text x="490" y="146" font-size="10" fill="#444" font-family="monospace">  : data_(new char[...]) {</text>
+  <text x="490" y="162" font-size="10" fill="#444" font-family="monospace">    strcpy(data_, o.data_);</text>
+  <text x="490" y="178" font-size="10" fill="#444" font-family="monospace">}</text>
+
+  <text x="490" y="204" font-size="10" fill="#444" font-weight="bold">内存状态：拷贝后</text>
+
+  <rect x="500" y="216" width="130" height="40" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.5"/>
+  <text x="565" y="232" text-anchor="middle" font-size="9" fill="#444">obj1.data_</text>
+  <text x="565" y="248" text-anchor="middle" font-size="9" fill="#2e6e2e">0x2000</text>
+
+  <rect x="500" y="282" width="130" height="40" rx="4" fill="#fff" stroke="#4a8e4a" stroke-width="1.5"/>
+  <text x="565" y="298" text-anchor="middle" font-size="9" fill="#444">obj2.data_</text>
+  <text x="565" y="314" text-anchor="middle" font-size="9" fill="#2e6e2e">0x3000</text>
+
+  <rect x="670" y="216" width="160" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  <text x="750" y="232" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">0x2000</text>
+  <text x="750" y="248" text-anchor="middle" font-size="9" fill="#444">"hello"</text>
+
+  <rect x="670" y="282" width="160" height="40" rx="4" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  <text x="750" y="298" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">0x3000</text>
+  <text x="750" y="314" text-anchor="middle" font-size="9" fill="#444">"hello"（副本）</text>
+
+  <path d="M 630 236 L 670 236" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 630 302 L 670 302" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <text x="490" y="350" font-size="10" fill="#2e6e2e" font-weight="bold">优势：</text>
+  <text x="490" y="370" font-size="9" fill="#888">1. 每个对象拥有独立的堆内存</text>
+  <text x="490" y="388" font-size="9" fill="#888">2. 修改 obj1 不影响 obj2</text>
+  <text x="490" y="406" font-size="9" fill="#888">3. 析构时各自释放各自的内存</text>
+  <text x="490" y="424" font-size="9" fill="#888">4. 安全，无 double free 风险</text>
+
+  <g filter="url(#sk)"><rect x="490" y="440" width="360" height="65" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="500" y="460" font-size="9" fill="#2e6e2e" font-weight="bold">~obj2() → delete[] data_  (释放 0x3000 ✅)</text>
+  <text x="500" y="478" font-size="9" fill="#2e6e2e" font-weight="bold">~obj1() → delete[] data_  (释放 0x2000 ✅)</text>
+  <text x="500" y="496" font-size="9" fill="#2e6e2e">各自独立释放，互不影响</text>
+</svg>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="801" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a8edb"/>
+    </marker>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#b85450"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">继承中的构造 / 析构调用顺序</text>
+  <path d="M 270 40 Q 450 48 630 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Class hierarchy -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="840" height="80" rx="8" fill="#f8f8f0" stroke="#888" stroke-width="1.5"/></g>
+  <text x="50" y="82" font-size="11" font-weight="bold" fill="#444">类继承关系：</text>
+  <text x="50" y="104" font-size="11" fill="#444" font-family="monospace">class Base { ... };  →  class Middle : public Base { ... };  →  class Derived : public Middle { ... };</text>
+  <text x="50" y="126" font-size="10" fill="#888">三层继承：Base（基类）→ Middle（中间类）→ Derived（派生类）</text>
+
+  <!-- Construction order -->
+  <text x="450" y="168" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6e9e">构造顺序（从基类到派生类）</text>
+
+  <g filter="url(#sk)"><rect x="60" y="185" width="200" height="55" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="160" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">① Base()</text>
+  <text x="160" y="228" text-anchor="middle" font-size="9" fill="#888">先构造基类部分</text>
+
+  <path d="M 260 212 L 310 212" stroke="#4a8edb" stroke-width="2" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="320" y="185" width="200" height="55" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="420" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">② Middle()</text>
+  <text x="420" y="228" text-anchor="middle" font-size="9" fill="#888">再构造中间类部分</text>
+
+  <path d="M 520 212 L 570 212" stroke="#4a8edb" stroke-width="2" fill="none" marker-end="url(#ar2)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="580" y="185" width="200" height="55" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="680" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">③ Derived()</text>
+  <text x="680" y="228" text-anchor="middle" font-size="9" fill="#888">最后构造派生类部分</text>
+
+  <!-- Construction note -->
+  <g filter="url(#sk)"><rect x="60" y="255" width="780" height="40" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="450" y="278" text-anchor="middle" font-size="10" fill="#2e6e2e" font-weight="bold">✅ 构造顺序：Base → Middle → Derived（先基类后派生类，确保基类已就绪）</text>
+  <text x="450" y="292" text-anchor="middle" font-size="9" fill="#888">成员变量按声明顺序构造（不是初始化列表顺序！）</text>
+
+  <!-- Destruction order -->
+  <text x="450" y="322" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">析构顺序（从派生类到基类，与构造相反）</text>
+
+  <g filter="url(#sk)"><rect x="580" y="340" width="200" height="55" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="680" y="363" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">① ~Derived()</text>
+  <text x="680" y="383" text-anchor="middle" font-size="9" fill="#888">先析构派生类部分</text>
+
+  <path d="M 580 367 L 530 367" stroke="#b85450" stroke-width="2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="320" y="340" width="200" height="55" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="420" y="363" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">② ~Middle()</text>
+  <text x="420" y="383" text-anchor="middle" font-size="9" fill="#888">再析构中间类部分</text>
+
+  <path d="M 320 367 L 270 367" stroke="#b85450" stroke-width="2" fill="none" marker-end="url(#ar3)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="60" y="340" width="200" height="55" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="160" y="363" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">③ ~Base()</text>
+  <text x="160" y="383" text-anchor="middle" font-size="9" fill="#888">最后析构基类部分</text>
+
+  <!-- Destruction note -->
+  <g filter="url(#sk)"><rect x="60" y="410" width="780" height="40" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="450" y="433" text-anchor="middle" font-size="10" fill="#7a5415" font-weight="bold">✅ 析构顺序：~Derived → ~Middle → ~Base（先派生类后基类，与构造严格相反）</text>
+  <text x="450" y="447" text-anchor="middle" font-size="9" fill="#888">成员变量按声明的逆序析构</text>
+
+  <!-- Bottom: key rule -->
+  <g filter="url(#sk)"><rect x="30" y="470" width="840" height="75" rx="8" fill="#f3e8fa" stroke="#8e4aeb" stroke-width="2"/></g>
+  <text x="450" y="494" text-anchor="middle" font-size="13" font-weight="bold" fill="#6e2b9e">关键规则</text>
+  <text x="450" y="514" text-anchor="middle" font-size="10" fill="#444">构造：成员变量按声明顺序初始化（不是初始化列表顺序）| 基类先于派生类</text>
+  <text x="450" y="532" text-anchor="middle" font-size="10" fill="#444">析构：与构造严格相反 | 基类指针删除派生类对象时，必须 virtual 析构才能调用 ~Derived()</text>
+</svg>

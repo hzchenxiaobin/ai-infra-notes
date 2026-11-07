@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="1104" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+  </defs>
+  <rect width="900" height="520" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">重载 vs 覆盖（重写） vs 隐藏</text>
+  <path d="M 260 40 Q 450 48 640 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Overload -->
+  <g filter="url(#sk)"><rect x="30" y="60" width="840" height="120" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="50" y="84" font-size="14" font-weight="bold" fill="#2b6e9e">重载（Overload）</text>
+  <text x="250" y="84" font-size="10" fill="#888">— 同一个作用域内，函数名相同，参数列表不同</text>
+
+  <text x="50" y="108" font-size="10" fill="#444" font-family="monospace">class Math {</text>
+  <text x="50" y="124" font-size="10" fill="#444" font-family="monospace">    int add(int a, int b);</text>
+  <text x="50" y="140" font-size="10" fill="#444" font-family="monospace">    double add(double a, double b);   // 重载：参数类型不同</text>
+  <text x="50" y="156" font-size="10" fill="#444" font-family="monospace">    int add(int a, int b, int c);     // 重载：参数个数不同</text>
+  <text x="50" y="172" font-size="10" fill="#444" font-family="monospace">};</text>
+
+  <text x="520" y="108" font-size="10" fill="#2b6e9e" font-weight="bold">特征：</text>
+  <text x="520" y="126" font-size="9" fill="#888">- 同一作用域（同一个类）</text>
+  <text x="520" y="142" font-size="9" fill="#888">- 函数名相同</text>
+  <text x="520" y="158" font-size="9" fill="#888">- 参数列表必须不同（类型/个数/顺序）</text>
+  <text x="520" y="174" font-size="9" fill="#888">- 返回值类型不作为区分依据</text>
+  <text x="520" y="174" font-size="9" fill="#888">- 编译期多态（静态绑定）</text>
+
+  <!-- Override -->
+  <g filter="url(#sk)"><rect x="30" y="200" width="840" height="120" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="50" y="224" font-size="14" font-weight="bold" fill="#2e6e2e">覆盖 / 重写（Override）</text>
+  <text x="320" y="224" font-size="10" fill="#888">— 派生类重新定义基类的虚函数</text>
+
+  <text x="50" y="248" font-size="10" fill="#444" font-family="monospace">class Base  { virtual void draw() const; };</text>
+  <text x="50" y="264" font-size="10" fill="#444" font-family="monospace">class Derived : public Base {</text>
+  <text x="50" y="280" font-size="10" fill="#444" font-family="monospace">    void draw() const override;   // 覆盖：签名完全一致</text>
+  <text x="50" y="296" font-size="10" fill="#444" font-family="monospace">};</text>
+
+  <text x="520" y="248" font-size="10" fill="#2e6e2e" font-weight="bold">特征：</text>
+  <text x="520" y="266" font-size="9" fill="#888">- 不同作用域（基类 vs 派生类）</text>
+  <text x="520" y="282" font-size="9" fill="#888">- 函数名、参数列表、返回值 完全相同</text>
+  <text x="520" y="298" font-size="9" fill="#888">- 基类函数必须是 virtual</text>
+  <text x="520" y="314" font-size="9" fill="#888">- 运行时多态（动态绑定，通过 vtable）</text>
+
+  <!-- Hide -->
+  <g filter="url(#sk)"><rect x="30" y="340" width="840" height="120" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="50" y="364" font-size="14" font-weight="bold" fill="#b85450">隐藏（Hide）</text>
+  <text x="210" y="364" font-size="10" fill="#888">— 派生类函数遮蔽了基类同名函数（非虚函数）</text>
+
+  <text x="50" y="388" font-size="10" fill="#444" font-family="monospace">class Base  { void show(); void show(int); };</text>
+  <text x="50" y="404" font-size="10" fill="#444" font-family="monospace">class Derived : public Base {</text>
+  <text x="50" y="420" font-size="10" fill="#444" font-family="monospace">    void show();   // 隐藏 Base::show() 和 Base::show(int)</text>
+  <text x="50" y="436" font-size="10" fill="#444" font-family="monospace">};</text>
+
+  <text x="520" y="388" font-size="10" fill="#b85450" font-weight="bold">特征：</text>
+  <text x="520" y="406" font-size="9" fill="#888">- 派生类定义了与基类同名的函数</text>
+  <text x="520" y="422" font-size="9" fill="#888">- 基类中所有同名函数都被隐藏（不管参数）</text>
+  <text x="520" y="438" font-size="9" fill="#888">- 基类函数不是 virtual（否则是覆盖）</text>
+  <text x="520" y="454" font-size="9" fill="#888">- 静态绑定：通过基类指针只能调到基类版本</text>
+
+  <!-- Summary table -->
+  <g filter="url(#sk)"><rect x="30" y="475" width="840" height="35" rx="6" fill="#fef6e6" stroke="#c98a2b" stroke-width="1.5"/></g>
+  <text x="170" y="497" text-anchor="middle" font-size="10" font-weight="bold" fill="#2b6e9e">重载：同作用域，参数不同</text>
+  <text x="450" y="497" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e6e2e">覆盖：跨作用域，virtual + 签名相同</text>
+  <text x="730" y="497" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">隐藏：跨作用域，同名遮蔽</text>
+</svg>

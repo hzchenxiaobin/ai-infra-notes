@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="'Comic Sans MS','Marker Felt','Segoe UI','Kaiti SC',楷体,cursive">
+  <defs>
+    <filter id="sk" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="1205" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5"/>
+    </filter>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#5a5a5a"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#fdfcf7"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b2b2b">菱形继承问题与虚继承解决方案</text>
+  <path d="M 250 40 Q 450 48 650 40" stroke="#2b2b2b" stroke-width="1.5" fill="none" filter="url(#sk)"/>
+
+  <!-- Left: Problem -->
+  <text x="220" y="68" text-anchor="middle" font-size="14" font-weight="bold" fill="#b85450">❌ 普通继承：菱形问题</text>
+
+  <!-- Diamond without virtual -->
+  <g filter="url(#sk)"><rect x="140" y="82" width="160" height="45" rx="8" fill="#e8f0fa" stroke="#4a8edb" stroke-width="2"/></g>
+  <text x="220" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6e9e">class Animal</text>
+
+  <path d="M 180 127 Q 120 155 100 175" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 260 127 Q 320 155 340 175" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="20" y="180" width="160" height="45" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="100" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">class Bird</text>
+
+  <g filter="url(#sk)"><rect x="260" y="180" width="160" height="45" rx="8" fill="#fef6e6" stroke="#c98a2b" stroke-width="2"/></g>
+  <text x="340" y="208" text-anchor="middle" font-size="12" font-weight="bold" fill="#7a5415">class Fish</text>
+
+  <path d="M 100 225 Q 120 250 180 270" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 340 225 Q 320 250 260 270" stroke="#5a5a5a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="140" y="275" width="160" height="45" rx="8" fill="#fce4ec" stroke="#b85450" stroke-width="2"/></g>
+  <text x="220" y="303" text-anchor="middle" font-size="12" font-weight="bold" fill="#b85450">class Sparrow</text>
+
+  <!-- Problem description -->
+  <g filter="url(#sk)"><rect x="20" y="335" width="400" height="120" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="40" y="358" font-size="10" fill="#b85450" font-weight="bold">问题：Sparrow 中有两份 Animal 的拷贝！</text>
+  <text x="40" y="380" font-size="9" fill="#444" font-family="monospace">class Animal { public: int age; };</text>
+  <text x="40" y="396" font-size="9" fill="#444" font-family="monospace">class Bird  : public Animal {};</text>
+  <text x="40" y="412" font-size="9" fill="#444" font-family="monospace">class Fish  : public Animal {};</text>
+  <text x="40" y="428" font-size="9" fill="#444" font-family="monospace">class Sparrow : public Bird, public Fish {};</text>
+  <text x="40" y="448" font-size="9" fill="#b85450">s.age → 歧义！Bird::Animal::age 还是 Fish::Animal::age？</text>
+
+  <!-- Right: Solution -->
+  <text x="670" y="68" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6e2e">✅ 虚继承：共享基类</text>
+
+  <!-- Diamond with virtual -->
+  <g filter="url(#sk)"><rect x="590" y="82" width="160" height="45" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="670" y="104" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">class Animal</text>
+  <text x="670" y="118" text-anchor="middle" font-size="8" fill="#888">（只有一份实例）</text>
+
+  <path d="M 630 127 Q 570 155 550 175" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 710 127 Q 770 155 790 175" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="470" y="180" width="160" height="45" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="550" y="202" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">class Bird</text>
+  <text x="550" y="216" text-anchor="middle" font-size="8" fill="#888">virtual public Animal</text>
+
+  <g filter="url(#sk)"><rect x="710" y="180" width="160" height="45" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2"/></g>
+  <text x="790" y="202" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">class Fish</text>
+  <text x="790" y="216" text-anchor="middle" font-size="8" fill="#888">virtual public Animal</text>
+
+  <path d="M 550 225 Q 570 250 630 270" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+  <path d="M 790 225 Q 770 250 710 270" stroke="#4a8e4a" stroke-width="1.5" fill="none" marker-end="url(#ar)" filter="url(#sk)"/>
+
+  <g filter="url(#sk)"><rect x="590" y="275" width="160" height="45" rx="8" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="2.5"/></g>
+  <text x="670" y="303" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e6e2e">class Sparrow</text>
+
+  <!-- Solution description -->
+  <g filter="url(#sk)"><rect x="470" y="335" width="400" height="120" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="490" y="358" font-size="10" fill="#2e6e2e" font-weight="bold">解决：Sparrow 中只有一份 Animal！</text>
+  <text x="490" y="380" font-size="9" fill="#444" font-family="monospace">class Bird  : virtual public Animal {};</text>
+  <text x="490" y="396" font-size="9" fill="#444" font-family="monospace">class Fish  : virtual public Animal {};</text>
+  <text x="490" y="412" font-size="9" fill="#444" font-family="monospace">class Sparrow : public Bird, public Fish {};</text>
+  <text x="490" y="436" font-size="9" fill="#2e6e2e">s.age → 无歧义！唯一的 Animal::age</text>
+  <text x="490" y="450" font-size="9" fill="#888">虚基类由最底层派生类（Sparrow）负责构造</text>
+
+  <!-- Bottom: memory layout comparison -->
+  <g filter="url(#sk)"><rect x="30" y="475" width="400" height="70" rx="6" fill="#fce4ec" stroke="#b85450" stroke-width="1.5"/></g>
+  <text x="230" y="498" text-anchor="middle" font-size="11" font-weight="bold" fill="#b85450">普通继承的内存布局</text>
+  <rect x="50" y="508" width="60" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  <text x="80" y="524" text-anchor="middle" font-size="7" fill="#2b6e9e">Animal</text>
+  <rect x="115" y="508" width="60" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  <text x="145" y="524" text-anchor="middle" font-size="7" fill="#7a5415">Bird</text>
+  <rect x="180" y="508" width="60" height="24" rx="3" fill="#e8f0fa" stroke="#4a8edb" stroke-width="1"/>
+  <text x="210" y="524" text-anchor="middle" font-size="7" fill="#2b6e9e">Animal</text>
+  <rect x="245" y="508" width="60" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  <text x="275" y="524" text-anchor="middle" font-size="7" fill="#7a5415">Fish</text>
+  <rect x="310" y="508" width="80" height="24" rx="3" fill="#fce4ec" stroke="#b85450" stroke-width="1"/>
+  <text x="350" y="524" text-anchor="middle" font-size="7" fill="#b85450">Sparrow</text>
+  <text x="230" y="540" text-anchor="middle" font-size="8" fill="#b85450">两份 Animal → 二义性 + 浪费</text>
+
+  <g filter="url(#sk)"><rect x="470" y="475" width="400" height="70" rx="6" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/></g>
+  <text x="670" y="498" text-anchor="middle" font-size="11" font-weight="bold" fill="#2e6e2e">虚继承的内存布局</text>
+  <rect x="490" y="508" width="60" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  <text x="520" y="524" text-anchor="middle" font-size="7" fill="#7a5415">Bird</text>
+  <rect x="555" y="508" width="60" height="24" rx="3" fill="#fef6e6" stroke="#c98a2b" stroke-width="1"/>
+  <text x="585" y="524" text-anchor="middle" font-size="7" fill="#7a5415">Fish</text>
+  <rect x="620" y="508" width="80" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1"/>
+  <text x="660" y="524" text-anchor="middle" font-size="7" fill="#2e6e2e">Sparrow</text>
+  <rect x="705" y="508" width="60" height="24" rx="3" fill="#eaf6ee" stroke="#4a8e4a" stroke-width="1.5"/>
+  <text x="735" y="524" text-anchor="middle" font-size="7" fill="#2e6e2e">Animal</text>
+  <text x="670" y="540" text-anchor="middle" font-size="8" fill="#2e6e2e">一份 Animal → 无二义性 ✅</text>
+</svg>
