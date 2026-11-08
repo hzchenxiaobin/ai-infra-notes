@@ -253,6 +253,8 @@ def _topic_day_pills(nav_days: list, current_day=None, overview_active: bool = F
             "label": f"Day {day['num']}",
             "href": href,
             "active": current_day == day["num"],
+            "num": day["num"],
+            "title": day["title"],
         })
     return pills
 

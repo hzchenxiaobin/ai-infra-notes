@@ -213,13 +213,59 @@ def solution_page_template(
     body_class = "vp-page"
     pills_html = ""
     if day_pills:
-        items = []
-        for pill in day_pills:
+        def _pill_link(pill, css_class="vp-pill"):
             active_cls = " active" if pill.get("active") else ""
-            items.append(
-                f'<a class="vp-pill{active_cls}" href="{pill["href"]}">{pill["label"]}</a>'
+            current = ' aria-current="page"' if pill.get("active") else ""
+            title = (
+                f' title="{html.escape(pill["title"], quote=True)}"'
+                if pill.get("title") else ""
             )
-        pills_html = '<nav class="vp-nav-pills">' + "".join(items) + "</nav>"
+            label = html.escape(str(pill["label"]))
+            return (
+                f'<a class="{css_class}{active_cls}" href="{pill["href"]}"'
+                f'{title}{current}>{label}</a>'
+            )
+
+        numbered_days = [pill for pill in day_pills if pill.get("num") is not None]
+        if len(numbered_days) > 10:
+            items = [
+                _pill_link(pill) for pill in day_pills if pill.get("num") is None
+            ]
+            active_day = next((pill for pill in numbered_days if pill.get("active")), None)
+            toggle_label = f"Day {active_day['num']}" if active_day else f"{len(numbered_days)} 天计划"
+            toggle_active = " active" if active_day else ""
+            weeks = {}
+            for pill in numbered_days:
+                week_num = (pill["num"] - 1) // 7 + 1
+                weeks.setdefault(week_num, []).append(pill)
+
+            week_groups = []
+            for week_num, week_days in weeks.items():
+                first_num, last_num = week_days[0]["num"], week_days[-1]["num"]
+                day_range = f"Day {first_num}" if first_num == last_num else f"Day {first_num}–{last_num}"
+                links = "".join(_pill_link(pill, "vp-day-link") for pill in week_days)
+                week_groups.append(
+                    '<section class="vp-day-week">'
+                    f'<div class="vp-day-week-title"><strong>第 {week_num} 周</strong>'
+                    f'<span>{day_range}</span></div>'
+                    f'<div class="vp-day-week-links">{links}</div></section>'
+                )
+            items.append(
+                f'<details class="vp-day-nav"><summary class="vp-day-nav-toggle{toggle_active}"'
+                f' aria-label="选择学习日期"><span>{toggle_label}</span>'
+                '<span class="vp-day-nav-chevron" aria-hidden="true">⌄</span></summary>'
+                '<div class="vp-day-menu"><div class="vp-day-menu-header">'
+                f'<strong>按周学习</strong><span>共 {len(numbered_days)} 天</span></div>'
+                f'<div class="vp-day-weeks">{"".join(week_groups)}</div></div></details>'
+            )
+            pills_html = (
+                '<nav class="vp-nav-pills vp-nav-pills-grouped" aria-label="每日教程导航">'
+                + "".join(items) + "</nav>"
+            )
+            body_class += " vp-page-grouped-nav"
+        else:
+            items = [_pill_link(pill) for pill in day_pills]
+            pills_html = '<nav class="vp-nav-pills">' + "".join(items) + "</nav>"
 
     def _pager(link, cls, label):
         if not link:
@@ -256,7 +302,7 @@ def solution_page_template(
         }} catch (e) {{}}
     }})();
     </script>
-    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=4">
+    <link rel="stylesheet" href="{root_prefix}css/vp-solution.css?v=5">
     <!-- Marked.js for Markdown rendering -->
     <script src="{root_prefix}js/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -333,7 +379,7 @@ def solution_page_template(
 
     <button class="vp-back-to-top" aria-label="回到顶部">↑</button>
 
-    <script src="{root_prefix}js/vp-solution.js?v=3"></script>
+    <script src="{root_prefix}js/vp-solution.js?v=4"></script>
     <script>
         const pageMarkdown = `{escaped_markdown}`;
 

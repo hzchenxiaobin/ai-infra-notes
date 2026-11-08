@@ -315,6 +315,7 @@ html.dark .vp-switch .moon {
 }
 
 .vp-doc-wrap {
+    box-sizing: border-box;
     padding: 32px 24px 96px;
     width: 100%;
 }
@@ -630,6 +631,7 @@ html.dark .vp-switch .moon {
    Code blocks
    -------------------------------------------------------------------------- */
 .vp-doc :not(pre) > code {
+    overflow-wrap: anywhere;
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 0.875em;
@@ -997,6 +999,187 @@ html.dark .vp-switch .moon {
     color: var(--vp-c-brand-1);
     border-color: var(--vp-c-brand-1);
     background-color: var(--vp-c-brand-soft);
+}
+
+.vp-nav-pills-grouped {
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.vp-day-nav {
+    position: relative;
+}
+
+.vp-day-nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border: 1px solid var(--vp-c-border);
+    border-radius: 999px;
+    color: var(--vp-c-text-2);
+    background-color: var(--vp-c-bg);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: color 0.25s, border-color 0.25s, background-color 0.25s;
+}
+
+.vp-day-nav-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.vp-day-nav-toggle:hover,
+.vp-day-nav[open] .vp-day-nav-toggle,
+.vp-day-nav-toggle.active {
+    color: var(--vp-c-brand-1);
+    border-color: var(--vp-c-brand-1);
+}
+
+.vp-day-nav-toggle.active,
+.vp-day-nav[open] .vp-day-nav-toggle {
+    background-color: var(--vp-c-brand-soft);
+}
+
+.vp-day-nav-toggle:focus-visible {
+    outline: 2px solid var(--vp-c-brand-1);
+    outline-offset: 2px;
+}
+
+.vp-day-nav-chevron {
+    font-size: 15px;
+    line-height: 1;
+    transition: transform 0.2s;
+}
+
+.vp-day-nav[open] .vp-day-nav-chevron {
+    transform: rotate(180deg);
+}
+
+.vp-day-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    z-index: 40;
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - var(--vp-nav-height) - 32px);
+    padding: 16px;
+    overflow-y: auto;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 12px;
+    background-color: var(--vp-c-bg);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    white-space: normal;
+}
+
+.vp-day-menu-header,
+.vp-day-week-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.vp-day-menu-header {
+    margin-bottom: 14px;
+    color: var(--vp-c-text-1);
+    font-size: 14px;
+}
+
+.vp-day-menu-header span,
+.vp-day-week-title span {
+    color: var(--vp-c-text-3);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.vp-day-weeks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.vp-day-week {
+    padding: 12px;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    background-color: var(--vp-c-bg-soft);
+}
+
+.vp-day-week-title {
+    margin-bottom: 10px;
+    color: var(--vp-c-text-2);
+    font-size: 12px;
+}
+
+.vp-day-week-links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.vp-day-link {
+    padding: 5px 4px;
+    border-radius: 6px;
+    color: var(--vp-c-text-2);
+    font-size: 12px;
+    text-align: center;
+    text-decoration: none;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.vp-day-link:hover {
+    color: var(--vp-c-brand-1);
+    background-color: var(--vp-c-brand-soft);
+}
+
+.vp-day-link.active {
+    color: var(--vp-c-brand-1);
+    background-color: var(--vp-c-brand-soft);
+    font-weight: 600;
+}
+
+@media (max-width: 520px) {
+    .vp-page-grouped-nav .vp-navbar-inner {
+        padding: 0 16px;
+    }
+
+    .vp-page-grouped-nav .vp-brand span {
+        display: none;
+    }
+
+    .vp-nav-pills-grouped {
+        gap: 6px;
+        margin-left: 8px;
+    }
+
+    .vp-nav-pills-grouped .vp-pill,
+    .vp-day-nav-toggle {
+        padding: 3px 9px;
+        font-size: 12px;
+    }
+
+    .vp-day-menu {
+        position: fixed;
+        top: calc(var(--vp-nav-height) + 8px);
+        left: 16px;
+        right: 16px;
+        width: auto;
+        max-width: none;
+    }
+
+    .vp-day-weeks {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 360px) {
+    .vp-page-grouped-nav .vp-nav-pills > .vp-pill {
+        display: none;
+    }
 }
 
 /* --------------------------------------------------------------------------

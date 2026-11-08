@@ -419,10 +419,27 @@ window.VPPage = (function () {
      * 胶囊导航：当前项滚动到可视区（移动端/长条）
      * ------------------------------------------------------------------ */
     function initPillBar() {
-        var active = document.querySelector('.vp-nav-pills .vp-pill.active');
+        var active = document.querySelector('.vp-nav-pills > .vp-pill.active');
         if (active && typeof active.scrollIntoView === 'function') {
             active.scrollIntoView({ inline: 'center', block: 'nearest' });
         }
+
+        var dayNav = document.querySelector('.vp-day-nav');
+        if (!dayNav) return;
+        var toggle = dayNav.querySelector('.vp-day-nav-toggle');
+        dayNav.addEventListener('toggle', function () {
+            if (!dayNav.open) return;
+            var current = dayNav.querySelector('.vp-day-link.active');
+            if (current) current.scrollIntoView({ block: 'nearest' });
+        });
+        document.addEventListener('click', function (event) {
+            if (dayNav.open && !dayNav.contains(event.target)) dayNav.open = false;
+        });
+        dayNav.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            dayNav.open = false;
+            toggle.focus();
+        });
     }
 
     /* ------------------------------------------------------------------
