@@ -482,3 +482,14 @@ cd_options = [(True, torch.float32), (False, torch.float32), (False, torch.bfloa
 ---
 
 明天（第 38 天）动手运行（或手工推演）Grouped GEMM：跟踪一个 group 从 layout 到输出区间的映射，手工构造两个不等长 group 推演调度过程，并回答"给定一个 MoE 输入，token、group、expert 权重和输出如何对应"。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_bf16_gemm.py kgrouped --skip-prof`
+- **结果**：`Num tests: 9`，**9/9 OK**（缓存热时 20 秒），含空组与累加变体。
+- **提醒**：该套件在连续批量跑时曾触发一次设备子进程超时（`507033`），**单独进程重跑必过**，建议串行执行。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

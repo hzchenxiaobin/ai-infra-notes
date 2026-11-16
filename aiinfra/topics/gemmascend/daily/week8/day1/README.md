@@ -387,3 +387,14 @@ def profile_fn():
 ---
 
 明天（第 51 天）把这些公式用起来：设置 `DG_PRINT_CONFIGS=1`、`DG_JIT_PRINT_COMPILER_COMMAND=1`，运行一个较小的 GEMM 测试，记录每个 shape 实际选中的 JIT 配置、耗时、TFLOPS 与带宽，形成一组**基线性能记录**——为第 52 天的单变量实验准备对照数据。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`bench_msprof(lambda: bf16_gemm_nt(a,b,d), kernel_names='gemm_impl', flush_l2=True)`
+- **结果**：`4096×4096×7168`：**582.2 µs / 413.1 TFLOPS / 259.3 GB/s**（mad 96.2%、mte2 93.7%）；`4096×7168×16384`：**2264.9 µs / 424.8 TFLOPS / 188.9 GB/s**（mad 98.5%）；`128×7168×2048`：**25.5 µs / 147.2 TFLOPS / 1242.7 GB/s**（mad 39.2%、mte2 87.7%，访存受限）。`get_num_sms() = 32`。
+- **要点**：大 shape 达 ~425 TFLOPS，接近 950 系列 BF16 峰值（README 口径 432 TFLOPS）的 98%，验证了"mad 长杆、mte2 紧随"的受限类型判断。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

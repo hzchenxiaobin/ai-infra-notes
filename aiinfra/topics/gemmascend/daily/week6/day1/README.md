@@ -512,3 +512,14 @@ MoE 全链路的对应关系（回答计划的最后一问）：**Dispatch**（�
 ---
 
 明天（第 37 天）把分组轴换到 K 维：阅读 K-Grouped 的 API 与 Scheduler 分支，理解"每组输出、共享 M×N 网格、K 长度不同"的另一种分组形态，并对比 Normal、M-Grouped、K-Grouped 三种 GEMM 的异同。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_bf16_gemm.py mgrouped --skip-prof` + `DG_PRINT_CONFIGS=1`
+- **结果**：`Num tests: 25`，**25/25 OK**（45 秒）。
+- **要点**：M-Grouped 用例里 `block_m` 恒为 256（`BLOCK_M` 被对齐值钉死），与第 35 天源码结论一致。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

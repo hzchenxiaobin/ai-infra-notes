@@ -337,3 +337,13 @@
 ---
 
 明天（第 49 天）是机动或休息日：可补充 MoE、Attention 或 TileLang 背景知识，也可以继续补做之前的实验。第 8 周我们将换上性能分析的眼镜（第 50 天起：TFLOPS/带宽/算术强度、冷热缓存、单变量实验）——今天问题④里练习的"瓶颈假设 + 验证手段"，正是那一周的预习。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：复盘日
+- **结果**：MegaMoE（第 41–44 天）因单卡未测，HC Prenorm（第 45 天）因 TileLang 版本不匹配未通过；本周产出以 B 组静态任务为主。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

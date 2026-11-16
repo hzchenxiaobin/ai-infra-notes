@@ -502,3 +502,14 @@ EOF
 ---
 
 **明日预告（第 30 天）**：理解正确性验证流程。今天造好了数据，明天读它如何被判定——`tests/common.py` 与 `tests/utils.py` 的参考结果比较（`calc_diff` 的余弦相似度为何对 bf16 用阈值、对 fp8 MX 可逐位相等）、ACLNN 交叉验证（`gemm_aclnn` 的全部跳过条件）、accumulation/bias/alpha 的语义核对、随机舍入为什么需要 `assert_stochastic_bf16_matches_fp32` 这样的确定性哈希比较，以及 meta 张量并行编译的完整原理。当天产出是一条完整测试流程图。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`./develop.sh` + `python tests/test_bf16_gemm.py normal --skip-prof`、`... unaligned-k --skip-prof`、`... kgrouped --skip-prof`
+- **结果**：构建成功（约 70 秒）；`normal` **54/54 OK**（4 分 35 秒）、`unaligned-k` **20/20 OK**（2 分 21 秒）、`kgrouped` **9/9 OK**（缓存热时 20 秒）。
+- **差异**：本版本 `kgrouped` 打印 `Num tests: 9`；教程此处的 324 应为 kernel 实例数，以实测输出为准。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

@@ -364,3 +364,13 @@ UB 缓冲规划（`:150-167`）：`ub_lut`（256B 表）+ `ub_fp4`（打包 fp4 
 ---
 
 明天（第 33 天）我们钻进 `transform_sf_into_required_layout`：recipe 如何解析、UE8M0 如何打包、为什么不能总用用户给的 SF 布局。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_fp8_gemm.py normal --skip-prof`、`test_fp4_gemm.py normal --skip-prof`、`test_fp8_dequant_gemm.py normal --skip-prof`
+- **结果**：三个套件各 **42/42 OK**（FP8 约 8 分钟，FP4 4 分 32 秒，FP8×FP4 4 分 33 秒），涵盖 `fp8×fp8`、`fp4×fp4`、`fp8×fp4` 三条路径。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

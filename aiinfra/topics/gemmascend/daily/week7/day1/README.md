@@ -372,3 +372,14 @@ torch.distributed（HCCL 进程组，R 个 rank）
 ---
 
 明天（第 44 天）进入 MegaMoE 计算主线：阅读 `deep_gemm/include/deep_gemm/mega_moe.hpp`、`scheduler/mega_moe.hpp` 与 `layout/mega_moe.hpp` 的执行细节，看两个 Grouped GEMM 与 SwiGLU 如何在一个 Kernel 里衔接、中间张量形状如何流转，把今天"只看外壳"的接口图补上内核。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_mega_moe.py --num-processes 2 ...`
+- **结果**：**未测**：容器只暴露 `/dev/davinci0`（`device_count=1`），而该测试要求 ≥2 卡（8 卡才能对齐 README 数值）。
+- **替代**：B 组静态任务（`SymmBuffer` 容量手算、权重变换 CPU 复现）可离线完成。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

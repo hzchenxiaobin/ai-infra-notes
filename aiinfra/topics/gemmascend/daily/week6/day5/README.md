@@ -258,20 +258,22 @@ AIC 的计算主干两条路相同：L0A 用 `pair/single` 两套 tile 适配 `q
 
 ### A 组：有 Ascend 环境
 
+> **命令勘误（实测）**：`test_attention.py` 的子命令在本仓库版本里只有 `all | prefill | paged | boundary | paged_boundary`（`python test_attention.py -h` 可查）。下文按实测可用的名字书写；若你手上的版本仍是 `sparse` / `paged_sparse` 一类旧名，按 `sparse → prefill`、`paged_sparse → paged`、`sparse_boundary → boundary`、`paged_sparse_boundary → paged_boundary` 替换即可（`sparse_cuda` / `paged_sparse_cuda` 本版本未暴露为子命令）。
+
 1. **跑通 Prefill sparse 生产用例**：
 
    ```bash
    cd DeepGEMM-Ascend/tests
-   python test_attention.py sparse --skip-prof
+   python test_attention.py prefill --skip-prof
    ```
 
-   预期输出 `Testing sparse MQA logits production cases:` 后 4 行 OK（overlap {0.8,0.9} × KV {64K,512K}）。核对 `test_sparse_mqa_logits_perf`（`:892-900`）的参数：H=32、FP4、B=8、capacity=2048、请求 (3157,5035)——对照 3.8 节的 Prefill 列。
+   实测（默认参数）输出 `Testing MQA logits (56 cases):`，56/56 OK；要只跑 3.8 节的 Prefill 生产参数，用 `--mode`、`--formats`、`--num_heads`、`--head_dims` 收窄（H=32、FP4、overlap {0.8,0.9} × KV {64K,512K}）。核对 `test_sparse_mqa_logits_perf`（`:892-900`）的参数：H=32、FP4、B=8、capacity=2048、请求 (3157,5035)——对照 3.8 节的 Prefill 列。
 
 2. **跑通 Paged sparse 生产用例并观察快照指标**：
 
    ```bash
-   python test_attention.py paged_sparse --skip-prof     # 先验证正确性
-   python test_attention.py paged_sparse                  # 去掉 --skip-prof
+   python test_attention.py paged --skip-prof     # 先验证正确性
+   python test_attention.py paged                  # 去掉 --skip-prof
    ```
 
    无 `--skip-prof` 时会打印 `prepare / first-main / reuse-main / R4` 四个时延与 TFLOPS（`:578-587`）。记录四个数并回答：reuse-main 与 first-main 的差值来自哪些被省掉的工作？R4 为什么不等于 4×reuse-main？
@@ -279,17 +281,17 @@ AIC 的计算主干两条路相同：L0A 用 `pair/single` 两套 tile 适配 `q
 3. **跑边界与契约测试**：
 
    ```bash
-   python test_attention.py sparse_boundary
-   python test_attention.py paged_sparse_boundary
+   python test_attention.py boundary
+   python test_attention.py paged_boundary
    ```
 
-   先读 `test_sparse_mqa_logits_boundaries` 的用例表（`:1149-1160`，元组为 `(heads, fp4, paged, nq, kv, block, capacity, unaligned)`），预测每个考察点压实哪条路径（如 `(12, True, False, 9, 640, 8, 128, True)` = 非 16 倍头数 + 非对齐 ks + 跨 split 容量），再与通过结果对账；`paged_sparse_boundary` 还会执行 3.7 节的三条快照断言（`:953-966`）。
+   先读 `test_sparse_mqa_logits_boundaries` 的用例表（`:1149-1160`，元组为 `(heads, fp4, paged, nq, kv, block, capacity, unaligned)`），预测每个考察点压实哪条路径（如 `(12, True, False, 9, 640, 8, 128, True)` = 非 16 倍头数 + 非对齐 ks + 跨 split 容量），再与通过结果对账；`paged_boundary` 还会执行 3.7 节的三条快照断言（`:953-966`）。
 
 4. **CUDA 对齐子集**（可选，用例很多时用它抽样）：
 
    ```bash
-   DG_MQA_NUM_CASES=8 python test_attention.py sparse_cuda --skip-prof
-   DG_MQA_NUM_CASES=8 python test_attention.py paged_sparse_cuda --skip-prof --formats fp8
+   DG_MQA_NUM_CASES=8 python test_attention.py prefill --skip-prof --formats fp8
+   DG_MQA_NUM_CASES=8 python test_attention.py paged --skip-prof --formats fp8
    ```
 
    对照 `enumerate_cuda_sparse_mqa_logits`（`:598-630`）里 B16 capacity=4095 的注释（"capped at 4095 by Ascend's 16-bit output offsets"），验证 3.1 节的上限推导。
@@ -398,3 +400,14 @@ AIC 的计算主干两条路相同：L0A 用 `pair/single` 两套 tile 适配 `q
 9. 参照 3.8 节对比表，任选 5 行并给出位置，如 kSplitKV（`layout/sparse_mqa_logits.hpp:16-18`）、KV 路径（`sparse_mqa_logits.hpp:330-335` vs `paged_sparse_mqa_logits.hpp:221-223`）、Q 形状（`attention.hpp:127` 的 `dim()==4` 与 `:187` 的 `dim()==3`）等。
 10. 一次 prepare + 一次 FIRST + 3 次 REUSE（`tests/test_attention.py:568-571`）；REUSE 省掉页表寻址、NZ 转换和 compact 写回，KV 变成整页线性 GM→L1，单位时间完成的有效乘加更多；prepare 只读 context_lens/indices/块 ID/页表并做归并与桶划分，不读 KV 数据本身（`paged_sparse_mqa_prepare_impl` 的输入列表，`:524-526`）。
 </details>
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_attention.py paged --skip-prof`、`boundary --skip-prof`、`paged_boundary --skip-prof`
+- **结果**：`paged` **28/28 OK**（2 分 24 秒）、`boundary` **21/21 OK**、`paged_boundary` **132/132 OK**（1 分 43 秒）。
+- **勘误**：教程写的子命令 `sparse` / `paged_sparse` / `sparse_boundary` / `paged_sparse_boundary` 在本版本不存在；实际可选 `all|prefill|paged|boundary|paged_boundary`，照原样执行会因 `invalid choice` 退出。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

@@ -432,3 +432,14 @@ GemmDesc.sfa/sfb（持有防释放，gemm_config.hpp:77-78）
 ---
 
 明天（第 34 天）把这些环节串成完整调用链：选择 `fp8_fp4_gemm_nn`，从"输入与 Scale"一路追到"结果验证"，并回答 Scaling Factor 在哪里转换、在哪里参与计算。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_layout.py correctness`；`transform_sf_into_required_layout` 直调
+- **结果**：`Num tests: 678`，**678/678 OK**（约 10 分钟，编译 48 个 kernel）。
+- **要点**：本环境下该套件需要显式 `#include <utils/debug/asc_assert.h>`（CANN 9.3.0 的 `asc_simd.h` 不再传递 `ascendc_assert`），否则 kernel 编译直接失败。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

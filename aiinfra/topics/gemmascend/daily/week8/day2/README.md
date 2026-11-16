@@ -333,3 +333,14 @@ print_perf(m, n, k, f'layout={layout}, {out_opt}, acc={int(test.accumulate)}, {t
 ---
 
 明天（第 52 天）在今天的基线上做**单变量性能实验**：固定一个 shape，每次只改一个因素——Block 大小、L1/L0 stage 数、resident A/B、direct store、AI Core 数量（`set_num_sms`）——每次先验证正确性再比较性能，并练习"提出假设 → 验证假设"，而不是只给一组调参结果。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`DG_PRINT_CONFIGS=1`、`DG_JIT_PRINT_COMPILER_COMMAND=1` + `bench_msprof`
+- **结果**：真实配置：`4096×4096×7168 → block=256x256x128, mad=256x128x64, l1_stages=4, l0_stages=2, epi_stages=4, direct_store=false, num_blocks=32`；`1024×2048×17 → 同 block/mad，epi_stages=2, direct_store=true`。
+- **要点**：编译命令实测为 `bisheng -O2 --npu-arch=dav-3510 --cce-aicore-only -I<repo>/deep_gemm/include -I<CANN>/aarch64-linux/asc/include/adv_api`，与第 12 天"模板实参 + 两个 include"的描述一致。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

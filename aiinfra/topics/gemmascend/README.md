@@ -4,6 +4,8 @@
 
 以下源码路径均相对于 `DeepGEMM-Ascend/`。没有 Ascend 硬件时，可以先完成源码阅读、调用链和手工演算；正确性测试与性能实验需要在项目支持的 Ascend 环境中完成。
 
+> **实测进度（2026-11-16，Ascend 950PR 单卡）**：第 5–8 周 A 组中单卡可执行的部分已在真实 NPU 上跑完——BF16/FP8/FP4 GEMM、Grouped GEMM、Scale-Factor 布局转换、MQA 与 Paged MQA 共 **14 个测试套件、1217 个检查点全部通过**；MegaMoE（需 ≥2 卡）与 HC Prenorm（TileLang 与 CANN 版本不匹配）未通过。环境搭建、逐日结果、性能数据与**教程勘误**见 [MEASUREMENTS.md](MEASUREMENTS.md)，每篇第 5–8 周教程末尾也附了当天的"实测记录"小节。
+
 ## 第 1 周：GEMM 与 Ascend 基础
 
 ### 第 1 天：理解 GEMM 基本问题

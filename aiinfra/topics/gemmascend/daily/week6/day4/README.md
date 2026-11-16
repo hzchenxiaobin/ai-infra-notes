@@ -492,3 +492,14 @@ Device: mqa_logits_impl   __mix__(1 AIC + 2 AIV)      mqa_logits.hpp:623
 9. 因为 N 维（KV）不构成输出 tile 网格——每行 query 的输出是一段变长窗口，由 per-row 的 `[ks, ke)` 在 kernel 内导出（scheduler 窗口），Host 无需静态切分 N。
 10. GEMM 的 M×N×K 是全部实算；MQA 只数有效窗口内的乘加（`valid_sum = Σ(ke−ks)`），被 `is_tile_active` 跳过的补零乘加不计入——所以它衡量的是"有用计算"的密度。
 </details>
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_attention.py prefill --skip-prof`
+- **结果**：`Testing MQA logits (56 cases)`，**56/56 OK**（1 分 11 秒），覆盖 FP8 / FP4、FullRange / Causal / Cp / Random 与多种 H/D。
+- **备注**：完整跑完全部模式时可用 `--mode` 限定；性能档（去掉 `--skip-prof`）本次未跑。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

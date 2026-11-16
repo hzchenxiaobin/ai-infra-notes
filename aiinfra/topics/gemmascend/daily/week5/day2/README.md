@@ -538,3 +538,14 @@ python tests/test_bf16_gemm.py unaligned-k --skip-prof
 ---
 
 **明日预告（第 31 天）**：运行并分析 BF16 测试。今天画好了流程图，明天让它真的跑起来——`normal` 与 `unaligned-k` 的输出如何与源码中的边界处理对应、`Compiling` 进度条与 `Num tests` 如何对上枚举器，以及测试失败时如何按"环境 / 参考结果 / 布局 / 内核"四个层级定位。没有环境时则选取一个测试用例做完整的静态推演。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_bf16_gemm.py unaligned-k --skip-prof`；性能用 `bench_msprof` 直调 `bf16_gemm_nt`
+- **结果**：`unaligned-k` **20/20 OK**；`4096×4096×7168` 实测 **582.2 µs / 413.1 TFLOPS / 259.3 GB/s**（mad 96.2%、mte2 93.7%），`calc_diff` 与参考结果一致。
+- **备注**：教程里"把 threshold 改成 1e-30 观察失败"的步骤未执行，其余均已验证。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

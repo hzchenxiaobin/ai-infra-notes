@@ -464,5 +464,12 @@ K 轴（total_k = 1536）
 
 明天（第 39 天）进入 MQA Logits：阅读 `tests/test_attention.py`、`csrc/apis/attention.hpp` 与 `deep_gemm/include/deep_gemm/mqa_logits.hpp`，理解 Q、KV、weights 的形状与 logits 的计算流程，并对比它与普通 GEMM 的调度及 Epilogue 差异。
 
+---
 
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
 
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`mgrouped` 与 `kgrouped` 连跑 + `DG_PRINT_CONFIGS=1`
+- **结果**：`mgrouped` **25/25 OK**、`kgrouped` **9/9 OK**；两次配置打印中 `block_m` 的差异（256 恒定 vs 随形状变化）与教程对比表一致。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

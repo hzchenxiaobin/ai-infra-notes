@@ -379,3 +379,13 @@
 | `get_actual_m` 的 M-Grouped 分支 | D | 接口沿用，行为改为恒返回 BLOCK_M（TODO 注释） |
 | `reversed_pairs` + `vf_mqa_logits_store_bf16` | N | 物理页乱序的顺序恢复，分页特有 |
 | `mad(..., ENABLE_UPDATE, true)` | R | 与 bf16_gemm 的 mad 调用同款，只是无 K 循环、单次调用 |
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：复盘日，可选复跑 `mgrouped`/`kgrouped`/`test_attention.py all --skip-prof`
+- **结果**：本周四个套件（25/9/56/28+21+132）全部通过；`all` 全量复跑未执行。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

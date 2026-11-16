@@ -330,3 +330,12 @@ AIC   [shared L1/L2]──[GEMM1/GEMM2 块级流水：kDispatched→A、kLinear1
 
 明天（第 46 天）转入 MegaMoE 的测试与性能入口：阅读 `scripts/profiling/msprof_mega_moe.py` 的 PIPE 级 trace 采集，看 `tests/test_mega_moe.py` 如何组织多 rank 测试与最大容量注册复用，并理解性能输出中计算带宽、内存带宽与通信带宽三个口径的来源——今天 3.7 的初步瓶颈判断，届时可以用 profiling 数据逐条验证。
 
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：8 卡 `test_mega_moe.py --num-processes 8 ...` 两个 case
+- **结果**：**未测**（单卡）。通信/计算时序图只能按 B 组手算完成。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

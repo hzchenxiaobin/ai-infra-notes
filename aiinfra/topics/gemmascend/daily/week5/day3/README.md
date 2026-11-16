@@ -305,3 +305,14 @@ python tests/test_bf16_gemm.py unaligned-k --skip-prof
 ---
 
 **明日预告（第 32 天）**：学习 FP8/FP4 Kernel 路径。今天的方法原样迁移：阅读 `tests/test_fp8_gemm.py` 与 `tests/test_fp4_gemm.py` 的场景构成，追踪 `csrc/jit_kernels/fp8_gemm.hpp` 与 `deep_gemm/include/deep_gemm/fp8_gemm.hpp`、`fp8_dequant_gemm.hpp`，对比 FP8×FP8、FP4×FP4、FP8×FP4 三条执行路径，找到反量化与高精度累加的位置——届时今天整理的"场景 → 边界代码"映射表会再添三列。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`normal`/`unaligned-k` + `DG_PRINT_CONFIGS=1`
+- **结果**：两个套件全部 OK。`(1024, 2048, 17)` 的真实配置：`block=256x256x128, mad=256x128x64, l1_stages=4, l0_stages=2, epi_stages=2, direct_store=true, num_blocks=32`。
+- **要点**：K=17 远小于 `BLOCK_K=128` 仍选 128，且 `epi_stages` 由常规的 4 降到 2、并启用 `direct_store` —— 与第 26 天"直写路径要求对齐、Tile 数少"的判据一致。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

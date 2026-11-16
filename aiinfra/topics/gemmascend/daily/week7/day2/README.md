@@ -491,3 +491,13 @@ AIV0  : [元数据][routed 权重 FP4→FP8 NZ 流水（与 AIC 的 routed 任�
 ---
 
 明天（第 45 天）进入 MegaMoE 的通信与融合：阅读 `comm/mega_moe.hpp` 的 `rank_barrier`/`wait_until` 与 `csrc/backends/hccl.hpp`，看 EP Dispatch/Combine 的通信对象、UBMEM 直访的细节，以及计算与通信如何 overlap——今天 3.6/3.7 节里一笔带过的 `kOverlapReduce` 时间线与 `publish_combine_prefix` 协议将全面展开。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：2 卡 `test_mega_moe.py` + `expert_recv_count` 对账
+- **结果**：**未测**（单卡）。跨 rank 的 `expert_recv_count`、`rank_barrier` 无法验证。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

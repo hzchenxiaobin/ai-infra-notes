@@ -350,4 +350,13 @@ auto [b, sfb_in] = get_transposed<kTransB>(b_, 0, 1);   // true ：B 和 sfB 一
 
 明天（第 35 天）是机动日：补充低精度数值基础，或复盘 BF16 Kernel 中仍不清楚的部分；第 6 周将进入 Grouped GEMM 与 MQA Logits。
 
+---
 
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`python tests/test_fp8_gemm.py normal --skip-prof`（42 例）+ `DG_PRINT_CONFIGS=1`
+- **结果**：**42/42 OK**；`fp8_fp4_gemm_nn` 与 `transform_sf_into_required_layout` 在真实 NPU 上可正常调用（`calc_diff` 通过）。
+- **备注**：FP8 的 `l1_sf_stages / sf_k_blocks` 配置行本次未单独采集，BF16 的配置行见第 50/51 天记录。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

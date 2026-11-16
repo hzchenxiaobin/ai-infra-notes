@@ -356,3 +356,14 @@ K-split 之后，多组 core 写**同一个输出区域**，这在前六周的�
 ---
 
 明天（第 48 天）是扩展算子复盘日：从 MQA、MegaMoE、HC Prenorm 中选一个你最感兴趣的，不看笔记回答四个问题——输入输出和核心计算是什么、调度与寻址有什么特殊之处、为什么普通 GEMM 接口不能直接满足需求、性能瓶颈可能在哪里。今天读过的 `tf32_hc_prenorm_gemm`（一份搬运两种计算 + K-split 原子归约）和第 46 天的测量口径，都会是你分析"性能瓶颈在哪"时的现成工具。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：`./develop.sh` + `python tests/test_hyperconnection.py default --skip-prof`
+- **结果**：**失败**：TileLang 生成的 kernel 引用了 CANN 9.3.0 中不存在的符号，编译阶段即报错：`unknown type name 'float8_e6m2_t'`、`no member named 'CACHELINE_UB'`、`use of undeclared identifier '__nop'`。
+- **原因**：`tilelang 0.1.15`（PyPI/华为云镜像）与仓库期望的 TileLang/CANN 组合不匹配；0.1.9 / 0.1.11 又与预装 `apache-tvm-ffi` ABI 冲突。HC Prenorm 需在配套环境重跑。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。

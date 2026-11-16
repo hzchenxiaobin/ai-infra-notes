@@ -361,3 +361,13 @@ python scripts/profiling/msprof_mega_moe.py --capture profiling/pipes/raw --outp
 ---
 
 明天（第 47 天）离开手写 Kernel 的世界一天：阅读 `deep_gemm/tilelang_ops/hc_prenorm.py` 和 `tests/test_hyperconnection.py`，看 TileLang 生成的 HC Prenorm 融合算子如何与 GEMM 衔接，并比较手写 Ascend Kernel 与 TileLang 两种开发方式在代码结构和工作流上的差异——今天读过的 `bench_msprof` 与 `KernelProfile` 届时还会作为统一的测量底座再次出场。
+
+---
+
+## 实测记录（2026-11-16，Ascend 950PR 单卡）
+
+- 环境：`Ascend950PR_9589` ×1、CANN 9.3.0、torch 2.10.0+cpu / torch_npu 2.10.0.post4、Python 3.10.12、`DeepGEMM-Ascend` @ `8491bbb`。
+- **命令**：8 卡 `test_mega_moe.py` + `scripts/profiling/msprof_mega_moe.py`
+- **结果**：**未测**（单卡 + 需要 `msprof` 采集）。注意 `--capture` 离线重导出已有 `PROF_*` 不需要 NPU，本轮没有可用的采集数据。
+
+完整结果、环境搭建步骤与教程勘误见 [MEASUREMENTS.md](../../../MEASUREMENTS.md)。
